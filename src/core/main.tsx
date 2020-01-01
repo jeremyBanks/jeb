@@ -3,6 +3,7 @@ import React from "react";
 
 import { SplashyGreeting } from "../components/splashy-greeting";
 import { sleep } from "../utilities/async";
+import { input, inputs } from "../utilities/input";
 import { clamp, roundDown } from "../utilities/math";
 import { print } from "../utilities/print";
 
@@ -12,37 +13,50 @@ export class App {
    * output any type of content at the bottom of the page.
    */
   async main() {
+    // Set the page's title and icon.
     const title = document.head.querySelector("title");
-    title.textContent = "A Pup's Project";
-
     const icon: HTMLLinkElement = document.head.querySelector("link[rel=icon]");
+    title.textContent = "A Pup's Project";
     icon.href = "/icon.png";
 
-    print("hello world");
-    print(
-      <p>
-        <b>hello</b>{" "}
-        <i
-          className={css({
-            color: "green"
-          })}
-        >
-          world
-        </i>
-        !
-      </p>
+    print("What is your name?");
+    const name = await input("John Smith");
+
+    print("Great! Just a moment...");
+
+    await sleep(2.0);
+
+    print(<SplashyGreeting name={name} />);
+
+    do {
+      print("Please accept our terms of service.");
+    } while (
+      "accept" !==
+      (await input(
+        <>
+          <button autoFocus>accept</button>
+          <button>reject</button>
+        </>
+      ))
     );
 
-    let x = 0;
-    while (true) {
-      print("What do I know?", { x });
-      await sleep(2);
-      x += 1;
-
-      if (!"x".startsWith("x")) {
-        break;
-      }
-    }
+    print(
+      await inputs(
+        <>
+          <input
+            name="something else"
+            placeholder="hmm"
+            required
+            minLength={1}
+          />
+          <button value="A" autoFocus>
+            A
+          </button>
+          <button value="B">B</button>
+          <button value="C">C</button>
+        </>
+      )
+    );
 
     // keep running forever
     return new Promise(() => {});
@@ -74,15 +88,13 @@ export class App {
             fontSize,
             color: "rgb(0, 25, 100)",
             textShadow,
-            height: 300
+            height: 100
           })}
         >
           It has been <code>{seconds.toFixed(0).padStart(3, "0")}</code> seconds
           and this is displayed at a font size of <code>{fontSize}</code>{" "}
           pixels.
         </div>
-
-        <SplashyGreeting name="Padawan Learner" />
       </>
     );
   }

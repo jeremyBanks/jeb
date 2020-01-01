@@ -20,11 +20,13 @@ export const print = (...values: Array<ReactNode | unknown>): void => {
 
   const container = document.createElement("div");
 
+  document.body.appendChild(container);
+
   ReactDOM.render(
     <React.StrictMode>
       <Printed
         values={values.flatMap((value, i) => {
-          while (typeof value?.[print.as] === "function") {
+          if (typeof value?.[print.as] === "function") {
             value = value[print.as]();
           }
           return value;
@@ -33,8 +35,6 @@ export const print = (...values: Array<ReactNode | unknown>): void => {
     </React.StrictMode>,
     container
   );
-
-  document.body.appendChild(container);
 
   const newMax =
     window.document.documentElement.scrollHeight - window.innerHeight;

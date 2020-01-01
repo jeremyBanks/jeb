@@ -7,15 +7,21 @@ import React, { ReactNode } from "react";
 export const Printed: React.FC<{ values: Array<ReactNode | any> }> = ({
   values
 }) => (
-  <p className={printed}>
+  <div className={printed}>
     {values.map((value, i) => {
       if (
         React.isValidElement(value) ||
         typeof value == "string" ||
         typeof value == "number"
       ) {
-        return <span key={i}>value</span>;
+        return <span key={i}>{value}</span>;
       } else {
+        console.log(value);
+        if (value instanceof FormData) {
+          value = Object.fromEntries(
+            [...value.keys()].map((key) => [key, value.getAll(key)])
+          );
+        }
         try {
           return <code key={i}>{JSON.stringify(value, null, 2)}</code>;
         } catch (error) {
@@ -38,10 +44,11 @@ export const Printed: React.FC<{ values: Array<ReactNode | any> }> = ({
         }
       }
     })}
-  </p>
+  </div>
 );
 
 const printed = css({
+  margin: 16,
   textShadow: "0 0 0 rgba(0, 0, 0, 0)",
   color: "rgba(0, 0, 0, 1.0)",
   animationName: `${keyframes({
