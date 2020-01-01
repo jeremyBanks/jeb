@@ -1,7 +1,7 @@
-import * as emotionReact from "@emotion/core";
 import { css } from "emotion";
 import React from "react";
 
+import { GlobalStyles } from "../components/global-styles";
 import { SplashyGreeting } from "../components/splashy-greeting";
 import { sleep } from "../utilities/async";
 import { input, inputs } from "../utilities/input";
@@ -19,14 +19,81 @@ export class App {
     document.title = "Your Project";
 
     print(
-      <p>
-        You can{" "}
-        <a href="https://github.com/otter-academy/template/generate">
-          create a repository from this template on GitHub
-        </a>
-        , edit it to your heart's content, then <code>./yarn deploy</code> it to
-        the web.
-      </p>
+      <section
+        className={css({
+          border: "3px dashed navy",
+          padding: "16px",
+          maxWidth: "720px",
+          lineHeight: "1.75",
+
+          h1: {
+            fontSize: "32px",
+            margin: 0
+          },
+
+          ol: {
+            margin: 0,
+            paddingLeft: 0,
+
+            li: {
+              margin: "8px 32px"
+            }
+          },
+
+          "code, pre": {
+            background: "rgba(0, 0, 0, 0.03)",
+            border: "1px solid rgba(0, 0, 0, 0.03)",
+            borderRadius: "4px",
+            padding: "0 4px"
+          },
+
+          code: {
+            userSelect: "all",
+            cursor: "pointer"
+          }
+        })}
+      >
+        <h1>Getting Started</h1>
+        <ol>
+          <li>
+            <a href="https://github.com/otter-academy/template/generate">
+              Create a repository from this template on GitHub
+            </a>
+            , clone it to your computer, and <code>cd</code> into it in a Linux
+            shell.
+          </li>
+          <li>
+            Run <code>source ./yarn install</code> to install everything
+            required for this project, including{" "}
+            <a href="https://github.com/nvm-sh/nvm">Node Version Manager</a> and
+            all dependencies.
+          </li>
+          <li>
+            Open this project folder in{" "}
+            <a href="https://code.visualstudio.com/">Visual Studio Code</a>.
+            Install the recommended extensions if prompted.
+          </li>
+          <li>
+            Run <code>./yarn start</code> in your shell to launch the local
+            development server.
+          </li>
+          <li>
+            You will probably want to do most of your work inside the{" "}
+            <code>core/</code>, <code>components/</code>, and{" "}
+            <code>utilities/</code> subdirectories of <code>src/</code>. A good
+            starting point would be to delete the introductory text you're
+            reading right now from <code>src/core/main.tsx</code>.
+          </li>
+          <li>
+            You can run <code>./yarn pretty</code> to auto-format the code.
+          </li>
+          <li>
+            Run <code>./yarn deploy</code> to install, build, and publish to the
+            web using GitHub Pages.
+          </li>
+        </ol>
+        <p>Some example code continues below.</p>
+      </section>
     );
 
     print("What is your name?");
@@ -115,8 +182,17 @@ export class App {
               alt=""
               src="/icon.png"
               className={css({
+                transition: "none",
                 height: 32,
-                width: 32
+                width: 32,
+                objectFit: "contain",
+                // This is silly hack to replace images in CSS.
+                // see https://stackoverflow.com/a/37124764
+                backgroundSize: "contain",
+                backgroundImage: "url(/icon-shiny.png)",
+                ":hover": {
+                  objectPosition: "-65536px 65536px"
+                }
               })}
             />
           </a>
@@ -124,49 +200,7 @@ export class App {
           seconds.
         </main>
 
-        <emotionReact.Global
-          styles={emotionReact.css({
-            html: {
-              boxSizing: "border-box"
-            },
-
-            a: {
-              color: "blue",
-
-              ":hover": {
-                color: "red"
-              }
-            },
-
-            "*": {
-              boxSizing: "inherit",
-              fontFamily: "inherit",
-              transitionDuration: "inherit"
-            },
-
-            body: {
-              padding: "0",
-              margin: "0",
-              fontSize: "16px"
-            },
-
-            "body > section": {
-              display: "contents"
-            },
-
-            "body > section > *": {
-              transitionDuration: "0.5s"
-            },
-
-            img: {
-              verticalAlign: "middle"
-            },
-
-            "code, pre, kbd": {
-              whiteSpace: "pre-wrap"
-            }
-          })}
-        />
+        <GlobalStyles />
       </>
     );
   }

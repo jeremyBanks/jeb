@@ -24,7 +24,7 @@ export const SplashyGreeting: React.FC<{ name: string }> = ({ name }) => {
           }
         }),
         animationDuration: "6s",
-        animationIterationCount: "infinite",
+        animationIterationCount: "4",
         background: "lime",
         color: "black",
         fontWeight: 900,

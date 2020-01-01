@@ -4,23 +4,21 @@ input,
 textarea,
 button,
 select {
-  font-size: inherit;
   font-family: "Fira Sans", sans-serif;
 }
 
 code,
 pre,
 kbd,
-samp {
-  font-size: inherit;
+samp,
+::marker {
   font-family: "JetBrains Mono", monospace;
-  white-space: pre-wrap;
 }
 
 @font-face {
   font-family: "JetBrains Mono";
   font-weight: 400;
-  src: local("JetBrains Mono"),
+  src: local("JetBrains Mono Regular"),
     url("/fonts/JetBrainsMono-Regular.woff2") format("woff2");
   font-display: swap;
 }
