@@ -3,6 +3,8 @@ set -euo pipefail;
 
 pushd "$(dirname "${BASH_SOURCE:-}")/.." > /dev/null;
 
+mkdir -p ./src/data/scryfall/;
+
 url="$(curl https://api.scryfall.com/bulk-data | jq '. |
   .data
   | map(select(.type == "oracle_cards"))
@@ -25,7 +27,8 @@ curl "$url" | jq '
       set,
       rarity,
       oracle_text,
-      standardLegal: .legalities.standard
+      standard_legal: .legalities.standard,
+      image_uri: .image_uris.normal
     }
   )
-' > ./public/data/scryfall/arena.json;
+' > ./src/data/scryfall/arena.json;

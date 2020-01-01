@@ -9,7 +9,7 @@
     "build": true,
     "run": true,
     "scripts": true,
-    "src/**/*.d.ts": true,
+    "src/react-app-env.d.ts": true,
     "tsconfig.json": true,
     "yarn": true,
     "yarn.lock": true

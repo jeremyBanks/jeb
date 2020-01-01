@@ -5,6 +5,7 @@ import { GlobalStyles } from "../components/global-styles";
 import { SplashyGreeting } from "../components/splashy-greeting";
 import { sleep } from "../utilities/async";
 import { input, inputs } from "../utilities/input";
+import { randomChoice } from "../utilities/random";
 import { print } from "../utilities/print";
 
 export class App {
@@ -93,8 +94,8 @@ export class App {
           </li>
         </ol>
         <p>Some example code continues below.</p>
-      </section>
-    );
+      </section>);
+
 
     print("What is your name?");
     const name = await input("John Smith");
@@ -109,6 +110,15 @@ export class App {
       await sleep(0.1);
       print(i);
     }
+
+    const cards = (await import("../data/scryfall/arena.json")).default;
+    print(`Loaded ${cards.length} cards. Here's one!`);
+
+    const card = randomChoice(cards);
+    print(card);
+    print(<img src={card.image_uri} alt={card.name} className={css({
+      width: '128px'
+    })} />);
 
     do {
       print("Please accept our terms of service.");
