@@ -56,15 +56,7 @@ Promise.resolve().then(async function main() {
 
 const words = [
   ...new Set(
-    [
-      "vegeta",
-      "goku",
-      "frieza",
-      ...dictionary.englishNoSwears
-        .filter((word) => word.length >= 4)
-        .slice(0, 2000),
-      ...bip39.wordlists.english
-    ]
+    [...dictionary.englishNoSwears.slice(0, 2000), ...bip39.wordlists.english]
       .map((word) => word.toLowerCase())
       .filter(
         (word) =>
