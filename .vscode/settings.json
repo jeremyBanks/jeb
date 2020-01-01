@@ -17,7 +17,7 @@
     "yarn": true,
     "yarn.lock": true
   },
-  "peacock.color": "#123",
+  "peacock.color": "#112233",
   "problems.showCurrentInStatus": true,
   "workbench.colorCustomizations": {
     "activityBar.activeBackground": "#1e3b59",
