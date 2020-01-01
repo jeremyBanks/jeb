@@ -17,7 +17,6 @@ cd ./gh-pages;
 git add .;
 git commit --reuse-message=HEAD;
 MERKLE_NO_CONFIRM=y ../scripts/merkle ...master;
-git push --force origin gh-pages;
 cd ..;
 rm -rf gh-pages;
 git worktree prune;

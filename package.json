@@ -4,9 +4,10 @@
   },
   "scripts": {
     "build": "scripts/build",
-    "create": "yarn install; yarn build; git add .; git commit --allow-empty-message -m ''; MERKLE_NO_CONFIRM=y scripts/merkle; yarn start",
+    "create": "yarn install --offline --frozen-lockfile; yarn deploy:gh-pages:build; git add src/CNAME; git commit -m 'initial generated CNAME: https://$(cat src/CNAME)'; yarn start",
     "deploy": "yarn deploy:gh-pages",
-    "deploy:gh-pages": "scripts/deploy-gh-pages",
+    "deploy:gh-pages": "yarn deploy:gh-pages:build; git push --force origin gh-pages",
+    "deploy:gh-pages:build": "scripts/build-gh-pages",
     "name": "scripts/name",
     "pretty": "scripts/pretty",
     "start": "react-scripts start"
@@ -34,20 +35,6 @@
     "xregexp": "^4.3.0"
   },
   "type": "module",
-  "browserslist": {
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 edge version"
-    ],
-    "production": [
-      "Firefox ESR",
-      "last 1 chrome version",
-      "last 1 edge version",
-      "last 1 firefox version",
-      "last 1 ios version"
-    ]
-  },
   "eslintConfig": {
     "extends": "react-app",
     "plugins": [
@@ -55,11 +42,6 @@
     ],
     "rules": {
       "prefer-let/prefer-let": "warn"
-    }
-  },
-  "importSort": {
-    ".js, .jsx, .ts, .tsx, .mjs": {
-      "style": "module"
     }
   },
   "prettier": {
@@ -77,6 +59,25 @@
     "proseWrap": "always",
     "trailingComma": "none"
   },
+  "browserslist": {
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 edge version"
+    ],
+    "production": [
+      "Firefox ESR",
+      "last 1 chrome version",
+      "last 1 edge version",
+      "last 1 firefox version",
+      "last 1 ios version"
+    ]
+  },
+  "importSort": {
+    ".js, .jsx, .ts, .tsx, .mjs": {
+      "style": "module"
+    }
+  },
   "format-package": {
     "order": [
       "workspaces",
@@ -87,6 +88,8 @@
       "peerDependencies",
       "resolutions",
       "type",
+      "eslintConfig",
+      "prettier",
       "...rest",
       "format-package",
       "private",
