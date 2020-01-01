@@ -16,7 +16,7 @@ cp -iR ./src ./gh-pages/src;
 cd ./gh-pages;
 git add .;
 git commit --reuse-message=HEAD;
-MERKLE_NO_CONFIRM=y ../scripts/merkle master...gh-pages;
+MERKLE_NO_CONFIRM=y MERKLE_TARGET=. ../scripts/merkle master...;
 cd ..;
 rm -rf gh-pages;
 git worktree prune;

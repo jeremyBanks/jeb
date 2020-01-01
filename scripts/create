@@ -6,6 +6,7 @@ yarn install --offline --frozen-lockfile;
 yarn deploy:gh-pages:build;
 git add src/CNAME;
 git commit -m "initial CNAME: https://$(cat src/CNAME)";
+git config alias.merk '!'"MERKLE_TARGET=${PWD} ${PWD}/scripts/merkle";
 
 code . || echo 'VS Code is recommended: https://code.visualstudio.com' 1>&2;
 yarn start;
