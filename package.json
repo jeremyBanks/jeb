@@ -2,6 +2,12 @@
   "engines": {
     "node": "14.3.0"
   },
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
   "scripts": {
     "build": "scripts/build",
     "create": "scripts/create",
@@ -88,6 +94,8 @@
     "order": [
       "workspaces",
       "engines",
+      "os",
+      "cpu",
       "scripts",
       "devDependencies",
       "dependencies",

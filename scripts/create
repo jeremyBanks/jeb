@@ -1,5 +1,6 @@
 #!/bin/bash
 set -meuo pipefail;
+pushd "$(dirname "${BASH_SOURCE:-}")/.." > /dev/null;
 trap '
   killtree() {
       local _pid=$1;
@@ -10,16 +11,19 @@ trap '
   }
   killtree $(jobs -p)
 ' EXIT;
-pushd "$(dirname "${BASH_SOURCE:-}")/.." > /dev/null;
 
 yarn install --offline --frozen-lockfile;
 yarn deploy:gh-pages:build;
+CNAME="$(cat src/CNAME)";
 git add --ignore-errors src/CNAME;
-git commit -m "initial CNAME: https://$(cat src/CNAME)";
+git commit -m "initial CNAME: https://${CNAME}";
+git config alias.hub "${PWD}"'/scripts/hub';
 git config alias.merk '!MERKLE_TARGET=${PWD} '"${PWD}"'/scripts/merkle';
 
 export PORT="$(( 3000 + ("$(date +1%s)" + "$(date +1%N)") % 7000 ))";
 echo "Using port ${PORT}." 1>&2;
+
+git hub create --homepage "https://${CNAME}" && git push -u origin master gh-pages || echo "Continuing without GitHub.";
 
 yarn start &
 yarn_pid=$!;
@@ -29,4 +33,13 @@ bash_pid=$!;
 
 code --new-window --wait . ./src/core/main.tsx || fg;
 
-echo "Shutting down."; 1>&2;
+echo 1>&2;
+echo "Editor closed, shutting down." 1>&2;
+echo 1>&2;
+echo "   Local: $PWD"
+echo "  Remote: $(git hub browse url)"
+echo "Deployed: https://$CNAME"
+echo 1>&2;
+echo "Run './yarn start' in this directory to restart the dev server." 1>&2;
+echo "Run './yarn deploy' in this directory to deploy committed changes." 1>&2;
+echo 1>&2;

@@ -19,6 +19,7 @@
     "yarn.lock": true
   },
   "peacock.color": "#112233",
+  "peacock.remoteColor": "#112233",
   "problems.showCurrentInStatus": true,
   "workbench.colorCustomizations": {
     "activityBar.activeBackground": "#1e3b59",
@@ -37,6 +38,5 @@
     "titleBar.border": "#112233",
     "titleBar.inactiveBackground": "#11223399",
     "titleBar.inactiveForeground": "#e7e7e799"
-  },
-  "peacock.remoteColor": "#112233"
+  }
 }
