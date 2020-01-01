@@ -5,7 +5,6 @@ import path from "path";
 import url from "url";
 
 import bip39 from "bip39";
-import dictionary from "word-list-google";
 
 let nameLengthMin = 12;
 let nameLengthMax = 12;
@@ -35,16 +34,20 @@ Promise.resolve().then(async function main() {
     );
     if (invalidNames.length > 0) {
       throw new Error(
-        `Existing names were invalid (example: ${invalidNames[0]}).`
+        `${
+          invalidNames.length
+        } existing names were invalid (example: ${JSON.stringify(
+          invalidNames[0]
+        )}).`
       );
     }
-    if (names.length <= 1000) {
+    if (names.length < 256) {
       throw new Error(`Too few existing names (${names.length}).`);
     }
   } catch (error) {
     console.error("Regenerating names; ", error);
     names = await regenerate();
-    fs.writeFileSync(path, names.join("\n"), {
+    fs.writeFileSync(namesPath, names.join("\n"), {
       encoding: "utf8"
     });
   }
@@ -61,7 +64,7 @@ Promise.resolve().then(async function main() {
 
 let words = [
   ...new Set(
-    [...dictionary.englishNoSwears.slice(0, 2000), ...bip39.wordlists.english]
+    [...bip39.wordlists.english]
       .map((word) => word.toLowerCase())
       .filter(
         (word) =>

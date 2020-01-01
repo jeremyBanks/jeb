@@ -29,7 +29,7 @@ env='export GIT_HEIGHT="$(git rev-list --count "${GIT_COMMIT:-HEAD}")" ;\
   export GIT_MESSAGE="$(printf %08d "${GIT_HEIGHT}")-${GIT_TREE_HASH}" ;\
   true';
 
-git filter-branch --force --env-filter "${env}" --msg-filter "${env}; echo \${GIT_MESSAGE}" "$@" || echo "I hope that wasn't an error." 1>&2;
+git filter-branch --force --env-filter "${env}" --msg-filter "${env}; echo \${GIT_MESSAGE}" "$@" || echo "I hope that wasn't an error!" 1>&2;
 
 echo;
 git --no-pager log --format=raw --graph --decorate -n 2;

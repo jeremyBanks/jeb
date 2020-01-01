@@ -140,8 +140,8 @@ let doGettingStartedMessage = async () => {
           <a href="https://github.com/otter-academy/template/generate">
             Create a repository from this template on GitHub
           </a>
-          , clone it to your computer, and <code>cd</code> into it in a Linux
-          shell.
+          , clone it to your computer (or run <code>yarn create in</code>), and{" "}
+          <code>cd</code> into it in a Linux shell.
         </li>
         <li>
           Run <code>source ./yarn install</code> to install everything required

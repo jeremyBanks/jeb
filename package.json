@@ -31,7 +31,6 @@
     "react-dom": "^16.13.1",
     "react-scripts": "^3.4.1",
     "typescript": "^3.9.3",
-    "word-list-google": "^1.0.1",
     "xregexp": "^4.3.0"
   },
   "type": "module",
