@@ -7,7 +7,7 @@ import { print } from "../utilities/print";
  * Displays a form, and disables it and returns the entered FormData when the
  * user submits it.
  */
-export const formInput = async (children: ReactNode): Promise<FormData> =>
+export let formInput = async (children: ReactNode): Promise<FormData> =>
   new Promise((resolve) => {
     print(<Form onSubmit={resolve}>{children}</Form>);
   });
@@ -18,7 +18,7 @@ export const formInput = async (children: ReactNode): Promise<FormData> =>
  * If there are duplicate names they will be overwritten, use `formInput`
  * instead if you need to capture those.
  */
-export const inputs = async (
+export let inputs = async (
   children: ReactNode
 ): Promise<Record<string, string>> =>
   Object.fromEntries(
@@ -37,7 +37,7 @@ export const inputs = async (
  * Defaults to a text input, optionally with a default string to be used if the
  * input is empty.
  */
-export const input = async (child?: string | ReactElement): Promise<string> => {
+export let input = async (child?: string | ReactElement): Promise<string> => {
   if (typeof child === "string") {
     child = <input autoFocus placeholder={child} />;
   } else if (typeof child === "undefined") {

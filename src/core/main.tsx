@@ -14,20 +14,20 @@ export class App {
    * output any type of content at the bottom of the page.
    */
   async main() {
-    const icon = document.getElementById("icon") as HTMLLinkElement;
+    let icon = document.getElementById("icon") as HTMLLinkElement;
     icon.href = "/icon.png";
 
     document.title = "Your Project";
 
-    await doGettingStartedMessage();
+    // await doGettingStartedMessage();
 
-    await doGreeting();
+    // await doGreeting();
 
-    await showARandomMagicCard();
+    // await showARandomMagicCard();
 
-    await requireTermsOfService();
+    // await requireTermsOfService();
 
-    await anotherFormExample();
+    // await anotherFormExample();
 
     await doMagicArenaLogThing();
 
@@ -45,7 +45,7 @@ export class App {
    * elements of React initially.
    */
   render(): React.ReactNode {
-    const seconds = performance.now() / 1000;
+    let seconds = performance.now() / 1000;
     let textShadow = "none";
     if (seconds > 2 && seconds < 8) {
       textShadow = "4px 6px 4px rgb(200, 200, 200)";
@@ -96,7 +96,7 @@ export class App {
   }
 }
 
-const doGettingStartedMessage = async () => {
+let doGettingStartedMessage = async () => {
   print(
     <section
       className={css({
@@ -176,9 +176,9 @@ const doGettingStartedMessage = async () => {
   );
 };
 
-const doGreeting = async () => {
+let doGreeting = async () => {
   print("What is your name?");
-  const name = await input("John Smith");
+  let name = await input("John Smith");
 
   print("Great! Just a moment...");
 
@@ -192,7 +192,7 @@ const doGreeting = async () => {
   }
 };
 
-const requireTermsOfService = async () => {
+let requireTermsOfService = async () => {
   do {
     print("Please accept our terms of service.");
   } while (
@@ -208,7 +208,7 @@ const requireTermsOfService = async () => {
   await sleep(0.5);
 };
 
-const anotherFormExample = async () => {
+let anotherFormExample = async () => {
   print(
     await inputs(
       <>
@@ -226,11 +226,11 @@ const anotherFormExample = async () => {
   );
 };
 
-const showARandomMagicCard = async () => {
-  const cards = (await import("../data/magic/arena.json")).default;
+let showARandomMagicCard = async () => {
+  let cards = (await import("../data/magic/arena.json")).default;
   print(`Loaded ${cards.length} cards. Here's one!`);
 
-  const card = randomChoice(cards);
+  let card = randomChoice(cards);
   print(card);
   print(
     <img
@@ -245,7 +245,7 @@ const showARandomMagicCard = async () => {
   );
 };
 
-const doMagicArenaLogThing = async () => {
+let doMagicArenaLogThing = async () => {
   print(
     <p
       className={css({
@@ -269,7 +269,7 @@ const doMagicArenaLogThing = async () => {
     </p>
   );
 
-  const files = (
+  let files = (
     await formInput(
       <>
         <input
@@ -282,7 +282,7 @@ const doMagicArenaLogThing = async () => {
             }
           })}
           onChange={(event) => {
-            const el = Object.assign(document.createElement("button"), {
+            let el = Object.assign(document.createElement("button"), {
               hidden: true
             });
             event.target.form.appendChild(el);
@@ -294,7 +294,7 @@ const doMagicArenaLogThing = async () => {
     )
   ).getAll("value") as Array<File>;
 
-  const contents = (
+  let contents = (
     await Promise.all(
       files.map(async (file) => ({
         name: file.name,
@@ -308,12 +308,34 @@ const doMagicArenaLogThing = async () => {
     )
   ).sort((a, b) => a.lastModified - b.lastModified);
 
-  for (const content of contents) {
+  for (let content of contents) {
     print("---");
     print(content.lastModified, content.name);
-    const lines = content.text.split(/\n/g);
-    for (const line of lines.slice(-32)) {
-      print(line);
+
+    for (let line of content.text.split(/\n/g).slice(4)) {
+      let match = line.match(
+        /(\[[0-9]+\])?[^[{]*(\[[A-Za-z].*\])?(.*)(\{.*\})/
+      );
+      if (!match) {
+        continue;
+      }
+
+      let tag = match[2];
+      let postTag = match[3];
+      let parsed;
+      try {
+        parsed = JSON.parse(match[4]);
+      } catch (error) {
+        console.log(match, error);
+        continue;
+      }
+
+      print(
+        <>
+          <b>{tag}</b> <i>{postTag}</i>
+        </>
+      );
+      print(parsed);
     }
   }
 };

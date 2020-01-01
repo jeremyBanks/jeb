@@ -3,10 +3,10 @@ import ReactDOM from "react-dom";
 
 import { App } from "./core/main";
 
-const main = async () => {
-  const app = new App();
-  const root = document.getElementById("main");
-  const main = app.main();
+let main = async () => {
+  let app = new App();
+  let root = document.getElementById("main");
+  let main = app.main();
 
   let done = false;
   while (!done) {

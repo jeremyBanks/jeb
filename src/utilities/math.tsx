@@ -1,19 +1,19 @@
 //! Re-exports contents of the Math built-in as a modern module.
 
 // Logical
-export const absolute = Math.abs;
-export const abs = absolute;
-export const round = Math.round;
-export const roundDown = Math.floor;
-export const roundTowardsZero = Math.trunc;
-export const roundUp = Math.ceil;
-export const floor = roundDown;
-export const trunc = roundTowardsZero;
-export const ceil = roundUp;
-export const sign = Math.sign;
-export const greater = Math.max;
-export const lesser = Math.min;
-export const clamp = (min: number, input: number, max: number): number => {
+export let absolute = Math.abs;
+export let abs = absolute;
+export let round = Math.round;
+export let roundDown = Math.floor;
+export let roundTowardsZero = Math.trunc;
+export let roundUp = Math.ceil;
+export let floor = roundDown;
+export let trunc = roundTowardsZero;
+export let ceil = roundUp;
+export let sign = Math.sign;
+export let greater = Math.max;
+export let lesser = Math.min;
+export let clamp = (min: number, input: number, max: number): number => {
   if (input < min) {
     return min;
   } else if (input > max) {
@@ -22,38 +22,38 @@ export const clamp = (min: number, input: number, max: number): number => {
     return input;
   }
 };
-export const max = greater;
-export const min = lesser;
+export let max = greater;
+export let min = lesser;
 
 // Magical
-export const E = Math.E;
-export const LN10 = Math.LN10;
-export const LN2 = Math.LN2;
-export const LOG10E = Math.LOG10E;
-export const LOG2E = Math.LOG2E;
-export const PI = Math.PI;
-export const SQRT1_2 = Math.SQRT1_2;
-export const SQRT2 = Math.SQRT2;
-export const acos = Math.acos;
-export const acosh = Math.acosh;
-export const asin = Math.asin;
-export const asinh = Math.asinh;
-export const atan = Math.atan;
-export const atan2 = Math.atan2;
-export const atanh = Math.atanh;
-export const cbrt = Math.cbrt;
-export const cos = Math.cos;
-export const cosh = Math.cosh;
-export const exp = Math.exp;
-export const expm1 = Math.expm1;
-export const hypot = Math.hypot;
-export const log = Math.log;
-export const log10 = Math.log10;
-export const log1p = Math.log1p;
-export const log2 = Math.log2;
-export const pow = Math.pow;
-export const sin = Math.sin;
-export const sinh = Math.sinh;
-export const sqrt = Math.sqrt;
-export const tan = Math.tan;
-export const tanh = Math.tanh;
+export let E = Math.E;
+export let LN10 = Math.LN10;
+export let LN2 = Math.LN2;
+export let LOG10E = Math.LOG10E;
+export let LOG2E = Math.LOG2E;
+export let PI = Math.PI;
+export let SQRT1_2 = Math.SQRT1_2;
+export let SQRT2 = Math.SQRT2;
+export let acos = Math.acos;
+export let acosh = Math.acosh;
+export let asin = Math.asin;
+export let asinh = Math.asinh;
+export let atan = Math.atan;
+export let atan2 = Math.atan2;
+export let atanh = Math.atanh;
+export let cbrt = Math.cbrt;
+export let cos = Math.cos;
+export let cosh = Math.cosh;
+export let exp = Math.exp;
+export let expm1 = Math.expm1;
+export let hypot = Math.hypot;
+export let log = Math.log;
+export let log10 = Math.log10;
+export let log1p = Math.log1p;
+export let log2 = Math.log2;
+export let pow = Math.pow;
+export let sin = Math.sin;
+export let sinh = Math.sinh;
+export let sqrt = Math.sqrt;
+export let tan = Math.tan;
+export let tanh = Math.tanh;

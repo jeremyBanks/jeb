@@ -39,13 +39,13 @@ class SyncStorage implements StringStorage {
   }
 
   async set(key: string, value: string) {
-    const former = this.get(key);
+    let former = this.get(key);
     this.storage.setItem(key, value);
     return former;
   }
 
   async delete(key: string) {
-    const former = this.get(key);
+    let former = this.get(key);
     this.storage.removeItem(key);
     return former;
   }
@@ -56,9 +56,9 @@ class SyncStorage implements StringStorage {
  */
 class RemoteStorage implements RemoteStorage {
   static async new() {
-    const password = "example@example.com\n3example22";
+    let password = "example@example.com\n3example22";
 
-    const privateKeyBuffer = await crypto.subtle.deriveBits(
+    let privateKeyBuffer = await crypto.subtle.deriveBits(
       {
         name: "PBKDF2",
         hash: "SHA-512",
@@ -75,25 +75,25 @@ class RemoteStorage implements RemoteStorage {
       128
     );
 
-    const publicKeyBuffer = await crypto.subtle
+    let publicKeyBuffer = await crypto.subtle
       .digest("SHA-512", privateKeyBuffer)
       .then((digest) => digest.slice(0, 128 / 8));
 
-    const toHex = (buffer: ArrayBuffer): string => {
-      const byteToHex = new Array(0x100);
+    let toHex = (buffer: ArrayBuffer): string => {
+      let byteToHex = new Array(0x100);
       for (let i = 0; i <= 0xff; ++i) {
         byteToHex[i] = i.toString(16).padStart(2, "0");
       }
-      const bufferBytes = new Uint8Array(buffer);
-      const hexOctets = Array(bufferBytes.length);
+      let bufferBytes = new Uint8Array(buffer);
+      let hexOctets = Array(bufferBytes.length);
       for (let i = 0; i < bufferBytes.length; ++i) {
         hexOctets[i] = byteToHex[bufferBytes[i]];
       }
       return hexOctets.join("");
     };
 
-    const privateKey = toHex(privateKeyBuffer);
-    const publicKey = toHex(publicKeyBuffer);
+    let privateKey = toHex(privateKeyBuffer);
+    let publicKey = toHex(publicKeyBuffer);
 
     console.log({ password, privateKey, publicKey });
   }
@@ -115,6 +115,6 @@ class RemoteStorage implements RemoteStorage {
   }
 }
 
-export const session: StringStorage = new SyncStorage(window.sessionStorage);
-export const local: StringStorage = new SyncStorage(window.localStorage);
-export const remote: RemoteStorage = new RemoteStorage();
+export let session: StringStorage = new SyncStorage(window.sessionStorage);
+export let local: StringStorage = new SyncStorage(window.localStorage);
+export let remote: RemoteStorage = new RemoteStorage();

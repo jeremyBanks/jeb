@@ -11,40 +11,43 @@ import { Printed } from "../components/printed";
  * DOM elements, React components, or if they implement the `[print.as]` method.
  * Otherwise they will be displayed as text or JSON.
  */
-export const print = (...values: Array<ReactNode | unknown>): void => {
-  console.debug(...values);
+export let print = Object.assign(
+  (...values: Array<ReactNode | unknown>): void => {
+    console.debug(...values);
 
-  const oldMax = document.documentElement.scrollHeight - window.innerHeight;
-  const atBottom = document.documentElement.scrollTop >= oldMax - 4;
+    let oldMax = document.documentElement.scrollHeight - window.innerHeight;
+    let atBottom = document.documentElement.scrollTop >= oldMax - 4;
 
-  const container = document.createElement("article");
-  document.getElementById("prints").appendChild(container);
+    let container = document.createElement("article");
+    document.getElementById("prints").appendChild(container);
 
-  ReactDOM.render(
-    <React.StrictMode>
-      <Printed
-        values={values.flatMap((value) => {
-          while (typeof value?.[print.as] === "function") {
-            value = value[print.as]();
-          }
-          return value;
-        })}
-      />
-    </React.StrictMode>,
-    container
-  );
+    ReactDOM.render(
+      <React.StrictMode>
+        <Printed
+          values={values.flatMap((value) => {
+            while (typeof value?.[print.as] === "function") {
+              value = value[print.as]();
+            }
+            return value;
+          })}
+        />
+      </React.StrictMode>,
+      container
+    );
 
-  const newMax = document.documentElement.scrollHeight - window.innerHeight;
+    let newMax = document.documentElement.scrollHeight - window.innerHeight;
 
-  if (atBottom) {
-    document.documentElement.scrollTop = newMax;
+    if (atBottom) {
+      document.documentElement.scrollTop = newMax;
+    }
+  },
+  {
+    /**
+     * Symbolic method name used to override display of a printed value.
+     *
+     * This only applies to values passed-in to print directly, it won't affect any
+     * internal rendering that takes place within the values.
+     */
+    as: Symbol("print.as")
   }
-};
-
-/**
- * Symbolic method name used to override display of a printed value.
- *
- * This only applies to values passed-in to print directly, it won't affect any
- * internal rendering that takes place within the values.
- */
-print.as = Symbol("print.as");
+);

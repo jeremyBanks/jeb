@@ -1,23 +1,23 @@
 import { css } from "emotion";
 import React, { ReactNode, useState } from "react";
 
-export const Form: React.FC<{
+export let Form: React.FC<{
   children: ReactNode;
   onSubmit(data: FormData): void;
 }> = ({ children, onSubmit }) => {
-  const [disabled, setDisabled] = useState(false);
+  let [disabled, setDisabled] = useState(false);
 
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
 
-        const nativeEvent: any = event.nativeEvent;
-        const data = new FormData(nativeEvent.target);
-        const submitter: HTMLInputElement | undefined =
+        let nativeEvent: any = event.nativeEvent;
+        let data = new FormData(nativeEvent.target);
+        let submitter: HTMLInputElement | undefined =
           nativeEvent.submitter ||
           nativeEvent.target.querySelector("fieldset :enabled");
-        const submitterName = submitter?.name || "value";
+        let submitterName = submitter?.name || "value";
         if (submitter && !data.has(submitterName)) {
           let value =
             submitter.value ||

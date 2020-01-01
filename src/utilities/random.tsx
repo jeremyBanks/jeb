@@ -2,12 +2,12 @@
  * Placeholder value used to distinguish missing arguments from `undefined`
  * arguments. (Infrequent, in most cases we want to treat them equivalently.)
  */
-const Missing = Symbol("Missing");
+let Missing = Symbol("Missing");
 
 /**
  * Generates a random number between 0 (inclusive) and 1 (exclusive).
  */
-export const randomFraction = () => {
+export let randomFraction = () => {
   return Math.random();
 };
 
@@ -19,13 +19,13 @@ export const randomFraction = () => {
  *
  * Based on https://stackoverflow.com/a/55544949.
  */
-export const randomInteger = (min: number, max: number): number => {
-  const range = max - min;
-  const maxGeneratedValue = 0xffffffff;
-  const possibleResultValues = range + 1;
-  const possibleGeneratedValues = maxGeneratedValue + 1;
-  const remainder = possibleGeneratedValues % possibleResultValues;
-  const maxUnbiased = maxGeneratedValue - remainder;
+export let randomInteger = (min: number, max: number): number => {
+  let range = max - min;
+  let maxGeneratedValue = 0xffffffff;
+  let possibleResultValues = range + 1;
+  let possibleGeneratedValues = maxGeneratedValue + 1;
+  let remainder = possibleGeneratedValues % possibleResultValues;
+  let maxUnbiased = maxGeneratedValue - remainder;
 
   if (
     !Number.isInteger(min) ||
@@ -58,11 +58,11 @@ export const randomInteger = (min: number, max: number): number => {
  * If the iterable contains no elements, throws an error unless an
  * `emptyDefault` is provided.
  */
-export const randomChoice = <Value extends unknown = unknown>(
+export let randomChoice = <Value extends unknown = unknown>(
   values: Array<Value> | Iterable<Value>,
   emptyDefault: Value | typeof Missing = Missing
 ): Value => {
-  const valueArray = [...values];
+  let valueArray = [...values];
 
   if (valueArray.length === 0) {
     if (emptyDefault === Missing) {
@@ -70,7 +70,7 @@ export const randomChoice = <Value extends unknown = unknown>(
         "attempted to take randomChoice() from an empty iterable"
       );
     } else {
-      return emptyDefault;
+      return emptyDefault as Value;
     }
   }
 

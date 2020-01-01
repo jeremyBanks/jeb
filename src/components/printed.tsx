@@ -4,7 +4,7 @@ import React, { ReactNode } from "react";
 /**
  * Renders a value that's been printed, with an animation to draw attention to the change.
  */
-export const Printed: React.FC<{ values: Array<ReactNode | any> }> = ({
+export let Printed: React.FC<{ values: Array<ReactNode | any> }> = ({
   values
 }) => (
   <div className={printed}>
@@ -22,7 +22,11 @@ export const Printed: React.FC<{ values: Array<ReactNode | any> }> = ({
           );
         }
         try {
-          return <code key={i}>{JSON.stringify(value, null, 2)}</code>;
+          let json = JSON.stringify(value, null, 2);
+          if (json && json.length > 1024) {
+            json = json.slice(0, 1024) + "… (truncated)";
+          }
+          return <code key={i}>{json}</code>;
         } catch (error) {
           console.error(error);
           return (
@@ -46,7 +50,7 @@ export const Printed: React.FC<{ values: Array<ReactNode | any> }> = ({
   </div>
 );
 
-const printed = css({
+let printed = css({
   transition: "none",
   margin: 16,
   textShadow: "0 0 0 rgba(0, 0, 0, 0)",

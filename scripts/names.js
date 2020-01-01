@@ -1,26 +1,31 @@
 #!/usr/bin/env node
 
 import fs from "fs";
+import path from "path";
+import url from "url";
 
 import bip39 from "bip39";
 import dictionary from "word-list-google";
 
-const nameLengthMin = 12;
-const nameLengthMax = 12;
-const wordLengthMin = 3;
-const wordLengthMax = 6;
-const overlapMin = 2;
-const overlapMax = 4;
+let nameLengthMin = 12;
+let nameLengthMax = 12;
+let wordLengthMin = 3;
+let wordLengthMax = 6;
+let overlapMin = 2;
+let overlapMax = 4;
 
 Promise.resolve().then(async function main() {
-  const path = "./scripts/names.txt";
+  let namesPath = path.join(
+    path.dirname(url.fileURLToPath(import.meta.url)),
+    "./names.txt"
+  );
   let names;
   try {
     names = fs
-      .readFileSync(path, { encoding: "utf8" })
+      .readFileSync(namesPath, { encoding: "utf8" })
       .split("\n")
       .filter(Boolean);
-    const invalidNames = names.filter(
+    let invalidNames = names.filter(
       (name) =>
         !(
           nameLengthMin <= name.length &&
@@ -54,7 +59,7 @@ Promise.resolve().then(async function main() {
   }
 });
 
-const words = [
+let words = [
   ...new Set(
     [...dictionary.englishNoSwears.slice(0, 2000), ...bip39.wordlists.english]
       .map((word) => word.toLowerCase())
@@ -81,9 +86,9 @@ async function regenerate() {
     },
     `using a dictionary of ${words.length} words.`
   );
-  const startGenerate = Date.now();
-  const names = [...new Set(makeNames())].sort();
-  const elapsedGenerate = (Date.now() - startGenerate) / 1000;
+  let startGenerate = Date.now();
+  let names = [...new Set(makeNames())].sort();
+  let elapsedGenerate = (Date.now() - startGenerate) / 1000;
 
   console.error(
     `Generated ${names.length} names in ${elapsedGenerate.toFixed(1)}s.`
@@ -97,19 +102,19 @@ function* makeNames(prefix = "") {
     yield prefix;
   }
 
-  const clampedOverlapMin = Math.min(overlapMin, prefix.length);
-  const clampedOverlapMax = Math.max(overlapMax, clampedOverlapMin);
+  let clampedOverlapMin = Math.min(overlapMin, prefix.length);
+  let clampedOverlapMax = Math.max(overlapMax, clampedOverlapMin);
 
   for (
     let overlap = clampedOverlapMin;
     overlap <= clampedOverlapMax;
     overlap += 1
   ) {
-    const overlapping = prefix.slice(-overlap);
-    const preOverlapping = prefix.slice(0, -overlap);
-    const minWordLength = Math.max(overlap + 1, wordLengthMin);
-    const maxWordLength = nameLengthMax - prefix.length + overlap;
-    for (const word of words) {
+    let overlapping = prefix.slice(-overlap);
+    let preOverlapping = prefix.slice(0, -overlap);
+    let minWordLength = Math.max(overlap + 1, wordLengthMin);
+    let maxWordLength = nameLengthMax - prefix.length + overlap;
+    for (let word of words) {
       if (
         minWordLength <= word.length &&
         word.length <= maxWordLength &&
