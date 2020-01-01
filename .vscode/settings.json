@@ -1,0 +1,28 @@
+{
+  "editor.tabCompletion": "on",
+  "editor.tabSize": 2,
+  "files.exclude": {
+    "build": true,
+    "src/react-app-env.d.ts": true
+  },
+  "peacock.color": "#392c2b",
+  "problems.showCurrentInStatus": true,
+  "workbench.colorCustomizations": {
+    "activityBar.activeBackground": "#564241",
+    "activityBar.activeBorder": "#000000",
+    "activityBar.background": "#564241",
+    "activityBar.foreground": "#e7e7e7",
+    "activityBar.inactiveForeground": "#e7e7e799",
+    "activityBarBadge.background": "#000000",
+    "activityBarBadge.foreground": "#e7e7e7",
+    "statusBar.background": "#392c2b",
+    "statusBar.border": "#392c2b",
+    "statusBar.foreground": "#e7e7e7",
+    "statusBarItem.hoverBackground": "#564241",
+    "titleBar.activeBackground": "#392c2b",
+    "titleBar.activeForeground": "#e7e7e7",
+    "titleBar.border": "#392c2b",
+    "titleBar.inactiveBackground": "#392c2b99",
+    "titleBar.inactiveForeground": "#e7e7e799"
+  }
+}

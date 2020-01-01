@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "eamodio.gitlens",
+    "emeraldwalk.runonsave",
+    "firefox-devtools.vscode-firefox-debug",
+    "johnpapa.vscode-peacock",
+    "ms-python.python",
+    "ms-vsliveshare.vsliveshare",
+    "msjsdiag.debugger-for-chrome",
+    "tyriar.sort-lines",
+    "visualstudioexptteam.vscodeintellicode"
+  ]
+}

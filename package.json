@@ -1,0 +1,72 @@
+{
+  "name": "project",
+  "version": "0.0.0",
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": {
+    "node": "14.3.0"
+  },
+  "scripts": {
+    "build": "yarn pretty; mkdir -p ./build; rm -rf ./build/*; yarn react-scripts build; rm -rf ./build/asset-manifest.json ./build/*/*/*LICENSE* ./build/*/*/*.map ./build/*manifest*.js ./build/service-worker.js; echo \"$(basename \"${PWD}\").otter.academy\" > ./build/CNAME",
+    "noop": "true",
+    "pretty": "jsonsort --arrays ./*.json ./src ./public ./.github ./.vscode; prettier --ignore-path .gitignore --write './**/*.{ts,tsx,js,jsx,json,md,yml,yaml,html,css}'; import-sort --ignore-path .gitignore --write './**/*.{ts,tsx,js,jsx}'",
+    "start": "yarn react-scripts start",
+    "upload": "yarn install; yarn upload-gh-pages",
+    "upload-gh-pages": "rm -rf ./gh-pages; git branch -D gh-pages; git worktree add --force ./gh-pages -b gh-pages HEAD; dotgit=$(cat gh-pages/.git); rm -rf gh-pages; mkdir -p gh-pages; echo $dotgit > gh-pages/.git; yarn build; cp -R ./build/* ./gh-pages; cd ./gh-pages; git add .; git commit --allow-empty-message -m ''; git push --force origin gh-pages; cd ..; rm -rf gh-pages; git worktree prune"
+  },
+  "browserslist": {
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version"
+    ],
+    "production": [
+      "Firefox ESR",
+      "last 1 chrome version",
+      "last 1 edge version",
+      "last 1 firefox version",
+      "last 1 ios version"
+    ]
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "importSort": {
+    ".js, .jsx, .ts, .tsx, .mjs": {
+      "style": "module"
+    }
+  },
+  "prettier": {
+    "overrides": [
+      {
+        "files": [
+          "*.yaml",
+          "*.yml"
+        ],
+        "options": {
+          "parser": "json"
+        }
+      }
+    ],
+    "trailingComma": "none"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@cloudflare/wrangler": "^1.9.1",
+    "@types/node": "^14.0.5",
+    "@types/react": "^16.9.0",
+    "@types/react-dom": "^16.9.0",
+    "emotion": "^10.0.27",
+    "husky": "^4.2.5",
+    "import-sort-cli": "^6.0.0",
+    "import-sort-parser-typescript": "^6.0.0",
+    "import-sort-style-module": "^6.0.0",
+    "json-sort-cli": "^1.15.22",
+    "lint-staged": "^10.2.6",
+    "prettier": "^2.0.5",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "react-scripts": "^3.4.1",
+    "serverless": "^1.71.3",
+    "typescript": "^3.9.3"
+  }
+}
