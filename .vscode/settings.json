@@ -2,6 +2,7 @@
   "editor.tabSize": 2,
   "files.eol": "\n",
   "files.exclude": {
+    ".gitattributes": true,
     ".github": true,
     ".gitignore": true,
     ".vscode": true,
