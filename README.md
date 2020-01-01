@@ -16,4 +16,4 @@ Run `./yarn pretty` to format the code.
 
 Run `./yarn build` to build a release version of the project.
 
-Run `./yarn upload` to install, build, and publish to GitHub Pages.
+Run `./yarn deploy` to install, build, and publish to GitHub Pages.

@@ -5,7 +5,7 @@ import { App } from "./core/main";
 
 const main = async () => {
   const app = new App();
-  const root = document.querySelector("main");
+  const root = document.querySelector("#main");
   const main = app.main();
 
   let done = false;

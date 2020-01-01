@@ -18,14 +18,13 @@ export const print = (...values: Array<ReactNode | unknown>): void => {
     window.document.documentElement.scrollHeight - window.innerHeight;
   const atBottom = window.document.documentElement.scrollTop >= oldMax - 4;
 
-  const container = document.createElement("div");
-
-  document.body.appendChild(container);
+  const container = document.createElement("article");
+  document.querySelector("#prints").appendChild(container);
 
   ReactDOM.render(
     <React.StrictMode>
       <Printed
-        values={values.flatMap((value, i) => {
+        values={values.flatMap((value, _i) => {
           if (typeof value?.[print.as] === "function") {
             value = value[print.as]();
           }

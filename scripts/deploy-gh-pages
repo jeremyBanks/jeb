@@ -2,7 +2,8 @@
 set -euo pipefail;
 
 rm -rf ./gh-pages;
-git branch -D gh-pages;
+git worktree prune;
+git branch -D gh-pages || true;
 git worktree add --force ./gh-pages -b gh-pages HEAD;
 dotgit="$(cat gh-pages/.git)";
 rm -rf gh-pages;

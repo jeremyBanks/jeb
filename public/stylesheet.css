@@ -3,8 +3,13 @@ html {
 }
 
 body {
-  margin: 16px;
+  padding: 0;
+  margin: 0;
   font-size: 16px;
+}
+
+body > section {
+  display: contents;
 }
 
 img {

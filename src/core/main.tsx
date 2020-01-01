@@ -4,7 +4,6 @@ import React from "react";
 import { SplashyGreeting } from "../components/splashy-greeting";
 import { sleep } from "../utilities/async";
 import { input, inputs } from "../utilities/input";
-import { clamp, roundDown } from "../utilities/math";
 import { print } from "../utilities/print";
 
 export class App {
@@ -27,6 +26,11 @@ export class App {
     await sleep(2.0);
 
     print(<SplashyGreeting name={name} />);
+
+    for (let i = 0; i < 20; i++) {
+      await sleep(0.1);
+      print(i);
+    }
 
     do {
       print("Please accept our terms of service.");
@@ -74,28 +78,27 @@ export class App {
    */
   render(): React.ReactNode {
     const seconds = performance.now() / 1000;
-    const fontSize = clamp(20, roundDown(16 + seconds), 30);
     let textShadow = "none";
     if (seconds > 2 && seconds < 8) {
       textShadow = "4px 6px 4px rgb(200, 200, 200)";
     }
 
     return (
-      <>
-        <div
-          className={css({
-            fontWeight: "bold",
-            fontSize,
-            color: "rgb(0, 25, 100)",
-            textShadow,
-            height: 100
-          })}
-        >
-          It has been <code>{seconds.toFixed(0).padStart(3, "0")}</code> seconds
-          and this is displayed at a font size of <code>{fontSize}</code>{" "}
-          pixels.
-        </div>
-      </>
+      <section
+        className={css({
+          position: "sticky",
+          top: "0px",
+          padding: "16px",
+          fontWeight: "bold",
+          color: "rgb(0, 25, 100)",
+          background: "white",
+          borderBottom: "3px solid black",
+          zIndex: 100,
+          textShadow
+        })}
+      >
+        It has been <code>{seconds.toFixed(0).padStart(3, "0")}</code> seconds.
+      </section>
     );
   }
 }
