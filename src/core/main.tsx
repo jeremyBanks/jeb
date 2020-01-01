@@ -40,6 +40,8 @@ export class App {
       ))
     );
 
+    await sleep(0.5);
+
     print(
       await inputs(
         <>
@@ -49,11 +51,9 @@ export class App {
             required
             minLength={1}
           />
-          <button value="A" autoFocus>
-            A
-          </button>
-          <button value="B">B</button>
-          <button value="C">C</button>
+          <button autoFocus>A</button>
+          <button>B</button>
+          <button>C</button>
         </>
       )
     );

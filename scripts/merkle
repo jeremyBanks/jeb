@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail;
 
-git log --graph --decorate -n 2;
+git --no-pager log --graph --decorate -n 2;
 echo;
 
 read -p "$(tput bold)$(tput setaf 1)Press Y to normalize the merkle tree. Press N to quit. $(tput smul)" -n 1 -r;
@@ -29,4 +29,4 @@ eval "$env";
 git commit --amend --no-edit;
 
 echo;
-git log --graph --decorate -n 2;
+git --no-pager log --graph --decorate -n 2;

@@ -16,7 +16,6 @@ export const Printed: React.FC<{ values: Array<ReactNode | any> }> = ({
       ) {
         return <span key={i}>{value}</span>;
       } else {
-        console.log(value);
         if (value instanceof FormData) {
           value = Object.fromEntries(
             [...value.keys()].map((key) => [key, value.getAll(key)])

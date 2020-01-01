@@ -17,7 +17,6 @@ export const Form: React.FC<{
         const submitter: HTMLInputElement | undefined =
           nativeEvent.submitter ||
           nativeEvent.target.querySelector("fieldset :enabled");
-        console.log({ submitter });
         const submitterName = submitter?.name || "value";
         if (submitter && !data.has(submitterName)) {
           let value =

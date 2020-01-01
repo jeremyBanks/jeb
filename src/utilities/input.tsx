@@ -21,14 +21,11 @@ export const inputs = async (
     })
   );
 
-export const elementInput = async (child: ReactElement): Promise<string> =>
-  (await inputs(child)).value || "";
-
 export const input = async (child?: string | ReactElement): Promise<string> => {
   if (typeof child === "string") {
     child = <input autoFocus placeholder={child} />;
   } else if (typeof child === "undefined") {
     child = <input autoFocus />;
   }
-  return (await inputs(child)).value;
+  return (await inputs(child)).value || "";
 };
