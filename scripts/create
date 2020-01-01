@@ -7,5 +7,5 @@ yarn deploy:gh-pages:build;
 git add src/CNAME;
 git commit -m "initial CNAME: https://$(cat src/CNAME)";
 
-code --folder-uri "${PWD}" || echo 'VS Code is recommended: https://code.visualstudio.com' 1>&2;
+code . || echo 'VS Code is recommended: https://code.visualstudio.com' 1>&2;
 yarn start;

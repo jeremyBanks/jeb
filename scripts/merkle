@@ -2,7 +2,7 @@
 pushd "$(dirname "${BASH_SOURCE:-}")/.." > /dev/null;
 set -euo pipefail;
 
-git --no-pager log --graph --decorate -n 2;
+git --no-pager log --format=raw --graph --decorate -n 2;
 echo;
 
 if [[ ! "${MERKLE_NO_CONFIRM:-}" =~ ^[Yy]$ ]]; then
@@ -29,7 +29,7 @@ env='export GIT_HEIGHT="$(git rev-list --count "${GIT_COMMIT:-HEAD}")" ;\
 
 git filter-branch --force --env-filter "${env}" --msg-filter "${env}; echo \${GIT_MESSAGE}" "$@" || echo "I hope that wasn't an error." 1>&2;
 eval "$env";
-git commit --amend --no-edit;
+GIT_COMMITTER_DATE="$(git log -1 --date=local --format=%aI)" git commit --amend --no-edit;
 
 echo;
-git --no-pager log --graph --decorate -n 2;
+git --no-pager log --format=raw --graph --decorate -n 2;

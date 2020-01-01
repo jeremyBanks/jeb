@@ -229,7 +229,11 @@ let anotherFormExample = async () => {
 };
 
 let showARandomMagicCard = async () => {
-  let cards = (await import("../data/magic/arena.json")).default;
+  let cards = (
+    await import(
+      /* webpackChunkName: "arena.json" */ "../data/magic/arena.json"
+    )
+  ).default;
   print(`Loaded ${cards.length} cards. Here's one!`);
 
   let card = randomChoice(cards);
@@ -249,10 +253,11 @@ let showARandomMagicCard = async () => {
 
 let doMagicArenaLogThing = async () => {
   let cards = Object.fromEntries(
-    (await import("../data/magic/arena.json")).default.map((x) => [
-      x.arena_id,
-      x
-    ])
+    (
+      await import(
+        /* webpackChunkName: "arena.json" */ "../data/magic/arena.json"
+      )
+    ).default.map((x) => [x.arena_id, x])
   );
 
   print(
