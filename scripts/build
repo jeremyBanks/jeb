@@ -4,10 +4,12 @@ set -euo pipefail;
 
 if [ "${CNAME:-}" != "" ]; then
   # if CNAME is set in env, we use that.
+  echo "Using provided CNAME: https://${CNAME}" 1>&2;
   true we good;
 elif [ -e ./src/CNAME ]; then
   # otherwise if CNAME is set in ./src, we use that.
   CNAME="$(cat ./src/CNAME)";
+  echo "Using saved CNAME: https://${CNAME}" 1>&2;
 else
   # otherwise we pick a random name.
   CNAME="$(scripts/names.js).otter.academy"
