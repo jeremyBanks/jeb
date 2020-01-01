@@ -2,11 +2,14 @@ import { css } from "emotion";
 import React from "react";
 
 import { GlobalStyles } from "../components/global-styles";
+import { Printed } from "../components/printed";
 import { SplashyGreeting } from "../components/splashy-greeting";
 import { NEVER, sleep } from "../utilities/async";
 import { formInput, input, inputs } from "../utilities/input";
 import { print } from "../utilities/print";
 import { randomChoice } from "../utilities/random";
+import * as regex from "../utilities/regex";
+import { re, reg } from "../utilities/regex";
 
 export class App {
   /**
@@ -294,7 +297,7 @@ let doMagicArenaLogThing = async () => {
     )
   ).getAll("value") as Array<File>;
 
-  let contents = (
+  let logs = (
     await Promise.all(
       files.map(async (file) => ({
         name: file.name,
@@ -308,34 +311,47 @@ let doMagicArenaLogThing = async () => {
     )
   ).sort((a, b) => a.lastModified - b.lastModified);
 
-  for (let content of contents) {
-    print("---");
-    print(content.lastModified, content.name);
+  let [latestLog] = logs.slice(-1);
 
-    for (let line of content.text.split(/\n/g).slice(4)) {
-      let match = line.match(
-        /(\[[0-9]+\])?[^[{]*(\[[A-Za-z].*\])?(.*)(\{.*\})/
-      );
-      if (!match) {
-        continue;
-      }
+  let messageDivider = reg`\n\[\d+\]\s+`;
 
-      let tag = match[2];
-      let postTag = match[3];
-      let parsed;
-      try {
-        parsed = JSON.parse(match[4]);
-      } catch (error) {
-        console.log(match, error);
-        continue;
-      }
+  // MTGA log messages have inconsistent formatting, but this grabs
+  // most of the interesting one.
+  let messageParts = re`
+    ^\s*(
+      \[ (?<logger> [^\]]+ ) \]
+    )?\s*(
+      (?<text> [^\{]* )
+    )\s*(
+      (?<json> \{ .* \})
+    )?\s*$
+  `;
 
-      print(
-        <>
-          <b>{tag}</b> <i>{postTag}</i>
-        </>
-      );
-      print(parsed);
+  for (let message of latestLog.text.split(messageDivider)) {
+    let match = regex.exec(message, messageParts);
+    if (!match) {
+      continue;
     }
+
+    let logger: string | undefined = match.logger;
+    let text: string | undefined = match.text;
+    let json: string | undefined = match.json;
+
+    let parsed: object | undefined = json ? JSON.parse(json) : undefined;
+
+    let interesting = text?.includes("<==") && parsed;
+
+    if (!interesting) {
+      continue;
+    }
+
+    print(
+      <>
+        <b>{logger}</b> <code>{text}</code>
+        <Printed values={[parsed]} />
+      </>
+    );
+
+    await sleep(2);
   }
 };

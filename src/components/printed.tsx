@@ -23,8 +23,8 @@ export let Printed: React.FC<{ values: Array<ReactNode | any> }> = ({
         }
         try {
           let json = JSON.stringify(value, null, 2);
-          if (json && json.length > 1024) {
-            json = json.slice(0, 1024) + "… (truncated)";
+          if (json && json.length > 256) {
+            json = json.slice(0, 256) + "… (truncated)";
           }
           return <code key={i}>{json}</code>;
         } catch (error) {
