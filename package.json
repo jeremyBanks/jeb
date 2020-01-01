@@ -8,10 +8,10 @@
   },
   "scripts": {
     "build": "scripts/build",
+    "deploy": "yarn install; yarn deploy-gh-pages",
+    "deploy-gh-pages": "scripts/deploy-gh-pages",
     "pretty": "scripts/pretty",
-    "start": "react-scripts start",
-    "upload": "yarn install; yarn upload-gh-pages",
-    "upload-gh-pages": "scripts/upload-gh-pages"
+    "start": "react-scripts start"
   },
   "browserslist": {
     "development": [

@@ -14,7 +14,7 @@ cp -iR ./src ./gh-pages/src;
 
 cd ./gh-pages;
 git add .;
-git commit --allow-empty-message -m '';
+git commit --allow-empty-message -m 'deploy-gh-pages';
 git push --force origin gh-pages;
 cd ..;
 rm -rf gh-pages;

@@ -1,13 +1,15 @@
 #!/bin/bash
 set -euo pipefail;
 
+git log --graph --decorate -n 2;
+echo;
+
 read -p "$(tput bold)$(tput setaf 1)Press Y to normalize the merkle tree. Press N to quit. $(tput smul)" -n 1 -r;
 echo "$(tput sgr 0)";
+echo;
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     exit 1;
 fi
-
-git log --format=fuller --decorate -n 3;
 
 env='export GIT_HEIGHT="$(printf %08d "$(git rev-list --count "${GIT_COMMIT:-HEAD}")")" ;\
   export GIT_COMMITTER_TIMESTAMP="$((1577836800 + 10 + 20 * (${GIT_HEIGHT} - 1) ))" ;\
@@ -26,7 +28,5 @@ git filter-branch --force --env-filter "${env}" --msg-filter "${env}; echo \${GI
 eval "$env";
 git commit --amend --no-edit;
 
-sync;
-sleep 1;
-
-git log --format=fuller --decorate -n 3;
+echo;
+git log --graph --decorate -n 2;

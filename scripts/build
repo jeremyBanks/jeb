@@ -1,13 +1,13 @@
 #!/bin/bash
 set -euo pipefail;
 
+if [ ! -e ./src/CNAME ]; then
+  echo "$(basename "${PWD}").otter.academy" > ./src/CNAME;
+fi
+
 yarn pretty;
 mkdir -p ./build;
 rm -rf ./build/*;
 yarn react-scripts build;
-
-if [ ! -e ./src/CNAME ]; then
-  echo \"$(basename \"${PWD}\").otter.academy\" > ./src/CNAME;
-fi
 
 cp ./src/CNAME ./build/CNAME;

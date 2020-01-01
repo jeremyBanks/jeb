@@ -2,16 +2,27 @@
  * An asynchronous key-value store of strings.
  */
 export interface StringStorage {
-  /** Returns a boolean indicating whether there is a value with the specified key. */
+  /**
+   * Returns a boolean indicating whether there is a value with the specified key.
+   */
   has(key: string): Promise<boolean>;
-  /** Returns the value stored under the specified key, or undefined. */
+  /**
+   * Returns the value stored under the specified key, or undefined.
+   */
   get(key: string): Promise<string | undefined>;
-  /** Sets the value stored under a specified key, returning the previous value or undefined. */
+  /**
+   * Sets the value stored under a specified key, returning the previous value or undefined.
+   */
   set(key: string, value: string): Promise<string | undefined>;
-  /** Deletes the value stored under a specified key there is any, returning it or undefined. */
+  /**
+   * Deletes the value stored under a specified key there is any, returning it or undefined.
+   */
   delete(key: string): Promise<string | undefined>;
 }
 
+/**
+ * The browser's built in synchronous string storage.
+ */
 class SyncStorage implements StringStorage {
   readonly storage: Storage;
 
@@ -40,6 +51,9 @@ class SyncStorage implements StringStorage {
   }
 }
 
+/**
+ * Our own remote storage service. Not implemented.
+ */
 class RemoteStorage implements RemoteStorage {
   readonly privateKey: string;
   readonly publicKey: string;

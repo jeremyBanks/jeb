@@ -1,6 +1,6 @@
 # Getting Started
 
-Run `. ./yarn install` in this directory in your Linux terminal to install
+Run `source ./yarn install` in this directory in your Linux terminal to install
 everything required for this project.
 
 You will probably want to open this project directory in
