@@ -46,13 +46,6 @@
       "prefer-let"
     ],
     "rules": {
-      "@typescript-eslint/no-unused-vars": [
-        "warn",
-        {
-          "varsIgnorePattern": "^_"
-        }
-      ],
-      "no-unused-vars": "off",
       "prefer-let/prefer-let": "warn"
     }
   },
