@@ -5,5 +5,9 @@ yarn pretty;
 mkdir -p ./build;
 rm -rf ./build/*;
 yarn react-scripts build;
-rm -rf ./build/asset-manifest.json ./build/*/*/*LICENSE* ./build/*/*/*.map ./build/*manifest*.js ./build/service-worker.js;
-echo \"$(basename \"${PWD}\").otter.academy\" > ./build/CNAME;
+
+if [ ! -e ./src/CNAME ]; then
+  echo \"$(basename \"${PWD}\").otter.academy\" > ./src/CNAME;
+fi
+
+cp ./src/CNAME ./build/CNAME;

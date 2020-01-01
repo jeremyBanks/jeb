@@ -1,4 +1,5 @@
-#!/bin/bash -euo pipefail
+#!/bin/bash
+set -euo pipefail;
 
 rm -rf ./gh-pages;
 git branch -D gh-pages;
@@ -8,7 +9,9 @@ rm -rf gh-pages;
 mkdir -p gh-pages;
 echo "${dotgit}" > gh-pages/.git;
 yarn build;
-cp -R ./build/* ./gh-pages;
+cp -iR ./build/* ./gh-pages;
+cp -iR ./src ./gh-pages/src;
+
 cd ./gh-pages;
 git add .;
 git commit --allow-empty-message -m '';

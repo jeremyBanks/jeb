@@ -3,8 +3,16 @@
   "editor.tabSize": 2,
   "files.eol": "\n",
   "files.exclude": {
+    ".github": true,
+    ".gitignore": true,
+    ".vscode": true,
     "build": true,
-    "src/react-app-env.d.ts": true
+    "run": true,
+    "scripts": true,
+    "src/**/*.d.ts": true,
+    "tsconfig.json": true,
+    "yarn": true,
+    "yarn.lock": true
   },
   "peacock.color": "#392c2b",
   "problems.showCurrentInStatus": true,

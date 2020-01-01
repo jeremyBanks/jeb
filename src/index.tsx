@@ -18,6 +18,8 @@ const main = async () => {
       )
     ]);
   }
+
+  console.debug("main() has exited.");
 };
 
 main();

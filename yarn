@@ -1,13 +1,17 @@
 #!/bin/bash
 # 
 # A wrapper for `yarn` which also installs and activates the appropriate version
-# of `node` and `yarn` using `nvm`, which is also installed if missing.
+# of `node` and `yarn` using `nvm`, which is also installed if missing. May be
+# used as a script or sourced in Bash.
 #
-set -euo pipefail;
-shopt -s globstar nullglob;
-pushd "$(dirname "${BASH_SOURCE}")" > /dev/null;
+(return 0 2>/dev/null) && sourced=true || sourced=false;
+if ! $sourced; then
+  set -euo pipefail;
+fi
 
-if [ -z "${npm_package_name:-}" ]; then
+pushd "$(dirname "${BASH_SOURCE:-}")" > /dev/null;
+
+if $sourced || [ -z "${npm_package_name:-}" ]; then
   echo "🧶 Preparing and activating Node/Yarn environment..." 1>&2;
 
   if [ ! -e "${HOME}/.nvm/nvm.sh" ]; then
@@ -22,7 +26,6 @@ if [ -z "${npm_package_name:-}" ]; then
 
   . ~/.nvm/nvm.sh;
 
-  source "${HOME}/.nvm/nvm.sh";
   if [ -z "$(nvm which default)" ]; then
     echo "🧶 Installing any Node..." 1>&2;
     nvm install stable;
@@ -54,4 +57,8 @@ fi
 
 popd > /dev/null;
 
-exec yarn "$@";
+if ! $sourced; then
+  exec yarn "$@";
+else
+  yarn "$@";
+fi
