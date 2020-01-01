@@ -1,7 +1,7 @@
 import { css, keyframes } from "emotion";
 import React from "react";
 
-export let SplashyGreeting: React.FC<{ name: string }> = ({ name }) => {
+export let SplashyGreeting = ({ name }: { name: string }) => {
   return (
     <div
       className={css({

@@ -4,10 +4,13 @@ import React, { ReactNode } from "react";
 /**
  * Renders a value that's been printed, with an animation to draw attention to the change.
  */
-export let Printed: React.FC<{
+export let Printed = ({
+  values,
+  inline
+}: {
   values: Array<ReactNode | any>;
   inline?: boolean;
-}> = ({ values, inline }) => (
+}) => (
   <div
     className={css(
       printed,

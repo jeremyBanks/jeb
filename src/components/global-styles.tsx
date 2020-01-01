@@ -4,7 +4,7 @@ import React from "react";
 /**
  * Global style definitions that are applied throughout the entire document.
  */
-export let GlobalStyles: React.FC<{}> = () => (
+export let GlobalStyles = () => (
   <emotionReact.Global
     styles={emotionReact.css({
       "input, textarea, button, select": {

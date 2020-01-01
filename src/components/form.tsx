@@ -1,10 +1,13 @@
 import { css } from "emotion";
 import React, { ReactNode, useState } from "react";
 
-export let Form: React.FC<{
+export let Form = ({
+  children,
+  onSubmit
+}: {
   children: ReactNode;
-  onSubmit(data: FormData): void;
-}> = ({ children, onSubmit }) => {
+  onSubmit: (data: FormData) => void;
+}) => {
   let [disabled, setDisabled] = useState(false);
 
   return (

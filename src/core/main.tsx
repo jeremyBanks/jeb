@@ -2,7 +2,6 @@ import { css } from "emotion";
 import React from "react";
 
 import { GlobalStyles } from "../components/global-styles";
-import { Printed } from "../components/printed";
 import { SplashyGreeting } from "../components/splashy-greeting";
 import { NEVER, sleep } from "../utilities/async";
 import { formInput, input, inputs } from "../utilities/input";
