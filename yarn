@@ -18,10 +18,10 @@ if "${sourced}" || [ -z "${npm_package_name:-}" ]; then
 
   if [ ! -e "${HOME}/.nvm/nvm.sh" ]; then
     echo "🧶 Installing Node Version Manager (nvm)..." 1>&2;
-    ./nvm-install-v0.35.3.bash;
+    ./scripts/nvm-install-v0.35.3.bash;
   fi
 
-  source ~/.nvm/nvm.sh;
+  source "${HOME}/.nvm/nvm.sh";
 
   if [ -z "$(nvm which default)" ]; then
     echo "🧶 Installing any Node..." 1>&2;
