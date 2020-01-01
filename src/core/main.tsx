@@ -358,12 +358,12 @@ let doMagicArenaLogThing = async () => {
     }
   }
 
-  let decks = responses["Deck.GetDeckListsV3"];
+  let _decks = responses["Deck.GetDeckListsV3"];
   let collection = responses["PlayerInventory.GetPlayerCardsV3"];
-  let inventory = responses["PlayerInventory.GetPlayerInventory"];
-  let formats = responses["PlayerInventory.GetFormats"];
-  let ranks = responses["Event.GetCombinedRankInfo"];
-  let season = responses["Event.GetSeasonAndRankDetail"];
+  let _inventory = responses["PlayerInventory.GetPlayerInventory"];
+  let _formats = responses["PlayerInventory.GetFormats"];
+  let _ranks = responses["Event.GetCombinedRankInfo"];
+  let _season = responses["Event.GetSeasonAndRankDetail"];
 
   for (let [cardId, count] of Object.entries(collection)) {
     let card = cards[cardId];
