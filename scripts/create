@@ -26,11 +26,11 @@ git commit -m "initial URLs: http://localhost:${PORT} https://${CNAME}";
 
 git hub create --homepage "https://${CNAME}" && git push -u origin master gh-pages || echo "Continuing without GitHub.";
 
-yarn start &
-yarn_pid=$!;
-
-(bash --login || true) &
+(bash --login || [ "$?" = "130" ]) &
 bash_pid=$!;
+
+(yarn start || [ "$?" = "130" ]) </dev/null &
+yarn_pid=$!;
 
 code --new-window --wait . ./src/core/main.tsx || fg;
 
