@@ -1,0 +1,31 @@
+#!/bin/bash
+set -euo pipefail;
+
+pushd "$(dirname "${BASH_SOURCE:-}")/.." > /dev/null;
+
+url="$(curl https://api.scryfall.com/bulk-data | jq '. |
+  .data
+  | map(select(.type == "oracle_cards"))
+  | first
+  | .download_uri
+' --raw-output)";
+
+echo "${url}";
+
+curl "$url" | jq '
+  map(
+    select(.object == "card" and (.games | contains(["arena"])))
+    | {
+      name,
+      layout,
+      mana_cost,
+      cmc,
+      type_line,
+      colors,
+      set,
+      rarity,
+      oracle_text,
+      standardLegal: .legalities.standard
+    }
+  )
+' > ./public/data/scryfall/arena.json;
