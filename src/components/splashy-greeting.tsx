@@ -5,6 +5,7 @@ export const SplashyGreeting: React.FC<{ name: string }> = ({ name }) => {
   return (
     <div
       className={css({
+        transition: "none",
         animationName: keyframes({
           "0%": {
             background: "lime"

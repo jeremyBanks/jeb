@@ -12,20 +12,19 @@ import { Printed } from "../components/printed";
  * Otherwise they will be displayed as text or JSON.
  */
 export const print = (...values: Array<ReactNode | unknown>): void => {
-  console.log(...values);
+  console.debug(...values);
 
-  const oldMax =
-    window.document.documentElement.scrollHeight - window.innerHeight;
-  const atBottom = window.document.documentElement.scrollTop >= oldMax - 4;
+  const oldMax = document.documentElement.scrollHeight - window.innerHeight;
+  const atBottom = document.documentElement.scrollTop >= oldMax - 4;
 
   const container = document.createElement("article");
-  document.querySelector("#prints").appendChild(container);
+  document.getElementById("prints").appendChild(container);
 
   ReactDOM.render(
     <React.StrictMode>
       <Printed
-        values={values.flatMap((value, _i) => {
-          if (typeof value?.[print.as] === "function") {
+        values={values.flatMap((value) => {
+          while (typeof value?.[print.as] === "function") {
             value = value[print.as]();
           }
           return value;
@@ -35,11 +34,10 @@ export const print = (...values: Array<ReactNode | unknown>): void => {
     container
   );
 
-  const newMax =
-    window.document.documentElement.scrollHeight - window.innerHeight;
+  const newMax = document.documentElement.scrollHeight - window.innerHeight;
 
   if (atBottom) {
-    window.document.documentElement.scrollTop = newMax;
+    document.documentElement.scrollTop = newMax;
   }
 };
 

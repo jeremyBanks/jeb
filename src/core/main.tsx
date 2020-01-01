@@ -1,3 +1,4 @@
+import * as emotionReact from "@emotion/core";
 import { css } from "emotion";
 import React from "react";
 
@@ -12,11 +13,21 @@ export class App {
    * output any type of content at the bottom of the page.
    */
   async main() {
-    // Set the page's title and icon.
-    const title = document.head.querySelector("title");
-    const icon: HTMLLinkElement = document.head.querySelector("link[rel=icon]");
-    title.textContent = "A Pup's Project";
+    const icon = document.getElementById("icon") as HTMLLinkElement;
     icon.href = "/icon.png";
+
+    document.title = "Your Project";
+
+    print(
+      <p>
+        You can{" "}
+        <a href="https://github.com/otter-academy/template/generate">
+          create a repository from this template on GitHub
+        </a>
+        , edit it to your heart's content, then <code>./yarn deploy</code> it to
+        the web.
+      </p>
+    );
 
     print("What is your name?");
     const name = await input("John Smith");
@@ -50,8 +61,8 @@ export class App {
       await inputs(
         <>
           <input
-            name="something else"
-            placeholder="hmm"
+            name="thinking"
+            placeholder="what are you thinking?"
             required
             minLength={1}
           />
@@ -84,21 +95,79 @@ export class App {
     }
 
     return (
-      <section
-        className={css({
-          position: "sticky",
-          top: "0px",
-          padding: "16px",
-          fontWeight: "bold",
-          color: "rgb(0, 25, 100)",
-          background: "white",
-          borderBottom: "3px solid black",
-          zIndex: 100,
-          textShadow
-        })}
-      >
-        It has been <code>{seconds.toFixed(0).padStart(3, "0")}</code> seconds.
-      </section>
+      <>
+        <main
+          className={css({
+            position: "sticky",
+            top: "0px",
+            padding: "16px",
+            fontWeight: "bold",
+            color: "rgb(0, 25, 100)",
+            borderBottom: "3px solid black",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.5)",
+            background: "#FFFFF8",
+            zIndex: 100,
+            textShadow
+          })}
+        >
+          <a href="/">
+            <img
+              alt=""
+              src="/icon.png"
+              className={css({
+                height: 32,
+                width: 32
+              })}
+            />
+          </a>
+          It has been <code>{seconds.toFixed(0).padStart(3, "0")}</code>{" "}
+          seconds.
+        </main>
+
+        <emotionReact.Global
+          styles={emotionReact.css({
+            html: {
+              boxSizing: "border-box"
+            },
+
+            a: {
+              color: "blue",
+
+              ":hover": {
+                color: "red"
+              }
+            },
+
+            "*": {
+              boxSizing: "inherit",
+              fontFamily: "inherit",
+              transitionDuration: "inherit"
+            },
+
+            body: {
+              padding: "0",
+              margin: "0",
+              fontSize: "16px"
+            },
+
+            "body > section": {
+              display: "contents"
+            },
+
+            "body > section > *": {
+              transitionDuration: "0.5s"
+            },
+
+            img: {
+              verticalAlign: "middle"
+            },
+
+            "code, pre, kbd": {
+              whiteSpace: "pre-wrap"
+            }
+          })}
+        />
+      </>
     );
   }
 }

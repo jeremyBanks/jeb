@@ -12,10 +12,10 @@ echo "${dotgit}" > gh-pages/.git;
 yarn build;
 cp -iR ./build/* ./gh-pages;
 cp -iR ./src ./gh-pages/src;
-
 cd ./gh-pages;
 git add .;
-git commit --allow-empty-message -m 'deploy-gh-pages';
+git commit --reuse-message=HEAD;
+MERKLE_NO_CONFIRM=y ../scripts/merkle ...master;
 git push --force origin gh-pages;
 cd ..;
 rm -rf gh-pages;

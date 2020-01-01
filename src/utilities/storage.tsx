@@ -55,8 +55,48 @@ class SyncStorage implements StringStorage {
  * Our own remote storage service. Not implemented.
  */
 class RemoteStorage implements RemoteStorage {
-  readonly privateKey: string;
-  readonly publicKey: string;
+  static async new() {
+    const password = "example@example.com\n3example22";
+
+    const privateKeyBuffer = await crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        hash: "SHA-512",
+        salt: new Uint8Array(),
+        iterations: 1 << 16
+      },
+      await crypto.subtle.importKey(
+        "raw",
+        new TextEncoder().encode(password),
+        "PBKDF2",
+        true,
+        ["deriveBits"]
+      ),
+      128
+    );
+
+    const publicKeyBuffer = await crypto.subtle
+      .digest("SHA-512", privateKeyBuffer)
+      .then((digest) => digest.slice(0, 128 / 8));
+
+    const toHex = (buffer: ArrayBuffer): string => {
+      const byteToHex = new Array(0x100);
+      for (let i = 0; i <= 0xff; ++i) {
+        byteToHex[i] = i.toString(16).padStart(2, "0");
+      }
+      const bufferBytes = new Uint8Array(buffer);
+      const hexOctets = Array(bufferBytes.length);
+      for (let i = 0; i < bufferBytes.length; ++i) {
+        hexOctets[i] = byteToHex[bufferBytes[i]];
+      }
+      return hexOctets.join("");
+    };
+
+    const privateKey = toHex(privateKeyBuffer);
+    const publicKey = toHex(publicKeyBuffer);
+
+    console.log({ password, privateKey, publicKey });
+  }
 
   async has(_key: string) {
     return false;

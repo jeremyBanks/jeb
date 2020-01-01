@@ -3,11 +3,21 @@ import React, { ReactElement, ReactNode } from "react";
 import { Form } from "../components/form";
 import { print } from "../utilities/print";
 
+/**
+ * Displays a form, and disables it and returns the entered FormData when the
+ * user submits it.
+ */
 export const formInput = async (children: ReactNode): Promise<FormData> =>
   new Promise((resolve) => {
     print(<Form onSubmit={resolve}>{children}</Form>);
   });
 
+/**
+ * Returns a Record with the values from each form control by name.
+ *
+ * If there are duplicate names they will be overwritten, use `formInput`
+ * instead if you need to capture those.
+ */
 export const inputs = async (
   children: ReactNode
 ): Promise<Record<string, string>> =>
@@ -21,6 +31,12 @@ export const inputs = async (
     })
   );
 
+/**
+ * Returns the value specified with a single form control.
+ *
+ * Defaults to a text input, optionally with a default string to be used if the
+ * input is empty.
+ */
 export const input = async (child?: string | ReactElement): Promise<string> => {
   if (typeof child === "string") {
     child = <input autoFocus placeholder={child} />;

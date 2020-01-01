@@ -47,6 +47,7 @@ export const Printed: React.FC<{ values: Array<ReactNode | any> }> = ({
 );
 
 const printed = css({
+  transition: "none",
   margin: 16,
   textShadow: "0 0 0 rgba(0, 0, 0, 0)",
   color: "rgba(0, 0, 0, 1.0)",
@@ -56,13 +57,13 @@ const printed = css({
       color: "rgba(0, 0, 0, 0)",
       opacity: 0.0
     },
-    "5%": {
-      textShadow: "0 0 8px black",
+    "40%": {
+      textShadow: "0 0 4px black",
       color: "rgba(0, 0, 0, 0)",
       opacity: 1.0
     },
-    "25%": {
-      textShadow: "0 0 4px black",
+    "60%": {
+      textShadow: "0 0 4px rgba(0, 0, 0, 0.25)",
       color: "rgba(0, 0, 0, 0.5)",
       opacity: 1.0
     },
@@ -72,8 +73,8 @@ const printed = css({
       opacity: 1.0
     }
   })}`,
-  animationDuration: "0.5s",
-  animationTimingFunction: "linear",
+  animationDuration: "0.25s",
+  animationTimingFunction: "ease-in-out",
   animationIterationCount: 1,
   animationFillMode: "forwards"
 });
