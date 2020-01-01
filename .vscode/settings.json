@@ -1,6 +1,7 @@
 {
   "editor.tabCompletion": "on",
   "editor.tabSize": 2,
+  "files.eol": "\n",
   "files.exclude": {
     "build": true,
     "src/react-app-env.d.ts": true

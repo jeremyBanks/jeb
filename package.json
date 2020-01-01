@@ -7,12 +7,11 @@
     "node": "14.3.0"
   },
   "scripts": {
-    "build": "yarn pretty; mkdir -p ./build; rm -rf ./build/*; yarn react-scripts build; rm -rf ./build/asset-manifest.json ./build/*/*/*LICENSE* ./build/*/*/*.map ./build/*manifest*.js ./build/service-worker.js; echo \"$(basename \"${PWD}\").otter.academy\" > ./build/CNAME",
-    "noop": "true",
-    "pretty": "jsonsort --arrays ./*.json ./src ./public ./.github ./.vscode; prettier --ignore-path .gitignore --write './**/*.{ts,tsx,js,jsx,json,md,yml,yaml,html,css}'; import-sort --ignore-path .gitignore --write './**/*.{ts,tsx,js,jsx}'",
-    "start": "yarn react-scripts start",
+    "build": "scripts/build",
+    "pretty": "scripts/pretty",
+    "start": "react-scripts start",
     "upload": "yarn install; yarn upload-gh-pages",
-    "upload-gh-pages": "rm -rf ./gh-pages; git branch -D gh-pages; git worktree add --force ./gh-pages -b gh-pages HEAD; dotgit=$(cat gh-pages/.git); rm -rf gh-pages; mkdir -p gh-pages; echo $dotgit > gh-pages/.git; yarn build; cp -R ./build/* ./gh-pages; cd ./gh-pages; git add .; git commit --allow-empty-message -m ''; git push --force origin gh-pages; cd ..; rm -rf gh-pages; git worktree prune"
+    "upload-gh-pages": "scripts/upload-gh-pages"
   },
   "browserslist": {
     "development": [

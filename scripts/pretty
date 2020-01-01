@@ -1,0 +1,6 @@
+#!/bin/bash
+set -euo pipefail;
+
+jsonsort --arrays ./*.json ./src ./public ./.github ./.vscode;
+prettier --ignore-path .gitignore --write './**/*.{ts,tsx,js,jsx,json,md,yml,yaml,html,css}';
+import-sort --ignore-path .gitignore --write './**/*.{ts,tsx,js,jsx}';

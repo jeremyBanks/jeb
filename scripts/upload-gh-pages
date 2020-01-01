@@ -1,0 +1,18 @@
+#!/bin/bash -euo pipefail
+
+rm -rf ./gh-pages;
+git branch -D gh-pages;
+git worktree add --force ./gh-pages -b gh-pages HEAD;
+dotgit="$(cat gh-pages/.git)";
+rm -rf gh-pages;
+mkdir -p gh-pages;
+echo "${dotgit}" > gh-pages/.git;
+yarn build;
+cp -R ./build/* ./gh-pages;
+cd ./gh-pages;
+git add .;
+git commit --allow-empty-message -m '';
+git push --force origin gh-pages;
+cd ..;
+rm -rf gh-pages;
+git worktree prune;
