@@ -1,18 +1,40 @@
 {
-  "name": "project",
-  "version": "0.0.0",
-  "license": "UNLICENSED",
-  "private": true,
   "engines": {
     "node": "14.3.0"
   },
   "scripts": {
     "build": "scripts/build",
-    "deploy": "yarn install; yarn deploy-gh-pages",
-    "deploy-gh-pages": "scripts/deploy-gh-pages",
+    "deploy": "yarn install; yarn deploy:gh-pages",
+    "deploy:gh-pages": "scripts/deploy-gh-pages",
+    "name": "scripts/name",
     "pretty": "scripts/pretty",
     "start": "react-scripts start"
   },
+  "devDependencies": {
+    "@emotion/core": "^10.0.28",
+    "@shopify/useful-types": "^2.1.5",
+    "@types/node": "^14.0.5",
+    "@types/react": "^16.9.0",
+    "@types/react-dom": "^16.9.0",
+    "bip39": "^3.0.2",
+    "emotion": "^10.0.27",
+    "fp-ts": "^2.6.1",
+    "import-sort-cli": "^6.0.0",
+    "import-sort-parser-typescript": "^6.0.0",
+    "import-sort-style-module": "^6.0.0",
+    "io-ts": "^2.2.3",
+    "io-ts-promise": "^2.0.2",
+    "io-ts-types": "^0.5.6",
+    "json-sort-cli": "^1.15.22",
+    "monocle-ts": "^2.1.0",
+    "prettier": "^2.0.5",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "react-scripts": "^3.4.1",
+    "typescript": "^3.9.3",
+    "word-list-google": "^1.0.1"
+  },
+  "type": "module",
   "browserslist": {
     "development": [
       "last 1 chrome version",
@@ -49,27 +71,26 @@
     "proseWrap": "always",
     "trailingComma": "none"
   },
-  "type": "module",
-  "devDependencies": {
-    "@emotion/core": "^10.0.28",
-    "@shopify/useful-types": "^2.1.5",
-    "@types/node": "^14.0.5",
-    "@types/react": "^16.9.0",
-    "@types/react-dom": "^16.9.0",
-    "emotion": "^10.0.27",
-    "fp-ts": "^2.6.1",
-    "import-sort-cli": "^6.0.0",
-    "import-sort-parser-typescript": "^6.0.0",
-    "import-sort-style-module": "^6.0.0",
-    "io-ts": "^2.2.3",
-    "io-ts-promise": "^2.0.2",
-    "io-ts-types": "^0.5.6",
-    "json-sort-cli": "^1.15.22",
-    "lint-staged": "^10.2.6",
-    "prettier": "^2.0.5",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1",
-    "react-scripts": "^3.4.1",
-    "typescript": "^3.9.3"
-  }
+  "format-package": {
+    "order": [
+      "engines",
+      "scripts",
+      "devDependencies",
+      "dependencies",
+      "peerDependencies",
+      "resolutions",
+      "type",
+      "...rest",
+      "format-package",
+      "private",
+      "license",
+      "name",
+      "version",
+      "author"
+    ]
+  },
+  "private": true,
+  "license": "UNLICENSED",
+  "name": "project",
+  "version": "0.0.0"
 }

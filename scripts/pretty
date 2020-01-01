@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail;
+shopt -s extglob globstar nullglob;
+export GLOBIGNORE="**/node_modules/**";
 
-jsonsort --arrays ./*.json ./src ./public ./.github ./.vscode;
-prettier --ignore-path .gitignore --write './**/*.{ts,tsx,js,jsx,json,md,yml,yaml,html,css}';
-import-sort --ignore-path .gitignore --write './**/*.{ts,tsx,js,jsx}';
+jsonsort -p --arrays ./*.json ./src ./public ./.github ./.vscode;
+format-package --write ./**/package.json;
+prettier --ignore-path .gitignore --write ./**/*.{ts,tsx,js,jsx,json,md,yml,yaml,html,css};
+import-sort --ignore-path .gitignore --write ./**/*.{ts,tsx,js,jsx};

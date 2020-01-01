@@ -1,11 +1,25 @@
 #!/bin/bash
+pushd "$(dirname "${BASH_SOURCE:-}")/.." > /dev/null;
 set -euo pipefail;
 
 CNAME="${CNAME:-}";
-if [ "${CNAME}" = "" ]; then
-  if [ ! -e ./src/CNAME ]; then
-    CNAME="$(basename "${PWD}").otter.academy";
+SRC_CNAME="$([ -e ./src/CNAME ] && cat ./src/CNAME || true)";
+
+if [ "${CNAME}" != "" ]; then
+  # if CNAME is set in env, we use that.
+  true we good;
+elif [ "${SRC_CNAME}" != "" ]; then
+  # otherwise if CNAME is set in ./src, we use that.
+  CNAME="${SRC_CNAME}";
+else
+  # otherwise we pick a random name.
+  CNAME="$(scripts/names.js).otter.academy"
+  # we save it unless we're in a `template` folder.
+  if [ "$(basename $(pwd))" != "template" ]; then
+    echo "Generated and saved CNAME: https://${CNAME}";
     echo "${CNAME}" > ./src/CNAME;
+  else
+    echo "Generated temporary CNAME: https://${CNAME}";
   fi
 fi
 
