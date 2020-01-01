@@ -4,7 +4,7 @@
   },
   "scripts": {
     "build": "scripts/build",
-    "create": "yarn install --offline --frozen-lockfile; yarn deploy:gh-pages:build; git add src/CNAME; git commit -m 'initial generated CNAME: https://$(cat src/CNAME)'; yarn start",
+    "create": "scripts/create",
     "deploy": "yarn deploy:gh-pages",
     "deploy:gh-pages": "yarn deploy:gh-pages:build; git push --force origin gh-pages",
     "deploy:gh-pages:build": "scripts/build-gh-pages",
