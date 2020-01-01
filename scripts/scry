@@ -3,11 +3,11 @@ set -euo pipefail;
 
 pushd "$(dirname "${BASH_SOURCE:-}")/.." > /dev/null;
 
-mkdir -p ./src/data/scryfall/;
+mkdir -p ./src/data/magic/;
 
 url="$(curl https://api.scryfall.com/bulk-data | jq '. |
   .data
-  | map(select(.type == "oracle_cards"))
+  | map(select(.type == "default_cards"))
   | first
   | .download_uri
 ' --raw-output)";
@@ -16,19 +16,20 @@ echo "${url}";
 
 curl "$url" | jq '
   map(
-    select(.object == "card" and (.games | contains(["arena"])))
+    select(.object == "card" and .arena_id != null)
     | {
-      name,
+      arena_id,
+      cmc,
+      colors,
+      image_uri: .image_uris.normal,
       layout,
       mana_cost,
-      cmc,
-      type_line,
-      colors,
-      set,
-      rarity,
+      name,
       oracle_text,
+      rarity,
+      set,
       standard_legal: .legalities.standard,
-      image_uri: .image_uris.normal
+      type_line
     }
-  )
-' > ./src/data/scryfall/arena.json;
+  ) | sort_by(.arena_id)
+' > ./src/data/magic/arena.json;

@@ -4,9 +4,9 @@ import React from "react";
 import { GlobalStyles } from "../components/global-styles";
 import { SplashyGreeting } from "../components/splashy-greeting";
 import { sleep } from "../utilities/async";
-import { input, inputs } from "../utilities/input";
-import { randomChoice } from "../utilities/random";
+import { formInput, input, inputs } from "../utilities/input";
 import { print } from "../utilities/print";
+import { randomChoice } from "../utilities/random";
 
 export class App {
   /**
@@ -94,8 +94,8 @@ export class App {
           </li>
         </ol>
         <p>Some example code continues below.</p>
-      </section>);
-
+      </section>
+    );
 
     print("What is your name?");
     const name = await input("John Smith");
@@ -111,14 +111,20 @@ export class App {
       print(i);
     }
 
-    const cards = (await import("../data/scryfall/arena.json")).default;
+    const cards = (await import("../data/magic/arena.json")).default;
     print(`Loaded ${cards.length} cards. Here's one!`);
 
     const card = randomChoice(cards);
     print(card);
-    print(<img src={card.image_uri} alt={card.name} className={css({
-      width: '128px'
-    })} />);
+    print(
+      <img
+        src={card.image_uri}
+        alt={card.name}
+        className={css({
+          width: "128px"
+        })}
+      />
+    );
 
     do {
       print("Please accept our terms of service.");
@@ -149,6 +155,8 @@ export class App {
         </>
       )
     );
+
+    await this.doMagicCardThing();
 
     // keep running forever
     return new Promise(() => {});
@@ -213,5 +221,80 @@ export class App {
         <GlobalStyles />
       </>
     );
+  }
+
+  async doMagicCardThing() {
+
+    print(
+      <p
+        className={css({
+          "code, pre": {
+            background: "rgba(0, 0, 0, 0.03)",
+            border: "1px solid rgba(0, 0, 0, 0.03)",
+            borderRadius: "4px",
+            padding: "0 4px"
+          },
+
+          code: {
+            userSelect: "all",
+            cursor: "pointer"
+          }
+        })}
+      >
+        Give us some files in{" "}
+        <code>
+          C:\Program Files (x86)\Wizards of the Coast\MTGA\MTGA_Data\Logs\Logs
+        </code>
+      </p>
+    );
+
+    const files = (
+      await formInput(
+        <>
+          <input
+            name="value"
+            type="file"
+            {...{ multiple: true, accept: ".log" }}
+            className={css({
+              "&:enabled": {
+                cursor: "pointer"
+              }
+            })}
+            onChange={(event) => {
+              const el = Object.assign(document.createElement("button"), {
+                hidden: true
+              });
+              event.target.form.appendChild(el);
+              el.click();
+              event.target.form.removeChild(el);
+            }}
+          />
+        </>
+      )
+    ).getAll("value") as Array<File>;
+
+    const contents = (
+      await Promise.all(
+        files.map(async (file) => ({
+          name: file.name,
+          lastModified: file.lastModified,
+          text: new TextDecoder()
+            .decode(
+              await (file as {
+                arrayBuffer(): Promise<ArrayBuffer>;
+              }).arrayBuffer()
+            )
+        }))
+      )
+    ).sort((a, b) => a.lastModified - b.lastModified);
+
+    for (const content of contents) {
+      print("---");
+      print(content.lastModified, content.name);
+      const lines = content.text.split(/\n/g);
+      for (const line of lines.slice(-32)) {
+        print(line)
+      }
+    }
   }
 }
