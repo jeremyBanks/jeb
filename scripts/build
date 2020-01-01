@@ -2,24 +2,21 @@
 pushd "$(dirname "${BASH_SOURCE:-}")/.." > /dev/null;
 set -euo pipefail;
 
-CNAME="${CNAME:-}";
-SRC_CNAME="$([ -e ./src/CNAME ] && cat ./src/CNAME || true)";
-
-if [ "${CNAME}" != "" ]; then
+if [ "${CNAME:-}" != "" ]; then
   # if CNAME is set in env, we use that.
   true we good;
-elif [ "${SRC_CNAME}" != "" ]; then
+elif [ -e ./src/CNAME ]; then
   # otherwise if CNAME is set in ./src, we use that.
-  CNAME="${SRC_CNAME}";
+  CNAME="$(cat ./src/CNAME)";
 else
   # otherwise we pick a random name.
   CNAME="$(scripts/names.js).otter.academy"
   # we save it unless we're in a `template` folder.
   if [ "$(basename $(pwd))" != "template" ]; then
-    echo "Generated and saved CNAME: https://${CNAME}";
+    echo "Generated and saved CNAME: https://${CNAME}" 1>&2;
     echo "${CNAME}" > ./src/CNAME;
   else
-    echo "Generated temporary CNAME: https://${CNAME}";
+    echo "Generated temporary CNAME: https://${CNAME}" 1>&2;
   fi
 fi
 
