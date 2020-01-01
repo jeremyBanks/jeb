@@ -28,8 +28,7 @@ env='export GIT_HEIGHT="$(git rev-list --count "${GIT_COMMIT:-HEAD}")" ;\
   true';
 
 git filter-branch --force --env-filter "${env}" --msg-filter "${env}; echo \${GIT_MESSAGE}" "$@" || echo "I hope that wasn't an error." 1>&2;
-eval "$env";
-GIT_COMMITTER_DATE="$(git log -1 --date=local --format=%aI)" git commit --amend --no-edit;
+eval "$env; git commit --amend --no-edit";
 
 echo;
 git --no-pager log --format=raw --graph --decorate -n 2;
