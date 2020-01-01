@@ -3,3 +3,8 @@
  */
 export const sleep = (seconds: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+
+/**
+ * A promise that will never settle/resolve/reject; it will be pending forever.
+ */
+export const NEVER: Promise<never> = new Promise((_resolve, _reject) => {});

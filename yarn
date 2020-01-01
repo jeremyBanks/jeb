@@ -1,15 +1,17 @@
 #!/bin/bash
-# 
+#
 # A wrapper for `yarn` which also installs and activates the appropriate version
 # of `node` and `yarn` using `nvm`, which is also installed if missing. May be
 # used as a script or sourced in Bash.
 #
-(return 0 2>/dev/null) && sourced=true || sourced=false;
-if ! $sourced; then
+pushd "$(dirname "${BASH_SOURCE:-}")" > /dev/null;
+if (return 0 2>/dev/null); then
+  sourced=true
+  set -o pipefail;
+else
+  sourced=false;
   set -euo pipefail;
 fi
-
-pushd "$(dirname "${BASH_SOURCE:-}")" > /dev/null;
 
 if $sourced || [ -z "${npm_package_name:-}" ]; then
   echo "🧶 Preparing and activating Node/Yarn environment..." 1>&2;
@@ -35,12 +37,12 @@ if $sourced || [ -z "${npm_package_name:-}" ]; then
   fi
 
   node_version="$(node -p 'require("./package.json").engines.node')";
-  
+
   if [ -z "$(nvm which ${node_version})" ]; then
     echo "🧶 Installing Node ${node_version}..." 1>&2;
     nvm install "${node_version}";
   fi
-  
+
   nvm use "${node_version}" 1>/dev/null 2>/dev/null
 
   if ! nvm exec "${node_version}" yarn --version 1>/dev/null 2>/dev/null; then
@@ -57,8 +59,8 @@ fi
 
 popd > /dev/null;
 
-if ! $sourced; then
-  exec yarn "$@";
-else
+if $sourced; then
   yarn "$@";
+else
+  exec yarn "$@";
 fi
