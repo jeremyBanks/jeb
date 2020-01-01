@@ -6,7 +6,7 @@ import { Printed } from "../components/printed";
 import { SplashyGreeting } from "../components/splashy-greeting";
 import { NEVER, sleep } from "../utilities/async";
 import { formInput, input, inputs } from "../utilities/input";
-import { print } from "../utilities/print";
+import { print, printInline } from "../utilities/print";
 import { randomChoice } from "../utilities/random";
 import * as regex from "../utilities/regex";
 import { re, reg } from "../utilities/regex";
@@ -22,15 +22,15 @@ export class App {
 
     document.title = "Your Project";
 
-    // await doGettingStartedMessage();
+    await doGettingStartedMessage();
 
-    // await doGreeting();
+    await doGreeting();
 
-    // await showARandomMagicCard();
+    await showARandomMagicCard();
 
-    // await requireTermsOfService();
+    await requireTermsOfService();
 
-    // await anotherFormExample();
+    await anotherFormExample();
 
     await doMagicArenaLogThing();
 
@@ -249,6 +249,13 @@ let showARandomMagicCard = async () => {
 };
 
 let doMagicArenaLogThing = async () => {
+  let cards = Object.fromEntries(
+    (await import("../data/magic/arena.json")).default.map((x) => [
+      x.arena_id,
+      x
+    ])
+  );
+
   print(
     <p
       className={css({
@@ -297,7 +304,7 @@ let doMagicArenaLogThing = async () => {
     )
   ).getAll("value") as Array<File>;
 
-  let logs = (
+  let logFiles = (
     await Promise.all(
       files.map(async (file) => ({
         name: file.name,
@@ -311,12 +318,7 @@ let doMagicArenaLogThing = async () => {
     )
   ).sort((a, b) => a.lastModified - b.lastModified);
 
-  let [latestLog] = logs.slice(-1);
-
   let messageDivider = reg`\n\[\d+\]\s+`;
-
-  // MTGA log messages have inconsistent formatting, but this grabs
-  // most of the interesting one.
   let messageParts = re`
     ^\s*(
       \[ (?<logger> [^\]]+ ) \]
@@ -327,31 +329,56 @@ let doMagicArenaLogThing = async () => {
     )?\s*$
   `;
 
-  for (let message of latestLog.text.split(messageDivider)) {
-    let match = regex.exec(message, messageParts);
-    if (!match) {
+  let logs = logFiles.flatMap((file) =>
+    file.text.split(messageDivider).flatMap((message) => {
+      let match = regex.exec(message, messageParts);
+      if (!match) {
+        return [];
+      }
+      let logger: string | undefined = match.logger?.trim();
+      let text: string | undefined = match.text?.trim();
+      let json: object | undefined = match.json
+        ? JSON.parse(match.json)
+        : undefined;
+      return [{ logger, text, json }];
+    })
+  );
+
+  let responses: Record<string, object> = {};
+  for (let log of logs) {
+    if (log.text?.startsWith("<== ") && log.json) {
+      let method = log.text.slice("<== ".length);
+      responses[method] = (log.json as any).payload as
+        | Array<unknown>
+        | Record<string, unknown>;
+    }
+  }
+
+  let decks = responses["Deck.GetDeckListsV3"];
+  let collection = responses["PlayerInventory.GetPlayerCardsV3"];
+  let inventory = responses["PlayerInventory.GetPlayerInventory"];
+  let formats = responses["PlayerInventory.GetFormats"];
+  let ranks = responses["Event.GetCombinedRankInfo"];
+  let season = responses["Event.GetSeasonAndRankDetail"];
+
+  for (let [cardId, count] of Object.entries(collection)) {
+    let card = cards[cardId];
+    if (!card) {
+      console.warn("unknown card id", cardId);
       continue;
     }
-
-    let logger: string | undefined = match.logger;
-    let text: string | undefined = match.text;
-    let json: string | undefined = match.json;
-
-    let parsed: object | undefined = json ? JSON.parse(json) : undefined;
-
-    let interesting = text?.includes("<==") && parsed;
-
-    if (!interesting) {
-      continue;
-    }
-
-    print(
-      <>
-        <b>{logger}</b> <code>{text}</code>
-        <Printed values={[parsed]} />
-      </>
+    printInline(
+      <img
+        src={card.image_uri}
+        alt={card.name}
+        className={css({
+          height: 128,
+          width: 92,
+          objectFit: "contain"
+        })}
+      />,
+      count !== 1 ? "x" + count : ""
     );
-
-    await sleep(2);
+    await sleep(0.05);
   }
 };

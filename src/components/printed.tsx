@@ -4,10 +4,21 @@ import React, { ReactNode } from "react";
 /**
  * Renders a value that's been printed, with an animation to draw attention to the change.
  */
-export let Printed: React.FC<{ values: Array<ReactNode | any> }> = ({
-  values
-}) => (
-  <div className={printed}>
+export let Printed: React.FC<{
+  values: Array<ReactNode | any>;
+  inline?: boolean;
+}> = ({ values, inline }) => (
+  <div
+    className={css(
+      printed,
+      inline
+        ? {
+            display: "inline",
+            margin: 2
+          }
+        : {}
+    )}
+  >
     {values.map((value, i) => {
       if (
         React.isValidElement(value) ||
@@ -23,8 +34,8 @@ export let Printed: React.FC<{ values: Array<ReactNode | any> }> = ({
         }
         try {
           let json = JSON.stringify(value, null, 2);
-          if (json && json.length > 256) {
-            json = json.slice(0, 256) + "… (truncated)";
+          if (json && json.length > 512) {
+            json = json.slice(0, 512) + "… (truncated)";
           }
           return <code key={i}>{json}</code>;
         } catch (error) {

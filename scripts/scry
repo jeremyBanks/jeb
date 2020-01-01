@@ -28,7 +28,8 @@ curl "$url" | jq '
       rarity,
       set,
       standard_legal: .legalities.standard,
-      type_line
+      type_line,
+      multiverse_ids
     }
   ) | sort_by(.arena_id)
 ' > ./src/data/magic/arena.json;
