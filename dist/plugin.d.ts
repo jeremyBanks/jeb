@@ -20,20 +20,21 @@ declare class Spider {
   fetchPreloadData(url: string): Promise<any>;
 }
 declare class CommonSku {
-  readonly appId: string;
+  readonly app: string;
   readonly sku: string;
   readonly type: "game" | "addon" | "bundle" | "subscription";
   readonly name: string;
   readonly handle: string;
   readonly description: string;
   constructor(
-    appId: string,
+    app: string,
     sku: string,
     type: "game" | "addon" | "bundle" | "subscription",
     name: string,
     handle: string,
     description: string
   );
+  key(): string;
 }
 declare class Game extends CommonSku {
   readonly type: "game";
@@ -44,7 +45,7 @@ declare class AddOn extends CommonSku {
 declare class Bundle extends CommonSku {
   readonly skus: Array<string>;
   constructor(
-    appId: string,
+    app: string,
     sku: string,
     type: "bundle",
     name: string,
@@ -56,7 +57,7 @@ declare class Bundle extends CommonSku {
 declare class Subscription extends CommonSku {
   readonly skus: Array<string>;
   constructor(
-    appId: string,
+    app: string,
     sku: string,
     type: "subscription",
     name: string,

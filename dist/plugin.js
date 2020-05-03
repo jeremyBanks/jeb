@@ -42,7 +42,7 @@ class Spider {
     while (Object.keys(this.skus).length > Object.keys(this.spidered).length) {
       for (const sku of Object.values(this.skus)) {
         if (this.spidered[sku.sku] !== true) {
-          console.debug("🕷️👀", "spidering ", sku);
+          console.debug("🕷️👀", "spidering ", sku.key(), sku);
           await this.loadSkuDetails(sku.sku);
           this.spidered[sku.sku] = true;
         }
@@ -50,7 +50,13 @@ class Spider {
     }
   }
   download() {
-    const json = JSON.stringify(this.skus, null, 2);
+    const json = JSON.stringify(
+      Object.fromEntries(
+        Object.values(this.skus).map((sku) => [sku.key(), sku])
+      ),
+      null,
+      2
+    );
     // XXX: this blob is leaked
     const href = URL.createObjectURL(
       new Blob([json], {
@@ -66,14 +72,10 @@ class Spider {
     document.body.removeChild(el);
   }
   async loadSkuList(number) {
-    const page = await this.fetchPreloadData(`/store/list/${number}`);
-    return page.skus;
+    await this.fetchPreloadData(`/store/list/${number}`);
   }
   async loadSkuDetails(sku) {
-    const page = await this.fetchPreloadData(
-      `/readonlystoredetails/_/sku/${sku}`
-    );
-    return page;
+    await this.fetchPreloadData(`/store/details/_/sku/${sku}`);
   }
   loadSkuData(data) {
     let sku;
@@ -180,6 +182,7 @@ class Spider {
         const skus = data[2].map((p) => this.loadSkuData(p[9]));
         return { skus };
       },
+      FWhQV_24r: (data) => loaders.Qc7K6_24r(data),
       Qc7K6_24r: (data) => {
         const gameData = data[18]?.[0]?.[9];
         const game = gameData && this.loadSkuData(gameData);
@@ -220,13 +223,24 @@ class Spider {
   }
 }
 class CommonSku {
-  constructor(appId, sku, type, name, handle, description) {
-    this.appId = appId;
+  constructor(app, sku, type, name, handle, description) {
+    this.app = app;
     this.sku = sku;
     this.type = type;
     this.name = name;
     this.handle = handle;
     this.description = description;
+  }
+  key() {
+    return `${
+      { game: "g", addon: "o", bundle: "x", subscription: "a" }[this.type] ??
+      this.type
+    }${this.app.slice(0, 6)}${this.sku.slice(0, 4)}${(
+      this.handle + this.name
+    ).slice(0, 16)}${this.sku.slice(4)}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "")
+      .slice(0, 32);
   }
 }
 class Game extends CommonSku {
@@ -242,14 +256,14 @@ class AddOn extends CommonSku {
   }
 }
 class Bundle extends CommonSku {
-  constructor(appId, sku, type = "bundle", name, handle, description, skus) {
-    super(appId, sku, type, name, handle, description);
+  constructor(app, sku, type = "bundle", name, handle, description, skus) {
+    super(app, sku, type, name, handle, description);
     this.skus = skus;
   }
 }
 class Subscription extends CommonSku {
   constructor(
-    appId,
+    app,
     sku,
     type = "subscription",
     name,
@@ -257,7 +271,7 @@ class Subscription extends CommonSku {
     description,
     skus
   ) {
-    super(appId, sku, type, name, handle, description);
+    super(app, sku, type, name, handle, description);
     this.skus = skus;
   }
 }
