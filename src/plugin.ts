@@ -7,7 +7,7 @@
     console.debug("🕷️👀", "starting spider", spider);
     const data = await spider.load();
     console.debug("🕷️👀", "completed spider", spider, data);
-    // spider.download();
+    spider.download();
   } catch (error) {
     console.error("🕷️👀", error);
   }
