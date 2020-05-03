@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build": " prettier --write src && rm -rf dist/* && tsc && prettier --write dist"
+    "build": "sort-json data/*.json; prettier --write src && rm -rf dist/* && tsc && prettier --write dist"
   },
   "devDependencies": {
     "prettier": "^2.0.5",
