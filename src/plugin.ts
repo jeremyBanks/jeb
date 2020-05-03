@@ -82,7 +82,9 @@ class Spider {
   }
 
   private async loadSkuDetails(sku: string) {
-    const page = await this.fetchPreloadData(`/store/details/sku/sku/${sku}`);
+    const page = await this.fetchPreloadData(
+      `/readonlystoredetails/_/sku/${sku}`
+    );
     return page;
   }
 
@@ -166,11 +168,13 @@ class Spider {
         )
       )[0];
 
-    const dataCallbackPattern = /^ *AF_initDataCallback *\( *{ *key *: *'([^]*?)' *,[^]*?data: *function *\( *\){ *return *([^]*)\s*}\s*}\s*\)\s*;?\s*$/;
-    const dataServiceLoads = contents
+    const dataCallbackPattern = /^ *AF_initDataCallback *\( *{ *key *: *'ds:([0-9]+?)' *,[^]*?data: *function *\( *\){ *return *([^]*)\s*}\s*}\s*\)\s*;?\s*$/;
+    const dataServiceLoads = [];
+    for (const matches of contents
       .map((s) => s.match(dataCallbackPattern))
-      .filter(Boolean)
-      .map((matches) => JSON.parse(matches[2]));
+      .filter(Boolean)) {
+      dataServiceLoads[matches[1]] = JSON.parse(matches[2]);
+    }
 
     const dataServiceRpcPrefixes = Object.values(dataServiceRequests).map(
       (x: any) => {
@@ -250,32 +254,32 @@ class CommonSku {
   constructor(
     readonly appId: string,
     readonly sku: string,
-    readonly skuType: "game" | "addon" | "bundle" | "subscription",
+    readonly type: "game" | "addon" | "bundle" | "subscription",
     readonly name: string,
-    readonly somename: string,
+    readonly handle: string,
     readonly description: string
   ) {}
 }
 
 class Game extends CommonSku {
-  readonly skuType = "game" as const;
+  readonly type = "game" as const;
 }
 
 class AddOn extends CommonSku {
-  readonly skuType = "addon" as const;
+  readonly type = "addon" as const;
 }
 
 class Bundle extends CommonSku {
   constructor(
     appId: string,
     sku: string,
-    skuType = "bundle" as const,
+    type = "bundle" as const,
     name: string,
-    somename: string,
+    handle: string,
     description: string,
     readonly skus: Array<string>
   ) {
-    super(appId, sku, skuType, name, somename, description);
+    super(appId, sku, type, name, handle, description);
   }
 }
 
@@ -283,12 +287,12 @@ class Subscription extends CommonSku {
   constructor(
     appId: string,
     sku: string,
-    skuType = "subscription" as const,
+    type = "subscription" as const,
     name: string,
-    somename: string,
+    handle: string,
     description: string,
     readonly skus: Array<string>
   ) {
-    super(appId, sku, skuType, name, somename, description);
+    super(appId, sku, type, name, handle, description);
   }
 }

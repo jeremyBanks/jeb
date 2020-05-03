@@ -70,7 +70,9 @@ class Spider {
     return page.skus;
   }
   async loadSkuDetails(sku) {
-    const page = await this.fetchPreloadData(`/store/details/sku/sku/${sku}`);
+    const page = await this.fetchPreloadData(
+      `/readonlystoredetails/_/sku/${sku}`
+    );
     return page;
   }
   loadSkuData(data) {
@@ -147,11 +149,13 @@ class Spider {
           Object.entries(requests).map(([key, value]) => [key, value])
         )
       )[0];
-    const dataCallbackPattern = /^ *AF_initDataCallback *\( *{ *key *: *'([^]*?)' *,[^]*?data: *function *\( *\){ *return *([^]*)\s*}\s*}\s*\)\s*;?\s*$/;
-    const dataServiceLoads = contents
+    const dataCallbackPattern = /^ *AF_initDataCallback *\( *{ *key *: *'ds:([0-9]+?)' *,[^]*?data: *function *\( *\){ *return *([^]*)\s*}\s*}\s*\)\s*;?\s*$/;
+    const dataServiceLoads = [];
+    for (const matches of contents
       .map((s) => s.match(dataCallbackPattern))
-      .filter(Boolean)
-      .map((matches) => JSON.parse(matches[2]));
+      .filter(Boolean)) {
+      dataServiceLoads[matches[1]] = JSON.parse(matches[2]);
+    }
     const dataServiceRpcPrefixes = Object.values(dataServiceRequests).map(
       (x) => {
         const pieces = [x.id, ...x.request];
@@ -216,38 +220,30 @@ class Spider {
   }
 }
 class CommonSku {
-  constructor(appId, sku, skuType, name, somename, description) {
+  constructor(appId, sku, type, name, handle, description) {
     this.appId = appId;
     this.sku = sku;
-    this.skuType = skuType;
+    this.type = type;
     this.name = name;
-    this.somename = somename;
+    this.handle = handle;
     this.description = description;
   }
 }
 class Game extends CommonSku {
   constructor() {
     super(...arguments);
-    this.skuType = "game";
+    this.type = "game";
   }
 }
 class AddOn extends CommonSku {
   constructor() {
     super(...arguments);
-    this.skuType = "addon";
+    this.type = "addon";
   }
 }
 class Bundle extends CommonSku {
-  constructor(
-    appId,
-    sku,
-    skuType = "bundle",
-    name,
-    somename,
-    description,
-    skus
-  ) {
-    super(appId, sku, skuType, name, somename, description);
+  constructor(appId, sku, type = "bundle", name, handle, description, skus) {
+    super(appId, sku, type, name, handle, description);
     this.skus = skus;
   }
 }
@@ -255,13 +251,13 @@ class Subscription extends CommonSku {
   constructor(
     appId,
     sku,
-    skuType = "subscription",
+    type = "subscription",
     name,
-    somename,
+    handle,
     description,
     skus
   ) {
-    super(appId, sku, skuType, name, somename, description);
+    super(appId, sku, type, name, handle, description);
     this.skus = skus;
   }
 }

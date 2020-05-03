@@ -22,33 +22,33 @@ declare class Spider {
 declare class CommonSku {
   readonly appId: string;
   readonly sku: string;
-  readonly skuType: "game" | "addon" | "bundle" | "subscription";
+  readonly type: "game" | "addon" | "bundle" | "subscription";
   readonly name: string;
-  readonly somename: string;
+  readonly handle: string;
   readonly description: string;
   constructor(
     appId: string,
     sku: string,
-    skuType: "game" | "addon" | "bundle" | "subscription",
+    type: "game" | "addon" | "bundle" | "subscription",
     name: string,
-    somename: string,
+    handle: string,
     description: string
   );
 }
 declare class Game extends CommonSku {
-  readonly skuType: "game";
+  readonly type: "game";
 }
 declare class AddOn extends CommonSku {
-  readonly skuType: "addon";
+  readonly type: "addon";
 }
 declare class Bundle extends CommonSku {
   readonly skus: Array<string>;
   constructor(
     appId: string,
     sku: string,
-    skuType: "bundle",
+    type: "bundle",
     name: string,
-    somename: string,
+    handle: string,
     description: string,
     skus: Array<string>
   );
@@ -58,9 +58,9 @@ declare class Subscription extends CommonSku {
   constructor(
     appId: string,
     sku: string,
-    skuType: "subscription",
+    type: "subscription",
     name: string,
-    somename: string,
+    handle: string,
     description: string,
     skus: Array<string>
   );
