@@ -83,8 +83,6 @@ class Spider {
 
   private async loadSkuDetails(sku: string) {
     const page = await this.fetchPreloadData(`/store/details/sku/sku/${sku}`);
-    if (page.subscriptions?.length) {
-    }
     return page;
   }
 
@@ -141,7 +139,7 @@ class Spider {
 
   async fetchPreloadData(url: string) {
     await new Promise((resolve) =>
-      setTimeout(resolve, Math.random() * 16384 + 1536)
+      setTimeout(resolve, Math.random() * 2048 + 1536)
     );
     const response = await fetch(url);
     const html = await response.text();
@@ -200,6 +198,7 @@ class Spider {
         const skus = data[2].map((p) => this.loadSkuData(p[9]));
         return { skus };
       },
+
       Qc7K6_24r: (data: ProtoData) => {
         const gameData = data[18]?.[0]?.[9];
         const game = gameData && this.loadSkuData(gameData);
@@ -208,10 +207,16 @@ class Spider {
 
         return { sku, game, addons };
       },
+
       FLCvtc: (data: ProtoData) => {
         const subscriptionDatas = data[2]?.map((x) => x[9]) ?? [];
         const subscriptions = subscriptionDatas.map((s) => this.loadSkuData(s));
         return { subscriptions };
+      },
+
+      ZAm7W: (data: ProtoData) => {
+        const bundles = data[1].map((x) => this.loadSkuData(x[9]));
+        return { bundles };
       },
     };
 
@@ -256,6 +261,10 @@ class Game extends CommonSku {
   readonly skuType = "game" as const;
 }
 
+class AddOn extends CommonSku {
+  readonly skuType = "addon" as const;
+}
+
 class Bundle extends CommonSku {
   constructor(
     appId: string,
@@ -268,10 +277,6 @@ class Bundle extends CommonSku {
   ) {
     super(appId, sku, skuType, name, somename, description);
   }
-}
-
-class AddOn extends CommonSku {
-  readonly skuType = "game" as const;
 }
 
 class Subscription extends CommonSku {

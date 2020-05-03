@@ -71,8 +71,6 @@ class Spider {
   }
   async loadSkuDetails(sku) {
     const page = await this.fetchPreloadData(`/store/details/sku/sku/${sku}`);
-    if (page.subscriptions?.length) {
-    }
     return page;
   }
   loadSkuData(data) {
@@ -125,7 +123,7 @@ class Spider {
   }
   async fetchPreloadData(url) {
     await new Promise((resolve) =>
-      setTimeout(resolve, Math.random() * 16384 + 1536)
+      setTimeout(resolve, Math.random() * 2048 + 1536)
     );
     const response = await fetch(url);
     const html = await response.text();
@@ -190,6 +188,10 @@ class Spider {
         const subscriptions = subscriptionDatas.map((s) => this.loadSkuData(s));
         return { subscriptions };
       },
+      ZAm7W: (data) => {
+        const bundles = data[1].map((x) => this.loadSkuData(x[9]));
+        return { bundles };
+      },
     };
     for (const [i, data] of Object.entries(preload)) {
       for (const prefix of dataServiceRpcPrefixes[i]) {
@@ -229,6 +231,12 @@ class Game extends CommonSku {
     this.skuType = "game";
   }
 }
+class AddOn extends CommonSku {
+  constructor() {
+    super(...arguments);
+    this.skuType = "addon";
+  }
+}
 class Bundle extends CommonSku {
   constructor(
     appId,
@@ -241,12 +249,6 @@ class Bundle extends CommonSku {
   ) {
     super(appId, sku, skuType, name, somename, description);
     this.skus = skus;
-  }
-}
-class AddOn extends CommonSku {
-  constructor() {
-    super(...arguments);
-    this.skuType = "game";
   }
 }
 class Subscription extends CommonSku {

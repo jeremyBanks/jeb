@@ -4,7 +4,7 @@
     "description": "The Terminator T-800 from \"Terminator: Dark Fate\" is a cyborg assassin, sent back in time from a post-apocalyptic future. He is nearly indestructible and possesses superior technology, fighting skills and artificial intelligence making him the ultimate killing machine.",
     "name": "Terminator T-800",
     "sku": "018fd8b8c01d496cb4917d43645c14b5",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "f1f3235b-a06b-4130-a17d-f89678047a29"
   },
   "01e95e73256c465fb5620fc574446413": {
@@ -17,29 +17,29 @@
   },
   "0292121ae01e4247ace30184df5f6ac0": {
     "appId": "ebf235012b054269af70eee901bc85cfrcp1",
-    "bundleSkus": [
-      "c50094b71d054fc28f3116245d9dbc9a",
-      "7c0dbd202f5d4c409fe30046f68854ca"
-    ],
     "description": "Take on the role of a modern farmer in Farming Simulator 19 Platinum Edition! For the first time in the franchise history, discover CLAAS, one of the world's leading farming brands. Enjoy over 380 machines from John Deere, CASE IH, New Holland, Challenger, Fendt, Massey Ferguson, Valtra, Krone, Deutz-Fahr and many more. Including more than 35 new CLAAS vehicles and tools to grow your farm alone or with other players in two huge maps filled with exciting farming activities, crops to harvest and animals to tend to.",
     "name": "Farming Simulator 19 Platinum Edition",
     "sku": "0292121ae01e4247ace30184df5f6ac0",
     "skuType": "bundle",
+    "skus": [
+      "c50094b71d054fc28f3116245d9dbc9a",
+      "7c0dbd202f5d4c409fe30046f68854ca"
+    ],
     "somename": "fs19_platinum"
   },
   "0339b1c963e64e28a64b5778da93478c": {
     "appId": "11c9ece5b3a045908d77cf2b66adb010rcp1",
-    "bundleSkus": [
+    "description": "Enjoy the complete experience with the Ultimate Edition, including: Year 1 Pass, the Survivor Pack, the Off-Road Pack, the Sacred Land Pack. The Year 1 Pass includes: The Siren's call Day 1 mission, two adventures continuing the main story, early unlock for 3 new classes, the Special Operations Forces Pack. Enjoy a totally new social experience with Stream Connect, providing a real time view into another player’s game as it’s happening, so you can not only watch but interact with them instantly.",
+    "name": "Tom Clancy's Ghost Recon Breakpoint - Ultimate Edition",
+    "sku": "0339b1c963e64e28a64b5778da93478c",
+    "skuType": "bundle",
+    "skus": [
       "06e101d56a03472bb6c204aee96187d7",
       "764aea6292f941c3a38c2875fbf1ff17",
       "926a01eb81a04bbd8d13d25f30c11a97",
       "3ff2d77b1a174ce8bfff7bc1ff6f2b35",
       "73e37b5508944b508cf1e997b7f11ebb"
     ],
-    "description": "Enjoy the complete experience with the Ultimate Edition, including: Year 1 Pass, the Survivor Pack, the Off-Road Pack, the Sacred Land Pack. The Year 1 Pass includes: The Siren's call Day 1 mission, two adventures continuing the main story, early unlock for 3 new classes, the Special Operations Forces Pack. Enjoy a totally new social experience with Stream Connect, providing a real time view into another player’s game as it’s happening, so you can not only watch but interact with them instantly.",
-    "name": "Tom Clancy's Ghost Recon Breakpoint - Ultimate Edition",
-    "sku": "0339b1c963e64e28a64b5778da93478c",
-    "skuType": "bundle",
     "somename": "game_ultimate"
   },
   "065c193373aa47859504227aeaa9cc28": {
@@ -47,7 +47,7 @@
     "description": "ZOMBIE ARMY 4: SEASON PASS ONE, INCLUDING 3 ADDITIONAL LEVELS. CHARACTER PACKS. WEAPON BUNDLES. WEAPON SKIN PACKS AND CHARACTER OUTFIT BUNDLES. All Season Pass One add-on content will be available by Holiday 2020.",
     "name": "Zombie Army 4: Season Pass One",
     "sku": "065c193373aa47859504227aeaa9cc28",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "SeasonPassOne"
   },
   "06e101d56a03472bb6c204aee96187d7": {
@@ -60,54 +60,54 @@
   },
   "08bf286364164e14bac41b0040d6331f": {
     "appId": "2152a1e96d5b47b18a5df7ca9bb0751frcp1",
-    "bundleSkus": [
-      "f790e37b6161477188923408085528a1",
-      "e96ff7a738d14b88ba459f052f237d17",
-      "1d3f76d6fcf149e0a446f6d49ac38ed6"
-    ],
     "description": "The Red Dead Redemption 2:  Ultimate Edition delivers all of the Story Mode content from the Special Edition plus additional content for online including Bonus Outfits for your online Character, Rank Bonuses, Black Chestnut Thoroughbred and free access to the Survivor Camp Theme.  Plus get free access to Additional Weapons in online.",
     "name": "Red Dead Redemption 2:  Ultimate Edition",
     "sku": "08bf286364164e14bac41b0040d6331f",
     "skuType": "bundle",
+    "skus": [
+      "f790e37b6161477188923408085528a1",
+      "e96ff7a738d14b88ba459f052f237d17",
+      "1d3f76d6fcf149e0a446f6d49ac38ed6"
+    ],
     "somename": "ultimate_ed_bundle"
   },
   "0a763df666fc4569896ca44062308138": {
     "appId": "2afad3696b394f669b49e4c0b6016958rcp1",
-    "bundleSkus": [
-      "b6d1b295ed0d4f1080576ac5d51df6d0",
-      "3e76ed160e434f799de225db62fd4cd0"
-    ],
     "description": "The NBA 2K20 Legend Edition includes the following digital items: 100,000 Virtual Currency, 50,000 MyTEAM Points, 20 MyCAREER Skill Boosts, MyPLAYER Clothing Capsule, MyPLAYER Apparel Collection, MyPLAYER Shoe Collection, 20 MyTEAM League Packs (delivered one a week), 20 MyTEAM Heat Check Packs (delivered one a week), 5 MyTEAM Themed Packs (one per theme release across the next five releases), and 2 Sapphire MyTEAM Cover Athlete Cards. See MyTEAM Pack Drop Rates below.",
     "name": "NBA 2K20 Legend Edition",
     "sku": "0a763df666fc4569896ca44062308138",
     "skuType": "bundle",
+    "skus": [
+      "b6d1b295ed0d4f1080576ac5d51df6d0",
+      "3e76ed160e434f799de225db62fd4cd0"
+    ],
     "somename": "NBA2K20_Legend_Bundle"
   },
   "10621ce0fe784ccca7a9d95ec0f24f37": {
     "appId": "11c9ece5b3a045908d77cf2b66adb010rcp1",
-    "bundleSkus": [
-      "06e101d56a03472bb6c204aee96187d7",
-      "764aea6292f941c3a38c2875fbf1ff17"
-    ],
     "description": "Upgrade your game experience with the Gold Edition, including the Year 1 Pass:  The Siren&#39;s call Day 1 mission, two adventures continuing the main story: Deep State &amp; Transcendence, early unlock for 3 new classes &amp; the Special Operations Forces Pack.  Experience a military shooter set in a diverse &amp; hostile open world that you can play solo or up to four-player co-op. Enjoy a totally new social experience with Stream Connect, providing a real time view into another player’s game as it’s happening, so you can not only watch but interact with them instantly.",
     "name": "Tom Clancy's Ghost Recon Breakpoint - Gold Edition",
     "sku": "10621ce0fe784ccca7a9d95ec0f24f37",
     "skuType": "bundle",
+    "skus": [
+      "06e101d56a03472bb6c204aee96187d7",
+      "764aea6292f941c3a38c2875fbf1ff17"
+    ],
     "somename": "game_gold"
   },
   "13f0229eab0a484382e9af78bad74ff7": {
     "appId": "cba537cccfe3470b8784f88660ea5f09rcp1",
-    "bundleSkus": [
+    "description": "The Zombie Army 4 Deluxe Edition includes: MAIN GAME, ADDITIONAL CHARACTER PACK Playable Character: Undead Airman, ADDITIONAL WEAPON SKIN PACK Weapon Skins: Solid Gold, ADDITIONAL WEAPON BUNDLE Weapon Bundle: FG-42 Semi-auto Rifle, ADDITIONAL CHARACTER OUTFIT BUNDLE Character Outfit: Undercover Karl.",
+    "name": "Zombie Army 4: Dead War Deluxe Edition",
+    "sku": "13f0229eab0a484382e9af78bad74ff7",
+    "skuType": "bundle",
+    "skus": [
       "a7b1581491ea4b7c9fcc89710561f5f7",
       "947515b6fcc543bca605d2c8d018a415",
       "a2451006373c494b87e770e97f476a91",
       "93501771f2244793af1053b120e66b02",
       "50f2c12c05e540098f75131c2c8ac560"
     ],
-    "description": "The Zombie Army 4 Deluxe Edition includes: MAIN GAME, ADDITIONAL CHARACTER PACK Playable Character: Undead Airman, ADDITIONAL WEAPON SKIN PACK Weapon Skins: Solid Gold, ADDITIONAL WEAPON BUNDLE Weapon Bundle: FG-42 Semi-auto Rifle, ADDITIONAL CHARACTER OUTFIT BUNDLE Character Outfit: Undercover Karl.",
-    "name": "Zombie Army 4: Dead War Deluxe Edition",
-    "sku": "13f0229eab0a484382e9af78bad74ff7",
-    "skuType": "bundle",
     "somename": "DeluxeEdition"
   },
   "1492d4fcf167420cb227a5579f447016": {
@@ -115,7 +115,7 @@
     "description": "The Kombat Pack is the best way to upgrade your Mortal Kombat Standard Edition. The Kombat Pack includes: 6 new add-on playable characters including Shang Tsung, Nightwolf, Terminator T-800, Sindel, The Joker and Spawn - Skins & gear sets with each add-on character - 6 themed skin packs including the Klassic Arcade Ninjas, Klassic Arcade Fighters and more",
     "name": "Mortal Kombat 11 Kombat Pack",
     "sku": "1492d4fcf167420cb227a5579f447016",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "4a317f2f-4e06-4dd0-ab63-311a7aeda4ee"
   },
   "15c4ba41842d41f5922c6f4797bf4d54": {
@@ -123,7 +123,7 @@
     "description": "This set includes Karakin Head Wrap, Jamila Diamondback Top, Jamila Diamond Leg Pants and Jamila Kontra Shoes.",
     "name": "PUBG - Jamila Textiles Set",
     "sku": "15c4ba41842d41f5922c6f4797bf4d54",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBGJAMTEXTSKIN"
   },
   "1611bf48ac784869bcbd1ce85bc71add": {
@@ -144,14 +144,14 @@
   },
   "183f245b98a141ae97214c9ee5ae8a56": {
     "appId": "2afad3696b394f669b49e4c0b6016958rcp1",
-    "bundleSkus": [
-      "b6d1b295ed0d4f1080576ac5d51df6d0",
-      "cdb883f981184a9486c567e1704e8f1b"
-    ],
     "description": "The NBA 2K20 Digital Deluxe Edition includes 35,000 Virtual Currency, 10,000 MyTEAM Points, 10 MyCAREER Skill Boosts, MyPLAYER Clothing Capsule, 10 MyTEAM League Packs (delivered one a week), 10 MyTEAM Heat Check Packs (delivered one a week), and 1 Sapphire MyTEAM Anthony Davis Card. See MyTEAM Pack Drop Rates below.",
     "name": "NBA 2K20 Digital Deluxe",
     "sku": "183f245b98a141ae97214c9ee5ae8a56",
     "skuType": "bundle",
+    "skus": [
+      "b6d1b295ed0d4f1080576ac5d51df6d0",
+      "cdb883f981184a9486c567e1704e8f1b"
+    ],
     "somename": "NBA2K20_Deluxe_Bundle"
   },
   "1cc4e8255c564d67806aeed81edf741b": {
@@ -159,7 +159,7 @@
     "description": "Obtain 1200 Ghost Coins plus an additional 100 Ghost Coins. Ghost Coins are used to purchase character and weapon customisations, vehicles and time savers.",
     "name": "Ghost Recon Breakpoint : 1200 (+100) Ghost Coins",
     "sku": "1cc4e8255c564d67806aeed81edf741b",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "ghost_coins_12"
   },
   "1d3f76d6fcf149e0a446f6d49ac38ed6": {
@@ -167,20 +167,20 @@
     "description": "The Red Dead Redemption 2:  Ultimate Edition delivers all of the Story Mode content from the Special Edition plus additional content for online including Bonus Outfits for your online Character, Rank Bonuses, Black Chestnut Thoroughbred and free access to the Survivor Camp Theme.  Plus get free access to Additional Weapons in online.",
     "name": "Red Dead Redemption 2:  Ultimate Edition Content",
     "sku": "1d3f76d6fcf149e0a446f6d49ac38ed6",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "dlc_ultimateedition"
   },
   "1e4107605f83447fa8e04e0abdc578b3": {
     "appId": "cc97434908874852a6705d255a605dc8rcp1",
-    "bundleSkus": [
-      "94db678cbb6342c3bc0e58f71130b3fb",
-      "38a33f9e010d48f9b80b3f7252a4768b",
-      "adeacff32c1b4e0ba1127766e7a5bfc4"
-    ],
     "description": "The Crew 2 - Gold Edition features : The Crew 2 Season Pass , The Crew 2 Motorsports Deluxe Pack that includes: Ford F-150 Raptor Race Truck 2017, Abarth 500 2008 Monster Truck Edition, 3 outfits to customize your pilot. Take on the American motorsports scene as you explore and dominate the land, air, and sea across the entire USA. With a wide variety of cars, bikes, boats, and planes, compete in a wide range of driving disciplines.",
     "name": "The Crew 2 - Gold Edition",
     "sku": "1e4107605f83447fa8e04e0abdc578b3",
     "skuType": "bundle",
+    "skus": [
+      "94db678cbb6342c3bc0e58f71130b3fb",
+      "38a33f9e010d48f9b80b3f7252a4768b",
+      "adeacff32c1b4e0ba1127766e7a5bfc4"
+    ],
     "somename": "GoldEdition"
   },
   "1e6b50c7fd7640f4a7b5160e74708043": {
@@ -188,19 +188,19 @@
     "description": "*Moxxi’s Heist of the Handsome Jackpot (Campaign Add-On 1) and bonus end game content such as Takedown at the Maliwan Blacksite expected to launch on Stadia early 2020. Continue your Borderlands 3 adventure with the Season Pass, featuring exclusive cosmetic items and four story campaign add-ons with new missions and challenges! This content is included with purchase of the Borderlands 3 Super Deluxe Edition. The Season Pass includes: • 4 campaign add-on packs featuring new stories, missions and challenges • Butt Stallion weapon skin • Butt Stallion weapon trinket • Butt Stallion grenade mod. All Season Pass add-on content will be available by September 2020.",
     "name": "Borderlands®3 Season Pass",
     "sku": "1e6b50c7fd7640f4a7b5160e74708043",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "BL3_SeasonPass"
   },
   "1f50a7a214994a5cb861db76eef77564": {
     "appId": "20e792017ab34ad89b70dc17a5c72d68rcp1",
-    "bundleSkus": [
-      "4950959380034dcda0aecf98f675e11f",
-      "6ae17ecb8ef044329109f23df572c0ef"
-    ],
     "description": "In a high-stakes prison escape, Uldren and his eight Barons took out legendary Hunter, Cayde-6, and unleashed chaos across the Reef.",
     "name": "Destiny 2: Forsaken",
     "sku": "1f50a7a214994a5cb861db76eef77564",
     "skuType": "bundle",
+    "skus": [
+      "4950959380034dcda0aecf98f675e11f",
+      "6ae17ecb8ef044329109f23df572c0ef"
+    ],
     "somename": "20000002"
   },
   "20ef71dd341a4fb38423fb207d6c4455": {
@@ -208,7 +208,7 @@
     "description": "This item is already included in the Kombat Pack. Three new character skins. The Klassic Arcade Fighter Pack outfits Mortal Kombat 11 characters Jax, Kung Lao and Kano in Klassic, Arcade inspired costumes.",
     "name": "Klassic Arcade Fighter Pack",
     "sku": "20ef71dd341a4fb38423fb207d6c4455",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "2bc8091c-2065-4df5-9490-ea6bd590528e"
   },
   "21c49bfa54d64bd1bcb6a929764ba7d1": {
@@ -216,7 +216,7 @@
     "description": "This set includes Shako Cheerleader Hat, Cheerleader Sweater, Cheerleader Skirt and Cheerleader Sneakers.",
     "name": "PUBG - Cheerleader Set",
     "sku": "21c49bfa54d64bd1bcb6a929764ba7d1",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBGCHRLDSKIN"
   },
   "2262139d1bd04020a8599874a142680f": {
@@ -224,7 +224,7 @@
     "description": "Hell’s armies have invaded Earth. Become the Slayer in an epic single-player campaign to conquer demons across dimensions and stop the final destruction of humanity. The only thing they fear... is you. Experience the ultimate combination of speed and power in DOOM Eternal - the next leap in push-forward, first-person combat. Armed with a shoulder-mounted flamethrower, retractable wrist-mounted blade, upgraded guns and mods and abilities, you're faster, stronger, and more versatile than ever.",
     "name": "DOOM Eternal Campaign",
     "sku": "2262139d1bd04020a8599874a142680f",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "dme_campaign"
   },
   "256f320f886b4ee68b7980d6fc1bd1b1": {
@@ -240,19 +240,19 @@
     "description": "This set includes School Skirt, School Jacket, School Shirt with Necktie and Sneakers (White).",
     "name": "PUBG - IVORY SCHOOL UNIFORM SET (FEMALE)",
     "sku": "2584c4486e3a4285af411859f4435215",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBGIVRYSHUNIFSKIN"
   },
   "2868c83c2411473282074a6fe5dbfc85": {
     "appId": "8b7e7f7036e5483eaa8745d46248536crcp1",
-    "bundleSkus": [
-      "6760aad6e75b4edc9686c48e8dd38936",
-      "6f6a85eb8e6f4042a95cc5a51ee26984"
-    ],
     "description": "Upgrade your experience with the Stadia Ultimate edition, which includes Assassin's Creed Odyssey, the Blind King Quest, the Stadia Season Pass, the Herald of Dusk Pack (featuring 5 rare pieces of armour and a rare weapon), the Capricornus Naval Pack (featuring a ship design and crew theme), a temporary XP Boost, a Temporary Drachmae Boost , and the Kronos Pack, featuring 5 epic pieces of armour, an epic weapon, and an epic mount. Choose your fate in Assassin's Creed Odyssey. From outcast to living legend, embark on an odyssey to uncover the secrets of your past and change the fate of Ancient Greece.",
     "name": "Assassin's Creed Odyssey - Stadia Ultimate Edition",
     "sku": "2868c83c2411473282074a6fe5dbfc85",
     "skuType": "bundle",
+    "skus": [
+      "6760aad6e75b4edc9686c48e8dd38936",
+      "6f6a85eb8e6f4042a95cc5a51ee26984"
+    ],
     "somename": "game_bundle_ultimate"
   },
   "294cbfab6a0e4d7db0d540968af2fbc7": {
@@ -260,7 +260,7 @@
     "description": "This item is already included in the Kombat Pack. Three new character skins. The Double Feature Skin Pack includes Cyborg Hunter Sonya Blade, Cash Machine Kano and Red Carpet Johnny Cage.",
     "name": "Double Feature Skin Pack",
     "sku": "294cbfab6a0e4d7db0d540968af2fbc7",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "5974ec88-cc4f-4301-85de-a4d7e8b06562"
   },
   "2b4f07c4c9264d2ba193cc4215e073c1": {
@@ -268,7 +268,7 @@
     "description": "The Butt Stallion Cosmetic Pack includes the following content, for use in Borderlands 3: • Butt Stallion weapon skin • Butt Stallion weapon trinket • Butt Stallion grenade mod. This content is included in the Borderlands 3 Season Pass.",
     "name": "Borderlands®3 Butt Stallion Cosmetic Pack",
     "sku": "2b4f07c4c9264d2ba193cc4215e073c1",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "BL3_D_ButtStallionCosmeticsPack"
   },
   "2b58178e031e4332a79617bc994ac21d": {
@@ -276,7 +276,7 @@
     "description": "The Toy Box Weapons Pack includes the following content, for use in Borderlands 3: • Toy Guns with unique effects • Toy grenade mod • Toy weapon trinket. This content is included in the Borderlands 3 Deluxe Edition and Super Deluxe Edition.",
     "name": "Borderlands®3 Toy Box Weapons Pack",
     "sku": "2b58178e031e4332a79617bc994ac21d",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "BL3_D_ToyBoxWeaponsPack"
   },
   "2c9a80e5c89b47d7974c521e04258615": {
@@ -284,7 +284,7 @@
     "description": "The Battleworn Secret Service pack includes: Battleworn Secret Service outfit, Secret service emote, Secret Service weapon skin.",
     "name": "The Division 2 - Battleworn Secret Service Pack",
     "sku": "2c9a80e5c89b47d7974c521e04258615",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "battlesworn_pack"
   },
   "2e07db5d338d40cb9eac9deae4154f11": {
@@ -292,7 +292,7 @@
     "description": "This set includes Premiere Hoodie, Premiere Glasses, Premiere Helmet (Level 3), Premiere Parachute and Premiere Pan",
     "name": "PUBG - Stadia Premiere Set",
     "sku": "2e07db5d338d40cb9eac9deae4154f11",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBGEXCSVSKINSET"
   },
   "31047b9e82bb4a30ba66b24bef71cdf2": {
@@ -308,7 +308,7 @@
     "description": "Obtain 4800 Ghost Coins plus an additional 1000 Ghost Coins. Ghost Coins are used to purchase character and weapon customisations, vehicles and time savers.",
     "name": "Ghost Recon Breakpoint : 4800 (+1000) Ghost Coins",
     "sku": "31635f3c873b41d29aeb325efff8a34f",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "ghost_coins_48"
   },
   "32a0791a88474f08ad7a687846b786f2": {
@@ -324,19 +324,19 @@
     "description": "The Boost Mods Pack includes two equippable mods, for use in Borderlands 3: • XP boost mod • Loot drop boost mod. This content is included in the Borderlands 3 Deluxe Edition and Super Deluxe Edition.",
     "name": "Borderlands®3 Boost Mods Pack",
     "sku": "337bd2854bd14b73a27d1c57d650e1da",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "BL3_D_BoostModsPack"
   },
   "35087d3c68c94b03b6f7e67440b8b283": {
     "appId": "20e792017ab34ad89b70dc17a5c72d68rcp1",
-    "bundleSkus": [
-      "4950959380034dcda0aecf98f675e11f",
-      "7c7818dfa9774281bdc6375402dc6e0a"
-    ],
     "description": "New nightmares have emerged from the shadows of our Moon. Called forth by haunting visions, Eris Morn has returned. Join her to slay these nightmares before they reach out beyond the Moon to cast humanity back into an age of darkness.",
     "name": "Destiny 2: Shadowkeep",
     "sku": "35087d3c68c94b03b6f7e67440b8b283",
     "skuType": "bundle",
+    "skus": [
+      "4950959380034dcda0aecf98f675e11f",
+      "7c7818dfa9774281bdc6375402dc6e0a"
+    ],
     "somename": "20000003"
   },
   "354ab39ab5e14aaba1a06ef86a0268fe": {
@@ -344,7 +344,7 @@
     "description": "Embark on an intense manhunt across Manhattan. New York is under threat. Aaron Keener, a former Division Agent turned rogue, has taken control of Lower Manhattan, backed by four devoted and highly skilled lieutenants. Trained by The Division but disavowing its ideals, they are now the highest authority in town and the most formidable force the Agents have ever faced. Play in single-player or online co-op: a gripping new story, hunting down your nemesis; a level 30 boost, allowing you to jump right into the Warlords of New York campaign; a new open world in New York; a revamped progression system with a level cap increased to 40; an ew tactical options: exotics, gears, and skills; an extended endgame, including thematic three-month seasons",
     "name": "The Division 2: Warlords of New York Expansion",
     "sku": "354ab39ab5e14aaba1a06ef86a0268fe",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "warlock"
   },
   "38a33f9e010d48f9b80b3f7252a4768b": {
@@ -352,7 +352,7 @@
     "description": "The Crew 2 Motorsports Deluxe Pack includes: Ford F-150 Raptor Race Truck 2017, Abarth 500 2008 Monster Truck Edition, Pilatus PC-21, 3 outfits to customize your avatar ",
     "name": "The Crew 2 - Motorsports Deluxe Pack",
     "sku": "38a33f9e010d48f9b80b3f7252a4768b",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "MotorsportsDeluxePack"
   },
   "38fa68705f70420f8e283fc937926e20": {
@@ -360,7 +360,7 @@
     "description": "This set includes Pleated Mini-skirt (Blue), Mandarin Jacket (Blue), School Shirt (Open) and School Shoes.",
     "name": "PUBG - BLUE SCHOOL UNIFORM SET (FEMALE)",
     "sku": "38fa68705f70420f8e283fc937926e20",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBGBSCHUNISKIN"
   },
   "3ac3e537019c49028d7bb98e8cd92482": {
@@ -376,7 +376,7 @@
     "description": "The NBA 2K20 Legend Edition includes the following digital items: 100,000 Virtual Currency, 50,000 MyTEAM Points, 20 MyCAREER Skill Boosts, MyPLAYER Clothing Capsule, MyPLAYER Apparel Collection, MyPLAYER Shoe Collection, 20 MyTEAM League Packs (delivered one a week), 20 MyTEAM Heat Check Packs (delivered one a week), 5 MyTEAM Themed Packs (one per theme release across the next five releases), and 2 Sapphire MyTEAM Cover Athlete Cards. See MyTEAM Pack Drop Rates below.",
     "name": "NBA 2K20 Legend Edition Bonus",
     "sku": "3e76ed160e434f799de225db62fd4cd0",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "NBA2K20_Legend_Edition"
   },
   "3feef74cbacf4ba39b5d9087e0dfb9e4": {
@@ -392,7 +392,7 @@
     "description": "Get the equipment to survive the most extreme situations. Unlock \"Promise\" handgun, \"Primal\" knife, the Survivor Bandana, the Survivor Pants and the ALICE Chest Rig in Tom Clancy's Ghost Recon Breakpoint. Plus, get a quickstart in the game thanks to a XP Booster and a Skell Credits Pack.",
     "name": "Ghost Recon Breakpoint : Survivor Pack",
     "sku": "3ff2d77b1a174ce8bfff7bc1ff6f2b35",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "survivor_pack"
   },
   "422be99cdbdb460f9ab9ec5ffc7b0594": {
@@ -400,7 +400,7 @@
     "description": "Upgrade to GRID Ultimate Season Pass to get 6 months of premium content including: 99 extra Career events (33 per season), 12 new cars (4 per season) &amp; Seasonal rewards*: Season 1 (Hot Hatch Showdown), Season 2 (Track Day Supercars), Season 3 (Track Day Hypercars). 5 Grid Edition Carbon Liveries (each with added XP boost): Aston Martin Vantage GT4, Pontiac Firebird Modified, Chevrolet Corvette C7.R, Mitsubishi Lancer Evolution VI Time Attack,  enault R26. 10 player cards, 10 player banners, 10 extra unique liveries, VIP status.",
     "name": "GRID Ultimate Upgrade",
     "sku": "422be99cdbdb460f9ab9ec5ffc7b0594",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "GRID_Ultimate_Upgrade"
   },
   "45918155e78145af937b5df1a574afd2": {
@@ -424,31 +424,31 @@
     "description": "Soul Sorcerer and historic host of the Mortal Kombat. Born in Earthrealm, Shang Tsung's relentless pursuit of powerful magic led him to Outworld, where Shao Kahn offered him a dark power that no sorcerer on Earthrealm could. Shang Tsung pledged his eternal loyalty to Shao Kahn in exchange for this evil magic, but he is no faithful servant. He dreams of the day his sorcery will overtake Shao Kahn's, and he'll pay any price to get there.",
     "name": "Shang Tsung",
     "sku": "4a4fabe8ed9942ed9ca5fa9111f3934f",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "58d88ee2-1f16-4862-ad4f-211f2228e6ba"
   },
   "4f1db1c66f6e427286cc21d116e7bbee": {
     "appId": "ca805d3d37404654a91d2ea62fad7bd4rcp1",
-    "bundleSkus": [
-      "75be643ff0fb40d7873fa41edb10d98a",
-      "422be99cdbdb460f9ab9ec5ffc7b0594"
-    ],
     "description": "Be an Ultimate Edition GRID player to get 6 months of premium content including: 99 extra Career events (33 per season), 12 new cars (4 per season) &amp; Seasonal rewards*: Season 1 (Hot Hatch Showdown), Season 2 (Track Day Supercars), Season 3 (Track Day Hypercars). 5 Grid Edition Carbon Liveries (each with added XP boost): Aston Martin Vantage GT4, Pontiac Firebird Modified, Chevrolet Corvette C7.R, Mitsubishi Lancer Evolution VI Time Attack, Renault R26. 10 player cards, 10 player banners, 10 extra unique liveries, VIP status.",
     "name": "GRID Ultimate Edition",
     "sku": "4f1db1c66f6e427286cc21d116e7bbee",
     "skuType": "bundle",
+    "skus": [
+      "75be643ff0fb40d7873fa41edb10d98a",
+      "422be99cdbdb460f9ab9ec5ffc7b0594"
+    ],
     "somename": "GRID_Ultimate_Edition"
   },
   "5027183521d3454a8ff000edbfd478a9": {
     "appId": "cba537cccfe3470b8784f88660ea5f09rcp1",
-    "bundleSkus": [
-      "a7b1581491ea4b7c9fcc89710561f5f7",
-      "065c193373aa47859504227aeaa9cc28"
-    ],
     "description": "Augment your Zombie Army 4 experience with an entire season of post-launch content with the Super Deluxe Edition.  The Zombie Army 4 Super Deluxe Edition includes: MAIN GAME, ZOMBIE ARMY 4: SEASON PASS ONE, INCLUDING 3 ADDITIONAL LEVELS, 4 CHARACTER PACKS, 9 WEAPON BUNDLES, 5 WEAPON SKIN PACKS, 4 CHARACTER OUTFIT BUNDLES.",
     "name": "Zombie Army 4: Dead War Super Deluxe Edition",
     "sku": "5027183521d3454a8ff000edbfd478a9",
     "skuType": "bundle",
+    "skus": [
+      "a7b1581491ea4b7c9fcc89710561f5f7",
+      "065c193373aa47859504227aeaa9cc28"
+    ],
     "somename": "SuperDeluxeEdition"
   },
   "50f2c12c05e540098f75131c2c8ac560": {
@@ -456,20 +456,20 @@
     "description": "As a former sniper, Karl Fairburne had all the tools he needed to get behind enemy lines, including impersonating a Nazi officer! This disguise doesn’t work against the dead, but at least it keeps the blood off! This content is included with the purchase of the Zombie Army 4: Season Pass One.",
     "name": "Zombie Army 4: Undercover Karl Outfit",
     "sku": "50f2c12c05e540098f75131c2c8ac560",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "DLC00006"
   },
   "58f0a37bf6b141e4ba3a14b59e46b7ff": {
     "appId": "20e792017ab34ad89b70dc17a5c72d68rcp1",
-    "bundleSkus": [
-      "4950959380034dcda0aecf98f675e11f",
-      "6ae17ecb8ef044329109f23df572c0ef",
-      "7c7818dfa9774281bdc6375402dc6e0a"
-    ],
     "description": "Experience all of Destiny 2’s cinematic story alone or with friends, join other Guardians for challenging co-op missions, or compete against them in a variety of PvP modes. You decide your legend. Includes the critically acclaimed expansions Forsaken and Shadowkeep.",
     "name": "Destiny 2: Upgrade Edition",
     "sku": "58f0a37bf6b141e4ba3a14b59e46b7ff",
     "skuType": "bundle",
+    "skus": [
+      "4950959380034dcda0aecf98f675e11f",
+      "6ae17ecb8ef044329109f23df572c0ef",
+      "7c7818dfa9774281bdc6375402dc6e0a"
+    ],
     "somename": "20000004"
   },
   "59c8314ac82a456ba61d08988b15b550": {
@@ -477,7 +477,22 @@
     "description": "Stadia Pro is Stadia's premium subscription service and your gateway to the best that Stadia has to offer.",
     "name": "Stadia Pro",
     "sku": "59c8314ac82a456ba61d08988b15b550",
-    "skuType": "game",
+    "skuType": "subscription",
+    "skus": [
+      "a7b1581491ea4b7c9fcc89710561f5f7",
+      "e8ed70244808408cbb7d3b2b1f06547f",
+      "f47a1e1e9f0b43078e0a80c57068b085",
+      "bd70626ec3834dedbc6dda5b956f7648",
+      "75be643ff0fb40d7873fa41edb10d98a",
+      "9ac5597c3f4a4e648c9ae56bac3d1b32",
+      "be9526126d394061b0eef9b16352357e",
+      "b54873e3768140b9805664a220969929",
+      "7ed521aacf2a44168fb99cd1e13472ad",
+      "f16b28e2fd224acaafeee4c19134adb4",
+      "45918155e78145af937b5df1a574afd2",
+      "90f5bd9270024986b26ee8221c1fa2e4",
+      "a1afa4eca7b24713a9bcf3421dd85a13"
+    ],
     "somename": "stadia-pro-subscription"
   },
   "5a0fbb32a8154c53967a07c233ec2a7c": {
@@ -485,7 +500,7 @@
     "description": "Purchase 1,100 G-Coin. Use G-Coin to purchase PUBG in-game cosmetics and more. Game sold separately.",
     "name": "PUBG - 1,100 G-COINS",
     "sku": "5a0fbb32a8154c53967a07c233ec2a7c",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBG01100GCOINS"
   },
   "5c1d84fe250a473e9d0313ed232508bc": {
@@ -493,19 +508,19 @@
     "description": "Dive into the world of Destiny 2 to experience responsive FPS combat, explore the mysteries of our solar system, and unleash elemental abilities against powerful enemies. Experience Destiny 2’s cinematic story alone or with friends, join other Guardians for challenging co-op missions, or compete against them in a variety of PvP modes. Destiny 2: The Collection includes Destiny 2, Destiny 2: Forsaken, and Destiny 2: Shadowkeep. See below for loot box odds.",
     "name": "Stadia Pro Access (Destiny 2: The Collection)",
     "sku": "5c1d84fe250a473e9d0313ed232508bc",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "10000001"
   },
   "63e94c60b10e4267add34ef768c30f8f": {
     "appId": "2152a1e96d5b47b18a5df7ca9bb0751frcp1",
-    "bundleSkus": [
-      "f790e37b6161477188923408085528a1",
-      "e96ff7a738d14b88ba459f052f237d17"
-    ],
     "description": "The Red Dead Redemption 2 Special Edition delivers exclusive content for Story Mode including a Bank Robbery Mission & Gang Hideout, Dappled Black Thoroughbred, Talisman & Medallion Gameplay Bonuses, Gameplay Boosts, Cash Bonuses & Discounts, and the Nuevo Paraiso Gunslinger Outfit, plus free access to Additional Weapons.",
     "name": "Red Dead Redemption 2:  Special Edition",
     "sku": "63e94c60b10e4267add34ef768c30f8f",
     "skuType": "bundle",
+    "skus": [
+      "f790e37b6161477188923408085528a1",
+      "e96ff7a738d14b88ba459f052f237d17"
+    ],
     "somename": "special_ed_bundle"
   },
   "659aa85ef9c04f1cb5db505b3685acca": {
@@ -513,19 +528,19 @@
     "description": "Purchase 2,300 G-Coin. Use G-Coin to purchase PUBG in-game cosmetics and more. Game sold separately.",
     "name": "PUBG - 2,300 G-COINS",
     "sku": "659aa85ef9c04f1cb5db505b3685acca",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBG02300GCOINS"
   },
   "65e4b00af1094f1c99f5a8c7248b433f": {
     "appId": "8615c857d7d54efebd94fe17e3f2896crcp1",
-    "bundleSkus": [
-      "78ea22fb5c054167bb722322b469f33f",
-      "d68a7dfd040946eca937ef08b3e4f471"
-    ],
     "description": "Dive headfirst into a dystopian world devoid of society, law, and order. RAGE 2 brings together two studio powerhouses – Avalanche Studios, masters of open world insanity, and id Software, creators of the first-person shooter – to deliver a carnival of carnage where you can go anywhere, shoot anything, and explode everything. Purchase the  RAGE 2: Deluxe Edition to receive: Rise of the Ghosts Expansion, Doom BFG, Wasteland Wizard Cheat Codes, Battle Standard, Progress Booster.",
     "name": "RAGE 2: Deluxe Edition",
     "sku": "65e4b00af1094f1c99f5a8c7248b433f",
     "skuType": "bundle",
+    "skus": [
+      "78ea22fb5c054167bb722322b469f33f",
+      "d68a7dfd040946eca937ef08b3e4f471"
+    ],
     "somename": "deluxe_edition"
   },
   "66f1b5a13ee54b7aa70aebfddd18c085": {
@@ -546,7 +561,11 @@
   },
   "69713a38ec1a48f5aed02a24752540cb": {
     "appId": "7bfbcba307114ab88ae4231da2ec85d3rcp1",
-    "bundleSkus": [
+    "description": "Mortal Kombat 11 is the latest installment in the critically acclaimed franchise, providing a deeper and more personalized experience than ever before. The all new Custom Character Variations give you unprecedented control of your fighters to make them your own. The Mortal Kombat 11 Premium Edition includes: Main Game, Kombat Pack. The Kombat Pack includes: 6 new add-on playable characters, released over time - 7 exclusive Character Skins - 7 exclusive sets of gear",
+    "name": "Mortal Kombat 11 Premium Edition",
+    "sku": "69713a38ec1a48f5aed02a24752540cb",
+    "skuType": "bundle",
+    "skus": [
       "f3f250e8a4d54f60ba730fbc04268052",
       "1492d4fcf167420cb227a5579f447016",
       "4a4fabe8ed9942ed9ca5fa9111f3934f",
@@ -556,10 +575,6 @@
       "018fd8b8c01d496cb4917d43645c14b5",
       "294cbfab6a0e4d7db0d540968af2fbc7"
     ],
-    "description": "Mortal Kombat 11 is the latest installment in the critically acclaimed franchise, providing a deeper and more personalized experience than ever before. The all new Custom Character Variations give you unprecedented control of your fighters to make them your own. The Mortal Kombat 11 Premium Edition includes: Main Game, Kombat Pack. The Kombat Pack includes: 6 new add-on playable characters, released over time - 7 exclusive Character Skins - 7 exclusive sets of gear",
-    "name": "Mortal Kombat 11 Premium Edition",
-    "sku": "69713a38ec1a48f5aed02a24752540cb",
-    "skuType": "bundle",
     "somename": "7dc2dac2-c9e7-4988-9b14-37cb58ff69f1"
   },
   "6ad6555933ee4c34a6ad1d2d4fdf69aa": {
@@ -567,7 +582,7 @@
     "description": "Sam, one of the soldiers of the Spartan Order, makes his way away from the Aurora in search of a way back to his home of the USA, arriving at the remains of Vladivostok’s tsunami ravaged harbours, ruined industrial buildings, and crumbling residential districts. Players will forge Sam's path through this landscape, as they take a brand new journey across the wasteland of post-apocalyptic Russia.",
     "name": "Metro Exodus - Sam's Story",
     "sku": "6ad6555933ee4c34a6ad1d2d4fdf69aa",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "metro_exodus_dlc2"
   },
   "6ae17ecb8ef044329109f23df572c0ef": {
@@ -575,7 +590,7 @@
     "description": "In a high-stakes prison escape, Uldren and his eight Barons took out legendary Hunter, Cayde-6, and unleashed chaos across the Reef.",
     "name": "Destiny 2: Forsaken",
     "sku": "6ae17ecb8ef044329109f23df572c0ef",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "10000002"
   },
   "6c8ae46efebc4bd1a7de725bc630ce65": {
@@ -599,7 +614,7 @@
     "description": "Continue your epic odyssey with the Stadia Season Pass, featuring two major episodic story arcs and bonus Secrets of Greece missions! In LEGACY OF THE FIRST BLADE,  encounter the legend who first wielded the Hidden Blade to change the course of history. In THE FATE OF ATLANTIS, venture into the fabled realms of Greek mythology to discover your hero's true power and unravel the mysteries of the First Civilisation. If you have purchased Assassin's Creed Odyssey - Stadia Ultimate Edition, you already own this content. It is included in Assassin's Creed Odyssey - Stadia Ultimate Edition.",
     "name": "Assassin's Creed Odyssey - Stadia Season Pass",
     "sku": "6f6a85eb8e6f4042a95cc5a51ee26984",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "expansion_pass"
   },
   "71e7c4fc5ca24f0f8301da6d042bf18e": {
@@ -615,7 +630,7 @@
     "description": "This pack includes: Sacred Land Pack",
     "name": "Ghost Recon Breakpoint : The Sacred Land Pack",
     "sku": "73e37b5508944b508cf1e997b7f11ebb",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "sacred_land_pack"
   },
   "75be643ff0fb40d7873fa41edb10d98a": {
@@ -631,7 +646,7 @@
     "description": "Enhance your Ghost Recon  Breakpoint experience with the Year 1 Pass including The Siren&#39;s call Day 1 mission, two adventures continuing the main story (Deep State &amp; Transcendence), early unlock for 3 new classes, the Special Operations Forces Pack.",
     "name": "Ghost Recon Breakpoint: Year 1 Pass",
     "sku": "764aea6292f941c3a38c2875fbf1ff17",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "year_one_pass"
   },
   "78ea22fb5c054167bb722322b469f33f": {
@@ -647,7 +662,7 @@
     "description": "For the first time in franchise history, discover CLAAS, one of the world’s leading farming brands, and its new vehicles allowing you to expand a wide range of activities such as forage harvesting and baling. Over 35 faithfully reproduced vehicles and tools from CLAAS join the already huge garage of Farming Simulator 19, including the new LEXION 8900 combine harvester and its unique technology, the JAGUAR 960 TT forage harvester for effective silage, and the powerful XERION 5000 tractor.",
     "name": "Farming Simulator 19 Platinum Expansion",
     "sku": "7c0dbd202f5d4c409fe30046f68854ca",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "fs19_dlc_8F6BAB51"
   },
   "7c7818dfa9774281bdc6375402dc6e0a": {
@@ -655,7 +670,7 @@
     "description": "New nightmares have emerged from the shadows of our Moon. Called forth by haunting visions, Eris Morn has returned. Join her to slay these nightmares before they reach out beyond the Moon to cast humanity back into an age of darkness.",
     "name": "Destiny 2: Shadowkeep",
     "sku": "7c7818dfa9774281bdc6375402dc6e0a",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "10000003"
   },
   "7ed368fdc86c45c5a61a44191bd0fa36": {
@@ -663,7 +678,7 @@
     "description": "This item is already included in the Kombat Pack. Three new character skins. The Klassic Arcade Ninja Skin Pack outfits Mortal Kombat 11 characters Scorpion, Sub-Zero and Noob Saibot in Klassic, Arcade inspired costumes.",
     "name": "Klassic Arcade Ninja Skin Pack 1",
     "sku": "7ed368fdc86c45c5a61a44191bd0fa36",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "98600abf-ddbc-40ad-9010-3a637027eea6"
   },
   "7ed521aacf2a44168fb99cd1e13472ad": {
@@ -679,7 +694,7 @@
     "description": "This set includes Faux Leather Jacket, Cowboy Hat (Brown), Leather Bootcut Pants, Battle Belt and Long Sleeved Turtleneck (Black).",
     "name": "PUBG - Brown Hat Ranger Set",
     "sku": "8492149db1724bb6b654d637e231136d",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBGBROWNHRSKIN"
   },
   "85a8f97e5cc448899d6f851a5976f5c4": {
@@ -687,7 +702,7 @@
     "description": "The Neon Cosmetic Pack includes the following content, for use in Borderlands 3: • Neon Vault Hunter head • Neon Vault Hunter skin • Neon Echo Device skin • Neon weapon trinket. This content is included in the Borderlands 3 Deluxe Edition and Super Deluxe Edition.",
     "name": "Borderlands®3 Neon Cosmetic Pack",
     "sku": "85a8f97e5cc448899d6f851a5976f5c4",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "BL3_D_NeonCosmeticPack"
   },
   "888a817c35b5439bb6a03a78ab09e138": {
@@ -719,7 +734,7 @@
     "description": "The Gearbox Cosmetic Pack includes the following content, for use in Borderlands 3: • Gearbox weapon skin • Gearbox weapon trinket. This content is included in the Borderlands 3 Deluxe Edition and Super Deluxe Edition.",
     "name": "Borderlands®3 Gearbox Cosmetic Pack",
     "sku": "8eb8fae663e841bca442ca6d95b54278",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "BL3_D_GearboxCosmeticPack"
   },
   "90f5bd9270024986b26ee8221c1fa2e4": {
@@ -735,7 +750,7 @@
     "description": "Obtain 9600 Ghost Coins plus an additional 2400 Ghost Coins. Ghost Coins are used to purchase character and weapon customisations, vehicles and time savers.",
     "name": "Ghost Recon Breakpoint : 9600 (+2400) Ghost Coins",
     "sku": "91d8f9ede6ed4a508349a9072e2a727d",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "ghost_coins_96"
   },
   "926a01eb81a04bbd8d13d25f30c11a97": {
@@ -743,7 +758,7 @@
     "description": "Unlock the GX Spider buggy and the Trail TX motorcycle in Tom Clancy's Ghost Recon Breakpoint.",
     "name": "Ghost Recon Breakpoint : Off-Road Pack",
     "sku": "926a01eb81a04bbd8d13d25f30c11a97",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "off_road_pack"
   },
   "93501771f2244793af1053b120e66b02": {
@@ -751,7 +766,7 @@
     "description": "One of the most advanced weapons of World War 2 salvaged for the Dead War, The FG-42 automatic rifle is a destructive upgrade to your arsenal - packing all of the intense firepower of a light machine gun with none of the heft! This content is included with the purchase of the Zombie Army 4: Season Pass One.",
     "name": "Zombie Army 4: FG-42 Automatic Rifle Bundle",
     "sku": "93501771f2244793af1053b120e66b02",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "DLC00003"
   },
   "947515b6fcc543bca605d2c8d018a415": {
@@ -759,7 +774,7 @@
     "description": "When Plan Z was unleashed, millions of soldiers rose from the dead – but not everyone came back as a mindless ghoul! Hector crashed in the Alps during the Dead War, and isn’t going to let that whole ‘being dead’ thing get in the way of his duty as a gentleman! Just try not to catch yourself on the propeller blade sticking out of his chest. This content is included with the purchase of the Zombie Army 4: Season Pass One.",
     "name": "Zombie Army 4: Undead Airman Character",
     "sku": "947515b6fcc543bca605d2c8d018a415",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "DLC00002"
   },
   "94db678cbb6342c3bc0e58f71130b3fb": {
@@ -791,12 +806,16 @@
     "description": "Obtain 2400 Ghost Coins plus an additional 400 Ghost Coins. Ghost Coins are used to purchase character and weapon customisations, vehicles and time savers.",
     "name": "Ghost Recon Breakpoint : 2400 (+400) Ghost Coins",
     "sku": "9e3e3fe699394570a8bf815b04f0b5ff",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "ghost_coins_24"
   },
   "9faa81e600704a828c243bf0b9c479bd": {
     "appId": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
-    "bundleSkus": [
+    "description": "This is Battle Royale. Land, loot and outwit your opponents to become the last player standing in a thrilling game experience full of unexpected, adrenaline-pumping moments. This bundle includes Playerunknown's Battlegrounds basegame, 6,000 G-Coin, Survivor Pass: Cold Front, Premiere set, Aviator Set, Brown Hat Ranger Set, Blue School Uniform Set, Cheerleader Set, Factory worker Set and Hipster Set.",
+    "name": "PlayerUnknown's Battlegrounds - Chicken Dinner Edition",
+    "sku": "9faa81e600704a828c243bf0b9c479bd",
+    "skuType": "bundle",
+    "skus": [
       "71e7c4fc5ca24f0f8301da6d042bf18e",
       "d125c6e1d3514f479e34badaad5b9836",
       "2e07db5d338d40cb9eac9deae4154f11",
@@ -808,10 +827,6 @@
       "d222256fad864d92803925f598c3e418",
       "f92203bfca9846b3b10f236d451a3300"
     ],
-    "description": "This is Battle Royale. Land, loot and outwit your opponents to become the last player standing in a thrilling game experience full of unexpected, adrenaline-pumping moments. This bundle includes Playerunknown's Battlegrounds basegame, 6,000 G-Coin, Survivor Pass: Cold Front, Premiere set, Aviator Set, Brown Hat Ranger Set, Blue School Uniform Set, Cheerleader Set, Factory worker Set and Hipster Set.",
-    "name": "PlayerUnknown's Battlegrounds - Chicken Dinner Edition",
-    "sku": "9faa81e600704a828c243bf0b9c479bd",
-    "skuType": "bundle",
     "somename": "PUBGCHKDINEDITION"
   },
   "a1afa4eca7b24713a9bcf3421dd85a13": {
@@ -827,7 +842,7 @@
     "description": "With the Dead War devaluing gold to nothing, the survivors have found a new use for it. Annihilate the undead with an air of class! Apply a brilliant gold sheen to your guns with these skins. This content is included with the purchase of the Zombie Army 4: Season Pass One.",
     "name": "Zombie Army 4: Solid Gold Weapon Skins",
     "sku": "a2451006373c494b87e770e97f476a91",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "DLC00004"
   },
   "a3ae3dfc95ca4ad9b191e0ab9b75f601": {
@@ -835,7 +850,7 @@
     "description": "Following the journey and experiences of Khlebnikov during the last days of life in Novosibirsk, retraced by Colonel Miller a year later, players can expect the classic story-driven gameplay of the Metro series in this new linear chapter, complete with a brand new weapon, the deadly flame-thrower, claustrophobic environments, and the all-too-familiar hair-raising tension.",
     "name": "Metro Exodus - The Two Colonels",
     "sku": "a3ae3dfc95ca4ad9b191e0ab9b75f601",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "metro_exodus_dlc1"
   },
   "a6c13e6aa796439295774eb0e8cd3f8b": {
@@ -867,7 +882,7 @@
     "description": "Enhance your The Division 2 experience with the Year 1 Pass! The Year 1 Pass includes: Instant unlock of all Year 1 Specializations, 7-day early access to all Year 1 Episodes, 8 exclusive narrative missions &quot;Classified Assignments: the Fall of D.C.&quot;, A VIP status during Year 1, including additional assignments, rewards and discounts, 1 exclusive outfit &amp; 1 exclusive emote",
     "name": "The Division 2 - Year 1 Pass",
     "sku": "a8b8eac0c0794b20a3f7a439760f6ee0",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "year_pass_1_pack"
   },
   "ab6a5a0d448d4c7aaed8dfa91ad6f4b9": {
@@ -883,7 +898,7 @@
     "description": "Upgrade your American Motorsport adventures with the Season Pass: Get immediate access to 25 vehicles, including three exclusive to the Season Pass. Drive the Ferrari FXX K 2014, the Mitsubishi Lancer Evolution X 2014, the Porsche 911 Turbo 3.6 1993 and more. A permanent VIP 20% in-game discount will allow you to buy more vehicles and customizations. Enjoy an additional home location to showcase your vehicles in style. Customize your avatar with two unique outfits to show off your personal flare.",
     "name": "THE CREW 2 - SEASON PASS",
     "sku": "adeacff32c1b4e0ba1127766e7a5bfc4",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "SeasonPass"
   },
   "af425d34afa740c194eb8326dbd1695b": {
@@ -891,7 +906,7 @@
     "description": "This set includes Military Jacket (Black), Military Skirt (Black), Military Cap (Black), Military Boots (Black) and Military Shirt (Gray).",
     "name": "PUBG - MILITARY UNIFORM SET(FEMALE)",
     "sku": "af425d34afa740c194eb8326dbd1695b",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBGMILTUNIFSKIN"
   },
   "b0c60f8483be419eb2335a79a0783cc5": {
@@ -904,27 +919,27 @@
   },
   "b171fc78d4e1496d9536d585257a771e": {
     "appId": "632522c846a041ce801e47b96ba2e265rcp1",
-    "bundleSkus": [
-      "17affc92b9ca47a7b64e748609ed25af",
-      "2262139d1bd04020a8599874a142680f"
-    ],
     "description": "Hell’s armies have invaded Earth. Become the Slayer in an epic single-player campaign to conquer demons across dimensions and stop the final destruction of humanity. The only thing they fear... is you. Experience the ultimate combination of speed and power in DOOM Eternal - the next leap in push-forward, first-person combat. Armed with a shoulder-mounted flamethrower, retractable wrist-mounted blade, upgraded guns and mods and abilities, you're faster, stronger, and more versatile than ever. And enter BATTLEMODE, the new 2 versus 1 multiplayer experience where a fully-armed DOOM Slayer faces off against two player-controlled demons, fighting it out in a best-of-five round match of intense first-person combat.",
     "name": "DOOM Eternal Standard Edition",
     "sku": "b171fc78d4e1496d9536d585257a771e",
     "skuType": "bundle",
+    "skus": [
+      "17affc92b9ca47a7b64e748609ed25af",
+      "2262139d1bd04020a8599874a142680f"
+    ],
     "somename": "dme_standardbundle"
   },
   "b1ef708943904e7eaa699d2113805814": {
     "appId": "879d82512f5441829250ead1aa678a70rcp1",
-    "bundleSkus": [
-      "8ca5e97f091e4f7fbfcf8069ba850b1f",
-      "a3ae3dfc95ca4ad9b191e0ab9b75f601",
-      "6ad6555933ee4c34a6ad1d2d4fdf69aa"
-    ],
     "description": "The Gold Edition includes the Metro Exodus Expansion Pass. The Metro Exodus Expansion Pass will contain two major pieces of story-driven DLC for the game, following brand new stories from the world of Metro: The Two Colonels & Sam’s Story – Early 2020. Flee the shattered ruins of the Moscow Metro and embark on an epic, continent-spanning journey across the post-apocalyptic Russian wilderness. Explore vast, non-linear levels, lose yourself in an immersive, sandbox survival experience, and follow a thrilling story-line that spans an entire year in the greatest Metro adventure yet.",
     "name": "Metro Exodus - Gold Edition",
     "sku": "b1ef708943904e7eaa699d2113805814",
     "skuType": "bundle",
+    "skus": [
+      "8ca5e97f091e4f7fbfcf8069ba850b1f",
+      "a3ae3dfc95ca4ad9b191e0ab9b75f601",
+      "6ad6555933ee4c34a6ad1d2d4fdf69aa"
+    ],
     "somename": "metro_exodus_gold_edition"
   },
   "b54873e3768140b9805664a220969929": {
@@ -932,7 +947,7 @@
     "description": "This set includes Miramar Beach Shirt, Badlands Gold Trim Boots, Marksman Aviators and White Weather Slacks.",
     "name": "PUBG - BADLANDS LEISURE SET",
     "sku": "b54873e3768140b9805664a220969929",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBGBDLDSLEISKIN"
   },
   "b63c09150d8b4305898d904f50c8c148": {
@@ -940,7 +955,7 @@
     "description": "Raze Hell with the DOOM Eternal Deluxe Edition which includes (1) Demonic Slayer Skin (2) Classic Weapon Sound Pack - throwback sound effects for all your DOOM Eternal guns.",
     "name": "DOOM Eternal Deluxe Content",
     "sku": "b63c09150d8b4305898d904f50c8c148",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "dme_deluxe"
   },
   "b6d1b295ed0d4f1080576ac5d51df6d0": {
@@ -953,7 +968,11 @@
   },
   "b9d1633ba24f41d7919f431db4744f3c": {
     "appId": "d43cd46c81734ca48e1a615310d0237crcp1",
-    "bundleSkus": [
+    "description": "In the Warlords of New York expansion, hunt down your nemesis, Aaron Keener, a former Division Agent who has taken control of New York. Trained by The Division but disavowing its ideals, he is now the highest authority in town. Tom Clancy’s The Division 2 Warlords of New York - Ultimate Edition includes:  the base game, the Warlords of New York expansion, a level 30 boost, allowing you to jump right into the Warlords of New York campaign, the instant unlock of all 6 endgame specializations, 8 exclusive Classified assignments missions, the Battleworn secret service pack, the First Responder pack, the Elite Agent pack, 1 exclusive emote, 1 exclusive outfit",
+    "name": "The Division 2: Warlords of New York Ultimate Edition",
+    "sku": "b9d1633ba24f41d7919f431db4744f3c",
+    "skuType": "bundle",
+    "skus": [
       "bed63eac149542078fa5b9d6f20f5f2f",
       "354ab39ab5e14aaba1a06ef86a0268fe",
       "a8b8eac0c0794b20a3f7a439760f6ee0",
@@ -961,10 +980,6 @@
       "2c9a80e5c89b47d7974c521e04258615",
       "bbce0ef261374790bb6ce080cd7b9725"
     ],
-    "description": "In the Warlords of New York expansion, hunt down your nemesis, Aaron Keener, a former Division Agent who has taken control of New York. Trained by The Division but disavowing its ideals, he is now the highest authority in town. Tom Clancy’s The Division 2 Warlords of New York - Ultimate Edition includes:  the base game, the Warlords of New York expansion, a level 30 boost, allowing you to jump right into the Warlords of New York campaign, the instant unlock of all 6 endgame specializations, 8 exclusive Classified assignments missions, the Battleworn secret service pack, the First Responder pack, the Elite Agent pack, 1 exclusive emote, 1 exclusive outfit",
-    "name": "The Division 2: Warlords of New York Ultimate Edition",
-    "sku": "b9d1633ba24f41d7919f431db4744f3c",
-    "skuType": "bundle",
     "somename": "game_warlock_ult_bundle"
   },
   "bb9bcb490fd145d9997c8b3ff3f1039f": {
@@ -980,7 +995,7 @@
     "description": "The First Responder pack includes: First Responder outfit, First Responder weapon skin.",
     "name": "The Division 2 - First Responder Pack",
     "sku": "bbce0ef261374790bb6ce080cd7b9725",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "first_responder_pack"
   },
   "bbe14a4d70cf4777b7319098b5136a40": {
@@ -988,32 +1003,32 @@
     "description": "The Elite Agent pack includes: An exotic Assault Rifle, An exclusive skill effect, A headstart stash space.",
     "name": "The Division 2 - Elite Agent Pack",
     "sku": "bbe14a4d70cf4777b7319098b5136a40",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "elite_agent_pack"
   },
   "bd70626ec3834dedbc6dda5b956f7648": {
     "appId": "20e792017ab34ad89b70dc17a5c72d68rcp1",
-    "bundleSkus": [
-      "4950959380034dcda0aecf98f675e11f",
-      "5c1d84fe250a473e9d0313ed232508bc"
-    ],
     "description": "Dive into the world of Destiny 2 to experience responsive FPS combat, explore the mysteries of our solar system, and unleash elemental abilities against powerful enemies. Experience Destiny 2’s cinematic story alone or with friends, join other Guardians for challenging co-op missions, or compete against them in a variety of PvP modes. Destiny 2: The Collection includes Destiny 2, Destiny 2: Forsaken, and Destiny 2: Shadowkeep. See below for loot box odds.",
     "name": "Destiny 2: The Collection",
     "sku": "bd70626ec3834dedbc6dda5b956f7648",
     "skuType": "bundle",
+    "skus": [
+      "4950959380034dcda0aecf98f675e11f",
+      "5c1d84fe250a473e9d0313ed232508bc"
+    ],
     "somename": "20000001"
   },
   "be9526126d394061b0eef9b16352357e": {
     "appId": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
-    "bundleSkus": [
-      "71e7c4fc5ca24f0f8301da6d042bf18e",
-      "d125c6e1d3514f479e34badaad5b9836",
-      "2e07db5d338d40cb9eac9deae4154f11"
-    ],
     "description": "This is Battle Royale. Land, loot and outwit your opponents to become the last player standing in a thrilling game experience full of unexpected, adrenaline-pumping moments. This bundle includes Playerunknown's Battlegrounds basegame, Survivor Pass: Cold Front and Stadia Premiere set.",
     "name": "PlayerUnknown's Battlegrounds - Pioneer Edition",
     "sku": "be9526126d394061b0eef9b16352357e",
     "skuType": "bundle",
+    "skus": [
+      "71e7c4fc5ca24f0f8301da6d042bf18e",
+      "d125c6e1d3514f479e34badaad5b9836",
+      "2e07db5d338d40cb9eac9deae4154f11"
+    ],
     "somename": "PUBGPIONEREDITION"
   },
   "bed63eac149542078fa5b9d6f20f5f2f": {
@@ -1042,14 +1057,14 @@
   },
   "cc66f2992d04402bba5cbc8abf6cc616": {
     "appId": "a031419410cc48469ff8954ea0732640rcp1",
-    "bundleSkus": [
-      "01e95e73256c465fb5620fc574446413",
-      "ede759ff51c948d698fe4f20172ff2e2"
-    ],
     "description": "Explore over-the-top action and physics-bending motorcycle racing in the latest entry of the Trials franchise.  With new tracks  and more ways to compete, Trials Rising is easy to pick-up and play, challenging to master and offers the best multiplayer racing experience. Get an additional 55+ tracks with the Expansion Pass: Explore the American southwest  and go on wild rides in Trials Rising Sixty-Six. Go on an epic adventure below the equator in Trials Rising Crash &amp; Sunburn, globe-trotting in exotic locations. Cut up the competition while you sport The Samurai Item Pack. Defy the laws of gravity with The Stuntman Rider Pack.",
     "name": "Trials Rising - Digital Gold Edition",
     "sku": "cc66f2992d04402bba5cbc8abf6cc616",
     "skuType": "bundle",
+    "skus": [
+      "01e95e73256c465fb5620fc574446413",
+      "ede759ff51c948d698fe4f20172ff2e2"
+    ],
     "somename": "gold"
   },
   "cd650c64a82c4726b38de3518f4c5544": {
@@ -1057,7 +1072,7 @@
     "description": "This set includes Punk Spaulder Leather Jacket (Red), Metallic Punk Jeans (Silver), Collar Bone Jet Fighter Helmet (Level 1) and Metallic Boots (Silver).",
     "name": "PUBG - PUNK DESTRUCTION SET",
     "sku": "cd650c64a82c4726b38de3518f4c5544",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBGPUKDSTRTSKIN"
   },
   "cdb883f981184a9486c567e1704e8f1b": {
@@ -1065,7 +1080,7 @@
     "description": "The NBA 2K20 Digital Deluxe Edition includes 35,000 Virtual Currency, 10,000 MyTEAM Points, 10 MyCAREER Skill Boosts, MyPLAYER Clothing Capsule, 10 MyTEAM League Packs (delivered one a week), 10 MyTEAM Heat Check Packs (delivered one a week), and 1 Sapphire MyTEAM Anthony Davis Card. See MyTEAM Pack Drop Rates below.",
     "name": "NBA 2K20 Digital Deluxe Bonus",
     "sku": "cdb883f981184a9486c567e1704e8f1b",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "NBA2K20_Deluxe_Edition"
   },
   "ce1f02b297f5433891b9aab3695625f8": {
@@ -1073,7 +1088,7 @@
     "description": "Purchase 500 G-Coin. Use G-Coin to purchase PUBG in-game cosmetics and more. Game sold separately.",
     "name": "PUBG - 500 G-COINS",
     "sku": "ce1f02b297f5433891b9aab3695625f8",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBG00500GCOINS"
   },
   "d125c6e1d3514f479e34badaad5b9836": {
@@ -1081,7 +1096,7 @@
     "description": "Dress for the season with Survivor Pass: Cold Front.",
     "name": "PUBG - Survivor Pass : Cold Front",
     "sku": "d125c6e1d3514f479e34badaad5b9836",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBGSURCLFRONT"
   },
   "d222256fad864d92803925f598c3e418": {
@@ -1089,7 +1104,7 @@
     "description": "This set includes Brimless Cap (Black), Leather Jumpsuit (Black) and Work Boots.",
     "name": "PUBG- Factory worker Set",
     "sku": "d222256fad864d92803925f598c3e418",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBGFATYWKSKIN"
   },
   "d41a70a360b54fbc91b088679bf5624b": {
@@ -1097,7 +1112,7 @@
     "description": "Purchase 6,000 G-Coin. Use G-Coin to purchase PUBG in-game cosmetics and more. Game sold separately.",
     "name": "PUBG - 6,000 G-COINS",
     "sku": "d41a70a360b54fbc91b088679bf5624b",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBG06000GCOINS"
   },
   "d68a7dfd040946eca937ef08b3e4f471": {
@@ -1105,7 +1120,7 @@
     "description": "The RAGE 2: Deluxe Content gives you: Rise of the Ghosts Expansion, Doom BFG, Wasteland Wizard Cheat Codes, Battle Standard, Progress Booster.",
     "name": "RAGE 2: Deluxe Content Pack",
     "sku": "d68a7dfd040946eca937ef08b3e4f471",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "R2DELUXE"
   },
   "d8e5901692754f05bf26ccef03ba1c18": {
@@ -1113,7 +1128,7 @@
     "description": "This upgrade pack includes Chicken Dinner Edition bonus content; DO NOT purchase this pack if you've already purchased an entitlement to PLAYERUNKNOWN'S BATTLEGROUND: Chicken Dinner Edition, as the content is duplicative.  This pack includes the 6,000 G-coin and 6 Skin sets (Aviator Set, Brown Hat Ranger Set, Blue School Uniform Set, Cheerleader Set, Factory worker Set and Hipster Set)",
     "name": "PUBG - Chicken Dinner Upgrade Pack",
     "sku": "d8e5901692754f05bf26ccef03ba1c18",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBGCHIKDUPGRAD"
   },
   "decf585409804c8f9c1bd03562504e10": {
@@ -1121,21 +1136,21 @@
     "description": "Purchase 13,500 G-Coin. Use G-Coin to purchase PUBG in-game cosmetics and more. Game sold separately.",
     "name": "PUBG - 13,500 G-COINS",
     "sku": "decf585409804c8f9c1bd03562504e10",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBG13500GCOINS"
   },
   "e74abd04f4a34c7a82b6cf8cd9cf9ac0": {
     "appId": "632522c846a041ce801e47b96ba2e265rcp1",
-    "bundleSkus": [
+    "description": "Hell’s armies have invaded Earth. Become the Slayer in an epic single-player campaign to conquer demons across dimensions and stop the final destruction of humanity. The only thing they fear... is you. Experience the ultimate combination of speed and power in DOOM Eternal - the next leap in push-forward, first-person combat. And enter BATTLEMODE, the new 2 versus 1 multiplayer experience where a fully-armed DOOM Slayer faces off against two player-controlled demons, fighting it out in a best-of-five round match of intense first-person combat. The Deluxe Edition includes: (1) Year One Pass (2) Demonic Slayer Skin (3) Classic Weapon Sound Pack.",
+    "name": "DOOM Eternal Deluxe Edition",
+    "sku": "e74abd04f4a34c7a82b6cf8cd9cf9ac0",
+    "skuType": "bundle",
+    "skus": [
       "17affc92b9ca47a7b64e748609ed25af",
       "2262139d1bd04020a8599874a142680f",
       "b63c09150d8b4305898d904f50c8c148",
       "f2d3edb585044489bda92238da640df0"
     ],
-    "description": "Hell’s armies have invaded Earth. Become the Slayer in an epic single-player campaign to conquer demons across dimensions and stop the final destruction of humanity. The only thing they fear... is you. Experience the ultimate combination of speed and power in DOOM Eternal - the next leap in push-forward, first-person combat. And enter BATTLEMODE, the new 2 versus 1 multiplayer experience where a fully-armed DOOM Slayer faces off against two player-controlled demons, fighting it out in a best-of-five round match of intense first-person combat. The Deluxe Edition includes: (1) Year One Pass (2) Demonic Slayer Skin (3) Classic Weapon Sound Pack.",
-    "name": "DOOM Eternal Deluxe Edition",
-    "sku": "e74abd04f4a34c7a82b6cf8cd9cf9ac0",
-    "skuType": "bundle",
     "somename": "dme_deluxebundle"
   },
   "e8ed70244808408cbb7d3b2b1f06547f": {
@@ -1151,7 +1166,7 @@
     "description": "Every generation, the Great Spirit chooses a worthy warrior to become Nightwolf: the Matoka's champion and protector. Grey Cloud proved worthy when he laid down his life to prevent the Black Dragon from plundering what remained of his tribe's sacred artifacts. As Nightwolf, Grey Cloud possesses extraordinary magic granted by the Great Spirit. He uses it not only to fight for the Matoka's future, but also to defend all of Earthrealm.",
     "name": "Nightwolf",
     "sku": "e94c4b9ada3e43a89fe92e86e83ed092",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "951c381a-e82a-4cdb-9056-c0dd63f4cdac"
   },
   "e96ff7a738d14b88ba459f052f237d17": {
@@ -1159,7 +1174,7 @@
     "description": "The Red Dead Redemption 2 Special Edition delivers exclusive content for Story Mode including a Bank Robbery Mission & Gang Hideout, Dappled Black Thoroughbred, Talisman & Medallion Gameplay Bonuses, Gameplay Boosts, Cash Bonuses & Discounts, and the Nuevo Paraiso Gunslinger Outfit, plus free access to Additional Weapons.",
     "name": "Red Dead Redemption 2:  Special Edition Content",
     "sku": "e96ff7a738d14b88ba459f052f237d17",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "dlc_specialedition"
   },
   "ead73553d3014369a48c2cbd92f02ae5": {
@@ -1167,19 +1182,19 @@
     "description": "This set includes Leather \"Skyrocket\" Jacket, Pilot Pants, Vintage Aviator Goggles, Feathered Shirt and Suede Aviator Cap.",
     "name": "PUBG - Aviator Set",
     "sku": "ead73553d3014369a48c2cbd92f02ae5",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBGAVIATORSKIN"
   },
   "ec30180d14de41fcaec12d442b81e248": {
     "appId": "cc97434908874852a6705d255a605dc8rcp1",
-    "bundleSkus": [
-      "94db678cbb6342c3bc0e58f71130b3fb",
-      "38a33f9e010d48f9b80b3f7252a4768b"
-    ],
     "description": "The Crew 2 - Deluxe Edition features The Crew 2 Motorsports Deluxe Pack which includes: Ford F-150 Raptor Race Truck 2017, Abarth 500 2008 Monster Truck Edition, Pilatus PC-21, 3 outfits to customize your avatar. Take on the American motorsports scene as you explore and dominate the land, air, and sea across the entire USA. With a wide variety of cars, bikes, boats, and planes, compete in a wide range of driving disciplines.",
     "name": "The Crew 2 - Deluxe Edition",
     "sku": "ec30180d14de41fcaec12d442b81e248",
     "skuType": "bundle",
+    "skus": [
+      "94db678cbb6342c3bc0e58f71130b3fb",
+      "38a33f9e010d48f9b80b3f7252a4768b"
+    ],
     "somename": "DeluxeEdition"
   },
   "ede759ff51c948d698fe4f20172ff2e2": {
@@ -1187,7 +1202,7 @@
     "description": "Extend your world tour with the Trials Rising , Expansion pass including 55+ additional tracks to master! The pass will include all the following content: Stuntman Rider Pack: defy the laws of gravity and fly through rings of fire with this flashy costume. Ride accross the US along the famous Route 66 and explore the American southwest. The pack also includes the Touchdown outfit which lets you cross the finish line as an American football player. Go beyond the Equator to see the wonders of the Southern Hemisphere! Globe-trot your way from icy Antartica to the jungle-covered mountains of Peru and more!",
     "name": "Trials Rising - Expansion Pass",
     "sku": "ede759ff51c948d698fe4f20172ff2e2",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "expansion_pass"
   },
   "f16b28e2fd224acaafeee4c19134adb4": {
@@ -1203,7 +1218,7 @@
     "description": "Access to two campaign add-ons to release within the first year of DOOM Eternal’s launch date.",
     "name": "Year One Pass",
     "sku": "f2d3edb585044489bda92238da640df0",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "dme_yearone"
   },
   "f3f250e8a4d54f60ba730fbc04268052": {
@@ -1224,7 +1239,11 @@
   },
   "f4934cfefbf845c3a3fa345dd65f9fcd": {
     "appId": "be080ad40b434ca289166031d3e88623rcp1",
-    "bundleSkus": [
+    "description": "*Moxxi’s Heist of the Handsome Jackpot (Campaign Add-On 1) and bonus end game content such as Takedown at the Maliwan Blacksite expected to launch on Stadia early 2020. The Deluxe Edition includes: • Retro Cosmetic Pack: Vault Hunter head &amp; skin, ECHO Device skin, weapon skin • Neon Cosmetic Pack: Vault Hunter head &amp; skin, ECHO Device skin, trinket • Gearbox Cosmetic Pack: weapon skin, trinket • Toy Box Weapons Pack: 2 Toy guns, Toy grenade mod, trinket • Equippable XP &amp; Loot Drop Boost Mods The original shooter-looter returns, packing bazillions of guns and an all-new mayhem-fueled adventure! Blast through new worlds and enemies as one of 4 brand new Vault Hunters. Play solo or with friends to take on insane enemies, score loads of loot and save your home.",
+    "name": "Borderlands®3 Deluxe Edition",
+    "sku": "f4934cfefbf845c3a3fa345dd65f9fcd",
+    "skuType": "bundle",
+    "skus": [
       "958f4c0900c64e7e83b9218ab479304e",
       "8eb8fae663e841bca442ca6d95b54278",
       "fc54b4c07feb43068a46aa7d9b4fd419",
@@ -1232,10 +1251,6 @@
       "2b58178e031e4332a79617bc994ac21d",
       "337bd2854bd14b73a27d1c57d650e1da"
     ],
-    "description": "*Moxxi’s Heist of the Handsome Jackpot (Campaign Add-On 1) and bonus end game content such as Takedown at the Maliwan Blacksite expected to launch on Stadia early 2020. The Deluxe Edition includes: • Retro Cosmetic Pack: Vault Hunter head &amp; skin, ECHO Device skin, weapon skin • Neon Cosmetic Pack: Vault Hunter head &amp; skin, ECHO Device skin, trinket • Gearbox Cosmetic Pack: weapon skin, trinket • Toy Box Weapons Pack: 2 Toy guns, Toy grenade mod, trinket • Equippable XP &amp; Loot Drop Boost Mods The original shooter-looter returns, packing bazillions of guns and an all-new mayhem-fueled adventure! Blast through new worlds and enemies as one of 4 brand new Vault Hunters. Play solo or with friends to take on insane enemies, score loads of loot and save your home.",
-    "name": "Borderlands®3 Deluxe Edition",
-    "sku": "f4934cfefbf845c3a3fa345dd65f9fcd",
-    "skuType": "bundle",
     "somename": "BL3_DeluxeEdition"
   },
   "f5562aaf93cb46e081d317263bde3013": {
@@ -1275,24 +1290,28 @@
     "description": "This set includes Hipster Jean Jacket, Hipster Skinny Jeans and Hipster Canvas Shoes.",
     "name": "PUBG - Hipster Set",
     "sku": "f92203bfca9846b3b10f236d451a3300",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "PUBGHIPSTERSKIN"
   },
   "f962fa4f12b64bffade9c170469d5710": {
     "appId": "d43cd46c81734ca48e1a615310d0237crcp1",
-    "bundleSkus": [
-      "bed63eac149542078fa5b9d6f20f5f2f",
-      "354ab39ab5e14aaba1a06ef86a0268fe"
-    ],
     "description": "INCLUDES THE DIVISION 2 + EXPANSION. In the Warlords of New York expansion, hunt down your nemesis, Aaron Keener, a former Division Agent who has taken control of New York. Trained by The Division but disavowing its ideals, he is now the highest authority in town. Includes a level 30 boost, allowing you to jump right into the Warlords of New York campaign. Play solo or online co-op. Experience a gripping story set in a post-pandemic country. Explore two open worlds: Washington, DC, and New York City. Create and level up your own Division Agent. Play intense PvP in the Dark Zones. Enjoy an extended endgame, including thematic three-month seasons",
     "name": "The Division 2 - Warlords of New York Edition",
     "sku": "f962fa4f12b64bffade9c170469d5710",
     "skuType": "bundle",
+    "skus": [
+      "bed63eac149542078fa5b9d6f20f5f2f",
+      "354ab39ab5e14aaba1a06ef86a0268fe"
+    ],
     "somename": "game_warlock_bundle"
   },
   "fbfc03802388481b87a6d6922b773686": {
     "appId": "be080ad40b434ca289166031d3e88623rcp1",
-    "bundleSkus": [
+    "description": "*Moxxi’s Heist of the Handsome Jackpot (Campaign Add-On 1) and bonus end game content such as Takedown at the Maliwan Blacksite expected to launch on Stadia early 2020. The Super Deluxe Edition includes the Season Pass and Deluxe bonus content. Season Pass: • 4 campaign add-on&#39;s • Butt Stallion weapon skin, weapon trinket, and grenade mod. Deluxe bonus content: • Retro Cosmetic Pack • Neon Cosmetic Pack • Gearbox Cosmetic Pack  • Toy Box Weapons Pack • Equippable XP &amp; Loot Drop Boost Mods. The original shooter-looter returns, packing bazillions of guns and an all-new mayhem-fueled adventure! Blast through new worlds and enemies as one of 4 brand new Vault Hunters. Play solo or with friends to take on insane enemies, score loads of loot and save your home.",
+    "name": "Borderlands®3 Super Deluxe Edition",
+    "sku": "fbfc03802388481b87a6d6922b773686",
+    "skuType": "bundle",
+    "skus": [
       "958f4c0900c64e7e83b9218ab479304e",
       "8eb8fae663e841bca442ca6d95b54278",
       "fc54b4c07feb43068a46aa7d9b4fd419",
@@ -1302,10 +1321,6 @@
       "2b4f07c4c9264d2ba193cc4215e073c1",
       "1e6b50c7fd7640f4a7b5160e74708043"
     ],
-    "description": "*Moxxi’s Heist of the Handsome Jackpot (Campaign Add-On 1) and bonus end game content such as Takedown at the Maliwan Blacksite expected to launch on Stadia early 2020. The Super Deluxe Edition includes the Season Pass and Deluxe bonus content. Season Pass: • 4 campaign add-on&#39;s • Butt Stallion weapon skin, weapon trinket, and grenade mod. Deluxe bonus content: • Retro Cosmetic Pack • Neon Cosmetic Pack • Gearbox Cosmetic Pack  • Toy Box Weapons Pack • Equippable XP &amp; Loot Drop Boost Mods. The original shooter-looter returns, packing bazillions of guns and an all-new mayhem-fueled adventure! Blast through new worlds and enemies as one of 4 brand new Vault Hunters. Play solo or with friends to take on insane enemies, score loads of loot and save your home.",
-    "name": "Borderlands®3 Super Deluxe Edition",
-    "sku": "fbfc03802388481b87a6d6922b773686",
-    "skuType": "bundle",
     "somename": "BL3_SuperDeluxeEdition"
   },
   "fc54b4c07feb43068a46aa7d9b4fd419": {
@@ -1313,7 +1328,7 @@
     "description": "The Retro Cosmetic Pack includes the following content, for use in Borderlands 3: • Retro Vault Hunter head • Retro Vault Hunter skin • Retro Echo Device skin • Retro weapon skin. This content is included in the Borderlands 3 Deluxe Edition and Super Deluxe Edition.",
     "name": "Borderlands®3 Retro Cosmetic Pack",
     "sku": "fc54b4c07feb43068a46aa7d9b4fd419",
-    "skuType": "game",
+    "skuType": "addon",
     "somename": "BL3_D_RetroCosmeticPack"
   }
 }
