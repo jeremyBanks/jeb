@@ -14,8 +14,8 @@
   }
 });
 class Spider {
-  constructor(products = {}, spidered = {}) {
-    this.products = products;
+  constructor(skus = {}, spidered = {}) {
+    this.skus = skus;
     this.spidered = spidered;
     let start;
     const started = new Promise((resolve) => (start = resolve));
@@ -23,36 +23,34 @@ class Spider {
     this.done = started
       .then(() => this.spider())
       .then(() => {
-        Object.freeze(this.products);
-        for (const product of Object.values(this.products)) {
-          Object.freeze(product);
+        Object.freeze(this.skus);
+        for (const sku of Object.values(this.skus)) {
+          Object.freeze(sku);
         }
       });
   }
   async load() {
     this.start();
     await this.done;
-    return this.products;
+    return this.skus;
   }
   async spider() {
-    await this.loadProductList(3);
-    await this.loadProductList(2001);
-    await this.loadProductList(45);
-    await this.loadProductDetails("be9526126d394061b0eef9b16352357e");
-    while (
-      Object.keys(this.products).length > Object.keys(this.spidered).length
-    ) {
-      for (const product of Object.values(this.products)) {
-        if (this.spidered[product.sku] !== true) {
-          console.debug("🕷️👀", "spidering ", product);
-          await this.loadProductDetails(product.sku);
-          this.spidered[product.sku] = true;
+    await this.loadSkuList(3);
+    await this.loadSkuList(2001);
+    await this.loadSkuList(45);
+    await this.loadSkuDetails("be9526126d394061b0eef9b16352357e");
+    while (Object.keys(this.skus).length > Object.keys(this.spidered).length) {
+      for (const sku of Object.values(this.skus)) {
+        if (this.spidered[sku.sku] !== true) {
+          console.debug("🕷️👀", "spidering ", sku);
+          await this.loadSkuDetails(sku.sku);
+          this.spidered[sku.sku] = true;
         }
       }
     }
   }
   download() {
-    const json = JSON.stringify(this.products, null, 2);
+    const json = JSON.stringify(this.skus, null, 2);
     // XXX: this blob is leaked
     const href = URL.createObjectURL(
       new Blob([json], {
@@ -60,60 +58,74 @@ class Spider {
       })
     );
     const el = Object.assign(document.createElement("a"), {
-      download: "stadia.observer.json",
+      download: "skus.json",
       href,
     });
     document.body.appendChild(el);
     el.click();
     document.body.removeChild(el);
   }
-  async loadProductList(number) {
+  async loadSkuList(number) {
     const page = await this.fetchPreloadData(`/store/list/${number}`);
-    return page.products;
+    return page.skus;
   }
-  async loadProductDetails(sku) {
+  async loadSkuDetails(sku) {
     const page = await this.fetchPreloadData(`/store/details/sku/sku/${sku}`);
+    if (page.subscriptions?.length) {
+    }
     return page;
   }
-  loadProductData(data) {
-    let product;
+  loadSkuData(data) {
+    let sku;
     if (data[6] === 1) {
-      product = new Game(data[4], data[0], "game", data[1], data[5], data[9]);
+      sku = new Game(data[4], data[0], "game", data[1], data[5], data[9]);
     } else if (data[6] === 2) {
-      product = new AddOn(data[4], data[0], "addon", data[1]);
+      sku = new AddOn(data[4], data[0], "addon", data[1], data[5], data[9]);
     } else if (data[6] === 3) {
-      product = new Bundle(
+      sku = new Bundle(
         data[4],
         data[0],
         "bundle",
         data[1],
+        data[5],
+        data[9],
+        data[14][0].map((x) => x[0])
+      );
+    } else if (data[6] === 5) {
+      sku = new Subscription(
+        data[4],
+        data[0],
+        "subscription",
+        data[1],
+        data[5],
+        data[9],
         data[14][0].map((x) => x[0])
       );
     } else {
       throw new Error(
-        `unexpected product type id ${JSON.stringify(data[6], null, 4)}`
+        `unexpected sku type id ${JSON.stringify(data[6], null, 4)}`
       );
     }
-    return this.loadProduct(product);
+    return this.loadSku(sku);
   }
-  loadProduct(product) {
-    const existing = this.products[product.sku];
+  loadSku(sku) {
+    const existing = this.skus[sku.sku];
     if (existing) {
-      if (JSON.stringify(existing) !== JSON.stringify(product)) {
-        const error = new Error(`products had same sku but different values`);
+      if (JSON.stringify(existing) !== JSON.stringify(sku)) {
+        const error = new Error(`skus had same sku but different values`);
         console.error("🕷️👀", error);
-        console.error("🕷️👀", existing, product);
+        console.error("🕷️👀", existing, sku);
         throw error;
       }
       return existing;
     } else {
-      this.products[product.sku] = product;
-      return product;
+      this.skus[sku.sku] = sku;
+      return sku;
     }
   }
   async fetchPreloadData(url) {
     await new Promise((resolve) =>
-      setTimeout(resolve, Math.random() * 3500 + 1500)
+      setTimeout(resolve, Math.random() * 16384 + 1536)
     );
     const response = await fetch(url);
     const html = await response.text();
@@ -160,18 +172,23 @@ class Spider {
     );
     const preload = Object.values(dataServiceLoads);
     const rpc = {};
-    const alias = {};
+    const loaded = {};
     const loaders = {
-      WwD3rb: (products) => {
-        products = products[2].map((p) => this.loadProductData(p[9]));
-        return { products };
+      WwD3rb: (data) => {
+        const skus = data[2].map((p) => this.loadSkuData(p[9]));
+        return { skus };
       },
-      Qc7K6_24r: (product) => {
-        const game =
-          product[18]?.[0]?.[9] && this.loadProductData(product[18][0][9]);
-        const addons = product[19]?.map((x) => this.loadProductData(x[9]));
-        product = product[16] && this.loadProductData(product[16]);
-        return { product: { product, game, addons } };
+      Qc7K6_24r: (data) => {
+        const gameData = data[18]?.[0]?.[9];
+        const game = gameData && this.loadSkuData(gameData);
+        const addons = data[19]?.map((x) => this.loadSkuData(x[9]));
+        const sku = data[16] && this.loadSkuData(data[16]);
+        return { sku, game, addons };
+      },
+      FLCvtc: (data) => {
+        const subscriptionDatas = data[2]?.map((x) => x[9]) ?? [];
+        const subscriptions = subscriptionDatas.map((s) => this.loadSkuData(s));
+        return { subscriptions };
       },
     };
     for (const [i, data] of Object.entries(preload)) {
@@ -180,7 +197,7 @@ class Spider {
           rpc[prefix + suffix] = data;
           const loader = loaders[prefix + suffix];
           if (loader) {
-            Object.assign(alias, loader(data));
+            Object.assign(loaded, loader(data));
           }
         }
       }
@@ -190,71 +207,60 @@ class Spider {
         preload,
         rpc,
       }),
-      alias
+      loaded
     );
     console.debug("🕷️👀", url, data);
     return data;
   }
 }
-class Product {
-  constructor(
-    appId = "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
-    sku = "71e7c4fc5ca24f0f8301da6d042bf18e",
-    productType = "game",
-    name = "PLAYERUNKNOWN'S BATTLEGROUNDS"
-  ) {
+class CommonSku {
+  constructor(appId, sku, skuType, name, somename, description) {
     this.appId = appId;
     this.sku = sku;
-    this.productType = productType;
-    this.name = name;
-  }
-}
-class Game extends Product {
-  constructor(
-    appId = "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
-    sku = "71e7c4fc5ca24f0f8301da6d042bf18e",
-    productType = "game",
-    name = "PLAYERUNKNOWN'S BATTLEGROUNDS",
-    somename = "PUBGBATTLEGROUNDS01",
-    description = ""
-  ) {
-    super(appId, sku, productType, name);
-    this.appId = appId;
-    this.sku = sku;
-    this.productType = productType;
+    this.skuType = skuType;
     this.name = name;
     this.somename = somename;
     this.description = description;
   }
 }
-class Bundle extends Product {
-  constructor(
-    appId = "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
-    sku = "71e7c4fc5ca24f0f8301da6d042bf18e",
-    productType = "bundle",
-    name = "PLAYERUNKNOWN'S BATTLEGROUNDS",
-    bundleSkus = new Array()
-  ) {
-    super(appId, sku, productType, name);
-    this.appId = appId;
-    this.sku = sku;
-    this.productType = productType;
-    this.name = name;
-    this.bundleSkus = bundleSkus;
+class Game extends CommonSku {
+  constructor() {
+    super(...arguments);
+    this.skuType = "game";
   }
 }
-class AddOn extends Product {
+class Bundle extends CommonSku {
   constructor(
-    appId = "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
-    sku = "71e7c4fc5ca24f0f8301da6d042bf18e",
-    productType = "addon",
-    name = "PLAYERUNKNOWN'S BATTLEGROUNDS"
+    appId,
+    sku,
+    skuType = "bundle",
+    name,
+    somename,
+    description,
+    skus
   ) {
-    super(appId, sku, productType, name);
-    this.appId = appId;
-    this.sku = sku;
-    this.productType = productType;
-    this.name = name;
+    super(appId, sku, skuType, name, somename, description);
+    this.skus = skus;
+  }
+}
+class AddOn extends CommonSku {
+  constructor() {
+    super(...arguments);
+    this.skuType = "game";
+  }
+}
+class Subscription extends CommonSku {
+  constructor(
+    appId,
+    sku,
+    skuType = "subscription",
+    name,
+    somename,
+    description,
+    skus
+  ) {
+    super(appId, sku, skuType, name, somename, description);
+    this.skus = skus;
   }
 }
 //# sourceMappingURL=plugin.js.map
