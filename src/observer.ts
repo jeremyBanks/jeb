@@ -8,7 +8,6 @@
   })
   .catch((error) => console.error(error));
 
-const playerId = "956082794034380385";
 const applicationId = "a4c5eb3f4e614b7fadbba64cba68f849rcp1";
 const gameSku = "71e7c4fc5ca24f0f8301da6d042bf18e";
 
@@ -22,7 +21,6 @@ class Spider {
   }
 
   public constructor(
-    private players: Record<Player["playerId"], Player> = {},
     private products: Record<Product["sku"], Product> = {},
     private knownSkus: Record<Product["sku"], true> = {}, 
     private spideredSkus: Record<Product["sku"], true> = {},
@@ -33,13 +31,9 @@ class Spider {
     await this.loadHome();
     await this.loadStoreList(3);
     await this.loadStoreList(45);
-    await this.loadPlayerProfile(playerId);
-    await this.loadPlayerGame(playerId, gameSku);
     await this.loadStoreProduct(applicationId, gameSku);
   }
 
-  /// Spiders product pages for every known SKU.
-  /// TODO: also players?
   private async spiderAll() {
     while (this.knownSkus.size < this.spideredSkus.size) {
       let next: string;
@@ -75,21 +69,6 @@ class Spider {
     document.body.appendChild(el);
     el.click();
     document.body.removeChild(el);
-  }
-
-  private loadPlayer(data: Proto): Player {
-    const player = new Player(
-      data[5],
-      data[0][0],
-      data[0][1],
-      data[3],
-      data[1][0],
-      data[1][1]
-    );
-    const previous = this.players[player.playerId];
-    return (this.players[player.playerId] = previous
-      ? Object.assign(previous, player)
-      : player);
   }
 
   private loadProduct(data: Proto): Product {
@@ -145,44 +124,6 @@ class Spider {
         : `/profile/detail/${applicationId}`
     );
   }
-}
-
-const data = new FormData();
-const rpcId = 'PtnQCd';
-data.append("f.req", `[[[${JSON.stringify(rpcId)},${JSON.stringify([])},null,"1"]]`);
-data.append('at', 'ANnLpDWTb0fB1GMd8PEl9WA0Utou:1588525434901');
-fetch('/_/CloudcastPortalFeWebUi/data/batchexecute?rpcids=PtnQCd&bl=boq_cloudcastportalfeuiserver_20200429.06_p1&hl=en&soc-app=760&soc-platform=1&soc-device=1&_reqid=1247146&rt=c', {
-  method: 'POST',
-  body: data,
-}).then(r => r.text()).then(x => console.log(x));
-
-const requestLabels = {
-  "PtnQCd[]": "activeSubscriptions",
-  "Qc7K6[]": "ownedGames",
-  "LV6ate[]": "currentPlayer",
-  "CmnEcf[[3]]": "alsoCurrentPlayer",
-  WwD3rb: "productList",
-  "WwD3rb[3]": "allGames",
-  "WwD3rb[45]": "stadiaProDeals",
-  "T9Kmu[]": "recentCaptures",
-  Q6jt8c: "thisPlayer",
-  GRn9Gb: "myGames",
-  FLCvtc: "bundles",
-  Qc7K6: "addons",
-  ZAm7We: "product",
-  D0Amud: "main",
-  e7h9qd: "friendsWhoPlay",
-};
-
-class Player {
-  constructor(
-    readonly playerId = "956082794034380385",
-    readonly gamertagName = "Jeremy",
-    readonly gamertagNumber = "0000",
-    readonly somename = "JEREMY",
-    readonly avatarId = "s00056",
-    readonly avatarUrl = "https://www.gstatic.com/stadia/gamers/avatars/mdpi/avatar_56.png"
-  ) {}
 }
 
 class BaseProduct {
