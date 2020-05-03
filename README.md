@@ -1,1 +1,1 @@
-https://stadia.observer/data/stadia.observer.json
+<https://stadia.observer/data/skus.json>
