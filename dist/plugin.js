@@ -182,18 +182,18 @@ class Spider {
         const skus = data[2].map((p) => this.loadSkuData(p[9]));
         return { skus };
       },
-      FWhQV_24r: (data) => loaders.Qc7K6_24r(data),
-      Qc7K6_24r: (data) => {
+      FWhQV_24r: (data) => {
         const gameData = data[18]?.[0]?.[9];
         const game = gameData && this.loadSkuData(gameData);
         const addons = data[19]?.map((x) => this.loadSkuData(x[9]));
         const sku = data[16] && this.loadSkuData(data[16]);
         return { sku, game, addons };
       },
-      FLCvtc: (data) => {
+      SYcsTd: (data) => {
         const subscriptionDatas = data[2]?.map((x) => x[9]) ?? [];
         const subscriptions = subscriptionDatas.map((s) => this.loadSkuData(s));
-        return { subscriptions };
+        if (subscriptions?.length) return { subscriptions };
+        else return {};
       },
       ZAm7W: (data) => {
         const bundles = data[1].map((x) => this.loadSkuData(x[9]));
@@ -244,20 +244,21 @@ class CommonSku {
   }
 }
 class Game extends CommonSku {
-  constructor() {
-    super(...arguments);
-    this.type = "game";
+  constructor(app, sku, type = "game", name, handle, description) {
+    super(app, sku, type, name, handle, description);
+    this.type = type;
   }
 }
 class AddOn extends CommonSku {
-  constructor() {
-    super(...arguments);
-    this.type = "addon";
+  constructor(app, sku, type = "addon", name, handle, description) {
+    super(app, sku, type, name, handle, description);
+    this.type = type;
   }
 }
 class Bundle extends CommonSku {
   constructor(app, sku, type = "bundle", name, handle, description, skus) {
     super(app, sku, type, name, handle, description);
+    this.type = type;
     this.skus = skus;
   }
 }
@@ -272,6 +273,7 @@ class Subscription extends CommonSku {
     skus
   ) {
     super(app, sku, type, name, handle, description);
+    this.type = type;
     this.skus = skus;
   }
 }

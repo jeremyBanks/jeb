@@ -38,11 +38,28 @@ declare class CommonSku {
 }
 declare class Game extends CommonSku {
   readonly type: "game";
+  constructor(
+    app: string,
+    sku: string,
+    type: "game",
+    name: string,
+    handle: string,
+    description: string
+  );
 }
 declare class AddOn extends CommonSku {
   readonly type: "addon";
+  constructor(
+    app: string,
+    sku: string,
+    type: "addon",
+    name: string,
+    handle: string,
+    description: string
+  );
 }
 declare class Bundle extends CommonSku {
+  readonly type: "bundle";
   readonly skus: Array<string>;
   constructor(
     app: string,
@@ -55,6 +72,7 @@ declare class Bundle extends CommonSku {
   );
 }
 declare class Subscription extends CommonSku {
+  readonly type: "subscription";
   readonly skus: Array<string>;
   constructor(
     app: string,

@@ -1,4 +1,27 @@
 {
+  "a40e16359c8stadiaprosubsc314ac82": {
+    "app": "40e16388602345889aa807762ea67d20rcp1",
+    "description": "Stadia Pro is Stadia's premium subscription service and your gateway to the best that Stadia has to offer.",
+    "handle": "stadia-pro-subscription",
+    "name": "Stadia Pro",
+    "sku": "59c8314ac82a456ba61d08988b15b550",
+    "skus": [
+      "a7b1581491ea4b7c9fcc89710561f5f7",
+      "e8ed70244808408cbb7d3b2b1f06547f",
+      "f47a1e1e9f0b43078e0a80c57068b085",
+      "bd70626ec3834dedbc6dda5b956f7648",
+      "75be643ff0fb40d7873fa41edb10d98a",
+      "9ac5597c3f4a4e648c9ae56bac3d1b32",
+      "be9526126d394061b0eef9b16352357e",
+      "b54873e3768140b9805664a220969929",
+      "7ed521aacf2a44168fb99cd1e13472ad",
+      "f16b28e2fd224acaafeee4c19134adb4",
+      "45918155e78145af937b5df1a574afd2",
+      "90f5bd9270024986b26ee8221c1fa2e4",
+      "a1afa4eca7b24713a9bcf3421dd85a13"
+    ],
+    "type": "subscription"
+  },
   "g10b8a9256fgamemonopoly320f886b4": {
     "app": "10b8a9cc8ec746f29afc1fc3c3ded28brcp1",
     "description": "Grow your empire anywhere, anytime, with MONOPOLY for Stadia! Immerse yourself in a mix of the original family-favorite board game enriched with new ways to play: • Choose among three lively 3D boards • Play on-the-go, with up to 6 players • Not enough time for a full game? Enjoy new modes for faster sessions • Select your own rules and spice things up with the new Action Cards Trading your way to success has never been so fun!",

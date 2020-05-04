@@ -205,8 +205,7 @@ class Spider {
         return { skus };
       },
 
-      FWhQV_24r: (data: ProtoData) => loaders.Qc7K6_24r(data),
-      Qc7K6_24r: (data: ProtoData) => {
+      FWhQV_24r: (data: ProtoData) => {
         const gameData = data[18]?.[0]?.[9];
         const game = gameData && this.loadSkuData(gameData);
         const addons = (data[19] as any)?.map((x) => this.loadSkuData(x[9]));
@@ -214,10 +213,11 @@ class Spider {
         return { sku, game, addons };
       },
 
-      FLCvtc: (data: ProtoData) => {
+      SYcsTd: (data: ProtoData) => {
         const subscriptionDatas = data[2]?.map((x) => x[9]) ?? [];
         const subscriptions = subscriptionDatas.map((s) => this.loadSkuData(s));
-        return { subscriptions };
+        if (subscriptions?.length) return { subscriptions };
+        else return {};
       },
 
       ZAm7W: (data: ProtoData) => {
@@ -276,18 +276,36 @@ class CommonSku {
 }
 
 class Game extends CommonSku {
-  readonly type = "game" as const;
+  constructor(
+    app: string,
+    sku: string,
+    readonly type = "game" as const,
+    name: string,
+    handle: string,
+    description: string
+  ) {
+    super(app, sku, type, name, handle, description);
+  }
 }
 
 class AddOn extends CommonSku {
-  readonly type = "addon" as const;
+  constructor(
+    app: string,
+    sku: string,
+    readonly type = "addon" as const,
+    name: string,
+    handle: string,
+    description: string
+  ) {
+    super(app, sku, type, name, handle, description);
+  }
 }
 
 class Bundle extends CommonSku {
   constructor(
     app: string,
     sku: string,
-    type = "bundle" as const,
+    readonly type = "bundle" as const,
     name: string,
     handle: string,
     description: string,
@@ -301,7 +319,7 @@ class Subscription extends CommonSku {
   constructor(
     app: string,
     sku: string,
-    type = "subscription" as const,
+    readonly type = "subscription" as const,
     name: string,
     handle: string,
     description: string,
