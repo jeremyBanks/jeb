@@ -1,8 +1,16 @@
 "use strict";
-(async () => "plugin entry point")().then(async () => {
+(async () => `
+  fetch("https://stadia.observer/dist/plugin.js")
+    .then(_ => _.text())
+    .then(textContent => document.head.appendChild(Object.assign(
+      document.createElement('script'), {
+        nonce: document.querySelector('[nonce]').nonce,
+        type: module,
+        textContent
+      })));
+`)().then(async () => {
   await new Promise((resolve) => setTimeout(resolve, 10));
   try {
-    console.clear();
     const spider = new Spider();
     window["spider"] = spider;
     console.debug("🕷️👀", "starting spider", spider);
@@ -80,17 +88,15 @@ class Spider {
   loadSkuData(data) {
     let sku;
     if (data[6] === 1) {
-      sku = new Game(data[4], data[0], "game", data[1], data[5], data[9]);
+      sku = new Game(data[4], data[0], "game", data[1]);
     } else if (data[6] === 2) {
-      sku = new AddOn(data[4], data[0], "addon", data[1], data[5], data[9]);
+      sku = new AddOn(data[4], data[0], "addon", data[1]);
     } else if (data[6] === 3) {
       sku = new Bundle(
         data[4],
         data[0],
         "bundle",
         data[1],
-        data[5],
-        data[9],
         data[14][0].map((x) => x[0])
       );
     } else if (data[6] === 5) {
@@ -99,8 +105,6 @@ class Spider {
         data[0],
         "subscription",
         data[1],
-        data[5],
-        data[9],
         data[14][0].map((x) => x[0])
       );
     } else {
@@ -127,7 +131,7 @@ class Spider {
   }
   async fetchPreloadData(url) {
     await new Promise((resolve) =>
-      setTimeout(resolve, Math.random() * 2048 + 1536)
+      setTimeout(resolve, Math.random() * 30000 + 2000)
     );
     const response = await fetch(url);
     const html = await response.text();
@@ -223,56 +227,47 @@ class Spider {
   }
 }
 class CommonSku {
-  constructor(app, sku, type, name, handle, description) {
+  constructor(app, sku, type, name) {
     this.app = app;
     this.sku = sku;
     this.type = type;
     this.name = name;
-    this.handle = handle;
-    this.description = description;
   }
   key() {
     return `${
       { game: "g", addon: "o", bundle: "x", subscription: "a" }[this.type] ??
       this.type
-    }${this.app.slice(0, 6)}${this.sku.slice(0, 4)}${(
-      this.handle + this.name
-    ).slice(0, 16)}${this.sku.slice(4)}`
+    }${this.app.slice(0, 6)}${this.sku.slice(0, 4)}${this.name.slice(
+      Math.max(0, 0 | ((this.name.length - 20) / 2)),
+      20
+    )}${this.sku.slice(4)}`
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "")
       .slice(0, 32);
   }
 }
 class Game extends CommonSku {
-  constructor(app, sku, type = "game", name, handle, description) {
-    super(app, sku, type, name, handle, description);
+  constructor(app, sku, type = "game", name) {
+    super(app, sku, type, name);
     this.type = type;
   }
 }
 class AddOn extends CommonSku {
-  constructor(app, sku, type = "addon", name, handle, description) {
-    super(app, sku, type, name, handle, description);
+  constructor(app, sku, type = "addon", name) {
+    super(app, sku, type, name);
     this.type = type;
   }
 }
 class Bundle extends CommonSku {
-  constructor(app, sku, type = "bundle", name, handle, description, skus) {
-    super(app, sku, type, name, handle, description);
+  constructor(app, sku, type = "bundle", name, skus) {
+    super(app, sku, type, name);
     this.type = type;
     this.skus = skus;
   }
 }
 class Subscription extends CommonSku {
-  constructor(
-    app,
-    sku,
-    type = "subscription",
-    name,
-    handle,
-    description,
-    skus
-  ) {
-    super(app, sku, type, name, handle, description);
+  constructor(app, sku, type = "subscription", name, skus) {
+    super(app, sku, type, name);
     this.type = type;
     this.skus = skus;
   }

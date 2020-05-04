@@ -1,7 +1,15 @@
-(async () => "plugin entry point")().then(async () => {
+(async () => `
+  fetch("https://stadia.observer/dist/plugin.js")
+    .then(_ => _.text())
+    .then(textContent => document.head.appendChild(Object.assign(
+      document.createElement('script'), {
+        nonce: document.querySelector('[nonce]').nonce,
+        type: module,
+        textContent
+      })));
+`)().then(async () => {
   await new Promise((resolve) => setTimeout(resolve, 10));
   try {
-    console.clear();
     const spider = new Spider();
     window["spider"] = spider;
     console.debug("🕷️👀", "starting spider", spider);
@@ -93,17 +101,15 @@ class Spider {
   private loadSkuData(data: ProtoData): Sku {
     let sku;
     if (data[6] === 1) {
-      sku = new Game(data[4], data[0], "game", data[1], data[5], data[9]);
+      sku = new Game(data[4], data[0], "game", data[1]);
     } else if (data[6] === 2) {
-      sku = new AddOn(data[4], data[0], "addon", data[1], data[5], data[9]);
+      sku = new AddOn(data[4], data[0], "addon", data[1]);
     } else if (data[6] === 3) {
       sku = new Bundle(
         data[4],
         data[0],
         "bundle",
         data[1],
-        data[5],
-        data[9],
         data[14][0].map((x) => x[0])
       );
     } else if (data[6] === 5) {
@@ -112,8 +118,6 @@ class Spider {
         data[0],
         "subscription",
         data[1],
-        data[5],
-        data[9],
         data[14][0].map((x) => x[0])
       );
     } else {
@@ -143,7 +147,7 @@ class Spider {
 
   async fetchPreloadData(url: string) {
     await new Promise((resolve) =>
-      setTimeout(resolve, Math.random() * 2048 + 1536)
+      setTimeout(resolve, Math.random() * 30_000 + 2_000)
     );
     const response = await fetch(url);
     const html = await response.text();
@@ -257,18 +261,17 @@ class CommonSku {
     readonly app: string,
     readonly sku: string,
     readonly type: "game" | "addon" | "bundle" | "subscription",
-    readonly name: string,
-    readonly handle: string,
-    readonly description: string
+    readonly name: string
   ) {}
 
   public key() {
     return `${
       { game: "g", addon: "o", bundle: "x", subscription: "a" }[this.type] ??
       this.type
-    }${this.app.slice(0, 6)}${this.sku.slice(0, 4)}${(
-      this.handle + this.name
-    ).slice(0, 16)}${this.sku.slice(4)}`
+    }${this.app.slice(0, 6)}${this.sku.slice(0, 4)}${this.name.slice(
+      Math.max(0, 0 | ((this.name.length - 20) / 2)),
+      20
+    )}${this.sku.slice(4)}`
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "")
       .slice(0, 32);
@@ -280,11 +283,9 @@ class Game extends CommonSku {
     app: string,
     sku: string,
     readonly type = "game" as const,
-    name: string,
-    handle: string,
-    description: string
+    name: string
   ) {
-    super(app, sku, type, name, handle, description);
+    super(app, sku, type, name);
   }
 }
 
@@ -293,11 +294,9 @@ class AddOn extends CommonSku {
     app: string,
     sku: string,
     readonly type = "addon" as const,
-    name: string,
-    handle: string,
-    description: string
+    name: string
   ) {
-    super(app, sku, type, name, handle, description);
+    super(app, sku, type, name);
   }
 }
 
@@ -307,11 +306,9 @@ class Bundle extends CommonSku {
     sku: string,
     readonly type = "bundle" as const,
     name: string,
-    handle: string,
-    description: string,
     readonly skus: Array<string>
   ) {
-    super(app, sku, type, name, handle, description);
+    super(app, sku, type, name);
   }
 }
 
@@ -321,10 +318,8 @@ class Subscription extends CommonSku {
     sku: string,
     readonly type = "subscription" as const,
     name: string,
-    handle: string,
-    description: string,
     readonly skus: Array<string>
   ) {
-    super(app, sku, type, name, handle, description);
+    super(app, sku, type, name);
   }
 }

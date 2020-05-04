@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <meta charset="utf-8" />
+
+  <body>
+    <template class="game">
+      <h1>
+        <slot name="gameName">gameName</slot>
+      </h1>
+
+      <p>
+        <a href="/">Launch</a>
+        <a href="/">Store</a>
+      </p>
+
+      <h2>
+        Add-Ons
+      </h2>
+
+      <h2>
+        Bundles
+      </h2>
+    </template>
+  </body>
+
+  <style>
+    :root {
+      font-family: sans-serif;
+    }
+
+    [slot] {
+      display: contents;
+    }
+  </style>
+
+  <script type="module">
+    (async () => {
+      const skus = Object.values(
+        await (await fetch("../data/skus.json")).json()
+      );
+      const skusById = Object.fromEntries(skus.map((sku) => [sku.sku, sku]));
+      const subscriptions = skus.filter((sku) => sku.type === "subscription");
+      const games = skus
+        .filter((sku) => sku.type === "game")
+        .map((game) =>
+          Object.assign(game, {
+            skus: skus.filter((sku) => sku.app === game.app),
+            addons: skus.filter(
+              (sku) => sku.app === game.app && sku.type === "addon"
+            ),
+            bundles: skus.filter(
+              (sku) => sku.app === game.app && sku.type === "bundle"
+            ),
+          })
+        );
+
+      for (const game of games) {
+        document.body.appendChild(
+          Object.assign(document.createElement("p"), {
+            textContent:
+              game.name + ":" + game.addons.map((x) => x.name).join(" "),
+          })
+        );
+      }
+
+      // console.log(games);
+
+      // console.log(sku.content);
+
+      // const root = document.body.attachShadow({mode: 'open'});
+
+      // const el = sku.content.cloneNode(true);
+      // console.log({el});
+      // root.appendChild(el);
+
+      // console.log(root);
+      // console.log({el});
+    })();
+  </script>
+</html>
