@@ -1,5 +1,6 @@
 "use strict";
 (async () => `
+  https://stadia.google.com/profile/6237980933414544774/gameactivities/all
   fetch("https://stadia.observer/dist/plugin.js")
     .then(_ => _.text())
     .then(textContent => document.head.appendChild(Object.assign(
@@ -85,13 +86,15 @@ class Spider {
   async loadSkuDetails(sku) {
     await this.fetchPreloadData(`/store/details/_/sku/${sku}`);
   }
-  loadSkuData(data) {
+  loadSkuData(data, pricing) {
+    const typeId = data[6];
+    console.log({ pricing });
     let sku;
-    if (data[6] === 1) {
+    if (typeId === 1) {
       sku = new Game(data[4], data[0], "game", data[1]);
-    } else if (data[6] === 2) {
+    } else if (typeId === 2) {
       sku = new AddOn(data[4], data[0], "addon", data[1]);
-    } else if (data[6] === 3) {
+    } else if (typeId === 3) {
       sku = new Bundle(
         data[4],
         data[0],
@@ -99,7 +102,7 @@ class Spider {
         data[1],
         data[14][0].map((x) => x[0])
       );
-    } else if (data[6] === 5) {
+    } else if (typeId === 5) {
       sku = new Subscription(
         data[4],
         data[0],
@@ -109,7 +112,7 @@ class Spider {
       );
     } else {
       throw new Error(
-        `unexpected sku type id ${JSON.stringify(data[6], null, 4)}`
+        `unexpected sku type id ${JSON.stringify(typeId, null, 4)}`
       );
     }
     return this.loadSku(sku);
