@@ -3,6 +3,13 @@
     "persistent": false,
     "scripts": ["background.js"]
   },
+  "browser_action": {
+    "default_icons": {
+      "32": "32.png",
+      "128": "128.png"
+    }
+  },
+  "description": "https://stadia.observer/",
   "homepage_url": "https://stadia.observer/",
   "icons": {
     "32": "32.png",
@@ -11,12 +18,6 @@
   "incognito": "split",
   "manifest_version": 2,
   "name": "Observer#1818 for Stadia",
-  "page_action": {
-    "default_icons": {
-      "32": "32.png",
-      "128": "128.png"
-    }
-  },
   "permissions": [
     "activeTab",
     "background",
@@ -25,7 +26,7 @@
     "contextMenus",
     "declarativeContent",
     "downloads",
-    "https://stadia.google.com/profile/6237980933414544774/*",
+    "https://stadia.google.com/*",
     "https://stadia.observer/*",
     "storage",
     "unlimitedStorage"
