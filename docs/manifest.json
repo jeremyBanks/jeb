@@ -1,5 +1,4 @@
 {
-  "description": "https://stadia.observer/",
   "externally_connectable": {
     "matches": ["https://stadia.observer/*"]
   },
@@ -10,7 +9,7 @@
   },
   "key": "stadiaobseeeeeeeeeeeeeeeeeeeeeee",
   "manifest_version": 2,
-  "name": "Observer#1818 for Stadia",
+  "name": "Stadia Observer",
   "permissions": [
     "downloads",
     "https://stadia.com/*",
