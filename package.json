@@ -1,16 +1,16 @@
 {
-  "name": "stadia.observer",
-  "engines": {
-    "node": "^14.0.0"
-  },
-  "version": "0.18.18",
-  "private": true,
-  "scripts": {
-    "build": "rm -rf docs/* && cp -r src/* data/* docs/ && sort-json */*.json; prettier --write src && (tsc || echo \"type errors oh no\") && prettier --write docs"
-  },
   "devDependencies": {
     "prettier": "^2.0.5",
     "sort-json": "^2.0.0",
     "typescript": "^3.8.3"
-  }
+  },
+  "engines": {
+    "node": "^14.0.0"
+  },
+  "name": "stadia.observer",
+  "private": true,
+  "scripts": {
+    "build": "rm -rf docs/* && cp -r src/* data/* images/* docs/ && sort-json *.json */*.json; prettier --write src *.json */*.json && (tsc || echo \"type errors oh no\") && prettier --write docs"
+  },
+  "version": "0.18.18"
 }

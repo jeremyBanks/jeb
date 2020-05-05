@@ -1,4 +1,14 @@
 {
+  "background": {
+    "persistent": false,
+    "scripts": ["background.js"]
+  },
+  "browser_action": {
+    "default_icons": {
+      "32": "illufinch-violetsky-edited.png",
+      "128": "illufinch-violetsky-edited@4x.png"
+    }
+  },
   "externally_connectable": {
     "ids": ["*"],
     "matches": ["https://stadia.google.com/*", "https://stadia.observer/*"]
@@ -8,14 +18,17 @@
     "32": "illufinch-violetsky-edited.png",
     "128": "illufinch-violetsky-edited@4x.png"
   },
-  "key": "stadiaobseeeeeeeeeeeeeeeeeeeeeee",
+  "key": "stadiaobsobsobsobsobsobsobstadia",
   "manifest_version": 2,
   "name": "stadia.observer",
   "permissions": [
+    "alarms",
     "downloads",
     "https://stadia.google.com/*",
     "https://stadia.observer/*",
+    "identity",
     "storage",
+    "tabs",
     "unlimitedStorage"
   ],
   "version": "0.18.18"
