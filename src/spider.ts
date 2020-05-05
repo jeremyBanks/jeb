@@ -3,12 +3,12 @@ export const spider = async () => {
   try {
     const spider = new Spider();
     window["spider"] = spider;
-    console.debug("🕷️👀", "starting spider", spider);
+    console.debug("starting spider", spider);
     const data = await spider.load();
-    console.debug("🕷️👀", "completed spider", spider, data);
+    console.debug("completed spider", spider, data);
     spider.download();
   } catch (error) {
-    console.error("🕷️👀", error);
+    console.error(error);
   }
 };
 
@@ -50,7 +50,7 @@ class Spider {
     while (Object.keys(this.skus).length > Object.keys(this.spidered).length) {
       for (const sku of Object.values(this.skus)) {
         if (this.spidered[sku.sku] !== true) {
-          console.debug("🕷️👀", "spidering ", sku.key(), sku);
+          console.debug("spidering ", sku.key(), sku);
           await this.loadSkuDetails(sku.sku);
           this.spidered[sku.sku] = true;
         }
@@ -93,6 +93,8 @@ class Spider {
     const typeId = data[6];
 
     console.log({ pricing });
+    // pricing should include normal price, pro price,
+    // current sale prices for each, the start and end dates of each sale
 
     let sku;
     if (typeId === 1) {
@@ -129,8 +131,8 @@ class Spider {
     if (existing) {
       if (JSON.stringify(existing) !== JSON.stringify(sku)) {
         const error = new Error(`skus had same sku but different values`);
-        console.error("🕷️👀", error);
-        console.error("🕷️👀", existing, sku);
+        console.error(error);
+        console.error(existing, sku);
         throw error;
       }
       return existing;
@@ -200,15 +202,23 @@ class Spider {
 
     const loaders = {
       WwD3rb: (data: ProtoData) => {
-        const skus = data[2].map((p) => this.loadSkuData(p[9]));
+        const skus = data[2].map((p: any) => this.loadSkuData(p[9]));
         return { skus };
       },
 
       FWhQV_24r: (data: ProtoData) => {
         const gameData = data[18]?.[0]?.[9];
-        const game = gameData && this.loadSkuData(gameData);
-        const addons = (data[19] as any)?.map((x) => this.loadSkuData(x[9]));
-        const sku = data[16] && this.loadSkuData(data[16]);
+        const gamePricingData = data[18]?.[0]?.[15]?.[0];
+        const game = gameData && this.loadSkuData(gameData, gamePricingData);
+
+        const addons = (data[19] as any)?.map((x: any) =>
+          this.loadSkuData(x[9])
+        );
+
+        const skuData = data[16];
+        const skuPricingData = data[21]?.[0];
+        const sku = skuData && this.loadSkuData(skuData, skuPricingData);
+
         return { sku, game, addons };
       },
 
@@ -245,7 +255,7 @@ class Spider {
       loaded
     );
 
-    console.debug("🕷️👀", path, data);
+    console.debug(path, data);
 
     return data;
   }

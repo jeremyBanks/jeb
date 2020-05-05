@@ -1,3 +1,7 @@
-:root {
+html {
+  background-image: url(/illufinch-violetsky-edited@2x.png);
+  background-position: top 16px right 16px;
+  background-repeat: no-repeat;
+  background-size: 64px;
   font-family: sans-serif;
 }

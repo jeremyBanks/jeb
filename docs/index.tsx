@@ -4,16 +4,13 @@ document.title = "stadia.observer";
 document.head.appendChild(
   Object.assign(document.createElement("link"), {
     rel: "icon",
-    href: "/illufinch-violetsky-edited@4x.png",
+    href: "/illufinch-violetsky-edited@2x.png",
   })
 );
 
 const Home = ({ buttons, games }) => (
   <section>
-    <h1>
-      <img src="/illufinch-violetsky-edited@4x.png" />
-      <slot name="title">stadia.observer</slot>
-    </h1>
+    <h1>stadia.observer</h1>
 
     {window.chrome?.runtime?.id && (
       <button onclick={async () => (await import("./spider.js")).spider()}>
