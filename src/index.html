@@ -1,19 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
   <meta charset="utf-8" />
-  <script type="module" src="./page.js"></script>
+  <link rel="stylesheet" href="/index.css" />
+  <script type="module" src="/index.js"></script>
 
-  <style>
-    :root {
-      font-family: sans-serif;
-    }
+  <template data-key="home">
+    <h1>
+      <img src="/illufinch-violetkey-edited@4x.png" />
+      stadia.observer
+    </h1>
+  </template>
 
-    [slot] {
-      display: contents;
-    }
-  </style>
-
-  <template class="game">
+  <template data-key="game">
     <h1>
       <slot name="gameName">gameName</slot>
     </h1>

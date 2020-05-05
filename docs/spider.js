@@ -275,4 +275,4 @@ class Subscription extends CommonSku {
     this.skus = skus;
   }
 }
-//# sourceMappingURL=plugin.js.map
+//# sourceMappingURL=spider.js.map

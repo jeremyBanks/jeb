@@ -1,9 +1,9 @@
 {
-  "name": "stadia.obserer",
+  "name": "stadia.observer",
   "engines": {
     "node": "^14.0.0"
   },
-  "version": "0.0.1",
+  "version": "0.18.18",
   "private": true,
   "scripts": {
     "build": "rm -rf docs/* && cp -r src/* data/* docs/ && sort-json */*.json; prettier --write src && (tsc || echo \"type errors oh no\") && prettier --write docs"
