@@ -152,7 +152,7 @@ class Spider {
 
   async fetchPreloadData(path: string) {
     await new Promise((resolve) =>
-      setTimeout(resolve, Math.random() * 30_000 + 2_000)
+      setTimeout(resolve, Math.random() * 3_000 + 2_000)
     );
     const response = await fetch("https://stadia.google.com/" + path);
     const html = await response.text();
