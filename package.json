@@ -3,15 +3,11 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build": "rm -rf dist/* && cp -r src/* data/* dist/ && sort-json */*.json; prettier --write src && (tsc || echo \"type errors oh no\") && prettier --write dist"
+    "build": "rm -rf docs/* && cp -r src/* data/* docs/ && sort-json */*.json; prettier --write src && (tsc || echo \"type errors oh no\") && prettier --write docs"
   },
   "devDependencies": {
     "prettier": "^2.0.5",
     "sort-json": "^2.0.0",
     "typescript": "^3.8.3"
-  },
-  "dependencies": {
-    "fp-ts": "^2.5.4",
-    "io-ts": "^2.2.2"
   }
 }
