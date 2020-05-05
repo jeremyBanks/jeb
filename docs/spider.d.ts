@@ -13,7 +13,7 @@ declare class Spider {
     private loadSkuDetails;
     private loadSkuData;
     private loadSku;
-    fetchPreloadData(url: string): Promise<any>;
+    fetchPreloadData(path: string): Promise<any>;
 }
 declare class CommonSku {
     readonly app: string;

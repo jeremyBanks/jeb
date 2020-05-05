@@ -74,10 +74,10 @@ class Spider {
         document.body.removeChild(el);
     }
     async loadSkuList(number) {
-        await this.fetchPreloadData(`/store/list/${number}`);
+        await this.fetchPreloadData(`store/list/${number}`);
     }
     async loadSkuDetails(sku) {
-        await this.fetchPreloadData(`/store/details/_/sku/${sku}`);
+        await this.fetchPreloadData(`store/details/_/sku/${sku}`);
     }
     loadSkuData(data, pricing) {
         const typeId = data[6];
@@ -116,9 +116,9 @@ class Spider {
             return sku;
         }
     }
-    async fetchPreloadData(url) {
+    async fetchPreloadData(path) {
         await new Promise((resolve) => setTimeout(resolve, Math.random() * 30000 + 2000));
-        const response = await fetch(url);
+        const response = await fetch("https://stadia.google.com/" + path);
         const html = await response.text();
         const document = new DOMParser().parseFromString(html, "text/html");
         const scripts = Array.from(document.scripts);
@@ -192,7 +192,7 @@ class Spider {
             preload,
             rpc,
         }), loaded);
-        console.debug("🕷️👀", url, data);
+        console.debug("🕷️👀", path, data);
         return data;
     }
 }
