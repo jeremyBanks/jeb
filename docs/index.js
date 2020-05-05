@@ -55,18 +55,23 @@
     };
     const templates = Object.fromEntries(Array.from(new DOMParser()
         .parseFromString(await (await fetch("/templates.html")).text(), "text/html")
-        .querySelectorAll("template")).map((el) => [
-        el.id,
-        Object.assign(el.content, {
-            render: renderTemplate.bind(null, el.content),
-        }),
-    ]));
-    const L = (name, props) => {
-        if (templates.hasOwnProperty(name)) {
+        .querySelectorAll("template")).map((el) => [el.id, el.content]));
+    const render = (name, props, child) => {
+        if (name instanceof DocumentFragment) {
+            if (child)
+                throw new TypeError("components can't have children");
+            return renderTemplate(name, props);
+        }
+        else if (templates.hasOwnProperty(name)) {
+            if (child)
+                throw new TypeError("components can't have children");
             return renderTemplate(templates[name], props);
         }
         else {
-            return Object.assign(document.createElement(name), props);
+            const el = document.createElement(name);
+            Object.assign(el, props);
+            el.appendChild(renderContent(child));
+            return el;
         }
     };
     const skus = Object.values(await (await fetch("/skus.json")).json());
@@ -79,15 +84,6 @@
         addons: skus.filter((sku) => sku.app === game.app && sku.type === "addon"),
         bundles: skus.filter((sku) => sku.app === game.app && sku.type === "bundle"),
     }));
-    document.body.appendChild(L("home", {
-        title: document.title,
-        buttons: L("button", {
-            textContent: "🕷️spider stadia",
-            onclick() {
-                import("/spider.js");
-            },
-        }),
-        games: games.map((game) => L("game", game)),
-    }));
+    document.body.appendChild(render("home", { title: document.title, buttons: render("button", { onclick: () => import("/spider.js") }, "\uD83D\uDD77\uFE0Fspider stadia"), games: games.map((game) => (render("game", Object.assign({}, game)))) }));
 })();
 //# sourceMappingURL=index.js.map

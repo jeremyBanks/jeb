@@ -76,19 +76,21 @@
           "text/html"
         )
         .querySelectorAll("template")
-    ).map((el: HTMLTemplateElement) => [
-      el.id,
-      Object.assign(el.content, {
-        render: renderTemplate.bind(null, el.content),
-      }),
-    ])
+    ).map((el: HTMLTemplateElement) => [el.id, el.content])
   );
 
-  const L = (name, props) => {
-    if (templates.hasOwnProperty(name)) {
+  const render = (name, props, child) => {
+    if (name instanceof DocumentFragment) {
+      if (child) throw new TypeError("components can't have children");
+      return renderTemplate(name, props);
+    } else if (templates.hasOwnProperty(name)) {
+      if (child) throw new TypeError("components can't have children");
       return renderTemplate(templates[name], props);
     } else {
-      return Object.assign(document.createElement(name), props);
+      const el = document.createElement(name);
+      Object.assign(el, props);
+      el.appendChild(renderContent(child));
+      return el;
     }
   };
 
@@ -111,15 +113,14 @@
     );
 
   document.body.appendChild(
-    L("home", {
-      title: document.title,
-      buttons: L("button", {
-        textContent: "🕷️spider stadia",
-        onclick() {
-          import("/spider.js");
-        },
-      }),
-      games: games.map((game) => L("game", game)),
-    })
+    <home
+      title={document.title}
+      buttons={
+        <button onclick={() => import("/spider.js")}>🕷️spider stadia</button>
+      }
+      games={games.map((game) => (
+        <game {...game} />
+      ))}
+    />
   );
 })();

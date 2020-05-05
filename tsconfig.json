@@ -3,7 +3,7 @@
     "alwaysStrict": true,
     "declaration": true,
     "jsx": "react",
-    "jsxFactory": "Components",
+    "jsxFactory": "render",
     "module": "esnext",
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
