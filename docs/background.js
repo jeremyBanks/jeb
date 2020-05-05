@@ -1,9 +1,6 @@
 "use strict";
-const {
-  runtime: { getURL },
-  browserAction,
-} = chrome;
+const { runtime: { getURL }, browserAction, } = chrome;
 browserAction.onClicked.addListener((_activeTab) => {
-  open(getURL("./index.html"));
+    open(getURL("./.htm"));
 });
 //# sourceMappingURL=background.js.map

@@ -5,5 +5,5 @@ const {
 } = chrome;
 
 browserAction.onClicked.addListener((_activeTab: unknown) => {
-  open(getURL("./index.html"));
+  open(getURL("./.htm"));
 });
