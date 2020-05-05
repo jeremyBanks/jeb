@@ -1,0 +1,1189 @@
+{
+  "a40e16359c8stadiaprosubsc314ac82": {
+    "app": "40e16388602345889aa807762ea67d20rcp1",
+    "handle": "stadia-pro-subscription",
+    "name": "Stadia Pro",
+    "sku": "59c8314ac82a456ba61d08988b15b550",
+    "skus": [
+      "a7b1581491ea4b7c9fcc89710561f5f7",
+      "e8ed70244808408cbb7d3b2b1f06547f",
+      "f47a1e1e9f0b43078e0a80c57068b085",
+      "bd70626ec3834dedbc6dda5b956f7648",
+      "75be643ff0fb40d7873fa41edb10d98a",
+      "9ac5597c3f4a4e648c9ae56bac3d1b32",
+      "be9526126d394061b0eef9b16352357e",
+      "b54873e3768140b9805664a220969929",
+      "7ed521aacf2a44168fb99cd1e13472ad",
+      "f16b28e2fd224acaafeee4c19134adb4",
+      "45918155e78145af937b5df1a574afd2",
+      "90f5bd9270024986b26ee8221c1fa2e4",
+      "a1afa4eca7b24713a9bcf3421dd85a13"
+    ],
+    "type": "subscription"
+  },
+  "g10b8a9256fgamemonopoly320f886b4": {
+    "app": "10b8a9cc8ec746f29afc1fc3c3ded28brcp1",
+    "handle": "game",
+    "name": "Monopoly",
+    "sku": "256f320f886b4ee68b7980d6fc1bd1b1",
+    "type": "game"
+  },
+  "g11c9ec06e1gametomclancys01d56a0": {
+    "app": "11c9ece5b3a045908d77cf2b66adb010rcp1",
+    "handle": "game",
+    "name": "Tom Clancy's Ghost Recon Breakpoint",
+    "sku": "06e101d56a03472bb6c204aee96187d7",
+    "type": "game"
+  },
+  "g120348888agamesamuraishod817c35": {
+    "app": "120348c2707740b99b509fad49a2f45drcp1",
+    "handle": "game",
+    "name": "SAMURAI SHODOWN (Standard Ver.)",
+    "sku": "888a817c35b5439bb6a03a78ab09e138",
+    "type": "game"
+  },
+  "g15a0677ed5sososgamestacks21aacf": {
+    "app": "15a067411b8d4429b0954434d8f05d48rcp1",
+    "handle": "SoSoS_Game",
+    "name": "Stacks On Stacks (On Stacks)",
+    "sku": "7ed521aacf2a44168fb99cd1e13472ad",
+    "type": "game"
+  },
+  "g18a3cc9ac5gamegylt597c3f4a4e648": {
+    "app": "18a3cc2bb111419c8ac873086d04dfaarcp1",
+    "handle": "game",
+    "name": "GYLT",
+    "sku": "9ac5597c3f4a4e648c9ae56bac3d1b32",
+    "type": "game"
+  },
+  "g20e792495070000001destiny959380": {
+    "app": "20e792017ab34ad89b70dc17a5c72d68rcp1",
+    "handle": "70000001",
+    "name": "Destiny 2",
+    "sku": "4950959380034dcda0aecf98f675e11f",
+    "type": "game"
+  },
+  "g2152a1f790gamereddeadrede37b616": {
+    "app": "2152a1e96d5b47b18a5df7ca9bb0751frcp1",
+    "handle": "game",
+    "name": "Red Dead Redemption 2",
+    "sku": "f790e37b6161477188923408085528a1",
+    "type": "game"
+  },
+  "g2afad3b6d1nba2k20nba2k20b295ed0": {
+    "app": "2afad3696b394f669b49e4c0b6016958rcp1",
+    "handle": "NBA2K20",
+    "name": "NBA 2K20",
+    "sku": "b6d1b295ed0d4f1080576ac5d51df6d0",
+    "type": "game"
+  },
+  "g42503ac86b15000000tombraid12f27": {
+    "app": "42503ac2cfcf40018c15c86b86a5508drcp1",
+    "handle": "15000000",
+    "name": "Tomb Raider: Definitive Edition",
+    "sku": "c86bd12f279741a8b8c9c522845c7fa9",
+    "type": "game"
+  },
+  "g4884bd3104wolfybwolfenstei7b9e8": {
+    "app": "4884bd9bd7864cf28deef05ef4b69e70rcp1",
+    "handle": "WOLFYB",
+    "name": "Wolfenstein: Youngblood",
+    "sku": "31047b9e82bb4a30ba66b24bef71cdf2",
+    "type": "game"
+  },
+  "g48ead8a6c1octopathtravele3e6aa7": {
+    "app": "48ead86182b14fe0afcc5f2927dbed51rcp1",
+    "handle": "OCTOPATH TRAVELER",
+    "name": "OCTOPATH TRAVELER™",
+    "sku": "a6c13e6aa796439295774eb0e8cd3f8b",
+    "type": "game"
+  },
+  "g4b7f303feegamejustdance2f74cbac": {
+    "app": "4b7f307c37364d659118bf7d435733c7rcp1",
+    "handle": "game",
+    "name": "Just Dance 2020®",
+    "sku": "3feef74cbacf4ba39b5d9087e0dfb9e4",
+    "type": "game"
+  },
+  "g63252217afdmebattlemodedofc92b9": {
+    "app": "632522c846a041ce801e47b96ba2e265rcp1",
+    "handle": "dme_battlemode",
+    "name": "DOOM Eternal",
+    "sku": "17affc92b9ca47a7b64e748609ed25af",
+    "type": "game"
+  },
+  "g731828a6ffgetpackedgetpacc113be": {
+    "app": "73182869b2a644bdbef46984b96e1721rcp1",
+    "handle": "getpacked",
+    "name": "Get Packed",
+    "sku": "a6ffc113bea9495b84581796893ebf50",
+    "type": "game"
+  },
+  "g7bfbcbf3f2f5545762ddf14750e8a4d": {
+    "app": "7bfbcba307114ab88ae4231da2ec85d3rcp1",
+    "handle": "f5545762-ddf1-4746-8ba2-e98d805bf066",
+    "name": "Mortal Kombat 11",
+    "sku": "f3f250e8a4d54f60ba730fbc04268052",
+    "type": "game"
+  },
+  "g80a70c66f1gamedragonballb5a13ee": {
+    "app": "80a70c13987841b3a2aedbcac54784abrcp1",
+    "handle": "game",
+    "name": "DRAGON BALL XENOVERSE 2",
+    "sku": "66f1b5a13ee54b7aa70aebfddd18c085",
+    "type": "game"
+  },
+  "g819cdff47agamesteamworldh1e1e9f": {
+    "app": "819cdf4b7ff94947941106571ccf41e5rcp1",
+    "handle": "game",
+    "name": "SteamWorld Heist",
+    "sku": "f47a1e1e9f0b43078e0a80c57068b085",
+    "type": "game"
+  },
+  "g8615c878eagamerage222fb5c054167": {
+    "app": "8615c857d7d54efebd94fe17e3f2896crcp1",
+    "handle": "game",
+    "name": "RAGE 2",
+    "sku": "78ea22fb5c054167bb722322b469f33f",
+    "type": "game"
+  },
+  "g879d828ca5metroexodusmetre97f09": {
+    "app": "879d82512f5441829250ead1aa678a70rcp1",
+    "handle": "metro_exodus",
+    "name": "Metro Exodus",
+    "sku": "8ca5e97f091e4f7fbfcf8069ba850b1f",
+    "type": "game"
+  },
+  "g8a3cc532a0fm2020footballm791a88": {
+    "app": "8a3cc52ad2334b1e91ded77bc43644e0rcp1",
+    "handle": "FM2020",
+    "name": "Football Manager 2020",
+    "sku": "32a0791a88474f08ad7a687846b786f2",
+    "type": "game"
+  },
+  "g8b7e7f6760gameassassinscaad6e75": {
+    "app": "8b7e7f7036e5483eaa8745d46248536crcp1",
+    "handle": "game",
+    "name": "Assassin's Creed® Odyssey",
+    "sku": "6760aad6e75b4edc9686c48e8dd38936",
+    "type": "game"
+  },
+  "g921e9af16b5f4901cff40e4cee28e2f": {
+    "app": "921e9afe46aa478fb4aa929a7b1a6bd5rcp1",
+    "handle": "5f4901cff40e4ceeaaac44858fbcd1a3pjp1",
+    "name": "Spitlings",
+    "sku": "f16b28e2fd224acaafeee4c19134adb4",
+    "type": "game"
+  },
+  "ga0314101e9trialsgametrial5e7325": {
+    "app": "a031419410cc48469ff8954ea0732640rcp1",
+    "handle": "Trials_game",
+    "name": "Trials Rising",
+    "sku": "01e95e73256c465fb5620fc574446413",
+    "type": "game"
+  },
+  "ga38d98f879at2edengame00000d932d": {
+    "app": "a38d988fb142400c947bf0a7b37fd404rcp1",
+    "handle": "AT2EDENGAME00000",
+    "name": "Attack on Titan 2: Final Battle",
+    "sku": "f879d932d28c4104958c7976f201ba38",
+    "type": "game"
+  },
+  "ga44762161115100000finalfabf48ac": {
+    "app": "a447622dbe084c3e9ace4f913a939afarcp1",
+    "handle": "15100000",
+    "name": "FINAL FANTASY XV",
+    "sku": "1611bf48ac784869bcbd1ce85bc71add",
+    "type": "game"
+  },
+  "ga4c5eb71e7pubgbattlegroundc4fc5": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGBATTLEGROUNDS01",
+    "name": "PLAYERUNKNOWN'S BATTLEGROUNDS",
+    "sku": "71e7c4fc5ca24f0f8301da6d042bf18e",
+    "type": "game"
+  },
+  "gb8328390f5gamesteamworlddbd9270": {
+    "app": "b832835182124d4d83cb76a74a76a33frcp1",
+    "handle": "game",
+    "name": "SteamWorld Dig 2",
+    "sku": "90f5bd9270024986b26ee8221c1fa2e4",
+    "type": "game"
+  },
+  "gb84560a1afgamesteamworldqa4eca7": {
+    "app": "b845605f8eb447008f3f0d2295265ffdrcp1",
+    "handle": "game",
+    "name": "SteamWorld Quest: Hand of Gilgamech",
+    "sku": "a1afa4eca7b24713a9bcf3421dd85a13",
+    "type": "game"
+  },
+  "gbe080a958fbl3standardedit4c0900": {
+    "app": "be080ad40b434ca289166031d3e88623rcp1",
+    "handle": "BL3_StandardEdition",
+    "name": "Borderlands®3",
+    "sku": "958f4c0900c64e7e83b9218ab479304e",
+    "type": "game"
+  },
+  "gc121d86e98thumperthumperf34bbca": {
+    "app": "c121d8b3fa744b52b71bf3599cb3da7frcp1",
+    "handle": "thumper",
+    "name": "Thumper",
+    "sku": "6e98f34bbcae444a99816b8f2613452b",
+    "type": "game"
+  },
+  "gc48985f665gamesteamworldd8df6c8": {
+    "app": "c4898519ff254b969ede8bafdff927e8rcp1",
+    "handle": "game",
+    "name": "SteamWorld Dig",
+    "sku": "f6658df6c8874c828532d5d24c66d58f",
+    "type": "game"
+  },
+  "gca805d75begridstandarded643ff0f": {
+    "app": "ca805d3d37404654a91d2ea62fad7bd4rcp1",
+    "handle": "GRID_Standard_Edition",
+    "name": "GRID",
+    "sku": "75be643ff0fb40d7873fa41edb10d98a",
+    "type": "game"
+  },
+  "gcabec54591gameserioussam8155e78": {
+    "app": "cabec52b78264dafac69011aeacd5753rcp1",
+    "handle": "game",
+    "name": "Serious Sam Collection",
+    "sku": "45918155e78145af937b5df1a574afd2",
+    "type": "game"
+  },
+  "gcba537a7b1zombiearmy4zombi58149": {
+    "app": "cba537cccfe3470b8784f88660ea5f09rcp1",
+    "handle": "ZombieArmy4",
+    "name": "Zombie Army 4: Dead War",
+    "sku": "a7b1581491ea4b7c9fcc89710561f5f7",
+    "type": "game"
+  },
+  "gcc974394dbthecrew2thecrew678cbb": {
+    "app": "cc97434908874852a6705d255a605dc8rcp1",
+    "handle": "TheCrew2",
+    "name": "The Crew 2",
+    "sku": "94db678cbb6342c3bc0e58f71130b3fb",
+    "type": "game"
+  },
+  "gcfd297e8edgametheturingt7024480": {
+    "app": "cfd2977e1b9f412387ca2f44848400acrcp1",
+    "handle": "game",
+    "name": "The Turing Test",
+    "sku": "e8ed70244808408cbb7d3b2b1f06547f",
+    "type": "game"
+  },
+  "gd334beab6agamelostwords5a0d448d": {
+    "app": "d334bea27ee64ef5a3a9bb14b1d6a88ercp1",
+    "handle": "game",
+    "name": "Lost Words: Beyond the Page",
+    "sku": "ab6a5a0d448d4c7aaed8dfa91ad6f4b9",
+    "type": "game"
+  },
+  "gd43cd4bed6gamethedivision3eac14": {
+    "app": "d43cd46c81734ca48e1a615310d0237crcp1",
+    "handle": "game",
+    "name": "The Division 2 - Standard Edition",
+    "sku": "bed63eac149542078fa5b9d6f20f5f2f",
+    "type": "game"
+  },
+  "gd50e1c3ac3gamemonsterenere53701": {
+    "app": "d50e1c1b61224bceb65da9406f3f4e8frcp1",
+    "handle": "game",
+    "name": "Monster Energy Supercross - The Official Videogame 3",
+    "sku": "3ac3e537019c49028d7bb98e8cd92482",
+    "type": "game"
+  },
+  "gda94f38d31kinegamekine24a81f644": {
+    "app": "da94f3aa88b24eb6ae6fdff798f73355rcp1",
+    "handle": "KineGame",
+    "name": "Kine",
+    "sku": "8d3124a81f6444219acd3d99c90a5658",
+    "type": "game"
+  },
+  "ge465c4b0c6gamemotogp200f8483be4": {
+    "app": "e465c4086aff4884990933d9f119f5f5rcp1",
+    "handle": "game",
+    "name": "MotoGP™20",
+    "sku": "b0c60f8483be419eb2335a79a0783cc5",
+    "type": "game"
+  },
+  "ge5c6ecf55615001000riseof2aaf93c": {
+    "app": "e5c6ec7bf437491ea4ac0917df8f9640rcp1",
+    "handle": "15001000",
+    "name": "Rise of the Tomb Raider: 20 Year Celebration",
+    "sku": "f5562aaf93cb46e081d317263bde3013",
+    "type": "game"
+  },
+  "gebf235c500fs19farmingsimu94b71d": {
+    "app": "ebf235012b054269af70eee901bc85cfrcp1",
+    "handle": "fs19",
+    "name": "Farming Simulator 19",
+    "sku": "c50094b71d054fc28f3116245d9dbc9a",
+    "type": "game"
+  },
+  "gefa3b6bb9b15002000shadowocb490f": {
+    "app": "efa3b6108d3e41689b2223ba9d48f5c8rcp1",
+    "handle": "15002000",
+    "name": "Shadow of the Tomb Raider Definitive Edition",
+    "sku": "bb9bcb490fd145d9997c8b3ff3f1039f",
+    "type": "game"
+  },
+  "gf393906c8af39390395ed5444de46ef": {
+    "app": "f39390395ed5444d8e9b23460c8f9152rcp1",
+    "handle": "f39390395ed5444d8e9b23460c8f9152rcp1",
+    "name": "Darksiders Genesis",
+    "sku": "6c8ae46efebc4bd1a7de725bc630ce65",
+    "type": "game"
+  },
+  "o11c9ec1cc4ghostcoins12ghe8255c5": {
+    "app": "11c9ece5b3a045908d77cf2b66adb010rcp1",
+    "handle": "ghost_coins_12",
+    "name": "Ghost Recon Breakpoint : 1200 (+100) Ghost Coins",
+    "sku": "1cc4e8255c564d67806aeed81edf741b",
+    "type": "addon"
+  },
+  "o11c9ec3163ghostcoins48gh5f3c873": {
+    "app": "11c9ece5b3a045908d77cf2b66adb010rcp1",
+    "handle": "ghost_coins_48",
+    "name": "Ghost Recon Breakpoint : 4800 (+1000) Ghost Coins",
+    "sku": "31635f3c873b41d29aeb325efff8a34f",
+    "type": "addon"
+  },
+  "o11c9ec3ff2survivorpackghod77b1a": {
+    "app": "11c9ece5b3a045908d77cf2b66adb010rcp1",
+    "handle": "survivor_pack",
+    "name": "Ghost Recon Breakpoint : Survivor Pack",
+    "sku": "3ff2d77b1a174ce8bfff7bc1ff6f2b35",
+    "type": "addon"
+  },
+  "o11c9ec73e3sacredlandpack7b55089": {
+    "app": "11c9ece5b3a045908d77cf2b66adb010rcp1",
+    "handle": "sacred_land_pack",
+    "name": "Ghost Recon Breakpoint : The Sacred Land Pack",
+    "sku": "73e37b5508944b508cf1e997b7f11ebb",
+    "type": "addon"
+  },
+  "o11c9ec764ayearonepassghoea6292f": {
+    "app": "11c9ece5b3a045908d77cf2b66adb010rcp1",
+    "handle": "year_one_pass",
+    "name": "Ghost Recon Breakpoint: Year 1 Pass",
+    "sku": "764aea6292f941c3a38c2875fbf1ff17",
+    "type": "addon"
+  },
+  "o11c9ec91d8ghostcoins96ghf9ede6e": {
+    "app": "11c9ece5b3a045908d77cf2b66adb010rcp1",
+    "handle": "ghost_coins_96",
+    "name": "Ghost Recon Breakpoint : 9600 (+2400) Ghost Coins",
+    "sku": "91d8f9ede6ed4a508349a9072e2a727d",
+    "type": "addon"
+  },
+  "o11c9ec926aoffroadpackgho01eb81a": {
+    "app": "11c9ece5b3a045908d77cf2b66adb010rcp1",
+    "handle": "off_road_pack",
+    "name": "Ghost Recon Breakpoint : Off-Road Pack",
+    "sku": "926a01eb81a04bbd8d13d25f30c11a97",
+    "type": "addon"
+  },
+  "o11c9ec9e3eghostcoins24gh3fe6993": {
+    "app": "11c9ece5b3a045908d77cf2b66adb010rcp1",
+    "handle": "ghost_coins_24",
+    "name": "Ghost Recon Breakpoint : 2400 (+400) Ghost Coins",
+    "sku": "9e3e3fe699394570a8bf815b04f0b5ff",
+    "type": "addon"
+  },
+  "o20e7925c1d10000001stadiap84fe25": {
+    "app": "20e792017ab34ad89b70dc17a5c72d68rcp1",
+    "handle": "10000001",
+    "name": "Stadia Pro Access (Destiny 2: The Collection)",
+    "sku": "5c1d84fe250a473e9d0313ed232508bc",
+    "type": "addon"
+  },
+  "o20e7926ae110000002destiny7ecb8e": {
+    "app": "20e792017ab34ad89b70dc17a5c72d68rcp1",
+    "handle": "10000002",
+    "name": "Destiny 2: Forsaken",
+    "sku": "6ae17ecb8ef044329109f23df572c0ef",
+    "type": "addon"
+  },
+  "o20e7927c7810000003destiny18dfa9": {
+    "app": "20e792017ab34ad89b70dc17a5c72d68rcp1",
+    "handle": "10000003",
+    "name": "Destiny 2: Shadowkeep",
+    "sku": "7c7818dfa9774281bdc6375402dc6e0a",
+    "type": "addon"
+  },
+  "o2152a11d3fdlcultimateedit76d6fc": {
+    "app": "2152a1e96d5b47b18a5df7ca9bb0751frcp1",
+    "handle": "dlc_ultimateedition",
+    "name": "Red Dead Redemption 2:  Ultimate Edition Content",
+    "sku": "1d3f76d6fcf149e0a446f6d49ac38ed6",
+    "type": "addon"
+  },
+  "o2152a1e96fdlcspecialeditif7a738": {
+    "app": "2152a1e96d5b47b18a5df7ca9bb0751frcp1",
+    "handle": "dlc_specialedition",
+    "name": "Red Dead Redemption 2:  Special Edition Content",
+    "sku": "e96ff7a738d14b88ba459f052f237d17",
+    "type": "addon"
+  },
+  "o2afad33e76nba2k20legendeed160e4": {
+    "app": "2afad3696b394f669b49e4c0b6016958rcp1",
+    "handle": "NBA2K20_Legend_Edition",
+    "name": "NBA 2K20 Legend Edition Bonus",
+    "sku": "3e76ed160e434f799de225db62fd4cd0",
+    "type": "addon"
+  },
+  "o2afad3cdb8nba2k20deluxee83f9811": {
+    "app": "2afad3696b394f669b49e4c0b6016958rcp1",
+    "handle": "NBA2K20_Deluxe_Edition",
+    "name": "NBA 2K20 Digital Deluxe Bonus",
+    "sku": "cdb883f981184a9486c567e1704e8f1b",
+    "type": "addon"
+  },
+  "o6325222262dmecampaigndoom139d1b": {
+    "app": "632522c846a041ce801e47b96ba2e265rcp1",
+    "handle": "dme_campaign",
+    "name": "DOOM Eternal Campaign",
+    "sku": "2262139d1bd04020a8599874a142680f",
+    "type": "addon"
+  },
+  "o632522b63cdmedeluxedoome09150d8": {
+    "app": "632522c846a041ce801e47b96ba2e265rcp1",
+    "handle": "dme_deluxe",
+    "name": "DOOM Eternal Deluxe Content",
+    "sku": "b63c09150d8b4305898d904f50c8c148",
+    "type": "addon"
+  },
+  "o632522f2d3dmeyearoneyearedb5850": {
+    "app": "632522c846a041ce801e47b96ba2e265rcp1",
+    "handle": "dme_yearone",
+    "name": "Year One Pass",
+    "sku": "f2d3edb585044489bda92238da640df0",
+    "type": "addon"
+  },
+  "o7bfbcb018ff1f3235ba06b41d8b8c01": {
+    "app": "7bfbcba307114ab88ae4231da2ec85d3rcp1",
+    "handle": "f1f3235b-a06b-4130-a17d-f89678047a29",
+    "name": "Terminator T-800",
+    "sku": "018fd8b8c01d496cb4917d43645c14b5",
+    "type": "addon"
+  },
+  "o7bfbcb14924a317f2f4e064dd4fcf16": {
+    "app": "7bfbcba307114ab88ae4231da2ec85d3rcp1",
+    "handle": "4a317f2f-4e06-4dd0-ab63-311a7aeda4ee",
+    "name": "Mortal Kombat 11 Kombat Pack",
+    "sku": "1492d4fcf167420cb227a5579f447016",
+    "type": "addon"
+  },
+  "o7bfbcb20ef2bc8091c20654d71dd341": {
+    "app": "7bfbcba307114ab88ae4231da2ec85d3rcp1",
+    "handle": "2bc8091c-2065-4df5-9490-ea6bd590528e",
+    "name": "Klassic Arcade Fighter Pack",
+    "sku": "20ef71dd341a4fb38423fb207d6c4455",
+    "type": "addon"
+  },
+  "o7bfbcb294c5974ec88cc4f43bfab6a0": {
+    "app": "7bfbcba307114ab88ae4231da2ec85d3rcp1",
+    "handle": "5974ec88-cc4f-4301-85de-a4d7e8b06562",
+    "name": "Double Feature Skin Pack",
+    "sku": "294cbfab6a0e4d7db0d540968af2fbc7",
+    "type": "addon"
+  },
+  "o7bfbcb4a4f58d88ee21f1648abe8ed9": {
+    "app": "7bfbcba307114ab88ae4231da2ec85d3rcp1",
+    "handle": "58d88ee2-1f16-4862-ad4f-211f2228e6ba",
+    "name": "Shang Tsung",
+    "sku": "4a4fabe8ed9942ed9ca5fa9111f3934f",
+    "type": "addon"
+  },
+  "o7bfbcb7ed398600abfddbc4068fdc86": {
+    "app": "7bfbcba307114ab88ae4231da2ec85d3rcp1",
+    "handle": "98600abf-ddbc-40ad-9010-3a637027eea6",
+    "name": "Klassic Arcade Ninja Skin Pack 1",
+    "sku": "7ed368fdc86c45c5a61a44191bd0fa36",
+    "type": "addon"
+  },
+  "o7bfbcbe94c951c381ae82a4c4b9ada3": {
+    "app": "7bfbcba307114ab88ae4231da2ec85d3rcp1",
+    "handle": "951c381a-e82a-4cdb-9056-c0dd63f4cdac",
+    "name": "Nightwolf",
+    "sku": "e94c4b9ada3e43a89fe92e86e83ed092",
+    "type": "addon"
+  },
+  "o8615c8d68ar2deluxerage27dfd0409": {
+    "app": "8615c857d7d54efebd94fe17e3f2896crcp1",
+    "handle": "R2DELUXE",
+    "name": "RAGE 2: Deluxe Content Pack",
+    "sku": "d68a7dfd040946eca937ef08b3e4f471",
+    "type": "addon"
+  },
+  "o879d826ad6metroexodusdlc555933e": {
+    "app": "879d82512f5441829250ead1aa678a70rcp1",
+    "handle": "metro_exodus_dlc2",
+    "name": "Metro Exodus - Sam's Story",
+    "sku": "6ad6555933ee4c34a6ad1d2d4fdf69aa",
+    "type": "addon"
+  },
+  "o879d82a3aemetroexodusdlc3dfc95c": {
+    "app": "879d82512f5441829250ead1aa678a70rcp1",
+    "handle": "metro_exodus_dlc1",
+    "name": "Metro Exodus - The Two Colonels",
+    "sku": "a3ae3dfc95ca4ad9b191e0ab9b75f601",
+    "type": "addon"
+  },
+  "o8b7e7f6f6aexpansionpassas85eb8e": {
+    "app": "8b7e7f7036e5483eaa8745d46248536crcp1",
+    "handle": "expansion_pass",
+    "name": "Assassin's Creed Odyssey - Stadia Season Pass",
+    "sku": "6f6a85eb8e6f4042a95cc5a51ee26984",
+    "type": "addon"
+  },
+  "oa03141ede7expansionpasstr59ff51": {
+    "app": "a031419410cc48469ff8954ea0732640rcp1",
+    "handle": "expansion_pass",
+    "name": "Trials Rising - Expansion Pass",
+    "sku": "ede759ff51c948d698fe4f20172ff2e2",
+    "type": "addon"
+  },
+  "oa4c5eb15c4pubgjamtextskinpba418": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGJAMTEXTSKIN",
+    "name": "PUBG - Jamila Textiles Set",
+    "sku": "15c4ba41842d41f5922c6f4797bf4d54",
+    "type": "addon"
+  },
+  "oa4c5eb21c4pubgchrldskinpub9bfa5": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGCHRLDSKIN",
+    "name": "PUBG - Cheerleader Set",
+    "sku": "21c49bfa54d64bd1bcb6a929764ba7d1",
+    "type": "addon"
+  },
+  "oa4c5eb2584pubgivryshunifskc4486": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGIVRYSHUNIFSKIN",
+    "name": "PUBG - IVORY SCHOOL UNIFORM SET (FEMALE)",
+    "sku": "2584c4486e3a4285af411859f4435215",
+    "type": "addon"
+  },
+  "oa4c5eb2e07pubgexcsvskinsetdb5d3": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGEXCSVSKINSET",
+    "name": "PUBG - Stadia Premiere Set",
+    "sku": "2e07db5d338d40cb9eac9deae4154f11",
+    "type": "addon"
+  },
+  "oa4c5eb38fapubgbschuniskinp68705": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGBSCHUNISKIN",
+    "name": "PUBG - BLUE SCHOOL UNIFORM SET (FEMALE)",
+    "sku": "38fa68705f70420f8e283fc937926e20",
+    "type": "addon"
+  },
+  "oa4c5eb5a0fpubg01100gcoinspbb32a": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBG01100GCOINS",
+    "name": "PUBG - 1,100 G-COINS",
+    "sku": "5a0fbb32a8154c53967a07c233ec2a7c",
+    "type": "addon"
+  },
+  "oa4c5eb659apubg02300gcoinspa85ef": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBG02300GCOINS",
+    "name": "PUBG - 2,300 G-COINS",
+    "sku": "659aa85ef9c04f1cb5db505b3685acca",
+    "type": "addon"
+  },
+  "oa4c5eb8492pubgbrownhrskinp149db": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGBROWNHRSKIN",
+    "name": "PUBG - Brown Hat Ranger Set",
+    "sku": "8492149db1724bb6b654d637e231136d",
+    "type": "addon"
+  },
+  "oa4c5ebaf42pubgmiltunifskin5d34a": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGMILTUNIFSKIN",
+    "name": "PUBG - MILITARY UNIFORM SET(FEMALE)",
+    "sku": "af425d34afa740c194eb8326dbd1695b",
+    "type": "addon"
+  },
+  "oa4c5ebb548pubgbdldsleiskin73e37": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGBDLDSLEISKIN",
+    "name": "PUBG - BADLANDS LEISURE SET",
+    "sku": "b54873e3768140b9805664a220969929",
+    "type": "addon"
+  },
+  "oa4c5ebcd65pubgpukdstrtskin0c64a": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGPUKDSTRTSKIN",
+    "name": "PUBG - PUNK DESTRUCTION SET",
+    "sku": "cd650c64a82c4726b38de3518f4c5544",
+    "type": "addon"
+  },
+  "oa4c5ebce1fpubg00500gcoinsp02b29": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBG00500GCOINS",
+    "name": "PUBG - 500 G-COINS",
+    "sku": "ce1f02b297f5433891b9aab3695625f8",
+    "type": "addon"
+  },
+  "oa4c5ebd125pubgsurclfrontpuc6e1d": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGSURCLFRONT",
+    "name": "PUBG - Survivor Pass : Cold Front",
+    "sku": "d125c6e1d3514f479e34badaad5b9836",
+    "type": "addon"
+  },
+  "oa4c5ebd222pubgfatywkskinpu256fa": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGFATYWKSKIN",
+    "name": "PUBG- Factory worker Set",
+    "sku": "d222256fad864d92803925f598c3e418",
+    "type": "addon"
+  },
+  "oa4c5ebd41apubg06000gcoinsp70a36": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBG06000GCOINS",
+    "name": "PUBG - 6,000 G-COINS",
+    "sku": "d41a70a360b54fbc91b088679bf5624b",
+    "type": "addon"
+  },
+  "oa4c5ebd8e5pubgchikdupgradp90169": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGCHIKDUPGRAD",
+    "name": "PUBG - Chicken Dinner Upgrade Pack",
+    "sku": "d8e5901692754f05bf26ccef03ba1c18",
+    "type": "addon"
+  },
+  "oa4c5ebdecfpubg13500gcoinsp58540": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBG13500GCOINS",
+    "name": "PUBG - 13,500 G-COINS",
+    "sku": "decf585409804c8f9c1bd03562504e10",
+    "type": "addon"
+  },
+  "oa4c5ebead7pubgaviatorskinp3553d": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGAVIATORSKIN",
+    "name": "PUBG - Aviator Set",
+    "sku": "ead73553d3014369a48c2cbd92f02ae5",
+    "type": "addon"
+  },
+  "oa4c5ebf922pubghipsterskinp03bfc": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGHIPSTERSKIN",
+    "name": "PUBG - Hipster Set",
+    "sku": "f92203bfca9846b3b10f236d451a3300",
+    "type": "addon"
+  },
+  "obe080a1e6bbl3seasonpassbo50c7fd": {
+    "app": "be080ad40b434ca289166031d3e88623rcp1",
+    "handle": "BL3_SeasonPass",
+    "name": "Borderlands®3 Season Pass",
+    "sku": "1e6b50c7fd7640f4a7b5160e74708043",
+    "type": "addon"
+  },
+  "obe080a2b4fbl3dbuttstalli07c4c92": {
+    "app": "be080ad40b434ca289166031d3e88623rcp1",
+    "handle": "BL3_D_ButtStallionCosmeticsPack",
+    "name": "Borderlands®3 Butt Stallion Cosmetic Pack",
+    "sku": "2b4f07c4c9264d2ba193cc4215e073c1",
+    "type": "addon"
+  },
+  "obe080a2b58bl3dtoyboxweap178e031": {
+    "app": "be080ad40b434ca289166031d3e88623rcp1",
+    "handle": "BL3_D_ToyBoxWeaponsPack",
+    "name": "Borderlands®3 Toy Box Weapons Pack",
+    "sku": "2b58178e031e4332a79617bc994ac21d",
+    "type": "addon"
+  },
+  "obe080a337bbl3dboostmodspd2854bd": {
+    "app": "be080ad40b434ca289166031d3e88623rcp1",
+    "handle": "BL3_D_BoostModsPack",
+    "name": "Borderlands®3 Boost Mods Pack",
+    "sku": "337bd2854bd14b73a27d1c57d650e1da",
+    "type": "addon"
+  },
+  "obe080a85a8bl3dneoncosmetf97e5cc": {
+    "app": "be080ad40b434ca289166031d3e88623rcp1",
+    "handle": "BL3_D_NeonCosmeticPack",
+    "name": "Borderlands®3 Neon Cosmetic Pack",
+    "sku": "85a8f97e5cc448899d6f851a5976f5c4",
+    "type": "addon"
+  },
+  "obe080a8eb8bl3dgearboxcosfae663e": {
+    "app": "be080ad40b434ca289166031d3e88623rcp1",
+    "handle": "BL3_D_GearboxCosmeticPack",
+    "name": "Borderlands®3 Gearbox Cosmetic Pack",
+    "sku": "8eb8fae663e841bca442ca6d95b54278",
+    "type": "addon"
+  },
+  "obe080afc54bl3dretrocosmeb4c07fe": {
+    "app": "be080ad40b434ca289166031d3e88623rcp1",
+    "handle": "BL3_D_RetroCosmeticPack",
+    "name": "Borderlands®3 Retro Cosmetic Pack",
+    "sku": "fc54b4c07feb43068a46aa7d9b4fd419",
+    "type": "addon"
+  },
+  "oca805d422bgridultimateupe99cdbd": {
+    "app": "ca805d3d37404654a91d2ea62fad7bd4rcp1",
+    "handle": "GRID_Ultimate_Upgrade",
+    "name": "GRID Ultimate Upgrade",
+    "sku": "422be99cdbdb460f9ab9ec5ffc7b0594",
+    "type": "addon"
+  },
+  "ocba537065cseasonpassonezom19337": {
+    "app": "cba537cccfe3470b8784f88660ea5f09rcp1",
+    "handle": "SeasonPassOne",
+    "name": "Zombie Army 4: Season Pass One",
+    "sku": "065c193373aa47859504227aeaa9cc28",
+    "type": "addon"
+  },
+  "ocba53750f2dlc00006zombieac12c05": {
+    "app": "cba537cccfe3470b8784f88660ea5f09rcp1",
+    "handle": "DLC00006",
+    "name": "Zombie Army 4: Undercover Karl Outfit",
+    "sku": "50f2c12c05e540098f75131c2c8ac560",
+    "type": "addon"
+  },
+  "ocba5379350dlc00003zombiea1771f2": {
+    "app": "cba537cccfe3470b8784f88660ea5f09rcp1",
+    "handle": "DLC00003",
+    "name": "Zombie Army 4: FG-42 Automatic Rifle Bundle",
+    "sku": "93501771f2244793af1053b120e66b02",
+    "type": "addon"
+  },
+  "ocba5379475dlc00002zombiea15b6fc": {
+    "app": "cba537cccfe3470b8784f88660ea5f09rcp1",
+    "handle": "DLC00002",
+    "name": "Zombie Army 4: Undead Airman Character",
+    "sku": "947515b6fcc543bca605d2c8d018a415",
+    "type": "addon"
+  },
+  "ocba537a245dlc00004zombiea100637": {
+    "app": "cba537cccfe3470b8784f88660ea5f09rcp1",
+    "handle": "DLC00004",
+    "name": "Zombie Army 4: Solid Gold Weapon Skins",
+    "sku": "a2451006373c494b87e770e97f476a91",
+    "type": "addon"
+  },
+  "occ974338a3motorsportsdelux3f9e0": {
+    "app": "cc97434908874852a6705d255a605dc8rcp1",
+    "handle": "MotorsportsDeluxePack",
+    "name": "The Crew 2 - Motorsports Deluxe Pack",
+    "sku": "38a33f9e010d48f9b80b3f7252a4768b",
+    "type": "addon"
+  },
+  "occ9743adeaseasonpassthecrcff32c": {
+    "app": "cc97434908874852a6705d255a605dc8rcp1",
+    "handle": "SeasonPass",
+    "name": "THE CREW 2 - SEASON PASS",
+    "sku": "adeacff32c1b4e0ba1127766e7a5bfc4",
+    "type": "addon"
+  },
+  "od43cd42c9abattleswornpack80e5c8": {
+    "app": "d43cd46c81734ca48e1a615310d0237crcp1",
+    "handle": "battlesworn_pack",
+    "name": "The Division 2 - Battleworn Secret Service Pack",
+    "sku": "2c9a80e5c89b47d7974c521e04258615",
+    "type": "addon"
+  },
+  "od43cd4354awarlockthedivisb39ab5": {
+    "app": "d43cd46c81734ca48e1a615310d0237crcp1",
+    "handle": "warlock",
+    "name": "The Division 2: Warlords of New York Expansion",
+    "sku": "354ab39ab5e14aaba1a06ef86a0268fe",
+    "type": "addon"
+  },
+  "od43cd4a8b8yearpass1packeac0c079": {
+    "app": "d43cd46c81734ca48e1a615310d0237crcp1",
+    "handle": "year_pass_1_pack",
+    "name": "The Division 2 - Year 1 Pass",
+    "sku": "a8b8eac0c0794b20a3f7a439760f6ee0",
+    "type": "addon"
+  },
+  "od43cd4bbcefirstresponder0ef2613": {
+    "app": "d43cd46c81734ca48e1a615310d0237crcp1",
+    "handle": "first_responder_pack",
+    "name": "The Division 2 - First Responder Pack",
+    "sku": "bbce0ef261374790bb6ce080cd7b9725",
+    "type": "addon"
+  },
+  "od43cd4bbe1eliteagentpack4a4d70c": {
+    "app": "d43cd46c81734ca48e1a615310d0237crcp1",
+    "handle": "elite_agent_pack",
+    "name": "The Division 2 - Elite Agent Pack",
+    "sku": "bbe14a4d70cf4777b7319098b5136a40",
+    "type": "addon"
+  },
+  "oebf2357c0dfs19dlc8f6bab5bd202f5": {
+    "app": "ebf235012b054269af70eee901bc85cfrcp1",
+    "handle": "fs19_dlc_8F6BAB51",
+    "name": "Farming Simulator 19 Platinum Expansion",
+    "sku": "7c0dbd202f5d4c409fe30046f68854ca",
+    "type": "addon"
+  },
+  "x11c9ec0339gameultimatetomb1c963": {
+    "app": "11c9ece5b3a045908d77cf2b66adb010rcp1",
+    "handle": "game_ultimate",
+    "name": "Tom Clancy's Ghost Recon Breakpoint - Ultimate Edition",
+    "sku": "0339b1c963e64e28a64b5778da93478c",
+    "skus": [
+      "06e101d56a03472bb6c204aee96187d7",
+      "764aea6292f941c3a38c2875fbf1ff17",
+      "926a01eb81a04bbd8d13d25f30c11a97",
+      "3ff2d77b1a174ce8bfff7bc1ff6f2b35",
+      "73e37b5508944b508cf1e997b7f11ebb"
+    ],
+    "type": "bundle"
+  },
+  "x11c9ec1062gamegoldtomcla1ce0fe7": {
+    "app": "11c9ece5b3a045908d77cf2b66adb010rcp1",
+    "handle": "game_gold",
+    "name": "Tom Clancy's Ghost Recon Breakpoint - Gold Edition",
+    "sku": "10621ce0fe784ccca7a9d95ec0f24f37",
+    "skus": [
+      "06e101d56a03472bb6c204aee96187d7",
+      "764aea6292f941c3a38c2875fbf1ff17"
+    ],
+    "type": "bundle"
+  },
+  "x20e7921f5020000002destinya7a214": {
+    "app": "20e792017ab34ad89b70dc17a5c72d68rcp1",
+    "handle": "20000002",
+    "name": "Destiny 2: Forsaken",
+    "sku": "1f50a7a214994a5cb861db76eef77564",
+    "skus": [
+      "4950959380034dcda0aecf98f675e11f",
+      "6ae17ecb8ef044329109f23df572c0ef"
+    ],
+    "type": "bundle"
+  },
+  "x20e792350820000003destiny7d3c68": {
+    "app": "20e792017ab34ad89b70dc17a5c72d68rcp1",
+    "handle": "20000003",
+    "name": "Destiny 2: Shadowkeep",
+    "sku": "35087d3c68c94b03b6f7e67440b8b283",
+    "skus": [
+      "4950959380034dcda0aecf98f675e11f",
+      "7c7818dfa9774281bdc6375402dc6e0a"
+    ],
+    "type": "bundle"
+  },
+  "x20e79258f020000004destinya37bf6": {
+    "app": "20e792017ab34ad89b70dc17a5c72d68rcp1",
+    "handle": "20000004",
+    "name": "Destiny 2: Upgrade Edition",
+    "sku": "58f0a37bf6b141e4ba3a14b59e46b7ff",
+    "skus": [
+      "4950959380034dcda0aecf98f675e11f",
+      "6ae17ecb8ef044329109f23df572c0ef",
+      "7c7818dfa9774281bdc6375402dc6e0a"
+    ],
+    "type": "bundle"
+  },
+  "x20e792bd7020000001destiny626ec3": {
+    "app": "20e792017ab34ad89b70dc17a5c72d68rcp1",
+    "handle": "20000001",
+    "name": "Destiny 2: The Collection",
+    "sku": "bd70626ec3834dedbc6dda5b956f7648",
+    "skus": [
+      "4950959380034dcda0aecf98f675e11f",
+      "5c1d84fe250a473e9d0313ed232508bc"
+    ],
+    "type": "bundle"
+  },
+  "x2152a108bfultimateedbund2863641": {
+    "app": "2152a1e96d5b47b18a5df7ca9bb0751frcp1",
+    "handle": "ultimate_ed_bundle",
+    "name": "Red Dead Redemption 2:  Ultimate Edition",
+    "sku": "08bf286364164e14bac41b0040d6331f",
+    "skus": [
+      "f790e37b6161477188923408085528a1",
+      "e96ff7a738d14b88ba459f052f237d17",
+      "1d3f76d6fcf149e0a446f6d49ac38ed6"
+    ],
+    "type": "bundle"
+  },
+  "x2152a163e9specialedbundl4c60b10": {
+    "app": "2152a1e96d5b47b18a5df7ca9bb0751frcp1",
+    "handle": "special_ed_bundle",
+    "name": "Red Dead Redemption 2:  Special Edition",
+    "sku": "63e94c60b10e4267add34ef768c30f8f",
+    "skus": [
+      "f790e37b6161477188923408085528a1",
+      "e96ff7a738d14b88ba459f052f237d17"
+    ],
+    "type": "bundle"
+  },
+  "x2afad30a76nba2k20legendb3df666f": {
+    "app": "2afad3696b394f669b49e4c0b6016958rcp1",
+    "handle": "NBA2K20_Legend_Bundle",
+    "name": "NBA 2K20 Legend Edition",
+    "sku": "0a763df666fc4569896ca44062308138",
+    "skus": [
+      "b6d1b295ed0d4f1080576ac5d51df6d0",
+      "3e76ed160e434f799de225db62fd4cd0"
+    ],
+    "type": "bundle"
+  },
+  "x2afad3183fnba2k20deluxeb245b98a": {
+    "app": "2afad3696b394f669b49e4c0b6016958rcp1",
+    "handle": "NBA2K20_Deluxe_Bundle",
+    "name": "NBA 2K20 Digital Deluxe",
+    "sku": "183f245b98a141ae97214c9ee5ae8a56",
+    "skus": [
+      "b6d1b295ed0d4f1080576ac5d51df6d0",
+      "cdb883f981184a9486c567e1704e8f1b"
+    ],
+    "type": "bundle"
+  },
+  "x632522b171dmestandardbundfc78d4": {
+    "app": "632522c846a041ce801e47b96ba2e265rcp1",
+    "handle": "dme_standardbundle",
+    "name": "DOOM Eternal Standard Edition",
+    "sku": "b171fc78d4e1496d9536d585257a771e",
+    "skus": [
+      "17affc92b9ca47a7b64e748609ed25af",
+      "2262139d1bd04020a8599874a142680f"
+    ],
+    "type": "bundle"
+  },
+  "x632522e74admedeluxebundlebd04f4": {
+    "app": "632522c846a041ce801e47b96ba2e265rcp1",
+    "handle": "dme_deluxebundle",
+    "name": "DOOM Eternal Deluxe Edition",
+    "sku": "e74abd04f4a34c7a82b6cf8cd9cf9ac0",
+    "skus": [
+      "17affc92b9ca47a7b64e748609ed25af",
+      "2262139d1bd04020a8599874a142680f",
+      "b63c09150d8b4305898d904f50c8c148",
+      "f2d3edb585044489bda92238da640df0"
+    ],
+    "type": "bundle"
+  },
+  "x7bfbcb69717dc2dac2c9e7493a38ec1": {
+    "app": "7bfbcba307114ab88ae4231da2ec85d3rcp1",
+    "handle": "7dc2dac2-c9e7-4988-9b14-37cb58ff69f1",
+    "name": "Mortal Kombat 11 Premium Edition",
+    "sku": "69713a38ec1a48f5aed02a24752540cb",
+    "skus": [
+      "f3f250e8a4d54f60ba730fbc04268052",
+      "1492d4fcf167420cb227a5579f447016",
+      "4a4fabe8ed9942ed9ca5fa9111f3934f",
+      "e94c4b9ada3e43a89fe92e86e83ed092",
+      "20ef71dd341a4fb38423fb207d6c4455",
+      "7ed368fdc86c45c5a61a44191bd0fa36",
+      "018fd8b8c01d496cb4917d43645c14b5",
+      "294cbfab6a0e4d7db0d540968af2fbc7"
+    ],
+    "type": "bundle"
+  },
+  "x8615c865e4deluxeeditionrab00af1": {
+    "app": "8615c857d7d54efebd94fe17e3f2896crcp1",
+    "handle": "deluxe_edition",
+    "name": "RAGE 2: Deluxe Edition",
+    "sku": "65e4b00af1094f1c99f5a8c7248b433f",
+    "skus": [
+      "78ea22fb5c054167bb722322b469f33f",
+      "d68a7dfd040946eca937ef08b3e4f471"
+    ],
+    "type": "bundle"
+  },
+  "x879d82b1efmetroexodusgol7089439": {
+    "app": "879d82512f5441829250ead1aa678a70rcp1",
+    "handle": "metro_exodus_gold_edition",
+    "name": "Metro Exodus - Gold Edition",
+    "sku": "b1ef708943904e7eaa699d2113805814",
+    "skus": [
+      "8ca5e97f091e4f7fbfcf8069ba850b1f",
+      "a3ae3dfc95ca4ad9b191e0ab9b75f601",
+      "6ad6555933ee4c34a6ad1d2d4fdf69aa"
+    ],
+    "type": "bundle"
+  },
+  "x8b7e7f2868gamebundleultic83c241": {
+    "app": "8b7e7f7036e5483eaa8745d46248536crcp1",
+    "handle": "game_bundle_ultimate",
+    "name": "Assassin's Creed Odyssey - Stadia Ultimate Edition",
+    "sku": "2868c83c2411473282074a6fe5dbfc85",
+    "skus": [
+      "6760aad6e75b4edc9686c48e8dd38936",
+      "6f6a85eb8e6f4042a95cc5a51ee26984"
+    ],
+    "type": "bundle"
+  },
+  "xa03141cc66goldtrialsrisinf2992d": {
+    "app": "a031419410cc48469ff8954ea0732640rcp1",
+    "handle": "gold",
+    "name": "Trials Rising - Digital Gold Edition",
+    "sku": "cc66f2992d04402bba5cbc8abf6cc616",
+    "skus": [
+      "01e95e73256c465fb5620fc574446413",
+      "ede759ff51c948d698fe4f20172ff2e2"
+    ],
+    "type": "bundle"
+  },
+  "xa4c5eb9faapubgchkdineditio81e60": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGCHKDINEDITION",
+    "name": "PlayerUnknown's Battlegrounds - Chicken Dinner Edition",
+    "sku": "9faa81e600704a828c243bf0b9c479bd",
+    "skus": [
+      "71e7c4fc5ca24f0f8301da6d042bf18e",
+      "d125c6e1d3514f479e34badaad5b9836",
+      "2e07db5d338d40cb9eac9deae4154f11",
+      "d41a70a360b54fbc91b088679bf5624b",
+      "ead73553d3014369a48c2cbd92f02ae5",
+      "8492149db1724bb6b654d637e231136d",
+      "38fa68705f70420f8e283fc937926e20",
+      "21c49bfa54d64bd1bcb6a929764ba7d1",
+      "d222256fad864d92803925f598c3e418",
+      "f92203bfca9846b3b10f236d451a3300"
+    ],
+    "type": "bundle"
+  },
+  "xa4c5ebbe95pubgpionereditio26126": {
+    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
+    "handle": "PUBGPIONEREDITION",
+    "name": "PlayerUnknown's Battlegrounds - Pioneer Edition",
+    "sku": "be9526126d394061b0eef9b16352357e",
+    "skus": [
+      "71e7c4fc5ca24f0f8301da6d042bf18e",
+      "d125c6e1d3514f479e34badaad5b9836",
+      "2e07db5d338d40cb9eac9deae4154f11"
+    ],
+    "type": "bundle"
+  },
+  "xbe080af493bl3deluxeeditio4cfefb": {
+    "app": "be080ad40b434ca289166031d3e88623rcp1",
+    "handle": "BL3_DeluxeEdition",
+    "name": "Borderlands®3 Deluxe Edition",
+    "sku": "f4934cfefbf845c3a3fa345dd65f9fcd",
+    "skus": [
+      "958f4c0900c64e7e83b9218ab479304e",
+      "8eb8fae663e841bca442ca6d95b54278",
+      "fc54b4c07feb43068a46aa7d9b4fd419",
+      "85a8f97e5cc448899d6f851a5976f5c4",
+      "2b58178e031e4332a79617bc994ac21d",
+      "337bd2854bd14b73a27d1c57d650e1da"
+    ],
+    "type": "bundle"
+  },
+  "xbe080afbfcbl3superdeluxee038023": {
+    "app": "be080ad40b434ca289166031d3e88623rcp1",
+    "handle": "BL3_SuperDeluxeEdition",
+    "name": "Borderlands®3 Super Deluxe Edition",
+    "sku": "fbfc03802388481b87a6d6922b773686",
+    "skus": [
+      "958f4c0900c64e7e83b9218ab479304e",
+      "8eb8fae663e841bca442ca6d95b54278",
+      "fc54b4c07feb43068a46aa7d9b4fd419",
+      "85a8f97e5cc448899d6f851a5976f5c4",
+      "2b58178e031e4332a79617bc994ac21d",
+      "337bd2854bd14b73a27d1c57d650e1da",
+      "2b4f07c4c9264d2ba193cc4215e073c1",
+      "1e6b50c7fd7640f4a7b5160e74708043"
+    ],
+    "type": "bundle"
+  },
+  "xca805d4f1dgridultimateedb1c66f6": {
+    "app": "ca805d3d37404654a91d2ea62fad7bd4rcp1",
+    "handle": "GRID_Ultimate_Edition",
+    "name": "GRID Ultimate Edition",
+    "sku": "4f1db1c66f6e427286cc21d116e7bbee",
+    "skus": [
+      "75be643ff0fb40d7873fa41edb10d98a",
+      "422be99cdbdb460f9ab9ec5ffc7b0594"
+    ],
+    "type": "bundle"
+  },
+  "xcba53713f0deluxeeditionzom229ea": {
+    "app": "cba537cccfe3470b8784f88660ea5f09rcp1",
+    "handle": "DeluxeEdition",
+    "name": "Zombie Army 4: Dead War Deluxe Edition",
+    "sku": "13f0229eab0a484382e9af78bad74ff7",
+    "skus": [
+      "a7b1581491ea4b7c9fcc89710561f5f7",
+      "947515b6fcc543bca605d2c8d018a415",
+      "a2451006373c494b87e770e97f476a91",
+      "93501771f2244793af1053b120e66b02",
+      "50f2c12c05e540098f75131c2c8ac560"
+    ],
+    "type": "bundle"
+  },
+  "xcba5375027superdeluxeediti18352": {
+    "app": "cba537cccfe3470b8784f88660ea5f09rcp1",
+    "handle": "SuperDeluxeEdition",
+    "name": "Zombie Army 4: Dead War Super Deluxe Edition",
+    "sku": "5027183521d3454a8ff000edbfd478a9",
+    "skus": [
+      "a7b1581491ea4b7c9fcc89710561f5f7",
+      "065c193373aa47859504227aeaa9cc28"
+    ],
+    "type": "bundle"
+  },
+  "xcc97431e41goldeditionthec07605f": {
+    "app": "cc97434908874852a6705d255a605dc8rcp1",
+    "handle": "GoldEdition",
+    "name": "The Crew 2 - Gold Edition",
+    "sku": "1e4107605f83447fa8e04e0abdc578b3",
+    "skus": [
+      "94db678cbb6342c3bc0e58f71130b3fb",
+      "38a33f9e010d48f9b80b3f7252a4768b",
+      "adeacff32c1b4e0ba1127766e7a5bfc4"
+    ],
+    "type": "bundle"
+  },
+  "xcc9743ec30deluxeeditionthe180d1": {
+    "app": "cc97434908874852a6705d255a605dc8rcp1",
+    "handle": "DeluxeEdition",
+    "name": "The Crew 2 - Deluxe Edition",
+    "sku": "ec30180d14de41fcaec12d442b81e248",
+    "skus": [
+      "94db678cbb6342c3bc0e58f71130b3fb",
+      "38a33f9e010d48f9b80b3f7252a4768b"
+    ],
+    "type": "bundle"
+  },
+  "xd43cd4b9d1gamewarlockult633ba24": {
+    "app": "d43cd46c81734ca48e1a615310d0237crcp1",
+    "handle": "game_warlock_ult_bundle",
+    "name": "The Division 2: Warlords of New York Ultimate Edition",
+    "sku": "b9d1633ba24f41d7919f431db4744f3c",
+    "skus": [
+      "bed63eac149542078fa5b9d6f20f5f2f",
+      "354ab39ab5e14aaba1a06ef86a0268fe",
+      "a8b8eac0c0794b20a3f7a439760f6ee0",
+      "bbe14a4d70cf4777b7319098b5136a40",
+      "2c9a80e5c89b47d7974c521e04258615",
+      "bbce0ef261374790bb6ce080cd7b9725"
+    ],
+    "type": "bundle"
+  },
+  "xd43cd4f962gamewarlockbunfa4f12b": {
+    "app": "d43cd46c81734ca48e1a615310d0237crcp1",
+    "handle": "game_warlock_bundle",
+    "name": "The Division 2 - Warlords of New York Edition",
+    "sku": "f962fa4f12b64bffade9c170469d5710",
+    "skus": [
+      "bed63eac149542078fa5b9d6f20f5f2f",
+      "354ab39ab5e14aaba1a06ef86a0268fe"
+    ],
+    "type": "bundle"
+  },
+  "xebf2350292fs19platinumfar121ae0": {
+    "app": "ebf235012b054269af70eee901bc85cfrcp1",
+    "handle": "fs19_platinum",
+    "name": "Farming Simulator 19 Platinum Edition",
+    "sku": "0292121ae01e4247ace30184df5f6ac0",
+    "skus": [
+      "c50094b71d054fc28f3116245d9dbc9a",
+      "7c0dbd202f5d4c409fe30046f68854ca"
+    ],
+    "type": "bundle"
+  }
+}
