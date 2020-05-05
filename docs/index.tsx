@@ -9,86 +9,70 @@
 
   type Renderable =
     | Element
+    | DocumentFragment
+    | Node
     | string
     | number
+    | boolean
     | null
     | undefined
     | Iterable<Renderable>;
 
-  const renderContent = (content: Renderable): Element => {
+  const renderChild = (content: Renderable): Node => {
     if (content === null || content === undefined) {
       return document.createElement("span");
-    } else if (content instanceof Element) {
-      return content;
-    } else if (typeof content === "string" || typeof content === "number") {
-      return Object.assign(document.createElement("span"), {
-        textContent: String(content),
-      });
     } else if (content instanceof Node) {
-      const container = document.createElement("span");
-      container.appendChild(content);
-      return container;
+      return content;
+    } else if (
+      typeof content === "string" ||
+      typeof content === "number" ||
+      typeof content === "boolean"
+    ) {
+      return document.createTextNode(String(content));
     } else {
-      console.log({ content });
-      const container = document.createElement("span");
+      const container = document.createDocumentFragment();
       for (const child of content) {
-        container.appendChild(renderContent(child));
+        container.appendChild(renderChild(child));
       }
       return container;
     }
   };
 
-  const renderTemplate = (
-    template: DocumentFragment,
-    slots: Record<string, Element | string> = {},
-    target: Element = document.createElement("span")
-  ): Element => {
-    while (target.lastChild) {
-      target.removeChild(target.lastChild);
-    }
+  const Home = ({ buttons, games }) => (
+    <section>
+      <h1>
+        <img src="/illufinch-violetsky-edited@4x.png" />
+        <slot name="title">stadia.observer</slot>
+      </h1>
 
-    if (target.shadowRoot) {
-      while (target.shadowRoot.lastChild) {
-        target.removeChild(target.shadowRoot.lastChild);
-      }
-    } else {
-      target.attachShadow({ mode: "open" });
-    }
+      <section>{buttons}</section>
 
-    target.shadowRoot.appendChild(template.cloneNode(true));
-
-    for (const [key, content] of Object.entries(slots)) {
-      if (template.querySelector(`slot[name=${CSS.escape(key)}]`)) {
-        let contentElement = renderContent(content);
-        contentElement.slot = key;
-        target.appendChild(contentElement);
-      }
-    }
-
-    return target;
-  };
-
-  const templates = Object.fromEntries(
-    Array.from(
-      new DOMParser()
-        .parseFromString(
-          await (await fetch("/templates.html")).text(),
-          "text/html"
-        )
-        .querySelectorAll("template")
-    ).map((el: HTMLTemplateElement) => [el.id, el.content])
+      <section>
+        {games.map((game) => (
+          <Game {...game} />
+        ))}
+      </section>
+    </section>
   );
 
-  const render = (name, props, child) => {
-    if (name instanceof DocumentFragment) {
-      return renderTemplate(name, { child, ...props });
-    } else if (templates.hasOwnProperty(name)) {
-      return renderTemplate(templates[name], { child, ...props });
-    } else {
-      const el = document.createElement(name);
+  const Game = ({ name }) => (
+    <section>
+      <h2>{name}</h2>
+    </section>
+  );
+
+  const render = (
+    type: string | ((props: Record<string, Renderable>) => Element),
+    props: Record<string, any>,
+    ...children: Array<Renderable>
+  ): Element => {
+    if (typeof type === "string") {
+      const el = document.createElement(type);
       Object.assign(el, props);
-      el.appendChild(renderContent(child));
+      el.appendChild(renderChild(children));
       return el;
+    } else {
+      return type(Object.assign(props, { children }));
     }
   };
 
@@ -111,14 +95,11 @@
     );
 
   document.body.appendChild(
-    <home
-      title={document.title}
+    <Home
       buttons={
         <button onclick={() => import("/spider.js")}>🕷️spider stadia</button>
       }
-      games={games.map((game) => (
-        <game {...game} />
-      ))}
+      games={games}
     />
   );
 })();
