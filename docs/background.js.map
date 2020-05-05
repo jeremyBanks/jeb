@@ -1,1 +1,0 @@
-{"version":3,"file":"background.js","sourceRoot":"./","sources":["background.ts"],"names":[],"mappings":";AACA,MAAM,EACJ,OAAO,EAAE,EAAE,MAAM,EAAE,EACnB,aAAa,GACd,GAAG,MAAM,CAAC;AAEX,aAAa,CAAC,SAAS,CAAC,WAAW,CAAC,CAAC,UAAmB,EAAE,EAAE;IAC1D,IAAI,CAAC,MAAM,CAAC,QAAQ,CAAC,CAAC,CAAC;AACzB,CAAC,CAAC,CAAC"}
