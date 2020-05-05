@@ -38,3 +38,5 @@ browserAction.onClicked.addListener(async (activeTab: any) => {
     await new Promise((resolve) => tabs.create({ url }, resolve));
   }
 });
+
+export {};

@@ -1,14 +1,4 @@
-(async () => `
-  https://stadia.google.com/profile/6237980933414544774/gameactivities/all
-  fetch("https://stadia.observer/dist/plugin.js")
-    .then(_ => _.text())
-    .then(textContent => document.head.appendChild(Object.assign(
-      document.createElement('script'), {
-        nonce: document.querySelector('[nonce]').nonce,
-        type: module,
-        textContent
-      })));
-`)().then(async () => {
+export const spider = async () => {
   await new Promise((resolve) => setTimeout(resolve, 10));
   try {
     const spider = new Spider();
@@ -20,7 +10,7 @@
   } catch (error) {
     console.error("🕷️👀", error);
   }
-});
+};
 
 type ProtoData = any & Array<ProtoData | number | string | boolean | null>;
 type Sku = Game | AddOn | Bundle | Subscription;
