@@ -81,11 +81,9 @@
 
   const render = (name, props, child) => {
     if (name instanceof DocumentFragment) {
-      if (child) throw new TypeError("components can't have children");
-      return renderTemplate(name, props);
+      return renderTemplate(name, { child, ...props });
     } else if (templates.hasOwnProperty(name)) {
-      if (child) throw new TypeError("components can't have children");
-      return renderTemplate(templates[name], props);
+      return renderTemplate(templates[name], { child, ...props });
     } else {
       const el = document.createElement(name);
       Object.assign(el, props);
@@ -113,7 +111,7 @@
     );
 
   document.body.appendChild(
-    <templates.home
+    <home
       title={document.title}
       buttons={
         <button onclick={() => import("/spider.js")}>🕷️spider stadia</button>
