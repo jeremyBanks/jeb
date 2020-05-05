@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "alwaysStrict": true,
-    "declaration": true,
     "inlineSourceMap": true,
     "inlineSources": true,
     "jsx": "react",
@@ -9,11 +8,10 @@
     "module": "esnext",
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
-    "noImplicitThis": true,
     "outDir": "./docs",
     "rootDir": "./src",
     "sourceRoot": "./",
-    "strict": false,
+    "strict": true,
     "target": "esnext"
   }
 }
