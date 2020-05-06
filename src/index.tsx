@@ -37,16 +37,51 @@ const Home = ({ games }: any) => (
   </main>
 );
 
-const Game = ({ name, description, type, sku, app }) => (
+const Game = ({ name, description, type, sku, app, addons, bundles }) => (
   <section>
-    <h2>{name}</h2>
-    <p>
-      {(type === "game") ? <a href={`http://stadia.google.com/player/${app}`}>launch game</a> : type}
-      {" "}
-      <a href={`https://stadia.google.com/store/details/${app}/sku/${sku}`}>store</a>
-    </p>
-    {" "}
+    <h2>
+      {name} [
+      {type === "game" ? (
+        <span>
+          <a href={`http://stadia.google.com/player/${app}`}>launch game</a> or
+        </span>
+      ) : (
+        type
+      )}{" "}
+      <a href={`https://stadia.google.com/store/details/${app}/sku/${sku}`}>
+        view in store
+      </a>
+      ]
+    </h2>
     <p>{description}</p>
+    {addons.map((addon) => (
+      <section>
+        <h3>
+          {addon.name} [
+          <a
+            href={`https://stadia.google.com/store/details/${app}/sku/${addon.sku}`}
+          >
+            view in store
+          </a>
+          ]
+        </h3>
+        <p>{description}</p>
+      </section>
+    ))}
+    {bundles.map((bundle) => (
+      <section>
+        <h3>
+          {bundle.name} [
+          <a
+            href={`https://stadia.google.com/store/details/${app}/sku/${bundle.sku}`}
+          >
+            view in store
+          </a>
+          ]
+        </h3>
+        <p>{description}</p>
+      </section>
+    ))}
   </section>
 );
 

@@ -8,7 +8,7 @@ document.head.appendChild(
   })
 );
 
-const Home = ({ buttons, games }: any) => (
+const Home = ({ games }: any) => (
   <main
     style={`
     font-size: 14px;
@@ -28,7 +28,6 @@ const Home = ({ buttons, games }: any) => (
         🕷️spider stadia
       </button>
     )}
-    <section>{buttons}</section>
 
     <section>
       {games.map((game) => (
@@ -38,10 +37,51 @@ const Home = ({ buttons, games }: any) => (
   </main>
 );
 
-const Game = ({ name, description }) => (
+const Game = ({ name, description, type, sku, app, addons, bundles }) => (
   <section>
-    <h2>{name}</h2>
+    <h2>
+      {name} [
+      {type === "game" ? (
+        <span>
+          <a href={`http://stadia.google.com/player/${app}`}>launch game</a> or
+        </span>
+      ) : (
+        type
+      )}{" "}
+      <a href={`https://stadia.google.com/store/details/${app}/sku/${sku}`}>
+        view in store
+      </a>
+      ]
+    </h2>
     <p>{description}</p>
+    {addons.map((addon) => (
+      <section>
+        <h3>
+          {addon.name} [
+          <a
+            href={`https://stadia.google.com/store/details/${app}/sku/${addon.sku}`}
+          >
+            view in store
+          </a>
+          ]
+        </h3>
+        <p>{description}</p>
+      </section>
+    ))}
+    {bundles.map((bundle) => (
+      <section>
+        <h3>
+          {bundle.name} [
+          <a
+            href={`https://stadia.google.com/store/details/${app}/sku/${bundle.sku}`}
+          >
+            view in store
+          </a>
+          ]
+        </h3>
+        <p>{description}</p>
+      </section>
+    ))}
   </section>
 );
 
