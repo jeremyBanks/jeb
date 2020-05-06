@@ -8,8 +8,19 @@ document.head.appendChild(
   })
 );
 
-const Home = ({ buttons, games }) => (
-  <section>
+const Home = ({ games }: any) => (
+  <main
+    style={`
+    font-size: 14px;
+    max-width: 800px;
+    margin: 8px 16px;
+
+    background-image: url(/illufinch-violetsky-edited@2x.png);
+    background-position: top 16px right 16px;
+    background-repeat: no-repeat;
+    background-size: 64px;
+  `}
+  >
     <h1>stadia.observer</h1>
 
     {window.chrome?.runtime?.id && (
@@ -17,19 +28,25 @@ const Home = ({ buttons, games }) => (
         🕷️spider stadia
       </button>
     )}
-    <section>{buttons}</section>
 
     <section>
       {games.map((game) => (
         <Game {...game} />
       ))}
     </section>
-  </section>
+  </main>
 );
 
-const Game = ({ name }) => (
+const Game = ({ name, description, type, sku, app }) => (
   <section>
     <h2>{name}</h2>
+    <p>
+      {(type === "game") ? <a href={`http://stadia.google.com/player/${app}`}>launch game</a> : type}
+      {" "}
+      <a href={`https://stadia.google.com/store/details/${app}/sku/${sku}`}>store</a>
+    </p>
+    {" "}
+    <p>{description}</p>
   </section>
 );
 

@@ -10,7 +10,7 @@
   "name": "stadia.observer",
   "private": true,
   "scripts": {
-    "start": "rm -rf docs/* && cp -r src/* data/* images/* docs/ && cp src/index.html docs/.htm && sort-json *.json */*.json; prettier --write src *.json */*.json && (tsc || echo \"type errors oh no\") && prettier --write docs"
+    "start": "rm -rf docs/* && cp -r src/* data/* static/* docs/ && cp src/index.html docs/.htm && sort-json *.json */*.json; prettier --write src *.json */*.json && (tsc || echo \"type errors oh no\") && prettier --write docs"
   },
   "version": "0.18.18"
 }
