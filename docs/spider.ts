@@ -1,4 +1,16 @@
+import { storage } from "./storage.js";
+import * as records from "./records.js";
+
 export const spider = async () => {
+  const usage = await storage.usage();
+  const schema = 20200202;
+  if (0 !== (await storage.get("schema"))) {
+    console.debug(`Resetting storage for schema ${schema}.`);
+    await storage.clear();
+    await storage.set("schema", 0);
+  }
+  console.debug(`Using ${usage} bytes of storage with schema ${schema}.`);
+
   await new Promise((resolve) => setTimeout(resolve, 10));
   try {
     const spider = new Spider();
@@ -7,6 +19,7 @@ export const spider = async () => {
     const data = await spider.load();
     console.debug("completed spider", spider, data);
     spider.download();
+    await storage.set("skus", spider.skus);
   } catch (error) {
     console.error(error);
   }
@@ -42,15 +55,23 @@ class Spider {
   }
 
   private async spider() {
+    await this.loadSkuDetails("59c8314ac82a456ba61d08988b15b550");
+    await this.loadSkuDetails("b171fc78d4e1496d9536d585257a771e");
+    await this.loadSkuDetails("4950959380034dcda0aecf98f675e11f");
+    await this.loadSkuDetails("2e07db5d338d40cb9eac9deae4154f11");
     await this.loadSkuList(3);
     await this.loadSkuList(2001);
     await this.loadSkuList(45);
-    await this.loadSkuDetails("be9526126d394061b0eef9b16352357e");
+    await this.loadSkuList(6);
 
+    console.warn(
+      "TODO: re-enable spidering once we've finished the above tweaks."
+    );
+    return;
     while (Object.keys(this.skus).length > Object.keys(this.spidered).length) {
       for (const sku of Object.values(this.skus)) {
         if (this.spidered[sku.sku] !== true) {
-          console.debug("spidering ", sku.key(), sku);
+          console.debug("spidering ", sortySlugy(sku), sku);
           await this.loadSkuDetails(sku.sku);
           this.spidered[sku.sku] = true;
         }
@@ -59,13 +80,14 @@ class Spider {
   }
 
   public download() {
-    const json = JSON.stringify(
+    const output = records.sorted(
       Object.fromEntries(
-        Object.values(this.skus).map((sku) => [sku.key(), sku])
-      ),
-      null,
-      2
+        Object.values(this.skus)
+          .map((sku) => records.sorted(sku))
+          .map((sku) => [sku.localKey, sku])
+      )
     );
+    const json = JSON.stringify(output, null, 2);
     // XXX: this blob is leaked
     const href = URL.createObjectURL(
       new Blob([json], {
@@ -98,16 +120,18 @@ class Spider {
 
     let sku;
     if (typeId === 1) {
-      sku = new Game(data[4], data[0], "game", data[1]);
+      sku = new Game(data[4], data[0], "game", data[1], data[5], data[9]);
     } else if (typeId === 2) {
-      sku = new AddOn(data[4], data[0], "addon", data[1]);
+      sku = new AddOn(data[4], data[0], "addon", data[1], data[5], data[9]);
     } else if (typeId === 3) {
       sku = new Bundle(
         data[4],
         data[0],
         "bundle",
         data[1],
-        data[14][0].map((x) => x[0])
+        data[5],
+        data[9],
+        data[14][0].map((x: any) => x[0])
       );
     } else if (typeId === 5) {
       sku = new Subscription(
@@ -115,7 +139,9 @@ class Spider {
         data[0],
         "subscription",
         data[1],
-        data[14][0].map((x) => x[0])
+        data[5],
+        data[9],
+        data[14][0].map((x: any) => x[0])
       );
     } else {
       throw new Error(
@@ -144,7 +170,7 @@ class Spider {
 
   async fetchPreloadData(path: string) {
     await new Promise((resolve) =>
-      setTimeout(resolve, Math.random() * 3_000 + 2_000)
+      setTimeout(resolve, Math.random() * 1_000 + 2_000)
     );
     const response = await fetch("https://stadia.google.com/" + path);
     const html = await response.text();
@@ -172,19 +198,19 @@ class Spider {
       )[0];
 
     const dataCallbackPattern = /^ *AF_initDataCallback *\( *{ *key *: *'ds:([0-9]+?)' *,[^]*?data: *function *\( *\){ *return *([^]*)\s*}\s*}\s*\)\s*;?\s*$/;
-    const dataServiceLoads = [];
+    const dataServiceLoads: Array<any> = [];
     for (const matches of contents
       .map((s) => s.match(dataCallbackPattern))
       .filter(Boolean)) {
       dataServiceLoads[matches[1]] = JSON.parse(matches[2]);
     }
-
+    6;
     const dataServiceRpcPrefixes = Object.values(dataServiceRequests).map(
       (x: any) => {
         const pieces = [x.id, ...x.request];
         const aliases = [];
         aliases.push(
-          `${pieces[0]}_${pieces.filter((x) => x != null).length - 1}s${
+          `${pieces[0]}_${pieces.filter((x: any) => x != null).length - 1}s${
             pieces.filter(Boolean).length - 1
           }t${pieces.length - 1}a`
         );
@@ -197,10 +223,10 @@ class Spider {
     );
 
     const preload = Object.values(dataServiceLoads);
-    const rpc = {};
+    const rpc: any = {};
     const loaded = {};
 
-    const loaders = {
+    const loaders: any = {
       WwD3rb: (data: ProtoData) => {
         const skus = data[2].map((p: any) => this.loadSkuData(p[9]));
         return { skus };
@@ -223,14 +249,14 @@ class Spider {
       },
 
       SYcsTd: (data: ProtoData) => {
-        const subscriptionDatas = data[2]?.map((x) => x[9]) ?? [];
+        const subscriptionDatas = data[2]?.map((x: any) => x[9]) ?? [];
         const subscriptions = subscriptionDatas.map((s) => this.loadSkuData(s));
         if (subscriptions?.length) return { subscriptions };
         else return {};
       },
 
       ZAm7W: (data: ProtoData) => {
-        const bundles = data[1].map((x) => this.loadSkuData(x[9]));
+        const bundles = data[1].map((x: any) => this.loadSkuData(x[9]));
         return { bundles };
       },
     };
@@ -261,26 +287,56 @@ class Spider {
   }
 }
 
+const sortySlugy = (sku: Sku | CommonSku) => {
+  const length = 32;
+  const maxNameLength = 23;
+  const typeTag =
+    ({ game: "g", addon: "o", bundle: "x", subscription: "c" } as any)[
+      sku.type
+    ] ?? `?${sku.type}?`;
+  const idsPrefix = sku.app.slice(0, 6) + sku.sku.slice(0, 2);
+  const idsRest = sku.app.slice(6) + sku.sku.slice(2);
+
+  let name = (sku.name + sku.internalSlug)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+
+  if (name.length > maxNameLength) {
+    const letterCounts: Record<string, number> = {};
+    for (const letter of name) {
+      letterCounts[letter] = (letterCounts[letter] || 0) + 1;
+    }
+    while (name.length > maxNameLength) {
+      const mostFrequentCount = Math.max(...Object.values(letterCounts));
+      const mostFrequent = Object.entries(letterCounts)
+        .filter(([_letter, count]) => count == mostFrequentCount)
+        .map(([letter, _count]) => letter);
+      for (let i = name.length - 1; i >= 0; i -= 1) {
+        const letter = name[i];
+        if (mostFrequent.includes(letter)) {
+          name = name.slice(0, i) + name.slice(i + 1);
+          letterCounts[letter] -= 1;
+          break;
+        }
+      }
+    }
+  }
+
+  return (typeTag + idsPrefix + name + idsRest).slice(0, length);
+};
+
 class CommonSku {
   constructor(
     readonly app: string,
     readonly sku: string,
     readonly type: "game" | "addon" | "bundle" | "subscription",
-    readonly name: string
-  ) {}
-
-  public key() {
-    return `${
-      { game: "g", addon: "o", bundle: "x", subscription: "a" }[this.type] ??
-      this.type
-    }${this.app.slice(0, 6)}${this.sku.slice(0, 4)}${this.name.slice(
-      Math.max(0, 0 | ((this.name.length - 20) / 2)),
-      20
-    )}${this.sku.slice(4)}`
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "")
-      .slice(0, 32);
+    readonly name: string,
+    readonly internalSlug: string,
+    readonly description: string
+  ) {
+    this.localKey = sortySlugy(this);
   }
+  readonly localKey: string;
 }
 
 class Game extends CommonSku {
@@ -288,9 +344,11 @@ class Game extends CommonSku {
     app: string,
     sku: string,
     readonly type = "game" as const,
-    name: string
+    name: string,
+    readonly internalSlug: string,
+    readonly description: string
   ) {
-    super(app, sku, type, name);
+    super(app, sku, type, name, internalSlug, description);
   }
 }
 
@@ -299,9 +357,11 @@ class AddOn extends CommonSku {
     app: string,
     sku: string,
     readonly type = "addon" as const,
-    name: string
+    name: string,
+    readonly internalSlug: string,
+    readonly description: string
   ) {
-    super(app, sku, type, name);
+    super(app, sku, type, name, internalSlug, description);
   }
 }
 
@@ -311,9 +371,11 @@ class Bundle extends CommonSku {
     sku: string,
     readonly type = "bundle" as const,
     name: string,
+    readonly internalSlug: string,
+    readonly description: string,
     readonly skus: Array<string>
   ) {
-    super(app, sku, type, name);
+    super(app, sku, type, name, internalSlug, description);
   }
 }
 
@@ -323,8 +385,10 @@ class Subscription extends CommonSku {
     sku: string,
     readonly type = "subscription" as const,
     name: string,
+    readonly internalSlug: string,
+    readonly description: string,
     readonly skus: Array<string>
   ) {
-    super(app, sku, type, name);
+    super(app, sku, type, name, internalSlug, description);
   }
 }
