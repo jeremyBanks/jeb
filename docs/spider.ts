@@ -63,14 +63,14 @@ class Spider {
     await this.loadSkuList(45);
     await this.loadSkuList(6);
 
-    console.warn(
-      "TODO: re-enable spidering once we've finished the above tweaks."
-    );
-    return;
+    // console.warn(
+    //   "TODO: re-enable spidering once we've finished the above tweaks."
+    // );
+    // return;
     while (Object.keys(this.skus).length > Object.keys(this.spidered).length) {
       for (const sku of Object.values(this.skus)) {
         if (this.spidered[sku.sku] !== true) {
-          console.debug("spidering ", sortySlugy(sku), sku);
+          console.debug("spidering ", sku);
           await this.loadSkuDetails(sku.sku);
           this.spidered[sku.sku] = true;
         }

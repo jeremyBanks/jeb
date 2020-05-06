@@ -39,6 +39,11 @@ export const internalKey = (sku: Sku | CommonSku) => {
 };
 
 export class CommonSku {
+  readonly proPriceCents: number | null = null;
+  readonly proSalePriceCents: number | null = null;
+  readonly basePriceCents: number | null = null;
+  readonly baseSalePriceCents: number | null = null;
+
   constructor(
     readonly app: string,
     readonly sku: string,
