@@ -129,11 +129,11 @@ class Spider {
   private loadSku(sku: Sku): Sku {
     const existing = this.skus[sku.sku];
     if (existing) {
-      if (JSON.stringify(existing) !== JSON.stringify(sku)) {
-        const error = new Error(`skus had same sku but different values`);
-        console.error(error);
-        console.error(existing, sku);
-        throw error;
+      const existingJson = JSON.stringify(existing);
+      const newJson = JSON.stringify(sku);
+      if (existingJson !== newJson) {
+        console.warn(`skus had same ids but different properties.`);
+        Object.assign(existing, sku);
       }
       return existing;
     } else {
