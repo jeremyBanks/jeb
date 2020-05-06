@@ -57,7 +57,7 @@ const Game = ({ name, description, type, sku, app, addons, bundles }) => (
     {addons.map((addon) => (
       <section>
         <h3>
-          {addon.name} [
+          <span style="font-weight: normal;">➕</span> {addon.name} [
           <a
             href={`https://stadia.google.com/store/details/${app}/sku/${addon.sku}`}
           >
@@ -71,7 +71,7 @@ const Game = ({ name, description, type, sku, app, addons, bundles }) => (
     {bundles.map((bundle) => (
       <section>
         <h3>
-          {bundle.name} [
+          <span style="font-weight: normal;">📦</span> {bundle.name} [
           <a
             href={`https://stadia.google.com/store/details/${app}/sku/${bundle.sku}`}
           >
