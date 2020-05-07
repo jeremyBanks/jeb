@@ -1,0 +1,19 @@
+{
+  "files.exclude": {
+    " */CNAME": true,
+    ".vscode": true,
+    "docs": true,
+    "LICENSE": true,
+    "README.md": true,
+    "static": true,
+    "yarn.lock": true
+  },
+  "workbench.colorCustomizations": {
+    "editorError.foreground": "#F884",
+    "minimap.errorHighlight": "#F882",
+    "titleBar.activeBackground": "#D06050",
+    "window.activeBorder": "#100",
+    "titleBar.inactiveBackground": "#803020",
+    "window.inactiveBorder": "#100"
+  }
+}

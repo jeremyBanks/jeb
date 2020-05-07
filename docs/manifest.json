@@ -3,6 +3,7 @@
     "persistent": false,
     "scripts": ["background.js"]
   },
+  "browser_action": {},
   "content_security_policy": "script-src 'self' chrome-extension://plnadnblnocgoficdcgbbdmcnciagojj https://stadia.observer https://stadia.google.com; object-src 'self'",
   "externally_connectable": {
     "ids": ["*"],
