@@ -11,9 +11,28 @@
   "workbench.colorCustomizations": {
     "editorError.foreground": "#F884",
     "minimap.errorHighlight": "#F882",
-    "titleBar.activeBackground": "#D06050",
+    "titleBar.activeBackground": "#d06050",
     "window.activeBorder": "#100",
-    "titleBar.inactiveBackground": "#803020",
-    "window.inactiveBorder": "#100"
-  }
+    "titleBar.inactiveBackground": "#d0605099",
+    "window.inactiveBorder": "#100",
+    "activityBar.activeBackground": "#db8578",
+    "activityBar.activeBorder": "#b4ebbb",
+    "activityBar.background": "#db8578",
+    "activityBar.foreground": "#15202b",
+    "activityBar.inactiveForeground": "#15202b99",
+    "activityBarBadge.background": "#b4ebbb",
+    "activityBarBadge.foreground": "#15202b",
+    "statusBar.background": "#d06050",
+    "statusBar.border": "#d06050",
+    "statusBar.foreground": "#e7e7e7",
+    "statusBarItem.hoverBackground": "#db8578",
+    "titleBar.activeForeground": "#e7e7e7",
+    "titleBar.border": "#d06050",
+    "titleBar.inactiveForeground": "#e7e7e799"
+  },
+  "peacock.color": "#D06050",
+  "cSpell.words": [
+    "skus",
+    "spidered"
+  ]
 }
