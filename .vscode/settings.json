@@ -34,5 +34,6 @@
   "cSpell.words": [
     "skus",
     "spidered"
-  ]
+  ],
+  "editor.wrappingIndent": "indent"
 }
