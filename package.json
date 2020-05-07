@@ -22,9 +22,9 @@
   "private": true,
   "scripts": {
     "build": "./build",
-    "test": "yarn build && yarn jest docs/ --testMatch='**/?(*.)+(spec|test).[j]s?(x)'"
+    "test": "yarn build && yarn jest docs/ --testMatch='**/?(*.)+(spec|test).[j]s?(x)'",
+    "w": "yarn build; printf '\nwatching to watch\n'; bash -c 'sleep 12'; yarn tsc --watch"
   },
   "type": "module",
-  "version": "2020.5.8",
-  "w": "yarn build; printf '\nwatching to watch\n'; bash -c 'sleep 12'; yarn tsc --watch"
+  "version": "2020.5.8"
 }
