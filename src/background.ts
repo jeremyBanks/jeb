@@ -1,7 +1,5 @@
-declare const chrome: any;
-
-chrome.browserAction.onClicked.addListener(async (activeTab: any) => {
-  const url = chrome.runtime.getURL("./.htm");
+browser.browserAction.onClicked.addListener(async (activeTab: any) => {
+  const url = browser.runtime.getURL("./.htm");
 
   console.log({ activeTab });
 
@@ -9,27 +7,21 @@ chrome.browserAction.onClicked.addListener(async (activeTab: any) => {
     return;
   }
 
-  const matchingTabs: Array<any> = await new Promise((resolve) =>
-    chrome.tabs.query(
-      {
-        url: chrome.runtime.getURL("*"),
-      },
-      resolve
-    )
-  );
+  const matchingTabs: Array<any> = await browser.tabs.query({
+    url: browser.runtime.getURL("*"),
+  });
 
   if (matchingTabs.length > 0) {
-    chrome.tabs.update(matchingTabs[0].id, { active: true, highlighted: true });
     for (const [i, tab] of matchingTabs.sort((a, b) => a.id - b.id).entries()) {
       if (i === 0) {
-        chrome.tabs.update(tab.id, { highlighted: true, active: true });
-        chrome.windows.update(tab.windowId, { focused: true });
+        await browser.tabs.update(tab.id, { highlighted: true, active: true });
+        await browser.windows.update(tab.windowId, { focused: true });
       } else {
-        chrome.tabs.update(tab.id, { highlighted: true });
+        browser.tabs.update(tab.id, { highlighted: true });
       }
     }
   } else {
-    await new Promise((resolve) => chrome.tabs.create({ url }, resolve));
+    await browser.tabs.create({ url });
   }
 });
 

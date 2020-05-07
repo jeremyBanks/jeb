@@ -1,14 +1,13 @@
-import { storage } from "./storage.js";
 import * as records from "./records.js";
 import { Sku, Game, AddOn, Bundle, Subscription } from "./data.js";
 
 export const spider = async () => {
-  const usage = await storage.usage();
+  const usage = await browser.storage.local.getBytesInUse!();
   const schema = 20200202;
-  if (schema !== (await storage.get("schema"))) {
+  if (schema !== (await browser.storage.local.get("schema")).schema) {
     console.debug(`Resetting storage for schema ${schema}.`);
-    await storage.clear();
-    await storage.set("schema", schema);
+    await browser.storage.local.clear();
+    await browser.storage.local.set({ schema });
   }
   console.debug(`Using ${usage} bytes of storage with schema ${schema}.`);
 
@@ -19,7 +18,7 @@ export const spider = async () => {
     const data = await spider.load();
     console.debug("completed spider", spider, data);
     spider.download();
-    await storage.set("skus", spider.output());
+    await browser.storage.local.set({ skus: spider.output() });
   } catch (error) {
     console.error(error);
   }
