@@ -6,12 +6,12 @@
     "typescript": "^3.8.3"
   },
   "engines": {
-    "node": "^14.2.0"
+    "node": "v14.2.0"
   },
   "name": "stadia.observer",
   "private": true,
   "scripts": {
-    "build": "bash ./build.bash"
+    "build": "./build.bash"
   },
   "version": "2020.5.7"
 }
