@@ -1,0 +1,36 @@
+#!/bin/bash
+set -euo pipefail;
+cd "$(dirname "${BASH_SOURCE}")";
+
+if [ -z "${npm_package_name:-}" ]; then
+    if [ -e "${HOME}/.nvm/nvm.sh" ]; then
+        source "${HOME}/.nvm/nvm.sh";
+        nvm use default;
+        node_version="$(node -p 'require("./package.json").engines.node')";
+        nvm install "${node_version}";
+        nvm use "${node_version}";
+    fi
+
+    yarn install;
+    exec yarn build "$@";
+fi
+
+dist="./docs";
+
+set -x;
+
+replace-in-files --regex='"version"\s*:\s*"(.*?)"' --replacement='"version": "'"$(date --utc "+%Y.%-m.%-d")"'"' "./package.json" "./src/manifest.json";
+replace-in-files --regex='"version_name"\s*:\s*"(.*?)"' --replacement='"version_name": "'"$(date --utc "+%Y-%m-%d")"'"' "./src/manifest.json";
+replace-in-files --regex='"node"\s*:\s*"(.*?)"' --replacement='"node": "'"$(node --version)"'"' ./"package.json";
+
+rm -rf "${dist}"/*;
+
+cp -r "./src/"* "./data/"* "./static/"* "${dist}/";
+cp "./node_modules/webextension-polyfill/dist/browser-polyfill.js"{"",".map"} "${dist}/";
+cp "./src/index.html" "${dist}/.htm";
+
+tsc || (printf "\n⚠️ TypeScript is confused. 😟\n\n");
+
+prettier --write "$dist";
+prettier --write src "./"*".json" *"/"*".json";
+sort-json "./"*".json" *"/"*".json";

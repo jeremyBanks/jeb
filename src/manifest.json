@@ -1,13 +1,25 @@
 {
   "background": {
     "persistent": false,
-    "scripts": ["background.js"]
+    "scripts": [
+      "background.js"
+    ]
   },
   "browser_action": {},
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "@stadia.observer"
+    }
+  },
   "content_security_policy": "script-src 'self' chrome-extension://plnadnblnocgoficdcgbbdmcnciagojj https://stadia.observer https://stadia.google.com; object-src 'self'",
   "externally_connectable": {
-    "ids": ["*"],
-    "matches": ["https://stadia.google.com/*", "https://stadia.observer/*"]
+    "ids": [
+      "*"
+    ],
+    "matches": [
+      "https://stadia.google.com/*",
+      "https://stadia.observer/*"
+    ]
   },
   "homepage_url": "https://stadia.observer/",
   "icons": {
@@ -27,5 +39,6 @@
     "tabs",
     "unlimitedStorage"
   ],
-  "version": "2020.5.7"
+  "version": "2020.5.7",
+  "version_name": "2020-05-07"
 }

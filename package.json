@@ -1,5 +1,9 @@
 {
+  "dependencies": {
+    "webextension-polyfill": "^0.6.0"
+  },
   "devDependencies": {
+    "@types/firefox-webext-browser": "^70.0.1",
     "prettier": "^2.0.5",
     "replace-in-files-cli": "^0.3.1",
     "sort-json": "^2.0.0",
@@ -11,7 +15,7 @@
   "name": "stadia.observer",
   "private": true,
   "scripts": {
-    "build": "./build.bash"
+    "build": "./build"
   },
   "version": "2020.5.7"
 }

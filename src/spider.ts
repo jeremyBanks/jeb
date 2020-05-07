@@ -5,10 +5,10 @@ import { Sku, Game, AddOn, Bundle, Subscription } from "./data.js";
 export const spider = async () => {
   const usage = await storage.usage();
   const schema = 20200202;
-  if (0 !== (await storage.get("schema"))) {
+  if (schema !== (await storage.get("schema"))) {
     console.debug(`Resetting storage for schema ${schema}.`);
     await storage.clear();
-    await storage.set("schema", 0);
+    await storage.set("schema", schema);
   }
   console.debug(`Using ${usage} bytes of storage with schema ${schema}.`);
 
