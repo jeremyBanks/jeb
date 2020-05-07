@@ -29,7 +29,7 @@ class Spider {
   private readonly done: Promise<unknown>;
   public constructor(
     private readonly skus: Record<Sku["sku"], Sku> = {},
-    private readonly spidered: Record<Sku["sku"], true> = {},
+    private readonly spidered: Record<Sku["sku"], true> = {}
   ) {
     let start: () => void;
     const started = new Promise((resolve) => (start = resolve));
@@ -61,7 +61,7 @@ class Spider {
     await this.loadSkuList(6);
 
     console.warn(
-      "TODO: re-enable spidering once we've finished the above tweaks.",
+      "TODO: re-enable spidering once we've finished the above tweaks."
     );
     return;
     while (Object.keys(this.skus).length > Object.keys(this.spidered).length) {
@@ -80,8 +80,8 @@ class Spider {
       Object.fromEntries(
         Object.values(this.skus)
           .map((sku) => records.sorted(sku))
-          .map((sku) => [sku.localKey, sku]),
-      ),
+          .map((sku) => [sku.localKey, sku])
+      )
     );
   }
 
@@ -92,7 +92,7 @@ class Spider {
     const href = URL.createObjectURL(
       new Blob([json], {
         type: "application/json",
-      }),
+      })
     );
     const el = Object.assign(document.createElement("a"), {
       download: "skus.json",
@@ -131,7 +131,7 @@ class Spider {
         data[1],
         data[5],
         data[9],
-        data[14][0].map((x: any) => x[0]),
+        data[14][0].map((x: any) => x[0])
       );
     } else if (typeId === 5) {
       sku = new Subscription(
@@ -141,11 +141,11 @@ class Spider {
         data[1],
         data[5],
         data[9],
-        data[14][0].map((x: any) => x[0]),
+        data[14][0].map((x: any) => x[0])
       );
     } else {
       throw new Error(
-        `unexpected sku type id ${JSON.stringify(typeId, null, 4)}`,
+        `unexpected sku type id ${JSON.stringify(typeId, null, 4)}`
       );
     }
 
@@ -170,7 +170,7 @@ class Spider {
 
   async fetchPreloadData(path: string) {
     await new Promise((resolve) =>
-      setTimeout(resolve, Math.random() * 1_000 + 2_000),
+      setTimeout(resolve, Math.random() * 1_000 + 2_000)
     );
     const response = await fetch("https://stadia.google.com/" + path);
     const html = await response.text();
@@ -188,13 +188,13 @@ class Spider {
           matches[1]
             .replace(/{id:/g, '{"id":')
             .replace(/,request:/g, ',"request":')
-            .replace(/'/g, '"'),
-        ),
+            .replace(/'/g, '"')
+        )
       )
       .map((requests) =>
         Object.fromEntries(
-          Object.entries(requests).map(([key, value]: any) => [key, value]),
-        ),
+          Object.entries(requests).map(([key, value]: any) => [key, value])
+        )
       )[0];
 
     const dataCallbackPattern = /^ *AF_initDataCallback *\( *{ *key *: *'ds:([0-9]+?)' *,[^]*?data: *function *\( *\){ *return *([^]*)\s*}\s*}\s*\)\s*;?\s*$/;
@@ -212,14 +212,14 @@ class Spider {
         aliases.push(
           `${pieces[0]}_${pieces.filter((x: any) => x != null).length - 1}s${
             pieces.filter(Boolean).length - 1
-          }t${pieces.length - 1}a`,
+          }t${pieces.length - 1}a`
         );
         while (pieces.length) {
           aliases.push(pieces.join("_"));
           pieces.pop();
         }
         return aliases;
-      },
+      }
     );
 
     const preload = Object.values(dataServiceLoads);
@@ -238,7 +238,7 @@ class Spider {
         const game = gameData && this.loadSkuData(gameData, gamePricingData);
 
         const addons = (data[19] as any)?.map((x: any) =>
-          this.loadSkuData(x[9]),
+          this.loadSkuData(x[9])
         );
 
         const skuData = data[16];
@@ -278,7 +278,7 @@ class Spider {
         preload,
         rpc,
       }),
-      loaded,
+      loaded
     );
 
     console.debug(path, data);

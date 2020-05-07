@@ -1,20 +1,17 @@
 {
+  "cSpell.words": ["skus", "spidered", "spidering", "woff"],
+  "editor.wrappingIndent": "indent",
   "files.exclude": {
     " */CNAME": true,
     ".vscode": true,
-    "docs": true,
     "LICENSE": true,
     "README.md": true,
+    "docs": true,
     "static": true,
     "yarn.lock": true
   },
+  "peacock.color": "#D06050",
   "workbench.colorCustomizations": {
-    "editorError.foreground": "#F884",
-    "minimap.errorHighlight": "#F882",
-    "titleBar.activeBackground": "#d06050",
-    "window.activeBorder": "#100",
-    "titleBar.inactiveBackground": "#d0605099",
-    "window.inactiveBorder": "#100",
     "activityBar.activeBackground": "#db8578",
     "activityBar.activeBorder": "#b4ebbb",
     "activityBar.background": "#db8578",
@@ -22,20 +19,18 @@
     "activityBar.inactiveForeground": "#15202b99",
     "activityBarBadge.background": "#b4ebbb",
     "activityBarBadge.foreground": "#15202b",
+    "editorError.foreground": "#F884",
+    "minimap.errorHighlight": "#F882",
     "statusBar.background": "#d06050",
     "statusBar.border": "#d06050",
     "statusBar.foreground": "#e7e7e7",
     "statusBarItem.hoverBackground": "#db8578",
+    "titleBar.activeBackground": "#d06050",
     "titleBar.activeForeground": "#e7e7e7",
     "titleBar.border": "#d06050",
-    "titleBar.inactiveForeground": "#e7e7e799"
-  },
-  "peacock.color": "#D06050",
-  "cSpell.words": [
-    "skus",
-    "spidered",
-    "spidering",
-    "woff"
-  ],
-  "editor.wrappingIndent": "indent"
+    "titleBar.inactiveBackground": "#d0605099",
+    "titleBar.inactiveForeground": "#e7e7e799",
+    "window.activeBorder": "#100",
+    "window.inactiveBorder": "#100"
+  }
 }

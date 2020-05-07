@@ -2,14 +2,12 @@ import * as records from "./records.js";
 import { Sku, Game, AddOn, Bundle, Subscription } from "./data.js";
 
 export const spider = async () => {
-  const usage = await browser.storage.local.getBytesInUse!();
   const schema = 20200202;
   if (schema !== (await browser.storage.local.get("schema")).schema) {
     console.debug(`Resetting storage for schema ${schema}.`);
     await browser.storage.local.clear();
     await browser.storage.local.set({ schema });
   }
-  console.debug(`Using ${usage} bytes of storage with schema ${schema}.`);
 
   await new Promise((resolve) => setTimeout(resolve, 10));
   try {

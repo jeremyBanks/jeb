@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail;
+shopt -s globstar nullglob;
 cd "$(dirname "${BASH_SOURCE}")";
 
 if [ -z "${npm_package_name:-}" ]; then
@@ -19,9 +20,11 @@ dist="./docs";
 
 set -x;
 
+node_version="$(node --version)";
 replace-in-files --regex='"version"\s*:\s*"(.*?)"' --replacement='"version": "'"$(date --utc "+%Y.%-m.%-d")"'"' "./package.json" "./src/manifest.json";
 replace-in-files --regex='"version_name"\s*:\s*"(.*?)"' --replacement='"version_name": "'"$(date --utc "+%Y-%m-%d")"'"' "./src/manifest.json";
-replace-in-files --regex='"node"\s*:\s*"(.*?)"' --replacement='"node": "'"$(node --version)"'"' ./"package.json";
+replace-in-files --regex='"node"\s*:\s*"(.*?)"' --replacement='"node": "'"${node_version}"'"' "./package.json";
+replace-in-files --regex='"node_version"\s*:\s*"(.*?)"' --replacement='"node_version": "'"${node_version}"'"' "./.github/workflows/build.yml";
 
 rm -rf "${dist}"/*;
 
@@ -31,5 +34,6 @@ cp "./src/index.html" "${dist}/.htm";
 
 tsc || printf "\n⚠️ TypeScript is confused. 😟\n\n";
 
-prettier --write "./"*".json" *"/"*".json" "./src/" "$dist";
-sort-json "./"*".json" *"/"*".json";
+sort-json "./"*".json" {"./src","./docs","./data","./.vscode","./.github"}"/"**/*"."{"json","yml","yaml"};
+prettier --write "./"*".json" "./data/" "./.vscode/" "./.github/" "./src/" "$dist";
+prettier --write --parser=json "./.github/"**/*"."{"yml","yaml"};
