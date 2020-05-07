@@ -1,9 +1,7 @@
 {
   "background": {
-    "persistent": false,
-    "scripts": [
-      "background.js"
-    ]
+    "page": "background.html",
+    "persistent": false
   },
   "browser_action": {},
   "browser_specific_settings": {
