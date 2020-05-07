@@ -1,4 +1,5 @@
 import { render } from "./index/render.js";
+import { spider } from "./index/spider.js";
 
 document.title = "stadia.observer";
 document.head.appendChild(
@@ -24,11 +25,7 @@ const Home = ({ games }: any) => (
     <h1>stadia.observer</h1>
 
     {window.chrome?.runtime?.id && (
-      <button
-        onclick={async () => (await import("./index/spider.js")).spider()}
-      >
-        🕷️spider stadia
-      </button>
+      <button onclick={spider}>🕷️spider stadia</button>
     )}
 
     <section>

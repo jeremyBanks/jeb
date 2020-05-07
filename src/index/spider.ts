@@ -1,6 +1,6 @@
-import { AddOn, Bundle, DataStore, Game, Sku, Subscription } from "./data.js";
+import * as records from "./records.js";
 
-import { records } from "./records.js";
+import { AddOn, Bundle, DataStore, Game, Sku, Subscription } from "./data.js";
 
 export const spider = async () => {
   const storage = await DataStore.open();
