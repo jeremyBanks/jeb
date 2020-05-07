@@ -1,4 +1,4 @@
-import * as records from "./records.js";
+import { records } from "./index.js";
 
 export type Sku = Game | AddOn | Bundle | Subscription;
 

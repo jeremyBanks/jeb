@@ -1,23 +1,25 @@
 {
   "dependencies": {
-    "webextension-polyfill": "^0.6.0"
+    "webextension-polyfill": "v0.6"
   },
   "devDependencies": {
-    "@types/firefox-webext-browser": "^70.0.1",
-    "jest": "^26.0.1",
-    "prettier": "^2.0.5",
-    "replace-in-files-cli": "^0.3.1",
-    "sort-json": "^2.0.0",
-    "typescript": "^3.8.3"
+    "@types/firefox-webext-browser": "v70.0.1",
+    "import-sort-cli": "^6.0.0",
+    "jest": "v26.0.1",
+    "prettier": "v2.0.5",
+    "replace-in-files-cli": "v0.3.1",
+    "sort-json": "v2",
+    "typescript": "v3.8.3"
   },
   "engines": {
-    "node": "v10.19.0"
+    "node": "v14.2.0"
   },
   "name": "stadia.observer",
   "private": true,
   "scripts": {
     "build": "./build",
-    "noop": true
+    "test": "jest --passWithNoTests"
   },
-  "version": "2020.5.8"
+  "version": "2020.5.8",
+  "w": "yarn build; printf '\nwatching to watch\n'; bash -c 'sleep 12'; yarn tsc --watch"
 }

@@ -20,6 +20,8 @@ dist="./docs";
 
 set -x;
 
+import-sort --write "./src/"**/*"."{"j","t"}"s"{,"x"};
+
 node_version="$(node --version)";
 replace-in-files --regex='"version"\s*:\s*"(.*?)"' --replacement='"version": "'"$(date --utc "+%Y.%-m.%-d")"'"' "./package.json" "./src/manifest.json";
 replace-in-files --regex='"version_name"\s*:\s*"(.*?)"' --replacement='"version_name": "'"$(date --utc "+%Y-%m-%d")"'"' "./src/manifest.json";

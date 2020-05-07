@@ -11,7 +11,8 @@
           "with": { "node-version": "v14.2.0" }
         },
         { "run": "yarn install" },
-        { "run": "yarn build" }
+        { "run": "yarn build" },
+        { "run": "yarn test" }
       ]
     }
   }

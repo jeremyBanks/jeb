@@ -4,6 +4,7 @@
     "esnext",
     "illufinch",
     "plnadnblnocgoficdcgbbdmcnciagojj",
+    "printf",
     "renderable",
     "skus",
     "spidered",
@@ -14,14 +15,11 @@
     "webextension",
     "woff"
   ],
-  "editor.codeActionsOnSave": {
-    "source.fixAll": true
-  },
   "editor.wrappingIndent": "indent",
   "emeraldwalk.runonsave": {
     "commands": [
       {
-        "cmd": "bash -c 'yarn build'",
+        "cmd": "bash -c 'NODE_VERSION=stable ~/.nvm/nvm-exec yarn build'",
         "match": ".*"
       }
     ]
