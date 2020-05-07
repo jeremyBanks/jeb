@@ -1,8 +1,18 @@
 {
-  "cSpell.words": ["skus", "spidered", "spidering", "woff"],
+  "cSpell.words": [
+    "illufinch",
+    "plnadnblnocgoficdcgbbdmcnciagojj",
+    "skus",
+    "spidered",
+    "spidering",
+    "stadiaobsobsobsobsobsobsobstadia",
+    "upsert",
+    "woff"
+  ],
   "editor.wrappingIndent": "indent",
   "files.exclude": {
     " */CNAME": true,
+    ".github": true,
     ".vscode": true,
     "LICENSE": true,
     "README.md": true,

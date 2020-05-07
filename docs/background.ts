@@ -24,5 +24,3 @@ browser.browserAction.onClicked.addListener(async (activeTab: any) => {
     await browser.tabs.create({ url });
   }
 });
-
-export {};

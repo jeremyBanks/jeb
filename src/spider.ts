@@ -1,25 +1,14 @@
 import * as records from "./records.js";
-import { Sku, Game, AddOn, Bundle, Subscription } from "./data.js";
+import { Sku, Game, AddOn, Bundle, Subscription, DataStore } from "./data.js";
 
 export const spider = async () => {
-  const schema = 20200202;
-  if (schema !== (await browser.storage.local.get("schema")).schema) {
-    console.debug(`Resetting storage for schema ${schema}.`);
-    await browser.storage.local.clear();
-    await browser.storage.local.set({ schema });
-  }
-
-  await new Promise((resolve) => setTimeout(resolve, 10));
-  try {
-    const spider = new Spider();
-    console.debug("starting spider", spider);
-    const data = await spider.load();
-    console.debug("completed spider", spider, data);
-    spider.download();
-    await browser.storage.local.set({ skus: spider.output() });
-  } catch (error) {
-    console.error(error);
-  }
+  const storage = await DataStore.open();
+  const spider = new Spider();
+  console.debug("starting spider", spider);
+  const data = await spider.load();
+  console.debug("completed spider", spider, data);
+  await storage.save();
+  spider.download();
 };
 
 type ProtoData = any & Array<ProtoData | number | string | boolean | null>;
