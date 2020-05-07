@@ -15,6 +15,17 @@
     "webextension",
     "woff"
   ],
+  "editor.cursorSmoothCaretAnimation": true,
+  "editor.gotoLocation.multipleDeclarations": "gotoAndPeek",
+  "editor.gotoLocation.multipleDefinitions": "gotoAndPeek",
+  "editor.gotoLocation.multipleImplementations": "gotoAndPeek",
+  "editor.gotoLocation.multipleReferences": "gotoAndPeek",
+  "editor.gotoLocation.multipleTypeDefinitions": "gotoAndPeek",
+  "editor.minimap.showSlider": "always",
+  "editor.minimap.size": "fit",
+  "editor.showFoldingControls": "always",
+  "editor.tabSize": 2,
+  "editor.wordWrap": "on",
   "editor.wrappingIndent": "indent",
   "emeraldwalk.runonsave": {
     "commands": [
@@ -24,9 +35,16 @@
       }
     ]
   },
+  "explorer.incrementalNaming": "smart",
+  "explorer.sortOrder": "mixed",
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 8000,
+  "files.defaultLanguage": " ${activeEditorLanguage}",
+  "files.eol": "\n",
   "files.exclude": {
     "*/CNAME": true,
     ".github": true,
+    ".gitignore": true,
     ".vscode": true,
     "LICENSE": true,
     "README.md": true,
@@ -34,7 +52,16 @@
     "static": true,
     "yarn.lock": true
   },
+  "files.insertFinalNewline": true,
+  "files.saveConflictResolution": "overwriteFileOnDisk",
+  "files.trimFinalNewlines": true,
   "peacock.color": "#d06050",
+  "problems.showCurrentInStatus": true,
+  "search.exclude": {
+    "**/*.code-search": false,
+    "**/bower_components": false,
+    "**/node_modules": false
+  },
   "workbench.colorCustomizations": {
     "activityBar.activeBackground": "#db8578",
     "activityBar.activeBorder": "#b4ebbb",
