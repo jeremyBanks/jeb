@@ -1,67 +1,51 @@
 import { localKey } from "./local-key.js";
 export class CommonSku {
-  constructor(app, sku, type, name, internalSlug, description) {
-    this.app = app;
-    this.sku = sku;
-    this.type = type;
-    this.name = name;
-    this.internalSlug = internalSlug;
-    this.description = description;
-    this.proPriceCents = null;
-    this.proSalePriceCents = null;
-    this.basePriceCents = null;
-    this.baseSalePriceCents = null;
-    this.localKey = localKey(this);
-  }
+    constructor(app, sku, type, name, internalSlug, description) {
+        this.app = app;
+        this.sku = sku;
+        this.type = type;
+        this.name = name;
+        this.internalSlug = internalSlug;
+        this.description = description;
+        this.proPriceCents = null;
+        this.proSalePriceCents = null;
+        this.basePriceCents = null;
+        this.baseSalePriceCents = null;
+        this.localKey = localKey(this);
+    }
 }
 export class Game extends CommonSku {
-  constructor(app, sku, type = "game", name, internalSlug, description) {
-    super(app, sku, type, name, internalSlug, description);
-    this.type = type;
-    this.internalSlug = internalSlug;
-    this.description = description;
-  }
+    constructor(app, sku, type = "game", name, internalSlug, description) {
+        super(app, sku, type, name, internalSlug, description);
+        this.type = type;
+        this.internalSlug = internalSlug;
+        this.description = description;
+    }
 }
 export class AddOn extends CommonSku {
-  constructor(app, sku, type = "addon", name, internalSlug, description) {
-    super(app, sku, type, name, internalSlug, description);
-    this.type = type;
-    this.internalSlug = internalSlug;
-    this.description = description;
-  }
+    constructor(app, sku, type = "addon", name, internalSlug, description) {
+        super(app, sku, type, name, internalSlug, description);
+        this.type = type;
+        this.internalSlug = internalSlug;
+        this.description = description;
+    }
 }
 export class Bundle extends CommonSku {
-  constructor(
-    app,
-    sku,
-    type = "bundle",
-    name,
-    internalSlug,
-    description,
-    skus
-  ) {
-    super(app, sku, type, name, internalSlug, description);
-    this.type = type;
-    this.internalSlug = internalSlug;
-    this.description = description;
-    this.skus = skus;
-  }
+    constructor(app, sku, type = "bundle", name, internalSlug, description, skus) {
+        super(app, sku, type, name, internalSlug, description);
+        this.type = type;
+        this.internalSlug = internalSlug;
+        this.description = description;
+        this.skus = skus;
+    }
 }
 export class Subscription extends CommonSku {
-  constructor(
-    app,
-    sku,
-    type = "subscription",
-    name,
-    internalSlug,
-    description,
-    skus
-  ) {
-    super(app, sku, type, name, internalSlug, description);
-    this.type = type;
-    this.internalSlug = internalSlug;
-    this.description = description;
-    this.skus = skus;
-  }
+    constructor(app, sku, type = "subscription", name, internalSlug, description, skus) {
+        super(app, sku, type, name, internalSlug, description);
+        this.type = type;
+        this.internalSlug = internalSlug;
+        this.description = description;
+        this.skus = skus;
+    }
 }
 //# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoibW9kZWxzLmpzIiwic291cmNlUm9vdCI6Ii4vIiwic291cmNlcyI6WyJpbmRleC9kYXRhL21vZGVscy50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQSxPQUFPLEVBQUUsUUFBUSxFQUFFLE1BQU0sZ0JBQWdCLENBQUM7QUFJMUMsTUFBTSxPQUFPLFNBQVM7SUFNcEIsWUFDVyxHQUFXLEVBQ1gsR0FBVyxFQUNYLElBQWtELEVBQ2xELElBQVksRUFDWixZQUFvQixFQUNwQixXQUFtQjtRQUxuQixRQUFHLEdBQUgsR0FBRyxDQUFRO1FBQ1gsUUFBRyxHQUFILEdBQUcsQ0FBUTtRQUNYLFNBQUksR0FBSixJQUFJLENBQThDO1FBQ2xELFNBQUksR0FBSixJQUFJLENBQVE7UUFDWixpQkFBWSxHQUFaLFlBQVksQ0FBUTtRQUNwQixnQkFBVyxHQUFYLFdBQVcsQ0FBUTtRQVhyQixrQkFBYSxHQUFrQixJQUFJLENBQUM7UUFDcEMsc0JBQWlCLEdBQWtCLElBQUksQ0FBQztRQUN4QyxtQkFBYyxHQUFrQixJQUFJLENBQUM7UUFDckMsdUJBQWtCLEdBQWtCLElBQUksQ0FBQztRQVVoRCxJQUFJLENBQUMsUUFBUSxHQUFHLFFBQVEsQ0FBQyxJQUFJLENBQUMsQ0FBQztJQUNqQyxDQUFDO0NBRUY7QUFFRCxNQUFNLE9BQU8sSUFBSyxTQUFRLFNBQVM7SUFDakMsWUFDRSxHQUFXLEVBQ1gsR0FBVyxFQUNGLE9BQU8sTUFBZSxFQUMvQixJQUFZLEVBQ0gsWUFBb0IsRUFDcEIsV0FBbUI7UUFFNUIsS0FBSyxDQUFDLEdBQUcsRUFBRSxHQUFHLEVBQUUsSUFBSSxFQUFFLElBQUksRUFBRSxZQUFZLEVBQUUsV0FBVyxDQUFDLENBQUM7UUFMOUMsU0FBSSxHQUFKLElBQUksQ0FBa0I7UUFFdEIsaUJBQVksR0FBWixZQUFZLENBQVE7UUFDcEIsZ0JBQVcsR0FBWCxXQUFXLENBQVE7SUFHOUIsQ0FBQztDQUNGO0FBRUQsTUFBTSxPQUFPLEtBQU0sU0FBUSxTQUFTO0lBQ2xDLFlBQ0UsR0FBVyxFQUNYLEdBQVcsRUFDRixPQUFPLE9BQWdCLEVBQ2hDLElBQVksRUFDSCxZQUFvQixFQUNwQixXQUFtQjtRQUU1QixLQUFLLENBQUMsR0FBRyxFQUFFLEdBQUcsRUFBRSxJQUFJLEVBQUUsSUFBSSxFQUFFLFlBQVksRUFBRSxXQUFXLENBQUMsQ0FBQztRQUw5QyxTQUFJLEdBQUosSUFBSSxDQUFtQjtRQUV2QixpQkFBWSxHQUFaLFlBQVksQ0FBUTtRQUNwQixnQkFBVyxHQUFYLFdBQVcsQ0FBUTtJQUc5QixDQUFDO0NBQ0Y7QUFFRCxNQUFNLE9BQU8sTUFBTyxTQUFRLFNBQVM7SUFDbkMsWUFDRSxHQUFXLEVBQ1gsR0FBVyxFQUNGLE9BQU8sUUFBaUIsRUFDakMsSUFBWSxFQUNILFlBQW9CLEVBQ3BCLFdBQW1CLEVBQ25CLElBQW1CO1FBRTVCLEtBQUssQ0FBQyxHQUFHLEVBQUUsR0FBRyxFQUFFLElBQUksRUFBRSxJQUFJLEVBQUUsWUFBWSxFQUFFLFdBQVcsQ0FBQyxDQUFDO1FBTjlDLFNBQUksR0FBSixJQUFJLENBQW9CO1FBRXhCLGlCQUFZLEdBQVosWUFBWSxDQUFRO1FBQ3BCLGdCQUFXLEdBQVgsV0FBVyxDQUFRO1FBQ25CLFNBQUksR0FBSixJQUFJLENBQWU7SUFHOUIsQ0FBQztDQUNGO0FBRUQsTUFBTSxPQUFPLFlBQWEsU0FBUSxTQUFTO0lBQ3pDLFlBQ0UsR0FBVyxFQUNYLEdBQVcsRUFDRixPQUFPLGNBQXVCLEVBQ3ZDLElBQVksRUFDSCxZQUFvQixFQUNwQixXQUFtQixFQUNuQixJQUFtQjtRQUU1QixLQUFLLENBQUMsR0FBRyxFQUFFLEdBQUcsRUFBRSxJQUFJLEVBQUUsSUFBSSxFQUFFLFlBQVksRUFBRSxXQUFXLENBQUMsQ0FBQztRQU45QyxTQUFJLEdBQUosSUFBSSxDQUEwQjtRQUU5QixpQkFBWSxHQUFaLFlBQVksQ0FBUTtRQUNwQixnQkFBVyxHQUFYLFdBQVcsQ0FBUTtRQUNuQixTQUFJLEdBQUosSUFBSSxDQUFlO0lBRzlCLENBQUM7Q0FDRiIsInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7IGxvY2FsS2V5IH0gZnJvbSBcIi4vbG9jYWwta2V5LmpzXCI7XG5cbmV4cG9ydCB0eXBlIFNrdSA9IEdhbWUgfCBBZGRPbiB8IEJ1bmRsZSB8IFN1YnNjcmlwdGlvbjtcblxuZXhwb3J0IGNsYXNzIENvbW1vblNrdSB7XG4gIHJlYWRvbmx5IHByb1ByaWNlQ2VudHM6IG51bWJlciB8IG51bGwgPSBudWxsO1xuICByZWFkb25seSBwcm9TYWxlUHJpY2VDZW50czogbnVtYmVyIHwgbnVsbCA9IG51bGw7XG4gIHJlYWRvbmx5IGJhc2VQcmljZUNlbnRzOiBudW1iZXIgfCBudWxsID0gbnVsbDtcbiAgcmVhZG9ubHkgYmFzZVNhbGVQcmljZUNlbnRzOiBudW1iZXIgfCBudWxsID0gbnVsbDtcblxuICBjb25zdHJ1Y3RvcihcbiAgICByZWFkb25seSBhcHA6IHN0cmluZyxcbiAgICByZWFkb25seSBza3U6IHN0cmluZyxcbiAgICByZWFkb25seSB0eXBlOiBcImdhbWVcIiB8IFwiYWRkb25cIiB8IFwiYnVuZGxlXCIgfCBcInN1YnNjcmlwdGlvblwiLFxuICAgIHJlYWRvbmx5IG5hbWU6IHN0cmluZyxcbiAgICByZWFkb25seSBpbnRlcm5hbFNsdWc6IHN0cmluZyxcbiAgICByZWFkb25seSBkZXNjcmlwdGlvbjogc3RyaW5nXG4gICkge1xuICAgIHRoaXMubG9jYWxLZXkgPSBsb2NhbEtleSh0aGlzKTtcbiAgfVxuICByZWFkb25seSBsb2NhbEtleTogc3RyaW5nO1xufVxuXG5leHBvcnQgY2xhc3MgR2FtZSBleHRlbmRzIENvbW1vblNrdSB7XG4gIGNvbnN0cnVjdG9yKFxuICAgIGFwcDogc3RyaW5nLFxuICAgIHNrdTogc3RyaW5nLFxuICAgIHJlYWRvbmx5IHR5cGUgPSBcImdhbWVcIiBhcyBjb25zdCxcbiAgICBuYW1lOiBzdHJpbmcsXG4gICAgcmVhZG9ubHkgaW50ZXJuYWxTbHVnOiBzdHJpbmcsXG4gICAgcmVhZG9ubHkgZGVzY3JpcHRpb246IHN0cmluZ1xuICApIHtcbiAgICBzdXBlcihhcHAsIHNrdSwgdHlwZSwgbmFtZSwgaW50ZXJuYWxTbHVnLCBkZXNjcmlwdGlvbik7XG4gIH1cbn1cblxuZXhwb3J0IGNsYXNzIEFkZE9uIGV4dGVuZHMgQ29tbW9uU2t1IHtcbiAgY29uc3RydWN0b3IoXG4gICAgYXBwOiBzdHJpbmcsXG4gICAgc2t1OiBzdHJpbmcsXG4gICAgcmVhZG9ubHkgdHlwZSA9IFwiYWRkb25cIiBhcyBjb25zdCxcbiAgICBuYW1lOiBzdHJpbmcsXG4gICAgcmVhZG9ubHkgaW50ZXJuYWxTbHVnOiBzdHJpbmcsXG4gICAgcmVhZG9ubHkgZGVzY3JpcHRpb246IHN0cmluZ1xuICApIHtcbiAgICBzdXBlcihhcHAsIHNrdSwgdHlwZSwgbmFtZSwgaW50ZXJuYWxTbHVnLCBkZXNjcmlwdGlvbik7XG4gIH1cbn1cblxuZXhwb3J0IGNsYXNzIEJ1bmRsZSBleHRlbmRzIENvbW1vblNrdSB7XG4gIGNvbnN0cnVjdG9yKFxuICAgIGFwcDogc3RyaW5nLFxuICAgIHNrdTogc3RyaW5nLFxuICAgIHJlYWRvbmx5IHR5cGUgPSBcImJ1bmRsZVwiIGFzIGNvbnN0LFxuICAgIG5hbWU6IHN0cmluZyxcbiAgICByZWFkb25seSBpbnRlcm5hbFNsdWc6IHN0cmluZyxcbiAgICByZWFkb25seSBkZXNjcmlwdGlvbjogc3RyaW5nLFxuICAgIHJlYWRvbmx5IHNrdXM6IEFycmF5PHN0cmluZz5cbiAgKSB7XG4gICAgc3VwZXIoYXBwLCBza3UsIHR5cGUsIG5hbWUsIGludGVybmFsU2x1ZywgZGVzY3JpcHRpb24pO1xuICB9XG59XG5cbmV4cG9ydCBjbGFzcyBTdWJzY3JpcHRpb24gZXh0ZW5kcyBDb21tb25Ta3Uge1xuICBjb25zdHJ1Y3RvcihcbiAgICBhcHA6IHN0cmluZyxcbiAgICBza3U6IHN0cmluZyxcbiAgICByZWFkb25seSB0eXBlID0gXCJzdWJzY3JpcHRpb25cIiBhcyBjb25zdCxcbiAgICBuYW1lOiBzdHJpbmcsXG4gICAgcmVhZG9ubHkgaW50ZXJuYWxTbHVnOiBzdHJpbmcsXG4gICAgcmVhZG9ubHkgZGVzY3JpcHRpb246IHN0cmluZyxcbiAgICByZWFkb25seSBza3VzOiBBcnJheTxzdHJpbmc+XG4gICkge1xuICAgIHN1cGVyKGFwcCwgc2t1LCB0eXBlLCBuYW1lLCBpbnRlcm5hbFNsdWcsIGRlc2NyaXB0aW9uKTtcbiAgfVxufVxuIl19
