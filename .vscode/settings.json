@@ -1,17 +1,33 @@
 {
   "cSpell.words": [
+    "KHTML",
+    "esnext",
     "illufinch",
     "plnadnblnocgoficdcgbbdmcnciagojj",
+    "renderable",
     "skus",
     "spidered",
     "spidering",
     "stadiaobsobsobsobsobsobsobstadia",
     "upsert",
+    "webext",
+    "webextension",
     "woff"
   ],
+  "editor.codeActionsOnSave": {
+    "source.fixAll": true
+  },
   "editor.wrappingIndent": "indent",
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "cmd": "bash -c 'yarn build'",
+        "match": ".*"
+      }
+    ]
+  },
   "files.exclude": {
-    " */CNAME": true,
+    "*/CNAME": true,
     ".github": true,
     ".vscode": true,
     "LICENSE": true,
@@ -20,7 +36,7 @@
     "static": true,
     "yarn.lock": true
   },
-  "peacock.color": "#D06050",
+  "peacock.color": "#d06050",
   "workbench.colorCustomizations": {
     "activityBar.activeBackground": "#db8578",
     "activityBar.activeBorder": "#b4ebbb",
@@ -39,8 +55,6 @@
     "titleBar.activeForeground": "#e7e7e7",
     "titleBar.border": "#d06050",
     "titleBar.inactiveBackground": "#d0605099",
-    "titleBar.inactiveForeground": "#e7e7e799",
-    "window.activeBorder": "#100",
-    "window.inactiveBorder": "#100"
+    "titleBar.inactiveForeground": "#e7e7e799"
   }
 }

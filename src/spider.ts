@@ -40,19 +40,20 @@ class Spider {
   }
 
   private async spider() {
-    await this.loadSkuDetails("59c8314ac82a456ba61d08988b15b550");
-    await this.loadSkuDetails("b171fc78d4e1496d9536d585257a771e");
-    await this.loadSkuDetails("4950959380034dcda0aecf98f675e11f");
-    await this.loadSkuDetails("2e07db5d338d40cb9eac9deae4154f11");
-    await this.loadSkuList(3);
-    await this.loadSkuList(2001);
-    await this.loadSkuList(45);
-    await this.loadSkuList(6);
+    {
+      await this.loadSkuDetails("59c8314ac82a456ba61d08988b15b550");
+      await this.loadSkuDetails("b171fc78d4e1496d9536d585257a771e");
+      await this.loadSkuDetails("4950959380034dcda0aecf98f675e11f");
+      await this.loadSkuDetails("2e07db5d338d40cb9eac9deae4154f11");
+      await this.loadSkuList(3);
+      await this.loadSkuList(2001);
+      await this.loadSkuList(45);
+      await this.loadSkuList(6);
+      throw "TODO: remove me";
+    }
 
-    console.warn(
-      "TODO: re-enable spidering once we've finished the above tweaks."
-    );
-    return;
+    await this.loadSkuList(3);
+
     while (Object.keys(this.skus).length > Object.keys(this.spidered).length) {
       for (const sku of Object.values(this.skus)) {
         if (this.spidered[sku.sku] !== true) {
@@ -161,11 +162,16 @@ class Spider {
     await new Promise((resolve) =>
       setTimeout(resolve, Math.random() * 1_000 + 2_000)
     );
-    const response = await fetch("https://stadia.google.com/" + path);
+    const response = await fetch("https://stadia.google.com/" + path, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36",
+      },
+    });
     const html = await response.text();
     const document = new DOMParser().parseFromString(html, "text/html");
     const scripts = Array.from(document.scripts);
-    const contents = scripts.map((s) => s.textContent.trim()).filter(Boolean);
+    const contents = scripts.map((s) => s.textContent?.trim()).filter(Boolean);
 
     const dataServiceRequestsPattern = /^var *AF_initDataKeys[^]*?var *AF_dataServiceRequests *= *({[^]*}); *?var /;
 

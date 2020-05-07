@@ -4,18 +4,20 @@
   },
   "devDependencies": {
     "@types/firefox-webext-browser": "^70.0.1",
+    "jest": "^26.0.1",
     "prettier": "^2.0.5",
     "replace-in-files-cli": "^0.3.1",
     "sort-json": "^2.0.0",
     "typescript": "^3.8.3"
   },
   "engines": {
-    "node": "v14.2.0"
+    "node": "v10.19.0"
   },
   "name": "stadia.observer",
   "private": true,
   "scripts": {
-    "build": "./build"
+    "build": "./build",
+    "noop": true
   },
-  "version": "2020.5.7"
+  "version": "2020.5.8"
 }
