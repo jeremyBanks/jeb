@@ -30,7 +30,7 @@
     "localKey": "g10b8a925monopolygamecc8ec746f29",
     "name": "Monopoly",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 5399,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -47,7 +47,7 @@
     "localKey": "g11c9ec06tomclancysghostrenbrkpi",
     "name": "Tom Clancy's Ghost Recon Breakpoint",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -124,7 +124,7 @@
     "localKey": "g2152a1f7reddeadredemption2gamee",
     "name": "Red Dead Redemption 2",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -141,7 +141,7 @@
     "localKey": "g2afad3b6nba2k20nba2k20696b394f6",
     "name": "NBA 2K20",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -175,7 +175,7 @@
     "localKey": "g4884bd31wolfensteinyoungbldwfyb",
     "name": "Wolfenstein: Youngblood",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 3999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -192,7 +192,7 @@
     "localKey": "g48ead8a6octopathtravelerocpahvl",
     "name": "OCTOPATH TRAVELER™",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 8399,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -209,7 +209,7 @@
     "localKey": "g4b7f303fjustdance2020game7c3736",
     "name": "Just Dance 2020®",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 6699,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -235,7 +235,7 @@
     "localKey": "g731828a6getpackedgetpacked69b2a",
     "name": "Get Packed",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 2499,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -252,7 +252,7 @@
     "localKey": "g7bfbcbf3mortalkomba1f54762d8e90",
     "name": "Mortal Kombat 11",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -269,7 +269,7 @@
     "localKey": "g80a70c66dragonballxenoverse2gam",
     "name": "DRAGON BALL XENOVERSE 2",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 6599,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -303,7 +303,7 @@
     "localKey": "g8615c878rage2game57d7d54efebd94",
     "name": "RAGE 2",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -337,7 +337,7 @@
     "localKey": "g8a3cc532footballmanager2020fm20",
     "name": "Football Manager 2020",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 5999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -354,7 +354,7 @@
     "localKey": "g8b7e7f67assassinscreedodyeygame",
     "name": "Assassin's Creed® Odyssey",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -388,7 +388,7 @@
     "localKey": "ga0314101trialsrisingtrialsgame9",
     "name": "Trials Rising",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 3499,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -405,7 +405,7 @@
     "localKey": "ga38d98f8attackonin2filble2edgm0",
     "name": "Attack on Titan 2: Final Battle",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -490,7 +490,7 @@
     "localKey": "gbe080a95borderlands3bl3staneiti",
     "name": "Borderlands®3",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -524,7 +524,7 @@
     "localKey": "gc48985f6steamworlddiggame19ff25",
     "name": "SteamWorld Dig",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 1199,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -592,7 +592,7 @@
     "localKey": "gcc974394thecrew2thecrew24908874",
     "name": "The Crew 2",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 6999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -626,7 +626,7 @@
     "localKey": "gd334beablostwordsbeyndthepaggam",
     "name": "Lost Words: Beyond the Page",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 1999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -660,7 +660,7 @@
     "localKey": "gd50e1c3amonsterenrgyupchfialvd3",
     "name": "Monster Energy Supercross - The Official Videogame 3",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -694,7 +694,7 @@
     "localKey": "ge465c4b0motogp20game086aff48849",
     "name": "MotoGP™20",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 6399,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -745,7 +745,7 @@
     "localKey": "gefa3b6bbshadowofthetmbrainv1502",
     "name": "Shadow of the Tomb Raider Definitive Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -762,7 +762,7 @@
     "localKey": "gf393906cdarksidegnf390548b26c1p",
     "name": "Darksiders Genesis",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 3999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -797,7 +797,7 @@
     "localKey": "o11c9ec76ghostreconbreakpintya1p",
     "name": "Ghost Recon Breakpoint: Year 1 Pass",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 4999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -904,7 +904,7 @@
     "localKey": "o632522f2yearonepassdmeyearonec8",
     "name": "Year One Pass",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 3999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -921,7 +921,7 @@
     "localKey": "o7bfbcb01terminator80f1325b647d9",
     "name": "Terminator T-800",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 799,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -938,7 +938,7 @@
     "localKey": "o7bfbcb14mortalkomba1pc437f2e06d",
     "name": "Mortal Kombat 11 Kombat Pack",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 4999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -955,7 +955,7 @@
     "localKey": "o7bfbcb20klasicrdefghtp2b8091654",
     "name": "Klassic Arcade Fighter Pack",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 799,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -972,7 +972,7 @@
     "localKey": "o7bfbcb29doublefatrskinpc5974830",
     "name": "Double Feature Skin Pack",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 799,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -989,7 +989,7 @@
     "localKey": "o7bfbcb4ashangtsung58d8ee21f164b",
     "name": "Shang Tsung",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 799,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1006,7 +1006,7 @@
     "localKey": "o7bfbcb7eklasicrdenjp19860bf4372",
     "name": "Klassic Arcade Ninja Skin Pack 1",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 799,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1023,7 +1023,7 @@
     "localKey": "o7bfbcbe9nightwolf951c38ae24db06",
     "name": "Nightwolf",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 799,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1049,7 +1049,7 @@
     "localKey": "o879d826ametroexodussamtryxdulc2",
     "name": "Metro Exodus - Sam's Story",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 2199,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1066,7 +1066,7 @@
     "localKey": "o879d82a3metroexodusthwclnlsmrx1",
     "name": "Metro Exodus - The Two Colonels",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 799,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1083,7 +1083,7 @@
     "localKey": "o8b7e7f6fassasincreedodyytionpxp",
     "name": "Assassin's Creed Odyssey - Stadia Season Pass",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 4999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1100,7 +1100,7 @@
     "localKey": "oa03141edtrialsrisingexpansopexo",
     "name": "Trials Rising - Expansion Pass",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 2699,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1188,7 +1188,7 @@
     "localKey": "oa4c5ebd4pubg6000gcoinspub6coins",
     "name": "PUBG - 6,000 G-COINS",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 4999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1223,7 +1223,7 @@
     "localKey": "obe080a1eborderlands3seasonpbl3p",
     "name": "Borderlands®3 Season Pass",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 6699,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1249,7 +1249,7 @@
     "localKey": "obe080a2bborderlands3toybxweapck",
     "name": "Borderlands®3 Toy Box Weapons Pack",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 699,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1275,7 +1275,7 @@
     "localKey": "obe080a85borderlands3neocsmticpk",
     "name": "Borderlands®3 Neon Cosmetic Pack",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 699,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1292,7 +1292,7 @@
     "localKey": "obe080a8eborderlands3geabxcmtipk",
     "name": "Borderlands®3 Gearbox Cosmetic Pack",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 699,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1309,7 +1309,7 @@
     "localKey": "obe080afcborderlands3etocsmticpk",
     "name": "Borderlands®3 Retro Cosmetic Pack",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 699,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1343,7 +1343,7 @@
     "localKey": "ocba53706zombiearmy4seasonpasonp",
     "name": "Zombie Army 4: Season Pass One",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 4699,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1360,7 +1360,7 @@
     "localKey": "ocba53750zombiearmy4undecvkltf06",
     "name": "Zombie Army 4: Undercover Karl Outfit",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 699,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1377,7 +1377,7 @@
     "localKey": "ocba53793zombiearmy4fg42utclnd03",
     "name": "Zombie Army 4: FG-42 Automatic Rifle Bundle",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 699,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1394,7 +1394,7 @@
     "localKey": "ocba53794zombiearmy4undeadchtl02",
     "name": "Zombie Army 4: Undead Airman Character",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 699,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1411,7 +1411,7 @@
     "localKey": "ocba537a2zombiearmy4solidgwpnkc0",
     "name": "Zombie Army 4: Solid Gold Weapon Skins",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 499,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1428,7 +1428,7 @@
     "localKey": "occ974338thecrew2motorspsdluxpak",
     "name": "The Crew 2 - Motorsports Deluxe Pack",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 1399,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1445,7 +1445,7 @@
     "localKey": "occ9743adthecrew2seasonpasseaonp",
     "name": "THE CREW 2 - SEASON PASS",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 5399,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1471,7 +1471,7 @@
     "localKey": "od43cd435thedivison2warlorfykxpc",
     "name": "The Division 2: Warlords of New York Expansion",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 3999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1532,7 +1532,7 @@
     "localKey": "x11c9ec03tomclancysghostrebkpiud",
     "name": "Tom Clancy's Ghost Recon Breakpoint - Ultimate Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 15999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1556,7 +1556,7 @@
     "localKey": "x11c9ec10tomclancysghostrenbkpid",
     "name": "Tom Clancy's Ghost Recon Breakpoint - Gold Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 12999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1577,7 +1577,7 @@
     "localKey": "x20e7921fdestiny2forsaken2000002",
     "name": "Destiny 2: Forsaken",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 3499,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1598,7 +1598,7 @@
     "localKey": "x20e79235destiny2shadowkeep20003",
     "name": "Destiny 2: Shadowkeep",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 3999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1619,7 +1619,7 @@
     "localKey": "x20e79258destiny2upgradeiton2004",
     "name": "Destiny 2: Upgrade Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 5699,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1654,7 +1654,7 @@
     "localKey": "x2152a108reddearmption2ultimaonb",
     "name": "Red Dead Redemption 2:  Ultimate Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 11999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1676,7 +1676,7 @@
     "localKey": "x2152a163reddearmption2spcialtbu",
     "name": "Red Dead Redemption 2:  Special Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 9999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1697,7 +1697,7 @@
     "localKey": "x2afad30anba2k20legendditiobak0u",
     "name": "NBA 2K20 Legend Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 11999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1718,7 +1718,7 @@
     "localKey": "x2afad318nba2k20digitaldeluxenbk",
     "name": "NBA 2K20 Digital Deluxe",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 9999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1739,7 +1739,7 @@
     "localKey": "x632522b1doometernalstandriimsbu",
     "name": "DOOM Eternal Standard Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1760,7 +1760,7 @@
     "localKey": "x632522e7doometernaldluxitinmuxb",
     "name": "DOOM Eternal Deluxe Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 11999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1783,7 +1783,7 @@
     "localKey": "x7bfbcb69mortalkb1peiudn7c294835",
     "name": "Mortal Kombat 11 Premium Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 12999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1810,7 +1810,7 @@
     "localKey": "x8615c865rage2deluxeditionluxton",
     "name": "RAGE 2: Deluxe Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 10999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1831,7 +1831,7 @@
     "localKey": "x879d82b1metroexodusglditinmrxus",
     "name": "Metro Exodus - Gold Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 8399,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1853,7 +1853,7 @@
     "localKey": "x8b7e7f28assaincreedodyytiultmgb",
     "name": "Assassin's Creed Odyssey - Stadia Ultimate Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 14999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1874,7 +1874,7 @@
     "localKey": "xa03141cctrialsrisingdgtalgodeon",
     "name": "Trials Rising - Digital Gold Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 4999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1895,7 +1895,7 @@
     "localKey": "xa4c5eb9fplayerunknowsbattlgdchi",
     "name": "PlayerUnknown's Battlegrounds - Chicken Dinner Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 8999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1946,7 +1946,7 @@
     "localKey": "xbe080af4borderlands3eluxitionb3",
     "name": "Borderlands®3 Deluxe Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 9999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -1971,7 +1971,7 @@
     "localKey": "xbe080afbborderlands3supeluxitio",
     "name": "Borderlands®3 Super Deluxe Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 11999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -2019,7 +2019,7 @@
     "localKey": "xcba53713zombiearmy4deadwrluxitn",
     "name": "Zombie Army 4: Dead War Deluxe Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -2043,7 +2043,7 @@
     "localKey": "xcba53750zombiearmy4deadwsuplxtn",
     "name": "Zombie Army 4: Dead War Super Deluxe Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 10699,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -2064,7 +2064,7 @@
     "localKey": "xcc97431ethecrew2goldeditiongoln",
     "name": "The Crew 2 - Gold Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 11999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -2086,7 +2086,7 @@
     "localKey": "xcc9743ecthecrew2dluxditionluxon",
     "name": "The Crew 2 - Deluxe Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -2107,7 +2107,7 @@
     "localKey": "xd43cd4b9thedivison2warlfykumgcb",
     "name": "The Division 2: Warlords of New York Ultimate Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 10699,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",
@@ -2132,7 +2132,7 @@
     "localKey": "xd43cd4f9thedivison2warlfykgmcbu",
     "name": "The Division 2 - Warlords of New York Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
       "countryCode": "CA",
       "currencyCode": "CAD",

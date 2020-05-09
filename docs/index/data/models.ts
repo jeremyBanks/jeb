@@ -1,4 +1,6 @@
 import { ProtoData } from "../stadia.js";
+import { Renderable } from "../render.js";
+import { flag } from "../flags.js";
 import { localKey } from "./local-key.js";
 
 export type Sku = Game | AddOn | Bundle | Subscription;
@@ -12,6 +14,19 @@ export class Prices {
     readonly basePriceCents: number | null = null,
     readonly baseSalePriceCents: number | null = null
   ) {}
+
+  public render(): Renderable {
+    // TODO: god remove this
+    if (!this) return;
+
+    if (this.basePriceCents) {
+      return `${Math.floor(this.basePriceCents / 100)}.${String(
+        this.basePriceCents % 100
+      ).padStart(2, "0")} ${this.currencyCode} ${flag(this.countryCode)}`;
+    } else {
+      return `∞ ${this.currencyCode} ${flag(this.countryCode)}`;
+    }
+  }
 
   public static fromProto(data: ProtoData): Prices {
     let countryCode: string & { length: 2 } = "??" as any;
@@ -27,9 +42,12 @@ export class Prices {
 
       let _timeSpan = [priceData[11], priceData[12]];
 
-      let potentialBasePrice = data[6]?.[0] ? data[6][0] / priceScale : null;
-      let potentialProPrice = data[6]?.[2]?.[0]
-        ? data[6][2][0] / priceScale
+      let potentialBasePrice = priceData[6]?.[0]?.[0]
+        ? priceData[6][0][0] / priceScale
+        : null;
+
+      let potentialProPrice = priceData[6]?.[2]?.[0]?.[2]?.[0]
+        ? priceData[6][2][0][2][0] / priceScale
         : null;
 
       if (potentialBasePrice) basePriceCents = potentialBasePrice;

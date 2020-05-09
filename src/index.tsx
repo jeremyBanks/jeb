@@ -1,3 +1,4 @@
+import { Prices } from "./index/data/models.js";
 import { render } from "./index/render.js";
 import { spider } from "./index/spider.js";
 
@@ -58,7 +59,16 @@ const Home = ({ games }: any) => (
   </main>
 );
 
-const Game = ({ name, description, type, sku, app, addons, bundles }) => (
+const Game = ({
+  name,
+  description,
+  type,
+  sku,
+  app,
+  addons,
+  bundles,
+  prices,
+}) => (
   <section>
     <h2>
       {name} [
@@ -71,8 +81,8 @@ const Game = ({ name, description, type, sku, app, addons, bundles }) => (
       )}{" "}
       <a href={`https://stadia.google.com/store/details/${app}/sku/${sku}`}>
         view in store
-      </a>
-      ]
+      </a>{" "}
+      {Prices.prototype.render.call(prices)}]
     </h2>
     <p>{description}</p>
     {addons.map((addon) => (
@@ -83,8 +93,8 @@ const Game = ({ name, description, type, sku, app, addons, bundles }) => (
             href={`https://stadia.google.com/store/details/${app}/sku/${addon.sku}`}
           >
             view in store
-          </a>
-          ]
+          </a>{" "}
+          {Prices.prototype.render.call(addon.prices)}]
         </h3>
         <p>{description}</p>
       </section>
@@ -97,8 +107,8 @@ const Game = ({ name, description, type, sku, app, addons, bundles }) => (
             href={`https://stadia.google.com/store/details/${app}/sku/${bundle.sku}`}
           >
             view in store
-          </a>
-          ]
+          </a>{" "}
+          {Prices.prototype.render.call(bundle.prices)}]
         </h3>
         <p>{description}</p>
       </section>
