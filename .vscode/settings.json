@@ -1,6 +1,6 @@
 {
   "cSpell.words": [
-    "KHTML",
+    "khtml",
     "esnext",
     "illufinch",
     "plnadnblnocgoficdcgbbdmcnciagojj",
@@ -16,14 +16,6 @@
     "woff"
   ],
   "editor.cursorSmoothCaretAnimation": true,
-  "editor.gotoLocation.multipleDeclarations": "gotoAndPeek",
-  "editor.gotoLocation.multipleDefinitions": "gotoAndPeek",
-  "editor.gotoLocation.multipleImplementations": "gotoAndPeek",
-  "editor.gotoLocation.multipleReferences": "gotoAndPeek",
-  "editor.gotoLocation.multipleTypeDefinitions": "gotoAndPeek",
-  "editor.minimap.showSlider": "always",
-  "editor.minimap.size": "fit",
-  "editor.showFoldingControls": "always",
   "editor.tabSize": 2,
   "editor.wordWrap": "on",
   "editor.wrappingIndent": "indent",
@@ -90,6 +82,5 @@
     "titleBar.border": "#d06050",
     "titleBar.inactiveBackground": "#d0605099",
     "titleBar.inactiveForeground": "#e7e7e799"
-  },
-  "workbench.startupEditor": "readme"
+  }
 }
