@@ -3,10 +3,13 @@ import { render } from "./index/render.js";
 import { spider } from "./index/spider.js";
 
 (async () => {
-  // TODO: only do this in dev please
-  let originalBuildTimestamp = await (await fetch("/timestamp.json")).json();
+  let originalBuildTimestamp = await (
+    await fetch("/last-build-timestamp.json")
+  ).json();
   setInterval(async () => {
-    let currentTimestamp = await (await fetch("/timestamp.json")).json();
+    let currentTimestamp = await (
+      await fetch("/last-build-timestamp.json")
+    ).json();
     if (currentTimestamp !== originalBuildTimestamp) {
       document.location.reload();
     }
