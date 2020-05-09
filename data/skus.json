@@ -29,6 +29,14 @@
     "internalSlug": "game",
     "localKey": "g10b8a925monopolygamecc8ec746f29",
     "name": "Monopoly",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "256f320f886b4ee68b7980d6fc1bd1b1",
     "type": "game"
   },
@@ -38,6 +46,14 @@
     "internalSlug": "game",
     "localKey": "g11c9ec06tomclancysghostrenbrkpi",
     "name": "Tom Clancy's Ghost Recon Breakpoint",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "06e101d56a03472bb6c204aee96187d7",
     "type": "game"
   },
@@ -47,6 +63,14 @@
     "internalSlug": "game",
     "localKey": "g12034888samuraishodowntndrvegme",
     "name": "SAMURAI SHODOWN (Standard Ver.)",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "888a817c35b5439bb6a03a78ab09e138",
     "type": "game"
   },
@@ -56,6 +80,14 @@
     "internalSlug": "SoSoS_Game",
     "localKey": "g15a0677estacksonstackontackogme",
     "name": "Stacks On Stacks (On Stacks)",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "7ed521aacf2a44168fb99cd1e13472ad",
     "type": "game"
   },
@@ -65,6 +97,14 @@
     "internalSlug": "game",
     "localKey": "g18a3cc9agyltgame2bb111419c8ac87",
     "name": "GYLT",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "9ac5597c3f4a4e648c9ae56bac3d1b32",
     "type": "game"
   },
@@ -83,6 +123,14 @@
     "internalSlug": "game",
     "localKey": "g2152a1f7reddeadredemption2gamee",
     "name": "Red Dead Redemption 2",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "f790e37b6161477188923408085528a1",
     "type": "game"
   },
@@ -92,6 +140,14 @@
     "internalSlug": "NBA2K20",
     "localKey": "g2afad3b6nba2k20nba2k20696b394f6",
     "name": "NBA 2K20",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "b6d1b295ed0d4f1080576ac5d51df6d0",
     "type": "game"
   },
@@ -101,6 +157,14 @@
     "internalSlug": "15000000",
     "localKey": "g42503ac8tombraiderdefintvon1500",
     "name": "Tomb Raider: Definitive Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "c86bd12f279741a8b8c9c522845c7fa9",
     "type": "game"
   },
@@ -110,6 +174,14 @@
     "internalSlug": "WOLFYB",
     "localKey": "g4884bd31wolfensteinyoungbldwfyb",
     "name": "Wolfenstein: Youngblood",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "31047b9e82bb4a30ba66b24bef71cdf2",
     "type": "game"
   },
@@ -119,6 +191,14 @@
     "internalSlug": "OCTOPATH TRAVELER",
     "localKey": "g48ead8a6octopathtravelerocpahvl",
     "name": "OCTOPATH TRAVELER™",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "a6c13e6aa796439295774eb0e8cd3f8b",
     "type": "game"
   },
@@ -128,6 +208,14 @@
     "internalSlug": "game",
     "localKey": "g4b7f303fjustdance2020game7c3736",
     "name": "Just Dance 2020®",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "3feef74cbacf4ba39b5d9087e0dfb9e4",
     "type": "game"
   },
@@ -146,6 +234,14 @@
     "internalSlug": "getpacked",
     "localKey": "g731828a6getpackedgetpacked69b2a",
     "name": "Get Packed",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "a6ffc113bea9495b84581796893ebf50",
     "type": "game"
   },
@@ -155,6 +251,14 @@
     "internalSlug": "f5545762-ddf1-4746-8ba2-e98d805bf066",
     "localKey": "g7bfbcbf3mortalkomba1f54762d8e90",
     "name": "Mortal Kombat 11",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "f3f250e8a4d54f60ba730fbc04268052",
     "type": "game"
   },
@@ -164,6 +268,14 @@
     "internalSlug": "game",
     "localKey": "g80a70c66dragonballxenoverse2gam",
     "name": "DRAGON BALL XENOVERSE 2",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "66f1b5a13ee54b7aa70aebfddd18c085",
     "type": "game"
   },
@@ -173,6 +285,14 @@
     "internalSlug": "game",
     "localKey": "g819cdff4steamworldheistgame4b7f",
     "name": "SteamWorld Heist",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "f47a1e1e9f0b43078e0a80c57068b085",
     "type": "game"
   },
@@ -182,6 +302,14 @@
     "internalSlug": "game",
     "localKey": "g8615c878rage2game57d7d54efebd94",
     "name": "RAGE 2",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "78ea22fb5c054167bb722322b469f33f",
     "type": "game"
   },
@@ -191,6 +319,14 @@
     "internalSlug": "metro_exodus",
     "localKey": "g879d828cmetroexodusmetroexodus5",
     "name": "Metro Exodus",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "8ca5e97f091e4f7fbfcf8069ba850b1f",
     "type": "game"
   },
@@ -200,6 +336,14 @@
     "internalSlug": "FM2020",
     "localKey": "g8a3cc532footballmanager2020fm20",
     "name": "Football Manager 2020",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "32a0791a88474f08ad7a687846b786f2",
     "type": "game"
   },
@@ -209,6 +353,14 @@
     "internalSlug": "game",
     "localKey": "g8b7e7f67assassinscreedodyeygame",
     "name": "Assassin's Creed® Odyssey",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "6760aad6e75b4edc9686c48e8dd38936",
     "type": "game"
   },
@@ -218,6 +370,14 @@
     "internalSlug": "5f4901cff40e4ceeaaac44858fbcd1a3pjp1",
     "localKey": "g921e9af1spitlings5f4901cea8bd3j",
     "name": "Spitlings",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "f16b28e2fd224acaafeee4c19134adb4",
     "type": "game"
   },
@@ -227,6 +387,14 @@
     "internalSlug": "Trials_game",
     "localKey": "ga0314101trialsrisingtrialsgame9",
     "name": "Trials Rising",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "01e95e73256c465fb5620fc574446413",
     "type": "game"
   },
@@ -236,6 +404,14 @@
     "internalSlug": "AT2EDENGAME00000",
     "localKey": "ga38d98f8attackonin2filble2edgm0",
     "name": "Attack on Titan 2: Final Battle",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "f879d932d28c4104958c7976f201ba38",
     "type": "game"
   },
@@ -245,6 +421,14 @@
     "internalSlug": "15100000",
     "localKey": "ga4476216finalfantasyxv151000002",
     "name": "FINAL FANTASY XV",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "1611bf48ac784869bcbd1ce85bc71add",
     "type": "game"
   },
@@ -254,6 +438,14 @@
     "internalSlug": "PUBGBATTLEGROUNDS01",
     "localKey": "ga4c5eb71playerunknowsbattlegd01",
     "name": "PLAYERUNKNOWN'S BATTLEGROUNDS",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "71e7c4fc5ca24f0f8301da6d042bf18e",
     "type": "game"
   },
@@ -263,6 +455,14 @@
     "internalSlug": "game",
     "localKey": "gb8328390steamworlddig2game51821",
     "name": "SteamWorld Dig 2",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "90f5bd9270024986b26ee8221c1fa2e4",
     "type": "game"
   },
@@ -272,6 +472,14 @@
     "internalSlug": "game",
     "localKey": "gb84560a1steamworldquesthandfgic",
     "name": "SteamWorld Quest: Hand of Gilgamech",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "a1afa4eca7b24713a9bcf3421dd85a13",
     "type": "game"
   },
@@ -281,6 +489,14 @@
     "internalSlug": "BL3_StandardEdition",
     "localKey": "gbe080a95borderlands3bl3staneiti",
     "name": "Borderlands®3",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "958f4c0900c64e7e83b9218ab479304e",
     "type": "game"
   },
@@ -290,6 +506,14 @@
     "internalSlug": "thumper",
     "localKey": "gc121d86ethumperthumperb3fa744b5",
     "name": "Thumper",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "6e98f34bbcae444a99816b8f2613452b",
     "type": "game"
   },
@@ -299,6 +523,14 @@
     "internalSlug": "game",
     "localKey": "gc48985f6steamworlddiggame19ff25",
     "name": "SteamWorld Dig",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "f6658df6c8874c828532d5d24c66d58f",
     "type": "game"
   },
@@ -308,6 +540,14 @@
     "internalSlug": "GRID_Standard_Edition",
     "localKey": "gca805d75gridgridstandardedition",
     "name": "GRID",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "75be643ff0fb40d7873fa41edb10d98a",
     "type": "game"
   },
@@ -317,6 +557,14 @@
     "internalSlug": "game",
     "localKey": "gcabec545serioussamcollectiongam",
     "name": "Serious Sam Collection",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "45918155e78145af937b5df1a574afd2",
     "type": "game"
   },
@@ -326,6 +574,14 @@
     "internalSlug": "ZombieArmy4",
     "localKey": "gcba537a7zombiearmy4deadwrzobiy4",
     "name": "Zombie Army 4: Dead War",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "a7b1581491ea4b7c9fcc89710561f5f7",
     "type": "game"
   },
@@ -335,6 +591,14 @@
     "internalSlug": "TheCrew2",
     "localKey": "gcc974394thecrew2thecrew24908874",
     "name": "The Crew 2",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "94db678cbb6342c3bc0e58f71130b3fb",
     "type": "game"
   },
@@ -344,6 +608,14 @@
     "internalSlug": "game",
     "localKey": "gcfd297e8theturingtestgame7e1b9f",
     "name": "The Turing Test",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "e8ed70244808408cbb7d3b2b1f06547f",
     "type": "game"
   },
@@ -353,6 +625,14 @@
     "internalSlug": "game",
     "localKey": "gd334beablostwordsbeyndthepaggam",
     "name": "Lost Words: Beyond the Page",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "ab6a5a0d448d4c7aaed8dfa91ad6f4b9",
     "type": "game"
   },
@@ -362,6 +642,14 @@
     "internalSlug": "game",
     "localKey": "gd43cd4bethedivision2standareogm",
     "name": "The Division 2 - Standard Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "bed63eac149542078fa5b9d6f20f5f2f",
     "type": "game"
   },
@@ -371,6 +659,14 @@
     "internalSlug": "game",
     "localKey": "gd50e1c3amonsterenrgyupchfialvd3",
     "name": "Monster Energy Supercross - The Official Videogame 3",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "3ac3e537019c49028d7bb98e8cd92482",
     "type": "game"
   },
@@ -380,6 +676,14 @@
     "internalSlug": "KineGame",
     "localKey": "gda94f38dkinekinegameaa88b24eb6a",
     "name": "Kine",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "8d3124a81f6444219acd3d99c90a5658",
     "type": "game"
   },
@@ -389,6 +693,14 @@
     "internalSlug": "game",
     "localKey": "ge465c4b0motogp20game086aff48849",
     "name": "MotoGP™20",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "b0c60f8483be419eb2335a79a0783cc5",
     "type": "game"
   },
@@ -398,6 +710,14 @@
     "internalSlug": "15001000",
     "localKey": "ge5c6ecf5riseofthetombad20ycln15",
     "name": "Rise of the Tomb Raider: 20 Year Celebration",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "f5562aaf93cb46e081d317263bde3013",
     "type": "game"
   },
@@ -407,6 +727,14 @@
     "internalSlug": "fs19",
     "localKey": "gebf235c5farmingsimulator19fs190",
     "name": "Farming Simulator 19",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "c50094b71d054fc28f3116245d9dbc9a",
     "type": "game"
   },
@@ -416,6 +744,14 @@
     "internalSlug": "15002000",
     "localKey": "gefa3b6bbshadowofthetmbrainv1502",
     "name": "Shadow of the Tomb Raider Definitive Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "bb9bcb490fd145d9997c8b3ff3f1039f",
     "type": "game"
   },
@@ -425,6 +761,14 @@
     "internalSlug": "f39390395ed5444d8e9b23460c8f9152rcp1",
     "localKey": "gf393906cdarksidegnf390548b26c1p",
     "name": "Darksiders Genesis",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "6c8ae46efebc4bd1a7de725bc630ce65",
     "type": "game"
   },
@@ -452,6 +796,14 @@
     "internalSlug": "year_one_pass",
     "localKey": "o11c9ec76ghostreconbreakpintya1p",
     "name": "Ghost Recon Breakpoint: Year 1 Pass",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "764aea6292f941c3a38c2875fbf1ff17",
     "type": "addon"
   },
@@ -551,6 +903,14 @@
     "internalSlug": "dme_yearone",
     "localKey": "o632522f2yearonepassdmeyearonec8",
     "name": "Year One Pass",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "f2d3edb585044489bda92238da640df0",
     "type": "addon"
   },
@@ -560,6 +920,14 @@
     "internalSlug": "f1f3235b-a06b-4130-a17d-f89678047a29",
     "localKey": "o7bfbcb01terminator80f1325b647d9",
     "name": "Terminator T-800",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "018fd8b8c01d496cb4917d43645c14b5",
     "type": "addon"
   },
@@ -569,6 +937,14 @@
     "internalSlug": "4a317f2f-4e06-4dd0-ab63-311a7aeda4ee",
     "localKey": "o7bfbcb14mortalkomba1pc437f2e06d",
     "name": "Mortal Kombat 11 Kombat Pack",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "1492d4fcf167420cb227a5579f447016",
     "type": "addon"
   },
@@ -578,6 +954,14 @@
     "internalSlug": "2bc8091c-2065-4df5-9490-ea6bd590528e",
     "localKey": "o7bfbcb20klasicrdefghtp2b8091654",
     "name": "Klassic Arcade Fighter Pack",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "20ef71dd341a4fb38423fb207d6c4455",
     "type": "addon"
   },
@@ -587,6 +971,14 @@
     "internalSlug": "5974ec88-cc4f-4301-85de-a4d7e8b06562",
     "localKey": "o7bfbcb29doublefatrskinpc5974830",
     "name": "Double Feature Skin Pack",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "294cbfab6a0e4d7db0d540968af2fbc7",
     "type": "addon"
   },
@@ -596,6 +988,14 @@
     "internalSlug": "58d88ee2-1f16-4862-ad4f-211f2228e6ba",
     "localKey": "o7bfbcb4ashangtsung58d8ee21f164b",
     "name": "Shang Tsung",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "4a4fabe8ed9942ed9ca5fa9111f3934f",
     "type": "addon"
   },
@@ -605,6 +1005,14 @@
     "internalSlug": "98600abf-ddbc-40ad-9010-3a637027eea6",
     "localKey": "o7bfbcb7eklasicrdenjp19860bf4372",
     "name": "Klassic Arcade Ninja Skin Pack 1",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "7ed368fdc86c45c5a61a44191bd0fa36",
     "type": "addon"
   },
@@ -614,6 +1022,14 @@
     "internalSlug": "951c381a-e82a-4cdb-9056-c0dd63f4cdac",
     "localKey": "o7bfbcbe9nightwolf951c38ae24db06",
     "name": "Nightwolf",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "e94c4b9ada3e43a89fe92e86e83ed092",
     "type": "addon"
   },
@@ -632,6 +1048,14 @@
     "internalSlug": "metro_exodus_dlc2",
     "localKey": "o879d826ametroexodussamtryxdulc2",
     "name": "Metro Exodus - Sam's Story",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "6ad6555933ee4c34a6ad1d2d4fdf69aa",
     "type": "addon"
   },
@@ -641,6 +1065,14 @@
     "internalSlug": "metro_exodus_dlc1",
     "localKey": "o879d82a3metroexodusthwclnlsmrx1",
     "name": "Metro Exodus - The Two Colonels",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "a3ae3dfc95ca4ad9b191e0ab9b75f601",
     "type": "addon"
   },
@@ -650,6 +1082,14 @@
     "internalSlug": "expansion_pass",
     "localKey": "o8b7e7f6fassasincreedodyytionpxp",
     "name": "Assassin's Creed Odyssey - Stadia Season Pass",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "6f6a85eb8e6f4042a95cc5a51ee26984",
     "type": "addon"
   },
@@ -659,16 +1099,15 @@
     "internalSlug": "expansion_pass",
     "localKey": "oa03141edtrialsrisingexpansopexo",
     "name": "Trials Rising - Expansion Pass",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "ede759ff51c948d698fe4f20172ff2e2",
-    "type": "addon"
-  },
-  "oa4c5eb15pubgjamilatextilesspukn": {
-    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
-    "description": "This set includes Karakin Head Wrap, Jamila Diamondback Top, Jamila Diamond Leg Pants and Jamila Kontra Shoes.",
-    "internalSlug": "PUBGJAMTEXTSKIN",
-    "localKey": "oa4c5eb15pubgjamilatextilesspukn",
-    "name": "PUBG - Jamila Textiles Set",
-    "sku": "15c4ba41842d41f5922c6f4797bf4d54",
     "type": "addon"
   },
   "oa4c5eb21pubgcheerladrstpubgckin": {
@@ -678,15 +1117,6 @@
     "localKey": "oa4c5eb21pubgcheerladrstpubgckin",
     "name": "PUBG - Cheerleader Set",
     "sku": "21c49bfa54d64bd1bcb6a929764ba7d1",
-    "type": "addon"
-  },
-  "oa4c5eb25pubgivoryscholunifmetak": {
-    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
-    "description": "This set includes School Skirt, School Jacket, School Shirt with Necktie and Sneakers (White).",
-    "internalSlug": "PUBGIVRYSHUNIFSKIN",
-    "localKey": "oa4c5eb25pubgivoryscholunifmetak",
-    "name": "PUBG - IVORY SCHOOL UNIFORM SET (FEMALE)",
-    "sku": "2584c4486e3a4285af411859f4435215",
     "type": "addon"
   },
   "oa4c5eb2epubgstadiapremiersxcvkn": {
@@ -707,24 +1137,6 @@
     "sku": "38fa68705f70420f8e283fc937926e20",
     "type": "addon"
   },
-  "oa4c5eb5apubg1100gcoinspubgcoins": {
-    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
-    "description": "Purchase 1,100 G-Coin. Use G-Coin to purchase PUBG in-game cosmetics and more. Game sold separately.",
-    "internalSlug": "PUBG01100GCOINS",
-    "localKey": "oa4c5eb5apubg1100gcoinspubgcoins",
-    "name": "PUBG - 1,100 G-COINS",
-    "sku": "5a0fbb32a8154c53967a07c233ec2a7c",
-    "type": "addon"
-  },
-  "oa4c5eb65pubg2300gcoinspub23coin": {
-    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
-    "description": "Purchase 2,300 G-Coin. Use G-Coin to purchase PUBG in-game cosmetics and more. Game sold separately.",
-    "internalSlug": "PUBG02300GCOINS",
-    "localKey": "oa4c5eb65pubg2300gcoinspub23coin",
-    "name": "PUBG - 2,300 G-COINS",
-    "sku": "659aa85ef9c04f1cb5db505b3685acca",
-    "type": "addon"
-  },
   "oa4c5eb84pubgbrownhatrangesetpki": {
     "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
     "description": "This set includes Faux Leather Jacket, Cowboy Hat (Brown), Leather Bootcut Pants, Battle Belt and Long Sleeved Turtleneck (Black).",
@@ -734,40 +1146,21 @@
     "sku": "8492149db1724bb6b654d637e231136d",
     "type": "addon"
   },
-  "oa4c5ebafpubgmilitaryunformsetfk": {
-    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
-    "description": "This set includes Military Jacket (Black), Military Skirt (Black), Military Cap (Black), Military Boots (Black) and Military Shirt (Gray).",
-    "internalSlug": "PUBGMILTUNIFSKIN",
-    "localKey": "oa4c5ebafpubgmilitaryunformsetfk",
-    "name": "PUBG - MILITARY UNIFORM SET(FEMALE)",
-    "sku": "af425d34afa740c194eb8326dbd1695b",
-    "type": "addon"
-  },
   "oa4c5ebb5pubgbadlandsleisuretpgk": {
     "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
     "description": "This set includes Miramar Beach Shirt, Badlands Gold Trim Boots, Marksman Aviators and White Weather Slacks.",
     "internalSlug": "PUBGBDLDSLEISKIN",
     "localKey": "oa4c5ebb5pubgbadlandsleisuretpgk",
     "name": "PUBG - BADLANDS LEISURE SET",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "b54873e3768140b9805664a220969929",
-    "type": "addon"
-  },
-  "oa4c5ebcdpubgpunkdestrctionsebgk": {
-    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
-    "description": "This set includes Punk Spaulder Leather Jacket (Red), Metallic Punk Jeans (Silver), Collar Bone Jet Fighter Helmet (Level 1) and Metallic Boots (Silver).",
-    "internalSlug": "PUBGPUKDSTRTSKIN",
-    "localKey": "oa4c5ebcdpubgpunkdestrctionsebgk",
-    "name": "PUBG - PUNK DESTRUCTION SET",
-    "sku": "cd650c64a82c4726b38de3518f4c5544",
-    "type": "addon"
-  },
-  "oa4c5ebcepubg500gcoinspubg5coins": {
-    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
-    "description": "Purchase 500 G-Coin. Use G-Coin to purchase PUBG in-game cosmetics and more. Game sold separately.",
-    "internalSlug": "PUBG00500GCOINS",
-    "localKey": "oa4c5ebcepubg500gcoinspubg5coins",
-    "name": "PUBG - 500 G-COINS",
-    "sku": "ce1f02b297f5433891b9aab3695625f8",
     "type": "addon"
   },
   "oa4c5ebd1pubgsurvivorpascoldfntb": {
@@ -794,25 +1187,15 @@
     "internalSlug": "PUBG06000GCOINS",
     "localKey": "oa4c5ebd4pubg6000gcoinspub6coins",
     "name": "PUBG - 6,000 G-COINS",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "d41a70a360b54fbc91b088679bf5624b",
-    "type": "addon"
-  },
-  "oa4c5ebd8pubgchickendinerupgrada": {
-    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
-    "description": "This upgrade pack includes Chicken Dinner Edition bonus content; DO NOT purchase this pack if you've already purchased an entitlement to PLAYERUNKNOWN'S BATTLEGROUND: Chicken Dinner Edition, as the content is duplicative.  This pack includes the 6,000 G-coin and 6 Skin sets (Aviator Set, Brown Hat Ranger Set, Blue School Uniform Set, Cheerleader Set, Factory worker Set and Hipster Set)",
-    "internalSlug": "PUBGCHIKDUPGRAD",
-    "localKey": "oa4c5ebd8pubgchickendinerupgrada",
-    "name": "PUBG - Chicken Dinner Upgrade Pack",
-    "sku": "d8e5901692754f05bf26ccef03ba1c18",
-    "type": "addon"
-  },
-  "oa4c5ebdepubg13500gcoinspub135co": {
-    "app": "a4c5eb3f4e614b7fadbba64cba68f849rcp1",
-    "description": "Purchase 13,500 G-Coin. Use G-Coin to purchase PUBG in-game cosmetics and more. Game sold separately.",
-    "internalSlug": "PUBG13500GCOINS",
-    "localKey": "oa4c5ebdepubg13500gcoinspub135co",
-    "name": "PUBG - 13,500 G-COINS",
-    "sku": "decf585409804c8f9c1bd03562504e10",
     "type": "addon"
   },
   "oa4c5ebeapubgaviatorsetpubgviokn": {
@@ -839,6 +1222,14 @@
     "internalSlug": "BL3_SeasonPass",
     "localKey": "obe080a1eborderlands3seasonpbl3p",
     "name": "Borderlands®3 Season Pass",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "1e6b50c7fd7640f4a7b5160e74708043",
     "type": "addon"
   },
@@ -857,6 +1248,14 @@
     "internalSlug": "BL3_D_ToyBoxWeaponsPack",
     "localKey": "obe080a2bborderlands3toybxweapck",
     "name": "Borderlands®3 Toy Box Weapons Pack",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "2b58178e031e4332a79617bc994ac21d",
     "type": "addon"
   },
@@ -875,6 +1274,14 @@
     "internalSlug": "BL3_D_NeonCosmeticPack",
     "localKey": "obe080a85borderlands3neocsmticpk",
     "name": "Borderlands®3 Neon Cosmetic Pack",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "85a8f97e5cc448899d6f851a5976f5c4",
     "type": "addon"
   },
@@ -884,6 +1291,14 @@
     "internalSlug": "BL3_D_GearboxCosmeticPack",
     "localKey": "obe080a8eborderlands3geabxcmtipk",
     "name": "Borderlands®3 Gearbox Cosmetic Pack",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "8eb8fae663e841bca442ca6d95b54278",
     "type": "addon"
   },
@@ -893,6 +1308,14 @@
     "internalSlug": "BL3_D_RetroCosmeticPack",
     "localKey": "obe080afcborderlands3etocsmticpk",
     "name": "Borderlands®3 Retro Cosmetic Pack",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "fc54b4c07feb43068a46aa7d9b4fd419",
     "type": "addon"
   },
@@ -902,6 +1325,14 @@
     "internalSlug": "GRID_Ultimate_Upgrade",
     "localKey": "oca805d42gridultimateupgradeglmp",
     "name": "GRID Ultimate Upgrade",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "422be99cdbdb460f9ab9ec5ffc7b0594",
     "type": "addon"
   },
@@ -911,6 +1342,14 @@
     "internalSlug": "SeasonPassOne",
     "localKey": "ocba53706zombiearmy4seasonpasonp",
     "name": "Zombie Army 4: Season Pass One",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "065c193373aa47859504227aeaa9cc28",
     "type": "addon"
   },
@@ -920,6 +1359,14 @@
     "internalSlug": "DLC00006",
     "localKey": "ocba53750zombiearmy4undecvkltf06",
     "name": "Zombie Army 4: Undercover Karl Outfit",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "50f2c12c05e540098f75131c2c8ac560",
     "type": "addon"
   },
@@ -929,6 +1376,14 @@
     "internalSlug": "DLC00003",
     "localKey": "ocba53793zombiearmy4fg42utclnd03",
     "name": "Zombie Army 4: FG-42 Automatic Rifle Bundle",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "93501771f2244793af1053b120e66b02",
     "type": "addon"
   },
@@ -938,6 +1393,14 @@
     "internalSlug": "DLC00002",
     "localKey": "ocba53794zombiearmy4undeadchtl02",
     "name": "Zombie Army 4: Undead Airman Character",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "947515b6fcc543bca605d2c8d018a415",
     "type": "addon"
   },
@@ -947,6 +1410,14 @@
     "internalSlug": "DLC00004",
     "localKey": "ocba537a2zombiearmy4solidgwpnkc0",
     "name": "Zombie Army 4: Solid Gold Weapon Skins",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "a2451006373c494b87e770e97f476a91",
     "type": "addon"
   },
@@ -956,6 +1427,14 @@
     "internalSlug": "MotorsportsDeluxePack",
     "localKey": "occ974338thecrew2motorspsdluxpak",
     "name": "The Crew 2 - Motorsports Deluxe Pack",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "38a33f9e010d48f9b80b3f7252a4768b",
     "type": "addon"
   },
@@ -965,6 +1444,14 @@
     "internalSlug": "SeasonPass",
     "localKey": "occ9743adthecrew2seasonpasseaonp",
     "name": "THE CREW 2 - SEASON PASS",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "adeacff32c1b4e0ba1127766e7a5bfc4",
     "type": "addon"
   },
@@ -983,6 +1470,14 @@
     "internalSlug": "warlock",
     "localKey": "od43cd435thedivison2warlorfykxpc",
     "name": "The Division 2: Warlords of New York Expansion",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "354ab39ab5e14aaba1a06ef86a0268fe",
     "type": "addon"
   },
@@ -1019,6 +1514,14 @@
     "internalSlug": "fs19_dlc_8F6BAB51",
     "localKey": "oebf2357cfarmingsulto19pexdc86b5",
     "name": "Farming Simulator 19 Platinum Expansion",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "7c0dbd202f5d4c409fe30046f68854ca",
     "type": "addon"
   },
@@ -1028,6 +1531,14 @@
     "internalSlug": "game_ultimate",
     "localKey": "x11c9ec03tomclancysghostrebkpiud",
     "name": "Tom Clancy's Ghost Recon Breakpoint - Ultimate Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "0339b1c963e64e28a64b5778da93478c",
     "skus": [
       "06e101d56a03472bb6c204aee96187d7",
@@ -1044,6 +1555,14 @@
     "internalSlug": "game_gold",
     "localKey": "x11c9ec10tomclancysghostrenbkpid",
     "name": "Tom Clancy's Ghost Recon Breakpoint - Gold Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "10621ce0fe784ccca7a9d95ec0f24f37",
     "skus": [
       "06e101d56a03472bb6c204aee96187d7",
@@ -1057,6 +1576,14 @@
     "internalSlug": "20000002",
     "localKey": "x20e7921fdestiny2forsaken2000002",
     "name": "Destiny 2: Forsaken",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "1f50a7a214994a5cb861db76eef77564",
     "skus": [
       "4950959380034dcda0aecf98f675e11f",
@@ -1070,6 +1597,14 @@
     "internalSlug": "20000003",
     "localKey": "x20e79235destiny2shadowkeep20003",
     "name": "Destiny 2: Shadowkeep",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "35087d3c68c94b03b6f7e67440b8b283",
     "skus": [
       "4950959380034dcda0aecf98f675e11f",
@@ -1083,6 +1618,14 @@
     "internalSlug": "20000004",
     "localKey": "x20e79258destiny2upgradeiton2004",
     "name": "Destiny 2: Upgrade Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "58f0a37bf6b141e4ba3a14b59e46b7ff",
     "skus": [
       "4950959380034dcda0aecf98f675e11f",
@@ -1110,6 +1653,14 @@
     "internalSlug": "ultimate_ed_bundle",
     "localKey": "x2152a108reddearmption2ultimaonb",
     "name": "Red Dead Redemption 2:  Ultimate Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "08bf286364164e14bac41b0040d6331f",
     "skus": [
       "f790e37b6161477188923408085528a1",
@@ -1124,6 +1675,14 @@
     "internalSlug": "special_ed_bundle",
     "localKey": "x2152a163reddearmption2spcialtbu",
     "name": "Red Dead Redemption 2:  Special Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "63e94c60b10e4267add34ef768c30f8f",
     "skus": [
       "f790e37b6161477188923408085528a1",
@@ -1137,6 +1696,14 @@
     "internalSlug": "NBA2K20_Legend_Bundle",
     "localKey": "x2afad30anba2k20legendditiobak0u",
     "name": "NBA 2K20 Legend Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "0a763df666fc4569896ca44062308138",
     "skus": [
       "b6d1b295ed0d4f1080576ac5d51df6d0",
@@ -1150,6 +1717,14 @@
     "internalSlug": "NBA2K20_Deluxe_Bundle",
     "localKey": "x2afad318nba2k20digitaldeluxenbk",
     "name": "NBA 2K20 Digital Deluxe",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "183f245b98a141ae97214c9ee5ae8a56",
     "skus": [
       "b6d1b295ed0d4f1080576ac5d51df6d0",
@@ -1163,6 +1738,14 @@
     "internalSlug": "dme_standardbundle",
     "localKey": "x632522b1doometernalstandriimsbu",
     "name": "DOOM Eternal Standard Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "b171fc78d4e1496d9536d585257a771e",
     "skus": [
       "17affc92b9ca47a7b64e748609ed25af",
@@ -1176,6 +1759,14 @@
     "internalSlug": "dme_deluxebundle",
     "localKey": "x632522e7doometernaldluxitinmuxb",
     "name": "DOOM Eternal Deluxe Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "e74abd04f4a34c7a82b6cf8cd9cf9ac0",
     "skus": [
       "17affc92b9ca47a7b64e748609ed25af",
@@ -1191,6 +1782,14 @@
     "internalSlug": "7dc2dac2-c9e7-4988-9b14-37cb58ff69f1",
     "localKey": "x7bfbcb69mortalkb1peiudn7c294835",
     "name": "Mortal Kombat 11 Premium Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "69713a38ec1a48f5aed02a24752540cb",
     "skus": [
       "f3f250e8a4d54f60ba730fbc04268052",
@@ -1210,6 +1809,14 @@
     "internalSlug": "deluxe_edition",
     "localKey": "x8615c865rage2deluxeditionluxton",
     "name": "RAGE 2: Deluxe Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "65e4b00af1094f1c99f5a8c7248b433f",
     "skus": [
       "78ea22fb5c054167bb722322b469f33f",
@@ -1223,6 +1830,14 @@
     "internalSlug": "metro_exodus_gold_edition",
     "localKey": "x879d82b1metroexodusglditinmrxus",
     "name": "Metro Exodus - Gold Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "b1ef708943904e7eaa699d2113805814",
     "skus": [
       "8ca5e97f091e4f7fbfcf8069ba850b1f",
@@ -1237,6 +1852,14 @@
     "internalSlug": "game_bundle_ultimate",
     "localKey": "x8b7e7f28assaincreedodyytiultmgb",
     "name": "Assassin's Creed Odyssey - Stadia Ultimate Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "2868c83c2411473282074a6fe5dbfc85",
     "skus": [
       "6760aad6e75b4edc9686c48e8dd38936",
@@ -1250,6 +1873,14 @@
     "internalSlug": "gold",
     "localKey": "xa03141cctrialsrisingdgtalgodeon",
     "name": "Trials Rising - Digital Gold Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "cc66f2992d04402bba5cbc8abf6cc616",
     "skus": [
       "01e95e73256c465fb5620fc574446413",
@@ -1263,6 +1894,14 @@
     "internalSlug": "PUBGCHKDINEDITION",
     "localKey": "xa4c5eb9fplayerunknowsbattlgdchi",
     "name": "PlayerUnknown's Battlegrounds - Chicken Dinner Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "9faa81e600704a828c243bf0b9c479bd",
     "skus": [
       "71e7c4fc5ca24f0f8301da6d042bf18e",
@@ -1284,6 +1923,14 @@
     "internalSlug": "PUBGPIONEREDITION",
     "localKey": "xa4c5ebbeplayerunknowsbattlegrdi",
     "name": "PlayerUnknown's Battlegrounds - Pioneer Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "be9526126d394061b0eef9b16352357e",
     "skus": [
       "71e7c4fc5ca24f0f8301da6d042bf18e",
@@ -1298,6 +1945,14 @@
     "internalSlug": "BL3_DeluxeEdition",
     "localKey": "xbe080af4borderlands3eluxitionb3",
     "name": "Borderlands®3 Deluxe Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "f4934cfefbf845c3a3fa345dd65f9fcd",
     "skus": [
       "958f4c0900c64e7e83b9218ab479304e",
@@ -1315,6 +1970,14 @@
     "internalSlug": "BL3_SuperDeluxeEdition",
     "localKey": "xbe080afbborderlands3supeluxitio",
     "name": "Borderlands®3 Super Deluxe Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "fbfc03802388481b87a6d6922b773686",
     "skus": [
       "958f4c0900c64e7e83b9218ab479304e",
@@ -1334,6 +1997,14 @@
     "internalSlug": "GRID_Ultimate_Edition",
     "localKey": "xca805d4fgridultimateedongrulmao",
     "name": "GRID Ultimate Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "4f1db1c66f6e427286cc21d116e7bbee",
     "skus": [
       "75be643ff0fb40d7873fa41edb10d98a",
@@ -1347,6 +2018,14 @@
     "internalSlug": "DeluxeEdition",
     "localKey": "xcba53713zombiearmy4deadwrluxitn",
     "name": "Zombie Army 4: Dead War Deluxe Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "13f0229eab0a484382e9af78bad74ff7",
     "skus": [
       "a7b1581491ea4b7c9fcc89710561f5f7",
@@ -1363,6 +2042,14 @@
     "internalSlug": "SuperDeluxeEdition",
     "localKey": "xcba53750zombiearmy4deadwsuplxtn",
     "name": "Zombie Army 4: Dead War Super Deluxe Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "5027183521d3454a8ff000edbfd478a9",
     "skus": [
       "a7b1581491ea4b7c9fcc89710561f5f7",
@@ -1376,6 +2063,14 @@
     "internalSlug": "GoldEdition",
     "localKey": "xcc97431ethecrew2goldeditiongoln",
     "name": "The Crew 2 - Gold Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "1e4107605f83447fa8e04e0abdc578b3",
     "skus": [
       "94db678cbb6342c3bc0e58f71130b3fb",
@@ -1390,6 +2085,14 @@
     "internalSlug": "DeluxeEdition",
     "localKey": "xcc9743ecthecrew2dluxditionluxon",
     "name": "The Crew 2 - Deluxe Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "ec30180d14de41fcaec12d442b81e248",
     "skus": [
       "94db678cbb6342c3bc0e58f71130b3fb",
@@ -1403,6 +2106,14 @@
     "internalSlug": "game_warlock_ult_bundle",
     "localKey": "xd43cd4b9thedivison2warlfykumgcb",
     "name": "The Division 2: Warlords of New York Ultimate Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "b9d1633ba24f41d7919f431db4744f3c",
     "skus": [
       "bed63eac149542078fa5b9d6f20f5f2f",
@@ -1420,6 +2131,14 @@
     "internalSlug": "game_warlock_bundle",
     "localKey": "xd43cd4f9thedivison2warlfykgmcbu",
     "name": "The Division 2 - Warlords of New York Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "f962fa4f12b64bffade9c170469d5710",
     "skus": [
       "bed63eac149542078fa5b9d6f20f5f2f",
@@ -1433,6 +2152,14 @@
     "internalSlug": "fs19_platinum",
     "localKey": "xebf23502farmingsimulator19plted",
     "name": "Farming Simulator 19 Platinum Edition",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "0292121ae01e4247ace30184df5f6ac0",
     "skus": [
       "c50094b71d054fc28f3116245d9dbc9a",

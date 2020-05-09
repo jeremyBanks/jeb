@@ -18,16 +18,35 @@ fi
 
 dist="./docs";
 
-set -x;
- 
-if [ -e "$dist/pid" ]; then
-    kill "$(cat "$dist/pid")" || echo "already dead";
-    echo "$$" > "$dist/pid";
-    echo "interrupted existing build";
-    sleep 8; # hacky debounce of repeated saves
+sync;
+
+if [ -e "./build.pid" ]; then
+    killtree() {
+        # from https://stackoverflow.com/a/3211182/1114
+        local _pid="$1";
+        kill -stop "${_pid}";
+        for _child in $(ps -o pid --no-headers --ppid ${_pid}); do
+            killtree "${_child}";
+        done
+        kill -9 "${_pid}";
+    }
+
+    killtree "$(cat "./build.pid")" 9 || printf "⚠️ Outdated pidfile?\n";
+    printf "$BASHPID" > "./build.pid";
+    sync;
+    for n in {4..1}; do
+        printf '\n%.0s' {1..12};
+        printf "🛑 Interrupted existing build. Debouncing for ${n}s... ";
+        sleep 1;
+    done
+    printf "👍 Restarting build.\n"
 else
-    echo "$$" > "$dist/pid";
+    printf "$BASHPID" > "./build.pid";
 fi
+
+sync;
+
+set -x;
 
 import-sort --write "./src/"**/*"."{"j","t"}"s"{,"x"};
 
@@ -49,4 +68,6 @@ sort-json "./"*".json" {"./src","./docs","./data","./.vscode","./.github"}"/"**/
 prettier --write "./"*".json" "./data/" "./.vscode/" "./.github/" "./src/" "$dist";
 prettier --write --parser=json "./.github/"**/*"."{"yml","yaml"};
 
-rm -f "$dist/pid";
+rm "./build.pid";
+
+printf "\n\n\n\n\n\n\n\n\n\n\n\n✔️ Build complete. ";

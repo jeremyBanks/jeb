@@ -39,10 +39,11 @@
   "explorer.incrementalNaming": "smart",
   "explorer.sortOrder": "mixed",
   "files.autoSave": "afterDelay",
-  "files.autoSaveDelay": 8000,
+  "files.autoSaveDelay": 4000,
   "files.defaultLanguage": " ${activeEditorLanguage}",
   "files.eol": "\n",
   "files.exclude": {
+    "*.pid": true,
     "*/CNAME": true,
     ".github": true,
     ".gitignore": true,
@@ -51,11 +52,14 @@
     "README.md": true,
     "docs": true,
     "static": true,
+    "yarn-error.log": true,
     "yarn.lock": true
   },
   "files.insertFinalNewline": true,
   "files.saveConflictResolution": "overwriteFileOnDisk",
   "files.trimFinalNewlines": true,
+  "peacock.affectAccentBorders": true,
+  "peacock.affectTabActiveBorder": true,
   "peacock.color": "#d06050",
   "problems.showCurrentInStatus": true,
   "search.exclude": {
@@ -72,15 +76,20 @@
     "activityBarBadge.background": "#b4ebbb",
     "activityBarBadge.foreground": "#15202b",
     "editorError.foreground": "#F888",
+    "editorGroup.border": "#db8578",
     "minimap.errorHighlight": "#F883",
+    "panel.border": "#db8578",
+    "sideBar.border": "#db8578",
     "statusBar.background": "#d06050",
     "statusBar.border": "#d06050",
     "statusBar.foreground": "#e7e7e7",
     "statusBarItem.hoverBackground": "#db8578",
+    "tab.activeBorder": "#db8578",
     "titleBar.activeBackground": "#d06050",
     "titleBar.activeForeground": "#e7e7e7",
     "titleBar.border": "#d06050",
     "titleBar.inactiveBackground": "#d0605099",
     "titleBar.inactiveForeground": "#e7e7e799"
-  }
+  },
+  "workbench.startupEditor": "readme"
 }

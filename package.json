@@ -4,6 +4,7 @@
   },
   "devDependencies": {
     "@types/firefox-webext-browser": "v70.0.1",
+    "eslint": "^7.0.0",
     "import-sort-cli": "^6.0.0",
     "prettier": "v2.0.5",
     "replace-in-files-cli": "v0.3.1",
@@ -17,7 +18,7 @@
   "private": true,
   "scripts": {
     "build": "./build",
-    "w": "yarn build; printf '\nwatching to watch\n'; bash -c 'sleep 12'; yarn tsc --watch"
+    "vendor": "git rm -rf node_modules; NODE_ENV=production yarn install; git add -f node_modules/*; NODE_ENV=development yarn install"
   },
   "type": "module",
   "version": "2020.5.9"
