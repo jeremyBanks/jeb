@@ -19,6 +19,15 @@ fi
 dist="./docs";
 
 set -x;
+ 
+if [ -e "$dist/pid" ]; then
+    kill "$(cat "$dist/pid")" || echo "already dead";
+    echo "$$" > "$dist/pid";
+    echo "interrupted existing build";
+    sleep 8; # hacky debounce of repeated saves
+else
+    echo "$$" > "$dist/pid";
+fi
 
 import-sort --write "./src/"**/*"."{"j","t"}"s"{,"x"};
 
@@ -39,3 +48,5 @@ tsc || printf "\n⚠️ TypeScript is confused. 😟\n\n";
 sort-json "./"*".json" {"./src","./docs","./data","./.vscode","./.github"}"/"**/*"."{"json","yml","yaml"};
 prettier --write "./"*".json" "./data/" "./.vscode/" "./.github/" "./src/" "$dist";
 prettier --write --parser=json "./.github/"**/*"."{"yml","yaml"};
+
+rm -f "$dist/pid";

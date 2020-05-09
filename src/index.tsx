@@ -1,13 +1,35 @@
 import { render } from "./index/render.js";
 import { spider } from "./index/spider.js";
 
-document.title = "stadia.observer";
-document.head.appendChild(
-  Object.assign(document.createElement("link"), {
-    rel: "icon",
-    href: "/illufinch-violetsky-edited@2x.png",
-  })
-);
+(async () => {
+  document.title = "stadia.observer";
+  document.head.appendChild(
+    Object.assign(document.createElement("link"), {
+      rel: "icon",
+      href: "/illufinch-violetsky-edited@2x.png",
+    })
+  );
+
+  const skus = Object.values(await (await fetch("/skus.json")).json());
+  const skusById = Object.fromEntries(skus.map((sku) => [sku.sku, sku]));
+  const subscriptions = skus.filter((sku) => sku.type === "subscription");
+
+  const games = skus
+    .filter((sku) => sku.type === "game")
+    .map((game) =>
+      Object.assign(game, {
+        skus: skus.filter((sku) => sku.app === game.app),
+        addons: skus.filter(
+          (sku) => sku.app === game.app && sku.type === "addon"
+        ),
+        bundles: skus.filter(
+          (sku) => sku.app === game.app && sku.type === "bundle"
+        ),
+      })
+    );
+
+  document.body.appendChild(<Home games={games} />);
+})();
 
 const Home = ({ games }: any) => (
   <main
@@ -83,25 +105,3 @@ const Game = ({ name, description, type, sku, app, addons, bundles }) => (
     ))}
   </section>
 );
-
-(async () => {
-  const skus = Object.values(await (await fetch("/skus.json")).json());
-  const skusById = Object.fromEntries(skus.map((sku) => [sku.sku, sku]));
-  const subscriptions = skus.filter((sku) => sku.type === "subscription");
-
-  const games = skus
-    .filter((sku) => sku.type === "game")
-    .map((game) =>
-      Object.assign(game, {
-        skus: skus.filter((sku) => sku.app === game.app),
-        addons: skus.filter(
-          (sku) => sku.app === game.app && sku.type === "addon"
-        ),
-        bundles: skus.filter(
-          (sku) => sku.app === game.app && sku.type === "bundle"
-        ),
-      })
-    );
-
-  document.body.appendChild(<Home games={games} />);
-})();

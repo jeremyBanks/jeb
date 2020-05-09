@@ -20,5 +20,5 @@
     "w": "yarn build; printf '\nwatching to watch\n'; bash -c 'sleep 12'; yarn tsc --watch"
   },
   "type": "module",
-  "version": "2020.5.8"
+  "version": "2020.5.9"
 }

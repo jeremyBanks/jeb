@@ -23,7 +23,7 @@ export class DataStore {
         `Resetting extension storage (data schema was ${existingSchema} but we need ${schema}).`
       );
       await browser.storage.local.clear();
-      await browser.storage.local.set({ schema: this.schema });
+      await browser.storage.local.set({ schema });
     }
   }
 

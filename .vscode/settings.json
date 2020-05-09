@@ -31,6 +31,7 @@
     "commands": [
       {
         "cmd": "bash -c 'NODE_VERSION=stable ~/.nvm/nvm-exec yarn build'",
+        "isAsync": true,
         "match": ".*"
       }
     ]
@@ -70,8 +71,8 @@
     "activityBar.inactiveForeground": "#15202b99",
     "activityBarBadge.background": "#b4ebbb",
     "activityBarBadge.foreground": "#15202b",
-    "editorError.foreground": "#F884",
-    "minimap.errorHighlight": "#F882",
+    "editorError.foreground": "#F888",
+    "minimap.errorHighlight": "#F883",
     "statusBar.background": "#d06050",
     "statusBar.border": "#d06050",
     "statusBar.foreground": "#e7e7e7",

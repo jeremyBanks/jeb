@@ -28,10 +28,11 @@
     "https://stadia.google.com/*",
     "https://stadia.observer/*",
     "identity",
+    "identity.email",
     "storage",
     "tabs",
     "unlimitedStorage"
   ],
-  "version": "2020.5.8",
-  "version_name": "2020-05-08"
+  "version": "2020.5.9",
+  "version_name": "2020-05-09"
 }

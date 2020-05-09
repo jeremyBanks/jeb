@@ -1,6 +1,16 @@
 import * as records from "./records.js";
 
-import { AddOn, Bundle, DataStore, Game, Sku, Subscription } from "./data.js";
+import {
+  AddOn,
+  Bundle,
+  DataStore,
+  Game,
+  Prices,
+  Sku,
+  Subscription,
+} from "./data.js";
+
+import { ProtoData } from "./stadia.js";
 
 export const spider = async () => {
   const storage = await DataStore.open();
@@ -11,8 +21,6 @@ export const spider = async () => {
   await storage.save();
   spider.download();
 };
-
-type ProtoData = any & Array<ProtoData | number | string | boolean | null>;
 
 class Spider {
   private readonly start: () => void;
@@ -41,7 +49,7 @@ class Spider {
   }
 
   private async spider() {
-    {
+    if (false) {
       await this.loadSkuDetails("59c8314ac82a456ba61d08988b15b550");
       await this.loadSkuDetails("b171fc78d4e1496d9536d585257a771e");
       await this.loadSkuDetails("4950959380034dcda0aecf98f675e11f");
@@ -102,36 +110,60 @@ class Spider {
     await this.fetchPreloadData(`store/details/_/sku/${sku}`);
   }
 
-  private loadSkuData(data: ProtoData, pricing: ProtoData): Sku {
+  private loadSkuData(data: ProtoData, priceData: ProtoData): Sku {
+    const app: string = data[4];
+    const skuId: string = data[0];
+    const name: string = data[1];
+    const internalSlug: string = data[5];
+    const description: string = data[9];
+
+    const prices = priceData && Prices.fromProto(priceData);
+
     const typeId = data[6];
 
-    console.log({ pricing });
-    // pricing should include normal price, pro price,
-    // current sale prices for each, the start and end dates of each sale
+    console.log({ priceData, prices });
 
     let sku;
     if (typeId === 1) {
-      sku = new Game(data[4], data[0], "game", data[1], data[5], data[9]);
+      sku = new Game(
+        app,
+        skuId,
+        "game",
+        name,
+        internalSlug,
+        description,
+        prices
+      );
     } else if (typeId === 2) {
-      sku = new AddOn(data[4], data[0], "addon", data[1], data[5], data[9]);
+      sku = new AddOn(
+        app,
+        skuId,
+        "addon",
+        name,
+        internalSlug,
+        description,
+        prices
+      );
     } else if (typeId === 3) {
       sku = new Bundle(
-        data[4],
-        data[0],
+        app,
+        skuId,
         "bundle",
-        data[1],
-        data[5],
-        data[9],
+        name,
+        internalSlug,
+        description,
+        prices,
         data[14][0].map((x: any) => x[0])
       );
     } else if (typeId === 5) {
       sku = new Subscription(
-        data[4],
-        data[0],
+        app,
+        skuId,
         "subscription",
-        data[1],
-        data[5],
-        data[9],
+        name,
+        internalSlug,
+        description,
+        prices,
         data[14][0].map((x: any) => x[0])
       );
     } else {
