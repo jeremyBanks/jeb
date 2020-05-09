@@ -119,6 +119,10 @@ class Spider {
 
     const prices = priceData && Prices.fromProto(priceData);
 
+    if (!prices?.basePriceCents) {
+      debugger;
+    }
+
     const typeId = data[6];
 
     console.log({ priceData, prices });
@@ -256,7 +260,7 @@ class Spider {
 
     const loaders: any = {
       WwD3rb: (data: ProtoData) => {
-        const skus = data[2].map((p: any) => this.loadSkuData(p[9]));
+        const skus = data[2].map((p: any) => this.loadSkuData(p[9], p[9][15]));
         return { skus };
       },
 

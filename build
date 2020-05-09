@@ -65,8 +65,10 @@ cp "./src/index.html" "${dist}/.htm";
 tsc || printf "\n⚠️ TypeScript is confused. 😟\n\n";
 
 sort-json "./"*".json" {"./src","./docs","./data","./.vscode","./.github"}"/"**/*"."{"json","yml","yaml"};
-prettier --write "./"*".json" "./data/" "./.vscode/" "./.github/" "./src/" "$dist";
+prettier --write "./"*".json" "./data/" "./.vscode/" "./.github/" "./src/" "${dist}";
 prettier --write --parser=json "./.github/"**/*"."{"yml","yaml"};
+
+date -u +%s > "${dist}/timestamp.json";
 
 rm "./build.pid";
 

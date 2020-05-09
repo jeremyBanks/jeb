@@ -1,8 +1,7 @@
 # To Do
 
-- [ ] country flags
+- [ ] design a better layout
 - [ ] location price data in every view where it's available.
 - [ ] interpreting price data.
-- [ ] display prices to some extent.
 - [ ] markdown descriptions of changes since last export.
 - [ ] serialization, reload data without losing types.

@@ -3,6 +3,17 @@ import { render } from "./index/render.js";
 import { spider } from "./index/spider.js";
 
 (async () => {
+  // TODO: only do this in dev please
+  let originalBuildTimestamp = await (await fetch("/timestamp.json")).json();
+  setInterval(async () => {
+    let currentTimestamp = await (await fetch("/timestamp.json")).json();
+    if (currentTimestamp !== originalBuildTimestamp) {
+      document.location.reload();
+    }
+  }, 1000);
+})();
+
+(async () => {
   document.title = "stadia.observer";
   document.head.appendChild(
     Object.assign(document.createElement("link"), {
@@ -46,6 +57,10 @@ const Home = ({ games }: any) => (
   `}
   >
     <h1>stadia.observer</h1>
+
+    <p>does this work?</p>
+
+    <hr />
 
     {window.chrome?.runtime?.id && (
       <button onclick={spider}>🕷️spider stadia</button>
