@@ -1,5 +1,5 @@
 import { ProtoData } from "../stadia.js";
-import { Renderable } from "../render.js";
+import { Renderable } from "../jsx.js";
 import { flag } from "../flags.js";
 import { localKey } from "./local-key.js";
 
@@ -16,7 +16,7 @@ export class Prices {
   ) {}
 
   public render(): Renderable {
-    // TODO: god remove this
+    // TODO: god remove this once you have fixed type serialization
     if (!this) return;
 
     if (this.basePriceCents) {

@@ -60,6 +60,7 @@ rm -rf "${dist}"/*;
 
 cp -r "./src/"* "./data/"* "./static/"* "${dist}/";
 cp "./node_modules/webextension-polyfill/dist/browser-polyfill.js"{"",".map"} "${dist}/";
+replace-in-files --regex='\s*//#\s*sourceMappingURL=[^\n]+\.map\s*$' --replacement '' "${dist}/browser-polyfill.js";
 cp "./src/index.html" "${dist}/.htm";
 
 tsc || printf "\n⚠️ TypeScript is confused. 😟\n\n";
@@ -68,7 +69,7 @@ sort-json "./"*".json" {"./src","./docs","./data","./.vscode","./.github"}"/"**/
 prettier --write "./"*".json" "./data/" "./.vscode/" "./.github/" "./src/" "${dist}";
 prettier --write --parser=json "./.github/"**/*"."{"yml","yaml"};
 
-date -u +%s > "${dist}/timestamp.json";
+date -u +%s > "${dist}/last-build-timestamp.json";
 
 rm "./build.pid";
 

@@ -1,5 +1,3 @@
-# To Do
-
 - [ ] design a better layout
 - [ ] location price data in every view where it's available.
 - [ ] interpreting price data.

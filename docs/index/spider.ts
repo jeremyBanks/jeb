@@ -119,13 +119,9 @@ class Spider {
 
     const prices = priceData && Prices.fromProto(priceData);
 
-    if (!prices?.basePriceCents) {
-      debugger;
-    }
-
     const typeId = data[6];
 
-    console.log({ priceData, prices });
+    console.log({ name, data, priceData, prices });
 
     let sku;
     if (typeId === 1) {

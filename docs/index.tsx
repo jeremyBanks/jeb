@@ -1,5 +1,6 @@
+import "./index/jsx.js";
+
 import { Prices } from "./index/data/models.js";
-import { render } from "./index/render.js";
 import { spider } from "./index/spider.js";
 
 (async () => {

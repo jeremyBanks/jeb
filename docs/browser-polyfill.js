@@ -1289,4 +1289,3 @@
     }
   }
 );
-//# sourceMappingURL=browser-polyfill.js.map

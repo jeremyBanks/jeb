@@ -1,6 +1,4 @@
-import { Renderable } from "./render.js";
-
-export const flag = (countryCode?: string): Renderable => {
+export const flag = (countryCode?: string): JSX.Renderable => {
   if (!countryCode) {
     return undefined;
   }

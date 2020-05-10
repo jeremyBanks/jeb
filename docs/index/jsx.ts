@@ -1,13 +1,4 @@
-export type Renderable =
-  | Element
-  | DocumentFragment
-  | Node
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | Iterable<Renderable>;
+export type Renderable = JSX.Renderable;
 
 const renderChild = (content: Renderable): Node => {
   if (content === null || content === undefined) {
@@ -29,11 +20,11 @@ const renderChild = (content: Renderable): Node => {
   }
 };
 
-export const render = (
-  type: string | ((props: Record<string, Renderable>) => Element),
+export const createElement = (
+  type: string | ((props: Record<string, Renderable>) => HTMLElement),
   props: Record<string, any>,
   ...children: Array<Renderable>
-): Element => {
+): HTMLElement => {
   if (typeof type === "string") {
     const el = document.createElement(type);
     Object.assign(el, props);
@@ -43,3 +34,9 @@ export const render = (
     return type(Object.assign(props, { children }));
   }
 };
+
+Object.assign(window, {
+  JSX: {
+    createElement,
+  },
+});

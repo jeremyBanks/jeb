@@ -4,7 +4,7 @@
     "inlineSourceMap": true,
     "inlineSources": true,
     "jsx": "react",
-    "jsxFactory": "render",
+    "jsxFactory": "JSX.createElement",
     "module": "esnext",
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
