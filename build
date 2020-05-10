@@ -6,10 +6,11 @@ cd "$(dirname "${BASH_SOURCE}")";
 if [ -z "${npm_package_name:-}" ]; then
     if [ -e "${HOME}/.nvm/nvm.sh" ]; then
         source "${HOME}/.nvm/nvm.sh";
-        nvm use default;
+        nvm use default || (nvm install stable && nvm use stable);
         node_version="$(node -p 'require("./package.json").engines.node')";
         nvm install "${node_version}";
         nvm use "${node_version}";
+        npm install -g yarn;
     fi
 
     yarn install;
@@ -64,6 +65,7 @@ replace-in-files --regex='\s*//#\s*sourceMappingURL=[^\n]+\.map\s*$' --replaceme
 cp "./src/index.html" "${dist}/.htm";
 
 tsc || printf "\n⚠️ TypeScript is confused. 😟\n\n";
+web-ext lint -s "${dist}" || printf "\n⚠️ Firefox is confused. 🦊\n\n";
 
 sort-json "./"*".json" {"./src","./docs","./data","./.vscode","./.github"}"/"**/*"."{"json","yml","yaml"};
 prettier --write "./"*".json" "./data/" "./.vscode/" "./.github/" "./src/" "${dist}";

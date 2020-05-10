@@ -31,7 +31,7 @@
       {
         "cmd": "bash -c 'NODE_VERSION=stable ~/.nvm/nvm-exec yarn build'",
         "isAsync": true,
-        "match": ".*"
+        "match": ".*zzzzzzzzzzzzdisabled"
       }
     ]
   },

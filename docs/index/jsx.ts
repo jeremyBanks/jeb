@@ -25,14 +25,24 @@ export const createElement = (
   props: Record<string, any>,
   ...children: Array<Renderable>
 ): HTMLElement => {
+  const style = props.styles;
+  props = { ...props };
+  delete props.styles;
+
+  let el;
   if (typeof type === "string") {
-    const el = document.createElement(type);
+    el = document.createElement(type);
     Object.assign(el, props);
     el.appendChild(renderChild(children));
-    return el;
   } else {
-    return type(Object.assign(props, { children }));
+    el = type(Object.assign(props, { children }));
   }
+
+  if (style) {
+    Object.assign(el.style, style);
+  }
+
+  return el;
 };
 
 Object.assign(window, {

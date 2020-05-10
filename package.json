@@ -9,17 +9,22 @@
     "prettier": "v2.0.5",
     "replace-in-files-cli": "v0.3.1",
     "sort-json": "v2",
-    "typescript": "v3.8.3"
+    "typescript": "v3.8.3",
+    "web-ext": "^4.2.0"
   },
   "engines": {
     "node": "v14.2.0"
   },
   "name": "stadia.observer",
   "private": true,
+  "resolutions": {
+    "web-ext/**/shelljs": ">=0.8.4"
+  },
   "scripts": {
     "build": "./build",
+    "fox": "yarn build && web-ext run --firefox-profile=stadia.observer",
     "vendor": "git rm -rf node_modules; NODE_ENV=production yarn install; git add -f node_modules/*; NODE_ENV=development yarn install"
   },
   "type": "module",
-  "version": "2020.5.10"
+  "version": "2020.5.11"
 }

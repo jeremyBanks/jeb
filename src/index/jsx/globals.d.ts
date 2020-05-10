@@ -37,7 +37,7 @@ declare namespace JSX {
   // Properties that our renderer handles in a way inconsistent with the underlying HTML DOM interface.
   type _OverrideProps = {
     children: Renderable;
-    style: string;
+    style: CSSStyleDeclaration;
   };
 
   type _Element<T extends HTMLElement = HTMLElement> = Partial<

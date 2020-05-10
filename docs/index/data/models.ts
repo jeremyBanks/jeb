@@ -16,7 +16,7 @@ export class Prices {
   ) {}
 
   public render(): Renderable {
-    // TODO: god remove this once you have fixed type serialization
+    // TODO: god remove this once you have fixed type
     if (!this) return;
 
     if (this.basePriceCents) {
