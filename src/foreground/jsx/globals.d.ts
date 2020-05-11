@@ -1,7 +1,11 @@
 declare namespace JSX {
-  const createElement: (
-    type: string | ((props: Record<string, Renderable>) => HTMLElement),
-    props: Record<string, any>,
+  type FC<Props extends {} = {}> = ((props: Props) => HTMLElement) & {
+    style?: Partial<CSSStyleDeclaration>;
+  };
+
+  const createElement: <Props extends {} = {}>(
+    type: string | FC<Props>,
+    props: Props,
     ...children: Array<Renderable>
   ) => HTMLElement;
 
@@ -18,13 +22,9 @@ declare namespace JSX {
 
   interface IntrinsicElements {
     a: _Element<HTMLAnchorElement>;
-    section: _Element;
-    main: _Element<HTMLElement>;
-    div: _Element<HTMLDivElement>;
-    span: _Element<HTMLSpanElement>;
-    hr: _Element<HTMLHRElement>;
-    p: _Element<HTMLParagraphElement>;
     button: _Element<HTMLButtonElement>;
+    title: _Element<HTMLTitleElement>;
+    div: _Element<HTMLDivElement>;
     h1: _Element<HTMLHeadingElement>;
     h2: _Element<HTMLHeadingElement>;
     h3: _Element<HTMLHeadingElement>;
@@ -32,6 +32,12 @@ declare namespace JSX {
     h5: _Element<HTMLHeadingElement>;
     h6: _Element<HTMLHeadingElement>;
     h7: _Element<HTMLHeadingElement>;
+    hr: _Element<HTMLHRElement>;
+    link: _Element<HTMLLinkElement>;
+    main: _Element<HTMLElement>;
+    p: _Element<HTMLParagraphElement>;
+    section: _Element;
+    span: _Element<HTMLSpanElement>;
   }
 
   // Properties that our renderer handles in a way inconsistent with the underlying HTML DOM interface.

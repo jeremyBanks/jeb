@@ -26,8 +26,6 @@
       "webextensions": true
     },
     "extends": [
-      "eslint:recommended",
-      "plugin:@typescript-eslint/eslint-recommended",
       "plugin:import/typescript"
     ],
     "parser": "@typescript-eslint/parser",

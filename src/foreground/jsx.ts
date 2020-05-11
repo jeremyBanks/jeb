@@ -22,19 +22,19 @@ const renderChild = (content: Renderable): Node => {
 
 const componentsByName = new Map();
 const namesByComponent = new Map();
-export const createElement = (
-  type: string | ((props: Record<string, Renderable>) => HTMLElement),
-  props: Record<string, any>,
+export const createElement = <Props extends {} = {}>(
+  type: string | JSX.FC<Props>,
+  props: Props,
   ...children: Array<Renderable>
 ): HTMLElement => {
-  props = { ...(props || {}) };
-  const style = props.style;
-  delete props.style;
+  const nativeProps = { ...(props || {}) };
+  const style = nativeProps.style;
+  delete nativeProps.style;
 
   let el: HTMLElement;
   if (typeof type === "string") {
     el = document.createElement(type);
-    Object.assign(el, props);
+    Object.assign(el, nativeProps);
     el.appendChild(renderChild(children));
   } else {
     let name = namesByComponent.get(type);
@@ -56,8 +56,21 @@ export const createElement = (
 
       componentsByName.set(name, type);
       namesByComponent.set(type, name);
+
+      type.style = { gridArea: name, ...type.style };
+
+      if (type.style) {
+        const el = document.querySelector("style")!;
+        const sheet: CSSStyleSheet = el.sheet as any;
+        const i = sheet.insertRule(`.${name}{}`, sheet.rules.length);
+        Object.assign(sheet.rules[i].style, type.style);
+        // HACK: these changes will work but will be confusingly invisible in the DOM so we write them back:
+        el.textContent = Array.from(sheet.rules)
+          .map(r => r.cssText)
+          .join("\n");
+      }
     }
-    el = type(Object.assign(props, { children }));
+    el = type(Object.assign(nativeProps, { children }));
     if (type.name) {
       el.classList.add(name);
     }
@@ -68,6 +81,19 @@ export const createElement = (
   }
 
   return el;
+};
+
+export const fragment = (
+  ...fragments: Array<DocumentFragment | Element>
+): DocumentFragment | Element => {
+  if (fragments.length === 1) {
+    return fragments[0];
+  }
+  const result = document.createDocumentFragment();
+  for (const fragment of fragments) {
+    result.appendChild(fragment);
+  }
+  return result;
 };
 
 Object.assign(window, {

@@ -58,7 +58,7 @@ class Spider {
       await this.loadSkuList(2001);
       await this.loadSkuList(45);
       await this.loadSkuList(6);
-      throw "TODO: remove me";
+      throw new Error("TODO: remove me");
     }
 
     await this.loadSkuList(3);
