@@ -33,7 +33,6 @@ import { spider } from "./foreground/spider.js";
 
   document.body.appendChild(<Home games={games} />);
 })();
-l;
 
 const Home = ({ games }: { games: Array<any> }) => (
   <main

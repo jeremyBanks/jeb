@@ -48,6 +48,12 @@ export const createElement = (
         name = ownName + count;
       }
 
+      if (type.name && count > 1) {
+        console.warn(
+          `Multiple (${count}) components named ${type.name} in use.`,
+        );
+      }
+
       componentsByName.set(name, type);
       namesByComponent.set(type, name);
     }
