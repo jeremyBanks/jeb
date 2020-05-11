@@ -34,6 +34,8 @@ export const main = async () => {
   document.body.appendChild(<Home games={games} />);
 };
 
+main().catch(error => console.error("Fatal error in main():", error));
+
 const Home = ({ games }: { games: Array<any> }) => (
   <main
     style={{
@@ -52,7 +54,7 @@ const Home = ({ games }: { games: Array<any> }) => (
       <button onclick={spider}>🕷️ Spider Stadia Store</button>
     )}
 
-    <section className="gameList">
+    <section>
       {games.map(game => (
         <Game {...game} />
       ))}
