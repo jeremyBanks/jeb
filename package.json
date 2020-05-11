@@ -7,6 +7,7 @@
     "@typescript-eslint/eslint-plugin": "^2.32.0",
     "@typescript-eslint/parser": "^2.32.0",
     "eslint": "^7.0.0",
+    "eslint-plugin-import": "^2.20.2",
     "import-sort-cli": "^6.0.0",
     "prettier": "v2.0.5",
     "replace-in-files-cli": "v0.3.1",
@@ -18,16 +19,27 @@
     "node": "v14.2.0"
   },
   "eslintConfig": {
+    "env": {
+      "browser": true,
+      "es2020": true,
+      "webextensions": true
+    },
     "extends": [
       "eslint:recommended",
       "plugin:@typescript-eslint/eslint-recommended",
-      "plugin:@typescript-eslint/recommended"
+      "plugin:@typescript-eslint/recommended",
+      "plugin:import/typescript"
     ],
     "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "project": "./tsconfig.json"
+    },
     "plugins": [
-      "@typescript-eslint"
+      "@typescript-eslint",
+      "eslint-plugin-import"
     ],
     "rules": {
+      "@typescript-eslint/no-floating-promises": "error",
       "eqeqeq": [
         "warn",
         "always",
@@ -35,6 +47,7 @@
           "null": "ignore"
         }
       ],
+      "import/no-internal-modules": "error",
       "no-throw-literal": "warn",
       "prefer-promise-reject-errors": "warn",
       "require-atomic-updates": "warn",

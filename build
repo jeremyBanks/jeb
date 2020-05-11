@@ -4,16 +4,30 @@ shopt -s globstar nullglob;
 cd "$(dirname "${BASH_SOURCE}")";
 
 if [ -z "${npm_package_name:-}" ]; then
+    printf "\n🔹 Initializing Node/Yarn environment...\n";
+
     if [ -e "${HOME}/.nvm/nvm.sh" ]; then
+        printf "\n🔹 Verifying Node version...\n";
+
         source "${HOME}/.nvm/nvm.sh";
-        nvm use default || (nvm install stable && nvm use stable);
+        if [ -z "$(nvm which default)" ]; then
+            nvm install stable;
+            nvm use stable;
+        else
+            nvm use default;
+        fi
         node_version="$(node -p 'require("./package.json").engines.node')";
         nvm install "${node_version}";
         nvm use "${node_version}";
         npm install -g yarn;
+    else
+        printf "⚠️ NVM not found.\n";
     fi
 
+    printf "\n🔹 Installing Yarn dependencies...\n";
     yarn install;
+
+    printf "\n🔹 Continuing in Yarn enivornment...\n";
     exec yarn build "$@";
 fi
 
@@ -22,6 +36,7 @@ dist="./docs";
 sync;
 
 if [ -e "./build.pid" ]; then
+    printf "🔸 Interrupting existing build...\n";
     killtree() {
         # from https://stackoverflow.com/a/3211182/1114
         local _pid="$1";
@@ -36,44 +51,52 @@ if [ -e "./build.pid" ]; then
     printf "$BASHPID" > "./build.pid";
     sync;
     for n in {4..1}; do
-        printf '\n%.0s' {1..12};
-        printf "🛑 Interrupted existing build. Debouncing for ${n}s... ";
+        printf "\n🔸 Interrupted existing build. Debouncing for ${n}s...\n";
         sleep 1;
     done
-    printf "👍 Restarting build.\n"
+    printf "\n🔸 Restarting build.\n"
 else
     printf "$BASHPID" > "./build.pid";
 fi
 
 sync;
 
-set -v;
-
-rm -rf "${dist}"/*;
-
+printf "\n🔹 Pre-build formatting and version updates...\n";
 import-sort --write "./src/"**/*"."{"j","t"}"s"{,"x"};
-
 node_version="$(node --version)";
 replace-in-files --regex='"version"\s*:\s*"(.*?)"' --replacement='"version": "'"$(date --utc "+%Y.%-m.%-d")"'"' "./package.json" "./src/manifest.json";
 replace-in-files --regex='"version_name"\s*:\s*"(.*?)"' --replacement='"version_name": "'"$(date --utc "+%Y-%m-%d")"'"' "./src/manifest.json";
 replace-in-files --regex='"node"\s*:\s*"(.*?)"' --replacement='"node": "'"${node_version}"'"' "./package.json";
 replace-in-files --regex='"node_version"\s*:\s*"(.*?)"' --replacement='"node_version": "'"${node_version}"'"' "./.github/workflows/build.yml";
 
+printf "\n🔹 Clearing previous build...\n";
+rm -rf "${dist}"/*;
+
+printf "\n🔹 Copying static files...\n";
+
 cp -r "./src/"* "./data/"* "./static/"* "${dist}/";
 cp "./node_modules/webextension-polyfill/dist/browser-polyfill.js"{"",".map"} "${dist}/";
 replace-in-files --regex='\s*//#\s*sourceMappingURL=[^\n]+\.map\s*$' --replacement '' "${dist}/browser-polyfill.js";
 cp "./src/index.html" "${dist}/.htm";
 
-tsc || printf "\n⚠️ TypeScript is confused. 😟\n\n";
+printf "\n🔹 Compiling TypeScript...\n";
+
+tsc || printf "\n⚠️ TypeScript is confused. 😟\n";
+
+printf "\n🔹 Post-build formatting...\n";
 
 sort-json "./"*".json" {"./src","./docs","./data","./.vscode","./.github"}"/"**/*"."{"json","yml","yaml"};
 prettier --write "./"*".json" "./data/" "./.vscode/" "./.github/" "./src/" "${dist}";
 
+printf "\n🔹 Marking build as complete for auto-reloading...\n";
+
 date -u +%s > "${dist}/last-build-timestamp.json";
 
-web-ext lint -s "${dist}" || printf "\n⚠️ Firefox is confused. 🦊\n\n";
-eslint --fix-dry-run src || printf "\n⚠️ ESLint is confused. 🤖\n\n";
+printf "\n🔹 Post-build linting...\n";
+
+web-ext lint -s "${dist}" || printf "\n⚠️ Firefox is confused. 🦊\n";
+eslint --fix-dry-run src || printf "\n⚠️ ESLint is confused. 🐭\n";
 
 rm "./build.pid";
 
-printf "\n\n\n\n\n\n\n\n\n\n\n\n✔️ Build complete. ";
+printf "\n✔️ Build complete. ";

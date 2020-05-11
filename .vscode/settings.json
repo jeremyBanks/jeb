@@ -22,6 +22,7 @@
     "upsert",
     "webext",
     "webextension",
+    "webextensions",
     "woff"
   ],
   "editor.cursorSmoothCaretAnimation": true,
