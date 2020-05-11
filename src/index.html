@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <meta charset="utf-8" />
 <script type="module" src="/browser-polyfill.js"></script>
-<script type="module" src="/index.js"></script>
+<script type="module" src="/foreground.js"></script>
 <style>
   html,
   body,
@@ -23,27 +23,27 @@
     font-family: "JetBrains Mono";
     font-weight: normal;
     src: url("/JetBrainsMono-Regular.woff2") format("woff2");
-    font-display: optional;
+    font-display: fallback;
   }
 
   @font-face {
     font-family: "JetBrains Mono";
     font-weight: bold;
     src: url("/JetBrainsMono-Bold.woff2") format("woff2");
-    font-display: optional;
+    font-display: fallback;
   }
 
   @font-face {
     font-family: "Fira Sans";
     font-weight: normal;
     src: url("/FiraSans-Regular.woff2") format("woff2");
-    font-display: optional;
+    font-display: fallback;
   }
 
   @font-face {
     font-family: "Fira Sans";
     font-weight: bold;
     src: url("/FiraSans-Bold.woff2") format("woff2");
-    font-display: optional;
+    font-display: fallback;
   }
 </style>

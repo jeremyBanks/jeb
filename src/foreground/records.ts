@@ -3,5 +3,5 @@ export const sorted = <T extends Record<string, any>>(record: T): T =>
   Object.fromEntries(
     Object.keys(record)
       .sort()
-      .map((key) => [key, record[key]])
+      .map(key => [key, record[key]]),
   );

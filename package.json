@@ -16,13 +16,27 @@
     "node": "v14.2.0"
   },
   "name": "stadia.observer",
+  "prettier": {
+    "arrowParens": "avoid",
+    "overrides": [
+      {
+        "files": [
+          "*.yml",
+          "*.yaml"
+        ],
+        "options": {
+          "parser": "json"
+        }
+      }
+    ],
+    "trailingComma": "all"
+  },
   "private": true,
   "resolutions": {
     "web-ext/**/shelljs": ">=0.8.4"
   },
   "scripts": {
     "build": "./build",
-    "fox": "yarn build && web-ext run --firefox-profile=stadia.observer",
     "vendor": "git rm -rf node_modules; NODE_ENV=production yarn install; git add -f node_modules/*; NODE_ENV=development yarn install"
   },
   "type": "module",

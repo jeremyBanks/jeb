@@ -20,7 +20,7 @@ export class DataStore {
     const existingSchema = (await browser.storage.local.get("schema")).schema;
     if (schema !== existingSchema) {
       console.info(
-        `Resetting extension storage (data schema was ${existingSchema} but we need ${schema}).`
+        `Resetting extension storage (data schema was ${existingSchema} but we need ${schema}).`,
       );
       await browser.storage.local.clear();
       await browser.storage.local.set({ schema });
@@ -65,7 +65,7 @@ export class DataStore {
           "to",
           previous,
           "producing",
-          existing
+          existing,
         );
         Object.assign(existing, sku);
       }

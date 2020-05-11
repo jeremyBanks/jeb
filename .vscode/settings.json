@@ -1,21 +1,22 @@
 {
   "cSpell.words": [
-    "Blackwater",
-    "GYLT",
-    "Rockstar",
-    "SHODOWN",
-    "Stadia's",
+    "Parens",
+    "blackwater",
     "esnext",
     "gameplay",
+    "gylt",
     "illufinch",
     "khtml",
     "playstyle",
     "plnadnblnocgoficdcgbbdmcnciagojj",
     "printf",
     "renderable",
+    "rockstar",
+    "shodown",
     "skus",
     "spidered",
     "spidering",
+    "stadia's",
     "stadiaobsobsobsobsobsobsobstadia",
     "upsert",
     "webext",
@@ -31,13 +32,13 @@
       {
         "cmd": "bash -c 'NODE_VERSION=stable ~/.nvm/nvm-exec yarn build'",
         "isAsync": true,
-        "match": ".*zzzzzzzzzzzzdisabled"
+        "match": ".*"
       }
     ]
   },
   "explorer.incrementalNaming": "smart",
   "explorer.sortOrder": "mixed",
-  "files.autoSave": "afterDelay",
+  "files.autoSave": "onFocusChange",
   "files.autoSaveDelay": 4000,
   "files.defaultLanguage": " ${activeEditorLanguage}",
   "files.eol": "\n",

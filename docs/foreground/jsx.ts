@@ -25,17 +25,20 @@ export const createElement = (
   props: Record<string, any>,
   ...children: Array<Renderable>
 ): HTMLElement => {
-  const style = props.styles;
-  props = { ...props };
-  delete props.styles;
+  props = { ...(props || {}) };
+  const style = props.style;
+  delete props.style;
 
-  let el;
+  let el: HTMLElement;
   if (typeof type === "string") {
     el = document.createElement(type);
     Object.assign(el, props);
     el.appendChild(renderChild(children));
   } else {
     el = type(Object.assign(props, { children }));
+    if (type.name) {
+      el.classList.add("jsx" + type.name);
+    }
   }
 
   if (style) {

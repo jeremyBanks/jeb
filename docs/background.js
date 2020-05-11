@@ -1,5 +1,5 @@
 "use strict";
-browser.browserAction.onClicked.addListener(async (activeTab) => {
+browser.browserAction.onClicked.addListener(async activeTab => {
   const url = browser.runtime.getURL("./.htm");
   console.log({ activeTab });
   if (activeTab.url === url) {

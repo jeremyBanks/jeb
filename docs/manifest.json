@@ -16,7 +16,7 @@
   },
   "homepage_url": "https://stadia.observer/",
   "icons": {
-    "32": "illufinch-violetsky-edited.png",
+    "64": "illufinch-violetsky-edited.png",
     "128": "illufinch-violetsky-edited@2x.png"
   },
   "key": "stadiaobsobsobsobsobsobsobstadia",
@@ -30,6 +30,7 @@
     "identity",
     "identity.email",
     "storage",
+    "storage.sync",
     "tabs",
     "unlimitedStorage"
   ],

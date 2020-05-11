@@ -41,7 +41,7 @@
       // never actually need to be called, this allows the polyfill to be included
       // in Firefox nearly for free.
 
-      const wrapAPIs = (extensionAPIs) => {
+      const wrapAPIs = extensionAPIs => {
         // NOTE: apiMetadata is associated to the content of the api-metadata.json file
         // at build time by replacing the following "include" with the content of the
         // JSON file.
@@ -706,7 +706,7 @@
 
         if (Object.keys(apiMetadata).length === 0) {
           throw new Error(
-            "api-metadata.json has not been included in browser-polyfill"
+            "api-metadata.json has not been included in browser-polyfill",
           );
         }
         /**
@@ -742,7 +742,7 @@
          * @returns {boolean} True if the value is thenable.
          */
 
-        const isThenable = (value) => {
+        const isThenable = value => {
           return (
             value &&
             typeof value === "object" &&
@@ -792,7 +792,7 @@
           };
         };
 
-        const pluralizeArguments = (numArgs) =>
+        const pluralizeArguments = numArgs =>
           numArgs == 1 ? "argument" : "arguments";
         /**
          * Creates a wrapper function for a method with the given name and metadata.
@@ -822,16 +822,16 @@
             if (args.length < metadata.minArgs) {
               throw new Error(
                 `Expected at least ${metadata.minArgs} ${pluralizeArguments(
-                  metadata.minArgs
-                )} for ${name}(), got ${args.length}`
+                  metadata.minArgs,
+                )} for ${name}(), got ${args.length}`,
               );
             }
 
             if (args.length > metadata.maxArgs) {
               throw new Error(
                 `Expected at most ${metadata.maxArgs} ${pluralizeArguments(
-                  metadata.maxArgs
-                )} for ${name}(), got ${args.length}`
+                  metadata.maxArgs,
+                )} for ${name}(), got ${args.length}`,
               );
             }
 
@@ -848,14 +848,14 @@
                         resolve,
                         reject,
                       },
-                      metadata
-                    )
+                      metadata,
+                    ),
                   );
                 } catch (cbError) {
                   console.warn(
                     `${name} API method doesn't seem to support the callback parameter, ` +
                       "falling back to call it without a callback: ",
-                    cbError
+                    cbError,
                   );
                   target[name](...args); // Update the API method metadata, so that the next API calls will not try to
                   // use the unsupported callback anymore.
@@ -875,8 +875,8 @@
                       resolve,
                       reject,
                     },
-                    metadata
-                  )
+                    metadata,
+                  ),
                 );
               }
             });
@@ -911,7 +911,7 @@
         };
 
         let hasOwnProperty = Function.call.bind(
-          Object.prototype.hasOwnProperty
+          Object.prototype.hasOwnProperty,
         );
         /**
          * Wraps an object in a Proxy which intercepts and wraps certain methods
@@ -1054,7 +1054,7 @@
          * @returns {object}
          */
 
-        const wrapEvent = (wrapperMap) => ({
+        const wrapEvent = wrapperMap => ({
           addListener(target, listener, ...args) {
             target.addListener(wrapperMap.get(listener), ...args);
           },
@@ -1069,7 +1069,7 @@
         }); // Keep track if the deprecation warning has been logged at least once.
 
         let loggedSendResponseDeprecationWarning = false;
-        const onMessageWrappers = new DefaultWeakMap((listener) => {
+        const onMessageWrappers = new DefaultWeakMap(listener => {
           if (typeof listener !== "function") {
             return listener;
           }
@@ -1094,12 +1094,12 @@
           return function onMessage(message, sender, sendResponse) {
             let didCallSendResponse = false;
             let wrappedSendResponse;
-            let sendResponsePromise = new Promise((resolve) => {
+            let sendResponsePromise = new Promise(resolve => {
               wrappedSendResponse = function (response) {
                 if (!loggedSendResponseDeprecationWarning) {
                   console.warn(
                     SEND_RESPONSE_DEPRECATION_WARNING,
-                    new Error().stack
+                    new Error().stack,
                   );
                   loggedSendResponseDeprecationWarning = true;
                 }
@@ -1127,14 +1127,14 @@
             // to translate the message into a resolved promise or a rejected
             // promise).
 
-            const sendPromisedResult = (promise) => {
+            const sendPromisedResult = promise => {
               promise
                 .then(
-                  (msg) => {
+                  msg => {
                     // send the message value.
                     sendResponse(msg);
                   },
-                  (error) => {
+                  error => {
                     // Send a JSON representation of the error if the rejected value
                     // is an instance of error, or the object itself otherwise.
                     let message;
@@ -1153,9 +1153,9 @@
                       __mozWebExtensionPolyfillReject__: true,
                       message,
                     });
-                  }
+                  },
                 )
-                .catch((err) => {
+                .catch(err => {
                   // Print an error on the console if unable to send the response.
                   console.error("Failed to send onMessage rejected reply", err);
                 });
@@ -1204,16 +1204,16 @@
           if (args.length < metadata.minArgs) {
             throw new Error(
               `Expected at least ${metadata.minArgs} ${pluralizeArguments(
-                metadata.minArgs
-              )} for ${name}(), got ${args.length}`
+                metadata.minArgs,
+              )} for ${name}(), got ${args.length}`,
             );
           }
 
           if (args.length > metadata.maxArgs) {
             throw new Error(
               `Expected at most ${metadata.maxArgs} ${pluralizeArguments(
-                metadata.maxArgs
-              )} for ${name}(), got ${args.length}`
+                metadata.maxArgs,
+              )} for ${name}(), got ${args.length}`,
             );
           }
 
@@ -1278,7 +1278,7 @@
         !chrome.runtime.id
       ) {
         throw new Error(
-          "This script should only be loaded in a browser extension."
+          "This script should only be loaded in a browser extension.",
         );
       } // The build process adds a UMD wrapper around this file, which makes the
       // `module` variable available.
@@ -1287,5 +1287,5 @@
     } else {
       module.exports = browser;
     }
-  }
+  },
 );

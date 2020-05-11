@@ -11,13 +11,8 @@
   },
   "content_security_policy": "script-src 'self' chrome-extension://plnadnblnocgoficdcgbbdmcnciagojj https://stadia.observer https://stadia.google.com; object-src 'self'",
   "externally_connectable": {
-    "ids": [
-      "*"
-    ],
-    "matches": [
-      "https://stadia.google.com/*",
-      "https://stadia.observer/*"
-    ]
+    "ids": ["*"],
+    "matches": ["https://stadia.google.com/*", "https://stadia.observer/*"]
   },
   "homepage_url": "https://stadia.observer/",
   "icons": {
@@ -35,6 +30,7 @@
     "identity",
     "identity.email",
     "storage",
+    "storage.sync",
     "tabs",
     "unlimitedStorage"
   ],
