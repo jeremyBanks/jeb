@@ -5,8 +5,8 @@ export const flag = (countryCode?: string): JSX.Renderable => {
 
   const letters = countryCode.toLowerCase().replace(/[^a-z]/g, "");
   let flag = "";
-  let indicatorA = 0x1f1e6;
-  let letterA = "a".codePointAt(0)!;
+  const indicatorA = 0x1f1e6;
+  const letterA = "a".codePointAt(0)!;
   for (const letter of letters) {
     flag += String.fromCodePoint(letter.codePointAt(0)! - letterA + indicatorA);
   }

@@ -32,21 +32,21 @@ export class Prices {
     let countryCode: string & { length: 2 } = "??" as any;
     let currencyCode: string & { length: 3 } = "???" as any;
     let proPriceCents = null;
-    let proSalePriceCents = null;
+    const proSalePriceCents = null;
     let basePriceCents = null;
-    let baseSalePriceCents = null;
+    const baseSalePriceCents = null;
     const priceScale = 10_000;
     for (const priceData of data) {
       if (priceData[3]) countryCode = priceData[3];
       if (priceData[4]) currencyCode = priceData[4];
 
-      let _timeSpan = [priceData[11], priceData[12]];
+      const _timeSpan = [priceData[11], priceData[12]];
 
-      let potentialBasePrice = priceData[6]?.[0]?.[0]
+      const potentialBasePrice = priceData[6]?.[0]?.[0]
         ? priceData[6][0][0] / priceScale
         : null;
 
-      let potentialProPrice = priceData[6]?.[2]?.[0]?.[2]?.[0]
+      const potentialProPrice = priceData[6]?.[2]?.[0]?.[2]?.[0]
         ? priceData[6][2][0][2][0] / priceScale
         : null;
 

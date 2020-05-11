@@ -4,6 +4,8 @@
   },
   "devDependencies": {
     "@types/firefox-webext-browser": "v70.0.1",
+    "@typescript-eslint/eslint-plugin": "^2.32.0",
+    "@typescript-eslint/parser": "^2.32.0",
     "eslint": "^7.0.0",
     "import-sort-cli": "^6.0.0",
     "prettier": "v2.0.5",
@@ -15,6 +17,33 @@
   "engines": {
     "node": "v14.2.0"
   },
+  "eslintConfig": {
+    "extends": [
+      "eslint:recommended",
+      "plugin:@typescript-eslint/eslint-recommended",
+      "plugin:@typescript-eslint/recommended"
+    ],
+    "parser": "@typescript-eslint/parser",
+    "plugins": [
+      "@typescript-eslint"
+    ],
+    "rules": {
+      "eqeqeq": [
+        "warn",
+        "always",
+        {
+          "null": "ignore"
+        }
+      ],
+      "no-throw-literal": "warn",
+      "prefer-promise-reject-errors": "warn",
+      "require-atomic-updates": "warn",
+      "require-unicode-regexp": "warn"
+    }
+  },
+  "eslintIgnore": [
+    "docs"
+  ],
   "name": "stadia.observer",
   "prettier": {
     "arrowParens": "avoid",
@@ -40,5 +69,5 @@
     "vendor": "git rm -rf node_modules; NODE_ENV=production yarn install; git add -f node_modules/*; NODE_ENV=development yarn install"
   },
   "type": "module",
-  "version": "2020.5.11"
+  "version": "2020.5.12"
 }

@@ -47,7 +47,7 @@ fi
 
 sync;
 
-set -x;
+set -v;
 
 rm -rf "${dist}"/*;
 
@@ -65,12 +65,14 @@ replace-in-files --regex='\s*//#\s*sourceMappingURL=[^\n]+\.map\s*$' --replaceme
 cp "./src/index.html" "${dist}/.htm";
 
 tsc || printf "\n⚠️ TypeScript is confused. 😟\n\n";
-web-ext lint -s "${dist}" || printf "\n⚠️ Firefox is confused. 🦊\n\n";
 
 sort-json "./"*".json" {"./src","./docs","./data","./.vscode","./.github"}"/"**/*"."{"json","yml","yaml"};
 prettier --write "./"*".json" "./data/" "./.vscode/" "./.github/" "./src/" "${dist}";
 
 date -u +%s > "${dist}/last-build-timestamp.json";
+
+web-ext lint -s "${dist}" || printf "\n⚠️ Firefox is confused. 🦊\n\n";
+eslint --fix-dry-run src || printf "\n⚠️ ESLint is confused. 🤖\n\n";
 
 rm "./build.pid";
 

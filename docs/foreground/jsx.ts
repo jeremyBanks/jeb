@@ -20,6 +20,8 @@ const renderChild = (content: Renderable): Node => {
   }
 };
 
+const componentsByName = new Map();
+const namesByComponent = new Map();
 export const createElement = (
   type: string | ((props: Record<string, Renderable>) => HTMLElement),
   props: Record<string, any>,
@@ -35,9 +37,23 @@ export const createElement = (
     Object.assign(el, props);
     el.appendChild(renderChild(children));
   } else {
+    let name = namesByComponent.get(type);
+    if (!name) {
+      const ownName = type.name || "_component";
+      let count = 1;
+      name = ownName;
+
+      while (componentsByName.has(name)) {
+        count += 1;
+        name = ownName + count;
+      }
+
+      componentsByName.set(name, type);
+      namesByComponent.set(type, name);
+    }
     el = type(Object.assign(props, { children }));
     if (type.name) {
-      el.classList.add("jsx" + type.name);
+      el.classList.add(name);
     }
   }
 

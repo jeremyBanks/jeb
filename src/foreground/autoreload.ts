@@ -20,7 +20,7 @@
     try {
       currentTimestamp = await (await fetch(buildTimestampPath)).json();
     } catch (error) {
-      if (previousTimestamp || true) {
+      if (previousTimestamp) {
         console.debug(
           "Failed to load build timestamp file; a new build may be in progress.",
           error,
