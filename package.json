@@ -8,6 +8,7 @@
     "@typescript-eslint/parser": "^2.32.0",
     "eslint": "^7.0.0",
     "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-react": "^7.19.0",
     "import-sort-cli": "^6.0.0",
     "prettier": "v2.0.5",
     "replace-in-files-cli": "v0.3.1",
@@ -37,22 +38,24 @@
     },
     "plugins": [
       "@typescript-eslint",
-      "eslint-plugin-import"
+      "eslint-plugin-import",
+      "react"
     ],
     "rules": {
       "@typescript-eslint/no-floating-promises": "error",
       "eqeqeq": [
-        "warn",
+        "error",
         "always",
         {
           "null": "ignore"
         }
       ],
       "import/no-internal-modules": "error",
-      "no-throw-literal": "warn",
-      "prefer-promise-reject-errors": "warn",
-      "require-atomic-updates": "warn",
-      "require-unicode-regexp": "warn"
+      "no-throw-literal": "error",
+      "prefer-promise-reject-errors": "error",
+      "react/jsx-uses-vars": "error",
+      "require-atomic-updates": "error",
+      "require-unicode-regexp": "error"
     }
   },
   "eslintIgnore": [

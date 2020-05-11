@@ -4,7 +4,7 @@ import "./foreground/jsx.js";
 import { Prices } from "./foreground/data/models.js";
 import { spider } from "./foreground/spider.js";
 
-(async () => {
+export const main = async () => {
   document.title = "stadia.observer";
   document.head.appendChild(
     Object.assign(document.createElement("link"), {
@@ -32,7 +32,7 @@ import { spider } from "./foreground/spider.js";
     );
 
   document.body.appendChild(<Home games={games} />);
-})();
+};
 
 const Home = ({ games }: { games: Array<any> }) => (
   <main
