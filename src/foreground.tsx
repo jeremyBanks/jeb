@@ -5,7 +5,6 @@ import * as models from "./foreground/data/models.js";
 import * as views from "./foreground/views.js";
 
 import { fragment } from "./foreground/jsx.js";
-import { spider } from "./foreground/spider.js";
 
 export const main = async () => {
   document.head.appendChild(
@@ -14,14 +13,6 @@ export const main = async () => {
       <link rel="icon" href="/illufinch-violetsky-edited@2x.png" />,
     ),
   );
-
-  if (browser?.runtime?.id) {
-    document.body.appendChild(
-      <button onclick={spider} style={{ cursor: "pointer" }}>
-        🕷️ Spider Stadia Store
-      </button>,
-    );
-  }
 
   // TODO: associate prototypes, these are plain Objects.
   const skus: Array<models.Sku> = Object.values(

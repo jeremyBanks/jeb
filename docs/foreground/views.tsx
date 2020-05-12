@@ -1,11 +1,22 @@
 import * as models from "./data/models.js";
 
+import { spider } from "./spider.js";
+
 export const Home: JSX.FC<{ skus: Array<models.Sku> }> = ({ skus }) => (
   <main>
-    <h1>stadia.observer</h1>
-
-    <hr />
-
+    {browser?.runtime?.id && (
+      <button
+        onclick={spider}
+        style={{
+          cursor: "pointer",
+          position: "absolute",
+          right: "16px",
+          top: "16px",
+        }}
+      >
+        🕷️ Spider Stadia Store
+      </button>
+    )}
     <SkuList>
       {skus.map(sku => (
         <Sku {...sku} />
@@ -18,7 +29,7 @@ Home.style = {
   display: "block",
   fontSize: "14px",
   maxWidth: "800px",
-  margin: "8px 16px",
+  margin: "16px",
   backgroundImage: "url(/illufinch-violetsky-edited@2x.png)",
   backgroundPosition: "top 16px right 16px",
   backgroundRepeat: "no-repeat",
@@ -54,8 +65,6 @@ const Title: JSX.FC<{ name: string }> = ({ name }) => <h2>{name}</h2>;
 Title.style = {
   display: "block",
   gridColumn: "Title",
-  marginTop: "32px",
-  marginBottom: "4px",
 };
 
 const Description: JSX.FC<{ body: string }> = ({ body }) => <p>{body}</p>;
@@ -63,6 +72,10 @@ const Description: JSX.FC<{ body: string }> = ({ body }) => <p>{body}</p>;
 Description.style = {
   display: "block",
   gridColumn: "Description",
+  marginBottom: "32px",
+  marginTop: "4px",
+  padding: "8px",
+  paddingRight: "32px",
 };
 
 const Links: JSX.FC<{ sku: models.Sku }> = ({ sku: { type, app, sku } }) => (
@@ -90,4 +103,6 @@ const Prices: JSX.FC<{ sku: models.Sku }> = ({ sku: { prices } }) => (
 Prices.style = {
   display: "block",
   gridColumn: "Prices",
+  fontFamily: "JetBrains Mono, monospace",
+  textAlign: "right",
 };
