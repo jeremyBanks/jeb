@@ -10,13 +10,13 @@ export const localKey = (sku: Sku | CommonSku) => {
   const typeTag =
     ({ game: "g", addon: "o", bundle: "x", subscription: "c" } as any)[
       sku.type
-    ] ?? `?${sku.type}?`;
-  const idsPrefix = sku.app.slice(0, 6) + sku.sku.slice(0, 2);
+    ] ?? `?`;
+  const idsPrefix = sku.app.slice(0, 6) + typeTag + sku.sku.slice(0, 2);
   const idsRest = sku.app.slice(6) + sku.sku.slice(2);
 
   let name = (sku.name + sku.internalSlug)
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "");
+    .replace(/[^a-z0-9]+/gu, "");
 
   if (name.length > maxNameLength) {
     const letterCounts: Record<string, number> = {};
@@ -39,5 +39,5 @@ export const localKey = (sku: Sku | CommonSku) => {
     }
   }
 
-  return (typeTag + idsPrefix + name + idsRest).slice(0, length);
+  return (idsPrefix + name + idsRest).slice(0, length);
 };

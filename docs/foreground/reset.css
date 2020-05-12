@@ -4,8 +4,9 @@
   padding: 0;
 
   /* dev mode */
-  background: rgba(255, 255, 255, 0.35);
-  outline: 2px dashed rgba(50, 50, 255, 0.25);
+  background: rgba(255, 255, 255, 0.5);
+  outline: 3px double rgba(0, 64, 255, 0.5);
+  outline-offset: -1px;
 }
 
 html {
