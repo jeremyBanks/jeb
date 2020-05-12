@@ -1,4 +1,5 @@
 export type Renderable = JSX.Renderable;
+export type FC<Props> = JSX.FC<Props>;
 
 const renderChild = (content: Renderable): Node => {
   if (content === null || content === undefined) {
@@ -23,7 +24,7 @@ const renderChild = (content: Renderable): Node => {
 const componentsByName = new Map();
 const namesByComponent = new Map();
 export const createElement = <Props extends {} = {}>(
-  type: string | JSX.FC<Props>,
+  type: string | FC<Props>,
   props: Props,
   ...children: Array<Renderable>
 ): HTMLElement => {
@@ -39,7 +40,7 @@ export const createElement = <Props extends {} = {}>(
   } else {
     let name = namesByComponent.get(type);
     if (!name) {
-      const ownName = type.name || "_component";
+      const ownName = type.name || "_";
       let count = 1;
       name = ownName;
 
@@ -57,12 +58,13 @@ export const createElement = <Props extends {} = {}>(
       componentsByName.set(name, type);
       namesByComponent.set(type, name);
 
-      type.style = { gridArea: name, ...type.style };
-
       if (type.style) {
         const el = document.querySelector("style")!;
         const sheet: CSSStyleSheet = el.sheet as any;
-        const i = sheet.insertRule(`.${name}{}`, sheet.rules.length);
+        const i = sheet.insertRule(
+          `body .${name}.Component {}`,
+          sheet.rules.length,
+        );
         Object.assign(sheet.rules[i].style, type.style);
         // HACK: these changes will work but will be confusingly invisible in the DOM so we write them back:
         el.textContent = Array.from(sheet.rules)
@@ -72,7 +74,7 @@ export const createElement = <Props extends {} = {}>(
     }
     el = type(Object.assign(nativeProps, { children }));
     if (type.name) {
-      el.classList.add(name);
+      el.classList.add(name, "Component");
     }
   }
 

@@ -1,5 +1,7 @@
 declare namespace JSX {
-  type FC<Props extends {} = {}> = ((props: Props) => HTMLElement) & {
+  type FC<Props extends {} = {}> = ((
+    props: Props & { children?: Array<Renderable> },
+  ) => HTMLElement) & {
     style?: Partial<CSSStyleDeclaration>;
   };
 

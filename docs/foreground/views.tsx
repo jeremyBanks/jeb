@@ -15,6 +15,7 @@ export const Home: JSX.FC<{ skus: Array<models.Sku> }> = ({ skus }) => (
 );
 
 Home.style = {
+  display: "block",
   fontSize: "14px",
   maxWidth: "800px",
   margin: "8px 16px",
@@ -28,6 +29,16 @@ const SkuList: JSX.FC<{ children: JSX.Renderable }> = ({ children }) => (
   <section>{children}</section>
 );
 
+SkuList.style = {
+  display: "grid",
+  gridAutoFlow: "dense row",
+  gridTemplateColumns: "auto 200px 100px",
+  gridTemplateAreas: `
+    "Title        Links        Prices       "
+    "Description  Description  Description  "
+  `,
+};
+
 const Sku: JSX.FC<models.Sku> = sku => (
   <section>
     <Title name={sku.name} />
@@ -37,18 +48,21 @@ const Sku: JSX.FC<models.Sku> = sku => (
   </section>
 );
 
-Sku.style = {
-  display: "grid",
-  gridTemplateColumns: `auto 200px 100px`,
-  gridTemplateAreas: `
-    "Title        Links        Prices       "
-    "Description  Description  Description  "
-  `,
-};
-
 const Title: JSX.FC<{ name: string }> = ({ name }) => <h2>{name}</h2>;
 
+Title.style = {
+  display: "block",
+  gridColumn: "Title",
+  gridAutoRows: "auto",
+};
+
 const Description: JSX.FC<{ body: string }> = ({ body }) => <p>{body}</p>;
+
+Description.style = {
+  display: "block",
+  gridColumn: "Description",
+  gridAutoRows: "auto",
+};
 
 const Links: JSX.FC<{ sku: models.Sku }> = ({ sku: { type, app, sku } }) => (
   <div>
@@ -63,6 +77,18 @@ const Links: JSX.FC<{ sku: models.Sku }> = ({ sku: { type, app, sku } }) => (
   </div>
 );
 
+Links.style = {
+  display: "block",
+  gridColumn: "Links",
+  gridAutoRows: "auto",
+};
+
 const Prices: JSX.FC<{ sku: models.Sku }> = ({ sku: { prices } }) => (
   <div>{models.Prices.prototype.render.call(prices)}</div>
 );
+
+Prices.style = {
+  display: "block",
+  gridColumn: "Prices",
+  gridAutoRows: "auto",
+};

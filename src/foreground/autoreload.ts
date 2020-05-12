@@ -40,7 +40,7 @@
     }
 
     // Build usually takes longer than this so we don't need to poll more often.
-    await new Promise(resolve => setTimeout(resolve, 8000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
     previousTimestamp = currentTimestamp;
   }
 })();
