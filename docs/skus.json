@@ -64,10 +64,10 @@
     "localKey": "g12034888samuraishodowntndrvegme",
     "name": "SAMURAI SHODOWN (Standard Ver.)",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -81,10 +81,10 @@
     "localKey": "g15a0677estacksonstackontackogme",
     "name": "Stacks On Stacks (On Stacks)",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 1699,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -98,10 +98,10 @@
     "localKey": "g18a3cc9agyltgame2bb111419c8ac87",
     "name": "GYLT",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 3999,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -158,10 +158,10 @@
     "localKey": "g42503ac8tombraiderdefintvon1500",
     "name": "Tomb Raider: Definitive Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 2699,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -217,6 +217,23 @@
       "proSalePriceCents": null
     },
     "sku": "3feef74cbacf4ba39b5d9087e0dfb9e4",
+    "type": "game"
+  },
+  "g5a0e89bcdoom64doom642c933c4f56b": {
+    "app": "5a0e892c933c4f56b4d87976cb655ecfrcp1",
+    "description": "Celebrate DOOM's 25th anniversary  with the release of DOOM 64, originally released on the Nintendo 64 in 1997, and now available for the first time on Stadia. Fight against demons in your crusade to hunt down the Mother of Demons and stop Hell's invasion. As you battle through more than 30 action-packed levels, be on the lookout for enhanced weapons and secrets to help you put an end to the demonic threat.",
+    "internalSlug": "DOOM64",
+    "localKey": "g5a0e89bcdoom64doom642c933c4f56b",
+    "name": "DOOM 64",
+    "prices": {
+      "basePriceCents": 699,
+      "baseSalePriceCents": null,
+      "countryCode": "CA",
+      "currencyCode": "CAD",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
+    "sku": "bcdca49dcac843f98ddb10e06ba83ee9",
     "type": "game"
   },
   "g63252217doometernaldmebattlemod": {
@@ -286,10 +303,10 @@
     "localKey": "g819cdff4steamworldheistgame4b7f",
     "name": "SteamWorld Heist",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 2299,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -320,10 +337,10 @@
     "localKey": "g879d828cmetroexodusmetroexodus5",
     "name": "Metro Exodus",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 5399,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -371,10 +388,10 @@
     "localKey": "g921e9af1spitlings5f4901cea8bd3j",
     "name": "Spitlings",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 1899,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -422,10 +439,10 @@
     "localKey": "ga4476216finalfantasyxv151000002",
     "name": "FINAL FANTASY XV",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 5399,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -439,10 +456,10 @@
     "localKey": "ga4c5eb71playerunknowsbattlegd01",
     "name": "PLAYERUNKNOWN'S BATTLEGROUNDS",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 2999,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -456,10 +473,10 @@
     "localKey": "gb8328390steamworlddig2game51821",
     "name": "SteamWorld Dig 2",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 2299,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -473,10 +490,10 @@
     "localKey": "gb84560a1steamworldquesthandfgic",
     "name": "SteamWorld Quest: Hand of Gilgamech",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 2899,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -507,10 +524,10 @@
     "localKey": "gc121d86ethumperthumperb3fa744b5",
     "name": "Thumper",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 2699,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -541,10 +558,10 @@
     "localKey": "gca805d75gridgridstandardedition",
     "name": "GRID",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 5299,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -558,10 +575,10 @@
     "localKey": "gcabec545serioussamcollectiongam",
     "name": "Serious Sam Collection",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 2999,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -573,12 +590,12 @@
     "description": "Hitler’s hordes are back for more in this spine-chilling shooter! Occult enemies, epic weapons and a new campaign for 1-4 players await, as you fight to save humankind from undead Armageddon!",
     "internalSlug": "ZombieArmy4",
     "localKey": "gcba537a7zombiearmy4deadwrzobiy4",
-    "name": "Zombie Army 4: Dead War",
+    "name": "Zombie Army 4: Dead War ",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 6699,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -609,10 +626,10 @@
     "localKey": "gcfd297e8theturingtestgame7e1b9f",
     "name": "The Turing Test",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 2699,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -643,10 +660,10 @@
     "localKey": "gd43cd4bethedivision2standareogm",
     "name": "The Division 2 - Standard Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 3999,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -677,10 +694,10 @@
     "localKey": "gda94f38dkinekinegameaa88b24eb6a",
     "name": "Kine",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 2599,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -711,10 +728,10 @@
     "localKey": "ge5c6ecf5riseofthetombad20ycln15",
     "name": "Rise of the Tomb Raider: 20 Year Celebration",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 3999,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -728,10 +745,10 @@
     "localKey": "gebf235c5farmingsimulator19fs190",
     "name": "Farming Simulator 19",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 5399,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -1153,10 +1170,10 @@
     "localKey": "oa4c5ebb5pubgbadlandsleisuretpgk",
     "name": "PUBG - BADLANDS LEISURE SET",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 499,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -1326,10 +1343,10 @@
     "localKey": "oca805d42gridultimateupgradeglmp",
     "name": "GRID Ultimate Upgrade",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 3299,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -1515,10 +1532,10 @@
     "localKey": "oebf2357cfarmingsulto19pexdc86b5",
     "name": "Farming Simulator 19 Platinum Expansion",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 2699,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -1640,6 +1657,14 @@
     "internalSlug": "20000001",
     "localKey": "x20e792bddestiny2thecollcion2001",
     "name": "Destiny 2: The Collection",
+    "prices": {
+      "basePriceCents": null,
+      "baseSalePriceCents": null,
+      "countryCode": "??",
+      "currencyCode": "???",
+      "proPriceCents": null,
+      "proSalePriceCents": null
+    },
     "sku": "bd70626ec3834dedbc6dda5b956f7648",
     "skus": [
       "4950959380034dcda0aecf98f675e11f",
@@ -1924,10 +1949,10 @@
     "localKey": "xa4c5ebbeplayerunknowsbattlegrdi",
     "name": "PlayerUnknown's Battlegrounds - Pioneer Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 3999,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -1998,10 +2023,10 @@
     "localKey": "xca805d4fgridultimateedongrulmao",
     "name": "GRID Ultimate Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 7999,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },
@@ -2153,10 +2178,10 @@
     "localKey": "xebf23502farmingsimulator19plted",
     "name": "Farming Simulator 19 Platinum Edition",
     "prices": {
-      "basePriceCents": null,
+      "basePriceCents": 6699,
       "baseSalePriceCents": null,
-      "countryCode": "??",
-      "currencyCode": "???",
+      "countryCode": "CA",
+      "currencyCode": "CAD",
       "proPriceCents": null,
       "proSalePriceCents": null
     },

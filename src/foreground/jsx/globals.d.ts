@@ -25,7 +25,7 @@ declare namespace JSX {
   interface IntrinsicElements {
     a: _Element<HTMLAnchorElement>;
     button: _Element<HTMLButtonElement>;
-    title: _Element<HTMLTitleElement>;
+    code: _Element;
     div: _Element<HTMLDivElement>;
     h1: _Element<HTMLHeadingElement>;
     h2: _Element<HTMLHeadingElement>;
@@ -38,8 +38,10 @@ declare namespace JSX {
     link: _Element<HTMLLinkElement>;
     main: _Element<HTMLElement>;
     p: _Element<HTMLParagraphElement>;
+    pre: _Element<HTMLPreElement>;
     section: _Element;
     span: _Element<HTMLSpanElement>;
+    title: _Element<HTMLTitleElement>;
   }
 
   // Properties that our renderer handles in a way inconsistent with the underlying HTML DOM interface.
