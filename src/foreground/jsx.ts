@@ -61,10 +61,7 @@ export const createElement = <Props extends {} = {}>(
       if (type.style) {
         const el = document.querySelector("style")!;
         const sheet: CSSStyleSheet = el.sheet as any;
-        const i = sheet.insertRule(
-          `body .${name}.Component {}`,
-          sheet.rules.length,
-        );
+        const i = sheet.insertRule(`.${name} {}`, sheet.rules.length);
         Object.assign(sheet.rules[i].style, type.style);
         // HACK: these changes will work but will be confusingly invisible in the DOM so we write them back:
         el.textContent = Array.from(sheet.rules)
@@ -73,8 +70,8 @@ export const createElement = <Props extends {} = {}>(
       }
     }
     el = type(Object.assign(nativeProps, { children }));
-    if (type.name) {
-      el.classList.add(name, "Component");
+    if (name) {
+      el.classList.add(name);
     }
   }
 

@@ -30,13 +30,14 @@ const SkuList: JSX.FC<{ children: JSX.Renderable }> = ({ children }) => (
 );
 
 SkuList.style = {
+  alignItems: "end",
   display: "grid",
   gridAutoFlow: "dense row",
-  gridTemplateColumns: "auto 200px 100px",
   gridTemplateAreas: `
-    "Title        Links        Prices       "
-    "Description  Description  Description  "
+    "  Title        Links        Prices       "
+    "  Description  Description  Description  "
   `,
+  gridTemplateColumns: "auto 200px 100px",
 };
 
 const Sku: JSX.FC<models.Sku> = sku => (
@@ -53,7 +54,8 @@ const Title: JSX.FC<{ name: string }> = ({ name }) => <h2>{name}</h2>;
 Title.style = {
   display: "block",
   gridColumn: "Title",
-  gridAutoRows: "auto",
+  marginTop: "32px",
+  marginBottom: "4px",
 };
 
 const Description: JSX.FC<{ body: string }> = ({ body }) => <p>{body}</p>;
@@ -61,18 +63,17 @@ const Description: JSX.FC<{ body: string }> = ({ body }) => <p>{body}</p>;
 Description.style = {
   display: "block",
   gridColumn: "Description",
-  gridAutoRows: "auto",
 };
 
 const Links: JSX.FC<{ sku: models.Sku }> = ({ sku: { type, app, sku } }) => (
   <div>
     {type === "game" ? (
       <span>
-        <a href={`http://stadia.google.com/player/${app}`}>launch game</a> or{" "}
+        <a href={`http://stadia.google.com/player/${app}`}>🎮 play</a> or{" "}
       </span>
     ) : null}
     <a href={`https://stadia.google.com/store/details/${app}/sku/${sku}`}>
-      view in store
+      🛒 shop
     </a>
   </div>
 );
@@ -80,7 +81,6 @@ const Links: JSX.FC<{ sku: models.Sku }> = ({ sku: { type, app, sku } }) => (
 Links.style = {
   display: "block",
   gridColumn: "Links",
-  gridAutoRows: "auto",
 };
 
 const Prices: JSX.FC<{ sku: models.Sku }> = ({ sku: { prices } }) => (
@@ -90,5 +90,4 @@ const Prices: JSX.FC<{ sku: models.Sku }> = ({ sku: { prices } }) => (
 Prices.style = {
   display: "block",
   gridColumn: "Prices",
-  gridAutoRows: "auto",
 };

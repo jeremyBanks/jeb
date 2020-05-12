@@ -3,13 +3,20 @@
 <script type="module" src="/browser-polyfill.js"></script>
 <script type="module" src="/foreground.js"></script>
 <style>
-  body * {
+  :not(button):not(input):not(head):not(html) {
     display: contents;
+    border: 0;
+    margin: 0;
+    padding: 0;
   }
 
-  body button,
-  body input {
-    display: block;
+  head {
+    display: none;
+  }
+
+  button,
+  input {
+    display: inline-block;
   }
 
   html,
