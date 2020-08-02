@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail;
 shopt -s globstar nullglob;
 cd "$(dirname "${BASH_SOURCE}")";
@@ -66,8 +66,8 @@ sync;
 printf "\n🔸 Pre-build formatting and version updates...\n";
 import-sort --write "./src/"**/*"."{"j","t"}"s"{,"x"};
 node_version="$(node --version)";
-replace-in-files --regex='"version"\s*:\s*"(.*?)"' --replacement='"version": "'"$(date --utc "+%Y.%-m.%-d")"'"' "./package.json" "./src/manifest.json";
-replace-in-files --regex='"version_name"\s*:\s*"(.*?)"' --replacement='"version_name": "'"$(date --utc "+%Y-%m-%d")"'"' "./src/manifest.json";
+replace-in-files --regex='"version"\s*:\s*"(.*?)"' --replacement='"version": "'"$(date "+%Y.%-m.%-d")"'"' "./package.json" "./src/manifest.json";
+replace-in-files --regex='"version_name"\s*:\s*"(.*?)"' --replacement='"version_name": "'"$(date "+%Y-%m-%d")"'"' "./src/manifest.json";
 replace-in-files --regex='"node"\s*:\s*"(.*?)"' --replacement='"node": "'"${node_version}"'"' "./package.json";
 replace-in-files --regex='"node_version"\s*:\s*"(.*?)"' --replacement='"node_version": "'"${node_version}"'"' "./.github/workflows/build.yml";
 

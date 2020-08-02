@@ -2,3 +2,4 @@ node_modules
 *.log
 build.pid
 docs/last-build-timestamp.json
+.DS_Store

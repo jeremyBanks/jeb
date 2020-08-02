@@ -49,7 +49,7 @@ class Spider {
   }
 
   private async spider() {
-    if (false) {
+    if (true) {
       await this.loadSkuDetails("59c8314ac82a456ba61d08988b15b550");
       await this.loadSkuDetails("b171fc78d4e1496d9536d585257a771e");
       await this.loadSkuDetails("4950959380034dcda0aecf98f675e11f");
@@ -58,7 +58,7 @@ class Spider {
       await this.loadSkuList(2001);
       await this.loadSkuList(45);
       await this.loadSkuList(6);
-      throw new Error("TODO: remove me");
+      // throw new Error("TODO: remove me");
     }
 
     await this.loadSkuList(3);
@@ -225,7 +225,7 @@ class Spider {
         ),
       )[0];
 
-    const dataCallbackPattern = /^ *AF_initDataCallback *\( *{ *key *: *'ds:([0-9]+?)' *,[^]*?data: *function *\( *\){ *return *([^]*)\s*}\s*}\s*\)\s*;?\s*$/;
+    const dataCallbackPattern = /^ *AF_initDataCallback *\( *{ *key *: *'ds:([0-9]+?)' *,[^]*?data: *([^]*)\s*}\s*\)\s*;?\s*$/;
     const dataServiceLoads: Array<any> = [];
     for (const matches of contents
       .map(s => s.match(dataCallbackPattern))
@@ -300,6 +300,8 @@ class Spider {
         }
       }
     }
+
+    console.log({ dataServiceRequests, preload, loaders, rpc });
 
     const data = Object.assign(
       Object.create({
