@@ -6,14 +6,10 @@ declare origin="$(git remote get-url origin)"
 declare branch="$(git rev-parse --abbrev-ref HEAD)"
 declare -a names=(stadia.red stadia.run)
 
+git pull --rebase
+
 for name in "${names[@]}"; do
   git subtree push -d --prefix="$name/" "${origin%/*}/$name.git" "$branch"
 done
 
 git push
-
-git pull
-
-for name in "${names[@]}"; do
-  git subtree pull -d --prefix="$name/" "${origin%/*}/$name.git" "$branch"
-done
