@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "alwaysStrict": true,
+    "inlineSourceMap": true,
+    "inlineSources": true,
+    "jsx": "react",
+    "jsxFactory": "JSX.createElement",
+    "module": "esnext",
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "outDir": "./docs",
+    "rootDir": "./src",
+    "sourceRoot": "./",
+    "strict": true,
+    "target": "esnext"
+  }
+}

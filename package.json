@@ -1,0 +1,88 @@
+{
+  "dependencies": {
+    "webextension-polyfill": "v0.6"
+  },
+  "devDependencies": {
+    "@types/firefox-webext-browser": "v70.0.1",
+    "@typescript-eslint/eslint-plugin": "^2.32.0",
+    "@typescript-eslint/parser": "^2.32.0",
+    "eslint": "^7.0.0",
+    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-react": "^7.19.0",
+    "import-sort-cli": "^6.0.0",
+    "prettier": "v2.0.5",
+    "replace-in-files-cli": "v0.3.1",
+    "sort-json": "v2",
+    "typescript": "v3.8.3",
+    "web-ext": "^4.2.0"
+  },
+  "engines": {
+    "node": "v14.7.0"
+  },
+  "eslintConfig": {
+    "env": {
+      "browser": true,
+      "es2020": true,
+      "webextensions": true
+    },
+    "extends": [
+      "plugin:import/typescript"
+    ],
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "ecmaVersion": 2020,
+      "project": "./tsconfig.json",
+      "sourceType": "module"
+    },
+    "plugins": [
+      "@typescript-eslint",
+      "eslint-plugin-import",
+      "react"
+    ],
+    "rules": {
+      "@typescript-eslint/no-floating-promises": "error",
+      "eqeqeq": [
+        "error",
+        "always",
+        {
+          "null": "ignore"
+        }
+      ],
+      "import/no-internal-modules": "error",
+      "no-throw-literal": "error",
+      "prefer-promise-reject-errors": "error",
+      "react/jsx-uses-vars": "error",
+      "require-atomic-updates": "error",
+      "require-unicode-regexp": "error"
+    }
+  },
+  "eslintIgnore": [
+    "docs"
+  ],
+  "name": "stadia.observer",
+  "prettier": {
+    "arrowParens": "avoid",
+    "overrides": [
+      {
+        "files": [
+          "*.yml",
+          "*.yaml"
+        ],
+        "options": {
+          "parser": "json"
+        }
+      }
+    ],
+    "trailingComma": "all"
+  },
+  "private": true,
+  "resolutions": {
+    "web-ext/**/shelljs": ">=0.8.4"
+  },
+  "scripts": {
+    "build": "./build",
+    "vendor": "git rm -rf node_modules; NODE_ENV=production yarn install; git add -f node_modules/*; NODE_ENV=development yarn install"
+  },
+  "type": "module",
+  "version": "2020.8.2"
+}

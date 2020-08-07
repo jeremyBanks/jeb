@@ -1,0 +1,5 @@
+- [ ] design a better layout
+- [ ] locate price data in every loaded view where it's available.
+- [ ] interpreting price data.
+- [ ] markdown descriptions of changes since last export.
+- [ ] serialization, reload data without losing types.

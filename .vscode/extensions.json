@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "eamodio.gitlens",
+    "emeraldwalk.runonsave",
+    "gruntfuggly.todo-tree",
+    "streetsidesoftware.code-spell-checker",
+    "tyriar.sort-lines",
+    "visualstudioexptteam.vscodeintellicode"
+  ]
+}
