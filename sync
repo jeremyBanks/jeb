@@ -104,7 +104,7 @@ shopt -s inherit_errexit nullglob compat"${BASH_COMPAT=42}"
 {
     declare origin="$(git remote get-url origin)"
     declare branch="$(git rev-parse --abbrev-ref HEAD)"
-    declare -a names=(stadia.red stadia.run)
+    declare -a names=(stadia.run)
 
     git pull --rebase
 

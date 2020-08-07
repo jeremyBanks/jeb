@@ -1,17 +1,39 @@
+type bool = boolean;
+type f64 = number;
+type u64 = bigint;
+const u64  = (i: bigint | string): u64 => {
+    const u = BigInt(i);
+    if (u < 0n || u > 0xFFFFFFFFFFFFFFFF) {
+        throw new TypeError(`u64 out of bounds: ${u}`);
+    }
+    return u;
+}
+u64.toBase64 = (i: bigint): string => "0";
+u64.tryFromBase64 = (s: string): u64 | undefined => 0n;
+u64.tryFromBase16 = (s: string): u64 | undefined => 0n;
+u64.tryFromBase10 = (s: string): u64 | undefined => 0n;
+u64.tryFrom = (s: string): u64 | undefined =>
+    u64.tryFromBase64(s) ??
+    u64.tryFromBase16(s) ??
+    u64.tryFromBase10(s);
+
+// youtube uses: -_
+// javascript uses: /+
+// does removing the padding allow some kind of collission?
 
 class Spidered {
     // the timestamp at which we first saw a reference to this record
-    firstRef: number | undefined = undefined
+    firstRef: f64 | undefined = undefined
     // the timestamp at which we first saw this record directly
-    firstLoaded: number | undefined = undefined
+    firstLoaded: f64 | undefined = undefined
     // the timestamp at which we first saw that this record was removed
-    firstGone: number | undefined = undefined
+    firstGone: f64 | undefined = undefined
     // the timestamp at which we most recently saw a reference to this record
-    lastRef: number | undefined = undefined
+    lastRef: f64 | undefined = undefined
     // the timestamp at which we we most recently saw this record directly
-    lastLoaded: number | undefined = undefined
+    lastLoaded: f64 | undefined = undefined
     // the timestamp at which we most recently saw that this record was removed
-    lastGone: number | undefined = undefined
+    lastGone: f64 | undefined = undefined
 
     listed() {
         if (this.lastGone === undefined) {
@@ -30,37 +52,37 @@ class Spidered {
     }
 
     markRef() {
-        const now = Date.now();
+        let now = Date.now();
         if (this.firstRef === undefined || this.firstRef > now) {
             this.firstRef = now;
         }
-        if (this.lastRef < now) {
+        if (this.lastRef === undefined || this.lastRef < now) {
             this.lastRef = now;
         }
     }
     
     markGone() {
-        const now = Date.now();
+        let now = Date.now();
         if (this.firstGone === undefined || this.firstGone > now) {
             this.firstGone = now;
         }
-        if (this.lastGone < now) {
+        if (this.lastGone === undefined || this.lastGone < now) {
             this.lastGone = now;
         }
     }
 
     load(source: Readonly<Partial<this>>) {
-        const now = Date.now();
+        let now = Date.now();
         if (this.firstLoaded === undefined || this.firstLoaded > now) {
             this.firstLoaded = now;
         }
-        if (this.lastLoaded < now) {
+        if (this.lastLoaded === undefined || this.lastLoaded < now) {
             this.lastLoaded = now;
         }
-        for (const key of Object.getOwnPropertyNames(source)) {
-            const value = source[key];
+        for (let key of Object.getOwnPropertyNames(source) as (keyof this)[]) {
+            let value = source[key];
             if (value !== undefined) {
-                this[key] = value;
+                this[key] = value as any;
             }
         }
     }
