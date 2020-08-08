@@ -31,7 +31,7 @@ if [ -z "${npm_package_name:-}" ]; then
     exec yarn build "$@";
 fi
 
-dist="./docs";
+dist="./dist";
 
 sync;
 
@@ -84,7 +84,7 @@ printf "\n🔸 Compiling TypeScript...\n";
 tsc || printf "\n⚠️ TypeScript is confused. 😟\n";
 
 printf "\n🔹 Post-build formatting...\n";
-sort-json "./"*".json" {"./src","./docs","./data","./.vscode","./.github"}"/"**/*"."{"json","yml","yaml"};
+sort-json "./"*".json" {"./src","./dist","./data","./.vscode","./.github"}"/"**/*"."{"json","yml","yaml"};
 prettier --write "./"*".json" "./data/" "./.vscode/" "./.github/" "./src/" "${dist}";
 
 printf "\n🔹 Marking build as complete for auto-reloading...\n";

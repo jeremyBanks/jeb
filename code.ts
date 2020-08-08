@@ -1,17 +1,20 @@
 type bool = boolean;
 type f64 = number;
 type u64 = bigint;
-const u64  = (i: bigint | string): u64 => {
-    const u = BigInt(i);
-    if (u < 0n || u > 0xFFFFFFFFFFFFFFFF) {
-        throw new TypeError(`u64 out of bounds: ${u}`);
+const u64  = (i: bigint): u64 => {
+    if (i < 0n || i > 0xFFFFFFFFFFFFFFFF) {
+        throw new TypeError(`u64 out of bounds: ${i}`);
     }
-    return u;
+    return i;
 }
 u64.toBase64 = (i: bigint): string => "0";
 u64.tryFromBase64 = (s: string): u64 | undefined => {
     if (s.length !== 11) {
         return undefined;
+    }
+    const byteChars = atob(s.replace(/\+/g, '-').replace(/\//g, '_'));
+    for (let i = 0; i < byteChars.length; i++) {
+        bytes[i] = byteChars.charCodeAt(i);
     }
 };
 u64.tryFromBase16 = (s: string): u64 | undefined => 0n;
