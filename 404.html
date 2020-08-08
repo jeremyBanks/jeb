@@ -1,14 +1,32 @@
-<!doctype html><html lang="en"><meta charset="utf-8">
+<!doctype html><html lang="en"><meta charset="utf-8"><body>
 
-<script type="application/json" id="games">{
-  "celeste": "c911998e4f8d4c6ea6712c5ad33e4a54rcp1",
-  "destiny2": "20e792017ab34ad89b70dc17a5c72d68rcp1"
+<script type="application/json" id="gamesData">{
+  "celeste": {
+    "id": "c911998e4f8d4c6ea6712c5ad33e4a54rcp1",
+    "id64": "wpPbNgFEetU",
+    "img": "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAMAAADz0U65AAAAAXNSR0IB2cksfwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAMBQTFRFOCMuRzYzUkdDZFtbkYF6a1lIWU07UUk2dWtwrJB3xZl0rm9akYd8YmBRVU45Yl9RfGZuimRpfm1gj3hki2tUSUk5UE8wWWRTdDs9Y1BMZWpbhoN5unZfbkIuQFQ+Vl5KZz46QEAxakk+l01CfJCPc09PQExRNUFFN1ddP1ZRaThJeENRXl9qO0VTSWdnMVVcKVNBP2VXPmBaVlJZf31zNVxdXXdoUHVtOGFlTXh9X4yGSGRlb3twS21pYYJ3lK6m1WucPgAAAFBJREFUeJxjYGBkYmZhZWNn4ODk4ubh5eNnEBAUEhYRFRNnkJCUkpaRlZNnUFBUUlZRVVNn0NDU0tbR1dNnMDA0MjYxNTNnsLC0sraxtbMHALv4B+FkcqP2AAAAAElFTkSuQmCC"
+  }
 }</script>
 
 <script>
-  var slugsToIds = JSON.parse(games.textContent);
-  var targetId = slugsToIds[document.location.pathname.toLowerCase().replace(/[^a-z]+/g, '')];
-  if (targetId) {
-    document.location = 'https://stadia.google.com/player/' + targetId;
+  var games = JSON.parse(gamesData.textContent);
+  var game = games[document.location.pathname.toLowerCase().replace(/[^a-z]+/g, "")] || games.celeste;
+  if (game) {
+    Object.assign(document.documentElement.style, {
+      position: "absolute",
+      width: "100%",
+      height: "100%",
+      transform: 'scale(1.25)',
+    });
+    Object.assign(document.body.style, {
+      position: "absolute",
+      margin: 0,
+      width: "100%",
+      height: "100%",
+      backgroundImage: "url(data:image/png;base64," + game.img + ")",
+      backgroundSize: "cover",
+      backdropFilter: "saturate(400%) blur(calc(max(12.5vw, 12.5vh))) brightness(100%)",
+    });
+    document.location = "https://stadia.google.com/player/" + game.id;
   }
 </script>
