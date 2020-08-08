@@ -9,13 +9,27 @@ const u64  = (i: bigint | string): u64 => {
     return u;
 }
 u64.toBase64 = (i: bigint): string => "0";
-u64.tryFromBase64 = (s: string): u64 | undefined => 0n;
+u64.tryFromBase64 = (s: string): u64 | undefined => {
+    if (s.length !== 11) {
+        return undefined;
+    }
+};
 u64.tryFromBase16 = (s: string): u64 | undefined => 0n;
-u64.tryFromBase10 = (s: string): u64 | undefined => 0n;
+u64.tryFromBase10 = (s: string): u64 | undefined => {
+    const u = BigInt(i);
+    if (u < 0n || u > 0xFFFFFFFFFFFFFFFF) {
+        throw new TypeError(`u64 out of bounds: ${u}`);
+    }
+    return u;
+};
 u64.tryFrom = (s: string): u64 | undefined =>
     u64.tryFromBase64(s) ??
     u64.tryFromBase16(s) ??
     u64.tryFromBase10(s);
+
+
+// ensure URLs are always their canonical representation
+// and that that is simple ascii
 
 // youtube uses: -_
 // javascript uses: /+
@@ -60,7 +74,7 @@ class Spidered {
             this.lastRef = now;
         }
     }
-    
+
     markGone() {
         let now = Date.now();
         if (this.firstGone === undefined || this.firstGone > now) {
@@ -95,4 +109,3 @@ class Player extends Spidered {
 class Game extends Spidered {
 
 }
-
