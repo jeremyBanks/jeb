@@ -106,7 +106,7 @@ shopt -s inherit_errexit nullglob compat"${BASH_COMPAT=42}"
     declare branch="$(git rev-parse --abbrev-ref HEAD)"
     declare -a names=(stadia.run)
 
-    git pull --rebase
+    git pull
 
     for name in "${names[@]}"; do
         git subtree push --prefix="$name/" "${origin%/*}/$name.git" "$branch"
