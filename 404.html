@@ -1,0 +1,13 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+
+<script>"use strict"; (function() {
+  var slugsToIds = {
+    "celeste": "c911998e4f8d4c6ea6712c5ad33e4a54rcp1",
+    "destiny-2": "20e792017ab34ad89b70dc17a5c72d68rcp1"
+  };
+  var targetId = slugsToIds[document.location.pathname.slice(0)];
+  if (targetId) {
+    document.location = 'https://stadia.google.com/player/' + targetId;
+  }
+}());
+</script>
