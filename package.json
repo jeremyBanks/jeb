@@ -57,9 +57,9 @@
     }
   },
   "eslintIgnore": [
-    "docs"
+    "dist"
   ],
-  "name": "stadia.observer",
+  "name": "stadian",
   "prettier": {
     "arrowParens": "avoid",
     "overrides": [

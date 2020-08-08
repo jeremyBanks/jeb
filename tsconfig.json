@@ -8,7 +8,7 @@
     "module": "esnext",
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
-    "outDir": "./docs",
+    "outDir": "./dist",
     "rootDir": "./src",
     "sourceRoot": "./",
     "strict": true,
