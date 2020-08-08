@@ -6,7 +6,7 @@
 }</script>
 
 <script>
-  var slugsToIds = eval(games.textContent);
+  var slugsToIds = eval('(' + games.textContent + ')');
   var targetId = slugsToIds[document.location.pathname.slice(1)];
   if (targetId) {
     document.location = 'https://stadia.google.com/player/' + targetId;
