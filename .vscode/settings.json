@@ -96,5 +96,6 @@
     "titleBar.border": "#d06050",
     "titleBar.inactiveBackground": "#d0605099",
     "titleBar.inactiveForeground": "#e7e7e799"
-  }
+  },
+  "typescript.tsdk": "node_modules/typescript/lib"
 }
