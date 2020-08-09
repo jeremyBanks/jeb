@@ -1,6 +1,11 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><body>
 
 <style>
+  * {
+    margin: 0;
+    padding: 0;
+  }
+
   html {
     background-color: #202124;
     color: #FFFFFF;
@@ -9,27 +14,23 @@
 
   nav {
     display: grid;
-  grid-auto-flow: row;
+    grid-template-columns: repeat(auto-fill, 256px);
+    grid-gap: 32px 8px;
+    margin: 32px 8px;
+    justify-content: space-around;
   }
 
   a {
     color: inherit;
     text-decoration: inherit;
-  grid-auto-flow: row;
     box-sizing: border-box;
     display: grid;
     height: 192px;
     width: 256px;
-    margin: 4px;
     border-radius: 16px;
     background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAMAAADz0U65AAAAAXNSR0IB2cksfwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAMBQTFRFqEqF23rcKU6LC1GLE1qNDVF6PJ+0n2mVo0qPsYHFNW2uPZHQQZTEGnmgS565nHCijlmcdYG0N5LGd7TbgbzXNqTCfK7BdWqhgoSeZ3GYapG5p83XstLYYarKT36wOj1qbVyBk4ejf2KHfXCBW4CcVHOHRZi9OEVjaElxelZxn2t9kX16UGJ+a1h0TWZ3TVF8b2KVsZeveFRjpZhuSF5wZExjknaQeo23o43LwqnQrpSku5aAqqKzd1532rnYdIOmX8eV2AAAAFBJREFUeJxjYGBkYmZhZWNn4ODk4ubh5eNnEBAUEhYRFRNnkJCUkpaRlZNnUFBUUlZRVVNn0NDU0tbR1dNnMDA0MjYxNTNnsLC0sraxtbMHALv4B+FkcqP2AAAAAElFTkSuQmCC);
     background-size: cover;
     overflow: hidden;
-  }
-
-  a:hover {
-    /* border: 4px solid white; */
-    box-shadow: 0 0 4px 0 white, inset 0 0 4px 0 white;
   }
 
   a > span {
@@ -40,11 +41,15 @@
     backdrop-filter: saturate(400%) blur(32px);
   }
 
+  a:hover > span {
+    backdrop-filter: contrast(400%) brightness(400%) saturate(400%) blur(42px);
+  }
+
   a > span > span {
     place-self: center;
     font-weight: bold;
     font-size: 48px;
-    text-shadow: 0 0 4px white;
+    text-shadow: 0 0 4px black;
   }
 </style>
 
