@@ -14,18 +14,21 @@
   if (game) {
     Object.assign(document.documentElement.style, {
       position: "absolute",
+      margin: 0,
+      padding: 0,
       width: "100%",
       height: "100%",
-      transform: 'scale(1.25)',
+      transform: 'scale(1.25)'
     });
     Object.assign(document.body.style, {
       position: "absolute",
       margin: 0,
+      padding: 0,
       width: "100%",
       height: "100%",
       backgroundImage: "url(data:image/png;base64," + game.img + ")",
       backgroundSize: "cover",
-      backdropFilter: "saturate(400%) blur(calc(max(12.5vw, 12.5vh))) brightness(100%)",
+      backdropFilter: "saturate(400%) blur(calc(max(12.5vw, 12.5vh)))",
     });
     document.location = "https://stadia.google.com/player/" + game.id;
   }
