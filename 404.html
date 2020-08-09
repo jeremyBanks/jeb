@@ -1,6 +1,11 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><body>
 
 <script type="application/json" id="gamesData">{
+  "crayta": {
+    "id": "05f66a46027747a08b930ea70374ac7frcp1",
+    "id64": "wpPbNgFEetU",
+    "img": "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAMAAADz0U65AAAAAXNSR0IB2cksfwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAMBQTFRFqEqF23rcKU6LC1GLE1qNDVF6PJ+0n2mVo0qPsYHFNW2uPZHQQZTEGnmgS565nHCijlmcdYG0N5LGd7TbgbzXNqTCfK7BdWqhgoSeZ3GYapG5p83XstLYYarKT36wOj1qbVyBk4ejf2KHfXCBW4CcVHOHRZi9OEVjaElxelZxn2t9kX16UGJ+a1h0TWZ3TVF8b2KVsZeveFRjpZhuSF5wZExjknaQeo23o43LwqnQrpSku5aAqqKzd1532rnYdIOmX8eV2AAAAFBJREFUeJxjYGBkYmZhZWNn4ODk4ubh5eNnEBAUEhYRFRNnkJCUkpaRlZNnUFBUUlZRVVNn0NDU0tbR1dNnMDA0MjYxNTNnsLC0sraxtbMHALv4B+FkcqP2AAAAAElFTkSuQmCC"
+  },
   "celeste": {
     "id": "c911998e4f8d4c6ea6712c5ad33e4a54rcp1",
     "id64": "wpPbNgFEetU",
@@ -10,7 +15,7 @@
 
 <script>
   var games = JSON.parse(gamesData.textContent);
-  var game = games[document.location.pathname.toLowerCase().replace(/[^a-z]+/g, "")] || games.celeste;
+  var game = games[document.location.pathname.toLowerCase().replace(/[^a-z]+/g, "")];
   if (game) {
     Object.assign(document.documentElement.style, {
       position: "absolute",
@@ -19,6 +24,7 @@
       width: "100%",
       height: "100%",
     });
+
     Object.assign(document.body.style, {
       position: "absolute",
       margin: 0,
@@ -29,6 +35,9 @@
       backgroundSize: "cover",
       backdropFilter: "saturate(400%) blur(calc(max(12.5vw, 12.5vh)))",
     });
-    // document.location = "https://stadia.google.com/player/" + game.id;
+
+    setTimeout(() => {
+      document.location = "https://stadia.google.com/player/" + game.id;
+    }, 750);
   }
 </script>
