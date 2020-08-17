@@ -4,3 +4,11 @@
 build.pid
 last-build-timestamp.json
 node_modules
+
+
+#Added by cargo
+#
+#already existing elements are commented out
+
+/target
+**/*.rs.bk

@@ -73,6 +73,7 @@
     "**/node_modules": false
   },
   "typescript.format.enable": false,
+  "typescript.tsdk": "node_modules/typescript/lib",
   "workbench.colorCustomizations": {
     "activityBar.activeBackground": "#db8578",
     "activityBar.activeBorder": "#b4ebbb",
@@ -96,6 +97,5 @@
     "titleBar.border": "#d06050",
     "titleBar.inactiveBackground": "#d0605099",
     "titleBar.inactiveForeground": "#e7e7e799"
-  },
-  "typescript.tsdk": "node_modules/typescript/lib"
+  }
 }

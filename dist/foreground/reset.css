@@ -1,0 +1,72 @@
+:not(button):not(input):not(head):not(html):not(a) {
+  display: contents;
+  margin: 0;
+  padding: 0;
+
+  /* dev mode */
+  background: rgba(255, 255, 255, 0.5);
+  outline: 3px double rgba(0, 64, 255, 0.5);
+  outline-offset: -1px;
+}
+
+html {
+  background: rgb(128, 128, 128);
+  box-sizing: border-box;
+}
+
+* {
+  box-sizing: inherit;
+  font-family: inherit;
+}
+
+html,
+body,
+input,
+textarea,
+button,
+select {
+  font-family: "Fira Sans", sans-serif;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: "JetBrains Mono", monospace;
+}
+
+a {
+  color: blue;
+}
+
+a:hover {
+  color: red;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: normal;
+  src: url("/JetBrainsMono-Regular.woff2") format("woff2");
+  font-display: fallback;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: bold;
+  src: url("/JetBrainsMono-Bold.woff2") format("woff2");
+  font-display: fallback;
+}
+
+@font-face {
+  font-family: "Fira Sans";
+  font-weight: normal;
+  src: url("/FiraSans-Regular.woff2") format("woff2");
+  font-display: fallback;
+}
+
+@font-face {
+  font-family: "Fira Sans";
+  font-weight: bold;
+  src: url("/FiraSans-Bold.woff2") format("woff2");
+  font-display: fallback;
+}

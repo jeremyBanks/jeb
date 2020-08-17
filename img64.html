@@ -1,0 +1,191 @@
+<!doctype html><html lang=en><meta charset=utf-8>
+
+step 1: write your fucking image decoder
+step 2: write an encoder
+step 3: maybe add color pallets
+step 4: make it a proper gif
+THE BLUR THE BLUR YOU DUMB FUCK THE BLUR.
+
+wait, does this break lazy-loading? shit.
+
+you don't need this shit to write your encoder you shit.
+
+make a gif.
+
+<script type="module">
+  let buffer = new ArrayBuffer(1024);
+  let view = new DataView(buffer);
+  let i = 0;
+  // GIF magic number header
+  view.setUint8(0, 0x47);
+  view.setUint8(1, 0x49);
+  view.setUint8(2, 0x46);
+  view.setUint8(3, 0x38);
+  view.setUint8(4, 0x39);
+  view.setUint8(5, 0x61);
+  // width
+  view.setUint16(6, 0x0008);
+  // height
+  view.setUint16(8, 0x0008);
+  // global color table flags
+  view.setUint8(10,
+    0b1000_0000 | // include global color table
+    0b0000_0101 | // with 64 colors
+    0b0111_0000 // each specified as 24-bit RGB
+  );
+  // background color (unused)
+  view.setUint8(11, 0x00);
+  // pixel aspect ratio (unused)
+  view.setUint8(12, 0x00);
+  // global color table colors
+  for (let i = 0; i < 64; i++) {
+    let red =
+      (i & 0b0010_0000) ? 0xF0 : 0
+    + (i & 0b0001_0000) ? 0x0F : 0;
+    view.setUint8(i * 3 + 0, red);
+    let green =
+      (i & 0b0000_1000) ? 0xF0 : 0
+    + (i & 0b0000_0100) ? 0x0F : 0;
+    view.setUint8(i * 3 + 1, green);
+    let blue =
+      (i & 0b0000_0010) ? 0xF0 : 0
+    + (i & 0b0000_0001) ? 0x0F : 0;
+    view.setUint8(i * 3 + 2, blue);
+  }
+  // start new frame
+  view.setUint8(204, 0x2C)
+  // frame x position
+  view.setUint16(206, 0x0000);
+  // frame y position
+  view.setUint16(208, 0x0000);
+  // frame width
+  view.setUint16(210, 0x0008);
+  // frame height
+  view.setUint16(212, 0x0008);
+  // exclude local color table
+  view.setUint8(213, 0x00);
+
+  (async () => {
+    await new Blob([
+
+    ]).arrayBuffer()
+  })();
+  new ArrayBuffer("")
+  new Blob([
+    "GIF89a",
+    new Uint16Array([]),
+
+  ], {type: "image/gif"})
+
+  let initialize8x8s = (root = document) => {
+    [...root.querySelectorAll('img[crossorigin]')].forEach(initialize8x8);
+  };
+
+  let initialized = new Symbol('initialized');
+  let initialize8x8 = (image) => {
+    if (image[initialized]) {
+      return;
+    } else {
+      image[initialized] = true;
+    }
+
+    let loader = image;
+
+    if (image.dataset.b64) {
+      // if we already have a b64, decode it, load it.
+      let preview = '';
+
+      loader = new Image();
+      loader.crossOrigin = image.crossOrigin;
+      loader.src = image.src;
+
+      image.src = preview;
+    }
+
+    loader.addEventListener('load', () => {
+      if (image !== loader) {
+        image.src = loader.src;
+      }
+
+      // now (re-)generate b64 based on loaded image data
+    })
+  }
+
+  initialize8x8s();
+</script>
+
+<st-launcher>
+  <a is=st-game
+
+  >
+    <!-- 8x8, intrinsic height -->
+    <img loading="lazy"
+      data-b64=1234567891-ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz
+      colors='
+        0 ZZZZ # .0 = #FFFFFF
+
+      '
+    >
+      Celeste
+    </span>
+    <img alt="Celeste" hidden
+      Image
+    />
+  </a>
+</st-launcher>
+
+<style>
+  [is=img-64] {
+    display: contents;
+  }
+</style>
+
+<script type="module">
+  class Img64 extends HTMLImageElement {
+    #width = 64
+    #height = 64
+
+    constructor() {
+      super();
+    }
+
+    static get observedAttributes() {
+      return ['src', 'width', 'height', 'b64'];
+    }
+
+    connectedCallback() {
+      this.initialize();
+    }
+
+    disconnectedCallback() {
+      this.initialize();
+    }
+
+    attributeChangedCallback() {
+      this.initialize();
+    }
+
+    adoptedCallback() {
+      this.initialize();
+    }
+
+    #initialized = false;
+    initialize() {
+      if (this.#initialized) {
+        return;
+      } else if (!this.isConnected()) {
+        return;
+      } else {
+        this.#initialized = true;
+      }
+    }
+  }
+</script>
+
+<img
+  is=img-64
+  width=128
+  height=128
+  b64=0123456789-abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ
+  src=http://invalid.invalid/media.discordapp.net/attachments/303268059261698050/744936316420096151/image0.jpg
+/>

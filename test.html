@@ -1,0 +1,111 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+
+<title>stadia.run/ launcher</title>
+<link rel="icon" href="/squirrel.png" />
+<link rel="canonical" href="https://stadia.run" />
+
+<img
+  id="img"
+  src="https://lh3.googleusercontent.com/GsTxQEeQlTRYlL__IDmEUxBIIA7YnhkpVIJhE6N0Ia3EunU6g_7I2P36t5jj00E6oKlABF0fEGSVhLyR9_5778M9kq3lHcW47UjStbrMhPKhm5nqKQwsnYOf0Q=s720-rw"
+  crossorigin="anonymous"
+/>
+
+<canvas id="canvas"></canvas>
+
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    background-color: #202124;
+    color: #FFFFFF;
+    font-family: sans-serif;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  #link {
+    contain: strict;
+    display: inline-grid;
+    height: 192px;
+    width: 256px;
+    margin: 32px;
+    border-radius: 16px;
+    font-weight: bold;
+    font-size: 48px;
+    border: 2px solid rgba(0, 0, 0, 0.25);
+  }
+
+  #link > #paper {
+    display: grid;
+    background-size: 100% 100%;
+    width: 100%;
+    height: 100%;
+  }
+
+#link > #paper > #pane {
+  display: grid;
+  background-size: 100% 100%;
+  width: 100%;
+  height: 100%;
+  justify-items: center;
+  align-items: center;
+  text-shadow: 0 0 4px black;
+  backdrop-filter: brightness(300%) contrast(150%) blur(32px) contrast(150%);
+}
+
+#link:hover {
+  border: 2px solid rgba(255, 255, 255, 0.75);
+}
+
+#link:hover > #paper > #pane {
+  backdrop-filter: contrast(150%) brightness(300%) blur(32px);
+}
+</style>
+
+<a id="link" class="game" href="/">
+  <div id="paper">
+    <div id="pane">
+      Celeste
+    </div>
+  </div>
+</a>
+
+<script>
+img.onload = event => {
+
+  canvas.width = 8;
+  canvas.height = 8;
+
+  let g = canvas.getContext("2d");
+  g.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  let data = g.getImageData(0, 0, canvas.width, canvas.height);
+
+  let threeBit = n => {
+    return ((n >> 5) << 5) + (1 + 2 + 4 + 8 + 16) * ((n >> 5) & 1);
+  };
+
+  for (let i = 0; i < data.data.length; i += 4) {
+    data.data[i + 0] = threeBit(data.data[i + 0]);
+    data.data[i + 1] = threeBit(data.data[i + 1]);
+    data.data[i + 2] = threeBit(data.data[i + 2]);
+    data.data[i + 3] = 0xFF;
+  }
+
+  g.putImageData(data, 0, 0);
+
+  let url = canvas.toDataURL();
+
+  img.remove();
+  canvas.remove();
+
+  paper.style.backgroundImage = `url(${url})`;
+};
+</script>
