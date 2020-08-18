@@ -2,35 +2,36 @@
 /// truncated SKU ID, and includes a potentially-truncated copy of the SKU's
 /// name. The ordering should be adequate for tree indexing if we ever use it,
 /// while potentially providing some minimal human-readability.
-export const localKey = (sku) => {
-    const length = 32;
-    const maxNameLength = 23;
-    const typeTag = { game: "g", addon: "o", bundle: "x", subscription: "c" }[sku.type] ?? `?`;
-    const idsPrefix = sku.app.slice(0, 6) + typeTag + sku.sku.slice(0, 2);
-    const idsRest = sku.app.slice(6) + sku.sku.slice(2);
-    let name = (sku.name + sku.internalSlug)
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/gu, "");
-    if (name.length > maxNameLength) {
-        const letterCounts = {};
-        for (const letter of name) {
-            letterCounts[letter] = (letterCounts[letter] || 0) + 1;
-        }
-        while (name.length > maxNameLength) {
-            const mostFrequentCount = Math.max(...Object.values(letterCounts));
-            const mostFrequent = Object.entries(letterCounts)
-                .filter(([_letter, count]) => count == mostFrequentCount)
-                .map(([letter, _count]) => letter);
-            for (let i = name.length - 1; i >= 0; i -= 1) {
-                const letter = name[i];
-                if (mostFrequent.includes(letter)) {
-                    name = name.slice(0, i) + name.slice(i + 1);
-                    letterCounts[letter] -= 1;
-                    break;
-                }
-            }
-        }
+export const localKey = sku => {
+  const length = 32;
+  const maxNameLength = 23;
+  const typeTag =
+    { game: "g", addon: "o", bundle: "x", subscription: "c" }[sku.type] ?? `?`;
+  const idsPrefix = sku.app.slice(0, 6) + typeTag + sku.sku.slice(0, 2);
+  const idsRest = sku.app.slice(6) + sku.sku.slice(2);
+  let name = (sku.name + sku.internalSlug)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, "");
+  if (name.length > maxNameLength) {
+    const letterCounts = {};
+    for (const letter of name) {
+      letterCounts[letter] = (letterCounts[letter] || 0) + 1;
     }
-    return (idsPrefix + name + idsRest).slice(0, length);
+    while (name.length > maxNameLength) {
+      const mostFrequentCount = Math.max(...Object.values(letterCounts));
+      const mostFrequent = Object.entries(letterCounts)
+        .filter(([_letter, count]) => count == mostFrequentCount)
+        .map(([letter, _count]) => letter);
+      for (let i = name.length - 1; i >= 0; i -= 1) {
+        const letter = name[i];
+        if (mostFrequent.includes(letter)) {
+          name = name.slice(0, i) + name.slice(i + 1);
+          letterCounts[letter] -= 1;
+          break;
+        }
+      }
+    }
+  }
+  return (idsPrefix + name + idsRest).slice(0, length);
 };
 //# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoibG9jYWwta2V5LmpzIiwic291cmNlUm9vdCI6Ii4vIiwic291cmNlcyI6WyJmb3JlZ3JvdW5kL2RhdGEvbG9jYWwta2V5LnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUVBLHlFQUF5RTtBQUN6RSw0RUFBNEU7QUFDNUUsOEVBQThFO0FBQzlFLCtEQUErRDtBQUMvRCxNQUFNLENBQUMsTUFBTSxRQUFRLEdBQUcsQ0FBQyxHQUFvQixFQUFFLEVBQUU7SUFDL0MsTUFBTSxNQUFNLEdBQUcsRUFBRSxDQUFDO0lBQ2xCLE1BQU0sYUFBYSxHQUFHLEVBQUUsQ0FBQztJQUN6QixNQUFNLE9BQU8sR0FDVixFQUFFLElBQUksRUFBRSxHQUFHLEVBQUUsS0FBSyxFQUFFLEdBQUcsRUFBRSxNQUFNLEVBQUUsR0FBRyxFQUFFLFlBQVksRUFBRSxHQUFHLEVBQVUsQ0FDaEUsR0FBRyxDQUFDLElBQUksQ0FDVCxJQUFJLEdBQUcsQ0FBQztJQUNYLE1BQU0sU0FBUyxHQUFHLEdBQUcsQ0FBQyxHQUFHLENBQUMsS0FBSyxDQUFDLENBQUMsRUFBRSxDQUFDLENBQUMsR0FBRyxPQUFPLEdBQUcsR0FBRyxDQUFDLEdBQUcsQ0FBQyxLQUFLLENBQUMsQ0FBQyxFQUFFLENBQUMsQ0FBQyxDQUFDO0lBQ3RFLE1BQU0sT0FBTyxHQUFHLEdBQUcsQ0FBQyxHQUFHLENBQUMsS0FBSyxDQUFDLENBQUMsQ0FBQyxHQUFHLEdBQUcsQ0FBQyxHQUFHLENBQUMsS0FBSyxDQUFDLENBQUMsQ0FBQyxDQUFDO0lBRXBELElBQUksSUFBSSxHQUFHLENBQUMsR0FBRyxDQUFDLElBQUksR0FBRyxHQUFHLENBQUMsWUFBWSxDQUFDO1NBQ3JDLFdBQVcsRUFBRTtTQUNiLE9BQU8sQ0FBQyxjQUFjLEVBQUUsRUFBRSxDQUFDLENBQUM7SUFFL0IsSUFBSSxJQUFJLENBQUMsTUFBTSxHQUFHLGFBQWEsRUFBRTtRQUMvQixNQUFNLFlBQVksR0FBMkIsRUFBRSxDQUFDO1FBQ2hELEtBQUssTUFBTSxNQUFNLElBQUksSUFBSSxFQUFFO1lBQ3pCLFlBQVksQ0FBQyxNQUFNLENBQUMsR0FBRyxDQUFDLFlBQVksQ0FBQyxNQUFNLENBQUMsSUFBSSxDQUFDLENBQUMsR0FBRyxDQUFDLENBQUM7U0FDeEQ7UUFDRCxPQUFPLElBQUksQ0FBQyxNQUFNLEdBQUcsYUFBYSxFQUFFO1lBQ2xDLE1BQU0saUJBQWlCLEdBQUcsSUFBSSxDQUFDLEdBQUcsQ0FBQyxHQUFHLE1BQU0sQ0FBQyxNQUFNLENBQUMsWUFBWSxDQUFDLENBQUMsQ0FBQztZQUNuRSxNQUFNLFlBQVksR0FBRyxNQUFNLENBQUMsT0FBTyxDQUFDLFlBQVksQ0FBQztpQkFDOUMsTUFBTSxDQUFDLENBQUMsQ0FBQyxPQUFPLEVBQUUsS0FBSyxDQUFDLEVBQUUsRUFBRSxDQUFDLEtBQUssSUFBSSxpQkFBaUIsQ0FBQztpQkFDeEQsR0FBRyxDQUFDLENBQUMsQ0FBQyxNQUFNLEVBQUUsTUFBTSxDQUFDLEVBQUUsRUFBRSxDQUFDLE1BQU0sQ0FBQyxDQUFDO1lBQ3JDLEtBQUssSUFBSSxDQUFDLEdBQUcsSUFBSSxDQUFDLE1BQU0sR0FBRyxDQUFDLEVBQUUsQ0FBQyxJQUFJLENBQUMsRUFBRSxDQUFDLElBQUksQ0FBQyxFQUFFO2dCQUM1QyxNQUFNLE1BQU0sR0FBRyxJQUFJLENBQUMsQ0FBQyxDQUFDLENBQUM7Z0JBQ3ZCLElBQUksWUFBWSxDQUFDLFFBQVEsQ0FBQyxNQUFNLENBQUMsRUFBRTtvQkFDakMsSUFBSSxHQUFHLElBQUksQ0FBQyxLQUFLLENBQUMsQ0FBQyxFQUFFLENBQUMsQ0FBQyxHQUFHLElBQUksQ0FBQyxLQUFLLENBQUMsQ0FBQyxHQUFHLENBQUMsQ0FBQyxDQUFDO29CQUM1QyxZQUFZLENBQUMsTUFBTSxDQUFDLElBQUksQ0FBQyxDQUFDO29CQUMxQixNQUFNO2lCQUNQO2FBQ0Y7U0FDRjtLQUNGO0lBRUQsT0FBTyxDQUFDLFNBQVMsR0FBRyxJQUFJLEdBQUcsT0FBTyxDQUFDLENBQUMsS0FBSyxDQUFDLENBQUMsRUFBRSxNQUFNLENBQUMsQ0FBQztBQUN2RCxDQUFDLENBQUMiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBDb21tb25Ta3UsIFNrdSB9IGZyb20gXCIuL21vZGVscy5qc1wiO1xuXG4vLy8gR2VuZXJhdGVzIGEgbG9jYWwga2V5IHRoYXQgb3JkZXJzIFNLVXMgYnkgdHlwZSwgdHJ1bmNhdGVkIGFwcCBJRCwgYW5kXG4vLy8gdHJ1bmNhdGVkIFNLVSBJRCwgYW5kIGluY2x1ZGVzIGEgcG90ZW50aWFsbHktdHJ1bmNhdGVkIGNvcHkgb2YgdGhlIFNLVSdzXG4vLy8gbmFtZS4gVGhlIG9yZGVyaW5nIHNob3VsZCBiZSBhZGVxdWF0ZSBmb3IgdHJlZSBpbmRleGluZyBpZiB3ZSBldmVyIHVzZSBpdCxcbi8vLyB3aGlsZSBwb3RlbnRpYWxseSBwcm92aWRpbmcgc29tZSBtaW5pbWFsIGh1bWFuLXJlYWRhYmlsaXR5LlxuZXhwb3J0IGNvbnN0IGxvY2FsS2V5ID0gKHNrdTogU2t1IHwgQ29tbW9uU2t1KSA9PiB7XG4gIGNvbnN0IGxlbmd0aCA9IDMyO1xuICBjb25zdCBtYXhOYW1lTGVuZ3RoID0gMjM7XG4gIGNvbnN0IHR5cGVUYWcgPVxuICAgICh7IGdhbWU6IFwiZ1wiLCBhZGRvbjogXCJvXCIsIGJ1bmRsZTogXCJ4XCIsIHN1YnNjcmlwdGlvbjogXCJjXCIgfSBhcyBhbnkpW1xuICAgICAgc2t1LnR5cGVcbiAgICBdID8/IGA/YDtcbiAgY29uc3QgaWRzUHJlZml4ID0gc2t1LmFwcC5zbGljZSgwLCA2KSArIHR5cGVUYWcgKyBza3Uuc2t1LnNsaWNlKDAsIDIpO1xuICBjb25zdCBpZHNSZXN0ID0gc2t1LmFwcC5zbGljZSg2KSArIHNrdS5za3Uuc2xpY2UoMik7XG5cbiAgbGV0IG5hbWUgPSAoc2t1Lm5hbWUgKyBza3UuaW50ZXJuYWxTbHVnKVxuICAgIC50b0xvd2VyQ2FzZSgpXG4gICAgLnJlcGxhY2UoL1teYS16MC05XSsvZ3UsIFwiXCIpO1xuXG4gIGlmIChuYW1lLmxlbmd0aCA+IG1heE5hbWVMZW5ndGgpIHtcbiAgICBjb25zdCBsZXR0ZXJDb3VudHM6IFJlY29yZDxzdHJpbmcsIG51bWJlcj4gPSB7fTtcbiAgICBmb3IgKGNvbnN0IGxldHRlciBvZiBuYW1lKSB7XG4gICAgICBsZXR0ZXJDb3VudHNbbGV0dGVyXSA9IChsZXR0ZXJDb3VudHNbbGV0dGVyXSB8fCAwKSArIDE7XG4gICAgfVxuICAgIHdoaWxlIChuYW1lLmxlbmd0aCA+IG1heE5hbWVMZW5ndGgpIHtcbiAgICAgIGNvbnN0IG1vc3RGcmVxdWVudENvdW50ID0gTWF0aC5tYXgoLi4uT2JqZWN0LnZhbHVlcyhsZXR0ZXJDb3VudHMpKTtcbiAgICAgIGNvbnN0IG1vc3RGcmVxdWVudCA9IE9iamVjdC5lbnRyaWVzKGxldHRlckNvdW50cylcbiAgICAgICAgLmZpbHRlcigoW19sZXR0ZXIsIGNvdW50XSkgPT4gY291bnQgPT0gbW9zdEZyZXF1ZW50Q291bnQpXG4gICAgICAgIC5tYXAoKFtsZXR0ZXIsIF9jb3VudF0pID0+IGxldHRlcik7XG4gICAgICBmb3IgKGxldCBpID0gbmFtZS5sZW5ndGggLSAxOyBpID49IDA7IGkgLT0gMSkge1xuICAgICAgICBjb25zdCBsZXR0ZXIgPSBuYW1lW2ldO1xuICAgICAgICBpZiAobW9zdEZyZXF1ZW50LmluY2x1ZGVzKGxldHRlcikpIHtcbiAgICAgICAgICBuYW1lID0gbmFtZS5zbGljZSgwLCBpKSArIG5hbWUuc2xpY2UoaSArIDEpO1xuICAgICAgICAgIGxldHRlckNvdW50c1tsZXR0ZXJdIC09IDE7XG4gICAgICAgICAgYnJlYWs7XG4gICAgICAgIH1cbiAgICAgIH1cbiAgICB9XG4gIH1cblxuICByZXR1cm4gKGlkc1ByZWZpeCArIG5hbWUgKyBpZHNSZXN0KS5zbGljZSgwLCBsZW5ndGgpO1xufTtcbiJdfQ==

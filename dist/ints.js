@@ -1,32 +1,31 @@
 // Unique symbol used for our type brands. Unused at runtime.
 const type = Symbol("type");
-export const u32 = (i) => {
-    if (!u32.check(i)) {
-        throw new TypeError(`expected u32, got ${typeof i} ${i}`);
-    }
-    return i;
+export const u32 = i => {
+  if (!u32.check(i)) {
+    throw new TypeError(`expected u32, got ${typeof i} ${i}`);
+  }
+  return i;
 };
 u32.guard = u32;
-u32.check = (i) => typeof i === "number" && i >= 0 && i <= 0xffffffff && Number.isSafeInteger(i);
-export const u64 = (i) => {
-    if (!u64.check(i)) {
-        throw new TypeError(`expected u64, got ${typeof i} ${i}`);
-    }
-    return i;
+u32.check = i =>
+  typeof i === "number" && i >= 0 && i <= 0xffffffff && Number.isSafeInteger(i);
+export const u64 = i => {
+  if (!u64.check(i)) {
+    throw new TypeError(`expected u64, got ${typeof i} ${i}`);
+  }
+  return i;
 };
 u64.guard = u64;
-u64.check = (i) => typeof i === "bigint" && i >= 0n && i <= 0xffffffffffffffffn;
-u64.wrap = (i) => BigInt.asUintN(64, i);
-u64.clamp = (i) => {
-    if (i < 0n) {
-        return 0n;
-    }
-    else if (i > 0xffffffffffffffffn) {
-        return 0xffffffffffffffffn;
-    }
-    else {
-        return i;
-    }
+u64.check = i => typeof i === "bigint" && i >= 0n && i <= 0xffffffffffffffffn;
+u64.wrap = i => BigInt.asUintN(64, i);
+u64.clamp = i => {
+  if (i < 0n) {
+    return 0n;
+  } else if (i > 0xffffffffffffffffn) {
+    return 0xffffffffffffffffn;
+  } else {
+    return i;
+  }
 };
 // u64.toBase64 = (i: u64): string => "0";
 // u64.tryFromBase64 = (s: string): u64 | undefined => {
