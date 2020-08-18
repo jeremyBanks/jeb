@@ -1,6 +1,7 @@
 <!doctype html><html lang=en><meta charset=utf-8>
 
-<title>stadia.run launcher</title>
+<title>stadia.run</title>
+<link rel="canonical" href="https://stadia.run" />
 <link rel="icon" href="./stadia.run/squirrel.png" />
 
 <script type="module">
@@ -107,7 +108,14 @@
 
   const skus = JSON.parse(document.getElementById('skus').textContent);
   const games = Object.values(skus).filter(sku => sku.imageUrl).map(game => ({
-    name: game.name,
+    name: game.name
+      .replace(/™/g, ' ')
+      .replace(/®/g, ' ')
+      .replace(/[\:\-]? Early Access$/g, ' ')
+      .replace(/[\:\-]? \w+ Edition$/g, ' ')
+      .replace(/\(\w+ Ver(\.|sion)\)$/g, ' ')
+      .replace(/™/g, ' ')
+    ,
     id: game.app,
     b8x8: game.b8x8,
     imageUrl: game.imageUrl,
@@ -160,6 +168,12 @@ height: 180px;
   height: 180px;
   image-rendering: pixelated;
 " />
+<img style="
+  width: 320px;
+  height: 180px;
+  filter: saturate(150%) contrast(125%);
+  image-rendering: pixelated;
+" />
 <div class="img" style="
   border-radius: 16px;
   display: inline-block;
@@ -171,7 +185,7 @@ height: 180px;
   contain: strict;
 ">
 <div style="
-  backdrop-filter: brightness(125%) contrast(200%) saturate(200%) blur(calc(180px/8));
+  backdrop-filter: saturate(150%) contrast(125%) blur(calc(180px/8));
   position: absolute;
   top: 0;
   left: 0;
@@ -210,6 +224,7 @@ html {
 
 <script type="application/json" id="skus">
   [{"name": "Steamed Hams", "imageUrl": "https://melmagazine.com/wp-content/uploads/2020/08/Steamed_Hams_Simpsons_Oral_History.jpg?width=800&height=333"},
+  {"name":"Nothing","id":"05f66a46027747a08b920ea70374ac7frcp1","b64":null,"imageUrl":"https://lh3.googleusercontent.com/WD-cqJT693XbUjVeBtR6gj6l65oPIX5p6VLbUgxPKqjHhVzWz3p8jwLPk9O2cnllfu4PDOBEK-Am4PTf2fDZQJJJsCzc0aotgzbIwI0GqJjFmaIRcgo-Oa-EK9sH=s720-rw","b8x8":"0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"},
   {"name":"Crayta","id":"05f66a46027747a08b920ea70374ac7frcp1","b64":null,"imageUrl":"https://lh3.googleusercontent.com/WD-cqJT693XbUjVeBtR6gj6l65oPIX5p6VLbUgxPKqjHhVzWz3p8jwLPk9O2cnllfu4PDOBEK-Am4PTf2fDZQJJJsCzc0aotgzbIwI0GqJjFmaIRcgo-Oa-EK9sH=s720-rw","b8x8":"ar5665-aavLA-66aeaPeePeLfLLjjP6GLeKaLPQKG_KLKKeeLzKe5K_LazeeeKue"},
   {"name":"West of Loathing","id":"0a60fff637b445a797623d0c69433a9crcp1","b64":null,"imageUrl":"https://lh3.googleusercontent.com/wYVT1KevOJGbw12oFGVWFlEi6uNp91s3zE7deoEZmHl7Imkyt3FGMscuWxRaGZ_93tKK6_yDatcEHKH-voUFU4GGRi4hpoOGvDR7UQEcbQpgdf5uS0CosIiqSRSg=s720-rw","b8x8":"zezeezeezze0KzK0zezzeeeezzKzzzzzzzKezzeezzzzzzzKzzzezzzzzzzzzzzz"},
   {"name":"Monopoly","id":"10b8a9cc8ec746f29afc1fc3c3ded28brcp1","b64":null,"imageUrl":"https://lh3.googleusercontent.com/Al3QfOz25vWgOUrxSQU0-xl8bn3ti2NpBq0fAoOP7-79omCOQIT9fo90QIeMtp7q5SlcKjFEQxSbWZFC732WsgDrBh1nDdQULf-K4vdSH6N3A4Dt4zz8r7gQg-xV=s720-rw","b8x8":"fffeee10ejzpz_65___eKuP5KdKe_u50K_eKudL5ze_eKeePzzdKKLzPKjeKeef5"},
