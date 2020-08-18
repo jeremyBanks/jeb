@@ -11,8 +11,13 @@
   },
   "content_security_policy": "script-src 'self' chrome-extension://plnadnblnocgoficdcgbbdmcnciagojj https://stadia.observer https://stadia.google.com; object-src 'self'",
   "externally_connectable": {
-    "ids": ["*"],
-    "matches": ["https://stadia.google.com/*", "https://stadia.observer/*"]
+    "ids": [
+      "*"
+    ],
+    "matches": [
+      "https://stadia.google.com/*",
+      "https://stadia.observer/*"
+    ]
   },
   "homepage_url": "https://stadia.observer/",
   "icons": {
@@ -34,6 +39,6 @@
     "tabs",
     "unlimitedStorage"
   ],
-  "version": "2020.8.17",
-  "version_name": "2020-08-17"
+  "version": "2020.8.18",
+  "version_name": "2020-08-18"
 }
