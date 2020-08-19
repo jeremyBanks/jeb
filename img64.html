@@ -4,6 +4,49 @@
 <link rel="canonical" href="https://stadia.run" />
 <link rel="icon" href="./stadia.run/squirrel.png" />
 
+<style>
+  #debug {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    border-top: 2px solid white;
+    background: rgba(255, 255, 255, 0.9375);
+    color: black;
+    padding: 8px;
+    z-index: 100;
+  }
+
+  #debug:target {
+    display: block;
+  }
+
+#debug .close {
+  display: block;
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 12px;
+  padding: 2px 8px;
+  text-decoration: none;
+  color: inherit;
+  border-left: 2px solid white;
+  border-bottom: 2px solid white;
+  background: #EDD;
+}
+
+#debug .close:hover {
+  background: #DCC;
+}
+</style>
+
+<aside id="debug">
+  <a class="close" href="#">X</a>
+  Hello world
+</aside>
+
 <script type="module">
   const digits = '0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
   const digitValues = new Map(Object.entries(digits).map(([index, char]) => [char, Number(index)]));
@@ -123,7 +166,7 @@
     const a = gameA.name.toLowerCase();
     const b = gameB.name.toLowerCase();
     return (a < b) ? -1 : (a > b) ? +1 : 0;
-  });
+  }).slice(0, 4);
 
   const main = async() => {
     const template = document.querySelector("center");
