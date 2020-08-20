@@ -1,383 +1,460 @@
-<!doctype html><html lang=en><meta charset=utf-8>
+<!doctype html><meta charset="utf-8">
 
 <title>stadia.run</title>
-<link rel="canonical" href="https://stadia.run" />
-<link rel="icon" href="./stadia.run/squirrel.png" />
+<link rel="canonical" href="https://stadia.run/" />
+<link rel="icon" href="/-/squirrel.png" />
 
 <style>
-  #debug {
-    display: none;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: auto;
-    border-top: 2px solid white;
-    background: rgba(255, 255, 255, 0.9375);
-    color: black;
-    padding: 8px;
-    z-index: 100;
-  }
-
-  #debug:target {
-    display: block;
-  }
-
-#debug .close {
-  display: block;
-  position: absolute;
-  top: 0;
-  right: 0;
-  font-size: 12px;
-  padding: 2px 8px;
-  text-decoration: none;
-  color: inherit;
-  border-left: 2px solid white;
-  border-bottom: 2px solid white;
-  background: #EDD;
-}
-
-#debug .close:hover {
-  background: #DCC;
-}
-</style>
-
-<aside id="debug">
-  <a class="close" href="#">X</a>
-  Hello world
-</aside>
-
-<script type="module">
-  const digits = '0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
-  const digitValues = new Map(Object.entries(digits).map(([index, char]) => [char, Number(index)]));
-
-  /**
-   * Decodes a base64 string as an 8x8 image, as a data URL.
-   * @returns {Promise<Blob>}
-   */
-  const microCovertoURL = async (/** @type string */ microCover) => {
-    const canvas = new OffscreenCanvas(8, 8);
-    const g2d = /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d"));
-    const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
-
-    const palette = /** @type Map<number, [number, number, number]> */ (new Map());
-    for (let i = 0; i < 64; i++) {
-      palette.set(i, u6toRGB(i));
-    }
-
-    for (let i = 0; i < microCover.length; i++) {
-      if (i < 64) {
-        const color = palette.get(digitValues.get(microCover[i]));
-        pixels.data[i * 4] = color[0];
-        pixels.data[i * 4 + 1] = color[1];
-        pixels.data[i * 4 + 2] = color[2];
-        pixels.data[i * 4 + 3] = 0xFF;
-      } else {
-        throw new Error("custom palettes not implemented");
-      }
-    }
-
-    g2d.putImageData(pixels, 0, 0);
-
-    const blob = await canvas.convertToBlob();
-    const reader = new FileReader();
-
-    await new Promise((resolve, reject) => {
-      reader.onload = resolve;
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-
-    const url = reader.result;
-
-    return url;
-  };
-
-  /**
-   * Returns an base-64 encoded 8x8 thumbnail the image at a given URL.
-   * @returns {Promise<String>}
-   */
-  const microCoverfromURL = async (/** @type string */ url) => {
-    const image = new Image();
-    await new Promise((resolve, reject) => {
-      image.onload = resolve;
-      image.onerror = reject;
-      image.crossOrigin = "anonymous";
-      image.src = url;
-    });
-
-    const canvas = new OffscreenCanvas(8, 8);
-    const g2d = /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d"));
-    g2d.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
-
-    const microCover = new Array();
-    for (let i = 0; i < 64; i++) {
-      const rgb = pixels.data.slice(i * 4, i * 4 + 3);
-      const u6 = rgbToU6(rgb);
-      microCover.push(digits[u6]);
-    }
-
-    return microCover.join("");
-  }
-
-  /**
-   * Converts a 6-bit RGB value to a 24-bit RGB value.
-   * @returns {[number, number, number]}
-   */
-  const u6toRGB = (/** @type {number} */ u6) => {
-    const red =
-      ((u6 & 0b100000) ? 0b10101010 : 0)
-    + ((u6 & 0b010000) ? 0b01010101 : 0);
-    const green =
-      ((u6 & 0b001000) ? 0b10101010 : 0)
-    + ((u6 & 0b000100) ? 0b01010101 : 0);
-    const blue =
-      ((u6 & 0b000010) ? 0b10101010 : 0)
-    + ((u6 & 0b000001) ? 0b01010101 : 0);
-    return [red, green, blue];
-  };
-
-  /**
-   * Rounds a 24-bit RGB value to the nearest 6-bit RGB value.
-   * @returns {number}
-   */
-  const rgbToU6 = (/** @type {[number, number, number]} */ rgb) => {
-    const red = Math.round(0b11 * rgb[0] / 0xFF);
-    const green = Math.round(0b11 * rgb[1] / 0xFF);
-    const blue = Math.round(0b11 * rgb[2] / 0xFF);
-    return (red << 4) + (green << 2) + blue;
-  };
-
-  const skus = JSON.parse(document.getElementById('skus').textContent);
-  const games = Object.values(skus).filter(sku => sku.fullCover).map(game => ({
-    name: game.name
-      .replace(/™/g, ' ')
-      .replace(/®/g, ' ')
-      .replace(/[\:\-]? Early Access$/g, ' ')
-      .replace(/[\:\-]? \w+ Edition$/g, ' ')
-      .replace(/\(\w+ Ver(\.|sion)\)$/g, ' ')
-      .replace(/™/g, ' ')
-    ,
-    id: game.app,
-    microCover: game.microCover,
-    fullCover: game.fullCover,
-  })).sort((gameA, gameB) => {
-    const a = gameA.name.toLowerCase();
-    const b = gameB.name.toLowerCase();
-    return (a < b) ? -1 : (a > b) ? +1 : 0;
-  }).slice(0, 4);
-
-  const main = async() => {
-    const template = document.querySelector("center");
-    template.remove();
-
-    for (const game of games) {
-      let root = template.cloneNode(true);
-      let url = game.fullCover;
-
-      root.querySelector('.source').src = url;
-      root.querySelector('.gameName').textContent = game.name;
-
-      if (!game.microCover) {
-        const microCover = await microCoverfromURL(url);
-        game.microCover = microCover;
-      }
-
-      url = await microCovertoURL(game.microCover);
-
-      for (const image of root.querySelectorAll("img:not(.source), .img")) {
-        image.src = url;
-        image.style.backgroundImage = 'url(' + url + ')';
-      }
-
-      container.appendChild(root);
-    }
-
-    window.debug_dump = () => {
-      const link = document.createElement('a');
-      link.download = "games.json";
-      link.href = URL.createObjectURL(new Blob([JSON.stringify(games).replace(/\}\,\{/g, '},\n{')]));
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    };
-  };
-
-  main();
-</script>
-
-<center>
-<img class="source" style="
-  width: 320px;
-  height: 180px;
-" loading="lazy" />
-<img style="
-  width: 320px;
-  height: 180px;
-  image-rendering: pixelated;
-" />
-<div class="img" style="
-  border-radius: 16px;
-  display: inline-block;
-  background-size: 100% 100%;
-  width: 320px;
-  height: 180px;
-  image-rendering: pixelated;
-  position: relative;
-  contain: strict;
-">
-<div style="
-  backdrop-filter: saturate(150%) contrast(125%) blur(calc(180px/8));
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-">
-  <div class="gameName" style="
-    display: grid;
-    background-size: 100% 100%;
-    width: 100%;
-    height: 100%;
-    justify-items: center;
-    align-items: center;
-    -webkit-text-stroke: 1px black;
-    text-shadow: 0 0 2px black;
-    font-weight: bold;
-    font-size: 36px;
-    color: #FFFFFF;
-    font-family: sans-serif;
-    overflow: hidden;
-  ">
-
-  </div>
-</div>
-</div>
-</center>
-
-<style>
-
-:root {
-  box-sizing: border-box;
-}
 * {
   box-sizing: inherit;
-}
-
-html, body {
-  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-decoration: inherit;
+  background: none;
+  border: none;
+  outline: none;
+  background-repeat: no-repeat;
   margin: 0;
+  padding: 0;
+  display: grid;
+  contain: paint;
 }
 
-main {
-  padding-top: 32px;
+/* root styles */
+html:root {
+  --background-color: #202124;
+  --primary-color: #FFFFFF;
+  --secondary-color: #EE6633;
+  --accent-color: #DD4422;
+  --mascot-url: url(/-/squirrel.png);
+  --primary-font-size: 14px;
+  --large-margin: 16px;
+  --small-margin: 6px;
+  /* We allow tiles to flow to full width, but want to keep any controls
+     or body text within a narrower window. */
+
+  --controls-width: 720px;
+  --search-height: 96px;
+  --search-font-size: 32px;
+
+  font-family: sans-serif;
+  box-sizing: border-box;
+  font-size: var(--primary-font-size);
+  background-color: var(--background-color);
+  color: var(--primary-color);
+  grid-auto-flow: dense;
 }
 
-main > * + * {
-  margin-top: 32px;
+script, style, link, head {
+  display: none;
 }
 
-html {
-    min-height: 100%;
-    background-color: #202124;
-    background-image: url(./stadia.run/squirrel.png);
-    background-position: right bottom;
-    background-repeat: no-repeat;
-    background-size: 128px;
-    color: #FFFFFF;
-    font-family: sans-serif;
+form {
+  display: contents;
+}
+
+button {
+  cursor: pointer;
+}
+
+body {
+  display: grid;
+}
+
+main#main {
+  display: grid;
+  grid-template-columns:
+    1fr
+    [controls-columns-start]
+    var(--controls-width)
+    [controls-columns-end]
+    1fr;
+  grid-template-rows:
+    var(--large-margin)
+    [controls-rows-start]
+    var(--search-height)
+    [controls-rows-end]
+    var(--large-margin)
+    auto;
+}
+
+  main#main st-search {
+    grid-column: controls-columns-start / controls-columns-end;
+    grid-row: controls-rows-start / controls-rows-end;
+
+    grid-template-columns:
+      [search-label-start]
+      120px
+      [search-label-end]
+      var(--small-margin)
+      [search-start]
+      auto
+      [search-end];
+    ;
+    font-size: var(--search-font-size);
   }
 
-  footer {
-    margin-top: calc(100vh - 128px);
-    min-height: 128px;
-    font-size: 10px;
-    color: #D42;
-    padding-right: 112px;
-    padding-top: 64px;
-    text-align: right;
-  }
+    main#main st-search span {
+      grid-column: search-label-start / search-label-end;
+      text-align: right;
+      place-self: center right;
+      color: var(--secondary-color);
+      user-select: none;
+    }
+
+    main#main st-search input {
+      grid-column: search-start / search-end;
+      /* grid-row: search-start / search-end; */
+      color: var(--primary-color);
+      caret-color: var(--accent-color);
+    background-image: var(--mascot-url);
+    background-size: var(--search-height);
+    background-position: right;
+    }
+
+    main#main st-search input::placeholder {
+      color: var(--primary-color);
+    }
+
+    main#main st-search input:placeholder-shown {
+      opacity: 0.5;
+    }
+
 </style>
 
-<main id="container">
+
+<script type="module">
+    const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+    const digitValues = new Map(Object.entries(digits).map(([index, char]) => [char, Number(index)]));
+
+    /**
+     * Decodes a base64 string as an 8x8 image, as a data URL.
+     * @returns {Promise<Blob>}
+     */
+    const microImageToURL = async (/** @type string */ microImage) => {
+      const canvas = new OffscreenCanvas(8, 8);
+      const g2d = /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d"));
+      const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
+
+      const palette = /** @type Map<number, [number, number, number]> */ (new Map());
+      for (let i = 0; i < 64; i++) {
+        palette.set(i, u6toRGB(i));
+      }
+
+      for (let i = 0; i < microImage.length; i++) {
+        if (i < 64) {
+          const color = palette.get(digitValues.get(microImage[i]));
+          pixels.data[i * 4] = color[0];
+          pixels.data[i * 4 + 1] = color[1];
+          pixels.data[i * 4 + 2] = color[2];
+          pixels.data[i * 4 + 3] = 0xFF;
+        } else {
+          throw new Error("custom palettes not implemented");
+        }
+      }
+
+      g2d.putImageData(pixels, 0, 0);
+
+      const blob = await canvas.convertToBlob();
+      const reader = new FileReader();
+
+      await new Promise((resolve, reject) => {
+        reader.onload = resolve;
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      const url = reader.result;
+
+      return url;
+    };
+
+    /**
+     * Returns an base-64 encoded 8x8 thumbnail the image at a given URL.
+     * @returns {Promise<String>}
+     */
+    const microImageFromURL = async (/** @type string */ url) => {
+      const image = new Image();
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = reject;
+        image.crossOrigin = "anonymous";
+        image.src = url;
+      });
+
+      const canvas = new OffscreenCanvas(8, 8);
+      const g2d = /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d"));
+      g2d.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
+
+      const microImage = new Array();
+      for (let i = 0; i < 64; i++) {
+        const rgb = pixels.data.slice(i * 4, i * 4 + 3);
+        const u6 = rgbToU6(rgb);
+        microImage.push(digits[u6]);
+      }
+
+      return microImage.join("");
+    }
+
+    /**
+     * Converts a 6-bit RGB value to a 24-bit RGB value.
+     * @returns {[number, number, number]}
+     */
+    const u6toRGB = (/** @type {number} */ u6) => {
+      const red =
+        ((u6 & 0b000010) ? 0b10101010 : 0)
+      + ((u6 & 0b000001) ? 0b01010101 : 0);
+      const green =
+        ((u6 & 0b001000) ? 0b10101010 : 0)
+      + ((u6 & 0b000100) ? 0b01010101 : 0);
+      const blue =
+        ((u6 & 0b100000) ? 0b10101010 : 0)
+      + ((u6 & 0b010000) ? 0b01010101 : 0);
+      return [red, green, blue];
+    };
+
+    /**
+     * Rounds a 24-bit RGB value to the nearest 6-bit RGB value.
+     * @returns {number}
+     */
+    const rgbToU6 = (/** @type {[number, number, number]} */ rgb) => {
+      const red = Math.round(0b11 * rgb[0] / 0xFF);
+      const green = Math.round(0b11 * rgb[1] / 0xFF);
+      const blue = Math.round(0b11 * rgb[2] / 0xFF);
+      return (red << 0) + (green << 2) + (blue << 4);
+    };
+
+    const skus = JSON.parse(document.getElementById('skus').textContent);
+    const games = Object.values(skus).filter(sku => sku.fullCover).map(game => ({
+      ...game,
+      name: game.name
+        .replace(/™/g, ' ')
+        .replace(/®/g, ' ')
+        .replace(/[\:\-]? Early Access$/g, ' ')
+        .replace(/[\:\-]? \w+ Edition$/g, ' ')
+        .replace(/\(\w+ Ver(\.|sion)\)$/g, ' ')
+        .replace(/™/g, ' ')
+      ,
+      id: game.app,
+      microImage: game.microImage,
+      fullCover: game.fullCover,
+    })).sort((gameA, gameB) => {
+      const a = gameA.name.toLowerCase();
+      const b = gameB.name.toLowerCase();
+      return (a < b) ? -1 : (a > b) ? +1 : 0;
+    });
+
+    const main = async() => {
+      const template = document.querySelector("center");
+      template.remove();
+
+      for (const game of games) {
+        let root = template.cloneNode(true);
+        let url = game.fullCover;
+
+        root.querySelector('.source').src = url;
+        root.querySelector('.gameName').textContent = game.name;
+
+        if (!game.microImage) {
+          const microImage = await microImageFromURL(url);
+          game.microImage = microImage;
+        }
+
+        url = await microImageToURL(game.microImage);
+
+        for (const image of root.querySelectorAll("img:not(.source), .img")) {
+          image.src = url;
+          image.style.backgroundImage = 'url(' + url + ')';
+        }
+
+        container.appendChild(root);
+      }
+
+      dev.querySelector(".dumpGames").onclick = () => {
+        const link = document.createElement('a');
+        link.download = "games.json";
+        link.href = URL.createObjectURL(new Blob([
+          JSON.stringify(games).replace(/\}\,\{/g, '},\n{')]));
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+    };
+
+    main();
+</script>
+
+
+<style type="nope">
+    #dev > .content {
+      padding: 16px 8px;
+    }
+
+        main {
+          padding-top: 32px;
+        }
+
+        main > * + * {
+          margin-top: 32px;
+        }
+
+        html {
+          min-height: 100%;
+          background-image: url(/-/squirrel.png);
+          background-position: right bottom;
+          background-repeat: no-repeat;
+          background-size: 128px;
+          color: #FFFFFF;
+          font-family: sans-serif;
+        }
+
+        footer {
+          margin-top: calc(100vh - 128px);
+          min-height: 128px;
+          color: #DD4422;
+          padding-right: 112px;
+          padding-top: 64px;
+          text-align: right;
+        }
+
+
+
+    #dev {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: auto;
+      border-top: 2px double white;
+      box-shadow: 0 0 8px white;
+      background: rgba(255, 255, 255, 0.9375);
+      color: black;
+      z-index: 100;
+    }
+
+    #dev:target {
+      display: block;
+    }
+
+
+    #dev .header {
+      font-family: monospace;
+      font-weight: bold;
+      padding-left: 8px;
+      border-bottom: 2px solid white;
+      background: white;
+      position: relative;
+    }
+
+    #dev .close {
+      display: block;
+      position: absolute;
+      top: 0;
+      right: 2px;
+      bottom: 0;
+      padding: 0 12px;
+      background: #EDD;
+      font-family: sans-serif;
+    }
+
+    #dev .close:hover {
+      background: #DCC;
+    }
+
+    </style>
+
+<main id="main">
+  <st-search>
+    <form>
+      <span>Launch</span>
+      <input
+        name="q"
+        type="text"
+        placeholder="your favourite Stadia game"
+        autocomplete="off"
+        autofocus
+      />
+    </form>
+  </st-search>
+
+  <st-games id="games">
+    <template id="stGameTemplate">
+      <st-game>
+        <st-cover-full>
+          <img class="cover" crossorigin />
+        </st-cover-full>
+        <st-cover-lite>
+          <st-name></st-name>
+
+        </st-cover-lite>
+      </st-game>
+    </template>
+  </st-games>
 </main>
 
-<footer>
-have a nice day
+<footer id="footer">
+  <a href="#dev-tools">have a nice day</a>
 </footer>
 
-<script type="application/json" id="skus">
-[{"name":"Assassin's Creed  Odyssey","id":"8b7e7f7036e5483eaa8745d46248536crcp1","microCover":"zzzjeeeKeezjeeKKzzzzeKKKzzezzKKJzezzzKddKeejeKeKKKdeKedJKJKd_KKK","fullCover":"https://lh3.googleusercontent.com/vl1UnUW0Saw70oyHrD6qo8IJJSiA59OfrYlWLZKQ8T9Cf62Ai2vbG8cAdRxhxSjl0wppmoUL0SIXNVljn9VfYxNEtuTFfy0uDoLsBR8JFHWWL9XNGcca2qEiSj4=s720-rw"},
-{"name":"Attack on Titan 2: Final Battle","id":"a38d988fb142400c947bf0a7b37fd404rcp1","microCover":"KKZ_d_JdFKJuZ_J_JFFJ_ZZZJJ_dK__Z_K__JJ__F__ZZ_ddKKJ_dKKJdKdetdKK","fullCover":"https://lh3.googleusercontent.com/eXP-01YmEHqfR_f4gkKS_-Apcgo8GS1QIgtRVw-71dif6VqU40nZuKedr0wKZi8S6oGF1ZTJCxc7FIKWLYJzgtCU7wAs7SWLCSbG3eJ_kakEVZ4oB9UE2C7RrjPW=s0-d-rw"},
-{"name":"Borderlands 3","id":"be080ad40b434ca289166031d3e88623rcp1","microCover":"56LL6K656LcsctL56PexteP55feeKfQ56Peeevf5Vfd_dKQ6KLpZ_JfLdKGFVF__","fullCover":"https://lh3.googleusercontent.com/azEgGAbPc-cO7Ff2yF1ieyIU9GlLksC-O_bVjmi1M7wn72BpaVjoLVVp29VlL5BkJvSV8oBSmMSuUsQc6561e8gckNIhyVE5LfPRouOQHbPbVYAdWJTDzbe7c_I=s720-rw"},
-{"name":"Celeste","id":"c911998e4f8d4c6ea6712c5ad33e4a54rcp1","microCover":"KKKKKKK4KKKKOKK0KKdeeK50K_eeeKK5KKPPjP0K_KK0055Ke_KK55K5GWKPKKK_","fullCover":"https://lh3.googleusercontent.com/7GTAoubUX43W_zaFkEvQoqAkruysGSkQygrV0DYkVzA7qsIcsboF4n1Kq0mejQIGdlSQxeh4-ZuNQWqMjJ55u0GCR3aBnY1MsMwrULT1-J73Rs3fc3bFO8YjT20=s720-rw"},
-{"name":"Crayta","id":"05f66a46027747a08b930ea70374ac7frcp1","microCover":"ar5665-aavLA-66aeaPeePeLfLLjjP6GLeKaLPQKG_KLKKeeLzKe5K_LazeeeKue","fullCover":"https://lh3.googleusercontent.com/WD-cqJT693XbUjVeBtR6gj6l65oPIX5p6VLbUgxPKqjHhVzWz3p8jwLPk9O2cnllfu4PDOBEK-Am4PTf2fDZQJJJsCzc0aotgzbIwI0GqJjFmaIRcgo-Oa-EK9sH=s720-rw"},
-{"name":"Darksiders Genesis","id":"f39390395ed5444d8e9b23460c8f9152rcp1","microCover":"zzzKKzzzzzezeaKzzezzyKKezuzuKeKezzze0KKezzeKKeKezeeKFKKezeK001KK","fullCover":"https://lh3.googleusercontent.com/34PeCYwQ_7NtcZFwoGbZLfrFXOG1hBTKjLoW3V1MnsUGVCNkfRg4yMslB7XWnoHZUzcQsJMYN0Q9ZdChPZaL6RgIGiYAFdnisMRQQoTOIAUZ9YoCJjik-60H5f8=s0-d-rw"},
-{"name":"Destiny 2","id":"20e792017ab34ad89b70dc17a5c72d68rcp1","microCover":"JKKKKJ004KKKKK000JKKdJ4004JKdJ0000JJdJ00004JK0000000000000000000","fullCover":"https://lh3.googleusercontent.com/DECXdgrgGa8kajG6I8U72o7StsqSlUGcg16poICA6aC-21bIXj6LgAk0ITZQSSj4VgMN1fvjlKGsr5Cb97PtyqKGB4sqvf2uvKbr3eikIXFV85vq76eJSYzV0DAP=s720-rw"},
-{"name":"DOOM","id":"cc1a8e0e94d54f15a22149fed93bbd7arcp1","microCover":"VVV__FVVVVVuzVVVVZVVVVVVZVZoZVFFFVVVoZFFFpFZZFFFd_FVVFFFZFFFVVFF","fullCover":"https://lh3.googleusercontent.com/Oiriurt7C92GiV2J5jXi2WuRouqvFXCSrRvZevSJfbSiSAhjfSw2C-pVjLOK_xi8d0sTkNFGVM-hItmkW7_CtJM3xno1EBjJcmDmuIBRTy3IyEFCJKDHP5Gx1w=s720-rw"},
-{"name":"DOOM 64","id":"5a0e892c933c4f56b4d87976cb655ecfrcp1","microCover":"000000000000000000FKKK0000KKJ_0000tcZZ0000ZxJJ000FFFFF000FFFFFF0","fullCover":"https://lh3.googleusercontent.com/2f9y7BvYG9RnFuEMBmCXbRbwdbG8g9AVQbMNx4m8M3bdIcIjVNz8MsY3jm6KTwGqsPa2XtHQ-y2gn0Yrtqf1UMwuYf1I2OeMHlHxQLlgdfkUzHr8xsjh7DWcpSg=s720-rw"},
-{"name":"DOOM Eternal","id":"632522c846a041ce801e47b96ba2e265rcp1","microCover":"FFFeeJ_FFJZzzKJJJJF_eKJFKFZttZKKJFJJZ_FdKKJFZJKKFJFJV_JFJFJJJJ0J","fullCover":"https://lh3.googleusercontent.com/m4SAdydyB_77-iNGFQVpQnhWsnE0qxfdfgr7CJHN5-2coWeI1aH2pA28jykfG1fsRmArHgDmEIbcueYz-lnm_d8bG9xomi32P2dpXqIVStSMA4E_a90DobkwN6Go=s720-rw"},
-{"name":"DRAGON BALL XENOVERSE 2","id":"80a70c13987841b3a2aedbcac54784abrcp1","microCover":"Kzzeeezz0zzLPzzz0eze_ezz0KzFcyzz0ez0JKzz0K00KeezeK00eJKze00F1pPz","fullCover":"https://lh3.googleusercontent.com/N7Mf3vpOBgTXZP5ZoEmOiq5XjHxvz20VZeKFlQrs9nEVjzP5WGpTsu5ENwJWoOSKCBj_syu4ZFwh6PBCKiLPuRc5HLsBicR0_sNcZLVV_KVfs738v4ooXwFRMrY=s720-rw"},
-{"name":"Embr ","id":"d599576cddfc400f804b889460e84cb3rcp1","microCover":"JGFVKKKFJ0zK_KdFJ_uK_KtK0Ku_u_tFF_ZKu_pKFZd_ttoKFZZt__tKK_txpt_K","fullCover":"https://lh3.googleusercontent.com/_Ya-5wOTO42t3kbYn_9AA9xvYD0ifdUSPU_Qrz8HaKtf7g-Gek4GD8ULUYKHesOux4FFZ2SX1eEbhNNm5z-GdIrpWFoUyfNrPPzwIev7in0kfkWUDiEYRgEI_3g=s720-rw"},
-{"name":"F1  2020","id":"f3519f3dc3d74fbb8086520577b832e0rcp1","microCover":"VVVFVVVVVV____VV_pGe_KV_VVueK0oVV0eeyeKVVVKeKKVVVpFKe0pVVVK0e0VV","fullCover":"https://lh3.googleusercontent.com/U5ow-2wVZGmOTVkiZ9G3T61pm8nfxn9Oa8WycJdd3rzzEGfb8D2LyFly4Mb11dR2FUYUV9qcbEjRSSzao4Jqr80iybnSu6f3Xhp2nq6msbCPa_29KxYbPp_8vg=s720-rw"},
-{"name":"Farming Simulator 19","id":"ebf235012b054269af70eee901bc85cfrcp1","microCover":"ejfjjffeKtdd_eKdeeeeeOKdeKeeeJKtKKKJK40ZKJFJJ0KJ00J_J_JK0K_K_dKJ","fullCover":"https://lh3.googleusercontent.com/FMmBebKN8KEcZ9LavxS2pv5qRRHlZYdcvaPiPQ94IyivxdRwS_XpnlUR8NVasYISARJeg0XVNDXFKeA6P01TXbn1IEtrWd9UUymKmKLiLnsnXCXGtQNWe7pxKdw=s720-rw"},
-{"name":"FINAL FANTASY XV","id":"a447622dbe084c3e9ace4f913a939afarcp1","microCover":"KKLPKLLKKeKLKKKKKyKdKKKKKKKdK5JKKKK0K0KK100K5000000005K000000000","fullCover":"https://lh3.googleusercontent.com/shHWB-5Z_PGMIvjqsGo7zPb4Xeo1OZX1bDgbis5tJuACtGxO7LcJsGZOVr0UdodTzP77KQuOw52t4bsFAUhVpLHVnSMnPrnVB2OgAI_A8zVLcQ2oII_VLAD1aPo=s0-d-rw"},
-{"name":"Football Manager 2020","id":"8a3cc52ad2334b1e91ded77bc43644e0rcp1","microCover":"0KKK_GK0FKzzzKFKK_G_Ka_0KeKd_KeeKdKJGaLe1ZdK_KKK0dJeeLK0KdcKKKK5","fullCover":"https://lh3.googleusercontent.com/A_rLmIMpgNzFJu8f3JoVfoUmA7fKZmVVSwjvTpRXJkHsA3iwvp-Lg_DmULTzpKlTgUTbu296Bo2UuPBURaz_aBpFiqIUKAysuCoFupTXA4ynY8pqVs7c_L-FsPHj=s720-rw"},
-{"name":"Get Packed","id":"73182869b2a644bdbef46984b96e1721rcp1","microCover":"-QfPAQQAdQzKejzeOeLptjPNOeKKZPKJeKO__KKKdeeOKeeeeKeKKeKKKKK_KKKK","fullCover":"https://lh3.googleusercontent.com/cEVs9JfH54_iiVjACC63MvIokK6JXMdaNGJ5YIeqKIg3c8sYHpsLm8wCy9GmlEwi_JYyCSw0Zfgsucv47CwZqPZ-Z5kDoIZvZDnoj7PvIafyTIpXvMZ6HBEwRyXA=s720-rw"},
-{"name":"GRID","id":"ca805d3d37404654a91d2ea62fad7bd4rcp1","microCover":"euuueeedV__Veee__ee_Kd_0eeKKeF00eKtKK000ccJ000JdJ00K0KeeKKKKKK_e","fullCover":"https://lh3.googleusercontent.com/9jDSkcgIn2zf1hrlOpT8MhbV5WdRLUtmQpk0-aIFxW_nRExc2PGsW5yhPDG03mc4RLJ29THcCHXc892U7Onp-50u1qJbAjSPfAoZ_M3m134KOHgvxHwakRP6YOc=s720-rw"},
-{"name":"GYLT","id":"18a3cc2bb111419c8ac873086d04dfaarcp1","microCover":"1KKKKKKL0KKKLeze5F1KKzzeKFKGGezKJFFF15KKF0K0LK01K1K55K005KKK1100","fullCover":"https://lh3.googleusercontent.com/Kn2LsxzVn65aWLTjJwB_kXDzGusf_bhLijJ-1T47G-6AC2a4bxRsD-IvgmOKv5QeKIbKOTA9PC9209LoLthGjhykbxIJNxLWruyeeBZvMXLANLarBQb5ByC7SwM=s0-d-rw"},
-{"name":"Jotun ","id":"c727a9083ce649e5b1cc6999c4fa2e5frcp1","microCover":"jjKzeLjjKjKeePjj5ePeePeKLjPeeLf5fjePeLP5jfPLLLKezzPPPPzzzzzeezzz","fullCover":"https://lh3.googleusercontent.com/XTJGCrxzsGuyt5iUIZ4G3rcq9BeFtOq7svkInUNXnIRaVaSwRTKOOPscVPK-7XB8uT9YxG2RkZixfoucfL-_75dE8RVGaxRuvs18FIIbN71jlqwx30f7VuvyPA=s720-rw"},
-{"name":"Just Dance 2020 ","id":"4b7f307c37364d659118bf7d435733c7rcp1","microCover":"pe_qptttlPizaztt_paqeLtd_aafzGaaa_aPzGaaaaLLLKLLaKLLLLLLLLLLLLLL","fullCover":"https://lh3.googleusercontent.com/TI1PWXCuH739YBSZev3xdW0gaCIKLxuMX77jGqIOMMgNMFL8gSeGbpbK7-txwqlUAyrYOLyAIkdlOQcCFy3mkEPDDhQ6T_I8d_ISPV6a3a3ObcnBX6VodClyh9M=s720-rw"},
-{"name":"Just Shapes & Beats","id":"6b43cecd79734ba28cef5894985c65f1rcp1","microCover":"00000000000FF0000F0GG0F00F0000W00F5K5eW00lP555G00050050000000000","fullCover":"https://lh3.googleusercontent.com/WiDrPA-2h2_lM7-9cQW81IPl33SWgp6uhmWMiFi24VDSreCmNYb2Diukj_0_511Di4_mlFxlSnwHzHuT9QNA0r19JpGpnTYreZpR2pT2cj7UzzZaXBuhf2Xjrg=s720-rw"},
-{"name":"Kine","id":"da94f3aa88b24eb6ae6fdff798f73355rcp1","microCover":"01100000GeKG1101LzeK1zz1LK1LGJueGLeLLeLKLGaraeGaLLLaaKK1LLaLLGKK","fullCover":"https://lh3.googleusercontent.com/4ieTMZxZgDL0xPUSG0VAWsjW6tMKZ-glKOYQfBbqk0AcnZljv2T4JXJvBuEcCviA1LfvX9Y18dTAEvhldCPSqzRgEksMurtRUCkBzuPHd58_j9mjhIlA9r9TFA=s0-d-rw"},
-{"name":"Kona","id":"f5f9708a422a44cc876c240cfa07221drcp1","microCover":"zzzzzz0ezzzzzz0zeeeedz0ezKJssz0Kzyussz1zzzyede0zzzzzz5Kzzzzzzzez","fullCover":"https://lh3.googleusercontent.com/BaL9NOmKI5VsUsbtruoFaLd7v8Pn-mK21e78dGZ7wNJ2SxJzM9wjP4cSAOpN798Ilcd3TrACEyxnRYpKz5xdWzxpk72mQ2gkLdh_HE8NxwXkJvklIelcezhoOdv9=s720-rw"},
-{"name":"Lara Croft and the Temple of Osiris","id":"6d0d865669774338b3ce888a84da6cdercp1","microCover":"K05K5000K40K0KF0KK0d0K_K0K0_FFKPKKK04KLQKeKK0KPPdKeeFKKeeeK_KKKK","fullCover":"https://lh3.googleusercontent.com/5SLIiiPbwGuKqbjNqAsBSeBnBIT70gipNFcRB6pWUgNHfwnmG_njj98iJEX7Vn88Z8tKKhSEF21sE8Cy2ntOglHWHrgQk4wUbMgL-D1jz3Ieh1w-5lkhTdDfqaU=s720-rw"},
-{"name":"Little Nightmares","id":"3aed855f10b34f618e5f6c6f5467bcf9rcp1","microCover":"000FF000000Ke00000KedK0000KeKJ0000KddKF0000ddK000000000000000000","fullCover":"https://lh3.googleusercontent.com/i6ZIXQ9RKfAc_KpLAxNbLRzljAijoJttuGAqGwWaBaxdc2knx-v8x_i44bKMopt1PyqrMRkTLpIKSAz77v3A15BXUoSG0Uo2QOqGgouUFIHYNPtM_ti97M6omg=s720-rw"},
-{"name":"Lost Words: Beyond the Page","id":"d334bea27ee64ef5a3a9bb14b1d6a88ercp1","microCover":"555-5PK405PKezK50KKPeeK50KF_OK500KJeeJK00d_deKJ00cdKyOJ00J5KdcN0","fullCover":"https://lh3.googleusercontent.com/1lhuwC0b8Lycp3LZ80XPcWN_rZHEIIqQl4Uv8MRr4CFO52DFFCn1cCJHSni2cLXgpyQAlOqAHkcQBj7XQXrjOr1IKaHmffXU5sg2F0DAjkOt5WD83mw3R-bYGTTh=s720-rw"},
-{"name":"Metro 2033 Redux","id":"9b3ea6519cac48d68ca821f07b1a6a3drcp1","microCover":"eejKzzee5eKK_eeKLee0KePKPeeOeeK0KKK0KeK0KeK00K00KKK00KK0L1000K00","fullCover":"https://lh3.googleusercontent.com/tcYmO1UAD8zzOK2cwYedocSZNgFXxfYVVZND9C7K8X8Yz6bpjPsapSejuKK6FJgkRhmfGVHOsLLs5qsNgI-76k3-_3IA8oEY5dzxC4PeIWXW5oQhbvSA0FIfNWOY=s720-rw"},
-{"name":"Metro Exodus","id":"879d82512f5441829250ead1aa678a70rcp1","microCover":"11KKKK110KKKKKK0KKKezPK10KeejeKKKKLzzeK51KezzeK55KzzzjKK0eeeeeK0","fullCover":"https://lh3.googleusercontent.com/tgNShQv8q6e10ecbPC3L_8fnglJObvQp7hrehmbgyLTVd1HQ6OmHtS3b9xrtutHaAA_4-Q5XdJ2TLbiNmybsOLQdbjHETkjuePT2QveE0cRoPzsqpjVU7DRRj1g=s720-rw"},
-{"name":"Metro Last Light Redux","id":"b65c1c4dcdf24446bcecda190c6a2fe7rcp1","microCover":"eezeeedKKze_KJKKKee_F0JKJKedK0F0KeKKK000KKKF00K0KKK00KK000K05000","fullCover":"https://lh3.googleusercontent.com/8404tAz3UBefbR9nZzIa_LPF2LTcCdzyeA7irc6WGQAaT0xnZhsLtQFwP9k7mDR__XJci62-Wuj0whWBuv5ao-yJ8Dp5TyMdgOt_UtkUNBYCcAZZ6C4o6nMT2Q=s720-rw"},
-{"name":"Monopoly","id":"10b8a9cc8ec746f29afc1fc3c3ded28brcp1","microCover":"fffeee10ejzpz_65___eKuP5KdKe_u50K_eKudL5ze_eKeePzzdKKLzPKjeKeef5","fullCover":"https://lh3.googleusercontent.com/Al3QfOz25vWgOUrxSQU0-xl8bn3ti2NpBq0fAoOP7-79omCOQIT9fo90QIeMtp7q5SlcKjFEQxSbWZFC732WsgDrBh1nDdQULf-K4vdSH6N3A4Dt4zz8r7gQg-xV=s720-rw"},
-{"name":"Monster Boy and the Cursed Kingdom","id":"ef14fb2f692c4b42b4b092d3e7864cd8rcp1","microCover":"66L-AfQzL__eQzjzA--PPe_zjeQKQ__zfeuuedtzjP__uduzQ_pWaKtzj_lW_lKz","fullCover":"https://lh3.googleusercontent.com/_iHMt71ESCfE4EKF3IhCCXCQTLmpn-zl7C8XyGl7fADYYF3W9w8Til_OLqeNGzsppZvZfEFIIQIx4Ec1YMPSG1bE2TB4_dY6gAU-l62Wijx1XCC18j1IWiplUNE=s720-rw"},
-{"name":"Monster Energy Supercross - The Official Videogame 3","id":"d50e1c1b61224bceb65da9406f3f4e8frcp1","microCover":"eeeefK00eKePe000LeKKK000e_KK000ePeK500K0101000000000000000000000","fullCover":"https://lh3.googleusercontent.com/naMIrWahw0AhZWz4o2SZ3xRl6X8E_xMhOPfoCrHBWBgphrPnkWqFDqWSGKqqVD6IqlklxEuyAtRj1sr9v1-f9kygJkraPUYt_2-GjIQCcU7UY5BhDqkks_-NBg=s720-rw"},
-{"name":"Mortal Kombat 11","id":"7bfbcba307114ab88ae4231da2ec85d3rcp1","microCover":"ttxtttssttx_yxsstty_tttssttKZttssst__ttssst_JcsosstF_ZoZsssssZZZ","fullCover":"https://lh3.googleusercontent.com/vaXYu0eqdKZfXKZyaAyEGW-groVZ-qM5w0uFSFNNAfgaYfRxzhnOji0kug3VPKqv54jrSPjCdzqcwCPsJdUJuAJjfFg7v9jQ_3ZIZ0LoCYWDOCrek7vH5M4-rA=s720-rw"},
-{"name":"MotoGP 20","id":"e465c4086aff4884990933d9f119f5f5rcp1","microCover":"0000d0K5e00FKdF00K00K0KK0000J0_J00000Ke000000JV000000ZeK00000000","fullCover":"https://lh3.googleusercontent.com/GESVnwuyEmTel73vl8bqY5GpeiIMYw2fl0k5ZB37_9cfAl4nSMJ06TLLf_kaQ57FYIkZ9z7BGi2C-GU69l0hWLwWOcB8aoJvqM2yYtr80dnAfyHI5jwscLrCfZg=s720-rw"},
-{"name":"NBA 2K20","id":"2afad3696b394f669b49e4c0b6016958rcp1","microCover":"KKK0F0FGGuz__ee00F_FKpFF0G__p_FFFFpeepWFFFFFZuuFFKFFVJ_0FKK0V__F","fullCover":"https://lh3.googleusercontent.com/-uLRlJISNpQDASN8PoN4q6-dP-B9UnB0uh6KijKcQMiRj_Ao4_SzCK04ZdGUU3tBOXFotkHKM5CeFhGRE6WIaB-mUDAEvmez5zlUhPeqxmPsqxJhqTfpSvljfz0=s0-d-rw"},
-{"name":"OCTOPATH TRAVELER ","id":"48ead86182b14fe0afcc5f2927dbed51rcp1","microCover":"K_Kd__eeed_dedeedeudeeedde_JK_eeddeKdKd_Kd_KK_KdKKK0FKKKKKK0KFKK","fullCover":"https://lh3.googleusercontent.com/Y5bhR3kzAE7olMePHIUoiHk6fs7gIvpqZyL5U-IKBMhRQbL7JQHVivWS7SavfywrA4bG2sd3crQ48orttlRYA8rneM1C0lqo-sDeQmtNGzVCoM2lOiIGLyufKSc=s720-rw"},
-{"name":"One Hand Clapping  ","id":"76309b9f2f294b07b410e8b6aa879273rcp1","microCover":"LvavuevfLvLvy1vzLfveyvfuauvzfvfuLuvzavftKazzafetGLezavuu1GKyauK1","fullCover":"https://lh3.googleusercontent.com/hndotUu39pSmenuSgr2AF_uNOJvAS4jHs37BZh5EHnVd6-HRAxT0Vcsv2dz2mO6-JSC4V4LVXoOZGhMrtwt9mp-n20BAOd6rkyLod5sv8f6cp85kGeXaE2n_Zw=s720-rw"},
-{"name":"Orcs Must Die! 3","id":"c1928530515748da9f55afc7243fd3e1rcp1","microCover":"0eeGGaQLG__GGaLH1K_KLaLa1KKGaa511FGKGa51J_11LLG10Z00G0L000000000","fullCover":"https://lh3.googleusercontent.com/eTyxZ0e-vii0pm7_On-XpTSit1S3QFz1SlhMwi9k40IYduSj56zW_9sq14RdGnjKi2bkt7RBV6vUYwxWMB9-L1y-8nZux7vIxAJnycZ_uD7M7Mcrq3sBaQ-Btw=s720-rw"},
-{"name":"Panzer Dragoon: Remake","id":"ffda0b7e397243f8956f92f89b6902c4rcp1","microCover":"eyeeLaLeeeedPeKPKeeeeLeePeeeePudLePeeeueKeeeLee_KePeffKK1dKKKLLP","fullCover":"https://lh3.googleusercontent.com/rd4vwRkfW6YO540AzWRvV43sqtAJaefbl7EZLtiReAHjIuhYw-ox1fp_wEE90Z2vvIvsaCVVUrdpSYqddOeAcWO7sDztSDo257WoVQS2cOfTNmCqf1BV-pBBXmw=s720-rw"},
-{"name":"PLAYERUNKNOWN'S BATTLEGROUNDS","id":"a4c5eb3f4e614b7fadbba64cba68f849rcp1","microCover":"LLLPPPPLPPKeKPPLejPKejQPKefeefeKK_teettKJJt_doZF0FKK_JJF000KKF00","fullCover":"https://lh3.googleusercontent.com/_jzVyR6DRJjaSO3c3SSbv0-1d5sX-i11TqRXV5I7c5IHvkGlVA-PfaAFwX080J9rZHeQfXx4T3MYLrGYjFqVQEV3bYiUKZRRKTbMxybo7XOxvxNntqdq_sV_T8o=s720-rw"},
-{"name":"Power Rangers: Battle for the Grid","id":"bbb1a143aa3449a5a1f236a05c305c9frcp1","microCover":"J00VV0K4Jy1pV1eKsiGpFGeKeKGK0GuZ_ZK__LeKKZa__adKKFKKWKKK10aKKK01","fullCover":"https://lh3.googleusercontent.com/jYBtT11ncBcKV54znlKKwc8NfGIHCgH2A52PffVX3a5wr1ztPUEJ8PbyWj6sNM0eYrEb-cw1YteBBKjSzDXOE_FwdlP01ISLJNRCRSMWWmqmKlLrWmwaMs74R_o=s720-rw"},
-{"name":"RAGE 2","id":"8615c857d7d54efebd94fe17e3f2896crcp1","microCover":"ztKeee0WeJ0_GK0aa0K00deu0FKKu_ez0eyK_F_qZ_qt_0dstKWWFFd_t0cJFZcc","fullCover":"https://lh3.googleusercontent.com/4RMHL8CJ4xcVA5yI9IZOosjfY5fVTEhmvfz6Bz53Ho1s2HOpzGIRN9W8rVy64nCS4Itr9s_hIcPUteHc0mDKUvLwgArRMG64dJ9axYLsViA1EKKQ35PxVA-11Qk=s0-d-rw"},
-{"name":"Red Dead Redemption 2","id":"2152a1e96d5b47b18a5df7ca9bb0751frcp1","microCover":"VVVVVVVVFFFVV0FVzeKkddcouKFVudssVVVVJFFoVFFVe0FV0F00K0K00000KFJF","fullCover":"https://lh3.googleusercontent.com/IfEP7mqce_bnp_aLxMKkjbw2uTz7MjKQg2tqwKMOA1c-1VrEbljPTf2ytbLZcr0A-CMjke6XJ-xiHILvZ2T15-gdi7d8oLxtUZafs-RSYfBKFF5LZDVhdxdKbEU=s720-rw"},
-{"name":"Relicta","id":"ed05d9df2ec4452594b07336e360a1aarcp1","microCover":"LeLPPLLPLePePePeLKPLPLefKKLeePeK0KLLLPjKKLePKezaLP0PPKeafKGLKKKa","fullCover":"https://lh3.googleusercontent.com/68YCBwz-50Nae2e_-XwCpG_13xbA3OuWTRsxxBqdlKUrvix6QnQYY011Fe8TeBj3iMOKhmP4vurjDcb1zOQwxxlWqaPZv0ztzr0GTkuqxRzYk_sSzNP7IQ3Mbg=s720-rw"},
-{"name":"Rise of the Tomb Raider: 20 Year Celebration","id":"e5c6ec7bf437491ea4ac0917df8f9640rcp1","microCover":"PPPjQQPPPPjPPQQPQffLfjQQfjjPPPjQfjjPLejjfjjPLjjjfjjPPjjjfjjfPfjj","fullCover":"https://lh3.googleusercontent.com/JV6HplJctzOUtRNjLPE1Uf-MqgkJKtbcmO_AuqFyl0Jn16Q6qe5EEWey49M4Ln1hNHFJbPGA5JSHsHts8RIdxYeg1vb0ZepIE4CPI5Um0l782IROp50jwuELxw=s0-d-rw"},
-{"name":"Rock of Ages 3: Make & Break","id":"d3d8e467203d401387857d5b6cc27263rcp1","microCover":"jeezeeuuKPezueeyKeKeue_eKeKeey__eeZddteyddZ_VdddJKK__KJJcJJJJJJZ","fullCover":"https://lh3.googleusercontent.com/6f0uungyoW2Axtus2sevnKMsYHaBEplqp2wMof8TSSbP3WYr-06Z0hQRJaF1WcO3EHWabPB4uIX1L-VjLIUbTL6BIa3kR6viOK8LomKtkw3VpayJSvIva87zGIQ=s720-rw"},
-{"name":"SAMURAI SHODOWN  ","id":"120348c2707740b99b509fad49a2f45drcp1","microCover":"Z_tK0_dctdtdFdZttyddKttZyy_y_ut_xyydudxttttJ_txtZddFJdttJZd_Fd_d","fullCover":"https://lh3.googleusercontent.com/WlB-WLbPcBnhLPPqHwp73e9ApLYfEdymhOIipbg0Xt4Q5LqvPrptNCiyx3YxEd785wOJ3SDRDPR4rE5TvV-lhi_sPX-lOpOB2HVHE6deJWfo5VUCJ6dWN2tak6jO=s720-rw"},
-{"name":"Serious Sam Collection","id":"cabec52b78264dafac69011aeacd5753rcp1","microCover":"deededddeeuFzdKeeudd_yueuyK__euuyd__tyeeed_du_eeeeeuuueeeeeuueee","fullCover":"https://lh3.googleusercontent.com/cC5Rsg3ikypKFeJQEo3mNK_sr1anHXApWiC4X1xhD22bZoe5pUKd_zw3sYEwPZEyzy9Pi8sLwJwHsFoYIYJcTHFhTQ4PgZN3OgZByi-P0ybj1oWF46vMfXa0EOk=s720-rw"},
-{"name":"Shadow of the Tomb Raider ","id":"efa3b6108d3e41689b2223ba9d48f5c8rcp1","microCover":"J0JKKK004FKeuK00JKdyKe000J_e0e000K__1K000JKK0K0000KK0KJ00FeK0K00","fullCover":"https://lh3.googleusercontent.com/ztnbk63kaMsX8xq4VM1mdQzzeV4hc3RIsQ1dTtjDbbSiYbivqY23FqHk_sCo883A1pJeUKw1EFmhn_vZiednBSQGa7lvvVpLXIliOa-5sAYbJewYS-vW9lpwUf4=s0-d-rw"},
-{"name":"Spitlings","id":"921e9afe46aa478fb4aa929a7b1a6bd5rcp1","microCover":"1KKKKG1111z0Fe111KzeeK111LKLKK111KKK001111K_OK111KL_KK011001J001","fullCover":"https://lh3.googleusercontent.com/vZXW0MY4ZA_vOOgKl5yI85uztXM3L-LtqWsvIziFqFa8kPoqtCVShu_T83t3UDQgteOdktWs-g3SStK2jAVIQlhp4GliyXuAW1sdV0MTJLNgVADHpwkIGl4L418=s720-rw"},
-{"name":"Stacks On Stacks (On Stacks)","id":"15a067411b8d4429b0954434d8f05d48rcp1","microCover":"PeeeefP1exeddLK1u_KdddKeead__tLLKeaaaeLLsPLdLK__sLPg11t_oLKdKK_e","fullCover":"https://lh3.googleusercontent.com/9dd62Cypq8DeEcBZDh6TGqzi1YCxxZhNs1p-EL2Ig3wCQPia7mEoUNA7Op_kg_Zjco1961MyPWjyBqp4eKrMLO75upayeV5br6yPZK98MRfyHSYNKlGmnKhgGAgD=s720-rw"},
-{"name":"SteamWorld Dig","id":"c4898519ff254b969ede8bafdff927e8rcp1","microCover":"0JK0JKK00F_u0yF000_ZFFF040gcJ0_GPJccZ0JK0JJJJ0ZG00JF0J0000000000","fullCover":"https://lh3.googleusercontent.com/wVaKsp3jYz-cRrPw2cxaInY9vrfVIoJOxeC9McLV63m7uK250VW3V6Q8s6tYcs-7HIpBprAEYIUzUDcyQ08ffq8_fhqAmRjvqxY7f8dAw1RQqWA21NMhg4ko2nhK=s720-rw"},
-{"name":"SteamWorld Dig 2","id":"b832835182124d4d83cb76a74a76a33frcp1","microCover":"00VF00000FVZ00010FZV0KK00FZJ0Z100FeZFZF004y_K05000K000O005000000","fullCover":"https://lh3.googleusercontent.com/kMw6B-p92Ea9HrZ2CUkc_yXmFmtfKF-IaMRPpmmTDwPVvD6wnZpw9OAuA-dW4eO1FtgDuAcezpxSn3ctqV8nsmGVde1JCDL3IWS6DGmg1-kQEczfAnVcRidphjM=s720-rw"},
-{"name":"SteamWorld Heist","id":"819cdf4b7ff94947941106571ccf41e5rcp1","microCover":"000FGF00000Jp_F000KF_pG000FKKFF00GFKKJF00GLscG000GGF0000100G0000","fullCover":"https://lh3.googleusercontent.com/BTpG0EFt5P6wMhjP6WnwIdo3qAqWFqOKU_ZGklGngMMy05wIlK68Z5ireUN36nyzfB-ovJUQ4-n6gGl5vVTRGbt6VR4qnAJXIcu4I9xefUxK8ZXZaYVvBZCGxQ=s720-rw"},
-{"name":"SteamWorld Quest: Hand of Gilgamech","id":"b845605f8eb447008f3f0d2295265ffdrcp1","microCover":"0K0KK000FddZKKKK0KKJFKKKKeKKyzu0KKKKduJJ00F_F__KF0FKKJFF0FJ0KJJJ","fullCover":"https://lh3.googleusercontent.com/kaw7D0A3WMsNVKIz-49sQ73wsAMMJu68Do5TkvvJkouQzfRLn0XHYRTze_6uz20QBSJvByPtU4kj-oAsBHvEF-jVFh9E5qdY_hv_auuKoYidW-NmNA-FQ7qgHR4=s720-rw"},
-{"name":"Strange Brigade","id":"8e77c7a4368944589b4c9d8179d2eb4crcp1","microCover":"00000000000001K0KK_K05P0eKKK15K0uK_K00K00KKKKKLK000K000K00000000","fullCover":"https://lh3.googleusercontent.com/OaTjOAMx743r0Dp02Fy85lxOXcqZKsGb82LoTX8UPIucZlOUUS2vVNPkg1Pc6Z_k1fxdTzDvCntNKrIpnnYZZjuzOBWvgoD3hodNe34QuO--oLwzf5M1dY2Jvwg=s720-rw"},
-{"name":"Sundered ","id":"5ec4424b963f44d18d0016322c19c9f0rcp1","microCover":"000G1000001HH000001ba000001GFG00000G000000JJJd000000100000000000","fullCover":"https://lh3.googleusercontent.com/k4qwu36Xxa-7po_Gl0LLHLlr0fKtjewYvMH07j3M4vpZ4YVFHe-ZrdMY-kKAYHgMPdIXGDrQrb04xl8QCr04E7LQT8Z2JJsDQvf1qwBn1XslM18RbfDLPb_Ojlk=s720-rw"},
-{"name":"SUPERHOT","id":"f7afcff709e74227a5648aacadf03815rcp1","microCover":"eeeePeeeeeefjzeeeeePePeffKeKeefefKeFWpzejVjFVuzzzZ_VV_zzz_0uFjzz","fullCover":"https://lh3.googleusercontent.com/a_DZMKOW9osfbqTGtoOn0nprUsTXzdGhueGOfKHWcfkURlE3ApMG-XXtbzJwvgQhpjduqe6axALeMRaTDyZ5AMa8cTI3KqoXCCi1FtiZPJW-oK8x5HS-AyAWCJM=s720-rw"},
-{"name":"SUPERHOT: MIND CONTROL DELETE","id":"382fe14629e148449e7b8f94e8aecb38rcp1","microCover":"zzzzzzzzzzzfezzzzzzzzzzzzzzzuzzzzzu_u_zzzzeee_zzzz_e_azzzzzuuuzz","fullCover":"https://lh3.googleusercontent.com/GPCxEK4m7U_JEYLqmX7-EBOUruH73G8uqakZJV7E-UJ09qGvbEz1h4fKmOGyQpUpTf9duNyNzFyMPLBUErjX6hVn93z3_r6QiS4gHQG2y4NSlQTP6oDa75B-8R0=s720-rw"},
-{"name":"The Crew 2","id":"cc97434908874852a6705d255a605dc8rcp1","microCover":"tyueuefjtyyK_sjjduzeeK_Ku_KKK_FeKKKaFKKKKFKFFKK_KeeK0KKK00F00000","fullCover":"https://lh3.googleusercontent.com/hSqSlpyyI32qQhzVP4RowfH10PfHU4EQUVZLz87LvE_SY874lzuRYQDK_NiKAGjtMK-VJrN6TLXKG5hu4mkmdHaAHuT0UVZgdaIs0x_TzRdkg8EwjNP158OH6Q=s720-rw"},
-{"name":"The Division 2  ","id":"d43cd46c81734ca48e1a615310d0237crcp1","microCover":"e0ejf_KPj0eo__KKz0eyzeKee0eed_KyK0KKdKKdK0Kdd0KK0GKee0000F0KF000","fullCover":"https://lh3.googleusercontent.com/5LWSNFzFoBNN8DKoq98yC6FbB2QLrYWdgD-5qNuCPxboIFJc96RdeNg2Y2nxCfTXGLJpmuvo2lMcNHce2FnTXpGZ8jxVfjHISp43Xed_XVzTFMlz4FNhjGOUSA=s720-rw"},
-{"name":"The Elder Scrolls Online: Tamriel Unlimited","id":"b17f16d4a4f94c0a85e07f54dbdedbb6rcp1","microCover":"KeyzzedKK_edKe_KJ_dJKeKJKKdKKKK0KKK00KK40JK00K4000J00J0000000000","fullCover":"https://lh3.googleusercontent.com/ir5czY9RZ8F1SosNn_DrqpqsPKXB_lqVey46kkhuBHiJODEI8niDIeV8Hy1NwbW4IViqhSLX6JcdowjfI1uHhVb1yBPnfSe94zR5FqyiVe-ahFpGG4ON_zUkupQ=s720-rw"},
-{"name":"The Turing Test","id":"cfd2977e1b9f412387ca2f44848400acrcp1","microCover":"0KKKe05f0KeKKK0f0eKzeeKj0KKeeKez0KKeeKez0KLePLzz0KKeeKPz0KKKfeLf","fullCover":"https://lh3.googleusercontent.com/wnZysSWLXqkoH1jxmsyMM7ZdBnj_RhHf7Oix6pbsc-5LiT-VLgkZMpH2mXWuVh9YT9JooKkJmmKfJ5vXbsrvVPUKdVnphRwFj-7niRw7IYXC9G9zAm0oNy3vOjs=s720-rw"},
-{"name":"Thumper","id":"c121d8b3fa744b52b71bf3599cb3da7frcp1","microCover":"ZVVFFFFVFFVVZF0F00JFd0000FJZFJF00K__eF000J_deF0000K0K00000KFK00G","fullCover":"https://lh3.googleusercontent.com/e1pU3ERRbguEAr5xj1eFMojTCspV8dVNmN6jc1B-vXiXBzKAGyTtrz6ZmQfh_RfozWPP4-3zGFzDPLsuQGq9ntnnVx9L-irtCSVjkipmKeHTYkXn6dAAEnrpSA=s0-d-rw"},
-{"name":"Tom Clancy's Ghost Recon Breakpoint","id":"11c9ece5b3a045908d77cf2b66adb010rcp1","microCover":"ejPPLPPPKffKKePPKKPKeKPfKPeeKLjPKefKejPLKLKKKeK55KeeePK0KKKKeeK5","fullCover":"https://lh3.googleusercontent.com/3z-r0Yva3nbHCwm_4W85X-UV5k42IwBG2EcDtlPWTmC5wdBGgMzyETp_pVw6e0wRuX2XDHT8VABem3NawwkMy1ITCCBAGcFoxfx2n6TWBtljxWiwOGdVIvXzIhEI=s720-rw"},
-{"name":"Tomb Raider ","id":"42503ac2cfcf40018c15c86b86a5508drcp1","microCover":"zeeeeK4KeKe_KKK0e_KKeK00eKKKeee0KKKKeeJ0eKeJyeK0eKKKyK00KKKeeK00","fullCover":"https://lh3.googleusercontent.com/ItdfhlmZlO02nwB2DXVUYjI9No4a8YneGd89WAtsQWQxIfuQtaNHNao7gA5ctMHgC-WTtPGjuuyK64Sv4nhEUYf6gwGELlxDePAdoKo1dGRhb9d64jyzPV4kQg=s0-d-rw"},
-{"name":"Trials Rising","id":"a031419410cc48469ff8954ea0732640rcp1","microCover":"1eeP5LLL1uz00PLK1ezP9ePKKeeKeeP_KPe0KPdKKey_ieKKKeeeedK1KKdeeKK1","fullCover":"https://lh3.googleusercontent.com/yboeUZCnPqzW-B4pHW8XyT3khyMK4n0D-1Tcsgv2aoJ3eh3S3JwblvGsW6Emf0hGQwq9pK6Kao2TSAp4Lek5Bx-GDTcKmDYlUbZjdjh7VpEaHZ9JuXjam5IpRig=s720-rw"},
-{"name":"Wave Break","id":"3e7b24085e704c10ab03f93a19947c14rcp1","microCover":"GGGGLHHHG1LLvGHH11GaaHHG11Gv_H1GGGPeGuGXHGGzu_XXHHHHXHXX0GHGGYG0","fullCover":"https://lh3.googleusercontent.com/dNa51Ue5hsKWeuuSOzAApEEGhABuJrCMUkXV6jj4TblatRHJXmianyfHdVqT2E48DlJhKpkZKiXcEw_lTCR2QjBJi8TZdTDg7yIRCSnbn01evNuIrqkrTQPa-xg=s720-rw"},
-{"name":"West of Loathing","id":"0a60fff637b445a797623d0c69433a9crcp1","microCover":"zezeezeezze0KzK0zezzeeeezzKzzzzzzzKezzeezzzzzzzKzzzezzzzzzzzzzzz","fullCover":"https://lh3.googleusercontent.com/wYVT1KevOJGbw12oFGVWFlEi6uNp91s3zE7deoEZmHl7Imkyt3FGMscuWxRaGZ_93tKK6_yDatcEHKH-voUFU4GGRi4hpoOGvDR7UQEcbQpgdf5uS0CosIiqSRSg=s720-rw"},
-{"name":"Wolfenstein: Youngblood","id":"4884bd9bd7864cf28deef05ef4b69e70rcp1","microCover":"16QL1KK115LP5eLK51L6LL555GL5LeL10GK1K_GF0LaLKFWF1KK_uGV_10__uFKK","fullCover":"https://lh3.googleusercontent.com/P6EgUVCNV8cHMnYL4RuIm580nj-uuFo3tEYm_t7Jsl79lBRwcvDahX0shJ4IV6LVDx8d8hsJAU29MGYfgIbZ6Iu0WeX7cUtvOnbPh3wGyxJhz20Ql28FJ67qGOQ=s0-d-rw"},
-{"name":"Zombie Army 4: Dead War","id":"cba537cccfe3470b8784f88660ea5f09rcp1","microCover":"000005K5000005e00F0F55510VVF5_d50KeP6KK500056KKL0001L50100055001","fullCover":"https://lh3.googleusercontent.com/_quRfOIUrcMNkLe08rO8dexL_9EDOOO6ST3up8HBIU4ufnnX2yHTsShcKwFaffOOyLo_lPKJVMFOfkjDakyFmdXC2WLat9WOaGUD4PoeXm2wFgVSlbH5HkvL_A=s720-rw"}]
-</script>
+<aside id="dev-tools">
+  <header>
+    <span class="tab">dev tools</span>
+    <a class="close" href="#">×</a>
+  </header>
+
+  <section>
+    <button class="dumpGames">games.json</button>
+  </section>
+</aside>
+
+
+
+<center>
+    <img class="source" style="
+      width: 320px;
+      height: 180px;
+    " loading="lazy" />
+    <img style="
+      width: 320px;
+      height: 180px;
+      image-rendering: pixelated;
+    " />
+    <div class="img" style="
+      border-radius: 16px;
+      display: inline-block;
+      background-size: 100% 100%;
+      width: 320px;
+      height: 180px;
+      image-rendering: pixelated;
+      position: relative;
+      contain: strict;
+    ">
+    <div style="
+      backdrop-filter: saturate(150%) contrast(125%) blur(calc(180px/8));
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    ">
+      <div class="gameName" style="
+        display: grid;
+        background-size: 100% 100%;
+        width: 100%;
+        height: 100%;
+        justify-items: center;
+        align-items: center;
+        -webkit-text-stroke: 1px black;
+        text-shadow: 0 0 2px black;
+        font-weight: bold;
+        font-size: 36px;
+        color: #FFFFFF;
+        font-family: sans-serif;
+        overflow: hidden;
+      ">
+
+      </div>
+    </div>
+    </div>
