@@ -2,7 +2,7 @@
 
 <title>stadia.run</title>
 <link rel="canonical" href="https://stadia.run/" />
-<link rel="icon" href="/-/squirrel.png" />
+<link rel="icon" href="/-/squirrel-stadian.png" />
 
 <style>
 * {
@@ -25,9 +25,9 @@ html:root {
   --background-color: #202124;
   --primary-color: #FFFFFF;
   --secondary-color: #D72D30;
-  --accent-color: #D72D30;
-  --mascot-url: url(/-/squirrel.png);
-  --mascot-disabled-url: url(/-/squirrel-generic.png);
+  --mascot-url: url(/-/squirrel-stadian.png);
+  --mascot-disabled-url: url(/-/squirrel-disabled.png);
+  --mascot-generic-url: url(/-/squirrel-generic.png);
   --primary-font-size: 14px;
   --large-margin: 16px;
   --small-margin: 6px;
@@ -35,7 +35,7 @@ html:root {
      or body text within a narrower window. */
 
   --controls-width: 720px;
-  --search-height: 96px;
+  --search-height: 64px;
   --search-font-size: 32px;
 
   font-family: sans-serif;
@@ -54,16 +54,15 @@ form {
   display: contents;
 }
 
-button {
+button:enabled {
   cursor: pointer;
 }
 
-body {
-  display: grid;
+:disabled {
+  cursor: not-allowed;
 }
 
 main#main {
-  display: grid;
   grid-template-columns:
     1fr
     [controls-columns-start]
@@ -88,12 +87,21 @@ main#main {
       min-content
       [search-label-end]
       0
-      [search-start]
+      [search-input-start]
       auto
-      [search-end];
+      [search-input-end]
+      var(--small-margin)
+      [search-button-start]
+      min-content
+      [search-button-end]
+      var(--small-margin)
+      var(--search-height)
     ;
     font-size: var(--search-font-size);
     font-weight: bold;
+    background-image: var(--mascot-url);
+    background-size: var(--search-height);
+    background-position: right;
   }
 
     main#main st-search span {
@@ -111,23 +119,35 @@ main#main {
       }
 
     main#main st-search input {
-      grid-column: search-start / search-end;
-      /* grid-row: search-start / search-end; */
-      color: var(--primary-color);
-      caret-color: var(--accent-color);
-      background-image: var(--mascot-url);
-      background-size: var(--search-height);
-      background-position: right;
+      grid-column: search-input-start / search-input-end;
+      caret-color: var(--secondary-color);
     }
 
-    main#main st-search input::placeholder {
-      color: var(--primary-color);
+      main#main st-search input::placeholder {
+        color: inherit;
+      }
+
+      main#main st-search input:placeholder-shown {
+        opacity: 0.5;
+      }
+
+      main#main st-search button {
+      grid-column: search-button-start / search-button-end;
+      align-items: center;
+      color: var(--secondary-color);
+      padding-top: 8px;
     }
 
-    main#main st-search input:placeholder-shown {
-      background-image: var(--mascot-disabled-url);
-      opacity: 0.5;
-    }
+      main#main st-search button kbd {
+        font-size: calc(var(--search-font-size) / 2);
+        display: inline;
+        border: 2px solid currentColor;
+        padding: 2px;
+      }
+
+      main#main st-search button:disabled {
+        /* color: #444; */
+      }
 
 </style>
 
@@ -381,7 +401,7 @@ main#main {
 <main id="main">
   <st-search>
     <form method="get" action="/">
-      <span>stadia.run<code>/</code></span>
+      <span>stadia<code>.</code>run<code>/</code></span>
       <input
         name="q"
         type="text"
@@ -390,6 +410,7 @@ main#main {
         autofocus
       />
     </form>
+    <button disabled><kbd>⏎</kbd></button>
   </st-search>
 
   <st-games id="games">
