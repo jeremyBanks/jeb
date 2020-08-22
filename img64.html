@@ -24,9 +24,10 @@
 html:root {
   --background-color: #202124;
   --primary-color: #FFFFFF;
-  --secondary-color: #EE6633;
-  --accent-color: #DD4422;
+  --secondary-color: #D72D30;
+  --accent-color: #D72D30;
   --mascot-url: url(/-/squirrel.png);
+  --mascot-disabled-url: url(/-/squirrel-generic.png);
   --primary-font-size: 14px;
   --large-margin: 16px;
   --small-margin: 6px;
@@ -84,17 +85,19 @@ main#main {
 
     grid-template-columns:
       [search-label-start]
-      120px
+      min-content
       [search-label-end]
-      var(--small-margin)
+      0
       [search-start]
       auto
       [search-end];
     ;
     font-size: var(--search-font-size);
+    font-weight: bold;
   }
 
     main#main st-search span {
+      display: block;
       grid-column: search-label-start / search-label-end;
       text-align: right;
       place-self: center right;
@@ -102,14 +105,19 @@ main#main {
       user-select: none;
     }
 
+      main#main st-search span code {
+        display: inline;
+        font-family: monospace;
+      }
+
     main#main st-search input {
       grid-column: search-start / search-end;
       /* grid-row: search-start / search-end; */
       color: var(--primary-color);
       caret-color: var(--accent-color);
-    background-image: var(--mascot-url);
-    background-size: var(--search-height);
-    background-position: right;
+      background-image: var(--mascot-url);
+      background-size: var(--search-height);
+      background-position: right;
     }
 
     main#main st-search input::placeholder {
@@ -117,6 +125,7 @@ main#main {
     }
 
     main#main st-search input:placeholder-shown {
+      background-image: var(--mascot-disabled-url);
       opacity: 0.5;
     }
 
@@ -126,6 +135,10 @@ main#main {
 <script type="module">
     const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
     const digitValues = new Map(Object.entries(digits).map(([index, char]) => [char, Number(index)]));
+
+    const main = () => {
+
+    };
 
     /**
      * Decodes a base64 string as an 8x8 image, as a data URL.
@@ -367,8 +380,8 @@ main#main {
 
 <main id="main">
   <st-search>
-    <form>
-      <span>Run</span>
+    <form method="get" action="/">
+      <span>stadia.run<code>/</code></span>
       <input
         name="q"
         type="text"
@@ -387,7 +400,6 @@ main#main {
         </st-cover-full>
         <st-cover-lite>
           <st-name></st-name>
-
         </st-cover-lite>
       </st-game>
     </template>
@@ -395,7 +407,7 @@ main#main {
 </main>
 
 <footer id="footer">
-  <a href="#dev-tools">have a nice day</a>
+  <a href="#dev-tools" onclick="import('/-/dev.js')">have a nice day</a>
 </footer>
 
 <aside id="dev-tools">
