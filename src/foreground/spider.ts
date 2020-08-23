@@ -116,7 +116,7 @@ class Spider {
     const name: string = data[1];
     const internalSlug: string = data[5];
     const description: string = data[9];
-    const fullCover: string = data[2]?.[1]?.[0]?.[0]?.[1];
+    const image: string = data[2]?.[1]?.[0]?.[0]?.[1];
 
     const prices = priceData && Prices.fromProto(priceData);
 
@@ -134,7 +134,7 @@ class Spider {
         internalSlug,
         description,
         prices,
-        fullCover,
+        image,
       );
     } else if (typeId === 2) {
       sku = new AddOn(

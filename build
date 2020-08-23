@@ -42,11 +42,11 @@ if [ -e "./build.pid" ]; then
     killtree() {
         # from https://stackoverflow.com/a/3211182/1114
         local _pid="$1";
-        kill -stop "${_pid}";
-        for _child in $(ps -o pid --no-headers --ppid ${_pid}); do
+        kill -s STOP "${_pid}";
+        for _child in $(pgrep -P ${_pid}); do
             killtree "${_child}";
         done
-        kill -9 "${_pid}";
+        kill -s KILL "${_pid}";
     }
 
     killtree "$(cat "./build.pid")" 9 || printf "\n⚠️ Stale pidfile?\n";
@@ -77,8 +77,7 @@ printf "\n🔸 Clearing previous build...\n";
 rm -rf "${dist}"/*;
 
 printf "\n🔸 Copying static files...\n";
-cp -r "./src/"* "./data/"* "./static/"* "${dist}/";
-cp -r "./data/"* "stadia.run";
+cp -r "./src/"* "./static/"* "./stadia.st/-"/*.json "${dist}/";
 cp "./node_modules/webextension-polyfill/dist/browser-polyfill.js"{"",".map"} "${dist}/";
 replace-in-files --regex='\s*//#\s*sourceMappingURL=[^\n]+\.map\s*$' --replacement '' "${dist}/browser-polyfill.js";
 cp "./src/index.html" "${dist}/.htm";

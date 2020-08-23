@@ -88,7 +88,7 @@ export class Game extends CommonSku {
     internalSlug: string,
     description: string,
     readonly prices: Prices,
-    readonly fullCover: string,
+    readonly image: string,
   ) {
     super(app, sku, type, name, internalSlug, description, prices);
   }
