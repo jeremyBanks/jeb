@@ -2,6 +2,8 @@
 set -euo pipefail
 shopt -s inherit_errexit nullglob compat"${BASH_COMPAT=42}"
 
+export TZ=UTC
+
 {
     declare message_prefix=""
     declare parents
