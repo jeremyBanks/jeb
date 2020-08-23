@@ -401,7 +401,7 @@ main#main {
     };
 
     const main = async() => {
-      const response = await fetch('/-/games.json');
+      const response = await fetch('https://stadia.st/games.json');
       const skus = await response.json();
       const games = Object.values(skus).filter(sku => sku.fullCover).map(game => ({
         ...game,
