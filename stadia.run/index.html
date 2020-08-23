@@ -1,0 +1,494 @@
+<!doctype html><meta charset="utf-8">
+
+<title>stadia.run</title>
+<link rel="canonical" href="https://stadia.run/" />
+<link rel="icon" href="/-/squirrel-stadian.png" />
+
+<style>
+* {
+  box-sizing: inherit;
+  font: inherit;
+  color: inherit;
+  text-decoration: inherit;
+  background: none;
+  border: none;
+  outline: none;
+  background-repeat: no-repeat;
+  margin: 0;
+  padding: 0;
+  display: grid; /* should this be contents instead? */
+}
+
+/* root styles */
+html:root {
+  --background-color: #202124;
+  --primary-color: #FFFFFF;
+  --secondary-color: #D72D30;
+  --mascot-url: url(/-/squirrel-stadian.png);
+  --mascot-disabled-url: url(/-/squirrel-disabled.png);
+  --mascot-generic-url: url(/-/squirrel-generic.png);
+  --primary-font-size: 14px;
+  --large-margin: 16px;
+  --small-margin: 6px;
+  /* We allow tiles to flow to full width, but want to keep anqy controls
+     or body text within a narrower window. */
+
+  --controls-width: 720px;
+  --search-height: 64px;
+  --search-font-size: 32px;
+
+  font-family: sans-serif;
+  box-sizing: border-box;
+  font-size: var(--primary-font-size);
+  background-color: var(--background-color);
+  color: var(--primary-color);
+  min-height: 100%;
+}
+
+script, style, link, head, template {
+  display: none;
+}
+
+form {
+  display: contents;
+}
+
+button:enabled {
+  cursor: pointer;
+}
+
+:disabled {
+  cursor: not-allowed;
+}
+
+main#main {
+  grid-template-columns:
+    [columns-main-start]
+    var(--small-margin)
+    [game-columns-start]
+    1fr
+    [controls-columns-start]
+    var(--controls-width)
+    [controls-columns-end]
+    1fr
+    [game-columns-end]
+    var(--small-margin)
+    [columns-main-end]
+  ;
+  grid-template-rows:
+    [rows-main-start]
+    var(--large-margin)
+    [controls-rows-start]
+    var(--search-height)
+    [controls-rows-end]
+    var(--large-margin)
+    [games-rows-start]
+    repeat(20,auto-fill)
+    [games-rows-end]
+    [rows-main-end]
+  ;
+}
+
+  main#main st-search {
+    grid-column: controls-columns-start / controls-columns-end;
+    grid-row: controls-rows-start / controls-rows-end;
+
+    grid-template-columns:
+      [search-label-start]
+      min-content
+      [search-label-end]
+      0
+      [search-input-start]
+      auto
+      [search-input-end]
+      var(--small-margin)
+      [search-button-start]
+      min-content
+      [search-button-end]
+      var(--small-margin)
+      var(--search-height)
+    ;
+    font-size: var(--search-font-size);
+    font-weight: bold;
+    background-image: var(--mascot-disabled-url);
+    background-size: var(--search-height);
+    background-position: right;
+  }
+
+    main#main st-search span {
+      display: block;
+      grid-column: search-label-start / search-label-end;
+      text-align: right;
+      place-self: center right;
+      color: var(--secondary-color);
+      user-select: none;
+    }
+
+      main#main st-search span code {
+        display: inline;
+        font-family: monospace;
+      }
+
+    main#main st-search input {
+      grid-column: search-input-start / search-input-end;
+      caret-color: var(--secondary-color);
+    }
+
+      main#main st-search input::placeholder {
+        color: inherit;
+      }
+
+      main#main st-search input:placeholder-shown {
+        opacity: 0.5;
+      }
+
+      main#main st-search button {
+      grid-column: search-button-start / search-button-end;
+      align-items: center;
+      color: var(--secondary-color);
+      padding-top: 8px;
+    }
+
+      main#main st-search button kbd {
+        font-size: calc(var(--search-font-size) / 2);
+        display: inline;
+        border: 2px outset currentColor;
+        padding: 2px;
+      }
+
+      main#main st-search button:disabled {
+        color: #444;
+      }
+
+    main#main st-games {
+      grid-column: game-columns-start / game-columns-end;
+      grid-row: games-rows-start / games-rows-end;
+      grid-template-columns: repeat(auto-fill, 320px);
+      grid-auto-rows: auto;
+      gap: 16px 24px;
+      margin: 32px;
+      justify-content: center;
+    }
+
+      main#main st-games st-game {
+        grid-template-rows: [game-rows-start] auto [game-rows-end];
+        grid-template-columns: [game-columns-start] auto [game-columns-end];
+        background-size: 100% 100%;
+        width: 320px;
+        height: 180px;
+        position: relative;
+        contain: strict;
+        border-radius: 16px;
+        background-color: black;
+        position: relative;
+        box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.5);
+      }
+
+        main#main st-games st-game:hover {
+          position: relative;
+          transform: scale(1.125);
+          z-index: 100;
+          box-shadow:
+            0 0 0px 2px black,
+            0 0 0px 4px var(--secondary-color),
+            0 0 0px 6px black,
+            0 0 2px 7px rgba(0, 0, 0, 0.5);
+          filter: none;
+        }
+
+        main#main st-games st-game a {
+          display: contents;
+        }
+
+        main#main st-games st-game st-cover-full,
+        main#main st-games st-game st-cover-lite {
+          grid-column: game-columns-start / game-columns-end;
+          grid-row: game-rows-start / game-rows-end ;
+        }
+
+        main#main st-games st-game st-cover-full img {
+          z-index: 2;
+          width: 100%;
+          height: 100%;
+
+          opacity: 1.0;
+          transition: .5s opacity;
+        }
+
+        main#main st-games st-game st-cover-full img[hidden] {
+          opacity: 0.0;
+        }
+
+        main#main st-games st-game st-cover-lite {
+          image-rendering: pixelated;
+          background-size: 100% 100%;
+        }
+
+        main#main st-games st-game st-cover-lite st-name {
+          backdrop-filter: saturate(150%) contrast(125%) blur(calc(180px/8));
+          width: 100%;
+          height: 100%;
+          text-align: center;
+          padding: 16px;
+          justify-items: center;
+          align-items: center;
+          -webkit-text-stroke: 1px black;
+          text-shadow: 0 0 2px black;
+          font-weight: bold;
+          font-size: 36px;
+          color: #FFFFFF;
+          font-family: sans-serif;
+          overflow: hidden;
+        }
+
+  #dev-tools {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    border-top: 2px double white;
+    box-shadow: 0 0 8px white;
+    background: rgba(255, 255, 255, 0.9375);
+    color: black;
+    z-index: 100;
+  }
+
+  #dev-tools:target {
+    display: grid;
+  }
+
+
+  #dev-tools .header {
+    font-family: monospace;
+    font-weight: bold;
+    padding-left: 8px;
+    border-bottom: 2px solid white;
+    background: white;
+    position: relative;
+  }
+
+  #dev-tools .close {
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 2px;
+    bottom: 0;
+    padding: 0 12px;
+    font-weight: bold;
+    background: #EDD;
+    font-family: sans-serif;
+    border: 1px solid #B99;
+  }
+
+  #dev-tools .close:hover {
+    background: #DCC;
+  }
+</style>
+
+<script type="module">
+    const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+    const digitValues = new Map(Object.entries(digits).map(([index, char]) => [char, Number(index)]));
+
+    const OffscreenCanvas = window.OffscreenCanvas ?? function(width, height) {
+      return Object.assign(document.createElement('canvas'), {width, height});
+    };
+
+    /**
+     * Decodes a base64 string as an 8x8 image, as a data URL.
+     * @returns {Promise<Blob>}
+     */
+    const microImageToURL = async (/** @type string */ microImage) => {
+      const canvas = new OffscreenCanvas(8, 8);
+      const g2d = /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d"));
+      const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
+
+      const palette = /** @type Map<number, [number, number, number]> */ (new Map());
+      for (let i = 0; i < 64; i++) {
+        palette.set(i, u6toRGB(i));
+      }
+
+      for (let i = 0; i < microImage.length; i++) {
+        if (i < 64) {
+          const color = palette.get(digitValues.get(microImage[i]));
+          pixels.data[i * 4] = color[0];
+          pixels.data[i * 4 + 1] = color[1];
+          pixels.data[i * 4 + 2] = color[2];
+          pixels.data[i * 4 + 3] = 0xFF;
+        } else {
+          throw new Error("custom palettes not implemented");
+        }
+      }
+
+      g2d.putImageData(pixels, 0, 0);
+
+      if (canvas.toDataURL) {
+        return canvas.toDataURL();
+      } else {
+        const blob = await canvas.convertToBlob();
+        const reader = new FileReader();
+
+        await new Promise((resolve, reject) => {
+          reader.onload = resolve;
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+
+        return reader.result;
+      }
+    };
+
+    /**
+     * Returns an base-64 encoded 8x8 thumbnail the image at a given URL.
+     * @returns {Promise<String>}
+     */
+    const microImageFromURL = async (/** @type string */ url) => {
+      const image = new Image();
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = reject;
+        image.crossOrigin = "anonymous";
+        image.src = url;
+      });
+
+      const canvas = new OffscreenCanvas(8, 8);
+      const g2d = /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d"));
+      g2d.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
+
+      const microImage = new Array();
+      for (let i = 0; i < 64; i++) {
+        const rgb = pixels.data.slice(i * 4, i * 4 + 3);
+        const u6 = rgbToU6(rgb);
+        microImage.push(digits[u6]);
+      }
+
+      return microImage.join("");
+    }
+
+    /**
+     * Converts a 6-bit RGB value to a 24-bit RGB value.
+     * @returns {[number, number, number]}
+     */
+    const u6toRGB = (/** @type {number} */ u6) => {
+      const red =
+        ((u6 & 0b000010) ? 0b10101010 : 0)
+      + ((u6 & 0b000001) ? 0b01010101 : 0);
+      const green =
+        ((u6 & 0b001000) ? 0b10101010 : 0)
+      + ((u6 & 0b000100) ? 0b01010101 : 0);
+      const blue =
+        ((u6 & 0b100000) ? 0b10101010 : 0)
+      + ((u6 & 0b010000) ? 0b01010101 : 0);
+      return [red, green, blue];
+    };
+
+    /**
+     * Rounds a 24-bit RGB value to the nearest 6-bit RGB value.
+     * @returns {number}
+     */
+    const rgbToU6 = (/** @type {[number, number, number]} */ rgb) => {
+      const red = Math.round(0b11 * rgb[0] / 0xFF);
+      const green = Math.round(0b11 * rgb[1] / 0xFF);
+      const blue = Math.round(0b11 * rgb[2] / 0xFF);
+      return (red << 0) + (green << 2) + (blue << 4);
+    };
+
+    const main = async() => {
+      const container = document.querySelector("st-games");
+      const response = await fetch('/-/games.json');
+      const skus = await response.json();
+      const games = Object.values(skus).filter(sku => sku.fullCover).map(game => ({
+        ...game,
+        name: game.name
+          .replace(/™/g, ' ')
+          .replace(/®/g, ' ')
+          .replace(/[\:\-]? Early Access$/g, ' ')
+          .replace(/[\:\-]? \w+ Edition$/g, ' ')
+          .replace(/\(\w+ Ver(\.|sion)\)$/g, ' ')
+          .replace(/™/g, ' ')
+          .replace(/\s{2,}/g, ' ')
+          .replace(/^\s+|\s+$/g, '')
+        ,
+        id: game.app,
+        microImage: game.microImage,
+        fullCover: game.fullCover,
+      })).sort((gameA, gameB) => {
+        const a = gameA.name.toLowerCase();
+        const b = gameB.name.toLowerCase();
+        return (a < b) ? -1 : (a > b) ? +1 : 0;
+      });
+
+      document.getElementById('games').data = games;
+
+      const template = document.querySelector("template#stGameTemplate");
+
+      for (const game of games) {
+        let root = template.content.cloneNode(true).firstElementChild;
+        let url = game.fullCover;
+
+        root.querySelector('img').src = url;
+        root.querySelector('a').href = `https://stadia.google.com/player/${game.app}`;
+        root.querySelector('st-name').textContent = game.name;
+
+        if (!game.microImage) {
+          const microImage = await microImageFromURL(url);
+          game.microImage = microImage;
+        }
+
+        url = await microImageToURL(game.microImage);
+
+        root.querySelector("st-cover-lite").style.backgroundImage = `url(${url})`;
+
+        root.setAttribute('data-name', game.name);
+        root.setAttribute('data-app-id', game.app);
+        root.setAttribute('data-micro-image', game.microImage);
+        root.setAttribute('data-full-cover', game.fullCover);
+
+        container.appendChild(root);
+      }
+    };
+
+    main();
+</script>
+
+<main id="main">
+  <st-search>
+    <form method="get" action="/">
+      <span>stadia<code>.</code>run<code>/</code></span>
+      <input
+        name="q"
+        type="text"
+        placeholder="your favourite Stadia game"
+        autocomplete="off"
+        autofocus
+      />
+      <button disabled><kbd>⏎</kbd></button>
+    </form>
+  </st-search>
+
+  <st-games id="games">
+    <template id="stGameTemplate">
+      <st-game><a>
+        <st-cover-full>
+          <img class="cover" loading="lazy" onload="setTimeout(() => this.hidden = false, Math.random() * 15000)" hidden crossorigin="anonymous" />
+        </st-cover-full>
+        <st-cover-lite>
+          <st-name></st-name>
+        </st-cover-lite>
+      </a></st-game>
+    </template>
+  </st-games>
+</main>
+
+<aside id="dev-tools">
+  <header>
+    <span class="tab">dev tools</span>
+    <a class="close" href="#">×</a>
+  </header>
+
+  <section>
+    <button class="dumpGames">games.json</button>
+  </section>
+</aside>
