@@ -16,8 +16,7 @@
   background-repeat: no-repeat;
   margin: 0;
   padding: 0;
-  display: grid;
-  contain: paint;
+  display: grid; /* should this be contents instead? */
 }
 
 /* root styles */
@@ -43,10 +42,10 @@ html:root {
   font-size: var(--primary-font-size);
   background-color: var(--background-color);
   color: var(--primary-color);
-  grid-auto-flow: dense;
+  min-height: 100%;
 }
 
-script, style, link, head {
+script, style, link, head, template {
   display: none;
 }
 
@@ -64,24 +63,35 @@ button:enabled {
 
 main#main {
   grid-template-columns:
+    [columns-main-start]
+    var(--small-margin)
+    [game-columns-start]
     1fr
     [controls-columns-start]
     var(--controls-width)
     [controls-columns-end]
-    1fr;
+    1fr
+    [game-columns-end]
+    var(--small-margin)
+    [columns-main-end]
+  ;
   grid-template-rows:
+    [rows-main-start]
     var(--large-margin)
     [controls-rows-start]
     var(--search-height)
     [controls-rows-end]
     var(--large-margin)
-    auto;
+    [games-rows-start]
+    auto
+    [games-rows-end]
+    [rows-main-end]
+  ;
 }
 
   main#main st-search {
     grid-column: controls-columns-start / controls-columns-end;
     grid-row: controls-rows-start / controls-rows-end;
-
     grid-template-columns:
       [search-label-start]
       min-content
@@ -99,7 +109,7 @@ main#main {
     ;
     font-size: var(--search-font-size);
     font-weight: bold;
-    background-image: var(--mascot-url);
+    background-image: var(--mascot-disabled-url);
     background-size: var(--search-height);
     background-position: right;
   }
@@ -146,19 +156,104 @@ main#main {
       }
 
       main#main st-search button:disabled {
-        /* color: #444; */
+        color: #444;
       }
 
-</style>
+    main#main st-games {
+      grid-column: game-columns-start / game-columns-end;
+      grid-row: games-rows-start / games-rows-end;
+      grid-template-columns: repeat(auto-fill, 320px);
+      grid-gap: 8px;
+    }
 
+      main#main st-games st-game {
+        grid-template-rows: [game-rows-start] auto [game-rows-end];
+        grid-template-columns: [game-columns-start] auto [game-columns-end];
+        border-radius: 16px;
+        background-size: 100% 100%;
+        width: 320px;
+        height: 180px;
+        image-rendering: pixelated;
+        position: relative;
+        contain: strict;
+        border-radius: 16px;
+        background-color: black;
+        position: relative;
+      }
+
+        main#main st-games st-game a {
+          display: contents;
+        }
+
+        main#main st-games st-game st-cover-full,
+        main#main st-games st-game st-cover-lite {
+          grid-column: game-columns-start / end-game-columns;
+          grid-row: game-rows-start / end-game-rows ;
+        }
+
+        main#main st-games st-game st-cover-full img {
+          opacity: 0.75;
+          width: 100%;
+          height: 100%;
+        }
+
+        main#main st-games st-game st-cover-lite {
+          background-size: 100% 100%;
+        }
+
+        main#main st-games st-game st-cover-lite st-name {
+          display: none;
+        }
+
+  #dev-tools {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    border-top: 2px double white;
+    box-shadow: 0 0 8px white;
+    background: rgba(255, 255, 255, 0.9375);
+    color: black;
+    z-index: 100;
+  }
+
+  #dev-tools:target {
+    display: grid;
+  }
+
+
+  #dev-tools .header {
+    font-family: monospace;
+    font-weight: bold;
+    padding-left: 8px;
+    border-bottom: 2px solid white;
+    background: white;
+    position: relative;
+  }
+
+  #dev-tools .close {
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 2px;
+    bottom: 0;
+    padding: 0 12px;
+    font-weight: bold;
+    background: #EDD;
+    font-family: sans-serif;
+    border: 1px solid #B99;
+  }
+
+  #dev-tools .close:hover {
+    background: #DCC;
+  }
+</style>
 
 <script type="module">
     const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
     const digitValues = new Map(Object.entries(digits).map(([index, char]) => [char, Number(index)]));
-
-    const main = () => {
-
-    };
 
     /**
      * Decodes a base64 string as an 8x8 image, as a data URL.
@@ -258,36 +353,38 @@ main#main {
       return (red << 0) + (green << 2) + (blue << 4);
     };
 
-    const skus = JSON.parse(document.getElementById('skus').textContent);
-    const games = Object.values(skus).filter(sku => sku.fullCover).map(game => ({
-      ...game,
-      name: game.name
-        .replace(/™/g, ' ')
-        .replace(/®/g, ' ')
-        .replace(/[\:\-]? Early Access$/g, ' ')
-        .replace(/[\:\-]? \w+ Edition$/g, ' ')
-        .replace(/\(\w+ Ver(\.|sion)\)$/g, ' ')
-        .replace(/™/g, ' ')
-      ,
-      id: game.app,
-      microImage: game.microImage,
-      fullCover: game.fullCover,
-    })).sort((gameA, gameB) => {
-      const a = gameA.name.toLowerCase();
-      const b = gameB.name.toLowerCase();
-      return (a < b) ? -1 : (a > b) ? +1 : 0;
-    });
-
     const main = async() => {
-      const template = document.querySelector("center");
-      template.remove();
+      const container = document.querySelector("st-games");
+      const response = await fetch('/data/skus.json');
+      const skus = await response.json();
+      const games = Object.values(skus).filter(sku => sku.fullCover).map(game => ({
+        ...game,
+        name: game.name
+          .replace(/™/g, ' ')
+          .replace(/®/g, ' ')
+          .replace(/[\:\-]? Early Access$/g, ' ')
+          .replace(/[\:\-]? \w+ Edition$/g, ' ')
+          .replace(/\(\w+ Ver(\.|sion)\)$/g, ' ')
+          .replace(/™/g, ' ')
+        ,
+        id: game.app,
+        microImage: game.microImage,
+        fullCover: game.fullCover,
+      })).sort((gameA, gameB) => {
+        const a = gameA.name.toLowerCase();
+        const b = gameB.name.toLowerCase();
+        return (a < b) ? -1 : (a > b) ? +1 : 0;
+      });
+
+      const template = document.querySelector("template#stGameTemplate").content;
 
       for (const game of games) {
         let root = template.cloneNode(true);
         let url = game.fullCover;
 
-        root.querySelector('.source').src = url;
-        root.querySelector('.gameName').textContent = game.name;
+        root.querySelector('img').src = url;
+        root.querySelector('a').href = `https://stadia.google.com/player/${game.app}`;
+        root.querySelector('st-name').textContent = game.name;
 
         if (!game.microImage) {
           const microImage = await microImageFromURL(url);
@@ -296,107 +393,14 @@ main#main {
 
         url = await microImageToURL(game.microImage);
 
-        for (const image of root.querySelectorAll("img:not(.source), .img")) {
-          image.src = url;
-          image.style.backgroundImage = 'url(' + url + ')';
-        }
+        root.querySelector("st-cover-lite").style.backgroundImage = `url(${url})`;
 
         container.appendChild(root);
       }
-
-      dev.querySelector(".dumpGames").onclick = () => {
-        const link = document.createElement('a');
-        link.download = "games.json";
-        link.href = URL.createObjectURL(new Blob([
-          JSON.stringify(games).replace(/\}\,\{/g, '},\n{')]));
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      };
     };
 
     main();
 </script>
-
-
-<style type="nope">
-    #dev > .content {
-      padding: 16px 8px;
-    }
-
-        main {
-          padding-top: 32px;
-        }
-
-        main > * + * {
-          margin-top: 32px;
-        }
-
-        html {
-          min-height: 100%;
-          background-image: url(/-/squirrel.png);
-          background-position: right bottom;
-          background-repeat: no-repeat;
-          background-size: 128px;
-          color: #FFFFFF;
-          font-family: sans-serif;
-        }
-
-        footer {
-          margin-top: calc(100vh - 128px);
-          min-height: 128px;
-          color: #DD4422;
-          padding-right: 112px;
-          padding-top: 64px;
-          text-align: right;
-        }
-
-
-
-    #dev {
-      display: none;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: auto;
-      border-top: 2px double white;
-      box-shadow: 0 0 8px white;
-      background: rgba(255, 255, 255, 0.9375);
-      color: black;
-      z-index: 100;
-    }
-
-    #dev:target {
-      display: block;
-    }
-
-
-    #dev .header {
-      font-family: monospace;
-      font-weight: bold;
-      padding-left: 8px;
-      border-bottom: 2px solid white;
-      background: white;
-      position: relative;
-    }
-
-    #dev .close {
-      display: block;
-      position: absolute;
-      top: 0;
-      right: 2px;
-      bottom: 0;
-      padding: 0 12px;
-      background: #EDD;
-      font-family: sans-serif;
-    }
-
-    #dev .close:hover {
-      background: #DCC;
-    }
-
-    </style>
 
 <main id="main">
   <st-search>
@@ -414,22 +418,18 @@ main#main {
   </st-search>
 
   <st-games id="games">
-    <template id="stGameTemplate">
+    <template id="stGameTemplate"><a>
       <st-game>
         <st-cover-full>
-          <img class="cover" crossorigin />
+          <img class="cover" loading="lazy" crossorigin />
         </st-cover-full>
         <st-cover-lite>
           <st-name></st-name>
         </st-cover-lite>
       </st-game>
-    </template>
+    </a></template>
   </st-games>
 </main>
-
-<footer id="footer">
-  <a href="#dev-tools" onclick="import('/-/dev.js')">have a nice day</a>
-</footer>
 
 <aside id="dev-tools">
   <header>
@@ -444,16 +444,7 @@ main#main {
 
 
 
-<center>
-    <img class="source" style="
-      width: 320px;
-      height: 180px;
-    " loading="lazy" />
-    <img style="
-      width: 320px;
-      height: 180px;
-      image-rendering: pixelated;
-    " />
+<center style="display: none;">
     <div class="img" style="
       border-radius: 16px;
       display: inline-block;
@@ -491,3 +482,38 @@ main#main {
       </div>
     </div>
     </div>
+
+
+    <style type="nope">
+        #dev > .content {
+          padding: 16px 8px;
+        }
+
+            main {
+              padding-top: 32px;
+            }
+
+            main > * + * {
+              margin-top: 32px;
+            }
+
+            html {
+              min-height: 100%;
+              background-image: url(/-/squirrel.png);
+              background-position: right bottom;
+              background-repeat: no-repeat;
+              background-size: 128px;
+              color: #FFFFFF;
+              font-family: sans-serif;
+            }
+
+            footer {
+              margin-top: calc(100vh - 128px);
+              min-height: 128px;
+              color: #DD4422;
+              padding-right: 112px;
+              padding-top: 64px;
+              text-align: right;
+            }
+
+        </style>
