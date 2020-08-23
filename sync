@@ -99,7 +99,12 @@ export TZ=UTC
     export GIT_AUTHOR_DATE="$date"
     export GIT_COMMIT_MESSAGE="$message"
 
+    for name in "${names[@]}"; do
+        git commit "./${name}/" --quiet -m "$message" || false;
+    done
+
     git commit --quiet -m "$message"
+
     git --no-pager log --format=raw --graph --decorate -n 2
 } || true
 
@@ -112,7 +117,6 @@ export TZ=UTC
 
     for name in "${names[@]}"; do
         git push "${origin%/*}/$name.git" "$(git subtree split --prefix "$name" "$branch")":"$branch" --force
-        # git subtree push --prefix="$name/" "${origin%/*}/$name.git" "$branch"
     done
 
     git push
