@@ -42,7 +42,6 @@ html:root {
   font-size: var(--primary-font-size);
   background-color: var(--background-color);
   color: var(--primary-color);
-  min-height: 100%;
 }
 
 script, style, link, head, template {
@@ -51,6 +50,10 @@ script, style, link, head, template {
 
 form {
   display: contents;
+}
+
+*[hidden] {
+  display: none;
 }
 
 button:enabled {
@@ -83,13 +86,13 @@ main#main {
     [controls-rows-end]
     var(--large-margin)
     [games-rows-start]
-    repeat(20,auto-fill)
-    [games-rows-end]
-    [rows-main-end]
+    max-content
+    [games-rows-end rows-main-end]
   ;
 }
 
   main#main st-search {
+    z-index: 10;
     grid-column: controls-columns-start / controls-columns-end;
     grid-row: controls-rows-start / controls-rows-end;
 
@@ -108,6 +111,8 @@ main#main {
       var(--small-margin)
       var(--search-height)
     ;
+    grid-auto-rows: auto;
+
     font-size: var(--search-font-size);
     font-weight: bold;
     background-image: var(--mascot-disabled-url);
@@ -152,8 +157,9 @@ main#main {
       main#main st-search button kbd {
         font-size: calc(var(--search-font-size) / 2);
         display: inline;
-        border: 2px outset currentColor;
+        border: 2px solid currentColor;
         padding: 2px;
+        border-radius: 4px;
       }
 
       main#main st-search button:disabled {
@@ -161,6 +167,7 @@ main#main {
       }
 
     main#main st-games {
+      z-index: 5;
       grid-column: game-columns-start / game-columns-end;
       grid-row: games-rows-start / games-rows-end;
       grid-template-columns: repeat(auto-fill, 320px);
@@ -203,21 +210,15 @@ main#main {
         main#main st-games st-game st-cover-full,
         main#main st-games st-game st-cover-lite {
           grid-column: game-columns-start / game-columns-end;
-          grid-row: game-rows-start / game-rows-end ;
+          grid-row: game-rows-start / game-rows-end;
         }
 
         main#main st-games st-game st-cover-full img {
           z-index: 2;
           width: 100%;
           height: 100%;
-
-          opacity: 1.0;
-          transition: .5s opacity;
         }
 
-        main#main st-games st-game st-cover-full img[hidden] {
-          opacity: 0.0;
-        }
 
         main#main st-games st-game st-cover-lite {
           image-rendering: pixelated;
@@ -238,7 +239,6 @@ main#main {
           font-size: 36px;
           color: #FFFFFF;
           font-family: sans-serif;
-          overflow: hidden;
         }
 
   #dev-tools {
@@ -291,16 +291,14 @@ main#main {
     const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
     const digitValues = new Map(Object.entries(digits).map(([index, char]) => [char, Number(index)]));
 
-    const OffscreenCanvas = window.OffscreenCanvas ?? function(width, height) {
-      return Object.assign(document.createElement('canvas'), {width, height});
-    };
-
     /**
      * Decodes a base64 string as an 8x8 image, as a data URL.
      * @returns {Promise<Blob>}
      */
     const microImageToURL = async (/** @type string */ microImage) => {
-      const canvas = new OffscreenCanvas(8, 8);
+      const canvas = document.createElement('canvas');
+      canvas.width = 8;
+      canvas.height = 8;
       const g2d = /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d"));
       const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
 
@@ -339,11 +337,7 @@ main#main {
       }
     };
 
-    /**
-     * Returns an base-64 encoded 8x8 thumbnail the image at a given URL.
-     * @returns {Promise<String>}
-     */
-    const microImageFromURL = async (/** @type string */ url) => {
+    const loadedImage = async (/** @type string */ url) => {
       const image = new Image();
       await new Promise((resolve, reject) => {
         image.onload = resolve;
@@ -351,8 +345,19 @@ main#main {
         image.crossOrigin = "anonymous";
         image.src = url;
       });
+      return image;
+    }
 
-      const canvas = new OffscreenCanvas(8, 8);
+    /**
+     * Returns an base-64 encoded 8x8 thumbnail the image at a given URL.
+     * @returns {Promise<String>}
+     */
+    const microImageFromURL = async (/** @type string */ url) => {
+      const image = await loadedImage(url);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 8;
+      canvas.height = 8;
       const g2d = /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d"));
       g2d.drawImage(image, 0, 0, canvas.width, canvas.height);
       const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
@@ -396,7 +401,6 @@ main#main {
     };
 
     const main = async() => {
-      const container = document.querySelector("st-games");
       const response = await fetch('/-/games.json');
       const skus = await response.json();
       const games = Object.values(skus).filter(sku => sku.fullCover).map(game => ({
@@ -424,11 +428,21 @@ main#main {
 
       const template = document.querySelector("template#stGameTemplate");
 
+      const container = document.createDocumentFragment();
+
       for (const game of games) {
         let root = template.content.cloneNode(true).firstElementChild;
         let url = game.fullCover;
 
-        root.querySelector('img').src = url;
+        const fullImg = root.querySelector('img');
+        fullImg.src = url;
+        root.querySelector('st-cover-full').hidden = fullImg.complete;
+        root.querySelector('st-cover-lite').hidden = !fullImg.complete;
+        loadedImage(url).then(() => {
+          root.querySelector('st-cover-full').hidden = false;
+          root.querySelector('st-cover-lite').hidden = true;
+        });
+
         root.querySelector('a').href = `https://stadia.google.com/player/${game.app}`;
         root.querySelector('st-name').textContent = game.name;
 
@@ -437,9 +451,8 @@ main#main {
           game.microImage = microImage;
         }
 
-        url = await microImageToURL(game.microImage);
-
-        root.querySelector("st-cover-lite").style.backgroundImage = `url(${url})`;
+        root.querySelector("st-cover-lite").style.backgroundImage = `url(${
+          await microImageToURL(game.microImage)})`;
 
         root.setAttribute('data-name', game.name);
         root.setAttribute('data-app-id', game.app);
@@ -448,6 +461,8 @@ main#main {
 
         container.appendChild(root);
       }
+
+      document.querySelector("st-games").appendChild(container)
     };
 
     main();
@@ -468,18 +483,18 @@ main#main {
     </form>
   </st-search>
 
-  <st-games id="games">
-    <template id="stGameTemplate">
+  <st-games id="games"></st-games>
+
+  <template id="stGameTemplate">
       <st-game><a>
         <st-cover-full>
-          <img class="cover" loading="lazy" onload="setTimeout(() => this.hidden = false, Math.random() * 15000)" hidden crossorigin="anonymous" />
+          <img class="cover" crossorigin="anonymous" />
         </st-cover-full>
         <st-cover-lite>
           <st-name></st-name>
         </st-cover-lite>
       </a></st-game>
     </template>
-  </st-games>
 </main>
 
 <aside id="dev-tools">
