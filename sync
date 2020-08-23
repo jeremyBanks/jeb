@@ -111,7 +111,7 @@ export TZ=UTC
     git pull
 
     for name in "${names[@]}"; do
-        git push origin "$(git subtree split --prefix "$name" "$branch")":"$branch" --force
+        git push "${origin%/*}/$name.git" "$(git subtree split --prefix "$name" "$branch")":"$branch" --force
         # git subtree push --prefix="$name/" "${origin%/*}/$name.git" "$branch"
     done
 
