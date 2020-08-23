@@ -4,7 +4,7 @@
 <link rel="canonical" href="https://stadia.run/" />
 <link rel="icon" href="/-/squirrel-stadian.png" />
 
-<style>
+<style id="main-styles">
 * {
   box-sizing: inherit;
   font: inherit;
@@ -52,6 +52,11 @@ form {
   display: contents;
 }
 
+code {
+  display: contents;
+  font-family: monospace;
+}
+
 *[hidden] {
   display: none;
 }
@@ -62,6 +67,7 @@ button:enabled {
 
 :disabled {
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 main#main {
@@ -240,232 +246,7 @@ main#main {
           color: #FFFFFF;
           font-family: sans-serif;
         }
-
-  #dev-tools {
-    display: none;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: auto;
-    border-top: 2px double white;
-    box-shadow: 0 0 8px white;
-    background: rgba(255, 255, 255, 0.9375);
-    color: black;
-    z-index: 100;
-  }
-
-  #dev-tools:target {
-    display: grid;
-  }
-
-
-  #dev-tools .header {
-    font-family: monospace;
-    font-weight: bold;
-    padding-left: 8px;
-    border-bottom: 2px solid white;
-    background: white;
-    position: relative;
-  }
-
-  #dev-tools .close {
-    display: block;
-    position: absolute;
-    top: 0;
-    right: 2px;
-    bottom: 0;
-    padding: 0 12px;
-    font-weight: bold;
-    background: #EDD;
-    font-family: sans-serif;
-    border: 1px solid #B99;
-  }
-
-  #dev-tools .close:hover {
-    background: #DCC;
-  }
 </style>
-
-<script type="module">
-    const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
-    const digitValues = new Map(Object.entries(digits).map(([index, char]) => [char, Number(index)]));
-
-    /**
-     * Decodes a base64 string as an 8x8 image, as a data URL.
-     * @returns {Promise<Blob>}
-     */
-    const microImageToURL = async (/** @type string */ microImage) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 8;
-      canvas.height = 8;
-      const g2d = /** @type OffscreenCanvasRenderingContext2D */ (canvas.getContext("2d"));
-      const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
-
-      const palette = /** @type Map<number, [number, number, number]> */ (new Map());
-      for (let i = 0; i < 64; i++) {
-        palette.set(i, u6toRGB(i));
-      }
-
-      for (let i = 0; i < microImage.length; i++) {
-        if (i < 64) {
-          const color = palette.get(digitValues.get(microImage[i]));
-          pixels.data[i * 4] = color[0];
-          pixels.data[i * 4 + 1] = color[1];
-          pixels.data[i * 4 + 2] = color[2];
-          pixels.data[i * 4 + 3] = 0xFF;
-        } else {
-          throw new Error("custom palettes not implemented");
-        }
-      }
-
-      g2d.putImageData(pixels, 0, 0);
-
-      return canvas.toDataURL();
-    };
-
-    const loadedImage = async (/** @type string */ url) => {
-      const image = new Image();
-      await new Promise((resolve, reject) => {
-        image.onload = resolve;
-        image.onerror = reject;
-        image.crossOrigin = "anonymous";
-        image.src = url;
-      });
-      return image;
-    }
-
-    /**
-     * Returns an base-64 encoded 8x8 thumbnail the image at a given URL.
-     * @returns {Promise<String>}
-     */
-    const microImageFromURL = async (/** @type string */ url) => {
-      const image = await loadedImage(url);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = 8;
-      canvas.height = 8;
-      const g2d = /** @type OffscreenCanvasRenderingContext2D */ (canvas.getContext("2d"));
-      g2d.drawImage(image, 0, 0, canvas.width, canvas.height);
-      const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
-
-      const microImage = new Array();
-      for (let i = 0; i < 64; i++) {
-        const rgb = pixels.data.slice(i * 4, i * 4 + 3);
-        const u6 = rgbToU6(rgb);
-        microImage.push(digits[u6]);
-      }
-
-      return microImage.join("");
-    }
-
-    /**
-     * Converts a 6-bit RGB value to a 24-bit RGB value.
-     * @returns {[number, number, number]}
-     */
-    const u6toRGB = (/** @type number */ u6) => {
-      const red =
-        ((u6 & 0b000010) ? 0b10101010 : 0)
-      + ((u6 & 0b000001) ? 0b01010101 : 0);
-      const green =
-        ((u6 & 0b001000) ? 0b10101010 : 0)
-      + ((u6 & 0b000100) ? 0b01010101 : 0);
-      const blue =
-        ((u6 & 0b100000) ? 0b10101010 : 0)
-      + ((u6 & 0b010000) ? 0b01010101 : 0);
-      return [red, green, blue];
-    };
-
-    /**
-     * Rounds a 24-bit RGB value to the nearest 6-bit RGB value.
-     * @returns {number}
-     */
-    const rgbToU6 = (/** @type [number, number, number] */ rgb) => {
-      const red = Math.round(0b11 * rgb[0] / 0xFF);
-      const green = Math.round(0b11 * rgb[1] / 0xFF);
-      const blue = Math.round(0b11 * rgb[2] / 0xFF);
-      return (red << 0) + (green << 2) + (blue << 4);
-    };
-
-    const checkStatus = (/** @type Response */ response) => {
-      if (response.ok) {
-        return response;
-      } else {
-        throw Object.assign(
-          new Error(`${response.status} ${response.statusText}`),
-          { response });
-      }
-    };
-
-    const main = async() => {
-      const skus = await
-        fetch('https://stadia.st/-/games.json').then(checkStatus)
-          .catch(() => fetch('https://stadia.st/-/skus.json').then(checkStatus))
-          .then(response => response.json());
-
-      const games = Object.values(skus).filter(sku => sku.image).map(game => ({
-        name: game.name
-          .replace(/™/g, ' ')
-          .replace(/®/g, ' ')
-          .replace(/[\:\-]? Early Access$/g, ' ')
-          .replace(/[\:\-]? \w+ Edition$/g, ' ')
-          .replace(/\(\w+ Ver(\.|sion)\)$/g, ' ')
-          .replace(/™/g, ' ')
-          .replace(/\s{2,}/g, ' ')
-          .replace(/^\s+|\s+$/g, '')
-        ,
-        app: game.app,
-        microImage: game.microImage,
-        image: game.image,
-      })).sort((gameA, gameB) => {
-        const a = gameA.name.toLowerCase();
-        const b = gameB.name.toLowerCase();
-        return (a < b) ? -1 : (a > b) ? +1 : 0;
-      });
-
-      document.getElementById('games').data = games;
-
-      const template = document.querySelector("template#stGameTemplate");
-
-      const container = document.createDocumentFragment();
-
-      for (const game of games) {
-        let root = template.content.cloneNode(true).firstElementChild;
-        let url = game.image;
-
-        const fullImg = root.querySelector('img');
-        fullImg.src = url;
-        root.querySelector('st-cover-full').hidden = fullImg.complete;
-        root.querySelector('st-cover-lite').hidden = !fullImg.complete;
-        loadedImage(url).then(() => {
-          root.querySelector('st-cover-full').hidden = false;
-          root.querySelector('st-cover-lite').hidden = true;
-        });
-
-        root.querySelector('a').href = `https://stadia.google.com/player/${game.app}`;
-        root.querySelector('st-name').textContent = game.name;
-
-        if (!game.microImage) {
-          const microImage = await microImageFromURL(url);
-          game.microImage = microImage;
-        }
-
-        root.querySelector("st-cover-lite").style.backgroundImage = `url(${
-          await microImageToURL(game.microImage)})`;
-
-        root.setAttribute('data-name', game.name);
-        root.setAttribute('data-app-id', game.app);
-        root.setAttribute('data-micro-image', game.microImage);
-        root.setAttribute('data-full-cover', game.image);
-
-        container.appendChild(root);
-      }
-
-      document.querySelector("st-games").appendChild(container)
-    };
-
-    main();
-</script>
 
 <main id="main">
   <st-search>
@@ -485,24 +266,158 @@ main#main {
   <st-games id="games"></st-games>
 
   <template id="stGameTemplate">
-      <st-game><a>
-        <st-cover-full>
-          <img class="cover" crossorigin="anonymous" />
-        </st-cover-full>
-        <st-cover-lite>
-          <st-name></st-name>
-        </st-cover-lite>
-      </a></st-game>
-    </template>
+    <st-game><a>
+      <st-cover-full>
+        <img class="cover" crossorigin="anonymous" />
+      </st-cover-full>
+      <st-cover-lite>
+        <st-name></st-name>
+      </st-cover-lite>
+    </a></st-game>
+  </template>
 </main>
+
+<script type="module" id="main-script">
+
+</script>
+
+<style id="dev-tools-style">
+  #dev-tools {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    background: white;
+    color: black;
+    z-index: 100;
+
+    --dev-border: #D0D0D0;
+    --dev-background: #F3F3F3;
+  }
+
+    #dev-tools:target {
+      display: grid;
+    }
+
+
+    #dev-tools header {
+      display: block;
+      border-top: 1px solid var(--dev-border);
+      border-bottom: 1px solid var(--dev-border);
+      padding-left: var(--large-margin);
+      background: var(--dev-background);
+      position: relative;
+    }
+
+      #dev-tools header .tab {
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+        padding: 4px 10px;
+        font-size: 11px;
+        top: 1px;
+        display: inline-block;
+        border-bottom: 2px solid var(--secondary-color);
+      }
+
+    #dev-tools .close {
+      display: block;
+      position: absolute;
+      top: 2px;
+      right: var(--small-margin);
+      bottom: 2px;
+      padding: 0 6px;
+      font-size: 20px;
+      font-family: sans-serif;
+      border: 1px solid transparent;
+      color: #666;
+    }
+
+      #dev-tools .close span {
+        position: relative;
+        top: -4px;
+      }
+
+      #dev-tools .close:hover {
+        border: 1px solid #B99;
+        background: #EDD;
+        color: #444;
+      }
+
+    #dev-tools section {
+      display: block;
+      min-height: 128px;
+      max-height: 256px;
+      overflow-y: auto;
+      padding: var(--small-margin) var(--large-margin);
+    }
+
+    #dev-tools section p {
+      display: block;
+      max-width: 700px;
+      line-height: 1.75em;
+      text-align: justify;
+    }
+
+    #dev-tools button {
+      line-height: 1em;
+      display: inline-block;
+      border: 1px solid var(--dev-border);
+      background: var(--dev-background);
+      padding: 2px 6px;
+    }
+
+      #dev-tools button:enabled:hover {
+        color: var(--secondary-color);
+      }
+
+      #dev-tools button:enabled:active {
+        border-color: var(--secondary-color);
+      }
+</style>
 
 <aside id="dev-tools">
   <header>
-    <span class="tab">dev tools</span>
-    <a class="close" href="#">×</a>
+    <span class="tab">Update Game Data</span>
+    <a class="close" href="#"><span>×</span></a>
   </header>
 
   <section>
-    <button class="dumpGames">games.json</button>
+    <p>
+      Start by <button id="dev-do-spider" disabled>spidering Stadia</button> to discover all of its SKUs (games, bundles, and addons), saving them as <button id="download-skus" disabled><code>skus.json</code></button>. From each game, take the <code>name</code>, <code>app</code> ID, and <code>fullImage</code> cover, then <button>fetch the cover images</button> to generate 64-character base-64 8x8 6-bit-RGB preview tiles we call <code>microImage</code>s, saving them in <button id="download-games"><code>games.json</code></button>. From that game data, generate a new <button><code>index.html</code></button> with all of the games included inline.
+    </p>
   </section>
 </aside>
+
+<script type="module" id="dev-tools-script">
+  let prevented = false;
+  document.addEventListener('keydown', event => {
+    if (event.key === 'F12') {
+      if (document.location.hash !== '#dev-tools') {
+        document.location.hash = '#dev-tools';
+        import('/-/dev-tools.js');
+        event.preventDefault();
+        prevented = true;
+      } else {
+        if (prevented) {
+          prevented = false;
+        } else {
+          document.location.hash = '';
+          event.preventDefault();
+        }
+      }
+    }
+  });
+
+  if (document.location.hash === '#dev-tools') {
+    import('/-/dev-tools.js');
+  } else {
+    document.addEventListener('hashchange', () => {
+      if (document.location.hash === '#dev-tools') {
+        import('/-/dev-tools.js');
+      }
+    });
+  }
+</script>
