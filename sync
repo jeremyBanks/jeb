@@ -109,7 +109,7 @@ shopt -s inherit_errexit nullglob compat"${BASH_COMPAT=42}"
     git pull
 
     for name in "${names[@]}"; do
-        git subtree push --prefix="$name/" "${origin%/*}/$name.git" "$branch"
+        git subtree push --prefix="$name/" "${origin%/*}/$name.git" "$branch" --force
     done
 
     git push
