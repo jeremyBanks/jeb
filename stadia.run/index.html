@@ -297,6 +297,17 @@ main#main {
     --dev-background: #F3F3F3;
   }
 
+    #dev-tools.unloaded {
+      user-select: none;
+      cursor: progress;
+      filter: saturate(0.5) contrast(0.5) brightness(0.5);
+    }
+
+    #dev-tools.unloaded section {
+      pointer-events: none;
+      filter: blur(2px);
+    }
+
     #dev-tools:target {
       display: grid;
     }
@@ -378,7 +389,7 @@ main#main {
       }
 </style>
 
-<aside id="dev-tools">
+<aside id="dev-tools" class="unloaded">
   <header>
     <span class="tab">Update Game Data</span>
     <a class="close" href="#"><span>×</span></a>
@@ -386,7 +397,7 @@ main#main {
 
   <section>
     <p>
-      Start by <button id="dev-do-spider" disabled>spidering Stadia</button> to discover all of its SKUs (games, bundles, and addons), saving them as <button id="download-skus" disabled><code>skus.json</code></button>. From each game, take the <code>name</code>, <code>app</code> ID, and <code>fullImage</code> cover, then <button>fetch the cover images</button> to generate 64-character base-64 8x8 6-bit-RGB preview tiles we call <code>microImage</code>s, saving them in <button id="download-games"><code>games.json</code></button>. From that game data, generate a new <button><code>index.html</code></button> with all of the games included inline.
+      Start by <button id="dev-do-spider" disabled>spidering Stadia</button> to discover all of its SKUs (games, bundles, add-ons, and subscriptions), saving them as <button id="download-skus" disabled><code>skus.json</code></button>. From each game, take the <code>name</code>, <code>app</code> ID, and <code>fullImage</code> cover, then <button>fetch the cover images</button> to generate 64-character base-64 8x8 6-bit-RGB preview tiles we call <code>microImage</code>s, saving them in <button id="download-games"><code>games.json</code></button>. From that game data, generate a new <button><code>index.html</code></button> with all of the games included inline.
     </p>
   </section>
 </aside>
