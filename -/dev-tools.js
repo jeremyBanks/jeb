@@ -1,6 +1,6 @@
 const init = async() => {
   const root = document.getElementById('dev-tools');
-  const body = root.querySelector('section');
+  root.classList.remove('unloaded');
 };
 
 export const initialized = Promise.resolve().then(() => {
