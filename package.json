@@ -31,6 +31,7 @@
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
       "ecmaVersion": 2020,
+      "extraFileExtensions": [".jsm"],
       "project": "./tsconfig.json",
       "sourceType": "module"
     },
