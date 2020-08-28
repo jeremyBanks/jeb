@@ -14,6 +14,20 @@ setTimeout(() => reloadSkus());
 
 const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
 
+const stadiaMirror = open(
+  'https://stadia.google.com/robots.txt',
+  '_blank',
+  `left=${screen.width},top=${screen.height},width=1,height=1`);
+stadiaMirror.blur();
+
+const spiderCode = `
+  window.addEventListener("message", ({origin, data}) => {
+    if (origin === ${JSON.stringify(window.origin)} && data.eval) {
+      eval(event.data.eval);
+    }
+  })
+`;
+
 const u6toRGB = (u6) => {
   const red =
     ((u6 & 0b000010) ? 0b10101010 : 0)
@@ -157,8 +171,8 @@ const reloadSkus = async() => {
     root.querySelector('st-cover-full').hidden = fullImg.complete;
     root.querySelector('st-cover-lite').hidden = !fullImg.complete;
     loadedImage(url).then(() => {
-      // root.querySelector('st-cover-full').hidden = false;
-      // root.querySelector('st-cover-lite').hidden = true;
+      root.querySelector('st-cover-full').hidden = false;
+      root.querySelector('st-cover-lite').hidden = true;
     }).catch(error => console.error(error));
 
     root.querySelector('a').href = `https://stadia.google.com/player/${game.app}`;
