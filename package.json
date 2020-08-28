@@ -31,7 +31,9 @@
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
       "ecmaVersion": 2020,
-      "extraFileExtensions": [".jsm"],
+      "extraFileExtensions": [
+        ".jsm"
+      ],
       "project": "./tsconfig.json",
       "sourceType": "module"
     },
@@ -85,5 +87,5 @@
     "vendor": "git rm -rf node_modules; NODE_ENV=production yarn install; git add -f node_modules/*; NODE_ENV=development yarn install"
   },
   "type": "module",
-  "version": "2020.8.23"
+  "version": "2020.8.28"
 }
