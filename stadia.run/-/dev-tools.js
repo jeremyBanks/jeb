@@ -10,8 +10,6 @@ export const initialized = Promise.resolve().then(() => {
   console.groupEnd();
 });
 
-const downloadGames = () => {};
-
 const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
 const u6toRGB = (u6) => {
   const red =
