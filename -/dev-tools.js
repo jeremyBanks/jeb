@@ -11,6 +11,7 @@ export const initialized = Promise.resolve().then(() => {
 });
 
 const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+
 const u6toRGB = (u6) => {
   const red =
     ((u6 & 0b000010) ? 0b10101010 : 0)
