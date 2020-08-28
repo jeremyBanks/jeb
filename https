@@ -1,16 +1,18 @@
 #!/bin/bash
 set -euxo pipefail
 
-echo '{
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  }
-}' |
-  cfssl selfsign localhost - |
-  cfssljson -bare localhost
+[[ -f './localhost.pem' && -f './localhost-key.pem' ]] || (
+  echo '{
+    "key": {
+      "algo": "rsa",
+      "size": 2048
+    }
+  }' |
+    cfssl selfsign 'localhost' - |
+    cfssljson -bare 'localhost'
+)
 
 deno run --allow-net --allow-read \
-  https://deno.land/std/http/file_server.ts ./stadia.run/ \
+  'https://deno.land/std@0.66.0/http/file_server.ts' './stadia.run/' \
   --port 57404 --cors \
-   --host localhost --cert localhost.pem --key localhost-key.pem
+   --host 'localhost' --cert './localhost.pem' --key './localhost-key.pem'
