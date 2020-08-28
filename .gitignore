@@ -1,15 +1,10 @@
+**/*.rs.bk
 *.ignore.*
 *.log
 .DS_Store
+/localhost*
+/target
 build.pid
+dist/
 last-build-timestamp.json
 node_modules
-
-
-#Added by cargo
-#
-#already existing elements are commented out
-
-/target
-**/*.rs.bk
-dist/
