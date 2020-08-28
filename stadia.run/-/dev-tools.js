@@ -1,7 +1,106 @@
 const init = async() => {
   const root = document.getElementById('dev-tools');
   root.classList.remove('unloaded');
+
+  while (true) {
+    stadiaMirror = open(
+      'https://stadia.google.com/robots.txt',
+      'stadiaMirror',
+      `left=${screen.width},top=${screen.height},width=1,height=1`);
+    if (stadiaMirror === null) {
+      console.warn("Please allow pop-ups.");
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } else {
+      break;
+    }
+  }
+
+  const spiderCode = `
+    window.addEventListener("message", ({origin, data}) => {
+      if (origin === ${JSON.stringify(window.origin)} && data.eval) {
+        eval(event.data.eval);
+      }
+    })
+  `;
+
+  stadiaMirror.focus();
+
+  while (true) {
+    if (!await stadiaAlive()) {
+    console.debug("Please press F12 to open the developer tools in the Stadia window, then paste the following to let us access it.\n", spiderCode);
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } else {
+      break;
+    }
+  }
+
+  console.debug("Thanks! We're good to go!");
+
+  window.focus();
 };
+
+let stadiaMirror = null;
+const pendingRequests = new Map();
+let nextRequestId = 0;
+
+const stadiaAlive = () => {
+  const id = nextRequestId++;
+
+  stadiaMirror.postMessage({
+    eval: `
+      event.source.postMessage({
+        id: ${JSON.stringify(id)}
+      })
+    `
+  }, "https://stadia.google.com")
+
+  return Promise.race([
+    new Promise(resolve => {
+      pendingRequests.set(id, resolve);
+    }).then(_ => true),
+    new Promise(resolve => {
+      setTimeout(() => resolve(false), 100)
+    })]);
+};
+
+const stadiaFetch = (...args) => {
+  const id = nextRequestId++;
+
+  stadiaMirror.postMessage({
+    eval: `
+      fetch(...JSON.parse(${JSON.stringify(args)}))
+        .then(response => response.text())
+        .then(body => {
+          event.source.postMessage({
+            id: ${JSON.stringify(id)},
+            return: body
+          })
+        }).catch(error => {
+          event.source.postMessage({
+            id: ${JSON.stringify(id)},
+            error
+          })
+        })
+    `
+  }, "https://stadia.google.com")
+
+  return new Promise(resolve => {
+    pendingRequests.set(id, resolve);
+  });
+};
+
+window.addEventListener('message', ({origin, data}) => {
+  if (origin === "https://stadia.google.com" && data?.id) {
+    const id = data.id;
+    const resolver = pendingRequests.get(id);
+    if (data.error) {
+      resolver(Promise.reject(data.error));
+    } else {
+      resolver(data.return);
+    }
+    pendingRequests.delete(id);
+  }
+})
 
 export const initialized = Promise.resolve().then(() => {
   console.group('🔧 initializing dev tools');
@@ -13,20 +112,6 @@ export const initialized = Promise.resolve().then(() => {
 setTimeout(() => reloadSkus());
 
 const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
-
-const stadiaMirror = open(
-  'https://stadia.google.com/robots.txt',
-  '_blank',
-  `left=${screen.width},top=${screen.height},width=1,height=1`);
-stadiaMirror.blur();
-
-const spiderCode = `
-  window.addEventListener("message", ({origin, data}) => {
-    if (origin === ${JSON.stringify(window.origin)} && data.eval) {
-      eval(event.data.eval);
-    }
-  })
-`;
 
 const u6toRGB = (u6) => {
   const red =
