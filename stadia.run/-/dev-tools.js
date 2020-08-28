@@ -10,6 +10,8 @@ export const initialized = Promise.resolve().then(() => {
   console.groupEnd();
 });
 
+setTimeout(() => reloadSkus());
+
 const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
 
 const u6toRGB = (u6) => {
@@ -155,9 +157,9 @@ const reloadSkus = async() => {
     root.querySelector('st-cover-full').hidden = fullImg.complete;
     root.querySelector('st-cover-lite').hidden = !fullImg.complete;
     loadedImage(url).then(() => {
-      root.querySelector('st-cover-full').hidden = false;
-      root.querySelector('st-cover-lite').hidden = true;
-    });
+      // root.querySelector('st-cover-full').hidden = false;
+      // root.querySelector('st-cover-lite').hidden = true;
+    }).catch(error => console.error(error));
 
     root.querySelector('a').href = `https://stadia.google.com/player/${game.app}`;
     root.querySelector('st-name').textContent = game.name;
