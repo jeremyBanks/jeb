@@ -102,7 +102,9 @@ declare -a names=(stadia.run stadia.st)
     export GIT_COMMIT_MESSAGE="$message"
 
     for name in "${names[@]}"; do
-        git commit "./${name}/" --quiet -m "$message" && exec ./sync || echo "nothing to commit in ./${name}/";
+        git commit "./${name}/" --quiet -m "$message" &&
+            exec ./sync ||
+            echo "nothing to commit in ./${name}/";
     done
 
     git commit --quiet -m "$message"
