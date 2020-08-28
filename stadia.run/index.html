@@ -355,7 +355,7 @@ main#main {
         history.replaceState(
           null,
           '',
-          '/?' + params.toString()
+          input.value ? ('/?' + params.toString()) : '/'
         );
     })
   });
@@ -372,27 +372,34 @@ main#main {
           '',
           '/' + input.value.toLowerCase().replace(/[^a-z0-9]+/, '')
         );
+        document.title = 'stadia.run/' + input.value.toLowerCase().replace(/[^a-z0-9]+/, '')
         elements[0].querySelector('a').click();
       } else {
         params.set("q", input.value);
         history.replaceState(
           null,
           '',
-          '/?' + params.toString()
+          input.value ? ('/?' + params.toString()) : '/'
         );
       }
     });
   });
 
-  const slug = document.location.pathname.slice(1) || null;
-  const query = new URLSearchParams(document.location.search).get('q') || null;
+  const checkUrl = () => {
+    const slug = document.location.pathname.slice(1) || null;
+    const query = new URLSearchParams(document.location.search).get('q') || null;
 
-  if (query) {
-    input.value = query;
-  } else if (slug) {
-    input.value = slug;
-    form.submit();
-  }
+    if (query) {
+      input.value = query;
+    } else if (slug) {
+      input.value = slug;
+      form.submit();
+    }
+  };
+
+  window.addEventListener('popstate', checkUrl);
+
+  checkUrl();
 </script>
 
 <style id="dev-tools-style">
