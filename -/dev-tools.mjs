@@ -21,7 +21,7 @@ const doFetchCovers = async() => {
 };
 
 const doDownloadHtml = async() => {
-
+  alert("lol");
 };
 
 const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';

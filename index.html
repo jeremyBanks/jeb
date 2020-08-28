@@ -197,20 +197,25 @@ main#main {
     }
 
       main#main st-games st-game {
-        grid-template-rows: [game-rows-start] auto [game-rows-end];
-        grid-template-columns: [game-columns-start] auto [game-columns-end];
-        background-size: 100% 100%;
-        width: 320px;
-        height: 180px;
-        position: relative;
-        contain: strict;
-        border-radius: 16px;
-        background-color: black;
-        position: relative;
-        box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.5);
+        display: contents;
       }
 
-        main#main st-games st-game:hover {
+        main#main st-games st-game a {
+          grid-template-rows: [game-rows-start] auto [game-rows-end];
+          grid-template-columns: [game-columns-start] auto [game-columns-end];
+          background-size: 100% 100%;
+          width: 320px;
+          height: 180px;
+          position: relative;
+          contain: strict;
+          border-radius: 16px;
+          background-color: black;
+          position: relative;
+          box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.5);
+        }
+        main#main st-games st-game a:hover,
+        main#main st-games st-game a:focus,
+        main#main st-games st-game a:active {
           transform: scale(1.125);
           z-index: 100;
           box-shadow:
@@ -220,8 +225,14 @@ main#main {
             0 0 2px 7px rgba(0, 0, 0, 0.5);
         }
 
-        main#main st-games st-game a {
-          display: contents;
+        main#main st-games st-game.only-match a {
+          width: 720px;
+          height: 405px;
+          box-shadow:
+            0 0 0px 2px black,
+            0 0 0px 4px var(--secondary-color),
+            0 0 0px 6px black,
+            0 0 2px 7px rgba(0, 0, 0, 0.5);
         }
 
         main#main st-games st-game st-cover-full,
@@ -270,6 +281,7 @@ main#main {
         placeholder="your favourite Stadia game"
         autocomplete="off"
         autofocus
+        id="search-input"
       />
       <button><kbd>⏎</kbd></button>
     </form>
@@ -278,7 +290,7 @@ main#main {
   <st-games id="games"></st-games>
 
   <template id="stGameTemplate">
-    <st-game><a>
+    <st-game data-name="unknown"><a>
       <st-cover-full>
         <img class="cover" crossorigin="anonymous" />
       </st-cover-full>
@@ -290,7 +302,97 @@ main#main {
 </main>
 
 <script type="module" id="main-script">
+  const form = document.querySelector('st-search form');
+  const input = form.querySelector('input');
+  const button = form.querySelector('button');
+  const gameList = document.querySelector('st-games#games');
 
+  let filterElementsPending = null;
+  const filterElements = async () => {
+    if (filterElementsPending) {
+      return filterElementsPending
+    }
+
+    return filterElementsPending = new Promise(
+      resolve => resolve()
+    ).then(() => {
+      filterElementsPending = false;
+
+      const q = input.value;
+      const qs = {
+        exact: q,
+        lower: q.toLowerCase(),
+        clean: q.toLowerCase().replace(/[^a-z0-9]+/g, '')
+      };
+
+      const elements = [];
+
+      for (const child of gameList.children) {
+        const name = child.dataset.name;
+        const matches =
+          !qs.clean ||
+          name.toLowerCase().replace(/[^a-z0-9]+/g, '').includes(qs.clean);
+        child.firstElementChild.hidden = !matches;
+        child.classList.remove('only-match');
+        if (matches) {
+          elements.push(child);
+        }
+      }
+
+      if (elements.length === 1) {
+        elements[0].classList.add('only-match');
+      }
+
+      return elements;
+    });
+  };
+
+  input.addEventListener('input', event => {
+    filterElements().then(elements => {
+      const params = new URLSearchParams(location.search);
+
+      params.set("q", input.value);
+        history.replaceState(
+          null,
+          '',
+          '/?' + params.toString()
+        );
+    })
+  });
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    filterElements().then(elements => {
+      const params = new URLSearchParams(location.search);
+
+      if (elements.length === 1) {
+        history.pushState(
+          null,
+          '',
+          '/' + input.value.toLowerCase().replace(/[^a-z0-9]+/, '')
+        );
+        elements[0].querySelector('a').click();
+      } else {
+        params.set("q", input.value);
+        history.replaceState(
+          null,
+          '',
+          '/?' + params.toString()
+        );
+      }
+    });
+  });
+
+  const slug = document.location.pathname.slice(1) || null;
+  const query = new URLSearchParams(document.location.search).get('q') || null;
+
+  if (query) {
+    input.value = query;
+  } else if (slug) {
+    input.value = slug;
+    form.submit();
+  }
 </script>
 
 <style id="dev-tools-style">
@@ -409,18 +511,19 @@ main#main {
 
   <section>
     <p>
-      <s>Start by <button id="dev-do-spider" disabled>spidering Stadia</button> to discover all of its SKUs (games, bundles, add-ons, and subscriptions), saving them as <button id="download-skus" disabled><code>skus.json</code></button>.</s> From each game, take the <code>name</code>, <code>app</code> ID, and <code>fullImage</code> cover, then <button id="fetch-covers">fetch the cover images</button> to generate 64-character base-64 8x8 6-bit-RGB preview tiles we call <code>microImage</code>s, saving them in <button id="download-games"><code>games.json</code></button>. From that game data, generate a new <button id="download-html"><code>index.html</code></button> with all of the games included inline.
+      <s>Start by <button id="dev-do-spider" disabled>spidering Stadia</button> to discover all of its SKUs (games, bundles, add-ons, and subscriptions), saving them as <button id="download-skus" disabled><code>skus.mjson</code></button>.</s> From each game, take the <code>name</code>, <code>app</code> ID, and <code>fullImage</code> cover, then <button id="fetch-covers">fetch the cover images</button> to generate 64-character base-64 8x8 6-bit-RGB preview tiles we call <code>microImage</code>s, saving them in <button id="download-games"><code>games.mjson</code></button>. From that game data, generate a new <button id="download-html"><code>index.html</code></button> with all of the games included inline.
     </p>
   </section>
 </aside>
 
 <script type="module" id="dev-tools-script">
   let prevented = false;
+
   document.addEventListener('keydown', event => {
     if (event.key === 'F12') {
       if (document.location.hash !== '#dev-tools') {
         document.location.hash = '#dev-tools';
-        import('/-/dev-tools.js');
+        import('/-/dev-tools.mjs');
         event.preventDefault();
         prevented = true;
       } else {
@@ -435,11 +538,13 @@ main#main {
   });
 
   if (document.location.hash === '#dev-tools') {
-    import('/-/dev-tools.js');
+    import('/-/dev-tools.mjs');
+    prevented = true;
   } else {
     document.addEventListener('hashchange', () => {
       if (document.location.hash === '#dev-tools') {
-        import('/-/dev-tools.js');
+        import('/-/dev-tools.mjs');
+        prevented = true;
       }
     });
   }
