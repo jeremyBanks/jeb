@@ -1108,7 +1108,9 @@ main {
       input.value = query;
     } else if (slug) {
       input.value = slug;
-      form.submit();
+      setTimeout(() => {
+        form.submit();
+      }, 10);
     }
   };
 
