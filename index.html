@@ -945,6 +945,10 @@ main {
 <script type="module">
   const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
 
+  const slugify = s => {
+    s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^\-+|\-+$/g, '');
+  };
+
   const init = async () => {
     await Promise.all([
       unpackMicroCovers(),
@@ -1094,13 +1098,15 @@ main {
       const params = new URLSearchParams(location.search);
 
       if (elements.length === 1) {
+        const slug = slugify(elements[0].querySelector('st-name').textContent);
         if (!event.first) {
           history.pushState(
             null,
             '',
-            '/' + input.value.toLowerCase().replace(/[^a-z0-9]+/, '')
+            '/' + slug
           );
         }
+        input.value = slug;
         document.title = 'stadia.run/' + input.value.toLowerCase().replace(/[^a-z0-9]+/, '')
         elements[0].querySelector('a').click();
       } else {
@@ -1110,15 +1116,14 @@ main {
           '',
           input.value ? ('/?' + params.toString()) : '/'
         );
+        document.title = 'stadia.run';
       }
     });
   };
 
   form.addEventListener('submit', (event) => onSubmit(event));
 
-  let count = 0;
-
-  const checkUrl = () => {
+  const checkUrl = (first = false) => {
     const slug = document.location.pathname.slice(1) || null;
     const query = new URLSearchParams(document.location.search).get('q') || null;
 
@@ -1127,13 +1132,13 @@ main {
       onInput();
     } else if (slug) {
       input.value = slug;
-      onSubmit({first: 0 === count++});
+      onSubmit({first});
     }
   };
 
   window.addEventListener('popstate', checkUrl);
 
-  checkUrl();
+  checkUrl(true);
 </script>
 
 <style>
