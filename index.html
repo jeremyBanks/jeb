@@ -1136,7 +1136,7 @@
         input.value = query;
         onInput();
       } else if (slug) {
-        input.value = slug;
+        input.value = slug.replace(/-/g, ' ');
         onSubmit({first});
       }
     };
