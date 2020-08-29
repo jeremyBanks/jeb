@@ -156,6 +156,7 @@ main#main {
     main#main st-search input {
       grid-column: search-input-start / search-input-end;
       caret-color: var(--secondary-color);
+      outline: none;
     }
 
       main#main st-search input::placeholder {
@@ -163,7 +164,7 @@ main#main {
       }
 
       main#main st-search input:placeholder-shown {
-        opacity: 0.5;
+        color: #888;
       }
 
       main#main st-search button {
@@ -226,8 +227,6 @@ main#main {
         }
 
         main#main st-games st-game.only-match a {
-          width: 720px;
-          height: 405px;
           box-shadow:
             0 0 0px 2px black,
             0 0 0px 4px var(--secondary-color),

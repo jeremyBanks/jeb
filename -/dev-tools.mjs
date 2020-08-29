@@ -26,7 +26,36 @@ const doFetchCovers = async() => {
 };
 
 const doDownloadHtml = async() => {
-  alert("lol");
+  const docToDownload = document.documentElement.cloneNode(true);
+
+  docToDownload.querySelector('title').textContent = 'stadia.run';
+
+  for (const el of docToDownload.querySelectorAll('[hidden]')) {
+    el.removeAttribute('hidden');
+  }
+
+  for (const input of docToDownload.querySelectorAll('input[value]')) {
+    el.removeAttribute('value');
+  }
+
+  for (const el of docToDownload.querySelectorAll('st-cover-lite[style]')) {
+    el.removeAttribute('style');
+  }
+
+  const html = '<!doctype html><html>' + docToDownload.innerHTML;
+
+  const href = URL.createObjectURL(
+    new Blob([html], {
+      type: "text/html",
+    }),
+  );
+  const el = Object.assign(document.createElement("a"), {
+    download: "index.html",
+    href,
+  });
+  document.body.appendChild(el);
+  el.click();
+  document.body.removeChild(el);
 };
 
 const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
@@ -191,10 +220,10 @@ const reloadSkus = async() => {
     root.setAttribute('data-name', game.name);
     root.setAttribute('data-app-id', game.app);
     root.setAttribute('data-micro-image', game.microImage);
-    root.setAttribute('data-full-cover', game.image);
 
     container.appendChild(root);
   }
 
-  document.querySelector('st-games').appendChild(container)
+  document.querySelector('st-games').textContent = '';
+  document.querySelector('st-games').appendChild(container);
 };
