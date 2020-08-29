@@ -194,6 +194,7 @@ main {
 
       html[data-st-matches="1"] st-search button {
         color: var(--theme-color);
+        pointer-events: default;
       }
 
       main st-search button kbd {
@@ -1108,9 +1109,7 @@ main {
       input.value = query;
     } else if (slug) {
       input.value = slug;
-      setTimeout(() => {
-        form.submit();
-      }, 10);
+      form.querySelector('button').submit();
     }
   };
 
