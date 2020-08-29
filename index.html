@@ -958,15 +958,21 @@ main {
     console.groupEnd();
   });
 
+  const loadedImage = async (/** @type string */ url) => {
+    const image = new Image();
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = reject;
+      image.crossOrigin = 'anonymous';
+      image.src = url;
+    });
+    return image;
+  }
+
   const unpackMicroCovers = async () => {
     for (const game of document.querySelectorAll('st-game')) {
       const full = game.querySelector('st-cover-full img');
       const micro = game.querySelector('st-cover-micro');
-
-      full.addEventListener('load', () => {
-        full.hidden = false;
-        micro.hidden = true;
-      });
 
       if (full.complete) {
         // full image already in cache
@@ -977,6 +983,11 @@ main {
         full.hidden = true;
         micro.hidden = false;
       }
+
+      loadedImage(full.src).then(() => {
+        full.hidden = false;
+        micro.hidden = true;
+      });
     }
   };
 
@@ -1067,7 +1078,7 @@ main {
 
       document.documentElement.setAttribute('data-st-matches', elements.length);
 
-      params.set("q", input.value);
+      params.set('q', input.value.toLowerCase());
       history.replaceState(
         null,
         '',
