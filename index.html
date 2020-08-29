@@ -4,324 +4,328 @@
 <link rel="canonical" href="https://stadia.run/">
 <link rel="icon" href="/-/squirrel-stadian.png">
 
+</head><body>
+
 <style>
-* {
-  box-sizing: inherit;
-  font: inherit;
-  color: inherit;
-  text-decoration: inherit;
-  background: none;
-  border: none;
-  background-repeat: no-repeat;
-  margin: 0;
-  padding: 0;
-  display: grid;
-}
-
-html {
-  --background-color: #202124;
-  --body-color: #FFFFFF;
-  --theme-color: #D72D30;
-  --mascot-url: url(/-/squirrel-stadian.png);
-  --mascot-disabled-url: url(/-/squirrel-disabled.png);
-  --mascot-generic-url: url(/-/squirrel.png);
-  --primary-font-size: 14px;
-  --large-margin: 16px;
-  --small-margin: 6px;
-  /* We allow tiles to flow to full width, but want to keep any controls
-     or body text within a narrower window. */
-  --controls-width: 720px;
-  --search-height: 64px;
-  --search-font-size: 32px;
-
-  font-family: sans-serif;
-  box-sizing: border-box;
-  font-size: var(--primary-font-size);
-  background-color: var(--background-color);
-  color: var(--body-color);
-  padding-bottom: 75vh;
-  overflow-y: scroll;
-  overflow-x: hidden;
-}
-
-script, style, link, head, template {
-  display: none;
-}
-
-form {
-  display: contents;
-}
-
-code {
-  display: contents;
-  font-family: monospace;
-}
-
-s {
-  display: contents;
-  text-decoration: line-through;
-  text-decoration-color: rgba(128, 0, 0, 0.5);
-  text-decoration-style: wavy;
-  text-shadow:
-    1px 0 2px rgba(0, 0, 0, 0.25),
-    0 0 2px rgba(0, 0, 0, 0.25),
-    0 0 3px rgba(0, 0, 0, 0.25),
-    -1px 0 2px rgba(0, 0, 0, 0.25);
-  color: rgba(0, 0, 0, 0.125);
-  user-select: none;
-  cursor: not-allowed;
-}
-
-*[hidden] {
-  display: none;
-}
-
-button:enabled {
-  cursor: pointer;
-}
-
-:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-main {
-  grid-template-columns:
-    [columns-main-start]
-    var(--small-margin)
-    [game-columns-start]
-    1fr
-    [controls-columns-start]
-    var(--controls-width)
-    [controls-columns-end]
-    1fr
-    [game-columns-end]
-    var(--small-margin)
-    [columns-main-end]
-  ;
-  grid-template-rows:
-    [rows-main-start]
-    var(--large-margin)
-    [controls-rows-start]
-    var(--search-height)
-    [controls-rows-end]
-    var(--large-margin)
-    [games-rows-start]
-    max-content
-    [games-rows-end rows-main-end]
-  ;
-}
-
-  main st-search {
-    z-index: 10;
-    grid-column: controls-columns-start / controls-columns-end;
-    grid-row: controls-rows-start / controls-rows-end;
-    text-shadow: 0 0 2px black;
-
-    grid-template-columns:
-      [search-label-start]
-      min-content
-      [search-label-end]
-      0
-      [search-input-start]
-      auto
-      [search-input-end]
-      var(--small-margin)
-      [search-button-start]
-      min-content
-      [search-button-end]
-      var(--small-margin)
-      var(--search-height)
-    ;
-    grid-auto-rows: auto;
-
-    font-size: var(--search-font-size);
-    font-weight: bold;
-    background-image: var(--mascot-url);
-    background-size: var(--search-height);
-    background-position: right;
+  * {
+    box-sizing: inherit;
+    font: inherit;
+    color: inherit;
+    text-decoration: inherit;
+    background: none;
+    border: none;
+    background-repeat: no-repeat;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    text-shadow: inherit;
   }
 
-    html[data-st-matches] main st-search {
-      background-image: var(--mascot-generic-url);
-    }
+  html {
+    --background-color: #202124;
+    --body-color: #FFFFFF;
+    --theme-color: #D72D30;
+    --mascot-url: url(/-/squirrel-stadian.png);
+    --mascot-disabled-url: url(/-/squirrel-disabled.png);
+    --mascot-generic-url: url(/-/squirrel.png);
+    --primary-font-size: 14px;
+    --large-margin: 16px;
+    --small-margin: 6px;
+    /* We allow tiles to flow to full width, but want to keep any controls
+      or body text within a narrower window. */
+    --controls-width: 720px;
+    --search-height: 64px;
+    --search-font-size: 32px;
 
-    html[data-st-matches="0"] main st-search {
-      background-image: var(--mascot-disabled-url);
-    }
+    font-family: sans-serif;
+    box-sizing: border-box;
+    font-size: var(--primary-font-size);
+    background-color: var(--background-color);
+    color: var(--body-color);
+    padding-bottom: 75vh;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    text-shadow: none;
+  }
 
-    html[data-st-matches="1"] main st-search {
-      background-image: var(--mascot-url);
-    }
+  script, style, link, head, template {
+    display: none;
+  }
 
-    main st-search span {
-      display: block;
-      grid-column: search-label-start / search-label-end;
-      text-align: right;
-      place-self: center right;
-      color: var(--theme-color);
-      user-select: none;
-    }
+  form {
+    display: contents;
+  }
 
-      main st-search span code {
-        display: inline;
-        font-family: monospace;
-      }
+  code {
+    display: contents;
+    font-family: monospace;
+  }
 
-    main st-search input {
-      grid-column: search-input-start / search-input-end;
-      caret-color: var(--theme-color);
-      outline: none;
-    }
+  s {
+    display: contents;
+    text-decoration: line-through;
+    text-decoration-color: rgba(128, 0, 0, 0.5);
+    text-decoration-style: wavy;
+    text-shadow:
+      1px 0 2px rgba(0, 0, 0, 0.25),
+      0 0 2px rgba(0, 0, 0, 0.25),
+      0 0 3px rgba(0, 0, 0, 0.25),
+      -1px 0 2px rgba(0, 0, 0, 0.25);
+    color: rgba(0, 0, 0, 0.125);
+    user-select: none;
+    cursor: not-allowed;
+  }
 
-      main st-search input::placeholder {
-        color: inherit;
-      }
+  *[hidden] {
+    display: none;
+  }
 
-      main st-search input:placeholder-shown {
-        color: #888;
-      }
+  button:enabled {
+    cursor: pointer;
+  }
 
-      main st-search button {
-        grid-column: search-button-start / search-button-end;
-        align-items: center;
-        padding-top: 8px;
+  :disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
 
-        color: #444;
-        cursor: not-allowed;
-        pointer-events: none;
-      }
+  main {
+    grid-template-columns:
+      [columns-main-start]
+      var(--small-margin)
+      [game-columns-start]
+      1fr
+      [controls-columns-start]
+      var(--controls-width)
+      [controls-columns-end]
+      1fr
+      [game-columns-end]
+      var(--small-margin)
+      [columns-main-end]
+    ;
+    grid-template-rows:
+      [rows-main-start]
+      var(--large-margin)
+      [controls-rows-start]
+      var(--search-height)
+      [controls-rows-end]
+      var(--large-margin)
+      [games-rows-start]
+      max-content
+      [games-rows-end rows-main-end]
+    ;
+  }
 
-      html[data-st-matches="1"] st-search button {
-        color: var(--theme-color);
-        pointer-events: default;
-      }
+    main st-search {
+      z-index: 10;
+      grid-column: controls-columns-start / controls-columns-end;
+      grid-row: controls-rows-start / controls-rows-end;
+      text-shadow: 0 0 2px black;
 
-      main st-search button kbd {
-        font-size: calc(var(--search-font-size) / 2);
-        display: inline;
-        border: 2px solid currentColor;
-        padding: 2px;
-        border-radius: 4px;
-      }
-
-    main st-games {
-      z-index: 5;
-      grid-column: game-columns-start / game-columns-end;
-      grid-row: games-rows-start / games-rows-end;
-      grid-template-columns: repeat(auto-fill, 320px);
+      grid-template-columns:
+        [search-label-start]
+        min-content
+        [search-label-end]
+        0
+        [search-input-start]
+        auto
+        [search-input-end]
+        var(--small-margin)
+        [search-button-start]
+        min-content
+        [search-button-end]
+        var(--small-margin)
+        var(--search-height)
+      ;
       grid-auto-rows: auto;
-      gap: 16px 24px;
-      margin: 32px;
-      justify-content: center;
+
+      font-size: var(--search-font-size);
+      font-weight: bold;
+      background-image: var(--mascot-url);
+      background-size: var(--search-height);
+      background-position: right;
     }
 
-      html[data-st-matches="1"] main st-games {
-        grid-template-columns: repeat(auto-fill, calc(2 * 320px));
+      html[data-st-matches] main st-search {
+        background-image: var(--mascot-generic-url);
       }
 
-      html[data-st-matches="1"] main st-games st-game a {
-        width: calc(2 * 320px);
-        height: calc(2 * 180px);
+      html[data-st-matches="0"] main st-search {
+        background-image: var(--mascot-disabled-url);
       }
 
-      main st-games st-game {
-        display: contents;
+      html[data-st-matches="1"] main st-search {
+        background-image: var(--mascot-url);
       }
 
-        main st-games st-game a {
-          grid-template-rows: [game-rows-start] auto [game-rows-end];
-          grid-template-columns: [game-columns-start] auto [game-columns-end];
-          background-size: 100% 100%;
-          width: 320px;
-          height: 180px;
-          position: relative;
-          contain: strict;
-          border-radius: 16px;
-          background-color: black;
-          position: relative;
-          box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.5);
-          outline: none;
-        }
-        main st-games st-game a:hover,
-        main st-games st-game a:focus,
-        main st-games st-game a:active {
-          transform: scale(1.125);
-          z-index: 100;
-          box-shadow:
-            0 0 0px 2px black,
-            0 0 0px 4px var(--theme-color),
-            0 0 0px 6px black,
-            0 0 2px 7px rgba(0, 0, 0, 0.5);
+      main st-search span {
+        display: block;
+        grid-column: search-label-start / search-label-end;
+        text-align: right;
+        place-self: center right;
+        color: var(--theme-color);
+        user-select: none;
+      }
+
+        main st-search span code {
+          display: inline;
+          font-family: monospace;
         }
 
-        main st-games st-game a:hover {
-          z-index: 101;
+      main st-search input {
+        grid-column: search-input-start / search-input-end;
+        caret-color: var(--theme-color);
+        outline: none;
+      }
+
+        main st-search input::placeholder {
+          color: inherit;
+        }
+
+        main st-search input:placeholder-shown {
+          color: #888;
+        }
+
+        main st-search button {
+          grid-column: search-button-start / search-button-end;
+          align-items: center;
+          padding-top: 8px;
+
+          color: #444;
+          cursor: not-allowed;
+          pointer-events: none;
+        }
+
+        html[data-st-matches="1"] st-search button {
+          color: var(--theme-color);
+          pointer-events: default;
+        }
+
+        main st-search button kbd {
+          font-size: calc(var(--search-font-size) / 2);
+          display: inline;
+          border: 2px solid currentColor;
+          padding: 2px;
+          border-radius: 4px;
+        }
+
+      main st-games {
+        z-index: 5;
+        grid-column: game-columns-start / game-columns-end;
+        grid-row: games-rows-start / games-rows-end;
+        grid-template-columns: repeat(auto-fill, 320px);
+        grid-auto-rows: auto;
+        gap: 16px 24px;
+        margin: 32px;
+        justify-content: center;
+      }
+
+        html[data-st-matches="1"] main st-games {
+          grid-template-columns: repeat(auto-fill, calc(2 * 320px));
         }
 
         html[data-st-matches="1"] main st-games st-game a {
-          box-shadow:
-            0 0 0px 2px black,
-            0 0 0px 4px var(--theme-color),
-            0 0 0px 6px black,
-            0 0 2px 7px rgba(0, 0, 0, 0.5);
+          width: calc(2 * 320px);
+          height: calc(2 * 180px);
         }
 
-        main st-games st-game st-pro {
-          z-index: 20;
-          background: var(--theme-color);
-          display: block;
-          position: absolute;
-          bottom: 8px;
-          left: 8px;
-          font-size: 16px;
-          padding: 2px 6px;
-          border-top-left-radius: 4px;
-          border-bottom-left-radius: 12px;
-          border-top-right-radius: 12px;
-          border-bottom-right-radius: 4px;
-          box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.5);
+        main st-games st-game {
+          display: contents;
         }
 
-        main st-games st-game st-cover-full,
-        main st-games st-game st-cover-micro {
-          grid-column: game-columns-start / game-columns-end;
-          grid-row: game-rows-start / game-rows-end;
-        }
+          main st-games st-game a {
+            grid-template-rows: [game-rows-start] auto [game-rows-end];
+            grid-template-columns: [game-columns-start] auto [game-columns-end];
+            background-size: 100% 100%;
+            width: 320px;
+            height: 180px;
+            position: relative;
+            contain: strict;
+            border-radius: 16px;
+            background-color: black;
+            position: relative;
+            box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.5);
+            outline: none;
+          }
+          main st-games st-game a:hover,
+          main st-games st-game a:focus,
+          main st-games st-game a:active {
+            transform: scale(1.125);
+            z-index: 100;
+            box-shadow:
+              0 0 0px 2px black,
+              0 0 0px 4px var(--theme-color),
+              0 0 0px 6px black,
+              0 0 2px 7px rgba(0, 0, 0, 0.5);
+          }
 
-        main st-games st-game st-cover-full img {
-          z-index: 2;
-          width: 100%;
-        }
+          main st-games st-game a:hover {
+            z-index: 101;
+          }
 
-        main st-games st-game st-cover-micro {
-          image-rendering: pixelated;
-          background-size: 100% 100%;
-          display: none;
-        }
+          html[data-st-matches="1"] main st-games st-game a {
+            box-shadow:
+              0 0 0px 2px black,
+              0 0 0px 4px var(--theme-color),
+              0 0 0px 6px black,
+              0 0 2px 7px rgba(0, 0, 0, 0.5);
+          }
 
-        main st-games st-game st-cover-micro.rendered:not([hidden]) {
-          display: grid;
-        }
+          main st-games st-game st-pro {
+            z-index: 20;
+            background: var(--theme-color);
+            display: block;
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            font-size: 16px;
+            padding: 2px 6px;
+            border-top-left-radius: 4px;
+            border-bottom-left-radius: 12px;
+            border-top-right-radius: 12px;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.5);
+          }
 
-        main st-games st-game st-cover-micro st-name {
-          backdrop-filter: blur(calc(180px/8));
-          width: 100%;
-          height: 100%;
-          text-align: center;
-          padding: 16px;
-          justify-items: center;
-          align-items: center;
-          -webkit-text-stroke: 1px black;
-          text-shadow: 0 0 2px black;
-          font-size: 36px;
-          font-weight: bold;
-          color: #FFFFFF;
-          font-family: sans-serif;
-        }
+          main st-games st-game st-cover-full,
+          main st-games st-game st-cover-micro {
+            grid-column: game-columns-start / game-columns-end;
+            grid-row: game-rows-start / game-rows-end;
+          }
+
+          main st-games st-game st-cover-full img {
+            z-index: 2;
+            width: 100%;
+          }
+
+          main st-games st-game st-cover-micro {
+            image-rendering: pixelated;
+            background-size: 100% 100%;
+            display: none;
+          }
+
+          main st-games st-game st-cover-micro.rendered:not([hidden]) {
+            display: grid;
+          }
+
+          main st-games st-game st-cover-micro st-name {
+            backdrop-filter: blur(calc(180px/8));
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            padding: 16px;
+            justify-items: center;
+            align-items: center;
+            -webkit-text-stroke: 1px black;
+            text-shadow: 0 0 2px black;
+            font-size: 36px;
+            font-weight: bold;
+            color: #FFFFFF;
+            font-family: sans-serif;
+          }
 </style>
 
-</head><body><main>
+<main>
   <st-search>
     <form method="get" action="/">
       <span>stadia<code>.</code>run<code>/</code></span>
@@ -940,317 +944,319 @@ main {
       </st-cover-micro>
     </a></st-game>
   </st-games>
-</main>
 
-<script type="module">
-  const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+  <script type="module">
+    const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
 
-  const slugify = s => {
-    return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^\-+|\-+$/g, '');
-  };
+    const slugify = s => {
+      return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^\-+|\-+$/g, '');
+    };
 
-  const init = async () => {
-    await Promise.all([
-      unpackMicroCovers(),
-    ]);
-  };
+    const init = async () => {
+      await Promise.all([
+        unpackMicroCovers(),
+      ]);
+    };
 
-  const initialized = Promise.resolve().then(() => {
-    console.group('🔧 initializing document');
-    return init();
-  }).finally(() => {
-    console.groupEnd();
-  });
-
-  const loadedImage = async (/** @type string */ url) => {
-    const image = new Image();
-    await new Promise((resolve, reject) => {
-      image.onload = resolve;
-      image.onerror = reject;
-      image.crossOrigin = 'anonymous';
-      image.src = url;
+    const initialized = Promise.resolve().then(() => {
+      console.group('🔧 initializing document');
+      return init();
+    }).finally(() => {
+      console.groupEnd();
     });
-    return image;
-  }
 
-  const unpackMicroCovers = async () => {
-    for (const game of document.querySelectorAll('st-game')) {
-      const full = game.querySelector('st-cover-full img');
-      const micro = game.querySelector('st-cover-micro');
-
-      if (full.complete) {
-        // full image already in cache
-        micro.hidden = true;
-      } else {
-        micro.classList.add('rendered');
-        micro.style.backgroundImage = `url(${microImageToURL(micro.getAttribute('data'))})`;
-        full.hidden = true;
-        micro.hidden = false;
-      }
-
-      loadedImage(full.src).then(() => {
-        full.hidden = false;
-        micro.hidden = true;
+    const loadedImage = async (/** @type string */ url) => {
+      const image = new Image();
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = reject;
+        image.crossOrigin = 'anonymous';
+        image.src = url;
       });
-    }
-  };
-
-  const u6toRGB = (u6) => {
-    const red =
-      ((u6 & 0b000010) ? 0b10101010 : 0)
-    + ((u6 & 0b000001) ? 0b01010101 : 0);
-    const green =
-      ((u6 & 0b001000) ? 0b10101010 : 0)
-    + ((u6 & 0b000100) ? 0b01010101 : 0);
-    const blue =
-      ((u6 & 0b100000) ? 0b10101010 : 0)
-    + ((u6 & 0b010000) ? 0b01010101 : 0);
-    return [red, green, blue];
-  };
-
-  const microImageToURL = (microImage) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 8;
-    canvas.height = 8;
-    const g2d = canvas.getContext('2d');
-    const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
-
-    const palette = new Map();
-    for (let i = 0; i < 64; i++) {
-      palette.set(i, u6toRGB(i));
+      return image;
     }
 
-    const digitValues = new Map(
-      Object.entries(digits).map(([index, char]) => [char, Number(index)]));
+    const unpackMicroCovers = async () => {
+      for (const game of document.querySelectorAll('st-game')) {
+        const full = game.querySelector('st-cover-full img');
+        const micro = game.querySelector('st-cover-micro');
 
-    for (let i = 0; i < microImage.length && i < 64; i++) {
-      const color = palette.get(digitValues.get(microImage[i]));
-      pixels.data[i * 4] = color[0];
-      pixels.data[i * 4 + 1] = color[1];
-      pixels.data[i * 4 + 2] = color[2];
-      pixels.data[i * 4 + 3] = 0xFF;
-    }
-
-    g2d.putImageData(pixels, 0, 0);
-    return canvas.toDataURL();
-  };
-
-  const form = document.querySelector('st-search form');
-  const input = form.querySelector('input');
-  const button = form.querySelector('button');
-  const gameList = document.querySelector('st-games');
-
-  let filterElementsPending = null;
-  const filterElements = async () => {
-    if (filterElementsPending) {
-      return filterElementsPending
-    }
-
-    return filterElementsPending = new Promise(
-      resolve => resolve()
-    ).then(() => {
-      filterElementsPending = false;
-
-      const q = input.value;
-      const qs = {
-        exact: q,
-        lower: q.toLowerCase(),
-        clean: q.toLowerCase().replace(/[^a-z0-9]+/g, '')
-      };
-
-      const elements = [];
-
-      for (const child of gameList.querySelectorAll('st-game')) {
-        const name = child.querySelector('st-name').textContent;
-        const matches =
-          !qs.clean ||
-          name.toLowerCase().replace(/[^a-z0-9]+/g, '').includes(qs.clean);
-        child.firstElementChild.hidden = !matches;
-        if (matches) {
-          elements.push(child);
+        if (full.complete) {
+          // full image already in cache
+          micro.hidden = true;
+        } else {
+          micro.classList.add('rendered');
+          micro.style.backgroundImage = `url(${microImageToURL(micro.getAttribute('data'))})`;
+          full.hidden = true;
+          micro.hidden = false;
         }
+
+        loadedImage(full.src).then(() => {
+          full.hidden = false;
+          micro.hidden = true;
+        });
+      }
+    };
+
+    const u6toRGB = (u6) => {
+      const red =
+        ((u6 & 0b000010) ? 0b10101010 : 0)
+      + ((u6 & 0b000001) ? 0b01010101 : 0);
+      const green =
+        ((u6 & 0b001000) ? 0b10101010 : 0)
+      + ((u6 & 0b000100) ? 0b01010101 : 0);
+      const blue =
+        ((u6 & 0b100000) ? 0b10101010 : 0)
+      + ((u6 & 0b010000) ? 0b01010101 : 0);
+      return [red, green, blue];
+    };
+
+    const microImageToURL = (microImage) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 8;
+      canvas.height = 8;
+      const g2d = canvas.getContext('2d');
+      const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
+
+      const palette = new Map();
+      for (let i = 0; i < 64; i++) {
+        palette.set(i, u6toRGB(i));
       }
 
-      document.documentElement.setAttribute('data-st-matches', elements.length);
+      const digitValues = new Map(
+        Object.entries(digits).map(([index, char]) => [char, Number(index)]));
 
-      return elements;
-    });
-  };
+      for (let i = 0; i < microImage.length && i < 64; i++) {
+        const color = palette.get(digitValues.get(microImage[i]));
+        pixels.data[i * 4] = color[0];
+        pixels.data[i * 4 + 1] = color[1];
+        pixels.data[i * 4 + 2] = color[2];
+        pixels.data[i * 4 + 3] = 0xFF;
+      }
 
-  input.addEventListener('input', event => onInput(event));
+      g2d.putImageData(pixels, 0, 0);
+      return canvas.toDataURL();
+    };
 
-  const onInput = (event) => {
-    filterElements().then(elements => {
-      const params = new URLSearchParams(location.search);
+    const form = document.querySelector('st-search form');
+    const input = form.querySelector('input');
+    const button = form.querySelector('button');
+    const gameList = document.querySelector('st-games');
 
-      params.set('q', input.value.toLowerCase());
-      history.replaceState(
-        null,
-        '',
-        input.value ? ('/?' + params.toString()) : '/'
-      );
-    })
-  };
+    let filterElementsPending = null;
+    const filterElements = async () => {
+      if (filterElementsPending) {
+        return filterElementsPending
+      }
 
-  const onSubmit = (event) => {
-    event.preventDefault?.();
-    filterElements().then(elements => {
-      const params = new URLSearchParams(location.search);
+      return filterElementsPending = new Promise(
+        resolve => resolve()
+      ).then(() => {
+        filterElementsPending = false;
 
-      if (elements.length === 1) {
-        const name = elements[0].querySelector('st-name').textContent;
-        const slug = slugify(name);
-        if (!event.first) {
-          history.pushState(
-            null,
-            '',
-            '/' + slug
-          );
+        const q = input.value;
+        const qs = {
+          exact: q,
+          lower: q.toLowerCase(),
+          clean: q.toLowerCase().replace(/[^a-z0-9]+/g, '')
+        };
+
+        const elements = [];
+
+        for (const child of gameList.querySelectorAll('st-game')) {
+          const name = child.querySelector('st-name').textContent;
+          const matches =
+            !qs.clean ||
+            name.toLowerCase().replace(/[^a-z0-9]+/g, '').includes(qs.clean);
+          child.firstElementChild.hidden = !matches;
+          if (matches) {
+            elements.push(child);
+          }
         }
-        input.value = name;
-        document.title = 'stadia.run/' + slug;
-        elements[0].querySelector('a').click();
-      } else {
-        params.set("q", input.value);
+
+        document.documentElement.setAttribute('data-st-matches', elements.length);
+
+        return elements;
+      });
+    };
+
+    input.addEventListener('input', event => onInput(event));
+
+    const onInput = (event) => {
+      filterElements().then(elements => {
+        const params = new URLSearchParams(location.search);
+
+        params.set('q', input.value.toLowerCase());
+
         history.replaceState(
           null,
           '',
           input.value ? ('/?' + params.toString()) : '/'
         );
-        document.title = 'stadia.run';
+      })
+    };
+
+    const onSubmit = (event) => {
+      event.preventDefault?.();
+
+      filterElements().then(elements => {
+        const params = new URLSearchParams(location.search);
+
+        if (elements.length === 1) {
+          const name = elements[0].querySelector('st-name').textContent;
+          const slug = slugify(name);
+          if (!event.first) {
+            history.pushState(
+              null,
+              '',
+              '/' + slug
+            );
+          }
+          input.value = name;
+          document.title = 'stadia.run/' + slug;
+          elements[0].querySelector('a').click();
+        } else {
+          params.set("q", input.value);
+          history.replaceState(
+            null,
+            '',
+            input.value ? ('/?' + params.toString()) : '/'
+          );
+          document.title = 'stadia.run';
+        }
+      });
+    };
+
+    form.addEventListener('submit', event => onSubmit());
+
+    const checkUrl = (first = false) => {
+      const slug = slugify(document.location.pathname.slice(1)).replace(/\-+/g, '') || null;
+      const query = new URLSearchParams(document.location.search).get('q') || null;
+
+      if (query) {
+        input.value = query;
+        onInput();
+      } else if (slug) {
+        input.value = slug;
+        onSubmit({first});
       }
-    });
-  };
+    };
 
-  form.addEventListener('submit', (event) => onSubmit(event));
+    window.addEventListener('popstate', checkUrl);
 
-  const checkUrl = (first = false) => {
-    const slug = document.location.pathname.slice(1) || null;
-    const query = new URLSearchParams(document.location.search).get('q') || null;
-
-    if (query) {
-      input.value = query;
-      onInput();
-    } else if (slug) {
-      input.value = slug;
-      onSubmit({first});
-    }
-  };
-
-  window.addEventListener('popstate', checkUrl);
-
-  checkUrl(true);
-</script>
-
-<style>
-  #dev-tools {
-    display: none;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: auto;
-    background: white;
-    color: black;
-    z-index: 100;
-
-    --dev-border: #D0D0D0;
-    --dev-background: #F3F3F3;
-  }
-
-    #dev-tools.unloaded {
-      user-select: none;
-      cursor: progress;
-      filter: saturate(0.5) contrast(0.5) brightness(0.5);
-    }
-
-    #dev-tools.unloaded section {
-      pointer-events: none;
-      filter: blur(2px);
-    }
-
-    #dev-tools:target {
-      display: grid;
-    }
-
-
-    #dev-tools header {
-      display: block;
-      border-top: 1px solid var(--dev-border);
-      border-bottom: 1px solid var(--dev-border);
-      padding-left: var(--large-margin);
-      background: var(--dev-background);
-      position: relative;
-    }
-
-      #dev-tools header .tab {
-        cursor: pointer;
-        user-select: none;
-        position: relative;
-        padding: 4px 10px;
-        font-size: 11px;
-        top: 1px;
-        display: inline-block;
-        border-bottom: 2px solid var(--theme-color);
-      }
-
-    #dev-tools .close {
-      display: block;
-      position: absolute;
-      top: 2px;
-      right: var(--small-margin);
-      bottom: 2px;
-      padding: 0 6px;
-      font-size: 20px;
-      font-family: sans-serif;
-      border: 1px solid transparent;
-      color: #666;
-    }
-
-      #dev-tools .close span {
-        position: relative;
-        top: -4px;
-      }
-
-      #dev-tools .close:hover {
-        border: 1px solid #B99;
-        background: #EDD;
-        color: #444;
-      }
-
-    #dev-tools section {
-      display: block;
-      min-height: 128px;
-      max-height: 256px;
-      overflow-y: auto;
-      padding: var(--small-margin) var(--large-margin);
-    }
-
-    #dev-tools section p {
-      display: block;
-      max-width: 700px;
-      line-height: 1.75em;
-      text-align: justify;
-    }
-
-    #dev-tools button {
-      line-height: 1em;
-      display: inline-block;
-      border: 1px solid var(--dev-border);
-      background: var(--dev-background);
-      padding: 2px 6px;
-    }
-
-      #dev-tools button:enabled:hover {
-        color: var(--theme-color);
-      }
-
-      #dev-tools button:enabled:active {
-        border-color: var(--theme-color);
-      }
-</style>
+    checkUrl(true);
+  </script>
+</main>
 
 <aside id="dev-tools">
+  <style>
+    #dev-tools {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: auto;
+      background: white;
+      color: black;
+      z-index: 100;
+
+      --dev-border: #D0D0D0;
+      --dev-background: #F3F3F3;
+    }
+
+      #dev-tools.unloaded {
+        user-select: none;
+        cursor: progress;
+        filter: saturate(0.5) contrast(0.5) brightness(0.5);
+      }
+
+      #dev-tools.unloaded section {
+        pointer-events: none;
+        filter: blur(2px);
+      }
+
+      #dev-tools:target {
+        display: grid;
+      }
+
+
+      #dev-tools header {
+        display: block;
+        border-top: 1px solid var(--dev-border);
+        border-bottom: 1px solid var(--dev-border);
+        padding-left: var(--large-margin);
+        background: var(--dev-background);
+        position: relative;
+      }
+
+        #dev-tools header .tab {
+          cursor: pointer;
+          user-select: none;
+          position: relative;
+          padding: 4px 10px;
+          font-size: 11px;
+          top: 1px;
+          display: inline-block;
+          border-bottom: 2px solid var(--theme-color);
+        }
+
+      #dev-tools .close {
+        display: block;
+        position: absolute;
+        top: 2px;
+        right: var(--small-margin);
+        bottom: 2px;
+        padding: 0 6px;
+        font-size: 20px;
+        font-family: sans-serif;
+        border: 1px solid transparent;
+        color: #666;
+      }
+
+        #dev-tools .close span {
+          position: relative;
+          top: -4px;
+        }
+
+        #dev-tools .close:hover {
+          border: 1px solid #B99;
+          background: #EDD;
+          color: #444;
+        }
+
+      #dev-tools section {
+        display: block;
+        min-height: 128px;
+        max-height: 256px;
+        overflow-y: auto;
+        padding: var(--small-margin) var(--large-margin);
+      }
+
+      #dev-tools section p {
+        display: block;
+        max-width: 700px;
+        line-height: 1.75em;
+        text-align: justify;
+      }
+
+      #dev-tools button {
+        line-height: 1em;
+        display: inline-block;
+        border: 1px solid var(--dev-border);
+        background: var(--dev-background);
+        padding: 2px 6px;
+      }
+
+        #dev-tools button:enabled:hover {
+          color: var(--theme-color);
+        }
+
+        #dev-tools button:enabled:active {
+          border-color: var(--theme-color);
+        }
+  </style>
+
   <header>
     <span class="tab">Update Game Data</span>
     <a class="close" href="#"><span>×</span></a>
@@ -1261,38 +1267,38 @@ main {
       <s>Start by <button id="dev-do-spider" disabled="">spidering Stadia</button> to discover all of its SKUs (games, bundles, add-ons, and subscriptions), saving them as <button id="download-skus" disabled=""><code>skus.mjson</code></button>.</s> From each game, take the <code>name</code>, <code>app</code> ID, and <code>fullImage</code> cover, then <button id="fetch-covers">fetch the cover images</button> to generate 64-character base-64 8x8 6-bit-RGB preview tiles we call <code>microImage</code>s, saving them in <button id="download-games"><code>games.mjson</code></button>. From that game data, generate a new <button id="download-html"><code>index.html</code></button> with all of the games included inline.
     </p>
   </section>
-</aside>
 
-<script type="module">
-  let prevented = false;
+  <script type="module">
+    let prevented = false;
 
-  document.addEventListener('keydown', event => {
-    if (event.key === 'F12') {
-      if (document.location.hash !== '#dev-tools') {
-        document.location.hash = '#dev-tools';
-        import('/-/dev-tools.mjs');
-        event.preventDefault();
-        prevented = true;
-      } else {
-        if (prevented) {
-          prevented = false;
-        } else {
-          document.location.hash = '';
+    document.addEventListener('keydown', event => {
+      if (event.key === 'F12') {
+        if (document.location.hash !== '#dev-tools') {
+          document.location.hash = '#dev-tools';
+          import('/-/dev-tools.mjs');
           event.preventDefault();
+          prevented = true;
+        } else {
+          if (prevented) {
+            prevented = false;
+          } else {
+            document.location.hash = '';
+            event.preventDefault();
+          }
         }
       }
-    }
-  });
-
-  if (document.location.hash === '#dev-tools') {
-    import('/-/dev-tools.mjs');
-    prevented = true;
-  } else {
-    document.addEventListener('hashchange', () => {
-      if (document.location.hash === '#dev-tools') {
-        import('/-/dev-tools.mjs');
-        prevented = true;
-      }
     });
-  }
-</script>
+
+    if (document.location.hash === '#dev-tools') {
+      import('/-/dev-tools.mjs');
+      prevented = true;
+    } else {
+      document.addEventListener('hashchange', () => {
+        if (document.location.hash === '#dev-tools') {
+          import('/-/dev-tools.mjs');
+          prevented = true;
+        }
+      });
+    }
+  </script>
+</aside>
