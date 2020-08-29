@@ -18,13 +18,13 @@
   display: grid;
 }
 
-html:root {
+html {
   --background-color: #202124;
-  --primary-color: #FFFFFF;
-  --secondary-color: #D72D30;
+  --body-color: #FFFFFF;
+  --theme-color: #D72D30;
   --mascot-url: url(/-/squirrel-stadian.png);
   --mascot-disabled-url: url(/-/squirrel-disabled.png);
-  --mascot-generic-url: url(/-/squirrel-generic.png);
+  --mascot-generic-url: url(/-/squirrel.png);
   --primary-font-size: 14px;
   --large-margin: 16px;
   --small-margin: 6px;
@@ -38,7 +38,7 @@ html:root {
   box-sizing: border-box;
   font-size: var(--primary-font-size);
   background-color: var(--background-color);
-  color: var(--primary-color);
+  color: var(--body-color);
   padding-bottom: 75vh;
   overflow-y: scroll;
   overflow-x: hidden;
@@ -142,12 +142,24 @@ main {
     background-position: right;
   }
 
+    html[data-st-matches] main st-search {
+      background-image: var(--mascot-generic-url);
+    }
+
+    html[data-st-matches="0"] main st-search {
+      background-image: var(--mascot-disabled-url);
+    }
+
+    html[data-st-matches="1"] main st-search {
+      background-image: var(--mascot-url);
+    }
+
     main st-search span {
       display: block;
       grid-column: search-label-start / search-label-end;
       text-align: right;
       place-self: center right;
-      color: var(--secondary-color);
+      color: var(--theme-color);
       user-select: none;
     }
 
@@ -158,7 +170,7 @@ main {
 
     main st-search input {
       grid-column: search-input-start / search-input-end;
-      caret-color: var(--secondary-color);
+      caret-color: var(--theme-color);
       outline: none;
     }
 
@@ -171,11 +183,18 @@ main {
       }
 
       main st-search button {
-      grid-column: search-button-start / search-button-end;
-      align-items: center;
-      color: var(--secondary-color);
-      padding-top: 8px;
-    }
+        grid-column: search-button-start / search-button-end;
+        align-items: center;
+        padding-top: 8px;
+
+        color: #444;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
+
+      html[data-st-matches="1"] st-search button {
+        color: var(--theme-color);
+      }
 
       main st-search button kbd {
         font-size: calc(var(--search-font-size) / 2);
@@ -183,10 +202,6 @@ main {
         border: 2px solid currentColor;
         padding: 2px;
         border-radius: 4px;
-      }
-
-      main st-search button:disabled {
-        color: #444;
       }
 
     main st-games {
@@ -199,6 +214,15 @@ main {
       margin: 32px;
       justify-content: center;
     }
+
+      html[data-st-matches="1"] main st-games {
+        grid-template-columns: repeat(auto-fill, calc(2 * 320px));
+      }
+
+      html[data-st-matches="1"] main st-games st-game a {
+        width: calc(2 * 320px);
+        height: calc(2 * 180px);
+      }
 
       main st-games st-game {
         display: contents;
@@ -225,7 +249,7 @@ main {
           z-index: 100;
           box-shadow:
             0 0 0px 2px black,
-            0 0 0px 4px var(--secondary-color),
+            0 0 0px 4px var(--theme-color),
             0 0 0px 6px black,
             0 0 2px 7px rgba(0, 0, 0, 0.5);
         }
@@ -234,17 +258,17 @@ main {
           z-index: 101;
         }
 
-        main st-games st-game.only-match a {
+        html[data-st-matches="1"] main st-games st-game a {
           box-shadow:
             0 0 0px 2px black,
-            0 0 0px 4px var(--secondary-color),
+            0 0 0px 4px var(--theme-color),
             0 0 0px 6px black,
             0 0 2px 7px rgba(0, 0, 0, 0.5);
         }
 
         main st-games st-game st-pro {
           z-index: 20;
-          background: var(--secondary-color);
+          background: var(--theme-color);
           display: block;
           position: absolute;
           bottom: 8px;
@@ -272,6 +296,11 @@ main {
         main st-games st-game st-cover-micro {
           image-rendering: pixelated;
           background-size: 100% 100%;
+          display: none;
+        }
+
+        main st-games st-game st-cover-micro.rendered:not([hidden]) {
+          display: grid;
         }
 
         main st-games st-game st-cover-micro st-name {
@@ -942,12 +971,11 @@ main {
         // full image already in cache
         micro.hidden = true;
       } else {
+        micro.classList.add('rendered');
         micro.style.backgroundImage = `url(${microImageToURL(micro.getAttribute('data'))})`;
         full.hidden = true;
         micro.hidden = false;
       }
-    }
-    for (const cover of document.querySelectorAll('st-cover-micro:not([style])')) {
     }
   };
 
@@ -1028,10 +1056,6 @@ main {
         }
       }
 
-      if (elements.length === 1) {
-        elements[0].classList.add('only-match');
-      }
-
       return elements;
     });
   };
@@ -1040,12 +1064,14 @@ main {
     filterElements().then(elements => {
       const params = new URLSearchParams(location.search);
 
+      document.documentElement.setAttribute('data-st-matches', elements.length);
+
       params.set("q", input.value);
-        history.replaceState(
-          null,
-          '',
-          input.value ? ('/?' + params.toString()) : '/'
-        );
+      history.replaceState(
+        null,
+        '',
+        input.value ? ('/?' + params.toString()) : '/'
+      );
     })
   });
 
@@ -1140,7 +1166,7 @@ main {
         font-size: 11px;
         top: 1px;
         display: inline-block;
-        border-bottom: 2px solid var(--secondary-color);
+        border-bottom: 2px solid var(--theme-color);
       }
 
     #dev-tools .close {
@@ -1191,11 +1217,11 @@ main {
     }
 
       #dev-tools button:enabled:hover {
-        color: var(--secondary-color);
+        color: var(--theme-color);
       }
 
       #dev-tools button:enabled:active {
-        border-color: var(--secondary-color);
+        border-color: var(--theme-color);
       }
 </style>
 
