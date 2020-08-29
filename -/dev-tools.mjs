@@ -260,5 +260,6 @@ const reloadSkus = async() => {
   gamesEl.textContent = '';
   gamesEl.appendChild(template);
   gamesEl.appendChild(fragment);
+
   gamesEl.appendChild(document.createTextNode("\n  "));
 };
