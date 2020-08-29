@@ -1129,7 +1129,7 @@
     form.addEventListener('submit', event => onSubmit(event));
 
     const checkUrl = (first = false) => {
-      const slug = slugify(decodeURIComponent(document.location.pathname.slice(1))).replace(/\-+/g, '') || null;
+      const slug = slugify(decodeURIComponent(document.location.pathname.slice(1))) || null;
       const query = new URLSearchParams(document.location.search).get('q') || null;
 
       if (query) {
