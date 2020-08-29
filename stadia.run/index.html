@@ -1072,7 +1072,9 @@ main {
     });
   };
 
-  input.addEventListener('input', event => {
+  input.addEventListener('input', event => onInput(event));
+
+  const onInput = (event) => {
     filterElements().then(elements => {
       const params = new URLSearchParams(location.search);
 
@@ -1085,9 +1087,9 @@ main {
         input.value ? ('/?' + params.toString()) : '/'
       );
     })
-  });
+  };
 
-  form.addEventListener('submit', (event) => {
+  const onSubmit = (event) => {
     event.preventDefault();
 
     filterElements().then(elements => {
@@ -1110,7 +1112,9 @@ main {
         );
       }
     });
-  });
+  };
+
+  form.addEventListener('submit', (event) => onSubmit(event));
 
   const checkUrl = () => {
     const slug = document.location.pathname.slice(1) || null;
@@ -1118,9 +1122,10 @@ main {
 
     if (query) {
       input.value = query;
+      onInput();
     } else if (slug) {
       input.value = slug;
-      form.querySelector('button').submit();
+      onSubmit();
     }
   };
 
