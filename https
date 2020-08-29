@@ -1,26 +1,96 @@
-#!/bin/bash
-set -euxo pipefail
+#!/usr/bin/env bash
+set -euo pipefail
+shopt -s inherit_errexit nullglob compat"${BASH_COMPAT=42}"
 trap 'kill $(jobs -p)' EXIT
 
-[[ -f './localhost.pem' && -f './localhost-key.pem' ]] || (
-  echo '{
-    "key": {
-      "algo": "rsa",
-      "size": 2048
-    }
-  }' |
-    cfssl selfsign 'localhost' - |
-    cfssljson -bare 'localhost'
-)
+if [[ ! -d './.https' ]]; then
+  declare https_tmp
+  https_tmp="$(mktemp -d)"
+
+  (
+    cfssl version || brew install cfssl
+    cfssljson --version || brew install cfssljson
+    deno --version || brew install deno
+    jq --version || brew install jq
+
+    cd "$https_tmp"
+
+    echo '{
+      "signing": {
+        "default": {
+          "expiry": "8760h",
+          "usages": [
+            "server auth",
+            "cert sign",
+            "key encipherment",
+            "signing"
+          ]
+        }
+      }
+    }' | jq > "./config.json";
+
+    echo '{
+      "CN": "stadians local development root",
+      "key": {
+        "algo": "ecdsa",
+        "size": 256
+      },
+      "ca": {
+        "expiry": "8760h"
+      }
+    }' | jq > "./ca-csr.json";
+
+    echo '{
+      "CN": "stadians local development",
+      "hosts": [
+        "stadians.dev",
+        "*.stadians.dev",
+        "dev.stadia.st",
+        "dev.stadia.run",
+        "localhost"
+      ],
+      "key": {
+        "algo": "rsa",
+        "size": 2048
+      },
+      "names": []
+    }' | jq > "./csr.json";
+
+    declare root_ca_json
+    root_ca_json="$(cfssl gencert -initca "./ca-csr.json")"
+
+    declare root_ca_cert
+    echo "$root_ca_json" | jq --raw-output .cert > ./root.crt
+
+    declare root_ca_key
+    root_ca_key="$(echo "$root_ca_json" | jq --raw-output .key)"
+
+    CA_KEY="$root_ca_key"  \
+      cfssl gencert -config="./config.json" -ca="./root.crt" -ca-key="env:CA_KEY" \
+      "./csr.json" |
+        cfssljson -bare
+
+    # delete the root cert's key before trusting it
+    root_ca_json=""
+    root_ca_key=""
+
+    echo "Adding local development certificate to system trust store."
+    sudo security add-trusted-cert -d -r trustRoot -k "/Library/Keychains/System.keychain" "./root.crt"
+  )
+
+  mv "$https_tmp" './.https'
+fi
 
 deno run --allow-net --allow-read \
   'https://deno.land/std@0.66.0/http/file_server.ts' './stadia.st/' \
-  --port 57480 --cors \
-  --host 'localhost' --cert './localhost.pem' --key './localhost-key.pem' &
+  --cert './.https/cert.pem' --key './.https/cert-key.pem' \
+  --host 'dev.stadia.st' --port 57480 --cors &
+
+sleep 1
 
 deno run --allow-net --allow-read \
   'https://deno.land/std@0.66.0/http/file_server.ts' './stadia.run/' \
-  --port 57481 --cors \
-  --host 'localhost' --cert './localhost.pem' --key './localhost-key.pem' &
+  --cert './.https/cert.pem' --key './.https/cert-key.pem' \
+  --host 'dev.stadia.run' --port 57481 &
 
 wait

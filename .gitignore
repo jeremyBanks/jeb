@@ -2,7 +2,7 @@
 *.ignore.*
 *.log
 .DS_Store
-/localhost*
+/.https
 /target
 build.pid
 dist/
