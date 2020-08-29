@@ -105,7 +105,7 @@ fi
 https-file-server() {
   deno run \
     --allow-net --allow-read \
-    'https://deno.land/std@0.66.0/http/file_server.ts'  \
+    'https://deno.land/std/http/file_server.ts'  \
     --cert './.https/cert.pem' \
     --key './.https/key.pem' \
     "$@"
