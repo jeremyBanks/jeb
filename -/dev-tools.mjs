@@ -38,8 +38,12 @@ const doDownloadHtml = async() => {
     el.removeAttribute('value');
   }
 
-  for (const el of docToDownload.querySelectorAll('st-cover-lite[style]')) {
+  for (const el of docToDownload.querySelectorAll('[style]')) {
     el.removeAttribute('style');
+  }
+
+  for (const el of docToDownload.querySelectorAll('[class=""]')) {
+    el.removeAttribute('class');
   }
 
   const html = '<!doctype html><html>' + docToDownload.innerHTML.replace(/\s*<\/body>\s*$/, '\n');
@@ -98,12 +102,6 @@ const microImageToURL = (microImage) => {
 
   g2d.putImageData(pixels, 0, 0);
   return canvas.toDataURL();
-};
-
-const hydrateMicroImages = (root) => {
-  for (const element of root.querySelectorAll("[data-micro-image]")) {
-    element.style.backgroundImage = `url(${microImageToURL(element.dataset.microImage)})`;
-  }
 };
 
 const loadedImage = async (/** @type string */ url) => {
@@ -215,10 +213,10 @@ const reloadSkus = async() => {
     fullImg.loading = 'lazy';
     fullImg.src = url;
     root.querySelector('st-cover-full').hidden = fullImg.complete;
-    root.querySelector('st-cover-lite').hidden = !fullImg.complete;
+    root.querySelector('st-cover-micro').hidden = !fullImg.complete;
     loadedImage(url).then(() => {
       root.querySelector('st-cover-full').hidden = false;
-      root.querySelector('st-cover-lite').hidden = true;
+      root.querySelector('st-cover-micro').hidden = true;
     }).catch(error => console.error(error));
 
     root.querySelector('a').href = `https://stadia.google.com/player/${game.app}`;
@@ -229,10 +227,10 @@ const reloadSkus = async() => {
       game.microImage = microImage;
     }
 
-    root.querySelector('st-cover-lite').style.backgroundImage = `url(${
+    root.querySelector('st-cover-micro').style.backgroundImage = `url(${
       microImageToURL(game.microImage)})`;
 
-    root.querySelector('st-cover-lite').setAttribute('data', game.microImage);
+    root.querySelector('st-cover-micro').setAttribute('data', game.microImage);
 
     if (game.pro) {
       root.querySelector('a').appendChild(Object.assign(
@@ -242,7 +240,7 @@ const reloadSkus = async() => {
       ))
     }
 
-    fragment.appendChild(document.createTextNode("\n      "));
+    fragment.appendChild(document.createTextNode("\n    "));
     fragment.appendChild(root);
   }
 
@@ -251,4 +249,5 @@ const reloadSkus = async() => {
   gamesEl.textContent = '';
   gamesEl.appendChild(template);
   gamesEl.appendChild(fragment);
+  gamesEl.appendChild(document.createTextNode("\n  "));
 };
