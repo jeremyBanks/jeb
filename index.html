@@ -1098,7 +1098,8 @@ main {
       const params = new URLSearchParams(location.search);
 
       if (elements.length === 1) {
-        const slug = slugify(elements[0].querySelector('st-name').textContent);
+        const name = elements[0].querySelector('st-name').textContent;
+        const slug = slugify(name);
         if (!event.first) {
           history.pushState(
             null,
@@ -1106,8 +1107,8 @@ main {
             '/' + slug
           );
         }
-        input.value = slug;
-        document.title = 'stadia.run/' + input.value.toLowerCase().replace(/[^a-z0-9]+/, '')
+        input.value = name;
+        document.title = 'stadia.run/' + slug;
         elements[0].querySelector('a').click();
       } else {
         params.set("q", input.value);
