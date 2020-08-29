@@ -42,7 +42,7 @@ const doDownloadHtml = async() => {
     el.removeAttribute('style');
   }
 
-  const html = '<!doctype html><html>' + docToDownload.innerHTML;
+  const html = '<!doctype html><html>' + docToDownload.innerHTML.replace(/\s*<\/body>\s*$/, '\n');
 
   const href = URL.createObjectURL(
     new Blob([html], {
@@ -186,11 +186,9 @@ const reloadSkus = async() => {
     return (a < b) ? -1 : (a > b) ? +1 : 0;
   });
 
-  document.getElementById('games').data = games;
+  const template = document.querySelector('st-games template');
 
-  const template = document.querySelector('template#stGameTemplate');
-
-  const container = document.createDocumentFragment();
+  const fragment = document.createDocumentFragment();
 
   for (const game of games) {
     let root = template.content.cloneNode(true).firstElementChild;
@@ -217,13 +215,15 @@ const reloadSkus = async() => {
     root.querySelector('st-cover-lite').style.backgroundImage = `url(${
       microImageToURL(game.microImage)})`;
 
-    root.setAttribute('data-name', game.name);
-    root.setAttribute('data-app-id', game.app);
-    root.setAttribute('data-micro-image', game.microImage);
+      root.querySelector('st-cover-lite').setAttribute('data', game.microImage);
 
-    container.appendChild(root);
+    fragment.appendChild(document.createTextNode("\n      "));
+    fragment.appendChild(root);
   }
 
-  document.querySelector('st-games').textContent = '';
-  document.querySelector('st-games').appendChild(container);
+  template.remove();
+  const gamesEl = document.querySelector('st-games');
+  gamesEl.textContent = '';
+  gamesEl.appendChild(template);
+  gamesEl.appendChild(fragment);
 };
