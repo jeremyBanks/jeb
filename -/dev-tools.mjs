@@ -16,6 +16,11 @@ export const initialized = Promise.resolve().then(() => {
   console.groupEnd();
 });
 
+const runHost = document.location.host;
+const stHost = runHost.endsWith(':57481') ? (
+  runHost.replace(':57481', ':57480').replace('.run:', '.st:')
+) : 'stadia.st';
+
 const doFetchCovers = async() => {
   await reloadSkus();
 };
@@ -129,8 +134,7 @@ const checkStatus = (/** @type Response */ response) => {
 
 const reloadSkus = async() => {
   const skus = await
-    fetch('https://stadia.st/-/games.json').then(checkStatus)
-      .catch(() => fetch('https://stadia.st/-/skus.json').then(checkStatus))
+    fetch(`https://${stHost}/-/skus.json`).then(checkStatus)
       .then(response => response.json());
 
   const games = Object.values(skus).filter(sku => sku.image).map(game => ({
