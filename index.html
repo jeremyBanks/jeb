@@ -3,8 +3,12 @@
 <title>stadia.run</title>
 
 <link rel="canonical" href="https://stadia.run">
-<link rel="icon" href="/-/squirrel-stadian.png">
-<meta property="og:image" content="/-/squirrel-stadian.png">
+<link rel="icon" href="/-/icon.png">
+<meta property="og:image" content="/-/icon.png">
+
+<link rel="preload" as="image" href="/-/squirrel-stadian.png">
+<link rel="preload" as="image" href="/-/squirrel.png">
+<link rel="preload" as="image" href="/-/squirrel-disabled.png">
 
 </head><body>
 
@@ -1056,20 +1060,13 @@
       ).then(() => {
         filterElementsPending = false;
 
-        const q = input.value;
-        const qs = {
-          exact: q,
-          lower: q.toLowerCase(),
-          clean: q.toLowerCase().replace(/[^a-z0-9]+/g, '')
-        };
+        const q = slugify(input.value);
 
         const elements = [];
 
         for (const child of gameList.querySelectorAll('st-game')) {
-          const name = child.querySelector('st-name').textContent;
-          const matches =
-            !qs.clean ||
-            name.toLowerCase().replace(/[^a-z0-9]+/g, '').includes(qs.clean);
+          let name = child.querySelector('st-name').textContent;
+          const matches = slugify(name).includes(q);
           child.firstElementChild.hidden = !matches;
           if (matches) {
             elements.push(child);
