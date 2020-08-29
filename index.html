@@ -1089,17 +1089,18 @@ main {
   };
 
   const onSubmit = (event) => {
-    event?.preventDefault();
-
+    event.preventDefault?.();
     filterElements().then(elements => {
       const params = new URLSearchParams(location.search);
 
       if (elements.length === 1) {
-        history.pushState(
-          null,
-          '',
-          '/' + input.value.toLowerCase().replace(/[^a-z0-9]+/, '')
-        );
+        if (!event.first) {
+          history.pushState(
+            null,
+            '',
+            '/' + input.value.toLowerCase().replace(/[^a-z0-9]+/, '')
+          );
+        }
         document.title = 'stadia.run/' + input.value.toLowerCase().replace(/[^a-z0-9]+/, '')
         elements[0].querySelector('a').click();
       } else {
@@ -1115,6 +1116,8 @@ main {
 
   form.addEventListener('submit', (event) => onSubmit(event));
 
+  let count = 0;
+
   const checkUrl = () => {
     const slug = document.location.pathname.slice(1) || null;
     const query = new URLSearchParams(document.location.search).get('q') || null;
@@ -1124,7 +1127,7 @@ main {
       onInput();
     } else if (slug) {
       input.value = slug;
-      onSubmit();
+      onSubmit({first: 0 === count++});
     }
   };
 
