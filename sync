@@ -119,7 +119,7 @@ declare -a names=(stadia.run stadia.st)
     git pull
 
     for name in "${names[@]}"; do
-        git push "${origin%/*}/$name.git" "$(git subtree split --prefix "$name" "$branch")":"$branch" --force
+        git push "${origin%/*}/$name.git" "$(git subtree split --prefix "$name" "$branch")":"refs/heads/$branch" --force
     done
 
     git push
