@@ -162,11 +162,27 @@ const checkStatus = (/** @type Response */ response) => {
 };
 
 const reloadSkus = async() => {
-  const skus = await
+  const skusData = await
     fetch(`https://${stHost}/-/skus.json`).then(checkStatus)
       .then(response => response.json());
 
-  const games = Object.values(skus).filter(sku => sku.image).map(game => ({
+  const skus = new Map();
+  for (const sku of Object.values(skusData)) {
+    skus.set(sku.sku, sku);
+  }
+
+  const proGameSkus = new Set();
+  const addProGames = (skuId) => {
+    const sku = skus.get(skuId);
+    if (sku.type === 'game') {
+      proGameSkus.add(skuId);
+    } else if (sku.skus) {
+      sku.skus.forEach(addProGames);
+    }
+  }
+  addProGames('59c8314ac82a456ba61d08988b15b550');
+
+  const games = [...skus.values()].filter(sku => sku.image).map(game => ({
     name: game.name
       .replace(/™/g, ' ')
       .replace(/®/g, ' ')
@@ -180,6 +196,7 @@ const reloadSkus = async() => {
     app: game.app,
     microImage: game.microImage,
     image: game.image,
+    pro: proGameSkus.has(game.sku)
   })).sort((gameA, gameB) => {
     const a = gameA.name.toLowerCase();
     const b = gameB.name.toLowerCase();
@@ -215,7 +232,15 @@ const reloadSkus = async() => {
     root.querySelector('st-cover-lite').style.backgroundImage = `url(${
       microImageToURL(game.microImage)})`;
 
-      root.querySelector('st-cover-lite').setAttribute('data', game.microImage);
+    root.querySelector('st-cover-lite').setAttribute('data', game.microImage);
+
+    if (game.pro) {
+      root.querySelector('a').appendChild(Object.assign(
+        document.createElement('st-pro'), {
+          textContent: 'PRO'
+        }
+      ))
+    }
 
     fragment.appendChild(document.createTextNode("\n      "));
     fragment.appendChild(root);
