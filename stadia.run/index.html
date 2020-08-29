@@ -1099,7 +1099,7 @@
     };
 
     const onSubmit = (event) => {
-      event.preventDefault?.();
+      event?.preventDefault?.();
 
       filterElements().then(elements => {
         const params = new URLSearchParams(location.search);
@@ -1107,7 +1107,7 @@
         if (elements.length === 1) {
           const name = elements[0].querySelector('st-name').textContent;
           const slug = slugify(name);
-          if (!event.first) {
+          if (!event?.first) {
             history.pushState(
               null,
               '',
