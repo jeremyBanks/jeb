@@ -1089,7 +1089,7 @@ main {
   };
 
   const onSubmit = (event) => {
-    event.preventDefault();
+    event?.preventDefault();
 
     filterElements().then(elements => {
       const params = new URLSearchParams(location.search);
