@@ -42,7 +42,7 @@ const doDownloadHtml = async() => {
     el.removeAttribute('style');
   }
 
-  for (const el of docToDownload.querySelectorAll('[class=""]')) {
+  for (const el of docToDownload.querySelectorAll('[class=""],main [class]')) {
     el.removeAttribute('class');
   }
 
@@ -222,7 +222,6 @@ const reloadSkus = async() => {
     let url = game.image;
 
     const fullImg = root.querySelector('img');
-    fullImg.loading = 'lazy';
     fullImg.src = url;
     root.querySelector('st-cover-full').hidden = fullImg.complete;
     root.querySelector('st-cover-micro').hidden = !fullImg.complete;
