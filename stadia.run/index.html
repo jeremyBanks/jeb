@@ -1062,11 +1062,12 @@ main {
           !qs.clean ||
           name.toLowerCase().replace(/[^a-z0-9]+/g, '').includes(qs.clean);
         child.firstElementChild.hidden = !matches;
-        child.classList.remove('only-match');
         if (matches) {
           elements.push(child);
         }
       }
+
+      document.documentElement.setAttribute('data-st-matches', elements.length);
 
       return elements;
     });
@@ -1077,8 +1078,6 @@ main {
   const onInput = (event) => {
     filterElements().then(elements => {
       const params = new URLSearchParams(location.search);
-
-      document.documentElement.setAttribute('data-st-matches', elements.length);
 
       params.set('q', input.value.toLowerCase());
       history.replaceState(
