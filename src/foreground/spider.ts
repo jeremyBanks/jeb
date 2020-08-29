@@ -232,10 +232,16 @@ class Spider {
     for (const matches of contents
       .map(s => s.match(dataCallbackPattern))
       .filter(Boolean)) {
-      dataServiceLoads[matches[1]] = JSON.parse(matches[2]);
+      dataServiceLoads[matches[1]] = JSON.parse(
+        matches[2].replace(/,\s*sideChannel:\s*\{\s*\}/g, ""),
+      );
     }
-    6;
-    const dataServiceRpcPrefixes = Object.values(dataServiceRequests).map(
+
+    if (!dataServiceRequests) {
+      console.error("no data service requests", contents);
+    }
+
+    const dataServiceRpcPrefixes = Object.values(dataServiceRequests || {}).map(
       (x: any) => {
         const pieces = [x.id, ...x.request];
         const aliases = [];
