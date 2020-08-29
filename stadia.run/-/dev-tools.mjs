@@ -196,9 +196,21 @@ const reloadSkus = async() => {
     image: game.image,
     pro: proGameSkus.has(game.sku)
   })).sort((gameA, gameB) => {
-    const a = gameA.name.toLowerCase();
-    const b = gameB.name.toLowerCase();
-    return (a < b) ? -1 : (a > b) ? +1 : 0;
+
+    const aName = gameA.name.toLowerCase();
+    const bName = gameB.name.toLowerCase();
+
+    if (gameA.pro && !gameB.pro) {
+      return -1;
+    } else if (!gameA.pro && gameB.pro) {
+      return +1;
+    } else if (aName < bName) {
+      return -1;
+    } else if (aName > bName) {
+      return +1;
+    } else {
+      return 0;
+    }
   });
 
   const template = document.querySelector('st-games template');
