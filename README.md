@@ -1,17 +1,20 @@
-Stadia launcher: https://stadia.run
+# <img src="./stadia.run/-/squirrel-stadian.png" height="32" /> Stadians.dev
 
-Stadia store data: https://stadia.st/-/skus.json
+- Launcher: https://stadia.run
+- Data: https://stadia.st/-/skus.json
+- Code: https://github.com/stadians/stadians
 
-Our code: https://github.com/stadians/stadians
+## Warning
 
-(The update process is still partially manual, so the site and data are probably already out of date.)
+The data update process isn't entirely automated, so we're probably missing recent changes.
 
 ## License
 
-Copyright 2020 Stadians.dev Contributors. Released under the
-[MIT License](https://opensource.org/licenses/MIT).
+All code in this repository are Copyright 2020 Stadians.dev Contributors and released under the [MIT License](https://opensource.org/licenses/MIT).
 
 By intentionally submitting code for inclusion in this repository, you agree to release it under the above license.
+
+The "Stadian Squirrel" icon is Copyright 2020 [illufinch](https://twitter.com/illufinch), and is only licensed for non-commercial use on stadians.dev, stadia.run, and stadia.st.
 
 ## Contributing
 
