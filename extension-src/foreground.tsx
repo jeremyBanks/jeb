@@ -9,10 +9,7 @@ import { localKey } from "./foreground/data/local-key.js";
 
 export const main = async () => {
   document.head.appendChild(
-    fragment(
-      <title>stadia.observer</title>,
-      <link rel="icon" href="/illufinch-violetsky-edited@2x.png" />,
-    ),
+    fragment(<title>stadian.dev</title>, <link rel="icon" href="/icon.png" />),
   );
 
   // TODO: associate prototypes, these are plain Objects.

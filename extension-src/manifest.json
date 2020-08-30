@@ -26,6 +26,6 @@
   "manifest_version": 2,
   "name": "stadians.dev",
   "permissions": ["https://stadia.google.com/*"],
-  "version": "2020.8.29",
-  "version_name": "2020-08-29"
+  "version": "2020.8.30",
+  "version_name": "2020-08-30"
 }

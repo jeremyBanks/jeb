@@ -5,6 +5,6 @@
 /.https
 /target
 build.pid
-dist/
+/*dist/
 last-build-timestamp.json
 node_modules

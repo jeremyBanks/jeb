@@ -8,8 +8,8 @@
     "module": "esnext",
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
+    "outDir": "./extension-dist",
+    "rootDir": "./extension-src",
     "sourceRoot": "./",
     "strict": true,
     "target": "esnext"

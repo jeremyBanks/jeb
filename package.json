@@ -83,9 +83,9 @@
     "web-ext/**/shelljs": ">=0.8.4"
   },
   "scripts": {
-    "build": "./build",
+    "build-extension": "./build-extension",
     "vendor": "git rm -rf node_modules; NODE_ENV=production yarn install; git add -f node_modules/*; NODE_ENV=development yarn install"
   },
   "type": "module",
-  "version": "2020.8.29"
+  "version": "2020.8.30"
 }
