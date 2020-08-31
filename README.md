@@ -10,7 +10,7 @@ The data update process isn't entirely automated, so we're probably missing rece
 
 ## License
 
-All code in this repository are Copyright 2020 Stadians.dev Contributors and released under the [MIT License](https://opensource.org/licenses/MIT).
+All code in this repository is Copyright 2020 Stadians.dev Contributors and released under the [MIT License](https://opensource.org/licenses/MIT).
 
 By intentionally submitting code for inclusion in this repository, you agree to release it under the above license.
 
@@ -18,7 +18,7 @@ The "Stadian Squirrel" icon is Copyright 2020 [illufinch](https://twitter.com/il
 
 ## Contributing
 
-Changes to the `./stadia.run` or `./stadia.st` subdirectories must be made in standalone commits that only modify one of those directories and do not touch anything else. (This is because we split those paths out with git-subtree to deploy them, and that works more smoothly with distinct commits.)
+Changes to the `./stadia.run` or `./stadia.st` subdirectories must be made in standalone commits that only modify one of those directories and do not touch anything else. (This is because we split those paths out with git-subtree to deploy them, and that works more smoothly with distinct commits.) This means we can't squash-merge PRs.
 
 ### Warnings
 
