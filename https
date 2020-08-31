@@ -3,6 +3,8 @@ set -euo pipefail
 shopt -s inherit_errexit nullglob compat"${BASH_COMPAT=42}"
 trap 'kill $(jobs -p) 2>/dev/null' EXIT
 
+./build-sites
+
 if [[ ! -d './.https' ]]; then
   declare https_tmp
   https_tmp="$(mktemp -d)"

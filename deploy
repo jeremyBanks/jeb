@@ -6,6 +6,7 @@ cd "$(dirname "${BASH_SOURCE}")"
 export TZ=UTC
 
 ./build-sites
+./build-extension || :
 
 declare -a names=(stadia.run stadia.st)
 
