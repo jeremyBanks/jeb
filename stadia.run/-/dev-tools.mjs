@@ -1,4 +1,4 @@
-import "./index.html/main.mjs";
+import {digits, u6toRGB, microImageToURL, loadedImage} from "./index.html/main.mjs";
 
 const init = async() => {
   const root = document.getElementById('dev-tools');
@@ -64,81 +64,6 @@ const doDownloadHtml = async() => {
   document.body.removeChild(el);
 };
 
-const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
-
-const u6toRGB = (u6) => {
-  const red =
-    ((u6 & 0b000010) ? 0b10101010 : 0)
-  + ((u6 & 0b000001) ? 0b01010101 : 0);
-  const green =
-    ((u6 & 0b001000) ? 0b10101010 : 0)
-  + ((u6 & 0b000100) ? 0b01010101 : 0);
-  const blue =
-    ((u6 & 0b100000) ? 0b10101010 : 0)
-  + ((u6 & 0b010000) ? 0b01010101 : 0);
-  return [red, green, blue];
-};
-
-const microImageToURL = (microImage) => {
-  const canvas = document.createElement('canvas');
-  canvas.width = 8;
-  canvas.height = 8;
-  const g2d = canvas.getContext('2d');
-  const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
-
-  const palette = new Map();
-  for (let i = 0; i < 64; i++) {
-    palette.set(i, u6toRGB(i));
-  }
-
-  const digitValues = new Map(
-    Object.entries(digits).map(([index, char]) => [char, Number(index)]));
-
-  for (let i = 0; i < microImage.length && i < 64; i++) {
-    const color = palette.get(digitValues.get(microImage[i]));
-    pixels.data[i * 4] = color[0];
-    pixels.data[i * 4 + 1] = color[1];
-    pixels.data[i * 4 + 2] = color[2];
-    pixels.data[i * 4 + 3] = 0xFF;
-  }
-
-  g2d.putImageData(pixels, 0, 0);
-  return canvas.toDataURL();
-};
-
-const loadedImage = async (/** @type string */ url) => {
-  const image = new Image();
-  await new Promise((resolve, reject) => {
-    image.onload = resolve;
-    image.onerror = reject;
-    image.crossOrigin = 'anonymous';
-    image.src = url;
-  });
-  return image;
-}
-
-/**
- * Returns an base-64 encoded 8x8 thumbnail the image at a given URL.
- * @returns {Promise<String>}
- */
-const microImageFromURL = async (/** @type string */ url) => {
-  const image = await loadedImage(url);
-  const canvas = document.createElement('canvas');
-  canvas.width = 8;
-  canvas.height = 8;
-  const g2d = canvas.getContext('2d');
-  g2d.drawImage(image, 0, 0, canvas.width, canvas.height);
-  const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
-
-  const microImage = new Array();
-  for (let i = 0; i < 64; i++) {
-    const rgb = pixels.data.slice(i * 4, i * 4 + 3);
-    const u6 = rgbToU6(rgb);
-    microImage.push(digits[u6]);
-  }
-
-  return microImage.join('');
-}
 
 /**
  * Rounds a 24-bit RGB value to the nearest 6-bit RGB value.
