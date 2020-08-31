@@ -116,6 +116,8 @@ declare -a names=(stadia.run stadia.st)
     declare origin="$(git remote get-url origin)"
     declare branch="$(git rev-parse --abbrev-ref HEAD)"
 
+    git branch --set-upstream-to=origin/"$branch" "$branch"
+
     git pull
 
     for name in "${names[@]}"; do
