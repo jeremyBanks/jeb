@@ -12,8 +12,7 @@ if [[ ! -d './.https' ]]; then
 
     cfssl version || brew install cfssl
     cfssljson --version || brew install cfssljson
-    deno --version || brew install deno
-    jq --version || brew install jq
+    http-server --version || yarn add http-server
 
     cd "$https_tmp"
 
@@ -103,9 +102,10 @@ if [[ ! -d './.https' ]]; then
 fi
 
 https-file-server() {
-  deno run \
-    --allow-net --allow-read \
-    'https://deno.land/std/http/file_server.ts'  \
+  yarn http-server \
+    --ssl \
+    -d false \
+    --gzip --brotli -c8 \
     --cert './.https/cert.pem' \
     --key './.https/key.pem' \
     "$@"
@@ -113,7 +113,6 @@ https-file-server() {
 
 https-file-server \
   ''./stadia.st/'' \
-  --host 'dev.stadia.st' \
   --port 57480 \
   --cors &
 
@@ -122,10 +121,12 @@ echo
 
 https-file-server \
   ''./stadia.run/'' \
-  --host 'dev.stadia.run' \
   --port 57481 &
 
 sleep 1
 echo
+
+echo "$(tput smul && tput setaf 6 || :)https://dev.stadia.st:57480/$(tput sgr0 || :)"
+echo "$(tput smul && tput setaf 6 || :)https://dev.stadia.run:57481/$(tput sgr0 || :)"
 
 wait

@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "http-server": "^0.12.3",
     "webextension-polyfill": "v0.6"
   },
   "devDependencies": {
