@@ -103,9 +103,9 @@ fi
 
 https-file-server() {
   yarn http-server \
-    --ssl \
-    -d false \
-    --gzip --brotli -c8 \
+    --ssl=true \
+    -d=false \
+    -c=8 \
     --cert './.https/cert.pem' \
     --key './.https/key.pem' \
     "$@"
@@ -126,7 +126,9 @@ https-file-server \
 sleep 1
 echo
 
-echo "$(tput smul && tput setaf 6 || :)https://dev.stadia.st:57480/$(tput sgr0 || :)"
-echo "$(tput smul && tput setaf 6 || :)https://dev.stadia.run:57481/$(tput sgr0 || :)"
+echo "  $(tput smul && tput setaf 6 || :)https://dev.stadia.run:57481$(tput sgr0 || :)"
+echo
+echo "  $(tput smul && tput setaf 6 || :)https://dev.stadia.st:57480$(tput sgr0 || :)"
+echo
 
 wait
