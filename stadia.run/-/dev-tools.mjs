@@ -1,3 +1,5 @@
+import "./index.html/main.mjs";
+
 const init = async() => {
   const root = document.getElementById('dev-tools');
 
