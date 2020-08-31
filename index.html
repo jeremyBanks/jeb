@@ -953,8 +953,8 @@
     </a></st-game>
   </st-games>
 
-  <script type="module">
-    const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+  <script type="module" id="main.mjs">
+    export const digits = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
 
     const slugify = s => {
       return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^\-+|\-+$/g, '');
@@ -966,11 +966,18 @@
       ]);
     };
 
+    const nonCanonicalDevToolsImport =
+      import.meta.url.includes('/index.html/') && import.meta.url.endsWith('.mjs');
+
     const initialized = Promise.resolve().then(() => {
+      if (nonCanonicalDevToolsImport) {
+        return;
+      }
+
       console.group('🔧 initializing document');
-      return init();
-    }).finally(() => {
-      console.groupEnd();
+      return init().finally(() => {
+        console.groupEnd();
+      });
     });
 
     const loadedImage = async (/** @type string */ url) => {
