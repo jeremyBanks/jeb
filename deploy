@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 shopt -s inherit_errexit nullglob compat"${BASH_COMPAT=42}"
+cd "$(dirname "${BASH_SOURCE}")"
 
 export TZ=UTC
+
+./build-sites
 
 declare -a names=(stadia.run stadia.st)
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail;
-shopt -s globstar nullglob;
-cd "$(dirname "${BASH_SOURCE}")";
+set -euo pipefail
+shopt -s inherit_errexit nullglob compat"${BASH_COMPAT=42}"
+cd "$(dirname "${BASH_SOURCE}")"
 
 if [ -z "${npm_package_name:-}" ]; then
     printf "\n🔹 Initializing Node/Yarn environment...\n";

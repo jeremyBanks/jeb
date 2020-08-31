@@ -14,6 +14,7 @@
     "*.lock": true,
     "*.log": true,
     "*.pid": true,
+    "**/*.html/*.mjs": true,
     "node_modules": true
   },
   "files.insertFinalNewline": true,
