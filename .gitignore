@@ -1,10 +1,7 @@
-**/*.rs.bk
-*.ignore.*
-*.log
 .DS_Store
-/.https
-/target
-build.pid
+*.lock
+*.log
+*.pid
+/.https/
 /*dist/
-last-build-timestamp.json
-node_modules
+/node_modules/
