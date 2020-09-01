@@ -104,7 +104,7 @@ if [[ ! -d './.https' ]]; then
 fi
 
 https-file-server() {
-  yarn http-server \
+  http-server \
     --ssl=true \
     -d=false \
     -c=8 \
@@ -128,9 +128,16 @@ https-file-server \
 sleep 1
 echo
 
+PORT=57483 ./dumb-server.rb &
+
+sleep 1
+echo
+
+echo "  $(tput smul && tput setaf 6 || :)https://dev.stadia.st:57480$(tput sgr0 || :)"
+echo
 echo "  $(tput smul && tput setaf 6 || :)https://dev.stadia.run:57481$(tput sgr0 || :)"
 echo
-echo "  $(tput smul && tput setaf 6 || :)https://dev.stadia.st:57480$(tput sgr0 || :)"
+echo "  $(tput smul && tput setaf 6 || :)http://127.0.0.1:57483$(tput sgr0 || :)"
 echo
 
 wait

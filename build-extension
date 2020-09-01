@@ -77,7 +77,7 @@ printf "\n🔸 Clearing previous build...\n";
 rm -rf "${dist}"/*;
 
 printf "\n🔸 Copying static files...\n";
-cp -r "./extension-src/"* "./static/"* "./stadia.st/-"/*.json "${dist}/";
+cp -r "./extension-src/"* "./stadia.st/-"/*.json "${dist}/";
 cp "./node_modules/webextension-polyfill/dist/browser-polyfill.js"{"",".map"} "${dist}/";
 replace-in-files --regex='\s*//#\s*sourceMappingURL=[^\n]+\.map\s*$' --replacement '' "${dist}/browser-polyfill.js";
 cp "./extension-src/index.html" "${dist}/.htm";
