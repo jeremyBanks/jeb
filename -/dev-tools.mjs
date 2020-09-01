@@ -23,11 +23,11 @@ const stHost = runHost.endsWith(':57481') ? (
   runHost.replace(':57481', ':57480').replace('.run:', '.st:')
 ) : 'stadia.st';
 
-const doFetchCovers = async() => {
+const doFetchCovers = async () => {
   await reloadSkus();
 };
 
-const doDownloadHtml = async() => {
+const doDownloadHtml = async () => {
   const docToDownload = document.documentElement.cloneNode(true);
 
   docToDownload.querySelector('title').textContent = 'stadia.run';
@@ -49,6 +49,11 @@ const doDownloadHtml = async() => {
   }
 
   const html = '<!doctype html><html>' + docToDownload.innerHTML.replace(/\s*<\/body>\s*$/, '\n');
+
+  await fetch('http://127.0.0.1:57483/index.html', {
+    method: 'PUT',
+    body: html
+  });
 
   const href = URL.createObjectURL(
     new Blob([html], {
