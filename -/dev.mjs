@@ -5,23 +5,31 @@ import {
   loadedImage,
 } from "/-/index.html/main.mjs";
 
-import { canUpdateData, canSaveData } from "/-/net.mjs";
+import {
+  canFetchDevApi,
+  canFetchStadiaHost,
+  canFetchStadiaStore,
+  fetchDevApi,
+  fetchStadia,
+} from "/-/net.mjs";
 
 const init = async () => {
   const root = document.getElementById("dev-tools");
 
-  root.querySelector("#fetch-covers").addEventListener("click", doFetchCovers);
-  root
-    .querySelector("#download-html")
-    .addEventListener("click", doDownloadHtml);
+  root.querySelector(".loaded-games-status").textContent = 0;
+  root.querySelector(".loaded-skus-status").textContent = 0;
 
-  if (await canUpdateData()) {
-    console.debug("Stadians.dev extension detected, spidering enabled.");
-  }
+  root.querySelector(".dev-server-status").textContent = (await canFetchDevApi)
+    ? "✅ available"
+    : "❌ unavailable";
 
-  if (await canSaveData()) {
-    console.debug("Local dev-api.stadia.st server detected, saving enabled.");
-  }
+  root.querySelector(
+    ".stadia-proxy-status"
+  ).textContent = (await canFetchStadiaStore)
+    ? "✅ authenticated"
+    : (await canFetchStadiaHost)
+    ? "⚠️ unauthenticated"
+    : "❌ unavailable";
 
   root.classList.remove("unloaded");
 };

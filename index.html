@@ -1322,7 +1322,11 @@
         margin: 8px 0;
       }
 
-      #dev-tools section.button-panel {
+      #dev-tools section.body span {
+        display: contents;
+      }
+
+      #dev-tools section.panel {
         border-left: 1px solid var(--dev-border);
       }
 
@@ -1352,13 +1356,23 @@
     <a class="close" href="#"><span>×</span></a>
   </header>
 
-  <section>
+  <section class="body">
     <section>
-      x games
-      most recent something something
+      <p>
+        local dev server: <span class="dev-server-status">pending</span>
+      </p>
+      <p>
+        stadia.com proxy: <span class="stadia-proxy-status">pending</span>
+      </p>
+      <p>
+        loaded games: <span class="loaded-games-status">pending</span>
+      </p>
+      <p>
+        loaded skus: <span class="loaded-skus-status">pending</span>
+      </p>
     </section>
 
-    <section class="button-panel">
+    <section class="panel">
       <p>
         <button>Load game SKUs from page HTML</button>
       </p>
