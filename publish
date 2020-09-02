@@ -7,7 +7,7 @@ export TZ=UTC
 
 ./build
 
-declare -a names=(stadia.run stadia.st)
+declare -a names=(stadia.st stadia.run stadia.red)
 
 {
     declare message_prefix=""
