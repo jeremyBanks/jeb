@@ -13,8 +13,8 @@ while connection = server.accept
   route_line, _, header_chunk = header_chunk.partition("\r\n")
   header_lines = header_chunk.split("\r\n")
   headers = Hash[ header_lines.collect { |line|
-    key, _, value = line.partition(": ")
-    [key, value]
+    key, _, value = line.partition(":")
+    [key.strip, value.strip]
   } ]
   route = route_line.sub(/[ ]+HTTP\/1\.[01]$/, '')
 
