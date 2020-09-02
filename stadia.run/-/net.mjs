@@ -2,10 +2,13 @@ const devApiHost = "//dev-api.stadia.st:57482";
 const chromeExtensionId = "faklgfkhnojnmccmjiifiljdhfjnacpb";
 
 /** Wraps a promise with a timeout. */
-const withTimeout = (ms, promise, resolution) => {
-  resolution ??= Promise.reject(new Error(`timed out after ${ms}ms`));
+const withTimeout = (ms, promise, errorResolution) => {
   return Promise.race([
-    new Promise((resolve) => setTimeout(() => resolve(resolution), ms)),
+    new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`timed out after ${ms}ms`));
+      }, ms);
+    }),
     promise,
   ]);
 };
@@ -41,22 +44,38 @@ const chromeCall = async (methodName, ...args) => {
 };
 
 /**
- * Whether we are able to communicate with our Chrome extension, which is
- * required to load updated data from Stadia.
+ * Whether we are able to communicate with our Chrome extension in order to
+ * fetch pages from the https://stadia.google.com host.
  */
-export const canFetchStadia = async () => {
+export const canFetchStadiaHost = Promise.resolve(async () => {
   try {
     return "pong" === (await withTimeout(100, chromeCall("ping")));
   } catch {
     return false;
   }
-};
+});
+
+/**
+ * Whether we are actually able to fetch information from the Stadia Store,
+ * meaning that we're authenticated and not getting a major error.
+ */
+export const canFetchStadiaStore = canFetchStadiaHost.then(
+  async (predicate) => {
+    if (!predicate) {
+      return false;
+    }
+
+    // If we're not authenticated as a Stadia user, we will be redirected.
+    const response = await fetchStadia("store");
+    return response.redirected === false;
+  }
+);
 
 /**
  * Whether we are able to communicate with a local dev server, which is required
  * to save updated data in the project directory.
  */
-export const canFetchDevApi = async () => {
+export const canFetchDevApi = Promise.resolve(async () => {
   try {
     const response = await withTimeout(
       100,
@@ -67,7 +86,7 @@ export const canFetchDevApi = async () => {
   } catch {
     return false;
   }
-};
+});
 
 /**
  * Fetch a path on the stadia.google.com domain, through our Chrome extension.
