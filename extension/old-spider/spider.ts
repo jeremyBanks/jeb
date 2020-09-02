@@ -27,10 +27,10 @@ class Spider {
   private readonly done: Promise<unknown>;
   public constructor(
     private readonly skus: Record<Sku["sku"], Sku> = {},
-    private readonly spidered: Record<Sku["sku"], true> = {},
+    private readonly spidered: Record<Sku["sku"], true> = {}
   ) {
     let start: () => void;
-    const started = new Promise(resolve => (start = resolve));
+    const started = new Promise((resolve) => (start = resolve));
     this.start = start;
     this.done = started
       .then(() => this.spider())
@@ -78,9 +78,9 @@ class Spider {
     return records.sorted(
       Object.fromEntries(
         Object.values(this.skus)
-          .map(sku => records.sorted(sku))
-          .map(sku => [sku.localKey, sku]),
-      ),
+          .map((sku) => records.sorted(sku))
+          .map((sku) => [sku.localKey, sku])
+      )
     );
   }
 
@@ -91,7 +91,7 @@ class Spider {
     const href = URL.createObjectURL(
       new Blob([json], {
         type: "application/json",
-      }),
+      })
     );
     const el = Object.assign(document.createElement("a"), {
       download: "skus.json",
@@ -134,7 +134,7 @@ class Spider {
         internalSlug,
         description,
         prices,
-        image,
+        image
       );
     } else if (typeId === 2) {
       sku = new AddOn(
@@ -144,7 +144,7 @@ class Spider {
         name,
         internalSlug,
         description,
-        prices,
+        prices
       );
     } else if (typeId === 3) {
       sku = new Bundle(
@@ -155,7 +155,7 @@ class Spider {
         internalSlug,
         description,
         prices,
-        data[14][0].map((x: any) => x[0]),
+        data[14][0].map((x: any) => x[0])
       );
     } else if (typeId === 5) {
       sku = new Subscription(
@@ -166,11 +166,11 @@ class Spider {
         internalSlug,
         description,
         prices,
-        data[14][0].map((x: any) => x[0]),
+        data[14][0].map((x: any) => x[0])
       );
     } else {
       throw new Error(
-        `unexpected sku type id ${JSON.stringify(typeId, null, 4)}`,
+        `unexpected sku type id ${JSON.stringify(typeId, null, 4)}`
       );
     }
 
@@ -194,8 +194,8 @@ class Spider {
   }
 
   async fetchPreloadData(path: string) {
-    await new Promise(resolve =>
-      setTimeout(resolve, Math.random() * 1_000 + 2_000),
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.random() * 1_000 + 2_000)
     );
     const response = await fetch("https://stadia.google.com/" + path, {
       headers: {
@@ -206,34 +206,34 @@ class Spider {
     const html = await response.text();
     const document = new DOMParser().parseFromString(html, "text/html");
     const scripts = Array.from(document.scripts);
-    const contents = scripts.map(s => s.textContent?.trim()).filter(Boolean);
+    const contents = scripts.map((s) => s.textContent?.trim()).filter(Boolean);
 
     const dataServiceRequestsPattern = /^var *AF_initDataKeys[^]*?var *AF_dataServiceRequests *= *({[^]*}); *?var /;
 
     const dataServiceRequests = contents
-      .map(s => s.match(dataServiceRequestsPattern))
+      .map((s) => s.match(dataServiceRequestsPattern))
       .filter(Boolean)
-      .map(matches =>
+      .map((matches) =>
         JSON.parse(
           matches[1]
             .replace(/{id:/g, '{"id":')
             .replace(/,request:/g, ',"request":')
-            .replace(/'/g, '"'),
-        ),
+            .replace(/'/g, '"')
+        )
       )
-      .map(requests =>
+      .map((requests) =>
         Object.fromEntries(
-          Object.entries(requests).map(([key, value]: any) => [key, value]),
-        ),
+          Object.entries(requests).map(([key, value]: any) => [key, value])
+        )
       )[0];
 
     const dataCallbackPattern = /^ *AF_initDataCallback *\( *{ *key *: *'ds:([0-9]+?)' *,[^]*?data: *([^]*)\s*}\s*\)\s*;?\s*$/;
     const dataServiceLoads: Array<any> = [];
     for (const matches of contents
-      .map(s => s.match(dataCallbackPattern))
+      .map((s) => s.match(dataCallbackPattern))
       .filter(Boolean)) {
       dataServiceLoads[matches[1]] = JSON.parse(
-        matches[2].replace(/,\s*sideChannel:\s*\{\s*\}/g, ""),
+        matches[2].replace(/,\s*sideChannel:\s*\{\s*\}/g, "")
       );
     }
 
@@ -248,14 +248,14 @@ class Spider {
         aliases.push(
           `${pieces[0]}_${pieces.filter((x: any) => x != null).length - 1}s${
             pieces.filter(Boolean).length - 1
-          }t${pieces.length - 1}a`,
+          }t${pieces.length - 1}a`
         );
         while (pieces.length) {
           aliases.push(pieces.join("_"));
           pieces.pop();
         }
         return aliases;
-      },
+      }
     );
 
     const preload = Object.values(dataServiceLoads);
@@ -274,7 +274,7 @@ class Spider {
         const game = gameData && this.loadSkuData(gameData, gamePricingData);
 
         const addons = (data[19] as any)?.map((x: any) =>
-          this.loadSkuData(x[9]),
+          this.loadSkuData(x[9])
         );
 
         const skuData = data[16];
@@ -286,7 +286,7 @@ class Spider {
 
       SYcsTd: (data: ProtoData) => {
         const subscriptionDatas = data[2]?.map((x: any) => x[9]) ?? [];
-        const subscriptions = subscriptionDatas.map(s => this.loadSkuData(s));
+        const subscriptions = subscriptionDatas.map((s) => this.loadSkuData(s));
         if (subscriptions?.length) return { subscriptions };
         else return {};
       },
@@ -316,7 +316,7 @@ class Spider {
         preload,
         rpc,
       }),
-      loaded,
+      loaded
     );
 
     console.debug(path, data);

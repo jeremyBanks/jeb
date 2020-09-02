@@ -16,3 +16,6 @@ for name in "${names[@]}"; do
   echo -n "// " >> "$path"
   sed -n -e '/<script type="module" id="main.mjs">/,/<\/script>/ p' "$source" | sed -e '$d' >> "$path"
 done
+
+yarn sort-json "./"*".json" {"./extension","./stadia.st/-","./stadia.run/-","./.vscode"}"/"**/*"."{"json","yml","yaml"};
+yarn prettier --write "./"*".json" "./stadia.st/-/" "./stadia.run/-/" "./.vscode/" "./extension/";

@@ -12,9 +12,9 @@
     "matches": [
       "https://stadia.google.com/*",
       "https://*.stadians.dev/*",
-      "https://*.stadia.run/*",
-      "https://*.stadia.st/*",
-      "https://localhost/*"
+      "*://*.stadia.run/*",
+      "*://*.stadia.st/*",
+      "*://localhost/*"
     ]
   },
   "homepage_url": "https://stadia.run/",
@@ -22,10 +22,16 @@
     "64": "icon.png",
     "128": "icon.png"
   },
-  "key": "stadiaobsobsobsobsobsobsobstadia",
+  "key": "stadiansstadiansstadiansstadians",
   "manifest_version": 2,
-  "name": "stadians.dev",
-  "permissions": ["https://stadia.google.com/*"],
+  "name": "Stadians.dev",
+  "permissions": [
+    "https://stadia.google.com/*",
+    "https://*.stadians.dev/*",
+    "*://*.stadia.run/*",
+    "*://*.stadia.st/*",
+    "*://localhost/*"
+  ],
   "version": "2020.9.2",
   "version_name": "2020-09-02"
 }

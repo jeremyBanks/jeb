@@ -12,7 +12,7 @@ export class Prices {
     readonly proPriceCents: number | null = null,
     readonly proSalePriceCents: number | null = null,
     readonly basePriceCents: number | null = null,
-    readonly baseSalePriceCents: number | null = null,
+    readonly baseSalePriceCents: number | null = null
   ) {}
 
   public render(): Renderable {
@@ -21,7 +21,7 @@ export class Prices {
 
     if (this.basePriceCents) {
       return `${Math.floor(this.basePriceCents / 100)}.${String(
-        this.basePriceCents % 100,
+        this.basePriceCents % 100
       ).padStart(2, "0")} ${this.currencyCode} ${flag(this.countryCode)}`;
     } else {
       return `∞ ${this.currencyCode} ${flag(this.countryCode)}`;
@@ -59,7 +59,7 @@ export class Prices {
       proPriceCents,
       proSalePriceCents,
       basePriceCents,
-      baseSalePriceCents,
+      baseSalePriceCents
     );
   }
 }
@@ -72,7 +72,7 @@ export abstract class CommonSku {
     readonly name: string,
     readonly internalSlug: string,
     readonly description: string,
-    readonly prices: Prices,
+    readonly prices: Prices
   ) {
     this.localKey = localKey(this);
   }
@@ -88,7 +88,7 @@ export class Game extends CommonSku {
     internalSlug: string,
     description: string,
     readonly prices: Prices,
-    readonly image: string,
+    readonly image: string
   ) {
     super(app, sku, type, name, internalSlug, description, prices);
   }
@@ -102,7 +102,7 @@ export class AddOn extends CommonSku {
     name: string,
     internalSlug: string,
     description: string,
-    prices: Prices,
+    prices: Prices
   ) {
     super(app, sku, type, name, internalSlug, description, prices);
   }
@@ -117,7 +117,7 @@ export class Bundle extends CommonSku {
     internalSlug: string,
     description: string,
     prices: Prices,
-    readonly skus: Array<string>,
+    readonly skus: Array<string>
   ) {
     super(app, sku, type, name, internalSlug, description, prices);
   }
@@ -132,7 +132,7 @@ export class Subscription extends CommonSku {
     internalSlug: string,
     description: string,
     prices: Prices,
-    readonly skus: Array<string>,
+    readonly skus: Array<string>
   ) {
     super(app, sku, type, name, internalSlug, description, prices);
   }

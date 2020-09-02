@@ -1,6 +1,5 @@
 .DS_Store
 *.br
-*.lock
 *.log
 *.pid
 /.https/

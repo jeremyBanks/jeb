@@ -51,7 +51,7 @@ export const createElement = <Props extends {} = {}>(
 
       if (type.name && count > 1) {
         console.warn(
-          `Multiple (${count}) components named ${type.name} in use.`,
+          `Multiple (${count}) components named ${type.name} in use.`
         );
       }
 
@@ -65,7 +65,7 @@ export const createElement = <Props extends {} = {}>(
         Object.assign(sheet.rules[i].style, type.style);
         // HACK: these changes will work but will be confusingly invisible in the DOM so we write them back:
         el.textContent = Array.from(sheet.rules)
-          .map(r => r.cssText)
+          .map((r) => r.cssText)
           .join("\n");
       }
     }
