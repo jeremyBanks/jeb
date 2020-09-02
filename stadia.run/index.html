@@ -1334,7 +1334,7 @@
       if (event.key === 'F12') {
         if (document.location.hash !== '#dev-tools') {
           document.location.hash = '#dev-tools';
-          import('/-/dev-tools.mjs');
+          import('/-/dev.mjs');
           event.preventDefault();
           prevented = true;
         } else {
@@ -1349,12 +1349,12 @@
     });
 
     if (document.location.hash === '#dev-tools') {
-      import('/-/dev-tools.mjs');
+      import('/-/dev.mjs');
       prevented = true;
     } else {
       document.addEventListener('hashchange', () => {
         if (document.location.hash === '#dev-tools') {
-          import('/-/dev-tools.mjs');
+          import('/-/dev.mjs');
           prevented = true;
         }
       });

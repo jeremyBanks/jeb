@@ -3,7 +3,9 @@ import {
   u6toRGB,
   microImageToURL,
   loadedImage,
-} from "./index.html/main.mjs";
+} from "/-/index.html/main.mjs";
+
+import { canUpdateData, canSaveData } from "/-/net.mjs";
 
 const init = async () => {
   const root = document.getElementById("dev-tools");
@@ -13,7 +15,7 @@ const init = async () => {
     .querySelector("#download-html")
     .addEventListener("click", doDownloadHtml);
 
-  if (await canFetchStadia()) {
+  if (await canUpdateData()) {
     console.debug("Stadians.dev extension detected, spidering enabled.");
   }
 
@@ -23,51 +25,6 @@ const init = async () => {
 
   root.classList.remove("unloaded");
 };
-
-const canFetchStadia = async () => {
-  try {
-    return await Promise.race([
-      new Promise((resolve) =>
-        chrome.runtime.sendMessage(
-          "faklgfkhnojnmccmjiifiljdhfjnacpb",
-          {
-            ping: true,
-          },
-          {},
-          (response) => resolve(response === "pong")
-        )
-      ),
-      new Promise((resolve) => setTimeout(() => resolve(false), 50)),
-    ]);
-  } catch {
-    return false;
-  }
-};
-
-const canSaveData = async () => {
-  try {
-    return await Promise.race([
-      fetch("http://dev-api.stadia.st:57482/index.html").then(
-        (response) => response.status >= 200 && response.status <= 299
-      ),
-      new Promise((resolve) => setTimeout(() => resolve(false), 250)),
-    ]);
-  } catch {
-    return false;
-  }
-};
-
-const fetchStadia = async (path, ...rest) =>
-  new Promise((resolve) =>
-    chrome.runtime.sendMessage(
-      "faklgfkhnojnmccmjiifiljdhfjnacpb",
-      {
-        fetch: [path, ...rest],
-      },
-      {},
-      resolve
-    )
-  );
 
 export const initialized = Promise.resolve()
   .then(() => {
