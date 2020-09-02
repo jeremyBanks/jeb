@@ -48,7 +48,12 @@ const doDownloadHtml = async () => {
     el.removeAttribute('class');
   }
 
-  const html = '<!doctype html><html>' + docToDownload.innerHTML.replace(/\s*<\/body>\s*$/, '\n');
+  const html = '<!doctype html><html>' +
+    docToDownload.innerHTML
+      .replace(/\s*<\/body>\s*$/, '\n')
+      .replace(/<html><head>/, '')
+      .replace(/</head><body>/, '')
+      .replace(/(\s)(disabled|autofocus)(="")([>\s])</body>/g, '\1\2\4');
 
   await fetch('http://127.0.0.1:57483/index.html', {
     method: 'PUT',
