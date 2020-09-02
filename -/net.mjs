@@ -2,7 +2,7 @@ const devApiHost = "//dev-api.stadia.st:57482";
 const chromeExtensionId = "faklgfkhnojnmccmjiifiljdhfjnacpb";
 
 /** Wraps a promise with a timeout. */
-const withTimeout = (ms, promise, errorResolution) => {
+const withTimeout = (ms, promise) => {
   return Promise.race([
     new Promise((_, reject) => {
       setTimeout(() => {
@@ -52,7 +52,7 @@ const chromeCall = async (methodName, ...args) => {
  */
 export const canFetchStadiaHost = Promise.resolve().then(async () => {
   try {
-    return "pong" === (await withTimeout(100, chromeCall("ping")));
+    return "pong" === (await withTimeout(1_000, chromeCall("ping")));
   } catch {
     return false;
   }
@@ -81,7 +81,7 @@ export const canFetchStadiaStore = canFetchStadiaHost.then(
 export const canFetchDevApi = Promise.resolve().then(async () => {
   try {
     const response = await withTimeout(
-      2000,
+      4_000,
       fetch(`${devApiHost}/skus.json`).then(checkStatus)
     );
     await response.json();
