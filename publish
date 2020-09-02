@@ -107,7 +107,7 @@ declare -a names=(stadia.st stadia.run stadia.red)
     for name in "${names[@]}"; do
         git commit "./${name}/" --quiet -m "$message" &&
             exec ./publish ||
-            echo "nothing to commit in ./${name}/";
+            echo "nothing to commit in ./${name}/"
     done
 
     git commit --quiet -m "$message"
@@ -121,7 +121,7 @@ declare -a names=(stadia.st stadia.run stadia.red)
 
     git branch --set-upstream-to=origin/"$branch" "$branch"
 
-    git pull
+    git pull --ff-only || :
 
     for name in "${names[@]}"; do
         git push "${origin%/*}/$name.git" "$(git subtree split --prefix "$name" "$branch")":"refs/heads/$branch" --force
