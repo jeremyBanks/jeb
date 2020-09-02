@@ -1,6 +1,6 @@
 chrome.runtime.onMessageExternal.addListener(
   (message, _sender, sendResponse) => {
-    onMessage(message).then(sendResponse);
+    handleRequest(message).then(sendResponse);
     return true;
   }
 );
@@ -25,14 +25,20 @@ const rpcs = {
   },
 };
 
-const onMessage = async (message) => {
+const handleRequest = async (request) => {
   const result = {};
-  for (const key of Object.keys(message)) {
-    const args = message[key];
+  for (const key of Object.keys(request)) {
+    const args = request[key];
+    console.debug("request:", key, "(", ...args, ")");
+    let resolution;
     try {
-      result[key] = { result: await rpcs[key](...args) };
+      resolution = { result: await rpcs[key](...args) };
+      console.debug("result:", resolution);
     } catch (error) {
-      result[key] = { error: error.toString() };
+      resolution = { error: error.toString() };
+      console.debug("error:", resolution);
     }
+    result[key] = resolution;
   }
+  return result;
 };
