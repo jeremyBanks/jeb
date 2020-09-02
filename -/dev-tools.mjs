@@ -1,27 +1,34 @@
-import {digits, u6toRGB, microImageToURL, loadedImage} from "./index.html/main.mjs";
+import {
+  digits,
+  u6toRGB,
+  microImageToURL,
+  loadedImage,
+} from "./index.html/main.mjs";
 
-const init = async() => {
-  const root = document.getElementById('dev-tools');
+const init = async () => {
+  const root = document.getElementById("dev-tools");
 
-  root.querySelector('#fetch-covers')
-    .addEventListener('click', doFetchCovers);
-  root.querySelector('#download-html')
-    .addEventListener('click', doDownloadHtml);
+  root.querySelector("#fetch-covers").addEventListener("click", doFetchCovers);
+  root
+    .querySelector("#download-html")
+    .addEventListener("click", doDownloadHtml);
 
-  root.classList.remove('unloaded');
+  root.classList.remove("unloaded");
 };
 
-export const initialized = Promise.resolve().then(() => {
-  console.group('🔧 initializing dev tools');
-  return init();
-}).finally(() => {
-  console.groupEnd();
-});
+export const initialized = Promise.resolve()
+  .then(() => {
+    console.group("🔧 initializing dev tools");
+    return init();
+  })
+  .finally(() => {
+    console.groupEnd();
+  });
 
 const runHost = document.location.host;
-const stHost = runHost.endsWith(':57481') ? (
-  runHost.replace(':57481', ':57480').replace('.run:', '.st:')
-) : 'stadia.st';
+const stHost = runHost.endsWith(":57481")
+  ? runHost.replace(":57481", ":57480").replace(".run:", ".st:")
+  : "stadia.st";
 
 const doFetchCovers = async () => {
   await reloadSkus();
@@ -30,35 +37,36 @@ const doFetchCovers = async () => {
 const doDownloadHtml = async () => {
   const docToDownload = document.documentElement.cloneNode(true);
 
-  docToDownload.querySelector('title').textContent = 'stadia.run';
+  docToDownload.querySelector("title").textContent = "stadia.run";
 
-  for (const el of docToDownload.querySelectorAll('[hidden]')) {
-    el.removeAttribute('hidden');
+  for (const el of docToDownload.querySelectorAll("[hidden]")) {
+    el.removeAttribute("hidden");
   }
 
-  for (const input of docToDownload.querySelectorAll('input[value]')) {
-    el.removeAttribute('value');
+  for (const input of docToDownload.querySelectorAll("input[value]")) {
+    el.removeAttribute("value");
   }
 
-  for (const el of docToDownload.querySelectorAll('[style]')) {
-    el.removeAttribute('style');
+  for (const el of docToDownload.querySelectorAll("[style]")) {
+    el.removeAttribute("style");
   }
 
   for (const el of docToDownload.querySelectorAll('[class=""],main [class]')) {
-    el.removeAttribute('class');
+    el.removeAttribute("class");
   }
 
-  const html = '<!doctype html>' +
+  const html =
+    "<!doctype html>" +
     docToDownload.innerHTML
-      .replace(/\s*<\/body>\s*$/, '\n')
-      .replace(/^<head>/, '')
-      .replace(/<\/head><body>/, '')
-      .replace(/(\s)(disabled|autofocus)(="")([>\s])<\/body>/g, '$1$2$4');
+      .replace(/\s*<\/body>\s*$/, "\n")
+      .replace(/^<head>/, "")
+      .replace(/<\/head><body>/, "")
+      .replace(/(\s)(disabled|autofocus)(="")([>\s])<\/body>/g, "$1$2$4");
 
   try {
-    await fetch('//dev-api.stadia.st:57482/index.html', {
-      method: 'PUT',
-      body: html
+    await fetch("//dev-api.stadia.st:57482/index.html", {
+      method: "PUT",
+      body: html,
     });
   } catch (error) {
     console.error("Failed to write index.html directly, downloading instead.");
@@ -67,7 +75,7 @@ const doDownloadHtml = async () => {
     const href = URL.createObjectURL(
       new Blob([html], {
         type: "text/html",
-      }),
+      })
     );
     const el = Object.assign(document.createElement("a"), {
       download: "index.html",
@@ -85,10 +93,10 @@ const doDownloadHtml = async () => {
  */
 const microImageFromURL = async (/** @type string */ url) => {
   const image = await loadedImage(url);
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = 8;
   canvas.height = 8;
-  const g2d = canvas.getContext('2d');
+  const g2d = canvas.getContext("2d");
   g2d.drawImage(image, 0, 0, canvas.width, canvas.height);
   const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
 
@@ -99,17 +107,17 @@ const microImageFromURL = async (/** @type string */ url) => {
     microImage.push(digits[u6]);
   }
 
-  return microImage.join('');
-}
+  return microImage.join("");
+};
 
 /**
  * Rounds a 24-bit RGB value to the nearest 6-bit RGB value.
  * @returns {number}
  */
 const rgbToU6 = (/** @type [number, number, number] */ rgb) => {
-  const red = Math.round(0b11 * rgb[0] / 0xFF);
-  const green = Math.round(0b11 * rgb[1] / 0xFF);
-  const blue = Math.round(0b11 * rgb[2] / 0xFF);
+  const red = Math.round((0b11 * rgb[0]) / 0xff);
+  const green = Math.round((0b11 * rgb[1]) / 0xff);
+  const blue = Math.round((0b11 * rgb[2]) / 0xff);
   return (red << 0) + (green << 2) + (blue << 4);
 };
 
@@ -119,14 +127,15 @@ const checkStatus = (/** @type Response */ response) => {
   } else {
     throw Object.assign(
       new Error(`${response.status} ${response.statusText}`),
-      { response });
+      { response }
+    );
   }
 };
 
-const reloadSkus = async() => {
-  const skusData = await
-    fetch(`//${stHost}/-/skus.json`).then(checkStatus)
-      .then(response => response.json());
+const reloadSkus = async () => {
+  const skusData = await fetch(`//${stHost}/-/skus.json`)
+    .then(checkStatus)
+    .then((response) => response.json());
 
   const skus = new Map();
   for (const sku of Object.values(skusData)) {
@@ -136,48 +145,49 @@ const reloadSkus = async() => {
   const proGameSkus = new Set();
   const addProGames = (skuId) => {
     const sku = skus.get(skuId);
-    if (sku.type === 'game') {
+    if (sku.type === "game") {
       proGameSkus.add(skuId);
     } else if (sku.skus) {
       sku.skus.forEach(addProGames);
     }
-  }
-  addProGames('59c8314ac82a456ba61d08988b15b550');
+  };
+  addProGames("59c8314ac82a456ba61d08988b15b550");
 
-  const games = [...skus.values()].filter(sku => sku.image).map(game => ({
-    name: game.name
-      .replace(/™/g, ' ')
-      .replace(/®/g, ' ')
-      .replace(/[\:\-]? Early Access$/g, ' ')
-      .replace(/[\:\-]? \w+ Edition$/g, ' ')
-      .replace(/\(\w+ Ver(\.|sion)\)$/g, ' ')
-      .replace(/™/g, ' ')
-      .replace(/\s{2,}/g, ' ')
-      .replace(/^\s+|\s+$/g, '')
-    ,
-    app: game.app,
-    microImage: game.microImage,
-    image: game.image,
-    pro: proGameSkus.has(game.sku)
-  })).sort((gameA, gameB) => {
+  const games = [...skus.values()]
+    .filter((sku) => sku.image)
+    .map((game) => ({
+      name: game.name
+        .replace(/™/g, " ")
+        .replace(/®/g, " ")
+        .replace(/[\:\-]? Early Access$/g, " ")
+        .replace(/[\:\-]? \w+ Edition$/g, " ")
+        .replace(/\(\w+ Ver(\.|sion)\)$/g, " ")
+        .replace(/™/g, " ")
+        .replace(/\s{2,}/g, " ")
+        .replace(/^\s+|\s+$/g, ""),
+      app: game.app,
+      microImage: game.microImage,
+      image: game.image,
+      pro: proGameSkus.has(game.sku),
+    }))
+    .sort((gameA, gameB) => {
+      const aName = gameA.name.toLowerCase();
+      const bName = gameB.name.toLowerCase();
 
-    const aName = gameA.name.toLowerCase();
-    const bName = gameB.name.toLowerCase();
+      if (gameA.pro && !gameB.pro) {
+        return -1;
+      } else if (!gameA.pro && gameB.pro) {
+        return +1;
+      } else if (aName < bName) {
+        return -1;
+      } else if (aName > bName) {
+        return +1;
+      } else {
+        return 0;
+      }
+    });
 
-    if (gameA.pro && !gameB.pro) {
-      return -1;
-    } else if (!gameA.pro && gameB.pro) {
-      return +1;
-    } else if (aName < bName) {
-      return -1;
-    } else if (aName > bName) {
-      return +1;
-    } else {
-      return 0;
-    }
-  });
-
-  const template = document.querySelector('st-games template');
+  const template = document.querySelector("st-games template");
 
   const fragment = document.createDocumentFragment();
 
@@ -185,34 +195,39 @@ const reloadSkus = async() => {
     let root = template.content.cloneNode(true).firstElementChild;
     let url = game.image;
 
-    const fullImg = root.querySelector('img');
+    const fullImg = root.querySelector("img");
     fullImg.src = url;
-    root.querySelector('st-cover-full').hidden = fullImg.complete;
-    root.querySelector('st-cover-micro').hidden = !fullImg.complete;
-    loadedImage(url).then(() => {
-      root.querySelector('st-cover-full').hidden = false;
-      root.querySelector('st-cover-micro').hidden = true;
-    }).catch(error => console.error(error));
+    root.querySelector("st-cover-full").hidden = fullImg.complete;
+    root.querySelector("st-cover-micro").hidden = !fullImg.complete;
+    loadedImage(url)
+      .then(() => {
+        root.querySelector("st-cover-full").hidden = false;
+        root.querySelector("st-cover-micro").hidden = true;
+      })
+      .catch((error) => console.error(error));
 
-    root.querySelector('a').href = `https://stadia.google.com/player/${game.app}`;
-    root.querySelector('st-name').textContent = game.name;
+    root.querySelector(
+      "a"
+    ).href = `https://stadia.google.com/player/${game.app}`;
+    root.querySelector("st-name").textContent = game.name;
 
     if (!game.microImage) {
       const microImage = await microImageFromURL(url);
       game.microImage = microImage;
     }
 
-    root.querySelector('st-cover-micro').style.backgroundImage = `url(${
-      microImageToURL(game.microImage)})`;
+    root.querySelector(
+      "st-cover-micro"
+    ).style.backgroundImage = `url(${microImageToURL(game.microImage)})`;
 
-    root.querySelector('st-cover-micro').setAttribute('data', game.microImage);
+    root.querySelector("st-cover-micro").setAttribute("data", game.microImage);
 
     if (game.pro) {
-      root.querySelector('a').appendChild(Object.assign(
-        document.createElement('st-pro'), {
-          textContent: 'PRO'
-        }
-      ))
+      root.querySelector("a").appendChild(
+        Object.assign(document.createElement("st-pro"), {
+          textContent: "PRO",
+        })
+      );
     }
 
     fragment.appendChild(document.createTextNode("\n    "));
@@ -220,8 +235,8 @@ const reloadSkus = async() => {
   }
 
   template.remove();
-  const gamesEl = document.querySelector('st-games');
-  gamesEl.textContent = '';
+  const gamesEl = document.querySelector("st-games");
+  gamesEl.textContent = "";
   gamesEl.appendChild(template);
   gamesEl.appendChild(fragment);
 
