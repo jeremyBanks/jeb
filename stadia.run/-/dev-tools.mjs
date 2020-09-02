@@ -48,32 +48,59 @@ const doDownloadHtml = async () => {
     el.removeAttribute('class');
   }
 
-  const html = '<!doctype html><html>' +
+  const html = '<!doctype html>' +
     docToDownload.innerHTML
       .replace(/\s*<\/body>\s*$/, '\n')
-      .replace(/<html><head>/, '')
-      .replace(/</head><body>/, '')
-      .replace(/(\s)(disabled|autofocus)(="")([>\s])</body>/g, '\1\2\4');
+      .replace(/^<head>/, '')
+      .replace(/<\/head><body>/, '')
+      .replace(/(\s)(disabled|autofocus)(="")([>\s])<\/body>/g, '$1$2$4');
 
-  await fetch('http://127.0.0.1:57483/index.html', {
-    method: 'PUT',
-    body: html
-  });
+  try {
+    await fetch('//dev-api.stadia.st:57482/index.html', {
+      method: 'PUT',
+      body: html
+    });
+  } catch (error) {
+    console.error("Failed to write index.html directly, downloading instead.");
+    console.error(error);
 
-  const href = URL.createObjectURL(
-    new Blob([html], {
-      type: "text/html",
-    }),
-  );
-  const el = Object.assign(document.createElement("a"), {
-    download: "index.html",
-    href,
-  });
-  document.body.appendChild(el);
-  el.click();
-  document.body.removeChild(el);
+    const href = URL.createObjectURL(
+      new Blob([html], {
+        type: "text/html",
+      }),
+    );
+    const el = Object.assign(document.createElement("a"), {
+      download: "index.html",
+      href,
+    });
+    document.body.appendChild(el);
+    el.click();
+    document.body.removeChild(el);
+  }
 };
 
+/**
+ * Returns an base-64 encoded 8x8 thumbnail the image at a given URL.
+ * @returns {Promise<String>}
+ */
+const microImageFromURL = async (/** @type string */ url) => {
+  const image = await loadedImage(url);
+  const canvas = document.createElement('canvas');
+  canvas.width = 8;
+  canvas.height = 8;
+  const g2d = canvas.getContext('2d');
+  g2d.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
+
+  const microImage = new Array();
+  for (let i = 0; i < 64; i++) {
+    const rgb = pixels.data.slice(i * 4, i * 4 + 3);
+    const u6 = rgbToU6(rgb);
+    microImage.push(digits[u6]);
+  }
+
+  return microImage.join('');
+}
 
 /**
  * Rounds a 24-bit RGB value to the nearest 6-bit RGB value.
@@ -98,7 +125,7 @@ const checkStatus = (/** @type Response */ response) => {
 
 const reloadSkus = async() => {
   const skusData = await
-    fetch(`https://${stHost}/-/skus.json`).then(checkStatus)
+    fetch(`//${stHost}/-/skus.json`).then(checkStatus)
       .then(response => response.json());
 
   const skus = new Map();
