@@ -22,7 +22,7 @@ http-file-server \
   --port 57481 &
 
 HOST=dev-api.stadia.st PORT=57482 \
-  ./dumb-server.rb &
+  ./dev-api.rb &
 
 sleep 1
 echo

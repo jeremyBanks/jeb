@@ -3,11 +3,6 @@
     "page": "background.html",
     "persistent": false
   },
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "@stadians.dev"
-    }
-  },
   "externally_connectable": {
     "matches": [
       "https://stadia.google.com/*",

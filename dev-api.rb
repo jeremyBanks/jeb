@@ -51,11 +51,10 @@ while connection = server.accept
 
   connection.print "HTTP/1.1 #{status}\r\n"
 
-  unless headers[:origin].nil? or headers[:access_control_request_method].nil?
+  unless headers[:origin].nil?
     connection.print "Access-Control-Allow-Origin: #{
       headers[:origin]}\r\n"
-    connection.print "Access-Control-Allow-Methods: #{
-      headers[:access_control_request_method]}\r\n"
+    connection.print "Access-Control-Allow-Methods: *\r\n"
   end
 
   unless response.nil?
