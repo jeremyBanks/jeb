@@ -106,7 +106,7 @@ declare -a names=(stadia.run stadia.st)
 
     for name in "${names[@]}"; do
         git commit "./${name}/" --quiet -m "$message" &&
-            exec ./deploy ||
+            exec ./publish ||
             echo "nothing to commit in ./${name}/";
     done
 
