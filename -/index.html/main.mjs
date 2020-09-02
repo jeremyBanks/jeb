@@ -16,8 +16,8 @@
     export const initialize = async () => {
       loadGamesFromDocument();
 
-      input.addEventListener('input', event => onInput(event));
-      form.addEventListener('submit', event => onSubmit(event));
+      searchInput.addEventListener('input', event => onInput(event));
+      searchForm.addEventListener('submit', event => onSubmit(event));
       window.addEventListener('popstate', checkUrl);
 
       checkUrl(true);
@@ -28,8 +28,8 @@
     };
 
     export const searchForm = document.querySelector('st-search form');
-    export const searchInput = form.querySelector('input');
-    export const searchButton = form.querySelector('button');
+    export const searchInput = searchForm.querySelector('input');
+    export const searchButton = searchForm.querySelector('button');
     export const gameTiles = document.querySelector('st-games');
 
     export const skus = mut.skus ??= new Map();
