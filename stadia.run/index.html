@@ -293,6 +293,19 @@
             box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.5);
           }
 
+            main st-games st-game st-pro[previous] {
+              color: #A66;
+              background-color: #300000;
+              font-size: 8px;
+              text-align: right;
+            }
+
+            main st-games st-game st-pro[previous]:before {
+              text-align: left;
+              content: "previously ";
+              display: block;
+            }
+
           main st-games st-game st-cover-full,
           main st-games st-game st-cover-micro {
             grid-column: game-columns-start / game-columns-end;
@@ -1254,7 +1267,7 @@
           user-select: none;
           position: relative;
           padding: 4px 10px;
-          font-size: 11px;
+          font-size: 12px;
           top: 1px;
           display: inline-block;
           border-bottom: 2px solid var(--theme-color);
@@ -1285,18 +1298,32 @@
         }
 
       #dev-tools section {
+        display: grid;
+        grid-template-columns:
+          [dev-start]
+          1fr
+          [dev-middle]
+          512px
+          [dev-end]
+        ;
+      }
+
+      #dev-tools section section {
+        grid-row: 1;
         display: block;
         min-height: 128px;
-        max-height: 256px;
+        max-height: 384px;
         overflow-y: auto;
         padding: var(--small-margin) var(--large-margin);
       }
 
       #dev-tools section p {
         display: block;
-        max-width: 700px;
-        line-height: 1.75em;
-        text-align: justify;
+        margin: 8px 0;
+      }
+
+      #dev-tools section.button-panel {
+        border-left: 1px solid var(--dev-border);
       }
 
       #dev-tools button {
@@ -1304,27 +1331,56 @@
         display: inline-block;
         border: 1px solid var(--dev-border);
         background: var(--dev-background);
-        padding: 2px 6px;
+        padding: 4px 6px;
+        outline-color: var(--theme-color);
       }
 
         #dev-tools button:enabled:hover {
+          border-color: var(--theme-color);
           color: var(--theme-color);
         }
 
         #dev-tools button:enabled:active {
           border-color: var(--theme-color);
+          color: var(--theme-color);
+          background-color: var(--dev-border);
         }
   </style>
 
   <header>
-    <span class="tab">Update Game Data</span>
+    <span class="tab">Just Stadian Things</span>
     <a class="close" href="#"><span>×</span></a>
   </header>
 
   <section>
-    <p>
-      <s>Start by <button id="dev-do-spider" disabled="">spidering Stadia</button> to discover all of its SKUs (games, bundles, add-ons, and subscriptions), saving them as <button id="download-skus" disabled=""><code>skus.json</code></button>.</s> From each game, take the <code>name</code>, <code>app</code> ID, and <code>fullImage</code> cover, then <button id="fetch-covers">fetch the cover images</button> to generate 64-character base-64 8x8 6-bit-RGB preview tiles we call <code>microImage</code>s, saving them in <button id="download-games"><code>games.mjson</code></button>. From that game data, generate a new <button id="download-html"><code>index.html</code></button> with all of the games included inline.
-    </p>
+    <section>
+      x games
+      most recent something something
+    </section>
+
+    <section class="button-panel">
+      <p>
+        <button>Load game SKUs from page HTML</button>
+      </p>
+      <p>
+        <button>Load SKUs from stadia.st</button>
+      </p>
+      <p>
+        <button>Load SKUs from local project</button> (requires dev server)
+      </p>
+      <p>
+        <button>Load SKUs from stadia.com</button> (requires Chrome extension)
+      </p>
+      <p>
+        <button>Update page HTML</button>
+      </p>
+      <p>
+        <button>Download HTML and SKUs</button>
+      </p>
+      <p>
+        <button>Save HTML and SKUs to local project</button> (requires dev server)
+      </p>
+    </section>
   </section>
 
   <script type="module">

@@ -10,7 +10,7 @@ const withTimeout = (ms, promise, resolution) => {
   ]);
 };
 
-/** Verifies that a fetch response has a 200 status code. */
+/** Verifies that a fetch response has an successful status code. */
 const checkStatus = (/** @type Response */ response) => {
   if (response.ok) {
     return response;
@@ -19,7 +19,7 @@ const checkStatus = (/** @type Response */ response) => {
   }
 };
 
-/** RPC call to the Stadian.dev Chrome extension. */
+/** RPC call to the Stadians.dev Chrome extension. */
 const chromeCall = async (methodName, ...args) => {
   return new Promise((resolve) =>
     chrome.runtime.sendMessage(
@@ -28,7 +28,8 @@ const chromeCall = async (methodName, ...args) => {
         [methodName]: args,
       },
       {},
-      (response) => {
+      (responses) => {
+        const response = responses[methodName];
         if (response.error) {
           resolve(Promise.reject(response.error));
         } else {
@@ -72,20 +73,19 @@ export const canFetchDevApi = async () => {
  * Fetch a path on the stadia.google.com domain, through our Chrome extension.
  */
 export const fetchStadia = async (path, options = {}) => {
-  const data = await withTimeout(
+  const response = await withTimeout(
     16_000,
     chromeCall("fetchStadia", path, options)
   );
-  return checkStatus({
-    status: data.status,
-    ok: 200 <= data.status && data.status < 300,
+  return {
+    ...response,
     async text() {
-      return data.text;
+      return this._text;
     },
     async json() {
-      return JSON.parse(data.text);
+      return JSON.parse(this._text);
     },
-  });
+  };
 };
 
 /**
