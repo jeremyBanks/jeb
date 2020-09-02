@@ -1297,46 +1297,45 @@
           color: #444;
         }
 
-      #dev-tools section {
+      #dev-tools section.container {
         display: grid;
-        grid-template-columns:
-          [dev-start]
-          1fr
-          [dev-middle]
-          512px
-          [dev-end]
-        ;
+        grid-template-columns: 1fr max-content;
       }
 
-      #dev-tools section section {
+      #dev-tools section.container section {
         grid-row: 1;
-        display: block;
         min-height: 128px;
         max-height: 384px;
         overflow-y: auto;
-        padding: var(--small-margin) var(--large-margin);
+        padding: var(--large-margin);
       }
 
-      #dev-tools section p {
+      #dev-tools section.container p {
         display: block;
         margin: 8px 0;
+        line-height: 1em;
       }
 
-      #dev-tools section.body span {
+      #dev-tools section.container section.body {
+        display: block;
+      }
+
+      #dev-tools section.container section.body span {
         display: contents;
       }
 
       #dev-tools section.panel {
         border-left: 1px solid var(--dev-border);
+        gap: 8px;
       }
 
       #dev-tools button {
-        line-height: 1em;
         display: inline-block;
         border: 1px solid var(--dev-border);
         background: var(--dev-background);
         padding: 4px 6px;
         outline-color: var(--theme-color);
+        text-align: left;
       }
 
         #dev-tools button:enabled:hover {
@@ -1356,44 +1355,44 @@
     <a class="close" href="#"><span>×</span></a>
   </header>
 
-  <section class="body">
-    <section>
+  <section class="container">
+    <section class="body">
       <p>
-        local dev server: <span class="dev-server-status">pending</span>
+        local project: <span class="dev-server-status">❓pending</span>
       </p>
       <p>
-        stadia.com proxy: <span class="stadia-proxy-status">pending</span>
+        stadia store: <span class="stadia-proxy-status">❓pending</span>
       </p>
       <p>
-        loaded games: <span class="loaded-games-status">pending</span>
+        loaded games: <span class="loaded-games-status">❓pending</span>
       </p>
       <p>
-        loaded skus: <span class="loaded-skus-status">pending</span>
+        loaded skus: <span class="loaded-skus-status">❓pending</span>
       </p>
     </section>
 
     <section class="panel">
-      <p>
+
         <button>Load game SKUs from page HTML</button>
-      </p>
-      <p>
+
+
         <button>Load SKUs from stadia.st</button>
-      </p>
-      <p>
-        <button>Load SKUs from local project</button> (requires dev server)
-      </p>
-      <p>
-        <button>Load SKUs from stadia.com</button> (requires Chrome extension)
-      </p>
-      <p>
+
+
+        <button disabled>Load SKUs from local project</button>
+
+
+        <button disabled>Load SKUs from stadia.com</button>
+
+
         <button>Update page HTML</button>
-      </p>
-      <p>
+
+
         <button>Download HTML and SKUs</button>
-      </p>
-      <p>
-        <button>Save HTML and SKUs to local project</button> (requires dev server)
-      </p>
+
+
+        <button disabled>Save HTML and SKUs to local project</button>
+
     </section>
   </section>
 

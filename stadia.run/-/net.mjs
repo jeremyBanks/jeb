@@ -24,6 +24,9 @@ const checkStatus = (/** @type Response */ response) => {
 
 /** RPC call to the Stadians.dev Chrome extension. */
 const chromeCall = async (methodName, ...args) => {
+  if (!chrome?.runtime?.sendMessage) {
+    throw new Error("not supported");
+  }
   return new Promise((resolve) =>
     chrome.runtime.sendMessage(
       chromeExtensionId,
@@ -47,7 +50,7 @@ const chromeCall = async (methodName, ...args) => {
  * Whether we are able to communicate with our Chrome extension in order to
  * fetch pages from the https://stadia.google.com host.
  */
-export const canFetchStadiaHost = Promise.resolve(async () => {
+export const canFetchStadiaHost = Promise.resolve().then(async () => {
   try {
     return "pong" === (await withTimeout(100, chromeCall("ping")));
   } catch {
@@ -60,8 +63,8 @@ export const canFetchStadiaHost = Promise.resolve(async () => {
  * meaning that we're authenticated and not getting a major error.
  */
 export const canFetchStadiaStore = canFetchStadiaHost.then(
-  async (predicate) => {
-    if (!predicate) {
+  async (canFetchHost) => {
+    if (!canFetchHost) {
       return false;
     }
 
@@ -75,10 +78,10 @@ export const canFetchStadiaStore = canFetchStadiaHost.then(
  * Whether we are able to communicate with a local dev server, which is required
  * to save updated data in the project directory.
  */
-export const canFetchDevApi = Promise.resolve(async () => {
+export const canFetchDevApi = Promise.resolve().then(async () => {
   try {
     const response = await withTimeout(
-      100,
+      2000,
       fetch(`${devApiHost}/skus.json`).then(checkStatus)
     );
     await response.json();
