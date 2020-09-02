@@ -1,7 +1,0 @@
-.DS_Store
-*.br
-*.log
-*.pid
-/.https/
-/*dist/
-/node_modules/
