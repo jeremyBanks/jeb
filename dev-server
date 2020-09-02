@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+shopt -s inherit_errexit nullglob compat"${BASH_COMPAT=42}"
+trap 'kill $(jobs -p) 2>/dev/null' EXIT
+
+./build-sites
+
+http-file-server() {
+  http-server \
+    -d=false \
+    -c=8 \
+    "$@"
+}
+
+http-file-server \
+  ''./stadia.st/'' \
+  --port 57480 \
+  --cors &
+
+http-file-server \
+  ''./stadia.run/'' \
+  --port 57481 &
+
+HOST=dev-api.stadia.st PORT=57482 \
+  ./dumb-server.rb &
+
+sleep 1
+echo
+
+echo "  $(tput smul && tput setaf 6 || :)http://dev.stadia.run:57481/$(tput sgr0 || :)"
+echo
+echo "  $(tput smul && tput setaf 6 || :)http://dev.stadia.st:57480/-/skus.json$(tput sgr0 || :)"
+echo
+echo "  $(tput smul && tput setaf 6 || :)http://dev-api.stadia.st:57482/skus.json$(tput sgr0 || :)"
+echo
+
+wait

@@ -8,12 +8,20 @@ server = TCPServer.new(host, port)
 puts "Listening at http://#{host}:#{port}"
 
 while connection = server.accept
-  request = connection.gets
+  header_chunk = connection.gets("\r\n\r\n")
 
-  header_chunk, body = request.partition("\r\n\r\n")
-  route_line, header_lines = header_chunk.partition("\r\n")
-  headers = header_lines.split("\r\n")
+  route_line, _, header_chunk = header_chunk.partition("\r\n")
+  header_lines = header_chunk.split("\r\n")
+  headers = Hash[ header_lines.collect { |line|
+    key, _, value = line.partition(": ")
+    [key, value]
+  } ]
   route = route_line.sub(/[ ]+HTTP\/1\.[01]$/, '')
+
+  content_length = headers["Content-Length"]
+  body = unless content_length.nil?
+    connection.gets(nil, content_length.to_i)
+  end
 
   client = connection.addr[2]
 
@@ -23,6 +31,7 @@ while connection = server.accept
       response = File.read("./stadia.st/-/skus.json", :encoding => "utf-8")
       "200 OK"
     when /^PUT \/skus\.json$/
+      body = connection.gets()
       File.write("./stadia.st/-/skus.json", body)
       "204 No Content"
 
