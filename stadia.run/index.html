@@ -48,10 +48,36 @@
     font-size: var(--primary-font-size);
     background-color: var(--background-color);
     color: var(--body-color);
-    padding-bottom: 75vh;
     overflow-y: scroll;
     overflow-x: hidden;
     text-shadow: none;
+  }
+
+  footer {
+    grid-column: controls-columns-start / controls-columns-end;
+    grid-row: footer-start / footer-end;
+
+    background-image: var(--mascot-disabled-url);
+    background-size: var(--search-height);
+    height: calc(2 * var(--search-height));
+    background-position: bottom right;
+    color: transparent;
+    margin-top: 75vh;
+    opacity: 0.125;
+    transition: 4s opacity ease-in;
+    user-select: none;
+  }
+
+  footer:hover {
+    opacity: 1.00;
+  }
+
+  footer.activated {
+    opacity: 1.00;
+  }
+
+  footer a {
+    display: grid;
   }
 
   script, style, link, head, template {
@@ -118,7 +144,11 @@
       var(--large-margin)
       [games-rows-start]
       max-content
-      [games-rows-end rows-main-end]
+      [games-rows-end footer-start]
+      max-content
+      [footer-end]
+      var(--large-margin)
+      [rows-main-end]
     ;
   }
 
@@ -1218,9 +1248,13 @@
       }
     };
   </script>
+
+  <footer>
+    <a href="#dev-tools" title="open dev tools">open dev tools</a>
+  </footer>
 </main>
 
-<aside id="dev-tools">
+<aside id="dev-tools" class="unloaded">
   <style>
     #dev-tools {
       display: none;
@@ -1240,7 +1274,6 @@
       #dev-tools.unloaded {
         user-select: none;
         cursor: progress;
-        filter: saturate(0.5) contrast(0.5) brightness(0.5);
       }
 
       #dev-tools.unloaded section {
@@ -1329,6 +1362,7 @@
         gap: 8px;
       }
 
+
       #dev-tools button {
         display: inline-block;
         border: 1px solid var(--dev-border);
@@ -1372,27 +1406,20 @@
     </section>
 
     <section class="panel">
-
-        <button>Load game SKUs from page HTML</button>
-
-
-        <button>Load SKUs from stadia.st</button>
-
-
-        <button disabled>Load SKUs from local project</button>
-
-
-        <button disabled>Load SKUs from stadia.com</button>
-
-
-        <button>Update page HTML</button>
-
-
-        <button>Download HTML and SKUs</button>
-
-
-        <button disabled>Save HTML and SKUs to local project</button>
-
+      <button class="do-load-from-page">
+        Load game SKUs from page HTML</button>
+      <button class="do-load-from-st">
+        Load SKUs from stadia.st</button>
+      <button class="do-load-from-dev" disabled>
+        Load SKUs from local project</button>
+      <button class="do-load-from-store" disabled>
+        Load SKUs from stadia.com</button>
+      <button class="do-update-page">
+        Update page HTML</button>
+      <button class="do-download-page">
+        Download HTML and SKUs</button>
+      <button class="do-save-to-dev" disabled>
+        Save HTML and SKUs to local project</button>
     </section>
   </section>
 
@@ -1402,15 +1429,20 @@
     document.addEventListener('keydown', event => {
       if (event.key === 'F12') {
         if (document.location.hash !== '#dev-tools') {
+          const scrollTop = document.documentElement.scrollTop;
           document.location.hash = '#dev-tools';
           import('/-/dev.mjs');
-          event.preventDefault();
           prevented = true;
+          document.documentElement.scrollTop = scrollTop;
+          event.preventDefault();
         } else {
           if (prevented) {
             prevented = false;
           } else {
+            const scrollTop = document.documentElement.scrollTop;
             document.location.hash = '';
+            history.replaceState(null, '', ' ');
+            document.documentElement.scrollTop = scrollTop;
             event.preventDefault();
           }
         }
@@ -1420,13 +1452,29 @@
     if (document.location.hash === '#dev-tools') {
       import('/-/dev.mjs');
       prevented = true;
-    } else {
-      document.addEventListener('hashchange', () => {
-        if (document.location.hash === '#dev-tools') {
-          import('/-/dev.mjs');
-          prevented = true;
-        }
-      });
     }
+
+    document.addEventListener('hashchange', () => {
+      if (document.location.hash === '#dev-tools') {
+        import('/-/dev.mjs');
+        prevented = true;
+      }
+    });
+
+    document.querySelector('footer a').addEventListener('click', event => {
+      import('/-/dev.mjs');
+      const scrollTop = document.documentElement.scrollTop;
+      document.location.hash = '#dev-tools';
+      document.documentElement.scrollTop = scrollTop;
+      event.preventDefault();
+    });
+
+    document.querySelector('#dev-tools header .close').addEventListener('click', (event) => {
+      const scrollTop = document.documentElement.scrollTop;
+      document.location.hash = '';
+      history.replaceState(null, '', ' ');
+      event.preventDefault();
+      document.documentElement.scrollTop = scrollTop;
+    });
   </script>
 </aside>

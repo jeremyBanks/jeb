@@ -16,6 +16,9 @@ import {
 const init = async () => {
   const root = document.getElementById("dev-tools");
 
+  root.classList.remove("unloaded");
+  document.querySelector("footer").classList.add("activated");
+
   root.querySelector(".loaded-games-status").textContent = 0;
   root.querySelector(".loaded-skus-status").textContent = 0;
 
@@ -31,7 +34,11 @@ const init = async () => {
     ? "⚠️ unauthenticated"
     : "❌ unavailable";
 
-  root.classList.remove("unloaded");
+  root.querySelector(".do-load-from-dev").disabled = !(await canFetchDevApi);
+  root.querySelector(".do-save-to-dev").disabled = !(await canFetchDevApi);
+  root.querySelector(
+    ".do-load-from-store"
+  ).disabled = !(await canFetchStadiaStore);
 };
 
 export const initialized = Promise.resolve()
