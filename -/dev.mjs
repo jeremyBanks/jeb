@@ -1,4 +1,4 @@
-import { digits, u6toRGB, microImageToURL, loadedImage } from "/-/index.mjs";
+import { digits, u6toRGB, microImageToURL, loadedImage } from "./index.mjs";
 
 import {
   canFetchDevApi,
@@ -6,7 +6,7 @@ import {
   canFetchStadiaStore,
   fetchDevApi,
   fetchStadia,
-} from "/-/net.mjs";
+} from "./net.mjs";
 
 const init = async () => {
   const root = document.getElementById("dev-tools");
