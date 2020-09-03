@@ -16,6 +16,8 @@ By intentionally submitting code for inclusion in this repository, you agree to 
 
 The "Stadian Squirrel" icon is Copyright 2020 [illufinch](https://twitter.com/illufinch), and is only licensed for non-commercial use on stadians.dev, stadia.run, and stadia.st.
 
+Store data, including product names, images, descriptions, and other metadata, may be copyrighted and/or trademarked by Google or other publishers. They are used here for non-commercial purposes assumed permitted as fair dealing, but this is not legal advice and I am not a lawyer.
+
 ## Contributing
 
 Changes to the `./stadia.run` or `./stadia.st` subdirectories must be made in standalone commits that only modify one of those directories and do not touch anything else. (This is because we split those paths out with git-subtree to deploy them, and that works more smoothly with distinct commits.) This means we can't squash-merge PRs.
@@ -25,8 +27,6 @@ Changes to the `./stadia.run` or `./stadia.st` subdirectories must be made in st
 This repo and this code is a jumbled mess. I'll fix it up as I have time.
 
 Some of the scripts run on Linux, but others only run on MacOS Unix.
-
-There's a bunch of code for a half-built Chrome extension for spidering the Stadia store, but it's mostly just there for reference as I strip it down and replace it. Most of the .vscode config is also related to that.
 
 ### Design of stadia.run
 
