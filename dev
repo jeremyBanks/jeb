@@ -17,9 +17,17 @@ HOST=dev-api.stadia.st PORT=57482 \
 sleep 1
 echo
 
-echo "  $(tput smul && tput setaf 6 || :)http://dev.stadia.run:57481/$(tput sgr0 || :)"
+(
+  wrangler dev \
+    --host "http://127.0.0.1:57481" --upstream-protocol http \
+    --port=57483 || :
+) &
+
+echo "  static: $(tput smul && tput setaf 6 || :)http://dev.stadia.run:57481/$(tput sgr0 || :)"
 echo
-echo "  $(tput smul && tput setaf 6 || :)http://dev-api.stadia.st:57482/skus.json$(tput sgr0 || :)"
+echo "    data: $(tput smul && tput setaf 6 || :)http://dev-api.stadia.st:57482/skus.json$(tput sgr0 || :)"
+echo
+echo "    edge: $(tput smul && tput setaf 6 || :)http://dev.stadia.run:57483/$(tput sgr0 || :)"
 echo
 
 (
