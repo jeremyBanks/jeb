@@ -12,6 +12,17 @@
 <link rel="preload" as="image" href="/-/squirrel-stadian.png">
 <link rel="preload" as="image" href="/-/squirrel-disabled.png">
 
+<script>
+  window.addEventListener('error', ({error}) =>
+    console.trace(`<st-error>${error}</st-error>`));
+  window.addEventListener('unhandledrejection', ({reason}) =>
+    console.trace(`<st-error>${reason}</st-error>`))
+  window.addEventListener('domcontentloaded', event =>
+    console.trace('<st-event>domcontentloaded</st-event>'));
+  window.addEventListener('load', event =>
+    console.trace('<st-event>load</st-event>'));
+</script>
+
 <style>
   * {
     box-sizing: inherit;
