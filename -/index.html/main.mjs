@@ -135,11 +135,11 @@ const filterElements = async () => {
     () => {
       filterElementsPending = false;
 
-      const q = slugify(input.value);
+      const q = slugify(searchInput.value);
 
       const elements = [];
 
-      for (const child of gameList.querySelectorAll("st-game")) {
+      for (const child of gameTiles.querySelectorAll("st-game")) {
         let name = child.querySelector("st-name").textContent;
         const matches = slugify(name).includes(q);
         child.firstElementChild.hidden = !matches;
@@ -159,12 +159,12 @@ const onInput = (event) => {
   filterElements().then((elements) => {
     const params = new URLSearchParams(location.search);
 
-    params.set("q", input.value.toLowerCase());
+    params.set("q", searchInput.value.toLowerCase());
 
     history.replaceState(
       null,
       "",
-      input.value ? "/?" + params.toString() : "/"
+      searchInput.value ? "/?" + params.toString() : "/"
     );
   });
 };
@@ -181,15 +181,15 @@ const onSubmit = (event) => {
       if (!event?.first) {
         history.pushState(null, "", "/" + slug);
       }
-      input.value = name;
+      searchInput.value = name;
       document.title = "stadia.run/" + slug;
       elements[0].querySelector("a").click();
     } else {
-      params.set("q", input.value);
+      params.set("q", searchInput.value);
       history.replaceState(
         null,
         "",
-        input.value ? "/?" + params.toString() : "/"
+        searchInput.value ? "/?" + params.toString() : "/"
       );
       document.title = "stadia.run";
     }
@@ -202,10 +202,10 @@ const checkUrl = (first = false) => {
   const query = new URLSearchParams(document.location.search).get("q") || null;
 
   if (query) {
-    input.value = query;
+    searchInput.value = query;
     onInput();
   } else if (slug) {
-    input.value = slug.replace(/-/g, " ");
+    searchInput.value = slug.replace(/-/g, " ");
     onSubmit({ first });
   }
 };
