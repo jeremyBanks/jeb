@@ -126,4 +126,8 @@ declare -a names=(stadia.st stadia.run stadia.red)
     done
 
     git push --set-upstream origin "$branch"
-} || false
+
+    if [[ "$branch" = "trunk" ]]; then
+        yarn wrangler publish
+    fi
+}

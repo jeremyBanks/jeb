@@ -12,3 +12,4 @@ sed -n -e '/<script type="module">/,/<\/script>/ p' "$source" | sed -e '1d;$d' >
 
 yarn sort-json "./"*".json" {"./extension","./stadia.st/-","./stadia.run/-","./.vscode","./.github"}"/"**/*"."{"json","yml","yaml"}
 yarn prettier --write "./"*".json" "./stadia.st/-/" "./stadia.run/-/" "./.vscode/" "./extension/" "./.github/"
+yarn wrangler build
