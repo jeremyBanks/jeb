@@ -1035,10 +1035,185 @@
     </a></st-game>
   </st-games>
 
-  <script type="module" id="main.mjs">
+  <footer>
+    <a href="#dev-tools" title="open dev tools">open dev tools</a>
+  </footer>
+</main>
+
+<aside id="dev-tools" class="unloaded">
+  <style>
+    #dev-tools {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: auto;
+      background: white;
+      color: black;
+      z-index: 100;
+
+      --dev-border: #D0D0D0;
+      --dev-background: #F3F3F3;
+    }
+
+      #dev-tools.unloaded {
+        user-select: none;
+        cursor: progress;
+      }
+
+      #dev-tools.unloaded section {
+        pointer-events: none;
+        filter: blur(2px);
+      }
+
+      #dev-tools:target {
+        display: grid;
+      }
+
+
+      #dev-tools header {
+        display: block;
+        border-top: 1px solid var(--dev-border);
+        border-bottom: 1px solid var(--dev-border);
+        padding-left: var(--large-margin);
+        background: var(--dev-background);
+        position: relative;
+      }
+
+        #dev-tools header .tab {
+          cursor: pointer;
+          user-select: none;
+          position: relative;
+          padding: 4px 10px;
+          font-size: 12px;
+          top: 1px;
+          display: inline-block;
+          border-bottom: 2px solid var(--theme-color);
+        }
+
+      #dev-tools .close {
+        display: block;
+        position: absolute;
+        top: 2px;
+        right: var(--small-margin);
+        bottom: 2px;
+        padding: 0 6px;
+        font-size: 20px;
+        font-family: sans-serif;
+        border: 1px solid transparent;
+        color: #666;
+      }
+
+        #dev-tools .close span {
+          position: relative;
+          top: -4px;
+        }
+
+        #dev-tools .close:hover {
+          border: 1px solid #B99;
+          background: #EDD;
+          color: #444;
+        }
+
+      #dev-tools section.container {
+        display: grid;
+        grid-template-columns: 1fr max-content;
+      }
+
+      #dev-tools section.container section {
+        grid-row: 1;
+        min-height: 128px;
+        max-height: 384px;
+        overflow-y: auto;
+        padding: var(--large-margin);
+      }
+
+      #dev-tools section.container p {
+        display: block;
+        margin: 8px 0;
+        line-height: 1em;
+      }
+
+      #dev-tools section.container section.body {
+        display: block;
+      }
+
+      #dev-tools section.container section.body span {
+        display: contents;
+      }
+
+      #dev-tools section.panel {
+        border-left: 1px solid var(--dev-border);
+        gap: 8px;
+      }
+
+
+      #dev-tools button {
+        display: inline-block;
+        border: 1px solid var(--dev-border);
+        background: var(--dev-background);
+        padding: 4px 6px;
+        outline-color: var(--theme-color);
+        text-align: left;
+      }
+
+        #dev-tools button:enabled:hover {
+          border-color: var(--theme-color);
+          color: var(--theme-color);
+        }
+
+        #dev-tools button:enabled:active {
+          border-color: var(--theme-color);
+          color: var(--theme-color);
+          background-color: var(--dev-border);
+        }
+  </style>
+
+  <header>
+    <span class="tab">Just Stadian Things</span>
+    <a class="close" href="#"><span>×</span></a>
+  </header>
+
+  <section class="container">
+    <section class="body">
+      <p>
+        local project: <span class="dev-server-status">❓pending</span>
+      </p>
+      <p>
+        stadia store: <span class="stadia-proxy-status">❓pending</span>
+      </p>
+      <p>
+        loaded games: <span class="loaded-games-status">❓pending</span>
+      </p>
+      <p>
+        loaded skus: <span class="loaded-skus-status">❓pending</span>
+      </p>
+    </section>
+
+    <section class="panel">
+      <button class="do-load-from-page">
+        Load game SKUs from page HTML</button>
+      <button class="do-load-from-st">
+        Load SKUs from stadia.st</button>
+      <button class="do-load-from-dev" disabled>
+        Load SKUs from local project</button>
+      <button class="do-load-from-store" disabled>
+        Load SKUs from stadia.com</button>
+      <button class="do-update-page">
+        Update page HTML</button>
+      <button class="do-download-page">
+        Download HTML and SKUs</button>
+      <button class="do-save-to-dev" disabled>
+        Save HTML and SKUs to local project</button>
+    </section>
+  </section>
+
+
+  <script type="module">
     // We may import an copy of this module while using dev tools, so we use
     // this to share any mutable state between the module instances.
-    const mut = window['main.mjs#mut'] ??= Object.create(null);
+    const mut = window['index.mjs#mut'] ??= Object.create(null);
 
     export const initialized = mut.initialized ??= Promise.resolve().then(async () => {
       console.group('🔧 initializing');
@@ -1247,183 +1422,7 @@
         onSubmit({first});
       }
     };
-  </script>
 
-  <footer>
-    <a href="#dev-tools" title="open dev tools">open dev tools</a>
-  </footer>
-</main>
-
-<aside id="dev-tools" class="unloaded">
-  <style>
-    #dev-tools {
-      display: none;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: auto;
-      background: white;
-      color: black;
-      z-index: 100;
-
-      --dev-border: #D0D0D0;
-      --dev-background: #F3F3F3;
-    }
-
-      #dev-tools.unloaded {
-        user-select: none;
-        cursor: progress;
-      }
-
-      #dev-tools.unloaded section {
-        pointer-events: none;
-        filter: blur(2px);
-      }
-
-      #dev-tools:target {
-        display: grid;
-      }
-
-
-      #dev-tools header {
-        display: block;
-        border-top: 1px solid var(--dev-border);
-        border-bottom: 1px solid var(--dev-border);
-        padding-left: var(--large-margin);
-        background: var(--dev-background);
-        position: relative;
-      }
-
-        #dev-tools header .tab {
-          cursor: pointer;
-          user-select: none;
-          position: relative;
-          padding: 4px 10px;
-          font-size: 12px;
-          top: 1px;
-          display: inline-block;
-          border-bottom: 2px solid var(--theme-color);
-        }
-
-      #dev-tools .close {
-        display: block;
-        position: absolute;
-        top: 2px;
-        right: var(--small-margin);
-        bottom: 2px;
-        padding: 0 6px;
-        font-size: 20px;
-        font-family: sans-serif;
-        border: 1px solid transparent;
-        color: #666;
-      }
-
-        #dev-tools .close span {
-          position: relative;
-          top: -4px;
-        }
-
-        #dev-tools .close:hover {
-          border: 1px solid #B99;
-          background: #EDD;
-          color: #444;
-        }
-
-      #dev-tools section.container {
-        display: grid;
-        grid-template-columns: 1fr max-content;
-      }
-
-      #dev-tools section.container section {
-        grid-row: 1;
-        min-height: 128px;
-        max-height: 384px;
-        overflow-y: auto;
-        padding: var(--large-margin);
-      }
-
-      #dev-tools section.container p {
-        display: block;
-        margin: 8px 0;
-        line-height: 1em;
-      }
-
-      #dev-tools section.container section.body {
-        display: block;
-      }
-
-      #dev-tools section.container section.body span {
-        display: contents;
-      }
-
-      #dev-tools section.panel {
-        border-left: 1px solid var(--dev-border);
-        gap: 8px;
-      }
-
-
-      #dev-tools button {
-        display: inline-block;
-        border: 1px solid var(--dev-border);
-        background: var(--dev-background);
-        padding: 4px 6px;
-        outline-color: var(--theme-color);
-        text-align: left;
-      }
-
-        #dev-tools button:enabled:hover {
-          border-color: var(--theme-color);
-          color: var(--theme-color);
-        }
-
-        #dev-tools button:enabled:active {
-          border-color: var(--theme-color);
-          color: var(--theme-color);
-          background-color: var(--dev-border);
-        }
-  </style>
-
-  <header>
-    <span class="tab">Just Stadian Things</span>
-    <a class="close" href="#"><span>×</span></a>
-  </header>
-
-  <section class="container">
-    <section class="body">
-      <p>
-        local project: <span class="dev-server-status">❓pending</span>
-      </p>
-      <p>
-        stadia store: <span class="stadia-proxy-status">❓pending</span>
-      </p>
-      <p>
-        loaded games: <span class="loaded-games-status">❓pending</span>
-      </p>
-      <p>
-        loaded skus: <span class="loaded-skus-status">❓pending</span>
-      </p>
-    </section>
-
-    <section class="panel">
-      <button class="do-load-from-page">
-        Load game SKUs from page HTML</button>
-      <button class="do-load-from-st">
-        Load SKUs from stadia.st</button>
-      <button class="do-load-from-dev" disabled>
-        Load SKUs from local project</button>
-      <button class="do-load-from-store" disabled>
-        Load SKUs from stadia.com</button>
-      <button class="do-update-page">
-        Update page HTML</button>
-      <button class="do-download-page">
-        Download HTML and SKUs</button>
-      <button class="do-save-to-dev" disabled>
-        Save HTML and SKUs to local project</button>
-    </section>
-  </section>
-
-  <script type="module">
     let prevented = false;
 
     document.addEventListener('keydown', event => {
