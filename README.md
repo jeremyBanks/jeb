@@ -32,6 +32,6 @@ Some of the scripts run on Linux, but others only run on MacOS Unix.
 
 The goal for stadia.run is to be an extremely fast way to access your games. In service of that, `index.html` needs to include everything required to do that directly inline: styles, scripts, and micro thumbnail placeholders for game covers. Supplemental scripts and high-resolution images can be loaded later, but they shouldn't block any of the main interactions.
 
-However, I also want to keep this code as minimal as possible. So I'm not using any frameworks or build tools like React of WebPack. Instead, the page itself includes some very simple "dev tools" which you can activate by pressing <kbd>F12</kbd>. The idea is that the these tools will let you import new data to update the page and generate the new `index.html` in the browser. (Currently, these tools are pretty broken and incomplete.)
+However, I also want to keep this code as minimal as possible. So I'm not using any frameworks or build tools like React or WebPack. Instead, the page itself includes some very simple "dev tools" which you can activate by pressing <kbd>F12</kbd>. The idea is that the these tools will let you import new data to update the page and generate the new `index.html` in the browser. (Currently, these tools are pretty broken and incomplete.)
 
 For desktop browsers, I only care about supporting whatever Stadia supports, so that means we can take advantage of all of the new features that evergreen Chromium browsers have shipped.
