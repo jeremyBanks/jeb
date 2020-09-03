@@ -119,11 +119,11 @@ declare -a names=(stadia.st stadia.run stadia.red)
     declare origin="$(git remote get-url origin)"
     declare branch="$(git rev-parse --abbrev-ref HEAD)"
 
-    git pull --ff-only || :
+    git pull --ff-only origin "$branch" || :
 
     for name in "${names[@]}"; do
         git push "${origin%/*}/$name.git" "$(git subtree split --prefix "$name" "$branch")":"refs/heads/$branch" --force
     done
 
-    git push --set-upstream origin
+    git push --set-upstream origin "$branch"
 } || false
