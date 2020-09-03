@@ -5,3 +5,5 @@
 /.https/
 /*dist/
 /node_modules/
+/worker/
+

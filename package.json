@@ -1,14 +1,14 @@
 {
   "dependencies": {
-    "webextension-polyfill": "v0.6"
-  },
-  "devDependencies": {
+    "@cloudflare/wrangler": "^1.11.0",
     "http-server": "^0.12.3",
     "prettier": "v2.0.5",
     "replace-in-files-cli": "v0.3.1",
     "sort-json": "v2",
-    "web-ext": "^4.2.0"
+    "web-ext": "^4.2.0",
+    "webextension-polyfill": "v0.6"
   },
+  "main": "./stadia.run/-/edge-worker.mjs",
   "name": "stadians.dev",
   "private": true,
   "resolutions": {
