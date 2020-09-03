@@ -1,9 +1,4 @@
-import {
-  digits,
-  u6toRGB,
-  microImageToURL,
-  loadedImage,
-} from "/-/index.html/main.mjs";
+import { digits, u6toRGB, microImageToURL, loadedImage } from "/-/index.mjs";
 
 import {
   canFetchDevApi,

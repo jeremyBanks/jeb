@@ -1,8 +1,8 @@
-// @generated from index.html, do not edit directly.
-//   <script type="module" id="main.mjs">
+/** @generated from index.html. */
+
 // We may import an copy of this module while using dev tools, so we use
 // this to share any mutable state between the module instances.
-const mut = (window["main.mjs#mut"] ??= Object.create(null));
+const mut = (window["index.mjs#mut"] ??= Object.create(null));
 
 export const initialized = (mut.initialized ??= Promise.resolve().then(
   async () => {
@@ -209,3 +209,58 @@ const checkUrl = (first = false) => {
     onSubmit({ first });
   }
 };
+
+let prevented = false;
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "F12") {
+    if (document.location.hash !== "#dev-tools") {
+      const scrollTop = document.documentElement.scrollTop;
+      document.location.hash = "#dev-tools";
+      import("/-/dev.mjs");
+      prevented = true;
+      document.documentElement.scrollTop = scrollTop;
+      event.preventDefault();
+    } else {
+      if (prevented) {
+        prevented = false;
+      } else {
+        const scrollTop = document.documentElement.scrollTop;
+        document.location.hash = "";
+        history.replaceState(null, "", " ");
+        document.documentElement.scrollTop = scrollTop;
+        event.preventDefault();
+      }
+    }
+  }
+});
+
+if (document.location.hash === "#dev-tools") {
+  import("/-/dev.mjs");
+  prevented = true;
+}
+
+document.addEventListener("hashchange", () => {
+  if (document.location.hash === "#dev-tools") {
+    import("/-/dev.mjs");
+    prevented = true;
+  }
+});
+
+document.querySelector("footer a").addEventListener("click", (event) => {
+  import("/-/dev.mjs");
+  const scrollTop = document.documentElement.scrollTop;
+  document.location.hash = "#dev-tools";
+  document.documentElement.scrollTop = scrollTop;
+  event.preventDefault();
+});
+
+document
+  .querySelector("#dev-tools header .close")
+  .addEventListener("click", (event) => {
+    const scrollTop = document.documentElement.scrollTop;
+    document.location.hash = "";
+    history.replaceState(null, "", " ");
+    event.preventDefault();
+    document.documentElement.scrollTop = scrollTop;
+  });
