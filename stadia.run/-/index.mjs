@@ -2,20 +2,25 @@
 
 // We may import an copy of this module while using dev tools, so we use
 // this to share any mutable state between the module instances.
-const mut = (window["index.mjs#mut"] ??= Object.create(null));
+const mut = (globalThis["index.mjs#mut"] =
+  globalThis["index.mjs#mut"] || Object.create(null));
 
-export const initialized = (mut.initialized ??= Promise.resolve().then(
-  async () => {
+export const initialized = (mut.initialized =
+  mut.initialized ||
+  Promise.resolve().then(async () => {
     console.group("🔧 initializing");
     try {
       await initialize();
     } finally {
       console.groupEnd();
     }
-  }
-));
+  }));
 
 export const initialize = async () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
   loadGamesFromDocument();
 
   searchInput.addEventListener("input", (event) => onInput(event));
@@ -24,15 +29,17 @@ export const initialize = async () => {
 
   checkUrl(true);
 
-  await Promise.all([unpackMicroCovers()]);
+  await Promise.all([initDevToolsLoader(), unpackMicroCovers()]);
 };
 
-export const searchForm = document.querySelector("st-search form");
-export const searchInput = searchForm.querySelector("input");
-export const searchButton = searchForm.querySelector("button");
-export const gameTiles = document.querySelector("st-games");
+export const searchForm =
+  globalThis.document && document.querySelector("st-search form");
+export const searchInput = searchForm && searchForm.querySelector("input");
+export const searchButton = searchForm && searchForm.querySelector("button");
+export const gameTiles =
+  globalThis.document && document.querySelector("st-games");
 
-export const skus = (mut.skus ??= new Map());
+export const skus = (mut.skus = mut.skus || new Map());
 
 export const digits =
   "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
@@ -170,7 +177,9 @@ const onInput = (event) => {
 };
 
 const onSubmit = (event) => {
-  event?.preventDefault?.();
+  if (event && event.preventDefault) {
+    event.preventDefault();
+  }
 
   filterElements().then((elements) => {
     const params = new URLSearchParams(location.search);
@@ -178,7 +187,7 @@ const onSubmit = (event) => {
     if (elements.length === 1) {
       const name = elements[0].querySelector("st-name").textContent;
       const slug = slugify(name);
-      if (!event?.first) {
+      if (!(event && event.first)) {
         history.pushState(null, "", "/" + slug);
       }
       searchInput.value = name;
@@ -212,55 +221,57 @@ const checkUrl = (first = false) => {
 
 let prevented = false;
 
-document.addEventListener("keydown", (event) => {
-  if (event.key === "F12") {
-    if (document.location.hash !== "#dev-tools") {
-      const scrollTop = document.documentElement.scrollTop;
-      document.location.hash = "#dev-tools";
-      import("/-/dev.mjs");
-      prevented = true;
-      document.documentElement.scrollTop = scrollTop;
-      event.preventDefault();
-    } else {
-      if (prevented) {
-        prevented = false;
-      } else {
+const initDevToolsLoader = async () => {
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "F12") {
+      if (document.location.hash !== "#dev-tools") {
         const scrollTop = document.documentElement.scrollTop;
-        document.location.hash = "";
-        history.replaceState(null, "", " ");
+        document.location.hash = "#dev-tools";
+        window.import("/-/dev.mjs");
+        prevented = true;
         document.documentElement.scrollTop = scrollTop;
         event.preventDefault();
+      } else {
+        if (prevented) {
+          prevented = false;
+        } else {
+          const scrollTop = document.documentElement.scrollTop;
+          document.location.hash = "";
+          history.replaceState(null, "", " ");
+          document.documentElement.scrollTop = scrollTop;
+          event.preventDefault();
+        }
       }
     }
-  }
-});
+  });
 
-if (document.location.hash === "#dev-tools") {
-  import("/-/dev.mjs");
-  prevented = true;
-}
-
-document.addEventListener("hashchange", () => {
   if (document.location.hash === "#dev-tools") {
-    import("/-/dev.mjs");
+    window.import("/-/dev.mjs");
     prevented = true;
   }
-});
 
-document.querySelector("footer a").addEventListener("click", (event) => {
-  import("/-/dev.mjs");
-  const scrollTop = document.documentElement.scrollTop;
-  document.location.hash = "#dev-tools";
-  document.documentElement.scrollTop = scrollTop;
-  event.preventDefault();
-});
-
-document
-  .querySelector("#dev-tools header .close")
-  .addEventListener("click", (event) => {
-    const scrollTop = document.documentElement.scrollTop;
-    document.location.hash = "";
-    history.replaceState(null, "", " ");
-    event.preventDefault();
-    document.documentElement.scrollTop = scrollTop;
+  document.addEventListener("hashchange", () => {
+    if (document.location.hash === "#dev-tools") {
+      window.import("/-/dev.mjs");
+      prevented = true;
+    }
   });
+
+  document.querySelector("footer a").addEventListener("click", (event) => {
+    window.import("/-/dev.mjs");
+    const scrollTop = document.documentElement.scrollTop;
+    document.location.hash = "#dev-tools";
+    document.documentElement.scrollTop = scrollTop;
+    event.preventDefault();
+  });
+
+  document
+    .querySelector("#dev-tools header .close")
+    .addEventListener("click", (event) => {
+      const scrollTop = document.documentElement.scrollTop;
+      document.location.hash = "";
+      history.replaceState(null, "", " ");
+      event.preventDefault();
+      document.documentElement.scrollTop = scrollTop;
+    });
+};
