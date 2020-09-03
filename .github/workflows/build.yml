@@ -16,7 +16,7 @@
               },
               { "run": "yarn install" },
               { "run": "./build" },
-              { "run": "git diff" },
+              { "run": "git status; git diff" },
             ],
         },
     },

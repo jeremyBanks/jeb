@@ -9,11 +9,9 @@
   "files.defaultLanguage": " ${activeEditorLanguage}",
   "files.eol": "\n",
   "files.exclude": {
-    ".https": true,
     "*.lock": true,
     "*.log": true,
     "*.pid": true,
-    "**/*.html/*.mjs": true,
     "node_modules": true
   },
   "files.insertFinalNewline": true,
