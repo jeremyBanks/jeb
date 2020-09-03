@@ -29,7 +29,7 @@ echo
     /Applications/"Google Chrome.app"/Contents/MacOS/"Google Chrome" \
       --headless \
       --user-data-dir="$HOME"/Library/"Application Support"/Google/Chrome/ \
-      'http://dev.stadia.run:57481/#dev-tools' 2>&1 \
+      'http://dev.stadia.run:57481/?q=cel#dev-tools' 2>&1 \
       | egrep --only-matching '<st-\w+>.*</st-\w+>' -A1 | cat || :)";
   echo
   if echo "$output" | grep -q '<st-event>load</st-event>'; then
