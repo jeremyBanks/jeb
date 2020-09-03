@@ -1,4 +1,4 @@
-/** @generated from index.html. */
+/** @generated from index.html */
 
 // We may import an copy of this module while using dev tools, so we use
 // this to share any mutable state between the module instances.
