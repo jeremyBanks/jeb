@@ -1,0 +1,23 @@
+{
+  "name": "build",
+  "on":
+    { "push": {}, "pull_request": {}, "schedule": [{ "cron": "20 4 * * 0" }] },
+  "jobs":
+    {
+      "build":
+        {
+          "runs-on": "ubuntu-latest",
+          "steps":
+            [
+              { "uses": "actions/checkout@v2" },
+              {
+                "uses": "actions/setup-node@v2-beta",
+                "with": { "node-version": "14" },
+              },
+              { "run": "yarn install" },
+              { "run": "./build" },
+              { "run": "git diff" },
+            ],
+        },
+    },
+}

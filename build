@@ -4,18 +4,11 @@ shopt -s inherit_errexit nullglob compat"${BASH_COMPAT=42}"
 cd "$(dirname "${BASH_SOURCE}")"
 
 declare source="$PWD/stadia.run/index.html"
-declare target="$PWD/stadia.run/-/index.html"
+declare target="$PWD/stadia.run/-/index.mjs"
 
-rm -f "$target/"*.mjs
+echo "/** @generated from index.html */" > "$target"
+echo >> "$target"
+sed -n -e '/<script type="module">/,/<\/script>/ p' "$source" | sed -e '1d;$d' >> "$target"
 
-declare -a names=(main.mjs)
-
-for name in "${names[@]}"; do
-  declare path="$target/$name"
-  echo "// @generated from index.html, do not edit directly." > "$path"
-  echo -n "// " >> "$path"
-  sed -n -e '/<script type="module" id="main.mjs">/,/<\/script>/ p' "$source" | sed -e '$d' >> "$path"
-done
-
-yarn sort-json "./"*".json" {"./extension","./stadia.st/-","./stadia.run/-","./.vscode"}"/"**/*"."{"json","yml","yaml"};
-yarn prettier --write "./"*".json" "./stadia.st/-/" "./stadia.run/-/" "./.vscode/" "./extension/";
+yarn sort-json "./"*".json" {"./extension","./stadia.st/-","./stadia.run/-","./.vscode","./.github"}"/"**/*"."{"json","yml","yaml"}
+yarn prettier --write "./"*".json" "./stadia.st/-/" "./stadia.run/-/" "./.vscode/" "./extension/" "./.github/"
