@@ -16,7 +16,7 @@ By intentionally submitting code for inclusion in this repository, you agree to 
 
 The "Stadian Squirrel" icon is Copyright 2020 [illufinch](https://twitter.com/illufinch), and is only licensed for non-commercial use on stadians.dev, stadia.run, and stadia.st.
 
-Store data, including product names, images, descriptions, and other metadata, may be copyrighted and/or trademarked by Google or other publishers. They are used here for non-commercial purposes assumed permitted as fair dealing, but this is not legal advice and I am not a lawyer.
+Stadia store data, including product names, images, descriptions, and other metadata, may be copyrighted and/or trademarked by Google or other publishers. They are used here for non-commercial purposes assumed permitted as fair dealing.
 
 ## Contributing
 
