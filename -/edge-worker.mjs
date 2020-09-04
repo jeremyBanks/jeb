@@ -1,6 +1,6 @@
 import { slugify } from "./index.mjs";
 
-addEventListener("fetch", (event) =>
+addEventListener("fetch", event =>
   event.respondWith(
     (async () => {
       const request = event.request;
@@ -12,11 +12,11 @@ addEventListener("fetch", (event) =>
       } else {
         return fetch(request);
       }
-    })()
-  )
+    })(),
+  ),
 );
 
-const maybeRedirect = async (url) => {
+const maybeRedirect = async url => {
   if (url.host !== "stadia.run") {
     return null;
   }
@@ -52,7 +52,7 @@ const maybeRedirect = async (url) => {
   }
 
   const game = Object.values(skus).find(
-    (sku) => sku.type === "game" && slugify(sku.name) == slug
+    sku => sku.type === "game" && slugify(sku.name) == slug,
   );
 
   if (!game) {

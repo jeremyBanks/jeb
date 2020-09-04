@@ -23,8 +23,8 @@ export const initialize = async () => {
 
   loadGamesFromDocument();
 
-  searchInput.addEventListener("input", (event) => onInput(event));
-  searchForm.addEventListener("submit", (event) => onSubmit(event));
+  searchInput.addEventListener("input", event => onInput(event));
+  searchForm.addEventListener("submit", event => onSubmit(event));
   window.addEventListener("popstate", checkUrl);
 
   checkUrl(true);
@@ -81,7 +81,7 @@ export const unpackMicroCovers = async () => {
     } else {
       micro.classList.add("rendered");
       micro.style.backgroundImage = `url(${microImageToURL(
-        micro.getAttribute("data")
+        micro.getAttribute("data"),
       )})`;
       full.hidden = true;
       micro.hidden = false;
@@ -94,7 +94,7 @@ export const unpackMicroCovers = async () => {
   }
 };
 
-export const u6toRGB = (u6) => {
+export const u6toRGB = u6 => {
   const red =
     (u6 & 0b000010 ? 0b10101010 : 0) + (u6 & 0b000001 ? 0b01010101 : 0);
   const green =
@@ -104,7 +104,7 @@ export const u6toRGB = (u6) => {
   return [red, green, blue];
 };
 
-export const microImageToURL = (microImage) => {
+export const microImageToURL = microImage => {
   const canvas = document.createElement("canvas");
   canvas.width = 8;
   canvas.height = 8;
@@ -117,7 +117,7 @@ export const microImageToURL = (microImage) => {
   }
 
   const digitValues = new Map(
-    Object.entries(digits).map(([index, char]) => [char, Number(index)])
+    Object.entries(digits).map(([index, char]) => [char, Number(index)]),
   );
 
   for (let i = 0; i < microImage.length && i < 64; i++) {
@@ -138,32 +138,30 @@ const filterElements = async () => {
     return filterElementsPending;
   }
 
-  return (filterElementsPending = new Promise((resolve) => resolve()).then(
-    () => {
-      filterElementsPending = false;
+  return (filterElementsPending = new Promise(resolve => resolve()).then(() => {
+    filterElementsPending = false;
 
-      const q = slugify(searchInput.value);
+    const q = slugify(searchInput.value);
 
-      const elements = [];
+    const elements = [];
 
-      for (const child of gameTiles.querySelectorAll("st-game")) {
-        let name = child.querySelector("st-name").textContent;
-        const matches = slugify(name).includes(q);
-        child.firstElementChild.hidden = !matches;
-        if (matches) {
-          elements.push(child);
-        }
+    for (const child of gameTiles.querySelectorAll("st-game")) {
+      let name = child.querySelector("st-name").textContent;
+      const matches = slugify(name).includes(q);
+      child.firstElementChild.hidden = !matches;
+      if (matches) {
+        elements.push(child);
       }
-
-      document.documentElement.setAttribute("data-st-matches", elements.length);
-
-      return elements;
     }
-  ));
+
+    document.documentElement.setAttribute("data-st-matches", elements.length);
+
+    return elements;
+  }));
 };
 
-const onInput = (event) => {
-  filterElements().then((elements) => {
+const onInput = event => {
+  filterElements().then(elements => {
     const params = new URLSearchParams(location.search);
 
     params.set("q", searchInput.value.toLowerCase());
@@ -171,17 +169,17 @@ const onInput = (event) => {
     history.replaceState(
       null,
       "",
-      searchInput.value ? "/?" + params.toString() : "/"
+      searchInput.value ? "/?" + params.toString() : "/",
     );
   });
 };
 
-const onSubmit = (event) => {
+const onSubmit = event => {
   if (event && event.preventDefault) {
     event.preventDefault();
   }
 
-  filterElements().then((elements) => {
+  filterElements().then(elements => {
     const params = new URLSearchParams(location.search);
 
     if (elements.length === 1) {
@@ -198,7 +196,7 @@ const onSubmit = (event) => {
       history.replaceState(
         null,
         "",
-        searchInput.value ? "/?" + params.toString() : "/"
+        searchInput.value ? "/?" + params.toString() : "/",
       );
       document.title = "stadia.run";
     }
@@ -222,7 +220,7 @@ const checkUrl = (first = false) => {
 let prevented = false;
 
 const initDevToolsLoader = async () => {
-  document.addEventListener("keydown", (event) => {
+  document.addEventListener("keydown", event => {
     if (event.key === "F12") {
       if (document.location.hash !== "#dev-tools") {
         const scrollTop = document.documentElement.scrollTop;
@@ -257,7 +255,7 @@ const initDevToolsLoader = async () => {
     }
   });
 
-  document.querySelector("footer a").addEventListener("click", (event) => {
+  document.querySelector("footer a").addEventListener("click", event => {
     window.import("/-/dev.mjs");
     const scrollTop = document.documentElement.scrollTop;
     document.location.hash = "#dev-tools";
@@ -267,7 +265,7 @@ const initDevToolsLoader = async () => {
 
   document
     .querySelector("#dev-tools header .close")
-    .addEventListener("click", (event) => {
+    .addEventListener("click", event => {
       const scrollTop = document.documentElement.scrollTop;
       document.location.hash = "";
       history.replaceState(null, "", " ");
