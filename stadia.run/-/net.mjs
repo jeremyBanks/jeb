@@ -27,22 +27,22 @@ const chromeCall = async (methodName, ...args) => {
   if (!chrome?.runtime?.sendMessage) {
     throw new Error("not supported");
   }
-  return new Promise((resolve) =>
+  return new Promise(resolve =>
     chrome.runtime.sendMessage(
       chromeExtensionId,
       {
         [methodName]: args,
       },
       {},
-      (responses) => {
+      responses => {
         const response = responses[methodName];
         if (response.error) {
           resolve(Promise.reject(response.error));
         } else {
           resolve(Promise.resolve(response.result));
         }
-      }
-    )
+      },
+    ),
   );
 };
 
@@ -63,7 +63,7 @@ export const canFetchStadiaHost = Promise.resolve().then(async () => {
  * meaning that we're authenticated and not getting a major error.
  */
 export const canFetchStadiaStore = canFetchStadiaHost.then(
-  async (canFetchHost) => {
+  async canFetchHost => {
     if (!canFetchHost) {
       return false;
     }
@@ -71,7 +71,7 @@ export const canFetchStadiaStore = canFetchStadiaHost.then(
     // If we're not authenticated as a Stadia user, we will be redirected.
     const response = await fetchStadia("store");
     return response.redirected === false;
-  }
+  },
 );
 
 /**
@@ -82,7 +82,7 @@ export const canFetchDevApi = Promise.resolve().then(async () => {
   try {
     const response = await withTimeout(
       4_000,
-      fetch(`${devApiHost}/skus.json`).then(checkStatus)
+      fetch(`${devApiHost}/skus.json`).then(checkStatus),
     );
     await response.json();
     return true;
@@ -97,7 +97,7 @@ export const canFetchDevApi = Promise.resolve().then(async () => {
 export const fetchStadia = async (path, options = {}) => {
   const response = await withTimeout(
     16_000,
-    chromeCall("fetchStadia", path, options)
+    chromeCall("fetchStadia", path, options),
   );
   return {
     ...response,

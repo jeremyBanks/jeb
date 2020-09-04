@@ -1,5 +1,3 @@
-import { digits, u6toRGB, microImageToURL, loadedImage } from "./index.mjs";
-
 import {
   canFetchDevApi,
   canFetchStadiaHost,
@@ -7,6 +5,7 @@ import {
   fetchDevApi,
   fetchStadia,
 } from "./net.mjs";
+import { digits, loadedImage, microImageToURL, u6toRGB } from "./index.mjs";
 
 const init = async () => {
   const root = document.getElementById("dev-tools");
@@ -22,7 +21,7 @@ const init = async () => {
     : "❌ unavailable";
 
   root.querySelector(
-    ".stadia-proxy-status"
+    ".stadia-proxy-status",
   ).textContent = (await canFetchStadiaStore)
     ? "✅ authenticated"
     : (await canFetchStadiaHost)
@@ -32,7 +31,7 @@ const init = async () => {
   root.querySelector(".do-load-from-dev").disabled = !(await canFetchDevApi);
   root.querySelector(".do-save-to-dev").disabled = !(await canFetchDevApi);
   root.querySelector(
-    ".do-load-from-store"
+    ".do-load-from-store",
   ).disabled = !(await canFetchStadiaStore);
 };
 
@@ -95,7 +94,7 @@ const doDownloadHtml = async () => {
     const href = URL.createObjectURL(
       new Blob([html], {
         type: "text/html",
-      })
+      }),
     );
     const el = Object.assign(document.createElement("a"), {
       download: "index.html",
@@ -147,7 +146,7 @@ const checkStatus = (/** @type Response */ response) => {
   } else {
     throw Object.assign(
       new Error(`${response.status} ${response.statusText}`),
-      { response }
+      { response },
     );
   }
 };
@@ -155,7 +154,7 @@ const checkStatus = (/** @type Response */ response) => {
 const reloadSkus = async () => {
   const skusData = await fetch(`//${stHost}/-/skus.json`)
     .then(checkStatus)
-    .then((response) => response.json());
+    .then(response => response.json());
 
   const skus = new Map();
   for (const sku of Object.values(skusData)) {
@@ -163,7 +162,7 @@ const reloadSkus = async () => {
   }
 
   const proGameSkus = new Set();
-  const addProGames = (skuId) => {
+  const addProGames = skuId => {
     const sku = skus.get(skuId);
     if (sku.type === "game") {
       proGameSkus.add(skuId);
@@ -174,8 +173,8 @@ const reloadSkus = async () => {
   addProGames("59c8314ac82a456ba61d08988b15b550");
 
   const games = [...skus.values()]
-    .filter((sku) => sku.image)
-    .map((game) => ({
+    .filter(sku => sku.image)
+    .map(game => ({
       name: game.name
         .replace(/™/g, " ")
         .replace(/®/g, " ")
@@ -224,10 +223,10 @@ const reloadSkus = async () => {
         root.querySelector("st-cover-full").hidden = false;
         root.querySelector("st-cover-micro").hidden = true;
       })
-      .catch((error) => console.error(error));
+      .catch(error => console.error(error));
 
     root.querySelector(
-      "a"
+      "a",
     ).href = `https://stadia.google.com/player/${game.app}`;
     root.querySelector("st-name").textContent = game.name;
 
@@ -237,7 +236,7 @@ const reloadSkus = async () => {
     }
 
     root.querySelector(
-      "st-cover-micro"
+      "st-cover-micro",
     ).style.backgroundImage = `url(${microImageToURL(game.microImage)})`;
 
     root.querySelector("st-cover-micro").setAttribute("data", game.microImage);
@@ -246,7 +245,7 @@ const reloadSkus = async () => {
       root.querySelector("a").appendChild(
         Object.assign(document.createElement("st-pro"), {
           textContent: "PRO",
-        })
+        }),
       );
     }
 
