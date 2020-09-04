@@ -2,7 +2,7 @@ chrome.runtime.onMessageExternal.addListener(
   (message, _sender, sendResponse) => {
     handleRequest(message).then(sendResponse);
     return true;
-  }
+  },
 );
 
 const rpcs = {
@@ -25,7 +25,7 @@ const rpcs = {
   },
 };
 
-const handleRequest = async (request) => {
+const handleRequest = async request => {
   const result = {};
   for (const key of Object.keys(request)) {
     const args = request[key];

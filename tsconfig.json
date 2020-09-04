@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "module": "esnext",
+    "noEmit": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "rootDir": "./",
+    "strict": true
+  },
+  "exclude": ["node_modules", "worker", "dist"],
+  "include": ["./**/*.mjs"]
+}

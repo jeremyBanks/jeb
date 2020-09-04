@@ -10,6 +10,9 @@ echo "/** @generated from index.html */" > "$target"
 echo >> "$target"
 sed -n -e '/<script type="module">/,/<\/script>/ p' "$source" | sed -e '1d;$d' >> "$target"
 
-yarn sort-json "./"*".json" {"./extension","./stadia.st/-","./stadia.run/-","./.vscode","./.github"}"/"**/*"."{"json","yml","yaml"}
-yarn prettier --write "./"*".json" "./stadia.st/-/" "./stadia.run/-/" "./.vscode/" "./extension/" "./.github/"
+yarn import-sort --write "./"{"extension","stadia".*}"/"**/*"."{"m",}{"j","t"}"s"{,"x"};
+yarn replace-in-files --regex='"version"\s*:\s*"(.*?)"' --replacement='"version": "'"$(date "+%Y.%-m.%-d")"'"' "./package.json" "./extension/manifest.json";
+yarn replace-in-files --regex='"version_name"\s*:\s*"(.*?)"' --replacement='"version_name": "'"$(date "+%Y-%m-%d")"'"' "./extension/manifest.json";
+yarn sort-json "./"*".json" {"./stadia."*"/-","./.vscode","./.github"}"/"**/*"."{"json","yml","yaml"}
+yarn prettier --write "./"*".json" "./stadia."*"/-/" "./.vscode/" "./extension/"**/*.mjs "./.github/"
 yarn wrangler build

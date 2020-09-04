@@ -2,14 +2,29 @@
   "dependencies": {
     "@cloudflare/wrangler": "^1.11.0",
     "http-server": "^0.12.3",
+    "import-sort-cli": "^6.0.0",
     "prettier": "v2.0.5",
     "replace-in-files-cli": "v0.3.1",
     "sort-json": "v2",
+    "typescript": "^4.0.2",
     "web-ext": "^4.2.0",
     "webextension-polyfill": "v0.6"
   },
   "main": "./stadia.run/-/edge-worker.mjs",
   "name": "stadians.dev",
+  "prettier": {
+    "arrowParens": "avoid",
+    "overrides": [
+      {
+        "files": ["*.yml", "*.yaml", "*.json"],
+        "options": {
+          "parser": "json",
+          "trailingComma": "none"
+        }
+      }
+    ],
+    "trailingComma": "all"
+  },
   "private": true,
   "resolutions": {
     "web-ext/**/shelljs": ">=0.8.4"
@@ -18,5 +33,5 @@
     "build-extension": "./build-extension"
   },
   "type": "module",
-  "version": "2020.9.2"
+  "version": "2020.9.4"
 }

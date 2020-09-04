@@ -12,7 +12,9 @@
     "*.lock": true,
     "*.log": true,
     "*.pid": true,
-    "node_modules": true
+    "dist": true,
+    "node_modules": true,
+    "worker": true
   },
   "files.insertFinalNewline": true,
   "files.trimFinalNewlines": true,
