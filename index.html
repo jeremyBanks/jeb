@@ -4,6 +4,7 @@
 
 <link rel="canonical" href="https://stadia.run">
 <link rel="icon" href="/-/icon.png">
+<meta name="viewport" content="width=770, initial-scale=1.0">
 <meta property="og:title" content="stadia.run">
 <meta property="og:image" content="/-/icon.png">
 <meta property="og:description" content="a lightning-fast launcher for Stadia">
@@ -39,6 +40,7 @@
   }
 
   html {
+    --viewport: 770px;
     --background-color: #202124;
     --body-color: #FFFFFF;
     --theme-color: #D72D30;
@@ -46,8 +48,9 @@
     --mascot-disabled-url: url(/-/squirrel-disabled.png);
     --mascot-generic-url: url(/-/squirrel.png);
     --primary-font-size: 14px;
-    --large-margin: 16px;
-    --small-margin: 6px;
+    --small-margin: 8px;
+    --large-margin: calc(4.0 * var(--small-margin));
+    --games-outer-margin: var(--large-margin);
     /* We allow tiles to flow to full width, but want to keep any controls
       or body text within a narrower window. */
     --controls-width: 720px;
@@ -62,6 +65,16 @@
     overflow-y: scroll;
     overflow-x: hidden;
     text-shadow: none;
+  }
+
+  @media (max-width: 770px) {
+    html body {
+      --games-outer-margin: 4px;
+    }
+
+    html body main st-games {
+      gap: var(--large-margin);
+    }
   }
 
   footer {
@@ -262,8 +275,8 @@
         grid-row: games-rows-start / games-rows-end;
         grid-template-columns: repeat(auto-fill, 320px);
         grid-auto-rows: auto;
-        gap: 16px 24px;
-        margin: 32px;
+        gap: calc(0.5 * var(--large-margin)) calc(0.75 * var(--large-margin));
+        margin: var(--games-outer-margin);
         justify-content: center;
       }
 
