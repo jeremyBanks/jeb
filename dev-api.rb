@@ -52,6 +52,7 @@ while connection = server.accept
   connection.print "HTTP/1.1 #{status}\r\n"
 
   unless headers[:origin].nil?
+    connection.print "Vary: Origin\r\n"
     connection.print "Access-Control-Allow-Origin: #{
       headers[:origin]}\r\n"
     connection.print "Access-Control-Allow-Methods: *\r\n"

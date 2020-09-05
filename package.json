@@ -29,9 +29,6 @@
   "resolutions": {
     "web-ext/**/shelljs": ">=0.8.4"
   },
-  "scripts": {
-    "build-extension": "./build-extension"
-  },
   "type": "module",
-  "version": "2020.9.4"
+  "version": "2020.9.5"
 }
