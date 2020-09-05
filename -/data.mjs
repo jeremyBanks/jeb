@@ -1,59 +1,92 @@
 /**
- * Ephemeral in-memory record of all known SKUs.
- * @type {{[skuId: string]: Sku}}
+ * Ephemeral in-memory record of all known records.
+ * @type {{[key: string]: Record}}
  */
-export const skus = {};
+const records = {};
 
-export const upserlect = (
+export const getset = (
   /** @type {
-  Pick<ASku, "skuId" | "type"> & Partial<Sku>
-} */ newSku,
+  (Pick<ASku, "skuId" | "type"> & Partial<Sku>) |
+  (Pick<List, "listId" | "type"> & Partial<List>)
+} */ newProps,
 ) => {
+  const newRecord = Object.assign(makeRecord(newProps.type), newProps);
   const now = Date.now();
-  const existingSku = skus[newSku.skuId];
-  const sku = existingSku || makeSku(newSku.type);
-  if (existingSku) {
-    for (const [property, newValue] of Object.entries(newSku)) {
-      const oldValue = existingSku[property];
+  const existingRecord = records[newRecord._key];
+  const record = existingRecord || makeRecord(newRecord.type);
+  if (existingRecord) {
+    for (const [property, newValue] of Object.entries(newRecord)) {
+      const oldValue = existingRecord[property];
       if (newValue !== oldValue && newValue != null) {
-        sku[property] = newValue;
-        sku.lastModified = now;
+        record[property] = newValue;
+        record.lastModified = now;
       }
     }
+    if (
+      existingRecord.type !== newRecord.type ||
+      existingRecord._key !== newRecord._key
+    ) {
+      throw new Error("data integrity failure");
+    }
   } else {
-    Object.assign(sku, newSku, { firstSeen: now });
-    sku.firstSeen = now;
+    Object.assign(record, newRecord, { firstSeen: now });
+    record.firstSeen = now;
   }
-  sku.lastSeen = now;
-  skus[sku.skuId] = sku;
-  return sku;
+  record.lastSeen = now;
+
+  records[record._key] = record;
+  return record;
 };
 
 /** @typedef {Game | Subscription | Bundle | Addon} Sku */
+/** @typedef {Sku | List} Record */
+/** @typedef {{
+  [skuId: string]: {
+    firstSeen: number,
+    lastSeen: number,
+  }
+}} SkuSet */
 
-/** @type {
- ((type: Game["type"]) => Game) &
- ((type: Bundle["type"]) => Bundle) &
- ((type: Addon["type"]) => Addon) &
- ((type: Subscription["type"]) => Subscription) &
- ((type: Sku["type"]) => Sku)
-}} */
-const makeSku = (/** @type {Sku["type"]} */ type) => {
+const makeRecord = (/** @type {Record["type"]} */ type) => {
   if (type === "game") return new Game();
   if (type === "bundle") return new Bundle();
   if (type === "addon") return new Addon();
   if (type === "subscription") return new Subscription();
-  throw new TypeError();
+  if (type === "list") return new List();
+  throw new TypeError("unknown record type");
 };
 
-class ASku {
-  /** @type {string} */ skuId;
-  /** @type {string} */ name;
+class ARecord {
   /** @type {string} */ type;
-  /** @type {number} */ firstSeen = 0;
-  /** @type {number} */ lastSeen = 0;
+  /** @type {string} */ name;
   /** @type {number} */ lastSpidered = 0;
   /** @type {number} */ lastModified = 0;
+  /** @type {number} */ firstSeen = 0;
+  /** @type {number} */ lastSeen = 0;
+
+  /**
+   * A primary key uniquely identifying this record from all others.
+   * @returns {string}
+   * */
+  get _key() {
+    throw new TypeError("not implemented");
+  }
+}
+
+export class List extends ARecord {
+  /** @type {"list"} */ type = "list";
+
+  /** @type {number} */ listId;
+  get _key() {
+    return `/list/${this.listId}`;
+  }
+}
+
+class ASku extends ARecord {
+  /** @type {string} */ skuId;
+  get _key() {
+    return `${this.skuId}`;
+  }
 }
 
 export class Game extends ASku {
@@ -67,21 +100,21 @@ export class Game extends ASku {
 export class Subscription extends ASku {
   /** @type {"subscription"} */ type = "subscription";
   /** @type {{
-   *    [skuId: string]: {
-   *      firstSeen: number,
-   *      lastSeen: number,
-   *    }
-   *  }} */ skus;
+    [skuId: string]: {
+      firstSeen: number,
+      lastSeen: number,
+    }
+  }} */ skus;
 }
 
 export class Bundle extends ASku {
   /** @type {"bundle"} */ type = "bundle";
   /** @type {{
-   *    [skuId: string]: {
-   *      firstSeen: number,
-   *      lastSeen: number,
-   *    }
-   *  }} */ skus;
+    [skuId: string]: {
+      firstSeen: number,
+      lastSeen: number,
+    }
+  }} */ skus;
 }
 
 export class Addon extends ASku {
