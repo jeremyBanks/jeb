@@ -53,9 +53,7 @@ export const jsonObjects = (/** @type {string} */ text) => {
       } catch (jsonError) {
         try {
           values.push(JSON5.parse(currentJson));
-        } catch (json5error) {
-          console.trace("that ain't json", currentJson, jsonError, json5error);
-        }
+        } catch (json5error) {}
       }
       currentJsonStartIndex = null;
     }
