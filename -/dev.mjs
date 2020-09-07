@@ -5,7 +5,7 @@ import {
   canFetchStadiaHost,
   canFetchStadiaStore,
   fetchDevApi,
-  fetchStadia,
+  fetchStadiaJsons,
 } from "./net.mjs";
 import { digits, loadedImage, microImageToURL, u6toRGB } from "./index.mjs";
 
@@ -263,3 +263,106 @@ const reloadSkus = async () => {
 
   gamesEl.appendChild(document.createTextNode("\n  "));
 };
+
+const fetchStadiaOpaque = async url => {
+  const jsons = await fetchStadiaJsons(url);
+
+  const data = Object.create({
+    raw: jsons,
+  });
+
+  Object.assign(
+    data,
+    padOpaqueKeys(
+      jsons.find(
+        x =>
+          Object.keys(x).length >= 8 &&
+          Object.keys(x).every(key => /^[a-zA-Z0-9]{1,6}$/.test(key)),
+      ),
+    ),
+  );
+
+  const preloadQueries = jsons.find(x => x?.["ds:0"]?.["id"]);
+
+  if (preloadQueries) {
+    for (const [key, { id, request }] of Object.entries(preloadQueries)) {
+      const preloadResponse = jsons.find(x => x.key === key);
+      const response = preloadResponse.data;
+      const name =
+        request.length > 0
+          ? `${id}${JSON.stringify(request)
+              .slice(1, -1)
+              .replace(/[^a-zA-Z0-9]+/g, "")
+              .replace(/true/g, "E")
+              .replace(/false/g, "u")
+              .replace(/(null)+/g, "n")
+              .replace(/\d{4,}/g, "D")}`
+          : id;
+      data[name] = response;
+    }
+  }
+
+  Object.assign(
+    data,
+    Object.fromEntries(
+      jsons
+        .find(
+          ({ values }) =>
+            values instanceof Array &&
+            values.length >= 4 &&
+            values.includes("stadia.google.com") &&
+            values.includes("https://stadia.google.com/"),
+        )
+        .values.map((value, i) => [
+          ((i + 7577) / 7919)
+            .toString(36)
+            .replace(/[^A-Za-z]+/, "")
+            .slice(0, 6)
+            .padEnd(6, "s"),
+          value,
+        ]),
+    ),
+  );
+
+  if (data.nQyAEs) {
+    Object.assign(data, padOpaqueKeys(data.nQyAEs));
+    delete data.nQyAEs;
+  }
+
+  return data;
+};
+
+const padOpaqueKeys = object => {
+  if (
+    typeof object === "object" &&
+    !(object instanceof Array) &&
+    Object.keys(object).length >= 4 &&
+    Object.keys(object).every(key => /^[a-zA-Z0-9]{1,6}$/.test(key))
+  ) {
+    return Object.fromEntries(
+      Object.entries(object).map(([key, value]) => [key.padEnd(6, "s"), value]),
+    );
+  } else {
+    return object;
+  }
+};
+
+canFetchStadiaStore.then(async () => {
+  const paths = [
+    "store",
+    "settings",
+    "store/list/3",
+    "store/details/-/sku/59c8314ac82a456ba61d08988b15b550", // subscription
+    "store/details/-/sku/bd70626ec3834dedbc6dda5b956f7648", // bundle
+    "store/details/-/sku/4950959380034dcda0aecf98f675e11f", // game
+    "store/details/-/sku/5c1d84fe250a473e9d0313ed232508bc", // addon
+    "player/20e792017ab34ad89b70dc17a5c72d68rcp1",
+    "profile/956082794034380385/gameactivities/all",
+    "profile/956082794034380385/detail/20e792017ab34ad89b70dc17a5c72d68rcp1",
+  ];
+  for (const path of paths) {
+    console.log(await fetchStadiaOpaque(path));
+
+    await new Promise(resolve => setTimeout(resolve, 4 * 1000));
+  }
+});

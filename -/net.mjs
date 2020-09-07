@@ -1,3 +1,5 @@
+import { jsonObjects } from "./jsons.mjs";
+
 const devApiHost = "//dev-api.stadia.st:57482";
 const chromeExtensionId = "faklgfkhnojnmccmjiifiljdhfjnacpb";
 
@@ -24,11 +26,11 @@ const checkStatus = (/** @type Response */ response) => {
 
 /** RPC call to the Stadians.dev Chrome extension. */
 const chromeCall = async (methodName, ...args) => {
-  if (!chrome?.runtime?.sendMessage) {
-    throw new Error("not supported");
+  if (!globalThis.chrome?.runtime?.sendMessage) {
+    throw new Error("chrome calls not supported");
   }
   return new Promise(resolve =>
-    chrome.runtime.sendMessage(
+    globalThis.chrome.runtime.sendMessage(
       chromeExtensionId,
       {
         [methodName]: args,
@@ -95,6 +97,10 @@ export const canFetchDevApi = Promise.resolve().then(async () => {
  * Fetch a path on the stadia.google.com domain, through our Chrome extension.
  */
 export const fetchStadia = async (path, options = {}) => {
+  if (path.startsWith("/")) {
+    console.warn("Please get rid of the leading slash in ", path);
+    path = path.replace(/^\/+/, "");
+  }
   const response = await withTimeout(
     16_000,
     chromeCall("fetchStadia", path, options),
@@ -108,6 +114,17 @@ export const fetchStadia = async (path, options = {}) => {
       return JSON.parse(this._text);
     },
   };
+};
+
+export const fetchStadiaJsons = async (path, options = {}) => {
+  const response = await fetchStadia(path, options);
+  console.debug("Got Stadia response", response);
+  checkStatus(response);
+  const body = await response.text();
+  const doc = new DOMParser().parseFromString(body, "text/html");
+  const scripts = [...doc.querySelectorAll("script")];
+
+  return scripts.flatMap(script => jsonObjects(script.textContent));
 };
 
 /**

@@ -14,15 +14,15 @@
 <link rel="preload" as="image" href="/-/squirrel-disabled.png">
 
 <script>
-  // console.trace messages are only for the sake of headless testing.
+  // console.debug messages are only for the sake of headless testing.
   window.addEventListener('error', ({error}) =>
-    console.trace(`<st-error>${error}</st-error>`));
+    console.debug(`<st-error>${error}</st-error>`));
   window.addEventListener('unhandledrejection', ({reason}) =>
-    console.trace(`<st-error>${reason}</st-error>`))
+    console.debug(`<st-error>${reason}</st-error>`))
   window.addEventListener('domcontentloaded', event =>
-    console.trace('<st-event>domcontentloaded</st-event>'));
+    console.debug('<st-event>domcontentloaded</st-event>'));
   window.addEventListener('load', event =>
-    console.trace('<st-event>load</st-event>'));
+    console.debug('<st-event>load</st-event>'));
 </script>
 
 <style>
