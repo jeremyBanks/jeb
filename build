@@ -10,6 +10,9 @@ echo "/** @generated from index.html */" > "$target"
 echo >> "$target"
 sed -n -e '/<script type="module">/,/<\/script>/ p' "$source" | sed -e '1d;$d' >> "$target"
 
+echo "/** @generated from node_modules/json5 */" > "./stadia.run/-/json5.mjs"
+tail -n +2 "./node_modules/json5/dist/index.mjs" >> "./stadia.run/-/json5.mjs"
+
 yarn import-sort --write "./"{"extension","stadia".*}"/"**/*"."{"m",}{"j","t"}"s"{,"x"}
 yarn replace-in-files --regex='"version"\s*:\s*"(.*?)"' --replacement='"version": "'"$(date "+%Y.%-m.%-d")"'"' "./package.json" "./extension/manifest.json"
 yarn replace-in-files --regex='"version_name"\s*:\s*"(.*?)"' --replacement='"version_name": "'"$(date "+%Y-%m-%d")"'"' "./extension/manifest.json"
