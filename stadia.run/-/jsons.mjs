@@ -1,5 +1,3 @@
-import { canFetchStadiaStore, fetchStadia } from "./net.mjs";
-
 import JSON5 from "./json5.mjs";
 
 /** @typedef {
@@ -48,12 +46,20 @@ export const jsonObjects = (/** @type {string} */ text) => {
 
     if (currentJsonStartIndex !== null && delimiterStack.length === 0) {
       const currentJson = text.slice(currentJsonStartIndex, index + 1);
+      let parsed = undefined;
       try {
-        values.push(JSON.parse(currentJson));
+        parsed = JSON.parse(currentJson);
       } catch (jsonError) {
         try {
-          values.push(JSON5.parse(currentJson));
+          parsed = JSON5.parse(currentJson);
         } catch (json5error) {}
+      }
+      if (parsed !== undefined) {
+        if (parsed instanceof Array && parsed.length > 0) {
+          values.push({ values: parsed });
+        } else if (Object.keys(parsed).length > 0) {
+          values.push(parsed);
+        }
       }
       currentJsonStartIndex = null;
     }
@@ -64,16 +70,3 @@ export const jsonObjects = (/** @type {string} */ text) => {
     }
   }
 };
-
-canFetchStadiaStore.then(async () => {
-  const response = await fetchStadia(
-    "store/details/cc97434908874852a6705d255a605dc8rcp1/sku/1e4107605f83447fa8e04e0abdc578b3",
-  );
-
-  const body = await response.text();
-  const doc = new DOMParser().parseFromString(body, "text/html");
-  const scripts = [...doc.querySelectorAll("script")];
-
-  const jsons = scripts.flatMap(script => jsonObjects(script.textContent));
-  console.log(jsons);
-});
