@@ -267,9 +267,7 @@ const reloadSkus = async () => {
 const fetchStadiaOpaque = async url => {
   const jsons = await fetchStadiaJsons(url);
 
-  const data = Object.create({
-    raw: jsons,
-  });
+  const data = Object.create(jsons);
 
   Object.assign(
     data,
@@ -289,15 +287,7 @@ const fetchStadiaOpaque = async url => {
       const preloadResponse = jsons.find(x => x.key === key);
       const response = preloadResponse.data;
       const name =
-        request.length > 0
-          ? `${id}${JSON.stringify(request)
-              .slice(1, -1)
-              .replace(/[^a-zA-Z0-9]+/g, "")
-              .replace(/true/g, "E")
-              .replace(/false/g, "u")
-              .replace(/(null)+/g, "n")
-              .replace(/\d{4,}/g, "D")}`
-          : id;
+        request.length > 0 ? id + request.map(x => (typeof x)[0]).join("") : id;
       data[name] = response;
     }
   }
@@ -332,6 +322,25 @@ const fetchStadiaOpaque = async url => {
   return data;
 };
 
+const fetchStadiaPage = async url => {
+  const opaque = await fetchStadiaOpaque(url);
+  const data = Object.create(opaque);
+
+  data.self = opaque.D0Amudob?.[5] ?? null;
+  data.subscription = opaque.Z5yYmeo?.[0]?.[0]?.[1] ?? null;
+  data.list = opaque.WwD3rbnob?.[2] ?? null;
+  data.sku = opaque.SYcsTdsb?.[1]?.[0] ?? null;
+  data.gameStats = opaque.e7h9qdoss?.[0]?.[8] ?? null;
+
+  for (const key of Object.keys(data)) {
+    if (data[key] === undefined) {
+      delete data[key];
+    }
+  }
+
+  return data;
+};
+
 const padOpaqueKeys = object => {
   if (
     typeof object === "object" &&
@@ -361,7 +370,7 @@ canFetchStadiaStore.then(async () => {
     "profile/956082794034380385/detail/20e792017ab34ad89b70dc17a5c72d68rcp1",
   ];
   for (const path of paths) {
-    console.log(await fetchStadiaOpaque(path));
+    console.log(path, await fetchStadiaPage(path));
 
     await new Promise(resolve => setTimeout(resolve, 4 * 1000));
   }
