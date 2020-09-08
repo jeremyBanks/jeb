@@ -4,8 +4,6 @@
   "editor.wordWrap": "on",
   "editor.wrappingIndent": "indent",
   "explorer.incrementalNaming": "smart",
-  "files.autoSave": "onFocusChange",
-  "files.autoSaveDelay": 4000,
   "files.defaultLanguage": " ${activeEditorLanguage}",
   "files.eol": "\n",
   "files.exclude": {
