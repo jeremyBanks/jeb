@@ -287,7 +287,9 @@ const fetchStadiaOpaque = async url => {
       const preloadResponse = jsons.find(x => x.key === key);
       const response = preloadResponse.data;
       const name =
-        request.length > 0 ? id + request.map(x => (typeof x)[0]).join("") : id;
+        request.length > 0
+          ? id + request.map(x => (typeof x).slice(0, 1)).join("")
+          : id;
       data[name] = response;
     }
   }
@@ -326,11 +328,12 @@ const fetchStadiaPage = async url => {
   const opaque = await fetchStadiaOpaque(url);
   const data = Object.create(opaque);
 
-  data.self = opaque.D0Amudob?.[5] ?? null;
-  data.subscription = opaque.Z5yYmeo?.[0]?.[0]?.[1] ?? null;
-  data.list = opaque.WwD3rbnob?.[2] ?? null;
-  data.sku = opaque.SYcsTdsb?.[1]?.[0] ?? null;
-  data.gameStats = opaque.e7h9qdoss?.[0]?.[8] ?? null;
+  data.self = opaque.D0Amudob?.[5];
+  data.list = opaque.WwD3rbnob?.[2];
+  data.gameStats = opaque.e7h9qdoss?.[0]?.[8];
+  data.playerGames = opaque.Q6jt8cooos?.[0];
+  data.sku = opaque.FWhQVssb;
+  data.storefront = opaque.xjyeoc?.[3].flatMap(x => x?.[1]);
 
   for (const key of Object.keys(data)) {
     if (data[key] === undefined) {
@@ -358,16 +361,12 @@ const padOpaqueKeys = object => {
 
 canFetchStadiaStore.then(async () => {
   const paths = [
-    "store",
-    "settings",
-    "store/list/3",
-    "store/details/-/sku/59c8314ac82a456ba61d08988b15b550", // subscription
+    "store/details/-/sku/59c8314ac82a456ba61d08988b15b550", // Stadia Pro
+    "store/list/3", // All Games
+    "store/list/45", // Pro Deals
     "store/details/-/sku/bd70626ec3834dedbc6dda5b956f7648", // bundle
     "store/details/-/sku/4950959380034dcda0aecf98f675e11f", // game
     "store/details/-/sku/5c1d84fe250a473e9d0313ed232508bc", // addon
-    "player/20e792017ab34ad89b70dc17a5c72d68rcp1",
-    "profile/956082794034380385/gameactivities/all",
-    "profile/956082794034380385/detail/20e792017ab34ad89b70dc17a5c72d68rcp1",
   ];
   for (const path of paths) {
     console.log(path, await fetchStadiaPage(path));
