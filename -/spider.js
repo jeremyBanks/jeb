@@ -7,9 +7,9 @@ import {
   Sku,
   Subscription,
   getset as record,
-} from "./data.mjs";
+} from "./data.js";
 
-import { sleep } from "./async.mjs";
+import { sleep } from "./async.js";
 
 const stadiaPro = /** @type {Subscription} */ (record({
   type: "subscription",

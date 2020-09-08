@@ -1,4 +1,4 @@
-import "./jsons.mjs";
+import "./jsons.js";
 
 import {
   canFetchDevApi,
@@ -6,8 +6,8 @@ import {
   canFetchStadiaStore,
   fetchDevApi,
   fetchStadiaJsons,
-} from "./net.mjs";
-import { digits, loadedImage, microImageToURL, u6toRGB } from "./index.mjs";
+} from "./net.js";
+import { digits, loadedImage, microImageToURL, u6toRGB } from "./index.js";
 
 const init = async () => {
   const root = document.getElementById("dev-tools");

@@ -1,10 +1,10 @@
-import JSON5 from "./json5.mjs";
+import JSON5 from "./json5.js";
 
-/** @typedef {
+/** @typedef {(
  Array<JsonValue> |
  Record<string, JsonValue> |
  string | number | null
-} JsonValue */
+)} JsonValue */
 
 export const jsonObjects = (/** @type {string} */ text) => {
   /** @type {Array<JsonValue & object>} */ const values = [];

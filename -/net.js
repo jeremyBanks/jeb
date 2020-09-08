@@ -1,4 +1,4 @@
-import { jsonObjects } from "./jsons.mjs";
+import { jsonObjects } from "./jsons.js";
 
 const devApiHost = "//dev-api.stadia.st:57482";
 const chromeExtensionId = "faklgfkhnojnmccmjiifiljdhfjnacpb";
