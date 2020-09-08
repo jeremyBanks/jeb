@@ -1,13 +1,13 @@
 import JSON5 from "./json5.js";
 
 /** @typedef {(
- Array<JsonValue> |
- Record<string, JsonValue> |
- string | number | null
+  Array<unknown> |
+  Record<string, unknown> |
+  string | number | null
 )} JsonValue */
 
 export const jsonObjects = (/** @type {string} */ text) => {
-  /** @type {Array<JsonValue & object>} */ const values = [];
+  /** @type {Array<JsonValue>} */ const values = [];
 
   if (!text) {
     return values;
