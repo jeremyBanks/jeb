@@ -2,7 +2,8 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
-    "module": "esnext",
+    "lib": ["DOM", "DOM.Iterable", "WebWorker", "ES2020", "ESNext"],
+    "module": "ESNext",
     "noEmit": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,

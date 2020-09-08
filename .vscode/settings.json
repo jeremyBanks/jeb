@@ -7,10 +7,10 @@
   "files.defaultLanguage": " ${activeEditorLanguage}",
   "files.eol": "\n",
   "files.exclude": {
-    "*.br": true,
     "*.lock": true,
     "*.log": true,
     "*.pid": true,
+    "**/*.br": true,
     "dist": true,
     "node_modules": true,
     "worker": true
