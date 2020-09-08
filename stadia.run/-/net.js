@@ -4,7 +4,7 @@ const devApiHost = "//dev-api.stadia.st:57482";
 const chromeExtensionId = "faklgfkhnojnmccmjiifiljdhfjnacpb";
 
 /** Wraps a promise with a timeout. */
-const withTimeout = (ms, promise) => {
+const withTimeout = (/** @type {number} */ ms, promise) => {
   return Promise.race([
     new Promise((_, reject) => {
       setTimeout(() => {
@@ -16,7 +16,7 @@ const withTimeout = (ms, promise) => {
 };
 
 /** Verifies that a fetch response has an successful status code. */
-const checkStatus = (/** @type Response */ response) => {
+export const checkStatus = (/** @type Response */ response) => {
   if (response.ok) {
     return response;
   } else {
@@ -96,7 +96,7 @@ export const canFetchDevApi = Promise.resolve().then(async () => {
 /**
  * Fetch a path on the stadia.google.com domain, through our Chrome extension.
  */
-export const fetchStadia = async (path, options = {}) => {
+export const fetchStadia = async (/** @type {string} */ path, options = {}) => {
   if (path.startsWith("/")) {
     console.warn("Please get rid of the leading slash in ", path);
     path = path.replace(/^\/+/, "");
@@ -114,17 +114,6 @@ export const fetchStadia = async (path, options = {}) => {
       return JSON.parse(this._text);
     },
   };
-};
-
-export const fetchStadiaJsons = async (path, options = {}) => {
-  const response = await fetchStadia(path, options);
-  console.debug("Got Stadia response", response);
-  checkStatus(response);
-  const body = await response.text();
-  const doc = new DOMParser().parseFromString(body, "text/html");
-  const scripts = [...doc.querySelectorAll("script")];
-
-  return scripts.flatMap(script => jsonObjects(script.textContent));
 };
 
 /**

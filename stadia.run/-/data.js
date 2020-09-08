@@ -2,7 +2,7 @@
  * Ephemeral in-memory record of all known records.
  * @type {{[key: string]: Record}}
  */
-const records = {};
+export const records = {};
 
 export const getset = (
   /** @type {
@@ -40,6 +40,7 @@ export const getset = (
 
 /** @typedef {Game | Subscription | Bundle | Addon} Sku */
 /** @typedef {Sku | List} Record */
+
 /** @typedef {{
   [skuId: string]: {
     firstSeen: number,
@@ -53,7 +54,7 @@ const makeRecord = (/** @type {Record["type"]} */ type) => {
   if (type === "addon") return new Addon();
   if (type === "subscription") return new Subscription();
   if (type === "list") return new List();
-  throw new TypeError("unknown record type");
+  throw new TypeError(`unknown record type: ${type}`);
 };
 
 class ARecord {
