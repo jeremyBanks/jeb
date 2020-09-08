@@ -2,8 +2,8 @@
 
 // We may import an copy of this module while using dev tools, so we use
 // this to share any mutable state between the module instances.
-const mut = (globalThis["index.mjs#mut"] =
-  globalThis["index.mjs#mut"] || Object.create(null));
+const mut = (globalThis["index.js#mut"] =
+  globalThis["index.js#mut"] || Object.create(null));
 
 export const initialized = (mut.initialized =
   mut.initialized ||
@@ -225,7 +225,7 @@ const initDevToolsLoader = async () => {
       if (document.location.hash !== "#dev-tools") {
         const scrollTop = document.documentElement.scrollTop;
         document.location.hash = "#dev-tools";
-        window.import("/-/dev.mjs");
+        window.import("/-/dev.js");
         prevented = true;
         document.documentElement.scrollTop = scrollTop;
         event.preventDefault();
@@ -244,19 +244,19 @@ const initDevToolsLoader = async () => {
   });
 
   if (document.location.hash === "#dev-tools") {
-    window.import("/-/dev.mjs");
+    window.import("/-/dev.js");
     prevented = true;
   }
 
   document.addEventListener("hashchange", () => {
     if (document.location.hash === "#dev-tools") {
-      window.import("/-/dev.mjs");
+      window.import("/-/dev.js");
       prevented = true;
     }
   });
 
   document.querySelector("footer a").addEventListener("click", event => {
-    window.import("/-/dev.mjs");
+    window.import("/-/dev.js");
     const scrollTop = document.documentElement.scrollTop;
     document.location.hash = "#dev-tools";
     document.documentElement.scrollTop = scrollTop;

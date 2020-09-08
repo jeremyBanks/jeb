@@ -1,4 +1,4 @@
-import { slugify } from "./index.mjs";
+import { slugify } from "./index.js";
 
 addEventListener("fetch", event =>
   event.respondWith(
