@@ -9,6 +9,8 @@ import {
   getset as record,
 } from "./data.mjs";
 
+import { sleep } from "./async.mjs";
+
 const stadiaPro = /** @type {Subscription} */ (record({
   type: "subscription",
   skuId: "59c8314ac82a456ba61d08988b15b550",
@@ -25,3 +27,8 @@ const allGames = /** @type {List} */ (record({
 }));
 
 const seeds = [allGames, stadiaPro, celeste];
+
+/** @returns {Promise<never>} */
+const spiderThread = async () => {
+  for (;;) {}
+};
