@@ -10,5 +10,5 @@
     "strict": true
   },
   "exclude": ["node_modules", "worker", "dist"],
-  "include": ["./**/*.mjs"]
+  "include": ["./**/*.js"]
 }
