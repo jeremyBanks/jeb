@@ -8,29 +8,17 @@ import {
   records,
 } from "./data.js";
 import { jsonObjects } from "./jsons.js";
-import { fetchStadia, checkStatus } from "./net.js";
+import {
+  fetchStadia,
+  checkStatus,
+  canFetchStadiaStore,
+  canFetchDevApi,
+  fetchDevApi,
+} from "./net.js";
 /** @typedef {import("./data.js").Sku} Sku */
 /** @typedef {import("./data.js").Record} Record */
 
-import { sleep } from "./async.js";
-
-const seeds = [
-  getset({
-    name: "All Games",
-    type: "list",
-    listId: 3,
-  }),
-  getset({
-    name: "Stadia Pro",
-    type: "subscription",
-    skuId: "59c8314ac82a456ba61d08988b15b550",
-  }),
-  getset({
-    name: "Celeste",
-    type: "game",
-    skuId: "68fb07a7c4ac41f1afb21d742c717538",
-  }),
-];
+import { sleep, withTimeout } from "./async.js";
 
 const loadSkuData = (/** @type {Array<unknown>} */ skuData) => {
   // https://github.com/stadians/stadians/blob/spider/src/foreground/spider.ts#L113
@@ -69,33 +57,73 @@ const spider = async (/** @type {Record} */ record) => {
   });
 };
 
-/** @returns {Promise<never>} */
+/** @returns {Promise<unknown>} */
 export const spiderThread = async () => {
-  for (const seed of seeds) {
-    await sleep(4.0);
-    await spider(seed);
-    console.info("🌱 seeded", seed);
+  try {
+    await withTimeout(16, canFetchStadiaStore);
+  } catch (error) {
+    console.debug(
+      "Failed to connect to Stadia store, abandoning spider.",
+      error,
+    );
+    return;
   }
 
-  console.info(
-    `${Object.keys(records).length} records after seeding.`,
-    records,
-  );
+  getset({
+    name: "All Games",
+    type: "list",
+    listId: 3,
+  });
+
+  getset({
+    name: "Stadia Pro",
+    type: "subscription",
+    skuId: "59c8314ac82a456ba61d08988b15b550",
+  });
+
+  try {
+    await withTimeout(16, canFetchDevApi);
+
+    const skus = await (await fetchDevApi("skus.json")).json();
+    Object.values(skus).forEach(getset);
+    console.info(`${Object.keys(records).length} records loaded.`, records);
+  } catch (error) {
+    console.debug(
+      "Failed to connect to local dev server, skipping load.",
+      error,
+    );
+  }
 
   for (;;) {
-    await sleep(16.0);
     const record = Object.values(records).sort((a, b) => {
-      if (a.lastSpidered ?? NaN < b.lastSpidered ?? NaN) {
-        return +1;
-      } else if (b.lastSpidered ?? NaN < a.lastSpidered ?? NaN) {
+      if (a.lastSpidered < b.lastSpidered) {
         return -1;
+      } else if (b.lastSpidered < a.lastSpidered) {
+        return +1;
+      } else if (a.lastModified < b.lastModified) {
+        return -1;
+      } else if (b.lastModified < a.lastModified) {
+        return +1;
       } else {
         return 0;
       }
     })[0];
 
+    if (await canFetchDevApi) {
+      const sorted = {};
+      for (const key of Object.keys(records).sort()) {
+        sorted[key] = records[key];
+      }
+      fetchDevApi("skus.json", {
+        method: "PUT",
+        body: JSON.stringify(sorted, null, 2),
+      });
+    }
+
     await spider(record);
     console.info("🕷️ spidered", record);
+    console.info(`${Object.keys(records).length} records.`, records);
+    await sleep(16.0);
   }
 };
 

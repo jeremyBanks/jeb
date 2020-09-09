@@ -13,13 +13,20 @@ export const getset = (
   const newRecord = Object.assign(makeRecord(newProps.type), newProps);
   const now = Date.now();
   const existingRecord = records[newRecord._key];
-  const record = existingRecord || makeRecord(newRecord.type);
+  const record = existingRecord ?? makeRecord(newRecord.type);
+
+  let modified = false;
   if (existingRecord) {
     for (const [property, newValue] of Object.entries(newRecord)) {
       const oldValue = existingRecord[property];
-      if (newValue !== oldValue && newValue != null) {
+      if (newValue !== oldValue && newValue != undefined) {
         record[property] = newValue;
-        record.lastModified = now;
+        if (oldValue != undefined && property !== "lastSpidered") {
+          console.debug(
+            `modified ${property} of ${record.type} ${record._key} from ${oldValue} to ${newValue}`,
+          );
+          modified = true;
+        }
       }
     }
     if (
@@ -29,10 +36,17 @@ export const getset = (
       throw new Error("data integrity failure");
     }
   } else {
-    Object.assign(record, newRecord, { firstSeen: now });
-    record.firstSeen = now;
+    Object.assign(record, newRecord);
   }
+
+  if (!record.type || !record._key || record._key === "undefined") {
+    throw new TypeError("record corrupt, missing key or type");
+  }
+
+  record.firstSeen = record.firstSeen ?? now;
   record.lastSeen = now;
+  record.lastModified = modified ? now : record.lastModified ?? 0;
+  record.lastSpidered = record.lastSpidered ?? 0;
 
   records[record._key] = record;
   return record;
@@ -60,10 +74,10 @@ const makeRecord = (/** @type {Record["type"]} */ type) => {
 class ARecord {
   /** @type {string} */ type;
   /** @type {string} */ name;
-  /** @type {number} */ lastSpidered = 0;
-  /** @type {number} */ lastModified = 0;
-  /** @type {number} */ firstSeen = 0;
-  /** @type {number} */ lastSeen = 0;
+  /** @type {number} */ lastSpidered;
+  /** @type {number} */ lastModified;
+  /** @type {number} */ firstSeen;
+  /** @type {number} */ lastSeen;
 
   /**
    * A primary key uniquely identifying this record from all others.

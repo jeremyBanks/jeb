@@ -1,19 +1,8 @@
 import { jsonObjects } from "./jsons.js";
+import { withTimeout } from "./async.js";
 
 const devApiHost = "//dev-api.stadia.st:57482";
 const chromeExtensionId = "faklgfkhnojnmccmjiifiljdhfjnacpb";
-
-/** Wraps a promise with a timeout. */
-const withTimeout = (/** @type {number} */ ms, promise) => {
-  return Promise.race([
-    new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(`timed out after ${ms}ms`));
-      }, ms);
-    }),
-    promise,
-  ]);
-};
 
 /** Verifies that a fetch response has an successful status code. */
 export const checkStatus = (/** @type Response */ response) => {
@@ -54,7 +43,7 @@ const chromeCall = async (methodName, ...args) => {
  */
 export const canFetchStadiaHost = Promise.resolve().then(async () => {
   try {
-    return "pong" === (await withTimeout(1_000, chromeCall("ping")));
+    return "pong" === (await withTimeout(1, chromeCall("ping")));
   } catch {
     return false;
   }
@@ -82,10 +71,7 @@ export const canFetchStadiaStore = canFetchStadiaHost.then(
  */
 export const canFetchDevApi = Promise.resolve().then(async () => {
   try {
-    const response = await withTimeout(
-      4_000,
-      fetch(`${devApiHost}/skus.json`).then(checkStatus),
-    );
+    const response = await withTimeout(4, fetchDevApi("skus.json"));
     await response.json();
     return true;
   } catch {
@@ -102,7 +88,7 @@ export const fetchStadia = async (/** @type {string} */ path, options = {}) => {
     path = path.replace(/^\/+/, "");
   }
   const response = await withTimeout(
-    16_000,
+    16,
     chromeCall("fetchStadia", path, options),
   );
   return {
