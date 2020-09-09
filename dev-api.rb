@@ -22,7 +22,7 @@ while connection = server.accept
 
   content_length = headers[:content_length]
   body = unless content_length.nil?
-    connection.gets(nil, content_length.to_i)
+    connection.read(content_length.to_i).force_encoding('utf-8')
   end
 
   response = nil
