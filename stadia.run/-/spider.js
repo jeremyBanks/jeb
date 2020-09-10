@@ -385,7 +385,7 @@ const updateDocument = async () => {
     let url = game.coverUrl;
 
     const fullImg = root.querySelector("img");
-    fullImg.src = url + "=w640-h180-rw";
+    fullImg.src = url + "=w640-h360-rw";
     root.querySelector("st-cover-full").hidden = fullImg.complete;
     root.querySelector("st-cover-micro").hidden = !fullImg.complete;
     loadedImage(url)
