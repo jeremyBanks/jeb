@@ -7,7 +7,7 @@ import {
   getset,
   records,
 } from "./data.js";
-import { loadedImage, digits } from "./index.js";
+import { digits, loadedImage, microImageToURL, slugify } from "./index.js";
 import { jsonObjects } from "./jsons.js";
 import {
   fetchStadia,
@@ -127,11 +127,13 @@ export const spiderThread = async () => {
       }
     })[0];
 
-    if (record.lastSpidered > Date.now() - 12 * 60 * 60 * 1000) {
+    if (record.lastSpidered > Date.now() - 8 * 60 * 60 * 1000) {
       console.info("Everything has been spidered recently.");
       await sleep(128.0);
       continue;
     }
+
+    await updateDocument();
 
     if (await canFetchDevApi) {
       const sorted = {};
@@ -142,6 +144,7 @@ export const spiderThread = async () => {
         method: "PUT",
         body: JSON.stringify(sorted, null, 2),
       });
+      downloadDocument();
     }
 
     await spider(record);
@@ -292,4 +295,135 @@ const rgbToU6 = (/** @type [number, number, number] */ rgb) => {
   const green = Math.round((0b11 * rgb[1]) / 0xff);
   const blue = Math.round((0b11 * rgb[2]) / 0xff);
   return (red << 0) + (green << 2) + (blue << 4);
+};
+
+const downloadDocument = async () => {
+  const docToDownload = document.documentElement.cloneNode(true);
+
+  docToDownload.querySelector("title").textContent = "stadia.run";
+
+  for (const el of docToDownload.querySelectorAll("[hidden]")) {
+    el.removeAttribute("hidden");
+  }
+
+  for (const input of docToDownload.querySelectorAll("input[value]")) {
+    el.removeAttribute("value");
+  }
+
+  for (const el of docToDownload.querySelectorAll("[style]")) {
+    el.removeAttribute("style");
+  }
+
+  for (const el of docToDownload.querySelectorAll('[class=""],main [class]')) {
+    el.removeAttribute("class");
+  }
+
+  const html =
+    "<!doctype html>" +
+    docToDownload.innerHTML
+      .replace(/\s*<\/body>\s*$/, "\n")
+      .replace(/^<head>/, "")
+      .replace(/<\/head><body>/, "")
+      .replace(/(\s)(disabled|autofocus)(="")([>\s])<\/body>/g, "$1$2$4");
+
+  await fetch("//dev-api.stadia.st:57482/index.html", {
+    method: "PUT",
+    body: html,
+  });
+};
+
+const updateDocument = async () => {
+  const proGameSkus = new Set();
+  const addProGames = skuId => {
+    const sku = records[skuId];
+    if (sku.type === "game") {
+      proGameSkus.add(skuId);
+    } else if (sku.childSkuIds) {
+      sku.childSkuIds.forEach(addProGames);
+    }
+  };
+  addProGames("59c8314ac82a456ba61d08988b15b550");
+
+  const games = [...Object.values(records)]
+    .filter(sku => sku.type === "game")
+    .map(game => ({
+      ...game,
+      name: game.name
+        .replace(/™/g, " ")
+        .replace(/®/g, " ")
+        .replace(/[\:\-]? Early Access$/g, " ")
+        .replace(/[\:\-]? \w+ Edition$/g, " ")
+        .replace(/\(\w+ Ver(\.|sion)\)$/g, " ")
+        .replace(/™/g, " ")
+        .replace(/\s{2,}/g, " ")
+        .replace(/^\s+|\s+$/g, ""),
+      pro: proGameSkus.has(game.skuId),
+    }))
+    .sort((gameA, gameB) => {
+      const aName = gameA.name.toLowerCase();
+      const bName = gameB.name.toLowerCase();
+
+      if (gameA.pro && !gameB.pro) {
+        return -1;
+      } else if (!gameA.pro && gameB.pro) {
+        return +1;
+      } else if (aName < bName) {
+        return -1;
+      } else if (aName > bName) {
+        return +1;
+      } else {
+        return 0;
+      }
+    });
+
+  const template = document.querySelector("st-games template");
+
+  const fragment = document.createDocumentFragment();
+
+  for (const game of games) {
+    let root = template.content.cloneNode(true).firstElementChild;
+    let url = game.coverUrl;
+
+    const fullImg = root.querySelector("img");
+    fullImg.src = url;
+    root.querySelector("st-cover-full").hidden = fullImg.complete;
+    root.querySelector("st-cover-micro").hidden = !fullImg.complete;
+    loadedImage(url)
+      .then(() => {
+        root.querySelector("st-cover-full").hidden = false;
+        root.querySelector("st-cover-micro").hidden = true;
+      })
+      .catch(error => console.error(error));
+
+    const link = root.querySelector("a");
+    link.href = `https://stadia.google.com/player/${game.appId}`;
+    root.querySelector("st-name").textContent = game.name;
+
+    root.querySelector(
+      "st-cover-micro",
+    ).style.backgroundImage = `url(${microImageToURL(game.coverMicroData)})`;
+
+    root
+      .querySelector("st-cover-micro")
+      .setAttribute("data", game.coverMicroData);
+
+    if (game.pro) {
+      root.querySelector("a").appendChild(
+        Object.assign(document.createElement("st-pro"), {
+          textContent: "PRO",
+        }),
+      );
+    }
+
+    fragment.appendChild(document.createTextNode("\n    "));
+    fragment.appendChild(root);
+  }
+
+  template.remove();
+  const gamesEl = document.querySelector("st-games");
+  gamesEl.textContent = "";
+  gamesEl.appendChild(template);
+  gamesEl.appendChild(fragment);
+
+  gamesEl.appendChild(document.createTextNode("\n  "));
 };
