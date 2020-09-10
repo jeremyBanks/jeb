@@ -7,6 +7,7 @@ import {
   getset,
   records,
 } from "./data.js";
+import { loadedImage, digits } from "./index.js";
 import { jsonObjects } from "./jsons.js";
 import {
   fetchStadia,
@@ -20,35 +21,52 @@ import {
 
 import { sleep, withTimeout } from "./async.js";
 
-const loadSkuData = (/** @type {Array<unknown>} */ skuData) => {
-  // https://github.com/stadians/stadians/blob/spider/src/foreground/spider.ts#L113
-  const skuId = skuData[0];
-  const appId = skuData[4];
-  const name = skuData[1];
+const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
   const type = {
     1: "game",
     2: "addon",
     3: "bundle",
     5: "subscription",
   }[skuData[6]];
+  const skuId = skuData[0];
+  const appId = skuData[4];
+  const name = skuData[1];
 
-  return getset({
+  const coverUrl = skuData?.[2]?.[1]?.[0]?.[0]?.[1]?.split(/=/)[0];
+  const coverMicroData = await microImageFromURL(coverUrl);
+
+  const childSkuIds = skuData?.[14]?.[0]?.map(x => x[0]);
+  const childData = skuData?.[14]?.[0]?.map(x => x[2]);
+  if (childData?.filter(Boolean).length) {
+    // if this is a shallow view it these will be null
+    await Promise.all(childData.map(loadSkuData));
+  }
+
+  const props = {
     type,
     skuId,
     appId,
     name,
-  });
+    coverUrl,
+    coverMicroData,
+  };
+
+  if (childSkuIds) {
+    props.childSkuIds = childSkuIds;
+  }
+
+  return getset(props);
 };
 
 const spider = async (/** @type {Record} */ record) => {
   if (record.type === "list") {
     const page = await fetchStadiaPage(`store/list/${record.listId}`);
     for (const sku of page.list) {
-      loadSkuData(sku[9]);
+      await loadSkuData(sku[9]);
     }
   } else {
     const page = await fetchStadiaPage(`store/details/-/sku/${record.skuId}`);
-    loadSkuData(page.sku[16]);
+    await loadSkuData(page.sku[16]);
   }
 
   getset({
@@ -109,6 +127,12 @@ export const spiderThread = async () => {
       }
     })[0];
 
+    if (record.lastSpidered > Date.now() - 12 * 60 * 60 * 1000) {
+      console.info("Everything has been spidered recently.");
+      await sleep(128.0);
+      continue;
+    }
+
     if (await canFetchDevApi) {
       const sorted = {};
       for (const key of Object.keys(records).sort()) {
@@ -122,7 +146,7 @@ export const spiderThread = async () => {
 
     await spider(record);
     console.info("🕷️ spidered", record);
-    console.info(`${Object.keys(records).length} records.`, records);
+    console.debug(`${Object.keys(records).length} records.`, records);
     await sleep(16.0);
   }
 };
@@ -234,4 +258,38 @@ const fetchStadiaOpaque = async url => {
   }
 
   return data;
+};
+
+/**
+ * Returns an base-64 encoded 8x8 thumbnail the image at a given URL.
+ * @returns {Promise<String>}
+ */
+const microImageFromURL = async (/** @type string */ url) => {
+  const image = await loadedImage(url);
+  const canvas = document.createElement("canvas");
+  canvas.width = 8;
+  canvas.height = 8;
+  const g2d = canvas.getContext("2d");
+  g2d.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const pixels = g2d.getImageData(0, 0, canvas.width, canvas.height);
+
+  const microImage = new Array();
+  for (let i = 0; i < 64; i++) {
+    const rgb = pixels.data.slice(i * 4, i * 4 + 3);
+    const u6 = rgbToU6(rgb);
+    microImage.push(digits[u6]);
+  }
+
+  return microImage.join("");
+};
+
+/**
+ * Rounds a 24-bit RGB value to the nearest 6-bit RGB value.
+ * @returns {number}
+ */
+const rgbToU6 = (/** @type [number, number, number] */ rgb) => {
+  const red = Math.round((0b11 * rgb[0]) / 0xff);
+  const green = Math.round((0b11 * rgb[1]) / 0xff);
+  const blue = Math.round((0b11 * rgb[2]) / 0xff);
+  return (red << 0) + (green << 2) + (blue << 4);
 };

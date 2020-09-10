@@ -19,9 +19,13 @@ export const getset = (
   if (existingRecord) {
     for (const [property, newValue] of Object.entries(newRecord)) {
       const oldValue = existingRecord[property];
-      if (newValue !== oldValue && newValue != undefined) {
+      if (
+        newValue != undefined &&
+        newValue !== oldValue &&
+        JSON.stringify(newValue) !== JSON.stringify(oldValue)
+      ) {
         record[property] = newValue;
-        if (oldValue != undefined && property !== "lastSpidered") {
+        if (oldValue != undefined && !/^(first|last)/.test(property)) {
           console.debug(
             `modified ${property} of ${record.type} ${record._key} from ${oldValue} to ${newValue}`,
           );
@@ -99,6 +103,7 @@ export class List extends ARecord {
 
 class ASku extends ARecord {
   /** @type {string} */ skuId;
+  /** @type {string} */ coverUrl;
   get _key() {
     return `${this.skuId}`;
   }
@@ -108,28 +113,17 @@ export class Game extends ASku {
   /** @type {"game"} */ type = "game";
   /** @type {string} */ appId;
   /** @type {string} */ slug;
-  /** @type {string} */ cover720Url;
   /** @type {string} */ coverMicroData;
 }
 
 export class Subscription extends ASku {
   /** @type {"subscription"} */ type = "subscription";
-  /** @type {{
-    [skuId: string]: {
-      firstSeen: number,
-      lastSeen: number,
-    }
-  }} */ skus;
+  /** @type {Array<string>} */ childSkuIds;
 }
 
 export class Bundle extends ASku {
   /** @type {"bundle"} */ type = "bundle";
-  /** @type {{
-    [skuId: string]: {
-      firstSeen: number,
-      lastSeen: number,
-    }
-  }} */ skus;
+  /** @type {Array<string>} */ childSkuIds;
 }
 
 export class Addon extends ASku {
