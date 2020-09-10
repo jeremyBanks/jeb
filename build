@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-shopt -s inherit_errexit nullglob compat"${BASH_COMPAT=42}"
+shopt -s inherit_errexit extglob nullglob compat"${BASH_COMPAT=42}"
 cd "$(dirname "${BASH_SOURCE}")"
 
 declare source="$PWD/stadia.run/index.html"
@@ -15,7 +15,8 @@ tail -n +2 "./node_modules/json5/dist/index.mjs" >> "./stadia.run/-/json5.js"
 
 yarn replace-in-files --regex='"version"\s*:\s*"(.*?)"' --replacement='"version": "'"$(date "+%Y.%-m.%-d")"'"' "./package.json" "./extension/manifest.json"
 yarn replace-in-files --regex='"version_name"\s*:\s*"(.*?)"' --replacement='"version_name": "'"$(date "+%Y-%m-%d")"'"' "./extension/manifest.json"
-yarn sort-json "./"*".json" {"./stadia."*"/-","./.vscode","./.github"}"/"**/*"."{"json","yml","yaml"}
+yarn sort-json .vscode/**/*.json .github/**/*.{json,yml,yaml} ./*.json ./stadia.run/-/**.json ./stadia.st/-/**.json
+
 yarn prettier --write "./"*".json" "./stadia."*"/-/" "./.vscode/" "./extension/"**/*.js "./.github/"
 
 yarn tsc || :
