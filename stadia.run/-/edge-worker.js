@@ -59,6 +59,8 @@ const maybeRedirect = async url => {
     return null;
   }
 
-  const appId = game.app;
-  return Response.redirect(`https://stadia.google.com/player/${appId}`, 301);
+  return Response.redirect(
+    `https://stadia.google.com/player/${game.appId}`,
+    301,
+  );
 };
