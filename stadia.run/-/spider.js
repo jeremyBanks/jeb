@@ -27,16 +27,20 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
     2: "addon",
     3: "bundle",
     5: "subscription",
+    6: "addon-subscription",
+    10: "preorder",
   }[skuData[6]];
   const skuId = skuData[0];
   const appId = skuData[4];
   const name = skuData[1];
 
-  const coverUrl = skuData?.[2]?.[1]?.[0]?.[0]?.[1]?.split(/=/)[0];
+  const coverUrl = skuData[2]?.[1]?.[0]?.[0]?.[1]?.split(/=/)[0];
   const coverMicroData = await microImageFromURL(coverUrl);
 
-  const childSkuIds = skuData?.[14]?.[0]?.map(x => x[0]);
-  const childData = skuData?.[14]?.[0]?.map(x => x[2]);
+  const released = 1000 * skuData[26]?.[0];
+
+  const childSkuIds = skuData[14]?.[0]?.map(x => x[0]);
+  const childData = skuData[14]?.[0]?.map(x => x[2]);
   if (childData?.filter(Boolean).length) {
     // if this is a shallow view it these will be null
     await Promise.all(childData.map(loadSkuData));
@@ -49,6 +53,7 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
     name,
     coverUrl,
     coverMicroData,
+    released,
   };
 
   if (childSkuIds) {
@@ -65,8 +70,26 @@ const spider = async (/** @type {Record} */ record) => {
       await loadSkuData(sku[9]);
     }
   } else {
-    const page = await fetchStadiaPage(`store/details/-/sku/${record.skuId}`);
+    const appId = record.appId || "-";
+    const page = await fetchStadiaPage(
+      `store/details/${appId}/sku/${record.skuId}`,
+    );
     await loadSkuData(page.sku[16]);
+    if (page.gameAddons) {
+      for (const sku of page.gameAddons) {
+        await loadSkuData(sku[9]);
+      }
+    }
+    if (page.gameBundles) {
+      for (const sku of page.gameBundles) {
+        await loadSkuData(sku[9]);
+      }
+    }
+    if (page.gameSubscriptions) {
+      for (const sku of page.gameSubscriptions) {
+        await loadSkuData(sku[9]);
+      }
+    }
   }
 
   getset({
@@ -113,11 +136,12 @@ export const spiderThread = async () => {
   }
 
   for (;;) {
+    const now = Date.now();
     const record = Object.values(records).sort((a, b) => {
-      if (a.lastSpidered < b.lastSpidered) {
-        return -1;
-      } else if (b.lastSpidered < a.lastSpidered) {
+      if (a.age(now) < b.age(now)) {
         return +1;
+      } else if (b.age(now) < a.age(now)) {
+        return -1;
       } else if (a.lastModified < b.lastModified) {
         return -1;
       } else if (b.lastModified < a.lastModified) {
@@ -127,8 +151,12 @@ export const spiderThread = async () => {
       }
     })[0];
 
-    if (record.lastSpidered > Date.now() - 8 * 60 * 60 * 1000) {
-      console.info("Everything has been spidered recently.");
+    if (record.age(now) < 24 * 60 * 60 * 1000) {
+      console.info(
+        `Everything has been spidered recently (at most ${
+          record.age(now) / 1000 / 60 / 60
+        } hours ago).`,
+      );
       await sleep(128.0);
       continue;
     }
@@ -164,6 +192,9 @@ const fetchStadiaPage = async url => {
   data.playerGames = opaque.Q6jt8cooos?.[0];
   data.sku = opaque.FWhQVssb;
   data.storefront = opaque.xjyeoc?.[3].flatMap(x => x?.[1]);
+  data.gameAddons = opaque.ZAm7Wesooooooob?.[0];
+  data.gameBundles = opaque.SYcsTdsb?.[1];
+  data.gameSubscriptions = opaque.SYcsTdsb?.[2];
 
   for (const key of Object.keys(data)) {
     if (data[key] === undefined) {
@@ -345,7 +376,12 @@ const updateDocument = async () => {
   addProGames("59c8314ac82a456ba61d08988b15b550");
 
   const games = [...Object.values(records)]
-    .filter(sku => sku.type === "game")
+    // only include games that are to be released within the next week
+    .filter(
+      sku =>
+        sku.type === "game" &&
+        sku.released < Date.now() + 1000 * 60 * 60 * 24 * 7,
+    )
     .map(game => ({
       ...game,
       name: game.name
