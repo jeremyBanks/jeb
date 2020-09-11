@@ -67,12 +67,16 @@ export const getset = (
 }} SkuSet */
 
 const makeRecord = (/** @type {Record["type"]} */ type) => {
+  if (!type) throw new TypeError("no .type");
   if (type === "game") return new Game();
   if (type === "bundle") return new Bundle();
   if (type === "addon") return new Addon();
   if (type === "subscription") return new Subscription();
   if (type === "list") return new List();
-  throw new TypeError(`unknown record type: ${type}`);
+  if (type === "preorder") return new Preorder();
+
+  console.warn(`weird type: ${type}`);
+  return new UnknownTypeSku();
 };
 
 class ARecord {
@@ -90,10 +94,26 @@ class ARecord {
   get _key() {
     throw new TypeError("not implemented");
   }
+
+  /**
+   * A modifier on the speed with which records of this type get
+   * stale.
+   */
+  get _age_rate() {
+    return 1.0;
+  }
+
+  age(now = Date.now()) {
+    return (Date.now() - this.lastSpidered) * this._age_rate;
+  }
 }
 
 export class List extends ARecord {
   /** @type {"list"} */ type = "list";
+
+  get _age_rate() {
+    return 8.0;
+  }
 
   /** @type {number} */ listId;
   get _key() {
@@ -104,9 +124,16 @@ export class List extends ARecord {
 class ASku extends ARecord {
   /** @type {string} */ skuId;
   /** @type {string} */ coverUrl;
+  /** @type {number} */ released;
   get _key() {
     return `${this.skuId}`;
   }
+}
+
+export class UnknownTypeSku extends ASku {}
+
+export class Preorder extends ASku {
+  /** @type {"preorder"} */ type = "preorder";
 }
 
 export class Game extends ASku {
@@ -119,6 +146,10 @@ export class Game extends ASku {
 export class Subscription extends ASku {
   /** @type {"subscription"} */ type = "subscription";
   /** @type {Array<string>} */ childSkuIds;
+
+  get _age_rate() {
+    return 8.0;
+  }
 }
 
 export class Bundle extends ASku {
@@ -128,4 +159,8 @@ export class Bundle extends ASku {
 
 export class Addon extends ASku {
   /** @type {"addon"} */ type = "addon";
+
+  get _age_rate() {
+    return 0.25;
+  }
 }
