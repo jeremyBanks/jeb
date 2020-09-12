@@ -21,8 +21,6 @@ export const initialize = async () => {
     return;
   }
 
-  loadGamesFromDocument();
-
   searchInput.addEventListener("input", event => onInput(event));
   searchForm.addEventListener("submit", event => onSubmit(event));
   window.addEventListener("popstate", checkUrl);
@@ -44,20 +42,24 @@ export const skus = (mut.skus = mut.skus || new Map());
 export const digits =
   "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 
-export const slugify = (/** @type string */ name, separator = "-") => {
-  return name
+export const cleanName = name =>
+  name
+    .replace(/™/g, " ")
+    .replace(/®/g, " ")
+    .replace(/[\:\-]? Early Access$/g, " ")
+    .replace(/[\:\-]? \w+ Edition$/g, " ")
+    .replace(/\(\w+ Ver(\.|sion)\)$/g, " ")
+    .replace(/™/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^\s+|\s+$/g, "");
+
+export const slugify = (name, separator = "-") =>
+  cleanName(name)
     .toLowerCase()
+    .replace(/'/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^\-+|\-+$/g, "")
     .replace(/\-/g, separator);
-};
-
-/**
- * Reads data from the `st-games` elements in the document into `games`.
- */
-export const loadGamesFromDocument = () => {
-  const els = gameTiles.querySelectorAll("st-game");
-};
 
 export const loadedImage = async (/** @type string */ url) => {
   const image = new Image();

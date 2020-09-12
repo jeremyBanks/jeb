@@ -1,3 +1,5 @@
+import { slugify } from "./index.js";
+
 /**
  * Ephemeral in-memory record of all known records.
  * @type {{[key: string]: Record}}
@@ -99,19 +101,24 @@ class ARecord {
    * A modifier on the speed with which records of this type get
    * stale.
    */
-  get _age_rate() {
+  get _spiderFrequencyCoefficient() {
     return 1.0;
   }
 
   age(now = Date.now()) {
-    return (Date.now() - this.lastSpidered) * this._age_rate;
+    const knownStale = this.lastModified > this.lastSpidered + 10;
+    let frequencyCoefficient = this._spiderFrequencyCoefficient;
+    if (knownStale) {
+      frequencyCoefficient *= 64;
+    }
+    return (Date.now() - this.lastSpidered) * frequencyCoefficient;
   }
 }
 
 export class List extends ARecord {
   /** @type {"list"} */ type = "list";
 
-  get _age_rate() {
+  get _spiderFrequencyCoefficient() {
     return 8.0;
   }
 
@@ -125,6 +132,7 @@ class ASku extends ARecord {
   /** @type {string} */ skuId;
   /** @type {string} */ coverUrl;
   /** @type {number} */ released;
+
   get _key() {
     return `${this.skuId}`;
   }
@@ -139,15 +147,18 @@ export class Preorder extends ASku {
 export class Game extends ASku {
   /** @type {"game"} */ type = "game";
   /** @type {string} */ appId;
-  /** @type {string} */ slug;
   /** @type {string} */ coverMicroData;
+
+  get slug() {
+    return slugify(name);
+  }
 }
 
 export class Subscription extends ASku {
   /** @type {"subscription"} */ type = "subscription";
   /** @type {Array<string>} */ childSkuIds;
 
-  get _age_rate() {
+  get _spiderFrequencyCoefficient() {
     return 8.0;
   }
 }
@@ -160,7 +171,7 @@ export class Bundle extends ASku {
 export class Addon extends ASku {
   /** @type {"addon"} */ type = "addon";
 
-  get _age_rate() {
-    return 0.25;
+  get _spiderFrequencyCoefficient() {
+    return 1 / 16;
   }
 }

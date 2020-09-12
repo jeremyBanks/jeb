@@ -7,7 +7,7 @@ import {
   getset,
   records,
 } from "./data.js";
-import { digits, loadedImage, microImageToURL, slugify } from "./index.js";
+import { digits, loadedImage, microImageToURL, cleanName } from "./index.js";
 import { jsonObjects } from "./jsons.js";
 import {
   fetchStadia,
@@ -384,15 +384,7 @@ const updateDocument = async () => {
     )
     .map(game => ({
       ...game,
-      name: game.name
-        .replace(/™/g, " ")
-        .replace(/®/g, " ")
-        .replace(/[\:\-]? Early Access$/g, " ")
-        .replace(/[\:\-]? \w+ Edition$/g, " ")
-        .replace(/\(\w+ Ver(\.|sion)\)$/g, " ")
-        .replace(/™/g, " ")
-        .replace(/\s{2,}/g, " ")
-        .replace(/^\s+|\s+$/g, ""),
+      name: cleanName(game.name),
       pro: proGameSkus.has(game.skuId),
     }))
     .sort((gameA, gameB) => {
