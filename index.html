@@ -1212,10 +1212,10 @@
   <section class="container">
     <section class="body">
       <p>
-        local project: <span class="dev-server-status">✅ available</span>
+        local project: <span class="dev-server-status">❌ unavailable</span>
       </p>
       <p>
-        stadia store: <span class="stadia-proxy-status">✅ authenticated</span>
+        stadia store: <span class="stadia-proxy-status">❌ unavailable</span>
       </p>
     </section>
 
@@ -1260,8 +1260,7 @@ export const initialize = async () => {
   await Promise.all([initDevToolsLoader(), unpackMicroCovers()]);
 
   // Just used for PWA offline fallback, because Chrome requires it.
-  // XXX: disabled because this is breaking on the web
-  // navigator.serviceWorker.register('/--service-worker.js', {scope: '/'});
+  navigator.serviceWorker.register('/--service-worker.js', {scope: '/'});
 };
 
 export const searchForm =

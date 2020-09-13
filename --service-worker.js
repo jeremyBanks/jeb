@@ -1,6 +1,6 @@
 const cacheId = 'stadia.run/cache/v1';
 
-self.addEventListener('fetch', event => event.respondWith(async () => {
+self.addEventListener('fetch', event => event.respondWith((async () => {
   try {
     const response = await fetch(event.request);
     if (response.ok) {
@@ -11,4 +11,4 @@ self.addEventListener('fetch', event => event.respondWith(async () => {
   } catch (error) {
     return caches.match(event.request);
   }
-}));
+})()));
