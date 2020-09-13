@@ -1,5 +1,11 @@
 import { slugify } from "./index.js";
 
+class RecordStore {
+  load(data, metadata = null) {}
+}
+
+export const records = new RecordStore();
+
 /**
  * Ephemeral in-memory record of all known records.
  * @type {{[key: string]: Record}}
@@ -82,19 +88,20 @@ const makeRecord = (/** @type {Record["type"]} */ type) => {
 };
 
 class ARecord {
-  /** @type {string} */ type;
-  /** @type {string} */ name;
-  /** @type {number} */ lastSpidered;
-  /** @type {number} */ lastModified;
-  /** @type {number} */ firstSeen;
-  /** @type {number} */ lastSeen;
+  /** @type {string} */ type = "unknown";
+
+  /** @type {?string} */ name = null;
+  /** @type {?number} */ lastSpidered = null;
+  /** @type {?number} */ lastModified = null;
+  /** @type {?number} */ firstSeen = null;
+  /** @type {?number} */ lastSeen = null;
 
   /**
    * A primary key uniquely identifying this record from all others.
    * @returns {string}
    * */
   get _key() {
-    throw new TypeError("not implemented");
+    throw new TypeError(`not implemented for ${this.constructor}`);
   }
 
   /**
