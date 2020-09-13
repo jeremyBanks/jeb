@@ -4,6 +4,7 @@
 
 <link rel="canonical" href="https://stadia.run">
 <link rel="icon" href="/-/icon.png">
+<link rel="manifest" href="/-/manifest.json">
 <meta name="viewport" content="width=770">
 <meta property="og:title" content="stadia.run">
 <meta property="og:image" content="/-/icon.png">
@@ -1257,6 +1258,9 @@ export const initialize = async () => {
   checkUrl(true);
 
   await Promise.all([initDevToolsLoader(), unpackMicroCovers()]);
+
+  // Just used for PWA offline fallback, because Chrome requires it.
+  navigator.serviceWorker.register('/--service-worker.js', {scope: '/'});
 };
 
 export const searchForm =

@@ -28,6 +28,9 @@ export const initialize = async () => {
   checkUrl(true);
 
   await Promise.all([initDevToolsLoader(), unpackMicroCovers()]);
+
+  // Just used for PWA offline fallback, because Chrome requires it.
+  navigator.serviceWorker.register("/--service-worker.js", { scope: "/" });
 };
 
 export const searchForm =
