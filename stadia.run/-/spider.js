@@ -333,6 +333,8 @@ const downloadDocument = async () => {
 
   docToDownload.querySelector("title").textContent = "stadia.run";
 
+  docToDownload.querySelector("base").removeAttribute("target");
+
   for (const el of docToDownload.querySelectorAll("[hidden]")) {
     el.removeAttribute("hidden");
   }
