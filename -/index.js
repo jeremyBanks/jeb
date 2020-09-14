@@ -21,6 +21,22 @@ export const initialize = async () => {
     return;
   }
 
+  let desktopPWA = false;
+
+  try {
+    desktopPWA =
+      navigator.userAgentData &&
+      navigator.userAgentData.mobile === false &&
+      (window.navigator.standalone ||
+        window.matchMedia("(display-mode: standalone)").matches);
+  } catch (error) {
+    console.warn(error);
+  }
+
+  if (desktopPWA) {
+    document.querySelector("base").target = "_blank";
+  }
+
   searchInput.addEventListener("input", event => onInput(event));
   searchForm.addEventListener("submit", event => onSubmit(event));
   window.addEventListener("popstate", checkUrl);
@@ -30,7 +46,9 @@ export const initialize = async () => {
   await Promise.all([initDevToolsLoader(), unpackMicroCovers()]);
 
   // Just used for PWA offline fallback, because Chrome requires it.
-  navigator.serviceWorker.register("/--service-worker.js", { scope: "/" });
+  if (navigator.serviceWorker) {
+    navigator.serviceWorker.register("/--service-worker.js", { scope: "/" });
+  }
 };
 
 export const searchForm =
@@ -190,11 +208,7 @@ const onSubmit = event => {
     if (elements.length === 1) {
       const name = elements[0].querySelector("st-name").textContent;
       const slug = slugify(name);
-      if (!(event && event.first)) {
-        history.pushState(null, "", "/" + slug);
-      }
       searchInput.value = name;
-      document.title = "stadia.run/" + slug;
       elements[0].querySelector("a").click();
     } else {
       params.set("q", searchInput.value);
@@ -203,7 +217,6 @@ const onSubmit = event => {
         "",
         searchInput.value ? "/?" + params.toString() : "/",
       );
-      document.title = "stadia.run";
     }
   });
 };

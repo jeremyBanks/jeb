@@ -2,13 +2,14 @@
 
 <title>stadia.run</title>
 
-<link rel="canonical" href="https://stadia.run">
 <link rel="icon" href="/-/icon.png">
-<link rel="manifest" href="/-/manifest.json">
-<meta name="viewport" content="width=770">
 <meta property="og:title" content="stadia.run">
 <meta property="og:image" content="/-/icon.png">
 <meta property="og:description" content="a lightning-fast launcher for Stadia">
+
+<meta name="viewport" content="width=770">
+<link rel="manifest" href="/-/manifest.json">
+<base>
 
 <link rel="preload" as="image" href="/-/squirrel.png">
 <link rel="preload" as="image" href="/-/squirrel-stadian.png">
@@ -1070,7 +1071,7 @@
   </st-games>
 
   <footer>
-    <a href="#dev-tools" title="open dev tools">open dev tools</a>
+    <a href="#dev-tools" target="_self" title="open dev tools">open dev tools</a>
   </footer>
 </main>
 
@@ -1212,7 +1213,7 @@
   <section class="container">
     <section class="body">
       <p>
-        local project: <span class="dev-server-status">❌ unavailable</span>
+        local project: <span class="dev-server-status">✅ available</span>
       </p>
       <p>
         stadia store: <span class="stadia-proxy-status">❌ unavailable</span>
@@ -1251,6 +1252,23 @@ export const initialize = async () => {
     return;
   }
 
+  let desktopPWA = false;
+
+  try {
+    desktopPWA =
+      navigator.userAgentData &&
+      navigator.userAgentData.mobile === false && (
+        window.navigator.standalone ||
+        window.matchMedia('(display-mode: standalone)').matches
+      );
+  } catch (error) {
+    console.warn(error);
+  }
+
+  if (desktopPWA) {
+    document.querySelector('base').target = '_blank';
+  }
+
   searchInput.addEventListener("input", event => onInput(event));
   searchForm.addEventListener("submit", event => onSubmit(event));
   window.addEventListener("popstate", checkUrl);
@@ -1260,7 +1278,9 @@ export const initialize = async () => {
   await Promise.all([initDevToolsLoader(), unpackMicroCovers()]);
 
   // Just used for PWA offline fallback, because Chrome requires it.
-  navigator.serviceWorker.register('/--service-worker.js', {scope: '/'});
+  if (navigator.serviceWorker) {
+    navigator.serviceWorker.register('/--service-worker.js', {scope: '/'});
+  }
 };
 
 export const searchForm =
@@ -1421,11 +1441,7 @@ const onSubmit = event => {
     if (elements.length === 1) {
       const name = elements[0].querySelector("st-name").textContent;
       const slug = slugify(name);
-      if (!(event && event.first)) {
-        history.pushState(null, "", "/" + slug);
-      }
       searchInput.value = name;
-      document.title = "stadia.run/" + slug;
       elements[0].querySelector("a").click();
     } else {
       params.set("q", searchInput.value);
@@ -1434,7 +1450,6 @@ const onSubmit = event => {
         "",
         searchInput.value ? "/?" + params.toString() : "/",
       );
-      document.title = "stadia.run";
     }
   });
 };
