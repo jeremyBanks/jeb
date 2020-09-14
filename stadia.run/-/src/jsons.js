@@ -1,3 +1,5 @@
+// @ts-nocheck WIP
+
 import JSON5 from "./json5.js";
 
 /** @typedef {(

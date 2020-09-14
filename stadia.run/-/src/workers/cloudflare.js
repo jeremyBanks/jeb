@@ -1,4 +1,6 @@
-import { slugify } from "./index.js";
+// @ts-nocheck WIP
+
+import { slugify } from "../index.js";
 
 addEventListener("fetch", event =>
   event.respondWith(

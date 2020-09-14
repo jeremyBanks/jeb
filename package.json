@@ -1,12 +1,13 @@
 {
   "dependencies": {
     "@cloudflare/wrangler": "^1.11.0",
+    "@shopify/useful-types": "^2.2.0",
     "http-server": "^0.12.3",
     "json5": "^2.1.3",
     "prettier": "v2.0.5",
     "replace-in-files-cli": "v0.3.1",
     "sort-json": "v2",
-    "typescript": "^4.0.2",
+    "typescript": "^4.1.0-dev.20200914",
     "web-ext": "^4.2.0"
   },
   "main": "./stadia.run/-/edge-worker.js",
@@ -15,7 +16,11 @@
     "arrowParens": "avoid",
     "overrides": [
       {
-        "files": ["*.yml", "*.yaml", "*.json"],
+        "files": [
+          "*.yml",
+          "*.yaml",
+          "*.json"
+        ],
         "options": {
           "parser": "json",
           "trailingComma": "none"
@@ -29,5 +34,5 @@
     "web-ext/**/shelljs": ">=0.8.4"
   },
   "type": "module",
-  "version": "2020.9.13"
+  "version": "2020.9.14"
 }

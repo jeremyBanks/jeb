@@ -2,9 +2,10 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
-    "lib": ["DOM", "DOM.Iterable", "WebWorker", "ES2020", "ESNext"],
+    "lib": ["DOM", "DOM.Iterable", "ES2020", "ESNext"],
     "module": "ESNext",
     "noEmit": true,
+    "moduleResolution": "node",
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
     "rootDir": "./",

@@ -7,7 +7,7 @@ declare source="$PWD/stadia.run/index.html"
 declare target="$PWD/stadia.run/-/index.js"
 
 rm -rf "$target"
-echo "/** @generated from index.html */" > "$target"
+echo "// @ts-nocheck @generated from @generated from index.html" > "$target"
 echo >> "$target"
 sed -n -e '/<script type="module">/,/<\/script>/ p' "$source" | sed -e '1d;$d' >> "$target"
 

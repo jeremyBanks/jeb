@@ -1,3 +1,5 @@
+// @ts-nocheck WIP
+
 import {
   Addon,
   Bundle,
@@ -19,7 +21,7 @@ import {
 /** @typedef {import("./data.js").Sku} Sku */
 /** @typedef {import("./data.js").Record} Record */
 
-import { sleep, withTimeout } from "./async.js";
+import { sleep, withTimeout } from "./common/async.js";
 
 const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
   const type = {

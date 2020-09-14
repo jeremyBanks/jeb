@@ -1,3 +1,5 @@
+// @ts-nocheck WIP
+
 import { spiderThread } from "./spider.js";
 import {
   canFetchDevApi,

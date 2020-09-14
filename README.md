@@ -20,8 +20,6 @@ Stadia store data, including product names, images, descriptions, and other meta
 
 ## Contributing
 
-Changes to the `./stadia.run` or `./stadia.st` subdirectories must be made in standalone commits that only modify one of those directories and do not touch anything else. (This is because we split those paths out with git-subtree to deploy them, and that works more smoothly with distinct commits.) This means we can't squash-merge PRs.
-
 ### Warnings
 
 This repo and this code is a jumbled mess. I'll fix it up as I have time.

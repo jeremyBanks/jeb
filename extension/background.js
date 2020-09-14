@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 chrome.runtime.onMessageExternal.addListener(
   (message, _sender, sendResponse) => {
     handleRequest(message).then(sendResponse);
