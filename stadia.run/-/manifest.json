@@ -1,15 +1,23 @@
 {
-  "background_color": "#202124",
+  "background_color": "#202020",
   "description": "a lightning-fast launcher for Stadia",
   "display": "standalone",
   "icons": [
     {
+      "purpose": "maskable",
+      "sizes": "560x560",
+      "src": "/-/pwa.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "any",
       "sizes": "420x420",
       "src": "/-/icon.png",
       "type": "image/png"
     }
   ],
   "name": "stadia.run",
+  "short_name": "stadia.run",
   "start_url": "/",
-  "theme_color": "#202124"
+  "theme_color": "#202020"
 }
