@@ -183,19 +183,7 @@ const filterElements = async () => {
   }));
 };
 
-const onInput = event => {
-  filterElements().then(elements => {
-    const params = new URLSearchParams(location.search);
-
-    params.set("q", searchInput.value.toLowerCase());
-
-    history.replaceState(
-      null,
-      "",
-      searchInput.value ? "/?" + params.toString() : "/",
-    );
-  });
-};
+const onInput = () => filterElements();
 
 const onSubmit = event => {
   if (event && event.preventDefault) {
@@ -210,13 +198,6 @@ const onSubmit = event => {
       const slug = slugify(name);
       searchInput.value = name;
       elements[0].querySelector("a").click();
-    } else {
-      params.set("q", searchInput.value);
-      history.replaceState(
-        null,
-        "",
-        searchInput.value ? "/?" + params.toString() : "/",
-      );
     }
   });
 };
