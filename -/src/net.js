@@ -1,5 +1,7 @@
+// @ts-nocheck WIP
+
 import { jsonObjects } from "./jsons.js";
-import { withTimeout } from "./async.js";
+import { withTimeout } from "./common/async.js";
 
 const devApiHost = "//dev-api.stadia.st:57482";
 const chromeExtensionId = "faklgfkhnojnmccmjiifiljdhfjnacpb";

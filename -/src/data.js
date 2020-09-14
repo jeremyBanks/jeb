@@ -1,8 +1,24 @@
+// @ts-nocheck WIP
+
 import { slugify } from "./index.js";
 
-class RecordStore {
-  load(data, metadata = null) {}
+class RecordSpiderMetadata {
+  /** @type {?number} */ lastSpidered = null;
+  /** @type {?number} */ lastModified = null;
+  /** @type {?number} */ firstSeen = null;
+  /** @type {?number} */ lastSeen = null;
 }
+
+class RecordStore {
+  byKey = {};
+
+  loadRecord(data, /** @type {RecordSpiderMetadata} */ metadata = null) {
+
+  }
+}
+
+/** @type {ExampleTest} */
+var x;
 
 export const records = new RecordStore();
 
@@ -91,6 +107,7 @@ class ARecord {
   /** @type {string} */ type = "unknown";
 
   /** @type {?string} */ name = null;
+
   /** @type {?number} */ lastSpidered = null;
   /** @type {?number} */ lastModified = null;
   /** @type {?number} */ firstSeen = null;
