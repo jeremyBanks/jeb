@@ -27,12 +27,19 @@ while connection = server.accept
 
   response = nil
   status = case route
-    when /^GET\s+\/skus\.json$/
-      response = File.read("./stadia.st/-/skus.json", :encoding => "utf-8")
-      "200 OK"
-    when /^PUT\s+\/skus\.json$/
-      File.write("./stadia.st/-/skus.json", body, :encoding => "utf-8")
-      "204 No Content"
+  when /^GET\s+\/skus\.json$/
+    response = File.read("./stadia.st/-/skus.json", :encoding => "utf-8")
+    "200 OK"
+  when /^PUT\s+\/skus\.json$/
+    File.write("./stadia.st/-/skus.json", body, :encoding => "utf-8")
+    "204 No Content"
+
+  when /^GET\s+\/skus-meta\.json$/
+    response = File.read("./stadia.st/-/skus-meta.json", :encoding => "utf-8")
+    "200 OK"
+  when /^PUT\s+\/skus-meta\.json$/
+    File.write("./stadia.st/-/skus-meta.json", body, :encoding => "utf-8")
+    "204 No Content"
 
     when /^GET\s+\/index\.html$/
       response = File.read("./stadia.run/index.html", :encoding => "utf-8")
