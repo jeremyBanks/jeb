@@ -1,3 +1,6 @@
+// This module shouldn't know about spidering, except
+// in enough to import the spider metadata class.
+
 class RecordStore {
   /** @type {Map<
     StadiaItem['key'],

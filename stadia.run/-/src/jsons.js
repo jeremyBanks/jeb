@@ -1,6 +1,6 @@
 // @ts-nocheck WIP
 
-import JSON5 from "./json5.js";
+import JSON5 from "./generated/json5.js";
 
 /** @typedef {(
   Array<unknown> |
