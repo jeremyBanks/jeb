@@ -41,6 +41,13 @@ while connection = server.accept
       File.write("./stadia.run/index.html", body, :encoding => "utf-8")
       "204 No Content"
 
+    when /^GET\s+\/manifest\.json$/
+      response = File.read("./stadia.run/-/manifest.json", :encoding => "utf-8")
+      "200 OK"
+    when /^PUT\s+\/manifest\.json$/
+      File.write("./stadia.run/-/manifest.json", body, :encoding => "utf-8")
+      "204 No Content"
+
     when /^OPTIONS\s+\/.+$/
       "204 No Content"
     else
