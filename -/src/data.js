@@ -1,16 +1,25 @@
 // @ts-nocheck WIP
 
-import { slugify } from "./index.js";
+// This module shouldn't need to know anything about spidering.
 
+import { slugify } from "./generated/index.js";
+
+/** Spidering-related metadata for a given record. */
 class RecordSpiderMetadata {
-  /** @type {?number} */ lastSpidered = null;
-  /** @type {?number} */ lastModified = null;
-  /** @type {?number} */ firstSeen = null;
-  /** @type {?number} */ lastSeen = null;
+  /** When we last spidered for this record directly.
+  @type {number} */ lastSpidered = 0;
+
+  /** The most recent time we saw a property of this record change.
+  @type {number} */ lastModified = 0;
+
+  /** The first time we saw this record's ID, directly or indirectly.
+  @type {number} */ firstSeen = 0;
+  /** The most recent time we saw this record's ID, directly or indirectly.
+  @type {number} */ lastSeen = 0;
 }
 
 class RecordStore {
-  byKey = {};
+  recordById: Record<string, Record>;
 
   loadRecord(data, /** @type {RecordSpiderMetadata} */ metadata = null) {}
 }
@@ -79,7 +88,7 @@ export const getset = (
 };
 
 /** @typedef {Game | Subscription | Bundle | Addon} Sku */
-/** @typedef {Sku | List} Record */
+/** @typedef {Sku | List} Model */
 
 /** @typedef {{
   [skuId: string]: {

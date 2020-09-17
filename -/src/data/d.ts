@@ -3,18 +3,41 @@
 
 export * from "@shopify/useful-types";
 
-export interface SpiderMetadata {
-  lastSpidered?: number;
-  lastModified?: number;
-  firstSeen?: number;
-  lastSeen?: number;
+export interface RecordStore {
+  readonly records: Readonly<Record<StadiaItem["key"], Readonly<StadiaItem>>>;
+
+  readonly metadata: Readonly<
+    Record<StadiaItem["key"], Readonly<ItemMetadata>>
+  >;
+
+  get(key: StadiaItem["key"]): ItemRef;
+}
+
+export interface ItemRef<T extends StadiaItem = StadiaItem> {
+  readonly key: string & { [0]: "/" };
+
+  readonly meta: Readonly<ItemMetadata>;
+
+  readonly type?: T["type"];
+  readonly item?: Readonly<T>;
+}
+
+/** Our spidering-related metadata for a given item.
+ *  All timestamps in milliseconds since the epoch.
+ */
+export interface ItemMetadata {
+  /** When we last spidered for this item directly. */
+  lastSpidered: number;
+  /** The most recent time we saw a property of this item change. */
+  lastModified: number;
+
+  /** The first time we saw this record's ID, directly or indirectly. */
+  firstSeen: number;
+  /** The most recent time we saw this record's ID, directly or indirectly. */
+  lastSeen: number;
 }
 
 export type StadiaItem = Sku | List;
-
-export type SpideredItem<T extends StadiaItem = StadiaItem> = T & {
-  meta: SpiderMetadata;
-};
 
 interface IStadiaItem {
   key: string;

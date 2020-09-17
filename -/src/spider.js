@@ -15,7 +15,7 @@ import {
   microImageToURL,
   cleanName,
   slugify,
-} from "./index.js";
+} from "./generated/index.js";
 import { jsonObjects } from "./jsons.js";
 import {
   fetchStadia,

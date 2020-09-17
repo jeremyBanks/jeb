@@ -225,7 +225,7 @@ const initDevToolsLoader = async () => {
       if (document.location.hash !== "#dev-tools") {
         const scrollTop = document.documentElement.scrollTop;
         document.location.hash = "#dev-tools";
-        window.import("/-/dev.js");
+        window.import("/-/src/dev.js");
         prevented = true;
         document.documentElement.scrollTop = scrollTop;
         event.preventDefault();
@@ -244,19 +244,19 @@ const initDevToolsLoader = async () => {
   });
 
   if (document.location.hash === "#dev-tools") {
-    window.import("/-/dev.js");
+    window.import("/-/src/dev.js");
     prevented = true;
   }
 
   document.addEventListener("hashchange", () => {
     if (document.location.hash === "#dev-tools") {
-      window.import("/-/dev.js");
+      window.import("/-/src/dev.js");
       prevented = true;
     }
   });
 
   document.querySelector("footer a").addEventListener("click", event => {
-    window.import("/-/dev.js");
+    window.import("/-/src/dev.js");
     const scrollTop = document.documentElement.scrollTop;
     document.location.hash = "#dev-tools";
     document.documentElement.scrollTop = scrollTop;
