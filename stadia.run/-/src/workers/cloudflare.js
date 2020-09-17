@@ -1,8 +1,11 @@
 // @ts-nocheck WIP
 
-import { slugify } from "../index.js";
+import { slugify } from "../generated/index.js";
 
-addEventListener("fetch", event =>
+addEventListener("fetch", event => null);
+
+/*
+
   event.respondWith(
     (async () => {
       const request = event.request;
@@ -66,3 +69,4 @@ const maybeRedirect = async url => {
     301,
   );
 };
+*/

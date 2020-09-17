@@ -12,9 +12,7 @@ class RecordSpiderMetadata {
 class RecordStore {
   byKey = {};
 
-  loadRecord(data, /** @type {RecordSpiderMetadata} */ metadata = null) {
-
-  }
+  loadRecord(data, /** @type {RecordSpiderMetadata} */ metadata = null) {}
 }
 
 /** @type {ExampleTest} */
