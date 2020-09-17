@@ -43,8 +43,8 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
   const coverUrl = skuData[2]?.[1]?.[0]?.[0]?.[1]?.split(/=/)[0];
   const coverMicroData = await microImageFromURL(coverUrl);
 
-  const releasedOnStadia = 1000 * skuData[10]?.[0];
-  const releasedAnywhere = 1000 * skuData[26]?.[0];
+  const releaseDateA = 1000 * skuData[10]?.[0];
+  const releaseDateB = 1000 * skuData[26]?.[0];
 
   const childSkuIds = skuData[14]?.[0]?.map(x => x[0]);
   const childData = skuData[14]?.[0]?.map(x => x[2]);
@@ -60,8 +60,8 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
     name,
     coverUrl,
     coverMicroData,
-    releasedOnStadia,
-    releasedAnywhere,
+    releaseDateA,
+    releaseDateB,
   };
 
   if (childSkuIds) {
@@ -125,6 +125,18 @@ export const spiderThread = async () => {
   });
 
   getset({
+    name: "New Releases",
+    type: "list",
+    listId: 22,
+  });
+
+  getset({
+    name: "Pre-order now",
+    type: "list",
+    listId: 76,
+  });
+
+  getset({
     name: "Stadia Pro",
     type: "subscription",
     skuId: "59c8314ac82a456ba61d08988b15b550",
@@ -134,6 +146,10 @@ export const spiderThread = async () => {
     await withTimeout(16, canFetchDevApi);
 
     const skus = await (await fetchDevApi("skus.json")).json();
+    const meta = await (await fetchDevApi("skus-meta.json")).json();
+    for (const key of Object.keys(skus)) {
+      Object.assign(skus[key], meta[key]);
+    }
     Object.values(skus).forEach(getset);
     console.info(`${Object.keys(records).length} records loaded.`, records);
   } catch (error) {
@@ -172,13 +188,37 @@ export const spiderThread = async () => {
     await updateDocument();
 
     if (await canFetchDevApi) {
-      const sorted = {};
+      const skus = {};
+      const meta = {};
       for (const key of Object.keys(records).sort()) {
-        sorted[key] = records[key];
+        const item = records[key];
+        skus[key] = {
+          appId: item.appId,
+          childSkuIds: item.childSkuIds,
+          coverMicroData: item.coverMicroData,
+          coverUrl: item.coverUrl,
+          listId: item.listId,
+          name: item.name,
+          releaseDateA: item.releaseDateA,
+          releaseDateB: item.releaseDateB,
+          skuId: item.skuId,
+          slug: item.slug,
+          type: item.type,
+        };
+        meta[key] = {
+          firstSeen: item.firstSeen,
+          lastModified: item.lastModified,
+          lastSeen: item.lastSeen,
+          lastSpidered: item.lastSpidered,
+        };
       }
       fetchDevApi("skus.json", {
         method: "PUT",
-        body: JSON.stringify(sorted, null, 2),
+        body: JSON.stringify(skus, null, 2),
+      });
+      fetchDevApi("skus-meta.json", {
+        method: "PUT",
+        body: JSON.stringify(meta, null, 2),
       });
       downloadDocument();
     }
@@ -263,7 +303,7 @@ const fetchStadiaOpaque = async url => {
   if (preloadQueries) {
     for (const [key, { id, request }] of Object.entries(preloadQueries)) {
       const preloadResponse = jsons.find(x => x.key === key);
-      const response = preloadResponse.data;
+      const response = preloadResponse?.data;
       const name =
         request.length > 0
           ? id + request.map(x => (typeof x).slice(0, 1)).join("")
@@ -398,7 +438,9 @@ const updateDocument = async () => {
       ...game,
       name: cleanName(game.name),
       pro: proGameSkus.has(game.skuId),
-      preOrder: game.releasedOnStadia > Date.now() + 1000 * 60 * 60 * 24 * 2,
+      preOrder:
+        Math.max(game.releaseDateA, game.releaseDateB) >
+        Date.now() + 1000 * 60 * 60 * 24 * 2,
     }))
     .sort((gameA, gameB) => {
       const aFirst = -1;
@@ -407,14 +449,8 @@ const updateDocument = async () => {
       const aName = gameA.name.toLowerCase();
       const bName = gameB.name.toLowerCase();
 
-      const aReleased = Math.max(
-        gameA.releasedOnStadia,
-        gameA.releasedAnywhere,
-      );
-      const bReleased = Math.max(
-        gameB.releasedOnStadia,
-        gameB.releasedAnywhere,
-      );
+      const aReleased = Math.max(gameA.releaseDateA, gameA.releaseDateB);
+      const bReleased = Math.max(gameB.releaseDateA, gameB.releaseDateB);
 
       if (gameA.preOrder && !gameB.preOrder) {
         return bFirst;
