@@ -9,7 +9,13 @@ import {
   getset,
   records,
 } from "./data.js";
-import { digits, loadedImage, microImageToURL, cleanName } from "./index.js";
+import {
+  digits,
+  loadedImage,
+  microImageToURL,
+  cleanName,
+  slugify,
+} from "./index.js";
 import { jsonObjects } from "./jsons.js";
 import {
   fetchStadia,
@@ -39,7 +45,8 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
   const coverUrl = skuData[2]?.[1]?.[0]?.[0]?.[1]?.split(/=/)[0];
   const coverMicroData = await microImageFromURL(coverUrl);
 
-  const released = 1000 * skuData[26]?.[0];
+  const releasedOnStadia = 1000 * skuData[10]?.[0];
+  const releasedAnywhere = 1000 * skuData[26]?.[0];
 
   const childSkuIds = skuData[14]?.[0]?.map(x => x[0]);
   const childData = skuData[14]?.[0]?.map(x => x[2]);
@@ -55,7 +62,8 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
     name,
     coverUrl,
     coverMicroData,
-    released,
+    releasedOnStadia,
+    releasedAnywhere,
   };
 
   if (childSkuIds) {
@@ -180,7 +188,7 @@ export const spiderThread = async () => {
     await spider(record);
     console.info("🕷️ spidered", record);
     console.debug(`${Object.keys(records).length} records.`, records);
-    await sleep(16.0);
+    await sleep(6.0);
   }
 };
 
@@ -335,6 +343,8 @@ const downloadDocument = async () => {
 
   docToDownload.querySelector("title").textContent = "stadia.run";
 
+  docToDownload.querySelector("base").removeAttribute("target");
+
   for (const el of docToDownload.querySelectorAll("[hidden]")) {
     el.removeAttribute("hidden");
   }
@@ -351,13 +361,19 @@ const downloadDocument = async () => {
     el.removeAttribute("class");
   }
 
+  for (const el of docToDownload.querySelectorAll(
+    ".dev-server-status,.stadia-proxy-status",
+  )) {
+    el.textContent = "";
+  }
+
   const html =
     "<!doctype html>" +
     docToDownload.innerHTML
       .replace(/\s*<\/body>\s*$/, "\n")
       .replace(/^<head>/, "")
       .replace(/<\/head><body>/, "")
-      .replace(/(\s)(disabled|autofocus)(="")([>\s])<\/body>/g, "$1$2$4");
+      .replace(/(\s)(disabled|autofocus|pre-order|pro)(="")([>\s])/g, "$1$2$4");
 
   await fetch("//dev-api.stadia.st:57482/index.html", {
     method: "PUT",
@@ -379,28 +395,51 @@ const updateDocument = async () => {
 
   const games = [...Object.values(records)]
     // only include games that are to be released within the next week
-    .filter(
-      sku =>
-        sku.type === "game" &&
-        sku.released < Date.now() + 1000 * 60 * 60 * 24 * 7,
-    )
+    .filter(sku => sku.type === "game")
     .map(game => ({
       ...game,
       name: cleanName(game.name),
       pro: proGameSkus.has(game.skuId),
+      preOrder: game.releasedOnStadia > Date.now() + 1000 * 60 * 60 * 24 * 2,
     }))
     .sort((gameA, gameB) => {
+      const aFirst = -1;
+      const bFirst = +1;
+
       const aName = gameA.name.toLowerCase();
       const bName = gameB.name.toLowerCase();
 
-      if (gameA.pro && !gameB.pro) {
-        return -1;
+      const aReleased = Math.max(
+        gameA.releasedOnStadia,
+        gameA.releasedAnywhere,
+      );
+      const bReleased = Math.max(
+        gameB.releasedOnStadia,
+        gameB.releasedAnywhere,
+      );
+
+      if (gameA.preOrder && !gameB.preOrder) {
+        return bFirst;
+      } else if (!gameA.preOrder && gameB.preOrder) {
+        return aFirst;
+      } else if (gameA.preOrder && gameB.preOrder) {
+        if (aReleased > bReleased) {
+          return bFirst;
+        } else if (aReleased < bReleased) {
+          return AFirst;
+        }
+      } else if (gameA.pro && !gameB.pro) {
+        return aFirst;
       } else if (!gameA.pro && gameB.pro) {
-        return +1;
+        return bFirst;
+      } else if (aReleased > bReleased) {
+        return aFirst;
+      } else if (aReleased < bReleased) {
+        return bFirst;
       } else if (aName < bName) {
-        return -1;
+        return aFirst;
       } else if (aName > bName) {
-        return +1;
+        return bFirst;
       } else {
         return 0;
       }
@@ -410,9 +449,27 @@ const updateDocument = async () => {
 
   const fragment = document.createDocumentFragment();
 
+  const request = await fetch("//dev-api.stadia.st:57482/manifest.json", {
+    method: "GET",
+  });
+  const manifest = await request.json();
+
+  manifest.shortcuts = [];
+
   for (const game of games) {
     let root = template.content.cloneNode(true).firstElementChild;
     let url = game.coverUrl;
+
+    manifest.shortcuts.push({
+      name: game.name,
+      url: `/${slugify(game.name)}`,
+      icons: [
+        {
+          src: url + "=s192-p-rp",
+          sizes: "192x192",
+        },
+      ],
+    });
 
     const fullImg = root.querySelector("img");
     fullImg.src = url + "=w640-h360-rw";
@@ -438,11 +495,19 @@ const updateDocument = async () => {
       .setAttribute("data", game.coverMicroData);
 
     if (game.pro) {
-      root.querySelector("a").appendChild(
-        Object.assign(document.createElement("st-pro"), {
-          textContent: "PRO",
-        }),
-      );
+      const badge = Object.assign(document.createElement("st-badge"), {
+        textContent: "PRO",
+      });
+      badge.setAttribute("pro", "");
+      root.querySelector("a").appendChild(badge);
+    }
+
+    if (game.preOrder) {
+      const badge = Object.assign(document.createElement("st-badge"), {
+        textContent: "pre-order",
+      });
+      badge.setAttribute("pre-order", "");
+      root.querySelector("a").appendChild(badge);
     }
 
     fragment.appendChild(document.createTextNode("\n    "));
@@ -456,4 +521,9 @@ const updateDocument = async () => {
   gamesEl.appendChild(fragment);
 
   gamesEl.appendChild(document.createTextNode("\n  "));
+
+  await fetch("//dev-api.stadia.st:57482/manifest.json", {
+    method: "PUT",
+    body: JSON.stringify(manifest, null, 2),
+  });
 };

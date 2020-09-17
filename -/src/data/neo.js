@@ -3,17 +3,7 @@ class RecordStore {
     StadiaItem['key'],
     Readonly<SpideredItem>
   >} */ #itemByKey = new Map();
-
 }
-
-
-
-
-
-
-
-
-
 
 // TypeScript's JSDoc implementation doesn't let you express their entire type
 // system, so some definitions need to go in a .ts file instead.
