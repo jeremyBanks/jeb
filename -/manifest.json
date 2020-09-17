@@ -848,6 +848,16 @@
       ],
       "name": "Metro Exodus",
       "url": "/metro-exodus"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/VDyK9Am5dtjlUWUy-_rN7GnhC__2pHBfFt4FJ7TnkcByg7v1jML0CVWjKIjdMX6N3bp8DrO5vZYdm8OFW3q1bHWvZhCBod5e9IEvv-c2zj9qAxEqlNNSi5FOp5s=s192-p-rp"
+        }
+      ],
+      "name": "IMMORTALS FENYX RISING",
+      "url": "/immortals-fenyx-rising"
     }
   ],
   "start_url": "/",

@@ -359,13 +359,19 @@ const downloadDocument = async () => {
     el.removeAttribute("class");
   }
 
+  for (const el of docToDownload.querySelectorAll(
+    ".dev-server-status,.stadia-proxy-status",
+  )) {
+    el.textContent = "";
+  }
+
   const html =
     "<!doctype html>" +
     docToDownload.innerHTML
       .replace(/\s*<\/body>\s*$/, "\n")
       .replace(/^<head>/, "")
       .replace(/<\/head><body>/, "")
-      .replace(/(\s)(disabled|autofocus)(="")([>\s])<\/body>/g, "$1$2$4");
+      .replace(/(\s)(disabled|autofocus|pre-order|pro)(="")([>\s])/g, "$1$2$4");
 
   await fetch("//dev-api.stadia.st:57482/index.html", {
     method: "PUT",
@@ -387,17 +393,17 @@ const updateDocument = async () => {
 
   const games = [...Object.values(records)]
     // only include games that are to be released within the next week
-    .filter(
-      sku =>
-        sku.type === "game" &&
-        sku.releasedOnStadia < Date.now() + 1000 * 60 * 60 * 24 * 7,
-    )
+    .filter(sku => sku.type === "game")
     .map(game => ({
       ...game,
       name: cleanName(game.name),
       pro: proGameSkus.has(game.skuId),
+      preOrder: game.releasedOnStadia > Date.now() + 1000 * 60 * 60 * 24 * 2,
     }))
     .sort((gameA, gameB) => {
+      const aFirst = -1;
+      const bFirst = +1;
+
       const aName = gameA.name.toLowerCase();
       const bName = gameB.name.toLowerCase();
 
@@ -410,18 +416,28 @@ const updateDocument = async () => {
         gameB.releasedAnywhere,
       );
 
-      if (gameA.pro && !gameB.pro) {
-        return -1;
+      if (gameA.preOrder && !gameB.preOrder) {
+        return bFirst;
+      } else if (!gameA.preOrder && gameB.preOrder) {
+        return aFirst;
+      } else if (gameA.preOrder && gameB.preOrder) {
+        if (aReleased > bReleased) {
+          return bFirst;
+        } else if (aReleased < bReleased) {
+          return AFirst;
+        }
+      } else if (gameA.pro && !gameB.pro) {
+        return aFirst;
       } else if (!gameA.pro && gameB.pro) {
-        return +1;
+        return bFirst;
       } else if (aReleased > bReleased) {
-        return -1;
+        return aFirst;
       } else if (aReleased < bReleased) {
-        return +1;
+        return bFirst;
       } else if (aName < bName) {
-        return -1;
+        return aFirst;
       } else if (aName > bName) {
-        return +1;
+        return bFirst;
       } else {
         return 0;
       }
@@ -477,11 +493,19 @@ const updateDocument = async () => {
       .setAttribute("data", game.coverMicroData);
 
     if (game.pro) {
-      root.querySelector("a").appendChild(
-        Object.assign(document.createElement("st-pro"), {
-          textContent: "PRO",
-        }),
-      );
+      const badge = Object.assign(document.createElement("st-badge"), {
+        textContent: "PRO",
+      });
+      badge.setAttribute("pro", "");
+      root.querySelector("a").appendChild(badge);
+    }
+
+    if (game.preOrder) {
+      const badge = Object.assign(document.createElement("st-badge"), {
+        textContent: "pre-order",
+      });
+      badge.setAttribute("pre-order", "");
+      root.querySelector("a").appendChild(badge);
     }
 
     fragment.appendChild(document.createTextNode("\n    "));
