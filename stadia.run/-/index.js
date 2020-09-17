@@ -197,6 +197,7 @@ const onSubmit = event => {
       const name = elements[0].querySelector("st-name").textContent;
       const slug = slugify(name);
       searchInput.value = name;
+      searchInput.select();
       elements[0].querySelector("a").click();
     }
   });

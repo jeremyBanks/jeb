@@ -7,7 +7,13 @@ import {
   getset,
   records,
 } from "./data.js";
-import { digits, loadedImage, microImageToURL, cleanName } from "./index.js";
+import {
+  digits,
+  loadedImage,
+  microImageToURL,
+  cleanName,
+  slugify,
+} from "./index.js";
 import { jsonObjects } from "./jsons.js";
 import {
   fetchStadia,
@@ -37,7 +43,8 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
   const coverUrl = skuData[2]?.[1]?.[0]?.[0]?.[1]?.split(/=/)[0];
   const coverMicroData = await microImageFromURL(coverUrl);
 
-  const released = 1000 * skuData[26]?.[0];
+  const releasedOnStadia = 1000 * skuData[10]?.[0];
+  const releasedAnywhere = 1000 * skuData[26]?.[0];
 
   const childSkuIds = skuData[14]?.[0]?.map(x => x[0]);
   const childData = skuData[14]?.[0]?.map(x => x[2]);
@@ -53,7 +60,8 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
     name,
     coverUrl,
     coverMicroData,
-    released,
+    releasedOnStadia,
+    releasedAnywhere,
   };
 
   if (childSkuIds) {
@@ -178,7 +186,7 @@ export const spiderThread = async () => {
     await spider(record);
     console.info("🕷️ spidered", record);
     console.debug(`${Object.keys(records).length} records.`, records);
-    await sleep(16.0);
+    await sleep(6.0);
   }
 };
 
@@ -382,7 +390,7 @@ const updateDocument = async () => {
     .filter(
       sku =>
         sku.type === "game" &&
-        sku.released < Date.now() + 1000 * 60 * 60 * 24 * 7,
+        sku.releasedOnStadia < Date.now() + 1000 * 60 * 60 * 24 * 7,
     )
     .map(game => ({
       ...game,
@@ -393,9 +401,22 @@ const updateDocument = async () => {
       const aName = gameA.name.toLowerCase();
       const bName = gameB.name.toLowerCase();
 
+      const aReleased = Math.max(
+        gameA.releasedOnStadia,
+        gameA.releasedAnywhere,
+      );
+      const bReleased = Math.max(
+        gameB.releasedOnStadia,
+        gameB.releasedAnywhere,
+      );
+
       if (gameA.pro && !gameB.pro) {
         return -1;
       } else if (!gameA.pro && gameB.pro) {
+        return +1;
+      } else if (aReleased > bReleased) {
+        return -1;
+      } else if (aReleased < bReleased) {
         return +1;
       } else if (aName < bName) {
         return -1;
@@ -410,9 +431,27 @@ const updateDocument = async () => {
 
   const fragment = document.createDocumentFragment();
 
+  const request = await fetch("//dev-api.stadia.st:57482/manifest.json", {
+    method: "GET",
+  });
+  const manifest = await request.json();
+
+  manifest.shortcuts = [];
+
   for (const game of games) {
     let root = template.content.cloneNode(true).firstElementChild;
     let url = game.coverUrl;
+
+    manifest.shortcuts.push({
+      name: game.name,
+      url: `/${slugify(game.name)}`,
+      icons: [
+        {
+          src: url + "=s192-p-rp",
+          sizes: "192x192",
+        },
+      ],
+    });
 
     const fullImg = root.querySelector("img");
     fullImg.src = url + "=w640-h360-rw";
@@ -456,4 +495,9 @@ const updateDocument = async () => {
   gamesEl.appendChild(fragment);
 
   gamesEl.appendChild(document.createTextNode("\n  "));
+
+  await fetch("//dev-api.stadia.st:57482/manifest.json", {
+    method: "PUT",
+    body: JSON.stringify(manifest, null, 2),
+  });
 };
