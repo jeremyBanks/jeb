@@ -131,10 +131,30 @@ export class List extends ARecord {
 class ASku extends ARecord {
   /** @type {string} */ skuId;
   /** @type {string} */ coverUrl;
-  /** @type {number} */ released;
+  /** @type {number} */ releaseDateA;
+  /** @type {number} */ releaseDateB;
+  /** @type {string} */ coverMicroData;
 
   get _key() {
     return `${this.skuId}`;
+  }
+
+  get slug() {
+    if (this.type === "list") {
+      return undefined;
+    } else if (this._slug) {
+      return this._slug;
+    } else if (this.type === "game" || this.type === "subscription") {
+      return slugify(this.name);
+    } else {
+      return slugify(
+        this._key.slice(0, 8) + "-" + slugify(this.name || "").slice(0, 23),
+      );
+    }
+  }
+
+  set slug(slug) {
+    this._slug = slug;
   }
 }
 
@@ -147,11 +167,6 @@ export class Preorder extends ASku {
 export class Game extends ASku {
   /** @type {"game"} */ type = "game";
   /** @type {string} */ appId;
-  /** @type {string} */ coverMicroData;
-
-  get slug() {
-    return slugify(name);
-  }
 }
 
 export class Subscription extends ASku {
