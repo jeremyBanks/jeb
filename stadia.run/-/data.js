@@ -76,6 +76,7 @@ const makeRecord = (/** @type {Record["type"]} */ type) => {
   if (type === "subscription") return new Subscription();
   if (type === "list") return new List();
   if (type === "preorder") return new Preorder();
+  if (type === "organization") return new Organization();
 
   console.warn(`weird type: ${type}`);
   return new UnknownTypeSku();
@@ -119,7 +120,11 @@ export class List extends ARecord {
   /** @type {"list"} */ type = "list";
 
   get _spiderFrequencyCoefficient() {
-    return 8.0;
+    if (this.lastSpidered === 0 || this.childSkuIds.length > 0) {
+      return 8.0;
+    } else {
+      return 1 / 8.0;
+    }
   }
 
   /** @type {number} */ listId;
@@ -134,6 +139,8 @@ class ASku extends ARecord {
   /** @type {number} */ releaseDateA;
   /** @type {number} */ releaseDateB;
   /** @type {string} */ coverMicroData;
+  /** @type {Array<string>} */ developerOrganizationIds;
+  /** @type {string} */ publisherOrganizationId;
 
   get _key() {
     return `${this.skuId}`;
@@ -188,5 +195,20 @@ export class Addon extends ASku {
 
   get _spiderFrequencyCoefficient() {
     return 1 / 16;
+  }
+}
+
+export class NonDirectlySpiderable extends ARecord {
+  get _spiderFrequencyCoefficient() {
+    return 0;
+  }
+}
+
+export class Organization extends NonDirectlySpiderable {
+  /** @type {"addon"} */ type = "organization";
+  /** @type {string} */ organizationId;
+
+  get _key() {
+    return `${this.organizationId}`;
   }
 }
