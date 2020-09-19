@@ -27,7 +27,6 @@ chmod -w "./stadia.run/-/json5.js"
 chmod -w "$target"
 
 yarn tsc || :
-yarn wrangler build
 
 brotli -f "./stadia.run/index.html"
 declare size
