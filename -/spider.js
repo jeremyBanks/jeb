@@ -40,6 +40,11 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
   const appId = skuData[4];
   const name = skuData[1];
 
+  const untitled = skuData[5];
+
+  const publisherOrganizationId = skuData[15];
+  const developerOrganizationIds = skuData[16];
+
   const coverUrl = skuData[2]?.[1]?.[0]?.[0]?.[1]?.split(/=/)[0];
   const coverMicroData = await microImageFromURL(coverUrl);
 
@@ -62,6 +67,9 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
     coverMicroData,
     releaseDateA,
     releaseDateB,
+    untitled,
+    publisherOrganizationId,
+    developerOrganizationIds,
   };
 
   if (childSkuIds) {
@@ -72,16 +80,30 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
 };
 
 const spider = async (/** @type {Record} */ record) => {
+  const also = {};
+
   if (record.type === "list") {
     const page = await fetchStadiaPage(`store/list/${record.listId}`);
     for (const sku of page.list) {
       await loadSkuData(sku[9]);
     }
+    also.childSkuIds = page.list.map(sku => sku[9][0]);
+    also.name = page.heading;
   } else {
     const appId = record.appId || "-";
     const page = await fetchStadiaPage(
       `store/details/${appId}/sku/${record.skuId}`,
     );
+
+    const organizations = [page.sku[22][0], ...page.sku[22][1]];
+    for (const organization of organizations) {
+      getset({
+        type: "organization",
+        organizationId: organization[0],
+        name: organization[2][0],
+      });
+    }
+
     await loadSkuData(page.sku[16]);
     if (page.gameAddons) {
       for (const sku of page.gameAddons) {
@@ -102,8 +124,17 @@ const spider = async (/** @type {Record} */ record) => {
 
   getset({
     ...record,
+    ...also,
     lastSpidered: Date.now(),
   });
+};
+
+const inclusive = (a, b) => {
+  const r = new Array();
+  for (let i = a; i >= a && i <= b; i++) {
+    r.push(i);
+  }
+  return r;
 };
 
 /** @returns {Promise<unknown>} */
@@ -118,26 +149,21 @@ export const spiderThread = async () => {
     return;
   }
 
-  getset({
-    name: "All Games",
-    type: "list",
-    listId: 3,
-  });
+  for (const listId of [
+    ...inclusive(3, 99),
+    ...inclusive(1001, 1058),
+    ...inclusive(2001, 2001), // TODO: add 2002
+    ...inclusive(3001, 3001),
+    ...inclusive(4001, 4006),
+    ...inclusive(5001, 5034),
+  ]) {
+    getset({
+      type: "list",
+      listId,
+    });
+  }
 
   getset({
-    name: "New Releases",
-    type: "list",
-    listId: 22,
-  });
-
-  getset({
-    name: "Pre-order now",
-    type: "list",
-    listId: 76,
-  });
-
-  getset({
-    name: "Stadia Pro",
     type: "subscription",
     skuId: "59c8314ac82a456ba61d08988b15b550",
   });
@@ -204,6 +230,10 @@ export const spiderThread = async () => {
           skuId: item.skuId,
           slug: item.slug,
           type: item.type,
+          organizationId: item.organizationId,
+          developerOrganizationIds: item.developerOrganizationIds,
+          publisherOrganizationId: item.publisherOrganizationId,
+          untitled: item.untitled,
         };
         meta[key] = {
           firstSeen: item.firstSeen,
@@ -234,6 +264,7 @@ const fetchStadiaPage = async url => {
   const opaque = await fetchStadiaOpaque(url);
   const data = Object.create(opaque);
 
+  data.heading = opaque.HZ5mJ;
   data.self = opaque.D0Amudob?.[5];
   data.list = opaque.WwD3rbnob?.[2];
   data.gameStats = opaque.e7h9qdoss?.[0]?.[8];
@@ -271,21 +302,23 @@ const padOpaqueKeys = (/** @type {unknown} */ object) => {
   }
 };
 
-export const fetchStadiaJsons = async (path, options = {}) => {
-  const response = await fetchStadia(path, options);
+const fetchStadiaOpaque = async url => {
+  const response = await fetchStadia(url);
   console.debug("Got Stadia response", response);
   checkStatus(response);
+
   const body = await response.text();
   const doc = new DOMParser().parseFromString(body, "text/html");
+
   const scripts = [...doc.querySelectorAll("script")];
 
-  return scripts.flatMap(script => jsonObjects(script.textContent));
-};
-
-const fetchStadiaOpaque = async url => {
-  const jsons = await fetchStadiaJsons(url);
+  const jsons = scripts.flatMap(script => jsonObjects(script.textContent));
 
   const data = Object.create(jsons);
+
+  for (const el of doc.querySelectorAll("[role][class]")) {
+    data[el.className] = el.textContent;
+  }
 
   Object.assign(
     data,
