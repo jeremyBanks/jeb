@@ -77,7 +77,7 @@ export const cleanName = name =>
 export const slugify = (name, separator = "-") =>
   cleanName(name)
     .normalize("NFKD")
-    .replace(/\p{InCombining_Diacritical_Marks}/gu, "")
+    .replace(/\p{Mark}/gu, "")
     .toLowerCase()
     .replace(/'/g, "")
     .replace(/[^a-z0-9]+/g, "-")
