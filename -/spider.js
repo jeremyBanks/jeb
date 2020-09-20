@@ -79,6 +79,10 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
   return getset(props);
 };
 
+const keygen = record => {
+  return record._key.replace(/^([a-f0-9]{32})([a-z0-9]+)$/, "$1-$2");
+};
+
 const spider = async (/** @type {Record} */ record) => {
   const also = {};
 
@@ -218,7 +222,9 @@ export const spiderThread = async () => {
       const meta = {};
       for (const key of Object.keys(records).sort()) {
         const item = records[key];
-        skus[key] = {
+        const newKey = keygen(item);
+
+        skus[newKey] = {
           appId: item.appId,
           childSkuIds: item.childSkuIds,
           coverMicroData: item.coverMicroData,
@@ -235,7 +241,7 @@ export const spiderThread = async () => {
           publisherOrganizationId: item.publisherOrganizationId,
           untitled: item.untitled,
         };
-        meta[key] = {
+        meta[newKey] = {
           firstSeen: item.firstSeen,
           lastModified: item.lastModified,
           lastSeen: item.lastSeen,

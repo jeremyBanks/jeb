@@ -917,7 +917,7 @@
     </a></st-game>
     <st-game><a href="https://stadia.google.com/player/80a70c13987841b3a2aedbcac54784abrcp1">
       <st-cover-full>
-        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/pkthfxaoB_asfo_C1MXHJvgpwW1h4leLgp_OCaXBcDwKcVau6EpP7cRE6-zRZeYPaXvHObKI3q2W0he7NbGePGhD9zUjg33rROT-AEdsoDL9lXpXIbuxya0Z96o=w640-h360-rw">
+        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/Lre3r1ycahc9Q1uRcte5EW7VrROl4VIvfPpDsRIjiyIEn_gThV0XLeqhx0GxkZuY8uHZotpCBO7lfpQGrfODy9ZRjgCisq1B2TPoQ7bteYgGTPoh9ZFgQAD0U0U=w640-h360-rw">
       </st-cover-full>
       <st-cover-micro data="Kezuuzzz-eeQ-ezz-ezPKezz-Kz40jzz-ee-4ezz-KJ-ePezKK-00KLze---FLez">
         <st-name>DRAGON BALL XENOVERSE 2</st-name>
@@ -1341,7 +1341,7 @@ export const cleanName = name =>
 export const slugify = (name, separator = "-") =>
    cleanName(name)
     .normalize('NFKD')
-    .replace(/\p{InCombining_Diacritical_Marks}/gu, '')
+    .replace(/\p{Mark}/gu, '')
     .toLowerCase()
     .replace(/'/g, "")
     .replace(/[^a-z0-9]+/g, "-")
