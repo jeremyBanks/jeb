@@ -80,7 +80,96 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
 };
 
 const keygen = record => {
-  return record._key.replace(/^([a-f0-9]{32})([a-z0-9]+)$/, "$1-$2");
+  if (record.type === "list") {
+    return "zzzl" + record._key.padStart(28, "-");
+  }
+
+  if (record.type === "organization") {
+    return "zzzo" + record.organizationId.slice(0, 28);
+  }
+
+  let appId = record.appId.replace(/^([a-f0-9]{32})([a-z0-9]+)$/, "$1-$2");
+  let skuId = record.skuId.replace(/^([a-f0-9]{32})([a-z0-9]+)$/, "$1-$2");
+  let typeTag = "";
+
+  if (record.type === "subscription") {
+    appId = "0000";
+    typeTag = "SB";
+  } else if (record.type === "game") {
+    typeTag = "GG";
+  } else if (record.type === "addon-subscription") {
+    typeTag = "GS";
+  } else if (record.type === "addon") {
+    typeTag = "GX";
+  } else if (record.type === "bundle") {
+    typeTag = "PA";
+  } else if (record.type === "preorder") {
+    typeTag = "PR";
+  }
+
+  let idLen = 6;
+  let typeLen = 2;
+  let nameLen = 32 - typeLen - idLen - idLen;
+
+  let nameTag = record.slug.replace(/-/g, "");
+  if (nameTag.length < nameLen) {
+    nameTag += slugify(record.untitled).replace(/-/g, "");
+  } else if (nameTag.length > nameLen) {
+    // remove last instance of most-frequent letter
+    while (nameTag.length > nameLen) {
+      const frequencies = {
+        0: 0.2,
+        e: 0.1249,
+        t: 0.0928,
+        a: 0.0804,
+        o: 0.0764,
+        i: 0.0757,
+        n: 0.0723,
+        s: 0.0651,
+        r: 0.0628,
+        h: 0.0505,
+        l: 0.0407,
+        d: 0.0382,
+        c: 0.0334,
+        u: 0.0273,
+        m: 0.0251,
+        f: 0.024,
+        p: 0.0214,
+        g: 0.0187,
+        w: 0.0168,
+        y: 0.0166,
+        b: 0.0148,
+        v: 0.0105,
+        k: 0.0054,
+        x: 0.0023,
+        j: 0.0016,
+        q: 0.0012,
+        z: 0.0009,
+      };
+      let mostFrequent = "";
+      for (const character of nameTag) {
+        const frequency = (frequencies[character] += 1);
+        if (!mostFrequent || frequency > frequencies[mostFrequent]) {
+          mostFrequent = character;
+        }
+      }
+
+      const index = nameTag.lastIndexOf(mostFrequent);
+      nameTag = nameTag.slice(0, index) + nameTag.slice(index + 1);
+    }
+  }
+
+  const result = [
+    appId.padEnd(idLen, 0).slice(0, idLen),
+    typeTag.padEnd(typeLen, "?").slice(0, typeLen),
+    skuId.padEnd(idLen, 0).slice(0, idLen),
+    (nameTag + skuId.slice(idLen)).slice(0, nameLen),
+  ].join("");
+
+  if (result.length !== 32) {
+    throw new TypeError("wrong id length");
+  }
+  return result;
 };
 
 const spider = async (/** @type {Record} */ record) => {
@@ -224,6 +313,10 @@ export const spiderThread = async () => {
         const item = records[key];
         const newKey = keygen(item);
 
+        if (skus.hasOwnProperty(newKey)) {
+          throw new Error(`duplicate key ${newKey}`);
+        }
+
         skus[newKey] = {
           appId: item.appId,
           childSkuIds: item.childSkuIds,
@@ -241,6 +334,7 @@ export const spiderThread = async () => {
           publisherOrganizationId: item.publisherOrganizationId,
           untitled: item.untitled,
         };
+
         meta[newKey] = {
           firstSeen: item.firstSeen,
           lastModified: item.lastModified,

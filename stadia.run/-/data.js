@@ -151,7 +151,7 @@ class ASku extends ARecord {
       return undefined;
     } else if (this._slug) {
       return this._slug;
-    } else if (this.type === "game" || this.type === "subscription") {
+    } else if (true || this.type === "game" || this.type === "subscription") {
       return slugify(this.name);
     } else {
       return slugify(
