@@ -88,6 +88,10 @@ const keygen = record => {
     return "zzzo" + record.organizationId.slice(0, 28);
   }
 
+  if (record.type === "user") {
+    return "zzzu" + record._key.padStart(28, "-");
+  }
+
   let appId = record.appId.replace(/^([a-f0-9]{32})([a-z0-9]+)$/, "$1-$2");
   let skuId = record.skuId.replace(/^([a-f0-9]{32})([a-z0-9]+)$/, "$1-$2");
   let typeTag = "";
@@ -182,6 +186,13 @@ const spider = async (/** @type {Record} */ record) => {
     }
     also.childSkuIds = page.list.map(sku => sku[9][0]);
     also.name = page.heading;
+  } else if (record.type === "user") {
+    const page = await fetchStadiaPage(
+      `profile/${record.userId}/gameactivities/all`,
+    );
+    also.playedAppIds = page.playedAppIds.sort();
+    also.name = page.user?.[0][0];
+    also.number = page.user?.[0][1];
   } else {
     const appId = record.appId || "-";
     const page = await fetchStadiaPage(
@@ -261,6 +272,17 @@ export const spiderThread = async () => {
     skuId: "59c8314ac82a456ba61d08988b15b550",
   });
 
+  for (const userId of [
+    "1251139222132626125",
+    "1617069803417798505",
+    "16426095180623872410",
+    "2123520036520821996",
+    "5438395451308729832",
+    "5478196876050978967",
+  ]) {
+    getset({ userId, type: "user" });
+  }
+
   try {
     await withTimeout(16, canFetchDevApi);
 
@@ -333,6 +355,9 @@ export const spiderThread = async () => {
           developerOrganizationIds: item.developerOrganizationIds,
           publisherOrganizationId: item.publisherOrganizationId,
           untitled: item.untitled,
+          number: item.number,
+          playedAppIds: item.playedAppIds,
+          userId: item.userId,
         };
 
         meta[newKey] = {
@@ -366,9 +391,10 @@ const fetchStadiaPage = async url => {
 
   data.heading = opaque.HZ5mJ;
   data.self = opaque.D0Amudob?.[5];
+  data.user = opaque.D0Amudoboos?.[5];
   data.list = opaque.WwD3rbnob?.[2];
   data.gameStats = opaque.e7h9qdoss?.[0]?.[8];
-  data.playerGames = opaque.Q6jt8cooos?.[0];
+  data.playedAppIds = opaque.Q6jt8cooos?.[0];
   data.sku = opaque.FWhQVssb;
   data.storefront = opaque.xjyeoc?.[3].flatMap(x => x?.[1]);
   data.gameAddons = opaque.ZAm7Wesooooooob?.[0];
