@@ -77,6 +77,7 @@ const makeRecord = (/** @type {Record["type"]} */ type) => {
   if (type === "list") return new List();
   if (type === "preorder") return new Preorder();
   if (type === "organization") return new Organization();
+  if (type === "user") return new User();
 
   if (type !== "addon-subscription") {
     console.warn(`weird type: ${type}`);
@@ -133,6 +134,22 @@ export class List extends ARecord {
   /** @type {number} */ listId;
   get _key() {
     return `/list/${this.listId}`;
+  }
+}
+
+export class User extends ARecord {
+  /** @type {string} */ userId;
+  /** @type {string} */ name;
+  /** @type {string} */ number;
+  /** @type {string} */ playedAppIds;
+
+  /** @type {"list"} */ type = "list";
+  get _spiderFrequencyCoefficient() {
+    return 1 / 32.0;
+  }
+
+  get _key() {
+    return `u${this.userId}`;
   }
 }
 
