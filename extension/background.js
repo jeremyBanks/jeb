@@ -16,7 +16,6 @@ const rpcs = {
     const text = await response.text();
     return {
       ok: response.ok,
-      statusText: response.statusText,
       status: response.status,
       redirected: response.redirected,
       url: response.url,
