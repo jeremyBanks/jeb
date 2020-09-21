@@ -78,7 +78,10 @@ const makeRecord = (/** @type {Record["type"]} */ type) => {
   if (type === "preorder") return new Preorder();
   if (type === "organization") return new Organization();
 
-  console.warn(`weird type: ${type}`);
+  if (type !== "addon-subscription") {
+    console.warn(`weird type: ${type}`);
+  }
+
   return new UnknownTypeSku();
 };
 
