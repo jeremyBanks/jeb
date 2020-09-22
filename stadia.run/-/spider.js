@@ -48,8 +48,8 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
   const coverUrl = skuData[2]?.[1]?.[0]?.[0]?.[1]?.split(/=/)[0];
   const coverMicroData = await microImageFromURL(coverUrl);
 
-  const releaseDateA = 1000 * skuData[10]?.[0];
-  const releaseDateB = 1000 * skuData[26]?.[0];
+  const releaseDateA = 1000 * skuData[10]?.[0] || undefined;
+  const releaseDateB = 1000 * skuData[26]?.[0] || undefined;
 
   const childSkuIds = skuData[14]?.[0]?.map(x => x[0]);
   const childData = skuData[14]?.[0]?.map(x => x[2]);
