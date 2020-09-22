@@ -283,6 +283,26 @@
       "icons": [
         {
           "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/g4IX1dR1b6zLaS8pMwlHCuc3icjsAFWnQlbimImWtvzieGMDC4eJo9nZNz_XPU6HcHPSJxupWWbkTsuQA7cOKnn-26f6nrof_IAALNGM8exHDt4_QPL_duPVPexQ=s192-p-rp"
+        }
+      ],
+      "name": "Hotline Miami",
+      "url": "/hotline-miami"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/8qwJqaCOKJtTdLFnqwYkNF66YzYjd127rlgt-B6L0Cy3YWx0M3eHeN7zXQrNprAB4nJnjnluAtG9BZ99goAW7u5ZgkgLeUtKQoCzzraN5nHLMwWkUbDTYznSXg=s192-p-rp"
+        }
+      ],
+      "name": "Hotline Miami 2:Wrong Number",
+      "url": "/hotline-miami-2-wrong-number"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
           "src": "https://lh3.googleusercontent.com/tpFAwj-9u5szPDDFB7V86bHDPhhqq4zA2I4eMxOHerMz2s-jMGQ8i7WDwsv2P8-2yibHTdIOJ7NvdWdTsBq7-WIHvm1WSQWgP8QEn03BFIjBWCWUy2IyMB7LWQ=s192-p-rp"
         }
       ],
@@ -603,7 +623,7 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/DkJ_0fnQJNBD5hppMM7vSo_KyjAUlplwfb70WNTtDQ1AzLrgHkJKHsIggsFEdTqjSxgvNYvNWq7sUxzsmZEoGoHVQr-XEGjxG079F6aQRhC4y3-fBfSsGPFO8kY=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/lTEK8iolPxfpLSH1thdzax2zM3z7q3GdVVwRYocHMpKhJIQXH6IWTBetwl8tGFIYzNpjYFr0uRlR5NazF2L-J-OfPlRNQjqWMWztcd8d7eKrOLi162BGbOvpAk0=s192-p-rp"
         }
       ],
       "name": "Spitlings",
