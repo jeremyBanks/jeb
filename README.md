@@ -4,31 +4,9 @@
 - Data: https://stadia.st/-/skus.json
 - Code: https://github.com/stadians/stadians
 
-## Warning
-
 The data update process isn't entirely automated, so we're probably missing recent changes.
 
-## License
-
-All code in this repository is Copyright 2020 Stadians.dev Contributors and released under the [MIT License](https://opensource.org/licenses/MIT).
-
-By intentionally submitting code for inclusion in this repository, you agree to release it under the above license.
-
-The "Stadian Squirrel" icon is Copyright 2020 [illufinch](https://twitter.com/illufinch), and is only licensed for non-commercial use on stadians.dev, stadia.run, and stadia.st.
-
 Stadia store data, including product names, images, descriptions, and other metadata, may be copyrighted and/or trademarked by Google or other publishers. They are used here for non-commercial purposes assumed permitted as fair dealing.
-
-## Contributing
-
-Changes to the `./stadia.run` or `./stadia.st` subdirectories must be made in standalone commits that only modify one of those directories and do not touch anything else. (This is because we split those paths out with git-subtree to deploy them, and that works more smoothly with distinct commits.) This means we can't squash-merge PRs.
-
-### Warnings
-
-This repo and this code is a jumbled mess. I'll fix it up as I have time.
-
-Some of the scripts run on Linux, but others only run on MacOS Unix.
-
-### Design of stadia.run
 
 The goal for stadia.run is to be an extremely fast way to access your games. In service of that, `index.html` needs to include everything required to do that directly inline: styles, scripts, and micro thumbnail placeholders for game covers. Supplemental scripts and high-resolution images can be loaded later, but they shouldn't block any of the main interactions.
 
