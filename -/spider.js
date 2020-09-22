@@ -181,11 +181,17 @@ const spider = async (/** @type {Record} */ record) => {
 
   if (record.type === "list") {
     const page = await fetchStadiaPage(`store/list/${record.listId}`);
-    for (const sku of page.list) {
-      await loadSkuData(sku[9]);
+
+    if (page.list) {
+      for (const sku of page.list) {
+        await loadSkuData(sku[9]);
+      }
+      also.childSkuIds = page.list.map(sku => sku[9][0]);
+      also.name = page.heading;
+    } else {
+      also.childSkuIds = [];
+      also.name = page.title.replace(/ - Store - Stadia$/, "");
     }
-    also.childSkuIds = page.list.map(sku => sku[9][0]);
-    also.name = page.heading;
   } else if (record.type === "user") {
     const page = await fetchStadiaPage(
       `profile/${record.userId}/gameactivities/all`,
@@ -256,7 +262,7 @@ export const spiderThread = async () => {
   for (const listId of [
     ...inclusive(3, 99),
     ...inclusive(1001, 1058),
-    ...inclusive(2001, 2001), // TODO: add 2002
+    ...inclusive(2001, 2002),
     ...inclusive(3001, 3001),
     ...inclusive(4001, 4006),
     ...inclusive(5001, 5034),
@@ -400,6 +406,7 @@ const fetchStadiaPage = async url => {
   const data = Object.create(opaque);
 
   data.heading = opaque.HZ5mJ;
+  data.title = opaque.title;
   data.self = opaque.D0Amudob?.[5];
   data.user = opaque.D0Amudoboos?.[5];
   data.list = opaque.WwD3rbnob?.[2];
@@ -456,6 +463,8 @@ const fetchStadiaOpaque = async url => {
     data[el.className] = el.textContent;
   }
 
+  data.title = doc.querySelector("title")?.textContent;
+
   Object.assign(
     data,
     padOpaqueKeys(
@@ -492,14 +501,14 @@ const fetchStadiaOpaque = async url => {
             values.includes("stadia.google.com") &&
             values.includes("https://stadia.google.com/"),
         )
-        .values.map((value, i) => [
+        ?.values.map((value, i) => [
           ((i + 7577) / 7919)
             .toString(36)
             .replace(/[^A-Za-z]+/, "")
             .slice(0, 6)
             .padEnd(6, "s"),
           value,
-        ]),
+        ]) || [],
     ),
   );
 
