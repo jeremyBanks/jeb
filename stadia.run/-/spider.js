@@ -601,7 +601,9 @@ const updateDocument = async () => {
   const proGameSkus = new Set();
   const addProGames = skuId => {
     const sku = records[skuId];
-    if (sku.type === "game") {
+    if (!sku) {
+      console.error("could not find pro game", skuId);
+    } else if (sku.type === "game") {
       proGameSkus.add(skuId);
     } else if (sku.childSkuIds) {
       sku.childSkuIds.forEach(addProGames);
