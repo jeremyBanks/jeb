@@ -27,6 +27,6 @@
     "*://*.stadia.st/*",
     "*://localhost/*"
   ],
-  "version": "2020.10.5",
-  "version_name": "2020-10-05"
+  "version": "2020.10.6",
+  "version_name": "2020-10-06"
 }
