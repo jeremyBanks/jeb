@@ -194,21 +194,19 @@ class ASku extends ARecord {
   }
 
   get slug() {
-    if (this.type === "list") {
+    if (this.type !== "game") {
       return undefined;
     } else if (this._slug) {
       return this._slug;
-    } else if (true || this.type === "game" || this.type === "subscription") {
-      return slugify(this.name);
     } else {
-      return slugify(
-        this._key.slice(0, 8) + "-" + slugify(this.name || "").slice(0, 23),
-      );
+      return slugify(this.name);
     }
   }
 
   set slug(slug) {
-    this._slug = slug;
+    if (slug && slug !== "undefined" && slug !== "null") {
+      this._slug = slug;
+    }
   }
 }
 
