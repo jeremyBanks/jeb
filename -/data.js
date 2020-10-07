@@ -50,12 +50,16 @@ export const getset = (
   }
 
   if (record.type === "game") {
+    let proGamesLoaded = 0;
+
     let proGameSkus = new Set();
     let addProGames = skuId => {
       let sku = records[skuId];
       if (!sku) {
         console.error("could not find pro game", skuId);
+        proGamesLoaded = -Infinity;
       } else if (sku.type === "game") {
+        proGamesLoaded += 1;
         proGameSkus.add(skuId);
       } else if (sku.childSkuIds) {
         sku.childSkuIds.forEach(addProGames);
@@ -63,8 +67,13 @@ export const getset = (
     };
     addProGames("59c8314ac82a456ba61d08988b15b550");
 
-    record.isPro = proGameSkus.has(record.skuId);
-    record.wasPro = record.wasPro || record.isPro;
+    if (proGamesLoaded > 0) {
+      record.isPro = proGameSkus.has(record.skuId);
+    } else {
+      record.isPro = Boolean(record.isPro);
+    }
+
+    record.wasPro = Boolean(record.wasPro || record.isPro);
   }
 
   record.firstSeen = record.firstSeen ?? now;
