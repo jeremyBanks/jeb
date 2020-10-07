@@ -374,6 +374,8 @@ export const spiderThread = async () => {
           number: item.number,
           playedAppIds: item.playedAppIds,
           userId: item.userId,
+          isPro: item.isPro,
+          wasPro: item.wasPro,
         };
 
         meta[newKey] = {
@@ -598,26 +600,12 @@ const downloadDocument = async () => {
 };
 
 const updateDocument = async () => {
-  const proGameSkus = new Set();
-  const addProGames = skuId => {
-    const sku = records[skuId];
-    if (!sku) {
-      console.error("could not find pro game", skuId);
-    } else if (sku.type === "game") {
-      proGameSkus.add(skuId);
-    } else if (sku.childSkuIds) {
-      sku.childSkuIds.forEach(addProGames);
-    }
-  };
-  addProGames("59c8314ac82a456ba61d08988b15b550");
-
   const games = [...Object.values(records)]
     // only include games that are to be released within the next week
     .filter(sku => sku.type === "game")
     .map(game => ({
       ...game,
       name: cleanName(game.name),
-      pro: proGameSkus.has(game.skuId),
       preOrder:
         Math.max(game.releaseDateA, game.releaseDateB) >
         Date.now() + 1000 * 60 * 60 * 24 * 2,
@@ -642,9 +630,13 @@ const updateDocument = async () => {
         } else if (aReleased < bReleased) {
           return AFirst;
         }
-      } else if (gameA.pro && !gameB.pro) {
+      } else if (gameA.isPro && !gameB.isPro) {
         return aFirst;
-      } else if (!gameA.pro && gameB.pro) {
+      } else if (!gameA.isPro && gameB.isPro) {
+        return bFirst;
+      } else if (gameA.wasPro && !gameB.wasPro) {
+        return aFirst;
+      } else if (!gameA.wasPro && gameB.wasPro) {
         return bFirst;
       } else if (aReleased > bReleased) {
         return aFirst;
@@ -708,11 +700,17 @@ const updateDocument = async () => {
       .querySelector("st-cover-micro")
       .setAttribute("data", game.coverMicroData);
 
-    if (game.pro) {
+    if (game.isPro) {
       const badge = Object.assign(document.createElement("st-badge"), {
         textContent: "PRO",
       });
       badge.setAttribute("pro", "");
+      root.querySelector("a").appendChild(badge);
+    } else if (game.wasPro) {
+      const badge = Object.assign(document.createElement("st-badge"), {
+        innerHTML: "previously<br />PRO",
+      });
+      badge.setAttribute("previously-pro", "");
       root.querySelector("a").appendChild(badge);
     }
 
