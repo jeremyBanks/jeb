@@ -47,6 +47,7 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
 
   const coverUrl = skuData[2]?.[1]?.[0]?.[0]?.[1]?.split(/=/)[0];
   const coverMicroData = await microImageFromURL(coverUrl);
+  const coverHash = await hashFromURL(coverUrl);
 
   const releaseDateA = 1000 * skuData[10]?.[0] || undefined;
   const releaseDateB = 1000 * skuData[26]?.[0] || undefined;
@@ -64,6 +65,7 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
     appId,
     name,
     coverUrl,
+    coverHash,
     coverMicroData,
     releaseDateA,
     releaseDateB,
@@ -319,7 +321,7 @@ export const spiderThread = async () => {
 
   for (;;) {
     const now = Date.now();
-    const record = Object.values(records).sort((a, b) => {
+    const allRecords = Object.values(records).sort((a, b) => {
       if (a.age(now) < b.age(now)) {
         return +1;
       } else if (b.age(now) < a.age(now)) {
@@ -331,9 +333,24 @@ export const spiderThread = async () => {
       } else {
         return 0;
       }
-    })[0];
+    });
 
-    if (record.age(now) < 24 * 60 * 60 * 1000) {
+    const ageLimit = 24 * 60 * 60 * 1000;
+
+    const staleRecords = allRecords.filter(
+      record => record.age(now) > ageLimit,
+    );
+
+    const record = staleRecords[0];
+
+    const icon =
+      allRecords.length > 8 ? (staleRecords.length > 0 ? "⚠️" : "✅") : "❌";
+
+    document.querySelector(
+      "#dev-tools .record-count",
+    ).textContent = `${icon} ${staleRecords.length} stale of ${allRecords.length} total`;
+
+    if (staleRecords.length === 0) {
       console.info(
         `Everything has been spidered recently (at most ${
           record.age(now) / 1000 / 60 / 60
@@ -359,23 +376,24 @@ export const spiderThread = async () => {
         skus[newKey] = {
           appId: item.appId,
           childSkuIds: item.childSkuIds,
+          coverHash: item.coverHash,
           coverMicroData: item.coverMicroData,
           coverUrl: item.coverUrl,
+          developerOrganizationIds: item.developerOrganizationIds,
+          isPro: item.isPro,
           listId: item.listId,
           name: item.name,
+          number: item.number,
+          organizationId: item.organizationId,
+          playedAppIds: item.playedAppIds,
+          publisherOrganizationId: item.publisherOrganizationId,
           releaseDateA: item.releaseDateA,
           releaseDateB: item.releaseDateB,
           skuId: item.skuId,
           slug: item.slug,
           type: item.type,
-          organizationId: item.organizationId,
-          developerOrganizationIds: item.developerOrganizationIds,
-          publisherOrganizationId: item.publisherOrganizationId,
           untitled: item.untitled,
-          number: item.number,
-          playedAppIds: item.playedAppIds,
           userId: item.userId,
-          isPro: item.isPro,
           wasPro: item.wasPro,
         };
 
@@ -546,6 +564,18 @@ const microImageFromURL = async (/** @type string */ url) => {
   return microImage.join("");
 };
 
+const hashFromURL = async (/** @type string */ url) => {
+  const response = await fetch(url);
+  const body = await response.arrayBuffer();
+  const hash = await crypto.subtle.digest("SHA-512", body);
+  const byteLength = 8;
+  const hexHash = Array.from(new Uint8Array(hash))
+    .slice(0, byteLength)
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+  return `f12${byteLength.toString(16).padStart(2, "0")}${hexHash}`;
+};
+
 /**
  * Rounds a 24-bit RGB value to the nearest 6-bit RGB value.
  * @returns {number}
@@ -581,9 +611,9 @@ const downloadDocument = async () => {
   }
 
   for (const el of docToDownload.querySelectorAll(
-    ".dev-server-status,.stadia-proxy-status",
+    ".dev-server-status,.stadia-proxy-status,.record-count",
   )) {
-    el.textContent = "";
+    el.textContent = "❓";
   }
 
   const html =
@@ -697,7 +727,9 @@ const updateDocument = async () => {
 
     const name = root.querySelector("st-name");
     name.textContent = game.name;
-    name.setAttribute("slug", game.slug);
+
+    const slug = root.querySelector("st-slug");
+    slug.textContent = "/" + game.slug;
 
     root.querySelector(
       "st-cover-micro",

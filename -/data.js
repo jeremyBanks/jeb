@@ -19,6 +19,14 @@ export const getset = (
 
   let modified = false;
   if (existingRecord) {
+    if (
+      existingRecord.coverHash &&
+      existingRecord.coverHash === newProps.coverHash
+    ) {
+      // ignore URL changes if the content is the same
+      newProps.coverUrl = existingRecord.coverUrl;
+    }
+
     for (const [property, newValue] of Object.entries(newRecord)) {
       const oldValue = existingRecord[property];
       if (
