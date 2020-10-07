@@ -67,7 +67,7 @@
         }
       ],
       "name": "HITMAN - World of Assassination",
-      "url": "/hitman-world-of-assassination"
+      "url": "/hitman"
     },
     {
       "icons": [
@@ -97,7 +97,7 @@
         }
       ],
       "name": "Rock of Ages 3: Make & Break",
-      "url": "/rock-of-ages-3-make-break"
+      "url": "/rock-of-ages-3"
     },
     {
       "icons": [
@@ -167,7 +167,7 @@
         }
       ],
       "name": "Just Shapes & Beats",
-      "url": "/just-shapes-beats"
+      "url": "/just-shapes-and-beats"
     },
     {
       "icons": [
@@ -177,7 +177,7 @@
         }
       ],
       "name": "Metro Last Light Redux",
-      "url": "/metro-last-light-redux"
+      "url": "/metro-last-light"
     }
   ],
   "start_url": "/",

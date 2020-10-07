@@ -260,7 +260,7 @@ export const spiderThread = async () => {
   }
 
   for (const listId of [
-    ...inclusive(3, 99),
+    ...inclusive(3, 100),
     ...inclusive(1001, 1058),
     ...inclusive(2001, 2002),
     ...inclusive(3001, 3001),
