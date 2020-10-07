@@ -176,7 +176,7 @@ const filterElements = async () => {
       child.firstElementChild.hidden = true;
 
       let name = child.querySelector("st-name").textContent.toLowerCase();
-      let slug = child.querySelector("st-slug").textContent;
+      let slug = child.querySelector("st-slug").textContent.replace(/\/+/, "");
 
       if (query === slug) {
         exactMatches.push(child);
@@ -212,7 +212,9 @@ const onSubmit = event => {
     const params = new URLSearchParams(location.search);
 
     if (elements.length === 1) {
-      searchInput.value = elements[0].querySelector("st-slug").textContent;
+      searchInput.value = elements[0]
+        .querySelector("st-slug")
+        .textContent.replace(/\/+/, "");
       searchInput.select();
       elements[0].querySelector("a").click();
     }
