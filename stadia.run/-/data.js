@@ -49,6 +49,24 @@ export const getset = (
     throw new TypeError("record corrupt, missing key or type");
   }
 
+  if (record.type === "game") {
+    let proGameSkus = new Set();
+    let addProGames = skuId => {
+      let sku = records[skuId];
+      if (!sku) {
+        console.error("could not find pro game", skuId);
+      } else if (sku.type === "game") {
+        proGameSkus.add(skuId);
+      } else if (sku.childSkuIds) {
+        sku.childSkuIds.forEach(addProGames);
+      }
+    };
+    addProGames("59c8314ac82a456ba61d08988b15b550");
+
+    record.isPro = proGameSkus.has(record.skuId);
+    record.wasPro = record.wasPro || record.isPro;
+  }
+
   record.firstSeen = record.firstSeen ?? now;
   record.lastSeen = now;
   record.lastModified = modified ? now : record.lastModified ?? 0;
@@ -194,6 +212,8 @@ export class Preorder extends ASku {
 export class Game extends ASku {
   /** @type {"game"} */ type = "game";
   /** @type {string} */ appId;
+  /** @type {boolean} */ isPro;
+  /** @type {boolean} */ wasPro;
 }
 
 export class Subscription extends ASku {
