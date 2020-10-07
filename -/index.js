@@ -166,17 +166,33 @@ const filterElements = async () => {
   return (filterElementsPending = new Promise(resolve => resolve()).then(() => {
     filterElementsPending = false;
 
-    const q = slugify(searchInput.value);
+    const query = searchInput.value.toLowerCase();
+    const slugQuery = slugify(query);
 
-    const elements = [];
+    const looseMatches = [];
+    const exactMatches = [];
 
     for (const child of gameTiles.querySelectorAll("st-game")) {
-      let name = child.querySelector("st-name").textContent;
-      const matches = slugify(name).includes(q);
-      child.firstElementChild.hidden = !matches;
-      if (matches) {
-        elements.push(child);
+      child.firstElementChild.hidden = true;
+
+      let name = child.querySelector("st-name").textContent.toLowerCase();
+      let slug = child.querySelector("st-name").getAttribute("slug");
+
+      if (query === slug) {
+        exactMatches.push(child);
+      } else if (query === name) {
+        exactMatches.push(child);
+      } else if (slugify(name).includes(slugQuery)) {
+        looseMatches.push(child);
+      } else if (slug.includes(slugQuery)) {
+        looseMatches.push(child);
       }
+    }
+
+    const elements = exactMatches.length > 0 ? exactMatches : looseMatches;
+
+    for (const el of elements) {
+      el.firstElementChild.hidden = false;
     }
 
     document.documentElement.setAttribute("data-st-matches", elements.length);
@@ -196,9 +212,7 @@ const onSubmit = event => {
     const params = new URLSearchParams(location.search);
 
     if (elements.length === 1) {
-      const name = elements[0].querySelector("st-name").textContent;
-      const slug = slugify(name);
-      searchInput.value = name;
+      searchInput.value = elements[0].querySelector("st-name").textContent;
       searchInput.select();
       elements[0].querySelector("a").click();
     }

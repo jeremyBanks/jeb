@@ -115,7 +115,7 @@ const keygen = record => {
   let typeLen = 2;
   let nameLen = 32 - typeLen - idLen - idLen;
 
-  let nameTag = record.slug.replace(/-/g, "");
+  let nameTag = (record.slug || slugify(record.name)).replace(/-/g, "");
   if (nameTag.length < nameLen) {
     nameTag += slugify(record.untitled).replace(/-/g, "");
   } else if (nameTag.length > nameLen) {
@@ -605,6 +605,7 @@ const updateDocument = async () => {
     .filter(sku => sku.type === "game")
     .map(game => ({
       ...game,
+      slug: game.slug,
       name: cleanName(game.name),
       preOrder:
         Math.max(game.releaseDateA, game.releaseDateB) >
@@ -666,16 +667,18 @@ const updateDocument = async () => {
     let root = template.content.cloneNode(true).firstElementChild;
     let url = game.coverUrl;
 
-    manifest.shortcuts.push({
-      name: game.name,
-      url: `/${slugify(game.name)}`,
-      icons: [
-        {
-          src: url + "=s192-p-rp",
-          sizes: "192x192",
-        },
-      ],
-    });
+    if (manifest.shortcuts.length < 16) {
+      manifest.shortcuts.push({
+        name: game.name,
+        url: `/${game.slug}`,
+        icons: [
+          {
+            src: url + "=s192-p-rp",
+            sizes: "192x192",
+          },
+        ],
+      });
+    }
 
     const fullImg = root.querySelector("img");
     fullImg.src = url + "=w640-h360-rw";
@@ -690,7 +693,10 @@ const updateDocument = async () => {
 
     const link = root.querySelector("a");
     link.href = `https://stadia.google.com/player/${game.appId}`;
-    root.querySelector("st-name").textContent = game.name;
+
+    const name = root.querySelector("st-name");
+    name.textContent = game.name;
+    name.setAttribute("slug", game.slug);
 
     root.querySelector(
       "st-cover-micro",
@@ -705,13 +711,13 @@ const updateDocument = async () => {
         textContent: "PRO",
       });
       badge.setAttribute("pro", "");
-      root.querySelector("a").appendChild(badge);
+      link.appendChild(badge);
     } else if (game.wasPro) {
       const badge = Object.assign(document.createElement("st-badge"), {
         innerHTML: "previously<br />PRO",
       });
       badge.setAttribute("previously-pro", "");
-      root.querySelector("a").appendChild(badge);
+      link.appendChild(badge);
     }
 
     if (game.preOrder) {
@@ -719,7 +725,7 @@ const updateDocument = async () => {
         textContent: "pre-order",
       });
       badge.setAttribute("pre-order", "");
-      root.querySelector("a").appendChild(badge);
+      link.appendChild(badge);
     }
 
     fragment.appendChild(document.createTextNode("\n    "));
