@@ -286,7 +286,6 @@
 
         html[data-st-matches="1"] main st-games {
           grid-template-columns: repeat(auto-fill, calc(2 * 320px));
-            box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.5);
         }
 
         html[data-st-matches="1"] main st-games st-game a {
@@ -1635,7 +1634,7 @@ const filterElements = async () => {
       child.firstElementChild.hidden = true;
 
       let name = child.querySelector("st-name").textContent.toLowerCase();
-      let slug = child.querySelector("st-slug").textContent;
+      let slug = child.querySelector("st-slug").textContent.replace(/\/+/, '');
 
       if (query === slug) {
         exactMatches.push(child);
@@ -1671,7 +1670,7 @@ const onSubmit = event => {
     const params = new URLSearchParams(location.search);
 
     if (elements.length === 1) {
-      searchInput.value = elements[0].querySelector("st-slug").textContent;
+      searchInput.value = elements[0].querySelector("st-slug").textContent.replace(/\/+/, '');
       searchInput.select();
       elements[0].querySelector("a").click();
     }
