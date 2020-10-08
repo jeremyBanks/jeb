@@ -13,7 +13,7 @@
 
         const data = await (await fetch('/-/skus.json')).json();
 
-        for (const {item, userId, name, number} of Object.values(data)) {
+        for (const {type, item, userId, name, number} of Object.values(data)) {
           if (
             type === "user" &&
             name.toLowerCase() === targetName &&
