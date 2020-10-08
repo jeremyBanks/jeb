@@ -20,8 +20,8 @@
             name.toLowerCase() === targetName &&
             targetNumber == Number(number)
           ) {
-            document.location = `https://stadia.google.com/home?si_rid=${userId}`;
-            break;
+            document.location.assign(`https://stadia.google.com/home?si_rid=${userId}`);
+            return;
           }
         }
 
