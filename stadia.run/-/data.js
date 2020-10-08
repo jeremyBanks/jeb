@@ -60,33 +60,6 @@ export const getset = (
     throw new TypeError("record corrupt, missing key or type");
   }
 
-  if (record.type === "game") {
-    let proGamesLoaded = 0;
-
-    let proGameSkus = new Set();
-    let addProGames = skuId => {
-      let sku = records[skuId];
-      if (!sku) {
-        console.error("could not find pro game", skuId);
-        proGamesLoaded = -Infinity;
-      } else if (sku.type === "game") {
-        proGamesLoaded += 1;
-        proGameSkus.add(skuId);
-      } else if (sku.childSkuIds) {
-        sku.childSkuIds.forEach(addProGames);
-      }
-    };
-    addProGames("59c8314ac82a456ba61d08988b15b550");
-
-    if (proGamesLoaded > 0) {
-      record.isPro = proGameSkus.has(record.skuId);
-    } else {
-      record.isPro = Boolean(record.isPro);
-    }
-
-    record.wasPro = Boolean(record.wasPro || record.isPro);
-  }
-
   record.firstSeen = record.firstSeen ?? now;
   record.lastSeen = now;
   record.lastModified = modified ? now : record.lastModified ?? 0;
@@ -94,6 +67,65 @@ export const getset = (
 
   records[record._key] = record;
   return record;
+};
+
+export const deriveDerivedDerivations = async () => {
+  let proGamesLoaded = 0;
+
+  const recordsOfType = {};
+  for (const record of Object.values(records)) {
+    (recordsOfType[record.type] = recordsOfType[record.type] || []).push(
+      record,
+    );
+  }
+
+  let proGameSkus = new Set();
+  let addProGames = skuId => {
+    let sku = records[skuId];
+    if (!sku) {
+      console.error("could not find pro game", skuId);
+      proGamesLoaded = -Infinity;
+    } else if (sku.type === "game") {
+      proGamesLoaded += 1;
+      proGameSkus.add(skuId);
+    } else if (sku.childSkuIds) {
+      sku.childSkuIds.forEach(addProGames);
+    }
+  };
+  addProGames("59c8314ac82a456ba61d08988b15b550");
+  const activePlayerSince = Date.now() - 1000 * 60 * 60 * 24 * 24;
+
+  const recentPlayerCountByGameAppId = {};
+  for (const user of recordsOfType.user) {
+    if (Math.max(user.firstSeen, user.lastModified) > activePlayerSince)
+      for (const appId of (user.playedAppIds || []).slice(0, 1)) {
+        recentPlayerCountByGameAppId[appId] =
+          (recentPlayerCountByGameAppId[appId] || 0) + 1;
+      }
+  }
+
+  const howPopular =
+    Math.max(...Object.values(recentPlayerCountByGameAppId)) * 0.8;
+  const popularEnough = Object.entries(recentPlayerCountByGameAppId)
+    .filter(a => a[1] >= howPopular)
+    .map(a => a[0]);
+
+  const slugs = new Set();
+  for (const game of recordsOfType.game) {
+    if (slugs.has(game.slug)) {
+      throw new Error("duplicate game slug: ", game.slug);
+    }
+    slugs.add(game.slug);
+
+    game.popular = popularEnough.includes(game.appId) ? true : undefined;
+
+    if (proGamesLoaded > 0) {
+      game.isPro = proGameSkus.has(game.skuId);
+    }
+    game.wasPro = game.wasPro || game.isPro;
+  }
+
+  // TODO: publishers?
 };
 
 /** @typedef {Game | Subscription | Bundle | Addon} Sku */

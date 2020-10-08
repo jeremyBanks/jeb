@@ -1,4 +1,4 @@
-import { getset, records } from "./data.js";
+import { getset, records, deriveDerivedDerivations } from "./data.js";
 import {
   digits,
   loadedImage,
@@ -326,7 +326,7 @@ export const spiderThread = async () => {
       "#dev-tools .record-count",
     ).textContent = `${icon} ${staleRecords.length} stale of ${allRecords.length} total`;
 
-    if (staleRecords.length % 128 === 0) {
+    if (staleRecords.length % 16 === 0) {
       await updateDocument();
       await downloadDocument();
     }
@@ -368,6 +368,7 @@ export const spiderThread = async () => {
           number: item.number,
           organizationId: item.organizationId,
           playedAppIds: item.playedAppIds,
+          popular: item.popular,
           publisherOrganizationId: item.publisherOrganizationId,
           releaseDateA: item.releaseDateA,
           releaseDateB: item.releaseDateB,
@@ -403,7 +404,7 @@ export const spiderThread = async () => {
     }
 
     console.debug(`${Object.keys(records).length} records.`, records);
-    await sleep((Math.random() * 128.0) / Math.log(staleRecords.length + 2));
+    await sleep((Math.random() * 64.0) / Math.log(staleRecords.length + 2));
   }
 };
 
@@ -622,6 +623,8 @@ const downloadDocument = async () => {
 };
 
 const updateDocument = async () => {
+  deriveDerivedDerivations();
+
   const games = [...Object.values(records)]
     // only include games that are to be released within the next week
     .filter(sku => sku.type === "game")
@@ -746,7 +749,7 @@ const updateDocument = async () => {
       link.appendChild(badge);
     }
 
-    if (!"this game is so popular!") {
+    if (game.popular) {
       const badge = Object.assign(document.createElement("st-badge"), {
         innerHTML: "🔥",
         title: `${game.name} is popular!`,
