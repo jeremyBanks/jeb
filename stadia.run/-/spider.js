@@ -1,12 +1,4 @@
-import {
-  Addon,
-  Bundle,
-  Game,
-  List,
-  Subscription,
-  getset,
-  records,
-} from "./data.js";
+import { getset, records } from "./data.js";
 import {
   digits,
   loadedImage,
@@ -53,11 +45,13 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
   const releaseDateB = 1000 * skuData[26]?.[0] || undefined;
 
   let countries, languages, description;
+
   if (type === "game") {
     countries = [...skuData[25]].sort();
     languages = [...skuData[24]].sort();
-    description = skuData[9];
   }
+
+  description = skuData[9];
 
   const childSkuIds = skuData[14]?.[0]?.map(x => x[0]);
   const childData = skuData[14]?.[0]?.map(x => x[2]);
@@ -208,9 +202,12 @@ const spider = async (/** @type {Record} */ record) => {
     const page = await fetchStadiaPage(
       `profile/${record.userId}/gameactivities/all`,
     );
-    also.playedAppIds = page.playedAppIds.sort();
+    also.playedAppIds = page.playedAppIds;
     also.name = page.user?.[0][0];
     also.number = page.user?.[0][1];
+    also.coverUrl = page.user?.[1][1].replace("/mdpi/", "/xxhdpi/");
+    also.coverMicroData = await microImageFromURL(also.coverUrl);
+    also.coverHash = await hashFromURL(also.coverUrl);
   } else {
     const appId = record.appId || "-";
     const page = await fetchStadiaPage(
@@ -329,21 +326,24 @@ export const spiderThread = async () => {
       "#dev-tools .record-count",
     ).textContent = `${icon} ${staleRecords.length} stale of ${allRecords.length} total`;
 
+    if (staleRecords.length % 128 === 0) {
+      await updateDocument();
+      await downloadDocument();
+    }
+
     if (staleRecords.length === 0) {
       console.info(
         `Everything has been spidered recently (at most ${
           record.age(now) / 1000 / 60 / 60
         } hours ago).`,
       );
-      await sleep(128.0);
+      await sleep(Math.random() * 600.0);
       continue;
     }
 
-    await updateDocument();
-
+    let skus = {};
+    let meta = {};
     if (await canFetchDevApi) {
-      const skus = {};
-      const meta = {};
       for (const key of Object.keys(records).sort()) {
         const item = records[key];
         const newKey = keygen(item);
@@ -354,15 +354,15 @@ export const spiderThread = async () => {
 
         skus[newKey] = {
           appId: item.appId,
-          languages: item.languages,
-          description: item.description,
-          countries: item.countries,
           childSkuIds: item.childSkuIds,
+          countries: item.countries,
           coverHash: item.coverHash,
           coverMicroData: item.coverMicroData,
           coverUrl: item.coverUrl,
+          description: item.description,
           developerOrganizationIds: item.developerOrganizationIds,
           isPro: item.isPro,
+          languages: item.languages,
           listId: item.listId,
           name: item.name,
           number: item.number,
@@ -386,6 +386,12 @@ export const spiderThread = async () => {
           lastSpidered: item.lastSpidered,
         };
       }
+    }
+
+    await spider(record);
+    console.info("🕷️ spidered", record);
+
+    if (await canFetchDevApi) {
       fetchDevApi("skus.json", {
         method: "PUT",
         body: JSON.stringify(skus, null, 2),
@@ -394,13 +400,10 @@ export const spiderThread = async () => {
         method: "PUT",
         body: JSON.stringify(meta, null, 2),
       });
-      downloadDocument();
     }
 
-    await spider(record);
-    console.info("🕷️ spidered", record);
     console.debug(`${Object.keys(records).length} records.`, records);
-    await sleep(6.0);
+    await sleep((Math.random() * 128.0) / Math.log(staleRecords.length + 2));
   }
 };
 
@@ -415,6 +418,9 @@ const fetchStadiaPage = async url => {
   data.list = opaque.WwD3rbnob?.[2];
   data.gameStats = opaque.e7h9qdoss?.[0]?.[8];
   data.playedAppIds = opaque.Q6jt8cooos?.[0];
+  if (!data.playedAppIds?.length) {
+    data.playedAppsIds = undefined;
+  }
   data.sku = opaque.FWhQVssb;
   data.storefront = opaque.xjyeoc?.[3].flatMap(x => x?.[1]);
   data.gameAddons = opaque.ZAm7Wesooooooob?.[0];
@@ -604,7 +610,10 @@ const downloadDocument = async () => {
       .replace(/\s*<\/body>\s*$/, "\n")
       .replace(/^<head>/, "")
       .replace(/<\/head><body>/, "")
-      .replace(/(\s)(disabled|autofocus|pre-order|pro)(="")([>\s])/g, "$1$2$4");
+      .replace(
+        /(\s)(disabled|autofocus|pre-order|pro|previously-pro|popular)(="")([>\s])/g,
+        "$1$2$4",
+      );
 
   await fetch("//dev-api.stadia.st:57482/index.html", {
     method: "PUT",
@@ -724,20 +733,32 @@ const updateDocument = async () => {
     if (game.isPro) {
       const badge = Object.assign(document.createElement("st-badge"), {
         textContent: "PRO",
+        title: `${game.name} is currently included with Stadia Pro.`,
       });
       badge.setAttribute("pro", "");
       link.appendChild(badge);
     } else if (game.wasPro) {
       const badge = Object.assign(document.createElement("st-badge"), {
         innerHTML: "previously<br />PRO",
+        title: `${game.name} was previously included with Stadia Pro.`,
       });
       badge.setAttribute("previously-pro", "");
+      link.appendChild(badge);
+    }
+
+    if (!"this game is so popular!") {
+      const badge = Object.assign(document.createElement("st-badge"), {
+        innerHTML: "🔥",
+        title: `${game.name} is popular!`,
+      });
+      badge.setAttribute("popular", "");
       link.appendChild(badge);
     }
 
     if (game.preOrder) {
       const badge = Object.assign(document.createElement("st-badge"), {
         textContent: "pre-order",
+        title: `${game.name} is available for pre-order, but not yet released.`,
       });
       badge.setAttribute("pre-order", "");
       link.appendChild(badge);

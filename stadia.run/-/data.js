@@ -25,6 +25,9 @@ export const getset = (
     ) {
       // ignore URL changes if the content is the same
       newProps.coverUrl = existingRecord.coverUrl;
+      // this should be identical, but canvas behaviour can slightly
+      // vary so let's also preserve it.
+      newProps.coverMicroData = existingRecord.coverMicroData;
     }
 
     for (const [property, newValue] of Object.entries(newRecord)) {
@@ -87,7 +90,7 @@ export const getset = (
   record.firstSeen = record.firstSeen ?? now;
   record.lastSeen = now;
   record.lastModified = modified ? now : record.lastModified ?? 0;
-  record.lastSpidered = record.lastSpidered ?? 0;
+  record.lastSpidered = record.lastSpidered ?? Math.random() * 0.5 * now;
 
   records[record._key] = record;
   return record;
@@ -159,10 +162,10 @@ export class List extends ARecord {
   /** @type {"list"} */ type = "list";
 
   get _spiderFrequencyCoefficient() {
-    if (this.lastSpidered === 0 || this.childSkuIds.length > 0) {
-      return 8.0;
+    if (this.childSkuIds.length > 0) {
+      return 2.0;
     } else {
-      return 1 / 8.0;
+      return 1 / 16.0;
     }
   }
 
@@ -180,7 +183,7 @@ export class User extends ARecord {
 
   /** @type {"list"} */ type = "list";
   get _spiderFrequencyCoefficient() {
-    return 1 / 64.0;
+    return 1 / 16;
   }
 
   get _key() {
@@ -222,6 +225,10 @@ export class UnknownTypeSku extends ASku {}
 
 export class Preorder extends ASku {
   /** @type {"preorder"} */ type = "preorder";
+
+  get _spiderFrequencyCoefficient() {
+    return 4.0;
+  }
 }
 
 export class Game extends ASku {
