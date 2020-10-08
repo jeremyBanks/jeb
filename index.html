@@ -352,6 +352,18 @@
             box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.5);
           }
 
+          main st-games st-game st-badge[popular] {
+            background: rgba(64, 0, 0, 0.5);
+            box-shadow: 0 0 2px 1px rgba(64, 0, 0, 0.25);
+            border-radius: 32px;
+            font-size: 32px;
+            height: 36px;
+            width: 36px;
+            padding: 0;
+            top: 8px;
+            left: 8px;
+          }
+
           main st-games st-game st-badge[pro] {
             background: var(--theme-color);
             bottom: 8px;
@@ -375,9 +387,9 @@
             background: #FD0;
             color: black;
             bottom: 8px;
-            right: 8px;
-            border-top-left-radius: 12px;
-            border-bottom-right-radius: 12px;
+            left: 8px;
+            border-bottom-left-radius: 12px;
+            border-top-right-radius: 12px;
           }
 
           main st-games st-game st-cover-full,
@@ -416,6 +428,7 @@
             box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.5);
             color: white;
             background: var(--background-color);
+            opacity: 0.875;
             border-bottom-right-radius: 12px;
             border-top-left-radius: 12px;
             visibility: hidden;
@@ -460,13 +473,13 @@
     </template>
     <st-game><a href="https://stadia.google.com/player/b67e43f2b05f4ba7acc56a4b222568aarcp1">
       <st-cover-full>
-        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/VyjrRvTwTqWUpt85AJxR4A8bnwXlAA9xE5mCUnaR53XAx1_cHilAWVqcTpxwE42g7boul7fRj50NGPZB4q4tYd0n_fStvjwM-cjItgL7mQK-J6FysozyoF5Ydpo=w640-h360-rw">
+        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/jKvUhJdnKjh32y6vuzq860f0GPb5RWSY_KWAPbOxaqjN8-oJ_L_I_JoBOhN2RwIMcxP8vUyfA44aOCmYlugRc5uk9_oM9Z2bmNZetK18z2ZXnVxcVdBcu-98PBo=w640-h360-rw">
       </st-cover-full>
       <st-cover-micro data="-FJKKK---FKK-KK--JKK-LKFFJKKKLKJ-JKKKKKJ-KKKKKK--KK--KK--0L--K--">
         <st-name>Dead by Daylight</st-name>
       </st-cover-micro>
       <st-slug>/dead-by-daylight</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Dead by Daylight is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/16d98de80a3340ffa4129953ae4e3206rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/Gw4F5Rql1NSmlx7v7HS0QjYiZlReSiiI-i2eHmyzi9xQtTk0W21NJb1LVG8hnsI1oi79OobGC2WnTX2SeHP8faP9luwONHpiRSoTeBkS_fGKGHGyhUaj2WHYo3I=w640-h360-rw">
@@ -475,7 +488,7 @@
         <st-name>Human: Fall Flat</st-name>
       </st-cover-micro>
       <st-slug>/human-fall-flat</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Human: Fall Flat is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/2847419bbb5146ed877a308d9884f504rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/ZONXSTvZFV6E6Z8_vt1STKkbyod_EYeF965ualDPplzrFWvCo6HGBFxJDIGYYD8VHYz1kV8SQqHCgGpnAXxqJWyBzDFV8_fu-29Aa01tKsO3ZZxzUlk-rGK9TVGQ=w640-h360-rw">
@@ -484,7 +497,7 @@
         <st-name>SUPER BOMBERMAN R ONLINE</st-name>
       </st-cover-micro>
       <st-slug>/super-bomberman-r-online</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="SUPER BOMBERMAN R ONLINE is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/9dc548a191914b419cc80802ca64788frcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/MTDESahJnlYXNU7mFfDOdSk_4sAF6ONemv6R9l9Uj40hR73KFd5eqKoYZanR6JXyMbqsqWC5a9pqhmA5fD1N24la1wQmBmiCHuYv3JPEHW2Mf_uINQjKlV7Arg=w640-h360-rw">
@@ -493,7 +506,7 @@
         <st-name>Hello Neighbor</st-name>
       </st-cover-micro>
       <st-slug>/hello-neighbor</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Hello Neighbor is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/990ec302c2cd4ba7817cedcf633ab20frcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/K4cdZyCNR-LtN8LtkHCuvcoc3QC7LEFBY8y9OjJxGkYRtStskmqamLFS2kFG1tcDgtkHwMnKX2Oq5iGXoNdXiCfuJMqKuD_gE9ABbHIZUorFDOFOSRzNPbDQlg=w640-h360-rw">
@@ -502,7 +515,7 @@
         <st-name>HITMAN - World of Assassination</st-name>
       </st-cover-micro>
       <st-slug>/hitman</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="HITMAN - World of Assassination is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/16330bd770134d85b5bef3cc6b1407ffrcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/FJZNweR1cRKiMEVMXvBZvB5wEI_iG_Zvw4ia2LwN-06NaTviBwdcchT7s5NYSDQjEoN9D3mNIruP8FLlc2WHOSsK3BWKoE3ztkUYYL35C17wha1OuI0Yb4KhJA=w640-h360-rw">
@@ -511,7 +524,7 @@
         <st-name>Gunsport</st-name>
       </st-cover-micro>
       <st-slug>/gunsport</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Gunsport is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/382fe14629e148449e7b8f94e8aecb38rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/6YsZ299uWpDzohhBvZiHwIebU5D5O26iRx4EmZ6Bf-X9ipNrajSbZaCuk3iM_qvKRAvxKXqTCyp77WQrsOlGJK6z7k_2rjK7K6aZnvnL3luzUlSBAKjyAXf4AYE=w640-h360-rw">
@@ -520,7 +533,7 @@
         <st-name>SUPERHOT: MIND CONTROL DELETE</st-name>
       </st-cover-micro>
       <st-slug>/superhot-mcd</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="SUPERHOT: MIND CONTROL DELETE is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/d3d8e467203d401387857d5b6cc27263rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/pljPTkCKdQCnSsIXkRByPSGhFzf1M3rxjjmyVwYaFCwkxr5UOamvUtbSK_GbkcAE-h9hlmvqFSjxd9UuGzwXMgoO6BZYu5rV-fW8_3Krw4cXhpf38R7RSxEPfQ=w640-h360-rw">
@@ -529,7 +542,7 @@
         <st-name>Rock of Ages 3: Make &amp; Break</st-name>
       </st-cover-micro>
       <st-slug>/rock-of-ages-3</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Rock of Ages 3: Make &amp; Break is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/8e77c7a4368944589b4c9d8179d2eb4crcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/OaTjOAMx743r0Dp02Fy85lxOXcqZKsGb82LoTX8UPIucZlOUUS2vVNPkg1Pc6Z_k1fxdTzDvCntNKrIpnnYZZjuzOBWvgoD3hodNe34QuO--oLwzf5M1dY2Jvwg=w640-h360-rw">
@@ -538,7 +551,7 @@
         <st-name>Strange Brigade</st-name>
       </st-cover-micro>
       <st-slug>/strange-brigade</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Strange Brigade is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/c911998e4f8d4c6ea6712c5ad33e4a54rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/7GTAoubUX43W_zaFkEvQoqAkruysGSkQygrV0DYkVzA7qsIcsboF4n1Kq0mejQIGdlSQxeh4-ZuNQWqMjJ55u0GCR3aBnY1MsMwrULT1-J73Rs3fc3bFO8YjT20=w640-h360-rw">
@@ -547,7 +560,7 @@
         <st-name>Celeste</st-name>
       </st-cover-micro>
       <st-slug>/celeste</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Celeste is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/6d0d865669774338b3ce888a84da6cdercp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/5SLIiiPbwGuKqbjNqAsBSeBnBIT70gipNFcRB6pWUgNHfwnmG_njj98iJEX7Vn88Z8tKKhSEF21sE8Cy2ntOglHWHrgQk4wUbMgL-D1jz3Ieh1w-5lkhTdDfqaU=w640-h360-rw">
@@ -556,7 +569,7 @@
         <st-name>Lara Croft and the Temple of Osiris</st-name>
       </st-cover-micro>
       <st-slug>/lara-croft-and-the-temple-of-osiris</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Lara Croft and the Temple of Osiris is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/c1928530515748da9f55afc7243fd3e1rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/Arfb5W-unypro7QZ2S9lHX3iz8gEhRMTvYbGZDHCY3FACkzSkTdkL746jKJhhhnmK-Jfobxz8cxGLyAibYWwXpubWZrGW5m2U8FUkbwE--NWqliYIFP1IlKwaQ=w640-h360-rw">
@@ -565,7 +578,7 @@
         <st-name>Orcs Must Die! 3</st-name>
       </st-cover-micro>
       <st-slug>/orcs-must-die-3</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Orcs Must Die! 3 is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/05f66a46027747a08b930ea70374ac7frcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/MYk1y21Do2wAf945dvckUCEht_4lAbpqVcgMCS5yQWbB-1Ja98PwT02FjNgnrF71FmbY6B90momoWBTxGC6u5gDJU7UIYq9cwbYSaG5zlv_bX_Z3Lc0dvHD4nLY=w640-h360-rw">
@@ -574,7 +587,7 @@
         <st-name>Crayta</st-name>
       </st-cover-micro>
       <st-slug>/crayta</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Crayta is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/0a60fff637b445a797623d0c69433a9crcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/jSXfWyncAmtfJQhxvaJ5-foSXBoyA9DB4h3c_npdP7UWP5pzUwHtHQ_t8xc51FOddChtCu9UShV_wpQBQBMQvrMFm71ABFBfATfuoBcrWkqRChYy0Izxij-zoFqc=w640-h360-rw">
@@ -583,7 +596,7 @@
         <st-name>West of Loathing</st-name>
       </st-cover-micro>
       <st-slug>/west-of-loathing</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="West of Loathing is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/6b43cecd79734ba28cef5894985c65f1rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/4PB-AwkBss_SSWOTl7jVq_oxCK_pgOjZp86koLjoX-Sm4ABdgFOrR_-EKJeI_g0EFBHZZPGeJ64yJdI_8sUTQ1eLt6EslTeQ8R9g8Y9SvhnPD_ElF5IaritDpg=w640-h360-rw">
@@ -592,7 +605,7 @@
         <st-name>Just Shapes &amp; Beats</st-name>
       </st-cover-micro>
       <st-slug>/just-shapes-and-beats</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Just Shapes &amp; Beats is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/b65c1c4dcdf24446bcecda190c6a2fe7rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/5Q_Jud3L9aA-BAh-oxts980rnvjCi_8do7mde9-ZQo3Q7-xv1a86OMc0YGR7y1Z9G4XpbHr3ZJKiSazE6UYLEk96U7Yql6P67BWpI1So6Cc_UA74KxcBfkSseg=w640-h360-rw">
@@ -601,7 +614,7 @@
         <st-name>Metro Last Light Redux</st-name>
       </st-cover-micro>
       <st-slug>/metro-last-light</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Metro Last Light Redux is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/ffda0b7e397243f8956f92f89b6902c4rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/rd4vwRkfW6YO540AzWRvV43sqtAJaefbl7EZLtiReAHjIuhYw-ox1fp_wEE90Z2vvIvsaCVVUrdpSYqddOeAcWO7sDztSDo257WoVQS2cOfTNmCqf1BV-pBBXmw=w640-h360-rw">
@@ -610,7 +623,7 @@
         <st-name>Panzer Dragoon: Remake</st-name>
       </st-cover-micro>
       <st-slug>/panzer-dragoon</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Panzer Dragoon: Remake is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/3aed855f10b34f618e5f6c6f5467bcf9rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/i6ZIXQ9RKfAc_KpLAxNbLRzljAijoJttuGAqGwWaBaxdc2knx-v8x_i44bKMopt1PyqrMRkTLpIKSAz77v3A15BXUoSG0Uo2QOqGgouUFIHYNPtM_ti97M6omg=w640-h360-rw">
@@ -619,7 +632,7 @@
         <st-name>Little Nightmares</st-name>
       </st-cover-micro>
       <st-slug>/little-nightmares</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Little Nightmares is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/f7afcff709e74227a5648aacadf03815rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/a_DZMKOW9osfbqTGtoOn0nprUsTXzdGhueGOfKHWcfkURlE3ApMG-XXtbzJwvgQhpjduqe6axALeMRaTDyZ5AMa8cTI3KqoXCCi1FtiZPJW-oK8x5HS-AyAWCJM=w640-h360-rw">
@@ -628,7 +641,7 @@
         <st-name>SUPERHOT</st-name>
       </st-cover-micro>
       <st-slug>/superhot</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="SUPERHOT is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/bbb1a143aa3449a5a1f236a05c305c9frcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/bYxWPLVUnAYpGDwNxjFyzq7UmAy_fxJh_MPEg2IGN9YtEgHs1aT-47B4SnoG_yYK-y4wY7UX6kMlcSkkimtQrnIJkVa_fLbnVhu2JqFAkxEioKjnzRtdyaZ2Mg=w640-h360-rw">
@@ -637,7 +650,7 @@
         <st-name>Power Rangers: Battle for the Grid</st-name>
       </st-cover-micro>
       <st-slug>/power-rangers-battle-for-the-grid</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Power Rangers: Battle for the Grid is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/c727a9083ce649e5b1cc6999c4fa2e5frcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/XTJGCrxzsGuyt5iUIZ4G3rcq9BeFtOq7svkInUNXnIRaVaSwRTKOOPscVPK-7XB8uT9YxG2RkZixfoucfL-_75dE8RVGaxRuvs18FIIbN71jlqwx30f7VuvyPA=w640-h360-rw">
@@ -646,7 +659,7 @@
         <st-name>Jotun</st-name>
       </st-cover-micro>
       <st-slug>/jotun</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Jotun is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/d599576cddfc400f804b889460e84cb3rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/cjlzxy12lrPBuJ2-8bfLWMHqvdUw6usWR0ChmT8-vlpPo_dJrGjGv3crDII-gBGKugWSlewQ0W_GFvoIXRtF_0W9jtglKfZE_jwJ_hDzXc2lE6MUfrUlUvw9kCs=w640-h360-rw">
@@ -655,7 +668,7 @@
         <st-name>Embr</st-name>
       </st-cover-micro>
       <st-slug>/embr</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Embr is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/a4c5eb3f4e614b7fadbba64cba68f849rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/hNUFlpnN2BSEOTzgVm3UULRMq7S3q_8wA2gImHkSkJ0oL-XD9OjOkP431qoCrd01yzAw_HqRTdqC87LyULUmKGO6RxvfT_NRpi5uIa28gTvJby0REy7sUhOr01s=w640-h360-rw">
@@ -664,7 +677,7 @@
         <st-name>PLAYERUNKNOWN'S BATTLEGROUNDS</st-name>
       </st-cover-micro>
       <st-slug>/pubg</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="PLAYERUNKNOWN'S BATTLEGROUNDS is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/c4898519ff254b969ede8bafdff927e8rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/LXLmsmhZBlnCYVmrkTrBezCQ9Tfq90Qx82YPu57ZJUsqM6Bn6fuMA4uinPUQnR74GJc3JyTAcRNegopeU9YnKoBnGQgpPWzo4IoNJkhi3Eb4pZwZqdwxP_t5A7ZD=w640-h360-rw">
@@ -673,7 +686,7 @@
         <st-name>SteamWorld Dig</st-name>
       </st-cover-micro>
       <st-slug>/steamworld-dig</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="SteamWorld Dig is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/819cdf4b7ff94947941106571ccf41e5rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/RMt7mHtBzQicL5jGpC1X9ELCF2NjOIfTfoNnCj2p61G1U0kkYnqkEGLcgJcuTC7dRn5mgdFt72fdGjfqfyltY5PZ-f2astm1-ZTSm9hOolWAS2r5UrzBf5Us6A=w640-h360-rw">
@@ -682,7 +695,7 @@
         <st-name>SteamWorld Heist</st-name>
       </st-cover-micro>
       <st-slug>/steamworld-heist</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="SteamWorld Heist is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/b832835182124d4d83cb76a74a76a33frcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/ONk3qa1K_m7aGUHZI6sbLDgNv43mlV3WXsoSi4_8vJpcAc1OVk7MSjimBfEPQ1ZTvbV5fVlIRXpTSxilcNudQ5XyCJNlxEh_eNLRaYi7_ThxqrWIp8WswEbxHMo=w640-h360-rw">
@@ -691,7 +704,7 @@
         <st-name>SteamWorld Dig 2</st-name>
       </st-cover-micro>
       <st-slug>/steamworld-dig-2</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="SteamWorld Dig 2 is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/b845605f8eb447008f3f0d2295265ffdrcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/saDQagRULDR_a1P7y4rDZXfKJ74v1pZEmIRoM2V8DWuKTdqRAF30BfkGvvhQ4eJKpQUfZnMymrmDj_Hd9hHjqcBo67jwQID8x5VgbwOlCdEB0fqhocA9ONpJASs=w640-h360-rw">
@@ -700,7 +713,7 @@
         <st-name>SteamWorld Quest: Hand of Gilgamech</st-name>
       </st-cover-micro>
       <st-slug>/steamworld-quest-hand-of-gilgamech</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="SteamWorld Quest: Hand of Gilgamech is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/20e792017ab34ad89b70dc17a5c72d68rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/0fwJoLxjhigQ1ScFZ1S27hEOKEPR8HH5Ac6nK2WOI5G0baQMgBjoeAha7zPNWE2-J6Zsm6mKmYOKhmVVndltPdOZTPtT178vBTw-T9VfKCW6Ph_qbnJPwukCgxtq=w640-h360-rw">
@@ -709,7 +722,7 @@
         <st-name>Destiny 2</st-name>
       </st-cover-micro>
       <st-slug>/destiny-2</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="Destiny 2 is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/18a3cc2bb111419c8ac873086d04dfaarcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/Kn2LsxzVn65aWLTjJwB_kXDzGusf_bhLijJ-1T47G-6AC2a4bxRsD-IvgmOKv5QeKIbKOTA9PC9209LoLthGjhykbxIJNxLWruyeeBZvMXLANLarBQb5ByC7SwM=w640-h360-rw">
@@ -718,7 +731,7 @@
         <st-name>GYLT</st-name>
       </st-cover-micro>
       <st-slug>/gylt</st-slug>
-    <st-badge pro>PRO</st-badge></a></st-game>
+    <st-badge title="GYLT is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/41de509cbdbb4a13828636099c57731arcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/bQlGBSzM3rM87xOByxx72eOnLwgpyJWyd4lH8UnYzPDNP9LD1Hp3_XZu9ukYyyjttjw2oqvdKCr3x1nB7mETo37m4Amuxjg_wRsSkGulwDputdLp4rJjKCmYAELa=w640-h360-rw">
@@ -862,7 +875,7 @@
         <st-name>Kona</st-name>
       </st-cover-micro>
       <st-slug>/kona</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="Kona was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/76309b9f2f294b07b410e8b6aa879273rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/CQ5zLG-4lvKoXKGeZkGIYOeOhsd2E0-HkTdRpaJh6Dk9_0jo7j-_DR2RUhP0BRQ31A9_D_4LUD23mmjdD4wTp-cZZH_I31uErvgacpx8lf7uI_Gf417t2s84-A=w640-h360-rw">
@@ -889,7 +902,7 @@
         <st-name>Monster Boy and the Cursed Kingdom</st-name>
       </st-cover-micro>
       <st-slug>/monster-boy</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="Monster Boy and the Cursed Kingdom was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/9b3ea6519cac48d68ca821f07b1a6a3drcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/IUfL2ZFbRWy_HrydHBbBkkGuvVXFBpgNXTBEEObL7jQoPjfZqX_JfYOGF-IAC_T_AC0O2mZ3uRw_dJtGrJa0ADHGDKgPcD9vFJukk2wrTe2kdSZaJ-25HPn31jtm=w640-h360-rw">
@@ -898,7 +911,7 @@
         <st-name>Metro 2033 Redux</st-name>
       </st-cover-micro>
       <st-slug>/metro-2033</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="Metro 2033 Redux was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/3e7b24085e704c10ab03f93a19947c14rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/4DAGmcRqGVErnvthhg2M7V2kCMCBlQvXHFKGYfSfRCh7WbgiBH-jkEzC5LH9xBtWdXXf3gWMn_-YbmnATqiPXucEDVt5TdAM3dWiEHRwmrbaBLGNhPqARWQApWY=w640-h360-rw">
@@ -916,7 +929,7 @@
         <st-name>The Elder Scrolls Online: Tamriel Unlimited</st-name>
       </st-cover-micro>
       <st-slug>/eso</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="The Elder Scrolls Online: Tamriel Unlimited was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/5ec4424b963f44d18d0016322c19c9f0rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/k4qwu36Xxa-7po_Gl0LLHLlr0fKtjewYvMH07j3M4vpZ4YVFHe-ZrdMY-kKAYHgMPdIXGDrQrb04xl8QCr04E7LQT8Z2JJsDQvf1qwBn1XslM18RbfDLPb_Ojlk=w640-h360-rw">
@@ -943,7 +956,7 @@
         <st-name>The Turing Test</st-name>
       </st-cover-micro>
       <st-slug>/the-turing-test</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="The Turing Test was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/cba537cccfe3470b8784f88660ea5f09rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/xSIP0ldbNDoulA3Iy0mwMf8dwHqHfFhKSETkYRcgWyRitHUB1qdVNvJLdcZHS2ozGJiLCSnWGZ0DJIYG3icCk5AYbhFTZJFZulMA6UgQJDwuVTmNM1nCcF4A4Q=w640-h360-rw">
@@ -952,7 +965,7 @@
         <st-name>Zombie Army 4: Dead War</st-name>
       </st-cover-micro>
       <st-slug>/zombie-army-4</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="Zombie Army 4: Dead War was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/48ead86182b14fe0afcc5f2927dbed51rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/Y5bhR3kzAE7olMePHIUoiHk6fs7gIvpqZyL5U-IKBMhRQbL7JQHVivWS7SavfywrA4bG2sd3crQ48orttlRYA8rneM1C0lqo-sDeQmtNGzVCoM2lOiIGLyufKSc=w640-h360-rw">
@@ -970,7 +983,7 @@
         <st-name>Get Packed</st-name>
       </st-cover-micro>
       <st-slug>/get-packed</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="Get Packed was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/10b8a9cc8ec746f29afc1fc3c3ded28brcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/Al3QfOz25vWgOUrxSQU0-xl8bn3ti2NpBq0fAoOP7-79omCOQIT9fo90QIeMtp7q5SlcKjFEQxSbWZFC732WsgDrBh1nDdQULf-K4vdSH6N3A4Dt4zz8r7gQg-xV=w640-h360-rw">
@@ -982,7 +995,7 @@
     </a></st-game>
     <st-game><a href="https://stadia.google.com/player/e465c4086aff4884990933d9f119f5f5rcp1">
       <st-cover-full>
-        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/GESVnwuyEmTel73vl8bqY5GpeiIMYw2fl0k5ZB37_9cfAl4nSMJ06TLLf_kaQ57FYIkZ9z7BGi2C-GU69l0hWLwWOcB8aoJvqM2yYtr80dnAfyHI5jwscLrCfZg=w640-h360-rw">
+        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/cOLw5MXyvc1nyle-7Cdu0DB3bkOKtsj3OjxSLlf8XigEu6NlB6vj8ewh4zlg6H_1NOocXfP3_kO3dj7nimCSnB5gowkorfQd0kpJA74dgUsTYMtLWmyqhjTBh4s=w640-h360-rw">
       </st-cover-full>
       <st-cover-micro data="----44KJ----K4KKKKK-K4KK----4GKL-----KKK-----KK0-----4K---------">
         <st-name>MotoGP 20</st-name>
@@ -997,7 +1010,7 @@
         <st-name>Stacks On Stacks (On Stacks)</st-name>
       </st-cover-micro>
       <st-slug>/stacks-on-stacks-on-stacks</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="Stacks On Stacks (On Stacks) was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/d334bea27ee64ef5a3a9bb14b1d6a88ercp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/1lhuwC0b8Lycp3LZ80XPcWN_rZHEIIqQl4Uv8MRr4CFO52DFFCn1cCJHSni2cLXgpyQAlOqAHkcQBj7XQXrjOr1IKaHmffXU5sg2F0DAjkOt5WD83mw3R-bYGTTh=w640-h360-rw">
@@ -1036,13 +1049,13 @@
     </a></st-game>
     <st-game><a href="https://stadia.google.com/player/cabec52b78264dafac69011aeacd5753rcp1">
       <st-cover-full>
-        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/81RnoCV4UpEfDs-aSmKXhqqiCHHnmWbIZ2PlnB9hCeuFkaxFz0MBqa-scqfH8qY3f2GnD0c1yz4ZgbYNasrKlCcwjcuKAJB3xgVc4dH-24-E8-zq2Z-9oESZbAo=w640-h360-rw">
+        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/zdR8SpkHI91O5T5qYyMa6shMMK-Z0KsSI4qJlnb72JDjAdjhdmllrQsH7Mkd_NCqWRg7ay21-t6rYKcJFUpywid6tu6LTVRl_b-d_FSiuofXM0txw78hd87_Q_A=w640-h360-rw">
       </st-cover-full>
       <st-cover-micro data="PeeeePPPeefLfPKPeeeLPjfefePLLeefePLKLeeeePLPPPeeeeeePfeeeeefeeee">
         <st-name>Serious Sam Collection</st-name>
       </st-cover-micro>
       <st-slug>/serious-sam-collection</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="Serious Sam Collection was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/921e9afe46aa478fb4aa929a7b1a6bd5rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/lTEK8iolPxfpLSH1thdzax2zM3z7q3GdVVwRYocHMpKhJIQXH6IWTBetwl8tGFIYzNpjYFr0uRlR5NazF2L-J-OfPlRNQjqWMWztcd8d7eKrOLi162BGbOvpAk0=w640-h360-rw">
@@ -1051,7 +1064,7 @@
         <st-name>Spitlings</st-name>
       </st-cover-micro>
       <st-slug>/spitlings</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="Spitlings was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/d50e1c1b61224bceb65da9406f3f4e8frcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/naMIrWahw0AhZWz4o2SZ3xRl6X8E_xMhOPfoCrHBWBgphrPnkWqFDqWSGKqqVD6IqlklxEuyAtRj1sr9v1-f9kygJkraPUYt_2-GjIQCcU7UY5BhDqkks_-NBg=w640-h360-rw">
@@ -1105,7 +1118,7 @@
         <st-name>Farming Simulator 19</st-name>
       </st-cover-micro>
       <st-slug>/farming-simulator-19</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="Farming Simulator 19 was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/ca805d3d37404654a91d2ea62fad7bd4rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/wSt9G8QWOlyr6r-JoEKlNZeA210QdmlPSuW5Svm5tHhkqpl34NkZ1G7a2wHxx-aw8HKlyoVlrxV3DhP8QBhAe-5R2UvmKF7221UzdMA0o5F1oPCSnS2W8dHUIo0=w640-h360-rw">
@@ -1114,7 +1127,7 @@
         <st-name>GRID</st-name>
       </st-cover-micro>
       <st-slug>/grid</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="GRID was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/e5c6ec7bf437491ea4ac0917df8f9640rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/JV6HplJctzOUtRNjLPE1Uf-MqgkJKtbcmO_AuqFyl0Jn16Q6qe5EEWey49M4Ln1hNHFJbPGA5JSHsHts8RIdxYeg1vb0ZepIE4CPI5Um0l782IROp50jwuELxw=w640-h360-rw">
@@ -1123,7 +1136,7 @@
         <st-name>Rise of the Tomb Raider: 20 Year Celebration</st-name>
       </st-cover-micro>
       <st-slug>/rise-of-the-tomb-raider</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="Rise of the Tomb Raider: 20 Year Celebration was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/120348c2707740b99b509fad49a2f45drcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/WlB-WLbPcBnhLPPqHwp73e9ApLYfEdymhOIipbg0Xt4Q5LqvPrptNCiyx3YxEd785wOJ3SDRDPR4rE5TvV-lhi_sPX-lOpOB2HVHE6deJWfo5VUCJ6dWN2tak6jO=w640-h360-rw">
@@ -1132,7 +1145,7 @@
         <st-name>SAMURAI SHODOWN</st-name>
       </st-cover-micro>
       <st-slug>/samurai-shodown</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="SAMURAI SHODOWN was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/c121d8b3fa744b52b71bf3599cb3da7frcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/_p33ZpHqaQSZY78a-6PhjiqNucXh5ToiDd6HzWkeV_sjhUeGHLWzmTzfRgzaPkcmMFFmGyatpCVr1nIxcsf2_7uR4vPjTOGMoMzaWDl7yaiDhnT6oNv6ab0aXg=w640-h360-rw">
@@ -1141,7 +1154,7 @@
         <st-name>Thumper</st-name>
       </st-cover-micro>
       <st-slug>/thumper</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="Thumper was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/42503ac2cfcf40018c15c86b86a5508drcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/ItdfhlmZlO02nwB2DXVUYjI9No4a8YneGd89WAtsQWQxIfuQtaNHNao7gA5ctMHgC-WTtPGjuuyK64Sv4nhEUYf6gwGELlxDePAdoKo1dGRhb9d64jyzPV4kQg=w640-h360-rw">
@@ -1150,7 +1163,7 @@
         <st-name>Tomb Raider</st-name>
       </st-cover-micro>
       <st-slug>/tomb-raider</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="Tomb Raider was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/8b7e7f7036e5483eaa8745d46248536crcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/-yVMpBzhUPohpKlazmJ4WwxCztfqFxTOAZPr28tmhvvbxsWJohHUA_XNEBiTpBB5iRZTq7-AO5asjjUkNUkJCCRtFNHMskctMRk1nz419phwp4zA4CSxcuN4ops=w640-h360-rw">
@@ -1225,9 +1238,9 @@
     </a></st-game>
     <st-game><a href="https://stadia.google.com/player/8615c857d7d54efebd94fe17e3f2896crcp1">
       <st-cover-full>
-        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/CdgYx9bv2CovVnR1BOF2NEJg-eQc0Sr6EEclCtmxxnDz-7pRcDBACOLWN1k05kOciZ_MbmLkxrix1zG5cRH0PSF5_FQulyAhIhvQR4HyV89QiAFTz9CmdroDOoI=w640-h360-rw">
+        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/65uHuKeD1rIuUdnZNq-xUnxcFao7H1JxniX4ZFEokrbqYmUsl6AetyhmNOZODy14PvPBxbVQfRI1hN2mvTVy92SCYofRy43LqqH6bf9xmRm7Bt5K9MQ0xYzUAI7A=w640-h360-rw">
       </st-cover-full>
-      <st-cover-micro data="z4eefe-HQ0--0eLHPKKKLLef0KeKfLff-0jeL0La4KbLL0LLPKa4KK5LK-9L059E">
+      <st-cover-micro data="zLeefeFHQ0--0eKHPKKKLLef4KeKf4ef-4jeL0La4KbLL0LLPKaKKK5LL-95059E">
         <st-name>RAGE 2</st-name>
       </st-cover-micro>
       <st-slug>/rage-2</st-slug>
@@ -1276,7 +1289,7 @@
         <st-name>Metro Exodus</st-name>
       </st-cover-micro>
       <st-slug>/metro-exodus</st-slug>
-    <st-badge previously-pro="">previously<br>PRO</st-badge></a></st-game>
+    <st-badge title="Metro Exodus was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game><a href="https://stadia.google.com/player/161f276db10947a199cd0260ed4dc248rcp1">
       <st-cover-full>
         <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/VDyK9Am5dtjlUWUy-_rN7GnhC__2pHBfFt4FJ7TnkcByg7v1jML0CVWjKIjdMX6N3bp8DrO5vZYdm8OFW3q1bHWvZhCBod5e9IEvv-c2zj9qAxEqlNNSi5FOp5s=w640-h360-rw">
@@ -1285,7 +1298,7 @@
         <st-name>IMMORTALS FENYX RISING</st-name>
       </st-cover-micro>
       <st-slug>/immortals-fenyx-rising</st-slug>
-    <st-badge pre-order>pre-order</st-badge></a></st-game>
+    <st-badge title="IMMORTALS FENYX RISING is available for pre-order, but not yet released." pre-order>pre-order</st-badge></a></st-game>
   </st-games>
 
   <footer>
