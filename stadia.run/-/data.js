@@ -12,6 +12,11 @@ export const getset = (
   (Pick<List, "listId" | "type"> & Partial<List>)
 } */ newProps,
 ) => {
+  // HACK
+  if (newProps.playedAppIds && newProps.playedAppIds.length === 0) {
+    delete newProps.playedAppIds;
+  }
+
   const newRecord = Object.assign(makeRecord(newProps.type), newProps);
   const now = Date.now();
   const existingRecord = records[newRecord._key];
