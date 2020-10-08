@@ -16,6 +16,7 @@
         for (const {type, item, userId, name, number} of Object.values(data)) {
           if (
             type === "user" &&
+            name &&
             name.toLowerCase() === targetName &&
             targetNumber == Number(number)
           ) {
