@@ -180,7 +180,7 @@ export class User extends ARecord {
 
   /** @type {"list"} */ type = "list";
   get _spiderFrequencyCoefficient() {
-    return 1 / 32.0;
+    return 1 / 64.0;
   }
 
   get _key() {
@@ -229,6 +229,10 @@ export class Game extends ASku {
   /** @type {string} */ appId;
   /** @type {boolean} */ isPro;
   /** @type {boolean} */ wasPro;
+
+  get _spiderFrequencyCoefficient() {
+    return 2.0;
+  }
 }
 
 export class Subscription extends ASku {

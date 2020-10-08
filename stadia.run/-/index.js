@@ -212,9 +212,7 @@ const onSubmit = event => {
     const params = new URLSearchParams(location.search);
 
     if (elements.length === 1) {
-      searchInput.value = elements[0]
-        .querySelector("st-slug")
-        .textContent.replace(/\/+/, "");
+      searchInput.value = elements[0].querySelector("st-slug").textContent;
       searchInput.select();
       elements[0].querySelector("a").click();
     }
