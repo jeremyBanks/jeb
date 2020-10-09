@@ -406,7 +406,7 @@ export const spiderThread = async () => {
     }
 
     console.debug(`${Object.keys(records).length} records.`, records);
-    const s = (Math.random() * 256.0) / Math.log(staleRecords.length + 2);
+    const s = (Math.random() * 128.0) / Math.log(staleRecords.length + 2);
     console.debug("sleeping for", s, "seconds");
     await sleep(s);
   }
