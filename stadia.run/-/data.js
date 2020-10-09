@@ -98,22 +98,26 @@ export const deriveDerivedDerivations = async () => {
     }
   };
   addProGames("59c8314ac82a456ba61d08988b15b550");
-  const activePlayerSince = Date.now() - 1000 * 60 * 60 * 24 * 24;
+  const activePlayerSince = Date.now() - 1000 * 60 * 60 * 24 * 24 - Infinity;
 
   const recentPlayerCountByGameAppId = {};
   for (const user of recordsOfType.user) {
     if (Math.max(user.firstSeen, user.lastModified) > activePlayerSince)
-      for (const appId of (user.playedAppIds || []).slice(0, 1)) {
+      for (const appId of (user.playedAppIds || []).slice(0, 4)) {
         recentPlayerCountByGameAppId[appId] =
           (recentPlayerCountByGameAppId[appId] || 0) + 1;
       }
   }
 
   const howPopular =
-    Math.max(...Object.values(recentPlayerCountByGameAppId)) * 0.8;
+    Object.values(recentPlayerCountByGameAppId)
+      .sort((a, b) => a - b)
+      .slice(-3)[0] * 0.75;
   const popularEnough = Object.entries(recentPlayerCountByGameAppId)
     .filter(a => a[1] >= howPopular)
     .map(a => a[0]);
+
+  console.debug({ howPopular, popularEnough, recentPlayerCountByGameAppId });
 
   const slugs = new Set();
   for (const game of recordsOfType.game) {
@@ -220,7 +224,13 @@ export class User extends ARecord {
 
   /** @type {"list"} */ type = "list";
   get _spiderFrequencyCoefficient() {
-    return 1 / 16;
+    return (
+      (1 +
+        (this.playedAppIds?.length || 0) +
+        (64 / 10000) *
+          (10000 - Number(this.number || 1) - (this.name?.length || 0) * 100)) /
+      128
+    );
   }
 
   get _key() {
