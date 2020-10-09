@@ -322,9 +322,11 @@ export const spiderThread = async () => {
     const icon =
       allRecords.length > 8 ? (staleRecords.length > 0 ? "⚠️" : "✅") : "❌";
 
-    document.querySelector(
-      "#dev-tools .record-count",
-    ).textContent = `${icon} ${staleRecords.length} stale of ${allRecords.length} total`;
+    document.querySelector("#dev-tools .record-count").textContent = `${icon} ${
+      staleRecords.length
+    } stale, ${allRecords.length - staleRecords.length} fresh, ${
+      allRecords.length
+    } total`;
 
     if (staleRecords.length % 16 === 0) {
       await updateDocument();
@@ -406,7 +408,7 @@ export const spiderThread = async () => {
     }
 
     console.debug(`${Object.keys(records).length} records.`, records);
-    const s = (Math.random() * 128.0) / Math.log(staleRecords.length + 2);
+    const s = Math.random() * 24.0;
     console.debug("sleeping for", s, "seconds");
     await sleep(s);
   }
