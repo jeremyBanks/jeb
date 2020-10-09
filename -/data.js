@@ -103,7 +103,7 @@ export const deriveDerivedDerivations = async () => {
   const recentPlayerCountByGameAppId = {};
   for (const user of recordsOfType.user) {
     if (Math.max(user.firstSeen, user.lastModified) > activePlayerSince)
-      for (const appId of (user.playedAppIds || []).slice(0, 4)) {
+      for (const appId of (user.playedAppIds || []).slice(0, Infinity)) {
         recentPlayerCountByGameAppId[appId] =
           (recentPlayerCountByGameAppId[appId] || 0) + 1;
       }
