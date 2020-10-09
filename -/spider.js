@@ -328,7 +328,7 @@ export const spiderThread = async () => {
       allRecords.length
     } total`;
 
-    if (staleRecords.length % 16 === 0) {
+    if (staleRecords.length % 4 === 0) {
       await updateDocument();
       await downloadDocument();
     }
@@ -652,7 +652,11 @@ const updateDocument = async () => {
       const aReleased = Math.max(gameA.releaseDateA, gameA.releaseDateB);
       const bReleased = Math.max(gameB.releaseDateA, gameB.releaseDateB);
 
-      if (gameA.preOrder && !gameB.preOrder) {
+      if (gameA.popular && !gameB.popular) {
+        return aFirst;
+      } else if (!gameA.popular && gameB.popular) {
+        return bFirst;
+      } else if (gameA.preOrder && !gameB.preOrder) {
         return bFirst;
       } else if (!gameA.preOrder && gameB.preOrder) {
         return aFirst;
