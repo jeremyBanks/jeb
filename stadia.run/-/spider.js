@@ -206,8 +206,8 @@ const spider = async (/** @type {Record} */ record) => {
     also.name = page.user?.[0][0];
     also.number = page.user?.[0][1];
     also.coverUrl = page.user?.[1][1].replace("/mdpi/", "/xxhdpi/");
-    also.coverMicroData = await microImageFromURL(also.coverUrl);
-    also.coverHash = await hashFromURL(also.coverUrl);
+    // also.coverMicroData = await microImageFromURL(also.coverUrl);
+    // also.coverHash = await hashFromURL(also.coverUrl);
   } else {
     const appId = record.appId || "-";
     const page = await fetchStadiaPage(
@@ -408,7 +408,7 @@ export const spiderThread = async () => {
     }
 
     console.debug(`${Object.keys(records).length} records.`, records);
-    const s = Math.random() * 24.0;
+    const s = Math.random() * 16.0;
     console.debug("sleeping for", s, "seconds");
     await sleep(s);
   }
