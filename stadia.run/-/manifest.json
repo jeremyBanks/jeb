@@ -63,16 +63,6 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/ItdfhlmZlO02nwB2DXVUYjI9No4a8YneGd89WAtsQWQxIfuQtaNHNao7gA5ctMHgC-WTtPGjuuyK64Sv4nhEUYf6gwGELlxDePAdoKo1dGRhb9d64jyzPV4kQg=s192-p-rp"
-        }
-      ],
-      "name": "Tomb Raider",
-      "url": "/tomb-raider"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
           "src": "https://lh3.googleusercontent.com/jKvUhJdnKjh32y6vuzq860f0GPb5RWSY_KWAPbOxaqjN8-oJ_L_I_JoBOhN2RwIMcxP8vUyfA44aOCmYlugRc5uk9_oM9Z2bmNZetK18z2ZXnVxcVdBcu-98PBo=s192-p-rp"
         }
       ],
@@ -178,6 +168,16 @@
       ],
       "name": "Lara Croft and the Temple of Osiris",
       "url": "/lara-croft-and-the-temple-of-osiris"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/Arfb5W-unypro7QZ2S9lHX3iz8gEhRMTvYbGZDHCY3FACkzSkTdkL746jKJhhhnmK-Jfobxz8cxGLyAibYWwXpubWZrGW5m2U8FUkbwE--NWqliYIFP1IlKwaQ=s192-p-rp"
+        }
+      ],
+      "name": "Orcs Must Die! 3",
+      "url": "/orcs-must-die-3"
     }
   ],
   "start_url": "/",

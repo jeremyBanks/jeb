@@ -112,7 +112,7 @@ export const deriveDerivedDerivations = async () => {
   const howPopular =
     Object.values(recentPlayerCountByGameAppId)
       .sort((a, b) => a - b)
-      .slice(-3)[0] * 0.75;
+      .slice(-2)[0] * 0.75;
   const popularEnough = Object.entries(recentPlayerCountByGameAppId)
     .filter(a => a[1] >= howPopular)
     .map(a => a[0]);
