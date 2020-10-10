@@ -27,17 +27,24 @@ while connection = server.accept
 
   response = nil
   status = case route
-  when /^GET\s+\/skus\.json$/
+  when /^GET\s+\/manifest\.json$/
+    response = File.read("./stadia.run/-/manifest.json", :encoding => "utf-8")
+    "200 OK"
+  when /^PUT\s+\/manifest\.json$/
+    File.write("./stadia.run/-/manifest.json", body, :encoding => "utf-8")
+    "204 No Content"
+
+  when /^GET\s+\/(\-\/)?[a-z]+\.json$/
     response = File.read("./stadia.st/-/skus.json", :encoding => "utf-8")
     "200 OK"
-  when /^PUT\s+\/skus\.json$/
+  when /^PUT\s+\/(\-\/)?[a-z]+\.json$/
     File.write("./stadia.st/-/skus.json", body, :encoding => "utf-8")
     "204 No Content"
 
-  when /^GET\s+\/skus-meta\.json$/
+  when /^GET\s+\/[a-z]+-meta\.json$/
     response = File.read("./stadia.st/-/skus-meta.json", :encoding => "utf-8")
     "200 OK"
-  when /^PUT\s+\/skus-meta\.json$/
+  when /^PUT\s+\/[a-z]+-meta\.json$/
     File.write("./stadia.st/-/skus-meta.json", body, :encoding => "utf-8")
     "204 No Content"
 
@@ -47,14 +54,6 @@ while connection = server.accept
     when /^PUT\s+\/index\.html$/
       File.write("./stadia.run/index.html", body, :encoding => "utf-8")
       "204 No Content"
-
-    when /^GET\s+\/manifest\.json$/
-      response = File.read("./stadia.run/-/manifest.json", :encoding => "utf-8")
-      "200 OK"
-    when /^PUT\s+\/manifest\.json$/
-      File.write("./stadia.run/-/manifest.json", body, :encoding => "utf-8")
-      "204 No Content"
-
     when /^OPTIONS\s+\/.+$/
       "204 No Content"
     else
