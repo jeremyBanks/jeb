@@ -23,41 +23,11 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/hNUFlpnN2BSEOTzgVm3UULRMq7S3q_8wA2gImHkSkJ0oL-XD9OjOkP431qoCrd01yzAw_HqRTdqC87LyULUmKGO6RxvfT_NRpi5uIa28gTvJby0REy7sUhOr01s=s192-p-rp"
-        }
-      ],
-      "name": "PLAYERUNKNOWN'S BATTLEGROUNDS",
-      "url": "/pubg"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
           "src": "https://lh3.googleusercontent.com/0fwJoLxjhigQ1ScFZ1S27hEOKEPR8HH5Ac6nK2WOI5G0baQMgBjoeAha7zPNWE2-J6Zsm6mKmYOKhmVVndltPdOZTPtT178vBTw-T9VfKCW6Ph_qbnJPwukCgxtq=s192-p-rp"
         }
       ],
       "name": "Destiny 2",
       "url": "/destiny-2"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/wSt9G8QWOlyr6r-JoEKlNZeA210QdmlPSuW5Svm5tHhkqpl34NkZ1G7a2wHxx-aw8HKlyoVlrxV3DhP8QBhAe-5R2UvmKF7221UzdMA0o5F1oPCSnS2W8dHUIo0=s192-p-rp"
-        }
-      ],
-      "name": "GRID",
-      "url": "/grid"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/WlB-WLbPcBnhLPPqHwp73e9ApLYfEdymhOIipbg0Xt4Q5LqvPrptNCiyx3YxEd785wOJ3SDRDPR4rE5TvV-lhi_sPX-lOpOB2HVHE6deJWfo5VUCJ6dWN2tak6jO=s192-p-rp"
-        }
-      ],
-      "name": "SAMURAI SHODOWN",
-      "url": "/samurai-shodown"
     },
     {
       "icons": [
@@ -178,6 +148,36 @@
       ],
       "name": "Orcs Must Die! 3",
       "url": "/orcs-must-die-3"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/MYk1y21Do2wAf945dvckUCEht_4lAbpqVcgMCS5yQWbB-1Ja98PwT02FjNgnrF71FmbY6B90momoWBTxGC6u5gDJU7UIYq9cwbYSaG5zlv_bX_Z3Lc0dvHD4nLY=s192-p-rp"
+        }
+      ],
+      "name": "Crayta",
+      "url": "/crayta"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/jSXfWyncAmtfJQhxvaJ5-foSXBoyA9DB4h3c_npdP7UWP5pzUwHtHQ_t8xc51FOddChtCu9UShV_wpQBQBMQvrMFm71ABFBfATfuoBcrWkqRChYy0Izxij-zoFqc=s192-p-rp"
+        }
+      ],
+      "name": "West of Loathing",
+      "url": "/west-of-loathing"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/4PB-AwkBss_SSWOTl7jVq_oxCK_pgOjZp86koLjoX-Sm4ABdgFOrR_-EKJeI_g0EFBHZZPGeJ64yJdI_8sUTQ1eLt6EslTeQ8R9g8Y9SvhnPD_ElF5IaritDpg=s192-p-rp"
+        }
+      ],
+      "name": "Just Shapes & Beats",
+      "url": "/just-shapes-and-beats"
     }
   ],
   "start_url": "/",
