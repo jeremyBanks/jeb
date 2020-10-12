@@ -296,119 +296,124 @@ export const spiderThread = async () => {
   }
 
   for (;;) {
-    const now = Date.now();
-    const allRecords = Object.values(records).sort((a, b) => {
-      if (a.age(now) < b.age(now)) {
-        return +1;
-      } else if (b.age(now) < a.age(now)) {
-        return -1;
-      } else if (a.lastModified < b.lastModified) {
-        return -1;
-      } else if (b.lastModified < a.lastModified) {
-        return +1;
-      } else {
-        return 0;
-      }
-    });
-
-    const ageLimit = 24 * 60 * 60 * 1000;
-
-    const staleRecords = allRecords.filter(
-      record => record.age(now) > ageLimit,
-    );
-
-    const record = allRecords[0];
-
-    const icon =
-      allRecords.length > 8 ? (staleRecords.length > 0 ? "⚠️" : "✅") : "❌";
-
-    document.querySelector("#dev-tools .record-count").textContent = `${icon} ${
-      staleRecords.length
-    } stale, ${allRecords.length - staleRecords.length} fresh, ${
-      allRecords.length
-    } total`;
-
-    if (staleRecords.length % 4 === 0) {
-      await updateDocument();
-      await downloadDocument();
-    }
-
-    if (staleRecords.length === 0) {
-      console.info(
-        `Everything has been spidered recently (at most ${
-          record.age(now) / 1000 / 60 / 60
-        } hours ago).`,
-      );
-      await sleep(Math.random() * 600.0);
-      continue;
-    }
-
-    let skus = {};
-    let meta = {};
-    if (await canFetchDevApi) {
-      for (const key of Object.keys(records).sort()) {
-        const item = records[key];
-        const newKey = keygen(item);
-
-        if (skus.hasOwnProperty(newKey)) {
-          throw new Error(`duplicate key ${newKey}`);
+    try {
+      const now = Date.now();
+      const allRecords = Object.values(records).sort((a, b) => {
+        if (a.age(now) < b.age(now)) {
+          return +1;
+        } else if (b.age(now) < a.age(now)) {
+          return -1;
+        } else if (a.lastModified < b.lastModified) {
+          return -1;
+        } else if (b.lastModified < a.lastModified) {
+          return +1;
+        } else {
+          return 0;
         }
+      });
 
-        skus[newKey] = {
-          appId: item.appId,
-          childSkuIds: item.childSkuIds,
-          countries: item.countries,
-          coverHash: item.coverHash,
-          coverMicroData: item.coverMicroData,
-          coverUrl: item.coverUrl,
-          description: item.description,
-          developerOrganizationIds: item.developerOrganizationIds,
-          isPro: item.isPro,
-          languages: item.languages,
-          listId: item.listId,
-          name: item.name,
-          number: item.number,
-          organizationId: item.organizationId,
-          playedAppIds: item.playedAppIds,
-          popular: item.popular,
-          publisherOrganizationId: item.publisherOrganizationId,
-          releaseDateA: item.releaseDateA,
-          releaseDateB: item.releaseDateB,
-          skuId: item.skuId,
-          slug: item.slug,
-          type: item.type,
-          untitled: item.untitled,
-          userId: item.userId,
-          wasPro: item.wasPro,
-        };
+      const ageLimit = 24 * 60 * 60 * 1000;
 
-        meta[newKey] = {
-          firstSeen: item.firstSeen,
-          lastModified: item.lastModified,
-          lastSeen: item.lastSeen,
-          lastSpidered: item.lastSpidered,
-        };
+      const staleRecords = allRecords.filter(
+        record => record.age(now) > ageLimit,
+      );
+
+      const record = allRecords[0];
+
+      const icon =
+        allRecords.length > 8 ? (staleRecords.length > 0 ? "⚠️" : "✅") : "❌";
+
+      document.querySelector(
+        "#dev-tools .record-count",
+      ).textContent = `${icon} ${staleRecords.length} stale, ${
+        allRecords.length - staleRecords.length
+      } fresh, ${allRecords.length} total`;
+
+      if (staleRecords.length % 16 === 0) {
+        await updateDocument();
+        await downloadDocument();
       }
-    }
 
-    let a = staleRecords.slice(0, Math.max(8, staleRecords.length / 100));
-    const chosenRecord = a[Math.floor(Math.random() * a.length)];
-    await spider(chosenRecord);
-    console.info("🕷️ spidered", chosenRecord);
+      if (staleRecords.length === 0) {
+        console.info(
+          `Everything has been spidered recently (at most ${
+            record.age(now) / 1000 / 60 / 60
+          } hours ago).`,
+        );
+        await sleep(Math.random() * 600.0);
+        continue;
+      }
 
-    if (await canFetchDevApi) {
-      fetchDevApi("skus.json", {
-        method: "PUT",
-        body: JSON.stringify(skus, null, 2),
-      });
-      fetchDevApi("skus-meta.json", {
-        method: "PUT",
-        body: JSON.stringify(meta, null, 2),
-      });
+      let skus = {};
+      let meta = {};
+      if (await canFetchDevApi) {
+        for (const key of Object.keys(records).sort()) {
+          const item = records[key];
+          const newKey = keygen(item);
+
+          if (skus.hasOwnProperty(newKey)) {
+            throw new Error(`duplicate key ${newKey}`);
+          }
+
+          skus[newKey] = {
+            appId: item.appId,
+            childSkuIds: item.childSkuIds,
+            countries: item.countries,
+            coverHash: item.coverHash,
+            coverMicroData: item.coverMicroData,
+            coverUrl: item.coverUrl,
+            description: item.description,
+            developerOrganizationIds: item.developerOrganizationIds,
+            isPro: item.isPro,
+            languages: item.languages,
+            listId: item.listId,
+            name: item.name,
+            number: item.number,
+            organizationId: item.organizationId,
+            playedAppIds: item.playedAppIds,
+            popular: item.popular,
+            publisherOrganizationId: item.publisherOrganizationId,
+            releaseDateA: item.releaseDateA,
+            releaseDateB: item.releaseDateB,
+            skuId: item.skuId,
+            slug: item.slug,
+            type: item.type,
+            untitled: item.untitled,
+            userId: item.userId,
+            wasPro: item.wasPro,
+          };
+
+          meta[newKey] = {
+            firstSeen: item.firstSeen,
+            lastModified: item.lastModified,
+            lastSeen: item.lastSeen,
+            lastSpidered: item.lastSpidered,
+          };
+        }
+      }
+
+      let a = staleRecords.slice(0, Math.max(8, staleRecords.length / 100));
+      const chosenRecord = a[Math.floor(Math.random() * a.length)];
+      await spider(chosenRecord);
+      console.info("🕷️ spidered", chosenRecord);
+
+      if (staleRecords.length % 16 === 0 && (await canFetchDevApi)) {
+        fetchDevApi("skus.json", {
+          method: "PUT",
+          body: JSON.stringify(skus, null, 2),
+        });
+        fetchDevApi("skus-meta.json", {
+          method: "PUT",
+          body: JSON.stringify(meta, null, 2),
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      await sleep(300);
     }
 
     console.debug(`${Object.keys(records).length} records.`, records);
-    const s = Math.random() * 16.0;
+    const s = Math.random() * 4.0;
     console.debug("sleeping for", s, "seconds");
     await sleep(s);
   }
