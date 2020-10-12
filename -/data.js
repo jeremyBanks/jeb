@@ -222,7 +222,7 @@ export class User extends ARecord {
   /** @type {string} */ number;
   /** @type {string} */ playedAppIds;
 
-  /** @type {"list"} */ type = "list";
+  /** @type {"user"} */ type = "user";
   get _spiderFrequencyCoefficient() {
     return this.playedAppIds?.length || 0 ? 1 / 32 : 1 / 128;
   }
