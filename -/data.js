@@ -224,13 +224,7 @@ export class User extends ARecord {
 
   /** @type {"list"} */ type = "list";
   get _spiderFrequencyCoefficient() {
-    return (
-      (1 +
-        (this.playedAppIds?.length || 0) +
-        (64 / 10000) *
-          (10000 - Number(this.number || 1) - (this.name?.length || 0) * 100)) /
-      128
-    );
+    return this.playedAppIds?.length || 0 ? 1 / 32 : 1 / 128;
   }
 
   get _key() {
