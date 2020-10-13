@@ -397,7 +397,7 @@ export const spiderThread = async () => {
       await spider(chosenRecord);
       console.info("🕷️ spidered", chosenRecord);
 
-      if (staleRecords.length % 16 === 0 && (await canFetchDevApi)) {
+      if (await canFetchDevApi) {
         fetchDevApi("skus.json", {
           method: "PUT",
           body: JSON.stringify(skus, null, 2),
