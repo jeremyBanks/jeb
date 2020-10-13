@@ -23,16 +23,6 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/0fwJoLxjhigQ1ScFZ1S27hEOKEPR8HH5Ac6nK2WOI5G0baQMgBjoeAha7zPNWE2-J6Zsm6mKmYOKhmVVndltPdOZTPtT178vBTw-T9VfKCW6Ph_qbnJPwukCgxtq=s192-p-rp"
-        }
-      ],
-      "name": "Destiny 2",
-      "url": "/destiny-2"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
           "src": "https://lh3.googleusercontent.com/BBSSulnYYKROnRYGHKXRlOlYS0_yqXnQlfuOiGRr_hXtdUeqNly2e3EXskTs7QTTu7NWQ2sUkWhQZW-5J93UmRPWH9ViFoxK_ilEW8xqJ01UVu34UxvEGfIrHx0=s192-p-rp"
         }
       ],
@@ -178,6 +168,16 @@
       ],
       "name": "Just Shapes & Beats",
       "url": "/just-shapes-and-beats"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/5Q_Jud3L9aA-BAh-oxts980rnvjCi_8do7mde9-ZQo3Q7-xv1a86OMc0YGR7y1Z9G4XpbHr3ZJKiSazE6UYLEk96U7Yql6P67BWpI1So6Cc_UA74KxcBfkSseg=s192-p-rp"
+        }
+      ],
+      "name": "Metro Last Light Redux",
+      "url": "/metro-last-light"
     }
   ],
   "start_url": "/",
