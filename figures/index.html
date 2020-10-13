@@ -186,12 +186,18 @@ window.setup = async () => {
       games.get('all').users.add(record);
 
       users.set(record.userId, new Set(record.playedAppIds.map(appId => {
+        // merge nazi-free variant of Wolfenstein with main version
+        if (appId === '6d92431b6ca24d69a771cf136a2a231frcp1') {
+          appId = '4884bd9bd7864cf28deef05ef4b69e70rcp1';
+        }
         const game = games.get(appId);
         game.users.add(record);
         return game;
       })));
     }
   }
+
+  games.delete('6d92431b6ca24d69a771cf136a2a231frcp1');
 
   const population = users.size;
   const founderPopulation = [...records.values()].filter(user => user.playedAppIds && user.number === '0000').length;
@@ -365,7 +371,7 @@ window.setup = async () => {
 
           fill(0, 0, 0);
           strokeWeight(2);
-          stroke(255, 255, 255, 32 + (overlap || 0) * (255 - 32));
+          stroke(255, 255, 255, 32 + (overlap || 0) * (255 - 64));
           textFont('JetBrains Mono');
 
           if (overlap === 1.0) {
