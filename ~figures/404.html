@@ -1,0 +1,396 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<body class="working">
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+canvas {
+  display: block;
+  max-width: calc(100% - 16px);
+  margin: 8px;
+  cursor: pointer;
+}
+
+body.working {
+  cursor: wait;
+}
+
+body:not(.working) canvas:hover {
+  max-width: none;
+}
+</style>
+
+<script src="./p5.js"></script>
+<script type="module">
+  const users = new Map();
+const games = new Map();
+
+
+const digits =
+  "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+
+const size = 1024;
+
+const minPopulation = 16;
+
+document.addEventListener('click', event => {
+  if (event.target.tagName === 'CANVAS') {
+    const el = document.createElement('a');
+    document.body.appendChild(el);
+    el.href = event.target.toDataURL();
+    el.download = "street.png";
+    el.click();
+    document.body.removeChild(el);
+  }
+}, {
+  capture: true
+});
+
+export const decodeMicroImage = microImage => {
+  const scaled = createImage(64, 64);
+  const image = createImage(8, 8);
+  image.loadPixels();
+
+  const palette = new Map();
+  for (let i = 0; i < 64; i++) {
+    palette.set(i, u6toRGB(i));
+  }
+
+  const digitValues = new Map(
+    Object.entries(digits).map(([index, char]) => [char, Number(index)]),
+  );
+
+  for (let i = 0; i < microImage.length && i < 64; i++) {
+    const color = palette.get(digitValues.get(microImage[i]));
+    image.pixels[i * 4] = color[0];
+    image.pixels[i * 4 + 1] = color[1];
+    image.pixels[i * 4 + 2] = color[2];
+    image.pixels[i * 4 + 3] = 0xff;
+  }
+
+  image.updatePixels();
+  scaled.copy(image, 0, 0, 8, 8, 0, 0, 64, 64);
+  scaled.filter(BLUR, 2);
+  return scaled;
+};
+
+export const u6toRGB = u6 => {
+  const red =
+    (u6 & 0b000010 ? 0b10101010 : 0) + (u6 & 0b000001 ? 0b01010101 : 0);
+  const green =
+    (u6 & 0b001000 ? 0b10101010 : 0) + (u6 & 0b000100 ? 0b01010101 : 0);
+  const blue =
+    (u6 & 0b100000 ? 0b10101010 : 0) + (u6 & 0b010000 ? 0b01010101 : 0);
+  return [red, green, blue];
+};
+
+const doEvents = () => new Promise(r => requestIdleCallback(r));
+
+window.setup = async () => {
+  createCanvas(2500 - 65 + 48, 2400 - 141 + 48);
+  document.querySelector('canvas').removeAttribute('style');
+  translate(-22, -46);
+
+  const response = await fetch('/-/records.json');
+  const records = new Set(Object.values(await response.json()));
+
+  games.set('all', {
+    type: 'game',
+    appId: 'all',
+    name: `Stadians`,
+    prefix: '🌎',
+    color: {r: 0xFF, g: 0xCC, b: 0xCC},
+    users: new Set(),
+    releaseDateA: 0,
+    releaseDateB: 0,
+    releaseDate: '',
+  })
+
+  games.set('founders', {
+    type: 'game',
+    appId: 'founders',
+    name: 'Founders',
+    prefix: '✨',
+    color: {r: 0xFF, g: 0xFF, b: 0xCC},
+    users: new Set(),
+    releaseDateA: 1,
+    releaseDateB: 1,
+    releaseDate: '',
+  })
+
+
+  games.set('non-founders', {
+    type: 'game',
+    appId: 'non-founders',
+    name: 'Settlers',
+    prefix: '🍁',
+    color: {r: 0xCC, g: 0xCC, b: 0xFF},
+    users: new Set(),
+    releaseDateA: 3, //1574175600000 + 6 * 1000 * 60 * 60 * 24,
+    releaseDateB: 3, //1574175600000 + 6 * 1000 * 60 * 60 * 24,
+    releaseDate: '',
+  });
+
+  for (const record of records) {
+    if (record.type === 'game') {
+      record.users = new Set();
+      games.set(record.appId, record);
+      const launch = 1574175600000;
+      record.releaseDateA = record.releaseDateB = (Math.floor(Math.max(launch, record.releaseDateA, record.releaseDateB) / (60 * 60 * 24 * 1000)) + 0.5) * 60 * 60 * 24 * 1000;
+      const d = new Date(record.releaseDateA);
+      record.releaseDate = `${d.toLocaleString('en-ca', { month: 'short' }).toLowerCase().slice(0, 3)} ${(d.getDate()).toString().padStart(2)} '${d.getFullYear() % 100}`;
+      record.coverMicroImage = decodeMicroImage(record.coverMicroData);
+
+      let r = 0,
+        g = 0,
+        b = 0;
+      const intensities = [...record.coverMicroData].map(x => digits.indexOf(x));
+      for (let i = 0; i < intensities.length; i += 3) {
+        r += intensities[i + 2] || 0;
+        g += intensities[i + 1] || 0;
+        b += intensities[i + 0] || 0;
+      }
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+
+      r = (192 + 32) + (r - min) * 32 / (max - min);
+      g = (192 + 32) + (g - min) * 32 / (max - min);
+      b = (192 + 32) + (b - min) * 32 / (max - min);
+
+      if (!(r > 0)) {
+        r = 0;
+      }
+      if (!(g > 0)) {
+        g = 0;
+      }
+      if (!(b > 0)) {
+        b = 0;
+      }
+
+      record.color = {r, g, b};
+
+    }
+  }
+
+  for (const record of records) {
+    if (record.type === 'user' && record.playedAppIds) {
+      if (record.number === "0000") {
+        games.get('founders').users.add(record);
+      } else {
+        games.get('non-founders').users.add(record);
+      }
+      games.get('all').users.add(record);
+
+      users.set(record.userId, new Set(record.playedAppIds.map(appId => {
+        const game = games.get(appId);
+        game.users.add(record);
+        return game;
+      })));
+    }
+  }
+
+  const population = users.size;
+  const founderPopulation = [...records.values()].filter(user => user.playedAppIds && user.number === '0000').length;
+
+  games.get('all').releaseDate = `n = ${population}`;
+  games.get('founders').releaseDate = `n = ${founderPopulation}`;
+  games.get('non-founders').releaseDate = `n = ${population - founderPopulation}`;
+
+  const orderedGames = [...games.values()]
+    .sort((a, b) => b.users.size - a.users.size)
+    .sort((a, b) => Math.max(a.releaseDateA, a.releaseDateB) - Math.max(b.releaseDateA, b.releaseDateB))
+
+  strokeJoin(ROUND);
+
+  let brightness = 0;
+
+  for (const layer of ['grid', 'grod', 'squares', 'grid-again', 'real-grid']) {
+    for (const [i, game] of Object.entries(orderedGames)) {
+      await doEvents();
+
+      let x = 23;
+      let y = 72 + i * 24;
+
+      let {r, g, b} = game.color;
+
+      stroke(r / 4, g / 4, b / 4, 256);
+      strokeWeight(2);
+
+      fill(0, 0, 0);
+      strokeWeight(2);
+      stroke(r, g, b, 128);
+      textSize(16);
+      textFont('JetBrains Mono');
+      textStyle(NORMAL);
+      stroke(r, g, b, 256);
+      textSize(18);
+      textStyle(BOLD);
+      textFont('CMU Sans Serif');
+
+      if (layer === 'grod') {
+
+        let prefix = '';
+        if (game.prefix) {
+          prefix = game.prefix;
+        } else if (game.isPro) {
+          prefix = "🔴";
+        } else if (game.wasPro) {
+          prefix = "🟠";
+        } else {
+          prefix = "⚫";
+        }
+
+        text(prefix + game.name
+          .replace(/™/g, " ")
+          .replace(/®/g, " ")
+          .replace(/[\:\-]? Early Access$/g, " ")
+          .replace(/[\:\-]? \w+ Edition$/g, " ")
+          .replace(/- The Official Videogame/g, " ")
+          .replace(/\(\w+ Ver(\.|sion)\)$/g, " ")
+          .replace(/™/g, " ")
+          .replace(/:(\w)/g, ": $1")
+          .replace(/\s{2,}/g, " ")
+          .replace(/^\s+|\s+$/g, "").slice(0),
+          x + 4, y + 18);
+        textSize(14);
+
+        // textSize(22);
+        // text(prefix,
+        //   y + 156, x + 27, 24);
+
+        textAlign(CENTER);
+        textSize(14);
+        strokeWeight(4);
+        stroke(r, g, b, 192);
+        text(game.name.slice(0, 1),
+          y + 154, x + 30, 24);
+
+        if (game.releaseDate) {
+          fill(0, 0, 0, 192);
+          strokeWeight(0);
+          rect(x + 135, y, 200 - 133, 24);
+          textAlign(CENTER);
+          textFont("Trebuchet MS");
+          textSize(12);
+          textStyle(BOLD);
+          strokeWeight(0);
+          stroke(0);
+          fill(r, g, b, 225);
+          text(game.releaseDate, x + 168, y + 16);
+          strokeWeight(2);
+          line(x + 135, y, x + 135, y + 24);
+        }
+        textAlign(LEFT);
+      }
+
+      if (layer === 'grid' ) {
+        if (game.coverMicroImage) {
+          image(game.coverMicroImage, x, y, 200, 24);
+          image(game.coverMicroImage, y + 152, x + 24, 24, 24);
+        } else {
+          strokeWeight(0);
+          fill(r, g, b);
+          rect(x, y, 200, 24);
+          rect(y + 152, x + 24, 24, 24);
+        }
+
+      }
+
+      if (layer === 'real-grid') {
+        stroke(0, 0, 0);
+        strokeWeight(2);
+        fill(0, 0, 0, 0);
+        rect(-32, y, size * 4, 24);
+        rect(y + 152, -32, 24, size * 4);
+      }
+
+      if (layer === "squares") {
+        for (const [j, otherGame] of Object.entries(orderedGames)) {
+          if (j % 32 === 0) {
+            await doEvents();
+          }
+
+          let oX = j * 24 + 72;
+          let oY = y + 152 - 72;
+
+          {
+            let t = oX;
+            oX = oY;
+            oY = t;
+          }
+
+
+          strokeWeight(0);
+          fill(0, 0, 0);
+          rect(72 + oX, oY, 24, 24);
+
+          if (game.coverMicroImage || otherGame.coverMicroImage) {
+            game.coverMicroImage && blend(game.coverMicroImage, 0, 0, 64, 64, 72 + oX, oY, 24, 24, SCREEN);
+            otherGame.coverMicroImage && blend(otherGame.coverMicroImage, 0, 0, 64, 64, 72 + oX, oY, 24, 24, SCREEN);
+
+            fill((r + otherGame.color.r) / 2,
+                (g + otherGame.color.g) / 2,
+                (b + otherGame.color.b) / 2,
+                255 * (1/2));
+          } else {
+            fill((r + otherGame.color.r) / 2,
+                (g + otherGame.color.g) / 2,
+                (b + otherGame.color.b) / 2,
+                255);
+          }
+          rect(72 + oX, oY, 24, 24);
+
+
+          let unknown = false;
+          let overlap = [...game.users].filter(u => otherGame.users.has(u)).length / game.users.size;
+          if ((otherGame.users.size < minPopulation || game.users.size < minPopulation) && game !== otherGame) {
+            if (game.users.size < minPopulation || (otherGame.users.size < minPopulation && game.users.size < minPopulation * 8)) {
+              unknown = true;
+              overlap = NaN;
+            }
+          }
+          if (otherGame.appId === "all" || otherGame === game) {
+            unknown = false;
+            overlap = 1.0;
+          }
+          strokeWeight(0);
+
+
+          fill(0, 0, 0, !isNaN(overlap) ? ((1 - overlap) * 255) : 255);
+          rect(72 + oX, oY, 24, 24);
+
+          fill(0, 0, 0);
+          strokeWeight(2);
+          stroke(255, 255, 255, 32 + (overlap || 0) * (255 - 32));
+          textFont('JetBrains Mono');
+
+          if (overlap === 1.0) {
+            if (game !== otherGame || true) {
+              textSize(10);
+              text((100 * overlap).toFixed(0).padStart(2) + '', 71 + oX + 4, oY + 15.5);
+            }
+          } else if (unknown) {
+            fill(16, 16, 16, 256);
+            // stroke(255, 255, 255, 64);
+            textSize(12);
+            text(' ?', 72 + oX + 4, oY + 16);
+          } else {
+            textSize(12);
+            text((100 * overlap).toFixed(0).padStart(2) + '', 72 + oX + 4, oY + 16);
+          }
+        }
+      }
+    }
+  }
+
+  strokeWeight(2);
+  stroke(0, 0, 0, 255);
+  line(23, 47 + 24 + 2, 23, 4000);
+  line(23 + 200 + 2, 47, 4000, 47);
+  document.body.classList.remove('working');
+}
+</script>
