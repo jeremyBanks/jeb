@@ -224,7 +224,11 @@ export class User extends ARecord {
 
   /** @type {"user"} */ type = "user";
   get _spiderFrequencyCoefficient() {
-    return this.playedAppIds?.length || 0 ? 1 / 32 : 1 / 128;
+    if (this.playedAppIds?.length) {
+      return 1 / 24;
+    } else {
+      return 0;
+    }
   }
 
   get _key() {
