@@ -126,7 +126,7 @@ export const deriveDerivedDerivations = async () => {
     }
     slugs.add(game.slug);
 
-    game.popular = popularEnough.includes(game.appId) ? true : undefined;
+    game.popular = undefined; // popularEnough.includes(game.appId) ? true : undefined;
 
     if (proGamesLoaded > 0) {
       game.isPro = proGameSkus.has(game.skuId);
@@ -224,11 +224,12 @@ export class User extends ARecord {
 
   /** @type {"user"} */ type = "user";
   get _spiderFrequencyCoefficient() {
-    if (this.playedAppIds?.length) {
-      return 1 / 24;
-    } else {
-      return 0;
-    }
+    return 1;
+    // if (this.playedAppIds?.length) {
+    //   return 1 / 24;
+    // } else {
+    //   return 0;
+    // }
   }
 
   get _key() {
