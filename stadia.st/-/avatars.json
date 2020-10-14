@@ -1,0 +1,362 @@
+{
+  "zzza--------------------------01": {
+    "avatarId": "01",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_01.png",
+    "name": "First Mover",
+    "type": "avatar"
+  },
+  "zzza--------------------------02": {
+    "avatarId": "02",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_02.png",
+    "name": "Headspace",
+    "type": "avatar"
+  },
+  "zzza--------------------------03": {
+    "avatarId": "03",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_03.png",
+    "name": "Good to Go",
+    "type": "avatar"
+  },
+  "zzza--------------------------04": {
+    "avatarId": "04",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_04.png",
+    "name": "First Down",
+    "type": "avatar"
+  },
+  "zzza--------------------------05": {
+    "avatarId": "05",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_05.png",
+    "name": "Smithee",
+    "type": "avatar"
+  },
+  "zzza--------------------------06": {
+    "avatarId": "06",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_06.png",
+    "name": "Ramen",
+    "type": "avatar"
+  },
+  "zzza--------------------------07": {
+    "avatarId": "07",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_07.png",
+    "name": "Scarab",
+    "type": "avatar"
+  },
+  "zzza--------------------------08": {
+    "avatarId": "08",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_08.png",
+    "name": "Portland",
+    "type": "avatar"
+  },
+  "zzza--------------------------09": {
+    "avatarId": "09",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_09.png",
+    "name": "Animaus",
+    "type": "avatar"
+  },
+  "zzza--------------------------10": {
+    "avatarId": "10",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_10.png",
+    "name": "Garnet",
+    "type": "avatar"
+  },
+  "zzza--------------------------11": {
+    "avatarId": "11",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_11.png",
+    "name": "Chance",
+    "type": "avatar"
+  },
+  "zzza--------------------------12": {
+    "avatarId": "12",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_12.png",
+    "name": "Lost",
+    "type": "avatar"
+  },
+  "zzza--------------------------13": {
+    "avatarId": "13",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_13.png",
+    "name": "Troll",
+    "type": "avatar"
+  },
+  "zzza--------------------------14": {
+    "avatarId": "14",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_14.png",
+    "name": "Bend It",
+    "type": "avatar"
+  },
+  "zzza--------------------------15": {
+    "avatarId": "15",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_15.png",
+    "name": "It's All Cake",
+    "type": "avatar"
+  },
+  "zzza--------------------------16": {
+    "avatarId": "16",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_16.png",
+    "name": "Asimov",
+    "type": "avatar"
+  },
+  "zzza--------------------------17": {
+    "avatarId": "17",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_17.png",
+    "name": "Purger",
+    "type": "avatar"
+  },
+  "zzza--------------------------18": {
+    "avatarId": "18",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_18.png",
+    "name": "Practice",
+    "type": "avatar"
+  },
+  "zzza--------------------------19": {
+    "avatarId": "19",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_19.png",
+    "name": "A Gnat",
+    "type": "avatar"
+  },
+  "zzza--------------------------20": {
+    "avatarId": "20",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_20.png",
+    "name": "Wonderland",
+    "type": "avatar"
+  },
+  "zzza--------------------------21": {
+    "avatarId": "21",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_21.png",
+    "name": "Sea Saw",
+    "type": "avatar"
+  },
+  "zzza--------------------------22": {
+    "avatarId": "22",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_22.png",
+    "name": "Songbird",
+    "type": "avatar"
+  },
+  "zzza--------------------------23": {
+    "avatarId": "23",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_23.png",
+    "name": "Icarus",
+    "type": "avatar"
+  },
+  "zzza--------------------------24": {
+    "avatarId": "24",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_24.png",
+    "name": "Cuckoo",
+    "type": "avatar"
+  },
+  "zzza--------------------------25": {
+    "avatarId": "25",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_25.png",
+    "name": "Changeling",
+    "type": "avatar"
+  },
+  "zzza--------------------------26": {
+    "avatarId": "26",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_26.png",
+    "name": "No Spoon",
+    "type": "avatar"
+  },
+  "zzza--------------------------27": {
+    "avatarId": "27",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_27.png",
+    "name": "Peter",
+    "type": "avatar"
+  },
+  "zzza--------------------------28": {
+    "avatarId": "28",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_28.png",
+    "name": "No Thanks",
+    "type": "avatar"
+  },
+  "zzza--------------------------29": {
+    "avatarId": "29",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_29.png",
+    "name": "Cowabunga",
+    "type": "avatar"
+  },
+  "zzza--------------------------30": {
+    "avatarId": "30",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_30.png",
+    "name": "Wyvern",
+    "type": "avatar"
+  },
+  "zzza--------------------------31": {
+    "avatarId": "31",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_31.png",
+    "name": "Save 1",
+    "type": "avatar"
+  },
+  "zzza--------------------------32": {
+    "avatarId": "32",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_32.png",
+    "name": "Pegagon",
+    "type": "avatar"
+  },
+  "zzza--------------------------33": {
+    "avatarId": "33",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_33.png",
+    "name": "Jelly Belly",
+    "type": "avatar"
+  },
+  "zzza--------------------------34": {
+    "avatarId": "34",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_34.png",
+    "name": "Boxman Sombrero",
+    "type": "avatar"
+  },
+  "zzza--------------------------35": {
+    "avatarId": "35",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_35.png",
+    "name": "Blimpasaurus",
+    "type": "avatar"
+  },
+  "zzza--------------------------36": {
+    "avatarId": "36",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_36.png",
+    "name": "Vincent",
+    "type": "avatar"
+  },
+  "zzza--------------------------37": {
+    "avatarId": "37",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_37.png",
+    "name": "Fire",
+    "type": "avatar"
+  },
+  "zzza--------------------------38": {
+    "avatarId": "38",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_38.png",
+    "name": "Earth",
+    "type": "avatar"
+  },
+  "zzza--------------------------39": {
+    "avatarId": "39",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_39.png",
+    "name": "Wind",
+    "type": "avatar"
+  },
+  "zzza--------------------------40": {
+    "avatarId": "40",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_40.png",
+    "name": "Water",
+    "type": "avatar"
+  },
+  "zzza--------------------------41": {
+    "avatarId": "41",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_41.png",
+    "name": "CRAB!",
+    "type": "avatar"
+  },
+  "zzza--------------------------42": {
+    "avatarId": "42",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_42.png",
+    "name": "Lift",
+    "type": "avatar"
+  },
+  "zzza--------------------------43": {
+    "avatarId": "43",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_43.png",
+    "name": "Maslow",
+    "type": "avatar"
+  },
+  "zzza--------------------------44": {
+    "avatarId": "44",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_44.png",
+    "name": "Face Food",
+    "type": "avatar"
+  },
+  "zzza--------------------------45": {
+    "avatarId": "45",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_45.png",
+    "name": "It's The 90s",
+    "type": "avatar"
+  },
+  "zzza--------------------------46": {
+    "avatarId": "46",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_46.png",
+    "name": "Proficient",
+    "type": "avatar"
+  },
+  "zzza--------------------------47": {
+    "avatarId": "47",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_47.png",
+    "name": "Auntie",
+    "type": "avatar"
+  },
+  "zzza--------------------------48": {
+    "avatarId": "48",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_48.png",
+    "name": "Perspective",
+    "type": "avatar"
+  },
+  "zzza--------------------------49": {
+    "avatarId": "49",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_49.png",
+    "name": "Overgrowth",
+    "type": "avatar"
+  },
+  "zzza--------------------------50": {
+    "avatarId": "50",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_50.png",
+    "name": "Return to Form",
+    "type": "avatar"
+  },
+  "zzza--------------------------51": {
+    "avatarId": "51",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_51.png",
+    "name": "Kit",
+    "type": "avatar"
+  },
+  "zzza--------------------------52": {
+    "avatarId": "52",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_52.png",
+    "name": "Sapphic Sword",
+    "type": "avatar"
+  },
+  "zzza--------------------------53": {
+    "avatarId": "53",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_53.png",
+    "name": "Creepy Doll",
+    "type": "avatar"
+  },
+  "zzza--------------------------54": {
+    "avatarId": "54",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_54.png",
+    "name": "Gojack Neckman",
+    "type": "avatar"
+  },
+  "zzza--------------------------55": {
+    "avatarId": "55",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_55.png",
+    "name": "Rockbot",
+    "type": "avatar"
+  },
+  "zzza--------------------------56": {
+    "avatarId": "56",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_56.png",
+    "name": "Saturn 2.0",
+    "type": "avatar"
+  },
+  "zzza--------------------------57": {
+    "avatarId": "57",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_57.png",
+    "name": "Ninja",
+    "type": "avatar"
+  },
+  "zzza--------------------------58": {
+    "avatarId": "58",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_58.png",
+    "name": "Charmer",
+    "type": "avatar"
+  },
+  "zzza--------------------------59": {
+    "avatarId": "59",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_59.png",
+    "name": "Critical",
+    "type": "avatar"
+  },
+  "zzza--------------------------60": {
+    "avatarId": "60",
+    "coverUrl": "https://www.gstatic.com/stadia/gamers/avatars/xxhdpi/avatar_60.png",
+    "name": "Hot",
+    "type": "avatar"
+  }
+}

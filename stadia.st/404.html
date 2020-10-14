@@ -11,7 +11,7 @@
         targetName = targetName.toLowerCase();
         targetNumber = Number(targetNumber || 0);
 
-        const data = await (await fetch('/-/skus.json')).json();
+        const data = await (await fetch('/-/records.json')).json();
 
         for (const {type, item, userId, name, number} of Object.values(data)) {
           if (
