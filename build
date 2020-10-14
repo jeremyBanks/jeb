@@ -40,7 +40,7 @@ declare target=24576
 declare percentage
 percentage="$((size * 100 / target))"
 echo "./stadia.run/index.html.br is at $percentage% of maximum size."
-if [[ "$percentage" -ge 90 ]]; then
+if [[ "$percentage" -ge 95 ]]; then
   echo "That's too damn high!"
   exit 1
 fi
