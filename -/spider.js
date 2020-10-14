@@ -281,6 +281,14 @@ export const spiderThread = async () => {
     skuId: "59c8314ac82a456ba61d08988b15b550",
   });
 
+  await spider(
+    getset({
+      type: "game",
+      skuId: "a7f0a6098ae747788a6f75d0d1e1d8f2p",
+      appId: "19efd5fa36794d7b8bc87de68124e705rcp1",
+    }),
+  );
+
   try {
     await withTimeout(16, canFetchDevApi);
 
