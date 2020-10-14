@@ -35,17 +35,17 @@ while connection = server.accept
     "204 No Content"
 
   when /^GET\s+\/(\-\/)?[a-z]+\.json$/
-    response = File.read("./stadia.st/-/skus.json", :encoding => "utf-8")
+    response = File.read("./stadia.st/-/records.json", :encoding => "utf-8")
     "200 OK"
   when /^PUT\s+\/(\-\/)?[a-z]+\.json$/
-    File.write("./stadia.st/-/skus.json", body, :encoding => "utf-8")
+    File.write("./stadia.st/-/records.json", body, :encoding => "utf-8")
     "204 No Content"
 
   when /^GET\s+\/[a-z]+-meta\.json$/
-    response = File.read("./stadia.st/-/skus-meta.json", :encoding => "utf-8")
+    response = File.read("./stadia.st/-/meta.json", :encoding => "utf-8")
     "200 OK"
   when /^PUT\s+\/[a-z]+-meta\.json$/
-    File.write("./stadia.st/-/skus-meta.json", body, :encoding => "utf-8")
+    File.write("./stadia.st/-/meta.json", body, :encoding => "utf-8")
     "204 No Content"
 
     when /^GET\s+\/index\.html$/
