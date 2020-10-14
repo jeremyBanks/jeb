@@ -204,7 +204,7 @@ export class List extends ARecord {
   /** @type {"list"} */ type = "list";
 
   get _spiderFrequencyCoefficient() {
-    if (this.childSkuIds.length > 0) {
+    if (this.childSkuIds && this.childSkuIds.length > 0) {
       return 2.0;
     } else {
       return 1 / 16.0;
@@ -226,7 +226,7 @@ export class User extends ARecord {
   /** @type {"user"} */ type = "user";
   get _spiderFrequencyCoefficient() {
     if (this.playedAppIds?.length) {
-      return 1 / 14;
+      return 1 / 32;
     } else {
       return 0;
     }
