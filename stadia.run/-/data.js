@@ -156,6 +156,7 @@ const makeRecord = (/** @type {Record["type"]} */ type) => {
   if (type === "list") return new List();
   if (type === "preorder") return new Preorder();
   if (type === "organization") return new Organization();
+  if (type === "avatar") return new Avatar();
   if (type === "user") return new User();
 
   if (type !== "addon-subscription") {
@@ -224,12 +225,11 @@ export class User extends ARecord {
 
   /** @type {"user"} */ type = "user";
   get _spiderFrequencyCoefficient() {
-    return 1;
-    // if (this.playedAppIds?.length) {
-    //   return 1 / 24;
-    // } else {
-    //   return 0;
-    // }
+    if (this.playedAppIds?.length) {
+      return 1 / 14;
+    } else {
+      return 0;
+    }
   }
 
   get _key() {
@@ -322,5 +322,14 @@ export class Organization extends NonDirectlySpiderable {
 
   get _key() {
     return `${this.organizationId}`;
+  }
+}
+
+export class Avatar extends NonDirectlySpiderable {
+  /** @type {"addon"} */ type = "avatar";
+  /** @type {string} */ avatarId;
+
+  get _key() {
+    return `${this.avatarId}`;
   }
 }
