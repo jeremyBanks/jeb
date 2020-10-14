@@ -98,6 +98,10 @@ const keygen = record => {
     return "zzzu" + record._key.padStart(28, "-");
   }
 
+  if (record.type === "avatar") {
+    return "zzza" + record.avatarId.padStart(28, "-");
+  }
+
   let appId = record.appId.replace(/^([a-f0-9]{32})([a-z0-9]+)$/, "$1-$2");
   let skuId = record.skuId.replace(/^([a-f0-9]{32})([a-z0-9]+)$/, "$1-$2");
   let typeTag = "";
@@ -206,8 +210,7 @@ const spider = async (/** @type {Record} */ record) => {
     also.name = page.user?.[0][0];
     also.number = page.user?.[0][1];
     also.coverUrl = page.user?.[1][1].replace("/mdpi/", "/xxhdpi/");
-    // also.coverMicroData = await microImageFromURL(also.coverUrl);
-    // also.coverHash = await hashFromURL(also.coverUrl);
+    also.avatarId = also.coverUrl.split("avatar_")[1].split(".")[0];
   } else {
     const appId = record.appId || "-";
     const page = await fetchStadiaPage(
@@ -318,6 +321,10 @@ export const spiderThread = async () => {
         record => record.age(now) > ageLimit,
       );
 
+      const agelessRecords = allRecords.filter(
+        record => record._spiderFrequencyCoefficient === 0,
+      );
+
       const record = allRecords[0];
 
       const icon =
@@ -325,9 +332,13 @@ export const spiderThread = async () => {
 
       document.querySelector(
         "#dev-tools .record-count",
-      ).textContent = `${icon} ${staleRecords.length} stale, ${
-        allRecords.length - staleRecords.length
-      } fresh, ${allRecords.length} total`;
+      ).textContent = `${icon} ${staleRecords.length} stale and ${
+        allRecords.length - staleRecords.length - agelessRecords.length
+      } fresh ${
+        allRecords.length - agelessRecords.length
+      } of known interesting records. ${
+        agelessRecords.length
+      } known uninteresting records.`;
 
       if (staleRecords.length % 16 === 0) {
         await updateDocument();
@@ -355,8 +366,13 @@ export const spiderThread = async () => {
             throw new Error(`duplicate key ${newKey}`);
           }
 
+          if (item.type === "user" && item.coverUrl) {
+            item.avatarId = item.coverUrl.split("avatar_")[1].split(".")[0];
+          }
+
           skus[newKey] = {
             appId: item.appId,
+            avatarId: item.avatarId,
             childSkuIds: item.childSkuIds,
             countries: item.countries,
             coverHash: item.coverHash,
