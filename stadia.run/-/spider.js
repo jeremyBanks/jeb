@@ -284,8 +284,8 @@ export const spiderThread = async () => {
   try {
     await withTimeout(16, canFetchDevApi);
 
-    const skus = await (await fetchDevApi("skus.json")).json();
-    const meta = await (await fetchDevApi("skus-meta.json")).json();
+    const skus = await (await fetchDevApi("records.json")).json();
+    const meta = await (await fetchDevApi("meta.json")).json();
     for (const key of Object.keys(skus)) {
       Object.assign(skus[key], meta[key]);
     }
@@ -414,11 +414,11 @@ export const spiderThread = async () => {
       console.info("🕷️ spidered", chosenRecord);
 
       if (await canFetchDevApi) {
-        fetchDevApi("skus.json", {
+        fetchDevApi("records.json", {
           method: "PUT",
           body: JSON.stringify(skus, null, 2),
         });
-        fetchDevApi("skus-meta.json", {
+        fetchDevApi("meta.json", {
           method: "PUT",
           body: JSON.stringify(meta, null, 2),
         });

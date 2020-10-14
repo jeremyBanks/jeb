@@ -71,7 +71,7 @@ export const canFetchStadiaStore = canFetchStadiaHost.then(
  */
 export const canFetchDevApi = Promise.resolve().then(async () => {
   try {
-    const response = await withTimeout(4, fetchDevApi("skus.json"));
+    const response = await withTimeout(4, fetchDevApi("records.json"));
     await response.json();
     return true;
   } catch {
