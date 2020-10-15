@@ -11,28 +11,36 @@ export const getset = (
   (Pick<ASku, "skuId" | "type"> & Partial<Sku>) |
   (Pick<List, "listId" | "type"> & Partial<List>)
 } */ newProps,
+  now = Date.now(),
 ) => {
   // HACK
   if (newProps.playedAppIds && newProps.playedAppIds.length === 0) {
     delete newProps.playedAppIds;
+  } else if (newProps.playedAppIds) {
+    for (const appId of newProps.playedAppIds) {
+      getset({ type: "game", appId });
+    }
   }
 
+  if (!newProps.type) {
+    throw new Error("no .type in " + JSON.stringify(newProps));
+  }
   const newRecord = Object.assign(makeRecord(newProps.type), newProps);
-  const now = Date.now();
+
   const existingRecord = records[newRecord._key];
   const record = existingRecord ?? makeRecord(newRecord.type);
 
   let modified = false;
   if (existingRecord) {
     if (
-      existingRecord.coverHash &&
-      existingRecord.coverHash === newProps.coverHash
+      existingRecord.imageHash &&
+      existingRecord.imageHash === newProps.imageHash
     ) {
       // ignore URL changes if the content is the same
-      newProps.coverUrl = existingRecord.coverUrl;
+      newProps.imageUrl = existingRecord.imageUrl;
       // this should be identical, but canvas behaviour can slightly
       // vary so let's also preserve it.
-      newProps.coverMicroData = existingRecord.coverMicroData;
+      newProps.thumbnail = existingRecord.thumbnail;
     }
 
     for (const [property, newValue] of Object.entries(newRecord)) {
@@ -205,9 +213,9 @@ export class List extends ARecord {
 
   get _spiderFrequencyCoefficient() {
     if (this.childSkuIds && this.childSkuIds.length > 0) {
-      return 2.0;
+      return 2;
     } else {
-      return 1 / 16.0;
+      return 1 / 16;
     }
   }
 
@@ -225,10 +233,14 @@ export class User extends ARecord {
 
   /** @type {"user"} */ type = "user";
   get _spiderFrequencyCoefficient() {
-    if (this.playedAppIds?.length) {
+    if (this.lastActive) {
+      return 1 / 8;
+    } else if (this.playedAppIds?.length) {
       return 1 / 32;
+    } else if (this.number === "0000") {
+      return 1 / (64 + this.name.length * 2);
     } else {
-      return 0;
+      return 1 / 512;
     }
   }
 
@@ -239,15 +251,15 @@ export class User extends ARecord {
 
 class ASku extends ARecord {
   /** @type {string} */ skuId;
-  /** @type {string} */ coverUrl;
+  /** @type {string} */ imageUrl;
   /** @type {number} */ releaseDateA;
   /** @type {number} */ releaseDateB;
-  /** @type {string} */ coverMicroData;
+  /** @type {string} */ thumbnail;
   /** @type {Array<string>} */ developerOrganizationIds;
   /** @type {string} */ publisherOrganizationId;
 
   get _key() {
-    return `${this.skuId}`;
+    return `${this.type === "game" ? this.appId : this.skuId}`;
   }
 
   get slug() {
@@ -255,8 +267,10 @@ class ASku extends ARecord {
       return undefined;
     } else if (this._slug) {
       return this._slug;
-    } else {
+    } else if (this.name) {
       return slugify(this.name);
+    } else {
+      return slugify(this._key);
     }
   }
 
@@ -306,7 +320,7 @@ export class Addon extends ASku {
   /** @type {"addon"} */ type = "addon";
 
   get _spiderFrequencyCoefficient() {
-    return 1 / 16;
+    return 1 / 32;
   }
 }
 
