@@ -19,7 +19,10 @@ import {
 
 import { sleep, withTimeout } from "./async.js";
 
-const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
+const loadSkuData = async (
+  /** @type {Array<unknown>} */ skuData,
+  now = Date.now(),
+) => {
   const type = {
     1: "game",
     2: "addon",
@@ -37,9 +40,9 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
   const publisherOrganizationId = skuData[15];
   const developerOrganizationIds = skuData[16];
 
-  const coverUrl = skuData[2]?.[1]?.[0]?.[0]?.[1]?.split(/=/)[0];
-  const coverMicroData = await microImageFromURL(coverUrl);
-  const coverHash = await hashFromURL(coverUrl);
+  const imageUrl = skuData[2]?.[1]?.[0]?.[0]?.[1]?.split(/=/)[0];
+  const thumbnail = await microImageFromURL(imageUrl);
+  const imageHash = await hashFromURL(imageUrl);
 
   const releaseDateA = 1000 * skuData[10]?.[0] || undefined;
   const releaseDateB = 1000 * skuData[26]?.[0] || undefined;
@@ -65,12 +68,12 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
     skuId,
     appId,
     name,
-    coverUrl,
-    coverHash,
+    imageUrl,
+    imageHash,
     countries,
     languages,
     description,
-    coverMicroData,
+    thumbnail,
     releaseDateA,
     releaseDateB,
     untitled,
@@ -82,28 +85,40 @@ const loadSkuData = async (/** @type {Array<unknown>} */ skuData) => {
     props.childSkuIds = childSkuIds;
   }
 
-  return getset(props);
+  return getset(props, now);
 };
 
 const keygen = record => {
   if (record.type === "list") {
-    return "zzzl" + record._key.padStart(28, "-");
+    return `list-${record.listId || "naught"}`;
   }
 
   if (record.type === "organization") {
-    return "zzzo" + record.organizationId.slice(0, 28);
+    return `organization-${record.organizationId}`;
   }
 
   if (record.type === "user") {
-    return "zzzu" + record._key.padStart(28, "-");
+    if (record.name && record.number === "0000") {
+      return `@${record.name.toLowerCase()}`;
+    } else if (record.name && record.number) {
+      return `@${record.name.toLowerCase()}-${record.number}`;
+    } else {
+      return `@${record.userId}`;
+    }
   }
 
   if (record.type === "avatar") {
-    return "zzza" + record.avatarId.padStart(28, "-");
+    return "avatar-" + record.avatarId;
   }
 
-  let appId = record.appId.replace(/^([a-f0-9]{32})([a-z0-9]+)$/, "$1-$2");
-  let skuId = record.skuId.replace(/^([a-f0-9]{32})([a-z0-9]+)$/, "$1-$2");
+  let appId = (record.appId || "").replace(
+    /^([a-f0-9]{32})([a-z0-9]+)$/,
+    "$1-$2",
+  );
+  let skuId = (record.skuId || "").replace(
+    /^([a-f0-9]{32})([a-z0-9]+)$/,
+    "$1-$2",
+  );
   let typeTag = "";
 
   if (record.type === "subscription") {
@@ -125,9 +140,9 @@ const keygen = record => {
   let typeLen = 2;
   let nameLen = 32 - typeLen - idLen - idLen;
 
-  let nameTag = (record.slug || slugify(record.name)).replace(/-/g, "");
+  let nameTag = (record.slug || slugify(record.name || "")).replace(/-/g, "");
   if (nameTag.length < nameLen) {
-    nameTag += slugify(record.untitled).replace(/-/g, "");
+    nameTag += slugify(record.untitled || "").replace(/-/g, "");
   } else if (nameTag.length > nameLen) {
     // remove last instance of most-frequent letter
     while (nameTag.length > nameLen) {
@@ -188,13 +203,16 @@ const keygen = record => {
 
 const spider = async (/** @type {Record} */ record) => {
   const also = {};
+  const now = Date.now();
+
+  console.info("🕷️ spidering", record);
 
   if (record.type === "list") {
     const page = await fetchStadiaPage(`store/list/${record.listId}`);
 
     if (page.list) {
       for (const sku of page.list) {
-        await loadSkuData(sku[9]);
+        await loadSkuData(sku[9], now);
       }
       also.childSkuIds = page.list.map(sku => sku[9][0]);
       also.name = page.heading;
@@ -209,12 +227,28 @@ const spider = async (/** @type {Record} */ record) => {
     also.playedAppIds = page.playedAppIds;
     also.name = page.user?.[0][0];
     also.number = page.user?.[0][1];
-    also.coverUrl = page.user?.[1][1].replace("/mdpi/", "/xxhdpi/");
-    also.avatarId = also.coverUrl.split("avatar_")[1].split(".")[0];
+    also.imageUrl = page.user?.[1][1].replace("/mdpi/", "/xxhdpi/");
+    also.avatarId = also.imageUrl.split("avatar_")[1].split(".")[0];
+    if (page.user?.[2]?.[4]?.length) {
+      also.lastActive =
+        page.user?.[2]?.[4][0] * 1000 +
+        (page.user?.[2]?.[4][1] * 1000) / 1000000000;
+    }
   } else {
-    const appId = record.appId || "-";
+    if (record.type === "game" && !record.skuId && record.appId) {
+      const page = await fetchStadiaPage(`player/${record.appId}`);
+      // special case: discovering a new game from only an appId
+      record.skuId = page.vBpx4o?.[0]?.[0];
+    } else if (!record.appId && record.skuId) {
+      // discovering a sku from only a skuId
+      const page = await fetchStadiaPage(`store/details/-/sku/${record.skuId}`);
+      record.appId = page.sku[16][4];
+    }
+    // both of the above are incomplete so we also perform the normal
+    // SKU spider process from here.
+
     const page = await fetchStadiaPage(
-      `store/details/${appId}/sku/${record.skuId}`,
+      `store/details/${record.appId}/sku/${record.skuId}`,
     );
 
     const organizations = [page.sku[22][0], ...page.sku[22][1]];
@@ -226,29 +260,32 @@ const spider = async (/** @type {Record} */ record) => {
       });
     }
 
-    await loadSkuData(page.sku[16]);
+    await loadSkuData(page.sku[16], now);
     if (page.gameAddons) {
       for (const sku of page.gameAddons) {
-        await loadSkuData(sku[9]);
+        await loadSkuData(sku[9], now);
       }
     }
     if (page.gameBundles) {
       for (const sku of page.gameBundles) {
-        await loadSkuData(sku[9]);
+        await loadSkuData(sku[9], now);
       }
     }
     if (page.gameSubscriptions) {
       for (const sku of page.gameSubscriptions) {
-        await loadSkuData(sku[9]);
+        await loadSkuData(sku[9], now);
       }
     }
   }
 
-  getset({
-    ...record,
-    ...also,
-    lastSpidered: Date.now(),
-  });
+  getset(
+    {
+      ...record,
+      ...also,
+      lastSpidered: now,
+    },
+    now,
+  );
 };
 
 const inclusive = (a, b) => {
@@ -264,30 +301,28 @@ export const spiderThread = async () => {
   try {
     await withTimeout(16, canFetchStadiaStore);
   } catch (error) {
-    console.debug(
+    console.error(
       "Failed to connect to Stadia store, abandoning spider.",
       error,
     );
     return;
   }
 
-  getset({
-    type: "list",
-    listId: 3,
-  });
-
-  getset({
-    type: "subscription",
-    skuId: "59c8314ac82a456ba61d08988b15b550",
-  });
+  await spider(
+    getset({
+      type: "list",
+      listId: "",
+    }),
+  );
 
   await spider(
     getset({
-      type: "game",
-      skuId: "a7f0a6098ae747788a6f75d0d1e1d8f2p",
-      appId: "19efd5fa36794d7b8bc87de68124e705rcp1",
+      type: "subscription",
+      skuId: "59c8314ac82a456ba61d08988b15b550",
     }),
   );
+
+  await spider(getset({ type: "user", userId: "5478196876050978967" }));
 
   try {
     await withTimeout(16, canFetchDevApi);
@@ -298,9 +333,9 @@ export const spiderThread = async () => {
       Object.assign(skus[key], meta[key]);
     }
     Object.values(skus).forEach(getset);
-    console.info(`${Object.keys(records).length} records loaded.`, records);
+    console.info(`${Object.keys(records).length} records loaded.`);
   } catch (error) {
-    console.debug(
+    console.error(
       "Failed to connect to local dev server, skipping load.",
       error,
     );
@@ -344,13 +379,15 @@ export const spiderThread = async () => {
         allRecords.length - staleRecords.length - agelessRecords.length
       } fresh ${
         allRecords.length - agelessRecords.length
-      } of known interesting records. ${
+      } of known interesting records. (${
         agelessRecords.length
-      } known uninteresting records.`;
+      } other records are non-spiderable.)`;
 
       if (staleRecords.length % 16 === 0) {
         await updateDocument();
         await downloadDocument();
+      } else if (staleRecords.length % 16 === 8) {
+        console.clear();
       }
 
       if (staleRecords.length === 0) {
@@ -365,6 +402,11 @@ export const spiderThread = async () => {
 
       let skus = {};
       let meta = {};
+
+      let a = staleRecords.slice(0, Math.max(8, staleRecords.length / 100));
+      const chosenRecord = a[Math.floor(Math.random() * a.length)];
+      await spider(chosenRecord);
+
       if (await canFetchDevApi) {
         for (const key of Object.keys(records).sort()) {
           const item = records[key];
@@ -374,18 +416,22 @@ export const spiderThread = async () => {
             throw new Error(`duplicate key ${newKey}`);
           }
 
-          if (item.type === "user" && item.coverUrl) {
-            item.avatarId = item.coverUrl.split("avatar_")[1].split(".")[0];
+          if (item.type === "user" && item.imageUrl) {
+            item.avatarId = item.imageUrl.split("avatar_")[1].split(".")[0];
+            item.imageUrl = undefined;
+            item.thumbnail = undefined;
+            item.imageHash = undefined;
           }
 
           skus[newKey] = {
             appId: item.appId,
+            lastActive: item.lastActive,
             avatarId: item.avatarId,
             childSkuIds: item.childSkuIds,
             countries: item.countries,
-            coverHash: item.coverHash,
-            coverMicroData: item.coverMicroData,
-            coverUrl: item.coverUrl,
+            imageHash: item.imageHash,
+            thumbnail: item.thumbnail,
+            imageUrl: item.imageUrl,
             description: item.description,
             developerOrganizationIds: item.developerOrganizationIds,
             isPro: item.isPro,
@@ -414,14 +460,7 @@ export const spiderThread = async () => {
             lastSpidered: item.lastSpidered,
           };
         }
-      }
 
-      let a = staleRecords.slice(0, Math.max(8, staleRecords.length / 100));
-      const chosenRecord = a[Math.floor(Math.random() * a.length)];
-      await spider(chosenRecord);
-      console.info("🕷️ spidered", chosenRecord);
-
-      if (await canFetchDevApi) {
         fetchDevApi("records.json", {
           method: "PUT",
           body: JSON.stringify(skus, null, 2),
@@ -436,7 +475,7 @@ export const spiderThread = async () => {
       await sleep(300);
     }
 
-    console.debug(`${Object.keys(records).length} records.`, records);
+    console.debug(`${Object.keys(records).length} records.`);
     const s = Math.random() * 4.0;
     console.debug("sleeping for", s, "seconds");
     await sleep(s);
@@ -492,7 +531,7 @@ const padOpaqueKeys = (/** @type {unknown} */ object) => {
 
 const fetchStadiaOpaque = async url => {
   const response = await fetchStadia(url);
-  console.debug("Got Stadia response", response);
+  // console.debug("Got Stadia response", response);
   checkStatus(response);
 
   const body = await response.text();
@@ -661,15 +700,21 @@ const updateDocument = async () => {
   deriveDerivedDerivations();
 
   const games = [...Object.values(records)]
-    // only include games that are to be released within the next week
-    .filter(sku => sku.type === "game")
+    .filter(
+      sku =>
+        sku.type === "game" &&
+        sku.appId !== "6d92431b6ca24d69a771cf136a2a231frcp1" &&
+        sku.appId &&
+        sku.name &&
+        sku.slug,
+    )
     .map(game => ({
       ...game,
       slug: game.slug,
       name: cleanName(game.name),
       preOrder:
         Math.max(game.releaseDateA, game.releaseDateB) >
-        Date.now() + 1000 * 60 * 60 * 24 * 2,
+        Date.now() + 1000 * 60 * 60 * 24 * 1,
     }))
     .sort((gameA, gameB) => {
       const aFirst = -1;
@@ -729,7 +774,7 @@ const updateDocument = async () => {
 
   for (const game of games) {
     let root = template.content.cloneNode(true).firstElementChild;
-    let url = game.coverUrl;
+    let url = game.imageUrl;
 
     if (manifest.shortcuts.length < 16) {
       manifest.shortcuts.push({
@@ -766,11 +811,9 @@ const updateDocument = async () => {
 
     root.querySelector(
       "st-cover-micro",
-    ).style.backgroundImage = `url(${microImageToURL(game.coverMicroData)})`;
+    ).style.backgroundImage = `url(${microImageToURL(game.thumbnail)})`;
 
-    root
-      .querySelector("st-cover-micro")
-      .setAttribute("data", game.coverMicroData);
+    root.querySelector("st-cover-micro").setAttribute("data", game.thumbnail);
 
     if (game.isPro) {
       const badge = Object.assign(document.createElement("st-badge"), {
