@@ -129,20 +129,20 @@
             record.releaseDate = `${d.toLocaleString('en-ca', { month: 'short' }).toLowerCase().slice(0, 3)} ${(d.getDate()).toString().padStart(2)} '${d.getFullYear() % 100}`;
           }
 
-          if (record.coverUrl) {
-            record.coverImage = await new Promise(resolve => loadImage(record.coverUrl, resolve));
+          if (record.imageUrl) {
+            record.image = await new Promise(resolve => loadImage(record.imageUrl, resolve));
             if (record.type === 'game') {
-              record.coverImage.resize(0, 128);
-              record.coverImage.filter(BLUR, 12);
+              record.image.resize(0, 128);
+              record.image.filter(BLUR, 12);
             } else {
-              record.coverImage.resize(0, 64);
-              record.coverImage.filter(BLUR, 1);
-              record.coverImageBlurred = await new Promise(resolve => loadImage(record.coverUrl, resolve));
-              record.coverImageBlurred.resize(0, 128);
-              record.coverImageBlurred.filter(BLUR, 12);
+              record.image.resize(0, 64);
+              record.image.filter(BLUR, 1);
+              record.imageBlurred = await new Promise(resolve => loadImage(record.imageUrl, resolve));
+              record.imageBlurred.resize(0, 128);
+              record.imageBlurred.filter(BLUR, 12);
             }
             const pixel = createImage(1, 1);
-            record.coverImage.copy(pixel, 0, 0, record.coverImage.width, record.coverImage.height, 0, 0, 1, 1)
+            record.image.copy(pixel, 0, 0, record.image.width, record.image.height, 0, 0, 1, 1)
             pixel.loadPixels();
             record.color = {
               r: pixel.pixels[0] * (1 - 7 / 8) + 255 * 7 / 8,
@@ -164,8 +164,8 @@
           }
           games.get('all').users.add(record);
 
-          if (record.coverUrl) {
-            const avatarId = record.coverUrl.split('avatar_')[1].split('.')[0];
+          if (record.imageUrl) {
+            const avatarId = record.imageUrl.split('avatar_')[1].split('.')[0];
             record.playedAppIds.push(avatarId);
           }
 
@@ -265,14 +265,14 @@
           }
 
           if (layer === 'grid') {
-            if (game.coverImage) {
+            if (game.image) {
               if (game.type === 'game') {
-                image(game.coverImage, x, y, 200, 24);
+                image(game.image, x, y, 200, 24);
               } else {
-                image(game.coverImageBlurred, x, y, 200, 24);
-                image(game.coverImage, x, y, 24, 24);
+                image(game.imageBlurred, x, y, 200, 24);
+                image(game.image, x, y, 24, 24);
               }
-              image(game.coverImage, y + 152, x + 24, 24, 24);
+              image(game.image, y + 152, x + 24, 24, 24);
             } else {
               strokeWeight(0);
               fill(r, g, b);
@@ -310,9 +310,9 @@
               fill(0, 0, 0);
               rect(72 + oX, oY, 24, 24);
 
-              if (game.coverImage || otherGame.coverImage) {
-                game.coverImage && blend(game.coverImage, 0, 0, game.coverImage.width, game.coverImage.height, 72 + oX, oY, 24, 24, SCREEN);
-                otherGame.coverImage && blend(otherGame.coverImage, 0, 0, otherGame.coverImage.width, otherGame.coverImage.height, 72 + oX, oY, 24, 24, SCREEN);
+              if (game.image || otherGame.image) {
+                game.image && blend(game.image, 0, 0, game.image.width, game.image.height, 72 + oX, oY, 24, 24, SCREEN);
+                otherGame.image && blend(otherGame.image, 0, 0, otherGame.image.width, otherGame.image.height, 72 + oX, oY, 24, 24, SCREEN);
 
                 fill((r + otherGame.color.r) / 2,
                   (g + otherGame.color.g) / 2,
