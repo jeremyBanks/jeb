@@ -76,7 +76,12 @@ export const getset = (
   record.firstSeen = record.firstSeen ?? now;
   record.lastSeen = now;
   record.lastModified = modified ? now : record.lastModified ?? 0;
-  record.lastSpidered = record.lastSpidered ?? Math.random() * 0.5 * now;
+  if (
+    !record.lastSpidered ||
+    record.lastSpidered < now - 1000 * 60 * 60 * 24 * 256
+  ) {
+    record.lastSpidered = 0;
+  }
 
   records[record._key] = record;
   return record;
@@ -233,7 +238,7 @@ export class User extends ARecord {
 
   /** @type {"user"} */ type = "user";
   get _spiderFrequencyCoefficient() {
-    if (this.lastActive) {
+    if (this.lastActive && this.playedAppIds?.length) {
       return 1 / 8;
     } else if (this.playedAppIds?.length) {
       return 1 / 32;
