@@ -518,7 +518,7 @@ export const spiderThread = async () => {
 };
 
 const fetchStadiaPage = async url => {
-  const s = Math.random() * 4.0;
+  const s = Math.random() * 6.0;
   console.debug("sleeping for", s, "seconds");
   await sleep(s);
 
