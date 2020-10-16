@@ -361,7 +361,12 @@ export const spiderThread = async () => {
     }),
   );
 
-  await spider(getset({ type: "user", userId: "5478196876050978967" }));
+  await spider(
+    getset({
+      type: "user",
+      userId: "5478196876050978967",
+    }),
+  );
 
   try {
     await withTimeout(16, canFetchDevApi);
