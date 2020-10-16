@@ -68,7 +68,7 @@
 
       games.set('all', {
         type: 'game',
-        appId: 'all',
+        gameId: 'all',
         name: `Stadians`,
         color: { r: 0xFF, g: 0xCC, b: 0xCC },
         users: new Set(),
@@ -79,7 +79,7 @@
 
       games.set('founders', {
         type: 'game',
-        appId: 'founders',
+        gameId: 'founders',
         name: 'Founders',
         color: { r: 0xFF, g: 0xFF, b: 0xCC },
         users: new Set(),
@@ -91,7 +91,7 @@
 
       games.set('non-founders', {
         type: 'game',
-        appId: 'non-founders',
+        gameId: 'non-founders',
         name: 'Settlers',
         color: { r: 0xCC, g: 0xCC, b: 0xFF },
         users: new Set(),
@@ -103,7 +103,7 @@
       for (const record of records) {
         if (record.type === 'game' || record.type === 'avatar') {
           record.users = new Set();
-          games.set(record.appId || record.avatarId, record);
+          games.set(record.gameId || record.avatarId, record);
           record.name = record.name
             .replace(/™/g, " ")
             .replace(/®/g, " ")
@@ -156,7 +156,7 @@
       }
 
       for (const record of records) {
-        if (record.type === 'user' && record.playedAppIds) {
+        if (record.type === 'user' && record.gameIds) {
           if (record.number === "0000") {
             games.get('founders').users.add(record);
           } else {
@@ -166,15 +166,15 @@
 
           if (record.imageUrl) {
             const avatarId = record.imageUrl.split('avatar_')[1].split('.')[0];
-            record.playedAppIds.push(avatarId);
+            record.gameIds.push(avatarId);
           }
 
-          users.set(record.userId, new Set(record.playedAppIds.map(appId => {
+          users.set(record.userId, new Set(record.gameIds.map(gameId => {
             // merge Nazi-free variant of Wolfenstein with main version
-            if (appId === '6d92431b6ca24d69a771cf136a2a231frcp1') {
-              appId = '4884bd9bd7864cf28deef05ef4b69e70rcp1';
+            if (gameId === '6d92431b6ca24d69a771cf136a2a231frcp1') {
+              gameId = '4884bd9bd7864cf28deef05ef4b69e70rcp1';
             }
-            const game = games.get(appId);
+            const game = games.get(gameId);
             game.users = game.users || new Set();
             game.users.add(record);
             return game;
@@ -185,7 +185,7 @@
       games.delete('6d92431b6ca24d69a771cf136a2a231frcp1');
 
       const population = users.size;
-      const founderPopulation = [...records.values()].filter(user => user.playedAppIds && user.number === '0000').length;
+      const founderPopulation = [...records.values()].filter(user => user.gameIds && user.number === '0000').length;
 
       games.get('all').releaseDate = `n = ${population}`;
       games.get('founders').releaseDate = `n = ${founderPopulation}`;
@@ -335,7 +335,7 @@
                   overlap = NaN;
                 }
               }
-              if (otherGame.appId === "all" || otherGame === game) {
+              if (otherGame.gameId === "all" || otherGame === game) {
                 unknown = false;
                 overlap = 1.0;
               }
