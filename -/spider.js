@@ -32,7 +32,7 @@ const loadSkuData = async (
     10: "preorder",
   }[skuData[6]];
   const skuId = skuData[0];
-  const appId = skuData[4];
+  const gameId = skuData[4];
   const name = skuData[1];
 
   const untitled = skuData[5];
@@ -66,7 +66,7 @@ const loadSkuData = async (
   const props = {
     type,
     skuId,
-    appId,
+    gameId,
     name,
     imageUrl,
     imageHash,
@@ -111,7 +111,7 @@ const keygen = record => {
     return "avatar-" + record.avatarId;
   }
 
-  let appId = (record.appId || "").replace(
+  let gameId = (record.gameId || "").replace(
     /^([a-f0-9]{32})([a-z0-9]+)$/,
     "$1-$2",
   );
@@ -122,7 +122,7 @@ const keygen = record => {
   let typeTag = "";
 
   if (record.type === "subscription") {
-    appId = "0000";
+    gameId = "0000";
     typeTag = "SB";
   } else if (record.type === "game") {
     typeTag = "GG";
@@ -189,7 +189,7 @@ const keygen = record => {
   }
 
   const result = [
-    appId.padEnd(idLen, 0).slice(0, idLen),
+    gameId.padEnd(idLen, 0).slice(0, idLen),
     typeTag.padEnd(typeLen, "?").slice(0, typeLen),
     skuId.padEnd(idLen, 0).slice(0, idLen),
     (nameTag + skuId.slice(idLen)).slice(0, nameLen),
@@ -224,7 +224,7 @@ const spider = async (/** @type {Record} */ record) => {
     const page = await fetchStadiaPage(
       `profile/${record.userId}/gameactivities/all`,
     );
-    also.playedAppIds = page.playedAppIds;
+    also.gameIds = page.gameIds;
     also.name = page.user?.[0][0];
     also.number = page.user?.[0][1];
     also.imageUrl = page.user?.[1][1].replace("/mdpi/", "/xxhdpi/");
@@ -234,21 +234,60 @@ const spider = async (/** @type {Record} */ record) => {
         page.user?.[2]?.[4][0] * 1000 +
         (page.user?.[2]?.[4][1] * 1000) / 1000000000;
     }
+
+    const games = {};
+
+    for (const gameId of page.gameIds || []) {
+      const detailPage = await fetchStadiaPage(
+        `profile/${record.userId}/detail/${gameId}`,
+      );
+
+      const lastPlayedPart = detailPage.e7h9qdoss?.[0]?.[1];
+      const secondsPlayed = detailPage.e7h9qdoss?.[0]?.[2]?.[0];
+      const achievements = detailPage.e7h9qdoss?.[0]?.[5]?.[1];
+
+      const lastPlayed = lastPlayedPart?.length
+        ? lastPlayedPart[0] * 1000 + (lastPlayedPart[1] * 1000) / 1000000000
+        : undefined;
+
+      const details = (games[gameId] = {
+        achievements,
+        lastPlayed,
+        secondsPlayed,
+      });
+
+      for (let [slug, value, _1, _2, name] of detailPage.gameStats) {
+        if (slug === slug.toUpperCase()) {
+          slug = slug.toLowerCase();
+        } else {
+          slug = slug[0].toLowerCase() + slug.slice(1);
+        }
+
+        const propertyName = slug.replace(/_([a-z])/g, (_, c) =>
+          c.toUpperCase(),
+        );
+        details[propertyName] = value;
+      }
+    }
+
+    if (Object.keys(games).length > 0) {
+      also.games = games;
+    }
   } else {
-    if (record.type === "game" && !record.skuId && record.appId) {
-      const page = await fetchStadiaPage(`player/${record.appId}`);
-      // special case: discovering a new game from only an appId
+    if (record.type === "game" && !record.skuId && record.gameId) {
+      const page = await fetchStadiaPage(`player/${record.gameId}`);
+      // special case: discovering a new game from only an gameId
       record.skuId = page.vBpx4o?.[0]?.[0];
-    } else if (!record.appId && record.skuId) {
+    } else if (!record.gameId && record.skuId) {
       // discovering a sku from only a skuId
       const page = await fetchStadiaPage(`store/details/-/sku/${record.skuId}`);
-      record.appId = page.sku[16][4];
+      record.gameId = page.sku[16][4];
     }
     // both of the above are incomplete so we also perform the normal
     // SKU spider process from here.
 
     const page = await fetchStadiaPage(
-      `store/details/${record.appId}/sku/${record.skuId}`,
+      `store/details/${record.gameId}/sku/${record.skuId}`,
     );
 
     const organizations = [page.sku[22][0], ...page.sku[22][1]];
@@ -333,7 +372,7 @@ export const spiderThread = async () => {
       Object.assign(skus[key], meta[key]);
     }
     Object.values(skus).forEach(getset);
-    console.info(`${Object.keys(records).length} records loaded.`);
+    console.info(`${new Set(Object.keys(records)).size} records loaded.`);
   } catch (error) {
     console.error(
       "Failed to connect to local dev server, skipping load.",
@@ -408,8 +447,7 @@ export const spiderThread = async () => {
       await spider(chosenRecord);
 
       if (await canFetchDevApi) {
-        for (const key of Object.keys(records).sort()) {
-          const item = records[key];
+        for (const item of new Set(Object.values(records))) {
           const newKey = keygen(item);
 
           if (skus.hasOwnProperty(newKey)) {
@@ -424,7 +462,7 @@ export const spiderThread = async () => {
           }
 
           skus[newKey] = {
-            appId: item.appId,
+            gameId: item.gameId,
             lastActive: item.lastActive,
             avatarId: item.avatarId,
             childSkuIds: item.childSkuIds,
@@ -440,8 +478,8 @@ export const spiderThread = async () => {
             name: item.name,
             number: item.number,
             organizationId: item.organizationId,
-            playedAppIds: item.playedAppIds,
-            popular: item.popular,
+            gameIds: item.gameIds,
+            games: item.games,
             publisherOrganizationId: item.publisherOrganizationId,
             releaseDateA: item.releaseDateA,
             releaseDateB: item.releaseDateB,
@@ -476,13 +514,14 @@ export const spiderThread = async () => {
     }
 
     console.debug(`${Object.keys(records).length} records.`);
-    const s = Math.random() * 4.0;
-    console.debug("sleeping for", s, "seconds");
-    await sleep(s);
   }
 };
 
 const fetchStadiaPage = async url => {
+  const s = Math.random() * 4.0;
+  console.debug("sleeping for", s, "seconds");
+  await sleep(s);
+
   const opaque = await fetchStadiaOpaque(url);
   const data = Object.create(opaque);
 
@@ -492,9 +531,9 @@ const fetchStadiaPage = async url => {
   data.user = opaque.D0Amudoboos?.[5];
   data.list = opaque.WwD3rbnob?.[2];
   data.gameStats = opaque.e7h9qdoss?.[0]?.[8];
-  data.playedAppIds = opaque.Q6jt8cooos?.[0];
-  if (!data.playedAppIds?.length) {
-    data.playedAppsIds = undefined;
+  data.gameIds = opaque.Q6jt8cooos?.[0];
+  if (!data.gameIds?.length) {
+    data.gamesIds = undefined;
   }
   data.sku = opaque.FWhQVssb;
   data.storefront = opaque.xjyeoc?.[3].flatMap(x => x?.[1]);
@@ -699,12 +738,12 @@ const downloadDocument = async () => {
 const updateDocument = async () => {
   deriveDerivedDerivations();
 
-  const games = [...Object.values(records)]
+  const games = [...new Set(Object.values(records))]
     .filter(
       sku =>
         sku.type === "game" &&
-        sku.appId !== "6d92431b6ca24d69a771cf136a2a231frcp1" &&
-        sku.appId &&
+        sku.gameId !== "6d92431b6ca24d69a771cf136a2a231frcp1" &&
+        sku.gameId &&
         sku.name &&
         sku.slug,
     )
@@ -801,7 +840,7 @@ const updateDocument = async () => {
       .catch(error => console.error(error));
 
     const link = root.querySelector("a");
-    link.href = `https://stadia.google.com/player/${game.appId}`;
+    link.href = `https://stadia.google.com/player/${game.gameId}`;
 
     const name = root.querySelector("st-name");
     name.textContent = game.name;

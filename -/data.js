@@ -13,18 +13,18 @@ export const getset = (
 } */ newProps,
   now = Date.now(),
 ) => {
-  // HACK
-  if (newProps.playedAppIds && newProps.playedAppIds.length === 0) {
-    delete newProps.playedAppIds;
-  } else if (newProps.playedAppIds) {
-    for (const appId of newProps.playedAppIds) {
-      getset({ type: "game", appId });
-    }
-  }
-
   if (!newProps.type) {
     throw new Error("no .type in " + JSON.stringify(newProps));
   }
+
+  if (newProps.gameIds && newProps.gameIds.length === 0) {
+    delete newProps.gameIds;
+  } else if (newProps.gameIds) {
+    for (const gameId of newProps.gameIds) {
+      getset({ type: "game", gameId });
+    }
+  }
+
   const newRecord = Object.assign(makeRecord(newProps.type), newProps);
 
   const existingRecord = records[newRecord._key];
@@ -70,6 +70,7 @@ export const getset = (
   }
 
   if (!record.type || !record._key || record._key === "undefined") {
+    debugger;
     throw new TypeError("record corrupt, missing key or type");
   }
 
@@ -84,6 +85,9 @@ export const getset = (
   }
 
   records[record._key] = record;
+  if (record.type === "game" && record.skuId) {
+    records[record.skuId] = record;
+  }
   return record;
 };
 
@@ -91,7 +95,7 @@ export const deriveDerivedDerivations = async () => {
   let proGamesLoaded = 0;
 
   const recordsOfType = {};
-  for (const record of Object.values(records)) {
+  for (const record of new Set(Object.values(records))) {
     (recordsOfType[record.type] = recordsOfType[record.type] || []).push(
       record,
     );
@@ -111,26 +115,6 @@ export const deriveDerivedDerivations = async () => {
     }
   };
   addProGames("59c8314ac82a456ba61d08988b15b550");
-  const activePlayerSince = Date.now() - 1000 * 60 * 60 * 24 * 24 - Infinity;
-
-  const recentPlayerCountByGameAppId = {};
-  for (const user of recordsOfType.user) {
-    if (Math.max(user.firstSeen, user.lastModified) > activePlayerSince)
-      for (const appId of (user.playedAppIds || []).slice(0, Infinity)) {
-        recentPlayerCountByGameAppId[appId] =
-          (recentPlayerCountByGameAppId[appId] || 0) + 1;
-      }
-  }
-
-  const howPopular =
-    Object.values(recentPlayerCountByGameAppId)
-      .sort((a, b) => a - b)
-      .slice(-1)[0] * 0.75;
-  const popularEnough = Object.entries(recentPlayerCountByGameAppId)
-    .filter(a => a[1] >= howPopular)
-    .map(a => a[0]);
-
-  console.debug({ howPopular, popularEnough, recentPlayerCountByGameAppId });
 
   const slugs = new Set();
   for (const game of recordsOfType.game) {
@@ -139,11 +123,10 @@ export const deriveDerivedDerivations = async () => {
     }
     slugs.add(game.slug);
 
-    game.popular = undefined; // popularEnough.includes(game.appId) ? true : undefined;
-
     if (proGamesLoaded > 0) {
       game.isPro = proGameSkus.has(game.skuId);
     }
+
     game.wasPro = game.wasPro || game.isPro;
   }
 
@@ -209,7 +192,7 @@ class ARecord {
     if (knownStale) {
       frequencyCoefficient *= 64;
     }
-    return (Date.now() - this.lastSpidered) * frequencyCoefficient;
+    return (now - this.lastSpidered) * frequencyCoefficient;
   }
 }
 
@@ -234,13 +217,15 @@ export class User extends ARecord {
   /** @type {string} */ userId;
   /** @type {string} */ name;
   /** @type {string} */ number;
-  /** @type {string} */ playedAppIds;
+  /** @type {string} */ gameIds;
 
   /** @type {"user"} */ type = "user";
   get _spiderFrequencyCoefficient() {
-    if (this.lastActive && this.playedAppIds?.length) {
+    if (this.gameIds?.length && !this.games?.length) {
+      return 1 / 2;
+    } else if (this.lastActive && this.games?.length) {
       return 1 / 8;
-    } else if (this.playedAppIds?.length) {
+    } else if (this.lastActive || this.games?.length || this.gameIds?.length) {
       return 1 / 32;
     } else if (this.number === "0000") {
       return 1 / (64 + this.name.length * 2);
@@ -264,7 +249,7 @@ class ASku extends ARecord {
   /** @type {string} */ publisherOrganizationId;
 
   get _key() {
-    return `${this.type === "game" ? this.appId : this.skuId}`;
+    return `${this.type === "game" ? this.gameId : this.skuId}`;
   }
 
   get slug() {
@@ -298,7 +283,7 @@ export class Preorder extends ASku {
 
 export class Game extends ASku {
   /** @type {"game"} */ type = "game";
-  /** @type {string} */ appId;
+  /** @type {string} */ gameId;
   /** @type {boolean} */ isPro;
   /** @type {boolean} */ wasPro;
 
