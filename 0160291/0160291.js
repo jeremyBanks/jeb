@@ -49,9 +49,9 @@ This process took place throughout September and October 2020.
   };
 
   let windows = [];
-  // window.onbeforeunload = () => {
-  //   windows.forEach(w => w?.close());
-  // };
+  window.onbeforeunload = () => {
+    windows.forEach(w => w?.close());
+  };
 
   const cleanName = (name) =>
     name
@@ -139,7 +139,7 @@ This process took place throughout September and October 2020.
     });
 
     const gameListVisiblePlayers = players.filter(
-      (player) => player.games || player.gameIds
+      (player) => player.gameIds
     );
 
     console.debug("users whose game lists are visible", {
