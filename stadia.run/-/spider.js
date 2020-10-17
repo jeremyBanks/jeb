@@ -41,8 +41,8 @@ const loadSkuData = async (
   const developerOrganizationIds = skuData[16];
 
   const imageUrl = skuData[2]?.[1]?.[0]?.[0]?.[1]?.split(/=/)[0];
-  const thumbnail = await microImageFromURL(imageUrl);
-  const imageHash = await hashFromURL(imageUrl);
+  const thumbnail = undefined; // await microImageFromURL(imageUrl);
+  const imageHash = undefined; // await hashFromURL(imageUrl);
 
   const releaseDateA = 1000 * skuData[10]?.[0] || undefined;
   const releaseDateB = 1000 * skuData[26]?.[0] || undefined;
@@ -395,7 +395,7 @@ export const spiderThread = async () => {
     );
   }
 
-  for (;;) {
+  for (; ;) {
     try {
       const now = Date.now();
       const allRecords = Object.values(records).sort((a, b) => {
@@ -429,13 +429,10 @@ export const spiderThread = async () => {
 
       document.querySelector(
         "#dev-tools .record-count",
-      ).textContent = `${icon} ${staleRecords.length} stale and ${
-        allRecords.length - staleRecords.length - agelessRecords.length
-      } fresh ${
-        allRecords.length - agelessRecords.length
-      } of known interesting records. (${
-        agelessRecords.length
-      } other records are non-spiderable.)`;
+      ).textContent = `${icon} ${staleRecords.length} stale and ${allRecords.length - staleRecords.length - agelessRecords.length
+      } fresh ${allRecords.length - agelessRecords.length
+        } of known interesting records. (${agelessRecords.length
+        } other records are non-spiderable.)`;
 
       if (staleRecords.length % 128 === 0) {
         await updateDocument();
@@ -446,8 +443,7 @@ export const spiderThread = async () => {
 
       if (staleRecords.length === 0) {
         console.info(
-          `Everything has been spidered recently (at most ${
-            record.age(now) / 1000 / 60 / 60
+          `Everything has been spidered recently (at most ${record.age(now) / 1000 / 60 / 60
           } hours ago).`,
         );
         await sleep(Math.random() * 600.0);
@@ -524,7 +520,7 @@ export const spiderThread = async () => {
         });
       }
     } catch (error) {
-      console.error(error);
+      console.error("sleeping following", error);
       await sleep(300);
     }
 

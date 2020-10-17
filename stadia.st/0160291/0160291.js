@@ -1,106 +1,222 @@
-Promise.resolve().then(async () => {
-  let markdown = "";
+async function street() {
+  PROSE`
 
-  markdown += `\
+# StadiaStreet's Stadia Stats
+
+---
+
 # Data Collection
+
+  CODE`
+
+  let recordsUrl = query.get("Records") || './records.json';
+  let recordsResponse = await fetch(recordsUrl);
+  if (!recordsResponse.ok) throw new Error(recordsResponse);
+  let records = Object.values(await recordsResponse.json());
+
+  let gameNames = Object.fromEntries(records
+    .filter(r => r.type === 'game')
+    .map(game => [game.gameId, cleanName(game.name)]));
+
+  CODE`
 
 This process took place throughout September and October 2020.
 
-1. A new Google account was created, with a new Stadia profile, with no Stadia friends, games, or activity history. This account was used for the rest of the process.
-2. A set of random **Name Prefixes** were generated. Each were between between 2-4 characters, taken from a distribution roughly approximating English letter frequency, with digits included at a lower frequency.
-3. Each Name Prefix was searched for using the the "Find players" interface in Stadia, and the results were collected into a set of **Candidate Players**.
-4. Each Candidate Player's profile was examined, and if their list of played games was publicly visible, each of their game stats sub-page were also examined. If their play time for each game was visible, this information was collected and gathered into a set of **Visible Players**.
-`;
+A new Google account was created, with a new Stadia profile, with no Stadia
+friends, games, or activity history. This account was used for the rest of the
+process.
 
-  const interestingHours = 2;
-  const interestingSeconds = interestingHours * 60 * 60;
+A set of random **Name Prefixes** were generated. Each was between between 2-4
+characters, taken from a distribution roughly approximating English letter
+frequency, with digits included at a lower frequency.
 
-  const monthDays = 32;// yes
-  const monthSeconds = monthDays * 24 * 60 * 60;
-  const minMonthlyTimestamp = Date.now() - monthSeconds * 1000;
+  CODE`
 
-  const yearDays = 365;
-  const yearSeconds = yearDays * 24 * 60 * 60;
-  const minYearlyTimestamp = Date.now() - yearSeconds * 1000;
+  let CandidatePlayers =
+    Object.values(records)
+      .filter(r => r.type === 'user')
+      .map(({ avatarId, games, name, number, userId, lastActive }) => ({
+        userId,
+        name,
+        number,
+        avatarId,
+        lastActive,
+        games: games && Object.fromEntries(Object.entries(games)
+          .map(([gameId, { achievements,
+            secondsPlayed,
+            lastPlayed, }]) => [gameNames[gameId], {
+              achievements,
+              secondsPlayed,
+              lastPlayed,
+            }]))
+      }));
+  let candidateFounders = CandidatePlayers.filter(p => p.number === '0000');
+  let candidateSettlers = CandidatePlayers.filter(p => p.number !== '0000');
 
-  let prefix = `st/${Math.floor(Date.now() / 10_000_000)
-    .toString(10)
-    .padStart(7, "0")}`;
+  CODE`
 
-  const prefixed = (separator, id) =>
-    `${prefix}${separator}${id.toString().padStart(7, "0")}`;
+Each Name Prefix was searched for using the the "Find players" interface in
+the Stadia web site, and the results were collected into a set of **Candidate
+Players**. Of those Candidate Players, ${(
+      100 * candidateFounders.length / CandidatePlayers.length).toFixed(1)
+    }% were "founders" and ${(
+      100 * candidateSettlers.length / CandidatePlayers.length).toFixed(1)
+    }% were not.
 
-  const jsonStyles = {
-    textDecoration: "none",
-    padding: "4px 12px",
-    display: "block",
-    position: "absolute",
-    top: "0",
-    bottom: "0",
-    left: "0",
-    right: "0",
-    background: "#246",
-    fontWeight: "bold",
-    color: "#FFC",
-    userSelect: "none",
-    cursor: "copy",
-    overflow: "auto",
-    fontSize: "8px",
-  };
+For each Candidate Player, their user ID, gamertag name, gamertag number,
+avatar, last played time (if visible), and (if visible) list of game played
+were collected from their profile.
 
-  let windows = [];
-  window.onbeforeunload = () => {
-    windows.forEach(w => w?.close());
-  };
+For each Candidate Players whose profile had a visible list of games, their
+achievement count (if visible), playtime (if visible), and last-played time
+(if visible) were collected for each game, from that game's detail subpage of
+their profile.
 
-  const cleanName = (name) =>
-    name
-      .replace(/™/g, "_")
-      .replace(/®/g, "_")
-      .replace(/[\:\-]? Early Access$/g, "_")
-      .replace(/[\:\-]? \w+ Edition$/g, "_")
-      .replace(/\(\w+ Ver(\.|sion)\)$/g, "_")
-      .replace(/™/g, "_")
-      .replace(/\s{2,}/g, "_")
-      .replace(/^\s+|\s+$/g, "")
-      .normalize("NFKD")
-      .replace(/\p{Mark}/gu, "")
-      .replace(/'/g, "")
-      .replace(/[^a-z0-9A-Z_]+/g, "_")
-      .replace(/^\_+|\_+$/g, "")
-      .replace(
-        /(_|^)([a-zA-Z0-9])([a-zA-Z0-9]*)/g,
-        (_1, p, c, d) =>
-          (p ? c.toUpperCase() : c.toLowerCase()) + d.toLowerCase()
-      )
-      .replace(/_/g, '');
+  CODE`
 
-  const rawUrl = new URL(document.location).searchParams.get("raw-url");
-  let visiblePlayersUrl = new URL(document.location).searchParams.get(
-    "visible-players-url"
-  );
-
-  if (!rawUrl && !visiblePlayersUrl) {
-    visiblePlayersUrl =
-      "https://gist.githubusercontent.com/StadiaStreet/9b0d619e16caca2504599cd4478a2ab7/raw/1-visible-players.json";
+  for (let player of CandidatePlayers) {
+    player.userId =
+      Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(10);
+    if (player.number !== '0000') {
+      player.number =
+        Math.floor(Math.random() * 9999 + 1).toString().padStart(4, '0');
+    }
+    player.name =
+      Math.random()
+        .toString(36)
+        .replace(/^[^A-Za-z]+/, '')
+        .slice(0, 3 + Math.floor(13 * Math.random(), 2));
   }
 
-  if (!visiblePlayersUrl) {
-    const rawResponse = await fetch(rawUrl);
-    if (!rawResponse.ok) {
-      throw new Error(rawResponse);
-    }
-    const json = await rawResponse.json();
+  CODE`
 
-    const records = Object.values(json);
+For each Candidate Player, their user ID, gamertag name, and gamertag number
+were erased and replaced with randomly-generated values to maintain privacy,
+except that "founder" users' numbers remained unchanged as exclusively "0000".
 
-    const games = Object.fromEntries(
+  CODE`
+
+  let VisiblePlayers = CandidatePlayers.filter(p => p.games !== undefined);
+  let visibleFounders = VisiblePlayers.filter(p => p.number === "0000");
+  let visibleSettlers = VisiblePlayers.filter(p => p.number !== "0000");
+
+  CODE`
+
+All Candidate Players whose game lists were visible were collected into
+${theSetOf({ VisiblePlayers })}. Of those Visible Players,
+${visibleFounders.length
+    } (${(100 * visibleFounders.length / VisiblePlayers.length).toFixed(1)
+    }%) were "founders" and ${visibleSettlers.length
+    } (${(100 * visibleSettlers.length / VisiblePlayers.length).toFixed(1)
+    }%) were not.
+
+  CODE`
+
+  CODE`
+
+# Analysis
+
+## Avatars
+
+### Most Popular
+
+The top ten most popular avatars among ${theSetOf({ VisiblePlayers })} are:
+
+  CODE`
+
+  let avatars = records.filter(r => r.type === 'avatar');
+  let playersByAvatarId =
+    Object.fromEntries(avatars.map(a => [a.avatarId, []]));
+  for (let player of VisiblePlayers) {
+    playersByAvatarId[player.avatarId].push(player);
+  }
+  let popularAvatars = avatars.map(({ avatarId, name }) => ({
+    avatarId,
+    name,
+    players: playersByAvatarId[avatarId],
+  })).sort((a, b) => b.players.length - a.players.length);
+  console.debug({ avatars, popularAvatars });
+
+  for (const { avatarId, name, players } of popularAvatars.slice(0, 10)) {
+    PROSE`
+1. ![**${name
+      }**](https://www.gstatic.com/stadia/gamers/avatars/mdpi/avatar_${avatarId
+      }.png) with ${players.length} players (${(
+        players.length / VisiblePlayers.length * 100).toFixed(1)
+      }%)
+    CODE`
+  }
+
+  CODE`
+
+### Least Popular
+
+The bottom ten least popular avatars among ${theSetOf({ VisiblePlayers })} are:
+
+  CODE`
+
+  const unpopularAvatars = [...popularAvatars].reverse();
+
+  for (const { avatarId, name, players } of unpopularAvatars.slice(0, 10)) {
+    PROSE`
+1. ![**${name
+      }**](https://www.gstatic.com/stadia/gamers/avatars/mdpi/avatar_${avatarId
+      }.png) with ${players.length} players (${(
+        players.length / VisiblePlayers.length * 100).toFixed(1)
+      }%)
+    CODE`
+  }
+
+  CODE`
+
+## Games
+
+## Most Tried
+
+The top ten most widely-tried games among ${theSetOf({ VisiblePlayers })} are:
+
+1. ![**Destiny 2**](https://lh3.googleusercontent.com/0fwJoLxjhigQ1ScFZ1S27hEOKEPR8HH5Ac6nK2WOI5G0baQMgBjoeAha7zPNWE2-J6Zsm6mKmYOKhmVVndltPdOZTPtT178vBTw-T9VfKCW6Ph_qbnJPwukCgxtq=w640-h360-rw) with 1234 players (12%).
+
+However, this doesn't distinguish between players who have only ever opened a
+game for a few minutes, and those who have played it every day for months.
+
+we have playtime for some players but not to many
+
+## Most Played
+
+## Most Playtime
+
+1. ![**Destiny 2**](https://lh3.googleusercontent.com/0fwJoLxjhigQ1ScFZ1S27hEOKEPR8HH5Ac6nK2WOI5G0baQMgBjoeAha7zPNWE2-J6Zsm6mKmYOKhmVVndltPdOZTPtT178vBTw-T9VfKCW6Ph_qbnJPwukCgxtq=w640-h360-rw) with 1234 players (12%).
+
+
+## Most Played Together
+
+1. Destiny 2 and stadia pros
+
+PlaytimePlayers
+
+All of the data sets linked above were collected into ${theSetOf()}.
+`
+  /*
+
+  let minMonthlyTimestamp = Date.now() - 32 * 24 * 60 * 60 * 1000;
+  let MonthlyActivePlayers = VisiblePlayers.filter(
+    p => (p.lastActive && p.lastActive >= minMonthlyTimestamp) || (
+      p.games && Object.values(p.games).some(g => g.lastPlayed >= minMonthlyTimestamp)
+    ));
+
+
+From ${theSetOf({ VisiblePlayers })}, those whose last-online timestamp were
+visible and within the last 32 days were collected into
+${theSetOf({ MonthlyActivePlayers })}.
+
+    let games = Object.fromEntries(
       records.flatMap((record) =>
         record.type === "game" && record.gameId ? [[record.gameId, record]] : []
       )
     );
 
-    const avatars = Object.fromEntries(
+    let avatars = Object.fromEntries(
       records.flatMap((record) =>
         record.type === "avatar" && record.avatarId
           ? [[record.avatarId, record]]
@@ -108,11 +224,47 @@ This process took place throughout September and October 2020.
       )
     );
 
-    const players = records.filter(
+    let players = records.filter(
       (record) => record.type === "user" && record.userId
     );
 
-    const monthlyActivePlayers = players.filter(
+
+
+    let interestingHours = 2;
+    let interestingSeconds = interestingHours * 60 * 60;
+
+    let yearDays = 365;
+    let yearSeconds = yearDays * 24 * 60 * 60;
+    let minYearlyTimestamp = Date.now() - yearSeconds * 1000;
+
+
+    let prefixed = (separator, id) =>
+      `${prefix}${separator}${id.toString().padStart(7, "0")}`;
+
+    let jsonStyles = {
+      textDecoration: "none",
+      padding: "4px 12px",
+      display: "block",
+      position: "absolute",
+      top: "0",
+      bottom: "0",
+      left: "0",
+      right: "0",
+      background: "#246",
+      fontWeight: "bold",
+      color: "#FFC",
+      userSelect: "none",
+      cursor: "copy",
+      overflow: "auto",
+      fontSize: "8px",
+    };
+
+    let windows = [];
+    window.onbeforeunload = () => {
+      windows.forEach(w => w?.close());
+    };
+
+    let monthlyActivePlayers = players.filter(
       (player) =>
         (player.lastActive && player.lastActive >= minMonthlyTimestamp) ||
         (player.games &&
@@ -125,7 +277,7 @@ This process took place throughout September and October 2020.
       monthlyActivePlayers,
     });
 
-    const yearlyActivePlayers = players.filter(
+    let yearlyActivePlayers = players.filter(
       (player) =>
         (player.lastActive && player.lastActive >= minYearlyTimestamp) ||
         (player.games &&
@@ -138,7 +290,7 @@ This process took place throughout September and October 2020.
       yearlyActivePlayers,
     });
 
-    const gameListVisiblePlayers = players.filter(
+    let gameListVisiblePlayers = players.filter(
       (player) => player.gameIds
     );
 
@@ -146,13 +298,13 @@ This process took place throughout September and October 2020.
       gameListVisiblePlayers,
     });
 
-    const gameListCapturedPlayers = players.filter((player) => player.games);
+    let gameListCapturedPlayers = players.filter((player) => player.games);
 
     console.debug("users whose game lists have been fully captured", {
       gameListCapturedPlayers,
     });
 
-    const candidatePlayers = [...players.entries()].flatMap(([i, record]) => {
+    let candidatePlayers = [...players.entries()].flatMap(([i, record]) => {
       if (record.type !== "user") return [];
       return [
         {
@@ -169,11 +321,11 @@ This process took place throughout September and October 2020.
 
     console.debug("all known players", { candidatePlayers });
 
-    const visiblePlayers = [...candidatePlayers].flatMap((player) => {
+    let visiblePlayers = [...candidatePlayers].flatMap((player) => {
       let visible = false;
 
-      const playerGameStats = {};
-      for (const [gameId, stats] of Object.entries(player.games || {})) {
+      let playerGameStats = {};
+      for (let [gameId, stats] of Object.entries(player.games || {})) {
         if (stats.secondsPlayed) {
           visible = true;
           playerGameStats[cleanName(games[gameId].name)] = {
@@ -199,7 +351,7 @@ This process took place throughout September and October 2020.
       ];
     });
 
-    for (const [i, visiblePlayer] of visiblePlayers.entries()) {
+    for (let [i, visiblePlayer] of visiblePlayers.entries()) {
       visiblePlayer.id = prefixed("/visible-player-", i + 1);
     }
 
@@ -209,11 +361,11 @@ This process took place throughout September and October 2020.
       })
     );
 
-    const w = open(visiblePlayersUrl, "1-visible-players.json", `location=0,width=${Math.floor(0.25 * screen.width)},left=${Math.floor(0.70 * screen.width)},height=${Math.floor(0.35 * screen.availHeight)},top=${Math.floor(0.15 * screen.height)}`);
+    let w = open(visiblePlayersUrl, "1-visible-players.json", `location = 0, width = ${Math.floor(0.25 * screen.width)}, left = ${Math.floor(0.70 * screen.width)}, height = ${Math.floor(0.35 * screen.availHeight)}, top = ${Math.floor(0.15 * screen.height)} `);
     windows.push(w);
     w?.addEventListener("load", () => {
-      w.document.title = `⬇️ ${prefix}/1-visible-players.json`;
-      const link = w.document.createElement("a");
+      w.document.title = `⬇️ ${prefix} /1-visible-players.json`;
+      let link = w.document.createElement("a");
       link.href = visiblePlayersUrl;
       link.download = "1-visible-players.json";
       link.title = "click to download";
@@ -221,116 +373,244 @@ This process took place throughout September and October 2020.
       link.appendChild(w.document.body.firstElementChild);
       w.document.body.appendChild(link);
     });
-  }
 
-  const visiblePlayersResponse = await fetch(visiblePlayersUrl);
-  if (!visiblePlayersResponse.ok) {
-    throw new Error(visiblePlayersResponse);
-  }
-  const visiblePlayers = await visiblePlayersResponse.json();
+    console.debug("players with playtime visible", { visiblePlayers });
 
-  console.debug("players with playtime visible", { visiblePlayers });
+    let interestingPlayers = visiblePlayers.flatMap((player) => {
+      let interestingPlayer = {
+        ...player,
+        games: Object.fromEntries(
+          Object.entries(player.games).filter(
+            ([id, { secondsPlayed }]) => secondsPlayed >= interestingSeconds
+          )
+        ),
+      };
 
-  const interestingPlayers = visiblePlayers.flatMap((player) => {
-    const interestingPlayer = {
-      ...player,
-      games: Object.fromEntries(
-        Object.entries(player.games).filter(
-          ([id, { secondsPlayed }]) => secondsPlayed >= interestingSeconds
-        )
-      ),
-    };
+      if (Object.keys(interestingPlayer.games).length > 0) {
+        return [interestingPlayer];
+      } else {
+        return [];
+      }
+    });
 
-    if (Object.keys(interestingPlayer.games).length > 0) {
-      return [interestingPlayer];
+    console.debug("players with meaningful playtime visible", {
+      interestingPlayers,
+    });
+
+
+
+
+    let interestingGamePlayerLists = {};
+    for (let player of interestingPlayers) {
+      for (let [game, info] of Object.entries(player.games)) {
+        (interestingGamePlayerLists[game] ??= []).push(player);
+      }
+    }
+
+    document.title = "Game Popularity Data and Analysis";
+
+    markdown += `
+  The Visible Players data set (n = ${Object.keys(visiblePlayers).length}), with user identifiers removed for privacy, was published [for download here](${visiblePlayersUrl}).
+
+  ## Game Popularity Association Matrix
+
+  Each cell indicates the percentage of players of the game to the left that have also played the game to the top.
+
+  ### Meaningfully Played Games
+
+  Here we only look at game that players have played for at least ${interestingHours} hours. However, the sample size is very small (n = ${interestingPlayers.length}) because most players' privacy settings do not allow us to know their playtime.
+
+  ### Tried Games
+
+  Here we consider all games that players have ever opened, even if it was only for a couple of minutes. This is less meaningful, but we have much more data (n = ${12344456434642}) because the default privacy settings allow us to see a player's list of games.
+
+  `;
+
+
+
+    let popularColumns = 8;
+    let popularRows = 24;
+
+    let popularGames = ([...Object.entries(interestingGamePlayerLists)].sort(([_a, a], [_b, b]) => b.length - a.length)).map(([name, players]) => ({ name, players }));
+
+    console.debug("most widely-meaningfully-played games", { popularGames });
+
+    markdown += `\n|  |`;
+    for (let [column, columnGame] of popularGames.slice(0, popularColumns).entries()) {
+      if (column === 0) {
+        markdown += ' |';
+      } else {
+        markdown += ` **${columnGame.name.slice(0, 8).trim()}** |`;
+      }
+    }
+    markdown += `\n|--:|`;
+    for (let [column, columnGame] of popularGames.slice(0, popularColumns).entries()) {
+      markdown += `--:|`;
+    }
+    for (let [row, rowGame] of popularGames.slice(0, popularRows).entries()) {
+      markdown += `\n| `;
+      if (row === 0) {
+        markdown += ` |`;
+      } else {
+        markdown += ` **${rowGame.name.slice(0, 8).trim()}** |`;
+      }
+      for (let [column, columnGame] of popularGames.slice(0, popularColumns).entries()) {
+        if (rowGame === columnGame) {
+          markdown += ` **${rowGame.name.slice(0, 8).trim()}** |`;
+        } else {
+          let rowPlayers = new Set(rowGame.players);
+          let commonPlayers = new Set(columnGame.players.filter(p => rowPlayers.has(p)));;
+          let percent = (100 * commonPlayers.size / columnGame.players.length).toFixed(0);
+          let description = `${percent}% (${commonPlayers.size} of ${columnGame.players.length}) of ${columnGame.name} players also play ${rowGame.name}`;
+          markdown += ` \`${percent}\`[%](mailto:street@hey.com?subject=${encodeURIComponent(description)} "${description}") |`;
+        }
+      }
+    }
+
+
+    CODE`
+
+
+  ## Most Popular Avatars
+
+  ### Overall
+
+  We have a lot of data for this (n ≫ 1).
+  `;
+
+    `
+  ### Among Meaningful Players of Each Game
+
+  🖼️
+
+  The script that produced this analysis was published [for download here](https://gist.githubusercontent.com/StadiaStreet/9b0d619e16caca2504599cd4478a2ab7/raw/1.js).
+  `;
+
+
+    let markdownUrl = window.URL.createObjectURL(
+      new Blob([markdown], { type: "text/plain;charset=utf-8" })
+    );
+
+    let w2 = open(markdownUrl, "1.md", `location=0,width=${Math.floor(0.25 * screen.width)},left=${Math.floor(0.70 * screen.width)},height=${Math.floor(0.35 * screen.availHeight)},top=${Math.floor(screen.height * 3 / 5)}`);
+    windows.push(w2);
+    w2?.addEventListener("load", () => {
+      w2.document.title = `⬇️ ${prefix}/1.md`;
+      let link = w2.document.createElement("a");
+      link.href = markdownUrl;
+      link.download = "1.md";
+      link.title = "click to download";
+      Object.assign(link.style, jsonStyles);
+      link.appendChild(w.document.body.firstElementChild);
+      w2.document.body.appendChild(link);
+    });
+    */
+};
+
+
+let PROSE = (strings, ...values) => {
+  let parts = [];
+  for (let i = 0; i < strings.length; i++) {
+    if (i < values.length) {
+      parts.push(strings[i]);
+      parts.push(values[i].toString());
     } else {
-      return [];
-    }
-  });
-
-  console.debug("players with meaningful playtime visible", {
-    interestingPlayers,
-  });
-
-
-  const interestingGamePlayerLists = {};
-  for (const player of interestingPlayers) {
-    for (const [game, info] of Object.entries(player.games)) {
-      (interestingGamePlayerLists[game] ??= []).push(player);
+      parts.push(strings[i].replace(/\n *CODE$/, ''));
     }
   }
+  PROSE.markdown += parts.join('');
 
-  const popularGames = ([...Object.entries(interestingGamePlayerLists)].sort(([_a, a], [_b, b]) => b.length - a.length).slice(0, 32));
+  try {
+    document.body.innerHTML = markdownit().render(PROSE.markdown)
+    document.body.style.whiteSpace = '';
+  } catch (error) {
+    console.error(error);
+    document.body.textContent = PROSE.markdown;
+    document.body.style.whiteSpace = 'pre-wrap';
+  }
+};
+PROSE.markdown = '';
+let CODE = PROSE;
 
-  console.debug("most widely-meaningfully-played games", {popularGames});
+let prefix = `st/${Math.floor(Date.now() / 10_000_000)
+  .toString(10)
+  .padStart(7, "0")}`;
 
-  document.title = "Game Popularity Data and Analysis";
+let sorted = x => {
+  if (Array.isArray(x)) {
+    return x.map(sorted).sort((a, b) => {
+      a = JSON.stringify(a);
+      b = JSON.stringify(b);
+      if (a < b) {
+        return -1;
+      } else if (a > b) {
+        return +1;
+      } else {
+        return 0;
+      }
+    });
+  } else if (x && typeof x === 'object') {
+    let keys = Object.keys(x).sort();
+    let y = {};
+    for (let key of keys) {
+      y[key] = sorted(x[key]);
+    }
+    return y;
+  } else {
+    return x;
+  }
+}
 
-  const pre = document.createElement("div");
-  // Object.assign(document.body.style, {
-  //   margin: 0,
-  //   padding: 0,
-  // });
-  Object.assign(pre.style, {
-    font: '16px sans-serif',
-    margin: "16px",
-    lineHeight: "2.0",
-    outline: "none",
-  });
-  document.body.appendChild(pre);
-  markdown += `
-The Visible Players data set, with user identifiers removed for privacy, was published [for download here](${visiblePlayersUrl}).
+let theSetOf = (data = { DataSets: Object.entries(theSetOf.allSets).map(([k, v]) => ({ [k]: v })) }) => {
+  if (Object.keys(data).length !== 1) {
+    throw new TypeError('theSetOf what?');
+  }
+  let key = Object.keys(data)[0];
+  let url = query.get(key);
+  let value = data[key];
+  let values = sorted(JSON.parse(JSON.stringify(value)));
 
-# Analysis
+  if (!url) {
+    let json = JSON.stringify({ [key]: values }, null, 2);
+    url = window.URL.createObjectURL(
+      new Blob([json], { type: "application/json;charset=utf-8" })
+    );
+  }
 
-- The data set consists of ${
-    Object.keys(visiblePlayers).length
-  } Visible Players.
-- A Visible Player is considered to have **meaningfully played** a game if they have at least ${interestingHours} hours (${interestingSeconds} seconds) of time played in that game.
-- An Visible Player is considered to be an **Interesting Player** if they have meaningfully played at least one game.
-- The data set includes ${
-    Object.keys(interestingPlayers).length
-  } Interesting Players.
-- A game's **popularity** refers to the number of Interesting Players that have meaningfully played that game. An avatar's popularity refers to the number of Interesting Players that are currently using that avatar.
-- An Interesting Player is considered to be a **Founder** if their gamertag number is \`0000\`.
-- An Interesting Player is considered to be a **Settler** if they are not a Founder, but also joined Stadia (created a Stadia profile and chose their Stadia gamertag) within one year of its launch (prior to November 19, 2020 in the \`America/Los_Angeles\` time zone).
+  if (theSetOf.allSets[key]) {
+    return `the set of ${values.length} ${key.replace(/(.)([A-Z])/g, '$1 $2')}`;
+  } else {
+    theSetOf.allSets[key] = value;
+    return `[a set of ${values.length} **${key.replace(/(.)([A-Z])/g, '$1 $2')}**](${url})`;
+  }
+};
+theSetOf.allSets = {};
 
-## Game Popularity Association Matrix
+let cleanName = (name) =>
+  name
+    .replace(/™/g, "_")
+    .replace(/®/g, "_")
+    .replace(/[\:\-]? Remake$/g, "_")
+    .replace(/[\:\-]? Tamriel Unlimited$/g, "_")
+    .replace(/[\:\-]? Early Access$/g, "_")
+    .replace(/[\:\-]? \w+ Edition$/g, "_")
+    .replace(/\(\w+ Ver(\.|sion)\)$/g, "_")
+    .replace(/™/g, "_")
+    .replace(/\s{2,}/g, "_")
+    .replace(/^\s+|\s+$/g, "")
+    .normalize("NFKD")
+    .replace(/\p{Mark}/gu, "")
+    .replace(/'/g, "")
+    .replace(/[^a-z0-9A-Z_]+/g, "_")
+    .replace(/^\_+|\_+$/g, "")
+    .replace(
+      /(_|^)([a-zA-Z0-9])([a-zA-Z0-9]*)/g,
+      (_1, p, c, d) =>
+        p + (p ? c : c) + d
+    )
+    .replace(/_/g, ' ')
+    .replace(/[ ]+/g, ' ')
+    .trim();
 
-The most popular games were selected for comparison in an association matrix, which is visualized below. Each cell indicates the percentage of meaningful players of the game to the left that have also meaningfully played the game to the top.
+let query = new URL(location).searchParams;
 
-🖼️
-
-## Most Popular Avatars
-
-### Overall
-
-🖼️
-
-### Among Meaningful Players of Each Game
-
-🖼️
-
-The script that produced this analysis was published [for download here](https://gist.githubusercontent.com/StadiaStreet/9b0d619e16caca2504599cd4478a2ab7/raw/1.js).
-`;
-
-  pre.textContent = markdown;
-  pre.innerHTML = window.markdownit().render(markdown);
-
-  const markdownUrl = window.URL.createObjectURL(
-    new Blob([markdown], { type: "text/plain;charset=utf-8" })
-  );
-
-  const w = open(markdownUrl, "1.md", `location=0,width=${Math.floor(0.25 * screen.width)},left=${Math.floor(0.70 * screen.width)},height=${Math.floor(0.35 * screen.availHeight)},top=${Math.floor(screen.height * 3 / 5)}`);
-  windows.push(w);
-  w?.addEventListener("load", () => {
-    w.document.title = `⬇️ ${prefix}/1.md`;
-    const link = w.document.createElement("a");
-    link.href = markdownUrl;
-    link.download = "1.md";
-    link.title = "click to download";
-    Object.assign(link.style, jsonStyles);
-    link.appendChild(w.document.body.firstElementChild);
-    w.document.body.appendChild(link);
-  });
-});
+import("./markdown-it.js").finally(street);
