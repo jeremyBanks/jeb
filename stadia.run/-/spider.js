@@ -524,7 +524,7 @@ export const spiderThread = async () => {
         });
       }
     } catch (error) {
-      console.error(error);
+      console.error("sleeping following", error);
       await sleep(300);
     }
 
