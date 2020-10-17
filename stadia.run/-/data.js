@@ -74,14 +74,18 @@ export const getset = (
     throw new TypeError("record corrupt, missing key or type");
   }
 
-  record.firstSeen = record.firstSeen ?? now;
   record.lastSeen = now;
   record.lastModified = modified ? now : record.lastModified ?? 0;
+
   if (
     !record.lastSpidered ||
-    record.lastSpidered < now - 1000 * 60 * 60 * 24 * 256
+    record.lastSpidered < now - 1000 * 60 * 60 * 24 * 512
   ) {
     record.lastSpidered = 0;
+  }
+
+  if (!record.firstSeen || record.firstSeen < now - 1000 * 60 * 60 * 24 * 512) {
+    record.firstSeen = now;
   }
 
   records[record._key] = record;
@@ -222,15 +226,14 @@ export class User extends ARecord {
   /** @type {"user"} */ type = "user";
   get _spiderFrequencyCoefficient() {
     if (this.gameIds?.length && !this.games?.length) {
-      return 1 / 2;
+      // stale! or has become private?
+      return 1;
     } else if (this.lastActive && this.games?.length) {
       return 1 / 8;
     } else if (this.lastActive || this.games?.length || this.gameIds?.length) {
       return 1 / 32;
-    } else if (this.number === "0000") {
-      return 1 / (64 + this.name.length * 2);
     } else {
-      return 1 / 512;
+      return 1 / 64;
     }
   }
 

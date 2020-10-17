@@ -228,7 +228,7 @@ const spider = async (/** @type {Record} */ record) => {
     also.name = page.user?.[0][0];
     also.number = page.user?.[0][1];
     also.imageUrl = page.user?.[1][1].replace("/mdpi/", "/xxhdpi/");
-    also.avatarId = also.imageUrl.split("avatar_")[1].split(".")[0];
+    also.avatarId = also.imageUrl?.split("avatar_")[1]?.split(".")[0];
     if (page.user?.[2]?.[4]?.length) {
       also.lastActive =
         page.user?.[2]?.[4][0] * 1000 +
@@ -257,15 +257,25 @@ const spider = async (/** @type {Record} */ record) => {
       });
 
       for (let [slug, value, _1, _2, name] of detailPage.gameStats) {
-        if (slug === slug.toUpperCase()) {
-          slug = slug.toLowerCase();
-        } else {
-          slug = slug[0].toLowerCase() + slug.slice(1);
-        }
-
-        const propertyName = slug.replace(/_([a-z])/g, (_, c) =>
-          c.toUpperCase(),
-        );
+        const propertyName = slug
+          .replace(/™/g, "_")
+          .replace(/®/g, "_")
+          .replace(/[\:\-]? Early Access$/g, "_")
+          .replace(/[\:\-]? \w+ Edition$/g, "_")
+          .replace(/\(\w+ Ver(\.|sion)\)$/g, "_")
+          .replace(/™/g, "_")
+          .replace(/\s{2,}/g, "_")
+          .replace(/^\s+|\s+$/g, "")
+          .normalize("NFKD")
+          .replace(/\p{Mark}/gu, "")
+          .replace(/'/g, "")
+          .replace(/[^a-z0-9A-Z_]+/g, "_")
+          .replace(/^\_+|\_+$/g, "")
+          .replace(
+            /(_|^)([a-zA-Z0-9])([a-zA-Z0-9]*)/g,
+            (_1, p, c, d) =>
+              (p ? c.toUpperCase() : c.toLowerCase()) + d.toLowerCase(),
+          );
         details[propertyName] = value;
       }
     }
@@ -427,7 +437,7 @@ export const spiderThread = async () => {
         agelessRecords.length
       } other records are non-spiderable.)`;
 
-      if (staleRecords.length % 16 === 0) {
+      if (staleRecords.length % 128 === 0) {
         await updateDocument();
         await downloadDocument();
       } else if (staleRecords.length % 16 === 8) {
