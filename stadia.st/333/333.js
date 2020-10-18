@@ -1,7 +1,7 @@
 async function street() {
   PROSE`
 
-# StadiaStreet's Stadia Stats: Volume ${volume}
+# Stadia Street's Stadia Stats: Volume ${volume}
 
 ---
 
@@ -16,8 +16,9 @@ async function street() {
 
   let Games = records
     .filter((r) => r.type === "game")
-    .map(({ imageUrl, gameId, name }) => ({
+    .map(({ imageUrl, gameId, name, skuId }) => ({
       gameId,
+      skuId,
       imageUrl,
       name: cleanName(name),
     }));
@@ -168,7 +169,7 @@ The top ten most popular avatars among ${theSetOf({ PlayersWithGames })} are:
     .slice(0, 10)
     .entries()) {
     PROSE`
-${i + 1}. ![**${name}**](${imageUrl}) with ${players.length} players (${(
+${i + 1}. [![](${imageUrl}) **${name}**](${imageUrl}) with ${players.length} players (${(
       (players.length / PlayersWithGames.length) *
       100
     ).toFixed(1)}%)
@@ -191,7 +192,7 @@ The bottom ten least popular avatars among ${theSetOf({
     .slice(0, 10)
     .entries()) {
     PROSE`
-${i + 1}. ![**${name}**](${imageUrl}) with ${players.length} players (${(
+${i + 1}. [![](${imageUrl}) **${name}**](${imageUrl}) with ${players.length} players (${(
       (players.length / PlayersWithGames.length) *
       100
     ).toFixed(1)}%)
@@ -233,11 +234,11 @@ The top ten most widely-tried games among ${theSetOf({ PlayersWithGames })} are:
 
   CODE`;
 
-  for (let [i, { imageUrl, name, players }] of mostTriedGames
+  for (let [i, { imageUrl, name, players, skuId, gameId }] of mostTriedGames
     .slice(0, 10)
     .entries()) {
     PROSE`
-${i + 1}. ![**${name}**](${imageUrl}) with ${players.length} players (${(
+${i + 1}. [![](${imageUrl}) **${name}**](https://stadia.google.com/readonlystoredetails/${gameId}/sku/${skuId}) with ${players.length} players (${(
       (players.length / PlayersWithGames.length) *
       100
     ).toFixed(1)}%)
@@ -258,20 +259,26 @@ played it every day for months.
     Object.values(p.games).some((g) => g.secondsPlayed)
   );
 
+  let significantPlayTime = 2 * 60 * 60;
+
+  let PlayersWithSignificantPlaytime = PlayersWithPlaytime.filter((p) =>
+    Object.values(p.games).some((g) => g.secondsPlayed > significantPlayTime)
+  );
+
   let twoHourPlayersByGameId = Object.fromEntries(
     Games.map(({ gameId }) => [gameId, []])
   );
   let pairKey = (a, b) => [a, b].sort().join("-");
   let twoHourPlayersByGameIdPairs = {};
-  for (let player of PlayersWithPlaytime) {
+  for (let player of PlayersWithSignificantPlaytime) {
     for (let [i, [nameA, infoA]] of Object.entries(player.games).entries()) {
       let idA = gameIdsByGameName[nameA];
-      if (infoA.secondsPlayed && infoA.secondsPlayed > 2 * 60 * 60) {
+      if (infoA.secondsPlayed && infoA.secondsPlayed > significantPlayTime) {
         twoHourPlayersByGameId[idA].push(player);
         for (let [j, [nameB, infoB]] of Object.entries(
           player.games
         ).entries()) {
-          if (j < i && infoB.secondsPlayed > 2 * 60 * 60) {
+          if (j < i && infoB.secondsPlayed > significantPlayTime) {
             let idB = gameIdsByGameName[nameB];
             (twoHourPlayersByGameIdPairs[pairKey(idA, idB)] =
               twoHourPlayersByGameIdPairs[pairKey(idA, idB)] || []).push(
@@ -313,19 +320,21 @@ played it every day for months.
   CODE`
 
 All Players With Games whose playtimes were visible were collected into
-${theSetOf({ PlayersWithPlaytime })}.
+${theSetOf({ PlayersWithPlaytime })}. Of those, players who had a
+playtime of at least two hours in any game were collected into
+${theSetOf({ PlayersWithSignificantPlaytime })}.
 
 The top ten games which the most users have played for at least two hours,
-among ${theSetOf({ PlayersWithPlaytime })}, are:
+among ${theSetOf({ PlayersWithSignificantPlaytime })}, are:
 
   CODE`;
 
-  for (let [i, { imageUrl, name, players }] of mostTwoHourPlayedGames
+  for (let [i, { imageUrl, name, players, skuId, gameId }] of mostTwoHourPlayedGames
     .slice(0, 10)
     .entries()) {
     PROSE`
-  ${i + 1}. ![**${name}**](${imageUrl}) with ${players.length} players (${(
-      (players.length / PlayersWithPlaytime.length) *
+  ${i + 1}. [![](${imageUrl}) **${name}**](https://stadia.google.com/readonlystoredetails/${gameId}/sku/${skuId}) with ${players.length} players (${(
+      (players.length / PlayersWithSignificantPlaytime.length) *
       100
     ).toFixed(1)}%)
     PROSE`;
@@ -335,19 +344,18 @@ among ${theSetOf({ PlayersWithPlaytime })}, are:
 
 ## Most Played Together
 
-The top 32 pairs of games for which the most players have played at least two
-hours of each among ${theSetOf({ PlayersWithPlaytime })} are:
+The top 18 pairs of games for which the most players have played at least two
+hours of each among ${theSetOf({ PlayersWithSignificantPlaytime })} are:
 
   CODE`;
 
   for (let [i, { gameA, gameB, players }] of mostTwoHourPlayedGamePairs
-    .slice(0, 32)
+    .slice(0, 18)
     .entries()) {
     PROSE`
-  ${i + 1}. ![**${gameA.name}**](${gameA.imageUrl}) and ![**${gameB.name}**](${
-      gameB.imageUrl
-    }) with ${players.length} players in common (${(
-      (players.length / PlayersWithPlaytime.length) *
+  ${i + 1}. [![](${gameA.imageUrl}) **${gameA.name}**](https://stadia.google.com/readonlystoredetails/${gameA.gameId}/sku/${gameA.skuId}) and [![](${gameB.imageUrl
+  }) **${gameB.name}**](https://stadia.google.com/readonlystoredetails/${gameB.gameId}/sku/${gameB.skuId}) with ${players.length} players in common (${(
+      (players.length / PlayersWithSignificantPlaytime.length) *
       100
     ).toFixed(1)}%)
     PROSE`;
@@ -474,11 +482,15 @@ theSetOf.allSets = {};
 let cleanName = (name) =>
   name
     .replace(/^PLAYERUNKNOWN'S BATTLEGROUNDS$/, "PUBG")
+    .replace(/^Tom Clancy's/, "")
+    .replace(/^Zombie Army 4: Dead War$/, "Zombie Army 4")
+    .replace(/^HITMAN - World of Assassination$/, "Hitman")
+    .replace(/^Red Dead Redemption 2$/, "RDR2")
+    .replace(/^The Elder Scrolls Online: Tamriel Unlimited$/, "ESO")
     .replace(/&|\+/g, "and")
     .replace(/™/g, "_")
     .replace(/®/g, "_")
     .replace(/[\:\-]? Remake$/g, "_")
-    .replace(/[\:\-]? Tamriel Unlimited$/g, "_")
     .replace(/[\:\-]? Early Access$/g, "_")
     .replace(/[\:\-]? \w+ Edition$/g, "_")
     .replace(/\(\w+ Ver(\.|sion)\)$/g, "_")

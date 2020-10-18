@@ -17,6 +17,30 @@
     padding-left: 24px;
   }
 
+  li a {
+    display: inline-block;
+    width: 150px;
+    white-space: nowrap;
+    overflow-x: hidden;
+    text-align: left;
+    height: 36px;
+    vertical-align: middle;
+  }
+
+  li a:hover {
+    background: #FFF8F8;
+  }
+
+  li a img {
+    height: 32px;
+    vertical-align: middle;
+    border: 1px solid black;
+  }
+
+  li a:hover img {
+    border: 1px solid #F44;
+  }
+
   body {
     margin: 32px auto;
     color: rgb(26, 26, 27);
@@ -29,11 +53,6 @@
     border-radius: 8px;
     box-shadow: 0 0 8px -2px rgba(0, 0, 0, 0.25);
     border: 1px solid rgba(0, 0, 0, 0.25);
-  }
-
-  img {
-    height: 32px;
-    vertical-align: middle;
   }
 
   code,
@@ -49,7 +68,7 @@
   h4,
   h5,
   h6 {
-    padding: .8em 0 .25em;
+    margin: .8em 0 .25em;
   }
 
   h1 {
@@ -73,11 +92,12 @@
   }
 
   a {
-    color: #08F;
+    color: inherit;
+    text-decoration: underline;
   }
 
   a:hover {
-    color: #F80;
+    text-decoration-color: #F44;
   }
 
   hr {
