@@ -41,8 +41,8 @@ const loadSkuData = async (
   const developerOrganizationIds = skuData[16];
 
   const imageUrl = skuData[2]?.[1]?.[0]?.[0]?.[1]?.split(/=/)[0];
-  const thumbnail = await microImageFromURL(imageUrl);
-  const imageHash = await hashFromURL(imageUrl);
+  const thumbnail = undefined; // await microImageFromURL(imageUrl);
+  const imageHash = undefined; // await hashFromURL(imageUrl);
 
   const releaseDateA = 1000 * skuData[10]?.[0] || undefined;
   const releaseDateB = 1000 * skuData[26]?.[0] || undefined;
