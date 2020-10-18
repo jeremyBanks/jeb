@@ -122,8 +122,8 @@ declare -a names=(stadia.st stadia.run stadia.red stadia.st/333)
     git pull --ff-only origin "$branch" || :
 
     for name in "${names[@]}"; do
-        local remote_url
-        local remote_branch
+        declare remote_url
+        declare remote_branch
         if [[ $name = stadia.st/333 ]]; then
             remote_url="git@gist.github.com:70026b9fa7a85929931c78d2bc0b15f3.git"
             remote_branch="master"
