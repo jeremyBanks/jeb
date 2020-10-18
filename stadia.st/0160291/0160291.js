@@ -1,7 +1,7 @@
 async function street() {
   PROSE`
 
-# Game Popularity Data and Analysis
+# StadiaStreet's Stadia Stats
 
 ---
 
@@ -73,6 +73,7 @@ achievement count (if visible), playtime (if visible), and last-played time
 their profile.
 
   CODE`
+
   for (let player of CandidatePlayers) {
     player.userId =
       Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(10);
@@ -111,19 +112,13 @@ ${visibleFounders.length
 
   CODE`
 
-  let minMonthlyTimestamp = Date.now() - 32 * 24 * 60 * 60 * 1000;
-  let MonthlyActivePlayers = VisiblePlayers.filter(
-    p => (p.lastActive && p.lastActive >= minMonthlyTimestamp) || (
-      p.games && Object.values(p.games).some(g => g.lastPlayed >= minMonthlyTimestamp)
-    ));
-
   CODE`
 
 # Analysis
 
 ## Avatars
 
-## Most Popular
+### Most Popular
 
 The top ten most popular avatars among ${theSetOf({ VisiblePlayers })} are:
 
@@ -144,8 +139,8 @@ The top ten most popular avatars among ${theSetOf({ VisiblePlayers })} are:
 
   for (const { avatarId, name, players } of popularAvatars.slice(0, 10)) {
     PROSE`
-1. ![${name
-      }](https://www.gstatic.com/stadia/gamers/avatars/mdpi/avatar_${avatarId
+1. ![**${name
+      }**](https://www.gstatic.com/stadia/gamers/avatars/mdpi/avatar_${avatarId
       }.png) with ${players.length} players (${(
         players.length / VisiblePlayers.length * 100).toFixed(1)
       }%)
@@ -164,8 +159,8 @@ The bottom ten least popular avatars among ${theSetOf({ VisiblePlayers })} are:
 
   for (const { avatarId, name, players } of unpopularAvatars.slice(0, 10)) {
     PROSE`
-1. ![${name
-      }](https://www.gstatic.com/stadia/gamers/avatars/mdpi/avatar_${avatarId
+1. ![**${name
+      }**](https://www.gstatic.com/stadia/gamers/avatars/mdpi/avatar_${avatarId
       }.png) with ${players.length} players (${(
         players.length / VisiblePlayers.length * 100).toFixed(1)
       }%)
@@ -174,17 +169,47 @@ The bottom ten least popular avatars among ${theSetOf({ VisiblePlayers })} are:
 
   CODE`
 
-From ${theSetOf({ VisiblePlayers })}, those whose last-online timestamp were
-visible and within the last 32 days were collected into
-${theSetOf({ MonthlyActivePlayers })}.
+## Games
 
-## Most-Tried Games
+## Most Tried
 
-## Top-Playtime Games
+The top ten most widely-tried games among ${theSetOf({ VisiblePlayers })} are:
+
+1. ![**Destiny 2**](https://lh3.googleusercontent.com/0fwJoLxjhigQ1ScFZ1S27hEOKEPR8HH5Ac6nK2WOI5G0baQMgBjoeAha7zPNWE2-J6Zsm6mKmYOKhmVVndltPdOZTPtT178vBTw-T9VfKCW6Ph_qbnJPwukCgxtq=w640-h360-rw) with 1234 players (12%).
+
+However, this doesn't distinguish between players who have only ever opened a
+game for a few minutes, and those who have played it every day for months.
+
+we have playtime for some players but not to many
+
+## Most Played
+
+## Most Playtime
+
+1. ![**Destiny 2**](https://lh3.googleusercontent.com/0fwJoLxjhigQ1ScFZ1S27hEOKEPR8HH5Ac6nK2WOI5G0baQMgBjoeAha7zPNWE2-J6Zsm6mKmYOKhmVVndltPdOZTPtT178vBTw-T9VfKCW6Ph_qbnJPwukCgxtq=w640-h360-rw) with 1234 players (12%).
+
+
+## Most Played Together
+
+1. Destiny 2 and stadia pros
+
+PlaytimePlayers
 
 All of the data sets linked above were collected into ${theSetOf()}.
 `
   /*
+
+  let minMonthlyTimestamp = Date.now() - 32 * 24 * 60 * 60 * 1000;
+  let MonthlyActivePlayers = VisiblePlayers.filter(
+    p => (p.lastActive && p.lastActive >= minMonthlyTimestamp) || (
+      p.games && Object.values(p.games).some(g => g.lastPlayed >= minMonthlyTimestamp)
+    ));
+
+
+From ${theSetOf({ VisiblePlayers })}, those whose last-online timestamp were
+visible and within the last 32 days were collected into
+${theSetOf({ MonthlyActivePlayers })}.
+
     let games = Object.fromEntries(
       records.flatMap((record) =>
         record.type === "game" && record.gameId ? [[record.gameId, record]] : []
@@ -564,6 +589,8 @@ let cleanName = (name) =>
   name
     .replace(/™/g, "_")
     .replace(/®/g, "_")
+    .replace(/[\:\-]? Remake$/g, "_")
+    .replace(/[\:\-]? Tamriel Unlimited$/g, "_")
     .replace(/[\:\-]? Early Access$/g, "_")
     .replace(/[\:\-]? \w+ Edition$/g, "_")
     .replace(/\(\w+ Ver(\.|sion)\)$/g, "_")
