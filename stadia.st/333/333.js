@@ -1,7 +1,7 @@
-async function street(volume) {
+async function street() {
   PROSE`
 
-# StadiaStreet's Stadia Stats - Volume ${volume}
+# StadiaStreet's Stadia Stats: Volume ${volume}
 
 ---
 
@@ -9,7 +9,7 @@ async function street(volume) {
 
   CODE`;
 
-  let recordsUrl = query.get("Records") || "./records.json";
+  let recordsUrl = query.get("Records") || "../-/records.json";
   let recordsResponse = await fetch(recordsUrl);
   if (!recordsResponse.ok) throw new Error(recordsResponse);
   let records = Object.values(await recordsResponse.json());
@@ -129,7 +129,7 @@ ${visibleFounders.length} (${(
     PlayersWithGames.length
   ).toFixed(1)}%) were not.
 
-  CODE`;
+  CODE`
 
   CODE`
 
@@ -162,7 +162,7 @@ The top ten most popular avatars among ${theSetOf({ PlayersWithGames })} are:
     imageUrl,
     name,
     players: playersByAvatarId[avatarId],
-  })).sort((a, b) => b.players.length - a.players.length);
+  })).sort((a, b) => b.players.length - a.players.players);
 
   for (let [i, { imageUrl, name, players }] of popularAvatars
     .slice(0, 10)
@@ -202,11 +202,44 @@ ${i + 1}. ![**${name}**](${imageUrl}) with ${players.length} players (${(
 
 ## Games
 
+  CODE`
+
+  let gameIdsByGameName = Object.fromEntries(Games.map(({gameId, name}) => [name, gameId]));
+  let tryersByGameId = Object.fromEntries(Games.map(({gameId}) => [gameId, []]));
+
+  for (let player of PlayersWithGames) {
+    for (let [i, [nameA, infoA]] of Object.entries(player.games).entries()) {
+      let idA = gameIdsByGameName[nameA];
+      tryersByGameId[idA].push(player);
+    }
+  }
+
+  const mostTriedGames = Object.entries(tryersByGameId).map(([gameId, players]) => ({
+    ...gamesById[gameId],
+    players,
+  })).sort((a, b) => b.players.length - a.players.length);
+
+
+  CODE`
+
 ## Most Tried
 
 The top ten most widely-tried games among ${theSetOf({ PlayersWithGames })} are:
 
-1. ![**Destiny 2**](https://lh3.googleusercontent.com/0fwJoLxjhigQ1ScFZ1S27hEOKEPR8HH5Ac6nK2WOI5G0baQMgBjoeAha7zPNWE2-J6Zsm6mKmYOKhmVVndltPdOZTPtT178vBTw-T9VfKCW6Ph_qbnJPwukCgxtq=w640-h360-rw) with 1234 players (12%).
+  CODE`
+
+  for (let [i, { imageUrl, name, players }] of mostTriedGames
+    .slice(0, 10)
+    .entries()) {
+    PROSE`
+${i + 1}. ![**${name}**](${imageUrl}) with ${players.length} players (${(
+      (players.length / PlayersWithGames.length) *
+      100
+    ).toFixed(1)}%)
+    PROSE`;
+  }
+
+  CODE`
 
 However, this list may be misleading because it doesn't distinguish between
 players who have only ever opened a game for a few minutes, and those who have
@@ -214,11 +247,54 @@ played it every day for months.
 
 ## Most Played
 
-  CODE`;
+  CODE`
 
   let PlayersWithPlaytime = PlayersWithGames.filter((p) =>
-    Object.values(p.games).some((g) => g.secondsPlayed)
+  Object.values(p.games).some((g) => g.secondsPlayed)
   );
+
+  let twoHourPlayersByGameId = Object.fromEntries(Games.map(({gameId}) => [gameId, []]));
+  let pairKey = (a, b) => [a, b].sort().join("-");
+  let twoHourPlayersByGameIdPairs = {};
+  for (let player of PlayersWithPlaytime) {
+    for (let [i, [nameA, infoA]] of Object.entries(player.games).entries()) {
+      let idA = gameIdsByGameName[nameA];
+      if (infoA.secondsPlayed && infoA.secondsPlayed > 2 * 60 * 60) {
+        twoHourPlayersByGameId[idA].push(player);
+        for (let [j, [nameB, infoB]] of Object.entries(player.games).entries()) {
+          if (j < i && infoB.secondsPlayed > 2 * 60 * 60) {
+            let idB = gameIdsByGameName[nameB];
+            (
+              twoHourPlayersByGameIdPairs[pairKey(idA, idB)] =
+              twoHourPlayersByGameIdPairs[pairKey(idA, idB)] || []
+            ).push(player);
+          }
+        }
+      }
+    }
+  }
+
+  const mostTwoHourPlayedGames = Object.entries(twoHourPlayersByGameId).map(([gameId, players]) => ({
+    ...gamesById[gameId],
+    players,
+  }
+  )).sort((a, b) => b.players.length - a.players.length);
+
+  const mostTwoHourPlayedGamePairs = Object.entries(twoHourPlayersByGameIdPairs).map(([gameIds, players]) => {
+    let [idA, idB] = gameIds.split(/-/);
+    let gameA = gamesById[idA];
+    let gameB = gamesById[idB];
+    if (twoHourPlayersByGameId[idA].length < twoHourPlayersByGameId[idB].length) {
+      let t = gameA;
+      gameA = gameB;
+      gameB = t;
+    }
+    return {
+      gameA,
+      gameB,
+      players,
+    };
+  }).sort((a, b) => b.players.length - a.players.length);
 
   CODE`
 
@@ -228,27 +304,47 @@ ${theSetOf({ PlayersWithPlaytime })}.
 The top ten games which the most users have played for at least two hours,
 among ${theSetOf({ PlayersWithPlaytime })}, are:
 
-1. ![**Destiny 2**](https://lh3.googleusercontent.com/0fwJoLxjhigQ1ScFZ1S27hEOKEPR8HH5Ac6nK2WOI5G0baQMgBjoeAha7zPNWE2-J6Zsm6mKmYOKhmVVndltPdOZTPtT178vBTw-T9VfKCW6Ph_qbnJPwukCgxtq=w640-h360-rw) with 1234 players (12%).
+  CODE`
 
-## Most Playtime
+  for (let [i, { imageUrl, name, players }] of mostTwoHourPlayedGames
+    .slice(0, 10)
+    .entries()) {
+    PROSE`
+  ${i + 1}. ![**${name}**](${imageUrl}) with ${players.length} players (${(
+      (players.length / PlayersWithPlaytime.length) *
+      100
+    ).toFixed(1)}%)
+    PROSE`;
+  }
 
-The top ten games with the most total playtime among
-${theSetOf({ PlayersWithPlaytime })} are:
-
-1. ![**Destiny 2**](https://lh3.googleusercontent.com/0fwJoLxjhigQ1ScFZ1S27hEOKEPR8HH5Ac6nK2WOI5G0baQMgBjoeAha7zPNWE2-J6Zsm6mKmYOKhmVVndltPdOZTPtT178vBTw-T9VfKCW6Ph_qbnJPwukCgxtq=w640-h360-rw) with 1234 players (12%).
-
+  CODE`
 
 ## Most Played Together
 
-The top ten pairs of games for which the most players have played at least two
+The top 32 pairs of games for which the most players have played at least two
 hours of each among ${theSetOf({ PlayersWithPlaytime })} are:
 
-1. ![**Destiny 2**](https://lh3.googleusercontent.com/0fwJoLxjhigQ1ScFZ1S27hEOKEPR8HH5Ac6nK2WOI5G0baQMgBjoeAha7zPNWE2-J6Zsm6mKmYOKhmVVndltPdOZTPtT178vBTw-T9VfKCW6Ph_qbnJPwukCgxtq=w640-h360-rw) and
-![**Destiny 2**](https://lh3.googleusercontent.com/0fwJoLxjhigQ1ScFZ1S27hEOKEPR8HH5Ac6nK2WOI5G0baQMgBjoeAha7zPNWE2-J6Zsm6mKmYOKhmVVndltPdOZTPtT178vBTw-T9VfKCW6Ph_qbnJPwukCgxtq=w640-h360-rw) with 1234 players (12%).
+  CODE`
+
+  for (let [i, { gameA, gameB, players }] of mostTwoHourPlayedGamePairs
+    .slice(0, 32)
+    .entries()) {
+    PROSE`
+  ${i + 1}. ![**${gameA.name}**](${gameA.imageUrl}) and ![**${gameB.name}**](${
+    gameB.imageUrl}) with ${players.length} players in common (${(
+      (players.length / PlayersWithPlaytime.length) *
+      100
+    ).toFixed(1)}%)
+    PROSE`;
+  }
+
+  CODE`
 
 ---
 
-All of the data sets were collected into ${theSetOf()}.
+*StadiaStreet's Stadia Stats: Volume ${volume}* was generated by [this
+script](https://gist.githubusercontent.com/StadiaStreet/${gist}/raw/${volume}.js)
+and ${theSetOf()}.
 
   CODE`;
 }
@@ -330,7 +426,13 @@ let theSetOf = (
     throw new TypeError("theSetOf what?");
   }
   let key = Object.keys(data)[0];
-  let url = query.get(key);
+  let url;
+  if (query.get("auto") === "auto") {
+    url = `https://gist.githubusercontent.com/StadiaStreet/${gist}/raw/st${volume}-${key}.json`
+  } else {
+    url = query.get(key);
+  }
+
   let value = data[key];
   let values = sorted(JSON.parse(JSON.stringify(value)));
 
@@ -416,6 +518,8 @@ sssssrrrrrrhhhhhddddllluuccmmffyywwggpbvkxqjz`;
 let lettersAndDigits = `${letters}0123456789`;
 
 let volume = 333;
+let gist = '70026b9fa7a85929931c78d2bc0b15f3';
+
 import("./markdown-it.js").finally(() =>
   street(volume).then(() => {
     if (!PROSE.url) return;
@@ -424,9 +528,10 @@ import("./markdown-it.js").finally(() =>
     window.onbeforeunload = () => {
       windows.forEach((w) => w?.close());
     };
+    let filename = `st${volume}.md`;
     let w = open(
       PROSE.url,
-      `${volume}.md`,
+      filename,
       `location = 0, width = ${Math.floor(
         0.25 * screen.width
       )}, left = ${Math.floor(0.7 * screen.width)}, height = ${Math.floor(
@@ -435,10 +540,10 @@ import("./markdown-it.js").finally(() =>
     );
     windows.push(w);
     w?.addEventListener("load", () => {
-      w.document.title = `⬇️ ${volume}.md`;
+      w.document.title = `⬇️ ${filename}`;
       let link = w.document.createElement("a");
       link.href = PROSE.url;
-      link.download = "${volume}.json";
+      link.download = filename;
       link.title = "click to download";
       Object.assign(link.style, {
         textDecoration: "none",
