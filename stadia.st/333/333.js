@@ -129,7 +129,7 @@ ${visibleFounders.length} (${(
     PlayersWithGames.length
   ).toFixed(1)}%) were not.
 
-  CODE`
+  CODE`;
 
   CODE`
 
@@ -162,7 +162,7 @@ The top ten most popular avatars among ${theSetOf({ PlayersWithGames })} are:
     imageUrl,
     name,
     players: playersByAvatarId[avatarId],
-  })).sort((a, b) => b.players.length - a.players.players);
+  })).sort((a, b) => b.players.length - a.players.length);
 
   for (let [i, { imageUrl, name, players }] of popularAvatars
     .slice(0, 10)
@@ -202,10 +202,14 @@ ${i + 1}. ![**${name}**](${imageUrl}) with ${players.length} players (${(
 
 ## Games
 
-  CODE`
+  CODE`;
 
-  let gameIdsByGameName = Object.fromEntries(Games.map(({gameId, name}) => [name, gameId]));
-  let tryersByGameId = Object.fromEntries(Games.map(({gameId}) => [gameId, []]));
+  let gameIdsByGameName = Object.fromEntries(
+    Games.map(({ gameId, name }) => [name, gameId])
+  );
+  let tryersByGameId = Object.fromEntries(
+    Games.map(({ gameId }) => [gameId, []])
+  );
 
   for (let player of PlayersWithGames) {
     for (let [i, [nameA, infoA]] of Object.entries(player.games).entries()) {
@@ -214,11 +218,12 @@ ${i + 1}. ![**${name}**](${imageUrl}) with ${players.length} players (${(
     }
   }
 
-  const mostTriedGames = Object.entries(tryersByGameId).map(([gameId, players]) => ({
-    ...gamesById[gameId],
-    players,
-  })).sort((a, b) => b.players.length - a.players.length);
-
+  const mostTriedGames = Object.entries(tryersByGameId)
+    .map(([gameId, players]) => ({
+      ...gamesById[gameId],
+      players,
+    }))
+    .sort((a, b) => b.players.length - a.players.length);
 
   CODE`
 
@@ -226,7 +231,7 @@ ${i + 1}. ![**${name}**](${imageUrl}) with ${players.length} players (${(
 
 The top ten most widely-tried games among ${theSetOf({ PlayersWithGames })} are:
 
-  CODE`
+  CODE`;
 
   for (let [i, { imageUrl, name, players }] of mostTriedGames
     .slice(0, 10)
@@ -247,13 +252,15 @@ played it every day for months.
 
 ## Most Played
 
-  CODE`
+  CODE`;
 
   let PlayersWithPlaytime = PlayersWithGames.filter((p) =>
-  Object.values(p.games).some((g) => g.secondsPlayed)
+    Object.values(p.games).some((g) => g.secondsPlayed)
   );
 
-  let twoHourPlayersByGameId = Object.fromEntries(Games.map(({gameId}) => [gameId, []]));
+  let twoHourPlayersByGameId = Object.fromEntries(
+    Games.map(({ gameId }) => [gameId, []])
+  );
   let pairKey = (a, b) => [a, b].sort().join("-");
   let twoHourPlayersByGameIdPairs = {};
   for (let player of PlayersWithPlaytime) {
@@ -261,40 +268,47 @@ played it every day for months.
       let idA = gameIdsByGameName[nameA];
       if (infoA.secondsPlayed && infoA.secondsPlayed > 2 * 60 * 60) {
         twoHourPlayersByGameId[idA].push(player);
-        for (let [j, [nameB, infoB]] of Object.entries(player.games).entries()) {
+        for (let [j, [nameB, infoB]] of Object.entries(
+          player.games
+        ).entries()) {
           if (j < i && infoB.secondsPlayed > 2 * 60 * 60) {
             let idB = gameIdsByGameName[nameB];
-            (
-              twoHourPlayersByGameIdPairs[pairKey(idA, idB)] =
-              twoHourPlayersByGameIdPairs[pairKey(idA, idB)] || []
-            ).push(player);
+            (twoHourPlayersByGameIdPairs[pairKey(idA, idB)] =
+              twoHourPlayersByGameIdPairs[pairKey(idA, idB)] || []).push(
+              player
+            );
           }
         }
       }
     }
   }
 
-  const mostTwoHourPlayedGames = Object.entries(twoHourPlayersByGameId).map(([gameId, players]) => ({
-    ...gamesById[gameId],
-    players,
-  }
-  )).sort((a, b) => b.players.length - a.players.length);
-
-  const mostTwoHourPlayedGamePairs = Object.entries(twoHourPlayersByGameIdPairs).map(([gameIds, players]) => {
-    let [idA, idB] = gameIds.split(/-/);
-    let gameA = gamesById[idA];
-    let gameB = gamesById[idB];
-    if (twoHourPlayersByGameId[idA].length < twoHourPlayersByGameId[idB].length) {
-      let t = gameA;
-      gameA = gameB;
-      gameB = t;
-    }
-    return {
-      gameA,
-      gameB,
+  const mostTwoHourPlayedGames = Object.entries(twoHourPlayersByGameId)
+    .map(([gameId, players]) => ({
+      ...gamesById[gameId],
       players,
-    };
-  }).sort((a, b) => b.players.length - a.players.length);
+    }))
+    .sort((a, b) => b.players.length - a.players.length);
+
+  const mostTwoHourPlayedGamePairs = Object.entries(twoHourPlayersByGameIdPairs)
+    .map(([gameIds, players]) => {
+      let [idA, idB] = gameIds.split(/-/);
+      let gameA = gamesById[idA];
+      let gameB = gamesById[idB];
+      if (
+        twoHourPlayersByGameId[idA].length < twoHourPlayersByGameId[idB].length
+      ) {
+        let t = gameA;
+        gameA = gameB;
+        gameB = t;
+      }
+      return {
+        gameA,
+        gameB,
+        players,
+      };
+    })
+    .sort((a, b) => b.players.length - a.players.length);
 
   CODE`
 
@@ -304,7 +318,7 @@ ${theSetOf({ PlayersWithPlaytime })}.
 The top ten games which the most users have played for at least two hours,
 among ${theSetOf({ PlayersWithPlaytime })}, are:
 
-  CODE`
+  CODE`;
 
   for (let [i, { imageUrl, name, players }] of mostTwoHourPlayedGames
     .slice(0, 10)
@@ -324,14 +338,15 @@ among ${theSetOf({ PlayersWithPlaytime })}, are:
 The top 32 pairs of games for which the most players have played at least two
 hours of each among ${theSetOf({ PlayersWithPlaytime })} are:
 
-  CODE`
+  CODE`;
 
   for (let [i, { gameA, gameB, players }] of mostTwoHourPlayedGamePairs
     .slice(0, 32)
     .entries()) {
     PROSE`
   ${i + 1}. ![**${gameA.name}**](${gameA.imageUrl}) and ![**${gameB.name}**](${
-    gameB.imageUrl}) with ${players.length} players in common (${(
+      gameB.imageUrl
+    }) with ${players.length} players in common (${(
       (players.length / PlayersWithPlaytime.length) *
       100
     ).toFixed(1)}%)
@@ -428,7 +443,7 @@ let theSetOf = (
   let key = Object.keys(data)[0];
   let url;
   if (query.get("auto") === "auto") {
-    url = `https://gist.githubusercontent.com/StadiaStreet/${gist}/raw/st${volume}-${key}.json`
+    url = `https://gist.githubusercontent.com/StadiaStreet/${gist}/raw/st${volume}-${key}.json`;
   } else {
     url = query.get(key);
   }
@@ -518,7 +533,7 @@ sssssrrrrrrhhhhhddddllluuccmmffyywwggpbvkxqjz`;
 let lettersAndDigits = `${letters}0123456789`;
 
 let volume = 333;
-let gist = '70026b9fa7a85929931c78d2bc0b15f3';
+let gist = "70026b9fa7a85929931c78d2bc0b15f3";
 
 import("./markdown-it.js").finally(() =>
   street(volume).then(() => {
