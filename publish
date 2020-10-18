@@ -7,7 +7,7 @@ export TZ=UTC
 
 ./build
 
-declare -a names=(stadia.st stadia.run stadia.red)
+declare -a names=(stadia.st stadia.run stadia.red stadia.st/333)
 
 {
     declare message_prefix=""
@@ -122,7 +122,16 @@ declare -a names=(stadia.st stadia.run stadia.red)
     git pull --ff-only origin "$branch" || :
 
     for name in "${names[@]}"; do
-        git push "${origin%/*}/$name.git" "$(git subtree split --prefix "$name" "$branch")":"refs/heads/$branch" --force
+        local remote_url
+        local remote_branch
+        if [[ $name = stadia.st/333 ]]; then
+            remote_url="git@gist.github.com:70026b9fa7a85929931c78d2bc0b15f3.git"
+            remote_branch="master"
+        else
+            remote_url="${origin%/*}/$name.git"
+            remote_branch="$branch"
+        fi
+        git push "$remote_url" "$(git subtree split --prefix "$name" "$branch")":"refs/heads/$remote_branch" --force
     done
 
     git push --set-upstream origin "$branch"
