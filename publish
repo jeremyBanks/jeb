@@ -125,7 +125,7 @@ declare -a names=(stadia.st stadia.run stadia.red stadia.st/333)
         declare remote_url
         declare remote_branch
         if [[ $name = stadia.st/333 ]]; then
-            remote_url="git@gist.github.com:70026b9fa7a85929931c78d2bc0b15f3.git"
+            remote_url="https://gist.github.com/70026b9fa7a85929931c78d2bc0b15f3.git"
             remote_branch="master"
         else
             remote_url="${origin%/*}/$name.git"
