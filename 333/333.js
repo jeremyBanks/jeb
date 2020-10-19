@@ -140,7 +140,7 @@ ${visibleFounders.length} (${(
 
 ### Most Popular
 
-The top ten most popular avatars among ${theSetOf({ PlayersWithGames })} are:
+The top ten most popular avatars among ${theSetOf({ PlayersWithGames })} were:
 
   CODE`;
 
@@ -182,7 +182,7 @@ ${i + 1}. [![](${imageUrl}) **${name}**](${imageUrl}) with ${players.length} pla
 
 The bottom ten least popular avatars among ${theSetOf({
     PlayersWithGames,
-  })} are:
+  })} were:
 
   CODE`;
 
@@ -230,7 +230,7 @@ ${i + 1}. [![](${imageUrl}) **${name}**](${imageUrl}) with ${players.length} pla
 
 ## Most Tried
 
-The top ten most widely-tried games among ${theSetOf({ PlayersWithGames })} are:
+The top ten most widely-tried games among ${theSetOf({ PlayersWithGames })} were:
 
   CODE`;
 
@@ -325,7 +325,7 @@ playtime of at least two hours in any game were collected into
 ${theSetOf({ PlayersWithSignificantPlaytime })}.
 
 The top ten games which the most users have played for at least two hours,
-among ${theSetOf({ PlayersWithSignificantPlaytime })}, are:
+among ${theSetOf({ PlayersWithSignificantPlaytime })}, were:
 
   CODE`;
 
@@ -345,7 +345,7 @@ among ${theSetOf({ PlayersWithSignificantPlaytime })}, are:
 ## Most Played Together
 
 The top 18 pairs of games for which the most players have played at least two
-hours of each among ${theSetOf({ PlayersWithSignificantPlaytime })} are:
+hours of each among ${theSetOf({ PlayersWithSignificantPlaytime })} were:
 
   CODE`;
 
