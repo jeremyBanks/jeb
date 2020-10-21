@@ -13,21 +13,22 @@
     put(results)
     get = new Promise(resolve => { put = resolve })
   }
-  let users = []
+  let players = window.players = []
+  let pids = new Set
   let url
   let flush = () => {
-    if (!users.length) return;
+    if (!players.length) return;
     if (url) url = URL.revokeObjectURL(url)
     url = window.URL.createObjectURL(
-      new Blob([JSON.stringify(users, null, 2)], { type: "application/json;charset=utf-8" })
+      new Blob([JSON.stringify(players, null, 2)], { type: "application/json;charset=utf-8" })
     );
     let a = document.createElement('a')
     a.href = url
-    a.download = `stadians-${users[0].userName.toLowerCase()}-${users[users.length - 1].userName.toLowerCase()}.json`
+    a.download = `stadians-${players[0].name.toLowerCase()}-${players[players.length - 1].name.toLowerCase()}.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-    users = []
+    players.splice(0, players.length)
   }
   XMLHttpRequest.prototype._send ??= XMLHttpRequest.prototype.send
   XMLHttpRequest.prototype.send = function() {
@@ -38,13 +39,12 @@
       let lines = this.responseText.split(/\n/g)
       let length = Math.max(...lines.map(s => s.length))
       let line = lines.filter(s => s.length === length)[0]
-      let users = Object.fromEntries(JSON.parse(JSON.parse(line + ']')?.[0]?.[2])?.[1]?.map(x => x[0])?.map(([[userName, userNumber], _1, _2, _3, _4, userId]) => [userId, {
-        type: 'user',
-        userName,
-        userNumber,
-        userId,
+      let players = Object.fromEntries(JSON.parse(JSON.parse(line + ']')?.[0]?.[2])?.[1]?.map(x => x[0])?.map(([[name, number], _1, _2, _3, _4, id]) => [id, {
+        name,
+        number,
+        id,
       }]) || [])
-      got(users)
+      got(players)
     }))
     return result
   }
@@ -52,21 +52,27 @@
   let lott = async(`0123456789`)
   let length = 15
   let id = 4
-  let pp = [...lett.flatMap(l => [...lett, ...lott].map(c => l + c))].reverse()
+  let pp = [...lett.flatMap(l => [...lett, ...lott].map(c => l + c))].reverse().reverse()
   while (length, pp.length) {
-    await new Promise(r => setTimeout(r, 12_000))
+    await new Promise(r => setTimeout(r, 500))
     let p = pp.pop()
     let qq = `${p.slice(0, 1)} ${p.slice(1)}`
     let e = yield `[jsname=hYL8Ff]`
     e.value = qq;
     e.dispatchEvent(new InputEvent('input', {bubbles: true}))
     let ps = async(await get);
-    users.push(...ps)
+    for (let p of ps) {
+      if (!pids.has(p.id)) {
+        pids.add(p.id);
+        players.push(p);
+      }
+    }
+    document.title = `Discovered ${pids.size} Stadians`
     let c = async({separator: '#'})
-    if ((users.length >= 8192 && flush()) || ps.length >= 100) {
+    if ((players.length >= 8192 && flush()) || ps.length >= 100) {
       if (p.length < length + id + 1) {
         if (p.length !== length) {
-          c = async([...lett, ...async(p.length < length ? lott : {})].reverse())
+          c = async([...lett, ...async(p.length < length ? lott : {})].reverse().reverse())
         }
         c.map(c => pp.push(p + c))
       } else {
