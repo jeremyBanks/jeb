@@ -95,6 +95,8 @@ export const getset = (
   return record;
 };
 
+window.getset = getset;
+
 export const deriveDerivedDerivations = async () => {
   let proGamesLoaded = 0;
 
@@ -230,7 +232,7 @@ export class User extends ARecord {
       return 1 / 8;
     } else if (this.games?.length) {
       // game list known visible
-      return 1 / 32;
+      return 1 / 16;
     } else {
       // nothing known visible
       return 1 / 64;
