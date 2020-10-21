@@ -371,12 +371,14 @@ export const spiderThread = async () => {
     }),
   );
 
-  await spider(
-    getset({
-      type: "user",
-      userId: "5478196876050978967",
-    }),
-  );
+  for (const userId of ["5478196876050978967"]) {
+    await spider(
+      getset({
+        type: "user",
+        userId,
+      }),
+    );
+  }
 
   try {
     await withTimeout(16, canFetchDevApi);
@@ -437,7 +439,7 @@ export const spiderThread = async () => {
         agelessRecords.length
       } other records are non-spiderable.)`;
 
-      if (staleRecords.length % 128 === 0) {
+      if (staleRecords.length % 64 === 0) {
         await updateDocument();
         await downloadDocument();
       } else if (staleRecords.length % 16 === 8) {
@@ -792,7 +794,7 @@ const updateDocument = async () => {
         if (aReleased > bReleased) {
           return bFirst;
         } else if (aReleased < bReleased) {
-          return AFirst;
+          return aFirst;
         }
       } else if (gameA.isPro && !gameB.isPro) {
         return aFirst;
@@ -863,11 +865,13 @@ const updateDocument = async () => {
     const slug = root.querySelector("st-slug");
     slug.textContent = "/" + game.slug;
 
-    root.querySelector(
-      "st-cover-micro",
-    ).style.backgroundImage = `url(${microImageToURL(game.thumbnail)})`;
+    if (game.thumbnail) {
+      root.querySelector(
+        "st-cover-micro",
+      ).style.backgroundImage = `url(${microImageToURL(game.thumbnail)})`;
 
-    root.querySelector("st-cover-micro").setAttribute("data", game.thumbnail);
+      root.querySelector("st-cover-micro").setAttribute("data", game.thumbnail);
+    }
 
     if (game.isPro) {
       const badge = Object.assign(document.createElement("st-badge"), {
