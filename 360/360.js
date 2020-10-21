@@ -25,17 +25,11 @@ async function street() {
 
   CODE`
 
-### Data Collection
-
-Is the data fresh? Most of it is.
+  ## Data
 
 A new Google account was created, with a new Stadia profile, with no Stadia
 friends, games, or activity history. This account was used for the rest of the
 process.
-
-A set of random **Name Prefixes** were generated. Each was between between 2-4
-characters, taken from a distribution roughly approximating English letter
-frequency, with digits included at a lower frequency.
 
   CODE`
 
@@ -67,9 +61,8 @@ frequency, with digits included at a lower frequency.
 
   CODE`
 
-Each Name Prefix was searched for using the the "Find players" interface in
-the Stadia web site, and the results were collected into a set of **Candidate
-Players**. Of those Candidate Players, ${(
+Every Stadia player whose profile was publicly-discoverable was collected into a
+set of **Candidate Players**. Of those Candidate Players, ${(
     (100 * candidateFounders.length) /
     CandidatePlayers.length
   ).toFixed(1)}% were "founders" and ${(
