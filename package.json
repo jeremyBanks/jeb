@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "chalk": "^4.1.0",
     "http-server": "^0.12.3",
     "json-parse-even-better-errors": "^2.3.1",
     "json5": "^2.1.3",

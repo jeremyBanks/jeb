@@ -2,6 +2,7 @@
 *.br
 *.log
 *.pid
+*.tmp
 /.https/
 /*dist/
 /node_modules/
