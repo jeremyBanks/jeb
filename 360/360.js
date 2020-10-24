@@ -27,10 +27,6 @@ async function street() {
 
   ## Data
 
-A new Google account was created, with a new Stadia profile, with no Stadia
-friends, games, or activity history. This account was used for the rest of the
-process.
-
   CODE`
 
   let CandidatePlayers = Object.values(records)
@@ -59,16 +55,45 @@ process.
   let candidateFounders = CandidatePlayers.filter((p) => p.number === "0000");
   let candidateSettlers = CandidatePlayers.filter((p) => p.number !== "0000");
 
+  // let roughlyShuffledPlayers = [...CandidatePlayers.entries()]
+  //   .sort(() => Math.random() - 0.5)
+  //   .sort(() => Math.random() - 0.5);
+  // for (let [i, player] of roughlyShuffledPlayers) {
+  //   let length = String(CandidatePlayers.length).length;
+  //   player.userId = `${volume}${(i + 1).toString().padStart(length, "0")}`;
+  //   if (player.number !== "0000") {
+  //     player.number = Math.floor(Math.random() * 9000 + 1000)
+  //       .toString()
+  //       .padStart(4, "0");
+  //   }
+  //   let nameLength = 3 + Math.floor(Math.random() * Math.random() * 13);
+  //   player.name = "";
+  //   for (let i = 0; i < nameLength; i++) {
+  //     if (i > 0) {
+  //       player.name +=
+  //         lettersAndDigits[Math.floor(Math.random() * lettersAndDigits.length)];
+  //     } else {
+  //       player.name += letters[Math.floor(Math.random() * letters.length)];
+  //     }
+  //   }
+  // }
+  let PlayersWithGames = CandidatePlayers.filter((p) => p.games !== undefined);
+  let visibleFounders = PlayersWithGames.filter((p) => p.number === "0000");
+  let visibleSettlers = PlayersWithGames.filter((p) => p.number !== "0000");
+
   CODE`
 
-Every Stadia player whose profile was publicly-discoverable was collected into a
-set of **Candidate Players**. Of those Candidate Players, ${(
-    (100 * candidateFounders.length) /
-    CandidatePlayers.length
-  ).toFixed(1)}% were "founders" and ${(
-    (100 * candidateSettlers.length) /
-    CandidatePlayers.length
-  ).toFixed(1)}% were not.
+Hmm before we anonymize it, let's take the set of all player numbers, so we can
+look for patterns in those.
+
+Discovered Stadia players were were collected into ${theSetOf({ CandidatePlayers })}.
+Of those Candidate Players, ${count(candidateFounders.length)} (${(
+      (100 * candidateFounders.length) /
+      CandidatePlayers.length
+    ).toFixed(1)}%) were "founders" and ${count(candidateSettlers.length)} (${(
+      (100 * candidateSettlers.length) /
+      CandidatePlayers.length
+    ).toFixed(1)}%) were not.
 
 For each Candidate Player, their user ID, gamertag name, gamertag number,
 avatar, last played time (if visible), and list of game played (if visible)
@@ -83,45 +108,15 @@ For each Candidate Player, their user ID, gamertag name, and gamertag number
 were erased and replaced with generated values to maintain privacy, except that
 "founder" users' numbers remained unchanged as exclusively "0000".
 
-  CODE`
-
-  let PlayersWithGames = CandidatePlayers.filter((p) => p.games !== undefined);
-  let roughlyShuffledPlayers = [...PlayersWithGames.entries()]
-    .sort(() => Math.random() - 0.5)
-    .sort(() => Math.random() - 0.5);
-  for (let [i, player] of roughlyShuffledPlayers) {
-    let length = String(PlayersWithGames.length).length;
-    player.userId = `${volume}${(i + 1).toString().padStart(length, "0")}`;
-    if (player.number !== "0000") {
-      player.number = Math.floor(Math.random() * 9999 + 1)
-        .toString()
-        .padStart(4, "0");
-    }
-    let nameLength = 3 + Math.floor(Math.random() * Math.random() * 13);
-    player.name = "";
-    for (let i = 0; i < nameLength; i++) {
-      if (i > 0) {
-        player.name +=
-          lettersAndDigits[Math.floor(Math.random() * lettersAndDigits.length)];
-      } else {
-        player.name += letters[Math.floor(Math.random() * letters.length)];
-      }
-    }
-  }
-  let visibleFounders = PlayersWithGames.filter((p) => p.number === "0000");
-  let visibleSettlers = PlayersWithGames.filter((p) => p.number !== "0000");
-
-  CODE`
-
 All Candidate Players whose game lists were visible were collected into
 ${theSetOf({ PlayersWithGames })}. Of those Players With Games,
-${visibleFounders.length} (${(
-    (100 * visibleFounders.length) /
-    PlayersWithGames.length
-  ).toFixed(1)}%) were "founders" and ${visibleSettlers.length} (${(
-    (100 * visibleSettlers.length) /
-    PlayersWithGames.length
-  ).toFixed(1)}%) were not.
+${count(visibleFounders.length)} (${(
+      (100 * visibleFounders.length) /
+      PlayersWithGames.length
+    ).toFixed(1)}%) were "founders" and ${count(visibleSettlers.length)} (${(
+      (100 * visibleSettlers.length) /
+      PlayersWithGames.length
+    ).toFixed(1)}%) were not.
 
   CODE`
 
@@ -161,10 +156,10 @@ Avatars ranked by popularity among ${theSetOf({ PlayersWithGames })}:
   for (let [i, { imageUrl, name, players }] of popularAvatars
     .entries()) {
     PROSE`
-${i + 1}. [![](${imageUrl}) **${name}**](${imageUrl}) with ${players.length} players (${(
-      (players.length / PlayersWithGames.length) *
-      100
-    ).toFixed(1)}%)
+${i + 1}. [![](${imageUrl}) **${name}**](${imageUrl}) with ${count(players.length)} players (${(
+        (players.length / PlayersWithGames.length) *
+        100
+      ).toFixed(1)}%)
     PROSE`
   }
 
@@ -209,10 +204,10 @@ The top most widely-tried games among ${theSetOf({ PlayersWithGames })} were:
     .slice(0, 16)
     .entries()) {
     PROSE`
-${i + 1}. [![](${imageUrl}) **${name}**](https://stadia.google.com/readonlystoredetails/${gameId}/sku/${skuId}) with ${players.length} players (${(
-      (players.length / PlayersWithGames.length) *
-      100
-    ).toFixed(1)}%)
+${i + 1}. [![](${imageUrl}) **${name}**](https://stadia.google.com/readonlystoredetails/${gameId}/sku/${skuId}) with ${count(players.length)} players (${(
+        (players.length / PlayersWithGames.length) *
+        100
+      ).toFixed(1)}%)
     PROSE`
   }
 
@@ -253,8 +248,8 @@ played it every day for months.
             let idB = gameIdsByGameName[nameB];
             (twoHourPlayersByGameIdPairs[pairKey(idA, idB)] =
               twoHourPlayersByGameIdPairs[pairKey(idA, idB)] || []).push(
-              player
-            );
+                player
+              );
           }
         }
       }
@@ -301,13 +296,13 @@ among ${theSetOf({ PlayersWithSignificantPlaytime })}, were:
   CODE`
 
   for (let [i, { imageUrl, name, players, skuId, gameId }] of mostTwoHourPlayedGames
-    .slice(0, 1024)
+    .slice(0, 16)
     .entries()) {
     PROSE`
-  ${i + 1}. [![](${imageUrl}) **${name}**](https://stadia.google.com/readonlystoredetails/${gameId}/sku/${skuId}) with ${players.length} players (${(
-      (players.length / PlayersWithSignificantPlaytime.length) *
-      100
-    ).toFixed(1)}%)
+  ${i + 1}. [![](${imageUrl}) **${name}**](https://stadia.google.com/readonlystoredetails/${gameId}/sku/${skuId}) with ${count(players.length)} players (${(
+        (players.length / PlayersWithSignificantPlaytime.length) *
+        100
+      ).toFixed(1)}%)
     PROSE`
   }
 
@@ -335,14 +330,14 @@ ${theSetOf({ PlayersWithPlaytime })} are:
   }
 
   for (const [i, [gameId, seconds]] of Object.entries(
-    totalSecondsByGameId).sort((a, b) => b[1] - a[1]).entries()
+    totalSecondsByGameId).sort((a, b) => b[1] - a[1]).slice(0, 16).entries()
   ) {
-    let {imageUrl, skuId, name} = gamesById[gameId];
+    let { imageUrl, skuId, name } = gamesById[gameId];
     PROSE`
-${i + 1}. [![](${imageUrl}) **${name}**](https://stadia.google.com/readonlystoredetails/${gameId}/sku/${skuId}) with ${(seconds / 60 / 60).toFixed(0)} hours (${(
-  (seconds  / totalSeconds) *
-  100
-).toFixed(1)}%)
+${i + 1}. [![](${imageUrl}) **${name}**](https://stadia.google.com/readonlystoredetails/${gameId}/sku/${skuId}) with ${count(Math.floor(seconds / 60 / 60))} hours (${(
+        (seconds / totalSeconds) *
+        100
+      ).toFixed(1)}%)
     PROSE`
   }
 
@@ -356,14 +351,14 @@ hours of each among ${theSetOf({ PlayersWithSignificantPlaytime })} were:
   CODE`
 
   for (let [i, { gameA, gameB, players }] of mostTwoHourPlayedGamePairs
-    .slice(0, 128)
+    .slice(0, 16)
     .entries()) {
     PROSE`
   ${i + 1}. [![](${gameA.imageUrl}) **${gameA.name}**](https://stadia.google.com/readonlystoredetails/${gameA.gameId}/sku/${gameA.skuId}) and [![](${gameB.imageUrl
-  }) **${gameB.name}**](https://stadia.google.com/readonlystoredetails/${gameB.gameId}/sku/${gameB.skuId}) with ${players.length} players in common (${(
-      (players.length / PlayersWithSignificantPlaytime.length) *
-      100
-    ).toFixed(1)}%)
+      }) **${gameB.name}**](https://stadia.google.com/readonlystoredetails/${gameB.gameId}/sku/${gameB.skuId}) with ${count(players.length)} players in common (${(
+        (players.length / PlayersWithSignificantPlaytime.length) *
+        100
+      ).toFixed(1)}%)
     PROSE`
   }
 
@@ -373,12 +368,7 @@ hours of each among ${theSetOf({ PlayersWithSignificantPlaytime })} were:
 
 *Stadia Street's Stadia Stats: Volume ${volume}* was generated by [this
 script](https://gist.githubusercontent.com/StadiaStreet/${gist}/raw/${volume}.js)
-and ${theSetOf()}. If you would like to be accounted for in future reports:
-adjust your Stadia Privacy settings to set your *Game activity* visibility (and,
-optionally, your *Time played per game*, *Achievements,* and *Player stats*
-visibility) to *All players*, then [send a Friend Request to
-\`Street#7194\`](https://stadia.com/home?si_rid=4025485100203500328) to ensure
-your profile is found.
+and ${theSetOf()}.
 
   CODE`
 }
@@ -483,10 +473,10 @@ let theSetOf = (
   }
 
   if (theSetOf.allSets[key]) {
-    return `the set of ${values.length} ${key.replace(/(.)([A-Z])/g, "$1 $2")}`;
+    return `the set of ${count(values.length)} ${key.replace(/(.)([A-Z])/g, "$1 $2")}`;
   } else {
     theSetOf.allSets[key] = value;
-    return `[a set of ${values.length} **${key.replace(
+    return `[a set of ${count(values.length)} **${key.replace(
       /(.)([A-Z])/g,
       "$1 $2"
     )}**](${url})`;
@@ -542,8 +532,7 @@ document.addEventListener(
       } else {
         link.setAttribute(
           "download",
-          `st${volume}-${
-            link.lastElementChild?.textContent?.replace(/ /g, "") || "data"
+          `st${volume}-${link.lastElementChild?.textContent?.replace(/ /g, "") || "data"
           }.json`
         );
       }
@@ -562,6 +551,8 @@ let lettersAndDigits = `${letters}0123456789`;
 
 let volume = 360;
 let gist = "0e378320a54c4059c0ce846c0a00c5d9";
+
+let count = n => new Intl.NumberFormat().format(n);
 
 import("./markdown-it.js").finally(() =>
   street(volume).then(() => {
