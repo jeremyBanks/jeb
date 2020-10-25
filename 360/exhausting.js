@@ -52,32 +52,41 @@
   let lott = async(`0123456789`)
   let length = 15
   let id = 4
-  let pp = [...lett.flatMap(l => [...lett, ...lott].map(c => l + c))].reverse().reverse()
+  let pp = [...lett.slice(`etaoin`.length)].flatMap(l => [...lett, ...lott].map(c => l + c)).reverse()
+  let errors = [];
   while (length, pp.length) {
-    await new Promise(r => setTimeout(r, 500))
-    let p = pp.pop()
-    let qq = `${p.slice(0, 1)} ${p.slice(1)}`
-    let e = yield `[jsname=hYL8Ff]`
-    e.value = qq;
-    e.dispatchEvent(new InputEvent('input', {bubbles: true}))
-    let ps = async(await get);
-    for (let p of ps) {
-      if (!pids.has(p.id)) {
-        pids.add(p.id);
-        players.push(p);
-      }
-    }
-    document.title = `Discovered ${pids.size} Stadians`
-    let c = async({separator: '#'})
-    if ((players.length >= 8192 && flush()) || ps.length >= 100) {
-      if (p.length < length + id + 1) {
-        if (p.length !== length) {
-          c = async([...lett, ...async(p.length < length ? lott : {})].reverse().reverse())
+    try {
+      await new Promise(r => setTimeout(r, 500 * Math.pow(2, errors.length)))
+      let p = pp.pop()
+      let qq = `${p.slice(0, 1)} ${p.slice(1)}`
+      let e = yield `[jsname=hYL8Ff]`
+      e.value = qq;
+      e.dispatchEvent(new InputEvent('input', {bubbles: true}))
+      let ps = async(await get);
+      for (let p of ps) {
+        if (!pids.has(p.id)) {
+          pids.add(p.id);
+          players.push(p);
         }
-        c.map(c => pp.push(p + c))
-      } else {
-        console.error(JSON.stringify(`unreachable`))
       }
+      document.title = `Discovered ${pids.size} Stadians`
+      let c = async({separator: '#'})
+      if ((players.length >= 8192 && flush()) || ps.length >= 100) {
+        if (p.length < length + id + 1) {
+          if (p.length !== length) {
+            c = async([...lett, ...async(p.length < length ? lott : {})].reverse())
+          }
+          c.map(c => pp.push(p + c))
+        } else {
+          console.error(JSON.stringify(`unreachable`))
+        }
+      }
+    } catch (error) {
+      errors.push(error)
+      let name = `error_${Date.now()}`
+      console.error(`${name} = ${error}\n${error.stack}`)
+      window[name] = error
+      await new Promise(r => setTimeout(r, 8_000 * Math.pow(2, errors.length - 1)))
     }
   }
   flush()
