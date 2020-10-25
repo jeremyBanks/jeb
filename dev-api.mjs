@@ -105,17 +105,20 @@ let main = async ({ sql, console }) => {
     await console.sql`pragma locking_mode = exclusive`;
     await console.sql`pragma journal_mode = memory`;
     await console.sql`pragma temp_store = memory`;
-
-    await console.sql`pragma foreign_key_check`;
     await console.sql`pragma foreign_keys = on`;
     await console.sql`pragma recursive_triggers = on`;
+
+    await console.sql`attach ':memory:' as dump`;
+
+    await console.sql`pragma foreign_key_check`;
   };
 
   let createTables = async () => {
     await console.sql`
       create table User(
         [json]
-        text not null
+        text
+        not null
         ,
         [userId]
         text
@@ -158,10 +161,10 @@ let main = async ({ sql, console }) => {
         [lastActive]
         integer
         as (json_extract(json, '$.lastActive')) stored
-      );
+      )
     `;
     await console.sql`
-      create index [User(lower(name), number)] on User(lower(name), number);
+      create index [User(lower(name), number)] on User(lower(name), number)
     `;
     await console.sql`
     create table Game(
@@ -238,34 +241,36 @@ let main = async ({ sql, console }) => {
 
   let importRecords = async () => {
     await console.sql`savepoint [import spidered records]`;
-
-    console.debug(chalk.dim(`Loading ${chalk.cyan('records.json')} …`));
-    for (let record of Object.values(JSON.parse(fs.readFileSync('./stadia.st/-/records.json')))) {
-      if (record.type === 'user') {
-        await sql`insert into User values(${record})`;
-      } else if (record.type === 'game') {
-        await sql`insert into Game values(${record})`;
+    try {
+      console.debug(chalk.dim(`Loading ${chalk.cyan('records.json')} …`));
+      for (let record of Object.values(JSON.parse(fs.readFileSync('./stadia.st/-/records.json')))) {
+        if (record.type === 'user') {
+          await sql`insert into User values(${record})`;
+        } else if (record.type === 'game') {
+          await sql`insert into Game values(${record})`;
+        }
       }
+    } finally {
+      await console.sql`release [import spidered records]`;
     }
-
-    await console.sql`release [import spidered records]`;
 
     await console.sql`savepoint [import identified users]`;
-
-    let sourceDir = '/mnt/c/Users/_/Desktop/street';
-    for (let source of fs.readdirSync(sourceDir).map(s => `${sourceDir}/${s}`)) {
-      console.debug(chalk.dim(`Loading ${chalk.underline.cyan(source)} …`));
-      for (let record of Object.values(JSON.parse(fs.readFileSync(source)))) {
-        record.userId = record.id;
-        delete record.id;
-        await sql`
-          insert into User values(${record})
-          on conflict do nothing
-      `;
+    try {
+      let sourceDir = `${process.env['HOME']}/Desktop/street`;
+      for (let source of fs.readdirSync(sourceDir).filter(s => s.endsWith('.json')).map(s => `${sourceDir}/${s}`)) {
+        console.debug(chalk.dim(`Loading ${chalk.underline.cyan(source)} …`));
+        for (let record of Object.values(JSON.parse(fs.readFileSync(source)))) {
+          record.userId = record.id;
+          delete record.id;
+          await sql`
+            insert into User values(${record})
+            on conflict do nothing
+        `;
+        }
       }
+    } finally {
+      await console.sql`release [import identified users]`;
     }
-
-    await console.sql`release [import identified users]`;
 
     await console.sql`analyze`;
   };
@@ -300,7 +305,70 @@ let main = async ({ sql, console }) => {
       left join User founder on lower(founder.name) = lower(user.name) and founder.number = '0000'
       group by lower(User.name)
       order by count desc
-      limit 0, 32
+      limit 0, 8
+    `;
+
+    await console.sql`
+      create temporary table UserGamedForAnHour
+      as select gameId, userId, secondsPlayed
+      from UserGame
+      where secondsPlayed is not null
+      and secondsPlayed >= 60 * 60
+    `;
+
+    await console.sql`
+      select
+        Game.name as name,
+        coalesce(sum(UserGamedForAnHour.secondsPlayed) / 60 / 60, 0) as hours,
+        count(UserGamedForAnHour.secondsPlayed) as players
+      from Game
+      left join UserGamedForAnHour
+      on Game.gameId = UserGamedForAnHour.gameId
+      group by UserGamedForAnHour.gameId
+      order by hours desc
+      limit 0, 2
+    `;
+
+    await console.sql`
+      drop table UserGamedForAnHour
+    `
+
+    await console.sql`
+    select * from (
+        select * from (select
+          substr(lower(User.name), 1, 1) as prefix,
+          count(*) as count
+        from User user
+        group by prefix
+        order by count desc
+        limit 0, 64)
+      union
+        select * from (select
+          substr(lower(User.name), 1, 2) as prefix,
+          count(*) as count
+        from User user
+        group by prefix
+        order by count desc
+        limit 0, 64)
+      union
+        select * from (select
+          substr(lower(User.name), 1, 3) as prefix,
+          count(*) as count
+        from User user
+        group by prefix
+        order by count desc
+        limit 0, 64)
+      union
+        select * from (select
+          substr(lower(User.name), 1, 4) as prefix,
+          count(*) as count
+        from User user
+        group by prefix
+        order by count desc
+        limit 0, 64)
+      )
+      order by count desc
+      limit 0, 64
     `;
   };
 
@@ -321,6 +389,22 @@ let main = async ({ sql, console }) => {
   }
 
   await use();
+
+  await console.sql`
+    create table dump.User
+      as select main.User.json
+      from main.User
+      order by main.User.userId asc
+  `;
+
+  await console.sql`
+    create table dump.Game
+      as select main.Game.json
+      from main.Game
+      order by main.Game.gameId asc
+  `;
+
+  await console.sql`vacuum main into ${'./sqlite.min.tmp'};`;
 };
 
 let sortKeys = (x, f = (value, _key) => value) => {
