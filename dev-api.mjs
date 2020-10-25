@@ -108,8 +108,6 @@ let main = async ({ sql, console }) => {
     await console.sql`pragma foreign_keys = on`;
     await console.sql`pragma recursive_triggers = on`;
 
-    await console.sql`attach ':memory:' as dump`;
-
     await console.sql`pragma foreign_key_check`;
   };
 
@@ -388,21 +386,49 @@ let main = async ({ sql, console }) => {
     console.debug();
   }
 
-  await use();
+  // await use();
 
   await console.sql`
-    create table dump.User
-      as select main.User.json
-      from main.User
-      order by main.User.userId asc
-  `;
+create temporary table UserPack (json text);
 
-  await console.sql`
-    create table dump.Game
-      as select main.Game.json
-      from main.Game
-      order by main.Game.gameId asc
-  `;
+
+create temporary view [mode]
+as select
+  null as [packed];
+
+create temporary trigger [update mode set packed = false]
+instead of update on [mode] when NEW.packed is false
+begin
+  insert into User (json)
+    select json from UserPack;
+  delete from UserPack;
+end;
+
+create temporary trigger [update mode set packed = true]
+instead of update on [mode] when NEW.packed is true
+begin
+  insert into UserPack (json)
+    select json from User;
+  delete from User;
+end;
+
+update mode set packed = false
+  `
+
+  // await console.sql`
+  //   create temporary trigger [magic unpack]
+  //   instead of update on [magic]
+  //   when NEW.magic = 'unpack'
+  //   begin
+  //     insert into User (json)
+  //     select json from User;
+  //   end
+  // `;
+
+  // await console.sql`
+  //   update magic set spell = 'unpack'
+  // `
+
 
   await console.sql`vacuum main into ${'./sqlite.min.tmp'};`;
 };
