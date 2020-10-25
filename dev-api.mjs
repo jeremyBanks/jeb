@@ -6,113 +6,91 @@ import SQL from 'sql-template-strings';
 import * as sqlite from 'sqlite';
 import sqlite3 from 'sqlite3';
 
-sqlite.open({
+let db = sqlite.open({
   filename: './sqlite.tmp',
   driver: sqlite3.Database,
-}).then((db, _sql) => {
-  let sql = async (strings, ...values) => {
-    strings = [...strings];
-    values = [...values];
-    for (let i = 0; i < values.length; i += 1) {
-      let value = values[i];
-      if (value instanceof Object) {
-        values[i] = JSON.stringify(sortKeys(value));
-        strings[i] = `${strings[i]} json(`;
-        strings[i + 1] = `)${strings[i + 1]} `
-      }
-    }
-    let rows = await db.all(SQL(strings, ...values));
-    let f = (value, key) => {
-      if (typeof value?.json === 'string') {
-        let onlyKey = (Object.keys(value).length === 1);
-        try {
-          let json = sortKeys(JSON.parse(value.json), f);
-          if (onlyKey) {
-            return json;
-          }
-          if (json instanceof Array) {
-            return Object.assign({}, value, { json });
-          } else if (json instanceof Object) {
-            delete value.json;
-            return Object.assign(Object.create(json), value, { json });
-          } else {
-            return Object.assign({}, value, { json });
-          }
-        } catch (error) {
-          console.warn(chalk.dim.keyword('orange')(`Warning: Invalid .json property in result: ${error}`));
-        }
-      }
-      return value;
-    };
-    return sortKeys(rows, f);
-  };
-
-  let console = Object.assign(Object.create(globalThis.console), {
-    sql: async (strings, ...values) => {
-      let pretty = chalk.rgb(0xFF, 0xFF, 0x7F)(dedent(strings.join('…').replace(/(^\n+|\s+$)/gm, '')));
-      let details = [];
-      try {
-        for (let { id, detail, parent } of await db.all(SQL(strings.map((x, i) => i ? x : `explain query plan ${x}`), ...values))) {
-          details.push({
-            order: id + .0,
-            value: chalk.rgb(0x20, 0x20, 0x00)(`${id}${parent ? `:${parent}` : ``}: `) + chalk.rgb(0xB0, 0xB0, 0x40)(detail)
-          });
-        }
-        for (let { addr, opcode, p1, p2, p3, p4, p5, comment } of await db.all(SQL(strings.map((x, i) => i ? x : `explain ${x}`), ...values))) {
-          let args = [p1, p2, p3, p4, p5, comment];
-          while (args.length > 0) {
-            let arg = args.pop();
-            if (arg && !arg?.match?.(/^0+$/)) {
-              args.push(arg);
-              break;
-            }
-          }
-          details.push({
-            order: addr + .1,
-            value: chalk.rgb(0x20, 0x20, 0x00)(`${addr}: ${opcode}(${args.map(JSON.stringify).join(', ')})`)
-          });
-        }
-      } catch { }
-      let ugly = '';
-      details = details.sort((a, b) => a.order - b.order).map(x => x.value);
-      if (details.length > 0) {
-        ugly += (chalk.rgb(0x7F, 0x7F, 0x40)(' → ') + details.join(chalk.rgb(0x20, 0x20, 0x20)(', ')));
-      }
-      if (ugly) {
-        pretty += ugly;
-      }
-      try {
-        let before = performance.now();
-        let value = await (sql)(strings, ...values);
-        let elapsed = performance.now() - before;
-        console.debug(chalk.underline.rgb(0 | Math.min(0xFF, 0x00 + 2 * elapsed), 0 | (Math.max(0, 0x80 - elapsed / 100)), 0x20)(`Query took ${elapsed.toFixed(1)}ms:\n`) + pretty, chalk.green('→'), value);
-        console.debug();
-        return value;
-      } catch (error) {
-        console.debug(chalk.underline.red(`Query failed:\n`) + pretty, chalk.red('→'), chalk.red(error));
-        console.debug();
-        throw error;
-      }
-    }
-  });
-
-  return main({ sql, console });
 });
 
-let main = async ({ sql, console }) => {
-  let configureFastAndDumb = async () => {
-    await console.sql`pragma synchronous = off`;
-    await console.sql`pragma locking_mode = exclusive`;
-    await console.sql`pragma journal_mode = memory`;
-    await console.sql`pragma temp_store = memory`;
-    await console.sql`pragma foreign_keys = on`;
-    await console.sql`pragma recursive_triggers = on`;
+let main = async ({ db, sql: qsql, vsql: sql }) => {
+  {
+    await qsql`pragma foreign_keys = on`;
+    await qsql`pragma synchronous = off`;
+    await qsql`pragma locking_mode = exclusive`;
+    await qsql`pragma recursive_triggers = off`;
+    await qsql`pragma foreign_key_check`;
+  }
 
-    await console.sql`pragma foreign_key_check`;
-  };
+  let requiresInitialization = false;
+  {
+    let [{application_id: oldApplicationId}] = await qsql`pragma application_id`;
+    let [{user_version: oldUserVersion}] = await qsql`pragma user_version`;
+    if (oldApplicationId) oldApplicationId = `0x${oldApplicationId.toString(16).toUpperCase().padStart(8, '0')}`;
+    if (oldUserVersion) oldUserVersion = `0x${oldUserVersion.toString(16).toUpperCase().padStart(8, '0')}`;
 
-  let createTables = async () => {
-    await console.sql`
+    let applicationId = '0x57AD1A57';
+    let userVersion = `0x${(Math.floor(0x57570000 + (Date.now() - 1574164800000) / (60 * 60 * 1000)).toString(16).toUpperCase().padStart(8, '0'))}`;
+    await db.exec(`
+      pragma application_id = ${applicationId};
+      pragma user_version = ${userVersion};
+    `);
+
+    requiresInitialization =
+      requiresInitialization ||
+      applicationId !== oldApplicationId ||
+      userVersion !== oldUserVersion;
+
+    console.debug({
+      oldApplicationId,
+      applicationId,
+      oldUserVersion,
+      userVersion,
+      requiresInitialization,
+    });
+  }
+
+  if (requiresInitialization) {
+    await sql`
+      create table [User](
+             json text not null check (json_type(json) = 'object'),
+             userId text not null unique)`;
+    await sql`
+      create table [Game](
+             json text not null check (json_type(json) = 'object'),
+             gameId text not null unique)`;
+    await sql`
+      create table [User.json](
+             json text not null check (json_type(json) = 'object'))`;
+    await sql`
+      create table [Game.json](
+             json text not null check (json_type(json) = 'object'))`;
+    await sql`
+      create view please
+             as select null as packed`;
+    await sql`
+      create trigger [please set packed = false]
+             instead of update of packed on please when new.PACKED is false
+             begin insert into Game (json)
+                          select json from [Game.json] where true
+                          on conflict (gameId) do update
+                             set json = json_patch(json, excluded.json);
+                   delete from [Game.json];
+             end`;
+    await sql`
+      create trigger [please set packed = true]
+      instead of update of packed on please when new.PACKED is true
+              begin insert into [Game.json] (json)
+                           select json from Game where true;
+                    delete from Game;
+              end`;
+
+    await sql`pragma recursive_triggers = on`;
+    await sql`update please set packed = false`;
+    await sql`update please set packed = true`;
+    await sql`pragma recursive_triggers = off`;
+
+        return;
+
+    await sql`
       create table User(
         [json]
         text
@@ -161,10 +139,10 @@ let main = async ({ sql, console }) => {
         as (json_extract(json, '$.lastActive')) stored
       )
     `;
-    await console.sql`
+    await sql`
       create index [User(lower(name), number)] on User(lower(name), number)
     `;
-    await console.sql`
+    await sql`
     create table Game(
       [json]
         text
@@ -184,7 +162,7 @@ let main = async ({ sql, console }) => {
         as (json_extract(json, '$.name')) stored
     )
       `;
-    await console.sql`
+    await sql`
       create table UserGame(
         [userId]
         text
@@ -206,7 +184,7 @@ let main = async ({ sql, console }) => {
         unique(userId, gameId)
       )
     `;
-    await console.sql`
+    await sql`
       create trigger [UserGame from User: insert]
       after insert on User begin
       insert into UserGame(
@@ -223,13 +201,13 @@ let main = async ({ sql, console }) => {
         from json_each(NEW.games);
       end
     `;
-    await console.sql`
+    await sql`
       create trigger [UserGame from User: delete]
       after delete on User begin
         select raise(fail, 'user deletion not implemented');
       end
     `;
-    await console.sql`
+    await sql`
       create trigger [UserGame from User: update]
       after update on User begin
         select raise(fail, 'user updates not implemented');
@@ -238,21 +216,21 @@ let main = async ({ sql, console }) => {
   };
 
   let importRecords = async () => {
-    await console.sql`savepoint [import spidered records]`;
+    await sql`savepoint [import spidered records]`;
     try {
       console.debug(chalk.dim(`Loading ${chalk.cyan('records.json')} …`));
       for (let record of Object.values(JSON.parse(fs.readFileSync('./stadia.st/-/records.json')))) {
         if (record.type === 'user') {
-          await sql`insert into User values(${record})`;
+          await qsql`insert into User values(${record})`;
         } else if (record.type === 'game') {
-          await sql`insert into Game values(${record})`;
+          await qsql`insert into Game values(${record})`;
         }
       }
     } finally {
-      await console.sql`release [import spidered records]`;
+      await sql`release [import spidered records]`;
     }
 
-    await console.sql`savepoint [import identified users]`;
+    await sql`savepoint [import identified users]`;
     try {
       let sourceDir = `${process.env['HOME']}/Desktop/street`;
       for (let source of fs.readdirSync(sourceDir).filter(s => s.endsWith('.json')).map(s => `${sourceDir}/${s}`)) {
@@ -260,28 +238,28 @@ let main = async ({ sql, console }) => {
         for (let record of Object.values(JSON.parse(fs.readFileSync(source)))) {
           record.userId = record.id;
           delete record.id;
-          await sql`
+          await qsql`
             insert into User values(${record})
             on conflict do nothing
         `;
         }
       }
     } finally {
-      await console.sql`release [import identified users]`;
+      await sql`release [import identified users]`;
     }
 
-    await console.sql`analyze`;
+    await sql`analyze`;
   };
 
   let use = async () => {
-    await console.sql`
+    await sql`
       select
         (select count(*) from Game),
         (select count(*) from User),
         (select count(*) from UserGame)
       `;
 
-    await console.sql`
+    await sql`
       select
         gamerTag,
         Game.name,
@@ -294,7 +272,7 @@ let main = async ({ sql, console }) => {
       limit 0, 1
     `;
 
-    await console.sql`
+    await sql`
       select
         lower(User.name) as name,
         count(*) as count,
@@ -306,7 +284,7 @@ let main = async ({ sql, console }) => {
       limit 0, 8
     `;
 
-    await console.sql`
+    await sql`
       create temporary table UserGamedForAnHour
       as select gameId, userId, secondsPlayed
       from UserGame
@@ -314,7 +292,7 @@ let main = async ({ sql, console }) => {
       and secondsPlayed >= 60 * 60
     `;
 
-    await console.sql`
+    await sql`
       select
         Game.name as name,
         coalesce(sum(UserGamedForAnHour.secondsPlayed) / 60 / 60, 0) as hours,
@@ -327,50 +305,64 @@ let main = async ({ sql, console }) => {
       limit 0, 2
     `;
 
-    await console.sql`
+    await sql`
       drop table UserGamedForAnHour
     `
 
-    await console.sql`
+    await sql`
     select * from (
         select * from (select
-          substr(lower(User.name), 1, 1) as prefix,
+          substr(lower(User.name || '        '), 1, 1) as prefix,
           count(*) as count
         from User user
         group by prefix
         order by count desc
-        limit 0, 64)
-      union
+        limit 0, 100)
+        union all
         select * from (select
-          substr(lower(User.name), 1, 2) as prefix,
+          substr(lower(User.name || '        '), 1, 2) as prefix,
           count(*) as count
         from User user
         group by prefix
         order by count desc
-        limit 0, 64)
-      union
+        limit 0, 100)
+      union all
         select * from (select
-          substr(lower(User.name), 1, 3) as prefix,
+          substr(lower(User.name || '        '), 1, 3) as prefix,
           count(*) as count
         from User user
         group by prefix
         order by count desc
-        limit 0, 64)
-      union
+        limit 0, 100)
+      union all
         select * from (select
-          substr(lower(User.name), 1, 4) as prefix,
+          substr(lower(User.name || '        '), 1, 4) as prefix,
           count(*) as count
         from User user
         group by prefix
         order by count desc
-        limit 0, 64)
+        limit 0, 100)
+      union all
+        select * from (select
+          substr(lower(User.name || '        '), 1, 5) as prefix,
+          count(*) as count
+        from User user
+        group by prefix
+        order by count desc
+        limit 0, 100)
+      union all
+        select * from (select
+          substr(lower(User.name || '        '), 1, 6) as prefix,
+          count(*) as count
+        from User user
+        group by prefix
+        order by count desc
+        limit 0, 100)
       )
       order by count desc
-      limit 0, 64
+      limit 0, 100
     `;
   };
-
-  await configureFastAndDumb();
 
   try {
     await createTables();
@@ -386,51 +378,9 @@ let main = async ({ sql, console }) => {
     console.debug();
   }
 
-  // await use();
+  await use();
 
-  await console.sql`
-create temporary table UserPack (json text);
-
-
-create temporary view [mode]
-as select
-  null as [packed];
-
-create temporary trigger [update mode set packed = false]
-instead of update on [mode] when NEW.packed is false
-begin
-  insert into User (json)
-    select json from UserPack;
-  delete from UserPack;
-end;
-
-create temporary trigger [update mode set packed = true]
-instead of update on [mode] when NEW.packed is true
-begin
-  insert into UserPack (json)
-    select json from User;
-  delete from User;
-end;
-
-update mode set packed = false
-  `
-
-  // await console.sql`
-  //   create temporary trigger [magic unpack]
-  //   instead of update on [magic]
-  //   when NEW.magic = 'unpack'
-  //   begin
-  //     insert into User (json)
-  //     select json from User;
-  //   end
-  // `;
-
-  // await console.sql`
-  //   update magic set spell = 'unpack'
-  // `
-
-
-  await console.sql`vacuum main into ${'./sqlite.min.tmp'};`;
+  await sql`vacuum main into ${'./sqlite.min.tmp'};`;
 };
 
 let sortKeys = (x, f = (value, _key) => value) => {
@@ -470,3 +420,91 @@ let dedent = s => {
   }
   return lines.map(line => line.slice(minIndent)).join('\n');
 }
+
+db.then((db) => {
+  let sql = async (strings, ...values) => {
+    strings = [...strings];
+    values = [...values];
+    for (let i = 0; i < values.length; i += 1) {
+      let value = values[i];
+      if (value instanceof Object) {
+        values[i] = JSON.stringify(sortKeys(value));
+        strings[i] = `${strings[i]} json(`;
+        strings[i + 1] = `)${strings[i + 1]} `
+      }
+    }
+    let rows = await db.all(SQL(strings, ...values));
+    let f = (value, key) => {
+      if (typeof value?.json === 'string') {
+        let onlyKey = (Object.keys(value).length === 1);
+        try {
+          let json = sortKeys(JSON.parse(value.json), f);
+          if (onlyKey) {
+            return json;
+          }
+          if (json instanceof Array) {
+            return Object.assign({}, value, { json });
+          } else if (json instanceof Object) {
+            delete value.json;
+            return Object.assign(Object.create(json), value, { json });
+          } else {
+            return Object.assign({}, value, { json });
+          }
+        } catch (error) {
+          console.warn(chalk.dim.keyword('orange')(`Warning: Invalid .json property in result: ${error}`));
+        }
+      }
+      return value;
+    };
+    return sortKeys(rows, f);
+  };
+
+  let vsql = async (strings, ...values) => {
+    let pretty = chalk.rgb(0xFF, 0xFF, 0x7F)(dedent(strings.join('…').replace(/(^\n+|\s+$)/gm, '')));
+    let details = [];
+    try {
+      for (let { id, detail, parent } of await db.all(SQL(strings.map((x, i) => i ? x : `explain query plan ${x}`), ...values))) {
+        details.push({
+          order: id + .0,
+          value: chalk.rgb(0x20, 0x20, 0x00)(`${id}${parent ? `:${parent}` : ``}: `) + chalk.rgb(0xB0, 0xB0, 0x40)(detail)
+        });
+      }
+      for (let { addr, opcode, p1, p2, p3, p4, p5, comment } of await db.all(SQL(strings.map((x, i) => i ? x : `explain ${x}`), ...values))) {
+        let args = [p1, p2, p3, p4, p5, comment];
+        while (args.length > 0) {
+          let arg = args.pop();
+          if (arg && !arg?.match?.(/^0+$/)) {
+            args.push(arg);
+            break;
+          }
+        }
+        details.push({
+          order: addr + .1,
+          value: chalk.rgb(0x20, 0x20, 0x00)(`${addr}: ${opcode}(${args.map(JSON.stringify).join(', ')})`)
+        });
+      }
+    } catch { }
+    let ugly = '';
+    details = details.sort((a, b) => a.order - b.order).map(x => x.value);
+    if (details.length > 0) {
+      ugly += (chalk.rgb(0x7F, 0x7F, 0x40)(' → ') + details.join(chalk.rgb(0x20, 0x20, 0x20)(', ')));
+    }
+    if (ugly) {
+      pretty += ugly;
+    }
+    try {
+      let before = performance.now();
+      let value = await (sql)(strings, ...values);
+      let elapsed = performance.now() - before;
+      console.debug(chalk.underline.rgb(0 | Math.min(0xFF, 0x00 + 2 * elapsed), 0 | (Math.max(0, 0x80 - elapsed / 100)), 0x20)(`Query took ${elapsed.toFixed(1)}ms:\n`) + pretty, chalk.green('→'), value);
+      console.debug();
+      return value;
+    } catch (error) {
+      console.debug(chalk.underline.red(`Query failed:\n`) + pretty, chalk.red('→'), chalk.red(error));
+      console.debug();
+      throw error;
+    }
+  };
+
+  return main({ db, sql, vsql });
+});

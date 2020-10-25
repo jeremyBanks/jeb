@@ -2,9 +2,8 @@
 *.br
 *.log
 *.pid
-*.tmp
+*.tmp*
 /.https/
 /*dist/
 /node_modules/
 /worker/
-
