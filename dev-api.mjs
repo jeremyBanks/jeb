@@ -1,4 +1,5 @@
 import fs from 'fs';
+import util from 'util';
 import { performance } from 'perf_hooks';
 
 import chalk from 'chalk';
@@ -11,7 +12,15 @@ let db = sqlite.open({
   driver: sqlite3.Database,
 });
 
+let flattenSQLStatement = sql => {
+  let {strings, values} = sql;
+
+
+};
+
 let main = async ({ db, sql: qsql, vsql: sql }) => {
+  console.log(SQL`test ${SQL`hello`}`);
+
   {
     await qsql`pragma foreign_keys = on`;
     await qsql`pragma synchronous = off`;
@@ -49,47 +58,6 @@ let main = async ({ db, sql: qsql, vsql: sql }) => {
   }
 
   if (requiresInitialization) {
-    await sql`
-      create table [User](
-             json text not null check (json_type(json) = 'object'),
-             userId text not null unique)`;
-    await sql`
-      create table [Game](
-             json text not null check (json_type(json) = 'object'),
-             gameId text not null unique)`;
-    await sql`
-      create table [User.json](
-             json text not null check (json_type(json) = 'object'))`;
-    await sql`
-      create table [Game.json](
-             json text not null check (json_type(json) = 'object'))`;
-    await sql`
-      create view please
-             as select null as packed`;
-    await sql`
-      create trigger [please set packed = false]
-             instead of update of packed on please when new.PACKED is false
-             begin insert into Game (json)
-                          select json from [Game.json] where true
-                          on conflict (gameId) do update
-                             set json = json_patch(json, excluded.json);
-                   delete from [Game.json];
-             end`;
-    await sql`
-      create trigger [please set packed = true]
-      instead of update of packed on please when new.PACKED is true
-              begin insert into [Game.json] (json)
-                           select json from Game where true;
-                    delete from Game;
-              end`;
-
-    await sql`pragma recursive_triggers = on`;
-    await sql`update please set packed = false`;
-    await sql`update please set packed = true`;
-    await sql`pragma recursive_triggers = off`;
-
-        return;
-
     await sql`
       create table User(
         [json]
@@ -213,7 +181,40 @@ let main = async ({ db, sql: qsql, vsql: sql }) => {
         select raise(fail, 'user updates not implemented');
       end
     `;
-  };
+
+
+    // PACKING and UNPACKING
+    await sql`
+      create view please
+             as select null as packed`;
+    await sql`
+      create table [User.json](
+             json text not null check (json_type(json) = 'object'))`;
+    await sql`
+      create table [Game.json](
+             json text not null check (json_type(json) = 'object'))`;
+    await sql`
+      create trigger [please set packed = false]
+             instead of update of packed on please when new.PACKED is false
+             begin insert into Game (json)
+                          select json from [Game.json] where true
+                          on conflict (gameId) do update
+                             set json = json_patch(json, excluded.json);
+                   delete from [Game.json];
+             end`;
+    await sql`
+      create trigger [please set packed = true]
+      instead of update of packed on please when new.PACKED is true
+              begin insert into [Game.json] (json)
+                           select json from Game where true;
+                    delete from Game;
+              end`;
+
+    await sql`pragma recursive_triggers = on`;
+    await sql`update please set packed = false`;
+    await sql`update please set packed = true`;
+    await sql`pragma recursive_triggers = off`;
+};
 
   let importRecords = async () => {
     await sql`savepoint [import spidered records]`;
@@ -312,57 +313,148 @@ let main = async ({ db, sql: qsql, vsql: sql }) => {
     await sql`
     select * from (
         select * from (select
-          substr(lower(User.name || '        '), 1, 1) as prefix,
-          count(*) as count
+          substr(lower(User.name || '#'), 1, 1) as prefix,
+          count(distinct lower(User.name)) as names,
+          count(*) as users
         from User user
         group by prefix
-        order by count desc
-        limit 0, 100)
-        union all
+        order by users desc
+        limit 0, 96)
+        union
         select * from (select
-          substr(lower(User.name || '        '), 1, 2) as prefix,
-          count(*) as count
+          substr(lower(User.name || '#'), 1, 2) as prefix,
+          count(distinct lower(User.name)) as names,
+          count(*) as users
         from User user
         group by prefix
-        order by count desc
-        limit 0, 100)
-      union all
+        order by users desc
+        limit 0, 96)
+      union
         select * from (select
-          substr(lower(User.name || '        '), 1, 3) as prefix,
-          count(*) as count
+          substr(lower(User.name || '#'), 1, 3) as prefix,
+          count(distinct lower(User.name)) as names,
+          count(*) as users
         from User user
         group by prefix
-        order by count desc
-        limit 0, 100)
-      union all
+        order by users desc
+        limit 0, 96)
+      union
         select * from (select
-          substr(lower(User.name || '        '), 1, 4) as prefix,
-          count(*) as count
+          substr(lower(User.name || '#'), 1, 4) as prefix,
+          count(distinct lower(User.name)) as names,
+          count(*) as users
         from User user
         group by prefix
-        order by count desc
-        limit 0, 100)
-      union all
+        order by users desc
+        limit 0, 96)
+      union
         select * from (select
-          substr(lower(User.name || '        '), 1, 5) as prefix,
-          count(*) as count
+          substr(lower(User.name || '#'), 1, 5) as prefix,
+          count(distinct lower(User.name)) as names,
+          count(*) as users
         from User user
         group by prefix
-        order by count desc
-        limit 0, 100)
-      union all
+        order by users desc
+        limit 0, 96)
+      union
         select * from (select
-          substr(lower(User.name || '        '), 1, 6) as prefix,
-          count(*) as count
+          substr(lower(User.name || '#'), 1, 6) as prefix,
+          count(distinct lower(User.name)) as names,
+          count(*) as users
         from User user
         group by prefix
-        order by count desc
-        limit 0, 100)
+        order by users desc
+        limit 0, 96)
+      union
+        select * from (select
+          substr(lower(User.name || '#'), 1, 7) as prefix,
+          count(distinct lower(User.name)) as names,
+          count(*) as users
+        from User user
+        group by prefix
+        order by users desc
+        limit 0, 96)
+      union
+        select * from (select
+          substr(lower(User.name || '#'), 1, 8) as prefix,
+          count(distinct lower(User.name)) as names,
+          count(*) as users
+        from User user
+        group by prefix
+        order by users desc
+        limit 0, 96)
+      union
+        select * from (select
+          substr(lower(User.name || '#'), 1, 9) as prefix,
+          count(distinct lower(User.name)) as names,
+          count(*) as users
+        from User user
+        group by prefix
+        order by users desc
+        limit 0, 96)
+      union
+        select * from (select
+          substr(lower(User.name || '#'), 1, 10) as prefix,
+          count(distinct lower(User.name)) as names,
+          count(*) as users
+        from User user
+        group by prefix
+        order by users desc
+        limit 0, 96)
+      union
+        select * from (select
+          substr(lower(User.name || '#'), 1, 11) as prefix,
+          count(distinct lower(User.name)) as names,
+          count(*) as users
+        from User user
+        group by prefix
+        order by users desc
+        limit 0, 96)
+      union
+        select * from (select
+          substr(lower(User.name || '#'), 1, 12) as prefix,
+          count(distinct lower(User.name)) as names,
+          count(*) as users
+        from User user
+        group by prefix
+        order by users desc
+        limit 0, 96)
+      union
+        select * from (select
+          substr(lower(User.name || '#'), 1, 13) as prefix,
+          count(distinct lower(User.name)) as names,
+          count(*) as users
+        from User user
+        group by prefix
+        order by users desc
+        limit 0, 96)
+      union
+        select * from (select
+          substr(lower(User.name || '#'), 1, 14) as prefix,
+          count(distinct lower(User.name)) as names,
+          count(*) as users
+        from User user
+        group by prefix
+        order by users desc
+        limit 0, 96)
+      union
+        select * from (select
+          substr(lower(User.name || '#'), 1, 15) as prefix,
+          count(distinct lower(User.name)) as names,
+          count(*) as users
+        from User user
+        group by prefix
+        order by users desc
+        limit 0, 96)
       )
-      order by count desc
-      limit 0, 100
+      order by users desc, names asc
+      limit 0, 96
     `;
-  };
+
+
+
+  await sql`select count(*) from User`;
+};
 
   try {
     await createTables();
@@ -496,7 +588,7 @@ db.then((db) => {
       let before = performance.now();
       let value = await (sql)(strings, ...values);
       let elapsed = performance.now() - before;
-      console.debug(chalk.underline.rgb(0 | Math.min(0xFF, 0x00 + 2 * elapsed), 0 | (Math.max(0, 0x80 - elapsed / 100)), 0x20)(`Query took ${elapsed.toFixed(1)}ms:\n`) + pretty, chalk.green('→'), value);
+      console.debug(chalk.underline.rgb(0 | Math.min(0xFF, 0x00 + 2 * elapsed), 0 | (Math.max(0, 0x80 - elapsed / 100)), 0x20)(`Query took ${elapsed.toFixed(1)}ms:\n`) + pretty, chalk.green('→'), util.inspect(value, { maxArrayLength: null, colors: true }));
       console.debug();
       return value;
     } catch (error) {

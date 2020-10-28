@@ -14,6 +14,12 @@ http-server \
 http-server \
   -d=false \
   -c=8 \
+  ''./stadia.run/'' \
+  --port 57484 &
+
+http-server \
+  -d=false \
+  -c=8 \
   ''./stadia.st/'' \
   --port 57483 &
 
