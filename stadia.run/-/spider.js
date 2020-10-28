@@ -41,7 +41,7 @@ const loadSkuData = async (
   const developerOrganizationIds = skuData[16];
 
   const imageUrl = skuData[2]?.[1]?.[0]?.[0]?.[1]?.split(/=/)[0];
-  const thumbnail = undefined; // await microImageFromURL(imageUrl);
+  const thumbnail = await microImageFromURL(imageUrl);
   const imageHash = undefined; // await hashFromURL(imageUrl);
 
   const releaseDateA = 1000 * skuData[10]?.[0] || undefined;
@@ -300,29 +300,35 @@ const spider = async (/** @type {Record} */ record) => {
       `store/details/${record.gameId}/sku/${record.skuId}`,
     );
 
-    const organizations = [page.sku[22][0], ...page.sku[22][1]];
-    for (const organization of organizations) {
-      getset({
-        type: "organization",
-        organizationId: organization[0],
-        name: organization[2][0],
-      });
-    }
+    if (page.sku[0] === "er") {
+      console.error("error?", page.sku, page, record);
+    } else {
+      const organizations = [page.sku[22][0], ...page.sku[22][1]].filter(
+        Boolean,
+      );
+      for (const organization of organizations) {
+        getset({
+          type: "organization",
+          organizationId: organization[0],
+          name: organization[2][0],
+        });
+      }
 
-    await loadSkuData(page.sku[16], now);
-    if (page.gameAddons) {
-      for (const sku of page.gameAddons) {
-        await loadSkuData(sku[9], now);
+      await loadSkuData(page.sku[16], now);
+      if (page.gameAddons) {
+        for (const sku of page.gameAddons) {
+          await loadSkuData(sku[9], now);
+        }
       }
-    }
-    if (page.gameBundles) {
-      for (const sku of page.gameBundles) {
-        await loadSkuData(sku[9], now);
+      if (page.gameBundles) {
+        for (const sku of page.gameBundles) {
+          await loadSkuData(sku[9], now);
+        }
       }
-    }
-    if (page.gameSubscriptions) {
-      for (const sku of page.gameSubscriptions) {
-        await loadSkuData(sku[9], now);
+      if (page.gameSubscriptions) {
+        for (const sku of page.gameSubscriptions) {
+          await loadSkuData(sku[9], now);
+        }
       }
     }
   }
@@ -357,28 +363,36 @@ export const spiderThread = async () => {
     return;
   }
 
-  await spider(
-    getset({
-      type: "list",
-      listId: "",
-    }),
-  );
+  // await spider(
+  //   getset({
+  //     type: "list",
+  //     listId: "",
+  //   }),
+  // );
 
-  await spider(
-    getset({
-      type: "subscription",
-      skuId: "59c8314ac82a456ba61d08988b15b550",
-    }),
-  );
+  // await spider(
+  //   getset({
+  //     type: "subscription",
+  //     skuId: "59c8314ac82a456ba61d08988b15b550",
+  //   }),
+  // );
 
-  for (const userId of ["5478196876050978967"]) {
-    await spider(
-      getset({
-        type: "user",
-        userId,
-      }),
-    );
-  }
+  // await spider(
+  //   getset({
+  //     type: "game",
+  //     skuId: "6d54e2f977514da38090c19655c61badp",
+  //     gameId: "243c716cb0834b5bbce536902dd23a5frcp1",
+  //   }),
+  // );
+
+  // for (const userId of ["5478196876050978967"]) {
+  //   await spider(
+  //     getset({
+  //       type: "user",
+  //       userId,
+  //     }),
+  //   );
+  // }
 
   try {
     await withTimeout(16, canFetchDevApi);
@@ -742,7 +756,7 @@ const downloadDocument = async () => {
       .replace(/^<head>/, "")
       .replace(/<\/head><body>/, "")
       .replace(
-        /(\s)(disabled|autofocus|pre-order|pro|previously-pro|popular)(="")([>\s])/g,
+        /(\s)(disabled|autofocus|pre-order|pro|previously-pro|demo)(="")([>\s])/g,
         "$1$2$4",
       );
 
@@ -771,6 +785,7 @@ const updateDocument = async () => {
       preOrder:
         Math.max(game.releaseDateA, game.releaseDateB) >
         Date.now() + 1000 * 60 * 60 * 24 * 1,
+      demo: /\b(demo|opendev beta)\b/i.test(game.name),
     }))
     .sort((gameA, gameB) => {
       const aFirst = -1;
@@ -781,12 +796,7 @@ const updateDocument = async () => {
 
       const aReleased = Math.max(gameA.releaseDateA, gameA.releaseDateB);
       const bReleased = Math.max(gameB.releaseDateA, gameB.releaseDateB);
-
-      if (gameA.popular && !gameB.popular) {
-        return aFirst;
-      } else if (!gameA.popular && gameB.popular) {
-        return bFirst;
-      } else if (gameA.preOrder && !gameB.preOrder) {
+      if (gameA.preOrder && !gameB.preOrder) {
         return bFirst;
       } else if (!gameA.preOrder && gameB.preOrder) {
         return aFirst;
@@ -796,6 +806,10 @@ const updateDocument = async () => {
         } else if (aReleased < bReleased) {
           return aFirst;
         }
+      } else if (!gameA.demo && gameB.demo) {
+        return aFirst;
+      } else if (gameA.demo && !gameB.demo) {
+        return bFirst;
       } else if (gameA.isPro && !gameB.isPro) {
         return aFirst;
       } else if (!gameA.isPro && gameB.isPro) {
@@ -889,21 +903,20 @@ const updateDocument = async () => {
       link.appendChild(badge);
     }
 
-    if (game.popular) {
-      const badge = Object.assign(document.createElement("st-badge"), {
-        innerHTML: "🔥",
-        title: `${game.name} is popular!`,
-      });
-      badge.setAttribute("popular", "");
-      link.appendChild(badge);
-    }
-
     if (game.preOrder) {
       const badge = Object.assign(document.createElement("st-badge"), {
         textContent: "pre-order",
         title: `${game.name} is available for pre-order, but not yet released.`,
       });
       badge.setAttribute("pre-order", "");
+      link.appendChild(badge);
+    }
+
+    if (game.demo) {
+      const badge = Object.assign(document.createElement("st-badge"), {
+        textContent: "demo",
+      });
+      badge.setAttribute("demo", "");
       link.appendChild(badge);
     }
 

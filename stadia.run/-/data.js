@@ -227,15 +227,10 @@ export class User extends ARecord {
 
   /** @type {"user"} */ type = "user";
   get _spiderFrequencyCoefficient() {
-    if (this.games?.length && this.gameIds.some(g => g.secondsPlayed > 0)) {
-      // play time known visible
-      return 1 / 8;
-    } else if (this.games?.length) {
-      // game list known visible
+    if (this.lastActive > 0 && this.gameIds?.some(g => g.secondsPlayed > 0)) {
       return 1 / 16;
     } else {
-      // nothing known visible
-      return 1 / 64;
+      return 0;
     }
   }
 
