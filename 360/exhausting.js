@@ -52,7 +52,8 @@
   let lott = async(`0123456789`)
   let length = 15
   let id = 4
-  let pp = [...lett.slice(`etaoin`.length)].flatMap(l => [...lett, ...lott].map(c => l + c)).reverse()
+  let pp = [
+  ].concat([...lett.slice(`etaoinsrhld`.length)].flatMap(l => [...lett, ...lott].map(c => l + c))).reverse();
   let errors = [];
   while (length, pp.length) {
     try {
