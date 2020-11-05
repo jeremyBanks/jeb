@@ -23,7 +23,37 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/ObrhH2F36Rmd7IIQu9Hxr2s38a21CxLGtSjagHUI6Ep9v-Z8G-7x1P-fr0vEkwc3IiyaJdWjRindTTFluJM3pyTHUcZoYzu279VkqSSYZzw2Y7jTrJ7t7Wfepy4=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/OvEs9s6UulH5KgA3sj53MyxuHgAO6jywLI1z_wGnxzkzSDU8LN5LyPlgOlBO0tkuM6_JQdWoMufgFEsZJjiFYhpEKsMBr2Gns6lBJxOCx6KbpKpWsoTEUBSqbA=s192-p-rp"
+        }
+      ],
+      "name": "Hello Neighbor: Hide and Seek",
+      "url": "/hello-neighbor-hide-and-seek"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/vxoexA1rhd2GJrcPrZWeFJGMZT8GlF8GFl7zLCv6kCKmIh2NI3rb8SjF4B0NX2-_WSI1o1d98VcozI_lpskYF9vMxU4nLG9NjJbrfDxY8l27Od5NZ-1pa4uzXQ=s192-p-rp"
+        }
+      ],
+      "name": "Sniper Elite 4",
+      "url": "/sniper-elite-4"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/S5gxNJIiaF9Oab3dV-u4F8dj2sy6gY6umtugNKfRzWlCoUeOIslqBpDrZAXVSE6OPr3NJc0BVRuWICa5k-aK8MixvT6a4qg3jAMPNXHglRG-WSU-atH-juJznj8=s192-p-rp"
+        }
+      ],
+      "name": "The Gardens Between",
+      "url": "/the-gardens-between"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/IZzT-SmnEmNDlOSmU-ctGffYh_wI7Or6Z8I4z4H3I9L2f5OOo0iseBZhnrBuMTp2ZIWnIo0T6kVL60lRUL7em__bapRBWJkjvOcqjehqhCvL_Y6hIAjGywu8Oak=s192-p-rp"
         }
       ],
       "name": "Dead by Daylight",
@@ -38,6 +68,26 @@
       ],
       "name": "Human: Fall Flat",
       "url": "/human-fall-flat"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/FZdjBJ1ygbaXNw74RNTLvwTB9cNsSRzPvlC_kzT7wFqda9GYCqkbubf-3TpH-lrt09yFrKz9Um5S8BTXP5u2KhIUkccdctWna18_RNjUEL7_KecjNB-4XsM8EUtE=s192-p-rp"
+        }
+      ],
+      "name": "Risk of Rain 2",
+      "url": "/risk-of-rain-2"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/w-gsFcFSdgL6v1RyDA44RbJIFrA5C063l-NgZloo0MKtFoVw6IBB4o9XeJ8FrDzyJL65kzCYo5g2UopC-F2iplVM3vbLOZJq16XyIH6i-KteP58lwIaE2o-luL8=s192-p-rp"
+        }
+      ],
+      "name": "République",
+      "url": "/republique"
     },
     {
       "icons": [
@@ -103,16 +153,6 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/3O4TSLomARrLlHKKXT_GwyFZ3NjqF3XO1B36OkjJbR3Xm_qG2F3QaHwqAIT6RqTBWWVgDoMHeItCQZm-7EWXqe3namAwYpcN67E8DmLac-pu-_bVUYTR9P8lfcw=s192-p-rp"
-        }
-      ],
-      "name": "Strange Brigade",
-      "url": "/strange-brigade"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
           "src": "https://lh3.googleusercontent.com/7GTAoubUX43W_zaFkEvQoqAkruysGSkQygrV0DYkVzA7qsIcsboF4n1Kq0mejQIGdlSQxeh4-ZuNQWqMjJ55u0GCR3aBnY1MsMwrULT1-J73Rs3fc3bFO8YjT20=s192-p-rp"
         }
       ],
@@ -138,46 +178,6 @@
       ],
       "name": "Orcs Must Die! 3",
       "url": "/orcs-must-die-3"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/0IEI-gEyPTjjYalgenWbJExgluhlME2DVPmtKYfv30HN59KQ-dTj9z1VxdVkYo_YTNdaW0Bym_IsZCzdn_Bd92-dmynEU_w0LSyrp0jvitUmFxnobP3uUKoNSHMg=s192-p-rp"
-        }
-      ],
-      "name": "Crayta",
-      "url": "/crayta"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/jSXfWyncAmtfJQhxvaJ5-foSXBoyA9DB4h3c_npdP7UWP5pzUwHtHQ_t8xc51FOddChtCu9UShV_wpQBQBMQvrMFm71ABFBfATfuoBcrWkqRChYy0Izxij-zoFqc=s192-p-rp"
-        }
-      ],
-      "name": "West of Loathing",
-      "url": "/west-of-loathing"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/4PB-AwkBss_SSWOTl7jVq_oxCK_pgOjZp86koLjoX-Sm4ABdgFOrR_-EKJeI_g0EFBHZZPGeJ64yJdI_8sUTQ1eLt6EslTeQ8R9g8Y9SvhnPD_ElF5IaritDpg=s192-p-rp"
-        }
-      ],
-      "name": "Just Shapes & Beats",
-      "url": "/just-shapes-and-beats"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/LXYqwgAVSfrtwMdb04QwU_jZ1H1etEdIoMbrFyBYdg3ZVXOSjAWuk-1pzGGhYcKaUeCxZbOGJiEFqBnV1AU5utIyqhouCoKLzZ9cQVyNEFKWNPGra9Nvah3VLg=s192-p-rp"
-        }
-      ],
-      "name": "Metro Last Light Redux",
-      "url": "/metro-last-light"
     }
   ],
   "start_url": "/",
