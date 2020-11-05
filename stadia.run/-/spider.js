@@ -5,6 +5,7 @@ import {
   microImageToURL,
   cleanName,
   slugify,
+  gameTiles,
 } from "./index.js";
 import { jsonObjects } from "./jsons.js";
 import {
@@ -42,7 +43,7 @@ const loadSkuData = async (
 
   const imageUrl = skuData[2]?.[1]?.[0]?.[0]?.[1]?.split(/=/)[0];
   const thumbnail = await microImageFromURL(imageUrl);
-  const imageHash = undefined; // await hashFromURL(imageUrl);
+  const imageHash = await hashFromURL(imageUrl);
 
   const releaseDateA = 1000 * skuData[10]?.[0] || undefined;
   const releaseDateB = 1000 * skuData[26]?.[0] || undefined;
@@ -225,14 +226,14 @@ const spider = async (/** @type {Record} */ record) => {
       `profile/${record.userId}/gameactivities/all`,
     );
     also.gameIds = page.gameIds;
-    also.name = page.user?.[0][0];
-    also.number = page.user?.[0][1];
-    also.imageUrl = page.user?.[1][1].replace("/mdpi/", "/xxhdpi/");
+    also.name = page.user?.[0]?.[0];
+    also.number = page.user?.[0]?.[1];
+    also.imageUrl = page.user?.[1]?.[1].replace("/mdpi/", "/xxhdpi/");
     also.avatarId = also.imageUrl?.split("avatar_")[1]?.split(".")[0];
     if (page.user?.[2]?.[4]?.length) {
       also.lastActive =
-        page.user?.[2]?.[4][0] * 1000 +
-        (page.user?.[2]?.[4][1] * 1000) / 1000000000;
+        page.user?.[2]?.[4]?.[0] * 1000 +
+        (page.user?.[2]?.[4]?.[1] * 1000) / 1000000000;
     }
 
     const games = {};
@@ -291,7 +292,7 @@ const spider = async (/** @type {Record} */ record) => {
     } else if (!record.gameId && record.skuId) {
       // discovering a sku from only a skuId
       const page = await fetchStadiaPage(`store/details/-/sku/${record.skuId}`);
-      record.gameId = page.sku[16][4];
+      record.gameId = page.sku[16]?.[4];
     }
     // both of the above are incomplete so we also perform the normal
     // SKU spider process from here.
@@ -300,17 +301,25 @@ const spider = async (/** @type {Record} */ record) => {
       `store/details/${record.gameId}/sku/${record.skuId}`,
     );
 
-    if (page.sku[0] === "er") {
-      console.error("error?", page.sku, page, record);
+    if (!page.sku) {
+      console.error("not sure what's going on here, no sku", page);
+    } else if (page.sku[0] === "er") {
+      console.error("delisted?", page.sku, page, record);
+      getset({
+        type: record.type,
+        gameId: record.gameId,
+        skuId: record.skuId,
+        deslisted: true,
+      });
     } else {
-      const organizations = [page.sku[22][0], ...page.sku[22][1]].filter(
+      const organizations = [page.sku[22]?.[0], ...page.sku[22]?.[1]].filter(
         Boolean,
       );
       for (const organization of organizations) {
         getset({
           type: "organization",
           organizationId: organization[0],
-          name: organization[2][0],
+          name: organization[2]?.[0],
         });
       }
 
@@ -453,7 +462,7 @@ export const spiderThread = async () => {
         agelessRecords.length
       } other records are non-spiderable.)`;
 
-      if (staleRecords.length % 64 === 0) {
+      if (staleRecords.length % 4 === 0) {
         await updateDocument();
         await downloadDocument();
       } else if (staleRecords.length % 16 === 8) {
@@ -498,6 +507,7 @@ export const spiderThread = async () => {
             avatarId: item.avatarId,
             childSkuIds: item.childSkuIds,
             countries: item.countries,
+            delisted: item.delisted,
             imageHash: item.imageHash,
             thumbnail: item.thumbnail,
             imageUrl: item.imageUrl,
@@ -530,17 +540,26 @@ export const spiderThread = async () => {
           };
         }
 
-        fetchDevApi("records.json", {
-          method: "PUT",
-          body: JSON.stringify(skus, null, 2),
-        });
-        fetchDevApi("meta.json", {
-          method: "PUT",
-          body: JSON.stringify(meta, null, 2),
-        });
+        try {
+          fetchDevApi("records.json", {
+            method: "PUT",
+            body: JSON.stringify(skus, null, 2),
+          });
+        } catch (error) {
+          console.error(error);
+        }
+
+        try {
+          fetchDevApi("meta.json", {
+            method: "PUT",
+            body: JSON.stringify(meta, null, 2),
+          });
+        } catch (error) {
+          console.error(error);
+        }
       }
     } catch (error) {
-      console.error("sleeping following", error);
+      console.error("sleeping following", error, error?.stack);
       await sleep(300);
     }
 
@@ -756,7 +775,7 @@ const downloadDocument = async () => {
       .replace(/^<head>/, "")
       .replace(/<\/head><body>/, "")
       .replace(
-        /(\s)(disabled|autofocus|pre-order|pro|previously-pro|demo)(="")([>\s])/g,
+        /(\s)(disabled|autofocus|pre-order|pro|previously-pro|demo|delisted)(="")([>\s])/g,
         "$1$2$4",
       );
 
@@ -796,7 +815,11 @@ const updateDocument = async () => {
 
       const aReleased = Math.max(gameA.releaseDateA, gameA.releaseDateB);
       const bReleased = Math.max(gameB.releaseDateA, gameB.releaseDateB);
-      if (gameA.preOrder && !gameB.preOrder) {
+      if (!gameA.delisted && gameB.delisted) {
+        return aFirst;
+      } else if (gameA.delisted && !gameB.delisted) {
+        return bFirst;
+      } else if (gameA.preOrder && !gameB.preOrder) {
         return bFirst;
       } else if (!gameA.preOrder && gameB.preOrder) {
         return aFirst;
@@ -893,6 +916,7 @@ const updateDocument = async () => {
         title: `${game.name} is currently included with Stadia Pro.`,
       });
       badge.setAttribute("pro", "");
+      root.setAttribute("pro", "");
       link.appendChild(badge);
     } else if (game.wasPro) {
       const badge = Object.assign(document.createElement("st-badge"), {
@@ -900,6 +924,7 @@ const updateDocument = async () => {
         title: `${game.name} was previously included with Stadia Pro.`,
       });
       badge.setAttribute("previously-pro", "");
+      root.setAttribute("previously-pro", "");
       link.appendChild(badge);
     }
 
@@ -909,6 +934,7 @@ const updateDocument = async () => {
         title: `${game.name} is available for pre-order, but not yet released.`,
       });
       badge.setAttribute("pre-order", "");
+      root.setAttribute("pre-order", "");
       link.appendChild(badge);
     }
 
@@ -917,6 +943,16 @@ const updateDocument = async () => {
         textContent: "demo",
       });
       badge.setAttribute("demo", "");
+      root.setAttribute("demo", "");
+      link.appendChild(badge);
+    }
+
+    if (game.delisted) {
+      const badge = Object.assign(document.createElement("st-badge"), {
+        textContent: "delisted",
+      });
+      badge.setAttribute("delisted", "");
+      root.setAttribute("delisted", "");
       link.appendChild(badge);
     }
 
@@ -932,8 +968,12 @@ const updateDocument = async () => {
 
   gamesEl.appendChild(document.createTextNode("\n  "));
 
-  await fetch("//dev-api.stadia.st:57482/manifest.json", {
-    method: "PUT",
-    body: JSON.stringify(manifest, null, 2),
-  });
+  try {
+    await fetch("//dev-api.stadia.st:57482/manifest.json", {
+      method: "PUT",
+      body: JSON.stringify(manifest, null, 2),
+    });
+  } catch (error) {
+    console.error(error);
+  }
 };
