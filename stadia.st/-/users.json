@@ -1,0 +1,67 @@
+{
+  "@usr": {
+    "avatarId": "55",
+    "games": {
+      "05f66a46027747a08b930ea70374ac7frcp1": {
+        "achievements": 5,
+        "hoursEditing": "0",
+        "hoursPlaying": "0",
+        "lastPlayed": 1603410060505,
+        "secondsPlayed": 31455,
+        "starterPackLevel": "14"
+      },
+      "120348c2707740b99b509fad49a2f45drcp1": {
+        "achievements": 0,
+        "lastPlayed": 1602836918476,
+        "secondsPlayed": 20,
+        "stats1": null,
+        "stats2": null,
+        "stats3": "0"
+      },
+      "20e792017ab34ad89b70dc17a5c72d68rcp1": {
+        "achievements": 9,
+        "characterageinyears": "0",
+        "characterlevel": "50",
+        "characterpower": "913",
+        "lastPlayed": 1602826543034,
+        "secondsPlayed": 115786
+      },
+      "a4c5eb3f4e614b7fadbba64cba68f849rcp1": {
+        "achievements": 0,
+        "eventTotalKill": "0",
+        "eventTotalPlayed": "0",
+        "eventTotalWin": "0",
+        "lastPlayed": 1588125744891,
+        "secondsPlayed": 262
+      },
+      "c911998e4f8d4c6ea6712c5ad33e4a54rcp1": {
+        "achievements": 1,
+        "berries": "0",
+        "deaths": "4",
+        "hearts": "0",
+        "lastPlayed": 1602836863743,
+        "secondsPlayed": 280
+      },
+      "cba537cccfe3470b8784f88660ea5f09rcp1": {
+        "achievements": 0,
+        "lastPlayed": 1588389007743,
+        "seLeaderboardCampaign": "0",
+        "seLeaderboardOverall": "0",
+        "seLeaderboardSurvival": "0",
+        "secondsPlayed": 1002
+      },
+      "f7afcff709e74227a5648aacadf03815rcp1": {
+        "achievements": 1,
+        "challengesprogress": "0",
+        "endllesskill": "0",
+        "lastPlayed": 1602836566335,
+        "secondsPlayed": 1102,
+        "storyprogress": "11"
+      }
+    },
+    "name": "usr",
+    "number": "0000",
+    "type": "user",
+    "userId": "5478196876050978967"
+  }
+}
