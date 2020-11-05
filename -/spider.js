@@ -456,9 +456,9 @@ export const spiderThread = async () => {
         "#dev-tools .record-count",
       ).textContent = `${icon} ${staleRecords.length} stale and ${
         allRecords.length - staleRecords.length - agelessRecords.length
-      } fresh ${
+      } fresh of ${
         allRecords.length - agelessRecords.length
-      } of known interesting records. (${
+      } known interesting records. (${
         agelessRecords.length
       } other records are non-spiderable.)`;
 
@@ -950,9 +950,11 @@ const updateDocument = async () => {
     if (game.delisted) {
       const badge = Object.assign(document.createElement("st-badge"), {
         textContent: "delisted",
+        title: `${game.name} has been delisted from the Stadia store; it is no longer available.`,
       });
       badge.setAttribute("delisted", "");
       root.setAttribute("delisted", "");
+      link.href = `https://stadia.google.com/store/details/${game.gameId}/sku/${game.skuId}`;
       link.appendChild(badge);
     }
 
