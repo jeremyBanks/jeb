@@ -12,12 +12,6 @@ let db = sqlite.open({
   driver: sqlite3.Database,
 });
 
-let flattenSQLStatement = sql => {
-  let {strings, values} = sql;
-
-
-};
-
 let main = async ({ db, sql: qsql, vsql: sql }) => {
   console.log(SQL`test ${SQL`hello`}`);
 
@@ -282,8 +276,10 @@ let main = async ({ db, sql: qsql, vsql: sql }) => {
       left join User founder on lower(founder.name) = lower(user.name) and founder.number = '0000'
       group by lower(User.name)
       order by count desc
-      limit 0, 8
+      limit 0, 64
     `;
+
+    return false;
 
     await sql`
       create temporary table UserGamedForAnHour

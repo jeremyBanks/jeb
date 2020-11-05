@@ -3,6 +3,7 @@
 *.log
 *.pid
 *.tmp*
+*.sqlite*
 /.https/
 /*dist/
 /node_modules/
