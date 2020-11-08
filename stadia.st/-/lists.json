@@ -495,6 +495,9 @@
   },
   "list-22": {
     "childSkuIds": [
+      "3e5dab36f21e466499f3449f13c98329",
+      "53ed0e18ae494c929dbec8262afcc915",
+      "8e894e5800a84b8aa6b8e277e5790a53",
       "be70e67b1fd64dc2bb4f002e65239731p",
       "c00cecabcbde4e95bdab69be6e80b40bp",
       "80da4613928a48459214767c8316a223p",
@@ -940,16 +943,16 @@
   },
   "list-46": {
     "childSkuIds": [
-      "ce8a411f4dc2470da828fc259c584aa5",
-      "be1bff38daf046f78cde2b36228de554",
-      "a1afa4eca7b24713a9bcf3421dd85a13",
-      "788a1f7b00f74b26b12d7c6d62d50d96",
-      "f491723b366248d18843107689f3ead6",
-      "5af3426b8434401897bb4eeac0344662",
-      "4950959380034dcda0aecf98f675e11f",
-      "77ab8b1807a849e3991826d8d7a9e3e0",
-      "599a08652fad4a41baad8591e18e83e2",
-      "1611bf48ac784869bcbd1ce85bc71add"
+      "60da786be741463fbbeb63ed5130bc11",
+      "888a817c35b5439bb6a03a78ab09e138",
+      "7ed521aacf2a44168fb99cd1e13472ad",
+      "ab6a5a0d448d4c7aaed8dfa91ad6f4b9",
+      "f16b28e2fd224acaafeee4c19134adb4",
+      "a6ffc113bea9495b84581796893ebf50",
+      "5251fd4e832d459ca046e6eb81b16809",
+      "d3e056ee79d947c29eedc5ae232d6c2ep",
+      "45918155e78145af937b5df1a574afd2",
+      "6c8ae46efebc4bd1a7de725bc630ce65"
     ],
     "listId": 46,
     "name": "Trending",
