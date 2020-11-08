@@ -16,18 +16,6 @@
 <link rel="preload" as="image" href="/-/squirrel-stadian.png">
 <link rel="preload" as="image" href="/-/squirrel-disabled.png">
 
-<script>
-  // console.debug messages are only for the sake of headless testing.
-  window.addEventListener('error', ({error}) =>
-    console.debug(`<st-error>${error}</st-error>`));
-  window.addEventListener('unhandledrejection', ({reason}) =>
-    console.debug(`<st-error>${reason}</st-error>`))
-  window.addEventListener('domcontentloaded', event =>
-    console.debug('<st-event>domcontentloaded</st-event>'));
-  window.addEventListener('load', event =>
-    console.debug('<st-event>load</st-event>'));
-</script>
-
 <style>
   * {
     box-sizing: inherit;
@@ -94,18 +82,6 @@
     opacity: 0.125;
     transition: 4s opacity ease-in;
     user-select: none;
-  }
-
-  footer:hover {
-    opacity: 1.00;
-  }
-
-  footer.activated {
-    opacity: 1.00;
-  }
-
-  footer a {
-    display: grid;
   }
 
   script, style, link, head, template {
@@ -549,7 +525,7 @@
     <st-badge title="Risk of Rain 2 is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game pro><a href="https://stadia.google.com/player/65864a95f9e74129845bda0467486413rcp1">
       <st-cover-full>
-        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/w-gsFcFSdgL6v1RyDA44RbJIFrA5C063l-NgZloo0MKtFoVw6IBB4o9XeJ8FrDzyJL65kzCYo5g2UopC-F2iplVM3vbLOZJq16XyIH6i-KteP58lwIaE2o-luL8=w640-h360-rw">
+        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/w9BxPN6zb77lscIMjHKTGPchYdGvIG0hZcmByW3gGr-3nefc1sAhiVJtmHtPwMDoPTUNwqxiMEQltkLudRZMBU1XiMdtVu2Ya4oooZGWuBQ_8nJAVBUzOa9KEoY=w640-h360-rw">
       </st-cover-full>
       <st-cover-micro data="--_Ke_----_eee-FGKKK_KKKGKF_aKKKG_F__KKKFK-KKKKK-G-KKKFK-FFKKKKK">
         <st-name>République</st-name>
@@ -630,7 +606,7 @@
     <st-badge title="Lara Croft and the Temple of Osiris is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game pro><a href="https://stadia.google.com/player/c1928530515748da9f55afc7243fd3e1rcp1">
       <st-cover-full>
-        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/Arfb5W-unypro7QZ2S9lHX3iz8gEhRMTvYbGZDHCY3FACkzSkTdkL746jKJhhhnmK-Jfobxz8cxGLyAibYWwXpubWZrGW5m2U8FUkbwE--NWqliYIFP1IlKwaQ=w640-h360-rw">
+        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/2hTIWZCyMesKIpb-P8Iw5f3P6B7aoz9XaiQfXId7SQm3Yy_CS7OP67ZsOo1i7XJ_APv73F0YEbFfjP8L6tL0oWrkNL6pCxddsCq4tug0RMKYcP470KDV9x9tCg=w640-h360-rw">
       </st-cover-full>
       <st-cover-micro data="-LaKG_t_FLLKG___FKLKK__KFKKK_KZFKKKK_KJFK5KFK_F--KFFFF---FFF-F--">
         <st-name>Orcs Must Die! 3</st-name>
@@ -702,7 +678,7 @@
     <st-badge title="Sundered is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game pro><a href="https://stadia.google.com/player/d599576cddfc400f804b889460e84cb3rcp1">
       <st-cover-full>
-        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/UN5wzRnNJoMSsXtygN1yo4bu3CbZHMfSZ04Od7kh5TQVzTBmk-fscM9l_grDlfxeWbejZFGvhiwQFdHfYfSlpWcvtYkMAYZ1Yyuy3iwCCRrKjRBGXb_QXoZpUvg=w640-h360-rw">
+        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/zYyNot2hmVTwqGaFhklb4bEw8MnTcY_jk95wL-Q5Iok3X76054BIeCUkqBR_k0W9KhottmCJo5wBDovOEFebvd9UCKN9XNnaUt_DC1mhUXkIqxRnPJ2Me5PL_RY=w640-h360-rw">
       </st-cover-full>
       <st-cover-micro data="0G0KKKK0KKLLLKPGLeLLLKPKKLLLQLL0KLLKQMMKKLLLMLLKK5LQQPQKKLQUMQLK">
         <st-name>Embr</st-name>
@@ -756,7 +732,7 @@
     <st-badge title="SteamWorld Quest: Hand of Gilgamech is currently included with Stadia Pro." pro>PRO</st-badge></a></st-game>
     <st-game pro><a href="https://stadia.google.com/player/20e792017ab34ad89b70dc17a5c72d68rcp1">
       <st-cover-full>
-        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/PuEepMDLtM-1nNVDY1RkBvCH1o7iLTXI9_44o6xgBHDu1PGFoAMTi6FmWhkA0ET9qLLIzww-17Kk59FgMY_xRilohJEZ_E1CdHrhm2F5THHWvCElbA7ddQVycXCJ=w640-h360-rw">
+        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/Hnrphe5otP0vnVnSEN5-FHlaOZK34rD9ak2s76hfWo6MOkVBtWpFbhosuOsoilp_fctd77-knejqANKGYPv8vqlOnBg1iypk7vZn6OFp9kSkXW7Wz1R4lGirbnIv=w640-h360-rw">
       </st-cover-full>
       <st-cover-micro data="KKKKK4--3KKKK4---4KKPK---KKKPK4--4KKPK4---4KK4-----44-----------">
         <st-name>Destiny 2</st-name>
@@ -1233,7 +1209,7 @@
     <st-badge title="GRID was previously included with Stadia Pro." previously-pro>previously<br>PRO</st-badge></a></st-game>
     <st-game previously-pro><a href="https://stadia.google.com/player/e5c6ec7bf437491ea4ac0917df8f9640rcp1">
       <st-cover-full>
-        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/JV6HplJctzOUtRNjLPE1Uf-MqgkJKtbcmO_AuqFyl0Jn16Q6qe5EEWey49M4Ln1hNHFJbPGA5JSHsHts8RIdxYeg1vb0ZepIE4CPI5Um0l782IROp50jwuELxw=w640-h360-rw">
+        <img crossorigin="anonymous" src="https://lh3.googleusercontent.com/1BZb1p7JVXbv2jSjaUNYebDdUZhv9Rrnsm_feiKDwpzBFkEMmt-QOxXDR_Ae9KfD-aIB4Mx8oW1RKOQ6-gkOx90IHQjjgzxeaazXB2oE6UWocJ4IUvy6PEPSUg=w640-h360-rw">
       </st-cover-full>
       <st-cover-micro data="ddduttd_dtyddttdtyedduutuyd__dytuyed_eyyuyyddyyyuuydeuyyuuudduyy">
         <st-name>Rise of the Tomb Raider: 20 Year Celebration</st-name>
@@ -1466,182 +1442,14 @@
       <st-slug>/pac-man-mega-tunnel-battle-demo</st-slug>
     <st-badge demo>demo</st-badge><st-badge title="PAC-MAN Mega Tunnel Battle DEMO has been delisted from the Stadia store; it is no longer available." delisted>delisted</st-badge></a></st-game>
   </st-games>
-
-  <footer>
-    <a href="#dev-tools" target="_self" title="open dev tools" tabindex="-1">open dev tools</a>
-  </footer>
 </main>
-
-<aside id="dev-tools">
-  <style>
-    #dev-tools {
-      display: none;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: auto;
-      background: white;
-      color: black;
-      z-index: 100;
-
-      --dev-border: #D0D0D0;
-      --dev-background: #F3F3F3;
-    }
-
-      #dev-tools.unloaded {
-        user-select: none;
-        cursor: progress;
-      }
-
-      #dev-tools.unloaded section {
-        pointer-events: none;
-        filter: blur(2px);
-      }
-
-      #dev-tools:target {
-        display: grid;
-      }
-
-      #dev-tools dl {
-        grid-template-columns: 128px max-content;
-      }
-
-      #dev-tools dl dl {
-        align-self: center;
-      }
-
-      #dev-tools dl dt {
-        align-self: center;
-      }
-
-      #dev-tools dl span {
-        display: inline;
-      }
-
-      #dev-tools header {
-        display: block;
-        border-top: 1px solid var(--dev-border);
-        border-bottom: 1px solid var(--dev-border);
-        padding-left: var(--large-margin);
-        background: var(--dev-background);
-        position: relative;
-      }
-
-        #dev-tools header .tab {
-          cursor: pointer;
-          user-select: none;
-          position: relative;
-          padding: 4px 10px;
-          font-size: 12px;
-          top: 1px;
-          display: inline-block;
-          border-bottom: 2px solid var(--theme-color);
-        }
-
-      #dev-tools .close {
-        display: block;
-        position: absolute;
-        top: 2px;
-        right: var(--small-margin);
-        bottom: 2px;
-        padding: 0 6px;
-        font-size: 20px;
-        font-family: sans-serif;
-        border: 1px solid transparent;
-        color: #666;
-      }
-
-        #dev-tools .close span {
-          position: relative;
-          top: -4px;
-        }
-
-        #dev-tools .close:hover {
-          border: 1px solid #B99;
-          background: #EDD;
-          color: #444;
-        }
-
-      #dev-tools section.container {
-        display: grid;
-        grid-template-columns: 1fr max-content;
-      }
-
-      #dev-tools section.container section {
-        grid-row: 1;
-        overflow-y: auto;
-        padding: var(--small-margin) var(--large-margin);
-      }
-
-      #dev-tools section.container p {
-        display: block;
-        margin: 8px 0;
-        line-height: 1em;
-      }
-
-      #dev-tools section.container section.body {
-        display: block;
-      }
-
-      #dev-tools section.container section.body span {
-        display: contents;
-      }
-
-      #dev-tools button {
-        display: inline-block;
-        border: 1px solid var(--dev-border);
-        background: var(--dev-background);
-        padding: 4px 6px;
-        outline-color: var(--theme-color);
-        text-align: left;
-      }
-
-        #dev-tools button:enabled:hover {
-          border-color: var(--theme-color);
-          color: var(--theme-color);
-        }
-
-        #dev-tools button:enabled:active {
-          border-color: var(--theme-color);
-          color: var(--theme-color);
-          background-color: var(--dev-border);
-        }
-  </style>
-
-  <header>
-    <span class="tab">Just Stadian Things</span>
-    <a class="close" href="#"><span>×</span></a>
-  </header>
-
-  <section class="container">
-    <section class="body">
-      <dl>
-        <dt>local project:</dt>
-        <dd class="dev-server-status">❓</dd>
-
-        <dt>stadia store:</dt>
-        <dd class="stadia-proxy-status">❓</dd>
-
-        <dt>records:</dt>
-        <dd class="record-count">❓</dd>
-      </dl>
-    </section>
-  </section>
-</aside>
 
 <script>
   window.import = url => import(url)
 </script>
 
 <script type="module">
-// We may import an copy of this module while using dev tools, so we use
-// this to share any mutable state between the module instances.
-const mut = (globalThis["index.js#mut"] =
-  globalThis["index.js#mut"] || Object.create(null));
-
-export const initialized = (mut.initialized =
-  mut.initialized ||
+export const initialized =
   Promise.resolve().then(async () => {
     console.group("🔧 initializing");
     try {
@@ -1649,7 +1457,7 @@ export const initialized = (mut.initialized =
     } finally {
       console.groupEnd();
     }
-  }));
+  });
 
 export const initialize = async () => {
   if (typeof window === "undefined") {
@@ -1679,12 +1487,12 @@ export const initialize = async () => {
 
   checkUrl(true);
 
-  await Promise.all([initDevToolsLoader(), unpackMicroCovers()]);
+  await unpackMicroCovers();
 
-  // Just used for PWA offline fallback, because Chrome requires it.
-  // if (navigator.serviceWorker) {
-  //   navigator.serviceWorker.register('/--service-worker.js', {scope: '/'});
-  // }
+  // Offline fallback (required for PWA installation).
+  if (navigator.serviceWorker) {
+    navigator.serviceWorker.register('/--service-worker.js', {scope: '/'});
+  }
 };
 
 export const searchForm =
@@ -1694,7 +1502,7 @@ export const searchButton = searchForm && searchForm.querySelector("button");
 export const gameTiles =
   globalThis.document && document.querySelector("st-games");
 
-export const skus = (mut.skus = mut.skus || new Map());
+export const skus = new Map();
 
 export const digits =
   "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
@@ -1868,62 +1676,5 @@ const checkUrl = (first = false) => {
     searchInput.value = slug.replace(/-/g, " ");
     onSubmit({ first });
   }
-};
-
-let prevented = false;
-
-const initDevToolsLoader = async () => {
-  document.addEventListener("keydown", event => {
-    if (event.key === "F12") {
-      if (document.location.hash !== "#dev-tools") {
-        const scrollTop = document.documentElement.scrollTop;
-        document.location.hash = "#dev-tools";
-        window.import("/-/dev.js");
-        prevented = true;
-        document.documentElement.scrollTop = scrollTop;
-        event.preventDefault();
-      } else {
-        if (prevented) {
-          prevented = false;
-        } else {
-          const scrollTop = document.documentElement.scrollTop;
-          document.location.hash = "";
-          history.replaceState(null, "", " ");
-          document.documentElement.scrollTop = scrollTop;
-          event.preventDefault();
-        }
-      }
-    }
-  });
-
-  if (document.location.hash === "#dev-tools") {
-    window.import("/-/dev.js");
-    prevented = true;
-  }
-
-  document.addEventListener("hashchange", () => {
-    if (document.location.hash === "#dev-tools") {
-      window.import("/-/dev.js");
-      prevented = true;
-    }
-  });
-
-  document.querySelector("footer a").addEventListener("click", event => {
-    window.import("/-/dev.js");
-    const scrollTop = document.documentElement.scrollTop;
-    document.location.hash = "#dev-tools";
-    document.documentElement.scrollTop = scrollTop;
-    event.preventDefault();
-  });
-
-  document
-    .querySelector("#dev-tools header .close")
-    .addEventListener("click", event => {
-      const scrollTop = document.documentElement.scrollTop;
-      document.location.hash = "";
-      history.replaceState(null, "", " ");
-      event.preventDefault();
-      document.documentElement.scrollTop = scrollTop;
-    });
 };
 </script>
