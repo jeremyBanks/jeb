@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno run --allow-env --allow-net=127.0.0.1:57414,stadia.google.com --allow-read=/ --allow-write=/
+#!/usr/bin/env -S deno run --allow-env --allow-net=127.0.0.1:57414,stadia.google.com --allow-read=/ --allow-write=/ --allow-run
 const net = "127.0.0.1:57414";
 const data = "./database.sqlite";
 
@@ -6,6 +6,14 @@ import SQL from "https://deno.land/x/lite@0.0.9/sql.ts";
 import * as log from "https://deno.land/std@0.75.0/log/mod.ts";
 import { serve } from "https://deno.land/std@0.77.0/http/server.ts";
 import { assert } from "https://deno.land/std@0.75.0/testing/asserts.ts";
+
+import init, {
+  aes_gcm_256_decrypt_and_verify_as_utf8,
+} from "./aes-gcm-256-wasm/pkg/aes_gcm_256_wasm.js";
+
+await init();
+
+// https://stackoverflow.com/a/60423699
 
 const chromeState = await Deno.readTextFile(
   "/mnt/c/Users/_/AppData/Local/Google/Chrome/User Data/Local State",
@@ -25,15 +33,29 @@ const chromeProfiles = Object.entries(chromeState.profile.info_cache).filter((
     last_accessed_stadia: 0n,
   }));
 
-// AES-256-GCM key used for local data that is encrypted at rest.
-const chromeKey = new Uint8Array(
-  [...atob(chromeState.os_crypt.encrypted_key as string)].map((c) =>
-    c.charCodeAt(0) ?? 0
-  ),
-);
+console.log(chromeState.os_crypt.encrypted_key);
 
+// AES-256-GCM key used for local data that is encrypted at rest.
+const encryptedChromeKey = chromeState.os_crypt.encrypted_key as string;
+
+const chromeKey = new Uint8Array(
+  [...atob(String.fromCharCode(
+    ...(await Deno.run({
+      cmd: [
+        "./dpapibridge.exe",
+        "--decrypt",
+        "--base64",
+        "--input",
+        btoa(atob(encryptedChromeKey).slice(5)),
+      ],
+      stdout: "piped",
+    }).output()),
+  ))].map((c) => c.codePointAt(0) ?? 0),
+); //.slice(4, 4 + 32);
+
+console.log(chromeKey);
 log.info(
-  `Chrome local decryption key: ${atob(chromeState.os_crypt.encrypted_key)}`,
+  `Chrome local decryption key: ${chromeKey}`,
 );
 
 const sessionCookieNames = ["HSID", "SSID", "SID"];
@@ -76,12 +98,19 @@ for (const profile of chromeProfiles) {
         )).filter((r) => sessionCookieNames.includes(r.name as string)).map(
           (
             x,
-          ) => [
-            x.name,
-            String.fromCharCode(
-              ...(x.encrypted_value as unknown as Uint8Array),
-            ),
-          ],
+          ) => {
+            const data = x.encrypted_value as unknown as Uint8Array;
+            const nonce = data.slice(3, 15);
+            const ciphertext = data.slice(15);
+            return [
+              x.name,
+              aes_gcm_256_decrypt_and_verify_as_utf8(
+                chromeKey,
+                nonce,
+                ciphertext,
+              ),
+            ];
+          },
         ),
       ),
     );
@@ -90,23 +119,12 @@ for (const profile of chromeProfiles) {
   }
 }
 
-eval("Deno.exit()");
-
 const googleSession = {
-  HSID: Deno.env.get("HSID"),
-  SSID: Deno.env.get("SSID"),
-  SID: Deno.env.get("SID"),
+  HSID: Deno.env.get("GOOGLE_HSID") ?? "AR8W2k2vlh3PS_oYT",
+  SSID: Deno.env.get("GOOGLE_SSID") ?? "ATSak_JlNFU2YwHcu",
+  SID: Deno.env.get("GOOGLE_SID") ??
+    "3gewSa0aX8d5c3mu5I6xbzlgrMQjhP7C1PuESfAxZz98aQ1tcFnUA-31WDRIVE9NqEi04g.",
 };
-
-const chromeCookies = SQL(
-  "/mnt/c/Users/_/AppData/Local/Google/Chrome/User Data/Default/Cookies",
-);
-log.info(
-  await chromeCookies(
-    SQL
-      `SELECT name, encrypted_value FROM cookies where host_key = '.google.com'`,
-  ),
-);
 
 const response = await fetch(
   "https://stadia.google.com/profile/956082794034380385",
