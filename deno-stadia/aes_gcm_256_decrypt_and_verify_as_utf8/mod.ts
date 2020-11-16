@@ -1,27 +1,27 @@
 
-let wasm;
+let wasm: any;
 
 const heap = new Array(32).fill(undefined);
 
 heap.push(undefined, null, true, false);
 
-function getObject(idx) { return heap[idx]; }
+function getObject(idx: number) { return heap[idx]; }
 
 let heap_next = heap.length;
 
-function dropObject(idx) {
+function dropObject(idx: number) {
     if (idx < 36) return;
     heap[idx] = heap_next;
     heap_next = idx;
 }
 
-function takeObject(idx) {
+function takeObject(idx: number) {
     const ret = getObject(idx);
     dropObject(idx);
     return ret;
 }
 
-let cachegetUint8Memory0 = null;
+let cachegetUint8Memory0: any = null;
 function getUint8Memory0() {
     if (cachegetUint8Memory0 === null || cachegetUint8Memory0.buffer !== wasm.memory.buffer) {
         cachegetUint8Memory0 = new Uint8Array(wasm.memory.buffer);
@@ -31,14 +31,14 @@ function getUint8Memory0() {
 
 let WASM_VECTOR_LEN = 0;
 
-function passArray8ToWasm0(arg, malloc) {
+function passArray8ToWasm0(arg: Uint8Array, malloc: any) {
     const ptr = malloc(arg.length * 1);
     getUint8Memory0().set(arg, ptr / 1);
     WASM_VECTOR_LEN = arg.length;
     return ptr;
 }
 
-let cachegetInt32Memory0 = null;
+let cachegetInt32Memory0: any = null;
 function getInt32Memory0() {
     if (cachegetInt32Memory0 === null || cachegetInt32Memory0.buffer !== wasm.memory.buffer) {
         cachegetInt32Memory0 = new Int32Array(wasm.memory.buffer);
@@ -50,16 +50,11 @@ let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true 
 
 cachedTextDecoder.decode();
 
-function getStringFromWasm0(ptr, len) {
+function getStringFromWasm0(ptr: number, len: number) {
     return cachedTextDecoder.decode(getUint8Memory0().subarray(ptr, ptr + len));
 }
-/**
-* @param {Uint8Array} key
-* @param {Uint8Array} nonce
-* @param {Uint8Array} ciphertext
-* @returns {string}
-*/
-export function aes_gcm_256_decrypt_and_verify_as_utf8(key, nonce, ciphertext) {
+
+export function aes_gcm_256_decrypt_and_verify_as_utf8(key: Uint8Array, nonce: Uint8Array, ciphertext: Uint8Array): string {
     try {
         const retptr = wasm.__wbindgen_export_0.value - 16;
         wasm.__wbindgen_export_0.value = retptr;
@@ -79,7 +74,7 @@ export function aes_gcm_256_decrypt_and_verify_as_utf8(key, nonce, ciphertext) {
     }
 }
 
-function addHeapObject(obj) {
+function addHeapObject(obj: any) {
     if (heap_next === heap.length) heap.push(heap.length + 1);
     const idx = heap_next;
     heap_next = heap[idx];
@@ -88,13 +83,13 @@ function addHeapObject(obj) {
     return idx;
 }
 
-let cachedTextEncoder = new TextEncoder('utf-8');
+let cachedTextEncoder = new TextEncoder();
 
 const encodeString = (typeof cachedTextEncoder.encodeInto === 'function'
-    ? function (arg, view) {
+    ? function (arg: any, view: any) {
     return cachedTextEncoder.encodeInto(arg, view);
 }
-    : function (arg, view) {
+    : function (arg: any, view: any) {
     const buf = cachedTextEncoder.encode(arg);
     view.set(buf);
     return {
@@ -103,7 +98,7 @@ const encodeString = (typeof cachedTextEncoder.encodeInto === 'function'
     };
 });
 
-function passStringToWasm0(arg, malloc, realloc) {
+function passStringToWasm0(arg: any, malloc: any, realloc: any) {
 
     if (realloc === undefined) {
         const buf = cachedTextEncoder.encode(arg);
@@ -134,14 +129,14 @@ function passStringToWasm0(arg, malloc, realloc) {
         const view = getUint8Memory0().subarray(ptr + offset, ptr + len);
         const ret = encodeString(arg, view);
 
-        offset += ret.written;
+        offset += ret.written!;
     }
 
     WASM_VECTOR_LEN = offset;
     return ptr;
 }
 
-async function load(module, imports) {
+async function load(module: any, imports: any) {
     if (typeof Response === 'function' && module instanceof Response) {
 
         if (typeof WebAssembly.instantiateStreaming === 'function') {
@@ -174,50 +169,47 @@ async function load(module, imports) {
     }
 }
 
-async function init(input) {
-    if (typeof input === 'undefined') {
-        input = import.meta.url.replace(/\.js$/, '_bg.wasm');
-    }
-    const imports = {};
+export async function init() {
+    const imports: any = {};
     imports.wbg = {};
     imports.wbg.__wbg_new_59cb74e423758ede = function() {
         var ret = new Error();
         return addHeapObject(ret);
     };
-    imports.wbg.__wbg_stack_558ba5917b466edd = function(arg0, arg1) {
+    imports.wbg.__wbg_stack_558ba5917b466edd = function(arg0: any, arg1: any) {
         var ret = getObject(arg1).stack;
         var ptr0 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         var len0 = WASM_VECTOR_LEN;
         getInt32Memory0()[arg0 / 4 + 1] = len0;
         getInt32Memory0()[arg0 / 4 + 0] = ptr0;
     };
-    imports.wbg.__wbg_error_4bb6c2a97407129a = function(arg0, arg1) {
+    imports.wbg.__wbg_error_4bb6c2a97407129a = function(arg0: any, arg1: any) {
         try {
             console.error(getStringFromWasm0(arg0, arg1));
         } finally {
             wasm.__wbindgen_free(arg0, arg1);
         }
     };
-    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
+    imports.wbg.__wbindgen_object_drop_ref = function(arg0: any) {
         takeObject(arg0);
     };
 
-    if (typeof input === 'string' || (typeof Request === 'function' && input instanceof Request) || (typeof URL === 'function' && input instanceof URL)) {
+    let inputPath = import.meta.url.replace(/.[jt]sx?$/, '.wasm');
+    const inputURL = new URL(inputPath);
 
-        const inputURL = new URL(input);
-        if (inputURL.protocol === "file:") {
-            input = await Deno.readFile(inputURL.pathname);
-        } else {
-            input = fetch(input);
-        }
+    let input;
+    if (inputURL.protocol === "file:") {
+        input = await Deno.readFile(inputURL.pathname);
+    } else {
+        input = fetch(inputPath);
     }
 
     const { instance, module } = await load(await input, imports);
 
     wasm = instance.exports;
-    init.__wbindgen_wasm_module = module;
+    (init as any).__wbindgen_wasm_module = module;
 
-    return wasm;
+    return aes_gcm_256_decrypt_and_verify_as_utf8;
 }
 
 export default init;

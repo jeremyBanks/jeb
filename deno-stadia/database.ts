@@ -9,7 +9,7 @@ import { assert } from "https://deno.land/std@0.75.0/testing/asserts.ts";
 
 import init, {
   aes_gcm_256_decrypt_and_verify_as_utf8,
-} from "./aes-gcm-256-wasm/pkg/aes_gcm_256_wasm.js";
+} from "./aes_gcm_256_decrypt_and_verify_as_utf8/mod.ts";
 
 await init();
 
@@ -121,14 +121,15 @@ for (const profile of chromeProfiles) {
   if (!(cookieCreds["HSID"] && cookieCreds["SSID"] && cookieCreds["SID"])) {
     log.warning("...but they don't currently have credentials saved.")
   } else {
+    log.info("...and they appear to have saved credentials.")
     credentials[profile.email] = cookieCreds;
   }
 }
 
-const googleSession = credentials["stadia.observer@gmail.com"];
+const googleSession = credentials["nobody@jeremy.ca"];
 
 const response = await fetch(
-  "https://stadia.google.com/profile/956082794034380385",
+  "https://stadia.google.com/profile",
   {
     "headers": {
       "user-agent":
@@ -143,50 +144,22 @@ const response = await fetch(
 );
 
 const body = await response.text();
-log.info(body.split("<title")[1].slice(0, 128));
 
-log.info(`Binding http://${net} to serve ${data}...`);
-const server = serve(net);
-const database = SQL(data);
-log.info(`Ready.`);
+// XXX: see no eval
+const preloadRequests = eval('(' + (body.match(/AF_dataServiceRequests =(.+); var AF_initDataChunkQueue =/s)?.[1] ?? 'null') + ')');
+const preloadResponses = [...body.matchAll(/>AF_initDataCallback(\(\{.*?\}\))\;<\/script>/gs)].map((x: any) => {
+  return eval(x[1]);
+});
 
-for await (
-  const request: {
-    method: string;
-    url: string;
-    headers: Record<string, unknown>;
-    conn: Deno.Conn;
-  } of server
-) {
-  const { method, url, headers, conn } = request;
-  assert(
-    conn.remoteAddr.transport === "tcp" && conn.localAddr.transport === "tcp",
-  );
-
-  const remote = `${conn.remoteAddr.hostname}:${conn.remoteAddr.port}`;
-  const local = `${conn.localAddr.hostname}:${conn.localAddr.port}`;
-  const body = await Deno.readAll(request.body);
-  if (body.length > 0) {
-    log.info(
-      `${remote} ${method} http://${local}${url} with body of ${body.length} bytes.`,
-    );
-  } else {
-    log.info(`${remote} ${method} http://${local}${url} with no body.`);
-  }
-  request.respond({
-    headers: new Headers({
-      "Content-Type": "application/json",
-    }),
-    body: JSON.stringify(
-      {
-        method,
-        url,
-        headers: Object.fromEntries(headers.entries()),
-        body,
-        data: await database(SQL`SELECT * FROM sqlite_master`),
-      },
-      null,
-      2,
-    ),
-  });
+const preloads = [];
+for (const response of preloadResponses) {
+  const request = preloadRequests[response.key];
+  preloads.push({
+    id: request.id,
+    args: request.request,
+    isError: response.isError,
+    data: response.data,
+  })
 }
+
+console.log(preloads);
