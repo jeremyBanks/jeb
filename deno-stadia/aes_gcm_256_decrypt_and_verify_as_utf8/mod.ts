@@ -212,6 +212,6 @@ async function init() {
     return aes_gcm_256_decrypt_and_verify_as_utf8;
 }
 
-await init();
-
 export default aes_gcm_256_decrypt_and_verify_as_utf8;
+
+await init();
