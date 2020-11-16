@@ -7,11 +7,9 @@ import * as log from "https://deno.land/std@0.75.0/log/mod.ts";
 import { serve } from "https://deno.land/std@0.77.0/http/server.ts";
 import { assert } from "https://deno.land/std@0.75.0/testing/asserts.ts";
 
-import init, {
+import
   aes_gcm_256_decrypt_and_verify_as_utf8,
-} from "./aes_gcm_256_decrypt_and_verify_as_utf8/mod.ts";
-
-await init();
+from "./aes_gcm_256_decrypt_and_verify_as_utf8/mod.ts";
 
 // https://stackoverflow.com/a/60423699
 

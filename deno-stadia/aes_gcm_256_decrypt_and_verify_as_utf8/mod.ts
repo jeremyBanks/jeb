@@ -54,7 +54,7 @@ function getStringFromWasm0(ptr: number, len: number) {
     return cachedTextDecoder.decode(getUint8Memory0().subarray(ptr, ptr + len));
 }
 
-export function aes_gcm_256_decrypt_and_verify_as_utf8(key: Uint8Array, nonce: Uint8Array, ciphertext: Uint8Array): string {
+function aes_gcm_256_decrypt_and_verify_as_utf8(key: Uint8Array, nonce: Uint8Array, ciphertext: Uint8Array): string {
     try {
         const retptr = wasm.__wbindgen_export_0.value - 16;
         wasm.__wbindgen_export_0.value = retptr;
@@ -169,7 +169,7 @@ async function load(module: any, imports: any) {
     }
 }
 
-export async function init() {
+async function init() {
     const imports: any = {};
     imports.wbg = {};
     imports.wbg.__wbg_new_59cb74e423758ede = function() {
@@ -212,4 +212,6 @@ export async function init() {
     return aes_gcm_256_decrypt_and_verify_as_utf8;
 }
 
-export default init;
+await init();
+
+export default aes_gcm_256_decrypt_and_verify_as_utf8;
