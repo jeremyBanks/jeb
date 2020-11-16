@@ -26,9 +26,8 @@ const chromeProfiles = Object.entries(chromeState.profile.info_cache).filter((
     [key, x]: any,
   ) => ({
     key,
-    label: [...new Set([x.gaia_name, x.name, `<${x.user_name}>`])].join(
-      " ",
-    ),
+    name: [...new Set([x.gaia_name, x.name])].join(" "),
+    email: x.user_name || null,
     google_id: x.gaia_id as string,
     last_accessed_stadia: 0n,
   }));
@@ -75,56 +74,58 @@ chromeProfiles.sort(
   (a: any, b: any) => Number(b.last_accessed_stadia - a.last_accessed_stadia),
 );
 
+const credentials: Record<string, any> = {};
+
 for (const profile of chromeProfiles) {
   const db = SQL(
     `/mnt/c/Users/_/AppData/Local/Google/Chrome/User Data/${profile.key}/Cookies`,
   );
 
-  if (profile.last_accessed_stadia) {
-    log.info(
-      `${profile.label} last accessed stadia ${
-        new Date(
-          Number(profile.last_accessed_stadia.toString()) / 1000 -
-            11644473600000,
-        )
-          .toISOString()
-      }`,
-    );
-    log.info(
-      Object.fromEntries(
-        (await db(
-          SQL
-            `SELECT name, encrypted_value FROM cookies where host_key like '%.google.com' order by name asc`,
-        )).filter((r) => sessionCookieNames.includes(r.name as string)).map(
-          (
-            x,
-          ) => {
-            const data = x.encrypted_value as unknown as Uint8Array;
-            const nonce = data.slice(3, 15);
-            const ciphertext = data.slice(15);
-            return [
-              x.name,
-              aes_gcm_256_decrypt_and_verify_as_utf8(
-                chromeKey,
-                nonce,
-                ciphertext,
-              ),
-            ];
-          },
-        ),
+  if (!profile.last_accessed_stadia) {
+    continue;
+  }
+
+  log.info(
+    `${profile.name} <${profile.email}> last accessed stadia ${
+      new Date(
+        Number(profile.last_accessed_stadia.toString()) / 1000 -
+          11644473600000,
+      )
+        .toISOString()
+    }`,
+  );
+  const cookieCreds =
+    Object.fromEntries(
+      (await db(
+        SQL
+          `SELECT name, encrypted_value FROM cookies where host_key like '%.google.com' order by name asc`,
+      )).filter((r) => sessionCookieNames.includes(r.name as string)).map(
+        (
+          x,
+        ) => {
+          const data = x.encrypted_value as unknown as Uint8Array;
+          const nonce = data.slice(3, 15);
+          const ciphertext = data.slice(15);
+          return [
+            x.name,
+            aes_gcm_256_decrypt_and_verify_as_utf8(
+              chromeKey,
+              nonce,
+              ciphertext,
+            ),
+          ];
+        },
       ),
     );
+
+  if (!(cookieCreds["HSID"] && cookieCreds["SSID"] && cookieCreds["SID"])) {
+    log.warning("...but they don't currently have credentials saved.")
   } else {
-    log.info(`${profile.label} has never accessed Stadia.`);
+    credentials[profile.email] = cookieCreds;
   }
 }
 
-const googleSession = {
-  HSID: Deno.env.get("GOOGLE_HSID") ?? "AR8W2k2vlh3PS_oYT",
-  SSID: Deno.env.get("GOOGLE_SSID") ?? "ATSak_JlNFU2YwHcu",
-  SID: Deno.env.get("GOOGLE_SID") ??
-    "3gewSa0aX8d5c3mu5I6xbzlgrMQjhP7C1PuESfAxZz98aQ1tcFnUA-31WDRIVE9NqEi04g.",
-};
+const googleSession = credentials["stadia.observer@gmail.com"];
 
 const response = await fetch(
   "https://stadia.google.com/profile/956082794034380385",
