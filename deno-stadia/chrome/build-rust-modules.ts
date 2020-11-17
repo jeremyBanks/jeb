@@ -63,7 +63,7 @@ Possible fix:
 }
 
 const cryptoWasm = await Deno.readFile(
-  "target/wasm32-unknown-unknown/release/crypto.wasm",
+  "target/wasm32-unknown-unknown/debug/crypto.wasm",
 );
 const cryptoWasmTsLines = [
   `/** @generated deno-fmt-ignore-file deno-lint-ignore-file        */
