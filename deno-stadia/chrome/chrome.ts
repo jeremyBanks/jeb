@@ -1,8 +1,9 @@
-import SQL from "https://deno.land/x/lite@0.0.9/sql.ts";
-
 import * as log from "https://deno.land/std@0.78.0/log/mod.ts";
 import { assert } from "https://deno.land/std@0.78.0/testing/asserts.ts";
 import { dirname } from "https://deno.land/std@0.78.0/path/mod.ts";
+
+import SQL from "https://deno.land/x/lite@0.0.9/sql.ts";
+
 import aes_gcm_256_decrypt_and_verify_as_utf8 from "./aes_gcm_256_decrypt_and_verify_as_utf8/mod.ts";
 
 const decryptCmd = [
