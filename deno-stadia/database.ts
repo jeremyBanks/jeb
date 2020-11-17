@@ -3,7 +3,7 @@ const net = "127.0.0.1:57414";
 const data = "./database.sqlite";
 
 import SQL from "https://deno.land/x/lite@0.0.9/sql.ts";
-import * as log from "https://deno.land/std@0.75.0/log/mod.ts";
+import * as log from "https://deno.land/std@0.78.0/log/mod.ts";
 import { serve } from "https://deno.land/std@0.77.0/http/server.ts";
 import { assert } from "https://deno.land/std@0.75.0/testing/asserts.ts";
 
