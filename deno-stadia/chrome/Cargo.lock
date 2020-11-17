@@ -192,6 +192,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-test",
  "wee_alloc",
+ "winapi",
 ]
 
 [[package]]
