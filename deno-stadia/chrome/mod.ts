@@ -4,14 +4,8 @@ import { dirname } from "https://deno.land/std@0.78.0/path/mod.ts";
 
 import SQL from "https://deno.land/x/lite@0.0.9/sql.ts";
 
-import aes_gcm_256_decrypt_and_verify_as_utf8 from "./aes_gcm_256_decrypt_and_verify_as_utf8/mod.ts";
-
-const decryptCmd = [
-  dirname(new URL(import.meta.url).pathname) + "/dpapibridge.exe",
-  "--decrypt",
-  "--base64",
-  "--input",
-];
+import { aesGcm256DecryptAndVerifyAsUtf8 } from "./crypto.ts";
+import { cryptUnprotectData } from "./windows.ts";
 
 class ChromeProfile {
   readonly path: string;
@@ -70,7 +64,7 @@ class ChromeProfile {
   }
 
   decryptAndDecode(encryptedValue: Uint8Array): string {
-    return aes_gcm_256_decrypt_and_verify_as_utf8(
+    return aesGcm256DecryptAndVerifyAsUtf8(
       this.encryptionKey,
       encryptedValue.slice(3, 15),
       encryptedValue.slice(15),
@@ -174,22 +168,12 @@ export const discoverProfiles = async (): Promise<Array<ChromeProfile>> => {
 
       let encryptionKey;
       try {
-        if (new URL(import.meta.url).protocol !== "file:") {
-          throw new Error(
-            "decrypting Chrome cookie encryption keys is only supported if running from file:",
-          );
-        }
-        const keyCiphertextBase64 = btoa(atob(encryptedEncryptionKey).slice(5));
-        const keyPlaintextBase64 = await Deno.run({
-          cmd: [...decryptCmd, keyCiphertextBase64],
-          stdout: "piped",
-        }).output();
-
-        encryptionKey = new Uint8Array(
-          [...atob(String.fromCharCode(...keyPlaintextBase64))].map((c) =>
+        const keyCiphertext = new Uint8Array(
+          [...atob(encryptedEncryptionKey).slice(5)].map((c) =>
             c.codePointAt(0)!
           ),
         );
+        encryptionKey = await cryptUnprotectData(keyCiphertext);
       } catch (error) {
         if (error instanceof Deno.errors.PermissionDenied) {
           log.warning(

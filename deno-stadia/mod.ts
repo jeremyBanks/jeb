@@ -1,6 +1,6 @@
 import * as log from "https://deno.land/std@0.78.0/log/mod.ts";
 
-import { discoverProfiles } from "./chrome/chrome.ts";
+import { discoverProfiles } from "./chrome/mod.ts";
 
 await log.setup({
   handlers: {

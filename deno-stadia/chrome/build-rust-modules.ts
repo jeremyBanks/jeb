@@ -11,6 +11,8 @@ if (new URL(import.meta.url).protocol === "file:") {
 
 /** Runs a command, logging any error, returning a boolean indicating success. */
 const ran = async (...cmd: string[]) => {
+  console.info(cmd);
+
   let result;
   try {
     result = await Deno.run({ cmd }).status();
@@ -26,8 +28,15 @@ const ran = async (...cmd: string[]) => {
   }
 };
 
-for (const bin of ["rustup", "cargo", "rustc"]) {
-  if (!await ran(bin, "--version")) {
+for (
+  const cmd of [
+    ["rustup", "--version"],
+    ["cargo", "--version"],
+    ["rustc", "--version"],
+    ["cargo", "fmt"],
+  ]
+) {
+  if (!await ran(...cmd)) {
     console.log(`
 Possible fix:
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -63,22 +72,25 @@ Possible fix:
 }
 
 const cryptoWasm = await Deno.readFile(
-  "target/wasm32-unknown-unknown/debug/crypto.wasm",
+  "target/wasm_pkg/crypto_bg.wasm",
 );
 const cryptoWasmTsLines = [
   `/** @generated deno-fmt-ignore-file deno-lint-ignore-file        */
-import init from "./target/wasm_pkg/crypto.js";
-export default await init(new Uint8Array([                       // OFFSET:`,
+import init, * as mod from "./target/wasm_pkg/crypto.js";
+export const aesGcm256DecryptAndVerifyAsUtf8 = 
+  mod.aes_gcm_256_decrypt_and_verify_as_utf8;
+await init(new Uint8Array([                       // OFFSET:`,
 ];
 for (let i = 0; i < cryptoWasm.length; i += 16) {
   cryptoWasmTsLines.push(
     ([...cryptoWasm.slice(i, i + 16)].map((n) => String(n).padStart(3)).join(
       ",",
-    ) + ',').padEnd(64) + ` // ${String(i).padStart(String(cryptoWasm.length).length)}`,
+    ) + ",").padEnd(64) +
+      ` // ${String(i).padStart(String(cryptoWasm.length).length)}`,
   );
 }
 
-cryptoWasmTsLines.push(`]));`);
+cryptoWasmTsLines.push(`] as any).buffer);`);
 await Deno.writeTextFile("./crypto.ts", cryptoWasmTsLines.join("\n"));
 
 if (
