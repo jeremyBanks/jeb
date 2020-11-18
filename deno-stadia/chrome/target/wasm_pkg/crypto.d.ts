@@ -6,13 +6,30 @@
 * @param {Uint8Array} ciphertext
 * @returns {string}
 */
-export function aes_gcm_256_decrypt_and_verify_as_utf8(key: Uint8Array, nonce: Uint8Array, ciphertext: Uint8Array): string;
+export function aes_gcm_256_decrypt_and_verify_as_utf8(
+  key: Uint8Array,
+  nonce: Uint8Array,
+  ciphertext: Uint8Array,
+): string;
 
-export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
+export type InitInput =
+  | RequestInfo
+  | URL
+  | Response
+  | BufferSource
+  | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
-  readonly aes_gcm_256_decrypt_and_verify_as_utf8: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+  readonly aes_gcm_256_decrypt_and_verify_as_utf8: (
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    e: number,
+    f: number,
+    g: number,
+  ) => void;
   readonly __wbindgen_malloc: (a: number) => number;
   readonly __wbindgen_free: (a: number, b: number) => void;
   readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;
@@ -26,5 +43,6 @@ export interface InitOutput {
 *
 * @returns {Promise<InitOutput>}
 */
-export default function init (module_or_path?: InitInput | Promise<InitInput>): Promise<InitOutput>;
-        
+export default function init(
+  module_or_path?: InitInput | Promise<InitInput>,
+): Promise<InitOutput>;
