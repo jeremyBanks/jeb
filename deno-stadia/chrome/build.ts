@@ -75,22 +75,30 @@ const cryptoWasm = await Deno.readFile(
   "target/wasm_pkg/crypto_bg.wasm",
 );
 const cryptoWasmTsLines = [
-  `/** @generated deno-fmt-ignore-file deno-lint-ignore-file        */
-import init, * as mod from "./target/wasm_pkg/crypto.js";
-export const aesGcm256DecryptAndVerifyAsUtf8 = 
-  mod.aes_gcm_256_decrypt_and_verify_as_utf8;
-await init(new Uint8Array([                       // OFFSET:`,
+  `/** @generated deno-fmt-ignore-file deno-lint-ignore-file */
+import init, * as mod from "./target/wasm_pkg/crypto.js";//
+export const aesGcm256DecryptAndVerifyAsUtf8 =          //
+  mod.aes_gcm_256_decrypt_and_verify_as_utf8;          //
+await init(new Uint8Array([                           ///////////// OFFSET`,
 ];
 for (let i = 0; i < cryptoWasm.length; i += 16) {
   cryptoWasmTsLines.push(
     ([...cryptoWasm.slice(i, i + 16)].map((n) => String(n).padStart(3)).join(
       ",",
     ) + ",").padEnd(64) +
-      ` // ${String(i).padStart(String(cryptoWasm.length).length)}`,
+      ` // ${
+        String(i).padStart(
+          Math.max("OFFSET".length, String(cryptoWasm.length).length),
+        )
+      }`,
   );
 }
 
-cryptoWasmTsLines.push(`] as any).buffer);`);
+cryptoWasmTsLines.push(
+  `] as any).buffer); /*//-//////////////////////////////////////////  OFFSET
+///////////////////*//-/
+`,
+);
 await Deno.writeTextFile("./crypto.ts", cryptoWasmTsLines.join("\n"));
 
 if (
@@ -107,3 +115,5 @@ Possible solution:
 `);
   throw Deno.exit(1);
 }
+
+await ran("deno", "fmt");

@@ -11,8 +11,8 @@ class ChromeProfile {
   readonly path: string;
   readonly encryptionKey: Uint8Array;
 
+  readonly name: string;
   readonly label: string;
-  readonly id: string;
 
   readonly lastActiveTimestamp: number;
 
@@ -25,8 +25,8 @@ class ChromeProfile {
   constructor(opts: ChromeProfile | any) {
     this.path = opts.path;
     this.encryptionKey = opts.encryptionKey;
+    this.name = opts.name;
     this.label = opts.label;
-    this.id = opts.id;
     this.lastActiveTimestamp = opts.lastActiveTimestamp || 0;
     this.googleId = opts.googleId || undefined;
     this.googleName = opts.googleName || undefined;
@@ -211,8 +211,8 @@ export const discoverProfiles = async (): Promise<Array<ChromeProfile>> => {
             path: profilePath,
             encryptionKey,
 
+            name: meta["name"],
             label: meta["shortcut_name"],
-            id: meta["name"],
 
             lastActiveTimestamp: meta["active_time"] || 0,
 
