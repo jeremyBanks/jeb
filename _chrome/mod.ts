@@ -38,27 +38,27 @@ class ChromeProfile {
     assert(typeof this.label === "string");
     assert(
       typeof this.lastActiveTimestamp === "number" ||
-        this.lastActiveTimestamp === undefined,
+      this.lastActiveTimestamp === undefined,
     );
     assert(
       typeof this.googleId === "string" ||
-        this.googleId === undefined,
+      this.googleId === undefined,
     );
     assert(
       typeof this.googleName === "string" ||
-        this.googleName === undefined,
+      this.googleName === undefined,
     );
     assert(
       typeof this.googleEmail === "string" ||
-        this.googleEmail === undefined,
+      this.googleEmail === undefined,
     );
     assert(
       typeof this.googleAvatarUrl === "string" ||
-        this.googleAvatarUrl === undefined,
+      this.googleAvatarUrl === undefined,
     );
     assert(
       typeof this.googleOrganization === "string" ||
-        this.googleOrganization === undefined,
+      this.googleOrganization === undefined,
     );
   }
 
@@ -94,7 +94,7 @@ class ChromeProfile {
     `.args,
     )).asObjects()].filter(({ encrypted_value }) =>
       (encrypted_value as unknown as Uint8Array).slice(0, 3).toString() ===
-        "118,49,48"
+      "118,49,48"
       // deno-lint-ignore no-explicit-any
     ).map((row: any) => ({
       host: row.host_key,
@@ -112,7 +112,7 @@ class ChromeProfile {
   toString() {
     return `ChromeProfile { label: ${JSON.stringify(this.name)}, googleEmail: ${
       JSON.stringify(this.googleEmail)
-    }, ... }`;
+      }, ... }`;
   }
 }
 
@@ -135,6 +135,7 @@ export const discoverProfiles = async (): Promise<Array<ChromeProfile>> => {
         { isDirectory },
       ) => isDirectory).map(({ name }) => name);
     } catch (error) {
+      log.error(`ignoring ${error}`);
       continue;
     }
 
