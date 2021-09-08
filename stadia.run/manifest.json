@@ -23,6 +23,26 @@
       "icons": [
         {
           "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/SvsP-wmIQFsB3diGfXMOY_0GIINx-PO83ZWRA2Ej43kPX9F18ZakMnoJirOxAxD9CLp4hrItO5J3FpmcIlojuiVK6-UlOT3CYDCPvpEzCam9js8qPFCfq5_YCrw=s192-p-rp"
+        }
+      ],
+      "name": "Darkwood",
+      "url": "/darkwood"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/UrcuL75Kbg6SLEoPyzoKzwGB4ek2b4x0vX6RQ3GL0f7mfsuZ2mzOfGkz7qZi0Lad0-2ay6Fm4T0BY_NcIu5l1uLSNevU9XNld5YSKYOfnaiKJbee87-9qS2XoqOr=s192-p-rp"
+        }
+      ],
+      "name": "Katamari Damacy REROLL",
+      "url": "/katamari-damacy-reroll"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
           "src": "https://lh3.googleusercontent.com/O9g06KujWvuohupQfKpBDeq3vIQmp4Nc-OHGM6zxQmpnkiNsBRffLeYIrk3bjUKNqxLATbUm_8kfygjhPuCWiht_DCXFA-TgoSjmMDy8aJchnN6JcI-ANBbexbI=s192-p-rp"
         }
       ],
@@ -43,7 +63,7 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/rOffyHbMx2B4w6HRoY1fPicOLj3yUCpTledA1MMegRR3x5oWJ8izaH_2YW20WRksqtkiXOqLBQqm-XVemOcZLvzHq6hi173_RTQzA112wnkLIYwZ58f7zmbyLIOR=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/6zqXUCjRnVN5xu91XNqz1Ur5QyJr2lYnZZ-DqoWXxRIIG6c71O1nh06vJfBByJ0ek03XQg6TTuU_5IK7MeDUjayi-IxXW-dgdTeUoyjz07SJHTX8gSb-9huhtIuI=s192-p-rp"
         }
       ],
       "name": "Madden NFL 22",
@@ -53,7 +73,7 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/UM4BXKoDmsP1nrn-cELDZ95lj_1IOBdkdjqx15QSajunpamG0qttr4mlpdlTuG71eeJ_kMoOXK1XYo-VFT2msy3gls_OxVGdw-VojUm6pbX76tPQqMJDS_cRqQ=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/z-UBlTbjIG7ABHJoS_Fd2fkRO-5eSN8t0Nmw4pMPgeeLGBbBwAl7EO31Q9_ZqLYuhVCO8Oa0XU6BkP8BbYRpMAAetLE2QKduGmOeJuU7Ist-tw3aU2uHi-fbSQ=s192-p-rp"
         }
       ],
       "name": "HUMANKIND",
@@ -158,26 +178,6 @@
       ],
       "name": "ONE PIECE World Seeker",
       "url": "/one-piece-world-seeker"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/QXoOQY_H1ooZuJO0anZoHjcH60_2mQAOZvbZ-CtNJS32Zua19mrrfzUbwc2tIK0D2XSb8DTL4Y8_7-XbMu-u2TZWWAXiKEAsCGIdjapKoZzwklML_OyKgyoxIy5Q=s192-p-rp"
-        }
-      ],
-      "name": "Cris Tales",
-      "url": "/cris-tales"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/YJ6YG8IMBlRHD8MF7C3t4O0azUKo6XDuDnlPFggb-OqPfyXxTEIZNYjgzJOspk6hjIrjVRIjUotexMT_A6cxPHaKZH0AZ0UdA1Y84Z3XFpP-ukV0e_9sQS8bV2o=s192-p-rp"
-        }
-      ],
-      "name": "Streets of Rage 4",
-      "url": "/streets-of-rage-4"
     }
   ],
   "start_url": "/",

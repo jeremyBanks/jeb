@@ -4,6 +4,16 @@
   },
   "redirects": [
     {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/848cb37ae8f64d4cbeddc5f2e290806ercp1",
+      "source": "/darkwood",
+      "statusCode": 301
+    },
+    {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/26f5878eb1ac46458bd275469f7a83fdrcp1",
+      "source": "/katamari-damacy-reroll",
+      "statusCode": 301
+    },
+    {
       "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/805de0d15b8b4beea63e282aa6f7e8fercp1",
       "source": "/ark-survival-evolved",
       "statusCode": 301
