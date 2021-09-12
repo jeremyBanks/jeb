@@ -23,6 +23,16 @@
       "icons": [
         {
           "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/RtXsJfGqqBhItW0rhFgqqqG4psmWj4_BExMdHybcKKVSfq5hWnTt4VF1wEcn6CzAvSNjw2g5i8_A5Ixqpo8jeEy_5ICNJ7sgwLPVvMU3nFpCDBHiZ9p-YQBiEw=s192-p-rp"
+        }
+      ],
+      "name": "Life is Strange: True Colors",
+      "url": "/life-is-strange-true-colors"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
           "src": "https://lh3.googleusercontent.com/SvsP-wmIQFsB3diGfXMOY_0GIINx-PO83ZWRA2Ej43kPX9F18ZakMnoJirOxAxD9CLp4hrItO5J3FpmcIlojuiVK6-UlOT3CYDCPvpEzCam9js8qPFCfq5_YCrw=s192-p-rp"
         }
       ],
@@ -43,7 +53,7 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/O9g06KujWvuohupQfKpBDeq3vIQmp4Nc-OHGM6zxQmpnkiNsBRffLeYIrk3bjUKNqxLATbUm_8kfygjhPuCWiht_DCXFA-TgoSjmMDy8aJchnN6JcI-ANBbexbI=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/R1QR8ZB3JaSOSV_kyc6hV_NUkVab2SMGMWk6P-8aRQ44b_pO_ATwa5j3e-hOVRI3Dv2c_ZXo_dJhOEne2gb1agj9u3vjH-ekt1VQM16L2-4RLeQa_y3Ofxiymvo=s192-p-rp"
         }
       ],
       "name": "ARK: Survival Evolved",
@@ -63,7 +73,7 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/6zqXUCjRnVN5xu91XNqz1Ur5QyJr2lYnZZ-DqoWXxRIIG6c71O1nh06vJfBByJ0ek03XQg6TTuU_5IK7MeDUjayi-IxXW-dgdTeUoyjz07SJHTX8gSb-9huhtIuI=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/EEEkoSre4zg2jkPLLtmmjAlGh3AV8KozK0b0oqw_4nk0QhtDze8sFd_vIPJwvEY8V37hs6rT6ZsBkW0C0zWNyj7mhDBGM--CEy1rLzy1rgoF9ajtsI5ReMbO4ZUr=s192-p-rp"
         }
       ],
       "name": "Madden NFL 22",
@@ -153,7 +163,7 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/DRzBoybxg6f5e_GiH5p4RBFTxqvBp7GUuga-Cr-WTlerZ3Syt6Up3Fvb29dmQSyyWNbpF95_m0TXvs5hJQXMBrdulyo-rtoPGl8ci8y7pUiHIlsfktwp6i0b0A=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/FsTnTpvq1WQ_JffnwEUxNvJpUR0Gydaw6lgTzkpoZysEuiv7u6ZkZ3qkrfmP7meQyG549tBqyDduzXd77p8LEE65AoR9kqHg9scg-5ocw18KS_6JSOYOe7vznA=s192-p-rp"
         }
       ],
       "name": "GRIME",
@@ -168,16 +178,6 @@
       ],
       "name": "Control",
       "url": "/control"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/HIhdCx2QvOPhaipbLTqUxTESJyyUA2Gfz6PHwAE5-d4L2EoL7kNFhVTkFZZnvu2eDqhhpt4B7uEfacOyFlSKZ9sbYNKnQ94h6HH49UkNzgVccCzM-1-psHQ-dN4y=s192-p-rp"
-        }
-      ],
-      "name": "ONE PIECE World Seeker",
-      "url": "/one-piece-world-seeker"
     }
   ],
   "start_url": "/",

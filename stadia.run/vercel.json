@@ -4,6 +4,11 @@
   },
   "redirects": [
     {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/00c1858d808f469297b1200c8383f5f5rcp1",
+      "source": "/life-is-strange-true-colors",
+      "statusCode": 301
+    },
+    {
       "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/848cb37ae8f64d4cbeddc5f2e290806ercp1",
       "source": "/darkwood",
       "statusCode": 301
@@ -556,11 +561,6 @@
     {
       "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/cc3f233990754f77a5819a583594f399rcp1",
       "source": "/sekiro-shadows-die-twice",
-      "statusCode": 301
-    },
-    {
-      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/6363b82d1cc442f5af9c3ce98ceb731drcp1",
-      "source": "/immortals-fenyx-rising-demo",
       "statusCode": 301
     },
     {
