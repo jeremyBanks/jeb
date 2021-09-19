@@ -4,6 +4,21 @@
   },
   "redirects": [
     {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/1509dbd662b7403f9497661157b9ca6brcp1",
+      "source": "/mereks-market",
+      "statusCode": 301
+    },
+    {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/ba56dcf3117a4a3a8323f49341f454a4rcp1",
+      "source": "/assassins-creed-black-flag",
+      "statusCode": 301
+    },
+    {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/d05ef34140f34f5e91f7c2ea9e58b135rcp1",
+      "source": "/darksiders-iii",
+      "statusCode": 301
+    },
+    {
       "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/00c1858d808f469297b1200c8383f5f5rcp1",
       "source": "/life-is-strange-true-colors",
       "statusCode": 301
