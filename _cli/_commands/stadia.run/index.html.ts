@@ -562,11 +562,11 @@ const filterElements = async () => {
       let name = child.querySelector("st-name").textContent.toLowerCase();
       let slug = child.querySelector("st-slug").textContent.replace(/\\/+/, '');
 
-      if (requiresUbi && !child.querySelector("st-badge[ubi]")) {
+      if (requireUbi && !child.querySelector("st-badge[ubi]")) {
         continue;
       }
 
-      if (requiresPro && !child.querySelector("st-badge[pro]")) {
+      if (requirePro && !child.querySelector("st-badge[pro]")) {
         continue;
       }
 
