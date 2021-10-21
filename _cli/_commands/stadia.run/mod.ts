@@ -56,6 +56,9 @@ export const command = async (client: Client, flags: FlagArgs) => {
 
   const name = flags.name;
 
+  const delistedGames = [
+    // await client.fetchSku("32a0791a88474f08ad7a687846b786f2", "8a3cc52ad2334b1e91ded77bc43644e0rcp1")
+  ];
   const allGamesListPage = await client.fetchStoreList(3);
   const stadiaProListPage = await client.fetchStoreList(2001);
   const ubisoftPlusListPage = await client.fetchStoreList(2002);
@@ -68,6 +71,8 @@ export const command = async (client: Client, flags: FlagArgs) => {
   );
 
   log.debug("Loaded game list, processing and generating thumbnails...");
+
+  allGamesListPage.push(...delistedGames)
 
   const games: Games = [];
 

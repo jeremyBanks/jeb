@@ -547,9 +547,9 @@ const filterElements = async () => {
 
     const query = searchInput.value.toLowerCase();
 
-    const withoutUbi = query.replace(/u\+/g, '');
+    const withoutUbi = query.replace(/u\\+/g, '');
     const requireUbi = withoutUbi !== query;
-    const withoutPro = withoutUbi.replace(/s\+/g, '');
+    const withoutPro = withoutUbi.replace(/s\\+/g, '');
     const requirePro = withoutPro !== withoutUbi;
     const slugQuery = slugify(withoutPro);
 
@@ -562,11 +562,11 @@ const filterElements = async () => {
       let name = child.querySelector("st-name").textContent.toLowerCase();
       let slug = child.querySelector("st-slug").textContent.replace(/\\/+/, '');
 
-      if (requireUbi && !child.querySelector("st-badge[ubi]")) {
+      if (requiresUbi && !child.querySelector("st-badge[ubi]")) {
         continue;
       }
 
-      if (requirePro && !child.querySelector("st-badge[pro]")) {
+      if (requiresPro && !child.querySelector("st-badge[pro]")) {
         continue;
       }
 

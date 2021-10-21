@@ -278,10 +278,10 @@ export class Client {
     );
   }
 
-  async fetchSku(skuId: string): Promise<models.Sku> {
+  async fetchSku(skuId: string, gameId: string): Promise<models.Sku> {
     const response = await this.fetchRpc(
       "FWhQV",
-      [null, skuId],
+      [gameId, skuId, true],
     );
 
     return skuFromProto.parse((response.response as any)[16]);
