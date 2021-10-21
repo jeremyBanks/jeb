@@ -4,6 +4,31 @@
   },
   "redirects": [
     {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/0301058e2733436484091e5ca27c2298rcp1",
+      "source": "/child-of-light",
+      "statusCode": 301
+    },
+    {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/513df9a0ecfd40199e077fc3bb9647f5rcp1",
+      "source": "/heist-simulator",
+      "statusCode": 301
+    },
+    {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/5eb3896383464e2897b3d4b56a5b3a1drcp1",
+      "source": "/far-cry-6",
+      "statusCode": 301
+    },
+    {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/1aca0f17682540698822de0419062511rcp1",
+      "source": "/assassins-creed-rogue",
+      "statusCode": 301
+    },
+    {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/b7be5151de924478ab54ef9afeee4826rcp1",
+      "source": "/the-falconeer",
+      "statusCode": 301
+    },
+    {
       "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/25567bfb599a46ecab0fc8b18682b3f8rcp1",
       "source": "/dreamworks-spirit-luckys-big-adventure",
       "statusCode": 301
@@ -181,6 +206,11 @@
     {
       "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/c44439c4ee1741b383c93996985efddfrcp1",
       "source": "/resident-evil-village",
+      "statusCode": 301
+    },
+    {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/09cfc43d2e2c4c7cb2e7cba32c5b1830rcp1",
+      "source": "/resident-evil-village-gameplay-demo",
       "statusCode": 301
     },
     {

@@ -23,6 +23,56 @@
       "icons": [
         {
           "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/IzLQDvqvGoKK7byLDI2LHeiqXeuCJxWpGFaWs2O0a_qWLZRuvKFpjMWL-21xX4f9gFeWylgoe4wpbhc1fqEfCO9UoD5ao9EG2IkUbZ2S-0TJrgRJ4NQtjFqZOzk=s192-p-rp"
+        }
+      ],
+      "name": "Child of Light",
+      "url": "/child-of-light"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/Mw7LWRKTdwe0llKNQzntxYtWumLD-n3hSUO15oc6mAJ5FUdLJg8p7UJwRY3aB--djXIKXlwIm7E8MQgAoz3c6GgjV-iMriNDSy13RURxlgb11kc7XHR3elGv_I8=s192-p-rp"
+        }
+      ],
+      "name": "Heist Simulator",
+      "url": "/heist-simulator"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/umdnqyDXSIUmI6nGrAtXNe50yymiaFp8IUvdrHSdNdASIKiI4UFT4f7qqMFecszkKun5RsxXJYe6iru2HEAAQ2XRZ5r21burLQl2P8wX0WSOb_Kesz3FEvW_NixL=s192-p-rp"
+        }
+      ],
+      "name": "FAR CRY 6",
+      "url": "/far-cry-6"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/1ELVdeyY_t9b7lEyPsdTFS6WDAYcwqTK8d_B0tN1Oq1tGsQwUZlDogn1u-OLBsdh56I8Up38t8x4OXJnvVTMG0oh9gF4xdk91XBbAqy18taxvEEu9RQkw0XsD1p0=s192-p-rp"
+        }
+      ],
+      "name": "Assassin's Creed Rogue",
+      "url": "/assassins-creed-rogue"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/_-zv86Ad634lbxHKZokh0793oF6_BkZuvMUvVohbIu19bBv4HhIQSHQAkWbZkCjrWDHMQ4Vq5yOp2A4VjaEEasg03ml7hBFk8aY1bnVlqOfWrSQD5EFKsKgaLEP-=s192-p-rp"
+        }
+      ],
+      "name": "The Falconeer",
+      "url": "/the-falconeer"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
           "src": "https://lh3.googleusercontent.com/Lnaw9FXACYyxZj3Z5XCdEslO0qA-A5gJc1EHbBAEitpmBTe445FhaTNzv4bToYdfi524jjXXeQB0yFTglr9ymgI9AXXxzf4gODUmRTdZU7eb7j-fjrgGpgIJ_rY=s192-p-rp"
         }
       ],
@@ -33,7 +83,7 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/AuZgnZhoOo6ObzsO7Zhs7hXtKclNi12JRUP8WBI8f0_5by2gCIK_qHlcpqhTCrT2XJ0iV5Lnv10sDXRxlw_7NrgyybFGHpJe3TCYqZgHzPMvDJq_J829h8OSiWs=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/day75obHDgsS7nVPLnp3GNXBbGgiwEOvZMwZyolEAt9CCf5_vnG_D9SitNK_g79lcDoR5tRFdxnG0QiTHGc3sZh3Zynwm5j5v-hqEesgaTrLf4gpfkuxdK0iuB4=s192-p-rp"
         }
       ],
       "name": "FIFA 22",
@@ -43,7 +93,7 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/30LQhrKKnY3MP431MVsNcJlEJ8h284GHIxevFMJAov0fr9MuKUIzuoe_Te55ap-t2s5IO-Jsixb5U71myUV_vvpCBnP3HMCJi_6BUb1U1dwtjifIISEoK4XQNA=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/h5s5C3kbfBQOP7fZlYBoon76I8_2Gheom44Bq0-ae7HykKOXRjbl-x0mPVMMnhaez54dccZ8J3Jz-UtJqh7kNPw1gQVoBRu_d_F7z4XjDneO1QKDzCcyeNVbjA=s192-p-rp"
         }
       ],
       "name": "Mafia III",
@@ -83,7 +133,7 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/TodKxXA3PXWCHeZwqYUabcAHWGa7YWAgn4kqrdvqqAPHvjkiurFJUsjO8U1Um-c9lnefnRvMLmPDeuUcoiO7pxc4WXAMpTF9qoFzbilCPZXqrt_JqWCQsse88N0=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/ri2Fz1BN9kmDu0MXEEVJZvmPSKcVi8l2uIiubUlVoVkbPs2SBghB56Ue4qAtZksi9FGeU7sOVvl5V3OwD7-xuVuniCFeeY3JowQe9ukGfc6omwTg-qkSJmuWOUw=s192-p-rp"
         }
       ],
       "name": "Darksiders III",
@@ -93,7 +143,7 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/eD-Q9QwCuszxaEMjIlqPMTI14rR3m0-LnAAO-3DDa-27mnsiDMTmWwAg0T0g85wSHsQdvXq5x9SOSRU3-Uzy8VSUfBGlsS8UmqwxDpXqw036E-nue_G2LyopTQ=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/dNBCe3-fgkH1lTP-v99AyuRx7sn-C1WSfD40i5nqgEabFu_hnzX718cDz8TP2g18u4euU--MhZKdIGkXM4GHFTiQlC7tof0NCESJcoPSGuYLxQiWnpT0rXgYQQ=s192-p-rp"
         }
       ],
       "name": "Life is Strange: True Colors",
@@ -123,61 +173,11 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/9S8QeZephjHI7_UHbw5ecfOiBpSz_BIMRCbK7MNbywWsA36qxNJWbGO6i1krcI_mnSFPdQhiiJVlXVYGvAQ9k7fo4Qmt76Toyi-GamwsCFL6GwfTRvII-5RolWM=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/olBgWVCePwRjufWgDpE7IvQ3fYvHTiSsrJneoR_QB0ZHAHumB4R2tjvVv2k2KGOobj-V1yj7bOUmm0_4MKvRgsmb2k3r8_IDxVPzkqIzKmhTunA6A8uKI7PVGDs=s192-p-rp"
         }
       ],
       "name": "ARK: Survival Evolved",
       "url": "/ark-survival-evolved"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/Ej-9pKLxanncyr0Ycwsllhz1lku1_Veku5ZMBW_IxOtFPPBG4E2GKNnQvcTJdHnsQEt6rY0nMwsxoNgfoXpF4jfhY0AbkyJ2ZuV7YJk9HHT80o3kzP_xIJEHv5I=s192-p-rp"
-        }
-      ],
-      "name": "Darksiders II",
-      "url": "/darksiders-ii"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/AOX4cdtDEajU8ksrqFHYErif9R2gBxAoJoTyeBzI1vQwxQ_Us3nxonIikhhuTbBkQzF9xD32MmcKrhsZ3yEDHuJ0mHYNQMoeD3-yR3j0_tWPzNHCchhAyxRpwKZf=s192-p-rp"
-        }
-      ],
-      "name": "Madden NFL 22",
-      "url": "/madden-nfl-22"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/ataaH-jLfwtAerSPVIpiYLI6GGMTRU90gM0DjJWOPMf2bsAqWHdCzYm-okwdIsf8y-Pr4P56150pJ_VS84bu4uO5_4h8Gdr9Yi4xBmippBkKYZXe8uQ6_pXGcg=s192-p-rp"
-        }
-      ],
-      "name": "HUMANKIND",
-      "url": "/humankind"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/Ua3f40x6NO-M_2299AMvBKecWxRNIHPhoaZQ38ajI2VER0THVi129cQpnnpnaNLwHlBY72SnuHd0Rt7u6yGvuDd7fxI4dIROwO04_cOtgsXb0fuhayD_-qZQwYIG=s192-p-rp"
-        }
-      ],
-      "name": "Young Souls",
-      "url": "/young-souls"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/opqfn50ukH_y8nTS-UDCC3mMFGX4ogEVOzjO96KZqPEMBtl1wNWs8Sqt469B8Tfj4YkJmIgl8YAdCN0VEtrs788sWdrtgAPgYY4NQDNvrfElQKns7flz1xqRwA=s192-p-rp"
-        }
-      ],
-      "name": "DreamWorks Dragons: Dawn of New Riders",
-      "url": "/dreamworks-dragons-dawn-of-new-riders"
     }
   ],
   "start_url": "/",

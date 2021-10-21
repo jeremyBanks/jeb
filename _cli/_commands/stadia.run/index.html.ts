@@ -546,7 +546,12 @@ const filterElements = async () => {
     filterElementsPending = false;
 
     const query = searchInput.value.toLowerCase();
-    const slugQuery = slugify(query);
+
+    const withoutUbi = query.replace(/u\+/g, '');
+    const requireUbi = withoutUbi !== query;
+    const withoutPro = withoutUbi.replace(/s\+/g, '');
+    const requirePro = withoutPro !== withoutUbi;
+    const slugQuery = slugify(withoutPro);
 
     const looseMatches = [];
     const exactMatches = [];
@@ -556,6 +561,14 @@ const filterElements = async () => {
 
       let name = child.querySelector("st-name").textContent.toLowerCase();
       let slug = child.querySelector("st-slug").textContent.replace(/\\/+/, '');
+
+      if (requiresUbi && !child.querySelector("st-badge[ubi]")) {
+        continue;
+      }
+
+      if (requiresPro && !child.querySelector("st-badge[pro]")) {
+        continue;
+      }
 
       if (query === slug) {
         exactMatches.push(child);
