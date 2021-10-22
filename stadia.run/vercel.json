@@ -4,6 +4,16 @@
   },
   "redirects": [
     {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/35cbf2108a6c4f1a982076cd41252112rcp1",
+      "source": "/ben-10-power-trip",
+      "statusCode": 301
+    },
+    {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/1d6f9f03c92b41fe9c0968c104014bfdrcp1",
+      "source": "/riders-republic-trial-week",
+      "statusCode": 301
+    },
+    {
       "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/0301058e2733436484091e5ca27c2298rcp1",
       "source": "/child-of-light",
       "statusCode": 301

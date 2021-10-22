@@ -23,6 +23,26 @@
       "icons": [
         {
           "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/_6H7YZXMPpIdEulHsw24QTRg6yI88mhV3dskNRRapyBV5OC9wYFK66tOHOKWOEsBVER_A7foCzariaBqbdw4LHdxjLDM8tWRlUa6T31M0AdgyipmPNkPMSPIGo8=s192-p-rp"
+        }
+      ],
+      "name": "Ben 10: Power Trip",
+      "url": "/ben-10-power-trip"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/B0KDqeHcP_LRaRlO2FMWyGURtM9cHGC-W49wPhk1k2O3zK1MSRGj6XZd6CaX8zL5yNTL0FSsFdY3io3MLT_0EshJApeqm4T-jKZ24iJfjjMOxvA2jmOjZFQfTuI=s192-p-rp"
+        }
+      ],
+      "name": "Riders Republic - Trial Week",
+      "url": "/riders-republic-trial-week"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
           "src": "https://lh3.googleusercontent.com/IzLQDvqvGoKK7byLDI2LHeiqXeuCJxWpGFaWs2O0a_qWLZRuvKFpjMWL-21xX4f9gFeWylgoe4wpbhc1fqEfCO9UoD5ao9EG2IkUbZ2S-0TJrgRJ4NQtjFqZOzk=s192-p-rp"
         }
       ],
@@ -158,26 +178,6 @@
       ],
       "name": "Darkwood",
       "url": "/darkwood"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/3vOp3bwaG_8B4iUIyrglIt-dlHfAWoHDjcH-wZjvltKXdAT2qAvvajqfD0YM8_37dyUC7CfwPwcqWjR0RKOJqXlWhuqehgq2SWnueLw-k8hMqYYt4dyKFsMg8bjy=s192-p-rp"
-        }
-      ],
-      "name": "Katamari Damacy REROLL",
-      "url": "/katamari-damacy-reroll"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/olBgWVCePwRjufWgDpE7IvQ3fYvHTiSsrJneoR_QB0ZHAHumB4R2tjvVv2k2KGOobj-V1yj7bOUmm0_4MKvRgsmb2k3r8_IDxVPzkqIzKmhTunA6A8uKI7PVGDs=s192-p-rp"
-        }
-      ],
-      "name": "ARK: Survival Evolved",
-      "url": "/ark-survival-evolved"
     }
   ],
   "start_url": "/",
