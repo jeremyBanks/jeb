@@ -4,6 +4,11 @@
   },
   "redirects": [
     {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/5e294a10f1d848c78ac205218b68e469rcp1",
+      "source": "/my-friend-peppa-pig",
+      "statusCode": 301
+    },
+    {
       "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/35cbf2108a6c4f1a982076cd41252112rcp1",
       "source": "/ben-10-power-trip",
       "statusCode": 301

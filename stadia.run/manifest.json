@@ -23,7 +23,17 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/_6H7YZXMPpIdEulHsw24QTRg6yI88mhV3dskNRRapyBV5OC9wYFK66tOHOKWOEsBVER_A7foCzariaBqbdw4LHdxjLDM8tWRlUa6T31M0AdgyipmPNkPMSPIGo8=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/ozJ9gEPTLOxfF88Ks2VfrlsgYepjuPdwEw7CugbV6A1rJ0fEXrrX3NwyTqckoXNHS3EULzWwXkfKdisUiBcDvCJrKZfdasjEigUsn4cUfsbCy96A3DUzqN1Fji3w=s192-p-rp"
+        }
+      ],
+      "name": "My Friend Peppa Pig",
+      "url": "/my-friend-peppa-pig"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/vQBeQ8147ScO9j-37tcuXMpLM_vQv9qwlodEUnYz-tx7FU9pY35NDvGtUUhUc4amBSKzpKVDr2l4-Yz_OMJ2-IIYjJEBm2CLP6sKMJc15IdfCTOWA9XgD4h92hM=s192-p-rp"
         }
       ],
       "name": "Ben 10: Power Trip",
@@ -168,16 +178,6 @@
       ],
       "name": "Life is Strange: True Colors",
       "url": "/life-is-strange-true-colors"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/SvsP-wmIQFsB3diGfXMOY_0GIINx-PO83ZWRA2Ej43kPX9F18ZakMnoJirOxAxD9CLp4hrItO5J3FpmcIlojuiVK6-UlOT3CYDCPvpEzCam9js8qPFCfq5_YCrw=s192-p-rp"
-        }
-      ],
-      "name": "Darkwood",
-      "url": "/darkwood"
     }
   ],
   "start_url": "/",
