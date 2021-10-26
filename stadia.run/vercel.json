@@ -4,6 +4,16 @@
   },
   "redirects": [
     {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/8275f275454340d78fb746ba97b6b8earcp1",
+      "source": "/dragon-ball-z-kakarot",
+      "statusCode": 301
+    },
+    {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/e85d550899de407e996a8a2d9dfbc7efrcp1",
+      "source": "/hello-engineer",
+      "statusCode": 301
+    },
+    {
       "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/5e294a10f1d848c78ac205218b68e469rcp1",
       "source": "/my-friend-peppa-pig",
       "statusCode": 301
@@ -191,11 +201,6 @@
     {
       "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/ab3353cfcd1f4a938e40b0ba32c72b64rcp1",
       "source": "/rainbow-six-siege",
-      "statusCode": 301
-    },
-    {
-      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/e85d550899de407e996a8a2d9dfbc7efrcp1",
-      "source": "/hello-engineer",
       "statusCode": 301
     },
     {
