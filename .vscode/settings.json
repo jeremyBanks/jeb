@@ -1,3 +1,50 @@
 {
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
+  "editor.tokenColorCustomizations": {
+    "textMateRules": [
+      {
+        "scope": "punctuation.definition.comment",
+        "settings": {
+          "foreground": "#0A44",
+          "fontStyle": "bold"
+        }
+      },
+      {
+        "scope": "comment",
+        "settings": {
+          "fontStyle": ""
+        }
+      }
+    ],
+    "[GitHub Dark Default]": {
+      "textMateRules": [
+        {
+          "scope": "comment",
+          "settings": {
+            "foreground": "#FFF"
+          }
+        }
+      ]
+    },
+    "[GitHub Light Default]": {
+      "textMateRules": [
+        {
+          "scope": "comment",
+          "settings": {
+            "foreground": "#000"
+          }
+        }
+      ]
+    },
+    "[Atom One Light]": {
+      "textMateRules": [
+        {
+          "scope": "comment",
+          "settings": {
+            "foreground": "#000"
+          }
+        }
+      ]
+    }
+  },
 }
