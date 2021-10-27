@@ -1,18 +1,25 @@
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
     // Initialize global unhandled error panic handler.
-    color_eyre::install()?;
+    color_eyre::install().expect("fatal error");
 
     // Initialize global logging handler.
     tracing_subscriber::util::SubscriberInitExt::init(tracing_subscriber::Layer::with_subscriber(
         tracing_error::ErrorLayer::default(),
         tracing_subscriber::fmt()
-            .with_span_events(tracing_subscriber::fmt::format::FmtSpan::ACTIVE)
+            .with_target(false)
+            .with_span_events(
+                tracing_subscriber::fmt::format::FmtSpan::NEW
+                    | tracing_subscriber::fmt::format::FmtSpan::CLOSE,
+            )
             .finish(),
     ));
 
-    log::info!("hello, log!");
-    tracing::info!("hello, tracing!");
+    // Initialize the global async runtime.
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .expect("fatal error");
 
-    Ok(())
+    // Start application.
+    runtime.block_on(stadians::main())
 }
