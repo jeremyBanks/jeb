@@ -1,6 +1,14 @@
 use crate::client::Client;
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct Spider {
     pub client: Client,
+}
+
+impl Spider {
+    pub fn new() -> Self {
+        Self {
+            client: Client::new(),
+        }
+    }
 }
