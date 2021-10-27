@@ -1,5 +1,6 @@
 {
   "editor.formatOnSave": true,
+  "rust-analyzer.checkOnSave.command": "clippy",
   "editor.tokenColorCustomizations": {
     "textMateRules": [
       {
@@ -47,4 +48,27 @@
       ]
     }
   },
+  "workbench.colorCustomizations": {
+    "activityBar.activeBackground": "#ac0c57",
+    "activityBar.activeBorder": "#0f1e02",
+    "activityBar.background": "#ac0c57",
+    "activityBar.foreground": "#e7e7e7",
+    "activityBar.inactiveForeground": "#e7e7e799",
+    "activityBarBadge.background": "#0f1e02",
+    "activityBarBadge.foreground": "#e7e7e7",
+    "editorGroup.border": "#ac0c57",
+    "panel.border": "#ac0c57",
+    "sash.hoverBorder": "#ac0c57",
+    "sideBar.border": "#ac0c57",
+    "statusBar.background": "#7c093f",
+    "statusBar.foreground": "#e7e7e7",
+    "statusBarItem.hoverBackground": "#ac0c57",
+    "statusBarItem.remoteBackground": "#7c093f",
+    "statusBarItem.remoteForeground": "#e7e7e7",
+    "titleBar.activeBackground": "#7c093f",
+    "titleBar.activeForeground": "#e7e7e7",
+    "titleBar.inactiveBackground": "#7c093f99",
+    "titleBar.inactiveForeground": "#e7e7e799"
+  },
+  "peacock.remoteColor": "#7c093f",
 }

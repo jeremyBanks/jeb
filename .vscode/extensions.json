@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "akamud.vscode-theme-onelight",
+    "eamodio.gitlens",
+    "github.github-vscode-theme",
+    "matklad.rust-analyzer",
+    "ms-vscode.theme-1337",
+    "Tyriar.sort-lines",
+    "denoland.vscode-deno",
+    "usernamehw.errorlens"
+  ]
+}
