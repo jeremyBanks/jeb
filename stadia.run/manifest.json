@@ -63,16 +63,6 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/B0KDqeHcP_LRaRlO2FMWyGURtM9cHGC-W49wPhk1k2O3zK1MSRGj6XZd6CaX8zL5yNTL0FSsFdY3io3MLT_0EshJApeqm4T-jKZ24iJfjjMOxvA2jmOjZFQfTuI=s192-p-rp"
-        }
-      ],
-      "name": "Riders Republic - Trial Week",
-      "url": "/riders-republic-trial-week"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
           "src": "https://lh3.googleusercontent.com/IzLQDvqvGoKK7byLDI2LHeiqXeuCJxWpGFaWs2O0a_qWLZRuvKFpjMWL-21xX4f9gFeWylgoe4wpbhc1fqEfCO9UoD5ao9EG2IkUbZ2S-0TJrgRJ4NQtjFqZOzk=s192-p-rp"
         }
       ],
@@ -93,7 +83,7 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/E6mdyFr_MiqUbtYgWH83U853gW8FSde1MzE-6In1givuqIoRX7-kpLDtlrR_7pchsPtyMsoYtLy494idWF5zaHeA4cuANnHtKSrFjjZIpSjZl6RbviXeifrHE8iw=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/WvZ8nZR4ywSjlfwyep9cyfn4mDZY523YibsUxH5mP7L_phYDkVxJ58yTe1nql0we6xAT_l7ukHv4mxWWnQ_Hiw40jW5qVcSBrrAjCRpaur1CyttypZ0JY5x7jMB_=s192-p-rp"
         }
       ],
       "name": "FAR CRY 6",
@@ -133,7 +123,7 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/day75obHDgsS7nVPLnp3GNXBbGgiwEOvZMwZyolEAt9CCf5_vnG_D9SitNK_g79lcDoR5tRFdxnG0QiTHGc3sZh3Zynwm5j5v-hqEesgaTrLf4gpfkuxdK0iuB4=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/fqz9QxqXovqEQLTfA1_pPc6kU7uFNBtmNt6A4vVLKj0kxUvPc-SvFuvEEnlK68dagOxHKs8I_dOg_c1YLeTGSl0W_2YnJN1zcNrbx7PyS5UMKGDV6HIJ-KdZHKg=s192-p-rp"
         }
       ],
       "name": "FIFA 22",
@@ -178,6 +168,16 @@
       ],
       "name": "Assassin's Creed Black Flag",
       "url": "/assassins-creed-black-flag"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/ri2Fz1BN9kmDu0MXEEVJZvmPSKcVi8l2uIiubUlVoVkbPs2SBghB56Ue4qAtZksi9FGeU7sOVvl5V3OwD7-xuVuniCFeeY3JowQe9ukGfc6omwTg-qkSJmuWOUw=s192-p-rp"
+        }
+      ],
+      "name": "Darksiders III",
+      "url": "/darksiders-iii"
     }
   ],
   "start_url": "/",
