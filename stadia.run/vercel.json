@@ -4,6 +4,11 @@
   },
   "redirects": [
     {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/a173ab7957e243d5a2a5668c6edd94b6rcp1",
+      "source": "/riders-republic",
+      "statusCode": 301
+    },
+    {
       "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/8275f275454340d78fb746ba97b6b8earcp1",
       "source": "/dragon-ball-z-kakarot",
       "statusCode": 301

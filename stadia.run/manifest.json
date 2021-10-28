@@ -23,6 +23,16 @@
       "icons": [
         {
           "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/ZuHAlHkYC1V7hHbzjnuEWSItFKmawT_HSrVrmZSrC0GtLI5NCBYVUrwiB4B0tLMT-wtis6nDEBvDzmxigEZk0aYNOapTUTXH6rjPMd4UyqKrAyBkSVVIaNuHnrEd=s192-p-rp"
+        }
+      ],
+      "name": "Riders Republic",
+      "url": "/riders-republic"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
           "src": "https://lh3.googleusercontent.com/qfCXR4lTQqLOozPjGSqsrEuUlw6QHuYavr4pYQ5aTpDmL3zWWljx-cH2eilmDIGBhFbnx6j_JbeIcFdp3iCAO574_Ka8yE3Kkp8tnPHem_kfDqr0w_iqHirNU30=s192-p-rp"
         }
       ],
@@ -168,16 +178,6 @@
       ],
       "name": "Assassin's Creed Black Flag",
       "url": "/assassins-creed-black-flag"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/ri2Fz1BN9kmDu0MXEEVJZvmPSKcVi8l2uIiubUlVoVkbPs2SBghB56Ue4qAtZksi9FGeU7sOVvl5V3OwD7-xuVuniCFeeY3JowQe9ukGfc6omwTg-qkSJmuWOUw=s192-p-rp"
-        }
-      ],
-      "name": "Darksiders III",
-      "url": "/darksiders-iii"
     }
   ],
   "start_url": "/",
