@@ -1268,6 +1268,7 @@ dependencies = [
  "tracing-serde",
  "tracing-subscriber",
  "tracing-unwrap",
+ "url",
 ]
 
 [[package]]
@@ -1563,6 +1564,7 @@ dependencies = [
  "idna",
  "matches",
  "percent-encoding",
+ "serde",
 ]
 
 [[package]]

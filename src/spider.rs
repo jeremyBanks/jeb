@@ -6,9 +6,9 @@ pub struct Spider {
 }
 
 impl Spider {
-    pub fn new(credentials: crate::credentials::GoogleCookies) -> Self {
+    pub fn new(cookie_header: String) -> Self {
         Self {
-            client: Client::new(credentials),
+            client: Client::new(cookie_header),
         }
     }
 }
