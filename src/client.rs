@@ -128,9 +128,9 @@ impl Client {
                         .collect::<Vec<&str>>()
                         .join(","),
                 ],
-                ["rt", "j"],
                 ["hl", "en"],
                 ["f.sid", &session_tokens.f_sid],
+                ["_reqid", "123456"]
             ])
             .form(&[
                 [

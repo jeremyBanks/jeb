@@ -22,6 +22,8 @@ git add .
 tree="$(git write-tree)"
 
 function icao-hex  {
+
+
     declare letters="$*"
     for ((i=0; i<${#letters}; i++)); do
         if ((i > 0)); then
