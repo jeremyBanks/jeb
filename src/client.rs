@@ -130,7 +130,7 @@ impl Client {
                 ],
                 ["hl", "en"],
                 ["f.sid", &session_tokens.f_sid],
-                ["_reqid", "123456"]
+                ["_reqid", "123456"],
             ])
             .form(&[
                 [
@@ -157,9 +157,12 @@ impl Client {
         let prefixed_json = response.text().await?;
         let json = prefixed_json.strip_prefix(")]}'\n").unwrap();
         let value = json.parse::<Json>()?;
-        value
+        Ok(value
             .as_array()
-            .ok_or_else(|| eyre!("expected JSON array"))
-            .map(Clone::clone)
+            .cloned()
+            .ok_or_else(|| eyre!("expected JSON array"))?
+            .iter()
+            .map(|x| x[2].as_str().unwrap_or("[]").parse::<Json>().unwrap())
+            .collect())
     }
 }
