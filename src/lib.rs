@@ -14,5 +14,5 @@ pub async fn main() {
         .api_request(&[("D0Amud", json!([Json::Null, true]))])
         .await
         .unwrap();
-    tracing::info!("we got something! {:#?}", result);
+    tracing::info!("we got something! {}", result[0].to_string());
 }
