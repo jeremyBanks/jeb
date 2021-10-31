@@ -1,14 +1,16 @@
+use eyre::{eyre, WrapErr};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value as Json};
 use std::time::Duration;
 
-use eyre::{eyre, WrapErr};
-use serde_json::{json, Value as Json};
-
-#[derive(Debug)]
 pub struct Client {
     /// Internal HTTP client.
     http_client: reqwest::Client,
     /// Internal throttle used for all HTTP requests.
     http_throttle: tokio::time::Interval,
+
+    api_cache: ApiCacheBucket,
+
     /// Google cookie header value for long-term authentication.
     cookie_header: String,
     /// Google API keys for short-term authentication.
@@ -21,6 +23,11 @@ struct SessionTokens {
     f_sid: String,
     at: String,
 }
+
+#[derive(Serialize, Deserialize, Default, Debug)]
+pub struct ApiCall {}
+
+pub type ApiCacheBucket = kv::Bucket<'static, String, kv::Json<ApiCall>>;
 
 // The anti-competitive monopolists at Google filter user agents, so we lie.
 const USER_AGENT: &str = concat![
@@ -38,8 +45,8 @@ const SPA_URL: &str = "https://stadia.google.com/u/0/settings";
 const API_URL: &str = "https://stadia.google.com/u/0/_/CloudcastPortalFeWebUi/data/batchexecute";
 
 impl Client {
-    #[tracing::instrument]
-    pub fn new(cookie_header: String) -> Self {
+    #[tracing::instrument(skip_all)]
+    pub fn new(cookie_header: String, api_cache: ApiCacheBucket) -> Self {
         let http_client = reqwest::Client::builder()
             .user_agent(USER_AGENT)
             .timeout(Duration::from_secs(12))
@@ -52,6 +59,7 @@ impl Client {
         Self {
             http_client,
             http_throttle,
+            api_cache,
             cookie_header,
             session_tokens: None,
         }
@@ -106,6 +114,10 @@ impl Client {
 
     #[tracing::instrument(skip(self))]
     pub async fn api_request(&mut self, requests: &[(&str, Json)]) -> eyre::Result<Vec<Json>> {
+        // TODO: check cache for each request first.
+        // or check cache in each request in the background, while automatically
+        // batching pending requests every 50ms or whatever.
+
         if self.session_tokens.is_none() {
             self.session_tokens = Some(self.get_session_tokens().await?);
         }
