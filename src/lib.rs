@@ -1,13 +1,15 @@
-mod client;
-mod spider;
+pub mod client;
+pub mod credentials;
+pub mod errors;
+pub mod spider;
 
 #[tracing::instrument(name = "stadians")]
 pub async fn main() {
-    log::info!("hello, log!");
-    tracing::info!("hello, tracing!");
+    let credentials =
+        credentials::GoogleCookies::try_from_system().expect("cannot continue without credentials");
 
-    let mut spider = crate::spider::Spider::new();
-    let result = spider.client.fetch("settings").await.unwrap();
+    let mut spider = crate::spider::Spider::new(credentials);
+    let result = spider.client.http_post("settings").await.unwrap();
     let length = result.len();
     tracing::info!(length, "we got some bytes!");
 }

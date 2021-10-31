@@ -17,6 +17,16 @@
         }
       }
     ],
+    "[1337]": {
+      "textMateRules": [
+        {
+          "scope": "comment",
+          "settings": {
+            "foreground": "#FFF"
+          }
+        }
+      ]
+    },
     "[GitHub Dark Default]": {
       "textMateRules": [
         {
@@ -70,5 +80,5 @@
     "titleBar.inactiveBackground": "#7c093f99",
     "titleBar.inactiveForeground": "#e7e7e799"
   },
-  "peacock.remoteColor": "#7c093f",
+  "peacock.remoteColor": "#7c093f"
 }

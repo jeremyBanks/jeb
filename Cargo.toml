@@ -5,6 +5,7 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
+bitvec = "0.22.3"
 blake3 = "1.1.0"
 bytes = "1.1.0"
 color-eyre = "0.5.11"
