@@ -130,7 +130,6 @@ impl Client {
                 ],
                 ["hl", "en"],
                 ["f.sid", &session_tokens.f_sid],
-                ["_reqid", "123456"],
             ])
             .form(&[
                 [
