@@ -1,14 +1,18 @@
+use serde_json::{json, Value as Json};
+
 pub mod client;
 pub mod errors;
 pub mod spider;
 
 #[tracing::instrument(name = "stadians")]
 pub async fn main() {
-    // let credentials = credentials::GoogleCookies::try_from_env()
-    //     .expect("Expected Google credentials in environment variables");
+    let google_cookie = std::env::var("GOOGLE_COOKIE").expect("GOOGLE_COOKIE not set");
 
-    // let mut spider = crate::spider::Spider::new(credentials);
-    // let result = spider.client.http_post("settings").await.unwrap();
-    // let length = result.len();
-    // tracing::info!(length, "we got some bytes!");
+    let mut spider = crate::spider::Spider::new(google_cookie);
+    let result = spider
+        .client
+        .api_request(&[("D0Amud", json!([Json::Null, true]))])
+        .await
+        .unwrap();
+    tracing::info!("we got something! {:#?}", result);
 }
