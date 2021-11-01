@@ -380,6 +380,6 @@ export class Client {
   async fetchPlayerSearch(namePrefix: string) {
     namePrefix = z.string().min(2).max(20).parse(namePrefix);
     const q = namePrefix.slice(0, 1) + " " + namePrefix.slice(1);
-    await this.fetchRpc("FdyJ0", [q]);
+    await this.fetchRpc(" ", [q]);
   }
 }

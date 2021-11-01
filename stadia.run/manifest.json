@@ -23,6 +23,26 @@
       "icons": [
         {
           "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/90YSyGHHl2nTSl8Hot_dVtBtiNXWMvjC21w82XcKhNr7a9usj2EQ0Kx7vU-Pp03SxqgT7nq6HM0NhvuCSy9ScGIgAao4nKtXtDudBh0LhPwPF1mSDGL4xcWN2Q=s192-p-rp"
+        }
+      ],
+      "name": "Saints Row: Re-Elected",
+      "url": "/saints-row-re-elected"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/Ijc-dGcKkL-r-hrbwFgwR7itMWR2jj_D028IVeksNYlrcuAjlFCvnbaDTqZNhJSzP6AAlTE0sUKtMxSCK12jAEqfdVKS8YZ9eJOZRM9jlzvs9h-JVtkv8DypMg=s192-p-rp"
+        }
+      ],
+      "name": "PJ MASKS: HEROES OF THE NIGHT",
+      "url": "/pj-masks-heroes-of-the-night"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
           "src": "https://lh3.googleusercontent.com/ZuHAlHkYC1V7hHbzjnuEWSItFKmawT_HSrVrmZSrC0GtLI5NCBYVUrwiB4B0tLMT-wtis6nDEBvDzmxigEZk0aYNOapTUTXH6rjPMd4UyqKrAyBkSVVIaNuHnrEd=s192-p-rp"
         }
       ],
@@ -63,7 +83,7 @@
       "icons": [
         {
           "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/vQBeQ8147ScO9j-37tcuXMpLM_vQv9qwlodEUnYz-tx7FU9pY35NDvGtUUhUc4amBSKzpKVDr2l4-Yz_OMJ2-IIYjJEBm2CLP6sKMJc15IdfCTOWA9XgD4h92hM=s192-p-rp"
+          "src": "https://lh3.googleusercontent.com/6V_mj4RcnGoQXdek8yyqEbO6FlFngYPRkuO4xPfq03wMhr-1alSsHw2bsB7RIItU46ZwTqoAAUWziBPoX4fJuo6pS2GCIcVncGHRJWCLsTKI3O6cPdXuMo70ICg=s192-p-rp"
         }
       ],
       "name": "Ben 10: Power Trip",
@@ -158,26 +178,6 @@
       ],
       "name": "The Addams Family: Mansion Mayhem",
       "url": "/the-addams-family-mansion-mayhem"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/IUsV3egbxyl6j2YevvS7OQcBEScYUWlUIZpU9Ka9u3_zS-rWaMt6QfN9rPH-NwXw1gW_T8C2g-9723QrwnefV_yP6V1gRnPaJ2vgXaMsnSXSCLhabrXo6WU3BdTU=s192-p-rp"
-        }
-      ],
-      "name": "Merek's Market",
-      "url": "/mereks-market"
-    },
-    {
-      "icons": [
-        {
-          "sizes": "192x192",
-          "src": "https://lh3.googleusercontent.com/EEHYUv3K9LvJAbbnbX_lyhXpdnCzSn1OHx_8cz2RBS1rI3n3j3GBz-nGodZVnO6ll-vQrFDc3YsqClCZADb6gmnuyAECOe0Xp2kmntNRgrelDfb0VJoKvX1nwws=s192-p-rp"
-        }
-      ],
-      "name": "Assassin's Creed Black Flag",
-      "url": "/assassins-creed-black-flag"
     }
   ],
   "start_url": "/",

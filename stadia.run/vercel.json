@@ -4,6 +4,16 @@
   },
   "redirects": [
     {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/5325f670b13d4c959123c437948d1834rcp1",
+      "source": "/saints-row-re-elected",
+      "statusCode": 301
+    },
+    {
+      "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/7eb71ccf6f374859909aacc5afb8264arcp1",
+      "source": "/pj-masks-heroes-of-the-night",
+      "statusCode": 301
+    },
+    {
       "destination": "https://stadia.google.com/setup?redirect_to=https://stadia.google.com/player/a173ab7957e243d5a2a5668c6edd94b6rcp1",
       "source": "/riders-republic",
       "statusCode": 301
