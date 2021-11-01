@@ -30,8 +30,8 @@ pub struct ApiCall {
     pub rpc_id: String,
     pub request: Json,
     pub response: Json,
-    pub request_timestamp_ms: u64,
-    pub response_timestamp_ms: u64,
+    pub request_timestamp: u64,
+    pub response_timestamp: u64,
 }
 
 pub type ApiCacheBucket = kv::Bucket<'static, String, kv::Json<ApiCall>>;
@@ -135,6 +135,12 @@ impl Client {
         let session_tokens = self.session_tokens.as_ref().unwrap();
 
         self.http_throttle.tick().await;
+
+        let request_timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
         let response = self
             .http_client
             .post(API_URL)
@@ -143,31 +149,44 @@ impl Client {
             .query(&[
                 ["bl", &session_tokens.bl],
                 ["rpcids", rpc_id],
-                ["hl", "en"],
                 ["f.sid", &session_tokens.f_sid],
+                ["hl", "en"],
+                ["_reqid", "123456"],
             ])
             .form(&[
                 [
                     "f.req",
-                    &(Json::from(vec![json!([rpc_id, request.to_string(), Json::Null, "1"])])
-                        .to_string()),
+                    &(json!([[[rpc_id, request.to_string(), Json::Null, "1"]]]).to_string()),
                 ],
                 ["at", &session_tokens.at],
-            ])
-            .send()
-            .await?;
+            ]);
+
+        let response = response.send().await?;
+
         let prefixed_json = response.text().await?;
         let json = prefixed_json.strip_prefix(")]}'\n").unwrap();
         let value = json.parse::<Json>()?;
+
+        tracing::info!(json);
 
         let response = value
             .as_array()
             .cloned()
             .ok_or_else(|| eyre!("expected JSON array"))?
             .iter()
-            .map(|x| x[2].as_str().unwrap_or("[]").parse::<Json>().unwrap())
+            .map(|x| {
+                x[2].as_str()
+                    .expect("should have value or else oh no")
+                    .parse::<Json>()
+                    .unwrap()
+            })
             .next()
             .unwrap();
+
+        let response_timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
 
         self.api_cache
             .set(
@@ -176,8 +195,8 @@ impl Client {
                     rpc_id: rpc_id.to_string(),
                     request: request.clone(),
                     response: response.clone(),
-                    request_timestamp_ms: 0,
-                    response_timestamp_ms: 0,
+                    request_timestamp,
+                    response_timestamp,
                 }),
             )
             .expect("failed to save to cache?");

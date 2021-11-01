@@ -18,15 +18,17 @@ impl Spider {
 
         for character_1 in "abcdefghijklmnopqrstuvwxyz".chars() {
             for character_2 in "abcdefghijklmnopqrstuvwxyz0123456789".chars() {
-                let result = self
-                    .client
-                    .api_request(
-                        "FdyJ0",
-                        &json!([format!("{} {}", character_1, character_2)]),
-                    )
-                    .await
-                    .unwrap();
-                tracing::info!("Searching for users... {}", result.to_string())
+                for character_3 in "abcdefghijklmnopqrstuvwxyz0123456789".chars() {
+                    let result = self
+                        .client
+                        .api_request(
+                            "FdyJ0",
+                            &json!([format!("{} {}{}", character_1, character_2, character_3)]),
+                        )
+                        .await
+                        .unwrap();
+                    tracing::info!("Searching for users... {}", result.to_string())
+                }
             }
         }
     }
