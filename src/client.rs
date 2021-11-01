@@ -2,6 +2,7 @@ use eyre::{eyre, WrapErr};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 use std::time::Duration;
+use tracing_unwrap::ResultExt;
 
 pub struct Client {
     /// Internal HTTP client.
@@ -25,11 +26,16 @@ struct SessionTokens {
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
-pub struct ApiCall {}
+pub struct ApiCall {
+    pub rpc_id: String,
+    pub request: Json,
+    pub response: Json,
+    pub request_timestamp_ms: u64,
+    pub response_timestamp_ms: u64,
+}
 
 pub type ApiCacheBucket = kv::Bucket<'static, String, kv::Json<ApiCall>>;
 
-// The anti-competitive monopolists at Google filter user agents, so we lie.
 const USER_AGENT: &str = concat![
     "Mozilla/5.0 ",
     "(Windows NT 10.0; Win64; x64) ",
@@ -42,10 +48,10 @@ const USER_AGENT: &str = concat![
 /// A URL of any Stadia SPA page containing session credentials.
 const SPA_URL: &str = "https://stadia.google.com/u/0/settings";
 
+/// The URL of the Stadia web frontend's API.
 const API_URL: &str = "https://stadia.google.com/u/0/_/CloudcastPortalFeWebUi/data/batchexecute";
 
 impl Client {
-    #[tracing::instrument(skip_all)]
     pub fn new(cookie_header: String, api_cache: ApiCacheBucket) -> Self {
         let http_client = reqwest::Client::builder()
             .user_agent(USER_AGENT)
@@ -65,9 +71,9 @@ impl Client {
         }
     }
 
-    #[tracing::instrument(skip(self))]
     async fn get_session_tokens(&mut self) -> eyre::Result<SessionTokens> {
         self.http_throttle.tick().await;
+        tracing::info!("Fetching session tokens");
 
         let response = self
             .http_client
@@ -112,11 +118,16 @@ impl Client {
         })
     }
 
-    #[tracing::instrument(skip(self))]
-    pub async fn api_request(&mut self, requests: &[(&str, Json)]) -> eyre::Result<Vec<Json>> {
-        // TODO: check cache for each request first.
-        // or check cache in each request in the background, while automatically
-        // batching pending requests every 50ms or whatever.
+    pub async fn api_request(&mut self, rpc_id: &str, request: &Json) -> eyre::Result<Json> {
+        let cache_key = format!("{}{}", rpc_id, request.to_string());
+        tracing::info!("API call: {}", &cache_key);
+
+        if let Ok(Some(cached)) = self.api_cache.get(&cache_key) {
+            tracing::info!(rpc_id, "API result found in cache");
+            return Ok(cached.0.response);
+        } else {
+            tracing::info!(rpc_id, "API result NOT found in cache, requesting it");
+        }
 
         if self.session_tokens.is_none() {
             self.session_tokens = Some(self.get_session_tokens().await?);
@@ -131,35 +142,15 @@ impl Client {
             .header("Cookie", &self.cookie_header)
             .query(&[
                 ["bl", &session_tokens.bl],
-                [
-                    "rpcids",
-                    &requests
-                        .iter()
-                        .map(|(rpc_id, _body)| rpc_id)
-                        .cloned()
-                        .collect::<Vec<&str>>()
-                        .join(","),
-                ],
+                ["rpcids", rpc_id],
                 ["hl", "en"],
                 ["f.sid", &session_tokens.f_sid],
             ])
             .form(&[
                 [
                     "f.req",
-                    &(Json::from(vec![requests
-                        .iter()
-                        .cloned()
-                        .enumerate()
-                        .map(|(i, (rpc_id, body))| {
-                            json!([
-                                rpc_id,
-                                body.to_string(),
-                                Json::Null,
-                                json!((i + 1).to_string())
-                            ])
-                        })
-                        .collect::<Vec<Json>>()])
-                    .to_string()),
+                    &(Json::from(vec![json!([rpc_id, request.to_string(), Json::Null, "1"])])
+                        .to_string()),
                 ],
                 ["at", &session_tokens.at],
             ])
@@ -168,12 +159,31 @@ impl Client {
         let prefixed_json = response.text().await?;
         let json = prefixed_json.strip_prefix(")]}'\n").unwrap();
         let value = json.parse::<Json>()?;
-        Ok(value
+
+        let response = value
             .as_array()
             .cloned()
             .ok_or_else(|| eyre!("expected JSON array"))?
             .iter()
             .map(|x| x[2].as_str().unwrap_or("[]").parse::<Json>().unwrap())
-            .collect())
+            .next()
+            .unwrap();
+
+        self.api_cache
+            .set(
+                cache_key.clone(),
+                kv::Json(ApiCall {
+                    rpc_id: rpc_id.to_string(),
+                    request: request.clone(),
+                    response: response.clone(),
+                    request_timestamp_ms: 0,
+                    response_timestamp_ms: 0,
+                }),
+            )
+            .expect("failed to save to cache?");
+
+        self.api_cache.flush().expect("unable to flush cache?");
+
+        Ok(response)
     }
 }
