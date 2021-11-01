@@ -205,4 +205,8 @@ impl Client {
 
         Ok(response)
     }
+
+    pub async fn player_search(&mut self, name_prefix: &str) -> eyre::Result<Json> {
+        self.api_request("FdyJ0", &json!([name_prefix])).await
+    }
 }
