@@ -118,7 +118,7 @@ impl Client {
         })
     }
 
-    pub async fn api_request(&mut self, rpc_id: &str, request: &Json) -> eyre::Result<Json> {
+    async fn api_request(&mut self, rpc_id: &str, request: &Json) -> eyre::Result<Json> {
         let cache_key = format!("{}{}", rpc_id, request.to_string());
         tracing::info!("API call: {}", &cache_key);
 
@@ -208,5 +208,9 @@ impl Client {
 
     pub async fn player_search(&mut self, name_prefix: &str) -> eyre::Result<Json> {
         self.api_request("FdyJ0", &json!([name_prefix])).await
+    }
+
+    pub async fn store_search(&mut self, name_contains: &str) -> eyre::Result<Json> {
+        self.api_request("QBe3Lb", &json!([name_contains])).await
     }
 }
