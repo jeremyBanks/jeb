@@ -2,7 +2,7 @@ use derive_more::{From, Into};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 
-use crate::client::{Client};
+use crate::client::Client;
 
 pub struct Spider {
     pub client: Client,
@@ -29,7 +29,8 @@ impl ApiRecordId {
     }
 }
 
-/// Record corresponding to a logical model, typically derived from one or more API records.
+/// Record corresponding to a logical model, typically derived from one or more
+/// API records.
 #[remain::sorted]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 enum ModelRecordId {
@@ -50,7 +51,8 @@ impl Spider {
         }
     }
 
-    /// Seeds the spider with a few starting points from which to begin crawling.
+    /// Seeds the spider with a few starting points from which to begin
+    /// crawling.
     pub async fn seed(&mut self) {
         fn seed(_id: impl Into<RecordId>) {}
 

@@ -1,7 +1,8 @@
+use std::time::Duration;
+
 use eyre::{eyre, WrapErr};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
-use std::time::Duration;
 use tracing_unwrap::ResultExt;
 
 pub struct Client {
@@ -33,7 +34,6 @@ pub struct ApiCall {
     pub request_timestamp: u64,
     pub response_timestamp: u64,
 }
-
 
 const USER_AGENT: &str = concat![
     "Mozilla/5.0 ",
