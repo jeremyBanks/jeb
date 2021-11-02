@@ -187,18 +187,7 @@ impl Client {
             .unwrap()
             .as_secs();
 
-        // self.api_cache
-        //     .set(
-        //         cache_key.clone(),
-        //         kv::Json(ApiCall {
-        //             rpc_id: rpc_id.to_string(),
-        //             request: request.clone(),
-        //             response: response.clone(),
-        //             request_timestamp,
-        //             response_timestamp,
-        //         }),
-        //     )
-        //     .expect("failed to save to cache?");
+        // self.acailed to save to cache?");
 
         // self.api_cache.flush().expect("unable to flush cache?");
 
