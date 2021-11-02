@@ -2,7 +2,7 @@ use derive_more::{From, Into};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 
-use crate::client::{ApiCacheBucket, Client};
+use crate::client::{Client};
 
 pub struct Spider {
     pub client: Client,
@@ -44,7 +44,7 @@ impl ModelRecordId {
 }
 
 impl Spider {
-    pub fn new(cookie_header: String, api_cache: ApiCacheBucket) -> Self {
+    pub fn new(cookie_header: String, api_cache: ()) -> Self {
         Self {
             client: Client::new(cookie_header, api_cache),
         }
@@ -66,7 +66,7 @@ impl Spider {
     pub async fn crawl(&mut self) {
         tracing::info!("Spider is crawling");
 
-        let result = self.client.store_search("e").await.unwrap();
+        let result = self.client.store_search("Riders Republic").await.unwrap();
         tracing::info!(
             "Searching... {}",
             result.to_string().chars().take(512).collect::<String>()

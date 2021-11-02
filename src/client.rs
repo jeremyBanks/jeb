@@ -10,7 +10,7 @@ pub struct Client {
     /// Internal throttle used for all HTTP requests.
     http_throttle: tokio::time::Interval,
 
-    api_cache: ApiCacheBucket,
+    api_cache: (),
 
     /// Google cookie header value for long-term authentication.
     cookie_header: String,
@@ -34,7 +34,6 @@ pub struct ApiCall {
     pub response_timestamp: u64,
 }
 
-pub type ApiCacheBucket = kv::Bucket<'static, String, kv::Json<ApiCall>>;
 
 const USER_AGENT: &str = concat![
     "Mozilla/5.0 ",
@@ -52,7 +51,7 @@ const SPA_URL: &str = "https://stadia.google.com/u/0/settings";
 const API_URL: &str = "https://stadia.google.com/u/0/_/CloudcastPortalFeWebUi/data/batchexecute";
 
 impl Client {
-    pub fn new(cookie_header: String, api_cache: ApiCacheBucket) -> Self {
+    pub fn new(cookie_header: String, api_cache: ()) -> Self {
         let http_client = reqwest::Client::builder()
             .user_agent(USER_AGENT)
             .timeout(Duration::from_secs(12))
@@ -122,12 +121,12 @@ impl Client {
         let cache_key = format!("{}{}", rpc_id, request.to_string());
         tracing::info!("API call: {}", &cache_key);
 
-        if let Ok(Some(cached)) = self.api_cache.get(&cache_key) {
-            tracing::info!(rpc_id, "API result found in cache");
-            return Ok(cached.0.response);
-        } else {
-            tracing::info!(rpc_id, "API result NOT found in cache, requesting it");
-        }
+        // if let Ok(Some(cached)) = self.api_cache.get(&cache_key) {
+        //     tracing::info!(rpc_id, "API result found in cache");
+        //     return Ok(cached.0.response);
+        // } else {
+        //     tracing::info!(rpc_id, "API result NOT found in cache, requesting it");
+        // }
 
         if self.session_tokens.is_none() {
             self.session_tokens = Some(self.get_session_tokens().await?);
@@ -188,20 +187,20 @@ impl Client {
             .unwrap()
             .as_secs();
 
-        self.api_cache
-            .set(
-                cache_key.clone(),
-                kv::Json(ApiCall {
-                    rpc_id: rpc_id.to_string(),
-                    request: request.clone(),
-                    response: response.clone(),
-                    request_timestamp,
-                    response_timestamp,
-                }),
-            )
-            .expect("failed to save to cache?");
+        // self.api_cache
+        //     .set(
+        //         cache_key.clone(),
+        //         kv::Json(ApiCall {
+        //             rpc_id: rpc_id.to_string(),
+        //             request: request.clone(),
+        //             response: response.clone(),
+        //             request_timestamp,
+        //             response_timestamp,
+        //         }),
+        //     )
+        //     .expect("failed to save to cache?");
 
-        self.api_cache.flush().expect("unable to flush cache?");
+        // self.api_cache.flush().expect("unable to flush cache?");
 
         Ok(response)
     }
