@@ -4,19 +4,63 @@ use bincode::Options;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 
-pub trait PrimaryKey: Serialize + DeserializeOwned + Clone + Debug {}
+// I want to be able to get records by primary key.
+// Which is to say, by key prefix?
+// How can you expose that in a Rust API? You probably can't.
+// These aren't primary, they're composite.
+// Don't rely on bincoding?
+// Or maybe do. Who knows? I don't.
 
-pub trait Table: Serialize + DeserializeOwned {
-    const NAME: &'static str;
+fn bincoder() -> impl bincode::Options {
+    // bincoding options to help maintain some sort orderings after serialization.
+    bincode::options().with_big_endian().with_fixint_encoding()
+}
+
+pub struct RowVersion<RowType: Row> {
+    /// Sled-generated ID when this row is inserted.
+    version_id: u64,
+    /// The actual contents of this row.
+    row: RowType,
+}
+
+// You can do this without putting it in the code, eh?
+
+pub trait Row: Serialize + DeserializeOwned {
+    type PrimaryKey: serde::Serialize;
+
+    /// Determines row identity across versions.
+    ///
+    /// May be ommitted to use value identity (by way of a cryptographic hash function).
+    fn PrimaryKey(&self) -> Self::PrimaryKey {
+        let serialized = bincoder().serialize(&self).expect("failed to bincode for primary_key");
+        blake3::hash(&serialized).as_bytes()[..16].to_vec();
+    }
+
+    /// Determines the priority of this version. When looking up a row by primary key, they are
+    /// ranked by priority, then by time. For example, this could be used to return versions
+    /// containing successful values over this returning containing failed values. If ommitted,
+    /// rows will only be sorted chronologically by version_id.
+    fn PriorityKey(&self) -> dyn serde::Serialize {}
+}
+
+// Getset on top of that?
+
+pub trait PrimaryKey: Serialize + DeserializeOwned + Clone + Debug {
+
+}
+
+
+pub trait Rowa: Serialize + DeserializeOwned {
+    const TABLE_NAME: &'static str;
 
     type PrimaryKey: PrimaryKey;
 
     fn primary_key(&self) -> Self::PrimaryKey {
-        let serialized = bincode::serialize(&self).expect("failed to bincode for primary_key");
+        let serialized = bincoder().serialize(&self).expect("failed to bincode for primary_key");
 
-        let hashed = blake3::hash(&serialized).as_bytes().to_vec();
+        let hashed = blake3::hash(&serialized).as_bytes()[..16].to_vec();
 
-        hashed.into()
+        unimplemented!()
     }
 }
 
@@ -43,9 +87,9 @@ enum StadiaApiCallResult {
     Success { value: Json },
 }
 
-impl Table for StadiaApiRequest {
-    const NAME: &'static str = "stadia_api_request";
-}
+// impl Table for StadiaApiRequest {
+//     const NAME: &'static str = "stadia_api_request";
+// }
 
 // #[derive(Clone)]
 // struct Database {
