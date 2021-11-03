@@ -68,7 +68,7 @@ impl Spider {
     pub async fn crawl(&mut self) {
         tracing::info!("Spider is crawling");
 
-        let result = self.client.store_search("Riders Republic").await.unwrap();
+        let result = self.client.store_search("the").await.unwrap();
         tracing::info!(
             "Searching... {}",
             result.to_string().chars().take(512).collect::<String>()
