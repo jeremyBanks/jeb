@@ -4,63 +4,53 @@ use bincode::Options;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 
-// I want to be able to get records by primary key.
-// Which is to say, by key prefix?
-// How can you expose that in a Rust API? You probably can't.
-// These aren't primary, they're composite.
-// Don't rely on bincoding?
-// Or maybe do. Who knows? I don't.
-
 fn bincoder() -> impl bincode::Options {
     // bincoding options to help maintain some sort orderings after serialization.
     bincode::options().with_big_endian().with_fixint_encoding()
 }
 
-pub struct RowVersion<RowType: Row> {
-    /// Sled-generated ID when this row is inserted.
-    version_id: u64,
-    /// The actual contents of this row.
-    row: RowType,
+#[derive(Serialize, Deserialize)]
+pub struct VersionedRow<RowType> {
+    pub row: RowType,
+    pub version_id: u64,
 }
 
-// You can do this without putting it in the code, eh?
-
-pub trait Row: Serialize + DeserializeOwned {
-    type PrimaryKey: serde::Serialize;
-
-    /// Determines row identity across versions.
-    ///
-    /// May be ommitted to use value identity (by way of a cryptographic hash function).
-    fn PrimaryKey(&self) -> Self::PrimaryKey {
-        let serialized = bincoder().serialize(&self).expect("failed to bincode for primary_key");
-        blake3::hash(&serialized).as_bytes()[..16].to_vec();
+impl<RowType: Row> VersionedRow<RowType> {
+    fn key(&self) -> (RowType::PrimaryKey, RowType::VersionKey, u64) {
+        (
+            self.row.primary_key(),
+            self.row.version_key(),
+            self.version_id,
+        )
     }
 
-    /// Determines the priority of this version. When looking up a row by primary key, they are
-    /// ranked by priority, then by time. For example, this could be used to return versions
-    /// containing successful values over this returning containing failed values. If ommitted,
-    /// rows will only be sorted chronologically by version_id.
-    fn PriorityKey(&self) -> dyn serde::Serialize {}
+    fn key_bytes(&self) -> Vec<u8> {
+        bincoder()
+            .serialize(&self.key())
+            .expect("unable to bincode key")
+    }
 }
-
-// Getset on top of that?
-
-pub trait PrimaryKey: Serialize + DeserializeOwned + Clone + Debug {
-
-}
-
-
-pub trait Rowa: Serialize + DeserializeOwned {
+pub trait Row: Serialize + DeserializeOwned + 'static {
     const TABLE_NAME: &'static str;
 
-    type PrimaryKey: PrimaryKey;
+    type PrimaryKey: serde::Serialize;
+    type VersionKey: serde::Serialize;
 
-    fn primary_key(&self) -> Self::PrimaryKey {
-        let serialized = bincoder().serialize(&self).expect("failed to bincode for primary_key");
+    /// Determines row identity across versions.
+    fn primary_key(&self) -> Self::PrimaryKey;
+    fn primary_key_bytes(&self) -> Vec<u8> {
+        bincoder()
+            .serialize(&self.primary_key())
+            .expect("unable to bincode primary key")
+    }
 
-        let hashed = blake3::hash(&serialized).as_bytes()[..16].to_vec();
-
-        unimplemented!()
+    /// Determines the indexing/ordering of versions of a row with the same
+    /// primary key. If not unique, the tie will be broken by the version_id.
+    fn version_key(&self) -> Self::VersionKey;
+    fn version_key_bytes(&self) -> Vec<u8> {
+        bincoder()
+            .serialize(&self.version_key())
+            .expect("unable to bincode version key")
     }
 }
 
@@ -69,22 +59,38 @@ pub trait Rowa: Serialize + DeserializeOwned {
 struct StadiaApiCall {
     method_id: String,
     arguments: Vec<Json>,
-    result: StadiaApiCallResult,
-    sled_id: u64,
+    result: Option<Vec<Json>>,
+    status: StadiaApiCallStatus,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, PartialOrd)]
 
-enum StadiaApiCallResult {
-    /// Unknown; this call was not completed or the result was not captured.
-    Unknown,
-    /// The call failed for out-of-band reasons (i.e. network error, unexpected
+enum StadiaApiCallStatus {
+    /// This call has been seeded into the database, but not executed.
+    Seeded,
+    /// This call has been attempted, but we don't know the result.
+    Attempted,
+    /// This call failed for out-of-band reasons (i.e. network error, unexpected
     /// response format).
-    Unable { error_message: String },
+    Unable,
     /// The call failed with an in-band error response value.
-    Error { value: Json },
+    Error,
     /// The call succeeded with a successful response value.
-    Success { value: Json },
+    Success,
+}
+
+impl Row for StadiaApiCall {
+    const TABLE_NAME: &'static str = "stadia_api_call";
+
+    type PrimaryKey = (String, Vec<Json>);
+    fn primary_key(&self) -> Self::PrimaryKey {
+        (self.method_id.clone(), self.arguments.clone())
+    }
+
+    type VersionKey = StadiaApiCallStatus;
+    fn version_key(&self) -> Self::VersionKey {
+        self.status
+    }
 }
 
 // impl Table for StadiaApiRequest {
