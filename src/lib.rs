@@ -7,11 +7,15 @@ mod errors;
 mod spider;
 
 pub async fn main() {
-    let google_cookie = std::env::var("GOOGLE_COOKIE").expect("GOOGLE_COOKIE not set");
+    let google_cookie = std::env::var("GOOGLE_COOKIE").ok();
 
-    let api_cache = sled::open("data/api_cache").unwrap();
+    let api_cache = sled::Config::default()
+        .path("data/api_cache")
+        .use_compression(true)
+        .open()
+        .unwrap();
 
-    let mut spider = crate::spider::Spider::new(google_cookie, api_cache.clone());
+    let mut spider = crate::spider::Spider::new(google_cookie, api_cache);
 
     spider.seed().await;
     spider.crawl().await;
