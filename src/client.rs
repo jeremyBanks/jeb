@@ -3,6 +3,7 @@ use std::time::Duration;
 use eyre::{eyre, WrapErr};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use tracing_unwrap::ResultExt;
 
 pub struct Client {
@@ -11,10 +12,10 @@ pub struct Client {
     /// Internal throttle used for all HTTP requests.
     http_throttle: tokio::time::Interval,
 
-    api_cache: (),
+    api_cache: sled::Db,
 
     /// Google cookie header value for long-term authentication.
-    cookie_header: String,
+    cookie_header: Option<String>,
     /// Google API keys for short-term authentication.
     session_tokens: Option<SessionTokens>,
 }
@@ -26,13 +27,51 @@ struct SessionTokens {
     at: String,
 }
 
-#[derive(Serialize, Deserialize, Default, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ApiCall {
     pub rpc_id: String,
     pub request: Json,
-    pub response: Json,
-    pub request_timestamp: u64,
-    pub response_timestamp: u64,
+    pub response: Option<Json>,
+    pub timestamp: u64,
+}
+
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Serialize_repr, Deserialize_repr)]
+#[repr(u32)]
+enum ApiCallStatus {
+    /// This call has been seeded into the database, but not attempted.
+    Known = 0x00,
+    /// This call has been attempted, but we don't know the result.
+    Attempted = 0x10,
+    /// This call failed for out-of-band reasons (i.e. network error, unexpected
+    /// response format).
+    Unable = 0x20,
+    /// The call failed with an in-band error response value.
+    Error = 0x30,
+    /// The call succeeded with a successful but empty response value.
+    Empty = 0x35,
+    /// The call succeeded with a successful non-empty response value.
+    Full = 0x40,
+}
+
+fn api_cache_key(method_id: &str, parameters: &Json, status: Option<ApiCallStatus>) -> Vec<u8> {
+    let mut key = [0u8; 128];
+
+    let key_prefix = "api_cache_".as_bytes();
+    key[0..10].copy_from_slice(key_prefix);
+
+    let key_method_id: [u8; 10] = fit_into_array(method_id.as_bytes());
+    key[10..20].copy_from_slice(&key_method_id);
+
+    let parameters_json = parameters.to_string();
+    let key_parameters: [u8; 107] = fit_into_array(parameters_json.as_bytes());
+    key[20..127].copy_from_slice(&key_parameters);
+
+    let mut v = Vec::from(key);
+    if let Some(status) = status {
+        v.push(status as u8);
+    }
+
+    v
 }
 
 const USER_AGENT: &str = concat![
@@ -45,13 +84,13 @@ const USER_AGENT: &str = concat![
 ];
 
 /// A URL of any Stadia SPA page containing session credentials.
-const SPA_URL: &str = "https://stadia.google.com/u/0/settings";
+const SPA_URL: &str = "https://stadia.google.com/settings";
 
 /// The URL of the Stadia web frontend's API.
-const API_URL: &str = "https://stadia.google.com/u/0/_/CloudcastPortalFeWebUi/data/batchexecute";
+const API_URL: &str = "https://stadia.google.com/_/CloudcastPortalFeWebUi/data/batchexecute";
 
 impl Client {
-    pub fn new(cookie_header: String, api_cache: ()) -> Self {
+    pub fn new(cookie_header: String, api_cache: sled::Db) -> Self {
         let http_client = reqwest::Client::builder()
             .user_agent(USER_AGENT)
             .timeout(Duration::from_secs(12))
@@ -117,16 +156,17 @@ impl Client {
         })
     }
 
-    async fn api_request(&mut self, rpc_id: &str, request: &Json) -> eyre::Result<Json> {
-        let cache_key = format!("{}{}", rpc_id, request.to_string());
-        tracing::info!("API call: {}", &cache_key);
+    pub async fn api_request(&mut self, rpc_id: &str, request: &Json) -> eyre::Result<Json> {
+        let cache_key = api_cache_key(rpc_id, request, None);
+        tracing::info!("API call: {}", printable(&cache_key, '_'));
 
-        // if let Ok(Some(cached)) = self.api_cache.get(&cache_key) {
-        //     tracing::info!(rpc_id, "API result found in cache");
-        //     return Ok(cached.0.response);
-        // } else {
-        //     tracing::info!(rpc_id, "API result NOT found in cache, requesting it");
-        // }
+        if let Some(Ok(cached)) = self.api_cache.scan_prefix(&cache_key).values().next_back() {
+            tracing::info!(rpc_id, "API result found in cache");
+            let cached: ApiCall = serde_json::from_slice(&cached.to_vec()).unwrap();
+            return Ok(cached.response);
+        } else {
+            tracing::info!(rpc_id, "API result NOT found in cache, requesting it");
+        }
 
         if self.session_tokens.is_none() {
             self.session_tokens = Some(self.get_session_tokens().await?);
@@ -173,12 +213,7 @@ impl Client {
             .cloned()
             .ok_or_else(|| eyre!("expected JSON array"))?
             .iter()
-            .map(|x| {
-                x[2].as_str()
-                    .expect("should have value or else oh no")
-                    .parse::<Json>()
-                    .unwrap()
-            })
+            .map(|x| x[2].as_str().unwrap_or("[]").parse::<Json>().unwrap())
             .next()
             .unwrap();
 
@@ -187,9 +222,23 @@ impl Client {
             .unwrap()
             .as_secs();
 
-        // self.acailed to save to cache?");
+        let mut cache_key = cache_key.to_vec();
+        cache_key.extend_from_slice(&self.api_cache.generate_id().unwrap().to_be_bytes());
 
-        // self.api_cache.flush().expect("unable to flush cache?");
+        self.api_cache
+            .insert(
+                cache_key.clone(),
+                serde_json::to_vec(&ApiCall {
+                    rpc_id: rpc_id.to_string(),
+                    request: request.clone(),
+                    response: response.clone(),
+                    timestamp: response_timestamp,
+                })
+                .unwrap(),
+            )
+            .expect("failed to save to cache?");
+
+        self.api_cache.flush().expect("unable to flush cache?");
 
         Ok(response)
     }
@@ -201,4 +250,36 @@ impl Client {
     pub async fn store_search(&mut self, name_contains: &str) -> eyre::Result<Json> {
         self.api_request("QBe3Lb", &json!([name_contains])).await
     }
+}
+
+fn printable(bytes: &[u8], filler: char) -> String {
+    regex::Regex::new(r"[^ -~]")
+        .unwrap()
+        .replace_all(
+            &String::from_utf8_lossy(bytes).to_string(),
+            filler.to_string(),
+        )
+        .to_string()
+}
+
+fn fit_into_array<const T: usize>(value: &[u8]) -> [u8; T] {
+    let mut array = [0x00; T];
+
+    if value.len() <= T {
+        // If the value fits in the array, great, put it in.
+        // If it's shorter than the array, we'll leave trailing zero-bytes.
+        array[..value.len()].copy_from_slice(value);
+    } else {
+        // If the value's too large to fit in the array, hash it with blake3.
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(value);
+        let mut result = hasher.finalize_xof();
+
+        // Fill the first half of the array with value, truncated to fit.
+        array[..T / 2].copy_from_slice(&value[..T / 2]);
+        // Fill the the second half from the hash digest.
+        result.fill(&mut array[T / 2..]);
+    }
+
+    array
 }
