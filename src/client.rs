@@ -90,7 +90,7 @@ const SPA_URL: &str = "https://stadia.google.com/settings";
 const API_URL: &str = "https://stadia.google.com/_/CloudcastPortalFeWebUi/data/batchexecute";
 
 impl Client {
-    pub fn new(cookie_header: String, api_cache: sled::Db) -> Self {
+    pub fn new(cookie_header: Option<String>, api_cache: sled::Db) -> Self {
         let http_client = reqwest::Client::builder()
             .user_agent(USER_AGENT)
             .timeout(Duration::from_secs(12))
@@ -117,7 +117,7 @@ impl Client {
             .http_client
             .get(SPA_URL)
             .header("User-Agent", USER_AGENT)
-            .header("Cookie", &self.cookie_header)
+            .header("Cookie", self.cookie_header.clone().expect("no cookies"))
             .send()
             .await?;
         let html = response.text().await?;
@@ -184,7 +184,7 @@ impl Client {
             .http_client
             .post(API_URL)
             .header("User-Agent", USER_AGENT)
-            .header("Cookie", &self.cookie_header)
+            .header("Cookie", self.cookie_header.clone().expect("no cookies"))
             .query(&[
                 ["bl", &session_tokens.bl],
                 ["rpcids", rpc_id],
@@ -231,7 +231,7 @@ impl Client {
                 serde_json::to_vec(&ApiCall {
                     rpc_id: rpc_id.to_string(),
                     request: request.clone(),
-                    response: response.clone(),
+                    response: Some(response.clone()),
                     timestamp: response_timestamp,
                 })
                 .unwrap(),
