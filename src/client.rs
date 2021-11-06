@@ -97,7 +97,7 @@ impl Client {
             .build()
             .expect("failed to initialize HTTP client");
 
-        let mut http_throttle = tokio::time::interval(Duration::from_secs(1));
+        let mut http_throttle = tokio::time::interval(Duration::from_secs_f64(0.5));
         http_throttle.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
         Self {
@@ -158,18 +158,26 @@ impl Client {
 
     pub async fn api_request(&mut self, rpc_id: &str, request: &Json) -> eyre::Result<Json> {
         let cache_key = api_cache_key(rpc_id, request, None);
-        tracing::info!("API call: {}", printable(&cache_key, '_'));
+        tracing::debug!("API call: {}", printable(&cache_key, ' ').trim());
 
         if let Some(Ok(cached)) = self.api_cache.scan_prefix(&cache_key).values().next_back() {
-            tracing::info!(rpc_id, "API result found in cache");
+            tracing::debug!(rpc_id, "API result found in cache");
             let cached: ApiCall = serde_json::from_slice(&cached.to_vec()).unwrap();
             if let Some(response) = cached.response {
                 return Ok(response);
             } else {
-                tracing::info!(rpc_id, "but it doesn't have a response");
+                tracing::info!(
+                    rpc_id,
+                    "but it doesn't have a response: {}",
+                    printable(&cache_key, ' ').trim()
+                );
             }
         } else {
-            tracing::info!(rpc_id, "API result NOT found in cache, requesting it");
+            tracing::info!(
+                rpc_id,
+                "API result NOT found in cache, requesting it: {}",
+                printable(&cache_key, ' ').trim()
+            );
         }
 
         if self.session_tokens.is_none() {
@@ -178,11 +186,6 @@ impl Client {
         let session_tokens = self.session_tokens.as_ref().unwrap();
 
         self.http_throttle.tick().await;
-
-        let request_timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
 
         let response = self
             .http_client
@@ -209,8 +212,6 @@ impl Client {
         let prefixed_json = response.text().await?;
         let json = prefixed_json.strip_prefix(")]}'\n").unwrap();
         let value = json.parse::<Json>()?;
-
-        tracing::info!(json);
 
         let response = value
             .as_array()
@@ -247,13 +248,103 @@ impl Client {
         Ok(response)
     }
 
-    pub async fn player_search(&mut self, name_prefix: &str) -> eyre::Result<Json> {
-        self.api_request("FdyJ0", &json!([name_prefix])).await
+    pub async fn player_search(&mut self, name_prefix: &str) -> eyre::Result<Vec<Player>> {
+        let name_prefix = format!("{} {}", &name_prefix[..1], &name_prefix[1..]);
+
+        Ok(self
+            .api_request("FdyJ0", &json!([name_prefix]))
+            .await?
+            .as_array()
+            .ok_or_else(|| eyre!("expected array"))?
+            .get(1)
+            .ok_or_else(|| eyre!("expected array"))?
+            .as_array()
+            .ok_or_else(|| eyre!("expected array"))?
+            .iter()
+            .map(|p| p.as_array().unwrap())
+            .map(|p| Player {
+                name: p
+                    .get(0)
+                    .unwrap()
+                    .as_array()
+                    .unwrap()
+                    .get(0)
+                    .unwrap()
+                    .as_array()
+                    .unwrap()
+                    .get(0)
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string(),
+                number: p
+                    .get(0)
+                    .unwrap()
+                    .as_array()
+                    .unwrap()
+                    .get(0)
+                    .unwrap()
+                    .as_array()
+                    .unwrap()
+                    .get(1)
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string(),
+                player_id: p
+                    .get(0)
+                    .unwrap()
+                    .as_array()
+                    .unwrap()
+                    .get(5)
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string()
+                    .parse()
+                    .unwrap(),
+            })
+            .collect::<Vec<_>>())
     }
 
-    pub async fn store_search(&mut self, name_contains: &str) -> eyre::Result<Json> {
-        self.api_request("QBe3Lb", &json!([name_contains])).await
+    pub async fn store_search(&mut self, name_contains: &str) -> eyre::Result<Vec<Sku>> {
+        let response = self.api_request("QBe3Lb", &json!([name_contains])).await;
+        let response = response.unwrap();
+        let response = response.as_array().unwrap().get(1).unwrap();
+        let response = response
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|d| d[1][2][0].as_str().unwrap().ends_with(".Card"))
+            .map(|d| d[1][2][1].clone())
+            .map(|d| Sku {
+                name: d[1].as_str().unwrap().to_string(),
+                sku_id: d[9].as_array().unwrap()[0].as_array().unwrap()[1]
+                    .as_str()
+                    .unwrap()
+                    .to_string(),
+                game_id: d[9].as_array().unwrap()[0].as_array().unwrap()[0]
+                    .as_str()
+                    .unwrap()
+                    .to_string(),
+            })
+            .collect::<Vec<_>>();
+        Ok(response)
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Sku {
+    pub sku_id: String,
+    pub game_id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Player {
+    pub player_id: u64,
+    pub name: String,
+    pub number: String,
 }
 
 fn printable(bytes: &[u8], filler: char) -> String {
