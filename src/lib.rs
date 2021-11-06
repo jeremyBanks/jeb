@@ -17,6 +17,63 @@ pub async fn main() {
 
     let mut spider = crate::spider::Spider::new(google_cookie, api_cache);
 
-    spider.seed().await;
-    spider.crawl().await;
+    let response = spider.client.player_search("j e").await.unwrap();
+    let response = response.as_array().unwrap();
+    let players = response.get(1).unwrap().as_array().unwrap();
+    let players = players
+        .iter()
+        .map(|p| p.as_array().unwrap())
+        .map(|p| PlayerResult {
+            name: p
+                .get(0)
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .get(0)
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .get(0)
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string(),
+            number: p
+                .get(0)
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .get(0)
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .get(1)
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string(),
+            id: p
+                .get(0)
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .get(5)
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string(),
+        })
+        .collect::<Vec<_>>();
+
+    println!("{:#?}", players);
+
+    // spider.seed().await;
+    // spider.crawl().await;
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct PlayerResult {
+    name: String,
+    number: String,
+    id: String,
 }

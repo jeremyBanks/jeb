@@ -163,7 +163,11 @@ impl Client {
         if let Some(Ok(cached)) = self.api_cache.scan_prefix(&cache_key).values().next_back() {
             tracing::info!(rpc_id, "API result found in cache");
             let cached: ApiCall = serde_json::from_slice(&cached.to_vec()).unwrap();
-            return Ok(cached.response);
+            if let Some(response) = cached.response {
+                return Ok(response);
+            } else {
+                tracing::info!(rpc_id, "but it doesn't have a response");
+            }
         } else {
             tracing::info!(rpc_id, "API result NOT found in cache, requesting it");
         }
