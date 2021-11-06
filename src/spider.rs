@@ -23,17 +23,25 @@ impl Spider {
             //     .store_search(&format!("{}", first_character))
             //     .await;
             for second_character in "abcdefghijklmnopqrstuvwxyz0123456789".chars() {
-                self.client
+                if let Err(err) = self
+                    .client
                     .store_search(&format!("{}{}", first_character, second_character))
-                    .await;
+                    .await
+                {
+                    tracing::error!("{:#?}", err)
+                }
             }
         }
 
         for first_character in "abcdefghijklmnopqrstuvwxyz".chars() {
             for second_character in "abcdefghijklmnopqrstuvwxyz0123456789".chars() {
-                self.client
+                if let Err(err) = self
+                    .client
                     .player_search(&format!("{} {}", first_character, second_character))
-                    .await;
+                    .await
+                {
+                    tracing::error!("{:#?}", err)
+                }
             }
         }
     }
