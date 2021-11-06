@@ -5,8 +5,9 @@
     "github.github-vscode-theme",
     "matklad.rust-analyzer",
     "ms-vscode.theme-1337",
-    "Tyriar.sort-lines",
+    "tyriar.sort-lines",
     "denoland.vscode-deno",
-    "usernamehw.errorlens"
+    "usernamehw.errorlens",
+    "vadimcn.vscode-lldb"
   ]
 }

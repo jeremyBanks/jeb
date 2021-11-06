@@ -1,10 +1,10 @@
 use std::time::Duration;
 
+use derive_more::{From, Into, TryInto};
 use eyre::{eyre, WrapErr};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use tracing_unwrap::ResultExt;
 
 pub struct Client {
     /// Internal HTTP client.
@@ -97,7 +97,7 @@ impl Client {
             .build()
             .expect("failed to initialize HTTP client");
 
-        let mut http_throttle = tokio::time::interval(Duration::from_secs_f64(0.5));
+        let mut http_throttle = tokio::time::interval(Duration::from_secs_f64(1.0));
         http_throttle.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
         Self {
@@ -164,7 +164,25 @@ impl Client {
             tracing::debug!(rpc_id, "API result found in cache");
             let cached: ApiCall = serde_json::from_slice(&cached.to_vec()).unwrap();
             if let Some(response) = cached.response {
-                return Ok(response);
+                if response.is_null() {
+                    tracing::info!(
+                        rpc_id,
+                        "but it it's null: {}",
+                        printable(&cache_key, ' ').trim()
+                    );
+                } else if let Some(response) = response.as_array() {
+                    if response.is_empty() {
+                        tracing::info!(
+                            rpc_id,
+                            "but it's empty: {}",
+                            printable(&cache_key, ' ').trim()
+                        );
+                    } else {
+                        return Ok(json!(response));
+                    }
+                } else {
+                    tracing::error!("wtf?");
+                }
             } else {
                 tracing::info!(
                     rpc_id,
@@ -307,7 +325,7 @@ impl Client {
             .collect::<Vec<_>>())
     }
 
-    pub async fn store_search(&mut self, name_contains: &str) -> eyre::Result<Vec<Sku>> {
+    pub async fn store_search(&mut self, name_contains: &str) -> eyre::Result<Vec<SearchSku>> {
         let response = self.api_request("QBe3Lb", &json!([name_contains])).await;
         let response = response.unwrap();
         let response = response.as_array().unwrap().get(1).unwrap();
@@ -317,7 +335,7 @@ impl Client {
             .iter()
             .filter(|d| d[1][2][0].as_str().unwrap().ends_with(".Card"))
             .map(|d| d[1][2][1].clone())
-            .map(|d| Sku {
+            .map(|d| SearchSku {
                 name: d[1].as_str().unwrap().to_string(),
                 sku_id: d[9].as_array().unwrap()[0].as_array().unwrap()[1]
                     .as_str()
@@ -331,12 +349,19 @@ impl Client {
             .collect::<Vec<_>>();
         Ok(response)
     }
+
+    pub async fn store_sku(&mut self, sku_id: &str) -> eyre::Result<Option<StoreSku>> {
+        let r = self.api_request("FWhQV", &json!([null, sku_id])).await;
+        let r = r.unwrap();
+        let r = r.as_array().unwrap().get(16);
+        Ok(r.map(|r| StoreSku::from_proto(r)))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Sku {
-    pub sku_id: String,
+pub struct SearchSku {
     pub game_id: String,
+    pub sku_id: String,
     pub name: String,
 }
 
@@ -377,4 +402,56 @@ fn fit_into_array<const T: usize>(value: &[u8]) -> [u8; T] {
     }
 
     array
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct StoreSku {
+    pub sku_type: SkuType,
+    pub sku_id: String,
+    pub game_id: Option<String>,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+impl StoreSku {
+    pub fn from_proto(proto: &Json) -> Self {
+        let proto = proto.as_array().unwrap();
+        StoreSku {
+            sku_type: proto[6].as_u64().unwrap().try_into().unwrap(),
+            sku_id: proto[0].as_str().unwrap().to_string(),
+            game_id: proto[4].as_str().map(|s| s.to_string()),
+            name: proto[1].as_str().unwrap().to_string(),
+            description: proto[9].as_str().map(|s| s.to_string()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum SkuType {
+    Game = 1,
+    Addon = 2,
+    Bundle = 3,
+    ExternalSubscription = 4,
+    StadiaSubscription = 5,
+    AddonSubscription = 6,
+    AddonBundle = 9,
+    PreorderBundle = 10,
+}
+
+impl TryFrom<u64> for SkuType {
+    type Error = eyre::Error;
+
+    fn try_from(value: u64) -> Result<Self, eyre::Error> {
+        match value {
+            1 => Ok(SkuType::Game),
+            2 => Ok(SkuType::Addon),
+            3 => Ok(SkuType::Bundle),
+            4 => Ok(SkuType::ExternalSubscription),
+            5 => Ok(SkuType::StadiaSubscription),
+            6 => Ok(SkuType::AddonSubscription),
+            9 => Ok(SkuType::AddonBundle),
+            10 => Ok(SkuType::PreorderBundle),
+            _ => Err(eyre::eyre!("Unknown sku type: {}", value)),
+        }
+    }
 }

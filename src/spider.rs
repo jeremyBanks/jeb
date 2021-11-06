@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fmt::Write};
+use std::{collections::BTreeSet, fmt::Write};
 
 use derive_more::{From, Into};
 use serde::{Deserialize, Serialize};
@@ -20,30 +20,9 @@ impl Spider {
     pub async fn crawl(&mut self) {
         tracing::info!("Spider is crawling");
 
-        let mut all_skus = HashSet::<crate::client::Sku>::new();
+        let mut all_skus = BTreeSet::<crate::client::StoreSku>::new();
 
-        for first_character in "abcdefghijklmnopqrstuvwxyz0123456789".chars() {
-            for second_character in "abcdefghijklmnopqrstuvwxyz0123456789".chars() {
-                let prefix = format!("{}{}", first_character, second_character);
-                let skus = self.client.store_search(&prefix).await;
-                let skus = match skus {
-                    Ok(skus) => skus,
-                    Err(err) => {
-                        tracing::error!("{}", err);
-                        continue;
-                    }
-                };
-                tracing::debug!(
-                    "Found {:?} skus containing {:?}. {:#?}",
-                    skus.len(),
-                    &prefix,
-                    skus.get(0),
-                );
-                all_skus.extend(skus);
-            }
-        }
-
-        let seed_skus = vec![
+        let mut all_sku_ids: BTreeSet<String> = vec![
             "053ebc72c9ff4de49e8ebf3b4ad0ce47p",
             "06adceee27be4150b080495b3c51c68c",
             "0b3acb4586bc4a049cac271ddc598e3e",
@@ -104,17 +83,41 @@ impl Spider {
             "f746502dc3b54a86ba5c42bb2e0ecea5",
             "f7aa7caf05e64d91af2063bf1803e947",
             "fea737af05af4408aaae16417011014f",
-        ];
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
 
-        for seed_sku in seed_skus {
-            let r = self
-                .client
-                .api_request("FWhQV", &json!([null, seed_sku]))
-                .await;
-            println!("{:#?}", r);
+        for first_character in "abcdefghijklmnopqrstuvwxyz0123456789".chars() {
+            for second_character in "abcdefghijklmnopqrstuvwxyz0123456789".chars() {
+                let prefix = format!("{}{}", first_character, second_character);
+                let skus = self.client.store_search(&prefix).await;
+                let skus = match skus {
+                    Ok(skus) => skus,
+                    Err(err) => {
+                        tracing::error!("{}", err);
+                        continue;
+                    }
+                };
+                tracing::debug!(
+                    "Found {:?} skus containing {:?}. {:#?}",
+                    skus.len(),
+                    &prefix,
+                    skus.get(0),
+                );
+                all_sku_ids.extend(skus.iter().map(|s| s.sku_id.to_string()));
+            }
         }
 
-        return;
+        for sku_id in all_sku_ids {
+            let sku = self.client.store_sku(&sku_id).await.unwrap();
+            if let Some(sku) = sku {
+                tracing::debug!("Got {:?}", &sku);
+                all_skus.insert(sku);
+            } else {
+                tracing::warn!("Could not find sku {:?}", &sku_id);
+            }
+        }
 
         tracing::info!("Found {} skus in total.", all_skus.len());
 
@@ -123,7 +126,14 @@ impl Spider {
             let mut all_skus: Vec<_> = all_skus.into_iter().collect();
             all_skus.sort();
             for sku in all_skus {
-                writeln!(lines, "{:36}/{:33} # {}", sku.game_id, sku.sku_id, sku.name).unwrap();
+                writeln!(
+                    lines,
+                    "{:36}/{:33} # {}",
+                    sku.game_id.unwrap_or_else(|| "-".to_string()),
+                    sku.sku_id,
+                    sku.name
+                )
+                .unwrap();
             }
             std::fs::write("data/skus.txt", lines).unwrap();
         }
