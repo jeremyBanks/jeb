@@ -50,7 +50,7 @@ impl Spider {
             let mut all_skus: Vec<_> = all_skus.into_iter().collect();
             all_skus.sort();
             for sku in all_skus {
-                writeln!(lines, "{:33}", sku.sku_id).unwrap();
+                writeln!(lines, "{:36}/{:33} # {}", sku.game_id, sku.sku_id, sku.name).unwrap();
             }
             std::fs::write("data/skus.txt", lines).unwrap();
         }
