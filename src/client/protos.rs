@@ -2,6 +2,7 @@ use bounded_integer::BoundedU64;
 use derive_more::Deref;
 use eyre::{eyre, Result};
 use getset::Getters;
+use paste::paste;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -15,68 +16,58 @@ macro_rules! proto {
 
         $(
             $(
-                optional ::$optional_type:ident $optional:ident
+                optional self::$optional_type:ident $optional:ident = $_id1:tt
             )*
             $(
-                optional string $optional_string:ident
+                optional string $optional_string:ident = $_id2:tt
             )*
             $(
-                optional uint64 $optional_uint64:ident
+                optional uint64 $optional_uint64:ident = $_id3:tt
             )*
             $(
-                repeated ::$repeated_type:ident $repeated:ident
+                repeated self::$repeated_type:ident $repeated:ident = $_id4:tt
             )*
             $(
-                repeated string $repeated_string:ident
+                repeated string $repeated_string:ident = $_id5:tt
             )*
             $(
-                repeated uint64 $repeated_uint64:ident
+                repeated uint64 $repeated_uint64:ident = $_id6:tt
             )*
             $(
-                reserved $reserved:ident
+                reserved $($reserved:tt),+
             )*
             ;
         )+
     ) => {
+        paste!{
         #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
         pub struct $name {
             $(
+                #[serde(default)]
                 $(
-                    #[serde(default)]
                     pub $optional: $optional_type,
                 )*
                 $(
-                    #[serde(default)]
                     pub $optional_string: String,
                 )*
                 $(
-                    #[serde(default)]
                     pub $optional_uint64: u64,
                 )*
                 $(
-                    #[serde(default)]
                     pub $repeated: Vec<$repeated_type>,
                 )*
                 $(
-                    #[serde(default)]
                     pub $repeated_string: Vec<String>,
                 )*
                 $(
-                    #[serde(default)]
                     pub $repeated_uint64: Vec<u64>,
                 )*
-                $(
-                    #[serde(default)]
-                    $reserved: Ignored,
-                )*
+                $($(
+                    [<_ $reserved>]: Ignored,
+                )+)*
             )+
         }
-
-        // impl $name {
-        //     pub fn new() -> Self {
-        //         Self::default()
-        //     }
-        // }
+        }
     };
 }
 
@@ -95,110 +86,73 @@ impl std::fmt::Debug for Ignored {
 pub struct Ignored(Option<Json>);
 
 proto! {
+    pub struct Timestamp;
+    optional uint64 seconds = 1;
+    optional uint64 nanos = 2;
+}
+
+proto! {
     pub struct StoreSkuResponse;
-    optional string game_id;
-    optional string sku_id;
-    reserved _2;
-    optional string name;
-    reserved _4;
-    optional string description;
-    reserved _6;
-    reserved _7;
-    reserved _8;
-    reserved _9;
-    reserved _10;
-    reserved _11;
-    reserved _12;
-    reserved _13;
-    reserved _14;
-    reserved _15;
-    optional ::Sku sku;
-    reserved _17;
-    reserved _18;
-    reserved _19;
-    reserved _20;
-    reserved _21;
-    reserved _22;
-    reserved _23;
-    reserved _24;
+    optional string game_id = 1;
+    optional string sku_id = 2;
+    reserved 3;
+    optional string name = 4;
+    reserved 5;
+    optional string description = 6;
+    reserved 7, 8, 9, 10, 11, 12, 13, 14, 15, 16;
+    optional self::Sku sku = 17;
+    reserved 18, 19, 20, 21, 22, 23, 24, 25;
 }
 
 proto! {
     pub struct Sku;
-    optional string sku_id;
-    optional string name;
-    reserved _images;
-    reserved _3;
-    optional string game_id;
-    optional string internal_name;
-    optional uint64 sku_type_id;
-    reserved _7;
-    reserved _8;
-    optional string description;
-    reserved _10_timestamp;
-    reserved _11;
-    reserved _12;
-    reserved _13;
-    reserved _14;
-    reserved publisher;
-    reserved developers;
-    reserved _17;
-    reserved _18;
-    reserved _19;
-    reserved _20;
-    reserved _21;
-    reserved _22;
-    reserved _23;
-    reserved languages;
-    reserved countries;
-    reserved _26_timestamp;
-    reserved _27;
-    reserved _28;
-    reserved _29;
-    reserved _30;
-    reserved _31;
-    reserved _32;
-    reserved _33;
-    reserved _34;
-    reserved _35;
-    reserved _36;
-    reserved _37;
+    optional string sku_id = 1;
+    optional string name = 2;
+    reserved 3, 4;
+    optional string game_id = 5;
+    optional string internal_name = 6;
+    optional uint64 sku_type_id = 7;
+    reserved 8, 9;
+    optional string description = 10;
+    optional self::Timestamp timestamp_a = 11;
+    reserved 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24;
+    repeated string languages = 25;
+    repeated string countries = 26;
+    optional self::Timestamp timestamp_b = 27;
+    reserved 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38;
 }
 
 proto! {
     pub struct PlayerSearchResponse;
-    reserved _0;
-    repeated ::PlayerSearchResponsePlayer players;
+    reserved 1;
+    repeated self::PlayerSearchResponsePlayer players = 2;
 }
 
 proto! {
     pub struct PlayerSearchResponsePlayer;
-    optional ::Player player;
-    reserved _1;
-    reserved _2;
-    reserved _3;
+    optional self::Player player = 1;
+    reserved 2, 3, 4;
 }
 
 proto! {
     pub struct Player;
-    optional ::PlayerGamertag gamertag;
-    optional ::PlayerAvatar avatar;
-    reserved _2;
-    optional string gamertag_normalized;
-    reserved _4;
-    optional string player_id;
-    reserved _6;
-    reserved _7;
+    optional self::PlayerGamertag gamertag = 1;
+    optional self::PlayerAvatar avatar = 2;
+    reserved 3;
+    optional string gamertag_normalized = 4;
+    reserved 5;
+    optional string player_id = 6;
+    reserved 7, 8;
 }
 
 proto! {
     pub struct PlayerGamertag;
-    optional string name;
-    optional string number;
+    optional string name = 1;
+    optional string number = 2;
 }
 
 proto! {
     pub struct PlayerAvatar;
-    optional string id;
-    optional string url;
+    optional string id = 1;
+    optional string url = 2;
 }
