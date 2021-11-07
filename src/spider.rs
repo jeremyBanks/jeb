@@ -4,7 +4,7 @@ use derive_more::{From, Into};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 
-use crate::client::Client;
+use crate::client::{protos, Client};
 
 pub struct Spider {
     pub client: Client,
@@ -20,7 +20,7 @@ impl Spider {
     pub async fn crawl(&mut self) {
         tracing::info!("Spider is crawling");
 
-        let mut all_skus = BTreeSet::<crate::client::StoreSku>::new();
+        let mut all_skus = BTreeSet::<protos::StoreSkuResponse>::new();
 
         let mut all_sku_ids: BTreeSet<String> = vec![
             "053ebc72c9ff4de49e8ebf3b4ad0ce47p",
@@ -113,30 +113,30 @@ impl Spider {
             let sku = self.client.store_sku(&sku_id).await.unwrap();
             if let Some(sku) = sku {
                 tracing::debug!("Got {:?}", &sku);
-                all_skus.insert(sku);
+                // all_skus.insert(sku.sku_id());
             } else {
                 tracing::warn!("Could not find sku {:?}", &sku_id);
             }
         }
 
-        tracing::info!("Found {} skus in total.", all_skus.len());
+        // tracing::info!("Found {} skus in total.", all_skus.len());
 
-        {
-            let mut lines = String::new();
-            let mut all_skus: Vec<_> = all_skus.into_iter().collect();
-            all_skus.sort();
-            for sku in all_skus {
-                writeln!(
-                    lines,
-                    "{:36}/{:33} # {}",
-                    sku.game_id.unwrap_or_else(|| "-".to_string()),
-                    sku.sku_id,
-                    sku.name
-                )
-                .unwrap();
-            }
-            std::fs::write("data/skus.txt", lines).unwrap();
-        }
+        // {
+        //     let mut lines = String::new();
+        //     let mut all_skus: Vec<_> = all_skus.into_iter().collect();
+        //     // all_skus.sort();
+        //     for sku in all_skus {
+        //         writeln!(
+        //             lines,
+        //             "{:36}/{:33} # {}",
+        //             sku.game_id().unwrap_or_else(|| "-".to_string()),
+        //             sku.sku_id(),
+        //             sku.name()
+        //         )
+        //         .unwrap();
+        //     }
+        //     std::fs::write("data/skus.txt", lines).unwrap();
+        // }
 
         let mut prefixes = Vec::<String>::new();
 

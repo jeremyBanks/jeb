@@ -72,7 +72,6 @@ pub struct Sku {
     _34: Json,
     _35: Json,
     _36: Json,
-    _37: Json,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default, Deref)]

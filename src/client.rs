@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-mod protos;
+pub mod protos;
 
 pub struct Client {
     /// Internal HTTP client.
@@ -285,7 +285,10 @@ impl Client {
         Ok(response)
     }
 
-    pub async fn store_sku(&mut self, sku_id: &str) -> eyre::Result<Option<protos::StoreSkuResponse>> {
+    pub async fn store_sku(
+        &mut self,
+        sku_id: &str,
+    ) -> eyre::Result<Option<protos::StoreSkuResponse>> {
         let response = self.api_request("FWhQV", &json!([null, sku_id])).await;
         let response = response.unwrap();
         tracing::debug!("{}", &response.to_string()[..100]);
