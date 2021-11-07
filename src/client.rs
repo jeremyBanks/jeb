@@ -291,11 +291,16 @@ impl Client {
     ) -> eyre::Result<Option<protos::StoreSkuResponse>> {
         let response = self.api_request("FWhQV", &json!([null, sku_id])).await;
         let response = response.unwrap();
-        tracing::debug!("{}", &response.to_string()[..100]);
+        let json = response.to_string();
 
-        Ok(serde_json::from_str::<Option<protos::StoreSkuResponse>>(
-            &response.to_string(),
-        )?)
+        let parsed = serde_json::from_str::<Option<protos::StoreSkuResponse>>(&json);
+
+        if let Err(ref err) = parsed {
+            tracing::error!("{:?}", err);
+            tracing::error!("{}", json);
+        }
+
+        Ok(parsed?)
     }
 }
 

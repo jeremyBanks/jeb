@@ -30,6 +30,13 @@ pub struct StoreSkuResponse {
     _14: Json,
     _15: Json,
     sku: Sku,
+    _17: Json,
+    _18: Json,
+    _19: Json,
+    _20: Json,
+    _21: Json,
+    _22: Json,
+    _23: Json,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default)]
