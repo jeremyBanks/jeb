@@ -43,26 +43,32 @@ macro_rules! proto {
         #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
         pub struct $name {
             $(
-                #[serde(default)]
                 $(
+                    #[serde(default)]
                     pub $optional: $optional_type,
                 )*
                 $(
+                    #[serde(default)]
                     pub $optional_string: String,
                 )*
                 $(
+                    #[serde(default)]
                     pub $optional_uint64: u64,
                 )*
                 $(
+                    #[serde(default)]
                     pub $repeated: Vec<$repeated_type>,
                 )*
                 $(
+                    #[serde(default)]
                     pub $repeated_string: Vec<String>,
                 )*
                 $(
+                    #[serde(default)]
                     pub $repeated_uint64: Vec<u64>,
                 )*
                 $($(
+                    #[serde(default)]
                     [<_ $reserved>]: Ignored,
                 )+)*
             )+
@@ -84,12 +90,6 @@ impl std::fmt::Debug for Ignored {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Default)]
 #[serde(transparent)]
 pub struct Ignored(Option<Json>);
-
-proto! {
-    pub struct Timestamp;
-    optional uint64 seconds = 1;
-    optional uint64 nanos = 2;
-}
 
 proto! {
     pub struct StoreSkuResponse;
@@ -114,12 +114,9 @@ proto! {
     optional uint64 sku_type_id = 7;
     reserved 8, 9;
     optional string description = 10;
-    optional self::Timestamp timestamp_a = 11;
-    reserved 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24;
-    repeated string languages = 25;
-    repeated string countries = 26;
-    optional self::Timestamp timestamp_b = 27;
-    reserved 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38;
+    reserved 11, 12, 13, 14, 15, 16, 17, 18, 19, 20;
+    reserved 21, 22, 23, 24, 25, 26, 27, 28, 29, 30;
+    reserved 31, 32, 33, 34, 35, 36, 37, 38;
 }
 
 proto! {
