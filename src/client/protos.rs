@@ -9,15 +9,46 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default)]
 pub struct StoreSearchResponse {}
 
-macro_rules! proto_type {
-    (pub struct $name:tt; $($prop:ident: $type:ty),*,) => {
+macro_rules! proto {
+    (
+        pub struct $name:ident;
+
+        $(
+            $(
+                optional $prop:ident [type = $type:ty]
+            )*
+            $(
+                repeated $repeated_prop:ident [type = $repeated_type:ty]
+            )*
+            $(
+                reserved $ignored_prop:ident
+            )*
+            ;
+        )+
+    ) => {
         #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
         pub struct $name {
-          $(
-            #[serde(default)]
-            pub $prop: $type,
-          )*
+            $(
+                $(
+                    #[serde(default)]
+                    pub $prop: $type,
+                )*
+                $(
+                    #[serde(default)]
+                    pub $repeated_prop: Vec<$repeated_type>,
+                )*
+                $(
+                    #[serde(default)]
+                    $ignored_prop: Ignored,
+                )*
+            )+
         }
+
+        // impl $name {
+        //     pub fn new() -> Self {
+        //         Self::default()
+        //     }
+        // }
     };
 }
 
@@ -35,111 +66,111 @@ impl std::fmt::Debug for Ignored {
 #[serde(transparent)]
 pub struct Ignored(Option<Json>);
 
-proto_type! {
+proto! {
     pub struct StoreSkuResponse;
-    game_id: String,
-    sku_id: String,
-    _2: Ignored,
-    name: String,
-    _4: Ignored,
-    description: String,
-    _6: Ignored,
-    _7: Ignored,
-    _8: Ignored,
-    _9: Ignored,
-    _10: Ignored,
-    _11: Ignored,
-    _12: Ignored,
-    _13: Ignored,
-    _14: Ignored,
-    _15: Ignored,
-    sku: Sku,
-    _17: Ignored,
-    _18: Ignored,
-    _19: Ignored,
-    _20: Ignored,
-    _21: Ignored,
-    _22: Ignored,
-    _23: Ignored,
-    _24: Ignored,
+    optional game_id [type = String];
+    optional sku_id [type = String];
+    reserved _2;
+    optional name [type = String];
+    reserved _4;
+    optional description [type = String];
+    reserved _6;
+    reserved _7;
+    reserved _8;
+    reserved _9;
+    reserved _10;
+    reserved _11;
+    reserved _12;
+    reserved _13;
+    reserved _14;
+    reserved _15;
+    optional sku [type = Sku];
+    reserved _17;
+    reserved _18;
+    reserved _19;
+    reserved _20;
+    reserved _21;
+    reserved _22;
+    reserved _23;
+    reserved _24;
 }
 
-proto_type! {
+proto! {
     pub struct Sku;
-    sku_id: String,
-    name: String,
-    _images: Ignored,
-    _3: Ignored,
-    game_id: String,
-    internal_name: String,
-    sku_type_id: u64,
-    _7: Ignored,
-    _8: Ignored,
-    description: String,
-    _10_timestamp: Ignored,
-    _11: Ignored,
-    _12: Ignored,
-    _13: Ignored,
-    _14: Ignored,
-    publisher: Ignored,
-    developers: Ignored,
-    _17: Ignored,
-    _18: Ignored,
-    _19: Ignored,
-    _20: Ignored,
-    _21: Ignored,
-    _22: Ignored,
-    _23: Ignored,
-    languages: Ignored,
-    countries: Ignored,
-    _26_timestamp: Ignored,
-    _27: Ignored,
-    _28: Ignored,
-    _29: Ignored,
-    _30: Ignored,
-    _31: Ignored,
-    _32: Ignored,
-    _33: Ignored,
-    _34: Ignored,
-    _35: Ignored,
-    _36: Ignored,
-    _37: Ignored,
+    optional sku_id [type = String];
+    optional name [type = String];
+    reserved _images;
+    reserved _3;
+    optional game_id [type = String];
+    optional internal_name [type = String];
+    optional sku_type_id [type = u64];
+    reserved _7;
+    reserved _8;
+    optional description [type = String];
+    reserved _10_timestamp;
+    reserved _11;
+    reserved _12;
+    reserved _13;
+    reserved _14;
+    reserved publisher;
+    reserved developers;
+    reserved _17;
+    reserved _18;
+    reserved _19;
+    reserved _20;
+    reserved _21;
+    reserved _22;
+    reserved _23;
+    reserved languages;
+    reserved countries;
+    reserved _26_timestamp;
+    reserved _27;
+    reserved _28;
+    reserved _29;
+    reserved _30;
+    reserved _31;
+    reserved _32;
+    reserved _33;
+    reserved _34;
+    reserved _35;
+    reserved _36;
+    reserved _37;
 }
 
-proto_type! {
+proto! {
     pub struct PlayerSearchResponse;
-    _0: Ignored,
-    players: Vec<PlayerSearchResponsePlayer>,
+    reserved _0;
+    optional players [type = Vec<PlayerSearchResponsePlayer>];
 }
 
-proto_type! {
+proto! {
     pub struct PlayerSearchResponsePlayer;
-    player: Player,
-    _1: Ignored,
-    _2: Ignored,
-    _3: Ignored,
+    optional player [type = Player];
+    reserved _1;
+    reserved _2;
+    reserved _3;
 }
 
-proto_type! {
+proto! {
     pub struct Player;
-    gamertag: PlayerGamertag,
-    avatar: PlayerAvatar,
-    _2: Ignored,
-    gamertag_normalized: String,
-    _4: Ignored,
-    player_id: String,
-    _6: Ignored,
-    _7: Ignored,
+    optional gamertag [type = PlayerGamertag];
+    optional avatar [type = PlayerAvatar];
+    reserved _2;
+    optional gamertag_normalized [type = String];
+    reserved _4;
+    optional player_id [type = String];
+    reserved _6;
+    reserved _7;
 }
 
-proto_type! {
+proto! {
     pub struct PlayerGamertag;
-    name: String,
-    number: String,
+    optional name [type = String];
+    optional number [type = String];
 }
 
-proto_type! {
+proto! {
     pub struct PlayerAvatar;
-    id: String,
-    url: String,
+    optional id [type = String];
+    optional url [type = String];
 }
