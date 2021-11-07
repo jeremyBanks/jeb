@@ -33,7 +33,7 @@ macro_rules! proto {
                 repeated uint64 $repeated_uint64:ident
             )*
             $(
-                reserved $ignored_prop:ident
+                reserved $reserved:ident
             )*
             ;
         )+
@@ -64,6 +64,10 @@ macro_rules! proto {
                 $(
                     #[serde(default)]
                     pub $repeated_uint64: Vec<u64>,
+                )*
+                $(
+                    #[serde(default)]
+                    $reserved: Ignored,
                 )*
             )+
         }
