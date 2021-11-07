@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
+mod protos;
+
 pub struct Client {
     /// Internal HTTP client.
     http_client: reqwest::Client,
@@ -35,25 +37,7 @@ pub struct ApiCall {
     pub timestamp: u64,
 }
 
-#[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Serialize_repr, Deserialize_repr)]
-#[repr(u32)]
-enum ApiCallStatus {
-    /// This call has been seeded into the database, but not attempted.
-    Known = 0x00,
-    /// This call has been attempted, but we don't know the result.
-    Attempted = 0x10,
-    /// This call failed for out-of-band reasons (i.e. network error, unexpected
-    /// response format).
-    Unable = 0x20,
-    /// The call failed with an in-band error response value.
-    Error = 0x30,
-    /// The call succeeded with a successful but empty response value.
-    Empty = 0x35,
-    /// The call succeeded with a successful non-empty response value.
-    Full = 0x40,
-}
-
-fn api_cache_key(method_id: &str, parameters: &Json, status: Option<ApiCallStatus>) -> Vec<u8> {
+fn api_cache_key(method_id: &str, parameters: &Json) -> Vec<u8> {
     let mut key = [0u8; 128];
 
     let key_prefix = "api_cache_".as_bytes();
@@ -66,12 +50,7 @@ fn api_cache_key(method_id: &str, parameters: &Json, status: Option<ApiCallStatu
     let key_parameters: [u8; 107] = fit_into_array(parameters_json.as_bytes());
     key[20..127].copy_from_slice(&key_parameters);
 
-    let mut v = Vec::from(key);
-    if let Some(status) = status {
-        v.push(status as u8);
-    }
-
-    v
+    key.to_vec()
 }
 
 const USER_AGENT: &str = concat![
@@ -157,7 +136,7 @@ impl Client {
     }
 
     pub async fn api_request(&mut self, rpc_id: &str, request: &Json) -> eyre::Result<Json> {
-        let cache_key = api_cache_key(rpc_id, request, None);
+        let cache_key = api_cache_key(rpc_id, request);
         tracing::debug!("API call: {}", printable(&cache_key, ' ').trim());
 
         if let Some(Ok(cached)) = self.api_cache.scan_prefix(&cache_key).values().next_back() {
@@ -170,17 +149,18 @@ impl Client {
                         "but it it's null: {}",
                         printable(&cache_key, ' ').trim()
                     );
-                } else if let Some(response) = response.as_array() {
-                    if response.is_empty() {
-                        tracing::info!(
-                            rpc_id,
-                            "but it's empty: {}",
-                            printable(&cache_key, ' ').trim()
-                        );
-                    } else {
-                        return Ok(json!(response));
-                    }
+                // } else if let Some(response) = response.as_array() {
+                //     if response.is_empty() {
+                //         tracing::info!(
+                //             rpc_id,
+                //             "but it's empty: {}",
+                //             printable(&cache_key, ' ').trim()
+                //         );
+                //     } else {
+                //         return Ok(json!(response));
+                //     }
                 } else {
+                    return Ok(response);
                     tracing::error!("wtf?");
                 }
             } else {
@@ -266,63 +246,18 @@ impl Client {
         Ok(response)
     }
 
-    pub async fn player_search(&mut self, name_prefix: &str) -> eyre::Result<Vec<Player>> {
+    pub async fn player_search(
+        &mut self,
+        name_prefix: &str,
+    ) -> eyre::Result<protos::PlayerSearchResponse> {
         let name_prefix = format!("{} {}", &name_prefix[..1], &name_prefix[1..]);
 
-        Ok(self
-            .api_request("FdyJ0", &json!([name_prefix]))
-            .await?
-            .as_array()
-            .ok_or_else(|| eyre!("expected array"))?
-            .get(1)
-            .ok_or_else(|| eyre!("expected array"))?
-            .as_array()
-            .ok_or_else(|| eyre!("expected array"))?
-            .iter()
-            .map(|p| p.as_array().unwrap())
-            .map(|p| Player {
-                name: p
-                    .get(0)
-                    .unwrap()
-                    .as_array()
-                    .unwrap()
-                    .get(0)
-                    .unwrap()
-                    .as_array()
-                    .unwrap()
-                    .get(0)
-                    .unwrap()
-                    .as_str()
-                    .unwrap()
-                    .to_string(),
-                number: p
-                    .get(0)
-                    .unwrap()
-                    .as_array()
-                    .unwrap()
-                    .get(0)
-                    .unwrap()
-                    .as_array()
-                    .unwrap()
-                    .get(1)
-                    .unwrap()
-                    .as_str()
-                    .unwrap()
-                    .to_string(),
-                player_id: p
-                    .get(0)
-                    .unwrap()
-                    .as_array()
-                    .unwrap()
-                    .get(5)
-                    .unwrap()
-                    .as_str()
-                    .unwrap()
-                    .to_string()
-                    .parse()
-                    .unwrap(),
-            })
-            .collect::<Vec<_>>())
+        let response = self.api_request("FdyJ0", &json!([name_prefix])).await?;
+        tracing::debug!("{}", &response.to_string()[..100]);
+
+        Ok(serde_json::from_str::<protos::PlayerSearchResponse>(
+            &response.to_string(),
+        )?)
     }
 
     pub async fn store_search(&mut self, name_contains: &str) -> eyre::Result<Vec<SearchSku>> {
@@ -350,26 +285,15 @@ impl Client {
         Ok(response)
     }
 
-    pub async fn store_sku(&mut self, sku_id: &str) -> eyre::Result<Option<StoreSku>> {
-        let r = self.api_request("FWhQV", &json!([null, sku_id])).await;
-        let r = r.unwrap();
-        let r = r.as_array().unwrap().get(16);
-        Ok(r.map(|r| StoreSku::from_proto(r)))
+    pub async fn store_sku(&mut self, sku_id: &str) -> eyre::Result<protos::StoreSkuResponse> {
+        let response = self.api_request("FWhQV", &json!([null, sku_id])).await;
+        let response = response.unwrap();
+        tracing::debug!("{}", &response.to_string()[..100]);
+
+        Ok(serde_json::from_str::<protos::StoreSkuResponse>(
+            &response.to_string(),
+        )?)
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct SearchSku {
-    pub game_id: String,
-    pub sku_id: String,
-    pub name: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Player {
-    pub player_id: u64,
-    pub name: String,
-    pub number: String,
 }
 
 fn printable(bytes: &[u8], filler: char) -> String {
@@ -402,6 +326,13 @@ fn fit_into_array<const T: usize>(value: &[u8]) -> [u8; T] {
     }
 
     array
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SearchSku {
+    pub game_id: String,
+    pub sku_id: String,
+    pub name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
