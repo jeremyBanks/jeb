@@ -9,8 +9,34 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default)]
 pub struct StoreSearchResponse {}
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default)]
-pub struct StoreSkuResponse {
+macro_rules! proto_type {
+    (pub struct $name:tt; $($prop:ident: $type:ty),*,) => {
+        #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
+        pub struct $name {
+          $(
+            #[serde(default)]
+            pub $prop: $type,
+          )*
+        }
+    };
+}
+
+impl std::fmt::Debug for Ignored {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.0.is_none() {
+            write!(f, "null")
+        } else {
+            write!(f, "…")
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Default)]
+#[serde(transparent)]
+pub struct Ignored(Option<Json>);
+
+proto_type! {
+    pub struct StoreSkuResponse;
     game_id: String,
     sku_id: String,
     _2: Ignored,
@@ -35,26 +61,11 @@ pub struct StoreSkuResponse {
     _21: Ignored,
     _22: Ignored,
     _23: Ignored,
-    #[serde(default)]
     _24: Ignored,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Default)]
-#[serde(transparent)]
-pub struct Ignored(Option<Json>);
-
-impl std::fmt::Debug for Ignored {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.0.is_none() {
-            write!(f, "null")
-        } else {
-            write!(f, "…")
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default)]
-pub struct Sku {
+proto_type! {
+    pub struct Sku;
     sku_id: String,
     name: String,
     _images: Ignored,
@@ -92,53 +103,43 @@ pub struct Sku {
     _34: Ignored,
     _35: Ignored,
     _36: Ignored,
-    #[serde(default)]
     _37: Ignored,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default, Deref)]
-pub struct PlayerSearchResponse {
-    #[serde(default)]
+proto_type! {
+    pub struct PlayerSearchResponse;
     _0: Ignored,
-    #[deref]
-    #[serde(default)]
     players: Vec<PlayerSearchResponsePlayer>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default, Deref)]
-pub struct PlayerSearchResponsePlayer {
-    #[deref]
+proto_type! {
+    pub struct PlayerSearchResponsePlayer;
     player: Player,
-    #[serde(default)]
     _1: Ignored,
-    #[serde(default)]
     _2: Ignored,
-    #[serde(default)]
     _3: Ignored,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default)]
-pub struct Player {
+proto_type! {
+    pub struct Player;
     gamertag: PlayerGamertag,
     avatar: PlayerAvatar,
     _2: Ignored,
     gamertag_normalized: String,
     _4: Ignored,
     player_id: String,
-    #[serde(default)]
     _6: Ignored,
-    #[serde(default)]
     _7: Ignored,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default)]
-pub struct PlayerGamertag {
+proto_type! {
+    pub struct PlayerGamertag;
     name: String,
     number: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default)]
-pub struct PlayerAvatar {
+proto_type! {
+    pub struct PlayerAvatar;
     id: String,
     url: String,
 }

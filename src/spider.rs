@@ -159,11 +159,11 @@ impl Spider {
 
             tracing::debug!(
                 "Found {:?} players starting with {:?}. {:#?}",
-                players.len(),
+                players.players.len(),
                 &prefix,
-                players.get(0),
+                players.players.get(0),
             );
-            if players.len() == 100 {
+            if players.players.len() == 100 {
                 if prefix.len() == 15 {
                     panic!("too many {:?}", prefix);
                 }
