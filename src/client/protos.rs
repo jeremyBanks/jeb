@@ -15,10 +15,22 @@ macro_rules! proto {
 
         $(
             $(
-                optional $prop:ident [type = $type:ty]
+                optional ::$optional_type:ident $optional:ident
             )*
             $(
-                repeated $repeated_prop:ident [type = $repeated_type:ty]
+                optional string $optional_string:ident
+            )*
+            $(
+                optional uint64 $optional_uint64:ident
+            )*
+            $(
+                repeated ::$repeated_type:ident $repeated:ident
+            )*
+            $(
+                repeated string $repeated_string:ident
+            )*
+            $(
+                repeated uint64 $repeated_uint64:ident
             )*
             $(
                 reserved $ignored_prop:ident
@@ -31,15 +43,27 @@ macro_rules! proto {
             $(
                 $(
                     #[serde(default)]
-                    pub $prop: $type,
+                    pub $optional: $optional_type,
                 )*
                 $(
                     #[serde(default)]
-                    pub $repeated_prop: Vec<$repeated_type>,
+                    pub $optional_string: String,
                 )*
                 $(
                     #[serde(default)]
-                    $ignored_prop: Ignored,
+                    pub $optional_uint64: u64,
+                )*
+                $(
+                    #[serde(default)]
+                    pub $repeated: Vec<$repeated_type>,
+                )*
+                $(
+                    #[serde(default)]
+                    pub $repeated_string: Vec<String>,
+                )*
+                $(
+                    #[serde(default)]
+                    pub $repeated_uint64: Vec<u64>,
                 )*
             )+
         }
@@ -68,12 +92,12 @@ pub struct Ignored(Option<Json>);
 
 proto! {
     pub struct StoreSkuResponse;
-    optional game_id [type = String];
-    optional sku_id [type = String];
+    optional string game_id;
+    optional string sku_id;
     reserved _2;
-    optional name [type = String];
+    optional string name;
     reserved _4;
-    optional description [type = String];
+    optional string description;
     reserved _6;
     reserved _7;
     reserved _8;
@@ -84,7 +108,7 @@ proto! {
     reserved _13;
     reserved _14;
     reserved _15;
-    optional sku [type = Sku];
+    optional ::Sku sku;
     reserved _17;
     reserved _18;
     reserved _19;
@@ -97,16 +121,16 @@ proto! {
 
 proto! {
     pub struct Sku;
-    optional sku_id [type = String];
-    optional name [type = String];
+    optional string sku_id;
+    optional string name;
     reserved _images;
     reserved _3;
-    optional game_id [type = String];
-    optional internal_name [type = String];
-    optional sku_type_id [type = u64];
+    optional string game_id;
+    optional string internal_name;
+    optional uint64 sku_type_id;
     reserved _7;
     reserved _8;
-    optional description [type = String];
+    optional string description;
     reserved _10_timestamp;
     reserved _11;
     reserved _12;
@@ -140,12 +164,12 @@ proto! {
 proto! {
     pub struct PlayerSearchResponse;
     reserved _0;
-    optional players [type = Vec<PlayerSearchResponsePlayer>];
+    repeated ::PlayerSearchResponsePlayer players;
 }
 
 proto! {
     pub struct PlayerSearchResponsePlayer;
-    optional player [type = Player];
+    optional ::Player player;
     reserved _1;
     reserved _2;
     reserved _3;
@@ -153,24 +177,24 @@ proto! {
 
 proto! {
     pub struct Player;
-    optional gamertag [type = PlayerGamertag];
-    optional avatar [type = PlayerAvatar];
+    optional ::PlayerGamertag gamertag;
+    optional ::PlayerAvatar avatar;
     reserved _2;
-    optional gamertag_normalized [type = String];
+    optional string gamertag_normalized;
     reserved _4;
-    optional player_id [type = String];
+    optional string player_id;
     reserved _6;
     reserved _7;
 }
 
 proto! {
     pub struct PlayerGamertag;
-    optional name [type = String];
-    optional number [type = String];
+    optional string name;
+    optional string number;
 }
 
 proto! {
     pub struct PlayerAvatar;
-    optional id [type = String];
-    optional url [type = String];
+    optional string id;
+    optional string url;
 }
