@@ -7,11 +7,9 @@ use serde_json::Value as Json;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default)]
-#[serde(default)]
 pub struct StoreSearchResponse {}
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default)]
-#[serde(default)]
 pub struct StoreSkuResponse {
     game_id: String,
     sku_id: String,
@@ -37,6 +35,8 @@ pub struct StoreSkuResponse {
     _21: Ignored,
     _22: Ignored,
     _23: Ignored,
+    #[serde(default)]
+    _24: Ignored,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Default)]
@@ -54,7 +54,6 @@ impl std::fmt::Debug for Ignored {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default)]
-#[serde(default)]
 pub struct Sku {
     sku_id: String,
     name: String,
@@ -71,8 +70,8 @@ pub struct Sku {
     _12: Ignored,
     _13: Ignored,
     _14: Ignored,
-    publisher: String,
-    developers: Vec<String>,
+    publisher: Ignored,
+    developers: Ignored,
     _17: Ignored,
     _18: Ignored,
     _19: Ignored,
@@ -80,8 +79,8 @@ pub struct Sku {
     _21: Ignored,
     _22: Ignored,
     _23: Ignored,
-    languages: Vec<String>,
-    countries: Vec<String>,
+    languages: Ignored,
+    countries: Ignored,
     _26_timestamp: Ignored,
     _27: Ignored,
     _28: Ignored,
@@ -93,28 +92,32 @@ pub struct Sku {
     _34: Ignored,
     _35: Ignored,
     _36: Ignored,
+    #[serde(default)]
+    _37: Ignored,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default, Deref)]
-#[serde(default)]
 pub struct PlayerSearchResponse {
+    #[serde(default)]
     _0: Ignored,
     #[deref]
+    #[serde(default)]
     players: Vec<PlayerSearchResponsePlayer>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default, Deref)]
-#[serde(default)]
 pub struct PlayerSearchResponsePlayer {
     #[deref]
     player: Player,
+    #[serde(default)]
     _1: Ignored,
+    #[serde(default)]
     _2: Ignored,
+    #[serde(default)]
     _3: Ignored,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default)]
-#[serde(default)]
 pub struct Player {
     gamertag: PlayerGamertag,
     avatar: PlayerAvatar,
@@ -122,19 +125,19 @@ pub struct Player {
     gamertag_normalized: String,
     _4: Ignored,
     player_id: String,
+    #[serde(default)]
     _6: Ignored,
+    #[serde(default)]
     _7: Ignored,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default)]
-#[serde(default)]
 pub struct PlayerGamertag {
     name: String,
     number: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Getters, Default)]
-#[serde(default)]
 pub struct PlayerAvatar {
     id: String,
     url: String,

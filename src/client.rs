@@ -253,11 +253,9 @@ impl Client {
         let name_prefix = format!("{} {}", &name_prefix[..1], &name_prefix[1..]);
 
         let response = self.api_request("FdyJ0", &json!([name_prefix])).await?;
-        tracing::debug!("{}", &response.to_string()[..100]);
+        let json = response.to_string();
 
-        Ok(serde_json::from_str::<protos::PlayerSearchResponse>(
-            &response.to_string(),
-        )?)
+        Ok(serde_json::from_str::<protos::PlayerSearchResponse>(&json)?)
     }
 
     pub async fn store_search(&mut self, name_contains: &str) -> eyre::Result<Vec<SearchSku>> {
@@ -293,11 +291,14 @@ impl Client {
         let response = response.unwrap();
         let json = response.to_string();
 
+        if json == "[]" {
+            return Ok(None);
+        }
+
         let parsed = serde_json::from_str::<Option<protos::StoreSkuResponse>>(&json);
 
         if let Err(ref err) = parsed {
             tracing::error!("{:?}", err);
-            tracing::error!("{}", json);
         }
 
         Ok(parsed?)

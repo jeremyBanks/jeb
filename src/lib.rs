@@ -17,12 +17,5 @@ pub async fn main() {
 
     let mut spider = crate::spider::Spider::new(google_cookie, api_cache);
 
-    dbg!(
-        spider
-            .client
-            .store_sku("8f006ae6f46648649e58b865b89b165ap")
-            .await
-    );
-
-    // spider.crawl().await;
+    spider.crawl().await;
 }
