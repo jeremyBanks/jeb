@@ -164,7 +164,7 @@ impl Client {
                     tracing::error!("wtf?");
                 }
             } else {
-                tracing::info!(
+                tracing::error!(
                     rpc_id,
                     "but it doesn't have a response: {}",
                     printable(&cache_key, ' ').trim()
