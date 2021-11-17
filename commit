@@ -7,6 +7,7 @@ export TZ=UTC
 
 declare parents
 declare tree
+declare tree4
 declare repo
 repo="$(git rev-parse --show-toplevel)"
 cd "$repo"
@@ -20,43 +21,7 @@ fi
 git add .
 
 tree="$(git write-tree)"
-
-function icao-hex  {
-
-
-    declare letters="$*"
-    for ((i=0; i<${#letters}; i++)); do
-        if ((i > 0)); then
-            printf " "
-        fi
-        declare letter="${letters:$i:1}"
-        declare phono
-        phono="${icao_hex[$letter]}"
-        printf "%s" "$phono"
-    done
-}
-
-declare -rA icao_hex=(
-    [0]=zero
-    [1]=one
-    [2]=two
-    [3]=three
-    [4]=four
-    [5]=five
-    [6]=six
-    [7]=seven
-    [8]=eight
-    [9]=nine
-    [a]=alfa
-    [b]=bravo
-    [c]=charlie
-    [d]=delta
-    [e]=echo
-    [f]=foxtrot
-)
-
-declare icao_tree
-icao_tree="$(icao-hex "${tree:0:4}")"
+tree4="${tree:0:4}"
 
 declare -i generation=0
     for parent in $parents; do
@@ -70,7 +35,7 @@ declare -i generation=0
     done
 
 declare message
-message="r$generation $icao_tree"
+message="r${generation}/${tree4}"
 
 declare -i tick=256
 declare -i step=16384
