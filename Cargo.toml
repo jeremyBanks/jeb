@@ -1,0 +1,22 @@
+[package]
+name = "jeb"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "jeb"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "jeb"
+path = "src/main.rs"
+
+[dependencies]
+wasm-bindgen = "0.2"
+
+[dev-dependencies]
+
+[profile.release]
+opt-level = "z"
+lto = true
