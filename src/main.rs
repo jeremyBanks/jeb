@@ -1,5 +1,5 @@
 use clap::Parser;
-use jeb::{merge_sorted_streams, parse_json_stream, JsonObject};
+use jeb::{apply_sort_buffer, merge_sorted_streams, parse_json_stream, JsonObject};
 use std::fs::File;
 use std::io::{self, BufWriter, Read, Write};
 use tracing::{debug, error, info};
@@ -14,6 +14,10 @@ struct Cli {
     /// Enable debug logging
     #[arg(short, long)]
     debug: bool,
+
+    /// Sort buffer size for correcting slight disorder (0 to disable)
+    #[arg(short = 'b', long, default_value = "128")]
+    buffer_size: usize,
 
     /// Input file (use '-' for stdin). When using positional args, this is also the output file.
     #[arg(value_name = "FILE")]
@@ -74,8 +78,11 @@ fn main() {
     }
 
     // Merge all sorted streams into a single sorted output
-    let all_objects = merge_sorted_streams(streams);
-    info!("Total objects after merge: {}", all_objects.len());
+    let merged_objects = merge_sorted_streams(streams);
+
+    // Apply sort buffer to correct slight disorder
+    let all_objects = apply_sort_buffer(merged_objects, cli.buffer_size);
+    info!("Total objects after sort buffer: {}", all_objects.len());
 
     // Write objects as JSON lines to output
     if let Err(e) = write_json_lines(&output_file, &all_objects) {

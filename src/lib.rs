@@ -299,6 +299,71 @@ pub fn merge_sorted_streams(streams: Vec<Vec<JsonObject>>) -> Vec<JsonObject> {
     result
 }
 
+/// Apply a sorting buffer to correct slight disorder in the input.
+///
+/// This function maintains a sliding window buffer of size `buffer_size`.
+/// It fills the buffer, sorts it, outputs the smallest element, and continues
+/// until all elements are processed. This allows correcting out-of-order elements
+/// within the buffer window.
+///
+/// If buffer_size is 0, returns the input unchanged.
+#[instrument(skip(objects))]
+pub fn apply_sort_buffer(objects: Vec<JsonObject>, buffer_size: usize) -> Vec<JsonObject> {
+    if buffer_size == 0 {
+        debug!("Sort buffer disabled (size=0), returning objects unchanged");
+        return objects;
+    }
+
+    if objects.is_empty() {
+        return objects;
+    }
+
+    let mut result = Vec::with_capacity(objects.len());
+    let mut buffer: Vec<JsonObject> = Vec::with_capacity(buffer_size);
+    let mut input_iter = objects.into_iter();
+
+    // Fill the initial buffer
+    for obj in input_iter.by_ref().take(buffer_size) {
+        buffer.push(obj);
+    }
+
+    // Sort the initial buffer
+    buffer.sort_by(|a, b| {
+        let a_val = Value::Object(a.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
+        let b_val = Value::Object(b.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
+        json_total_order(&a_val, &b_val)
+    });
+
+    // Process remaining objects
+    for obj in input_iter {
+        // Output the smallest element from buffer
+        if !buffer.is_empty() {
+            result.push(buffer.remove(0));
+        }
+
+        // Insert new object in sorted position
+        let obj_val = Value::Object(obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
+        let insert_pos = buffer
+            .iter()
+            .position(|b| {
+                let b_val = Value::Object(b.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
+                json_total_order(&obj_val, &b_val) == Ordering::Less
+            })
+            .unwrap_or(buffer.len());
+        buffer.insert(insert_pos, obj);
+    }
+
+    // Output remaining buffer contents (already sorted)
+    result.extend(buffer);
+
+    info!(
+        "Applied sort buffer of size {} to {} objects",
+        buffer_size,
+        result.len()
+    );
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -605,5 +670,80 @@ Random text in between
 
         let merged = merge_sorted_streams(vec![stream1]);
         assert_eq!(merged.len(), 3);
+    }
+
+    // Sort buffer tests
+
+    #[test]
+    fn test_apply_sort_buffer_disabled() {
+        let objects = parse_json_stream(r#"{"id": 3}{"id": 1}{"id": 2}"#).unwrap();
+        let result = apply_sort_buffer(objects.clone(), 0);
+
+        // Should return unchanged when buffer size is 0
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0].get("id").unwrap(), &Value::from(3));
+        assert_eq!(result[1].get("id").unwrap(), &Value::from(1));
+        assert_eq!(result[2].get("id").unwrap(), &Value::from(2));
+    }
+
+    #[test]
+    fn test_apply_sort_buffer_small_disorder() {
+        // Slightly out of order - within buffer window
+        let objects = parse_json_stream(r#"{"id": 1}{"id": 3}{"id": 2}{"id": 4}"#).unwrap();
+        let result = apply_sort_buffer(objects, 3);
+
+        // Should be sorted
+        assert_eq!(result.len(), 4);
+        for (i, obj) in result.iter().enumerate() {
+            assert_eq!(obj.get("id").unwrap(), &Value::from(i + 1));
+        }
+    }
+
+    #[test]
+    fn test_apply_sort_buffer_already_sorted() {
+        let objects = parse_json_stream(r#"{"id": 1}{"id": 2}{"id": 3}{"id": 4}"#).unwrap();
+        let result = apply_sort_buffer(objects, 3);
+
+        // Should remain sorted
+        assert_eq!(result.len(), 4);
+        for (i, obj) in result.iter().enumerate() {
+            assert_eq!(obj.get("id").unwrap(), &Value::from(i + 1));
+        }
+    }
+
+    #[test]
+    fn test_apply_sort_buffer_large_buffer() {
+        // Buffer larger than input
+        let objects = parse_json_stream(r#"{"id": 3}{"id": 1}{"id": 2}"#).unwrap();
+        let result = apply_sort_buffer(objects, 10);
+
+        // Should fully sort
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0].get("id").unwrap(), &Value::from(1));
+        assert_eq!(result[1].get("id").unwrap(), &Value::from(2));
+        assert_eq!(result[2].get("id").unwrap(), &Value::from(3));
+    }
+
+    #[test]
+    fn test_apply_sort_buffer_empty() {
+        let objects: Vec<JsonObject> = vec![];
+        let result = apply_sort_buffer(objects, 3);
+
+        assert_eq!(result.len(), 0);
+    }
+
+    #[test]
+    fn test_apply_sort_buffer_complex() {
+        // More complex disorder pattern
+        let objects = parse_json_stream(
+            r#"{"id": 1}{"id": 2}{"id": 5}{"id": 3}{"id": 4}{"id": 6}"#
+        ).unwrap();
+        let result = apply_sort_buffer(objects, 3);
+
+        // With buffer size 3, should correct the disorder
+        assert_eq!(result.len(), 6);
+        for (i, obj) in result.iter().enumerate() {
+            assert_eq!(obj.get("id").unwrap(), &Value::from(i + 1));
+        }
     }
 }
