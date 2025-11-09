@@ -77,6 +77,11 @@
   - `"-attribute-name"`: Parent's attribute values (for ALL attributes)
   - `"--attribute-name"`: Grandparent's attribute values (and so on)
   - Example: `"-id"` for parent's id attribute, `"--class"` for grandparent's class attribute
+- Attribute value handling:
+  - Boolean attributes without values (HTML): converted to `true`
+    - Example: `<input disabled>` → `"disabled": true`
+  - Attributes with values: preserved as strings
+  - Round-trip: `true` values output as valueless boolean attributes
 - Virtual attributes (always present in data model):
   - `@text`: Text node as first child of the node (empty string `""` for self-closing tags, `null` for tags with no text)
   - `@tail`: Text node following the node
