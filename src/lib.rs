@@ -6,6 +6,10 @@ use std::cmp::Ordering;
 use tokio::io::{AsyncBufRead, AsyncReadExt, BufReader};
 use tracing::{debug, info, instrument};
 
+// New module for stream/text conversion (work in progress, currently unused)
+#[allow(dead_code)]
+mod json_stream;
+
 /// Type alias for JSON objects using IndexMap to preserve insertion order
 pub type JsonObject = IndexMap<String, Value>;
 
