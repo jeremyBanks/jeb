@@ -52,3 +52,26 @@
 
 ### Statistics
 - Report on object counts, field distributions, etc.
+
+## Pipeline Definition and Visualization
+
+### Data-Driven Pipeline Configuration
+- Define data flow using data/configuration instead of code
+- CLI could construct pipeline definitions from arguments
+- Visualize the data flow pipeline
+- Show how transformations connect and compose
+
+## Alternative Input Formats
+
+### Bencode Support
+- Support JEB binary encodings
+- Serialize and deserialize bencoded data (BitTorrent encoding format)
+
+### XML Support (Input Only)
+- Serialize nodes that don't have children (self-closing or leaf nodes)
+- Include tag names and parent information with special naming to avoid collisions:
+  - `xml-name`: The node's tag name
+  - `xml-parent-xml-name`: Parent tag name
+  - `xml-parent-id`: Parent tag's id attribute value
+- Note: Naming scheme is intentionally verbose to avoid collisions with actual XML content
+- Starting point that could be refined with a cleaner approach later
