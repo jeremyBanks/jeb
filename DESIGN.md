@@ -21,11 +21,6 @@ Converts text streams into streams of parsed JSON objects.
 - Simple scan for `{` character, then delegates to real JSON parser to extract complete object
 - Between top-level objects, any character (including `{` in text) is ignored
 
-**Future extensions (input only):**
-- Comments (line and block styles)
-- Multiline strings
-- Unquoted or single-quoted keys
-
 ### 2. Output Serialization
 
 Converts streams of JSON objects into text streams.
