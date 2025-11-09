@@ -1,123 +1,149 @@
-use clap::{Parser, Subcommand};
-use jeb::{calculate, entity_from_json, entity_to_json, greet, process_data, Entity};
-use tracing::{error, info};
+use clap::Parser;
+use jeb::{parse_json_stream, JsonObject};
+use std::fs::File;
+use std::io::{self, BufWriter, Read, Write};
+use tracing::{debug, error, info};
 use tracing_subscriber;
 
-/// JSON Entity Bucket - A demo Rust application
+/// JSON Entity Bucket - Merge, format, and search JSON
 #[derive(Parser, Debug)]
 #[command(name = "jeb")]
-#[command(about = "JSON Entity Bucket CLI", long_about = None)]
+#[command(about = "JSON Entity Bucket - Merge, format, and search JSON", long_about = None)]
 struct Cli {
     /// Enable debug logging
     #[arg(short, long)]
     debug: bool,
 
-    #[command(subcommand)]
-    command: Commands,
-}
+    /// Input file (use '-' for stdin). When using positional args, this is also the output file.
+    #[arg(value_name = "FILE")]
+    files: Vec<String>,
 
-#[derive(Subcommand, Debug)]
-enum Commands {
-    /// Greet someone
-    Greet {
-        /// Name to greet
-        #[arg(default_value = "World")]
-        name: String,
-    },
-    /// Calculate sum of two numbers
-    Calculate {
-        /// First number
-        x: i32,
-        /// Second number
-        y: i32,
-    },
-    /// Process some data
-    Process {
-        /// Data as comma-separated bytes (e.g., "1,2,3,4,5")
-        #[arg(default_value = "1,2,3,4,5")]
-        data: String,
-    },
-    /// Create and display an entity as JSON
-    Entity {
-        /// Entity ID
-        #[arg(short, long)]
-        id: i64,
-        /// Entity name
-        #[arg(short, long)]
-        name: String,
-        /// Optional metadata
-        #[arg(short, long)]
-        metadata: Option<String>,
-    },
-    /// Parse an entity from JSON
-    ParseEntity {
-        /// JSON string representing an entity
-        json: String,
-    },
+    /// Input file(s) - alternative to positional arguments
+    #[arg(short, long, value_name = "FILE")]
+    from: Vec<String>,
+
+    /// Output file (use '-' for stdout) - alternative to positional arguments
+    #[arg(short, long, value_name = "FILE")]
+    to: Option<String>,
 }
 
 fn main() {
     let cli = Cli::parse();
 
     // Initialize tracing
-    let filter = if cli.debug {
-        "debug"
-    } else {
-        "info"
-    };
-    tracing_subscriber::fmt()
-        .with_env_filter(filter)
-        .init();
+    let filter = if cli.debug { "debug" } else { "info" };
+    tracing_subscriber::fmt().with_env_filter(filter).init();
 
     info!("JEB starting...");
 
-    match cli.command {
-        Commands::Greet { name } => {
-            let greeting = greet(&name);
-            println!("{}", greeting);
+    // Validate and determine input/output files
+    let (input_files, output_file) = match parse_io_args(&cli) {
+        Ok((inputs, output)) => (inputs, output),
+        Err(e) => {
+            error!("{}", e);
+            std::process::exit(1);
         }
-        Commands::Calculate { x, y } => {
-            let result = calculate(x, y);
-            println!("{} + {} = {}", x, y, result);
-        }
-        Commands::Process { data } => {
-            let bytes: Vec<u8> = data
-                .split(',')
-                .filter_map(|s| s.trim().parse().ok())
-                .collect();
-            let processed = process_data(&bytes);
-            println!("Input:  {:?}", bytes);
-            println!("Output: {:?}", processed);
-        }
-        Commands::Entity { id, name, metadata } => {
-            let mut entity = Entity::new(id, name);
-            if let Some(meta) = metadata {
-                entity = entity.with_metadata(meta);
-            }
+    };
 
-            match entity_to_json(&entity) {
-                Ok(json) => println!("{}", json),
-                Err(e) => {
-                    error!("Failed to serialize entity: {}", e);
-                    std::process::exit(1);
-                }
+    debug!("Input files: {:?}", input_files);
+    debug!("Output file: {:?}", output_file);
+
+    // Process JSON from all input files
+    let mut all_objects = Vec::new();
+
+    for input_file in &input_files {
+        match read_json_objects(input_file) {
+            Ok(mut objects) => {
+                debug!("Read {} objects from {}", objects.len(), input_file);
+                all_objects.append(&mut objects);
             }
-        }
-        Commands::ParseEntity { json } => {
-            match entity_from_json(&json) {
-                Ok(entity) => {
-                    println!("Parsed entity:");
-                    println!("  ID: {}", entity.id);
-                    println!("  Name: {}", entity.name);
-                    println!("  Metadata: {:?}", entity.metadata);
-                }
-                Err(e) => {
-                    error!("Failed to parse entity: {}", e);
-                    std::process::exit(1);
-                }
+            Err(e) => {
+                error!("Failed to read from '{}': {}", input_file, e);
+                std::process::exit(1);
             }
         }
     }
 
+    info!("Total objects read: {}", all_objects.len());
+
+    // Write objects as JSON lines to output
+    if let Err(e) = write_json_lines(&output_file, &all_objects) {
+        error!("Failed to write to '{}': {}", output_file, e);
+        std::process::exit(1);
+    }
+
     info!("JEB completed successfully");
+}
+
+fn parse_io_args(cli: &Cli) -> Result<(Vec<String>, String), String> {
+    let has_positional = !cli.files.is_empty();
+    let has_from = !cli.from.is_empty();
+    let has_to = cli.to.is_some();
+
+    // Error if both positional and both --from/--to are present
+    if has_positional && has_from && has_to {
+        return Err(
+            "Cannot specify both positional arguments and --from/--to options".to_string(),
+        );
+    }
+
+    // Use --from/--to if present
+    if has_from || has_to {
+        let inputs = if has_from {
+            cli.from.clone()
+        } else {
+            vec!["-".to_string()] // Default to stdin
+        };
+        let output = cli.to.clone().unwrap_or_else(|| "-".to_string());
+        return Ok((inputs, output));
+    }
+
+    // Use positional arguments
+    if has_positional {
+        if cli.files.len() == 1 {
+            // Single file is both input and output
+            let file = cli.files[0].clone();
+            return Ok((vec![file.clone()], file));
+        } else {
+            // First file is input/output, rest are additional inputs
+            let output = cli.files[0].clone();
+            let inputs = cli.files.clone();
+            return Ok((inputs, output));
+        }
+    }
+
+    // Default: stdin to stdout
+    Ok((vec!["-".to_string()], "-".to_string()))
+}
+
+fn read_json_objects(file_path: &str) -> Result<Vec<JsonObject>, Box<dyn std::error::Error>> {
+    let mut reader: Box<dyn Read> = if file_path == "-" {
+        Box::new(io::stdin())
+    } else {
+        Box::new(File::open(file_path)?)
+    };
+
+    let mut content = String::new();
+    reader.read_to_string(&mut content)?;
+
+    parse_json_stream(&content)
+}
+
+fn write_json_lines(
+    file_path: &str,
+    objects: &[JsonObject],
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut writer: BufWriter<Box<dyn Write>> = if file_path == "-" {
+        BufWriter::new(Box::new(io::stdout()))
+    } else {
+        BufWriter::new(Box::new(File::create(file_path)?))
+    };
+
+    for obj in objects {
+        let json_str = serde_json::to_string(obj)?;
+        writeln!(writer, "{}", json_str)?;
+    }
+
+    writer.flush()?;
+    Ok(())
 }
