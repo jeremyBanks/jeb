@@ -81,7 +81,6 @@
   - `@text`: Text node as first child of the node (empty string `""` for self-closing tags, `null` for tags with no text)
   - `@tail`: Text node following the node
   - `@index`: Sibling index for distinguishing identical adjacent parents
-  - CDATA sections are parsed as regular text content (semantically equivalent)
   - Inherited from ancestors: `"-@text"`, `"--@text"`, `"-@tail"`, `"-@index"`, etc.
   - Options to control filtering:
     - Text filtering: Include all, filter whitespace-only, or filter empty (default: include all)
@@ -89,6 +88,10 @@
 - XML metadata preservation as special leaf nodes:
   - Comments, DTD, doctype, XML headers/declarations, processing instructions preserved as leaf nodes
   - The `""` key contains the entire source of these elements
+  - CDATA sections preserved as special leaf nodes:
+    - `""` contains the CDATA wrapper (e.g., `<![CDATA[`)
+    - `@text` contains the actual CDATA content
+    - Distinguishes CDATA from regular text content
   - Allows round-tripping of all XML metadata
 - Ordering preservation:
   - Attribute order preserved (using ordered maps)
@@ -105,5 +108,6 @@
   - Self-closing tag distinction via `@text` (`""` vs `null`)
   - Attribute and entity ordering preserved
   - Metadata (comments, processing instructions, DTD, etc.) preserved in raw form
-  - Only accepted semantic equivalence: CDATA vs regular text
+  - CDATA sections preserved distinctly from regular text
+  - Fully lossless round-tripping of XML/HTML documents
 - Input only due to non-bijective nature with JSON
