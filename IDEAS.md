@@ -91,6 +91,9 @@
   - The `""` key contains the entire source of these elements
   - Allows round-tripping of all XML metadata
 - This scheme doesn't collide with valid XML names (which can't be empty or start with hyphens)
-- Makes the transformation lossless with one accepted limitation:
-  - Adjacent parent nodes with identical attributes cannot be distinguished and won't round trip perfectly
+- Handling identical adjacent parents:
+  - If a child node and the next node have identical attributes, add `.index` to both
+  - Requires buffering one extra entity to look ahead
+  - Ensures all identical siblings get indexed (including the first), not just subsequent ones
+  - Makes the transformation fully lossless even with identical adjacent parents
 - Input only due to non-bijective nature with JSON
