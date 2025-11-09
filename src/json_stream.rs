@@ -334,9 +334,12 @@ Random text in between
         write_json_array(&mut buffer, &objects).await.unwrap();
 
         let output = String::from_utf8(buffer).unwrap();
-        assert_eq!(output, r#"[{"id":1,"name":"Alice"}
+        assert_eq!(
+            output,
+            r#"[{"id":1,"name":"Alice"}
 ]
-"#);
+"#
+        );
     }
 
     #[tokio::test]
