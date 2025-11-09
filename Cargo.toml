@@ -1,26 +1,27 @@
 [package]
 name = "jeb"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
+license = "MIT OR Apache-2.0"
 
 [lib]
 name = "jeb"
 path = "src/lib.rs"
-crate-type = ["cdylib", "rlib"]
 
 [[bin]]
 name = "jeb"
 path = "src/main.rs"
 
 [dependencies]
-wasm-bindgen = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 indexmap = { version = "2.0", features = ["serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-sqlx = { version = "0.8", features = ["runtime-tokio", "tls-rustls", "sqlite", "postgres", "mysql"] }
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.0", features = ["fs", "io-util", "io-std", "rt-multi-thread", "macros"] }
+tokio-stream = "0.1"
+futures = "0.3"
+async-stream = "0.3"
 clap = { version = "4.5", features = ["derive"] }
 color-eyre = "0.6"
 
