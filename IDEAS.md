@@ -92,7 +92,7 @@
   - Allows round-tripping of all XML metadata
 - This scheme doesn't collide with valid XML names (which can't be empty or start with hyphens)
 - Handling identical adjacent parents:
-  - If a child node and the next node have identical attributes, add `.index` to both
+  - If a child node and the next node have identical attributes, add `@index` to both
   - Requires buffering one extra entity to look ahead
   - Ensures all identical siblings get indexed (including the first), not just subsequent ones
   - Makes the transformation fully lossless even with identical adjacent parents
