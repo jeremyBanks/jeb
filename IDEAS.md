@@ -75,11 +75,13 @@
 - Allows importing data from torrent files and similar sources
 
 ### XML Support (Input Only)
-- Serialize nodes that don't have children (self-closing or leaf nodes)
-- Include tag names and parent information with special naming to avoid collisions:
-  - `xml-name`: The node's tag name
-  - `xml-parent-xml-name`: Parent tag name
-  - `xml-parent-id`: Parent tag's id attribute value
-- Note: Naming scheme is intentionally verbose to avoid collisions with actual XML content
-- Starting point that could be refined with a cleaner approach later
+- Serialize leaf nodes (nodes without children, either self-closing or incidentally)
+- Include tag names and parent information with special naming scheme:
+  - `""` (empty string): The node's tag name
+  - `"-"`: Parent tag name
+  - `"--"`: Grandparent tag name (and so on)
+  - `"-id"`: Parent's id attribute value
+  - `"--id"`: Grandparent's id attribute value (and so on)
+- This scheme doesn't collide with valid XML names (which can't be empty or start with hyphens)
+- Makes the transformation lossless
 - Input only due to non-bijective nature with JSON
