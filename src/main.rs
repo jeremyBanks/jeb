@@ -10,7 +10,7 @@ use tracing_subscriber;
 #[derive(Parser, Debug)]
 #[command(name = "jeb")]
 #[command(about = "JSON Entity Bucket - Merge, format, and search JSON")]
-#[command(long_about = "JSON Entity Bucket - Merge, format, and search JSON\n\nWith no arguments, reads from stdin and writes to stdout.\nUse '-' to explicitly specify stdin or stdout.")]
+#[command(long_about = "JSON Entity Bucket - Merge, format, and search JSON\n\nWith no arguments, reads from stdin and writes to stdout.\nUse '-' to explicitly specify stdin or stdout.\n\nInput arguments starting with { or [ are treated as inline JSON.")]
 struct Cli {
     /// Enable debug logging
     #[arg(short, long)]
@@ -21,16 +21,34 @@ struct Cli {
     buffer_size: usize,
 
     /// Input file (use '-' for stdin). When using positional args, this is also the output file.
+    /// Arguments starting with { or [ are treated as inline JSON.
     #[arg(value_name = "FILE")]
     files: Vec<String>,
 
-    /// Input file(s) - alternative to positional arguments
+    /// Input file(s) - alternative to positional arguments (auto-detects inline JSON)
     #[arg(short, long, value_name = "FILE")]
     from: Vec<String>,
+
+    /// Input file path(s) - never treat as inline JSON
+    #[arg(long, value_name = "PATH")]
+    from_path: Vec<String>,
+
+    /// Input JSON string(s) - always treat as inline JSON
+    #[arg(long, value_name = "JSON")]
+    from_string: Vec<String>,
 
     /// Output file (use '-' for stdout) - alternative to positional arguments
     #[arg(short, long, value_name = "FILE")]
     to: Option<String>,
+}
+
+/// Represents a source of JSON input
+#[derive(Debug, Clone)]
+enum InputSource {
+    /// Read from a file path or stdin (-)
+    FilePath(String),
+    /// Parse from inline JSON string
+    InlineJson(String),
 }
 
 fn main() {
@@ -51,7 +69,7 @@ fn main() {
     info!("JEB starting...");
 
     // Validate and determine input/output files
-    let (input_files, output_file) = match parse_io_args(&cli) {
+    let (input_sources, output_file) = match parse_io_args(&cli) {
         Ok((inputs, output)) => (inputs, output),
         Err(e) => {
             error!("{}", e);
@@ -59,20 +77,24 @@ fn main() {
         }
     };
 
-    debug!("Input files: {:?}", input_files);
+    debug!("Input sources: {} items", input_sources.len());
     debug!("Output file: {:?}", output_file);
 
-    // Process JSON from all input files, treating each as a sorted stream
+    // Process JSON from all input sources, treating each as a sorted stream
     let mut streams = Vec::new();
 
-    for input_file in &input_files {
-        match read_json_objects(input_file) {
+    for input_source in &input_sources {
+        match read_json_from_source(input_source) {
             Ok(objects) => {
-                debug!("Read {} objects from {}", objects.len(), input_file);
+                let source_desc = match input_source {
+                    InputSource::FilePath(p) => p.clone(),
+                    InputSource::InlineJson(_) => "<inline>".to_string(),
+                };
+                debug!("Read {} objects from {}", objects.len(), source_desc);
                 streams.push(objects);
             }
             Err(e) => {
-                error!("Failed to read from '{}': {}", input_file, e);
+                error!("Failed to read from source: {}", e);
                 std::process::exit(1);
             }
         }
@@ -86,7 +108,15 @@ fn main() {
     info!("Total objects after sort buffer: {}", all_objects.len());
 
     // Determine if we need safe in-place modification
-    let needs_safe_write = output_file != "-" && input_files.contains(&output_file);
+    // Check if output file is used as any input file path
+    let input_file_paths: Vec<String> = input_sources
+        .iter()
+        .filter_map(|src| match src {
+            InputSource::FilePath(p) => Some(p.clone()),
+            InputSource::InlineJson(_) => None,
+        })
+        .collect();
+    let needs_safe_write = output_file != "-" && input_file_paths.contains(&output_file);
 
     if needs_safe_write {
         debug!("Output path matches an input path, using safe in-place modification");
@@ -105,48 +135,93 @@ fn main() {
     info!("JEB completed successfully");
 }
 
-fn parse_io_args(cli: &Cli) -> Result<(Vec<String>, String), String> {
+/// Check if a string looks like inline JSON (starts with { or [ and ends with matching brace)
+fn is_inline_json(s: &str) -> bool {
+    let trimmed = s.trim();
+    (trimmed.starts_with('{') && trimmed.ends_with('}'))
+        || (trimmed.starts_with('[') && trimmed.ends_with(']'))
+}
+
+fn parse_io_args(cli: &Cli) -> Result<(Vec<InputSource>, String), String> {
     let has_positional = !cli.files.is_empty();
-    let has_from = !cli.from.is_empty();
     let has_to = cli.to.is_some();
 
-    // Error if both positional and both --from/--to are present
-    if has_positional && has_from && has_to {
-        return Err(
-            "Cannot specify both positional arguments and --from/--to options".to_string(),
-        );
+    let mut all_inputs: Vec<InputSource> = Vec::new();
+
+    // Collect inputs from --from-path (always file paths)
+    for path in &cli.from_path {
+        all_inputs.push(InputSource::FilePath(path.clone()));
     }
 
-    // Use --from/--to if present
-    if has_from || has_to {
-        let inputs = if has_from {
-            cli.from.clone()
-        } else {
-            vec!["-".to_string()] // Default to stdin
-        };
-        let output = cli.to.clone().unwrap_or_else(|| "-".to_string());
-        return Ok((inputs, output));
+    // Collect inputs from --from-string (always inline JSON)
+    for json in &cli.from_string {
+        all_inputs.push(InputSource::InlineJson(json.clone()));
     }
 
-    // Use positional arguments
-    if has_positional {
-        if cli.files.len() == 1 {
-            // Single file is both input and output
-            let file = cli.files[0].clone();
-            return Ok((vec![file.clone()], file));
+    // Collect inputs from --from (auto-detect)
+    for arg in &cli.from {
+        if is_inline_json(arg) {
+            debug!("Detected inline JSON in --from argument");
+            all_inputs.push(InputSource::InlineJson(arg.clone()));
         } else {
-            // First file is input/output, rest are additional inputs
-            let output = cli.files[0].clone();
-            let inputs = cli.files.clone();
-            return Ok((inputs, output));
+            all_inputs.push(InputSource::FilePath(arg.clone()));
         }
     }
 
-    // Default: stdin to stdout
-    Ok((vec!["-".to_string()], "-".to_string()))
+    // Collect inputs from positional arguments (auto-detect)
+    for arg in &cli.files {
+        if is_inline_json(arg) {
+            debug!("Detected inline JSON in positional argument");
+            all_inputs.push(InputSource::InlineJson(arg.clone()));
+        } else {
+            all_inputs.push(InputSource::FilePath(arg.clone()));
+        }
+    }
+
+    // Determine output
+    let output = if has_to {
+        let out = cli.to.clone().unwrap();
+        // Validate output is not inline JSON
+        if is_inline_json(&out) {
+            return Err("Output path cannot be inline JSON (starts with { or [)".to_string());
+        }
+        out
+    } else if has_positional && !cli.files.is_empty() {
+        // First positional argument is output only if it's NOT inline JSON
+        let first = &cli.files[0];
+        if is_inline_json(first) {
+            // All positionals are inputs, output to stdout
+            "-".to_string()
+        } else {
+            // First positional is output file
+            first.clone()
+        }
+    } else {
+        // Default to stdout
+        "-".to_string()
+    };
+
+    // If no inputs specified, default to stdin
+    if all_inputs.is_empty() {
+        all_inputs.push(InputSource::FilePath("-".to_string()));
+    }
+
+    Ok((all_inputs, output))
 }
 
-fn read_json_objects(file_path: &str) -> Result<Vec<JsonObject>, Box<dyn std::error::Error>> {
+fn read_json_from_source(
+    source: &InputSource,
+) -> Result<Vec<JsonObject>, Box<dyn std::error::Error>> {
+    match source {
+        InputSource::FilePath(path) => read_json_from_file(path),
+        InputSource::InlineJson(json) => {
+            debug!("Parsing inline JSON");
+            parse_json_stream(json)
+        }
+    }
+}
+
+fn read_json_from_file(file_path: &str) -> Result<Vec<JsonObject>, Box<dyn std::error::Error>> {
     let mut reader: Box<dyn Read> = if file_path == "-" {
         Box::new(io::stdin())
     } else {
