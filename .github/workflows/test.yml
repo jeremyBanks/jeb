@@ -2,9 +2,8 @@ name: Tests and Native Build
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, trunk ]
   pull_request:
-    branches: [ main, master ]
 
 env:
   CARGO_TERM_COLOR: always

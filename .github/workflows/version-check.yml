@@ -4,7 +4,6 @@ on:
   push:
     branches: [ main, master, trunk ]
   pull_request:
-    branches: [ main, master, trunk ]
 
 jobs:
   check-version:
