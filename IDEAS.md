@@ -75,13 +75,22 @@
 - Allows importing data from torrent files and similar sources
 
 ### XML Support (Input Only)
-- Serialize leaf nodes (nodes without children, either self-closing or incidentally)
+- Serialize all nodes which do not have non-text children
 - Include tag names and parent information with special naming scheme:
   - `""` (empty string): The node's tag name
   - `"-"`: Parent tag name
   - `"--"`: Grandparent tag name (and so on)
   - `"-id"`: Parent's id attribute value
   - `"--id"`: Grandparent's id attribute value (and so on)
+- Text node handling with virtual attributes:
+  - `@text`: Text node as first child of the node
+  - `@tail`: Text node following the node
+  - Inherited from ancestors: `"-@text"`, `"--@text"`, `"-@tail"`, etc.
+  - By default, these attributes are present for all nodes (even if empty/whitespace)
+  - Options enum to control text filtering:
+    - Include all (default)
+    - Filter out whitespace-only text nodes
+    - Filter out empty text nodes
 - This scheme doesn't collide with valid XML names (which can't be empty or start with hyphens)
 - Makes the transformation lossless
 - Input only due to non-bijective nature with JSON
