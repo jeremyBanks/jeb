@@ -19,7 +19,7 @@ Converts text streams into streams of parsed JSON objects.
 **Behavior:**
 - Accepts JSON lines (newline-delimited), JSON arrays, concatenated objects, and mixed formats with arbitrary text
 - Simple scan for `{` character, then delegates to real JSON parser to extract complete object
-- Between top-level objects, any character (including `{` in text) is ignored - out of scope for quote handling
+- Between top-level objects, any character (including `{` in text) is ignored
 
 **Future extensions (input only):**
 - Comments (line and block styles)
@@ -47,10 +47,15 @@ Converts streams of JSON objects into text streams.
 
 Defines a total ordering for JSON values used by other utilities.
 
-**Type precedence (descending):**
-```
-object > array > string > number > true > false > null
-```
+**Type precedence:**
+- Types are ordered by the ASCII/lexicographic ordering of their representative characters:
+  - `-` for numbers (lowest)
+  - `"` for strings
+  - `[` for arrays
+  - `f` for false
+  - `n` for null
+  - `t` for true
+  - `{` for objects (highest)
 
 **Within-type ordering:**
 - **Strings**: Lexicographic UTF-8 byte order
@@ -66,13 +71,11 @@ Merges multiple sorted input streams into a single sorted output stream.
 
 **Behavior:**
 - Maintains round-robin pointer that advances on every pull
-- Compares values at head of each stream using comparison function
-- **If current round-robin head is incomparable to ALL other heads:** emit it directly
-- **If current round-robin head is comparable to ANY other head(s):** use those comparisons to determine minimum across all comparable values
-- **On ties (multiple streams have equal minimum):**
-  - Use round-robin to select among tied streams
-  - If round-robin pointer currently points to a non-tied stream, advance until it points to a tied stream
-  - Emit from that stream
+- Always start with the round-robin head as the current minimum
+- Rotate through the other stream heads
+- If a stream head compares less than the current minimum, it becomes the new minimum
+- Equal or incomparable is not less
+- Emit the minimum
 
 **Assumptions:** Input streams assumed to be pre-sorted for typical merge behavior; unsorted inputs handled gracefully (may produce unusual pull patterns)
 
@@ -122,7 +125,7 @@ Groups consecutive items and reduces each group to output items.
 - **First**: Returns `vec![group[0]]`
 - **Last**: Returns `vec![group[group.len()-1]]`
 - **FirstAndLast**: Returns `vec![group[0], group[group.len()-1]]` (or just first if group size is 1)
-- **Merge**: Combines all objects' fields into single object
+- **Merge**: Merges objects' fields when there are no conflicts (a field exists in multiple objects with different values). Can merge nested objects recursively, but cannot merge conflicting primitive values (strings, numbers, arrays, booleans, null)
 
 **Defaults:**
 - Grouping: Total ordering equality
