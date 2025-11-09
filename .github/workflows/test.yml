@@ -2,7 +2,7 @@ name: Tests and Native Build
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, trunk ]
   pull_request:
 
 env:
