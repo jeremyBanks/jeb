@@ -6,6 +6,10 @@ use std::cmp::Ordering;
 use tokio::io::{AsyncBufRead, AsyncReadExt, BufReader};
 use tracing::{debug, info, instrument};
 
+// New module for stream/text conversion (work in progress, currently unused)
+#[allow(dead_code)]
+mod json_stream;
+
 /// Type alias for JSON objects using IndexMap to preserve insertion order
 pub type JsonObject = IndexMap<String, Value>;
 
@@ -1243,11 +1247,11 @@ Random text in between
     #[test]
     fn test_key_order_parse_unsorted() {
         let opts = KeyOrderOptions::parse("").unwrap();
-        assert_eq!(opts.sort, false);
-        assert_eq!(opts.recursive, true);
+        assert!(!opts.sort);
+        assert!(opts.recursive);
 
         let opts = KeyOrderOptions::parse("false").unwrap();
-        assert_eq!(opts.sort, false);
+        assert!(!opts.sort);
     }
 
     #[test]
