@@ -79,6 +79,7 @@
 - Text node handling with virtual attributes:
   - `@text`: Text node as first child of the node
   - `@tail`: Text node following the node
+  - CDATA sections are parsed as regular text content
   - Inherited from ancestors: `"-@text"`, `"--@text"`, `"-@tail"`, etc.
   - By default, these attributes are present for all nodes (even if empty/whitespace)
   - Options enum to control text filtering:
