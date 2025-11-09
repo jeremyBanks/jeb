@@ -7,7 +7,7 @@ use async_stream::stream;
 use futures::stream::Stream;
 use indexmap::IndexMap;
 use serde_json::Value;
-use tokio::io::{AsyncBufRead, AsyncReadExt, BufReader};
+use tokio::io::{AsyncBufRead, AsyncReadExt, AsyncWriteExt, BufReader};
 use tracing::{debug, info, instrument};
 
 /// Type alias for JSON objects using IndexMap to preserve insertion order
@@ -145,6 +145,50 @@ fn extract_json_object(input: &str) -> Option<(&str, usize)> {
     None
 }
 
+/// Write JSON objects to an async writer in line-by-line friendly format
+///
+/// Writes objects as a JSON array with special formatting:
+/// - First line: `[` followed by first object
+/// - Middle lines: `,` followed by each object
+/// - Last line: `]`
+///
+/// This format is both valid JSON and line-by-line processable (skip first character).
+///
+/// # Example Output
+/// ```text
+/// [{"id":1,"name":"Alice"}
+/// ,{"id":2,"name":"Bob"}
+/// ]
+/// ```
+pub async fn write_json_array<W: tokio::io::AsyncWrite + Unpin>(
+    writer: &mut W,
+    objects: &[JsonObject],
+) -> Result<(), std::io::Error> {
+    for (i, obj) in objects.iter().enumerate() {
+        let json_str = serde_json::to_string(obj)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+
+        if i == 0 {
+            writer
+                .write_all(format!("[{}\n", json_str).as_bytes())
+                .await?;
+        } else {
+            writer
+                .write_all(format!(",{}\n", json_str).as_bytes())
+                .await?;
+        }
+    }
+
+    // Write closing bracket (or just [] if empty)
+    if objects.is_empty() {
+        writer.write_all(b"[]\n").await?;
+    } else {
+        writer.write_all(b"]\n").await?;
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -266,5 +310,109 @@ Random text in between
         let (extracted, len) = result.unwrap();
         assert_eq!(extracted, r#"{"id": 1}"#);
         assert_eq!(len, 9);
+    }
+
+    #[tokio::test]
+    async fn test_write_json_array_empty() {
+        let objects: Vec<JsonObject> = vec![];
+        let mut buffer = Vec::new();
+
+        write_json_array(&mut buffer, &objects).await.unwrap();
+
+        let output = String::from_utf8(buffer).unwrap();
+        assert_eq!(output, "[]\n");
+    }
+
+    #[tokio::test]
+    async fn test_write_json_array_single() {
+        let mut obj = IndexMap::new();
+        obj.insert("id".to_string(), Value::from(1));
+        obj.insert("name".to_string(), Value::from("Alice"));
+        let objects = vec![obj];
+
+        let mut buffer = Vec::new();
+        write_json_array(&mut buffer, &objects).await.unwrap();
+
+        let output = String::from_utf8(buffer).unwrap();
+        assert_eq!(output, r#"[{"id":1,"name":"Alice"}
+]
+"#);
+    }
+
+    #[tokio::test]
+    async fn test_write_json_array_multiple() {
+        let mut obj1 = IndexMap::new();
+        obj1.insert("id".to_string(), Value::from(1));
+        obj1.insert("name".to_string(), Value::from("Alice"));
+
+        let mut obj2 = IndexMap::new();
+        obj2.insert("id".to_string(), Value::from(2));
+        obj2.insert("name".to_string(), Value::from("Bob"));
+
+        let objects = vec![obj1, obj2];
+
+        let mut buffer = Vec::new();
+        write_json_array(&mut buffer, &objects).await.unwrap();
+
+        let output = String::from_utf8(buffer).unwrap();
+        assert_eq!(
+            output,
+            r#"[{"id":1,"name":"Alice"}
+,{"id":2,"name":"Bob"}
+]
+"#
+        );
+    }
+
+    #[tokio::test]
+    async fn test_write_json_array_is_valid_json() {
+        let mut obj1 = IndexMap::new();
+        obj1.insert("id".to_string(), Value::from(1));
+        let mut obj2 = IndexMap::new();
+        obj2.insert("id".to_string(), Value::from(2));
+        let objects = vec![obj1, obj2];
+
+        let mut buffer = Vec::new();
+        write_json_array(&mut buffer, &objects).await.unwrap();
+
+        let output = String::from_utf8(buffer).unwrap();
+
+        // Verify output is valid JSON by parsing it
+        let parsed: Value = serde_json::from_str(&output).unwrap();
+        assert!(parsed.is_array());
+        let array = parsed.as_array().unwrap();
+        assert_eq!(array.len(), 2);
+        assert_eq!(array[0]["id"], 1);
+        assert_eq!(array[1]["id"], 2);
+    }
+
+    #[tokio::test]
+    async fn test_write_then_parse_roundtrip() {
+        // Create some objects
+        let mut obj1 = IndexMap::new();
+        obj1.insert("id".to_string(), Value::from(1));
+        obj1.insert("name".to_string(), Value::from("Alice"));
+
+        let mut obj2 = IndexMap::new();
+        obj2.insert("id".to_string(), Value::from(2));
+        obj2.insert("name".to_string(), Value::from("Bob"));
+
+        let original_objects = vec![obj1, obj2];
+
+        // Write to buffer
+        let mut buffer = Vec::new();
+        write_json_array(&mut buffer, &original_objects)
+            .await
+            .unwrap();
+
+        // Parse back
+        let output = String::from_utf8(buffer).unwrap();
+        let parsed_objects = parse_json_string(&output).unwrap();
+
+        // Verify roundtrip
+        assert_eq!(parsed_objects.len(), original_objects.len());
+        for (parsed, original) in parsed_objects.iter().zip(original_objects.iter()) {
+            assert_eq!(parsed, original);
+        }
     }
 }
