@@ -85,6 +85,10 @@
     - Include all (default)
     - Filter out whitespace-only text nodes
     - Filter out empty text nodes
+- XML metadata preservation as special leaf nodes:
+  - Comments, DTD, doctype, XML headers/declarations preserved as leaf nodes
+  - The `""` key contains the entire source of these elements
+  - Allows round-tripping of all XML metadata
 - This scheme doesn't collide with valid XML names (which can't be empty or start with hyphens)
 - Makes the transformation lossless
 - Input only due to non-bijective nature with JSON
