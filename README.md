@@ -1,4 +1,4 @@
-# JEB (JSON Entity Bucket)
+# jeb (JSON Entity Bucket)
 
 > **⚠️ DISCLAIMER**: This is vibe-coded slop. The humans responsible would like none of the blame but all of the credit.
 
@@ -45,7 +45,7 @@ jeb --from input.json
 
 ### Input Format Handling
 
-JEB automatically handles various JSON formats:
+jeb automatically handles various JSON formats:
 
 **JSON Lines (newline-delimited):**
 ```json
@@ -76,7 +76,7 @@ Random text
 
 ### Output Format
 
-JEB outputs JSON as a **JSON array** (line-by-line friendly):
+jeb outputs JSON as a **JSON array** (line-by-line friendly):
 
 ```json
 [{"id":1,"name":"Alice"}
