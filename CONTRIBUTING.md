@@ -1,7 +1,5 @@
 # Contributing to jeb
 
-Thank you for your interest in contributing to jeb!
-
 ## Pull Request Guidelines
 
 ### Version Bumping (IMPORTANT!)
@@ -58,7 +56,3 @@ cargo doc --open
 # Build with all features
 cargo doc --all-features --open
 ```
-
-## Questions?
-
-Feel free to open an issue if you have any questions about contributing!
