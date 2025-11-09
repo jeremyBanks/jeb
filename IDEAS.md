@@ -34,13 +34,7 @@
 ### Deduplication
 - Remove duplicate objects based on key fields
 
-### JSON Patch/Merge
-- Apply transformations to objects
-
 ## Output Options
-
-### Pretty Printing
-- Option to output formatted JSON instead of JSON lines
 
 ### Streaming Output
 - Write objects as they're parsed for large files
