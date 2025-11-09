@@ -1,10 +1,12 @@
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::cmp::Ordering;
 use tracing::{debug, info, instrument};
 use wasm_bindgen::prelude::*;
 
-/// Type alias for JSON objects
-pub type JsonObject = serde_json::Map<String, Value>;
+/// Type alias for JSON objects using IndexMap to preserve insertion order
+pub type JsonObject = IndexMap<String, Value>;
 
 /// A simple data structure to demonstrate serde serialization.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -97,7 +99,10 @@ pub fn parse_json_stream(input: &str) -> Result<Vec<JsonObject>, Box<dyn std::er
                 match serde_json::from_str::<Value>(obj_str) {
                     Ok(Value::Object(obj)) => {
                         debug!("Parsed JSON object with {} keys", obj.len());
-                        objects.push(obj);
+                        // Convert serde_json::Map to IndexMap to preserve order
+                        let index_map: IndexMap<String, Value> =
+                            obj.into_iter().collect();
+                        objects.push(index_map);
 
                         // Skip ahead by the consumed length minus 1
                         // (minus 1 because we already consumed the first char)
@@ -158,6 +163,140 @@ fn extract_json_object(input: &str) -> Option<(&str, usize)> {
     }
 
     None
+}
+
+/// Implement total ordering for JSON values.
+///
+/// Ordering rules:
+/// 1. null < boolean < number < string < array < object
+/// 2. For booleans: false < true
+/// 3. For numbers: standard numeric comparison (treating all as f64)
+/// 4. For strings: lexicographic comparison
+/// 5. For arrays: lexicographic comparison element-by-element
+/// 6. For objects: compare by sorted keys, then by values
+pub fn json_total_order(a: &Value, b: &Value) -> Ordering {
+    use Value::*;
+
+    match (a, b) {
+        (Null, Null) => Ordering::Equal,
+        (Null, _) => Ordering::Less,
+        (_, Null) => Ordering::Greater,
+
+        (Bool(a), Bool(b)) => a.cmp(b),
+        (Bool(_), _) => Ordering::Less,
+        (_, Bool(_)) => Ordering::Greater,
+
+        (Number(a), Number(b)) => {
+            let a_f64 = a.as_f64().unwrap_or(0.0);
+            let b_f64 = b.as_f64().unwrap_or(0.0);
+            a_f64.partial_cmp(&b_f64).unwrap_or(Ordering::Equal)
+        }
+        (Number(_), _) => Ordering::Less,
+        (_, Number(_)) => Ordering::Greater,
+
+        (String(a), String(b)) => a.cmp(b),
+        (String(_), _) => Ordering::Less,
+        (_, String(_)) => Ordering::Greater,
+
+        (Array(a), Array(b)) => {
+            for (a_elem, b_elem) in a.iter().zip(b.iter()) {
+                match json_total_order(a_elem, b_elem) {
+                    Ordering::Equal => continue,
+                    other => return other,
+                }
+            }
+            a.len().cmp(&b.len())
+        }
+        (Array(_), _) => Ordering::Less,
+        (_, Array(_)) => Ordering::Greater,
+
+        (Object(a), Object(b)) => {
+            // Compare objects by their keys first, then by values
+            let a_keys: Vec<_> = a.keys().collect();
+            let b_keys: Vec<_> = b.keys().collect();
+
+            match a_keys.cmp(&b_keys) {
+                Ordering::Equal => {
+                    // Keys are the same, compare values in key order
+                    for key in a_keys {
+                        let a_val = &a[key];
+                        let b_val = &b[key];
+                        match json_total_order(a_val, b_val) {
+                            Ordering::Equal => continue,
+                            other => return other,
+                        }
+                    }
+                    Ordering::Equal
+                }
+                other => other,
+            }
+        }
+    }
+}
+
+/// Merge multiple sorted streams of JSON objects into a single sorted stream.
+///
+/// Assumes that each input vector is already sorted according to json_total_order.
+/// Performs an n-way merge to produce a single sorted output.
+#[instrument(skip(streams))]
+pub fn merge_sorted_streams(streams: Vec<Vec<JsonObject>>) -> Vec<JsonObject> {
+    let total_capacity: usize = streams.iter().map(|s| s.len()).sum();
+    let mut result = Vec::with_capacity(total_capacity);
+
+    // Track the current position in each stream
+    let mut indices: Vec<usize> = vec![0; streams.len()];
+
+    loop {
+        // Find the smallest element among all stream heads
+        let mut min_stream_idx: Option<usize> = None;
+
+        for (stream_idx, stream) in streams.iter().enumerate() {
+            let pos = indices[stream_idx];
+            if pos >= stream.len() {
+                continue; // This stream is exhausted
+            }
+
+            // Convert current JsonObject to Value for comparison
+            let current_obj = Value::Object(
+                stream[pos]
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect(),
+            );
+
+            match min_stream_idx {
+                None => {
+                    min_stream_idx = Some(stream_idx);
+                }
+                Some(min_idx) => {
+                    // Compare with current minimum
+                    let min_pos = indices[min_idx];
+                    let min_obj = Value::Object(
+                        streams[min_idx][min_pos]
+                            .iter()
+                            .map(|(k, v)| (k.clone(), v.clone()))
+                            .collect(),
+                    );
+
+                    if json_total_order(&current_obj, &min_obj) == Ordering::Less {
+                        min_stream_idx = Some(stream_idx);
+                    }
+                }
+            }
+        }
+
+        // If no minimum was found, all streams are exhausted
+        if let Some(stream_idx) = min_stream_idx {
+            let pos = indices[stream_idx];
+            result.push(streams[stream_idx][pos].clone());
+            indices[stream_idx] += 1;
+        } else {
+            break;
+        }
+    }
+
+    info!("Merged {} streams into {} total objects", streams.len(), result.len());
+    result
 }
 
 #[cfg(test)]
@@ -356,5 +495,115 @@ Random text in between
         let (extracted, len) = result.unwrap();
         assert_eq!(extracted, r#"{"id": 1}"#);
         assert_eq!(len, 9);
+    }
+
+    // JSON total ordering tests
+
+    #[test]
+    fn test_json_total_order_types() {
+        use serde_json::json;
+
+        // Test type ordering: null < bool < number < string < array < object
+        assert_eq!(json_total_order(&json!(null), &json!(false)), Ordering::Less);
+        assert_eq!(json_total_order(&json!(false), &json!(0)), Ordering::Less);
+        assert_eq!(json_total_order(&json!(0), &json!("")), Ordering::Less);
+        assert_eq!(json_total_order(&json!(""), &json!([])), Ordering::Less);
+        assert_eq!(json_total_order(&json!([]), &json!({})), Ordering::Less);
+    }
+
+    #[test]
+    fn test_json_total_order_booleans() {
+        use serde_json::json;
+
+        assert_eq!(json_total_order(&json!(false), &json!(true)), Ordering::Less);
+        assert_eq!(json_total_order(&json!(true), &json!(false)), Ordering::Greater);
+        assert_eq!(json_total_order(&json!(true), &json!(true)), Ordering::Equal);
+    }
+
+    #[test]
+    fn test_json_total_order_numbers() {
+        use serde_json::json;
+
+        assert_eq!(json_total_order(&json!(1), &json!(2)), Ordering::Less);
+        assert_eq!(json_total_order(&json!(2.5), &json!(2.5)), Ordering::Equal);
+        assert_eq!(json_total_order(&json!(10), &json!(5)), Ordering::Greater);
+    }
+
+    #[test]
+    fn test_json_total_order_strings() {
+        use serde_json::json;
+
+        assert_eq!(
+            json_total_order(&json!("apple"), &json!("banana")),
+            Ordering::Less
+        );
+        assert_eq!(
+            json_total_order(&json!("test"), &json!("test")),
+            Ordering::Equal
+        );
+    }
+
+    #[test]
+    fn test_json_total_order_arrays() {
+        use serde_json::json;
+
+        assert_eq!(
+            json_total_order(&json!([1, 2]), &json!([1, 3])),
+            Ordering::Less
+        );
+        assert_eq!(
+            json_total_order(&json!([1, 2]), &json!([1, 2])),
+            Ordering::Equal
+        );
+        assert_eq!(
+            json_total_order(&json!([1, 2]), &json!([1])),
+            Ordering::Greater
+        );
+    }
+
+    #[test]
+    fn test_json_total_order_objects() {
+        use serde_json::json;
+
+        assert_eq!(
+            json_total_order(&json!({"a": 1}), &json!({"a": 2})),
+            Ordering::Less
+        );
+        assert_eq!(
+            json_total_order(&json!({"a": 1, "b": 2}), &json!({"a": 1, "b": 2})),
+            Ordering::Equal
+        );
+    }
+
+    // Merge sorted streams tests
+
+    #[test]
+    fn test_merge_sorted_streams_simple() {
+        let stream1 = parse_json_stream(r#"{"id": 1}{"id": 3}{"id": 5}"#).unwrap();
+        let stream2 = parse_json_stream(r#"{"id": 2}{"id": 4}{"id": 6}"#).unwrap();
+
+        let merged = merge_sorted_streams(vec![stream1, stream2]);
+
+        assert_eq!(merged.len(), 6);
+        for (i, obj) in merged.iter().enumerate() {
+            assert_eq!(obj.get("id").unwrap(), &Value::from(i + 1));
+        }
+    }
+
+    #[test]
+    fn test_merge_sorted_streams_empty() {
+        let stream1: Vec<JsonObject> = vec![];
+        let stream2 = parse_json_stream(r#"{"id": 1}"#).unwrap();
+
+        let merged = merge_sorted_streams(vec![stream1, stream2]);
+        assert_eq!(merged.len(), 1);
+    }
+
+    #[test]
+    fn test_merge_sorted_streams_single() {
+        let stream1 = parse_json_stream(r#"{"id": 1}{"id": 2}{"id": 3}"#).unwrap();
+
+        let merged = merge_sorted_streams(vec![stream1]);
+        assert_eq!(merged.len(), 3);
     }
 }

@@ -1,5 +1,5 @@
 use clap::Parser;
-use jeb::{parse_json_stream, JsonObject};
+use jeb::{merge_sorted_streams, parse_json_stream, JsonObject};
 use std::fs::File;
 use std::io::{self, BufWriter, Read, Write};
 use tracing::{debug, error, info};
@@ -31,9 +31,17 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
 
-    // Initialize tracing
-    let filter = if cli.debug { "debug" } else { "info" };
-    tracing_subscriber::fmt().with_env_filter(filter).init();
+    // Initialize tracing with env-based configuration
+    // Defaults to "info" level, can be overridden with RUST_LOG env var
+    // Always writes to stderr
+    let default_filter = if cli.debug { "debug" } else { "info" };
+    tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(default_filter)),
+        )
+        .init();
 
     info!("JEB starting...");
 
@@ -49,14 +57,14 @@ fn main() {
     debug!("Input files: {:?}", input_files);
     debug!("Output file: {:?}", output_file);
 
-    // Process JSON from all input files
-    let mut all_objects = Vec::new();
+    // Process JSON from all input files, treating each as a sorted stream
+    let mut streams = Vec::new();
 
     for input_file in &input_files {
         match read_json_objects(input_file) {
-            Ok(mut objects) => {
+            Ok(objects) => {
                 debug!("Read {} objects from {}", objects.len(), input_file);
-                all_objects.append(&mut objects);
+                streams.push(objects);
             }
             Err(e) => {
                 error!("Failed to read from '{}': {}", input_file, e);
@@ -65,7 +73,9 @@ fn main() {
         }
     }
 
-    info!("Total objects read: {}", all_objects.len());
+    // Merge all sorted streams into a single sorted output
+    let all_objects = merge_sorted_streams(streams);
+    info!("Total objects after merge: {}", all_objects.len());
 
     // Write objects as JSON lines to output
     if let Err(e) = write_json_lines(&output_file, &all_objects) {
