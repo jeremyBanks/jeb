@@ -1,5 +1,7 @@
 # JEB (JSON Entity Bucket)
 
+> **⚠️ DISCLAIMER**: This is vibe-coded slop. The humans responsible would like none of the blame but all of the credit.
+
 A flexible command-line tool for merging, formatting, and searching JSON data.
 
 ## Features

@@ -1,9 +1,11 @@
 use clap::Parser;
-use jeb::{apply_sort_buffer, merge_sorted_streams, parse_json_stream, JsonObject};
+use color_eyre::eyre::{Context, Result};
+use jeb::{apply_sort_buffer, merge_sorted_streams, parse_json_stream, JsonObject, SortSpec};
+use serde_json::Value;
 use std::fs::{self, File};
 use std::io::{self, BufWriter, Read, Write};
 use std::path::Path;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 use tracing_subscriber;
 
 /// JSON Entity Bucket - Merge, format, and search JSON
@@ -19,6 +21,10 @@ struct Cli {
     /// Sort buffer size for correcting slight disorder (0 to disable)
     #[arg(short = 'b', long, default_value = "128")]
     buffer_size: usize,
+
+    /// Sort keys in JSON objects (false=unsorted, true=sorted, or JSON array like '["key1", true, "key2"]')
+    #[arg(short = 's', long, default_value = "false")]
+    sort: String,
 
     /// Input file (use '-' for stdin). When using positional args, this is also the output file.
     /// Arguments starting with { or [ are treated as inline JSON.
@@ -51,8 +57,62 @@ enum InputSource {
     InlineJson(String),
 }
 
-fn main() {
-    let cli = Cli::parse();
+/// Load jeb.json config file from current directory and convert to CLI arguments
+fn load_config_args() -> Vec<String> {
+    let config_path = Path::new("jeb.json");
+    if !config_path.exists() {
+        return vec![];
+    }
+
+    match std::fs::read_to_string(config_path) {
+        Ok(contents) => {
+            match serde_json::from_str::<Value>(&contents) {
+                Ok(Value::Object(map)) => {
+                    let mut args = Vec::new();
+                    for (key, value) in map {
+                        // Convert each key-value to --key=value format
+                        let arg = match value {
+                            Value::String(s) => format!("--{}={}", key, s),
+                            Value::Number(n) => format!("--{}={}", key, n),
+                            Value::Bool(b) => format!("--{}={}", key, b),
+                            Value::Array(_) | Value::Object(_) => {
+                                // For complex types, serialize back to JSON
+                                format!("--{}={}", key, serde_json::to_string(&value).unwrap_or_default())
+                            }
+                            Value::Null => continue, // Skip null values
+                        };
+                        args.push(arg);
+                    }
+                    debug!("Loaded {} config arguments from jeb.json", args.len());
+                    args
+                }
+                Ok(_) => {
+                    warn!("jeb.json must contain a JSON object at the top level");
+                    vec![]
+                }
+                Err(e) => {
+                    warn!("Failed to parse jeb.json: {}", e);
+                    vec![]
+                }
+            }
+        }
+        Err(e) => {
+            warn!("Failed to read jeb.json: {}", e);
+            vec![]
+        }
+    }
+}
+
+fn main() -> Result<()> {
+    // Initialize color_eyre for better error reporting
+    color_eyre::install()?;
+
+    // Load config file arguments and merge with command-line arguments
+    let mut args: Vec<String> = std::env::args().collect();
+    let config_args = load_config_args();
+    args.extend(config_args);
+
+    let cli = Cli::parse_from(args);
 
     // Initialize tracing with env-based configuration
     // Defaults to "info" level, can be overridden with RUST_LOG env var
@@ -68,14 +128,15 @@ fn main() {
 
     info!("JEB starting...");
 
+    // Parse sort specification
+    let sort_spec = SortSpec::parse(&cli.sort)
+        .map_err(|e| color_eyre::eyre::eyre!("Invalid sort specification: {}", e))?;
+
+    debug!("Sort spec: {:?}", sort_spec);
+
     // Validate and determine input/output files
-    let (input_sources, output_file) = match parse_io_args(&cli) {
-        Ok((inputs, output)) => (inputs, output),
-        Err(e) => {
-            error!("{}", e);
-            std::process::exit(1);
-        }
-    };
+    let (input_sources, output_file) = parse_io_args(&cli)
+        .map_err(|e| color_eyre::eyre::eyre!("{}", e))?;
 
     debug!("Input sources: {} items", input_sources.len());
     debug!("Output file: {:?}", output_file);
@@ -84,20 +145,15 @@ fn main() {
     let mut streams = Vec::new();
 
     for input_source in &input_sources {
-        match read_json_from_source(input_source) {
-            Ok(objects) => {
-                let source_desc = match input_source {
-                    InputSource::FilePath(p) => p.clone(),
-                    InputSource::InlineJson(_) => "<inline>".to_string(),
-                };
-                debug!("Read {} objects from {}", objects.len(), source_desc);
-                streams.push(objects);
-            }
-            Err(e) => {
-                error!("Failed to read from source: {}", e);
-                std::process::exit(1);
-            }
-        }
+        let objects = read_json_from_source(input_source)
+            .wrap_err_with(|| format!("Failed to read from source: {:?}", input_source))?;
+
+        let source_desc = match input_source {
+            InputSource::FilePath(p) => p.clone(),
+            InputSource::InlineJson(_) => "<inline>".to_string(),
+        };
+        debug!("Read {} objects from {}", objects.len(), source_desc);
+        streams.push(objects);
     }
 
     // Merge all sorted streams into a single sorted output
@@ -106,6 +162,13 @@ fn main() {
     // Apply sort buffer to correct slight disorder
     let all_objects = apply_sort_buffer(merged_objects, cli.buffer_size);
     info!("Total objects after sort buffer: {}", all_objects.len());
+
+    // Apply key sorting to each object
+    let all_objects: Vec<JsonObject> = all_objects
+        .into_iter()
+        .map(|obj| sort_spec.apply(&obj))
+        .collect();
+    debug!("Applied key sorting to all objects");
 
     // Determine if we need safe in-place modification
     // Check if output file is used as any input file path
@@ -120,19 +183,16 @@ fn main() {
 
     if needs_safe_write {
         debug!("Output path matches an input path, using safe in-place modification");
-        if let Err(e) = write_json_safely(&output_file, &all_objects) {
-            error!("Failed to write to '{}': {}", output_file, e);
-            std::process::exit(1);
-        }
+        write_json_safely(&output_file, &all_objects)
+            .wrap_err_with(|| format!("Failed to write to '{}'", output_file))?;
     } else {
         // Write objects as JSON array to output
-        if let Err(e) = write_json_lines(&output_file, &all_objects) {
-            error!("Failed to write to '{}': {}", output_file, e);
-            std::process::exit(1);
-        }
+        write_json_lines(&output_file, &all_objects)
+            .wrap_err_with(|| format!("Failed to write to '{}'", output_file))?;
     }
 
     info!("JEB completed successfully");
+    Ok(())
 }
 
 /// Check if a string looks like inline JSON (starts with { or [ and ends with matching brace)
@@ -211,17 +271,17 @@ fn parse_io_args(cli: &Cli) -> Result<(Vec<InputSource>, String), String> {
 
 fn read_json_from_source(
     source: &InputSource,
-) -> Result<Vec<JsonObject>, Box<dyn std::error::Error>> {
+) -> Result<Vec<JsonObject>> {
     match source {
         InputSource::FilePath(path) => read_json_from_file(path),
         InputSource::InlineJson(json) => {
             debug!("Parsing inline JSON");
-            parse_json_stream(json)
+            parse_json_stream(json).map_err(|e| color_eyre::eyre::eyre!("{}", e))
         }
     }
 }
 
-fn read_json_from_file(file_path: &str) -> Result<Vec<JsonObject>, Box<dyn std::error::Error>> {
+fn read_json_from_file(file_path: &str) -> Result<Vec<JsonObject>> {
     let mut reader: Box<dyn Read> = if file_path == "-" {
         Box::new(io::stdin())
     } else {
@@ -231,13 +291,13 @@ fn read_json_from_file(file_path: &str) -> Result<Vec<JsonObject>, Box<dyn std::
     let mut content = String::new();
     reader.read_to_string(&mut content)?;
 
-    parse_json_stream(&content)
+    parse_json_stream(&content).map_err(|e| color_eyre::eyre::eyre!("{}", e))
 }
 
 fn write_json_lines(
     file_path: &str,
     objects: &[JsonObject],
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
     let mut writer: BufWriter<Box<dyn Write>> = if file_path == "-" {
         BufWriter::new(Box::new(io::stdout()))
     } else {
@@ -252,7 +312,7 @@ fn write_json_lines(
 fn write_json_array<W: Write>(
     writer: &mut W,
     objects: &[JsonObject],
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
     // Write as a JSON array, but line-by-line friendly:
     // - First line: [ followed by first object
     // - Middle lines: , followed by each object
@@ -281,7 +341,7 @@ fn write_json_array<W: Write>(
 fn write_json_safely(
     file_path: &str,
     objects: &[JsonObject],
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
     let path = Path::new(file_path);
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
 

@@ -8,6 +8,130 @@ use wasm_bindgen::prelude::*;
 /// Type alias for JSON objects using IndexMap to preserve insertion order
 pub type JsonObject = IndexMap<String, Value>;
 
+/// Specification for how to sort keys in JSON objects
+#[derive(Debug, Clone, PartialEq)]
+pub enum SortSpec {
+    /// Keep original insertion order
+    Unsorted,
+    /// Sort all keys alphabetically
+    Sorted,
+    /// Custom sorting: prefix keys, middle section (sorted or not), suffix keys
+    Custom {
+        prefix: Vec<String>,
+        middle_sorted: bool,
+        suffix: Vec<String>,
+    },
+}
+
+impl SortSpec {
+    /// Parse a sort specification from a string
+    /// - "false" or "" -> Unsorted
+    /// - "true" -> Sorted
+    /// - JSON array -> Custom with prefix/middle/suffix
+    pub fn parse(s: &str) -> Result<Self, String> {
+        let trimmed = s.trim();
+
+        if trimmed.is_empty() || trimmed == "false" {
+            return Ok(SortSpec::Unsorted);
+        }
+
+        if trimmed == "true" {
+            return Ok(SortSpec::Sorted);
+        }
+
+        // Try to parse as JSON array
+        let value: Value = serde_json::from_str(trimmed)
+            .map_err(|e| format!("Failed to parse sort spec as JSON: {}", e))?;
+
+        let array = value.as_array()
+            .ok_or_else(|| "Sort spec must be a boolean or JSON array".to_string())?;
+
+        let mut prefix = Vec::new();
+        let mut middle_sorted = true; // default to sorted if not specified
+        let mut suffix = Vec::new();
+        let mut in_suffix = false;
+        let mut middle_specified = false;
+
+        for item in array {
+            match item {
+                Value::String(s) => {
+                    if in_suffix {
+                        suffix.push(s.clone());
+                    } else {
+                        prefix.push(s.clone());
+                    }
+                }
+                Value::Bool(b) => {
+                    if middle_specified {
+                        return Err("Sort spec can only contain one boolean value".to_string());
+                    }
+                    middle_sorted = *b;
+                    middle_specified = true;
+                    in_suffix = true;
+                }
+                _ => {
+                    return Err("Sort spec array must contain only strings and at most one boolean".to_string());
+                }
+            }
+        }
+
+        Ok(SortSpec::Custom {
+            prefix,
+            middle_sorted,
+            suffix,
+        })
+    }
+
+    /// Apply this sort specification to reorder a JSON object's keys
+    pub fn apply(&self, obj: &JsonObject) -> JsonObject {
+        match self {
+            SortSpec::Unsorted => obj.clone(),
+            SortSpec::Sorted => {
+                let mut sorted: Vec<_> = obj.iter().collect();
+                sorted.sort_by(|a, b| a.0.cmp(b.0));
+                sorted.into_iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+            }
+            SortSpec::Custom { prefix, middle_sorted, suffix } => {
+                let mut result = IndexMap::new();
+
+                // Add prefix keys in specified order
+                for key in prefix {
+                    if let Some(value) = obj.get(key) {
+                        result.insert(key.clone(), value.clone());
+                    }
+                }
+
+                // Collect middle keys (not in prefix or suffix)
+                let prefix_set: std::collections::HashSet<_> = prefix.iter().collect();
+                let suffix_set: std::collections::HashSet<_> = suffix.iter().collect();
+
+                let mut middle_keys: Vec<_> = obj.keys()
+                    .filter(|k| !prefix_set.contains(k) && !suffix_set.contains(k))
+                    .collect();
+
+                if *middle_sorted {
+                    middle_keys.sort();
+                }
+
+                for key in middle_keys {
+                    if let Some(value) = obj.get(key) {
+                        result.insert(key.clone(), value.clone());
+                    }
+                }
+
+                // Add suffix keys in specified order
+                for key in suffix {
+                    if let Some(value) = obj.get(key) {
+                        result.insert(key.clone(), value.clone());
+                    }
+                }
+
+                result
+            }
+        }
+    }
+}
+
 /// A simple data structure to demonstrate serde serialization.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Entity {
@@ -745,5 +869,135 @@ Random text in between
         for (i, obj) in result.iter().enumerate() {
             assert_eq!(obj.get("id").unwrap(), &Value::from(i + 1));
         }
+    }
+
+    #[test]
+    fn test_sort_spec_parse_unsorted() {
+        assert_eq!(SortSpec::parse("").unwrap(), SortSpec::Unsorted);
+        assert_eq!(SortSpec::parse("false").unwrap(), SortSpec::Unsorted);
+    }
+
+    #[test]
+    fn test_sort_spec_parse_sorted() {
+        assert_eq!(SortSpec::parse("true").unwrap(), SortSpec::Sorted);
+    }
+
+    #[test]
+    fn test_sort_spec_parse_custom_prefix_only() {
+        let spec = SortSpec::parse(r#"["id","name"]"#).unwrap();
+        assert_eq!(spec, SortSpec::Custom {
+            prefix: vec!["id".to_string(), "name".to_string()],
+            middle_sorted: true,
+            suffix: vec![],
+        });
+    }
+
+    #[test]
+    fn test_sort_spec_parse_custom_with_sorted_middle() {
+        let spec = SortSpec::parse(r#"["id",true,"zip"]"#).unwrap();
+        assert_eq!(spec, SortSpec::Custom {
+            prefix: vec!["id".to_string()],
+            middle_sorted: true,
+            suffix: vec!["zip".to_string()],
+        });
+    }
+
+    #[test]
+    fn test_sort_spec_parse_custom_with_unsorted_middle() {
+        let spec = SortSpec::parse(r#"["id",false,"name"]"#).unwrap();
+        assert_eq!(spec, SortSpec::Custom {
+            prefix: vec!["id".to_string()],
+            middle_sorted: false,
+            suffix: vec!["name".to_string()],
+        });
+    }
+
+    #[test]
+    fn test_sort_spec_parse_invalid() {
+        assert!(SortSpec::parse("invalid").is_err());
+        assert!(SortSpec::parse("123").is_err());
+        assert!(SortSpec::parse(r#"["key",true,false]"#).is_err()); // Two booleans
+    }
+
+    #[test]
+    fn test_sort_spec_apply_unsorted() {
+        let mut obj = IndexMap::new();
+        obj.insert("name".to_string(), Value::from("Alice"));
+        obj.insert("id".to_string(), Value::from(1));
+        obj.insert("age".to_string(), Value::from(30));
+
+        let result = SortSpec::Unsorted.apply(&obj);
+        let keys: Vec<_> = result.keys().collect();
+        assert_eq!(keys, vec!["name", "id", "age"]);
+    }
+
+    #[test]
+    fn test_sort_spec_apply_sorted() {
+        let mut obj = IndexMap::new();
+        obj.insert("name".to_string(), Value::from("Alice"));
+        obj.insert("id".to_string(), Value::from(1));
+        obj.insert("age".to_string(), Value::from(30));
+
+        let result = SortSpec::Sorted.apply(&obj);
+        let keys: Vec<_> = result.keys().collect();
+        assert_eq!(keys, vec!["age", "id", "name"]);
+    }
+
+    #[test]
+    fn test_sort_spec_apply_custom_prefix() {
+        let mut obj = IndexMap::new();
+        obj.insert("name".to_string(), Value::from("Alice"));
+        obj.insert("id".to_string(), Value::from(1));
+        obj.insert("age".to_string(), Value::from(30));
+        obj.insert("city".to_string(), Value::from("NYC"));
+
+        let spec = SortSpec::Custom {
+            prefix: vec!["id".to_string(), "name".to_string()],
+            middle_sorted: true,
+            suffix: vec![],
+        };
+
+        let result = spec.apply(&obj);
+        let keys: Vec<_> = result.keys().collect();
+        assert_eq!(keys, vec!["id", "name", "age", "city"]);
+    }
+
+    #[test]
+    fn test_sort_spec_apply_custom_with_suffix() {
+        let mut obj = IndexMap::new();
+        obj.insert("name".to_string(), Value::from("Alice"));
+        obj.insert("id".to_string(), Value::from(1));
+        obj.insert("age".to_string(), Value::from(30));
+        obj.insert("zip".to_string(), Value::from("12345"));
+
+        let spec = SortSpec::Custom {
+            prefix: vec!["id".to_string()],
+            middle_sorted: true,
+            suffix: vec!["zip".to_string()],
+        };
+
+        let result = spec.apply(&obj);
+        let keys: Vec<_> = result.keys().collect();
+        assert_eq!(keys, vec!["id", "age", "name", "zip"]);
+    }
+
+    #[test]
+    fn test_sort_spec_apply_custom_unsorted_middle() {
+        let mut obj = IndexMap::new();
+        obj.insert("name".to_string(), Value::from("Alice"));
+        obj.insert("id".to_string(), Value::from(1));
+        obj.insert("age".to_string(), Value::from(30));
+        obj.insert("city".to_string(), Value::from("NYC"));
+
+        let spec = SortSpec::Custom {
+            prefix: vec!["id".to_string()],
+            middle_sorted: false,
+            suffix: vec!["city".to_string()],
+        };
+
+        let result = spec.apply(&obj);
+        let keys: Vec<_> = result.keys().collect();
+        // id first, then name and age in original order (name, age), then city
+        assert_eq!(keys, vec!["id", "name", "age", "city"]);
     }
 }

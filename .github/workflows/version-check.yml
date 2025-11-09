@@ -1,0 +1,28 @@
+name: Version Check
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  check-version:
+    name: Validate Version is 0.0.x
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check version format
+        run: |
+          VERSION=$(grep '^version = ' Cargo.toml | head -1 | cut -d'"' -f2)
+          echo "Current version: $VERSION"
+
+          # Check if version matches 0.0.x pattern
+          if [[ ! "$VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
+            echo "ERROR: Version must be 0.0.x format (major=0, minor=0)"
+            echo "Found: $VERSION"
+            exit 1
+          fi
+
+          echo "✓ Version $VERSION is valid (0.0.x format)"
