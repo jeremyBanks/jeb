@@ -69,7 +69,7 @@ jeb automatically handles various JSON formats:
 ```
 
 **Mixed with arbitrary text:**
-```
+```text
 Some preamble
 {"id": 1, "name": "Alice"}
 Random text
