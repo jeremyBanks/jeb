@@ -12,141 +12,172 @@ pub type JsonObject = IndexMap<String, Value>;
 /// Type alias for JSON parsing errors
 pub type JsonError = Box<dyn std::error::Error + Send + Sync>;
 
-/// Specification for how to sort keys in JSON objects
+/// Options for how to order keys in JSON objects
 #[derive(Debug, Clone, PartialEq)]
-pub enum SortSpec {
-    /// Keep original insertion order
-    Unsorted,
-    /// Sort all keys alphabetically
-    Sorted,
-    /// Custom sorting: prefix keys, middle section (sorted or not), suffix keys
-    Custom {
-        prefix: Vec<String>,
-        middle_sorted: bool,
-        suffix: Vec<String>,
-    },
+pub struct KeyOrderOptions {
+    /// Apply recursively to nested objects
+    pub recursive: bool,
+    /// Keys to place first in specified order
+    pub first: Vec<String>,
+    /// Keys to place last in specified order
+    pub last: Vec<String>,
+    /// Sort remaining keys alphabetically
+    pub sort: bool,
 }
 
-impl SortSpec {
-    /// Parse a sort specification from a string
-    /// - "false" or "" -> Unsorted
-    /// - "true" -> Sorted
-    /// - JSON array -> Custom with prefix/middle/suffix
+impl Default for KeyOrderOptions {
+    fn default() -> Self {
+        Self {
+            recursive: true,
+            first: Vec::new(),
+            last: Vec::new(),
+            sort: true,
+        }
+    }
+}
+
+impl KeyOrderOptions {
+    /// Parse key order options from a string
+    /// - "false" or "" -> sort=false, recursive=true
+    /// - "true" -> sort=true, recursive=true
+    /// - JSON array -> Custom with first/sort/last
     pub fn parse(s: &str) -> Result<Self, String> {
         let trimmed = s.trim();
 
         if trimmed.is_empty() || trimmed == "false" {
-            return Ok(SortSpec::Unsorted);
+            return Ok(Self {
+                recursive: true,
+                first: Vec::new(),
+                last: Vec::new(),
+                sort: false,
+            });
         }
 
         if trimmed == "true" {
-            return Ok(SortSpec::Sorted);
+            return Ok(Self::default());
         }
 
         // Try to parse as JSON array
         let value: Value = serde_json::from_str(trimmed)
-            .map_err(|e| format!("Failed to parse sort spec as JSON: {}", e))?;
+            .map_err(|e| format!("Failed to parse key order spec as JSON: {}", e))?;
 
         let array = value
             .as_array()
-            .ok_or_else(|| "Sort spec must be a boolean or JSON array".to_string())?;
+            .ok_or_else(|| "Key order spec must be a boolean or JSON array".to_string())?;
 
-        let mut prefix = Vec::new();
-        let mut middle_sorted = true; // default to sorted if not specified
-        let mut suffix = Vec::new();
-        let mut in_suffix = false;
-        let mut middle_specified = false;
+        let mut first = Vec::new();
+        let mut sort = true; // default to sorted if not specified
+        let mut last = Vec::new();
+        let mut in_last = false;
+        let mut sort_specified = false;
 
         for item in array {
             match item {
                 Value::String(s) => {
-                    if in_suffix {
-                        suffix.push(s.clone());
+                    if in_last {
+                        last.push(s.clone());
                     } else {
-                        prefix.push(s.clone());
+                        first.push(s.clone());
                     }
                 }
                 Value::Bool(b) => {
-                    if middle_specified {
-                        return Err("Sort spec can only contain one boolean value".to_string());
+                    if sort_specified {
+                        return Err("Key order spec can only contain one boolean value".to_string());
                     }
-                    middle_sorted = *b;
-                    middle_specified = true;
-                    in_suffix = true;
+                    sort = *b;
+                    sort_specified = true;
+                    in_last = true;
                 }
                 _ => {
                     return Err(
-                        "Sort spec array must contain only strings and at most one boolean"
+                        "Key order spec array must contain only strings and at most one boolean"
                             .to_string(),
                     );
                 }
             }
         }
 
-        Ok(SortSpec::Custom {
-            prefix,
-            middle_sorted,
-            suffix,
+        Ok(Self {
+            recursive: true,
+            first,
+            last,
+            sort,
         })
     }
 
-    /// Apply this sort specification to reorder a JSON object's keys
+    /// Apply this key ordering to a JSON object
     pub fn apply(&self, obj: &JsonObject) -> JsonObject {
-        match self {
-            SortSpec::Unsorted => obj.clone(),
-            SortSpec::Sorted => {
-                let mut sorted: Vec<_> = obj.iter().collect();
-                sorted.sort_by(|a, b| a.0.cmp(b.0));
-                sorted
-                    .into_iter()
-                    .map(|(k, v)| (k.clone(), v.clone()))
-                    .collect()
+        let mut result = IndexMap::new();
+
+        // Add first keys in specified order
+        for key in &self.first {
+            if let Some(value) = obj.get(key) {
+                let processed_value = if self.recursive {
+                    self.apply_to_value(value)
+                } else {
+                    value.clone()
+                };
+                result.insert(key.clone(), processed_value);
             }
-            SortSpec::Custom {
-                prefix,
-                middle_sorted,
-                suffix,
-            } => {
-                let mut result = IndexMap::new();
+        }
 
-                // Add prefix keys in specified order
-                for key in prefix {
-                    if let Some(value) = obj.get(key) {
-                        result.insert(key.clone(), value.clone());
-                    }
-                }
+        // Collect middle keys (not in first or last)
+        let first_set: std::collections::HashSet<_> = self.first.iter().collect();
+        let last_set: std::collections::HashSet<_> = self.last.iter().collect();
 
-                // Collect middle keys (not in prefix or suffix)
-                let prefix_set: std::collections::HashSet<_> = prefix.iter().collect();
-                let suffix_set: std::collections::HashSet<_> = suffix.iter().collect();
+        let mut middle_keys: Vec<_> = obj
+            .keys()
+            .filter(|k| !first_set.contains(k) && !last_set.contains(k))
+            .collect();
 
-                let mut middle_keys: Vec<_> = obj
-                    .keys()
-                    .filter(|k| !prefix_set.contains(k) && !suffix_set.contains(k))
-                    .collect();
+        if self.sort {
+            middle_keys.sort();
+        }
 
-                if *middle_sorted {
-                    middle_keys.sort();
-                }
-
-                for key in middle_keys {
-                    if let Some(value) = obj.get(key) {
-                        result.insert(key.clone(), value.clone());
-                    }
-                }
-
-                // Add suffix keys in specified order
-                for key in suffix {
-                    if let Some(value) = obj.get(key) {
-                        result.insert(key.clone(), value.clone());
-                    }
-                }
-
-                result
+        for key in middle_keys {
+            if let Some(value) = obj.get(key) {
+                let processed_value = if self.recursive {
+                    self.apply_to_value(value)
+                } else {
+                    value.clone()
+                };
+                result.insert(key.clone(), processed_value);
             }
+        }
+
+        // Add last keys in specified order
+        for key in &self.last {
+            if let Some(value) = obj.get(key) {
+                let processed_value = if self.recursive {
+                    self.apply_to_value(value)
+                } else {
+                    value.clone()
+                };
+                result.insert(key.clone(), processed_value);
+            }
+        }
+
+        result
+    }
+
+    /// Apply key ordering recursively to a JSON value
+    fn apply_to_value(&self, value: &Value) -> Value {
+        match value {
+            Value::Object(obj) => {
+                let index_map: JsonObject = obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+                let reordered = self.apply(&index_map);
+                Value::Object(reordered.into_iter().collect())
+            }
+            Value::Array(arr) => {
+                Value::Array(arr.iter().map(|v| self.apply_to_value(v)).collect())
+            }
+            _ => value.clone(),
         }
     }
 }
+
+// Type alias for backward compatibility
+pub type SortSpec = KeyOrderOptions;
 
 /// Parse a stream of JSON objects from an async reader
 ///
@@ -279,25 +310,17 @@ fn extract_json_object(input: &str) -> Option<(&str, usize)> {
 
 /// Implement total ordering for JSON values.
 ///
-/// Ordering rules:
-/// 1. null < boolean < number < string < array < object
-/// 2. For booleans: false < true
-/// 3. For numbers: standard numeric comparison (treating all as f64)
-/// 4. For strings: lexicographic comparison
-/// 5. For arrays: lexicographic comparison element-by-element
-/// 6. For objects: compare by sorted keys, then by values
+/// Ordering rules based on ASCII ordering of representative characters:
+/// 1. number < string < array < false < null < true < object
+/// 2. For numbers: standard numeric comparison (treating all as f64)
+/// 3. For strings: lexicographic UTF-8 byte comparison
+/// 4. For arrays: element-by-element comparison; shorter arrays sort before longer when all compared elements are equal
+/// 5. For objects: compared as flattened array [key1, value1, key2, value2, ...], so key order matters
 pub fn json_total_order(a: &Value, b: &Value) -> Ordering {
     use Value::*;
 
     match (a, b) {
-        (Null, Null) => Ordering::Equal,
-        (Null, _) => Ordering::Less,
-        (_, Null) => Ordering::Greater,
-
-        (Bool(a), Bool(b)) => a.cmp(b),
-        (Bool(_), _) => Ordering::Less,
-        (_, Bool(_)) => Ordering::Greater,
-
+        // Numbers (lowest)
         (Number(a), Number(b)) => {
             let a_f64 = a.as_f64().unwrap_or(0.0);
             let b_f64 = b.as_f64().unwrap_or(0.0);
@@ -306,10 +329,12 @@ pub fn json_total_order(a: &Value, b: &Value) -> Ordering {
         (Number(_), _) => Ordering::Less,
         (_, Number(_)) => Ordering::Greater,
 
+        // Strings
         (String(a), String(b)) => a.cmp(b),
         (String(_), _) => Ordering::Less,
         (_, String(_)) => Ordering::Greater,
 
+        // Arrays
         (Array(a), Array(b)) => {
             for (a_elem, b_elem) in a.iter().zip(b.iter()) {
                 match json_total_order(a_elem, b_elem) {
@@ -322,26 +347,43 @@ pub fn json_total_order(a: &Value, b: &Value) -> Ordering {
         (Array(_), _) => Ordering::Less,
         (_, Array(_)) => Ordering::Greater,
 
-        (Object(a), Object(b)) => {
-            // Compare objects by their keys first, then by values
-            let a_keys: Vec<_> = a.keys().collect();
-            let b_keys: Vec<_> = b.keys().collect();
+        // False
+        (Bool(false), Bool(false)) => Ordering::Equal,
+        (Bool(false), _) => Ordering::Less,
+        (_, Bool(false)) => Ordering::Greater,
 
-            match a_keys.cmp(&b_keys) {
-                Ordering::Equal => {
-                    // Keys are the same, compare values in key order
-                    for key in a_keys {
-                        let a_val = &a[key];
-                        let b_val = &b[key];
+        // Null
+        (Null, Null) => Ordering::Equal,
+        (Null, _) => Ordering::Less,
+        (_, Null) => Ordering::Greater,
+
+        // True
+        (Bool(true), Bool(true)) => Ordering::Equal,
+        (Bool(true), _) => Ordering::Less,
+        (_, Bool(true)) => Ordering::Greater,
+
+        // Objects (highest)
+        (Object(a), Object(b)) => {
+            // Compare objects as flattened [key1, value1, key2, value2, ...]
+            // This means key order matters
+            let a_items: Vec<_> = a.iter().collect();
+            let b_items: Vec<_> = b.iter().collect();
+
+            for ((a_key, a_val), (b_key, b_val)) in a_items.iter().zip(b_items.iter()) {
+                // Compare keys first
+                match a_key.cmp(b_key) {
+                    Ordering::Equal => {
+                        // Keys are equal, compare values
                         match json_total_order(a_val, b_val) {
                             Ordering::Equal => continue,
                             other => return other,
                         }
                     }
-                    Ordering::Equal
+                    other => return other,
                 }
-                other => other,
             }
+            // All compared pairs were equal, compare lengths
+            a_items.len().cmp(&b_items.len())
         }
     }
 }
@@ -467,6 +509,267 @@ where
     }
 }
 
+/// Built-in reduction strategies for consecutive group reduction
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReductionStrategy {
+    /// Return only the first item from each group
+    First,
+    /// Return only the last item from each group
+    Last,
+    /// Return first and last items from each group
+    FirstAndLast,
+    /// Merge all objects in the group (fails if there are conflicts)
+    Merge,
+}
+
+impl ReductionStrategy {
+    /// Apply this reduction strategy to a group of objects
+    pub fn apply(&self, group: Vec<JsonObject>) -> Vec<JsonObject> {
+        if group.is_empty() {
+            return vec![];
+        }
+
+        match self {
+            ReductionStrategy::First => vec![group[0].clone()],
+            ReductionStrategy::Last => vec![group[group.len() - 1].clone()],
+            ReductionStrategy::FirstAndLast => {
+                if group.len() == 1 {
+                    vec![group[0].clone()]
+                } else {
+                    vec![group[0].clone(), group[group.len() - 1].clone()]
+                }
+            }
+            ReductionStrategy::Merge => {
+                match merge_objects(&group) {
+                    Ok(merged) => vec![merged],
+                    Err(_) => group, // Return original group if merge fails
+                }
+            }
+        }
+    }
+}
+
+/// Merge multiple JSON objects into one, returning error if there are conflicts
+fn merge_objects(objects: &[JsonObject]) -> Result<JsonObject, String> {
+    if objects.is_empty() {
+        return Ok(IndexMap::new());
+    }
+
+    let mut result = IndexMap::new();
+
+    for obj in objects {
+        for (key, value) in obj {
+            match result.get(key) {
+                None => {
+                    result.insert(key.clone(), value.clone());
+                }
+                Some(existing_value) => {
+                    // Try to merge the values
+                    match (existing_value, value) {
+                        (Value::Object(existing_obj), Value::Object(new_obj)) => {
+                            // Recursively merge objects
+                            let existing_map: JsonObject =
+                                existing_obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+                            let new_map: JsonObject =
+                                new_obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+
+                            match merge_objects(&[existing_map, new_map]) {
+                                Ok(merged) => {
+                                    result.insert(
+                                        key.clone(),
+                                        Value::Object(merged.into_iter().collect()),
+                                    );
+                                }
+                                Err(_) => {
+                                    return Err(format!(
+                                        "Conflict when merging nested objects at key '{}'",
+                                        key
+                                    ));
+                                }
+                            }
+                        }
+                        (existing, new) if existing == new => {
+                            // Values are equal, no conflict
+                        }
+                        _ => {
+                            return Err(format!(
+                                "Conflict at key '{}': cannot merge different values",
+                                key
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(result)
+}
+
+/// Apply consecutive group reduction to a stream of objects
+///
+/// Groups consecutive items and reduces each group to output items.
+///
+/// # Arguments
+/// * `objects` - The input objects
+/// * `grouping_fn` - Function to determine if two consecutive items belong to the same group
+/// * `strategies` - Reduction strategies to apply (in order)
+pub fn apply_group_reduction<F>(
+    objects: Vec<JsonObject>,
+    grouping_fn: F,
+    strategies: &[ReductionStrategy],
+) -> Vec<JsonObject>
+where
+    F: Fn(&JsonObject, &JsonObject) -> bool,
+{
+    if objects.is_empty() {
+        return vec![];
+    }
+
+    let mut result = Vec::new();
+    let mut current_group = vec![objects[0].clone()];
+
+    for i in 1..objects.len() {
+        if grouping_fn(&objects[i - 1], &objects[i]) {
+            // Same group, add to current group
+            current_group.push(objects[i].clone());
+        } else {
+            // New group, process current group
+            let reduced = apply_reduction_strategies(current_group, strategies);
+            result.extend(reduced);
+            current_group = vec![objects[i].clone()];
+        }
+    }
+
+    // Process final group
+    let reduced = apply_reduction_strategies(current_group, strategies);
+    result.extend(reduced);
+
+    result
+}
+
+/// Apply a sequence of reduction strategies to a group
+fn apply_reduction_strategies(
+    mut group: Vec<JsonObject>,
+    strategies: &[ReductionStrategy],
+) -> Vec<JsonObject> {
+    for strategy in strategies {
+        group = strategy.apply(group);
+    }
+    group
+}
+
+/// Default grouping function: use total ordering equality
+pub fn default_grouping(a: &JsonObject, b: &JsonObject) -> bool {
+    let a_val = Value::Object(a.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
+    let b_val = Value::Object(b.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
+    json_total_order(&a_val, &b_val) == Ordering::Equal
+}
+
+/// Re-root a JSON value by making a node at the specified path the new root
+///
+/// Transforms a JSON tree by making a node at the specified path the new root,
+/// nesting original ancestors under the reversed path.
+///
+/// # Arguments
+/// * `json` - The input JSON value
+/// * `path` - The path to the node that should become the new root
+///
+/// # Returns
+/// * `Ok(new_root)` - The re-rooted JSON value
+/// * `Err(original_json)` - The original JSON if the path doesn't exist or key collision occurs
+///
+/// # Example
+/// ```ignore
+/// let json = json!({
+///     "container": {
+///         "entity": {
+///             "id": 1,
+///             "name": "foo"
+///         },
+///         "metadata": "bar"
+///     }
+/// });
+///
+/// let rerooted = reroot(json, &["container", "entity"]).unwrap();
+/// // Result: { "id": 1, "name": "foo", "container": { "metadata": "bar" } }
+/// ```
+pub fn reroot(json: Value, path: &[&str]) -> Result<Value, Value> {
+    if path.is_empty() {
+        return Ok(json);
+    }
+
+    // Walk to the target node, collecting ancestors along the way
+    let mut current = &json;
+    let mut ancestors: Vec<(String, serde_json::Map<String, Value>)> = Vec::new();
+
+    for &key in path.iter() {
+        match current {
+            Value::Object(obj) => {
+                if let Some(next_value) = obj.get(key) {
+                    // Store the current level siblings (without the key we're following)
+                    let mut siblings = obj.clone();
+                    siblings.remove(key);
+                    ancestors.push((key.to_string(), siblings));
+                    current = next_value;
+                } else {
+                    // Path doesn't exist
+                    return Err(json);
+                }
+            }
+            _ => {
+                // Path doesn't exist (tried to descend into non-object)
+                return Err(json);
+            }
+        }
+    }
+
+    // Start with the target node as the new root
+    let mut new_root = match current {
+        Value::Object(obj) => obj.clone(),
+        _ => {
+            // Can only reroot to an object
+            return Err(json);
+        }
+    };
+
+    // Build up the inverted structure
+    // For path ["a", "b", "c"], we create: target with "c" -> { siblings_of_c, "b" -> { siblings_of_b, "a" -> { siblings_of_a } } }
+    // But actually, the keys are not path elements but the parent keys
+    // For path ["container", "entity"], we create: entity with "container" -> { siblings_of_entity }
+
+    // Process ancestors from deepest to shallowest
+    if let Some((last_key, last_siblings)) = ancestors.pop() {
+        // Check for collision
+        if new_root.contains_key(&last_key) {
+            return Err(json);
+        }
+
+        // Build nested structure
+        let mut nested = last_siblings;
+
+        // Add each remaining ancestor level
+        while let Some((key, siblings)) = ancestors.pop() {
+            // Check for collision
+            for k in nested.keys() {
+                if k == &key {
+                    return Err(json);
+                }
+            }
+
+            // Nest the current structure under the parent key
+            let nested_value = Value::Object(nested.clone());
+            nested = siblings;
+            nested.insert(key, nested_value);
+        }
+
+        // Add the final nested structure to the new root
+        new_root.insert(last_key, Value::Object(nested));
+    }
+
+    Ok(Value::Object(new_root))
+}
+
 // For backward compatibility during transition - keep the sync version for tests
 #[doc(hidden)]
 pub fn parse_json_stream_sync(input: &str) -> Result<Vec<JsonObject>, JsonError> {
@@ -475,59 +778,75 @@ pub fn parse_json_stream_sync(input: &str) -> Result<Vec<JsonObject>, JsonError>
 
 #[doc(hidden)]
 pub fn merge_sorted_streams_sync(streams: Vec<Vec<JsonObject>>) -> Vec<JsonObject> {
+    if streams.is_empty() {
+        return Vec::new();
+    }
+
     let total_capacity: usize = streams.iter().map(|s| s.len()).sum();
     let mut result = Vec::with_capacity(total_capacity);
 
     // Track the current position in each stream
     let mut indices: Vec<usize> = vec![0; streams.len()];
+    let mut round_robin_ptr = 0;
 
     loop {
-        // Find the smallest element among all stream heads
-        let mut min_stream_idx: Option<usize> = None;
+        // Find the next non-exhausted stream starting from round-robin pointer
+        let mut attempts = 0;
+        while attempts < streams.len() {
+            if indices[round_robin_ptr] < streams[round_robin_ptr].len() {
+                break; // Found a non-exhausted stream
+            }
+            round_robin_ptr = (round_robin_ptr + 1) % streams.len();
+            attempts += 1;
+        }
 
-        for (stream_idx, stream) in streams.iter().enumerate() {
+        if attempts == streams.len() {
+            // All streams are exhausted
+            break;
+        }
+
+        // Start with round-robin head as current minimum
+        let mut min_stream_idx = round_robin_ptr;
+        let min_pos = indices[min_stream_idx];
+        let mut min_obj = Value::Object(
+            streams[min_stream_idx][min_pos]
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect(),
+        );
+
+        // Rotate through the other stream heads
+        for offset in 1..streams.len() {
+            let stream_idx = (round_robin_ptr + offset) % streams.len();
             let pos = indices[stream_idx];
-            if pos >= stream.len() {
+
+            if pos >= streams[stream_idx].len() {
                 continue; // This stream is exhausted
             }
 
             // Convert current JsonObject to Value for comparison
             let current_obj = Value::Object(
-                stream[pos]
+                streams[stream_idx][pos]
                     .iter()
                     .map(|(k, v)| (k.clone(), v.clone()))
                     .collect(),
             );
 
-            match min_stream_idx {
-                None => {
-                    min_stream_idx = Some(stream_idx);
-                }
-                Some(min_idx) => {
-                    // Compare with current minimum
-                    let min_pos = indices[min_idx];
-                    let min_obj = Value::Object(
-                        streams[min_idx][min_pos]
-                            .iter()
-                            .map(|(k, v)| (k.clone(), v.clone()))
-                            .collect(),
-                    );
-
-                    if json_total_order(&current_obj, &min_obj) == Ordering::Less {
-                        min_stream_idx = Some(stream_idx);
-                    }
-                }
+            // If a stream head compares less than the current minimum, it becomes the new minimum
+            // Equal or incomparable is not less
+            if json_total_order(&current_obj, &min_obj) == Ordering::Less {
+                min_stream_idx = stream_idx;
+                min_obj = current_obj;
             }
         }
 
-        // If no minimum was found, all streams are exhausted
-        if let Some(stream_idx) = min_stream_idx {
-            let pos = indices[stream_idx];
-            result.push(streams[stream_idx][pos].clone());
-            indices[stream_idx] += 1;
-        } else {
-            break;
-        }
+        // Emit the minimum
+        let pos = indices[min_stream_idx];
+        result.push(streams[min_stream_idx][pos].clone());
+        indices[min_stream_idx] += 1;
+
+        // Advance round-robin pointer
+        round_robin_ptr = (round_robin_ptr + 1) % streams.len();
     }
 
     info!(
@@ -726,15 +1045,19 @@ Random text in between
     fn test_json_total_order_types() {
         use serde_json::json;
 
-        // Test type ordering: null < bool < number < string < array < object
-        assert_eq!(
-            json_total_order(&json!(null), &json!(false)),
-            Ordering::Less
-        );
-        assert_eq!(json_total_order(&json!(false), &json!(0)), Ordering::Less);
+        // Test type ordering: number < string < array < false < null < true < object
         assert_eq!(json_total_order(&json!(0), &json!("")), Ordering::Less);
         assert_eq!(json_total_order(&json!(""), &json!([])), Ordering::Less);
-        assert_eq!(json_total_order(&json!([]), &json!({})), Ordering::Less);
+        assert_eq!(json_total_order(&json!([]), &json!(false)), Ordering::Less);
+        assert_eq!(
+            json_total_order(&json!(false), &json!(null)),
+            Ordering::Less
+        );
+        assert_eq!(
+            json_total_order(&json!(null), &json!(true)),
+            Ordering::Less
+        );
+        assert_eq!(json_total_order(&json!(true), &json!({})), Ordering::Less);
     }
 
     #[test]
@@ -918,139 +1241,157 @@ Random text in between
     }
 
     #[test]
-    fn test_sort_spec_parse_unsorted() {
-        assert_eq!(SortSpec::parse("").unwrap(), SortSpec::Unsorted);
-        assert_eq!(SortSpec::parse("false").unwrap(), SortSpec::Unsorted);
+    fn test_key_order_parse_unsorted() {
+        let opts = KeyOrderOptions::parse("").unwrap();
+        assert_eq!(opts.sort, false);
+        assert_eq!(opts.recursive, true);
+
+        let opts = KeyOrderOptions::parse("false").unwrap();
+        assert_eq!(opts.sort, false);
     }
 
     #[test]
-    fn test_sort_spec_parse_sorted() {
-        assert_eq!(SortSpec::parse("true").unwrap(), SortSpec::Sorted);
+    fn test_key_order_parse_sorted() {
+        let opts = KeyOrderOptions::parse("true").unwrap();
+        assert_eq!(opts, KeyOrderOptions::default());
     }
 
     #[test]
-    fn test_sort_spec_parse_custom_prefix_only() {
-        let spec = SortSpec::parse(r#"["id","name"]"#).unwrap();
+    fn test_key_order_parse_custom_first_only() {
+        let opts = KeyOrderOptions::parse(r#"["id","name"]"#).unwrap();
         assert_eq!(
-            spec,
-            SortSpec::Custom {
-                prefix: vec!["id".to_string(), "name".to_string()],
-                middle_sorted: true,
-                suffix: vec![],
+            opts,
+            KeyOrderOptions {
+                recursive: true,
+                first: vec!["id".to_string(), "name".to_string()],
+                last: vec![],
+                sort: true,
             }
         );
     }
 
     #[test]
-    fn test_sort_spec_parse_custom_with_sorted_middle() {
-        let spec = SortSpec::parse(r#"["id",true,"zip"]"#).unwrap();
+    fn test_key_order_parse_custom_with_sorted_middle() {
+        let opts = KeyOrderOptions::parse(r#"["id",true,"zip"]"#).unwrap();
         assert_eq!(
-            spec,
-            SortSpec::Custom {
-                prefix: vec!["id".to_string()],
-                middle_sorted: true,
-                suffix: vec!["zip".to_string()],
+            opts,
+            KeyOrderOptions {
+                recursive: true,
+                first: vec!["id".to_string()],
+                last: vec!["zip".to_string()],
+                sort: true,
             }
         );
     }
 
     #[test]
-    fn test_sort_spec_parse_custom_with_unsorted_middle() {
-        let spec = SortSpec::parse(r#"["id",false,"name"]"#).unwrap();
+    fn test_key_order_parse_custom_with_unsorted_middle() {
+        let opts = KeyOrderOptions::parse(r#"["id",false,"name"]"#).unwrap();
         assert_eq!(
-            spec,
-            SortSpec::Custom {
-                prefix: vec!["id".to_string()],
-                middle_sorted: false,
-                suffix: vec!["name".to_string()],
+            opts,
+            KeyOrderOptions {
+                recursive: true,
+                first: vec!["id".to_string()],
+                last: vec!["name".to_string()],
+                sort: false,
             }
         );
     }
 
     #[test]
-    fn test_sort_spec_parse_invalid() {
-        assert!(SortSpec::parse("invalid").is_err());
-        assert!(SortSpec::parse("123").is_err());
-        assert!(SortSpec::parse(r#"["key",true,false]"#).is_err()); // Two booleans
+    fn test_key_order_parse_invalid() {
+        assert!(KeyOrderOptions::parse("invalid").is_err());
+        assert!(KeyOrderOptions::parse("123").is_err());
+        assert!(KeyOrderOptions::parse(r#"["key",true,false]"#).is_err()); // Two booleans
     }
 
     #[test]
-    fn test_sort_spec_apply_unsorted() {
+    fn test_key_order_apply_unsorted() {
         let mut obj = IndexMap::new();
         obj.insert("name".to_string(), Value::from("Alice"));
         obj.insert("id".to_string(), Value::from(1));
         obj.insert("age".to_string(), Value::from(30));
 
-        let result = SortSpec::Unsorted.apply(&obj);
+        let opts = KeyOrderOptions {
+            recursive: true,
+            first: vec![],
+            last: vec![],
+            sort: false,
+        };
+        let result = opts.apply(&obj);
         let keys: Vec<_> = result.keys().collect();
         assert_eq!(keys, vec!["name", "id", "age"]);
     }
 
     #[test]
-    fn test_sort_spec_apply_sorted() {
+    fn test_key_order_apply_sorted() {
         let mut obj = IndexMap::new();
         obj.insert("name".to_string(), Value::from("Alice"));
         obj.insert("id".to_string(), Value::from(1));
         obj.insert("age".to_string(), Value::from(30));
 
-        let result = SortSpec::Sorted.apply(&obj);
+        let opts = KeyOrderOptions::default();
+        let result = opts.apply(&obj);
         let keys: Vec<_> = result.keys().collect();
         assert_eq!(keys, vec!["age", "id", "name"]);
     }
 
     #[test]
-    fn test_sort_spec_apply_custom_prefix() {
+    fn test_key_order_apply_custom_first() {
         let mut obj = IndexMap::new();
         obj.insert("name".to_string(), Value::from("Alice"));
         obj.insert("id".to_string(), Value::from(1));
         obj.insert("age".to_string(), Value::from(30));
         obj.insert("city".to_string(), Value::from("NYC"));
 
-        let spec = SortSpec::Custom {
-            prefix: vec!["id".to_string(), "name".to_string()],
-            middle_sorted: true,
-            suffix: vec![],
+        let opts = KeyOrderOptions {
+            recursive: true,
+            first: vec!["id".to_string(), "name".to_string()],
+            last: vec![],
+            sort: true,
         };
 
-        let result = spec.apply(&obj);
+        let result = opts.apply(&obj);
         let keys: Vec<_> = result.keys().collect();
         assert_eq!(keys, vec!["id", "name", "age", "city"]);
     }
 
     #[test]
-    fn test_sort_spec_apply_custom_with_suffix() {
+    fn test_key_order_apply_custom_with_last() {
         let mut obj = IndexMap::new();
         obj.insert("name".to_string(), Value::from("Alice"));
         obj.insert("id".to_string(), Value::from(1));
         obj.insert("age".to_string(), Value::from(30));
         obj.insert("zip".to_string(), Value::from("12345"));
 
-        let spec = SortSpec::Custom {
-            prefix: vec!["id".to_string()],
-            middle_sorted: true,
-            suffix: vec!["zip".to_string()],
+        let opts = KeyOrderOptions {
+            recursive: true,
+            first: vec!["id".to_string()],
+            last: vec!["zip".to_string()],
+            sort: true,
         };
 
-        let result = spec.apply(&obj);
+        let result = opts.apply(&obj);
         let keys: Vec<_> = result.keys().collect();
         assert_eq!(keys, vec!["id", "age", "name", "zip"]);
     }
 
     #[test]
-    fn test_sort_spec_apply_custom_unsorted_middle() {
+    fn test_key_order_apply_custom_unsorted_middle() {
         let mut obj = IndexMap::new();
         obj.insert("name".to_string(), Value::from("Alice"));
         obj.insert("id".to_string(), Value::from(1));
         obj.insert("age".to_string(), Value::from(30));
         obj.insert("city".to_string(), Value::from("NYC"));
 
-        let spec = SortSpec::Custom {
-            prefix: vec!["id".to_string()],
-            middle_sorted: false,
-            suffix: vec!["city".to_string()],
+        let opts = KeyOrderOptions {
+            recursive: true,
+            first: vec!["id".to_string()],
+            last: vec!["city".to_string()],
+            sort: false,
         };
 
-        let result = spec.apply(&obj);
+        let result = opts.apply(&obj);
         let keys: Vec<_> = result.keys().collect();
         // id first, then name and age in original order (name, age), then city
         assert_eq!(keys, vec!["id", "name", "age", "city"]);
