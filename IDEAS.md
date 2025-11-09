@@ -86,12 +86,16 @@
     - Text filtering: Include all, filter whitespace-only, or filter empty (default: include all)
     - Index filtering: Include all, or filter except when needed for disambiguation (default: filter except when needed)
 - XML metadata preservation as special leaf nodes:
-  - Comments, DTD, doctype, XML headers/declarations, processing instructions preserved as leaf nodes
-  - The `""` key contains the entire source of these elements
-  - CDATA sections preserved as special leaf nodes:
-    - `""` contains the CDATA wrapper (e.g., `<![CDATA[`)
-    - `@text` contains the actual CDATA content
-    - Distinguishes CDATA from regular text content
+  - CDATA sections:
+    - `""` (tag name) = `![CDATA[`
+    - `@text` = everything before the closing `]]>`
+  - All other special declarations (comments, processing instructions, DOCTYPE, entities, etc.):
+    - `""` (tag name) = type identifier (e.g., `?xml`, `!DOCTYPE`, `!--`, `!ENTITY`, `?xml-stylesheet`)
+    - `@text` = everything after the opening, until (excluding) the closing `>` or `?>`
+    - Examples:
+      - `<!-- comment -->`: `"" = "!--"`, `@text = " comment "`
+      - `<?xml version="1.0"?>`: `"" = "?xml"`, `@text = " version=\"1.0\""`
+      - `<!DOCTYPE html>`: `"" = "!DOCTYPE"`, `@text = " html"`
   - Allows round-tripping of all XML metadata
 - Ordering preservation:
   - Attribute order preserved (using ordered maps)
