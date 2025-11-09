@@ -8,7 +8,8 @@ use tracing_subscriber;
 /// JSON Entity Bucket - Merge, format, and search JSON
 #[derive(Parser, Debug)]
 #[command(name = "jeb")]
-#[command(about = "JSON Entity Bucket - Merge, format, and search JSON", long_about = None)]
+#[command(about = "JSON Entity Bucket - Merge, format, and search JSON")]
+#[command(long_about = "JSON Entity Bucket - Merge, format, and search JSON\n\nWith no arguments, reads from stdin and writes to stdout.\nUse '-' to explicitly specify stdin or stdout.")]
 struct Cli {
     /// Enable debug logging
     #[arg(short, long)]

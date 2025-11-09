@@ -158,6 +158,10 @@ The tests cover:
 - **Relaxed Syntax**:
   - Treat `:` and `,` as optional/equivalent to whitespace
   - Allow more flexible delimiter usage for easier hand-editing
+- **Alternative String Delimiters**:
+  - Support single quotes (`'string'`) in addition to double quotes
+  - Support backticks (`` `string` ``) for template-style strings
+  - Allow multiline strings without escaping newlines
 
 ### Data Operations
 - **Filtering**: Add query support to filter objects (e.g., `--filter 'id > 5'`)
