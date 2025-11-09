@@ -164,13 +164,12 @@ impl KeyOrderOptions {
     fn apply_to_value(&self, value: &Value) -> Value {
         match value {
             Value::Object(obj) => {
-                let index_map: JsonObject = obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+                let index_map: JsonObject =
+                    obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
                 let reordered = self.apply(&index_map);
                 Value::Object(reordered.into_iter().collect())
             }
-            Value::Array(arr) => {
-                Value::Array(arr.iter().map(|v| self.apply_to_value(v)).collect())
-            }
+            Value::Array(arr) => Value::Array(arr.iter().map(|v| self.apply_to_value(v)).collect()),
             _ => value.clone(),
         }
     }
@@ -568,10 +567,14 @@ fn merge_objects(objects: &[JsonObject]) -> Result<JsonObject, String> {
                     match (existing_value, value) {
                         (Value::Object(existing_obj), Value::Object(new_obj)) => {
                             // Recursively merge objects
-                            let existing_map: JsonObject =
-                                existing_obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
-                            let new_map: JsonObject =
-                                new_obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+                            let existing_map: JsonObject = existing_obj
+                                .iter()
+                                .map(|(k, v)| (k.clone(), v.clone()))
+                                .collect();
+                            let new_map: JsonObject = new_obj
+                                .iter()
+                                .map(|(k, v)| (k.clone(), v.clone()))
+                                .collect();
 
                             match merge_objects(&[existing_map, new_map]) {
                                 Ok(merged) => {
@@ -1053,10 +1056,7 @@ Random text in between
             json_total_order(&json!(false), &json!(null)),
             Ordering::Less
         );
-        assert_eq!(
-            json_total_order(&json!(null), &json!(true)),
-            Ordering::Less
-        );
+        assert_eq!(json_total_order(&json!(null), &json!(true)), Ordering::Less);
         assert_eq!(json_total_order(&json!(true), &json!({})), Ordering::Less);
     }
 
