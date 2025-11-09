@@ -74,27 +74,36 @@
   - `""` (empty string): The node's tag name
   - `"-"`: Parent tag name
   - `"--"`: Grandparent tag name (and so on)
-  - `"-id"`: Parent's id attribute value
-  - `"--id"`: Grandparent's id attribute value (and so on)
+  - `"-attribute-name"`: Parent's attribute values (for ALL attributes)
+  - `"--attribute-name"`: Grandparent's attribute values (and so on)
+  - Example: `"-id"` for parent's id attribute, `"--class"` for grandparent's class attribute
 - Virtual attributes (always present in data model):
-  - `@text`: Text node as first child of the node
+  - `@text`: Text node as first child of the node (empty string `""` for self-closing tags, `null` for tags with no text)
   - `@tail`: Text node following the node
   - `@index`: Sibling index for distinguishing identical adjacent parents
-  - CDATA sections are parsed as regular text content
+  - CDATA sections are parsed as regular text content (semantically equivalent)
   - Inherited from ancestors: `"-@text"`, `"--@text"`, `"-@tail"`, `"-@index"`, etc.
   - Options to control filtering:
     - Text filtering: Include all, filter whitespace-only, or filter empty (default: include all)
     - Index filtering: Include all, or filter except when needed for disambiguation (default: filter except when needed)
 - XML metadata preservation as special leaf nodes:
-  - Comments, DTD, doctype, XML headers/declarations preserved as leaf nodes
+  - Comments, DTD, doctype, XML headers/declarations, processing instructions preserved as leaf nodes
   - The `""` key contains the entire source of these elements
   - Allows round-tripping of all XML metadata
-- This scheme doesn't collide with valid XML names (which can't be empty or start with hyphens)
+- Ordering preservation:
+  - Attribute order preserved (using ordered maps)
+  - Entity order preserved via `@index`
+- This scheme doesn't collide with valid XML names (which can't be empty or start with hyphens or `@`)
 - Handling identical adjacent parents:
   - `@index` is always present in the data model (like `@text`/`@tail`)
   - Default option filters it out except when needed for disambiguation
   - When a child node and the next node have identical attributes, `@index` is preserved on both
   - Requires buffering one extra entity to look ahead
   - Ensures all identical siblings get indexed (including the first), not just subsequent ones
-  - Makes the transformation fully lossless even with identical adjacent parents
+- Lossless transformation:
+  - All parent attributes captured at all levels
+  - Self-closing tag distinction via `@text` (`""` vs `null`)
+  - Attribute and entity ordering preserved
+  - Metadata (comments, processing instructions, DTD, etc.) preserved in raw form
+  - Only accepted semantic equivalence: CDATA vs regular text
 - Input only due to non-bijective nature with JSON
