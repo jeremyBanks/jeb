@@ -63,9 +63,16 @@
 
 ## Alternative Input Formats
 
-### Bencode Support
-- Support JEB binary encodings
-- Serialize and deserialize bencoded data (BitTorrent encoding format)
+> **Note on Format Philosophy**: JSON is canonical for jeb (hence the name). Both XML and bencoding are not fully bijective with JSON, so they are primarily input formats to get data into the canonical JSON representation.
+
+### JEB Binary Encodings
+- Use no prefix for simple values that don't require encoding and don't use special characters
+- Need to investigate current implementation to verify this optimization
+
+### Bencode Support (Input Only)
+- Deserialize bencoded data (BitTorrent encoding format)
+- Input only initially due to non-bijective nature with JSON
+- Allows importing data from torrent files and similar sources
 
 ### XML Support (Input Only)
 - Serialize nodes that don't have children (self-closing or leaf nodes)
@@ -75,3 +82,4 @@
   - `xml-parent-id`: Parent tag's id attribute value
 - Note: Naming scheme is intentionally verbose to avoid collisions with actual XML content
 - Starting point that could be refined with a cleaner approach later
+- Input only due to non-bijective nature with JSON
