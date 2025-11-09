@@ -1,8 +1,9 @@
 use clap::Parser;
 use jeb::{apply_sort_buffer, merge_sorted_streams, parse_json_stream, JsonObject};
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{self, BufWriter, Read, Write};
-use tracing::{debug, error, info};
+use std::path::Path;
+use tracing::{debug, error, info, warn};
 use tracing_subscriber;
 
 /// JSON Entity Bucket - Merge, format, and search JSON
@@ -84,10 +85,21 @@ fn main() {
     let all_objects = apply_sort_buffer(merged_objects, cli.buffer_size);
     info!("Total objects after sort buffer: {}", all_objects.len());
 
-    // Write objects as JSON lines to output
-    if let Err(e) = write_json_lines(&output_file, &all_objects) {
-        error!("Failed to write to '{}': {}", output_file, e);
-        std::process::exit(1);
+    // Determine if we need safe in-place modification
+    let needs_safe_write = output_file != "-" && input_files.contains(&output_file);
+
+    if needs_safe_write {
+        debug!("Output path matches an input path, using safe in-place modification");
+        if let Err(e) = write_json_safely(&output_file, &all_objects) {
+            error!("Failed to write to '{}': {}", output_file, e);
+            std::process::exit(1);
+        }
+    } else {
+        // Write objects as JSON array to output
+        if let Err(e) = write_json_lines(&output_file, &all_objects) {
+            error!("Failed to write to '{}': {}", output_file, e);
+            std::process::exit(1);
+        }
     }
 
     info!("JEB completed successfully");
@@ -157,11 +169,82 @@ fn write_json_lines(
         BufWriter::new(Box::new(File::create(file_path)?))
     };
 
-    for obj in objects {
+    write_json_array(&mut writer, objects)?;
+    writer.flush()?;
+    Ok(())
+}
+
+fn write_json_array<W: Write>(
+    writer: &mut W,
+    objects: &[JsonObject],
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Write as a JSON array, but line-by-line friendly:
+    // - First line: [ followed by first object
+    // - Middle lines: , followed by each object
+    // - Last line: ]
+    // This makes it valid JSON but also line-by-line processable (skip first char)
+
+    for (i, obj) in objects.iter().enumerate() {
         let json_str = serde_json::to_string(obj)?;
-        writeln!(writer, "{}", json_str)?;
+        if i == 0 {
+            writeln!(writer, "[{}", json_str)?;
+        } else {
+            writeln!(writer, ",{}", json_str)?;
+        }
     }
 
-    writer.flush()?;
+    // Write closing bracket (or just [] if empty)
+    if objects.is_empty() {
+        writeln!(writer, "[]")?;
+    } else {
+        writeln!(writer, "]")?;
+    }
+
+    Ok(())
+}
+
+fn write_json_safely(
+    file_path: &str,
+    objects: &[JsonObject],
+) -> Result<(), Box<dyn std::error::Error>> {
+    let path = Path::new(file_path);
+    let parent = path.parent().unwrap_or_else(|| Path::new("."));
+
+    // Create temp file in the same directory
+    let temp_path = parent.join(format!(".jeb-tmp-{}", std::process::id()));
+    let backup_path = parent.join(format!("{}.bak-{}",
+        path.file_name().unwrap_or_default().to_string_lossy(),
+        std::process::id()
+    ));
+
+    debug!("Writing to temp file: {:?}", temp_path);
+
+    // Write to temp file
+    {
+        let temp_file = File::create(&temp_path)?;
+        let mut writer = BufWriter::new(temp_file);
+        write_json_array(&mut writer, objects)?;
+        writer.flush()?;
+    }
+
+    // Rename original to backup
+    if path.exists() {
+        debug!("Renaming original {:?} to backup {:?}", path, backup_path);
+        fs::rename(path, &backup_path)?;
+    }
+
+    // Rename temp to target
+    debug!("Renaming temp {:?} to target {:?}", temp_path, path);
+    fs::rename(&temp_path, path)?;
+
+    // Delete backup
+    if backup_path.exists() {
+        debug!("Deleting backup {:?}", backup_path);
+        if let Err(e) = fs::remove_file(&backup_path) {
+            warn!("Failed to delete backup file {:?}: {}", backup_path, e);
+        }
+    }
+
+    info!("Safely wrote to {:?}", path);
     Ok(())
 }
