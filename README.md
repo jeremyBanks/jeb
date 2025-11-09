@@ -76,12 +76,15 @@ Random text
 
 ### Output Format
 
-JEB always outputs JSON as **JSON Lines** (newline-delimited JSON):
+JEB outputs JSON as a **JSON array** (line-by-line friendly):
 
 ```json
-{"id":1,"name":"Alice"}
-{"id":2,"name":"Bob"}
+[{"id":1,"name":"Alice"}
+,{"id":2,"name":"Bob"}
+]
 ```
+
+This format is both valid JSON and line-processable (skip the first character of each line).
 
 ### Options
 
@@ -130,9 +133,11 @@ curl https://api.example.com/data | jeb | jq '.id'
 
 ### Binary (`src/main.rs`)
 
+- Built on Tokio async runtime for efficient I/O
 - CLI argument parsing with clap
-- File I/O handling with stdin/stdout support
+- Async file I/O handling with stdin/stdout support
 - Integration of parsing and output logic
+- Safe in-place file modification with atomic rename
 
 ## Testing
 
@@ -182,4 +187,13 @@ The tests cover:
 
 ## License
 
-This project is open source.
+Licensed under either of:
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
+
+## Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.

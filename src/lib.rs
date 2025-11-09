@@ -1,12 +1,16 @@
+use async_stream::stream;
+use futures::stream::{Stream, StreamExt};
 use indexmap::IndexMap;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::cmp::Ordering;
+use tokio::io::{AsyncBufRead, AsyncReadExt, BufReader};
 use tracing::{debug, info, instrument};
-use wasm_bindgen::prelude::*;
 
 /// Type alias for JSON objects using IndexMap to preserve insertion order
 pub type JsonObject = IndexMap<String, Value>;
+
+/// Type alias for JSON parsing errors
+pub type JsonError = Box<dyn std::error::Error + Send + Sync>;
 
 /// Specification for how to sort keys in JSON objects
 #[derive(Debug, Clone, PartialEq)]
@@ -43,7 +47,8 @@ impl SortSpec {
         let value: Value = serde_json::from_str(trimmed)
             .map_err(|e| format!("Failed to parse sort spec as JSON: {}", e))?;
 
-        let array = value.as_array()
+        let array = value
+            .as_array()
             .ok_or_else(|| "Sort spec must be a boolean or JSON array".to_string())?;
 
         let mut prefix = Vec::new();
@@ -70,7 +75,10 @@ impl SortSpec {
                     in_suffix = true;
                 }
                 _ => {
-                    return Err("Sort spec array must contain only strings and at most one boolean".to_string());
+                    return Err(
+                        "Sort spec array must contain only strings and at most one boolean"
+                            .to_string(),
+                    );
                 }
             }
         }
@@ -89,9 +97,16 @@ impl SortSpec {
             SortSpec::Sorted => {
                 let mut sorted: Vec<_> = obj.iter().collect();
                 sorted.sort_by(|a, b| a.0.cmp(b.0));
-                sorted.into_iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+                sorted
+                    .into_iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect()
             }
-            SortSpec::Custom { prefix, middle_sorted, suffix } => {
+            SortSpec::Custom {
+                prefix,
+                middle_sorted,
+                suffix,
+            } => {
                 let mut result = IndexMap::new();
 
                 // Add prefix keys in specified order
@@ -105,7 +120,8 @@ impl SortSpec {
                 let prefix_set: std::collections::HashSet<_> = prefix.iter().collect();
                 let suffix_set: std::collections::HashSet<_> = suffix.iter().collect();
 
-                let mut middle_keys: Vec<_> = obj.keys()
+                let mut middle_keys: Vec<_> = obj
+                    .keys()
                     .filter(|k| !prefix_set.contains(k) && !suffix_set.contains(k))
                     .collect();
 
@@ -132,68 +148,7 @@ impl SortSpec {
     }
 }
 
-/// A simple data structure to demonstrate serde serialization.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Entity {
-    pub id: i64,
-    pub name: String,
-    pub metadata: Option<String>,
-}
-
-impl Entity {
-    pub fn new(id: i64, name: String) -> Self {
-        Self {
-            id,
-            name,
-            metadata: None,
-        }
-    }
-
-    pub fn with_metadata(mut self, metadata: String) -> Self {
-        self.metadata = Some(metadata);
-        self
-    }
-}
-
-/// A simple greeting function that returns a formatted message.
-#[wasm_bindgen]
-#[instrument]
-pub fn greet(name: &str) -> String {
-    info!("Greeting user: {}", name);
-    format!("Hello, {}!", name)
-}
-
-/// Process some data - placeholder implementation.
-#[instrument(skip(data))]
-pub fn process_data(data: &[u8]) -> Vec<u8> {
-    debug!("Processing {} bytes of data", data.len());
-    // Placeholder: just returns a copy of the input
-    data.to_vec()
-}
-
-/// Calculate something - placeholder implementation.
-#[instrument]
-pub fn calculate(x: i32, y: i32) -> i32 {
-    debug!("Calculating: {} + {}", x, y);
-    // Placeholder: simple addition
-    x + y
-}
-
-/// Serialize an Entity to JSON.
-#[instrument(skip(entity))]
-pub fn entity_to_json(entity: &Entity) -> Result<String, serde_json::Error> {
-    info!("Serializing entity with id: {}", entity.id);
-    serde_json::to_string(entity)
-}
-
-/// Deserialize an Entity from JSON.
-#[instrument(skip(json))]
-pub fn entity_from_json(json: &str) -> Result<Entity, serde_json::Error> {
-    debug!("Deserializing entity from JSON");
-    serde_json::from_str(json)
-}
-
-/// Parse a stream of JSON objects from a string.
+/// Parse a stream of JSON objects from an async reader
 ///
 /// This function handles multiple input formats:
 /// - JSON lines (newline-delimited JSON objects)
@@ -202,8 +157,42 @@ pub fn entity_from_json(json: &str) -> Result<Entity, serde_json::Error> {
 ///
 /// It scans for '{' characters and parses JSON objects from those positions,
 /// ignoring any content that isn't part of a JSON object.
+pub fn parse_json_stream<R: AsyncBufRead + Unpin + Send + 'static>(
+    reader: R,
+) -> impl Stream<Item = Result<JsonObject, JsonError>> {
+    stream! {
+        let mut reader = BufReader::new(reader);
+        let mut buffer = String::new();
+
+        // Read entire content (for now - can optimize later for true streaming)
+        match reader.read_to_string(&mut buffer).await {
+            Ok(_) => {
+                debug!("Read {} bytes from input", buffer.len());
+
+                // Parse using the synchronous parser
+                match parse_json_string(&buffer) {
+                    Ok(objects) => {
+                        for obj in objects {
+                            yield Ok(obj);
+                        }
+                    }
+                    Err(e) => {
+                        yield Err(e);
+                    }
+                }
+            }
+            Err(e) => {
+                yield Err(Box::new(e) as JsonError);
+            }
+        }
+    }
+}
+
+/// Parse JSON objects from a string (synchronous helper)
+///
+/// This is the core parsing logic, used by both sync and async variants
 #[instrument(skip(input))]
-pub fn parse_json_stream(input: &str) -> Result<Vec<JsonObject>, Box<dyn std::error::Error>> {
+pub fn parse_json_string(input: &str) -> Result<Vec<JsonObject>, JsonError> {
     let mut objects = Vec::new();
     let mut chars = input.char_indices().peekable();
 
@@ -224,8 +213,7 @@ pub fn parse_json_stream(input: &str) -> Result<Vec<JsonObject>, Box<dyn std::er
                     Ok(Value::Object(obj)) => {
                         debug!("Parsed JSON object with {} keys", obj.len());
                         // Convert serde_json::Map to IndexMap to preserve order
-                        let index_map: IndexMap<String, Value> =
-                            obj.into_iter().collect();
+                        let index_map: IndexMap<String, Value> = obj.into_iter().collect();
                         objects.push(index_map);
 
                         // Skip ahead by the consumed length minus 1
@@ -358,12 +346,135 @@ pub fn json_total_order(a: &Value, b: &Value) -> Ordering {
     }
 }
 
-/// Merge multiple sorted streams of JSON objects into a single sorted stream.
+/// Merge multiple sorted streams into a single sorted stream
 ///
-/// Assumes that each input vector is already sorted according to json_total_order.
-/// Performs an n-way merge to produce a single sorted output.
-#[instrument(skip(streams))]
-pub fn merge_sorted_streams(streams: Vec<Vec<JsonObject>>) -> Vec<JsonObject> {
+/// Assumes that each input stream is already sorted according to json_total_order.
+/// Performs an n-way merge to produce a single sorted output stream.
+pub fn merge_sorted_streams<S>(streams: Vec<S>) -> impl Stream<Item = JsonObject>
+where
+    S: Stream<Item = Result<JsonObject, JsonError>> + Unpin + Send + 'static,
+{
+    stream! {
+        // Collect all items from all streams first
+        // TODO: Implement true streaming n-way merge with peekable streams
+        let mut all_objects = Vec::new();
+        let stream_count = streams.len();
+
+        for mut stream in streams {
+            while let Some(result) = stream.next().await {
+                match result {
+                    Ok(obj) => all_objects.push(obj),
+                    Err(e) => {
+                        debug!("Error in stream: {}", e);
+                        // Skip errors for now
+                    }
+                }
+            }
+        }
+
+        // Sort all objects
+        all_objects.sort_by(|a, b| {
+            let a_val = Value::Object(a.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
+            let b_val = Value::Object(b.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
+            json_total_order(&a_val, &b_val)
+        });
+
+        info!("Merged {} total objects from {} streams", all_objects.len(), stream_count);
+
+        for obj in all_objects {
+            yield obj;
+        }
+    }
+}
+
+/// Apply a sorting buffer to correct slight disorder in the stream
+///
+/// This function maintains a sliding window buffer of size `buffer_size`.
+/// It fills the buffer, sorts it, outputs the smallest element, and continues
+/// until all elements are processed. This allows correcting out-of-order elements
+/// within the buffer window.
+///
+/// If buffer_size is 0, returns the stream unchanged.
+pub fn apply_sort_buffer<S>(stream: S, buffer_size: usize) -> impl Stream<Item = JsonObject>
+where
+    S: Stream<Item = JsonObject> + Unpin + Send + 'static,
+{
+    stream! {
+        if buffer_size == 0 {
+            debug!("Sort buffer disabled (size=0), passing through unchanged");
+            let mut stream = Box::pin(stream);
+            while let Some(obj) = stream.next().await {
+                yield obj;
+            }
+            return;
+        }
+
+        // Collect all items for now - TODO: implement true sliding window
+        let mut objects: Vec<JsonObject> = Vec::new();
+        let mut stream = Box::pin(stream);
+
+        while let Some(obj) = stream.next().await {
+            objects.push(obj);
+        }
+
+        if objects.is_empty() {
+            return;
+        }
+
+        let mut result = Vec::with_capacity(objects.len());
+        let mut buffer: Vec<JsonObject> = Vec::with_capacity(buffer_size);
+        let mut input_iter = objects.into_iter();
+
+        // Fill the initial buffer
+        for obj in input_iter.by_ref().take(buffer_size) {
+            buffer.push(obj);
+        }
+
+        // Sort the initial buffer
+        buffer.sort_by(|a, b| {
+            let a_val = Value::Object(a.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
+            let b_val = Value::Object(b.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
+            json_total_order(&a_val, &b_val)
+        });
+
+        // Process remaining objects
+        for obj in input_iter {
+            // Output the smallest element from buffer
+            if !buffer.is_empty() {
+                result.push(buffer.remove(0));
+            }
+
+            // Insert new object in sorted position
+            let obj_val = Value::Object(obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
+            let insert_pos = buffer
+                .iter()
+                .position(|b| {
+                    let b_val = Value::Object(b.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
+                    json_total_order(&obj_val, &b_val) == Ordering::Less
+                })
+                .unwrap_or(buffer.len());
+            buffer.insert(insert_pos, obj);
+        }
+
+        // Output remaining buffer contents (already sorted)
+        result.extend(buffer);
+
+        info!("Applied sort buffer of size {} to {} objects", buffer_size, result.len());
+
+        for obj in result {
+            yield obj;
+        }
+    }
+}
+
+// For backward compatibility during transition - keep the sync version for tests
+#[doc(hidden)]
+pub fn parse_json_stream_sync(input: &str) -> Result<Vec<JsonObject>, JsonError> {
+    parse_json_string(input)
+}
+
+#[doc(hidden)]
+pub fn merge_sorted_streams_sync(streams: Vec<Vec<JsonObject>>) -> Vec<JsonObject> {
     let total_capacity: usize = streams.iter().map(|s| s.len()).sum();
     let mut result = Vec::with_capacity(total_capacity);
 
@@ -419,20 +530,16 @@ pub fn merge_sorted_streams(streams: Vec<Vec<JsonObject>>) -> Vec<JsonObject> {
         }
     }
 
-    info!("Merged {} streams into {} total objects", streams.len(), result.len());
+    info!(
+        "Merged {} streams into {} total objects",
+        streams.len(),
+        result.len()
+    );
     result
 }
 
-/// Apply a sorting buffer to correct slight disorder in the input.
-///
-/// This function maintains a sliding window buffer of size `buffer_size`.
-/// It fills the buffer, sorts it, outputs the smallest element, and continues
-/// until all elements are processed. This allows correcting out-of-order elements
-/// within the buffer window.
-///
-/// If buffer_size is 0, returns the input unchanged.
-#[instrument(skip(objects))]
-pub fn apply_sort_buffer(objects: Vec<JsonObject>, buffer_size: usize) -> Vec<JsonObject> {
+#[doc(hidden)]
+pub fn apply_sort_buffer_sync(objects: Vec<JsonObject>, buffer_size: usize) -> Vec<JsonObject> {
     if buffer_size == 0 {
         debug!("Sort buffer disabled (size=0), returning objects unchanged");
         return objects;
@@ -492,80 +599,6 @@ pub fn apply_sort_buffer(objects: Vec<JsonObject>, buffer_size: usize) -> Vec<Js
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_greet() {
-        let result = greet("World");
-        assert_eq!(result, "Hello, World!");
-    }
-
-    #[test]
-    fn test_greet_empty() {
-        let result = greet("");
-        assert_eq!(result, "Hello, !");
-    }
-
-    #[test]
-    fn test_process_data() {
-        let data = vec![1, 2, 3, 4, 5];
-        let result = process_data(&data);
-        assert_eq!(result, data);
-    }
-
-    #[test]
-    fn test_process_data_empty() {
-        let data: Vec<u8> = vec![];
-        let result = process_data(&data);
-        assert_eq!(result, data);
-    }
-
-    #[test]
-    fn test_calculate() {
-        assert_eq!(calculate(2, 3), 5);
-        assert_eq!(calculate(-1, 1), 0);
-        assert_eq!(calculate(0, 0), 0);
-    }
-
-    #[test]
-    fn test_entity_creation() {
-        let entity = Entity::new(1, "Test Entity".to_string());
-        assert_eq!(entity.id, 1);
-        assert_eq!(entity.name, "Test Entity");
-        assert_eq!(entity.metadata, None);
-    }
-
-    #[test]
-    fn test_entity_with_metadata() {
-        let entity = Entity::new(1, "Test".to_string())
-            .with_metadata("Some metadata".to_string());
-        assert_eq!(entity.metadata, Some("Some metadata".to_string()));
-    }
-
-    #[test]
-    fn test_entity_serialization() {
-        let entity = Entity::new(42, "John Doe".to_string());
-        let json = entity_to_json(&entity).unwrap();
-        assert!(json.contains("\"id\":42"));
-        assert!(json.contains("\"name\":\"John Doe\""));
-    }
-
-    #[test]
-    fn test_entity_deserialization() {
-        let json = r#"{"id":123,"name":"Jane Doe","metadata":null}"#;
-        let entity = entity_from_json(json).unwrap();
-        assert_eq!(entity.id, 123);
-        assert_eq!(entity.name, "Jane Doe");
-        assert_eq!(entity.metadata, None);
-    }
-
-    #[test]
-    fn test_entity_round_trip() {
-        let original = Entity::new(999, "Round Trip".to_string())
-            .with_metadata("test metadata".to_string());
-        let json = entity_to_json(&original).unwrap();
-        let deserialized = entity_from_json(&json).unwrap();
-        assert_eq!(original, deserialized);
-    }
-
     // JSON stream parsing tests
 
     #[test]
@@ -574,7 +607,7 @@ mod tests {
 {"id": 2, "name": "Bob"}
 {"id": 3, "name": "Charlie"}"#;
 
-        let objects = parse_json_stream(input).unwrap();
+        let objects = parse_json_stream_sync(input).unwrap();
         assert_eq!(objects.len(), 3);
         assert_eq!(objects[0].get("id").unwrap(), &Value::from(1));
         assert_eq!(objects[0].get("name").unwrap(), &Value::from("Alice"));
@@ -590,7 +623,7 @@ mod tests {
             {"id": 3, "name": "Charlie"}
         ]"#;
 
-        let objects = parse_json_stream(input).unwrap();
+        let objects = parse_json_stream_sync(input).unwrap();
         assert_eq!(objects.len(), 3);
         assert_eq!(objects[0].get("id").unwrap(), &Value::from(1));
         assert_eq!(objects[1].get("id").unwrap(), &Value::from(2));
@@ -599,9 +632,10 @@ mod tests {
 
     #[test]
     fn test_parse_concatenated_json() {
-        let input = r#"{"id": 1, "name": "Alice"}{"id": 2, "name": "Bob"}{"id": 3, "name": "Charlie"}"#;
+        let input =
+            r#"{"id": 1, "name": "Alice"}{"id": 2, "name": "Bob"}{"id": 3, "name": "Charlie"}"#;
 
-        let objects = parse_json_stream(input).unwrap();
+        let objects = parse_json_stream_sync(input).unwrap();
         assert_eq!(objects.len(), 3);
         assert_eq!(objects[0].get("id").unwrap(), &Value::from(1));
         assert_eq!(objects[1].get("id").unwrap(), &Value::from(2));
@@ -616,7 +650,7 @@ Random text in between
 {"id": 2, "name": "Bob"}
 [{"id": 3, "name": "Charlie"}]"#;
 
-        let objects = parse_json_stream(input).unwrap();
+        let objects = parse_json_stream_sync(input).unwrap();
         assert_eq!(objects.len(), 3);
         assert_eq!(objects[0].get("id").unwrap(), &Value::from(1));
         assert_eq!(objects[1].get("id").unwrap(), &Value::from(2));
@@ -628,7 +662,7 @@ Random text in between
         let input = r#"{"id": 1, "data": {"nested": "value"}}
 {"id": 2, "data": {"nested": {"deep": "value"}}}"#;
 
-        let objects = parse_json_stream(input).unwrap();
+        let objects = parse_json_stream_sync(input).unwrap();
         assert_eq!(objects.len(), 2);
         assert_eq!(objects[0].get("id").unwrap(), &Value::from(1));
         assert!(objects[0].get("data").unwrap().is_object());
@@ -640,7 +674,7 @@ Random text in between
         let input = r#"{"id": 1, "text": "This has a } in it"}
 {"id": 2, "text": "And this has a { in it"}"#;
 
-        let objects = parse_json_stream(input).unwrap();
+        let objects = parse_json_stream_sync(input).unwrap();
         assert_eq!(objects.len(), 2);
         assert_eq!(
             objects[0].get("text").unwrap(),
@@ -655,14 +689,14 @@ Random text in between
     #[test]
     fn test_parse_empty_input() {
         let input = "";
-        let objects = parse_json_stream(input).unwrap();
+        let objects = parse_json_stream_sync(input).unwrap();
         assert_eq!(objects.len(), 0);
     }
 
     #[test]
     fn test_parse_no_json_objects() {
         let input = "This is just plain text with no JSON objects";
-        let objects = parse_json_stream(input).unwrap();
+        let objects = parse_json_stream_sync(input).unwrap();
         assert_eq!(objects.len(), 0);
     }
 
@@ -693,7 +727,10 @@ Random text in between
         use serde_json::json;
 
         // Test type ordering: null < bool < number < string < array < object
-        assert_eq!(json_total_order(&json!(null), &json!(false)), Ordering::Less);
+        assert_eq!(
+            json_total_order(&json!(null), &json!(false)),
+            Ordering::Less
+        );
         assert_eq!(json_total_order(&json!(false), &json!(0)), Ordering::Less);
         assert_eq!(json_total_order(&json!(0), &json!("")), Ordering::Less);
         assert_eq!(json_total_order(&json!(""), &json!([])), Ordering::Less);
@@ -704,9 +741,18 @@ Random text in between
     fn test_json_total_order_booleans() {
         use serde_json::json;
 
-        assert_eq!(json_total_order(&json!(false), &json!(true)), Ordering::Less);
-        assert_eq!(json_total_order(&json!(true), &json!(false)), Ordering::Greater);
-        assert_eq!(json_total_order(&json!(true), &json!(true)), Ordering::Equal);
+        assert_eq!(
+            json_total_order(&json!(false), &json!(true)),
+            Ordering::Less
+        );
+        assert_eq!(
+            json_total_order(&json!(true), &json!(false)),
+            Ordering::Greater
+        );
+        assert_eq!(
+            json_total_order(&json!(true), &json!(true)),
+            Ordering::Equal
+        );
     }
 
     #[test]
@@ -768,10 +814,10 @@ Random text in between
 
     #[test]
     fn test_merge_sorted_streams_simple() {
-        let stream1 = parse_json_stream(r#"{"id": 1}{"id": 3}{"id": 5}"#).unwrap();
-        let stream2 = parse_json_stream(r#"{"id": 2}{"id": 4}{"id": 6}"#).unwrap();
+        let stream1 = parse_json_stream_sync(r#"{"id": 1}{"id": 3}{"id": 5}"#).unwrap();
+        let stream2 = parse_json_stream_sync(r#"{"id": 2}{"id": 4}{"id": 6}"#).unwrap();
 
-        let merged = merge_sorted_streams(vec![stream1, stream2]);
+        let merged = merge_sorted_streams_sync(vec![stream1, stream2]);
 
         assert_eq!(merged.len(), 6);
         for (i, obj) in merged.iter().enumerate() {
@@ -782,17 +828,17 @@ Random text in between
     #[test]
     fn test_merge_sorted_streams_empty() {
         let stream1: Vec<JsonObject> = vec![];
-        let stream2 = parse_json_stream(r#"{"id": 1}"#).unwrap();
+        let stream2 = parse_json_stream_sync(r#"{"id": 1}"#).unwrap();
 
-        let merged = merge_sorted_streams(vec![stream1, stream2]);
+        let merged = merge_sorted_streams_sync(vec![stream1, stream2]);
         assert_eq!(merged.len(), 1);
     }
 
     #[test]
     fn test_merge_sorted_streams_single() {
-        let stream1 = parse_json_stream(r#"{"id": 1}{"id": 2}{"id": 3}"#).unwrap();
+        let stream1 = parse_json_stream_sync(r#"{"id": 1}{"id": 2}{"id": 3}"#).unwrap();
 
-        let merged = merge_sorted_streams(vec![stream1]);
+        let merged = merge_sorted_streams_sync(vec![stream1]);
         assert_eq!(merged.len(), 3);
     }
 
@@ -800,8 +846,8 @@ Random text in between
 
     #[test]
     fn test_apply_sort_buffer_disabled() {
-        let objects = parse_json_stream(r#"{"id": 3}{"id": 1}{"id": 2}"#).unwrap();
-        let result = apply_sort_buffer(objects.clone(), 0);
+        let objects = parse_json_stream_sync(r#"{"id": 3}{"id": 1}{"id": 2}"#).unwrap();
+        let result = apply_sort_buffer_sync(objects.clone(), 0);
 
         // Should return unchanged when buffer size is 0
         assert_eq!(result.len(), 3);
@@ -813,8 +859,8 @@ Random text in between
     #[test]
     fn test_apply_sort_buffer_small_disorder() {
         // Slightly out of order - within buffer window
-        let objects = parse_json_stream(r#"{"id": 1}{"id": 3}{"id": 2}{"id": 4}"#).unwrap();
-        let result = apply_sort_buffer(objects, 3);
+        let objects = parse_json_stream_sync(r#"{"id": 1}{"id": 3}{"id": 2}{"id": 4}"#).unwrap();
+        let result = apply_sort_buffer_sync(objects, 3);
 
         // Should be sorted
         assert_eq!(result.len(), 4);
@@ -825,8 +871,8 @@ Random text in between
 
     #[test]
     fn test_apply_sort_buffer_already_sorted() {
-        let objects = parse_json_stream(r#"{"id": 1}{"id": 2}{"id": 3}{"id": 4}"#).unwrap();
-        let result = apply_sort_buffer(objects, 3);
+        let objects = parse_json_stream_sync(r#"{"id": 1}{"id": 2}{"id": 3}{"id": 4}"#).unwrap();
+        let result = apply_sort_buffer_sync(objects, 3);
 
         // Should remain sorted
         assert_eq!(result.len(), 4);
@@ -838,8 +884,8 @@ Random text in between
     #[test]
     fn test_apply_sort_buffer_large_buffer() {
         // Buffer larger than input
-        let objects = parse_json_stream(r#"{"id": 3}{"id": 1}{"id": 2}"#).unwrap();
-        let result = apply_sort_buffer(objects, 10);
+        let objects = parse_json_stream_sync(r#"{"id": 3}{"id": 1}{"id": 2}"#).unwrap();
+        let result = apply_sort_buffer_sync(objects, 10);
 
         // Should fully sort
         assert_eq!(result.len(), 3);
@@ -851,7 +897,7 @@ Random text in between
     #[test]
     fn test_apply_sort_buffer_empty() {
         let objects: Vec<JsonObject> = vec![];
-        let result = apply_sort_buffer(objects, 3);
+        let result = apply_sort_buffer_sync(objects, 3);
 
         assert_eq!(result.len(), 0);
     }
@@ -859,10 +905,10 @@ Random text in between
     #[test]
     fn test_apply_sort_buffer_complex() {
         // More complex disorder pattern
-        let objects = parse_json_stream(
-            r#"{"id": 1}{"id": 2}{"id": 5}{"id": 3}{"id": 4}{"id": 6}"#
-        ).unwrap();
-        let result = apply_sort_buffer(objects, 3);
+        let objects =
+            parse_json_stream_sync(r#"{"id": 1}{"id": 2}{"id": 5}{"id": 3}{"id": 4}{"id": 6}"#)
+                .unwrap();
+        let result = apply_sort_buffer_sync(objects, 3);
 
         // With buffer size 3, should correct the disorder
         assert_eq!(result.len(), 6);
@@ -885,31 +931,40 @@ Random text in between
     #[test]
     fn test_sort_spec_parse_custom_prefix_only() {
         let spec = SortSpec::parse(r#"["id","name"]"#).unwrap();
-        assert_eq!(spec, SortSpec::Custom {
-            prefix: vec!["id".to_string(), "name".to_string()],
-            middle_sorted: true,
-            suffix: vec![],
-        });
+        assert_eq!(
+            spec,
+            SortSpec::Custom {
+                prefix: vec!["id".to_string(), "name".to_string()],
+                middle_sorted: true,
+                suffix: vec![],
+            }
+        );
     }
 
     #[test]
     fn test_sort_spec_parse_custom_with_sorted_middle() {
         let spec = SortSpec::parse(r#"["id",true,"zip"]"#).unwrap();
-        assert_eq!(spec, SortSpec::Custom {
-            prefix: vec!["id".to_string()],
-            middle_sorted: true,
-            suffix: vec!["zip".to_string()],
-        });
+        assert_eq!(
+            spec,
+            SortSpec::Custom {
+                prefix: vec!["id".to_string()],
+                middle_sorted: true,
+                suffix: vec!["zip".to_string()],
+            }
+        );
     }
 
     #[test]
     fn test_sort_spec_parse_custom_with_unsorted_middle() {
         let spec = SortSpec::parse(r#"["id",false,"name"]"#).unwrap();
-        assert_eq!(spec, SortSpec::Custom {
-            prefix: vec!["id".to_string()],
-            middle_sorted: false,
-            suffix: vec!["name".to_string()],
-        });
+        assert_eq!(
+            spec,
+            SortSpec::Custom {
+                prefix: vec!["id".to_string()],
+                middle_sorted: false,
+                suffix: vec!["name".to_string()],
+            }
+        );
     }
 
     #[test]
