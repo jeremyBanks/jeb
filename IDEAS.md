@@ -76,23 +76,24 @@
   - `"--"`: Grandparent tag name (and so on)
   - `"-id"`: Parent's id attribute value
   - `"--id"`: Grandparent's id attribute value (and so on)
-- Text node handling with virtual attributes:
+- Virtual attributes (always present in data model):
   - `@text`: Text node as first child of the node
   - `@tail`: Text node following the node
+  - `@index`: Sibling index for distinguishing identical adjacent parents
   - CDATA sections are parsed as regular text content
-  - Inherited from ancestors: `"-@text"`, `"--@text"`, `"-@tail"`, etc.
-  - By default, these attributes are present for all nodes (even if empty/whitespace)
-  - Options enum to control text filtering:
-    - Include all (default)
-    - Filter out whitespace-only text nodes
-    - Filter out empty text nodes
+  - Inherited from ancestors: `"-@text"`, `"--@text"`, `"-@tail"`, `"-@index"`, etc.
+  - Options to control filtering:
+    - Text filtering: Include all, filter whitespace-only, or filter empty (default: include all)
+    - Index filtering: Include all, or filter except when needed for disambiguation (default: filter except when needed)
 - XML metadata preservation as special leaf nodes:
   - Comments, DTD, doctype, XML headers/declarations preserved as leaf nodes
   - The `""` key contains the entire source of these elements
   - Allows round-tripping of all XML metadata
 - This scheme doesn't collide with valid XML names (which can't be empty or start with hyphens)
 - Handling identical adjacent parents:
-  - If a child node and the next node have identical attributes, add `@index` to both
+  - `@index` is always present in the data model (like `@text`/`@tail`)
+  - Default option filters it out except when needed for disambiguation
+  - When a child node and the next node have identical attributes, `@index` is preserved on both
   - Requires buffering one extra entity to look ahead
   - Ensures all identical siblings get indexed (including the first), not just subsequent ones
   - Makes the transformation fully lossless even with identical adjacent parents
