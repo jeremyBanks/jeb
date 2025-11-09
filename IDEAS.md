@@ -60,6 +60,11 @@
 > **Note on Format Philosophy**: JSON is canonical for jeb (hence the name). Both XML and bencoding are not fully bijective with JSON, so they are primarily input formats to get data into the canonical JSON representation.
 
 ### JEB Binary Encodings
+
+> **Note on naming**: The tool and library for JSON is **jeb** (lowercase). The text/binary encoding family is **JEB** (uppercase).
+
+- JEB is a family of text encoding variations based on base64 and base85
+- Attempts to preserve source as readable when it avoids problematic characters
 - Use no prefix for simple values that don't require encoding and don't use special characters
 - Need to investigate current implementation to verify this optimization
 
