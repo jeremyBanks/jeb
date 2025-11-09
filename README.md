@@ -1,6 +1,8 @@
 # jeb (JSON Entity Bucket)
 
 > **⚠️ DISCLAIMER**: This is vibe-coded slop. The humans responsible would like none of the blame but all of the credit.
+>
+> Nothing in this README or any other documents or files in this repository should currently be taken as necessarily true, accurate, or correct. The project version will remain 0.0.x for as long as this is the case.
 
 A flexible command-line tool for merging, formatting, and searching JSON data.
 
