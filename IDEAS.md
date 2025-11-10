@@ -73,6 +73,29 @@ Considerations:
 - Need to distinguish node parameters from connection directives (`-as-NAME`, `-from-X`, `-to-Y`)
 - Should be concise but unambiguous
 
+**Example Node Type: SQLite**
+
+The SQLite node demonstrates multiple parameter types:
+```bash
+jeb read-file:latest.json sqlite:foo.db where-prefix:(type:Entry)
+```
+
+Parameters:
+- **Database path**: `sqlite:foo.db` (or empty string `sqlite:` for temporary file)
+- **Mode flags**: replace vs extend existing database
+- **Query/filter expressions**: `where-prefix:(type:Entry)`
+- **Default behavior**: If no path specified, use `""` (temporary file created by SQLite)
+
+The SQLite node has special output types (TBD) for query results.
+
+### Named and Optional Outputs
+
+Nodes can have multiple types of outputs:
+- **Required outputs**: Referenced by just the node name (e.g., `NODE`)
+- **Optional/named outputs**: Referenced with dot notation (e.g., `NODE.portname`)
+
+When a node has both required and optional outputs, referring to it by name alone means its required outputs.
+
 ### Output Representations
 
 The constructed graph can be:
@@ -157,6 +180,12 @@ The constructed graph can be:
 - Deserialize bencoded data (BitTorrent encoding format)
 - Input only initially due to non-bijective nature with JSON
 - Allows importing data from torrent files and similar sources
+
+### Protocol Buffers Wire Format
+
+Support for serialization and deserialization of Protocol Buffers wire format:
+- Both encoding and decoding operations
+- Details TBD
 
 ### XML Support (Input Only)
 - Serialize all nodes which do not have non-text children
