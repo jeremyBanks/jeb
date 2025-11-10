@@ -10,6 +10,9 @@ use tracing::{debug, info, instrument};
 #[allow(dead_code)]
 mod json_stream;
 
+// SQLite integration module
+pub mod sqlite;
+
 /// Type alias for JSON objects using IndexMap to preserve insertion order
 pub type JsonObject = IndexMap<String, Value>;
 
