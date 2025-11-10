@@ -246,12 +246,14 @@ mod tests {
         register_jeb_functions(&conn).unwrap();
         create_jeb_table(&conn, "entities").unwrap();
 
-        // Insert objects with different prefixes
+        // Insert objects - Note: json! sorts keys alphabetically
+        // So {"ns": "user", "id": 1} becomes {"id": 1, "ns": "user"} in the encoding
+        // We use "ns" (comes after "id") to ensure it's last alphabetically
         let test_data = vec![
-            json!({"namespace": "user", "id": 1}),
-            json!({"namespace": "user", "id": 2}),
-            json!({"namespace": "admin", "id": 1}),
-            json!({"namespace": "guest", "id": 1}),
+            json!({"id": 1, "ns": "user"}),
+            json!({"id": 2, "ns": "user"}),
+            json!({"id": 1, "ns": "admin"}),
+            json!({"id": 1, "ns": "guest"}),
             json!({"other": "data"}),
         ];
 
@@ -263,15 +265,18 @@ mod tests {
             .unwrap();
         }
 
-        // Find all objects with namespace="user"
-        // We create a prefix by encoding the start of the object
-        let prefix_start = to_sortable_bytes(&json!({"namespace": "user"}));
+        // Find all objects starting with {"id": 1, "ns": "user"}
+        // Note: Keys are alphabetically ordered, so "id" comes before "ns"
+        let mut prefix_start = to_sortable_bytes(&json!({"id": 1, "ns": "user"}));
 
-        // Create an upper bound by incrementing the last byte
-        let mut prefix_end = prefix_start.clone();
-        if let Some(last) = prefix_end.last_mut() {
-            *last = last.wrapping_add(1);
+        // Remove the final terminator (\0\0) to allow prefix matching with additional fields
+        if prefix_start.len() >= 2 {
+            prefix_start.truncate(prefix_start.len() - 2);
         }
+
+        // Create upper bound by appending a high byte
+        let mut prefix_end = prefix_start.clone();
+        prefix_end.push(0xFF);
 
         let mut stmt = conn
             .prepare(
@@ -290,11 +295,10 @@ mod tests {
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
 
-        // Should find both user objects
-        assert_eq!(results.len(), 2);
-        for result in results {
-            assert_eq!(result["namespace"], "user");
-        }
+        // Should find exactly the one object with id=1 and ns=user
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0]["id"], 1);
+        assert_eq!(results[0]["ns"], "user");
     }
 
     #[test]
