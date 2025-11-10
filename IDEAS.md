@@ -2,6 +2,91 @@
 
 > **IMPORTANT**: This document contains brainstorming and potential ideas for future development. Nothing listed here represents a commitment to implement these features. These are exploratory concepts that may or may not be pursued.
 
+## Pipeline-Based CLI Model
+
+### Overview
+
+Redesign the CLI as a concise constructor DSL for building data flow graphs. Each node type represents a transformation or I/O operation with typed inputs/outputs.
+
+### Data Flow Graph Model
+
+- **Nodes**: Transformation operations (parse, merge, filter, etc.) or I/O operations (read file, stdin, stdout)
+- **Edges**: Typed stream connections between nodes
+- **Stream Types**: Each edge has a type (binary stream, JSON object stream, etc.)
+- **Cardinality Constraints**: Each node type specifies min/max number of inputs and outputs
+- **Defaults**: One binary stream input from stdin, one binary stream output to stdout
+
+### CLI Argument Syntax
+
+**Basic Principle**: Each argument specifies a new node in the graph.
+
+**Node Naming**:
+- Node names: Start with uppercase letter, contain uppercase letters, digits, underscores (e.g., `A1`, `FILE1`, `MERGED_DATA`)
+- Command names: Start with lowercase letter (e.g., `parse-json`, `sort-keys`, `merge`)
+- Implicit input nodes: Named `I1`, `I2`, `I3`, etc.
+- Implicit operation nodes: Named `A1`, `A2`, `A3`, etc.
+- Reserved names: `ALL`, `EACH` (for future use)
+
+**Explicit Naming**: Append `-as-NAME` to give a node an explicit name
+```bash
+parse-json-as-PARSER1
+```
+
+**Explicit Connections**:
+- Input connections: `-from-NODE1-NODE2-NODE3`
+- Output connections: `-to-NODE1-NODE2-NODE3`
+
+```bash
+merge-from-A1-A2-A3-to-COMBINED
+```
+
+**Implicit Connection Rules**:
+1. If a new node requires inputs and has no explicit `-from`:
+   - **Single input required**: Connect from the most recent node with available output
+   - **Multiple inputs accepted**: Connect from all previous nodes with available outputs
+2. If no suitable inputs exist, implicitly create a stdin reader node (`I1`, `I2`, etc.)
+3. After all nodes are created, if any outputs are unconnected:
+   - Create an implicit merge node connected to all unconnected outputs
+   - Connect merge to an implicit stdout writer
+
+**Examples**:
+
+Simple linear pipeline (implicit connections):
+```bash
+jeb parse-json sort-keys
+# Creates: I1 (stdin) → A1 (parse-json) → A2 (sort-keys) → O1 (stdout)
+```
+
+Multiple inputs with implicit merge:
+```bash
+jeb read-file-as-FILE1 read-file-as-FILE2 parse-json-from-FILE1 parse-json-from-FILE2
+# Creates: FILE1 → parse (A1) ┐
+#          FILE2 → parse (A2) ┴→ merge (M1) → stdout (O1)
+```
+
+### Node Parameter Syntax
+
+**Status**: Not yet defined. Need to catalog all node types and their parameter requirements to determine appropriate syntax.
+
+Considerations:
+- How to specify file paths, buffer sizes, sort specifications, filter expressions, etc.
+- Need to distinguish node parameters from connection directives (`-as-NAME`, `-from-X`, `-to-Y`)
+- Should be concise but unambiguous
+
+### Output Representations
+
+The constructed graph can be:
+1. **Executed**: Run the pipeline
+2. **Serialized to JSON**: Output the graph definition for inspection or reuse
+3. **Visualized**: Render a crude topological sort or graph representation (TBD)
+
+### Open Questions
+
+- How to handle multiple implicit input nodes sensibly
+- Best syntax for node parameters (colon-separated? key=value? other?)
+- Graph validation rules and error messages
+- How to support node type discovery/documentation
+
 ## Permissive JSON Parsing
 
 ### Comment Support
