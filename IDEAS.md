@@ -20,6 +20,12 @@ Redesign the CLI as a concise constructor DSL for building data flow graphs. Eac
 
 **Basic Principle**: Each argument specifies a new node in the graph.
 
+**Pipe Operator (`|`) for jq Compatibility**:
+- If an argument contains `|`, split on pipe and trim whitespace from before and after each segment
+- Each segment becomes a separate node in the pipeline, connected sequentially
+- Users must quote arguments containing `|` for shell compatibility
+- Example: `jeb '.data | map(.id) | select(. > 5)'` creates three connected nodes
+
 **Node Naming**:
 - Node names: Start with uppercase letter, contain uppercase letters, digits, underscores (e.g., `A1`, `FILE1`, `MERGED_DATA`)
 - Command names: Start with lowercase letter (e.g., `parse-json`, `sort-keys`, `merge`)
