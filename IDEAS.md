@@ -329,7 +329,7 @@ jeb \
 
 2. **Raw mode prefix**: A special prefix (e.g., `|~`) meaning "everything after this point is unencoded passthrough". This would be highly efficient for files with small encoded headers followed by large safe text bodies.
    - The prefix only applies at block transition points, so `|~` appearing naturally in raw content is not a concern
-   - Needs investigation to determine if there were reasons this wasn't implemented previously (canonical encoding issues, block alignment concerns, etc.)
+   - **Canonical encoding strategy**: Since 9999 is the maximum number of blocks, buffer the required number of bytes to look ahead that far. If the stream ends within that distance AND all remaining bytes are safe characters, use `|~` prefix instead of block encoding. This makes the encoding deterministic - same input always produces the same output - while keeping buffering costs bounded.
 
 ### Bencode Support (Input Only)
 - Deserialize bencoded data (BitTorrent encoding format)
