@@ -299,7 +299,12 @@ jeb \
 
 Support for serialization and deserialization of Protocol Buffers wire format:
 - Both encoding and decoding operations
-- Details TBD
+- **Heuristic decoding approach**: Since wire format cannot inherently distinguish between binary data and nested messages without a schema, use best-effort auto-detection at each nesting level:
+  - Check if data looks like valid UTF-8 (decode as string)
+  - Check if data looks like JSON (parse as JSON)
+  - Check if data looks like proto wire format (decode recursively)
+  - Check if data looks like bencode (decode as bencode)
+  - Otherwise treat as binary blob (base64 or similar representation)
 
 ### XML Support (Input Only)
 - Serialize all nodes which do not have non-text children
