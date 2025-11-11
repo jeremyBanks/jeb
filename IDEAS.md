@@ -362,6 +362,11 @@ The encoding uses `\b` (backspace escape) as a binary marker, which is valid JSO
 - **Safe text in binary**: Safe text segments inside binary data are preserved at block boundaries without breaking alignment
 - **Clear distinction**: The `\b` prefix makes binary encoding immediately obvious and never conflicts with actual text content
 
+**Buffer and Block Limits**:
+- Maximum of **8192 blocks** for lookahead (32KiB buffer for 4-byte Z85 blocks)
+- **Full string passthrough**: Only applies to strings within the 8192-block buffer size. Longer strings use block-based encoding since we can't verify they're entirely text-suitable without exceeding the buffer limit.
+- **Raw mode prefix**: Use a special prefix (e.g., `|~`) for "everything after this is unencoded passthrough" when the stream ends within the lookahead distance AND all remaining bytes are safe characters. This makes encoding deterministic while keeping buffering costs bounded.
+
 This approach balances readability for text-heavy data with proper handling of binary content, ensuring that diffs remain meaningful and aligned.
 
 ### Bencode Support (Input Only)
