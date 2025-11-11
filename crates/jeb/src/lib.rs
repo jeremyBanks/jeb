@@ -1,4 +1,4 @@
-#![doc = include_str!("../README.md")]
+#![doc = include_str!("../../../README.md")]
 
 use async_stream::stream;
 use futures::stream::{Stream, StreamExt};
@@ -7,6 +7,10 @@ use serde_json::Value;
 use std::cmp::Ordering;
 use tokio::io::{AsyncBufRead, AsyncReadExt, BufReader};
 use tracing::{debug, info, instrument};
+
+// Import json-encoded-binary (currently unused, but available for future use)
+#[allow(unused_imports)]
+use json_encoded_binary as _;
 
 // New module for stream/text conversion (work in progress, currently unused)
 #[allow(dead_code)]

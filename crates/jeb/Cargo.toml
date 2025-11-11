@@ -1,0 +1,30 @@
+[package]
+name = "jeb"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "jeb"
+path = "src/lib.rs"
+
+[[bin]]
+name = "jeb"
+path = "src/main.rs"
+
+[dependencies]
+json-encoded-binary = { path = "../json-encoded-binary" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+indexmap = { version = "2.0", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tokio = { version = "1.0", features = ["fs", "io-util", "io-std", "rt-multi-thread", "macros"] }
+tokio-stream = "0.1"
+futures = "0.3"
+async-stream = "0.3"
+clap = { version = "4.5", features = ["derive"] }
+color-eyre = "0.6"
+
+[dev-dependencies]
+tokio-test = "0.4"
