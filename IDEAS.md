@@ -26,6 +26,8 @@ Redesign the CLI as a concise constructor DSL for building data flow graphs. Eac
 - Users must quote arguments containing `|` for shell compatibility
 - Example: `jeb '.data | map(.id) | select(. > 5)'` creates three connected nodes
 
+**Note on jq Integration**: Avoid reimplementing jq functionality. If extensive jq compatibility is needed, consider embedding jq itself (possibly as WASM) rather than recreating it poorly. Focus on jeb's unique capabilities: streaming data flow graphs, multiple format support, binary encoding strategies, and composable pipeline construction.
+
 **Node Naming**:
 - Node names: Start with uppercase letter, contain uppercase letters, digits, underscores (e.g., `A1`, `FILE1`, `MERGED_DATA`)
 - Command names: Start with lowercase letter (e.g., `parse-json`, `sort-keys`, `merge`)
