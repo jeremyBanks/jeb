@@ -321,19 +321,22 @@ jeb \
 - Use no prefix for simple values that don't require encoding and don't use special characters
 - Current implementation uses block-based preservation (encode66/decode66 for URLs, encode92/decode92 for string literals)
 
-**Internal Representation**: The canonical internal binary format for JSON is **JEB92 (encode92/decode92)** - this keeps binary data aligned instead of the variable-length encoding that results from escape sequences in raw JSON strings. While Latin-1 passthrough is the most generic option, JEB92 provides better alignment characteristics for binary data.
+**Internal Representation**: The canonical internal binary format for JSON is **JEB92 (encode92/decode92)** with `\b`-prefixed binary encoding.
 
-**Potential Optimizations**:
+**Encoding Strategy**:
 
-1. **Full string passthrough (refined)**: Pass through strings unencoded when they consist primarily of text content, even if they contain common escape sequences. This optimization is tailored for the common case of text strings with occasional newlines, tabs, etc.
-   - **Allowed characters**: Safe printable characters PLUS common escape sequences (`\n`, `\t`, `\r`, etc.) - essentially "text strings" rather than binary data
-   - **Disallowed**: Prefix markers (`~`, `|`) that would interfere with the encoding scheme itself
-   - **Size limit**: This optimization only applies to strings within the 9999-block lookahead buffer size. For longer strings, we can't determine if they're entirely suitable without reading past the buffer limit, so block-based encoding is used instead.
-   - **Note**: This is being optimized specifically for the text-heavy use case rather than strictly following "safe character" rules
+The encoding uses `\b` (backspace escape) as a binary marker, which is valid JSON but never appears in real text data:
 
-2. **Raw mode prefix**: A special prefix (e.g., `|~`) meaning "everything after this point is unencoded passthrough". This would be highly efficient for files with small encoded headers followed by large safe text bodies.
-   - The prefix only applies at block transition points, so `|~` appearing naturally in raw content is not a concern
-   - **Canonical encoding strategy**: Since 9999 is the maximum number of blocks, buffer the required number of bytes to look ahead that far. If the stream ends within that distance AND all remaining bytes are safe characters, use `|~` prefix instead of block encoding. This makes the encoding deterministic - same input always produces the same output - while keeping buffering costs bounded.
+1. **Pure text strings**: If a string can be represented in JSON without `\u` escapes or `\b`, pass it through as-is
+2. **Binary strings**: Prefix with `\b` and use JEB92 block-aligned encoding with opportunistic safe text preservation
+
+**Design Goals**:
+- **Alignment for diffs**: Binary data maintains block alignment so version control diffs make sense
+- **Text passthrough**: Non-binary text data is not significantly encoded
+- **Safe text in binary**: Safe text segments inside binary data are preserved at block boundaries without breaking alignment
+- **Clear distinction**: The `\b` prefix makes binary encoding immediately obvious and never conflicts with actual text content
+
+This approach balances readability for text-heavy data with proper handling of binary content, ensuring that diffs remain meaningful and aligned.
 
 ### Bencode Support (Input Only)
 - Deserialize bencoded data (BitTorrent encoding format)
