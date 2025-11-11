@@ -321,12 +321,15 @@ jeb \
 - Use no prefix for simple values that don't require encoding and don't use special characters
 - Current implementation uses block-based preservation (encode66/decode66 for URLs, encode92/decode92 for string literals)
 
-**Internal Representation**: The canonical internal binary format for JSON is **Latin-1 passthrough** - the most generic and native option, even though it may be less efficient when encoded as JSON. JEB encodings (JEB64, etc.) are available as encoding options but are not used as the core internal representation.
+**Internal Representation**: The canonical internal binary format for JSON is **JEB92 (encode92/decode92)** - this keeps binary data aligned instead of the variable-length encoding that results from escape sequences in raw JSON strings. While Latin-1 passthrough is the most generic option, JEB92 provides better alignment characteristics for binary data.
 
 **Potential Optimizations**:
 
-1. **Full string passthrough**: If an entire string consists only of safe characters and contains no prefix markers (`~`, `|`, etc.), pass it through completely unencoded. This works as an optimization on top of the existing block-based approach, handling the common case of already-safe strings efficiently.
-   - **Size limit**: This optimization only applies to strings within the 9999-block lookahead buffer size. For longer strings, we can't determine if they're entirely safe without reading past the buffer limit, so block-based encoding is used instead.
+1. **Full string passthrough (refined)**: Pass through strings unencoded when they consist primarily of text content, even if they contain common escape sequences. This optimization is tailored for the common case of text strings with occasional newlines, tabs, etc.
+   - **Allowed characters**: Safe printable characters PLUS common escape sequences (`\n`, `\t`, `\r`, etc.) - essentially "text strings" rather than binary data
+   - **Disallowed**: Prefix markers (`~`, `|`) that would interfere with the encoding scheme itself
+   - **Size limit**: This optimization only applies to strings within the 9999-block lookahead buffer size. For longer strings, we can't determine if they're entirely suitable without reading past the buffer limit, so block-based encoding is used instead.
+   - **Note**: This is being optimized specifically for the text-heavy use case rather than strictly following "safe character" rules
 
 2. **Raw mode prefix**: A special prefix (e.g., `|~`) meaning "everything after this point is unencoded passthrough". This would be highly efficient for files with small encoded headers followed by large safe text bodies.
    - The prefix only applies at block transition points, so `|~` appearing naturally in raw content is not a concern
