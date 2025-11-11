@@ -319,9 +319,17 @@ jeb \
 - JEB is a family of text encoding variations based on base64 and base85
 - Attempts to preserve source as readable when it avoids problematic characters
 - Use no prefix for simple values that don't require encoding and don't use special characters
-- Need to investigate current implementation to verify this optimization
+- Current implementation uses block-based preservation (encode66/decode66 for URLs, encode92/decode92 for string literals)
 
 **Internal Representation**: The canonical internal binary format for JSON is **Latin-1 passthrough** - the most generic and native option, even though it may be less efficient when encoded as JSON. JEB encodings (JEB64, etc.) are available as encoding options but are not used as the core internal representation.
+
+**Potential Optimizations**:
+
+1. **Full string passthrough**: If an entire string consists only of safe characters and contains no prefix markers (`~`, `|`, etc.), pass it through completely unencoded. This works as an optimization on top of the existing block-based approach, handling the common case of already-safe strings efficiently.
+
+2. **Raw mode prefix**: A special prefix (e.g., `|~`) meaning "everything after this point is unencoded passthrough". This would be highly efficient for files with small encoded headers followed by large safe text bodies.
+   - The prefix only applies at block transition points, so `|~` appearing naturally in raw content is not a concern
+   - Needs investigation to determine if there were reasons this wasn't implemented previously (canonical encoding issues, block alignment concerns, etc.)
 
 ### Bencode Support (Input Only)
 - Deserialize bencoded data (BitTorrent encoding format)
