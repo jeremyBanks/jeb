@@ -326,6 +326,21 @@ jeb \
 ### Statistics
 - Report on object counts, field distributions, etc.
 
+### Stream Behavior Testing
+
+**Potential approach**: A test helper that tracks the global order of pulls and pushes across different streams to verify lazy evaluation behavior.
+
+**Concept**:
+- Pipe all input and output through a test wrapper
+- Track the global order in which items are pulled and pushed from different streams
+- Verify that streams exhibit the expected lazy behavior (items pulled on-demand, not eagerly materialized)
+
+**Caveats**:
+- This approach has been used successfully with synchronous stream implementations
+- May not be viable with async/concurrent architecture due to inherent non-determinism in sink streams
+- Need to investigate whether the approach can work with the asynchronous streaming model being used
+- If non-determinism is unavoidable, may need alternative testing strategies for verifying stream behavior
+
 ## Pipeline Definition and Visualization
 
 ### Data-Driven Pipeline Configuration
