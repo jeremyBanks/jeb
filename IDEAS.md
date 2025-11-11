@@ -221,6 +221,24 @@ One possible approach for representing the pipeline model and CLI mapping:
       "algorithms": ["BLAKE3", "SHA1", "SHA-256", "SHA-384", "SHA-512", "SHA3"],
       "IN": "Bytes",
       "OUT": "Json"
+    },
+
+    // Adds an incrementing index field to each entity in the stream.
+    "enumerate": {
+      "name": "index",
+      "start": 0,
+      "step": 1,
+      "IN": "Json",
+      "OUT": "Json"
+    },
+
+    // Shells out to an external command (e.g., jq) for processing.
+    // Alternative: implement jq-compatible query language (complex).
+    "exec": {
+      "command": "",
+      "args": [],
+      "IN": "Json",  // or Bytes depending on command
+      "OUT": "Json"  // or Bytes depending on command
     }
   },
 
