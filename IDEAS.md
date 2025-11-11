@@ -190,6 +190,14 @@ One possible approach for representing the pipeline model and CLI mapping:
     "serialize-json": {
       "IN": "Json",
       "OUT": "Bytes"
+    },
+
+    // Computes cryptographic hash digests of binary data.
+    // Outputs a JSON object with hash algorithm names as keys.
+    "digests": {
+      "algorithms": ["BLAKE3", "SHA1", "SHA-256", "SHA-384", "SHA-512", "SHA3"],
+      "IN": "Bytes",
+      "OUT": "Json"
     }
   },
 
