@@ -103,6 +103,29 @@ The constructed graph can be:
 2. **Serialized to JSON**: Output the graph definition for inspection or reuse
 3. **Visualized**: Render a crude topological sort or graph representation (TBD)
 
+### Default Option Values
+
+**Potential feature**: A meta-command to set default values for options globally, which then applies transparently to all nodes that accept those option names.
+
+Example:
+```bash
+jeb set-default:max:1024 \
+    read:file1.json parse-json sort \
+    read:file2.json parse-json sort \
+    merge
+# Both sort nodes would inherit max:1024
+```
+
+Or possibly:
+```bash
+jeb defaults(max:1024,strict:true) \
+    parse-json sort \
+    parse-json sort
+# All applicable nodes inherit the defaults
+```
+
+This would avoid repeating common options across many nodes while passing through all other node aspects transparently.
+
 ### Open Questions
 
 - How to handle multiple implicit input nodes sensibly
