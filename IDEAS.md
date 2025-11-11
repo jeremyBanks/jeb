@@ -326,6 +326,7 @@ jeb \
 **Potential Optimizations**:
 
 1. **Full string passthrough**: If an entire string consists only of safe characters and contains no prefix markers (`~`, `|`, etc.), pass it through completely unencoded. This works as an optimization on top of the existing block-based approach, handling the common case of already-safe strings efficiently.
+   - **Size limit**: This optimization only applies to strings within the 9999-block lookahead buffer size. For longer strings, we can't determine if they're entirely safe without reading past the buffer limit, so block-based encoding is used instead.
 
 2. **Raw mode prefix**: A special prefix (e.g., `|~`) meaning "everything after this point is unencoded passthrough". This would be highly efficient for files with small encoded headers followed by large safe text bodies.
    - The prefix only applies at block transition points, so `|~` appearing naturally in raw content is not a concern
