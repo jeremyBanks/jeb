@@ -363,9 +363,21 @@ The encoding uses `\b` (backspace escape) as a binary marker, which is valid JSO
 - **Clear distinction**: The `\b` prefix makes binary encoding immediately obvious and never conflicts with actual text content
 
 **Buffer and Block Limits**:
-- Maximum of **8192 blocks** for lookahead (32KiB buffer for 4-byte Z85 blocks)
-- **Full string passthrough**: Only applies to strings within the 8192-block buffer size. Longer strings use block-based encoding since we can't verify they're entirely text-suitable without exceeding the buffer limit.
-- **Raw mode prefix**: Use a special prefix (e.g., `|~`) for "everything after this is unencoded passthrough" when the stream ends within the lookahead distance AND all remaining bytes are safe characters. This makes encoding deterministic while keeping buffering costs bounded.
+- **Default canonical buffer: 64KiB** (2^16 bytes = 2^(2^(2^2))) - elegant and practical for determining canonical encoding
+- **Hard maximum: 48MiB** using four Z85 characters to encode block counts
+- For 4-byte Z85 blocks: 64KiB = 16,384 blocks
+
+**Simplified Encoding Scheme**:
+
+Uses a single special character (outside the Z85 alphabet) to mark unescaped blocks:
+- **At block boundary**: Special character alone → exactly 1 unescaped block follows
+- **With count prefix**: Z85 number + special character → (number + 2) unescaped blocks follow
+  - The count represents blocks minus 2 (since minimum for prefix encoding is 2 blocks)
+  - Maximum of 4 Z85 characters for count, enabling up to 48MiB of unescaped content
+- **Full string passthrough**: Strings within the 64KiB buffer that can be represented without `\u` escapes or `\b` pass through as-is
+- **Binary strings**: Prefix with `\b` and use the above encoding scheme
+
+This simplified approach uses only one special character instead of multiple prefixes (`~`, `|~`, `.N.`, etc.), making the encoding cleaner while maintaining alignment and diff-friendliness.
 
 This approach balances readability for text-heavy data with proper handling of binary content, ensuring that diffs remain meaningful and aligned.
 
