@@ -298,6 +298,8 @@ jeb \
 - Use no prefix for simple values that don't require encoding and don't use special characters
 - Need to investigate current implementation to verify this optimization
 
+**Internal Representation**: The canonical internal binary format for JSON is **Latin-1 passthrough** - the most generic and native option, even though it may be less efficient when encoded as JSON. JEB encodings (JEB64, etc.) are available as encoding options but are not used as the core internal representation.
+
 ### Bencode Support (Input Only)
 - Deserialize bencoded data (BitTorrent encoding format)
 - Input only initially due to non-bijective nature with JSON
