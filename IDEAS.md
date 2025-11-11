@@ -110,6 +110,120 @@ The constructed graph can be:
 - Graph validation rules and error messages
 - How to support node type discovery/documentation
 
+### Potential JSON Schema Model
+
+One possible approach for representing the pipeline model and CLI mapping:
+
+**Option Syntax**: Using `:` sets the first unnamed option, or use `()` for named options
+- `head:128` - sets first option to 128
+- `head(max:128)` - explicitly names the option
+
+**Example Schema**:
+```json
+{
+  // TitleCamelCase
+  "stream_types": {
+    "Binary": {},
+    "Json": {}
+  },
+
+  // lower-kebab-case
+  "node_types": {
+    "read": {
+      "path": "/dev/stdin",
+      "OUT": "Bytes"
+    },
+
+    "write": {
+      "path": "/dev/stdout",
+      "IN": "Bytes"
+    },
+
+    "sort": {
+      "max": 512,
+      "IN": "Json",
+      "OUT": "Json"
+    },
+
+    // Merges multiple input streams into a single output stream,
+    // attempting to maintain our sorting.
+    "merge": {
+      "descending": false,
+      "IN": {
+        "type": "json-objects",
+        "plural": true
+      },
+      "OUT": {
+        "type": "json-objects"
+      }
+    },
+
+    // Concatenates multiple input streams (of the same type)
+    // into a single output stream.
+    "concat": {
+      "IN": {
+        "plural": true
+      },
+      "OUT": {
+        "type": "IN"
+      }
+    },
+
+    // Duplicates the input stream to multiple output streams.
+    "tee": {
+      "IN": {},
+      "OUT": {
+        "type": "IN",
+        "plural": true
+      }
+    },
+
+    // Parses a binary stream into a stream of JSON objects.
+    "parse-json": {
+      "strict": false,
+      "IN": "Bytes",
+      "OUT": "Json",
+      "OUT.failed": "Bytes"
+    },
+
+    // Serializes a stream of JSON objects into a binary stream.
+    "serialize-json": {
+      "IN": "Json",
+      "OUT": "Bytes"
+    }
+  },
+
+  // UPPER_SNAKE_CASE
+  "nodes": {
+    "G1": {
+      "type": "ReadPath",
+      "path": "/dev/stdin"
+    },
+
+    "A1": {
+      "type": "parse-json",
+      "strict": true
+    },
+
+    "G2": {
+      "type": "WritePath",
+      "path": "/dev/stdout"
+    }
+  }
+}
+```
+
+**Example Pipeline** (conceptual):
+```bash
+jeb \
+  read:data.json parse-json \
+  read:/dev/stdin parse-json \
+  merge serialize-json \
+  tee write:data.json \
+      order:type_id,id sort(max:1024) head:128 write:/dev/stdout \
+      order:name sort(max:1024) head:16 write:1.json
+```
+
 ## Permissive JSON Parsing
 
 ### Comment Support
