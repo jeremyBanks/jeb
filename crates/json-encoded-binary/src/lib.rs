@@ -19,6 +19,8 @@ use nom::{
     sequence::{preceded, tuple},
     IResult,
 };
+use nom_locate::LocatedSpan;
+use nom_supreme::error::ErrorTree;
 
 /// Maximum size for text mode strings (64 KiB)
 pub const MAX_TEXT_SIZE: usize = 64 * 1024;

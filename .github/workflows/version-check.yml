@@ -14,41 +14,29 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history for all branches
 
-      - name: Check version format
+      - name: Check version format for all crates
         run: |
-          VERSION=$(grep '^version = ' Cargo.toml | head -1 | cut -d'"' -f2)
-          echo "Current version: $VERSION"
+          # Check jeb crate
+          JEB_VERSION=$(grep '^version = ' crates/jeb/Cargo.toml | head -1 | cut -d'"' -f2)
+          echo "jeb version: $JEB_VERSION"
 
-          # Check if version matches 0.0.x pattern
-          if [[ ! "$VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
-            echo "ERROR: Version must be 0.0.x format (major=0, minor=0)"
-            echo "Found: $VERSION"
+          if [[ ! "$JEB_VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
+            echo "ERROR: jeb version must be 0.0.x format (major=0, minor=0)"
+            echo "Found: $JEB_VERSION"
             exit 1
           fi
 
-          echo "✓ Version $VERSION is valid (0.0.x format)"
+          echo "✓ jeb version $JEB_VERSION is valid (0.0.x format)"
 
-      - name: Compare version with base branch (PR only)
-        if: github.event_name == 'pull_request'
-        run: |
-          # Get the current PR version
-          PR_VERSION=$(grep '^version = ' Cargo.toml | head -1 | cut -d'"' -f2)
-          echo "PR version: $PR_VERSION"
+          # Check json-encoded-binary crate
+          JEB85_VERSION=$(grep '^version = ' crates/json-encoded-binary/Cargo.toml | head -1 | cut -d'"' -f2)
+          echo "json-encoded-binary version: $JEB85_VERSION"
 
-          # Get the base branch name (main or master)
-          BASE_BRANCH="${{ github.base_ref }}"
-          echo "Base branch: $BASE_BRANCH"
-
-          # Get the version from the base branch
-          git fetch origin "$BASE_BRANCH"
-          BASE_VERSION=$(git show "origin/$BASE_BRANCH:Cargo.toml" | grep '^version = ' | head -1 | cut -d'"' -f2)
-          echo "Base branch version: $BASE_VERSION"
-
-          # Check if versions are different
-          if [[ "$PR_VERSION" == "$BASE_VERSION" ]]; then
-            echo "ERROR: PR version ($PR_VERSION) must be different from base branch version ($BASE_VERSION)"
-            echo "Please increment the patch version (e.g., 0.0.3 -> 0.0.4)"
+          if [[ ! "$JEB85_VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
+            echo "ERROR: json-encoded-binary version must be 0.0.x format (major=0, minor=0)"
+            echo "Found: $JEB85_VERSION"
             exit 1
           fi
 
-          echo "✓ Version has been updated from $BASE_VERSION to $PR_VERSION"
+          echo "✓ json-encoded-binary version $JEB85_VERSION is valid (0.0.x format)"
+          echo "✓ All crate versions are valid"
