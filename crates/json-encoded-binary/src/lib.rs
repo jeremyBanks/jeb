@@ -26,6 +26,12 @@ use nom::{
     IResult,
 };
 
+// For future use: better error handling and position tracking
+#[allow(unused_imports)]
+use nom_locate::LocatedSpan;
+#[allow(unused_imports)]
+use nom_supreme::error::ErrorTree;
+
 /// Maximum size for text mode strings (64 KiB)
 pub const MAX_TEXT_SIZE: usize = 64 * 1024;
 
