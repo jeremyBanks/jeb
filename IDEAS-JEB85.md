@@ -19,9 +19,9 @@ Note that parsing also accepts standard Z85 data if the `\b` prefix is added
 first.
 
 In JEB, Text mode will be used if the string is valid UTF-8, and doesn't contain
-`0x08` or any ASCII control characters that don't have a single-character JSON
-escape sequence (so no `\x00`-`\x08`, `0x0E`-`0x1F`, or `0x7F`), and if the
-string is not greater than 64KiB in size.
+`0x08` or any ASCII control characters other than the three common whitespace
+characters (tab, newline, carriage return) — so no `\x00`-`\x08`, `0x0B`-`0x1F`,
+or `0x7F` — and if the string is not greater than 64KiB in size.
 
 In JEB, Binary mode uses raw chunks for any chunks that contain only the
 standard printable ASCII characters that can be displayed in JSON without any

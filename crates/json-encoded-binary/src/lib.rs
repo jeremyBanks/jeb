@@ -150,10 +150,10 @@ fn should_use_text_mode(data: &[u8]) -> bool {
     // Check for prohibited control characters
     for &byte in data {
         match byte {
-            // Allow these control chars (have single-char JSON escapes)
+            // Allow only the three common whitespace control chars
             b'\t' | b'\n' | b'\r' => continue,
-            // Prohibit backspace (our binary marker) and other control chars without single-char escapes
-            0x00..=0x08 | 0x0E..=0x1F | 0x7F => return false,
+            // Prohibit backspace (our binary marker) and all other control chars
+            0x00..=0x08 | 0x0B..=0x1F | 0x7F => return false,
             _ => continue,
         }
     }
@@ -386,6 +386,20 @@ mod tests {
     }
 
     #[test]
+    fn test_form_feed_forces_binary() {
+        // Form feed (\f) should force binary mode
+        let data = b"Before\x0CAfter";
+        let encoded = encode(data);
+
+        // Should use binary mode (contains backspace marker)
+        assert!(encoded.contains('\x08'), "Form feed should force binary mode");
+
+        // Should round-trip correctly
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, data);
+    }
+
+    #[test]
     fn test_binary_mode_basic() {
         let data = b"\x00\x01\x02\x03";
         let encoded = encode(data);
@@ -460,8 +474,12 @@ mod tests {
     fn test_should_use_text_mode() {
         assert!(should_use_text_mode(b"Hello"));
         assert!(should_use_text_mode(b"Hello\nWorld"));
+        assert!(should_use_text_mode(b"Hello\tWorld")); // tab is allowed
+        assert!(should_use_text_mode(b"Hello\rWorld")); // carriage return is allowed
         assert!(!should_use_text_mode(b"Hello\x00World")); // null byte
         assert!(!should_use_text_mode(b"Hello\x08World")); // backspace
+        assert!(!should_use_text_mode(b"Hello\x0CWorld")); // form feed (\f) - rejected
+        assert!(!should_use_text_mode(b"Hello\x0BWorld")); // vertical tab (\v) - rejected
         assert!(!should_use_text_mode(&vec![b'a'; MAX_TEXT_SIZE + 1])); // too large
     }
 
