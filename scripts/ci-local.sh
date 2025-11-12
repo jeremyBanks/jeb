@@ -1,8 +1,8 @@
 #!/bin/bash
-# Run local CI checks before pushing
-# This replicates what GitHub Actions will run, catching issues early
+# Run all CI checks locally before pushing
+# GitHub Actions calls these same scripts, ensuring identical behavior
 
-set -e  # Exit on first error
+set -euo pipefail
 
 echo "========================================="
 echo "Running local CI checks..."
@@ -72,7 +72,7 @@ else
 fi
 
 # 5. Build release binary (optional, can be slow)
-if [ "$SKIP_BUILD" != "1" ]; then
+if [ "${SKIP_BUILD:-}" != "1" ]; then
     print_step "5. Building release binary"
     if cargo build --release --verbose; then
         print_success "Release build succeeded"

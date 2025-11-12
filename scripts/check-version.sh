@@ -1,8 +1,8 @@
 #!/bin/bash
 # Check that version in Cargo.toml follows project conventions
-# This replicates the version-check.yml workflow
+# Called by CI and can be run locally
 
-set -e
+set -euo pipefail
 
 # Color codes for output
 RED='\033[0;31m'
