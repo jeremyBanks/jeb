@@ -19,18 +19,17 @@
 
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take, take_while_m_n},
+    bytes::complete::{tag as bytes_tag, take, take_while_m_n},
     combinator::{map, map_res},
     multi::many0,
     sequence::preceded,
-    IResult,
+    IResult, Parser,
 };
+use nom_supreme::{error::ErrorTree, final_parser::final_parser, parser_ext::ParserExt};
 
-// For future use: better error handling and position tracking
+// For future use: position tracking
 #[allow(unused_imports)]
 use nom_locate::LocatedSpan;
-#[allow(unused_imports)]
-use nom_supreme::error::ErrorTree;
 
 /// Maximum size for text mode strings (64 KiB)
 pub const MAX_TEXT_SIZE: usize = 64 * 1024;
@@ -248,7 +247,7 @@ fn encode_binary(data: &[u8], output: &mut String) {
 }
 
 /// Parse a Z85 block (5 characters)
-fn parse_z85_block(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+fn parse_z85_block(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
     map_res(
         take_while_m_n(5, 5, |c: u8| Z85_DECODE[c as usize] != 255),
         |bytes: &[u8]| {
@@ -256,30 +255,48 @@ fn parse_z85_block(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
             arr.copy_from_slice(bytes);
             decode_z85_block(&arr).map(|b| b.to_vec())
         },
-    )(input)
+    )
+    .context("Z85 block")
+    .parse(input)
 }
 
 /// Parse a single raw block (|xxxx)
-fn parse_single_raw_block(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    preceded(tag(b"|"), map(take(4usize), |bytes: &[u8]| bytes.to_vec()))(input)
+fn parse_single_raw_block(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
+    preceded(
+        bytes_tag(b"|"),
+        map(take(4usize), |bytes: &[u8]| bytes.to_vec()),
+    )
+    .context("single raw block")
+    .parse(input)
 }
 
 /// Parse a terminal raw block (||...)
-fn parse_terminal_raw_block(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (input, _) = tag(b"||")(input)?;
+fn parse_terminal_raw_block(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
+    let (input, _) = bytes_tag(b"||")
+        .context("terminal raw marker")
+        .parse(input)?;
     // Take everything remaining and decode UTF-8 chars back to bytes
     // The encoder uses `byte as char`, which treats bytes as Latin-1 (codepoints 0-255)
     // These get UTF-8 encoded in the string, so we need to decode them back
-    let text = std::str::from_utf8(input)
-        .map_err(|_| nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Fail)))?;
+    let text = std::str::from_utf8(input).map_err(|_| {
+        use nom_supreme::error::BaseErrorKind;
+        nom::Err::Error(ErrorTree::Base {
+            location: input,
+            kind: BaseErrorKind::Kind(nom::error::ErrorKind::Char),
+        })
+    })?;
     let bytes: Vec<u8> = text.chars().map(|c| c as u8).collect();
     Ok((&b""[..], bytes))
 }
 
 /// Parse a multi-block raw chunk (N|...)
-fn parse_multi_raw_block(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (input, count_chars) = take_while_m_n(1, 4, |c: u8| Z85_DECODE[c as usize] != 255)(input)?;
-    let (input, _) = tag(b"|")(input)?;
+fn parse_multi_raw_block(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
+    let (input, count_chars) = take_while_m_n(1, 4, |c: u8| Z85_DECODE[c as usize] != 255)
+        .context("count digits")
+        .parse(input)?;
+    let (input, _) = bytes_tag(b"|")
+        .context("raw block separator")
+        .parse(input)?;
 
     // Decode the count (number of blocks - 2)
     let mut count_value = 0usize;
@@ -297,7 +314,7 @@ fn parse_multi_raw_block(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
     let chars_to_read = raw_bytes + padding_needed;
 
     // Read the data + padding
-    let (input, bytes) = take(chars_to_read)(input)?;
+    let (input, bytes) = take(chars_to_read).context("raw block data").parse(input)?;
 
     // Remove trailing padding (.) characters
     let mut result = bytes.to_vec();
@@ -312,18 +329,22 @@ fn parse_multi_raw_block(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
 }
 
 /// Parse a binary mode chunk (Z85 block or raw chunk)
-fn parse_binary_chunk(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+fn parse_binary_chunk(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
     alt((
         parse_terminal_raw_block,
         parse_multi_raw_block,
         parse_single_raw_block,
         parse_z85_block,
-    ))(input)
+    ))
+    .context("binary chunk")
+    .parse(input)
 }
 
 /// Parse binary mode data (after the \b prefix)
-fn parse_binary_mode(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (input, chunks) = many0(parse_binary_chunk)(input)?;
+fn parse_binary_mode(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
+    let (input, chunks) = many0(parse_binary_chunk)
+        .context("binary mode data")
+        .parse(input)?;
 
     // Flatten chunks into a single byte vector
     let result = chunks.into_iter().flatten().collect();
@@ -332,27 +353,31 @@ fn parse_binary_mode(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
 }
 
 /// Parse text mode data (validates UTF-8 only)
-fn parse_text_mode(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+fn parse_text_mode(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
     // Use map_res to convert UTF-8 validation into a nom combinator
     map_res(
-        nom::combinator::rest,  // Take all remaining input
+        nom::combinator::rest, // Take all remaining input
         |bytes: &[u8]| {
             // Validate it's UTF-8
             std::str::from_utf8(bytes)?;
             Ok::<Vec<u8>, std::str::Utf8Error>(bytes.to_vec())
         },
-    )(input)
+    )
+    .context("text mode (UTF-8)")
+    .parse(input)
 }
 
 /// Parse JEB85-encoded data (parent combinator that routes to text or binary mode)
-fn parse_jeb85(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+fn parse_jeb85(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
     // Check for binary mode prefix (\b = 0x08)
     if input.starts_with(&[0x08]) {
         // Binary mode: skip the prefix and parse binary data
-        let (input, _) = tag(&[0x08])(input)?;
+        let (input, _) = bytes_tag(&[0x08])
+            .context("binary mode prefix (\\b)")
+            .parse(input)?;
         parse_binary_mode(input)
     } else {
-        // Text mode: validate UTF-8 and control chars
+        // Text mode: validate UTF-8
         parse_text_mode(input)
     }
 }
@@ -361,16 +386,11 @@ fn parse_jeb85(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
 pub fn decode(input: &str) -> Result<Vec<u8>, Jeb85Error> {
     let bytes = input.as_bytes();
 
-    // Use the parser combinator to decode
-    let (_remaining, data) = parse_jeb85(bytes).map_err(|e| match e {
-        nom::Err::Error(e) | nom::Err::Failure(e) => {
-            // Map nom errors to JEB85 errors
-            match e.code {
-                nom::error::ErrorKind::Char => Jeb85Error::InvalidUtf8,
-                _ => Jeb85Error::ParseError(format!("Parse error: {:?}", e.code)),
-            }
-        }
-        nom::Err::Incomplete(_) => Jeb85Error::ParseError("Incomplete input".to_string()),
+    // Use final_parser to ensure all input is consumed and get better error messages
+    let data = final_parser(parse_jeb85)(bytes).map_err(|e: ErrorTree<&[u8]>| {
+        // Convert ErrorTree to our error type
+        // ErrorTree provides much better error messages with context
+        Jeb85Error::ParseError(format!("{:?}", e))
     })?;
 
     Ok(data)
