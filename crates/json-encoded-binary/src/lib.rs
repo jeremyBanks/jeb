@@ -331,35 +331,49 @@ fn parse_binary_mode(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
     Ok((input, result))
 }
 
+/// Parse text mode data (validates UTF-8 only)
+fn parse_text_mode(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    // Use map_res to convert UTF-8 validation into a nom combinator
+    map_res(
+        nom::combinator::rest,  // Take all remaining input
+        |bytes: &[u8]| {
+            // Validate it's UTF-8
+            std::str::from_utf8(bytes)?;
+            Ok::<Vec<u8>, std::str::Utf8Error>(bytes.to_vec())
+        },
+    )(input)
+}
+
+/// Parse JEB85-encoded data (parent combinator that routes to text or binary mode)
+fn parse_jeb85(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    // Check for binary mode prefix (\b = 0x08)
+    if input.starts_with(&[0x08]) {
+        // Binary mode: skip the prefix and parse binary data
+        let (input, _) = tag(&[0x08])(input)?;
+        parse_binary_mode(input)
+    } else {
+        // Text mode: validate UTF-8 and control chars
+        parse_text_mode(input)
+    }
+}
+
 /// Decode a JEB85-encoded string
 pub fn decode(input: &str) -> Result<Vec<u8>, Jeb85Error> {
     let bytes = input.as_bytes();
 
-    // Check for binary mode prefix (\b = 0x08)
-    if bytes.starts_with(&[0x08]) {
-        let (_remaining, data) =
-            parse_binary_mode(&bytes[1..]).map_err(|e| Jeb85Error::ParseError(e.to_string()))?;
-        Ok(data)
-    } else {
-        // Text mode: validate and return as-is
-        if !should_use_text_mode(bytes) {
-            // Check specifically what failed
-            if bytes.len() > MAX_TEXT_SIZE {
-                return Err(Jeb85Error::TextTooLarge);
+    // Use the parser combinator to decode
+    let (_remaining, data) = parse_jeb85(bytes).map_err(|e| match e {
+        nom::Err::Error(e) | nom::Err::Failure(e) => {
+            // Map nom errors to JEB85 errors
+            match e.code {
+                nom::error::ErrorKind::Char => Jeb85Error::InvalidUtf8,
+                _ => Jeb85Error::ParseError(format!("Parse error: {:?}", e.code)),
             }
-            if std::str::from_utf8(bytes).is_err() {
-                return Err(Jeb85Error::InvalidUtf8);
-            }
-            // Must be a prohibited control char
-            for &byte in bytes {
-                if !matches!(byte, b'\t' | b'\n' | b'\r') && byte < 0x20 || byte == 0x7F {
-                    return Err(Jeb85Error::ProhibitedControlChar(byte));
-                }
-            }
-            return Err(Jeb85Error::InvalidUtf8); // Fallback
         }
-        Ok(bytes.to_vec())
-    }
+        nom::Err::Incomplete(_) => Jeb85Error::ParseError("Incomplete input".to_string()),
+    })?;
+
+    Ok(data)
 }
 
 #[cfg(test)]
