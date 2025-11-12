@@ -42,123 +42,78 @@ cargo build --release
 cargo doc --open
 ```
 
-## Testing GitHub Actions Locally
+## Running CI Checks Locally
 
-**TL;DR**: Use [act](https://github.com/nektos/act) to run GitHub Actions locally before pushing, catching CI failures early and saving time.
+**TL;DR**: Use `scripts/ci-local.sh` to run all CI checks locally before pushing, catching failures early and saving time.
 
-### What is act?
+### Why run CI locally?
 
-`act` is a tool that runs GitHub Actions workflows on your local machine using Docker. It reads workflows from `.github/workflows/` and executes them in containers that match GitHub's environment, giving you fast feedback before pushing code.
-
-### Why use it?
-
-- **Catch failures early**: Find CI issues locally instead of in GitHub Actions tab
-- **Save time**: No need to commit/push/wait to test workflow changes
+- **Catch failures early**: Find CI issues on your machine instead of in GitHub Actions
+- **Save time**: No need to commit/push/wait to see if tests pass
+- **Faster iteration**: Test changes immediately
 - **Free CI minutes**: Local runs don't consume GitHub Actions minutes
-- **Faster iteration**: Test changes immediately without network round-trips
 
-### Prerequisites
+### Quick Start
 
-**Docker must be installed and running** - act uses Docker to run workflow containers.
-
-Check if Docker is available:
-```bash
-docker --version
-```
-
-### Installation
-
-Choose one method:
-
-**Linux/macOS (curl script):**
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
-```
-
-**macOS (Homebrew):**
-```bash
-brew install act
-```
-
-**Linux (Nix):**
-```bash
-nix-env -iA nixpkgs.act
-```
-
-**Windows (Chocolatey):**
-```bash
-choco install act-cli
-```
-
-**Other options**: See [nektos/act releases](https://github.com/nektos/act/releases)
-
-### Basic Usage
+Run all CI checks that GitHub Actions will run:
 
 ```bash
-# List all workflows and jobs
-act -l
-
-# Run all workflows (simulates 'push' event)
-act
-
-# Run all workflows for pull_request event
-act pull_request
-
-# Run a specific job
-act -j test
-
-# Run a specific workflow
-act -W .github/workflows/test.yml
-
-# Dry run (show what would run without executing)
-act -n
+./scripts/ci-local.sh
 ```
 
-### Common Workflows for This Project
+This script runs (in order):
+1. **Format check** (`cargo fmt --check`) - Ensures code is formatted correctly
+2. **Linter** (`cargo clippy`) - Catches common mistakes and enforces best practices
+3. **Tests (debug)** (`cargo test`) - Runs all tests in debug mode
+4. **Tests (release)** (`cargo test --release`) - Runs all tests in optimized release mode
+5. **Release build** (`cargo build --release`) - Ensures project builds in release mode
+
+The script exits immediately on first failure, showing you exactly what needs to be fixed.
+
+### Skipping the Release Build
+
+The release build can be slow. Skip it during rapid iteration:
 
 ```bash
-# Run the test workflow (most common - tests, clippy, fmt)
-act -j test
-act -j clippy
-act -j fmt
-
-# Run version check
-act -j check-version
-
-# Run everything that would run on a pull request
-act pull_request
+SKIP_BUILD=1 ./scripts/ci-local.sh
 ```
 
-### Tips and Limitations
+### Checking Version Format
 
-**First run**: act will prompt you to choose a Docker image size (medium is recommended for Rust projects).
+Verify your version follows project conventions:
 
-**Secrets**: If workflows need secrets, create `.secrets` file or pass with `-s`:
 ```bash
-act -s GITHUB_TOKEN=your_token
+./scripts/check-version.sh
 ```
 
-**Known limitations**:
-- Requires Docker (won't work in environments without it)
-- Some GitHub-specific features may not work identically
-- Large images can be slow on first download
+This checks that:
+- Version is in `0.0.x` format (required for this project)
+- Version has been bumped from the base branch (if applicable)
 
-**Documentation**: Full docs at [nektosact.com](https://nektosact.com)
+### Using as a Pre-Push Hook (Optional)
 
-### Should I use a pre-push hook?
+**Not required, but helpful.** To automatically run CI checks before pushing:
 
-**Optional, not required.** While act can be integrated into git hooks, it's intentionally left as an optional developer tool because:
-- Not all developers may have Docker installed
-- CI runs are already relatively fast
-- Hooks can slow down git operations
-- Developers should choose their own workflow
-
-If you want to add it as a personal pre-push hook, create `.git/hooks/pre-push`:
+Create `.git/hooks/pre-push`:
 ```bash
 #!/bin/bash
-echo "Running GitHub Actions locally with act..."
-act pull_request -q
+echo "Running CI checks before push..."
+SKIP_BUILD=1 ./scripts/ci-local.sh
 ```
+
+Then make it executable:
+```bash
+chmod +x .git/hooks/pre-push
+```
+
+You can bypass the hook when needed with:
+```bash
+git push --no-verify
+```
+
+### About act (Docker-based GitHub Actions runner)
+
+There's a tool called [act](https://github.com/nektos/act) that runs GitHub Actions workflows locally using Docker. However, it requires Docker to be installed, which isn't available in all development environments. Our bash scripts provide a simpler, more portable alternative that works anywhere Rust is installed.
 
 ## Code Style
 
