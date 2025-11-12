@@ -185,7 +185,7 @@ fn encode_binary(data: &[u8], output: &mut String) {
 
     while i < data.len() {
         // Look ahead to find runs of JSON-safe blocks
-        let mut run_start = i;
+        let run_start = i;
         let mut run_blocks = 0;
 
         while i < data.len() && (i - run_start) / 4 < 85usize.pow(4) {
@@ -267,8 +267,13 @@ fn parse_single_raw_block(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
 /// Parse a terminal raw block (||...)
 fn parse_terminal_raw_block(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
     let (input, _) = tag(b"||")(input)?;
-    // Take everything remaining
-    Ok((&b""[..], input.to_vec()))
+    // Take everything remaining and decode UTF-8 chars back to bytes
+    // The encoder uses `byte as char`, which treats bytes as Latin-1 (codepoints 0-255)
+    // These get UTF-8 encoded in the string, so we need to decode them back
+    let text = std::str::from_utf8(input)
+        .map_err(|_| nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Fail)))?;
+    let bytes: Vec<u8> = text.chars().map(|c| c as u8).collect();
+    Ok((&b""[..], bytes))
 }
 
 /// Parse a multi-block raw chunk (N|...)
@@ -365,7 +370,7 @@ mod tests {
     fn test_z85_encode_decode() {
         let input = [0x86, 0x4F, 0xD2, 0x6F];
         let encoded = encode_z85_block(&input);
-        assert_eq!(&encoded, b"HelloW");
+        assert_eq!(&encoded, b"Hello");
 
         let decoded = decode_z85_block(&encoded).unwrap();
         assert_eq!(decoded, input);
