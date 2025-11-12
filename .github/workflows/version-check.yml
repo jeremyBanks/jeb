@@ -14,29 +14,5 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history for all branches
 
-      - name: Check version format for all crates
-        run: |
-          # Check jeb crate
-          JEB_VERSION=$(grep '^version = ' crates/jeb/Cargo.toml | head -1 | cut -d'"' -f2)
-          echo "jeb version: $JEB_VERSION"
-
-          if [[ ! "$JEB_VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
-            echo "ERROR: jeb version must be 0.0.x format (major=0, minor=0)"
-            echo "Found: $JEB_VERSION"
-            exit 1
-          fi
-
-          echo "✓ jeb version $JEB_VERSION is valid (0.0.x format)"
-
-          # Check json-encoded-binary crate
-          JEB85_VERSION=$(grep '^version = ' crates/json-encoded-binary/Cargo.toml | head -1 | cut -d'"' -f2)
-          echo "json-encoded-binary version: $JEB85_VERSION"
-
-          if [[ ! "$JEB85_VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
-            echo "ERROR: json-encoded-binary version must be 0.0.x format (major=0, minor=0)"
-            echo "Found: $JEB85_VERSION"
-            exit 1
-          fi
-
-          echo "✓ json-encoded-binary version $JEB85_VERSION is valid (0.0.x format)"
-          echo "✓ All crate versions are valid"
+      - name: Check version
+        run: ./scripts/check-version.sh
