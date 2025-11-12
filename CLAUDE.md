@@ -42,6 +42,79 @@ cargo build --release
 cargo doc --open
 ```
 
+## Running CI Checks Locally
+
+**TL;DR**: Use `scripts/ci-local.sh` to run all CI checks locally before pushing, catching failures early and saving time.
+
+### Why run CI locally?
+
+- **Catch failures early**: Find CI issues on your machine instead of in GitHub Actions
+- **Save time**: No need to commit/push/wait to see if tests pass
+- **Faster iteration**: Test changes immediately
+- **Free CI minutes**: Local runs don't consume GitHub Actions minutes
+
+### Quick Start
+
+Run all CI checks that GitHub Actions will run:
+
+```bash
+./scripts/ci-local.sh
+```
+
+This script runs (in order):
+1. **Format check** (`cargo fmt --check`) - Ensures code is formatted correctly
+2. **Linter** (`cargo clippy`) - Catches common mistakes and enforces best practices
+3. **Tests (debug)** (`cargo test`) - Runs all tests in debug mode
+4. **Tests (release)** (`cargo test --release`) - Runs all tests in optimized release mode
+5. **Release build** (`cargo build --release`) - Ensures project builds in release mode
+
+The script exits immediately on first failure, showing you exactly what needs to be fixed.
+
+### Skipping the Release Build
+
+The release build can be slow. Skip it during rapid iteration:
+
+```bash
+SKIP_BUILD=1 ./scripts/ci-local.sh
+```
+
+### Checking Version Format
+
+Verify your version follows project conventions:
+
+```bash
+./scripts/check-version.sh
+```
+
+This checks that:
+- Version is in `0.0.x` format (required for this project)
+- Version has been bumped from the base branch (if applicable)
+
+### Using as a Pre-Push Hook (Optional)
+
+**Not required, but helpful.** To automatically run CI checks before pushing:
+
+Create `.git/hooks/pre-push`:
+```bash
+#!/bin/bash
+echo "Running CI checks before push..."
+SKIP_BUILD=1 ./scripts/ci-local.sh
+```
+
+Then make it executable:
+```bash
+chmod +x .git/hooks/pre-push
+```
+
+You can bypass the hook when needed with:
+```bash
+git push --no-verify
+```
+
+### About act (Docker-based GitHub Actions runner)
+
+There's a tool called [act](https://github.com/nektos/act) that runs GitHub Actions workflows locally using Docker. However, it requires Docker to be installed, which isn't available in all development environments. Our bash scripts provide a simpler, more portable alternative that works anywhere Rust is installed.
+
 ## Code Style
 
 - Follow standard Rust conventions

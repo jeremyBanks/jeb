@@ -37,10 +37,7 @@ jobs:
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run tests
-        run: cargo test --verbose
-
-      - name: Run tests (release mode)
-        run: cargo test --release --verbose
+        run: ./scripts/test.sh
 
   build-native:
     name: Build Native Binary
@@ -104,7 +101,7 @@ jobs:
           components: clippy
 
       - name: Run clippy
-        run: cargo clippy -- -D warnings
+        run: ./scripts/clippy.sh
 
   fmt:
     name: Rustfmt (Format Check)
@@ -118,4 +115,4 @@ jobs:
           components: rustfmt
 
       - name: Check formatting
-        run: cargo fmt -- --check
+        run: ./scripts/fmt.sh
