@@ -9,8 +9,7 @@
       "extensions": [
         "denoland.vscode-deno",
         "rust-lang.rust-analyzer",
-        "vadimcn.vscode-lldb",
-        "Anthropic.claude-code"
+        "vadimcn.vscode-lldb"
       ]
     }
   }

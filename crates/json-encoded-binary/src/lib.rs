@@ -15,8 +15,6 @@
 //!
 //! All raw chunks are padded with `.` to maintain 5-character block alignment.
 
-#![warn(missing_docs)]
-
 use nom::{
     branch::alt,
     bytes::complete::{tag as bytes_tag, take, take_while_m_n},
@@ -25,28 +23,34 @@ use nom::{
     sequence::preceded,
     IResult, Parser,
 };
+use nom_supreme::tag::streaming;
 use nom_supreme::{error::ErrorTree, final_parser::final_parser, parser_ext::ParserExt};
 
 // For future use: position tracking
 #[allow(unused_imports)]
 use nom_locate::LocatedSpan;
 
-/// Maximum size for text mode strings (64 KiB)
-pub const MAX_TEXT_SIZE: usize = 64 * 1024;
+pub const MAX_SIZE: usize = 64 * 1024;
+pub const LINE_SIZE: usize = 64;
 
-/// Default maximum chunk size for binary mode (64 KiB)
-pub const DEFAULT_CHUNK_SIZE: usize = 64 * 1024;
+pub const BASE: usize = 85;
+pub const BLOCK_BYTES: usize = 4;
+pub const BLOCK_CHARACTERS: usize = 5;
+pub const DIGITS: &[u8; BASE] =
+    b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
+pub const RAW_PREFIX: u8 = b'|';
+
+pub const MAX_RAW_BLOCK_COUNT: usize = 2 + BASE.pow((BLOCK_CHARACTERS - 1) as _);
+pub const MAX_RAW_BYTES: usize = MAX_RAW_BLOCK_COUNT * BLOCK_BYTES - BLOCK_CHARACTERS;
 
 /// Z85 alphabet (85 characters) - note that | is NOT in this alphabet
-pub const Z85_ALPHABET: &[u8; 85] =
-    b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
 
 /// Reverse lookup table for Z85 decoding
-const Z85_DECODE: [u8; 256] = {
+const VALUES_BY_DIGIT: [u8; 256] = {
     let mut table = [255u8; 256];
     let mut i = 0;
     while i < 85 {
-        table[Z85_ALPHABET[i] as usize] = i as u8;
+        table[DIGITS[i] as usize] = i as u8;
         i += 1;
     }
     table
