@@ -1,8 +1,9 @@
 [package]
 name = "json-encoded-binary"
-version.workspace = true
+publish.workspace = true
 edition.workspace = true
 license.workspace = true
+version.workspace = true
 
 [dependencies]
 nom.workspace = true
