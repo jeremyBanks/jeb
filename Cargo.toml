@@ -1,33 +1,43 @@
-[package]
-name = "jeb"
-version = "0.0.13"
+[workspace]
+resolver = "2"
+members = [
+    "crates/jeb",
+    "crates/json-encoded-binary",
+]
+
+[workspace.package]
+version = "0.0.14"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
-[lib]
-name = "jeb"
-path = "src/lib.rs"
-
-[[bin]]
-name = "jeb"
-path = "src/main.rs"
-
-[dependencies]
+[workspace.dependencies]
+# Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 indexmap = { version = "2.0", features = ["serde"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Async runtime
 tokio = { version = "1.0", features = ["fs", "io-util", "io-std", "rt-multi-thread", "macros"] }
 tokio-stream = "0.1"
+tokio-test = "0.4"
 futures = "0.3"
 async-stream = "0.3"
+
+# CLI
 clap = { version = "4.5", features = ["derive"] }
 color-eyre = "0.6"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Database
 rusqlite = { version = "0.32", features = ["bundled", "functions"] }
 
-[dev-dependencies]
-tokio-test = "0.4"
+# Parsing
+nom = "7.1"
+nom-supreme = "0.8"
+nom_locate = "4.2"
 
 [profile.release]
 opt-level = "z"

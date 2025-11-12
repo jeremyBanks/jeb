@@ -1,0 +1,12 @@
+[package]
+name = "json-encoded-binary"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+nom.workspace = true
+# TODO: Use nom-supreme for better error messages and combinators
+nom-supreme.workspace = true
+# TODO: Use nom_locate for error position tracking
+nom_locate.workspace = true

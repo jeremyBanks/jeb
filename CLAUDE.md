@@ -2,6 +2,12 @@
 
 A flexible command-line tool for merging, formatting, and searching JSON data.
 
+## Workspace Structure
+
+This project uses a Cargo workspace with multiple crates:
+- **`crates/jeb`** - Main CLI tool and library
+- **`crates/json-encoded-binary`** - JEB85 binary encoding library
+
 ## Key Documentation
 
 **Read these files before starting work:**
@@ -12,11 +18,12 @@ A flexible command-line tool for merging, formatting, and searching JSON data.
 
 ## Critical Convention: Version Bumping
 
-**⚠️ EVERY pull request MUST bump the version in `Cargo.toml`**
+**⚠️ EVERY pull request MUST bump the version in `crates/jeb/Cargo.toml`**
 
 Current versioning scheme (while in 0.0.x):
 - Patch version (0.0.X) - All changes while project is experimental
 - Version stays at 0.0.x until project is stable (see README disclaimer)
+- Each crate has independent versioning
 
 CI will fail if version is not bumped!
 
@@ -125,6 +132,11 @@ There's a tool called [act](https://github.com/nektos/act) that runs GitHub Acti
 
 ## Core Files
 
+### jeb crate (`crates/jeb/`)
 - `src/lib.rs` - Main library with JSON parsing, sorting, merging logic
 - `src/main.rs` - CLI implementation
 - `src/json_stream.rs` - Stream/text conversion utilities (work in progress)
+- `src/sqlite.rs` - SQLite integration with custom functions
+
+### json-encoded-binary crate (`crates/json-encoded-binary/`)
+- `src/lib.rs` - JEB85 encoding/decoding implementation with nom parser
