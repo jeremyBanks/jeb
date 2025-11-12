@@ -1,10 +1,10 @@
 [package]
 name = "json-encoded-binary"
-version = "0.0.1"
+version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-nom = "7.1"
-nom_supreme = "0.8"
-nom_locate = "4.2"
+nom.workspace = true
+nom_supreme.workspace = true
+nom_locate.workspace = true

@@ -15,37 +15,56 @@ NC='\033[0m' # No Color
 if grep -q '^\[workspace\]' Cargo.toml; then
     echo "Detected workspace structure"
 
-    # Check jeb crate
-    if [ -f "crates/jeb/Cargo.toml" ]; then
-        JEB_VERSION=$(grep '^version = ' crates/jeb/Cargo.toml | head -1 | cut -d'"' -f2)
-        echo "jeb version: $JEB_VERSION"
+    # Check if workspace has a shared version
+    WORKSPACE_VERSION=$(grep '^\[workspace\.package\]' -A 10 Cargo.toml | grep '^version = ' | head -1 | cut -d'"' -f2 || echo "")
 
-        if [[ ! "$JEB_VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
-            echo -e "${RED}ERROR: jeb version must be 0.0.x format (major=0, minor=0)${NC}"
-            echo "Found: $JEB_VERSION"
+    if [[ -n "$WORKSPACE_VERSION" ]]; then
+        echo "Workspace version: $WORKSPACE_VERSION"
+        VERSION=$WORKSPACE_VERSION
+
+        if [[ ! "$VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
+            echo -e "${RED}ERROR: Workspace version must be 0.0.x format (major=0, minor=0)${NC}"
+            echo "Found: $VERSION"
             exit 1
         fi
 
-        echo -e "${GREEN}✓ jeb version $JEB_VERSION is valid (0.0.x format)${NC}"
-    fi
+        echo -e "${GREEN}✓ Workspace version $VERSION is valid (0.0.x format)${NC}"
 
-    # Check json-encoded-binary crate
-    if [ -f "crates/json-encoded-binary/Cargo.toml" ]; then
-        JEB85_VERSION=$(grep '^version = ' crates/json-encoded-binary/Cargo.toml | head -1 | cut -d'"' -f2)
-        echo "json-encoded-binary version: $JEB85_VERSION"
+        # For workspace with shared version, use root Cargo.toml for comparison
+        CARGO_PATH="Cargo.toml"
+    else
+        # Check jeb crate
+        if [ -f "crates/jeb/Cargo.toml" ]; then
+            JEB_VERSION=$(grep '^version = ' crates/jeb/Cargo.toml | head -1 | cut -d'"' -f2)
+            echo "jeb version: $JEB_VERSION"
 
-        if [[ ! "$JEB85_VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
-            echo -e "${RED}ERROR: json-encoded-binary version must be 0.0.x format (major=0, minor=0)${NC}"
-            echo "Found: $JEB85_VERSION"
-            exit 1
+            if [[ ! "$JEB_VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
+                echo -e "${RED}ERROR: jeb version must be 0.0.x format (major=0, minor=0)${NC}"
+                echo "Found: $JEB_VERSION"
+                exit 1
+            fi
+
+            echo -e "${GREEN}✓ jeb version $JEB_VERSION is valid (0.0.x format)${NC}"
         fi
 
-        echo -e "${GREEN}✓ json-encoded-binary version $JEB85_VERSION is valid (0.0.x format)${NC}"
-    fi
+        # Check json-encoded-binary crate
+        if [ -f "crates/json-encoded-binary/Cargo.toml" ]; then
+            JEB85_VERSION=$(grep '^version = ' crates/json-encoded-binary/Cargo.toml | head -1 | cut -d'"' -f2)
+            echo "json-encoded-binary version: $JEB85_VERSION"
 
-    # For workspace, check if jeb version differs from base (primary crate)
-    VERSION=$JEB_VERSION
-    CARGO_PATH="crates/jeb/Cargo.toml"
+            if [[ ! "$JEB85_VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
+                echo -e "${RED}ERROR: json-encoded-binary version must be 0.0.x format (major=0, minor=0)${NC}"
+                echo "Found: $JEB85_VERSION"
+                exit 1
+            fi
+
+            echo -e "${GREEN}✓ json-encoded-binary version $JEB85_VERSION is valid (0.0.x format)${NC}"
+        fi
+
+        # For workspace without shared version, check if jeb version differs from base (primary crate)
+        VERSION=$JEB_VERSION
+        CARGO_PATH="crates/jeb/Cargo.toml"
+    fi
 else
     # Single package layout
     VERSION=$(grep '^version = ' Cargo.toml | head -1 | cut -d'"' -f2)
@@ -91,10 +110,18 @@ if [[ "$CURRENT_BRANCH" != "main" && "$CURRENT_BRANCH" != "master" && "$CURRENT_
             if git cat-file -e "origin/$BASE_BRANCH:$CARGO_PATH" 2>/dev/null || \
                git cat-file -e "$BASE_BRANCH:$CARGO_PATH" 2>/dev/null; then
 
-                # Get the version
-                BASE_VERSION=$(git show "origin/$BASE_BRANCH:$CARGO_PATH" 2>/dev/null | grep '^version = ' | head -1 | cut -d'"' -f2 || \
-                              git show "$BASE_BRANCH:$CARGO_PATH" 2>/dev/null | grep '^version = ' | head -1 | cut -d'"' -f2 || \
+                # Get the version - check for workspace.package or direct version
+                BASE_CONTENT=$(git show "origin/$BASE_BRANCH:$CARGO_PATH" 2>/dev/null || \
+                              git show "$BASE_BRANCH:$CARGO_PATH" 2>/dev/null || \
                               echo "")
+
+                # Try workspace.package version first
+                BASE_VERSION=$(echo "$BASE_CONTENT" | grep '^\[workspace\.package\]' -A 10 | grep '^version = ' | head -1 | cut -d'"' -f2 || echo "")
+
+                # If not found, try direct version
+                if [[ -z "$BASE_VERSION" ]]; then
+                    BASE_VERSION=$(echo "$BASE_CONTENT" | grep '^version = ' | head -1 | cut -d'"' -f2 || echo "")
+                fi
             else
                 # Try the other layout (workspace vs single-package)
                 if [[ "$CARGO_PATH" == "Cargo.toml" ]]; then
@@ -106,9 +133,17 @@ if [[ "$CURRENT_BRANCH" != "main" && "$CURRENT_BRANCH" != "master" && "$CURRENT_
                 if git cat-file -e "origin/$BASE_BRANCH:$ALT_PATH" 2>/dev/null || \
                    git cat-file -e "$BASE_BRANCH:$ALT_PATH" 2>/dev/null; then
 
-                    BASE_VERSION=$(git show "origin/$BASE_BRANCH:$ALT_PATH" 2>/dev/null | grep '^version = ' | head -1 | cut -d'"' -f2 || \
-                                  git show "$BASE_BRANCH:$ALT_PATH" 2>/dev/null | grep '^version = ' | head -1 | cut -d'"' -f2 || \
+                    BASE_CONTENT=$(git show "origin/$BASE_BRANCH:$ALT_PATH" 2>/dev/null || \
+                                  git show "$BASE_BRANCH:$ALT_PATH" 2>/dev/null || \
                                   echo "")
+
+                    # Try workspace.package version first
+                    BASE_VERSION=$(echo "$BASE_CONTENT" | grep '^\[workspace\.package\]' -A 10 | grep '^version = ' | head -1 | cut -d'"' -f2 || echo "")
+
+                    # If not found, try direct version
+                    if [[ -z "$BASE_VERSION" ]]; then
+                        BASE_VERSION=$(echo "$BASE_CONTENT" | grep '^version = ' | head -1 | cut -d'"' -f2 || echo "")
+                    fi
 
                     if [[ -n "$BASE_VERSION" ]]; then
                         echo -e "${YELLOW}⚠ Project structure changed between branches${NC}"
