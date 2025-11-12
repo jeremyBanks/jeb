@@ -16,6 +16,9 @@ use json_encoded_binary as _;
 #[allow(dead_code)]
 mod json_stream;
 
+// SQLite integration module
+pub mod sqlite;
+
 /// Type alias for JSON objects using IndexMap to preserve insertion order
 pub type JsonObject = IndexMap<String, Value>;
 
@@ -320,16 +323,21 @@ fn extract_json_object(input: &str) -> Option<(&str, usize)> {
 /// Implement total ordering for JSON values.
 ///
 /// Ordering rules based on ASCII ordering of representative characters:
-/// 1. number < string < array < false < null < true < object
-/// 2. For numbers: standard numeric comparison (treating all as f64)
-/// 3. For strings: lexicographic UTF-8 byte comparison
+/// 1. string (") < number (0) < array ([) < false (f) < null (n) < true (t) < object ({)
+/// 2. For strings: lexicographic UTF-8 byte comparison
+/// 3. For numbers: standard numeric comparison (treating all as f64)
 /// 4. For arrays: element-by-element comparison; shorter arrays sort before longer when all compared elements are equal
 /// 5. For objects: compared as flattened array [key1, value1, key2, value2, ...], so key order matters
 pub fn json_total_order(a: &Value, b: &Value) -> Ordering {
     use Value::*;
 
     match (a, b) {
-        // Numbers (lowest)
+        // Strings (lowest)
+        (String(a), String(b)) => a.cmp(b),
+        (String(_), _) => Ordering::Less,
+        (_, String(_)) => Ordering::Greater,
+
+        // Numbers
         (Number(a), Number(b)) => {
             let a_f64 = a.as_f64().unwrap_or(0.0);
             let b_f64 = b.as_f64().unwrap_or(0.0);
@@ -337,11 +345,6 @@ pub fn json_total_order(a: &Value, b: &Value) -> Ordering {
         }
         (Number(_), _) => Ordering::Less,
         (_, Number(_)) => Ordering::Greater,
-
-        // Strings
-        (String(a), String(b)) => a.cmp(b),
-        (String(_), _) => Ordering::Less,
-        (_, String(_)) => Ordering::Greater,
 
         // Arrays
         (Array(a), Array(b)) => {
@@ -395,6 +398,111 @@ pub fn json_total_order(a: &Value, b: &Value) -> Ordering {
             a_items.len().cmp(&b_items.len())
         }
     }
+}
+
+/// Convert a JSON value to a byte string that preserves the ordering defined by json_total_order.
+///
+/// This encoding is designed for use as an index key in databases like SQLite.
+/// The bytes are ordered such that lexicographic byte comparison matches json_total_order.
+///
+/// Encoding scheme:
+/// - Type prefix byte: " (string), 0 (number), [ (array), f (false), n (null), t (true), { (object)
+/// - Strings: null-byte escaped, terminated with \x00\x00
+/// - Numbers: order-preserving IEEE 754 encoding (sign-magnitude with bit flipping)
+/// - Arrays: recursively encoded elements with \x00\x00 separators, terminated with \x00\x00
+/// - Objects: recursively encoded (key, value) pairs with \x00\x00 separators, terminated with \x00\x00
+/// - Booleans and null: just the prefix byte
+pub fn to_sortable_bytes(value: &Value) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    encode_value(value, &mut bytes);
+    bytes
+}
+
+fn encode_value(value: &Value, bytes: &mut Vec<u8>) {
+    use Value::*;
+
+    match value {
+        // String: prefix '"', null-escaped string, terminator \x00\x00
+        String(s) => {
+            bytes.push(b'"');
+            for byte in s.as_bytes() {
+                if *byte == 0x00 {
+                    bytes.push(0x00);
+                    bytes.push(0x01);
+                } else {
+                    bytes.push(*byte);
+                }
+            }
+            bytes.push(0x00);
+            bytes.push(0x00);
+        }
+
+        // Number: prefix '0', then order-preserving float encoding
+        Number(n) => {
+            bytes.push(b'0');
+            let f = n.as_f64().unwrap_or(0.0);
+            encode_number(f, bytes);
+        }
+
+        // Array: prefix '[', recursively encode elements with separators, terminator
+        Array(arr) => {
+            bytes.push(b'[');
+            for elem in arr {
+                encode_value(elem, bytes);
+                bytes.push(0x00);
+                bytes.push(0x00);
+            }
+            // Final terminator (empty element signals end)
+            bytes.push(0x00);
+            bytes.push(0x00);
+        }
+
+        // Booleans: just prefix byte
+        Bool(false) => {
+            bytes.push(b'f');
+        }
+        Bool(true) => {
+            bytes.push(b't');
+        }
+
+        // Null: just prefix byte
+        Null => {
+            bytes.push(b'n');
+        }
+
+        // Object: prefix '{', recursively encode (key, value) pairs, terminator
+        Object(obj) => {
+            bytes.push(b'{');
+            for (key, val) in obj {
+                // Encode key as string
+                encode_value(&Value::String(key.clone()), bytes);
+                // Encode value
+                encode_value(val, bytes);
+                bytes.push(0x00);
+                bytes.push(0x00);
+            }
+            // Final terminator
+            bytes.push(0x00);
+            bytes.push(0x00);
+        }
+    }
+}
+
+/// Encode a f64 in order-preserving format
+///
+/// Uses IEEE 754 bit representation with transformations:
+/// - If positive: flip sign bit (so positive > negative in byte order)
+/// - If negative: flip all bits (so more negative < less negative)
+fn encode_number(f: f64, bytes: &mut Vec<u8>) {
+    let bits = f.to_bits();
+    let transformed = if f >= 0.0 {
+        // Positive: flip sign bit (set bit 63)
+        bits ^ 0x8000_0000_0000_0000
+    } else {
+        // Negative: flip all bits
+        !bits
+    };
+    bytes.extend_from_slice(&transformed.to_be_bytes());
 }
 
 /// Merge multiple sorted streams into a single sorted stream
@@ -1058,9 +1166,9 @@ Random text in between
     fn test_json_total_order_types() {
         use serde_json::json;
 
-        // Test type ordering: number < string < array < false < null < true < object
-        assert_eq!(json_total_order(&json!(0), &json!("")), Ordering::Less);
-        assert_eq!(json_total_order(&json!(""), &json!([])), Ordering::Less);
+        // Test type ordering: string < number < array < false < null < true < object
+        assert_eq!(json_total_order(&json!(""), &json!(0)), Ordering::Less);
+        assert_eq!(json_total_order(&json!(0), &json!([])), Ordering::Less);
         assert_eq!(json_total_order(&json!([]), &json!(false)), Ordering::Less);
         assert_eq!(
             json_total_order(&json!(false), &json!(null)),
@@ -1405,5 +1513,139 @@ Random text in between
         let keys: Vec<_> = result.keys().collect();
         // id first, then name and age in original order (name, age), then city
         assert_eq!(keys, vec!["id", "name", "age", "city"]);
+    }
+
+    // Binary encoding tests
+
+    #[test]
+    fn test_to_sortable_bytes_type_ordering() {
+        use serde_json::json;
+
+        // Test that binary encoding preserves type ordering
+        let string_bytes = to_sortable_bytes(&json!("test"));
+        let number_bytes = to_sortable_bytes(&json!(42));
+        let array_bytes = to_sortable_bytes(&json!([]));
+        let false_bytes = to_sortable_bytes(&json!(false));
+        let null_bytes = to_sortable_bytes(&json!(null));
+        let true_bytes = to_sortable_bytes(&json!(true));
+        let object_bytes = to_sortable_bytes(&json!({}));
+
+        assert!(string_bytes < number_bytes);
+        assert!(number_bytes < array_bytes);
+        assert!(array_bytes < false_bytes);
+        assert!(false_bytes < null_bytes);
+        assert!(null_bytes < true_bytes);
+        assert!(true_bytes < object_bytes);
+    }
+
+    #[test]
+    fn test_to_sortable_bytes_strings() {
+        use serde_json::json;
+
+        let a = to_sortable_bytes(&json!("apple"));
+        let b = to_sortable_bytes(&json!("banana"));
+        let c = to_sortable_bytes(&json!("cherry"));
+
+        assert!(a < b);
+        assert!(b < c);
+        assert!(a < c);
+    }
+
+    #[test]
+    fn test_to_sortable_bytes_string_with_null() {
+        use serde_json::json;
+
+        // Test that strings with null bytes are handled correctly
+        let s1 = "hello";
+        let s2 = "hello\x00world";
+        let s3 = "hello\x00world\x00";
+
+        let b1 = to_sortable_bytes(&json!(s1));
+        let b2 = to_sortable_bytes(&json!(s2));
+        let b3 = to_sortable_bytes(&json!(s3));
+
+        // Should sort lexicographically
+        assert!(b1 < b2);
+        assert!(b2 < b3);
+    }
+
+    #[test]
+    fn test_to_sortable_bytes_numbers() {
+        use serde_json::json;
+
+        let neg_large = to_sortable_bytes(&json!(-1000.0));
+        let neg_small = to_sortable_bytes(&json!(-1.0));
+        let zero = to_sortable_bytes(&json!(0.0));
+        let pos_small = to_sortable_bytes(&json!(1.0));
+        let pos_large = to_sortable_bytes(&json!(1000.0));
+
+        assert!(neg_large < neg_small);
+        assert!(neg_small < zero);
+        assert!(zero < pos_small);
+        assert!(pos_small < pos_large);
+    }
+
+    #[test]
+    fn test_to_sortable_bytes_arrays() {
+        use serde_json::json;
+
+        let a1 = to_sortable_bytes(&json!([1]));
+        let a2 = to_sortable_bytes(&json!([1, 2]));
+        let a3 = to_sortable_bytes(&json!([1, 2, 3]));
+        let a4 = to_sortable_bytes(&json!([2]));
+
+        assert!(a1 < a2);
+        assert!(a2 < a3);
+        assert!(a1 < a4); // [1] < [2] (compares first element)
+    }
+
+    #[test]
+    fn test_to_sortable_bytes_objects() {
+        use serde_json::json;
+
+        let o1 = to_sortable_bytes(&json!({"a": 1}));
+        let o2 = to_sortable_bytes(&json!({"a": 2}));
+        let o3 = to_sortable_bytes(&json!({"b": 1}));
+
+        assert!(o1 < o2); // Same key, different value
+        assert!(o1 < o3); // Different key: "a" < "b"
+    }
+
+    #[test]
+    fn test_to_sortable_bytes_consistency_with_json_total_order() {
+        use serde_json::json;
+
+        // Create a variety of JSON values
+        let values = vec![
+            json!("aaa"),
+            json!("zzz"),
+            json!(-100),
+            json!(0),
+            json!(100),
+            json!([]),
+            json!([1]),
+            json!([1, 2]),
+            json!(false),
+            json!(null),
+            json!(true),
+            json!({}),
+            json!({"x": 1}),
+        ];
+
+        // For every pair of values, binary encoding order should match json_total_order
+        for i in 0..values.len() {
+            for j in 0..values.len() {
+                let bytes_i = to_sortable_bytes(&values[i]);
+                let bytes_j = to_sortable_bytes(&values[j]);
+                let byte_ordering = bytes_i.cmp(&bytes_j);
+                let json_ordering = json_total_order(&values[i], &values[j]);
+
+                assert_eq!(
+                    byte_ordering, json_ordering,
+                    "Mismatch for {:?} vs {:?}",
+                    values[i], values[j]
+                );
+            }
+        }
     }
 }

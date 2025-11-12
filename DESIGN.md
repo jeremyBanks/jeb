@@ -44,8 +44,8 @@ Defines a total ordering for JSON values used by other utilities.
 
 **Type precedence:**
 - Types are ordered by the ASCII/lexicographic ordering of their representative characters:
-  - `-` for numbers (lowest)
-  - `"` for strings
+  - `"` for strings (lowest)
+  - `0` for numbers
   - `[` for arrays
   - `f` for false
   - `n` for null
