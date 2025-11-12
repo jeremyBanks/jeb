@@ -39,7 +39,8 @@ pub const MAX_TEXT_SIZE: usize = 64 * 1024;
 pub const DEFAULT_CHUNK_SIZE: usize = 64 * 1024;
 
 /// Z85 alphabet (85 characters) - note that | is NOT in this alphabet
-pub const Z85_ALPHABET: &[u8; 85] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
+pub const Z85_ALPHABET: &[u8; 85] =
+    b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
 
 /// Reverse lookup table for Z85 decoding
 const Z85_DECODE: [u8; 256] = {
@@ -75,7 +76,11 @@ impl std::fmt::Display for Jeb85Error {
             Self::ProhibitedControlChar(c) => {
                 write!(f, "Prohibited control character: 0x{:02X}", c)
             }
-            Self::TextTooLarge => write!(f, "Text too large for text mode (max {} bytes)", MAX_TEXT_SIZE),
+            Self::TextTooLarge => write!(
+                f,
+                "Text too large for text mode (max {} bytes)",
+                MAX_TEXT_SIZE
+            ),
             Self::ParseError(msg) => write!(f, "Parse error: {}", msg),
         }
     }
@@ -207,7 +212,8 @@ fn encode_binary(data: &[u8], output: &mut String) {
 
                 // Emit the raw blocks
                 let raw_len = run_blocks * 4;
-                output.push_str(std::str::from_utf8(&data[run_start..run_start + raw_len]).unwrap());
+                output
+                    .push_str(std::str::from_utf8(&data[run_start..run_start + raw_len]).unwrap());
 
                 // Pad to 5-char alignment if needed
                 let total_len = count_encoded.len() + 1 + raw_len; // count + | + data
@@ -326,8 +332,8 @@ pub fn decode(input: &str) -> Result<Vec<u8>, Jeb85Error> {
 
     // Check for binary mode prefix (\b = 0x08)
     if bytes.starts_with(&[0x08]) {
-        let (_remaining, data) = parse_binary_mode(&bytes[1..])
-            .map_err(|e| Jeb85Error::ParseError(e.to_string()))?;
+        let (_remaining, data) =
+            parse_binary_mode(&bytes[1..]).map_err(|e| Jeb85Error::ParseError(e.to_string()))?;
         Ok(data)
     } else {
         // Text mode: validate and return as-is
@@ -392,7 +398,10 @@ mod tests {
         let encoded = encode(data);
 
         // Should use binary mode (contains backspace marker)
-        assert!(encoded.contains('\x08'), "Form feed should force binary mode");
+        assert!(
+            encoded.contains('\x08'),
+            "Form feed should force binary mode"
+        );
 
         // Should round-trip correctly
         let decoded = decode(&encoded).unwrap();
@@ -424,7 +433,7 @@ mod tests {
     fn test_binary_with_embedded_text() {
         // Mix of binary and text-safe blocks
         let mut data = vec![0x00, 0x01, 0x02, 0x03]; // Binary
-        data.extend_from_slice(b"Test");              // Text-safe
+        data.extend_from_slice(b"Test"); // Text-safe
         data.extend_from_slice(&[0xFF, 0xFE, 0xFD, 0xFC]); // Binary
 
         let encoded = encode(&data);
