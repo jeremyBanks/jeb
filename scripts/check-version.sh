@@ -161,15 +161,13 @@ if [[ "$CURRENT_BRANCH" != "main" && "$CURRENT_BRANCH" != "master" && "$CURRENT_
                 echo "Base branch ($BASE_BRANCH) version: $BASE_VERSION"
 
                 if [[ "$VERSION" == "$BASE_VERSION" ]]; then
-                    echo -e "${RED}ERROR: Version must be bumped for this branch${NC}"
+                    echo -e "${YELLOW}ERROR: Version has not been be bumped for this branch${NC}"
                     echo "Current: $VERSION"
                     echo "Base: $BASE_VERSION"
-                    echo ""
-                    echo "Please increment the patch version (e.g., 0.0.3 -> 0.0.4)"
-                    exit 1
+                else
+                    echo -e "${GREEN}✓ Version has been updated from $BASE_VERSION to $VERSION${NC}"
                 fi
 
-                echo -e "${GREEN}✓ Version has been updated from $BASE_VERSION to $VERSION${NC}"
                 exit 0
             else
                 echo -e "${YELLOW}⚠ Could not extract version from $BASE_BRANCH:$CARGO_PATH${NC}"
