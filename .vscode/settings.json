@@ -1,5 +1,12 @@
 {
     "editor.formatOnSave": true,
     "files.autoSave": "afterDelay",
-    "files.autoSaveDelay": 32768
+    "files.autoSaveDelay": 32768,
+    "[json][jsonc]": {
+        "editor.tabSize": 2,
+        "editor.defaultFormatter": "denoland.vscode-deno"
+    },
+    "[markdown]": {
+        "editor.defaultFormatter": "denoland.vscode-deno"
+    }
 }
