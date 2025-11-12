@@ -6,7 +6,7 @@ license.workspace = true
 
 [dependencies]
 nom.workspace = true
-# TODO: Use nom_supreme for better error messages and combinators
-nom_supreme.workspace = true
-# TODO: Use nom_locate for error position tracking
-nom_locate.workspace = true
+# TODO: Use nom-supreme for better error messages and combinators
+nom-supreme.workspace = true
+# TODO: Use nom-locate for error position tracking
+nom-locate.workspace = true

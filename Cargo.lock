@@ -430,8 +430,8 @@ name = "json-encoded-binary"
 version = "0.0.14"
 dependencies = [
  "nom",
- "nom_locate",
- "nom_supreme",
+ "nom-locate",
+ "nom-supreme",
 ]
 
 [[package]]
@@ -510,7 +510,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "nom_locate"
+name = "nom-locate"
 version = "4.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e3c83c053b0713da60c5b8de47fe8e494fe3ece5267b2f23090a07a053ba8f3"
@@ -521,7 +521,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "nom_supreme"
+name = "nom-supreme"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2bd3ae6c901f1959588759ff51c95d24b491ecb9ff91aa9c2ef4acc5b1dcab27"

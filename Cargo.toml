@@ -36,8 +36,8 @@ rusqlite = { version = "0.32", features = ["bundled", "functions"] }
 
 # Parsing
 nom = "7.1"
-nom_supreme = "0.8"
-nom_locate = "4.2"
+nom-supreme = "0.8"
+nom-locate = "4.2"
 
 [profile.release]
 opt-level = "z"
