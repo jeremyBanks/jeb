@@ -23,17 +23,45 @@ fi
 
 echo -e "${GREEN}✓ Version $VERSION is valid (0.0.x format)${NC}"
 
-# If we're on a branch (not main/master/trunk), check if version differs from main
+# If we're on a branch (not main/master/trunk), check if version differs from base
 CURRENT_BRANCH=$(git branch --show-current)
 
 if [[ "$CURRENT_BRANCH" != "main" && "$CURRENT_BRANCH" != "master" && "$CURRENT_BRANCH" != "trunk" ]]; then
-    # Try to get version from main branch (or master/trunk as fallback)
-    for BASE_BRANCH in main master trunk; do
-        if git show-ref --verify --quiet "refs/heads/$BASE_BRANCH" || \
-           git show-ref --verify --quiet "refs/remotes/origin/$BASE_BRANCH"; then
+    # Try to find and fetch base branch
+    BASE_FOUND=false
 
-            # Get version from base branch
-            BASE_VERSION=$(git show "origin/$BASE_BRANCH:Cargo.toml" 2>/dev/null | grep '^version = ' | head -1 | cut -d'"' -f2 || echo "")
+    for BASE_BRANCH in main master trunk; do
+        # Check if branch exists locally
+        if git show-ref --verify --quiet "refs/heads/$BASE_BRANCH"; then
+            BASE_FOUND=true
+            echo "Found local $BASE_BRANCH branch"
+        # Check if branch exists on remote
+        elif git ls-remote --exit-code --heads origin "$BASE_BRANCH" &>/dev/null; then
+            echo "Fetching $BASE_BRANCH from origin..."
+            if git fetch origin "$BASE_BRANCH" &>/dev/null; then
+                BASE_FOUND=true
+                echo "Fetched origin/$BASE_BRANCH"
+            fi
+        fi
+
+        if [ "$BASE_FOUND" = true ]; then
+            # Try to get version from base branch - handle missing file gracefully
+            BASE_VERSION=""
+
+            # First check if Cargo.toml exists in the base branch
+            if git cat-file -e "origin/$BASE_BRANCH:Cargo.toml" 2>/dev/null || \
+               git cat-file -e "$BASE_BRANCH:Cargo.toml" 2>/dev/null; then
+
+                # Get the version
+                BASE_VERSION=$(git show "origin/$BASE_BRANCH:Cargo.toml" 2>/dev/null | grep '^version = ' | head -1 | cut -d'"' -f2 || \
+                              git show "$BASE_BRANCH:Cargo.toml" 2>/dev/null | grep '^version = ' | head -1 | cut -d'"' -f2 || \
+                              echo "")
+            else
+                echo -e "${YELLOW}⚠ Cargo.toml does not exist in $BASE_BRANCH branch${NC}"
+                echo "This is okay if the project structure has changed"
+                echo -e "${GREEN}✓ Version check complete (no comparison possible)${NC}"
+                exit 0
+            fi
 
             if [[ -n "$BASE_VERSION" ]]; then
                 echo "Base branch ($BASE_BRANCH) version: $BASE_VERSION"
@@ -49,12 +77,16 @@ if [[ "$CURRENT_BRANCH" != "main" && "$CURRENT_BRANCH" != "master" && "$CURRENT_
 
                 echo -e "${GREEN}✓ Version has been updated from $BASE_VERSION to $VERSION${NC}"
                 exit 0
+            else
+                echo -e "${YELLOW}⚠ Could not extract version from $BASE_BRANCH:Cargo.toml${NC}"
             fi
         fi
     done
 
-    echo -e "${YELLOW}⚠ Could not find base branch to compare version${NC}"
-    echo "This is okay for new repositories or if you're working offline"
+    if [ "$BASE_FOUND" = false ]; then
+        echo -e "${YELLOW}⚠ Could not find base branch to compare version${NC}"
+        echo "This is okay for new repositories or if working offline"
+    fi
 fi
 
 echo -e "${GREEN}✓ Version check complete${NC}"
