@@ -10,5 +10,10 @@
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
   "editor.detectIndentation": false,
-  "editor.indentSize": "tabSize"
+  "editor.indentSize": "tabSize",
+  "editor.rulers": [
+    80,
+    100,
+    120
+  ]
 }

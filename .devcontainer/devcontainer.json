@@ -4,11 +4,13 @@
     "ghcr.io/devcontainers-community/features/deno:1": {},
     "ghcr.io/devcontainers-community/features/llvm": {}
   },
+  "postCreateCommand": ".devcontainer/post-create.sh",
   "customizations": {
     "vscode": {
       "extensions": [
         "denoland.vscode-deno",
         "rust-lang.rust-analyzer",
+        "timonwong.shellcheck",
         "vadimcn.vscode-lldb"
       ]
     }

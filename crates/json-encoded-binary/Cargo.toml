@@ -9,3 +9,5 @@ version.workspace = true
 nom.workspace = true
 nom-supreme.workspace = true
 nom_locate.workspace = true
+static_assertions = "1.1.0"
+winnow.workspace = true
