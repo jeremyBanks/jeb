@@ -91,6 +91,7 @@ impl Encoder {
 
 #[derive(Default)]
 pub struct Decoder;
+
 impl Decoder {
     #[expect(clippy::unused_self)]
     pub fn decode_bytes(&self, encoded: &[u8]) -> Result<Vec<u8>, Panic> {
