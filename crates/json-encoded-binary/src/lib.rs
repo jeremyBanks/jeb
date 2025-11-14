@@ -18,6 +18,7 @@
     clippy::cargo_common_metadata,
     clippy::default_constructed_unit_structs
 )]
+// cSpell:ignoreRegExp b"(\\?.){5}"
 
 mod byte_ranges;
 mod const_checked;
@@ -193,8 +194,6 @@ pub const fn decode_z85_block_or_panic(encoded: [u8; BLOCK_DIGITS_5]) -> [u8; BL
 fn test_z85_blocks() {
     macro_rules! assertions {
         () => {
-            // spellchecker:disable
-
             expect(b"00000", b"\x00\x00\x00\x00");
             expect(b"00001", b"\x00\x00\x00\x01");
             expect(b"0000#", b"\x00\x00\x00\x54");
@@ -250,8 +249,6 @@ fn test_z85_blocks() {
             reject(b"\0\0\0\0\0");
             reject(b"\n\n\n\n\n");
             reject(b"\xFF\xFF\xFF\xFF\xFF");
-
-            // spellchecker:enable
         };
     }
 
