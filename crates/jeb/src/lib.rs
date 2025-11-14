@@ -1,16 +1,17 @@
 #![doc = include_str!("../../../README.md")]
 
-use async_stream::stream;
-use futures::stream::{Stream, StreamExt};
-use indexmap::IndexMap;
-use serde_json::Value;
-use std::cmp::Ordering;
-use tokio::io::{AsyncBufRead, AsyncReadExt, BufReader};
-use tracing::{debug, info, instrument};
-
 // Import json-encoded-binary (currently unused, but available for future use)
 #[allow(unused_imports)]
 use json_encoded_binary as _;
+use {
+    async_stream::stream,
+    futures::stream::{Stream, StreamExt},
+    indexmap::IndexMap,
+    serde_json::Value,
+    std::cmp::Ordering,
+    tokio::io::{AsyncBufRead, AsyncReadExt, BufReader},
+    tracing::{debug, info, instrument},
+};
 
 // New module for stream/text conversion (work in progress, currently unused)
 #[allow(dead_code)]
@@ -323,11 +324,14 @@ fn extract_json_object(input: &str) -> Option<(&str, usize)> {
 /// Implement total ordering for JSON values.
 ///
 /// Ordering rules based on ASCII ordering of representative characters:
-/// 1. string (") < number (0) < array ([) < false (f) < null (n) < true (t) < object ({)
+/// 1. string (") < number (0) < array ([) < false (f) < null (n) < true (t) <
+///    object ({)
 /// 2. For strings: lexicographic UTF-8 byte comparison
 /// 3. For numbers: standard numeric comparison (treating all as f64)
-/// 4. For arrays: element-by-element comparison; shorter arrays sort before longer when all compared elements are equal
-/// 5. For objects: compared as flattened array [key1, value1, key2, value2, ...], so key order matters
+/// 4. For arrays: element-by-element comparison; shorter arrays sort before
+///    longer when all compared elements are equal
+/// 5. For objects: compared as flattened array [key1, value1, key2, value2,
+///    ...], so key order matters
 pub fn json_total_order(a: &Value, b: &Value) -> Ordering {
     use Value::*;
 
@@ -400,17 +404,23 @@ pub fn json_total_order(a: &Value, b: &Value) -> Ordering {
     }
 }
 
-/// Convert a JSON value to a byte string that preserves the ordering defined by json_total_order.
+/// Convert a JSON value to a byte string that preserves the ordering defined by
+/// json_total_order.
 ///
 /// This encoding is designed for use as an index key in databases like SQLite.
-/// The bytes are ordered such that lexicographic byte comparison matches json_total_order.
+/// The bytes are ordered such that lexicographic byte comparison matches
+/// json_total_order.
 ///
 /// Encoding scheme:
-/// - Type prefix byte: " (string), 0 (number), [ (array), f (false), n (null), t (true), { (object)
+/// - Type prefix byte: " (string), 0 (number), [ (array), f (false), n (null),
+///   t (true), { (object)
 /// - Strings: null-byte escaped, terminated with \x00\x00
-/// - Numbers: order-preserving IEEE 754 encoding (sign-magnitude with bit flipping)
-/// - Arrays: recursively encoded elements with \x00\x00 separators, terminated with \x00\x00
-/// - Objects: recursively encoded (key, value) pairs with \x00\x00 separators, terminated with \x00\x00
+/// - Numbers: order-preserving IEEE 754 encoding (sign-magnitude with bit
+///   flipping)
+/// - Arrays: recursively encoded elements with \x00\x00 separators, terminated
+///   with \x00\x00
+/// - Objects: recursively encoded (key, value) pairs with \x00\x00 separators,
+///   terminated with \x00\x00
 /// - Booleans and null: just the prefix byte
 pub fn to_sortable_bytes(value: &Value) -> Vec<u8> {
     let mut bytes = Vec::new();
@@ -507,8 +517,9 @@ fn encode_number(f: f64, bytes: &mut Vec<u8>) {
 
 /// Merge multiple sorted streams into a single sorted stream
 ///
-/// Assumes that each input stream is already sorted according to json_total_order.
-/// Performs an n-way merge to produce a single sorted output stream.
+/// Assumes that each input stream is already sorted according to
+/// json_total_order. Performs an n-way merge to produce a single sorted output
+/// stream.
 pub fn merge_sorted_streams<S>(streams: Vec<S>) -> impl Stream<Item = JsonObject>
 where
     S: Stream<Item = Result<JsonObject, JsonError>> + Unpin + Send + 'static,
@@ -550,8 +561,8 @@ where
 ///
 /// This function maintains a sliding window buffer of size `buffer_size`.
 /// It fills the buffer, sorts it, outputs the smallest element, and continues
-/// until all elements are processed. This allows correcting out-of-order elements
-/// within the buffer window.
+/// until all elements are processed. This allows correcting out-of-order
+/// elements within the buffer window.
 ///
 /// If buffer_size is 0, returns the stream unchanged.
 pub fn apply_sort_buffer<S>(stream: S, buffer_size: usize) -> impl Stream<Item = JsonObject>
@@ -733,7 +744,8 @@ fn merge_objects(objects: &[JsonObject]) -> Result<JsonObject, String> {
 ///
 /// # Arguments
 /// * `objects` - The input objects
-/// * `grouping_fn` - Function to determine if two consecutive items belong to the same group
+/// * `grouping_fn` - Function to determine if two consecutive items belong to
+///   the same group
 /// * `strategies` - Reduction strategies to apply (in order)
 pub fn apply_group_reduction<F>(
     objects: Vec<JsonObject>,
@@ -798,7 +810,8 @@ pub fn default_grouping(a: &JsonObject, b: &JsonObject) -> bool {
 ///
 /// # Returns
 /// * `Ok(new_root)` - The re-rooted JSON value
-/// * `Err(original_json)` - The original JSON if the path doesn't exist or key collision occurs
+/// * `Err(original_json)` - The original JSON if the path doesn't exist or key
+///   collision occurs
 ///
 /// # Example
 /// ```ignore
@@ -855,9 +868,10 @@ pub fn reroot(json: Value, path: &[&str]) -> Result<Value, Value> {
     };
 
     // Build up the inverted structure
-    // For path ["a", "b", "c"], we create: target with "c" -> { siblings_of_c, "b" -> { siblings_of_b, "a" -> { siblings_of_a } } }
-    // But actually, the keys are not path elements but the parent keys
-    // For path ["container", "entity"], we create: entity with "container" -> { siblings_of_entity }
+    // For path ["a", "b", "c"], we create: target with "c" -> { siblings_of_c, "b"
+    // -> { siblings_of_b, "a" -> { siblings_of_a } } } But actually, the keys
+    // are not path elements but the parent keys For path ["container",
+    // "entity"], we create: entity with "container" -> { siblings_of_entity }
 
     // Process ancestors from deepest to shallowest
     if let Some((last_key, last_siblings)) = ancestors.pop() {
@@ -891,7 +905,8 @@ pub fn reroot(json: Value, path: &[&str]) -> Result<Value, Value> {
     Ok(Value::Object(new_root))
 }
 
-// For backward compatibility during transition - keep the sync version for tests
+// For backward compatibility during transition - keep the sync version for
+// tests
 #[doc(hidden)]
 pub fn parse_json_stream_sync(input: &str) -> Result<Vec<JsonObject>, JsonError> {
     parse_json_string(input)
@@ -953,8 +968,8 @@ pub fn merge_sorted_streams_sync(streams: Vec<Vec<JsonObject>>) -> Vec<JsonObjec
                     .collect(),
             );
 
-            // If a stream head compares less than the current minimum, it becomes the new minimum
-            // Equal or incomparable is not less
+            // If a stream head compares less than the current minimum, it becomes the new
+            // minimum Equal or incomparable is not less
             if json_total_order(&current_obj, &min_obj) == Ordering::Less {
                 min_stream_idx = stream_idx;
                 min_obj = current_obj;
@@ -1377,43 +1392,34 @@ Random text in between
     #[test]
     fn test_key_order_parse_custom_first_only() {
         let opts = KeyOrderOptions::parse(r#"["id","name"]"#).unwrap();
-        assert_eq!(
-            opts,
-            KeyOrderOptions {
-                recursive: true,
-                first: vec!["id".to_string(), "name".to_string()],
-                last: vec![],
-                sort: true,
-            }
-        );
+        assert_eq!(opts, KeyOrderOptions {
+            recursive: true,
+            first: vec!["id".to_string(), "name".to_string()],
+            last: vec![],
+            sort: true,
+        });
     }
 
     #[test]
     fn test_key_order_parse_custom_with_sorted_middle() {
         let opts = KeyOrderOptions::parse(r#"["id",true,"zip"]"#).unwrap();
-        assert_eq!(
-            opts,
-            KeyOrderOptions {
-                recursive: true,
-                first: vec!["id".to_string()],
-                last: vec!["zip".to_string()],
-                sort: true,
-            }
-        );
+        assert_eq!(opts, KeyOrderOptions {
+            recursive: true,
+            first: vec!["id".to_string()],
+            last: vec!["zip".to_string()],
+            sort: true,
+        });
     }
 
     #[test]
     fn test_key_order_parse_custom_with_unsorted_middle() {
         let opts = KeyOrderOptions::parse(r#"["id",false,"name"]"#).unwrap();
-        assert_eq!(
-            opts,
-            KeyOrderOptions {
-                recursive: true,
-                first: vec!["id".to_string()],
-                last: vec!["name".to_string()],
-                sort: false,
-            }
-        );
+        assert_eq!(opts, KeyOrderOptions {
+            recursive: true,
+            first: vec!["id".to_string()],
+            last: vec!["name".to_string()],
+            sort: false,
+        });
     }
 
     #[test]

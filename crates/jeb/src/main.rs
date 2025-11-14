@@ -1,19 +1,25 @@
-use clap::Parser;
-use color_eyre::eyre::{Context, Result};
-use futures::stream::{self, StreamExt};
-use jeb::{apply_sort_buffer, merge_sorted_streams, parse_json_stream, JsonObject, SortSpec};
-use serde_json::Value;
-use std::path::Path;
-use tokio::fs::File;
-use tokio::io::{stdin, stdout, AsyncWriteExt, BufWriter};
-use tracing::{debug, info, warn};
+use {
+    clap::Parser,
+    color_eyre::eyre::{Context, Result},
+    futures::stream::{self, StreamExt},
+    jeb::{JsonObject, SortSpec, apply_sort_buffer, merge_sorted_streams, parse_json_stream},
+    serde_json::Value,
+    std::path::Path,
+    tokio::{
+        fs::File,
+        io::{AsyncWriteExt, BufWriter, stdin, stdout},
+    },
+    tracing::{debug, info, warn},
+};
 
 /// JSON Entity Bucket - Merge, format, and search JSON
 #[derive(Parser, Debug)]
 #[command(name = "jeb")]
 #[command(about = "JSON Entity Bucket - Merge, format, and search JSON")]
 #[command(
-    long_about = "JSON Entity Bucket - Merge, format, and search JSON\n\nWith no arguments, reads from stdin and writes to stdout.\nUse '-' to explicitly specify stdin or stdout.\n\nInput arguments starting with { or [ are treated as inline JSON."
+    long_about = "JSON Entity Bucket - Merge, format, and search JSON\n\nWith no arguments, reads \
+                  from stdin and writes to stdout.\nUse '-' to explicitly specify stdin or \
+                  stdout.\n\nInput arguments starting with { or [ are treated as inline JSON."
 )]
 struct Cli {
     /// Enable debug logging
@@ -24,16 +30,19 @@ struct Cli {
     #[arg(short = 'b', long, default_value = "128")]
     buffer_size: usize,
 
-    /// Sort keys in JSON objects (false=unsorted, true=sorted, or JSON array like '["key1", true, "key2"]')
+    /// Sort keys in JSON objects (false=unsorted, true=sorted, or JSON array
+    /// like '["key1", true, "key2"]')
     #[arg(short = 's', long, default_value = "false")]
     sort: String,
 
-    /// Input file (use '-' for stdin). When using positional args, this is also the output file.
-    /// Arguments starting with { or [ are treated as inline JSON.
+    /// Input file (use '-' for stdin). When using positional args, this is also
+    /// the output file. Arguments starting with { or [ are treated as
+    /// inline JSON.
     #[arg(value_name = "FILE")]
     files: Vec<String>,
 
-    /// Input file(s) - alternative to positional arguments (auto-detects inline JSON)
+    /// Input file(s) - alternative to positional arguments (auto-detects inline
+    /// JSON)
     #[arg(short, long, value_name = "FILE")]
     from: Vec<String>,
 
@@ -59,7 +68,8 @@ enum InputSource {
     InlineJson(String),
 }
 
-/// Load jeb.json config file from current directory and convert to CLI arguments
+/// Load jeb.json config file from current directory and convert to CLI
+/// arguments
 fn load_config_args() -> Vec<String> {
     let config_path = Path::new("jeb.json");
     if !config_path.exists() {
@@ -225,7 +235,8 @@ async fn create_stream_from_source(
     }
 }
 
-/// Check if a string looks like inline JSON (starts with { or [ and ends with matching brace)
+/// Check if a string looks like inline JSON (starts with { or [ and ends with
+/// matching brace)
 fn is_inline_json(s: &str) -> bool {
     let trimmed = s.trim();
     (trimmed.starts_with('{') && trimmed.ends_with('}'))

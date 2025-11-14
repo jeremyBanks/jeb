@@ -10,8 +10,6 @@ mod byte_ranges;
 mod const_checked;
 mod errors;
 
-
-
 // MARK: encoding constants
 
 pub const BASE_85: usize = 85;
@@ -41,14 +39,11 @@ pub const MAX_RAW_BYTES: usize = eq_usize(208_802_508, MAX_RAW_BLOCKS * BLOCK_BY
 /// size value that can fit in the initial block with `RAW_PREFIX`.
 pub const MAX_RAW_BLOCKS: usize = eq_usize(52_200_627, 2 + pow(BASE_85, BLOCK_DIGITS_5 - 1));
 
-
 // MARK: ???
 
 pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
     unimplemented!()
 }
-
-
 
 // MARK: Z85 block ser/de
 

@@ -3,8 +3,6 @@ pub const Z85: &[u8; 85] =
     b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
 pub const Z85_LUT: [u8; 256] = index_lut(Z85, -1 as _);
 
-
-
 /// Characters that are safe as-is in in URLs according to the current
 /// [RFC 3986](https://datatracker.ietf.org/doc/html/rfc3986).
 pub const SAFE_IN_URL: &[u8; 66] =
@@ -55,8 +53,6 @@ pub const NOT_PLAIN_UTF8_TEXT: &[u8; 44] = &[
 ];
 pub const NOT_PLAIN_UTF8_TEXT_LUT: [bool; 256] = presence_lut(NOT_PLAIN_UTF8_TEXT);
 pub const PLAIN_UTF8_TEXT_LUT: [bool; 256] = invert_presence(&NOT_PLAIN_UTF8_TEXT_LUT);
-
-
 
 const fn index_lut(values: &[u8], absent: u8) -> [u8; 256] {
     if (values.len() >= 0xFF) {
