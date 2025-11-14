@@ -15,7 +15,8 @@
     clippy::manual_assert,
     clippy::cast_sign_loss,
     clippy::cast_possible_truncation,
-    clippy::cargo_common_metadata
+    clippy::cargo_common_metadata,
+    clippy::default_constructed_unit_structs
 )]
 
 mod byte_ranges;
@@ -30,6 +31,7 @@ use {
 };
 
 pub use crate::{byte_ranges::*, const_checked::*, errors::*};
+
 
 
 // MARK: encoding constants
@@ -73,16 +75,39 @@ pub const TARGET_RAW_BYTES: usize = eq_usize(65_536, 64 * 1024);
 /// We encode a maximum of 16 Ki blocks per raw chunk.
 pub const TARGET_RAW_BLOCKS: usize = eq_usize(16_384, div_exact(TARGET_RAW_BYTES, BLOCK_BYTES_4));
 
-// MARK: Simple high-level interface.
+
+
+// MARK: high-level interface
+
+#[derive(Default)]
+pub struct Encoder;
+impl Encoder {
+    #[must_use]
+    #[expect(clippy::unused_self)]
+    pub fn encode_bytes(&self, bytes: &[u8]) -> Vec<u8> {
+        unimplemented!()
+    }
+}
+
+#[derive(Default)]
+pub struct Decoder;
+impl Decoder {
+    #[expect(clippy::unused_self)]
+    pub fn decode_bytes(&self, encoded: &[u8]) -> Result<Vec<u8>, Panic> {
+        unimplemented!()
+    }
+}
 
 #[must_use]
-pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
-    unimplemented!()
+pub fn encode(bytes: &[u8]) -> Vec<u8> {
+    Encoder::default().encode_bytes(bytes)
 }
 
-pub fn decode_jeb85(encoded: &[u8]) -> Result<Vec<u8>, Panic> {
-    unimplemented!()
+pub fn decode(encoded: &[u8]) -> Result<Vec<u8>, Panic> {
+    Decoder::default().decode_bytes(encoded)
 }
+
+
 
 // MARK: Z85 block ser/de
 
