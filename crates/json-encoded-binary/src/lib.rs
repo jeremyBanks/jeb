@@ -1,19 +1,25 @@
 #![allow(unused)]
 
-use nom_supreme::tag::streaming;
-use nom_supreme::{error::ErrorTree, final_parser::final_parser, parser_ext::ParserExt};
+use nom_supreme::{
+    error::ErrorTree, final_parser::final_parser, parser_ext::ParserExt, tag::streaming,
+};
+
+pub use crate::{byte_ranges::*, const_checked::*, errors::*};
 
 mod byte_ranges;
 mod const_checked;
 mod errors;
 
-pub use crate::byte_ranges::*;
-pub use crate::const_checked::*;
-pub use crate::errors::*;
+
+
+// MARK: encoding constants
 
 pub const BASE_85: usize = 85;
 pub const BLOCK_BYTES_4: usize = 4;
 pub const BLOCK_DIGITS_5: usize = 5;
+
+pub const BLOCK_DIGITS_BY_BYTES: [usize; BLOCK_BYTES_4 + 1] = [0, 2, 3, 4, 5];
+pub const BLOCK_BYTES_BY_DIGITS: [usize; BLOCK_DIGITS_5 + 1] = [0, -1 as _, 1, 2, 3, 4];
 
 pub const RAW_PREFIX: u8 = b'|';
 pub const RAW_PADDING: u8 = b'.';
@@ -34,6 +40,17 @@ pub const MAX_RAW_BYTES: usize = eq_usize(208_802_508, MAX_RAW_BLOCKS * BLOCK_BY
 /// The number of raw blocks in a raw chunk is limited by the maximum raw prefix
 /// size value that can fit in the initial block with `RAW_PREFIX`.
 pub const MAX_RAW_BLOCKS: usize = eq_usize(52_200_627, 2 + pow(BASE_85, BLOCK_DIGITS_5 - 1));
+
+
+// MARK: ???
+
+pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
+    unimplemented!()
+}
+
+
+
+// MARK: Z85 block ser/de
 
 /// Encodes a 4-byte (32-bit) binary block into a 5-digit Z85 block.
 pub const fn encode_z85_block(bytes: &[u8; BLOCK_BYTES_4]) -> [u8; BLOCK_DIGITS_5] {
@@ -62,7 +79,8 @@ pub const fn encode_z85_block(bytes: &[u8; BLOCK_BYTES_4]) -> [u8; BLOCK_DIGITS_
 
 /// Decodes a 4-byte (32-bit) binary block into a 5-digit Z85 block.
 ///
-/// Errors with `Panic` if an invalid digit is encountered or the value overflows.
+/// Errors with `Panic` if an invalid digit is encountered or the value
+/// overflows.
 pub const fn decode_z85_block(
     encoded: &[u8; BLOCK_DIGITS_5],
 ) -> Result<[u8; BLOCK_BYTES_4], &'static str> {
@@ -72,18 +90,19 @@ pub const fn decode_z85_block(
     loop {
         value = match value.checked_mul(BASE_85 as u32) {
             Some(value) => value,
-            None => return Err("invalid overflowing value in decode_z85_block"),
+            None => return Err("decode_z85_block failed: invalid overflowing leading digit"),
         };
 
         let digit = encoded[encoded_index];
         let digit_value = Z85_LUT[digit as usize] as usize;
 
         if (digit_value >= BASE_85) {
-            return Err("invalid Z85 digit in decode_z85_block");
+            return Err("decode_z85_block failed: invalid digit");
         }
+
         value = match value.checked_add(digit_value as u32) {
             Some(value) => value,
-            None => return Err("invalid overflowing value in decode_z85_block"),
+            None => return Err("decode_z85_block failed: invalid overflowing value"),
         };
 
         if encoded_index < BLOCK_DIGITS_5 - 1 {

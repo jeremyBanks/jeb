@@ -1,7 +1,9 @@
 /// Characters used by Z85 encoding.
 pub const Z85: &[u8; 85] =
     b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
-pub const Z85_LUT: [u8; 256] = index_lut(Z85, 0xFF);
+pub const Z85_LUT: [u8; 256] = index_lut(Z85, -1 as _);
+
+
 
 /// Characters that are safe as-is in in URLs according to the current
 /// [RFC 3986](https://datatracker.ietf.org/doc/html/rfc3986).
@@ -54,19 +56,19 @@ pub const NOT_PLAIN_UTF8_TEXT: &[u8; 44] = &[
 pub const NOT_PLAIN_UTF8_TEXT_LUT: [bool; 256] = presence_lut(NOT_PLAIN_UTF8_TEXT);
 pub const PLAIN_UTF8_TEXT_LUT: [bool; 256] = invert_presence(&NOT_PLAIN_UTF8_TEXT_LUT);
 
+
+
 const fn index_lut(values: &[u8], absent: u8) -> [u8; 256] {
     if (values.len() >= 0xFF) {
         panic!("index_lut!(...) requires fewer than 256 values");
-    }
+    } // MARK: test
+
     let mut table = [absent; 256];
     let mut index = 0;
     while index < values.len() {
         let value = values[index] as usize;
         if table[value] != absent {
             panic!("duplicate value in index_lut!(...)");
-        }
-        if (value > 0xFF) {
-            panic!("out-of-bounds value in index_lut!(...)");
         }
         table[value] = index as u8;
         index += 1;

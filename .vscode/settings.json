@@ -1,19 +1,24 @@
 {
-  "editor.formatOnSave": true,
-  "files.autoSave": "afterDelay",
-  "files.autoSaveDelay": 32768,
   "[json][jsonc]": {
-    "editor.tabSize": 2,
-    "editor.defaultFormatter": "denoland.vscode-deno"
+    "editor.defaultFormatter": "denoland.vscode-deno",
+    "editor.tabSize": 2
   },
   "[markdown]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
   "editor.detectIndentation": false,
+  "editor.formatOnSave": true,
   "editor.indentSize": "tabSize",
   "editor.rulers": [
     80,
     100,
     120
+  ],
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 32768,
+  "git.autofetch": true,
+  "rust-analyzer.rustfmt.overrideCommand": [
+    "rustfmt",
+    "+nightly"
   ]
 }
