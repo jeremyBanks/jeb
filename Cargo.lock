@@ -444,7 +444,7 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jeb"
-version = "0.0.15"
+version = "0.0.16"
 dependencies = [
  "async-stream",
  "clap",
@@ -470,7 +470,7 @@ checksum = "72167d68f5fce3b8655487b8038691a3c9984ee769590f93f2a631f4ad64e4f5"
 
 [[package]]
 name = "json-encoded-binary"
-version = "0.0.15"
+version = "0.0.16"
 dependencies = [
  "nom",
  "nom-supreme",

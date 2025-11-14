@@ -19,6 +19,9 @@ mod json_stream;
 // SQLite integration module
 pub mod sqlite;
 
+// CGP-Serde integration module for context-generic serialization
+pub mod cgp_serde;
+
 /// Type alias for JSON objects using IndexMap to preserve insertion order
 pub type JsonObject = IndexMap<String, Value>;
 
