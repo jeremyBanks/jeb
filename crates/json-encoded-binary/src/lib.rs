@@ -1,17 +1,35 @@
-#![allow(unused)]
-#![warn(clippy::std_instead_of_core)]
-
-use std::fmt::Debug;
-
-use nom_supreme::{
-    error::ErrorTree, final_parser::final_parser, parser_ext::ParserExt, tag::streaming,
-};
-
-pub use crate::{byte_ranges::*, const_checked::*, errors::*};
+#![warn(
+    clippy::std_instead_of_core,
+    clippy::pedantic,
+    clippy::cargo,
+    clippy::nursery,
+    clippy::allow_attributes,
+    clippy::arbitrary_source_item_ordering
+)]
+#![expect(
+    unused,
+    missing_docs,
+    clippy::missing_errors_doc,
+    clippy::redundant_else,
+    clippy::needless_continue,
+    clippy::manual_assert,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation
+)]
 
 mod byte_ranges;
 mod const_checked;
 mod errors;
+
+use {
+    core::fmt::Debug,
+    nom_supreme::{
+        error::ErrorTree, final_parser::final_parser, parser_ext::ParserExt, tag::streaming,
+    },
+};
+
+pub use crate::{byte_ranges::*, const_checked::*, errors::*};
+
 
 // MARK: encoding constants
 
@@ -56,6 +74,7 @@ pub const TARGET_RAW_BLOCKS: usize = eq_usize(16_384, div_exact(TARGET_RAW_BYTES
 
 // MARK: Simple high-level interface.
 
+#[must_use]
 pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
     unimplemented!()
 }
@@ -67,10 +86,11 @@ pub fn decode_jeb85(encoded: &[u8]) -> Result<Vec<u8>, Panic> {
 // MARK: Z85 block ser/de
 
 /// Encodes a 4-byte (32-bit) binary block into a 5-digit Z85 block.
-pub const fn encode_z85_block(bytes: &[u8; BLOCK_BYTES_4]) -> [u8; BLOCK_DIGITS_5] {
+#[must_use]
+pub const fn encode_z85_block(bytes: [u8; BLOCK_BYTES_4]) -> [u8; BLOCK_DIGITS_5] {
     let mut encoded = [0u8; BLOCK_DIGITS_5];
 
-    let mut value = u32::from_be_bytes(*bytes) as usize;
+    let mut value = u32::from_be_bytes(bytes) as usize;
 
     let mut encoded_index = BLOCK_DIGITS_5 - 1;
     loop {
@@ -96,7 +116,7 @@ pub const fn encode_z85_block(bytes: &[u8; BLOCK_BYTES_4]) -> [u8; BLOCK_DIGITS_
 /// Errors with `Panic` if an invalid digit is encountered or the value
 /// overflows.
 pub const fn decode_z85_block(
-    encoded: &[u8; BLOCK_DIGITS_5],
+    encoded: [u8; BLOCK_DIGITS_5],
 ) -> Result<[u8; BLOCK_BYTES_4], &'static str> {
     let mut value: u32 = 0;
 
@@ -127,12 +147,13 @@ pub const fn decode_z85_block(
         }
     }
 
-    let bytes = (value as u32).to_be_bytes();
+    let bytes = value.to_be_bytes();
 
     Ok(bytes)
 }
 
-pub const fn decode_z85_block_or_panic(encoded: &[u8; BLOCK_DIGITS_5]) -> [u8; BLOCK_BYTES_4] {
+#[must_use]
+pub const fn decode_z85_block_or_panic(encoded: [u8; BLOCK_DIGITS_5]) -> [u8; BLOCK_BYTES_4] {
     match decode_z85_block(encoded) {
         Ok(bytes) => bytes,
         Err(err) => panic!("{}", err),
@@ -141,6 +162,7 @@ pub const fn decode_z85_block_or_panic(encoded: &[u8; BLOCK_DIGITS_5]) -> [u8; B
 
 #[cfg(test)]
 #[test]
+#[expect(clippy::trivially_copy_pass_by_ref)]
 fn test_z85_blocks() {
     macro_rules! assertions {
         () => {
@@ -202,32 +224,31 @@ fn test_z85_blocks() {
         };
     }
 
-    {
-        fn expect(encoded: &[u8; BLOCK_DIGITS_5], bytes: &[u8; BLOCK_BYTES_4]) {
-            assert_eq!(Ok(bytes), decode_z85_block(encoded).as_ref());
-            assert_eq!(encoded, &encode_z85_block(bytes));
-        }
-
-        fn reject(encoded: &[u8; BLOCK_DIGITS_5]) {
-            assert!(decode_z85_block(encoded).is_err());
-        }
-
-        assertions!();
-    }
-
     const _: () = {
         const fn expect(encoded: &[u8; BLOCK_DIGITS_5], bytes: &[u8; BLOCK_BYTES_4]) {
-            eq_bytes(bytes, &decode_z85_block_or_panic(encoded));
-            eq_bytes(encoded, &encode_z85_block(bytes));
+            eq_bytes(bytes, &decode_z85_block_or_panic(*encoded));
+            eq_bytes(encoded, &encode_z85_block(*bytes));
         }
 
         const fn reject(encoded: &[u8; BLOCK_DIGITS_5]) {
-            match decode_z85_block(encoded) {
-                Ok(_) => panic!("expected error decoding invalid z85 block, but it succeeded"),
-                Err(_) => {}
+            if decode_z85_block(*encoded).is_ok() {
+                panic!("expected error decoding invalid z85 block, but it succeeded")
             }
         }
 
         assertions!();
     };
+
+    {
+        fn expect(encoded: &[u8; BLOCK_DIGITS_5], bytes: &[u8; BLOCK_BYTES_4]) {
+            assert_eq!(Ok(bytes), decode_z85_block(*encoded).as_ref());
+            assert_eq!(encoded, &encode_z85_block(*bytes));
+        }
+
+        fn reject(encoded: &[u8; BLOCK_DIGITS_5]) {
+            assert!(decode_z85_block(*encoded).is_err());
+        }
+
+        assertions!();
+    }
 }

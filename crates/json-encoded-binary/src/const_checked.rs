@@ -14,6 +14,7 @@ macro_rules! r#noop {
     };
 }
 
+#[expect(clippy::must_use_candidate)]
 pub const fn eq_usize(value: usize, calculation: usize) -> usize {
     if value != calculation {
         panic!("calculation did not match actual value");
@@ -22,6 +23,7 @@ pub const fn eq_usize(value: usize, calculation: usize) -> usize {
     value
 }
 
+#[expect(clippy::must_use_candidate)]
 pub const fn eq_bytes(expected: &[u8], calculated: &[u8]) -> bool {
     if expected.len() != calculated.len() {
         panic!("calculated value had different length than expected value");
@@ -38,6 +40,7 @@ pub const fn eq_bytes(expected: &[u8], calculated: &[u8]) -> bool {
     true
 }
 
+#[expect(clippy::must_use_candidate)]
 pub const fn div_exact(dividend: usize, divisor: usize) -> usize {
     if dividend % divisor != 0 {
         panic!("remainder in div_exact");
@@ -45,6 +48,8 @@ pub const fn div_exact(dividend: usize, divisor: usize) -> usize {
 
     dividend / divisor
 }
+
+#[expect(clippy::must_use_candidate)]
 pub const fn pow(base: usize, exponent: usize) -> usize {
     let mut result: usize = 1;
 

@@ -29,9 +29,10 @@ pub const SAFE_IN_STRING_SINGLE_QUOTED_LUT: [bool; 256] =
     presence_lut(SAFE_IN_STRING_SINGLE_QUOTED);
 
 /// Characters that are safe as-is in backtick-quoted strings in
-/// JavaScript and languages with similar syntax. (This excludes `$`
-/// unconditionally, but a smarter encoding would only require it excluded
-/// when it occurs before a raw `{`.)
+/// JavaScript and languages with similar syntax.
+///
+/// This excludes `$` unconditionally, but a smarter encoding would only require
+/// it excluded when it occurs before a raw `{`.)
 pub const SAFE_IN_STRING_BACKTICKED: &[u8; 94] =
         b" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 pub const SAFE_IN_STRING_BACKTICKED_LUT: [bool; 256] = presence_lut(SAFE_IN_STRING_BACKTICKED);

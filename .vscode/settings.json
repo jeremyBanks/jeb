@@ -17,8 +17,12 @@
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 32768,
   "git.autofetch": true,
+  "rust-analyzer.check.command": "clippy",
   "rust-analyzer.rustfmt.overrideCommand": [
     "rustfmt",
     "+nightly"
+  ],
+  "cSpell.words": [
+    "BACKTICKED"
   ]
 }
