@@ -137,7 +137,7 @@ pub const fn encode_z85_block(bytes: [u8; BLOCK_BYTES_4]) -> [u8; BLOCK_DIGITS_5
     encoded
 }
 
-/// Decodes a 4-byte (32-bit) binary block into a 5-digit Z85 block.
+/// Decodes a 5-digit Z85 block into a 4-byte (32-bit) binary block.
 ///
 /// Errors with `Panic` if an invalid digit is encountered or the value
 /// overflows.
@@ -192,6 +192,8 @@ pub const fn decode_z85_block_or_panic(encoded: [u8; BLOCK_DIGITS_5]) -> [u8; BL
 fn test_z85_blocks() {
     macro_rules! assertions {
         () => {
+            // spellchecker:disable
+
             expect(b"00000", b"\x00\x00\x00\x00");
             expect(b"00001", b"\x00\x00\x00\x01");
             expect(b"0000#", b"\x00\x00\x00\x54");
@@ -247,6 +249,8 @@ fn test_z85_blocks() {
             reject(b"\0\0\0\0\0");
             reject(b"\n\n\n\n\n");
             reject(b"\xFF\xFF\xFF\xFF\xFF");
+
+            // spellchecker:enable
         };
     }
 
