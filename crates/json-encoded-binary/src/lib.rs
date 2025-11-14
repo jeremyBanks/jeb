@@ -2,122 +2,185 @@
 
 use nom_supreme::tag::streaming;
 use nom_supreme::{error::ErrorTree, final_parser::final_parser, parser_ext::ParserExt};
-use static_assertions::const_assert;
 
 mod byte_ranges;
+mod const_checked;
 mod errors;
 
-pub(crate) use crate::byte_ranges::*;
-pub(crate) use crate::errors::*;
+pub use crate::byte_ranges::*;
+pub use crate::const_checked::*;
+pub use crate::errors::*;
 
-pub(crate) const BASE_85: usize = 85;
-pub(crate) const BLOCK_BYTES_4: usize = 4;
-pub(crate) const BLOCK_DIGITS_5: usize = 5;
+pub const BASE_85: usize = 85;
+pub const BLOCK_BYTES_4: usize = 4;
+pub const BLOCK_DIGITS_5: usize = 5;
 
-pub(crate) const RAW_PREFIX: u8 = b'|';
-pub(crate) const RAW_PADDING: u8 = b'.';
+pub const RAW_PREFIX: u8 = b'|';
+pub const RAW_PADDING: u8 = b'.';
 
-pub(crate) const TARGET_LINE_SIZE_DIGITS: usize = 80;
-pub(crate) const TARGET_LINE_SIZE_BYTES: usize = eq(
+pub const TARGET_LINE_SIZE_DIGITS: usize = 80;
+pub const TARGET_LINE_SIZE_BYTES: usize = eq_usize(
     64,
-    div(TARGET_LINE_SIZE_DIGITS * BLOCK_BYTES_4, BLOCK_DIGITS_5),
+    div_exact(TARGET_LINE_SIZE_DIGITS * BLOCK_BYTES_4, BLOCK_DIGITS_5),
 );
 
 /// We encode a maximum of 64 KiB of raw data per raw chunk.
-pub(crate) const TARGET_RAW_BYTES: usize = eq(65_536, 64 * 1024);
+pub const TARGET_RAW_BYTES: usize = eq_usize(65_536, 64 * 1024);
 /// We encode a maximum of 16 Ki blocks per raw chunk.
-pub(crate) const TARGET_RAW_BLOCKS: usize = eq(16_384, div(TARGET_RAW_BYTES, BLOCK_BYTES_4));
+pub const TARGET_RAW_BLOCKS: usize = eq_usize(16_384, div_exact(TARGET_RAW_BYTES, BLOCK_BYTES_4));
 
 /// We decode the format's maximum of roughly 200 MiB of raw data per raw chunk.
-pub(crate) const MAX_RAW_BYTES: usize = eq(208_802_508, MAX_RAW_BLOCKS * BLOCK_BYTES_4);
+pub const MAX_RAW_BYTES: usize = eq_usize(208_802_508, MAX_RAW_BLOCKS * BLOCK_BYTES_4);
 /// The number of raw blocks in a raw chunk is limited by the maximum raw prefix
 /// size value that can fit in the initial block with `RAW_PREFIX`.
-pub(crate) const MAX_RAW_BLOCKS: usize = eq(52_200_627, 2 + pow(BASE_85, BLOCK_DIGITS_5 - 1));
+pub const MAX_RAW_BLOCKS: usize = eq_usize(52_200_627, 2 + pow(BASE_85, BLOCK_DIGITS_5 - 1));
 
-const fn eq(value: usize, calculation: usize) -> usize {
-    if value != calculation {
-        panic!("calculation did not match actual value");
-    }
-    value
-}
-const fn div(dividend: usize, divisor: usize) -> usize {
-    if dividend % divisor != 0 {
-        panic!("division left remainder");
-    }
-    dividend / divisor
-}
-const fn pow(base: usize, exponent: usize) -> usize {
-    let mut result: usize = 1;
-    let mut exp: usize = 0;
-    while exp < exponent {
-        result = result.checked_mul(base).expect("overflow in pow(...)");
-        exp += 1;
-    }
-    result
-}
+/// Encodes a 4-byte (32-bit) binary block into a 5-digit Z85 block.
+pub const fn encode_z85_block(bytes: &[u8; BLOCK_BYTES_4]) -> [u8; BLOCK_DIGITS_5] {
+    let mut encoded = [0u8; BLOCK_DIGITS_5];
 
-pub const fn encode_z85_block(input: &[u8; BLOCK_BYTES_4]) -> [u8; BLOCK_DIGITS_5] {
-    let mut value: u32 = 0;
-    let mut index = 0;
-    while index < BLOCK_BYTES_4 {
-        let byte = input[index];
-        value = (value << 8) | (byte as u32);
-        index += 1;
-    }
-    let mut output = [0u8; BLOCK_DIGITS_5];
-    let mut index = BLOCK_DIGITS_5;
-    let base = BASE_85 as u32;
-    while index > 0 {
-        index -= 1;
-        output[index] = (value % base) as u8 + 33;
-        value /= base;
-    }
-    output
-}
+    let mut value = u32::from_be_bytes(*bytes) as usize;
 
-pub const fn decode_z85_block(input: &[u8; BLOCK_DIGITS_5]) -> [u8; BLOCK_BYTES_4] {
-    let mut value: u32 = 0;
-    let mut index = 0;
-    let base = BASE_85 as u32;
-    while index < BLOCK_DIGITS_5 {
-        let digit = (input[index] as u32)
-            .checked_sub(33)
-            .expect("invalid z85 digit");
-        if digit >= base {
-            panic!("invalid z85 digit");
-        }
-        value = value
-            .checked_mul(base)
-            .expect("overflow in decode_z85_block(...)")
-            .checked_add(digit)
-            .expect("overflow in decode_z85_block(...)");
-        index += 1;
-    }
-    let mut output = [0u8; BLOCK_BYTES_4];
-    let mut index = BLOCK_BYTES_4;
-    while index > 0 {
-        index -= 1;
-        output[index] = (value & 0xFF) as u8;
-        value >>= 8;
-    }
-    output
-}
+    let mut encoded_index = BLOCK_DIGITS_5 - 1;
+    loop {
+        let digit_value = value % BASE_85;
+        value /= BASE_85;
 
-const fn assert_eq(expected: &[u8], actual: &[u8]) -> bool {
-    if expected.len() != actual.len() {
-        panic!("asserted values were not the same (length mismatch)");
-    }
-    let mut index = 0;
-    while index < expected.len() {
-        if expected[index] != actual[index] {
-            panic!("asserted values were not the same");
+        let digit = Z85[digit_value];
+        encoded[encoded_index] = digit;
+
+        if encoded_index > 0 {
+            encoded_index -= 1;
+            continue;
+        } else {
+            break;
         }
     }
-    true
+
+    encoded
 }
 
-const_assert! {
-    assert_eq(b"00000", &encode_z85_block(b"\x00\x00\x00\x00"))
+/// Decodes a 4-byte (32-bit) binary block into a 5-digit Z85 block.
+///
+/// Errors with `Panic` if an invalid digit is encountered or the value overflows.
+pub const fn decode_z85_block(
+    encoded: &[u8; BLOCK_DIGITS_5],
+) -> Result<[u8; BLOCK_BYTES_4], &'static str> {
+    let mut value: u32 = 0;
+
+    let mut encoded_index = 0;
+    loop {
+        value = match value.checked_mul(BASE_85 as u32) {
+            Some(value) => value,
+            None => return Err("invalid overflowing value in decode_z85_block"),
+        };
+
+        let digit = encoded[encoded_index];
+        let digit_value = Z85_LUT[digit as usize] as usize;
+
+        if (digit_value >= BASE_85) {
+            return Err("invalid Z85 digit in decode_z85_block");
+        }
+        value = match value.checked_add(digit_value as u32) {
+            Some(value) => value,
+            None => return Err("invalid overflowing value in decode_z85_block"),
+        };
+
+        if encoded_index < BLOCK_DIGITS_5 - 1 {
+            encoded_index += 1;
+            continue;
+        } else {
+            break;
+        }
+    }
+
+    let bytes = (value as u32).to_be_bytes();
+
+    Ok(bytes)
 }
 
-pub const S: [u8; 5] = encode_z85_block(b"\x00\x00\x00\x00");
+pub const fn decode_z85_block_or_panic(encoded: &[u8; BLOCK_DIGITS_5]) -> [u8; BLOCK_BYTES_4] {
+    match decode_z85_block(encoded) {
+        Ok(bytes) => bytes,
+        Err(err) => panic!("{}", err),
+    }
+}
+
+macro_rules! assertions {
+    () => {
+        expect(b"00000", b"\x00\x00\x00\x00");
+        expect(b"00001", b"\x00\x00\x00\x01");
+        expect(b"0000#", b"\x00\x00\x00\x54");
+        expect(b"00010", b"\x00\x00\x00\x55");
+        expect(b"000##", b"\x00\x00\x1c\x38");
+        expect(b"00100", b"\x00\x00\x1C\x39");
+        expect(b"00###", b"\x00\x09\x5E\xEC");
+        expect(b"01000", b"\x00\x09\x5E\xED");
+        expect(b"0####", b"\x03\x1C\x84\xB0");
+        expect(b"10000", b"\x03\x1C\x84\xB1");
+        reject(b"#####");
+        reject(b"#0000");
+        reject(b"$0000");
+        expect(b"%0000", b"\xFF\x22\x80\xB2");
+        reject(b"%%%%%");
+        expect(b"%nSc0", b"\xFF\xFF\xFF\xFF");
+        reject(b"%nSc1");
+        expect(b"%nSb#", b"\xFF\xFF\xFF\xFE");
+
+        expect(b"01234", b"\x00\x09\x98\x62");
+        expect(b"56789", b"\x0F\xC7\x99\x43");
+        expect(b"abcde", b"\x1F\x85\x9A\x24");
+        expect(b"fghij", b"\x2F\x43\x9B\x05");
+        expect(b"klmno", b"\x3F\x01\x9B\xE6");
+        expect(b"pqrst", b"\x4E\xBF\x9C\xC7");
+        expect(b"uvwxy", b"\x5E\x7D\x9D\xA8");
+        expect(b"zABCD", b"\x6E\x3B\x9E\x89");
+        expect(b"EFGHI", b"\x7D\xF9\x9F\x6A");
+        expect(b"JKLMN", b"\x8D\xB7\xA0\x4B");
+        expect(b"OPQRS", b"\x9D\x75\xA1\x2C");
+        expect(b"TUVWX", b"\xAD\x33\xA2\x0D");
+        expect(b"YZ.-:", b"\xBC\xF1\xA2\xEE");
+        expect(b"+=^!/", b"\xCC\xAF\xA3\xCF");
+        expect(b"*?&<>", b"\xDC\x6D\xA4\xB0");
+        expect(b"()[]{", b"\xEC\x2B\xA5\x91");
+        expect(b"}@%$#", b"\xFB\xE9\xA6\x72");
+
+        reject(b"\0\0\0\0\0");
+        reject(b"\n\n\n\n\n");
+        reject(b"     ");
+        reject(b"|||||");
+        reject(b"0|000");
+        reject(b"|0000");
+    };
+}
+
+#[cfg(test)]
+#[test]
+fn test_assertions() {
+    fn expect(encoded: &[u8; BLOCK_DIGITS_5], bytes: &[u8; BLOCK_BYTES_4]) {
+        assert_eq!(Ok(bytes), decode_z85_block(encoded).as_ref());
+        assert_eq!(encoded, &encode_z85_block(bytes));
+    }
+
+    fn reject(encoded: &[u8; BLOCK_DIGITS_5]) {
+        assert!(decode_z85_block(encoded).is_err());
+    }
+
+    assertions!();
+}
+
+const _TEST_ASSERTIONS: () = {
+    const fn expect(encoded: &[u8; BLOCK_DIGITS_5], bytes: &[u8; BLOCK_BYTES_4]) {
+        eq_bytes(bytes, &decode_z85_block_or_panic(encoded));
+        eq_bytes(encoded, &encode_z85_block(bytes));
+    }
+
+    const fn reject(encoded: &[u8; BLOCK_DIGITS_5]) {
+        match decode_z85_block(encoded) {
+            Ok(_) => panic!("expected error decoding invalid z85 block, but it succeeded"),
+            Err(_) => {}
+        }
+    }
+
+    assertions!();
+};
