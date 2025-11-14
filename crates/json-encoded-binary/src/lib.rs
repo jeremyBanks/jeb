@@ -1,4 +1,7 @@
 #![allow(unused)]
+#![warn(clippy::std_instead_of_core)]
+
+use std::fmt::Debug;
 
 use nom_supreme::{
     error::ErrorTree, final_parser::final_parser, parser_ext::ParserExt, tag::streaming,
@@ -12,17 +15,35 @@ mod errors;
 
 // MARK: encoding constants
 
+/// This encoding uses base 85 for binary data.
 pub const BASE_85: usize = 85;
+/// This encoding works in 4-byte (32-bit) blocks.
 pub const BLOCK_BYTES_4: usize = 4;
+/// This encoding represents each block with 5 digits.
 pub const BLOCK_DIGITS_5: usize = 5;
 
-pub const BLOCK_DIGITS_BY_BYTES: [usize; BLOCK_BYTES_4 + 1] = [0, 2, 3, 4, 5];
-pub const BLOCK_BYTES_BY_DIGITS: [usize; BLOCK_DIGITS_5 + 1] = [0, -1 as _, 1, 2, 3, 4];
-
+/// The prefix byte preceding raw data.
 pub const RAW_PREFIX: u8 = b'|';
+/// The padding byte following raw data as necessary to align following blocks.
 pub const RAW_PADDING: u8 = b'.';
 
+/// This encoding allows maximum of roughly 200 MiB of raw data per raw chunk.
+pub const MAX_RAW_BYTES: usize = eq_usize(208_802_508, MAX_RAW_BLOCKS * BLOCK_BYTES_4);
+/// This encoding's number of raw blocks in a raw chunk is limited by the
+/// maximum raw prefix size value that can fit in the initial block with
+/// `RAW_PREFIX`.
+pub const MAX_RAW_BLOCKS: usize = eq_usize(52_200_627, 2 + pow(BASE_85, BLOCK_DIGITS_5 - 1));
+
+/// The number of blocks required to encode a given number of bytes.
+pub const BLOCK_DIGITS_BY_BYTES: [usize; BLOCK_BYTES_4 + 1] = [0, 2, 3, 4, 5];
+/// The number of bytes encoded by a given number of digits.
+pub const BLOCK_BYTES_BY_DIGITS: [usize; BLOCK_DIGITS_5 + 1] = [0, -1 as _, 1, 2, 3, 4];
+
+/// When this encoding is used to convert binary data into line of text, our
+/// implementation limits each line to 80 digits.
 pub const TARGET_LINE_SIZE_DIGITS: usize = 80;
+/// When this encoding is split into 80 digit lines, each line contains 64 bytes
+/// of data, which has a good chance of some alignment with binary data.
 pub const TARGET_LINE_SIZE_BYTES: usize = eq_usize(
     64,
     div_exact(TARGET_LINE_SIZE_DIGITS * BLOCK_BYTES_4, BLOCK_DIGITS_5),
@@ -33,15 +54,13 @@ pub const TARGET_RAW_BYTES: usize = eq_usize(65_536, 64 * 1024);
 /// We encode a maximum of 16 Ki blocks per raw chunk.
 pub const TARGET_RAW_BLOCKS: usize = eq_usize(16_384, div_exact(TARGET_RAW_BYTES, BLOCK_BYTES_4));
 
-/// We decode the format's maximum of roughly 200 MiB of raw data per raw chunk.
-pub const MAX_RAW_BYTES: usize = eq_usize(208_802_508, MAX_RAW_BLOCKS * BLOCK_BYTES_4);
-/// The number of raw blocks in a raw chunk is limited by the maximum raw prefix
-/// size value that can fit in the initial block with `RAW_PREFIX`.
-pub const MAX_RAW_BLOCKS: usize = eq_usize(52_200_627, 2 + pow(BASE_85, BLOCK_DIGITS_5 - 1));
-
-// MARK: ???
+// MARK: Simple high-level interface.
 
 pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
+    unimplemented!()
+}
+
+pub fn decode_jeb85(encoded: &[u8]) -> Result<Vec<u8>, Panic> {
     unimplemented!()
 }
 

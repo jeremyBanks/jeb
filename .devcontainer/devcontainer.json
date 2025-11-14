@@ -14,7 +14,8 @@
         "denoland.vscode-deno",
         "rust-lang.rust-analyzer",
         "timonwong.shellcheck",
-        "vadimcn.vscode-lldb"
+        "vadimcn.vscode-lldb",
+        "streetsidesoftware.code-spell-checker"
       ]
     }
   }
