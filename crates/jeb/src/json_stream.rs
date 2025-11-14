@@ -174,11 +174,11 @@ pub async fn write_json_array<W: tokio::io::AsyncWrite + Unpin>(
 
         if i == 0 {
             writer
-                .write_all(format!("[{}\n", json_str).as_bytes())
+                .write_all(format!("[{json_str}\n").as_bytes())
                 .await?;
         } else {
             writer
-                .write_all(format!(",{}\n", json_str).as_bytes())
+                .write_all(format!(",{json_str}\n").as_bytes())
                 .await?;
         }
     }

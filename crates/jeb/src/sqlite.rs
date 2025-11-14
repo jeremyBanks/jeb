@@ -79,12 +79,11 @@ pub fn create_jeb_table(conn: &Connection, table_name: &str) -> Result<()> {
     // Create table with generated column
     conn.execute(
         &format!(
-            "CREATE TABLE IF NOT EXISTS {} (
+            "CREATE TABLE IF NOT EXISTS {table_name} (
                 id INTEGER PRIMARY KEY,
                 json TEXT NOT NULL,
                 total_order BLOB GENERATED ALWAYS AS (jeb_to_bytes(json)) VIRTUAL
-            )",
-            table_name
+            )"
         ),
         [],
     )?;
@@ -92,8 +91,7 @@ pub fn create_jeb_table(conn: &Connection, table_name: &str) -> Result<()> {
     // Create index on the generated column
     conn.execute(
         &format!(
-            "CREATE INDEX IF NOT EXISTS idx_{}_total_order ON {}(total_order)",
-            table_name, table_name
+            "CREATE INDEX IF NOT EXISTS idx_{table_name}_total_order ON {table_name}(total_order)"
         ),
         [],
     )?;
@@ -193,9 +191,7 @@ mod tests {
             let curr = &ordered_values[i];
             assert!(
                 crate::json_total_order(prev, curr) != std::cmp::Ordering::Greater,
-                "Values out of order: {:?} > {:?}",
-                prev,
-                curr
+                "Values out of order: {prev:?} > {curr:?}"
             );
         }
     }

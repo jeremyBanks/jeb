@@ -73,7 +73,7 @@ impl KeyOrderOptions {
 
         // Try to parse as JSON array
         let value: Value = serde_json::from_str(trimmed)
-            .map_err(|e| format!("Failed to parse key order spec as JSON: {}", e))?;
+            .map_err(|e| format!("Failed to parse key order spec as JSON: {e}"))?;
 
         let array = value
             .as_array()
@@ -714,8 +714,7 @@ fn merge_objects(objects: &[JsonObject]) -> Result<JsonObject, String> {
                                 }
                                 Err(_) => {
                                     return Err(format!(
-                                        "Conflict when merging nested objects at key '{}'",
-                                        key
+                                        "Conflict when merging nested objects at key '{key}'"
                                     ));
                                 }
                             }
@@ -725,8 +724,7 @@ fn merge_objects(objects: &[JsonObject]) -> Result<JsonObject, String> {
                         }
                         _ => {
                             return Err(format!(
-                                "Conflict at key '{}': cannot merge different values",
-                                key
+                                "Conflict at key '{key}': cannot merge different values"
                             ));
                         }
                     }

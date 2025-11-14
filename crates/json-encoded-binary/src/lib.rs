@@ -14,7 +14,8 @@
     clippy::needless_continue,
     clippy::manual_assert,
     clippy::cast_sign_loss,
-    clippy::cast_possible_truncation
+    clippy::cast_possible_truncation,
+    clippy::cargo_common_metadata
 )]
 
 mod byte_ranges;

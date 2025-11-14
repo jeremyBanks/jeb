@@ -83,9 +83,9 @@ fn load_config_args() -> Vec<String> {
                 for (key, value) in map {
                     // Convert each key-value to --key=value format
                     let arg = match value {
-                        Value::String(s) => format!("--{}={}", key, s),
-                        Value::Number(n) => format!("--{}={}", key, n),
-                        Value::Bool(b) => format!("--{}={}", key, b),
+                        Value::String(s) => format!("--{key}={s}"),
+                        Value::Number(n) => format!("--{key}={n}"),
+                        Value::Bool(b) => format!("--{key}={b}"),
                         Value::Array(_) | Value::Object(_) => {
                             // For complex types, serialize back to JSON
                             format!(
@@ -218,7 +218,7 @@ async fn create_stream_from_source(
             debug!("Reading from file: {}", path);
             let file = File::open(&path)
                 .await
-                .wrap_err_with(|| format!("Failed to open file: {}", path))?;
+                .wrap_err_with(|| format!("Failed to open file: {path}"))?;
             Ok(Box::pin(parse_json_stream(tokio::io::BufReader::new(file))))
         }
         InputSource::InlineJson(json) => {
@@ -336,11 +336,11 @@ async fn write_json_array<W: tokio::io::AsyncWrite + Unpin>(
         let json_str = serde_json::to_string(obj)?;
         if i == 0 {
             writer
-                .write_all(format!("[{}\n", json_str).as_bytes())
+                .write_all(format!("[{json_str}\n").as_bytes())
                 .await?;
         } else {
             writer
-                .write_all(format!(",{}\n", json_str).as_bytes())
+                .write_all(format!(",{json_str}\n").as_bytes())
                 .await?;
         }
     }
