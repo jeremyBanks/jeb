@@ -30,6 +30,9 @@ rusqlite.workspace = true
 nom.workspace = true
 nom-supreme.workspace = true
 nom_locate.workspace = true
+cgp.workspace = true
+cgp-serde.workspace = true
+cgp-serde-json.workspace = true
 
 [dev-dependencies]
 tokio-test.workspace = true

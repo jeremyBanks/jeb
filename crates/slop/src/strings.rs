@@ -55,7 +55,7 @@ pub const MAX_RAW_BYTES: usize = MAX_RAW_BLOCK_COUNT * BLOCK_BYTES - BLOCK_CHARA
 
 /// Z85 alphabet (85 characters) - note that | is NOT in this alphabet
 /// Reverse lookup table for Z85 decoding
-const VALUES_BY_DIGIT: [u8; 256] = {
+pub const Z85_DECODE: [u8; 256] = {
     let mut table = [255u8; 256];
     let mut i = 0;
     while i < 85 {
