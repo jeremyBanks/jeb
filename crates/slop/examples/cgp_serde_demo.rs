@@ -3,12 +3,16 @@
 // This example shows how to use the full CGP infrastructure with cgp-serde
 // in the slop library.
 
-use slop::cgp_serde::{
-    deserialize_with_context, serialize_with_context, serialize_with_context_pretty,
-    OrderedContext, PrettyContext, StandardContext,
+use {
+    serde_json::json,
+    slop::{
+        KeyOrderOptions,
+        cgp_serde::{
+            OrderedContext, PrettyContext, StandardContext, deserialize_with_context,
+            serialize_with_context, serialize_with_context_pretty,
+        },
+    },
 };
-use slop::KeyOrderOptions;
-use serde_json::json;
 
 fn main() {
     println!("=== CGP-Serde Full Infrastructure Demonstration ===\n");

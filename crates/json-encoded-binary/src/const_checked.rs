@@ -278,7 +278,8 @@ pub const fn usize_eq(expected: usize, calculation: usize) -> usize {
 ///
 /// # Panics
 ///
-/// Panics if the length or contents of `expected` and `calculated` do not match.
+/// Panics if the length or contents of `expected` and `calculated` do not
+/// match.
 pub const fn bytes_eq<'a>(expected: &'a [u8], calculated: &'a [u8]) -> &'a [u8] {
     if expected.len() < calculated.len() {
         panic!("calculated value had lower length than expected value");
