@@ -3,12 +3,12 @@
 //! This demonstrates how nom combinators work and can be composed.
 
 use nom::{
+    IResult,
     branch::alt,
     bytes::complete::{tag, take_until},
     combinator::{map, opt},
     multi::many0,
     sequence::{delimited, preceded, tuple},
-    IResult,
 };
 
 // Re-export the parsing functions from json-encoded-binary for demonstration
@@ -22,7 +22,7 @@ fn example_basic_parsing() {
 
     // Text mode example
     let text_input = "Hello, World!";
-    match json_encoded_binary::decode(text_input) {
+    match json_encoded_binary::decode(text_input.as_bytes()) {
         Ok(bytes) => {
             println!("Text mode input: {:?}", text_input);
             println!("Decoded bytes: {:?}", bytes);
@@ -33,7 +33,7 @@ fn example_basic_parsing() {
 
     // Binary mode example (with backspace prefix)
     let binary_input = "\x08Hello"; // \b prefix makes it binary mode
-    match json_encoded_binary::decode(binary_input) {
+    match json_encoded_binary::decode(binary_input.as_bytes()) {
         Ok(bytes) => {
             println!("Binary mode input: {:?}", binary_input);
             println!("Decoded bytes: {:?}\n", bytes);
@@ -52,8 +52,9 @@ fn parse_json_with_jeb85(input: &str) -> IResult<&str, String> {
     let (input, _) = tag("\"}")(input)?;
 
     // Decode the JEB85 value
-    let decoded = json_encoded_binary::decode(jeb_str)
-        .map_err(|_| nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Verify)))?;
+    let decoded = json_encoded_binary::decode(jeb_str.as_bytes()).map_err(|_| {
+        nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Verify))
+    })?;
 
     Ok((input, String::from_utf8_lossy(&decoded).to_string()))
 }
@@ -75,18 +76,22 @@ fn example_composition() {
 /// Example 3: Parsing multiple JEB85 values
 ///
 /// Parse a stream of JEB85 values separated by newlines
+
+// Helper function to parse a single line
+fn parse_jeb85_line(i: &str) -> IResult<&str, Vec<u8>> {
+    // Parse a line
+    let (i, line) = take_until("\n")(i)?;
+    let (i, _) = tag("\n")(i)?;
+
+    // Decode the JEB85 value
+    let decoded = json_encoded_binary::decode(line.as_bytes())
+        .map_err(|_| nom::Err::Error(nom::error::Error::new(i, nom::error::ErrorKind::Verify)))?;
+
+    Ok((i, decoded))
+}
+
 fn parse_jeb85_stream(input: &str) -> IResult<&str, Vec<Vec<u8>>> {
-    many0(|input| {
-        // Parse a line
-        let (input, line) = take_until("\n")(input)?;
-        let (input, _) = tag("\n")(input)?;
-
-        // Decode the JEB85 value
-        let decoded = json_encoded_binary::decode(line)
-            .map_err(|_| nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Verify)))?;
-
-        Ok((input, decoded))
-    })(input)
+    many0(parse_jeb85_line)(input)
 }
 
 fn example_stream_parsing() {
@@ -120,17 +125,17 @@ fn parse_jeb85_protocol(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
     let length = std::str::from_utf8(length_str)
         .ok()
         .and_then(|s| s.parse::<usize>().ok())
-        .ok_or_else(|| nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Digit)))?;
+        .ok_or_else(|| {
+            nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Digit))
+        })?;
 
     // Take exactly 'length' bytes
     let (input, data_bytes) = nom::bytes::complete::take(length)(input)?;
 
     // Decode as JEB85
-    let data_str = std::str::from_utf8(data_bytes)
-        .map_err(|_| nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Char)))?;
-
-    let decoded = json_encoded_binary::decode(data_str)
-        .map_err(|_| nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Verify)))?;
+    let decoded = json_encoded_binary::decode(data_bytes).map_err(|_| {
+        nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Verify))
+    })?;
 
     Ok((input, decoded))
 }
@@ -163,8 +168,9 @@ fn parse_optional_jeb85(input: &str) -> IResult<&str, (String, Option<Vec<u8>>)>
     let (input, value) = if is_jeb85.is_some() {
         // Parse as JEB85
         let (input, jeb_str) = nom::combinator::rest(input)?;
-        let decoded = json_encoded_binary::decode(jeb_str)
-            .map_err(|_| nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Verify)))?;
+        let decoded = json_encoded_binary::decode(jeb_str.as_bytes()).map_err(|_| {
+            nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Verify))
+        })?;
         (input, Some(decoded))
     } else {
         // Plain text
@@ -189,8 +195,11 @@ fn example_optional() {
 
     match parse_optional_jeb85(encoded) {
         Ok((_, (name, value))) => {
-            println!("Encoded - Name: {}, Value: {:?}\n", name,
-                value.map(|v| String::from_utf8_lossy(&v).to_string()));
+            println!(
+                "Encoded - Name: {}, Value: {:?}\n",
+                name,
+                value.map(|v| String::from_utf8_lossy(&v).to_string())
+            );
         }
         Err(e) => println!("Error: {:?}", e),
     }
@@ -216,13 +225,13 @@ fn example_serde_integration() {
 
     // Process JEB85-encoded fields
     if let Some(data) = json.get("data").and_then(|v| v.as_str()) {
-        if let Ok(decoded) = json_encoded_binary::decode(data) {
+        if let Ok(decoded) = json_encoded_binary::decode(data.as_bytes()) {
             println!("Decoded 'data': {:?}", String::from_utf8_lossy(&decoded));
         }
     }
 
     if let Some(binary) = json.get("binary").and_then(|v| v.as_str()) {
-        if let Ok(decoded) = json_encoded_binary::decode(binary) {
+        if let Ok(decoded) = json_encoded_binary::decode(binary.as_bytes()) {
             println!("Decoded 'binary': {:?}\n", decoded);
         }
     }
@@ -233,8 +242,9 @@ fn example_serde_integration() {
 /// Create a combinator that validates and transforms JEB85 data
 fn parse_validated_text(input: &str) -> IResult<&str, String> {
     // Decode JEB85
-    let decoded = json_encoded_binary::decode(input)
-        .map_err(|_| nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Verify)))?;
+    let decoded = json_encoded_binary::decode(input.as_bytes()).map_err(|_| {
+        nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Verify))
+    })?;
 
     // Ensure it's valid UTF-8
     let text = String::from_utf8(decoded)
@@ -242,7 +252,10 @@ fn parse_validated_text(input: &str) -> IResult<&str, String> {
 
     // Additional validation: must not be empty
     if text.is_empty() {
-        return Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Verify)));
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Verify,
+        )));
     }
 
     Ok(("", text))
@@ -261,7 +274,7 @@ fn example_validation() {
 
     match parse_validated_text(empty) {
         Ok((_, text)) => println!("Empty: {:?}", text),
-        Err(e) => println!("Empty failed validation (expected)\n"),
+        Err(_e) => println!("Empty failed validation (expected)\n"),
     }
 }
 

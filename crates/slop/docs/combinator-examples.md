@@ -1,6 +1,7 @@
 # Nom Combinator Examples for JEB85
 
-This document shows practical examples of how the JEB85 combinators work and can be composed with other nom parsers.
+This document shows practical examples of how the JEB85 combinators work and can
+be composed with other nom parsers.
 
 ## Quick Reference: The Three Combinators
 
@@ -316,6 +317,7 @@ fn parse_validated_jeb85_text(input: &str) -> IResult<&str, String> {
 The split combinator design enables:
 
 ### 1. **Independent Testing**
+
 ```rust
 #[test]
 fn test_text_mode_only() {
@@ -333,6 +335,7 @@ fn test_binary_mode_only() {
 ```
 
 ### 2. **Clear Error Messages**
+
 ```rust
 // Text mode errors are specific to UTF-8/control chars
 parse_text_mode(b"\xFF\xFE") → InvalidUtf8
@@ -342,6 +345,7 @@ parse_binary_mode(b"!!!") → InvalidZ85Character
 ```
 
 ### 3. **Easy Composition**
+
 ```rust
 // You can use just the text validator in other contexts
 fn validate_utf8_field(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
@@ -359,4 +363,5 @@ The split combinator architecture provides:
 - ✅ **Clarity**: Clean separation between text and binary paths
 - ✅ **Error handling**: Specific errors for each validation stage
 
-The key insight: **Small, focused combinators are easier to understand, test, and compose than monolithic parsers.**
+The key insight: **Small, focused combinators are easier to understand, test,
+and compose than monolithic parsers.**

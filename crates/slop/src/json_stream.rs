@@ -1,14 +1,17 @@
-//! Module for converting between streams of text and streams of serde_json::Value
+//! Module for converting between streams of text and streams of
+//! serde_json::Value
 //!
-//! This module provides functionality to parse JSON objects from various text formats
-//! and convert them to/from async streams.
+//! This module provides functionality to parse JSON objects from various text
+//! formats and convert them to/from async streams.
 
-use async_stream::stream;
-use futures::stream::Stream;
-use indexmap::IndexMap;
-use serde_json::Value;
-use tokio::io::{AsyncBufRead, AsyncReadExt, AsyncWriteExt, BufReader};
-use tracing::{debug, info, instrument};
+use {
+    async_stream::stream,
+    futures::stream::Stream,
+    indexmap::IndexMap,
+    serde_json::Value,
+    tokio::io::{AsyncBufRead, AsyncReadExt, AsyncWriteExt, BufReader},
+    tracing::{debug, info, instrument},
+};
 
 /// Type alias for JSON objects using IndexMap to preserve insertion order
 pub type JsonObject = IndexMap<String, Value>;
@@ -152,7 +155,8 @@ fn extract_json_object(input: &str) -> Option<(&str, usize)> {
 /// - Middle lines: `,` followed by each object
 /// - Last line: `]`
 ///
-/// This format is both valid JSON and line-by-line processable (skip first character).
+/// This format is both valid JSON and line-by-line processable (skip first
+/// character).
 ///
 /// # Example Output
 /// ```text
@@ -170,11 +174,11 @@ pub async fn write_json_array<W: tokio::io::AsyncWrite + Unpin>(
 
         if i == 0 {
             writer
-                .write_all(format!("[{}\n", json_str).as_bytes())
+                .write_all(format!("[{json_str}\n").as_bytes())
                 .await?;
         } else {
             writer
-                .write_all(format!(",{}\n", json_str).as_bytes())
+                .write_all(format!(",{json_str}\n").as_bytes())
                 .await?;
         }
     }

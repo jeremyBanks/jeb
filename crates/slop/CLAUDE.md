@@ -5,12 +5,14 @@ A flexible command-line tool for merging, formatting, and searching JSON data.
 ## Workspace Structure
 
 This project uses a Cargo workspace with multiple crates:
+
 - **`crates/jeb`** - Main CLI tool and library
 - **`crates/json-encoded-binary`** - JEB85 binary encoding library
 
 ## Key Documentation
 
 **Read these files before starting work:**
+
 - **[README.md](README.md)** - Project overview, usage, and examples
 - **[DESIGN.md](DESIGN.md)** - Architecture and design decisions
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development workflow and guidelines
@@ -21,6 +23,7 @@ This project uses a Cargo workspace with multiple crates:
 **⚠️ EVERY pull request MUST bump the version in `crates/jeb/Cargo.toml`**
 
 Current versioning scheme (while in 0.0.x):
+
 - Patch version (0.0.X) - All changes while project is experimental
 - Version stays at 0.0.x until project is stable (see README disclaimer)
 - Each crate has independent versioning
@@ -51,11 +54,13 @@ cargo doc --open
 
 ## Running CI Checks Locally
 
-**TL;DR**: Use `scripts/ci-local.sh` to run all CI checks locally before pushing, catching failures early and saving time.
+**TL;DR**: Use `scripts/ci-local.sh` to run all CI checks locally before
+pushing, catching failures early and saving time.
 
 ### Why run CI locally?
 
-- **Catch failures early**: Find CI issues on your machine instead of in GitHub Actions
+- **Catch failures early**: Find CI issues on your machine instead of in GitHub
+  Actions
 - **Save time**: No need to commit/push/wait to see if tests pass
 - **Faster iteration**: Test changes immediately
 - **Free CI minutes**: Local runs don't consume GitHub Actions minutes
@@ -69,13 +74,18 @@ Run all CI checks that GitHub Actions will run:
 ```
 
 This script runs (in order):
-1. **Format check** (`cargo fmt --check`) - Ensures code is formatted correctly
-2. **Linter** (`cargo clippy`) - Catches common mistakes and enforces best practices
-3. **Tests (debug)** (`cargo test`) - Runs all tests in debug mode
-4. **Tests (release)** (`cargo test --release`) - Runs all tests in optimized release mode
-5. **Release build** (`cargo build --release`) - Ensures project builds in release mode
 
-The script exits immediately on first failure, showing you exactly what needs to be fixed.
+1. **Format check** (`cargo fmt --check`) - Ensures code is formatted correctly
+2. **Linter** (`cargo clippy`) - Catches common mistakes and enforces best
+   practices
+3. **Tests (debug)** (`cargo test`) - Runs all tests in debug mode
+4. **Tests (release)** (`cargo test --release`) - Runs all tests in optimized
+   release mode
+5. **Release build** (`cargo build --release`) - Ensures project builds in
+   release mode
+
+The script exits immediately on first failure, showing you exactly what needs to
+be fixed.
 
 ### Skipping the Release Build
 
@@ -94,6 +104,7 @@ Verify your version follows project conventions:
 ```
 
 This checks that:
+
 - Version is in `0.0.x` format (required for this project)
 - Version has been bumped from the base branch (if applicable)
 
@@ -102,6 +113,7 @@ This checks that:
 **Not required, but helpful.** To automatically run CI checks before pushing:
 
 Create `.git/hooks/pre-push`:
+
 ```bash
 #!/bin/bash
 echo "Running CI checks before push..."
@@ -109,18 +121,24 @@ SKIP_BUILD=1 ./scripts/ci-local.sh
 ```
 
 Then make it executable:
+
 ```bash
 chmod +x .git/hooks/pre-push
 ```
 
 You can bypass the hook when needed with:
+
 ```bash
 git push --no-verify
 ```
 
 ### About act (Docker-based GitHub Actions runner)
 
-There's a tool called [act](https://github.com/nektos/act) that runs GitHub Actions workflows locally using Docker. However, it requires Docker to be installed, which isn't available in all development environments. Our bash scripts provide a simpler, more portable alternative that works anywhere Rust is installed.
+There's a tool called [act](https://github.com/nektos/act) that runs GitHub
+Actions workflows locally using Docker. However, it requires Docker to be
+installed, which isn't available in all development environments. Our bash
+scripts provide a simpler, more portable alternative that works anywhere Rust is
+installed.
 
 ## Code Style
 
@@ -133,10 +151,12 @@ There's a tool called [act](https://github.com/nektos/act) that runs GitHub Acti
 ## Core Files
 
 ### jeb crate (`crates/jeb/`)
+
 - `src/lib.rs` - Main library with JSON parsing, sorting, merging logic
 - `src/main.rs` - CLI implementation
 - `src/json_stream.rs` - Stream/text conversion utilities (work in progress)
 - `src/sqlite.rs` - SQLite integration with custom functions
 
 ### json-encoded-binary crate (`crates/json-encoded-binary/`)
+
 - `src/lib.rs` - JEB85 encoding/decoding implementation with nom parser

@@ -1,6 +1,7 @@
 # Nom Combinators in JEB85: A Detailed Guide
 
-This guide explains how the nom combinators in `json-encoded-binary` work and how they can be used and composed.
+This guide explains how the nom combinators in `json-encoded-binary` work and
+how they can be used and composed.
 
 ## Table of Contents
 
@@ -17,6 +18,7 @@ This guide explains how the nom combinators in `json-encoded-binary` work and ho
 ### What is a Combinator?
 
 A **combinator** in nom is a function that:
+
 - Takes some input (usually `&[u8]` or `&str`)
 - Tries to parse it
 - Returns an `IResult<Input, Output>`
@@ -46,7 +48,8 @@ assert_eq!(result, Ok((&b" world"[..], &b"hello"[..])));
 
 ### Why Combinators?
 
-Combinators are **composable** - you can combine simple parsers into complex ones:
+Combinators are **composable** - you can combine simple parsers into complex
+ones:
 
 ```rust
 use nom::{
@@ -118,11 +121,13 @@ fn parse_jeb85(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
 ```
 
 **How it works:**
+
 1. Checks if input starts with `\b` (0x08)
 2. If yes → strip prefix, parse as binary
 3. If no → validate as text
 
 **Usage pattern:**
+
 ```rust
 let text_result = parse_jeb85(b"Hello");
 // Ok((&b""[..], vec![72, 101, 108, 108, 111]))
@@ -166,12 +171,14 @@ fn parse_text_mode(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
 ```
 
 **Validation rules:**
+
 - ✅ Valid UTF-8
 - ✅ ≤ 64 KiB
 - ✅ Only allows `\t`, `\n`, `\r` control chars
 - ❌ Rejects `\0`, `\b`, `\f`, `\v`, etc.
 
 **Example:**
+
 ```rust
 parse_text_mode(b"Hello\nWorld");    // ✅ OK
 parse_text_mode(b"Hello\x00World");  // ❌ Null byte rejected
@@ -193,11 +200,13 @@ fn parse_binary_mode(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
 ```
 
 **How it works:**
+
 1. Uses `many0` to parse zero or more chunks
 2. Each chunk is parsed by `parse_binary_chunk`
 3. Flattens all chunks into a single byte vector
 
 **What's a chunk?** One of:
+
 - **Z85 block** (5 chars → 4 bytes)
 - **Single raw** (`|xxxx` → 4 bytes)
 - **Multi raw** (`N|xxxx...` → N×4 bytes)
@@ -221,11 +230,13 @@ fn parse_binary_chunk(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
 ```
 
 **The `alt` combinator:**
+
 - Tries each parser in order
 - Returns the first successful match
 - Order matters! Terminal must come before multi (both start with `|`)
 
 **Example flow:**
+
 ```
 Input: "|Test"
   ├─ parse_terminal_raw_block → Fails (needs "||")
