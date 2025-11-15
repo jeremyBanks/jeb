@@ -35,8 +35,6 @@ use {
 
 pub use crate::{byte_ranges::*, const_checked::*, errors::*};
 
-
-
 // MARK: encoding constants
 
 /// This encoding uses base 85 for binary data.
@@ -78,8 +76,6 @@ pub const TARGET_RAW_BYTES: usize = usize_eq(65_536, 64 * 1024);
 /// We encode a maximum of 16 Ki blocks per raw chunk.
 pub const TARGET_RAW_BLOCKS: usize = usize_eq(16_384, div_exact(TARGET_RAW_BYTES, BLOCK_BYTES_4));
 
-
-
 // MARK: high-level interface
 
 #[derive(Default)]
@@ -110,8 +106,6 @@ pub fn encode(bytes: &[u8]) -> Vec<u8> {
 pub fn decode(encoded: &[u8]) -> Result<Vec<u8>, Panic> {
     Decoder::default().decode_bytes(encoded)
 }
-
-
 
 // MARK: Z85 block ser/de
 

@@ -4,8 +4,6 @@ use core::mem::swap;
 
 pub use static_assertions::const_assert;
 
-
-
 #[macro_export]
 macro_rules! noop {
     ($($x:expr $(;)?)+) => {
@@ -19,7 +17,6 @@ macro_rules! noop {
         )+
     };
 }
-
 
 /// const-compatible order-preserving set of unique byte values. The byte in the
 /// set will always make up the first `length` items of the `bytes` array, in
@@ -229,13 +226,34 @@ impl OrderedByteSet {
 
         lut
     }
+
+    pub const fn sort(self) -> Self {
+        Self::ALL.and(self)
+    }
+
+    pub const fn eq(self, expected: &[u8]) -> Self {
+        if expected.len() < self.len() {
+            panic!("calculated value had lower length than expected value");
+        } else if expected.len() > self.len() {
+            panic!("calculated value had greater length than expected value");
+        }
+
+        let mut index = 0;
+        while index < expected.len() {
+            if expected[index] != self.bytes[index] {
+                panic!("calculated value did not match expected value");
+            }
+            index += 1;
+        }
+
+        self
+    }
 }
 
 #[expect(non_snake_case)]
 pub const fn OBS(b: &[u8]) -> OrderedByteSet {
     OrderedByteSet::from_bytes(b)
 }
-
 
 /// Asserts that both `usize` arguments are equal, then returns that value.
 pub const fn usize_eq(expected: usize, calculation: usize) -> usize {
@@ -248,8 +266,10 @@ pub const fn usize_eq(expected: usize, calculation: usize) -> usize {
 
 /// Asserts that both `&[u8]` arguments are equal, then returns that value.
 pub const fn bytes_eq<'a>(expected: &'a [u8], calculated: &'a [u8]) -> &'a [u8] {
-    if expected.len() != calculated.len() {
-        panic!("calculated value had different length than expected value");
+    if expected.len() < calculated.len() {
+        panic!("calculated value had lower length than expected value");
+    } else if expected.len() > calculated.len() {
+        panic!("calculated value had greater length than expected value");
     }
 
     let mut index = 0;
