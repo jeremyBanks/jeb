@@ -1,13 +1,13 @@
 // CGP-Serde demonstration example
 //
 // This example shows how to use the full CGP infrastructure with cgp-serde
-// in the jeb library.
+// in the slop library.
 
-use jeb::cgp_serde::{
+use slop::cgp_serde::{
     deserialize_with_context, serialize_with_context, serialize_with_context_pretty,
     OrderedContext, PrettyContext, StandardContext,
 };
-use jeb::KeyOrderOptions;
+use slop::KeyOrderOptions;
 use serde_json::json;
 
 fn main() {

@@ -1,6 +1,6 @@
-# CGP-Serde Integration in jeb
+# CGP-Serde Integration in slop
 
-This document explains how the **full CGP infrastructure** is integrated into the jeb library for modular, context-dependent serialization.
+This document explains how the **full CGP infrastructure** is integrated into the slop library for modular, context-dependent serialization.
 
 > **Implementation Status**: This uses the real `cgp` and `cgp-serde` libraries (cgp v0.6.0, cgp-serde v0.1.0) with full compile-time dispatch and zero runtime overhead.
 
@@ -17,7 +17,7 @@ For more information, see: https://contextgeneric.dev/blog/cgp-serde-release/
 
 ## Integration Overview
 
-The `jeb::cgp_serde` module provides three context types that use the full CGP infrastructure:
+The `slop::cgp_serde` module provides three context types that use the full CGP infrastructure:
 
 **Dependencies**:
 - `cgp` v0.6.0 - Core CGP component system
@@ -29,7 +29,7 @@ The `jeb::cgp_serde` module provides three context types that use the full CGP i
 Provides default serde_json serialization behavior.
 
 ```rust
-use jeb::cgp_serde::{StandardContext, serialize_with_context};
+use slop::cgp_serde::{StandardContext, serialize_with_context};
 use serde_json::json;
 
 let context = StandardContext;
@@ -44,8 +44,8 @@ let serialized = serialize_with_context(&context, &value).unwrap();
 Applies key ordering to JSON objects during serialization.
 
 ```rust
-use jeb::cgp_serde::{OrderedContext, serialize_with_context};
-use jeb::KeyOrderOptions;
+use slop::cgp_serde::{OrderedContext, serialize_with_context};
+use slop::KeyOrderOptions;
 use serde_json::json;
 
 let key_order = KeyOrderOptions {
@@ -72,7 +72,7 @@ let serialized = serialize_with_context(&context, &value).unwrap();
 Serializes JSON with human-friendly formatting.
 
 ```rust
-use jeb::cgp_serde::{PrettyContext, serialize_with_context_pretty};
+use slop::cgp_serde::{PrettyContext, serialize_with_context_pretty};
 use serde_json::json;
 
 let context = PrettyContext::new();
@@ -92,7 +92,7 @@ let serialized = serialize_with_context_pretty(&context, &value).unwrap();
 All contexts also support deserialization:
 
 ```rust
-use jeb::cgp_serde::{StandardContext, deserialize_with_context};
+use slop::cgp_serde::{StandardContext, deserialize_with_context};
 use serde_json::Value;
 
 let context = StandardContext;
@@ -107,8 +107,8 @@ assert_eq!(value["name"], "Bob");
 The module provides a helper function to apply key ordering transformations:
 
 ```rust
-use jeb::cgp_serde::apply_context_ordering;
-use jeb::KeyOrderOptions;
+use slop::cgp_serde::apply_context_ordering;
+use slop::KeyOrderOptions;
 use serde_json::json;
 
 let value = json!({
@@ -175,7 +175,7 @@ All context resolution happens at compile time. The `SerializeWithContext` wrapp
 implements `serde::Serialize` by delegating to the context's `serialize` method,
 with no runtime overhead.
 
-## Benefits for jeb
+## Benefits for slop
 
 ### 1. Multiple Serialization Strategies
 
@@ -188,7 +188,7 @@ Before CGP-serde, we had one serialization path. Now we can have:
 
 ### 2. Extensibility
 
-Users of the jeb library can define their own contexts and providers:
+Users of the slop library can define their own contexts and providers:
 
 ```rust
 // User-defined context
@@ -219,14 +219,14 @@ let readable_json = serialize_with_context_pretty(&pretty, &value)?;
 
 ## Integration with Existing Features
 
-CGP-serde complements jeb's existing features:
+CGP-serde complements slop's existing features:
 
 ### JSON Total Ordering
 
 The `json_total_order` function remains independent and can be used alongside CGP contexts:
 
 ```rust
-use jeb::{json_total_order, cgp_serde::StandardContext};
+use slop::{json_total_order, cgp_serde::StandardContext};
 use std::cmp::Ordering;
 
 let v1 = json!("string");
@@ -298,4 +298,4 @@ CGP-serde uses compile-time dispatch, so there is **zero runtime overhead** comp
 
 ## License
 
-The CGP-serde integration in jeb is licensed under the same terms as the jeb project (MIT OR Apache-2.0).
+The CGP-serde integration in slop is licensed under the same terms as the slop project (MIT OR Apache-2.0).

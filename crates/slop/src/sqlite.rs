@@ -3,9 +3,11 @@
 //! This module provides SQLite custom functions and utilities for working with
 //! JSON data using jeb's total ordering and binary encoding.
 
-use crate::to_sortable_bytes;
-use rusqlite::{functions::FunctionFlags, Connection, Result};
-use serde_json::Value;
+use {
+    crate::to_sortable_bytes,
+    rusqlite::{Connection, Result, functions::FunctionFlags},
+    serde_json::Value,
+};
 
 /// Register jeb custom functions with a SQLite connection
 ///
@@ -14,8 +16,7 @@ use serde_json::Value;
 ///
 /// # Example
 /// ```no_run
-/// use rusqlite::Connection;
-/// use jeb::sqlite::register_jeb_functions;
+/// use {jeb::sqlite::register_jeb_functions, rusqlite::Connection};
 ///
 /// let conn = Connection::open_in_memory()?;
 /// register_jeb_functions(&conn)?;
@@ -64,8 +65,10 @@ pub fn register_jeb_functions(conn: &Connection) -> Result<()> {
 ///
 /// # Example
 /// ```no_run
-/// use rusqlite::Connection;
-/// use jeb::sqlite::{register_jeb_functions, create_jeb_table};
+/// use {
+///     jeb::sqlite::{create_jeb_table, register_jeb_functions},
+///     rusqlite::Connection,
+/// };
 ///
 /// let conn = Connection::open_in_memory()?;
 /// register_jeb_functions(&conn)?;
@@ -76,12 +79,11 @@ pub fn create_jeb_table(conn: &Connection, table_name: &str) -> Result<()> {
     // Create table with generated column
     conn.execute(
         &format!(
-            "CREATE TABLE IF NOT EXISTS {} (
+            "CREATE TABLE IF NOT EXISTS {table_name} (
                 id INTEGER PRIMARY KEY,
                 json TEXT NOT NULL,
                 total_order BLOB GENERATED ALWAYS AS (jeb_to_bytes(json)) VIRTUAL
-            )",
-            table_name
+            )"
         ),
         [],
     )?;
@@ -89,8 +91,7 @@ pub fn create_jeb_table(conn: &Connection, table_name: &str) -> Result<()> {
     // Create index on the generated column
     conn.execute(
         &format!(
-            "CREATE INDEX IF NOT EXISTS idx_{}_total_order ON {}(total_order)",
-            table_name, table_name
+            "CREATE INDEX IF NOT EXISTS idx_{table_name}_total_order ON {table_name}(total_order)"
         ),
         [],
     )?;
@@ -100,8 +101,7 @@ pub fn create_jeb_table(conn: &Connection, table_name: &str) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use serde_json::json;
+    use {super::*, serde_json::json};
 
     #[test]
     fn test_register_jeb_functions() {
@@ -159,10 +159,9 @@ mod tests {
         ];
 
         for value in &test_values {
-            conn.execute(
-                "INSERT INTO entities (json) VALUES (?)",
-                [serde_json::to_string(value).unwrap()],
-            )
+            conn.execute("INSERT INTO entities (json) VALUES (?)", [
+                serde_json::to_string(value).unwrap(),
+            ])
             .unwrap();
         }
 
@@ -192,9 +191,7 @@ mod tests {
             let curr = &ordered_values[i];
             assert!(
                 crate::json_total_order(prev, curr) != std::cmp::Ordering::Greater,
-                "Values out of order: {:?} > {:?}",
-                prev,
-                curr
+                "Values out of order: {prev:?} > {curr:?}"
             );
         }
     }
@@ -208,10 +205,9 @@ mod tests {
         // Insert numbers in random order
         for &n in &[5, 2, 8, 1, 9, 3, 7, 4, 6] {
             let json = json!(n);
-            conn.execute(
-                "INSERT INTO entities (json) VALUES (?)",
-                [serde_json::to_string(&json).unwrap()],
-            )
+            conn.execute("INSERT INTO entities (json) VALUES (?)", [
+                serde_json::to_string(&json).unwrap(),
+            ])
             .unwrap();
         }
 
@@ -258,10 +254,9 @@ mod tests {
         ];
 
         for value in test_data {
-            conn.execute(
-                "INSERT INTO entities (json) VALUES (?)",
-                [serde_json::to_string(&value).unwrap()],
-            )
+            conn.execute("INSERT INTO entities (json) VALUES (?)", [
+                serde_json::to_string(&value).unwrap(),
+            ])
             .unwrap();
         }
 
@@ -269,7 +264,8 @@ mod tests {
         // Note: Keys are alphabetically ordered, so "id" comes before "ns"
         let mut prefix_start = to_sortable_bytes(&json!({"id": 1, "ns": "user"}));
 
-        // Remove the final terminator (\0\0) to allow prefix matching with additional fields
+        // Remove the final terminator (\0\0) to allow prefix matching with additional
+        // fields
         if prefix_start.len() >= 2 {
             prefix_start.truncate(prefix_start.len() - 2);
         }
@@ -318,10 +314,9 @@ mod tests {
         ];
 
         for value in test_data {
-            conn.execute(
-                "INSERT INTO entities (json) VALUES (?)",
-                [serde_json::to_string(&value).unwrap()],
-            )
+            conn.execute("INSERT INTO entities (json) VALUES (?)", [
+                serde_json::to_string(&value).unwrap(),
+            ])
             .unwrap();
         }
 

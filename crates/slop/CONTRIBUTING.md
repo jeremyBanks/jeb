@@ -6,15 +6,18 @@
 
 **Every pull request MUST bump the version number in `Cargo.toml`.**
 
-Our CI checks enforce that the PR version is different from the base branch version. If you forget to bump the version, your PR will fail with:
+Our CI checks enforce that the PR version is different from the base branch
+version. If you forget to bump the version, your PR will fail with:
 
 ```
 ERROR: PR version (X.X.X) must be different from base branch version (X.X.X)
 ```
 
 To fix this:
+
 1. Open `Cargo.toml`
-2. Increment the version number (we follow [Semantic Versioning](https://semver.org/)):
+2. Increment the version number (we follow
+   [Semantic Versioning](https://semver.org/)):
    - **Patch version** (0.0.X) - Bug fixes and minor changes
    - **Minor version** (0.X.0) - New features, backward compatible
    - **Major version** (X.0.0) - Breaking changes

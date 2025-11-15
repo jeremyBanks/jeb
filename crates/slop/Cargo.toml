@@ -1,15 +1,16 @@
 [package]
-name = "jeb"
+name = "slop"
 version.workspace = true
-edition.workspace = true
+publish.workspace = true
 license.workspace = true
+edition.workspace = true
 
 [lib]
-name = "jeb"
+name = "slop"
 path = "src/lib.rs"
 
 [[bin]]
-name = "jeb"
+name = "slop"
 path = "src/main.rs"
 
 [dependencies]

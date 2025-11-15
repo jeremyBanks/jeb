@@ -1,579 +1,278 @@
-//! JSON Encoded Binary (JEB85)
-//!
-//! A library for encoding binary data in JSON-compatible formats using Z85 with extensions.
-//!
-//! JEB85 supports two modes:
-//! - **Text mode**: Valid UTF-8 strings without control characters (except those with single-char JSON escapes), ≤64 KiB
-//! - **Binary mode**: Prefixed with `\b` (0x08), uses Z85 encoding with raw chunk extensions for readability
-//!
-//! # Encoding Strategy
-//!
-//! Binary mode uses Z85 encoding with special raw chunk markers for preserving readable ASCII:
-//! - Single raw block: `|xxxx` (4 bytes of raw data)
-//! - Multi-block raw: `N|xxxx...` where N is Z85-encoded (count-2), followed by count×4 bytes
-//! - Terminal raw: `||...` (rest of data is raw, no length limit)
-//!
-//! All raw chunks are padded with `.` to maintain 5-character block alignment.
+#![warn(
+    clippy::std_instead_of_core,
+    clippy::pedantic,
+    clippy::cargo,
+    clippy::nursery,
+    clippy::allow_attributes,
+    clippy::arbitrary_source_item_ordering
+)]
+#![expect(
+    unused,
+    missing_docs,
+    clippy::missing_errors_doc,
+    clippy::redundant_else,
+    clippy::needless_continue,
+    clippy::manual_assert,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation,
+    clippy::cargo_common_metadata,
+    clippy::default_constructed_unit_structs,
+    clippy::too_long_first_doc_paragraph,
+    clippy::arbitrary_source_item_ordering
+)]
+// cSpell:ignoreRegExp b"(\\?.){5}"
 
-#![warn(missing_docs)]
+mod byte_ranges;
+mod const_checked;
+mod errors;
 
-use nom::{
-    branch::alt,
-    bytes::complete::{tag as bytes_tag, take, take_while_m_n},
-    combinator::{map, map_res},
-    multi::many0,
-    sequence::preceded,
-    IResult, Parser,
-};
-use nom_supreme::{error::ErrorTree, final_parser::final_parser, parser_ext::ParserExt};
-
-// For future use: position tracking
-#[allow(unused_imports)]
-use nom_locate::LocatedSpan;
-
-/// Maximum size for text mode strings (64 KiB)
-pub const MAX_TEXT_SIZE: usize = 64 * 1024;
-
-/// Default maximum chunk size for binary mode (64 KiB)
-pub const DEFAULT_CHUNK_SIZE: usize = 64 * 1024;
-
-/// Z85 alphabet (85 characters) - note that | is NOT in this alphabet
-pub const Z85_ALPHABET: &[u8; 85] =
-    b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
-
-/// Reverse lookup table for Z85 decoding
-const Z85_DECODE: [u8; 256] = {
-    let mut table = [255u8; 256];
-    let mut i = 0;
-    while i < 85 {
-        table[Z85_ALPHABET[i] as usize] = i as u8;
-        i += 1;
-    }
-    table
+use {
+    core::fmt::Debug,
+    nom_supreme::{
+        error::ErrorTree, final_parser::final_parser, parser_ext::ParserExt, tag::streaming,
+    },
 };
 
-/// Error type for JEB85 operations
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Jeb85Error {
-    /// Invalid Z85 character
-    InvalidZ85Character(u8),
-    /// Invalid UTF-8 in text mode
-    InvalidUtf8,
-    /// Text contains prohibited control characters
-    ProhibitedControlChar(u8),
-    /// Text too large for text mode
-    TextTooLarge,
-    /// Parse error
-    ParseError(String),
-}
+pub use crate::{byte_ranges::*, const_checked::*, errors::*};
 
-impl std::fmt::Display for Jeb85Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InvalidZ85Character(c) => write!(f, "Invalid Z85 character: 0x{:02X}", c),
-            Self::InvalidUtf8 => write!(f, "Invalid UTF-8 in text mode"),
-            Self::ProhibitedControlChar(c) => {
-                write!(f, "Prohibited control character: 0x{:02X}", c)
-            }
-            Self::TextTooLarge => write!(
-                f,
-                "Text too large for text mode (max {} bytes)",
-                MAX_TEXT_SIZE
-            ),
-            Self::ParseError(msg) => write!(f, "Parse error: {}", msg),
-        }
+// MARK: encoding constants
+
+/// This encoding uses base 85 for binary data.
+pub const BASE_85: usize = 85;
+/// This encoding works in 4-byte (32-bit) blocks.
+pub const BLOCK_BYTES_4: usize = 4;
+/// This encoding represents each block with 5 digits.
+pub const BLOCK_DIGITS_5: usize = 5;
+
+/// The prefix byte preceding raw data.
+pub const RAW_PREFIX: u8 = b'|';
+/// The padding byte following raw data as necessary to align following blocks.
+pub const RAW_PADDING: u8 = b'.';
+
+/// This encoding allows maximum of roughly 200 MiB of raw data per raw chunk.
+pub const MAX_RAW_BYTES: usize = usize_eq(208_802_508, MAX_RAW_BLOCKS * BLOCK_BYTES_4);
+/// This encoding's number of raw blocks in a raw chunk is limited by the
+/// maximum raw prefix size value that can fit in the initial block with
+/// `RAW_PREFIX`.
+pub const MAX_RAW_BLOCKS: usize = usize_eq(52_200_627, 2 + pow(BASE_85, BLOCK_DIGITS_5 - 1));
+
+/// The number of blocks required to encode a given number of bytes.
+pub const BLOCK_DIGITS_BY_BYTES: [usize; BLOCK_BYTES_4 + 1] = [0, 2, 3, 4, 5];
+/// The number of bytes encoded by a given number of digits.
+pub const BLOCK_BYTES_BY_DIGITS: [usize; BLOCK_DIGITS_5 + 1] = [0, -1 as _, 1, 2, 3, 4];
+
+/// When this encoding is used to convert binary data into line of text, our
+/// implementation limits each line to 80 digits.
+pub const TARGET_LINE_SIZE_DIGITS: usize = 80;
+/// When this encoding is split into 80 digit lines, each line contains 64 bytes
+/// of data, which has a good chance of some alignment with binary data.
+pub const TARGET_LINE_SIZE_BYTES: usize = usize_eq(
+    64,
+    div_exact(TARGET_LINE_SIZE_DIGITS * BLOCK_BYTES_4, BLOCK_DIGITS_5),
+);
+
+/// We encode a maximum of 64 KiB of raw data per raw chunk.
+pub const TARGET_RAW_BYTES: usize = usize_eq(65_536, 64 * 1024);
+/// We encode a maximum of 16 Ki blocks per raw chunk.
+pub const TARGET_RAW_BLOCKS: usize = usize_eq(16_384, div_exact(TARGET_RAW_BYTES, BLOCK_BYTES_4));
+
+// MARK: high-level interface
+
+#[derive(Default)]
+pub struct Encoder;
+impl Encoder {
+    #[must_use]
+    #[expect(clippy::unused_self)]
+    pub fn encode_bytes(&self, bytes: &[u8]) -> Vec<u8> {
+        unimplemented!()
     }
 }
 
-impl std::error::Error for Jeb85Error {}
+#[derive(Default)]
+pub struct Decoder;
 
-/// Encode 4 bytes as 5 Z85 characters
-fn encode_z85_block(input: &[u8; 4]) -> [u8; 5] {
-    let value = u32::from_be_bytes(*input);
-    let mut output = [0u8; 5];
-    let mut val = value;
-
-    for i in (0..5).rev() {
-        output[i] = Z85_ALPHABET[(val % 85) as usize];
-        val /= 85;
+impl Decoder {
+    #[expect(clippy::unused_self)]
+    pub fn decode_bytes(&self, encoded: &[u8]) -> Result<Vec<u8>, Panic> {
+        unimplemented!()
     }
-
-    output
 }
 
-/// Decode 5 Z85 characters to 4 bytes
-fn decode_z85_block(input: &[u8; 5]) -> Result<[u8; 4], Jeb85Error> {
-    let mut value = 0u32;
-
-    for &byte in input {
-        let digit = Z85_DECODE[byte as usize];
-        if digit == 255 {
-            return Err(Jeb85Error::InvalidZ85Character(byte));
-        }
-        value = value * 85 + digit as u32;
-    }
-
-    Ok(value.to_be_bytes())
+#[must_use]
+pub fn encode(bytes: &[u8]) -> Vec<u8> {
+    Encoder::default().encode_bytes(bytes)
 }
 
-/// Encode a count as Z85 digits (1-4 characters)
-fn encode_z85_count(count: usize) -> Vec<u8> {
-    let mut result = Vec::new();
-    let mut val = count;
-
-    if val == 0 {
-        return vec![Z85_ALPHABET[0]];
-    }
-
-    while val > 0 {
-        result.push(Z85_ALPHABET[val % 85]);
-        val /= 85;
-    }
-
-    result.reverse();
-    result
+pub fn decode(encoded: &[u8]) -> Result<Vec<u8>, Panic> {
+    Decoder::default().decode_bytes(encoded)
 }
 
-/// Check if a byte is a JSON-safe printable ASCII character (no escape needed)
-fn is_json_safe_ascii(byte: u8) -> bool {
-    matches!(byte, 0x20..=0x21 | 0x23..=0x5B | 0x5D..=0x7E)
-    // Excludes: 0x22 ("), 0x5C (\), and all control chars
-}
+// MARK: Z85 block ser/de
 
-/// Check if data should use text mode
-fn should_use_text_mode(data: &[u8]) -> bool {
-    if data.len() > MAX_TEXT_SIZE {
-        return false;
-    }
+/// Encodes a 4-byte (32-bit) binary block into a 5-digit Z85 block.
+#[must_use]
+pub const fn encode_z85_block(bytes: [u8; BLOCK_BYTES_4]) -> [u8; BLOCK_DIGITS_5] {
+    let mut encoded = [0u8; BLOCK_DIGITS_5];
 
-    // Check if valid UTF-8
-    if std::str::from_utf8(data).is_err() {
-        return false;
-    }
+    let mut value = u32::from_be_bytes(bytes) as usize;
 
-    // Check for prohibited control characters
-    for &byte in data {
-        match byte {
-            // Allow only the three common whitespace control chars
-            b'\t' | b'\n' | b'\r' => continue,
-            // Prohibit backspace (our binary marker) and all other control chars
-            0x00..=0x08 | 0x0B..=0x1F | 0x7F => return false,
-            _ => continue,
-        }
-    }
+    let mut encoded_index = BLOCK_DIGITS_5 - 1;
+    loop {
+        let digit_value = value % BASE_85;
+        value /= BASE_85;
 
-    true
-}
+        let digit = Z85[digit_value];
+        encoded[encoded_index] = digit;
 
-/// Encode data using JEB85
-pub fn encode(data: &[u8]) -> String {
-    if should_use_text_mode(data) {
-        // Text mode: return as-is (will be JSON-escaped by the JSON encoder)
-        return String::from_utf8(data.to_vec()).expect("validated UTF-8");
-    }
-
-    // Binary mode: prefix with \b and encode
-    let mut result = String::from("\u{0008}"); // \b character
-    encode_binary(data, &mut result);
-    result
-}
-
-/// Encode binary data (without the \b prefix)
-fn encode_binary(data: &[u8], output: &mut String) {
-    let mut i = 0;
-
-    while i < data.len() {
-        // Look ahead to find runs of JSON-safe blocks
-        let run_start = i;
-        let mut run_blocks = 0;
-
-        while i < data.len() && (i - run_start) / 4 < 85usize.pow(4) {
-            let block_end = (i + 4).min(data.len());
-            if block_end - i == 4 && data[i..block_end].iter().all(|&b| is_json_safe_ascii(b)) {
-                run_blocks += 1;
-                i += 4;
-            } else {
-                break;
-            }
-        }
-
-        // Emit raw chunk if we found any
-        if run_blocks > 0 {
-            if run_blocks == 1 {
-                // Single block: |xxxx
-                output.push('|');
-                output.push_str(std::str::from_utf8(&data[run_start..run_start + 4]).unwrap());
-            } else {
-                // Multi-block: N|xxxx... (N = blocks - 2)
-                let count_encoded = encode_z85_count(run_blocks - 2);
-                output.push_str(std::str::from_utf8(&count_encoded).unwrap());
-                output.push('|');
-
-                // Emit the raw blocks
-                let raw_len = run_blocks * 4;
-                output
-                    .push_str(std::str::from_utf8(&data[run_start..run_start + raw_len]).unwrap());
-
-                // Pad to 5-char alignment if needed
-                let total_len = count_encoded.len() + 1 + raw_len; // count + | + data
-                let padding_needed = (5 - (total_len % 5)) % 5;
-                for _ in 0..padding_needed {
-                    output.push('.');
-                }
-            }
+        if encoded_index > 0 {
+            encoded_index -= 1;
+            continue;
         } else {
-            // No raw run, encode as Z85
-            let block_end = (i + 4).min(data.len());
-            let block_size = block_end - i;
-
-            if block_size == 4 {
-                // Full block
-                let mut block_data = [0u8; 4];
-                block_data.copy_from_slice(&data[i..i + 4]);
-                let encoded = encode_z85_block(&block_data);
-                output.push_str(std::str::from_utf8(&encoded).unwrap());
-                i += 4;
-            } else {
-                // Partial block at end - use terminal raw chunk
-                output.push_str("||");
-                // Emit remaining bytes as-is (may not be valid UTF-8, but that's okay for raw data)
-                for &byte in &data[i..] {
-                    output.push(byte as char);
-                }
-                i = data.len();
-            }
+            break;
         }
     }
+
+    encoded
 }
 
-/// Parse a Z85 block (5 characters)
-fn parse_z85_block(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
-    map_res(
-        take_while_m_n(5, 5, |c: u8| Z85_DECODE[c as usize] != 255),
-        |bytes: &[u8]| {
-            let mut arr = [0u8; 5];
-            arr.copy_from_slice(bytes);
-            decode_z85_block(&arr).map(|b| b.to_vec())
-        },
-    )
-    .context("Z85 block")
-    .parse(input)
-}
+/// Decodes a 5-digit Z85 block into a 4-byte (32-bit) binary block.
+///
+/// Errors with `Panic` if an invalid digit is encountered or the value
+/// overflows.
+pub const fn decode_z85_block(
+    encoded: [u8; BLOCK_DIGITS_5],
+) -> Result<[u8; BLOCK_BYTES_4], &'static str> {
+    let mut value: u32 = 0;
 
-/// Parse a single raw block (|xxxx)
-fn parse_single_raw_block(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
-    preceded(
-        bytes_tag(b"|"),
-        map(take(4usize), |bytes: &[u8]| bytes.to_vec()),
-    )
-    .context("single raw block")
-    .parse(input)
-}
+    let mut encoded_index = 0;
+    loop {
+        value = match value.checked_mul(BASE_85 as u32) {
+            Some(value) => value,
+            None => return Err("decode_z85_block failed: invalid overflowing leading digit"),
+        };
 
-/// Parse a terminal raw block (||...)
-fn parse_terminal_raw_block(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
-    let (input, _) = bytes_tag(b"||")
-        .context("terminal raw marker")
-        .parse(input)?;
-    // Take everything remaining and decode UTF-8 chars back to bytes
-    // The encoder uses `byte as char`, which treats bytes as Latin-1 (codepoints 0-255)
-    // These get UTF-8 encoded in the string, so we need to decode them back
-    let text = std::str::from_utf8(input).map_err(|_| {
-        use nom_supreme::error::BaseErrorKind;
-        nom::Err::Error(ErrorTree::Base {
-            location: input,
-            kind: BaseErrorKind::Kind(nom::error::ErrorKind::Char),
-        })
-    })?;
-    let bytes: Vec<u8> = text.chars().map(|c| c as u8).collect();
-    Ok((&b""[..], bytes))
-}
+        let digit = encoded[encoded_index];
+        let digit_value = Z85_LUT[digit as usize] as usize;
 
-/// Parse a multi-block raw chunk (N|...)
-fn parse_multi_raw_block(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
-    let (input, count_chars) = take_while_m_n(1, 4, |c: u8| Z85_DECODE[c as usize] != 255)
-        .context("count digits")
-        .parse(input)?;
-    let (input, _) = bytes_tag(b"|")
-        .context("raw block separator")
-        .parse(input)?;
+        if (digit_value >= BASE_85) {
+            return Err("decode_z85_block failed: invalid digit");
+        }
 
-    // Decode the count (number of blocks - 2)
-    let mut count_value = 0usize;
-    for &byte in count_chars {
-        let digit = Z85_DECODE[byte as usize] as usize;
-        count_value = count_value * 85 + digit;
-    }
-    let num_blocks = count_value + 2;
+        value = match value.checked_add(digit_value as u32) {
+            Some(value) => value,
+            None => return Err("decode_z85_block failed: invalid overflowing value"),
+        };
 
-    // Calculate total chars needed (data + padding to 5-char alignment)
-    let raw_bytes = num_blocks * 4;
-    let prefix_len = count_chars.len() + 1; // count + |
-    let total_len = prefix_len + raw_bytes;
-    let padding_needed = (5 - (total_len % 5)) % 5;
-    let chars_to_read = raw_bytes + padding_needed;
-
-    // Read the data + padding
-    let (input, bytes) = take(chars_to_read).context("raw block data").parse(input)?;
-
-    // Remove trailing padding (.) characters
-    let mut result = bytes.to_vec();
-    while result.last() == Some(&b'.') && result.len() > raw_bytes {
-        result.pop();
+        if encoded_index < BLOCK_DIGITS_5 - 1 {
+            encoded_index += 1;
+            continue;
+        } else {
+            break;
+        }
     }
 
-    // Trim to exact size
-    result.truncate(raw_bytes);
+    let bytes = value.to_be_bytes();
 
-    Ok((input, result))
+    Ok(bytes)
 }
 
-/// Parse a binary mode chunk (Z85 block or raw chunk)
-fn parse_binary_chunk(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
-    alt((
-        parse_terminal_raw_block,
-        parse_multi_raw_block,
-        parse_single_raw_block,
-        parse_z85_block,
-    ))
-    .context("binary chunk")
-    .parse(input)
-}
-
-/// Parse binary mode data (after the \b prefix)
-fn parse_binary_mode(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
-    let (input, chunks) = many0(parse_binary_chunk)
-        .context("binary mode data")
-        .parse(input)?;
-
-    // Flatten chunks into a single byte vector
-    let result = chunks.into_iter().flatten().collect();
-
-    Ok((input, result))
-}
-
-/// Parse text mode data (validates UTF-8 only)
-fn parse_text_mode(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
-    // Use map_res to convert UTF-8 validation into a nom combinator
-    map_res(
-        nom::combinator::rest, // Take all remaining input
-        |bytes: &[u8]| {
-            // Validate it's UTF-8
-            std::str::from_utf8(bytes)?;
-            Ok::<Vec<u8>, std::str::Utf8Error>(bytes.to_vec())
-        },
-    )
-    .context("text mode (UTF-8)")
-    .parse(input)
-}
-
-/// Parse JEB85-encoded data (parent combinator that routes to text or binary mode)
-fn parse_jeb85(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
-    // Check for binary mode prefix (\b = 0x08)
-    if input.starts_with(&[0x08]) {
-        // Binary mode: skip the prefix and parse binary data
-        let (input, _) = bytes_tag(&[0x08])
-            .context("binary mode prefix (\\b)")
-            .parse(input)?;
-        parse_binary_mode(input)
-    } else {
-        // Text mode: validate UTF-8
-        parse_text_mode(input)
+#[must_use]
+pub const fn decode_z85_block_or_panic(encoded: [u8; BLOCK_DIGITS_5]) -> [u8; BLOCK_BYTES_4] {
+    match decode_z85_block(encoded) {
+        Ok(bytes) => bytes,
+        Err(err) => panic!("{}", err),
     }
-}
-
-/// Decode a JEB85-encoded string
-pub fn decode(input: &str) -> Result<Vec<u8>, Jeb85Error> {
-    let bytes = input.as_bytes();
-
-    // Use final_parser to ensure all input is consumed and get better error messages
-    let data = final_parser(parse_jeb85)(bytes).map_err(|e: ErrorTree<&[u8]>| {
-        // Convert ErrorTree to our error type
-        // ErrorTree provides much better error messages with context
-        Jeb85Error::ParseError(format!("{:?}", e))
-    })?;
-
-    Ok(data)
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
+#[test]
+#[expect(clippy::trivially_copy_pass_by_ref)]
+fn test_z85_blocks() {
+    macro_rules! assertions {
+        () => {
+            expect(b"00000", b"\x00\x00\x00\x00");
+            expect(b"00001", b"\x00\x00\x00\x01");
+            expect(b"0000#", b"\x00\x00\x00\x54");
+            expect(b"00010", b"\x00\x00\x00\x55");
+            expect(b"000##", b"\x00\x00\x1c\x38");
+            expect(b"00100", b"\x00\x00\x1C\x39");
+            expect(b"00###", b"\x00\x09\x5E\xEC");
+            expect(b"01000", b"\x00\x09\x5E\xED");
+            expect(b"0####", b"\x03\x1C\x84\xB0");
+            expect(b"10000", b"\x03\x1C\x84\xB1");
+            reject(b"#####");
+            reject(b"#0000");
+            reject(b"$0000");
+            expect(b"%0000", b"\xFF\x22\x80\xB2");
+            reject(b"%%%%%");
+            expect(b"%nSc0", b"\xFF\xFF\xFF\xFF");
+            reject(b"%nSc1");
+            expect(b"%nSb#", b"\xFF\xFF\xFF\xFE");
 
-    #[test]
-    fn test_z85_encode_decode() {
-        let input = [0x86, 0x4F, 0xD2, 0x6F];
-        let encoded = encode_z85_block(&input);
-        assert_eq!(&encoded, b"Hello");
+            expect(b"01234", b"\x00\x09\x98\x62");
+            expect(b"56789", b"\x0F\xC7\x99\x43");
+            expect(b"abcde", b"\x1F\x85\x9A\x24");
+            expect(b"fghij", b"\x2F\x43\x9B\x05");
+            expect(b"klmno", b"\x3F\x01\x9B\xE6");
+            expect(b"pqrst", b"\x4E\xBF\x9C\xC7");
+            expect(b"uvwxy", b"\x5E\x7D\x9D\xA8");
+            expect(b"zABCD", b"\x6E\x3B\x9E\x89");
+            expect(b"EFGHI", b"\x7D\xF9\x9F\x6A");
+            expect(b"JKLMN", b"\x8D\xB7\xA0\x4B");
+            expect(b"OPQRS", b"\x9D\x75\xA1\x2C");
+            expect(b"TUVWX", b"\xAD\x33\xA2\x0D");
+            expect(b"YZ.-:", b"\xBC\xF1\xA2\xEE");
+            expect(b"+=^!/", b"\xCC\xAF\xA3\xCF");
+            expect(b"*?&<>", b"\xDC\x6D\xA4\xB0");
+            expect(b"()[]{", b"\xEC\x2B\xA5\x91");
+            expect(b"}@%$#", b"\xFB\xE9\xA6\x72");
 
-        let decoded = decode_z85_block(&encoded).unwrap();
-        assert_eq!(decoded, input);
+            reject(b"     ");
+            reject(b" 0000");
+            reject(b"0 000");
+            reject(b"00 00");
+            reject(b"00|00");
+            reject(b"00_00");
+            reject(b"00,00");
+            reject(b"00;00");
+            reject(b"00~00");
+            reject(b"00`00");
+            reject(b"00'00");
+            reject(b"00\"00");
+            reject(b"00\\00");
+            reject(b"000 0");
+            reject(b"0000 ");
+            reject(b"\0\0\0\0\0");
+            reject(b"\n\n\n\n\n");
+            reject(b"\xFF\xFF\xFF\xFF\xFF");
+        };
     }
 
-    #[test]
-    fn test_text_mode_simple() {
-        let data = b"Hello, World!";
-        let encoded = encode(data);
-        assert_eq!(encoded, "Hello, World!");
-
-        let decoded = decode(&encoded).unwrap();
-        assert_eq!(decoded, data);
-    }
-
-    #[test]
-    fn test_text_mode_with_escapes() {
-        let data = b"Line 1\nLine 2\tTabbed";
-        let encoded = encode(data);
-        assert_eq!(encoded, "Line 1\nLine 2\tTabbed");
-
-        let decoded = decode(&encoded).unwrap();
-        assert_eq!(decoded, data);
-    }
-
-    #[test]
-    fn test_form_feed_forces_binary() {
-        // Form feed (\f) should force binary mode
-        let data = b"Before\x0CAfter";
-        let encoded = encode(data);
-
-        // Should use binary mode (contains backspace marker)
-        assert!(
-            encoded.contains('\x08'),
-            "Form feed should force binary mode"
-        );
-
-        // Should round-trip correctly
-        let decoded = decode(&encoded).unwrap();
-        assert_eq!(decoded, data);
-    }
-
-    #[test]
-    fn test_binary_mode_basic() {
-        let data = b"\x00\x01\x02\x03";
-        let encoded = encode(data);
-        assert!(encoded.starts_with('\u{0008}'));
-
-        let decoded = decode(&encoded).unwrap();
-        assert_eq!(decoded, data);
-    }
-
-    #[test]
-    fn test_binary_mode_with_ascii() {
-        let data = b"Test";
-        let encoded = encode(data);
-        // ASCII should trigger text mode
-        assert_eq!(encoded, "Test");
-
-        let decoded = decode(&encoded).unwrap();
-        assert_eq!(decoded, data);
-    }
-
-    #[test]
-    fn test_binary_with_embedded_text() {
-        // Mix of binary and text-safe blocks
-        let mut data = vec![0x00, 0x01, 0x02, 0x03]; // Binary
-        data.extend_from_slice(b"Test"); // Text-safe
-        data.extend_from_slice(&[0xFF, 0xFE, 0xFD, 0xFC]); // Binary
-
-        let encoded = encode(&data);
-        let decoded = decode(&encoded).unwrap();
-        assert_eq!(decoded, data);
-    }
-
-    #[test]
-    fn test_multi_block_raw() {
-        // 8 bytes of JSON-safe ASCII (2 blocks)
-        let data = b"TestData";
-        // Force binary mode by adding a null byte
-        let mut binary_data = vec![0x00];
-        binary_data.extend_from_slice(data);
-
-        let encoded = encode(&binary_data);
-        let decoded = decode(&encoded).unwrap();
-        assert_eq!(decoded, binary_data);
-    }
-
-    #[test]
-    fn test_round_trip_empty() {
-        let data = b"";
-        let encoded = encode(data);
-        let decoded = decode(&encoded).unwrap();
-        assert_eq!(decoded, data);
-    }
-
-    #[test]
-    fn test_round_trip_binary() {
-        let data = b"\x00\x01\x02\x03\x04\x05\x06\x07";
-        let encoded = encode(data);
-        let decoded = decode(&encoded).unwrap();
-        assert_eq!(decoded, data);
-    }
-
-    #[test]
-    fn test_round_trip_partial_block() {
-        // 5 bytes - not a multiple of 4
-        let data = b"\x00\x01\x02\x03\x04";
-        let encoded = encode(data);
-        let decoded = decode(&encoded).unwrap();
-        assert_eq!(decoded, data, "Failed to round-trip partial block");
-    }
-
-    #[test]
-    fn test_should_use_text_mode() {
-        assert!(should_use_text_mode(b"Hello"));
-        assert!(should_use_text_mode(b"Hello\nWorld"));
-        assert!(should_use_text_mode(b"Hello\tWorld")); // tab is allowed
-        assert!(should_use_text_mode(b"Hello\rWorld")); // carriage return is allowed
-        assert!(!should_use_text_mode(b"Hello\x00World")); // null byte
-        assert!(!should_use_text_mode(b"Hello\x08World")); // backspace
-        assert!(!should_use_text_mode(b"Hello\x0CWorld")); // form feed (\f) - rejected
-        assert!(!should_use_text_mode(b"Hello\x0BWorld")); // vertical tab (\v) - rejected
-        assert!(!should_use_text_mode(&vec![b'a'; MAX_TEXT_SIZE + 1])); // too large
-    }
-
-    #[test]
-    fn test_is_json_safe_ascii() {
-        assert!(is_json_safe_ascii(b'a'));
-        assert!(is_json_safe_ascii(b'Z'));
-        assert!(is_json_safe_ascii(b' '));
-        assert!(is_json_safe_ascii(b'!'));
-        assert!(!is_json_safe_ascii(b'"')); // needs escape
-        assert!(!is_json_safe_ascii(b'\\')); // needs escape
-        assert!(!is_json_safe_ascii(b'\n')); // control char
-        assert!(!is_json_safe_ascii(0x00)); // control char
-    }
-
-    #[test]
-    fn test_terminal_chunk() {
-        // Test terminal chunk with non-UTF8 bytes
-        let data = vec![0xFF, 0xFE, 0xFD];
-        let encoded = encode(&data);
-        assert!(encoded.contains("||"));
-        let decoded = decode(&encoded).unwrap();
-        assert_eq!(decoded, data);
-    }
-
-    #[test]
-    fn test_large_raw_run() {
-        // Test many consecutive JSON-safe blocks
-        let mut data = Vec::new();
-        for _ in 0..10 {
-            data.extend_from_slice(b"Test");
+    const _: () = {
+        const fn expect(encoded: &[u8; BLOCK_DIGITS_5], bytes: &[u8; BLOCK_BYTES_4]) {
+            bytes_eq(bytes, &decode_z85_block_or_panic(*encoded));
+            bytes_eq(encoded, &encode_z85_block(*bytes));
         }
-        // Force binary mode
-        data.insert(0, 0x00);
 
-        let encoded = encode(&data);
-        let decoded = decode(&encoded).unwrap();
-        assert_eq!(decoded, data);
-    }
+        const fn reject(encoded: &[u8; BLOCK_DIGITS_5]) {
+            if decode_z85_block(*encoded).is_ok() {
+                panic!("expected error decoding invalid z85 block, but it succeeded")
+            }
+        }
 
-    #[test]
-    fn test_count_encoding() {
-        assert_eq!(encode_z85_count(0), vec![Z85_ALPHABET[0]]);
-        assert_eq!(encode_z85_count(1), vec![Z85_ALPHABET[1]]);
-        assert_eq!(encode_z85_count(84), vec![Z85_ALPHABET[84]]);
-        // 85 = "10" in base85
-        assert_eq!(encode_z85_count(85), vec![Z85_ALPHABET[1], Z85_ALPHABET[0]]);
+        assertions!();
+    };
+
+    {
+        fn expect(encoded: &[u8; BLOCK_DIGITS_5], bytes: &[u8; BLOCK_BYTES_4]) {
+            assert_eq!(Ok(bytes), decode_z85_block(*encoded).as_ref());
+            assert_eq!(encoded, &encode_z85_block(*bytes));
+        }
+
+        fn reject(encoded: &[u8; BLOCK_DIGITS_5]) {
+            assert!(decode_z85_block(*encoded).is_err());
+        }
+
+        assertions!();
     }
 }

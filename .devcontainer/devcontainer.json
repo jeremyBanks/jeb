@@ -2,14 +2,21 @@
   "image": "mcr.microsoft.com/devcontainers/rust:1-1-bullseye",
   "features": {
     "ghcr.io/devcontainers-community/features/deno:1": {},
-    "ghcr.io/devcontainers-community/features/llvm": {}
+    "ghcr.io/devcontainers-community/features/llvm:3": {}
   },
+  "containerEnv": {
+    "RUSTC_BOOTSTRAP": "1"
+  },
+  "postCreateCommand": ".devcontainer/post-create.sh",
   "customizations": {
     "vscode": {
       "extensions": [
         "denoland.vscode-deno",
         "rust-lang.rust-analyzer",
-        "vadimcn.vscode-lldb"
+        "timonwong.shellcheck",
+        "vadimcn.vscode-lldb",
+        "streetsidesoftware.code-spell-checker",
+        "usernamehw.errorlens"
       ]
     }
   }
