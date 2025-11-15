@@ -27,6 +27,9 @@ async-stream.workspace = true
 clap.workspace = true
 color-eyre.workspace = true
 rusqlite.workspace = true
+cgp.workspace = true
+cgp-serde.workspace = true
+cgp-serde-json.workspace = true
 
 [dev-dependencies]
 tokio-test.workspace = true

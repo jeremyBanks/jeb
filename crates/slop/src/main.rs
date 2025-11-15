@@ -2,7 +2,7 @@ use {
     clap::Parser,
     color_eyre::eyre::{Context, Result},
     futures::stream::{self, StreamExt},
-    jeb::{JsonObject, SortSpec, apply_sort_buffer, merge_sorted_streams, parse_json_stream},
+    slop::{JsonObject, SortSpec, apply_sort_buffer, merge_sorted_streams, parse_json_stream},
     serde_json::Value,
     std::path::Path,
     tokio::{
@@ -204,7 +204,7 @@ async fn create_stream_from_source(
     source: InputSource,
 ) -> Result<
     std::pin::Pin<
-        Box<dyn futures::Stream<Item = Result<JsonObject, jeb::JsonError>> + Send + 'static>,
+        Box<dyn futures::Stream<Item = Result<JsonObject, slop::JsonError>> + Send + 'static>,
     >,
 > {
     match source {
@@ -224,7 +224,7 @@ async fn create_stream_from_source(
         InputSource::InlineJson(json) => {
             debug!("Parsing inline JSON");
             // Parse inline JSON synchronously and convert to stream
-            match jeb::parse_json_string(&json) {
+            match slop::parse_json_string(&json) {
                 Ok(objects) => Ok(Box::pin(stream::iter(objects.into_iter().map(Ok)))),
                 Err(e) => Err(color_eyre::eyre::eyre!(
                     "Failed to parse inline JSON: {}",
