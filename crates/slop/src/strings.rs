@@ -1,36 +1,44 @@
 //! JSON Encoded Binary (JEB85)
 //!
-//! A library for encoding binary data in JSON-compatible formats using Z85 with extensions.
+//! A library for encoding binary data in JSON-compatible formats using Z85 with
+//! extensions.
 //!
 //! JEB85 supports two modes:
-//! - **Text mode**: Valid UTF-8 strings without control characters (except those with single-char JSON escapes), ≤64 KiB
-//! - **Binary mode**: Prefixed with `\b` (0x08), uses Z85 encoding with raw chunk extensions for readability
+//! - **Text mode**: Valid UTF-8 strings without control characters (except
+//!   those with single-char JSON escapes), ≤64 KiB
+//! - **Binary mode**: Prefixed with `\b` (0x08), uses Z85 encoding with raw
+//!   chunk extensions for readability
 //!
 //! # Encoding Strategy
 //!
-//! Binary mode uses Z85 encoding with special raw chunk markers for preserving readable ASCII:
+//! Binary mode uses Z85 encoding with special raw chunk markers for preserving
+//! readable ASCII:
 //! - Single raw block: `|xxxx` (4 bytes of raw data)
-//! - Multi-block raw: `N|xxxx...` where N is Z85-encoded (count-2), followed by count×4 bytes
+//! - Multi-block raw: `N|xxxx...` where N is Z85-encoded (count-2), followed by
+//!   count×4 bytes
 //! - Terminal raw: `||...` (rest of data is raw, no length limit)
 //!
 //! All raw chunks are padded with `.` to maintain 5-character block alignment.
 
-use nom::{
-    branch::alt,
-    bytes::complete::{tag as bytes_tag, take, take_while_m_n},
-    combinator::{map, map_res},
-    multi::many0,
-    sequence::preceded,
-    IResult, Parser,
-};
-use nom_supreme::tag::streaming;
-use nom_supreme::{error::ErrorTree, final_parser::final_parser, parser_ext::ParserExt};
+// Work in progress - allow dead code and unused imports
+#![allow(dead_code, unused_imports)]
 
 // For future use: position tracking
-#[allow(unused_imports)]
 use nom_locate::LocatedSpan;
-
-use json_encoded_binary::{MAX_TEXT_SIZE, Z85_ALPHABET, Z85_DECODE};
+use {
+    json_encoded_binary::{MAX_TEXT_SIZE, Z85_ALPHABET, Z85_DECODE},
+    nom::{
+        IResult, Parser,
+        branch::alt,
+        bytes::complete::{tag as bytes_tag, take, take_while_m_n},
+        combinator::{map, map_res},
+        multi::many0,
+        sequence::preceded,
+    },
+    nom_supreme::{
+        error::ErrorTree, final_parser::final_parser, parser_ext::ParserExt, tag::streaming,
+    },
+};
 
 pub const MAX_SIZE: usize = 64 * 1024;
 pub const LINE_SIZE: usize = 64;
@@ -46,7 +54,6 @@ pub const MAX_RAW_BLOCK_COUNT: usize = 2 + BASE.pow((BLOCK_CHARACTERS - 1) as _)
 pub const MAX_RAW_BYTES: usize = MAX_RAW_BLOCK_COUNT * BLOCK_BYTES - BLOCK_CHARACTERS;
 
 /// Z85 alphabet (85 characters) - note that | is NOT in this alphabet
-
 /// Reverse lookup table for Z85 decoding
 const VALUES_BY_DIGIT: [u8; 256] = {
     let mut table = [255u8; 256];
@@ -242,7 +249,8 @@ fn encode_binary(data: &[u8], output: &mut String) {
             } else {
                 // Partial block at end - use terminal raw chunk
                 output.push_str("||");
-                // Emit remaining bytes as-is (may not be valid UTF-8, but that's okay for raw data)
+                // Emit remaining bytes as-is (may not be valid UTF-8, but that's okay for raw
+                // data)
                 for &byte in &data[i..] {
                     output.push(byte as char);
                 }
@@ -282,8 +290,9 @@ fn parse_terminal_raw_block(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&
         .context("terminal raw marker")
         .parse(input)?;
     // Take everything remaining and decode UTF-8 chars back to bytes
-    // The encoder uses `byte as char`, which treats bytes as Latin-1 (codepoints 0-255)
-    // These get UTF-8 encoded in the string, so we need to decode them back
+    // The encoder uses `byte as char`, which treats bytes as Latin-1 (codepoints
+    // 0-255) These get UTF-8 encoded in the string, so we need to decode them
+    // back
     let text = std::str::from_utf8(input).map_err(|_| {
         use nom_supreme::error::BaseErrorKind;
         nom::Err::Error(ErrorTree::Base {
@@ -373,7 +382,8 @@ fn parse_text_mode(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
     .parse(input)
 }
 
-/// Parse JEB85-encoded data (parent combinator that routes to text or binary mode)
+/// Parse JEB85-encoded data (parent combinator that routes to text or binary
+/// mode)
 fn parse_jeb85(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
     // Check for binary mode prefix (\b = 0x08)
     if input.starts_with(&[0x08]) {
@@ -392,7 +402,8 @@ fn parse_jeb85(input: &[u8]) -> IResult<&[u8], Vec<u8>, ErrorTree<&[u8]>> {
 pub fn decode(input: &str) -> Result<Vec<u8>, Jeb85Error> {
     let bytes = input.as_bytes();
 
-    // Use final_parser to ensure all input is consumed and get better error messages
+    // Use final_parser to ensure all input is consumed and get better error
+    // messages
     let data = final_parser(parse_jeb85)(bytes).map_err(|e: ErrorTree<&[u8]>| {
         // Convert ErrorTree to our error type
         // ErrorTree provides much better error messages with context

@@ -16,7 +16,7 @@ use {
 ///
 /// # Example
 /// ```no_run
-/// use {jeb::sqlite::register_jeb_functions, rusqlite::Connection};
+/// use {slop::sqlite::register_jeb_functions, rusqlite::Connection};
 ///
 /// let conn = Connection::open_in_memory()?;
 /// register_jeb_functions(&conn)?;
@@ -66,7 +66,7 @@ pub fn register_jeb_functions(conn: &Connection) -> Result<()> {
 /// # Example
 /// ```no_run
 /// use {
-///     jeb::sqlite::{create_jeb_table, register_jeb_functions},
+///     slop::sqlite::{create_jeb_table, register_jeb_functions},
 ///     rusqlite::Connection,
 /// };
 ///
