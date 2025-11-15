@@ -16,7 +16,9 @@
     clippy::cast_sign_loss,
     clippy::cast_possible_truncation,
     clippy::cargo_common_metadata,
-    clippy::default_constructed_unit_structs
+    clippy::default_constructed_unit_structs,
+    clippy::too_long_first_doc_paragraph,
+    clippy::arbitrary_source_item_ordering
 )]
 // cSpell:ignoreRegExp b"(\\?.){5}"
 
@@ -50,11 +52,11 @@ pub const RAW_PREFIX: u8 = b'|';
 pub const RAW_PADDING: u8 = b'.';
 
 /// This encoding allows maximum of roughly 200 MiB of raw data per raw chunk.
-pub const MAX_RAW_BYTES: usize = eq_usize(208_802_508, MAX_RAW_BLOCKS * BLOCK_BYTES_4);
+pub const MAX_RAW_BYTES: usize = usize_eq(208_802_508, MAX_RAW_BLOCKS * BLOCK_BYTES_4);
 /// This encoding's number of raw blocks in a raw chunk is limited by the
 /// maximum raw prefix size value that can fit in the initial block with
 /// `RAW_PREFIX`.
-pub const MAX_RAW_BLOCKS: usize = eq_usize(52_200_627, 2 + pow(BASE_85, BLOCK_DIGITS_5 - 1));
+pub const MAX_RAW_BLOCKS: usize = usize_eq(52_200_627, 2 + pow(BASE_85, BLOCK_DIGITS_5 - 1));
 
 /// The number of blocks required to encode a given number of bytes.
 pub const BLOCK_DIGITS_BY_BYTES: [usize; BLOCK_BYTES_4 + 1] = [0, 2, 3, 4, 5];
@@ -66,15 +68,15 @@ pub const BLOCK_BYTES_BY_DIGITS: [usize; BLOCK_DIGITS_5 + 1] = [0, -1 as _, 1, 2
 pub const TARGET_LINE_SIZE_DIGITS: usize = 80;
 /// When this encoding is split into 80 digit lines, each line contains 64 bytes
 /// of data, which has a good chance of some alignment with binary data.
-pub const TARGET_LINE_SIZE_BYTES: usize = eq_usize(
+pub const TARGET_LINE_SIZE_BYTES: usize = usize_eq(
     64,
     div_exact(TARGET_LINE_SIZE_DIGITS * BLOCK_BYTES_4, BLOCK_DIGITS_5),
 );
 
 /// We encode a maximum of 64 KiB of raw data per raw chunk.
-pub const TARGET_RAW_BYTES: usize = eq_usize(65_536, 64 * 1024);
+pub const TARGET_RAW_BYTES: usize = usize_eq(65_536, 64 * 1024);
 /// We encode a maximum of 16 Ki blocks per raw chunk.
-pub const TARGET_RAW_BLOCKS: usize = eq_usize(16_384, div_exact(TARGET_RAW_BYTES, BLOCK_BYTES_4));
+pub const TARGET_RAW_BLOCKS: usize = usize_eq(16_384, div_exact(TARGET_RAW_BYTES, BLOCK_BYTES_4));
 
 
 
@@ -254,8 +256,8 @@ fn test_z85_blocks() {
 
     const _: () = {
         const fn expect(encoded: &[u8; BLOCK_DIGITS_5], bytes: &[u8; BLOCK_BYTES_4]) {
-            eq_bytes(bytes, &decode_z85_block_or_panic(*encoded));
-            eq_bytes(encoded, &encode_z85_block(*bytes));
+            bytes_eq(bytes, &decode_z85_block_or_panic(*encoded));
+            bytes_eq(encoded, &encode_z85_block(*bytes));
         }
 
         const fn reject(encoded: &[u8; BLOCK_DIGITS_5]) {
