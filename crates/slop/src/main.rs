@@ -2,8 +2,8 @@ use {
     clap::Parser,
     color_eyre::eyre::{Context, Result},
     futures::stream::{self, StreamExt},
-    slop::{JsonObject, SortSpec, apply_sort_buffer, merge_sorted_streams, parse_json_stream},
     serde_json::Value,
+    slop::{JsonObject, SortSpec, apply_sort_buffer, merge_sorted_streams, parse_json_stream},
     std::path::Path,
     tokio::{
         fs::File,

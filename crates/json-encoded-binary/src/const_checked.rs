@@ -169,6 +169,9 @@ impl OrderedByteSet {
         result
     }
 
+    /// # Panics
+    ///
+    /// Panics if the length of `self` does not match `LENGTH`.
     pub const fn to_array<const LENGTH: usize>(self) -> [u8; LENGTH] {
         let mut array = [0u8; LENGTH];
 
@@ -231,6 +234,9 @@ impl OrderedByteSet {
         Self::ALL.and(self)
     }
 
+    /// # Panics
+    ///
+    /// Panics if the length or contents of `expected` do not match `self`.
     pub const fn eq(self, expected: &[u8]) -> Self {
         if expected.len() < self.len() {
             panic!("calculated value had lower length than expected value");
@@ -256,6 +262,10 @@ pub const fn OBS(b: &[u8]) -> OrderedByteSet {
 }
 
 /// Asserts that both `usize` arguments are equal, then returns that value.
+///
+/// # Panics
+///
+/// Panics if `expected` and `calculation` are not equal.
 pub const fn usize_eq(expected: usize, calculation: usize) -> usize {
     if expected != calculation {
         panic!("calculated value did not match expected value");
@@ -265,6 +275,11 @@ pub const fn usize_eq(expected: usize, calculation: usize) -> usize {
 }
 
 /// Asserts that both `&[u8]` arguments are equal, then returns that value.
+///
+/// # Panics
+///
+/// Panics if the length or contents of `expected` and `calculated` do not
+/// match.
 pub const fn bytes_eq<'a>(expected: &'a [u8], calculated: &'a [u8]) -> &'a [u8] {
     if expected.len() < calculated.len() {
         panic!("calculated value had lower length than expected value");
@@ -283,8 +298,13 @@ pub const fn bytes_eq<'a>(expected: &'a [u8], calculated: &'a [u8]) -> &'a [u8] 
     expected
 }
 
+/// Performs exact division, ensuring there is no remainder.
+///
+/// # Panics
+///
+/// Panics if `dividend` is not evenly divisible by `divisor`.
 pub const fn div_exact(dividend: usize, divisor: usize) -> usize {
-    if dividend % divisor != 0 {
+    if !dividend.is_multiple_of(divisor) {
         panic!("remainder in div_exact");
     }
 

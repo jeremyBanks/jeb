@@ -15,7 +15,6 @@
     clippy::manual_assert,
     clippy::cast_sign_loss,
     clippy::cast_possible_truncation,
-    clippy::cargo_common_metadata,
     clippy::default_constructed_unit_structs,
     clippy::too_long_first_doc_paragraph,
     clippy::arbitrary_source_item_ordering
@@ -34,6 +33,11 @@ use {
 };
 
 pub use crate::{byte_ranges::*, const_checked::*, errors::*};
+
+// Aliases for compatibility with slop crate
+pub const Z85_ALPHABET: &[u8; 85] = Z85;
+pub const Z85_DECODE: [u8; 256] = Z85_LUT;
+pub const MAX_TEXT_SIZE: usize = TARGET_RAW_BYTES;
 
 // MARK: encoding constants
 
@@ -82,7 +86,6 @@ pub const TARGET_RAW_BLOCKS: usize = usize_eq(16_384, div_exact(TARGET_RAW_BYTES
 pub struct Encoder;
 impl Encoder {
     #[must_use]
-    #[expect(clippy::unused_self)]
     pub fn encode_bytes(&self, bytes: &[u8]) -> Vec<u8> {
         unimplemented!()
     }
@@ -92,7 +95,6 @@ impl Encoder {
 pub struct Decoder;
 
 impl Decoder {
-    #[expect(clippy::unused_self)]
     pub fn decode_bytes(&self, encoded: &[u8]) -> Result<Vec<u8>, Panic> {
         unimplemented!()
     }
@@ -176,6 +178,11 @@ pub const fn decode_z85_block(
     Ok(bytes)
 }
 
+/// Decodes a Z85 block, panicking on error.
+///
+/// # Panics
+///
+/// Panics if the encoded block contains invalid digits or the value overflows.
 #[must_use]
 pub const fn decode_z85_block_or_panic(encoded: [u8; BLOCK_DIGITS_5]) -> [u8; BLOCK_BYTES_4] {
     match decode_z85_block(encoded) {

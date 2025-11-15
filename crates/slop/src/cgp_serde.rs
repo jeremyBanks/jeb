@@ -1,12 +1,14 @@
 // ! CGP-Serde integration for jeb
 //!
-//! This module integrates Context-Generic Programming (CGP) with Serde for modular,
-//! context-dependent serialization in the jeb library.
+//! This module integrates Context-Generic Programming (CGP) with Serde for
+//! modular, context-dependent serialization in the jeb library.
 //!
 //! ## Key Concepts
 //!
-//! - **Context Types**: Different contexts provide different serialization behaviors
-//! - **Component Delegation**: Use CGP's `delegate_components!` macro for compile-time dispatch
+//! - **Context Types**: Different contexts provide different serialization
+//!   behaviors
+//! - **Component Delegation**: Use CGP's `delegate_components!` macro for
+//!   compile-time dispatch
 //! - **Modularity**: Serialization logic is completely separate from data types
 //! - **Full CGP Infrastructure**: Uses the real cgp and cgp-serde libraries
 //!
@@ -23,12 +25,12 @@
 //! - CGP repository: https://github.com/contextgeneric/cgp
 //! - CGP-Serde repository: https://github.com/contextgeneric/cgp-serde
 
-use cgp_serde::components::CanSerializeValue;
-use cgp_serde::types::SerializeWithContext;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-
-use crate::{JsonObject, KeyOrderOptions};
+use {
+    crate::{JsonObject, KeyOrderOptions},
+    cgp_serde::{components::CanSerializeValue, types::SerializeWithContext},
+    serde::{Deserialize, Serialize},
+    serde_json::Value,
+};
 
 /// Standard JSON serialization context
 ///
@@ -228,8 +230,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use serde_json::json;
+    use {super::*, serde_json::json};
 
     #[test]
     fn test_standard_context_serialization() {
@@ -338,7 +339,8 @@ mod tests {
             age: u32,
         }
 
-        // We need to convert to Value first since we only implement CanSerializeValue<Value>
+        // We need to convert to Value first since we only implement
+        // CanSerializeValue<Value>
         let person = Person {
             name: "Alice".to_string(),
             age: 30,
