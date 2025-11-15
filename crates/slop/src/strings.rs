@@ -30,6 +30,8 @@ use nom_supreme::{error::ErrorTree, final_parser::final_parser, parser_ext::Pars
 #[allow(unused_imports)]
 use nom_locate::LocatedSpan;
 
+use json_encoded_binary::{MAX_TEXT_SIZE, Z85_ALPHABET, Z85_DECODE};
+
 pub const MAX_SIZE: usize = 64 * 1024;
 pub const LINE_SIZE: usize = 64;
 

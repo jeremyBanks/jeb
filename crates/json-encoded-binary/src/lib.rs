@@ -35,6 +35,11 @@ use {
 
 pub use crate::{byte_ranges::*, const_checked::*, errors::*};
 
+// Aliases for compatibility with slop crate
+pub const Z85_ALPHABET: &[u8; 85] = Z85;
+pub const Z85_DECODE: [u8; 256] = Z85_LUT;
+pub const MAX_TEXT_SIZE: usize = TARGET_RAW_BYTES;
+
 // MARK: encoding constants
 
 /// This encoding uses base 85 for binary data.
