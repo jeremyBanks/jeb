@@ -39,6 +39,11 @@ nom = "7.1"
 nom-supreme = "0.8"
 nom_locate = "4.2"
 
+# Context-Generic Programming
+cgp = { git = "https://github.com/contextgeneric/cgp.git", tag = "v0.6.0" }
+cgp-serde = { git = "https://github.com/contextgeneric/cgp-serde.git", tag = "v0.1.0" }
+cgp-serde-json = { git = "https://github.com/contextgeneric/cgp-serde.git", tag = "v0.1.0" }
+
 [profile.release]
 opt-level = "z"
 lto = true

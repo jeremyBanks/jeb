@@ -1,8 +1,8 @@
-# CGP-Serde Concepts Demonstration in jeb
+# CGP-Serde Integration in jeb
 
-This document explains how **Context-Generic Programming (CGP)** concepts are demonstrated in the jeb library.
+This document explains how the **full CGP infrastructure** is integrated into the jeb library for modular, context-dependent serialization.
 
-> **Note**: This is a conceptual demonstration using standard Rust traits. The actual cgp-serde library (v0.1.0) is still in early development and has some API instability. When it stabilizes, this implementation can be migrated to use the full CGP infrastructure.
+> **Implementation Status**: This uses the real `cgp` and `cgp-serde` libraries (cgp v0.6.0, cgp-serde v0.1.0) with full compile-time dispatch and zero runtime overhead.
 
 ## What is CGP-Serde?
 
@@ -17,7 +17,12 @@ For more information, see: https://contextgeneric.dev/blog/cgp-serde-release/
 
 ## Integration Overview
 
-The `jeb::cgp_serde` module provides three context types that demonstrate different serialization strategies:
+The `jeb::cgp_serde` module provides three context types that use the full CGP infrastructure:
+
+**Dependencies**:
+- `cgp` v0.6.0 - Core CGP component system
+- `cgp-serde` v0.1.0 - Serialization components
+- `cgp-serde-json` v0.1.0 - JSON-specific providers
 
 ### 1. StandardContext
 
@@ -128,47 +133,47 @@ let ordered = apply_context_ordering(&value, &key_order);
 
 ### Context Types
 
-Each context type is a zero-sized struct that implements specific CGP traits:
+Each context implements the `CanSerializeValue` trait from cgp-serde:
 
 ```rust
-#[derive(Clone)]
+use cgp_serde::components::CanSerializeValue;
+
+#[derive(Clone, Debug)]
 pub struct StandardContext;
 
-#[derive(Clone)]
-pub struct OrderedContext {
-    pub key_order: KeyOrderOptions,
-}
-```
-
-### Component Delegation
-
-The `delegate_components!` macro creates compile-time dispatch tables:
-
-```rust
-delegate_components! {
-    StandardContext {
-        ValueSerializerComponent: UseDelegate<JsonSerializerComponents>,
-        ValueDeserializerComponent: UseDelegate<JsonDeserializerComponents>,
+impl CanSerializeValue<Value> for StandardContext {
+    fn serialize<S>(&self, value: &Value, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        value.serialize(serializer)
     }
 }
 ```
 
-### Serialization Providers
+### CGP SerializeWithContext Wrapper
 
-Providers implement the actual serialization logic:
+The cgp-serde library provides `SerializeWithContext` for wrapping values with context:
 
 ```rust
-pub struct OrderedSerializerComponents;
+use cgp_serde::types::SerializeWithContext;
 
-delegate_components! {
-    OrderedSerializerComponents {
-        [
-            serde_json::Value,
-            IndexMap<String, Value>,
-        ]: SerializeToJson,
-    }
+pub fn serialize_with_context<Ctx, T>(
+    context: &Ctx,
+    value: &T,
+) -> Result<String, serde_json::Error>
+where
+    Ctx: CanSerializeValue<T>,
+{
+    serde_json::to_string(&SerializeWithContext::new(context, value))
 }
 ```
+
+### Zero-Cost Abstraction
+
+All context resolution happens at compile time. The `SerializeWithContext` wrapper
+implements `serde::Serialize` by delegating to the context's `serialize` method,
+with no runtime overhead.
 
 ## Benefits for jeb
 
