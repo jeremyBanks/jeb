@@ -23,7 +23,16 @@
     "+nightly"
   ],
   "cSpell.words": [
-    "BACKTICKED"
+    "BACKTICKED",
+    "denoland",
+    "errorlens",
+    "RUSTC",
+    "rustup",
+    "shellcheck",
+    "timonwong",
+    "usernamehw",
+    "vadimcn",
+    "vexu"
   ],
   "editor.wrappingIndent": "indent",
   "files.trimTrailingWhitespace": true,

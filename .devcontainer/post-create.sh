@@ -1,7 +1,8 @@
 #!/bin/sh
 set -vexu
 
-git config --global push.autoSetupRemote current
+git config --global push.autoSetupRemote true
+git config --global pull.default current
 git config --global pull.rebase false
 
 rustup update
