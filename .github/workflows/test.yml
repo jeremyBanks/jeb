@@ -2,7 +2,7 @@ name: Tests and Native Build
 
 on:
   push:
-    branches: [ main, master, trunk ]
+    branches: [main, master, trunk]
   pull_request:
 
 env:
@@ -15,8 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
+
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo registry
         uses: actions/cache@v4

@@ -2,7 +2,7 @@ name: Version Check
 
 on:
   push:
-    branches: [ main, master, trunk ]
+    branches: [main, master, trunk]
   pull_request:
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for all branches
+          fetch-depth: 0 # Fetch all history for all branches
 
       - name: Check version
         run: ./scripts/check-version.sh

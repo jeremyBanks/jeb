@@ -443,26 +443,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
-name = "jeb"
-version = "0.0.15"
-dependencies = [
- "async-stream",
- "clap",
- "color-eyre",
- "futures",
- "indexmap",
- "json-encoded-binary",
- "rusqlite",
- "serde",
- "serde_json",
- "tokio",
- "tokio-stream",
- "tokio-test",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "joinery"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -470,7 +450,7 @@ checksum = "72167d68f5fce3b8655487b8038691a3c9984ee769590f93f2a631f4ad64e4f5"
 
 [[package]]
 name = "json-encoded-binary"
-version = "0.0.15"
+version = "0.0.20"
 dependencies = [
  "nom",
  "nom-supreme",
@@ -750,6 +730,26 @@ name = "slab"
 version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a2ae44ef20feb57a68b23d846850f861394c2e02dc425a50098ae8c90267589"
+
+[[package]]
+name = "slop"
+version = "0.0.20"
+dependencies = [
+ "async-stream",
+ "clap",
+ "color-eyre",
+ "futures",
+ "indexmap",
+ "json-encoded-binary",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "tokio-test",
+ "tracing",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "smallvec"
