@@ -4,6 +4,10 @@ version = "0.0.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "A lenient JSON parser with optional commas, comments, and unquoted keys"
+repository = "https://github.com/jeremyBanks/json-entity-bucket"
+readme = "SPEC.md"
+keywords = ["json", "parser", "lenient", "config"]
+categories = ["parser-implementations", "encoding"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }

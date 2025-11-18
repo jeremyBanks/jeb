@@ -666,7 +666,7 @@ World"}"#;
         let input = r#"{
             string: "hello",
             number: 42,
-            float: 3.14,
+            float: 3.5,
             bool_true: true,
             bool_false: false,
             null_value: null,
@@ -676,7 +676,7 @@ World"}"#;
         let value = parse(input).unwrap();
         assert_eq!(value["string"], "hello");
         assert_eq!(value["number"], 42);
-        assert_eq!(value["float"], 3.14);
+        assert_eq!(value["float"], 3.5);
         assert_eq!(value["bool_true"], true);
         assert_eq!(value["bool_false"], false);
         assert_eq!(value["null_value"], serde_json::Value::Null);
@@ -729,10 +729,10 @@ World"}"#;
 
     #[test]
     fn test_negative_numbers() {
-        let input = r#"[-1, -3.14, -0]"#;
+        let input = r#"[-1, -3.5, -0]"#;
         let value = parse(input).unwrap();
         assert_eq!(value[0], -1);
-        assert_eq!(value[1], -3.14);
+        assert_eq!(value[1], -3.5);
         assert_eq!(value[2], 0);
     }
 
