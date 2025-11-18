@@ -1012,6 +1012,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "slop-lenient-json"
+version = "0.0.1"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "smallvec"
 version = "1.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
