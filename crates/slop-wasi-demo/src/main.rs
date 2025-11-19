@@ -32,8 +32,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Parse JSON
-    let value: Value = serde_json::from_str(&json_text)
-        .map_err(|e| format!("JSON parse error: {}", e))?;
+    let value: Value =
+        serde_json::from_str(&json_text).map_err(|e| format!("JSON parse error: {}", e))?;
 
     // Format output
     let output = if compact {
@@ -87,8 +87,8 @@ fn print_help() {
 
 /// Read file using std::fs (WASI compatible)
 fn read_file(path: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let mut file = std::fs::File::open(path)
-        .map_err(|e| format!("Failed to open {}: {}", path, e))?;
+    let mut file =
+        std::fs::File::open(path).map_err(|e| format!("Failed to open {}: {}", path, e))?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)
         .map_err(|e| format!("Failed to read {}: {}", path, e))?;
