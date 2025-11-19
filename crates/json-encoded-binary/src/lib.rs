@@ -87,7 +87,34 @@ pub struct Encoder;
 impl Encoder {
     #[must_use]
     pub fn encode_bytes(&self, bytes: &[u8]) -> Vec<u8> {
-        unimplemented!()
+        let mut result = Vec::with_capacity((bytes.len() * BLOCK_DIGITS_5) / BLOCK_BYTES_4 + BLOCK_DIGITS_5);
+
+        let mut i = 0;
+        // Encode full 4-byte blocks
+        while i + BLOCK_BYTES_4 <= bytes.len() {
+            let mut block = [0u8; BLOCK_BYTES_4];
+            block.copy_from_slice(&bytes[i..i + BLOCK_BYTES_4]);
+            let encoded = encode_z85_block(block);
+            result.extend_from_slice(&encoded);
+            i += BLOCK_BYTES_4;
+        }
+
+        // Handle partial block at end (1-3 bytes remaining)
+        let remaining = bytes.len() - i;
+        if remaining > 0 {
+            // Pad on the right (little-endian for partial blocks)
+            let mut block = [0u8; BLOCK_BYTES_4];
+            // Put bytes at the END of the block (right-aligned)
+            let start_pos = BLOCK_BYTES_4 - remaining;
+            block[start_pos..].copy_from_slice(&bytes[i..]);
+            let encoded = encode_z85_block(block);
+            // Use the LAST N digits (right-aligned)
+            let digits_needed = BLOCK_DIGITS_BY_BYTES[remaining];
+            let start_digit = BLOCK_DIGITS_5 - digits_needed;
+            result.extend_from_slice(&encoded[start_digit..]);
+        }
+
+        result
     }
 }
 
@@ -96,7 +123,42 @@ pub struct Decoder;
 
 impl Decoder {
     pub fn decode_bytes(&self, encoded: &[u8]) -> Result<Vec<u8>, Panic> {
-        unimplemented!()
+        let mut result = Vec::with_capacity((encoded.len() * BLOCK_BYTES_4) / BLOCK_DIGITS_5);
+
+        let mut i = 0;
+        // Decode full 5-digit blocks
+        while i + BLOCK_DIGITS_5 <= encoded.len() {
+            let mut block = [0u8; BLOCK_DIGITS_5];
+            block.copy_from_slice(&encoded[i..i + BLOCK_DIGITS_5]);
+            let decoded = match decode_z85_block(block) {
+                Ok(bytes) => bytes,
+                Err(e) => panic!("{}", e),
+            };
+            result.extend_from_slice(&decoded);
+            i += BLOCK_DIGITS_5;
+        }
+
+        // Handle partial block at end (2-4 digits remaining)
+        let remaining = encoded.len() - i;
+        if remaining > 0 {
+            // Pad with '0' at the START (left-aligned)
+            let mut block = [b'0'; BLOCK_DIGITS_5];
+            let start_pos = BLOCK_DIGITS_5 - remaining;
+            block[start_pos..].copy_from_slice(&encoded[i..]);
+            let decoded = match decode_z85_block(block) {
+                Ok(bytes) => bytes,
+                Err(e) => panic!("{}", e),
+            };
+            // Use the LAST N bytes (right-aligned)
+            let bytes_decoded = BLOCK_BYTES_BY_DIGITS[remaining];
+            if bytes_decoded == usize::MAX {
+                panic!("Invalid number of digits in partial block");
+            }
+            let start_byte = BLOCK_BYTES_4 - bytes_decoded;
+            result.extend_from_slice(&decoded[start_byte..]);
+        }
+
+        Ok(result)
     }
 }
 
