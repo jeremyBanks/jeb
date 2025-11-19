@@ -39,17 +39,11 @@ fn process_pipeline(commands: &[String], mut data: Vec<u8>) -> io::Result<Vec<u8
                     // Map over each sub-stream
                     streams = streams
                         .into_iter()
-                        .map(|chunk| match json_encoded_binary::decode(&chunk) {
-                            Ok(decoded) => decoded,
-                            Err(_) => unreachable!(),
-                        })
+                        .map(|chunk| json_encoded_binary::decode(&chunk))
                         .collect();
                 } else {
                     // Decode single stream
-                    data = match json_encoded_binary::decode(&data) {
-                        Ok(decoded) => decoded,
-                        Err(_) => unreachable!(),
-                    };
+                    data = json_encoded_binary::decode(&data);
                 }
             }
             "split-64k" => {

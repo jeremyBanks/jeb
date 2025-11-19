@@ -15,7 +15,6 @@
     clippy::manual_assert,
     clippy::cast_sign_loss,
     clippy::cast_possible_truncation,
-    clippy::default_constructed_unit_structs,
     clippy::too_long_first_doc_paragraph,
     clippy::arbitrary_source_item_ordering
 )]
@@ -85,9 +84,14 @@ pub const TARGET_RAW_BLOCKS: usize = usize_eq(16_384, div_exact(TARGET_RAW_BYTES
 #[derive(Default)]
 pub struct Encoder;
 impl Encoder {
+    /// Encodes bytes using Z85 encoding.
+    ///
+    /// Encodes 4-byte blocks into 5 Z85 characters. Partial blocks at the end
+    /// are right-aligned and use fewer characters.
     #[must_use]
-    pub fn encode_bytes(&self, bytes: &[u8]) -> Vec<u8> {
-        let mut result = Vec::with_capacity((bytes.len() * BLOCK_DIGITS_5) / BLOCK_BYTES_4 + BLOCK_DIGITS_5);
+    pub fn encode_bytes(bytes: &[u8]) -> Vec<u8> {
+        let mut result =
+            Vec::with_capacity((bytes.len() * BLOCK_DIGITS_5) / BLOCK_BYTES_4 + BLOCK_DIGITS_5);
 
         let mut i = 0;
         // Encode full 4-byte blocks
@@ -122,7 +126,14 @@ impl Encoder {
 pub struct Decoder;
 
 impl Decoder {
-    pub fn decode_bytes(&self, encoded: &[u8]) -> Result<Vec<u8>, Panic> {
+    /// Decodes Z85-encoded bytes back to original binary data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the encoded data contains invalid Z85 characters or an invalid
+    /// number of digits in a partial block.
+    #[must_use]
+    pub fn decode_bytes(encoded: &[u8]) -> Vec<u8> {
         let mut result = Vec::with_capacity((encoded.len() * BLOCK_BYTES_4) / BLOCK_DIGITS_5);
 
         let mut i = 0;
@@ -158,17 +169,18 @@ impl Decoder {
             result.extend_from_slice(&decoded[start_byte..]);
         }
 
-        Ok(result)
+        result
     }
 }
 
 #[must_use]
 pub fn encode(bytes: &[u8]) -> Vec<u8> {
-    Encoder::default().encode_bytes(bytes)
+    Encoder::encode_bytes(bytes)
 }
 
-pub fn decode(encoded: &[u8]) -> Result<Vec<u8>, Panic> {
-    Decoder::default().decode_bytes(encoded)
+#[must_use]
+pub fn decode(encoded: &[u8]) -> Vec<u8> {
+    Decoder::decode_bytes(encoded)
 }
 
 // MARK: Z85 block ser/de
