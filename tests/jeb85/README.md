@@ -80,6 +80,30 @@ tests/jeb85/
 **Pipeline**: `(split-64k encode-z85 join-lines) × 2` then `(split-lines decode-z85 join) × 2`
 **Expected**: Should roundtrip perfectly through double encoding and remain text-safe
 
+### 12-jeb85-text-mode.sh
+**Goal**: Verify JEB85 text mode passthrough
+**Input**: "Hello, World!" (plain ASCII)
+**Pipeline**: `encode-jeb85 | decode-jeb85`
+**Expected**: Text should pass through unchanged and roundtrip perfectly
+
+### 13-jeb85-binary-mode.sh
+**Goal**: Verify JEB85 binary mode encoding
+**Input**: 16 bytes of 0x00-0x0f
+**Pipeline**: `encode-jeb85 | decode-jeb85`
+**Expected**: Should be encoded (not passthrough) and roundtrip perfectly
+
+### 14-jeb85-mixed.sh
+**Goal**: Verify JEB85 with mixed binary and text
+**Input**: Text with embedded null bytes
+**Pipeline**: `encode-jeb85 | decode-jeb85`
+**Expected**: Should roundtrip correctly and produce text-safe output
+
+### 15-jeb85-chunked.sh
+**Goal**: Verify JEB85 with chunked encoding
+**Input**: 100 KiB file
+**Pipeline**: `split-64k encode-jeb85 join-lines | split-lines decode-jeb85 join`
+**Expected**: Should roundtrip correctly and produce 2 lines
+
 ## Running Tests
 
 ```bash
@@ -95,12 +119,21 @@ cd tests/jeb85/scripts
 
 - `encode-z85` - Encode binary to Z85 text (pure base85)
 - `decode-z85` - Decode Z85 text to binary
+- `encode-jeb85` - Encode with JEB85 (text passthrough + Z85 with raw chunks)
+- `decode-jeb85` - Decode JEB85-encoded data
 - `split-64k` - Split single stream into 64 KiB chunks (stream-of-streams)
 - `join-lines` - Join stream-of-streams with newlines into single stream
 - `split-lines` - Split single stream by newlines into stream-of-streams
 - `join` - Join stream-of-streams with no delimiter into single stream
 
 ## Design Notes
+
+### JEB85 vs Z85
+- **Z85**: Pure base-85 encoding, always encodes all data
+- **JEB85**: Enhanced Z85 with:
+  - **Text mode**: If input is text-safe (UTF-8, no prohibited control chars, ≤64 KiB), pass through as-is
+  - **Binary mode**: Use Z85 encoding with raw chunk markers (`|`) for readable ASCII blocks
+  - **Automatic detection**: Decoder automatically detects text vs binary mode
 
 ### Output Format
 - **All encoded outputs are text-only**: No control characters except newlines

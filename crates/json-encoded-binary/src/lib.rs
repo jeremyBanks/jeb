@@ -23,6 +23,7 @@
 mod byte_ranges;
 mod const_checked;
 mod errors;
+pub mod jeb85;
 
 use {
     core::fmt::Debug,
@@ -31,7 +32,7 @@ use {
     },
 };
 
-pub use crate::{byte_ranges::*, const_checked::*, errors::*};
+pub use crate::{byte_ranges::*, const_checked::*, errors::*, jeb85::{encode_jeb85, decode_jeb85}};
 
 // Aliases for compatibility with slop crate
 pub const Z85_ALPHABET: &[u8; 85] = Z85;

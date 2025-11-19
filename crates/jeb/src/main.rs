@@ -46,6 +46,30 @@ fn process_pipeline(commands: &[String], mut data: Vec<u8>) -> io::Result<Vec<u8
                     data = json_encoded_binary::decode(&data);
                 }
             }
+            "encode-jeb85" => {
+                if is_stream_of_streams {
+                    // Map over each sub-stream
+                    streams = streams
+                        .into_iter()
+                        .map(|chunk| json_encoded_binary::encode_jeb85(&chunk))
+                        .collect();
+                } else {
+                    // Encode single stream
+                    data = json_encoded_binary::encode_jeb85(&data);
+                }
+            }
+            "decode-jeb85" => {
+                if is_stream_of_streams {
+                    // Map over each sub-stream
+                    streams = streams
+                        .into_iter()
+                        .map(|chunk| json_encoded_binary::decode_jeb85(&chunk))
+                        .collect();
+                } else {
+                    // Decode single stream
+                    data = json_encoded_binary::decode_jeb85(&data);
+                }
+            }
             "split-64k" => {
                 if is_stream_of_streams {
                     return Err(io::Error::new(
