@@ -1,0 +1,46 @@
+name: DO NOT MERGE Check
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main, master, trunk]
+  pull_request:
+
+jobs:
+  check-do-not-merge:
+    name: Check for DO NOT MERGE/SUBMIT/REVIEW markers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for blocking markers
+        run: |
+          # This workflow checks for "DO NOT MERGE", "DO NOT SUBMIT", and "DO NOT REVIEW"
+          # markers (in uppercase) with various spacing formats:
+          # - DO NOT MERGE/SUBMIT/REVIEW (with spaces)
+          # - DONOTMERGE/DONOTSUBMIT/DONOTREVIEW (no spaces)
+          # - DO_NOT_MERGE/DO_NOT_SUBMIT/DO_NOT_REVIEW (with underscores)
+
+          # Exclude this workflow file and related files from the check
+          EXCLUDE_FILE=".github/workflows/do-not-merge-check.yml"
+
+          echo "Searching for DO NOT MERGE/SUBMIT/REVIEW markers..."
+          echo "Excluding: $EXCLUDE_FILE"
+
+          # Search for the patterns using grep with extended regex
+          # Match any of: DO NOT MERGE, DONOTMERGE, DO_NOT_MERGE (and SUBMIT/REVIEW variants)
+          # The regex matches: DO[ _]?NOT[ _]?(MERGE|SUBMIT|REVIEW)
+          # This accepts 0 or 1 separator (space or underscore) between words
+
+          if git grep -n -E 'DO[ _]?NOT[ _]?(MERGE|SUBMIT|REVIEW)' -- ':!'"$EXCLUDE_FILE" > /tmp/matches.txt 2>&1; then
+            echo "❌ Found blocking markers in the following locations:"
+            echo ""
+            cat /tmp/matches.txt
+            echo ""
+            echo "Please remove these markers before merging."
+            exit 1
+          else
+            echo "✅ No blocking markers found. Proceeding with build."
+            exit 0
+          fi
