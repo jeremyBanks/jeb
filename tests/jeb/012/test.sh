@@ -1,3 +1,3 @@
 #!/bin/bash
-jeb split-lines < in.txt > out.txt
+jeb encode-z85 split-lines join-lines < in.txt > out.txt
 echo $? > status.txt

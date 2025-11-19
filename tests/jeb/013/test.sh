@@ -1,3 +1,3 @@
 #!/bin/bash
-jeb split-64k join < in.bin > out.txt
+jeb split-64k encode-z85 join < in.bin > out.txt
 echo $? > status.txt
