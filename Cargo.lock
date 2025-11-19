@@ -1020,6 +1020,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "slop-wasi-demo"
+version = "0.0.20"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "smallvec"
 version = "1.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
