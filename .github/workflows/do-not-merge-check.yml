@@ -1,0 +1,85 @@
+name: DO NOT MERGE Check
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main, master, trunk]
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  check-do-not-merge:
+    name: Check for DO NOT MERGE/SUBMIT/REVIEW markers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check PR title and description
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "Checking PR title and description for blocking markers..."
+
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_BODY="${{ github.event.pull_request.body }}"
+
+          FOUND_ISSUES=0
+
+          # Check for WIP in PR title (case-insensitive)
+          if echo "$PR_TITLE" | grep -qi '\bWIP\b'; then
+            echo "❌ Found 'WIP' in PR title: $PR_TITLE"
+            FOUND_ISSUES=1
+          fi
+
+          # Check for DO NOT MERGE/SUBMIT/REVIEW patterns in PR title
+          if echo "$PR_TITLE" | grep -qE 'DO[ _]?NOT[ _]?(MERGE|SUBMIT|REVIEW)'; then
+            echo "❌ Found blocking marker in PR title: $PR_TITLE"
+            FOUND_ISSUES=1
+          fi
+
+          # Check for DO NOT MERGE/SUBMIT/REVIEW patterns in PR body
+          if echo "$PR_BODY" | grep -qE 'DO[ _]?NOT[ _]?(MERGE|SUBMIT|REVIEW)'; then
+            echo "❌ Found blocking marker in PR description"
+            echo "Matching lines:"
+            echo "$PR_BODY" | grep -E 'DO[ _]?NOT[ _]?(MERGE|SUBMIT|REVIEW)'
+            FOUND_ISSUES=1
+          fi
+
+          if [ $FOUND_ISSUES -eq 1 ]; then
+            echo ""
+            echo "Please remove WIP/blocking markers from PR title and description before merging."
+            exit 1
+          else
+            echo "✅ No blocking markers found in PR metadata."
+          fi
+
+      - name: Check code for blocking markers
+        run: |
+          # This step checks code files for "DO NOT MERGE", "DO NOT SUBMIT", and "DO NOT REVIEW"
+          # markers (in uppercase) with various spacing formats:
+          # - DO NOT MERGE/SUBMIT/REVIEW (with spaces)
+          # - DONOTMERGE/DONOTSUBMIT/DONOTREVIEW (no spaces)
+          # - DO_NOT_MERGE/DO_NOT_SUBMIT/DO_NOT_REVIEW (with underscores)
+
+          # Exclude this workflow file and related files from the check
+          EXCLUDE_FILE=".github/workflows/do-not-merge-check.yml"
+
+          echo "Searching for DO NOT MERGE/SUBMIT/REVIEW markers..."
+          echo "Excluding: $EXCLUDE_FILE"
+
+          # Search for the patterns using grep with extended regex
+          # Match any of: DO NOT MERGE, DONOTMERGE, DO_NOT_MERGE (and SUBMIT/REVIEW variants)
+          # The regex matches: DO[ _]?NOT[ _]?(MERGE|SUBMIT|REVIEW)
+          # This accepts 0 or 1 separator (space or underscore) between words
+
+          if git grep -n -E 'DO[ _]?NOT[ _]?(MERGE|SUBMIT|REVIEW)' -- ':!'"$EXCLUDE_FILE" > /tmp/matches.txt 2>&1; then
+            echo "❌ Found blocking markers in the following locations:"
+            echo ""
+            cat /tmp/matches.txt
+            echo ""
+            echo "Please remove these markers before merging."
+            exit 1
+          else
+            echo "✅ No blocking markers found. Proceeding with build."
+            exit 0
+          fi
