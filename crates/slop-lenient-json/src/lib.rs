@@ -203,6 +203,8 @@ impl<'a> Lexer<'a> {
 
     fn parse_number(&mut self) -> Result<Value> {
         let start = self.pos;
+        let mut has_decimal = false;
+        let mut has_exponent = false;
 
         // Handle negative sign
         if self.current_char() == Some('-') {
@@ -228,6 +230,7 @@ impl<'a> Lexer<'a> {
 
         // Parse decimal part
         if self.current_char() == Some('.') {
+            has_decimal = true;
             self.advance();
             if !matches!(self.current_char(), Some(c) if c.is_ascii_digit()) {
                 return Err(ParseError::InvalidNumber(
@@ -245,6 +248,7 @@ impl<'a> Lexer<'a> {
 
         // Parse exponent part
         if matches!(self.current_char(), Some('e') | Some('E')) {
+            has_exponent = true;
             self.advance();
             if matches!(self.current_char(), Some('+') | Some('-')) {
                 self.advance();
@@ -265,12 +269,15 @@ impl<'a> Lexer<'a> {
 
         let num_str = &self.input[start..self.pos];
 
-        // Try to parse as i64 first
-        if let Ok(i) = num_str.parse::<i64>() {
-            return Ok(Value::Number(i.into()));
+        // If integer syntax (no decimal point or exponent), must fit in i64
+        if !has_decimal && !has_exponent {
+            return num_str
+                .parse::<i64>()
+                .map(|i| Value::Number(i.into()))
+                .map_err(|_| ParseError::InvalidNumber(num_str.to_string()));
         }
 
-        // Otherwise parse as f64
+        // Float syntax - parse as f64 but reject infinity/NaN
         let f = num_str
             .parse::<f64>()
             .map_err(|_| ParseError::InvalidNumber(num_str.to_string()))?;
@@ -904,21 +911,29 @@ World"}"#;
     }
 
     #[test]
-    fn test_beyond_i64_max_as_f64() {
-        // Number beyond i64::MAX should parse as f64
+    fn test_beyond_i64_max_rejected() {
+        // Integer syntax beyond i64::MAX should be rejected (no silent precision loss)
         let input = "9223372036854775808"; // i64::MAX + 1
-        let value = parse(input).unwrap();
-        assert!(value.is_f64());
-        assert_eq!(value.as_f64().unwrap(), 9223372036854775808.0);
+        assert!(parse(input).is_err());
     }
 
     #[test]
-    fn test_beyond_i64_min_as_f64() {
-        // Number beyond i64::MIN should parse as f64
+    fn test_beyond_i64_min_rejected() {
+        // Integer syntax beyond i64::MIN should be rejected (no silent precision loss)
         let input = "-9223372036854775809"; // i64::MIN - 1
+        assert!(parse(input).is_err());
+    }
+
+    #[test]
+    fn test_large_integer_as_float_syntax() {
+        // If we use float syntax (with .0 or e0), large numbers can be f64
+        let input = "9223372036854775808.0"; // i64::MAX + 1 with decimal
         let value = parse(input).unwrap();
         assert!(value.is_f64());
-        assert_eq!(value.as_f64().unwrap(), -9223372036854775809.0);
+
+        let input = "9223372036854775808e0"; // i64::MAX + 1 with exponent
+        let value = parse(input).unwrap();
+        assert!(value.is_f64());
     }
 
     #[test]
@@ -946,6 +961,55 @@ World"}"#;
         // Extremely large exponent should be rejected
         let input = "1e10000";
         assert!(parse(input).is_err());
+    }
+
+    #[test]
+    fn test_float_syntax_allows_precision_loss() {
+        // Float syntax with precision loss is allowed (but integer syntax is not)
+        let input = "9007199254740993.0"; // Larger than exact f64 precision
+        let value = parse(input).unwrap();
+        assert!(value.is_f64());
+
+        // Same number with integer syntax would be an i64
+        let input = "9007199254740993";
+        let value = parse(input).unwrap();
+        assert!(value.is_i64());
+        assert_eq!(value.as_i64().unwrap(), 9007199254740993_i64);
+    }
+
+    #[test]
+    fn test_integer_syntax_must_be_exact() {
+        // These are valid i64 values and should parse correctly
+        let valid_integers = [
+            "0",
+            "-0",
+            "1",
+            "-1",
+            "12345",
+            "-12345",
+            "9223372036854775807",  // i64::MAX
+            "-9223372036854775808", // i64::MIN
+        ];
+
+        for int_str in &valid_integers {
+            let value = parse(int_str).unwrap();
+            assert!(value.is_i64() || value.is_u64());
+        }
+    }
+
+    #[test]
+    fn test_exponent_creates_float() {
+        // Even if the result is an integer value, exponent notation makes it f64
+        let input = "1e2"; // = 100
+        let value = parse(input).unwrap();
+        assert!(value.is_f64());
+        assert_eq!(value.as_f64().unwrap(), 100.0);
+
+        // Without exponent, it's i64
+        let input = "100";
+        let value = parse(input).unwrap();
+        assert!(value.is_i64());
+        assert_eq!(value.as_i64().unwrap(), 100);
     }
 
     #[test]
