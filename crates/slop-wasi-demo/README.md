@@ -1,15 +1,18 @@
 # slop-wasi-demo
 
-A demonstration of how to build and distribute Rust CLI tools as WASM modules for Deno, using WASI (WebAssembly System Interface).
+A demonstration of how to build and distribute Rust CLI tools as WASM modules using WASI (WebAssembly System Interface).
+
+**✅ Verified Working:** Node.js WASI, wasmtime
+**⚠️ Deno Status:** WASI support is limited (see [Deno Compatibility](#deno-compatibility) below)
 
 ## What This Demonstrates
 
 This crate shows WASI-compatible patterns for building CLI tools:
 
-- ✅ **Single-threaded async runtime**: Uses `tokio` with `current_thread` flavor (available but not needed)
+- ✅ **Single-threaded async runtime**: Uses `tokio` with `current_thread` flavor - **works with WASI!**
 - ✅ **File I/O**: Uses `std::fs` for file operations (WASI doesn't support async file I/O)
 - ✅ **stdin/stdout**: Uses `std::io` for synchronous stream operations
-- ✅ **Cross-platform**: Single WASM binary works on any platform with WASI support
+- ✅ **Cross-platform**: Single WASM binary works with any WASI-compatible runtime
 
 ## WASI Compatibility Notes
 
@@ -81,9 +84,22 @@ mv slop-wasi-demo.opt.wasm slop-wasi-demo.wasm
 
 This can reduce the WASM size by 30-50%.
 
-## Testing with Node.js
+## Deno Compatibility
 
-Node.js v13+ has built-in WASI support, making it easy to test your WASM binary:
+**Current Status (Deno 2.5.6 as of Nov 2025):**
+- `node:wasi` - Non-functional (stub implementation only)
+- `std/wasi` - Deprecated, has compatibility issues with modern Rust/tokio
+
+**Recommendation:** Use Node.js WASI or wasmtime for now. Deno's WASI support is expected to improve with WASI 0.2 implementation ([Issue #24289](https://github.com/denoland/deno/issues/24289)).
+
+You can still run the WASM via Deno using Node compatibility:
+```bash
+deno run --allow-read --allow-env test-wasm-node.mjs example.json
+```
+
+## Running with Node.js
+
+Node.js v13+ has excellent built-in WASI support and works perfectly with this demo:
 
 ```bash
 cd crates/slop-wasi-demo
@@ -99,39 +115,6 @@ node test-wasm-node.mjs example.json --compact
 
 # Test help
 node test-wasm-node.mjs --help
-```
-
-This is useful for quick testing before deploying with Deno.
-
-## Running with Deno
-
-### Direct Execution
-
-```bash
-cd crates/slop-wasi-demo
-
-# Read from stdin
-echo '{"hello":"world"}' | deno run --allow-read --allow-env run-wasm.ts
-
-# Read from file
-echo '{"hello":"world"}' > test.json
-deno run --allow-read --allow-env run-wasm.ts test.json
-
-# Compact output
-deno run --allow-read --allow-env run-wasm.ts test.json --compact
-```
-
-### Install as a Command
-
-```bash
-cd crates/slop-wasi-demo
-
-# Install globally
-deno install -A -n slop-wasi run-wasm.ts
-
-# Now you can run it anywhere
-echo '{"hello":"world"}' | slop-wasi
-slop-wasi input.json
 ```
 
 ## Distribution Options

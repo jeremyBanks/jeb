@@ -6,9 +6,9 @@ use {
 /// Simple JSON pretty-printer demo for WASI/Deno distribution
 ///
 /// This demonstrates WASI-compatible patterns:
-/// - Single-threaded tokio runtime (current_thread) - available but not needed here
+/// - Single-threaded tokio runtime (current_thread flavor)
 /// - std::fs and std::io for all I/O operations (WASI compatible)
-/// - No tokio::io::stdin/stdout (not supported on WASI)
+/// - Tokio is available but not required for this simple CLI
 ///
 /// Usage:
 ///   slop-wasi-demo                    # Read from stdin
@@ -17,12 +17,6 @@ use {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Note: We're using tokio::main but not actually using any async features
-    // This demonstrates that the runtime works on WASI, even if we don't need it here
-    run_sync()
-}
-
-fn run_sync() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
 
     // Parse arguments

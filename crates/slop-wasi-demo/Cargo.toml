@@ -13,7 +13,7 @@ path = "src/main.rs"
 serde.workspace = true
 serde_json.workspace = true
 
-# Using single-threaded tokio for async I/O (stdin/stdout)
+# Single-threaded tokio for async I/O
 # WASI only supports: sync, macros, io-util, rt, time
 tokio = { version = "1.0", default-features = false, features = [
     "io-util",

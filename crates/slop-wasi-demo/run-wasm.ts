@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno run --allow-read --allow-env
 /**
- * Deno wrapper for running slop-wasi-demo as WASM
+ * Deno wrapper for running slop-wasi-demo as WASM using Node.js WASI compatibility
  *
  * This demonstrates how to distribute a Rust CLI as a Deno program using WASI.
  *
@@ -14,7 +14,8 @@
  *   slop-wasi input.json
  */
 
-import Context from "https://deno.land/std@0.204.0/wasi/snapshot_preview1.ts";
+import { WASI } from "node:wasi";
+import { readFile } from "node:fs/promises";
 
 // Path to the WASM binary (relative to this script)
 const WASM_PATH = new URL("./slop-wasi-demo.wasm", import.meta.url).pathname;
@@ -23,7 +24,7 @@ async function main() {
   // Read the WASM binary
   let wasmBinary: Uint8Array;
   try {
-    wasmBinary = await Deno.readFile(WASM_PATH);
+    wasmBinary = await readFile(WASM_PATH);
   } catch (error) {
     console.error(`Error: Could not find WASM binary at ${WASM_PATH}`);
     console.error("Please build it first with:");
@@ -32,32 +33,21 @@ async function main() {
     Deno.exit(1);
   }
 
-  // Create WASI context with environment and arguments
-  const context = new Context({
+  // Create WASI instance using Node.js compatibility
+  const wasi = new WASI({
     args: ["slop-wasi-demo", ...Deno.args],
     env: Deno.env.toObject(),
-    stdin: Deno.stdin.rid,
-    stdout: Deno.stdout.rid,
-    stderr: Deno.stderr.rid,
+    preopens: {
+      ".": ".",
+    },
   });
 
   // Compile and instantiate the WASM module
   const module = await WebAssembly.compile(wasmBinary);
-  const instance = await WebAssembly.instantiate(module, {
-    wasi_snapshot_preview1: context.exports,
-  });
+  const instance = await WebAssembly.instantiate(module, wasi.wasiImport);
 
   // Start the WASI program
-  try {
-    context.start(instance);
-  } catch (error) {
-    // WASI programs exit by throwing, check if it's a normal exit
-    if (error instanceof Error && error.message.includes("unreachable")) {
-      // Normal exit - WASI uses unreachable for exit(0)
-      Deno.exit(0);
-    }
-    throw error;
-  }
+  wasi.start(instance);
 }
 
 // Run the program
