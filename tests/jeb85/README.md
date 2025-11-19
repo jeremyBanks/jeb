@@ -62,6 +62,18 @@ tests/jeb85/
 **Pipeline**: `encode-z85 | decode-z85`
 **Expected**: Should roundtrip perfectly
 
+### 09-output-is-text.sh
+**Goal**: Verify all encoded output is text-safe (no control characters)
+**Input**: Binary data
+**Pipeline**: `encode-z85`
+**Expected**: Output should be valid UTF-8 with only printable ASCII characters
+
+### 10-mixed-binary-text.sh
+**Goal**: Verify mixed binary and text input handling
+**Input**: "Hello\x00\x01\x02World\x00\xff" (text with embedded binary)
+**Pipeline**: `encode-z85 | decode-z85`
+**Expected**: Should roundtrip perfectly and produce text-safe encoded output
+
 ## Running Tests
 
 ```bash
@@ -83,6 +95,12 @@ cd tests/jeb85/scripts
 - `join` - Join stream-of-streams with no delimiter into single stream
 
 ## Design Notes
+
+### Output Format
+- **All encoded outputs are text-only**: No control characters except newlines
+- **Git-friendly**: Encoded outputs can be committed and diffed
+- **Valid UTF-8**: All outputs should be valid UTF-8
+- **Printable ASCII**: Z85 uses only printable ASCII characters (0x20-0x7E)
 
 ### Stream Types
 - **Single stream**: Binary or text data
