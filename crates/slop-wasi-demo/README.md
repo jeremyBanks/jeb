@@ -6,25 +6,27 @@ A demonstration of how to build and distribute Rust CLI tools as WASM modules fo
 
 This crate shows WASI-compatible patterns for building CLI tools:
 
-- ✅ **Single-threaded async runtime**: Uses `tokio` with `current_thread` flavor
+- ✅ **Single-threaded async runtime**: Uses `tokio` with `current_thread` flavor (available but not needed)
 - ✅ **File I/O**: Uses `std::fs` for file operations (WASI doesn't support async file I/O)
-- ✅ **stdin/stdout**: Uses `tokio::io` for async stream operations
-- ✅ **Cross-platform**: Single WASM binary works on any platform with Deno
+- ✅ **stdin/stdout**: Uses `std::io` for synchronous stream operations
+- ✅ **Cross-platform**: Single WASM binary works on any platform with WASI support
 
 ## WASI Compatibility Notes
 
 ### What Works ✅
 
 - `std::fs::File` - Synchronous file operations
-- `tokio::io::stdin()` / `stdout()` - Async stdio
-- `tokio::time` - Timers and delays
+- `std::io::stdin()` / `stdout()` - Synchronous stdio
+- `tokio::time` - Timers and delays (with `rt` feature)
 - `serde_json` - JSON parsing and serialization
 - Command-line argument parsing
 - Environment variables
+- Single-threaded tokio runtime (`current_thread` flavor)
 
 ### What Doesn't Work ❌
 
 - `tokio::fs` - Uses thread pools (not available in WASI)
+- `tokio::io::stdin/stdout` - Not supported (use `std::io` instead)
 - `tokio::net` - Network sockets (WASI Preview 1 limitation)
 - Multi-threaded runtime - WASI is single-threaded only
 - Process spawning - Not supported in WASI
@@ -78,6 +80,28 @@ mv slop-wasi-demo.opt.wasm slop-wasi-demo.wasm
 ```
 
 This can reduce the WASM size by 30-50%.
+
+## Testing with Node.js
+
+Node.js v13+ has built-in WASI support, making it easy to test your WASM binary:
+
+```bash
+cd crates/slop-wasi-demo
+
+# Test with file input
+node test-wasm-node.mjs example.json
+
+# Test with stdin
+echo '{"hello":"world"}' | node test-wasm-node.mjs
+
+# Test compact mode
+node test-wasm-node.mjs example.json --compact
+
+# Test help
+node test-wasm-node.mjs --help
+```
+
+This is useful for quick testing before deploying with Deno.
 
 ## Running with Deno
 
