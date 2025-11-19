@@ -74,6 +74,12 @@ tests/jeb85/
 **Pipeline**: `encode-z85 | decode-z85`
 **Expected**: Should roundtrip perfectly and produce text-safe encoded output
 
+### 11-double-encode.sh
+**Goal**: Verify double encoding/decoding (encoding encoded data)
+**Input**: Mixed binary/text
+**Pipeline**: `(split-64k encode-z85 join-lines) × 2` then `(split-lines decode-z85 join) × 2`
+**Expected**: Should roundtrip perfectly through double encoding and remain text-safe
+
 ## Running Tests
 
 ```bash
