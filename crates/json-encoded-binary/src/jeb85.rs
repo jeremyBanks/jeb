@@ -1,16 +1,21 @@
 // JEB85 implementation - Enhanced Z85 with text mode and raw chunks
 //
 // JEB85 adds two enhancements over pure Z85:
-// 1. Text mode: If input is text-safe (valid UTF-8, no prohibited control chars, ≤64 KiB),
-//    pass through as-is
-// 2. Raw chunks: For binary mode, preserve readable ASCII blocks using | markers
+// 1. Text mode: If input is text-safe (valid UTF-8, no prohibited control
+//    chars, ≤64 KiB), pass through as-is
+// 2. Raw chunks: For binary mode, preserve readable ASCII blocks using |
+//    markers
 //
-// This implementation does NOT use the \b prefix - that's for JSON serialization.
+// This implementation does NOT use the \b prefix - that's for JSON
+// serialization.
 
-use crate::{TARGET_RAW_BYTES, encode_z85_block, decode_z85_block, Z85_DECODE, BLOCK_BYTES_4, BLOCK_DIGITS_5, BLOCK_DIGITS_BY_BYTES, BLOCK_BYTES_BY_DIGITS};
+use crate::{
+    BLOCK_BYTES_4, BLOCK_BYTES_BY_DIGITS, BLOCK_DIGITS_5, BLOCK_DIGITS_BY_BYTES, TARGET_RAW_BYTES,
+    Z85_DECODE, decode_z85_block, encode_z85_block,
+};
 
 /// Check if a byte is JSON-safe printable ASCII
-fn is_json_safe_ascii(byte: u8) -> bool {
+const fn is_json_safe_ascii(byte: u8) -> bool {
     matches!(byte, 0x20..=0x21 | 0x23..=0x5B | 0x5D..=0x7E)
 }
 
@@ -21,7 +26,7 @@ fn is_text_safe(data: &[u8]) -> bool {
     }
 
     // Must be valid UTF-8
-    if std::str::from_utf8(data).is_err() {
+    if core::str::from_utf8(data).is_err() {
         return false;
     }
 
@@ -93,9 +98,7 @@ impl Jeb85Encoder {
                     // Pad to 5-char alignment
                     let total_len = count_encoded.len() + 1 + raw_len;
                     let padding = (5 - (total_len % 5)) % 5;
-                    for _ in 0..padding {
-                        result.push(b'.');
-                    }
+                    result.extend(core::iter::repeat_n(b'.', padding));
                 }
             } else {
                 // Encode as Z85
@@ -171,7 +174,6 @@ impl Jeb85Decoder {
         Self::decode_binary(encoded)
     }
 
-    #[allow(clippy::too_many_lines)]
     fn decode_binary(encoded: &[u8]) -> Vec<u8> {
         let mut result = Vec::with_capacity(encoded.len() * 4 / 5);
         let mut i = 0;
@@ -195,11 +197,11 @@ impl Jeb85Decoder {
                 let mut count_len = 0;
                 let mut j = i;
                 while j < encoded.len() && j - i < 4 && encoded[j] != b'|' {
-                    if Z85_DECODE[encoded[j] as usize] != 255 {
+                    if Z85_DECODE[encoded[j] as usize] == 255 {
+                        break;
+                    } else {
                         count_len += 1;
                         j += 1;
-                    } else {
-                        break;
                     }
                 }
 

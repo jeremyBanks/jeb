@@ -14,14 +14,19 @@ for script in [0-9][0-9]-*.sh; do
     fi
 
     echo "Running $script..."
-    if bash "$script" 2>&1; then
-        if grep -q "SKIP" < <(bash "$script" 2>&1); then
-            ((SKIP++))
-        else
-            ((PASS++))
-        fi
+    if OUTPUT=$(bash "$script" 2>&1); then
+        echo "$OUTPUT"
+        case "$OUTPUT" in
+            *SKIP*)
+                SKIP=$((SKIP + 1))
+                ;;
+            *)
+                PASS=$((PASS + 1))
+                ;;
+        esac
     else
-        ((FAIL++))
+        echo "$OUTPUT"
+        FAIL=$((FAIL + 1))
     fi
     echo ""
 done

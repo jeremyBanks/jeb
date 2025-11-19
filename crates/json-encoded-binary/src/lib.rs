@@ -32,7 +32,12 @@ use {
     },
 };
 
-pub use crate::{byte_ranges::*, const_checked::*, errors::*, jeb85::{encode_jeb85, decode_jeb85}};
+pub use crate::{
+    byte_ranges::*,
+    const_checked::*,
+    errors::*,
+    jeb85::{decode_jeb85, encode_jeb85},
+};
 
 // Aliases for compatibility with slop crate
 pub const Z85_ALPHABET: &[u8; 85] = Z85;
