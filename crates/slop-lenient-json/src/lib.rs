@@ -895,6 +895,60 @@ World"}"#;
     }
 
     #[test]
+    fn test_i64_boundaries() {
+        // Test i64::MIN and i64::MAX
+        let input = format!("[{}, {}]", i64::MIN, i64::MAX);
+        let value = parse(&input).unwrap();
+        assert_eq!(value[0].as_i64().unwrap(), i64::MIN);
+        assert_eq!(value[1].as_i64().unwrap(), i64::MAX);
+    }
+
+    #[test]
+    fn test_beyond_i64_max_as_f64() {
+        // Number beyond i64::MAX should parse as f64
+        let input = "9223372036854775808"; // i64::MAX + 1
+        let value = parse(input).unwrap();
+        assert!(value.is_f64());
+        assert_eq!(value.as_f64().unwrap(), 9223372036854775808.0);
+    }
+
+    #[test]
+    fn test_beyond_i64_min_as_f64() {
+        // Number beyond i64::MIN should parse as f64
+        let input = "-9223372036854775809"; // i64::MIN - 1
+        let value = parse(input).unwrap();
+        assert!(value.is_f64());
+        assert_eq!(value.as_f64().unwrap(), -9223372036854775809.0);
+    }
+
+    #[test]
+    fn test_valid_f64_values() {
+        let input = r#"[1.7976931348623157e308, -1.7976931348623157e308, 2.2250738585072014e-308]"#;
+        let value = parse(input).unwrap();
+        // Close to f64::MAX, f64::MIN, and smallest positive normal f64
+        assert!(value[0].is_f64());
+        assert!(value[1].is_f64());
+        assert!(value[2].is_f64());
+    }
+
+    #[test]
+    fn test_overflow_to_infinity_rejected() {
+        // Numbers that would overflow to infinity should be rejected
+        let input = "1.7976931348623159e309"; // Beyond f64::MAX
+        assert!(parse(input).is_err());
+
+        let input = "-1.7976931348623159e309"; // Beyond f64::MIN
+        assert!(parse(input).is_err());
+    }
+
+    #[test]
+    fn test_very_large_exponent_rejected() {
+        // Extremely large exponent should be rejected
+        let input = "1e10000";
+        assert!(parse(input).is_err());
+    }
+
+    #[test]
     fn test_streaming_with_newlines() {
         let input = "{\n  name: \"Alice\"\n}\n{\n  name: \"Bob\"\n}";
         let (value1, remainder) = parse_first(input).unwrap();
