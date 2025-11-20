@@ -1,9 +1,13 @@
 [package]
 name = "json-encoded-binary"
 version.workspace = true
-publish.workspace = true
+publish = false
 license.workspace = true
 edition.workspace = true
+exclude = [
+    "*.md",
+    "!README.md",
+]
 
 
 [dependencies]

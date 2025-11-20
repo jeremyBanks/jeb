@@ -20,13 +20,14 @@ This project uses a Cargo workspace with multiple crates:
 
 ## Critical Convention: Version Bumping
 
-**⚠️ EVERY pull request MUST bump the version in `crates/jeb/Cargo.toml`**
+**⚠️ EVERY pull request MUST bump the version in root `Cargo.toml` (workspace version)**
 
-Current versioning scheme (while in 0.0.x):
+Current versioning scheme (while in 0.0.0-vibes-YYYY-MM-DD.xxxx):
 
-- Patch version (0.0.X) - All changes while project is experimental
-- Version stays at 0.0.x until project is stable (see README disclaimer)
-- Each crate has independent versioning
+- Version format: 0.0.0-vibes-YYYY-MM-DD.xxxx (date-based versioning)
+- Use `./scripts/new-version.sh` to generate a new version based on current date/time
+- Version stays at 0.0.0-vibes-* until project is stable (see README disclaimer)
+- Crates inherit the workspace version
 
 CI will fail if version is not bumped!
 
@@ -105,7 +106,7 @@ Verify your version follows project conventions:
 
 This checks that:
 
-- Version is in `0.0.x` format (required for this project)
+- Version is in `0.0.0-vibes-YYYY-MM-DD.xxxx` format (required for this project)
 - Version has been bumped from the base branch (if applicable)
 
 ### Using as a Pre-Push Hook (Optional)
