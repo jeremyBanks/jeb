@@ -1,0 +1,194 @@
+name: Release
+permissions:
+  contents: write  # Required for creating tags and releases
+
+on:
+  push:
+    branches: [trunk]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Run all CI checks first
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@nightly
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run tests
+        run: ./scripts/test.sh
+
+  clippy:
+    name: Clippy (Lints)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Run clippy
+        run: ./scripts/clippy.sh
+
+  fmt:
+    name: Rustfmt (Format Check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: ./scripts/fmt.sh
+
+  build-release-binaries:
+    name: Build Release Binaries
+    needs: [test, clippy, fmt]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            artifact_name: slop-linux-x64
+            binary_name: slop
+            binary_path: target/release/slop
+          - os: windows-latest
+            artifact_name: slop-windows-x64.exe
+            binary_name: slop.exe
+            binary_path: target/release/slop.exe
+          - os: macos-latest
+            artifact_name: slop-macos-x64
+            binary_name: slop
+            binary_path: target/release/slop
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release binary
+        run: cargo build --release --verbose -p slop
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.binary_path }}
+
+  create-release:
+    name: Create Release
+    needs: [test, clippy, fmt, build-release-binaries]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tags
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Extract version from Cargo.toml
+        id: get_version
+        run: |
+          VERSION=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git rev-parse "v${{ steps.get_version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag v${{ steps.get_version.outputs.version }} already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Tag v${{ steps.get_version.outputs.version }} does not exist"
+          fi
+
+      - name: Create tag
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ steps.get_version.outputs.version }}" -m "Release v${{ steps.get_version.outputs.version }}"
+          git push origin "v${{ steps.get_version.outputs.version }}"
+
+      - name: Download all artifacts
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Display artifact structure
+        if: steps.check_tag.outputs.exists == 'false'
+        run: ls -R ./artifacts
+
+      - name: Create GitHub Release
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          name: Release v${{ steps.get_version.outputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            artifacts/slop-linux-x64/slop
+            artifacts/slop-windows-x64.exe/slop.exe
+            artifacts/slop-macos-x64/slop
+
+      - name: Attempt cargo publish (expected to fail)
+        if: steps.check_tag.outputs.exists == 'false'
+        continue-on-error: true
+        run: |
+          echo "Attempting cargo publish (this will fail until credentials are configured and publish=true)"
+          cargo publish --allow-dirty || echo "Cargo publish failed as expected"
