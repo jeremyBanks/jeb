@@ -1,5 +1,7 @@
-use std::io::{self, Read, Write};
-use std::process;
+use std::{
+    io::{self, Read, Write},
+    process,
+};
 
 /// A binary stream with an associated error flag
 #[derive(Clone, Debug)]
@@ -10,10 +12,7 @@ struct BinaryStream {
 
 impl BinaryStream {
     fn new(data: Vec<u8>) -> Self {
-        Self {
-            data,
-            error: false,
-        }
+        Self { data, error: false }
     }
 }
 
@@ -200,7 +199,10 @@ fn process_pipeline(commands: &[String], input: Vec<u8>) -> io::Result<BinaryStr
                 let has_error = streams.has_errors();
                 let data: Vec<u8> = streams.streams.into_iter().flat_map(|s| s.data).collect();
                 streams = StreamOfStreams {
-                    streams: vec![BinaryStream { data, error: has_error }],
+                    streams: vec![BinaryStream {
+                        data,
+                        error: has_error,
+                    }],
                 };
             }
             "join-lines" => {
@@ -215,7 +217,10 @@ fn process_pipeline(commands: &[String], input: Vec<u8>) -> io::Result<BinaryStr
                     }
                 }
                 streams = StreamOfStreams {
-                    streams: vec![BinaryStream { data, error: has_error }],
+                    streams: vec![BinaryStream {
+                        data,
+                        error: has_error,
+                    }],
                 };
             }
             _ => {
@@ -238,7 +243,13 @@ fn decode_z85_with_errors(input: &[u8]) -> (Vec<u8>, bool) {
     let mut i = 0;
 
     while i + 5 <= input.len() {
-        let block = [input[i], input[i + 1], input[i + 2], input[i + 3], input[i + 4]];
+        let block = [
+            input[i],
+            input[i + 1],
+            input[i + 2],
+            input[i + 3],
+            input[i + 4],
+        ];
 
         match json_encoded_binary::decode_z85_block(block) {
             Ok(decoded) => {
@@ -271,12 +282,13 @@ fn decode_z85_with_errors(input: &[u8]) -> (Vec<u8>, bool) {
                 }
             }
             Err(_) => {
-                // Error on partial block: output "E(" + original bytes + ")" (padded to 8 total)
+                // Error on partial block: output "E(" + original bytes + ")" (padded to 8
+                // total)
                 output.extend_from_slice(b"E(");
                 output.extend_from_slice(&input[i..]);
                 // Pad to make total 8 bytes (2 + remaining + padding + 1)
                 let padding_needed = 5 - remaining;
-                output.extend(core::iter::repeat(b'0').take(padding_needed));
+                output.extend(std::iter::repeat_n(b'0', padding_needed));
                 output.push(b')');
                 had_error = true;
             }
@@ -299,17 +311,16 @@ fn decode_jeb85_with_errors(input: &[u8]) -> (Vec<u8>, bool) {
 
     // Check if it's text mode (no . markers and text-safe)
     if !input.contains(&b'.') {
-        let all_z85 = input.iter().all(|&b| {
-            json_encoded_binary::Z85_DECODE[b as usize] != 255
-        });
+        let all_z85 = input
+            .iter()
+            .all(|&b| json_encoded_binary::Z85_DECODE[b as usize] != 255);
 
         // Simple check for text-safe
-        if let Ok(s) = core::str::from_utf8(input) {
-            if !all_z85 && s.len() <= 65536 {
+        if let Ok(s) = core::str::from_utf8(input)
+            && !all_z85 && s.len() <= 65536 {
                 // Text mode passthrough
                 return (input.to_vec(), false);
             }
-        }
     }
 
     // Binary mode - for now just use the non-error version
