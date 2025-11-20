@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.0.0-vibes-2025-11-20.2155"
+version = "0.0.0-vibes-2025-11-20.2254"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 publish = false
