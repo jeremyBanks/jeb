@@ -1,5 +1,5 @@
 [package]
-name = "jeb"
+name = "jeb-jeb"
 publish = false
 version.workspace = true
 license.workspace = true

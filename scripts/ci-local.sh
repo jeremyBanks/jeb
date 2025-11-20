@@ -33,8 +33,17 @@ print_error() {
     echo -e "${RED}✗ $1${NC}"
 }
 
-# 1. Check formatting
-print_step "1. Checking code formatting (cargo fmt)"
+# 1. Run tests (debug mode)
+print_step "1. Running tests (debug mode)"
+if cargo test --verbose; then
+    print_success "Tests passed (debug mode)"
+else
+    print_error "Tests failed (debug mode)"
+    exit 1
+fi
+
+# 2. Check formatting
+print_step "2. Checking code formatting (cargo fmt)"
 if cargo fmt -- --check; then
     print_success "Formatting check passed"
 else
@@ -44,21 +53,12 @@ else
     exit 1
 fi
 
-# 2. Run clippy (linter)
-print_step "2. Running linter (cargo clippy)"
+# 3. Run clippy (linter)
+print_step "3. Running linter (cargo clippy)"
 if cargo clippy -- -D warnings; then
     print_success "Clippy passed"
 else
     print_error "Clippy failed"
-    exit 1
-fi
-
-# 3. Run tests (debug mode)
-print_step "3. Running tests (debug mode)"
-if cargo test --verbose; then
-    print_success "Tests passed (debug mode)"
-else
-    print_error "Tests failed (debug mode)"
     exit 1
 fi
 
