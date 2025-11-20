@@ -101,10 +101,27 @@ impl Jeb85Encoder {
 
                     result.extend_from_slice(&data[run_start..run_start + raw_len]);
 
-                    // Pad to 5-char alignment with .
+                    // Pad to 5-char alignment with . or preview of next bytes
                     let total_len = count_encoded.len() + 1 + raw_len;
                     let padding = (5 - (total_len % 5)) % 5;
-                    result.extend(core::iter::repeat_n(b'.', padding));
+
+                    // Try to use next bytes as padding for readability
+                    let mut padding_used = 0;
+                    while padding_used < padding && i < data.len() {
+                        if is_json_safe_ascii(data[i]) {
+                            result.push(data[i]);
+                            padding_used += 1;
+                            i += 1;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    // Fill remaining padding with .
+                    result.extend(core::iter::repeat_n(b'.', padding - padding_used));
+
+                    // Rewind i - those bytes are still to be processed
+                    i -= padding_used;
                 }
             } else {
                 // Encode as Z85
