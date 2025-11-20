@@ -16,11 +16,8 @@ ERROR: PR version (X.X.X) must be different from base branch version (X.X.X)
 To fix this:
 
 1. Open `Cargo.toml`
-2. Increment the version number (we follow
-   [Semantic Versioning](https://semver.org/)):
-   - **Patch version** (0.0.X) - Bug fixes and minor changes
-   - **Minor version** (0.X.0) - New features, backward compatible
-   - **Major version** (X.0.0) - Breaking changes
+2. Increment the version number (we use 0.0.0-vibes.X format):
+   - **Patch version** (0.0.0-vibes.X) - Bug fixes and minor changes
 3. Commit the change
 
 ### Before Submitting a PR

@@ -22,13 +22,13 @@ if grep -q '^\[workspace\]' Cargo.toml; then
         echo "Workspace version: $WORKSPACE_VERSION"
         VERSION=$WORKSPACE_VERSION
 
-        if [[ ! "$VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
-            echo -e "${RED}ERROR: Workspace version must be 0.0.x format (major=0, minor=0)${NC}"
+        if [[ ! "$VERSION" =~ ^0\.0\.0-vibes\.[0-9]+$ ]]; then
+            echo -e "${RED}ERROR: Workspace version must be 0.0.0-vibes.x format${NC}"
             echo "Found: $VERSION"
             exit 1
         fi
 
-        echo -e "${GREEN}✓ Workspace version $VERSION is valid (0.0.x format)${NC}"
+        echo -e "${GREEN}✓ Workspace version $VERSION is valid (0.0.0-vibes.x format)${NC}"
 
         # For workspace with shared version, use root Cargo.toml for comparison
         CARGO_PATH="Cargo.toml"
@@ -38,13 +38,13 @@ if grep -q '^\[workspace\]' Cargo.toml; then
             JEB_VERSION=$(grep '^version = ' crates/jeb/Cargo.toml | head -1 | cut -d'"' -f2)
             echo "jeb version: $JEB_VERSION"
 
-            if [[ ! "$JEB_VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
-                echo -e "${RED}ERROR: jeb version must be 0.0.x format (major=0, minor=0)${NC}"
+            if [[ ! "$JEB_VERSION" =~ ^0\.0\.0-vibes\.[0-9]+$ ]]; then
+                echo -e "${RED}ERROR: jeb version must be 0.0.0-vibes.x format${NC}"
                 echo "Found: $JEB_VERSION"
                 exit 1
             fi
 
-            echo -e "${GREEN}✓ jeb version $JEB_VERSION is valid (0.0.x format)${NC}"
+            echo -e "${GREEN}✓ jeb version $JEB_VERSION is valid (0.0.0-vibes.x format)${NC}"
         fi
 
         # Check json-encoded-binary crate
@@ -52,13 +52,13 @@ if grep -q '^\[workspace\]' Cargo.toml; then
             JEB85_VERSION=$(grep '^version = ' crates/json-encoded-binary/Cargo.toml | head -1 | cut -d'"' -f2)
             echo "json-encoded-binary version: $JEB85_VERSION"
 
-            if [[ ! "$JEB85_VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
-                echo -e "${RED}ERROR: json-encoded-binary version must be 0.0.x format (major=0, minor=0)${NC}"
+            if [[ ! "$JEB85_VERSION" =~ ^0\.0\.0-vibes\.[0-9]+$ ]]; then
+                echo -e "${RED}ERROR: json-encoded-binary version must be 0.0.0-vibes.x format${NC}"
                 echo "Found: $JEB85_VERSION"
                 exit 1
             fi
 
-            echo -e "${GREEN}✓ json-encoded-binary version $JEB85_VERSION is valid (0.0.x format)${NC}"
+            echo -e "${GREEN}✓ json-encoded-binary version $JEB85_VERSION is valid (0.0.0-vibes.x format)${NC}"
         fi
 
         # For workspace without shared version, check if jeb version differs from base (primary crate)
@@ -70,14 +70,14 @@ else
     VERSION=$(grep '^version = ' Cargo.toml | head -1 | cut -d'"' -f2)
     echo "Current version: $VERSION"
 
-    # Check if version matches 0.0.x pattern
-    if [[ ! "$VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
-        echo -e "${RED}ERROR: Version must be 0.0.x format (major=0, minor=0)${NC}"
+    # Check if version matches 0.0.0-vibes.x pattern
+    if [[ ! "$VERSION" =~ ^0\.0\.0-vibes\.[0-9]+$ ]]; then
+        echo -e "${RED}ERROR: Version must be 0.0.0-vibes.x format${NC}"
         echo "Found: $VERSION"
         exit 1
     fi
 
-    echo -e "${GREEN}✓ Version $VERSION is valid (0.0.x format)${NC}"
+    echo -e "${GREEN}✓ Version $VERSION is valid (0.0.0-vibes.x format)${NC}"
     CARGO_PATH="Cargo.toml"
 fi
 

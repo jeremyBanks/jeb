@@ -3,7 +3,7 @@
 >
 > Nothing in this README or any other documents or files in this repository
 > should currently be taken as necessarily true, accurate, or correct. The
-> project version will remain 0.0.x for as long as this is the case.
+> project version will remain 0.0.0-vibes.x for as long as this is the case.
 
 ## License
 
