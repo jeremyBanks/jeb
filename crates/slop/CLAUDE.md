@@ -25,7 +25,7 @@ This project uses a Cargo workspace with multiple crates:
 Current versioning scheme (while in 0.0.0-vibes-YYYY-MM-DD.xxxx):
 
 - Version format: 0.0.0-vibes-YYYY-MM-DD.xxxx (date-based versioning)
-- Use `./scripts/set-version.sh` to generate a new version based on current date/time
+- Use `./scripts/new-version.sh` to generate a new version based on current date/time
 - Version stays at 0.0.0-vibes-* until project is stable (see README disclaimer)
 - Crates inherit the workspace version
 
