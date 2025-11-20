@@ -298,7 +298,8 @@ mod tests {
     fn test_text_mode() {
         let data = b"Hello, World!";
         let encoded = encode_jeb85(data);
-        assert_eq!(encoded, data);
+        // Text is now encoded in binary mode with raw chunks, not passed through
+        assert_ne!(encoded, data);
 
         let decoded = decode_jeb85(&encoded);
         assert_eq!(decoded, data);
