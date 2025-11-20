@@ -1,9 +1,12 @@
-> **⚠️**: This is vibe-coded slop. The humans responsible would like none of the
-> blame but all of the credit.
->
-> Nothing in this README or any other documents or files in this repository
-> should currently be taken as necessarily true, accurate, or correct. The
-> project version will remain 0.0.x for as long as this is the case.
+# `jeb`
+
+JSON Entity Bag?
+
+Just Encode Bytes?
+
+Joined Escaped Binary?
+
+vibe-coded slop.
 
 ## License
 
@@ -11,9 +14,8 @@ Copyright Jeremy Banks and contributors.
 
 Licensed under either of:
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or
-  http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+- Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license (http://opensource.org/licenses/MIT)
 
 at your option.
 
