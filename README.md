@@ -2,7 +2,9 @@
 
 JSON Entity Bag?
 
-Just Encoded Bytes?
+Just Encode Bytes?
+
+Joined Escaped Binary?
 
 vibe-coded slop.
 
