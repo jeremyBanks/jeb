@@ -51,11 +51,6 @@ impl Jeb85Encoder {
     /// Encode bytes using JEB85 (enhanced Z85 with text mode)
     #[must_use]
     pub fn encode_bytes(bytes: &[u8]) -> Vec<u8> {
-        // Text mode: pass through if text-safe
-        if is_text_safe(bytes) {
-            return bytes.to_vec();
-        }
-
         // Binary mode: use Z85 encoding with raw chunks
         Self::encode_binary(bytes)
     }
@@ -86,18 +81,18 @@ impl Jeb85Encoder {
 
                 if run_blocks == 1 {
                     // Single block: .xxxx
-                    result.push(b'.');
+                    result.push(b'_');
                     result.extend_from_slice(&data[run_start..run_start + 4]);
                 } else if is_at_end {
                     // Multi-block at end: ..xxxx... (no padding needed)
-                    result.extend_from_slice(b"..");
+                    result.extend_from_slice(b"__");
                     result.extend_from_slice(&data[run_start..run_start + raw_len]);
                 } else {
                     // Multi-block in middle: N.xxxx... where N = blocks - 2
                     let count = run_blocks - 2;
                     let count_encoded = encode_count(count);
                     result.extend_from_slice(&count_encoded);
-                    result.push(b'.');
+                    result.push(b'_');
 
                     result.extend_from_slice(&data[run_start..run_start + raw_len]);
 
@@ -118,7 +113,7 @@ impl Jeb85Encoder {
                     }
 
                     // Fill remaining padding with .
-                    result.extend(core::iter::repeat_n(b'.', padding - padding_used));
+                    result.extend(core::iter::repeat_n(b'_', padding - padding_used));
 
                     // Rewind i - those bytes are still to be processed
                     i -= padding_used;
@@ -136,7 +131,7 @@ impl Jeb85Encoder {
                     i += 4;
                 } else if remaining > 0 {
                     // Partial block - use terminal raw chunk ..
-                    result.extend_from_slice(b"..");
+                    result.extend_from_slice(b"__");
                     result.extend_from_slice(&data[i..]);
                     i = data.len();
                 }
@@ -181,7 +176,7 @@ impl Jeb85Decoder {
         }
 
         // If it contains . markers, it's binary mode with raw chunks
-        if encoded.contains(&b'.') {
+        if encoded.contains(&b'_') {
             return Self::decode_binary(encoded);
         }
 
@@ -202,9 +197,9 @@ impl Jeb85Decoder {
         let mut i = 0;
 
         while i < encoded.len() {
-            if encoded[i] == b'.' {
+            if encoded[i] == b'_' {
                 // Raw chunk marker
-                if i + 1 < encoded.len() && encoded[i + 1] == b'.' {
+                if i + 1 < encoded.len() && encoded[i + 1] == b'_' {
                     // Terminal raw: rest is raw data
                     result.extend_from_slice(&encoded[i + 2..]);
                     break;
@@ -219,7 +214,7 @@ impl Jeb85Decoder {
                 // Check if this is a count prefix for multi-block raw
                 let mut count_len = 0;
                 let mut j = i;
-                while j < encoded.len() && j - i < 4 && encoded[j] != b'.' {
+                while j < encoded.len() && j - i < 4 && encoded[j] != b'_' {
                     if Z85_DECODE[encoded[j] as usize] == 255 {
                         break;
                     } else {
@@ -228,7 +223,7 @@ impl Jeb85Decoder {
                     }
                 }
 
-                if j < encoded.len() && encoded[j] == b'.' && count_len > 0 {
+                if j < encoded.len() && encoded[j] == b'_' && count_len > 0 {
                     // Multi-block raw: decode count
                     let mut count = 0usize;
                     for k in i..j {

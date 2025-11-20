@@ -15,7 +15,7 @@ name = "slop"
 path = "src/main.rs"
 
 [dependencies]
-json-encoded-binary = { path = "../jeb" }
+json-encoded-binary = { path = "../jeb", package = "jeb-jeb" }
 serde.workspace = true
 serde_json.workspace = true
 indexmap.workspace = true

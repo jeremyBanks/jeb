@@ -44,9 +44,9 @@ pub const BLOCK_BYTES_4: usize = 4;
 pub const BLOCK_DIGITS_5: usize = 5;
 
 /// The prefix byte preceding raw data.
-pub const RAW_PREFIX: u8 = b'.';
+pub const RAW_PREFIX: u8 = b'_';
 /// The default padding byte repeated after raw data to align following blocks.
-pub const RAW_PADDING: u8 = b'.';
+pub const RAW_PADDING: u8 = b'_';
 
 /// This encoding allows maximum of roughly 200 MiB of raw data per raw chunk.
 pub const MAX_RAW_BYTES: usize = usize_eq(208_802_508, MAX_RAW_BLOCKS * BLOCK_BYTES_4);

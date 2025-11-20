@@ -144,7 +144,7 @@ fn process_pipeline(commands: &[String], input: Vec<u8>) -> io::Result<BinaryStr
                     })
                     .collect();
             }
-            "split-64k" => {
+            "split-64K" => {
                 // Split each stream into 64 KiB chunks
                 const CHUNK_SIZE: usize = 64 * 1024;
                 let mut new_streams = Vec::new();
@@ -158,7 +158,21 @@ fn process_pipeline(commands: &[String], input: Vec<u8>) -> io::Result<BinaryStr
                 }
                 streams.streams = new_streams;
             }
-            "split-64b" => {
+            "split-80" => {
+                // Split each stream into 80 byte chunks
+                const CHUNK_SIZE: usize = 80;
+                let mut new_streams = Vec::new();
+                for stream in streams.streams {
+                    for chunk in stream.data.chunks(CHUNK_SIZE) {
+                        new_streams.push(BinaryStream {
+                            data: chunk.to_vec(),
+                            error: stream.error, // Propagate error to all chunks
+                        });
+                    }
+                }
+                streams.streams = new_streams;
+            }
+            "split-64" => {
                 // Split each stream into 64 byte chunks
                 const CHUNK_SIZE: usize = 64;
                 let mut new_streams = Vec::new();
@@ -310,7 +324,7 @@ fn decode_jeb85_with_errors(input: &[u8]) -> (Vec<u8>, bool) {
     }
 
     // Check if it's text mode (no . markers and text-safe)
-    if !input.contains(&b'.') {
+    if !input.contains(&b'_') {
         let all_z85 = input
             .iter()
             .all(|&b| json_encoded_binary::Z85_DECODE[b as usize] != 255);
