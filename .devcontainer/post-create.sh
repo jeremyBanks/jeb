@@ -8,3 +8,5 @@ git config --global pull.rebase false
 rustup update
 rustup target add wasm32-unknown-unknown
 rustup toolchain install nightly
+
+curl -fsSL https://claude.ai/install.sh | bash
