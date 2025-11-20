@@ -1,7 +1,7 @@
 #!/bin/bash
 # Set version based on current date and time
 # Format: 0.0.0-vibes-YYYY-MM-DD.xxxx
-# where xxxx = (yyyy XOR (dd * 100 + mm)) + (hh * 100 + mm)
+# where xxxx = (yyyy XOR (dd * 100 + MM)) + (hh * 100 + mm) + 2000
 
 set -euo pipefail
 
@@ -19,10 +19,10 @@ dd=$((10#$dd))
 hh=$((10#$hh))
 mm=$((10#$mm))
 
-# Calculate xxxx = (yyyy XOR (dd * 100 + MM)) + (hh * 100 + mm)
+# Calculate xxxx = (yyyy XOR (dd * 100 + MM)) + (hh * 100 + mm) + 2000
 first_part=$((yyyy ^ (dd * 100 + MM)))
 second_part=$((hh * 100 + mm))
-xxxx=$((first_part + second_part))
+xxxx=$((first_part + second_part + 2000))
 
 # Format the version (with zero-padded date components)
 version="0.0.0-vibes-$(date +%Y-%m-%d).$xxxx"
@@ -30,9 +30,9 @@ version="0.0.0-vibes-$(date +%Y-%m-%d).$xxxx"
 echo "Calculated version: $version"
 echo "  Date: $(date +%Y-%m-%d)"
 echo "  Time: $(date +%H:%M)"
-echo "  Formula: ($yyyy XOR ($dd * 100 + $MM)) + ($hh * 100 + $mm)"
-echo "  = ($yyyy XOR $((dd * 100 + MM))) + $((hh * 100 + mm))"
-echo "  = $first_part + $second_part"
+echo "  Formula: ($yyyy XOR ($dd * 100 + $MM)) + ($hh * 100 + $mm) + 2000"
+echo "  = ($yyyy XOR $((dd * 100 + MM))) + $((hh * 100 + mm)) + 2000"
+echo "  = $first_part + $second_part + 2000"
 echo "  = $xxxx"
 
 # Update Cargo.toml workspace version
