@@ -6,14 +6,7 @@ Just Encode Bytes?
 
 Joined Escaped Binary?
 
-vibe-coded slop.
-
-> **⚠️**: This is vibe-coded slop. The humans responsible would like none of the
-> blame but all of the credit.
->
-> Nothing in this README or any other documents or files in this repository
-> should currently be taken as necessarily true, accurate, or correct. The
-> project version will remain 0.0.0-vibes-YYYY-MM-DD.xxxx for as long as this is the case.
+vibe-coded clanker slop.
 
 ## License
 
