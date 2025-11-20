@@ -1,6 +1,7 @@
 [package]
 name = "slop-lenient-json"
 version.workspace = true
+publish = false
 edition.workspace = true
 license.workspace = true
 description = "A lenient JSON parser with optional commas, comments, and unquoted keys"
