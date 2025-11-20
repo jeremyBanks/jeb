@@ -159,6 +159,27 @@ fn process_pipeline(commands: &[String], input: Vec<u8>) -> io::Result<BinaryStr
                 }
                 streams.streams = new_streams;
             }
+            "split-64b" => {
+                // Split each stream into 64 byte chunks
+                const CHUNK_SIZE: usize = 64;
+                let mut new_streams = Vec::new();
+                for stream in streams.streams {
+                    for chunk in stream.data.chunks(CHUNK_SIZE) {
+                        new_streams.push(BinaryStream {
+                            data: chunk.to_vec(),
+                            error: stream.error, // Propagate error to all chunks
+                        });
+                    }
+                }
+                streams.streams = new_streams;
+            }
+            "first" => {
+                // Keep only the first substream
+                if !streams.streams.is_empty() {
+                    let first = streams.streams.into_iter().next().unwrap();
+                    streams.streams = vec![first];
+                }
+            }
             "split-lines" => {
                 // Split each stream by newlines
                 let mut new_streams = Vec::new();
