@@ -2,7 +2,6 @@
 
 use core::mem::swap;
 
-pub use static_assertions::const_assert;
 
 #[macro_export]
 macro_rules! noop {

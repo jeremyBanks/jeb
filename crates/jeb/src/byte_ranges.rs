@@ -87,16 +87,28 @@ pub const ASCII_NON_WHITESPACE_CONTROL_CHARACTERS: &[u8; 31] = &[
 pub const ASCII_TEXT: &[u8; 97] = &OBS(ASCII)
     .sub(OBS(ASCII_NON_WHITESPACE_CONTROL_CHARACTERS))
     .to_array();
-pub const ASCII_TEXT_LUT: [bool; 256] = OBS(UTF8_TEXT).presence_lut();
+// TODO: add .eq
+pub const ASCII_TEXT_LUT: [bool; 256] = OBS(ASCII_TEXT).presence_lut();
 
 /// Bytes that may occur in UTF-8 text data, excluding ASCII control characters
 /// other than `\t`, `\n`, and `\r`.
 pub const UTF8_TEXT: &[u8; 212] = &OBS(UTF8)
     .sub(OBS(ASCII_NON_WHITESPACE_CONTROL_CHARACTERS))
     .to_array();
+// TODO: add .eq
 pub const UTF8_TEXT_LUT: [bool; 256] = OBS(UTF8_TEXT).presence_lut();
 
+/// Bytes that can occur in ASCII text data, excluding control characters.
+pub const ASCII_INLINE_TEXT: &[u8; 95] = &OBS(ASCII_TEXT).sub(OBS(b"\t\n\r")).to_array();
+pub const ASCII_INLINE_TEXT_LUT: [bool; 256] = OBS(ASCII_INLINE_TEXT).presence_lut();
 
+
+
+/// ASCII characters that are safe as-is as non-leading characters in
+/// identifiers in practically all languages.
+pub const SAFE_IN_IDENTIFIER: &[u8; 63] =
+    b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+pub const SAFE_IN_IDENTIFIER_LUT: [bool; 256] = OBS(SAFE_IN_IDENTIFIER).presence_lut();
 
 /// Characters that are safe as-is in in URLs according to the current
 /// [RFC 3986](https://datatracker.ietf.org/doc/html/rfc3986).

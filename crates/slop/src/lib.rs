@@ -1,8 +1,6 @@
 #![doc = include_str!("../../../README.md")]
 
-// Import json-encoded-binary (currently unused, but available for future use)
 #[allow(unused_imports)]
-use json_encoded_binary as _;
 use {
     async_stream::stream,
     futures::stream::{Stream, StreamExt},

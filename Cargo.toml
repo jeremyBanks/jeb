@@ -9,6 +9,7 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [workspace.dependencies]
+jeb = { path = "crates/jeb" }
 async-stream = "0.3"
 cgp = "0.6.0"
 cgp-error-anyhow = "0.6.0"
