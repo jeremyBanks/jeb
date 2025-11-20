@@ -290,15 +290,15 @@ fn decode_z85_with_errors(input: &[u8]) -> (Vec<u8>, bool) {
 /// Returns (output, had_error)
 fn decode_jeb85_with_errors(input: &[u8]) -> (Vec<u8>, bool) {
     // For now, JEB85 decode uses same error handling as Z85
-    // If input contains | markers, it's binary mode
+    // If input contains . markers, it's binary mode
     // If it's text mode, it can't really fail
 
     if input.is_empty() {
         return (Vec::new(), false);
     }
 
-    // Check if it's text mode (no | markers and text-safe)
-    if !input.contains(&b'|') {
+    // Check if it's text mode (no . markers and text-safe)
+    if !input.contains(&b'.') {
         let all_z85 = input.iter().all(|&b| {
             json_encoded_binary::Z85_DECODE[b as usize] != 255
         });

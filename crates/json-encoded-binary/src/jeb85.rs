@@ -16,7 +16,7 @@ use crate::{
 
 /// Check if a byte is JSON-safe printable ASCII
 const fn is_json_safe_ascii(byte: u8) -> bool {
-    matches!(byte, 0x20..=0x21 | 0x23..=0x5B | 0x5D..=0x7E)
+    matches!(byte, 0x20..=0x7E)
 }
 
 /// Check if data is text-safe (can use text mode)
