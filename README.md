@@ -1,3 +1,13 @@
+# `jeb`
+
+JSON Entity Bag?
+
+Just Encode Bytes?
+
+Joined Escaped Binary?
+
+vibe-coded slop.
+
 > **⚠️**: This is vibe-coded slop. The humans responsible would like none of the
 > blame but all of the credit.
 >
@@ -11,9 +21,8 @@ Copyright Jeremy Banks and contributors.
 
 Licensed under either of:
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or
-  http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+- Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license (http://opensource.org/licenses/MIT)
 
 at your option.
 
