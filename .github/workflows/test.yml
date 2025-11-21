@@ -42,56 +42,6 @@ jobs:
       - name: Run tests
         run: ./scripts/test.sh
 
-  build-native:
-    name: Build Native Binary
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            artifact_name: jeb
-            artifact_path: target/release/jeb
-          - os: windows-latest
-            artifact_name: jeb.exe
-            artifact_path: target/release/jeb.exe
-          - os: macos-latest
-            artifact_name: jeb
-            artifact_path: target/release/jeb
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache cargo index
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache cargo build
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build release binary
-        run: cargo build --release --verbose
-
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.os }}-${{ matrix.artifact_name }}
-          path: ${{ matrix.artifact_path }}
-
   clippy:
     name: Clippy (Lints)
     runs-on: ubuntu-latest
