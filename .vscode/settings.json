@@ -6,6 +6,28 @@
   "[markdown]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
+  "[plaintext]": {
+    "editor.rulers": [
+      5,
+      10,
+      15,
+      20,
+      25,
+      30,
+      35,
+      40,
+      45,
+      50,
+      55,
+      60,
+      65,
+      70,
+      75,
+      80,
+      85,
+      90
+    ]
+  },
   "cSpell.words": [
     "backticked",
     "denoland",
@@ -30,7 +52,6 @@
     120
   ],
   "editor.wrappingIndent": "indent",
-  "errorLens.codeLensEnabled": true,
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 32768,
   "files.trimTrailingWhitespace": true,

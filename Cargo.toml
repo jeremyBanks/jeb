@@ -1,14 +1,15 @@
 [workspace]
 resolver = "2"
-members = ["crates/*"]
+members = ["crates/jeb"]
 
 [workspace.package]
-version = "0.0.0-vibes-2025-11-20.2155"
+version = "0.0.0-vibes-2025-11-20.2254"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 publish = false
 
 [workspace.dependencies]
+jeb = { path = "crates/jeb" }
 async-stream = "0.3"
 cgp = "0.6.0"
 cgp-error-anyhow = "0.6.0"

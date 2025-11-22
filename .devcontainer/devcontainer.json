@@ -12,11 +12,12 @@
     "vscode": {
       "extensions": [
         "denoland.vscode-deno",
+        "github.vscode-github-actions",
         "rust-lang.rust-analyzer",
-        "timonwong.shellcheck",
-        "vadimcn.vscode-lldb",
         "streetsidesoftware.code-spell-checker",
-        "usernamehw.errorlens"
+        "timonwong.shellcheck",
+        "usernamehw.errorlens",
+        "vadimcn.vscode-lldb"
       ]
     }
   }

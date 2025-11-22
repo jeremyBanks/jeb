@@ -25,12 +25,7 @@ mod byte_ranges;
 mod const_checked;
 mod errors;
 
-use {
-    core::fmt::Debug,
-    nom_supreme::{
-        error::ErrorTree, final_parser::final_parser, parser_ext::ParserExt, tag::streaming,
-    },
-};
+use core::fmt::Debug;
 
 pub use crate::{byte_ranges::*, const_checked::*, errors::*};
 
@@ -49,9 +44,9 @@ pub const BLOCK_BYTES_4: usize = 4;
 pub const BLOCK_DIGITS_5: usize = 5;
 
 /// The prefix byte preceding raw data.
-pub const RAW_PREFIX: u8 = b'|';
-/// The padding byte following raw data as necessary to align following blocks.
-pub const RAW_PADDING: u8 = b'.';
+pub const RAW_PREFIX: u8 = b'_';
+/// The default padding byte repeated after raw data to align following blocks.
+pub const RAW_PADDING: u8 = b'_';
 
 /// This encoding allows maximum of roughly 200 MiB of raw data per raw chunk.
 pub const MAX_RAW_BYTES: usize = usize_eq(208_802_508, MAX_RAW_BLOCKS * BLOCK_BYTES_4);
