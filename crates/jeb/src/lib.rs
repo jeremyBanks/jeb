@@ -278,3 +278,47 @@ fn test_z85_blocks() {
         assertions!();
     }
 }
+
+#[must_use]
+pub const fn encoded_jeb85_length(byte_length: usize) -> usize {
+    let full_blocks = byte_length / BLOCK_BYTES_4;
+    let remaining_bytes = byte_length % BLOCK_BYTES_4;
+
+    let full_block_digits = full_blocks * BLOCK_DIGITS_5;
+    let remaining_block_digits = BLOCK_DIGITS_BY_BYTES[remaining_bytes];
+
+    full_block_digits + remaining_block_digits
+}
+
+#[must_use]
+pub const fn decoded_base_jeb85_length(digit_length: usize) -> usize {
+    let full_blocks = digit_length / BLOCK_DIGITS_5;
+    let remaining_digits = digit_length % BLOCK_DIGITS_5;
+
+    let full_block_bytes = full_blocks * BLOCK_BYTES_4;
+    let remaining_block_bytes = BLOCK_BYTES_BY_DIGITS[remaining_digits];
+
+    full_block_bytes + remaining_block_bytes
+}
+
+#[must_use]
+pub fn encode_z85(bytes: &[u8]) -> Vec<u8> {
+    let encoded_length = encoded_jeb85_length(bytes.len());
+    let mut output = Vec::with_capacity(encoded_length);
+
+    for bytes in bytes.chunks(BLOCK_BYTES_4) {
+        let byte_length = bytes.len();
+        let mut byte_block = [0x00; BLOCK_BYTES_4];
+        byte_block[..byte_length].copy_from_slice(bytes);
+
+        let encoded_length = BLOCK_DIGITS_BY_BYTES[bytes.len()];
+        let encoded_block = encode_z85_block(byte_block);
+        let encoded = &encoded_block[..encoded_length];
+
+        output.extend_from_slice(encoded);
+    }
+
+    debug_assert!(output.len() == encoded_length);
+
+    output
+}

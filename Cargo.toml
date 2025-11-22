@@ -7,6 +7,14 @@ version = "0.0.0-vibes-2025-11-20.2254"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 publish = false
+exclude = ["*.md", "!README.md"]
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+codegen-units = 1
+
 
 [workspace.dependencies]
 jeb = { path = "crates/jeb" }
@@ -41,7 +49,3 @@ tokio-test = "0.4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 winnow = "0.7.13"
-
-[profile.release]
-opt-level = "z"
-lto = true

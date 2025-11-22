@@ -1,7 +1,23 @@
 [package]
-name = "jeb-jeb"
+name = "jeb"
 publish = false
 version.workspace = true
 license.workspace = true
 edition.workspace = true
-exclude = ["*.md", "!README.md"]
+exclude.workspace = true
+
+[dependencies]
+bstr = "1.12.1"
+const_format = "0.2.35"
+indexmap = "2.0"
+tap = "1.0.1"
+tokio = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+
+[lib]
+
+[[bin]]
+name = "jeb"
+path = "src/bin/jeb.rs"
