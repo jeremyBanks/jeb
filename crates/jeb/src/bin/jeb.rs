@@ -1,20 +1,65 @@
 #![allow(unused)]
 use {
-    bstr::BString,
+    color_eyre::Error,
+    derive_more::From,
     std::{
+        collections::HashMap,
         io::{Read, Write},
         mem::{replace, take},
     },
     tap::Tap,
 };
 
+#[derive(Debug, Clone, Default)]
+struct JsonRecord(indexmap::IndexMap<String, JsonValue>);
+
+#[derive(Debug, Clone, Default)]
+enum JsonValue {
+    #[default]
+    Null,
+    Bool(bool),
+    Integer(i64),
+    Float(f64),
+    String(String),
+    Array(Vec<JsonValue>),
+    Object(JsonRecord),
+}
+
+#[derive(Debug, Clone)]
+enum Item {
+    Bytes(Vec<u8>),
+    Record(JsonRecord),
+}
+
 pub fn main() {
     let mut args = Vec::<String>::from_iter(std::env::args());
     let own_path: String = args.remove(0);
 
+    let commands = HashMap::<String, fn(&mut Vec<Item>) -> Result<(), Error>>::from_iter([
+        ["stdin", |state: &mut Vec<Item>| -> Result<(), Error> {
+            let mut buffer = Vec::<u8>::new();
+            std::io::stdin().read_to_end(&mut buffer)?;
+            state.push(Item::Bytes(buffer));
+            Ok(())
+        }],
+        ["stdout", |state: &mut Vec<Item>| -> Result<(), Error> {
+            for item in take(state) {
+                match item {
+                    Item::Bytes(blob) => {
+                        std::io::stdout().write_all(&blob)?;
+                    }
+                    Item::Record(_) => {
+                        return Err(Error::msg("cannot write non-bytes item to stdout"));
+                    }
+                }
+            }
+            Ok(())
+        }],
+    ]);
 
     if (args.is_empty() || args.iter().any(|arg| arg == "--help" || arg == "-h")) {
-        eprintln!("usage: {own_path} [--help|-h]");
+        eprint!("usage: {own_path} [--help|-h]");
+        eprintln!();
         return;
     }
 

@@ -8,7 +8,10 @@ exclude.workspace = true
 
 [dependencies]
 bstr = "1.12.1"
+bytes = "1.11.0"
+color-eyre.workspace = true
 const_format = "0.2.35"
+derive_more = { version = "2.0.1", features = ["full"] }
 indexmap = "2.0"
 tap = "1.0.1"
 tokio = "1.0"
