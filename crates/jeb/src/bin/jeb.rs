@@ -1,6 +1,6 @@
 #![allow(unused)]
 use {
-    color_eyre::Error,
+    color_eyre::Report,
     derive_more::From,
     std::{
         collections::HashMap,
@@ -35,27 +35,28 @@ pub fn main() {
     let mut args = Vec::<String>::from_iter(std::env::args());
     let own_path: String = args.remove(0);
 
-    let commands = HashMap::<String, fn(&mut Vec<Item>) -> Result<(), Error>>::from_iter([
-        ["stdin", |state: &mut Vec<Item>| -> Result<(), Error> {
-            let mut buffer = Vec::<u8>::new();
-            std::io::stdin().read_to_end(&mut buffer)?;
-            state.push(Item::Bytes(buffer));
-            Ok(())
-        }],
-        ["stdout", |state: &mut Vec<Item>| -> Result<(), Error> {
-            for item in take(state) {
-                match item {
-                    Item::Bytes(blob) => {
-                        std::io::stdout().write_all(&blob)?;
-                    }
-                    Item::Record(_) => {
-                        return Err(Error::msg("cannot write non-bytes item to stdout"));
+    let commands =
+        HashMap::<&'static str, fn(&mut Vec<Item>) -> Result<(), Report>>::from_iter(vec![
+            ("stdin", |state: &mut Vec<Item>| -> Result<(), Report> {
+                let mut buffer = Vec::<u8>::new();
+                std::io::stdin().read_to_end(&mut buffer)?;
+                state.push(Item::Bytes(buffer));
+                Ok(())
+            }),
+            ("stdout", |state: &mut Vec<Item>| -> Result<(), Report> {
+                for item in take(state) {
+                    match item {
+                        Item::Bytes(blob) => {
+                            std::io::stdout().write_all(&blob)?;
+                        }
+                        Item::Record(_) => {
+                            return Err(Error::msg("cannot write non-bytes item to stdout"));
+                        }
                     }
                 }
-            }
-            Ok(())
-        }],
-    ]);
+                Ok(())
+            }),
+        ]);
 
     if (args.is_empty() || args.iter().any(|arg| arg == "--help" || arg == "-h")) {
         eprint!("usage: {own_path} [--help|-h]");
