@@ -9,11 +9,14 @@ license = "MIT OR Apache-2.0"
 publish = false
 exclude = ["*.md", "!README.md"]
 
-[profile.release]
-opt-level = 3
-codegen-units = 1
+[profile.small]
+inherits = "release"
 lto = true
-# strip = true
+opt-level = "z"
+codegen-units = 1
+strip = true
+split-debuginfo = "packed"
+panic = "abort"
 
 [workspace.dependencies]
 jeb = { path = "crates/jeb" }
