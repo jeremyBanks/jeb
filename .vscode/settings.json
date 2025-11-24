@@ -45,6 +45,7 @@
     "usernamehw",
     "USERPROFILE",
     "vadimcn",
+    "veuo",
     "vexu"
   ],
   "editor.detectIndentation": false,
@@ -65,5 +66,9 @@
   "rust-analyzer.rustfmt.overrideCommand": [
     "rustfmt",
     "+nightly"
+  ],
+  "errorLens.statusBarColorsEnabled": true,
+  "errorLens.enabledDiagnosticLevels": [
+    "error"
   ]
 }
