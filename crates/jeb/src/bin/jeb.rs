@@ -1,11 +1,11 @@
 #![allow(unused)]
 
 use {
-    color_eyre::Report,
-    jeb::model::Bytes,
+    jeb::{Panic, model::Bytes},
     owo_colors::{OwoColorize, colors::*},
     std::{
         collections::HashMap,
+        fmt::Debug,
         io::{Read, Write},
         mem::{replace, take},
     },
@@ -15,16 +15,12 @@ use {
 
 static README: &str = include_str!("../../../../README.md");
 
-
 #[tokio::main(flavor = "current_thread")]
-pub async fn main() -> Result<(), Report> {
-    color_eyre::install()?;
-    dotenv::dotenv().ok();
-    tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        .pretty()
-        .init();
+pub async fn main() -> Result<(), ()> {
+    inner_main().await.map_err(|_| ())
+}
 
+pub async fn inner_main() -> Result<(), Panic> {
     let mut args = Vec::<String>::from_iter(std::env::args());
     let own_path: String = args.remove(0);
 
@@ -83,48 +79,48 @@ pub async fn main() -> Result<(), Report> {
     Ok(())
 }
 
-fn help(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn help(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     state.push(README.into());
 
     Ok(state)
 }
 
-fn read(mut state: Vec<Bytes>, path: &str) -> Result<Vec<Bytes>, Report> {
+fn read(mut state: Vec<Bytes>, path: &str) -> Result<Vec<Bytes>, Panic> {
     let data = std::fs::read(path)?;
     state.push(Bytes::from(data));
     Ok(state)
 }
 
 // async fn fetch(mut state: Vec<Bytes>, url: &str) -> Result<Vec<Bytes>,
-// Report> {     let response = reqwest::get(url).await?;
+// Panic> {     let response = reqwest::get(url).await?;
 //     response.error_for_status_ref()?;
 //     let bytes = response.bytes().await?;
 //     state.push(Bytes::from(bytes.to_vec()));
 //     Ok(state)
 // }
 
-fn self_(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn self_(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let own_path = std::env::current_exe()?;
     let own_data = std::fs::read(own_path)?;
     state.push(Bytes::from(own_data));
     Ok(state)
 }
 
-fn stdin(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn stdin(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let mut buffer = Vec::<u8>::new();
     std::io::stdin().read_to_end(&mut buffer)?;
     state.push(Bytes::from(buffer));
     Ok(state)
 }
 
-fn stdout(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn stdout(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for item in state {
         std::io::stdout().write_all(&item)?;
     }
     Ok(Vec::new())
 }
 
-fn encode_z85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn encode_z85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let bytes = take(piece);
         let encoded = jeb::encode_z85(&bytes);
@@ -133,7 +129,7 @@ fn encode_z85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
     Ok(state)
 }
 
-fn encode_jeb85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn encode_jeb85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let bytes = take(piece);
         let encoded = jeb::encode_jeb85(&bytes);
@@ -142,14 +138,14 @@ fn encode_jeb85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
     Ok(state)
 }
 
-fn first(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn first(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     while (state.len() > 1) {
         state.pop();
     }
     Ok(state)
 }
 
-fn last(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn last(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let last = state.pop();
     state.clear();
     if let Some(item) = last {
@@ -158,7 +154,7 @@ fn last(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
     Ok(state)
 }
 
-fn split_lines(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn split_lines(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let mut result = Vec::<Bytes>::new();
     for bytes in state {
         for line in bytes.split(|&byte| byte == b'\n') {
@@ -168,7 +164,7 @@ fn split_lines(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
     Ok(result)
 }
 
-fn split_64(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn split_64(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let mut result = Vec::<Bytes>::new();
     for bytes in state {
         let chunks = bytes.chunks(64);
@@ -179,7 +175,7 @@ fn split_64(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
     Ok(result)
 }
 
-fn split_80(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn split_80(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let mut result = Vec::<Bytes>::new();
     for bytes in state {
         let chunks = bytes.chunks(80);
@@ -190,7 +186,7 @@ fn split_80(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
     Ok(result)
 }
 
-fn split_64k(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn split_64k(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let mut result = Vec::<Bytes>::new();
     for bytes in state {
         let chunks = bytes.chunks(65536);
@@ -201,13 +197,13 @@ fn split_64k(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
     Ok(result)
 }
 
-fn join(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn join(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let input = take(&mut state).into_iter().flatten().collect::<Vec<u8>>();
     state.push(Bytes::from(input));
     Ok(state)
 }
 
-fn join_lines(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn join_lines(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let input = take(&mut state)
         .into_iter()
         .flat_map(|b| b.into_iter().chain(core::iter::once(b'\n')))
@@ -216,7 +212,7 @@ fn join_lines(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
     Ok(state)
 }
 
-fn join_space(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn join_space(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let mut input = take(&mut state)
         .into_iter()
         .flat_map(|b| b.into_iter().chain(core::iter::once(b' ')))
@@ -226,7 +222,7 @@ fn join_space(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
     Ok(state)
 }
 
-fn filter(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+fn filter(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     Ok(take(&mut state)
         .into_iter()
         .filter(|bytes| !bytes.is_empty())
