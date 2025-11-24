@@ -1,0 +1,12 @@
+[env]
+SOURCE_DATE_EPOCH = "1608040201"
+LC_ALL = "C"
+TZ = "UTC"
+
+[build]
+rustflags = [
+    "--remap-path-prefix=/home/vscode=~",
+    "--remap-path-prefix=/workspaces/json-entity-bucket=.",
+    "--remap-path-prefix=/usr/local/rustup=~rustup",
+    "--remap-path-prefix=/usr/local/cargo=~cargo",
+]
