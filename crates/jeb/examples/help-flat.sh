@@ -2,14 +2,14 @@
 # shellcheck disable=all
 set -euo pipefail; path="$(realpath "$0")"; cd "$(dirname "$path")"
 jeb() {
-    echo "$(grep -m 1 -B 999 -A 1 "jeb"" " < "$path")"$'\n\n\n' > "$path"
-    cargo run --release --bin "je""b" -- "$@" >> "$path"
+    echo "$(grep -m 1 -B 999 -A 1 "^jeb " < "$path")"$'\n\n\n' > "$path"
+    cargo run --release --bin jeb -- "$@" >> "$path"
     exit
 }
 
 
 
-jeb ../../../README.md split-lines filter join-space encode-jeb85 split-80 join-lines stdout
+jeb help split-lines filter join-space encode-jeb85 split-80 join-lines stdout
 
 
 

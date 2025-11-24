@@ -9,7 +9,7 @@ jeb() {
 
 
 
-jeb ../../../README.md encode-jeb85 split-80 join-lines stdout
+jeb help encode-jeb85 split-80 join-lines stdout
 
 
 

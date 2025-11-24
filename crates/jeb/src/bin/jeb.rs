@@ -13,6 +13,8 @@ use {
 };
 
 
+static README: &str = include_str!("../../../../README.md");
+
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), Report> {
@@ -26,17 +28,17 @@ pub async fn main() -> Result<(), Report> {
     let mut args = Vec::<String>::from_iter(std::env::args());
     let own_path: String = args.remove(0);
 
-    if (args.is_empty() || args.iter().any(|arg| arg == "--help" || arg == "-h")) {
-        eprintln!("{}", "¯\\_(ツ)_/¯".yellow());
-        return Ok(());
-    }
-
     let mut commands = args;
     let mut commands_fmt = commands
         .iter()
         .map(|s| s.yellow().to_string())
         .collect::<Vec<String>>()
         .join(" ");
+
+    if commands.is_empty() {
+        commands.push("help".to_string());
+        commands_fmt.push_str("help".red().to_string().as_str());
+    }
 
     if commands.last().map(|s| s.as_str()) != Some("stdout") {
         commands.push("stdout".to_string());
@@ -49,6 +51,7 @@ pub async fn main() -> Result<(), Report> {
 
     for command in commands {
         state = match command.as_str() {
+            "help" | "--help" | "-h" | "-?" => help(state)?,
             "stdin" => stdin(state)?,
             "stdout" => stdout(state)?,
             "self" => self_(state)?,
@@ -78,6 +81,12 @@ pub async fn main() -> Result<(), Report> {
     }
 
     Ok(())
+}
+
+fn help(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+    state.push(README.into());
+
+    Ok(state)
 }
 
 fn read(mut state: Vec<Bytes>, path: &str) -> Result<Vec<Bytes>, Report> {
