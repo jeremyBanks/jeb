@@ -16,6 +16,13 @@ use {
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), Report> {
+    color_eyre::install()?;
+    dotenv::dotenv().ok();
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .pretty()
+        .init();
+
     let mut args = Vec::<String>::from_iter(std::env::args());
     let own_path: String = args.remove(0);
 
@@ -54,9 +61,16 @@ pub async fn main() -> Result<(), Report> {
             "join" => join(state)?,
             "join-lines" => join_lines(state)?,
             "encode-z85" => encode_z85(state)?,
+            "encode-jeb85" => encode_jeb85(state)?,
             arg => {
-                eprintln!("error: unrecognized argument: {command}");
-                std::process::exit(1);
+                if command.starts_with(".") || command.starts_with("/") {
+                    read(state, &command)?
+                // } else if (command.starts_with("http://") || command.starts_with("https://")) {
+                // fetch(state, &command).await?
+                } else {
+                    eprintln!("error: unrecognized argument: {command}");
+                    std::process::exit(1);
+                }
             }
         }
     }
@@ -65,6 +79,20 @@ pub async fn main() -> Result<(), Report> {
 
     Ok(())
 }
+
+fn read(mut state: Vec<Bytes>, path: &str) -> Result<Vec<Bytes>, Report> {
+    let data = std::fs::read(path)?;
+    state.push(Bytes::from(data));
+    Ok(state)
+}
+
+// async fn fetch(mut state: Vec<Bytes>, url: &str) -> Result<Vec<Bytes>,
+// Report> {     let response = reqwest::get(url).await?;
+//     response.error_for_status_ref()?;
+//     let bytes = response.bytes().await?;
+//     state.push(Bytes::from(bytes.to_vec()));
+//     Ok(state)
+// }
 
 fn self_(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
     let own_path = std::env::current_exe()?;
@@ -91,6 +119,15 @@ fn encode_z85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
     for piece in &mut state {
         let bytes = take(piece);
         let encoded = jeb::encode_z85(&bytes);
+        *piece = encoded;
+    }
+    Ok(state)
+}
+
+fn encode_jeb85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+    for piece in &mut state {
+        let bytes = take(piece);
+        let encoded = jeb::encode_jeb85(&bytes);
         *piece = encoded;
     }
     Ok(state)

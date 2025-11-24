@@ -49,9 +49,9 @@ pub const BLOCK_BYTES_4: usize = 4;
 pub const BLOCK_DIGITS_5: usize = 5;
 
 /// The prefix byte preceding raw data.
-pub const RAW_PREFIX: u8 = b'_';
+pub const RAW_PREFIX: u8 = b'|';
 /// The default padding byte repeated after raw data to align following blocks.
-pub const RAW_PADDING: u8 = b'_';
+pub const RAW_PADDING: u8 = b'.';
 
 /// This encoding allows maximum of roughly 200 MiB of raw data per raw chunk.
 pub const MAX_RAW_BYTES: usize = usize_eq(208_802_508, MAX_RAW_BLOCKS * BLOCK_BYTES_4);
@@ -285,7 +285,7 @@ fn test_z85_blocks() {
 }
 
 #[must_use]
-pub const fn encoded_jeb85_length(byte_length: usize) -> usize {
+pub const fn encoded_z85_length(byte_length: usize) -> usize {
     let full_blocks = byte_length / BLOCK_BYTES_4;
     let remaining_bytes = byte_length % BLOCK_BYTES_4;
 
@@ -296,7 +296,7 @@ pub const fn encoded_jeb85_length(byte_length: usize) -> usize {
 }
 
 #[must_use]
-pub const fn decoded_base_jeb85_length(digit_length: usize) -> usize {
+pub const fn decoded_z85_length(digit_length: usize) -> usize {
     let full_blocks = digit_length / BLOCK_DIGITS_5;
     let remaining_digits = digit_length % BLOCK_DIGITS_5;
 
@@ -308,7 +308,7 @@ pub const fn decoded_base_jeb85_length(digit_length: usize) -> usize {
 
 #[must_use]
 pub fn encode_z85(bytes: &[u8]) -> Vec<u8> {
-    let encoded_length = encoded_jeb85_length(bytes.len());
+    let encoded_length = encoded_z85_length(bytes.len());
     let mut output = Vec::with_capacity(encoded_length);
 
     for bytes in bytes.chunks(BLOCK_BYTES_4) {
@@ -330,7 +330,7 @@ pub fn encode_z85(bytes: &[u8]) -> Vec<u8> {
 
 #[must_use]
 pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
-    let encoded_length = encoded_jeb85_length(bytes.len());
+    let encoded_length = encoded_z85_length(bytes.len());
     let mut output = Vec::with_capacity(encoded_length);
 
     let mut raw_buffer = Vec::<u8>::new();
@@ -345,7 +345,7 @@ pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
             let raw_block_count = raw_buffer.len() / BLOCK_BYTES_4;
 
             if (raw_block_count == 1) {
-                output.extend(b"|");
+                output.extend([RAW_PREFIX]);
                 output.extend(&raw_buffer);
             } else {
                 let block_count_prefix_value = raw_block_count - 2;
@@ -354,8 +354,46 @@ pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
                         .unwrap()
                         .to_be_bytes(),
                 );
-            }
+                let mut block_count_prefix = &block_count_prefix_block[..];
+                while block_count_prefix.first() == Some(&b'0') {
+                    block_count_prefix = &block_count_prefix[1..];
+                }
+                let mut block_prefix = block_count_prefix.to_vec();
+                block_prefix.extend([RAW_PREFIX]);
 
+                let raw_block_digits = raw_block_count * BLOCK_DIGITS_5;
+                let padding_needed = raw_block_digits - block_prefix.len() - raw_buffer.len();
+
+                let mut padding = vec![RAW_PADDING; padding_needed];
+
+                // TODO: now, we see how many leading bytes from the next block
+                // can be represented raw (between 0 and 3). If it's more than 0,
+                // then we copy those bytes to the beginning of the padding.
+                // Then, whether or not we wrote any of those, we then add "|"
+                // to the padding, before falling back to the standard default
+                // byte to fill the rest. However, in no cases we will adjust
+                // the size of the padding: we just write as much of this as
+                // can fit in the available size. Maybe we just construct this
+                // in a separate vec and then copy over as much as we can.
+
+                let mut cosmetic_padding = Vec::new();
+                for byte in bytes {
+                    if ASCII_INLINE_TEXT_LUT[*byte as usize] {
+                        cosmetic_padding.push(*byte);
+                    } else {
+                        break;
+                    }
+                }
+                cosmetic_padding.push(RAW_PREFIX);
+
+                let available_len = padding.len().min(cosmetic_padding.len());
+                padding[..available_len].copy_from_slice(&cosmetic_padding[..available_len]);
+
+
+                output.extend(&block_prefix);
+                output.extend(&raw_buffer);
+                output.extend(&padding);
+            }
 
             raw_buffer.clear();
         }
@@ -373,9 +411,9 @@ pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
 
     if !raw_buffer.is_empty() {
         if (raw_buffer.len() == 1) {
-            output.extend(b"|");
+            output.push(RAW_PREFIX);
         } else {
-            output.extend(b"||");
+            output.extend([RAW_PREFIX; 2]);
         }
         output.extend_from_slice(&raw_buffer);
         raw_buffer.clear();

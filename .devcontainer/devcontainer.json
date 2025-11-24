@@ -5,7 +5,9 @@
     "ghcr.io/devcontainers-community/features/llvm:3": {}
   },
   "containerEnv": {
-    "RUSTC_BOOTSTRAP": "1"
+    "RUSTC_BOOTSTRAP": "1",
+    "RUST_BACKTRACE": "1",
+    "RUST_LOG": "warn"
   },
   "postCreateCommand": ".devcontainer/post-create.sh",
   "customizations": {
