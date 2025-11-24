@@ -60,6 +60,7 @@ pub async fn main() -> Result<(), Report> {
             "split-64k" => split_64k(state)?,
             "join" => join(state)?,
             "join-lines" => join_lines(state)?,
+            "join-space" => join_lines(state)?,
             "encode-z85" => encode_z85(state)?,
             "encode-jeb85" => encode_jeb85(state)?,
             arg => {
@@ -74,8 +75,6 @@ pub async fn main() -> Result<(), Report> {
             }
         }
     }
-
-    println!();
 
     Ok(())
 }
@@ -202,6 +201,15 @@ fn join_lines(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
     let input = take(&mut state)
         .into_iter()
         .flat_map(|b| b.into_iter().chain(core::iter::once(b'\n')))
+        .collect::<Vec<u8>>();
+    state.push(Bytes::from(input));
+    Ok(state)
+}
+
+fn join_space(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
+    let input = take(&mut state)
+        .into_iter()
+        .flat_map(|b| b.into_iter().chain(core::iter::once(b' ')))
         .collect::<Vec<u8>>();
     state.push(Bytes::from(input));
     Ok(state)

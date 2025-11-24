@@ -366,16 +366,6 @@ pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
 
                 let mut padding = vec![RAW_PADDING; padding_needed];
 
-                // TODO: now, we see how many leading bytes from the next block
-                // can be represented raw (between 0 and 3). If it's more than 0,
-                // then we copy those bytes to the beginning of the padding.
-                // Then, whether or not we wrote any of those, we then add "|"
-                // to the padding, before falling back to the standard default
-                // byte to fill the rest. However, in no cases we will adjust
-                // the size of the padding: we just write as much of this as
-                // can fit in the available size. Maybe we just construct this
-                // in a separate vec and then copy over as much as we can.
-
                 let mut cosmetic_padding = Vec::new();
                 for byte in bytes {
                     if ASCII_INLINE_TEXT_LUT[*byte as usize] {
