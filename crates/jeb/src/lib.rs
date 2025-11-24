@@ -17,17 +17,22 @@
     clippy::cast_possible_truncation,
     clippy::default_constructed_unit_structs,
     clippy::too_long_first_doc_paragraph,
-    clippy::arbitrary_source_item_ordering
+    clippy::arbitrary_source_item_ordering,
+    clippy::missing_panics_doc
 )]
+#![allow(clippy::unnecessary_wraps)]
 // cSpell:ignoreRegExp b"(\\?.){5}"
 
-mod byte_ranges;
-mod const_checked;
-mod errors;
+pub mod byte_ranges;
+pub mod const_checked;
+pub mod errors;
+pub mod model;
 
 use core::fmt::Debug;
 
 pub use crate::{byte_ranges::*, const_checked::*, errors::*};
+
+
 
 // Aliases for compatibility with slop crate
 pub const Z85_ALPHABET: &[u8; 85] = Z85;
@@ -319,6 +324,64 @@ pub fn encode_z85(bytes: &[u8]) -> Vec<u8> {
     }
 
     debug_assert!(output.len() == encoded_length);
+
+    output
+}
+
+#[must_use]
+pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
+    let encoded_length = encoded_jeb85_length(bytes.len());
+    let mut output = Vec::with_capacity(encoded_length);
+
+    let mut raw_buffer = Vec::<u8>::new();
+
+    for bytes in bytes.chunks(BLOCK_BYTES_4) {
+        if bytes.iter().all(|b| ASCII_INLINE_TEXT_LUT[*b as usize]) {
+            raw_buffer.extend_from_slice(bytes);
+            continue;
+        }
+
+        if !raw_buffer.is_empty() {
+            let raw_block_count = raw_buffer.len() / BLOCK_BYTES_4;
+
+            if (raw_block_count == 1) {
+                output.extend(b"|");
+                output.extend(&raw_buffer);
+            } else {
+                let block_count_prefix_value = raw_block_count - 2;
+                let block_count_prefix_block = encode_z85_block(
+                    u32::try_from(block_count_prefix_value)
+                        .unwrap()
+                        .to_be_bytes(),
+                );
+            }
+
+
+            raw_buffer.clear();
+        }
+
+        let byte_length = bytes.len();
+        let mut byte_block = [0x00; BLOCK_BYTES_4];
+        byte_block[..byte_length].copy_from_slice(bytes);
+
+        let encoded_length = BLOCK_DIGITS_BY_BYTES[bytes.len()];
+        let encoded_block = encode_z85_block(byte_block);
+        let encoded = &encoded_block[..encoded_length];
+
+        output.extend_from_slice(encoded);
+    }
+
+    if !raw_buffer.is_empty() {
+        if (raw_buffer.len() == 1) {
+            output.extend(b"|");
+        } else {
+            output.extend(b"||");
+        }
+        output.extend_from_slice(&raw_buffer);
+        raw_buffer.clear();
+    }
+
+    debug_assert!(output.len() <= encoded_length);
 
     output
 }

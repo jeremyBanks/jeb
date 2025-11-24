@@ -1,8 +1,9 @@
 #![allow(unused)]
+
 use {
-    bytes::Bytes,
     color_eyre::Report,
-    derive_more::From,
+    jeb::model::Bytes,
+    owo_colors::{OwoColorize, colors::*},
     std::{
         collections::HashMap,
         io::{Read, Write},
@@ -11,20 +12,58 @@ use {
     tap::Tap,
 };
 
-#[derive(Debug, Clone, Default)]
-struct JsonObject(indexmap::IndexMap<String, JsonValue>);
 
-#[derive(Debug, Clone, Default)]
-enum JsonValue {
-    #[default]
-    Null,
-    Bool(bool),
-    Unsigned(u64),
-    Signed(i64),
-    Float(f64),
-    String(String),
-    Array(Vec<JsonValue>),
-    Object(JsonObject),
+
+#[tokio::main(flavor = "current_thread")]
+pub async fn main() -> Result<(), Report> {
+    let mut args = Vec::<String>::from_iter(std::env::args());
+    let own_path: String = args.remove(0);
+
+    if (args.is_empty() || args.iter().any(|arg| arg == "--help" || arg == "-h")) {
+        eprintln!("{}", "¯\\_(ツ)_/¯".yellow());
+        return Ok(());
+    }
+
+    let mut commands = args;
+    let mut commands_fmt = commands
+        .iter()
+        .map(|s| s.yellow().to_string())
+        .collect::<Vec<String>>()
+        .join(" ");
+
+    if commands.last().map(|s| s.as_str()) != Some("stdout") {
+        commands.push("stdout".to_string());
+        commands_fmt.push_str(" stdout".red().to_string().as_str());
+    }
+
+    let mut state = Vec::<Bytes>::new();
+
+    eprintln!("{} {}", own_path.magenta(), commands_fmt);
+
+    for command in commands {
+        state = match command.as_str() {
+            "stdin" => stdin(state)?,
+            "stdout" => stdout(state)?,
+            "self" => self_(state)?,
+            "first" => first(state)?,
+            "last" => last(state)?,
+            "split-lines" => split_lines(state)?,
+            "split-64" => split_64(state)?,
+            "split-80" => split_80(state)?,
+            "split-64k" => split_64k(state)?,
+            "join" => join(state)?,
+            "join-lines" => join_lines(state)?,
+            "encode-z85" => encode_z85(state)?,
+            arg => {
+                eprintln!("error: unrecognized argument: {command}");
+                std::process::exit(1);
+            }
+        }
+    }
+
+    println!();
+
+    Ok(())
 }
 
 fn self_(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
@@ -49,7 +88,11 @@ fn stdout(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
 }
 
 fn encode_z85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
-    state.iter_mut().for_each(|b| *b = jeb::encode_z85(b).into());
+    for piece in &mut state {
+        let bytes = take(piece);
+        let encoded = jeb::encode_z85(&bytes);
+        *piece = encoded;
+    }
     Ok(state)
 }
 
@@ -61,7 +104,7 @@ fn first(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
 }
 
 fn last(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
-    let last = state.pop();;
+    let last = state.pop();
     state.clear();
     if let Some(item) = last {
         state.push(item);
@@ -121,49 +164,8 @@ fn join(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
 fn join_lines(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Report> {
     let input = take(&mut state)
         .into_iter()
-        .flat_map(|b| b.into_iter().chain(std::iter::once(b'\n')))
+        .flat_map(|b| b.into_iter().chain(core::iter::once(b'\n')))
         .collect::<Vec<u8>>();
     state.push(Bytes::from(input));
     Ok(state)
-}
-
-#[tokio::main(flavor = "current_thread")]
-pub async fn main() -> Result<(), Report> {
-    let mut args = Vec::<String>::from_iter(std::env::args());
-    let own_path: String = args.remove(0);
-
-    if (args.is_empty() || args.iter().any(|arg| arg == "--help" || arg == "-h")) {
-        eprint!("usage: {own_path} [--help|-h]");
-        eprintln!();
-        return Ok(());
-    }
-
-    let mut state = Vec::<Bytes>::new();
-
-    eprintln!("{own_path} {}", args.join(" "));
-
-    for arg in args {
-        state = match arg.as_str() {
-            "stdin" => stdin(state)?,
-            "stdout" => stdout(state)?,
-            "self" => self_(state)?,
-            "first" => first(state)?,
-            "last" => last(state)?,
-            "split-lines" => split_lines(state)?,
-            "split-64" => split_64(state)?,
-            "split-80" => split_80(state)?,
-            "split-64k" => split_64k(state)?,
-            "join" => join(state)?,
-            "join-lines" => join_lines(state)?,
-            "encode-z85" => encode_z85(state)?,
-            arg => {
-                eprintln!("error: unrecognized argument: {arg}");
-                std::process::exit(1);
-            }
-        }
-    }
-
-    println!();
-
-    Ok(())
 }
