@@ -100,6 +100,11 @@ jobs:
             echo "Tag v${{ steps.get_version.outputs.version }} does not exist"
           fi
 
+      - name: Attempt cargo publish
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          cargo publish
+
       - name: Create tag
         if: steps.check_tag.outputs.exists == 'false'
         run: |
@@ -117,8 +122,3 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
-
-      - name: Attempt cargo publish
-        if: steps.check_tag.outputs.exists == 'false'
-        run: |
-          cargo publish
