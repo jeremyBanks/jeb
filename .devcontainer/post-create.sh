@@ -11,4 +11,3 @@ rustup update
 rustup target add wasm32-unknown-unknown
 rustup toolchain install nightly
 
-cargo install --path crates/jeb

@@ -17,17 +17,23 @@
     clippy::cast_possible_truncation,
     clippy::default_constructed_unit_structs,
     clippy::too_long_first_doc_paragraph,
-    clippy::arbitrary_source_item_ordering
+    clippy::arbitrary_source_item_ordering,
+    clippy::missing_panics_doc
 )]
+#![allow(clippy::unnecessary_wraps)]
+#![doc = include_str!("../../../README.md")]
 // cSpell:ignoreRegExp b"(\\?.){5}"
 
-mod byte_ranges;
-mod const_checked;
-mod errors;
+pub mod byte_ranges;
+pub mod const_checked;
+pub mod errors;
+pub mod model;
 
 use core::fmt::Debug;
 
 pub use crate::{byte_ranges::*, const_checked::*, errors::*};
+
+
 
 // Aliases for compatibility with slop crate
 pub const Z85_ALPHABET: &[u8; 85] = Z85;
@@ -44,9 +50,9 @@ pub const BLOCK_BYTES_4: usize = 4;
 pub const BLOCK_DIGITS_5: usize = 5;
 
 /// The prefix byte preceding raw data.
-pub const RAW_PREFIX: u8 = b'_';
+pub const RAW_PREFIX: u8 = b'|';
 /// The default padding byte repeated after raw data to align following blocks.
-pub const RAW_PADDING: u8 = b'_';
+pub const RAW_PADDING: u8 = b'.';
 
 /// This encoding allows maximum of roughly 200 MiB of raw data per raw chunk.
 pub const MAX_RAW_BYTES: usize = usize_eq(208_802_508, MAX_RAW_BLOCKS * BLOCK_BYTES_4);
@@ -277,4 +283,134 @@ fn test_z85_blocks() {
 
         assertions!();
     }
+}
+
+#[must_use]
+pub const fn encoded_z85_length(byte_length: usize) -> usize {
+    let full_blocks = byte_length / BLOCK_BYTES_4;
+    let remaining_bytes = byte_length % BLOCK_BYTES_4;
+
+    let full_block_digits = full_blocks * BLOCK_DIGITS_5;
+    let remaining_block_digits = BLOCK_DIGITS_BY_BYTES[remaining_bytes];
+
+    full_block_digits + remaining_block_digits
+}
+
+#[must_use]
+pub const fn decoded_z85_length(digit_length: usize) -> usize {
+    let full_blocks = digit_length / BLOCK_DIGITS_5;
+    let remaining_digits = digit_length % BLOCK_DIGITS_5;
+
+    let full_block_bytes = full_blocks * BLOCK_BYTES_4;
+    let remaining_block_bytes = BLOCK_BYTES_BY_DIGITS[remaining_digits];
+
+    full_block_bytes + remaining_block_bytes
+}
+
+#[must_use]
+pub fn encode_z85(bytes: &[u8]) -> Vec<u8> {
+    let encoded_length = encoded_z85_length(bytes.len());
+    let mut output = Vec::with_capacity(encoded_length);
+
+    for bytes in bytes.chunks(BLOCK_BYTES_4) {
+        let byte_length = bytes.len();
+        let mut byte_block = [0x00; BLOCK_BYTES_4];
+        byte_block[..byte_length].copy_from_slice(bytes);
+
+        let encoded_length = BLOCK_DIGITS_BY_BYTES[bytes.len()];
+        let encoded_block = encode_z85_block(byte_block);
+        let encoded = &encoded_block[..encoded_length];
+
+        output.extend_from_slice(encoded);
+    }
+
+    debug_assert!(output.len() == encoded_length);
+
+    output
+}
+
+#[must_use]
+pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
+    let encoded_length = encoded_z85_length(bytes.len());
+    let mut output = Vec::with_capacity(encoded_length);
+
+    let mut raw_buffer = Vec::<u8>::new();
+
+    for bytes in bytes.chunks(BLOCK_BYTES_4) {
+        if bytes.iter().all(|b| ASCII_INLINE_TEXT_LUT[*b as usize]) {
+            raw_buffer.extend_from_slice(bytes);
+            continue;
+        }
+
+        if !raw_buffer.is_empty() {
+            let raw_block_count = raw_buffer.len() / BLOCK_BYTES_4;
+
+            if (raw_block_count == 1) {
+                output.extend([RAW_PREFIX]);
+                output.extend(&raw_buffer);
+            } else {
+                let block_count_prefix_value = raw_block_count - 2;
+                let block_count_prefix_block = encode_z85_block(
+                    u32::try_from(block_count_prefix_value)
+                        .unwrap()
+                        .to_be_bytes(),
+                );
+                let mut block_count_prefix = &block_count_prefix_block[..];
+                while block_count_prefix.first() == Some(&b'0') {
+                    block_count_prefix = &block_count_prefix[1..];
+                }
+                let mut block_prefix = block_count_prefix.to_vec();
+                block_prefix.extend([RAW_PREFIX]);
+
+                let raw_block_digits = raw_block_count * BLOCK_DIGITS_5;
+                let padding_needed = raw_block_digits - block_prefix.len() - raw_buffer.len();
+
+                let mut padding = vec![RAW_PADDING; padding_needed];
+
+                let mut cosmetic_padding = Vec::new();
+                for byte in bytes {
+                    if ASCII_INLINE_TEXT_LUT[*byte as usize] {
+                        cosmetic_padding.push(*byte);
+                    } else {
+                        break;
+                    }
+                }
+                cosmetic_padding.push(RAW_PREFIX);
+
+                let available_len = padding.len().min(cosmetic_padding.len());
+                padding[..available_len].copy_from_slice(&cosmetic_padding[..available_len]);
+
+
+                output.extend(&block_prefix);
+                output.extend(&raw_buffer);
+                output.extend(&padding);
+            }
+
+            raw_buffer.clear();
+        }
+
+        let byte_length = bytes.len();
+        let mut byte_block = [0x00; BLOCK_BYTES_4];
+        byte_block[..byte_length].copy_from_slice(bytes);
+
+        let encoded_length = BLOCK_DIGITS_BY_BYTES[bytes.len()];
+        let encoded_block = encode_z85_block(byte_block);
+        let encoded = &encoded_block[..encoded_length];
+
+        output.extend_from_slice(encoded);
+    }
+
+    if !raw_buffer.is_empty() {
+        if (raw_buffer.len() <= BLOCK_BYTES_4) {
+            output.push(RAW_PREFIX);
+        } else {
+            output.extend([RAW_PREFIX; 2]);
+        }
+        output.extend_from_slice(&raw_buffer);
+        raw_buffer.clear();
+    }
+
+    debug_assert!(output.len() <= encoded_length);
+
+    output
 }

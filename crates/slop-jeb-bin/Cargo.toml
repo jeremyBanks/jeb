@@ -1,13 +1,16 @@
 [package]
 name = "jeb"
-version.workspace = true
-publish.workspace = true
-license.workspace = true
-edition.workspace = true
+version = "0.0.0"
+publish = false
+edition = "2024"
+exclude = ["*.md", "!README.md"]
 
 [[bin]]
 name = "jeb"
 path = "src/main.rs"
 
 [dependencies]
-json-encoded-binary = { path = "../slop-json-encoded-binary" }
+nom = "7.1"
+nom_locate = "4.2"
+nom-supreme = "0.8"
+static_assertions = "1.1.0"
