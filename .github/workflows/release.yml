@@ -104,6 +104,8 @@ jobs:
         if: steps.check_tag.outputs.exists == 'false'
         run: |
           cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
       - name: Create tag
         if: steps.check_tag.outputs.exists == 'false'
