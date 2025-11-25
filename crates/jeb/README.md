@@ -6,11 +6,17 @@ Just Encode Bytes?
 
 Joined Escaped Binary?
 
-vibe-coded clanker slop with Semitranslucent Binary Encodings.
+Slop, with Semitranslucent Binary Encodings.
+
+## Installation
+
+```sh
+cargo install jeb --version ^0.0.0-vibes
+```
 
 ## License
 
-Copyright Jeremy Banks and contributors.
+Copyright Jeremy Banks.
 
 Licensed under either of:
 
