@@ -1,6 +1,11 @@
 [package]
 name = "jeb"
-publish = false
+publish = true
+repository = "https://github.com/jeremyBanks/jeb"
+description = "experimenting with machine- and human-sympathetic encoding"
+keywords = ["encoding"]
+categories = ["encoding"]
+readme.workspace = true
 version.workspace = true
 license.workspace = true
 edition.workspace = true
