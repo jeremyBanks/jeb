@@ -21,7 +21,7 @@
     clippy::missing_panics_doc
 )]
 #![allow(clippy::unnecessary_wraps)]
-#![doc = include_str!("../../../README.md")]
+#![doc = include_str!("../README.md")]
 // cSpell:ignoreRegExp b"(\\?.){5}"
 
 pub mod byte_ranges;
