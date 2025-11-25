@@ -4,7 +4,7 @@ members = ["crates/jeb"]
 
 [workspace.package]
 readme = "README.md"
-version = "0.0.0-vibes-2025-11-25.7598"
+version = "0.0.0-vibes-2025-11-25.7677"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 publish = false
