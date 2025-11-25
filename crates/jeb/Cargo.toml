@@ -1,6 +1,6 @@
 [package]
 name = "jeb"
-publish = false
+publish = true
 version.workspace = true
 license.workspace = true
 edition.workspace = true

@@ -3,11 +3,19 @@ resolver = "2"
 members = ["crates/jeb"]
 
 [workspace.package]
-version = "0.0.0-vibes-2025-11-24.7668"
+version = "0.0.0-vibes-2025-11-25.7598"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 publish = false
-exclude = ["*.md", "!README.md"]
+exclude = [
+    "*.md",
+    "!README.md",
+    "!LICENSE-*",
+    "*.txt",
+    "*.sh",
+    "*.yaml",
+    "*.json",
+]
 
 [profile.small]
 inherits = "release"
