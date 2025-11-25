@@ -80,7 +80,7 @@ pub async fn inner_main() -> Result<(), Panic> {
 }
 
 fn help(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
-    static README: &str = include_str!("../../../../README.md");
+    static README: &str = include_str!("../../README.md");
     state.push(README.into());
 
     Ok(state)
