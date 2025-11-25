@@ -1,16 +1,11 @@
-#![allow(unused)]
-
 use {
     jeb::{Panic, model::Bytes},
-    owo_colors::{OwoColorize, colors::*},
+    owo_colors::OwoColorize,
     std::{
-        collections::HashMap,
         convert::Infallible,
-        fmt::Debug,
         io::{Read, Write},
-        mem::{replace, take},
+        mem::take,
     },
-    tap::Tap,
 };
 
 
@@ -45,6 +40,8 @@ pub async fn inner_main() -> Result<(), Panic> {
 
     eprintln!("{} {}", own_path.magenta(), commands_fmt);
 
+    let mut _default_mode: &'static str = "last";
+
     for command in commands {
         state = match command.as_str() {
             "help" | "--help" | "-h" | "-?" => help(state)?,
@@ -54,20 +51,36 @@ pub async fn inner_main() -> Result<(), Panic> {
             "first" => first(state)?,
             "last" => last(state)?,
             "split-lines" => split_lines(state)?,
-            "split-64" => split_64(state)?,
-            "split-80" => split_80(state)?,
-            "split-64k" => split_64k(state)?,
             "join" => join(state)?,
             "join-lines" => join_lines(state)?,
             "join-space" => join_space(state)?,
+            "collapse" => collapse(state)?,
             "filter" => filter(state)?,
             "encode-z85" => encode_z85(state)?,
             "encode-jeb85" => encode_jeb85(state)?,
-            arg => {
+            "--all" => {
+                _default_mode = "all";
+                state
+            }
+            "--last" => {
+                _default_mode = "last";
+                state
+            }
+            "--first" => {
+                _default_mode = "first";
+                state
+            }
+            _ => {
                 if command.starts_with(".") || command.starts_with("/") {
                     read(state, &command)?
-                // } else if (command.starts_with("http://") || command.starts_with("https://")) {
-                // fetch(state, &command).await?
+                } else if let Some(arg) = command.strip_prefix("last-") {
+                    last_n(state, arg)?
+                } else if let Some(arg) = command.strip_prefix("first-") {
+                    first_n(state, arg)?
+                } else if let Some(arg) = command.strip_prefix("split-") {
+                    split_n(state, arg)?
+                } else if let Some(arg) = command.strip_prefix("find-") {
+                    find_target(state, arg)?
                 } else {
                     eprintln!("error: unrecognized argument: {command}");
                     std::process::exit(1);
@@ -92,14 +105,6 @@ fn read(mut state: Vec<Bytes>, path: &str) -> Result<Vec<Bytes>, Panic> {
     Ok(state)
 }
 
-// async fn fetch(mut state: Vec<Bytes>, url: &str) -> Result<Vec<Bytes>,
-// Panic> {     let response = reqwest::get(url).await?;
-//     response.error_for_status_ref()?;
-//     let bytes = response.bytes().await?;
-//     state.push(Bytes::from(bytes.to_vec()));
-//     Ok(state)
-// }
-
 fn self_(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let own_path = std::env::current_exe()?;
     let own_data = std::fs::read(own_path)?;
@@ -114,7 +119,7 @@ fn stdin(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     Ok(state)
 }
 
-fn stdout(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+fn stdout(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for item in state {
         std::io::stdout().write_all(&item)?;
     }
@@ -140,7 +145,15 @@ fn encode_jeb85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 }
 
 fn first(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
-    while (state.len() > 1) {
+    while state.len() > 1 {
+        state.pop();
+    }
+    Ok(state)
+}
+
+fn first_n(mut state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
+    let n: usize = arg.parse()?;
+    while state.len() > n {
         state.pop();
     }
     Ok(state)
@@ -155,7 +168,34 @@ fn last(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     Ok(state)
 }
 
-fn split_lines(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+fn last_n(mut state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
+    let n: usize = arg.parse()?;
+    if state.len() > n {
+        state.drain(0..state.len() - n);
+    }
+    Ok(state)
+}
+
+fn collapse(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    let input = state.pop().unwrap();
+    let mut output = Vec::<u8>::new();
+    let mut in_whitespace = false;
+    for &byte in &input {
+        if byte.is_ascii_whitespace() {
+            in_whitespace = true;
+        } else {
+            if in_whitespace {
+                output.push(b' ');
+                in_whitespace = false;
+            }
+            output.push(byte);
+        }
+    }
+    state.push(Bytes::from(output));
+    Ok(state)
+}
+
+fn split_lines(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let mut result = Vec::<Bytes>::new();
     for bytes in state {
         for line in bytes.split(|&byte| byte == b'\n') {
@@ -165,34 +205,70 @@ fn split_lines(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     Ok(result)
 }
 
-fn split_64(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+fn split_n(state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
+    let rest = arg.to_ascii_uppercase();
+    let mut rest = rest.as_str();
+
+    let mut unit = 1;
+
+    let binary;
+    if let Some(_next) = rest.strip_suffix("IB") {
+        binary = true;
+    } else if let Some(_next) = rest.strip_suffix("B") {
+        binary = false;
+    } else if let Some(_next) = rest.strip_suffix("I") {
+        binary = true;
+    } else {
+        binary = true;
+    }
+
+    loop {
+        if let Some(next) = rest.strip_suffix("K") {
+            if binary {
+                unit <<= 10;
+            } else {
+                unit *= 1_000;
+            }
+            rest = next;
+        } else if let Some(next) = rest.strip_suffix("M") {
+            if binary {
+                unit <<= 20;
+            } else {
+                unit *= 1_000_000;
+            }
+            rest = next;
+        } else if let Some(next) = rest.strip_suffix("G") {
+            if binary {
+                unit <<= 30;
+            } else {
+                unit *= 1_000_000_000;
+            }
+            rest = next;
+        } else {
+            break;
+        }
+    }
+
+    let coefficient: usize = rest.parse()?;
+    let size = coefficient * unit;
+
     let mut result = Vec::<Bytes>::new();
     for bytes in state {
-        let chunks = bytes.chunks(64);
+        let chunks = bytes.chunks(size);
         for chunk in chunks {
             result.push(Bytes::from(chunk.to_vec()));
         }
     }
+
     Ok(result)
 }
 
-fn split_80(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+fn find_target(state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
+    let target = arg.as_bytes();
     let mut result = Vec::<Bytes>::new();
     for bytes in state {
-        let chunks = bytes.chunks(80);
-        for chunk in chunks {
-            result.push(Bytes::from(chunk.to_vec()));
-        }
-    }
-    Ok(result)
-}
-
-fn split_64k(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
-    let mut result = Vec::<Bytes>::new();
-    for bytes in state {
-        let chunks = bytes.chunks(65536);
-        for chunk in chunks {
-            result.push(Bytes::from(chunk.to_vec()));
+        if bytes.windows(target.len()).any(|window| window == target) {
+            result.push(bytes);
         }
     }
     Ok(result)
