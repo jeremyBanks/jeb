@@ -42,6 +42,8 @@ jobs:
       - name: Run tests
         run: ./scripts/test.sh
 
+      - run: cargo publish --dry-run
+
   clippy:
     name: Clippy (Lints)
     runs-on: ubuntu-latest
