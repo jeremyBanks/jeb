@@ -7,7 +7,11 @@
   "containerEnv": {
     "RUSTC_BOOTSTRAP": "1",
     "RUST_BACKTRACE": "1",
-    "RUST_LOG": "warn"
+    "RUST_LOG": "warn",
+    "PROMPT_COMMAND": "history -a",
+    "HISTCONTROL": "ignoreboth",
+    "HISTSIZE": "10000",
+    "HISTFILESIZE": "100000"
   },
   "postCreateCommand": ".devcontainer/post-create.sh",
   "customizations": {
