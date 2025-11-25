@@ -401,7 +401,7 @@ pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
     }
 
     if !raw_buffer.is_empty() {
-        if (raw_buffer.len() == 1) {
+        if (raw_buffer.len() <= BLOCK_BYTES_4) {
             output.push(RAW_PREFIX);
         } else {
             output.extend([RAW_PREFIX; 2]);
