@@ -105,7 +105,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${{ steps.get_version.outputs.version }}" -m "Release v${{ steps.get_version.outputs.version }}"
+          git tag -a "v${{ steps.get_version.outputs.version }}" -m "v${{ steps.get_version.outputs.version }}"
           git push origin "v${{ steps.get_version.outputs.version }}"
 
       - name: Create GitHub Release
@@ -113,14 +113,12 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
-          name: Release v${{ steps.get_version.outputs.version }}
+          name: v${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: false
           generate_release_notes: true
 
-      - name: Attempt cargo publish (expected to fail)
+      - name: Attempt cargo publish
         if: steps.check_tag.outputs.exists == 'false'
-        continue-on-error: true
         run: |
-          echo "Attempting cargo publish (this will fail until credentials are configured and publish=true)"
-          cargo publish --allow-dirty || echo "Cargo publish failed as expected"
+          cargo publish
