@@ -124,3 +124,6 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+          body: |
+            https://crates.io/crates/jeb/v${{ steps.get_version.outputs.version }}
+
