@@ -5,6 +5,7 @@ use {
     owo_colors::{OwoColorize, colors::*},
     std::{
         collections::HashMap,
+        convert::Infallible,
         fmt::Debug,
         io::{Read, Write},
         mem::{replace, take},
@@ -13,11 +14,10 @@ use {
 };
 
 
-static README: &str = include_str!("../../../../README.md");
-
 #[tokio::main(flavor = "current_thread")]
-pub async fn main() -> Result<(), ()> {
-    inner_main().await.map_err(|_| ())
+pub async fn main() -> Result<(), Infallible> {
+    inner_main().await.ok();
+    Ok(())
 }
 
 pub async fn inner_main() -> Result<(), Panic> {
@@ -80,6 +80,7 @@ pub async fn inner_main() -> Result<(), Panic> {
 }
 
 fn help(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    static README: &str = include_str!("../../../../README.md");
     state.push(README.into());
 
     Ok(state)
