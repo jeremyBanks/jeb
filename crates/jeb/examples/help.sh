@@ -1,5 +1,6 @@
 #!/bin/bash
 # shellcheck disable=all
+# spellchecker: disable=all
 set -euo pipefail; path="$(realpath "$0")"; cd "$(dirname "$path")"
 jeb() {
     echo "$(grep -m 1 -B 999 -A 1 "^jeb " < "$path")"$'\n\n\n' > "$path"

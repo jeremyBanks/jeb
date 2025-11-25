@@ -1,5 +1,6 @@
 #!/bin/bash
 # shellcheck disable=all
+# spellchecker: disable=all
 set -euo pipefail; path="$(realpath "$0")"; cd "$(dirname "$path")"
 jeb() {
     echo "$(grep -m 1 -B 999 -A 1 "^jeb " < "$path")"$'\n\n\n' > "$path"
@@ -9,7 +10,7 @@ jeb() {
 
 
 
-jeb help split-lines filter join-space encode-jeb85 split-80 join-lines stdout
+jeb help collapse encode-jeb85 split-80 join-lines stdout
 
 
 
