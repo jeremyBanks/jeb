@@ -2,9 +2,9 @@
 
 ## Overview
 
-`jeb` is a command-line tool for processing data through a pipeline of transformations. It operates on a heterogeneous stream of items, where each item can be either text (JSON-like) or binary (Bencode-like) data.
+`jeb` is a command-line tool for processing data through a pipeline of transformations. It operates on a heterogeneous stream of items, where each item can serialize as either JSON (text) or Extended Bencode (binary).
 
-The core philosophy is Unix-like composability with explicit state management - commands read from and write to a shared vector of items, enabling flexible data transformation workflows.
+The core philosophy is Unix-like composability with explicit state management - commands read from and write to a shared vector of items, enabling flexible data transformation workflows. The same rich data model can be serialized in either text (JSON) or binary (Extended Bencode) format.
 
 ## Data Model
 
@@ -16,37 +16,59 @@ The pipeline state is `Vec<Item>`, where:
 Vec<Item>
 
 enum Item {
-    Text(Vec<JsonValue>),     // JSON-like data model
-    Binary(Vec<BencodeValue>)  // Bencode-like data model
+    Text(Vec<Value>),    // Values serialized as JSON
+    Binary(Vec<Value>)   // Values serialized as Extended Bencode
 }
 ```
 
 **Key characteristics:**
 - The top-level `Vec<Item>` is heterogeneous - can contain both Text and Binary items
 - Each `Item` contains a homogeneous `Vec` of values in that format
+- **Text and Binary support the same data model** - difference is serialization format only
 - Commands have defined behavior for each mode (Text vs Binary)
 - Explicit commands exist to convert between Text and Binary modes
 
-### Text Mode (JSON-like)
+### Unified Data Model
 
-Based on JSON data model with extensions:
+Both Text and Binary modes support the same rich data model:
 
-- **Strings**: UTF-8 text strings
+- **Strings**: UTF-8 text strings (or byte strings in Binary mode)
 - **Numbers**: i64, u64, or f64
 - **Booleans**: true/false
 - **Null**: null value
-- **Arrays**: ordered sequences
-- **Objects**: key-value maps with **preserved key order** (important!)
+- **Arrays/Lists**: ordered sequences
+- **Objects/Dictionaries**: key-value maps
+  - **Text mode**: preserved key order (important!)
+  - **Binary mode**: unsorted keys
 
-### Binary Mode (Bencode-like)
+### Text Mode (JSON Serialization)
 
-Similar to Bencode but without sorted keys requirement:
+Serializes values as JSON text with preserved key order in objects.
 
-- **Byte Strings**: raw binary data (not UTF-8)
-- **Numbers**: i64 only
-- **Lists**: ordered sequences
-- **Dictionaries**: key-value maps with **unsorted keys**
-- **No booleans or nulls**
+Standard JSON syntax with extension:
+- Objects maintain insertion order (not alphabetical)
+
+### Binary Mode (Extended Bencode Serialization)
+
+Serializes values as Extended Bencode binary format.
+
+**Traditional Bencode:**
+- `i<number>e` - integers (e.g., `i42e`, `i-17e`)
+- `<length>:<bytes>` - byte strings (e.g., `4:spam`, `11:hello world`)
+- `l...e` - lists (e.g., `li1ei2ee` for `[1, 2]`)
+- `d...e` - dictionaries (e.g., `d3:key5:valuee`)
+
+**Extended Bencode additions for JSON-completeness:**
+- `f<number>e` - floats (e.g., `f3.14e`, `f-2.5e`, `f1.0e`)
+- `n` - null (single character)
+- `b1` - boolean true
+- `b0` - boolean false
+
+**Benefits:**
+- **Backward compatible**: Traditional Bencode still works
+- **JSON-complete**: Can represent any JSON value
+- **Round-trip both formats**: JSON ↔ Extended Bencode ↔ JSON
+- **Unsorted keys**: Unlike traditional Bencode, no key sorting requirement
 
 ### I/O Modes
 
@@ -57,12 +79,16 @@ Similar to Bencode but without sorted keys requirement:
 ### Common Usage Patterns
 
 In simple cases, items are just strings:
-- `Text(vec!["hello".into()])` - single UTF-8 string
-- `Binary(vec![b"data".into()])` - single byte string
+- `Text(vec!["hello".into()])` - single UTF-8 string, will serialize as JSON
+- `Binary(vec![b"data".into()])` - single byte string, will serialize as Extended Bencode
 
 But the model supports rich structured data:
-- `Text(vec![object, array, number])` - multiple JSON values
-- `Binary(vec![dict, list, int])` - multiple Bencode values
+- `Text(vec![object, array, number])` - multiple values, JSON serialization
+- `Binary(vec![dict, list, float])` - same values, Extended Bencode serialization
+
+Since both modes support the same data model, the choice between Text and Binary is primarily about:
+- **Text**: Human-readable JSON, UTF-8 strings, preserved key order
+- **Binary**: Compact Extended Bencode, byte strings, unsorted keys, backward-compatible with traditional Bencode
 
 ## Current Implementation
 
@@ -130,41 +156,50 @@ The `_default_mode` variable is set but never read (line 43 in jeb.rs).
 
 ### Command Behavior with Text vs Binary
 
-Commands have defined behavior for each mode:
+Commands have defined behavior for each mode. Since both modes support the same data model, the difference is mainly about serialization format and string handling:
 
 **Example: `encode-jeb85`**
-- On `Text` items: operates on UTF-8 strings within the JSON values
-- On `Binary` items: operates on byte strings within the Bencode values
+- On `Text` items: operates on UTF-8 strings within values, preserves JSON serialization
+- On `Binary` items: operates on byte strings within values, preserves Extended Bencode serialization
 
 **Example: `split-lines`**
-- On `Text` items: splits UTF-8 strings on `\n`
-- On `Binary` items: splits byte strings on `\n` byte
+- On `Text` items: splits UTF-8 strings on `\n`, keeps as Text (JSON)
+- On `Binary` items: splits byte strings on `\n` byte, keeps as Binary (Extended Bencode)
 
 **Example: Arithmetic operations** (future)
-- On `Text` items: can operate on i64/u64/f64 numbers
-- On `Binary` items: can only operate on i64 numbers
+- Both modes support i64/u64/f64 numbers thanks to Extended Bencode
+- Binary mode serializes floats as `f<number>e`
 
 ### Mode Conversion Commands
 
-Explicit commands to convert between modes:
+Since both modes support the same data model, conversion is straightforward:
 
 **`to-text`** / **`as-text`** - Convert Binary items to Text items
-- Attempts UTF-8 decoding of byte strings
-- Converts Bencode values to JSON equivalents where possible
-- May error on invalid UTF-8
+- Changes serialization format from Extended Bencode to JSON
+- Attempts UTF-8 decoding of byte strings (may error on invalid UTF-8)
+- All other value types convert directly (floats, bools, nulls all supported)
 
 **`to-binary`** / **`as-binary`** - Convert Text items to Binary items
+- Changes serialization format from JSON to Extended Bencode
 - Encodes UTF-8 strings as byte strings
-- Converts JSON values to Bencode equivalents
-- Booleans/nulls may need special handling or error
+- All value types convert directly thanks to Extended Bencode
 
-**`parse-json`** - Parse text/binary strings as JSON, creating Text items
+**`parse-json`** - Parse strings as JSON, creating Text items
+- Parses UTF-8 or byte strings containing JSON
+- Outputs Text items with parsed values
 
-**`parse-bencode`** - Parse binary strings as Bencode, creating Binary items
+**`parse-bencode`** - Parse strings as Extended Bencode, creating Binary items
+- Parses byte strings containing Extended Bencode
+- Outputs Binary items with parsed values
+- Supports both traditional and extended Bencode
 
-**`serialize-json`** - Serialize Text items to JSON string representation
+**`serialize-json`** - Serialize values to JSON strings
+- Takes Text or Binary items
+- Outputs Text items containing JSON string representations
 
-**`serialize-bencode`** - Serialize Binary items to Bencode byte string representation
+**`serialize-bencode`** - Serialize values to Extended Bencode byte strings
+- Takes Text or Binary items
+- Outputs Binary items containing Extended Bencode byte string representations
 
 ### Source/Sink Behavior
 
@@ -181,10 +216,11 @@ Explicit commands to convert between modes:
 ### Migration Path
 
 Current `Vec<Bytes>` → Future `Vec<Item>`:
-1. Treat existing `Bytes` as `Binary(vec![bytes])`
-2. Gradually add Text support to commands
-3. Add conversion commands
-4. Update sources/sinks to be mode-aware
+1. Treat existing `Bytes` as `Binary(vec![bytes])` (Extended Bencode byte strings)
+2. Implement Extended Bencode parser/serializer
+3. Migrate commands to work with unified Value type
+4. Add conversion commands (`to-text`, `to-binary`, etc.)
+5. Update sources/sinks to be mode-aware
 
 ## Design Goals
 
@@ -445,43 +481,43 @@ jeb self split-64KiB encode-jeb85 chain
 
 ### Data Model Questions
 
-1. **Implicit conversions**: Should `stdout` automatically convert Text to Binary (via UTF-8 encoding)? Or require explicit `to-binary`?
+1. **Implicit conversions**: Should `stdout` automatically convert Text to Binary (via serialization)? Or require explicit `to-binary`?
 
 2. **Mixed-mode operations**: How do commands behave when state contains both Text and Binary items? Apply to each according to type? Error? Filter?
 
 3. **Nested values**: How do commands like `split-lines` work on `Text(vec![object, array])`? Do they only apply to string values? Recursively search for strings?
 
-4. **Boolean/null handling**: When converting Text to Binary, how to handle booleans and nulls? Error? Convert to string representation? Skip?
+4. **Empty items**: Can an Item contain an empty Vec? `Text(vec![])` or `Binary(vec![])`? What does this represent?
 
-5. **Number precision**: When converting Binary (i64 only) to Text (i64/u64/f64), how to choose the type?
+5. **Dict key types**: Should Extended Bencode dictionaries allow any value type as keys (like JSON objects require strings)? Or only byte strings (traditional Bencode)?
 
-6. **Bencode dict keys**: Bencode traditionally requires byte string keys. Do we enforce this or allow other types?
-
-7. **Empty items**: Can an Item contain an empty Vec? `Text(vec![])` or `Binary(vec![])`? What does this represent?
+6. **Float representation**: How should floats serialize in Extended Bencode? Decimal string representation (`f3.14e`)? Scientific notation allowed (`f3.14e-2e`)? Special values (`fNaNe`, `fInfe`)?
 
 ### Workflow Questions
 
-8. **Mode vs Filter unification**: Should `--last` be different from `last`? Current thinking: yes, keep separate.
+7. **Mode vs Filter unification**: Should `--last` be different from `last`? Current thinking: yes, keep separate.
 
-9. **Mode persistence**: Sticky vs next-only? Current thinking: sticky (Option A).
+8. **Mode persistence**: Sticky vs next-only? Current thinking: sticky (Option A).
 
-10. **Command discoverability**: How do users know which commands respect mode overrides? Needs documentation/help system.
+9. **Command discoverability**: How do users know which commands respect mode overrides? Needs documentation/help system.
 
-11. **Merge semantics**: How exactly does merge work with the new data model? Merging within Items or across Items?
+10. **Merge semantics**: How exactly does merge work with the new data model? Merging within Items or across Items?
 
-12. **Chain necessity**: Is `chain` just a no-op? Or does it have meaning in certain contexts?
+11. **Chain necessity**: Is `chain` just a no-op? Or does it have meaning in certain contexts?
 
-13. **Error propagation**: How do commands signal errors in a pipeline? Current: `Result<Vec<Bytes>, Panic>`. Future: `Result<Vec<Item>, Panic>`?
+12. **Error propagation**: How do commands signal errors in a pipeline? Current: `Result<Vec<Bytes>, Panic>`. Future: `Result<Vec<Item>, Panic>`?
 
-14. **Streaming vs buffering**: Should some operations stream through items rather than buffering entire state?
+13. **Streaming vs buffering**: Should some operations stream through items rather than buffering entire state?
 
-15. **Multiple inputs/outputs**: Do we ever need commands that take N inputs and produce M outputs explicitly?
+14. **Multiple inputs/outputs**: Do we ever need commands that take N inputs and produce M outputs explicitly?
 
 ## Implementation Phases
 
 ### Phase 0: Data Model Migration
 - Define `Item` enum with Text and Binary variants
-- Implement JsonValue and BencodeValue types with preserved/unsorted key order
+- Implement unified `Value` type supporting full data model
+- Implement JSON serializer/parser with preserved key order
+- Implement Extended Bencode serializer/parser (`f<float>e`, `n`, `b0`, `b1`)
 - Migrate existing commands to work with `Vec<Item>` (treating as Binary mode)
 - Add basic conversion commands: `to-text`, `to-binary`
 - Update error handling to `Result<Vec<Item>, Panic>`
