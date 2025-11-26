@@ -33,13 +33,18 @@ enum Item {
 Both Text and Binary modes support the same rich data model:
 
 - **Strings**: UTF-8 text strings (or byte strings in Binary mode)
-- **Numbers**: i64, u64, or f64
+- **Numbers**: i64, u64, or finite f64 (no NaN or Infinity)
 - **Booleans**: true/false
 - **Null**: null value
 - **Arrays/Lists**: ordered sequences
 - **Objects/Dictionaries**: key-value maps
   - **Text mode**: preserved key order (important!)
   - **Binary mode**: unsorted keys
+
+**Float restrictions:**
+- Only finite floats allowed (no NaN, no Infinity) to match JSON semantics
+- Implementation: validate with `f64::is_finite()` on construction
+- Attempting to create NaN or Infinity values returns an error
 
 ### Text Mode (JSON Serialization)
 
@@ -59,7 +64,9 @@ Serializes values as Extended Bencode binary format.
 - `d...e` - dictionaries (e.g., `d3:key5:valuee`)
 
 **Extended Bencode additions for JSON-completeness:**
-- `f<number>e` - floats (e.g., `f3.14e`, `f-2.5e`, `f1.0e`)
+- `f<number>e` - finite floats (e.g., `f3.14e`, `f-2.5e`, `f1.0e`)
+  - Only finite values allowed (no NaN or Infinity)
+  - Uses standard decimal representation
 - `n` - null (single character)
 - `b1` - boolean true
 - `b0` - boolean false
@@ -692,7 +699,7 @@ jeb self split-64KiB encode-jeb85 chain
 
 5. **Dict key types**: Should Extended Bencode dictionaries allow any value type as keys (like JSON objects require strings)? Or only byte strings (traditional Bencode)?
 
-6. **Float representation**: How should floats serialize in Extended Bencode? Decimal string representation (`f3.14e`)? Scientific notation allowed (`f3.14e-2e`)? Special values (`fNaNe`, `fInfe`)?
+6. **Float representation**: ~~How should floats serialize in Extended Bencode?~~ **RESOLVED**: Standard decimal representation only (e.g., `f3.14e`, `f-2.5e`). Scientific notation may be allowed for parsing. NaN and Infinity are not allowed (match JSON semantics). Validated with `f64::is_finite()`.
 
 ### Workflow Questions
 
