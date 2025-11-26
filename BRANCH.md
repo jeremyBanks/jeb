@@ -201,6 +201,138 @@ Since both modes support the same data model, conversion is straightforward:
 - Takes Text or Binary items
 - Outputs Binary items containing Extended Bencode byte string representations
 
+### Format Auto-Detection
+
+**`sniff`** - Auto-detect format and parse accordingly
+- Buffers first 64KB of each item to detect format
+- Automatically invokes appropriate parser based on detected format:
+  - `parse-json` - for JSON data (starts with `{`, `[`, `"`, numbers, `true`, `false`, `null`)
+  - `parse-bencode` - for Bencode/Extended Bencode data (starts with `i`, `l`, `d`, digit, `f`, `n`, `b`)
+  - `parse-xml` - for XML/HTML data (starts with `<`)
+  - `parse-protobuf` - for Protocol Buffer wire format (heuristic binary detection)
+  - `as-text` - for valid UTF-8 text that doesn't match structured formats
+  - `as-binary` - for binary data that isn't a recognized format
+- Useful for generic data pipelines where input format may vary
+- Can be combined with type-specific operations that follow
+
+**Detection heuristics:**
+1. Check UTF-8 validity first
+2. If UTF-8, check for structured text format markers:
+   - JSON: `{`, `[`, `"`, digits, `true`, `false`, `null`
+   - XML/HTML: `<` followed by tag name or declaration
+3. If not UTF-8 or no text format detected, check binary format markers:
+   - Extended Bencode: `i`, `l`, `d`, `f`, `n`, `b`, or digit (for byte string length)
+   - Protocol Buffers: heuristic checks for valid wire format structure
+4. Fall back to `as-text` (UTF-8) or `as-binary` (non-UTF-8)
+
+**Example usage:**
+```bash
+# Auto-detect and pretty-print various formats
+jeb ./unknown-file sniff serialize-json
+
+# Process any structured data format
+jeb stdin sniff extract-field:name stdout
+
+# Convert any format to Extended Bencode
+jeb ./data.* sniff serialize-bencode write:./output.bencode
+```
+
+### XML Support (Input Only)
+
+**`parse-xml`** - Parse XML/HTML to JSON representation
+
+Special naming scheme for lossless round-tripping:
+- `""` (empty string): The node's tag name
+- `"-"`: Parent tag name
+- `"--"`: Grandparent tag name (and so on)
+- `"-attribute-name"`: Parent's attribute values
+- `"--attribute-name"`: Grandparent's attribute values
+
+**Virtual attributes** (always in data model):
+- `@text`: Text content as first child (empty string for self-closing, null for no text)
+- `@tail`: Text following the node
+- `@index`: Sibling index for distinguishing identical adjacent parents
+
+**Attribute handling:**
+- Boolean attributes (HTML `<input disabled>`): `"disabled": true`
+- Attributes with values: preserved as strings
+- Attribute order preserved via ordered maps
+
+**Metadata preservation:**
+- CDATA sections: `"" = "![CDATA["`, `@text = content`
+- Comments: `"" = "!--"`, `@text = " comment "`
+- Processing instructions: `"" = "?xml"`, `@text = " version=\"1.0\""`
+- DOCTYPE: `"" = "!DOCTYPE"`, `@text = " html"`
+
+**Benefits:**
+- Fully lossless round-tripping
+- No collision with valid XML names (can't start with `-` or `@`)
+- Preserves ordering and structure completely
+- Input only (non-bijective with JSON, but can serialize back to XML)
+
+**Example:**
+```xml
+<book id="123">
+  <title>Example</title>
+  <!-- comment -->
+</book>
+```
+Becomes:
+```json
+{
+  "": "book",
+  "id": "123",
+  "@text": "\n  ",
+  "-id": "123",
+  "--": null,
+  "children": [
+    {
+      "": "title",
+      "-": "book",
+      "-id": "123",
+      "@text": "Example",
+      "@tail": "\n  "
+    },
+    {
+      "": "!--",
+      "@text": " comment ",
+      "@tail": "\n"
+    }
+  ]
+}
+```
+
+### Protocol Buffer Wire Format
+
+**`parse-protobuf`** - Heuristic Protocol Buffer wire format decoder
+
+Since wire format lacks schema information, uses best-effort auto-detection at each nesting level:
+
+**Heuristic checks** (in order):
+1. Valid UTF-8? → decode as string
+2. Valid JSON? → parse as JSON (nested structured data)
+3. Valid proto wire format? → decode recursively
+4. Valid bencode? → decode as bencode (nested structured data)
+5. Otherwise → treat as binary blob (base64 representation)
+
+**Encoding support:**
+- Can encode JSON structures to proto wire format
+- Requires explicit type hints for fields (varint, fixed32, length-delimited, etc.)
+
+**Limitations:**
+- Best-effort without schema
+- May misidentify nested binary data
+- Not suitable for complex proto schemas without hints
+
+**Example usage:**
+```bash
+# Decode proto wire format file
+jeb ./message.pb parse-protobuf serialize-json
+
+# Encode JSON to proto wire format (with type hints)
+jeb ./data.json parse-json encode-protobuf write:./message.pb
+```
+
 ### Source/Sink Behavior
 
 **Sources:**
