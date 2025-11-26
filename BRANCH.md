@@ -201,6 +201,39 @@ Since both modes support the same data model, conversion is straightforward:
 - Takes Text or Binary items
 - Outputs Binary items containing Extended Bencode byte string representations
 
+### Implicit Conversions
+
+Many commands will automatically convert between formats as needed, using heuristics to determine the most appropriate conversion:
+
+**Conversion principles:**
+- Commands that need Text items will implicitly convert Binary → Text when needed
+- Commands that need Binary items will implicitly convert Text → Binary when needed
+- Commands that need parsed structures will attempt to parse strings automatically
+- Commands that produce text output will serialize structured data automatically
+
+**Example implicit conversions:**
+```bash
+# split-lines expects string data
+# If input is Binary(vec![bencode_dict]), implicitly serializes to string first
+jeb stdin parse-bencode split-lines
+
+# encode-jeb85 operates on strings
+# If input contains structured data, implicitly serializes to strings
+jeb ./data.json parse-json encode-jeb85
+
+# stdout expects Binary items
+# If input is Text items, implicitly converts via as-binary
+jeb help stdout
+```
+
+**Heuristics for conversion** (detailed in implementation):
+- UTF-8 validity checks
+- Structure detection (is this a string or complex object?)
+- Format inference from command context
+- Graceful degradation when conversion is ambiguous
+
+**Note**: While implicit conversions provide convenience, explicit conversion commands (`as-text`, `as-binary`, `serialize-*`, `parse-*`) give precise control when needed.
+
 ### Format Auto-Detection
 
 **`sniff`** - Auto-detect format and parse accordingly
@@ -358,19 +391,44 @@ Current `Vec<Bytes>` → Future `Vec<Item>`:
 
 ### 1. Intelligent Auto-Completion
 
-**Sources**: If no source commands are present, prepend `stdin`
+**Sources**: If no source commands are present, prepend `stdin` and `sniff`
 - Sources: `stdin`, `help`, `self`, file paths, future network sources, etc.
+- Auto-detection via `sniff` ensures input is parsed into structured data
 
-**Sinks**: If no sink commands are present, append `stdout`
-- Sinks: `stdout`, future file output, network sinks, etc.
+**Sinks**: If no sink commands are present, append `as-text` and `stdout`
+- Sinks: `stdout`, `write:path`, future network sinks, etc.
+- Text conversion via `as-text` ensures human-readable output
+
+**Default pipeline** (no explicit sources or sinks):
+```bash
+jeb [command]
+# Expands to: stdin sniff [command] as-text stdout
+```
 
 This allows:
 ```bash
-jeb encode-jeb85                    # reads stdin, writes stdout
-jeb self encode-jeb85               # reads self, writes stdout
-jeb help                            # outputs help to stdout
-jeb stdin split-lines ./output.txt  # reads stdin, outputs to file
+# Read stdin, auto-detect format, encode, output as text
+jeb encode-jeb85
+# Equivalent to: stdin sniff encode-jeb85 as-text stdout
+
+# Explicit source, auto-detect sink
+jeb self encode-jeb85
+# Equivalent to: self encode-jeb85 as-text stdout
+
+# Help output (already text)
+jeb help
+# Equivalent to: help as-text stdout
+
+# Explicit source and sink
+jeb stdin split-lines write:./output.txt
+# No auto-completion needed
 ```
+
+**Benefits**:
+- Sensible defaults: parse structured input, output readable text
+- Works with any format via `sniff` auto-detection
+- No boilerplate for common use cases
+- Can override by explicitly specifying sources/sinks
 
 ### 2. Command Operation Modes
 
@@ -551,7 +609,18 @@ fn has_sink(commands: &[String]) -> bool {
 }
 ```
 
-Then prepend/append as needed before execution.
+Then auto-complete as needed:
+```rust
+if !has_source(commands) {
+    commands.insert(0, "stdin".to_string());
+    commands.insert(1, "sniff".to_string());
+}
+
+if !has_sink(commands) {
+    commands.push("as-text".to_string());
+    commands.push("stdout".to_string());
+}
+```
 
 ## Example Workflows
 
