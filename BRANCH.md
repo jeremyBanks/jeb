@@ -2,19 +2,79 @@
 
 ## Overview
 
-`jeb` is a command-line tool for processing binary data through a pipeline of transformations. It operates on a stream of `Vec<Bytes>` items, where each command in the pipeline transforms the state.
+`jeb` is a command-line tool for processing data through a pipeline of transformations. It operates on a heterogeneous stream of items, where each item can be either text (JSON-like) or binary (Bencode-like) data.
 
-The core philosophy is Unix-like composability with explicit state management - commands read from and write to a shared vector of byte chunks, enabling flexible data transformation workflows.
+The core philosophy is Unix-like composability with explicit state management - commands read from and write to a shared vector of items, enabling flexible data transformation workflows.
+
+## Data Model
+
+### Type Structure
+
+The pipeline state is `Vec<Item>`, where:
+
+```rust
+Vec<Item>
+
+enum Item {
+    Text(Vec<JsonValue>),     // JSON-like data model
+    Binary(Vec<BencodeValue>)  // Bencode-like data model
+}
+```
+
+**Key characteristics:**
+- The top-level `Vec<Item>` is heterogeneous - can contain both Text and Binary items
+- Each `Item` contains a homogeneous `Vec` of values in that format
+- Commands have defined behavior for each mode (Text vs Binary)
+- Explicit commands exist to convert between Text and Binary modes
+
+### Text Mode (JSON-like)
+
+Based on JSON data model with extensions:
+
+- **Strings**: UTF-8 text strings
+- **Numbers**: i64, u64, or f64
+- **Booleans**: true/false
+- **Null**: null value
+- **Arrays**: ordered sequences
+- **Objects**: key-value maps with **preserved key order** (important!)
+
+### Binary Mode (Bencode-like)
+
+Similar to Bencode but without sorted keys requirement:
+
+- **Byte Strings**: raw binary data (not UTF-8)
+- **Numbers**: i64 only
+- **Lists**: ordered sequences
+- **Dictionaries**: key-value maps with **unsorted keys**
+- **No booleans or nulls**
+
+### I/O Modes
+
+- **stdin**: Binary mode (reads raw bytes)
+- **stdout**: Binary mode (writes raw bytes)
+- **File I/O**: Can be either, depending on content/command
+
+### Common Usage Patterns
+
+In simple cases, items are just strings:
+- `Text(vec!["hello".into()])` - single UTF-8 string
+- `Binary(vec![b"data".into()])` - single byte string
+
+But the model supports rich structured data:
+- `Text(vec![object, array, number])` - multiple JSON values
+- `Binary(vec![dict, list, int])` - multiple Bencode values
 
 ## Current Implementation
 
-### Pipeline Model
+### Pipeline Model (Current)
 
-Commands are executed left-to-right, each receiving and returning a `Vec<Bytes>`:
+Commands are executed left-to-right, currently operating on `Vec<Bytes>`:
 
 ```rust
 state: Vec<Bytes> -> command1 -> command2 -> ... -> commandN -> output
 ```
+
+**Note**: The current implementation uses the simple `Vec<Bytes>` model. Migration to the `Vec<Item>` model is planned.
 
 ### Command Categories (As Implemented)
 
@@ -65,6 +125,66 @@ Mode flags exist but are not currently used:
 - `--first` - operate on first item only
 
 The `_default_mode` variable is set but never read (line 43 in jeb.rs).
+
+## New Data Model Implications
+
+### Command Behavior with Text vs Binary
+
+Commands have defined behavior for each mode:
+
+**Example: `encode-jeb85`**
+- On `Text` items: operates on UTF-8 strings within the JSON values
+- On `Binary` items: operates on byte strings within the Bencode values
+
+**Example: `split-lines`**
+- On `Text` items: splits UTF-8 strings on `\n`
+- On `Binary` items: splits byte strings on `\n` byte
+
+**Example: Arithmetic operations** (future)
+- On `Text` items: can operate on i64/u64/f64 numbers
+- On `Binary` items: can only operate on i64 numbers
+
+### Mode Conversion Commands
+
+Explicit commands to convert between modes:
+
+**`to-text`** / **`as-text`** - Convert Binary items to Text items
+- Attempts UTF-8 decoding of byte strings
+- Converts Bencode values to JSON equivalents where possible
+- May error on invalid UTF-8
+
+**`to-binary`** / **`as-binary`** - Convert Text items to Binary items
+- Encodes UTF-8 strings as byte strings
+- Converts JSON values to Bencode equivalents
+- Booleans/nulls may need special handling or error
+
+**`parse-json`** - Parse text/binary strings as JSON, creating Text items
+
+**`parse-bencode`** - Parse binary strings as Bencode, creating Binary items
+
+**`serialize-json`** - Serialize Text items to JSON string representation
+
+**`serialize-bencode`** - Serialize Binary items to Bencode byte string representation
+
+### Source/Sink Behavior
+
+**Sources:**
+- `stdin` - reads raw bytes, creates `Binary(vec![bytes])`
+- File reads - creates `Binary(vec![bytes])` by default
+- `help` - creates `Text(vec![string])`
+
+**Sinks:**
+- `stdout` - expects Binary items, writes raw bytes
+- If given Text items, may need implicit conversion or error
+- `write:path` - writes Binary items as raw bytes
+
+### Migration Path
+
+Current `Vec<Bytes>` → Future `Vec<Item>`:
+1. Treat existing `Bytes` as `Binary(vec![bytes])`
+2. Gradually add Text support to commands
+3. Add conversion commands
+4. Update sources/sinks to be mode-aware
 
 ## Design Goals
 
@@ -323,41 +443,77 @@ jeb self split-64KiB encode-jeb85 chain
 
 ## Open Questions
 
-1. **Mode vs Filter unification**: Should `--last` be different from `last`? Current thinking: yes, keep separate.
+### Data Model Questions
 
-2. **Mode persistence**: Sticky vs next-only? Current thinking: sticky (Option A).
+1. **Implicit conversions**: Should `stdout` automatically convert Text to Binary (via UTF-8 encoding)? Or require explicit `to-binary`?
 
-3. **Command discoverability**: How do users know which commands respect mode overrides? Needs documentation/help system.
+2. **Mixed-mode operations**: How do commands behave when state contains both Text and Binary items? Apply to each according to type? Error? Filter?
 
-4. **Merge semantics**: How exactly does merge work with `Vec<Bytes>`? Treating each as a separate sorted stream?
+3. **Nested values**: How do commands like `split-lines` work on `Text(vec![object, array])`? Do they only apply to string values? Recursively search for strings?
 
-5. **Chain necessity**: Is `chain` just a no-op? Or does it have meaning in certain contexts?
+4. **Boolean/null handling**: When converting Text to Binary, how to handle booleans and nulls? Error? Convert to string representation? Skip?
 
-6. **Error propagation**: How do commands signal errors in a pipeline? Current: `Result<Vec<Bytes>, Panic>`.
+5. **Number precision**: When converting Binary (i64 only) to Text (i64/u64/f64), how to choose the type?
 
-7. **Streaming vs buffering**: Should some operations stream through items rather than buffering entire state?
+6. **Bencode dict keys**: Bencode traditionally requires byte string keys. Do we enforce this or allow other types?
 
-8. **Multiple inputs/outputs**: Do we ever need commands that take N inputs and produce M outputs explicitly?
+7. **Empty items**: Can an Item contain an empty Vec? `Text(vec![])` or `Binary(vec![])`? What does this represent?
+
+### Workflow Questions
+
+8. **Mode vs Filter unification**: Should `--last` be different from `last`? Current thinking: yes, keep separate.
+
+9. **Mode persistence**: Sticky vs next-only? Current thinking: sticky (Option A).
+
+10. **Command discoverability**: How do users know which commands respect mode overrides? Needs documentation/help system.
+
+11. **Merge semantics**: How exactly does merge work with the new data model? Merging within Items or across Items?
+
+12. **Chain necessity**: Is `chain` just a no-op? Or does it have meaning in certain contexts?
+
+13. **Error propagation**: How do commands signal errors in a pipeline? Current: `Result<Vec<Bytes>, Panic>`. Future: `Result<Vec<Item>, Panic>`?
+
+14. **Streaming vs buffering**: Should some operations stream through items rather than buffering entire state?
+
+15. **Multiple inputs/outputs**: Do we ever need commands that take N inputs and produce M outputs explicitly?
 
 ## Implementation Phases
 
-### Phase 1: Fix Current Implementation
+### Phase 0: Data Model Migration
+- Define `Item` enum with Text and Binary variants
+- Implement JsonValue and BencodeValue types with preserved/unsorted key order
+- Migrate existing commands to work with `Vec<Item>` (treating as Binary mode)
+- Add basic conversion commands: `to-text`, `to-binary`
+- Update error handling to `Result<Vec<Item>, Panic>`
+
+### Phase 1: Fix Current Implementation & Mode Support
 - Implement the mode flag functionality (currently unused)
 - Fix auto-append logic for sources and sinks
 - Document each command's default mode behavior
+- Ensure all commands have defined behavior for Text vs Binary
 
 ### Phase 2: Add Core Commands
-- Implement `chain` and `merge`
+- Implement `chain` and `merge` (needs data model clarification)
 - Implement `sort-N` and `sort-all`
+- Add `parse-json`, `parse-bencode`, `serialize-json`, `serialize-bencode`
 - Add command metadata system
+- Add `write:path` atomic file sink
 
-### Phase 3: Refinement
-- Comprehensive help system showing modes
+### Phase 3: Rich Data Operations
+- Commands for manipulating JSON/Bencode structures (get, set, delete keys)
+- Array/list operations (map, filter, reduce-like operations)
+- Arithmetic operations on numbers
+- String manipulation beyond simple encoding
+
+### Phase 4: Refinement
+- Comprehensive help system showing modes and type behavior
 - Error messages that suggest corrections
 - Performance optimization for large pipelines
+- Handle edge cases (mixed-mode operations, nested values, etc.)
 
-### Phase 4: Expansion
+### Phase 5: Expansion
 - More encoders/decoders
 - Compression commands
 - Cryptographic operations
 - Network sources/sinks
+- Query languages (jq-like for JSON, similar for Bencode)
