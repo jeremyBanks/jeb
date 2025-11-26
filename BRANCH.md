@@ -48,6 +48,7 @@ state: Vec<Bytes> -> command1 -> command2 -> ... -> commandN -> output
 
 6. **Sinks** (consume state):
    - `stdout` - write all items to stdout, clear state
+   - Future: `write:path` - atomic file writes
 
 ### Current Auto-Append Behavior
 
@@ -163,6 +164,43 @@ Treats each item in the state as a separate stream to merge.
 - Equivalent to `join sort-lines split-lines` for line-based data
 - May need variants: `sort-all-lines`, `sort-all-bytes`, etc.
 
+### File Output Sink
+
+**`write:path`** - Atomic file write:
+Writes all items in state to a file with atomic replacement semantics. This is critical for safe in-place transformations where the same file is both input and output.
+
+**Algorithm**:
+1. Generate temporary filename: `NAME.(hex_timestamp_ms).tmp`
+2. Write all state items to the temporary file
+3. After complete write, perform atomic replacement:
+   - **If target file exists**:
+     - Rename existing file to `NAME.(hex_timestamp_ms).bak`
+     - Rename `.tmp` to target filename
+     - Unlink `.bak` file
+   - **If target file doesn't exist**:
+     - Simply rename `.tmp` to target filename
+
+**Rationale**:
+- Always write to `.tmp` first, even if target doesn't exist (protects against crashes mid-write)
+- The rename operations are atomic on POSIX filesystems
+- Backup file created only if replacing existing file
+- If any step fails, the original file remains intact
+- Avoids TOCTOU (time-of-check-time-of-use) races
+
+**Safe detection**: Use `std::fs::metadata()` to check if target exists before rename dance. If it returns `Err(NotFound)`, skip the backup step.
+
+**Example usage**:
+```bash
+# Safe in-place transformation
+jeb ./data.txt split-lines filter join-lines write:./data.txt
+
+# Process and save to new file
+jeb stdin encode-jeb85 write:./output.jeb85
+
+# Multiple transformations
+jeb ./input.bin split-1MiB encode-z85 write:./output.z85
+```
+
 ## Implementation Considerations
 
 ### Mode Flag Semantics
@@ -219,7 +257,8 @@ fn has_source(commands: &[String]) -> bool {
 fn has_sink(commands: &[String]) -> bool {
     commands.iter().any(|cmd| {
         matches!(cmd.as_str(), "stdout")
-        // future: file outputs, network sinks
+            || cmd.starts_with("write:")
+        // future: network sinks
     })
 }
 ```
@@ -259,6 +298,21 @@ jeb ./sorted1.txt ./sorted2.txt ./sorted3.txt merge
 
 # Use bounded sort for large data
 jeb ./huge.txt split-lines sort-1000000 join-lines
+```
+
+### File I/O workflows
+```bash
+# In-place file transformation (safe atomic replacement)
+jeb ./data.txt split-lines filter join-lines write:./data.txt
+
+# Read from one file, write to another
+jeb ./input.bin encode-jeb85 write:./output.jeb85
+
+# Process stdin, save to file
+jeb encode-z85 split-80 join-lines write:./encoded.txt
+
+# Multiple transformations with file output
+jeb ./binary.dat split-1MiB --all encode-jeb85 join-lines write:./chunks.txt
 ```
 
 ### Complex pipelines
