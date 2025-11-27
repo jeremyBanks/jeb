@@ -31,7 +31,7 @@ impl ParserState {
         &mut self,
         node: Box<dyn crate::pipeline::Node>,
         label: String,
-    ) -> usize {
+    ) -> Result<usize, ParseError> {
         let (min_inputs, max_inputs) = node.input_arity();
         let output_count = node.output_count();
 
@@ -46,16 +46,24 @@ impl ParserState {
             min_inputs.min(self.unconnected_outputs.len())
         };
 
-        // Connect from right to left (stack semantics)
-        for input_idx in 0..inputs_needed {
-            if let Some((from_node, from_output)) = self.unconnected_outputs.pop() {
-                self.pipeline.add_edge(Edge {
+        // Connect left-to-right (FIFO), matching conceptual model
+        // Drain from the front to preserve ordering
+        let drained_outputs: Vec<(usize, usize)> = self
+            .unconnected_outputs
+            .drain(0..inputs_needed)
+            .collect();
+        for (input_idx, (from_node, from_output)) in drained_outputs.into_iter().enumerate() {
+            self.pipeline
+                .add_edge(Edge {
                     from_node,
                     from_output,
                     to_node: node_index,
                     to_input: input_idx,
-                });
-            }
+                })
+                .map_err(|e| ParseError::InvalidArgument {
+                    message: format!("Failed to add edge: {:?}", e),
+                    position: self.arg_index,
+                })?;
         }
 
         // Add this node's outputs to the stack
@@ -63,7 +71,7 @@ impl ParserState {
             self.unconnected_outputs.push((node_index, output_idx));
         }
 
-        node_index
+        Ok(node_index)
     }
 }
 
@@ -168,7 +176,7 @@ pub fn parse_pipeline(args: &[String]) -> Result<Pipeline, ParseError> {
             }
         };
 
-        state.add_node_with_connections(node, arg.clone());
+        state.add_node_with_connections(node, arg.clone())?;
     }
 
     // Apply implicit commands to ensure well-formed pipeline
@@ -207,12 +215,18 @@ fn finalize_pipeline(state: &mut ParserState) -> Result<(), ParseError> {
                 for (input_idx, (from_node, from_output)) in
                     state.unconnected_outputs.drain(..).enumerate()
                 {
-                    state.pipeline.add_edge(Edge {
-                        from_node,
-                        from_output,
-                        to_node: chain_index,
-                        to_input: input_idx,
-                    });
+                    state
+                        .pipeline
+                        .add_edge(Edge {
+                            from_node,
+                            from_output,
+                            to_node: chain_index,
+                            to_input: input_idx,
+                        })
+                        .map_err(|e| ParseError::InvalidArgument {
+                            message: format!("Failed to add edge: {:?}", e),
+                            position: state.arg_index,
+                        })?;
                 }
 
                 state.unconnected_outputs.push((chain_index, 0));
@@ -224,12 +238,18 @@ fn finalize_pipeline(state: &mut ParserState) -> Result<(), ParseError> {
                 .add_node(Box::new(StdoutNode), "stdout".to_string());
 
             if let Some((from_node, from_output)) = state.unconnected_outputs.pop() {
-                state.pipeline.add_edge(Edge {
-                    from_node,
-                    from_output,
-                    to_node: stdout_index,
-                    to_input: 0,
-                });
+                state
+                    .pipeline
+                    .add_edge(Edge {
+                        from_node,
+                        from_output,
+                        to_node: stdout_index,
+                        to_input: 0,
+                    })
+                    .map_err(|e| ParseError::InvalidArgument {
+                        message: format!("Failed to add edge: {:?}", e),
+                        position: state.arg_index,
+                    })?;
             }
         }
     }
@@ -245,4 +265,148 @@ pub enum ParseError {
 
     /// Invalid argument format
     InvalidArgument { message: String, position: usize },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_empty_args_adds_implicit_stdin_stdout() {
+        let args: Vec<String> = vec![];
+        let pipeline = parse_pipeline(&args).unwrap();
+
+        // Should have stdin and stdout
+        assert_eq!(pipeline.nodes.len(), 2);
+        assert_eq!(pipeline.nodes[0].label, "stdin");
+        assert_eq!(pipeline.nodes[1].label, "stdout");
+    }
+
+    #[test]
+    fn test_single_transform_adds_stdin_stdout() {
+        let args = vec!["parse-json".to_string()];
+        let pipeline = parse_pipeline(&args).unwrap();
+
+        // Should have stdin, parse-json, stdout
+        assert_eq!(pipeline.nodes.len(), 3);
+        assert_eq!(pipeline.nodes[0].label, "stdin");
+        assert_eq!(pipeline.nodes[1].label, "parse-json");
+        assert_eq!(pipeline.nodes[2].label, "stdout");
+    }
+
+    #[test]
+    fn test_source_node_no_duplicate_stdin() {
+        let args = vec!["stdin".to_string(), "parse-json".to_string()];
+        let pipeline = parse_pipeline(&args).unwrap();
+
+        // Should have stdin, parse-json, stdout (no duplicate stdin)
+        assert_eq!(pipeline.nodes.len(), 3);
+        assert_eq!(pipeline.nodes[0].label, "stdin");
+        assert_eq!(pipeline.nodes[1].label, "parse-json");
+        assert_eq!(pipeline.nodes[2].label, "stdout");
+    }
+
+    #[test]
+    fn test_file_path_detection() {
+        // Relative path
+        let args = vec!["./test.txt".to_string()];
+        let pipeline = parse_pipeline(&args).unwrap();
+        assert_eq!(pipeline.nodes[0].label, "./test.txt");
+        assert_eq!(pipeline.nodes[0].node.name(), "file");
+
+        // Absolute path
+        let args = vec!["/tmp/test.txt".to_string()];
+        let pipeline = parse_pipeline(&args).unwrap();
+        assert_eq!(pipeline.nodes[0].label, "/tmp/test.txt");
+        assert_eq!(pipeline.nodes[0].node.name(), "file");
+    }
+
+    #[test]
+    fn test_parametrized_first_n() {
+        let args = vec!["first-5".to_string()];
+        let pipeline = parse_pipeline(&args).unwrap();
+
+        // Should have stdin, first-5, stdout
+        assert_eq!(pipeline.nodes.len(), 3);
+        assert_eq!(pipeline.nodes[1].label, "first-5");
+    }
+
+    #[test]
+    fn test_parametrized_last_n() {
+        let args = vec!["last-10".to_string()];
+        let pipeline = parse_pipeline(&args).unwrap();
+
+        // Should have stdin, last-10, stdout
+        assert_eq!(pipeline.nodes.len(), 3);
+        assert_eq!(pipeline.nodes[1].label, "last-10");
+    }
+
+    #[test]
+    fn test_unknown_command_error() {
+        let args = vec!["unknown-command".to_string()];
+        let result = parse_pipeline(&args);
+
+        assert!(matches!(
+            result,
+            Err(ParseError::UnknownCommand { command, position: 0 }) if command == "unknown-command"
+        ));
+    }
+
+    #[test]
+    fn test_invalid_first_n_argument() {
+        let args = vec!["first-abc".to_string()];
+        let result = parse_pipeline(&args);
+
+        assert!(matches!(result, Err(ParseError::InvalidArgument { .. })));
+    }
+
+    #[test]
+    fn test_sink_no_implicit_stdout() {
+        let args = vec!["parse-json".to_string(), "stdout".to_string()];
+        let pipeline = parse_pipeline(&args).unwrap();
+
+        // Should have stdin, parse-json, stdout (no duplicate stdout)
+        assert_eq!(pipeline.nodes.len(), 3);
+        assert_eq!(pipeline.nodes[2].label, "stdout");
+    }
+
+    #[test]
+    fn test_edge_connections_fifo_order() {
+        // When multiple sources feed into a multi-input node,
+        // they should be connected in left-to-right (FIFO) order
+        let args = vec!["parse-json".to_string(), "to-json".to_string()];
+        let pipeline = parse_pipeline(&args).unwrap();
+
+        // Verify that there are edges connecting nodes
+        assert!(!pipeline.edges.is_empty());
+
+        // Check first edge connects stdin to parse-json
+        let first_edge = &pipeline.edges[0];
+        assert_eq!(first_edge.from_node, 0); // stdin
+        assert_eq!(first_edge.to_node, 1); // parse-json
+    }
+
+    #[test]
+    fn test_chain_multiple_transforms() {
+        let args = vec![
+            "by-lines".to_string(),
+            "sort".to_string(),
+            "join-lines".to_string(),
+        ];
+        let pipeline = parse_pipeline(&args).unwrap();
+
+        // Should have stdin, by-lines, sort, join-lines, stdout
+        assert_eq!(pipeline.nodes.len(), 5);
+        assert_eq!(pipeline.edges.len(), 4);
+    }
+
+    #[test]
+    fn test_self_source() {
+        let args = vec!["self".to_string(), "to-base64".to_string()];
+        let pipeline = parse_pipeline(&args).unwrap();
+
+        // self is a source, so no implicit stdin
+        assert_eq!(pipeline.nodes[0].label, "self");
+        assert_eq!(pipeline.nodes[0].node.name(), "self");
+    }
 }

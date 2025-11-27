@@ -1,7 +1,7 @@
 // Pipeline infrastructure for DAG-based stream processing
 
 use crate::model::{ErrorValue, StreamItem, Warning};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 /// Node trait that all pipeline commands implement.
 /// Each node has a statically known number of inputs and outputs.
@@ -123,8 +123,44 @@ impl Pipeline {
         index
     }
 
-    /// Add an edge between two nodes
-    pub fn add_edge(&mut self, edge: Edge) {
+    /// Add an edge between two nodes with validation
+    pub fn add_edge(&mut self, edge: Edge) -> Result<(), PipelineError> {
+        // Validate node indices
+        if edge.from_node >= self.nodes.len() {
+            return Err(PipelineError::InvalidStructure(format!(
+                "Invalid from_node index {}: only {} nodes exist",
+                edge.from_node,
+                self.nodes.len()
+            )));
+        }
+        if edge.to_node >= self.nodes.len() {
+            return Err(PipelineError::InvalidStructure(format!(
+                "Invalid to_node index {}: only {} nodes exist",
+                edge.to_node,
+                self.nodes.len()
+            )));
+        }
+
+        // Validate output index
+        let from_outputs = self.nodes[edge.from_node].node.output_count();
+        if edge.from_output >= from_outputs {
+            return Err(PipelineError::InvalidStructure(format!(
+                "Invalid from_output index {}: node {} only has {} outputs",
+                edge.from_output, edge.from_node, from_outputs
+            )));
+        }
+
+        // Validate input index (check against node's max inputs)
+        let (_, max_inputs) = self.nodes[edge.to_node].node.input_arity();
+        if let Some(max) = max_inputs {
+            if edge.to_input >= max {
+                return Err(PipelineError::InvalidStructure(format!(
+                    "Invalid to_input index {}: node {} accepts at most {} inputs",
+                    edge.to_input, edge.to_node, max
+                )));
+            }
+        }
+
         self.output_edges
             .entry(edge.from_node)
             .or_default()
@@ -136,13 +172,11 @@ impl Pipeline {
             .push(edge.clone());
 
         self.edges.push(edge);
+        Ok(())
     }
 
     /// Execute the pipeline
     pub fn execute(&self) -> Result<PipelineResult, PipelineError> {
-        // For now, implement simple sequential execution
-        // TODO: Implement true DAG-based async execution
-
         let mut streams: HashMap<(usize, usize), Stream> = HashMap::new();
         let mut all_warnings = Vec::new();
         let mut all_errors = Vec::new();
@@ -211,28 +245,36 @@ impl Pipeline {
             *in_degree.entry(edge.to_node).or_insert(0) += 1;
         }
 
-        // Find all nodes with in-degree 0
-        let mut queue: Vec<usize> = in_degree
+        // Find all nodes with in-degree 0 and use VecDeque for proper FIFO ordering
+        let mut queue: VecDeque<usize> = in_degree
             .iter()
             .filter(|&(_, degree)| *degree == 0)
             .map(|(&node, _)| node)
             .collect();
 
-        queue.sort(); // For deterministic ordering
+        // Sort for deterministic ordering, then convert to VecDeque
+        let mut sorted: Vec<usize> = queue.drain(..).collect();
+        sorted.sort();
+        queue = sorted.into_iter().collect();
 
-        while let Some(node) = queue.pop() {
+        while let Some(node) = queue.pop_front() {
             result.push(node);
 
             // Reduce in-degree for all neighbors
             if let Some(edges) = self.output_edges.get(&node) {
+                let mut new_nodes = Vec::new();
                 for edge in edges {
                     if let Some(degree) = in_degree.get_mut(&edge.to_node) {
                         *degree -= 1;
                         if *degree == 0 {
-                            queue.push(edge.to_node);
-                            queue.sort();
+                            new_nodes.push(edge.to_node);
                         }
                     }
+                }
+                // Sort new nodes before adding to queue for deterministic ordering
+                new_nodes.sort();
+                for n in new_nodes {
+                    queue.push_back(n);
                 }
             }
         }
@@ -274,4 +316,331 @@ pub enum PipelineError {
 
     /// Invalid pipeline structure
     InvalidStructure(String),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::StreamItem;
+    use crate::nodes::{ChainNode, ParseJsonNode, SortNode, ToJsonNode};
+
+    /// A simple pass-through node for testing
+    struct PassThroughNode;
+
+    impl Node for PassThroughNode {
+        fn name(&self) -> &str {
+            "pass-through"
+        }
+
+        fn input_arity(&self) -> (usize, Option<usize>) {
+            (1, Some(1))
+        }
+
+        fn output_count(&self) -> usize {
+            1
+        }
+
+        fn execute(
+            &self,
+            inputs: Vec<Stream>,
+            _node_index: usize,
+        ) -> Result<ExecutionResult, NodeError> {
+            Ok(ExecutionResult {
+                outputs: inputs,
+                errors: Vec::new(),
+                warnings: Vec::new(),
+            })
+        }
+    }
+
+    /// A source node that produces a fixed stream
+    struct TestSourceNode {
+        items: Vec<StreamItem>,
+    }
+
+    impl Node for TestSourceNode {
+        fn name(&self) -> &str {
+            "test-source"
+        }
+
+        fn input_arity(&self) -> (usize, Option<usize>) {
+            (0, Some(0))
+        }
+
+        fn output_count(&self) -> usize {
+            1
+        }
+
+        fn execute(
+            &self,
+            _inputs: Vec<Stream>,
+            _node_index: usize,
+        ) -> Result<ExecutionResult, NodeError> {
+            Ok(ExecutionResult {
+                outputs: vec![self.items.clone()],
+                errors: Vec::new(),
+                warnings: Vec::new(),
+            })
+        }
+    }
+
+    /// A sink node that does nothing (for testing)
+    struct TestSinkNode;
+
+    impl Node for TestSinkNode {
+        fn name(&self) -> &str {
+            "test-sink"
+        }
+
+        fn input_arity(&self) -> (usize, Option<usize>) {
+            (1, Some(1))
+        }
+
+        fn output_count(&self) -> usize {
+            0
+        }
+
+        fn execute(
+            &self,
+            _inputs: Vec<Stream>,
+            _node_index: usize,
+        ) -> Result<ExecutionResult, NodeError> {
+            Ok(ExecutionResult {
+                outputs: Vec::new(),
+                errors: Vec::new(),
+                warnings: Vec::new(),
+            })
+        }
+    }
+
+    #[test]
+    fn test_empty_pipeline() {
+        let pipeline = Pipeline::new();
+        let result = pipeline.execute();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_single_source_node() {
+        let mut pipeline = Pipeline::new();
+        let source = TestSourceNode {
+            items: vec![StreamItem::Text("hello".to_string())],
+        };
+        pipeline.add_node(Box::new(source), "source".to_string());
+
+        let result = pipeline.execute();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_source_to_sink() {
+        let mut pipeline = Pipeline::new();
+
+        let source = TestSourceNode {
+            items: vec![StreamItem::Text("hello".to_string())],
+        };
+        let source_idx = pipeline.add_node(Box::new(source), "source".to_string());
+
+        let sink_idx = pipeline.add_node(Box::new(TestSinkNode), "sink".to_string());
+
+        pipeline
+            .add_edge(Edge {
+                from_node: source_idx,
+                from_output: 0,
+                to_node: sink_idx,
+                to_input: 0,
+            })
+            .expect("Failed to add edge");
+
+        let result = pipeline.execute();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_topological_sort_order() {
+        let mut pipeline = Pipeline::new();
+
+        // Create a chain: source -> pass1 -> pass2 -> sink
+        let source = TestSourceNode {
+            items: vec![StreamItem::Text("test".to_string())],
+        };
+        let source_idx = pipeline.add_node(Box::new(source), "source".to_string());
+        let pass1_idx = pipeline.add_node(Box::new(PassThroughNode), "pass1".to_string());
+        let pass2_idx = pipeline.add_node(Box::new(PassThroughNode), "pass2".to_string());
+        let sink_idx = pipeline.add_node(Box::new(TestSinkNode), "sink".to_string());
+
+        pipeline
+            .add_edge(Edge {
+                from_node: source_idx,
+                from_output: 0,
+                to_node: pass1_idx,
+                to_input: 0,
+            })
+            .unwrap();
+        pipeline
+            .add_edge(Edge {
+                from_node: pass1_idx,
+                from_output: 0,
+                to_node: pass2_idx,
+                to_input: 0,
+            })
+            .unwrap();
+        pipeline
+            .add_edge(Edge {
+                from_node: pass2_idx,
+                from_output: 0,
+                to_node: sink_idx,
+                to_input: 0,
+            })
+            .unwrap();
+
+        let order = pipeline.topological_sort().unwrap();
+        // Verify source comes first, sink comes last
+        assert_eq!(order[0], source_idx);
+        assert_eq!(order[order.len() - 1], sink_idx);
+
+        // Verify execution succeeds
+        let result = pipeline.execute();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_cycle_detection() {
+        let mut pipeline = Pipeline::new();
+
+        // Create a cycle: A -> B -> A
+        let node_a = pipeline.add_node(Box::new(PassThroughNode), "A".to_string());
+        let node_b = pipeline.add_node(Box::new(PassThroughNode), "B".to_string());
+
+        pipeline
+            .add_edge(Edge {
+                from_node: node_a,
+                from_output: 0,
+                to_node: node_b,
+                to_input: 0,
+            })
+            .unwrap();
+        pipeline
+            .add_edge(Edge {
+                from_node: node_b,
+                from_output: 0,
+                to_node: node_a,
+                to_input: 0,
+            })
+            .unwrap();
+
+        let result = pipeline.topological_sort();
+        assert!(matches!(result, Err(PipelineError::CyclicGraph)));
+    }
+
+    #[test]
+    fn test_multiple_sources() {
+        let mut pipeline = Pipeline::new();
+
+        // Two independent sources feeding into a chain node
+        let source1 = TestSourceNode {
+            items: vec![StreamItem::Text("a".to_string())],
+        };
+        let source2 = TestSourceNode {
+            items: vec![StreamItem::Text("b".to_string())],
+        };
+
+        let source1_idx = pipeline.add_node(Box::new(source1), "source1".to_string());
+        let source2_idx = pipeline.add_node(Box::new(source2), "source2".to_string());
+        let chain_idx = pipeline.add_node(Box::new(ChainNode), "chain".to_string());
+        let sink_idx = pipeline.add_node(Box::new(TestSinkNode), "sink".to_string());
+
+        pipeline
+            .add_edge(Edge {
+                from_node: source1_idx,
+                from_output: 0,
+                to_node: chain_idx,
+                to_input: 0,
+            })
+            .unwrap();
+        pipeline
+            .add_edge(Edge {
+                from_node: source2_idx,
+                from_output: 0,
+                to_node: chain_idx,
+                to_input: 1,
+            })
+            .unwrap();
+        pipeline
+            .add_edge(Edge {
+                from_node: chain_idx,
+                from_output: 0,
+                to_node: sink_idx,
+                to_input: 0,
+            })
+            .unwrap();
+
+        let result = pipeline.execute();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_edge_validation_invalid_from_node() {
+        let mut pipeline = Pipeline::new();
+        pipeline.add_node(Box::new(PassThroughNode), "node".to_string());
+
+        let result = pipeline.add_edge(Edge {
+            from_node: 999, // Invalid
+            from_output: 0,
+            to_node: 0,
+            to_input: 0,
+        });
+
+        assert!(matches!(result, Err(PipelineError::InvalidStructure(_))));
+    }
+
+    #[test]
+    fn test_edge_validation_invalid_to_node() {
+        let mut pipeline = Pipeline::new();
+        pipeline.add_node(Box::new(PassThroughNode), "node".to_string());
+
+        let result = pipeline.add_edge(Edge {
+            from_node: 0,
+            from_output: 0,
+            to_node: 999, // Invalid
+            to_input: 0,
+        });
+
+        assert!(matches!(result, Err(PipelineError::InvalidStructure(_))));
+    }
+
+    #[test]
+    fn test_edge_validation_invalid_output_index() {
+        let mut pipeline = Pipeline::new();
+        let source = TestSourceNode {
+            items: vec![],
+        };
+        let source_idx = pipeline.add_node(Box::new(source), "source".to_string());
+        let sink_idx = pipeline.add_node(Box::new(TestSinkNode), "sink".to_string());
+
+        let result = pipeline.add_edge(Edge {
+            from_node: source_idx,
+            from_output: 999, // Invalid - source only has 1 output
+            to_node: sink_idx,
+            to_input: 0,
+        });
+
+        assert!(matches!(result, Err(PipelineError::InvalidStructure(_))));
+    }
+
+    #[test]
+    fn test_disconnected_nodes() {
+        let mut pipeline = Pipeline::new();
+
+        // Add two disconnected nodes
+        let source = TestSourceNode {
+            items: vec![StreamItem::Text("test".to_string())],
+        };
+        pipeline.add_node(Box::new(source), "source".to_string());
+        pipeline.add_node(Box::new(TestSinkNode), "sink".to_string());
+
+        // Both nodes should execute successfully even without connection
+        let result = pipeline.execute();
+        assert!(result.is_ok());
+    }
 }

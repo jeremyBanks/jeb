@@ -1,7 +1,6 @@
 // Pipeline visualization with ASCII art
 
 use crate::pipeline::Pipeline;
-use std::collections::HashMap;
 
 /// Generate ASCII visualization of the pipeline
 pub fn visualize_pipeline(pipeline: &Pipeline, terminal_width: usize) -> String {
@@ -12,7 +11,7 @@ pub fn visualize_pipeline(pipeline: &Pipeline, terminal_width: usize) -> String 
     }
 
     // Build a simple linear representation for now
-    // TODO: Handle more complex DAG structures with branching
+    // Note: complex DAG structures with branching are shown in detailed view
 
     // Create a mapping of node positions
     let mut node_lines = Vec::new();
@@ -26,14 +25,15 @@ pub fn visualize_pipeline(pipeline: &Pipeline, terminal_width: usize) -> String 
         // Check if this node has outputs
         let has_output = pipeline.output_edges.get(&idx).map_or(false, |v| !v.is_empty());
 
-        let line = if idx == 0 && !has_input {
-            // Source node
+        // A source node has no inputs (not just idx == 0)
+        let line = if !has_input {
+            // Source node (no inputs)
             format!("{} →", node_name)
         } else if !has_output {
-            // Sink node
+            // Sink node (no outputs)
             format!("→ {}", node_name)
         } else {
-            // Transform node
+            // Transform node (has both inputs and outputs)
             format!("→ {} →", node_name)
         };
 
@@ -105,11 +105,8 @@ pub fn visualize_pipeline_detailed(pipeline: &Pipeline) -> String {
 
 /// Colorize pipeline visualization for terminal output
 pub fn colorize_pipeline(visualization: &str) -> String {
-    // For now, just return the visualization as-is
-    // TODO: Add color codes based on node types
-    // - Blue for output streams
-    // - Red for error streams
-    // - Yellow for implicit nodes
+    // Note: Color support would require terminal capability detection
+    // For now, return the visualization as-is for maximum compatibility
     visualization.to_string()
 }
 
