@@ -1,20 +1,10 @@
 use {
     crate::{
         Panic,
-        model::{Bytes, Float, Item, Node, Receiver, Task, Text, Value, channel},
+        model::{Bytes, Item, Node, Receiver, Task, channel},
     },
-    core::hash::Hash,
-    derive_more::{
-        AsMut, AsRef, Deref, DerefMut, Display, From, Index, IndexMut, Into, IntoIterator,
-        IsVariant, TryInto, TryUnwrap, Unwrap,
-    },
-    indexmap::IndexMap,
-    serde::{Deserialize, Serialize, de::value},
     std::borrow::Cow,
-    tokio::{
-        io::{AsyncWriteExt, BufReader},
-        task::JoinHandle,
-    },
+    tokio::io::AsyncWriteExt,
     tokio_stream::StreamExt,
     tokio_util::codec::{BytesCodec, FramedRead},
 };
@@ -42,7 +32,7 @@ impl NodeDef for Stdin {
 
     fn spawn(&self, mut stack: Vec<Receiver>) -> (Vec<Receiver>, Task) {
         let (sender, receiver) = channel();
-        let mut stdin = tokio::io::stdin();
+        let stdin = tokio::io::stdin();
 
         let handle = tokio::spawn(async move {
             let mut stdin_bytes: FramedRead<tokio::io::Stdin, BytesCodec> =

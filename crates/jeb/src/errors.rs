@@ -9,7 +9,7 @@ impl<Error: ::core::fmt::Debug> From<Error> for Panic {
 }
 
 impl ::core::fmt::Display for Panic {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    fn fmt(&self, _f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         unreachable!()
     }
 }

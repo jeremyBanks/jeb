@@ -11,3 +11,4 @@ rustup update
 rustup target add wasm32-unknown-unknown
 rustup toolchain install nightly
 
+history -s "cargo fix --allow-dirty; cargo clippy --fix --allow-dirty; cargo fmt; crates/jeb/examples/all.sh"
