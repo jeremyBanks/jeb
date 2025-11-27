@@ -246,16 +246,15 @@ impl Pipeline {
         }
 
         // Find all nodes with in-degree 0 and use VecDeque for proper FIFO ordering
-        let mut queue: VecDeque<usize> = in_degree
+        let mut initial_nodes: Vec<usize> = in_degree
             .iter()
             .filter(|&(_, degree)| *degree == 0)
             .map(|(&node, _)| node)
             .collect();
 
-        // Sort for deterministic ordering, then convert to VecDeque
-        let mut sorted: Vec<usize> = queue.drain(..).collect();
-        sorted.sort();
-        queue = sorted.into_iter().collect();
+        // Sort for deterministic ordering
+        initial_nodes.sort();
+        let mut queue: VecDeque<usize> = initial_nodes.into_iter().collect();
 
         while let Some(node) = queue.pop_front() {
             result.push(node);

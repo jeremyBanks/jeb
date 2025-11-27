@@ -1120,10 +1120,19 @@ fn compare_structured(a: &Structured, b: &Structured) -> std::cmp::Ordering {
     match (a, b) {
         (Structured::Null, Structured::Null) => Ordering::Equal,
         (Structured::Bool(a), Structured::Bool(b)) => a.cmp(b),
-        // Compare numbers by converting to f64 (simple approach)
+        // Compare same numeric types directly for precision
         (Structured::SignedInt(a), Structured::SignedInt(b)) => a.cmp(b),
         (Structured::UnsignedInt(a), Structured::UnsignedInt(b)) => a.cmp(b),
-        (Structured::Float(a), Structured::Float(b)) => a.partial_cmp(b).unwrap_or(Ordering::Equal),
+        // For floats, treat NaN as greater than all values for consistent ordering
+        (Structured::Float(a), Structured::Float(b)) => {
+            match (a.is_nan(), b.is_nan()) {
+                (true, true) => Ordering::Equal,
+                (true, false) => Ordering::Greater,
+                (false, true) => Ordering::Less,
+                (false, false) => a.partial_cmp(b).unwrap_or(Ordering::Equal),
+            }
+        }
+        // Mixed integer types: compare directly when possible
         (Structured::SignedInt(a), Structured::UnsignedInt(b)) => {
             if *a < 0 {
                 Ordering::Less
@@ -1138,10 +1147,36 @@ fn compare_structured(a: &Structured, b: &Structured) -> std::cmp::Ordering {
                 a.cmp(&(*b as u64))
             }
         }
-        (Structured::SignedInt(a), Structured::Float(b)) => (*a as f64).partial_cmp(b).unwrap_or(Ordering::Equal),
-        (Structured::Float(a), Structured::SignedInt(b)) => a.partial_cmp(&(*b as f64)).unwrap_or(Ordering::Equal),
-        (Structured::UnsignedInt(a), Structured::Float(b)) => (*a as f64).partial_cmp(b).unwrap_or(Ordering::Equal),
-        (Structured::Float(a), Structured::UnsignedInt(b)) => a.partial_cmp(&(*b as f64)).unwrap_or(Ordering::Equal),
+        // Mixed float/integer: use f64 comparison with NaN handling
+        // Note: Large integers (>2^53) may lose precision when converted to f64
+        (Structured::SignedInt(a), Structured::Float(b)) => {
+            if b.is_nan() {
+                Ordering::Less
+            } else {
+                (*a as f64).partial_cmp(b).unwrap_or(Ordering::Equal)
+            }
+        }
+        (Structured::Float(a), Structured::SignedInt(b)) => {
+            if a.is_nan() {
+                Ordering::Greater
+            } else {
+                a.partial_cmp(&(*b as f64)).unwrap_or(Ordering::Equal)
+            }
+        }
+        (Structured::UnsignedInt(a), Structured::Float(b)) => {
+            if b.is_nan() {
+                Ordering::Less
+            } else {
+                (*a as f64).partial_cmp(b).unwrap_or(Ordering::Equal)
+            }
+        }
+        (Structured::Float(a), Structured::UnsignedInt(b)) => {
+            if a.is_nan() {
+                Ordering::Greater
+            } else {
+                a.partial_cmp(&(*b as f64)).unwrap_or(Ordering::Equal)
+            }
+        }
         (Structured::TextString(a), Structured::TextString(b)) => a.cmp(b),
         (Structured::BinaryString(a), Structured::BinaryString(b)) => a.cmp(b),
         (Structured::Array(a), Structured::Array(b)) => {
