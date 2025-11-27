@@ -92,6 +92,7 @@ pub fn parse_pipeline(args: &[String]) -> Result<Pipeline, ParseError> {
         let node: Box<dyn crate::pipeline::Node> = match arg.as_str() {
             // Sources
             "stdin" => Box::new(StdinNode),
+            "self" => Box::new(SelfNode),
 
             // Sinks
             "stdout" => Box::new(StdoutNode),
@@ -105,6 +106,10 @@ pub fn parse_pipeline(args: &[String]) -> Result<Pipeline, ParseError> {
             "to-json" => Box::new(ToJsonNode),
             "to-base64" => Box::new(ToBase64Node),
 
+            // Encoding
+            "encode-z85" => Box::new(EncodeZ85Node),
+            "encode-jeb85" => Box::new(EncodeJeb85Node),
+
             // Chunking
             "by-lines" => Box::new(ByLinesNode),
             "split-lines" => Box::new(SplitLinesNode),
@@ -115,6 +120,8 @@ pub fn parse_pipeline(args: &[String]) -> Result<Pipeline, ParseError> {
             "join-array" => Box::new(JoinArrayNode),
             "split-array" => Box::new(SplitArrayNode),
             "join-lines" => Box::new(JoinLinesNode),
+            "join-space" => Box::new(JoinSpaceNode),
+            "join" => Box::new(JoinNode),
 
             // Stream combining
             "chain" => Box::new(ChainNode),
@@ -123,10 +130,34 @@ pub fn parse_pipeline(args: &[String]) -> Result<Pipeline, ParseError> {
             // Transforms
             "sort" => Box::new(SortNode),
             "filter" => Box::new(FilterNode),
+            "collapse" => Box::new(CollapseNode),
+
+            // Selection
+            "first" => Box::new(FirstNode),
+            "last" => Box::new(LastNode),
 
             // File literals (paths starting with . or /)
             path if path.starts_with('.') || path.starts_with('/') => {
                 Box::new(FileSourceNode::new(path.to_string()))
+            }
+
+            // Parametrized commands
+            arg if arg.starts_with("first-") => {
+                let n_str = &arg[6..];
+                let n: usize = n_str.parse().map_err(|_| ParseError::InvalidArgument {
+                    message: format!("Invalid number: {}", n_str),
+                    position: idx,
+                })?;
+                Box::new(FirstNNode::new(n))
+            }
+
+            arg if arg.starts_with("last-") => {
+                let n_str = &arg[5..];
+                let n: usize = n_str.parse().map_err(|_| ParseError::InvalidArgument {
+                    message: format!("Invalid number: {}", n_str),
+                    position: idx,
+                })?;
+                Box::new(LastNNode::new(n))
             }
 
             _ => {
@@ -148,7 +179,7 @@ pub fn parse_pipeline(args: &[String]) -> Result<Pipeline, ParseError> {
 
 /// Check if a command is a source node (has no inputs)
 fn is_source_node(command: &str) -> bool {
-    matches!(command, "stdin") || command.starts_with('.') || command.starts_with('/')
+    matches!(command, "stdin" | "self") || command.starts_with('.') || command.starts_with('/')
 }
 
 /// Finalize the pipeline by adding implicit commands

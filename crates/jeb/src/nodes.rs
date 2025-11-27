@@ -1019,3 +1019,470 @@ fn structured_to_json_value(structured: &Structured) -> Option<serde_json::Value
         }
     }
 }
+
+// MARK: JEB-Specific Encoding Nodes
+
+/// Encodes data using Z85 encoding
+pub struct EncodeZ85Node;
+
+impl Node for EncodeZ85Node {
+    fn name(&self) -> &str {
+        "encode-z85"
+    }
+
+    fn input_arity(&self) -> (usize, Option<usize>) {
+        (1, Some(1))
+    }
+
+    fn output_count(&self) -> usize {
+        1
+    }
+
+    fn execute(
+        &self,
+        inputs: Vec<Stream>,
+        _node_index: usize,
+    ) -> Result<ExecutionResult, NodeError> {
+        if inputs.len() != 1 {
+            return Err(NodeError::InvalidInputCount {
+                expected: "1".to_string(),
+                got: inputs.len(),
+            });
+        }
+
+        let mut output = Vec::new();
+
+        for item in &inputs[0] {
+            let bytes = match item {
+                StreamItem::Bytes(b) => b,
+                StreamItem::Text(s) => s.as_bytes(),
+                StreamItem::Structured(_) => continue,
+            };
+
+            let encoded = crate::encode_z85(bytes);
+            output.push(StreamItem::Bytes(encoded));
+        }
+
+        Ok(ExecutionResult {
+            outputs: vec![output],
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        })
+    }
+}
+
+/// Encodes data using JEB85 encoding
+pub struct EncodeJeb85Node;
+
+impl Node for EncodeJeb85Node {
+    fn name(&self) -> &str {
+        "encode-jeb85"
+    }
+
+    fn input_arity(&self) -> (usize, Option<usize>) {
+        (1, Some(1))
+    }
+
+    fn output_count(&self) -> usize {
+        1
+    }
+
+    fn execute(
+        &self,
+        inputs: Vec<Stream>,
+        _node_index: usize,
+    ) -> Result<ExecutionResult, NodeError> {
+        if inputs.len() != 1 {
+            return Err(NodeError::InvalidInputCount {
+                expected: "1".to_string(),
+                got: inputs.len(),
+            });
+        }
+
+        let mut output = Vec::new();
+
+        for item in &inputs[0] {
+            let bytes = match item {
+                StreamItem::Bytes(b) => b,
+                StreamItem::Text(s) => s.as_bytes(),
+                StreamItem::Structured(_) => continue,
+            };
+
+            let encoded = crate::encode_jeb85(bytes);
+            output.push(StreamItem::Bytes(encoded));
+        }
+
+        Ok(ExecutionResult {
+            outputs: vec![output],
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        })
+    }
+}
+
+// MARK: Additional Utility Nodes
+
+/// Reads the current executable
+pub struct SelfNode;
+
+impl Node for SelfNode {
+    fn name(&self) -> &str {
+        "self"
+    }
+
+    fn input_arity(&self) -> (usize, Option<usize>) {
+        (0, Some(0))
+    }
+
+    fn output_count(&self) -> usize {
+        1
+    }
+
+    fn execute(
+        &self,
+        _inputs: Vec<Stream>,
+        _node_index: usize,
+    ) -> Result<ExecutionResult, NodeError> {
+        let own_path = std::env::current_exe()?;
+        let data = std::fs::read(own_path)?;
+
+        Ok(ExecutionResult {
+            outputs: vec![vec![StreamItem::Bytes(data)]],
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        })
+    }
+}
+
+/// Keeps only the first item
+pub struct FirstNode;
+
+impl Node for FirstNode {
+    fn name(&self) -> &str {
+        "first"
+    }
+
+    fn input_arity(&self) -> (usize, Option<usize>) {
+        (1, Some(1))
+    }
+
+    fn output_count(&self) -> usize {
+        1
+    }
+
+    fn execute(
+        &self,
+        inputs: Vec<Stream>,
+        _node_index: usize,
+    ) -> Result<ExecutionResult, NodeError> {
+        if inputs.len() != 1 {
+            return Err(NodeError::InvalidInputCount {
+                expected: "1".to_string(),
+                got: inputs.len(),
+            });
+        }
+
+        let output = inputs[0].iter().take(1).cloned().collect();
+
+        Ok(ExecutionResult {
+            outputs: vec![output],
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        })
+    }
+}
+
+/// Keeps only the last item
+pub struct LastNode;
+
+impl Node for LastNode {
+    fn name(&self) -> &str {
+        "last"
+    }
+
+    fn input_arity(&self) -> (usize, Option<usize>) {
+        (1, Some(1))
+    }
+
+    fn output_count(&self) -> usize {
+        1
+    }
+
+    fn execute(
+        &self,
+        inputs: Vec<Stream>,
+        _node_index: usize,
+    ) -> Result<ExecutionResult, NodeError> {
+        if inputs.len() != 1 {
+            return Err(NodeError::InvalidInputCount {
+                expected: "1".to_string(),
+                got: inputs.len(),
+            });
+        }
+
+        let output = if let Some(last) = inputs[0].last() {
+            vec![last.clone()]
+        } else {
+            Vec::new()
+        };
+
+        Ok(ExecutionResult {
+            outputs: vec![output],
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        })
+    }
+}
+
+/// Keeps first N items
+pub struct FirstNNode {
+    n: usize,
+}
+
+impl FirstNNode {
+    pub fn new(n: usize) -> Self {
+        Self { n }
+    }
+}
+
+impl Node for FirstNNode {
+    fn name(&self) -> &str {
+        "first-n"
+    }
+
+    fn input_arity(&self) -> (usize, Option<usize>) {
+        (1, Some(1))
+    }
+
+    fn output_count(&self) -> usize {
+        1
+    }
+
+    fn execute(
+        &self,
+        inputs: Vec<Stream>,
+        _node_index: usize,
+    ) -> Result<ExecutionResult, NodeError> {
+        if inputs.len() != 1 {
+            return Err(NodeError::InvalidInputCount {
+                expected: "1".to_string(),
+                got: inputs.len(),
+            });
+        }
+
+        let output = inputs[0].iter().take(self.n).cloned().collect();
+
+        Ok(ExecutionResult {
+            outputs: vec![output],
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        })
+    }
+}
+
+/// Keeps last N items
+pub struct LastNNode {
+    n: usize,
+}
+
+impl LastNNode {
+    pub fn new(n: usize) -> Self {
+        Self { n }
+    }
+}
+
+impl Node for LastNNode {
+    fn name(&self) -> &str {
+        "last-n"
+    }
+
+    fn input_arity(&self) -> (usize, Option<usize>) {
+        (1, Some(1))
+    }
+
+    fn output_count(&self) -> usize {
+        1
+    }
+
+    fn execute(
+        &self,
+        inputs: Vec<Stream>,
+        _node_index: usize,
+    ) -> Result<ExecutionResult, NodeError> {
+        if inputs.len() != 1 {
+            return Err(NodeError::InvalidInputCount {
+                expected: "1".to_string(),
+                got: inputs.len(),
+            });
+        }
+
+        let len = inputs[0].len();
+        let skip = if len > self.n { len - self.n } else { 0 };
+        let output = inputs[0].iter().skip(skip).cloned().collect();
+
+        Ok(ExecutionResult {
+            outputs: vec![output],
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        })
+    }
+}
+
+/// Collapses whitespace
+pub struct CollapseNode;
+
+impl Node for CollapseNode {
+    fn name(&self) -> &str {
+        "collapse"
+    }
+
+    fn input_arity(&self) -> (usize, Option<usize>) {
+        (1, Some(1))
+    }
+
+    fn output_count(&self) -> usize {
+        1
+    }
+
+    fn execute(
+        &self,
+        inputs: Vec<Stream>,
+        _node_index: usize,
+    ) -> Result<ExecutionResult, NodeError> {
+        if inputs.len() != 1 {
+            return Err(NodeError::InvalidInputCount {
+                expected: "1".to_string(),
+                got: inputs.len(),
+            });
+        }
+
+        let mut output = Vec::new();
+
+        for item in &inputs[0] {
+            let bytes = match item {
+                StreamItem::Bytes(b) => b.clone(),
+                StreamItem::Text(s) => s.as_bytes().to_vec(),
+                StreamItem::Structured(_) => continue,
+            };
+
+            let mut result = Vec::new();
+            let mut in_whitespace = false;
+
+            for &byte in &bytes {
+                if byte.is_ascii_whitespace() {
+                    in_whitespace = true;
+                } else {
+                    if in_whitespace {
+                        result.push(b' ');
+                        in_whitespace = false;
+                    }
+                    result.push(byte);
+                }
+            }
+
+            output.push(StreamItem::Bytes(result));
+        }
+
+        Ok(ExecutionResult {
+            outputs: vec![output],
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        })
+    }
+}
+
+/// Joins items with spaces
+pub struct JoinSpaceNode;
+
+impl Node for JoinSpaceNode {
+    fn name(&self) -> &str {
+        "join-space"
+    }
+
+    fn input_arity(&self) -> (usize, Option<usize>) {
+        (1, Some(1))
+    }
+
+    fn output_count(&self) -> usize {
+        1
+    }
+
+    fn execute(
+        &self,
+        inputs: Vec<Stream>,
+        _node_index: usize,
+    ) -> Result<ExecutionResult, NodeError> {
+        if inputs.len() != 1 {
+            return Err(NodeError::InvalidInputCount {
+                expected: "1".to_string(),
+                got: inputs.len(),
+            });
+        }
+
+        let mut result = Vec::new();
+
+        for (idx, item) in inputs[0].iter().enumerate() {
+            if idx > 0 {
+                result.push(b' ');
+            }
+
+            match item {
+                StreamItem::Bytes(b) => result.extend_from_slice(b),
+                StreamItem::Text(s) => result.extend_from_slice(s.as_bytes()),
+                StreamItem::Structured(_) => {}
+            }
+        }
+
+        Ok(ExecutionResult {
+            outputs: vec![vec![StreamItem::Bytes(result)]],
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        })
+    }
+}
+
+/// Joins all bytes together
+pub struct JoinNode;
+
+impl Node for JoinNode {
+    fn name(&self) -> &str {
+        "join"
+    }
+
+    fn input_arity(&self) -> (usize, Option<usize>) {
+        (1, Some(1))
+    }
+
+    fn output_count(&self) -> usize {
+        1
+    }
+
+    fn execute(
+        &self,
+        inputs: Vec<Stream>,
+        _node_index: usize,
+    ) -> Result<ExecutionResult, NodeError> {
+        if inputs.len() != 1 {
+            return Err(NodeError::InvalidInputCount {
+                expected: "1".to_string(),
+                got: inputs.len(),
+            });
+        }
+
+        let mut result = Vec::new();
+
+        for item in &inputs[0] {
+            match item {
+                StreamItem::Bytes(b) => result.extend_from_slice(b),
+                StreamItem::Text(s) => result.extend_from_slice(s.as_bytes()),
+                StreamItem::Structured(_) => {}
+            }
+        }
+
+        Ok(ExecutionResult {
+            outputs: vec![vec![StreamItem::Bytes(result)]],
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        })
+    }
+}
