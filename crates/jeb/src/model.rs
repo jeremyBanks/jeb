@@ -6,10 +6,11 @@ use {
     },
     indexmap::IndexMap,
     serde::{Deserialize, Serialize, de::value},
-    tokio::{io::BufReader, task::JoinHandle},
+    tokio::{io::{AsyncWriteExt, BufReader}, task::JoinHandle},
     tokio_stream::StreamExt,
     tokio_util::codec::{BytesCodec, FramedRead},
 };
+
 
 
 pub type Task = JoinHandle<Result<(), Panic>>;
@@ -31,58 +32,7 @@ pub trait Node {
     fn spawn(&self, stack: Vec<Receiver>) -> (Vec<Receiver>, Task);
 }
 
-#[derive(Clone, Copy, Debug)]
-struct Stdin;
-impl Node for Stdin {
-    fn spawn(&self, mut stack: Vec<Receiver>) -> (Vec<Receiver>, Task) {
-        let (sender, receiver) = channel();
 
-        let handle = tokio::spawn(async move {
-            let mut stdin = tokio::io::stdin();
-
-            let mut stdin_bytes: FramedRead<tokio::io::Stdin, BytesCodec> =
-                FramedRead::new(stdin, BytesCodec::new());
-
-            while let Some(value) = stdin_bytes.next().await {
-                let vec = value?.to_vec();
-                let bytes = Bytes::from(vec);
-                sender.send(bytes.into()).await?;
-            }
-
-            Ok(())
-        });
-
-        stack.push(receiver);
-
-        (stack, handle)
-    }
-}
-
-// TODO: move or remove
-pub async fn wip_example_call() -> Result<(), Panic> {
-    let nodes: Vec::<Box::<dyn Node>> = vec![
-        Box::new(Stdin)
-    ];
-
-    let mut stack = vec![];
-    let mut tasks = vec![];
-
-    for node in nodes {
-        let task;
-        (stack, task) = node.spawn(stack);
-        tasks.push(task);
-    }
-
-    assert!(stack.is_empty());
-
-    let mut complete_tasks = futures::stream::FuturesUnordered::from_iter(tasks);
-
-    while let Some(result) = complete_tasks.next().await {
-        result??;
-    }
-
-    Ok(())
-}
 
 
 #[derive(Debug, Clone, From, Serialize, Deserialize)]
@@ -100,6 +50,8 @@ impl Default for Item {
     }
 }
 
+
+
 #[derive(Debug, Clone, From, Serialize, Deserialize, Default)]
 #[serde(untagged)]
 #[must_use]
@@ -116,6 +68,8 @@ pub enum Value {
     BytesMap(IndexMap<Bytes, Value>),
     TextMap(IndexMap<Text, Value>),
 }
+
+
 
 
 #[derive(AsRef, Clone, Debug, Default, Deref, Copy, Display, Index, Into, Serialize)]
@@ -228,6 +182,9 @@ impl Hash for FiniteFloat {
     }
 }
 
+
+
+
 #[derive(
     AsMut,
     AsRef,
@@ -273,6 +230,9 @@ impl From<Text> for Bytes {
     }
 }
 
+
+
+
 #[derive(
     AsMut,
     AsRef,
@@ -297,3 +257,113 @@ impl From<Text> for Bytes {
 #[repr(transparent)]
 #[must_use]
 pub struct Text(String);
+
+impl TryFrom<Bytes> for Text {
+    type Error = core::str::Utf8Error;
+
+    fn try_from(value: Bytes) -> Result<Self, Self::Error> {
+        let s = core::str::from_utf8(&value)?;
+        Ok(Text(s.to_string()))
+    }
+}
+
+
+
+pub trait NodeDef: Node + Send + Sync + 'static {
+    const NAME: &'static str;
+
+    fn spawn(&self, stack: Vec<Receiver>) -> (Vec<Receiver>, Task);
+}
+
+impl <T: NodeDef> Node for T
+{
+    fn spawn(&self, stack: Vec<Receiver>) -> (Vec<Receiver>, Task) {
+        NodeDef::spawn(self, stack)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Stdin;
+impl NodeDef for Stdin {
+    const NAME: &'static str = "stdin";
+
+    fn spawn(&self, mut stack: Vec<Receiver>) -> (Vec<Receiver>, Task) {
+        let (sender, receiver) = channel();
+        let mut stdin = tokio::io::stdin();
+
+        let handle = tokio::spawn(async move {
+            let mut stdin_bytes: FramedRead<tokio::io::Stdin, BytesCodec> =
+                FramedRead::new(stdin, BytesCodec::new());
+
+            while let Some(value) = stdin_bytes.next().await {
+                let vec = value?.to_vec();
+                let bytes = Bytes::from(vec);
+                sender.send(bytes.into()).await?;
+            }
+
+            Ok(())
+        });
+
+        stack.push(receiver);
+
+        (stack, handle)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Stdout;
+impl NodeDef for Stdout {
+    const NAME: &'static str = "stdout";
+
+    fn spawn(&self, mut stack: Vec<Receiver>) -> (Vec<Receiver>, Task) {
+        let mut receiver = stack.pop().expect("stdout node must receive an input");
+        let mut stdout = tokio::io::stdout();
+
+        let handle = tokio::spawn(async move {
+            while let Some(value) = receiver.next().await {
+                match value {
+                    Item::Bytes(bytes) => {
+                        stdout.write_all(&bytes).await?;
+                    }
+                    Item::Text(text) => {
+                        stdout.write_all(text.as_bytes()).await?;
+                    }
+                    Item::Value(_) => {
+                        unimplemented!("stdout does not support Value items");
+                    }
+                }
+            }
+
+            Ok(())
+        });
+
+        (stack, handle)
+    }
+}
+
+// TODO: move or remove
+pub async fn wip_example_pseudo_main() -> Result<(), Panic> {
+    let nodes: Vec::<&dyn Node> = vec![
+        &Stdin,
+        &Stdout
+    ];
+
+    let mut stack = vec![];
+    let mut tasks = vec![];
+
+    for node in nodes {
+        let task;
+        (stack, task) = node.spawn(stack);
+        tasks.push(task);
+    }
+
+    assert!(stack.is_empty());
+
+    let mut complete_tasks = futures::stream::FuturesUnordered::from_iter(tasks);
+
+    while let Some(result) = complete_tasks.next().await {
+        result??;
+    }
+
+    Ok(())
+}
