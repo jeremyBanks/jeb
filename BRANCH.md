@@ -43,8 +43,10 @@ Both Text and Binary modes support the same rich data model:
 
 **Float restrictions:**
 - Only finite floats allowed (no NaN, no Infinity) to match JSON semantics
-- Implementation: validate with `f64::is_finite()` on construction
-- Attempting to create NaN or Infinity values returns an error
+- **Specification constraint**, not enforced by wrapper types in the Value implementation
+- CLI commands won't provide ways to create NaN or Infinity values
+- Parsers (JSON, Extended Bencode) reject NaN/Infinity on input
+- Future: may add debug assertions to catch violations during development
 
 ### Text Mode (JSON Serialization)
 
@@ -381,9 +383,9 @@ jeb ./data.json parse-json encode-protobuf write:./message.pb
 - `help` - creates `Text(vec![string])`
 
 **Sinks:**
-- `stdout` - expects Binary items, writes raw bytes
-- If given Text items, may need implicit conversion or error
-- `write:path` - writes Binary items as raw bytes
+- `stdout` - writes Binary items as raw bytes
+- If given Text items, implicitly converts to Binary (via serialization) before writing
+- `write:path` - writes Binary items as raw bytes (with atomic replacement semantics)
 
 ### Migration Path
 
@@ -689,7 +691,7 @@ jeb self split-64KiB encode-jeb85 chain
 
 ### Data Model Questions
 
-1. **Implicit conversions**: Should `stdout` automatically convert Text to Binary (via serialization)? Or require explicit `to-binary`?
+1. **Implicit conversions**: ~~Should `stdout` automatically convert Text to Binary?~~ **RESOLVED**: Yes, `stdout` and other commands perform implicit conversions as needed. See "Implicit Conversions" section for details.
 
 2. **Mixed-mode operations**: How do commands behave when state contains both Text and Binary items? Apply to each according to type? Error? Filter?
 
@@ -699,7 +701,7 @@ jeb self split-64KiB encode-jeb85 chain
 
 5. **Dict key types**: Should Extended Bencode dictionaries allow any value type as keys (like JSON objects require strings)? Or only byte strings (traditional Bencode)?
 
-6. **Float representation**: ~~How should floats serialize in Extended Bencode?~~ **RESOLVED**: Standard decimal representation only (e.g., `f3.14e`, `f-2.5e`). Scientific notation may be allowed for parsing. NaN and Infinity are not allowed (match JSON semantics). Validated with `f64::is_finite()`.
+6. **Float representation**: ~~How should floats serialize in Extended Bencode?~~ **RESOLVED**: Standard decimal representation only (e.g., `f3.14e`, `f-2.5e`). Scientific notation may be allowed for parsing. NaN and Infinity are not allowed per specification (match JSON semantics). Not enforced by wrapper types - parsers reject on input, CLI doesn't provide ways to create them.
 
 ### Workflow Questions
 
