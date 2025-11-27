@@ -96,16 +96,21 @@ CI will fail if the version is not bumped from the base branch.
 
 Key documentation files to reference:
 
-- `crates/jeb/README.md` - Main crate overview
+- `crates/jeb/README.md` - Main crate overview and usage examples
+
+Additional documentation exists in experimental crates (not currently part of workspace):
+
 - `crates/slop/CONTRIBUTING.md` - Development workflow and guidelines
 - `crates/slop/DESIGN.md` - Architecture and design decisions
 
 ## Testing
 
-- Tests are located alongside source files and in `tests/` directories
+- Unit tests are located alongside source files in each crate
+- Integration tests for the `jeb` binary are in the root `tests/` directory
+- `tests/jeb/` contains numbered test cases for the jeb CLI
+- `tests/jeb85/` contains tests for JEB85 encoding
 - Run `cargo test` to execute all tests
 - Add tests for new functionality
-- Integration tests for the `jeb` binary are in `tests/`
 
 ## Dependencies
 
