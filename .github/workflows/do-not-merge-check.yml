@@ -10,24 +10,30 @@ on:
 
 jobs:
   check-do-not-merge:
-    name: Check for DO NOT MERGE/SUBMIT/REVIEW markers
+    name: Check for WIP/TODO/DO NOT MERGE markers
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Check PR title and description
         if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           echo "Checking PR title and description for blocking markers..."
-
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          PR_BODY="${{ github.event.pull_request.body }}"
 
           FOUND_ISSUES=0
 
           # Check for WIP in PR title (case-insensitive)
           if echo "$PR_TITLE" | grep -qi '\bWIP\b'; then
             echo "❌ Found 'WIP' in PR title: $PR_TITLE"
+            FOUND_ISSUES=1
+          fi
+
+          # Check for TODO or TODO: in PR title (but allow TODO()
+          if echo "$PR_TITLE" | grep -qE '\bTODO[ :]'; then
+            echo "❌ Found 'TODO ' or 'TODO:' in PR title: $PR_TITLE"
             FOUND_ISSUES=1
           fi
 
@@ -45,9 +51,17 @@ jobs:
             FOUND_ISSUES=1
           fi
 
+          # Check for TODO or TODO: in PR body (but allow TODO()
+          if echo "$PR_BODY" | grep -qE '\bTODO[ :]'; then
+            echo "❌ Found 'TODO ' or 'TODO:' in PR description"
+            echo "Matching lines:"
+            echo "$PR_BODY" | grep -E '\bTODO[ :]'
+            FOUND_ISSUES=1
+          fi
+
           if [ $FOUND_ISSUES -eq 1 ]; then
             echo ""
-            echo "Please remove WIP/blocking markers from PR title and description before merging."
+            echo "Please remove WIP/TODO/blocking markers from PR title and description before merging."
             exit 1
           else
             echo "✅ No blocking markers found in PR metadata."
