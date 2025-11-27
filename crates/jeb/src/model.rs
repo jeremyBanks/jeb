@@ -5,8 +5,11 @@ use {
         AsMut, AsRef, Deref, DerefMut, Display, From, Index, IndexMut, Into, IntoIterator, TryInto,
     },
     indexmap::IndexMap,
-    serde::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize, de::value},
+    tokio::{io::BufReader, task::JoinHandle},
+    tokio_util::codec::{BytesCodec, FramedRead},
 };
+ use tokio_stream::StreamExt;
 
 pub type Sender = tokio_util::sync::PollSender<Item>;
 
@@ -17,9 +20,38 @@ pub fn channel() -> (Sender, Receiver) {
     let (sender, receiver) = tokio::sync::mpsc::channel(1);
 
     let sender = tokio_util::sync::PollSender::new(sender);
-    let receiver = receiver.into();
+    let receiver = tokio_stream::wrappers::ReceiverStream::new(receiver);
 
     (sender, receiver)
+}
+
+pub trait Node {
+    fn spawn(stack: Vec<Receiver>) -> (Vec<Receiver>, JoinHandle<Result<(), Panic>>);
+}
+
+struct Stdin;
+impl Node for Stdin {
+    fn spawn(mut stack: Vec<Receiver>) -> (Vec<Receiver>, JoinHandle<Result<(), Panic>>) {
+        let (sender, receiver) = channel();
+
+        let handle = tokio::spawn(async move {
+            let mut stdin = tokio::io::stdin();
+
+            let mut stdin_bytes: FramedRead<tokio::io::Stdin, BytesCodec> = FramedRead::new(stdin, BytesCodec::new());
+
+            while let Some(value) = stdin_bytes.next().await {
+                let vec = value?.to_vec();
+                let bytes = Bytes::from(vec);
+                sender.get_ref().unwrap().send(bytes.into()).await?;
+            }
+
+            Ok(())
+        });
+
+        stack.push(receiver);
+
+        (stack, handle)
+    }
 }
 
 #[derive(Debug, Clone, From, Serialize, Deserialize)]

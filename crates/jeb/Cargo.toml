@@ -20,9 +20,9 @@ parking_lot = "0.12.5"
 serde.workspace = true
 serde_json.workspace = true
 tap = "1.0.1"
-tokio = { version = "1.0", features = ["rt", "macros", "sync"] }
+tokio = { version = "1.0", features = ["rt", "macros", "sync", "fs", "io-std", "io-util"] }
 tokio-stream.workspace = true
-tokio-util = "0.7.17"
+tokio-util = { version = "0.7.17", features = ["codec", "io"] }
 
 [lib]
 
