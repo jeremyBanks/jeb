@@ -7,7 +7,6 @@
     clippy::arbitrary_source_item_ordering
 )]
 #![expect(
-    unused,
     missing_docs,
     clippy::missing_errors_doc,
     clippy::redundant_else,
@@ -20,7 +19,11 @@
     clippy::arbitrary_source_item_ordering,
     clippy::missing_panics_doc
 )]
-#![allow(clippy::unnecessary_wraps, clippy::use_self)]
+#![allow(
+    clippy::unnecessary_wraps,
+    clippy::use_self,
+    mismatched_lifetime_syntaxes
+)]
 #![doc = include_str!("../README.md")]
 // cSpell:ignoreRegExp b"(\\?.){5}"
 
@@ -28,6 +31,7 @@ pub mod byte_ranges;
 pub mod const_checked;
 pub mod errors;
 pub mod model;
+pub mod nodes;
 
 use core::fmt::Debug;
 

@@ -2,11 +2,16 @@ use {
     crate::Panic,
     core::hash::Hash,
     derive_more::{
-        AsMut, AsRef, Deref, DerefMut, Display, From, Index, IndexMut, Into, IntoIterator, TryInto,
+        AsMut, AsRef, Deref, DerefMut, Display, From, Index, IndexMut, Into, IntoIterator,
+        IsVariant, TryInto, TryUnwrap, Unwrap,
     },
     indexmap::IndexMap,
     serde::{Deserialize, Serialize, de::value},
-    tokio::{io::{AsyncWriteExt, BufReader}, task::JoinHandle},
+    std::borrow::Cow,
+    tokio::{
+        io::{AsyncWriteExt, BufReader},
+        task::JoinHandle,
+    },
     tokio_stream::StreamExt,
     tokio_util::codec::{BytesCodec, FramedRead},
 };
@@ -34,8 +39,7 @@ pub trait Node {
 
 
 
-
-#[derive(Debug, Clone, From, Serialize, Deserialize)]
+#[derive(Debug, Clone, From, Serialize, Deserialize, TryUnwrap, IsVariant, Unwrap)]
 #[serde(untagged)]
 #[must_use]
 pub enum Item {
@@ -52,13 +56,13 @@ impl Default for Item {
 
 
 
-#[derive(Debug, Clone, From, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, From, Serialize, Deserialize, Default, TryUnwrap, IsVariant, Unwrap)]
 #[serde(untagged)]
 #[must_use]
 pub enum Value {
     Unsigned(u64),
     Signed(i64),
-    Float(f64),
+    Float(Float),
     Bool(bool),
     #[default]
     Null,
@@ -71,31 +75,30 @@ pub enum Value {
 
 
 
-
 #[derive(AsRef, Clone, Debug, Default, Deref, Copy, Display, Index, Into, Serialize)]
 #[serde(transparent)]
 #[repr(transparent)]
 #[must_use]
-pub struct FiniteFloat(f64);
+pub struct Float(f64);
 
-impl FiniteFloat {
+impl Float {
     #[must_use]
     pub const fn new(value: f64) -> Option<Self> {
         if value.is_finite() {
-            Some(FiniteFloat(value))
+            Some(Float(value))
         } else {
             None
         }
     }
 }
 
-impl<'de> Deserialize<'de> for FiniteFloat {
+impl<'de> Deserialize<'de> for Float {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         let value = f64::deserialize(deserializer)?;
-        FiniteFloat::new(value).ok_or_else(|| {
+        Float::new(value).ok_or_else(|| {
             serde::de::Error::invalid_value(
                 serde::de::Unexpected::Float(value),
                 &"a finite floating point number",
@@ -104,84 +107,31 @@ impl<'de> Deserialize<'de> for FiniteFloat {
     }
 }
 
-impl TryFrom<f64> for FiniteFloat {
-    type Error = f64;
-
-    fn try_from(value: f64) -> Result<Self, Self::Error> {
-        FiniteFloat::new(value).ok_or(value)
-    }
-}
-
-impl TryFrom<f32> for FiniteFloat {
-    type Error = f32;
-
-    fn try_from(value: f32) -> Result<Self, Self::Error> {
-        FiniteFloat::new(value.into()).ok_or(value)
-    }
-}
-
-impl From<i32> for FiniteFloat {
-    fn from(value: i32) -> Self {
-        FiniteFloat(value.into())
-    }
-}
-
-impl From<u32> for FiniteFloat {
-    fn from(value: u32) -> Self {
-        FiniteFloat(value.into())
-    }
-}
-
-impl From<i16> for FiniteFloat {
-    fn from(value: i16) -> Self {
-        FiniteFloat(value.into())
-    }
-}
-
-impl From<u16> for FiniteFloat {
-    fn from(value: u16) -> Self {
-        FiniteFloat(value.into())
-    }
-}
-
-impl From<i8> for FiniteFloat {
-    fn from(value: i8) -> Self {
-        FiniteFloat(value.into())
-    }
-}
-
-impl From<u8> for FiniteFloat {
-    fn from(value: u8) -> Self {
-        FiniteFloat(value.into())
-    }
-}
-
-impl Ord for FiniteFloat {
+impl Ord for Float {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.0.total_cmp(&other.0)
     }
 }
 
-impl PartialEq for FiniteFloat {
+impl PartialEq for Float {
     fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == core::cmp::Ordering::Equal
     }
 }
 
-impl Eq for FiniteFloat {}
+impl Eq for Float {}
 
-impl PartialOrd for FiniteFloat {
+impl PartialOrd for Float {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Hash for FiniteFloat {
+impl Hash for Float {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         state.write_u64(self.0.to_bits());
     }
 }
-
 
 
 
@@ -212,25 +162,6 @@ impl Hash for FiniteFloat {
 #[into_iterator(owned, ref, ref_mut)]
 pub struct Bytes(Vec<u8>);
 
-impl From<&[u8]> for Bytes {
-    fn from(value: &[u8]) -> Self {
-        Bytes(value.to_vec())
-    }
-}
-
-impl From<&str> for Bytes {
-    fn from(value: &str) -> Self {
-        Bytes(value.as_bytes().to_vec())
-    }
-}
-
-impl From<Text> for Bytes {
-    fn from(value: Text) -> Self {
-        Bytes(value.0.into_bytes())
-    }
-}
-
-
 
 
 #[derive(
@@ -258,6 +189,30 @@ impl From<Text> for Bytes {
 #[must_use]
 pub struct Text(String);
 
+
+
+// MARK: Bytes conversions
+
+impl From<&[u8]> for Bytes {
+    fn from(value: &[u8]) -> Self {
+        Bytes(value.to_vec())
+    }
+}
+
+impl From<&str> for Bytes {
+    fn from(value: &str) -> Self {
+        Bytes(value.as_bytes().to_vec())
+    }
+}
+
+impl From<Text> for Bytes {
+    fn from(value: Text) -> Self {
+        Bytes(value.0.into_bytes())
+    }
+}
+
+// MARK: Text conversions
+
 impl TryFrom<Bytes> for Text {
     type Error = core::str::Utf8Error;
 
@@ -267,103 +222,245 @@ impl TryFrom<Bytes> for Text {
     }
 }
 
+// MARK: Float conversions
 
+impl TryFrom<f64> for Float {
+    type Error = f64;
 
-pub trait NodeDef: Node + Send + Sync + 'static {
-    const NAME: &'static str;
-
-    fn spawn(&self, stack: Vec<Receiver>) -> (Vec<Receiver>, Task);
-}
-
-impl <T: NodeDef> Node for T
-{
-    fn spawn(&self, stack: Vec<Receiver>) -> (Vec<Receiver>, Task) {
-        NodeDef::spawn(self, stack)
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        Float::new(value).ok_or(value)
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-struct Stdin;
-impl NodeDef for Stdin {
-    const NAME: &'static str = "stdin";
+impl TryFrom<f32> for Float {
+    type Error = f32;
 
-    fn spawn(&self, mut stack: Vec<Receiver>) -> (Vec<Receiver>, Task) {
-        let (sender, receiver) = channel();
-        let mut stdin = tokio::io::stdin();
-
-        let handle = tokio::spawn(async move {
-            let mut stdin_bytes: FramedRead<tokio::io::Stdin, BytesCodec> =
-                FramedRead::new(stdin, BytesCodec::new());
-
-            while let Some(value) = stdin_bytes.next().await {
-                let vec = value?.to_vec();
-                let bytes = Bytes::from(vec);
-                sender.send(bytes.into()).await?;
-            }
-
-            Ok(())
-        });
-
-        stack.push(receiver);
-
-        (stack, handle)
+    fn try_from(value: f32) -> Result<Self, Self::Error> {
+        Float::new(value.into()).ok_or(value)
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-struct Stdout;
-impl NodeDef for Stdout {
-    const NAME: &'static str = "stdout";
-
-    fn spawn(&self, mut stack: Vec<Receiver>) -> (Vec<Receiver>, Task) {
-        let mut receiver = stack.pop().expect("stdout node must receive an input");
-        let mut stdout = tokio::io::stdout();
-
-        let handle = tokio::spawn(async move {
-            while let Some(value) = receiver.next().await {
-                match value {
-                    Item::Bytes(bytes) => {
-                        stdout.write_all(&bytes).await?;
-                    }
-                    Item::Text(text) => {
-                        stdout.write_all(text.as_bytes()).await?;
-                    }
-                    Item::Value(_) => {
-                        unimplemented!("stdout does not support Value items");
-                    }
-                }
-            }
-
-            Ok(())
-        });
-
-        (stack, handle)
+impl From<i32> for Float {
+    fn from(value: i32) -> Self {
+        Float(value.into())
     }
 }
 
-// TODO: move or remove
-pub async fn wip_example_pseudo_main() -> Result<(), Panic> {
-    let nodes: Vec::<&dyn Node> = vec![
-        &Stdin,
-        &Stdout
-    ];
-
-    let mut stack = vec![];
-    let mut tasks = vec![];
-
-    for node in nodes {
-        let task;
-        (stack, task) = node.spawn(stack);
-        tasks.push(task);
+impl From<u32> for Float {
+    fn from(value: u32) -> Self {
+        Float(value.into())
     }
+}
 
-    assert!(stack.is_empty());
-
-    let mut complete_tasks = futures::stream::FuturesUnordered::from_iter(tasks);
-
-    while let Some(result) = complete_tasks.next().await {
-        result??;
+impl From<i16> for Float {
+    fn from(value: i16) -> Self {
+        Float(value.into())
     }
+}
 
-    Ok(())
+impl From<u16> for Float {
+    fn from(value: u16) -> Self {
+        Float(value.into())
+    }
+}
+
+impl From<i8> for Float {
+    fn from(value: i8) -> Self {
+        Float(value.into())
+    }
+}
+
+impl From<u8> for Float {
+    fn from(value: u8) -> Self {
+        Float(value.into())
+    }
+}
+
+
+// MARK: Value conversions
+
+impl TryFrom<f32> for Value {
+    type Error = f32;
+
+    fn try_from(value: f32) -> Result<Self, Self::Error> {
+        Float::try_from(value).map(Value::from)
+    }
+}
+
+impl TryFrom<f64> for Value {
+    type Error = f64;
+
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        Float::try_from(value).map(Value::from)
+    }
+}
+
+impl TryFrom<u128> for Value {
+    type Error = u128;
+
+    fn try_from(value: u128) -> Result<Self, Self::Error> {
+        u64::try_from(value).map(Value::Unsigned).map_err(|_| value)
+    }
+}
+
+impl TryFrom<i128> for Value {
+    type Error = i128;
+
+    fn try_from(value: i128) -> Result<Self, Self::Error> {
+        i64::try_from(value).map(Value::Signed).map_err(|_| value)
+    }
+}
+
+impl From<()> for Value {
+    fn from((): ()) -> Self {
+        Value::Null
+    }
+}
+
+impl From<u32> for Value {
+    fn from(value: u32) -> Self {
+        Value::Unsigned(value.into())
+    }
+}
+
+impl From<u16> for Value {
+    fn from(value: u16) -> Self {
+        Value::Unsigned(value.into())
+    }
+}
+
+impl From<u8> for Value {
+    fn from(value: u8) -> Self {
+        Value::Unsigned(value.into())
+    }
+}
+
+impl From<i32> for Value {
+    fn from(value: i32) -> Self {
+        Value::Signed(value.into())
+    }
+}
+
+impl From<i16> for Value {
+    fn from(value: i16) -> Self {
+        Value::Signed(value.into())
+    }
+}
+
+impl From<i8> for Value {
+    fn from(value: i8) -> Self {
+        Value::Signed(value.into())
+    }
+}
+
+impl From<String> for Value {
+    fn from(value: String) -> Self {
+        Value::Text(value.into())
+    }
+}
+
+impl From<&str> for Value {
+    fn from(value: &str) -> Self {
+        Value::Text(value.to_string().into())
+    }
+}
+
+impl From<Vec<u8>> for Value {
+    fn from(value: Vec<u8>) -> Self {
+        Value::Bytes(value.into())
+    }
+}
+
+impl From<&[u8]> for Value {
+    fn from(value: &[u8]) -> Self {
+        Value::Bytes(value.into())
+    }
+}
+
+impl FromIterator<Value> for Value {
+    fn from_iter<T: IntoIterator<Item = Value>>(iter: T) -> Self {
+        Value::Array(iter.into_iter().collect())
+    }
+}
+
+impl<const N: usize> From<[Value; N]> for Value {
+    fn from(value: [Value; N]) -> Self {
+        value.into_iter().collect()
+    }
+}
+
+impl FromIterator<(Text, Value)> for Value {
+    fn from_iter<T: IntoIterator<Item = (Text, Value)>>(iter: T) -> Self {
+        Value::TextMap(iter.into_iter().collect())
+    }
+}
+
+impl FromIterator<(String, Value)> for Value {
+    fn from_iter<T: IntoIterator<Item = (String, Value)>>(iter: T) -> Self {
+        Value::TextMap(iter.into_iter().map(|(k, v)| (Text::from(k), v)).collect())
+    }
+}
+
+impl<'a> FromIterator<(&'a str, Value)> for Value {
+    fn from_iter<T: IntoIterator<Item = (&'a str, Value)>>(iter: T) -> Self {
+        Value::TextMap(
+            iter.into_iter()
+                .map(|(k, v)| (Text::from(k.to_string()), v))
+                .collect(),
+        )
+    }
+}
+
+impl<const N: usize> From<[(Text, Value); N]> for Value {
+    fn from(value: [(Text, Value); N]) -> Self {
+        value.into_iter().collect()
+    }
+}
+
+impl<const N: usize> From<[(String, Value); N]> for Value {
+    fn from(value: [(String, Value); N]) -> Self {
+        value.into_iter().collect()
+    }
+}
+
+impl<const N: usize> From<[(&str, Value); N]> for Value {
+    fn from(value: [(&str, Value); N]) -> Self {
+        value.into_iter().collect()
+    }
+}
+
+impl FromIterator<(Bytes, Value)> for Value {
+    fn from_iter<T: IntoIterator<Item = (Bytes, Value)>>(iter: T) -> Self {
+        Value::BytesMap(iter.into_iter().collect())
+    }
+}
+
+impl FromIterator<(Vec<u8>, Value)> for Value {
+    fn from_iter<T: IntoIterator<Item = (Vec<u8>, Value)>>(iter: T) -> Self {
+        Value::BytesMap(iter.into_iter().map(|(k, v)| (Bytes::from(k), v)).collect())
+    }
+}
+
+impl<'a> FromIterator<(&'a [u8], Value)> for Value {
+    fn from_iter<T: IntoIterator<Item = (&'a [u8], Value)>>(iter: T) -> Self {
+        Value::BytesMap(iter.into_iter().map(|(k, v)| (Bytes::from(k), v)).collect())
+    }
+}
+
+impl<const N: usize> From<[(Bytes, Value); N]> for Value {
+    fn from(value: [(Bytes, Value); N]) -> Self {
+        value.into_iter().collect()
+    }
+}
+
+impl<const N: usize> From<[(Vec<u8>, Value); N]> for Value {
+    fn from(value: [(Vec<u8>, Value); N]) -> Self {
+        value.into_iter().collect()
+    }
+}
+
+impl<const N: usize> From<[(&[u8], Value); N]> for Value {
+    fn from(value: [(&[u8], Value); N]) -> Self {
+        value.into_iter().collect()
+    }
 }
