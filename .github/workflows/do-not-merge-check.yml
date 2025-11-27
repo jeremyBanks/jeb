@@ -17,11 +17,11 @@ jobs:
 
       - name: Check PR title and description
         if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           echo "Checking PR title and description for blocking markers..."
-
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          PR_BODY="${{ github.event.pull_request.body }}"
 
           FOUND_ISSUES=0
 
