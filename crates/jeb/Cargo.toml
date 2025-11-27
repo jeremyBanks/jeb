@@ -17,6 +17,7 @@ futures.workspace = true
 indexmap = { version = "2.0", features = ["serde"] }
 owo-colors = "4.2.3"
 parking_lot = "0.12.5"
+regex = "1.12.2"
 serde.workspace = true
 serde_json.workspace = true
 tap = "1.0.1"
