@@ -130,7 +130,7 @@ fn encode_z85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let bytes = take(piece);
         let encoded = jeb::encode_z85(&bytes);
-        *piece = encoded;
+        *piece = encoded.into();
     }
     Ok(state)
 }
@@ -139,7 +139,7 @@ fn encode_jeb85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let bytes = take(piece);
         let encoded = jeb::encode_jeb85(&bytes);
-        *piece = encoded;
+        *piece = encoded.into();
     }
     Ok(state)
 }
@@ -303,5 +303,5 @@ fn filter(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     Ok(take(&mut state)
         .into_iter()
         .filter(|bytes| !bytes.is_empty())
-        .collect::<Vec<Vec<u8>>>())
+        .collect())
 }

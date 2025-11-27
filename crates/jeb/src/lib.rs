@@ -20,7 +20,7 @@
     clippy::arbitrary_source_item_ordering,
     clippy::missing_panics_doc
 )]
-#![allow(clippy::unnecessary_wraps)]
+#![allow(clippy::unnecessary_wraps, clippy::use_self)]
 #![doc = include_str!("../README.md")]
 // cSpell:ignoreRegExp b"(\\?.){5}"
 

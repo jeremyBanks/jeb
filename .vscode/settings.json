@@ -41,6 +41,7 @@
     "ignoreboth",
     "indexmap",
     "peekable",
+    "repr",
     "reqwest",
     "rustc",
     "RUSTFLAGS",
