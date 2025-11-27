@@ -69,7 +69,7 @@ pub enum Value {
 
 
 
-#[derive(AsRef, Clone, Debug, Default, Deref, Copy, Display, Index, Into, Serialize)]
+#[derive(AsRef, Clone, Debug, Default, Deref, Copy, Display, Into, Serialize)]
 #[serde(transparent)]
 #[repr(transparent)]
 #[must_use]
