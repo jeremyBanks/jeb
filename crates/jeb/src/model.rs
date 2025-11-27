@@ -8,13 +8,18 @@ use {
     serde::{Deserialize, Serialize},
 };
 
-pub type Sender = tokio::sync::mpsc::Sender<Item>;
+pub type Sender = tokio_util::sync::PollSender<Item>;
 
-pub type Receiver = tokio::sync::mpsc::Receiver<Item>;
+pub type Receiver = tokio_stream::wrappers::ReceiverStream<Item>;
 
 #[must_use]
 pub fn channel() -> (Sender, Receiver) {
-    tokio::sync::mpsc::channel(1)
+    let (sender, receiver) = tokio::sync::mpsc::channel(1);
+
+    let sender = tokio_util::sync::PollSender::new(sender);
+    let receiver = receiver.into();
+
+    (sender, receiver)
 }
 
 #[derive(Debug, Clone, From, Serialize, Deserialize)]
