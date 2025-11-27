@@ -8,13 +8,16 @@ This file provides guidance to GitHub Copilot when working with code in this rep
 
 ## Workspace Structure
 
-This is a Cargo workspace with multiple crates:
+This is a Cargo workspace. The current workspace member is:
 
 - `crates/jeb` - Main CLI tool and library for JSON merging, formatting, and searching
-- `crates/slop` - Parser combinators and utilities
-- `crates/slop-jeb-bin` - Binary encoding utilities
-- `crates/slop-lenient-json` - Lenient JSON parsing
-- `crates/slop-wasi-demo` - WASI demonstration
+
+Additional crate directories exist in `crates/` but are not currently part of the workspace:
+
+- `crates/slop` - Parser combinators and utilities (experimental)
+- `crates/slop-jeb-bin` - Binary encoding utilities (experimental)
+- `crates/slop-lenient-json` - Lenient JSON parsing (experimental)
+- `crates/slop-wasi-demo` - WASI demonstration (experimental)
 
 ## Build, Test, and Lint Commands
 
@@ -112,7 +115,7 @@ Workspace dependencies are defined in the root `Cargo.toml`. Key dependencies in
 - `clap` for CLI argument parsing
 - `tokio` for async runtime
 - `indexmap` for ordered maps
-- `nom` and `winnow` for parsing
+- `nom` for parsing
 
 ## License
 
