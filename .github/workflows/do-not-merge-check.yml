@@ -10,7 +10,7 @@ on:
 
 jobs:
   check-do-not-merge:
-    name: Check for DO NOT MERGE/SUBMIT/REVIEW markers
+    name: Check for WIP/TODO/DO NOT MERGE markers
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +31,12 @@ jobs:
             FOUND_ISSUES=1
           fi
 
+          # Check for TODO or TODO: in PR title (but allow TODO()
+          if echo "$PR_TITLE" | grep -qE '\bTODO[ :]'; then
+            echo "❌ Found 'TODO ' or 'TODO:' in PR title: $PR_TITLE"
+            FOUND_ISSUES=1
+          fi
+
           # Check for DO NOT MERGE/SUBMIT/REVIEW patterns in PR title
           if echo "$PR_TITLE" | grep -qE 'DO[ _]?NOT[ _]?(MERGE|SUBMIT|REVIEW)'; then
             echo "❌ Found blocking marker in PR title: $PR_TITLE"
@@ -45,9 +51,17 @@ jobs:
             FOUND_ISSUES=1
           fi
 
+          # Check for TODO or TODO: in PR body (but allow TODO()
+          if echo "$PR_BODY" | grep -qE '\bTODO[ :]'; then
+            echo "❌ Found 'TODO ' or 'TODO:' in PR description"
+            echo "Matching lines:"
+            echo "$PR_BODY" | grep -E '\bTODO[ :]'
+            FOUND_ISSUES=1
+          fi
+
           if [ $FOUND_ISSUES -eq 1 ]; then
             echo ""
-            echo "Please remove WIP/blocking markers from PR title and description before merging."
+            echo "Please remove WIP/TODO/blocking markers from PR title and description before merging."
             exit 1
           else
             echo "✅ No blocking markers found in PR metadata."
