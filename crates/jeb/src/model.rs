@@ -7,11 +7,14 @@ use {
     indexmap::IndexMap,
     serde::{Deserialize, Serialize, de::value},
     tokio::{io::BufReader, task::JoinHandle},
+    tokio_stream::StreamExt,
     tokio_util::codec::{BytesCodec, FramedRead},
 };
- use tokio_stream::StreamExt;
 
-pub type Sender = tokio_util::sync::PollSender<Item>;
+
+pub type Task = JoinHandle<Result<(), Panic>>;
+
+pub type Sender = tokio::sync::mpsc::Sender<Item>;
 
 pub type Receiver = tokio_stream::wrappers::ReceiverStream<Item>;
 
@@ -19,30 +22,31 @@ pub type Receiver = tokio_stream::wrappers::ReceiverStream<Item>;
 pub fn channel() -> (Sender, Receiver) {
     let (sender, receiver) = tokio::sync::mpsc::channel(1);
 
-    let sender = tokio_util::sync::PollSender::new(sender);
     let receiver = tokio_stream::wrappers::ReceiverStream::new(receiver);
 
     (sender, receiver)
 }
 
 pub trait Node {
-    fn spawn(stack: Vec<Receiver>) -> (Vec<Receiver>, JoinHandle<Result<(), Panic>>);
+    fn spawn(&self, stack: Vec<Receiver>) -> (Vec<Receiver>, Task);
 }
 
+#[derive(Clone, Copy, Debug)]
 struct Stdin;
 impl Node for Stdin {
-    fn spawn(mut stack: Vec<Receiver>) -> (Vec<Receiver>, JoinHandle<Result<(), Panic>>) {
+    fn spawn(&self, mut stack: Vec<Receiver>) -> (Vec<Receiver>, Task) {
         let (sender, receiver) = channel();
 
         let handle = tokio::spawn(async move {
             let mut stdin = tokio::io::stdin();
 
-            let mut stdin_bytes: FramedRead<tokio::io::Stdin, BytesCodec> = FramedRead::new(stdin, BytesCodec::new());
+            let mut stdin_bytes: FramedRead<tokio::io::Stdin, BytesCodec> =
+                FramedRead::new(stdin, BytesCodec::new());
 
             while let Some(value) = stdin_bytes.next().await {
                 let vec = value?.to_vec();
                 let bytes = Bytes::from(vec);
-                sender.get_ref().unwrap().send(bytes.into()).await?;
+                sender.send(bytes.into()).await?;
             }
 
             Ok(())
@@ -53,6 +57,33 @@ impl Node for Stdin {
         (stack, handle)
     }
 }
+
+// TODO: move or remove
+pub async fn wip_example_call() -> Result<(), Panic> {
+    let nodes: Vec::<Box::<dyn Node>> = vec![
+        Box::new(Stdin)
+    ];
+
+    let mut stack = vec![];
+    let mut tasks = vec![];
+
+    for node in nodes {
+        let task;
+        (stack, task) = node.spawn(stack);
+        tasks.push(task);
+    }
+
+    assert!(stack.is_empty());
+
+    let mut complete_tasks = futures::stream::FuturesUnordered::from_iter(tasks);
+
+    while let Some(result) = complete_tasks.next().await {
+        result??;
+    }
+
+    Ok(())
+}
+
 
 #[derive(Debug, Clone, From, Serialize, Deserialize)]
 #[serde(untagged)]
