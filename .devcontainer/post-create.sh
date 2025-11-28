@@ -9,5 +9,5 @@ curl -fsSL https://claude.ai/install.sh | bash
 
 rustup update
 rustup target add wasm32-unknown-unknown
-rustup toolchain install nightly
+rustup toolchain install nightly-2025-11-28
 

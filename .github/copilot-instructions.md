@@ -1,38 +1,32 @@
 # Copilot Instructions for jeb
 
+Note that we are using the nightly-2025-11-28 Rust toolchain for this project
+(because we are using some unstable features for formatting and linting — the
+actual code should be compatible with stable Rust). Ensure that you're you have
+the nightly-2025-11-28 Rust toolchain installed.
+
 ## Before Completing Any Task
 
-Always run these commands to ensure your changes are properly formatted, linted, and tested:
+Always run these commands to ensure your changes are properly formatted, linted,
+and tested:
 
 ```bash
-# Format code
-cargo fmt
+cargo fix --allow-dirty --allow-staged
 
-# Run clippy with automatic fixes where possible
 cargo clippy --fix --allow-dirty --allow-staged
 
-# Run all tests
+cargo fmt
+
 cargo test
 
-# Run all examples to regenerate their output
-cd crates/jeb/examples && ./all.sh
+crates/jeb/examples/all.sh
 ```
 
 ## Code Style
 
-- Follow Rust's standard formatting (enforced by `cargo fmt`)
-- Address all clippy warnings
-- Keep comments minimal - only add comments that explain _why_ something is done, not _what_ is done when the code is clear
-- Doc comments (`///`) should be thorough since they're for people who can't see the code
-
-## Error Handling
-
-- Never use `from_utf8_lossy` - always use `from_utf8` with proper error handling via `?` or `.expect()`
-- Prefer infallible APIs that return results with error/warning information rather than using `Result` types for expected failures
-- Never call `process::exit()` directly - let errors propagate
-
-## Testing
-
-- Run tests with `cargo test`
-- Examples in `crates/jeb/examples/` are self-regenerating scripts - run them to update their output
-- Always run `crates/jeb/examples/all.sh` after making changes to ensure examples are up-to-date
+- Don't add comments that explain what the code is doing if the code itself is
+  extremely clear and explicit, and using most of the same words as the comment
+  would use.
+- Do add comments for cases where it's not locally clear why something is being
+  done, or it's not clear what's being done, such as to exploit the nuances of
+  an algorithm or key invariants.
