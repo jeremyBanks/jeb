@@ -1,45 +1,6 @@
-use derive_more::{Deref, DerefMut, From, Into, IntoIterator, TryInto};
+// Pipeline stream model types for the synchronous pipeline system
 
-
-#[derive(Debug, Clone, Default)]
-pub struct JsonObject(indexmap::IndexMap<String, JsonValue>);
-
-#[derive(Debug, Clone, Default, From, TryInto)]
-pub enum JsonValue {
-    #[default]
-    Null,
-    Bool(bool),
-    Unsigned(u64),
-    Signed(i64),
-    Float(f64),
-    String(String),
-    Array(JsonArray),
-    Object(JsonObject),
-}
-
-#[derive(Debug, Clone, Default, From, Into, IntoIterator, Deref, DerefMut)]
-pub struct JsonArray(Vec<JsonValue>);
-
-pub type Bytes = Vec<u8>;
-
-#[derive(Debug, Clone, From, TryInto)]
-pub enum Item {
-    JsonValue(JsonValue),
-    JsonObject(JsonObject),
-    Bytes(Bytes),
-    String(String),
-}
-
-#[derive(Debug, Clone, Default, From, Into, IntoIterator, Deref, DerefMut)]
-pub struct ItemNodeList(Vec<ItemNode>);
-
-#[derive(Debug, Clone, From, TryInto)]
-pub enum ItemNode {
-    Leaf(Item),
-    Branch(ItemNodeList),
-}
-
-// MARK: Stream Data Model (Conceptual Model Implementation)
+use indexmap::IndexMap;
 
 /// Stream item types as defined in the conceptual model.
 /// Each item in a stream has one of three top-level types.
@@ -86,10 +47,10 @@ pub enum Structured {
     Array(Vec<Structured>),
 
     /// Ordered key-value collection (text-keyed)
-    TextMap(indexmap::IndexMap<String, Structured>),
+    TextMap(IndexMap<String, Structured>),
 
     /// Ordered key-value collection (binary-keyed)
-    BinaryMap(indexmap::IndexMap<Vec<u8>, Structured>),
+    BinaryMap(IndexMap<Vec<u8>, Structured>),
 }
 
 /// Error value sent through the error pipeline.

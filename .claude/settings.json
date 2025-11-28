@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "deny": [
-      "Write(/crates/jeb/**)",
-      "Write(/crates/jeb*/**)",
-      "Write(/README.md)"
-    ]
-  }
-}
