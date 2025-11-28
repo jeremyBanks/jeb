@@ -37,16 +37,15 @@ Both Text and Binary modes support the same rich data model:
 - **Booleans**: true/false
 - **Null**: null value
 - **Arrays/Lists**: ordered sequences
-- **Objects/Dictionaries**: key-value maps
-  - **Text mode**: preserved key order (important!)
-  - **Binary mode**: unsorted keys
+- **Objects/Dictionaries**: key-value maps using `IndexMap` (insertion order preserved in both modes)
+  - **Text mode**: preserved key order (required for JSON round-tripping)
+  - **Binary mode**: insertion order preserved in memory; serialization order not guaranteed by Extended Bencode spec (unlike traditional Bencode which required sorted keys)
 
 **Float restrictions:**
 - Only finite floats allowed (no NaN, no Infinity) to match JSON semantics
-- **Specification constraint**, not enforced by wrapper types in the Value implementation
+- **Specification constraint,** enforced by the `Float` wrapper type which rejects non-finite values
 - CLI commands won't provide ways to create NaN or Infinity values
 - Parsers (JSON, Extended Bencode) reject NaN/Infinity on input
-- Future: may add debug assertions to catch violations during development
 
 ### Text Mode (JSON Serialization)
 
@@ -77,7 +76,7 @@ Serializes values as Extended Bencode binary format.
 - **Backward compatible**: Traditional Bencode still works
 - **JSON-complete**: Can represent any JSON value
 - **Round-trip both formats**: JSON ↔ Extended Bencode ↔ JSON
-- **Unsorted keys**: Unlike traditional Bencode, no key sorting requirement
+- **Relaxed key ordering**: Unlike traditional Bencode which required sorted keys, Extended Bencode does not require key sorting; key order in serialized output is implementation-defined
 
 ### I/O Modes
 
@@ -101,15 +100,61 @@ Since both modes support the same data model, the choice between Text and Binary
 
 ## Current Implementation
 
+### Data Model Types (Implemented)
+
+The following types are now implemented in `crates/jeb/src/model/`:
+
+```rust
+// model/bytes.rs - Raw binary data wrapper
+pub struct Bytes(Vec<u8>);
+
+// model/text.rs - UTF-8 text wrapper
+pub struct Text(String);
+
+// model/float.rs - Finite-only f64 wrapper (rejects NaN/Infinity)
+pub struct Float(f64);
+
+// model/value.rs - Unified value type
+pub enum Value {
+    Unsigned(u64),
+    Signed(i64),
+    Float(Float),
+    Bool(bool),
+    Null,
+    Text(Text),
+    Bytes(Bytes),
+    Array(Vec<Value>),
+    BytesMap(IndexMap<Bytes, Value>),
+    TextMap(IndexMap<Text, Value>),
+}
+
+// model/node.rs - Pipeline item and async channel types
+pub enum Item {
+    Bytes(Bytes),
+    Text(Text),
+    Value(Value),
+}
+
+pub trait Node {
+    fn spawn(&self, stack: Vec<Receiver>) -> (Vec<Receiver>, Task);
+}
+
+pub type Task = JoinHandle<Result<(), Panic>>;
+pub type Sender = tokio::sync::mpsc::Sender<Item>;
+pub type Receiver = tokio_stream::wrappers::ReceiverStream<Item>;
+```
+
+**Float validation**: The `Float` type only allows finite values - `Float::new(value)` returns `None` for NaN or Infinity. The serde deserializer also rejects non-finite values.
+
 ### Pipeline Model (Current)
 
-Commands are executed left-to-right, currently operating on `Vec<Bytes>`:
+Commands are executed left-to-right. The CLI currently operates on `Vec<Bytes>`:
 
 ```rust
 state: Vec<Bytes> -> command1 -> command2 -> ... -> commandN -> output
 ```
 
-**Note**: The current implementation uses the simple `Vec<Bytes>` model. Migration to the `Vec<Item>` model is planned.
+The async streaming architecture is defined in `nodes.rs` with the `Node` trait for future streaming pipelines.
 
 ### Command Categories (As Implemented)
 
@@ -129,6 +174,7 @@ state: Vec<Bytes> -> command1 -> command2 -> ... -> commandN -> output
 
 3. **Splitters** (one→many):
    - `split-lines` - split on newlines
+   - `split-shell` - split using POSIX shell tokenization rules
    - `split-N` - split by size with unit parsing (e.g., `split-64`, `split-1KiB`, `split-2MB`)
 
 4. **Joiners** (many→one):
@@ -145,6 +191,26 @@ state: Vec<Bytes> -> command1 -> command2 -> ... -> commandN -> output
    - `stdout` - write all items to stdout, clear state
    - Future: `write:path` - atomic file writes
 
+### Shell Tokenizer (Implemented)
+
+The `split-shell` command uses the POSIX shell tokenizer in `shell_tokenizer.rs`:
+
+**Supported features:**
+- Single-quoted strings (`'...'`) - preserves content literally
+- Double-quoted strings (`"..."`) - processes escape sequences
+- Backslash escapes (e.g., `\ `, `\n`)
+- Line continuation (`\` at end of line)
+
+**Best-effort handling with warnings:**
+- Variable expansion (`$VAR`, `${VAR}`)
+- Command substitution (`` `...` ``, `$(...)`)
+- Glob patterns (`*`, `?`, `[...]`)
+- Tilde expansion (`~`)
+- Redirections (`<`, `>`, `|`)
+- Control operators (`&`, `;`, `(`, `)`)
+
+When unsupported syntax is encountered, the tokenizer produces best-effort output and populates an error list indicating the output should not be trusted.
+
 ### Current Auto-Append Behavior
 
 - If no commands provided: prepend `help`
@@ -159,7 +225,7 @@ Mode flags exist but are not currently used:
 - `--last` - operate on last item only
 - `--first` - operate on first item only
 
-The `_default_mode` variable is set but never read (line 43 in jeb.rs).
+The `_default_mode` variable is set but never read in `jeb.rs`.
 
 ## New Data Model Implications
 
@@ -209,6 +275,26 @@ Since both modes support the same data model, conversion is straightforward:
 **`serialize-bencode`** - Serialize values to Extended Bencode byte strings
 - Takes Text or Binary items
 - Outputs Binary items containing Extended Bencode byte string representations
+
+### Field Extraction (Planned)
+
+**`extract-field:name`** - Extract a specific field from structured data
+- Extracts the value at the given field name from objects/dictionaries
+- Works with both JSON-parsed and Bencode-parsed structures
+- Supports nested paths (e.g., `extract-field:foo.bar.baz`)
+- Returns the extracted values as items
+
+**Example usage:**
+```bash
+# Extract name field from JSON
+jeb ./data.json parse-json extract-field:name
+
+# Extract nested field
+jeb stdin parse-json extract-field:user.profile.id
+
+# Extract from array of objects
+jeb ./users.json parse-json extract-field:email
+```
 
 ### Implicit Conversions
 
@@ -294,6 +380,7 @@ Special naming scheme for lossless round-tripping:
 - `@text`: Text content as first child (empty string for self-closing, null for no text)
 - `@tail`: Text following the node
 - `@index`: Sibling index for distinguishing identical adjacent parents
+- `children`: Array of child elements (element nodes, comments, processing instructions)
 
 **Attribute handling:**
 - Boolean attributes (HTML `<input disabled>`): `"disabled": true`
@@ -307,10 +394,10 @@ Special naming scheme for lossless round-tripping:
 - DOCTYPE: `"" = "!DOCTYPE"`, `@text = " html"`
 
 **Benefits:**
-- Fully lossless round-tripping
+- Fully lossless round-tripping (XML→JSON→XML possible with extended format)
 - No collision with valid XML names (can't start with `-` or `@`)
 - Preserves ordering and structure completely
-- Input only (non-bijective with JSON, but can serialize back to XML)
+- Input only (XML serialization not planned for initial implementation)
 
 **Example:**
 ```xml
@@ -358,7 +445,7 @@ Since wire format lacks schema information, uses best-effort auto-detection at e
 5. Otherwise → treat as binary blob (base64 representation)
 
 **Encoding support:**
-- Can encode JSON structures to proto wire format
+- Can encode JSON structures to proto wire format via **`encode-protobuf`** (planned)
 - Requires explicit type hints for fields (varint, fixed32, length-delimited, etc.)
 
 **Limitations:**
@@ -400,15 +487,15 @@ Parses text input as command line arguments and executes them as a disconnected 
 # Execute pipeline definition from file
 jeb ./pipeline-config.txt eval
 
-# Store reusable pipeline
+# Store reusable pipeline using eval:path parameter syntax
 echo "split-lines filter join-lines" > transform.txt
 jeb ./data.txt eval:./transform.txt
 
 # Generate pipeline programmatically
 jeb ./config.json extract-field:pipeline eval
 
-# Dynamic pipeline based on input
-jeb stdin sniff-format \
+# Dynamic pipeline based on input (hypothetical - if-json/if-xml not yet implemented)
+jeb stdin sniff \
   if-json:"parse-json extract-field:id" \
   if-xml:"parse-xml extract-field:@id" \
   eval
@@ -416,6 +503,10 @@ jeb stdin sniff-format \
 # Nested eval (eval within eval)
 echo "stdin encode-jeb85 stdout" | jeb stdin eval
 ```
+
+**Parameter syntax:**
+- `eval` - evaluate the current item as a pipeline
+- `eval:./path` - read commands from file and execute as pipeline
 
 **Use cases:**
 - Configuration-driven pipelines
@@ -512,7 +603,7 @@ Current `Vec<Bytes>` → Future `Vec<Item>`:
 
 **Sources**: If no source commands are present, prepend `stdin` and `sniff`
 - Sources: `stdin`, `help`, `self`, file paths, future network sources, etc.
-- Auto-detection via `sniff` ensures input is parsed into structured data
+- Auto-detection via `sniff` attempts to parse input into structured data when possible (falls back to raw text/binary for unrecognized formats)
 
 **Sinks**: If no sink commands are present, append `as-text` and `stdout`
 - Sinks: `stdout`, `write:path`, future network sinks, etc.
@@ -811,7 +902,7 @@ jeb self split-64KiB encode-jeb85 chain
 
 5. **Dict key types**: Should Extended Bencode dictionaries allow any value type as keys (like JSON objects require strings)? Or only byte strings (traditional Bencode)?
 
-6. **Float representation**: ~~How should floats serialize in Extended Bencode?~~ **RESOLVED**: Standard decimal representation only (e.g., `f3.14e`, `f-2.5e`). Scientific notation may be allowed for parsing. NaN and Infinity are not allowed per specification (match JSON semantics). Not enforced by wrapper types - parsers reject on input, CLI doesn't provide ways to create them.
+6. **Float representation**: ~~How should floats serialize in Extended Bencode?~~ **RESOLVED**: Standard decimal representation only (e.g., `f3.14e`, `f-2.5e`). Scientific notation may be allowed for parsing. NaN and Infinity are not allowed per specification (match JSON semantics). **IMPLEMENTED**: The `Float` wrapper type in `model/float.rs` enforces finite-only values at construction time.
 
 ### Workflow Questions
 
@@ -827,49 +918,53 @@ jeb self split-64KiB encode-jeb85 chain
 
 12. **Error propagation**: How do commands signal errors in a pipeline? Current: `Result<Vec<Bytes>, Panic>`. Future: `Result<Vec<Item>, Panic>`?
 
-13. **Streaming vs buffering**: Should some operations stream through items rather than buffering entire state?
+13. **Streaming vs buffering**: Should some operations stream through items rather than buffering entire state? **IN PROGRESS**: The `Node` trait and async channel types in `model/node.rs` provide the foundation for streaming operations.
 
 14. **Multiple inputs/outputs**: Do we ever need commands that take N inputs and produce M outputs explicitly?
 
 ## Implementation Phases
 
-### Phase 0: Data Model Migration
-- Define `Item` enum with Text and Binary variants
-- Implement unified `Value` type supporting full data model
-- Implement JSON serializer/parser with preserved key order
-- Implement Extended Bencode serializer/parser (`f<float>e`, `n`, `b0`, `b1`)
-- Migrate existing commands to work with `Vec<Item>` (treating as Binary mode)
-- Add basic conversion commands: `to-text`, `to-binary`
-- Update error handling to `Result<Vec<Item>, Panic>`
+### Phase 0: Data Model Migration (Partially Complete)
+- [x] Define `Item` enum with Bytes, Text, and Value variants
+- [x] Implement unified `Value` type supporting full data model
+- [x] Implement `Float` wrapper type enforcing finite-only values
+- [x] Implement `Bytes` and `Text` wrapper types
+- [x] Define `Node` trait for async streaming pipelines
+- [ ] Implement JSON serializer/parser with preserved key order
+- [ ] Implement Extended Bencode serializer/parser (`f<float>e`, `n`, `b0`, `b1`)
+- [ ] Migrate existing commands to work with `Vec<Item>` (treating as Binary mode)
+- [ ] Add basic conversion commands: `to-text`, `to-binary`
+- [ ] Update error handling to `Result<Vec<Item>, Panic>`
 
 ### Phase 1: Fix Current Implementation & Mode Support
-- Implement the mode flag functionality (currently unused)
-- Fix auto-append logic for sources and sinks
-- Document each command's default mode behavior
-- Ensure all commands have defined behavior for Text vs Binary
+- [ ] Implement the mode flag functionality (currently unused)
+- [ ] Fix auto-append logic for sources and sinks
+- [ ] Document each command's default mode behavior
+- [ ] Ensure all commands have defined behavior for Text vs Binary
 
 ### Phase 2: Add Core Commands
-- Implement `chain` and `merge` (needs data model clarification)
-- Implement `sort-N` and `sort-all`
-- Add `parse-json`, `parse-bencode`, `serialize-json`, `serialize-bencode`
-- Add command metadata system
-- Add `write:path` atomic file sink
+- [x] Implement `split-shell` (POSIX shell tokenizer)
+- [ ] Implement `chain` and `merge` (needs data model clarification)
+- [ ] Implement `sort-N` and `sort-all`
+- [ ] Add `parse-json`, `parse-bencode`, `serialize-json`, `serialize-bencode`
+- [ ] Add command metadata system
+- [ ] Add `write:path` atomic file sink
 
 ### Phase 3: Rich Data Operations
-- Commands for manipulating JSON/Bencode structures (get, set, delete keys)
-- Array/list operations (map, filter, reduce-like operations)
-- Arithmetic operations on numbers
-- String manipulation beyond simple encoding
+- [ ] Commands for manipulating JSON/Bencode structures (get, set, delete keys)
+- [ ] Array/list operations (map, filter, reduce-like operations)
+- [ ] Arithmetic operations on numbers
+- [ ] String manipulation beyond simple encoding
 
 ### Phase 4: Refinement
-- Comprehensive help system showing modes and type behavior
-- Error messages that suggest corrections
-- Performance optimization for large pipelines
-- Handle edge cases (mixed-mode operations, nested values, etc.)
+- [ ] Comprehensive help system showing modes and type behavior
+- [ ] Error messages that suggest corrections
+- [ ] Performance optimization for large pipelines
+- [ ] Handle edge cases (mixed-mode operations, nested values, etc.)
 
 ### Phase 5: Expansion
-- More encoders/decoders
-- Compression commands
-- Cryptographic operations
-- Network sources/sinks
-- Query languages (jq-like for JSON, similar for Bencode)
+- [ ] More encoders/decoders
+- [ ] Compression commands
+- [ ] Cryptographic operations
+- [ ] Network sources/sinks
+- [ ] Query languages (jq-like for JSON, similar for Bencode)
