@@ -1,21 +1,13 @@
 [workspace]
 resolver = "2"
-members = ["crates/jeb"]
+members = ["crates/*", "slop/slop/slop"]
 
 [workspace.package]
 version = "0.0.0-vibes-2025-11-27.7832"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 publish = false
-exclude = [
-    "*.md",
-    "!README.md",
-    "!LICENSE-*",
-    "*.txt",
-    "*.sh",
-    "*.yaml",
-    "*.json",
-]
+include = ["**/*.rs", "**/*.toml", "**/*.lock", "**/*.md", "**/LICENSE*", "!.*"]
 
 [profile.small]
 inherits = "release"

@@ -8,7 +8,7 @@ categories = ["encoding"]
 version.workspace = true
 license.workspace = true
 edition.workspace = true
-exclude.workspace = true
+include.workspace = true
 
 [dependencies]
 derive_more = { version = "2.0.1", features = ["full"] }
