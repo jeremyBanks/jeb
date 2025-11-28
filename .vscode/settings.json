@@ -6,26 +6,88 @@
   "[markdown]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
-  "[plaintext]": {
+  "[plaintext][shellscript][code-text-binary]": {
     "editor.rulers": [
-      5,
-      10,
-      15,
-      20,
-      25,
-      30,
-      35,
-      40,
-      45,
-      50,
-      55,
-      60,
-      65,
-      70,
-      75,
-      80,
-      85,
-      90
+      {
+        "color": "#CCCCCCCC",
+        "column": 0
+      },
+      {
+        "color": "#FF880044",
+        "column": 5
+      },
+      {
+        "color": "#CCCCCC55",
+        "column": 10
+      },
+      {
+        "color": "#44CCFF44",
+        "column": 15
+      },
+      {
+        "color": "#CCCCCC66",
+        "column": 20
+      },
+      {
+        "color": "#FF880044",
+        "column": 25
+      },
+      {
+        "color": "#CCCCCC55",
+        "column": 30
+      },
+      {
+        "color": "#44CCFF44",
+        "column": 35
+      },
+      {
+        "color": "#CCCCCCCC",
+        "column": 40
+      },
+      {
+        "color": "#FF880044",
+        "column": 45
+      },
+      {
+        "color": "#CCCCCC55",
+        "column": 50
+      },
+      {
+        "color": "#44CCFF44",
+        "column": 55
+      },
+      {
+        "color": "#CCCCCC66",
+        "column": 60
+      },
+      {
+        "color": "#FF880044",
+        "column": 65
+      },
+      {
+        "color": "#CCCCCC55",
+        "column": 70
+      },
+      {
+        "color": "#44CCFF44",
+        "column": 75
+      },
+      {
+        "color": "#CCCCCCCC",
+        "column": 80
+      },
+      {
+        "color": "#88888833",
+        "column": 85
+      },
+      {
+        "color": "#88888822",
+        "column": 90
+      },
+      {
+        "color": "#88888811",
+        "column": 95
+      }
     ]
   },
   "cSpell.words": [
@@ -34,6 +96,9 @@
     "codegen",
     "delegators",
     "denoland",
+    "DONOTMERGE",
+    "DONOTREVIEW",
+    "DONOTSUBMIT",
     "dotenv",
     "errorlens",
     "getset",
@@ -42,6 +107,7 @@
     "HISTSIZE",
     "ignoreboth",
     "indexmap",
+    "mergeoptions",
     "peekable",
     "redirections",
     "repr",
@@ -51,6 +117,7 @@
     "rustup",
     "serde",
     "shellcheck",
+    "stefanzweifel",
     "subshell",
     "timonwong",
     "usernamehw",
@@ -69,17 +136,13 @@
     120
   ],
   "editor.wrappingIndent": "indent",
+  "errorLens.enabledDiagnosticLevels": [
+    "error"
+  ],
+  "errorLens.statusBarColorsEnabled": true,
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 32768,
   "files.trimTrailingWhitespace": true,
   "git.autofetch": true,
-  "rust-analyzer.check.command": "clippy",
-  "rust-analyzer.rustfmt.overrideCommand": [
-    "rustfmt",
-    "+nightly-2025-11-28"
-  ],
-  "errorLens.statusBarColorsEnabled": true,
-  "errorLens.enabledDiagnosticLevels": [
-    "error"
-  ]
+  "rust-analyzer.check.command": "clippy"
 }

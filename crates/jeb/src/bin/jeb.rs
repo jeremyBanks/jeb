@@ -1,14 +1,13 @@
-use {
-    jeb::{Panic, model::Bytes},
-    owo_colors::OwoColorize,
-    regex::Regex,
-    std::{
-        convert::Infallible,
-        io::{Read, Write},
-        mem::take,
-        sync::LazyLock,
-    },
+use std::{
+    convert::Infallible,
+    io::{Read, Write},
+    mem::take,
+    sync::LazyLock,
 };
+
+use jeb::{Panic, model::Bytes};
+use owo_colors::OwoColorize;
+use regex::Regex;
 
 
 #[tokio::main(flavor = "current_thread")]

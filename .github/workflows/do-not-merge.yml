@@ -1,19 +1,21 @@
-name: DO NOT MERGE Check
+name: check for DO NOT MERGE
 permissions:
   contents: read
 
 on:
-  push:
-    branches: [main, master, trunk]
+  workflow_dispatch:
   pull_request:
     types: [opened, edited, reopened, synchronize]
+  push:
+    branches:
+      - trunk
 
 jobs:
-  check-do-not-merge:
+  do-not-merge:
     name: Check for WIP/TODO/DO NOT MERGE markers
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Check PR title and description
         if: github.event_name == 'pull_request'
@@ -97,6 +99,3 @@ jobs:
             echo "✅ No blocking markers found. Proceeding with build."
             exit 0
           fi
-
-      - name: Not WIP
-        run: echo "Not WIP"

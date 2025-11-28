@@ -1,12 +1,12 @@
-use {
-    crate::{
-        Panic,
-        model::{Bytes, Item, Node, Receiver, Task, channel},
-    },
-    std::borrow::Cow,
-    tokio::io::AsyncWriteExt,
-    tokio_stream::StreamExt,
-    tokio_util::codec::{BytesCodec, FramedRead},
+use std::borrow::Cow;
+
+use tokio::io::AsyncWriteExt;
+use tokio_stream::StreamExt;
+use tokio_util::codec::{BytesCodec, FramedRead};
+
+use crate::{
+    Panic,
+    model::{Bytes, Item, Node, Receiver, Task, channel},
 };
 
 pub trait NodeDef: Node + Send + Sync + 'static {
