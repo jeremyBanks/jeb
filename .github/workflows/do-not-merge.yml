@@ -1,4 +1,4 @@
-name: DO NOT MERGE Check
+name: check for DO NOT MERGE
 permissions:
   contents: read
 
@@ -11,7 +11,7 @@ on:
       - trunk
 
 jobs:
-  check-do-not-merge:
+  do-not-merge:
     name: Check for WIP/TODO/DO NOT MERGE markers
     runs-on: ubuntu-latest
     steps:

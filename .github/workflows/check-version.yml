@@ -1,4 +1,3 @@
-name: Version Check
 permissions:
   contents: read
 
@@ -9,12 +8,10 @@ on:
 
 jobs:
   check-version:
-    name: Validate Version is 0.0.0-vibes-YYYY-MM-DD.xxxx
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Fetch all history for all branches
 
-      - name: Check version
-        run: ./scripts/check-version.sh
+      - run: ./scripts/check-version.sh
