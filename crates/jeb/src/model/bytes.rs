@@ -1,9 +1,9 @@
-use {
-    crate::model::text::Text,
-    core::hash::Hash,
-    derive_more::{AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut, Into, IntoIterator},
-    serde::{Deserialize, Serialize},
-};
+use core::hash::Hash;
+
+use derive_more::{AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut, Into, IntoIterator};
+use serde::{Deserialize, Serialize};
+
+use crate::model::text::Text;
 
 
 
