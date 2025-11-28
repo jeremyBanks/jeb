@@ -29,4 +29,3 @@ jobs:
         with:
           commit_message: autofix
           commit_author: ${{ steps.last-commit.outputs.author }}
-          commit_message: ${{ steps.last-commit.outputs.message }}
