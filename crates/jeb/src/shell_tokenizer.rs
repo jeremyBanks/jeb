@@ -1,13 +1,15 @@
 //! POSIX Shell Argument Tokenizer
 //!
-//! This module implements a tokenizer for splitting shell command lines into arguments,
-//! handling quoting and escape sequences according to POSIX shell rules.
+//! This module implements a tokenizer for splitting shell command lines into
+//! arguments, handling quoting and escape sequences according to POSIX shell
+//! rules.
 //!
-//! This tokenizer produces correct results for valid inputs that only use single-quoted
-//! strings, double-quoted strings, and backslash escapes. If unsupported shell syntax
-//! is encountered (such as variable expansion, command substitution, globs, or other
-//! shell features), the tokenizer produces a best-effort result but populates the
-//! `errors` list in the result, indicating that the output should not be trusted.
+//! This tokenizer produces correct results for valid inputs that only use
+//! single-quoted strings, double-quoted strings, and backslash escapes. If
+//! unsupported shell syntax is encountered (such as variable expansion, command
+//! substitution, globs, or other shell features), the tokenizer produces a
+//! best-effort result but populates the `errors` list in the result, indicating
+//! that the output should not be trusted.
 
 use core::fmt;
 
@@ -68,7 +70,9 @@ impl fmt::Display for ErrorKind {
             Self::Hash => write!(f, "hash (comment not interpreted)"),
             Self::Asterisk => write!(f, "asterisk (glob wildcard not interpreted)"),
             Self::QuestionMark => write!(f, "question mark (glob wildcard not interpreted)"),
-            Self::OpenBracket => write!(f, "open bracket (glob bracket expression not interpreted)"),
+            Self::OpenBracket => {
+                write!(f, "open bracket (glob bracket expression not interpreted)")
+            }
             Self::Tilde => write!(f, "tilde (tilde expansion not interpreted)"),
         }
     }
@@ -103,7 +107,8 @@ impl fmt::Display for Error {
 pub struct TokenizeResult {
     /// The parsed arguments. If `errors` is non-empty, these may be incorrect.
     pub args: Vec<Vec<u8>>,
-    /// Errors encountered during parsing. If non-empty, the args may be incorrect.
+    /// Errors encountered during parsing. If non-empty, the args may be
+    /// incorrect.
     pub errors: Vec<Error>,
 }
 
@@ -118,12 +123,14 @@ enum State {
 /// Bytes that trigger errors when unquoted.
 const UNQUOTED_WARN_BYTES: &[u8] = b"$`|&;()<>*?[";
 
-/// Tokenize a shell command line (as bytes) into arguments according to POSIX shell rules.
+/// Tokenize a shell command line (as bytes) into arguments according to POSIX
+/// shell rules.
 ///
-/// This function produces correct results for valid inputs that only use single-quoted
-/// strings, double-quoted strings, and backslash escapes. If unsupported shell syntax
-/// is encountered, the function produces a best-effort result but populates the
-/// `errors` list, indicating that the output should not be trusted.
+/// This function produces correct results for valid inputs that only use
+/// single-quoted strings, double-quoted strings, and backslash escapes. If
+/// unsupported shell syntax is encountered, the function produces a best-effort
+/// result but populates the `errors` list, indicating that the output should
+/// not be trusted.
 ///
 /// # Arguments
 ///
@@ -131,8 +138,8 @@ const UNQUOTED_WARN_BYTES: &[u8] = b"$`|&;()<>*?[";
 ///
 /// # Returns
 ///
-/// Returns a `TokenizeResult` with the parsed arguments and any errors encountered.
-/// If `errors` is non-empty, the `args` may be incorrect.
+/// Returns a `TokenizeResult` with the parsed arguments and any errors
+/// encountered. If `errors` is non-empty, the `args` may be incorrect.
 #[expect(clippy::too_many_lines)]
 #[must_use]
 pub fn tokenize(input: &[u8]) -> TokenizeResult {
@@ -307,11 +314,12 @@ pub fn tokenize(input: &[u8]) -> TokenizeResult {
     TokenizeResult { args, errors }
 }
 
-/// Tokenize a shell command line string into arguments according to POSIX shell rules.
+/// Tokenize a shell command line string into arguments according to POSIX shell
+/// rules.
 ///
-/// This is a convenience wrapper around [`tokenize`] that works with `&str` input
-/// and produces `String` output. Since the tokenizer only operates on ASCII control
-/// characters, it preserves UTF-8 validity.
+/// This is a convenience wrapper around [`tokenize`] that works with `&str`
+/// input and produces `String` output. Since the tokenizer only operates on
+/// ASCII control characters, it preserves UTF-8 validity.
 ///
 /// # Arguments
 ///
@@ -319,8 +327,9 @@ pub fn tokenize(input: &[u8]) -> TokenizeResult {
 ///
 /// # Returns
 ///
-/// Returns a tuple of (args, errors) where args are the parsed arguments as strings
-/// and errors are any errors encountered. If errors is non-empty, the args may be incorrect.
+/// Returns a tuple of (args, errors) where args are the parsed arguments as
+/// strings and errors are any errors encountered. If errors is non-empty, the
+/// args may be incorrect.
 ///
 /// # Examples
 ///
@@ -343,10 +352,7 @@ pub fn tokenize_str(input: &str) -> (Vec<String>, Vec<Error>) {
     let args = result
         .args
         .into_iter()
-        .map(|bytes| {
-            String::from_utf8(bytes)
-                .expect("tokenizer should preserve UTF-8 validity")
-        })
+        .map(|bytes| String::from_utf8(bytes).expect("tokenizer should preserve UTF-8 validity"))
         .collect();
     (args, result.errors)
 }
@@ -360,13 +366,12 @@ mod tests {
         let (args, errors) = tokenize_str(input);
         assert_eq!(
             args,
-            expected.iter().map(|s| (*s).to_string()).collect::<Vec<_>>()
+            expected
+                .iter()
+                .map(|s| (*s).to_string())
+                .collect::<Vec<_>>()
         );
-        assert!(
-            errors.is_empty(),
-            "expected no errors, got: {:?}",
-            errors
-        );
+        assert!(errors.is_empty(), "expected no errors, got: {:?}", errors);
     }
 
     // Helper to assert args without errors using tokenize (bytes)
@@ -388,7 +393,10 @@ mod tests {
         let (args, errors) = tokenize_str(input);
         assert_eq!(
             args,
-            expected.iter().map(|s| (*s).to_string()).collect::<Vec<_>>()
+            expected
+                .iter()
+                .map(|s| (*s).to_string())
+                .collect::<Vec<_>>()
         );
         let actual_error_bytes: Vec<u8> = errors.iter().map(|e| e.byte).collect();
         assert_eq!(actual_error_bytes, error_bytes);
@@ -649,6 +657,11 @@ mod tests {
     #[test]
     fn test_bytes_unclosed_quote() {
         let result = tokenize(b"'hello");
-        assert!(result.errors.iter().any(|e| e.kind == ErrorKind::UnclosedSingleQuote));
+        assert!(
+            result
+                .errors
+                .iter()
+                .any(|e| e.kind == ErrorKind::UnclosedSingleQuote)
+        );
     }
 }
