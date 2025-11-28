@@ -116,7 +116,7 @@ enum State {
 }
 
 /// Bytes that trigger errors when unquoted.
-const UNQUOTED_WARN_BYTES: &[u8] = b"$`|&;()<>#*?[";
+const UNQUOTED_WARN_BYTES: &[u8] = b"$`|&;()<>*?[";
 
 /// Tokenize a shell command line (as bytes) into arguments according to POSIX shell rules.
 ///
@@ -195,6 +195,14 @@ pub fn tokenize(input: &[u8]) -> TokenizeResult {
                     });
                     current_token.push(b);
                     at_word_start = false;
+                } else if b == b'#' && at_word_start {
+                    errors.push(Error {
+                        kind: ErrorKind::Hash,
+                        byte: b,
+                        position,
+                    });
+                    current_token.push(b);
+                    at_word_start = false;
                 } else if UNQUOTED_WARN_BYTES.contains(&b) {
                     let kind = match b {
                         b'$' => ErrorKind::DollarSign,
@@ -206,7 +214,6 @@ pub fn tokenize(input: &[u8]) -> TokenizeResult {
                         b')' => ErrorKind::CloseParen,
                         b'<' => ErrorKind::LessThan,
                         b'>' => ErrorKind::GreaterThan,
-                        b'#' => ErrorKind::Hash,
                         b'*' => ErrorKind::Asterisk,
                         b'?' => ErrorKind::QuestionMark,
                         b'[' => ErrorKind::OpenBracket,
@@ -529,6 +536,18 @@ mod tests {
     #[test]
     fn test_tilde_mid_word_no_warn() {
         assert_args_str("a~b", &["a~b"]);
+    }
+
+    #[test]
+    fn test_hash_at_word_start_warns() {
+        assert_args_with_errors_str("#comment", &["#comment"], b"#");
+        assert_args_with_errors_str("echo #test", &["echo", "#test"], b"#");
+    }
+
+    #[test]
+    fn test_hash_mid_word_no_warn() {
+        assert_args_str("foo#bar", &["foo#bar"]);
+        assert_args_str("C#", &["C#"]);
     }
 
     #[test]
