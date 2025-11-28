@@ -10,6 +10,10 @@ jobs:
     permissions:
       contents: write
     steps:
+      - id: last-commit
+        run: |
+          echo "message=$(git log -1 --pretty=%s)" >> $GITHUB_OUTPUT
+          echo "author=$(git log -1 --pretty=\"%an <%ae>\")" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v5
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
@@ -22,3 +26,7 @@ jobs:
       - run: cargo fmt
       - run: crates/jeb/examples/all.sh
       - uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: autofix
+          commit_author: ${{ steps.last-commit.outputs.author }}
+          commit_message: ${{ steps.last-commit.outputs.message }}
