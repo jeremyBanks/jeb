@@ -1,34 +1,25 @@
 # CGP-Serde Integration in slop
 
-This document explains how the **full CGP infrastructure** is integrated into
-the slop library for modular, context-dependent serialization.
+This document explains how the **full CGP infrastructure** is integrated into the slop library for modular, context-dependent serialization.
 
-> **Implementation Status**: This uses the real `cgp` and `cgp-serde` libraries
-> (cgp v0.6.0, cgp-serde v0.1.0) with full compile-time dispatch and zero
-> runtime overhead.
+> **Implementation Status**: This uses the real `cgp` and `cgp-serde` libraries (cgp v0.6.0, cgp-serde v0.1.0) with full compile-time dispatch and zero runtime overhead.
 
 ## What is CGP-Serde?
 
-CGP-Serde is a modular serialization library that extends Serde with
-Context-Generic Programming, enabling:
+CGP-Serde is a modular serialization library that extends Serde with Context-Generic Programming, enabling:
 
-1. **Overlapping Implementations** - Write multiple serialization strategies for
-   the same type
-2. **Context-Dependent Behavior** - Different contexts provide different
-   serialization behavior
-3. **Modularity Without Derive Bloat** - Separate serialization logic from data
-   types
+1. **Overlapping Implementations** - Write multiple serialization strategies for the same type
+2. **Context-Dependent Behavior** - Different contexts provide different serialization behavior
+3. **Modularity Without Derive Bloat** - Separate serialization logic from data types
 4. **Bypass Coherence Restrictions** - Implement orphaned or overlapping traits
 
 For more information, see: https://contextgeneric.dev/blog/cgp-serde-release/
 
 ## Integration Overview
 
-The `slop::cgp_serde` module provides three context types that use the full CGP
-infrastructure:
+The `slop::cgp_serde` module provides three context types that use the full CGP infrastructure:
 
 **Dependencies**:
-
 - `cgp` v0.6.0 - Core CGP component system
 - `cgp-serde` v0.1.0 - Serialization components
 - `cgp-serde-json` v0.1.0 - JSON-specific providers
@@ -162,8 +153,7 @@ impl CanSerializeValue<Value> for StandardContext {
 
 ### CGP SerializeWithContext Wrapper
 
-The cgp-serde library provides `SerializeWithContext` for wrapping values with
-context:
+The cgp-serde library provides `SerializeWithContext` for wrapping values with context:
 
 ```rust
 use cgp_serde::types::SerializeWithContext;
@@ -181,9 +171,9 @@ where
 
 ### Zero-Cost Abstraction
 
-All context resolution happens at compile time. The `SerializeWithContext`
-wrapper implements `serde::Serialize` by delegating to the context's `serialize`
-method, with no runtime overhead.
+All context resolution happens at compile time. The `SerializeWithContext` wrapper
+implements `serde::Serialize` by delegating to the context's `serialize` method,
+with no runtime overhead.
 
 ## Benefits for slop
 
@@ -233,8 +223,7 @@ CGP-serde complements slop's existing features:
 
 ### JSON Total Ordering
 
-The `json_total_order` function remains independent and can be used alongside
-CGP contexts:
+The `json_total_order` function remains independent and can be used alongside CGP contexts:
 
 ```rust
 use slop::{json_total_order, cgp_serde::StandardContext};
@@ -270,12 +259,10 @@ stream
 
 Potential future improvements include:
 
-1. **Custom Binary Encodings** - Context-specific binary serialization for
-   database indexes
+1. **Custom Binary Encodings** - Context-specific binary serialization for database indexes
 2. **Streaming Serialization** - Apply contexts to async streams of JSON objects
 3. **Performance Optimization** - Zero-copy serialization with arena allocators
-4. **Format Conversions** - Contexts for converting between JSON, CBOR,
-   MessagePack, etc.
+4. **Format Conversions** - Contexts for converting between JSON, CBOR, MessagePack, etc.
 
 ## Testing
 
@@ -300,9 +287,7 @@ Test coverage includes:
 
 ## Performance Considerations
 
-CGP-serde uses compile-time dispatch, so there is **zero runtime overhead**
-compared to direct serde usage. All context resolution happens at compile time
-through the type system.
+CGP-serde uses compile-time dispatch, so there is **zero runtime overhead** compared to direct serde usage. All context resolution happens at compile time through the type system.
 
 ## References
 
@@ -313,5 +298,4 @@ through the type system.
 
 ## License
 
-The CGP-serde integration in slop is licensed under the same terms as the slop
-project (MIT OR Apache-2.0).
+The CGP-serde integration in slop is licensed under the same terms as the slop project (MIT OR Apache-2.0).

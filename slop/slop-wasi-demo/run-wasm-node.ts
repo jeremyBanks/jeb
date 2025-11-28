@@ -29,10 +29,7 @@ async function main() {
     },
   });
 
-  const { instance } = await WebAssembly.instantiate(
-    wasmBinary,
-    wasi.wasiImport,
-  );
+  const { instance } = await WebAssembly.instantiate(wasmBinary, wasi.wasiImport);
   wasi.start(instance);
 }
 

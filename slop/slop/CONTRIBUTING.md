@@ -15,10 +15,8 @@ ERROR: PR version (X.X.X) must be different from base branch version (X.X.X)
 
 To fix this:
 
-1. Run `./scripts/new-version.sh` to generate a new version based on current
-   date/time
-2. This will update the version in `Cargo.toml` to format:
-   0.0.0-vibes-YYYY-MM-DD.xxxx
+1. Run `./scripts/new-version.sh` to generate a new version based on current date/time
+2. This will update the version in `Cargo.toml` to format: 0.0.0-vibes-YYYY-MM-DD.xxxx
 3. Commit the change
 
 ### Before Submitting a PR
