@@ -15,4 +15,4 @@ rustup default nightly-2025-11-28
 
 history -s "cargo fix --allow-dirty; cargo clippy --fix --allow-dirty; cargo fmt; crates/jeb/examples/all.sh"
 history -s "git fetch origin; git merge origin/trunk"
-history -s "git commit --allow-empty-message --no-edit; git add ."
+history -s "git commit --allow-empty-message --no-edit; git add .; git commit --allow-empty-message --no-edit;"
