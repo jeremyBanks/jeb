@@ -116,6 +116,7 @@
     "rustup",
     "serde",
     "shellcheck",
+    "stefanzweifel",
     "subshell",
     "timonwong",
     "usernamehw",

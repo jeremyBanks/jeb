@@ -3,6 +3,7 @@ permissions:
   contents: read
 
 on:
+  workflow_dispatch:
   pull_request:
     types: [opened, edited, reopened, synchronize]
 
@@ -95,4 +96,3 @@ jobs:
             echo "✅ No blocking markers found. Proceeding with build."
             exit 0
           fi
-

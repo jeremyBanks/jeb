@@ -1,9 +1,9 @@
 name: Build and Deploy Documentation
 
 on:
-  push:
-    branches: [trunk]
+  workflow_dispatch:
   pull_request:
+  push:
 
 permissions:
   contents: read
