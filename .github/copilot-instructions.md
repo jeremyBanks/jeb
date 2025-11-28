@@ -2,8 +2,8 @@
 
 Note that we are using the nightly-2025-11-28 Rust toolchain for this project
 (because we are using some unstable features for formatting and linting — the
-actual code should be compatible with stable Rust). Ensure that you're you have
-the nightly-2025-11-28 Rust toolchain installed.
+actual code should be compatible with stable Rust). Ensure that you have the
+nightly-2025-11-28 Rust toolchain installed.
 
 ## Before Completing Any Task
 
