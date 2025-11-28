@@ -6,8 +6,8 @@ on:
     paths:
       - .github/workflows/copilot-setup-steps.yml
   push:
-    paths:
-      - .github/workflows/copilot-setup-steps.yml
+    branches:
+      - trunk
 
 jobs:
   copilot-setup-steps:

@@ -6,6 +6,9 @@ on:
   workflow_dispatch:
   pull_request:
     types: [opened, edited, reopened, synchronize]
+  push:
+    branches:
+      - trunk
 
 jobs:
   check-do-not-merge:
