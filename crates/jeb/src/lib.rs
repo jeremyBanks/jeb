@@ -28,6 +28,7 @@ pub mod byte_ranges;
 pub mod const_checked;
 pub mod errors;
 pub mod model;
+pub mod shell_tokenizer;
 
 use core::fmt::Debug;
 

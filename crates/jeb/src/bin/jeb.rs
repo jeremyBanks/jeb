@@ -51,6 +51,7 @@ pub async fn inner_main() -> Result<(), Panic> {
             "first" => first(state)?,
             "last" => last(state)?,
             "split-lines" => split_lines(state)?,
+            "split-shell" => split_shell(state)?,
             "join" => join(state)?,
             "join-lines" => join_lines(state)?,
             "join-space" => join_space(state)?,
@@ -304,4 +305,18 @@ fn filter(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
         .into_iter()
         .filter(|bytes| !bytes.is_empty())
         .collect::<Vec<Vec<u8>>>())
+}
+
+fn split_shell(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    let mut result = Vec::<Bytes>::new();
+    for bytes in state {
+        let token_result = jeb::shell_tokenizer::tokenize(&bytes);
+        for error in &token_result.errors {
+            eprintln!("{error}");
+        }
+        for arg in token_result.args {
+            result.push(arg);
+        }
+    }
+    Ok(result)
 }
