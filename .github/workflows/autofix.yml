@@ -7,6 +7,8 @@ jobs:
   autofix:
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
         with:

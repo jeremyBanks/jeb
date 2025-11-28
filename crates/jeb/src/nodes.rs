@@ -4,8 +4,9 @@ use tokio::io::AsyncWriteExt;
 use tokio_stream::StreamExt;
 use tokio_util::codec::{BytesCodec, FramedRead};
 
+use crate::Panic;
 use crate::{
-    Panic,
+                
     model::{Bytes, Item, Node, Receiver, Task, channel},
 };
 
