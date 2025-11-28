@@ -29,7 +29,9 @@ async function main() {
     console.error(`Error: Could not find WASM binary at ${WASM_PATH}`);
     console.error("Please build it first with:");
     console.error("  cargo build --target wasm32-wasip1 --release");
-    console.error("  cp ../../target/wasm32-wasip1/release/slop-wasi-demo.wasm .");
+    console.error(
+      "  cp ../../target/wasm32-wasip1/release/slop-wasi-demo.wasm .",
+    );
     Deno.exit(1);
   }
 

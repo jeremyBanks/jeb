@@ -198,128 +198,128 @@ named options
 
 ```json
 {
-    // TitleCamelCase
-    "stream_types": {
-        "Binary": {},
-        "Json": {}
+  // TitleCamelCase
+  "stream_types": {
+    "Binary": {},
+    "Json": {}
+  },
+
+  // lower-kebab-case
+  "node_types": {
+    "read": {
+      "path": "/dev/stdin",
+      "OUT": "Bytes"
     },
 
-    // lower-kebab-case
-    "node_types": {
-        "read": {
-            "path": "/dev/stdin",
-            "OUT": "Bytes"
-        },
-
-        "write": {
-            "path": "/dev/stdout",
-            "IN": "Bytes"
-        },
-
-        "sort": {
-            "max": 512,
-            "IN": "Json",
-            "OUT": "Json"
-        },
-
-        // Merges multiple input streams into a single output stream,
-        // attempting to maintain our sorting.
-        "merge": {
-            "descending": false,
-            "IN": {
-                "type": "json-objects",
-                "plural": true
-            },
-            "OUT": {
-                "type": "json-objects"
-            }
-        },
-
-        // Concatenates multiple input streams (of the same type)
-        // into a single output stream.
-        "concat": {
-            "IN": {
-                "plural": true
-            },
-            "OUT": {
-                "type": "IN"
-            }
-        },
-
-        // Duplicates the input stream to multiple output streams.
-        "tee": {
-            "IN": {},
-            "OUT": {
-                "type": "IN",
-                "plural": true
-            }
-        },
-
-        // Parses a binary stream into a stream of JSON objects.
-        "parse-json": {
-            "strict": false,
-            "IN": "Bytes",
-            "OUT": "Json",
-            "OUT.failed": "Bytes"
-        },
-
-        // Serializes a stream of JSON objects into a binary stream.
-        "serialize-json": {
-            "IN": "Json",
-            "OUT": "Bytes"
-        },
-
-        // Computes cryptographic hash digests of binary data.
-        // Outputs a JSON object with hash algorithm names as keys.
-        "digests": {
-            "algorithms": [
-                "BLAKE3",
-                "SHA1",
-                "SHA-256",
-                "SHA-384",
-                "SHA-512",
-                "SHA3"
-            ],
-            "IN": "Bytes",
-            "OUT": "Json"
-        },
-
-        // Adds an incrementing index field to each entity in the stream.
-        "enumerate": {
-            "name": "index",
-            "start": 0,
-            "step": 1,
-            "IN": "Json",
-            "OUT": "Json"
-        },
-
-        // Shells out to an external command (e.g., jq) for processing.
-        // Alternative: implement jq-compatible query language (complex).
-        "exec": {
-            "command": "",
-            "args": [],
-            "IN": "Json", // or Bytes depending on command
-            "OUT": "Json" // or Bytes depending on command
-        }
+    "write": {
+      "path": "/dev/stdout",
+      "IN": "Bytes"
     },
 
-    // UPPER_SNAKE_CASE
-    "nodes": {
-        "G1": {
-            "type": "ReadPath",
-            "path": "/dev/stdin"
-        },
+    "sort": {
+      "max": 512,
+      "IN": "Json",
+      "OUT": "Json"
+    },
 
-        "A1": {
-            "type": "parse-json",
-            "strict": true
-        },
+    // Merges multiple input streams into a single output stream,
+    // attempting to maintain our sorting.
+    "merge": {
+      "descending": false,
+      "IN": {
+        "type": "json-objects",
+        "plural": true
+      },
+      "OUT": {
+        "type": "json-objects"
+      }
+    },
 
-        "G2": {
-            "type": "WritePath",
-            "path": "/dev/stdout"
-        }
+    // Concatenates multiple input streams (of the same type)
+    // into a single output stream.
+    "concat": {
+      "IN": {
+        "plural": true
+      },
+      "OUT": {
+        "type": "IN"
+      }
+    },
+
+    // Duplicates the input stream to multiple output streams.
+    "tee": {
+      "IN": {},
+      "OUT": {
+        "type": "IN",
+        "plural": true
+      }
+    },
+
+    // Parses a binary stream into a stream of JSON objects.
+    "parse-json": {
+      "strict": false,
+      "IN": "Bytes",
+      "OUT": "Json",
+      "OUT.failed": "Bytes"
+    },
+
+    // Serializes a stream of JSON objects into a binary stream.
+    "serialize-json": {
+      "IN": "Json",
+      "OUT": "Bytes"
+    },
+
+    // Computes cryptographic hash digests of binary data.
+    // Outputs a JSON object with hash algorithm names as keys.
+    "digests": {
+      "algorithms": [
+        "BLAKE3",
+        "SHA1",
+        "SHA-256",
+        "SHA-384",
+        "SHA-512",
+        "SHA3"
+      ],
+      "IN": "Bytes",
+      "OUT": "Json"
+    },
+
+    // Adds an incrementing index field to each entity in the stream.
+    "enumerate": {
+      "name": "index",
+      "start": 0,
+      "step": 1,
+      "IN": "Json",
+      "OUT": "Json"
+    },
+
+    // Shells out to an external command (e.g., jq) for processing.
+    // Alternative: implement jq-compatible query language (complex).
+    "exec": {
+      "command": "",
+      "args": [],
+      "IN": "Json", // or Bytes depending on command
+      "OUT": "Json" // or Bytes depending on command
     }
+  },
+
+  // UPPER_SNAKE_CASE
+  "nodes": {
+    "G1": {
+      "type": "ReadPath",
+      "path": "/dev/stdin"
+    },
+
+    "A1": {
+      "type": "parse-json",
+      "strict": true
+    },
+
+    "G2": {
+      "type": "WritePath",
+      "path": "/dev/stdout"
+    }
+  }
 }
 ```
 

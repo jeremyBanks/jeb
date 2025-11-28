@@ -1,18 +1,22 @@
 # slop-wasi-demo
 
-A demonstration of how to build and distribute Rust CLI tools as WASM modules using WASI (WebAssembly System Interface).
+A demonstration of how to build and distribute Rust CLI tools as WASM modules
+using WASI (WebAssembly System Interface).
 
-**✅ Verified Working:** Node.js WASI, wasmtime
-**⚠️ Deno Status:** WASI support is limited (see [Deno Compatibility](#deno-compatibility) below)
+**✅ Verified Working:** Node.js WASI, wasmtime **⚠️ Deno Status:** WASI support
+is limited (see [Deno Compatibility](#deno-compatibility) below)
 
 ## What This Demonstrates
 
 This crate shows WASI-compatible patterns for building CLI tools:
 
-- ✅ **Single-threaded async runtime**: Uses `tokio` with `current_thread` flavor - **works with WASI!**
-- ✅ **File I/O**: Uses `std::fs` for file operations (WASI doesn't support async file I/O)
+- ✅ **Single-threaded async runtime**: Uses `tokio` with `current_thread`
+  flavor - **works with WASI!**
+- ✅ **File I/O**: Uses `std::fs` for file operations (WASI doesn't support
+  async file I/O)
 - ✅ **stdin/stdout**: Uses `std::io` for synchronous stream operations
-- ✅ **Cross-platform**: Single WASM binary works with any WASI-compatible runtime
+- ✅ **Cross-platform**: Single WASM binary works with any WASI-compatible
+  runtime
 
 ## WASI Compatibility Notes
 
@@ -87,19 +91,24 @@ This can reduce the WASM size by 30-50%.
 ## Deno Compatibility
 
 **Current Status (Deno 2.5.6 as of Nov 2025):**
+
 - `node:wasi` - Non-functional (stub implementation only)
 - `std/wasi` - Deprecated, has compatibility issues with modern Rust/tokio
 
-**Recommendation:** Use Node.js WASI or wasmtime for now. Deno's WASI support is expected to improve with WASI 0.2 implementation ([Issue #24289](https://github.com/denoland/deno/issues/24289)).
+**Recommendation:** Use Node.js WASI or wasmtime for now. Deno's WASI support is
+expected to improve with WASI 0.2 implementation
+([Issue #24289](https://github.com/denoland/deno/issues/24289)).
 
 You can still run the WASM via Deno using Node compatibility:
+
 ```bash
 deno run --allow-read --allow-env test-wasm-node.mjs example.json
 ```
 
 ## Running with Node.js
 
-Node.js v13+ has excellent built-in WASI support and works perfectly with this demo:
+Node.js v13+ has excellent built-in WASI support and works perfectly with this
+demo:
 
 ```bash
 cd crates/slop-wasi-demo
@@ -130,6 +139,7 @@ const wasmBinary = new Uint8Array([
 ```
 
 This creates a single-file executable that can be published to:
+
 - [deno.land/x](https://deno.land/x)
 - [JSR](https://jsr.io)
 
@@ -154,7 +164,8 @@ deno install -A https://example.com/run-wasm.ts
 
 ### Advantages of WASM Distribution
 
-- **Universal compatibility**: One binary for all platforms (x64, ARM, Windows, macOS, Linux)
+- **Universal compatibility**: One binary for all platforms (x64, ARM, Windows,
+  macOS, Linux)
 - **No compilation matrix**: Don't need to build for multiple targets
 - **Sandboxed execution**: WASI provides security boundaries
 - **Easy updates**: Just replace the WASM file
@@ -165,9 +176,11 @@ deno install -A https://example.com/run-wasm.ts
 - **Larger file size**: WASM binaries are typically larger than native
 - **Startup overhead**: 10-50ms to compile and instantiate WASM
 - **Slight performance penalty**: 5-50% slower than native (varies by workload)
-- **Limited APIs**: No networking, threading, or subprocess spawning (WASI Preview 1)
+- **Limited APIs**: No networking, threading, or subprocess spawning (WASI
+  Preview 1)
 
-For I/O-bound JSON processing tools like this, the performance difference is negligible.
+For I/O-bound JSON processing tools like this, the performance difference is
+negligible.
 
 ## Adapting Your Own CLI
 
@@ -207,6 +220,7 @@ To make your CLI WASI-compatible:
 ## Future: WASI Preview 2
 
 WASI Preview 2 (WASI 0.2) provides:
+
 - Component model support
 - Better networking APIs
 - Improved threading support

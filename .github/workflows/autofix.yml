@@ -25,4 +25,8 @@ jobs:
 
       - run: crates/jeb/examples/all.sh
 
+      - uses: denoland/setup-deno@v2
+
+      - run: deno fmt .
+
       - uses: stefanzweifel/git-auto-commit-action@v7
