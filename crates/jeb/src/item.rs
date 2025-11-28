@@ -3,8 +3,6 @@
 //! Data flows between nodes as streams of items. Each item has one of three
 //! top-level types: Text, Bytes, or Structured.
 
-use core::cmp::Ordering;
-
 use indexmap::IndexMap;
 
 /// An item flowing through a jeb pipeline.

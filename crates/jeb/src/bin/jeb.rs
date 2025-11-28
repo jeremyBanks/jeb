@@ -4,7 +4,11 @@ use {
         pipeline::{Executor, Pipeline},
     },
     owo_colors::OwoColorize,
-    std::convert::Infallible,
+    regex::Regex,
+    std::{
+        convert::Infallible,
+        sync::LazyLock,
+    },
 };
 
 
@@ -17,6 +21,22 @@ pub async fn main() -> Result<(), Infallible> {
 pub async fn inner_main() -> Result<u8, Panic> {
     let mut args = Vec::<String>::from_iter(std::env::args());
     let own_path: String = args.remove(0);
+
+    // Parse pipe-separated arguments (from trunk)
+    let args = args
+        .into_iter()
+        .flat_map(|s| {
+            static REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"\s\|\s"#).unwrap());
+
+            if REGEX.is_match(&s) {
+                s.split('|')
+                    .map(|s| s.trim_ascii().to_string())
+                    .collect::<Vec<String>>()
+            } else {
+                vec![s]
+            }
+        })
+        .collect::<Vec<_>>();
 
     let commands = args;
 

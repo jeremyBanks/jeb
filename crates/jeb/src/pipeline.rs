@@ -3,8 +3,6 @@
 //! A jeb command is a sequence of subcommands that form a directed acyclic graph (DAG).
 //! Data flows left-to-right through the pipeline, with nodes executing asynchronously.
 
-use std::collections::VecDeque;
-
 use crate::item::{CoercionWarning, Item, MapValue, NumberValue, StringValue, Value};
 
 /// A node in the pipeline DAG.
@@ -94,6 +92,10 @@ pub enum Command {
     EncodeZ85,
     /// Encode to JEB85
     EncodeJeb85,
+    
+    // Shell tokenization
+    /// Split shell arguments
+    SplitShell,
 }
 
 impl Command {
@@ -126,7 +128,8 @@ impl Command {
             | Self::Last(_)
             | Self::Collapse
             | Self::EncodeZ85
-            | Self::EncodeJeb85 => InputCount::One,
+            | Self::EncodeJeb85
+            | Self::SplitShell => InputCount::One,
 
             // Chain and Merge accept any number of inputs
             Self::Chain | Self::Merge => InputCount::Many,
@@ -203,7 +206,7 @@ impl Pipeline {
         for arg in args {
             if let Some(cmd) = Self::parse_command(arg) {
                 let node_idx = nodes.len();
-                let is_source = cmd.is_source();
+                let _is_source = cmd.is_source();
                 let is_sink = cmd.is_sink();
                 let input_count = cmd.input_count();
 
@@ -273,6 +276,7 @@ impl Pipeline {
             "collapse" => Command::Collapse,
             "encode-z85" => Command::EncodeZ85,
             "encode-jeb85" => Command::EncodeJeb85,
+            "split-shell" => Command::SplitShell,
             _ => {
                 // Check for file paths
                 if arg.starts_with('.') || arg.starts_with('/') {
@@ -400,6 +404,7 @@ impl Pipeline {
             Command::Collapse => "collapse".to_string(),
             Command::EncodeZ85 => "encode-z85".to_string(),
             Command::EncodeJeb85 => "encode-jeb85".to_string(),
+            Command::SplitShell => "split-shell".to_string(),
         }
     }
 }
@@ -836,6 +841,25 @@ impl Executor {
                     let encoded = base64_encode_bytes(&bytes);
                     *item = Item::Bytes(encoded);
                 }
+            }
+
+            Command::SplitShell => {
+                let mut new_items = Vec::new();
+                for item in items.drain(..) {
+                    let bytes = item.to_bytes();
+                    let token_result = crate::shell_tokenizer::tokenize(&bytes);
+                    for error in &token_result.errors {
+                        self.warnings.push(PipelineWarning {
+                            node_index: node.index,
+                            message: format!("Shell tokenizer warning: {error}"),
+                            coercion: None,
+                        });
+                    }
+                    for arg in token_result.args {
+                        new_items.push(Item::Bytes(arg));
+                    }
+                }
+                *items = new_items;
             }
         }
 
