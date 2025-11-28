@@ -429,6 +429,62 @@ echo "stdin encode-jeb85 stdout" | jeb stdin eval
 - Useful for treating command sequences as first-class data
 - Enables higher-order pipeline operations
 
+### Shebang Script Support
+
+**Special argument handling** for shebang compatibility:
+
+When the **first argument** matches the shebang marker pattern, jeb rearranges arguments to enable script execution with data files.
+
+**Marker pattern**: `[space !-]* # [space !#-]*`
+- Before `#`: zero or more space, `!`, or `-` characters
+- The `#` character itself
+- After `#`: zero or more space, `!`, `#`, or `-` characters
+
+**Examples of valid markers:**
+```bash
+#!/usr/bin/env jeb ########
+#!/usr/bin/env jeb ----#----
+#!/usr/bin/env jeb  ! # !
+#!/usr/bin/env jeb ###!!!---
+```
+
+**Argument rearrangement:**
+When marker is detected:
+1. Remove the marker argument (first arg)
+2. Take the last argument
+3. Move it to the front
+4. Insert `eval` after it
+
+**Example:**
+
+Script file `process.jeb`:
+```bash
+#!/usr/bin/env jeb ########
+split-lines
+filter
+join-lines
+```
+
+Execution: `./process.jeb data.txt`
+
+OS invokes: `jeb ######## ./process.jeb data.txt`
+
+Jeb rearranges to: `jeb data.txt eval ./process.jeb`
+
+Result: `data.txt` is read as input, script is eval'd with that input
+
+**Use cases:**
+- Executable data processing scripts
+- Shebang scripts that accept input files as arguments
+- Reusable transformation scripts
+- Unix-style filter programs
+
+**Notes:**
+- Works seamlessly with standard Unix shebang mechanism
+- No special file extensions required
+- Script can be used with or without input file argument
+- If no extra args: `./process.jeb` reads from stdin
+
 ### Source/Sink Behavior
 
 **Sources:**
