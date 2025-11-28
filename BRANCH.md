@@ -375,6 +375,60 @@ jeb ./message.pb parse-protobuf serialize-json
 jeb ./data.json parse-json encode-protobuf write:./message.pb
 ```
 
+### Meta-Commands
+
+**`eval`** - Execute a sub-pipeline from text input
+
+Parses text input as command line arguments and executes them as a disconnected sub-pipeline:
+
+**Behavior:**
+- Takes text input (string containing command line arguments)
+- Parses as jeb command line arguments
+- Executes as independent sub-pipeline
+- Sub-pipeline's `stdin` comes from eval's input
+- Sub-pipeline's `stdout` goes to eval's output
+- Sub-pipeline's `stderr` is connected to parent's stderr (shared)
+- If sub-pipeline doesn't use stdin/stdout, those streams remain empty/unused
+
+**Input/Output:**
+- Single input stream → becomes sub-pipeline's stdin
+- Single output stream → receives sub-pipeline's stdout
+- No auto-completion within eval'd pipeline (explicit sources/sinks required or empty)
+
+**Example usage:**
+```bash
+# Execute pipeline definition from file
+jeb ./pipeline-config.txt eval
+
+# Store reusable pipeline
+echo "split-lines filter join-lines" > transform.txt
+jeb ./data.txt eval:./transform.txt
+
+# Generate pipeline programmatically
+jeb ./config.json extract-field:pipeline eval
+
+# Dynamic pipeline based on input
+jeb stdin sniff-format \
+  if-json:"parse-json extract-field:id" \
+  if-xml:"parse-xml extract-field:@id" \
+  eval
+
+# Nested eval (eval within eval)
+echo "stdin encode-jeb85 stdout" | jeb stdin eval
+```
+
+**Use cases:**
+- Configuration-driven pipelines
+- Dynamic command generation
+- Reusable pipeline definitions
+- Metaprogramming and conditional execution
+- Pipeline composition and abstraction
+
+**Notes:**
+- Sub-pipeline is isolated (can't affect parent pipeline state)
+- Useful for treating command sequences as first-class data
+- Enables higher-order pipeline operations
+
 ### Source/Sink Behavior
 
 **Sources:**
