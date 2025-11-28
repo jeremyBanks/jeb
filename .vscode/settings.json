@@ -107,6 +107,7 @@
     "HISTSIZE",
     "ignoreboth",
     "indexmap",
+    "mergeoptions",
     "peekable",
     "redirections",
     "repr",
