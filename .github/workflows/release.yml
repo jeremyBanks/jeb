@@ -4,7 +4,7 @@ permissions:
 
 on:
   push:
-    branches: [trunk]
+    branches: [main, master, trunk]
 
 env:
   CARGO_TERM_COLOR: always
