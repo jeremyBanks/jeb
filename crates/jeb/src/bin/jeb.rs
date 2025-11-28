@@ -310,22 +310,12 @@ fn filter(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 fn split_shell(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let mut result = Vec::<Bytes>::new();
     for bytes in state {
-        let input = String::from_utf8_lossy(&bytes);
-        match jeb::shell_tokenizer::tokenize(&input) {
-            Ok(token_result) => {
-                // Print warnings to stderr
-                for warning in &token_result.warnings {
-                    eprintln!("{warning}");
-                }
-                // Add each token as a separate output
-                for token in token_result.tokens {
-                    result.push(Bytes::from(token.into_bytes()));
-                }
-            }
-            Err(err) => {
-                eprintln!("error: {err}");
-                std::process::exit(1);
-            }
+        let token_result = jeb::shell_tokenizer::tokenize(&bytes);
+        for error in &token_result.errors {
+            eprintln!("{error}");
+        }
+        for arg in token_result.args {
+            result.push(arg);
         }
     }
     Ok(result)
