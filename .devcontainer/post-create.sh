@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -vexu
 
 git config --global push.autoSetupRemote true
