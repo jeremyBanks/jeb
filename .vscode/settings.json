@@ -36,6 +36,7 @@
     "denoland",
     "dotenv",
     "errorlens",
+    "getset",
     "HISTCONTROL",
     "HISTFILESIZE",
     "HISTSIZE",
