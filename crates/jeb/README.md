@@ -6,12 +6,7 @@ Just Encode Bytes?
 
 Joined Escaped Binary?
 
-
-
-
 vibe-coded clanker slop with Semitranslucent Binary Encodings.
-
-
 
 ## License
 
