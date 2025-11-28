@@ -19,7 +19,7 @@ jobs:
 
       - run: cargo fix --allow-dirty
 
-      - run: cargo clippy fix --allow-dirty
+      - run: cargo clippy --fix --allow-dirty
 
       - run: cargo fmt
 
