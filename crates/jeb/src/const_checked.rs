@@ -1,6 +1,5 @@
 #![expect(clippy::must_use_candidate)]
 
-use core::mem::swap;
 
 
 #[macro_export]
@@ -77,7 +76,7 @@ impl OrderedByteSet {
 
         let mut index = 0;
         loop {
-            if (index >= bytes.len()) {
+            if index >= bytes.len() {
                 break;
             }
 
@@ -92,12 +91,12 @@ impl OrderedByteSet {
     const fn index_of(self, byte: u8) -> usize {
         let mut index = 0;
         loop {
-            if (self.bytes[index] == byte) {
+            if self.bytes[index] == byte {
                 return index;
             }
 
             index += 1;
-            if (index > 0xFF) {
+            if index > 0xFF {
                 return -1isize as usize;
             }
         }
@@ -106,7 +105,7 @@ impl OrderedByteSet {
     pub const fn insert(&mut self, byte: u8) -> Option<u8> {
         let existing_index = self.index_of(byte);
 
-        if (existing_index < self.len()) {
+        if existing_index < self.len() {
             return Some(byte);
         }
 
@@ -120,14 +119,14 @@ impl OrderedByteSet {
     pub const fn remove(&mut self, byte: u8) -> Option<u8> {
         let existing_index = self.index_of(byte);
 
-        if (existing_index >= self.len()) {
+        if existing_index >= self.len() {
             return None;
         }
 
         self.len -= 1;
 
         let mut existing_index = existing_index;
-        while (existing_index < self.len()) {
+        while existing_index < self.len() {
             self.bytes.swap(existing_index, existing_index + 1);
             existing_index += 1;
         }
@@ -138,7 +137,7 @@ impl OrderedByteSet {
     pub const fn add(self, other: Self) -> Self {
         let mut result = self;
         let mut index = 0;
-        while (index < other.len()) {
+        while index < other.len() {
             result.insert(other.bytes[index]);
             index += 1;
         }
@@ -148,7 +147,7 @@ impl OrderedByteSet {
     pub const fn sub(self, other: Self) -> Self {
         let mut result = self;
         let mut index = 0;
-        while (index < other.len()) {
+        while index < other.len() {
             result.remove(other.bytes[index]);
             index += 1;
         }
@@ -158,9 +157,9 @@ impl OrderedByteSet {
     pub const fn and(self, other: Self) -> Self {
         let mut result = Self::NONE;
         let mut index = 0;
-        while (index < self.len()) {
+        while index < self.len() {
             let byte = self.bytes[index];
-            if (other.contains(byte)) {
+            if other.contains(byte) {
                 result.insert(byte);
             }
             index += 1;
@@ -174,9 +173,9 @@ impl OrderedByteSet {
     pub const fn to_array<const LENGTH: usize>(self) -> [u8; LENGTH] {
         let mut array = [0u8; LENGTH];
 
-        if (self.len() > LENGTH) {
+        if self.len() > LENGTH {
             panic!("computed array had larger than expected size")
-        } else if (self.len() < LENGTH) {
+        } else if self.len() < LENGTH {
             panic!("computed array had smaller than expected size")
         }
 
@@ -185,7 +184,7 @@ impl OrderedByteSet {
             array[index] = self.bytes[index];
 
             index += 1;
-            if (index >= LENGTH) {
+            if index >= LENGTH {
                 break;
             }
         }
@@ -205,7 +204,7 @@ impl OrderedByteSet {
         let mut lut = [false; 256];
 
         let mut index = 0;
-        while (index < self.len()) {
+        while index < self.len() {
             let byte = self.bytes[index];
             lut[byte as usize] = true;
 
@@ -219,7 +218,7 @@ impl OrderedByteSet {
         let mut lut = [0xFF; 256];
 
         let mut index = 0;
-        while (index < self.len()) {
+        while index < self.len() {
             let byte = self.bytes[index];
             lut[byte as usize] = index as u8;
 

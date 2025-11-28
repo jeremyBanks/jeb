@@ -371,7 +371,7 @@ mod tests {
                 .map(|s| (*s).to_string())
                 .collect::<Vec<_>>()
         );
-        assert!(errors.is_empty(), "expected no errors, got: {:?}", errors);
+        assert!(errors.is_empty(), "expected no errors, got: {errors:?}");
     }
 
     // Helper to assert args without errors using tokenize (bytes)
@@ -418,9 +418,7 @@ mod tests {
         let (_, errors) = tokenize_str(input);
         assert!(
             errors.iter().any(|e| e.kind == expected_kind),
-            "expected error {:?}, got: {:?}",
-            expected_kind,
-            errors
+            "expected error {expected_kind:?}, got: {errors:?}"
         );
     }
 
