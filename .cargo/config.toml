@@ -12,5 +12,6 @@ rustflags = [
     "--remap-path-prefix=/home/runner=~",
     "--remap-path-prefix=/home/=~",
     "--remap-path-prefix=/workspaces/jeb=.",
+    "--remap-path-prefix=/workspaces/json-entity-bucket=.",
     "--remap-path-prefix=/workspaces/=..",
 ]
