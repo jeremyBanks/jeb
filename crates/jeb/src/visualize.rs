@@ -1,7 +1,6 @@
 // Pipeline visualization with ASCII art
 
 use crate::pipeline::Pipeline;
-use std::collections::HashMap;
 
 /// Generate ASCII visualization of the pipeline
 pub fn visualize_pipeline(pipeline: &Pipeline, terminal_width: usize) -> String {
@@ -116,7 +115,7 @@ pub fn colorize_pipeline(visualization: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nodes::*, parser::parse_pipeline};
+    use crate::parser::parse_pipeline;
 
     #[test]
     fn test_visualize_simple_pipeline() {

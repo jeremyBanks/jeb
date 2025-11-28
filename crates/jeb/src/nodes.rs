@@ -1,1488 +1,179 @@
-// Node implementations for the pipeline system
-
-use crate::{
-    model::{ErrorValue, StreamItem, Structured},
-    pipeline::{ExecutionResult, Node, NodeError, Stream},
+use {
+    crate::{
+        Panic,
+        model::{Bytes, Item, Node, Receiver, Task, channel},
+    },
+    std::borrow::Cow,
+    tokio::io::AsyncWriteExt,
+    tokio_stream::StreamExt,
+    tokio_util::codec::{BytesCodec, FramedRead},
 };
-use std::io::{Read, Write};
 
-// MARK: Source Nodes
+pub trait NodeDef: Node + Send + Sync + 'static {
+    const NAME: &'static str;
 
-/// Reads from standard input
-pub struct StdinNode;
-
-impl Node for StdinNode {
-    fn name(&self) -> &str {
-        "stdin"
+    fn name(&self) -> Cow<str> {
+        Self::NAME.into()
     }
 
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (0, Some(0)) // No inputs
-    }
+    fn spawn(&self, stack: Vec<Receiver>) -> (Vec<Receiver>, Task);
+}
 
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        _inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        let mut buffer = Vec::new();
-        std::io::stdin().read_to_end(&mut buffer)?;
-
-        Ok(ExecutionResult {
-            outputs: vec![vec![StreamItem::Bytes(buffer)]],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
+impl<T: NodeDef> Node for T {
+    fn spawn(&self, stack: Vec<Receiver>) -> (Vec<Receiver>, Task) {
+        NodeDef::spawn(self, stack)
     }
 }
 
-/// Reads from a file
-pub struct FileSourceNode {
-    path: String,
-}
-
-impl FileSourceNode {
-    pub fn new(path: String) -> Self {
-        Self { path }
-    }
-}
-
-impl Node for FileSourceNode {
-    fn name(&self) -> &str {
-        "file"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (0, Some(0))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        _inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        let data = std::fs::read(&self.path)?;
-
-        Ok(ExecutionResult {
-            outputs: vec![vec![StreamItem::Bytes(data)]],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-// MARK: Sink Nodes
-
-/// Writes to standard output
-pub struct StdoutNode;
-
-impl Node for StdoutNode {
-    fn name(&self) -> &str {
-        "stdout"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        0 // Sink has no outputs
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut stdout = std::io::stdout();
-
-        for item in &inputs[0] {
-            match item {
-                StreamItem::Text(s) => stdout.write_all(s.as_bytes())?,
-                StreamItem::Bytes(b) => stdout.write_all(b)?,
-                StreamItem::Structured(_) => {
-                    // For now, just skip structured items
-                    // TODO: Implement proper coercion
-                }
-            }
-        }
-
-        stdout.flush()?;
-
-        Ok(ExecutionResult {
-            outputs: Vec::new(),
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-/// Writes to standard error
-pub struct StderrNode;
-
-impl Node for StderrNode {
-    fn name(&self) -> &str {
-        "stderr"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        0
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut stderr = std::io::stderr();
-
-        for item in &inputs[0] {
-            match item {
-                StreamItem::Text(s) => stderr.write_all(s.as_bytes())?,
-                StreamItem::Bytes(b) => stderr.write_all(b)?,
-                StreamItem::Structured(_) => {
-                    // Skip structured items
-                }
-            }
-        }
-
-        stderr.flush()?;
-
-        Ok(ExecutionResult {
-            outputs: Vec::new(),
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-// MARK: Parser Nodes
-
-/// Parses JSON from text or bytes
-pub struct ParseJsonNode;
-
-impl Node for ParseJsonNode {
-    fn name(&self) -> &str {
-        "parse-json"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut output = Vec::new();
-        let mut errors = Vec::new();
-
-        for item in &inputs[0] {
-            let bytes = match item {
-                StreamItem::Bytes(b) => b.clone(),
-                StreamItem::Text(s) => s.as_bytes().to_vec(),
-                StreamItem::Structured(_) => {
-                    // Already structured, pass through
-                    output.push(item.clone());
-                    continue;
-                }
-            };
-
-            // Try to parse as JSON
-            match serde_json::from_slice::<serde_json::Value>(&bytes) {
-                Ok(value) => {
-                    // Convert serde_json::Value to our Structured type
-                    if let Some(structured) = json_value_to_structured(&value) {
-                        output.push(StreamItem::Structured(structured));
-                    } else {
-                        errors.push(ErrorValue {
-                            node_index,
-                            message: "Failed to convert JSON value".to_string(),
-                            context: None,
-                        });
-                    }
-                }
-                Err(e) => {
-                    errors.push(ErrorValue {
-                        node_index,
-                        message: format!("JSON parse error: {}", e),
-                        context: None,
-                    });
-                }
-            }
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors,
-            warnings: Vec::new(),
-        })
-    }
-}
-
-/// Decodes base64 data
-pub struct FromBase64Node;
-
-impl Node for FromBase64Node {
-    fn name(&self) -> &str {
-        "from-base64"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut output = Vec::new();
-
-        for item in &inputs[0] {
-            // For now, just pass through
-            // TODO: Implement actual base64 decoding
-            output.push(item.clone());
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-// MARK: Serializer Nodes
-
-/// Serializes structured data to JSON
-pub struct ToJsonNode;
-
-impl Node for ToJsonNode {
-    fn name(&self) -> &str {
-        "to-json"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut output = Vec::new();
-
-        for item in &inputs[0] {
-            match item {
-                StreamItem::Structured(s) => {
-                    // Convert to JSON and output as Text
-                    if let Some(json_value) = structured_to_json_value(s) {
-                        if let Ok(json_string) = serde_json::to_string(&json_value) {
-                            output.push(StreamItem::Text(json_string + "\n"));
-                        }
-                    }
-                }
-                _ => {
-                    // Pass through non-structured items
-                    output.push(item.clone());
-                }
-            }
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-/// Encodes data as base64
-pub struct ToBase64Node;
-
-impl Node for ToBase64Node {
-    fn name(&self) -> &str {
-        "to-base64"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut output = Vec::new();
-
-        for item in &inputs[0] {
-            // For now, just pass through
-            // TODO: Implement actual base64 encoding
-            output.push(item.clone());
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-// MARK: Chunking Nodes
-
-/// Splits by lines, keeping line endings
-pub struct ByLinesNode;
-
-impl Node for ByLinesNode {
-    fn name(&self) -> &str {
-        "by-lines"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut output = Vec::new();
-
-        for item in &inputs[0] {
-            let text = match item {
-                StreamItem::Text(s) => s.clone(),
-                StreamItem::Bytes(b) => String::from_utf8_lossy(b).to_string(),
-                StreamItem::Structured(_) => continue,
-            };
-
-            // Split by lines, keeping the newline
-            for line in text.split_inclusive('\n') {
-                output.push(StreamItem::Text(line.to_string()));
-            }
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-/// Splits by lines, removing line endings
-pub struct SplitLinesNode;
-
-impl Node for SplitLinesNode {
-    fn name(&self) -> &str {
-        "split-lines"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut output = Vec::new();
-
-        for item in &inputs[0] {
-            let text = match item {
-                StreamItem::Text(s) => s.clone(),
-                StreamItem::Bytes(b) => String::from_utf8_lossy(b).to_string(),
-                StreamItem::Structured(_) => continue,
-            };
-
-            for line in text.lines() {
-                output.push(StreamItem::Text(line.to_string()));
-            }
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-/// Splits by null bytes, keeping them
-pub struct ByNullNode;
-
-impl Node for ByNullNode {
-    fn name(&self) -> &str {
-        "by-null"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut output = Vec::new();
-
-        for item in &inputs[0] {
-            let bytes = match item {
-                StreamItem::Bytes(b) => b.clone(),
-                StreamItem::Text(s) => s.as_bytes().to_vec(),
-                StreamItem::Structured(_) => continue,
-            };
-
-            let mut current = Vec::new();
-            for &byte in &bytes {
-                current.push(byte);
-                if byte == 0 {
-                    output.push(StreamItem::Bytes(current.clone()));
-                    current.clear();
-                }
+#[derive(Clone, Copy, Debug)]
+struct Stdin;
+impl NodeDef for Stdin {
+    const NAME: &'static str = "stdin";
+
+    fn spawn(&self, mut stack: Vec<Receiver>) -> (Vec<Receiver>, Task) {
+        let (sender, receiver) = channel();
+        let stdin = tokio::io::stdin();
+
+        let handle = tokio::spawn(async move {
+            let mut stdin_bytes: FramedRead<tokio::io::Stdin, BytesCodec> =
+                FramedRead::new(stdin, BytesCodec::new());
+
+            while let Some(value) = stdin_bytes.next().await {
+                let vec = value?.to_vec();
+                let bytes = Bytes::from(vec);
+                sender.send(bytes.into()).await?;
             }
 
-            if !current.is_empty() {
-                output.push(StreamItem::Bytes(current));
-            }
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-/// Splits by null bytes, removing them
-pub struct SplitNullNode;
-
-impl Node for SplitNullNode {
-    fn name(&self) -> &str {
-        "split-null"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut output = Vec::new();
-
-        for item in &inputs[0] {
-            let bytes = match item {
-                StreamItem::Bytes(b) => b.clone(),
-                StreamItem::Text(s) => s.as_bytes().to_vec(),
-                StreamItem::Structured(_) => continue,
-            };
-
-            for chunk in bytes.split(|&b| b == 0) {
-                if !chunk.is_empty() {
-                    output.push(StreamItem::Bytes(chunk.to_vec()));
-                }
-            }
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-/// Joins items with newlines
-pub struct JoinLinesNode;
-
-impl Node for JoinLinesNode {
-    fn name(&self) -> &str {
-        "join-lines"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut result = String::new();
-
-        for item in &inputs[0] {
-            match item {
-                StreamItem::Text(s) => {
-                    result.push_str(s);
-                    if !s.ends_with('\n') {
-                        result.push('\n');
-                    }
-                }
-                StreamItem::Bytes(b) => {
-                    result.push_str(&String::from_utf8_lossy(b));
-                    result.push('\n');
-                }
-                StreamItem::Structured(_) => {}
-            }
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![vec![StreamItem::Text(result)]],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-// MARK: Aggregation Nodes
-
-/// Collects stream items into an array
-pub struct JoinArrayNode;
-
-impl Node for JoinArrayNode {
-    fn name(&self) -> &str {
-        "join-array"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut array = Vec::new();
-
-        for item in &inputs[0] {
-            if let StreamItem::Structured(s) = item {
-                array.push(s.clone());
-            }
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![vec![StreamItem::Structured(Structured::Array(array))]],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-/// Splits an array into individual items
-pub struct SplitArrayNode;
-
-impl Node for SplitArrayNode {
-    fn name(&self) -> &str {
-        "split-array"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut output = Vec::new();
-
-        for item in &inputs[0] {
-            if let StreamItem::Structured(Structured::Array(arr)) = item {
-                for element in arr {
-                    output.push(StreamItem::Structured(element.clone()));
-                }
-            } else {
-                // Pass through non-arrays
-                output.push(item.clone());
-            }
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-// MARK: Stream Combining Nodes
-
-/// Concatenates multiple input streams
-pub struct ChainNode;
-
-impl Node for ChainNode {
-    fn name(&self) -> &str {
-        "chain"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (0, None) // Accepts any number of inputs
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        let mut output = Vec::new();
-
-        for input_stream in inputs {
-            output.extend(input_stream);
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-/// Merges multiple sorted streams
-pub struct MergeNode;
-
-impl Node for MergeNode {
-    fn name(&self) -> &str {
-        "merge"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (0, None) // Accepts any number of inputs
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        // For now, just chain them
-        // TODO: Implement true merge with ordering
-        let mut output = Vec::new();
-
-        for input_stream in inputs {
-            output.extend(input_stream);
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-// MARK: Transform Nodes
-
-/// Sorts stream items
-pub struct SortNode;
-
-impl Node for SortNode {
-    fn name(&self) -> &str {
-        "sort"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut output = inputs[0].clone();
-
-        // Simple sorting for text items
-        // TODO: Implement proper sorting with JSON total ordering
-        output.sort_by(|a, b| {
-            match (a, b) {
-                (StreamItem::Text(s1), StreamItem::Text(s2)) => s1.cmp(s2),
-                _ => std::cmp::Ordering::Equal,
-            }
+            Ok(())
         });
 
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
+        stack.push(receiver);
+
+        (stack, handle)
     }
 }
 
-/// Filters stream items
-pub struct FilterNode;
+#[derive(Clone, Copy, Debug)]
+struct ReadPath<T: AsRef<std::path::Path>>(T);
 
-impl Node for FilterNode {
-    fn name(&self) -> &str {
-        "filter"
+impl<T: AsRef<std::path::Path> + Send + Sync + 'static> NodeDef for ReadPath<T> {
+    const NAME: &'static str = "read:";
+
+    fn name(&self) -> Cow<str> {
+        format!("read:{}", self.0.as_ref().display()).into()
     }
 
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
+    fn spawn(&self, mut stack: Vec<Receiver>) -> (Vec<Receiver>, Task) {
+        let (sender, receiver) = channel();
+        let path = self.0.as_ref().to_owned();
 
-    fn output_count(&self) -> usize {
-        1
-    }
+        let handle = tokio::spawn(async move {
+            let file = tokio::fs::File::open(path).await?;
 
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
+            let mut file_bytes: FramedRead<tokio::fs::File, BytesCodec> =
+                FramedRead::new(file, BytesCodec::new());
 
-        // For now, just pass through
-        // TODO: Implement actual filtering
-        let output = inputs[0].clone();
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-// MARK: Helper Functions
-
-/// Convert serde_json::Value to our Structured type
-fn json_value_to_structured(value: &serde_json::Value) -> Option<Structured> {
-    match value {
-        serde_json::Value::Null => Some(Structured::Null),
-        serde_json::Value::Bool(b) => Some(Structured::Bool(*b)),
-        serde_json::Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                Some(Structured::SignedInt(i))
-            } else if let Some(u) = n.as_u64() {
-                Some(Structured::UnsignedInt(u))
-            } else if let Some(f) = n.as_f64() {
-                Some(Structured::Float(f))
-            } else {
-                None
+            while let Some(value) = file_bytes.next().await {
+                let vec = value?.to_vec();
+                let bytes = Bytes::from(vec);
+                sender.send(bytes.into()).await?;
             }
-        }
-        serde_json::Value::String(s) => Some(Structured::TextString(s.clone())),
-        serde_json::Value::Array(arr) => {
-            let mut result = Vec::new();
-            for item in arr {
-                if let Some(structured) = json_value_to_structured(item) {
-                    result.push(structured);
-                } else {
-                    return None;
-                }
-            }
-            Some(Structured::Array(result))
-        }
-        serde_json::Value::Object(obj) => {
-            let mut result = indexmap::IndexMap::new();
-            for (key, value) in obj {
-                if let Some(structured) = json_value_to_structured(value) {
-                    result.insert(key.clone(), structured);
-                } else {
-                    return None;
-                }
-            }
-            Some(Structured::TextMap(result))
-        }
+
+            Ok(())
+        });
+
+        stack.push(receiver);
+
+        (stack, handle)
     }
 }
 
-/// Convert our Structured type to serde_json::Value
-fn structured_to_json_value(structured: &Structured) -> Option<serde_json::Value> {
-    match structured {
-        Structured::Null => Some(serde_json::Value::Null),
-        Structured::Bool(b) => Some(serde_json::Value::Bool(*b)),
-        Structured::SignedInt(i) => serde_json::Number::from_f64(*i as f64)
-            .map(serde_json::Value::Number),
-        Structured::UnsignedInt(u) => serde_json::Number::from_f64(*u as f64)
-            .map(serde_json::Value::Number),
-        Structured::Float(f) => serde_json::Number::from_f64(*f)
-            .map(serde_json::Value::Number),
-        Structured::TextString(s) => Some(serde_json::Value::String(s.clone())),
-        Structured::BinaryString(b) => {
-            // Convert binary to base64 string for JSON
-            Some(serde_json::Value::String(
-                String::from_utf8_lossy(b).to_string(),
-            ))
-        }
-        Structured::Array(arr) => {
-            let mut result = Vec::new();
-            for item in arr {
-                if let Some(value) = structured_to_json_value(item) {
-                    result.push(value);
-                } else {
-                    return None;
-                }
-            }
-            Some(serde_json::Value::Array(result))
-        }
-        Structured::TextMap(map) => {
-            let mut result = serde_json::Map::new();
-            for (key, value) in map {
-                if let Some(json_value) = structured_to_json_value(value) {
-                    result.insert(key.clone(), json_value);
-                } else {
-                    return None;
-                }
-            }
-            Some(serde_json::Value::Object(result))
-        }
-        Structured::BinaryMap(_) => {
-            // Can't represent binary-keyed maps in JSON
-            None
-        }
-    }
-}
 
-// MARK: JEB-Specific Encoding Nodes
-
-/// Encodes data using Z85 encoding
-pub struct EncodeZ85Node;
-
-impl Node for EncodeZ85Node {
-    fn name(&self) -> &str {
-        "encode-z85"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut output = Vec::new();
-
-        for item in &inputs[0] {
-            let bytes = match item {
-                StreamItem::Bytes(b) => b,
-                StreamItem::Text(s) => s.as_bytes(),
-                StreamItem::Structured(_) => continue,
-            };
-
-            let encoded = crate::encode_z85(bytes);
-            output.push(StreamItem::Bytes(encoded));
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-/// Encodes data using JEB85 encoding
-pub struct EncodeJeb85Node;
-
-impl Node for EncodeJeb85Node {
-    fn name(&self) -> &str {
-        "encode-jeb85"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut output = Vec::new();
-
-        for item in &inputs[0] {
-            let bytes = match item {
-                StreamItem::Bytes(b) => b,
-                StreamItem::Text(s) => s.as_bytes(),
-                StreamItem::Structured(_) => continue,
-            };
-
-            let encoded = crate::encode_jeb85(bytes);
-            output.push(StreamItem::Bytes(encoded));
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-// MARK: Additional Utility Nodes
-
-/// Reads the current executable
-pub struct SelfNode;
-
-impl Node for SelfNode {
-    fn name(&self) -> &str {
-        "self"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (0, Some(0))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        _inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        let own_path = std::env::current_exe()?;
-        let data = std::fs::read(own_path)?;
-
-        Ok(ExecutionResult {
-            outputs: vec![vec![StreamItem::Bytes(data)]],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-/// Keeps only the first item
-pub struct FirstNode;
-
-impl Node for FirstNode {
-    fn name(&self) -> &str {
-        "first"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let output = inputs[0].iter().take(1).cloned().collect();
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-/// Keeps only the last item
-pub struct LastNode;
-
-impl Node for LastNode {
-    fn name(&self) -> &str {
-        "last"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let output = if let Some(last) = inputs[0].last() {
-            vec![last.clone()]
-        } else {
-            Vec::new()
-        };
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-/// Keeps first N items
-pub struct FirstNNode {
-    n: usize,
-}
-
-impl FirstNNode {
-    pub fn new(n: usize) -> Self {
-        Self { n }
-    }
-}
-
-impl Node for FirstNNode {
-    fn name(&self) -> &str {
-        "first-n"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let output = inputs[0].iter().take(self.n).cloned().collect();
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-/// Keeps last N items
-pub struct LastNNode {
-    n: usize,
-}
-
-impl LastNNode {
-    pub fn new(n: usize) -> Self {
-        Self { n }
-    }
-}
-
-impl Node for LastNNode {
-    fn name(&self) -> &str {
-        "last-n"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let len = inputs[0].len();
-        let skip = if len > self.n { len - self.n } else { 0 };
-        let output = inputs[0].iter().skip(skip).cloned().collect();
-
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
-}
-
-/// Collapses whitespace
-pub struct CollapseNode;
-
-impl Node for CollapseNode {
-    fn name(&self) -> &str {
-        "collapse"
-    }
-
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
-
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut output = Vec::new();
-
-        for item in &inputs[0] {
-            let bytes = match item {
-                StreamItem::Bytes(b) => b.clone(),
-                StreamItem::Text(s) => s.as_bytes().to_vec(),
-                StreamItem::Structured(_) => continue,
-            };
-
-            let mut result = Vec::new();
-            let mut in_whitespace = false;
-
-            for &byte in &bytes {
-                if byte.is_ascii_whitespace() {
-                    in_whitespace = true;
-                } else {
-                    if in_whitespace {
-                        result.push(b' ');
-                        in_whitespace = false;
+#[derive(Clone, Copy, Debug)]
+struct Stdout;
+impl NodeDef for Stdout {
+    const NAME: &'static str = "stdout";
+
+    fn spawn(&self, mut stack: Vec<Receiver>) -> (Vec<Receiver>, Task) {
+        let mut receiver = stack.pop().expect("stdout node must receive an input");
+        let mut stdout = tokio::io::stdout();
+
+        let handle = tokio::spawn(async move {
+            while let Some(value) = receiver.next().await {
+                match value {
+                    Item::Bytes(bytes) => {
+                        stdout.write_all(&bytes).await?;
                     }
-                    result.push(byte);
+                    Item::Text(text) => {
+                        stdout.write_all(text.as_bytes()).await?;
+                    }
+                    Item::Value(_) => {
+                        unimplemented!("stdout does not support Value items");
+                    }
                 }
             }
 
-            output.push(StreamItem::Bytes(result));
-        }
+            Ok(())
+        });
 
-        Ok(ExecutionResult {
-            outputs: vec![output],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
+        (stack, handle)
     }
 }
 
-/// Joins items with spaces
-pub struct JoinSpaceNode;
 
-impl Node for JoinSpaceNode {
-    fn name(&self) -> &str {
-        "join-space"
-    }
+#[derive(Clone, Copy, Debug)]
+struct Stderr;
+impl NodeDef for Stderr {
+    const NAME: &'static str = "stderr";
 
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
-    }
+    fn spawn(&self, mut stack: Vec<Receiver>) -> (Vec<Receiver>, Task) {
+        let mut receiver = stack.pop().expect("stderr node must receive an input");
+        let mut stderr = tokio::io::stderr();
 
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut result = Vec::new();
-
-        for (idx, item) in inputs[0].iter().enumerate() {
-            if idx > 0 {
-                result.push(b' ');
+        let handle = tokio::spawn(async move {
+            while let Some(value) = receiver.next().await {
+                match value {
+                    Item::Bytes(bytes) => {
+                        stderr.write_all(&bytes).await?;
+                    }
+                    Item::Text(text) => {
+                        stderr.write_all(text.as_bytes()).await?;
+                    }
+                    Item::Value(_) => {
+                        unimplemented!("stderr does not support Value items");
+                    }
+                }
             }
 
-            match item {
-                StreamItem::Bytes(b) => result.extend_from_slice(b),
-                StreamItem::Text(s) => result.extend_from_slice(s.as_bytes()),
-                StreamItem::Structured(_) => {}
-            }
-        }
+            Ok(())
+        });
 
-        Ok(ExecutionResult {
-            outputs: vec![vec![StreamItem::Bytes(result)]],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
+        (stack, handle)
     }
 }
 
-/// Joins all bytes together
-pub struct JoinNode;
 
-impl Node for JoinNode {
-    fn name(&self) -> &str {
-        "join"
+
+// TODO: move or remove
+pub async fn wip_example_pseudo_main() -> Result<(), Panic> {
+    let nodes: Vec<&dyn Node> = vec![&Stdin, &Stdout, &ReadPath("/etc/hosts")];
+
+    let mut stack = vec![];
+    let mut tasks = vec![];
+
+    for node in nodes {
+        let task;
+        (stack, task) = node.spawn(stack);
+        tasks.push(task);
     }
 
-    fn input_arity(&self) -> (usize, Option<usize>) {
-        (1, Some(1))
+    assert!(stack.is_empty());
+
+    let mut complete_tasks = futures::stream::FuturesUnordered::from_iter(tasks);
+
+    while let Some(result) = complete_tasks.next().await {
+        result??;
     }
 
-    fn output_count(&self) -> usize {
-        1
-    }
-
-    fn execute(
-        &self,
-        inputs: Vec<Stream>,
-        _node_index: usize,
-    ) -> Result<ExecutionResult, NodeError> {
-        if inputs.len() != 1 {
-            return Err(NodeError::InvalidInputCount {
-                expected: "1".to_string(),
-                got: inputs.len(),
-            });
-        }
-
-        let mut result = Vec::new();
-
-        for item in &inputs[0] {
-            match item {
-                StreamItem::Bytes(b) => result.extend_from_slice(b),
-                StreamItem::Text(s) => result.extend_from_slice(s.as_bytes()),
-                StreamItem::Structured(_) => {}
-            }
-        }
-
-        Ok(ExecutionResult {
-            outputs: vec![vec![StreamItem::Bytes(result)]],
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
+    Ok(())
 }

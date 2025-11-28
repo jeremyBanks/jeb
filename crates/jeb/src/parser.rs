@@ -1,7 +1,7 @@
 // Parser for building pipeline DAGs from command-line arguments
 
 use crate::{
-    nodes::*,
+    pipeline_nodes::*,
     pipeline::{Edge, Pipeline},
 };
 
