@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/*", "slop/slop/slop"]
+members = ["crates/*"]
 
 [workspace.package]
 version = "0.0.0-vibes-2025-11-27.7832"

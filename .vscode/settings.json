@@ -74,7 +74,7 @@
   "rust-analyzer.check.command": "clippy",
   "rust-analyzer.rustfmt.overrideCommand": [
     "rustfmt",
-    "+nightly"
+    "+nightly-2025-11-28"
   ],
   "errorLens.statusBarColorsEnabled": true,
   "errorLens.enabledDiagnosticLevels": [
