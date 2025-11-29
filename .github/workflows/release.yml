@@ -26,8 +26,24 @@ jobs:
       - name: Check version
         run: ./scripts/check-version.sh
 
+      - name: Find baseline tag for semver check
+        id: baseline
+        run: |
+          # Find the most recent tag matching semver pattern (N.N.N*)
+          # from commits reachable from trunk
+          BASELINE=$(git tag --merged origin/trunk --sort=-creatordate | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "")
+          if [ -n "$BASELINE" ]; then
+            echo "tag=$BASELINE" >> $GITHUB_OUTPUT
+            echo "Found baseline tag: $BASELINE"
+          else
+            echo "No baseline tag found, skipping semver check"
+          fi
+
       - name: Check semver compatibility
+        if: steps.baseline.outputs.tag != ''
         uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          baseline-rev: ${{ steps.baseline.outputs.tag }}
 
   release:
     runs-on: ubuntu-latest
