@@ -2,10 +2,8 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
-export function add(a: number, b: number): number;
-export class Greeter {
+export class Bytes {
+  private constructor();
   free(): void;
   [Symbol.dispose](): void;
-  constructor(name: string);
-  greet(): string;
 }

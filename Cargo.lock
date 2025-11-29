@@ -214,10 +214,11 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
+ "wasm-bindgen",
 ]
 
 [[package]]
-name = "libjeb"
+name = "jeb-cdylib"
 version = "0.0.0-vibes-2025-11-28.7321"
 dependencies = [
  "jeb",
