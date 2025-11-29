@@ -11,7 +11,7 @@ edition.workspace = true
 include.workspace = true
 
 [features]
-wasm = []
+wasm = ["dep:wasm-bindgen"]
 default = ["fs", "stdio"]
 fs = ["tokio/fs"]
 stdio = ["tokio/io-std"]
@@ -30,7 +30,7 @@ tokio-stream = "0.1"
 tap = "1.0.1"
 tokio = { version = "1.0", features = ["rt", "macros", "sync", "io-util"] }
 tokio-util = { version = "0.7.17", features = ["codec", "io"] }
-wasm-bindgen = "0.2.105"
+wasm-bindgen = { version = "0.2.105", optional = true }
 
 [lib]
 
