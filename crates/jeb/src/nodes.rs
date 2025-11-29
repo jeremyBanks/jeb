@@ -1,12 +1,17 @@
 use std::borrow::Cow;
 
+#[cfg(any(feature = "stdio", feature = "fs"))]
 use tokio::io::AsyncWriteExt;
+#[cfg(any(feature = "stdio", feature = "fs"))]
 use tokio_stream::StreamExt;
+#[cfg(any(feature = "stdio", feature = "fs"))]
 use tokio_util::codec::{BytesCodec, FramedRead};
 
+use crate::model::{Node, Receiver, Task};
+#[cfg(any(feature = "stdio", feature = "fs"))]
 use crate::{
     Panic,
-    model::{Bytes, Item, Node, Receiver, Task, channel},
+    model::{Bytes, Item, channel},
 };
 
 pub trait NodeDef: Node + Send + Sync + 'static {
@@ -26,7 +31,10 @@ impl<T: NodeDef> Node for T {
 }
 
 #[derive(Clone, Copy, Debug)]
+#[cfg(feature = "stdio")]
 struct Stdin;
+
+#[cfg(feature = "stdio")]
 impl NodeDef for Stdin {
     const NAME: &'static str = "stdin";
 
@@ -54,8 +62,10 @@ impl NodeDef for Stdin {
 }
 
 #[derive(Clone, Copy, Debug)]
+#[cfg(feature = "fs")]
 struct ReadPath<T: AsRef<std::path::Path>>(T);
 
+#[cfg(feature = "fs")]
 impl<T: AsRef<std::path::Path> + Send + Sync + 'static> NodeDef for ReadPath<T> {
     const NAME: &'static str = "read:";
 
@@ -88,9 +98,11 @@ impl<T: AsRef<std::path::Path> + Send + Sync + 'static> NodeDef for ReadPath<T> 
     }
 }
 
-
 #[derive(Clone, Copy, Debug)]
+#[cfg(feature = "stdio")]
 struct Stdout;
+
+#[cfg(feature = "stdio")]
 impl NodeDef for Stdout {
     const NAME: &'static str = "stdout";
 
@@ -120,9 +132,10 @@ impl NodeDef for Stdout {
     }
 }
 
-
 #[derive(Clone, Copy, Debug)]
+#[cfg(feature = "stdio")]
 struct Stderr;
+#[cfg(feature = "stdio")]
 impl NodeDef for Stderr {
     const NAME: &'static str = "stderr";
 
@@ -152,11 +165,17 @@ impl NodeDef for Stderr {
     }
 }
 
-
-
 // TODO: move or remove
+#[cfg(any(feature = "stdio", feature = "fs"))]
 pub async fn wip_example_pseudo_main() -> Result<(), Panic> {
-    let nodes: Vec<&dyn Node> = vec![&Stdin, &Stdout, &ReadPath("/etc/hosts")];
+    let nodes: Vec<&dyn Node> = vec![
+        #[cfg(feature = "stdio")]
+        &Stdin,
+        #[cfg(feature = "stdio")]
+        &Stdout,
+        #[cfg(feature = "fs")]
+        &ReadPath("/etc/hosts"),
+    ];
 
     let mut stack = vec![];
     let mut tasks = vec![];
@@ -171,7 +190,7 @@ pub async fn wip_example_pseudo_main() -> Result<(), Panic> {
 
     let mut complete_tasks = futures::stream::FuturesUnordered::from_iter(tasks);
 
-    while let Some(result) = complete_tasks.next().await {
+    while let Some(result) = tokio_stream::StreamExt::next(&mut complete_tasks).await {
         result??;
     }
 

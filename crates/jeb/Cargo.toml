@@ -1,37 +1,36 @@
 [package]
 name = "jeb"
 publish = true
-repository = "https://github.com/jeremyBanks/jeb"
 description = "experimenting with machine- and human-sympathetic encoding"
 keywords = ["encoding"]
 categories = ["encoding"]
+repository.workspace = true
 version.workspace = true
 license.workspace = true
 edition.workspace = true
 include.workspace = true
 
+[features]
+wasm = ["dep:wasm-bindgen"]
+default = ["fs", "stdio"]
+fs = ["tokio/fs"]
+stdio = ["tokio/io-std"]
+
 [dependencies]
 derive_more = { version = "2.0.1", features = ["full"] }
 dotenv = "0.15.0"
-futures.workspace = true
 getset = "0.1.6"
 indexmap = { version = "2.0", features = ["serde"] }
 owo-colors = "4.2.3"
-
 regex = "1.12.2"
-serde.workspace = true
-serde_json.workspace = true
+futures = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio-stream = "0.1"
 tap = "1.0.1"
-tokio = { version = "1.0", features = [
-    "rt",
-    "macros",
-    "sync",
-    "fs",
-    "io-std",
-    "io-util",
-] }
-tokio-stream.workspace = true
+tokio = { version = "1.0", features = ["rt", "macros", "sync", "io-util"] }
 tokio-util = { version = "0.7.17", features = ["codec", "io"] }
+wasm-bindgen = { version = "0.2.105", optional = true }
 
 [lib]
 

@@ -92,8 +92,12 @@
   },
   "cSpell.words": [
     "backticked",
+    "bindgen",
     "bstr",
+    "cdylib",
+    "clippy",
     "codegen",
+    "debuginfo",
     "delegators",
     "denoland",
     "DONOTMERGE",
@@ -101,12 +105,15 @@
     "DONOTSUBMIT",
     "dotenv",
     "errorlens",
+    "externref",
+    "externrefs",
     "getset",
     "HISTCONTROL",
     "HISTFILESIZE",
     "HISTSIZE",
     "ignoreboth",
     "indexmap",
+    "libjeb",
     "mergeoptions",
     "peekable",
     "redirections",
@@ -124,7 +131,9 @@
     "USERPROFILE",
     "vadimcn",
     "veuo",
-    "vexu"
+    "vexu",
+    "wasmbuild",
+    "wbindgen"
   ],
   "editor.detectIndentation": false,
   "editor.formatOnSave": true,
@@ -144,5 +153,6 @@
   "files.autoSaveDelay": 32768,
   "files.trimTrailingWhitespace": true,
   "git.autofetch": true,
+  "rust-analyzer.cargo.features": "all",
   "rust-analyzer.check.command": "clippy"
 }

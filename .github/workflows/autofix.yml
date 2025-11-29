@@ -19,12 +19,13 @@ jobs:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.ref }}
       - uses: denoland/setup-deno@v2
-      - run: deno fmt
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: deno fmt
       - run: cargo fix --allow-dirty
       - run: cargo clippy --fix --allow-dirty
       - run: cargo fmt
-      - run: crates/jeb/examples/all.sh
+      - run: deno task wasmbuild
+      - run: examples/all.sh
       - uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: autofix
