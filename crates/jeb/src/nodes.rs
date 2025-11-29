@@ -188,7 +188,7 @@ pub async fn wip_example_pseudo_main() -> Result<(), Panic> {
 
     let mut complete_tasks = futures::stream::FuturesUnordered::from_iter(tasks);
 
-    while let Some(result) = futures::StreamExt::next(&mut complete_tasks).await {
+    while let Some(result) = tokio_stream::StreamExt::next(&mut complete_tasks).await {
         result??;
     }
 
