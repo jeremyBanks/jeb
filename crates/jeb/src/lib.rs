@@ -33,11 +33,7 @@ pub mod const_checked;
 pub mod errors;
 pub mod model;
 pub mod nodes;
-pub mod parser;
-pub mod pipeline;
-pub mod pipeline_nodes;
 pub mod shell_tokenizer;
-pub mod visualize;
 
 
 pub use crate::{byte_ranges::*, const_checked::*, errors::*};
