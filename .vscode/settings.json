@@ -153,5 +153,6 @@
   "files.autoSaveDelay": 32768,
   "files.trimTrailingWhitespace": true,
   "git.autofetch": true,
+  "rust-analyzer.cargo.features": "all",
   "rust-analyzer.check.command": "clippy"
 }

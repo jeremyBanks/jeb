@@ -11,6 +11,7 @@ edition.workspace = true
 include.workspace = true
 
 [features]
+default = ["fs", "stdio"]
 fs = ["tokio/fs"]
 stdio = ["tokio/io-std"]
 

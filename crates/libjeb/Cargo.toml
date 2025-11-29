@@ -15,6 +15,7 @@ name = "jeb"
 crate-type = ["cdylib"]
 
 [features]
+default = ["wasm", "stdio", "fs"]
 wasm = []
 stdio = ["jeb/stdio"]
 fs = ["jeb/fs"]
