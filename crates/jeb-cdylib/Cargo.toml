@@ -17,10 +17,12 @@ doc = false
 
 [features]
 default = ["wasm", "stdio", "fs"]
-wasm = []
+wasm = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys", "jeb/wasm"]
 stdio = ["jeb/stdio"]
 fs = ["jeb/fs"]
 
 [dependencies]
-wasm-bindgen = { version = "*" }
+wasm-bindgen = { version = "*", optional = true }
 jeb = { path = "../jeb", default-features = false }
+js-sys = { version = "0.3.82", optional = true }
+web-sys = { version = "0.3.82", optional = true }
