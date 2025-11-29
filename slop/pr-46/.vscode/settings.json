@@ -1,0 +1,85 @@
+{
+  "[json][jsonc]": {
+    "editor.defaultFormatter": "denoland.vscode-deno",
+    "editor.tabSize": 2
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "[plaintext]": {
+    "editor.rulers": [
+      5,
+      10,
+      15,
+      20,
+      25,
+      30,
+      35,
+      40,
+      45,
+      50,
+      55,
+      60,
+      65,
+      70,
+      75,
+      80,
+      85,
+      90
+    ]
+  },
+  "cSpell.words": [
+    "backticked",
+    "bstr",
+    "codegen",
+    "delegators",
+    "denoland",
+    "dotenv",
+    "errorlens",
+    "getset",
+    "HISTCONTROL",
+    "HISTFILESIZE",
+    "HISTSIZE",
+    "ignoreboth",
+    "indexmap",
+    "peekable",
+    "redirections",
+    "repr",
+    "reqwest",
+    "rustc",
+    "RUSTFLAGS",
+    "rustup",
+    "serde",
+    "shellcheck",
+    "subshell",
+    "timonwong",
+    "usernamehw",
+    "USERPROFILE",
+    "vadimcn",
+    "veuo",
+    "vexu"
+  ],
+  "editor.detectIndentation": false,
+  "editor.formatOnSave": true,
+  "editor.indentSize": "tabSize",
+  "editor.renderWhitespace": "boundary",
+  "editor.rulers": [
+    80,
+    100,
+    120
+  ],
+  "editor.wrappingIndent": "indent",
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 32768,
+  "files.trimTrailingWhitespace": true,
+  "git.autofetch": true,
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.rustfmt.overrideCommand": [
+    "rustfmt",
+    "+nightly-2025-11-28"
+  ],
+  "errorLens.statusBarColorsEnabled": true,
+  "errorLens.enabledDiagnosticLevels": [
+    "error"
+  ]
+}

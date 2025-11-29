@@ -1,0 +1,45 @@
+name: Tests and Native Build
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main, master, trunk]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - run: ./scripts/test.sh
+
+      - run: cargo publish --dry-run
+
+  clippy:
+    name: Clippy (Lints)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - run: ./scripts/clippy.sh
+
+  fmt:
+    name: Rustfmt (Format Check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Check formatting
+        run: ./scripts/fmt.sh
