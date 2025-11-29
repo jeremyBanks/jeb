@@ -1,0 +1,39 @@
+[package]
+name = "slop"
+version.workspace = true
+publish = false
+license.workspace = true
+edition.workspace = true
+exclude = ["*.md", "!README.md", "docs/", "examples/"]
+
+[lib]
+name = "slop"
+path = "src/lib.rs"
+
+[[bin]]
+name = "slop"
+path = "src/main.rs"
+
+[dependencies]
+json-encoded-binary = { path = "../jeb", package = "jeb-jeb" }
+serde.workspace = true
+serde_json.workspace = true
+indexmap.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+futures.workspace = true
+async-stream.workspace = true
+clap.workspace = true
+color-eyre.workspace = true
+rusqlite.workspace = true
+nom.workspace = true
+nom-supreme.workspace = true
+nom_locate.workspace = true
+cgp.workspace = true
+cgp-serde.workspace = true
+cgp-serde-json.workspace = true
+
+[dev-dependencies]
+tokio-test.workspace = true
