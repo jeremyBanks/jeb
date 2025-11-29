@@ -1,0 +1,24 @@
+[package]
+name = "libjeb"
+publish = true
+repository = "https://github.com/jeremyBanks/jeb"
+description = "jeb as a wasm-bindgen cdylib"
+keywords = []
+categories = []
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+include.workspace = true
+
+[lib]
+name = "jeb"
+crate-type = ["cdylib"]
+
+[features]
+wasm = []
+stdio = ["jeb/stdio"]
+fs = ["jeb/fs"]
+
+[dependencies]
+wasm-bindgen = { version = "=0.2.105" }
+jeb = { path = "../jeb", default-features = false }

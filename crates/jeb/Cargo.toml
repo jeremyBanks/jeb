@@ -10,27 +10,23 @@ license.workspace = true
 edition.workspace = true
 include.workspace = true
 
+[features]
+fs = ["tokio/fs"]
+stdio = ["tokio/io-std"]
+
 [dependencies]
 derive_more = { version = "2.0.1", features = ["full"] }
 dotenv = "0.15.0"
-futures.workspace = true
 getset = "0.1.6"
 indexmap = { version = "2.0", features = ["serde"] }
 owo-colors = "4.2.3"
-
 regex = "1.12.2"
-serde.workspace = true
-serde_json.workspace = true
+futures = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio-stream = "0.1"
 tap = "1.0.1"
-tokio = { version = "1.0", features = [
-    "rt",
-    "macros",
-    "sync",
-    "fs",
-    "io-std",
-    "io-util",
-] }
-tokio-stream.workspace = true
+tokio = { version = "1.0", features = ["rt", "macros", "sync", "io-util"] }
 tokio-util = { version = "0.7.17", features = ["codec", "io"] }
 
 [lib]
