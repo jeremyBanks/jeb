@@ -2,11 +2,15 @@ use core::hash::Hash;
 
 use derive_more::{AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut, Into, IntoIterator};
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::model::text::Text;
 
-#[wasm_bindgen]
+#[cfg(feature = "wasm")]
+mod wasm {
+  pub use wasm_bindgen::prelude::wasm_bindgen;
+}
+
+#[cfg_attr(feature = "wasm", wasm::wasm_bindgen)]
 #[derive(
     AsMut,
     AsRef,
