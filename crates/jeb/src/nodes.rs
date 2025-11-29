@@ -129,7 +129,6 @@ impl NodeDef for Stdout {
 
 #[derive(Clone, Copy, Debug)]
 #[cfg(feature = "stdio")]
-
 struct Stderr;
 #[cfg(feature = "stdio")]
 impl NodeDef for Stderr {
