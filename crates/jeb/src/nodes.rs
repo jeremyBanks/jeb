@@ -8,9 +8,11 @@ use tokio_stream::StreamExt;
 use tokio_util::codec::{BytesCodec, FramedRead};
 
 use crate::model::{Node, Receiver, Task};
-
 #[cfg(any(feature = "stdio", feature = "fs"))]
-use crate::{Panic, model::{Bytes, Item, channel}};
+use crate::{
+    Panic,
+    model::{Bytes, Item, channel},
+};
 
 pub trait NodeDef: Node + Send + Sync + 'static {
     const NAME: &'static str;
