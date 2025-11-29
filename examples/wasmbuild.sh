@@ -8,7 +8,7 @@ cargo run "${cargo_flags[@]}" --bin jeb -- "$@" >> "$path"; exit; }; set -x
 
 deno task wasmbuild
 
-jeb ../crates/jeb-cdylib/wasmbuild/jeb.wasm encode-jeb85 split-80 join-lines stdout
+jeb ../crates/jeb-wasm/build/jeb.wasm encode-jeb85 split-80 join-lines stdout
 JEB
 
 
