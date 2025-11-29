@@ -1,6 +1,6 @@
 [package]
 name = "jeb-wasm"
-publish = true
+publish = false
 repository = "https://github.com/jeremyBanks/jeb"
 description = "jeb as a WASM cdylib"
 keywords = []
