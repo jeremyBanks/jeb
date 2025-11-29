@@ -41,6 +41,9 @@ jobs:
       - run: cargo fmt
       - run: crates/jeb/examples/all.sh
       - uses: stefanzweifel/git-auto-commit-action@v7
+        env:
+          COMMIT_MESSAGE: "autofix ${{ steps.commit-info.outputs.message }}"
+          COMMIT_AUTHOR: ${{ steps.commit-info.outputs.author }}
         with:
-          commit_message: "autofix ${{ steps.commit-info.outputs.message }}"
-          commit_author: ${{ steps.commit-info.outputs.author }}
+          commit_message: ${{ env.COMMIT_MESSAGE }}
+          commit_author: ${{ env.COMMIT_AUTHOR }}
