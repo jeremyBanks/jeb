@@ -1,13 +1,10 @@
-#!/bin/sh
+#!/bin/bash
 set -vexu
 
-git config --global push.autoSetupRemote true
+git config --global core.mergeoptions "--no-edit"
 git config --global pull.default current
 git config --global pull.rebase false
-
-curl -fsSL https://claude.ai/install.sh | bash
+git config --global push.autoSetupRemote true
 
 rustup update
-rustup target add wasm32-unknown-unknown
-rustup toolchain install nightly
-
+rustup show

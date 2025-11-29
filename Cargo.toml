@@ -1,21 +1,13 @@
 [workspace]
 resolver = "2"
-members = ["crates/jeb"]
+members = ["crates/*"]
 
 [workspace.package]
-version = "0.0.0-vibes-2025-11-25.7818"
+version = "0.0.0-vibes-2025-11-28.7321"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 publish = false
-exclude = [
-    "*.md",
-    "!README.md",
-    "!LICENSE-*",
-    "*.txt",
-    "*.sh",
-    "*.yaml",
-    "*.json",
-]
+include = ["**/*.rs", "**/*.toml", "**/*.lock", "**/*.md", "**/LICENSE*", "!.*"]
 
 [profile.small]
 inherits = "release"
@@ -27,35 +19,7 @@ split-debuginfo = "packed"
 panic = "abort"
 
 [workspace.dependencies]
-jeb = { path = "crates/jeb" }
-async-stream = "0.3"
-cgp = "0.6.0"
-cgp-error-anyhow = "0.6.0"
-cgp-serde = "0.1.0"
-cgp-serde-json = { git = "https://github.com/contextgeneric/cgp-serde.git", tag = "v0.1.0" }
-clap = { version = "4.5", features = ["derive"] }
-color-eyre = "0.6"
-facet = "0.31.3"
-facet-deserialize = "0.31.1"
-facet-json = "0.31.0"
-facet-pretty = "0.31.0"
 futures = "0.3"
-indexmap = { version = "2.0", features = ["serde"] }
-nom = "7.1"
-nom_locate = "4.2"
-nom-supreme = "0.8"
-rusqlite = { version = "0.32", features = ["bundled", "functions"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1.0", features = [
-    "fs",
-    "io-util",
-    "io-std",
-    "rt-multi-thread",
-    "macros",
-] }
 tokio-stream = "0.1"
-tokio-test = "0.4"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-winnow = "0.7.13"

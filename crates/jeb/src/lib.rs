@@ -7,7 +7,6 @@
     clippy::arbitrary_source_item_ordering
 )]
 #![expect(
-    unused,
     missing_docs,
     clippy::missing_errors_doc,
     clippy::redundant_else,
@@ -20,7 +19,12 @@
     clippy::arbitrary_source_item_ordering,
     clippy::missing_panics_doc
 )]
-#![allow(clippy::unnecessary_wraps)]
+#![allow(
+    clippy::unnecessary_wraps,
+    clippy::use_self,
+    mismatched_lifetime_syntaxes,
+    dead_code
+)]
 #![doc = include_str!("../README.md")]
 // cSpell:ignoreRegExp b"(\\?.){5}"
 
@@ -29,11 +33,8 @@ pub mod const_checked;
 pub mod errors;
 pub mod model;
 pub mod nodes;
-pub mod parser;
-pub mod pipeline;
-pub mod visualize;
+pub mod shell_tokenizer;
 
-use core::fmt::Debug;
 
 pub use crate::{byte_ranges::*, const_checked::*, errors::*};
 
@@ -91,7 +92,7 @@ pub const TARGET_RAW_BLOCKS: usize = usize_eq(16_384, div_exact(TARGET_RAW_BYTES
 pub struct Encoder;
 impl Encoder {
     #[must_use]
-    pub fn encode_bytes(&self, bytes: &[u8]) -> Vec<u8> {
+    pub fn encode_bytes(&self, _bytes: &[u8]) -> Vec<u8> {
         unimplemented!()
     }
 }
@@ -100,7 +101,7 @@ impl Encoder {
 pub struct Decoder;
 
 impl Decoder {
-    pub fn decode_bytes(&self, encoded: &[u8]) -> Result<Vec<u8>, Panic> {
+    pub fn decode_bytes(&self, _encoded: &[u8]) -> Result<Vec<u8>, Panic> {
         unimplemented!()
     }
 }
@@ -161,7 +162,7 @@ pub const fn decode_z85_block(
         let digit = encoded[encoded_index];
         let digit_value = Z85_LUT[digit as usize] as usize;
 
-        if (digit_value >= BASE_85) {
+        if digit_value >= BASE_85 {
             return Err("decode_z85_block failed: invalid digit");
         }
 
@@ -349,7 +350,7 @@ pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
         if !raw_buffer.is_empty() {
             let raw_block_count = raw_buffer.len() / BLOCK_BYTES_4;
 
-            if (raw_block_count == 1) {
+            if raw_block_count == 1 {
                 output.extend([RAW_PREFIX]);
                 output.extend(&raw_buffer);
             } else {
@@ -405,7 +406,7 @@ pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
     }
 
     if !raw_buffer.is_empty() {
-        if (raw_buffer.len() <= BLOCK_BYTES_4) {
+        if raw_buffer.len() <= BLOCK_BYTES_4 {
             output.push(RAW_PREFIX);
         } else {
             output.extend([RAW_PREFIX; 2]);
