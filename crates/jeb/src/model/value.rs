@@ -1,8 +1,9 @@
-use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use indexmap::IndexMap;
-use serde::{Deserialize, Serialize};
-
-use super::{bytes::Bytes, float::Float, text::Text};
+use {
+    super::{bytes::Bytes, float::Float, text::Text},
+    derive_more::{From, IsVariant, TryUnwrap, Unwrap},
+    indexmap::IndexMap,
+    serde::{Deserialize, Serialize},
+};
 
 
 

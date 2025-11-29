@@ -1,7 +1,8 @@
-use core::hash::Hash;
-
-use derive_more::{AsRef, Deref, Display, Into};
-use serde::{Deserialize, Serialize};
+use {
+    core::hash::Hash,
+    derive_more::{AsRef, Deref, Display, Into},
+    serde::{Deserialize, Serialize},
+};
 
 
 

@@ -1,16 +1,54 @@
+name: Release
 permissions:
-  contents: write
+  contents: write # Required for creating tags and releases
 
 on:
   push:
-    branches:
-      - trunk
+    branches: [trunk]
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  release:
+  # Run all CI checks first
+  test:
+    name: Run Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - run: ./scripts/test.sh
+
+  clippy:
+    name: Clippy (Lints)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Run clippy
+        run: ./scripts/clippy.sh
+
+  fmt:
+    name: Rustfmt (Format Check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Check formatting
+        run: ./scripts/fmt.sh
+
+  create-release:
+    name: Create Release
+    needs: [test, clippy, fmt]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch all history for tags
 
