@@ -25,7 +25,7 @@ jobs:
       - run: cargo clippy --fix --allow-dirty
       - run: cargo fmt
       - run: deno task wasmbuild
-      - run: crates/jeb/examples/all.sh
+      - run: examples/all.sh
       - uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: autofix
