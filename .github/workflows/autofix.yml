@@ -16,13 +16,19 @@ jobs:
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.ref }}
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ env.GH_TOKEN }}
       - id: commit-info
         run: |
           MESSAGE=$(git log -1 --pretty=%s)
           AUTHOR=$(git log -1 --pretty="%an <%ae>")
-          echo "message=$MESSAGE" >> $GITHUB_OUTPUT
-          echo "author=$AUTHOR" >> $GITHUB_OUTPUT
+          {
+            echo "message<<EOF"
+            echo "$MESSAGE"
+            echo "EOF"
+            echo "author<<EOF"
+            echo "$AUTHOR"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
           if [[ "$MESSAGE" == "autofix autofix autofix"* ]]; then
             echo "ERROR: Autofix has already run 3 times in a row, aborting to prevent infinite loop"
             exit 1
@@ -36,5 +42,5 @@ jobs:
       - run: crates/jeb/examples/all.sh
       - uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          commit_message: autofix ${{ steps.commit-info.outputs.message }}
+          commit_message: "autofix ${{ steps.commit-info.outputs.message }}"
           commit_author: ${{ steps.commit-info.outputs.author }}
