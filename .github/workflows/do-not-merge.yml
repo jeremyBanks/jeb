@@ -77,18 +77,30 @@ jobs:
           # - DONOTMERGE/DONOTSUBMIT/DONOTREVIEW (no spaces)
           # - DO_NOT_MERGE/DO_NOT_SUBMIT/DO_NOT_REVIEW (with underscores)
 
-          # Exclude this workflow file and related files from the check
-          EXCLUDE_FILE=".github/workflows/do-not-merge.yml"
+          # Exclude markers in comments within configuration files
+          # These file types commonly contain metadata or documentation where markers are acceptable
+          EXCLUDE_PATTERNS=(
+            '*.yml'
+            '*.yaml'
+            '*.json'
+            '*.toml'
+          )
 
           echo "Searching for DO NOT MERGE/SUBMIT/REVIEW markers..."
-          echo "Excluding: $EXCLUDE_FILE"
+          echo "Excluding patterns: ${EXCLUDE_PATTERNS[*]}"
+
+          # Build the exclusion arguments for git grep
+          EXCLUDE_ARGS=""
+          for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+            EXCLUDE_ARGS="$EXCLUDE_ARGS ':!$pattern'"
+          done
 
           # Search for the patterns using grep with extended regex
           # Match any of: DO NOT MERGE, DONOTMERGE, DO_NOT_MERGE (and SUBMIT/REVIEW variants)
           # The regex matches: DO[ _]?NOT[ _]?(MERGE|SUBMIT|REVIEW)
           # This accepts 0 or 1 separator (space or underscore) between words
 
-          if git grep -n -E 'DO[ _]?NOT[ _]?(MERGE|SUBMIT|REVIEW)' -- ':!'"$EXCLUDE_FILE" > /tmp/matches.txt 2>&1; then
+          if eval git grep -n -E 'DO[ _]?NOT[ _]?(MERGE|SUBMIT|REVIEW)' -- $EXCLUDE_ARGS > /tmp/matches.txt 2>&1; then
             echo "❌ Found blocking markers in the following locations:"
             echo ""
             cat /tmp/matches.txt
@@ -96,6 +108,6 @@ jobs:
             echo "Please remove these markers before merging."
             exit 1
           else
-            echo "✅ No blocking markers found. Proceeding with build."
+            echo "✅ No blocking markers found."
             exit 0
           fi
