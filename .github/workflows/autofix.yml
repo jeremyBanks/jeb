@@ -6,18 +6,15 @@ on:
 jobs:
   autofix:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft != true
     permissions:
       contents: write
     steps:
-      - id: last-commit
-        run: |
-          echo "message=$(git log -1 --pretty=%s)" >> $GITHUB_OUTPUT
-          echo "author=$(git log -1 --pretty=\"%an <%ae>\")" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v5
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GH_TOKEN }}
       - uses: denoland/setup-deno@v2
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: deno fmt
@@ -26,7 +23,23 @@ jobs:
       - run: cargo fmt
       - run: deno task build-wasm
       - run: examples/all.sh
+
+      - id: last-commit
+        run: |
+          message="$(git log -1 --pretty=%s)"
+
+          if [[ "$message" == "autofix autofix autofix"* ]]; then
+            echo "ERROR: Autofix has already run 3 times in a row, aborting to prevent infinite loop"
+            exit 1
+          fi
+
+          echo "message<<AUTOFIX_EOF" >> "$GITHUB_OUTPUT"
+          echo "$message" >> "$GITHUB_OUTPUT"
+          echo "AUTOFIX_EOF" >> "$GITHUB_OUTPUT"
+
+          echo "author="$(git log -1 --pretty="%an <%ae>")" >> "$GITHUB_OUTPUT"
+
       - uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          commit_message: autofix
+          commit_message: ${{ steps.last-commit.outputs.message }}
           commit_author: ${{ steps.last-commit.outputs.author }}
