@@ -10,6 +10,7 @@
   },
   "tasks": {
     "wasmbuild": "deno run --allow-all wasmbuild",
-    "build-wasm": "rm -rf build/wasm; mkdir -p build/wasm; deno task wasmbuild --project jeb-wasm --out build/wasm; deno task wasmbuild --project jeb-wasm --out build/wasm --inline"
+    "build-wasm": "rm -rf build/wasm; mkdir -p build/wasm; deno task wasmbuild --project jeb-wasm --out build/wasm; deno task wasmbuild --project jeb-wasm --out build/wasm --inline",
+    "build-wasm-docs": "deno doc --output=./target/doc/jeb-wasm --html ./build/wasm/jeb.js"
   }
 }
