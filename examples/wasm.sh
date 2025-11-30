@@ -6,9 +6,9 @@ set -euo pipefail; path="$(realpath "$0")";cd "$(dirname "$path")";cargo_flags=(
 cargo run "${cargo_flags[@]}" --bin jeb -- "$@" >> "$path"; exit; }; set -x
 
 
-deno task wasmbuild
+deno task build-wasm
 
-jeb ../crates/jeb-wasm/build/jeb.wasm encode-jeb85 split-80 join-lines stdout
+jeb ../build/wasm/jeb.wasm encode-jeb85 split-80 join-lines stdout
 JEB
 
 

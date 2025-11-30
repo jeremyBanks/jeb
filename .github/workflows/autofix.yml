@@ -24,7 +24,7 @@ jobs:
       - run: cargo fix --allow-dirty
       - run: cargo clippy --fix --allow-dirty
       - run: cargo fmt
-      - run: deno task wasmbuild
+      - run: deno task build-wasm
       - run: examples/all.sh
       - uses: stefanzweifel/git-auto-commit-action@v7
         with:

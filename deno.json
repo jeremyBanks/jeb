@@ -2,7 +2,14 @@
   "fmt": {
     "exclude": ["slop", "target"]
   },
+  "lock": {
+    "frozen": false
+  },
+  "imports": {
+    "wasmbuild": "jsr:@deno/wasmbuild@0.20.0"
+  },
   "tasks": {
-    "wasmbuild": "rm -rf crates/jeb-wasm/build; deno -A jsr:@deno/wasmbuild@0.20.0 --project jeb-wasm --no-default-features --features wasm --out crates/jeb-wasm/build; deno -A jsr:@deno/wasmbuild@0.20.0 --project jeb-wasm --no-default-features --features wasm --out crates/jeb-wasm/build --inline"
+    "wasmbuild": "deno run --allow-all wasmbuild",
+    "build-wasm": "rm -rf build/wasm; mkdir -p build/wasm; deno task wasmbuild --project jeb-wasm --out build/wasm; deno task wasmbuild --project jeb-wasm --out build/wasm --inline"
   }
 }
