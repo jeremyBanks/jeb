@@ -12,11 +12,12 @@ JEB
 
 
 
-||incomplete and incorrect --- # `jeb` JSON Entity Bag? Just Encode Bytes? Joine
-d Escaped Binary? Semitranslucent Binary Encodings? ## License Copyright Jeremy 
-Banks and contributors. Licensed under either of: - Apache License, Version 2.0 
-(<http://www.apache.org/licenses/LICENSE-2.0>) - MIT license (<http://opensource
-.org/licenses/MIT>) at your option. ## Contribution Unless you explicitly state 
-otherwise, any contribution intentionally submitted for inclusion in the work by
- you, as defined in the Apache-2.0 license, shall be dual licensed as above, wit
-hout any additional terms or conditions.
+||Incomplete and incorrect, vague ideas and hallucinations. At least for now. --
+- # `jeb` JSON Entity Bag? Just Encode Bytes? Joined Escaped Binary? Semitranslu
+cent Binary Encodings? ## License Copyright Jeremy Banks and contributors. Licen
+sed under either of: - Apache License, Version 2.0 (<http://www.apache.org/licen
+ses/LICENSE-2.0>) - MIT license (<http://opensource.org/licenses/MIT>) at your o
+ption. ## Contribution Unless you explicitly state otherwise, any contribution i
+ntentionally submitted for inclusion in the work by you, as defined in the Apach
+e-2.0 license, shall be dual licensed as above, without any additional terms or 
+conditions.

@@ -12,13 +12,14 @@ JEB
 
 
 
-4|incomplete and incorrect|...3jnvpeEz?f| `jevQGJI2|JSON Entity Bag?|.3joyF|st E
-1|ncode Bytes?|3joyz3|ined Escaped Binary?|..3joZy||mitranslucent Binary Enc
-|odinxlcoA3l{=r|LicezGxv@3pw-J7|yright Jeremy Banks and contributors.|.....e^.}V
-4|icensed under either of:|...3jnvc||Apache License, Version 2.0 (<http:/
-7|/www.apache.org/licenses/LICENSE-2.0>)|....j$c*<|| MIT license (<http://op
-4|ensource.org/licenses/MIT>)|r6z-r3sO301|your option.|3jn151| Contributionzvc.J
-||nless you explicitly state otherwise, any contribution intention
-1|ally submittewN(cW||or inclusion in the work by you, as defined in t
-5|he Apache-2.0 license, shall be|.ayX)?||dual licensed as above, without 
-6|any additional terms or conditions.|..zGvAq
+||Incomplete and incorrect, vague ideas and hallucinations. At lea
+|st for noz*9/v3n0?Y3jn12|`jebu<Wlk1|SON Entity Bavp}!i3qbCZ1|t Encode BytewPH6y
+3qbkJ2|ned Escaped BinaryA^o>R3r7IM5|itranslucent Binary Encodings?|..B3y0s|## L
+|icenB7CW=8|Copyright Jeremy Banks and contributors.|.......3joEv||censed under
+| either oz!q3q3n0w^||pache License, Version 2.0 (<http://www.apache.o
+4|rg/licenses/LICENSE-2.0>)|..dgdTH||MIT license (<http://opensource.org/
+1|licenses/MIT>j$c*C1|at your optioz/dfm3l{=r1|Contribution|3jo^J||less you exp
+||licitly state otherwise, any contribution intentionally submitte
+wc#{!||r inclusion in the work by you, as defined in the Apache-2.0
+2| license, shall bevR2)S||ual licensed as above, without any additiona
+3|l terms or conditions.|B1N!
