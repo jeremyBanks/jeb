@@ -21,6 +21,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rustflags: ""
       - uses: denoland/setup-deno@v2
       - run: cargo doc --no-deps --all-features
       - run: deno task build-wasm-docs

@@ -14,5 +14,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rustflags: ""
+      - run: cargo build
+      - run: cargo publish --dry-run
+
+  build-warnings:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rustflags: "-D warnings"
       - run: cargo build
       - run: cargo publish --dry-run
