@@ -12,8 +12,8 @@ JEB
 
 
 
-||# `jeb` JSON Entity Bag? Just Encode Bytes? Joined Escaped Binary? vibe-coded 
-clanker slop with Semitranslucent Binary Encodings. ## License Copyright Jeremy 
+||incomplete and incorrect --- # `jeb` JSON Entity Bag? Just Encode Bytes? Joine
+d Escaped Binary? Semitranslucent Binary Encodings? ## License Copyright Jeremy 
 Banks and contributors. Licensed under either of: - Apache License, Version 2.0 
 (<http://www.apache.org/licenses/LICENSE-2.0>) - MIT license (<http://opensource
 .org/licenses/MIT>) at your option. ## Contribution Unless you explicitly state 

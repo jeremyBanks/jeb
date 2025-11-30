@@ -12,13 +12,13 @@ JEB
 
 
 
-|# `jwNY3O3qak)1|N Entity Bag?kmd-&2|ust Encode Bytes?|kmd-&||oined Escaped Bi
-|narykmd:v||ibe-coded clanker slop with Semitranslucent Binary Encod
-|ingse^.}g|# LicensewEn=i7|opyright Jeremy Banks and contributors.|...A=S&u3qtez
-3|ensed under either of:|w&Zna||- Apache License, Version 2.0 (<http://w
-7|ww.apache.org/licenses/LICENSE-2.0>)|......3n0w{||IT license (<http://open
-4|source.org/licenses/MIT>)|..dgcz<1|t your optionzy#n61|## Contributix(v>@3rp$W
-||ess you explicitly state otherwise, any contribution intentional
-1|ly submitted|3tai%|| inclusion in the work by you, as defined in the
-5| Apache-2.0 license, shall be|...wEq%<||al licensed as above, without an
-6|y additional terms or conditions.|....e^.
+4|incomplete and incorrect|...3jnvpeEz?f| `jevQGJI2|JSON Entity Bag?|.3joyF|st E
+1|ncode Bytes?|3joyz3|ined Escaped Binary?|..3joZy||mitranslucent Binary Enc
+|odinxlcoA3l{=r|LicezGxv@3pw-J7|yright Jeremy Banks and contributors.|.....e^.}V
+4|icensed under either of:|...3jnvc||Apache License, Version 2.0 (<http:/
+7|/www.apache.org/licenses/LICENSE-2.0>)|....j$c*<|| MIT license (<http://op
+4|ensource.org/licenses/MIT>)|r6z-r3sO301|your option.|3jn151| Contributionzvc.J
+||nless you explicitly state otherwise, any contribution intention
+1|ally submittewN(cW||or inclusion in the work by you, as defined in t
+5|he Apache-2.0 license, shall be|.ayX)?||dual licensed as above, without 
+6|any additional terms or conditions.|..zGvAq
