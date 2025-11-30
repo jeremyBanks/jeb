@@ -1,4 +1,4 @@
-incomplete and incorrect
+Incomplete and incorrect, vague ideas and hallucinations. At least for now.
 
 ---
 
