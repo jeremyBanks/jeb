@@ -199,13 +199,14 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jeb"
-version = "0.0.0-vibes-2025-11-29.5948"
+version = "0.0.0-vibes-2025-11-30.7316"
 dependencies = [
  "derive_more",
  "dotenv",
  "futures",
  "getset",
  "indexmap",
+ "js-sys",
  "owo-colors",
  "regex",
  "serde",
@@ -215,16 +216,16 @@ dependencies = [
  "tokio-stream",
  "tokio-util",
  "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
 name = "jeb-wasm"
-version = "0.0.0-vibes-2025-11-29.5948"
+version = "0.0.0-vibes-2025-11-30.7316"
 dependencies = [
  "jeb",
  "js-sys",
  "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]

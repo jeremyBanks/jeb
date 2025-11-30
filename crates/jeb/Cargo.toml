@@ -4,36 +4,40 @@ publish = true
 description = "experimenting with machine- and human-sympathetic encoding"
 keywords = ["encoding"]
 categories = ["encoding"]
-repository.workspace = true
-version.workspace = true
-license.workspace = true
 edition.workspace = true
 include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[lib]
+name = "jeb"
+path = "src/lib.rs"
+
+[[bin]]
+name = "jeb"
+path = "src/bin/jeb.rs"
 
 [features]
-wasm = ["dep:wasm-bindgen"]
 default = ["fs", "stdio"]
+wasm = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
 fs = ["tokio/fs"]
 stdio = ["tokio/io-std"]
 
 [dependencies]
 derive_more = { version = "2.0.1", features = ["full"] }
 dotenv = "0.15.0"
+futures = "0.3"
 getset = "0.1.6"
 indexmap = { version = "2.0", features = ["serde"] }
+js-sys = { version = "0.3.82", optional = true }
 owo-colors = "4.2.3"
 regex = "1.12.2"
-futures = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tokio-stream = "0.1"
 tap = "1.0.1"
 tokio = { version = "1.0", features = ["rt", "macros", "sync", "io-util"] }
+tokio-stream = "0.1"
 tokio-util = { version = "0.7.17", features = ["codec", "io"] }
 wasm-bindgen = { version = "0.2.105", optional = true }
-
-[lib]
-
-[[bin]]
-name = "jeb"
-path = "src/bin/jeb.rs"
+web-sys = { version = "0.3.82", optional = true }
