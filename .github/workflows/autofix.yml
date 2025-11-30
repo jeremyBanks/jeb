@@ -37,7 +37,7 @@ jobs:
           echo "$message" >> "$GITHUB_OUTPUT"
           echo "AUTOFIX_EOF" >> "$GITHUB_OUTPUT"
 
-          echo "author="$(git log -1 --pretty="%an <%ae>")" >> "$GITHUB_OUTPUT"
+          echo "author=$(git log -1 --pretty="%an <%ae>")" >> "$GITHUB_OUTPUT"
 
       - uses: stefanzweifel/git-auto-commit-action@v7
         with:
