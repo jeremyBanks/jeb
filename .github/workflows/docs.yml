@@ -21,9 +21,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rustflags: ""
       - uses: denoland/setup-deno@v2
       - run: cargo doc --no-deps --all-features
-      - run: deno doc --output=./target/doc/jeb-wasm --html ./crates/jeb-wasm/build/jeb.js
+      - run: deno task build-wasm-docs
       - run: |
           echo '<meta http-equiv="refresh" content="0; url=jeb/index.html">' > target/doc/index.html
       - uses: actions/upload-pages-artifact@v3

@@ -4,7 +4,7 @@
 // deno-fmt-ignore-file
 // @ts-self-types="./jeb.d.ts"
 
-// source-hash: 5473fa82ced46f0611fea154ece2926e30c88d60
+// source-hash: 0edf03b2f070aff9ee5ff7048c9ce9d6632d3389
 import * as imports from "./jeb.internal.js";
 const bytes = base64decode("\
 AGFzbQEAAAABNQlgAn9/AGACf38Bf2ADf39/AX9gAX8AYAR/f39/AX9gA39/fwBgAABgAX8Bf2AFf3\
