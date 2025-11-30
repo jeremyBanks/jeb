@@ -78,7 +78,7 @@ jobs:
           # - DO_NOT_MERGE/DO_NOT_SUBMIT/DO_NOT_REVIEW (with underscores)
 
           # Exclude this workflow file and related files from the check
-          EXCLUDE_FILE=".github/workflows/do-not-merge-check.yml"
+          EXCLUDE_FILE=".github/workflows/do-not-merge.yml"
 
           echo "Searching for DO NOT MERGE/SUBMIT/REVIEW markers..."
           echo "Excluding: $EXCLUDE_FILE"
