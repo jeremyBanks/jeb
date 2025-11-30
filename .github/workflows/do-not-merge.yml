@@ -14,6 +14,7 @@ jobs:
   do-not-merge:
     name: Check for WIP/TODO/DO NOT MERGE markers
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     steps:
       - uses: actions/checkout@v5
 

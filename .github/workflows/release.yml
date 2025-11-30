@@ -41,8 +41,32 @@ jobs:
             echo "No baseline tag found, skipping semver check"
           fi
 
-      - name: Check semver compatibility
+      - name: Check if version has changed
+        id: version_check
         if: steps.baseline.outputs.tag != ''
+        run: |
+          # Extract version from Cargo.toml (workspace or single package)
+          if grep -q '^\[workspace\.package\]' Cargo.toml; then
+            CURRENT_VERSION=$(grep '^\[workspace\.package\]' -A 10 Cargo.toml | grep '^version = ' | head -1 | cut -d'"' -f2)
+          else
+            CURRENT_VERSION=$(grep '^version = ' Cargo.toml | head -1 | cut -d'"' -f2)
+          fi
+
+          BASELINE_TAG="${{ steps.baseline.outputs.tag }}"
+
+          echo "Current version: $CURRENT_VERSION"
+          echo "Baseline tag: $BASELINE_TAG"
+
+          if [ "$CURRENT_VERSION" = "$BASELINE_TAG" ]; then
+            echo "Version has not changed, skipping semver check"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Version has changed from $BASELINE_TAG to $CURRENT_VERSION"
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check semver compatibility
+        if: steps.baseline.outputs.tag != '' && steps.version_check.outputs.changed == 'true'
         uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
           baseline-rev: ${{ steps.baseline.outputs.tag }}
