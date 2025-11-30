@@ -1,3 +1,7 @@
+incomplete and incorrect
+
+---
+
 # `jeb`
 
 JSON Entity Bag?
@@ -6,7 +10,7 @@ Just Encode Bytes?
 
 Joined Escaped Binary?
 
-vibe-coded clanker slop with Semitranslucent Binary Encodings.
+Semitranslucent Binary Encodings?
 
 ## License
 

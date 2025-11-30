@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.0.0-vibes-2025-11-29.5948"
+version = "0.0.0-vibes-2025-11-30.7316"
 repository = "https://github.com/jeremyBanks/jeb"
 edition = "2024"
 license = "MIT OR Apache-2.0"

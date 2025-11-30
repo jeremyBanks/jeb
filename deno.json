@@ -3,7 +3,7 @@
     "exclude": ["slop", "target"]
   },
   "lock": {
-    "frozen": false
+    "frozen": true
   },
   "imports": {
     "wasmbuild": "jsr:@deno/wasmbuild@0.20.0"

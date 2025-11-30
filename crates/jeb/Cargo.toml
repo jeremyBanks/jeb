@@ -4,11 +4,19 @@ publish = true
 description = "experimenting with machine- and human-sympathetic encoding"
 keywords = ["encoding"]
 categories = ["encoding"]
-repository.workspace = true
-version.workspace = true
-license.workspace = true
 edition.workspace = true
 include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[lib]
+name = "jeb"
+path = "src/lib.rs"
+
+[[bin]]
+name = "jeb"
+path = "src/bin/jeb.rs"
 
 [features]
 default = ["fs", "stdio"]
@@ -33,9 +41,3 @@ tokio-stream = "0.1"
 tokio-util = { version = "0.7.17", features = ["codec", "io"] }
 wasm-bindgen = { version = "0.2.105", optional = true }
 web-sys = { version = "0.3.82", optional = true }
-
-[lib]
-
-[[bin]]
-name = "jeb"
-path = "src/bin/jeb.rs"
