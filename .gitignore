@@ -1,4 +1,2 @@
-*.pdb
-*.rs.bk
-**/mutants.out*/
+/build/wasm/*.wasm
 /target

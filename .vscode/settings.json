@@ -160,5 +160,10 @@
   "files.trimTrailingWhitespace": true,
   "git.autofetch": true,
   "rust-analyzer.cargo.features": "all",
-  "rust-analyzer.check.command": "clippy"
+  "rust-analyzer.check.command": "clippy",
+  "cSpell.enabledNotifications": {
+    "Maximum Word Length Exceeded": false,
+    "Average Word Length too Long": false,
+    "Lines too Long": false
+  }
 }

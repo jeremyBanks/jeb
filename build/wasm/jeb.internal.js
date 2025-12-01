@@ -65,19 +65,6 @@ function getArrayU8FromWasm0(ptr, len) {
  * @param {Uint8Array} bytes
  * @returns {Uint8Array}
  */
-export function encode_z85(bytes) {
-  const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
-  const len0 = WASM_VECTOR_LEN;
-  const ret = wasm.encode_z85(ptr0, len0);
-  var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-  return v2;
-}
-
-/**
- * @param {Uint8Array} bytes
- * @returns {Uint8Array}
- */
 export function encode_jeb85(bytes) {
   const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
@@ -88,101 +75,17 @@ export function encode_jeb85(bytes) {
 }
 
 /**
- * The kind of error encountered during shell tokenization.
- * @enum {0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17}
+ * @param {Uint8Array} bytes
+ * @returns {Uint8Array}
  */
-export const ErrorKind = Object.freeze({
-  /**
-   * An unclosed single quote was encountered.
-   */
-  UnclosedSingleQuote: 0,
-  "0": "UnclosedSingleQuote",
-  /**
-   * An unclosed double quote was encountered.
-   */
-  UnclosedDoubleQuote: 1,
-  "1": "UnclosedDoubleQuote",
-  /**
-   * A trailing backslash was encountered at end of input.
-   */
-  TrailingBackslash: 2,
-  "2": "TrailingBackslash",
-  /**
-   * Dollar sign for variable expansion (not interpreted).
-   */
-  DollarSign: 3,
-  "3": "DollarSign",
-  /**
-   * Backtick for command substitution (not interpreted).
-   */
-  Backtick: 4,
-  "4": "Backtick",
-  /**
-   * Pipe for piping (not interpreted).
-   */
-  Pipe: 5,
-  "5": "Pipe",
-  /**
-   * Ampersand for background/AND (not interpreted).
-   */
-  Ampersand: 6,
-  "6": "Ampersand",
-  /**
-   * Semicolon as command separator (not interpreted).
-   */
-  Semicolon: 7,
-  "7": "Semicolon",
-  /**
-   * Newline as command separator (not interpreted).
-   */
-  Newline: 8,
-  "8": "Newline",
-  /**
-   * Open parenthesis for subshell (not interpreted).
-   */
-  OpenParen: 9,
-  "9": "OpenParen",
-  /**
-   * Close parenthesis for subshell (not interpreted).
-   */
-  CloseParen: 10,
-  "10": "CloseParen",
-  /**
-   * Less-than for input redirection (not interpreted).
-   */
-  LessThan: 11,
-  "11": "LessThan",
-  /**
-   * Greater-than for output redirection (not interpreted).
-   */
-  GreaterThan: 12,
-  "12": "GreaterThan",
-  /**
-   * Hash for comment (not interpreted).
-   */
-  Hash: 13,
-  "13": "Hash",
-  /**
-   * Asterisk glob wildcard (not interpreted).
-   */
-  Asterisk: 14,
-  "14": "Asterisk",
-  /**
-   * Question mark glob wildcard (not interpreted).
-   */
-  QuestionMark: 15,
-  "15": "QuestionMark",
-  /**
-   * Open bracket for glob bracket expression (not interpreted).
-   */
-  OpenBracket: 16,
-  "16": "OpenBracket",
-  /**
-   * Tilde at word start for tilde expansion (not interpreted).
-   */
-  Tilde: 17,
-  "17": "Tilde",
-});
+export function encode_z85(bytes) {
+  const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.encode_z85(ptr0, len0);
+  var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v2;
+}
 
 const BytesFinalization = (typeof FinalizationRegistry === "undefined")
   ? { register: () => {}, unregister: () => {} }
