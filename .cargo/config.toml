@@ -12,11 +12,6 @@ TZ = "UTC"
 # > When multiple remappings are given and several of them match, the last
 # > matching one is applied.
 rustflags = [
-    "--remap-path-prefix=/workspaces/=../",
-    "--remap-path-prefix=~/work/jeb/=../",
-
-    "--remap-path-prefix=/workspaces/jeb/=./",
-    "--remap-path-prefix=~/work/jeb/jeb/=./",
 
     "--remap-path-prefix=/home/=~",
     "--remap-path-prefix=/Users/=~",
@@ -35,4 +30,10 @@ rustflags = [
 
     "--remap-path-prefix=/.rustup/=~/.rustup",
     "--remap-path-prefix=/usr/local/rustup/=~/.rustup",
+
+    "--remap-path-prefix=/workspaces/=../",
+    "--remap-path-prefix=~/work/jeb/=../",
+
+    "--remap-path-prefix=/workspaces/jeb/=./",
+    "--remap-path-prefix=/home/runner/work/jeb/jeb/=./",
 ]
