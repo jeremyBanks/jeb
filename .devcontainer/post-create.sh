@@ -8,3 +8,4 @@ git config --global push.autoSetupRemote true
 
 rustup update
 rustup show
+rustup default nightly-2025-11-28
