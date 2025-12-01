@@ -9,6 +9,22 @@ use jeb::{Panic, model::Bytes};
 use owo_colors::OwoColorize;
 use regex::Regex;
 
+/// Pre-defined aliases that expand a single command into one or more commands.
+static ALIASES: &[(&str, &[&str])] = &[("to-jeb85-lines", &[
+    "encode-jeb85",
+    "split-80",
+    "join-lines",
+])];
+
+/// Expand an alias into its component commands, or return the original command.
+fn expand_alias(command: &str) -> Vec<String> {
+    for (alias, expansion) in ALIASES {
+        if command == *alias {
+            return expansion.iter().map(|s| s.to_string()).collect();
+        }
+    }
+    vec![command.to_string()]
+}
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), Infallible> {
@@ -33,6 +49,8 @@ pub async fn inner_main() -> Result<(), Panic> {
                 vec![s]
             }
         })
+        // Expand any aliases into their component commands
+        .flat_map(|s| expand_alias(&s))
         .collect();
 
     let mut commands = args;
