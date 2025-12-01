@@ -16,6 +16,8 @@ static ALIASES: &[(&str, &[&str])] = &[("to-jeb85-lines", &[
     "join-lines",
 ])];
 
+static PRELUDE: &str = include_str!("jeb/prelude.jeb");
+
 /// Expand an alias into its component commands, or return the original command.
 fn expand_alias(command: &str) -> Vec<String> {
     for (alias, expansion) in ALIASES {

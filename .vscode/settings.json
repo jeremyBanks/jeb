@@ -6,10 +6,10 @@
   "[markdown]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
-  "[plaintext][shellscript][code-text-binary]": {
+  "[code-text-binary][shellscript]": {
     "editor.rulers": [
       {
-        "color": "#CCCCCCCC",
+        "color": "#CCCCCC66",
         "column": 0
       },
       {
@@ -41,7 +41,7 @@
         "column": 35
       },
       {
-        "color": "#CCCCCCCC",
+        "color": "#CCCCCC88",
         "column": 40
       },
       {
@@ -150,6 +150,11 @@
     "error"
   ],
   "errorLens.statusBarColorsEnabled": true,
+  "files.associations": {
+    "*.jeb": "ini",
+    "*.jeb85": "code-text-binary",
+    "*.z85": "code-text-binary"
+  },
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 32768,
   "files.trimTrailingWhitespace": true,
