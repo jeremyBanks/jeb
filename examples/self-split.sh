@@ -6,190 +6,182 @@ source "$(dirname "$0")/setup"
 cargo_flags=(--release)
 jeb self split-64 encode-jeb85 find-\| find-.rs first-256 join-lines stdout
 
-6|.3.22/src/filter/env/field.rs|...A@VLY1|gnoring v88>LiV#is3ikJ+0|argo/registr
-a|b557f/aho-corasick-1.1.4/src/packed/pattern.rs|......A=Rkf0|cargo/registry/s
-6|.48.0/src/runtime/task/state.rs|.e](1k0|/rustc/c86564c412a5949088a53b665
-a|d8b9a47ec610a39/library/alloc/src/vec/mod.rs|........0bMvU0|rary/std/src/../
-8|../backtrace/src/symbolize/gimli/elf.rs|...e](1k6(vJ03|ory allocation of w*1(0
-5|-syntax-0.8.8/src/error.rs|.A=Rj<4|rates/jeb/src/z85.rs|..00aZ/ZYng+0|brary/st
-5|d/src/sys/pal/unix/os.rs|...055wn0|st/deps/gimli-0.32.3/src/read/abbrev
-9|tomata-0.4.13/src/util/prefilter/memchr.rs|.....A=Ri}0|attempted to compile
-|i.rs0dFA^0|rgo/registry/src/index.crates.io-1949cf8c6b5b557f/aho-co
-7|rasick-1.1.4/src/nfa/contiguous.rs|...A=Rkf0|cargo/registry/src/index.cra
-7|-corasick-1.1.4/src/automaton.rs|.....055wn0|st/deps/rustc-demangle-0.1.2
-1|6/src/v0e](1k5|library/alloc/src/fmt.rs|...01-NW2|sertion `leftBrFvn0| right` 
-8|lloc/src/collections/btree/map/entry.rs|...e](1kZYuHi01:9T2|ttern length:iV#is
-b|7f/regex-automata-0.4.13/src/nfa/thompson/map.rs|.........0263O0|ystack of le
-5|a-0.4.13/src/hybrid/dfa.rs|.A=Ri$5|longest pattern length: |...ZYs=x0|library/
-8|std/src/io/buffered/linewritershim.rs|.....A@V}.4|at` split index (is |..Z.XBx
-b|-1949cf8c6b5b557f/rustc-demangle-0.1.26/src/lib.rs|.......A=Rkf0|rustup/toolc
-8|c/rust/library/core/src/ops/function.rs|...e](1k0|&number of DFA states ex
-b|b557f/regex-automata-0.4.13/src/nfa/thompson/nfa.rs|......e](1k0|~cargo/regis
-5|rc/util/prefilter/memmem.rs|e](1k4pT3?1|ary-uniozyAp4efI.edf72}0|nvalid 'from
-1|habet.rs01-^Y2|t codepoint Urv+<i0| which occurs before last codepoint 
-5|.48.0/src/sync/notify.rs|...0dFA^0|rgo/registry/src/index.crates.io-194
-d|9cf8c6b5b557f/tokio-1.48.0/src/runtime/metrics/worker.rs|...........0dFA^|rgo/
-3|untime/handle.rs|.04zI*8|iled to allocate an alternative stack: |...yDrPN01imY
-5|li-0.32.3/src/read/line.rs|.A=Ri]3|invalid pattern IDnKKYp0dFA^0|rgo/registry
-5|nfa/thompson/compiler.rs|...0dFA^0|rgo/registry/src/index.crates.io-194
-c|9cf8c6b5b557f/regex-automata-0.4.13/src/util/utf8.rs|..........00^7Q|ror:aIW$i
-e|49cf8c6b5b557f/tokio-1.48.0/src/runtime/blocking/shutdown.rs|............0bMvU
-5|rary/std/src/ffi/os_str.rs|.A=Rjl0|rust/deps/addr2line-0.25.1/src/funct
-|ion.A=Rj%8|ibrary/std/src/sync/reentrant_lock.rs|.....A@Vh?0|rustup/toolchain
-6|st/library/std/src/sync/once.rs|.e](1k0|~cargo/registry/src/index.crates
-b|.io-1949cf8c6b5b557f/once_cell-1.21.3/src/lib.rs|.........0dFA^0|rgo/registry
-2|util/look.rs|03VG67|arse set capacity cannot exceed |.....ZYn*[0|argo/registr
-3|/meta/limited.rs|.0dFA^0|rgo/registry/src/index.crates.io-1949cf8c6b5
-c|b557f/regex-automata-0.4.13/src/util/prefilter/teddy.rs|.......e](1k3VHb$|filt
-7|io-1.48.0/src/util/sharded_list.rs|...A=Rjl0|rustc/c86564c412a5949088a53b
-7|/src/collections/btree/map/entry.rs|..e](1k0|/rustc/c86564c412a5949088a53
-a|b665d8b9a47ec610a39/library/core/src/time.rs|........0bMvU0|rary/std/src/../
-9|../backtrace/src/symbolize/gimli/stash.rs|......A@WX30|xtension cannot cont
-4|ain path separators: |.aIW$[5|ibrary/core/src/fmt/num.rs|.A=Rj<0|rates/jeb/sr
-2|c/bin/jeb.rs|0dFA^0|rgo/registry/src/index.crates.io-1949cf8c6b5b557
-7|f/color-spantrace-0.3.0/src/lib.rs|...A=Ri%4|tried to drop a ref to Bz&qq8z01u
-6|tomata-0.4.13/src/dfa/search.rs|.e](1k0|~cargo/registry/src/index.crates
-d|.io-1949cf8c6b5b557f/aho-corasick-1.1.4/src/ahocorasick.rs|.........A=Ri:|Span
-e](1k8|library/core/src/num/dec2flt/parse.rs|.....A@WK%0|opy_from_slice: sour
-a|ubscriber-0.3.22/src/filter/env/directive.rs|........03bGT0|celerator alread
-b|5b557f/aho-corasick-1.1.4/src/util/primitives.rs|.........04A2g0|ied to unwra
-c|-1949cf8c6b5b557f/tokio-1.48.0/src/runtime/time/mod.rs|........A=Rjl0|rust/dep
-6|s/gimli-0.32.3/src/read/line.rs|.e](1k0|library/std/src/../../backtrace/
-4|src/symbolize/mod.rs|..01imY1|te indexaIX<q5|is not an OsStr boundary|...055wn
-8|st/deps/hashbrown-0.16.1/src/raw/mod.rs|...e](1k0|library/alloc/src/raw_ve
-1|c/mod.rs01%r-3|moval index (is |.Z.Ovw4|should be < len (is |..ZYt>:0|library/
-5|core/src/fmt/builders.rs|...0dFA^0|rgo/registry/src/index.crates.io-194
-c|9cf8c6b5b557f/regex-automata-0.4.13/src/util/pool.rs|..........03kY(0|ror: unr
-|d.rs0dFA^0|rgo/registry/src/index.crates.io-1949cf8c6b5b557f/backtr
-6|ace-0.3.76/src/symbolize/mod.rs|.e](1k0|*anchored searches for a specifi
-3|determinize/mod.rsA=Rkf0|cargo/registry/src/index.crates.io-1949cf8c6
-a|b5b557f/regex-automata-0.4.13/src/dfa/accel.rs|......A=RjC0|internal error: 
-7|0/src/runtime/context/runtime.rs|.....0dFA^0|rgo/registry/src/index.crate
-d|s.io-1949cf8c6b5b557f/tokio-1.48.0/src/util/linked_list.rs|.........A=Rj%|ibra
-b|ry/std/src/../../backtrace/src/symbolize/gimli.rs|........A@YrD0|tracing-subs
-c|557f/tracing-subscriber-0.3.22/src/filter/directive.rs|........A=Rkf0|cargo/re
-3|c/inflate/core.rs|A@ZV00|argo/registry/src/index.crates.io-1949cf8c6b
-b|5b557f/regex-automata-0.4.13/src/hybrid/regex.rs|.........04&qk0|ied to unwra
-c|949cf8c6b5b557f/tracing-core-0.1.35/src/dispatcher.rs|.........A@ZVf0|ustup/to
-8|/src/rust/library/core/src/cell/once.rs|...e](1k0|~rustup/toolchains/night
-9|ary/alloc/src/collections/btree/navigate.rs|....e](1kZYu451rY&>aIW#a0|cargo/re
-6|3/src/nfa/thompson/pikevm.rs|....0dFA^0|rgo/registry/src/index.crates.io
-d|-1949cf8c6b5b557f/regex-automata-0.4.13/src/util/wire.rs|...........0dFA^|rgo/
-8|557f/tokio-1.48.0/src/util/wake_list.rs|...e](1k0|~cargo/registry/src/inde
-1|/level.rA@Z2<7|brary/std/src/sys/thread/unix.rs|.....0bMvU0|rary/std/src/sys
-5|/pal/unix/stack_overflow.rs|e](1k7isqa3|ce index starts atvrrTc4iPb50|t ends a
-BrFv06|library/core/src/str/lossy.rs|...A@ZV00|argo/registry/src/index.crat
-b|x-gnu/lib/rustlib/src/rust/library/std/src/env.rs|........A@WX70|nternal erro
-d|io-1949cf8c6b5b557f/regex-automata-0.4.13/src/dfa/dense.rs|.........A=Rkf|carg
-4|0/src/inline_lazy.rs|..0dF%h0|stup/toolchains/nightly-2025-11-28-x86_6
-4|ctions/btree/node.rs|..0dFA^0|rgo/registry/src/index.crates.io-1949cf8
-9|c6b5b557f/tracing-core-0.1.35/src/field.rs|.....A=Rkf0|cargo/registry/src/i
-1|scape.rs0dFA^0|rgo/registry/src/index.crates.io-1949cf8c6b5b557f/re
-9|gex-automata-0.4.13/src/util/primitives.rs|.....A=Rkf0|cargo/registry/src/i
-e|ndex.crates.io-1949cf8c6b5b557f/aho-corasick-1.1.4/src/dfa.rs|...........A@Z2<
-7|brary/std/src/sys/pal/unix/mod.rs|....A@Z2<5|brary/core/src/panicking.rs|e](1k
-8|57f/addr2line-0.25.1/src/function.rs|......0dFA^0|rgo/registry/src/index.c
-8|r-2.7.6/src/arch/generic/packedpair.rs|....A=Ri?2|capture(pid=|ZZ8Fl|grouA6p#w
-b|557f/regex-automata-0.4.13/src/dfa/determinize.rs|........A@Wa)0|nvalid accel
-8|b5b557f/regex-syntax-0.8.8/src/utf8.rs|....A=Ri]3|failed printing toBz&qq0Y?Et
-0bMvU6|rary/std/src/sync/lazy_lock.rs|..A=Rj%0|ibrary/std/src/sys/random/li
-|nux.A=Rj%4|ibrary/std/src/time.rs|A=Rj60|index out of bounds: the len is 
-e|8c6b5b557f/tracing-subscriber-0.3.22/src/registry/extensions.rs|.........e](1k
-6|scriber-0.3.22/src/fmt/mod.rs|...A@ZV00|argo/registry/src/index.crates.i
-5|.4.13/src/util/alphabet.rs|.A=Ri^1|on line ZZhbi|coluzeHGi4>eSy0|hrough line 
-ZZhbi|coluzeHGi0vX1U4|rates/jeb/src/jeb85.rs|A=Rkf0|cargo/registry/src/index
-4|core/src/cell/once.rs|.A@W>l0|ustc/c86564c412a5949088a53b665d8b9a47ec6
-8|10a39/library/core/src/num/wrapping.rs|....A=Rj%4|ibrary/std/src/rt.rs|..0bMvU
-6|rary/std/src/thread/current.rs|..A=Rj%0|ibrary/core/src/unicode/printabl
-|e.rs0dFA^0|rgo/registry/src/index.crates.io-1949cf8c6b5b557f/tracin
-a|g-subscriber-0.3.22/src/fmt/format/pretty.rs|........04]{m0|rates/jeb/src/er
-4|llvec-1.15.1/src/lib.rse](1k0|~cargo/registry/src/index.crates.io-1949
-d|cf8c6b5b557f/backtrace-0.3.76/src/symbolize/gimli/elf.rs|...........0dF%h|stup
-a|lib/src/rust/library/core/src/num/wrapping.rs|.......A@ZV00|argo/registry/sr
-9|tomata-0.4.13/src/nfa/thompson/builder.rs|......A@ZV00|argo/registry/src/in
-3|terminize/state.rsA=Rkf0|cargo/registry/src/index.crates.io-1949cf8c6
-b|b5b557f/regex-automata-0.4.13/src/meta/strategy.rs|.......A=Rkf0|cargo/regist
-3|c/dfa/onepass.rs|.02Po(4|pected char at offset |BrFv00|~cargo/registry/src/
-5|48.0/src/runtime/park.rs|...0bMvU5|rary/std/src/panicking.rs|..A@ZV00|argo/reg
-6|c-demangle-0.1.26/src/legacy.rs|.e](1k0|9internal error: entered unreach
-5|fa/thompson/range_trie.rs|..A@ZV00|argo/registry/src/index.crates.io-19
-d|49cf8c6b5b557f/regex-automata-0.4.13/src/util/captures.rs|..........A@ZV0|argo
-3|memmem/searcher.rsA=Rkf0|cargo/registry/src/index.crates.io-1949cf8c6
-e|b5b557f/regex-automata-0.4.13/src/nfa/thompson/literal_trie.rs|..........A=RiZ
-B-O#i3@y>-1|ition(o:aIXdi| l: ZY=niv(+:F0vX1+4|ibrary/std/src/path.rs|A=Rjl|rust
-8|/deps/gimli-0.32.3/src/read/index.rs|......055wn0|st/deps/miniz_oxide-0.8.
-4|9/src/inflate/core.rs|.A@Z2<6|brary/core/src/num/bignum.rs|....0bMvU0|rary/cor
-7|e/src/num/dec2flt/decimal_seq.rs|.....0dFA^0|rgo/registry/src/index.crate
-0|index.crates.io-1949cf8c6b5b557f/gimli-0.32.3/src/read/abbrev.rs
-6|k-1.1.4/src/packed/rabinkarp.rs|.e](1k0|*tried to unwrap group from HirF
-5|ibrary/std/src/sync/once.rs|e](1k0|/rustc/c86564c412a5949088a53b665d8b9
-c|a47ec610a39/library/alloc/src/collections/btree/node.rs|.......e](1k0|/rustc/c
-1|, abortizF6pR8|library/std/src/sys/pal/unix/time.rs|......02ouZ0|mory allocat
-9|f8c6b5b557f/sharded-slab-0.1.7/src/tid.rs|......A@-#RaohHGB:H[8Ee[.a0|argo/reg
-5|symbolize/gimli/stash.rs|...0dFA^0|rgo/registry/src/index.crates.io-194
-9|9cf8c6b5b557f/addr2line-0.25.1/src/line.rs|.....A=Rjd0|determinization exce
-b|c6b5b557f/aho-corasick-1.1.4/src/util/remapper.rs|........A@ZV00|argo/registr
-d|b557f/tracing-subscriber-0.3.22/src/fmt/time/datetime.rs|...........0dFA^|rgo/
-5|rc/symbolize/gimli/lru.rs|..A@ZV00|argo/registry/src/index.crates.io-19
-9|49cf8c6b5b557f/addr2line-0.25.1/src/unit.rs|....e](1k0|~cargo/registry/src/
-4|prefilter/byteset.rs|..0dFA^0|rgo/registry/src/index.crates.io-1949cf8
-c|c6b5b557f/regex-automata-0.4.13/src/hybrid/search.rs|..........04IY20|consiste
-A@V<@3|     [... omitted wfwU(| frazdQG!| ...t)ZNF4|ibrary/std/src/alloc.rse](1k
-b|rustlib/src/rust/library/core/src/str/pattern.rs|.........0dF%h0|stup/toolcha
-c|rust/library/core/src/slice/sort/stable/quicksort.rs|..........0dFA^0|rgo/regi
-5|.22/src/registry/stack.rs|..A@V}N4|TART_GROUP(pattern: |..ZYC}(04A2d0|o many p
-d|cf8c6b5b557f/aho-corasick-1.1.4/src/nfa/noncontiguous.rs|...........02Y&>|orte
-4|c/util/sparse_set.rs|..00WN-|ion(ZYt>:0|~cargo/registry/src/index.crates
-d|.io-1949cf8c6b5b557f/regex-automata-0.4.13/src/dfa/regex.rs|........e](1k|Bcan
-d|49cf8c6b5b557f/regex-automata-0.4.13/src/meta/literal.rs|...........0dFA^|rgo/
-3|/src/util/debug.rsA=Rkf0|rustup/toolchains/nightly-2025-11-28-x86_64-
-4|d_local/native/lazy.rs|A=Ri!3uP%4|ead c+]*iasL2A0|) has overflowed its sta
-v}#zK4|library/std/src/env.rs|A=Rjl0|failed to set up alternative stack g
-1|uard pagwJy%H055wn8|st/deps/addr2line-0.25.1/src/line.rs|......055wn0|st/deps/
-7|rustc-demangle-0.1.26/src/lib.rs|.....0bMvU5|rary/core/src/fmt/mod.rs|...0bMvU
-6|rary/core/src/str/pattern.rs|....0bMvU6|rary/core/src/slice/memchr.rs|...A@Z2<
-a|brary/core/src/num/flt2dec/strategy/dragon.rs|.......A@V?[0|ange start index
-4|ry/alloc/src/string.rs|A=Ri{4|invalid field name `|..ZYv*y0|~cargo/registry/
-|n.rs01hwe1|entifierd8k<j0kHMp0|is both a start and a match state, which
-2|xt/current.rsA@Z2<4|brary/std/src/io/mod.rse](1k0|/rust/deps/addr2line-0.2
-2|5.1/src/unit.e](1ka|/rust/deps/rustc-demangle-0.1.26/src/legacy.rs|......A=Rj%
-5|ibrary/alloc/src/sync.rs|...0dFA^0|rgo/registry/src/index.crates.io-194
-c|9cf8c6b5b557f/regex-automata-0.4.13/src/util/search.rs|........A=Rkf0|cargo/re
-4|3/src/meta/wrappers.rs|A=Rjq0|heap usage during NFA compilation exceed
-7|7f/tokio-1.48.0/src/util/rand/rt.rs|..e](1k8E)/04|ating a new thread ID (l)9[[
-5|otenv-0.15.0/src/parse.rs|..A@ZV00|argo/registry/src/index.crates.io-19
-a|49cf8c6b5b557f/color-eyre-0.6.5/src/config.rs|.......A@:1>ZYDLtZYn*[0|argo/reg
-a|57f/regex-automata-0.4.13/src/dfa/remapper.rs|.......A@XZu0|ompiling DFA wit
-b|8c6b5b557f/regex-automata-0.4.13/src/util/empty.rs|.......A=Rkf0|rustup/toolc
-6|c/rust/library/core/src/cell.rs|.e](1k0|~cargo/registry/src/index.crates
-d|.io-1949cf8c6b5b557f/regex-syntax-0.8.8/src/hir/literal.rs|.........A=Rkf|carg
-b|tracing-subscriber-0.3.22/src/registry/sharded.rs|........A@ZVf0|ustup/toolch
-8|/rust/library/std/src/thread/local.rs|.....A@ZV00|argo/registry/src/index.
-9|tomata-0.4.13/src/nfa/thompson/backtrack.rs|....e](1k0|~cargo/registry/src/
-1|error.rs0dFA^0|rgo/registry/src/index.crates.io-1949cf8c6b5b557f/ah
-a|o-corasick-1.1.4/src/packed/teddy/generic.rs|........0bMvU0|rary/std/src/io/
-1|stdio.rs01r*P1|nicked aBrFv2iTSUU3uP%40|ead panicked while processing pa
-2|nic. abortingxd:I>a|library/core/src/slice/sort/shared/smallsort.rs|.....e](1k
-9|9cf8c6b5b557f/tracing-log-0.2.0/src/lib.rs|.....A=Rkf0|cargo/registry/src/i
-9|557f/sharded-slab-0.1.7/src/page/slot.rs|.......0dF%h0|stup/toolchains/nigh
-4|rary/std/src/io/mod.rs|A=Rkf0|rustup/toolchains/nightly-2025-11-28-x86
-5|-slab-0.1.7/src/page/mod.rs|e](1k2oUci| at ZYuHi00Lhsj2e[k0xX6$jhp?1|38;2jhp>U
-7|f/gimli-0.32.3/src/read/index.rs|.....0dF%h0|stup/toolchains/nightly-2025
-a|b5b557f/aho-corasick-1.1.4/src/util/search.rs|.......A@ZV00|argo/registry/sr
-7|o-1.48.0/src/runtime/time/entry.rs|...A=Rkf0|rustup/toolchains/nightly-20
-4|td/src/thread/mod.rs|..0bMvU0|rary/std/src/sys/thread_local/destructor
-4|backtrace/libunwind.rs|A=Ri<2|state length:iV#is3ihn(0|oo many capture grou
-5|/src/meta/reverse_inner.rs|.A=Rkf0|rustup/toolchains/nightly-2025-11-28
-|on.rA@W>lc|ust/deps/miniz_oxide-0.8.9/src/inflate/output_buffer.rs|.......e](1k
-7|library/core/src/num/flt2dec/mod.rs|..e](1k8FK8j4|alid filter directive: wJy%H
-6|mata-0.4.13/src/meta/stopat.rs|..A=Ri}4|attempted to compile |.aIYxF0|NFA stat
-e|s.io-1949cf8c6b5b557f/regex-syntax-0.8.8/src/hir/interval.rs|............054>]
-|v/nuy?%8/8|ibrary/std/src/sys/sync/rwlock/futex.rs|...e](1k0|library/std/src/
-2|thread/mod.rsA@Z2<6|brary/core/src/num/diy_float.rs|.e](1k%nSc0%nSc0%nSc0%nSc0
-0|nt crates/jeb/src/bin/jeb.rs:54jebmessagecrates/jeb/src/bin/jeb.
-a|8c6b5b557f/sharded-slab-0.1.7/src/tid.rs:163:21|.....iX&z%0|note: we were al
-8|7f/sharded-slab-0.1.7/src/tid.rs:163:21|...iX&z%0|note: we were already un
-0|ing-subscriber-0.3.22/src/registry/sharded.rs/!\ Tried to regist
-Fb/MHn@TKY00000oO}W#.rs5[Mb2@3@qV/%%nSaGnia*6M+-%znq?NnndQzW2MK&}I/TblH0&IG|\$@L
-Gtnr{I:!mHI9RW-5c+Ah5DLK:1y$5.6V9I51x4%NjJy3C.rsBF|l$ H%ikT!nqRddawvXpmkrjVg22lQ
-000000dWQ#l)KEA|\$8HiMI.+cLuyVpk}x$00000oO}W#.rs2)Mb2}y.sQqV=KVwU2/d48NhC#8mksg6
+e|9cf8c6b5b557f/tracing-subscriber-0.3.22/src/registry/sharded.rs|.........e](1k
+3|y/alloc/src/str.rsA=Rj@0|[tracing-subscriber] Unable to write an "eve
+8|b557f/color-spantrace-0.3.0/src/lib.rs|....A=RiYe5hb(1|ignoringayI$!u]/BC0sw*Q
+5|re-0.1.35/src/callsite.rs|..A@ZUx0|.cargo/registry/src/index.crates.io-
+d|1949cf8c6b5b557f/regex-automata-0.4.13/src/meta/stopat.rs|..........A@VF!|trid
+7|gex-syntax-0.8.8/src/ast/parse.rs|....A@W>l0|ustc/c86564c412a5949088a53b6
+a|65d8b9a47ec610a39/library/alloc/src/vec/mod.rs|......A=Rkf0|/.cargo/registry
+a|ex-automata-0.4.13/src/nfa/thompson/compiler.rs|.....e](1k0|-first capture g
+3|ates/jeb/src/z85.re](1k0wqg60bMvU6|rary/std/src/sys/pal/unix/os.rs|.e](1k|/rus
+8|t/deps/gimli-0.32.3/src/read/abbrev.rs|....A=Ri(3|assertion `left |.ZZ}Se|ight
+|i.rs02n{:3|tempted to compiley?j:80|& patterns, which exceeds the limit 
+8|corasick-1.1.4/src/nfa/noncontiguous.rs|...e](1k0|~/.cargo/registry/src/in
+7|ex-automata-0.4.13/src/util/pool.rs|..e](1k4@=M22|lude error: |ZYn*p0|.cargo/r
+5|0.3.22/src/fmt/fmt_layer.rs|e](1k0|AThread count overflowed the configu
+6|3.22/src/filter/directive.rs|....0kMwI0|~/.cargo/registry/src/index.crat
+c|es.io-1949cf8c6b5b557f/rustc-demangle-0.1.26/src/v0.rs|........A=Ri}0|invalid 
+b|b557f/regex-automata-0.4.13/src/nfa/thompson/map.rs|......e](1k0|~/.cargo/reg
+3|/src/util/look.rs|A@ZUx0|.cargo/registry/src/index.crates.io-1949cf8c
+b|6b5b557f/regex-automata-0.4.13/src/dfa/search.rs|.........0dDNN0|cargo/regist
+2|/task/state.rA=Rjl9|rust/deps/rustc-demangle-0.1.26/src/v0.rs|......A@Z2<|brar
+3|y/alloc/src/fmt.rsA=Ri(3|assertion `left |.Z.Xbl2|ight` failed|3lQEc|eft:aIXo<
+d|b5b557f/tracing-subscriber-0.3.22/src/filter/env/field.rs|..........A@ZUx|.car
+2|.0/src/lib.rsA@ZUx0|.cargo/registry/src/index.crates.io-1949cf8c6b5b
+b|557f/backtrace-0.3.76/src/backtrace/libunwind.rs|.........0kFQ@ZYj{+0|attern l
+c|9cf8c6b5b557f/regex-automata-0.4.13/src/util/search.rs|........A=Ri]0|haystack
+d|1949cf8c6b5b557f/aho-corasick-1.1.4/src/util/remapper.rs|...........03=61|pect
+a|-automata-0.4.13/src/nfa/thompson/backtrack.rs|......A=Rkf0|/.cargo/registry
+6|nfa/thompson/literal_trie.rs|....02PJ<4|ngest pattern length: |iV#is3ikJd|.car
+5|1.4/src/util/prefilter.rs|..A@ZUx0|.cargo/registry/src/index.crates.io-
+e|1949cf8c6b5b557f/tokio-1.48.0/src/runtime/context/runtime.rs|............0bMvU
+9|rary/std/src/io/buffered/linewritershim.rs|.....A=Ri}0|`at` split index (is
+e|ates.io-1949cf8c6b5b557f/backtrace-0.3.76/src/symbolize/mod.rs|..........A=Rjc
+7|ata-0.4.13/src/util/primitives.rs|....A@V>/3|nvalid 'from' id: iV#ir3#GA{|ch k
+b|o-1949cf8c6b5b557f/regex-syntax-0.8.8/src/error.rs|.......A=Ri(0|got codepoin
+4|re-0.1.35/src/field.rs|A=Ri]3|invalid pattern IDnKKYp0dDNN0|cargo/registry/s
+4|il/determinize/state.rse](1k0|~/.cargo/registry/src/index.crates.io-19
+c|49cf8c6b5b557f/aho-corasick-1.1.4/src/packed/pattern.rs|.......e](1k2w4{@|or: 
+5|stent park state; actual = |auZ<.0bMvU5|rary/std/src/ffi/os_str.rs|.A=Rjl|rust
+8|/deps/addr2line-0.25.1/src/function.rs|....A=Rj%0|ibrary/std/src/sync/reen
+2|trant_lock.rsA@Vg[0|rustc/c86564c412a5949088a53b665d8b9a47ec610a39/l
+a|ibrary/core/src/slice/sort/stable/quicksort.rs|......A=Rkf0|/.cargo/registry
+4|ate/output_buffer.rs|..055wn0|stc/c86564c412a5949088a53b665d8b9a47ec61
+c|0a39/library/alloc/src/collections/btree/map/entry.rs|.........A@Wz90|parse se
+6|10a39/library/core/src/time.rs|..A=Rj%0|ibrary/std/src/../../backtrace/s
+5|rc/symbolize/gimli/stash.rs|e](1k0|*extension cannot contain path separ
+|atorB2>CV0bMvU5|rary/core/src/fmt/num.rs|...0aQ4T4|tes/jeb/src/bin/jeb.rs|A=Ri%
+|b.rs0dDNN0|cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lazy
+7|_static-1.5.0/src/inline_lazy.rs|.....0dDNN0|cargo/registry/src/index.cra
+d|tes.io-1949cf8c6b5b557f/rustc-demangle-0.1.26/src/legacy.rs|........e](1kZ.E#6
+1|earch.rs0dDNN0|cargo/registry/src/index.crates.io-1949cf8c6b5b557f/
+6|aho-corasick-1.1.4/src/dfa.rs|...A@Vwx|pan(ZYD5fZYt>:0|~/.cargo/registry/sr
+1|li/lru.rA@Z2<7|brary/core/src/num/dec2flt/parse.rs|..e](1k0|&copy_from_slice
+6|harded-slab-0.1.7/src/shard.rs|..A=Rkf0|/.cargo/registry/src/index.crate
+e|s.io-1949cf8c6b5b557f/tracing-subscriber-0.3.22/src/fmt/mod.rs|..........A=Rjl
+7|ead_local-1.1.9/src/thread_id.rs|.....03bGT5|celerator already contains |zGu@o
+3|rc/raw_vec/mod.rs|A@-#ReX?vn0|/.cargo/registry/src/index.crates.io-194
+b|9cf8c6b5b557f/aho-corasick-1.1.4/src/automaton.rs|........A@WUh0|ried to unwr
+|ine.A=Rj%b|ibrary/std/src/../../backtrace/src/symbolize/mod.rs|......e](1k3U1y6
+2|src/raw/mod.rA=Rj%6|ibrary/alloc/src/raw_vec/mod.rs|.e](1k5]}M20|oval index (
+x(+Aj7aywE3|hould be < len (isx(+Aj0vX1+6|ibrary/core/src/fmt/builders.rs|.e](1k
+d|9cf8c6b5b557f/memchr-2.7.6/src/arch/generic/packedpair.rs|..........A@XEt|nter
+9|c/../../backtrace/src/symbolize/gimli.rs|.......09ADE0|racing-subscriber] U
+5|dr2line-0.25.1/src/line.rs|.A=Rkf0|/.cargo/registry/src/index.crates.io
+7|-automata-0.4.13/src/util/empty.rs|...A=Rkf0|/.cargo/registry/src/index.c
+c|10a39/library/std/src/sys/thread_local/native/lazy.rs|.........A@W1*0|ailed to
+2| join thread:iV#ir9|library/std/src/sys/io/io_slice/iovec.rs|.......0kF%+|(os 
+|erroAV&c#dfaf#a|brary/core/src/num/flt2dec/strategy/grisu.rs|........07yal|raci
+9|7f/miniz_oxide-0.8.9/src/inflate/core.rs|.......0kFQ!ZYU=yj%mSv0|~/.cargo/reg
+4|/src/util/alphabet.rs|.A@ZUx0|.cargo/registry/src/index.crates.io-1949
+d|cf8c6b5b557f/aho-corasick-1.1.4/src/packed/teddy/generic.rs|........e](1k|~/.c
+5|0.8.8/src/hir/translate.rs|.A=Rkf0|/.cargo/registry/src/index.crates.io
+d|-1949cf8c6b5b557f/tokio-1.48.0/src/runtime/time/entry.rs|...........0dDNN|carg
+3|/runtime/park.rs|.0bMvU6|rary/std/src/sys/thread/unix.rs|.e](1k0|library/std/
+7|src/sys/pal/unix/stack_overflow.rs|...A=Ri@4|slice index starts at |BrFvd| but
+1| ends ataIW$[6|ibrary/core/src/str/lossy.rs|....055wn0|stc/c86564c412a59490
+c|88a53b665d8b9a47ec610a39/library/alloc/src/string.rs|..........0dDNN0|cargo/re
+e|5b557f/tokio-1.48.0/src/runtime/scheduler/current_thread/mod.rs|.........e](1k
+6|3.76/src/symbolize/gimli/lru.rs|.e](1k0|~/.cargo/registry/src/index.crat
+e|es.io-1949cf8c6b5b557f/regex-automata-0.4.13/src/util/utf8.rs|...........A@ZUx
+6|ata-0.4.13/src/dfa/onepass.rs|...A@ZUx0|.cargo/registry/src/index.crates
+c|.io-1949cf8c6b5b557f/tokio-1.48.0/src/runtime/handle.rs|.......e](1k0|library/
+5|std/src/sys/pal/unix/mod.rs|e](1k6|library/core/src/panicking.rs|...A@ZUx|.car
+5|0.4.13/src/meta/wrappers.rs|e](1k3$AZ+1|ture(pidj?}sO| groB-oHV2p}0s|lot=ZY=ef
+8|x-automata-0.4.13/src/hybrid/regex.rs|.....A@Wa)0|nvalid accelerator index
+6|kio-1.48.0/src/sync/notify.rs|...A@V>=3|ailed printing to zY(*%iV#ir0|library/
+5|std/src/sync/lazy_lock.rs|..A@Z2<7|brary/std/src/sys/random/linux.rs|....A@Z2<
+4|brary/std/src/time.rs|.A@Ws%6|ndex out of bounds: the len is |.x(+Aj5*gUa|t th
+d|o-1949cf8c6b5b557f/tracing-core-0.1.35/src/dispatcher.rs|...........055wn|stc/
+4|ore/src/num/wrapping.rse](1k0|~/.cargo/registry/src/index.crates.io-19
+c|49cf8c6b5b557f/regex-automata-0.4.13/src/util/escape.rs|.......e](1k4qxZ6|alid
+8|7f/aho-corasick-1.1.4/src/packed/api.rs|...e](1k2YBP6|lineaIXpa1|(column ZZ?>p
+b|o-1949cf8c6b5b557f/regex-syntax-0.8.8/src/debug.rs|.......A=Rj<0|rates/jeb/sr
+1|c/jeb85.A=Rj%4|ibrary/std/src/rt.rs|..0bMvU0|rary/std/src/thread/current.
+A=Rj%8|ibrary/core/src/unicode/printable.rs|......055wn0|stc/c86564c412a59490
+b|88a53b665d8b9a47ec610a39/library/core/src/cell.rs|........A@W4*0|xpected char
+8|57f/tokio-1.48.0/src/sync/oneshot.rs|......0bMvU0|rary/std/src/panicking.r
+4|-slab-0.1.7/src/tid.rs|A=Rkf0|/.cargo/registry/src/index.crates.io-194
+a|9cf8c6b5b557f/rustc-demangle-0.1.26/src/lib.rs|......A=Rjv0|internal error: 
+6|mata-0.4.13/src/dfa/regex.rs|....00jn>ZYt>:6K$M<3|ture group index |aIYrD|is i
+2|/thread/mod.rA=Rj%4|ibrary/std/src/path.rs|A=Rjl0|rust/deps/gimli-0.32.3/s
+3|rc/read/index.rs|.055wn0|st/deps/miniz_oxide-0.8.9/src/inflate/core.r
+A@Z2<6|brary/core/src/num/bignum.rs|....0bMvU0|rary/core/src/num/dec2flt/de
+2|cimal_seq.rs|055wn0|stc/c86564c412a5949088a53b665d8b9a47ec610a39/lib
+6|rary/core/src/str/pattern.rs|....0dDNN0|cargo/registry/src/index.crates.
+7|arded-slab-0.1.7/src/page/mod.rs|.....0kFT!aI++#1|.sourcesZYDLtZYjJ]|8;5;ZYn*p
+3|.21.3/src/lib.rs|.055wn0|stc/c86564c412a5949088a53b665d8b9a47ec610a39
+a|/library/alloc/src/collections/btree/node.rs|........03(Y80|supported regex 
+e|s.io-1949cf8c6b5b557f/regex-automata-0.4.13/src/dfa/accel.rs|............07{%y
+8|/aho-corasick-1.1.4/src/util/search.rs|....A=Rjg0|tried to unwrap group fr
+8|io-1.48.0/src/runtime/time/wheel/mod.rs|...e](1k0|~/.cargo/registry/src/in
+2|/shutdown.rs|0bMvU5|rary/std/src/sync/once.rs|..A@X7f0|atal runtime error: 
+3|s/pal/unix/time.rsA=Ri}4|memory allocation of |.aIXBe2|bytes failed|0kFQT00uFG
+5|ing-core-0.1.35/src/span.rs|e](1k0|'determinization exceeded size limit
+a|ex-automata-0.4.13/src/nfa/thompson/builder.rs|......A=RjG0|cannot create it
+b|b557f/aho-corasick-1.1.4/src/packed/rabinkarp.rs|.........00Bz!arXD2aIW#a|/.ca
+8|iber-0.3.22/src/filter/env/directive.rs|...e](1k0|/rustc/c86564c412a594908
+9|emchr-2.7.6/src/arch/all/packedpair/mod.rs|.....A=Rkf0|/.cargo/registry/src
+9|b557f/regex-syntax-0.8.8/src/hir/literal.rs|....e](1k0|~/.cargo/registry/sr
+1|asick.rs0dDNN0|cargo/registry/src/index.crates.io-1949cf8c6b5b557f/
+7|regex-syntax-0.8.8/src/hir/mod.rs|....A@ZUx0|.cargo/registry/src/index.cr
+|t.rs04IY29|consistent park_timeout state; actual = |.......ZYk2<0|     [... om
+|ittewfwU(| frazdQG!| ...t)ZNF4|ibrary/std/src/alloc.rse](1k0|Hcannot access a
+c|ry/std/src/../../backtrace/src/backtrace/libunwind.rs|.........A@V+(0|ange end
+d|949088a53b665d8b9a47ec610a39/library/std/src/sync/once.rs|..........A@ZUx|.car
+6|6/src/symbolize/gimli/stash.rs|..A=Rkf0|/.cargo/registry/src/index.crate
+c|s.io-1949cf8c6b5b557f/gimli-0.32.3/src/read/abbrev.rs|.........A@V}N0|TART_GRO
+4|/src/meta/limited.rs|..02Y&>4|ortest pattern length: xGvoK0sw/p0|memory usage
+7|-corasick-1.1.4/src/util/debug.rs|....A@W>n0|ried to unwrap byte class fr
+7|memchr-2.7.6/src/arch/all/twoway.rs|..e](1k0|~/.cargo/registry/src/index.
+6|-0.3.22/src/registry/stack.rs|...A@ZUx0|.cargo/registry/src/index.crates
+c|.io-1949cf8c6b5b557f/addr2line-0.25.1/src/function.rs|.........A@Vz!|niond8k<j
+e|s.io-1949cf8c6b5b557f/aho-corasick-1.1.4/src/util/primitives.rs|.........e](1k
+6|/addr2line-0.25.1/src/line.rs|...A@W>l0|ust/deps/rustc-demangle-0.1.26/s
+1|rc/lib.rA@Z2<5|brary/core/src/fmt/mod.rs|..A@Z2<0|brary/core/src/str/patte
+|rn.rA@Z2<6|brary/core/src/slice/memchr.rs|..A=Rj%0|ibrary/core/src/num/flt2
+4|dec/strategy/dragon.rs|A=Ri[3|range start index CP:^C0| out of range for sl
+d|5b557f/tracing-subscriber-0.3.22/src/fmt/time/datetime.rs|..........A@V[*|nval
+0|x.crates.io-1949cf8c6b5b557f/memchr-2.7.6/src/memmem/searcher.rs
+6|tomata-0.4.13/src/meta/error.rs|.e](1k0|<max number of byte-based equiva
+1|rc/utf8.A=Rj%5|ibrary/std/src/io/mod.rs|...055wn0|st/deps/addr2line-0.25.1
+2|/src/unit.rs|055wn9|st/deps/rustc-demangle-0.1.26/src/legacy.rs|....e](1k|libr
+4|ary/alloc/src/sync.rs|.A@ZUx0|.cargo/registry/src/index.crates.io-1949
+e|cf8c6b5b557f/tracing-subscriber-0.3.22/src/filter/env/mod.rs|............0dDNN
+6|ta-0.4.13/src/dfa/remapper.rs|...A@ZUx0|.cargo/registry/src/index.crates
+e|.io-1949cf8c6b5b557f/regex-automata-0.4.13/src/util/captures.rs|.........e](1k
+6|omata-0.4.13/src/util/wire.rs|...A@ZUx0|.cargo/registry/src/index.crates
+7|utomata-0.4.13/src/meta/strategy.rs|..e](1k0|4heap usage during NFA compi
+6|rc/nfa/thompson/range_trie.rs|...A@XZu0|ompiling DFA with total patterns
+8|ex-automata-0.4.13/src/meta/literal.rs|....A=Rkf0|/.cargo/registry/src/ind
+e|ex.crates.io-1949cf8c6b5b557f/once_cell-1.21.3/src/imp_std.rs|...........A@Z2<
+d|brary/std/src/sys/pal/unix/stack_overflow/thread_info.rs|...........0dDNN|carg
+8|er-0.3.22/src/registry/extensions.rs|......0dDNN0|cargo/registry/src/index
+c|.crates.io-1949cf8c6b5b557f/dotenv-0.15.0/src/parse.rs|........A=Rkf0|/.cargo/
+2|rc/config.rs|0dDNN0|cargo/registry/src/index.crates.io-1949cf8c6b5b5
+6|57f/backtrace-0.3.76/src/lib.rs|.e](1k0|~/.cargo/registry/src/index.crat
+A@Z2<5|brary/std/src/io/stdio.rs|..A@VR/1|anicked vrrTc0Y*X7gywkq0|read panicke
+4|/shared/smallsort.rs|..02xo^4|valid field filter: |..ZYn*p0|.cargo/registry/
+9|-automata-0.4.13/src/nfa/thompson/pikevm.rs|....e](1k0|~/.cargo/registry/sr
+4|l/prefilter/memmem.rs|.A@ZUx0|.cargo/registry/src/index.crates.io-1949
+e|cf8c6b5b557f/regex-automata-0.4.13/src/meta/reverse_inner.rs|............02PA/
+d|es.io-1949cf8c6b5b557f/tokio-1.48.0/src/util/linked_list.rs|........e](1k|~/.c
+b|tes.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs|.......A=Rkf0|/.cargo/regi
+3|src/dfa/dense.rs|.00Lhsj2e[k0xX6$jhp?1|38;2jhp>UZYuKj0kFQ@ZYuHi0dDNN0|cargo/re
+4|/symbolize/gimli/elf.rse](1k0|~/.cargo/registry/src/index.crates.io-19
+a|49cf8c6b5b557f/gimli-0.32.3/src/read/line.rs|........06$ak0|mpiling DFA with
+2|arded_list.rsA@Z2<0|brary/std/src/sys/thread_local/destructors/list.
+e|a5949088a53b665d8b9a47ec610a39/library/core/src/ops/function.rs|.........e](1k
+|de.rA@W>lc|ust/deps/miniz_oxide-0.8.9/src/inflate/output_buffer.rs|.......e](1k
+7|library/core/src/num/flt2dec/mod.rs|..e](1k0|~/work/jeb/jeb/crates/jeb/sr
+e|ndex.crates.io-1949cf8c6b5b557f/regex-1.12.2/src/builders.rs|............0dDNN
+7|ta-0.4.13/src/nfa/thompson/nfa.rs|....A@V}-4|ttempted to compile |..Z:Hs2|FA s
+4|s/sync/rwlock/futex.rs|A=Rj%6|ibrary/std/src/thread/mod.rs|....0bMvU0|rary/cor
+4|e/src/num/diy_float.rs|A=RiX0000000000%nSc0%nSc0%nSc0%nSc0A+bjJ000000000000000
+0|c/bin/jeb.rs:54jebmessagecrates/jeb/src/bin/jeb.rsassertion fail
+7|rded-slab-0.1.7/src/tid.rs:163:21|....f:./p0|te: we were already unwindin
+5|b-0.1.7/src/tid.rs:163:21|..f:./p0|te: we were already unwinding due to
+0|er-0.3.22/src/registry/sharded.rs/!\ Tried to register the null 
+.rs5[Mb2@3@qV/%%nSaGnia*6M+-%znq?NnndQzW2MK&}I/TblH0&IG|\$@LIkhyZ0rrawg!rEBbUgE.
+5DLK:1y$5.6V9I51x4%NjJy3C.rsBF|l$ H%ikT!nqRddawvXpmkrjVg22lQ=p*qEkO66$k[xc$ASX<?
