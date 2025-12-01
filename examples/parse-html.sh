@@ -7,7 +7,7 @@ cargo run "${cargo_flags[@]}" --bin jeb -- "$@" >> "$path"; exit; }; set -x
 
 
 
-echo '<html><body><h1>Hello</h1><p>World</p></body></html>' | jeb stdin parse-html stdout
+echo '<!DOCTYPE html><html><body><h1>Hello</h1><p>World</p></body></html>' | jeb stdin parse-markup stdout
 JEB
 
 

@@ -7,7 +7,7 @@ cargo run "${cargo_flags[@]}" --bin jeb -- "$@" >> "$path"; exit; }; set -x
 
 
 
-echo '<root><item>First</item><item>Second</item><item>Third</item></root>' | jeb stdin parse-xml stdout
+echo '<?xml version="1.0" encoding="UTF-8"?><root><item>First</item><item>Second</item><item>Third</item></root>' | jeb stdin parse-xml stdout
 JEB
 
 
