@@ -1,9 +1,7 @@
 #!/bin/bash
 # shellcheck disable=all
 # spellchecker: disable=all
-set -euo pipefail; path="$(realpath "$0")";cd "$(dirname "$path")";cargo_flags=(
-);echo "$(grep -m 1 -B 99999 -A 0 "^JEB" < "$path")"$'\n\n\n' > "$path"; jeb() {
-cargo run "${cargo_flags[@]}" --bin jeb -- "$@" >> "$path"; exit; }; set -x
+source "$(dirname $0)/setup"
 
 
 
@@ -19,9 +17,5 @@ JEB
 
 
 |#!/bin/bavrl8?4|# shellcheck disable=all|...3l{Wm4|pellchecker: disable=all|...
-3uG^2h| -euo pipefail; path="$(realpath "$0")";cd "$(dirname "$path")";cargo_fla
-gs=(|...............c<?y+h|echo "$(grep -m 1 -B 99999 -A 0 "^JEB" < "$path")"$'\
-n\n\n' > "$path"; jeb() {|..............aBsD9g|argo run "${cargo_flags[@]}" --bi
-n jeb -- "$@" >> "$path"; exit; }; set -x|.............eQdQf3jpJVvJW391|    ./mi
-rror.e]$Xk2|    | encode-jeb85i5I3=1|   | split-80fBw{B1|  | join-linewPFh3|   |
- stdoz/{decKJEmlja5b3i
+3uHcd4|rce "$(dirname $0)/setup"|..a{[U:3tKcYasvHs1|   ./mirror.sB7+[62|   | enc
+ode-jeb85|h3$DG1|  | split-80|3lQDl1| | join-linesA%:3j|  | stdouB-W%r3q9-N3jmaE

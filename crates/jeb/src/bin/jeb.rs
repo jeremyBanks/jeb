@@ -146,7 +146,7 @@ fn stdout(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 fn encode_z85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let bytes = take(piece);
-        let encoded = jeb::encode_z85(&bytes);
+        let encoded = jeb::z85::encode_z85(&bytes);
         *piece = encoded.into();
     }
     Ok(state)
@@ -155,7 +155,7 @@ fn encode_z85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 fn encode_jeb85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let bytes = take(piece);
-        let encoded = jeb::encode_jeb85(&bytes);
+        let encoded = jeb::jeb85::encode_jeb85(&bytes);
         *piece = encoded.into();
     }
     Ok(state)
