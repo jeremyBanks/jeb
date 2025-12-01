@@ -76,6 +76,8 @@ pub async fn inner_main() -> Result<(), Panic> {
             "encode-z85" => encode_z85(state)?,
             "encode-jeb85" => encode_jeb85(state)?,
             "parse-xml" => parse_xml(state)?,
+            "parse-html" => parse_html(state)?,
+            "parse-markup" => parse_markup(state)?,
             "--all" => {
                 _default_mode = "all";
                 state
@@ -348,6 +350,40 @@ fn parse_xml(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
             }
             Err(e) => {
                 eprintln!("XML parsing error: {e}");
+                return Err(e.into());
+            }
+        }
+    }
+    Ok(state)
+}
+
+fn parse_html(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    for piece in &mut state {
+        let bytes = take(piece);
+        match jeb::xml_to_json::html_to_json(&bytes) {
+            Ok(json_value) => {
+                let json_string = serde_json::to_string_pretty(&json_value)?;
+                *piece = json_string.as_bytes().into();
+            }
+            Err(e) => {
+                eprintln!("HTML parsing error: {e}");
+                return Err(e.into());
+            }
+        }
+    }
+    Ok(state)
+}
+
+fn parse_markup(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    for piece in &mut state {
+        let bytes = take(piece);
+        match jeb::xml_to_json::parse_markup(&bytes) {
+            Ok(json_value) => {
+                let json_string = serde_json::to_string_pretty(&json_value)?;
+                *piece = json_string.as_bytes().into();
+            }
+            Err(e) => {
+                eprintln!("Markup parsing error: {e}");
                 return Err(e.into());
             }
         }

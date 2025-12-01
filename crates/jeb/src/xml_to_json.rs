@@ -3,7 +3,9 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 use serde_json::Value as JsonValue;
 
-/// Converts XML to JSON using the lossless transformation scheme.
+/// Converts XML/HTML to JSON using the lossless transformation scheme.
+///
+/// This function can parse both well-formed XML and lenient HTML.
 ///
 /// The transformation uses a special naming scheme for lossless round-tripping:
 /// - `""` (empty string): The node's tag name
@@ -23,9 +25,62 @@ use serde_json::Value as JsonValue;
 /// - Processing instructions: `""` = `?xml`, `@text` = PI content
 /// - DOCTYPE: `""` = `!DOCTYPE`, `@text` = DOCTYPE content
 pub fn xml_to_json(xml_bytes: &[u8]) -> Result<JsonValue, String> {
+    xml_to_json_impl(xml_bytes, false)
+}
+
+/// Converts HTML to JSON using the lossless transformation scheme.
+///
+/// This function uses more lenient parsing suitable for HTML documents
+/// that may not be well-formed XML.
+pub fn html_to_json(html_bytes: &[u8]) -> Result<JsonValue, String> {
+    xml_to_json_impl(html_bytes, true)
+}
+
+/// Auto-detects whether input is HTML or XML and converts to JSON.
+///
+/// Detection logic:
+/// - Starts with `<!DOCTYPE html>` (case-insensitive) → HTML
+/// - Starts with `<html` (case-insensitive) → HTML
+/// - Starts with `<?xml` → XML
+/// - Otherwise → XML (default)
+pub fn parse_markup(bytes: &[u8]) -> Result<JsonValue, String> {
+    let is_html = detect_html(bytes);
+    xml_to_json_impl(bytes, is_html)
+}
+
+fn detect_html(bytes: &[u8]) -> bool {
+    let trimmed = bytes.iter()
+        .skip_while(|&&b| b.is_ascii_whitespace())
+        .copied()
+        .take(200)
+        .collect::<Vec<u8>>();
+
+    let lower = trimmed.to_ascii_lowercase();
+
+    // Check for HTML DOCTYPE
+    if lower.starts_with(b"<!doctype html") {
+        return true;
+    }
+
+    // Check for <html tag
+    if lower.starts_with(b"<html") {
+        return true;
+    }
+
+    false
+}
+
+fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String> {
     let mut reader = Reader::from_reader(xml_bytes);
     reader.config_mut().trim_text(false);
     reader.config_mut().expand_empty_elements = true;
+
+    if lenient {
+        // More lenient settings for HTML
+        reader.config_mut().check_end_names = false;
+        reader.config_mut().check_comments = false;
+        reader.config_mut().allow_unmatched_ends = true;
+    }
 
     let mut stack: Vec<NodeContext> = Vec::new();
     let mut root: Option<JsonValue> = None;

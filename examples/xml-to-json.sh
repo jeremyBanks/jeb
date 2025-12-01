@@ -1,5 +1,8 @@
 #!/bin/bash
-# Examples of using jeb to convert XML to JSON
+# Examples of using jeb to convert XML and HTML to JSON
+
+echo "========== XML EXAMPLES =========="
+echo ""
 
 echo "=== Simple XML Example ==="
 cargo run --quiet -- examples/xml/simple.xml parse-xml
@@ -17,6 +20,35 @@ echo "=== Mixed Content with DOCTYPE and CDATA ==="
 cargo run --quiet -- examples/xml/mixed-content.xml parse-xml
 
 echo ""
+echo "========== HTML EXAMPLES =========="
+echo ""
+
+echo "=== Simple HTML Document ==="
+cargo run --quiet -- examples/html/simple.html parse-html
+
+echo ""
+echo "=== HTML Form ==="
+cargo run --quiet -- examples/html/form.html parse-html
+
+echo ""
+echo "=== HTML with Unclosed Tags (lenient parsing) ==="
+cargo run --quiet -- examples/html/unclosed-tags.html parse-html
+
+echo ""
+echo "========== AUTO-DETECTION =========="
+echo ""
+
+echo "=== Auto-detect XML ==="
+cargo run --quiet -- examples/xml/book.xml parse-markup
+
+echo ""
+echo "=== Auto-detect HTML ==="
+cargo run --quiet -- examples/html/simple.html parse-markup
+
+echo ""
+echo "========== OTHER EXAMPLES =========="
+echo ""
+
 echo "=== Using stdin ==="
 echo '<greeting name="World">Hello!</greeting>' | cargo run --quiet -- stdin parse-xml
 

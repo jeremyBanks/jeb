@@ -2,16 +2,28 @@
 
 This directory contains examples demonstrating the capabilities of the `jeb` binary.
 
-## XML to JSON Conversion
+## XML/HTML to JSON Conversion
 
-The `parse-xml` command converts XML to JSON using a lossless transformation scheme that preserves all structure, attributes, and metadata.
+JEB provides three commands for parsing markup:
 
-### Sample XML Files
+- **`parse-xml`** - Strict XML parsing
+- **`parse-html`** - Lenient HTML parsing (handles unclosed tags, etc.)
+- **`parse-markup`** - Auto-detects HTML vs XML and uses appropriate parser
 
+All commands use the same lossless transformation scheme that preserves structure, attributes, and metadata.
+
+### Sample Files
+
+**XML:**
 - `xml/simple.xml` - Basic XML with repeated elements
 - `xml/book.xml` - XML with attributes and nested structure
 - `xml/nested.xml` - Deeply nested XML demonstrating parent attribute propagation
 - `xml/mixed-content.xml` - HTML-style document with DOCTYPE, CDATA, and comments
+
+**HTML:**
+- `html/simple.html` - Well-formed HTML5 document
+- `html/form.html` - HTML form with various input types
+- `html/unclosed-tags.html` - HTML with unclosed tags (demonstrates lenient parsing)
 
 ### Running Examples
 
@@ -22,15 +34,36 @@ The `parse-xml` command converts XML to JSON using a lossless transformation sch
 
 #### Manual usage:
 ```bash
-# Convert a file
+# Convert XML file
 cargo run -- examples/xml/book.xml parse-xml stdout
+
+# Convert HTML file
+cargo run -- examples/html/simple.html parse-html stdout
+
+# Auto-detect format
+cargo run -- examples/html/simple.html parse-markup stdout
 
 # Use stdin
 echo '<root><item>test</item></root>' | cargo run -- stdin parse-xml stdout
 
+# Use stdin with HTML
+echo '<!DOCTYPE html><html><body>Hello</body></html>' | cargo run -- stdin parse-html stdout
+
 # Chain with other commands
 cargo run -- examples/xml/simple.xml parse-xml split-lines filter stdout
 ```
+
+### Auto-Detection
+
+The `parse-markup` command automatically detects whether input is HTML or XML:
+
+- Starts with `<!DOCTYPE html>` (case-insensitive) → HTML
+- Starts with `<html` (case-insensitive) → HTML
+- Otherwise → XML (default)
+
+### Known Limitations
+
+- **DOCTYPE declarations**: Currently `<!DOCTYPE html>` declarations may cause parsing errors. For best results, omit DOCTYPE from HTML files or use parse-xml for XHTML-style documents.
 
 ### Transformation Features
 
