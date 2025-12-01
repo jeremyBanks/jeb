@@ -1,5 +1,5 @@
 use crate::{
-    ASCII_INLINE_TEXT_LUT, div_exact, pow, usize_eq,
+    ASCII_INLINE_TEXT_LUT, Z85, div_exact, pow, usize_eq,
     z85::{
         BASE_85, BLOCK_BYTES_4, BLOCK_DIGITS_5, BLOCK_DIGITS_BY_BYTES, encode_z85_block,
         encoded_z85_length,
@@ -55,7 +55,7 @@ pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
                 output.extend([RAW_PREFIX]);
                 output.extend(&raw_buffer);
             } else {
-                let block_count_prefix_value = raw_block_count - 2;
+                let block_count_prefix_value = raw_block_count - 1;
                 let block_count_prefix_block = encode_z85_block(
                     u32::try_from(block_count_prefix_value)
                         .unwrap()
@@ -86,7 +86,6 @@ pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
                 let available_len = padding.len().min(cosmetic_padding.len());
                 padding[..available_len].copy_from_slice(&cosmetic_padding[..available_len]);
 
-
                 output.extend(&block_prefix);
                 output.extend(&raw_buffer);
                 output.extend(&padding);
@@ -107,11 +106,10 @@ pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
     }
 
     if !raw_buffer.is_empty() {
-        if raw_buffer.len() <= BLOCK_BYTES_4 {
-            output.push(RAW_PREFIX);
-        } else {
-            output.extend([RAW_PREFIX; 2]);
+        if raw_buffer.len() > BLOCK_BYTES_4 {
+            output.push(Z85[0]);
         }
+        output.push(RAW_PREFIX);
         output.extend_from_slice(&raw_buffer);
         raw_buffer.clear();
     }

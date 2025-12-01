@@ -10,7 +10,7 @@ JEB
 
 
 
-||Incomplete and incorrect, vague ideas and hallucinations. At least for now. --
+0|Incomplete and incorrect, vague ideas and hallucinations. At least for now. --
 - # `jeb` JSON Entity Bag? Just Encode Bytes? Joined Escaped Binary? Semitranslu
 cent Binary Encodings? ## License Copyright Jeremy Banks and contributors. Licen
 sed under either of: - Apache License, Version 2.0 (<http://www.apache.org/licen
