@@ -5,12 +5,14 @@
   "lock": {
     "frozen": true
   },
+  "exports": "./build/wasm/jeb.js",
   "imports": {
-    "wasmbuild": "jsr:@deno/wasmbuild@0.20.0"
+    "wasmbuild": "jsr:@deno/wasmbuild@0.20.0",
+    "~jeb": "./build/wasm/jeb.js"
   },
   "tasks": {
     "wasmbuild": "deno run --allow-all wasmbuild",
     "build-wasm": "rm -rf build/wasm; mkdir -p build/wasm; deno task wasmbuild --project jeb-wasm --out build/wasm; deno task wasmbuild --project jeb-wasm --out build/wasm --inline",
-    "build-wasm-docs": "deno doc --output=./target/doc/jeb-wasm --html ./build/wasm/jeb.js"
+    "build-wasm-docs": "deno doc --output=./target/doc/jeb.js --html --name=jeb ./build/wasm/jeb.js"
   }
 }
