@@ -23,14 +23,14 @@ JEB
     "": "root",
     "@index": 0,
     "@tail": null,
-    "@text": "tail after atail after b",
+    "@text": null,
     "children": [
       {
         "": "a",
         "-": "root",
         "--": null,
         "@index": 0,
-        "@tail": null,
+        "@tail": "tail after a",
         "@text": "text in a"
       },
       {
@@ -38,7 +38,7 @@ JEB
         "-": "root",
         "--": null,
         "@index": 0,
-        "@tail": null,
+        "@tail": "tail after b",
         "@text": "text in b"
       }
     ]

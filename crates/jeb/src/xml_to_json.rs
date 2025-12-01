@@ -91,6 +91,11 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
             Ok(Event::Eof) => break,
 
             Ok(Event::Start(e)) => {
+                // Reset the just_closed_child flag since we're starting a new element
+                if let Some(parent) = stack.last_mut() {
+                    parent.just_closed_child = false;
+                }
+
                 let tag_name = String::from_utf8_lossy(e.name().as_ref()).to_string();
 
                 let mut node = IndexMap::new();
@@ -120,6 +125,7 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
                     text_content: String::new(),
                     has_element_children: false,
                     children: Vec::new(),
+                    just_closed_child: false,
                 };
 
                 stack.push(context);
@@ -154,6 +160,7 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
                     if let Some(parent) = stack.last_mut() {
                         parent.children.push(node_value);
                         parent.has_element_children = true;
+                        parent.just_closed_child = true;
                     } else {
                         top_level_items.push(node_value);
                     }
@@ -161,6 +168,11 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
             }
 
             Ok(Event::Empty(e)) => {
+                // Reset the just_closed_child flag since we're starting a new element
+                if let Some(parent) = stack.last_mut() {
+                    parent.just_closed_child = false;
+                }
+
                 let tag_name = String::from_utf8_lossy(e.name().as_ref()).to_string();
 
                 let mut node = IndexMap::new();
@@ -191,6 +203,7 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
                 if let Some(parent) = stack.last_mut() {
                     parent.children.push(node_value);
                     parent.has_element_children = true;
+                    parent.just_closed_child = true;
                 } else {
                     top_level_items.push(node_value);
                 }
@@ -199,11 +212,37 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
             Ok(Event::Text(e)) => {
                 let text = e.unescape().map_err(|e| e.to_string())?;
                 if let Some(context) = stack.last_mut() {
-                    context.text_content.push_str(&text);
+                    if context.just_closed_child && !context.children.is_empty() {
+                        // Text after a child element - this is tail text
+                        // Modify the last child to set its @tail
+                        if let Some(JsonValue::Object(last_child)) = context.children.last_mut() {
+                            let current_tail = last_child.get("@tail").cloned();
+                            let new_tail = match current_tail {
+                                Some(JsonValue::String(s)) => {
+                                    // Append to existing tail
+                                    JsonValue::String(format!("{}{}", s, text))
+                                }
+                                _ => {
+                                    // Set new tail
+                                    JsonValue::String(text.to_string())
+                                }
+                            };
+                            last_child.insert("@tail".to_string(), new_tail);
+                        }
+                        // Don't reset just_closed_child here - multiple text nodes can follow
+                    } else {
+                        // Text inside parent, before any child elements
+                        context.text_content.push_str(&text);
+                    }
                 }
             }
 
             Ok(Event::CData(e)) => {
+                // Reset the just_closed_child flag since we're processing a new node
+                if let Some(parent) = stack.last_mut() {
+                    parent.just_closed_child = false;
+                }
+
                 let content = String::from_utf8_lossy(&e.into_inner()).to_string();
 
                 let mut node = IndexMap::new();
@@ -224,12 +263,18 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
                 if let Some(parent) = stack.last_mut() {
                     parent.children.push(node_value);
                     parent.has_element_children = true;
+                    parent.just_closed_child = true;
                 } else {
                     top_level_items.push(node_value);
                 }
             }
 
             Ok(Event::Comment(e)) => {
+                // Reset the just_closed_child flag since we're processing a new node
+                if let Some(parent) = stack.last_mut() {
+                    parent.just_closed_child = false;
+                }
+
                 let comment = String::from_utf8_lossy(&e.into_inner()).to_string();
 
                 let mut node = IndexMap::new();
@@ -250,12 +295,18 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
                 if let Some(parent) = stack.last_mut() {
                     parent.children.push(node_value);
                     parent.has_element_children = true;
+                    parent.just_closed_child = true;
                 } else {
                     top_level_items.push(node_value);
                 }
             }
 
             Ok(Event::Decl(e)) => {
+                // Reset the just_closed_child flag since we're processing a new node
+                if let Some(parent) = stack.last_mut() {
+                    parent.just_closed_child = false;
+                }
+
                 let version = e.version().map_err(|e| e.to_string())?;
                 let encoding = e.encoding().transpose().map_err(|e| e.to_string())?;
                 let standalone = e.standalone().transpose().map_err(|e| e.to_string())?;
@@ -286,12 +337,18 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
                 if let Some(parent) = stack.last_mut() {
                     parent.children.push(node_value);
                     parent.has_element_children = true;
+                    parent.just_closed_child = true;
                 } else {
                     top_level_items.push(node_value);
                 }
             }
 
             Ok(Event::DocType(e)) => {
+                // Reset the just_closed_child flag since we're processing a new node
+                if let Some(parent) = stack.last_mut() {
+                    parent.just_closed_child = false;
+                }
+
                 let content = String::from_utf8_lossy(&e.into_inner()).to_string();
 
                 let mut node = IndexMap::new();
@@ -312,12 +369,18 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
                 if let Some(parent) = stack.last_mut() {
                     parent.children.push(node_value);
                     parent.has_element_children = true;
+                    parent.just_closed_child = true;
                 } else {
                     top_level_items.push(node_value);
                 }
             }
 
             Ok(Event::PI(e)) => {
+                // Reset the just_closed_child flag since we're processing a new node
+                if let Some(parent) = stack.last_mut() {
+                    parent.just_closed_child = false;
+                }
+
                 let content = String::from_utf8_lossy(&e.into_inner()).to_string();
                 let parts: Vec<&str> = content.splitn(2, ' ').collect();
                 let target = parts.get(0).unwrap_or(&"");
@@ -341,6 +404,7 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
                 if let Some(parent) = stack.last_mut() {
                     parent.children.push(node_value);
                     parent.has_element_children = true;
+                    parent.just_closed_child = true;
                 } else {
                     top_level_items.push(node_value);
                 }
@@ -367,6 +431,7 @@ struct NodeContext {
     text_content: String,
     has_element_children: bool,
     children: Vec<JsonValue>,
+    just_closed_child: bool,
 }
 
 fn add_parent_info(node: &mut IndexMap<String, JsonValue>, stack: &[NodeContext]) {
