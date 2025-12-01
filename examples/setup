@@ -1,4 +1,25 @@
 # shellcheck shell=bash
-set -euo pipefail; path="$(realpath "$0")";cd "$(dirname "$path")";cargo_flags=(
-);echo "$(grep -m 1 -B 99999 -A 0 "^JEB" < "$path")"$'\n\n\n' > "$path"; jeb() {
-cargo run "${cargo_flags[@]}" --bin jeb -- "$@" >> "$path"; exit; }; set -x
+set -euo pipefail
+path="$(realpath "$0")"
+cd "$(dirname "$path")"
+cargo_flags=()
+
+# shellcheck disable=SC2016
+echo '#!/bin/bash
+# shellcheck disable=all
+# spellchecker: disable=all
+source "$(dirname "$0")/setup"
+
+'"$(
+    grep '^$' -m 1 -A 999 < "$path" |
+    grep -v '^$' -m 1 -A 999 |
+    grep '^$' -m 1 -B 999
+)
+" > "$path"
+
+jeb() {
+    cargo run "${cargo_flags[@]}" --bin jeb -- "$@" >> "$path"
+    exit
+}
+
+set -x

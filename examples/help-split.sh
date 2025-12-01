@@ -3,12 +3,7 @@
 # spellchecker: disable=all
 source "$(dirname "$0")/setup"
 
-
-
 jeb help split-64 encode-jeb85 join-lines stdout
-JEB
-
-
 
 0|Incomplete and incorrect, vague ideas and hallucinations. At lea
 1|st for nz*9/v3n0?Y3jn12|`jebu<Wlk2|SON Entity Bavp}!i3qbCZ2|t Encode BytewPH6y

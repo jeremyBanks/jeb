@@ -3,14 +3,8 @@
 # spellchecker: disable=all
 source "$(dirname "$0")/setup"
 
-
-
 deno task build-wasm
-
 jeb ../build/wasm/jeb.wasm encode-jeb85 split-80 join-lines stdout
-JEB
-
-
 
 0ax}=0rr910z0Sb0!kX1u&>?c0E[FVE$8}GE{-qb0ak^dE$7&dE$8}Fu&Qgm1B>]JE/U4b0!kX3E$7&b
 E/U4b1+h2KE$4Da1B>]JE/GK&0UE4rc|jeb.internal.js'__wbg___wbindgen_throw_b855445ff

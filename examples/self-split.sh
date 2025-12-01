@@ -3,14 +3,8 @@
 # spellchecker: disable=all
 source "$(dirname "$0")/setup"
 
-
-
 cargo_flags=(--release)
-
 jeb self split-64 encode-jeb85 find-\| find-.rs first-256 join-lines stdout
-JEB
-
-
 
 e|f8c6b5b557f/tracing-subscriber-0.3.22/src/filter/env/field.rs|...........A@VLY
 7|5b557f/regex-1.12.2/src/builders.rs|..e](1k2Y>9d|ide:aIX0+0dFA^0|rgo/registry

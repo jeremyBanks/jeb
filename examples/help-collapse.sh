@@ -3,12 +3,7 @@
 # spellchecker: disable=all
 source "$(dirname "$0")/setup"
 
-
-
 jeb help collapse encode-jeb85 split-80 join-lines stdout
-JEB
-
-
 
 0|Incomplete and incorrect, vague ideas and hallucinations. At least for now. --
 - # `jeb` JSON Entity Bag? Just Encode Bytes? Joined Escaped Binary? Semitranslu
