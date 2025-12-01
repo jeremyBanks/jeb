@@ -83,7 +83,7 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
     }
 
     let mut stack: Vec<NodeContext> = Vec::new();
-    let mut root: Option<JsonValue> = None;
+    let mut top_level_items: Vec<JsonValue> = Vec::new();
     let mut buf = Vec::new();
 
     loop {
@@ -155,7 +155,7 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
                         parent.children.push(node_value);
                         parent.has_element_children = true;
                     } else {
-                        root = Some(node_value);
+                        top_level_items.push(node_value);
                     }
                 }
             }
@@ -192,7 +192,7 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
                     parent.children.push(node_value);
                     parent.has_element_children = true;
                 } else {
-                    root = Some(node_value);
+                    top_level_items.push(node_value);
                 }
             }
 
@@ -225,7 +225,7 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
                     parent.children.push(node_value);
                     parent.has_element_children = true;
                 } else {
-                    root = Some(node_value);
+                    top_level_items.push(node_value);
                 }
             }
 
@@ -251,7 +251,7 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
                     parent.children.push(node_value);
                     parent.has_element_children = true;
                 } else {
-                    root = Some(node_value);
+                    top_level_items.push(node_value);
                 }
             }
 
@@ -287,7 +287,7 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
                     parent.children.push(node_value);
                     parent.has_element_children = true;
                 } else {
-                    root = Some(node_value);
+                    top_level_items.push(node_value);
                 }
             }
 
@@ -313,7 +313,7 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
                     parent.children.push(node_value);
                     parent.has_element_children = true;
                 } else {
-                    root = Some(node_value);
+                    top_level_items.push(node_value);
                 }
             }
 
@@ -342,7 +342,7 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
                     parent.children.push(node_value);
                     parent.has_element_children = true;
                 } else {
-                    root = Some(node_value);
+                    top_level_items.push(node_value);
                 }
             }
 
@@ -352,7 +352,13 @@ fn xml_to_json_impl(xml_bytes: &[u8], lenient: bool) -> Result<JsonValue, String
         buf.clear();
     }
 
-    root.ok_or_else(|| "No root element found".to_string())
+    // If we have multiple top-level items (declaration, comments, root element),
+    // return them all wrapped in an array. If only one, return it directly.
+    match top_level_items.len() {
+        0 => Err("No root element found".to_string()),
+        1 => Ok(top_level_items.into_iter().next().unwrap()),
+        _ => Ok(JsonValue::Array(top_level_items)),
+    }
 }
 
 struct NodeContext {
