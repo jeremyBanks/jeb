@@ -10,9 +10,11 @@ use owo_colors::OwoColorize;
 use regex::Regex;
 
 /// Pre-defined aliases that expand a single command into one or more commands.
-static ALIASES: &[(&str, &[&str])] = &[
-    ("to-jeb85-lines", &["encode-jeb85", "split-80", "join-lines"]),
-];
+static ALIASES: &[(&str, &[&str])] = &[("to-jeb85-lines", &[
+    "encode-jeb85",
+    "split-80",
+    "join-lines",
+])];
 
 /// Expand an alias into its component commands, or return the original command.
 fn expand_alias(command: &str) -> Vec<String> {
