@@ -1,11 +1,4 @@
 {
-  "[json][jsonc]": {
-    "editor.defaultFormatter": "denoland.vscode-deno",
-    "editor.tabSize": 2
-  },
-  "[markdown]": {
-    "editor.defaultFormatter": "denoland.vscode-deno"
-  },
   "[code-text-binary][shellscript]": {
     "editor.rulers": [
       {
@@ -90,6 +83,18 @@
       }
     ]
   },
+  "[json][jsonc][javascript][javascriptreact][typescript][typescriptreact]": {
+    "editor.defaultFormatter": "denoland.vscode-deno",
+    "editor.tabSize": 2
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "cSpell.enabledNotifications": {
+    "Average Word Length too Long": false,
+    "Lines too Long": false,
+    "Maximum Word Length Exceeded": false
+  },
   "cSpell.words": [
     "backticked",
     "bindgen",
@@ -160,10 +165,5 @@
   "files.trimTrailingWhitespace": true,
   "git.autofetch": true,
   "rust-analyzer.cargo.features": "all",
-  "rust-analyzer.check.command": "clippy",
-  "cSpell.enabledNotifications": {
-    "Maximum Word Length Exceeded": false,
-    "Average Word Length too Long": false,
-    "Lines too Long": false
-  }
+  "rust-analyzer.check.command": "clippy"
 }

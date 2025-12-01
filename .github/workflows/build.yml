@@ -18,6 +18,7 @@ jobs:
           rustflags: ""
       - run: cargo build
       - run: cargo publish --dry-run
+      - run: deno test
 
   build-warnings:
     runs-on: ubuntu-latest

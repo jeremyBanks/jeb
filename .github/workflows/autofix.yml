@@ -19,6 +19,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           rustflags: ""
+      - run: deno lint --fix
       - run: deno fmt
       - run: cargo fix --allow-dirty
       - run: cargo clippy --fix --allow-dirty
