@@ -75,6 +75,7 @@ pub async fn inner_main() -> Result<(), Panic> {
             "filter" => filter(state)?,
             "encode-z85" => encode_z85(state)?,
             "encode-jeb85" => encode_jeb85(state)?,
+            "parse-xml" => parse_xml(state)?,
             "--all" => {
                 _default_mode = "all";
                 state
@@ -335,4 +336,21 @@ fn split_shell(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
         }
     }
     Ok(result)
+}
+
+fn parse_xml(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    for piece in &mut state {
+        let bytes = take(piece);
+        match jeb::xml_to_json::xml_to_json(&bytes) {
+            Ok(json_value) => {
+                let json_string = serde_json::to_string_pretty(&json_value)?;
+                *piece = json_string.as_bytes().into();
+            }
+            Err(e) => {
+                eprintln!("XML parsing error: {e}");
+                return Err(e.into());
+            }
+        }
+    }
+    Ok(state)
 }
