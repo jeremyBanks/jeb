@@ -12,7 +12,6 @@
 //! that the output should not be trusted.
 
 /// The kind of error encountered during shell tokenization.
-#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorKind {
     /// An unclosed single quote was encountered.
