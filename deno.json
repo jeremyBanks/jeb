@@ -13,7 +13,7 @@
   },
   "imports": {
     "wasmbuild": "jsr:@deno/wasmbuild@0.20.0",
-    "jeb": "./js/mod.ts"
+    "jsr:@jeb/jeb": "./js/mod.ts"
   },
   "lock": {
     "frozen": true
