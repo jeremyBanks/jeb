@@ -12,43 +12,8 @@ JEB
 
 
 
-[
-  {
-    "": "?xml",
-    "-": null,
-    "@index": 0,
-    "@tail": null,
-    "@text": " version=\"1.0\" encoding=\"UTF-8\""
-  },
-  {
-    "": "item",
-    "-": "root",
-    "--": null,
-    "@index": 0,
-    "@tail": null,
-    "@text": "First"
-  },
-  {
-    "": "item",
-    "-": "root",
-    "--": null,
-    "@index": 1,
-    "@tail": null,
-    "@text": "Second"
-  },
-  {
-    "": "item",
-    "-": "root",
-    "--": null,
-    "@index": 2,
-    "@tail": null,
-    "@text": "Third"
-  },
-  {
-    "": "root",
-    "-": null,
-    "@index": 1,
-    "@tail": "\n",
-    "@text": null
-  }
-]
+{"":"?xml","-":null,"@index":0,"@tail":null,"@text":" version=\"1.0\" encoding=\"UTF-8\""}
+{"":"item","-":"root","--":null,"@index":0,"@tail":null,"@text":"First"}
+{"":"item","-":"root","--":null,"@index":1,"@tail":null,"@text":"Second"}
+{"":"item","-":"root","--":null,"@index":2,"@tail":null,"@text":"Third"}
+{"":"root","-":null,"@index":1,"@tail":"\n","@text":null}

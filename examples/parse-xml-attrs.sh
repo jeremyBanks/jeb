@@ -12,50 +12,8 @@ JEB
 
 
 
-[
-  {
-    "": "?xml",
-    "-": null,
-    "@index": 0,
-    "@tail": null,
-    "@text": " version=\"1.0\""
-  },
-  {
-    "": "title",
-    "-": "book",
-    "--": null,
-    "-id": "123",
-    "@index": 0,
-    "@tail": null,
-    "@text": "Example"
-  },
-  {
-    "": "email",
-    "-": "author",
-    "--": "book",
-    "---": null,
-    "--id": "123",
-    "-name": "Jane",
-    "@index": 0,
-    "@tail": null,
-    "@text": "jane@example.com"
-  },
-  {
-    "": "author",
-    "-": "book",
-    "--": null,
-    "-id": "123",
-    "@index": 1,
-    "@tail": null,
-    "@text": null,
-    "name": "Jane"
-  },
-  {
-    "": "book",
-    "-": null,
-    "@index": 1,
-    "@tail": "\n",
-    "@text": null,
-    "id": "123"
-  }
-]
+{"":"?xml","-":null,"@index":0,"@tail":null,"@text":" version=\"1.0\""}
+{"":"title","-":"book","--":null,"-id":"123","@index":0,"@tail":null,"@text":"Example"}
+{"":"email","-":"author","--":"book","---":null,"--id":"123","-name":"Jane","@index":0,"@tail":null,"@text":"jane@example.com"}
+{"":"author","-":"book","--":null,"-id":"123","@index":1,"@tail":null,"@text":null,"name":"Jane"}
+{"":"book","-":null,"@index":1,"@tail":"\n","@text":null,"id":"123"}

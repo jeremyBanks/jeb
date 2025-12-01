@@ -12,35 +12,7 @@ JEB
 
 
 
-[
-  {
-    "": "?xml",
-    "-": null,
-    "@index": 0,
-    "@tail": null,
-    "@text": " version=\"1.0\""
-  },
-  {
-    "": "a",
-    "-": "root",
-    "--": null,
-    "@index": 0,
-    "@tail": "tail after a",
-    "@text": "text in a"
-  },
-  {
-    "": "b",
-    "-": "root",
-    "--": null,
-    "@index": 1,
-    "@tail": "tail after b",
-    "@text": "text in b"
-  },
-  {
-    "": "root",
-    "-": null,
-    "@index": 1,
-    "@tail": "\n",
-    "@text": null
-  }
-]
+{"":"?xml","-":null,"@index":0,"@tail":null,"@text":" version=\"1.0\""}
+{"":"a","-":"root","--":null,"@index":0,"@tail":"tail after a","@text":"text in a"}
+{"":"b","-":"root","--":null,"@index":1,"@tail":"tail after b","@text":"text in b"}
+{"":"root","-":null,"@index":1,"@tail":"\n","@text":null}

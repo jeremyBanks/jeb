@@ -343,16 +343,19 @@ fn split_shell(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 fn parse_xml(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let bytes = take(piece);
-        match jeb::xml_to_json::xml_to_json(&bytes) {
-            Ok(json_value) => {
-                let json_string = serde_json::to_string_pretty(&json_value)?;
-                *piece = json_string.as_bytes().into();
-            }
-            Err(e) => {
-                eprintln!("XML parsing error: {e}");
-                return Err(e.into());
-            }
-        }
+        let json_value = jeb::xml_to_json::xml_to_json(&bytes)?;
+
+        // Convert array to JSON Lines format (one object per line)
+        let json_lines = if let serde_json::Value::Array(items) = json_value {
+            items.iter()
+                .map(|item| serde_json::to_string(item))
+                .collect::<Result<Vec<_>, _>>()?
+                .join("\n")
+        } else {
+            serde_json::to_string(&json_value)?
+        };
+
+        *piece = json_lines.as_bytes().into();
     }
     Ok(state)
 }
@@ -360,16 +363,19 @@ fn parse_xml(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 fn parse_html(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let bytes = take(piece);
-        match jeb::xml_to_json::html_to_json(&bytes) {
-            Ok(json_value) => {
-                let json_string = serde_json::to_string_pretty(&json_value)?;
-                *piece = json_string.as_bytes().into();
-            }
-            Err(e) => {
-                eprintln!("HTML parsing error: {e}");
-                return Err(e.into());
-            }
-        }
+        let json_value = jeb::xml_to_json::html_to_json(&bytes)?;
+
+        // Convert array to JSON Lines format (one object per line)
+        let json_lines = if let serde_json::Value::Array(items) = json_value {
+            items.iter()
+                .map(|item| serde_json::to_string(item))
+                .collect::<Result<Vec<_>, _>>()?
+                .join("\n")
+        } else {
+            serde_json::to_string(&json_value)?
+        };
+
+        *piece = json_lines.as_bytes().into();
     }
     Ok(state)
 }
@@ -377,16 +383,19 @@ fn parse_html(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 fn parse_markup(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let bytes = take(piece);
-        match jeb::xml_to_json::parse_markup(&bytes) {
-            Ok(json_value) => {
-                let json_string = serde_json::to_string_pretty(&json_value)?;
-                *piece = json_string.as_bytes().into();
-            }
-            Err(e) => {
-                eprintln!("Markup parsing error: {e}");
-                return Err(e.into());
-            }
-        }
+        let json_value = jeb::xml_to_json::parse_markup(&bytes)?;
+
+        // Convert array to JSON Lines format (one object per line)
+        let json_lines = if let serde_json::Value::Array(items) = json_value {
+            items.iter()
+                .map(|item| serde_json::to_string(item))
+                .collect::<Result<Vec<_>, _>>()?
+                .join("\n")
+        } else {
+            serde_json::to_string(&json_value)?
+        };
+
+        *piece = json_lines.as_bytes().into();
     }
     Ok(state)
 }
