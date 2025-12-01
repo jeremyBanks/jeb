@@ -1,3 +1,4 @@
+// spellchecker: disable=all
 import { assertEquals } from "jsr:@std/assert";
 import { encodeJeb85 } from "jsr:@jeb/jeb";
 
