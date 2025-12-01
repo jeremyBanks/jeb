@@ -117,6 +117,7 @@
     "mergeoptions",
     "peekable",
     "redirections",
+    "remappings",
     "repr",
     "reqwest",
     "rustc",
