@@ -7,44 +7,30 @@ cargo run "${cargo_flags[@]}" --bin jeb -- "$@" >> "$path"; exit; }; set -x
 
 
 
-echo '<!DOCTYPE html><html><body><h1>Hello</h1><p>World</p></body></html>' | jeb stdin parse-markup stdout
+cat parse-html/index.html | jeb stdin first-64 parse-markup stdout
 JEB
 
 
 
-{
-  "": "html",
-  "@index": 0,
-  "@tail": null,
-  "@text": null,
-  "children": [
-    {
-      "": "body",
-      "-": "html",
-      "--": null,
-      "@index": 0,
-      "@tail": null,
-      "@text": null,
-      "children": [
-        {
-          "": "h1",
-          "-": "body",
-          "--": "html",
-          "---": null,
-          "@index": 0,
-          "@tail": null,
-          "@text": "Hello"
-        },
-        {
-          "": "p",
-          "-": "body",
-          "--": "html",
-          "---": null,
-          "@index": 0,
-          "@tail": null,
-          "@text": "World"
-        }
-      ]
-    }
-  ]
-}
+[
+  {
+    "": "!DOCTYPE",
+    "@index": 0,
+    "@tail": null,
+    "@text": " html"
+  },
+  {
+    "": "title",
+    "@index": 0,
+    "@tail": null,
+    "@text": "Community Data Dump"
+  },
+  {
+    "": "meta",
+    "@index": 0,
+    "@tail": null,
+    "@text": "",
+    "content": "width=685",
+    "name": "viewport"
+  }
+]
