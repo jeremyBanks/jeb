@@ -29,7 +29,9 @@ rustflags = [
     "--remap-path-prefix=/home/vscode/=~/",
     "--remap-path-prefix=/root/=~/",
 
+    "--remap-path-prefix=/.cargo/=~/.cargo",
     "--remap-path-prefix=/usr/local/cargo/=~/.cargo",
 
+    "--remap-path-prefix=/.rustup/=~/.rustup",
     "--remap-path-prefix=/usr/local/rustup/=~/.rustup",
 ]
