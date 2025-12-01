@@ -35,6 +35,7 @@ pub const TARGET_LINE_SIZE_BYTES: usize = usize_eq(
     div_exact(TARGET_LINE_SIZE_DIGITS * BLOCK_BYTES_4, BLOCK_DIGITS_5),
 );
 
+#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
 #[must_use]
 pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
     let encoded_length = encoded_z85_length(bytes.len());

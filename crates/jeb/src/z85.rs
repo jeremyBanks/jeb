@@ -14,6 +14,7 @@ pub const BLOCK_BYTES_BY_DIGITS: [usize; BLOCK_DIGITS_5 + 1] = [0, -1 as _, 1, 2
 
 #[derive(Default)]
 pub struct Encoder;
+
 impl Encoder {
     #[must_use]
     pub fn encode_bytes(&self, _bytes: &[u8]) -> Vec<u8> {
@@ -238,6 +239,7 @@ pub const fn decoded_z85_length(digit_length: usize) -> usize {
     full_block_bytes + remaining_block_bytes
 }
 
+#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
 #[must_use]
 pub fn encode_z85(bytes: &[u8]) -> Vec<u8> {
     let encoded_length = encoded_z85_length(bytes.len());

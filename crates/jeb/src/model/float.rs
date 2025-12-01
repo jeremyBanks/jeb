@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 
 
+#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
 #[derive(AsRef, Clone, Debug, Default, Deref, Copy, Display, Into, Serialize)]
 #[serde(transparent)]
 #[repr(transparent)]

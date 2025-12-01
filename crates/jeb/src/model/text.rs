@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use super::bytes::Bytes;
 
 
-
+#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
 #[derive(
     AsMut,
     AsRef,

@@ -11,9 +11,8 @@
 //! best-effort result but populates the `errors` list in the result, indicating
 //! that the output should not be trusted.
 
-use core::fmt;
-
 /// The kind of error encountered during shell tokenization.
+#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorKind {
     /// An unclosed single quote was encountered.
@@ -54,8 +53,8 @@ pub enum ErrorKind {
     Tilde,
 }
 
-impl fmt::Display for ErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl core::fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::UnclosedSingleQuote => write!(f, "unclosed single quote"),
             Self::UnclosedDoubleQuote => write!(f, "unclosed double quote"),
@@ -95,8 +94,8 @@ pub struct Error {
     pub position: usize,
 }
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl core::fmt::Display for Error {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
             "error at position {}: {} (byte 0x{:02x})",
