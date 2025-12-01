@@ -1,7 +1,7 @@
 #!/bin/bash
 # shellcheck disable=all
 # spellchecker: disable=all
-source "$(dirname $0)/setup"
+source "$(dirname "$0")/setup"
 
 
 
@@ -12,8 +12,8 @@ JEB
 
 h|Incomplete and incorrect, vague ideas and hallucinations. At least for now.|..
 ..........z*9/v3n0?Y3jn12|`jebu<Wlk2|SON Entity Bavp}!i3qbCZ2|t Encode BytewPH6y
-3qbkJ3|ned Escaped BinaryA^o>R3r7IM6|itranslucent Binary Encodings?|..B3y0s1|## 
-LicenB7CW=9|Copyright Jeremy Banks and contributors.|.......3joEv4|censed under 
+3qbkJ3|ned Escaped BinaryA^o>R3r7IM6|itranslucent Binary Encodings?|..B3y0s1|##
+LicenB7CW=9|Copyright Jeremy Banks and contributors.|.......3joEv4|censed under
 either of:z!q3q3n0w^h|pache License, Version 2.0 (<http://www.apache.org/license
 s/LICENSE-2.0>)|..............dgdTHb|MIT license (<http://opensource.org/license
 s/MIT>)|.......j$c*C2|at your optioz/dfm3l{=r2|Contribution|3jo^Ji|less you expl

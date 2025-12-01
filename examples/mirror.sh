@@ -1,7 +1,7 @@
 #!/bin/bash
 # shellcheck disable=all
 # spellchecker: disable=all
-source "$(dirname $0)/setup"
+source "$(dirname "$0")/setup"
 
 
 
