@@ -11,8 +11,5 @@ JEB
 
 
 1|#!/bin/bvrl8?5|# shellcheck disable=all|...3l{Wm5|pellchecker: disable=all|...
-3uG^2i| -euo pipefail; path="$(realpath "$0")";cd "$(dirname "$path")";cargo_fla
-gs=(|...............c<?y+i|echo "$(grep -m 1 -B 99999 -A 0 "^JEB" < "$path")"$'\
-n\n\n' > "$path"; jeb() {|..............aBsD9h|argo run "${cargo_flags[@]}" --bi
-n jeb -- "$@" >> "$path"; exit; }; set -x|.............eQdQf3jpJV9|b ./to-jeb85-
-lines.sh to-jeb85-lines stdout|....z/{den<#5N3jma
+3uHcd5|rce "$(dirname "$0")/setup"|B-nJi3jmbP7|eb ./alias.sh to-jeb85-lines stdo
+ut|..z/{den<#5N3jma

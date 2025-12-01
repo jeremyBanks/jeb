@@ -1,3 +1,5 @@
+#![cfg(feature = "bin")]
+
 use std::{
     convert::Infallible,
     io::{Read, Write},
@@ -8,6 +10,7 @@ use std::{
 use jeb::{Panic, model::Bytes};
 use owo_colors::OwoColorize;
 use regex::Regex;
+use tracing::debug;
 
 /// Pre-defined aliases that expand a single command into one or more commands.
 static ALIASES: &[(&str, &[&str])] = &[("to-jeb85-lines", &[
@@ -35,11 +38,30 @@ pub async fn main() -> Result<(), Infallible> {
 }
 
 pub async fn inner_main() -> Result<(), Panic> {
+    color_eyre::install()?;
+    dotenv::dotenv().ok();
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .pretty()
+        .init();
+
     let mut args = Vec::<String>::from_iter(std::env::args());
     let own_path: String = args.remove(0);
 
-    args = args
+    // Parse prelude and prepend to args
+    let prelude_result = jeb::shell_tokenizer::tokenize(PRELUDE.as_bytes());
+    for error in &prelude_result.errors {
+        debug!("prelude error: {error}");
+    }
+    let prelude_args: Vec<String> = prelude_result
+        .args
         .into_iter()
+        .map(|bytes| String::from_utf8(bytes).expect("prelude should be valid UTF-8"))
+        .collect();
+
+    args = prelude_args
+        .into_iter()
+        .chain(args)
         .flat_map(|s| {
             static REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"\s\|\s"#).unwrap());
 
@@ -105,6 +127,10 @@ pub async fn inner_main() -> Result<(), Panic> {
             }
             "--first" => {
                 _default_mode = "first";
+                state
+            }
+            _ if command.contains('=') => {
+                // Assignment - no-op for now
                 state
             }
             _ => {

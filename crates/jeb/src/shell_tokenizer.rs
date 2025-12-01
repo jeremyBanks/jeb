@@ -32,6 +32,8 @@ pub enum ErrorKind {
     Ampersand,
     /// Semicolon as command separator (not interpreted).
     Semicolon,
+    /// Newline as command separator (not interpreted).
+    Newline,
     /// Open parenthesis for subshell (not interpreted).
     OpenParen,
     /// Close parenthesis for subshell (not interpreted).
@@ -63,6 +65,10 @@ impl fmt::Display for ErrorKind {
             Self::Pipe => write!(f, "pipe (piping not interpreted)"),
             Self::Ampersand => write!(f, "ampersand (background/AND not interpreted)"),
             Self::Semicolon => write!(f, "semicolon (command separator not interpreted)"),
+            Self::Newline => write!(
+                f,
+                "newline (command separator interpreted as whitespace instead)"
+            ),
             Self::OpenParen => write!(f, "open parenthesis (subshell not interpreted)"),
             Self::CloseParen => write!(f, "close parenthesis (subshell not interpreted)"),
             Self::LessThan => write!(f, "less-than (input redirection not interpreted)"),
@@ -189,6 +195,17 @@ pub fn tokenize(input: &[u8]) -> TokenizeResult {
                     token_started = true;
                     quote_start_position = Some(position);
                 } else if b == b' ' || b == b'\t' {
+                    if token_started || !current_token.is_empty() {
+                        args.push(core::mem::take(&mut current_token));
+                        token_started = false;
+                    }
+                    at_word_start = true;
+                } else if b == b'\n' || b == b'\r' {
+                    errors.push(Error {
+                        kind: ErrorKind::Newline,
+                        byte: b,
+                        position,
+                    });
                     if token_started || !current_token.is_empty() {
                         args.push(core::mem::take(&mut current_token));
                         token_started = false;
