@@ -31,6 +31,7 @@ rustflags = [
 
     "--remap-path-prefix=/.cargo/=~/.cargo",
     "--remap-path-prefix=/usr/local/cargo/=~/.cargo",
+    "--remap-path-prefix=usr/local/cargo/=~/.cargo",
 
     "--remap-path-prefix=/.rustup/=~/.rustup",
     "--remap-path-prefix=/usr/local/rustup/=~/.rustup",

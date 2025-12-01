@@ -12,7 +12,7 @@
   },
   "tasks": {
     "wasmbuild": "deno run --allow-all wasmbuild",
-    "build-wasm": "rm -rf build/wasm; mkdir -p build/wasm; deno task wasmbuild --project jeb-wasm --out build/wasm; deno task wasmbuild --project jeb-wasm --out build/wasm --inline",
+    "build-wasm": "export RUSTFLAGS=\"--remap-path-prefix=/workspaces/=../ --remap-path-prefix=~/work/jeb/=../ --remap-path-prefix=/workspaces/jeb/=./ --remap-path-prefix=~/work/jeb/jeb/=./ --remap-path-prefix=/home/=~ --remap-path-prefix=/Users/=~ --remap-path-prefix=/usr/home/=~ --remap-path-prefix=/home/_/=~/ --remap-path-prefix=/home/jeb/=~/ --remap-path-prefix=/home/runner/=~/ --remap-path-prefix=/home/user/=~/ --remap-path-prefix=/home/vscode/=~/ --remap-path-prefix=/root/=~/ --remap-path-prefix=/.cargo/=~/.cargo --remap-path-prefix=/usr/local/cargo/=~/.cargo --remap-path-prefix=usr/local/cargo/=~/.cargo --remap-path-prefix=/.rustup/=~/.rustup --remap-path-prefix=/usr/local/rustup/=~/.rustup\"; rm -rf build/wasm; mkdir -p build/wasm; deno task wasmbuild --project jeb-wasm --out build/wasm; deno task wasmbuild --project jeb-wasm --out build/wasm --inline",
     "build-wasm-docs": "deno doc --output=./target/doc/jeb.js --html --name=jeb ./build/wasm/jeb.js"
   }
 }
