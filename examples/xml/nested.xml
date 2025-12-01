@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<company name="TechCorp">
+  <department id="eng">
+    <name>Engineering</name>
+    <team id="backend">
+      <name>Backend Team</name>
+      <member role="lead">
+        <name>Alice</name>
+        <skills>
+          <skill level="expert">Rust</skill>
+          <skill level="expert">Python</skill>
+        </skills>
+      </member>
+      <member role="developer">
+        <name>Bob</name>
+        <skills>
+          <skill level="intermediate">JavaScript</skill>
+          <skill level="beginner">Rust</skill>
+        </skills>
+      </member>
+    </team>
+  </department>
+</company>

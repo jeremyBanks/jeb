@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<book id="123" isbn="978-0-123456-78-9">
+  <title>The Art of Programming</title>
+  <author name="Jane Doe">
+    <email>jane@example.com</email>
+    <website>https://janedoe.dev</website>
+  </author>
+  <chapters>
+    <chapter number="1">Introduction</chapter>
+    <chapter number="2">Getting Started</chapter>
+    <chapter number="3">Advanced Topics</chapter>
+  </chapters>
+  <!-- Published in 2024 -->
+  <metadata>
+    <published>2024-01-15</published>
+    <edition>1st</edition>
+  </metadata>
+</book>
