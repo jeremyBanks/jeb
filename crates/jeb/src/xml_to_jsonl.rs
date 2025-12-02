@@ -284,7 +284,11 @@ fn decode_entities(text: &str) -> String {
     }
 }
 
-/// Custom entity resolver for entities not handled by quick-xml
+/// Custom entity resolver for entities not handled by quick-xml.
+///
+/// This function always returns `Some(value)` - for unknown entities, it returns
+/// the Unicode replacement character `U+FFFD` after logging a warning. This is
+/// intentional per the specification to ensure no data is silently lost.
 fn custom_entity_resolver(entity: &str) -> Option<&'static str> {
     // First check our custom HTML entity table
     if let Some(value) = html_entity(entity) {
@@ -297,6 +301,14 @@ fn custom_entity_resolver(entity: &str) -> Option<&'static str> {
 }
 
 /// Resolve a single entity reference to its expanded value.
+///
+/// This handles:
+/// - Built-in XML entities (&amp;, &lt;, &gt;, &quot;, &apos;)
+/// - Numeric character references (&#NN; and &#xNN;)
+/// - HTML5 named entities (via quick-xml's resolver)
+/// - Custom HTML entity table
+///
+/// For unknown entities, logs a warning and returns the Unicode replacement character.
 fn resolve_entity(entity: &str) -> String {
     // Built-in XML entities
     match entity {
@@ -308,19 +320,26 @@ fn resolve_entity(entity: &str) -> String {
         _ => {}
     }
 
-    // Numeric character references
+    // Numeric character references with bounds validation
     if let Some(hex) = entity.strip_prefix("#x").or_else(|| entity.strip_prefix("#X")) {
         // Hexadecimal: &#xNN;
-        if let Ok(code) = u32::from_str_radix(hex, 16)
-            && let Some(c) = char::from_u32(code) {
-                return c.to_string();
-            }
+        if let Ok(code) = u32::from_str_radix(hex, 16) {
+            // Validate the codepoint is in valid Unicode range
+            // (char::from_u32 already handles this, but be explicit about rejecting surrogates)
+            if is_valid_xml_char(code)
+                && let Some(c) = char::from_u32(code) {
+                    return c.to_string();
+                }
+        }
     } else if let Some(decimal) = entity.strip_prefix('#') {
         // Decimal: &#NN;
-        if let Ok(code) = decimal.parse::<u32>()
-            && let Some(c) = char::from_u32(code) {
-                return c.to_string();
-            }
+        if let Ok(code) = decimal.parse::<u32>() {
+            // Validate the codepoint is in valid Unicode range
+            if is_valid_xml_char(code)
+                && let Some(c) = char::from_u32(code) {
+                    return c.to_string();
+                }
+        }
     }
 
     // Try HTML5 entities via quick-xml's resolver
@@ -336,6 +355,21 @@ fn resolve_entity(entity: &str) -> String {
     // Unknown entity - log warning and return replacement character
     tracing::warn!("Unsupported entity reference: &{};", entity);
     "\u{FFFD}".to_string()
+}
+
+/// Validate that a numeric codepoint is a valid XML character.
+/// Per XML 1.0 spec, valid characters are:
+/// - #x9, #xA, #xD (tab, newline, carriage return)
+/// - #x20-#xD7FF (most BMP characters)
+/// - #xE000-#xFFFD (private use and specials, excluding #xFFFE and #xFFFF)
+/// - #x10000-#x10FFFF (supplementary planes)
+const fn is_valid_xml_char(code: u32) -> bool {
+    matches!(code,
+        0x9 | 0xA | 0xD |
+        0x20..=0xD7FF |
+        0xE000..=0xFFFD |
+        0x10000..=0x0010_FFFF
+    )
 }
 
 /// Information about an ancestor element for encoding parent context.
