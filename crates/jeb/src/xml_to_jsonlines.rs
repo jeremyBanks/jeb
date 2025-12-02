@@ -1,13 +1,12 @@
 use indexmap::IndexMap;
-use quick_xml::events::Event;
-use quick_xml::Reader;
+use quick_xml::{Reader, events::Event};
 use serde_json::Value;
 
 /// Converts XML data to JSON Lines format following the specification.
 ///
 /// Each XML node is converted to a JSON object on a single line, with ancestor
 /// context encoded via special attribute naming conventions using `-` prefixes.
-pub fn xml_to_jsonlines(xml_data: &[u8]) -> Result<String, Box<dyn std::error::Error>> {
+pub fn xml_to_jsonlines(xml_data: &[u8]) -> Result<String, Box<dyn core::error::Error>> {
     let mut reader = Reader::from_reader(xml_data);
     reader.trim_text(false);
     reader.expand_empty_elements(false);
@@ -18,7 +17,7 @@ pub fn xml_to_jsonlines(xml_data: &[u8]) -> Result<String, Box<dyn std::error::E
             Ok(Event::Eof) => break,
             Ok(event) => events.push(event),
             Err(e) => {
-                eprintln!("Warning: XML parsing error: {}", e);
+                eprintln!("Warning: XML parsing error: {e}");
                 break;
             }
         }
@@ -29,7 +28,12 @@ pub fn xml_to_jsonlines(xml_data: &[u8]) -> Result<String, Box<dyn std::error::E
     let mut ancestor_stack: Vec<AncestorInfo> = Vec::new();
     let mut sibling_counters: Vec<usize> = Vec::new();
 
-    process_events(&events, &mut json_lines, &mut ancestor_stack, &mut sibling_counters)?;
+    process_events(
+        &events,
+        &mut json_lines,
+        &mut ancestor_stack,
+        &mut sibling_counters,
+    )?;
 
     // Output
     let output = json_lines
@@ -52,14 +56,13 @@ fn process_events(
     json_lines: &mut Vec<Value>,
     ancestor_stack: &mut Vec<AncestorInfo>,
     sibling_counters: &mut Vec<usize>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn core::error::Error>> {
     let mut i = 0;
 
     while i < events.len() {
-
         match &events[i] {
             Event::Decl(decl) => {
-                let content = String::from_utf8_lossy(&decl).to_string();
+                let content = String::from_utf8_lossy(decl).to_string();
                 let obj = create_special_node("?xml", &content, "", ancestor_stack)?;
                 json_lines.push(obj);
                 increment_sibling_index(sibling_counters);
@@ -159,7 +162,7 @@ fn process_events(
                 i += 1;
             }
             Event::CData(cdata) => {
-                let text = String::from_utf8_lossy(&cdata).to_string();
+                let text = String::from_utf8_lossy(cdata).to_string();
                 let obj = create_special_node("![CDATA[", &text, "", ancestor_stack)?;
                 json_lines.push(obj);
                 increment_sibling_index(sibling_counters);
@@ -173,13 +176,13 @@ fn process_events(
                 i += 1;
             }
             Event::PI(pi) => {
-                let pi_data = String::from_utf8_lossy(&pi).to_string();
+                let pi_data = String::from_utf8_lossy(pi).to_string();
                 let target = if let Some(space_pos) = pi_data.find(' ') {
                     &pi_data[..space_pos]
                 } else {
                     &pi_data
                 };
-                let obj = create_special_node(&format!("?{}", target), &pi_data, "", ancestor_stack)?;
+                let obj = create_special_node(&format!("?{target}"), &pi_data, "", ancestor_stack)?;
                 json_lines.push(obj);
                 increment_sibling_index(sibling_counters);
 
@@ -240,10 +243,10 @@ fn create_element_node(
     ancestor_stack: &[AncestorInfo],
     attributes: &IndexMap<String, String>,
     index: usize,
-) -> Result<Value, Box<dyn std::error::Error>> {
+) -> Result<Value, Box<dyn core::error::Error>> {
     let mut obj = serde_json::Map::new();
 
-    obj.insert("".to_string(), Value::String(tag.to_string()));
+    obj.insert(String::new(), Value::String(tag.to_string()));
 
     // Add ancestor tags and attributes (in reverse order, closest ancestor first)
     let len = ancestor_stack.len();
@@ -253,7 +256,7 @@ fn create_element_node(
         obj.insert(prefix.clone(), Value::String(ancestor.tag.clone()));
 
         for (attr_name, attr_value) in &ancestor.attributes {
-            let attr_key = format!("{}{}", prefix, attr_name);
+            let attr_key = format!("{prefix}{attr_name}");
             obj.insert(attr_key, Value::String(attr_value.clone()));
         }
     }
@@ -277,10 +280,10 @@ fn create_empty_element_node(
     ancestor_stack: &[AncestorInfo],
     attributes: &IndexMap<String, String>,
     index: usize,
-) -> Result<Value, Box<dyn std::error::Error>> {
+) -> Result<Value, Box<dyn core::error::Error>> {
     let mut obj = serde_json::Map::new();
 
-    obj.insert("".to_string(), Value::String(tag.to_string()));
+    obj.insert(String::new(), Value::String(tag.to_string()));
 
     // Add ancestor tags and attributes (in reverse order, closest ancestor first)
     let len = ancestor_stack.len();
@@ -290,7 +293,7 @@ fn create_empty_element_node(
         obj.insert(prefix.clone(), Value::String(ancestor.tag.clone()));
 
         for (attr_name, attr_value) in &ancestor.attributes {
-            let attr_key = format!("{}{}", prefix, attr_name);
+            let attr_key = format!("{prefix}{attr_name}");
             obj.insert(attr_key, Value::String(attr_value.clone()));
         }
     }
@@ -312,10 +315,10 @@ fn create_special_node(
     text: &str,
     tail: &str,
     ancestor_stack: &[AncestorInfo],
-) -> Result<Value, Box<dyn std::error::Error>> {
+) -> Result<Value, Box<dyn core::error::Error>> {
     let mut obj = serde_json::Map::new();
 
-    obj.insert("".to_string(), Value::String(tag.to_string()));
+    obj.insert(String::new(), Value::String(tag.to_string()));
 
     // Add ancestor tags and attributes (in reverse order, closest ancestor first)
     let len = ancestor_stack.len();
@@ -325,7 +328,7 @@ fn create_special_node(
         obj.insert(prefix.clone(), Value::String(ancestor.tag.clone()));
 
         for (attr_name, attr_value) in &ancestor.attributes {
-            let attr_key = format!("{}{}", prefix, attr_name);
+            let attr_key = format!("{prefix}{attr_name}");
             obj.insert(attr_key, Value::String(attr_value.clone()));
         }
     }
