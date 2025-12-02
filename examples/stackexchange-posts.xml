@@ -1,13 +1,114 @@
 <?xml version="1.0" encoding="utf-8"?>
 <posts>
-  <row Id="1" PostTypeId="1" AcceptedAnswerId="3" CreationDate="2016-01-12T18:45:19.963" Score="10" ViewCount="1000" Body="&lt;p&gt;What is the best way to level a 3D printer bed?&lt;/p&gt;" OwnerUserId="1" Title="How to level a 3D printer bed?" Tags="&lt;bed-leveling&gt;&lt;calibration&gt;" AnswerCount="2" CommentCount="1" />
-  <row Id="2" PostTypeId="1" CreationDate="2016-01-12T19:00:00.000" Score="5" ViewCount="500" Body="&lt;p&gt;What materials work best for &lt;strong&gt;PLA&lt;/strong&gt; printing?&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Temperature settings&lt;/li&gt;&lt;li&gt;Bed adhesion&lt;/li&gt;&lt;/ul&gt;" OwnerUserId="2" Title="Best PLA printing settings?" Tags="&lt;pla&gt;&lt;settings&gt;&lt;temperature&gt;" AnswerCount="3" CommentCount="2" />
-  <row Id="3" PostTypeId="2" ParentId="1" CreationDate="2016-01-12T19:30:00.000" Score="15" Body="&lt;p&gt;The best method is to use a piece of paper:&lt;/p&gt;&lt;ol&gt;&lt;li&gt;Heat the bed to operating temperature&lt;/li&gt;&lt;li&gt;Move the nozzle to each corner&lt;/li&gt;&lt;li&gt;Adjust until you feel slight resistance&lt;/li&gt;&lt;/ol&gt;" OwnerUserId="3" />
-  <row Id="4" PostTypeId="2" ParentId="1" CreationDate="2016-01-12T20:00:00.000" Score="8" Body="&lt;p&gt;Consider using a &lt;em&gt;BLTouch&lt;/em&gt; or similar auto-leveling probe for consistent results.&lt;/p&gt;" OwnerUserId="4" />
-  <row Id="5" PostTypeId="1" CreationDate="2016-01-13T10:00:00.000" Score="12" ViewCount="2500" Body="&lt;p&gt;My prints keep warping at the corners. What causes this and how can I fix it?&lt;/p&gt;&lt;p&gt;I am using ABS filament at 230C with a heated bed at 100C.&lt;/p&gt;" OwnerUserId="5" Title="Why do my ABS prints warp?" Tags="&lt;abs&gt;&lt;warping&gt;&lt;troubleshooting&gt;" AnswerCount="4" CommentCount="5" />
-  <row Id="6" PostTypeId="2" ParentId="5" CreationDate="2016-01-13T11:00:00.000" Score="20" Body="&lt;p&gt;Warping is caused by uneven cooling. Try these solutions:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Use an enclosure&lt;/li&gt;&lt;li&gt;Apply ABS slurry to the bed&lt;/li&gt;&lt;li&gt;Increase bed temperature to 110C&lt;/li&gt;&lt;/ul&gt;" OwnerUserId="3" />
-  <row Id="7" PostTypeId="1" CreationDate="2016-01-14T08:00:00.000" Score="7" ViewCount="800" Body="&lt;p&gt;What is the difference between &lt;code&gt;Cura&lt;/code&gt; and &lt;code&gt;PrusaSlicer&lt;/code&gt;?&lt;/p&gt;" OwnerUserId="6" Title="Cura vs PrusaSlicer comparison" Tags="&lt;slicer&gt;&lt;software&gt;&lt;cura&gt;&lt;prusaslicer&gt;" AnswerCount="2" CommentCount="3" />
-  <row Id="8" PostTypeId="2" ParentId="7" CreationDate="2016-01-14T09:00:00.000" Score="10" Body="&lt;p&gt;Both are excellent slicers. Key differences:&lt;/p&gt;&lt;table&gt;&lt;tr&gt;&lt;th&gt;Feature&lt;/th&gt;&lt;th&gt;Cura&lt;/th&gt;&lt;th&gt;PrusaSlicer&lt;/th&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;UI&lt;/td&gt;&lt;td&gt;Beginner-friendly&lt;/td&gt;&lt;td&gt;More technical&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;" OwnerUserId="7" />
-  <row Id="9" PostTypeId="1" CreationDate="2016-01-15T12:00:00.000" Score="3" ViewCount="300" Body="&lt;p&gt;Can I print with &lt;strong&gt;PETG&lt;/strong&gt; on a non-heated bed?&lt;/p&gt;" OwnerUserId="8" Title="PETG without heated bed?" Tags="&lt;petg&gt;&lt;bed&gt;" AnswerCount="1" CommentCount="0" />
-  <row Id="10" PostTypeId="2" ParentId="9" CreationDate="2016-01-15T13:00:00.000" Score="5" Body="&lt;p&gt;PETG &lt;em&gt;technically&lt;/em&gt; can be printed without a heated bed, but adhesion will be poor. Recommended bed temp: 70-80C.&lt;/p&gt;" OwnerUserId="3" />
+  <row
+    Id="1"
+    PostTypeId="1"
+    AcceptedAnswerId="3"
+    CreationDate="2016-01-12T18:45:19.963"
+    Score="10"
+    ViewCount="1000"
+    Body="&lt;p&gt;What is the best way to level a 3D printer bed?&lt;/p&gt;"
+    OwnerUserId="1"
+    Title="How to level a 3D printer bed?"
+    Tags="&lt;bed-leveling&gt;&lt;calibration&gt;"
+    AnswerCount="2"
+    CommentCount="1"
+  />
+  <row
+    Id="2"
+    PostTypeId="1"
+    CreationDate="2016-01-12T19:00:00.000"
+    Score="5"
+    ViewCount="500"
+    Body="&lt;p&gt;What materials work best for &lt;strong&gt;PLA&lt;/strong&gt; printing?&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Temperature settings&lt;/li&gt;&lt;li&gt;Bed adhesion&lt;/li&gt;&lt;/ul&gt;"
+    OwnerUserId="2"
+    Title="Best PLA printing settings?"
+    Tags="&lt;pla&gt;&lt;settings&gt;&lt;temperature&gt;"
+    AnswerCount="3"
+    CommentCount="2"
+  />
+  <row
+    Id="3"
+    PostTypeId="2"
+    ParentId="1"
+    CreationDate="2016-01-12T19:30:00.000"
+    Score="15"
+    Body="&lt;p&gt;The best method is to use a piece of paper:&lt;/p&gt;&lt;ol&gt;&lt;li&gt;Heat the bed to operating temperature&lt;/li&gt;&lt;li&gt;Move the nozzle to each corner&lt;/li&gt;&lt;li&gt;Adjust until you feel slight resistance&lt;/li&gt;&lt;/ol&gt;"
+    OwnerUserId="3"
+  />
+  <row
+    Id="4"
+    PostTypeId="2"
+    ParentId="1"
+    CreationDate="2016-01-12T20:00:00.000"
+    Score="8"
+    Body="&lt;p&gt;Consider using a &lt;em&gt;BLTouch&lt;/em&gt; or similar auto-leveling probe for consistent results.&lt;/p&gt;"
+    OwnerUserId="4"
+  />
+  <row
+    Id="5"
+    PostTypeId="1"
+    CreationDate="2016-01-13T10:00:00.000"
+    Score="12"
+    ViewCount="2500"
+    Body="&lt;p&gt;My prints keep warping at the corners. What causes this and how can I fix it?&lt;/p&gt;&lt;p&gt;I am using ABS filament at 230C with a heated bed at 100C.&lt;/p&gt;"
+    OwnerUserId="5"
+    Title="Why do my ABS prints warp?"
+    Tags="&lt;abs&gt;&lt;warping&gt;&lt;troubleshooting&gt;"
+    AnswerCount="4"
+    CommentCount="5"
+  />
+  <row
+    Id="6"
+    PostTypeId="2"
+    ParentId="5"
+    CreationDate="2016-01-13T11:00:00.000"
+    Score="20"
+    Body="&lt;p&gt;Warping is caused by uneven cooling. Try these solutions:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Use an enclosure&lt;/li&gt;&lt;li&gt;Apply ABS slurry to the bed&lt;/li&gt;&lt;li&gt;Increase bed temperature to 110C&lt;/li&gt;&lt;/ul&gt;"
+    OwnerUserId="3"
+  />
+  <row
+    Id="7"
+    PostTypeId="1"
+    CreationDate="2016-01-14T08:00:00.000"
+    Score="7"
+    ViewCount="800"
+    Body="&lt;p&gt;What is the difference between &lt;code&gt;Cura&lt;/code&gt; and &lt;code&gt;PrusaSlicer&lt;/code&gt;?&lt;/p&gt;"
+    OwnerUserId="6"
+    Title="Cura vs PrusaSlicer comparison"
+    Tags="&lt;slicer&gt;&lt;software&gt;&lt;cura&gt;&lt;prusaslicer&gt;"
+    AnswerCount="2"
+    CommentCount="3"
+  />
+  <row
+    Id="8"
+    PostTypeId="2"
+    ParentId="7"
+    CreationDate="2016-01-14T09:00:00.000"
+    Score="10"
+    Body="&lt;p&gt;Both are excellent slicers. Key differences:&lt;/p&gt;&lt;table&gt;&lt;tr&gt;&lt;th&gt;Feature&lt;/th&gt;&lt;th&gt;Cura&lt;/th&gt;&lt;th&gt;PrusaSlicer&lt;/th&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;UI&lt;/td&gt;&lt;td&gt;Beginner-friendly&lt;/td&gt;&lt;td&gt;More technical&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;"
+    OwnerUserId="7"
+  />
+  <row
+    Id="9"
+    PostTypeId="1"
+    CreationDate="2016-01-15T12:00:00.000"
+    Score="3"
+    ViewCount="300"
+    Body="&lt;p&gt;Can I print with &lt;strong&gt;PETG&lt;/strong&gt; on a non-heated bed?&lt;/p&gt;"
+    OwnerUserId="8"
+    Title="PETG without heated bed?"
+    Tags="&lt;petg&gt;&lt;bed&gt;"
+    AnswerCount="1"
+    CommentCount="0"
+  />
+  <row
+    Id="10"
+    PostTypeId="2"
+    ParentId="9"
+    CreationDate="2016-01-15T13:00:00.000"
+    Score="5"
+    Body="&lt;p&gt;PETG &lt;em&gt;technically&lt;/em&gt; can be printed without a heated bed, but adhesion will be poor. Recommended bed temp: 70-80C.&lt;/p&gt;"
+    OwnerUserId="3"
+  />
 </posts>
