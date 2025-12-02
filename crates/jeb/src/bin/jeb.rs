@@ -93,6 +93,7 @@ pub async fn inner_main() -> Result<(), Panic> {
             "filter" => filter(state)?,
             "encode-z85" => encode_z85(state)?,
             "encode-jeb85" => encode_jeb85(state)?,
+            "xml-to-jsonl" => xml_to_jsonl(state)?,
             "--all" => {
                 _default_mode = "all";
                 state
@@ -350,6 +351,20 @@ fn split_shell(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
         }
         for arg in token_result.args {
             result.push(arg.into());
+        }
+    }
+    Ok(result)
+}
+
+fn xml_to_jsonl(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    let mut result = Vec::<Bytes>::new();
+    for bytes in state {
+        let lines = jeb::xml_to_jsonl::xml_to_jsonl_bytes(&bytes);
+        for line in lines {
+            // Each JSON line should end with a newline
+            let mut line_with_newline = line.into_bytes();
+            line_with_newline.push(b'\n');
+            result.push(Bytes::from(line_with_newline));
         }
     }
     Ok(result)

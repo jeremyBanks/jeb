@@ -33,6 +33,7 @@ pub mod const_checked;
 pub mod errors;
 pub mod model;
 pub mod nodes;
+pub mod xml_to_jsonl;
 pub mod shell_tokenizer;
 
 

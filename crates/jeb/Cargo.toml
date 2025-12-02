@@ -39,5 +39,7 @@ tap = "1.0.1"
 tokio = { version = "1.0", features = ["rt", "macros", "sync", "io-util"] }
 tokio-stream = "0.1"
 tokio-util = { version = "0.7.17", features = ["codec", "io"] }
+quick-xml = { version = "0.38.4", features = ["escape-html"] }
+tracing = "0.1.43"
 wasm-bindgen = { version = "0.2.105", optional = true }
 web-sys = { version = "0.3.82", optional = true }
