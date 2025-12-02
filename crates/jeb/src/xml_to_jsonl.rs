@@ -132,7 +132,7 @@ impl<'a> XmlToJsonlConverter<'a> {
                     let name = String::from_utf8_lossy(e.name().as_ref()).to_string();
                     let attrs: Vec<(String, String)> = e
                         .attributes()
-                        .filter_map(std::result::Result::ok)
+                        .filter_map(core::result::Result::ok)
                         .map(|a| {
                             (
                                 String::from_utf8_lossy(a.key.as_ref()).to_string(),
@@ -189,7 +189,7 @@ impl<'a> XmlToJsonlConverter<'a> {
                     let mut obj = self.create_base_object(&name);
 
                     // Add attributes
-                    for attr in e.attributes().filter_map(std::result::Result::ok) {
+                    for attr in e.attributes().filter_map(core::result::Result::ok) {
                         let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
                         let value = String::from_utf8_lossy(&attr.value).to_string();
                         obj.insert(key, serde_json::Value::String(value));
