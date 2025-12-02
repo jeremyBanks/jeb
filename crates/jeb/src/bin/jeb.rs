@@ -5,7 +5,7 @@ use std::{
     sync::LazyLock,
 };
 
-use jeb::{Panic, model::Bytes};
+use jeb::{Panic, model::Bytes, xml_to_jsonlines::xml_to_jsonlines};
 use owo_colors::OwoColorize;
 use regex::Regex;
 
@@ -93,6 +93,7 @@ pub async fn inner_main() -> Result<(), Panic> {
             "filter" => filter(state)?,
             "encode-z85" => encode_z85(state)?,
             "encode-jeb85" => encode_jeb85(state)?,
+            "xml-to-jsonlines" | "xml-to-json-lines" => xml_to_jsonlines_cmd(state)?,
             "--all" => {
                 _default_mode = "all";
                 state
@@ -351,6 +352,15 @@ fn split_shell(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
         for arg in token_result.args {
             result.push(arg.into());
         }
+    }
+    Ok(result)
+}
+
+fn xml_to_jsonlines_cmd(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    let mut result = Vec::<Bytes>::new();
+    for bytes in state {
+        let json_lines = xml_to_jsonlines(&bytes)?;
+        result.push(Bytes::from(json_lines.into_bytes()));
     }
     Ok(result)
 }
