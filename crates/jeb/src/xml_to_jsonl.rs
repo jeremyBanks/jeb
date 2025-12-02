@@ -745,7 +745,11 @@ fn parse_element(start: &BytesStart) -> (String, IndexMap<String, String>) {
 
     for attr in start.attributes().flatten() {
         let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
-        let value = decode_entities(&String::from_utf8_lossy(&attr.value));
+        // Use unescape_value to decode XML entities in attribute values
+        let value = match attr.unescape_value() {
+            Ok(v) => v.to_string(),
+            Err(_) => String::from_utf8_lossy(&attr.value).to_string(),
+        };
         attributes.insert(key, value);
     }
 
