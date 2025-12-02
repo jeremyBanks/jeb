@@ -15,3 +15,7 @@ jeb stdin xml-to-jsonlines stdout <<'EOF'
 </html>
 EOF
 JEB
+
+
+
+{"":"html","@index":0,"@tail":"","@text":"\n  ","lang":"en"}{"":"body","-":"html","-lang":"en","@index":0,"@tail":"","@text":"\n    ","id":"main"}{"":"div","-":"body","--":"html","--lang":"en","-id":"main","@index":0,"@tail":"\n","@text":"Hello","class":"content"}

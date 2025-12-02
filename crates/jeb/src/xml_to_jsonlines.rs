@@ -1,14 +1,11 @@
 //! XML to JSON Lines conversion
 //!
-//! This module implements a lossless, streaming transformation from XML documents
-//! to JSON Lines format as specified in the technical specification.
+//! This module implements a lossless, streaming transformation from XML
+//! documents to JSON Lines format as specified in the technical specification.
 
 use indexmap::IndexMap;
-use quick_xml::{
-    events::Event,
-    Reader,
-};
-use serde_json::{json, Value};
+use quick_xml::{Reader, events::Event};
+use serde_json::{Value, json};
 
 use crate::Panic;
 
@@ -62,7 +59,7 @@ pub fn xml_to_jsonlines(xml_input: &[u8]) -> Result<Vec<String>, Panic> {
                     &ancestors,
                     current_index,
                     Some(String::new()), // @text starts empty, will be updated
-                    String::new(),        // @tail starts empty, will be updated
+                    String::new(),       // @tail starts empty, will be updated
                     false,
                 );
                 output.push(serde_json::to_string(&obj)?);
@@ -110,8 +107,8 @@ pub fn xml_to_jsonlines(xml_input: &[u8]) -> Result<Vec<String>, Panic> {
                     &attributes,
                     &ancestors,
                     current_index,
-                    None,            // No @text for self-closing
-                    String::new(),   // @tail starts empty, will be updated
+                    None,          // No @text for self-closing
+                    String::new(), // @tail starts empty, will be updated
                     true,
                 );
                 output.push(serde_json::to_string(&obj)?);
@@ -152,7 +149,7 @@ pub fn xml_to_jsonlines(xml_input: &[u8]) -> Result<Vec<String>, Panic> {
                 let full_text = if comment_text.starts_with(' ') && comment_text.ends_with(' ') {
                     comment_text
                 } else {
-                    format!(" {} ", comment_text)
+                    format!(" {comment_text} ")
                 };
 
                 let current_index = *sibling_indices.last().unwrap_or(&root_level_index);
@@ -209,7 +206,7 @@ pub fn xml_to_jsonlines(xml_input: &[u8]) -> Result<Vec<String>, Panic> {
                     .transpose()?
                     .unwrap_or_else(|| "UTF-8".to_string());
 
-                let decl_text = format!(" version=\"{}\" encoding=\"{}\"", version, encoding);
+                let decl_text = format!(" version=\"{version}\" encoding=\"{encoding}\"");
 
                 let current_index = root_level_index;
                 root_level_index += 1;
@@ -245,8 +242,8 @@ pub fn xml_to_jsonlines(xml_input: &[u8]) -> Result<Vec<String>, Panic> {
                     *sibling_indices.last_mut().unwrap() += 1;
                 }
 
-                let tag = format!("?{}", target);
-                let full_text = format!(" {}{}", target, content);
+                let tag = format!("?{target}");
+                let full_text = format!(" {target}{content}");
 
                 let obj = build_json_object(
                     &tag,
@@ -263,7 +260,7 @@ pub fn xml_to_jsonlines(xml_input: &[u8]) -> Result<Vec<String>, Panic> {
 
             Ok(Event::DocType(e)) => {
                 let doctype_text = decode_bytes(&e)?;
-                let full_text = format!(" {}", doctype_text);
+                let full_text = format!(" {doctype_text}");
 
                 let current_index = root_level_index;
                 root_level_index += 1;
@@ -283,7 +280,7 @@ pub fn xml_to_jsonlines(xml_input: &[u8]) -> Result<Vec<String>, Panic> {
 
             Err(e) => {
                 // This will panic, ending execution
-                Panic::from(format!("XML parsing error: {}", e));
+                Panic::from(format!("XML parsing error: {e}"));
             }
         }
     }
@@ -304,7 +301,7 @@ fn build_json_object(
     let mut obj = IndexMap::new();
 
     // Tag name (empty string key)
-    obj.insert("".to_string(), json!(tag));
+    obj.insert(String::new(), json!(tag));
 
     // Ancestor tags and attributes
     for (depth, ancestor) in ancestors.iter().rev().enumerate() {
@@ -315,7 +312,7 @@ fn build_json_object(
 
         // Ancestor attributes
         for (attr_name, attr_value) in &ancestor.attributes {
-            obj.insert(format!("{}{}", prefix, attr_name), json!(attr_value));
+            obj.insert(format!("{prefix}{attr_name}"), json!(attr_value));
         }
     }
 
@@ -336,10 +333,10 @@ fn build_json_object(
     // @index
     obj.insert("@index".to_string(), json!(index));
 
-    Value::Object(obj.into_iter().map(|(k, v)| (k, v)).collect())
+    Value::Object(obj.into_iter().collect())
 }
 
-/// Parse attributes from a BytesStart event
+/// Parse attributes from a `BytesStart` event
 fn parse_attributes(e: &quick_xml::events::BytesStart) -> Result<IndexMap<String, String>, Panic> {
     let mut attrs = IndexMap::new();
     for attr in e.attributes() {
@@ -362,7 +359,7 @@ fn decode_text(e: &quick_xml::events::BytesText) -> Result<String, Panic> {
         Ok(text) => Ok(text.to_string()),
         Err(e) => {
             // If we can't decode an entity, use replacement character and warn
-            eprintln!("Warning: Failed to decode entity: {}", e);
+            eprintln!("Warning: Failed to decode entity: {e}");
             Ok("�".to_string())
         }
     }
@@ -370,11 +367,11 @@ fn decode_text(e: &quick_xml::events::BytesText) -> Result<String, Panic> {
 
 /// Decode attribute value, handling entity references
 fn decode_attribute_value(value: &[u8]) -> Result<String, Panic> {
-    let text = std::str::from_utf8(value)?;
+    let text = core::str::from_utf8(value)?;
     match quick_xml::escape::unescape(text) {
         Ok(cow) => Ok(cow.to_string()),
         Err(e) => {
-            eprintln!("Warning: Failed to decode attribute entity: {}", e);
+            eprintln!("Warning: Failed to decode attribute entity: {e}");
             Ok("�".to_string())
         }
     }
