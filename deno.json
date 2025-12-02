@@ -1,6 +1,6 @@
 {
   "fmt": {
-    "exclude": ["slop", "target"]
+    "exclude": ["slop", "target", "examples/*.xml"]
   },
   "lock": {
     "frozen": true

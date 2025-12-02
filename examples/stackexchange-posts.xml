@@ -1,114 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  ContentLicense
+
+  CC BY-SA 2.5 - Url: https://creativecommons.org/licenses/by-sa/2.5/ 
+  CC BY-SA 3.0 - Url: https://creativecommons.org/licenses/by-sa/3.0/
+  CC BY-SA 4.0 - Url: https://creativecommons.org/licenses/by-sa/4.0/
+  -->
 <posts>
-  <row
-    Id="1"
-    PostTypeId="1"
-    AcceptedAnswerId="3"
-    CreationDate="2016-01-12T18:45:19.963"
-    Score="10"
-    ViewCount="1000"
-    Body="&lt;p&gt;What is the best way to level a 3D printer bed?&lt;/p&gt;"
-    OwnerUserId="1"
-    Title="How to level a 3D printer bed?"
-    Tags="&lt;bed-leveling&gt;&lt;calibration&gt;"
-    AnswerCount="2"
-    CommentCount="1"
-  />
-  <row
-    Id="2"
-    PostTypeId="1"
-    CreationDate="2016-01-12T19:00:00.000"
-    Score="5"
-    ViewCount="500"
-    Body="&lt;p&gt;What materials work best for &lt;strong&gt;PLA&lt;/strong&gt; printing?&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Temperature settings&lt;/li&gt;&lt;li&gt;Bed adhesion&lt;/li&gt;&lt;/ul&gt;"
-    OwnerUserId="2"
-    Title="Best PLA printing settings?"
-    Tags="&lt;pla&gt;&lt;settings&gt;&lt;temperature&gt;"
-    AnswerCount="3"
-    CommentCount="2"
-  />
-  <row
-    Id="3"
-    PostTypeId="2"
-    ParentId="1"
-    CreationDate="2016-01-12T19:30:00.000"
-    Score="15"
-    Body="&lt;p&gt;The best method is to use a piece of paper:&lt;/p&gt;&lt;ol&gt;&lt;li&gt;Heat the bed to operating temperature&lt;/li&gt;&lt;li&gt;Move the nozzle to each corner&lt;/li&gt;&lt;li&gt;Adjust until you feel slight resistance&lt;/li&gt;&lt;/ol&gt;"
-    OwnerUserId="3"
-  />
-  <row
-    Id="4"
-    PostTypeId="2"
-    ParentId="1"
-    CreationDate="2016-01-12T20:00:00.000"
-    Score="8"
-    Body="&lt;p&gt;Consider using a &lt;em&gt;BLTouch&lt;/em&gt; or similar auto-leveling probe for consistent results.&lt;/p&gt;"
-    OwnerUserId="4"
-  />
-  <row
-    Id="5"
-    PostTypeId="1"
-    CreationDate="2016-01-13T10:00:00.000"
-    Score="12"
-    ViewCount="2500"
-    Body="&lt;p&gt;My prints keep warping at the corners. What causes this and how can I fix it?&lt;/p&gt;&lt;p&gt;I am using ABS filament at 230C with a heated bed at 100C.&lt;/p&gt;"
-    OwnerUserId="5"
-    Title="Why do my ABS prints warp?"
-    Tags="&lt;abs&gt;&lt;warping&gt;&lt;troubleshooting&gt;"
-    AnswerCount="4"
-    CommentCount="5"
-  />
-  <row
-    Id="6"
-    PostTypeId="2"
-    ParentId="5"
-    CreationDate="2016-01-13T11:00:00.000"
-    Score="20"
-    Body="&lt;p&gt;Warping is caused by uneven cooling. Try these solutions:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Use an enclosure&lt;/li&gt;&lt;li&gt;Apply ABS slurry to the bed&lt;/li&gt;&lt;li&gt;Increase bed temperature to 110C&lt;/li&gt;&lt;/ul&gt;"
-    OwnerUserId="3"
-  />
-  <row
-    Id="7"
-    PostTypeId="1"
-    CreationDate="2016-01-14T08:00:00.000"
-    Score="7"
-    ViewCount="800"
-    Body="&lt;p&gt;What is the difference between &lt;code&gt;Cura&lt;/code&gt; and &lt;code&gt;PrusaSlicer&lt;/code&gt;?&lt;/p&gt;"
-    OwnerUserId="6"
-    Title="Cura vs PrusaSlicer comparison"
-    Tags="&lt;slicer&gt;&lt;software&gt;&lt;cura&gt;&lt;prusaslicer&gt;"
-    AnswerCount="2"
-    CommentCount="3"
-  />
-  <row
-    Id="8"
-    PostTypeId="2"
-    ParentId="7"
-    CreationDate="2016-01-14T09:00:00.000"
-    Score="10"
-    Body="&lt;p&gt;Both are excellent slicers. Key differences:&lt;/p&gt;&lt;table&gt;&lt;tr&gt;&lt;th&gt;Feature&lt;/th&gt;&lt;th&gt;Cura&lt;/th&gt;&lt;th&gt;PrusaSlicer&lt;/th&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;UI&lt;/td&gt;&lt;td&gt;Beginner-friendly&lt;/td&gt;&lt;td&gt;More technical&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;"
-    OwnerUserId="7"
-  />
-  <row
-    Id="9"
-    PostTypeId="1"
-    CreationDate="2016-01-15T12:00:00.000"
-    Score="3"
-    ViewCount="300"
-    Body="&lt;p&gt;Can I print with &lt;strong&gt;PETG&lt;/strong&gt; on a non-heated bed?&lt;/p&gt;"
-    OwnerUserId="8"
-    Title="PETG without heated bed?"
-    Tags="&lt;petg&gt;&lt;bed&gt;"
-    AnswerCount="1"
-    CommentCount="0"
-  />
-  <row
-    Id="10"
-    PostTypeId="2"
-    ParentId="9"
-    CreationDate="2016-01-15T13:00:00.000"
-    Score="5"
-    Body="&lt;p&gt;PETG &lt;em&gt;technically&lt;/em&gt; can be printed without a heated bed, but adhesion will be poor. Recommended bed temp: 70-80C.&lt;/p&gt;"
-    OwnerUserId="3"
-  />
+  <row Id="6" PostTypeId="1" CreationDate="2016-01-12T20:30:19.493" Score="5" ViewCount="114" Body="&lt;p&gt;From &lt;a href=&quot;http://blog.stackoverflow.com/2010/07/the-7-essential-meta-questions-of-every-beta/&quot;&gt;The 7 Essential Meta Questions of Every Beta&lt;/a&gt;:&lt;/p&gt;&#xA;&lt;hr /&gt;&#xA;&lt;h2&gt;What should our documentation contain?&lt;/h2&gt;&#xA;&lt;p&gt;Much of the sites documentation will be the same as on every other Stack Exchange site: &quot;be nice,&quot; &quot;how to create an account,&quot; &quot;how to ask questions&quot; — it's all pretty static. Even the sections about &quot;what kind of questions should I (not) ask here?&quot; comes primarily from &lt;a href=&quot;http://area51.stackexchange.com/faq#questions&quot;&gt;the Definition phase of Area 51&lt;/a&gt;.&lt;/p&gt;&#xA;&lt;p&gt;But the questions you want to discuss in meta are those issues specific to your site that need to be mentioned in the Help Center.&lt;/p&gt;&#xA;&lt;p&gt;Take the &lt;a href=&quot;https://superuser.com/faq&quot;&gt;Super User &amp;quot;About&amp;quot; page&lt;/a&gt; as an example:&lt;/p&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;Super User is for computer enthusiasts and power users.&lt;/p&gt;&#xA;&lt;p&gt;Ask about...&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;Specific issues with computer software, hardware or networking&lt;/li&gt;&#xA;&lt;li&gt;Real problems or questions that you've encountered&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;p&gt;Don't ask about...&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;Anything not directly related to computer software or computer hardware&lt;/li&gt;&#xA;&lt;li&gt;Questions that are primarily opinion-based&lt;/li&gt;&#xA;&lt;li&gt;Questions with too many possible answers or require an extremely long answer&lt;/li&gt;&#xA;&lt;li&gt;Videogames, consoles, or other electronic devices, unless they connect to your computer&lt;/li&gt;&#xA;&lt;li&gt;Websites or web services like Google, Facebook, Twitter, and WordPress&lt;/li&gt;&#xA;&lt;li&gt;Shopping, buying or product recommendations&lt;/li&gt;&#xA;&lt;li&gt;Issues specific to corporate IT support and networks&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;/blockquote&gt;&#xA;&lt;p&gt;These are then elaborated on in SU's &lt;a href=&quot;https://superuser.com/help/on-topic&quot;&gt;What topics can I ask about here?&lt;/a&gt; page.&lt;/p&gt;&#xA;&lt;p&gt;It took almost a year to figure out the list of &quot;we want these sort of questions&quot; and &quot;we don't want these sort of questions&quot; on Super User. Area 51 gave you a head start but you should also be working out other FAQ-related issues &lt;strong&gt;specific to your topic and your community&lt;/strong&gt;.&lt;/p&gt;&#xA;" OwnerUserId="63" LastEditorUserId="-1" LastEditDate="2020-06-18T08:29:38.190" LastActivityDate="2017-05-30T17:17:04.580" Title="What should our documentation contain?" Tags="&lt;discussion&gt;&lt;7-questions&gt;" AnswerCount="3" CommentCount="2" ContentLicense="CC BY-SA 3.0" />
+  <row Id="18" PostTypeId="1" CreationDate="2016-01-12T22:22:27.763" Score="1" ViewCount="82" Body="&lt;p&gt;Are there plans or ideas floating around for a logo contest, or is that a Public-Beta stage thing?&lt;/p&gt;&#xA;" OwnerUserId="107" LastEditorUserId="1" LastEditDate="2016-01-12T23:28:03.320" LastActivityDate="2018-01-17T08:07:30.150" Title="Is there going to be a Logo Contest?" Tags="&lt;discussion&gt;&lt;support&gt;" AnswerCount="3" CommentCount="0" ContentLicense="CC BY-SA 3.0" />
+  <row Id="19" PostTypeId="1" AcceptedAnswerId="27" CreationDate="2016-01-12T22:26:52.990" Score="3" ViewCount="97" Body="&lt;p&gt;Is it realistic or thought neccesary to develop a plugin/feature for this site, to automatically add a small info-box about a thingiverse link? An example of this is Apple's 3D touch technology. In theory, the plugin could recogize thingiverse links in questions and answers, replace the link with an image and the author/name of the project.&lt;/p&gt;&#xA;&#xA;&lt;p&gt;I'm also volunteering myself to help with this if there's interest. (Experience with Thingiverse API)&lt;/p&gt;&#xA;" OwnerUserId="107" LastActivityDate="2016-01-14T14:42:16.973" Title="Plugin for Thingiverse based on API?" Tags="&lt;discussion&gt;&lt;feature-request&gt;" AnswerCount="2" CommentCount="0" ContentLicense="CC BY-SA 3.0" />
+  <row Id="3" PostTypeId="2" ParentId="2" CreationDate="2016-01-12T20:09:21.760" Score="2" Body="&lt;p&gt;No, there will be many questions which are more general in nature, and have little to do with the actual process used to produce the part.&lt;/p&gt;&#xA;&#xA;&lt;p&gt;We should encourage tag use for process when appropriate, but I don't think making it mandatory will work in the long term.&lt;/p&gt;&#xA;" OwnerUserId="16" LastActivityDate="2016-01-12T20:09:21.760" CommentCount="1" ContentLicense="CC BY-SA 3.0" />
+  <row Id="4" PostTypeId="2" ParentId="2" CreationDate="2016-01-12T20:14:12.953" Score="4" Body="&lt;p&gt;For questions where the technology matters, absolutely.&lt;/p&gt;&#xA;&#xA;&lt;p&gt;If you look at Stack Overflow, for example, all questions must be tagged with the language the OP is asking about. I doubt there will be many questions that are asking about all technologies at once - and if they are, that's likely to be marked as too broad anyway.&lt;/p&gt;&#xA;" OwnerUserId="9" LastActivityDate="2016-01-12T20:14:12.953" CommentCount="0" ContentLicense="CC BY-SA 3.0" />
 </posts>
