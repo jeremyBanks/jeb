@@ -1,8 +1,8 @@
 /// XML to JSON Lines conversion
 ///
-/// This module implements a lossless transformation from XML documents to JSON Lines format.
-/// Each XML node is converted to a JSON object with complete ancestor context.
-
+/// This module implements a lossless transformation from XML documents to JSON
+/// Lines format. Each XML node is converted to a JSON object with complete
+/// ancestor context.
 use std::collections::HashMap;
 
 /// Decode XML and HTML entity references in text
@@ -48,23 +48,28 @@ fn decode_entities(text: &str) -> String {
 /// Decode a single entity reference (without & and ;)
 fn decode_single_entity(entity: &str) -> String {
     // Numeric character references
-    if let Some(hex) = entity.strip_prefix("#x").or_else(|| entity.strip_prefix("#X")) {
-        if let Ok(code) = u32::from_str_radix(hex, 16) {
-            if let Some(ch) = char::from_u32(code) {
-                return ch.to_string();
-            }
+    if let Some(hex) = entity
+        .strip_prefix("#x")
+        .or_else(|| entity.strip_prefix("#X"))
+    {
+        if let Ok(code) = u32::from_str_radix(hex, 16)
+            && let Some(ch) = char::from_u32(code)
+        {
+            return ch.to_string();
         }
-        eprintln!("Warning: Invalid hexadecimal character reference: &{}; - replacing with �", entity);
+        eprintln!(
+            "Warning: Invalid hexadecimal character reference: &{entity}; - replacing with �"
+        );
         return "\u{FFFD}".to_string();
     }
 
     if let Some(decimal) = entity.strip_prefix("#") {
-        if let Ok(code) = decimal.parse::<u32>() {
-            if let Some(ch) = char::from_u32(code) {
-                return ch.to_string();
-            }
+        if let Ok(code) = decimal.parse::<u32>()
+            && let Some(ch) = char::from_u32(code)
+        {
+            return ch.to_string();
         }
-        eprintln!("Warning: Invalid decimal character reference: &{}; - replacing with �", entity);
+        eprintln!("Warning: Invalid decimal character reference: &{entity}; - replacing with �");
         return "\u{FFFD}".to_string();
     }
 
@@ -180,7 +185,7 @@ fn decode_single_entity(entity: &str) -> String {
 
         // Unsupported entity
         _ => {
-            eprintln!("Warning: Unsupported entity reference: &{}; - replacing with �", entity);
+            eprintln!("Warning: Unsupported entity reference: &{entity}; - replacing with �");
             "\u{FFFD}".to_string()
         }
     }
@@ -190,7 +195,11 @@ fn decode_single_entity(entity: &str) -> String {
 #[derive(Debug, Clone, PartialEq)]
 enum Token {
     /// Start tag: <name attrs>
-    StartTag { name: String, attrs: HashMap<String, String>, self_closing: bool },
+    StartTag {
+        name: String,
+        attrs: HashMap<String, String>,
+        self_closing: bool,
+    },
     /// End tag: </name>
     EndTag { name: String },
     /// Text content
@@ -230,15 +239,11 @@ impl Tokenizer {
     }
 
     fn peek_slice(&self, n: usize) -> String {
-        self.input
-            .iter()
-            .skip(self.pos)
-            .take(n)
-            .collect()
+        self.input.iter().skip(self.pos).take(n).collect()
     }
 
     fn skip_whitespace(&mut self) {
-        while self.peek().map_or(false, |c| c.is_whitespace()) {
+        while self.peek().is_some_and(char::is_whitespace) {
             self.advance();
         }
     }
@@ -431,7 +436,11 @@ impl Tokenizer {
 
         self.advance(); // skip '>'
 
-        Some(Token::StartTag { name, attrs, self_closing })
+        Some(Token::StartTag {
+            name,
+            attrs,
+            self_closing,
+        })
     }
 
     fn tokenize(&mut self) -> Vec<Token> {
@@ -470,11 +479,19 @@ fn parse_tokens(tokens: Vec<Token>) -> Vec<XmlNode> {
 
     for token in tokens {
         match token {
-            Token::StartTag { name, attrs, self_closing } => {
+            Token::StartTag {
+                name,
+                attrs,
+                self_closing,
+            } => {
                 let node = XmlNode {
                     tag: name.clone(),
                     attrs,
-                    text: if self_closing { None } else { Some(String::new()) },
+                    text: if self_closing {
+                        None
+                    } else {
+                        Some(String::new())
+                    },
                     tail: String::new(),
                     index: 0, // Will be set later
                     self_closing,
@@ -556,7 +573,7 @@ fn parse_tokens(tokens: Vec<Token>) -> Vec<XmlNode> {
 
             Token::ProcessingInstruction { target, content } => {
                 let node = XmlNode {
-                    tag: format!("?{}", target),
+                    tag: format!("?{target}"),
                     attrs: HashMap::new(),
                     text: Some(content),
                     tail: String::new(),
@@ -634,7 +651,7 @@ struct AncestorContext {
 }
 
 impl AncestorContext {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             tags: Vec::new(),
             attrs: Vec::new(),
@@ -656,39 +673,73 @@ impl AncestorContext {
 
 /// Convert a node to a JSON object string with ancestor context
 fn node_to_json(node: &XmlNode, ancestors: &AncestorContext) -> String {
-    use std::fmt::Write;
+    use core::fmt::Write;
 
     let mut json = String::from("{");
 
     // Add tag name with empty string key
-    write!(&mut json, "\"\":{}", serde_json::to_string(&node.tag).unwrap()).unwrap();
+    write!(
+        &mut json,
+        "\"\":{}",
+        serde_json::to_string(&node.tag).unwrap()
+    )
+    .unwrap();
 
     // Add ancestor tags
     for (depth, tag) in ancestors.tags.iter().enumerate() {
         let prefix = "-".repeat(depth + 1);
-        write!(&mut json, ",\"{}\":{}", prefix, serde_json::to_string(tag).unwrap()).unwrap();
+        write!(
+            &mut json,
+            ",\"{}\":{}",
+            prefix,
+            serde_json::to_string(tag).unwrap()
+        )
+        .unwrap();
     }
 
     // Add ancestor attributes
     for (depth, attrs) in ancestors.attrs.iter().enumerate() {
         let prefix = "-".repeat(depth + 1);
         for (key, value) in attrs {
-            write!(&mut json, ",\"{}{}\":{}", prefix, key, serde_json::to_string(value).unwrap()).unwrap();
+            write!(
+                &mut json,
+                ",\"{}{}\":{}",
+                prefix,
+                key,
+                serde_json::to_string(value).unwrap()
+            )
+            .unwrap();
         }
     }
 
     // Add current node's attributes
     for (key, value) in &node.attrs {
-        write!(&mut json, ",\"{}\":{}", key, serde_json::to_string(value).unwrap()).unwrap();
+        write!(
+            &mut json,
+            ",\"{}\":{}",
+            key,
+            serde_json::to_string(value).unwrap()
+        )
+        .unwrap();
     }
 
     // Add @text if present
     if let Some(ref text) = node.text {
-        write!(&mut json, ",\"@text\":{}", serde_json::to_string(text).unwrap()).unwrap();
+        write!(
+            &mut json,
+            ",\"@text\":{}",
+            serde_json::to_string(text).unwrap()
+        )
+        .unwrap();
     }
 
     // Add @tail
-    write!(&mut json, ",\"@tail\":{}", serde_json::to_string(&node.tail).unwrap()).unwrap();
+    write!(
+        &mut json,
+        ",\"@tail\":{}",
+        serde_json::to_string(&node.tail).unwrap()
+    )
+    .unwrap();
 
     // Add @index
     write!(&mut json, ",\"@index\":{}", node.index).unwrap();
@@ -698,7 +749,11 @@ fn node_to_json(node: &XmlNode, ancestors: &AncestorContext) -> String {
 }
 
 /// Convert nodes to JSON Lines output, recursively
-fn nodes_to_jsonlines(nodes: &[XmlNode], ancestors: &mut AncestorContext, output: &mut Vec<String>) {
+fn nodes_to_jsonlines(
+    nodes: &[XmlNode],
+    ancestors: &mut AncestorContext,
+    output: &mut Vec<String>,
+) {
     for node in nodes {
         // Output this node
         output.push(node_to_json(node, ancestors));
@@ -713,6 +768,7 @@ fn nodes_to_jsonlines(nodes: &[XmlNode], ancestors: &mut AncestorContext, output
 }
 
 /// Convert XML string to JSON Lines
+#[must_use]
 pub fn xml_to_jsonlines(xml: &str) -> Vec<String> {
     let mut tokenizer = Tokenizer::new(xml);
     let tokens = tokenizer.tokenize();
@@ -872,7 +928,8 @@ mod tests {
 
         // Check decoded entities
         assert!(result[0].contains("\"@text\":\"Standard: <>& Numeric: A HTML: "));
-        // Note: nbsp is non-breaking space U+00A0, and custom entity becomes replacement char
+        // Note: nbsp is non-breaking space U+00A0, and custom entity becomes
+        // replacement char
         assert!(result[0].contains("�"));
     }
 
