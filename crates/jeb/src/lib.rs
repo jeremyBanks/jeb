@@ -34,6 +34,7 @@ pub mod errors;
 pub mod model;
 pub mod nodes;
 pub mod shell_tokenizer;
+pub mod xml_to_jsonlines;
 
 
 pub use crate::{byte_ranges::*, const_checked::*, errors::*};

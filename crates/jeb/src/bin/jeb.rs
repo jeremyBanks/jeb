@@ -93,6 +93,7 @@ pub async fn inner_main() -> Result<(), Panic> {
             "filter" => filter(state)?,
             "encode-z85" => encode_z85(state)?,
             "encode-jeb85" => encode_jeb85(state)?,
+            "xml-to-jsonlines" => xml_to_jsonlines(state)?,
             "--all" => {
                 _default_mode = "all";
                 state
@@ -350,6 +351,17 @@ fn split_shell(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
         }
         for arg in token_result.args {
             result.push(arg.into());
+        }
+    }
+    Ok(result)
+}
+
+fn xml_to_jsonlines(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    let mut result = Vec::<Bytes>::new();
+    for bytes in state {
+        let lines = jeb::xml_to_jsonlines::xml_to_jsonlines(&bytes)?;
+        for line in lines {
+            result.push(Bytes::from(line.into_bytes()));
         }
     }
     Ok(result)
