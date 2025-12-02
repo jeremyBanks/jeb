@@ -1,10 +1,10 @@
 //! XML to JSON Lines Conversion
 //!
-//! This module implements a lossless, streaming transformation from XML documents
-//! to JSON Lines format. The design flattens hierarchical XML structures into a
-//! stream of individual JSON objects, where each object represents a single XML
-//! node with complete ancestor context encoded via special attribute naming
-//! conventions.
+//! This module implements a lossless, streaming transformation from XML
+//! documents to JSON Lines format. The design flattens hierarchical XML
+//! structures into a stream of individual JSON objects, where each object
+//! represents a single XML node with complete ancestor context encoded via
+//! special attribute naming conventions.
 
 use indexmap::IndexMap;
 use quick_xml::{
@@ -267,9 +267,10 @@ fn html_entity(name: &str) -> Option<&'static str> {
     }
 }
 
-/// Decode entity references in text content using quick-xml's unescape function.
-/// Handles built-in XML entities, numeric character references, and HTML named entities.
-/// For unsupported entities, logs a warning and replaces with the replacement character.
+/// Decode entity references in text content using quick-xml's unescape
+/// function. Handles built-in XML entities, numeric character references, and
+/// HTML named entities. For unsupported entities, logs a warning and replaces
+/// with the replacement character.
 fn decode_entities(text: &str) -> String {
     // Use quick-xml's unescape_with to handle entities
     // The escape-html feature provides HTML5 entity support
@@ -286,16 +287,18 @@ fn decode_entities(text: &str) -> String {
 
 /// Custom entity resolver for entities not handled by quick-xml.
 ///
-/// This function always returns `Some(value)` - for unknown entities, it returns
-/// the Unicode replacement character `U+FFFD` after logging a warning. This is
-/// intentional per the specification to ensure no data is silently lost.
+/// This function always returns `Some(value)` - for unknown entities, it
+/// returns the Unicode replacement character `U+FFFD` after logging a warning.
+/// This is intentional per the specification to ensure no data is silently
+/// lost.
 fn custom_entity_resolver(entity: &str) -> Option<&'static str> {
     // First check our custom HTML entity table
     if let Some(value) = html_entity(entity) {
         return Some(value);
     }
 
-    // If we get here, it's an unknown entity - log warning and return replacement char
+    // If we get here, it's an unknown entity - log warning and return replacement
+    // char
     tracing::warn!("Unsupported entity reference: &{};", entity);
     Some("\u{FFFD}")
 }
@@ -308,7 +311,8 @@ fn custom_entity_resolver(entity: &str) -> Option<&'static str> {
 /// - HTML5 named entities (via quick-xml's resolver)
 /// - Custom HTML entity table
 ///
-/// For unknown entities, logs a warning and returns the Unicode replacement character.
+/// For unknown entities, logs a warning and returns the Unicode replacement
+/// character.
 fn resolve_entity(entity: &str) -> String {
     // Built-in XML entities
     match entity {
@@ -321,24 +325,30 @@ fn resolve_entity(entity: &str) -> String {
     }
 
     // Numeric character references with bounds validation
-    if let Some(hex) = entity.strip_prefix("#x").or_else(|| entity.strip_prefix("#X")) {
+    if let Some(hex) = entity
+        .strip_prefix("#x")
+        .or_else(|| entity.strip_prefix("#X"))
+    {
         // Hexadecimal: &#xNN;
         if let Ok(code) = u32::from_str_radix(hex, 16) {
             // Validate the codepoint is in valid Unicode range
-            // (char::from_u32 already handles this, but be explicit about rejecting surrogates)
+            // (char::from_u32 already handles this, but be explicit about rejecting
+            // surrogates)
             if is_valid_xml_char(code)
-                && let Some(c) = char::from_u32(code) {
-                    return c.to_string();
-                }
+                && let Some(c) = char::from_u32(code)
+            {
+                return c.to_string();
+            }
         }
     } else if let Some(decimal) = entity.strip_prefix('#') {
         // Decimal: &#NN;
         if let Ok(code) = decimal.parse::<u32>() {
             // Validate the codepoint is in valid Unicode range
             if is_valid_xml_char(code)
-                && let Some(c) = char::from_u32(code) {
-                    return c.to_string();
-                }
+                && let Some(c) = char::from_u32(code)
+            {
+                return c.to_string();
+            }
         }
     }
 
@@ -390,7 +400,8 @@ struct XmlToJsonlState {
     /// `sibling_indices`[i] is the current sibling index at depth i.
     sibling_indices: Vec<usize>,
     /// Stack of output indices for the last sibling at each depth.
-    /// `last_sibling_output_index`[i] is the index in `output` of the last sibling at depth i.
+    /// `last_sibling_output_index`[i] is the index in `output` of the last
+    /// sibling at depth i.
     last_sibling_output_index: Vec<Option<usize>>,
     /// Pending tail text and the depth it belongs to.
     pending_tail: Option<(String, usize)>,
@@ -477,18 +488,22 @@ impl XmlToJsonlState {
     ) {
         let depth = self.ancestors.len();
 
-        // Before emitting this node, apply any pending tail to the previous sibling at this depth
+        // Before emitting this node, apply any pending tail to the previous sibling at
+        // this depth
         if let Some((tail, tail_depth)) = self.pending_tail.take()
-            && tail_depth == depth {
-                // Apply to previous sibling at this depth
-                if let Some(Some(sibling_idx)) = self.last_sibling_output_index.get(depth) {
-                    self.update_output_tail(*sibling_idx, &tail);
-                }
+            && tail_depth == depth
+        {
+            // Apply to previous sibling at this depth
+            if let Some(Some(sibling_idx)) = self.last_sibling_output_index.get(depth) {
+                self.update_output_tail(*sibling_idx, &tail);
             }
-            // If depths don't match, the tail was already applied when the closing tag was processed
+        }
+        // If depths don't match, the tail was already applied when the closing tag was
+        // processed
 
         let index = self.get_and_increment_sibling_index();
-        // Start with empty tail - it will be updated later when we see text after the closing tag
+        // Start with empty tail - it will be updated later when we see text after the
+        // closing tag
         let tail = String::new();
 
         let text_content = if is_self_closing { None } else { text };
@@ -509,10 +524,11 @@ impl XmlToJsonlState {
     /// Update a specific output entry's tail text.
     fn update_output_tail(&mut self, output_idx: usize, tail: &str) {
         if let Some(output) = self.output.get_mut(output_idx)
-            && let Ok(mut obj) = serde_json::from_str::<IndexMap<String, Value>>(output) {
-                obj.insert("@tail".to_string(), Value::String(tail.to_string()));
-                *output = serde_json::to_string(&obj).expect("Failed to serialize JSON");
-            }
+            && let Ok(mut obj) = serde_json::from_str::<IndexMap<String, Value>>(output)
+        {
+            obj.insert("@tail".to_string(), Value::String(tail.to_string()));
+            *output = serde_json::to_string(&obj).expect("Failed to serialize JSON");
+        }
     }
 
     /// Push a new ancestor onto the stack.
@@ -521,7 +537,8 @@ impl XmlToJsonlState {
             tag_name,
             attributes,
         });
-        // Initialize sibling counter and last_sibling tracker for children of this element
+        // Initialize sibling counter and last_sibling tracker for children of this
+        // element
         let depth = self.ancestors.len();
         while self.sibling_indices.len() <= depth {
             self.sibling_indices.push(0);
@@ -546,9 +563,10 @@ impl XmlToJsonlState {
     /// Apply pending tail to the appropriate element.
     fn apply_pending_tail(&mut self) {
         if let Some((tail, depth)) = self.pending_tail.take()
-            && let Some(Some(sibling_idx)) = self.last_sibling_output_index.get(depth) {
-                self.update_output_tail(*sibling_idx, &tail);
-            }
+            && let Some(Some(sibling_idx)) = self.last_sibling_output_index.get(depth)
+        {
+            self.update_output_tail(*sibling_idx, &tail);
+        }
     }
 }
 
@@ -559,7 +577,7 @@ impl XmlToJsonlState {
 ///
 /// # Returns
 /// A vector of JSON strings, each representing one XML node.
-#[must_use] 
+#[must_use]
 pub fn xml_to_jsonl(input: &str) -> Vec<String> {
     xml_to_jsonl_bytes(input.as_bytes())
 }
@@ -972,14 +990,18 @@ mod tests {
         let parsed = parse_jsonl(&result);
 
         assert_eq!(parsed[0][""], "?xml");
-        assert!(parsed[0]["@text"]
-            .as_str()
-            .unwrap()
-            .contains(r#"version="1.0""#));
-        assert!(parsed[0]["@text"]
-            .as_str()
-            .unwrap()
-            .contains(r#"encoding="UTF-8""#));
+        assert!(
+            parsed[0]["@text"]
+                .as_str()
+                .unwrap()
+                .contains(r#"version="1.0""#)
+        );
+        assert!(
+            parsed[0]["@text"]
+                .as_str()
+                .unwrap()
+                .contains(r#"encoding="UTF-8""#)
+        );
     }
 
     #[test]

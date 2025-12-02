@@ -33,8 +33,8 @@ pub mod const_checked;
 pub mod errors;
 pub mod model;
 pub mod nodes;
-pub mod xml_to_jsonl;
 pub mod shell_tokenizer;
+pub mod xml_to_jsonl;
 
 
 pub use crate::{byte_ranges::*, const_checked::*, errors::*};
