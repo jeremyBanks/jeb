@@ -389,8 +389,11 @@ struct XmlToJsonlState {
     /// Stack of sibling counters for each nesting level.
     /// `sibling_indices`[i] is the current sibling index at depth i.
     sibling_indices: Vec<usize>,
-    /// Pending tail text to be added to the next element.
-    pending_tail: Option<String>,
+    /// Stack of output indices for the last sibling at each depth.
+    /// `last_sibling_output_index`[i] is the index in `output` of the last sibling at depth i.
+    last_sibling_output_index: Vec<Option<usize>>,
+    /// Pending tail text and the depth it belongs to.
+    pending_tail: Option<(String, usize)>,
     /// Output JSON lines.
     output: Vec<String>,
 }
@@ -400,6 +403,7 @@ impl XmlToJsonlState {
         Self {
             ancestors: Vec::new(),
             sibling_indices: vec![0], // Start with root level counter
+            last_sibling_output_index: vec![None], // Start with root level
             pending_tail: None,
             output: Vec::new(),
         }
@@ -471,14 +475,44 @@ impl XmlToJsonlState {
         text: Option<&str>,
         is_self_closing: bool,
     ) {
+        let depth = self.ancestors.len();
+
+        // Before emitting this node, apply any pending tail to the previous sibling at this depth
+        if let Some((tail, tail_depth)) = self.pending_tail.take()
+            && tail_depth == depth {
+                // Apply to previous sibling at this depth
+                if let Some(Some(sibling_idx)) = self.last_sibling_output_index.get(depth) {
+                    self.update_output_tail(*sibling_idx, &tail);
+                }
+            }
+            // If depths don't match, the tail was already applied when the closing tag was processed
+
         let index = self.get_and_increment_sibling_index();
-        let tail = self.pending_tail.take().unwrap_or_default();
+        // Start with empty tail - it will be updated later when we see text after the closing tag
+        let tail = String::new();
 
         let text_content = if is_self_closing { None } else { text };
 
         let obj = self.create_node_object(tag_name, own_attributes, text_content, &tail, index);
         let json = serde_json::to_string(&obj).expect("Failed to serialize JSON");
+
+        // Track this node as the last sibling at this depth
+        let output_idx = self.output.len();
+        while self.last_sibling_output_index.len() <= depth {
+            self.last_sibling_output_index.push(None);
+        }
+        self.last_sibling_output_index[depth] = Some(output_idx);
+
         self.output.push(json);
+    }
+
+    /// Update a specific output entry's tail text.
+    fn update_output_tail(&mut self, output_idx: usize, tail: &str) {
+        if let Some(output) = self.output.get_mut(output_idx)
+            && let Ok(mut obj) = serde_json::from_str::<IndexMap<String, Value>>(output) {
+                obj.insert("@tail".to_string(), Value::String(tail.to_string()));
+                *output = serde_json::to_string(&obj).expect("Failed to serialize JSON");
+            }
     }
 
     /// Push a new ancestor onto the stack.
@@ -487,12 +521,16 @@ impl XmlToJsonlState {
             tag_name,
             attributes,
         });
-        // Initialize sibling counter for children of this element
+        // Initialize sibling counter and last_sibling tracker for children of this element
         let depth = self.ancestors.len();
         while self.sibling_indices.len() <= depth {
             self.sibling_indices.push(0);
         }
         self.sibling_indices[depth] = 0;
+        while self.last_sibling_output_index.len() <= depth {
+            self.last_sibling_output_index.push(None);
+        }
+        self.last_sibling_output_index[depth] = None;
     }
 
     /// Pop an ancestor from the stack.
@@ -500,9 +538,17 @@ impl XmlToJsonlState {
         self.ancestors.pop();
     }
 
-    /// Set pending tail text for the next sibling.
-    fn set_pending_tail(&mut self, tail: String) {
-        self.pending_tail = Some(tail);
+    /// Set pending tail text for the previous sibling at the given depth.
+    fn set_pending_tail(&mut self, tail: String, depth: usize) {
+        self.pending_tail = Some((tail, depth));
+    }
+
+    /// Apply pending tail to the appropriate element.
+    fn apply_pending_tail(&mut self) {
+        if let Some((tail, depth)) = self.pending_tail.take()
+            && let Some(Some(sibling_idx)) = self.last_sibling_output_index.get(depth) {
+                self.update_output_tail(*sibling_idx, &tail);
+            }
     }
 }
 
@@ -535,8 +581,6 @@ pub fn xml_to_jsonl_bytes(input: &[u8]) -> Vec<String> {
 
     // Track text content for elements
     let mut current_text: Option<String> = None;
-    // Track if we've seen any actual content
-    let mut in_element = false;
     // Track pending elements that need their text content
     let mut pending_elements: Vec<(String, IndexMap<String, String>)> = Vec::new();
 
@@ -588,7 +632,6 @@ pub fn xml_to_jsonl_bytes(input: &[u8]) -> Vec<String> {
 
                 // Queue this element to be emitted when we know its text content
                 pending_elements.push((tag_name, attributes));
-                in_element = true;
             }
 
             Ok(Event::Empty(empty)) => {
@@ -605,23 +648,23 @@ pub fn xml_to_jsonl_bytes(input: &[u8]) -> Vec<String> {
                 emit_pending_element(&mut state, &mut pending_elements, current_text.as_ref());
                 current_text = None;
 
+                // Apply any pending tail to the last child at the current depth
+                state.apply_pending_tail();
+
                 state.pop_ancestor();
-                in_element = !state.ancestors.is_empty();
             }
 
             Ok(Event::Text(text)) => {
                 // Text content
                 let text_str = decode_text(&text);
+                let depth = state.ancestors.len();
 
-                if !pending_elements.is_empty() {
+                if pending_elements.is_empty() {
+                    // This is tail text for the previous sibling at current depth
+                    state.set_pending_tail(text_str, depth);
+                } else {
                     // This is text content for the most recent pending element
                     current_text = Some(text_str);
-                } else if in_element || !state.ancestors.is_empty() {
-                    // This is tail text for the previous sibling
-                    state.set_pending_tail(text_str);
-                } else {
-                    // Root level text - treat as tail for previous root node
-                    state.set_pending_tail(text_str);
                 }
             }
 
@@ -629,28 +672,22 @@ pub fn xml_to_jsonl_bytes(input: &[u8]) -> Vec<String> {
                 // Entity references - expand them to their character values
                 let entity_name = String::from_utf8_lossy(r.as_ref());
                 let expanded = resolve_entity(&entity_name);
+                let depth = state.ancestors.len();
 
                 // Add to current text accumulator
-                if !pending_elements.is_empty() {
+                if pending_elements.is_empty() {
+                    // Add to tail text for the previous sibling at current depth
+                    if let Some((ref mut tail, _)) = state.pending_tail {
+                        tail.push_str(&expanded);
+                    } else {
+                        state.set_pending_tail(expanded, depth);
+                    }
+                } else {
                     // Add to text content for the pending element
                     if let Some(ref mut text) = current_text {
                         text.push_str(&expanded);
                     } else {
                         current_text = Some(expanded);
-                    }
-                } else if in_element || !state.ancestors.is_empty() {
-                    // Add to tail text for the previous sibling
-                    if let Some(tail) = state.pending_tail.as_mut() {
-                        tail.push_str(&expanded);
-                    } else {
-                        state.set_pending_tail(expanded);
-                    }
-                } else {
-                    // Root level - add to pending tail
-                    if let Some(tail) = state.pending_tail.as_mut() {
-                        tail.push_str(&expanded);
-                    } else {
-                        state.set_pending_tail(expanded);
                     }
                 }
             }
@@ -664,16 +701,8 @@ pub fn xml_to_jsonl_bytes(input: &[u8]) -> Vec<String> {
         buf.clear();
     }
 
-    // Handle any remaining pending tail as final empty tail
-    if let Some(tail) = state.pending_tail.take() {
-        // This tail belongs to the last emitted node, but we've already emitted it
-        // We need to update the last output line to include this tail
-        if let Some(last) = state.output.last_mut()
-            && let Ok(mut obj) = serde_json::from_str::<IndexMap<String, Value>>(last) {
-                obj.insert("@tail".to_string(), Value::String(tail));
-                *last = serde_json::to_string(&obj).expect("Failed to serialize JSON");
-            }
-    }
+    // Handle any remaining pending tail
+    state.apply_pending_tail();
 
     state.output
 }
