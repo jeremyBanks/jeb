@@ -34,9 +34,10 @@ pub mod errors;
 pub mod model;
 pub mod nodes;
 pub mod shell_tokenizer;
+pub mod xml_to_jsonl;
 
 
-pub use crate::{byte_ranges::*, const_checked::*, errors::*};
+pub use crate::{byte_ranges::*, const_checked::*, errors::*, xml_to_jsonl::xml_to_jsonl};
 
 
 
