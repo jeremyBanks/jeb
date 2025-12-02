@@ -51,13 +51,6 @@ pub fn xml_to_jsonl(xml: &str) -> Vec<String> {
 /// Uses BTreeMap to ensure consistent key ordering in output.
 type JsonObject = BTreeMap<String, serde_json::Value>;
 
-/// Represents an element being built
-#[derive(Debug, Clone)]
-struct PendingElement {
-    obj: JsonObject,
-    is_self_closing: bool,
-}
-
 /// Represents an element in the ancestor stack
 #[derive(Debug, Clone)]
 struct AncestorElement {
@@ -65,15 +58,22 @@ struct AncestorElement {
     attributes: Vec<(String, String)>,
 }
 
+/// Represents an element waiting for its @tail to be determined
+#[derive(Debug)]
+struct CompletedElement {
+    obj: JsonObject,
+}
+
 /// Main converter struct that maintains state during conversion
 struct XmlToJsonlConverter<'a> {
     reader: Reader<&'a [u8]>,
     output: Vec<String>,
     ancestor_stack: Vec<AncestorElement>,
-    pending_stack: Vec<PendingElement>,
+    building_stack: Vec<(JsonObject, String)>, // (object, accumulated_text)
+    last_completed: Option<CompletedElement>,
     root_index: usize,
     sibling_indices: Vec<usize>,
-    accumulated_text: String,
+    accumulated_tail: String,
 }
 
 impl<'a> XmlToJsonlConverter<'a> {
@@ -86,10 +86,19 @@ impl<'a> XmlToJsonlConverter<'a> {
             reader,
             output: Vec::new(),
             ancestor_stack: Vec::new(),
-            pending_stack: Vec::new(),
+            building_stack: Vec::new(),
+            last_completed: None,
             root_index: 0,
             sibling_indices: Vec::new(),
-            accumulated_text: String::new(),
+            accumulated_tail: String::new(),
+        }
+    }
+
+    fn flush_completed(&mut self) {
+        if let Some(mut completed) = self.last_completed.take() {
+            completed.obj.insert("@tail".to_string(), serde_json::Value::String(self.accumulated_tail.clone()));
+            self.accumulated_tail.clear();
+            self.output_object(completed.obj);
         }
     }
 
@@ -100,6 +109,16 @@ impl<'a> XmlToJsonlConverter<'a> {
             match self.reader.read_event_into(&mut buf) {
                 Ok(Event::Eof) => break,
                 Ok(Event::Start(e)) => {
+                    // Flush any previously completed element
+                    self.flush_completed();
+
+                    // If there's a parent element being built, its @text is complete
+                    // Move it to last_completed so it can collect @tail
+                    if let Some((mut parent_obj, parent_text)) = self.building_stack.pop() {
+                        parent_obj.insert("@text".to_string(), serde_json::Value::String(parent_text));
+                        self.last_completed = Some(CompletedElement { obj: parent_obj });
+                    }
+
                     let name = String::from_utf8_lossy(e.name().as_ref()).to_string();
                     let attrs: Vec<(String, String)> = e
                         .attributes()
@@ -119,19 +138,16 @@ impl<'a> XmlToJsonlConverter<'a> {
                         obj.insert(key.clone(), serde_json::Value::String(value.clone()));
                     }
 
-                    // Set @tail to accumulated text (text before this element)
-                    obj.insert("@tail".to_string(), serde_json::Value::String(self.accumulated_text.clone()));
-                    self.accumulated_text.clear();
+                    // Add @tail placeholder (will be set later)
+                    obj.insert("@tail".to_string(), serde_json::Value::String(self.accumulated_tail.clone()));
+                    self.accumulated_tail.clear();
 
                     // Add @index
                     let index = self.current_index();
                     obj.insert("@index".to_string(), serde_json::Value::Number(index.into()));
 
-                    // Push as pending element
-                    self.pending_stack.push(PendingElement {
-                        obj,
-                        is_self_closing: false,
-                    });
+                    // Push to building stack to collect @text
+                    self.building_stack.push((obj, String::new()));
 
                     // Push to ancestor stack
                     self.ancestor_stack.push(AncestorElement {
@@ -142,6 +158,16 @@ impl<'a> XmlToJsonlConverter<'a> {
                     self.increment_current_index();
                 }
                 Ok(Event::Empty(e)) => {
+                    // Flush any previously completed element
+                    self.flush_completed();
+
+                    // If there's a parent element being built, its @text is complete
+                    // Move it to last_completed so it can collect @tail
+                    if let Some((mut parent_obj, parent_text)) = self.building_stack.pop() {
+                        parent_obj.insert("@text".to_string(), serde_json::Value::String(parent_text));
+                        self.last_completed = Some(CompletedElement { obj: parent_obj });
+                    }
+
                     let name = String::from_utf8_lossy(e.name().as_ref()).to_string();
                     let mut obj = self.create_base_object(&name);
 
@@ -152,9 +178,9 @@ impl<'a> XmlToJsonlConverter<'a> {
                         obj.insert(key, serde_json::Value::String(value));
                     }
 
-                    // Set @tail to accumulated text
-                    obj.insert("@tail".to_string(), serde_json::Value::String(self.accumulated_text.clone()));
-                    self.accumulated_text.clear();
+                    // Set @tail
+                    obj.insert("@tail".to_string(), serde_json::Value::String(self.accumulated_tail.clone()));
+                    self.accumulated_tail.clear();
 
                     // No @text for self-closing tags
 
@@ -162,16 +188,22 @@ impl<'a> XmlToJsonlConverter<'a> {
                     let index = self.current_index();
                     obj.insert("@index".to_string(), serde_json::Value::Number(index.into()));
 
-                    // Output immediately (self-closing)
-                    self.output_object(obj);
+                    // Self-closing element becomes last_completed (will get @tail updated)
+                    self.last_completed = Some(CompletedElement { obj });
                     self.increment_current_index();
                 }
                 Ok(Event::End(_e)) => {
-                    // Set @text on the pending element
-                    if let Some(mut pending) = self.pending_stack.pop() {
-                        pending.obj.insert("@text".to_string(), serde_json::Value::String(self.accumulated_text.clone()));
-                        self.accumulated_text.clear();
-                        self.output_object(pending.obj);
+                    // Pop element from building stack and set its @text
+                    if let Some((mut obj, text)) = self.building_stack.pop() {
+                        // Element was in building stack (leaf or no children yet)
+                        // Don't flush last_completed (it's probably a parent)
+                        obj.insert("@text".to_string(), serde_json::Value::String(text));
+                        // Element becomes last_completed (will collect @tail before output)
+                        self.last_completed = Some(CompletedElement { obj });
+                    } else {
+                        // Element was already moved to last_completed (it had children)
+                        // Now it's closing, so flush it
+                        self.flush_completed();
                     }
 
                     // Pop from ancestor stack
@@ -183,31 +215,56 @@ impl<'a> XmlToJsonlConverter<'a> {
                         Ok(cow) => cow.to_string(),
                         Err(_) => String::from_utf8_lossy(&e).to_string(),
                     };
-                    self.accumulated_text.push_str(&text);
+
+                    // If we're inside an element being built, add to its @text
+                    if let Some((_obj, elem_text)) = self.building_stack.last_mut() {
+                        elem_text.push_str(&text);
+                    } else {
+                        // Otherwise, accumulate for @tail
+                        self.accumulated_tail.push_str(&text);
+                    }
                 }
                 Ok(Event::CData(e)) => {
+                    self.flush_completed();
+
+                    // If parent is being built, its @text is complete
+                    if let Some((mut parent_obj, parent_text)) = self.building_stack.pop() {
+                        parent_obj.insert("@text".to_string(), serde_json::Value::String(parent_text));
+                        self.last_completed = Some(CompletedElement { obj: parent_obj });
+                    }
+
                     let mut obj = self.create_base_object("![CDATA[");
                     let content = String::from_utf8_lossy(&e).to_string();
                     obj.insert("@text".to_string(), serde_json::Value::String(content));
-                    obj.insert("@tail".to_string(), serde_json::Value::String(self.accumulated_text.clone()));
-                    self.accumulated_text.clear();
+                    obj.insert("@tail".to_string(), serde_json::Value::String(self.accumulated_tail.clone()));
+                    self.accumulated_tail.clear();
                     let index = self.current_index();
                     obj.insert("@index".to_string(), serde_json::Value::Number(index.into()));
-                    self.output_object(obj);
+                    self.last_completed = Some(CompletedElement { obj });
                     self.increment_current_index();
                 }
                 Ok(Event::Comment(e)) => {
+                    self.flush_completed();
+
+                    // If parent is being built, its @text is complete
+                    if let Some((mut parent_obj, parent_text)) = self.building_stack.pop() {
+                        parent_obj.insert("@text".to_string(), serde_json::Value::String(parent_text));
+                        self.last_completed = Some(CompletedElement { obj: parent_obj });
+                    }
+
                     let mut obj = self.create_base_object("!--");
                     let content = String::from_utf8_lossy(&e).to_string();
                     obj.insert("@text".to_string(), serde_json::Value::String(content));
-                    obj.insert("@tail".to_string(), serde_json::Value::String(self.accumulated_text.clone()));
-                    self.accumulated_text.clear();
+                    obj.insert("@tail".to_string(), serde_json::Value::String(self.accumulated_tail.clone()));
+                    self.accumulated_tail.clear();
                     let index = self.current_index();
                     obj.insert("@index".to_string(), serde_json::Value::Number(index.into()));
-                    self.output_object(obj);
+                    self.last_completed = Some(CompletedElement { obj });
                     self.increment_current_index();
                 }
                 Ok(Event::Decl(e)) => {
+                    self.flush_completed();
+
                     let mut obj = self.create_base_object("?xml");
 
                     // Build the declaration text
@@ -223,14 +280,16 @@ impl<'a> XmlToJsonlConverter<'a> {
                     }
 
                     obj.insert("@text".to_string(), serde_json::Value::String(decl_text));
-                    obj.insert("@tail".to_string(), serde_json::Value::String(self.accumulated_text.clone()));
-                    self.accumulated_text.clear();
+                    obj.insert("@tail".to_string(), serde_json::Value::String(self.accumulated_tail.clone()));
+                    self.accumulated_tail.clear();
                     let index = self.current_index();
                     obj.insert("@index".to_string(), serde_json::Value::Number(index.into()));
-                    self.output_object(obj);
+                    self.last_completed = Some(CompletedElement { obj });
                     self.increment_current_index();
                 }
                 Ok(Event::PI(e)) => {
+                    self.flush_completed();
+
                     let content = String::from_utf8_lossy(&e).to_string();
 
                     // Extract PI target (everything before first whitespace)
@@ -240,23 +299,30 @@ impl<'a> XmlToJsonlConverter<'a> {
 
                     let tag_name = format!("?{}", target);
                     let mut obj = self.create_base_object(&tag_name);
-                    obj.insert("@text".to_string(), serde_json::Value::String(format!(" {}", data)));
-                    obj.insert("@tail".to_string(), serde_json::Value::String(self.accumulated_text.clone()));
-                    self.accumulated_text.clear();
+                    let pi_text = if data.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" {}", data)
+                    };
+                    obj.insert("@text".to_string(), serde_json::Value::String(pi_text));
+                    obj.insert("@tail".to_string(), serde_json::Value::String(self.accumulated_tail.clone()));
+                    self.accumulated_tail.clear();
                     let index = self.current_index();
                     obj.insert("@index".to_string(), serde_json::Value::Number(index.into()));
-                    self.output_object(obj);
+                    self.last_completed = Some(CompletedElement { obj });
                     self.increment_current_index();
                 }
                 Ok(Event::DocType(e)) => {
+                    self.flush_completed();
+
                     let mut obj = self.create_base_object("!DOCTYPE");
                     let content = String::from_utf8_lossy(&e).to_string();
                     obj.insert("@text".to_string(), serde_json::Value::String(format!(" {}", content)));
-                    obj.insert("@tail".to_string(), serde_json::Value::String(self.accumulated_text.clone()));
-                    self.accumulated_text.clear();
+                    obj.insert("@tail".to_string(), serde_json::Value::String(self.accumulated_tail.clone()));
+                    self.accumulated_tail.clear();
                     let index = self.current_index();
                     obj.insert("@index".to_string(), serde_json::Value::Number(index.into()));
-                    self.output_object(obj);
+                    self.last_completed = Some(CompletedElement { obj });
                     self.increment_current_index();
                 }
                 Err(e) => {
@@ -266,6 +332,9 @@ impl<'a> XmlToJsonlConverter<'a> {
             }
             buf.clear();
         }
+
+        // Flush any remaining completed element at EOF
+        self.flush_completed();
 
         self.output.clone()
     }
