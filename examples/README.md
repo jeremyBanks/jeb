@@ -4,9 +4,11 @@ This directory contains example XML files and their JSON Lines conversions.
 
 ## Posts.xml
 
-Source: [Stack Exchange Data Dump - 3dprinting.meta.stackexchange.com](https://archive.org/download/stackexchange_20250630_rev2/stackexchange_20250630_rev2/3dprinting.meta.stackexchange.com.7z)
+Source:
+[Stack Exchange Data Dump - 3dprinting.meta.stackexchange.com](https://archive.org/download/stackexchange_20250630_rev2/stackexchange_20250630_rev2/3dprinting.meta.stackexchange.com.7z)
 
-This is a real-world XML file from the Stack Exchange network containing meta posts from the 3D Printing Stack Exchange site.
+This is a real-world XML file from the Stack Exchange network containing meta
+posts from the 3D Printing Stack Exchange site.
 
 ### File Details
 
@@ -16,11 +18,13 @@ This is a real-world XML file from the Stack Exchange network containing meta po
 ### Usage
 
 Convert the entire file:
+
 ```bash
 jeb /path/to/Posts.xml xml-to-jsonlines
 ```
 
 Convert and save output:
+
 ```bash
 jeb /path/to/Posts.xml xml-to-jsonlines > output.jsonlines
 ```
@@ -28,6 +32,7 @@ jeb /path/to/Posts.xml xml-to-jsonlines > output.jsonlines
 ### Sample Output
 
 The XML structure like:
+
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <!--
@@ -55,10 +60,13 @@ Converts to JSON Lines where each node becomes a separate JSON object:
 ### Key Features Demonstrated
 
 1. **Special Nodes**: XML declaration (`?xml`), comments (`!--`)
-2. **Ancestor Context**: Each `row` element includes `"-":"posts"` to show its parent
-3. **Entity Decoding**: HTML entities like `&lt;` are decoded to `<` in attribute values
+2. **Ancestor Context**: Each `row` element includes `"-":"posts"` to show its
+   parent
+3. **Entity Decoding**: HTML entities like `&lt;` are decoded to `<` in
+   attribute values
 4. **Structural Metadata**:
    - `@text`: Text content within elements
    - `@tail`: Text after closing tag
    - `@index`: Position among siblings
-5. **Lossless Conversion**: All information needed to reconstruct the original XML is preserved
+5. **Lossless Conversion**: All information needed to reconstruct the original
+   XML is preserved
