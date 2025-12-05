@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "JEB85",
+  "scopeName": "source.jeb85",
+  "patterns": [{
+    "name": "constant.numeric.zero",
+    "match": "0{5}"
+  }, {
+    "name": "constant.numeric",
+    "match": "[0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.\\-:+=\\^!/*?&<>()[\\]{}@%$#]{5}"
+  }, {
+    "name": "constant.numeric",
+    "match": "[0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.\\-:+=\\^!/*?&<>()[\\]{}@%$#]{1,4}$"
+  }, {
+    "name": "string.quoted.double",
+    "begin": "0\\|.{5,}",
+    "end": "$"
+  }, {
+    "name": "string.quoted.double",
+    "match": "\\|.{0,4}(.|$)"
+  }, {
+    "name": "string.quoted.double",
+    "match": "1\\|.{6}.{0,2}(.|$)"
+  }]
+}

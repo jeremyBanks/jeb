@@ -1,5 +1,5 @@
 {
-  "[code-text-binary][shellscript]": {
+  "[jeb85]": {
     "editor.rulers": [
       {
         "color": "#CCCCCC66",
@@ -82,6 +82,9 @@
         "column": 95
       }
     ]
+  },
+  "editor.tokenColorCustomizations": {
+    "comments": "#FF0000"
   },
   "[json][jsonc][javascript][javascriptreact][typescript][typescriptreact]": {
     "editor.defaultFormatter": "denoland.vscode-deno",

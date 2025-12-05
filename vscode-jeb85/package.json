@@ -1,0 +1,36 @@
+{
+  "name": "jeb85",
+  "displayName": "JEB85",
+  "description": "Syntax highlighting for JEB85 encoding",
+  "version": "0.0.4",
+  "publisher": "jeremyBanks",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "jeb85",
+        "aliases": [
+          "JEB85",
+          "jeb85"
+        ],
+        "extensions": [
+          ".jeb85",
+          ".z85"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "jeb85",
+        "scopeName": "source.jeb85",
+        "path": "./syntaxes/jeb85.tmLanguage.json"
+      }
+    ]
+  }
+}
