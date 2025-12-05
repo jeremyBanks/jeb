@@ -27,6 +27,7 @@ stdio = ["tokio/io-std"]
 [dependencies]
 derive_more = { version = "2.0.1", features = ["full"] }
 dotenv = "0.15.0"
+fast_hilbert = "2.1.0"
 futures = "0.3"
 getset = "0.1.6"
 indexmap = { version = "2.0", features = ["serde"] }
