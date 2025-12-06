@@ -2,71 +2,71 @@
   "[jeb85]": {
     "editor.rulers": [
       {
-        "color": "#CCCCCC66",
+        "color": "#CCCCCC44",
         "column": 0
       },
       {
-        "color": "#FF880044",
+        "color": "#FF442222",
         "column": 5
       },
       {
-        "color": "#CCCCCC55",
+        "color": "#CCCCCC33",
         "column": 10
       },
       {
-        "color": "#44CCFF44",
+        "color": "#44CCFF22",
         "column": 15
       },
       {
-        "color": "#CCCCCC66",
+        "color": "#CCCCCC44",
         "column": 20
       },
       {
-        "color": "#FF880044",
+        "color": "#FF442222",
         "column": 25
       },
       {
-        "color": "#CCCCCC55",
+        "color": "#CCCCCC33",
         "column": 30
       },
       {
-        "color": "#44CCFF44",
+        "color": "#44CCFF22",
         "column": 35
       },
       {
-        "color": "#CCCCCC88",
+        "color": "#CCCCCC44",
         "column": 40
       },
       {
-        "color": "#FF880044",
+        "color": "#FF442222",
         "column": 45
       },
       {
-        "color": "#CCCCCC55",
+        "color": "#CCCCCC33",
         "column": 50
       },
       {
-        "color": "#44CCFF44",
+        "color": "#44CCFF22",
         "column": 55
       },
       {
-        "color": "#CCCCCC66",
+        "color": "#CCCCCC44",
         "column": 60
       },
       {
-        "color": "#FF880044",
+        "color": "#FF442222",
         "column": 65
       },
       {
-        "color": "#CCCCCC55",
+        "color": "#CCCCCC33",
         "column": 70
       },
       {
-        "color": "#44CCFF44",
+        "color": "#44CCFF22",
         "column": 75
       },
       {
-        "color": "#CCCCCCCC",
+        "color": "#CCCCCCAA",
         "column": 80
       },
       {
@@ -82,9 +82,6 @@
         "column": 95
       }
     ]
-  },
-  "editor.tokenColorCustomizations": {
-    "comments": "#FF0000"
   },
   "[json][jsonc][javascript][javascriptreact][typescript][typescriptreact]": {
     "editor.defaultFormatter": "denoland.vscode-deno",
@@ -124,6 +121,9 @@
     "libjeb",
     "mergeoptions",
     "peekable",
+    "pipefail",
+    "pushd",
+    "realpath",
     "redirections",
     "remappings",
     "repr",
@@ -153,6 +153,46 @@
     100,
     120
   ],
+  "editor.tokenColorCustomizations": {
+    "textMateRules": [
+      {
+        "scope": "constant.numeric.padding.jeb",
+        "settings": {
+          "foreground": "#8AD2"
+        }
+      },
+      {
+        "scope": "constant.numeric.jeb",
+        "settings": {
+          "foreground": "#8ADF"
+        }
+      },
+      {
+        "scope": "string.jeb",
+        "settings": {
+          "foreground": "#FFFF"
+        }
+      },
+      {
+        "scope": "string.padding.jeb",
+        "settings": {
+          "foreground": "#FFFC"
+        }
+      },
+      {
+        "scope": "keyword.jeb",
+        "settings": {
+          "foreground": "#F848"
+        }
+      },
+      {
+        "scope": "comment.prelude.jeb",
+        "settings": {
+          "foreground": "#888"
+        }
+      }
+    ]
+  },
   "editor.wrappingIndent": "indent",
   "errorLens.enabledDiagnosticLevels": [
     "error"
