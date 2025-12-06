@@ -54,9 +54,10 @@ pub const BLOCK_BYTES_4: usize = 4;
 /// This encoding represents each block with 5 digits.
 pub const BLOCK_DIGITS_5: usize = 5;
 
-/// The prefix byte preceding raw data.
+/// The prefix and delimiter byte for raw data sections.
+/// Format: |<byte_count>|<raw_data>
 pub const RAW_PREFIX: u8 = b'|';
-/// The default padding byte repeated after raw data to align following blocks.
+/// Legacy padding byte (no longer used - new format uses explicit byte counts).
 pub const RAW_PADDING: u8 = b'.';
 
 /// This encoding allows maximum of roughly 200 MiB of raw data per raw chunk.
@@ -348,48 +349,25 @@ pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
         }
 
         if !raw_buffer.is_empty() {
-            let raw_block_count = raw_buffer.len() / BLOCK_BYTES_4;
+            // Encode byte count (not block count)
+            let byte_count = raw_buffer.len();
+            let byte_count_z85 = encode_z85_block(
+                u32::try_from(byte_count)
+                    .unwrap()
+                    .to_be_bytes(),
+            );
 
-            if raw_block_count == 1 {
-                output.extend([RAW_PREFIX]);
-                output.extend(&raw_buffer);
-            } else {
-                let block_count_prefix_value = raw_block_count - 2;
-                let block_count_prefix_block = encode_z85_block(
-                    u32::try_from(block_count_prefix_value)
-                        .unwrap()
-                        .to_be_bytes(),
-                );
-                let mut block_count_prefix = &block_count_prefix_block[..];
-                while block_count_prefix.first() == Some(&b'0') {
-                    block_count_prefix = &block_count_prefix[1..];
-                }
-                let mut block_prefix = block_count_prefix.to_vec();
-                block_prefix.extend([RAW_PREFIX]);
-
-                let raw_block_digits = raw_block_count * BLOCK_DIGITS_5;
-                let padding_needed = raw_block_digits - block_prefix.len() - raw_buffer.len();
-
-                let mut padding = vec![RAW_PADDING; padding_needed];
-
-                let mut cosmetic_padding = Vec::new();
-                for byte in bytes {
-                    if ASCII_INLINE_TEXT_LUT[*byte as usize] {
-                        cosmetic_padding.push(*byte);
-                    } else {
-                        break;
-                    }
-                }
-                cosmetic_padding.push(RAW_PREFIX);
-
-                let available_len = padding.len().min(cosmetic_padding.len());
-                padding[..available_len].copy_from_slice(&cosmetic_padding[..available_len]);
-
-
-                output.extend(&block_prefix);
-                output.extend(&raw_buffer);
-                output.extend(&padding);
+            // Strip leading zeros from count
+            let mut byte_count_str = &byte_count_z85[..];
+            while byte_count_str.first() == Some(&b'0') {
+                byte_count_str = &byte_count_str[1..];
             }
+
+            // Output format: |<count>|<raw_bytes>
+            output.push(RAW_PREFIX);
+            output.extend_from_slice(byte_count_str);
+            output.push(RAW_PREFIX);
+            output.extend(&raw_buffer);
 
             raw_buffer.clear();
         }
@@ -406,16 +384,31 @@ pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
     }
 
     if !raw_buffer.is_empty() {
-        if raw_buffer.len() <= BLOCK_BYTES_4 {
-            output.push(RAW_PREFIX);
-        } else {
-            output.extend([RAW_PREFIX; 2]);
+        // Encode byte count for trailing raw data
+        let byte_count = raw_buffer.len();
+        let byte_count_z85 = encode_z85_block(
+            u32::try_from(byte_count)
+                .unwrap()
+                .to_be_bytes(),
+        );
+
+        // Strip leading zeros from count
+        let mut byte_count_str = &byte_count_z85[..];
+        while byte_count_str.first() == Some(&b'0') {
+            byte_count_str = &byte_count_str[1..];
         }
+
+        // Output format: |<count>|<raw_bytes>
+        output.push(RAW_PREFIX);
+        output.extend_from_slice(byte_count_str);
+        output.push(RAW_PREFIX);
         output.extend_from_slice(&raw_buffer);
         raw_buffer.clear();
     }
 
-    debug_assert!(output.len() <= encoded_length);
+    // Note: with the new byte-count format (|count|data), output may be slightly
+    // longer than pure Z85 encoding, since we add delimiters but save on padding.
+    // The encoded_length calculation is just for initial capacity estimation.
 
     output
 }
