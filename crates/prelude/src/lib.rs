@@ -113,7 +113,7 @@ mod language_prelude {
 
 mod prelude {
     #![allow(nonstandard_style)]
-    pub use ::std::println as print;
+    pub use ::std::{format, println as print};
 
     pub use super::language_prelude::*;
 
@@ -128,7 +128,10 @@ mod prelude {
     pub type string<'a> = &'a ::core::primitive::str;
     pub type String = ::std::string::String;
 
-    pub type Vector<T> = ::std::vec::Vec<T>;
+    pub type size = ::core::primitive::usize;
+
+    pub type Vector<Item> = ::std::vec::Vec<Item>;
+    pub type Array<Item, const size: size> = [Item; size];
 
     pub use ::core::iter::{FromIterator, IntoIterator, Iterator};
 }
