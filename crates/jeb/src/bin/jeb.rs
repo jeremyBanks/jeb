@@ -117,6 +117,11 @@ pub async fn inner_main() -> Result<(), Panic> {
             "filter" => filter(state)?,
             "encode-z85" => encode_z85(state)?,
             "encode-jeb85" => encode_jeb85(state)?,
+            "parse-hex" => parse_hex(state)?,
+            "to-hex" => to_hex(state)?,
+            "parse-binary" => parse_binary(state)?,
+            "to-binary" => to_binary(state)?,
+            "split-whitespace" => split_whitespace(state)?,
             "--all" => {
                 _default_mode = "all";
                 state
@@ -381,4 +386,105 @@ fn split_shell(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
         }
     }
     Ok(result)
+}
+
+fn split_whitespace(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    let mut result = Vec::<Bytes>::new();
+    for bytes in state {
+        let mut current = Vec::<u8>::new();
+        for &byte in bytes.iter() {
+            if byte.is_ascii_whitespace() {
+                if !current.is_empty() {
+                    result.push(Bytes::from(take(&mut current)));
+                }
+            } else {
+                current.push(byte);
+            }
+        }
+        if !current.is_empty() {
+            result.push(Bytes::from(current));
+        }
+    }
+    Ok(result)
+}
+
+fn parse_hex(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    for piece in &mut state {
+        let hex_str = take(piece);
+        let mut bytes = Vec::new();
+        let mut hex_chars = hex_str
+            .iter()
+            .filter(|&&b| !b.is_ascii_whitespace())
+            .copied();
+        while let Some(high) = hex_chars.next() {
+            let low = hex_chars.next().ok_or("odd number of hex digits")?;
+            let high = hex_digit_to_value(high)?;
+            let low = hex_digit_to_value(low)?;
+            bytes.push((high << 4) | low);
+        }
+        *piece = bytes.into();
+    }
+    Ok(state)
+}
+
+fn hex_digit_to_value(digit: u8) -> Result<u8, Panic> {
+    match digit {
+        b'0'..=b'9' => Ok(digit - b'0'),
+        b'a'..=b'f' => Ok(digit - b'a' + 10),
+        b'A'..=b'F' => Ok(digit - b'A' + 10),
+        _ => Err(format!("invalid hex digit: {}", digit as char).into()),
+    }
+}
+
+fn to_hex(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    for piece in &mut state {
+        let bytes = take(piece);
+        let mut hex = Vec::with_capacity(bytes.len() * 2);
+        for byte in bytes.iter() {
+            hex.extend_from_slice(format!("{:02x}", byte).as_bytes());
+        }
+        *piece = hex.into();
+    }
+    Ok(state)
+}
+
+fn parse_binary(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    for piece in &mut state {
+        let bin_str = take(piece);
+        let mut bytes = Vec::new();
+        let bits: Vec<u8> = bin_str
+            .iter()
+            .filter(|&&b| !b.is_ascii_whitespace())
+            .copied()
+            .collect();
+        if bits.len() % 8 != 0 {
+            return Err(format!("binary string length {} is not a multiple of 8", bits.len()).into());
+        }
+        for chunk in bits.chunks(8) {
+            let mut byte = 0u8;
+            for &bit in chunk {
+                byte <<= 1;
+                match bit {
+                    b'0' => {}
+                    b'1' => byte |= 1,
+                    _ => return Err(format!("invalid binary digit: {}", bit as char).into()),
+                }
+            }
+            bytes.push(byte);
+        }
+        *piece = bytes.into();
+    }
+    Ok(state)
+}
+
+fn to_binary(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    for piece in &mut state {
+        let bytes = take(piece);
+        let mut binary = Vec::with_capacity(bytes.len() * 8);
+        for byte in bytes.iter() {
+            binary.extend_from_slice(format!("{:08b}", byte).as_bytes());
+        }
+        *piece = binary.into();
+    }
+    Ok(state)
 }
