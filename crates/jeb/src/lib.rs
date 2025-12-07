@@ -38,7 +38,4 @@ pub mod nodes;
 pub mod shell_tokenizer;
 pub mod z85;
 
-pub(crate) mod clobber_language_prelude;
-
-
 pub use crate::{byte_ranges::*, const_checked::*, errors::*};

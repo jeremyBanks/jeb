@@ -1,5 +1,3 @@
-crate::no_prelude! {}
-
 use crate::{
     ASCII_INLINE_TEXT_LUT, Z85, div_exact, pow, usize_eq,
     z85::{
