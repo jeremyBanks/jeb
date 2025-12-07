@@ -199,9 +199,10 @@
   ],
   "errorLens.statusBarColorsEnabled": true,
   "files.associations": {
-    "*.jeb": "ini",
-    "*.jeb85": "code-text-binary",
-    "*.z85": "code-text-binary"
+    "*.jeb": "jeb85",
+    "*.jeb85": "jeb85",
+    "*.sh": "jeb85",
+    "*.z85": "jeb85"
   },
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 32768,

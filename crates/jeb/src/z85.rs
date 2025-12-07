@@ -261,3 +261,31 @@ pub fn encode_z85(bytes: &[u8]) -> Vec<u8> {
 
     output
 }
+
+pub fn decode_z85(encoded: &[u8]) -> Result<Vec<u8>, crate::Panic> {
+    // Filter out whitespace
+    let encoded: Vec<u8> = encoded
+        .iter()
+        .filter(|&&b| !b.is_ascii_whitespace())
+        .copied()
+        .collect();
+
+    let decoded_length = decoded_z85_length(encoded.len());
+    let mut output = Vec::with_capacity(decoded_length);
+
+    for digits in encoded.chunks(BLOCK_DIGITS_5) {
+        let digit_length = digits.len();
+        let mut digit_block = [b'0'; BLOCK_DIGITS_5];
+        digit_block[..digit_length].copy_from_slice(digits);
+
+        let decoded_length = BLOCK_BYTES_BY_DIGITS[digits.len()];
+        let decoded_block = decode_z85_block(digit_block)?;
+        let decoded = &decoded_block[..decoded_length];
+
+        output.extend_from_slice(decoded);
+    }
+
+    debug_assert!(output.len() == decoded_length);
+
+    Ok(output)
+}

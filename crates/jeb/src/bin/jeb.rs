@@ -116,6 +116,7 @@ pub async fn inner_main() -> Result<(), Panic> {
             "collapse" => collapse(state)?,
             "filter" => filter(state)?,
             "encode-z85" => encode_z85(state)?,
+            "decode-z85" => decode_z85(state)?,
             "encode-jeb85" => encode_jeb85(state)?,
             "parse-hex" => parse_hex(state)?,
             "to-hex" => to_hex(state)?,
@@ -208,6 +209,15 @@ fn encode_jeb85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
         let bytes = take(piece);
         let encoded = jeb::jeb85::encode_jeb85(&bytes);
         *piece = encoded.into();
+    }
+    Ok(state)
+}
+
+fn decode_z85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    for piece in &mut state {
+        let encoded = take(piece);
+        let decoded = jeb::z85::decode_z85(&encoded)?;
+        *piece = decoded.into();
     }
     Ok(state)
 }
