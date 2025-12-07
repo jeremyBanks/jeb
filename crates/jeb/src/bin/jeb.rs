@@ -427,6 +427,7 @@ fn parse_hex(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     Ok(state)
 }
 
+#[allow(unreachable_code)]
 fn hex_digit_to_value(digit: u8) -> Result<u8, Panic> {
     match digit {
         b'0'..=b'9' => Ok(digit - b'0'),
@@ -448,6 +449,7 @@ fn to_hex(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     Ok(state)
 }
 
+#[allow(unreachable_code)]
 fn parse_binary(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let bin_str = take(piece);
@@ -458,7 +460,7 @@ fn parse_binary(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
             .copied()
             .collect();
         if bits.len() % 8 != 0 {
-            return Err(format!("binary string length {} is not a multiple of 8", bits.len()).into());
+            return Err(format!("binary string has {} bits, which is not a multiple of 8 (need {} more bits, or {} fewer)", bits.len(), 8 - (bits.len() % 8), bits.len() % 8).into());
         }
         for chunk in bits.chunks(8) {
             let mut byte = 0u8;
