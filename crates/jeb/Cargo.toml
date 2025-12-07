@@ -28,10 +28,12 @@ bin = [
     "dep:dotenv",
     "dep:owo-colors",
     "tracing-subscriber/env-filter",
+    "clobber_language_prelude",
 ]
 
 fs = ["tokio/fs"]
 stdio = ["tokio/io-std"]
+clobber_language_prelude = []
 
 [dependencies]
 derive_more = { version = "2.0.1", features = ["full"] }

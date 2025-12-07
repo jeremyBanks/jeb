@@ -28,6 +28,7 @@
 #![doc = include_str!("../README.md")]
 // cSpell:ignoreRegExp b"(\\?.){5}"
 
+
 pub mod byte_ranges;
 pub mod const_checked;
 pub mod errors;
@@ -36,6 +37,8 @@ pub mod model;
 pub mod nodes;
 pub mod shell_tokenizer;
 pub mod z85;
+
+pub(crate) mod clobber_language_prelude;
 
 
 pub use crate::{byte_ranges::*, const_checked::*, errors::*};

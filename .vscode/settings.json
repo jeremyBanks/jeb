@@ -120,6 +120,7 @@
     "indexmap",
     "libjeb",
     "mergeoptions",
+    "miri",
     "peekable",
     "pipefail",
     "pushd",
