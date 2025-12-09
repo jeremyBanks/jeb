@@ -1,53 +1,4 @@
-#![warn(
-    clippy::std_instead_of_core,
-    clippy::pedantic,
-    clippy::cargo,
-    clippy::nursery,
-    clippy::allow_attributes,
-    clippy::arbitrary_source_item_ordering
-)]
-#![expect(
-    missing_docs,
-    clippy::missing_errors_doc,
-    clippy::redundant_else,
-    clippy::needless_continue,
-    clippy::manual_assert,
-    clippy::cast_sign_loss,
-    clippy::cast_possible_truncation,
-    clippy::default_constructed_unit_structs,
-    clippy::too_long_first_doc_paragraph,
-    clippy::arbitrary_source_item_ordering,
-    clippy::missing_panics_doc
-)]
-#![allow(
-    clippy::unnecessary_wraps,
-    clippy::use_self,
-    mismatched_lifetime_syntaxes,
-    dead_code
-)]
-#![doc = include_str!("../README.md")]
-// cSpell:ignoreRegExp b"(\\?.){5}"
-
-pub mod byte_ranges;
-pub mod const_checked;
-pub mod errors;
-pub mod jeb85;
-pub mod model;
-pub mod nodes;
-pub mod shell_tokenizer;
-pub mod z85;
-
-
-pub use crate::{byte_ranges::*, const_checked::*, errors::*};
-
-
-
-// Aliases for compatibility with slop crate
-pub const Z85_ALPHABET: &[u8; 85] = Z85;
-pub const Z85_DECODE: [u8; 256] = Z85_LUT;
-pub const MAX_TEXT_SIZE: usize = TARGET_RAW_BYTES;
-
-// MARK: encoding constants
+use crate::{Panic, Z85, Z85_LUT};
 
 /// This encoding uses base 85 for binary data.
 pub const BASE_85: usize = 85;
@@ -56,42 +7,14 @@ pub const BLOCK_BYTES_4: usize = 4;
 /// This encoding represents each block with 5 digits.
 pub const BLOCK_DIGITS_5: usize = 5;
 
-/// The prefix byte preceding raw data.
-pub const RAW_PREFIX: u8 = b'|';
-/// The default padding byte repeated after raw data to align following blocks.
-pub const RAW_PADDING: u8 = b'.';
-
-/// This encoding allows maximum of roughly 200 MiB of raw data per raw chunk.
-pub const MAX_RAW_BYTES: usize = usize_eq(208_802_508, MAX_RAW_BLOCKS * BLOCK_BYTES_4);
-/// This encoding's number of raw blocks in a raw chunk is limited by the
-/// maximum raw prefix size value that can fit in the initial block with
-/// `RAW_PREFIX`.
-pub const MAX_RAW_BLOCKS: usize = usize_eq(52_200_627, 2 + pow(BASE_85, BLOCK_DIGITS_5 - 1));
-
 /// The number of blocks required to encode a given number of bytes.
 pub const BLOCK_DIGITS_BY_BYTES: [usize; BLOCK_BYTES_4 + 1] = [0, 2, 3, 4, 5];
 /// The number of bytes encoded by a given number of digits.
 pub const BLOCK_BYTES_BY_DIGITS: [usize; BLOCK_DIGITS_5 + 1] = [0, -1 as _, 1, 2, 3, 4];
 
-/// When this encoding is used to convert binary data into line of text, our
-/// implementation limits each line to 80 digits.
-pub const TARGET_LINE_SIZE_DIGITS: usize = 80;
-/// When this encoding is split into 80 digit lines, each line contains 64 bytes
-/// of data, which has a good chance of some alignment with binary data.
-pub const TARGET_LINE_SIZE_BYTES: usize = usize_eq(
-    64,
-    div_exact(TARGET_LINE_SIZE_DIGITS * BLOCK_BYTES_4, BLOCK_DIGITS_5),
-);
-
-/// We encode a maximum of 64 KiB of raw data per raw chunk.
-pub const TARGET_RAW_BYTES: usize = usize_eq(65_536, 64 * 1024);
-/// We encode a maximum of 16 Ki blocks per raw chunk.
-pub const TARGET_RAW_BLOCKS: usize = usize_eq(16_384, div_exact(TARGET_RAW_BYTES, BLOCK_BYTES_4));
-
-// MARK: high-level interface
-
 #[derive(Default)]
 pub struct Encoder;
+
 impl Encoder {
     #[must_use]
     pub fn encode_bytes(&self, _bytes: &[u8]) -> Vec<u8> {
@@ -199,6 +122,60 @@ pub const fn decode_z85_block_or_panic(encoded: [u8; BLOCK_DIGITS_5]) -> [u8; BL
     }
 }
 
+/// Maximum values that can be encoded in N Z85 characters.
+/// - 1 char: 0-84 (85^1 - 1)
+/// - 2 chars: 0-7224 (85^2 - 1)
+/// - 3 chars: 0-614124 (85^3 - 1)
+/// - 4 chars: 0-52200624 (85^4 - 1)
+pub const MAX_VALUE_BY_CHARS: [u32; 5] = [
+    0,
+    84,                    // 85^1 - 1
+    7_224,                 // 85^2 - 1
+    614_124,               // 85^3 - 1
+    52_200_624,            // 85^4 - 1
+];
+
+/// Encodes a value in the minimum number of Z85 characters needed.
+/// Returns the encoded slice and the number of characters used.
+#[must_use]
+pub fn encode_z85_compact(value: u32) -> ([u8; BLOCK_DIGITS_5], usize) {
+    let full_block = encode_z85_block(value.to_be_bytes());
+
+    // Count leading zeros
+    let mut start = 0;
+    while start < BLOCK_DIGITS_5 - 1 && full_block[start] == b'0' {
+        start += 1;
+    }
+
+    (full_block, BLOCK_DIGITS_5 - start)
+}
+
+/// Checks if N bytes with the given big-endian value can fit in fewer than
+/// the standard Z85 character count (exploiting leading zero bits).
+/// Returns Some(char_count) if it can be compactly encoded, None otherwise.
+#[must_use]
+pub const fn can_encode_compactly(value: u32, byte_count: usize) -> Option<usize> {
+    // Standard encoding requirements from BLOCK_DIGITS_BY_BYTES
+    let standard_chars = match byte_count {
+        1 => 2,
+        2 => 3,
+        3 => 4,
+        4 => 5,
+        _ => return None,
+    };
+
+    // Check if value fits in fewer characters
+    let mut chars_needed = 1;
+    while chars_needed < standard_chars {
+        if value <= MAX_VALUE_BY_CHARS[chars_needed] {
+            return Some(chars_needed);
+        }
+        chars_needed += 1;
+    }
+
+    None
+}
+
 #[cfg(test)]
 #[test]
 #[expect(clippy::trivially_copy_pass_by_ref)]
@@ -265,6 +242,8 @@ fn test_z85_blocks() {
 
     const _: () = {
         const fn expect(encoded: &[u8; BLOCK_DIGITS_5], bytes: &[u8; BLOCK_BYTES_4]) {
+            use crate::bytes_eq;
+
             bytes_eq(bytes, &decode_z85_block_or_panic(*encoded));
             bytes_eq(encoded, &encode_z85_block(*bytes));
         }
@@ -292,6 +271,82 @@ fn test_z85_blocks() {
     }
 }
 
+#[cfg(test)]
+#[test]
+fn test_max_value_by_chars() {
+    // 1 char can encode 0-84 (85^1 - 1)
+    assert_eq!(MAX_VALUE_BY_CHARS[1], 84);
+    // 2 chars can encode 0-7224 (85^2 - 1)
+    assert_eq!(MAX_VALUE_BY_CHARS[2], 7_224);
+    // 3 chars can encode 0-614124 (85^3 - 1)
+    assert_eq!(MAX_VALUE_BY_CHARS[3], 614_124);
+    // 4 chars can encode 0-52200624 (85^4 - 1)
+    assert_eq!(MAX_VALUE_BY_CHARS[4], 52_200_624);
+}
+
+#[cfg(test)]
+#[test]
+fn test_encode_z85_compact() {
+    // Value 5 should need only 1 character
+    let (encoded, len) = encode_z85_compact(5);
+    assert_eq!(len, 1);
+    assert_eq!(&encoded[4..5], b"5");
+
+    // Value 84 should need only 1 character (max for 1 char)
+    let (encoded, len) = encode_z85_compact(84);
+    assert_eq!(len, 1);
+    assert_eq!(&encoded[4..5], b"#");
+
+    // Value 85 should need 2 characters
+    let (encoded, len) = encode_z85_compact(85);
+    assert_eq!(len, 2);
+    assert_eq!(&encoded[3..5], b"10");
+
+    // Value 256 should need 2 characters
+    let (encoded, len) = encode_z85_compact(256);
+    assert_eq!(len, 2);
+    assert_eq!(&encoded[3..5], b"31");
+
+    // Value 65536 should need 3 characters
+    let (encoded, len) = encode_z85_compact(65536);
+    assert_eq!(len, 3);
+    assert_eq!(&encoded[2..5], b"961");
+}
+
+#[cfg(test)]
+#[test]
+fn test_can_encode_compactly() {
+    // 1 byte normally needs 2 chars, but value 5 fits in 1 char
+    assert_eq!(can_encode_compactly(5, 1), Some(1));
+
+    // 1 byte normally needs 2 chars, value 84 fits in 1 char
+    assert_eq!(can_encode_compactly(84, 1), Some(1));
+
+    // 1 byte normally needs 2 chars, value 85 needs 2 chars (not compact)
+    assert_eq!(can_encode_compactly(85, 1), None);
+
+    // 2 bytes normally need 3 chars, value 256 fits in 2 chars
+    assert_eq!(can_encode_compactly(256, 2), Some(2));
+
+    // 2 bytes normally need 3 chars, value 7224 fits in 2 chars
+    assert_eq!(can_encode_compactly(7224, 2), Some(2));
+
+    // 2 bytes normally need 3 chars, value 7225 needs 3 chars (not compact)
+    assert_eq!(can_encode_compactly(7225, 2), None);
+
+    // 3 bytes normally need 4 chars, value 65536 fits in 3 chars
+    assert_eq!(can_encode_compactly(65536, 3), Some(3));
+
+    // 3 bytes normally need 4 chars, value 614125 needs 4 chars (not compact)
+    assert_eq!(can_encode_compactly(614_125, 3), None);
+
+    // 4 bytes normally need 5 chars, small value 12345 fits in 3 chars
+    assert_eq!(can_encode_compactly(12345, 4), Some(3));
+
+    // 4 bytes normally need 5 chars, value 52200625 needs 5 chars (not compact)
+    assert_eq!(can_encode_compactly(52_200_625, 4), None);
+}
+
 #[must_use]
 pub const fn encoded_z85_length(byte_length: usize) -> usize {
     let full_blocks = byte_length / BLOCK_BYTES_4;
@@ -314,6 +369,7 @@ pub const fn decoded_z85_length(digit_length: usize) -> usize {
     full_block_bytes + remaining_block_bytes
 }
 
+#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
 #[must_use]
 pub fn encode_z85(bytes: &[u8]) -> Vec<u8> {
     let encoded_length = encoded_z85_length(bytes.len());
@@ -336,88 +392,30 @@ pub fn encode_z85(bytes: &[u8]) -> Vec<u8> {
     output
 }
 
-#[must_use]
-pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
-    let encoded_length = encoded_z85_length(bytes.len());
-    let mut output = Vec::with_capacity(encoded_length);
+pub fn decode_z85(encoded: &[u8]) -> Result<Vec<u8>, crate::Panic> {
+    // Filter out whitespace
+    let encoded: Vec<u8> = encoded
+        .iter()
+        .filter(|&&b| !b.is_ascii_whitespace())
+        .copied()
+        .collect();
 
-    let mut raw_buffer = Vec::<u8>::new();
+    let decoded_length = decoded_z85_length(encoded.len());
+    let mut output = Vec::with_capacity(decoded_length);
 
-    for bytes in bytes.chunks(BLOCK_BYTES_4) {
-        if bytes.iter().all(|b| ASCII_INLINE_TEXT_LUT[*b as usize]) {
-            raw_buffer.extend_from_slice(bytes);
-            continue;
-        }
+    for digits in encoded.chunks(BLOCK_DIGITS_5) {
+        let digit_length = digits.len();
+        let mut digit_block = [b'0'; BLOCK_DIGITS_5];
+        digit_block[..digit_length].copy_from_slice(digits);
 
-        if !raw_buffer.is_empty() {
-            let raw_block_count = raw_buffer.len() / BLOCK_BYTES_4;
+        let decoded_length = BLOCK_BYTES_BY_DIGITS[digits.len()];
+        let decoded_block = decode_z85_block(digit_block)?;
+        let decoded = &decoded_block[..decoded_length];
 
-            if raw_block_count == 1 {
-                output.extend([RAW_PREFIX]);
-                output.extend(&raw_buffer);
-            } else {
-                let block_count_prefix_value = raw_block_count - 2;
-                let block_count_prefix_block = encode_z85_block(
-                    u32::try_from(block_count_prefix_value)
-                        .unwrap()
-                        .to_be_bytes(),
-                );
-                let mut block_count_prefix = &block_count_prefix_block[..];
-                while block_count_prefix.first() == Some(&b'0') {
-                    block_count_prefix = &block_count_prefix[1..];
-                }
-                let mut block_prefix = block_count_prefix.to_vec();
-                block_prefix.extend([RAW_PREFIX]);
-
-                let raw_block_digits = raw_block_count * BLOCK_DIGITS_5;
-                let padding_needed = raw_block_digits - block_prefix.len() - raw_buffer.len();
-
-                let mut padding = vec![RAW_PADDING; padding_needed];
-
-                let mut cosmetic_padding = Vec::new();
-                for byte in bytes {
-                    if ASCII_INLINE_TEXT_LUT[*byte as usize] {
-                        cosmetic_padding.push(*byte);
-                    } else {
-                        break;
-                    }
-                }
-                cosmetic_padding.push(RAW_PREFIX);
-
-                let available_len = padding.len().min(cosmetic_padding.len());
-                padding[..available_len].copy_from_slice(&cosmetic_padding[..available_len]);
-
-
-                output.extend(&block_prefix);
-                output.extend(&raw_buffer);
-                output.extend(&padding);
-            }
-
-            raw_buffer.clear();
-        }
-
-        let byte_length = bytes.len();
-        let mut byte_block = [0x00; BLOCK_BYTES_4];
-        byte_block[..byte_length].copy_from_slice(bytes);
-
-        let encoded_length = BLOCK_DIGITS_BY_BYTES[bytes.len()];
-        let encoded_block = encode_z85_block(byte_block);
-        let encoded = &encoded_block[..encoded_length];
-
-        output.extend_from_slice(encoded);
+        output.extend_from_slice(decoded);
     }
 
-    if !raw_buffer.is_empty() {
-        if raw_buffer.len() <= BLOCK_BYTES_4 {
-            output.push(RAW_PREFIX);
-        } else {
-            output.extend([RAW_PREFIX; 2]);
-        }
-        output.extend_from_slice(&raw_buffer);
-        raw_buffer.clear();
-    }
+    debug_assert!(output.len() == decoded_length);
 
-    debug_assert!(output.len() <= encoded_length);
-
-    output
+    Ok(output)
 }
