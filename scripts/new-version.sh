@@ -56,8 +56,12 @@ echo "  = $xxxx"
 # Update Cargo.toml workspace version
 if grep -q '^\[workspace\.package\]' Cargo.toml; then
     # Use sed to update the version line after [workspace.package]
-    # macOS requires an empty string argument for -i
-    sed -i '' "/^\[workspace\.package\]/,/^\[/ s/^version = \".*\"/version = \"$version\"/" Cargo.toml
+    # macOS and Linux have different sed -i syntax
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "/^\[workspace\.package\]/,/^\[/ s/^version = \".*\"/version = \"$version\"/" Cargo.toml
+    else
+        sed -i "/^\[workspace\.package\]/,/^\[/ s/^version = \".*\"/version = \"$version\"/" Cargo.toml
+    fi
     echo "Updated workspace version in Cargo.toml to: $version"
 else
     echo "Error: No [workspace.package] section found in Cargo.toml"
