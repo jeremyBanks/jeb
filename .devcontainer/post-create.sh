@@ -9,3 +9,7 @@ git config --global push.autoSetupRemote true
 rustup update
 rustup show
 rustup default nightly-2025-11-28
+
+curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
+cargo binstall --no-confirm --strategies crate-meta-data jj-cli

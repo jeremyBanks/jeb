@@ -35,6 +35,14 @@ fs = ["tokio/fs"]
 stdio = ["tokio/io-std"]
 clobber_language_prelude = []
 
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/{ version }/{ name }-{ target }{ archive-suffix }"
+bin-dir = "{ bin }{ binary-ext }"
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.signing]
+algorithm = "minisign"
+
 [dependencies]
 derive_more = { version = "2.0.1", features = ["full"] }
 futures = "0.3"
