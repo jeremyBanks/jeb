@@ -457,4 +457,415 @@ mod tests {
     fn test_decode_error_standalone_pipe() {
         assert!(decode_jeb85(b"|test").is_err());
     }
+
+    // =========================================================================
+    // EDGE CASE TESTS - Reserved prefix characters in input
+    // =========================================================================
+
+    #[test]
+    fn test_underscore_in_input_4_bytes() {
+        // Input contains underscore - currently raw-friendly but it's our prefix!
+        // If we encode "a_bc" as "_a_bc", decoder sees _ prefix and expects 4 raw bytes
+        // "a_bc" but then there's leftover. Need to verify this works.
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_underscore_in_input_start_4_bytes() {
+        // Input starts with underscore: "_abc" (4 bytes)
+        // Encoded as "__abc" - decoder sees _ prefix, reads "_abc" as 4 raw bytes. OK!
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_tilde_in_input_6_bytes() {
+        // Input contains tilde: "ab~cde" (6 bytes)
+        // Encoded as "~ab~cde" - decoder reads "ab~cde" as 6 raw bytes
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_tilde_in_input_start_6_bytes() {
+        // Input starts with tilde: "~abcde" (6 bytes)
+        // Encoded as "~~abcde" - decoder sees ~ prefix, reads "~abcde"
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_pipe_in_input_8_bytes() {
+        // Input contains pipe: "abc|defg" (8 bytes)
+        // Encoded as "8|abc|defg" - decoder sees 8| prefix, reads 8 bytes "abc|defg"
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_pipe_in_input_start_8_bytes() {
+        // Input starts with pipe: "|abcdefg" (8 bytes)
+        // Encoded as "8||abcdefg" - decoder sees 8| prefix, reads 8 bytes "|abcdefg"
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_all_reserved_chars_in_input() {
+        // Input has all reserved chars: "_~|_~|_~" (8 bytes)
+        unimplemented!()
+    }
+
+    // =========================================================================
+    // EDGE CASE TESTS - Length prefix encoding (base-85 boundaries)
+    // =========================================================================
+
+    #[test]
+    fn test_length_85_requires_two_digits() {
+        // Length 85 = "10" in base-85 (85 = 1*85 + 0)
+        // So encoded as "10|" followed by 85 raw bytes
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_length_84_single_digit() {
+        // Length 84 = "#" in Z85 (84 is last single digit)
+        // Actually, Z85 digits 0-84 map to characters, so 84 is valid single digit
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_length_7225_requires_three_digits() {
+        // Length 7225 = 85*85 = "100" in base-85
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_length_exactly_8() {
+        // Minimum for variable-length prefix (MIN_VAR_RAW_BYTES = 8)
+        // Length 8 = "8" in base-85
+        unimplemented!()
+    }
+
+    // =========================================================================
+    // EDGE CASE TESTS - Z85 and length prefix ambiguity
+    // =========================================================================
+
+    #[test]
+    fn test_z85_five_digits_then_pipe_in_raw() {
+        // If Z85 data happens to be followed by a raw region starting with |
+        // e.g., binary data that encodes to "ABCDE" followed by raw "|test..."
+        // Decoder must recognize "ABCDE" as a complete Z85 block, not a length prefix
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_z85_four_digits_then_pipe() {
+        // 4 Z85 digits followed by | could be misinterpreted as length prefix
+        // But 4 digits before | means it's a partial Z85 block or length prefix
+        // Need to determine: is "ABCD" a partial block or 4-digit length?
+        // Current logic: < 5 digits before | = length prefix
+        // 4 digit length = 85^3 * A + 85^2 * B + 85 * C + D (huge number!)
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_z85_partial_block_before_raw_prefix() {
+        // Partial Z85 block (1-4 digits) right before a _ or ~ prefix
+        // e.g., binary byte encoded as "CM" followed by "_test"
+        // Must correctly split as Z85 "CM" then raw "_test"
+        unimplemented!()
+    }
+
+    // =========================================================================
+    // EDGE CASE TESTS - Boundary between raw and binary modes
+    // =========================================================================
+
+    #[test]
+    fn test_exactly_min_raw_run_threshold() {
+        // Exactly MIN_RAW_RUN (4) raw-friendly bytes - should trigger raw mode
+        // 3 raw bytes = Z85, 4 raw bytes = raw prefix
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_one_below_min_raw_run_threshold() {
+        // 3 raw-friendly bytes surrounded by binary
+        // Should use Z85 for the raw bytes, not raw prefix
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_short_raw_gaps_between_raw_regions() {
+        // Pattern: 8 raw, 1 binary, 8 raw
+        // The 1 binary byte breaks the raw region - how is it handled?
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_single_binary_byte_between_raw() {
+        // "testXtest" where X = 0xFF
+        // Two raw regions of 4 bytes each, separated by one binary byte
+        unimplemented!()
+    }
+
+    // =========================================================================
+    // EDGE CASE TESTS - Partial Z85 blocks
+    // =========================================================================
+
+    #[test]
+    fn test_partial_z85_1_byte_then_raw() {
+        // 1 binary byte, then 4+ raw-friendly bytes
+        // The 1 byte becomes partial Z85 (2 chars), then raw prefix
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_partial_z85_2_bytes_then_raw() {
+        // 2 binary bytes, then raw region
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_partial_z85_3_bytes_then_raw() {
+        // 3 binary bytes, then raw region
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_partial_z85_at_end() {
+        // Raw region followed by 1-3 binary bytes at end
+        unimplemented!()
+    }
+
+    // =========================================================================
+    // EDGE CASE TESTS - Zero bytes and special values
+    // =========================================================================
+
+    #[test]
+    fn test_all_zero_bytes() {
+        // 4 zero bytes - definitely not raw-friendly
+        // Should encode as Z85 "00000"
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_zero_byte_in_middle_of_raw() {
+        // "te\x00st" - zero byte breaks raw-friendliness
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_0xff_bytes() {
+        // All 0xFF bytes - max value, definitely binary
+        unimplemented!()
+    }
+
+    // =========================================================================
+    // EDGE CASE TESTS - Decoder error cases
+    // =========================================================================
+
+    #[test]
+    fn test_decode_truncated_length_prefix_raw() {
+        // "8|abc" - length says 8 bytes but only 3 follow
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_decode_length_overflow() {
+        // Very long length prefix that would overflow usize
+        // e.g., "####|" where #### represents max values
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_decode_invalid_z85_digit() {
+        // Character that's not a valid Z85 digit and not a prefix
+        // Space (0x20) is not in Z85 charset
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_decode_invalid_character_in_length() {
+        // Non-Z85 digit before |
+        unimplemented!()
+    }
+
+    // =========================================================================
+    // EDGE CASE TESTS - Encoding efficiency
+    // =========================================================================
+
+    #[test]
+    fn test_encoding_never_longer_than_z85() {
+        // For any input, jeb85 should never be longer than pure Z85
+        // (raw regions should only be used when they save space)
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_raw_encoding_overhead() {
+        // _ prefix = 1 byte overhead for 4 raw bytes (5 total, vs 5 Z85 chars) - break
+        // even ~ prefix = 1 byte overhead for 6 raw bytes (7 total, vs 8 Z85
+        // chars) - saves 1 N| prefix for 8 bytes = 2 bytes overhead (10 total,
+        // vs 10 Z85 chars) - break even Verify we only use raw when it's
+        // beneficial
+        unimplemented!()
+    }
+
+    // =========================================================================
+    // EDGE CASE TESTS - Consecutive raw regions
+    // =========================================================================
+
+    #[test]
+    fn test_two_4byte_raw_regions_adjacent() {
+        // "testword" - 8 raw-friendly bytes
+        // Could be: "_test" + "_word" (10 chars) or "8|testword" (10 chars)
+        // Encoder should choose optimally
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_two_6byte_raw_regions_adjacent() {
+        // 12 raw-friendly bytes
+        // Could be: "~hello!" + "~world!" (14 chars) or "c|..." (14 chars)
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_many_consecutive_raw_regions() {
+        // Very long all-raw input - should use single length-prefixed encoding
+        unimplemented!()
+    }
+
+    // =========================================================================
+    // EDGE CASE TESTS - Length prefix digit characters in input
+    // =========================================================================
+
+    #[test]
+    fn test_z85_digits_as_raw_data() {
+        // Raw input that looks like Z85: "0123abcd" (8 bytes)
+        // All valid Z85 digits, but should be encoded as raw
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_raw_starts_with_digit_then_pipe() {
+        // Input like "8|xxxxxx" (8 bytes) - looks exactly like our encoding!
+        // Must roundtrip correctly
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_raw_is_fake_underscore_prefix() {
+        // Input "_test" (5 bytes) - starts with underscore like our prefix
+        // Tricky because _ is a valid prefix
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_raw_is_fake_tilde_prefix() {
+        // Input "~hello!" (7 bytes) - looks like our ~ prefix format
+        unimplemented!()
+    }
+
+    // =========================================================================
+    // EDGE CASE TESTS - Mixed scenarios
+    // =========================================================================
+
+    #[test]
+    fn test_binary_raw_binary_raw_pattern() {
+        // Alternating: 4 binary, 4 raw, 4 binary, 4 raw
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_raw_binary_raw_binary_pattern() {
+        // Alternating: 4 raw, 4 binary, 4 raw, 4 binary
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_long_binary_short_raw_long_binary() {
+        // 100 binary bytes, 4 raw, 100 binary bytes
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_long_raw_short_binary_long_raw() {
+        // 100 raw bytes, 4 binary, 100 raw bytes
+        unimplemented!()
+    }
+
+    // =========================================================================
+    // EDGE CASE TESTS - Specific ASCII ranges
+    // =========================================================================
+
+    #[test]
+    fn test_printable_ascii_range() {
+        // All printable ASCII: 0x20-0x7E
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_lowercase_letters_only() {
+        // "abcdefghijklmnopqrstuvwxyz"
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_uppercase_letters_only() {
+        // "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_digits_only() {
+        // "0123456789"
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_punctuation_only() {
+        // Various punctuation that should be raw-friendly
+        unimplemented!()
+    }
+
+    // =========================================================================
+    // EDGE CASE TESTS - Control characters
+    // =========================================================================
+
+    #[test]
+    fn test_tab_not_raw_friendly() {
+        // Tab (0x09) should NOT be raw-friendly (it's not in ASCII_INLINE_TEXT)
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_newline_not_raw_friendly() {
+        // Newline (0x0A) should NOT be raw-friendly
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_carriage_return_not_raw_friendly() {
+        // CR (0x0D) should NOT be raw-friendly
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_null_byte_not_raw_friendly() {
+        // Null (0x00) should NOT be raw-friendly
+        unimplemented!()
+    }
+
+    // =========================================================================
+    // EDGE CASE TESTS - Determinism and idempotence
+    // =========================================================================
+
+    #[test]
+    fn test_encode_is_deterministic() {
+        // Same input always produces same output
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_double_encode_decode() {
+        // encode(encode(x)) can be decoded back (two layers)
+        unimplemented!()
+    }
 }
