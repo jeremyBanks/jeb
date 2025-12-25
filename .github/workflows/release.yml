@@ -107,7 +107,7 @@ jobs:
 
       - name: Install rsign2
         if: steps.check_tag.outputs.exists == 'false'
-        run: cargo install rsign2
+        run: cargo install rsign2@0.6.4 --locked
 
       - name: Generate signing key
         if: steps.check_tag.outputs.exists == 'false'
@@ -197,7 +197,7 @@ jobs:
 
       - name: Install cross
         if: matrix.cross
-        run: cargo install cross
+        run: cargo install cross@0.2.5 --locked
 
       - name: Build binary
         run: |
@@ -243,7 +243,7 @@ jobs:
           merge-multiple: true
 
       - name: Install rsign2
-        run: cargo install rsign2
+        run: cargo install rsign2@0.6.4 --locked
 
       - name: Sign binaries
         run: |
