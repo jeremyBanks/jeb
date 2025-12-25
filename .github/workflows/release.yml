@@ -112,7 +112,7 @@ jobs:
       - name: Generate signing key
         if: steps.check_tag.outputs.exists == 'false'
         run: |
-          rsign2 generate -W -p signing.pub -s signing.key
+          rsign generate -W -p signing.pub -s signing.key
           echo "Generated signing key"
           cat signing.pub
 
@@ -255,7 +255,7 @@ jobs:
         run: |
           for archive in jeb-*.tar.gz; do
             echo "Signing $archive"
-            rsign2 sign -W -s signing.key -x "${archive}.sig" "$archive"
+            rsign sign -W -s signing.key -x "${archive}.sig" "$archive"
           done
 
       - name: Upload signed artifacts
