@@ -275,14 +275,51 @@ pub fn decode_z85(encoded: &[u8]) -> Result<Vec<u8>, crate::Panic> {
 
     for digits in encoded.chunks(BLOCK_DIGITS_5) {
         let digit_length = digits.len();
-        let mut digit_block = [b'0'; BLOCK_DIGITS_5];
-        digit_block[..digit_length].copy_from_slice(digits);
 
-        let decoded_length = BLOCK_BYTES_BY_DIGITS[digits.len()];
-        let decoded_block = decode_z85_block(digit_block)?;
-        let decoded = &decoded_block[..decoded_length];
+        if digit_length == BLOCK_DIGITS_5 {
+            // Full block - decode normally
+            let digit_block: [u8; BLOCK_DIGITS_5] = digits.try_into().unwrap();
+            let decoded_block = decode_z85_block(digit_block)?;
+            output.extend_from_slice(&decoded_block);
+        } else {
+            // Partial block - need special handling
+            //
+            // When encoding N bytes, we:
+            // 1. Zero-pad to 4 bytes: [b0, b1, ..., b(N-1), 0, 0, ...]
+            // 2. Encode as value = bytes_as_u32_be
+            // 3. Convert to 5 base-85 digits
+            // 4. Take first K digits (where K = BLOCK_DIGITS_BY_BYTES[N])
+            //
+            // To decode K digits back to N bytes:
+            // 1. Parse K digits as base-85 number (partial_value)
+            // 2. The full value was: partial_value * 85^(5-K) + remainder where remainder <
+            //    85^(5-K)
+            // 3. The original bytes (as u32) = full_value / 256^(4-N)
+            // 4. Use rounding: byte_value = round(partial_value * 85^(5-K) / 256^(4-N))
 
-        output.extend_from_slice(decoded);
+            let mut partial_value: u64 = 0;
+            for &digit in digits {
+                let digit_value = Z85_LUT[digit as usize] as usize;
+                if digit_value >= BASE_85 {
+                    return Err("invalid Z85 digit".into());
+                }
+                partial_value = partial_value * (BASE_85 as u64) + (digit_value as u64);
+            }
+
+            let num_bytes = BLOCK_BYTES_BY_DIGITS[digit_length];
+
+            // Calculate: byte_value = round(partial_value * 85^(5-K) / 256^(4-N))
+            // Using integer math with rounding: (a + b/2) / b
+            let pow85 = 85u64.pow((BLOCK_DIGITS_5 - digit_length) as u32);
+            let pow256 = 256u64.pow((BLOCK_BYTES_4 - num_bytes) as u32);
+
+            let numerator = partial_value * pow85;
+            let byte_value = (numerator + pow256 / 2) / pow256;
+
+            // Convert to big-endian bytes and take last N
+            let full_bytes = (byte_value as u32).to_be_bytes();
+            output.extend_from_slice(&full_bytes[BLOCK_BYTES_4 - num_bytes..]);
+        }
     }
 
     debug_assert!(output.len() == decoded_length);
