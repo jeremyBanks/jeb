@@ -46,8 +46,12 @@ pub fn encode_jeb85(input: &[u8]) -> Vec<u8> {
         let raw_run = count_raw_friendly(input, pos);
 
         if raw_run >= MIN_RAW_RUN {
+            // Check if we just emitted a partial Z85 block
+            // If so, we need to avoid length prefix to prevent ambiguity
+            let avoid_length_prefix = would_create_ambiguity(&output);
+
             // Worth switching to raw mode
-            emit_raw_region(&mut output, &input[pos..pos + raw_run]);
+            emit_raw_region_inner(&mut output, &input[pos..pos + raw_run], avoid_length_prefix);
             pos += raw_run;
         } else {
             // Use Z85 - find extent including short raw runs
@@ -60,6 +64,7 @@ pub fn encode_jeb85(input: &[u8]) -> Vec<u8> {
                 // Include this byte (and any short raw run) in Z85
                 pos += next_raw_run.max(1);
             }
+
             emit_z85(&mut output, &input[start..pos]);
         }
     }
@@ -76,8 +81,64 @@ fn count_raw_friendly(input: &[u8], pos: usize) -> usize {
     count
 }
 
+/// Check if the output ends with a partial Z85 block (1-4 Z85 digits).
+/// This would create ambiguity if followed by a length-prefixed raw region.
+fn would_create_ambiguity(output: &[u8]) -> bool {
+    if output.is_empty() {
+        return false;
+    }
+
+    // Scan backwards to find the last segment boundary
+    // Segment boundaries are: _, ~, or |
+    let mut i = output.len();
+    while i > 0 {
+        i -= 1;
+        let c = output[i];
+        if c == RAW_PREFIX_4 || c == RAW_PREFIX_6 || c == RAW_PREFIX_VAR {
+            // Found a prefix - check what follows
+            i += 1; // Move past the prefix
+            if c == RAW_PREFIX_4 {
+                // After _, we have 4 raw bytes
+                i += 4;
+            } else if c == RAW_PREFIX_6 {
+                // After ~, we have 6 raw bytes
+                i += 6;
+            } else {
+                // After |, we have length-specified raw bytes
+                // Can't easily determine length, but this isn't a Z85 block anyway
+                return false;
+            }
+
+            // Now check if there are Z85 digits after this
+            let remaining = output.len() - i;
+            // Z85 blocks are 5 digits. If remaining is 1-4, it's a partial block
+            return remaining > 0 && remaining < 5 && output[i..].iter().all(|&b| is_z85_digit(b));
+        }
+    }
+
+    // No prefix found - the entire output might be Z85
+    // Check if it's a partial block (length not divisible by 5)
+    let len = output.len();
+    if len == 0 {
+        return false;
+    }
+
+    // If all characters are Z85 digits and length % 5 != 0, it's a partial block
+    if output.iter().all(|&b| is_z85_digit(b)) {
+        let z85_block_remainder = len % 5;
+        return z85_block_remainder != 0;
+    }
+
+    false
+}
+
 /// Emit a raw-friendly region using the best encoding.
 fn emit_raw_region(output: &mut Vec<u8>, bytes: &[u8]) {
+    emit_raw_region_inner(output, bytes, false);
+}
+
+/// Emit a raw-friendly region, with option to avoid length prefix.
+fn emit_raw_region_inner(output: &mut Vec<u8>, bytes: &[u8], avoid_length_prefix: bool) {
     let mut pos = 0;
     let len = bytes.len();
 
@@ -114,14 +175,6 @@ fn emit_raw_region(output: &mut Vec<u8>, bytes: &[u8]) {
             }
             7 => {
                 // 7 bytes: use ~ for 6, then handle 1 remaining
-                // But 1 byte as Z85 is 2 chars, total 8 chars
-                // Alternative: _ for 4 + Z85 for 3 = 5 + 4 = 9 chars
-                // So ~ + Z85(1) = 7 + 2 = 9 chars... same
-                // Actually: ~ is 1 prefix + 6 bytes = 7 chars total
-                // Then 1 byte as Z85 = 2 chars. Total 9.
-                // _ is 1 prefix + 4 bytes = 5 chars
-                // Then 3 bytes as Z85 = 4 chars. Total 9.
-                // Either works, prefer ~ for longer raw span
                 output.push(RAW_PREFIX_6);
                 output.extend_from_slice(&bytes[pos..pos + 6]);
                 pos += 6;
@@ -129,11 +182,24 @@ fn emit_raw_region(output: &mut Vec<u8>, bytes: &[u8]) {
                 break;
             }
             _ => {
-                // 8+ bytes: use length-prefixed encoding
-                // Calculate optimal chunk size considering alignment
-                let chunk_size = optimal_raw_chunk_size(remaining, pos);
-                emit_length_prefixed_raw(output, &bytes[pos..pos + chunk_size]);
-                pos += chunk_size;
+                // 8+ bytes: normally use length-prefixed encoding
+                // But if we need to avoid length prefix (ambiguity), use fixed prefixes
+                if avoid_length_prefix {
+                    // Use fixed prefixes: encode as 6 bytes at a time
+                    if remaining >= 6 {
+                        output.push(RAW_PREFIX_6);
+                        output.extend_from_slice(&bytes[pos..pos + 6]);
+                        pos += 6;
+                    } else {
+                        // Shouldn't happen, but handle gracefully
+                        emit_z85(output, &bytes[pos..]);
+                        break;
+                    }
+                } else {
+                    let chunk_size = optimal_raw_chunk_size(remaining, pos);
+                    emit_length_prefixed_raw(output, &bytes[pos..pos + chunk_size]);
+                    pos += chunk_size;
+                }
             }
         }
     }

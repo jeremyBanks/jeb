@@ -6,24 +6,12 @@ use std::{
 use ignorable::{Hash, Ord, PartialEq, PartialOrd};
 use indexmap::IndexMap;
 
-/*
-just thinking
-
-to-jeb85-lines="encode-jeb85 split-80 join-lines"
-parsed to a call to, what?
-Assign {
-    name:
-}
-
-
- */
-
 // The configuration for an execution includes which commands and rules
 // will be used.
 #[derive(Clone, Default)]
 pub struct Configuration {
     commands: BTreeSet<Command>,
-    rules: BTreeSet<Rule>,
+    hooks: BTreeSet<Hook>,
     preludes: Vec<Call>,
 }
 
@@ -31,7 +19,7 @@ impl Configuration {
     pub fn all() -> Configuration {
         Configuration {
             commands: Command::all().into_iter().collect(),
-            rules: Rule::all().into_iter().collect(),
+            hooks: Hook::all().into_iter().collect(),
             preludes: vec![],
         }
     }
@@ -39,7 +27,7 @@ impl Configuration {
 
 pub struct Context {
     calls: Vec<Call>,
-    aliases: BTreeMap<String, Vec<Call>>,
+    aliases: IndexMap<String, String>,
 }
 
 // A command is... a named command!
@@ -53,7 +41,7 @@ struct Command {
 impl Eq for Command {}
 
 trait CommandImpl {
-    #![allow(unused_variables)]
+    #[allow(unused_variables)]
     fn spawn(
         &self,
         context: &mut Context,
@@ -85,6 +73,12 @@ impl Command {
 
 #[derive(Debug, Clone)]
 struct Assign;
+impl Assign {
+    const COMMAND: LazyLock<Command> = LazyLock::new(|| Command {
+        name: "assign",
+        implementation: Arc::new(Self),
+    });
+}
 impl CommandImpl for Assign {}
 
 // A call is an invocation of a command, with optional named and positional
@@ -128,20 +122,15 @@ struct Call {
     body: Option<String>,
 }
 
-const ASSIGN: LazyLock<Command> = LazyLock::new(|| Command {
-    name: "assign",
-    implementation: Arc::new(Assign),
-});
-
 #[derive(Clone, Hash, Ord, PartialEq, PartialOrd)]
-struct Rule {
+struct Hook {
     name: &'static str,
 }
 
-impl Eq for Rule {}
+impl Eq for Hook {}
 
-impl Rule {
-    pub fn all() -> impl IntoIterator<Item = Rule> {
+impl Hook {
+    pub fn all() -> impl IntoIterator<Item = Hook> {
         vec![]
     }
 
