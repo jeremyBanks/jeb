@@ -254,6 +254,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
 
 [[package]]
+name = "ignorable"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e37cabdb99bee3bd91a5e85b81e2782fe249963f8ab2a8e1e53ce00bc4c6d08c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "indenter"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -286,6 +297,7 @@ dependencies = [
  "dotenv",
  "futures",
  "getset",
+ "ignorable",
  "indexmap",
  "js-sys",
  "owo-colors",

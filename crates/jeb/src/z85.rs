@@ -262,6 +262,7 @@ pub fn encode_z85(bytes: &[u8]) -> Vec<u8> {
     output
 }
 
+#[allow(dead_code)]
 pub fn decode_z85(encoded: &[u8]) -> Result<Vec<u8>, crate::Panic> {
     // Filter out whitespace
     let encoded: Vec<u8> = encoded
@@ -316,9 +317,9 @@ pub fn decode_z85(encoded: &[u8]) -> Result<Vec<u8>, crate::Panic> {
             let numerator = partial_value * pow85;
             let byte_value = (numerator + pow256 / 2) / pow256;
 
-            // Convert to big-endian bytes and take last N
+            // Convert to big-endian bytes and take first N
             let full_bytes = (byte_value as u32).to_be_bytes();
-            output.extend_from_slice(&full_bytes[BLOCK_BYTES_4 - num_bytes..]);
+            output.extend_from_slice(&full_bytes[..num_bytes]);
         }
     }
 
