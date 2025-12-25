@@ -121,9 +121,12 @@ jobs:
         run: |
           PUBKEY=$(tail -n 1 signing.pub)
           echo "Public key: $PUBKEY"
-          sed -i 's/pubkey = "PLACEHOLDER"/pubkey = "'"$PUBKEY"'"/' crates/jeb/Cargo.toml
+          # Insert pubkey line after the algorithm line in the signing section
+          sed -i '/^\[package\.metadata\.binstall\.signing\]/,/^\[/ { /^algorithm = "minisign"$/a\
+pubkey = "'"$PUBKEY"'"
+}' crates/jeb/Cargo.toml
           echo "Updated Cargo.toml:"
-          grep -A 2 '\[package.metadata.binstall.signing\]' crates/jeb/Cargo.toml
+          grep -A 3 '\[package.metadata.binstall.signing\]' crates/jeb/Cargo.toml
 
       - name: Commit public key and create patch
         if: steps.check_tag.outputs.exists == 'false'
@@ -314,6 +317,21 @@ jobs:
 
       - name: Push commit to trunk
         run: |
+          git push origin HEAD:trunk
+
+      - name: Create post-release dev version commit
+        run: |
+          # Remove pubkey line from Cargo.toml
+          sed -i '/^pubkey = /d' crates/jeb/Cargo.toml
+
+          # Run new-version.sh to bump to next dev version
+          ./scripts/new-version.sh
+
+          # Commit the changes
+          git add Cargo.toml crates/jeb/Cargo.toml
+          git commit -m "Bump to next dev version after release ${{ needs.prepare.outputs.version }}"
+
+          # Push to trunk
           git push origin HEAD:trunk
 
       - name: Download signed binaries
