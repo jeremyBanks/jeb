@@ -217,8 +217,8 @@ jobs:
     needs: [prepare, sign]
     if: needs.prepare.outputs.tag_exists == 'false'
     permissions:
-      contents: write  # For pushing commits and tags
-      id-token: write  # For OIDC trusted publishing to crates.io
+      contents: write # For pushing commits and tags
+      id-token: write # For OIDC trusted publishing to crates.io
     steps:
       - uses: actions/checkout@v5
         with:
