@@ -22,7 +22,7 @@ if grep -q '^\[workspace\]' Cargo.toml; then
         echo "Workspace version: $WORKSPACE_VERSION"
         VERSION=$WORKSPACE_VERSION
 
-        if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-(dev|vibes)-[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]+$ ]]; then
+        if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev-[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]+$ ]]; then
             echo -e "${RED}ERROR: Workspace version must be X.Y.Z-dev-YYYY-MM-DD.xxxx format${NC}"
             echo "Found: $VERSION"
             exit 1
@@ -38,7 +38,7 @@ if grep -q '^\[workspace\]' Cargo.toml; then
             JEB_VERSION=$(grep '^version = ' crates/jeb/Cargo.toml | head -1 | cut -d'"' -f2)
             echo "jeb version: $JEB_VERSION"
 
-            if [[ ! "$JEB_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-(dev|vibes)-[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]+$ ]]; then
+            if [[ ! "$JEB_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev-[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]+$ ]]; then
                 echo -e "${RED}ERROR: jeb version must be X.Y.Z-dev-YYYY-MM-DD.xxxx format${NC}"
                 echo "Found: $JEB_VERSION"
                 exit 1
@@ -52,7 +52,7 @@ if grep -q '^\[workspace\]' Cargo.toml; then
             JEB85_VERSION=$(grep '^version = ' crates/json-encoded-binary/Cargo.toml | head -1 | cut -d'"' -f2)
             echo "json-encoded-binary version: $JEB85_VERSION"
 
-            if [[ ! "$JEB85_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-(dev|vibes)-[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]+$ ]]; then
+            if [[ ! "$JEB85_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev-[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]+$ ]]; then
                 echo -e "${RED}ERROR: json-encoded-binary version must be X.Y.Z-dev-YYYY-MM-DD.xxxx format${NC}"
                 echo "Found: $JEB85_VERSION"
                 exit 1
@@ -71,7 +71,7 @@ else
     echo "Current version: $VERSION"
 
     # Check if version matches X.Y.Z-dev-YYYY-MM-DD.xxxx pattern
-    if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-(dev|vibes)-[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]+$ ]]; then
+    if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev-[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]+$ ]]; then
         echo -e "${RED}ERROR: Version must be X.Y.Z-dev-YYYY-MM-DD.xxxx format${NC}"
         echo "Found: $VERSION"
         exit 1
