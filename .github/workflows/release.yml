@@ -122,9 +122,12 @@ jobs:
           PUBKEY=$(tail -n 1 signing.pub)
           echo "Public key: $PUBKEY"
           # Insert pubkey line after the algorithm line in the signing section
-          sed -i '/^\[package\.metadata\.binstall\.signing\]/,/^\[/ { /^algorithm = "minisign"$/a\
-pubkey = "'"$PUBKEY"'"
-}' crates/jeb/Cargo.toml
+          awk -v pubkey="$PUBKEY" '
+            /^\[package\.metadata\.binstall\.signing\]/ { in_section=1 }
+            in_section && /^algorithm = "minisign"$/ { print; print "pubkey = \"" pubkey "\""; next }
+            { print }
+          ' crates/jeb/Cargo.toml > crates/jeb/Cargo.toml.tmp
+          mv crates/jeb/Cargo.toml.tmp crates/jeb/Cargo.toml
           echo "Updated Cargo.toml:"
           grep -A 3 '\[package.metadata.binstall.signing\]' crates/jeb/Cargo.toml
 
