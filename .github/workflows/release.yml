@@ -223,9 +223,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          # Note: Requires branch protection to allow force pushes or use deploy key
-          # For now, temporarily disable trunk protection to run releases
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
 
       - name: Add public key to Cargo.toml and commit
         run: |
