@@ -24,6 +24,15 @@ wasm = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
 fs = ["tokio/fs"]
 stdio = ["tokio/io-std"]
 
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/{ version }/{ name }-{ target }{ archive-suffix }"
+bin-dir = "{ bin }{ binary-ext }"
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.signing]
+algorithm = "minisign"
+pubkey = "RWRwL9Hegca29jrzxLKxEQEVycSIZk/GHkEVeSR8eUhmFok3NjK3xN1M"
+
 [dependencies]
 derive_more = { version = "2.0.1", features = ["full"] }
 dotenv = "0.15.0"

@@ -71,18 +71,18 @@ jobs:
         with:
           baseline-rev: ${{ steps.baseline.outputs.tag }}
 
-  release:
+  prepare:
     runs-on: ubuntu-latest
     needs: checks
     if: github.ref == 'refs/heads/trunk'
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      tag_exists: ${{ steps.check_tag.outputs.exists }}
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0 # Fetch all history for tags
-
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          rustflags: ""
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract version from Cargo.toml
         id: get_version
@@ -104,31 +104,226 @@ jobs:
             echo "Tag $VERSION does not exist"
           fi
 
-      - name: Attempt cargo publish
-        if: steps.check_tag.outputs.exists == 'false'
-        run: |
-          cargo publish
-        env:
-          CARGO_REGISTRY_TOKEN: "${{ secrets.CARGO_REGISTRY_TOKEN }}"
+  build:
+    runs-on: ${{ matrix.os }}
+    needs: prepare
+    if: needs.prepare.outputs.tag_exists == 'false'
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            cross: true
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            cross: true
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            cross: false
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            cross: false
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
-      - name: Create tag
-        if: steps.check_tag.outputs.exists == 'false'
-        env:
-          VERSION: ${{ steps.get_version.outputs.version }}
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rustflags: ""
+          target: ${{ matrix.target }}
+
+      - name: Install cross
+        if: matrix.cross
+        run: cargo install cross@0.2.5 --locked
+
+      - name: Build binary
         run: |
+          if [ "${{ matrix.cross }}" = "true" ]; then
+            cross build --release --target ${{ matrix.target }} --bin jeb
+          else
+            cargo build --release --target ${{ matrix.target }} --bin jeb
+          fi
+        shell: bash
+
+      - name: Create archive
+        run: |
+          cd target/${{ matrix.target }}/release
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            # On Windows, create tar.gz using tar (available in Git Bash)
+            tar czf ../../../jeb-${{ matrix.target }}.tar.gz jeb.exe
+          else
+            tar czf ../../../jeb-${{ matrix.target }}.tar.gz jeb
+          fi
+        shell: bash
+
+      - name: Upload binary archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: jeb-${{ matrix.target }}.tar.gz
+          retention-days: 1
+
+  sign:
+    runs-on: ubuntu-latest
+    needs: [prepare, build]
+    if: needs.prepare.outputs.tag_exists == 'false'
+    outputs:
+      pubkey: ${{ steps.generate_key.outputs.pubkey }}
+    steps:
+      - name: Download all binary archives
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          merge-multiple: true
+
+      - name: Install rsign2
+        run: cargo install rsign2@0.6.4 --locked
+
+      - name: Generate ephemeral signing key
+        id: generate_key
+        run: |
+          # Generate ephemeral keypair (private key never leaves this job)
+          rsign generate -W -p signing.pub -s signing.key
+          echo "Generated ephemeral signing key"
+
+          # Extract and output the public key for the release job
+          PUBKEY=$(tail -n 1 signing.pub)
+          echo "pubkey=$PUBKEY" >> $GITHUB_OUTPUT
+          echo "Public key: $PUBKEY"
+
+      - name: Sign binaries
+        run: |
+          for archive in jeb-*.tar.gz; do
+            echo "Signing $archive"
+            rsign sign -W -s signing.key -x "${archive}.sig" "$archive"
+          done
+
+          # Verify private key is not in any uploaded files
+          rm signing.key signing.pub
+          echo "Private key deleted - never uploaded as artifact"
+
+      - name: Upload signed artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-binaries
+          path: |
+            jeb-*.tar.gz
+            jeb-*.tar.gz.sig
+          retention-days: 1
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [prepare, sign]
+    if: needs.prepare.outputs.tag_exists == 'false'
+    permissions:
+      contents: write # For pushing commits and tags
+      id-token: write # For OIDC trusted publishing to crates.io
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
+
+      - name: Add public key to Cargo.toml and commit
+        run: |
+          PUBKEY="${{ needs.sign.outputs.pubkey }}"
+          echo "Adding public key to Cargo.toml: $PUBKEY"
+
+          # Insert pubkey line after the algorithm line in the signing section
+          awk -v pubkey="$PUBKEY" '
+            /^\[package\.metadata\.binstall\.signing\]/ { in_section=1 }
+            in_section && /^algorithm = "minisign"$/ { print; print "pubkey = \"" pubkey "\""; next }
+            { print }
+          ' crates/jeb/Cargo.toml > crates/jeb/Cargo.toml.tmp
+          mv crates/jeb/Cargo.toml.tmp crates/jeb/Cargo.toml
+
+          echo "Updated Cargo.toml:"
+          grep -A 3 '\[package.metadata.binstall.signing\]' crates/jeb/Cargo.toml
+
+          # Commit the public key
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add crates/jeb/Cargo.toml
+          git commit -m "Add signing public key for version ${{ needs.prepare.outputs.version }}"
+          echo "Committed public key"
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rustflags: ""
+
+      - name: Authenticate with crates.io using OIDC
+        uses: rust-lang/crates-io-auth-action@v1
+        id: cratesio_auth
+
+      - name: Attempt cargo publish
+        id: cargo_publish
+        continue-on-error: true
+        run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.cratesio_auth.outputs.token }}
+
+      - name: Check publish result
+        if: steps.cargo_publish.outcome == 'failure'
+        run: |
+          echo "Cargo publish failed, aborting release"
+          exit 1
+
+      - name: Create and push tag
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
           git tag -a "$VERSION" -m "https://crates.io/crates/jeb/$VERSION"
           git push origin "$VERSION"
 
+      - name: Push commit to trunk
+        run: |
+          git push origin HEAD:trunk
+
+      - name: Create post-release dev version commit
+        run: |
+          # Remove pubkey line from Cargo.toml
+          sed -i '/^pubkey = /d' crates/jeb/Cargo.toml
+
+          # Run new-version.sh to bump to next dev version
+          ./scripts/new-version.sh
+
+          # Commit the changes
+          git add Cargo.toml crates/jeb/Cargo.toml
+          git commit -m "Bump to next dev version after release ${{ needs.prepare.outputs.version }}"
+
+          # Push to trunk
+          git push origin HEAD:trunk
+
+      - name: Download signed binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: signed-binaries
+
       - name: Create GitHub Release
-        if: steps.check_tag.outputs.exists == 'false'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: "${{ steps.get_version.outputs.version }}"
-          name: "${{ steps.get_version.outputs.version }}"
+          tag_name: "${{ needs.prepare.outputs.version }}"
+          name: "${{ needs.prepare.outputs.version }}"
           draft: false
           prerelease: false
           generate_release_notes: true
           body: |
-            https://crates.io/crates/jeb/${{ steps.get_version.outputs.version }}
+            https://crates.io/crates/jeb/${{ needs.prepare.outputs.version }}
+
+            ## Installation
+
+            Install via cargo-binstall (recommended):
+            ```
+            cargo binstall jeb
+            ```
+
+            Or via cargo:
+            ```
+            cargo install jeb
+            ```
+
+            All binaries are signed with minisign. Signatures are verified automatically by cargo-binstall.
+          files: |
+            jeb-*.tar.gz
+            jeb-*.tar.gz.sig
