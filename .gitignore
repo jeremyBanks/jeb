@@ -1,3 +1,4 @@
 *.wasm
 /target
 /examples/self.sh
+/.beads
