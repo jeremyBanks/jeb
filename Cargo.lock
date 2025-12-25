@@ -199,7 +199,7 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jeb"
-version = "0.0.0-vibes-2025-11-30.7316"
+version = "0.0.0-dev-2025-12-25.6142"
 dependencies = [
  "derive_more",
  "dotenv",
@@ -221,7 +221,7 @@ dependencies = [
 
 [[package]]
 name = "jeb-wasm"
-version = "0.0.0-vibes-2025-11-30.7316"
+version = "0.0.0-dev-2025-12-25.6142"
 dependencies = [
  "jeb",
  "js-sys",
