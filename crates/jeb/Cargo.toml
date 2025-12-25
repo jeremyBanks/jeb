@@ -31,6 +31,7 @@ pkg-fmt = "tgz"
 
 [package.metadata.binstall.signing]
 algorithm = "minisign"
+pubkey = "RWTAKhPZTNUBj54gOi3Bb8AocX0hXn2wxzK2cK5t5WhLPf8Kv3dLD0FT"
 
 [dependencies]
 derive_more = { version = "2.0.1", features = ["full"] }
