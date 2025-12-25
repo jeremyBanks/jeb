@@ -223,8 +223,9 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          # Use PAT to bypass branch protection for release commits
-          token: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
+          # Note: Requires branch protection to allow force pushes or use deploy key
+          # For now, temporarily disable trunk protection to run releases
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Add public key to Cargo.toml and commit
         run: |
