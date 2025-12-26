@@ -9,7 +9,6 @@ use crate::{Receiver, Sender, channel};
 
 pub type TaskHandle = tokio::task::JoinHandle<()>;
 
-
 #[derive(Copy, Clone, Deref, DerefMut)]
 pub struct SourceNode<T = Result<Item, &'static str>, F = fn(Sender<T>) -> TaskHandle  >
 where F: FnOnce(Sender<T>) -> TaskHandle {
@@ -109,97 +108,74 @@ where
     TransformNode::new(move |receiver, sender| tokio::spawn(f(receiver, sender)))
 }
 
-pub fn read_source<R>(reader: R) -> SourceNode<Result<Item, &'static str>, impl FnOnce(Sender<Result<Item, &'static str>>) -> TaskHandle>
+pub fn read_source<R, F, Fut>(reader_fn: F) -> SourceNode<Result<Item, &'static str>, impl FnOnce(Sender<Result<Item, &'static str>>) -> TaskHandle>
 where
+    F: FnOnce() -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = std::io::Result<R>> + Send + 'static,
     R: AsyncRead + Unpin + Send + 'static,
 {
     source(move |output| async move {
-        let mut reader = reader;
-        let mut buffer = [0u8; 65_536];
+        match reader_fn().await {
+            Ok(mut reader) => {
+                let mut buffer = [0u8; 65_536];
 
-        loop {
-            match reader.read(&mut buffer).await {
-                Ok(0) => break,
-                Ok(n) => {
-                    let bytes = Bytes::from(&buffer[..n]);
-                    if output.push_value(Item::Bytes(bytes)).await.is_err() {
-                        break;
+                loop {
+                    match reader.read(&mut buffer).await {
+                        Ok(0) => break,
+                        Ok(n) => {
+                            let bytes = Bytes::from(&buffer[..n]);
+                            if output.push_value(Item::Bytes(bytes)).await.is_err() {
+                                break;
+                            }
+                        }
+                        Err(_) => {
+                            let _ = output.push_error("failed to read").await;
+                            break;
+                        }
                     }
                 }
-                Err(_err) => {
-                    let _ = output.push_error("failed to read").await;
-                    break;
-                }
+            }
+            Err(_) => {
+                let _ = output.push_error("failed to open").await;
             }
         }
     })
 }
 
-pub fn write_sink<W>(writer: W) -> SinkNode<Item, impl FnOnce(Receiver<Item>) -> TaskHandle>
+pub fn write_sink<W, F, Fut>(writer_fn: F) -> SinkNode<Item, impl FnOnce(Receiver<Item>) -> TaskHandle>
 where
+    F: FnOnce() -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = std::io::Result<W>> + Send + 'static,
     W: AsyncWrite + Unpin + Send + 'static,
 {
     sink(move |mut input| async move {
-        let mut writer = writer;
+        let mut writer = writer_fn().await.expect("failed to open writer");
 
         while let Some(item) = input.pull().await {
             match item {
                 Item::Bytes(bytes) => {
-                    if writer.write_all(&bytes).await.is_err() {
-                        break;
-                    }
+                    writer.write_all(&bytes).await.expect("failed to write bytes");
                 }
                 Item::Text(text) => {
-                    if writer.write_all(text.as_bytes()).await.is_err() {
-                        break;
-                    }
+                    writer.write_all(text.as_bytes()).await.expect("failed to write text");
                 }
-                _ => {
-
-                }
+                _ => panic!("write_sink received non-text/non-bytes item"),
             }
         }
     })
 }
 
-
-// async fn example() {
-//     let stdin = stdin();
-//     let stdin = stdin.spawn();
-
-//     stdout().spawn(input).await;
-// }
-
-// impl<T, F> Node for SourceNode<T, F>
-// where F: Fn(Sender<T>) -> TaskHandle   {
-//     fn spawn(&mut self) -> TaskHandle {
-//         let (sender receiver, input) = channel::<T>();
-//         (self.f)(output)
-//     }
-// }
-
-// static_assertions::assert_obj_safe!(Node);
-
-// pub trait SourceNode<T = Result<Item, &'static str>> {
-//     fn spawn_source(&mut self) -> (TaskHandle, Output<T>);
-// }
-
-// impl<T> SourceNode<T> for fn(Input<T>) -> TaskHandle {
-//     fn spawn_source(&mut self) -> (TaskHandle, Output<T>) {
-//         let (output, input) = channel::<T>();
-//         let handle = (self)(input);
-//         (handle, output)
-//     }
-// }
-
-// pub trait SinkNode<T = Item> {
-//     fn spawn_source(&mut self) -> (TaskHandle, Input<T>);
-// }
-
-// impl<T> SinkNode<T> for fn(Output<T>) -> TaskHandle {
-//     fn spawn_source(&mut self) -> (TaskHandle, Input<T>) {
-//         let (output, input) = channel::<T>();
-//         let handle = (self)(output);
-//         (handle, input)
-//     }
-// }
+pub fn iter_source<I, T>(items: I) -> SourceNode<Result<T, &'static str>, impl FnOnce(Sender<Result<T, &'static str>>) -> TaskHandle>
+where
+    I: IntoIterator<Item = T> + Send + 'static,
+    I::IntoIter: Send,
+    T: Send + 'static,
+{
+    source(|sender| async move {
+        for item in items {
+            if sender.push_value(item).await.is_err() {
+                break;
+            }
+        }
+    })
+}
