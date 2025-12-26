@@ -291,3 +291,13 @@ Remove current serialize.rs and deserialize.rs stubs.
 - [ ] Nested Options round-trip correctly (Some(None) ≠ None)
 - [ ] Compatibility: can deserialize serde_json output (Null, bare values)
 - [ ] Internally tagged and adjacently tagged enums work correctly (these use deserialize_any to peek)
+
+---
+
+## Future Considerations (Out of Scope)
+
+**Crate naming consistency**: After this project is complete, consider whether crate names should be revised for consistency. For example:
+- `jeb-values` → `jeb-value` (singular, matching the primary export)
+- `jeb-node` → `jeb-streaming` or similar (more descriptive of purpose)
+
+This is a discussion topic for later, not part of the current implementation.
