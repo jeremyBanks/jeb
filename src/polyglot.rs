@@ -27,11 +27,21 @@ struct FileEntry {
     name: Vec<u8>,
     body: Vec<u8>,
     crc: u32,
-    /// Offset of the local file header from the start of the final file.
-    header_offset: u32,
+    /// Offset of the local file header in the FILTERED data (final file position).
+    filtered_offset: u32,
 }
 
-/// Build a polyglot PNG+ZIP file.
+/// Minimum row width in bytes for polyglot files.
+/// Must be large enough to contain a ZIP local header (30 bytes) plus filename plus file data.
+/// Filter bytes are inserted at row boundaries, so file data must fit within a single row
+/// to avoid corruption. Using 4096 bytes allows files up to ~4KB per entry.
+/// For larger files, the row width should be increased accordingly.
+const MIN_POLYGLOT_ROW_WIDTH: usize = 4096;
+
+/// Build a polyglot PNG+ZIP file with proper 2D layout.
+///
+/// Entries are aligned to row boundaries so that PNG filter bytes
+/// land in padding between entries, not inside ZIP structures.
 pub fn build_polyglot(
     files: &[(&[u8], &[u8])],
     width: u32,
@@ -39,76 +49,73 @@ pub fn build_polyglot(
     color_mode: ColorMode,
     palette: Option<&[u8]>,
 ) -> Vec<u8> {
-    // Step 1: Build the ZIP local file entries (headers + data)
-    let local_entries = build_local_entries(files);
+    // Calculate bytes per row correctly for sub-byte bit depths
+    let bits_per_pixel = bit_depth.bits_per_sample() * color_mode.samples_per_pixel();
+    let mut row_width = (width as usize * bits_per_pixel + 7) / 8;
 
-    // Step 2: Calculate PNG parameters
-    // For polyglot to work, we need to minimize filter byte interference.
-    // Using the entire data as one row means only ONE filter byte at the start,
-    // keeping all ZIP data contiguous.
-    let bytes_per_pixel = (bit_depth.bits_per_sample() * color_mode.samples_per_pixel() + 7) / 8;
-    let bytes_per_pixel = bytes_per_pixel.max(1);
+    // Calculate minimum row width needed for the largest entry
+    // Each entry needs: header(30) + name + extra_padding(up to row_width) + body
+    // The body must fit in remaining row space after the header reaches a boundary
+    let max_body_size = files.iter().map(|(_, b)| b.len()).max().unwrap_or(0);
+    let needed_row_width = MIN_POLYGLOT_ROW_WIDTH.max(max_body_size + 64); // +64 for header overhead
 
-    // Calculate the actual width to use - prefer single row for ZIP integrity
-    let data_len = local_entries.len();
-    let (actual_width, height) = if data_len <= 65535 {
-        // Single row - all data contiguous after one filter byte
-        let actual_width = (data_len + bytes_per_pixel - 1) / bytes_per_pixel;
-        (actual_width, 1)
+    // For polyglot files, enforce minimum row width to fit entries
+    // If row_width is too small, increase it and recalculate effective width
+    let effective_width = if row_width < needed_row_width {
+        row_width = needed_row_width;
+        // Calculate pixels that fit in this row width
+        (row_width * 8) / bits_per_pixel
     } else {
-        // Multiple rows needed - use requested width
-        let bytes_per_row = width as usize * bytes_per_pixel;
-        let height = (data_len + bytes_per_row - 1) / bytes_per_row;
-        (width as usize, height)
+        width as usize
     };
 
-    let bytes_per_row = actual_width * bytes_per_pixel;
+    // Step 1: Build row-aligned ZIP local entries
+    let (local_data, entry_infos) = build_row_aligned_entries(files, row_width);
 
-    // Pad data to fill complete rows
-    let padded_len = height * bytes_per_row;
-    let mut padded_data = local_entries.clone();
+    // Step 2: Calculate PNG dimensions
+    let height = (local_data.len() + row_width - 1) / row_width;
+
+    // Ensure data fills complete rows
+    let mut padded_data = local_data;
+    let padded_len = height * row_width;
     padded_data.resize(padded_len, 0);
 
-    // Use actual_width for PNG
-    let width = actual_width as u32;
-
-    // Step 3: Calculate the PNG prefix size (everything before IDAT data)
+    // Step 3: Calculate PNG prefix size for offset calculation
     let png_sig_size = 8;
-    let ihdr_size = 4 + 4 + 13 + 4; // len + type + data + crc = 25
-    let plte_size = if let Some(p) = palette {
-        4 + 4 + p.len() + 4 // len + type + data + crc
-    } else {
-        0
-    };
-    let idat_header_size = 4 + 4; // len + type
+    let ihdr_size = 4 + 4 + 13 + 4; // 25 bytes
+    let plte_size = palette.map(|p| 4 + 4 + p.len() + 4).unwrap_or(0);
+    let idat_header_size = 4 + 4; // chunk length + "IDAT"
     let zlib_header_size = 2;
+    let deflate_header_size = 5; // for first stored block
 
-    // Calculate deflate overhead (stored blocks have 5-byte headers every 65535 bytes)
-    let filtered_data_len = padded_len + height; // +1 filter byte per row
-    let num_deflate_blocks = (filtered_data_len + 65534) / 65535;
-    let deflate_headers_size = num_deflate_blocks * 5;
-
-    // The first byte of actual data starts at this offset
-    let data_start_offset = png_sig_size
+    let data_start_in_file = png_sig_size
         + ihdr_size
         + plte_size
         + idat_header_size
         + zlib_header_size
-        + 5; // first deflate block header
+        + deflate_header_size;
 
-    // Step 4: Calculate where each local file header ends up in the final file
-    let file_entries = calculate_file_offsets(
-        files,
-        &local_entries,
-        data_start_offset,
-        bytes_per_row,
-    );
+    // Step 4: Convert original positions to filtered (final file) positions
+    let file_entries: Vec<FileEntry> = entry_infos
+        .into_iter()
+        .map(|(name, body, original_pos)| {
+            let filtered_pos = original_to_filtered_pos(original_pos, row_width);
+            let final_offset = data_start_in_file + filtered_pos;
+            FileEntry {
+                name: name.to_vec(),
+                body: body.to_vec(),
+                crc: crc32(body),
+                filtered_offset: final_offset as u32,
+            }
+        })
+        .collect();
 
     // Step 5: Build the PNG
     let mut output = Vec::new();
 
-    // IHDR (write_png_header includes the PNG signature)
-    write_png_header(&mut output, width, height as u32, bit_depth, color_mode);
+    // IHDR (includes PNG signature)
+    // Use effective_width to match the actual row structure
+    write_png_header(&mut output, effective_width as u32, height as u32, bit_depth, color_mode);
 
     // PLTE (if indexed)
     if let Some(p) = palette {
@@ -116,7 +123,7 @@ pub fn build_polyglot(
     }
 
     // IDAT with filtered data
-    let filtered_data = add_png_filter_bytes(&padded_data, bytes_per_row);
+    let filtered_data = add_png_filter_bytes(&padded_data, row_width);
     write_idat_stored(&mut output, &filtered_data);
 
     // IEND
@@ -138,87 +145,99 @@ pub fn build_polyglot(
     output
 }
 
-/// Build ZIP local file entries (header + data for each file).
-fn build_local_entries(files: &[(&[u8], &[u8])]) -> Vec<u8> {
+/// Build ZIP local entries with careful filter byte alignment.
+///
+/// Strategy:
+/// 1. Entry header starts at a row boundary (filter byte before PK signature)
+/// 2. File data starts at a row boundary (extra field pads header to boundary)
+/// 3. Extra field length includes the filter byte count to help ZIP navigate
+/// 4. File data must fit within row_width to avoid internal filter bytes
+///
+/// This ensures PNG filter bytes land in predictable locations that don't
+/// corrupt the ZIP structure or file contents.
+fn build_row_aligned_entries<'a>(
+    files: &[(&'a [u8], &'a [u8])],
+    row_width: usize,
+) -> (Vec<u8>, Vec<(&'a [u8], &'a [u8], usize)>) {
     let mut data = Vec::new();
+    let mut entry_infos = Vec::new();
+
+    // Fixed header size (before filename)
+    const LOCAL_HEADER_FIXED: usize = 30;
 
     for (name, body) in files {
-        // Local file header
-        // 0x0000..0x0004: signature
+        // Pad to align entry start to row boundary
+        if !data.is_empty() {
+            let current_pos = data.len();
+            let padding_needed = (row_width - (current_pos % row_width)) % row_width;
+            data.resize(data.len() + padding_needed, 0);
+        }
+
+        let entry_start = data.len();
+
+        // Calculate header size (fixed + name)
+        let header_size = LOCAL_HEADER_FIXED + name.len();
+
+        // Calculate extra field size to push file data to next row boundary
+        // This padding will include the filter byte when ZIP navigates
+        let header_end_in_row = header_size % row_width;
+        let extra_content_len = if header_end_in_row == 0 {
+            0 // Header already ends at boundary
+        } else {
+            row_width - header_end_in_row
+        };
+
+        // The extra_len in the ZIP header must include +1 for each filter byte
+        // that ZIP will encounter when skipping past the extra field.
+        // If header+name+extra_content spans exactly to a row boundary,
+        // there's 1 filter byte between extra and file data.
+        let filter_bytes_before_data = if extra_content_len > 0 { 1 } else { 0 };
+        let extra_len_for_zip = extra_content_len + filter_bytes_before_data;
+
+        entry_infos.push((*name, *body, entry_start));
+
+        // Build local file header
         data.extend_from_slice(b"PK\x03\x04");
-        // 0x0004..0x0006: version needed (1.0)
-        data.extend_from_slice(&10_u16.to_le_bytes());
-        // 0x0006..0x0008: general purpose bit flag
-        data.extend_from_slice(&0_u16.to_le_bytes());
-        // 0x0008..0x000A: compression method (0 = stored)
-        data.extend_from_slice(&0_u16.to_le_bytes());
-        // 0x000A..0x000C: last mod time
-        data.extend_from_slice(&0_u16.to_le_bytes());
-        // 0x000C..0x000E: last mod date
-        data.extend_from_slice(&0_u16.to_le_bytes());
-        // 0x000E..0x0012: CRC-32
+        data.extend_from_slice(&10_u16.to_le_bytes()); // version needed
+        data.extend_from_slice(&0_u16.to_le_bytes());  // flags
+        data.extend_from_slice(&0_u16.to_le_bytes());  // compression (stored)
+        data.extend_from_slice(&0_u16.to_le_bytes());  // mod time
+        data.extend_from_slice(&0_u16.to_le_bytes());  // mod date
         data.extend_from_slice(&crc32(body).to_le_bytes());
-        // 0x0012..0x0016: compressed size
-        data.extend_from_slice(&(body.len() as u32).to_le_bytes());
-        // 0x0016..0x001A: uncompressed size
-        data.extend_from_slice(&(body.len() as u32).to_le_bytes());
-        // 0x001A..0x001C: file name length
+        data.extend_from_slice(&(body.len() as u32).to_le_bytes()); // compressed size
+        data.extend_from_slice(&(body.len() as u32).to_le_bytes()); // uncompressed size
         data.extend_from_slice(&(name.len() as u16).to_le_bytes());
-        // 0x001C..0x001E: extra field length
-        data.extend_from_slice(&0_u16.to_le_bytes());
-        // File name
+        data.extend_from_slice(&(extra_len_for_zip as u16).to_le_bytes());
+
+        // Filename
         data.extend_from_slice(name);
-        // File data (no extra field)
+
+        // Extra field content (actual padding bytes, not including filter byte)
+        data.resize(data.len() + extra_content_len, 0);
+
+        // File data (now at row boundary in original data)
         data.extend_from_slice(body);
     }
 
-    data
+    (data, entry_infos)
 }
 
-/// Calculate the actual file offset for each local file header after PNG encoding.
-fn calculate_file_offsets(
-    files: &[(&[u8], &[u8])],
-    local_entries: &[u8],
-    data_start_offset: usize,
-    bytes_per_row: usize,
-) -> Vec<FileEntry> {
-    let mut entries = Vec::new();
-    let mut pos = 0; // Position in local_entries
-
-    for (name, body) in files {
-        // Calculate the filtered position (accounting for PNG filter bytes)
-        let row = pos / bytes_per_row;
-        let col = pos % bytes_per_row;
-        let filtered_pos = row * (bytes_per_row + 1) + 1 + col; // +1 for filter byte at start of each row
-
-        // Calculate deflate block position
-        let deflate_block = filtered_pos / 65535;
-        let pos_in_block = filtered_pos % 65535;
-        let deflate_pos = deflate_block * (65535 + 5) + pos_in_block;
-
-        // Final file offset
-        let file_offset = data_start_offset + deflate_pos;
-
-        entries.push(FileEntry {
-            name: name.to_vec(),
-            body: body.to_vec(),
-            crc: crc32(body),
-            header_offset: file_offset as u32,
-        });
-
-        // Advance position past this entry
-        let header_size = 30 + name.len();
-        pos += header_size + body.len();
-    }
-
-    entries
+/// Convert original data position to filtered position.
+///
+/// PNG filtering inserts a filter byte at the start of each row.
+/// For row width W, original position P maps to filtered position:
+///   F = P + (P / W) + 1
+/// (one filter byte per complete row, plus one for the current row)
+fn original_to_filtered_pos(original_pos: usize, row_width: usize) -> usize {
+    let row = original_pos / row_width;
+    original_pos + row + 1
 }
 
 /// Add PNG filter bytes (0x00 = None filter) at the start of each row.
-fn add_png_filter_bytes(data: &[u8], bytes_per_row: usize) -> Vec<u8> {
+fn add_png_filter_bytes(data: &[u8], row_width: usize) -> Vec<u8> {
     let mut filtered = Vec::new();
 
-    for chunk in data.chunks(bytes_per_row) {
+    for chunk in data.chunks(row_width) {
         filtered.push(0x00); // Filter type: None
         filtered.extend_from_slice(chunk);
     }
@@ -230,10 +249,9 @@ fn add_png_filter_bytes(data: &[u8], bytes_per_row: usize) -> Vec<u8> {
 fn write_idat_stored(buffer: &mut Vec<u8>, filtered_data: &[u8]) {
     let mut idat_content = Vec::new();
 
-    // zlib header: CMF=0x78 (deflate, 32K window), FLG calculated for checksum
+    // zlib header: CMF=0x78 (deflate, 32K window), FLG for checksum
     let cmf: u8 = 0x78;
-    let mut flg: u8 = 0x01; // compression level 0
-    // Adjust FLG so (CMF * 256 + FLG) % 31 == 0
+    let mut flg: u8 = 0x01;
     let check = ((cmf as u16) * 256 + (flg as u16)) % 31;
     if check != 0 {
         flg += (31 - check) as u8;
@@ -241,88 +259,56 @@ fn write_idat_stored(buffer: &mut Vec<u8>, filtered_data: &[u8]) {
     idat_content.push(cmf);
     idat_content.push(flg);
 
-    // Deflate stored blocks
+    // Deflate stored blocks (max 65535 bytes each)
     let chunks: Vec<&[u8]> = filtered_data.chunks(65535).collect();
     for (i, chunk) in chunks.iter().enumerate() {
         let is_last = i == chunks.len() - 1;
-        // BFINAL (1 bit) + BTYPE=00 (2 bits) = stored block
         idat_content.push(if is_last { 0x01 } else { 0x00 });
-        // LEN (16-bit little-endian)
         idat_content.extend_from_slice(&(chunk.len() as u16).to_le_bytes());
-        // NLEN (one's complement of LEN)
         idat_content.extend_from_slice(&(chunk.len() as u16).not().to_le_bytes());
-        // Data
         idat_content.extend_from_slice(chunk);
     }
 
-    // Adler-32 checksum of uncompressed data (big-endian for zlib!)
+    // Adler-32 checksum (big-endian for zlib)
     idat_content.extend_from_slice(&adler32(filtered_data).to_be_bytes());
 
-    // Write as PNG chunk
     write_png_chunk(buffer, b"IDAT", &idat_content);
 }
 
 /// Write ZIP central directory entries.
 fn write_central_directory(buffer: &mut Vec<u8>, entries: &[FileEntry]) {
     for entry in entries {
-        // Central directory file header
-        // 0x0000..0x0004: signature
         buffer.extend_from_slice(b"PK\x01\x02");
-        // 0x0004..0x0006: version made by
-        buffer.extend_from_slice(&20_u16.to_le_bytes());
-        // 0x0006..0x0008: version needed
-        buffer.extend_from_slice(&10_u16.to_le_bytes());
-        // 0x0008..0x000A: general purpose bit flag
-        buffer.extend_from_slice(&0_u16.to_le_bytes());
-        // 0x000A..0x000C: compression method (0 = stored)
-        buffer.extend_from_slice(&0_u16.to_le_bytes());
-        // 0x000C..0x000E: last mod time
-        buffer.extend_from_slice(&0_u16.to_le_bytes());
-        // 0x000E..0x0010: last mod date
-        buffer.extend_from_slice(&0_u16.to_le_bytes());
-        // 0x0010..0x0014: CRC-32
+        buffer.extend_from_slice(&20_u16.to_le_bytes()); // version made by
+        buffer.extend_from_slice(&10_u16.to_le_bytes()); // version needed
+        buffer.extend_from_slice(&0_u16.to_le_bytes());  // flags
+        buffer.extend_from_slice(&0_u16.to_le_bytes());  // compression
+        buffer.extend_from_slice(&0_u16.to_le_bytes());  // mod time
+        buffer.extend_from_slice(&0_u16.to_le_bytes());  // mod date
         buffer.extend_from_slice(&entry.crc.to_le_bytes());
-        // 0x0014..0x0018: compressed size
-        buffer.extend_from_slice(&(entry.body.len() as u32).to_le_bytes());
-        // 0x0018..0x001C: uncompressed size
-        buffer.extend_from_slice(&(entry.body.len() as u32).to_le_bytes());
-        // 0x001C..0x001E: file name length
+        buffer.extend_from_slice(&(entry.body.len() as u32).to_le_bytes()); // compressed
+        buffer.extend_from_slice(&(entry.body.len() as u32).to_le_bytes()); // uncompressed
         buffer.extend_from_slice(&(entry.name.len() as u16).to_le_bytes());
-        // 0x001E..0x0020: extra field length
-        buffer.extend_from_slice(&0_u16.to_le_bytes());
-        // 0x0020..0x0022: file comment length
-        buffer.extend_from_slice(&0_u16.to_le_bytes());
-        // 0x0022..0x0024: disk number start
-        buffer.extend_from_slice(&0_u16.to_le_bytes());
-        // 0x0024..0x0026: internal file attributes
-        buffer.extend_from_slice(&0_u16.to_le_bytes());
-        // 0x0026..0x002A: external file attributes
-        buffer.extend_from_slice(&0_u32.to_le_bytes());
-        // 0x002A..0x002E: relative offset of local header
-        buffer.extend_from_slice(&entry.header_offset.to_le_bytes());
-        // File name
+        buffer.extend_from_slice(&0_u16.to_le_bytes());  // extra len
+        buffer.extend_from_slice(&0_u16.to_le_bytes());  // comment len
+        buffer.extend_from_slice(&0_u16.to_le_bytes());  // disk number
+        buffer.extend_from_slice(&0_u16.to_le_bytes());  // internal attrs
+        buffer.extend_from_slice(&0_u32.to_le_bytes());  // external attrs
+        buffer.extend_from_slice(&entry.filtered_offset.to_le_bytes()); // local header offset
         buffer.extend_from_slice(&entry.name);
     }
 }
 
 /// Write ZIP end of central directory record.
-fn write_eocd(buffer: &mut Vec<u8>, num_entries: u16, central_dir_size: u32, central_dir_offset: u32) {
-    // 0x0000..0x0004: signature
+fn write_eocd(buffer: &mut Vec<u8>, num_entries: u16, cd_size: u32, cd_offset: u32) {
     buffer.extend_from_slice(b"PK\x05\x06");
-    // 0x0004..0x0006: disk number
-    buffer.extend_from_slice(&0_u16.to_le_bytes());
-    // 0x0006..0x0008: disk number with central directory
-    buffer.extend_from_slice(&0_u16.to_le_bytes());
-    // 0x0008..0x000A: number of entries on this disk
+    buffer.extend_from_slice(&0_u16.to_le_bytes()); // disk number
+    buffer.extend_from_slice(&0_u16.to_le_bytes()); // disk with CD
     buffer.extend_from_slice(&num_entries.to_le_bytes());
-    // 0x000A..0x000C: total number of entries
     buffer.extend_from_slice(&num_entries.to_le_bytes());
-    // 0x000C..0x0010: size of central directory
-    buffer.extend_from_slice(&central_dir_size.to_le_bytes());
-    // 0x0010..0x0014: offset of central directory
-    buffer.extend_from_slice(&central_dir_offset.to_le_bytes());
-    // 0x0014..0x0016: comment length
-    buffer.extend_from_slice(&0_u16.to_le_bytes());
+    buffer.extend_from_slice(&cd_size.to_le_bytes());
+    buffer.extend_from_slice(&cd_offset.to_le_bytes());
+    buffer.extend_from_slice(&0_u16.to_le_bytes()); // comment len
 }
 
 #[cfg(test)]
@@ -330,14 +316,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_build_polyglot_basic() {
+    fn test_row_aligned_polyglot() {
         let files = vec![
             (b"hello.txt".as_ref(), b"Hello, World!".as_ref()),
+            (b"test.txt".as_ref(), b"Test content here".as_ref()),
         ];
 
         let result = build_polyglot(
             &files,
-            64, // width
+            64, // 64 pixels wide
             BitDepth::EightBit,
             ColorMode::Lightness,
             None,
@@ -346,7 +333,7 @@ mod tests {
         // Check PNG signature
         assert_eq!(&result[0..8], b"\x89PNG\r\n\x1A\n");
 
-        // Check for ZIP EOCD signature near the end
+        // Check for ZIP EOCD
         let eocd_pos = result.windows(4)
             .rposition(|w| w == b"PK\x05\x06")
             .expect("EOCD not found");
@@ -354,5 +341,17 @@ mod tests {
 
         println!("Polyglot size: {} bytes", result.len());
         println!("EOCD at offset: {}", eocd_pos);
+    }
+
+    #[test]
+    fn test_original_to_filtered() {
+        // With row_width = 64:
+        // Position 0 -> filtered 1 (after first filter byte)
+        // Position 64 -> filtered 66 (row 1, after 2 filter bytes)
+        // Position 128 -> filtered 131 (row 2, after 3 filter bytes)
+        assert_eq!(original_to_filtered_pos(0, 64), 1);
+        assert_eq!(original_to_filtered_pos(63, 64), 64);
+        assert_eq!(original_to_filtered_pos(64, 64), 66);
+        assert_eq!(original_to_filtered_pos(128, 64), 131);
     }
 }
