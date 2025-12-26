@@ -1,9 +1,10 @@
+#![allow(clippy::type_complexity)]
 
-use std::{marker::PhantomData, sync::LazyLock};
+use std::marker::PhantomData;
 
-use derive_more::{Deref, DerefMut, From};
+use derive_more::{Deref, DerefMut};
 use jeb_values::{Bytes, Item};
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use crate::{Receiver, Sender, channel};
 
 type TaskHandle = tokio::task::JoinHandle<()>;
@@ -79,20 +80,36 @@ where F: FnOnce(Receiver<In>, Sender<Out>) -> TaskHandle   {
     }
 }
 
-pub fn source<T, F, FutureT>(f: F) -> SourceNode<T, impl FnOnce(Sender<T>) -> FutureT  >
-where F: FnOnce(Sender<T>) -> FutureT,
-T: 'static + Send,
-FutureT: std::future::Future<Output = ()> + 'static + Send,
-F: 'static + Send {
-    // SourceNode::new(|output| {
-    //     tokio::spawn(async move {
-    //         (f)(output).await.unwrap()
-    //     })
-    // })
+pub fn source<T, F, Fut>(f: F) -> SourceNode<T, impl FnOnce(Sender<T>) -> TaskHandle>
+where
+    F: FnOnce(Sender<T>) -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = ()> + Send + 'static,
+    T: Send + 'static,
+{
+    SourceNode::new(move |sender| tokio::spawn(f(sender)))
 }
 
-pub fn stdin() -> SourceNode {
-    source(|output| async {
+pub fn sink<T, F, Fut>(f: F) -> SinkNode<T, impl FnOnce(Receiver<T>) -> TaskHandle>
+where
+    F: FnOnce(Receiver<T>) -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = ()> + Send + 'static,
+    T: Send + 'static,
+{
+    SinkNode::new(move |receiver| tokio::spawn(f(receiver)))
+}
+
+pub fn transform<In, Out, F, Fut>(f: F) -> TransformNode<In, Out, impl FnOnce(Receiver<In>, Sender<Out>) -> TaskHandle>
+where
+    F: FnOnce(Receiver<In>, Sender<Out>) -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = ()> + Send + 'static,
+    In: Send + 'static,
+    Out: Send + 'static,
+{
+    TransformNode::new(move |receiver, sender| tokio::spawn(f(receiver, sender)))
+}
+
+pub fn stdin() -> SourceNode<Result<Item, &'static str>, impl FnOnce(Sender<Result<Item, &'static str>>) -> TaskHandle> {
+    source(|output| async move {
         let mut stdin = tokio::io::stdin();
         let mut buffer = [0u8; 65_536];
 
@@ -107,6 +124,52 @@ pub fn stdin() -> SourceNode {
                 }
                 Err(_err) => {
                     let _ = output.send(Err("Failed to read from stdin")).await;
+                    break;
+                }
+            }
+        }
+    })
+}
+
+pub fn stdout() -> SinkNode<Result<Item, &'static str>, impl FnOnce(Receiver<Result<Item, &'static str>>) -> TaskHandle> {
+    sink(|mut input| async move {
+        let mut stdout = tokio::io::stdout();
+
+        while let Some(item) = input.recv().await {
+            match item {
+                Ok(Item::Bytes(bytes)) => {
+                    if stdout.write_all(&bytes).await.is_err() {
+                        break;
+                    }
+                }
+                Ok(_) => {
+                    // Ignore non-bytes items
+                }
+                Err(_err) => {
+                    // Handle error if needed
+                    break;
+                }
+            }
+        }
+    })
+}
+
+pub fn stderr() -> SinkNode<Result<Item, &'static str>, impl FnOnce(Receiver<Result<Item, &'static str>>) -> TaskHandle> {
+    sink(|mut input| async move {
+        let mut stderr = tokio::io::stderr();
+
+        while let Some(item) = input.recv().await {
+            match item {
+                Ok(Item::Bytes(bytes)) => {
+                    if stderr.write_all(&bytes).await.is_err() {
+                        break;
+                    }
+                }
+                Ok(_) => {
+                    // Ignore non-bytes items
+                }
+                Err(_err) => {
+                    // Handle error if needed
                     break;
                 }
             }
