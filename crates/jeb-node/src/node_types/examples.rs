@@ -2,18 +2,19 @@
 
 use jeb_values::{Bytes, Item};
 use macro_rules_attribute::apply;
+use tokio::task::JoinHandle;
 
-use crate::{Receiver, Sender};
+use crate::{Receiver, Sender, channel::channel};
 
-type ItemResult<T=Item> = Result<T, Item>;
+type ItemResult<T = Item> = Result<T, Item>;
 
 macro_rules! node {
     {
         $(
             $( #[$attr:meta] )*
             $pub:vis
-            $(async $async_vis:vis)?
-            fn $name:ident
+            $(async fn $async_name:ident)?
+            $(fn $name:ident)?
             (
                 input: $input_ty:ty,
                 output: $output_ty:ty
@@ -26,8 +27,8 @@ macro_rules! node {
         $(
             $( #[$attr] )*
             $pub
-            $(async $async_vis)?
-            fn $name
+            $(async fn $async_name)?
+            $(fn $name)?
             (
                 input: $input_ty,
                 output: $output_ty
@@ -36,49 +37,89 @@ macro_rules! node {
             $(-> $return)?
             $body
 
-            mod $name
+            // mod $($name)? $($async_name)? {
+            //     use super::*;
 
+            //     pub fn spawn(
+            //         input: $input_ty,
+            //         $( $rest_ident: $rest_ty ),*
+            //     ) -> $output_ty {
+            //         let (sender, receiver) = $crate::channel::<$output_ty>();
+            //         tokio::spawn(
+            //             super::$($name)?$($async_name)?(
+            //                 input,
+            //                 sender,
+            //                 $( $rest_ident ),*
+            //             )
+            //         );
+            //         receiver
+            //     }
+            // }
         )+
     }
 }
 
 use node;
 
-pub trait NodeFn {
-    fn name() -> &'static str;
-    fn max_inputs() -> Option<usize>;
-    fn min_inputs() -> Option<usize>;
-    fn max_outputs() -> Option<usize>;
-    fn min_outputs() -> Option<usize>;
+trait InputManyItemsOutputOneItemResult {
+    fn spawn(self, input: Vec<Receiver<Item>>) -> Receiver<ItemResult>;
+}
+impl<T, F> InputManyItemsOutputOneItemResult for T
+where
+    T: Fn(Vec<Receiver<Item>>, Sender<ItemResult>) -> F,
+    F: Future + Send + 'static,
+    F::Output: Send + 'static,
+{
+    fn spawn(self, input: Vec<Receiver<Item>>) -> Receiver<ItemResult> {
+        let (sender, receiver) = channel::<ItemResult>();
+        tokio::spawn((self)(input, sender));
+        receiver
+    }
+}
 
-    const MAX_INPUTS: Option<usize> = Some(0);
-    const MIN_INPUTS: Option<usize> = Self::MAX_INPUTS;
+type InputOneBytes {
+    fn spawn(self, input: Receiver<Item>) -> JoinHandle<()>;
+}
 
-    const MAX_OUTPUTS: Option<usize> = Some(0);
-    const MIN_OUTPUTS: Option<usize> = Self::MAX_OUTPUTS;
-
-    type InputType;
-    type OutputType;
+trait OutputOneBytesResult {
+    fn spawn(self) -> JoinHandle<()>;
+}
+impl<T, F> OutputOneBytesResult for T
+where
+    T: Fn(Vec<Receiver<Item>>, Sender<ItemResult>) -> F,
+    F: Future + Send + 'static,
+    F::Output: Send + 'static,
+{
+    fn spawn(self) -> Receiver<ItemResult<()>> {
+        let (sender, receiver) = channel::<ItemResult>();
+        tokio::spawn((self)(input, sender));
+        receiver
+    }
 }
 
 // impl NodeFn for
 
-node! {
-    pub async fn merge(input: Vec<Receiver<Item>>, output: Sender<ItemResult>)  {
+// node! {
+pub async fn merge(input: Vec<Receiver<Item>>, output: Sender<ItemResult>) {}
 
-    }
-
-    pub fn chunks(input: Receiver<Item>, output: Sender<ItemResult>, rest: (), size: usize) -> impl Future<Output = ()> {
-        async { unimplemented!() }
-    }
-
-    pub fn stdin(input: (), output: Sender<Bytes>) -> impl Future<Output = ()> {
-        async { unimplemented!() }
-    }
+pub fn chunks(
+    input: Receiver<Item>,
+    output: Sender<ItemResult>,
+    rest: (),
+    size: usize,
+) -> impl Future<Output = ()> {
+    async { unimplemented!() }
 }
+
+pub fn stdin(input: (), output: Sender<Bytes>) -> impl Future<Output = ()> {
+    async { unimplemented!() }
+}
+// }
 
 #[test]
 fn test() {
+    let d = merge.spawn(vec![stdin.spawn(), stdin.spawn()]);
+
     // let _ = merge(vec![], Sender {});
     // let _ = chunks;
     // let _ = stdin;
