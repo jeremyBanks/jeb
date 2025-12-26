@@ -55,8 +55,8 @@ tokio-stream = "0.1"
 tokio-util = { version = "0.7.17", features = ["codec", "io"] }
 tracing = "0.1.43"
 
-jeb-values = { path = "../jeb-values", features = ["serde"] }
-jeb-common = { path = "../jeb-common" }
+jeb-values = { workspace = true, features = ["serde"] }
+jeb-common = { workspace = true }
 
 color-eyre = { version = "0.6.5", optional = true }
 dotenv = { version = "0.15.0", optional = true }

@@ -34,6 +34,7 @@ const BYTES = [
   "123456789ABCDEF0",
 ].map(denoHex.decodeHex);
 
+// deno-lint-ignore no-unused-vars
 const LENGTHS = [0, 3, 6, 1, 2, 4, 5, 7, 8, 13, 15];
 
 Deno.test({

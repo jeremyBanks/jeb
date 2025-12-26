@@ -19,5 +19,9 @@ split-debuginfo = "packed"
 panic = "abort"
 
 [workspace.dependencies]
+jeb = { path = "crates/jeb", version = "0.0.0-dev-2025-12-25.6200" }
+jeb-common = { path = "crates/jeb-common", version = "0.0.0-dev-2025-12-25.6200" }
+jeb-values = { path = "crates/jeb-values", version = "0.0.0-dev-2025-12-25.6200" }
+
 wasm-bindgen = "0.2.105"
 web-sys = "0.3.82"

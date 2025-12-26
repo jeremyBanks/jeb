@@ -1,10 +1,10 @@
 #![allow(clippy::type_complexity)]
 
 mod channel;
-mod node;
+mod node_types;
 
 pub use channel::*;
-pub use node::*;
+pub use node_types::*;
 
 pub mod nodes {
     mod text;

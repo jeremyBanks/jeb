@@ -224,6 +224,7 @@ export class Encoding {
     );
   }
 
+  // deno-lint-ignore no-unused-vars
   #decodeBlock(block: string): Uint8Array {
     throw new Error("not implemented");
   }
@@ -237,6 +238,7 @@ export class Encoding {
     return buffer;
   }
 
+  // deno-lint-ignore no-unused-vars
   decode(encoded: string): Uint8Array {
     throw new Error("not implemented");
   }
