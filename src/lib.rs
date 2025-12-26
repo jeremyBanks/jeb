@@ -1,4 +1,4 @@
-#![feature(doc_cfg, doc_auto_cfg)]
+#![feature(doc_cfg)]
 #![doc = include_str!("../README.md")]
 //!
 //! ## Feature flags
@@ -47,6 +47,7 @@ pub mod r#impl {
     pub mod generic;
     pub mod padding;
     pub mod png;
+    pub mod polyglot;
     pub mod text;
     pub mod zip;
     pub mod zlib;
@@ -72,10 +73,39 @@ pub fn zipng(files: &Files) -> Vec<u8> {
 type Opts<Options> = fn(&mut Options);
 
 /// Creates a "transparent zipng" zip file using custom options, with the
-/// given files, in the given order.1
+/// given files, in the given order.
+///
+/// The resulting file is simultaneously a valid PNG image and a valid ZIP archive.
+/// PNG readers will display the ZIP data as pixels, while ZIP readers will
+/// extract the embedded files.
 pub fn zipng_with(files: &Files, opts: Opts<ZipngOptions>) -> Vec<u8> {
-    let opts = ZipngOptions::default_for_data(&[]).tap_mut(opts);
-    todo!()
+    // Build the file list for the polyglot builder
+    let file_list: Vec<(&[u8], &[u8])> = files
+        .files
+        .iter()
+        .map(|(k, v)| (k.as_ref(), v.as_ref()))
+        .collect();
+
+    // Estimate total data size for default options
+    let total_size: usize = file_list
+        .iter()
+        .map(|(name, body)| 30 + name.len() + body.len())
+        .sum();
+
+    let mut opts = ZipngOptions::default_for_data(&vec![0u8; total_size]).tap_mut(opts);
+
+    // Ensure reasonable defaults
+    if opts.png.width == 0 {
+        opts.png.width = 64;
+    }
+
+    polyglot::build_polyglot(
+        &file_list,
+        opts.png.width as u32,
+        opts.png.bit_depth,
+        opts.png.color_mode,
+        opts.png.color_palette.as_deref(),
+    )
 }
 /// Creates a zip file wherein all files are stored un-compressed, directly in
 /// the zip file as-is.
@@ -101,8 +131,29 @@ pub fn png(body: &[u8]) -> Vec<u8> {
 
 /// Creates a PNG file with the given image data and options.
 pub fn png_with(body: &[u8], opts: Opts<PngOptions>) -> Vec<u8> {
-    let opts = PngOptions::default().tap_mut(opts);
-    todo!()
+    let mut opts = PngOptions::default().tap_mut(opts);
+
+    // Calculate dimensions if not specified
+    if opts.width == 0 {
+        opts.width = 64;
+    }
+
+    let bytes_per_pixel =
+        (opts.bit_depth.bits_per_sample() * opts.color_mode.samples_per_pixel() + 7) / 8;
+    let bytes_per_row = opts.width * bytes_per_pixel;
+    let height = (body.len() + bytes_per_row - 1) / bytes_per_row;
+
+    let mut buffer = Vec::new();
+    png::write_png(
+        &mut buffer,
+        body,
+        opts.width as u32,
+        height as u32,
+        opts.bit_depth,
+        opts.color_mode,
+        opts.color_palette.as_deref(),
+    );
+    buffer
 }
 
 #[cfg(feature = "brotli")]
