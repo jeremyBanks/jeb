@@ -1,11 +1,21 @@
 use core::hash::Hash;
 
 use derive_more::{AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut, Into, IntoIterator};
-use serde::{Deserialize, Serialize};
 
-use crate::model::text::Text;
+use crate::text::Text;
 
-#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
+#[cfg_attr(
+    feature = "wasm",
+    wasm_bindgen::prelude::wasm_bindgen
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(
+        serde::Serialize,
+        serde::Deserialize,
+    ),
+    serde(transparent)
+)]
 #[derive(
     AsMut,
     AsRef,
@@ -14,7 +24,6 @@ use crate::model::text::Text;
     Default,
     Deref,
     DerefMut,
-    Deserialize,
     Eq,
     From,
     Hash,
@@ -25,13 +34,13 @@ use crate::model::text::Text;
     Ord,
     PartialEq,
     PartialOrd,
-    Serialize,
 )]
 #[repr(transparent)]
-#[serde(transparent)]
 #[must_use]
-#[into_iterator(owned, ref, ref_mut)]
-pub struct Bytes(pub(in crate::model) Vec<u8>);
+#[into_iterator(
+    owned, ref, ref_mut
+)]
+pub struct Bytes(pub(crate) Vec<u8>);
 
 impl From<&[u8]> for Bytes {
     fn from(value: &[u8]) -> Self {

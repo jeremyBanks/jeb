@@ -239,7 +239,10 @@ pub const fn decoded_z85_length(digit_length: usize) -> usize {
     full_block_bytes + remaining_block_bytes
 }
 
-#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
+#[cfg_attr(
+    feature = "wasm",
+    wasm_bindgen::prelude::wasm_bindgen
+)]
 #[must_use]
 pub fn encode_z85(bytes: &[u8]) -> Vec<u8> {
     let encoded_length = encoded_z85_length(bytes.len());

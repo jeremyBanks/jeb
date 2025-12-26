@@ -35,7 +35,10 @@ pub const MIN_VAR_RAW_BYTES: usize = 8;
 const MIN_RAW_RUN: usize = 4;
 
 /// Encodes bytes to jeb85 format.
-#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
+#[cfg_attr(
+    feature = "wasm",
+    wasm_bindgen::prelude::wasm_bindgen
+)]
 #[must_use]
 pub fn encode_jeb85(input: &[u8]) -> Vec<u8> {
     let mut output = Vec::with_capacity(encoded_z85_length(input.len()));
@@ -239,7 +242,10 @@ fn emit_z85(output: &mut Vec<u8>, bytes: &[u8]) {
 // =============================================================================
 
 /// Decodes jeb85-encoded data back to bytes.
-#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
+#[cfg_attr(
+    feature = "wasm",
+    wasm_bindgen::prelude::wasm_bindgen
+)]
 pub fn decode_jeb85(input: &[u8]) -> Result<Vec<u8>, String> {
     let mut output = Vec::new();
     let mut pos = 0;
@@ -891,14 +897,20 @@ mod tests {
     fn test_decode_invalid_z85_digit() {
         // Space (0x20) is not a valid Z85 digit
         let result = decode_jeb85(b"hello world");
-        assert!(result.is_err(), "should fail on invalid Z85 character (space)");
+        assert!(
+            result.is_err(),
+            "should fail on invalid Z85 character (space)"
+        );
     }
 
     #[test]
     fn test_decode_invalid_character_in_length() {
         // Space before | should fail
         let result = decode_jeb85(b" |test");
-        assert!(result.is_err(), "should fail on invalid character in length");
+        assert!(
+            result.is_err(),
+            "should fail on invalid character in length"
+        );
     }
 
     // =========================================================================
@@ -918,15 +930,18 @@ mod tests {
             let jeb85_len = encode_jeb85(&input).len();
             let z85_len = encode_z85(&input).len();
             // jeb85 may be slightly longer due to mode switches, but not by much
-            assert!(jeb85_len <= z85_len * 2, "jeb85 shouldn't be dramatically longer than z85");
+            assert!(
+                jeb85_len <= z85_len * 2,
+                "jeb85 shouldn't be dramatically longer than z85"
+            );
         }
     }
 
     #[test]
     fn test_raw_encoding_overhead() {
         // Test efficiency of different raw encoding methods
-        let input4 = b"test";  // 4 bytes: "_test" (5) vs Z85 (5) - break even
-        let input6 = b"hello!";  // 6 bytes: "~hello!" (7) vs Z85 (8) - saves 1
+        let input4 = b"test"; // 4 bytes: "_test" (5) vs Z85 (5) - break even
+        let input6 = b"hello!"; // 6 bytes: "~hello!" (7) vs Z85 (8) - saves 1
         assert_eq!(roundtrip(input4), input4.to_vec());
         assert_eq!(roundtrip(input6), input6.to_vec());
     }

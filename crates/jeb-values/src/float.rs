@@ -1,16 +1,22 @@
 use core::hash::Hash;
 
 use derive_more::{AsRef, Deref, Display, Into};
-use serde::{Deserialize, Serialize};
 
 
 
-#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
-#[derive(AsRef, Clone, Debug, Default, Deref, Copy, Display, Into, Serialize)]
-#[serde(transparent)]
+#[cfg_attr(
+    feature = "wasm",
+    wasm_bindgen::prelude::wasm_bindgen
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize),
+    serde(transparent)
+)]
+#[derive(AsRef, Clone, Debug, Default, Deref, Copy, Display, Into)]
 #[repr(transparent)]
 #[must_use]
-pub struct Float(pub(in crate::model) f64);
+pub struct Float(pub(crate) f64);
 
 impl Float {
     #[must_use]
@@ -23,7 +29,8 @@ impl Float {
     }
 }
 
-impl<'de> Deserialize<'de> for Float {
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Float {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,

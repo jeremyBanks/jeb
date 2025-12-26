@@ -299,6 +299,7 @@ dependencies = [
  "getset",
  "ignorable",
  "indexmap",
+ "jeb-values",
  "js-sys",
  "owo-colors",
  "regex",
@@ -312,6 +313,16 @@ dependencies = [
  "tracing-subscriber",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "jeb-values"
+version = "0.0.0-dev-2025-12-25.6200"
+dependencies = [
+ "derive_more",
+ "indexmap",
+ "serde",
+ "wasm-bindgen",
 ]
 
 [[package]]

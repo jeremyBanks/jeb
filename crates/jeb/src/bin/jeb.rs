@@ -470,7 +470,14 @@ fn parse_binary(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
             .copied()
             .collect();
         if bits.len() % 8 != 0 {
-            return Err(format!("binary string has {} bits, which is not a multiple of 8 (need {} more bits, or {} fewer)", bits.len(), 8 - (bits.len() % 8), bits.len() % 8).into());
+            return Err(format!(
+                "binary string has {} bits, which is not a multiple of 8 (need {} more bits, or \
+                 {} fewer)",
+                bits.len(),
+                8 - (bits.len() % 8),
+                bits.len() % 8
+            )
+            .into());
         }
         for chunk in bits.chunks(8) {
             let mut byte = 0u8;

@@ -1,13 +1,17 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 use indexmap::IndexMap;
-use serde::{Deserialize, Serialize};
 
 use super::{bytes::Bytes, float::Float, text::Text};
 
-
-
-#[derive(Debug, Clone, From, Serialize, Deserialize, Default, TryUnwrap, IsVariant, Unwrap)]
-#[serde(untagged)]
+#[cfg_attr(
+    feature = "serde",
+    derive(
+        serde::Serialize,
+        serde::Deserialize
+    ),
+    serde(untagged)
+)]
+#[derive(Debug, Clone, From, Default, TryUnwrap, IsVariant, Unwrap)]
 #[must_use]
 pub enum Value {
     Unsigned(u64),

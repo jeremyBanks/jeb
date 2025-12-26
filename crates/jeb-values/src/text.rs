@@ -1,12 +1,22 @@
 use core::hash::Hash;
 
 use derive_more::{AsMut, AsRef, Deref, DerefMut, Display, From, Index, Into};
-use serde::{Deserialize, Serialize};
 
 use super::bytes::Bytes;
 
 
-#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
+#[cfg_attr(
+    feature = "wasm",
+    wasm_bindgen::prelude::wasm_bindgen
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(
+        serde::Serialize,
+        serde::Deserialize
+    ),
+    serde(transparent)
+)]
 #[derive(
     AsMut,
     AsRef,
@@ -15,7 +25,6 @@ use super::bytes::Bytes;
     Default,
     Deref,
     DerefMut,
-    Deserialize,
     Display,
     Eq,
     From,
@@ -25,12 +34,10 @@ use super::bytes::Bytes;
     Ord,
     PartialEq,
     PartialOrd,
-    Serialize,
 )]
-#[serde(transparent)]
 #[repr(transparent)]
 #[must_use]
-pub struct Text(pub(in crate::model) String);
+pub struct Text(pub(crate) String);
 
 impl TryFrom<Bytes> for Text {
     type Error = core::str::Utf8Error;

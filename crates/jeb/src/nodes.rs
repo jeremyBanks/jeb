@@ -1,14 +1,34 @@
 use std::borrow::Cow;
 
-#[cfg(any(feature = "stdio", feature = "fs"))]
+#[cfg(
+    any(
+        feature = "stdio",
+        feature = "fs"
+    )
+)]
 use tokio::io::AsyncWriteExt;
-#[cfg(any(feature = "stdio", feature = "fs"))]
+#[cfg(
+    any(
+        feature = "stdio",
+        feature = "fs"
+    )
+)]
 use tokio_stream::StreamExt;
-#[cfg(any(feature = "stdio", feature = "fs"))]
+#[cfg(
+    any(
+        feature = "stdio",
+        feature = "fs"
+    )
+)]
 use tokio_util::codec::{BytesCodec, FramedRead};
 
 use crate::model::{Node, Receiver, Task};
-#[cfg(any(feature = "stdio", feature = "fs"))]
+#[cfg(
+    any(
+        feature = "stdio",
+        feature = "fs"
+    )
+)]
 use crate::{
     Panic,
     model::{Bytes, Item, channel},
@@ -166,7 +186,12 @@ impl NodeDef for Stderr {
 }
 
 // TODO: move or remove
-#[cfg(any(feature = "stdio", feature = "fs"))]
+#[cfg(
+    any(
+        feature = "stdio",
+        feature = "fs"
+    )
+)]
 pub async fn wip_example_pseudo_main() -> Result<(), Panic> {
     let nodes: Vec<&dyn Node> = vec![
         #[cfg(feature = "stdio")]

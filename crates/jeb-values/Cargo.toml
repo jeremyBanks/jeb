@@ -1,0 +1,22 @@
+[package]
+name = "jeb-values"
+publish = true
+description = "supporting crate for https://crates.io/crates/jeb"
+keywords = []
+categories = []
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[features]
+default = ["wasm", "serde"]
+wasm = ["dep:wasm-bindgen"]
+serde = ["indexmap/serde", "serde/derive"]
+
+[dependencies]
+derive_more = { version = "2.0.1", features = ["full"] }
+indexmap = { version = "2.0" }
+serde = { version = "1.0", optional = true }
+wasm-bindgen = { version = "0.2.105", optional = true }
