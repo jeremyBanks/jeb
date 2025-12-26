@@ -15,14 +15,10 @@ name = "jeb"
 crate-type = ["cdylib"]
 doc = false
 
-[features]
-default = ["wasm"]
-wasm = []
-
 [dependencies]
-js-sys = "=0.3.82"
-wasm-bindgen = "=0.2.105"
+js-sys = { workspace = true }
+wasm-bindgen = { workspace = true }
 
-[dependencies.jeb]
-workspace = true
-features = ["wasm"]
+document-features = "0.2.12"
+jeb = { workspace = true, features = ["wasm"] }
+

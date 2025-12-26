@@ -1,4 +1,5 @@
 *.local.*
+*.tmp
 *.wasm
 /examples/self.sh
 /target
