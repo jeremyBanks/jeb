@@ -3,11 +3,9 @@ use std::any::Any;
 use derive_more::{Deref, DerefMut};
 use jeb_values::Item;
 
-pub type Task = tokio::task::JoinHandle<dyn Any + Send>;
+pub type Task = tokio::task::JoinHandle<()>;
 
-pub trait Processor {
-    
-}
+fn stdin
 
 #[derive(Deref, DerefMut)]
 pub struct Input<T = Item> {

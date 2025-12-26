@@ -133,9 +133,11 @@ fn would_create_ambiguity(output: &[u8]) -> bool {
                 }
             } else {
                 // These Z85 digits are actual Z85 data, we've reached the end
-                // Check if this is a partial block (1-4 digits)
+                // Z85 works in 5-digit blocks. Check if there's a trailing partial block.
+                // e.g., 7 digits = 5 (full) + 2 (partial) → partial size = 7 % 5 = 2
                 let z85_len = pos - start;
-                return z85_len > 0 && z85_len < BLOCK_DIGITS_5;
+                let partial_len = z85_len % BLOCK_DIGITS_5;
+                return partial_len > 0;
             }
         } else {
             // Unexpected byte, shouldn't happen in valid jeb85 output
@@ -1063,6 +1065,24 @@ mod tests {
         let mut input = vec![b'x'; 100];
         input.extend_from_slice(&[0xFF; 4]);
         input.extend_from_slice(&vec![b'x'; 100]);
+        assert_eq!(roundtrip(&input), input);
+    }
+
+    #[test]
+    fn test_5_binary_bytes_then_raw() {
+        // 5 binary bytes encode to 7 Z85 digits (5 + 2 partial)
+        // followed by 8 raw bytes that would use length prefix
+        // This tests the edge case where partial Z85 block detection
+        // must account for Z85 block boundaries
+        let mut input = vec![0xFF; 5]; // 7 Z85 digits
+        input.extend_from_slice(b"testtest"); // 8 raw bytes
+        let encoded = encode_jeb85(&input);
+        eprintln!(
+            "5_binary_then_raw: {:?}",
+            String::from_utf8_lossy(&encoded)
+        );
+        // Should NOT produce something like "...@@8|testtest" which is ambiguous
+        // The decoder would misinterpret "@@8" as a length prefix
         assert_eq!(roundtrip(&input), input);
     }
 
