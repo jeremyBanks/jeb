@@ -4,6 +4,30 @@
 
 Implement `serde::Serializer` and `serde::Deserializer` traits for the `jeb-values::Value` type to enable `to_value<T>()` and `from_value<T>()` conversions. This will follow serde_json's architecture but with key improvements that leverage jeb-values's richer type system.
 
+## Design Goals & Philosophy
+
+### Primary Goal: 100% Round-Trip Fidelity
+The most important goal is **perfect round-tripping when the target type is known**. Given any Rust type `T: Serialize + DeserializeOwned`, this must work:
+```rust
+let original: T = ...;
+let value = to_value(&original)?;
+let recovered: T = from_value(value)?;
+assert_eq!(original, recovered);  // Always true
+```
+
+### Secondary Goal: Self-Description
+When deserializing without knowing the target type (`deserialize_any`), we provide the most natural interpretation of the Value. However, **self-description is explicitly secondary to round-tripping**. Some information that enables round-tripping may not be self-describing:
+- `Value::Bytes([16 bytes])` could be i128, u128, or actual bytes - but when we know the target type, we interpret it correctly
+- `{"Some": v}` could theoretically collide with a user struct field named "Some" - but in practice this is extremely rare and round-tripping still works
+
+### Compatibility Goal: Accept serde_json Output
+Our deserializer should accept data serialized by serde_json where possible, enabling migration and interop. We serialize in our own unambiguous format, but accept multiple input formats.
+
+### Non-Goals
+- We do NOT prioritize JSON compatibility for output (we have a richer type system)
+- We do NOT try to make `deserialize_any` perfect (it's inherently limited)
+- We do NOT error on things we can represent (e.g., NaN/Infinity → bytes, not error)
+
 ## Key Improvements Over serde_json
 
 | Feature | serde_json | jeb-values (our approach) |
@@ -70,14 +94,18 @@ pub fn to_value<T: Serialize>(value: T) -> Result<Value, Error> {
 3. **Bytes serialization** (native support):
    - `serialize_bytes` → `Value::Bytes(bytes.into())`
 
-4. **Option serialization** (tagged Some for losslessness):
+4. **Char serialization**:
+   - `serialize_char` → `Value::Text(single-char string)`
+
+5. **Option serialization** (tagged Some for losslessness):
    - `serialize_none` → `Value::Null`
    - `serialize_some(v)` → `Value::TextMap({"Some": to_value(v)})`
    - Fixes nested Option round-tripping: None→null, Some(None)→{"Some":null}, Some(Some(x))→{"Some":{"Some":x}}
 
-5. **Map serialization** (buffered three-tier strategy for universal key support):
+6. **Map serialization** (buffered three-tier strategy for universal key support):
    - Buffer all (key, value) pairs during serialization
    - At `end()`, analyze all keys and pick optimal representation:
+     - Empty map → `Array([])` (avoids implying key type)
      - All Text keys → `TextMap`
      - All Bytes keys → `BytesMap`
      - Mixed or other types → `Array` of `[key, value]` pairs
@@ -199,6 +227,7 @@ Remove current serialize.rs and deserialize.rs stubs.
 
 1. **Map key strategy**: Buffered three-tier approach
    - Buffer all pairs, then at end() analyze keys:
+   - Empty → Array([]) (avoids implying key type)
    - All Text keys → TextMap
    - All Bytes keys → BytesMap
    - Mixed or other types → Array of [key, value] pairs
