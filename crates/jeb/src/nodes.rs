@@ -4,6 +4,19 @@
         feature = "fs"
     )
 )]
+use crate::{
+    Panic,
+    model::{
+        Bytes,
+        channel,
+    },
+};
+#[cfg(
+    any(
+        feature = "stdio",
+        feature = "fs"
+    )
+)]
 use tokio::io::AsyncWriteExt;
 #[cfg(
     any(
@@ -30,20 +43,6 @@ use {
     },
     jeb_node::Item,
     std::borrow::Cow,
-};
-
-#[cfg(
-    any(
-        feature = "stdio",
-        feature = "fs"
-    )
-)]
-use crate::{
-    Panic,
-    model::{
-        Bytes,
-        channel,
-    },
 };
 
 pub trait NodeDef: Node + Send + Sync + 'static {
