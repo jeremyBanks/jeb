@@ -1,4 +1,4 @@
-use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
+use derive_more::{From, IsVariant, TryInto, TryUnwrap, Unwrap};
 use indexmap::IndexMap;
 
 use super::{bytes::Bytes, float::Float, text::Text};
@@ -11,7 +11,7 @@ use super::{bytes::Bytes, float::Float, text::Text};
     ),
     serde(untagged)
 )]
-#[derive(Debug, Clone, From, Default, TryUnwrap, IsVariant, Unwrap)]
+#[derive(Debug, Clone, From, Default, TryInto, IsVariant, TryUnwrap, Unwrap)]
 #[must_use]
 pub enum Value {
     Unsigned(u64),

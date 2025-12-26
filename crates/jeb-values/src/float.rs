@@ -13,7 +13,7 @@ use derive_more::{AsRef, Deref, Display, Into};
     derive(serde::Serialize),
     serde(transparent)
 )]
-#[derive(AsRef, Clone, Debug, Default, Deref, Copy, Display, Into)]
+#[derive(AsRef, Clone, Copy, Debug, Default, Deref, Display, Into)]
 #[repr(transparent)]
 #[must_use]
 pub struct Float(pub(crate) f64);

@@ -1,14 +1,13 @@
 use std::marker::PhantomData;
 
 use derive_more::{Deref, DerefMut};
-use jeb_values::Item;
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 
-use crate::{channel::Receiver, node_types::TaskHandle};
+use crate::{Item, channel::Receiver, node_types::TaskHandle};
 
 
 
-#[derive(Copy, Clone, Deref, DerefMut)]
+#[derive(Clone, Copy, Deref, DerefMut)]
 pub struct SinkNode<T = Result<Item, &'static str>, F = fn(Receiver<T>) -> TaskHandle>
 where
     F: FnOnce(Receiver<T>) -> TaskHandle,

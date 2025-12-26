@@ -26,6 +26,8 @@
     dead_code
 )]
 #![doc = include_str!("../README.md")]
+#![doc = ::document_features::document_features!()]
+
 // cSpell:ignoreRegExp b"(\\?.){5}"
 
 pub use jeb_common::Panic;

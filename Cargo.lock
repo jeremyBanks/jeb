@@ -27,6 +27,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-stream"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b5a71a6f37880a80d1d7f19efd781e4b5de42c88f0722cc13bcb6cc2cfe8476"
+dependencies = [
+ "async-stream-impl",
+ "futures-core",
+ "pin-project-lite",
+]
+
+[[package]]
+name = "async-stream-impl"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7c24de15d275a1ecfd47a380fb4d5ec9bfe0933f309ed5e705b775596a3574d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "backtrace"
 version = "0.3.76"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -116,6 +138,15 @@ dependencies = [
  "rustc_version",
  "syn",
  "unicode-xid",
+]
+
+[[package]]
+name = "document-features"
+version = "0.2.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4b8a88685455ed29a21542a33abd9cb6510b6b129abadabdcef0f4c55bc8f61"
+dependencies = [
+ "litrs",
 ]
 
 [[package]]
@@ -294,12 +325,14 @@ version = "0.0.0-dev-2025-12-26.6614"
 dependencies = [
  "color-eyre",
  "derive_more",
+ "document-features",
  "dotenv",
  "futures",
  "getset",
  "ignorable",
  "indexmap",
  "jeb-common",
+ "jeb-node",
  "jeb-values",
  "js-sys",
  "owo-colors",
@@ -321,6 +354,7 @@ name = "jeb-common"
 version = "0.0.0-dev-2025-12-26.6614"
 dependencies = [
  "derive_more",
+ "document-features",
  "indexmap",
  "wasm-bindgen",
 ]
@@ -329,10 +363,15 @@ dependencies = [
 name = "jeb-node"
 version = "0.0.0-dev-2025-12-26.6614"
 dependencies = [
+ "async-stream",
+ "cfg-if",
  "derive_more",
+ "document-features",
+ "futures",
  "jeb-common",
  "jeb-values",
  "macro_rules_attribute",
+ "serde",
  "static_assertions",
  "tokio",
  "tokio-stream",
@@ -345,6 +384,7 @@ name = "jeb-values"
 version = "0.0.0-dev-2025-12-26.6614"
 dependencies = [
  "derive_more",
+ "document-features",
  "indexmap",
  "serde",
  "wasm-bindgen",
@@ -380,6 +420,12 @@ name = "libc"
 version = "0.2.178"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37c93d8daa9d8a012fd8ab92f088405fb202ea0b6ab73ee2482ae66af4f42091"
+
+[[package]]
+name = "litrs"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11d3d7f243d5c5a8b9bb5d6dd2b1602c0cb0b9db1621bafc7ed66e35ff9fe092"
 
 [[package]]
 name = "log"

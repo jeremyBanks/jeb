@@ -4,7 +4,7 @@ use crate::{Receiver, SinkNode, TaskHandle, write_sink};
 
 pub fn write_path<P>(
     path: P,
-) -> SinkNode<jeb_values::Item, impl FnOnce(Receiver<jeb_values::Item>) -> TaskHandle>
+) -> SinkNode<crate::Item, impl FnOnce(Receiver<crate::Item>) -> TaskHandle>
 where
     P: AsRef<Path> + Send + 'static,
 {

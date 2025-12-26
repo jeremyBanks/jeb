@@ -1,4 +1,4 @@
-use jeb_values::Item;
+use crate::Item;
 
 pub struct Sender<T = Result<Item, &'static str>> {
     sender: tokio::sync::mpsc::Sender<T>,

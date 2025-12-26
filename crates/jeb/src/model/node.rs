@@ -1,8 +1,9 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
+use jeb_node::Item;
 use serde::{Deserialize, Serialize};
 use tokio::task::JoinHandle;
 
-use super::{Bytes, Item, Text, Value};
+use super::{Bytes, Text, Value};
 use crate::Panic;
 
 pub trait Node {

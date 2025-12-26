@@ -1,6 +1,8 @@
 use core::hash::Hash;
 
-use derive_more::{AsMut, AsRef, Deref, DerefMut, Display, From, Index, Into};
+use derive_more::{
+    AsMut, AsRef, Deref, DerefMut, Display, From, Index, IndexMut, Into, IntoIterator,
+};
 
 use super::bytes::Bytes;
 
@@ -30,6 +32,7 @@ use super::bytes::Bytes;
     From,
     Hash,
     Index,
+    IndexMut,
     Into,
     Ord,
     PartialEq,
@@ -38,6 +41,12 @@ use super::bytes::Bytes;
 #[repr(transparent)]
 #[must_use]
 pub struct Text(pub(crate) String);
+
+impl From<&str> for Text {
+    fn from(s: &str) -> Self {
+        Text(s.to_string())
+    }
+}
 
 impl TryFrom<Bytes> for Text {
     type Error = core::str::Utf8Error;

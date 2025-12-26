@@ -56,6 +56,7 @@ tokio-util = { version = "0.7.17", features = ["codec", "io"] }
 tracing = "0.1.43"
 
 jeb-values = { workspace = true, features = ["serde"] }
+jeb-node = { workspace = true }
 jeb-common = { workspace = true }
 
 color-eyre = { version = "0.6.5", optional = true }
@@ -66,3 +67,4 @@ tracing-subscriber = { version = "0.3.22", optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true }
 ignorable = "0.1.2"
+document-features = "0.2.12"

@@ -2,8 +2,11 @@
 #![allow(dead_code)]
 
 mod channel;
+mod item;
 mod node_types;
 mod nodes;
 
-use channel::*;
+pub use channel::*;
+pub use item::*;
 use node_types::*;
+pub use nodes::*;

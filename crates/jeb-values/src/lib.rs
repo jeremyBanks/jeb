@@ -8,16 +8,26 @@
 //! binary byte strings, and order-preserving maps with binary byte string keys
 //! and arbitrary values.
 //!
-//! Item is a top-level enum which may contain Text, Binary, or an arbitrary
-//! Value.
+//! These types support serde, but they also can be used as an in-memory serde
+//! serialization format (similar to `serde_json::Value`, but with more direct
+//! support for more of serde's JSON model) for interop with other types.
 //!
-//! This crate just contains the type definitions, optional serde annotations,
-//! and a bunch of helper functions for converting between different runtime
-//! types. This doesn't define any serialization scheme or anything like that.
+//! This crate does _not_ define a text or binary representation for this data.
+#![doc = ::document_features::document_features!()]
+
 mod bytes;
 mod float;
-mod item;
 mod text;
 mod value;
 
-pub use self::{bytes::Bytes, float::Float, item::Item, text::Text, value::Value};
+pub use self::{bytes::Bytes, float::Float, text::Text, value::Value};
+
+#[cfg(feature = "serde")]
+mod deserialize;
+#[cfg(feature = "serde")]
+pub use self::deserialize::*;
+
+#[cfg(feature = "serde")]
+mod serialize;
+#[cfg(feature = "serde")]
+pub use self::serialize::*;

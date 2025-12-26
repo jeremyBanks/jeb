@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use jeb_node::Item;
 #[cfg(
     any(
         feature = "stdio",
@@ -31,7 +32,7 @@ use crate::model::{Node, Receiver, Task};
 )]
 use crate::{
     Panic,
-    model::{Bytes, Item, channel},
+    model::{Bytes, channel},
 };
 
 pub trait NodeDef: Node + Send + Sync + 'static {

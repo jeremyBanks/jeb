@@ -22,6 +22,7 @@ panic = "abort"
 jeb = { path = "crates/jeb", version = "0.0.0-dev-2025-12-26.6614" }
 jeb-common = { path = "crates/jeb-common", version = "0.0.0-dev-2025-12-26.6614" }
 jeb-values = { path = "crates/jeb-values", version = "0.0.0-dev-2025-12-26.6614" }
+jeb-node = { path = "crates/jeb-node", version = "0.0.0-dev-2025-12-26.6614" }
 
 wasm-bindgen = "0.2.105"
 web-sys = "0.3.82"

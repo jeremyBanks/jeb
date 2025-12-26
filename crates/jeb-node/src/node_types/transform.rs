@@ -1,8 +1,7 @@
 use std::marker::PhantomData;
 
-use jeb_values::Item;
-
 use crate::{
+    Item,
     channel::{Receiver, Sender, channel},
     node_types::TaskHandle,
 };
