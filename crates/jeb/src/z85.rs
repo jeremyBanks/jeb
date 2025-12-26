@@ -239,10 +239,7 @@ pub const fn decoded_z85_length(digit_length: usize) -> usize {
     full_block_bytes + remaining_block_bytes
 }
 
-#[cfg_attr(
-    feature = "wasm",
-    wasm_bindgen::prelude::wasm_bindgen
-)]
+#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
 #[must_use]
 pub fn encode_z85(bytes: &[u8]) -> Vec<u8> {
     let encoded_length = encoded_z85_length(bytes.len());
@@ -265,8 +262,7 @@ pub fn encode_z85(bytes: &[u8]) -> Vec<u8> {
     output
 }
 
-#[allow(dead_code)]
-pub fn decode_z85(encoded: &[u8]) -> Result<Vec<u8>, &'static str> {
+pub fn decode_z85(encoded: &[u8]) -> Result<Vec<u8>, crate::Panic> {
     // Filter out whitespace
     let encoded: Vec<u8> = encoded
         .iter()
@@ -279,45 +275,14 @@ pub fn decode_z85(encoded: &[u8]) -> Result<Vec<u8>, &'static str> {
 
     for digits in encoded.chunks(BLOCK_DIGITS_5) {
         let digit_length = digits.len();
+        let mut digit_block = [b'0'; BLOCK_DIGITS_5];
+        digit_block[..digit_length].copy_from_slice(digits);
 
-        if digit_length == BLOCK_DIGITS_5 {
-            // Full block - decode normally
-            let digit_block: [u8; BLOCK_DIGITS_5] = digits.try_into().unwrap();
-            let decoded_block = decode_z85_block(digit_block)?;
-            output.extend_from_slice(&decoded_block);
-        } else {
-            // Partial block - need special handling
-            //
-            // When encoding N bytes, we:
-            // 1. Zero-pad to 4 bytes: [b0, b1, ..., b(N-1), 0, 0, ...]
-            // 2. Encode as value = bytes_as_u32_be
-            // 3. Convert to 5 base-85 digits
-            // 4. Take first K digits (where K = BLOCK_DIGITS_BY_BYTES[N])
-            //
-            // To decode K digits back to N bytes:
-            // 1. Pad to 5 digits with '#' (digit value 84, maximum)
-            //    This is needed because encoding takes leading digits, so the
-            //    remaining digits could be any value 0-84. Using max rounds up
-            //    to the correct byte boundary.
-            // 2. Decode as full block
-            // 3. Take first N bytes
+        let decoded_length = BLOCK_BYTES_BY_DIGITS[digits.len()];
+        let decoded_block = decode_z85_block(digit_block)?;
+        let decoded = &decoded_block[..decoded_length];
 
-            // Validate digits before decoding
-            for &digit in digits {
-                let digit_value = Z85_LUT[digit as usize] as usize;
-                if digit_value >= BASE_85 {
-                    return Err("invalid Z85 digit".into());
-                }
-            }
-
-            // Pad with '#' (Z85 digit 84, the maximum value)
-            let mut digit_block = [b'#'; BLOCK_DIGITS_5];
-            digit_block[..digit_length].copy_from_slice(digits);
-
-            let decoded_block = decode_z85_block(digit_block)?;
-            let num_bytes = BLOCK_BYTES_BY_DIGITS[digit_length];
-            output.extend_from_slice(&decoded_block[..num_bytes]);
-        }
+        output.extend_from_slice(decoded);
     }
 
     debug_assert!(output.len() == decoded_length);
