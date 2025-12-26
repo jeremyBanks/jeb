@@ -1,4 +1,3 @@
-.beads
 *.local.*
 *.wasm
 /examples/self.sh

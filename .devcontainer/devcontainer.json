@@ -23,7 +23,8 @@
         "streetsidesoftware.code-spell-checker",
         "timonwong.shellcheck",
         "usernamehw.errorlens",
-        "vadimcn.vscode-lldb"
+        "vadimcn.vscode-lldb",
+        "Anthropic.claude-code"
       ]
     }
   }

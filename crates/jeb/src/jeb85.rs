@@ -91,48 +91,73 @@ fn would_create_ambiguity(output: &[u8]) -> bool {
         return false;
     }
 
-    // Scan backwards to find the last segment boundary
-    // Segment boundaries are: _, ~, or |
-    let mut i = output.len();
-    while i > 0 {
-        i -= 1;
-        let c = output[i];
-        if c == RAW_PREFIX_4 || c == RAW_PREFIX_6 || c == RAW_PREFIX_VAR {
-            // Found a prefix - check what follows
-            i += 1; // Move past the prefix
-            if c == RAW_PREFIX_4 {
-                // After _, we have 4 raw bytes
-                i += 4;
-            } else if c == RAW_PREFIX_6 {
-                // After ~, we have 6 raw bytes
-                i += 6;
-            } else {
-                // After |, we have length-specified raw bytes
-                // Can't easily determine length, but this isn't a Z85 block anyway
-                return false;
+    // We need to find the last "segment" and check if it ends with a partial Z85 block.
+    // Segments are delimited by:
+    // - _ followed by 4 raw bytes
+    // - ~ followed by 6 raw bytes
+    // - N| followed by N raw bytes (where N is base-85 encoded)
+    //
+    // Strategy: scan forward through the output to find segment boundaries,
+    // then check if the final segment is a partial Z85 block.
+
+    let mut pos = 0;
+    let len = output.len();
+
+    while pos < len {
+        let b = output[pos];
+
+        if b == RAW_PREFIX_4 {
+            // _ followed by 4 raw bytes
+            pos += 1 + 4;
+        } else if b == RAW_PREFIX_6 {
+            // ~ followed by 6 raw bytes
+            pos += 1 + 6;
+        } else if is_z85_digit(b) {
+            // Could be Z85 data or a length prefix
+            // Count consecutive Z85 digits
+            let start = pos;
+            while pos < len && is_z85_digit(output[pos]) {
+                pos += 1;
             }
 
-            // Now check if there are Z85 digits after this
-            let remaining = output.len() - i;
-            // Z85 blocks are 5 digits. If remaining is 1-4, it's a partial block
-            return remaining > 0 && remaining < 5 && output[i..].iter().all(|&b| is_z85_digit(b));
+            // Check if followed by |
+            if pos < len && output[pos] == RAW_PREFIX_VAR {
+                // This was a length prefix, decode it
+                let length_digits = &output[start..pos];
+                if let Ok(raw_len) = decode_length_from_digits(length_digits) {
+                    pos += 1; // skip |
+                    pos += raw_len; // skip raw bytes
+                } else {
+                    // Invalid length, treat rest as Z85
+                    break;
+                }
+            } else {
+                // These Z85 digits are actual Z85 data, we've reached the end
+                // Check if this is a partial block (1-4 digits)
+                let z85_len = pos - start;
+                return z85_len > 0 && z85_len < BLOCK_DIGITS_5;
+            }
+        } else {
+            // Unexpected byte, shouldn't happen in valid jeb85 output
+            break;
         }
     }
 
-    // No prefix found - the entire output might be Z85
-    // Check if it's a partial block (length not divisible by 5)
-    let len = output.len();
-    if len == 0 {
-        return false;
-    }
-
-    // If all characters are Z85 digits and length % 5 != 0, it's a partial block
-    if output.iter().all(|&b| is_z85_digit(b)) {
-        let z85_block_remainder = len % 5;
-        return z85_block_remainder != 0;
-    }
-
     false
+}
+
+/// Decode a length from Z85 digits (helper for would_create_ambiguity).
+fn decode_length_from_digits(digits: &[u8]) -> Result<usize, ()> {
+    let mut value: usize = 0;
+    for &digit in digits {
+        let digit_value = Z85_LUT[digit as usize];
+        if digit_value >= BASE_85 as u8 {
+            return Err(());
+        }
+        value = value.checked_mul(BASE_85).ok_or(())?;
+        value = value.checked_add(digit_value as usize).ok_or(())?;
+    }
+    Ok(value)
 }
 
 /// Emit a raw-friendly region using the best encoding.
@@ -188,16 +213,11 @@ fn emit_raw_region_inner(output: &mut Vec<u8>, bytes: &[u8], avoid_length_prefix
                 // 8+ bytes: normally use length-prefixed encoding
                 // But if we need to avoid length prefix (ambiguity), use fixed prefixes
                 if avoid_length_prefix {
-                    // Use fixed prefixes: encode as 6 bytes at a time
-                    if remaining >= 6 {
-                        output.push(RAW_PREFIX_6);
-                        output.extend_from_slice(&bytes[pos..pos + 6]);
-                        pos += 6;
-                    } else {
-                        // Shouldn't happen, but handle gracefully
-                        emit_z85(output, &bytes[pos..]);
-                        break;
-                    }
+                    // Use _ prefix (4 bytes at a time) to avoid creating trailing Z85
+                    // that could cause ambiguity with the next region
+                    output.push(RAW_PREFIX_4);
+                    output.extend_from_slice(&bytes[pos..pos + 4]);
+                    pos += 4;
                 } else {
                     let chunk_size = optimal_raw_chunk_size(remaining, pos);
                     emit_length_prefixed_raw(output, &bytes[pos..pos + chunk_size]);
@@ -886,11 +906,10 @@ mod tests {
 
     #[test]
     fn test_decode_length_overflow() {
-        // Length that would overflow - not critical since we check bounds
-        // Just verify it doesn't panic
+        // Length that would overflow - "#####" is an invalid Z85 block (overflows u32)
+        // The decode_jeb85 function returns an error for this case
         let result = decode_jeb85(b"#####|abc");
-        // Either succeeds (if length is small enough) or fails gracefully
-        let _ = result;
+        assert!(result.is_err(), "should fail on invalid Z85 block");
     }
 
     #[test]

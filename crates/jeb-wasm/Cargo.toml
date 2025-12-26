@@ -1,7 +1,7 @@
 [package]
 name = "jeb-wasm"
-publish = false
-description = "jeb/wasm"
+publish = true
+description = "(part of https://crates.io/crates/jeb)"
 keywords = []
 categories = []
 edition.workspace = true
