@@ -8,56 +8,56 @@ use crate::{Receiver, Sender, channel::channel};
 
 type ItemResult<T = Item> = Result<T, Item>;
 
-macro_rules! node {
-    {
-        $(
-            $( #[$attr:meta] )*
-            $pub:vis
-            $(async fn $async_name:ident)?
-            $(fn $name:ident)?
-            (
-                input: $input_ty:ty,
-                output: $output_ty:ty
-                $(, $rest_ident:ident: $rest_ty:ty)*
-            )
-            $(-> $return:ty)?
-            $body:block
-        )+
-    } => {
-        $(
-            $( #[$attr] )*
-            $pub
-            $(async fn $async_name)?
-            $(fn $name)?
-            (
-                input: $input_ty,
-                output: $output_ty
-                $(, $rest_ident: $rest_ty)*
-            )
-            $(-> $return)?
-            $body
+// macro_rules! node {
+//     {
+//         $(
+//             $( #[$attr:meta] )*
+//             $pub:vis
+//             $(async fn $async_name:ident)?
+//             $(fn $name:ident)?
+//             (
+//                 input: $input_ty:ty,
+//                 output: $output_ty:ty
+//                 $(, $rest_ident:ident: $rest_ty:ty)*
+//             )
+//             $(-> $return:ty)?
+//             $body:block
+//         )+
+//     } => {
+//         $(
+//             $( #[$attr] )*
+//             $pub
+//             $(async fn $async_name)?
+//             $(fn $name)?
+//             (
+//                 input: $input_ty,
+//                 output: $output_ty
+//                 $(, $rest_ident: $rest_ty)*
+//             )
+//             $(-> $return)?
+//             $body
 
-            // mod $($name)? $($async_name)? {
-            //     use super::*;
+//             // mod $($name)? $($async_name)? {
+//             //     use super::*;
 
-            //     pub fn spawn(
-            //         input: $input_ty,
-            //         $( $rest_ident: $rest_ty ),*
-            //     ) -> $output_ty {
-            //         let (sender, receiver) = $crate::channel::<$output_ty>();
-            //         tokio::spawn(
-            //             super::$($name)?$($async_name)?(
-            //                 input,
-            //                 sender,
-            //                 $( $rest_ident ),*
-            //             )
-            //         );
-            //         receiver
-            //     }
-            // }
-        )+
-    }
-}
+//             //     pub fn spawn(
+//             //         input: $input_ty,
+//             //         $( $rest_ident: $rest_ty ),*
+//             //     ) -> $output_ty {
+//             //         let (sender, receiver) = $crate::channel::<$output_ty>();
+//             //         tokio::spawn(
+//             //             super::$($name)?$($async_name)?(
+//             //                 input,
+//             //                 sender,
+//             //                 $( $rest_ident ),*
+//             //             )
+//             //         );
+//             //         receiver
+//             //     }
+//             // }
+//         )+
+//     }
+// }
 
 use node;
 
