@@ -1,13 +1,20 @@
+use derive_more::{Deref, DerefMut};
 use jeb_values::Item;
 
-pub type Sender = tokio::sync::mpsc::Sender<Item>;
-pub type Receiver = tokio_stream::wrappers::ReceiverStream<Item>;
+#[derive(Deref, DerefMut)]
+pub struct Input<T = Item> {
+    sender: tokio::sync::mpsc::Sender<T>,
+}
+
+pub struct Output<T = Item> {
+    receiver: tokio::sync::mpsc::Receiver<T>,
+}
+
+pub type Task = tokio::task::JoinHandle<()>;
 
 #[must_use]
-pub fn channel() -> (Sender, Receiver) {
+pub fn channel<T>() -> (Input<T>, Output<T>) {
     let (sender, receiver) = tokio::sync::mpsc::channel(1);
 
-    let receiver = tokio_stream::wrappers::ReceiverStream::new(receiver);
-
-    (sender, receiver)
+    (Input { sender }, Output { receiver })
 }

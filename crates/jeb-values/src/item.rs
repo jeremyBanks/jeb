@@ -1,11 +1,5 @@
-use core::hash::Hash;
+use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 
-use derive_more::{
-    AsMut, AsRef, Deref, DerefMut, Display, From, Index, Into, IsVariant, TryUnwrap, Unwrap,
-};
-
-
-#[derive(Debug, Clone, From, TryUnwrap, IsVariant, Unwrap)]
 #[cfg_attr(
     feature = "serde",
     derive(
@@ -14,6 +8,7 @@ use derive_more::{
     ),
     serde(untagged)
 )]
+#[derive(Debug, Clone, From, TryUnwrap, IsVariant, Unwrap)]
 #[must_use]
 pub enum Item {
     Bytes(crate::Bytes),

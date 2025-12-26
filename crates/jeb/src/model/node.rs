@@ -2,7 +2,7 @@ use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 use serde::{Deserialize, Serialize};
 use tokio::task::JoinHandle;
 
-use super::{Bytes, Text, Value};
+use super::{Bytes, Item, Text, Value};
 use crate::Panic;
 
 pub trait Node {
@@ -22,21 +22,4 @@ pub fn channel() -> (Sender, Receiver) {
     let receiver = tokio_stream::wrappers::ReceiverStream::new(receiver);
 
     (sender, receiver)
-}
-
-
-
-#[derive(Debug, Clone, From, Serialize, Deserialize, TryUnwrap, IsVariant, Unwrap)]
-#[serde(untagged)]
-#[must_use]
-pub enum Item {
-    Bytes(Bytes),
-    Text(Text),
-    Value(Value),
-}
-
-impl Default for Item {
-    fn default() -> Self {
-        Item::Bytes(Bytes::default())
-    }
 }
