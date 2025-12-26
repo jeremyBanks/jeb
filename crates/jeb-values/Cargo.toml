@@ -19,4 +19,4 @@ serde = ["indexmap/serde", "serde/derive"]
 derive_more = { version = "2.0.1", features = ["full"] }
 indexmap = { version = "2.0" }
 serde = { version = "1.0", optional = true }
-wasm-bindgen = { version = "0.2.105", optional = true }
+wasm-bindgen = { workspace = true, optional = true }

@@ -5,8 +5,6 @@ use tokio::task::JoinHandle;
 use super::{Bytes, Text, Value};
 use crate::Panic;
 
-
-
 pub trait Node {
     fn spawn(&self, stack: Vec<Receiver>) -> (Vec<Receiver>, Task);
 }

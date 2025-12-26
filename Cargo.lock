@@ -316,6 +316,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "jeb-channels"
+version = "0.0.0-dev-2025-12-25.6200"
+dependencies = [
+ "jeb-values",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "jeb-values"
 version = "0.0.0-dev-2025-12-25.6200"
 dependencies = [

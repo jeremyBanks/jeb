@@ -17,3 +17,7 @@ codegen-units = 1
 strip = true
 split-debuginfo = "packed"
 panic = "abort"
+
+[workspace.dependencies]
+wasm-bindgen = "0.2.105"
+web-sys = "0.3.82"
