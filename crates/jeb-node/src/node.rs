@@ -4,10 +4,15 @@ use std::marker::PhantomData;
 
 use derive_more::{Deref, DerefMut};
 use jeb_values::{Bytes, Item};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use crate::{Receiver, Sender, channel};
 
 type TaskHandle = tokio::task::JoinHandle<()>;
+
+
+trait Node: Sized {
+    fn stack_spawn(self, stack: &mut Vec<Receiver>) -> Result<(), &'static str>;
+}
 
 #[derive(Copy, Clone, Deref, DerefMut)]
 pub struct SourceNode<T = Result<Item, &'static str>, F = fn(Sender<T>) -> TaskHandle  >
@@ -108,13 +113,16 @@ where
     TransformNode::new(move |receiver, sender| tokio::spawn(f(receiver, sender)))
 }
 
-pub fn stdin() -> SourceNode<Result<Item, &'static str>, impl FnOnce(Sender<Result<Item, &'static str>>) -> TaskHandle> {
-    source(|output| async move {
-        let mut stdin = tokio::io::stdin();
+pub fn read_source<R>(reader: R) -> SourceNode<Result<Item, &'static str>, impl FnOnce(Sender<Result<Item, &'static str>>) -> TaskHandle>
+where
+    R: AsyncRead + Unpin + Send + 'static,
+{
+    source(move |output| async move {
+        let mut reader = reader;
         let mut buffer = [0u8; 65_536];
 
         loop {
-            match stdin.read(&mut buffer).await {
+            match reader.read(&mut buffer).await {
                 Ok(0) => break,
                 Ok(n) => {
                     let bytes = Bytes::from(&buffer[..n]);
@@ -123,58 +131,116 @@ pub fn stdin() -> SourceNode<Result<Item, &'static str>, impl FnOnce(Sender<Resu
                     }
                 }
                 Err(_err) => {
-                    let _ = output.send(Err("Failed to read from stdin")).await;
+                    let _ = output.send(Err("Failed to read")).await;
                     break;
                 }
             }
         }
     })
+}
+
+pub fn write_sink<W>(writer: W) -> SinkNode<Result<Item, &'static str>, impl FnOnce(Receiver<Result<Item, &'static str>>) -> TaskHandle>
+where
+    W: AsyncWrite + Unpin + Send + 'static,
+{
+    sink(move |mut input| async move {
+        let mut writer = writer;
+
+        while let Some(item) = input.recv().await {
+            match item {
+                Ok(Item::Bytes(bytes)) => {
+                    if writer.write_all(&bytes).await.is_err() {
+                        break;
+                    }
+                }
+                Ok(_) => {
+                    // Ignore non-bytes items
+                }
+                Err(_err) => {
+                    break;
+                }
+            }
+        }
+    })
+}
+
+
+impl<T, E: std::fmt::Debug> Receiver<Result<T, E>> where E: Send + 'static, T: Send + 'static {
+    /// Takes a stream of Result<T, E> and splits it into two separate streams,
+    /// one for the Ok values and one for the Err values.
+    pub fn out_and_err(self) -> (Receiver<T>, Receiver<E>) {
+        let (ok_sender, ok_receiver) = channel::<T>();
+        let (err_sender, err_receiver) = channel::<E>();
+
+        tokio::spawn(async move {
+            let mut receiver = self;
+            while let Some(item) = receiver.recv().await {
+                match item {
+                    Ok(ok) => {
+                        if ok_sender.send(ok).await.is_err() {
+                            break;
+                        }
+                    }
+                    Err(err) => {
+                        if err_sender.send(err).await.is_err() {
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+
+        (ok_receiver, err_receiver)
+    }
+
+    /// Takes a stream of Result<T, E> and closes after the first Err.
+    pub fn fail_fast(self) -> Receiver<T> {
+        let (ok_sender, ok_receiver) = channel::<T>();
+
+        tokio::spawn(async move {
+            let mut receiver = self;
+            while let Some(item) = receiver.recv().await {
+                match item {
+                    Ok(ok) => {
+                        if ok_sender.send(ok).await.is_err() {
+                            break;
+                        }
+                    }
+                    Err(_err) => {
+                        break;
+                    }
+                }
+            }
+        });
+
+        ok_receiver
+    }
+
+    /// Takes a stream of Result<T, E> and unwraps the Ok values, panicking on Err.
+    pub fn unwrapping(self) -> Receiver<T> {
+        let (ok_sender, ok_receiver) = channel::<T>();
+
+        tokio::spawn(async move {
+            let mut receiver = self;
+            while let Some(item) = receiver.recv().await {
+                ok_sender.send(item.unwrap()).await.unwrap()
+            }
+        });
+
+        ok_receiver
+    }
+}
+
+pub fn stdin() -> SourceNode<Result<Item, &'static str>, impl FnOnce(Sender<Result<Item, &'static str>>) -> TaskHandle> {
+    read_source(tokio::io::stdin())
 }
 
 pub fn stdout() -> SinkNode<Result<Item, &'static str>, impl FnOnce(Receiver<Result<Item, &'static str>>) -> TaskHandle> {
-    sink(|mut input| async move {
-        let mut stdout = tokio::io::stdout();
-
-        while let Some(item) = input.recv().await {
-            match item {
-                Ok(Item::Bytes(bytes)) => {
-                    if stdout.write_all(&bytes).await.is_err() {
-                        break;
-                    }
-                }
-                Ok(_) => {
-                    // Ignore non-bytes items
-                }
-                Err(_err) => {
-                    // Handle error if needed
-                    break;
-                }
-            }
-        }
-    })
+    write_sink(tokio::io::stdout())
 }
 
 pub fn stderr() -> SinkNode<Result<Item, &'static str>, impl FnOnce(Receiver<Result<Item, &'static str>>) -> TaskHandle> {
-    sink(|mut input| async move {
-        let mut stderr = tokio::io::stderr();
-
-        while let Some(item) = input.recv().await {
-            match item {
-                Ok(Item::Bytes(bytes)) => {
-                    if stderr.write_all(&bytes).await.is_err() {
-                        break;
-                    }
-                }
-                Ok(_) => {
-                    // Ignore non-bytes items
-                }
-                Err(_err) => {
-                    // Handle error if needed
-                    break;
-                }
-            }
-        }
-    })
+    write_sink(tokio::io::stderr())
 }
 
 // async fn example() {

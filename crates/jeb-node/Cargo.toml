@@ -12,9 +12,9 @@ version.workspace = true
 
 [features]
 default = ["wasm", "stdio", "fs", "json"]
-fs = []
+fs = ["tokio/fs"]
 json = []
-stdio = []
+stdio = ["tokio/io-std"]
 wasm = ["dep:wasm-bindgen"]
 
 [dependencies]

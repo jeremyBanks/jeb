@@ -11,7 +11,6 @@ impl<T> Sender<T> {
     }
 }
 
-#[derive(Deref, DerefMut)]
 pub struct Receiver<T = Item> {
     receiver: tokio::sync::mpsc::Receiver<T>,
 }
