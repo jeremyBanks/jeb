@@ -327,3 +327,19 @@ jobs:
           files: |
             jeb-*.tar.gz
             jeb-*.tar.gz.sig
+
+      - name: Verify installation with cargo-binstall
+        run: |
+          # Install cargo-binstall
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
+          # Wait a moment for crates.io to propagate
+          sleep 30
+
+          # Install jeb using binstall (will verify signatures automatically)
+          cargo binstall --no-confirm jeb@${{ needs.prepare.outputs.version }}
+
+          # Verify it works
+          jeb --help
+
+          echo "✓ cargo-binstall verification successful!"
