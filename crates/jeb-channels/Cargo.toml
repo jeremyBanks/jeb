@@ -1,0 +1,23 @@
+[package]
+name = "jeb-channels"
+publish = true
+description = "supporting crate for https://crates.io/crates/jeb"
+keywords = []
+categories = []
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[features]
+default = ["wasm"]
+wasm = ["dep:wasm-bindgen"]
+
+[dependencies]
+jeb-values = { path = "../jeb-values" }
+
+tokio = { version = "1.0", features = ["rt", "macros", "sync", "io-util"] }
+tokio-stream = "0.1"
+tokio-util = { version = "0.7.17", features = ["codec", "io"] }
+wasm-bindgen = { workspace = true, optional = true }
