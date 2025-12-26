@@ -1,7 +1,15 @@
 use crate::{
-    ASCII_INLINE_TEXT_LUT, Z85, div_exact, pow, usize_eq,
+    ASCII_INLINE_TEXT_LUT,
+    Z85,
+    div_exact,
+    pow,
+    usize_eq,
     z85::{
-        BASE_85, BLOCK_BYTES_4, BLOCK_DIGITS_5, BLOCK_DIGITS_BY_BYTES, encode_z85_block,
+        BASE_85,
+        BLOCK_BYTES_4,
+        BLOCK_DIGITS_5,
+        BLOCK_DIGITS_BY_BYTES,
+        encode_z85_block,
         encoded_z85_length,
     },
 };

@@ -1,6 +1,12 @@
-use std::path::Path;
-
-use crate::{Sender, SourceNode, TaskHandle, read_source};
+use {
+    crate::{
+        Sender,
+        SourceNode,
+        TaskHandle,
+        read_source,
+    },
+    std::path::Path,
+};
 
 pub fn read_path<P>(
     path: P,

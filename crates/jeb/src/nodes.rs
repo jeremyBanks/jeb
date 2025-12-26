@@ -1,6 +1,3 @@
-use std::borrow::Cow;
-
-use jeb_node::Item;
 #[cfg(
     any(
         feature = "stdio",
@@ -21,9 +18,20 @@ use tokio_stream::StreamExt;
         feature = "fs"
     )
 )]
-use tokio_util::codec::{BytesCodec, FramedRead};
+use tokio_util::codec::{
+    BytesCodec,
+    FramedRead,
+};
+use {
+    crate::model::{
+        Node,
+        Receiver,
+        Task,
+    },
+    jeb_node::Item,
+    std::borrow::Cow,
+};
 
-use crate::model::{Node, Receiver, Task};
 #[cfg(
     any(
         feature = "stdio",
@@ -32,7 +40,10 @@ use crate::model::{Node, Receiver, Task};
 )]
 use crate::{
     Panic,
-    model::{Bytes, channel},
+    model::{
+        Bytes,
+        channel,
+    },
 };
 
 pub trait NodeDef: Node + Send + Sync + 'static {

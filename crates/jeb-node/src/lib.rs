@@ -6,7 +6,9 @@ mod item;
 mod node_types;
 mod nodes;
 
-pub use channel::*;
-pub use item::*;
 use node_types::*;
-pub use nodes::*;
+pub use {
+    channel::*,
+    item::*,
+    nodes::*,
+};

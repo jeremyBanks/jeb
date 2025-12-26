@@ -1,6 +1,7 @@
-use serde::Serialize;
-
-use crate::Value;
+use {
+    crate::Value,
+    serde::Serialize,
+};
 
 pub fn to_value<T>(value: T) -> Result<Value, T>
 where

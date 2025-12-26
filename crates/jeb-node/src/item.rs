@@ -1,5 +1,18 @@
-use derive_more::{AsRef, From, IsVariant, TryInto, TryUnwrap, Unwrap};
-use jeb_values::{Bytes, Text, Value};
+use {
+    derive_more::{
+        AsRef,
+        From,
+        IsVariant,
+        TryInto,
+        TryUnwrap,
+        Unwrap,
+    },
+    jeb_values::{
+        Bytes,
+        Text,
+        Value,
+    },
+};
 
 #[cfg_attr(
     feature = "serde",

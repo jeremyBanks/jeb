@@ -1,4 +1,10 @@
-use crate::{Item, Sender, SourceNode, TaskHandle, iter_source};
+use crate::{
+    Item,
+    Sender,
+    SourceNode,
+    TaskHandle,
+    iter_source,
+};
 
 pub fn text_source<IntoTextIterator>(
     text: IntoTextIterator,

@@ -1,10 +1,23 @@
-use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use jeb_node::Item;
-use serde::{Deserialize, Serialize};
-use tokio::task::JoinHandle;
-
-use super::{Bytes, Text, Value};
-use crate::Panic;
+use {
+    super::{
+        Bytes,
+        Text,
+        Value,
+    },
+    crate::Panic,
+    derive_more::{
+        From,
+        IsVariant,
+        TryUnwrap,
+        Unwrap,
+    },
+    jeb_node::Item,
+    serde::{
+        Deserialize,
+        Serialize,
+    },
+    tokio::task::JoinHandle,
+};
 
 pub trait Node {
     fn spawn(&self, stack: Vec<Receiver>) -> (Vec<Receiver>, Task);

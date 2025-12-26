@@ -1,4 +1,10 @@
-use crate::{Item, Sender, SourceNode, TaskHandle, read_source};
+use crate::{
+    Item,
+    Sender,
+    SourceNode,
+    TaskHandle,
+    read_source,
+};
 
 pub fn stdin() -> SourceNode<
     Result<Item, &'static str>,

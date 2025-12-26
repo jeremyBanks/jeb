@@ -1,4 +1,11 @@
-use crate::{Item, Receiver, Sender, TaskHandle, TransformNode, transform};
+use crate::{
+    Item,
+    Receiver,
+    Sender,
+    TaskHandle,
+    TransformNode,
+    transform,
+};
 
 pub fn chunks(
     length: usize,

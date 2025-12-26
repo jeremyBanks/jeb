@@ -1,7 +1,18 @@
-use derive_more::{From, IsVariant, TryInto, TryUnwrap, Unwrap};
-use indexmap::IndexMap;
-
-use super::{bytes::Bytes, float::Float, text::Text};
+use {
+    super::{
+        bytes::Bytes,
+        float::Float,
+        text::Text,
+    },
+    derive_more::{
+        From,
+        IsVariant,
+        TryInto,
+        TryUnwrap,
+        Unwrap,
+    },
+    indexmap::IndexMap,
+};
 
 #[cfg_attr(
     feature = "serde",

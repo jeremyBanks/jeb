@@ -1,6 +1,12 @@
-use std::path::Path;
-
-use crate::{Receiver, SinkNode, TaskHandle, write_sink};
+use {
+    crate::{
+        Receiver,
+        SinkNode,
+        TaskHandle,
+        write_sink,
+    },
+    std::path::Path,
+};
 
 pub fn write_path<P>(
     path: P,

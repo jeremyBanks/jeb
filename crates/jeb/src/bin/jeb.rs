@@ -1,16 +1,23 @@
 #![cfg(feature = "bin")]
 
-use std::{
-    convert::Infallible,
-    io::{Read, Write},
-    mem::take,
-    sync::LazyLock,
+use {
+    jeb::{
+        Panic,
+        model::Bytes,
+    },
+    owo_colors::OwoColorize,
+    regex::Regex,
+    std::{
+        convert::Infallible,
+        io::{
+            Read,
+            Write,
+        },
+        mem::take,
+        sync::LazyLock,
+    },
+    tracing::debug,
 };
-
-use jeb::{Panic, model::Bytes};
-use owo_colors::OwoColorize;
-use regex::Regex;
-use tracing::debug;
 
 /// Pre-defined aliases that expand a single command into one or more commands.
 static ALIASES: &[(&str, &[&str])] = &[("to-jeb85-lines", &[

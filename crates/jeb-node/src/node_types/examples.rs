@@ -1,12 +1,21 @@
 #![allow(unused)]
 
-use async_stream::stream;
-use futures::{Stream, StreamExt};
-use jeb_values::Bytes;
-use macro_rules_attribute::apply;
-use tokio::task::JoinHandle;
-
-use crate::{Item, Receiver, Sender, channel::channel};
+use {
+    crate::{
+        Item,
+        Receiver,
+        Sender,
+        channel::channel,
+    },
+    async_stream::stream,
+    futures::{
+        Stream,
+        StreamExt,
+    },
+    jeb_values::Bytes,
+    macro_rules_attribute::apply,
+    tokio::task::JoinHandle,
+};
 
 type ItemResult<T = Item> = Result<T, Item>;
 

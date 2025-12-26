@@ -1,9 +1,14 @@
-use std::marker::PhantomData;
-
-use crate::{
-    Item,
-    channel::{Receiver, Sender, channel},
-    node_types::TaskHandle,
+use {
+    crate::{
+        Item,
+        channel::{
+            Receiver,
+            Sender,
+            channel,
+        },
+        node_types::TaskHandle,
+    },
+    std::marker::PhantomData,
 };
 
 

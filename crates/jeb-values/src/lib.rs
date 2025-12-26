@@ -6,7 +6,12 @@ mod float;
 mod text;
 mod value;
 
-pub use self::{bytes::Bytes, float::Float, text::Text, value::Value};
+pub use self::{
+    bytes::Bytes,
+    float::Float,
+    text::Text,
+    value::Value,
+};
 
 #[cfg(feature = "serde")]
 mod deserialize;

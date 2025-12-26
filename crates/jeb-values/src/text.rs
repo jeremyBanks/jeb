@@ -1,10 +1,18 @@
-use core::hash::Hash;
-
-use derive_more::{
-    AsMut, AsRef, Deref, DerefMut, Display, From, Index, IndexMut, Into, IntoIterator,
+use {
+    super::bytes::Bytes,
+    core::hash::Hash,
+    derive_more::{
+        AsMut,
+        AsRef,
+        Deref,
+        DerefMut,
+        Display,
+        From,
+        Index,
+        IndexMut,
+        Into,
+    },
 };
-
-use super::bytes::Bytes;
 
 
 #[cfg_attr(

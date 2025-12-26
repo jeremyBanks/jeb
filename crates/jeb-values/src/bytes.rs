@@ -1,8 +1,18 @@
-use core::hash::Hash;
-
-use derive_more::{AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut, Into, IntoIterator};
-
-use crate::text::Text;
+use {
+    crate::text::Text,
+    core::hash::Hash,
+    derive_more::{
+        AsMut,
+        AsRef,
+        Deref,
+        DerefMut,
+        From,
+        Index,
+        IndexMut,
+        Into,
+        IntoIterator,
+    },
+};
 
 #[cfg_attr(
     feature = "wasm",

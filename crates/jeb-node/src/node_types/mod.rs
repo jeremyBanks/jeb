@@ -7,14 +7,29 @@ mod sink;
 mod source;
 mod transform;
 
-use derive_more::{Deref, DerefMut};
-pub use examples::*;
-use jeb_values::Bytes;
-pub use sink::*;
-pub use source::*;
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
-pub use transform::*;
-
-use crate::{Receiver, Sender, channel};
+use {
+    crate::{
+        Receiver,
+        Sender,
+        channel,
+    },
+    derive_more::{
+        Deref,
+        DerefMut,
+    },
+    jeb_values::Bytes,
+    tokio::io::{
+        AsyncRead,
+        AsyncReadExt,
+        AsyncWrite,
+        AsyncWriteExt,
+    },
+};
+pub use {
+    examples::*,
+    sink::*,
+    source::*,
+    transform::*,
+};
 
 pub type TaskHandle = tokio::task::JoinHandle<()>;

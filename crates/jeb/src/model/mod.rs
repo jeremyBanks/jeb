@@ -1,8 +1,12 @@
 mod attempt;
 mod node;
 
-pub use jeb_values::*;
-
-pub use self::{attempt::*, node::*};
+pub use {
+    self::{
+        attempt::*,
+        node::*,
+    },
+    jeb_values::*,
+};
 
 // mod context;

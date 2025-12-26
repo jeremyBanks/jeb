@@ -387,6 +387,7 @@ dependencies = [
  "document-features",
  "indexmap",
  "serde",
+ "serde_json",
  "wasm-bindgen",
 ]
 

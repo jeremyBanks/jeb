@@ -1,4 +1,8 @@
-use crate::{Panic, Z85, Z85_LUT};
+use crate::{
+    Panic,
+    Z85,
+    Z85_LUT,
+};
 
 /// This encoding uses base 85 for binary data.
 pub const BASE_85: usize = 85;
