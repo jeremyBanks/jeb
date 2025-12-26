@@ -28,14 +28,15 @@
 #![doc = include_str!("../README.md")]
 // cSpell:ignoreRegExp b"(\\?.){5}"
 
+pub use jeb_common::Panic;
+
 
 pub mod byte_ranges;
 pub mod const_checked;
-pub mod errors;
 pub mod jeb85;
 pub mod model;
 pub mod nodes;
 pub mod shell_tokenizer;
 pub mod z85;
 
-pub use crate::{byte_ranges::*, const_checked::*, errors::*};
+pub use crate::{byte_ranges::*, const_checked::*};
