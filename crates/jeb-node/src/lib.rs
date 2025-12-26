@@ -1,30 +1,9 @@
 #![allow(clippy::type_complexity)]
+#![allow(dead_code)]
 
 mod channel;
 mod node_types;
+mod nodes;
 
-pub use channel::*;
-pub use node_types::*;
-
-pub mod nodes {
-    mod text;
-    pub use text::*;
-
-    mod bytes;
-    pub use bytes::*;
-
-    #[cfg(feature = "json")]
-    mod json;
-    #[cfg(feature = "json")]
-    pub use json::*;
-
-    #[cfg(feature = "stdio")]
-    mod stdio;
-    #[cfg(feature = "stdio")]
-    pub use stdio::*;
-
-    #[cfg(feature = "fs")]
-    mod fs;
-    #[cfg(feature = "fs")]
-    pub use fs::*;
-}
+use channel::*;
+use node_types::*;

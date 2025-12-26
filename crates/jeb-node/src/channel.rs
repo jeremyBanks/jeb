@@ -12,11 +12,17 @@ impl<T> Sender<T> {
 
 impl<T, E> Sender<Result<T, E>> {
     pub async fn push_value(&self, item: T) -> Result<(), T> {
-        self.sender.send(Ok(item)).await.map_err(|e| e.0.ok().expect("unreachable"))
+        self.sender
+            .send(Ok(item))
+            .await
+            .map_err(|e| e.0.ok().expect("unreachable"))
     }
 
     pub async fn push_error(&self, item: E) -> Result<(), E> {
-        self.sender.send(Err(item)).await.map_err(|e| e.0.err().expect("unreachable"))
+        self.sender
+            .send(Err(item))
+            .await
+            .map_err(|e| e.0.err().expect("unreachable"))
     }
 }
 
@@ -38,7 +44,11 @@ pub fn channel<T>() -> (Sender<T>, Receiver<T>) {
 }
 
 
-impl<T, E: std::fmt::Debug> Receiver<Result<T, E>> where E: Send + 'static, T: Send + 'static {
+impl<T, E: std::fmt::Debug> Receiver<Result<T, E>>
+where
+    E: Send + 'static,
+    T: Send + 'static,
+{
     /// Takes a stream of Result<T, E> and splits it into two separate streams,
     /// one for the Ok values and one for the Err values.
     pub fn out_and_err(self) -> (Receiver<T>, Receiver<E>) {
@@ -89,7 +99,8 @@ impl<T, E: std::fmt::Debug> Receiver<Result<T, E>> where E: Send + 'static, T: S
         ok_receiver
     }
 
-    /// Takes a stream of Result<T, E> and unwraps the Ok values, panicking on Err.
+    /// Takes a stream of Result<T, E> and unwraps the Ok values, panicking on
+    /// Err.
     pub fn unwrapping(self) -> Receiver<T> {
         let (ok_sender, ok_receiver) = channel::<T>();
 
