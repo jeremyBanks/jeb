@@ -512,6 +512,13 @@ mod tests {
     #[test]
     fn test_long_raw() {
         let input = b"The quick brown fox jumps over the lazy dog".to_vec();
+        let encoded = encode_jeb85(&input);
+        eprintln!("long_raw encoded: {:?}", String::from_utf8_lossy(&encoded));
+        // Key design goal: raw ASCII should be readable in the encoded output
+        assert!(
+            encoded.windows(5).any(|w| w == b"quick"),
+            "semitranslucent encoding should preserve readable ASCII"
+        );
         assert_eq!(roundtrip(&input), input);
     }
 

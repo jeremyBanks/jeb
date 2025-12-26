@@ -5,8 +5,6 @@ use jeb_values::Item;
 
 pub type Task = tokio::task::JoinHandle<()>;
 
-fn stdin
-
 #[derive(Deref, DerefMut)]
 pub struct Input<T = Item> {
     #[deref]
