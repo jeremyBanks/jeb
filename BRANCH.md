@@ -102,7 +102,16 @@ pub fn to_value<T: Serialize>(value: T) -> Result<Value, Error> {
    - `serialize_some(v)` → `Value::TextMap({"Some": to_value(v)})`
    - Fixes nested Option round-tripping: None→null, Some(None)→{"Some":null}, Some(Some(x))→{"Some":{"Some":x}}
 
-6. **Map serialization** (buffered three-tier strategy for universal key support):
+6. **Unit and newtype handling**:
+   - `serialize_unit` / `serialize_unit_struct` → `Value::Null` (name not needed for round-trip)
+   - `serialize_newtype_struct` → transparent (just the inner value)
+   - `serialize_newtype_variant` → `{"Variant": inner_value}`
+
+7. **is_human_readable**: Returns `true` (explicit)
+   - Affects how types like chrono, uuid, IpAddr serialize themselves
+   - Balances human-readability with efficiency; cheap win for debugging/inspection
+
+8. **Map serialization** (buffered three-tier strategy for universal key support):
    - Buffer all (key, value) pairs during serialization
    - At `end()`, analyze all keys and pick optimal representation:
      - Empty map → `Array([])` (avoids implying key type)
@@ -165,6 +174,7 @@ pub fn from_value<T: DeserializeOwned>(value: Value) -> Result<T, Error> {
 2. **Float deserialization** (accept both Float and raw bytes):
    - `deserialize_f32` accepts `Float` or `Bytes(len=4)`
    - `deserialize_f64` accepts `Float`, `Bytes(len=8)`, or `Bytes(len=4)` (promoted f32)
+   - Other byte lengths → type error (only 4/8/16 bytes have defined meanings)
 
 3. **Bytes deserialization** (native + compatibility):
    - Primary: `Value::Bytes` → `visit_byte_buf`
@@ -256,7 +266,11 @@ Remove current serialize.rs and deserialize.rs stubs.
 
 8. **Identifier**: Text or Unsigned (supports both string variant names and numeric indices)
 
-9. **Round-trip priority**: When target type is known, accept multiple Value representations
+9. **Unit/newtype handling**: Both unit and unit_struct → Null; newtype_struct → transparent
+
+10. **is_human_readable**: Always returns `true`
+
+11. **Round-trip priority**: When target type is known, accept multiple Value representations
    - Our serialization is unambiguous and lossless
    - Our deserialization accepts both our format AND serde_json format for compatibility
    - Enables 100% round-trip coverage of serde data model
