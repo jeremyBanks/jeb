@@ -1,7 +1,7 @@
 use crate::{Bytes, Float, Text, Value};
 
 // ============================================================================
-// Float From/TryFrom implementations
+// Float - TryFrom implementations
 // ============================================================================
 
 impl TryFrom<f64> for Float {
@@ -19,6 +19,10 @@ impl TryFrom<f32> for Float {
         Float::new(value.into()).ok_or(value)
     }
 }
+
+// ============================================================================
+// Float - From implementations
+// ============================================================================
 
 impl From<i32> for Float {
     fn from(value: i32) -> Self {
@@ -57,7 +61,7 @@ impl From<u8> for Float {
 }
 
 // ============================================================================
-// Value From/TryFrom implementations
+// Value - TryFrom implementations
 // ============================================================================
 
 impl TryFrom<f32> for Value {
@@ -91,6 +95,10 @@ impl TryFrom<i128> for Value {
         i64::try_from(value).map(Value::Signed).map_err(|_| value)
     }
 }
+
+// ============================================================================
+// Value - From implementations (primitives)
+// ============================================================================
 
 impl From<()> for Value {
     fn from((): ()) -> Self {
@@ -134,6 +142,10 @@ impl From<i8> for Value {
     }
 }
 
+// ============================================================================
+// Value - From implementations (strings)
+// ============================================================================
+
 impl From<String> for Value {
     fn from(value: String) -> Self {
         Value::Text(value.into())
@@ -145,6 +157,10 @@ impl From<&str> for Value {
         Value::Text(value.to_string().into())
     }
 }
+
+// ============================================================================
+// Value - From implementations (bytes)
+// ============================================================================
 
 impl From<Vec<u8>> for Value {
     fn from(value: Vec<u8>) -> Self {
@@ -170,17 +186,51 @@ impl<const N: usize> From<&[u8; N]> for Value {
     }
 }
 
-impl FromIterator<Value> for Value {
-    fn from_iter<T: IntoIterator<Item = Value>>(iter: T) -> Self {
-        Value::Array(iter.into_iter().collect())
-    }
-}
+// ============================================================================
+// Value - From implementations (arrays)
+// ============================================================================
 
 impl<const N: usize> From<[Value; N]> for Value {
     fn from(value: [Value; N]) -> Self {
         value.into_iter().collect()
     }
 }
+
+// ============================================================================
+// Value - FromIterator implementations (arrays)
+// ============================================================================
+
+impl FromIterator<Value> for Value {
+    fn from_iter<T: IntoIterator<Item = Value>>(iter: T) -> Self {
+        Value::Array(iter.into_iter().collect())
+    }
+}
+
+// ============================================================================
+// Value - From implementations (TextMap)
+// ============================================================================
+
+impl<const N: usize> From<[(Text, Value); N]> for Value {
+    fn from(value: [(Text, Value); N]) -> Self {
+        value.into_iter().collect()
+    }
+}
+
+impl<const N: usize> From<[(String, Value); N]> for Value {
+    fn from(value: [(String, Value); N]) -> Self {
+        value.into_iter().collect()
+    }
+}
+
+impl<const N: usize> From<[(&str, Value); N]> for Value {
+    fn from(value: [(&str, Value); N]) -> Self {
+        value.into_iter().collect()
+    }
+}
+
+// ============================================================================
+// Value - FromIterator implementations (TextMap)
+// ============================================================================
 
 impl FromIterator<(Text, Value)> for Value {
     fn from_iter<T: IntoIterator<Item = (Text, Value)>>(iter: T) -> Self {
@@ -204,41 +254,9 @@ impl<'a> FromIterator<(&'a str, Value)> for Value {
     }
 }
 
-impl<const N: usize> From<[(Text, Value); N]> for Value {
-    fn from(value: [(Text, Value); N]) -> Self {
-        value.into_iter().collect()
-    }
-}
-
-impl<const N: usize> From<[(String, Value); N]> for Value {
-    fn from(value: [(String, Value); N]) -> Self {
-        value.into_iter().collect()
-    }
-}
-
-impl<const N: usize> From<[(&str, Value); N]> for Value {
-    fn from(value: [(&str, Value); N]) -> Self {
-        value.into_iter().collect()
-    }
-}
-
-impl FromIterator<(Bytes, Value)> for Value {
-    fn from_iter<T: IntoIterator<Item = (Bytes, Value)>>(iter: T) -> Self {
-        Value::BytesMap(iter.into_iter().collect())
-    }
-}
-
-impl FromIterator<(Vec<u8>, Value)> for Value {
-    fn from_iter<T: IntoIterator<Item = (Vec<u8>, Value)>>(iter: T) -> Self {
-        Value::BytesMap(iter.into_iter().map(|(k, v)| (Bytes::from(k), v)).collect())
-    }
-}
-
-impl<'a> FromIterator<(&'a [u8], Value)> for Value {
-    fn from_iter<T: IntoIterator<Item = (&'a [u8], Value)>>(iter: T) -> Self {
-        Value::BytesMap(iter.into_iter().map(|(k, v)| (Bytes::from(k), v)).collect())
-    }
-}
+// ============================================================================
+// Value - From implementations (BytesMap)
+// ============================================================================
 
 impl<const N: usize> From<[(Bytes, Value); N]> for Value {
     fn from(value: [(Bytes, Value); N]) -> Self {
@@ -255,5 +273,27 @@ impl<const N: usize> From<[(Vec<u8>, Value); N]> for Value {
 impl<const N: usize> From<[(&[u8], Value); N]> for Value {
     fn from(value: [(&[u8], Value); N]) -> Self {
         value.into_iter().collect()
+    }
+}
+
+// ============================================================================
+// Value - FromIterator implementations (BytesMap)
+// ============================================================================
+
+impl FromIterator<(Bytes, Value)> for Value {
+    fn from_iter<T: IntoIterator<Item = (Bytes, Value)>>(iter: T) -> Self {
+        Value::BytesMap(iter.into_iter().collect())
+    }
+}
+
+impl FromIterator<(Vec<u8>, Value)> for Value {
+    fn from_iter<T: IntoIterator<Item = (Vec<u8>, Value)>>(iter: T) -> Self {
+        Value::BytesMap(iter.into_iter().map(|(k, v)| (Bytes::from(k), v)).collect())
+    }
+}
+
+impl<'a> FromIterator<(&'a [u8], Value)> for Value {
+    fn from_iter<T: IntoIterator<Item = (&'a [u8], Value)>>(iter: T) -> Self {
+        Value::BytesMap(iter.into_iter().map(|(k, v)| (Bytes::from(k), v)).collect())
     }
 }
