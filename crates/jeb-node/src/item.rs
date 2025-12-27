@@ -23,7 +23,9 @@ use {
     serde(untagged)
 )]
 #[must_use]
-#[derive(Clone, Debug, From, IsVariant, TryInto, TryUnwrap)]
+#[derive(
+    Clone, Debug, From, IsVariant, TryInto, TryUnwrap, Hash, Eq, PartialEq, PartialOrd, Ord,
+)]
 pub enum Item {
     Bytes(Bytes),
     Text(Text),
