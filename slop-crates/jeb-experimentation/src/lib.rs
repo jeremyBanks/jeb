@@ -1,5 +1,5 @@
 use {
-    futures::Stream,
+    futures::{stream::FusedStream, Stream},
     parking_lot::Mutex,
     std::{
         pin::Pin,
@@ -230,6 +230,15 @@ where
     }
 }
 
+impl<S, T, E> FusedStream for OkStream<S, T, E>
+where
+    S: Stream<Item = Result<T, E>>,
+{
+    fn is_terminated(&self) -> bool {
+        self.shared.lock().input.is_none()
+    }
+}
+
 impl<S, T, E> Stream for ErrStream<S, T, E>
 where
     S: Stream<Item = Result<T, E>>,
@@ -341,6 +350,15 @@ where
                 }
             },
         }
+    }
+}
+
+impl<S, T, E> FusedStream for ErrStream<S, T, E>
+where
+    S: Stream<Item = Result<T, E>>,
+{
+    fn is_terminated(&self) -> bool {
+        self.shared.lock().input.is_none()
     }
 }
 
