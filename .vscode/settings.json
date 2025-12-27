@@ -124,6 +124,7 @@
     "libjeb",
     "mergeoptions",
     "miri",
+    "newtype",
     "peekable",
     "pipefail",
     "pushd",
