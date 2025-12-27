@@ -72,29 +72,31 @@ impl core::hash::Hash for Value {
 impl Value {
     /// Total ordering by type complexity and value.
     ///
-    /// Order hierarchy:
-    /// 1. Null (least complex)
-    /// 2. Bool
-    /// 3. Numbers (compared numerically when possible, then by type: Unsigned < Signed < Float)
-    /// 4. Bytes
-    /// 5. Text
-    /// 6. Array
-    /// 7. BytesMap
-    /// 8. TextMap (most complex)
+    /// Order hierarchy (roughly aligned with JSON serialization lexicographic order):
+    /// 1. Bytes (will serialize as `"\b...`)
+    /// 2. Text (serializes as `"...`)
+    /// 3. Numbers (serializes as digits, compared numerically, then by type: Unsigned < Signed < Float)
+    /// 4. Array (serializes as `[...`)
+    /// 5. Bool(false) (serializes as `false`)
+    /// 6. Null (serializes as `null`)
+    /// 7. Bool(true) (serializes as `true`)
+    /// 8. BytesMap (serializes as `{"\b...`)
+    /// 9. TextMap (serializes as `{"...`)
     #[must_use]
     pub fn cmp_by_complexity(&self, other: &Self) -> core::cmp::Ordering {
         use core::cmp::Ordering;
 
-        // Helper to get type rank
+        // Helper to get type rank based on JSON serialization lexicographic order
         let type_rank = |v: &Value| match v {
-            Value::Null => 0,
-            Value::Bool(_) => 1,
-            Value::Unsigned(_) | Value::Signed(_) | Value::Float(_) => 2,
-            Value::Bytes(_) => 3,
-            Value::Text(_) => 4,
-            Value::Array(_) => 5,
-            Value::BytesMap(_) => 6,
-            Value::TextMap(_) => 7,
+            Value::Bytes(_) => 0,                // "\b
+            Value::Text(_) => 1,                 // "
+            Value::Unsigned(_) | Value::Signed(_) | Value::Float(_) => 2, // 0-9, -
+            Value::Array(_) => 3,                // [
+            Value::Bool(false) => 4,             // f
+            Value::Null => 5,                    // n
+            Value::Bool(true) => 6,              // t
+            Value::BytesMap(_) => 7,             // {"\b
+            Value::TextMap(_) => 8,              // {"
         };
 
         let self_rank = type_rank(self);
@@ -105,8 +107,8 @@ impl Value {
             Ordering::Equal => {
                 // Same rank, compare within type
                 match (self, other) {
-                    (Value::Null, Value::Null) => Ordering::Equal,
-                    (Value::Bool(a), Value::Bool(b)) => a.cmp(b),
+                    (Value::Bytes(a), Value::Bytes(b)) => a.cmp(b),
+                    (Value::Text(a), Value::Text(b)) => a.cmp(b),
 
                     // Numbers: try numeric comparison first, then fall back to type ordering
                     (Value::Unsigned(a), Value::Unsigned(b)) => a.cmp(b),
@@ -155,8 +157,6 @@ impl Value {
                         other.cmp_by_complexity(self).reverse()
                     }
 
-                    (Value::Bytes(a), Value::Bytes(b)) => a.cmp(b),
-                    (Value::Text(a), Value::Text(b)) => a.cmp(b),
                     (Value::Array(a), Value::Array(b)) => {
                         // Lexicographic comparison
                         for (a_item, b_item) in a.iter().zip(b.iter()) {
@@ -167,6 +167,8 @@ impl Value {
                         }
                         a.len().cmp(&b.len())
                     }
+                    (Value::Bool(a), Value::Bool(b)) => a.cmp(b),
+                    (Value::Null, Value::Null) => Ordering::Equal,
                     (Value::BytesMap(a), Value::BytesMap(b)) => {
                         // Lexicographic comparison by key-value pairs
                         for (a_item, b_item) in a.iter().zip(b.iter()) {

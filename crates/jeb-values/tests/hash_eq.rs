@@ -111,33 +111,49 @@ fn test_hash_consistency() {
 fn test_ordering_type_hierarchy() {
     use std::cmp::Ordering;
 
-    // Type hierarchy: Null < Bool < Number < Bytes < Text < Array < BytesMap < TextMap
-    assert_eq!(Value::Null.cmp(&Value::from(true)), Ordering::Less);
-    assert_eq!(Value::from(true).cmp(&Value::from(42u64)), Ordering::Less);
-    assert_eq!(
-        Value::from(42u64).cmp(&Value::from(vec![1u8, 2, 3])),
-        Ordering::Less
-    );
+    // Type hierarchy (aligned with JSON serialization lexicographic order):
+    // Bytes < Text < Number < Array < Bool(false) < Null < Bool(true) < BytesMap < TextMap
+
+    // Bytes < Text
     assert_eq!(
         Value::from(vec![1u8, 2, 3]).cmp(&Value::from("hello")),
         Ordering::Less
     );
+
+    // Text < Number
     assert_eq!(
-        Value::from("hello").cmp(&Value::from([Value::from(1u64), Value::from(2u64)])),
+        Value::from("hello").cmp(&Value::from(42u64)),
         Ordering::Less
     );
 
+    // Number < Array
+    assert_eq!(
+        Value::from(42u64).cmp(&Value::from([Value::from(1u64), Value::from(2u64)])),
+        Ordering::Less
+    );
+
+    // Array < Bool(false)
+    assert_eq!(
+        Value::from([Value::from(1u64)]).cmp(&Value::from(false)),
+        Ordering::Less
+    );
+
+    // Bool(false) < Null
+    assert_eq!(Value::from(false).cmp(&Value::Null), Ordering::Less);
+
+    // Null < Bool(true)
+    assert_eq!(Value::Null.cmp(&Value::from(true)), Ordering::Less);
+
+    // Bool(true) < BytesMap
     let bytes_map: Value = [(Bytes::from(vec![1u8]), Value::from(1u64))]
         .into_iter()
         .collect();
+    assert_eq!(Value::from(true).cmp(&bytes_map), Ordering::Less);
+
+    // BytesMap < TextMap
     let text_map: Value = [(Text::from("a"), Value::from(1u64))]
         .into_iter()
         .collect();
-
-    assert_eq!(
-        Value::from([Value::from(1u64)]).cmp(&bytes_map),
-        Ordering::Less
-    );
     assert_eq!(bytes_map.cmp(&text_map), Ordering::Less);
 }
 
@@ -264,16 +280,17 @@ fn test_value_in_btreemap() {
     map.insert(Value::from(10u64), "ten");
     map.insert(Value::from(-5i64), "neg five");
     map.insert(Value::from("hello"), "text");
+    map.insert(Value::from(vec![1u8, 2, 3]), "bytes");
 
-    // Verify ordering: should be sorted by complexity hierarchy
+    // Verify ordering: Bytes < Text < Numbers < Array < Bool(false) < Null < Bool(true)
     let keys: Vec<_> = map.keys().cloned().collect();
-    assert_eq!(keys[0], Value::Null);
-    assert_eq!(keys[1], Value::from(false));
-    assert_eq!(keys[2], Value::from(true));
-    // Numbers next (signed negative, then unsigned, then positive signed would be the order)
-    assert_eq!(keys[3], Value::from(-5i64));
-    assert_eq!(keys[4], Value::from(10u64));
-    assert_eq!(keys[5], Value::from("hello"));
+    assert_eq!(keys[0], Value::from(vec![1u8, 2, 3])); // Bytes
+    assert_eq!(keys[1], Value::from("hello")); // Text
+    assert_eq!(keys[2], Value::from(-5i64)); // Number (negative)
+    assert_eq!(keys[3], Value::from(10u64)); // Number (positive unsigned)
+    assert_eq!(keys[4], Value::from(false)); // Bool(false)
+    assert_eq!(keys[5], Value::Null); // Null
+    assert_eq!(keys[6], Value::from(true)); // Bool(true)
 }
 
 #[test]
@@ -300,17 +317,19 @@ fn test_sorted_values() {
         Value::from([Value::from(1u64)]),
         Value::from("apple"),
         Value::from(vec![1u8, 2, 3]),
+        Value::from(false),
     ];
 
     values.sort();
 
-    // Expected order: Null, Bool, Numbers, Bytes, Text, Array
-    assert_eq!(values[0], Value::Null);
-    assert_eq!(values[1], Value::from(true));
-    assert_eq!(values[2], Value::from(-10i64));
-    assert_eq!(values[3], Value::from(42u64));
-    assert_eq!(values[4], Value::from(vec![1u8, 2, 3]));
-    assert_eq!(values[5], Value::from("apple"));
-    assert_eq!(values[6], Value::from("zebra"));
-    assert_eq!(values[7], Value::from([Value::from(1u64)]));
+    // Expected order: Bytes < Text < Numbers < Array < Bool(false) < Null < Bool(true)
+    assert_eq!(values[0], Value::from(vec![1u8, 2, 3])); // Bytes
+    assert_eq!(values[1], Value::from("apple")); // Text (sorted)
+    assert_eq!(values[2], Value::from("zebra")); // Text (sorted)
+    assert_eq!(values[3], Value::from(-10i64)); // Numbers
+    assert_eq!(values[4], Value::from(42u64));
+    assert_eq!(values[5], Value::from([Value::from(1u64)])); // Array
+    assert_eq!(values[6], Value::from(false)); // Bool(false)
+    assert_eq!(values[7], Value::Null); // Null
+    assert_eq!(values[8], Value::from(true)); // Bool(true)
 }
