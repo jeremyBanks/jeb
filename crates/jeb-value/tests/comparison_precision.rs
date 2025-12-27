@@ -97,3 +97,27 @@ fn test_exact_equality() {
     assert_eq!(u.cmp(&f), Ordering::Less);
     assert_eq!(f.cmp(&u), Ordering::Greater);
 }
+
+#[test]
+fn test_signed_float_negative_fractional() {
+    // Test negative float with fractional part
+    // -5 vs -4.5: -5 < -4.5
+    let i1 = Value::Signed(-5);
+    let f1 = Value::Float((-4.5).try_into().unwrap());
+    assert_eq!(i1.cmp(&f1), Ordering::Less);
+    assert_eq!(f1.cmp(&i1), Ordering::Greater);
+
+    // Test negative float with fractional part, integer parts equal
+    // -5 vs -5.5: -5 > -5.5
+    let i2 = Value::Signed(-5);
+    let f2 = Value::Float((-5.5).try_into().unwrap());
+    assert_eq!(i2.cmp(&f2), Ordering::Greater);
+    assert_eq!(f2.cmp(&i2), Ordering::Less);
+
+    // Test negative float with positive fractional (closer to zero)
+    // -6 vs -5.5: -6 < -5.5
+    let i3 = Value::Signed(-6);
+    let f3 = Value::Float((-5.5).try_into().unwrap());
+    assert_eq!(i3.cmp(&f3), Ordering::Less);
+    assert_eq!(f3.cmp(&i3), Ordering::Greater);
+}
