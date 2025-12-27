@@ -5,7 +5,7 @@ pub enum Error {
     Message(Box<str>),
     InvalidType {
         unexpected: Unexpected,
-        expected: &'static str,
+        expected: Box<str>,
     },
 }
 
@@ -60,10 +60,10 @@ impl serde::ser::Error for Error {
 }
 
 impl Error {
-    pub(crate) fn invalid_type(unexp: Unexpected, exp: &'static str) -> Self {
+    pub(crate) fn invalid_type(unexp: Unexpected, exp: &str) -> Self {
         Error::InvalidType {
             unexpected: unexp,
-            expected: exp,
+            expected: exp.into(),
         }
     }
 
@@ -117,7 +117,7 @@ impl serde::de::Error for Error {
 
         Error::InvalidType {
             unexpected,
-            expected: exp.to_string().leak(),
+            expected: exp.to_string().into_boxed_str(),
         }
     }
 }
