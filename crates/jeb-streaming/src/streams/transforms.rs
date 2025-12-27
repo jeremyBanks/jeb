@@ -339,3 +339,90 @@ where
         }
     }
 }
+
+/// Transforms a stream of Items by splitting on ASCII whitespace with cross-chunk buffering.
+///
+/// Handles both `Item::Text` and `Item::Bytes`, buffering until complete segments are available.
+/// Uses `u8::is_ascii_whitespace()` as delimiter. Consecutive whitespace is treated as a single
+/// separator (no empty segments). Flushes remaining buffers at stream end.
+pub fn split_whitespace<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    stream! {
+        let mut input = pin!(input);
+        let mut text_buffer = String::new();
+        let mut bytes_buffer = Vec::<u8>::new();
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match item {
+                        Item::Text(text) => {
+                            // Flush bytes buffer if switching types
+                            if !bytes_buffer.is_empty() {
+                                yield Ok(Item::Bytes(std::mem::take(&mut bytes_buffer).into()));
+                            }
+
+                            // Process text, buffering and splitting on whitespace
+                            for ch in text.chars() {
+                                if ch.is_ascii_whitespace() {
+                                    if !text_buffer.is_empty() {
+                                        yield Ok(Item::Text(std::mem::take(&mut text_buffer).into()));
+                                    }
+                                } else {
+                                    text_buffer.push(ch);
+                                }
+                            }
+                        }
+                        Item::Bytes(bytes) => {
+                            // Flush text buffer if switching types
+                            if !text_buffer.is_empty() {
+                                yield Ok(Item::Text(std::mem::take(&mut text_buffer).into()));
+                            }
+
+                            // Process bytes, buffering and splitting on whitespace
+                            for &byte in bytes.iter() {
+                                if byte.is_ascii_whitespace() {
+                                    if !bytes_buffer.is_empty() {
+                                        yield Ok(Item::Bytes(std::mem::take(&mut bytes_buffer).into()));
+                                    }
+                                } else {
+                                    bytes_buffer.push(byte);
+                                }
+                            }
+                        }
+                        other => {
+                            // Flush both buffers before passing through
+                            if !text_buffer.is_empty() {
+                                yield Ok(Item::Text(std::mem::take(&mut text_buffer).into()));
+                            }
+                            if !bytes_buffer.is_empty() {
+                                yield Ok(Item::Bytes(std::mem::take(&mut bytes_buffer).into()));
+                            }
+                            yield Ok(other);
+                        }
+                    }
+                }
+                Err(e) => {
+                    // Flush both buffers before passing through error
+                    if !text_buffer.is_empty() {
+                        yield Ok(Item::Text(std::mem::take(&mut text_buffer).into()));
+                    }
+                    if !bytes_buffer.is_empty() {
+                        yield Ok(Item::Bytes(std::mem::take(&mut bytes_buffer).into()));
+                    }
+                    yield Err(e);
+                }
+            }
+        }
+
+        // Flush remaining buffers at end of stream
+        if !text_buffer.is_empty() {
+            yield Ok(Item::Text(text_buffer.into()));
+        }
+        if !bytes_buffer.is_empty() {
+            yield Ok(Item::Bytes(bytes_buffer.into()));
+        }
+    }
+}

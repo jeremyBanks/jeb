@@ -723,4 +723,179 @@ mod tests {
         assert_eq!(result[1], Err("test error"));
         assert!(result[2].is_ok());
     }
+
+    // ===== Transform Tests: split_whitespace() =====
+
+    #[tokio::test]
+    async fn test_split_whitespace_text_simple() {
+        let source = text_source(vec!["hello world".to_string()]);
+        let result: Vec<_> = split_whitespace(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Text("hello".into()));
+        assert_eq!(result[1], Item::Text("world".into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_whitespace_text_multiple_spaces() {
+        let source = text_source(vec!["hello    world".to_string()]);
+        let result: Vec<_> = split_whitespace(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Text("hello".into()));
+        assert_eq!(result[1], Item::Text("world".into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_whitespace_text_tabs_newlines() {
+        let source = text_source(vec!["hello\t\nworld".to_string()]);
+        let result: Vec<_> = split_whitespace(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Text("hello".into()));
+        assert_eq!(result[1], Item::Text("world".into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_whitespace_text_leading_trailing() {
+        let source = text_source(vec!["  hello world  ".to_string()]);
+        let result: Vec<_> = split_whitespace(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Text("hello".into()));
+        assert_eq!(result[1], Item::Text("world".into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_whitespace_text_empty() {
+        let source = text_source(vec!["".to_string()]);
+        let result: Vec<_> = split_whitespace(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_split_whitespace_text_only_whitespace() {
+        let source = text_source(vec!["   \n\t  ".to_string()]);
+        let result: Vec<_> = split_whitespace(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_split_whitespace_bytes_simple() {
+        let source = bytes_source(vec![b"hello world".to_vec()]);
+        let result: Vec<_> = split_whitespace(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Bytes(b"hello".to_vec().into()));
+        assert_eq!(result[1], Item::Bytes(b"world".to_vec().into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_whitespace_across_chunks() {
+        let source = text_source(vec![
+            "hel".to_string(),
+            "lo wor".to_string(),
+            "ld".to_string(),
+        ]);
+        let result: Vec<_> = split_whitespace(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Text("hello".into()));
+        assert_eq!(result[1], Item::Text("world".into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_whitespace_whitespace_across_chunks() {
+        let source = text_source(vec![
+            "hello ".to_string(),
+            " world".to_string(),
+        ]);
+        let result: Vec<_> = split_whitespace(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Text("hello".into()));
+        assert_eq!(result[1], Item::Text("world".into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_whitespace_partial_word_at_end() {
+        let source = text_source(vec!["hello world foo".to_string()]);
+        let result: Vec<_> = split_whitespace(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0], Item::Text("hello".into()));
+        assert_eq!(result[1], Item::Text("world".into()));
+        assert_eq!(result[2], Item::Text("foo".into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_whitespace_mixed_types() {
+        use async_stream::stream;
+
+        let mixed_source = stream! {
+            yield Ok(Item::Text("hello world".into()));
+            yield Ok(Item::Bytes(b"foo bar".to_vec().into()));
+        };
+
+        let result: Vec<_> = split_whitespace(mixed_source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 4);
+        assert_eq!(result[0], Item::Text("hello".into()));
+        assert_eq!(result[1], Item::Text("world".into()));
+        assert_eq!(result[2], Item::Bytes(b"foo".to_vec().into()));
+        assert_eq!(result[3], Item::Bytes(b"bar".to_vec().into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_whitespace_propagates_errors() {
+        use async_stream::stream;
+
+        let error_source = stream! {
+            yield Ok(Item::Text("hello".into()));
+            yield Err("test error");
+            yield Ok(Item::Text("world".into()));
+        };
+
+        let result: Vec<_> = split_whitespace(error_source).collect().await;
+
+        assert_eq!(result.len(), 3);
+        assert!(result[0].is_ok());
+        assert_eq!(result[1], Err("test error"));
+        assert!(result[2].is_ok());
+    }
 }
