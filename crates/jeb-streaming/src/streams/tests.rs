@@ -504,4 +504,88 @@ mod tests {
 
         assert!(result.iter().any(|r| r.is_err()));
     }
+
+    // ===== Transform Tests: to_hex() =====
+
+    #[tokio::test]
+    async fn test_to_hex_bytes_simple() {
+        let source = bytes_source(vec![vec![0xDE, 0xAD, 0xBE, 0xEF]]);
+        let result: Vec<_> = to_hex(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Text("deadbeef".into()));
+    }
+
+    #[tokio::test]
+    async fn test_to_hex_bytes_empty() {
+        let source = bytes_source(vec![vec![]]);
+        let result: Vec<_> = to_hex(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Text("".into()));
+    }
+
+    #[tokio::test]
+    async fn test_to_hex_text_ascii() {
+        let source = text_source(vec!["hello".to_string()]);
+        let result: Vec<_> = to_hex(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Text("68656c6c6f".into()));
+    }
+
+    #[tokio::test]
+    async fn test_to_hex_text_unicode() {
+        let source = text_source(vec!["🦀".to_string()]);
+        let result: Vec<_> = to_hex(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Text("f09fa680".into()));
+    }
+
+    #[tokio::test]
+    async fn test_to_hex_multiple_items() {
+        let source = bytes_source(vec![vec![0xAA], vec![0xBB]]);
+        let result: Vec<_> = to_hex(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Text("aa".into()));
+        assert_eq!(result[1], Item::Text("bb".into()));
+    }
+
+    #[tokio::test]
+    async fn test_to_hex_mixed_types() {
+        use async_stream::stream;
+
+        let mixed_source = stream! {
+            yield Ok(Item::Bytes(vec![0xAA].into()));
+            yield Ok(Item::Text("B".into()));
+            yield Ok(Item::Bytes(vec![0xCC].into()));
+        };
+
+        let result: Vec<_> = to_hex(mixed_source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0], Item::Text("aa".into()));
+        assert_eq!(result[1], Item::Text("42".into()));  // 'B' in ASCII
+        assert_eq!(result[2], Item::Text("cc".into()));
+    }
 }

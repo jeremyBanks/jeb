@@ -196,3 +196,49 @@ where
         }
     }
 }
+/// Transforms a stream of Items by converting bytes to lowercase hexadecimal string representation.
+///
+/// Handles both `Item::Text` and `Item::Bytes`, treating text as UTF-8 bytes.
+/// Each byte is converted to a two-character hex string (e.g., `0xDE` → `"de"`).
+pub fn to_hex<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    stream! {
+        let mut input = pin!(input);
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match item {
+                        Item::Text(text) => {
+                            // Convert text to bytes, then to hex
+                            let bytes = text.as_bytes();
+                            let mut hex = String::with_capacity(bytes.len() * 2);
+                            for byte in bytes {
+                                hex.push_str(&format!("{:02x}", byte));
+                            }
+                            yield Ok(Item::Text(hex.into()));
+                        }
+                        Item::Bytes(bytes) => {
+                            // Convert bytes to hex
+                            let mut hex = String::with_capacity(bytes.len() * 2);
+                            for byte in bytes.iter() {
+                                hex.push_str(&format!("{:02x}", byte));
+                            }
+                            yield Ok(Item::Text(hex.into()));
+                        }
+                        other => {
+                            // Pass through other item types unchanged
+                            yield Ok(other);
+                        }
+                    }
+                }
+                Err(e) => {
+                    // Pass through error
+                    yield Err(e);
+                }
+            }
+        }
+    }
+}
