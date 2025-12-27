@@ -5,14 +5,19 @@ use {
     std::pin::pin,
 };
 
-/// Transforms a stream of Items into lines, splitting on newline characters.
+/// Transforms a stream of Items by splitting after occurrences of a pattern.
 ///
-/// Handles both `Item::Text` and `Item::Bytes`, buffering until complete lines
-/// are available. Flushes remaining buffers at stream end.
-pub fn lines<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+/// Handles both `Item::Text` and `Item::Bytes`, buffering until complete
+/// segments (including the pattern) are available. Flushes remaining buffers at stream end.
+///
+/// The pattern must be a valid UTF-8 string to ensure we never break UTF-8 boundaries.
+pub fn split_after<S>(input: S, pattern: &str) -> impl Stream<Item = Result<Item, &'static str>> + Send
 where
     S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
 {
+    let pattern = pattern.to_string();
+    let pattern_bytes = pattern.as_bytes().to_vec();
+
     stream! {
         let mut input = pin!(input);
         let mut text_buffer = String::new();
@@ -28,13 +33,14 @@ where
                                 yield Ok(Item::Bytes(std::mem::take(&mut bytes_buffer).into()));
                             }
 
-                            // Add to text buffer and split on newlines
+                            // Add to text buffer and split on pattern
                             text_buffer.push_str(&text);
 
-                            while let Some(newline_pos) = text_buffer.find('\n') {
-                                let line = text_buffer[..=newline_pos].to_string();
-                                text_buffer.drain(..=newline_pos);
-                                yield Ok(Item::Text(line.into()));
+                            while let Some(pattern_pos) = text_buffer.find(&pattern) {
+                                let end_pos = pattern_pos + pattern.len() - 1;
+                                let segment = text_buffer[..=end_pos].to_string();
+                                text_buffer.drain(..=end_pos);
+                                yield Ok(Item::Text(segment.into()));
                             }
                         }
                         Item::Bytes(bytes) => {
@@ -43,12 +49,14 @@ where
                                 yield Ok(Item::Text(std::mem::take(&mut text_buffer).into()));
                             }
 
-                            // Add to bytes buffer and split on newline bytes
+                            // Add to bytes buffer and split on pattern bytes
                             bytes_buffer.extend_from_slice(&bytes);
 
-                            while let Some(newline_pos) = bytes_buffer.iter().position(|&b| b == b'\n') {
-                                let line: Vec<u8> = bytes_buffer.drain(..=newline_pos).collect();
-                                yield Ok(Item::Bytes(line.into()));
+                            while let Some(pattern_pos) = bytes_buffer.windows(pattern_bytes.len())
+                                .position(|window| window == pattern_bytes.as_slice()) {
+                                let end_pos = pattern_pos + pattern_bytes.len() - 1;
+                                let segment: Vec<u8> = bytes_buffer.drain(..=end_pos).collect();
+                                yield Ok(Item::Bytes(segment.into()));
                             }
                         }
                         other => {
@@ -88,6 +96,17 @@ where
             yield Ok(Item::Bytes(bytes_buffer.into()));
         }
     }
+}
+
+/// Transforms a stream of Items into lines, splitting on newline characters.
+///
+/// Handles both `Item::Text` and `Item::Bytes`, buffering until complete lines
+/// are available. Flushes remaining buffers at stream end.
+pub fn lines<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    split_after(input, "\n")
 }
 
 /// Transforms a stream of Items into fixed-size chunks.

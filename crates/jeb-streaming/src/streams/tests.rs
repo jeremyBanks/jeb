@@ -3,6 +3,91 @@ mod tests {
     use crate::{streams::*, Item};
     use futures::StreamExt;
 
+    // ===== Transform Tests: split_after() =====
+
+    #[tokio::test]
+    async fn test_split_after_custom_delimiter() {
+        let source = text_source(vec!["hello||world||".to_string()]);
+        let result: Vec<_> = split_after(source, "||")
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Text("hello||".into()));
+        assert_eq!(result[1], Item::Text("world||".into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_after_multi_char_pattern() {
+        let source = text_source(vec!["data<SEP>more<SEP>end".to_string()]);
+        let result: Vec<_> = split_after(source, "<SEP>")
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0], Item::Text("data<SEP>".into()));
+        assert_eq!(result[1], Item::Text("more<SEP>".into()));
+        assert_eq!(result[2], Item::Text("end".into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_after_pattern_split_across_chunks() {
+        let source = text_source(vec![
+            "hello<".to_string(),
+            "SEP>world<SE".to_string(),
+            "P>end".to_string(),
+        ]);
+        let result: Vec<_> = split_after(source, "<SEP>")
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0], Item::Text("hello<SEP>".into()));
+        assert_eq!(result[1], Item::Text("world<SEP>".into()));
+        assert_eq!(result[2], Item::Text("end".into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_after_bytes_custom_pattern() {
+        let source = bytes_source(vec![b"data||more||".to_vec()]);
+        let result: Vec<_> = split_after(source, "||")
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Bytes(b"data||".to_vec().into()));
+        assert_eq!(result[1], Item::Bytes(b"more||".to_vec().into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_after_no_match() {
+        let source = text_source(vec!["hello world".to_string()]);
+        let result: Vec<_> = split_after(source, "||")
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Text("hello world".into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_after_empty_pattern_flush() {
+        let source = text_source(vec!["data||partial".to_string()]);
+        let result: Vec<_> = split_after(source, "||")
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Text("data||".into()));
+        assert_eq!(result[1], Item::Text("partial".into()));
+    }
+
     // ===== Transform Tests: lines() =====
 
     #[tokio::test]
