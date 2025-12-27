@@ -55,10 +55,7 @@ impl Ord for Value {
                 (Signed(_), Unsigned(_)) => other.cmp(self).reverse(),
 
                 (Unsigned(left), Float(right)) => {
-                    // Handle special float values
-                    if right.is_nan() {
-                        return Less; // u64 < NaN (total ordering convention)
-                    }
+                    // Float is guaranteed finite (no NaN/Infinity)
                     if **right < 0.0 {
                         return Greater; // u64 >= 0, so u64 > negative float
                     }
@@ -89,11 +86,7 @@ impl Ord for Value {
                 (Float(_), Unsigned(_)) => other.cmp(self).reverse(),
 
                 (Signed(left), Float(right)) => {
-                    // Handle special float values
-                    if right.is_nan() {
-                        return Less; // i64 < NaN (total ordering convention)
-                    }
-
+                    // Float is guaranteed finite (no NaN/Infinity)
                     // Check if float exceeds i64 range
                     const I64_MAX_PLUS_1: f64 = 9223372036854775808.0; // 2^63
                     const I64_MIN: f64 = -9223372036854775808.0; // -2^63
