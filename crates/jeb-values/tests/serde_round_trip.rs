@@ -1,4 +1,4 @@
-use jeb_values::{from_value, to_value, Value};
+use jeb_values::{from_value, to_value, Bytes, Value};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -212,22 +212,30 @@ fn test_enums() {
 #[test]
 fn test_bytes() {
     // Vec<u8> serializes as a sequence by default in serde, not bytes
-    // To get bytes, you need to use serde_bytes or serialize_bytes explicitly
-    let bytes = vec![0u8, 1, 2, 3, 255];
-    let value = to_value(&bytes).unwrap();
+    let vec_bytes = vec![0u8, 1, 2, 3, 255];
+    let value = to_value(&vec_bytes).unwrap();
     // Vec<u8> becomes Array of Unsigned
     assert!(matches!(value, Value::Array(_)));
     let recovered: Vec<u8> = from_value(value).unwrap();
+    assert_eq!(recovered, vec_bytes);
+
+    // But our Bytes type uses serialize_bytes, so it becomes Value::Bytes!
+    let bytes = Bytes::from(vec![0u8, 1, 2, 3, 255]);
+    let value = to_value(&bytes).unwrap();
+    assert!(matches!(value, Value::Bytes(_)));
+    let recovered: Bytes = from_value(value).unwrap();
     assert_eq!(recovered, bytes);
 
-    // But our deserializer accepts arrays as bytes
+    // Our deserializer accepts arrays as bytes too
     let arr_value = Value::Array(vec![
         Value::Unsigned(0),
         Value::Unsigned(1),
         Value::Unsigned(255),
     ]);
-    let as_bytes: Vec<u8> = from_value(arr_value).unwrap();
-    assert_eq!(as_bytes, vec![0, 1, 255]);
+    let as_vec: Vec<u8> = from_value(arr_value.clone()).unwrap();
+    assert_eq!(as_vec, vec![0, 1, 255]);
+    let as_bytes: Bytes = from_value(arr_value).unwrap();
+    assert_eq!(as_bytes, Bytes::from(vec![0, 1, 255]));
 }
 
 #[test]
