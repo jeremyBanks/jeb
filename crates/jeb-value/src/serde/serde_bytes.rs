@@ -29,10 +29,3 @@ impl From<&serde_bytes::Bytes> for Value {
         Value::Bytes(Bytes::from(value))
     }
 }
-
-// From Bytes to serde_bytes::ByteBuf
-impl From<Bytes> for serde_bytes::ByteBuf {
-    fn from(value: Bytes) -> Self {
-        serde_bytes::ByteBuf::from(value.0)
-    }
-}
