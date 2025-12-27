@@ -125,6 +125,10 @@ where
                     // Not for us, put it back and wait
                     state.buffer = Some(Err(e));
                     state.ok_waker = Some(cx.waker().clone());
+                    // Re-wake the err stream in case of spurious wakeup
+                    if let Some(waker) = state.err_waker.take() {
+                        waker.wake();
+                    }
                     return Poll::Pending;
                 }
                 None => {
@@ -202,6 +206,10 @@ where
                     // Not for us, put it back and wait
                     state.buffer = Some(Ok(t));
                     state.err_waker = Some(cx.waker().clone());
+                    // Re-wake the ok stream in case of spurious wakeup
+                    if let Some(waker) = state.ok_waker.take() {
+                        waker.wake();
+                    }
                     return Poll::Pending;
                 }
                 None => {
@@ -330,5 +338,185 @@ mod tests {
         // Ok stream should still get all oks
         let results: Vec<i32> = block_on(ok_stream.collect());
         assert_eq!(results, vec![1, 2]);
+    }
+
+    #[test]
+    fn test_empty_stream() {
+        let input = stream::iter(Vec::<Result<i32, &str>>::new());
+        let (ok_stream, err_stream) = oks_and_errs(input);
+
+        let oks: Vec<i32> = block_on(ok_stream.collect());
+        assert!(oks.is_empty());
+
+        // Note: err_stream would also be empty but we already consumed input via ok_stream
+    }
+
+    #[test]
+    fn test_single_ok() {
+        let input = stream::iter(vec![Ok::<_, &str>(42)]);
+        let (ok_stream, _err_stream) = oks_and_errs(input);
+
+        let results: Vec<i32> = block_on(ok_stream.collect());
+        assert_eq!(results, vec![42]);
+    }
+
+    #[test]
+    fn test_single_err() {
+        let input = stream::iter(vec![Err::<i32, _>("error")]);
+        let (_ok_stream, err_stream) = oks_and_errs(input);
+
+        let results: Vec<&str> = block_on(err_stream.collect());
+        assert_eq!(results, vec!["error"]);
+    }
+
+    #[test]
+    fn test_many_consecutive_oks() {
+        let input = stream::iter((0..100).map(Ok::<_, &str>).collect::<Vec<_>>());
+        let (ok_stream, _err_stream) = oks_and_errs(input);
+
+        let results: Vec<i32> = block_on(ok_stream.collect());
+        assert_eq!(results, (0..100).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn test_many_consecutive_errs() {
+        let input = stream::iter((0..100).map(|i| Err::<i32, _>(i)).collect::<Vec<_>>());
+        let (_ok_stream, err_stream) = oks_and_errs(input);
+
+        let results: Vec<i32> = block_on(err_stream.collect());
+        assert_eq!(results, (0..100).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn test_drop_both_streams() {
+        let input = stream::iter(vec![Ok::<_, &str>(1), Err("a"), Ok(2)]);
+        let (ok_stream, err_stream) = oks_and_errs(input);
+
+        // Drop both - should not panic or leak
+        drop(ok_stream);
+        drop(err_stream);
+    }
+
+    /// Test that when a stream sees an item in the buffer belonging to the other stream,
+    /// it wakes that stream (if a waker is registered).
+    ///
+    /// This test verifies the fix for a potential deadlock where:
+    /// 1. StreamA buffers item for StreamB, wakes StreamB
+    /// 2. StreamA gets polled again (spurious wakeup)
+    /// 3. StreamA sees item still in buffer, must re-wake StreamB
+    ///
+    /// The key insight: after take(), the waker slot is empty, so re-waking only
+    /// works if StreamB has re-registered. This test verifies the wake happens
+    /// when a waker IS registered.
+    #[test]
+    fn test_wake_on_buffer_check() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::task::{RawWaker, RawWakerVTable};
+
+        // Track wake calls
+        static WAKE_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+        const VTABLE: RawWakerVTable = RawWakerVTable::new(
+            |_| RawWaker::new(std::ptr::null(), &VTABLE),
+            |_| {
+                WAKE_COUNT.fetch_add(1, Ordering::SeqCst);
+            },
+            |_| {
+                WAKE_COUNT.fetch_add(1, Ordering::SeqCst);
+            },
+            |_| {},
+        );
+
+        let input = stream::iter(vec![Ok::<i32, &str>(1), Err("error")]);
+        let (mut ok_stream, mut err_stream) = oks_and_errs(input);
+
+        let waker = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), &VTABLE)) };
+        let mut cx = Context::from_waker(&waker);
+
+        WAKE_COUNT.store(0, Ordering::SeqCst);
+
+        // 1. err_stream polls, gets Ok(1), buffers it, registers waker, returns Pending
+        let err_pinned = std::pin::pin!(&mut err_stream);
+        let result = err_pinned.poll_next(&mut cx);
+        assert!(matches!(result, Poll::Pending));
+
+        // ok_waker should have been called when err_stream buffered the Ok
+        let wakes_after_err_poll = WAKE_COUNT.load(Ordering::SeqCst);
+        assert!(
+            wakes_after_err_poll >= 1,
+            "err_stream should wake ok_stream when buffering Ok"
+        );
+
+        // 2. ok_stream polls, sees Ok(1), takes it, wakes err_stream, returns Ready
+        let ok_pinned = std::pin::pin!(&mut ok_stream);
+        let result = ok_pinned.poll_next(&mut cx);
+        assert!(matches!(result, Poll::Ready(Some(1))));
+
+        let wakes_after_ok_takes = WAKE_COUNT.load(Ordering::SeqCst);
+        assert!(
+            wakes_after_ok_takes > wakes_after_err_poll,
+            "ok_stream should wake err_stream when taking buffered item"
+        );
+
+        // 3. err_stream polls again (woken from step 2), buffer empty, polls input,
+        //    gets Err, returns Ready with the Err
+        let err_pinned = std::pin::pin!(&mut err_stream);
+        let result = err_pinned.poll_next(&mut cx);
+        assert!(
+            matches!(result, Poll::Ready(Some("error"))),
+            "err_stream should get the Err from input"
+        );
+    }
+
+    /// Test the specific scenario where we re-wake after seeing buffer item for other stream.
+    /// Setup: ok_stream has waker registered, buffer has Ok for it, err_stream polls.
+    #[test]
+    fn test_rewake_when_other_stream_checks_buffer() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::task::{RawWaker, RawWakerVTable};
+
+        static WAKE_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+        const VTABLE: RawWakerVTable = RawWakerVTable::new(
+            |_| RawWaker::new(std::ptr::null(), &VTABLE),
+            |_| {
+                WAKE_COUNT.fetch_add(1, Ordering::SeqCst);
+            },
+            |_| {
+                WAKE_COUNT.fetch_add(1, Ordering::SeqCst);
+            },
+            |_| {},
+        );
+
+        // Input: Ok, then Err - designed so we can set up the right state
+        let input = stream::iter(vec![Ok::<i32, &str>(1)]);
+        let (mut ok_stream, mut err_stream) = oks_and_errs(input);
+
+        let waker = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), &VTABLE)) };
+        let mut cx = Context::from_waker(&waker);
+
+        WAKE_COUNT.store(0, Ordering::SeqCst);
+
+        // err_stream polls: buffer empty, polls input, gets Ok(1), buffers it, returns Pending
+        let err_pinned = std::pin::pin!(&mut err_stream);
+        let result = err_pinned.poll_next(&mut cx);
+        assert!(matches!(result, Poll::Pending));
+
+        // Now: buffer has Ok(1), err_stream has registered err_waker
+
+        // ok_stream polls, registers ok_waker, then checks buffer, sees Ok(1), takes it
+        let ok_pinned = std::pin::pin!(&mut ok_stream);
+        let result = ok_pinned.poll_next(&mut cx);
+        assert!(matches!(result, Poll::Ready(Some(1))));
+
+        // err_stream polls again: buffer empty, polls input, input exhausted, returns None
+        let err_pinned = std::pin::pin!(&mut err_stream);
+        let result = err_pinned.poll_next(&mut cx);
+        assert!(matches!(result, Poll::Ready(None)));
+
+        // Now test: ok_stream polls, buffer empty, input exhausted, returns None
+        let ok_pinned = std::pin::pin!(&mut ok_stream);
+        let result = ok_pinned.poll_next(&mut cx);
+        assert!(matches!(result, Poll::Ready(None)));
     }
 }
