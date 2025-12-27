@@ -113,6 +113,7 @@
     "errorlens",
     "externref",
     "externrefs",
+    "fuckit",
     "getset",
     "HISTCONTROL",
     "HISTFILESIZE",
@@ -212,5 +213,6 @@
   "files.trimTrailingWhitespace": true,
   "git.autofetch": true,
   "rust-analyzer.cargo.features": "all",
-  "rust-analyzer.check.command": "clippy"
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.diagnostics.disabled": ["E0728"]
 }

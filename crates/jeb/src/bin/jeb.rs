@@ -38,6 +38,8 @@ fn expand_alias(command: &str) -> Vec<String> {
     vec![command.to_string()]
 }
 
+// XXX: Consider switching to a real entry point so we can do
+//      set .unhandled_panic(UnhandledPanic::ShutdownRuntime).
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), Infallible> {
     inner_main().await.ok();

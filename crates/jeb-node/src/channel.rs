@@ -1,4 +1,12 @@
-use crate::Item;
+use {
+    crate::Item,
+    async_stream::stream,
+    futures::{
+        Stream,
+        StreamExt,
+    },
+    std::pin::pin,
+};
 
 pub struct Sender<T = Result<Item, &'static str>> {
     sender: tokio::sync::mpsc::Sender<T>,
@@ -41,6 +49,67 @@ pub fn channel<T>() -> (Sender<T>, Receiver<T>) {
     let (sender, receiver) = tokio::sync::mpsc::channel(1);
 
     (Sender { sender }, Receiver { receiver })
+}
+
+pub fn oks_and_errs<T, E>(
+    input: impl Stream<Item = Result<T, E>> + Send + 'static,
+) -> (impl Stream<Item = T>, impl Stream<Item = E>)
+where
+    E: Send + 'static,
+    T: Send + 'static,
+{
+    let (ok_sender, ok_receiver) = tokio::sync::mpsc::channel::<T>(1);
+    let (err_sender, err_receiver) = tokio::sync::mpsc::channel::<E>(1);
+
+    tokio::spawn(async move {
+        let mut input = pin!(input);
+
+        let mut ok_sender = Some(ok_sender);
+        let mut err_sender = Some(err_sender);
+
+        while let Some(item) = input.next().await {
+            match item {
+                Ok(ok) => {
+                    if let Some(sender) = &mut ok_sender {
+                        let send = sender.send(ok).await;
+                        if send.is_err() {
+                            ok_sender = None;
+                            if err_sender.is_none() {
+                                break;
+                            }
+                        }
+                    }
+                }
+                Err(err) => {
+                    if let Some(sender) = &mut err_sender {
+                        let send = sender.send(err).await;
+                        if send.is_err() {
+                            err_sender = None;
+                            if ok_sender.is_none() {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    let ok_stream = stream! {
+        let mut ok_receiver = ok_receiver;
+        while let Some(item) = ok_receiver.recv().await {
+            yield item;
+        }
+    };
+
+    let err_stream = stream! {
+        let mut err_receiver = err_receiver;
+        while let Some(item) = err_receiver.recv().await {
+            yield item;
+        }
+    };
+
+    (ok_stream, err_stream)
 }
 
 
