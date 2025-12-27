@@ -2,9 +2,18 @@
 /// in Item type for equality, ordering, and hashing (via contained Value).
 use {
     jeb_streaming::Item,
-    jeb_value::{Float, Value},
-    std::collections::{hash_map::DefaultHasher, HashMap},
-    std::hash::{Hash, Hasher},
+    jeb_value::{
+        Float,
+        Value,
+    },
+    std::collections::{
+        HashMap,
+        hash_map::DefaultHasher,
+    },
+    std::hash::{
+        Hash,
+        Hasher,
+    },
 };
 
 #[test]
@@ -65,7 +74,7 @@ fn test_item_zero_as_hashmap_key() {
 
 #[test]
 fn test_item_zero_sorted() {
-    let mut items = vec![
+    let mut items = [
         Item::Value(Value::Float(Float::try_from(0.0f64).unwrap())),
         Item::Value(Value::Float(Float::try_from(-0.0f64).unwrap())),
         Item::Value(Value::from(0u64)),

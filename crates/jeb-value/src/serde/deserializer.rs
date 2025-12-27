@@ -45,7 +45,7 @@ impl<'de> de::Deserializer<'de> for Value {
     {
         match self {
             Value::Bool(b) => visitor.visit_bool(b),
-            _ => Err(SerdeError::invalid_type(self.unexpected(), &"a boolean")),
+            _ => Err(SerdeError::invalid_type(self.unexpected(), "a boolean")),
         }
     }
 
@@ -93,7 +93,7 @@ impl<'de> de::Deserializer<'de> for Value {
                     Err(SerdeError::custom("i128 value out of range for i64"))
                 }
             }
-            _ => Err(SerdeError::invalid_type(self.unexpected(), &"an integer")),
+            _ => Err(SerdeError::invalid_type(self.unexpected(), "an integer")),
         }
     }
 
@@ -110,7 +110,7 @@ impl<'de> de::Deserializer<'de> for Value {
                 let i = i128::from_be_bytes(bytes);
                 visitor.visit_i128(i)
             }
-            _ => Err(SerdeError::invalid_type(self.unexpected(), &"an i128")),
+            _ => Err(SerdeError::invalid_type(self.unexpected(), "an i128")),
         }
     }
 
@@ -160,7 +160,7 @@ impl<'de> de::Deserializer<'de> for Value {
             }
             _ => Err(SerdeError::invalid_type(
                 self.unexpected(),
-                &"an unsigned integer",
+                "an unsigned integer",
             )),
         }
     }
@@ -184,7 +184,7 @@ impl<'de> de::Deserializer<'de> for Value {
                 let u = u128::from_be_bytes(bytes);
                 visitor.visit_u128(u)
             }
-            _ => Err(SerdeError::invalid_type(self.unexpected(), &"a u128")),
+            _ => Err(SerdeError::invalid_type(self.unexpected(), "a u128")),
         }
     }
 
@@ -200,7 +200,7 @@ impl<'de> de::Deserializer<'de> for Value {
                 let f = f32::from_be_bytes(bytes);
                 visitor.visit_f32(f)
             }
-            _ => Err(SerdeError::invalid_type(self.unexpected(), &"a float")),
+            _ => Err(SerdeError::invalid_type(self.unexpected(), "a float")),
         }
     }
 
@@ -222,7 +222,7 @@ impl<'de> de::Deserializer<'de> for Value {
                 let f = f32::from_be_bytes(bytes);
                 visitor.visit_f64(f as f64)
             }
-            _ => Err(SerdeError::invalid_type(self.unexpected(), &"a float")),
+            _ => Err(SerdeError::invalid_type(self.unexpected(), "a float")),
         }
     }
 
@@ -234,17 +234,17 @@ impl<'de> de::Deserializer<'de> for Value {
             Value::Text(t) => {
                 let s: String = t.into();
                 let mut chars = s.chars();
-                if let Some(c) = chars.next() {
-                    if chars.next().is_none() {
-                        return visitor.visit_char(c);
-                    }
+                if let Some(c) = chars.next()
+                    && chars.next().is_none()
+                {
+                    return visitor.visit_char(c);
                 }
                 Err(SerdeError::invalid_type(
                     Unexpected::Str(s.into_boxed_str()),
-                    &"a single character",
+                    "a single character",
                 ))
             }
-            _ => Err(SerdeError::invalid_type(self.unexpected(), &"a character")),
+            _ => Err(SerdeError::invalid_type(self.unexpected(), "a character")),
         }
     }
 
@@ -254,7 +254,7 @@ impl<'de> de::Deserializer<'de> for Value {
     {
         match self {
             Value::Text(t) => visitor.visit_string(t.into()),
-            _ => Err(SerdeError::invalid_type(self.unexpected(), &"a string")),
+            _ => Err(SerdeError::invalid_type(self.unexpected(), "a string")),
         }
     }
 
@@ -276,7 +276,7 @@ impl<'de> de::Deserializer<'de> for Value {
                 for v in arr {
                     match v {
                         Value::Unsigned(u) if u <= 255 => bytes.push(u as u8),
-                        Value::Signed(i) if i >= 0 && i <= 255 => bytes.push(i as u8),
+                        Value::Signed(i) if (0..=255).contains(&i) => bytes.push(i as u8),
                         _ => {
                             return Err(SerdeError::custom(
                                 "array contains non-byte values for bytes deserialization",
@@ -290,7 +290,7 @@ impl<'de> de::Deserializer<'de> for Value {
                 let s: String = t.into();
                 visitor.visit_byte_buf(s.into_bytes())
             }
-            _ => Err(SerdeError::invalid_type(self.unexpected(), &"bytes")),
+            _ => Err(SerdeError::invalid_type(self.unexpected(), "bytes")),
         }
     }
 
@@ -308,11 +308,11 @@ impl<'de> de::Deserializer<'de> for Value {
         match self {
             Value::Null => visitor.visit_none(),
             Value::TextMap(map) if map.len() == 1 => {
-                if let Some((key, value)) = map.iter().next() {
-                    if key.as_str() == "Some" {
-                        let value = value.clone();
-                        return visitor.visit_some(value);
-                    }
+                if let Some((key, value)) = map.iter().next()
+                    && key.as_str() == "Some"
+                {
+                    let value = value.clone();
+                    return visitor.visit_some(value);
                 }
                 visitor.visit_some(Value::TextMap(map))
             }
@@ -326,7 +326,7 @@ impl<'de> de::Deserializer<'de> for Value {
     {
         match self {
             Value::Null => visitor.visit_unit(),
-            _ => Err(SerdeError::invalid_type(self.unexpected(), &"null")),
+            _ => Err(SerdeError::invalid_type(self.unexpected(), "null")),
         }
     }
 
@@ -358,7 +358,7 @@ impl<'de> de::Deserializer<'de> for Value {
     {
         match self {
             Value::Array(arr) => visitor.visit_seq(SeqDeserializer::new(arr)),
-            _ => Err(SerdeError::invalid_type(self.unexpected(), &"a sequence")),
+            _ => Err(SerdeError::invalid_type(self.unexpected(), "a sequence")),
         }
     }
 
@@ -400,10 +400,10 @@ impl<'de> de::Deserializer<'de> for Value {
                     // Array of 2-element arrays: treat as pairs
                     visitor.visit_map(PairsDeserializer::new(arr))
                 } else {
-                    Err(SerdeError::invalid_type(Unexpected::Seq, &"a map"))
+                    Err(SerdeError::invalid_type(Unexpected::Seq, "a map"))
                 }
             }
-            _ => Err(SerdeError::invalid_type(self.unexpected(), &"a map")),
+            _ => Err(SerdeError::invalid_type(self.unexpected(), "a map")),
         }
     }
 
@@ -420,7 +420,7 @@ impl<'de> de::Deserializer<'de> for Value {
             Value::TextMap(m) => visitor.visit_map(TextMapDeserializer::new(m)),
             Value::BytesMap(m) => visitor.visit_map(BytesMapDeserializer::new(m)),
             Value::Array(arr) => visitor.visit_seq(SeqDeserializer::new(arr)),
-            _ => Err(SerdeError::invalid_type(self.unexpected(), &"a struct")),
+            _ => Err(SerdeError::invalid_type(self.unexpected(), "a struct")),
         }
     }
 
@@ -446,7 +446,7 @@ impl<'de> de::Deserializer<'de> for Value {
                     value: Some(value),
                 })
             }
-            _ => Err(SerdeError::invalid_type(self.unexpected(), &"an enum")),
+            _ => Err(SerdeError::invalid_type(self.unexpected(), "an enum")),
         }
     }
 
@@ -457,10 +457,7 @@ impl<'de> de::Deserializer<'de> for Value {
         match self {
             Value::Text(t) => visitor.visit_string(t.into()),
             Value::Unsigned(u) => visitor.visit_u64(u),
-            _ => Err(SerdeError::invalid_type(
-                self.unexpected(),
-                &"an identifier",
-            )),
+            _ => Err(SerdeError::invalid_type(self.unexpected(), "an identifier")),
         }
     }
 
