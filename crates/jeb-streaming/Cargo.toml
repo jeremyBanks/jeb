@@ -11,7 +11,7 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-default = ["stdio", "fs", "json", "serde"]
+default = ["json", "serde"]
 serde = ["jeb-value/serde", "dep:serde"]
 fs = ["tokio/fs"]
 json = []
