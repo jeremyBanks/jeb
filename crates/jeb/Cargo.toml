@@ -20,7 +20,7 @@ path = "src/bin/jeb.rs"
 
 [features]
 default = ["bin", "fs", "stdio"]
-wasm = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys", "jeb-value/wasm"]
+wasm = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys", "jeb-value/wasm", "jeb-streaming/wasm", "jeb-common/wasm"]
 bin = [
     "fs",
     "stdio",
@@ -30,8 +30,8 @@ bin = [
     "tracing-subscriber/env-filter",
 ]
 
-fs = ["tokio/fs"]
-stdio = ["tokio/io-std"]
+fs = ["tokio/fs", "jeb-streaming/fs"]
+stdio = ["tokio/io-std", "jeb-streaming/stdio"]
 
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/{ version }/{ name }-{ target }{ archive-suffix }"
@@ -42,29 +42,28 @@ pkg-fmt = "tgz"
 algorithm = "minisign"
 
 [dependencies]
-derive_more = { version = "2.0.1", features = ["full"] }
-futures = "0.3"
-getset = "0.1.6"
-indexmap = { version = "2.0", features = ["serde"] }
-regex = "1.12.2"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-tap = "1.0.1"
-tokio = { version = "1.0", features = ["rt", "macros", "sync", "io-util"] }
-tokio-stream = "0.1"
-tokio-util = { version = "0.7.17", features = ["codec", "io"] }
-tracing = "0.1.43"
-
-jeb-value = { workspace = true, features = ["serde"] }
-jeb-streaming = { workspace = true }
-jeb-common = { workspace = true }
-
-color-eyre = { version = "0.6.5", optional = true }
-dotenv = { version = "0.15.0", optional = true }
-js-sys = { version = "0.3.82", optional = true }
-owo-colors = { version = "4.2.3", optional = true }
-tracing-subscriber = { version = "0.3.22", optional = true }
+color-eyre = { workspace = true, optional = true }
+derive_more = { workspace = true, features = ["full"] }
+document-features = { workspace = true }
+dotenv = { workspace = true, optional = true }
+futures = { workspace = true }
+getset = { workspace = true }
+ignorable = { workspace = true }
+indexmap = { workspace = true, features = ["serde"] }
+js-sys = { workspace = true, optional = true }
+owo-colors = { workspace = true, optional = true }
+regex = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tap = { workspace = true }
+tokio = { workspace = true, features = ["rt", "macros", "sync", "io-util"] }
+tokio-stream = { workspace = true }
+tokio-util = { workspace = true, features = ["codec", "io"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true }
-ignorable = "0.1.2"
-document-features = "0.2.12"
+
+jeb-common = { workspace = true }
+jeb-streaming = { workspace = true, features = ["json", "serde"] }
+jeb-value = { workspace = true, features = ["serde", "serde_json"] }

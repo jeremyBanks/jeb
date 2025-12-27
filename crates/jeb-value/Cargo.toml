@@ -11,15 +11,16 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-default = ["wasm", "serde", "serde_json"]
-serde = ["indexmap/serde", "serde/derive"]
+default = []
+serde = ["indexmap/serde", "dep:serde", "serde/derive", "dep:serde_bytes"]
 serde_json = ["dep:serde_json", "serde"]
 wasm = ["dep:wasm-bindgen"]
 
 [dependencies]
-derive_more = { version = "2.0.1", features = ["full"] }
-document-features = "0.2.12"
-indexmap = { version = "2.0" }
-serde = { version = "1.0", optional = true }
-serde_json = { version = "1.0", optional = true }
+derive_more = { workspace = true, features = ["full"] }
+document-features = { workspace = true }
+indexmap = { workspace = true }
+serde = { workspace = true, optional = true }
+serde_bytes = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
