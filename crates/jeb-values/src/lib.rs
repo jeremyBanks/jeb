@@ -11,10 +11,10 @@ mod text;
 mod value;
 
 pub use self::{
-    bytes::Bytes,
-    float::Float,
-    text::Text,
-    value::Value,
+    bytes::*,
+    float::*,
+    text::*,
+    value::*,
 };
 
 #[cfg(feature = "serde")]

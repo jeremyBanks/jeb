@@ -161,13 +161,13 @@ impl ser::Serializer for Serializer {
         Ok(Value::TextMap(map))
     }
 
-    fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Error> {
+    fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, SerdeError> {
         Ok(SerializeVec {
             vec: Vec::with_capacity(len.unwrap_or(0)),
         })
     }
 
-    fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple, Error> {
+    fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple, SerdeError> {
         Ok(SerializeVec {
             vec: Vec::with_capacity(len),
         })
@@ -177,7 +177,7 @@ impl ser::Serializer for Serializer {
         self,
         _name: &'static str,
         len: usize,
-    ) -> Result<Self::SerializeTupleStruct, Error> {
+    ) -> Result<Self::SerializeTupleStruct, SerdeError> {
         Ok(SerializeVec {
             vec: Vec::with_capacity(len),
         })
@@ -189,14 +189,14 @@ impl ser::Serializer for Serializer {
         _variant_index: u32,
         variant: &'static str,
         len: usize,
-    ) -> Result<Self::SerializeTupleVariant, Error> {
+    ) -> Result<Self::SerializeTupleVariant, SerdeError> {
         Ok(SerializeTupleVariant {
             variant: variant.to_string(),
             vec: Vec::with_capacity(len),
         })
     }
 
-    fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Error> {
+    fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, SerdeError> {
         Ok(SerializeMap {
             entries: Vec::with_capacity(len.unwrap_or(0)),
             next_key: None,
@@ -207,7 +207,7 @@ impl ser::Serializer for Serializer {
         self,
         _name: &'static str,
         len: usize,
-    ) -> Result<Self::SerializeStruct, Error> {
+    ) -> Result<Self::SerializeStruct, SerdeError> {
         Ok(SerializeMap {
             entries: Vec::with_capacity(len),
             next_key: None,
@@ -220,7 +220,7 @@ impl ser::Serializer for Serializer {
         _variant_index: u32,
         variant: &'static str,
         len: usize,
-    ) -> Result<Self::SerializeStructVariant, Error> {
+    ) -> Result<Self::SerializeStructVariant, SerdeError> {
         Ok(SerializeStructVariant {
             variant: variant.to_string(),
             map: SerializeMap {
@@ -324,10 +324,9 @@ impl ser::SerializeMap for SerializeMap {
     }
 
     fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), SerdeError> {
-        let key = self
-            .next_key
-            .take()
-            .ok_or_else(|| Error::Message("serialize_value called before serialize_key".into()))?;
+        let key = self.next_key.take().ok_or_else(|| {
+            SerdeError::Message("serialize_value called before serialize_key".into())
+        })?;
         self.entries.push((key, to_value(value)?));
         Ok(())
     }
@@ -453,7 +452,7 @@ impl ser::SerializeSeq for MapKeySeq {
         Ok(())
     }
 
-    fn end(self) -> Result<MapKey, Error> {
+    fn end(self) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Array(self.elements)))
     }
 }
@@ -467,7 +466,7 @@ impl ser::SerializeTuple for MapKeySeq {
         Ok(())
     }
 
-    fn end(self) -> Result<MapKey, Error> {
+    fn end(self) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Array(self.elements)))
     }
 }
@@ -481,7 +480,7 @@ impl ser::SerializeTupleStruct for MapKeySeq {
         Ok(())
     }
 
-    fn end(self) -> Result<MapKey, Error> {
+    fn end(self) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Array(self.elements)))
     }
 }
@@ -495,7 +494,7 @@ impl ser::SerializeTupleVariant for MapKeySeq {
         Ok(())
     }
 
-    fn end(self) -> Result<MapKey, Error> {
+    fn end(self) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Array(self.elements)))
     }
 }
@@ -518,7 +517,7 @@ impl ser::SerializeStruct for MapKeyStruct {
         Ok(())
     }
 
-    fn end(self) -> Result<MapKey, Error> {
+    fn end(self) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::TextMap(self.fields)))
     }
 }
@@ -537,7 +536,7 @@ impl ser::SerializeStructVariant for MapKeyStruct {
         Ok(())
     }
 
-    fn end(self) -> Result<MapKey, Error> {
+    fn end(self) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::TextMap(self.fields)))
     }
 }
@@ -557,15 +556,14 @@ impl ser::SerializeMap for MapKeyMap {
     }
 
     fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), SerdeError> {
-        let key = self
-            .next_key
-            .take()
-            .ok_or_else(|| Error::Message("serialize_value called before serialize_key".into()))?;
+        let key = self.next_key.take().ok_or_else(|| {
+            SerdeError::Message("serialize_value called before serialize_key".into())
+        })?;
         self.entries.push((key, to_value(value)?));
         Ok(())
     }
 
-    fn end(self) -> Result<MapKey, Error> {
+    fn end(self) -> Result<MapKey, SerdeError> {
         if self.entries.is_empty() {
             return Ok(MapKey::Complex(Value::Array(Vec::new())));
         }
@@ -637,83 +635,83 @@ impl ser::Serializer for MapKeySerializer {
     type SerializeTupleStruct = MapKeySeq;
     type SerializeTupleVariant = MapKeySeq;
 
-    fn serialize_bool(self, v: bool) -> Result<MapKey, Error> {
+    fn serialize_bool(self, v: bool) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Bool(v)))
     }
 
-    fn serialize_i8(self, v: i8) -> Result<MapKey, Error> {
+    fn serialize_i8(self, v: i8) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Signed(v as i64)))
     }
 
-    fn serialize_i16(self, v: i16) -> Result<MapKey, Error> {
+    fn serialize_i16(self, v: i16) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Signed(v as i64)))
     }
 
-    fn serialize_i32(self, v: i32) -> Result<MapKey, Error> {
+    fn serialize_i32(self, v: i32) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Signed(v as i64)))
     }
 
-    fn serialize_i64(self, v: i64) -> Result<MapKey, Error> {
+    fn serialize_i64(self, v: i64) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Signed(v)))
     }
 
-    fn serialize_i128(self, v: i128) -> Result<MapKey, Error> {
+    fn serialize_i128(self, v: i128) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Serializer.serialize_i128(v)?))
     }
 
-    fn serialize_u8(self, v: u8) -> Result<MapKey, Error> {
+    fn serialize_u8(self, v: u8) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Unsigned(v as u64)))
     }
 
-    fn serialize_u16(self, v: u16) -> Result<MapKey, Error> {
+    fn serialize_u16(self, v: u16) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Unsigned(v as u64)))
     }
 
-    fn serialize_u32(self, v: u32) -> Result<MapKey, Error> {
+    fn serialize_u32(self, v: u32) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Unsigned(v as u64)))
     }
 
-    fn serialize_u64(self, v: u64) -> Result<MapKey, Error> {
+    fn serialize_u64(self, v: u64) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Unsigned(v)))
     }
 
-    fn serialize_u128(self, v: u128) -> Result<MapKey, Error> {
+    fn serialize_u128(self, v: u128) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Serializer.serialize_u128(v)?))
     }
 
-    fn serialize_f32(self, v: f32) -> Result<MapKey, Error> {
+    fn serialize_f32(self, v: f32) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Serializer.serialize_f32(v)?))
     }
 
-    fn serialize_f64(self, v: f64) -> Result<MapKey, Error> {
+    fn serialize_f64(self, v: f64) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Serializer.serialize_f64(v)?))
     }
 
-    fn serialize_char(self, v: char) -> Result<MapKey, Error> {
+    fn serialize_char(self, v: char) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Text(Text::from(v.to_string())))
     }
 
-    fn serialize_str(self, v: &str) -> Result<MapKey, Error> {
+    fn serialize_str(self, v: &str) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Text(Text::from(v.to_string())))
     }
 
-    fn serialize_bytes(self, v: &[u8]) -> Result<MapKey, Error> {
+    fn serialize_bytes(self, v: &[u8]) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Bytes(Bytes::from(v.to_vec())))
     }
 
-    fn serialize_none(self) -> Result<MapKey, Error> {
+    fn serialize_none(self) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Null))
     }
 
-    fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<MapKey, Error> {
+    fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Serializer.serialize_some(value)?))
     }
 
-    fn serialize_unit(self) -> Result<MapKey, Error> {
+    fn serialize_unit(self) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Null))
     }
 
-    fn serialize_unit_struct(self, _name: &'static str) -> Result<MapKey, Error> {
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Complex(Value::Null))
     }
 
@@ -722,7 +720,7 @@ impl ser::Serializer for MapKeySerializer {
         _name: &'static str,
         _variant_index: u32,
         variant: &'static str,
-    ) -> Result<MapKey, Error> {
+    ) -> Result<MapKey, SerdeError> {
         Ok(MapKey::Text(Text::from(variant.to_string())))
     }
 
@@ -730,7 +728,7 @@ impl ser::Serializer for MapKeySerializer {
         self,
         _name: &'static str,
         value: &T,
-    ) -> Result<MapKey, Error> {
+    ) -> Result<MapKey, SerdeError> {
         value.serialize(self)
     }
 
@@ -740,20 +738,20 @@ impl ser::Serializer for MapKeySerializer {
         _variant_index: u32,
         variant: &'static str,
         value: &T,
-    ) -> Result<MapKey, Error> {
+    ) -> Result<MapKey, SerdeError> {
         let inner = to_value(value)?;
         let mut map = IndexMap::new();
         map.insert(Text::from(variant.to_string()), inner);
         Ok(MapKey::Complex(Value::TextMap(map)))
     }
 
-    fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, Error> {
+    fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, SerdeError> {
         Ok(MapKeySeq {
             elements: Vec::new(),
         })
     }
 
-    fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple, Error> {
+    fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple, SerdeError> {
         Ok(MapKeySeq {
             elements: Vec::new(),
         })
@@ -763,7 +761,7 @@ impl ser::Serializer for MapKeySerializer {
         self,
         _name: &'static str,
         _len: usize,
-    ) -> Result<Self::SerializeTupleStruct, Error> {
+    ) -> Result<Self::SerializeTupleStruct, SerdeError> {
         Ok(MapKeySeq {
             elements: Vec::new(),
         })
@@ -775,13 +773,13 @@ impl ser::Serializer for MapKeySerializer {
         _variant_index: u32,
         _variant: &'static str,
         _len: usize,
-    ) -> Result<Self::SerializeTupleVariant, Error> {
+    ) -> Result<Self::SerializeTupleVariant, SerdeError> {
         Ok(MapKeySeq {
             elements: Vec::new(),
         })
     }
 
-    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap, Error> {
+    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap, SerdeError> {
         Ok(MapKeyMap {
             entries: Vec::new(),
             next_key: None,
@@ -792,7 +790,7 @@ impl ser::Serializer for MapKeySerializer {
         self,
         _name: &'static str,
         _len: usize,
-    ) -> Result<Self::SerializeStruct, Error> {
+    ) -> Result<Self::SerializeStruct, SerdeError> {
         Ok(MapKeyStruct {
             fields: IndexMap::new(),
         })
@@ -804,7 +802,7 @@ impl ser::Serializer for MapKeySerializer {
         _variant_index: u32,
         _variant: &'static str,
         _len: usize,
-    ) -> Result<Self::SerializeStructVariant, Error> {
+    ) -> Result<Self::SerializeStructVariant, SerdeError> {
         Ok(MapKeyStruct {
             fields: IndexMap::new(),
         })

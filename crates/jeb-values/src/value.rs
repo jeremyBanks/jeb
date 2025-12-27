@@ -18,11 +18,7 @@ mod from;
 
 #[cfg_attr(
     feature = "serde",
-    derive(
-        serde::Serialize,
-        serde::Deserialize
-    ),
-    serde(untagged)
+    derive(serde::Serialize)
 )]
 #[derive(Debug, Clone, From, Default, TryInto, IsVariant, TryUnwrap, Unwrap, Eq, PartialEq)]
 #[must_use]
