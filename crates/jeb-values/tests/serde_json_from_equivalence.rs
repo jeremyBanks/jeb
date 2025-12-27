@@ -92,7 +92,16 @@ fn test_from_json_number_signed() {
 
 #[test]
 fn test_from_json_number_float() {
-    for &num in &[0.0, 1.5, -1.5, 42.42, -42.42, 3.14159, f64::MIN, f64::MAX] {
+    for &num in &[
+        0.0,
+        1.5,
+        -1.5,
+        42.42,
+        -42.42,
+        core::f64::consts::PI,
+        f64::MIN,
+        f64::MAX,
+    ] {
         let json = serde_json::json!(num);
 
         // Direct conversion
@@ -353,8 +362,13 @@ fn test_roundtrip_primitives() {
         // distinguish signed/unsigned for non-negative integers
         match original {
             Value::Signed(n) if n >= 0 => {
-                assert_eq!(via_direct, Value::Unsigned(n as u64),
-                    "Signed({}) should normalize to Unsigned({})", n, n);
+                assert_eq!(
+                    via_direct,
+                    Value::Unsigned(n as u64),
+                    "Signed({}) should normalize to Unsigned({})",
+                    n,
+                    n
+                );
             }
             _ => {
                 assert_eq!(via_direct, original, "Round-trip failed for {:?}", original);

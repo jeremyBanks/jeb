@@ -1,93 +1,63 @@
-# serde_json Conversion Discrepancies
+# serde_json Conversion Equivalence - RESOLVED ✅
 
 ## Summary
 
-**IMPORTANT**: The direct `From<serde_json::Value>` implementations in `crates/jeb-values/src/serde_json/mod.rs` are **NOT equivalent** to using serde's `serialize`/`deserialize` traits.
+**RESOLVED**: The direct `From<serde_json::Value>` implementations and serde's `serialize`/`deserialize` traits now produce equivalent results!
 
-I ran comprehensive tests comparing both approaches and found **7 test failures** showing different behavior.
+The issue was caused by using derived `#[derive(Deserialize)]` with `#[serde(untagged)]` on the `Value` enum, which tried variants in order. Since `Bytes` came before `Array` and accepted sequences, arrays were incorrectly captured as bytes.
+
+## Solution
+
+Implemented a **manual `impl<'de> Deserialize<'de> for Value`** that maps serde's data model directly:
+- `visit_seq` → `Value::Array` (always)
+- `visit_bytes` → `Value::Bytes` (always)
+- `visit_map` → `Value::TextMap` or `Value::BytesMap` (based on first key type)
 
 ## Test Results
 
-- ✅ **13 tests passed** (primitives, nested objects, complex structures)
-- ❌ **7 tests failed** (arrays and round-trips)
+**All 20 tests pass!** ✅
 
-## Key Discrepancy: Array vs Bytes
-
-The most critical difference is how **empty and numeric arrays** are handled:
-
-### Empty Array Example
-```rust
-let json = serde_json::json!([]);
-
-// Direct From<serde_json::Value>
-let direct: Value = json.clone().into();
-// Result: Value::Array([])
-
-// Via serde deserialize
-let via_serde: Value = serde_json::from_value(json).unwrap();
-// Result: Value::Bytes(Bytes([]))  ❌ DIFFERENT!
-```
-
-### Numeric Array Example
-```rust
-let json = serde_json::json!([[1, 2], [3, 4]]);
-
-// Direct From<serde_json::Value>
-// Result: Value::Array([
-//     Value::Array([Unsigned(1), Unsigned(2)]),
-//     Value::Array([Unsigned(3), Unsigned(4)])
-// ])
-
-// Via serde deserialize
-// Result: Value::Array([
-//     Value::Bytes(Bytes([1, 2])),  ❌ Arrays of u8 become Bytes!
-//     Value::Bytes(Bytes([3, 4]))
-// ])
-```
-
-## Root Cause
-
-The serde implementation has special logic that converts arrays of u8 into `Value::Bytes`:
-- When deserializing via serde, arrays containing only u8-sized integers are interpreted as byte arrays
-- The direct `From` implementation treats them as regular arrays
-
-## Affected Tests
-
-1. `test_from_json_array_empty` - Empty arrays
-2. `test_from_json_array_nested` - Nested numeric arrays
-3. `test_from_json_mixed_array_types` - Mixed content with numeric arrays
-4. `test_from_json_object_empty` - Probably related to nested empty arrays
-5. `test_roundtrip_primitives` - Round-trip conversions
-6. `test_roundtrip_arrays` - Array round-trips
-7. `test_roundtrip_objects` - Object round-trips (likely containing arrays)
-
-## What Works Correctly
-
-The following conversions **are equivalent** between both approaches:
+### What Works
 - ✅ Null values
 - ✅ Booleans
 - ✅ Numbers (unsigned, signed, floats)
-- ✅ Strings
-- ✅ Objects with non-array values
-- ✅ Deeply nested structures (without numeric arrays)
 - ✅ Zero sign distinction (-0.0 vs +0.0)
+- ✅ Strings
+- ✅ **Empty arrays** (now correctly `Array([])` instead of `Bytes([])`)
+- ✅ **Numeric arrays** (now correctly `Array([...])` instead of `Bytes([...])`)
+- ✅ Objects (empty and nested)
+- ✅ Complex nested structures
+- ✅ Round-trip conversions
 
-## Recommendation
+### Expected Normalization
 
-The comment in `serde_json/mod.rs` claiming these are equivalent is **incorrect**. You need to decide:
+JSON normalizes positive `Signed` integers to `Unsigned` since JSON doesn't distinguish signed/unsigned:
+- `Signed(0)` → `Unsigned(0)`
+- `Signed(i64::MAX)` → `Unsigned(9223372036854775807)`
 
-1. **Keep both implementations** - Document that they behave differently for arrays
-2. **Make them equivalent** - Either:
-   - Update the direct `From` to match serde's byte array logic, OR
-   - Change serde's Deserialize impl to not convert arrays to bytes
-3. **Remove the direct `From`** - Just use serde for consistency
+This is expected JSON behavior and tests account for it.
 
-## Test File
+## Files Changed
 
-The comprehensive test suite is available at:
-`crates/jeb-values/tests/serde_json_from_equivalence.rs`
+1. **crates/jeb-values/src/value.rs**
+   - Removed `Deserialize` from derive (kept `Serialize` with `#[serde(untagged)]`)
 
-Run with:
+2. **crates/jeb-values/src/serde/deserialize.rs**
+   - Added manual `impl<'de> Deserialize<'de> for Value`
+   - Created `ValueVisitor` with all visitor methods
+
+3. **crates/jeb-values/src/serde/error.rs**
+   - Renamed `Error` to `SerdeError` for clarity
+
+4. **crates/jeb-values/tests/serde_json_from_equivalence.rs**
+   - Added comprehensive test suite (20 tests)
+   - Tests both direct `From` and serde deserialization
+   - Handles expected JSON normalization
+
+## Test Command
+
 ```bash
 cargo test -p jeb-values --test serde_json_from_equivalence
 ```
+
+All 80 tests in jeb-values pass! ✅
