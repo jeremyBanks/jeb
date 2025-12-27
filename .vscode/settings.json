@@ -214,5 +214,8 @@
   "git.autofetch": true,
   "rust-analyzer.cargo.features": "all",
   "rust-analyzer.check.command": "clippy",
-  "rust-analyzer.diagnostics.disabled": ["E0728"]
+  "rust-analyzer.diagnostics.disabled": [
+    "E0728"
+  ],
+  "chat.useClaudeSkills": true
 }
