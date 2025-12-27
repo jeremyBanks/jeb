@@ -1,7 +1,13 @@
+mod deserialize;
+mod deserializer;
 mod error;
 mod serialize;
-mod deserializer;
+mod serializer;
 
-pub use error::Error;
-pub use serialize::to_value;
-pub use deserializer::from_value;
+pub use {
+    deserialize::*,
+    deserializer::*,
+    error::*,
+    serialize::*,
+    serializer::*,
+};
