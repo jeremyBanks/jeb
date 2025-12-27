@@ -11,7 +11,7 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-default = ["serde", "serde_json"]
+default = []
 serde = ["indexmap/serde", "serde/derive"]
 serde_json = ["dep:serde_json", "serde"]
 wasm = ["dep:wasm-bindgen"]
