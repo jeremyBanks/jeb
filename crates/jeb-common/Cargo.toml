@@ -19,4 +19,3 @@ derive_more = { workspace = true, features = ["full"] }
 document-features = { workspace = true }
 indexmap = { workspace = true }
 wasm-bindgen = { workspace = true, optional = true }
-you-can = { workspace = true }

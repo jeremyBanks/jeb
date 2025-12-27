@@ -23,7 +23,6 @@ async-stream = { workspace = true }
 cfg-if = { workspace = true }
 derive_more = { workspace = true, features = ["full"] }
 document-features = { workspace = true }
-fuckit = { workspace = true }
 futures = { workspace = true }
 macro_rules_attribute = { workspace = true }
 serde = { workspace = true, optional = true, features = ["derive"] }
