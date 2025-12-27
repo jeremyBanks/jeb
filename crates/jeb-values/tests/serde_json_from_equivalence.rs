@@ -348,7 +348,18 @@ fn test_roundtrip_primitives() {
         let via_serde = from_serde_json_via_serde(&json);
 
         assert_eq!(via_direct, via_serde, "Mismatch for {:?}", original);
-        assert_eq!(via_direct, original, "Round-trip failed for {:?}", original);
+
+        // JSON normalizes positive Signed integers to Unsigned because JSON doesn't
+        // distinguish signed/unsigned for non-negative integers
+        match original {
+            Value::Signed(n) if n >= 0 => {
+                assert_eq!(via_direct, Value::Unsigned(n as u64),
+                    "Signed({}) should normalize to Unsigned({})", n, n);
+            }
+            _ => {
+                assert_eq!(via_direct, original, "Round-trip failed for {:?}", original);
+            }
+        }
     }
 }
 
