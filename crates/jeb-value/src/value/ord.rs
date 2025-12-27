@@ -74,12 +74,11 @@ impl Ord for Value {
                         Less => Less,
                         Greater => Greater,
                         Equal => {
-                            // Integer parts equal; check fractional part
-                            if **right > right_trunc {
-                                Less // left < right (right has fractional part)
-                            } else {
-                                Less // Tiebreaker: Unsigned < Float when equal
-                            }
+                            // Integer parts equal
+                            // If right has fractional part: left < right
+                            // If exactly equal: Unsigned < Float (tiebreaker)
+                            // Either way: Less
+                            Less
                         }
                     }
                 }
@@ -112,7 +111,8 @@ impl Ord for Value {
                             } else if **right < right_trunc {
                                 Greater // left > right (right has negative fractional part)
                             } else {
-                                Less // Tiebreaker: Signed < Float when equal
+                                // Exactly equal: Signed < Float (tiebreaker)
+                                Less
                             }
                         }
                     }
