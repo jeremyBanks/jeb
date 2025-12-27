@@ -69,144 +69,83 @@ impl core::hash::Hash for Value {
     }
 }
 
-impl Value {
-    /// Total ordering by type complexity and value.
-    ///
-    /// Order hierarchy (roughly aligned with JSON serialization lexicographic order):
-    /// 1. Bytes (will serialize as `"\b...`)
-    /// 2. Text (serializes as `"...`)
-    /// 3. Numbers (serializes as digits, compared numerically, then by type: Unsigned < Signed < Float)
-    /// 4. Array (serializes as `[...`)
-    /// 5. Bool(false) (serializes as `false`)
-    /// 6. Null (serializes as `null`)
-    /// 7. Bool(true) (serializes as `true`)
-    /// 8. BytesMap (serializes as `{"\b...`)
-    /// 9. TextMap (serializes as `{"...`)
-    #[must_use]
-    pub fn cmp_by_complexity(&self, other: &Self) -> core::cmp::Ordering {
-        use core::cmp::Ordering;
 
-        // Helper to get type rank based on JSON serialization lexicographic order
-        let type_rank = |v: &Value| match v {
-            Value::Bytes(_) => 0,                // "\b
-            Value::Text(_) => 1,                 // "
-            Value::Unsigned(_) | Value::Signed(_) | Value::Float(_) => 2, // 0-9, -
-            Value::Array(_) => 3,                // [
-            Value::Bool(false) => 4,             // f
-            Value::Null => 5,                    // n
-            Value::Bool(true) => 6,              // t
-            Value::BytesMap(_) => 7,             // {"\b
-            Value::TextMap(_) => 8,              // {"
+impl Ord for Value {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        use {
+            Value::*,
+            core::cmp::Ordering::*,
         };
+
+        fn type_rank(value: &Value) -> usize {
+            use Value::*;
+            match value {
+                /* "\b__ */ Bytes(_) => 0,
+                /* "____ */ Text(_) => 1,
+                /* 0____ */ Unsigned(_) | Signed(_) | Float(_) => 2,
+                /* [____ */ Array(_) => 3,
+                /* false */ Bool(false) => 4,
+                /* null_ */ Null => 5,
+                /* true_ */ Bool(true) => 6,
+                /* {"\b_ */ BytesMap(_) => 7,
+                /* {"___ */ TextMap(_) => 8,
+            }
+        }
 
         let self_rank = type_rank(self);
         let other_rank = type_rank(other);
 
         // First compare by type rank
         match self_rank.cmp(&other_rank) {
-            Ordering::Equal => {
-                // Same rank, compare within type
-                match (self, other) {
-                    (Value::Bytes(a), Value::Bytes(b)) => a.cmp(b),
-                    (Value::Text(a), Value::Text(b)) => a.cmp(b),
+            Equal => match (self, other) {
+                (Null, Null) => Equal,
+                (Bool(left), Bool(right)) => left.cmp(right),
+                (Unsigned(left), Unsigned(right)) => left.cmp(right),
+                (Signed(left), Signed(right)) => left.cmp(right),
+                (Float(left), Float(right)) => left.cmp(right),
+                (Bytes(left), Bytes(right)) => left.cmp(right),
+                (Text(left), Text(right)) => left.cmp(right),
+                (Array(left), Array(right)) => left.cmp(right),
+                (BytesMap(left), BytesMap(right)) => left.iter().cmp(right),
+                (TextMap(left), TextMap(right)) => left.iter().cmp(right),
 
-                    // Numbers: try numeric comparison first, then fall back to type ordering
-                    (Value::Unsigned(a), Value::Unsigned(b)) => a.cmp(b),
-                    (Value::Signed(a), Value::Signed(b)) => a.cmp(b),
-                    (Value::Float(a), Value::Float(b)) => a.cmp(b),
-
-                    // Cross-number comparisons: compare numerically if possible
-                    (Value::Unsigned(a), Value::Signed(b)) => {
-                        // If signed is negative, unsigned is always greater
-                        if *b < 0 {
-                            Ordering::Greater
-                        } else {
-                            // Both non-negative, compare as u64 if possible
-                            match u64::try_from(*b) {
-                                Ok(b_as_u64) => match a.cmp(&b_as_u64) {
-                                    Ordering::Equal => Ordering::Less, // Unsigned < Signed for same value
-                                    ord => ord,
-                                },
-                                Err(_) => Ordering::Less, // b too large for u64
-                            }
+                (Unsigned(left), Signed(right)) => {
+                    if *right < 0 {
+                        Greater
+                    } else {
+                        match u64::try_from(*right) {
+                            Ok(b_as_u64) => match left.cmp(&b_as_u64) {
+                                Equal => Less,
+                                ord => ord,
+                            },
+                            Err(_) => Less,
                         }
                     }
-                    (Value::Signed(_), Value::Unsigned(_)) => {
-                        other.cmp_by_complexity(self).reverse()
-                    }
-
-                    (Value::Unsigned(a), Value::Float(b)) => {
-                        let a_as_f64 = *a as f64;
-                        match a_as_f64.total_cmp(&**b) {
-                            Ordering::Equal => Ordering::Less, // Unsigned < Float for same value
-                            ord => ord,
-                        }
-                    }
-                    (Value::Float(_), Value::Unsigned(_)) => {
-                        other.cmp_by_complexity(self).reverse()
-                    }
-
-                    (Value::Signed(a), Value::Float(b)) => {
-                        let a_as_f64 = *a as f64;
-                        match a_as_f64.total_cmp(&**b) {
-                            Ordering::Equal => Ordering::Less, // Signed < Float for same value
-                            ord => ord,
-                        }
-                    }
-                    (Value::Float(_), Value::Signed(_)) => {
-                        other.cmp_by_complexity(self).reverse()
-                    }
-
-                    (Value::Array(a), Value::Array(b)) => {
-                        // Lexicographic comparison
-                        for (a_item, b_item) in a.iter().zip(b.iter()) {
-                            match a_item.cmp_by_complexity(b_item) {
-                                Ordering::Equal => continue,
-                                ord => return ord,
-                            }
-                        }
-                        a.len().cmp(&b.len())
-                    }
-                    (Value::Bool(a), Value::Bool(b)) => a.cmp(b),
-                    (Value::Null, Value::Null) => Ordering::Equal,
-                    (Value::BytesMap(a), Value::BytesMap(b)) => {
-                        // Lexicographic comparison by key-value pairs
-                        for (a_item, b_item) in a.iter().zip(b.iter()) {
-                            match a_item.0.cmp(b_item.0) {
-                                Ordering::Equal => match a_item.1.cmp_by_complexity(&b_item.1) {
-                                    Ordering::Equal => continue,
-                                    ord => return ord,
-                                },
-                                ord => return ord,
-                            }
-                        }
-                        a.len().cmp(&b.len())
-                    }
-                    (Value::TextMap(a), Value::TextMap(b)) => {
-                        // Lexicographic comparison by key-value pairs
-                        for (a_item, b_item) in a.iter().zip(b.iter()) {
-                            match a_item.0.cmp(b_item.0) {
-                                Ordering::Equal => match a_item.1.cmp_by_complexity(&b_item.1) {
-                                    Ordering::Equal => continue,
-                                    ord => return ord,
-                                },
-                                ord => return ord,
-                            }
-                        }
-                        a.len().cmp(&b.len())
-                    }
-
-                    _ => unreachable!("type_rank equality should prevent this"),
                 }
-            }
+                (Signed(_), Unsigned(_)) => other.cmp(self).reverse(),
+
+                (Unsigned(left), Float(right)) => {
+                    let left_as_f64 = *left as f64;
+                    match left_as_f64.total_cmp(right) {
+                        Equal => Less,
+                        ord => ord,
+                    }
+                }
+                (Float(_), Unsigned(_)) => other.cmp(self).reverse(),
+
+                (Signed(left), Float(right)) => {
+                    let left_as_f64 = *left as f64;
+                    match left_as_f64.total_cmp(right) {
+                        Equal => Less,
+                        ord => ord,
+                    }
+                }
+                (Float(_), Signed(_)) => other.cmp(self).reverse(),
+
+                _ => unreachable!("type_rank equality should prevent this"),
+            },
             ord => ord,
         }
-    }
-}
-
-impl Ord for Value {
-    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        self.cmp_by_complexity(other)
     }
 }
 

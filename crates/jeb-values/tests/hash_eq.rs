@@ -1,6 +1,15 @@
 use {
-    jeb_values::{Bytes, Float, Text, Value},
-    std::collections::{BTreeMap, HashMap, HashSet},
+    jeb_values::{
+        Bytes,
+        Float,
+        Text,
+        Value,
+    },
+    std::collections::{
+        BTreeMap,
+        HashMap,
+        HashSet,
+    },
 };
 
 #[test]
@@ -88,8 +97,13 @@ fn test_eq_different_numeric_types() {
 
 #[test]
 fn test_hash_consistency() {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
+    use std::{
+        collections::hash_map::DefaultHasher,
+        hash::{
+            Hash,
+            Hasher,
+        },
+    };
 
     let v1 = Value::from(42u64);
     let v2 = Value::from(42u64);
@@ -112,7 +126,8 @@ fn test_ordering_type_hierarchy() {
     use std::cmp::Ordering;
 
     // Type hierarchy (aligned with JSON serialization lexicographic order):
-    // Bytes < Text < Number < Array < Bool(false) < Null < Bool(true) < BytesMap < TextMap
+    // Bytes < Text < Number < Array < Bool(false) < Null < Bool(true) < BytesMap <
+    // TextMap
 
     // Bytes < Text
     assert_eq!(
@@ -151,9 +166,7 @@ fn test_ordering_type_hierarchy() {
     assert_eq!(Value::from(true).cmp(&bytes_map), Ordering::Less);
 
     // BytesMap < TextMap
-    let text_map: Value = [(Text::from("a"), Value::from(1u64))]
-        .into_iter()
-        .collect();
+    let text_map: Value = [(Text::from("a"), Value::from(1u64))].into_iter().collect();
     assert_eq!(bytes_map.cmp(&text_map), Ordering::Less);
 }
 
@@ -177,10 +190,7 @@ fn test_ordering_same_type() {
     );
 
     // Signed integers
-    assert_eq!(
-        Value::from(-10i64).cmp(&Value::from(-5i64)),
-        Ordering::Less
-    );
+    assert_eq!(Value::from(-10i64).cmp(&Value::from(-5i64)), Ordering::Less);
     assert_eq!(Value::from(-5i64).cmp(&Value::from(5i64)), Ordering::Less);
 
     // Bytes
@@ -205,7 +215,10 @@ fn test_ordering_numeric_cross_type() {
         Value::from(10u64).cmp(&Value::from(-5i64)),
         Ordering::Greater
     ); // 10 > -5
-    assert_eq!(Value::from(10u64).cmp(&Value::from(5i64)), Ordering::Greater); // 10 > 5
+    assert_eq!(
+        Value::from(10u64).cmp(&Value::from(5i64)),
+        Ordering::Greater
+    ); // 10 > 5
     assert_eq!(Value::from(10u64).cmp(&Value::from(10i64)), Ordering::Less); // Equal numerically, but Unsigned < Signed
 
     // Unsigned vs Float
@@ -250,13 +263,19 @@ fn test_ordering_arrays_lexicographic() {
 fn test_ordering_maps_lexicographic() {
     use std::cmp::Ordering;
 
-    let map1: Value = [(Text::from("a"), Value::from(1u64)), (Text::from("b"), Value::from(2u64))]
-        .into_iter()
-        .collect();
+    let map1: Value = [
+        (Text::from("a"), Value::from(1u64)),
+        (Text::from("b"), Value::from(2u64)),
+    ]
+    .into_iter()
+    .collect();
 
-    let map2: Value = [(Text::from("a"), Value::from(1u64)), (Text::from("b"), Value::from(3u64))]
-        .into_iter()
-        .collect();
+    let map2: Value = [
+        (Text::from("a"), Value::from(1u64)),
+        (Text::from("b"), Value::from(3u64)),
+    ]
+    .into_iter()
+    .collect();
 
     let map3: Value = [
         (Text::from("a"), Value::from(1u64)),
@@ -282,7 +301,8 @@ fn test_value_in_btreemap() {
     map.insert(Value::from("hello"), "text");
     map.insert(Value::from(vec![1u8, 2, 3]), "bytes");
 
-    // Verify ordering: Bytes < Text < Numbers < Array < Bool(false) < Null < Bool(true)
+    // Verify ordering: Bytes < Text < Numbers < Array < Bool(false) < Null <
+    // Bool(true)
     let keys: Vec<_> = map.keys().cloned().collect();
     assert_eq!(keys[0], Value::from(vec![1u8, 2, 3])); // Bytes
     assert_eq!(keys[1], Value::from("hello")); // Text
@@ -294,16 +314,16 @@ fn test_value_in_btreemap() {
 }
 
 #[test]
-fn test_cmp_by_complexity_public_api() {
+fn test_cmp() {
     use std::cmp::Ordering;
 
     // Test that the public method works correctly
     let v1 = Value::from(42u64);
     let v2 = Value::from(100u64);
 
-    assert_eq!(v1.cmp_by_complexity(&v2), Ordering::Less);
-    assert_eq!(v2.cmp_by_complexity(&v1), Ordering::Greater);
-    assert_eq!(v1.cmp_by_complexity(&v1), Ordering::Equal);
+    assert_eq!(v1.cmp(&v2), Ordering::Less);
+    assert_eq!(v2.cmp(&v1), Ordering::Greater);
+    assert_eq!(v1.cmp(&v1), Ordering::Equal);
 }
 
 #[test]
@@ -322,7 +342,8 @@ fn test_sorted_values() {
 
     values.sort();
 
-    // Expected order: Bytes < Text < Numbers < Array < Bool(false) < Null < Bool(true)
+    // Expected order: Bytes < Text < Numbers < Array < Bool(false) < Null <
+    // Bool(true)
     assert_eq!(values[0], Value::from(vec![1u8, 2, 3])); // Bytes
     assert_eq!(values[1], Value::from("apple")); // Text (sorted)
     assert_eq!(values[2], Value::from("zebra")); // Text (sorted)
