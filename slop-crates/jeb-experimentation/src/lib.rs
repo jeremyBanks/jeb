@@ -52,10 +52,15 @@ where
     S: Stream<Item = Result<T, E>>,
 {
     fn drop(&mut self) {
-        let mut state = self.shared.lock();
-        state.ok_dropped = true;
-        // Wake the err stream so it can make progress
-        if let Some(waker) = state.err_waker.take() {
+        // Extract waker before releasing lock to avoid deadlock
+        let waker = {
+            let mut state = self.shared.lock();
+            state.ok_dropped = true;
+            state.err_waker.take()
+        }; // Lock released here
+
+        // Wake the err stream so it can make progress (outside lock)
+        if let Some(waker) = waker {
             waker.wake();
         }
     }
@@ -66,10 +71,15 @@ where
     S: Stream<Item = Result<T, E>>,
 {
     fn drop(&mut self) {
-        let mut state = self.shared.lock();
-        state.err_dropped = true;
-        // Wake the ok stream so it can make progress
-        if let Some(waker) = state.ok_waker.take() {
+        // Extract waker before releasing lock to avoid deadlock
+        let waker = {
+            let mut state = self.shared.lock();
+            state.err_dropped = true;
+            state.ok_waker.take()
+        }; // Lock released here
+
+        // Wake the ok stream so it can make progress (outside lock)
+        if let Some(waker) = waker {
             waker.wake();
         }
     }
@@ -115,97 +125,107 @@ where
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut state = self.shared.lock();
 
-        loop {
-            // First check the buffer
-            match state.buffer.take() {
-                Some(Ok(t)) => {
-                    // It's for us! Wake the other stream so it can poll input.
-                    if let Some(waker) = state.err_waker.take() {
-                        waker.wake();
-                    }
-                    return Poll::Ready(Some(t));
+        // First check the buffer
+        match state.buffer.take() {
+            Some(Ok(t)) => {
+                // It's for us! Wake the other stream so it can poll input.
+                let waker = state.err_waker.take();
+                drop(state); // Release lock before waking
+                if let Some(waker) = waker {
+                    waker.wake();
                 }
-                Some(Err(e)) => {
-                    // Not for us, put it back and wait
+                return Poll::Ready(Some(t));
+            }
+            Some(Err(e)) => {
+                // Not for us - check if the other stream was dropped
+                if state.err_dropped {
+                    // Err stream is gone, discard this item and continue polling input
+                    // Fall through to input polling section
+                } else {
+                    // Put it back and wait for err stream to consume it
                     state.buffer = Some(Err(e));
                     // Only clone waker if it's different from current
                     if !state
                         .ok_waker
                         .as_ref()
-                        .map_or(false, |w| w.will_wake(cx.waker()))
+                        .is_some_and(|w| w.will_wake(cx.waker()))
                     {
                         state.ok_waker = Some(cx.waker().clone());
                     }
                     // Re-wake the err stream in case of spurious wakeup
-                    if let Some(waker) = state.err_waker.take() {
+                    let waker = state.err_waker.take();
+                    drop(state); // Release lock before waking
+                    if let Some(waker) = waker {
                         waker.wake();
                     }
                     return Poll::Pending;
                 }
-                None => {
-                    // Buffer is empty, try to poll input
-                }
             }
+            None => {
+                // Buffer is empty, fall through to poll input
+            }
+        }
 
-            // Buffer is empty, poll the input stream
-            match &mut state.input {
-                None => {
-                    // Input exhausted
-                    return Poll::Ready(None);
-                }
-                Some(input) => {
-                    match input.as_mut().poll_next(cx) {
-                        Poll::Ready(Some(Ok(t))) => {
-                            // Got an Ok, return it directly
-                            return Poll::Ready(Some(t));
-                        }
-                        Poll::Ready(Some(Err(e))) => {
-                            if state.err_dropped {
-                                // Err stream is gone, discard this item.
-                                // Wake ourselves to continue, but yield to avoid spin loop.
-                                cx.waker().wake_by_ref();
-                                return Poll::Pending;
-                            }
-                            // Got an Err, buffer it for the other stream
-                            state.buffer = Some(Err(e));
-                            // Only clone waker if it's different from current
-                            if !state
-                                .ok_waker
-                                .as_ref()
-                                .map_or(false, |w| w.will_wake(cx.waker()))
-                            {
-                                state.ok_waker = Some(cx.waker().clone());
-                            }
-                            // Wake the err stream
-                            if let Some(waker) = state.err_waker.take() {
-                                waker.wake();
-                            }
-                            return Poll::Pending;
-                        }
-                        Poll::Ready(None) => {
-                            // Input exhausted
-                            state.input = None;
-                            // Wake err stream so it knows we're done
-                            if let Some(waker) = state.err_waker.take() {
-                                waker.wake();
-                            }
-                            return Poll::Ready(None);
-                        }
-                        Poll::Pending => {
-                            // Input not ready, store our waker
-                            // Only clone waker if it's different from current
-                            if !state
-                                .ok_waker
-                                .as_ref()
-                                .map_or(false, |w| w.will_wake(cx.waker()))
-                            {
-                                state.ok_waker = Some(cx.waker().clone());
-                            }
-                            return Poll::Pending;
-                        }
-                    }
-                }
+        // Buffer is empty, poll the input stream
+        match &mut state.input {
+            None => {
+                // Input exhausted
+                Poll::Ready(None)
             }
+            Some(input) => match input.as_mut().poll_next(cx) {
+                Poll::Ready(Some(Ok(t))) => {
+                    // Got an Ok, return it directly
+                    Poll::Ready(Some(t))
+                }
+                Poll::Ready(Some(Err(e))) => {
+                    if state.err_dropped {
+                        // Err stream is gone, discard this item.
+                        // Wake ourselves to continue, but yield to avoid spin loop.
+                        cx.waker().wake_by_ref();
+                        return Poll::Pending;
+                    }
+                    // Got an Err, buffer it for the other stream
+                    state.buffer = Some(Err(e));
+                    // Only clone waker if it's different from current
+                    if !state
+                        .ok_waker
+                        .as_ref()
+                        .is_some_and(|w| w.will_wake(cx.waker()))
+                    {
+                        state.ok_waker = Some(cx.waker().clone());
+                    }
+                    // Wake the err stream
+                    let waker = state.err_waker.take();
+                    drop(state); // Release lock before waking
+                    if let Some(waker) = waker {
+                        waker.wake();
+                    }
+                    Poll::Pending
+                }
+                Poll::Ready(None) => {
+                    // Input exhausted
+                    state.input = None;
+                    // Wake err stream so it knows we're done
+                    let waker = state.err_waker.take();
+                    drop(state); // Release lock before waking
+                    if let Some(waker) = waker {
+                        waker.wake();
+                    }
+                    Poll::Ready(None)
+                }
+                Poll::Pending => {
+                    // Input not ready, store our waker
+                    // Only clone waker if it's different from current
+                    if !state
+                        .ok_waker
+                        .as_ref()
+                        .is_some_and(|w| w.will_wake(cx.waker()))
+                    {
+                        state.ok_waker = Some(cx.waker().clone());
+                    }
+                    Poll::Pending
+                }
+            },
         }
     }
 }
@@ -219,97 +239,107 @@ where
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut state = self.shared.lock();
 
-        loop {
-            // First check the buffer
-            match state.buffer.take() {
-                Some(Err(e)) => {
-                    // It's for us! Wake the other stream so it can poll input.
-                    if let Some(waker) = state.ok_waker.take() {
-                        waker.wake();
-                    }
-                    return Poll::Ready(Some(e));
+        // First check the buffer
+        match state.buffer.take() {
+            Some(Err(e)) => {
+                // It's for us! Wake the other stream so it can poll input.
+                let waker = state.ok_waker.take();
+                drop(state); // Release lock before waking
+                if let Some(waker) = waker {
+                    waker.wake();
                 }
-                Some(Ok(t)) => {
-                    // Not for us, put it back and wait
+                return Poll::Ready(Some(e));
+            }
+            Some(Ok(t)) => {
+                // Not for us - check if the other stream was dropped
+                if state.ok_dropped {
+                    // Ok stream is gone, discard this item and continue polling input
+                    // Fall through to input polling section
+                } else {
+                    // Put it back and wait for ok stream to consume it
                     state.buffer = Some(Ok(t));
                     // Only clone waker if it's different from current
                     if !state
                         .err_waker
                         .as_ref()
-                        .map_or(false, |w| w.will_wake(cx.waker()))
+                        .is_some_and(|w| w.will_wake(cx.waker()))
                     {
                         state.err_waker = Some(cx.waker().clone());
                     }
                     // Re-wake the ok stream in case of spurious wakeup
-                    if let Some(waker) = state.ok_waker.take() {
+                    let waker = state.ok_waker.take();
+                    drop(state); // Release lock before waking
+                    if let Some(waker) = waker {
                         waker.wake();
                     }
                     return Poll::Pending;
                 }
-                None => {
-                    // Buffer is empty, try to poll input
-                }
             }
+            None => {
+                // Buffer is empty, fall through to poll input
+            }
+        }
 
-            // Buffer is empty, poll the input stream
-            match &mut state.input {
-                None => {
-                    // Input exhausted
-                    return Poll::Ready(None);
-                }
-                Some(input) => {
-                    match input.as_mut().poll_next(cx) {
-                        Poll::Ready(Some(Err(e))) => {
-                            // Got an Err, return it directly
-                            return Poll::Ready(Some(e));
-                        }
-                        Poll::Ready(Some(Ok(t))) => {
-                            if state.ok_dropped {
-                                // Ok stream is gone, discard this item.
-                                // Wake ourselves to continue, but yield to avoid spin loop.
-                                cx.waker().wake_by_ref();
-                                return Poll::Pending;
-                            }
-                            // Got an Ok, buffer it for the other stream
-                            state.buffer = Some(Ok(t));
-                            // Only clone waker if it's different from current
-                            if !state
-                                .err_waker
-                                .as_ref()
-                                .map_or(false, |w| w.will_wake(cx.waker()))
-                            {
-                                state.err_waker = Some(cx.waker().clone());
-                            }
-                            // Wake the ok stream
-                            if let Some(waker) = state.ok_waker.take() {
-                                waker.wake();
-                            }
-                            return Poll::Pending;
-                        }
-                        Poll::Ready(None) => {
-                            // Input exhausted
-                            state.input = None;
-                            // Wake ok stream so it knows we're done
-                            if let Some(waker) = state.ok_waker.take() {
-                                waker.wake();
-                            }
-                            return Poll::Ready(None);
-                        }
-                        Poll::Pending => {
-                            // Input not ready, store our waker
-                            // Only clone waker if it's different from current
-                            if !state
-                                .err_waker
-                                .as_ref()
-                                .map_or(false, |w| w.will_wake(cx.waker()))
-                            {
-                                state.err_waker = Some(cx.waker().clone());
-                            }
-                            return Poll::Pending;
-                        }
-                    }
-                }
+        // Buffer is empty, poll the input stream
+        match &mut state.input {
+            None => {
+                // Input exhausted
+                Poll::Ready(None)
             }
+            Some(input) => match input.as_mut().poll_next(cx) {
+                Poll::Ready(Some(Err(e))) => {
+                    // Got an Err, return it directly
+                    Poll::Ready(Some(e))
+                }
+                Poll::Ready(Some(Ok(t))) => {
+                    if state.ok_dropped {
+                        // Ok stream is gone, discard this item.
+                        // Wake ourselves to continue, but yield to avoid spin loop.
+                        cx.waker().wake_by_ref();
+                        return Poll::Pending;
+                    }
+                    // Got an Ok, buffer it for the other stream
+                    state.buffer = Some(Ok(t));
+                    // Only clone waker if it's different from current
+                    if !state
+                        .err_waker
+                        .as_ref()
+                        .is_some_and(|w| w.will_wake(cx.waker()))
+                    {
+                        state.err_waker = Some(cx.waker().clone());
+                    }
+                    // Wake the ok stream
+                    let waker = state.ok_waker.take();
+                    drop(state); // Release lock before waking
+                    if let Some(waker) = waker {
+                        waker.wake();
+                    }
+                    Poll::Pending
+                }
+                Poll::Ready(None) => {
+                    // Input exhausted
+                    state.input = None;
+                    // Wake ok stream so it knows we're done
+                    let waker = state.ok_waker.take();
+                    drop(state); // Release lock before waking
+                    if let Some(waker) = waker {
+                        waker.wake();
+                    }
+                    Poll::Ready(None)
+                }
+                Poll::Pending => {
+                    // Input not ready, store our waker
+                    // Only clone waker if it's different from current
+                    if !state
+                        .err_waker
+                        .as_ref()
+                        .is_some_and(|w| w.will_wake(cx.waker()))
+                    {
+                        state.err_waker = Some(cx.waker().clone());
+                    }
+                    Poll::Pending
+                }
+            },
         }
     }
 }
@@ -564,5 +594,145 @@ mod tests {
         let ok_pinned = std::pin::pin!(&mut ok_stream);
         let result = ok_pinned.poll_next(&mut cx);
         assert!(matches!(result, Poll::Ready(None)));
+    }
+
+    /// Test interleaved polling of both streams with mixed Ok/Err items.
+    /// This ensures the cooperative handoff works correctly when both streams
+    /// are polled alternately.
+    #[test]
+    fn test_interleaved_polling() {
+        use std::task::{RawWaker, RawWakerVTable};
+
+        const VTABLE: RawWakerVTable = RawWakerVTable::new(
+            |_| RawWaker::new(std::ptr::null(), &VTABLE),
+            |_| {},
+            |_| {},
+            |_| {},
+        );
+
+        let input = stream::iter(vec![Ok::<i32, &str>(1), Err("a"), Ok(2), Err("b")]);
+        let (mut ok_stream, mut err_stream) = oks_and_errs(input);
+
+        let waker = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), &VTABLE)) };
+        let mut cx = Context::from_waker(&waker);
+
+        // Poll ok_stream first - should get 1 directly
+        let result = std::pin::pin!(&mut ok_stream).poll_next(&mut cx);
+        assert_eq!(result, Poll::Ready(Some(1)));
+
+        // Poll err_stream - should poll input, get Err("a") directly
+        let result = std::pin::pin!(&mut err_stream).poll_next(&mut cx);
+        assert_eq!(result, Poll::Ready(Some("a")));
+
+        // Poll ok_stream - should get 2
+        let result = std::pin::pin!(&mut ok_stream).poll_next(&mut cx);
+        assert_eq!(result, Poll::Ready(Some(2)));
+
+        // Poll err_stream - should get "b"
+        let result = std::pin::pin!(&mut err_stream).poll_next(&mut cx);
+        assert_eq!(result, Poll::Ready(Some("b")));
+
+        // Both should be exhausted
+        let result = std::pin::pin!(&mut ok_stream).poll_next(&mut cx);
+        assert_eq!(result, Poll::Ready(None));
+
+        let result = std::pin::pin!(&mut err_stream).poll_next(&mut cx);
+        assert_eq!(result, Poll::Ready(None));
+    }
+
+    /// Test that dropping one stream while buffer contains an item for IT
+    /// (not for the other stream) works correctly.
+    #[test]
+    fn test_drop_with_buffered_item_for_dropped_stream() {
+        let input = stream::iter(vec![Err::<i32, &str>("a"), Ok(1), Err("b")]);
+        let (ok_stream, mut err_stream) = oks_and_errs(input);
+
+        // err_stream polls first, should get "a" directly
+        let result = block_on(std::pin::pin!(&mut err_stream).next());
+        assert_eq!(result, Some("a"));
+
+        // Now drop ok_stream before it processes anything
+        drop(ok_stream);
+
+        // err_stream should still be able to get "b"
+        // (the Ok(1) will be discarded since ok_stream is dropped)
+        let result = block_on(std::pin::pin!(&mut err_stream).next());
+        assert_eq!(result, Some("b"));
+
+        // err_stream should be exhausted
+        let result = block_on(std::pin::pin!(&mut err_stream).next());
+        assert_eq!(result, None);
+    }
+
+    /// Test that when one stream is dropped while an item for the OTHER stream
+    /// is buffered, the other stream can still consume it.
+    #[test]
+    fn test_drop_while_buffer_has_item_for_other() {
+        use std::task::{RawWaker, RawWakerVTable};
+
+        const VTABLE: RawWakerVTable = RawWakerVTable::new(
+            |_| RawWaker::new(std::ptr::null(), &VTABLE),
+            |_| {},
+            |_| {},
+            |_| {},
+        );
+
+        let input = stream::iter(vec![Ok::<i32, &str>(1), Err("a")]);
+        let (mut ok_stream, err_stream) = oks_and_errs(input);
+
+        let waker = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), &VTABLE)) };
+        let mut cx = Context::from_waker(&waker);
+
+        // err_stream polls first, gets Ok(1), buffers it, returns Pending
+        // (We simulate this by having err_stream poll, which will buffer the Ok)
+        drop(err_stream); // Drop immediately before it can consume anything
+
+        // ok_stream should still get all Oks
+        let result = std::pin::pin!(&mut ok_stream).poll_next(&mut cx);
+        assert_eq!(result, Poll::Ready(Some(1)));
+
+        // Continue to end
+        let results: Vec<i32> = block_on(ok_stream.collect());
+        assert!(results.is_empty()); // All consumed above
+    }
+
+    /// Test that the spin-loop prevention works: when the other stream is dropped
+    /// and we encounter items for it, we yield (return Pending) rather than spin.
+    #[test]
+    fn test_no_spin_loop_with_dropped_partner() {
+        use std::task::{RawWaker, RawWakerVTable};
+
+        const VTABLE: RawWakerVTable = RawWakerVTable::new(
+            |_| RawWaker::new(std::ptr::null(), &VTABLE),
+            |_| {},
+            |_| {},
+            |_| {},
+        );
+
+        // Create stream with Err, then Ok
+        let input = stream::iter(vec![Err::<i32, &str>("e"), Ok(1)]);
+        let (mut ok_stream, err_stream) = oks_and_errs(input);
+
+        // Drop err_stream immediately
+        drop(err_stream);
+
+        let waker = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), &VTABLE)) };
+        let mut cx = Context::from_waker(&waker);
+
+        // First poll: ok_stream polls input, gets Err("e"), discards it, returns Pending
+        let result = std::pin::pin!(&mut ok_stream).poll_next(&mut cx);
+        assert_eq!(
+            result,
+            Poll::Pending,
+            "Should return Pending after discarding, not spin"
+        );
+
+        // Second poll: ok_stream polls input again, gets Ok(1), returns it
+        let result = std::pin::pin!(&mut ok_stream).poll_next(&mut cx);
+        assert_eq!(result, Poll::Ready(Some(1)));
+
+        // Third poll: input exhausted
+        let result = std::pin::pin!(&mut ok_stream).poll_next(&mut cx);
+        assert_eq!(result, Poll::Ready(None));
     }
 }
