@@ -19,7 +19,7 @@ use {
     derive(serde::Serialize),
     serde(untagged)
 )]
-#[derive(Debug, Clone, From, Default, TryInto, IsVariant, TryUnwrap, Unwrap, Eq, PartialEq)]
+#[derive(Debug, Clone, From, Default, TryInto, IsVariant, TryUnwrap, Unwrap)]
 #[must_use]
 pub enum Value {
     #[default]
@@ -36,25 +36,85 @@ pub enum Value {
 }
 
 
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        use Value::*;
+        match (self, other) {
+            (Null, Null) => true,
+            (Bool(a), Bool(b)) => a == b,
+            (Unsigned(a), Unsigned(b)) => a == b,
+            (Signed(a), Signed(b)) => a == b,
+            // Cross-type integer equality: treat Unsigned and Signed as same type
+            (Unsigned(a), Signed(b)) => {
+                if *b < 0 {
+                    false
+                } else {
+                    u64::try_from(*b).map_or(false, |b_u64| *a == b_u64)
+                }
+            }
+            (Signed(a), Unsigned(b)) => {
+                if *a < 0 {
+                    false
+                } else {
+                    u64::try_from(*a).map_or(false, |a_u64| a_u64 == *b)
+                }
+            }
+            (Float(a), Float(b)) => a == b,
+            (Bytes(a), Bytes(b)) => a == b,
+            (Text(a), Text(b)) => a == b,
+            (Array(a), Array(b)) => a == b,
+            (BytesMap(a), BytesMap(b)) => a == b,
+            (TextMap(a), TextMap(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Value {}
+
 impl core::hash::Hash for Value {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        core::mem::discriminant(self).hash(state);
         match self {
-            Value::Null => {}
-            Value::Bool(value) => value.hash(state),
-            Value::Unsigned(value) => value.hash(state),
-            Value::Signed(value) => value.hash(state),
-            Value::Float(value) => value.hash(state),
-            Value::Bytes(value) => value.hash(state),
-            Value::Text(value) => value.hash(state),
-            Value::Array(value) => value.hash(state),
+            Value::Null => {
+                0u8.hash(state);
+            }
+            Value::Bool(value) => {
+                1u8.hash(state);
+                value.hash(state);
+            }
+            Value::Unsigned(value) => {
+                2u8.hash(state); // Integer type discriminant
+                value.hash(state);
+            }
+            Value::Signed(value) => {
+                2u8.hash(state); // Same as Unsigned - treat as same type
+                value.hash(state);
+            }
+            Value::Float(value) => {
+                3u8.hash(state);
+                value.hash(state);
+            }
+            Value::Bytes(value) => {
+                4u8.hash(state);
+                value.hash(state);
+            }
+            Value::Text(value) => {
+                5u8.hash(state);
+                value.hash(state);
+            }
+            Value::Array(value) => {
+                6u8.hash(state);
+                value.hash(state);
+            }
             Value::TextMap(value) => {
+                7u8.hash(state);
                 value.len().hash(state);
                 for item in value {
                     item.hash(state);
                 }
             }
             Value::BytesMap(value) => {
+                8u8.hash(state);
                 value.len().hash(state);
                 for item in value {
                     item.hash(state);
@@ -108,15 +168,21 @@ impl Ord for Value {
                         Greater
                     } else {
                         match u64::try_from(*right) {
-                            Ok(b_as_u64) => match left.cmp(&b_as_u64) {
-                                Equal => Less,
-                                ord => ord,
-                            },
+                            Ok(b_as_u64) => left.cmp(&b_as_u64),
                             Err(_) => Less,
                         }
                     }
                 }
-                (Signed(_), Unsigned(_)) => other.cmp(self).reverse(),
+                (Signed(left), Unsigned(right)) => {
+                    if *left < 0 {
+                        Less
+                    } else {
+                        match u64::try_from(*left) {
+                            Ok(a_as_u64) => a_as_u64.cmp(right),
+                            Err(_) => Greater,
+                        }
+                    }
+                }
 
                 (Unsigned(left), Float(right)) => {
                     // Float is guaranteed finite (no NaN/Infinity)
