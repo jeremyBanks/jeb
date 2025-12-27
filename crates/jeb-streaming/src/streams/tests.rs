@@ -588,4 +588,139 @@ mod tests {
         assert_eq!(result[1], Item::Text("42".into()));  // 'B' in ASCII
         assert_eq!(result[2], Item::Text("cc".into()));
     }
+
+    // ===== Transform Tests: parse_hex() =====
+
+    #[tokio::test]
+    async fn test_parse_hex_text_simple() {
+        let source = text_source(vec!["deadbeef".to_string()]);
+        let result: Vec<_> = parse_hex(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF].into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_hex_text_uppercase() {
+        let source = text_source(vec!["DEADBEEF".to_string()]);
+        let result: Vec<_> = parse_hex(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF].into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_hex_text_mixed_case() {
+        let source = text_source(vec!["DeAdBeEf".to_string()]);
+        let result: Vec<_> = parse_hex(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF].into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_hex_with_whitespace() {
+        let source = text_source(vec!["de ad be ef".to_string()]);
+        let result: Vec<_> = parse_hex(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF].into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_hex_bytes_ascii() {
+        let source = bytes_source(vec![b"deadbeef".to_vec()]);
+        let result: Vec<_> = parse_hex(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF].into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_hex_empty() {
+        let source = text_source(vec!["".to_string()]);
+        let result: Vec<_> = parse_hex(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Bytes(vec![].into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_hex_odd_digits() {
+        let source = text_source(vec!["abc".to_string()]);
+        let result: Vec<_> = parse_hex(source).collect().await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Err("odd number of hex digits"));
+    }
+
+    #[tokio::test]
+    async fn test_parse_hex_invalid_char() {
+        let source = text_source(vec!["abcg".to_string()]);
+        let result: Vec<_> = parse_hex(source).collect().await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Err("invalid hex digit"));
+    }
+
+    #[tokio::test]
+    async fn test_parse_hex_all_whitespace() {
+        let source = text_source(vec!["   \n\t  ".to_string()]);
+        let result: Vec<_> = parse_hex(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Bytes(vec![].into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_hex_multiple_items() {
+        let source = text_source(vec!["aa".to_string(), "bb".to_string()]);
+        let result: Vec<_> = parse_hex(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Bytes(vec![0xAA].into()));
+        assert_eq!(result[1], Item::Bytes(vec![0xBB].into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_hex_propagates_errors() {
+        use async_stream::stream;
+
+        let error_source = stream! {
+            yield Ok(Item::Text("aa".into()));
+            yield Err("test error");
+            yield Ok(Item::Text("bb".into()));
+        };
+
+        let result: Vec<_> = parse_hex(error_source).collect().await;
+
+        assert_eq!(result.len(), 3);
+        assert!(result[0].is_ok());
+        assert_eq!(result[1], Err("test error"));
+        assert!(result[2].is_ok());
+    }
 }

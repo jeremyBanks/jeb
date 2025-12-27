@@ -242,3 +242,100 @@ where
         }
     }
 }
+
+/// Transforms a stream of Items by parsing hexadecimal strings into bytes.
+///
+/// Handles both `Item::Text` and `Item::Bytes` (treating bytes as ASCII hex).
+/// Filters out whitespace before parsing. Returns errors for invalid hex.
+pub fn parse_hex<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    fn hex_digit_to_value(digit: u8) -> Result<u8, &'static str> {
+        match digit {
+            b'0'..=b'9' => Ok(digit - b'0'),
+            b'a'..=b'f' => Ok(digit - b'a' + 10),
+            b'A'..=b'F' => Ok(digit - b'A' + 10),
+            _ => Err("invalid hex digit"),
+        }
+    }
+
+    stream! {
+        let mut input = pin!(input);
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match item {
+                        Item::Text(text) => {
+                            // Parse hex string to bytes
+                            let hex_bytes: Vec<u8> = text.as_bytes()
+                                .iter()
+                                .filter(|&&b| !b.is_ascii_whitespace())
+                                .copied()
+                                .collect();
+
+                            if hex_bytes.len() % 2 != 0 {
+                                yield Err("odd number of hex digits");
+                                continue;
+                            }
+
+                            let mut bytes = Vec::new();
+                            let mut has_error = false;
+                            for chunk in hex_bytes.chunks(2) {
+                                match (hex_digit_to_value(chunk[0]), hex_digit_to_value(chunk[1])) {
+                                    (Ok(high), Ok(low)) => bytes.push((high << 4) | low),
+                                    _ => {
+                                        yield Err("invalid hex digit");
+                                        has_error = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if !has_error {
+                                yield Ok(Item::Bytes(bytes.into()));
+                            }
+                        }
+                        Item::Bytes(bytes) => {
+                            // Treat bytes as ASCII hex, parse
+                            let hex_bytes: Vec<u8> = bytes
+                                .iter()
+                                .filter(|&&b| !b.is_ascii_whitespace())
+                                .copied()
+                                .collect();
+
+                            if hex_bytes.len() % 2 != 0 {
+                                yield Err("odd number of hex digits");
+                                continue;
+                            }
+
+                            let mut result_bytes = Vec::new();
+                            let mut has_error = false;
+                            for chunk in hex_bytes.chunks(2) {
+                                match (hex_digit_to_value(chunk[0]), hex_digit_to_value(chunk[1])) {
+                                    (Ok(high), Ok(low)) => result_bytes.push((high << 4) | low),
+                                    _ => {
+                                        yield Err("invalid hex digit");
+                                        has_error = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if !has_error {
+                                yield Ok(Item::Bytes(result_bytes.into()));
+                            }
+                        }
+                        other => {
+                            // Pass through other item types unchanged
+                            yield Ok(other);
+                        }
+                    }
+                }
+                Err(e) => {
+                    // Pass through error
+                    yield Err(e);
+                }
+            }
+        }
+    }
+}

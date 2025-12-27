@@ -49,14 +49,14 @@ impl PartialEq for Value {
                 if *b < 0 {
                     false
                 } else {
-                    u64::try_from(*b).map_or(false, |b_u64| *a == b_u64)
+                    u64::try_from(*b) == Ok(*a)
                 }
             }
             (Signed(a), Unsigned(b)) => {
                 if *a < 0 {
                     false
                 } else {
-                    u64::try_from(*a).map_or(false, |a_u64| a_u64 == *b)
+                    u64::try_from(*a) == Ok(*b)
                 }
             }
             (Float(a), Float(b)) => a == b,
