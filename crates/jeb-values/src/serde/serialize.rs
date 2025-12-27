@@ -427,17 +427,118 @@ impl ser::SerializeStructVariant for SerializeStructVariant {
 
 struct MapKeySerializer;
 
+// Helper for serializing compound types as map keys
+struct MapKeySeq {
+    elements: Vec<Value>,
+}
+
+impl ser::SerializeSeq for MapKeySeq {
+    type Ok = MapKey;
+    type Error = Error;
+
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Error> {
+        self.elements.push(to_value(value)?);
+        Ok(())
+    }
+
+    fn end(self) -> Result<MapKey, Error> {
+        Ok(MapKey::Complex(Value::Array(self.elements)))
+    }
+}
+
+impl ser::SerializeTuple for MapKeySeq {
+    type Ok = MapKey;
+    type Error = Error;
+
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Error> {
+        self.elements.push(to_value(value)?);
+        Ok(())
+    }
+
+    fn end(self) -> Result<MapKey, Error> {
+        Ok(MapKey::Complex(Value::Array(self.elements)))
+    }
+}
+
+impl ser::SerializeTupleStruct for MapKeySeq {
+    type Ok = MapKey;
+    type Error = Error;
+
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Error> {
+        self.elements.push(to_value(value)?);
+        Ok(())
+    }
+
+    fn end(self) -> Result<MapKey, Error> {
+        Ok(MapKey::Complex(Value::Array(self.elements)))
+    }
+}
+
+impl ser::SerializeTupleVariant for MapKeySeq {
+    type Ok = MapKey;
+    type Error = Error;
+
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Error> {
+        self.elements.push(to_value(value)?);
+        Ok(())
+    }
+
+    fn end(self) -> Result<MapKey, Error> {
+        Ok(MapKey::Complex(Value::Array(self.elements)))
+    }
+}
+
+struct MapKeyStruct {
+    fields: IndexMap<Text, Value>,
+}
+
+impl ser::SerializeStruct for MapKeyStruct {
+    type Ok = MapKey;
+    type Error = Error;
+
+    fn serialize_field<T: ?Sized + Serialize>(
+        &mut self,
+        key: &'static str,
+        value: &T,
+    ) -> Result<(), Error> {
+        self.fields.insert(Text::from(key.to_string()), to_value(value)?);
+        Ok(())
+    }
+
+    fn end(self) -> Result<MapKey, Error> {
+        Ok(MapKey::Complex(Value::TextMap(self.fields)))
+    }
+}
+
+impl ser::SerializeStructVariant for MapKeyStruct {
+    type Ok = MapKey;
+    type Error = Error;
+
+    fn serialize_field<T: ?Sized + Serialize>(
+        &mut self,
+        key: &'static str,
+        value: &T,
+    ) -> Result<(), Error> {
+        self.fields.insert(Text::from(key.to_string()), to_value(value)?);
+        Ok(())
+    }
+
+    fn end(self) -> Result<MapKey, Error> {
+        Ok(MapKey::Complex(Value::TextMap(self.fields)))
+    }
+}
+
 impl ser::Serializer for MapKeySerializer {
     type Ok = MapKey;
     type Error = Error;
 
-    type SerializeSeq = ser::Impossible<MapKey, Error>;
-    type SerializeTuple = ser::Impossible<MapKey, Error>;
-    type SerializeTupleStruct = ser::Impossible<MapKey, Error>;
-    type SerializeTupleVariant = ser::Impossible<MapKey, Error>;
+    type SerializeSeq = MapKeySeq;
+    type SerializeTuple = MapKeySeq;
+    type SerializeTupleStruct = MapKeySeq;
+    type SerializeTupleVariant = MapKeySeq;
     type SerializeMap = ser::Impossible<MapKey, Error>;
-    type SerializeStruct = ser::Impossible<MapKey, Error>;
-    type SerializeStructVariant = ser::Impossible<MapKey, Error>;
+    type SerializeStruct = MapKeyStruct;
+    type SerializeStructVariant = MapKeyStruct;
 
     fn serialize_bool(self, v: bool) -> Result<MapKey, Error> {
         Ok(MapKey::Complex(Value::Bool(v)))
@@ -549,11 +650,15 @@ impl ser::Serializer for MapKeySerializer {
     }
 
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, Error> {
-        Err(Error::Message("cannot serialize seq as map key".into()))
+        Ok(MapKeySeq {
+            elements: Vec::new(),
+        })
     }
 
     fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple, Error> {
-        Err(Error::Message("cannot serialize tuple as map key".into()))
+        Ok(MapKeySeq {
+            elements: Vec::new(),
+        })
     }
 
     fn serialize_tuple_struct(
@@ -561,9 +666,9 @@ impl ser::Serializer for MapKeySerializer {
         _name: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeTupleStruct, Error> {
-        Err(Error::Message(
-            "cannot serialize tuple struct as map key".into(),
-        ))
+        Ok(MapKeySeq {
+            elements: Vec::new(),
+        })
     }
 
     fn serialize_tuple_variant(
@@ -573,9 +678,9 @@ impl ser::Serializer for MapKeySerializer {
         _variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant, Error> {
-        Err(Error::Message(
-            "cannot serialize tuple variant as map key".into(),
-        ))
+        Ok(MapKeySeq {
+            elements: Vec::new(),
+        })
     }
 
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap, Error> {
@@ -587,7 +692,9 @@ impl ser::Serializer for MapKeySerializer {
         _name: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeStruct, Error> {
-        Err(Error::Message("cannot serialize struct as map key".into()))
+        Ok(MapKeyStruct {
+            fields: IndexMap::new(),
+        })
     }
 
     fn serialize_struct_variant(
@@ -597,9 +704,9 @@ impl ser::Serializer for MapKeySerializer {
         _variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeStructVariant, Error> {
-        Err(Error::Message(
-            "cannot serialize struct variant as map key".into(),
-        ))
+        Ok(MapKeyStruct {
+            fields: IndexMap::new(),
+        })
     }
 }
 
