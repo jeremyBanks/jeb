@@ -20,7 +20,7 @@ path = "src/bin/jeb.rs"
 
 [features]
 default = ["bin", "fs", "stdio"]
-wasm = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys", "jeb-values/wasm"]
+wasm = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys", "jeb-value/wasm"]
 bin = [
     "fs",
     "stdio",
@@ -55,8 +55,8 @@ tokio-stream = "0.1"
 tokio-util = { version = "0.7.17", features = ["codec", "io"] }
 tracing = "0.1.43"
 
-jeb-values = { workspace = true, features = ["serde"] }
-jeb-node = { workspace = true }
+jeb-value = { workspace = true, features = ["serde"] }
+jeb-streaming = { workspace = true }
 jeb-common = { workspace = true }
 
 color-eyre = { version = "0.6.5", optional = true }

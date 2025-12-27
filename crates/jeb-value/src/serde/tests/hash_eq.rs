@@ -1,5 +1,5 @@
 use {
-    jeb_values::{
+    jeb_value::{
         Bytes,
         Float,
         Text,
@@ -63,7 +63,7 @@ fn test_array_value_hash() {
 
 #[test]
 fn test_map_value_hash() {
-    use jeb_values::Text;
+    use jeb_value::Text;
     let mut outer_map = HashMap::new();
 
     let inner1: Value = [

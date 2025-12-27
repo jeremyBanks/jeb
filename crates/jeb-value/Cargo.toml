@@ -1,5 +1,5 @@
 [package]
-name = "jeb-values"
+name = "jeb-value"
 publish = true
 description.workspace = true
 keywords.workspace = true

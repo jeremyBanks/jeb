@@ -12,7 +12,7 @@ use {
         Deref,
         DerefMut,
     },
-    jeb_values::Bytes,
+    jeb_value::Bytes,
     std::marker::PhantomData,
     tokio::io::{
         AsyncRead,

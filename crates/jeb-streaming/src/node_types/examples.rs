@@ -12,7 +12,7 @@ use {
         Stream,
         StreamExt,
     },
-    jeb_values::Bytes,
+    jeb_value::Bytes,
     macro_rules_attribute::apply,
     tokio::task::JoinHandle,
 };

@@ -1,5 +1,5 @@
 use {
-    jeb_values::{
+    jeb_value::{
         Value,
         from_value,
     },
@@ -20,7 +20,7 @@ fn test_option_compat() {
 
     // Our format: None -> null, Some(42) -> {"Some": 42}
     let our_none = Value::TextMap(
-        [(jeb_values::Text::from("value".to_string()), Value::Null)]
+        [(jeb_value::Text::from("value".to_string()), Value::Null)]
             .into_iter()
             .collect(),
     );
@@ -30,7 +30,7 @@ fn test_option_compat() {
     // serde_json format: Some(42) -> bare 42 (we accept this too)
     let json_some = Value::TextMap(
         [(
-            jeb_values::Text::from("value".to_string()),
+            jeb_value::Text::from("value".to_string()),
             Value::Unsigned(42),
         )]
         .into_iter()
@@ -42,10 +42,10 @@ fn test_option_compat() {
     // Our format: Some(42) -> {"Some": 42}
     let our_some = Value::TextMap(
         [(
-            jeb_values::Text::from("value".to_string()),
+            jeb_value::Text::from("value".to_string()),
             Value::TextMap(
                 [(
-                    jeb_values::Text::from("Some".to_string()),
+                    jeb_value::Text::from("Some".to_string()),
                     Value::Unsigned(42),
                 )]
                 .into_iter()
@@ -129,11 +129,11 @@ fn test_enum_as_text() {
         Pending,
     }
 
-    let value = Value::Text(jeb_values::Text::from("Active".to_string()));
+    let value = Value::Text(jeb_value::Text::from("Active".to_string()));
     let status: Status = from_value(value).unwrap();
     assert_eq!(status, Status::Active);
 
-    let value = Value::Text(jeb_values::Text::from("Pending".to_string()));
+    let value = Value::Text(jeb_value::Text::from("Pending".to_string()));
     let status: Status = from_value(value).unwrap();
     assert_eq!(status, Status::Pending);
 }

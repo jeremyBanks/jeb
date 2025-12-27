@@ -1,5 +1,5 @@
 use {
-    jeb_values::{
+    jeb_value::{
         Bytes,
         Value,
         from_value,

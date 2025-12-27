@@ -338,8 +338,8 @@ dependencies = [
  "ignorable",
  "indexmap",
  "jeb-common",
- "jeb-node",
- "jeb-values",
+ "jeb-streaming",
+ "jeb-value",
  "js-sys",
  "owo-colors",
  "regex",
@@ -367,7 +367,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "jeb-node"
+name = "jeb-streaming"
 version = "0.0.0-dev-2025-12-26.7705"
 dependencies = [
  "async-stream",
@@ -377,7 +377,7 @@ dependencies = [
  "fuckit",
  "futures",
  "jeb-common",
- "jeb-values",
+ "jeb-value",
  "macro_rules_attribute",
  "serde",
  "static_assertions",
@@ -388,7 +388,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "jeb-values"
+name = "jeb-value"
 version = "0.0.0-dev-2025-12-26.7705"
 dependencies = [
  "derive_more",

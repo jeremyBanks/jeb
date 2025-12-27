@@ -17,7 +17,7 @@ use {
         Deref,
         DerefMut,
     },
-    jeb_values::Bytes,
+    jeb_value::Bytes,
     tokio::io::{
         AsyncRead,
         AsyncReadExt,

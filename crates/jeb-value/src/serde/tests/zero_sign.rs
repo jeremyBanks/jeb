@@ -1,7 +1,7 @@
 /// Tests to verify that positive and negative zero are properly distinguished
 /// in Float and Value types for equality, ordering, and hashing.
 use {
-    jeb_values::{
+    jeb_value::{
         Float,
         Value,
     },
@@ -160,7 +160,7 @@ fn test_value_zero_in_arrays() {
 
 #[test]
 fn test_value_zero_in_maps() {
-    use jeb_values::Text;
+    use jeb_value::Text;
 
     let map_pos: Value = [(
         Text::from("zero"),

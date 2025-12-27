@@ -6,7 +6,7 @@ pub use {
         attempt::*,
         node::*,
     },
-    jeb_values::*,
+    jeb_value::*,
 };
 
 // mod context;

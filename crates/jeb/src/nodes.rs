@@ -41,7 +41,7 @@ use {
         Receiver,
         Task,
     },
-    jeb_node::Item,
+    jeb_streaming::Item,
     std::borrow::Cow,
 };
 

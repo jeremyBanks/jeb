@@ -1,8 +1,8 @@
-# Implementation Plan: Serde Serializer/Deserializer for jeb-values
+# Implementation Plan: Serde Serializer/Deserializer for jeb-value
 
 ## Overview
 
-Implement `serde::Serializer` and `serde::Deserializer` traits for the `jeb-values::Value` type to enable `to_value<T>()` and `from_value<T>()` conversions. This will follow serde_json's architecture but with key improvements that leverage jeb-values's richer type system.
+Implement `serde::Serializer` and `serde::Deserializer` traits for the `jeb-value::Value` type to enable `to_value<T>()` and `from_value<T>()` conversions. This will follow serde_json's architecture but with key improvements that leverage jeb-value's richer type system.
 
 ## Design Goals & Philosophy
 
@@ -30,7 +30,7 @@ Our deserializer should accept data serialized by serde_json where possible, ena
 
 ## Key Improvements Over serde_json
 
-| Feature | serde_json | jeb-values (our approach) |
+| Feature | serde_json | jeb-value (our approach) |
 |---------|-----------|---------------------------|
 | **Integer signedness** | Lost (all → Number) | **Preserved** (Unsigned/Signed variants) |
 | **Bytes** | Converted to array `[1,2,3,...]` | **Native Bytes variant** |
@@ -42,7 +42,7 @@ Our deserializer should accept data serialized by serde_json where possible, ena
 ## Files to Modify/Create
 
 ### 1. Create Error Infrastructure
-**File**: `crates/jeb-values/src/serde/error.rs` (NEW)
+**File**: `crates/jeb-value/src/serde/error.rs` (NEW)
 
 Error type implementing:
 - `serde::ser::Error` trait
@@ -54,7 +54,7 @@ Key error variants:
 - `InvalidType { unexpected, expected }` - type mismatches
 
 ### 2. Implement Serializer
-**File**: `crates/jeb-values/src/serde/serialize.rs` (NEW)
+**File**: `crates/jeb-value/src/serde/serialize.rs` (NEW)
 
 **Main components**:
 
@@ -129,7 +129,7 @@ pub fn to_value<T: Serialize>(value: T) -> Result<Value, Error> {
 - `MapKey` enum - `Text(Text) | Bytes(Bytes) | Complex(Value)`
 
 ### 3. Implement Deserializer
-**File**: `crates/jeb-values/src/serde/deserialize.rs` (NEW)
+**File**: `crates/jeb-value/src/serde/deserialize.rs` (NEW)
 
 **Main components**:
 
@@ -208,7 +208,7 @@ pub fn from_value<T: DeserializeOwned>(value: Value) -> Result<T, Error> {
 - `VariantDeserializer` - for enum content
 
 ### 4. Create serde module
-**File**: `crates/jeb-values/src/serde/mod.rs` (NEW)
+**File**: `crates/jeb-value/src/serde/mod.rs` (NEW)
 
 ```rust
 mod error;
@@ -221,7 +221,7 @@ pub use deserialize::from_value;
 ```
 
 ### 5. Update lib.rs
-**File**: `crates/jeb-values/src/lib.rs` (MINOR)
+**File**: `crates/jeb-value/src/lib.rs` (MINOR)
 
 Replace current serialize/deserialize with serde module:
 ```rust
@@ -297,7 +297,7 @@ Remove current serialize.rs and deserialize.rs stubs.
 ## Future Considerations (Out of Scope)
 
 **Crate naming consistency**: After this project is complete, consider whether crate names should be revised for consistency. For example:
-- `jeb-values` → `jeb-value` (singular, matching the primary export)
-- `jeb-node` → `jeb-streaming` or similar (more descriptive of purpose)
+- `jeb-value` → `jeb-value` (singular, matching the primary export)
+- `jeb-streaming` → `jeb-streaming` or similar (more descriptive of purpose)
 
 This is a discussion topic for later, not part of the current implementation.

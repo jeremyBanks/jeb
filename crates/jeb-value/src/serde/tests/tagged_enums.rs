@@ -1,4 +1,4 @@
-use jeb_values::{from_value, to_value};
+use jeb_value::{from_value, to_value};
 use serde::{Deserialize, Serialize};
 
 /// Test internally and adjacently tagged enums

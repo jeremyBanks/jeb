@@ -11,7 +11,7 @@ use {
         TryUnwrap,
         Unwrap,
     },
-    jeb_node::Item,
+    jeb_streaming::Item,
     serde::{
         Deserialize,
         Serialize,

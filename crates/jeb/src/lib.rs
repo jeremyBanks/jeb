@@ -46,8 +46,8 @@ pub use {
         const_checked::*,
     },
     jeb_common as common,
-    jeb_node as node,
-    jeb_values::{
+    jeb_streaming as node,
+    jeb_value::{
         self as values,
         *,
     },

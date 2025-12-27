@@ -7,7 +7,7 @@ use {
         TryUnwrap,
         Unwrap,
     },
-    jeb_values::{
+    jeb_value::{
         Bytes,
         Text,
         Value,

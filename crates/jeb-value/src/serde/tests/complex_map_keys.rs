@@ -1,7 +1,7 @@
 #![expect(clippy::type_complexity)]
 
 use {
-    jeb_values::{
+    jeb_value::{
         Value,
         from_value,
         to_value,

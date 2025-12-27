@@ -1,8 +1,8 @@
 /// Tests to verify that positive and negative zero are properly distinguished
 /// in Item type for equality, ordering, and hashing (via contained Value).
 use {
-    jeb_node::Item,
-    jeb_values::{Float, Value},
+    jeb_streaming::Item,
+    jeb_value::{Float, Value},
     std::collections::{hash_map::DefaultHasher, HashMap},
     std::hash::{Hash, Hasher},
 };

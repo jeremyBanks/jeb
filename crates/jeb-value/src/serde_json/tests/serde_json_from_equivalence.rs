@@ -3,7 +3,7 @@
 ///
 /// This verifies the claim in serde_json/mod.rs that the direct conversions
 /// are equivalent to using the serialize trait, just with less overhead.
-use jeb_values::{
+use jeb_value::{
     Float,
     Value,
 };
@@ -261,7 +261,7 @@ fn test_from_json_object_simple() {
 
     match direct {
         Value::TextMap(map) => {
-            use jeb_values::Text;
+            use jeb_value::Text;
             assert_eq!(map.len(), 4);
             assert_eq!(map.get(&Text::from("null")), Some(&Value::Null));
             assert_eq!(map.get(&Text::from("bool")), Some(&Value::Bool(true)));
@@ -409,7 +409,7 @@ fn test_roundtrip_arrays() {
 
 #[test]
 fn test_roundtrip_objects() {
-    use jeb_values::Text;
+    use jeb_value::Text;
 
     let values = vec![
         Value::TextMap(Default::default()),

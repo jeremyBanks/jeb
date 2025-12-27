@@ -1,5 +1,5 @@
 [package]
-name = "jeb-node"
+name = "jeb-streaming"
 publish = true
 description = "(part of https://crates.io/crates/jeb)"
 keywords = []
@@ -12,14 +12,14 @@ version.workspace = true
 
 [features]
 default = ["wasm", "stdio", "fs", "json", "serde"]
-serde = ["jeb-values/serde", "dep:serde"]
+serde = ["jeb-value/serde", "dep:serde"]
 fs = ["tokio/fs"]
 json = []
 stdio = ["tokio/io-std"]
 wasm = ["dep:wasm-bindgen"]
 
 [dependencies]
-jeb-values = { workspace = true }
+jeb-value = { workspace = true }
 jeb-common = { workspace = true }
 derive_more = { version = "2.0.1", features = ["full"] }
 
