@@ -16,9 +16,9 @@ crate-type = ["cdylib"]
 doc = false
 
 [dependencies]
+document-features = { workspace = true }
 js-sys = { workspace = true }
 wasm-bindgen = { workspace = true }
 
-document-features = "0.2.12"
-jeb = { workspace = true, default-features = false, features = ["wasm"] }
+jeb = { path = "../jeb", default-features = false, features = ["wasm"] }
 

@@ -15,8 +15,8 @@ default = []
 wasm = ["dep:wasm-bindgen"]
 
 [dependencies]
-derive_more = { version = "2.0.1", features = ["full"] }
-document-features = "0.2.12"
-indexmap = { version = "2.0" }
+derive_more = { workspace = true, features = ["full"] }
+document-features = { workspace = true }
+indexmap = { workspace = true }
 wasm-bindgen = { workspace = true, optional = true }
-you-can = "0.0.14"
+you-can = { workspace = true }
