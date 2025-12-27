@@ -235,7 +235,8 @@ where
     S: Stream<Item = Result<T, E>>,
 {
     fn is_terminated(&self) -> bool {
-        self.shared.lock().input.is_none()
+        let state = self.shared.lock();
+        state.input.is_none() && !matches!(state.buffer, Some(Ok(_)))
     }
 }
 
@@ -358,7 +359,8 @@ where
     S: Stream<Item = Result<T, E>>,
 {
     fn is_terminated(&self) -> bool {
-        self.shared.lock().input.is_none()
+        let state = self.shared.lock();
+        state.input.is_none() && !matches!(state.buffer, Some(Err(_)))
     }
 }
 
