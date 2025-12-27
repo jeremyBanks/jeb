@@ -1,10 +1,14 @@
-use std::fmt::{self, Display};
+use std::fmt::{
+    self,
+    Display,
+};
 
 /// Error type for both serialization and deserialization of `Value`.
 ///
 /// This error type is used by both:
 /// - `impl Serializer` in serializer.rs (for serializing to `Value`)
-/// - `impl Deserializer for Value` in deserializer.rs (for deserializing from `Value`)
+/// - `impl Deserializer for Value` in deserializer.rs (for deserializing from
+///   `Value`)
 #[derive(Debug, Clone)]
 pub enum SerdeError {
     Message(Box<str>),
@@ -32,7 +36,10 @@ impl Display for SerdeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SerdeError::Message(msg) => f.write_str(msg),
-            SerdeError::InvalidType { unexpected, expected } => {
+            SerdeError::InvalidType {
+                unexpected,
+                expected,
+            } => {
                 write!(f, "invalid type: {}, expected {}", unexpected, expected)
             }
         }
@@ -82,8 +89,8 @@ impl serde::de::Error for SerdeError {
         SerdeError::Message(msg.to_string().into_boxed_str())
     }
 
-    fn invalid_type(unexp: serde::de::Unexpected, exp: &dyn serde::de::Expected) -> Self {
-        let unexpected = match unexp {
+    fn invalid_type(unexpected: serde::de::Unexpected, exp: &dyn serde::de::Expected) -> Self {
+        let unexpected = match unexpected {
             serde::de::Unexpected::Bool(b) => Unexpected::Bool(b),
             serde::de::Unexpected::Unsigned(u) => Unexpected::Unsigned(u),
             serde::de::Unexpected::Signed(i) => Unexpected::Signed(i),
