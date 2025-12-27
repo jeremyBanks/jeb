@@ -1,6 +1,6 @@
 use jeb_values::{from_value, to_value, Value};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 /// Test complex map keys (tuples, structs)
 /// This is useful for composite indexing in data structures like BTrees
@@ -121,4 +121,69 @@ fn test_seq_keys() {
     let recovered: HashMap<Vec<i32>, String> = from_value(value).unwrap();
     assert_eq!(recovered.get(&vec![1, 2, 3]), Some(&"list1".to_string()));
     assert_eq!(recovered.get(&vec![4, 5]), Some(&"list2".to_string()));
+}
+
+#[test]
+fn test_newtype_variant_keys() {
+    // Newtype variants as keys (enum variants that wrap a value)
+    #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+    enum Identity {
+        UserId(u32),
+        Email(String),
+        Token(String),
+    }
+
+    let mut map = HashMap::new();
+    map.insert(Identity::UserId(42), "Alice".to_string());
+    map.insert(
+        Identity::Email("bob@example.com".to_string()),
+        "Bob".to_string(),
+    );
+    map.insert(Identity::Token("xyz123".to_string()), "Charlie".to_string());
+
+    let value = to_value(&map).unwrap();
+
+    // Maps with enum variant keys serialize as Array of [key, value] pairs
+    assert!(matches!(value, Value::Array(_)));
+
+    // Round-trip
+    let recovered: HashMap<Identity, String> = from_value(value).unwrap();
+    assert_eq!(
+        recovered.get(&Identity::UserId(42)),
+        Some(&"Alice".to_string())
+    );
+    assert_eq!(
+        recovered.get(&Identity::Email("bob@example.com".to_string())),
+        Some(&"Bob".to_string())
+    );
+    assert_eq!(
+        recovered.get(&Identity::Token("xyz123".to_string())),
+        Some(&"Charlie".to_string())
+    );
+}
+
+#[test]
+fn test_map_keys() {
+    // BTreeMap as key (nested maps!)
+    let mut inner1 = BTreeMap::new();
+    inner1.insert("a".to_string(), 1);
+    inner1.insert("b".to_string(), 2);
+
+    let mut inner2 = BTreeMap::new();
+    inner2.insert("x".to_string(), 10);
+    inner2.insert("y".to_string(), 20);
+
+    let mut outer = BTreeMap::new();
+    outer.insert(inner1.clone(), "first".to_string());
+    outer.insert(inner2.clone(), "second".to_string());
+
+    let value = to_value(&outer).unwrap();
+
+    // Maps with map keys serialize as Array of [key, value] pairs
+    assert!(matches!(value, Value::Array(_)));
+
+    // Round-trip
+    let recovered: BTreeMap<BTreeMap<String, i32>, String> = from_value(value).unwrap();
+    assert_eq!(recovered.get(&inner1), Some(&"first".to_string()));
+    assert_eq!(recovered.get(&inner2), Some(&"second".to_string()));
 }

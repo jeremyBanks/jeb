@@ -14,6 +14,8 @@ use {
     indexmap::IndexMap,
 };
 
+// todo ordering
+
 #[cfg_attr(
     feature = "serde",
     derive(
@@ -133,6 +135,18 @@ impl From<Vec<u8>> for Value {
 impl From<&[u8]> for Value {
     fn from(value: &[u8]) -> Self {
         Value::Bytes(value.into())
+    }
+}
+
+impl<const N: usize> From<[u8; N]> for Value {
+    fn from(value: [u8; N]) -> Self {
+        Value::Bytes(value.to_vec().into())
+    }
+}
+
+impl<const N: usize> From<&[u8; N]> for Value {
+    fn from(value: &[u8; N]) -> Self {
+        Value::Bytes(value.to_vec().into())
     }
 }
 

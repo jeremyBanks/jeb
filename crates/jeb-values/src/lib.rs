@@ -1,5 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![doc = ::document_features::document_features!()]
+#![allow(unused_imports)]
 
 mod bytes;
 mod float;
@@ -16,4 +17,9 @@ pub use self::{
 #[cfg(feature = "serde")]
 pub mod serde;
 #[cfg(feature = "serde")]
-pub use self::serde::{from_value, to_value, Error as SerdeError};
+pub use self::serde::*;
+
+#[cfg(feature = "serde_json")]
+pub mod serde_json;
+#[cfg(feature = "serde_json")]
+pub use self::serde_json::*;

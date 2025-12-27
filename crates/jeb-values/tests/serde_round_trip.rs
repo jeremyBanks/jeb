@@ -1,6 +1,18 @@
-use jeb_values::{from_value, to_value, Bytes, Value};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+#![allow(approx_constant)]
+
+use {
+    jeb_values::{
+        Bytes,
+        Value,
+        from_value,
+        to_value,
+    },
+    serde::{
+        Deserialize,
+        Serialize,
+    },
+    std::collections::HashMap,
+};
 
 #[test]
 fn test_primitives() {

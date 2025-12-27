@@ -528,6 +528,90 @@ impl ser::SerializeStructVariant for MapKeyStruct {
     }
 }
 
+struct MapKeyMap {
+    entries: Vec<(MapKey, Value)>,
+    next_key: Option<MapKey>,
+}
+
+impl ser::SerializeMap for MapKeyMap {
+    type Ok = MapKey;
+    type Error = Error;
+
+    fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<(), Error> {
+        self.next_key = Some(key.serialize(MapKeySerializer)?);
+        Ok(())
+    }
+
+    fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Error> {
+        let key = self
+            .next_key
+            .take()
+            .ok_or_else(|| Error::Message("serialize_value called before serialize_key".into()))?;
+        self.entries.push((key, to_value(value)?));
+        Ok(())
+    }
+
+    fn end(self) -> Result<MapKey, Error> {
+        if self.entries.is_empty() {
+            return Ok(MapKey::Complex(Value::Array(Vec::new())));
+        }
+
+        // Analyze keys to determine representation
+        let mut all_text = true;
+        let mut all_bytes = true;
+
+        for (key, _) in &self.entries {
+            match key {
+                MapKey::Text(_) => all_bytes = false,
+                MapKey::Bytes(_) => all_text = false,
+                MapKey::Complex(_) => {
+                    all_text = false;
+                    all_bytes = false;
+                }
+            }
+        }
+
+        if all_text {
+            let mut map = IndexMap::new();
+            for (key, value) in self.entries {
+                match key {
+                    MapKey::Text(t) => {
+                        map.insert(t, value);
+                    }
+                    _ => unreachable!(),
+                }
+            }
+            Ok(MapKey::Complex(Value::TextMap(map)))
+        } else if all_bytes {
+            let mut map = IndexMap::new();
+            for (key, value) in self.entries {
+                match key {
+                    MapKey::Bytes(b) => {
+                        map.insert(b, value);
+                    }
+                    _ => unreachable!(),
+                }
+            }
+            Ok(MapKey::Complex(Value::BytesMap(map)))
+        } else {
+            // Mixed or complex keys: use array of pairs
+            let pairs = self
+                .entries
+                .into_iter()
+                .map(|(key, value)| {
+                    let key_value = match key {
+                        MapKey::Text(t) => Value::Text(t),
+                        MapKey::Bytes(b) => Value::Bytes(b),
+                        MapKey::Complex(v) => v,
+                    };
+                    Value::Array(vec![key_value, value])
+                })
+                .collect();
+            Ok(MapKey::Complex(Value::Array(pairs)))
+        }
+    }
+}
+
 impl ser::Serializer for MapKeySerializer {
     type Ok = MapKey;
     type Error = Error;
@@ -536,7 +620,7 @@ impl ser::Serializer for MapKeySerializer {
     type SerializeTuple = MapKeySeq;
     type SerializeTupleStruct = MapKeySeq;
     type SerializeTupleVariant = MapKeySeq;
-    type SerializeMap = ser::Impossible<MapKey, Error>;
+    type SerializeMap = MapKeyMap;
     type SerializeStruct = MapKeyStruct;
     type SerializeStructVariant = MapKeyStruct;
 
@@ -641,12 +725,13 @@ impl ser::Serializer for MapKeySerializer {
         self,
         _name: &'static str,
         _variant_index: u32,
-        _variant: &'static str,
-        _value: &T,
+        variant: &'static str,
+        value: &T,
     ) -> Result<MapKey, Error> {
-        Err(Error::Message(
-            "cannot serialize newtype variant as map key".into(),
-        ))
+        let inner = to_value(value)?;
+        let mut map = IndexMap::new();
+        map.insert(Text::from(variant.to_string()), inner);
+        Ok(MapKey::Complex(Value::TextMap(map)))
     }
 
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, Error> {
@@ -684,7 +769,10 @@ impl ser::Serializer for MapKeySerializer {
     }
 
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap, Error> {
-        Err(Error::Message("cannot serialize map as map key".into()))
+        Ok(MapKeyMap {
+            entries: Vec::new(),
+            next_key: None,
+        })
     }
 
     fn serialize_struct(

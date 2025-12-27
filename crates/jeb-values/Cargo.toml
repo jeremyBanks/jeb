@@ -13,7 +13,7 @@ version.workspace = true
 [features]
 default = ["wasm", "serde", "serde_json"]
 wasm = ["dep:wasm-bindgen"]
-serde_json = ["dep:serde_json"]
+serde_json = ["dep:serde_json", "serde"]
 serde = ["indexmap/serde", "serde/derive"]
 
 [dependencies]
