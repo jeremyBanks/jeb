@@ -25,6 +25,7 @@ derive_more = { workspace = true, features = ["full"] }
 document-features = { workspace = true }
 futures = { workspace = true }
 macro_rules_attribute = { workspace = true }
+parking_lot = "0.12"
 serde = { workspace = true, optional = true, features = ["derive"] }
 static_assertions = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "io-util"] }
