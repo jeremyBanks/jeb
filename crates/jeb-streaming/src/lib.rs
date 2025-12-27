@@ -1,19 +1,17 @@
 #![allow(clippy::type_complexity)]
 #![allow(dead_code)]
 
-mod channel;
 mod item;
-mod node_types;
-mod nodes;
 
-// New stream-based infrastructure
+// Stream infrastructure
 pub mod split;
 pub mod stream_utils;
-pub mod streams;
 
-use node_types::*;
-pub use {
-    channel::*,
-    item::*,
-    nodes::*,
-};
+// Stream functions (promoted from streams module)
+mod streams;
+
+// Re-export everything
+pub use item::*;
+pub use split::{oks_and_errs, ErrStream, OkStream};
+pub use stream_utils::{errs, fail_fast, oks, unwrap_oks};
+pub use streams::*;
