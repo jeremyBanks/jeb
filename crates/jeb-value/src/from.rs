@@ -1,9 +1,64 @@
-use crate::{
-    Bytes,
-    Float,
-    Text,
-    Value,
-};
+use crate::{Bytes, Float, Text, Value};
+
+// ============================================================================
+// Float From/TryFrom implementations
+// ============================================================================
+
+impl TryFrom<f64> for Float {
+    type Error = f64;
+
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        Float::new(value).ok_or(value)
+    }
+}
+
+impl TryFrom<f32> for Float {
+    type Error = f32;
+
+    fn try_from(value: f32) -> Result<Self, Self::Error> {
+        Float::new(value.into()).ok_or(value)
+    }
+}
+
+impl From<i32> for Float {
+    fn from(value: i32) -> Self {
+        Float(value.into())
+    }
+}
+
+impl From<u32> for Float {
+    fn from(value: u32) -> Self {
+        Float(value.into())
+    }
+}
+
+impl From<i16> for Float {
+    fn from(value: i16) -> Self {
+        Float(value.into())
+    }
+}
+
+impl From<u16> for Float {
+    fn from(value: u16) -> Self {
+        Float(value.into())
+    }
+}
+
+impl From<i8> for Float {
+    fn from(value: i8) -> Self {
+        Float(value.into())
+    }
+}
+
+impl From<u8> for Float {
+    fn from(value: u8) -> Self {
+        Float(value.into())
+    }
+}
+
+// ============================================================================
+// Value From/TryFrom implementations
+// ============================================================================
 
 impl TryFrom<f32> for Value {
     type Error = f32;

@@ -7,6 +7,7 @@
 
 mod bytes;
 mod float;
+mod from;
 #[cfg(feature = "serde")]
 mod serde;
 #[cfg(feature = "serde_json")]
