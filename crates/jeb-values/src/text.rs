@@ -14,7 +14,6 @@ use {
     },
 };
 
-
 #[cfg_attr(
     feature = "wasm",
     wasm_bindgen::prelude::wasm_bindgen
