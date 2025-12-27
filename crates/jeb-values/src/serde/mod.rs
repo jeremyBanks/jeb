@@ -1,7 +1,7 @@
 mod error;
 mod serialize;
-mod deserialize;
+mod deserializer;
 
 pub use error::Error;
 pub use serialize::to_value;
-pub use deserialize::from_value;
+pub use deserializer::from_value;
