@@ -20,5 +20,5 @@ js-sys = { workspace = true }
 wasm-bindgen = { workspace = true }
 
 document-features = "0.2.12"
-jeb = { workspace = true, features = ["wasm"] }
+jeb = { workspace = true, default-features = false, features = ["wasm"] }
 

@@ -11,7 +11,7 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-default = ["wasm"]
+default = []
 wasm = ["dep:wasm-bindgen"]
 
 [dependencies]

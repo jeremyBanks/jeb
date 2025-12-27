@@ -11,12 +11,12 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-default = ["wasm", "stdio", "fs", "json", "serde"]
+default = ["stdio", "fs", "json", "serde"]
 serde = ["jeb-value/serde", "dep:serde"]
 fs = ["tokio/fs"]
 json = []
 stdio = ["tokio/io-std"]
-wasm = ["dep:wasm-bindgen"]
+wasm = ["dep:wasm-bindgen", "jeb-value/wasm", "jeb-common/wasm"]
 
 [dependencies]
 jeb-value = { workspace = true }
