@@ -55,19 +55,73 @@ impl Ord for Value {
                 (Signed(_), Unsigned(_)) => other.cmp(self).reverse(),
 
                 (Unsigned(left), Float(right)) => {
-                    let left_as_f64 = *left as f64;
-                    match left_as_f64.total_cmp(right) {
-                        Equal => Less,
-                        ord => ord,
+                    // Handle special float values
+                    if right.is_nan() {
+                        return Less; // u64 < NaN (total ordering convention)
+                    }
+                    if **right < 0.0 {
+                        return Greater; // u64 >= 0, so u64 > negative float
+                    }
+
+                    // Check if float exceeds u64 range
+                    const U64_MAX_PLUS_1: f64 = 18446744073709551616.0; // 2^64
+                    if **right >= U64_MAX_PLUS_1 {
+                        return Less; // u64 < float (float exceeds u64::MAX)
+                    }
+
+                    // Float is in [0, 2^64), safe to truncate and convert
+                    let right_trunc = right.trunc();
+                    let right_int = right_trunc as u64;
+
+                    match left.cmp(&right_int) {
+                        Less => Less,
+                        Greater => Greater,
+                        Equal => {
+                            // Integer parts equal; check fractional part
+                            if **right > right_trunc {
+                                Less // left < right (right has fractional part)
+                            } else {
+                                Less // Tiebreaker: Unsigned < Float when equal
+                            }
+                        }
                     }
                 }
                 (Float(_), Unsigned(_)) => other.cmp(self).reverse(),
 
                 (Signed(left), Float(right)) => {
-                    let left_as_f64 = *left as f64;
-                    match left_as_f64.total_cmp(right) {
-                        Equal => Less,
-                        ord => ord,
+                    // Handle special float values
+                    if right.is_nan() {
+                        return Less; // i64 < NaN (total ordering convention)
+                    }
+
+                    // Check if float exceeds i64 range
+                    const I64_MAX_PLUS_1: f64 = 9223372036854775808.0; // 2^63
+                    const I64_MIN: f64 = -9223372036854775808.0; // -2^63
+
+                    if **right >= I64_MAX_PLUS_1 {
+                        return Less; // i64 < float (float exceeds i64::MAX)
+                    }
+                    if **right < I64_MIN {
+                        return Greater; // i64 > float (float below i64::MIN)
+                    }
+
+                    // Float is in [i64::MIN, i64::MAX + 1), safe to truncate and convert
+                    let right_trunc = right.trunc();
+                    let right_int = right_trunc as i64;
+
+                    match left.cmp(&right_int) {
+                        Less => Less,
+                        Greater => Greater,
+                        Equal => {
+                            // Integer parts equal; check fractional part
+                            if **right > right_trunc {
+                                Less // left < right (right has positive fractional part)
+                            } else if **right < right_trunc {
+                                Greater // left > right (right has negative fractional part)
+                            } else {
+                                Less // Tiebreaker: Signed < Float when equal
+                            }
+                        }
                     }
                 }
                 (Float(_), Signed(_)) => other.cmp(self).reverse(),
