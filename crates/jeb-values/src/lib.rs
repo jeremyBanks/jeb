@@ -7,22 +7,20 @@
 
 mod bytes;
 mod float;
+#[cfg(feature = "serde")]
+mod serde;
+#[cfg(feature = "serde_json")]
+mod serde_json;
 mod text;
 mod value;
 
+#[cfg(feature = "serde")]
+pub use self::serde::*;
+#[cfg(feature = "serde_json")]
+pub use self::serde_json::*;
 pub use self::{
     bytes::*,
     float::*,
     text::*,
     value::*,
 };
-
-#[cfg(feature = "serde")]
-pub mod serde;
-#[cfg(feature = "serde")]
-pub use self::serde::*;
-
-#[cfg(feature = "serde_json")]
-pub mod serde_json;
-#[cfg(feature = "serde_json")]
-pub use self::serde_json::*;

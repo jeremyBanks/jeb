@@ -1,6 +1,20 @@
-use jeb_values::{from_value, to_value, Value};
-use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+#![expect(clippy::type_complexity)]
+
+use {
+    jeb_values::{
+        Value,
+        from_value,
+        to_value,
+    },
+    serde::{
+        Deserialize,
+        Serialize,
+    },
+    std::collections::{
+        BTreeMap,
+        HashMap,
+    },
+};
 
 /// Test complex map keys (tuples, structs)
 /// This is useful for composite indexing in data structures like BTrees
@@ -20,9 +34,18 @@ fn test_tuple_map_keys() {
 
     // Round-trip
     let recovered: HashMap<(i32, String), String> = from_value(value).unwrap();
-    assert_eq!(recovered.get(&(1, "a".to_string())), Some(&"value1".to_string()));
-    assert_eq!(recovered.get(&(2, "b".to_string())), Some(&"value2".to_string()));
-    assert_eq!(recovered.get(&(1, "b".to_string())), Some(&"value3".to_string()));
+    assert_eq!(
+        recovered.get(&(1, "a".to_string())),
+        Some(&"value1".to_string())
+    );
+    assert_eq!(
+        recovered.get(&(2, "b".to_string())),
+        Some(&"value2".to_string())
+    );
+    assert_eq!(
+        recovered.get(&(1, "b".to_string())),
+        Some(&"value3".to_string())
+    );
 }
 
 #[test]
@@ -74,8 +97,14 @@ fn test_nested_tuple_keys() {
 
     let value = to_value(&map).unwrap();
     let recovered: HashMap<((i32, i32), (i32, i32)), String> = from_value(value).unwrap();
-    assert_eq!(recovered.get(&((1, 2), (3, 4))), Some(&"nested".to_string()));
-    assert_eq!(recovered.get(&((5, 6), (7, 8))), Some(&"another".to_string()));
+    assert_eq!(
+        recovered.get(&((1, 2), (3, 4))),
+        Some(&"nested".to_string())
+    );
+    assert_eq!(
+        recovered.get(&((5, 6), (7, 8))),
+        Some(&"another".to_string())
+    );
 }
 
 #[test]

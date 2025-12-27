@@ -181,7 +181,7 @@ fn test_from_json_array_empty() {
 
 #[test]
 fn test_from_json_array_primitives() {
-    let json = serde_json::json!([null, true, false, 42, -42, 3.14, "hello"]);
+    let json = serde_json::json!([null, true, false, 42, -42, core::f64::consts::PI, "hello"]);
 
     // Direct conversion
     let direct: Value = json.clone().into();
@@ -199,7 +199,10 @@ fn test_from_json_array_primitives() {
             assert_eq!(arr[2], Value::Bool(false));
             assert_eq!(arr[3], Value::Unsigned(42));
             assert_eq!(arr[4], Value::Signed(-42));
-            assert_eq!(arr[5], Value::Float(Float::try_from(3.14).unwrap()));
+            assert_eq!(
+                arr[5],
+                Value::Float(Float::try_from(core::f64::consts::PI).unwrap())
+            );
             assert_eq!(arr[6], Value::from("hello"));
         }
         _ => panic!("Expected Array variant"),
@@ -339,8 +342,8 @@ fn test_roundtrip_primitives() {
         Value::Signed(i64::MAX),
         Value::Float(Float::try_from(0.0).unwrap()),
         Value::Float(Float::try_from(-0.0).unwrap()),
-        Value::Float(Float::try_from(3.14).unwrap()),
-        Value::Float(Float::try_from(-3.14).unwrap()),
+        Value::Float(Float::try_from(core::f64::consts::PI).unwrap()),
+        Value::Float(Float::try_from(-core::f64::consts::PI).unwrap()),
         Value::from(""),
         Value::from("hello"),
         Value::from("unicode: 你好"),
@@ -480,7 +483,7 @@ fn test_from_json_mixed_array_types() {
         true,
         42,
         -42,
-        3.14,
+        core::f64::consts::PI,
         "string",
         [1, 2, 3],
         {"key": "value"}

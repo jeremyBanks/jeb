@@ -1,9 +1,18 @@
 /// Tests to verify that positive and negative zero are properly distinguished
 /// in Float and Value types for equality, ordering, and hashing.
 use {
-    jeb_values::{Float, Value},
-    std::collections::{hash_map::DefaultHasher, HashMap},
-    std::hash::{Hash, Hasher},
+    jeb_values::{
+        Float,
+        Value,
+    },
+    std::collections::{
+        HashMap,
+        hash_map::DefaultHasher,
+    },
+    std::hash::{
+        Hash,
+        Hasher,
+    },
 };
 
 // ============================================================================
@@ -181,8 +190,9 @@ fn test_value_zero_cross_type_comparison() {
     let signed_zero = Value::from(0i64);
 
     // Float zeros vs integer zeros
-    // When comparing integer 0 to float -0.0 or +0.0, we convert integer to f64 (which gives +0.0)
-    // Then use total_cmp: -0.0 < +0.0, so integer 0 (+0.0) > float -0.0
+    // When comparing integer 0 to float -0.0 or +0.0, we convert integer to f64
+    // (which gives +0.0) Then use total_cmp: -0.0 < +0.0, so integer 0 (+0.0) >
+    // float -0.0
 
     // unsigned_zero (0u64 -> 0.0) vs neg_zero_float (-0.0)
     // Using total_cmp: 0.0 > -0.0, so unsigned is Greater
@@ -206,7 +216,7 @@ fn test_value_zero_cross_type_comparison() {
 
 #[test]
 fn test_value_zero_sorted() {
-    let mut values = vec![
+    let mut values = [
         Value::Float(Float::try_from(0.0f64).unwrap()),
         Value::Float(Float::try_from(-0.0f64).unwrap()),
         Value::from(0u64),
@@ -219,16 +229,12 @@ fn test_value_zero_sorted() {
     // Reasoning:
     // - All numbers are in the same type rank (2)
     // - -0.0 < 0u64 because when comparing, 0u64 converts to +0.0, and -0.0 < +0.0
-    // - 0u64 < 0i64 because when both compare as +0.0, we use type tiebreaker: Unsigned < Signed
-    // - 0i64 < +0.0 because when both compare as +0.0, we use type tiebreaker: Signed < Float
-    assert_eq!(
-        values[0],
-        Value::Float(Float::try_from(-0.0f64).unwrap())
-    );
+    // - 0u64 < 0i64 because when both compare as +0.0, we use type tiebreaker:
+    //   Unsigned < Signed
+    // - 0i64 < +0.0 because when both compare as +0.0, we use type tiebreaker:
+    //   Signed < Float
+    assert_eq!(values[0], Value::Float(Float::try_from(-0.0f64).unwrap()));
     assert_eq!(values[1], Value::from(0u64));
     assert_eq!(values[2], Value::from(0i64));
-    assert_eq!(
-        values[3],
-        Value::Float(Float::try_from(0.0f64).unwrap())
-    );
+    assert_eq!(values[3], Value::Float(Float::try_from(0.0f64).unwrap()));
 }

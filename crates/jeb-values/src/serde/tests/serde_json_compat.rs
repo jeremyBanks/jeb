@@ -1,5 +1,10 @@
-use jeb_values::{from_value, Value};
-use serde::{Deserialize, Serialize};
+use {
+    jeb_values::{
+        Value,
+        from_value,
+    },
+    serde::Deserialize,
+};
 
 /// Test that our deserializer can accept serde_json-style data
 
@@ -15,12 +20,9 @@ fn test_option_compat() {
 
     // Our format: None -> null, Some(42) -> {"Some": 42}
     let our_none = Value::TextMap(
-        [(
-            jeb_values::Text::from("value".to_string()),
-            Value::Null,
-        )]
-        .into_iter()
-        .collect(),
+        [(jeb_values::Text::from("value".to_string()), Value::Null)]
+            .into_iter()
+            .collect(),
     );
     let container: Container = from_value(our_none).unwrap();
     assert_eq!(container.value, None);

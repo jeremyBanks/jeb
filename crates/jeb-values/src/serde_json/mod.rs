@@ -1,7 +1,3 @@
-// XXX: these should all be equivalent to using the serialize trait/to_value,
-// but with less overhead and error handling. We need to write a bunch of tests
-// to confirm that!
-
 impl From<serde_json::Value> for crate::Value {
     fn from(value: serde_json::Value) -> Self {
         use serde_json::Value::*;

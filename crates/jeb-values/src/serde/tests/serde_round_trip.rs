@@ -35,10 +35,10 @@ fn test_primitives() {
     assert_round_trip(18_000_000_000_000_000_000u64);
 
     // Floats
-    assert_round_trip(3.14f32);
-    assert_round_trip(-3.14f32);
-    assert_round_trip(2.718281828f64);
-    assert_round_trip(-2.718281828f64);
+    assert_round_trip(core::f32::consts::PI);
+    assert_round_trip(-core::f32::consts::PI);
+    assert_round_trip(core::f64::consts::E);
+    assert_round_trip(-core::f64::consts::E);
     assert_round_trip(0.0f64);
     assert_round_trip(-0.0f64);
 
@@ -62,13 +62,13 @@ fn test_i128_u128() {
 
     // Values that overflow - require bytes encoding
     let large_i128 = i128::MAX;
-    let value = to_value(&large_i128).unwrap();
+    let value = to_value(large_i128).unwrap();
     assert!(matches!(value, Value::Bytes(_)));
     let recovered: i128 = from_value(value).unwrap();
     assert_eq!(recovered, large_i128);
 
     let large_u128 = u128::MAX;
-    let value = to_value(&large_u128).unwrap();
+    let value = to_value(large_u128).unwrap();
     assert!(matches!(value, Value::Bytes(_)));
     let recovered: u128 = from_value(value).unwrap();
     assert_eq!(recovered, large_u128);
@@ -78,19 +78,19 @@ fn test_i128_u128() {
 fn test_special_floats() {
     // NaN and infinity should serialize to bytes
     let nan_f32 = f32::NAN;
-    let value = to_value(&nan_f32).unwrap();
+    let value = to_value(nan_f32).unwrap();
     assert!(matches!(value, Value::Bytes(_)));
     let recovered: f32 = from_value(value).unwrap();
     assert!(recovered.is_nan());
 
     let inf_f64 = f64::INFINITY;
-    let value = to_value(&inf_f64).unwrap();
+    let value = to_value(inf_f64).unwrap();
     assert!(matches!(value, Value::Bytes(_)));
     let recovered: f64 = from_value(value).unwrap();
     assert!(recovered.is_infinite() && recovered.is_sign_positive());
 
     let neg_inf_f32 = f32::NEG_INFINITY;
-    let value = to_value(&neg_inf_f32).unwrap();
+    let value = to_value(neg_inf_f32).unwrap();
     assert!(matches!(value, Value::Bytes(_)));
     let recovered: f32 = from_value(value).unwrap();
     assert!(recovered.is_infinite() && recovered.is_sign_negative());
@@ -100,14 +100,14 @@ fn test_special_floats() {
 fn test_option() {
     // None serializes to Null
     let none: Option<i32> = None;
-    let value = to_value(&none).unwrap();
+    let value = to_value(none).unwrap();
     assert!(matches!(value, Value::Null));
     let recovered: Option<i32> = from_value(value).unwrap();
     assert_eq!(recovered, None);
 
     // Some serializes to {"Some": value}
     let some = Some(42);
-    let value = to_value(&some).unwrap();
+    let value = to_value(some).unwrap();
     assert!(matches!(value, Value::TextMap(_)));
     let recovered: Option<i32> = from_value(value).unwrap();
     assert_eq!(recovered, Some(42));
@@ -138,7 +138,7 @@ fn test_sequences() {
 #[test]
 fn test_tuples() {
     assert_round_trip((1, 2));
-    assert_round_trip((1, "hello".to_string(), 3.14));
+    assert_round_trip((1, "hello".to_string(), core::f64::consts::PI));
     assert_round_trip((true, false, true, false));
 }
 
