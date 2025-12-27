@@ -14,11 +14,6 @@ pub use self::{
 };
 
 #[cfg(feature = "serde")]
-mod deserialize;
+pub mod serde;
 #[cfg(feature = "serde")]
-pub use self::deserialize::*;
-
-#[cfg(feature = "serde")]
-mod serialize;
-#[cfg(feature = "serde")]
-pub use self::serialize::*;
+pub use self::serde::{from_value, to_value, Error as SerdeError};
