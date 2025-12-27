@@ -103,6 +103,7 @@
     "cdylib",
     "clippy",
     "codegen",
+    "databake",
     "debuginfo",
     "delegators",
     "denoland",

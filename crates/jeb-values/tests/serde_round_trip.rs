@@ -1,5 +1,3 @@
-#![allow(approx_constant)]
-
 use {
     jeb_values::{
         Bytes,

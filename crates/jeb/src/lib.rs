@@ -47,5 +47,8 @@ pub use {
     },
     jeb_common as common,
     jeb_node as node,
-    jeb_values as values,
+    jeb_values::{
+        self as values,
+        *,
+    },
 };

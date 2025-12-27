@@ -1,6 +1,9 @@
 #![doc = include_str!("../README.md")]
 #![doc = ::document_features::document_features!()]
-#![allow(unused_imports)]
+#![allow(
+    unused_imports,
+    clippy::approx_constant
+)]
 
 mod bytes;
 mod float;

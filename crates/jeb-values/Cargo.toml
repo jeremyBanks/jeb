@@ -11,16 +11,19 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-default = ["wasm", "serde", "serde_json"]
-wasm = ["dep:wasm-bindgen"]
-serde_json = ["dep:serde_json", "serde"]
+default = ["wasm", "serde", "serde_json", "facet", "databake"]
+databake = ["databake/derive"]
+facet = ["dep:facet"]
 serde = ["indexmap/serde", "serde/derive"]
+serde_json = ["dep:serde_json", "serde"]
+wasm = ["dep:wasm-bindgen"]
 
 [dependencies]
 derive_more = { version = "2.0.1", features = ["full"] }
+databake = { version = "0.2.0", optional = true }
 document-features = "0.2.12"
+facet = { version = "0.34.0", optional = true }
 indexmap = { version = "2.0" }
 serde = { version = "1.0", optional = true }
 serde_json = { version = "1.0", optional = true }
 wasm-bindgen = { workspace = true, optional = true }
-
