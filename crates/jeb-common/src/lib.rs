@@ -2,4 +2,6 @@
 
 mod panic;
 
+pub mod shell_tokenizer;
+
 pub use crate::panic::Panic;

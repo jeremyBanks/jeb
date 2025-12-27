@@ -349,7 +349,7 @@ pub fn tokenize(input: &[u8]) -> TokenizeResult {
 /// # Examples
 ///
 /// ```
-/// use jeb::shell_tokenizer::tokenize_str;
+/// use jeb_common::shell_tokenizer::tokenize_str;
 ///
 /// let (args, errors) = tokenize_str("hello world");
 /// assert_eq!(args, vec!["hello", "world"]);

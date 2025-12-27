@@ -5,6 +5,7 @@ use {
         Panic,
         model::Bytes,
     },
+    jeb_common::shell_tokenizer,
     owo_colors::OwoColorize,
     regex::Regex,
     std::{
@@ -58,7 +59,7 @@ pub async fn inner_main() -> Result<(), Panic> {
     let own_path: String = args.remove(0);
 
     // Parse prelude and prepend to args
-    let prelude_result = jeb::shell_tokenizer::tokenize(PRELUDE.as_bytes());
+    let prelude_result = shell_tokenizer::tokenize(PRELUDE.as_bytes());
     for error in &prelude_result.errors {
         debug!("prelude error: {error}");
     }
@@ -396,7 +397,7 @@ fn filter(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 fn split_shell(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let mut result = Vec::<Bytes>::new();
     for bytes in state {
-        let token_result = jeb::shell_tokenizer::tokenize(&bytes);
+        let token_result = shell_tokenizer::tokenize(&bytes);
         for error in &token_result.errors {
             eprintln!("{error}");
         }

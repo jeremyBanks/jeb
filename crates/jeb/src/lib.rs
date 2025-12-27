@@ -36,7 +36,6 @@ pub mod const_checked;
 pub mod jeb85;
 pub mod model;
 pub mod nodes;
-pub mod shell_tokenizer;
 pub mod z85;
 
 pub use {
@@ -44,11 +43,9 @@ pub use {
         byte_ranges::*,
         common::*,
         const_checked::*,
+        value::*,
     },
     jeb_common as common,
     jeb_streaming as node,
-    jeb_value::{
-        self as values,
-        *,
-    },
+    jeb_value as value,
 };
