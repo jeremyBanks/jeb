@@ -90,6 +90,7 @@
   "[markdown]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
+  "chat.useClaudeSkills": true,
   "cSpell.enabledNotifications": {
     "Average Word Length too Long": false,
     "Lines too Long": false,
@@ -220,6 +221,5 @@
   "rust-analyzer.check.command": "clippy",
   "rust-analyzer.diagnostics.disabled": [
     "E0728"
-  ],
-  "chat.useClaudeSkills": true
+  ]
 }
