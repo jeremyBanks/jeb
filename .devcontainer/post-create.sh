@@ -9,12 +9,12 @@ git config --global core.pager "less -F -X"
 # shellcheck disable=SC2016,SC2101
 git config --global alias.save '!
     git_save_commit() {
+        git commit --allow-empty-message --no-edit >/dev/null 2>&1 || return
+
+        default_message="$(git log -1 --format=%B)"
         tree="$(git write-tree)"
-        if git commit --allow-empty-message --no-edit >/dev/null 2>&1; then
-            default_message="$(git log -1 --format=%B)"
-            tree_label="x$(echo "${tree:0:4}" | tr '[:lower:]' '[:upper:]')"
-            git commit --amend -m "${tree_label}" -m "${default_message}"
-        fi
+        tree_label="x$(echo "${tree:0:4}" | tr '[:lower:]' '[:upper:]')"
+        git commit --amend -m "${tree_label}" -m "${default_message}"
     }
 
     git_save() {
