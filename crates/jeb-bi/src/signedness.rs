@@ -40,6 +40,38 @@ macro_rules! impls {
                 (self ^ high_bit) as $signed
             }
         }
+
+        impl<const N: usize> Signedness for [$signed; N] {
+            type Out = [$unsigned; N];
+
+            fn signedness(self) -> [$unsigned; N] {
+                self.map(|v| v.signedness())
+            }
+        }
+
+        impl<const N: usize> Signedness for [$unsigned; N] {
+            type Out = [$signed; N];
+
+            fn signedness(self) -> [$signed; N] {
+                self.map(|v| v.signedness())
+            }
+        }
+
+        impl Signedness for ($unsigned, $unsigned) {
+            type Out = ($signed, $signed);
+
+            fn signedness(self) -> ($signed, $signed) {
+                <[_; _]>::from(self).signedness().into()
+            }
+        }
+
+        impl Signedness for ($signed, $signed) {
+            type Out = ($unsigned, $unsigned);
+
+            fn signedness(self) -> ($unsigned, $unsigned) {
+                <[_; _]>::from(self).signedness().into()
+            }
+        }
     )+}
 }
 use impls;

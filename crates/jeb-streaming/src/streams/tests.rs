@@ -1276,4 +1276,107 @@ mod tests {
         assert_eq!(result[1], Err("test error"));
         assert!(result[2].is_ok());
     }
+    // ===== Transform Tests: split_shell() =====
+
+    #[tokio::test]
+    async fn test_split_shell_simple() {
+        let source = text_source(vec!["hello world".to_string()]);
+        let result: Vec<_> = split_shell(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Bytes(b"hello".to_vec().into()));
+        assert_eq!(result[1], Item::Bytes(b"world".to_vec().into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_shell_quoted() {
+        let source = text_source(vec!["hello 'world foo'".to_string()]);
+        let result: Vec<_> = split_shell(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Bytes(b"hello".to_vec().into()));
+        assert_eq!(result[1], Item::Bytes(b"world foo".to_vec().into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_shell_double_quoted() {
+        let source = text_source(vec!["hello \"world foo\"".to_string()]);
+        let result: Vec<_> = split_shell(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Bytes(b"hello".to_vec().into()));
+        assert_eq!(result[1], Item::Bytes(b"world foo".to_vec().into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_shell_escaped() {
+        let source = text_source(vec!["hello\\ world".to_string()]);
+        let result: Vec<_> = split_shell(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Bytes(b"hello world".to_vec().into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_shell_bytes() {
+        let source = bytes_source(vec![b"hello world".to_vec()]);
+        let result: Vec<_> = split_shell(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Bytes(b"hello".to_vec().into()));
+        assert_eq!(result[1], Item::Bytes(b"world".to_vec().into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_shell_multiple_items() {
+        let source = text_source(vec![
+            "hello world".to_string(),
+            "foo bar".to_string(),
+        ]);
+        let result: Vec<_> = split_shell(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 4);
+        assert_eq!(result[0], Item::Bytes(b"hello".to_vec().into()));
+        assert_eq!(result[1], Item::Bytes(b"world".to_vec().into()));
+        assert_eq!(result[2], Item::Bytes(b"foo".to_vec().into()));
+        assert_eq!(result[3], Item::Bytes(b"bar".to_vec().into()));
+    }
+
+    #[tokio::test]
+    async fn test_split_shell_propagates_errors() {
+        use async_stream::stream;
+
+        let error_source = stream! {
+            yield Ok(Item::Text("hello world".into()));
+            yield Err("test error");
+            yield Ok(Item::Text("foo bar".into()));
+        };
+
+        let result: Vec<_> = split_shell(error_source).collect().await;
+
+        assert_eq!(result.len(), 5); // 2 + error + 2
+        assert!(result[0].is_ok());
+        assert!(result[1].is_ok());
+        assert_eq!(result[2], Err("test error"));
+        assert!(result[3].is_ok());
+        assert!(result[4].is_ok());
+    }
 }

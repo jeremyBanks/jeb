@@ -1,27 +1,25 @@
-#![allow(dead_code)]
-//! Chebyshev (L∞) shell bijections between:
-//!   u16 <-> (i8,  i8)
-//!   u32 <-> (i16, i16)
-//!   u64 <-> (i32, i32)
-//!   u128 <-> (i64, i64)
-//!
-//! Design summary:
-//! - Region A: enumerate the full symmetric square [-MAX..MAX]^2 in true
-//!   Chebyshev shells: M = max(|x|, |y|), base(M) = (2M-1)^2, shell size = 8M.
-//!   Within each shell, apply a per-layer Feistel permutation to remove
-//!   perimeter bias.
-//! - Region B: treat all points involving MIN as the “next shell” (M = MAX+1),
-//!   which is necessarily ragged because +2^(w-1) does not exist in signed
-//!   twos-complement. The ragged set is exactly: (MIN, y) for all y   plus   (x
-//!   != MIN, MIN) and is also permuted with the same Feistel+cycle-walk
-//!   machinery.
-//! - Total, infallible, bijective, and covers all values of the involved types.
-//!
-//! Seed:
-//! - Seed is a const generic on the trait with a default of 0.
-//! - `chebyshev(value)` uses SEED=0.
-//! - `chebyshev_with::<SEED>(value)` lets you choose a compile-time seed.
-
+// Chebyshev (L∞) shell bijections between:
+//   u16 <-> (i8,  i8)
+//   u32 <-> (i16, i16)
+//   u64 <-> (i32, i32)
+//   u128 <-> (i64, i64)
+//
+// Design summary:
+// - Region A: enumerate the full symmetric square [-MAX..MAX]^2 in true
+//   Chebyshev shells: M = max(|x|, |y|), base(M) = (2M-1)^2, shell size = 8M.
+//   Within each shell, apply a per-layer Feistel permutation to remove
+//   perimeter bias.
+// - Region B: treat all points involving MIN as the “next shell” (M = MAX+1),
+//   which is necessarily ragged because +2^(w-1) does not exist in signed
+//   twos-complement. The ragged set is exactly: (MIN, y) for all y   plus   (x
+//   != MIN, MIN) and is also permuted with the same Feistel+cycle-walk
+//   machinery.
+// - Total, infallible, bijective, and covers all values of the involved types.
+//
+// Seed:
+// - Seed is a const generic on the trait with a default of 0.
+// - `chebyshev(value)` uses SEED=0.
+// - `chebyshev_with::<SEED>(value)` lets you choose a compile-time seed.
 pub fn chebyshev<const SEED: u64, T: Chebyshev<SEED>>(value: T) -> T::Out {
     value.chebyshev()
 }

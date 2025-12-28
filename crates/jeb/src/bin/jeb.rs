@@ -275,8 +275,8 @@ fn collapse(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     // Apply transformation
     let transformed = jeb_streaming::collapse(source);
 
-    // Collect back to Vec<Bytes> (use futures::executor since we can't nest tokio runtimes)
-    futures::executor::block_on(async {
+    // Collect back to Vec<Bytes>
+    tokio::runtime::Handle::current().block_on(async {
         let items: Vec<_> = transformed.collect().await;
         let mut result = Vec::new();
 
@@ -306,8 +306,8 @@ fn split_lines(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     // Apply transformation (lines() splits on newlines)
     let transformed = jeb_streaming::lines(source);
 
-    // Collect back to Vec<Bytes> (use futures::executor since we can't nest tokio runtimes)
-    futures::executor::block_on(async {
+    // Collect back to Vec<Bytes>
+    tokio::runtime::Handle::current().block_on(async {
         let items: Vec<_> = transformed.collect().await;
         let mut result = Vec::new();
 
@@ -327,7 +327,7 @@ fn split_lines(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     })
 }
 
-fn split_n(state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
+fn parse_size_notation(arg: &str) -> Result<usize, Panic> {
     let rest = arg.to_ascii_uppercase();
     let mut rest = rest.as_str();
 
@@ -373,16 +373,40 @@ fn split_n(state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
 
     let coefficient: usize = rest.parse()?;
     let size = coefficient * unit;
+    Ok(size)
+}
 
-    let mut result = Vec::<Bytes>::new();
-    for bytes in state {
-        let chunks = bytes.chunks(size);
-        for chunk in chunks {
-            result.push(Bytes::from(chunk.to_vec()));
+fn split_n(state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
+    use futures::StreamExt;
+
+    let size = parse_size_notation(arg)?;
+
+    // Convert Vec<Bytes> to stream of Vec<u8>
+    let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
+    let source = jeb_streaming::bytes_source(byte_vecs);
+
+    // Apply transformation
+    let transformed = jeb_streaming::chunks(source, size);
+
+    // Collect back to Vec<Bytes>
+    futures::executor::block_on(async {
+        let items: Vec<_> = transformed.collect().await;
+        let mut result = Vec::new();
+
+        for item_result in items {
+            match item_result {
+                Ok(jeb_streaming::Item::Bytes(bytes)) => {
+                    result.push(Bytes::from(bytes.to_vec()));
+                }
+                Ok(jeb_streaming::Item::Text(text)) => {
+                    result.push(Bytes::from(text.as_bytes().to_vec()));
+                }
+                Ok(_) => {}
+                Err(e) => return Err(e.into()),
+            }
         }
-    }
-
-    Ok(result)
+        Ok(result)
+    })
 }
 
 fn find_target(state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
@@ -431,8 +455,8 @@ fn filter(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     // Apply transformation
     let transformed = jeb_streaming::filter(source);
 
-    // Collect back to Vec<Bytes> (use futures::executor since we can't nest tokio runtimes)
-    futures::executor::block_on(async {
+    // Collect back to Vec<Bytes>
+    tokio::runtime::Handle::current().block_on(async {
         let items: Vec<_> = transformed.collect().await;
         let mut result = Vec::new();
 
@@ -453,17 +477,34 @@ fn filter(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 }
 
 fn split_shell(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
-    let mut result = Vec::<Bytes>::new();
-    for bytes in state {
-        let token_result = shell_tokenizer::tokenize(&bytes);
-        for error in &token_result.errors {
-            eprintln!("{error}");
+    use futures::StreamExt;
+
+    // Convert Vec<Bytes> to stream of Vec<u8>
+    let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
+    let source = jeb_streaming::bytes_source(byte_vecs);
+
+    // Apply transformation (split_shell tokenizes using shell rules)
+    let transformed = jeb_streaming::split_shell(source);
+
+    // Collect back to Vec<Bytes>
+    tokio::runtime::Handle::current().block_on(async {
+        let items: Vec<_> = transformed.collect().await;
+        let mut result = Vec::new();
+
+        for item_result in items {
+            match item_result {
+                Ok(jeb_streaming::Item::Bytes(bytes)) => {
+                    result.push(Bytes::from(bytes.to_vec()));
+                }
+                Ok(jeb_streaming::Item::Text(text)) => {
+                    result.push(Bytes::from(text.as_bytes().to_vec()));
+                }
+                Ok(_) => {} // Skip other item types
+                Err(e) => return Err(e.into()),
+            }
         }
-        for arg in token_result.args {
-            result.push(arg.into());
-        }
-    }
-    Ok(result)
+        Ok(result)
+    })
 }
 
 fn split_whitespace(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
@@ -476,8 +517,8 @@ fn split_whitespace(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     // Apply transformation
     let transformed = jeb_streaming::split_whitespace(source);
 
-    // Collect back to Vec<Bytes> (use futures::executor since we can't nest tokio runtimes)
-    futures::executor::block_on(async {
+    // Collect back to Vec<Bytes>
+    tokio::runtime::Handle::current().block_on(async {
             let items: Vec<_> = transformed.collect().await;
             let mut result = Vec::new();
 
@@ -507,8 +548,8 @@ fn parse_hex(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     // Apply transformation
     let transformed = jeb_streaming::parse_hex(source);
 
-    // Collect back to Vec<Bytes> (use futures::executor since we can't nest tokio runtimes)
-    futures::executor::block_on(async {
+    // Collect back to Vec<Bytes>
+    tokio::runtime::Handle::current().block_on(async {
             let items: Vec<_> = transformed.collect().await;
             let mut result = Vec::new();
 
@@ -538,8 +579,8 @@ fn to_hex(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     // Apply transformation
     let transformed = jeb_streaming::to_hex(source);
 
-    // Collect back to Vec<Bytes> (use futures::executor since we can't nest tokio runtimes)
-    futures::executor::block_on(async {
+    // Collect back to Vec<Bytes>
+    tokio::runtime::Handle::current().block_on(async {
             let items: Vec<_> = transformed.collect().await;
             let mut result = Vec::new();
 
@@ -569,8 +610,8 @@ fn parse_binary(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     // Apply transformation
     let transformed = jeb_streaming::parse_binary(source);
 
-    // Collect back to Vec<Bytes> (use futures::executor since we can't nest tokio runtimes)
-    futures::executor::block_on(async {
+    // Collect back to Vec<Bytes>
+    tokio::runtime::Handle::current().block_on(async {
         let items: Vec<_> = transformed.collect().await;
         let mut result = Vec::new();
 
@@ -600,8 +641,8 @@ fn to_binary(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     // Apply transformation
     let transformed = jeb_streaming::to_binary(source);
 
-    // Collect back to Vec<Bytes> (use futures::executor since we can't nest tokio runtimes)
-    futures::executor::block_on(async {
+    // Collect back to Vec<Bytes>
+    tokio::runtime::Handle::current().block_on(async {
         let items: Vec<_> = transformed.collect().await;
         let mut result = Vec::new();
 
