@@ -1,5 +1,5 @@
 //! Protobuf ZigZag integer scheme.
-pub fn zigzag() -> () {}
+pub fn zigzag() {}
 // impls! {
 //     i8: u8;
 //     i16: u16;
