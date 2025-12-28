@@ -8,26 +8,26 @@ git config --global push.autoSetupRemote true
 git config --global core.pager "less -F -X"
 # shellcheck disable=SC2016,SC2101
 git config --global alias.save '!
-    git_commit_tree() {
+    git_save_commit() {
         tree="$(git write-tree)"
         if git commit --allow-empty-message --no-edit >/dev/null 2>&1; then
             default_message="$(git log -1 --format=%B)"
             tree_label="x$(echo "${tree:0:4}" | tr '[:lower:]' '[:upper:]')"
             git commit --amend -m "${tree_label}" -m "${default_message}"
         fi
-        echo "${tree}"
     }
 
     git_save() {
         if command -v save >/dev/null 2>&1 || [ $# -gt 0 ]; then
             save "$@"
         else
-            staged_tree="$(git_commit_tree)"
+            unstaged_tree="$(git write-tree)"
+            git_save_commit
             staged_result="$?"
 
             git add "$(git rev-parse --show-toplevel)"
             unstaged_tree="$(git write-tree)"
-            [ "${staged_tree}" != "${unstaged_tree}" ] && git_commit_tree
+            [ "${staged_tree}" != "${unstaged_tree}" ] && git_save_commit
             unstaged_result="$?"
 
             [ $staged_result -eq 0 ] || return $unstaged_result
