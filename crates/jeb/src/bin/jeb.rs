@@ -6,6 +6,7 @@ use {
         model::Bytes,
     },
     jeb_common::shell_tokenizer,
+    jeb_streaming,
     owo_colors::OwoColorize,
     regex::Regex,
     std::{
@@ -409,64 +410,96 @@ fn split_shell(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 }
 
 fn split_whitespace(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
-    let mut result = Vec::<Bytes>::new();
-    for bytes in state {
-        let mut current = Vec::<u8>::new();
-        for &byte in bytes.iter() {
-            if byte.is_ascii_whitespace() {
-                if !current.is_empty() {
-                    result.push(Bytes::from(take(&mut current)));
+    use futures::StreamExt;
+
+    // Convert Vec<Bytes> to stream of Vec<u8>
+    let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
+    let source = jeb_streaming::bytes_source(byte_vecs);
+
+    // Apply transformation
+    let transformed = jeb_streaming::split_whitespace(source);
+
+    // Collect back to Vec<Bytes> (use futures::executor since we can't nest tokio runtimes)
+    futures::executor::block_on(async {
+            let items: Vec<_> = transformed.collect().await;
+            let mut result = Vec::new();
+
+            for item_result in items {
+                match item_result {
+                    Ok(jeb_streaming::Item::Bytes(bytes)) => {
+                        result.push(Bytes::from(bytes.to_vec()));
+                    }
+                    Ok(jeb_streaming::Item::Text(text)) => {
+                        result.push(Bytes::from(text.as_bytes().to_vec()));
+                    }
+                    Ok(_) => {} // Skip other item types
+                    Err(e) => return Err(e.into()),
                 }
-            } else {
-                current.push(byte);
             }
-        }
-        if !current.is_empty() {
-            result.push(Bytes::from(current));
-        }
-    }
-    Ok(result)
+            Ok(result)
+    })
 }
 
-fn parse_hex(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
-    for piece in &mut state {
-        let hex_str = take(piece);
-        let mut bytes = Vec::new();
-        let mut hex_chars = hex_str
-            .iter()
-            .filter(|&&b| !b.is_ascii_whitespace())
-            .copied();
-        while let Some(high) = hex_chars.next() {
-            let low = hex_chars.next().ok_or("odd number of hex digits")?;
-            let high = hex_digit_to_value(high)?;
-            let low = hex_digit_to_value(low)?;
-            bytes.push((high << 4) | low);
-        }
-        *piece = bytes.into();
-    }
-    Ok(state)
+fn parse_hex(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    use futures::StreamExt;
+
+    // Convert Vec<Bytes> to stream of Vec<u8>
+    let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
+    let source = jeb_streaming::bytes_source(byte_vecs);
+
+    // Apply transformation
+    let transformed = jeb_streaming::parse_hex(source);
+
+    // Collect back to Vec<Bytes> (use futures::executor since we can't nest tokio runtimes)
+    futures::executor::block_on(async {
+            let items: Vec<_> = transformed.collect().await;
+            let mut result = Vec::new();
+
+            for item_result in items {
+                match item_result {
+                    Ok(jeb_streaming::Item::Bytes(bytes)) => {
+                        result.push(Bytes::from(bytes.to_vec()));
+                    }
+                    Ok(jeb_streaming::Item::Text(text)) => {
+                        result.push(Bytes::from(text.as_bytes().to_vec()));
+                    }
+                    Ok(_) => {} // Skip other item types
+                    Err(e) => return Err(e.into()),
+                }
+            }
+            Ok(result)
+    })
 }
 
-#[allow(unreachable_code)]
-fn hex_digit_to_value(digit: u8) -> Result<u8, Panic> {
-    match digit {
-        b'0'..=b'9' => Ok(digit - b'0'),
-        b'a'..=b'f' => Ok(digit - b'a' + 10),
-        b'A'..=b'F' => Ok(digit - b'A' + 10),
-        _ => Err(format!("invalid hex digit: {}", digit as char).into()),
-    }
-}
+fn to_hex(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    use futures::StreamExt;
 
-fn to_hex(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
-    for piece in &mut state {
-        let bytes = take(piece);
-        let mut hex = Vec::with_capacity(bytes.len() * 2);
-        for byte in bytes.iter() {
-            hex.extend_from_slice(format!("{:02x}", byte).as_bytes());
-        }
-        *piece = hex.into();
-    }
-    Ok(state)
+    // Convert Vec<Bytes> to stream of Vec<u8>
+    let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
+    let source = jeb_streaming::bytes_source(byte_vecs);
+
+    // Apply transformation
+    let transformed = jeb_streaming::to_hex(source);
+
+    // Collect back to Vec<Bytes> (use futures::executor since we can't nest tokio runtimes)
+    futures::executor::block_on(async {
+            let items: Vec<_> = transformed.collect().await;
+            let mut result = Vec::new();
+
+            for item_result in items {
+                match item_result {
+                    Ok(jeb_streaming::Item::Text(text)) => {
+                        result.push(Bytes::from(text.as_bytes().to_vec()));
+                    }
+                    Ok(jeb_streaming::Item::Bytes(bytes)) => {
+                        result.push(Bytes::from(bytes.to_vec()));
+                    }
+                    Ok(_) => {} // Skip other item types
+                    Err(e) => return Err(e.into()),
+                }
+            }
+            Ok(result)
+    })
 }
 
 #[allow(unreachable_code)]
