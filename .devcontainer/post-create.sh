@@ -30,7 +30,9 @@ git config --global alias.save '!
             [ "${staged_tree}" != "${unstaged_tree}" ] && git_save_commit
             unstaged_result="$?"
 
-            [ $staged_result -eq 0 ] || return $unstaged_result
+            if [ $staged_result -ne 0 ] || [ $unstaged_result -ne 0 ]; then
+                echo "nothing to commit, working tree clean"
+            if
         fi
     }
 
