@@ -21,7 +21,7 @@ git config --global alias.save '!
         if command -v save >/dev/null 2>&1 || [ $# -gt 0 ]; then
             save "$@"
         else
-            unstaged_tree="$(git write-tree)"
+            staged_tree="$(git write-tree)"
             git_save_commit
             staged_result="$?"
 
