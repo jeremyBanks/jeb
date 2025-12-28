@@ -297,13 +297,34 @@ fn collapse(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 }
 
 fn split_lines(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
-    let mut result = Vec::<Bytes>::new();
-    for bytes in state {
-        for line in bytes.split(|&byte| byte == b'\n') {
-            result.push(Bytes::from(line.to_vec()));
+    use futures::StreamExt;
+
+    // Convert Vec<Bytes> to stream of Vec<u8>
+    let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
+    let source = jeb_streaming::bytes_source(byte_vecs);
+
+    // Apply transformation (lines() splits on newlines)
+    let transformed = jeb_streaming::lines(source);
+
+    // Collect back to Vec<Bytes> (use futures::executor since we can't nest tokio runtimes)
+    futures::executor::block_on(async {
+        let items: Vec<_> = transformed.collect().await;
+        let mut result = Vec::new();
+
+        for item_result in items {
+            match item_result {
+                Ok(jeb_streaming::Item::Bytes(bytes)) => {
+                    result.push(Bytes::from(bytes.to_vec()));
+                }
+                Ok(jeb_streaming::Item::Text(text)) => {
+                    result.push(Bytes::from(text.as_bytes().to_vec()));
+                }
+                Ok(_) => {} // Skip other item types
+                Err(e) => return Err(e.into()),
+            }
         }
-    }
-    Ok(result)
+        Ok(result)
+    })
 }
 
 fn split_n(state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {

@@ -138,6 +138,7 @@
     "rustup",
     "serde",
     "shellcheck",
+    "signedness",
     "stefanzweifel",
     "subshell",
     "timonwong",

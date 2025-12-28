@@ -15,7 +15,10 @@ default = []
 wasm = ["dep:wasm-bindgen"]
 
 [dependencies]
+jeb-common = { workspace = true }
+
 derive_more = { workspace = true, features = ["full"] }
 document-features = { workspace = true }
 indexmap = { workspace = true }
 wasm-bindgen = { workspace = true, optional = true }
+fast_hilbert = "2.0.2"

@@ -178,6 +178,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fast_hilbert"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "995357145df6831aab3c8d1408da05804b0a478ce93fb1740667f417b93e67e0"
+
+[[package]]
 name = "futures"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -361,7 +367,9 @@ version = "0.0.0-dev-2025-12-26.7705"
 dependencies = [
  "derive_more",
  "document-features",
+ "fast_hilbert",
  "indexmap",
+ "jeb-common",
  "wasm-bindgen",
 ]
 

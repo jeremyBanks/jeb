@@ -1,4 +1,3 @@
-#![no_std]
 #![allow(dead_code)]
 //! Chebyshev (L∞) shell bijections between:
 //!   u16 <-> (i8,  i8)
@@ -23,30 +22,14 @@
 //! - `chebyshev(value)` uses SEED=0.
 //! - `chebyshev_with::<SEED>(value)` lets you choose a compile-time seed.
 
+pub fn chebyshev<const SEED: u64, T: Chebyshev<SEED>>(value: T) -> T::Out {
+    value.chebyshev()
+}
 
-// -------------------------
-// Trait + dispatch functions
-// -------------------------
-
-/// Directional milestone: `Self -> Out`.
 /// Implemented on both domains (rank and coordinate pair).
 pub trait Chebyshev<const SEED: u64 = 0> {
     type Out;
     fn chebyshev(self) -> Self::Out;
-}
-
-/// One function that goes either way (default seed = 0).
-#[inline(always)]
-pub fn chebyshev<T: Chebyshev>(value: T) -> T::Out {
-    value.chebyshev()
-}
-
-/// Same dispatcher but with a chosen const seed.
-#[inline(always)]
-pub fn chebyshev_with<const SEED: u64, T: Chebyshev<SEED>>(
-    value: T,
-) -> <T as Chebyshev<SEED>>::Out {
-    value.chebyshev()
 }
 
 // -------------------------
