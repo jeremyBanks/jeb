@@ -684,3 +684,61 @@ where
         }
     }
 }
+/// Transforms a stream of Items by tokenizing using shell tokenization rules.
+///
+/// Uses `jeb_common::shell_tokenizer` to split each item according to shell quoting
+/// and escaping rules. Errors from the tokenizer are logged to stderr but don't stop
+/// the stream. Handles both `Item::Text` and `Item::Bytes`.
+pub fn split_shell<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    stream! {
+        let mut input = pin!(input);
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match item {
+                        Item::Text(text) => {
+                            let bytes = text.as_bytes();
+                            let token_result = jeb_common::shell_tokenizer::tokenize(bytes);
+
+                            // Log errors to stderr (side effect, but matches original behavior)
+                            for error in &token_result.errors {
+                                eprintln!("{error}");
+                            }
+
+                            // Yield each tokenized argument as a separate item
+                            for arg in token_result.args {
+                                yield Ok(Item::Bytes(arg.into()));
+                            }
+                        }
+                        Item::Bytes(bytes) => {
+                            let token_result = jeb_common::shell_tokenizer::tokenize(&bytes);
+
+                            // Log errors to stderr
+                            for error in &token_result.errors {
+                                eprintln!("{error}");
+                            }
+
+                            // Yield each tokenized argument
+                            for arg in token_result.args {
+                                yield Ok(Item::Bytes(arg.into()));
+                            }
+                        }
+                        other => {
+                            // Pass through other item types unchanged
+                            yield Ok(other);
+                        }
+                    }
+                }
+                Err(e) => {
+                    // Pass through error
+                    yield Err(e);
+                }
+            }
+        }
+    }
+}
+
