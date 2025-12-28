@@ -8,6 +8,8 @@ git config --global push.autoSetupRemote true
 git config --global core.pager "less -F -X"
 # shellcheck disable=SC2016,SC2101
 git config --global alias.save '!
+    export TZ=UTC0
+
     git_save_commit() {
         git commit --allow-empty-message --no-edit >/dev/null 2>&1 || return
 
