@@ -898,4 +898,382 @@ mod tests {
         assert_eq!(result[1], Err("test error"));
         assert!(result[2].is_ok());
     }
+
+    // ===== Transform Tests: collapse() =====
+
+    #[tokio::test]
+    async fn test_collapse_text_simple() {
+        let source = text_source(vec!["hello  world".to_string()]);
+        let result: Vec<_> = collapse(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Text("hello world".into()));
+    }
+
+    #[tokio::test]
+    async fn test_collapse_text_multiple_spaces() {
+        let source = text_source(vec!["hello    world    foo".to_string()]);
+        let result: Vec<_> = collapse(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Text("hello world foo".into()));
+    }
+
+    #[tokio::test]
+    async fn test_collapse_text_tabs_newlines() {
+        let source = text_source(vec!["hello\t\nworld".to_string()]);
+        let result: Vec<_> = collapse(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Text("hello world".into()));
+    }
+
+    #[tokio::test]
+    async fn test_collapse_text_leading_trailing() {
+        let source = text_source(vec!["  hello world  ".to_string()]);
+        let result: Vec<_> = collapse(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Text("hello world".into()));
+    }
+
+    #[tokio::test]
+    async fn test_collapse_text_only_whitespace() {
+        let source = text_source(vec!["   \n\t  ".to_string()]);
+        let result: Vec<_> = collapse(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Text("".into()));
+    }
+
+    #[tokio::test]
+    async fn test_collapse_bytes_simple() {
+        let source = bytes_source(vec![b"hello  world".to_vec()]);
+        let result: Vec<_> = collapse(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Bytes(b"hello world".to_vec().into()));
+    }
+
+    #[tokio::test]
+    async fn test_collapse_multiple_items() {
+        let source = text_source(vec![
+            "hello  world".to_string(),
+            "foo   bar".to_string(),
+        ]);
+        let result: Vec<_> = collapse(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Text("hello world".into()));
+        assert_eq!(result[1], Item::Text("foo bar".into()));
+    }
+
+    #[tokio::test]
+    async fn test_collapse_propagates_errors() {
+        use async_stream::stream;
+
+        let error_source = stream! {
+            yield Ok(Item::Text("hello  world".into()));
+            yield Err("test error");
+            yield Ok(Item::Text("foo   bar".into()));
+        };
+
+        let result: Vec<_> = collapse(error_source).collect().await;
+
+        assert_eq!(result.len(), 3);
+        assert!(result[0].is_ok());
+        assert_eq!(result[1], Err("test error"));
+        assert!(result[2].is_ok());
+    }
+
+    // ===== Transform Tests: filter() =====
+
+    #[tokio::test]
+    async fn test_filter_text_mixed() {
+        let source = text_source(vec![
+            "hello".to_string(),
+            "".to_string(),
+            "world".to_string(),
+        ]);
+        let result: Vec<_> = filter(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Text("hello".into()));
+        assert_eq!(result[1], Item::Text("world".into()));
+    }
+
+    #[tokio::test]
+    async fn test_filter_bytes_mixed() {
+        let source = bytes_source(vec![
+            b"hello".to_vec(),
+            vec![],
+            b"world".to_vec(),
+        ]);
+        let result: Vec<_> = filter(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Bytes(b"hello".to_vec().into()));
+        assert_eq!(result[1], Item::Bytes(b"world".to_vec().into()));
+    }
+
+    #[tokio::test]
+    async fn test_filter_all_empty() {
+        let source = text_source(vec![
+            "".to_string(),
+            "".to_string(),
+        ]);
+        let result: Vec<_> = filter(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_filter_none_empty() {
+        let source = text_source(vec![
+            "hello".to_string(),
+            "world".to_string(),
+        ]);
+        let result: Vec<_> = filter(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Text("hello".into()));
+        assert_eq!(result[1], Item::Text("world".into()));
+    }
+
+    #[tokio::test]
+    async fn test_filter_propagates_errors() {
+        use async_stream::stream;
+
+        let error_source = stream! {
+            yield Ok(Item::Text("hello".into()));
+            yield Ok(Item::Text("".into()));
+            yield Err("test error");
+            yield Ok(Item::Text("world".into()));
+        };
+
+        let result: Vec<_> = filter(error_source).collect().await;
+
+        assert_eq!(result.len(), 3); // hello, error, world (empty filtered out)
+        assert!(result[0].is_ok());
+        assert_eq!(result[1], Err("test error"));
+        assert!(result[2].is_ok());
+    }
+
+    // ===== Transform Tests: to_binary() =====
+
+    #[tokio::test]
+    async fn test_to_binary_bytes_simple() {
+        let source = bytes_source(vec![vec![0xFF, 0x00, 0xAA]]);
+        let result: Vec<_> = to_binary(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Text("111111110000000010101010".into()));
+    }
+
+    #[tokio::test]
+    async fn test_to_binary_bytes_empty() {
+        let source = bytes_source(vec![vec![]]);
+        let result: Vec<_> = to_binary(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Text("".into()));
+    }
+
+    #[tokio::test]
+    async fn test_to_binary_text_ascii() {
+        let source = text_source(vec!["AB".to_string()]);
+        let result: Vec<_> = to_binary(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        // 'A' = 0x41 = 01000001, 'B' = 0x42 = 01000010
+        assert_eq!(result[0], Item::Text("0100000101000010".into()));
+    }
+
+    #[tokio::test]
+    async fn test_to_binary_multiple_items() {
+        let source = bytes_source(vec![vec![0x01], vec![0x02]]);
+        let result: Vec<_> = to_binary(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Text("00000001".into()));
+        assert_eq!(result[1], Item::Text("00000010".into()));
+    }
+
+    #[tokio::test]
+    async fn test_to_binary_propagates_errors() {
+        use async_stream::stream;
+
+        let error_source = stream! {
+            yield Ok(Item::Bytes(vec![0xFF].into()));
+            yield Err("test error");
+        };
+
+        let result: Vec<_> = to_binary(error_source).collect().await;
+
+        assert_eq!(result.len(), 2);
+        assert!(result[0].is_ok());
+        assert_eq!(result[1], Err("test error"));
+    }
+
+    // ===== Transform Tests: parse_binary() =====
+
+    #[tokio::test]
+    async fn test_parse_binary_text_simple() {
+        let source = text_source(vec!["1111111100000000".to_string()]);
+        let result: Vec<_> = parse_binary(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Bytes(vec![0xFF, 0x00].into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_binary_text_with_whitespace() {
+        let source = text_source(vec!["11111111 00000000".to_string()]);
+        let result: Vec<_> = parse_binary(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Bytes(vec![0xFF, 0x00].into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_binary_bytes_ascii() {
+        let source = bytes_source(vec![b"0100000101000010".to_vec()]);
+        let result: Vec<_> = parse_binary(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        // Should be 'A' (0x41) and 'B' (0x42)
+        assert_eq!(result[0], Item::Bytes(vec![0x41, 0x42].into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_binary_empty() {
+        let source = text_source(vec!["".to_string()]);
+        let result: Vec<_> = parse_binary(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Bytes(vec![].into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_binary_all_whitespace() {
+        let source = text_source(vec!["  \n\t  ".to_string()]);
+        let result: Vec<_> = parse_binary(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], Item::Bytes(vec![].into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_binary_invalid_bit_count() {
+        let source = text_source(vec!["1111111".to_string()]); // 7 bits
+        let result: Vec<_> = parse_binary(source).collect().await;
+
+        assert_eq!(result.len(), 1);
+        assert!(result[0].is_err());
+        assert_eq!(result[0], Err("binary string bit count not multiple of 8"));
+    }
+
+    #[tokio::test]
+    async fn test_parse_binary_invalid_digit() {
+        let source = text_source(vec!["11111112".to_string()]);
+        let result: Vec<_> = parse_binary(source).collect().await;
+
+        assert_eq!(result.len(), 1);
+        assert!(result[0].is_err());
+        assert_eq!(result[0], Err("invalid binary digit"));
+    }
+
+    #[tokio::test]
+    async fn test_parse_binary_multiple_items() {
+        let source = text_source(vec![
+            "11111111".to_string(),
+            "00000000".to_string(),
+        ]);
+        let result: Vec<_> = parse_binary(source)
+            .map(|r| r.unwrap())
+            .collect()
+            .await;
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], Item::Bytes(vec![0xFF].into()));
+        assert_eq!(result[1], Item::Bytes(vec![0x00].into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_binary_propagates_errors() {
+        use async_stream::stream;
+
+        let error_source = stream! {
+            yield Ok(Item::Text("11111111".into()));
+            yield Err("test error");
+            yield Ok(Item::Text("00000000".into()));
+        };
+
+        let result: Vec<_> = parse_binary(error_source).collect().await;
+
+        assert_eq!(result.len(), 3);
+        assert!(result[0].is_ok());
+        assert_eq!(result[1], Err("test error"));
+        assert!(result[2].is_ok());
+    }
 }

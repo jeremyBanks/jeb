@@ -426,3 +426,261 @@ where
         }
     }
 }
+/// Transforms a stream of Items by collapsing consecutive ASCII whitespace into single spaces.
+///
+/// Handles both `Item::Text` and `Item::Bytes`. Consecutive whitespace characters are replaced
+/// with a single space (0x20). Leading and trailing whitespace is removed. Uses
+/// `u8::is_ascii_whitespace()` to identify whitespace characters.
+pub fn collapse<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    stream! {
+        let mut input = pin!(input);
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match item {
+                        Item::Text(text) => {
+                            let mut output = String::new();
+                            let mut in_whitespace = false;
+
+                            for ch in text.chars() {
+                                if ch.is_ascii_whitespace() {
+                                    in_whitespace = true;
+                                } else {
+                                    if in_whitespace && !output.is_empty() {
+                                        output.push(' ');
+                                    }
+                                    output.push(ch);
+                                    in_whitespace = false;
+                                }
+                            }
+
+                            yield Ok(Item::Text(output.into()));
+                        }
+                        Item::Bytes(bytes) => {
+                            let mut output = Vec::new();
+                            let mut in_whitespace = false;
+
+                            for &byte in bytes.iter() {
+                                if byte.is_ascii_whitespace() {
+                                    in_whitespace = true;
+                                } else {
+                                    if in_whitespace && !output.is_empty() {
+                                        output.push(b' ');
+                                    }
+                                    output.push(byte);
+                                    in_whitespace = false;
+                                }
+                            }
+
+                            yield Ok(Item::Bytes(output.into()));
+                        }
+                        other => {
+                            // Pass through other item types unchanged
+                            yield Ok(other);
+                        }
+                    }
+                }
+                Err(e) => {
+                    // Pass through error
+                    yield Err(e);
+                }
+            }
+        }
+    }
+}
+
+/// Transforms a stream of Items by filtering out empty items.
+///
+/// Removes any `Item::Text` with empty string or `Item::Bytes` with empty byte vector.
+/// Passes through other item types and errors unchanged.
+pub fn filter<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    stream! {
+        let mut input = pin!(input);
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match &item {
+                        Item::Text(text) if text.is_empty() => {
+                            // Skip empty text
+                        }
+                        Item::Bytes(bytes) if bytes.is_empty() => {
+                            // Skip empty bytes
+                        }
+                        _ => {
+                            // Yield non-empty items
+                            yield Ok(item);
+                        }
+                    }
+                }
+                Err(e) => {
+                    // Pass through error
+                    yield Err(e);
+                }
+            }
+        }
+    }
+}
+
+/// Transforms a stream of Items by converting bytes to binary string representation.
+///
+/// Each byte is converted to an 8-bit binary string (e.g., 0xFF → "11111111").
+/// `Item::Text` is treated as UTF-8 bytes. Output is always `Item::Text`.
+pub fn to_binary<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    stream! {
+        let mut input = pin!(input);
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match item {
+                        Item::Text(text) => {
+                            let bytes = text.as_bytes();
+                            let mut binary = String::with_capacity(bytes.len() * 8);
+                            for byte in bytes {
+                                binary.push_str(&format!("{:08b}", byte));
+                            }
+                            yield Ok(Item::Text(binary.into()));
+                        }
+                        Item::Bytes(bytes) => {
+                            let mut binary = String::with_capacity(bytes.len() * 8);
+                            for byte in bytes.iter() {
+                                binary.push_str(&format!("{:08b}", byte));
+                            }
+                            yield Ok(Item::Text(binary.into()));
+                        }
+                        other => {
+                            // Pass through other item types unchanged
+                            yield Ok(other);
+                        }
+                    }
+                }
+                Err(e) => {
+                    // Pass through error
+                    yield Err(e);
+                }
+            }
+        }
+    }
+}
+
+/// Transforms a stream of Items by parsing binary strings into bytes.
+///
+/// Handles both `Item::Text` and `Item::Bytes` (treating bytes as ASCII binary).
+/// Filters out whitespace before parsing. Returns errors for invalid binary digits
+/// or if the bit count is not a multiple of 8.
+pub fn parse_binary<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    stream! {
+        let mut input = pin!(input);
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match item {
+                        Item::Text(text) => {
+                            // Parse binary string to bytes
+                            let bits: Vec<u8> = text.as_bytes()
+                                .iter()
+                                .filter(|&&b| !b.is_ascii_whitespace())
+                                .copied()
+                                .collect();
+
+                            if bits.len() % 8 != 0 {
+                                yield Err("binary string bit count not multiple of 8");
+                                continue;
+                            }
+
+                            let mut bytes = Vec::new();
+                            let mut has_error = false;
+
+                            for chunk in bits.chunks(8) {
+                                let mut byte = 0u8;
+                                for &bit in chunk {
+                                    byte <<= 1;
+                                    match bit {
+                                        b'0' => {}
+                                        b'1' => byte |= 1,
+                                        _ => {
+                                            yield Err("invalid binary digit");
+                                            has_error = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if has_error {
+                                    break;
+                                }
+                                bytes.push(byte);
+                            }
+
+                            if !has_error {
+                                yield Ok(Item::Bytes(bytes.into()));
+                            }
+                        }
+                        Item::Bytes(bytes) => {
+                            // Treat bytes as ASCII binary, parse
+                            let bits: Vec<u8> = bytes
+                                .iter()
+                                .filter(|&&b| !b.is_ascii_whitespace())
+                                .copied()
+                                .collect();
+
+                            if bits.len() % 8 != 0 {
+                                yield Err("binary string bit count not multiple of 8");
+                                continue;
+                            }
+
+                            let mut result_bytes = Vec::new();
+                            let mut has_error = false;
+
+                            for chunk in bits.chunks(8) {
+                                let mut byte = 0u8;
+                                for &bit in chunk {
+                                    byte <<= 1;
+                                    match bit {
+                                        b'0' => {}
+                                        b'1' => byte |= 1,
+                                        _ => {
+                                            yield Err("invalid binary digit");
+                                            has_error = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if has_error {
+                                    break;
+                                }
+                                result_bytes.push(byte);
+                            }
+
+                            if !has_error {
+                                yield Ok(Item::Bytes(result_bytes.into()));
+                            }
+                        }
+                        other => {
+                            // Pass through other item types unchanged
+                            yield Ok(other);
+                        }
+                    }
+                }
+                Err(e) => {
+                    // Pass through error
+                    yield Err(e);
+                }
+            }
+        }
+    }
+}
