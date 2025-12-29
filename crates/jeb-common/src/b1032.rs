@@ -798,6 +798,60 @@ mod tests {
         assert_eq!(from_b1032::<i32>("-0042").unwrap(), -42);
     }
 
+    #[test]
+    fn test_roundtrip_signed_zones() {
+        // Sample 128 values in each zone: below transition, in transition, above transition
+        // Test both positive and negative values
+
+        let below_transition = 10_000_u64; // values 0..10000 are decimal
+        let transition_start = 10_000_u64;
+        let transition_end = C; // 304426
+        let transition_size = transition_end - transition_start;
+
+        // Below transition zone (0..10000) - 128 samples
+        for i in 0..128_u64 {
+            let n = (i * below_transition / 128) as i64;
+            let tok = to_b1032(n);
+            let back: i64 = from_b1032(&tok).unwrap();
+            assert_eq!(n, back, "below transition failed for n={}, tok={}", n, tok);
+
+            // Negative
+            let neg = -n;
+            let tok_neg = to_b1032(neg);
+            let back_neg: i64 = from_b1032(&tok_neg).unwrap();
+            assert_eq!(neg, back_neg, "below transition (neg) failed for n={}", neg);
+        }
+
+        // In transition zone (10000..C) - 128 samples
+        for i in 0..128_u64 {
+            let n = (transition_start + (i * transition_size / 128)) as i64;
+            let tok = to_b1032(n);
+            let back: i64 = from_b1032(&tok).unwrap();
+            assert_eq!(n, back, "in transition failed for n={}, tok={}", n, tok);
+
+            // Negative
+            let neg = -n;
+            let tok_neg = to_b1032(neg);
+            let back_neg: i64 = from_b1032(&tok_neg).unwrap();
+            assert_eq!(neg, back_neg, "in transition (neg) failed for n={}", neg);
+        }
+
+        // Above transition zone (C..) - 128 samples spread over a larger range
+        for i in 0..128_u64 {
+            let offset = i * 1_000_000; // spread samples across millions
+            let n = (C + offset) as i64;
+            let tok = to_b1032(n);
+            let back: i64 = from_b1032(&tok).unwrap();
+            assert_eq!(n, back, "above transition failed for n={}, tok={}", n, tok);
+
+            // Negative
+            let neg = -n;
+            let tok_neg = to_b1032(neg);
+            let back_neg: i64 = from_b1032(&tok_neg).unwrap();
+            assert_eq!(neg, back_neg, "above transition (neg) failed for n={}", neg);
+        }
+    }
+
     // =========================================================================
     // Internal function tests
     // =========================================================================
