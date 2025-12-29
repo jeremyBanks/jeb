@@ -25,7 +25,7 @@ EOF
 
 The optional `[target]` argument specifies the ancestor commit that marks the
 start of the work you're describing (defaults to the most recent first-parent
-ancestor that isn't a merge commit). The script creates a
+ancestor that is a merge commit). The script creates a
 merge commit where:
 
 - The tree is unchanged (same as HEAD)

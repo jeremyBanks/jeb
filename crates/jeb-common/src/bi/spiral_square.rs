@@ -69,7 +69,6 @@ where
     // Region A: the symmetric square [-MAX..MAX]^2
     // Region B: the ragged outer shell involving MIN
 
-    let max_s = (1i64 << (W - 1)) - 1; // e.g., 127 for i8
     let min_s = -(1i64 << (W - 1)); // e.g., -128 for i8
 
     // Region A size: (2*MAX+1)^2 = (2^W - 1)^2
@@ -154,7 +153,6 @@ where
     let x: i64 = x.into();
     let y: i64 = y.into();
 
-    let max_s = (1i64 << (W - 1)) - 1;
     let min_s = -(1i64 << (W - 1));
     let region_a_size = ((1u64 << W) - 1) * ((1u64 << W) - 1);
 
@@ -236,8 +234,6 @@ fn perimeter_point(m: i64, j: u64) -> (i64, i64) {
 
 /// Inverse of perimeter_point: given a point on shell m, return its index j.
 fn perimeter_index(m: i64, x: i64, y: i64) -> u64 {
-    let s = 2 * m as u64;
-
     if x == m && y > -m {
         // Right edge: y = -m + 1 + j, so j = y - (-m + 1) = y + m - 1
         (y + m - 1) as u64
