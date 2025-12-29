@@ -1,7 +1,8 @@
 //! B1032: Human-readable integer encoding optimized for common values.
 //!
-//! Encodes non-negative integers as short alphanumeric strings. Common values
-//! (0-9999) encode as familiar decimal; larger values use base32 for density.
+//! Encodes integers as short alphanumeric strings. Common values (0-9999)
+//! encode as familiar decimal; larger values use base32 for density. Negative
+//! values are prefixed with `-`.
 //!
 //! The encoding is bijective and unambiguous: every integer maps to exactly one
 //! canonical token, and every valid token decodes to exactly one integer.
@@ -15,16 +16,20 @@
 //! };
 //!
 //! // Small values are decimal
-//! assert_eq!(to_b1032(42_u64), "42");
-//! assert_eq!(to_b1032(9999_u32), "9999");
+//! assert_eq!(to_b1032(42), "42");
+//! assert_eq!(to_b1032(9999), "9999");
 //!
 //! // Larger values use base32 (at least 4 chars, always contains a letter)
 //! assert_eq!(to_b1032(10000_u64), "000A");
 //! assert_eq!(to_b1032(1_000_000_u64), "UGI0");
 //!
+//! // Negative values are prefixed with `-`
+//! assert_eq!(to_b1032(-42), "-42");
+//! assert_eq!(to_b1032(-10000_i64), "-000A");
+//!
 //! // Decoding is case-insensitive and generic over return type
 //! assert_eq!(from_b1032::<u64>("000a").unwrap(), 10000);
-//! assert_eq!(from_b1032::<u32>("42").unwrap(), 42);
+//! assert_eq!(from_b1032::<i32>("-42").unwrap(), -42);
 //! ```
 //!
 //! # Design
@@ -314,6 +319,71 @@ impl B1032 for u8 {
     }
 }
 
+impl B1032 for i64 {
+    fn to_b1032(self) -> String {
+        if self >= 0 {
+            encode_u64(self as u64)
+        } else {
+            // Handle i64::MIN specially since its absolute value overflows i64
+            let abs = (self as i128).unsigned_abs() as u64;
+            format!("-{}", encode_u64(abs))
+        }
+    }
+
+    fn from_b1032(s: &str) -> Result<Self, Error> {
+        if let Some(rest) = s.strip_prefix('-') {
+            if rest.is_empty() {
+                return Err(Error::EmptyString);
+            }
+            let v = decode_u64(rest)?;
+            // i64::MIN has absolute value 9223372036854775808
+            if v == 9_223_372_036_854_775_808 {
+                Ok(i64::MIN)
+            } else if v > i64::MAX as u64 {
+                Err(Error::Overflow)
+            } else {
+                Ok(-(v as i64))
+            }
+        } else {
+            let v = decode_u64(s)?;
+            v.try_into().map_err(|_| Error::Overflow)
+        }
+    }
+}
+
+impl B1032 for i32 {
+    fn to_b1032(self) -> String {
+        (self as i64).to_b1032()
+    }
+
+    fn from_b1032(s: &str) -> Result<Self, Error> {
+        let v = i64::from_b1032(s)?;
+        v.try_into().map_err(|_| Error::Overflow)
+    }
+}
+
+impl B1032 for i16 {
+    fn to_b1032(self) -> String {
+        (self as i64).to_b1032()
+    }
+
+    fn from_b1032(s: &str) -> Result<Self, Error> {
+        let v = i64::from_b1032(s)?;
+        v.try_into().map_err(|_| Error::Overflow)
+    }
+}
+
+impl B1032 for i8 {
+    fn to_b1032(self) -> String {
+        (self as i64).to_b1032()
+    }
+
+    fn from_b1032(s: &str) -> Result<Self, Error> {
+        let v = i64::from_b1032(s)?;
+        v.try_into().map_err(|_| Error::Overflow)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -420,11 +490,11 @@ mod tests {
 
     #[test]
     fn test_specific_decodings() {
-        assert_eq!(from_b1032("9999").unwrap(), 9999);
-        assert_eq!(from_b1032("000A").unwrap(), 10000);
-        assert_eq!(from_b1032("999A").unwrap(), 304426);
-        assert_eq!(from_b1032("VVVV").unwrap(), 1048575);
-        assert_eq!(from_b1032("10000").unwrap(), 1048576);
+        assert_eq!(from_b1032::<u64>("9999").unwrap(), 9999);
+        assert_eq!(from_b1032::<u64>("000A").unwrap(), 10000);
+        assert_eq!(from_b1032::<u64>("999A").unwrap(), 304426);
+        assert_eq!(from_b1032::<u64>("VVVV").unwrap(), 1048575);
+        assert_eq!(from_b1032::<u64>("10000").unwrap(), 1048576);
     }
 
     #[test]
@@ -456,45 +526,45 @@ mod tests {
 
     #[test]
     fn test_case_insensitive_decode() {
-        assert_eq!(from_b1032("000a").unwrap(), 10000);
-        assert_eq!(from_b1032("999a").unwrap(), 304426);
-        assert_eq!(from_b1032("vvvv").unwrap(), 1048575);
+        assert_eq!(from_b1032::<u64>("000a").unwrap(), 10000);
+        assert_eq!(from_b1032::<u64>("999a").unwrap(), 304426);
+        assert_eq!(from_b1032::<u64>("vvvv").unwrap(), 1048575);
     }
 
     #[test]
     fn test_mixed_case_decode() {
-        assert_eq!(from_b1032("VvVv").unwrap(), 1048575);
-        assert_eq!(from_b1032("aB").unwrap(), from_b1032("AB").unwrap());
-        assert_eq!(from_b1032("Ab").unwrap(), from_b1032("AB").unwrap());
+        assert_eq!(from_b1032::<u64>("VvVv").unwrap(), 1048575);
+        assert_eq!(from_b1032::<u64>("aB").unwrap(), from_b1032::<u64>("AB").unwrap());
+        assert_eq!(from_b1032::<u64>("Ab").unwrap(), from_b1032::<u64>("AB").unwrap());
     }
 
     #[test]
     fn test_decode_with_leading_zeros() {
-        assert_eq!(from_b1032("0007").unwrap(), 7);
-        assert_eq!(from_b1032("0042").unwrap(), 42);
-        assert_eq!(from_b1032("0100").unwrap(), 100);
+        assert_eq!(from_b1032::<u64>("0007").unwrap(), 7);
+        assert_eq!(from_b1032::<u64>("0042").unwrap(), 42);
+        assert_eq!(from_b1032::<u64>("0100").unwrap(), 100);
     }
 
     #[test]
     fn test_leading_zeros_stripped() {
         // "00007" → "7" → decimal
-        assert_eq!(from_b1032("00007").unwrap(), 7);
-        assert_eq!(from_b1032("000042").unwrap(), 42);
-        assert_eq!(from_b1032("0000000000000000007").unwrap(), 7);
+        assert_eq!(from_b1032::<u64>("00007").unwrap(), 7);
+        assert_eq!(from_b1032::<u64>("000042").unwrap(), 42);
+        assert_eq!(from_b1032::<u64>("0000000000000000007").unwrap(), 7);
 
         // "0000A" → "A" → base32 (transitional, since A=10 < C)
-        assert_eq!(from_b1032("0000A").unwrap(), 10000);
+        assert_eq!(from_b1032::<u64>("0000A").unwrap(), 10000);
 
         // All zeros → "0" → decimal 0
-        assert_eq!(from_b1032("0000").unwrap(), 0);
-        assert_eq!(from_b1032("00000000").unwrap(), 0);
+        assert_eq!(from_b1032::<u64>("0000").unwrap(), 0);
+        assert_eq!(from_b1032::<u64>("00000000").unwrap(), 0);
     }
 
     #[test]
     fn test_extra_leading_zeros_with_letters() {
-        assert_eq!(from_b1032("000A").unwrap(), 10000);
-        assert_eq!(from_b1032("0000A").unwrap(), 10000);
-        assert_eq!(from_b1032("00000A").unwrap(), 10000);
+        assert_eq!(from_b1032::<u64>("000A").unwrap(), 10000);
+        assert_eq!(from_b1032::<u64>("0000A").unwrap(), 10000);
+        assert_eq!(from_b1032::<u64>("00000A").unwrap(), 10000);
     }
 
     // =========================================================================
@@ -503,35 +573,39 @@ mod tests {
 
     #[test]
     fn test_error_empty_string() {
-        assert_eq!(from_b1032(""), Err(Error::EmptyString));
+        assert_eq!(from_b1032::<u64>(""), Err(Error::EmptyString));
+        assert_eq!(from_b1032::<i64>(""), Err(Error::EmptyString));
     }
 
     #[test]
     fn test_error_invalid_characters() {
         // Letters beyond V
-        assert_eq!(from_b1032("W"), Err(Error::InvalidCharacter('W')));
-        assert_eq!(from_b1032("w"), Err(Error::InvalidCharacter('w')));
-        assert_eq!(from_b1032("X"), Err(Error::InvalidCharacter('X')));
-        assert_eq!(from_b1032("Z"), Err(Error::InvalidCharacter('Z')));
+        assert_eq!(from_b1032::<u64>("W"), Err(Error::InvalidCharacter('W')));
+        assert_eq!(from_b1032::<u64>("w"), Err(Error::InvalidCharacter('w')));
+        assert_eq!(from_b1032::<u64>("X"), Err(Error::InvalidCharacter('X')));
+        assert_eq!(from_b1032::<u64>("Z"), Err(Error::InvalidCharacter('Z')));
 
         // Whitespace
-        assert_eq!(from_b1032(" "), Err(Error::InvalidCharacter(' ')));
-        assert_eq!(from_b1032("123 "), Err(Error::InvalidCharacter(' ')));
-        assert_eq!(from_b1032(" 123"), Err(Error::InvalidCharacter(' ')));
-        assert_eq!(from_b1032("12 34"), Err(Error::InvalidCharacter(' ')));
-        assert_eq!(from_b1032("\t"), Err(Error::InvalidCharacter('\t')));
-        assert_eq!(from_b1032("\n"), Err(Error::InvalidCharacter('\n')));
-        assert_eq!(from_b1032("123\n"), Err(Error::InvalidCharacter('\n')));
+        assert_eq!(from_b1032::<u64>(" "), Err(Error::InvalidCharacter(' ')));
+        assert_eq!(from_b1032::<u64>("123 "), Err(Error::InvalidCharacter(' ')));
+        assert_eq!(from_b1032::<u64>(" 123"), Err(Error::InvalidCharacter(' ')));
+        assert_eq!(from_b1032::<u64>("12 34"), Err(Error::InvalidCharacter(' ')));
+        assert_eq!(from_b1032::<u64>("\t"), Err(Error::InvalidCharacter('\t')));
+        assert_eq!(from_b1032::<u64>("\n"), Err(Error::InvalidCharacter('\n')));
+        assert_eq!(from_b1032::<u64>("123\n"), Err(Error::InvalidCharacter('\n')));
 
         // Underscores and other punctuation
-        assert_eq!(from_b1032("1_000"), Err(Error::InvalidCharacter('_')));
-        assert_eq!(from_b1032("1,000"), Err(Error::InvalidCharacter(',')));
-        assert_eq!(from_b1032("1.5"), Err(Error::InvalidCharacter('.')));
-        assert_eq!(from_b1032("-1"), Err(Error::InvalidCharacter('-')));
-        assert_eq!(from_b1032("+1"), Err(Error::InvalidCharacter('+')));
+        assert_eq!(from_b1032::<u64>("1_000"), Err(Error::InvalidCharacter('_')));
+        assert_eq!(from_b1032::<u64>("1,000"), Err(Error::InvalidCharacter(',')));
+        assert_eq!(from_b1032::<u64>("1.5"), Err(Error::InvalidCharacter('.')));
+        // Negative sign is invalid for unsigned types
+        assert_eq!(from_b1032::<u64>("-1"), Err(Error::InvalidCharacter('-')));
+        assert_eq!(from_b1032::<u64>("+1"), Err(Error::InvalidCharacter('+')));
+        // But valid for signed types
+        assert_eq!(from_b1032::<i32>("-1").unwrap(), -1);
 
         // Special characters
-        assert_eq!(from_b1032("!@#$"), Err(Error::InvalidCharacter('!')));
+        assert_eq!(from_b1032::<u64>("!@#$"), Err(Error::InvalidCharacter('!')));
     }
 
     // =========================================================================
@@ -627,6 +701,101 @@ mod tests {
         assert_roundtrip_u64(u64::MAX - 2);
         assert_roundtrip_u64(u64::MAX - 1);
         assert_roundtrip_u64(u64::MAX);
+    }
+
+    // =========================================================================
+    // Signed integer tests
+    // =========================================================================
+
+    #[test]
+    fn test_i32_positive() {
+        assert_roundtrip(0_i32, "0");
+        assert_roundtrip(1_i32, "1");
+        assert_roundtrip(42_i32, "42");
+        assert_roundtrip(9999_i32, "9999");
+        assert_roundtrip(10000_i32, "000A");
+        assert_roundtrip(i32::MAX, "1VVVVVV"); // 2147483647
+    }
+
+    #[test]
+    fn test_i32_negative() {
+        assert_roundtrip(-1_i32, "-1");
+        assert_roundtrip(-42_i32, "-42");
+        assert_roundtrip(-9999_i32, "-9999");
+        assert_roundtrip(-10000_i32, "-000A");
+        assert_roundtrip(i32::MIN, "-2000000"); // -2147483648
+    }
+
+    #[test]
+    fn test_i64_boundaries() {
+        assert_roundtrip(0_i64, "0");
+        assert_roundtrip(i64::MAX, "7VVVVVVVVVVVV"); // 9223372036854775807
+        assert_roundtrip(i64::MIN, "-8000000000000"); // -9223372036854775808
+    }
+
+    #[test]
+    fn test_i64_roundtrip_negative_range() {
+        for n in -10000_i64..0 {
+            let tok = to_b1032(n);
+            let back: i64 = from_b1032(&tok).unwrap();
+            assert_eq!(n, back, "roundtrip failed for n={}, tok={}", n, tok);
+        }
+    }
+
+    #[test]
+    fn test_i8_signed() {
+        assert_roundtrip(0_i8, "0");
+        assert_roundtrip(127_i8, "127");
+        assert_roundtrip(-1_i8, "-1");
+        assert_roundtrip(-128_i8, "-128");
+    }
+
+    #[test]
+    fn test_i8_overflow() {
+        assert_eq!(from_b1032::<i8>("128"), Err(Error::Overflow));
+        assert_eq!(from_b1032::<i8>("-129"), Err(Error::Overflow));
+    }
+
+    #[test]
+    fn test_i16_signed() {
+        assert_roundtrip(0_i16, "0");
+        assert_roundtrip(9999_i16, "9999");
+        assert_roundtrip(i16::MAX, "00NV"); // 32767 (in tricky region)
+        assert_roundtrip(-1_i16, "-1");
+        assert_roundtrip(-9999_i16, "-9999");
+        assert_roundtrip(i16::MIN, "-00O0"); // -32768 (in tricky region)
+    }
+
+    #[test]
+    fn test_i16_overflow() {
+        assert_eq!(from_b1032::<i16>("00O0"), Err(Error::Overflow)); // 32768
+        assert_eq!(from_b1032::<i16>("-00O1"), Err(Error::Overflow)); // -32769
+    }
+
+    #[test]
+    fn test_i32_overflow() {
+        assert_eq!(from_b1032::<i32>("2000000"), Err(Error::Overflow)); // > i32::MAX
+        assert_eq!(from_b1032::<i32>("-2000001"), Err(Error::Overflow)); // < i32::MIN
+    }
+
+    #[test]
+    fn test_i64_overflow() {
+        // Values beyond i64 range
+        assert_eq!(from_b1032::<i64>("8000000000000"), Err(Error::Overflow)); // > i64::MAX
+        assert_eq!(from_b1032::<i64>("-8000000000001"), Err(Error::Overflow)); // < i64::MIN
+    }
+
+    #[test]
+    fn test_signed_negative_zero() {
+        // "-0" should decode as 0
+        assert_eq!(from_b1032::<i32>("-0").unwrap(), 0);
+        assert_eq!(from_b1032::<i64>("-0").unwrap(), 0);
+    }
+
+    #[test]
+    fn test_signed_leading_zeros() {
+        assert_eq!(from_b1032::<i32>("-007").unwrap(), -7);
+        assert_eq!(from_b1032::<i32>("-0042").unwrap(), -42);
     }
 
     // =========================================================================
