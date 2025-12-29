@@ -3,8 +3,9 @@ macro_rules! description {
     () => {
         r#"
 Bijection between between N-bit unsigned integers and pairs of N/2-bit signed
-integers where unsigned integers are mapped onto points on successive Chebyshev
-L∞ shells (starting at (0, 0)) with pseudorandom ordering within each shell.
+integers where unsigned integers are mapped onto points on successive squares
+(Chebyshev L∞ shells), starting at (0, 0), with pseudorandom ordering within
+each square.
 
 In other words: as we start at 0 and look at ascending unsigned integers, we'll
 first see all of the points whose maximum component magnitude is 0, then all of
@@ -16,9 +17,9 @@ picking points within each shell using a weakly-pseudorandom ordering.
 }
 use description;
 
-impl_with!(u16, i8, u8, 8, chebyshev_scatter_u16);
-impl_with!(u32, i16, u16, 16, chebyshev_scatter_u32);
-impl_with!(u64, i32, u32, 32, chebyshev_scatter_u64);
+impl_with!(u16, i8, u8, 8, scatter_square_u16);
+impl_with!(u32, i16, u16, 16, scatter_square_u32);
+impl_with!(u64, i32, u32, 32, scatter_square_u64);
 
 // Chebyshev (L∞) shell bijections between:
 //   u16 <-> (i8,  i8)
@@ -43,16 +44,16 @@ impl_with!(u64, i32, u32, 32, chebyshev_scatter_u64);
 // - `chebyshev(value)` uses SEED=0.
 // - `chebyshev_with::<SEED>(value)` lets you choose a compile-time seed.
 #[doc = description!()]
-pub fn chebyshev_scatter<const SEED: u64, T: ChebyshevScatter<SEED>>(value: T) -> T::Out {
-    value.chebyshev_scatter()
+pub fn scatter_square<const SEED: u64, T: ScatterSquare<SEED>>(value: T) -> T::Out {
+    value.scatter_square()
 }
 
 #[doc = description!()]
-pub trait ChebyshevScatter<const SEED: u64 = 0> {
+pub trait ScatterSquare<const SEED: u64 = 0> {
     type Out;
 
     #[doc = description!()]
-    fn chebyshev_scatter(self) -> Self::Out;
+    fn scatter_square(self) -> Self::Out;
 }
 
 // -------------------------
@@ -400,22 +401,23 @@ macro_rules! impl_with {
         }
 
         // Trait impls (both directions)
-        impl<const SEED: u64> super::ChebyshevScatter<SEED> for $U {
+        impl<const SEED: u64> ScatterSquare<SEED> for $U {
             type Out = ($S, $S);
 
             #[inline(always)]
-            fn chebyshev_scatter(self) -> Self::Out {
+            fn scatter_square(self) -> Self::Out {
                 $mod::to_xy::<SEED>(self)
             }
         }
 
-        impl<const SEED: u64> super::ChebyshevScatter<SEED> for ($S, $S) {
+        impl<const SEED: u64> ScatterSquare<SEED> for ($S, $S) {
             type Out = $U;
 
             #[inline(always)]
-            fn chebyshev_scatter(self) -> Self::Out {
+            fn scatter_square(self) -> Self::Out {
                 $mod::from_xy::<SEED>(self.0, self.1)
             }
         }
     };
-} use impl_with;
+}
+use impl_with;

@@ -3,7 +3,9 @@ macro_rules! description {
     () => {
         r#"
 Bijection between between N-bit unsigned integers and pairs of N/2-bit unsigned
-integers which preserves locality through an order-N/2 Hilbert curve.
+integers which preserves locality through an order-N/2 Hilbert curve: two
+unsigned integers with a distance of X will encode into two pairs of unsigned
+integers whose Manhattan distance is at less-than or equal to X and 3√X.
         "#
     };
 }

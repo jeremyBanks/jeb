@@ -64,7 +64,6 @@ tracing-subscriber = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true }
 
-jeb-bi = { workspace = true }
 jeb-common = { workspace = true }
 jeb-streaming = { workspace = true, features = ["json", "serde"] }
 jeb-value = { workspace = true, features = ["serde", "serde_json"] }

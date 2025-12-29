@@ -17,5 +17,6 @@ wasm = ["dep:wasm-bindgen"]
 [dependencies]
 derive_more = { workspace = true, features = ["full"] }
 document-features = { workspace = true }
+fast_hilbert = "2.0.2"
 indexmap = { workspace = true }
 wasm-bindgen = { workspace = true, optional = true }

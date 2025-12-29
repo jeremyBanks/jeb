@@ -137,6 +137,7 @@
     "rustc",
     "RUSTFLAGS",
     "rustup",
+    "scattersquare",
     "serde",
     "shellcheck",
     "signedness",
