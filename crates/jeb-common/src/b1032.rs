@@ -453,6 +453,122 @@ mod tests {
         }
     }
 
+    // =========================================================================
+    // Specific boundary values (decimal + base32 form)
+    // =========================================================================
+
+    #[test]
+    fn test_boundary_decimal_to_transition() {
+        // Last decimal value and first transition value
+        assert_eq!(to_b1032(9999_u64), "9999");
+        assert_eq!(to_b1032(10000_u64), "000A"); // First value that needs a letter
+    }
+
+    #[test]
+    fn test_boundary_transition_to_plain_base32() {
+        // C is where transition zone ends and plain base32 begins
+        // C = 304426 = base32 "999A"
+        assert_eq!(to_b1032(304425_u64), "998V"); // Last transition value
+        assert_eq!(to_b1032(304426_u64), "999A"); // C: first plain base32 (also happens to be 999A)
+        assert_eq!(to_b1032(304427_u64), "999B"); // C+1
+
+        // Verify C is correct by checking it's base32 "999A"
+        assert_eq!(from_base32("999A").unwrap(), C);
+    }
+
+    #[test]
+    fn test_boundary_4digit_to_5digit_base32() {
+        // B = 32^4 = 1048576 is where 4-digit base32 overflows to 5-digit
+        assert_eq!(to_b1032(1048575_u64), "VVVV"); // B-1: largest 4-digit base32
+        assert_eq!(to_b1032(1048576_u64), "10000"); // B: first 5-digit base32
+        assert_eq!(to_b1032(1048577_u64), "10001"); // B+1
+    }
+
+    #[test]
+    fn test_specific_transition_values() {
+        // Sample specific values in transition zone with their expected encodings
+        // These are hand-verified values that skip all-digit base32 tokens
+
+        // First few transition values (10000, 10001, ...) map to first few "good" base32 values
+        // Good values are those where padded-to-4 base32 has at least one letter
+        assert_eq!(to_b1032(10000_u64), "000A"); // base32 10 = 'A', padded to "000A"
+        assert_eq!(to_b1032(10001_u64), "000B");
+        assert_eq!(to_b1032(10002_u64), "000C");
+        assert_eq!(to_b1032(10009_u64), "000J");
+        assert_eq!(to_b1032(10010_u64), "000K");
+
+        // Around base32 boundaries
+        assert_eq!(to_b1032(10021_u64), "000V"); // base32 31 = 'V'
+        assert_eq!(to_b1032(10022_u64), "001A"); // base32 42 = "1A", skips "10"-"19" (digits only)
+    }
+
+    // =========================================================================
+    // Property: Lexicographic ordering in transition zone
+    // =========================================================================
+
+    #[test]
+    fn test_lexicographic_order_transition_zone() {
+        // In the transition zone (10000..C), consecutive integers should produce
+        // lexicographically ordered tokens (all 4-char, good values assigned in order)
+        let mut prev_tok = to_b1032(10000_u64);
+        for n in 10001..C {
+            let tok = to_b1032(n);
+            assert!(
+                tok > prev_tok,
+                "lexicographic order violated: {} ({}) should be > {} ({})",
+                n,
+                tok,
+                n - 1,
+                prev_tok
+            );
+            prev_tok = tok;
+        }
+    }
+
+    #[test]
+    fn test_lexicographic_order_post_c_same_length() {
+        // Above C, within same token length, ordering should be preserved
+        // Test a range where all tokens have the same length (4 chars: C to B-1)
+        let mut prev_tok = to_b1032(C);
+        for n in (C + 1)..B {
+            let tok = to_b1032(n);
+            assert!(
+                tok > prev_tok,
+                "post-C order violated: {} ({}) should be > {} ({})",
+                n,
+                tok,
+                n - 1,
+                prev_tok
+            );
+            prev_tok = tok;
+        }
+    }
+
+    #[test]
+    fn test_lexicographic_order_decimal_zone() {
+        // In decimal zone (0..10000), ordering should be numeric (but not lexicographic
+        // due to varying lengths: "9" > "10" lexicographically but 9 < 10 numerically)
+        // We verify that same-length tokens are lexicographically ordered
+        for len in 1..=4 {
+            let start = if len == 1 { 0 } else { 10_u64.pow(len - 1) };
+            let end = 10_u64.pow(len).min(10000);
+            let mut prev_tok = to_b1032(start);
+            for n in (start + 1)..end {
+                let tok = to_b1032(n);
+                assert!(
+                    tok > prev_tok,
+                    "decimal order violated at len {}: {} ({}) should be > {} ({})",
+                    len,
+                    n,
+                    tok,
+                    n - 1,
+                    prev_tok
+                );
+                prev_tok = tok;
+            }
+        }
+    }
+
     #[test]
     fn test_roundtrip_large_values() {
         let test_values = [
