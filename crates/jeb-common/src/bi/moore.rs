@@ -220,12 +220,22 @@ fn fast_hilbert_d2xy(d: u128, order: u32) -> (u128, u128) {
         return (0, 0);
     }
     if order <= 32 {
-        // Use the actual fast_hilbert for smaller orders
-        let (x, y) = ::fast_hilbert::h2xy::<u64>(d as u64, order.try_into().unwrap());
-        return (x as u128, y as u128);
+        // For order <= 32, we can use u32 output which takes u64 input
+        // But we need order <= 16 for u16 output with u32 input, etc.
+        // Let's use the appropriate type based on order
+        if order <= 8 {
+            let (x, y) = ::fast_hilbert::h2xy::<u8>(d as u16, order.try_into().unwrap());
+            return (x as u128, y as u128);
+        } else if order <= 16 {
+            let (x, y) = ::fast_hilbert::h2xy::<u16>(d as u32, order.try_into().unwrap());
+            return (x as u128, y as u128);
+        } else {
+            // order <= 32, use u32 output with u64 input
+            let (x, y) = ::fast_hilbert::h2xy::<u32>(d as u64, order.try_into().unwrap());
+            return (x as u128, y as u128);
+        }
     }
-    // For very large orders, implement recursively
-    // This shouldn't happen in practice for our use cases
+    // For order > 32, implement recursively
     hilbert_d2xy_recursive(d, order)
 }
 
@@ -235,8 +245,16 @@ fn fast_hilbert_xy2d(x: u128, y: u128, order: u32) -> u128 {
         return 0;
     }
     if order <= 32 {
-        let d = ::fast_hilbert::xy2h::<u64>(x as u64, y as u64, order.try_into().unwrap());
-        return d as u128;
+        if order <= 8 {
+            let d = ::fast_hilbert::xy2h::<u8>(x as u8, y as u8, order.try_into().unwrap());
+            return d as u128;
+        } else if order <= 16 {
+            let d = ::fast_hilbert::xy2h::<u16>(x as u16, y as u16, order.try_into().unwrap());
+            return d as u128;
+        } else {
+            let d = ::fast_hilbert::xy2h::<u32>(x as u32, y as u32, order.try_into().unwrap());
+            return d as u128;
+        }
     }
     hilbert_xy2d_recursive(x, y, order)
 }
