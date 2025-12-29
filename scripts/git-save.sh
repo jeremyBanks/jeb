@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 export TZ=UTC0
 
@@ -43,4 +43,4 @@ git_save() {
     fi
 }
 
-git_save
+git_save "$@"

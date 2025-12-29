@@ -1,11 +1,8 @@
-While editing files, please use `git save` (a custom alias which takes no
-arguments) to commit all changes in the working tree _very_ often, for the sake
-of having a lot of snapshots so we can cleanly revert exactly as far as we need
-to, if we ever need to. You'll want to ensure that the state before and after
-you make changes are both fully captured as well as the incremental snapshots
-while you work. (If `git save` is not defined, look at the definition in
-`./.devcontainer/post-create.sh` and use `git config` to define it for this
-repository.)
+While editing files, please run `./scripts/git-save.sh` to commit all changes in
+the working tree _very_ often, for the sake of having a lot of snapshots so we
+can cleanly revert exactly as far as we need to, if we ever need to. You'll want
+to ensure that the state before and after you make changes are both fully
+captured as well as the incremental snapshots while you work.
 
 ---
 
@@ -15,24 +12,28 @@ commands that create new commits instead.
 
 ---
 
-After you've completed a significant chunk of work, you should use
+After you've completed a significant chunk of work, you should run
+`./scripts/git-message.sh [target]` to create a merge-style commit describing
+the changes. The script reads the commit message from stdin, so you can use a
+heredoc:
 
 ```
-git commit --allow-empty --trailer "Co-Authored-By: Claude Code <noreply@anthropic.com>" -m "$(cat <<'EOF'
-...
+./scripts/git-message.sh [target] <<'EOF'
+Your message describing what changed and why...
 EOF
-)"
 ```
 
-to write a commit message summarizing your understanding of what was changed and
-why, any context or considerations you think would be useful, potentially
-including forward- or backward-looking context when it's important, sort-of like
-we might do for a high-quality pull request description.
+The optional `[target]` argument specifies the ancestor commit that marks the
+start of the work you're describing (defaults to HEAD~1). The script creates a
+merge commit where:
+- The tree is unchanged (same as HEAD)
+- First parent is the target commit
+- Second parent is HEAD
+- The message summarizes what changed between target and HEAD
 
-Similar to a merged pull request, you should use `git commit-tree` (with the
-existing HEAD's tree) so that the HEAD is the second parent, and the first
-parent is the commit _before_ the first commit you're describing, so it's like
-you're merging in that history branch and describing it, then saves it with
-`git update-ref HEAD`.
+This is similar to how a merged pull request appears in history - write a
+message summarizing your understanding of what was changed and why, any context
+or considerations you think would be useful, potentially including forward- or
+backward-looking context when it's important.
 
 ---
