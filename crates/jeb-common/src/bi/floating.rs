@@ -92,14 +92,14 @@ mod tests {
             f64::INFINITY,
         ];
 
-        // Test that ordering is preserved
+        // Test that ordering is preserved using IEEE 754-2008 totalOrder
         for i in 0..test_values.len() - 1 {
             let a = test_values[i];
             let b = test_values[i + 1];
             let a_enc = floating(a);
             let b_enc = floating(b);
 
-            assert!(a < b, "Test data should be ordered: {} < {}", a, b);
+            assert!(a.total_cmp(&b).is_lt(), "Test data should be ordered: {} < {}", a, b);
             assert!(a_enc < b_enc, "Encoded values should preserve order: {} < {} (from {} < {})",
                     a_enc, b_enc, a, b);
         }
@@ -154,13 +154,14 @@ mod tests {
             f32::INFINITY,
         ];
 
+        // Test that ordering is preserved using IEEE 754-2008 totalOrder
         for i in 0..test_values.len() - 1 {
             let a = test_values[i];
             let b = test_values[i + 1];
             let a_enc = floating(a);
             let b_enc = floating(b);
 
-            assert!(a < b, "Test data should be ordered: {} < {}", a, b);
+            assert!(a.total_cmp(&b).is_lt(), "Test data should be ordered: {} < {}", a, b);
             assert!(a_enc < b_enc, "Encoded values should preserve order: {} < {} (from {} < {})",
                     a_enc, b_enc, a, b);
         }
