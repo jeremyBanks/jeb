@@ -203,11 +203,19 @@ pub fn decode(t: &str) -> Result<u64, Error> {
         return Err(Error::EmptyString);
     }
 
-    // Check if it's a decimal token (all digits, length <= 4)
-    if t.len() <= 4 && t.chars().all(|c| c.is_ascii_digit()) {
+    // Strip leading zeros first.
+    let t = t.trim_start_matches('0');
+    let t = if t.is_empty() { "0" } else { t };
+
+    let all_digits = t.chars().all(|c| c.is_ascii_digit());
+
+    // All digits, ≤4 chars → decimal
+    if all_digits && t.len() <= 4 {
         return Ok(t.parse::<u64>().unwrap());
     }
 
+    // All digits, ≥5 chars → plain base32 (always >= C)
+    // Has letters → base32 (transitional if v < C, plain otherwise)
     let v = from_base32(t)?;
 
     // Fast path: from C onward, decoding is identical to base32 parsing.
@@ -418,11 +426,18 @@ mod tests {
     }
 
     #[test]
-    fn test_leading_zeros_all_digits_long() {
-        // 5+ digit all-numeric strings go through base32 path, not decimal
-        // "00007" in base32 = 7, which is a "bad" value
-        // This will cause underflow in rank_good since good_leq(7) = 0
-        let result = decode("00007");
-        println!("decode(\"00007\") = {:?}", result);
+    fn test_leading_zeros_stripped() {
+        // Leading zeros are stripped first, then length/content determines format
+        // "00007" → "7" → decimal
+        assert_eq!(decode("00007").unwrap(), 7);
+        assert_eq!(decode("000042").unwrap(), 42);
+        assert_eq!(decode("0000000000000000007").unwrap(), 7);
+
+        // "0000A" → "A" → base32 (transitional, since A=10 < C)
+        assert_eq!(decode("0000A").unwrap(), 10000);
+
+        // All zeros → "0" → decimal 0
+        assert_eq!(decode("0000").unwrap(), 0);
+        assert_eq!(decode("00000000").unwrap(), 0);
     }
 }
