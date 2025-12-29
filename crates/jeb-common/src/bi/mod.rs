@@ -1,3 +1,5 @@
+//! Bijections between numeric types.
+
 pub mod floating;
 pub mod hilbert;
 pub mod scatter_square;

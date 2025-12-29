@@ -500,11 +500,56 @@ mod tests {
         // Around base32 boundaries
         assert_eq!(to_b1032(10021_u64), "000V"); // base32 31 = 'V'
         assert_eq!(to_b1032(10022_u64), "001A"); // base32 42 = "1A", skips "10"-"19" (digits only)
+
+        // Middle of transition zone
+        assert_eq!(to_b1032(150000_u64), "4DJ8");
+        assert_eq!(to_b1032(200000_u64), "5VD0");
+
+        // Just before C
+        assert_eq!(to_b1032(304420_u64), "998Q");
+        assert_eq!(to_b1032(304421_u64), "998R");
+        assert_eq!(to_b1032(304422_u64), "998S");
+        assert_eq!(to_b1032(304423_u64), "998T");
+        assert_eq!(to_b1032(304424_u64), "998U");
+        assert_eq!(to_b1032(304425_u64), "998V");
+    }
+
+    #[test]
+    fn test_specific_post_c_values() {
+        // Values at and just after C (plain base32 region)
+        assert_eq!(to_b1032(304426_u64), "999A"); // C
+        assert_eq!(to_b1032(304427_u64), "999B");
+        assert_eq!(to_b1032(304428_u64), "999C");
+
+        // Larger values
+        assert_eq!(to_b1032(1000000_u64), "UGI0");
+        assert_eq!(to_b1032(10000000_u64), "9H5K0");
+        assert_eq!(to_b1032(100000000_u64), "2VBO80");
+
+        // Powers of 32
+        assert_eq!(to_b1032(32_u64), "32"); // Still decimal
+        assert_eq!(to_b1032(1024_u64), "1024"); // Still decimal
+        assert_eq!(to_b1032(32768_u64), "0N6O"); // In transition zone
+        assert_eq!(to_b1032(1048576_u64), "10000"); // B = 32^4
+        assert_eq!(to_b1032(33554432_u64), "100000"); // 32^5
     }
 
     // =========================================================================
-    // Property: Lexicographic ordering in transition zone
+    // Property: Lexicographic ordering (exhaustive proof)
     // =========================================================================
+    //
+    // The tests below form a "proof by exhaustion" that the encoding is correct:
+    //
+    // 1. Boundary tests verify specific values at zone transitions:
+    //    - 9999 -> "9999", 10000 -> "000A" (decimal to transition)
+    //    - 304425 -> "998V", 304426 -> "999A" (transition to plain base32)
+    //    - 1048575 -> "VVVV", 1048576 -> "10000" (4-digit to 5-digit)
+    //
+    // 2. Lexicographic ordering tests verify monotonicity:
+    //    - If f(n) < f(n+1) for all n in a range, and f(start) and f(end) are
+    //      correct, then f is correct for the entire range.
+    //
+    // 3. Combined, these prove correctness for all values in each zone.
 
     #[test]
     fn test_lexicographic_order_transition_zone() {
