@@ -2,6 +2,7 @@
 
 pub mod floating;
 pub mod hilbert;
+pub mod moore;
 pub mod scatter_square;
 pub mod signedness;
 pub mod zig_zag;
@@ -16,6 +17,7 @@ pub mod zig_zag;
 pub use {
     floating::floating,
     hilbert::hilbert,
+    moore::moore,
     scatter_square::scatter_square,
     signedness::signedness,
     zig_zag::zig_zag,

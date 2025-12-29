@@ -420,3 +420,204 @@ macro_rules! impl_with {
     };
 }
 use impl_with;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Test roundtrip: u16 -> (i8, i8) -> u16
+    #[test]
+    fn roundtrip_u16_to_pair() {
+        for u in 0u16..=u16::MAX {
+            let (x, y): (i8, i8) = scatter_square::<0, _>(u);
+            let back: u16 = scatter_square::<0, _>((x, y));
+            assert_eq!(u, back, "roundtrip failed for u16 {u} -> ({x}, {y})");
+        }
+    }
+
+    // Test roundtrip: (i8, i8) -> u16 -> (i8, i8)
+    #[test]
+    fn roundtrip_pair_to_u16() {
+        for x in i8::MIN..=i8::MAX {
+            for y in i8::MIN..=i8::MAX {
+                let u: u16 = scatter_square::<0, _>((x, y));
+                let (back_x, back_y): (i8, i8) = scatter_square::<0, _>(u);
+                assert_eq!((x, y), (back_x, back_y), "roundtrip failed for ({x}, {y}) -> {u}");
+            }
+        }
+    }
+
+    // Test bijection coverage
+    #[test]
+    fn bijection_coverage_u16() {
+        use std::collections::HashSet;
+        let mut seen: HashSet<(i8, i8)> = HashSet::new();
+        for u in 0u16..=u16::MAX {
+            let pair: (i8, i8) = scatter_square::<0, _>(u);
+            assert!(seen.insert(pair), "duplicate output for u16 {u}: {pair:?}");
+        }
+        assert_eq!(seen.len(), 65536);
+    }
+
+    // Test that 0 maps to origin
+    #[test]
+    fn zero_maps_to_origin() {
+        let (x, y): (i8, i8) = scatter_square::<0, _>(0u16);
+        assert_eq!((x, y), (0, 0), "0 should map to (0, 0)");
+    }
+
+    // Test shell structure: values are placed in L∞ shells
+    // Shell 0: just (0,0)
+    // Shell 1: max(|x|,|y|) = 1, size 8 points
+    // Shell 2: max(|x|,|y|) = 2, size 16 points
+    // Shell M: size 8*M points
+    // Shell 128 (ragged): points involving i8::MIN
+    #[test]
+    fn shell_structure() {
+        // Count points in each shell (need 129 for shells 0..=128)
+        let mut shell_counts: [u32; 129] = [0; 129];
+        for u in 0u16..=u16::MAX {
+            let (x, y): (i8, i8) = scatter_square::<0, _>(u);
+            let shell = (x as i32).abs().max((y as i32).abs()) as usize;
+            shell_counts[shell] += 1;
+        }
+
+        // Shell 0: 1 point (0,0)
+        assert_eq!(shell_counts[0], 1, "shell 0 should have 1 point");
+
+        // Shell M (1 <= M <= 127): 8*M points
+        for m in 1..=127usize {
+            let expected = 8 * m as u32;
+            assert_eq!(
+                shell_counts[m], expected,
+                "shell {m} should have {expected} points, got {}",
+                shell_counts[m]
+            );
+        }
+
+        // Shell 128 (ragged, involving MIN): 511 points
+        // This is 2^(W+1) - 1 = 2^9 - 1 = 511
+        assert_eq!(
+            shell_counts[128], 511,
+            "shell 128 (ragged) should have 511 points, got {}",
+            shell_counts[128]
+        );
+    }
+
+    // Test that shells are filled in order (monotonically)
+    // As u increases, max(|x|,|y|) should never decrease (within regions)
+    // Note: actually this property holds because region A fills shells 0..=MAX_S
+    // and region B fills the "ragged" outer shell
+    #[test]
+    fn shells_filled_in_order() {
+        // Calculate region A size for u16: (2^8 - 1)^2 = 255^2 = 65025
+        let region_a_size = 65025u16;
+
+        let mut max_shell_seen = 0i32;
+        for u in 0u16..region_a_size {
+            let (x, y): (i8, i8) = scatter_square::<0, _>(u);
+            let shell = (x as i32).abs().max((y as i32).abs());
+            assert!(
+                shell >= max_shell_seen,
+                "shell decreased at u={u}: was {max_shell_seen}, now {shell}"
+            );
+            max_shell_seen = shell;
+        }
+    }
+
+    // Test with different seeds produce different orderings
+    #[test]
+    fn different_seeds_differ() {
+        let mut same_count = 0;
+        for u in 1u16..1000 {
+            let p0: (i8, i8) = scatter_square::<0, _>(u);
+            let p1: (i8, i8) = scatter_square::<12345, _>(u);
+            if p0 == p1 {
+                same_count += 1;
+            }
+        }
+        // With different seeds, very few should match (statistically near zero)
+        assert!(
+            same_count < 50,
+            "too many matches between seeds: {same_count}/999"
+        );
+    }
+
+    // Test roundtrip for u32 (sampled)
+    #[test]
+    fn roundtrip_u32_sample() {
+        let test_values: Vec<u32> = (0..1000)
+            .chain((u32::MAX - 1000)..=u32::MAX)
+            .chain((0..10000).map(|i| i * 429496))
+            .collect();
+
+        for u in test_values {
+            let (x, y): (i16, i16) = scatter_square::<0, _>(u);
+            let back: u32 = scatter_square::<0, _>((x, y));
+            assert_eq!(u, back, "roundtrip failed for u32 {u}");
+        }
+    }
+
+    // Test roundtrip for u64 (sampled)
+    #[test]
+    fn roundtrip_u64_sample() {
+        let test_values: Vec<u64> = (0..1000)
+            .chain((u64::MAX - 1000)..=u64::MAX)
+            .chain((0..10000).map(|i| i * 1844674407370955))
+            .collect();
+
+        for u in test_values {
+            let (x, y): (i32, i32) = scatter_square::<0, _>(u);
+            let back: u64 = scatter_square::<0, _>((x, y));
+            assert_eq!(u, back, "roundtrip failed for u64 {u}");
+        }
+    }
+
+    // Test that region B (ragged outer shell) is handled correctly
+    // Region B is indices >= (2^W - 1)^2
+    #[test]
+    fn region_b_points() {
+        let region_a_size = 65025u16; // (255)^2
+
+        // Collect all region B points
+        let mut region_b_points: Vec<(i8, i8)> = Vec::new();
+        for u in region_a_size..=u16::MAX {
+            let (x, y): (i8, i8) = scatter_square::<0, _>(u);
+            region_b_points.push((x, y));
+        }
+
+        // Region B should have 65536 - 65025 = 511 points
+        assert_eq!(region_b_points.len(), 511);
+
+        // All region B points should involve i8::MIN (-128)
+        for (x, y) in &region_b_points {
+            assert!(
+                *x == i8::MIN || *y == i8::MIN,
+                "region B point ({x}, {y}) doesn't involve MIN"
+            );
+        }
+    }
+
+    // Test specific values (origin and boundary)
+    #[test]
+    fn specific_values() {
+        // u = 0 -> (0, 0)
+        assert_eq!(scatter_square::<0, _>(0u16), (0i8, 0i8));
+
+        // The last point in region A (65024) should be in shell 127
+        let (x, y): (i8, i8) = scatter_square::<0, _>(65024u16);
+        let shell = (x as i32).abs().max((y as i32).abs());
+        assert_eq!(shell, 127, "last region A point should be in shell 127");
+
+        // All points in shell 127 should have max component 127 or -127
+        let mut found_127 = false;
+        for u in ((255u16 - 2) * (255u16 - 2))..65025 {
+            let (px, py): (i8, i8) = scatter_square::<0, _>(u);
+            let s = (px as i32).abs().max((py as i32).abs());
+            if s == 127 {
+                found_127 = true;
+            }
+        }
+        assert!(found_127, "should find shell 127 points");
+    }
+}
