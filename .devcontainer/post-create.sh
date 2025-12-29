@@ -12,10 +12,14 @@ git config --global core.pager "less -F -X"
 git config --global alias.save '!
     export TZ=UTC0
 
-    if [ "$CLAUDECODE" = "1" ]; then
+    if [ -n "$CLAUDECODE" ]; then
         export GIT_COMMITTER_NAME="Claude Code"
         export GIT_COMMITTER_EMAIL="noreply@anthropic.com"
-    elif [ "$GEMINI_CLI" = "1" ]; then
+
+        if [ -n "$CLAUDE_CODE_REMOTE" ]; then
+            export GIT_COMMITTER_NAME="${GIT_COMMITTER_NAME} (remote)"
+        fi
+    elif [ -n "$GEMINI_CLI" ]; then
         export GIT_COMMITTER_NAME="Gemini CLI"
         export GIT_COMMITTER_EMAIL="noreply@google.com"
     fi
