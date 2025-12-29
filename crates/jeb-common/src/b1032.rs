@@ -760,16 +760,16 @@ mod tests {
     fn test_i16_signed() {
         assert_roundtrip(0_i16, "0");
         assert_roundtrip(9999_i16, "9999");
-        assert_roundtrip(i16::MAX, "00NV"); // 32767 (in tricky region)
+        assert_roundtrip(i16::MAX, "0N6N"); // 32767 (in tricky region)
         assert_roundtrip(-1_i16, "-1");
         assert_roundtrip(-9999_i16, "-9999");
-        assert_roundtrip(i16::MIN, "-00O0"); // -32768 (in tricky region)
+        assert_roundtrip(i16::MIN, "-0N6O"); // -32768 (in tricky region)
     }
 
     #[test]
     fn test_i16_overflow() {
-        assert_eq!(from_b1032::<i16>("00O0"), Err(Error::Overflow)); // 32768
-        assert_eq!(from_b1032::<i16>("-00O1"), Err(Error::Overflow)); // -32769
+        assert_eq!(from_b1032::<i16>("0N6O"), Err(Error::Overflow)); // 32768
+        assert_eq!(from_b1032::<i16>("-0N6P"), Err(Error::Overflow)); // -32769
     }
 
     #[test]
