@@ -101,10 +101,9 @@ fn next_pow2(mut n: u64) -> u64 {
 
 #[inline(always)]
 fn domain_bits_for(n: u64) -> u32 {
-    let mut d = next_pow2(n);
+    let d = next_pow2(n);
     let mut bits = d.trailing_zeros(); // log2(d)
     if bits % 2 == 1 {
-        d <<= 1;
         bits += 1;
     }
     bits
@@ -318,7 +317,7 @@ macro_rules! impl_with {
                     }
 
                     let r = isqrt_u64(u);
-                    let m = ((r + 1) / 2) as u64; // 1..=MAX
+                    let m = r.div_ceil(2) as u64; // 1..=MAX
 
                     let b = base(m);
                     let t = u - b;
@@ -383,8 +382,8 @@ macro_rules! impl_with {
                 let xi = x as i64;
                 let yi = y as i64;
 
-                let ax = xi.abs() as u64;
-                let ay = yi.abs() as u64;
+                let ax = xi.unsigned_abs();
+                let ay = yi.unsigned_abs();
                 let m = ax.max(ay);
 
                 if m == 0 {

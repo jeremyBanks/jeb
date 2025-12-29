@@ -639,6 +639,7 @@ async fn to_binary(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
                 result.push(Bytes::from(bytes.to_vec()));
             }
             Ok(_) => {} // Skip other item types
+            #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }

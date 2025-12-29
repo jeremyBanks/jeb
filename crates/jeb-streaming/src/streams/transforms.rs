@@ -285,7 +285,7 @@ where
                                 .copied()
                                 .collect();
 
-                            if hex_bytes.len() % 2 != 0 {
+                            if !hex_bytes.len().is_multiple_of(2) {
                                 yield Err("odd number of hex digits");
                                 continue;
                             }
@@ -314,7 +314,7 @@ where
                                 .copied()
                                 .collect();
 
-                            if hex_bytes.len() % 2 != 0 {
+                            if !hex_bytes.len().is_multiple_of(2) {
                                 yield Err("odd number of hex digits");
                                 continue;
                             }
@@ -613,7 +613,7 @@ where
                                 .copied()
                                 .collect();
 
-                            if bits.len() % 8 != 0 {
+                            if !bits.len().is_multiple_of(8) {
                                 yield Err("binary string bit count not multiple of 8");
                                 continue;
                             }
@@ -653,7 +653,7 @@ where
                                 .copied()
                                 .collect();
 
-                            if bits.len() % 8 != 0 {
+                            if !bits.len().is_multiple_of(8) {
                                 yield Err("binary string bit count not multiple of 8");
                                 continue;
                             }

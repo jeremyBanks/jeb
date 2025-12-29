@@ -1,11 +1,9 @@
 use {
     derive_more::{
-        AsRef,
         From,
         IsVariant,
         TryInto,
         TryUnwrap,
-        Unwrap,
     },
     jeb_value::{
         Bytes,
