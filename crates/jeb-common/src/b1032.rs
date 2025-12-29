@@ -1032,6 +1032,218 @@ mod tests {
     }
 
     // =========================================================================
+    // Exhaustive string-first roundtrip (all 1-4 char base32 strings)
+    // =========================================================================
+
+    #[test]
+    fn test_exhaustive_string_roundtrip_1_to_4_chars() {
+        // Test every possible base32 string from 1-4 characters
+        // This is ~1.1M strings: 32 + 1024 + 32768 + 1048576 = 1082400
+        let alphabet = b"0123456789ABCDEFGHIJKLMNOPQRSTUV";
+
+        // 1-char strings
+        for &c1 in alphabet {
+            let s = String::from_utf8(vec![c1]).unwrap();
+            let decoded: u64 = from_b1032(&s).unwrap();
+            let reencoded = to_b1032(decoded);
+            let redecoded: u64 = from_b1032(&reencoded).unwrap();
+            assert_eq!(
+                decoded, redecoded,
+                "1-char roundtrip failed: '{}' -> {} -> '{}' -> {}",
+                s, decoded, reencoded, redecoded
+            );
+        }
+
+        // 2-char strings
+        for &c1 in alphabet {
+            for &c2 in alphabet {
+                let s = String::from_utf8(vec![c1, c2]).unwrap();
+                let decoded: u64 = from_b1032(&s).unwrap();
+                let reencoded = to_b1032(decoded);
+                let redecoded: u64 = from_b1032(&reencoded).unwrap();
+                assert_eq!(
+                    decoded, redecoded,
+                    "2-char roundtrip failed: '{}' -> {} -> '{}' -> {}",
+                    s, decoded, reencoded, redecoded
+                );
+            }
+        }
+
+        // 3-char strings
+        for &c1 in alphabet {
+            for &c2 in alphabet {
+                for &c3 in alphabet {
+                    let s = String::from_utf8(vec![c1, c2, c3]).unwrap();
+                    let decoded: u64 = from_b1032(&s).unwrap();
+                    let reencoded = to_b1032(decoded);
+                    let redecoded: u64 = from_b1032(&reencoded).unwrap();
+                    assert_eq!(
+                        decoded, redecoded,
+                        "3-char roundtrip failed: '{}' -> {} -> '{}' -> {}",
+                        s, decoded, reencoded, redecoded
+                    );
+                }
+            }
+        }
+
+        // 4-char strings
+        for &c1 in alphabet {
+            for &c2 in alphabet {
+                for &c3 in alphabet {
+                    for &c4 in alphabet {
+                        let s = String::from_utf8(vec![c1, c2, c3, c4]).unwrap();
+                        let decoded: u64 = from_b1032(&s).unwrap();
+                        let reencoded = to_b1032(decoded);
+                        let redecoded: u64 = from_b1032(&reencoded).unwrap();
+                        assert_eq!(
+                            decoded, redecoded,
+                            "4-char roundtrip failed: '{}' -> {} -> '{}' -> {}",
+                            s, decoded, reencoded, redecoded
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    // =========================================================================
+    // Random value-first roundtrip for all types
+    // =========================================================================
+
+    /// Simple deterministic PRNG for reproducible tests (xorshift64)
+    fn next_random(state: &mut u64) -> u64 {
+        let mut x = *state;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        *state = x;
+        x
+    }
+
+    #[test]
+    fn test_random_roundtrip_u64() {
+        let mut rng = 0xDEADBEEF_u64;
+        for _ in 0..1024 {
+            let n = next_random(&mut rng);
+            let tok = to_b1032(n);
+            let back: u64 = from_b1032(&tok).unwrap();
+            assert_eq!(n, back, "u64 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+        }
+    }
+
+    #[test]
+    fn test_random_roundtrip_u32() {
+        let mut rng = 0xCAFEBABE_u64;
+        for _ in 0..1024 {
+            let n = next_random(&mut rng) as u32;
+            let tok = to_b1032(n);
+            let back: u32 = from_b1032(&tok).unwrap();
+            assert_eq!(n, back, "u32 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+        }
+    }
+
+    #[test]
+    fn test_random_roundtrip_u16() {
+        let mut rng = 0x12345678_u64;
+        for _ in 0..1024 {
+            let n = next_random(&mut rng) as u16;
+            let tok = to_b1032(n);
+            let back: u16 = from_b1032(&tok).unwrap();
+            assert_eq!(n, back, "u16 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+        }
+    }
+
+    #[test]
+    fn test_random_roundtrip_i64() {
+        let mut rng = 0xFEEDFACE_u64;
+        for _ in 0..1024 {
+            let n = next_random(&mut rng) as i64;
+            let tok = to_b1032(n);
+            let back: i64 = from_b1032(&tok).unwrap();
+            assert_eq!(n, back, "i64 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+        }
+    }
+
+    #[test]
+    fn test_random_roundtrip_i32() {
+        let mut rng = 0xBADC0DE_u64;
+        for _ in 0..1024 {
+            let n = next_random(&mut rng) as i32;
+            let tok = to_b1032(n);
+            let back: i32 = from_b1032(&tok).unwrap();
+            assert_eq!(n, back, "i32 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+        }
+    }
+
+    #[test]
+    fn test_random_roundtrip_i16() {
+        let mut rng = 0x0BADF00D_u64;
+        for _ in 0..1024 {
+            let n = next_random(&mut rng) as i16;
+            let tok = to_b1032(n);
+            let back: i16 = from_b1032(&tok).unwrap();
+            assert_eq!(n, back, "i16 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+        }
+    }
+
+    // =========================================================================
+    // Cross-type consistency: signed/unsigned encode the same for shared range
+    // =========================================================================
+
+    #[test]
+    fn test_cross_type_consistency_u32_i32() {
+        let mut rng = 0xABCD1234_u64;
+        for _ in 0..1024 {
+            let u = next_random(&mut rng) as u32;
+            // If u fits in i32 (i.e., u <= i32::MAX), encodings should match
+            if let Ok(i) = i32::try_from(u) {
+                let u_tok = to_b1032(u);
+                let i_tok = to_b1032(i);
+                assert_eq!(
+                    u_tok, i_tok,
+                    "u32/i32 mismatch: u32({}) -> '{}', i32({}) -> '{}'",
+                    u, u_tok, i, i_tok
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_cross_type_consistency_u64_i64() {
+        let mut rng = 0x98765432_u64;
+        for _ in 0..1024 {
+            let u = next_random(&mut rng);
+            // If u fits in i64 (i.e., u <= i64::MAX), encodings should match
+            if let Ok(i) = i64::try_from(u) {
+                let u_tok = to_b1032(u);
+                let i_tok = to_b1032(i);
+                assert_eq!(
+                    u_tok, i_tok,
+                    "u64/i64 mismatch: u64({}) -> '{}', i64({}) -> '{}'",
+                    u, u_tok, i, i_tok
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_cross_type_consistency_u16_i16() {
+        let mut rng = 0x11223344_u64;
+        for _ in 0..1024 {
+            let u = next_random(&mut rng) as u16;
+            if let Ok(i) = i16::try_from(u) {
+                let u_tok = to_b1032(u);
+                let i_tok = to_b1032(i);
+                assert_eq!(
+                    u_tok, i_tok,
+                    "u16/i16 mismatch: u16({}) -> '{}', i16({}) -> '{}'",
+                    u, u_tok, i, i_tok
+                );
+            }
+        }
+    }
+
+    // =========================================================================
     // Internal function tests
     // =========================================================================
 
