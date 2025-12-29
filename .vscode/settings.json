@@ -144,6 +144,7 @@
     "shellcheck",
     "signedness",
     "stefanzweifel",
+    "subnormals",
     "subshell",
     "timonwong",
     "tlsv",
