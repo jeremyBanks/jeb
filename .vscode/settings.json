@@ -102,6 +102,7 @@
     "binstall",
     "bstr",
     "cdylib",
+    "CLAUDECODE",
     "clippy",
     "codegen",
     "databake",

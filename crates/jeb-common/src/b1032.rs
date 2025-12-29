@@ -408,4 +408,21 @@ mod tests {
         // Total good values in [0, B) = B - 10000
         assert_eq!(good_leq(B - 1), B - 10000);
     }
+
+    #[test]
+    fn test_extra_leading_zeros_with_letters() {
+        // Base32 tokens with letters: extra leading zeros work
+        assert_eq!(decode("000A").unwrap(), 10000);
+        assert_eq!(decode("0000A").unwrap(), 10000);
+        assert_eq!(decode("00000A").unwrap(), 10000);
+    }
+
+    #[test]
+    fn test_leading_zeros_all_digits_long() {
+        // 5+ digit all-numeric strings go through base32 path, not decimal
+        // "00007" in base32 = 7, which is a "bad" value
+        // This will cause underflow in rank_good since good_leq(7) = 0
+        let result = decode("00007");
+        println!("decode(\"00007\") = {:?}", result);
+    }
 }

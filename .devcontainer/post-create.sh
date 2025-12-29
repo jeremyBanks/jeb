@@ -12,6 +12,11 @@ git config --global core.pager "less -F -X"
 git config --global alias.save '!
     export TZ=UTC0
 
+    if [ $CLAUDECODE -eq 1 ]; then
+        export GIT_COMMITTER_NAME="Claude Code"
+        export GIT_COMMITTER_EMAIL="noreply@anthropic.com"
+    fi
+
     git_save_commit() {
         git commit --allow-empty-message --no-edit >/dev/null 2>&1 || return
 
