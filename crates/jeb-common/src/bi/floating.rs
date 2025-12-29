@@ -11,10 +11,10 @@ use description;
 
 
 #[doc = description!()]
-pub fn floating<T: Floating>(value: T) -> T::Out {
+pub fn floating<T: Floating>(_value: T) -> T::Out {
     unimplemented!()
 }
 
-trait Floating {
+pub trait Floating {
     type Out;
 }
