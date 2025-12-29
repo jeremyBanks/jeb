@@ -5,6 +5,7 @@ pub mod hilbert;
 pub mod moore;
 pub mod scatter_square;
 pub mod signedness;
+pub mod spiral_square;
 pub mod zig_zag;
 
 
@@ -20,5 +21,6 @@ pub use {
     moore::moore,
     scatter_square::scatter_square,
     signedness::signedness,
+    spiral_square::spiral_square,
     zig_zag::zig_zag,
 };
