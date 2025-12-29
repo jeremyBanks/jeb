@@ -46,6 +46,7 @@ use {
     PartialOrd,
 )]
 #[repr(transparent)]
+#[as_ref(String, str, [u8])]
 #[must_use]
 pub struct Text(pub(crate) String);
 

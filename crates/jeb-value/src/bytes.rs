@@ -38,10 +38,11 @@ use {
     PartialOrd,
 )]
 #[repr(transparent)]
-#[must_use]
+#[as_ref(Vec<u8>, [u8])]
 #[into_iterator(
     owned, ref, ref_mut
 )]
+#[must_use]
 pub struct Bytes(pub(crate) Vec<u8>);
 
 impl From<&[u8]> for Bytes {

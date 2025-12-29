@@ -46,6 +46,6 @@ pub use {
         value::*,
     },
     jeb_common as common,
-    jeb_streaming as node,
+    jeb_stream as streams,
     jeb_value as value,
 };

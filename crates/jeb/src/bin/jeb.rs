@@ -6,7 +6,6 @@ use {
         model::Bytes,
     },
     jeb_common::shell_tokenizer,
-    jeb_streaming,
     owo_colors::OwoColorize,
     regex::Regex,
     std::{
@@ -270,10 +269,10 @@ async fn collapse(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
-    let source = jeb_streaming::bytes_source(byte_vecs);
+    let source = jeb_stream::bytes_source(byte_vecs);
 
     // Apply transformation
-    let transformed = jeb_streaming::collapse(source);
+    let transformed = jeb_stream::collapse(source);
 
     // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
@@ -281,13 +280,14 @@ async fn collapse(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     for item_result in items {
         match item_result {
-            Ok(jeb_streaming::Item::Bytes(bytes)) => {
+            Ok(jeb_stream::Item::Bytes(bytes)) => {
                 result.push(Bytes::from(bytes.to_vec()));
             }
-            Ok(jeb_streaming::Item::Text(text)) => {
+            Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
             Ok(_) => {} // Skip other item types
+            #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
@@ -299,10 +299,10 @@ async fn split_lines(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
-    let source = jeb_streaming::bytes_source(byte_vecs);
+    let source = jeb_stream::bytes_source(byte_vecs);
 
     // Apply transformation (lines() splits on newlines)
-    let transformed = jeb_streaming::lines(source);
+    let transformed = jeb_stream::lines(source);
 
     // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
@@ -310,13 +310,14 @@ async fn split_lines(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     for item_result in items {
         match item_result {
-            Ok(jeb_streaming::Item::Bytes(bytes)) => {
+            Ok(jeb_stream::Item::Bytes(bytes)) => {
                 result.push(Bytes::from(bytes.to_vec()));
             }
-            Ok(jeb_streaming::Item::Text(text)) => {
+            Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
             Ok(_) => {} // Skip other item types
+            #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
@@ -382,10 +383,10 @@ async fn split_n(state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
 
     // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
-    let source = jeb_streaming::bytes_source(byte_vecs);
+    let source = jeb_stream::bytes_source(byte_vecs);
 
     // Apply transformation
-    let transformed = jeb_streaming::chunks(source, size);
+    let transformed = jeb_stream::chunks(source, size);
 
     // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
@@ -393,13 +394,14 @@ async fn split_n(state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
 
     for item_result in items {
         match item_result {
-            Ok(jeb_streaming::Item::Bytes(bytes)) => {
+            Ok(jeb_stream::Item::Bytes(bytes)) => {
                 result.push(Bytes::from(bytes.to_vec()));
             }
-            Ok(jeb_streaming::Item::Text(text)) => {
+            Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
             Ok(_) => {}
+            #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
@@ -447,10 +449,10 @@ async fn filter(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
-    let source = jeb_streaming::bytes_source(byte_vecs);
+    let source = jeb_stream::bytes_source(byte_vecs);
 
     // Apply transformation
-    let transformed = jeb_streaming::filter(source);
+    let transformed = jeb_stream::filter(source);
 
     // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
@@ -458,13 +460,14 @@ async fn filter(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     for item_result in items {
         match item_result {
-            Ok(jeb_streaming::Item::Bytes(bytes)) => {
+            Ok(jeb_stream::Item::Bytes(bytes)) => {
                 result.push(Bytes::from(bytes.to_vec()));
             }
-            Ok(jeb_streaming::Item::Text(text)) => {
+            Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
             Ok(_) => {} // Skip other item types
+            #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
@@ -476,10 +479,10 @@ async fn split_shell(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
-    let source = jeb_streaming::bytes_source(byte_vecs);
+    let source = jeb_stream::bytes_source(byte_vecs);
 
     // Apply transformation (split_shell tokenizes using shell rules)
-    let transformed = jeb_streaming::split_shell(source);
+    let transformed = jeb_stream::split_shell(source);
 
     // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
@@ -487,13 +490,14 @@ async fn split_shell(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     for item_result in items {
         match item_result {
-            Ok(jeb_streaming::Item::Bytes(bytes)) => {
+            Ok(jeb_stream::Item::Bytes(bytes)) => {
                 result.push(Bytes::from(bytes.to_vec()));
             }
-            Ok(jeb_streaming::Item::Text(text)) => {
+            Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
             Ok(_) => {} // Skip other item types
+            #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
@@ -505,10 +509,10 @@ async fn split_whitespace(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
-    let source = jeb_streaming::bytes_source(byte_vecs);
+    let source = jeb_stream::bytes_source(byte_vecs);
 
     // Apply transformation
-    let transformed = jeb_streaming::split_whitespace(source);
+    let transformed = jeb_stream::split_whitespace(source);
 
     // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
@@ -516,13 +520,14 @@ async fn split_whitespace(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     for item_result in items {
         match item_result {
-            Ok(jeb_streaming::Item::Bytes(bytes)) => {
+            Ok(jeb_stream::Item::Bytes(bytes)) => {
                 result.push(Bytes::from(bytes.to_vec()));
             }
-            Ok(jeb_streaming::Item::Text(text)) => {
+            Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
             Ok(_) => {} // Skip other item types
+            #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
@@ -534,10 +539,10 @@ async fn parse_hex(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
-    let source = jeb_streaming::bytes_source(byte_vecs);
+    let source = jeb_stream::bytes_source(byte_vecs);
 
     // Apply transformation
-    let transformed = jeb_streaming::parse_hex(source);
+    let transformed = jeb_stream::parse_hex(source);
 
     // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
@@ -545,13 +550,14 @@ async fn parse_hex(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     for item_result in items {
         match item_result {
-            Ok(jeb_streaming::Item::Bytes(bytes)) => {
+            Ok(jeb_stream::Item::Bytes(bytes)) => {
                 result.push(Bytes::from(bytes.to_vec()));
             }
-            Ok(jeb_streaming::Item::Text(text)) => {
+            Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
             Ok(_) => {} // Skip other item types
+            #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
@@ -563,10 +569,10 @@ async fn to_hex(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
-    let source = jeb_streaming::bytes_source(byte_vecs);
+    let source = jeb_stream::bytes_source(byte_vecs);
 
     // Apply transformation
-    let transformed = jeb_streaming::to_hex(source);
+    let transformed = jeb_stream::to_hex(source);
 
     // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
@@ -574,13 +580,14 @@ async fn to_hex(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     for item_result in items {
         match item_result {
-            Ok(jeb_streaming::Item::Text(text)) => {
+            Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
-            Ok(jeb_streaming::Item::Bytes(bytes)) => {
+            Ok(jeb_stream::Item::Bytes(bytes)) => {
                 result.push(Bytes::from(bytes.to_vec()));
             }
             Ok(_) => {} // Skip other item types
+            #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
@@ -592,10 +599,10 @@ async fn parse_binary(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
-    let source = jeb_streaming::bytes_source(byte_vecs);
+    let source = jeb_stream::bytes_source(byte_vecs);
 
     // Apply transformation
-    let transformed = jeb_streaming::parse_binary(source);
+    let transformed = jeb_stream::parse_binary(source);
 
     // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
@@ -603,13 +610,14 @@ async fn parse_binary(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     for item_result in items {
         match item_result {
-            Ok(jeb_streaming::Item::Bytes(bytes)) => {
+            Ok(jeb_stream::Item::Bytes(bytes)) => {
                 result.push(Bytes::from(bytes.to_vec()));
             }
-            Ok(jeb_streaming::Item::Text(text)) => {
+            Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
             Ok(_) => {} // Skip other item types
+            #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
@@ -621,10 +629,10 @@ async fn to_binary(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
-    let source = jeb_streaming::bytes_source(byte_vecs);
+    let source = jeb_stream::bytes_source(byte_vecs);
 
     // Apply transformation
-    let transformed = jeb_streaming::to_binary(source);
+    let transformed = jeb_stream::to_binary(source);
 
     // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
@@ -632,10 +640,10 @@ async fn to_binary(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 
     for item_result in items {
         match item_result {
-            Ok(jeb_streaming::Item::Text(text)) => {
+            Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
-            Ok(jeb_streaming::Item::Bytes(bytes)) => {
+            Ok(jeb_stream::Item::Bytes(bytes)) => {
                 result.push(Bytes::from(bytes.to_vec()));
             }
             Ok(_) => {} // Skip other item types

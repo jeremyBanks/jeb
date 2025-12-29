@@ -20,7 +20,7 @@ path = "src/bin/jeb.rs"
 
 [features]
 default = ["bin", "fs", "stdio"]
-wasm = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys", "jeb-value/wasm", "jeb-streaming/wasm", "jeb-common/wasm"]
+wasm = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys", "jeb-value/wasm", "jeb-stream/wasm", "jeb-common/wasm"]
 bin = [
     "fs",
     "stdio",
@@ -30,8 +30,8 @@ bin = [
     "tracing-subscriber/env-filter",
 ]
 
-fs = ["tokio/fs", "jeb-streaming/fs"]
-stdio = ["tokio/io-std", "jeb-streaming/stdio"]
+fs = ["tokio/fs", "jeb-stream/fs"]
+stdio = ["tokio/io-std", "jeb-stream/stdio"]
 
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/{ version }/{ name }-{ target }{ archive-suffix }"
@@ -65,5 +65,5 @@ wasm-bindgen = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true }
 
 jeb-common = { workspace = true }
-jeb-streaming = { workspace = true, features = ["json", "serde"] }
+jeb-stream = { workspace = true, features = ["json", "serde"] }
 jeb-value = { workspace = true, features = ["serde", "serde_json"] }

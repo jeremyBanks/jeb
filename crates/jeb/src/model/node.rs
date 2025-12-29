@@ -1,6 +1,6 @@
 use {
     crate::Panic,
-    jeb_streaming::Item,
+    jeb_stream::Item,
     tokio::task::JoinHandle,
 };
 

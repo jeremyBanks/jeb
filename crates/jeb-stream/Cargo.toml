@@ -1,5 +1,5 @@
 [package]
-name = "jeb-streaming"
+name = "jeb-stream"
 publish = true
 description = "(part of https://crates.io/crates/jeb)"
 keywords = []

@@ -489,8 +489,9 @@ mod tests {
         // Sample specific values in transition zone with their expected encodings
         // These are hand-verified values that skip all-digit base32 tokens
 
-        // First few transition values (10000, 10001, ...) map to first few "good" base32 values
-        // Good values are those where padded-to-4 base32 has at least one letter
+        // First few transition values (10000, 10001, ...) map to first few "good"
+        // base32 values Good values are those where padded-to-4 base32 has at
+        // least one letter
         assert_eq!(to_b1032(10000_u64), "000A"); // base32 10 = 'A', padded to "000A"
         assert_eq!(to_b1032(10001_u64), "000B");
         assert_eq!(to_b1032(10002_u64), "000C");
@@ -1127,7 +1128,11 @@ mod tests {
             let n = next_random(&mut rng);
             let tok = to_b1032(n);
             let back: u64 = from_b1032(&tok).unwrap();
-            assert_eq!(n, back, "u64 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+            assert_eq!(
+                n, back,
+                "u64 roundtrip failed: {} -> '{}' -> {}",
+                n, tok, back
+            );
         }
     }
 
@@ -1138,7 +1143,11 @@ mod tests {
             let n = next_random(&mut rng) as u32;
             let tok = to_b1032(n);
             let back: u32 = from_b1032(&tok).unwrap();
-            assert_eq!(n, back, "u32 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+            assert_eq!(
+                n, back,
+                "u32 roundtrip failed: {} -> '{}' -> {}",
+                n, tok, back
+            );
         }
     }
 
@@ -1149,7 +1158,11 @@ mod tests {
             let n = next_random(&mut rng) as u16;
             let tok = to_b1032(n);
             let back: u16 = from_b1032(&tok).unwrap();
-            assert_eq!(n, back, "u16 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+            assert_eq!(
+                n, back,
+                "u16 roundtrip failed: {} -> '{}' -> {}",
+                n, tok, back
+            );
         }
     }
 
@@ -1160,7 +1173,11 @@ mod tests {
             let n = next_random(&mut rng) as i64;
             let tok = to_b1032(n);
             let back: i64 = from_b1032(&tok).unwrap();
-            assert_eq!(n, back, "i64 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+            assert_eq!(
+                n, back,
+                "i64 roundtrip failed: {} -> '{}' -> {}",
+                n, tok, back
+            );
         }
     }
 
@@ -1171,7 +1188,11 @@ mod tests {
             let n = next_random(&mut rng) as i32;
             let tok = to_b1032(n);
             let back: i32 = from_b1032(&tok).unwrap();
-            assert_eq!(n, back, "i32 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+            assert_eq!(
+                n, back,
+                "i32 roundtrip failed: {} -> '{}' -> {}",
+                n, tok, back
+            );
         }
     }
 
@@ -1182,7 +1203,11 @@ mod tests {
             let n = next_random(&mut rng) as i16;
             let tok = to_b1032(n);
             let back: i16 = from_b1032(&tok).unwrap();
-            assert_eq!(n, back, "i16 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+            assert_eq!(
+                n, back,
+                "i16 roundtrip failed: {} -> '{}' -> {}",
+                n, tok, back
+            );
         }
     }
 

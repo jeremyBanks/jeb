@@ -28,7 +28,7 @@ use {
         Receiver,
         Task,
     },
-    jeb_streaming::Item,
+    jeb_stream::Item,
     std::borrow::Cow,
 };
 

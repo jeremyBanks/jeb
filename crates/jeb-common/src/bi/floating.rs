@@ -136,9 +136,20 @@ mod tests {
             let a_enc = floating(a);
             let b_enc = floating(b);
 
-            assert!(a.total_cmp(&b).is_lt(), "Test data should be ordered: {} < {}", a, b);
-            assert!(a_enc < b_enc, "Encoded values should preserve order: {} < {} (from {} < {})",
-                    a_enc, b_enc, a, b);
+            assert!(
+                a.total_cmp(&b).is_lt(),
+                "Test data should be ordered: {} < {}",
+                a,
+                b
+            );
+            assert!(
+                a_enc < b_enc,
+                "Encoded values should preserve order: {} < {} (from {} < {})",
+                a_enc,
+                b_enc,
+                a,
+                b
+            );
         }
     }
 
@@ -182,9 +193,14 @@ mod tests {
             let decoded: f64 = floating(encoded);
 
             // Use to_bits for comparison to handle -0.0 vs 0.0 and NaN bit patterns
-            assert_eq!(val.to_bits(), decoded.to_bits(),
-                      "Round-trip failed for {}: encoded={}, decoded={}",
-                      val, encoded, decoded);
+            assert_eq!(
+                val.to_bits(),
+                decoded.to_bits(),
+                "Round-trip failed for {}: encoded={}, decoded={}",
+                val,
+                encoded,
+                decoded
+            );
         }
     }
 
@@ -232,9 +248,20 @@ mod tests {
             let a_enc = floating(a);
             let b_enc = floating(b);
 
-            assert!(a.total_cmp(&b).is_lt(), "Test data should be ordered: {} < {}", a, b);
-            assert!(a_enc < b_enc, "Encoded values should preserve order: {} < {} (from {} < {})",
-                    a_enc, b_enc, a, b);
+            assert!(
+                a.total_cmp(&b).is_lt(),
+                "Test data should be ordered: {} < {}",
+                a,
+                b
+            );
+            assert!(
+                a_enc < b_enc,
+                "Encoded values should preserve order: {} < {} (from {} < {})",
+                a_enc,
+                b_enc,
+                a,
+                b
+            );
         }
     }
 
@@ -277,9 +304,14 @@ mod tests {
             let encoded = floating(val);
             let decoded: f32 = floating(encoded);
 
-            assert_eq!(val.to_bits(), decoded.to_bits(),
-                      "Round-trip failed for {}: encoded={}, decoded={}",
-                      val, encoded, decoded);
+            assert_eq!(
+                val.to_bits(),
+                decoded.to_bits(),
+                "Round-trip failed for {}: encoded={}, decoded={}",
+                val,
+                encoded,
+                decoded
+            );
         }
     }
 
@@ -294,7 +326,8 @@ mod tests {
         // -0.0 should encode to a different value than +0.0
         assert_ne!(neg_enc, pos_enc);
 
-        // -0.0 should encode to a smaller value than +0.0 (preserving IEEE 754-2008 totalOrder)
+        // -0.0 should encode to a smaller value than +0.0 (preserving IEEE 754-2008
+        // totalOrder)
         assert!(neg_enc < pos_enc);
     }
 }

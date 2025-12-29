@@ -26,3 +26,17 @@ pub use {
     },
     streams::*,
 };
+
+
+pub trait StreamExt: futures::stream::Stream + futures::stream::StreamExt {}
+impl<T> StreamExt for T where T: futures::stream::StreamExt {}
+
+pub trait TryStreamExt:
+    StreamExt
+    + futures::stream::Stream
+    + futures::stream::StreamExt
+    + futures::stream::TryStream
+    + futures::stream::TryStreamExt
+{
+}
+impl<T> TryStreamExt for T where T: futures::stream::TryStreamExt {}
