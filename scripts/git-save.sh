@@ -24,8 +24,7 @@ git_save_commit() {
 }
 
 git_save() {
-    if [ $# -gt 0 ]; then
-        # Pass to built-in save (will fail if not defined, showing user they need it)
+    if command -v save >/dev/null 2>&1 || [ $# -gt 0 ]; then
         save "$@"
     else
         staged_tree="$(git write-tree)"
