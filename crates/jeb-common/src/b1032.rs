@@ -9,7 +9,10 @@
 //! # Examples
 //!
 //! ```
-//! use jeb_common::b1032::{to_b1032, from_b1032};
+//! use jeb_common::b1032::{
+//!     from_b1032,
+//!     to_b1032,
+//! };
 //!
 //! // Small values are decimal
 //! assert_eq!(to_b1032(42_u64), "42");
@@ -27,11 +30,13 @@
 //! # Design
 //!
 //! The tricky part: base32 tokens like "1234" look like decimal. To avoid
-//! ambiguity, tokens ≤4 chars that are all-digits are always decoded as decimal.
-//! The encoder skips base32 values that would produce such tokens, ensuring
-//! integers ≥10000 always encode to strings containing at least one letter.
+//! ambiguity, tokens ≤4 chars that are all-digits are always decoded as
+//! decimal. The encoder skips base32 values that would produce such tokens,
+//! ensuring integers ≥10000 always encode to strings containing at least one
+//! letter.
 //!
-//! Base32 alphabet: `0123456789ABCDEFGHIJKLMNOPQRSTUV` (digits 0-9, letters A-V).
+//! Base32 alphabet: `0123456789ABCDEFGHIJKLMNOPQRSTUV` (digits 0-9, letters
+//! A-V).
 
 use std::fmt;
 
@@ -84,17 +89,6 @@ pub fn to_b1032<T: B1032>(value: T) -> String {
 /// Decode a B1032 string. Generic over return type.
 pub fn from_b1032<T: B1032>(s: &str) -> Result<T, Error> {
     T::from_b1032(s)
-}
-
-// Keep the old names as aliases for backwards compatibility
-/// Encode a u64 to B1032 (legacy alias for `to_b1032`).
-pub fn encode(n: u64) -> String {
-    to_b1032(n)
-}
-
-/// Decode a B1032 string to u64 (legacy alias for `from_b1032`).
-pub fn decode(s: &str) -> Result<u64, Error> {
-    from_b1032(s)
 }
 
 // =============================================================================
@@ -159,8 +153,8 @@ fn digits4(mut v: u64) -> [u64; 4] {
     ds
 }
 
-/// Count of values v' in [0..=v] whose 4-digit padded base32 digits are all < 10
-/// (i.e., token would be digit-only).
+/// Count of values v' in [0..=v] whose 4-digit padded base32 digits are all <
+/// 10 (i.e., token would be digit-only).
 fn bad_leq(v: u64) -> u64 {
     let ds = digits4(v);
     let mut tight: u64 = 1;
@@ -190,7 +184,8 @@ fn bad_leq(v: u64) -> u64 {
     tight + loose
 }
 
-/// Count of 'good' values in [0..=v], where good means padded-4 has at least one letter.
+/// Count of 'good' values in [0..=v], where good means padded-4 has at least
+/// one letter.
 fn good_leq(v: u64) -> u64 {
     (v + 1) - bad_leq(v)
 }
@@ -325,8 +320,8 @@ mod tests {
 
     // Helper: assert encode and decode roundtrip
     fn assert_roundtrip_u64(n: u64) {
-        let tok = encode(n);
-        let back = decode(&tok).unwrap();
+        let tok = to_b1032(n);
+        let back = from_b1032(&tok).unwrap();
         assert_eq!(n, back, "roundtrip failed for n={}, tok={}", n, tok);
     }
 
@@ -414,36 +409,36 @@ mod tests {
 
     #[test]
     fn test_specific_encodings() {
-        assert_eq!(encode(9999), "9999");
-        assert_eq!(encode(10000), "000A");
-        assert_eq!(encode(304425), "998V");
-        assert_eq!(encode(304426), "999A"); // C
-        assert_eq!(encode(304427), "999B");
-        assert_eq!(encode(1048575), "VVVV"); // B - 1
-        assert_eq!(encode(1048576), "10000"); // B
+        assert_eq!(to_b1032(9999), "9999");
+        assert_eq!(to_b1032(10000), "000A");
+        assert_eq!(to_b1032(304425), "998V");
+        assert_eq!(to_b1032(304426), "999A"); // C
+        assert_eq!(to_b1032(304427), "999B");
+        assert_eq!(to_b1032(1048575), "VVVV"); // B - 1
+        assert_eq!(to_b1032(1048576), "10000"); // B
     }
 
     #[test]
     fn test_specific_decodings() {
-        assert_eq!(decode("9999").unwrap(), 9999);
-        assert_eq!(decode("000A").unwrap(), 10000);
-        assert_eq!(decode("999A").unwrap(), 304426);
-        assert_eq!(decode("VVVV").unwrap(), 1048575);
-        assert_eq!(decode("10000").unwrap(), 1048576);
+        assert_eq!(from_b1032("9999").unwrap(), 9999);
+        assert_eq!(from_b1032("000A").unwrap(), 10000);
+        assert_eq!(from_b1032("999A").unwrap(), 304426);
+        assert_eq!(from_b1032("VVVV").unwrap(), 1048575);
+        assert_eq!(from_b1032("10000").unwrap(), 1048576);
     }
 
     #[test]
     fn test_decimal_tokens_no_leading_zeros() {
-        assert_eq!(encode(0), "0");
-        assert_eq!(encode(7), "7");
-        assert_eq!(encode(42), "42");
-        assert_eq!(encode(100), "100");
+        assert_eq!(to_b1032(0), "0");
+        assert_eq!(to_b1032(7), "7");
+        assert_eq!(to_b1032(42), "42");
+        assert_eq!(to_b1032(100), "100");
     }
 
     #[test]
     fn test_encoded_tokens_not_ambiguous() {
         for n in 10000..C {
-            let tok = encode(n);
+            let tok = to_b1032(n);
             if tok.len() == 4 {
                 assert!(
                     !tok.chars().all(|c| c.is_ascii_digit()),
@@ -461,45 +456,45 @@ mod tests {
 
     #[test]
     fn test_case_insensitive_decode() {
-        assert_eq!(decode("000a").unwrap(), 10000);
-        assert_eq!(decode("999a").unwrap(), 304426);
-        assert_eq!(decode("vvvv").unwrap(), 1048575);
+        assert_eq!(from_b1032("000a").unwrap(), 10000);
+        assert_eq!(from_b1032("999a").unwrap(), 304426);
+        assert_eq!(from_b1032("vvvv").unwrap(), 1048575);
     }
 
     #[test]
     fn test_mixed_case_decode() {
-        assert_eq!(decode("VvVv").unwrap(), 1048575);
-        assert_eq!(decode("aB").unwrap(), decode("AB").unwrap());
-        assert_eq!(decode("Ab").unwrap(), decode("AB").unwrap());
+        assert_eq!(from_b1032("VvVv").unwrap(), 1048575);
+        assert_eq!(from_b1032("aB").unwrap(), from_b1032("AB").unwrap());
+        assert_eq!(from_b1032("Ab").unwrap(), from_b1032("AB").unwrap());
     }
 
     #[test]
     fn test_decode_with_leading_zeros() {
-        assert_eq!(decode("0007").unwrap(), 7);
-        assert_eq!(decode("0042").unwrap(), 42);
-        assert_eq!(decode("0100").unwrap(), 100);
+        assert_eq!(from_b1032("0007").unwrap(), 7);
+        assert_eq!(from_b1032("0042").unwrap(), 42);
+        assert_eq!(from_b1032("0100").unwrap(), 100);
     }
 
     #[test]
     fn test_leading_zeros_stripped() {
         // "00007" → "7" → decimal
-        assert_eq!(decode("00007").unwrap(), 7);
-        assert_eq!(decode("000042").unwrap(), 42);
-        assert_eq!(decode("0000000000000000007").unwrap(), 7);
+        assert_eq!(from_b1032("00007").unwrap(), 7);
+        assert_eq!(from_b1032("000042").unwrap(), 42);
+        assert_eq!(from_b1032("0000000000000000007").unwrap(), 7);
 
         // "0000A" → "A" → base32 (transitional, since A=10 < C)
-        assert_eq!(decode("0000A").unwrap(), 10000);
+        assert_eq!(from_b1032("0000A").unwrap(), 10000);
 
         // All zeros → "0" → decimal 0
-        assert_eq!(decode("0000").unwrap(), 0);
-        assert_eq!(decode("00000000").unwrap(), 0);
+        assert_eq!(from_b1032("0000").unwrap(), 0);
+        assert_eq!(from_b1032("00000000").unwrap(), 0);
     }
 
     #[test]
     fn test_extra_leading_zeros_with_letters() {
-        assert_eq!(decode("000A").unwrap(), 10000);
-        assert_eq!(decode("0000A").unwrap(), 10000);
-        assert_eq!(decode("00000A").unwrap(), 10000);
+        assert_eq!(from_b1032("000A").unwrap(), 10000);
+        assert_eq!(from_b1032("0000A").unwrap(), 10000);
+        assert_eq!(from_b1032("00000A").unwrap(), 10000);
     }
 
     // =========================================================================
@@ -508,35 +503,35 @@ mod tests {
 
     #[test]
     fn test_error_empty_string() {
-        assert_eq!(decode(""), Err(Error::EmptyString));
+        assert_eq!(from_b1032(""), Err(Error::EmptyString));
     }
 
     #[test]
     fn test_error_invalid_characters() {
         // Letters beyond V
-        assert_eq!(decode("W"), Err(Error::InvalidCharacter('W')));
-        assert_eq!(decode("w"), Err(Error::InvalidCharacter('w')));
-        assert_eq!(decode("X"), Err(Error::InvalidCharacter('X')));
-        assert_eq!(decode("Z"), Err(Error::InvalidCharacter('Z')));
+        assert_eq!(from_b1032("W"), Err(Error::InvalidCharacter('W')));
+        assert_eq!(from_b1032("w"), Err(Error::InvalidCharacter('w')));
+        assert_eq!(from_b1032("X"), Err(Error::InvalidCharacter('X')));
+        assert_eq!(from_b1032("Z"), Err(Error::InvalidCharacter('Z')));
 
         // Whitespace
-        assert_eq!(decode(" "), Err(Error::InvalidCharacter(' ')));
-        assert_eq!(decode("123 "), Err(Error::InvalidCharacter(' ')));
-        assert_eq!(decode(" 123"), Err(Error::InvalidCharacter(' ')));
-        assert_eq!(decode("12 34"), Err(Error::InvalidCharacter(' ')));
-        assert_eq!(decode("\t"), Err(Error::InvalidCharacter('\t')));
-        assert_eq!(decode("\n"), Err(Error::InvalidCharacter('\n')));
-        assert_eq!(decode("123\n"), Err(Error::InvalidCharacter('\n')));
+        assert_eq!(from_b1032(" "), Err(Error::InvalidCharacter(' ')));
+        assert_eq!(from_b1032("123 "), Err(Error::InvalidCharacter(' ')));
+        assert_eq!(from_b1032(" 123"), Err(Error::InvalidCharacter(' ')));
+        assert_eq!(from_b1032("12 34"), Err(Error::InvalidCharacter(' ')));
+        assert_eq!(from_b1032("\t"), Err(Error::InvalidCharacter('\t')));
+        assert_eq!(from_b1032("\n"), Err(Error::InvalidCharacter('\n')));
+        assert_eq!(from_b1032("123\n"), Err(Error::InvalidCharacter('\n')));
 
         // Underscores and other punctuation
-        assert_eq!(decode("1_000"), Err(Error::InvalidCharacter('_')));
-        assert_eq!(decode("1,000"), Err(Error::InvalidCharacter(',')));
-        assert_eq!(decode("1.5"), Err(Error::InvalidCharacter('.')));
-        assert_eq!(decode("-1"), Err(Error::InvalidCharacter('-')));
-        assert_eq!(decode("+1"), Err(Error::InvalidCharacter('+')));
+        assert_eq!(from_b1032("1_000"), Err(Error::InvalidCharacter('_')));
+        assert_eq!(from_b1032("1,000"), Err(Error::InvalidCharacter(',')));
+        assert_eq!(from_b1032("1.5"), Err(Error::InvalidCharacter('.')));
+        assert_eq!(from_b1032("-1"), Err(Error::InvalidCharacter('-')));
+        assert_eq!(from_b1032("+1"), Err(Error::InvalidCharacter('+')));
 
         // Special characters
-        assert_eq!(decode("!@#$"), Err(Error::InvalidCharacter('!')));
+        assert_eq!(from_b1032("!@#$"), Err(Error::InvalidCharacter('!')));
     }
 
     // =========================================================================
@@ -622,7 +617,7 @@ mod tests {
         // u32::MAX + 1 = 4294967296
         assert_eq!(from_b1032::<u32>("4000000"), Err(Error::Overflow));
         // u64::MAX encoded
-        let max_tok = encode(u64::MAX);
+        let max_tok = to_b1032(u64::MAX);
         assert_eq!(from_b1032::<u32>(&max_tok), Err(Error::Overflow));
     }
 
