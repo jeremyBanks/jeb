@@ -1,7 +1,12 @@
 #[cfg(test)]
 mod tests {
-    use crate::{streams::*, Item};
-    use futures::StreamExt;
+    use {
+        crate::{
+            Item,
+            streams::*,
+        },
+        futures::StreamExt,
+    };
 
     // ===== Transform Tests: split_after() =====
 
@@ -93,10 +98,7 @@ mod tests {
     #[tokio::test]
     async fn test_lines_text_single_line() {
         let source = text_source(vec!["hello\n".to_string()]);
-        let result: Vec<_> = lines(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = lines(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Text("hello\n".into()));
@@ -105,10 +107,7 @@ mod tests {
     #[tokio::test]
     async fn test_lines_text_multiple_lines() {
         let source = text_source(vec!["hello\nworld\n".to_string()]);
-        let result: Vec<_> = lines(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = lines(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("hello\n".into()));
@@ -118,10 +117,7 @@ mod tests {
     #[tokio::test]
     async fn test_lines_text_partial_line() {
         let source = text_source(vec!["hello\nworld".to_string()]);
-        let result: Vec<_> = lines(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = lines(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("hello\n".into()));
@@ -135,10 +131,7 @@ mod tests {
             "lo\nwor".to_string(),
             "ld\n".to_string(),
         ]);
-        let result: Vec<_> = lines(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = lines(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("hello\n".into()));
@@ -148,10 +141,7 @@ mod tests {
     #[tokio::test]
     async fn test_lines_bytes_single_line() {
         let source = bytes_source(vec![b"hello\n".to_vec()]);
-        let result: Vec<_> = lines(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = lines(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Bytes(b"hello\n".to_vec().into()));
@@ -160,10 +150,7 @@ mod tests {
     #[tokio::test]
     async fn test_lines_bytes_multiple_lines() {
         let source = bytes_source(vec![b"hello\nworld\n".to_vec()]);
-        let result: Vec<_> = lines(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = lines(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Bytes(b"hello\n".to_vec().into()));
@@ -173,10 +160,7 @@ mod tests {
     #[tokio::test]
     async fn test_lines_bytes_partial_line() {
         let source = bytes_source(vec![b"hello\nworld".to_vec()]);
-        let result: Vec<_> = lines(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = lines(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Bytes(b"hello\n".to_vec().into()));
@@ -185,15 +169,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_lines_bytes_split_across_chunks() {
-        let source = bytes_source(vec![
-            b"hel".to_vec(),
-            b"lo\nwor".to_vec(),
-            b"ld\n".to_vec(),
-        ]);
-        let result: Vec<_> = lines(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let source = bytes_source(vec![b"hel".to_vec(), b"lo\nwor".to_vec(), b"ld\n".to_vec()]);
+        let result: Vec<_> = lines(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Bytes(b"hello\n".to_vec().into()));
@@ -203,10 +180,7 @@ mod tests {
     #[tokio::test]
     async fn test_lines_empty_lines() {
         let source = text_source(vec!["\n\n\n".to_string()]);
-        let result: Vec<_> = lines(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = lines(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], Item::Text("\n".into()));
@@ -217,10 +191,7 @@ mod tests {
     #[tokio::test]
     async fn test_lines_no_newline() {
         let source = text_source(vec!["hello world".to_string()]);
-        let result: Vec<_> = lines(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = lines(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Text("hello world".into()));
@@ -231,10 +202,7 @@ mod tests {
     #[tokio::test]
     async fn test_chunks_text_exact_size() {
         let source = text_source(vec!["12345".to_string()]);
-        let result: Vec<_> = chunks(source, 5)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = chunks(source, 5).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Text("12345".into()));
@@ -243,10 +211,7 @@ mod tests {
     #[tokio::test]
     async fn test_chunks_text_multiple_chunks() {
         let source = text_source(vec!["1234567890".to_string()]);
-        let result: Vec<_> = chunks(source, 3)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = chunks(source, 3).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 4);
         assert_eq!(result[0], Item::Text("123".into()));
@@ -258,10 +223,7 @@ mod tests {
     #[tokio::test]
     async fn test_chunks_text_partial_chunk() {
         let source = text_source(vec!["12345".to_string()]);
-        let result: Vec<_> = chunks(source, 3)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = chunks(source, 3).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("123".into()));
@@ -270,11 +232,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_chunks_text_across_stream_items() {
-        let source = text_source(vec!["123".to_string(), "456".to_string(), "789".to_string()]);
-        let result: Vec<_> = chunks(source, 5)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let source = text_source(vec![
+            "123".to_string(),
+            "456".to_string(),
+            "789".to_string(),
+        ]);
+        let result: Vec<_> = chunks(source, 5).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("12345".into()));
@@ -284,10 +247,7 @@ mod tests {
     #[tokio::test]
     async fn test_chunks_bytes_exact_size() {
         let source = bytes_source(vec![b"12345".to_vec()]);
-        let result: Vec<_> = chunks(source, 5)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = chunks(source, 5).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Bytes(b"12345".to_vec().into()));
@@ -296,10 +256,7 @@ mod tests {
     #[tokio::test]
     async fn test_chunks_bytes_multiple_chunks() {
         let source = bytes_source(vec![b"1234567890".to_vec()]);
-        let result: Vec<_> = chunks(source, 3)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = chunks(source, 3).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 4);
         assert_eq!(result[0], Item::Bytes(b"123".to_vec().into()));
@@ -311,10 +268,7 @@ mod tests {
     #[tokio::test]
     async fn test_chunks_bytes_partial_chunk() {
         let source = bytes_source(vec![b"12345".to_vec()]);
-        let result: Vec<_> = chunks(source, 3)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = chunks(source, 3).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Bytes(b"123".to_vec().into()));
@@ -325,10 +279,7 @@ mod tests {
     async fn test_chunks_zero_defaults_to_65536() {
         let large_text = "a".repeat(70000);
         let source = text_source(vec![large_text.clone()]);
-        let result: Vec<_> = chunks(source, 0)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = chunks(source, 0).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         match &result[0] {
@@ -345,10 +296,7 @@ mod tests {
     async fn test_chunks_text_unicode() {
         // Test that chunks work correctly with multi-byte UTF-8 characters
         let source = text_source(vec!["🦀🦀🦀🦀🦀".to_string()]);
-        let result: Vec<_> = chunks(source, 3)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = chunks(source, 3).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("🦀🦀🦀".into()));
@@ -436,10 +384,7 @@ mod tests {
             yield Ok(Item::Text("foo\n".into()));
         };
 
-        let result: Vec<_> = lines(mixed_source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = lines(mixed_source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], Item::Text("hello\n".into()));
@@ -457,10 +402,7 @@ mod tests {
             yield Ok(Item::Bytes(b"67890".to_vec().into()));
         };
 
-        let result: Vec<_> = chunks(mixed_source, 3)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = chunks(mixed_source, 3).map(|r| r.unwrap()).collect().await;
 
         // Should flush text buffer when switching to bytes
         assert_eq!(result.len(), 4);
@@ -510,10 +452,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_hex_bytes_simple() {
         let source = bytes_source(vec![vec![0xDE, 0xAD, 0xBE, 0xEF]]);
-        let result: Vec<_> = to_hex(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = to_hex(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Text("deadbeef".into()));
@@ -522,10 +461,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_hex_bytes_empty() {
         let source = bytes_source(vec![vec![]]);
-        let result: Vec<_> = to_hex(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = to_hex(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Text("".into()));
@@ -534,10 +470,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_hex_text_ascii() {
         let source = text_source(vec!["hello".to_string()]);
-        let result: Vec<_> = to_hex(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = to_hex(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Text("68656c6c6f".into()));
@@ -546,10 +479,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_hex_text_unicode() {
         let source = text_source(vec!["🦀".to_string()]);
-        let result: Vec<_> = to_hex(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = to_hex(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Text("f09fa680".into()));
@@ -558,10 +488,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_hex_multiple_items() {
         let source = bytes_source(vec![vec![0xAA], vec![0xBB]]);
-        let result: Vec<_> = to_hex(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = to_hex(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("aa".into()));
@@ -578,14 +505,11 @@ mod tests {
             yield Ok(Item::Bytes(vec![0xCC].into()));
         };
 
-        let result: Vec<_> = to_hex(mixed_source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = to_hex(mixed_source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], Item::Text("aa".into()));
-        assert_eq!(result[1], Item::Text("42".into()));  // 'B' in ASCII
+        assert_eq!(result[1], Item::Text("42".into())); // 'B' in ASCII
         assert_eq!(result[2], Item::Text("cc".into()));
     }
 
@@ -594,10 +518,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_hex_text_simple() {
         let source = text_source(vec!["deadbeef".to_string()]);
-        let result: Vec<_> = parse_hex(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = parse_hex(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF].into()));
@@ -606,10 +527,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_hex_text_uppercase() {
         let source = text_source(vec!["DEADBEEF".to_string()]);
-        let result: Vec<_> = parse_hex(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = parse_hex(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF].into()));
@@ -618,10 +536,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_hex_text_mixed_case() {
         let source = text_source(vec!["DeAdBeEf".to_string()]);
-        let result: Vec<_> = parse_hex(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = parse_hex(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF].into()));
@@ -630,10 +545,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_hex_with_whitespace() {
         let source = text_source(vec!["de ad be ef".to_string()]);
-        let result: Vec<_> = parse_hex(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = parse_hex(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF].into()));
@@ -642,10 +554,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_hex_bytes_ascii() {
         let source = bytes_source(vec![b"deadbeef".to_vec()]);
-        let result: Vec<_> = parse_hex(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = parse_hex(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF].into()));
@@ -654,10 +563,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_hex_empty() {
         let source = text_source(vec!["".to_string()]);
-        let result: Vec<_> = parse_hex(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = parse_hex(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Bytes(vec![].into()));
@@ -684,10 +590,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_hex_all_whitespace() {
         let source = text_source(vec!["   \n\t  ".to_string()]);
-        let result: Vec<_> = parse_hex(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = parse_hex(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Bytes(vec![].into()));
@@ -696,10 +599,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_hex_multiple_items() {
         let source = text_source(vec!["aa".to_string(), "bb".to_string()]);
-        let result: Vec<_> = parse_hex(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = parse_hex(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Bytes(vec![0xAA].into()));
@@ -729,10 +629,7 @@ mod tests {
     #[tokio::test]
     async fn test_split_whitespace_text_simple() {
         let source = text_source(vec!["hello world".to_string()]);
-        let result: Vec<_> = split_whitespace(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = split_whitespace(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("hello".into()));
@@ -742,10 +639,7 @@ mod tests {
     #[tokio::test]
     async fn test_split_whitespace_text_multiple_spaces() {
         let source = text_source(vec!["hello    world".to_string()]);
-        let result: Vec<_> = split_whitespace(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = split_whitespace(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("hello".into()));
@@ -755,10 +649,7 @@ mod tests {
     #[tokio::test]
     async fn test_split_whitespace_text_tabs_newlines() {
         let source = text_source(vec!["hello\t\nworld".to_string()]);
-        let result: Vec<_> = split_whitespace(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = split_whitespace(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("hello".into()));
@@ -768,10 +659,7 @@ mod tests {
     #[tokio::test]
     async fn test_split_whitespace_text_leading_trailing() {
         let source = text_source(vec!["  hello world  ".to_string()]);
-        let result: Vec<_> = split_whitespace(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = split_whitespace(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("hello".into()));
@@ -781,10 +669,7 @@ mod tests {
     #[tokio::test]
     async fn test_split_whitespace_text_empty() {
         let source = text_source(vec!["".to_string()]);
-        let result: Vec<_> = split_whitespace(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = split_whitespace(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 0);
     }
@@ -792,10 +677,7 @@ mod tests {
     #[tokio::test]
     async fn test_split_whitespace_text_only_whitespace() {
         let source = text_source(vec!["   \n\t  ".to_string()]);
-        let result: Vec<_> = split_whitespace(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = split_whitespace(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 0);
     }
@@ -803,10 +685,7 @@ mod tests {
     #[tokio::test]
     async fn test_split_whitespace_bytes_simple() {
         let source = bytes_source(vec![b"hello world".to_vec()]);
-        let result: Vec<_> = split_whitespace(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = split_whitespace(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Bytes(b"hello".to_vec().into()));
@@ -820,10 +699,7 @@ mod tests {
             "lo wor".to_string(),
             "ld".to_string(),
         ]);
-        let result: Vec<_> = split_whitespace(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = split_whitespace(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("hello".into()));
@@ -832,14 +708,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_split_whitespace_whitespace_across_chunks() {
-        let source = text_source(vec![
-            "hello ".to_string(),
-            " world".to_string(),
-        ]);
-        let result: Vec<_> = split_whitespace(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let source = text_source(vec!["hello ".to_string(), " world".to_string()]);
+        let result: Vec<_> = split_whitespace(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("hello".into()));
@@ -849,10 +719,7 @@ mod tests {
     #[tokio::test]
     async fn test_split_whitespace_partial_word_at_end() {
         let source = text_source(vec!["hello world foo".to_string()]);
-        let result: Vec<_> = split_whitespace(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = split_whitespace(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], Item::Text("hello".into()));
@@ -904,10 +771,7 @@ mod tests {
     #[tokio::test]
     async fn test_collapse_text_simple() {
         let source = text_source(vec!["hello  world".to_string()]);
-        let result: Vec<_> = collapse(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = collapse(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Text("hello world".into()));
@@ -916,10 +780,7 @@ mod tests {
     #[tokio::test]
     async fn test_collapse_text_multiple_spaces() {
         let source = text_source(vec!["hello    world    foo".to_string()]);
-        let result: Vec<_> = collapse(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = collapse(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Text("hello world foo".into()));
@@ -928,10 +789,7 @@ mod tests {
     #[tokio::test]
     async fn test_collapse_text_tabs_newlines() {
         let source = text_source(vec!["hello\t\nworld".to_string()]);
-        let result: Vec<_> = collapse(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = collapse(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Text("hello world".into()));
@@ -940,10 +798,7 @@ mod tests {
     #[tokio::test]
     async fn test_collapse_text_leading_trailing() {
         let source = text_source(vec!["  hello world  ".to_string()]);
-        let result: Vec<_> = collapse(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = collapse(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Text("hello world".into()));
@@ -952,10 +807,7 @@ mod tests {
     #[tokio::test]
     async fn test_collapse_text_only_whitespace() {
         let source = text_source(vec!["   \n\t  ".to_string()]);
-        let result: Vec<_> = collapse(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = collapse(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Text("".into()));
@@ -964,10 +816,7 @@ mod tests {
     #[tokio::test]
     async fn test_collapse_bytes_simple() {
         let source = bytes_source(vec![b"hello  world".to_vec()]);
-        let result: Vec<_> = collapse(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = collapse(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Bytes(b"hello world".to_vec().into()));
@@ -975,14 +824,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_collapse_multiple_items() {
-        let source = text_source(vec![
-            "hello  world".to_string(),
-            "foo   bar".to_string(),
-        ]);
-        let result: Vec<_> = collapse(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let source = text_source(vec!["hello  world".to_string(), "foo   bar".to_string()]);
+        let result: Vec<_> = collapse(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("hello world".into()));
@@ -1016,10 +859,7 @@ mod tests {
             "".to_string(),
             "world".to_string(),
         ]);
-        let result: Vec<_> = filter(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = filter(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("hello".into()));
@@ -1028,15 +868,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_filter_bytes_mixed() {
-        let source = bytes_source(vec![
-            b"hello".to_vec(),
-            vec![],
-            b"world".to_vec(),
-        ]);
-        let result: Vec<_> = filter(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let source = bytes_source(vec![b"hello".to_vec(), vec![], b"world".to_vec()]);
+        let result: Vec<_> = filter(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Bytes(b"hello".to_vec().into()));
@@ -1045,28 +878,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_filter_all_empty() {
-        let source = text_source(vec![
-            "".to_string(),
-            "".to_string(),
-        ]);
-        let result: Vec<_> = filter(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let source = text_source(vec!["".to_string(), "".to_string()]);
+        let result: Vec<_> = filter(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 0);
     }
 
     #[tokio::test]
     async fn test_filter_none_empty() {
-        let source = text_source(vec![
-            "hello".to_string(),
-            "world".to_string(),
-        ]);
-        let result: Vec<_> = filter(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let source = text_source(vec!["hello".to_string(), "world".to_string()]);
+        let result: Vec<_> = filter(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("hello".into()));
@@ -1097,10 +918,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_binary_bytes_simple() {
         let source = bytes_source(vec![vec![0xFF, 0x00, 0xAA]]);
-        let result: Vec<_> = to_binary(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = to_binary(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Text("111111110000000010101010".into()));
@@ -1109,10 +927,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_binary_bytes_empty() {
         let source = bytes_source(vec![vec![]]);
-        let result: Vec<_> = to_binary(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = to_binary(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Text("".into()));
@@ -1121,10 +936,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_binary_text_ascii() {
         let source = text_source(vec!["AB".to_string()]);
-        let result: Vec<_> = to_binary(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = to_binary(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         // 'A' = 0x41 = 01000001, 'B' = 0x42 = 01000010
@@ -1134,10 +946,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_binary_multiple_items() {
         let source = bytes_source(vec![vec![0x01], vec![0x02]]);
-        let result: Vec<_> = to_binary(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = to_binary(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Text("00000001".into()));
@@ -1165,10 +974,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_binary_text_simple() {
         let source = text_source(vec!["1111111100000000".to_string()]);
-        let result: Vec<_> = parse_binary(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = parse_binary(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Bytes(vec![0xFF, 0x00].into()));
@@ -1177,10 +983,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_binary_text_with_whitespace() {
         let source = text_source(vec!["11111111 00000000".to_string()]);
-        let result: Vec<_> = parse_binary(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = parse_binary(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Bytes(vec![0xFF, 0x00].into()));
@@ -1189,10 +992,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_binary_bytes_ascii() {
         let source = bytes_source(vec![b"0100000101000010".to_vec()]);
-        let result: Vec<_> = parse_binary(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = parse_binary(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         // Should be 'A' (0x41) and 'B' (0x42)
@@ -1202,10 +1002,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_binary_empty() {
         let source = text_source(vec!["".to_string()]);
-        let result: Vec<_> = parse_binary(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = parse_binary(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Bytes(vec![].into()));
@@ -1214,10 +1011,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_binary_all_whitespace() {
         let source = text_source(vec!["  \n\t  ".to_string()]);
-        let result: Vec<_> = parse_binary(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = parse_binary(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Bytes(vec![].into()));
@@ -1245,14 +1039,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_parse_binary_multiple_items() {
-        let source = text_source(vec![
-            "11111111".to_string(),
-            "00000000".to_string(),
-        ]);
-        let result: Vec<_> = parse_binary(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let source = text_source(vec!["11111111".to_string(), "00000000".to_string()]);
+        let result: Vec<_> = parse_binary(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Bytes(vec![0xFF].into()));
@@ -1281,10 +1069,7 @@ mod tests {
     #[tokio::test]
     async fn test_split_shell_simple() {
         let source = text_source(vec!["hello world".to_string()]);
-        let result: Vec<_> = split_shell(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = split_shell(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Bytes(b"hello".to_vec().into()));
@@ -1294,10 +1079,7 @@ mod tests {
     #[tokio::test]
     async fn test_split_shell_quoted() {
         let source = text_source(vec!["hello 'world foo'".to_string()]);
-        let result: Vec<_> = split_shell(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = split_shell(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Bytes(b"hello".to_vec().into()));
@@ -1307,10 +1089,7 @@ mod tests {
     #[tokio::test]
     async fn test_split_shell_double_quoted() {
         let source = text_source(vec!["hello \"world foo\"".to_string()]);
-        let result: Vec<_> = split_shell(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = split_shell(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Bytes(b"hello".to_vec().into()));
@@ -1320,10 +1099,7 @@ mod tests {
     #[tokio::test]
     async fn test_split_shell_escaped() {
         let source = text_source(vec!["hello\\ world".to_string()]);
-        let result: Vec<_> = split_shell(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = split_shell(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], Item::Bytes(b"hello world".to_vec().into()));
@@ -1332,10 +1108,7 @@ mod tests {
     #[tokio::test]
     async fn test_split_shell_bytes() {
         let source = bytes_source(vec![b"hello world".to_vec()]);
-        let result: Vec<_> = split_shell(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let result: Vec<_> = split_shell(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], Item::Bytes(b"hello".to_vec().into()));
@@ -1344,14 +1117,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_split_shell_multiple_items() {
-        let source = text_source(vec![
-            "hello world".to_string(),
-            "foo bar".to_string(),
-        ]);
-        let result: Vec<_> = split_shell(source)
-            .map(|r| r.unwrap())
-            .collect()
-            .await;
+        let source = text_source(vec!["hello world".to_string(), "foo bar".to_string()]);
+        let result: Vec<_> = split_shell(source).map(|r| r.unwrap()).collect().await;
 
         assert_eq!(result.len(), 4);
         assert_eq!(result[0], Item::Bytes(b"hello".to_vec().into()));

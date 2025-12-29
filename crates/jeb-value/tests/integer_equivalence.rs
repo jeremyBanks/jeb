@@ -1,7 +1,15 @@
 use {
-    jeb_value::{Float, Value},
-    std::collections::hash_map::DefaultHasher,
-    std::hash::{Hash, Hasher},
+    jeb_value::{
+        Float,
+        Value,
+    },
+    std::{
+        collections::hash_map::DefaultHasher,
+        hash::{
+            Hash,
+            Hasher,
+        },
+    },
 };
 
 fn hash_value(v: &Value) -> u64 {
@@ -164,12 +172,12 @@ fn test_edge_case_stable_sort() {
     // Test with edge cases: -1, -0.0, 0, 0.0 in a non-trivial order
     // Initial order is intentionally scrambled (not sorted, not reversed)
     let mut vals = vec![
-        Value::Float(Float::new(0.0).unwrap()),      // 0: Float(0.0)
-        Value::Signed(-1),                            // 1: Signed(-1)
-        Value::Unsigned(0),                           // 2: Unsigned(0)
-        Value::Float(Float::new(-0.0).unwrap()),     // 3: Float(-0.0)
-        Value::Signed(0),                             // 4: Signed(0)
-        Value::Float(Float::new(-1.0).unwrap()),     // 5: Float(-1.0)
+        Value::Float(Float::new(0.0).unwrap()),  // 0: Float(0.0)
+        Value::Signed(-1),                       // 1: Signed(-1)
+        Value::Unsigned(0),                      // 2: Unsigned(0)
+        Value::Float(Float::new(-0.0).unwrap()), // 3: Float(-0.0)
+        Value::Signed(0),                        // 4: Signed(0)
+        Value::Float(Float::new(-1.0).unwrap()), // 5: Float(-1.0)
     ];
 
     vals.sort();
@@ -187,9 +195,14 @@ fn test_edge_case_stable_sort() {
     // 4-5. Float(-0.0) and Float(0.0) - by total_cmp, -0.0 < 0.0
 
     // Let's verify the actual behavior
-    // Signed(-1) vs Float(-1.0): both have type_rank 2, so goes to cross-type comparison
-    // Signed(-1) vs Float(-1.0) should make Signed < Float (integer before float at same numeric value)
-    assert_eq!(vals[0], Value::Signed(-1), "Expected Signed(-1) at position 0");
+    // Signed(-1) vs Float(-1.0): both have type_rank 2, so goes to cross-type
+    // comparison Signed(-1) vs Float(-1.0) should make Signed < Float (integer
+    // before float at same numeric value)
+    assert_eq!(
+        vals[0],
+        Value::Signed(-1),
+        "Expected Signed(-1) at position 0"
+    );
 
     match &vals[1] {
         Value::Float(f) if **f == -1.0 => {}
@@ -198,9 +211,18 @@ fn test_edge_case_stable_sort() {
 
     // Positions 2-3 should be the integer zeros in their original relative order
     // Original order: Unsigned(0) was at index 2, Signed(0) was at index 4
-    // Since stable sort preserves order of equal elements, Unsigned(0) should come first
-    assert_eq!(vals[2], Value::Unsigned(0), "Expected Unsigned(0) at position 2");
-    assert_eq!(vals[3], Value::Signed(0), "Expected Signed(0) at position 3");
+    // Since stable sort preserves order of equal elements, Unsigned(0) should come
+    // first
+    assert_eq!(
+        vals[2],
+        Value::Unsigned(0),
+        "Expected Unsigned(0) at position 2"
+    );
+    assert_eq!(
+        vals[3],
+        Value::Signed(0),
+        "Expected Signed(0) at position 3"
+    );
 
     // Positions 4-5 should be the float zeros
     // By total_cmp, -0.0 < 0.0, so Float(-0.0) should come before Float(0.0)
@@ -230,22 +252,22 @@ fn test_negative_zero_float_ordering() {
 #[test]
 fn test_stable_sort_order_preservation() {
     // Test that stable sort preserves relative order of equal elements
-    // We'll use two different initial orders and verify they produce different results
-    // for equal elements while maintaining the same overall ordering
+    // We'll use two different initial orders and verify they produce different
+    // results for equal elements while maintaining the same overall ordering
 
     // Order A: Unsigned before Signed for zeros
     let mut vals_a = vec![
         Value::Signed(-1),
-        Value::Unsigned(0),  // First zero
-        Value::Signed(0),    // Second zero
+        Value::Unsigned(0), // First zero
+        Value::Signed(0),   // Second zero
         Value::Float(Float::new(5.0).unwrap()),
     ];
 
     // Order B: Signed before Unsigned for zeros (reversed)
     let mut vals_b = vec![
         Value::Signed(-1),
-        Value::Signed(0),    // First zero
-        Value::Unsigned(0),  // Second zero
+        Value::Signed(0),   // First zero
+        Value::Unsigned(0), // Second zero
         Value::Float(Float::new(5.0).unwrap()),
     ];
 
@@ -267,12 +289,28 @@ fn test_stable_sort_order_preservation() {
     assert_eq!(vals_b[0], Value::Signed(-1));
 
     // Order A should have Unsigned(0) before Signed(0) (original order preserved)
-    assert_eq!(vals_a[1], Value::Unsigned(0), "Order A: Unsigned(0) should come first");
-    assert_eq!(vals_a[2], Value::Signed(0), "Order A: Signed(0) should come second");
+    assert_eq!(
+        vals_a[1],
+        Value::Unsigned(0),
+        "Order A: Unsigned(0) should come first"
+    );
+    assert_eq!(
+        vals_a[2],
+        Value::Signed(0),
+        "Order A: Signed(0) should come second"
+    );
 
     // Order B should have Signed(0) before Unsigned(0) (original order preserved)
-    assert_eq!(vals_b[1], Value::Signed(0), "Order B: Signed(0) should come first");
-    assert_eq!(vals_b[2], Value::Unsigned(0), "Order B: Unsigned(0) should come second");
+    assert_eq!(
+        vals_b[1],
+        Value::Signed(0),
+        "Order B: Signed(0) should come first"
+    );
+    assert_eq!(
+        vals_b[2],
+        Value::Unsigned(0),
+        "Order B: Unsigned(0) should come second"
+    );
 
     // Both should have Float(5.0) at the end
     match &vals_a[3] {
@@ -286,12 +324,16 @@ fn test_stable_sort_order_preservation() {
 
     // The two sorted arrays should be different due to stable sort
     // However, since Unsigned(0) == Signed(0) by our PartialEq implementation,
-    // the vectors will compare as equal even though they have different types at positions 1-2
-    // Let's verify they're structurally different by comparing discriminants
+    // the vectors will compare as equal even though they have different types at
+    // positions 1-2 Let's verify they're structurally different by comparing
+    // discriminants
     assert!(
-        !matches!((&vals_a[1], &vals_b[1]),
-                  (Value::Unsigned(_), Value::Unsigned(_)) | (Value::Signed(_), Value::Signed(_))),
-        "Stable sort should preserve different initial orders - position 1 should have different types"
+        !matches!(
+            (&vals_a[1], &vals_b[1]),
+            (Value::Unsigned(_), Value::Unsigned(_)) | (Value::Signed(_), Value::Signed(_))
+        ),
+        "Stable sort should preserve different initial orders - position 1 should have different \
+         types"
     );
 }
 

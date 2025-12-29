@@ -1,9 +1,15 @@
-//! Toggles between signed and unsigned integer types while preserving the
-//! position of values within new type's range, rather than preserving the
-//! numerical values (e.g. `0u32`/`u32::MIN` goes to `i32::MIN`, not `0i32`).
+#![doc = description!()]
+macro_rules! description {
+    () => {
+        r#"
+Bijection between signed and unsigned integer types which preserves the
+ordering and distance relationships of values.
+        "#
+    };
+}
+use description;
 
-use jeb_common::is;
-
+#[doc = description!()]
 pub fn signedness<T: Signedness>(value: T) -> T::Out {
     value.signedness()
 }
@@ -16,8 +22,13 @@ impls! {
     isize: usize;
 }
 
+use jeb_common::is;
+
+#[doc = description!()]
 pub trait Signedness {
     type Out;
+
+    #[doc = description!()]
     fn signedness(self) -> Self::Out;
 }
 

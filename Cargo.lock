@@ -343,6 +343,7 @@ dependencies = [
  "getset",
  "ignorable",
  "indexmap",
+ "jeb-bi",
  "jeb-common",
  "jeb-streaming",
  "jeb-value",

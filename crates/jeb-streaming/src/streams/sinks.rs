@@ -1,7 +1,13 @@
 use {
     crate::Item,
-    futures::{Stream, StreamExt},
-    std::{path::Path, pin::pin},
+    futures::{
+        Stream,
+        StreamExt,
+    },
+    std::{
+        path::Path,
+        pin::pin,
+    },
     tokio::io::AsyncWriteExt,
 };
 
@@ -79,8 +85,8 @@ where
 ///
 /// # Panics
 ///
-/// Panics if the file cannot be created, if the stream contains non-text/non-bytes
-/// items, or if writing fails.
+/// Panics if the file cannot be created, if the stream contains
+/// non-text/non-bytes items, or if writing fails.
 #[cfg(feature = "fs")]
 pub async fn write_path<S, P>(input: S, path: P)
 where

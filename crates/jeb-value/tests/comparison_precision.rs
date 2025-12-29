@@ -1,5 +1,7 @@
-use jeb_value::Value;
-use std::cmp::Ordering;
+use {
+    jeb_value::Value,
+    std::cmp::Ordering,
+};
 
 /// Test the precision fix for comparing large integers with floats.
 /// Previously, casting u64 to f64 lost precision for values > 2^53.

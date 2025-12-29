@@ -11,7 +11,18 @@ pub mod stream_utils;
 mod streams;
 
 // Re-export everything
-pub use item::*;
-pub use split::{oks_and_errs, ErrStream, OkStream};
-pub use stream_utils::{errs, fail_fast, oks, unwrap_oks};
-pub use streams::*;
+pub use {
+    item::*,
+    split::{
+        ErrStream,
+        OkStream,
+        oks_and_errs,
+    },
+    stream_utils::{
+        errs,
+        fail_fast,
+        oks,
+        unwrap_oks,
+    },
+    streams::*,
+};

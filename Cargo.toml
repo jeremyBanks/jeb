@@ -12,6 +12,9 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 include = ["**/*.rs", "**/*.toml", "**/*.lock", "**/*.md", "**/LICENSE*", "!.*"]
 
+[profile.dev.package.backtrace]
+opt-level = 3
+
 [profile.small]
 inherits = "release"
 lto = true
@@ -23,6 +26,7 @@ panic = "abort"
 
 [workspace.dependencies]
 jeb = { path = "crates/jeb", version = "0.0.0-dev-2025-12-26.7705" }
+jeb-bi = { path = "crates/jeb-bi", version = "0.0.0-dev-2025-12-26.7705" }
 jeb-common = { path = "crates/jeb-common", version = "0.0.0-dev-2025-12-26.7705" }
 jeb-streaming = { path = "crates/jeb-streaming", version = "0.0.0-dev-2025-12-26.7705" }
 jeb-value = { path = "crates/jeb-value", version = "0.0.0-dev-2025-12-26.7705" }

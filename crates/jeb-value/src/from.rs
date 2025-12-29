@@ -1,4 +1,9 @@
-use crate::{Bytes, Float, Text, Value};
+use crate::{
+    Bytes,
+    Float,
+    Text,
+    Value,
+};
 
 // ============================================================================
 // Float - TryFrom implementations

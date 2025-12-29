@@ -8,7 +8,8 @@ use {
 
 /// Creates a stream that reads from stdin.
 ///
-/// Returns a stream of `Result<Item, &'static str>` where items are `Item::Bytes`.
+/// Returns a stream of `Result<Item, &'static str>` where items are
+/// `Item::Bytes`.
 #[cfg(feature = "stdio")]
 pub fn stdin() -> impl Stream<Item = Result<Item, &'static str>> + Send + Unpin {
     Box::pin(stream! {
@@ -30,7 +31,8 @@ pub fn stdin() -> impl Stream<Item = Result<Item, &'static str>> + Send + Unpin 
 
 /// Creates a stream that reads from a file path.
 ///
-/// Returns a stream of `Result<Item, &'static str>` where items are `Item::Bytes`.
+/// Returns a stream of `Result<Item, &'static str>` where items are
+/// `Item::Bytes`.
 #[cfg(feature = "fs")]
 pub fn read_path<P>(path: P) -> impl Stream<Item = Result<Item, &'static str>> + Send + Unpin
 where
@@ -61,7 +63,8 @@ where
 
 /// Creates a stream from an iterator of strings.
 ///
-/// Returns a stream of `Result<Item, &'static str>` where items are `Item::Text`.
+/// Returns a stream of `Result<Item, &'static str>` where items are
+/// `Item::Text`.
 pub fn text_source<IntoTextIterator>(
     text: IntoTextIterator,
 ) -> impl Stream<Item = Result<Item, &'static str>> + Send
@@ -78,7 +81,8 @@ where
 
 /// Creates a stream from an iterator of byte vectors.
 ///
-/// Returns a stream of `Result<Item, &'static str>` where items are `Item::Bytes`.
+/// Returns a stream of `Result<Item, &'static str>` where items are
+/// `Item::Bytes`.
 pub fn bytes_source<IntoBytesIterator>(
     bytes: IntoBytesIterator,
 ) -> impl Stream<Item = Result<Item, &'static str>> + Send

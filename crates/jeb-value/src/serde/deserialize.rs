@@ -2,9 +2,17 @@
 //! them to be deserialized by arbitrary serde `Deserializer`s.
 
 use {
-    crate::{Bytes, Float, Text, Value},
+    crate::{
+        Bytes,
+        Float,
+        Text,
+        Value,
+    },
     indexmap::IndexMap,
-    serde::de::{self, Visitor},
+    serde::de::{
+        self,
+        Visitor,
+    },
 };
 
 impl<'de> serde::Deserialize<'de> for Value {

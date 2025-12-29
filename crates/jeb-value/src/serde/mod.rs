@@ -1,15 +1,15 @@
 mod deserialize;
 mod deserializer;
 mod error;
+mod serde_bytes;
 mod serialize;
 mod serializer;
-mod serde_bytes;
 
 pub use {
     deserialize::*,
     deserializer::*,
     error::*,
+    serde_bytes::*,
     serialize::*,
     serializer::*,
-    serde_bytes::*,
 };

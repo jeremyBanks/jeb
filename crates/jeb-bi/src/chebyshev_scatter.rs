@@ -1,3 +1,25 @@
+#![doc = description!()]
+macro_rules! description {
+    () => {
+        r#"
+Bijection between between N-bit unsigned integers and pairs of N/2-bit signed
+integers where unsigned integers are mapped onto points on successive Chebyshev
+L∞ shells (starting at (0, 0)) with pseudorandom ordering within each shell.
+
+In other words: as we start at 0 and look at ascending unsigned integers, we'll
+first see all of the points whose maximum component magnitude is 0, then all of
+the points whose maximum component magnitude is 1, then 2, etc, so we're filling
+up concentric squares shells centered at the origin, one shell at a time, but
+picking points within each shell using a weakly-pseudorandom ordering.
+        "#
+    };
+}
+use description;
+
+impl_with!(u16, i8, u8, 8, chebyshev_scatter_u16);
+impl_with!(u32, i16, u16, 16, chebyshev_scatter_u32);
+impl_with!(u64, i32, u32, 32, chebyshev_scatter_u64);
+
 // Chebyshev (L∞) shell bijections between:
 //   u16 <-> (i8,  i8)
 //   u32 <-> (i16, i16)
@@ -20,14 +42,17 @@
 // - Seed is a const generic on the trait with a default of 0.
 // - `chebyshev(value)` uses SEED=0.
 // - `chebyshev_with::<SEED>(value)` lets you choose a compile-time seed.
-pub fn chebyshev<const SEED: u64, T: Chebyshev<SEED>>(value: T) -> T::Out {
-    value.chebyshev()
+#[doc = description!()]
+pub fn chebyshev_scatter<const SEED: u64, T: ChebyshevScatter<SEED>>(value: T) -> T::Out {
+    value.chebyshev_scatter()
 }
 
-/// Implemented on both domains (rank and coordinate pair).
-pub trait Chebyshev<const SEED: u64 = 0> {
+#[doc = description!()]
+pub trait ChebyshevScatter<const SEED: u64 = 0> {
     type Out;
-    fn chebyshev(self) -> Self::Out;
+
+    #[doc = description!()]
+    fn chebyshev_scatter(self) -> Self::Out;
 }
 
 // -------------------------
@@ -171,9 +196,9 @@ fn isqrt_u64(x: u64) -> u64 {
 // Rung generator macro
 // -------------------------
 
-macro_rules! impl_chebyshev_rung {
-    ($U:ty, $S:ty, $UB:ty, $W:expr, $modname:ident) => {
-        mod $modname {
+macro_rules! impl_with {
+    ($U:ty, $S:ty, $UB:ty, $W:expr, $mod:ident) => {
+        mod $mod {
             use super::*;
 
             // Width parameters
@@ -375,30 +400,22 @@ macro_rules! impl_chebyshev_rung {
         }
 
         // Trait impls (both directions)
-        impl<const SEED: u64> super::Chebyshev<SEED> for $U {
+        impl<const SEED: u64> super::ChebyshevScatter<SEED> for $U {
             type Out = ($S, $S);
 
             #[inline(always)]
-            fn chebyshev(self) -> Self::Out {
-                $modname::to_xy::<SEED>(self)
+            fn chebyshev_scatter(self) -> Self::Out {
+                $mod::to_xy::<SEED>(self)
             }
         }
 
-        impl<const SEED: u64> super::Chebyshev<SEED> for ($S, $S) {
+        impl<const SEED: u64> super::ChebyshevScatter<SEED> for ($S, $S) {
             type Out = $U;
 
             #[inline(always)]
-            fn chebyshev(self) -> Self::Out {
-                $modname::from_xy::<SEED>(self.0, self.1)
+            fn chebyshev_scatter(self) -> Self::Out {
+                $mod::from_xy::<SEED>(self.0, self.1)
             }
         }
     };
-}
-
-// -------------------------
-// Instantiate supported rungs
-// -------------------------
-
-impl_chebyshev_rung!(u16, i8, u8, 8, rung_u16_i8);
-impl_chebyshev_rung!(u32, i16, u16, 16, rung_u32_i16);
-impl_chebyshev_rung!(u64, i32, u32, 32, rung_u64_i32);
+} use impl_with;

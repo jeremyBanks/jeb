@@ -1,17 +1,25 @@
 use {
     crate::Item,
     async_stream::stream,
-    futures::{Stream, StreamExt},
+    futures::{
+        Stream,
+        StreamExt,
+    },
     std::pin::pin,
 };
 
 /// Transforms a stream of Items by splitting after occurrences of a pattern.
 ///
 /// Handles both `Item::Text` and `Item::Bytes`, buffering until complete
-/// segments (including the pattern) are available. Flushes remaining buffers at stream end.
+/// segments (including the pattern) are available. Flushes remaining buffers at
+/// stream end.
 ///
-/// The pattern must be a valid UTF-8 string to ensure we never break UTF-8 boundaries.
-pub fn split_after<S>(input: S, pattern: &str) -> impl Stream<Item = Result<Item, &'static str>> + Send
+/// The pattern must be a valid UTF-8 string to ensure we never break UTF-8
+/// boundaries.
+pub fn split_after<S>(
+    input: S,
+    pattern: &str,
+) -> impl Stream<Item = Result<Item, &'static str>> + Send
 where
     S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
 {
@@ -111,8 +119,8 @@ where
 
 /// Transforms a stream of Items into fixed-size chunks.
 ///
-/// For `Item::Text`, chunks by character count. For `Item::Bytes`, chunks by byte count.
-/// If `length` is 0, defaults to 65536.
+/// For `Item::Text`, chunks by character count. For `Item::Bytes`, chunks by
+/// byte count. If `length` is 0, defaults to 65536.
 pub fn chunks<S>(input: S, length: usize) -> impl Stream<Item = Result<Item, &'static str>> + Send
 where
     S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
@@ -196,10 +204,12 @@ where
         }
     }
 }
-/// Transforms a stream of Items by converting bytes to lowercase hexadecimal string representation.
+/// Transforms a stream of Items by converting bytes to lowercase hexadecimal
+/// string representation.
 ///
 /// Handles both `Item::Text` and `Item::Bytes`, treating text as UTF-8 bytes.
-/// Each byte is converted to a two-character hex string (e.g., `0xDE` → `"de"`).
+/// Each byte is converted to a two-character hex string (e.g., `0xDE` →
+/// `"de"`).
 pub fn to_hex<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
 where
     S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
@@ -340,11 +350,13 @@ where
     }
 }
 
-/// Transforms a stream of Items by splitting on ASCII whitespace with cross-chunk buffering.
+/// Transforms a stream of Items by splitting on ASCII whitespace with
+/// cross-chunk buffering.
 ///
-/// Handles both `Item::Text` and `Item::Bytes`, buffering until complete segments are available.
-/// Uses `u8::is_ascii_whitespace()` as delimiter. Consecutive whitespace is treated as a single
-/// separator (no empty segments). Flushes remaining buffers at stream end.
+/// Handles both `Item::Text` and `Item::Bytes`, buffering until complete
+/// segments are available. Uses `u8::is_ascii_whitespace()` as delimiter.
+/// Consecutive whitespace is treated as a single separator (no empty segments).
+/// Flushes remaining buffers at stream end.
 pub fn split_whitespace<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
 where
     S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
@@ -426,11 +438,13 @@ where
         }
     }
 }
-/// Transforms a stream of Items by collapsing consecutive ASCII whitespace into single spaces.
+/// Transforms a stream of Items by collapsing consecutive ASCII whitespace into
+/// single spaces.
 ///
-/// Handles both `Item::Text` and `Item::Bytes`. Consecutive whitespace characters are replaced
-/// with a single space (0x20). Leading and trailing whitespace is removed. Uses
-/// `u8::is_ascii_whitespace()` to identify whitespace characters.
+/// Handles both `Item::Text` and `Item::Bytes`. Consecutive whitespace
+/// characters are replaced with a single space (0x20). Leading and trailing
+/// whitespace is removed. Uses `u8::is_ascii_whitespace()` to identify
+/// whitespace characters.
 pub fn collapse<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
 where
     S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
@@ -495,8 +509,8 @@ where
 
 /// Transforms a stream of Items by filtering out empty items.
 ///
-/// Removes any `Item::Text` with empty string or `Item::Bytes` with empty byte vector.
-/// Passes through other item types and errors unchanged.
+/// Removes any `Item::Text` with empty string or `Item::Bytes` with empty byte
+/// vector. Passes through other item types and errors unchanged.
 pub fn filter<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
 where
     S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
@@ -529,7 +543,8 @@ where
     }
 }
 
-/// Transforms a stream of Items by converting bytes to binary string representation.
+/// Transforms a stream of Items by converting bytes to binary string
+/// representation.
 ///
 /// Each byte is converted to an 8-bit binary string (e.g., 0xFF → "11111111").
 /// `Item::Text` is treated as UTF-8 bytes. Output is always `Item::Text`.
@@ -576,9 +591,9 @@ where
 
 /// Transforms a stream of Items by parsing binary strings into bytes.
 ///
-/// Handles both `Item::Text` and `Item::Bytes` (treating bytes as ASCII binary).
-/// Filters out whitespace before parsing. Returns errors for invalid binary digits
-/// or if the bit count is not a multiple of 8.
+/// Handles both `Item::Text` and `Item::Bytes` (treating bytes as ASCII
+/// binary). Filters out whitespace before parsing. Returns errors for invalid
+/// binary digits or if the bit count is not a multiple of 8.
 pub fn parse_binary<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
 where
     S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
@@ -686,9 +701,9 @@ where
 }
 /// Transforms a stream of Items by tokenizing using shell tokenization rules.
 ///
-/// Uses `jeb_common::shell_tokenizer` to split each item according to shell quoting
-/// and escaping rules. Errors from the tokenizer are logged to stderr but don't stop
-/// the stream. Handles both `Item::Text` and `Item::Bytes`.
+/// Uses `jeb_common::shell_tokenizer` to split each item according to shell
+/// quoting and escaping rules. Errors from the tokenizer are logged to stderr
+/// but don't stop the stream. Handles both `Item::Text` and `Item::Bytes`.
 pub fn split_shell<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
 where
     S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
@@ -741,4 +756,3 @@ where
         }
     }
 }
-

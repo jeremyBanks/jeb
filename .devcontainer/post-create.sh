@@ -1,6 +1,8 @@
 #!/bin/bash
 set -vexu
 
+sudo chown "$USER:$USER" ./target
+
 git config --global core.mergeoptions "--no-edit"
 git config --global pull.default current
 git config --global pull.rebase false

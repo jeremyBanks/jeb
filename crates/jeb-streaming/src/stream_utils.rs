@@ -1,6 +1,9 @@
 use {
     async_stream::stream,
-    futures::{Stream, StreamExt},
+    futures::{
+        Stream,
+        StreamExt,
+    },
     std::pin::pin,
 };
 
@@ -65,7 +68,8 @@ where
 
 /// Yields Ok values from a Result stream until the first Err is encountered.
 ///
-/// Once an Err is encountered, the stream terminates without yielding the error.
+/// Once an Err is encountered, the stream terminates without yielding the
+/// error.
 pub fn fail_fast<S, T, E>(input: S) -> impl Stream<Item = T> + Send
 where
     S: Stream<Item = Result<T, E>> + Send + 'static,

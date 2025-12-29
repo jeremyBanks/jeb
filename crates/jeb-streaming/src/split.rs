@@ -1,10 +1,17 @@
 use {
-    futures::{stream::FusedStream, Stream},
+    futures::{
+        Stream,
+        stream::FusedStream,
+    },
     parking_lot::Mutex,
     std::{
         pin::Pin,
         sync::Arc,
-        task::{Context, Poll, Waker},
+        task::{
+            Context,
+            Poll,
+            Waker,
+        },
     },
 };
 
@@ -85,7 +92,8 @@ where
     }
 }
 
-/// Split a stream of `Result<T, E>` into two streams: one for `Ok` values, one for `Err` values.
+/// Split a stream of `Result<T, E>` into two streams: one for `Ok` values, one
+/// for `Err` values.
 ///
 /// This implementation:
 /// - Does NOT spawn any tasks
@@ -139,8 +147,9 @@ where
             Some(Err(e)) => {
                 // Not for us - check if the other stream was dropped
                 if state.err_dropped {
-                    // Err stream is gone, discard this item and continue polling input
-                    // Fall through to input polling section
+                    // Err stream is gone, discard this item and continue
+                    // polling input Fall through to input
+                    // polling section
                 } else {
                     // Put it back and wait for err stream to consume it
                     state.buffer = Some(Err(e));
@@ -263,8 +272,9 @@ where
             Some(Ok(t)) => {
                 // Not for us - check if the other stream was dropped
                 if state.ok_dropped {
-                    // Ok stream is gone, discard this item and continue polling input
-                    // Fall through to input polling section
+                    // Ok stream is gone, discard this item and continue polling
+                    // input Fall through to input polling
+                    // section
                 } else {
                     // Put it back and wait for ok stream to consume it
                     state.buffer = Some(Ok(t));
