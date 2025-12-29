@@ -534,8 +534,14 @@ mod tests {
     #[test]
     fn test_mixed_case_decode() {
         assert_eq!(from_b1032::<u64>("VvVv").unwrap(), 1048575);
-        assert_eq!(from_b1032::<u64>("aB").unwrap(), from_b1032::<u64>("AB").unwrap());
-        assert_eq!(from_b1032::<u64>("Ab").unwrap(), from_b1032::<u64>("AB").unwrap());
+        assert_eq!(
+            from_b1032::<u64>("aB").unwrap(),
+            from_b1032::<u64>("AB").unwrap()
+        );
+        assert_eq!(
+            from_b1032::<u64>("Ab").unwrap(),
+            from_b1032::<u64>("AB").unwrap()
+        );
     }
 
     #[test]
@@ -589,14 +595,26 @@ mod tests {
         assert_eq!(from_b1032::<u64>(" "), Err(Error::InvalidCharacter(' ')));
         assert_eq!(from_b1032::<u64>("123 "), Err(Error::InvalidCharacter(' ')));
         assert_eq!(from_b1032::<u64>(" 123"), Err(Error::InvalidCharacter(' ')));
-        assert_eq!(from_b1032::<u64>("12 34"), Err(Error::InvalidCharacter(' ')));
+        assert_eq!(
+            from_b1032::<u64>("12 34"),
+            Err(Error::InvalidCharacter(' '))
+        );
         assert_eq!(from_b1032::<u64>("\t"), Err(Error::InvalidCharacter('\t')));
         assert_eq!(from_b1032::<u64>("\n"), Err(Error::InvalidCharacter('\n')));
-        assert_eq!(from_b1032::<u64>("123\n"), Err(Error::InvalidCharacter('\n')));
+        assert_eq!(
+            from_b1032::<u64>("123\n"),
+            Err(Error::InvalidCharacter('\n'))
+        );
 
         // Underscores and other punctuation
-        assert_eq!(from_b1032::<u64>("1_000"), Err(Error::InvalidCharacter('_')));
-        assert_eq!(from_b1032::<u64>("1,000"), Err(Error::InvalidCharacter(',')));
+        assert_eq!(
+            from_b1032::<u64>("1_000"),
+            Err(Error::InvalidCharacter('_'))
+        );
+        assert_eq!(
+            from_b1032::<u64>("1,000"),
+            Err(Error::InvalidCharacter(','))
+        );
         assert_eq!(from_b1032::<u64>("1.5"), Err(Error::InvalidCharacter('.')));
         // Negative sign is invalid for unsigned types
         assert_eq!(from_b1032::<u64>("-1"), Err(Error::InvalidCharacter('-')));
@@ -800,8 +818,8 @@ mod tests {
 
     #[test]
     fn test_roundtrip_signed_zones() {
-        // Sample 128 values in each zone: below transition, in transition, above transition
-        // Test both positive and negative values
+        // Sample 128 values in each zone: below transition, in transition, above
+        // transition Test both positive and negative values
 
         let below_transition = 10_000_u64; // values 0..10000 are decimal
         let transition_start = 10_000_u64;
