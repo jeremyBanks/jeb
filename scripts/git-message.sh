@@ -15,8 +15,16 @@ elif [ -n "${GEMINI_CLI:-}" ]; then
     export GIT_COMMITTER_EMAIL="noreply@google.com"
 fi
 
-# Target commit: first argument, or HEAD's first parent if not provided
-target="${1:-$(git rev-parse HEAD~1)}"
+# Target commit: first argument, or most recent first-parent ancestor that isn't a merge
+if [ -n "${1:-}" ]; then
+    target="$1"
+else
+    # Walk first-parent ancestry until we find a non-merge commit
+    target="$(git rev-parse HEAD~1)"
+    while git rev-parse --verify "$target^2" >/dev/null 2>&1; do
+        target="$(git rev-parse "$target~1")"
+    done
+fi
 
 # Resolve to full commit hash
 target="$(git rev-parse "$target")"
