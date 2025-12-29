@@ -20,8 +20,14 @@ if [ -n "${1:-}" ]; then
     target="$1"
 else
     # Walk first-parent ancestry until we find a merge commit
+    # Fall back to HEAD~1 if no merge found before reaching root
     target="$(git rev-parse HEAD~1)"
     while ! git rev-parse --verify "$target^2" >/dev/null 2>&1; do
+        if ! git rev-parse --verify "$target~1" >/dev/null 2>&1; then
+            # Reached root without finding a merge, fall back to HEAD~1
+            target="$(git rev-parse HEAD~1)"
+            break
+        fi
         target="$(git rev-parse "$target~1")"
     done
 fi
