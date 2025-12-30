@@ -82,7 +82,7 @@ in our case it scans back and see that D has the trailer, so it picks `C` as the
 commit argument and src/path as the path argument, as though we'd run
 `git zoom D:src/tree`.
 
-It creates a new commit `F` whose first parent is `D`, and whose second parent
+It creates a new commit `F` whose first parent is `C`, and whose second parent
 is `E`, and updates head to point to that. this way, now that we're back on the
 "main" tree, all of the changes on the other tree look like a branch that was
 merged in. It gets a `git-zoom-out: src/tree` trailer. Then we make a normal
@@ -116,3 +116,11 @@ A->B->C-------->F->G-/       # full tree commits
 
 It's possible that we might want to split up the zoom-out and the merge into
 separate commits for the sake of easier git tool handling.
+
+actually we need to do that both ways to get our clean histories.
+
+```
+F1->F2->F3--------------->F7->F8-----------> full commit branch/view
+        |           -F6-/      \-S9-\
+         \->S4->S5-/----------------->S10--> sub tree branch/view
+```
