@@ -701,3 +701,8 @@ module. First, we're not going to worry about interaction with git2 and real
 repositories at all. We're just going to work on serializing and deserializing
 example .yaml repository files. We'll have a bunch of example inputs and example
 output files we'll be asserting against.
+
+when we serialize, we're no longer using integer commit references ever, that's
+just a human-readable input option (which is also used to generate default
+commit messages), but when we're serializing we'll always use the full real
+commit IDs.
