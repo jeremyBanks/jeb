@@ -9,8 +9,7 @@ mod scan;
 mod tree;
 mod zoom_in;
 mod zoom_out;
-#[allow(unused)]
-mod gits;
+mod git_snapshot;
 
 use std::env;
 use std::process::ExitCode;

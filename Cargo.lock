@@ -416,6 +416,8 @@ name = "git-zoom"
 version = "0.0.0-dev-2025-12-26.7705"
 dependencies = [
  "git2",
+ "serde",
+ "serde_bytes",
  "sha1-checked",
  "tempfile",
 ]

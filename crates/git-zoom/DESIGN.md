@@ -665,3 +665,14 @@ after everything else) replacing all integer IDs with full untruncated git
 hashes.
 
 The git format for hashing etc is pretty simple.
+
+okay you know what I've been massively over-engineering my thoughts around that.
+We don't need some Serde-serializable custom type.
+
+We can handle the above ^ representation dynamically using serde_json::Value and
+serde_yaml serialization.
+
+We can have an in-memory representation which includes all of the fields that
+are shared or inferred, but then when we're serializing we see if we could
+calculate the value of the field correctly by default, and if so, we omit it
+from the serialization.
