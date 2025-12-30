@@ -16,7 +16,7 @@ elif [ -n "$GEMINI_CLI" ]; then
 fi
 
 git_save_commit() {
-    git commit --allow-empty-message --no-edit >/dev/null 2>&1 || return
+    git commit --allow-empty-message --no-edit || return
 
     default_message="$(git log -1 --format=%B)"
     tree="$(git write-tree)"
@@ -25,7 +25,7 @@ git_save_commit() {
 }
 
 git_save() {
-    if command -v save >/dev/null 2>&1 || [ $# -gt 0 ]; then
+    if command -v save || [ $# -gt 0 ]; then
         save "$@"
     else
         staged_tree="$(git write-tree)"
