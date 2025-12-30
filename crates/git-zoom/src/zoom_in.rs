@@ -226,4 +226,84 @@ mod tests {
             .collect();
         assert_eq!(entries.len(), 0);
     }
+
+    #[test]
+    fn test_zoom_in_trailing_slash() {
+        let dir = setup_test_repo();
+
+        fs::create_dir_all(dir.path().join("src/lib")).unwrap();
+        fs::write(dir.path().join("src/lib/foo.txt"), "hello").unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "initial"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+
+        // Trailing slash should be normalized
+        zoom_in(Some("src/lib/"), false).unwrap();
+
+        // Verify: trailer should have normalized path
+        let body = git::commit_body("HEAD").unwrap();
+        assert!(body.contains("git-zoom-in: src/lib"));
+        assert!(!body.contains("git-zoom-in: src/lib/"));
+    }
+
+    #[test]
+    fn test_zoom_in_invalid_paths() {
+        let dir = setup_test_repo();
+
+        fs::write(dir.path().join("root.txt"), "root").unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "initial"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+
+        // Empty path should fail
+        assert!(zoom_in(Some(""), false).is_err());
+        assert!(zoom_in(Some("."), false).is_err());
+        assert!(zoom_in(Some("/"), false).is_err());
+
+        // Path with .. should fail
+        assert!(zoom_in(Some("src/../lib"), false).is_err());
+        assert!(zoom_in(Some(".."), false).is_err());
+    }
+
+    #[test]
+    fn test_zoom_in_seed_has_trailer() {
+        let dir = setup_test_repo();
+
+        fs::create_dir_all(dir.path().join("src/lib")).unwrap();
+        fs::write(dir.path().join("src/lib/foo.txt"), "hello").unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "initial"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+
+        zoom_in(Some("src/lib"), false).unwrap();
+
+        // Get seed commit (first parent of HEAD)
+        let parents = git::parents("HEAD").unwrap();
+        let seed = &parents[0];
+        let seed_body = git::commit_body(seed).unwrap();
+
+        // Seed should have git-zoom-seed trailer
+        assert!(seed_body.contains("git-zoom-seed: src/lib"));
+    }
 }

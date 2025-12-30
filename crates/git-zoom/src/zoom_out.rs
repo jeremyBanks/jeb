@@ -265,4 +265,91 @@ mod tests {
             (None, Some("src/lib".to_string()))
         );
     }
+
+    #[test]
+    fn test_multiple_paths() {
+        let dir = setup_test_repo();
+
+        // Create structure with two subtrees
+        fs::create_dir_all(dir.path().join("src/lib")).unwrap();
+        fs::create_dir_all(dir.path().join("src/bin")).unwrap();
+        fs::write(dir.path().join("src/lib/lib.txt"), "library").unwrap();
+        fs::write(dir.path().join("src/bin/main.txt"), "binary").unwrap();
+
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "initial"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+
+        // Zoom into lib, modify, zoom out
+        zoom_in::zoom_in(Some("src/lib"), false).unwrap();
+        fs::write(dir.path().join("lib.txt"), "modified library").unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "modify lib"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        zoom_out(None, false).unwrap();
+
+        // Zoom into bin, modify, zoom out
+        zoom_in::zoom_in(Some("src/bin"), false).unwrap();
+        fs::write(dir.path().join("main.txt"), "modified binary").unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "modify bin"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        zoom_out(None, false).unwrap();
+
+        // Verify both changes exist
+        let lib_content = fs::read_to_string(dir.path().join("src/lib/lib.txt")).unwrap();
+        let bin_content = fs::read_to_string(dir.path().join("src/bin/main.txt")).unwrap();
+        assert_eq!(lib_content, "modified library");
+        assert_eq!(bin_content, "modified binary");
+    }
+
+    #[test]
+    fn test_deny_empty() {
+        let dir = setup_test_repo();
+
+        fs::create_dir_all(dir.path().join("src/lib")).unwrap();
+        fs::write(dir.path().join("src/lib/foo.txt"), "hello").unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "initial"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+
+        // Zoom in with allow-empty
+        zoom_in::zoom_in(Some("empty/path"), true).unwrap();
+
+        // Try to zoom out with --deny-empty (should fail)
+        let result = zoom_out(None, true);
+        assert!(result.is_err());
+
+        // Without --deny-empty should work
+        let result = zoom_out(None, false);
+        assert!(result.is_ok());
+    }
 }
