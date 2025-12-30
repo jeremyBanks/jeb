@@ -532,7 +532,7 @@ F1->F2->F3-------------------->F9->F10-----------> full commit branch/view
 ```
 
 ```
-S4:
+S4, S11:
 Message: Zoom in to 'src/tree'
 Committer: 🔎 <git-zoom-in@localhost>
 
@@ -540,14 +540,15 @@ S5:
 Message: Initial commit
 Committer: 🔎 <git-zoom-in@localhost>
 
-S6:
+S6, S12:
 Message: Merge from tree 'src/tree'
 Committer: 🔎 <git-zoom-in@localhost>
 
-
+F8:
 Message: Zoom out from 'src/tree'
 Committer: 🔍 <git-zoom-out@localhost>
 
+F9:
 Message: Merge to tree 'src/tree'
 Committer: 🔍 <git-zoom-out@localhost>
 ```
