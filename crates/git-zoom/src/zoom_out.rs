@@ -349,6 +349,193 @@ mod tests {
     }
 
     #[test]
+    fn test_nested_zoom() {
+        let dir = setup_test_repo();
+
+        // Create nested structure: src/lib/core/mod.rs
+        fs::create_dir_all(dir.path().join("src/lib/core")).unwrap();
+        fs::write(dir.path().join("src/lib/core/mod.rs"), "v1").unwrap();
+        fs::write(dir.path().join("src/lib/lib.rs"), "lib").unwrap();
+        fs::write(dir.path().join("root.txt"), "root").unwrap();
+
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "initial"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+
+        // First zoom: into src/lib
+        zoom_in::zoom_in(Some("src/lib"), false).unwrap();
+        assert!(dir.path().join("core/mod.rs").exists());
+        assert!(dir.path().join("lib.rs").exists());
+        assert!(!dir.path().join("root.txt").exists());
+
+        // Second zoom: into core (nested)
+        zoom_in::zoom_in(Some("core"), false).unwrap();
+        assert!(dir.path().join("mod.rs").exists());
+        assert!(!dir.path().join("lib.rs").exists());
+
+        // Modify in nested zoom
+        fs::write(dir.path().join("mod.rs"), "v2").unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "modify in nested"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+
+        // Zoom out from core back to src/lib
+        zoom_out(None, false).unwrap();
+        assert!(dir.path().join("core/mod.rs").exists());
+        assert!(dir.path().join("lib.rs").exists());
+        let content = fs::read_to_string(dir.path().join("core/mod.rs")).unwrap();
+        assert_eq!(content, "v2");
+
+        // Zoom out from src/lib back to root
+        zoom_out(None, false).unwrap();
+        assert!(dir.path().join("src/lib/core/mod.rs").exists());
+        assert!(dir.path().join("root.txt").exists());
+        let content = fs::read_to_string(dir.path().join("src/lib/core/mod.rs")).unwrap();
+        assert_eq!(content, "v2");
+    }
+
+    #[test]
+    fn test_explicit_target() {
+        let dir = setup_test_repo();
+
+        // Create initial structure
+        fs::create_dir_all(dir.path().join("src/lib")).unwrap();
+        fs::write(dir.path().join("src/lib/foo.txt"), "v1").unwrap();
+        fs::write(dir.path().join("root.txt"), "root v1").unwrap();
+
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "initial"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+
+        let initial_commit = git::head().unwrap();
+
+        // Make a change to root.txt on the full tree
+        fs::write(dir.path().join("root.txt"), "root v2").unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "update root"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+
+        let updated_commit = git::head().unwrap();
+
+        // Zoom in
+        zoom_in::zoom_in(Some("src/lib"), false).unwrap();
+
+        // Make change in subtree
+        fs::write(dir.path().join("foo.txt"), "v2").unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "update foo"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+
+        // Zoom out with explicit target (the updated commit, not initial)
+        zoom_out(Some(&format!("{}:src/lib", updated_commit)), false).unwrap();
+
+        // Verify: should have root v2 (from explicit target) and foo v2 (from subtree work)
+        let root_content = fs::read_to_string(dir.path().join("root.txt")).unwrap();
+        let foo_content = fs::read_to_string(dir.path().join("src/lib/foo.txt")).unwrap();
+        assert_eq!(root_content, "root v2");
+        assert_eq!(foo_content, "v2");
+
+        // Verify: first parent should be the explicit target
+        let parents = git::parents("HEAD").unwrap();
+        assert_eq!(parents[0], updated_commit);
+    }
+
+    #[test]
+    fn test_explicit_path_filter() {
+        let dir = setup_test_repo();
+
+        // Create structure with two subtrees
+        fs::create_dir_all(dir.path().join("src/lib")).unwrap();
+        fs::create_dir_all(dir.path().join("src/bin")).unwrap();
+        fs::write(dir.path().join("src/lib/lib.txt"), "lib").unwrap();
+        fs::write(dir.path().join("src/bin/main.txt"), "bin").unwrap();
+
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "initial"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+
+        // Zoom into lib, modify, zoom out
+        zoom_in::zoom_in(Some("src/lib"), false).unwrap();
+        fs::write(dir.path().join("lib.txt"), "lib v2").unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "update lib"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        zoom_out(None, false).unwrap();
+
+        // Zoom into bin, modify
+        zoom_in::zoom_in(Some("src/bin"), false).unwrap();
+        fs::write(dir.path().join("main.txt"), "bin v2").unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "update bin"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+
+        // Zoom out with explicit path filter - should use src/bin path
+        zoom_out(Some(":src/bin"), false).unwrap();
+
+        // Verify both changes exist
+        let lib_content = fs::read_to_string(dir.path().join("src/lib/lib.txt")).unwrap();
+        let bin_content = fs::read_to_string(dir.path().join("src/bin/main.txt")).unwrap();
+        assert_eq!(lib_content, "lib v2");
+        assert_eq!(bin_content, "bin v2");
+    }
+
+    #[test]
     fn test_deny_empty() {
         let dir = setup_test_repo();
 
