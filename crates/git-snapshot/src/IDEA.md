@@ -123,10 +123,46 @@ If absent, `commit-date` defaults to `3` seconds after the maximum of this
 # ...
 1:
   # ...
-  author-date: 2021-01-14T08:25:36Z
-  commit-date: 2021-01-14T14:25:36-0200
+  tree:
+    README: "# example"
+    src:
+      target:
+      main.bash: "echo hello world"
 # ...
 ```
+
+`tree` is the most complicated case to avoid redundancy. It defaults to the same
+tree as the first parent, or the empty tree if this is the first commit, but
+even if a value is specified it _usually_ represents a change that is applied on
+top of that default, rather than entirely replacing it as our other defaults do.
+This expression is evaluated recursively.
+
+The root `tree` is a mapping from strings to non-empty recursive mappings (to
+represent nested directories/trees), or strings (to represent blob contents), or
+`null`/absent/empty mappings (to represent deletion). When serializing, we
+prefer the absent format where there's a key but not value, to represent
+deletion, instead of `null` or `{}`, but they're both supported when parsing.
+
+A value of `null`/missing/the empty object `{}`, that represents deletion. If
+it's the root tree for the commit, it means the commit contains no files/has the
+empty tree as its root. (The empty tree cannot exist anywhere but the root.) If
+it's a nested tree entry, it means that the file or tree at that path is
+deleted, it if even existed.
+
+A value which is a string represents the contents of a blob (must be UTF-8). If
+any blob or tree already existed there, it's replaced with this new blob. The
+empty string represents the empty blob.
+
+A non-empty object represents a directory/tree. Any existing entries which are
+not named in the new object are _left intact/as-is/not-modified_. (Hence the
+empty object is a special case, because normally we're not deleting unmentioned
+keys.) Any entries that are modified will be listed here, as either an
+empty/`null`/`{}` for deletion, a string for a blob, or a mapping with the
+changes to apply to a tree. (If we have mapping object in the path where a blob
+previously was, the mapping replaces the blob.
+
+(This scheme has no way to store non-default flags, such as whether a files is
+executable or a symlink. Those files are not supported.)
 
 ## Version 2
 
@@ -138,3 +174,9 @@ writing to one if it's empty, as well as for creating one in a new temporary
 directory and returning a handle to it, and similar things, to make it as easy
 as practical to use this for testing with real git. But that depends on us
 getting Version 1 right first, before we worry about these details!
+
+If we encounter any data data that is not supported by our on-disk
+representation, then we ignore it if we can (for example, we can omit tags and
+nothing else is corrupted) or raise an error (for example, if we encounter a
+file that's marked executable, we can't add it without losing data, so we need
+to raise an error and abort).
