@@ -1,6 +1,4 @@
 #!/bin/bash
-set -vx
-
 export TZ=UTC0
 
 if [ -n "$CLAUDECODE" ]; then

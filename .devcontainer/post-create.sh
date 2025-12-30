@@ -9,8 +9,8 @@ git config --global pull.rebase false
 git config --global push.autoSetupRemote true
 git config --global core.pager "less -F -X"
 # shellcheck disable=SC2016
-git config --global alias.save "!scripts/git-save.sh"
-git config --global alias.message "!scripts/git-message.sh"
+git config --global alias.save '!scripts/git-save.sh'
+git config --global alias.message '!scripts/git-message.sh'
 
 rustup update
 rustup show
