@@ -32,7 +32,7 @@ git_save() {
 
         git add "$(git rev-parse --show-toplevel)"
         unstaged_tree="$(git write-tree)"
-        [ "${staged_tree}" != "${unstaged_tree}" ] && git_save_commit
+        [ "${staged_tree}" != "${unstaged_tree}" ] && (echo; git_save_commit)
         unstaged_result="$?"
 
         if [ $staged_result -ne 0 ] && [ $unstaged_result -ne 0 ]; then
