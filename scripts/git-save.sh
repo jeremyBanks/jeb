@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -vx
 
 export TZ=UTC0
