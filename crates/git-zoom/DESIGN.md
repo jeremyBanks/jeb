@@ -613,10 +613,25 @@ Maybe we can have a standard way to represent serialized simple git
 repositories/trees for testing. We could represent it as serde-json test files
 for now, something really simple like the following (but as actual JSON):
 
+Some defaults to keep the descriptions succinct when they can be:
+
+if a commit has no parents and these fields are unspecified they default to
+
+```
+commit: 🔎 git zoom in <git-zoom@localhost>
+author-date: Thu Jan 14 08:25:36 2021 +0000
+commit-date: 2 seconds after author-date
+```
+
 ```
 refs:
-    HEAD: 1
+    HEAD: 1 # in these files, commits are identified by whole numbers or ref names
     heads/origin/main: 2
+commits:
+    1:
+        commit-date: Thu Jan 14 08:25:39 2021 +0000 # this is the default if not set
+        commit: Foo <bar@localhost>
+        author: Foo <bar@localhost>
 
 
 
