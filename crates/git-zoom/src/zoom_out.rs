@@ -13,15 +13,16 @@ fn parse_target_path(arg: Option<&str>) -> (Option<String>, Option<String>) {
         None => (None, None),
         Some(s) => {
             if let Some((target, path)) = s.split_once(':') {
-                (Some(target.to_string()), Some(path.to_string()))
-            } else {
-                // Could be just a target or just a path - we'll treat it as a target
-                // The user can use ":path" for just a path
-                if s.starts_with(':') {
-                    (None, Some(s[1..].to_string()))
+                // Handle ":path" case (empty target means None)
+                let target_opt = if target.is_empty() {
+                    None
                 } else {
-                    (Some(s.to_string()), None)
-                }
+                    Some(target.to_string())
+                };
+                (target_opt, Some(path.to_string()))
+            } else {
+                // No colon - treat as target only
+                (Some(s.to_string()), None)
             }
         }
     }

@@ -240,17 +240,18 @@ pub fn parents(commit: &str) -> Result<Vec<String>> {
 
 /// Walk first-parent history, yielding (commit_hash, parents, body) for each.
 pub fn walk_first_parent(start: &str) -> Result<Vec<(String, Vec<String>, String)>> {
-    // Use a format with null separators for reliable parsing
+    // Use a format with a unique record separator (ASCII RS = 0x1e)
+    // Format: hash\x00parents\x00body\x1e
     let output = git_stdout(&[
         "log",
         "--first-parent",
-        "--format=%H%x00%P%x00%B%x00",
+        "--format=%H%x00%P%x00%B%x1e",
         start,
     ])?;
 
     let mut results = Vec::new();
-    for record in output.split("\x00\x00") {
-        let record = record.trim_matches('\x00').trim();
+    for record in output.split('\x1e') {
+        let record = record.trim();
         if record.is_empty() {
             continue;
         }
