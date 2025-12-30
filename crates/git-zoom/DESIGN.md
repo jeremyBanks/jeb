@@ -24,7 +24,109 @@ git zoom out origin/branch:src/tree --deny-empty
 
 ## Purpose and behavior
 
-[TODO: write everything important]
+### Goal
+
+Enable working on a subtree of a repository as if it were its own independent
+repository, then merging changes back. Both the full-tree and subtree lineages
+should have clean first-parent histories, and merge commits should have
+comparable parent trees for sensible diffs.
+
+### Commit structure
+
+Each zoom operation creates **two commits**:
+
+1. **Bridge commit**: Converts tree type (full→subtree or subtree→full), parent
+   is on the "source" lineage
+2. **Merge commit**: Merges the bridge into the "destination" lineage as second
+   parent, preserving first-parent lineage
+
+Additionally, the **first zoom-in to a new path** creates a **seed commit**: an
+orphan commit with an empty tree that becomes the root of the subtree's
+first-parent lineage. This ensures the subtree history never includes full-tree
+commits in its first-parent traversal.
+
+### Example
+
+```
+F1->F2->F3-------------------->F9->F10-----------> full-tree lineage
+         \-S4---\       /-F8-/       \-S11-\
+              S5->S6->S7------------------->S12--> subtree lineage
+```
+
+**First zoom in** (`git zoom in src/tree` at F3):
+- **S4** (bridge): parent=F3, tree=F3's subtree at `src/tree`
+- **S5** (seed): no parent, empty tree
+- **S6** (merge): first-parent=S5, second-parent=S4, tree=S4's tree
+
+**Work on subtree**: S6→S7
+
+**Zoom out** (`git zoom out` at S7):
+- **F8** (bridge): parent=S7, tree=F3's tree with `src/tree` replaced by S7's tree
+- **F9** (merge): first-parent=F3, second-parent=F8, tree=F8's tree
+
+**Work on full tree**: F9→F10
+
+**Zoom back in** (`git zoom in` at F10):
+- **S11** (bridge): parent=F10, tree=F10's subtree at `src/tree`
+- **S12** (merge): first-parent=S7, second-parent=S11, tree=S11's tree
+
+### First-parent histories
+
+- **Full-tree**: F1→F2→F3→F9→F10→... (only full-tree commits)
+- **Subtree**: S5→S6→S7→S12→... (only subtree commits, no F commits)
+
+The seed commit (S5) breaks the link to full-tree history while preserving
+traceability via second-parent.
+
+### Trailers
+
+Trailers are placed on the **merge commits** (which appear in first-parent
+history) to enable scanning:
+
+| Commit | Trailer | Purpose |
+|--------|---------|---------|
+| S6, S12 | `git-zoom-in: src/tree` | Found when scanning subtree to zoom out |
+| F9 | `git-zoom-out: src/tree` | Found when scanning full-tree to zoom in |
+
+Bridge commits (S4, S11, F8) may also have trailers for debugging, but these
+are not used for scanning since they're not in first-parent history.
+
+### Argument resolution
+
+**`git zoom in [path]`**:
+- If path specified: use that path, create new seed if no prior history for path
+- If no path: scan first-parent for `git-zoom-out` trailer, use its path
+- Error if no path specified and no `git-zoom-out` found
+
+**`git zoom out [target[:path]]`**:
+- Scan first-parent for `git-zoom-in` trailer (filtered by path if specified)
+- Default target: first-parent of the bridge commit from the found merge
+- Default path: path from the found trailer
+- If explicit target given: use that commit as merge first-parent
+- If explicit path given: scan for trailer matching that path
+- Error if no matching `git-zoom-in` found
+
+### Edge cases
+
+**Multiple paths**: Each path gets its own seed commit and lineage. Scanning
+filters by path.
+
+**Sub-sub-trees**: Zooming in from a subtree works the same way. Creates a new
+seed and lineage. Zooming out traverses back up.
+
+**Multiple zoom-outs in a row**: Error unless explicit target specified. No
+`git-zoom-in` trailer exists in a lineage that was already zoomed out from.
+
+**Multiple zoom-ins in a row**: Error unless targeting different paths. No
+`git-zoom-out` trailer exists in a fresh subtree lineage.
+
+### Committer identity
+
+Commits created by git-zoom use special committer identities:
+- Zoom in: `🔎 <git-zoom-in@localhost>`
+- Zoom out: `🔍 <git-zoom-out@localhost>`
+
+Author is preserved from git config (or uses the zoom identity if none set).
 
 ## Implementation notes
 
@@ -41,7 +143,7 @@ we're running.)
 
 ---
 
-# rough notes to read and capture into the document above then delete
+# rough notes to read and capture into the document above
 
 ## example
 
