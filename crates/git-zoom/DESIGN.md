@@ -106,19 +106,13 @@ are not used for scanning since they're not in first-parent history.
 - If explicit path given: scan for trailer matching that path
 - Error if no matching `git-zoom-in` found
 
-### Edge cases
+### Multiple paths and nested trees
 
-**Multiple paths**: Each path gets its own seed commit and lineage. Scanning
-filters by path.
+Each path gets its own seed commit and independent lineage. Scanning always
+filters by path when a path is specified.
 
-**Sub-sub-trees**: Zooming in from a subtree works the same way. Creates a new
-seed and lineage. Zooming out traverses back up.
-
-**Multiple zoom-outs in a row**: Error unless explicit target specified. No
-`git-zoom-in` trailer exists in a lineage that was already zoomed out from.
-
-**Multiple zoom-ins in a row**: Error unless targeting different paths. No
-`git-zoom-out` trailer exists in a fresh subtree lineage.
+Sub-sub-trees work naturally: zooming in from a subtree creates another nested
+lineage. Zooming out traverses back up one level at a time.
 
 ### Committer identity
 
@@ -128,139 +122,303 @@ Commits created by git-zoom use special committer identities:
 
 Author is preserved from git config (or uses the zoom identity if none set).
 
-## Implementation notes
+## Implementation plan
 
-This will be implemented in Rust, but all of the git operations are going to be
-performed by calling the real `git` executable. The Rust program should have
-very few or no dependencies, and be kept as simple as practical. We're
-essentially using Rust as a more robust reliable scripting/glue language, not
-performing architecture astronauting.
+### Technology choices
 
-Exit immediately if not run from the root of a git repository. (This way there's
-no ambiguity about whether paths are relative to the root or the current
-directory, and we avoid the current directory disappearing from under us while
-we're running.)
+- **Language**: Rust, used as a robust scripting/glue language
+- **Dependencies**: Minimal - just std library, maybe `clap` for arg parsing
+- **Git interaction**: Shell out to the `git` executable for all operations
 
----
-
-# rough notes to read and capture into the document above
-
-## example
-
-We're in a repo with commits
+### Project structure
 
 ```
-A->B->C  # full tree commits
+src/
+  main.rs          # Entry point, arg parsing, dispatch to zoom_in/zoom_out
+  git.rs           # Wrapper functions for git commands
+  zoom_in.rs       # git zoom in implementation
+  zoom_out.rs      # git zoom out implementation
+  scan.rs          # First-parent history scanning for trailers
+  tree.rs          # Tree manipulation (extract subtree, replace subtree)
 ```
 
-we run `git zoom in src/tree`
+### Preconditions (checked on startup)
 
-this creates a new commit `D`, whose root tree is the tree that was at src/tree
-in `C`. commit `D` has the trailer `git-zoom-in: src/tree`. then we make some
-changes in a commit `E`.
+1. Must be run from git repository root (`git rev-parse --show-toplevel`)
+2. Working tree must be clean (`git status --porcelain` is empty)
+3. HEAD must exist (not an empty repository)
 
-```
-       /->D->E # sub tree commits
-A->B->C        # full tree commits
-```
+### Git commands used
 
-now we run `git zoom out`.
+| Operation | Command |
+|-----------|---------|
+| Check repo root | `git rev-parse --show-toplevel` |
+| Get HEAD commit | `git rev-parse HEAD` |
+| Check working tree clean | `git status --porcelain` |
+| Get tree at path | `git rev-parse <commit>:<path>` |
+| List tree entries | `git ls-tree <tree>` |
+| Create tree object | `git mktree` (stdin: ls-tree format lines) |
+| Create commit | `git commit-tree <tree> -p <parent> [-p <parent2>] -m <msg>` |
+| Update HEAD | `git update-ref HEAD <sha>` |
+| Reset working tree | `git reset --hard HEAD` |
+| Scan history | `git log --first-parent --format='%H %B' HEAD` |
+| Get user config | `git config user.name`, `git config user.email` |
 
-(argument handling: Because we didn't specify a commit ref or a path, we scan
-back through first-parents (whenever we talk about scanning through history in
-this document assume we mean only first parents - we might revisit that in the
-future, so in our doc above we'll want to use some phrasing like "in the initial
-version" to describe the first-parent behavior but don't use any language that
-implies anything else either, although we will want to think about whether
-depth-first might actually do some nice things) until we find a commit with a
-`git-zoom-in` trailer. The value of that trailer is used as a default for the
-path, and the first parent of the matching commit (NOT the commit itself) is
-used as a default for the commit argument. if the user specifies a path, but no
-commit, then we use their path with the commit we scanned for (error if no
-matching commits). if the user specifies a commit but no path, then we use the
-path from the commit we scanned for (error if no matching commit).)
-
-in our case it scans back and see that D has the trailer, so it picks `C` as the
-commit argument and src/path as the path argument, as though we'd run
-`git zoom D:src/tree`.
-
-It creates a new commit `F` whose first parent is `C`, and whose second parent
-is `E`, and updates head to point to that. this way, now that we're back on the
-"main" tree, all of the changes on the other tree look like a branch that was
-merged in. It gets a `git-zoom-out: src/tree` trailer. Then we make a normal
-commit `G`.
+### Algorithm: `git zoom in [path]`
 
 ```
-A->B->C-------->F->G  # full tree commits
-       \-D->E-/       # sub tree commits
+fn zoom_in(path: Option<String>) -> Result<()>:
+    # 1. Resolve path
+    if path is Some:
+        target_path = path
+        is_fresh = true  # might have existing history, check below
+    else:
+        # Scan for git-zoom-out trailer
+        found = scan_first_parent_for_trailer("git-zoom-out")
+        if found is None:
+            error("No path specified and no previous zoom-out found")
+        target_path = found.path
+        is_fresh = false
+
+    # 2. Check path exists in HEAD (unless --allow-empty)
+    subtree_hash = git_rev_parse(f"HEAD:{target_path}")
+    if subtree_hash is error and not allow_empty:
+        error(f"Path '{target_path}' does not exist in HEAD")
+
+    # 3. Determine if we have existing subtree history for this path
+    if is_fresh:
+        existing = scan_first_parent_for_trailer("git-zoom-in", filter_path=target_path)
+        is_fresh = existing is None
+
+    # 4. Get current HEAD
+    head_commit = git_rev_parse("HEAD")
+
+    # 5. Create bridge commit (S4 or S11)
+    bridge_tree = subtree_hash  # or empty tree if --allow-empty
+    bridge_msg = f"Zoom in to '{target_path}'\n\ngit-zoom-bridge: {target_path}"
+    bridge_commit = git_commit_tree(
+        tree=bridge_tree,
+        parents=[head_commit],
+        message=bridge_msg,
+        committer="🔎 <git-zoom-in@localhost>"
+    )
+
+    # 6. Create seed commit if fresh (S5)
+    if is_fresh:
+        empty_tree = git_mktree("")  # empty tree
+        seed_msg = f"Initial commit for '{target_path}'"
+        seed_commit = git_commit_tree(
+            tree=empty_tree,
+            parents=[],  # orphan
+            message=seed_msg,
+            committer="🔎 <git-zoom-in@localhost>"
+        )
+        merge_first_parent = seed_commit
+    else:
+        # We're on full-tree lineage, zooming back into existing subtree.
+        # `found` is from scanning for git-zoom-out (step 1):
+        #   found.commit = F9 (merge commit with trailer)
+        #   found.second_parent = F8 (bridge commit)
+        #   F8's parent = S7 (last subtree commit before zoom-out)
+        # S12's first parent should be S7 to continue the subtree lineage.
+        merge_first_parent = git_rev_parse(f"{found.second_parent}^")
+
+    # 7. Create merge commit (S6 or S12)
+    merge_msg = f"Merge from '{target_path}'\n\ngit-zoom-in: {target_path}"
+    merge_commit = git_commit_tree(
+        tree=bridge_tree,
+        parents=[merge_first_parent, bridge_commit],
+        message=merge_msg,
+        committer="🔎 <git-zoom-in@localhost>"
+    )
+
+    # 8. Update HEAD and reset
+    git_update_ref("HEAD", merge_commit)
+    git_reset_hard()
 ```
 
-now we do `git zoom in` again, and it's a bit more interesting because now we
-have some some `git-zoom-out` commits in our history. So we can and find `E`.
-Because we've specified nothing, we re-zoom on what we most-recently
-zoomed-out-of. However, in addition to that, we use the `git-zoom-out` commit we
-found _as the first parent_ with `HEAD` as the second parent. (If we had
-specified a path, like we did the first time, we'd have scanned back for commits
-with a trailer _that matched that path_.) This way, while we're on a branch
-whose HEAD is in the sub tree, all of the changes from the full tree look like
-merges into our own tree, so if we end up with these in different branches or
-different repos, zooming out will look a lot like merging changes from upstream
-(because of how tools privilege the first-parent lineage). This is commit `H`,
-then we make a normal commit `I`. (Our initial commits `A`, `B`, `C` are in the
-first-parent lineage for both, of course, that's probably fine, unless we want
-to do something truly absurd like create an empty seed commit for each new
-path... we won't do that for this example, though.)
+### Algorithm: `git zoom out [target[:path]]`
 
 ```
-       /-D->E-\------->H->I  # sub tree commits
-A->B->C-------->F->G-/       # full tree commits
+fn zoom_out(target_and_path: Option<String>) -> Result<()>:
+    # 1. Parse target and path from argument
+    (explicit_target, explicit_path) = parse_target_path(target_and_path)
+
+    # 2. Scan for git-zoom-in trailer (filtered by path if specified)
+    found = scan_first_parent_for_trailer("git-zoom-in", filter_path=explicit_path)
+    if found is None:
+        error("No zoom-in commit found in history" +
+              (f" for path '{explicit_path}'" if explicit_path else ""))
+
+    # 3. Determine path
+    path = explicit_path or found.path
+
+    # 4. Determine target commit (where to merge into full-tree lineage)
+    if explicit_target:
+        target_commit = git_rev_parse(explicit_target)
+    else:
+        # Default: first parent of the bridge commit
+        # found.commit = S6 or S12 (merge commit)
+        # found.second_parent = S4 or S11 (bridge commit)
+        # bridge's parent = F3 or F10 (full-tree commit we came from)
+        bridge_commit = found.second_parent
+        target_commit = git_rev_parse(f"{bridge_commit}^")
+
+    # 5. Get current HEAD tree (subtree content)
+    head_commit = git_rev_parse("HEAD")
+    head_tree = git_rev_parse("HEAD^{tree}")
+
+    # 6. Build full tree: target's tree with path replaced by head's tree
+    target_tree = git_rev_parse(f"{target_commit}^{{tree}}")
+    new_full_tree = replace_subtree(target_tree, path, head_tree)
+
+    # 7. Create bridge commit (F8)
+    bridge_msg = f"Zoom out from '{path}'\n\ngit-zoom-bridge: {path}"
+    bridge_commit = git_commit_tree(
+        tree=new_full_tree,
+        parents=[head_commit],
+        message=bridge_msg,
+        committer="🔍 <git-zoom-out@localhost>"
+    )
+
+    # 8. Create merge commit (F9)
+    merge_msg = f"Merge to '{path}'\n\ngit-zoom-out: {path}"
+    merge_commit = git_commit_tree(
+        tree=new_full_tree,
+        parents=[target_commit, bridge_commit],
+        message=merge_msg,
+        committer="🔍 <git-zoom-out@localhost>"
+    )
+
+    # 9. Update HEAD and reset
+    git_update_ref("HEAD", merge_commit)
+    git_reset_hard()
 ```
 
-It's possible that we might want to split up the zoom-out and the merge into
-separate commits for the sake of easier git tool handling.
+### Tree manipulation: `replace_subtree(base_tree, path, new_subtree)`
 
-actually we need to do that both ways to get our clean histories.
-
-```
-F1->F2->F3-------------------->F9->F10-----------> full commit branch/view
-         \-S4---\       /-F8-/       \-S11-\
-              S5->S6->S7------------------->S12--> sub tree branch/view
-```
+This replaces a subtree at a given path within a tree. The path can be nested
+(e.g., `src/lib/core`), requiring recursive tree reconstruction.
 
 ```
-S4:
-Message: Zoom in to 'src/tree'
-Committer: 🔎 <git-zoom-in@localhost>
+fn replace_subtree(base_tree: TreeHash, path: &str, new_subtree: TreeHash) -> TreeHash:
+    parts = path.split('/')
+    return replace_subtree_recursive(base_tree, parts, new_subtree)
 
-S5:
-Message: Initial commit
-Committer: 🔎 <git-zoom-in@localhost>
+fn replace_subtree_recursive(tree: TreeHash, path_parts: &[&str], new_subtree: TreeHash) -> TreeHash:
+    if path_parts.is_empty():
+        return new_subtree
 
-S6:
-Message: Merge from tree 'src/tree'
-Committer: 🔎 <git-zoom-in@localhost>
+    target_name = path_parts[0]
+    remaining_path = &path_parts[1..]
 
+    # List current tree entries
+    entries = git_ls_tree(tree)  # Vec<(mode, type, hash, name)>
 
-Message: Zoom out from 'src/tree'
-Committer: 🔍 <git-zoom-out@localhost>
+    # Build new entries, replacing/adding the target
+    new_entries = []
+    found = false
 
-Message: Merge to tree 'src/tree'
-Committer: 🔍 <git-zoom-out@localhost>
+    for (mode, obj_type, hash, name) in entries:
+        if name == target_name:
+            found = true
+            if remaining_path.is_empty():
+                # Replace this entry with new_subtree
+                new_entries.push((mode, "tree", new_subtree, name))
+            else:
+                # Recurse into this subtree
+                new_hash = replace_subtree_recursive(hash, remaining_path, new_subtree)
+                new_entries.push((mode, obj_type, new_hash, name))
+        else:
+            new_entries.push((mode, obj_type, hash, name))
+
+    if not found:
+        # Need to create new entry (and possibly intermediate trees)
+        if remaining_path.is_empty():
+            new_entries.push(("040000", "tree", new_subtree, target_name))
+        else:
+            # Create empty tree, recurse, then add
+            empty_tree = git_mktree("")
+            new_hash = replace_subtree_recursive(empty_tree, remaining_path, new_subtree)
+            new_entries.push(("040000", "tree", new_hash, target_name))
+
+    # Create new tree from entries
+    return git_mktree(entries_to_ls_tree_format(new_entries))
 ```
 
-(We only set the committer, we use the default author... unless there is no
-author set, in which case we use our own value for the author too, instead of
-git's meaningless defaults.)
+### History scanning: `scan_first_parent_for_trailer`
 
-We could imagine different sub-trees branching off of the full-tree, or
-sub-sub-trees, or zooming out to embed ourselves into another repository we
-previously had no connection to, or zooming in and out of different parents, and
-this model should be able to do the right thing, if we get the details right.
+```
+fn scan_first_parent_for_trailer(trailer_name: &str, filter_path: Option<&str>) -> Option<Found>:
+    # Use git log to walk first-parent history
+    output = git_log("--first-parent", "--format=%H%x00%P%x00%B%x00", "HEAD")
 
-or actually, this doesn't even need to be a fake merge commit - we could
-literally actually invoke git merge? but then if it fails we're in trouble
-because we don't want to have to be able to resume our own logic after the user
-handles a merge commit... but if that merge commit is the last thing that's
-happening, then there's no need to resume so maybe it would be fine? If we could
-set this up so there are _real_ merge commits using `git-merge` and we're not
-just constructing that history ourselves, that would be great.
+    for each commit in parse_log_output(output):
+        commit_hash = commit.hash
+        parents = commit.parents.split(' ')
+        body = commit.body
+
+        # Look for trailer in body
+        for line in body.lines():
+            if line.starts_with(f"{trailer_name}: "):
+                path = line.strip_prefix(f"{trailer_name}: ")
+                if filter_path is None or path == filter_path:
+                    return Found {
+                        commit: commit_hash,
+                        path: path,
+                        second_parent: parents[1] if len(parents) > 1 else None,
+                    }
+
+    return None
+```
+
+### Committer handling
+
+```
+fn make_commit_with_committer(tree, parents, message, zoom_committer) -> CommitHash:
+    # Get author from git config (or use zoom identity as fallback)
+    author_name = git_config("user.name") or zoom_committer.name
+    author_email = git_config("user.email") or zoom_committer.email
+
+    # Set environment for commit-tree
+    env = {
+        "GIT_AUTHOR_NAME": author_name,
+        "GIT_AUTHOR_EMAIL": author_email,
+        "GIT_COMMITTER_NAME": zoom_committer.name,
+        "GIT_COMMITTER_EMAIL": zoom_committer.email,
+    }
+
+    return git_commit_tree(tree, parents, message, env)
+```
+
+### Error handling
+
+All git commands should:
+1. Check exit code, fail fast on non-zero
+2. Capture stderr for error messages
+3. Provide context about what operation failed
+
+Specific error cases:
+- Path doesn't exist: "Path 'src/foo' does not exist in HEAD"
+- No trailer found: "No zoom-in found in history (are you on a subtree?)"
+- Working tree dirty: "Working tree has uncommitted changes"
+- Not in repo: "Not in a git repository"
+
+### Flags
+
+| Flag | Command | Effect |
+|------|---------|--------|
+| `--allow-empty` | zoom in | Allow zooming into non-existent path (creates empty subtree) |
+| `--deny-empty` | zoom out | Error if subtree would be empty |
+
+### Testing strategy
+
+1. **Unit tests**: Tree manipulation functions with mock git commands
+2. **Integration tests**: Full zoom in/out cycles in temp git repos
+3. **Test cases**:
+   - Basic zoom in, make changes, zoom out
+   - Multiple zoom cycles
+   - Different paths
+   - Sub-sub-trees
+   - Explicit target commits
+   - Error cases (dirty tree, no trailer, missing path)
