@@ -23,7 +23,7 @@ git_save_commit() {
 }
 
 git_save() {
-    if command -v save || [ $# -gt 0 ]; then
+    if command -v save >/dev/null 2>&1  || [ $# -gt 0 ]; then
         save "$@"
     else
         staged_tree="$(git write-tree)"
