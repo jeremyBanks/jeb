@@ -113,3 +113,6 @@ path... we won't do that for this example, though.)
        /-D->E-\------->H->I  # sub tree commits
 A->B->C-------->F->G-/       # full tree commits
 ```
+
+It's possible that we might want to split up the zoom-out and the merge into
+separate commits for the sake of easier git tool handling.
