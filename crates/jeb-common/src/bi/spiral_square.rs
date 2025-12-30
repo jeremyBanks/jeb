@@ -10,9 +10,6 @@ shell - spiraling outward from the origin.
 In other words: as we start at 0 and look at ascending unsigned integers, we
 first see (0, 0), then all points on the shell with max(|x|, |y|) = 1 in
 counterclockwise order starting from the positive x-axis, then shell 2, etc.
-
-This is similar to scatter_square but with predictable spiral ordering instead
-of pseudorandom permutation within each shell.
         "#
     };
 }
@@ -91,9 +88,9 @@ where
 
         // Map idx_in_shell to a point on the perimeter
         // We go counterclockwise starting from (m, 0):
-        // - Side 0: (m, 0) to (m, m-1) then to (m, m) [length 2m, from (m, -m+1) to (m, m)]
-        //   Actually, let's define more carefully:
-        //   Side 0 (right): x = m, y goes from 0 up to m, then -1 down to -m+1 [but that's weird]
+        // - Side 0: (m, 0) to (m, m-1) then to (m, m) [length 2m, from (m, -m+1) to (m,
+        //   m)] Actually, let's define more carefully: Side 0 (right): x = m, y goes
+        //   from 0 up to m, then -1 down to -m+1 [but that's weird]
         //
         // Standard perimeter traversal (counterclockwise from (m, 0)):
         //   - Right edge going up: (m, y) for y = 0, 1, ..., m-1, m
@@ -109,8 +106,8 @@ where
         // - Right edge: (m, y) for y = -m+1, ..., m (length 2m)
         // - Top edge: (x, m) for x = m-1, ..., -m (length 2m)
         // - Left edge: (-m, y) for y = m-1, ..., -m (length 2m)
-        // - Bottom edge: (x, -m) for x = -m+1, ..., m-1 (length 2m-1)
-        //   Wait that's only 8m-1 points, not 8m.
+        // - Bottom edge: (x, -m) for x = -m+1, ..., m-1 (length 2m-1) Wait that's only
+        //   8m-1 points, not 8m.
         //
         // The perimeter of a square with max coord m has 8m points:
         //   4 sides, each with 2m points, but corners are shared
@@ -248,7 +245,8 @@ fn perimeter_index(m: i64, x: i64, y: i64) -> u64 {
         // Left edge: y = m - 1 - (j - 4m), so j = m - 1 - y + 4m = 5m - 1 - y
         (5 * m - 1 - y) as u64
     } else {
-        // Bottom edge (y == -m, x > -m): x = -m + 1 + (j - 6m), so j = x + m - 1 + 6m = x + 7m - 1
+        // Bottom edge (y == -m, x > -m): x = -m + 1 + (j - 6m), so j = x + m - 1 + 6m =
+        // x + 7m - 1
         (x + 7 * m - 1) as u64
     }
 }
@@ -383,7 +381,10 @@ mod tests {
             (0, -1),
             (1, -1),
         ];
-        assert_eq!(shell1, expected, "shell 1 should be in counterclockwise order");
+        assert_eq!(
+            shell1, expected,
+            "shell 1 should be in counterclockwise order"
+        );
     }
 
     // Test region B (ragged outer shell)

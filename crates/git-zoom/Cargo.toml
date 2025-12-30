@@ -1,0 +1,11 @@
+[package]
+name = "git-zoom"
+publish = false
+description = "git zoom in; git zoom out"
+keywords = []
+categories = []
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
