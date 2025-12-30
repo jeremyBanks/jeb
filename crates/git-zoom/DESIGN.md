@@ -118,9 +118,9 @@ Each path gets its own seed commit and independent lineage. Scanning always
 filters by path when a path is specified.
 
 **Nested subtrees**: When zooming in from a subtree, paths are always relative
-to the current tree root. If you're zoomed into `src/` and then zoom into `lib/`,
-the trailer records `git-zoom-in: lib` (not `src/lib`). Each zoom level is
-independent — zooming out from the nested subtree returns you to the parent
+to the current tree root. If you're zoomed into `src/` and then zoom into
+`lib/`, the trailer records `git-zoom-in: lib` (not `src/lib`). Each zoom level
+is independent — zooming out from the nested subtree returns you to the parent
 subtree, and zooming out again returns to the full tree.
 
 ### Not branch-aware
@@ -129,10 +129,10 @@ This tool operates purely on commits and trailers, not branch references. When
 scanning for trailers, it walks first-parent history from HEAD. It has no
 knowledge of remote branches or other refs.
 
-When zooming out, the default target is the commit you originally zoomed in
-from (found via trailer), not "the current tip of some branch." If others have
-pushed commits to a shared branch, you'll need to merge separately or specify
-an explicit target.
+When zooming out, the default target is the commit you originally zoomed in from
+(found via trailer), not "the current tip of some branch." If others have pushed
+commits to a shared branch, you'll need to merge separately or specify an
+explicit target.
 
 ### Committer identity
 
@@ -480,6 +480,134 @@ we're running.)
 
 ---
 
+# rough notes to read and capture into the document above
+
+DO NOT DELETE THESE BUT THEY MAY BE WRONG FYI BUT PRESERVE THEM, DO NOT EDIT OR
+DELETE.
+
+## example
+
+We're in a repo with commits
+
+```
+A->B->C  # full tree commits
+```
+
+we run `git zoom in src/tree`
+
+this creates a new commit `D`, whose root tree is the tree that was at src/tree
+in `C`. commit `D` has the trailer `git-zoom-in: src/tree`. then we make some
+changes in a commit `E`.
+
+```
+       /->D->E # sub tree commits
+A->B->C        # full tree commits
+```
+
+now we run `git zoom out`.
+
+(argument handling: Because we didn't specify a commit ref or a path, we scan
+back through first-parents (whenever we talk about scanning through history in
+this document assume we mean only first parents - we might revisit that in the
+future, so in our doc above we'll want to use some phrasing like "in the initial
+version" to describe the first-parent behavior but don't use any language that
+implies anything else either, although we will want to think about whether
+depth-first might actually do some nice things) until we find a commit with a
+`git-zoom-in` trailer. The value of that trailer is used as a default for the
+path, and the first parent of the matching commit (NOT the commit itself) is
+used as a default for the commit argument. if the user specifies a path, but no
+commit, then we use their path with the commit we scanned for (error if no
+matching commits). if the user specifies a commit but no path, then we use the
+path from the commit we scanned for (error if no matching commit).)
+
+in our case it scans back and see that D has the trailer, so it picks `C` as the
+commit argument and src/path as the path argument, as though we'd run
+`git zoom D:src/tree`.
+
+It creates a new commit `F` whose first parent is `C`, and whose second parent
+is `E`, and updates head to point to that. this way, now that we're back on the
+"main" tree, all of the changes on the other tree look like a branch that was
+merged in. It gets a `git-zoom-out: src/tree` trailer. Then we make a normal
+commit `G`.
+
+```
+A->B->C-------->F->G  # full tree commits
+       \-D->E-/       # sub tree commits
+```
+
+now we do `git zoom in` again, and it's a bit more interesting because now we
+have some some `git-zoom-out` commits in our history. So we can and find `E`.
+Because we've specified nothing, we re-zoom on what we most-recently
+zoomed-out-of. However, in addition to that, we use the `git-zoom-out` commit we
+found _as the first parent_ with `HEAD` as the second parent. (If we had
+specified a path, like we did the first time, we'd have scanned back for commits
+with a trailer _that matched that path_.) This way, while we're on a branch
+whose HEAD is in the sub tree, all of the changes from the full tree look like
+merges into our own tree, so if we end up with these in different branches or
+different repos, zooming out will look a lot like merging changes from upstream
+(because of how tools privilege the first-parent lineage). This is commit `H`,
+then we make a normal commit `I`. (Our initial commits `A`, `B`, `C` are in the
+first-parent lineage for both, of course, that's probably fine, unless we want
+to do something truly absurd like create an empty seed commit for each new
+path... we won't do that for this example, though.)
+
+```
+       /-D->E-\------->H->I  # sub tree commits
+A->B->C-------->F->G-/       # full tree commits
+```
+
+It's possible that we might want to split up the zoom-out and the merge into
+separate commits for the sake of easier git tool handling.
+
+actually we need to do that both ways to get our clean histories.
+
+```
+F1->F2->F3-------------------->F9->F10-----------> full commit branch/view
+         \-S4---\       /-F8-/       \-S11-\
+              S5->S6->S7------------------->S12--> sub tree branch/view
+```
+
+```
+S4, S11:
+Message: Zoom in to 'src/tree'
+Committer: 🔎 <git-zoom-in@localhost>
+
+S5:
+Message: Initial commit
+Committer: 🔎 <git-zoom-in@localhost>
+
+S6, S12:
+Message: Merge from tree 'src/tree'
+Committer: 🔎 <git-zoom-in@localhost>
+
+F8:
+Message: Zoom out from 'src/tree'
+Committer: 🔍 <git-zoom-out@localhost>
+
+F9:
+Message: Merge to tree 'src/tree'
+Committer: 🔍 <git-zoom-out@localhost>
+```
+
+(We only set the committer, we use the default author... unless there is no
+author set, in which case we use our own value for the author too, instead of
+git's meaningless defaults.)
+
+We could imagine different sub-trees branching off of the full-tree, or
+sub-sub-trees, or zooming out to embed ourselves into another repository we
+previously had no connection to, or zooming in and out of different parents, and
+this model should be able to do the right thing, if we get the details right.
+
+or actually, this doesn't even need to be a fake merge commit - we could
+literally actually invoke git merge? but then if it fails we're in trouble
+because we don't want to have to be able to resume our own logic after the user
+handles a merge commit... but if that merge commit is the last thing that's
+happening, then there's no need to resume so maybe it would be fine? If we could
+set this up so there are _real_ merge commits using `git-merge` and we're not
+just constructing that history ourselves, that would be great.
+
+---
+
 ## Design notes and future considerations
 
 ### Using real git merge
@@ -492,9 +620,9 @@ of `git commit-tree`. This would enable:
 - Automatic conflict detection if the subtree path was modified on both lineages
 - Standard git conflict resolution workflow
 
-The bridge commit is always created first (deterministic, no conflicts). Then
-if the merge commit is the last operation, we could invoke `git merge` and let
-git handle conflicts. If the merge fails, the user resolves conflicts normally.
+The bridge commit is always created first (deterministic, no conflicts). Then if
+the merge commit is the last operation, we could invoke `git merge` and let git
+handle conflicts. If the merge fails, the user resolves conflicts normally.
 
 For the default case (zooming out to the same commit we zoomed in from), there
 are no conflicts possible — the merge is trivially resolved.
