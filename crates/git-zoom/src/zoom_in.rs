@@ -6,6 +6,24 @@ use crate::scan;
 const COMMITTER_NAME: &str = "🔎";
 const COMMITTER_EMAIL: &str = "git-zoom-in@localhost";
 
+/// Normalize a path: strip trailing slashes, reject empty or "." paths.
+fn normalize_path(path: &str) -> git::Result<String> {
+    let normalized = path.trim_matches('/');
+    if normalized.is_empty() || normalized == "." {
+        return Err(git::Error {
+            command: "zoom in".to_string(),
+            message: "invalid path: cannot zoom into repository root".to_string(),
+        });
+    }
+    if normalized.contains("..") {
+        return Err(git::Error {
+            command: "zoom in".to_string(),
+            message: "invalid path: '..' not allowed".to_string(),
+        });
+    }
+    Ok(normalized.to_string())
+}
+
 /// Execute git zoom in.
 pub fn zoom_in(path: Option<&str>, allow_empty: bool) -> git::Result<()> {
     // 1. Resolve path and find existing subtree history
@@ -24,9 +42,10 @@ pub fn zoom_in(path: Option<&str>, allow_empty: bool) -> git::Result<()> {
             }
         }
         Some(p) => {
-            // Path specified: check if we have previous zoom-out for this path
-            let found = scan::scan_for_zoom_out(Some(p))?;
-            (p.to_string(), found)
+            // Path specified: normalize and check if we have previous zoom-out
+            let normalized = normalize_path(p)?;
+            let found = scan::scan_for_zoom_out(Some(&normalized))?;
+            (normalized, found)
         }
     };
 
@@ -48,9 +67,12 @@ pub fn zoom_in(path: Option<&str>, allow_empty: bool) -> git::Result<()> {
     // 3. Determine merge first parent
     let merge_first_parent = match zoom_out_found {
         None => {
-            // Fresh subtree: create orphan seed commit
+            // Fresh subtree: create orphan seed commit with trailer
             let empty_tree = git::empty_tree()?;
-            let seed_msg = format!("Initial commit for '{}'", target_path);
+            let seed_msg = format!(
+                "Initial commit for '{}'\n\ngit-zoom-seed: {}",
+                target_path, target_path
+            );
             git::commit_tree(&empty_tree, &[], &seed_msg, COMMITTER_NAME, COMMITTER_EMAIL)?
         }
         Some(found) => {

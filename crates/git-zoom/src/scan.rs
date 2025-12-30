@@ -4,6 +4,7 @@ use crate::git;
 
 /// Result of scanning for a trailer.
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // commit field is useful for debugging/future use
 pub struct Found {
     /// The commit hash where the trailer was found.
     pub commit: String,
@@ -28,11 +29,9 @@ pub fn scan_for_trailer(
         for line in body.lines() {
             if let Some(path) = line.strip_prefix(&trailer_prefix) {
                 let path = path.trim();
-                // Check filter
-                if let Some(filter) = filter_path {
-                    if path != filter {
-                        continue;
-                    }
+                // Check filter - skip if path doesn't match
+                if filter_path.is_some_and(|filter| path != filter) {
+                    continue;
                 }
                 return Ok(Some(Found {
                     commit: commit_hash,
