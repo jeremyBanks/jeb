@@ -57,6 +57,10 @@ fn main() -> ExitCode {
                 if arg == "--allow-empty" {
                     allow_empty = true;
                 } else if !arg.starts_with('-') {
+                    if path.is_some() {
+                        eprintln!("Error: multiple paths provided (expected at most one)");
+                        return ExitCode::from(1);
+                    }
                     path = Some(arg);
                 } else {
                     eprintln!("Unknown option: {}", arg);
@@ -77,6 +81,10 @@ fn main() -> ExitCode {
                 if arg == "--deny-empty" {
                     deny_empty = true;
                 } else if !arg.starts_with('-') {
+                    if target_path.is_some() {
+                        eprintln!("Error: multiple arguments provided (expected at most one)");
+                        return ExitCode::from(1);
+                    }
                     target_path = Some(arg);
                 } else {
                     eprintln!("Unknown option: {}", arg);
