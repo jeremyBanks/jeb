@@ -1,12 +1,15 @@
 //! git zoom in implementation.
 
-use crate::git;
-use crate::scan;
+use crate::{
+    git,
+    scan,
+};
 
-const COMMITTER_NAME: &str = "🔎";
+const COMMITTER_NAME: &str = "🔎 git zoom in";
 const COMMITTER_EMAIL: &str = "git-zoom-in@localhost";
 
-/// Normalize a path: strip trailing slashes, remove `.` components, reject `..`.
+/// Normalize a path: strip trailing slashes, remove `.` components, reject
+/// `..`.
 fn normalize_path(path: &str) -> git::Result<String> {
     let parts: Vec<&str> = path
         .split('/')
@@ -77,7 +80,7 @@ pub fn zoom_in(path: Option<&str>, allow_empty: bool) -> git::Result<()> {
         None => {
             // Fresh subtree: create orphan seed commit
             let empty_tree = git::empty_tree()?;
-            let seed_msg = format!("Initial commit for '{}'", target_path);
+            let seed_msg = "Initial commit".to_string();
             git::commit_tree(&empty_tree, &[], &seed_msg, COMMITTER_NAME, COMMITTER_EMAIL)?
         }
         Some(found) => {
@@ -92,7 +95,7 @@ pub fn zoom_in(path: Option<&str>, allow_empty: bool) -> git::Result<()> {
 
     // 4. Create merge commit
     let merge_msg = format!(
-        "Merge from '{}'\n\ngit-zoom-in: {}",
+        "Merge from tree '{}'\n\ngit-zoom-in: {}",
         target_path, target_path
     );
     let merge_commit = git::commit_tree(
@@ -113,10 +116,14 @@ pub fn zoom_in(path: Option<&str>, allow_empty: bool) -> git::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::fs;
-    use std::process::Command;
-    use tempfile::TempDir;
+    use {
+        super::*,
+        std::{
+            fs,
+            process::Command,
+        },
+        tempfile::TempDir,
+    };
 
     fn setup_test_repo() -> TempDir {
         let dir = TempDir::new().unwrap();
@@ -223,11 +230,7 @@ mod tests {
         // Working directory should be empty
         let entries: Vec<_> = fs::read_dir(dir.path())
             .unwrap()
-            .filter(|e| {
-                e.as_ref()
-                    .map(|e| e.file_name() != ".git")
-                    .unwrap_or(false)
-            })
+            .filter(|e| e.as_ref().map(|e| e.file_name() != ".git").unwrap_or(false))
             .collect();
         assert_eq!(entries.len(), 0);
     }
@@ -311,5 +314,4 @@ mod tests {
         assert!(body.contains("git-zoom-in: src/lib"));
         assert!(!body.contains("./"));
     }
-
 }

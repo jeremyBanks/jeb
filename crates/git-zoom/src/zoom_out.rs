@@ -1,10 +1,12 @@
 //! git zoom out implementation.
 
-use crate::git;
-use crate::scan;
-use crate::tree;
+use crate::{
+    git,
+    scan,
+    tree,
+};
 
-const COMMITTER_NAME: &str = "🔍";
+const COMMITTER_NAME: &str = "🔍 git zoom out";
 const COMMITTER_EMAIL: &str = "git-zoom-out@localhost";
 
 /// Normalize a path: strip slashes, remove `.` components.
@@ -95,7 +97,7 @@ pub fn zoom_out(target_and_path: Option<&str>, deny_empty: bool) -> git::Result<
     let new_full_tree = tree::replace_subtree(&target_tree, &path, &head_tree)?;
 
     // 9. Create merge commit
-    let merge_msg = format!("Merge to '{}'\n\ngit-zoom-out: {}", path, path);
+    let merge_msg = format!("Merge to tree '{}'\n\ngit-zoom-out: {}", path, path);
     let merge_commit = git::commit_tree(
         &new_full_tree,
         &[&target_commit, &head_commit],
@@ -114,11 +116,15 @@ pub fn zoom_out(target_and_path: Option<&str>, deny_empty: bool) -> git::Result<
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::zoom_in;
-    use std::fs;
-    use std::process::Command;
-    use tempfile::TempDir;
+    use {
+        super::*,
+        crate::zoom_in,
+        std::{
+            fs,
+            process::Command,
+        },
+        tempfile::TempDir,
+    };
 
     fn setup_test_repo() -> TempDir {
         let dir = TempDir::new().unwrap();
@@ -467,7 +473,8 @@ mod tests {
         // Zoom out with explicit target (the updated commit, not initial)
         zoom_out(Some(&format!("{}:src/lib", updated_commit)), false).unwrap();
 
-        // Verify: should have root v2 (from explicit target) and foo v2 (from subtree work)
+        // Verify: should have root v2 (from explicit target) and foo v2 (from subtree
+        // work)
         let root_content = fs::read_to_string(dir.path().join("root.txt")).unwrap();
         let foo_content = fs::read_to_string(dir.path().join("src/lib/foo.txt")).unwrap();
         assert_eq!(root_content, "root v2");
