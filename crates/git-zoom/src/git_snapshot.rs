@@ -7,46 +7,46 @@
 
 use std::{collections::BTreeMap, sync::Arc};
 
-use serde::{Deserialize, Serialize};
-
 struct RepositorySnapshot {
-
+    head: Option<String>,
+    index: Tree,
+    refs: BTreeMap<String, Commit>,
 }
 
 struct Object {
-    
+    id: ObjectId,
+    value: ObjectArc,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Eq, PartialEq, Hash, Clone, Copy)]
 struct ObjectId([u8; 20]);
 
-#[derive(Serialize, Deserialize)]
+
 enum ObjectArc {
     Blob(Arc<Blob>),
     Commit(Arc<Commit>),
     Tree(Arc<Tree>),
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(transparent)]
+
 struct Blob {
-    #[serde(with = "serde_bytes")]
+    id: ObjectId,
     data: Vec<u8>,
 }
 
-#[derive(Serialize, Deserialize)]
+
 struct Commit {
     parents: Vec<Commit>,
     message: String,
     tree: Tree,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Eq, PartialEq)]
 struct Tree {
     entries: BTreeMap<String, TreeEntry>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Eq, PartialEq)]
 enum TreeEntry {
     Blob(ObjectId),
     Tree(Tree),

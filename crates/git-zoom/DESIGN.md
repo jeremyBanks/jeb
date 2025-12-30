@@ -644,7 +644,7 @@ this should be able to be used to deterministically reproduce a git repo state
 on-disk with commit IDs and everything matching.
 
 ```
-HEAD: refs/heads/trunk
+HEAD: refs/heads/trunk # this _could_ be a commit ID directly if we're on a detached head
 refs/head/trunk: 2
 1:
     message: initial commit
@@ -675,4 +675,29 @@ serde_yaml serialization.
 We can have an in-memory representation which includes all of the fields that
 are shared or inferred, but then when we're serializing we see if we could
 calculate the value of the field correctly by default, and if so, we omit it
-from the serialization.
+from the serialization. And the in-memory representation won't have inherent
+commit ordering so we'll do a topological sort I guess? Where the first-parent
+of a commit is considered "older" than the second parent? Now in git that's
+tricky because a commit can appear in multiple places, so what we do to make
+this deterministic is
+
+Take all of our head commits, with the one pointed to by HEAD coming first, then
+sorted by commit ID (and obviously deduplicate them all). Then, one by one, walk
+their ancestors, depth first. For each commit we step over, we initialize a
+tiebreaking key, a Vec, onto which we push N where N is the index of this commit
+among the parents of the commit we reached it from. After we do this for all
+heads, then finally go through all commits and append a final component of their
+commit timestamp, followed by their authoring timestamp.
+
+This gives us a topological sort which will also reflect the git structure in a
+way that prioritizes the HEAD branch but includes all of them.
+
+Yeah that's what we'll do when re-serializing.
+
+So first steps for this very large tangent:
+
+we're going to define this whole testing helper in a new crate::git_snapshot
+module. First, we're not going to worry about interaction with git2 and real
+repositories at all. We're just going to work on serializing and deserializing
+example .yaml repository files. We'll have a bunch of example inputs and example
+output files we'll be asserting against.
