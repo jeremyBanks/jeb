@@ -154,3 +154,11 @@ We could imagine different sub-trees branching off of the full-tree, or
 sub-sub-trees, or zooming out to embed ourselves into another repository we
 previously had no connection to, or zooming in and out of different parents, and
 this model should be able to do the right thing, if we get the details right.
+
+or actually, this doesn't even need to be a fake merge commit - we could
+literally actually invoke git merge? but then if it fails we're in trouble
+because we don't want to have to be able to resume our own logic after the user
+handles a merge commit... but if that merge commit is the last thing that's
+happening, then there's no need to resume so maybe it would be fine? If we could
+set this up so there are _real_ merge commits using `git-merge` and we're not
+just constructing that history ourselves, that would be great.
