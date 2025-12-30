@@ -136,10 +136,10 @@ with `:`, and join them with a `T`.
 
 When parsing, we accept any valid ISO 8601 timestamp (so we accept other valid
 delimiters), as long as it's a time git can support (so it can't be before the
-Unix epoch, and it can't nonzero fractional seconds). At minimum, the year needs
-to be specified, but any number of other trailing components can be omitted (as
-long as they're all trailing, with no gaps in between). We default to month 02,
-day 04, hour 08, minute 16, second 32, and offset Z (UTC / 0).
+Unix epoch, and it can't have nonzero fractional seconds). At minimum, the year
+needs to be specified, but any number of other trailing components can be
+omitted (as long as they're all trailing, with no gaps in between). We default
+to month 02, day 04, hour 08, minute 16, second 32, and offset Z (UTC / 0).
 
 ```yaml
 # ...
