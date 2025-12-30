@@ -7,6 +7,11 @@ use crate::tree;
 const COMMITTER_NAME: &str = "🔍";
 const COMMITTER_EMAIL: &str = "git-zoom-out@localhost";
 
+/// Normalize a path: strip trailing/leading slashes.
+fn normalize_path(path: &str) -> String {
+    path.trim_matches('/').to_string()
+}
+
 /// Parse target[:path] argument.
 fn parse_target_path(arg: Option<&str>) -> (Option<String>, Option<String>) {
     match arg {
@@ -19,7 +24,14 @@ fn parse_target_path(arg: Option<&str>) -> (Option<String>, Option<String>) {
                 } else {
                     Some(target.to_string())
                 };
-                (target_opt, Some(path.to_string()))
+                // Normalize path to match zoom_in behavior
+                let path_normalized = normalize_path(path);
+                let path_opt = if path_normalized.is_empty() {
+                    None
+                } else {
+                    Some(path_normalized)
+                };
+                (target_opt, path_opt)
             } else {
                 // No colon - treat as target only
                 (Some(s.to_string()), None)
@@ -264,6 +276,18 @@ mod tests {
             parse_target_path(Some(":src/lib")),
             (None, Some("src/lib".to_string()))
         );
+        // Path normalization - trailing slashes stripped
+        assert_eq!(
+            parse_target_path(Some(":src/lib/")),
+            (None, Some("src/lib".to_string()))
+        );
+        assert_eq!(
+            parse_target_path(Some("abc123:/src/lib/")),
+            (Some("abc123".to_string()), Some("src/lib".to_string()))
+        );
+        // Empty path after normalization becomes None
+        assert_eq!(parse_target_path(Some(":")), (None, None));
+        assert_eq!(parse_target_path(Some(":/")), (None, None));
     }
 
     #[test]
