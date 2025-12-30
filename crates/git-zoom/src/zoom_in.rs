@@ -6,22 +6,30 @@ use crate::scan;
 const COMMITTER_NAME: &str = "🔎";
 const COMMITTER_EMAIL: &str = "git-zoom-in@localhost";
 
-/// Normalize a path: strip trailing slashes, reject empty or "." paths.
+/// Normalize a path: strip trailing slashes, remove `.` components, reject `..`.
 fn normalize_path(path: &str) -> git::Result<String> {
-    let normalized = path.trim_matches('/');
-    if normalized.is_empty() || normalized == "." {
+    let parts: Vec<&str> = path
+        .split('/')
+        .filter(|s| !s.is_empty() && *s != ".")
+        .collect();
+
+    if parts.is_empty() {
         return Err(git::Error {
             command: "zoom in".to_string(),
             message: "invalid path: cannot zoom into repository root".to_string(),
         });
     }
-    if normalized.contains("..") {
-        return Err(git::Error {
-            command: "zoom in".to_string(),
-            message: "invalid path: '..' not allowed".to_string(),
-        });
+
+    for part in &parts {
+        if *part == ".." {
+            return Err(git::Error {
+                command: "zoom in".to_string(),
+                message: "invalid path: '..' not allowed".to_string(),
+            });
+        }
     }
-    Ok(normalized.to_string())
+
+    Ok(parts.join("/"))
 }
 
 /// Execute git zoom in.
@@ -270,10 +278,38 @@ mod tests {
         assert!(zoom_in(Some(""), false).is_err());
         assert!(zoom_in(Some("."), false).is_err());
         assert!(zoom_in(Some("/"), false).is_err());
+        assert!(zoom_in(Some("./"), false).is_err());
+        assert!(zoom_in(Some("/./"), false).is_err());
 
         // Path with .. should fail
         assert!(zoom_in(Some("src/../lib"), false).is_err());
         assert!(zoom_in(Some(".."), false).is_err());
+    }
+
+    #[test]
+    fn test_zoom_in_dot_normalization() {
+        let dir = setup_test_repo();
+
+        fs::create_dir_all(dir.path().join("src/lib")).unwrap();
+        fs::write(dir.path().join("src/lib/foo.txt"), "hello").unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "initial"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+
+        // Path with . components should be normalized
+        zoom_in(Some("./src/./lib"), false).unwrap();
+
+        // Verify: trailer should have normalized path (no dots)
+        let body = git::commit_body("HEAD").unwrap();
+        assert!(body.contains("git-zoom-in: src/lib"));
+        assert!(!body.contains("./"));
     }
 
 }

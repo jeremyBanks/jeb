@@ -7,9 +7,12 @@ use crate::tree;
 const COMMITTER_NAME: &str = "🔍";
 const COMMITTER_EMAIL: &str = "git-zoom-out@localhost";
 
-/// Normalize a path: strip trailing/leading slashes.
+/// Normalize a path: strip slashes, remove `.` components.
 fn normalize_path(path: &str) -> String {
-    path.trim_matches('/').to_string()
+    path.split('/')
+        .filter(|s| !s.is_empty() && *s != ".")
+        .collect::<Vec<_>>()
+        .join("/")
 }
 
 /// Parse target[:path] argument.
