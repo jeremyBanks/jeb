@@ -36,7 +36,6 @@ git_save() {
         unstaged_result="$?"
 
         if [ $staged_result -ne 0 ] && [ $unstaged_result -ne 0 ]; then
-            echo "nothing to commit, working tree clean" >&2
             return 1
         fi
     fi
