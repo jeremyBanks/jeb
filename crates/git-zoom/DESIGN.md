@@ -120,7 +120,37 @@ separate commits for the sake of easier git tool handling.
 actually we need to do that both ways to get our clean histories.
 
 ```
-F1->F2->F3--------------->F7->F8-----------> full commit branch/view
-        |           -F6-/      \-S9-\
-         \->S4->S5-/----------------->S10--> sub tree branch/view
+F1->F2->F3-------------------->F9->F10-----------> full commit branch/view
+         \-S4---\       /-F8-/       \-S11-\
+              S5->S6->S7------------------->S12--> sub tree branch/view
 ```
+
+```
+S4:
+Message: Zoom in to 'src/tree'
+Committer: 🔎 <git-zoom-in@localhost>
+
+S5:
+Message: Initial commit
+Committer: 🔎 <git-zoom-in@localhost>
+
+S6:
+Message: Merge from tree 'src/tree'
+Committer: 🔎 <git-zoom-in@localhost>
+
+
+Message: Zoom out from 'src/tree'
+Committer: 🔍 <git-zoom-out@localhost>
+
+Message: Merge to tree 'src/tree'
+Committer: 🔍 <git-zoom-out@localhost>
+```
+
+(We only set the committer, we use the default author... unless there is no
+author set, in which case we use our own value for the author too, instead of
+git's meaningless defaults.)
+
+We could imagine different sub-trees branching off of the full-tree, or
+sub-sub-trees, or zooming out to embed ourselves into another repository we
+previously had no connection to, or zooming in and out of different parents, and
+this model should be able to do the right thing, if we get the details right.
