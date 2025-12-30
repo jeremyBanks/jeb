@@ -446,6 +446,33 @@ no ambiguity about whether paths are relative to the root or the current
 directory, and we avoid the current directory disappearing from under us while
 we're running.)
 
+## Design notes and future considerations
+
+### Using real git merge
+
+The merge commits created by git-zoom could potentially use `git merge` instead
+of `git commit-tree`. This would enable:
+
+- Proper three-way merge when zooming out to an explicit target that differs
+  from the base commit
+- Automatic conflict detection if the subtree path was modified on both lineages
+- Standard git conflict resolution workflow
+
+Since the merge commit is the last operation in both zoom-in and zoom-out, we
+could invoke `git merge` and let git handle conflicts. If the merge fails, the
+user resolves conflicts normally.
+
+For the default case (zooming out to the same commit we zoomed in from), there
+are no conflicts possible — the merge is trivially resolved.
+
+### History scanning strategy
+
+Currently we scan first-parent history only. Future versions might consider:
+
+- Depth-first traversal for finding trailers
+- Handling octopus merges (commits with >2 parents)
+- More sophisticated path matching for complex workflows
+
 ---
 
 # rough notes to read and capture into the document above
@@ -574,31 +601,27 @@ happening, then there's no need to resume so maybe it would be fine? If we could
 set this up so there are _real_ merge commits using `git-merge` and we're not
 just constructing that history ourselves, that would be great.
 
----
+## also git zoom merge in and out
 
-## Design notes and future considerations
+We might want to also have `git zoom merge out` which does the necessary jumping
+around to set up a normal `git merge`, it's not doing anything complicated
+itself just normal zooming out.
 
-### Using real git merge
+## also test repository serialization
 
-The merge commits created by git-zoom could potentially use `git merge` instead
-of `git commit-tree`. This would enable:
+Maybe we can have a standard way to represent serialized simple git
+repositories/trees for testing. We could represent it as serde-json test files
+for now, something really simple like the following (but as actual JSON):
 
-- Proper three-way merge when zooming out to an explicit target that differs
-  from the base commit
-- Automatic conflict detection if the subtree path was modified on both lineages
-- Standard git conflict resolution workflow
+```
+refs:
+    HEAD: 1
+    heads/origin/main: 2
 
-Since the merge commit is the last operation in both zoom-in and zoom-out, we
-could invoke `git merge` and let git handle conflicts. If the merge fails, the
-user resolves conflicts normally.
 
-For the default case (zooming out to the same commit we zoomed in from), there
-are no conflicts possible — the merge is trivially resolved.
 
-### History scanning strategy
 
-Currently we scan first-parent history only. Future versions might consider:
 
-- Depth-first traversal for finding trailers
-- Handling octopus merges (commits with >2 parents)
-- More sophisticated path matching for complex workflows
+}
+
+```
