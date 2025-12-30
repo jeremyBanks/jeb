@@ -9,3 +9,6 @@ include.workspace = true
 license.workspace = true
 repository.workspace = true
 version.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
