@@ -5,7 +5,7 @@ use crate::{
     scan,
 };
 
-const COMMITTER_NAME: &str = "🔎 git zoom in";
+const COMMITTER_NAME: &str = "🔎";
 const COMMITTER_EMAIL: &str = "git-zoom-in@localhost";
 
 /// Normalize a path: strip trailing slashes, remove `.` components, reject
@@ -95,7 +95,7 @@ pub fn zoom_in(path: Option<&str>, allow_empty: bool) -> git::Result<()> {
 
     // 4. Create merge commit
     let merge_msg = format!(
-        "Merge from tree '{}'\n\ngit-zoom-in: {}",
+        "Merge from '{}'\n\ngit-zoom-in: {}",
         target_path, target_path
     );
     let merge_commit = git::commit_tree(

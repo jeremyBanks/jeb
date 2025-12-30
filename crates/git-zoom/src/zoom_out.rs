@@ -6,7 +6,7 @@ use crate::{
     tree,
 };
 
-const COMMITTER_NAME: &str = "🔍 git zoom out";
+const COMMITTER_NAME: &str = "🔍";
 const COMMITTER_EMAIL: &str = "git-zoom-out@localhost";
 
 /// Normalize a path: strip slashes, remove `.` components.
@@ -97,7 +97,7 @@ pub fn zoom_out(target_and_path: Option<&str>, deny_empty: bool) -> git::Result<
     let new_full_tree = tree::replace_subtree(&target_tree, &path, &head_tree)?;
 
     // 9. Create merge commit
-    let merge_msg = format!("Merge to tree '{}'\n\ngit-zoom-out: {}", path, path);
+    let merge_msg = format!("Merge to '{}'\n\ngit-zoom-out: {}", path, path);
     let merge_commit = git::commit_tree(
         &new_full_tree,
         &[&target_commit, &head_commit],
