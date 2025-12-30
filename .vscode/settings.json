@@ -127,6 +127,7 @@
     "libjeb",
     "mergeoptions",
     "miri",
+    "mktree",
     "newtype",
     "peekable",
     "pipefail",
