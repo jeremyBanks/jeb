@@ -164,6 +164,10 @@ previously was, the mapping replaces the blob.
 (This scheme has no way to store non-default flags, such as whether a files is
 executable or a symlink. Those files are not supported.)
 
+### In-Memory Representation
+
+TODO
+
 ## Version 2
 
 (We are NOT implementing or discussing this in detail yet. This is just for
