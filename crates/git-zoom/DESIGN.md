@@ -65,15 +65,18 @@ A->B->C        # full tree commits
 now we run `git zoom out`.
 
 (argument handling: Because we didn't specify a commit ref or a path, we scan
-back through first-parents (expanding to fuller depth-first search is a topic
-for future investigation due to performance considerations) until we find a
-commit with a `git-zoom-in: path` trailer. The value of that trailer is used as
-a default for the path, and the first parent of the matching commit (NOT the
-commit itself) is used as a default for the commit argument. if the user
-specifies a path, but no commit, then we use their path with the commit we
-scanned for (error if no matching commits). if the user specifies a commit but
-no path, then we use the path from the commit we scanned for (error if no
-matching commit).)
+back through first-parents (whenever we talk about scanning through history in
+this document assume we mean only first parents - we might revisit that in the
+future, so in our doc above we'll want to use some phrasing like "in the initial
+version" to describe the first-parent behavior but don't use any language that
+implies anything else either, although we will want to think about whether
+depth-first might actually do some nice things) until we find a commit with a
+`git-zoom-in` trailer. The value of that trailer is used as a default for the
+path, and the first parent of the matching commit (NOT the commit itself) is
+used as a default for the commit argument. if the user specifies a path, but no
+commit, then we use their path with the commit we scanned for (error if no
+matching commits). if the user specifies a commit but no path, then we use the
+path from the commit we scanned for (error if no matching commit).)
 
 in our case it scans back and see that D has the trailer, so it picks `C` as the
 commit argument and src/path as the path argument, as though we'd run
@@ -82,9 +85,31 @@ commit argument and src/path as the path argument, as though we'd run
 It creates a new commit `F` whose first parent is `D`, and whose second parent
 is `E`, and updates head to point to that. this way, now that we're back on the
 "main" tree, all of the changes on the other tree look like a branch that was
-merged in. Then we make a normal commit `E`.
+merged in. It gets a `git-zoom-out: src/tree` trailer. Then we make a normal
+commit `G`.
 
 ```
-A->B->C-------->F->E  
-       \-D->E-/
+A->B->C-------->F->G  # full tree commits
+       \-D->E-/       # sub tree commits
+```
+
+now we do `git zoom in` again, and it's a bit more interesting because now we
+have some some `git-zoom-out` commits in our history. So we can and find `E`.
+Because we've specified nothing, we re-zoom on what we most-recently
+zoomed-out-of. However, in addition to that, we use the `git-zoom-out` commit we
+found _as the first parent_ with `HEAD` as the second parent. (If we had
+specified a path, like we did the first time, we'd have scanned back for commits
+with a trailer _that matched that path_.) This way, while we're on a branch
+whose HEAD is in the sub tree, all of the changes from the full tree look like
+merges into our own tree, so if we end up with these in different branches or
+different repos, zooming out will look a lot like merging changes from upstream
+(because of how tools privilege the first-parent lineage). This is commit `H`,
+then we make a normal commit `I`. (Our initial commits `A`, `B`, `C` are in the
+first-parent lineage for both, of course, that's probably fine, unless we want
+to do something truly absurd like create an empty seed commit for each new
+path... we won't do that for this example, though.)
+
+```
+       /-D->E-\------->H->I  # sub tree commits
+A->B->C-------->F->G-/       # full tree commits
 ```
