@@ -14,7 +14,7 @@ elif [ -n "$GEMINI_CLI" ]; then
 fi
 
 git_save_commit() {
-    git commit --allow-empty-message --no-edit || return
+    git commit --allow-empty-message --no-edit --quiet || return
 
     default_message="$(git log -1 --format=%B)"
     tree="$(git write-tree)"
