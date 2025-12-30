@@ -15,9 +15,11 @@ The subcommand is actually two sub-sub-commands, with optional arguments:
 ```
 git zoom in
 git zoom in src/tree
+git zoom in src/tree --allow-empty
 git zoom out
 git zoom out origin/branch
 git zoom out origin/branch:src/tree
+git zoom out origin/branch:src/tree --deny-empty
 ```
 
 ## Purpose and behavior
