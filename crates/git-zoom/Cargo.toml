@@ -12,3 +12,7 @@ version.workspace = true
 
 [dev-dependencies]
 tempfile = "3"
+
+[dependencies]
+git2 = "0.20.3"
+sha1-checked = { version = "0.10.0", default-features = true, features = ["std"]}

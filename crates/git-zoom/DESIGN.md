@@ -34,12 +34,14 @@ comparable parent trees for sensible diffs.
 ### Commit structure
 
 **Zoom in** creates one or two commits:
+
 - **Seed commit** (first zoom-in to a path only): orphan commit with empty tree,
   becomes the root of the subtree's first-parent lineage
 - **Merge commit**: first-parent is seed (if fresh) or last subtree commit (if
   returning), second-parent is the full-tree commit we're zooming from
 
 **Zoom out** creates one commit:
+
 - **Merge commit**: first-parent is the full-tree commit we zoomed in from,
   second-parent is the current subtree HEAD
 
@@ -85,10 +87,10 @@ full-tree commits.
 
 Trailers are on the merge commits (which appear in first-parent history):
 
-| Commit  | Trailer                  | Purpose                                  |
-| ------- | ------------------------ | ---------------------------------------- |
-| S5, S9  | `git-zoom-in: src/tree`  | Found when scanning subtree to zoom out  |
-| F7      | `git-zoom-out: src/tree` | Found when scanning full-tree to zoom in |
+| Commit | Trailer                  | Purpose                                  |
+| ------ | ------------------------ | ---------------------------------------- |
+| S5, S9 | `git-zoom-in: src/tree`  | Found when scanning subtree to zoom out  |
+| F7     | `git-zoom-out: src/tree` | Found when scanning full-tree to zoom in |
 
 ### Argument resolution
 
@@ -611,32 +613,55 @@ itself just normal zooming out.
 
 Maybe we can have a standard way to represent serialized simple git
 repositories/trees for testing. We could represent it as serde-json test files
-for now, something really simple like the following (but as actual JSON):
+for now, something really simple like the following (but as actual JSON -- or
+maybe yaml if that doesn't incur significant complexities).
 
-Some defaults to keep the descriptions succinct when they can be:
-
-if a commit has no parents and these fields are unspecified they default to
-
-```
-commit: 🔎 git zoom in <git-zoom@localhost>
-author-date: Thu Jan 14 08:25:36 2021 +0000
-commit-date: 2 seconds after author-date
-```
+Some defaults to keep the descriptions succinct when they can be.
 
 ```
-refs:
-    HEAD: 1 # in these files, commits are identified by whole numbers or ref names
-    heads/origin/main: 2
-commits:
-    1:
-        commit-date: Thu Jan 14 08:25:39 2021 +0000 # this is the default if not set
-        commit: Foo <bar@localhost>
-        author: Foo <bar@localhost>
+parents: <defaults to a single item array of the previous commit in the list of
+commits, or none if this is the first commit in the list.>
+message: <"commit N" if this commit is identified by an integer, or else just "commit">
+author: git-zoom <git-zoom@localhost>
+author-date: Thu Jan 14 08:25:36 2021 +0000 -- if no parent commit
+             if there are parent commits, then this defaults to 4096 seconds
+             after the maximum author-date among parent commits.
+commit: (defaults to author)
+commit-date: (defaults to 1 second after the author date plus one more for each
+             additional parent)
+tree: <defaults to the tree from the first parent, or empty tree if no parents.>
+```
 
+again, commits are generally identified here by whole numbers, so where you see
+something else it's like a ref path probably. except that if you see hex string
+of at least six digits, that's interpreted as a real commit ID, which serves as
+an assertion that the commit tree
 
+where we have commit definitions like `2:` with nothing following them below,
+that's `null` in YAML which we treat as equal to an empty {} in all cases.
 
-
-
-}
+this should be able to be used to deterministically reproduce a git repo state
+on-disk with commit IDs and everything matching.
 
 ```
+HEAD: refs/heads/trunk
+refs/head/trunk: 2
+1:
+    message: initial commit
+    tree:
+        README.md: "hello, world"
+        src:
+
+2:
+3:
+4:
+    parents:
+```
+
+our serialized representation should allow these fields to be empty, but we
+should also be able to populate them in-place, so that we can re-serialize it
+entirely-fleshed-out, including (this might need to be done in a second pass
+after everything else) replacing all integer IDs with full untruncated git
+hashes.
+
+The git format for hashing etc is pretty simple.
