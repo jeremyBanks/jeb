@@ -67,12 +67,9 @@ pub fn zoom_in(path: Option<&str>, allow_empty: bool) -> git::Result<()> {
     // 3. Determine merge first parent
     let merge_first_parent = match zoom_out_found {
         None => {
-            // Fresh subtree: create orphan seed commit with trailer
+            // Fresh subtree: create orphan seed commit
             let empty_tree = git::empty_tree()?;
-            let seed_msg = format!(
-                "Initial commit for '{}'\n\ngit-zoom-seed: {}",
-                target_path, target_path
-            );
+            let seed_msg = format!("Initial commit for '{}'", target_path);
             git::commit_tree(&empty_tree, &[], &seed_msg, COMMITTER_NAME, COMMITTER_EMAIL)?
         }
         Some(found) => {
@@ -279,31 +276,4 @@ mod tests {
         assert!(zoom_in(Some(".."), false).is_err());
     }
 
-    #[test]
-    fn test_zoom_in_seed_has_trailer() {
-        let dir = setup_test_repo();
-
-        fs::create_dir_all(dir.path().join("src/lib")).unwrap();
-        fs::write(dir.path().join("src/lib/foo.txt"), "hello").unwrap();
-        Command::new("git")
-            .args(["add", "."])
-            .current_dir(dir.path())
-            .output()
-            .unwrap();
-        Command::new("git")
-            .args(["commit", "-m", "initial"])
-            .current_dir(dir.path())
-            .output()
-            .unwrap();
-
-        zoom_in(Some("src/lib"), false).unwrap();
-
-        // Get seed commit (first parent of HEAD)
-        let parents = git::parents("HEAD").unwrap();
-        let seed = &parents[0];
-        let seed_body = git::commit_body(seed).unwrap();
-
-        // Seed should have git-zoom-seed trailer
-        assert!(seed_body.contains("git-zoom-seed: src/lib"));
-    }
 }
