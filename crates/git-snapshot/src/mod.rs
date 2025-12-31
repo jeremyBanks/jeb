@@ -1090,7 +1090,8 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
     };
 
     // Parse commits - build a map of commit references to their definitions
-    let mut commit_defs = BTreeMap::new();
+    // Use a Vec to preserve document order, not BTreeMap which sorts by CommitRef
+    let mut commit_defs_vec: Vec<(CommitRef, &serde_yaml::Mapping)> = Vec::new();
     let mut integer_to_hex: HashMap<u32, ObjectId> = HashMap::new();
     let mut prefix_to_hex: HashMap<String, ObjectId> = HashMap::new();
 
@@ -1110,15 +1111,18 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
                 actual: format!("{:?}", value),
             })?;
 
-        commit_defs.insert(commit_ref.clone(), commit_mapping);
+        commit_defs_vec.push((commit_ref.clone(), commit_mapping));
     }
 
     // First pass: compute ObjectIds for integer-keyed commits
     // We need to resolve the commit graph to compute object IDs
     // For now, we'll use a placeholder approach and compute them later
 
-    // Build commits in document order
-    let commit_order: Vec<_> = commit_defs.keys().cloned().collect();
+    // Build commit_defs HashMap for fast lookups
+    let commit_defs: HashMap<CommitRef, &serde_yaml::Mapping> = commit_defs_vec.iter().cloned().collect();
+
+    // Build commits in document order (from vec, which preserves insertion order)
+    let commit_order: Vec<_> = commit_defs_vec.iter().map(|(ref_val, _)| ref_val.clone()).collect();
 
     // Build the commits
     let mut commits = HashMap::new();
@@ -1435,7 +1439,7 @@ fn get_special_key<'a>(
 
 fn build_commit(
     commit_ref: &CommitRef,
-    commit_defs: &BTreeMap<CommitRef, &serde_yaml::Mapping>,
+    commit_defs: &HashMap<CommitRef, &serde_yaml::Mapping>,
     commit_order: &[CommitRef],
     _idx: usize,
     prev_commit_ref: Option<&CommitRef>,
@@ -1540,7 +1544,6 @@ fn build_commit(
 
             // Store the mapping from prefix to calculated ID
             prefix_to_hex.insert(prefix.clone(), calculated_id);
-            eprintln!("DEBUG: Stored prefix mapping: {} -> {}", prefix, calculated_id.to_hex());
 
             // Optionally verify the prefix matches (for debugging)
             // But don't fail if it doesn't - YAML keys are just labels
@@ -2161,8 +2164,24 @@ fn calculate_tree_id(tree: &Tree) -> Result<ObjectId, ParseError> {
     // Start from deepest directories and work up
     let mut tree_oids: HashMap<String, ObjectId> = HashMap::new();
 
+    // Collect all directories that need tree objects
+    // Include all directories with entries, plus all their ancestors up to root
+    let mut all_dirs = std::collections::HashSet::new();
+    for dir in dir_entries.keys() {
+        // Add this directory
+        all_dirs.insert(dir.clone());
+        // Add all ancestor directories
+        let mut current = dir.as_str();
+        while let Some(pos) = current.rfind('/') {
+            current = &current[..pos];
+            all_dirs.insert(current.to_string());
+        }
+        // Always include root
+        all_dirs.insert(String::new());
+    }
+
     // Sort directories by depth (deepest first)
-    let mut dirs: Vec<String> = dir_entries.keys().cloned().collect();
+    let mut dirs: Vec<String> = all_dirs.into_iter().collect();
     dirs.sort_by(|a, b| {
         let a_depth = if a.is_empty() {
             0
@@ -2218,7 +2237,12 @@ fn calculate_tree_id(tree: &Tree) -> Result<ObjectId, ParseError> {
     }
 
     // Return the root tree OID
-    Ok(*tree_oids.get("").unwrap())
+    tree_oids.get("").copied().ok_or_else(|| {
+        ParseError::InvalidTreeEntryName(format!(
+            "No root tree found. Available trees: {:?}",
+            tree_oids.keys().collect::<Vec<_>>()
+        ))
+    })
 }
 
 fn calculate_commit_id(
