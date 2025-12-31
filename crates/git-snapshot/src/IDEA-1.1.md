@@ -70,7 +70,7 @@ new tree) and source paths (where we're reading from in the referenced commit).
 
 3. **When `[path]` is explicitly specified**:
    - If the path is `.`, or starts with `./` or `../`, it is resolved relative
-     to this entry's target path.
+     to this entry's default effective path.
    - Otherwise (e.g., `src/bin`), it is resolved relative to the repository
      root.
 
@@ -79,12 +79,12 @@ new tree) and source paths (where we're reading from in the referenced commit).
 ```yaml
 tree:
   strange-name:
-    [path]: foo/src           # target: strange-name → source: foo/src
-    bins:                     # target: strange-name/bins → source: foo/src/bins
+    [path]: foo/src # target: strange-name → source: foo/src
+    bins: # target: strange-name/bins → source: foo/src/bins
       main.rs: "use foo..."
-      test:                   # target: strange-name/bins/test → source: foo/src/bins/test
-        main.test.rs: "..."   # target: strange-name/bins/test/main.test.rs
-                              #      → source: foo/src/bins/test/main.test.rs
+      test: # target: strange-name/bins/test → source: foo/src/bins/test
+        main.test.rs: "..." # target: strange-name/bins/test/main.test.rs
+#      → source: foo/src/bins/test/main.test.rs
 ```
 
 Here, setting `[path]: foo/src` on `strange-name` remaps that subtree. All
