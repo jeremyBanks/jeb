@@ -1119,10 +1119,14 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
     // For now, we'll use a placeholder approach and compute them later
 
     // Build commit_defs HashMap for fast lookups
-    let commit_defs: HashMap<CommitRef, &serde_yaml::Mapping> = commit_defs_vec.iter().cloned().collect();
+    let commit_defs: HashMap<CommitRef, &serde_yaml::Mapping> =
+        commit_defs_vec.iter().cloned().collect();
 
     // Build commits in document order (from vec, which preserves insertion order)
-    let commit_order: Vec<_> = commit_defs_vec.iter().map(|(ref_val, _)| ref_val.clone()).collect();
+    let commit_order: Vec<_> = commit_defs_vec
+        .iter()
+        .map(|(ref_val, _)| ref_val.clone())
+        .collect();
 
     // Build the commits
     let mut commits = HashMap::new();
@@ -1160,7 +1164,8 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
     let resolved_head = match head {
         HeadStateOrRef::Symbolic(ref_name) => HeadState::Symbolic(ref_name),
         HeadStateOrRef::Detached(commit_ref) => {
-            let object_id = resolve_commit_ref(&commit_ref, &integer_to_hex, &prefix_to_hex, &commits)?;
+            let object_id =
+                resolve_commit_ref(&commit_ref, &integer_to_hex, &prefix_to_hex, &commits)?;
             HeadState::Detached(object_id)
         }
     };
@@ -1524,7 +1529,8 @@ fn build_commit(
     // Parse tree (with default)
     let tree = parse_tree(commit_mapping, first_parent, processing_state)?;
 
-    // Determine object ID: use the key for hex/prefix refs, calculate for integer refs
+    // Determine object ID: use the key for hex/prefix refs, calculate for integer
+    // refs
     let object_id = match commit_ref {
         CommitRef::Hex(oid) => *oid,
         CommitRef::Prefix(prefix) => {
@@ -1549,8 +1555,10 @@ fn build_commit(
             // But don't fail if it doesn't - YAML keys are just labels
             let calculated_hex = calculated_id.to_hex();
             if !calculated_hex.starts_with(prefix) {
-                eprintln!("WARNING: commit content hash {} doesn't start with declared prefix {}",
-                    calculated_hex, prefix);
+                eprintln!(
+                    "WARNING: commit content hash {} doesn't start with declared prefix {}",
+                    calculated_hex, prefix
+                );
             }
 
             calculated_id
@@ -2407,7 +2415,8 @@ impl SerializationContext {
     ) -> Self {
         let truncated_len = compute_truncated_hash_length(&ordered_commits);
 
-        // Build blob_locations map: for each blob, record the first location where it appears
+        // Build blob_locations map: for each blob, record the first location where it
+        // appears
         let mut blob_locations = HashMap::new();
         let mut content_to_blob: HashMap<String, ObjectId> = HashMap::new();
 
@@ -2623,7 +2632,8 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
         ctx.current_commit = *commit_id;
 
         let commit_key = commit_refs.get(commit_id).cloned().unwrap();
-        let commit_value = serialize_commit(commit, prev_commit, &commit_refs, id_style, repo, &ctx);
+        let commit_value =
+            serialize_commit(commit, prev_commit, &commit_refs, id_style, repo, &ctx);
 
         root.insert(commit_key, commit_value);
     }
@@ -2636,7 +2646,8 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
 }
 
 /// Sort the root mapping while preserving commit order
-/// Commits should appear in topological order (document order), not lexicographic order
+/// Commits should appear in topological order (document order), not
+/// lexicographic order
 fn sort_root_mapping(
     root: serde_yaml::Mapping,
     ordered_commits: &[ObjectId],
@@ -2666,7 +2677,10 @@ fn sort_root_mapping(
     for commit_id in ordered_commits {
         if let Some(commit_key) = commit_refs.get(commit_id) {
             if let Some(commit_val) = root.get(commit_key) {
-                sorted.insert(commit_key.clone(), sort_mapping_recursive(commit_val.clone()));
+                sorted.insert(
+                    commit_key.clone(),
+                    sort_mapping_recursive(commit_val.clone()),
+                );
             }
         }
     }
@@ -2941,7 +2955,14 @@ fn compute_tree_delta(
         if current_content != base_content {
             // Path has changed
             let path_parts: Vec<&str> = path.split('/').collect();
-            insert_tree_change(&mut delta, &path_parts, current_content, path, ctx, commit_refs);
+            insert_tree_change(
+                &mut delta,
+                &path_parts,
+                current_content,
+                path,
+                ctx,
+                commit_refs,
+            );
         }
     }
 
@@ -2959,7 +2980,14 @@ fn serialize_tree_full(
     for path in tree.paths() {
         let content = tree.get(path).expect("path should exist");
         let path_parts: Vec<&str> = path.split('/').collect();
-        insert_tree_change(&mut root, &path_parts, Some(content), path, ctx, commit_refs);
+        insert_tree_change(
+            &mut root,
+            &path_parts,
+            Some(content),
+            path,
+            ctx,
+            commit_refs,
+        );
     }
 
     serde_yaml::Value::Mapping(root)
@@ -2991,8 +3019,12 @@ fn insert_tree_change(
                     // Only use reference if it's not the current location AND
                     // the reference target comes earlier in the commit order
                     let ref_position = ctx.all_commits.iter().position(|id| *id == ref_commit);
-                    let current_position = ctx.all_commits.iter().position(|id| *id == ctx.current_commit);
-                    let should_reference = (ref_commit != ctx.current_commit || ref_path != full_path)
+                    let current_position = ctx
+                        .all_commits
+                        .iter()
+                        .position(|id| *id == ctx.current_commit);
+                    let should_reference = (ref_commit != ctx.current_commit
+                        || ref_path != full_path)
                         && ref_position.is_some()
                         && current_position.is_some()
                         && ref_position < current_position;
@@ -3002,13 +3034,18 @@ fn insert_tree_change(
                         // Note: [commit] and [path] must be sequences, not strings!
                         let mut ref_mapping = serde_yaml::Mapping::new();
                         ref_mapping.insert(
-                            serde_yaml::Value::Sequence(vec![serde_yaml::Value::String("commit".to_string())]),
-                            commit_refs.get(&ref_commit).cloned().unwrap_or_else(|| {
-                                serde_yaml::Value::String(ref_commit.to_hex())
-                            }),
+                            serde_yaml::Value::Sequence(vec![serde_yaml::Value::String(
+                                "commit".to_string(),
+                            )]),
+                            commit_refs
+                                .get(&ref_commit)
+                                .cloned()
+                                .unwrap_or_else(|| serde_yaml::Value::String(ref_commit.to_hex())),
                         );
                         ref_mapping.insert(
-                            serde_yaml::Value::Sequence(vec![serde_yaml::Value::String("path".to_string())]),
+                            serde_yaml::Value::Sequence(vec![serde_yaml::Value::String(
+                                "path".to_string(),
+                            )]),
                             serde_yaml::Value::String(ref_path.clone()),
                         );
                         serde_yaml::Value::Mapping(ref_mapping)
@@ -3032,7 +3069,14 @@ fn insert_tree_change(
             .or_insert_with(|| serde_yaml::Value::Mapping(serde_yaml::Mapping::new()));
 
         if let serde_yaml::Value::Mapping(nested_map) = nested {
-            insert_tree_change(nested_map, &path_parts[1..], content, full_path, ctx, commit_refs);
+            insert_tree_change(
+                nested_map,
+                &path_parts[1..],
+                content,
+                full_path,
+                ctx,
+                commit_refs,
+            );
         }
     }
 }

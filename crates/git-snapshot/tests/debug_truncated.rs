@@ -7,9 +7,9 @@ use git_snapshot::{
 #[test]
 fn test_truncated_hash_roundtrip() {
     // Read the actual generated fixture
-    let yaml_with_truncated = std::fs::read_to_string(
-        "tests/fixtures/03-tree-references.hex.out.yaml"
-    ).expect("fixture should exist");
+    let yaml_with_truncated =
+        std::fs::read_to_string("tests/fixtures/03-tree-references.hex.out.yaml")
+            .expect("fixture should exist");
 
     eprintln!("=== Parsing YAML with truncated hash ===");
     let result = parse(&yaml_with_truncated);
