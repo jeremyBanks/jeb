@@ -22,8 +22,14 @@ pub enum ParseError {
     #[error("invalid tree entry name: {0}")]
     InvalidTreeEntryName(String),
 
+    #[error("invalid path reference: {0}")]
+    InvalidPathReference(String),
+
     #[error("commit not found: {0}")]
     CommitNotFound(String),
+
+    #[error("ambiguous commit hash: {0} matches multiple commits")]
+    AmbiguousHash(String),
 
     #[error("cycle detected in commit graph")]
     CycleDetected,
@@ -1109,7 +1115,7 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
     // Convert refs to use resolved ObjectIds
     let mut resolved_refs = BTreeMap::new();
     for (ref_name, commit_ref) in refs {
-        let object_id = resolve_commit_ref(&commit_ref, &integer_to_hex)?;
+        let object_id = resolve_commit_ref(&commit_ref, &integer_to_hex, &commits)?;
         resolved_refs.insert(ref_name, object_id);
     }
 
@@ -1117,7 +1123,7 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
     let resolved_head = match head {
         HeadStateOrRef::Symbolic(ref_name) => HeadState::Symbolic(ref_name),
         HeadStateOrRef::Detached(commit_ref) => {
-            let object_id = resolve_commit_ref(&commit_ref, &integer_to_hex)?;
+            let object_id = resolve_commit_ref(&commit_ref, &integer_to_hex, &commits)?;
             HeadState::Detached(object_id)
         }
     };
@@ -1137,6 +1143,7 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 enum CommitRef {
     Hex(ObjectId),
+    Prefix(String), // Truncated hex prefix (4-40 chars)
     Int(u32),
 }
 
@@ -1221,12 +1228,25 @@ fn parse_refs_recursive(
 
 fn parse_commit_ref_key(key: &serde_yaml::Value) -> Result<CommitRef, ParseError> {
     if let Some(s) = key.as_str() {
-        if s.len() == 40 {
+        let len = s.len();
+
+        // Check if it's a valid hex string
+        if !s.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Err(ParseError::InvalidObjectId(format!(
+                "commit key must contain only hex characters, got: {}",
+                s
+            )));
+        }
+
+        if len == 40 {
             let oid = ObjectId::from_hex(s)?;
             Ok(CommitRef::Hex(oid))
+        } else if len >= 4 && len <= 40 {
+            // Truncated hash - will be resolved later
+            Ok(CommitRef::Prefix(s.to_string()))
         } else {
             Err(ParseError::InvalidObjectId(format!(
-                "commit key must be 40-char hex or positive integer, got: {}",
+                "commit key must be 4-40 hex characters or positive integer, got: {}",
                 s
             )))
         }
@@ -1248,12 +1268,25 @@ fn parse_commit_ref_key(key: &serde_yaml::Value) -> Result<CommitRef, ParseError
 
 fn parse_commit_ref(value: &serde_yaml::Value) -> Result<CommitRef, ParseError> {
     if let Some(s) = value.as_str() {
-        if s.len() == 40 {
+        let len = s.len();
+
+        // Check if it's a valid hex string
+        if !s.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Err(ParseError::InvalidObjectId(format!(
+                "commit reference must contain only hex characters, got: {}",
+                s
+            )));
+        }
+
+        if len == 40 {
             let oid = ObjectId::from_hex(s)?;
             Ok(CommitRef::Hex(oid))
+        } else if len >= 4 && len <= 40 {
+            // Truncated hash reference
+            Ok(CommitRef::Prefix(s.to_string()))
         } else {
             Err(ParseError::InvalidObjectId(format!(
-                "commit reference must be 40-char hex or positive integer, got: {}",
+                "commit reference must be 4-40 hex characters or positive integer, got: {}",
                 s
             )))
         }
@@ -1276,9 +1309,30 @@ fn parse_commit_ref(value: &serde_yaml::Value) -> Result<CommitRef, ParseError> 
 fn resolve_commit_ref(
     commit_ref: &CommitRef,
     integer_to_hex: &HashMap<u32, ObjectId>,
+    commits: &HashMap<ObjectId, Commit>,
 ) -> Result<ObjectId, ParseError> {
     match commit_ref {
         CommitRef::Hex(oid) => Ok(*oid),
+        CommitRef::Prefix(prefix) => {
+            // Find all commits that match this prefix
+            let matches: Vec<ObjectId> = commits
+                .keys()
+                .filter(|oid| {
+                    let hex_str = oid.to_hex();
+                    hex_str.starts_with(prefix)
+                })
+                .copied()
+                .collect();
+
+            match matches.len() {
+                0 => Err(ParseError::CommitNotFound(format!(
+                    "no commit found matching prefix: {}",
+                    prefix
+                ))),
+                1 => Ok(matches[0]),
+                _ => Err(ParseError::AmbiguousHash(prefix.clone())),
+            }
+        }
         CommitRef::Int(n) => integer_to_hex.get(n).copied().ok_or_else(|| {
             ParseError::CommitNotFound(format!("integer commit reference {} not found", n))
         }),

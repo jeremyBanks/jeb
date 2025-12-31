@@ -41,7 +41,8 @@ const V_VERSION: &'static str = concat!("v", env!("CARGO_PKG_VERSION"));
 LINKS:
     https://docs.rs/save/{VERSION}
     https://crates.io/crates/save/{VERSION}"));
-        S.as_ref()
+        let s: &str = S.as_ref();
+        s
     },
     dont_collapse_args_in_usage = true,
     infer_long_args = true,
@@ -580,7 +581,7 @@ pub fn main(args: Save) -> Result<()> {
     eprintln!();
 
     Command::new("git")
-        .args(&[
+        .args([
             "--no-pager",
             "log",
             "--name-status",
@@ -597,7 +598,7 @@ pub fn main(args: Save) -> Result<()> {
     eprintln!();
 
     Command::new("git")
-        .args(&[
+        .args([
             "--no-pager",
             "log",
             "--name-status",
