@@ -73,9 +73,60 @@ impl ObjectId {
         Ok(ObjectId(bytes))
     }
 
+    /// Parse from truncated hex string (4-40 characters)
+    /// Used during deserialization when reading truncated hashes
+    pub fn from_hex_prefix(s: &str) -> Result<Self, ParseError> {
+        let len = s.len();
+
+        // Validate length: must be even, >= 4, <= 40
+        if len < 4 || len > 40 {
+            return Err(ParseError::InvalidObjectId(format!(
+                "truncated hash must be 4-40 characters, got {}",
+                len
+            )));
+        }
+
+        if len % 2 != 0 {
+            return Err(ParseError::InvalidObjectId(format!(
+                "truncated hash must have even length, got {}",
+                len
+            )));
+        }
+
+        // Parse the available hex digits
+        let num_bytes = len / 2;
+        let mut bytes = [0u8; 20];
+        for i in 0..num_bytes {
+            let hex_byte = &s[i * 2..i * 2 + 2];
+            bytes[i] = u8::from_str_radix(hex_byte, 16).map_err(|_| {
+                ParseError::InvalidObjectId(format!("invalid hex characters: {}", s))
+            })?;
+        }
+
+        // Note: The remaining bytes are left as zeros. This creates a partial ObjectId
+        // that should only be used for lookups where the caller will handle ambiguity.
+        Ok(ObjectId(bytes))
+    }
+
     /// Convert to 40-character lowercase hex string
     pub fn to_hex(self) -> String {
         self.0
+            .iter()
+            .map(|byte| format!("{:02x}", byte))
+            .collect()
+    }
+
+    /// Convert to truncated hex string of specified length
+    /// Used during serialization for non-head commits
+    pub fn to_hex_truncated(&self, len: usize) -> String {
+        // Validate length: must be even, >= 4, <= 40
+        if len < 4 || len > 40 || len % 2 != 0 {
+            // Fall back to full length if invalid
+            return self.to_hex();
+        }
+
+        let num_bytes = len / 2;
+        self.0[..num_bytes]
             .iter()
             .map(|byte| format!("{:02x}", byte))
             .collect()
@@ -444,6 +495,15 @@ pub struct Tree {
     /// Map from file paths to blob contents.
     /// Paths use forward slashes as separators, never have leading/trailing slashes.
     entries: BTreeMap<String, String>,
+
+    /// Map from file paths to blob object IDs (hashes).
+    /// Each blob's hash is computed from its content using git's blob hashing algorithm.
+    blob_hashes: BTreeMap<String, ObjectId>,
+
+    /// Cached tree hash for this tree.
+    /// Computed from the tree's contents following git's tree hashing algorithm.
+    /// This is used during serialization to enable deduplication via references.
+    tree_hash: Option<ObjectId>,
 }
 
 impl Tree {
