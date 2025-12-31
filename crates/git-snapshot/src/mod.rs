@@ -728,4 +728,800 @@ impl Default for Repository {
     }
 }
 
+// ============================================================================
+// Parsing Implementation
+// ============================================================================
+
+/// Parse a YAML string into a Repository.
+pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
+    let value: serde_yaml::Value = serde_yaml::from_str(yaml)?;
+
+    let mapping = value
+        .as_mapping()
+        .ok_or_else(|| ParseError::UnexpectedType {
+            expected: "mapping",
+            actual: format!("{:?}", value),
+        })?;
+
+    // Parse HEAD
+    let head_value = mapping
+        .get(&serde_yaml::Value::String("HEAD".to_string()))
+        .ok_or(ParseError::MissingField("HEAD"))?;
+
+    let head = parse_head(head_value)?;
+
+    // Parse refs
+    let refs_value = mapping.get(&serde_yaml::Value::String("refs".to_string()));
+    let refs = if let Some(refs_value) = refs_value {
+        parse_refs(refs_value)?
+    } else {
+        BTreeMap::new()
+    };
+
+    // Parse commits - build a map of commit references to their definitions
+    let mut commit_defs = BTreeMap::new();
+    let mut integer_to_hex: HashMap<u32, ObjectId> = HashMap::new();
+
+    for (key, value) in mapping.iter() {
+        let key_str = key.as_str();
+        if key_str == Some("HEAD") || key_str == Some("refs") {
+            continue;
+        }
+
+        // Parse commit reference
+        let commit_ref = parse_commit_ref_key(key)?;
+
+        let commit_mapping = value.as_mapping().ok_or_else(|| ParseError::UnexpectedType {
+            expected: "mapping",
+            actual: format!("{:?}", value),
+        })?;
+
+        commit_defs.insert(commit_ref.clone(), commit_mapping);
+    }
+
+    // First pass: compute ObjectIds for integer-keyed commits
+    // We need to resolve the commit graph to compute object IDs
+    // For now, we'll use a placeholder approach and compute them later
+
+    // Build commits in document order
+    let commit_order: Vec<_> = commit_defs.keys().cloned().collect();
+
+    // Build the commits
+    let mut commits = HashMap::new();
+    let mut commit_processing_state: HashMap<CommitRef, CommitProcessingState> = HashMap::new();
+
+    for (idx, commit_ref) in commit_order.iter().enumerate() {
+        let prev_commit_ref = if idx > 0 {
+            Some(commit_order[idx - 1].clone())
+        } else {
+            None
+        };
+
+        let commit = build_commit(
+            commit_ref,
+            &commit_defs,
+            &commit_order,
+            idx,
+            prev_commit_ref.as_ref(),
+            &mut integer_to_hex,
+            &mut commit_processing_state,
+        )?;
+
+        commits.insert(commit.id, commit);
+    }
+
+    // Convert refs to use resolved ObjectIds
+    let mut resolved_refs = BTreeMap::new();
+    for (ref_name, commit_ref) in refs {
+        let object_id = resolve_commit_ref(&commit_ref, &integer_to_hex)?;
+        resolved_refs.insert(ref_name, object_id);
+    }
+
+    // Convert HEAD to use resolved ObjectId
+    let resolved_head = match head {
+        HeadStateOrRef::Symbolic(ref_name) => HeadState::Symbolic(ref_name),
+        HeadStateOrRef::Detached(commit_ref) => {
+            let object_id = resolve_commit_ref(&commit_ref, &integer_to_hex)?;
+            HeadState::Detached(object_id)
+        }
+    };
+
+    let mut repo = Repository {
+        commits,
+        refs: resolved_refs,
+        head: resolved_head,
+    };
+
+    // Prune unreachable commits
+    prune_unreachable(&mut repo);
+
+    Ok(repo)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum CommitRef {
+    Hex(ObjectId),
+    Int(u32),
+}
+
+#[derive(Debug, Clone)]
+enum CommitProcessingState {
+    InProgress,
+    Complete(Commit),
+}
+
+fn parse_head(value: &serde_yaml::Value) -> Result<HeadStateOrRef, ParseError> {
+    if let Some(s) = value.as_str() {
+        if s.starts_with("refs/") {
+            let ref_name = RefName::new(s.to_string())?;
+            Ok(HeadStateOrRef::Symbolic(ref_name))
+        } else {
+            // Try to parse as ObjectId or integer
+            if s.len() == 40 {
+                let oid = ObjectId::from_hex(s)?;
+                Ok(HeadStateOrRef::Detached(CommitRef::Hex(oid)))
+            } else {
+                return Err(ParseError::UnexpectedType {
+                    expected: "ref name or commit ID",
+                    actual: s.to_string(),
+                });
+            }
+        }
+    } else if let Some(n) = value.as_u64() {
+        if n == 0 || n > u32::MAX as u64 {
+            return Err(ParseError::InvalidObjectId(format!(
+                "integer commit reference must be positive and fit in u32: {}",
+                n
+            )));
+        }
+        Ok(HeadStateOrRef::Detached(CommitRef::Int(n as u32)))
+    } else {
+        Err(ParseError::UnexpectedType {
+            expected: "string or integer",
+            actual: format!("{:?}", value),
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+enum HeadStateOrRef {
+    Symbolic(RefName),
+    Detached(CommitRef),
+}
+
+fn parse_refs(value: &serde_yaml::Value) -> Result<BTreeMap<RefName, CommitRef>, ParseError> {
+    let mapping = value.as_mapping().ok_or_else(|| ParseError::UnexpectedType {
+        expected: "mapping",
+        actual: format!("{:?}", value),
+    })?;
+
+    let mut refs = BTreeMap::new();
+    parse_refs_recursive("refs", mapping, &mut refs)?;
+    Ok(refs)
+}
+
+fn parse_refs_recursive(
+    prefix: &str,
+    mapping: &serde_yaml::Mapping,
+    refs: &mut BTreeMap<RefName, CommitRef>,
+) -> Result<(), ParseError> {
+    for (key, value) in mapping.iter() {
+        let key_name = normalize_yaml_key(key)?;
+        let full_path = format!("{}/{}", prefix, key_name);
+
+        if let Some(nested_mapping) = value.as_mapping() {
+            // Recursively parse nested refs
+            parse_refs_recursive(&full_path, nested_mapping, refs)?;
+        } else {
+            // This is a leaf - parse the commit reference
+            let commit_ref = parse_commit_ref(value)?;
+            let ref_name = RefName::new(full_path)?;
+            refs.insert(ref_name, commit_ref);
+        }
+    }
+
+    Ok(())
+}
+
+fn parse_commit_ref_key(key: &serde_yaml::Value) -> Result<CommitRef, ParseError> {
+    if let Some(s) = key.as_str() {
+        if s.len() == 40 {
+            let oid = ObjectId::from_hex(s)?;
+            Ok(CommitRef::Hex(oid))
+        } else {
+            Err(ParseError::InvalidObjectId(format!(
+                "commit key must be 40-char hex or positive integer, got: {}",
+                s
+            )))
+        }
+    } else if let Some(n) = key.as_u64() {
+        if n == 0 || n > u32::MAX as u64 {
+            return Err(ParseError::InvalidObjectId(format!(
+                "integer commit reference must be positive and fit in u32: {}",
+                n
+            )));
+        }
+        Ok(CommitRef::Int(n as u32))
+    } else {
+        Err(ParseError::UnexpectedType {
+            expected: "string or integer",
+            actual: format!("{:?}", key),
+        })
+    }
+}
+
+fn parse_commit_ref(value: &serde_yaml::Value) -> Result<CommitRef, ParseError> {
+    if let Some(s) = value.as_str() {
+        if s.len() == 40 {
+            let oid = ObjectId::from_hex(s)?;
+            Ok(CommitRef::Hex(oid))
+        } else {
+            Err(ParseError::InvalidObjectId(format!(
+                "commit reference must be 40-char hex or positive integer, got: {}",
+                s
+            )))
+        }
+    } else if let Some(n) = value.as_u64() {
+        if n == 0 || n > u32::MAX as u64 {
+            return Err(ParseError::InvalidObjectId(format!(
+                "integer commit reference must be positive and fit in u32: {}",
+                n
+            )));
+        }
+        Ok(CommitRef::Int(n as u32))
+    } else {
+        Err(ParseError::UnexpectedType {
+            expected: "string or integer",
+            actual: format!("{:?}", value),
+        })
+    }
+}
+
+fn resolve_commit_ref(
+    commit_ref: &CommitRef,
+    integer_to_hex: &HashMap<u32, ObjectId>,
+) -> Result<ObjectId, ParseError> {
+    match commit_ref {
+        CommitRef::Hex(oid) => Ok(*oid),
+        CommitRef::Int(n) => integer_to_hex.get(n).copied().ok_or_else(|| {
+            ParseError::CommitNotFound(format!("integer commit reference {} not found", n))
+        }),
+    }
+}
+
+fn normalize_yaml_key(key: &serde_yaml::Value) -> Result<String, ParseError> {
+    match key {
+        serde_yaml::Value::String(s) => Ok(s.clone()),
+        serde_yaml::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Ok(i.to_string())
+            } else if let Some(u) = n.as_u64() {
+                Ok(u.to_string())
+            } else {
+                Err(ParseError::UnexpectedType {
+                    expected: "integer",
+                    actual: format!("{:?}", n),
+                })
+            }
+        }
+        serde_yaml::Value::Bool(b) => Ok(b.to_string()),
+        serde_yaml::Value::Null => Ok("null".to_string()),
+        serde_yaml::Value::Tagged(_) => Err(ParseError::UnexpectedField(
+            "YAML tags are not supported".to_string(),
+        )),
+        _ => Err(ParseError::UnexpectedType {
+            expected: "string, number, boolean, or null",
+            actual: format!("{:?}", key),
+        }),
+    }
+}
+
+fn build_commit(
+    commit_ref: &CommitRef,
+    commit_defs: &BTreeMap<CommitRef, &serde_yaml::Mapping>,
+    commit_order: &[CommitRef],
+    idx: usize,
+    prev_commit_ref: Option<&CommitRef>,
+    integer_to_hex: &mut HashMap<u32, ObjectId>,
+    processing_state: &mut HashMap<CommitRef, CommitProcessingState>,
+) -> Result<Commit, ParseError> {
+    // Check for cycles
+    if let Some(CommitProcessingState::InProgress) = processing_state.get(commit_ref) {
+        return Err(ParseError::CycleDetected);
+    }
+
+    // Check if already processed
+    if let Some(CommitProcessingState::Complete(commit)) = processing_state.get(commit_ref) {
+        return Ok(commit.clone());
+    }
+
+    processing_state.insert(commit_ref.clone(), CommitProcessingState::InProgress);
+
+    let commit_mapping = commit_defs.get(commit_ref).ok_or_else(|| {
+        ParseError::CommitNotFound(format!("commit {:?} not found", commit_ref))
+    })?;
+
+    // Parse parents (with default)
+    let parents = parse_parents(commit_mapping, prev_commit_ref)?;
+
+    // Resolve parent commits first (for defaults)
+    let mut resolved_parents = Vec::new();
+    for parent_ref in &parents {
+        // Recursively build parent commit if needed
+        if let Some(parent_def) = commit_defs.get(parent_ref) {
+            let parent_idx = commit_order
+                .iter()
+                .position(|r| r == parent_ref)
+                .ok_or_else(|| {
+                    ParseError::CommitNotFound(format!("parent commit {:?} not in order", parent_ref))
+                })?;
+            let prev_parent = if parent_idx > 0 {
+                Some(&commit_order[parent_idx - 1])
+            } else {
+                None
+            };
+            let parent_commit = build_commit(
+                parent_ref,
+                commit_defs,
+                commit_order,
+                parent_idx,
+                prev_parent,
+                integer_to_hex,
+                processing_state,
+            )?;
+            resolved_parents.push(parent_commit);
+        } else {
+            return Err(ParseError::CommitNotFound(format!(
+                "parent commit {:?} not defined",
+                parent_ref
+            )));
+        }
+    }
+
+    let first_parent = resolved_parents.first();
+
+    // Parse author (with default)
+    let author = parse_author(commit_mapping, first_parent)?;
+
+    // Parse author-date (with default)
+    let author_date = parse_author_date(commit_mapping, &resolved_parents)?;
+
+    // Parse committer (with default)
+    let committer = parse_committer(commit_mapping, &author)?;
+
+    // Parse commit-date (with default)
+    let committer_date = parse_committer_date(commit_mapping, author_date, &resolved_parents)?;
+
+    // Parse message (with default)
+    let message = parse_message(commit_mapping, commit_ref, &committer_date)?;
+
+    // Parse tree (with default)
+    let tree = parse_tree(commit_mapping, first_parent)?;
+
+    // Calculate object ID
+    let parent_ids: Vec<ObjectId> = resolved_parents.iter().map(|c| c.id).collect();
+    let tree_id = calculate_tree_id(&tree)?;
+    let object_id = calculate_commit_id(
+        &tree_id,
+        &parent_ids,
+        &author,
+        author_date,
+        &committer,
+        committer_date,
+        &message,
+    )?;
+
+    // If this is an integer reference, store the mapping
+    if let CommitRef::Int(n) = commit_ref {
+        integer_to_hex.insert(*n, object_id);
+    }
+
+    let commit = Commit {
+        id: object_id,
+        parents: parent_ids,
+        tree,
+        author,
+        author_date,
+        committer,
+        committer_date,
+        message,
+    };
+
+    processing_state.insert(commit_ref.clone(), CommitProcessingState::Complete(commit.clone()));
+
+    Ok(commit)
+}
+
+fn parse_parents(
+    mapping: &serde_yaml::Mapping,
+    prev_commit_ref: Option<&CommitRef>,
+) -> Result<Vec<CommitRef>, ParseError> {
+    let parents_key = serde_yaml::Value::String("parents".to_string());
+
+    if let Some(parents_value) = mapping.get(&parents_key) {
+        // Explicit parents specified
+        if parents_value.is_null() {
+            return Ok(Vec::new());
+        }
+
+        let parents_seq = parents_value.as_sequence().ok_or_else(|| ParseError::UnexpectedType {
+            expected: "array",
+            actual: format!("{:?}", parents_value),
+        })?;
+
+        let mut parents = Vec::new();
+        for parent_value in parents_seq {
+            let parent_ref = parse_commit_ref(parent_value)?;
+            parents.push(parent_ref);
+        }
+        Ok(parents)
+    } else {
+        // Default: previous commit in document order, or empty for first commit
+        if let Some(prev_ref) = prev_commit_ref {
+            Ok(vec![prev_ref.clone()])
+        } else {
+            Ok(Vec::new())
+        }
+    }
+}
+
+fn parse_author(
+    mapping: &serde_yaml::Mapping,
+    first_parent: Option<&Commit>,
+) -> Result<Identity, ParseError> {
+    let author_key = serde_yaml::Value::String("author".to_string());
+
+    if let Some(author_value) = mapping.get(&author_key) {
+        let author_str = author_value.as_str().ok_or_else(|| ParseError::UnexpectedType {
+            expected: "string",
+            actual: format!("{:?}", author_value),
+        })?;
+        Identity::parse(author_str)
+    } else {
+        // Default: first parent's author, or "User <user@localhost>"
+        if let Some(parent) = first_parent {
+            Ok(parent.author.clone())
+        } else {
+            Identity::parse("User <user@localhost>").map_err(|_| {
+                ParseError::InvalidIdentity("failed to parse default identity".to_string())
+            })
+        }
+    }
+}
+
+fn parse_author_date(
+    mapping: &serde_yaml::Mapping,
+    parents: &[Commit],
+) -> Result<Timestamp, ParseError> {
+    let key = serde_yaml::Value::String("author-date".to_string());
+
+    if let Some(value) = mapping.get(&key) {
+        let date_str = value.as_str().ok_or_else(|| ParseError::UnexpectedType {
+            expected: "string",
+            actual: format!("{:?}", value),
+        })?;
+        Timestamp::from_iso8601(date_str)
+    } else {
+        // Default: 256 seconds after max parent author-date, or 2021-01-14T08:25:36Z for first commit
+        if parents.is_empty() {
+            Timestamp::from_iso8601("2021-01-14T08:25:36Z")
+        } else {
+            let max_parent = parents
+                .iter()
+                .max_by_key(|p| (p.author_date.seconds, p.author_date.offset_minutes))
+                .unwrap();
+            Ok(Timestamp {
+                seconds: max_parent.author_date.seconds + 256,
+                offset_minutes: max_parent.author_date.offset_minutes,
+            })
+        }
+    }
+}
+
+fn parse_committer(
+    mapping: &serde_yaml::Mapping,
+    author: &Identity,
+) -> Result<Identity, ParseError> {
+    let key = serde_yaml::Value::String("committer".to_string());
+
+    if let Some(value) = mapping.get(&key) {
+        let committer_str = value.as_str().ok_or_else(|| ParseError::UnexpectedType {
+            expected: "string",
+            actual: format!("{:?}", value),
+        })?;
+        Identity::parse(committer_str)
+    } else {
+        // Default: same as author
+        Ok(author.clone())
+    }
+}
+
+fn parse_committer_date(
+    mapping: &serde_yaml::Mapping,
+    author_date: Timestamp,
+    parents: &[Commit],
+) -> Result<Timestamp, ParseError> {
+    let key = serde_yaml::Value::String("commit-date".to_string());
+
+    if let Some(value) = mapping.get(&key) {
+        let date_str = value.as_str().ok_or_else(|| ParseError::UnexpectedType {
+            expected: "string",
+            actual: format!("{:?}", value),
+        })?;
+        Timestamp::from_iso8601(date_str)
+    } else {
+        // Default: 3 seconds after max of author-date and parent commit-dates
+        let mut max_seconds = author_date.seconds;
+        let mut max_offset = author_date.offset_minutes;
+
+        for parent in parents {
+            if parent.committer_date.seconds > max_seconds
+                || (parent.committer_date.seconds == max_seconds
+                    && parent.committer_date.offset_minutes > max_offset)
+            {
+                max_seconds = parent.committer_date.seconds;
+                max_offset = parent.committer_date.offset_minutes;
+            }
+        }
+
+        Ok(Timestamp {
+            seconds: max_seconds + 3,
+            offset_minutes: max_offset,
+        })
+    }
+}
+
+fn parse_message(
+    mapping: &serde_yaml::Mapping,
+    commit_ref: &CommitRef,
+    committer_date: &Timestamp,
+) -> Result<String, ParseError> {
+    let key = serde_yaml::Value::String("message".to_string());
+
+    if let Some(value) = mapping.get(&key) {
+        let message_str = value.as_str().ok_or_else(|| ParseError::UnexpectedType {
+            expected: "string",
+            actual: format!("{:?}", value),
+        })?;
+        Ok(message_str.to_string())
+    } else {
+        // Default: "commit N" for integer refs, "commit at <date>" for hex refs
+        match commit_ref {
+            CommitRef::Int(n) => Ok(format!("commit {}", n)),
+            CommitRef::Hex(_) => Ok(format!("commit at {}", committer_date.to_iso8601())),
+        }
+    }
+}
+
+fn parse_tree(
+    mapping: &serde_yaml::Mapping,
+    first_parent: Option<&Commit>,
+) -> Result<Tree, ParseError> {
+    let key = serde_yaml::Value::String("tree".to_string());
+
+    let base_tree = if let Some(parent) = first_parent {
+        parent.tree.clone()
+    } else {
+        Tree::new()
+    };
+
+    if let Some(value) = mapping.get(&key) {
+        if value.is_null() {
+            // Explicit null means empty tree
+            Ok(Tree::new())
+        } else if let Some(tree_mapping) = value.as_mapping() {
+            if tree_mapping.is_empty() {
+                // Empty mapping means empty tree
+                Ok(Tree::new())
+            } else {
+                // Apply modifications on top of base tree
+                let mut tree = base_tree;
+                apply_tree_delta(&mut tree, "", tree_mapping)?;
+                Ok(tree)
+            }
+        } else {
+            Err(ParseError::UnexpectedType {
+                expected: "mapping or null",
+                actual: format!("{:?}", value),
+            })
+        }
+    } else {
+        // No tree specified, use base tree
+        Ok(base_tree)
+    }
+}
+
+fn apply_tree_delta(
+    tree: &mut Tree,
+    prefix: &str,
+    mapping: &serde_yaml::Mapping,
+) -> Result<(), ParseError> {
+    for (key, value) in mapping.iter() {
+        let name = normalize_yaml_key(key)?;
+
+        // Validate the name component
+        Tree::validate_component(&name)?;
+
+        let path = if prefix.is_empty() {
+            name.clone()
+        } else {
+            format!("{}/{}", prefix, name)
+        };
+
+        if value.is_null() {
+            // Delete
+            tree.remove(&path);
+        } else if let Some(s) = value.as_str() {
+            // Blob content
+            tree.insert(path, s.to_string());
+        } else if let Some(nested_mapping) = value.as_mapping() {
+            if nested_mapping.is_empty() {
+                // Empty mapping means delete
+                tree.remove(&path);
+            } else {
+                // Recursively apply nested modifications
+                apply_tree_delta(tree, &path, nested_mapping)?;
+            }
+        } else if value.is_tagged() {
+            return Err(ParseError::UnexpectedField(
+                "YAML tags are not supported".to_string(),
+            ));
+        } else {
+            return Err(ParseError::UnexpectedType {
+                expected: "string, mapping, or null",
+                actual: format!("{:?}", value),
+            });
+        }
+    }
+
+    Ok(())
+}
+
+fn calculate_tree_id(tree: &Tree) -> Result<ObjectId, ParseError> {
+    use sha1_checked::Sha1;
+
+    // Build tree entries in sorted order
+    let mut entries: Vec<(&str, &str)> = tree.paths().map(|path| {
+        let content = tree.get(path).unwrap();
+        (path, content)
+    }).collect();
+
+    // For a flat tree structure, we need to build the git tree objects hierarchically
+    // This is complex, so for V1 we'll use a simplified approach:
+    // Create a single tree object with all entries
+
+    // Group by directory structure
+    let mut tree_objects: HashMap<String, Vec<(String, ObjectId)>> = HashMap::new();
+
+    // First, hash all blobs
+    let mut blob_ids: HashMap<String, ObjectId> = HashMap::new();
+    for (path, content) in &entries {
+        let blob_data = format!("blob {}\0{}", content.len(), content);
+        let hash = Sha1::hash(blob_data.as_bytes());
+        let oid = ObjectId(hash);
+        blob_ids.insert(path.to_string(), oid);
+    }
+
+    // Build tree objects bottom-up
+    // For simplicity, we'll compute a single root tree hash
+    let mut tree_entries: Vec<(String, String, ObjectId)> = Vec::new();
+
+    for (path, content) in tree.paths().zip(tree.paths().map(|p| tree.get(p).unwrap())) {
+        let blob_id = blob_ids.get(path).unwrap();
+        tree_entries.push((path.to_string(), "100644".to_string(), *blob_id));
+    }
+
+    // Sort by path (git requires this)
+    tree_entries.sort_by(|a, b| a.0.cmp(&b.0));
+
+    // Build tree object content
+    let mut tree_content = Vec::new();
+    for (path, mode, oid) in tree_entries {
+        tree_content.extend_from_slice(format!("{} {}\0", mode, path).as_bytes());
+        tree_content.extend_from_slice(oid.as_bytes());
+    }
+
+    let tree_data = format!("tree {}\0", tree_content.len());
+    let mut full_tree_data = tree_data.as_bytes().to_vec();
+    full_tree_data.extend_from_slice(&tree_content);
+
+    let hash = Sha1::hash(&full_tree_data);
+    Ok(ObjectId(hash))
+}
+
+fn calculate_commit_id(
+    tree_id: &ObjectId,
+    parent_ids: &[ObjectId],
+    author: &Identity,
+    author_date: Timestamp,
+    committer: &Identity,
+    committer_date: Timestamp,
+    message: &str,
+) -> Result<ObjectId, ParseError> {
+    use sha1_checked::Sha1;
+
+    let mut commit_content = String::new();
+    commit_content.push_str(&format!("tree {}\n", tree_id.to_hex()));
+
+    for parent_id in parent_ids {
+        commit_content.push_str(&format!("parent {}\n", parent_id.to_hex()));
+    }
+
+    commit_content.push_str(&format!(
+        "author {} {} {:+05}\n",
+        author.to_string(),
+        author_date.seconds,
+        format_git_offset(author_date.offset_minutes)
+    ));
+
+    commit_content.push_str(&format!(
+        "committer {} {} {:+05}\n",
+        committer.to_string(),
+        committer_date.seconds,
+        format_git_offset(committer_date.offset_minutes)
+    ));
+
+    commit_content.push('\n');
+    commit_content.push_str(message);
+
+    let commit_data = format!("commit {}\0{}", commit_content.len(), commit_content);
+    let hash = Sha1::hash(commit_data.as_bytes());
+    Ok(ObjectId(hash))
+}
+
+fn format_git_offset(offset_minutes: i16) -> String {
+    let sign = if offset_minutes < 0 { '-' } else { '+' };
+    let abs_minutes = offset_minutes.abs();
+    let hours = abs_minutes / 60;
+    let mins = abs_minutes % 60;
+    format!("{}{:02}{:02}", sign, hours, mins)
+}
+
+fn prune_unreachable(repo: &mut Repository) {
+    let mut reachable = std::collections::HashSet::new();
+    let mut to_visit = Vec::new();
+
+    // Start from HEAD
+    match &repo.head {
+        HeadState::Detached(id) => {
+            if repo.commits.contains_key(id) {
+                to_visit.push(*id);
+            }
+        }
+        HeadState::Symbolic(ref_name) => {
+            if let Some(id) = repo.refs.get(ref_name) {
+                if repo.commits.contains_key(id) {
+                    to_visit.push(*id);
+                }
+            }
+        }
+    }
+
+    // Add all refs
+    for (_, id) in repo.refs.iter() {
+        if repo.commits.contains_key(id) {
+            to_visit.push(*id);
+        }
+    }
+
+    // Walk the commit graph
+    while let Some(id) = to_visit.pop() {
+        if reachable.contains(&id) {
+            continue;
+        }
+        reachable.insert(id);
+
+        if let Some(commit) = repo.commits.get(&id) {
+            for parent_id in &commit.parents {
+                if !reachable.contains(parent_id) {
+                    to_visit.push(*parent_id);
+                }
+            }
+        }
+    }
+
+    // Remove unreachable commits
+    repo.commits.retain(|id, _| reachable.contains(id));
+}
+
 pub fn main() {}
