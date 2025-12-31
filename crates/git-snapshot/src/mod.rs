@@ -1380,45 +1380,97 @@ fn apply_tree_delta(
 fn calculate_tree_id(tree: &Tree) -> Result<ObjectId, ParseError> {
     use sha1_checked::Digest;
 
-    // First, hash all blobs
-    let mut blob_ids: HashMap<String, ObjectId> = HashMap::new();
+    if tree.is_empty() {
+        // Empty tree has a specific hash in git
+        // tree 0\0
+        let mut hasher = sha1_checked::Sha1::new();
+        hasher.update(b"tree 0\0");
+        let hash: [u8; 20] = hasher.finalize().into();
+        return Ok(ObjectId(hash));
+    }
+
+    // Build a hierarchical tree structure
+    // Map from directory path -> map of name -> (mode, oid)
+    let mut dir_entries: HashMap<String, BTreeMap<String, (String, ObjectId)>> = HashMap::new();
+
+    // First, hash all blobs and organize by directory
     for path in tree.paths() {
         let content = tree.get(path).unwrap();
+
+        // Hash the blob
         let blob_data = format!("blob {}\0{}", content.len(), content);
         let mut hasher = sha1_checked::Sha1::new();
         hasher.update(blob_data.as_bytes());
         let hash: [u8; 20] = hasher.finalize().into();
-        let oid = ObjectId(hash);
-        blob_ids.insert(path.to_string(), oid);
+        let blob_oid = ObjectId(hash);
+
+        // Split into directory and filename
+        let (dir, name) = if let Some(pos) = path.rfind('/') {
+            (&path[..pos], &path[pos + 1..])
+        } else {
+            ("", path)
+        };
+
+        dir_entries
+            .entry(dir.to_string())
+            .or_insert_with(BTreeMap::new)
+            .insert(name.to_string(), ("100644".to_string(), blob_oid));
     }
 
     // Build tree objects bottom-up
-    // For simplicity, we'll compute a single root tree hash
-    let mut tree_entries: Vec<(String, String, ObjectId)> = Vec::new();
+    // Start from deepest directories and work up
+    let mut tree_oids: HashMap<String, ObjectId> = HashMap::new();
 
-    for path in tree.paths() {
-        let blob_id = blob_ids.get(path).unwrap();
-        tree_entries.push((path.to_string(), "100644".to_string(), *blob_id));
+    // Sort directories by depth (deepest first)
+    let mut dirs: Vec<String> = dir_entries.keys().cloned().collect();
+    dirs.sort_by(|a, b| {
+        let a_depth = if a.is_empty() { 0 } else { a.matches('/').count() + 1 };
+        let b_depth = if b.is_empty() { 0 } else { b.matches('/').count() + 1 };
+        b_depth.cmp(&a_depth) // Reverse order (deepest first)
+    });
+
+    for dir in dirs {
+        let mut entries = dir_entries.get(&dir).cloned().unwrap_or_default();
+
+        // Add subdirectories
+        for (subdir, subdir_oid) in &tree_oids {
+            // Check if subdir is a direct child of dir
+            let expected_prefix = if dir.is_empty() {
+                String::new()
+            } else {
+                format!("{}/", dir)
+            };
+
+            if subdir.starts_with(&expected_prefix) {
+                let remainder = &subdir[expected_prefix.len()..];
+                // Only direct children (no slashes in remainder)
+                if !remainder.contains('/') && !remainder.is_empty() {
+                    entries.insert(remainder.to_string(), ("040000".to_string(), *subdir_oid));
+                }
+            }
+        }
+
+        // Build tree object
+        let mut tree_content = Vec::new();
+        for (name, (mode, oid)) in entries {
+            tree_content.extend_from_slice(format!("{} {}\0", mode, name).as_bytes());
+            tree_content.extend_from_slice(oid.as_bytes());
+        }
+
+        let tree_data = format!("tree {}\0", tree_content.len());
+        let mut full_tree_data = tree_data.as_bytes().to_vec();
+        full_tree_data.extend_from_slice(&tree_content);
+
+        let mut hasher = sha1_checked::Sha1::new();
+        hasher.update(&full_tree_data);
+        let hash: [u8; 20] = hasher.finalize().into();
+        let tree_oid = ObjectId(hash);
+
+        tree_oids.insert(dir, tree_oid);
     }
 
-    // Sort by path (git requires this)
-    tree_entries.sort_by(|a, b| a.0.cmp(&b.0));
-
-    // Build tree object content
-    let mut tree_content = Vec::new();
-    for (path, mode, oid) in tree_entries {
-        tree_content.extend_from_slice(format!("{} {}\0", mode, path).as_bytes());
-        tree_content.extend_from_slice(oid.as_bytes());
-    }
-
-    let tree_data = format!("tree {}\0", tree_content.len());
-    let mut full_tree_data = tree_data.as_bytes().to_vec();
-    full_tree_data.extend_from_slice(&tree_content);
-
-    let mut hasher = sha1_checked::Sha1::new();
-    hasher.update(&full_tree_data);
-    let hash: [u8; 20] = hasher.finalize().into();
-    Ok(ObjectId(hash))
+    // Return the root tree OID
+    Ok(*tree_oids.get("").unwrap())
 }
 
 fn calculate_commit_id(
