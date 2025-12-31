@@ -74,7 +74,7 @@ impl ObjectId {
     }
 
     /// Convert to 40-character lowercase hex string
-    pub fn to_hex(&self) -> String {
+    pub fn to_hex(self) -> String {
         self.0
             .iter()
             .map(|byte| format!("{:02x}", byte))
@@ -114,7 +114,7 @@ impl Timestamp {
         let s = s.trim();
 
         // Split into date and time parts (accepting various delimiters)
-        let parts: Vec<&str> = s.split(|c| c == 'T' || c == 't' || c == ' ').collect();
+        let parts: Vec<&str> = s.split(['T', 't', ' ']).collect();
 
         if parts.is_empty() {
             return Err(ParseError::InvalidTimestamp("empty string".to_string()));
@@ -122,7 +122,7 @@ impl Timestamp {
 
         // Parse date part (YYYY-MM-DD or YYYY-MM or YYYY)
         let date_part = parts[0];
-        let date_components: Vec<&str> = date_part.split(|c| c == '-' || c == '/').collect();
+        let date_components: Vec<&str> = date_part.split(['-', '/']).collect();
 
         if date_components.is_empty() {
             return Err(ParseError::InvalidTimestamp("missing year".to_string()));
@@ -155,7 +155,7 @@ impl Timestamp {
             // Extract timezone offset first (can be Z, +HH:MM, -HH:MM, +HHMM, -HHMM, +HH, -HH)
             let (time_part, offset) = if time_part.ends_with('Z') || time_part.ends_with('z') {
                 (&time_part[..time_part.len() - 1], 0i16)
-            } else if let Some(pos) = time_part.rfind(|c| c == '+' || c == '-') {
+            } else if let Some(pos) = time_part.rfind(['+', '-']) {
                 let offset_str = &time_part[pos..];
                 let sign = if offset_str.starts_with('-') { -1 } else { 1 };
                 let offset_digits = &offset_str[1..];
@@ -292,7 +292,7 @@ impl Timestamp {
     }
 
     /// Format as ISO 8601 string
-    pub fn to_iso8601(&self) -> String {
+    pub fn to_iso8601(self) -> String {
         // Convert Unix timestamp to date/time components
         let total_days = self.seconds / 86400;
         let remaining_seconds = self.seconds % 86400;
@@ -428,7 +428,7 @@ impl Identity {
     }
 
     /// Format as git string: "Name <email@example.com>"
-    pub fn to_string(&self) -> String {
+    pub fn format(&self) -> String {
         format!("{} <{}>", self.name, self.email)
     }
 }
@@ -462,7 +462,7 @@ impl Tree {
     /// Set the content of a blob at the given path
     pub fn insert(&mut self, path: String, content: String) {
         // Validate path components
-        if let Err(_) = Self::validate_path(&path) {
+        if Self::validate_path(&path).is_err() {
             // For now, just insert anyway. Validation should be done before calling.
             // In a full implementation, we might want to return Result here.
         }
@@ -745,13 +745,13 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
 
     // Parse HEAD
     let head_value = mapping
-        .get(&serde_yaml::Value::String("HEAD".to_string()))
+        .get(serde_yaml::Value::String("HEAD".to_string()))
         .ok_or(ParseError::MissingField("HEAD"))?;
 
     let head = parse_head(head_value)?;
 
     // Parse refs
-    let refs_value = mapping.get(&serde_yaml::Value::String("refs".to_string()));
+    let refs_value = mapping.get(serde_yaml::Value::String("refs".to_string()));
     let refs = if let Some(refs_value) = refs_value {
         parse_refs(refs_value)?
     } else {
@@ -847,7 +847,7 @@ enum CommitRef {
 #[derive(Debug, Clone)]
 enum CommitProcessingState {
     InProgress,
-    Complete(Commit),
+    Complete(Box<Commit>),
 }
 
 fn parse_head(value: &serde_yaml::Value) -> Result<HeadStateOrRef, ParseError> {
@@ -861,10 +861,10 @@ fn parse_head(value: &serde_yaml::Value) -> Result<HeadStateOrRef, ParseError> {
                 let oid = ObjectId::from_hex(s)?;
                 Ok(HeadStateOrRef::Detached(CommitRef::Hex(oid)))
             } else {
-                return Err(ParseError::UnexpectedType {
+                Err(ParseError::UnexpectedType {
                     expected: "ref name or commit ID",
                     actual: s.to_string(),
-                });
+                })
             }
         }
     } else if let Some(n) = value.as_u64() {
@@ -1032,7 +1032,7 @@ fn build_commit(
 
     // Check if already processed
     if let Some(CommitProcessingState::Complete(commit)) = processing_state.get(commit_ref) {
-        return Ok(commit.clone());
+        return Ok((**commit).clone());
     }
 
     processing_state.insert(commit_ref.clone(), CommitProcessingState::InProgress);
@@ -1127,7 +1127,7 @@ fn build_commit(
         message,
     };
 
-    processing_state.insert(commit_ref.clone(), CommitProcessingState::Complete(commit.clone()));
+    processing_state.insert(commit_ref.clone(), CommitProcessingState::Complete(Box::new(commit.clone())));
 
     Ok(commit)
 }
@@ -1413,7 +1413,7 @@ fn calculate_tree_id(tree: &Tree) -> Result<ObjectId, ParseError> {
 
         dir_entries
             .entry(dir.to_string())
-            .or_insert_with(BTreeMap::new)
+            .or_default()
             .insert(name.to_string(), ("100644".to_string(), blob_oid));
     }
 
@@ -1493,14 +1493,14 @@ fn calculate_commit_id(
 
     commit_content.push_str(&format!(
         "author {} {} {:+05}\n",
-        author.to_string(),
+        author.format(),
         author_date.seconds,
         format_git_offset(author_date.offset_minutes)
     ));
 
     commit_content.push_str(&format!(
         "committer {} {} {:+05}\n",
-        committer.to_string(),
+        committer.format(),
         committer_date.seconds,
         format_git_offset(committer_date.offset_minutes)
     ));
@@ -1535,10 +1535,10 @@ fn prune_unreachable(repo: &mut Repository) {
             }
         }
         HeadState::Symbolic(ref_name) => {
-            if let Some(id) = repo.refs.get(ref_name) {
-                if repo.commits.contains_key(id) {
-                    to_visit.push(*id);
-                }
+            if let Some(id) = repo.refs.get(ref_name)
+                && repo.commits.contains_key(id)
+            {
+                to_visit.push(*id);
             }
         }
     }
@@ -1768,11 +1768,11 @@ fn serialize_commit(
             // Find the integer ID for this commit
             let mut int_id = 0u32;
             for (oid, ref_val) in commit_refs.iter() {
-                if *oid == commit.id {
-                    if let serde_yaml::Value::Number(n) = ref_val {
-                        int_id = n.as_u64().unwrap_or(0) as u32;
-                        break;
-                    }
+                if *oid == commit.id
+                    && let serde_yaml::Value::Number(n) = ref_val
+                {
+                    int_id = n.as_u64().unwrap_or(0) as u32;
+                    break;
                 }
             }
             if int_id > 0 {
@@ -1803,7 +1803,7 @@ fn serialize_commit(
     if commit.author != default_author {
         mapping.insert(
             serde_yaml::Value::String("author".to_string()),
-            serde_yaml::Value::String(commit.author.to_string()),
+            serde_yaml::Value::String(commit.author.format()),
         );
     }
 
@@ -1831,7 +1831,7 @@ fn serialize_commit(
     if commit.committer != commit.author {
         mapping.insert(
             serde_yaml::Value::String("committer".to_string()),
-            serde_yaml::Value::String(commit.committer.to_string()),
+            serde_yaml::Value::String(commit.committer.format()),
         );
     }
 
@@ -1988,10 +1988,10 @@ fn topological_sort_with_tiebreak(repo: &Repository) -> Vec<ObjectId> {
             }
         }
         HeadState::Symbolic(ref_name) => {
-            if let Some(id) = repo.get_ref(ref_name) {
-                if repo.get_commit(id).is_some() {
-                    head_commits.push(*id);
-                }
+            if let Some(id) = repo.get_ref(ref_name)
+                && repo.get_commit(id).is_some()
+            {
+                head_commits.push(*id);
             }
         }
     }
@@ -2069,10 +2069,10 @@ fn walk_ancestors_for_tiebreak(
     tiebreak_keys: &mut HashMap<ObjectId, Vec<TiebreakComponent>>,
 ) {
     // Record parent index if provided
-    if let Some(idx) = parent_index {
-        if let Some(key) = tiebreak_keys.get_mut(&commit_id) {
-            key.push(TiebreakComponent::ParentIndex(idx));
-        }
+    if let Some(idx) = parent_index
+        && let Some(key) = tiebreak_keys.get_mut(&commit_id)
+    {
+        key.push(TiebreakComponent::ParentIndex(idx));
     }
 
     // If already visited, don't recurse further
@@ -2520,14 +2520,14 @@ mod tests {
             name: "Jane Smith".to_string(),
             email: "jane@test.org".to_string(),
         };
-        assert_eq!(id.to_string(), "Jane Smith <jane@test.org>");
+        assert_eq!(id.format(), "Jane Smith <jane@test.org>");
     }
 
     #[test]
     fn test_identity_roundtrip() {
         let original = "Alice Wonder <alice@wonderland.com>";
         let id = Identity::parse(original).unwrap();
-        assert_eq!(id.to_string(), original);
+        assert_eq!(id.format(), original);
     }
 
     // ============================================================================
