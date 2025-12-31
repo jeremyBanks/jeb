@@ -25,6 +25,8 @@ filename, which must be a string.
 These special keys allow referencing content from other commits or paths,
 enabling deduplication and expressing renames without repeating content.
 
+When serializing, special keys sort before string keys in the mapping output.
+
 ### Syntax
 
 ```yaml
@@ -70,9 +72,11 @@ new tree) and source paths (where we're reading from in the referenced commit).
 
 3. **When `[path]` is explicitly specified**:
    - If the path is `.`, or starts with `./` or `../`, it is resolved relative
-     to this entry's default effective path.
+     to the source path that would be computed by inheritance (i.e., parent's
+     effective source path plus this entry's name).
    - Otherwise (e.g., `src/bin`), it is resolved relative to the repository
      root.
+   - Resolving `..` past the repository root is an error.
 
 **Example of path inheritance:**
 
@@ -126,9 +130,14 @@ modifications.
 
 ### Blob References
 
-When a reference (mapping with only special keys) resolves to a blob, it is an
-error if the mapping contains any keys other than `[commit]` and `[path]`. You
-cannot add entries to a blob.
+In IDEA.md, blobs are always represented as strings (their content). IDEA-1.1
+extends this: a blob can also be represented as a mapping containing only
+`[commit]` and/or `[path]` keys, which references a blob from another location.
+The "physical" blob (where content actually appears in the document) is always a
+string; blob references are always mappings with only special keys.
+
+When a reference resolves to a blob, it is an error if the mapping contains any
+keys other than `[commit]` and `[path]`. You cannot add entries to a blob.
 
 ```yaml
 # Valid: reference to a blob
@@ -142,6 +151,10 @@ new-name.rs:
   [path]: old-name.rs
   something: "content" # ERROR if old-name.rs is a blob
 ```
+
+Invalid states (such as string keys on a mapping that resolves to a blob) are
+errors. This document specifies what is valid; implementations should validate
+inputs appropriately.
 
 ### Type Flexibility
 
@@ -256,8 +269,8 @@ The primary test pattern is:
 
 After comparing against the expected output, also verify round-trip stability:
 deserialize the output, serialize again, and assert the result is identical to
-the first serialization. This confirms the serialized form is canonical and
-stable.
+the first serialization. This confirms the serializer produces stable,
+deterministic output.
 
 ### Auto-Generation of Expected Output
 
