@@ -6,6 +6,9 @@ serialization behavior.
 
 ## Hash Length in Serialized Output
 
+Object IDs are computed using the Checked SHA-1 algorithm, matching git's
+behavior.
+
 When serializing commit references as hex strings (as opposed to integer IDs),
 we use truncated hashes for non-head commits. The truncation length is computed
 as: the minimum number of hex digits required to avoid ambiguity among all
@@ -56,8 +59,15 @@ tree or reference. Its value is a commit reference (integer or hex string).
 given level, it inherits from the parent mapping. At the root `tree` level, if
 not specified, it defaults to the first parent commit. If there is no first
 parent (i.e., this is a root commit), `[commit]` defaults to null, meaning there
-is no base tree to inherit from. Explicitly setting `[commit]` to null has the
-same effect.
+is no base tree to inherit from (equivalent to the empty tree). Explicitly
+setting `[commit]` to null has the same effect.
+
+If `[commit]` is null (whether explicitly or by default for a root commit), then
+specifying `[path]` is an error—there is no tree to reference a path within.
+
+Changing `[commit]` at a nested level does not reset the effective source path.
+The `[path]` inheritance continues from wherever it was; only the commit being
+referenced changes.
 
 ### Semantics of `[path]`
 
@@ -73,7 +83,8 @@ new tree) and source paths (where we're reading from in the referenced commit).
 
 1. **At the root `tree` level**: If `[path]` is not specified, it defaults to
    `.` (the root of the commit's tree). This means source path = target path by
-   default.
+   default. A null or absent value is equivalent to the empty string `""`, which
+   is equivalent to `.` for paths.
 
 2. **At nested levels without explicit `[path]`**: The effective source path is
    the parent's effective source path plus this entry's name. This extends the
@@ -302,3 +313,5 @@ If an expected output file does not exist, the test should:
 4. Mark the test as failed at the end
 
 This allows multiple missing output files to be generated in a single test run.
+If we need to intentionally re-generate an existing snapshot, we can just delete
+one (or all) of them and run the tests again.
