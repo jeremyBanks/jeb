@@ -1,0 +1,39 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 7
+1:
+  tree:
+    file.txt: version A
+2:
+  tree:
+    file.txt: version B (from main)
+3:
+  parents:
+  - 1
+  tree:
+    file.txt: version C (from feature)
+4:
+  message: Merge with conflict resolution AND extra changes
+  parents:
+  - 2
+  - 3
+  tree:
+    MERGE-NOTES.txt: This merge also fixed a critical bug
+    file.txt: version D (merged + fixed bug)
+5:
+  tree:
+    another-file.txt: normal work
+6:
+  message: commit 20
+  parents: []
+  tree:
+    data.json: '{"source": "orphan"}'
+7:
+  message: Merge unrelated history
+  parents:
+  - 5
+  - 6
+  tree:
+    INTEGRATION.md: How we integrated the orphan history
+    orphan-data.json: '{"source": "orphan"}'

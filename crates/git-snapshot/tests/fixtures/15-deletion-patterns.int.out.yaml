@@ -1,0 +1,32 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 6
+1:
+  tree:
+    delete-soon.txt: will be deleted
+    dir:
+      file-a.txt: a
+      file-b.txt: b
+      file-c.txt: c
+    keep.txt: kept
+2:
+  tree:
+    delete-soon.txt: null
+3:
+  tree:
+    dir:
+      file-b.txt: null
+4:
+  tree:
+    delete-soon.txt: will be deleted
+5:
+  tree:
+    dir:
+      file-a.txt: null
+      file-c.txt: null
+6:
+  tree:
+    dir:
+      file-a.txt: a
+      new-file.txt: new

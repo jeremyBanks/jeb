@@ -1,0 +1,98 @@
+HEAD: refs/heads/full-tree
+refs:
+  heads:
+    core-subtree: 10
+    full-tree: 11
+    lib-subtree: 8
+1:
+  tree:
+    README.md: '# Project'
+    src:
+      lib:
+        api.rs: fn api() {}
+        core:
+          engine.rs: fn engine() {}
+          types.rs: struct Type;
+      main.rs: fn main() {}
+2:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: zoom-in seed for core
+  parents: []
+  tree: {}
+3:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: zoom-in seed for src/lib
+  parents: []
+  tree: {}
+4:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'src/lib'
+
+    git-zoom-in: src/lib
+  parents:
+  - 3
+  - 1
+  tree:
+    api.rs: fn api() {}
+    core:
+      engine.rs: fn engine() {}
+      types.rs: struct Type;
+5:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'core'
+
+    git-zoom-in: core
+  parents:
+  - 2
+  - 4
+  tree:
+    engine.rs: fn engine() {}
+    types.rs: struct Type;
+6:
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'core'
+
+    git-zoom-out: core
+  parents:
+  - 4
+  - 5
+7:
+  tree:
+    tests.rs: fn test_lib() {}
+8:
+  tree:
+    api.rs: fn api() { /* updated */ }
+9:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'core'
+
+    git-zoom-in: core
+  parents:
+  - 5
+  - 8
+  tree:
+    engine.rs: null
+    types.rs: null
+10:
+  tree:
+    engine.rs: fn engine() { /* v3 */ }
+11:
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'src/lib/core'
+
+    git-zoom-out: src/lib/core
+  parents:
+  - 1
+  - 10
+  tree:
+    src:
+      lib:
+        api.rs: fn api() { /* updated */ }
+        core:
+          engine.rs: fn engine() { /* v3 */ }
+        tests.rs: fn test_lib() {}

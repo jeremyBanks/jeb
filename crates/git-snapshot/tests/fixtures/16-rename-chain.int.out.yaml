@@ -1,0 +1,27 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 7
+1:
+  tree:
+    original-name.txt: content that moves around
+    static.txt: never moves
+2:
+  tree:
+    renamed-once.txt: content that moves around
+3:
+  tree:
+    renamed-twice.txt: content that moves around
+4:
+  tree:
+    renamed-thrice.txt: content that moves around
+5:
+  tree:
+    final-name.txt: content that moves around
+6:
+  tree:
+    archive:
+      final-name.txt: content that moves around
+7:
+  tree:
+    restored.txt: content that moves around

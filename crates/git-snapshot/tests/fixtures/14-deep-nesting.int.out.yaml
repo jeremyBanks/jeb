@@ -1,0 +1,36 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 4
+1:
+  tree:
+    a:
+      b:
+        c:
+          d:
+            e:
+              f:
+                deep.txt: very deep file
+2:
+  tree:
+    x:
+      y:
+        z:
+          moved-deep.txt: very deep file
+3:
+  tree:
+    a:
+      b:
+        c:
+          d:
+            e:
+              f:
+                g:
+                  h:
+                    i:
+                      very-deep.txt: very deep file
+4:
+  tree:
+    flat-1.txt: very deep file
+    flat-2.txt: very deep file
+    flat-3.txt: very deep file
