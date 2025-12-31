@@ -2351,11 +2351,34 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
     // Sort commits in topological order with tiebreaking
     let ordered_commits = topological_sort_with_tiebreak(repo);
 
+    // Collect head commits (commits directly referenced by HEAD or refs)
+    let mut head_commits = std::collections::HashSet::new();
+    match &repo.head {
+        HeadState::Detached(oid) => {
+            head_commits.insert(*oid);
+        }
+        HeadState::Symbolic(_) => {}
+    }
+    for (_, target_id) in repo.refs() {
+        head_commits.insert(*target_id);
+    }
+
+    // Initialize serialization context for deduplication
+    let mut ctx = SerializationContext::new(repo, ordered_commits.clone(), head_commits.clone());
+
     // Build mapping from ObjectId to commit reference (hex or integer)
     let mut commit_refs: HashMap<ObjectId, serde_yaml::Value> = HashMap::new();
     for (idx, commit_id) in ordered_commits.iter().enumerate() {
         let ref_value = match id_style {
-            CommitIdStyle::Hex => serde_yaml::Value::String(commit_id.to_hex()),
+            CommitIdStyle::Hex => {
+                // Use full hash for head commits, truncated for others
+                let hash_str = if ctx.head_commits.contains(commit_id) {
+                    commit_id.to_hex()
+                } else {
+                    commit_id.to_hex_truncated(ctx.truncated_len)
+                };
+                serde_yaml::Value::String(hash_str)
+            }
             CommitIdStyle::Integer => serde_yaml::Value::Number((idx + 1).into()),
         };
         commit_refs.insert(*commit_id, ref_value);
@@ -2392,7 +2415,7 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
         serde_yaml::Value::Mapping(refs_map),
     );
 
-    // Serialize commits
+    // Serialize commits with deduplication
     for (idx, commit_id) in ordered_commits.iter().enumerate() {
         let commit = repo.get_commit(commit_id).expect("commit should exist");
         let prev_commit = if idx > 0 {
@@ -2400,6 +2423,8 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
         } else {
             None
         };
+
+        ctx.current_commit = *commit_id;
 
         let commit_key = commit_refs.get(commit_id).cloned().unwrap();
         let commit_value = serialize_commit(commit, prev_commit, &commit_refs, id_style, repo);
