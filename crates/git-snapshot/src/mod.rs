@@ -2591,7 +2591,7 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
         ctx.current_commit = *commit_id;
 
         let commit_key = commit_refs.get(commit_id).cloned().unwrap();
-        let commit_value = serialize_commit(commit, prev_commit, &commit_refs, id_style, repo);
+        let commit_value = serialize_commit(commit, prev_commit, &commit_refs, id_style, repo, &ctx);
 
         root.insert(commit_key, commit_value);
     }
@@ -2714,6 +2714,7 @@ fn serialize_commit(
     commit_refs: &HashMap<ObjectId, serde_yaml::Value>,
     id_style: CommitIdStyle,
     repo: &Repository,
+    ctx: &SerializationContext,
 ) -> serde_yaml::Value {
     let mut mapping = serde_yaml::Mapping::new();
 
@@ -2849,7 +2850,7 @@ fn serialize_commit(
 
     // Serialize tree (compute delta from first parent)
     let first_parent_tree = first_parent.map(|p| &p.tree);
-    let tree_delta = compute_tree_delta(&commit.tree, first_parent_tree);
+    let tree_delta = compute_tree_delta(&commit.tree, first_parent_tree, ctx, commit_refs);
 
     // Only include tree if it's non-empty or if this is the root commit with an
     // empty tree
@@ -2872,7 +2873,12 @@ fn serialize_commit(
 }
 
 /// Compute tree delta between current tree and base tree
-fn compute_tree_delta(tree: &Tree, base_tree: Option<&Tree>) -> serde_yaml::Value {
+fn compute_tree_delta(
+    tree: &Tree,
+    base_tree: Option<&Tree>,
+    ctx: &SerializationContext,
+    commit_refs: &HashMap<ObjectId, serde_yaml::Value>,
+) -> serde_yaml::Value {
     let base_tree = match base_tree {
         Some(t) => t,
         None => {
@@ -2880,7 +2886,7 @@ fn compute_tree_delta(tree: &Tree, base_tree: Option<&Tree>) -> serde_yaml::Valu
             if tree.is_empty() {
                 return serde_yaml::Value::Mapping(serde_yaml::Mapping::new());
             }
-            return serialize_tree_full(tree);
+            return serialize_tree_full(tree, ctx, commit_refs);
         }
     };
 
@@ -2903,7 +2909,7 @@ fn compute_tree_delta(tree: &Tree, base_tree: Option<&Tree>) -> serde_yaml::Valu
         if current_content != base_content {
             // Path has changed
             let path_parts: Vec<&str> = path.split('/').collect();
-            insert_tree_change(&mut delta, &path_parts, current_content);
+            insert_tree_change(&mut delta, &path_parts, current_content, path, ctx, commit_refs);
         }
     }
 
@@ -2911,13 +2917,17 @@ fn compute_tree_delta(tree: &Tree, base_tree: Option<&Tree>) -> serde_yaml::Valu
 }
 
 /// Serialize a full tree (no delta)
-fn serialize_tree_full(tree: &Tree) -> serde_yaml::Value {
+fn serialize_tree_full(
+    tree: &Tree,
+    ctx: &SerializationContext,
+    commit_refs: &HashMap<ObjectId, serde_yaml::Value>,
+) -> serde_yaml::Value {
     let mut root = serde_yaml::Mapping::new();
 
     for path in tree.paths() {
         let content = tree.get(path).expect("path should exist");
         let path_parts: Vec<&str> = path.split('/').collect();
-        insert_tree_change(&mut root, &path_parts, Some(content));
+        insert_tree_change(&mut root, &path_parts, Some(content), path, ctx, commit_refs);
     }
 
     serde_yaml::Value::Mapping(root)
@@ -2928,16 +2938,23 @@ fn insert_tree_change(
     mapping: &mut serde_yaml::Mapping,
     path_parts: &[&str],
     content: Option<&str>,
+    full_path: &str,
+    ctx: &SerializationContext,
+    commit_refs: &HashMap<ObjectId, serde_yaml::Value>,
 ) {
     if path_parts.is_empty() {
         return;
     }
 
     if path_parts.len() == 1 {
-        // Leaf node
+        // Leaf node - check if we should use a reference
         let key = serde_yaml::Value::String(path_parts[0].to_string());
         let value = match content {
-            Some(s) => serde_yaml::Value::String(s.to_string()),
+            Some(s) => {
+                // TODO: Implement deduplication by checking blob_locations
+                // For now, just output inline content
+                serde_yaml::Value::String(s.to_string())
+            }
             None => serde_yaml::Value::Null, // Deletion
         };
         mapping.insert(key, value);
@@ -2949,7 +2966,7 @@ fn insert_tree_change(
             .or_insert_with(|| serde_yaml::Value::Mapping(serde_yaml::Mapping::new()));
 
         if let serde_yaml::Value::Mapping(nested_map) = nested {
-            insert_tree_change(nested_map, &path_parts[1..], content);
+            insert_tree_change(nested_map, &path_parts[1..], content, full_path, ctx, commit_refs);
         }
     }
 }
