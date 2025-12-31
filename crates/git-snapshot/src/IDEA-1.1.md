@@ -53,14 +53,57 @@ not specified, it defaults to the first parent commit.
 The `[path]` key specifies which path within the `[commit]`'s tree to use as the
 source. Its value is a path string.
 
-If `[path]` is not specified, it defaults to the target path being written to
-(equivalent to `.`).
+Like `[commit]`, `[path]` is inherited through nested tree structures, but in a
+relative way: each level appends its entry name to the parent's effective source
+path. This creates a mapping between target paths (where we're writing in the
+new tree) and source paths (where we're reading from in the referenced commit).
 
-Path resolution:
+**Computing the effective source path:**
 
-- If the path is `.`, or starts with `./` or `../`, it is resolved relative to
-  the target path currently being written.
-- Otherwise (e.g., `src/bin`), it is resolved relative to the repository root.
+1. **At the root `tree` level**: If `[path]` is not specified, it defaults to
+   `.` (the root of the commit's tree). This means source path = target path by
+   default.
+
+2. **At nested levels without explicit `[path]`**: The effective source path is
+   the parent's effective source path plus this entry's name. This extends the
+   mapping naturally through the tree.
+
+3. **When `[path]` is explicitly specified**:
+   - If the path is `.`, or starts with `./` or `../`, it is resolved relative
+     to this entry's target path.
+   - Otherwise (e.g., `src/bin`), it is resolved relative to the repository
+     root.
+
+**Example of path inheritance:**
+
+```yaml
+tree:
+  strange-name:
+    [path]: foo/src           # target: strange-name → source: foo/src
+    bins:                     # target: strange-name/bins → source: foo/src/bins
+      main.rs: "use foo..."
+      test:                   # target: strange-name/bins/test → source: foo/src/bins/test
+        main.test.rs: "..."   # target: strange-name/bins/test/main.test.rs
+                              #      → source: foo/src/bins/test/main.test.rs
+```
+
+Here, setting `[path]: foo/src` on `strange-name` remaps that subtree. All
+descendants inherit the remapped source path, so `strange-name/bins/test`
+sources from `foo/src/bins/test` in the referenced commit.
+
+**Default behavior matches IDEA.md:**
+
+When no special keys are used, the implicit defaults are:
+
+```yaml
+tree:
+  [commit]: <first-parent>
+  [path]: .
+```
+
+This means "inherit the entire tree from the first parent commit, with source
+paths equal to target paths." Any string keys then represent modifications on
+top of that base, exactly as described in IDEA.md.
 
 ### References vs. Tree Definitions
 
