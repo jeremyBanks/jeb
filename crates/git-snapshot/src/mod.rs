@@ -2142,6 +2142,95 @@ mod tests {
     }
 
     #[test]
+    fn test_serialize_with_deletion() {
+        // Create a repository with two commits, second one deletes a file
+        let mut repo = Repository::new();
+
+        let author = Identity::parse("User <user@localhost>").unwrap();
+        let author_date = Timestamp::from_iso8601("2021-01-14T08:25:36Z").unwrap();
+
+        // First commit
+        let tree1 = {
+            let mut t = Tree::new();
+            t.insert("README.md".to_string(), "# Hello".to_string());
+            t.insert("file.txt".to_string(), "content".to_string());
+            t
+        };
+
+        let tree_id1 = calculate_tree_id(&tree1).unwrap();
+        let commit_id1 = calculate_commit_id(
+            &tree_id1,
+            &[],
+            &author,
+            author_date,
+            &author,
+            Timestamp { seconds: author_date.seconds + 3, offset_minutes: author_date.offset_minutes },
+            "commit 1",
+        )
+        .unwrap();
+
+        let commit1 = Commit {
+            id: commit_id1,
+            parents: vec![],
+            tree: tree1,
+            author: author.clone(),
+            author_date,
+            committer: author.clone(),
+            committer_date: Timestamp { seconds: author_date.seconds + 3, offset_minutes: author_date.offset_minutes },
+            message: "commit 1".to_string(),
+        };
+
+        // Second commit (delete file.txt)
+        let tree2 = {
+            let mut t = Tree::new();
+            t.insert("README.md".to_string(), "# Hello".to_string());
+            t
+        };
+
+        let tree_id2 = calculate_tree_id(&tree2).unwrap();
+        let author_date2 = Timestamp { seconds: author_date.seconds + 256, offset_minutes: author_date.offset_minutes };
+        let commit_id2 = calculate_commit_id(
+            &tree_id2,
+            &[commit_id1],
+            &author,
+            author_date2,
+            &author,
+            Timestamp { seconds: author_date2.seconds + 3, offset_minutes: author_date2.offset_minutes },
+            "commit 2",
+        )
+        .unwrap();
+
+        let commit2 = Commit {
+            id: commit_id2,
+            parents: vec![commit_id1],
+            tree: tree2,
+            author: author.clone(),
+            author_date: author_date2,
+            committer: author.clone(),
+            committer_date: Timestamp { seconds: author_date2.seconds + 3, offset_minutes: author_date2.offset_minutes },
+            message: "commit 2".to_string(),
+        };
+
+        repo.insert_commit(commit1);
+        repo.insert_commit(commit2);
+        repo.insert_ref(
+            RefName::new("refs/heads/main".to_string()).unwrap(),
+            commit_id2,
+        );
+        repo.set_head(HeadState::Symbolic(
+            RefName::new("refs/heads/main".to_string()).unwrap(),
+        ));
+
+        // Serialize with integer IDs
+        let yaml = serialize(&repo, CommitIdStyle::Integer);
+        println!("Serialized YAML with deletion:\n{}", yaml);
+
+        // Parse it back
+        let repo2 = parse(&yaml).expect("should parse");
+        assert_eq!(repo2.commits().count(), 2);
+    }
+
+    #[test]
     fn test_serialize_roundtrip_hex() {
         // Create a simple repository
         let mut repo = Repository::new();
