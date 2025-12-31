@@ -1130,6 +1130,8 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
             None
         };
 
+        eprintln!("DEBUG: Building commit {:?} (idx={}, prev={:?})", commit_ref, idx, prev_commit_ref);
+
         let commit = build_commit(
             commit_ref,
             &commit_defs,
@@ -1140,13 +1142,20 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
             &mut commit_processing_state,
         )?;
 
+        eprintln!("DEBUG: Built commit {} with {} parents", commit.id.to_hex(), commit.parents.len());
+        for (i, p) in commit.parents.iter().enumerate() {
+            eprintln!("DEBUG:   Parent {}: {}", i, p.to_hex());
+        }
+
         commits.insert(commit.id, commit);
     }
 
     // Convert refs to use resolved ObjectIds
     let mut resolved_refs = BTreeMap::new();
     for (ref_name, commit_ref) in refs {
+        eprintln!("DEBUG: Resolving ref {} -> {:?}", ref_name.as_str(), commit_ref);
         let object_id = resolve_commit_ref(&commit_ref, &integer_to_hex, &commits)?;
+        eprintln!("DEBUG: Resolved to {}", object_id.to_hex());
         resolved_refs.insert(ref_name, object_id);
     }
 
@@ -1510,23 +1519,58 @@ fn build_commit(
     // Parse tree (with default)
     let tree = parse_tree(commit_mapping, first_parent, processing_state)?;
 
-    // Calculate object ID
-    let parent_ids: Vec<ObjectId> = resolved_parents.iter().map(|c| c.id).collect();
-    let tree_id = calculate_tree_id(&tree)?;
-    let object_id = calculate_commit_id(
-        &tree_id,
-        &parent_ids,
-        &author,
-        author_date,
-        &committer,
-        committer_date,
-        &message,
-    )?;
+    // Determine object ID: use the key for hex/prefix refs, calculate for integer refs
+    let object_id = match commit_ref {
+        CommitRef::Hex(oid) => *oid,
+        CommitRef::Prefix(prefix) => {
+            // For truncated hashes, we calculate the full hash from content
+            // The prefix in the YAML is just a label for human readability
+            let parent_ids: Vec<ObjectId> = resolved_parents.iter().map(|c| c.id).collect();
+            let tree_id = calculate_tree_id(&tree)?;
+            let calculated_id = calculate_commit_id(
+                &tree_id,
+                &parent_ids,
+                &author,
+                author_date,
+                &committer,
+                committer_date,
+                &message,
+            )?;
 
-    // If this is an integer reference, store the mapping
-    if let CommitRef::Int(n) = commit_ref {
-        integer_to_hex.insert(*n, object_id);
-    }
+            // Optionally verify the prefix matches (for debugging)
+            // But don't fail if it doesn't - YAML keys are just labels
+            let calculated_hex = calculated_id.to_hex();
+            if !calculated_hex.starts_with(prefix) {
+                eprintln!("WARNING: commit content hash {} doesn't start with declared prefix {}",
+                    calculated_hex, prefix);
+            }
+
+            calculated_id
+        }
+        CommitRef::Int(_) => {
+            // Calculate ID for integer references
+            let parent_ids: Vec<ObjectId> = resolved_parents.iter().map(|c| c.id).collect();
+            let tree_id = calculate_tree_id(&tree)?;
+            let calculated_id = calculate_commit_id(
+                &tree_id,
+                &parent_ids,
+                &author,
+                author_date,
+                &committer,
+                committer_date,
+                &message,
+            )?;
+
+            // Store the mapping for integer references
+            if let CommitRef::Int(n) = commit_ref {
+                integer_to_hex.insert(*n, calculated_id);
+            }
+
+            calculated_id
+        }
+    };
+
+    let parent_ids: Vec<ObjectId> = resolved_parents.iter().map(|c| c.id).collect();
 
     let commit = Commit {
         id: object_id,
@@ -2509,11 +2553,50 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
         root.insert(commit_key, commit_value);
     }
 
-    // Sort all mappings lexicographically
-    let sorted_root = sort_mapping_recursive(serde_yaml::Value::Mapping(root));
+    // Sort the root mapping, but preserve commit order
+    let sorted_root = sort_root_mapping(root, &ordered_commits, &commit_refs);
 
     // Convert to YAML string
     serde_yaml::to_string(&sorted_root).expect("serialization should succeed")
+}
+
+/// Sort the root mapping while preserving commit order
+/// Commits should appear in topological order (document order), not lexicographic order
+fn sort_root_mapping(
+    root: serde_yaml::Mapping,
+    ordered_commits: &[ObjectId],
+    commit_refs: &HashMap<ObjectId, serde_yaml::Value>,
+) -> serde_yaml::Value {
+    let mut sorted = serde_yaml::Mapping::new();
+
+    // First, insert non-commit keys in sorted order (HEAD, refs, etc.)
+    let mut non_commit_keys: Vec<serde_yaml::Value> = root
+        .keys()
+        .filter(|k| !commit_refs.values().any(|v| v == *k))
+        .cloned()
+        .collect();
+    non_commit_keys.sort_by(|a, b| {
+        let a_str = value_to_sort_key(a);
+        let b_str = value_to_sort_key(b);
+        a_str.cmp(&b_str)
+    });
+
+    for key in non_commit_keys {
+        if let Some(val) = root.get(&key) {
+            sorted.insert(key, sort_mapping_recursive(val.clone()));
+        }
+    }
+
+    // Then, insert commits in document order (topological order)
+    for commit_id in ordered_commits {
+        if let Some(commit_key) = commit_refs.get(commit_id) {
+            if let Some(commit_val) = root.get(commit_key) {
+                sorted.insert(commit_key.clone(), sort_mapping_recursive(commit_val.clone()));
+            }
+        }
+    }
+
+    serde_yaml::Value::Mapping(sorted)
 }
 
 /// Recursively sort all mappings in a Value by their keys (lexicographically)

@@ -6,29 +6,13 @@ use git_snapshot::{
 
 #[test]
 fn test_truncated_hash_roundtrip() {
-    // This is the serialized output from fixture 03
-    let yaml_with_truncated = r#"77a352:
-  message: commit 1
-  tree:
-    README.md: '# Original README'
-    src:
-      helper.rs: pub fn help() {}
-      lib.rs: pub fn original() {}
-HEAD: refs/heads/main
-b9d0b12d6c37ac7e529e6206bf28c0168e85de61:
-  message: commit 2
-  tree:
-    GUIDE.md: '# Original README'
-    src:
-      helper.rs: pub fn help() { /* updated */ }
-      new.rs: pub fn new_func() {}
-refs:
-  heads:
-    main: b9d0b12d6c37ac7e529e6206bf28c0168e85de61
-"#;
+    // Read the actual generated fixture
+    let yaml_with_truncated = std::fs::read_to_string(
+        "tests/fixtures/03-tree-references.hex.out.yaml"
+    ).expect("fixture should exist");
 
     eprintln!("=== Parsing YAML with truncated hash ===");
-    let result = parse(yaml_with_truncated);
+    let result = parse(&yaml_with_truncated);
 
     match result {
         Ok(repo) => {
