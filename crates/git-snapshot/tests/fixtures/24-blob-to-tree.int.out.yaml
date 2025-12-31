@@ -1,0 +1,42 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 5
+1:
+  tree:
+    path:
+      to:
+        item: This is a file
+2:
+  message: commit 3
+  parents: []
+  tree: {}
+3:
+  message: |
+    Zoom in to path/to/item
+
+    git-zoom-in: path/to/item
+  parents:
+  - 2
+  - 1
+  tree:
+    content.txt: extracted blob as tree
+4:
+  message: |
+    Zoom out to path/to/item
+
+    git-zoom-out: path/to/item
+  parents:
+  - 1
+  - 3
+  tree:
+    path:
+      to:
+        item:
+          content.txt: extracted blob as tree
+5:
+  message: commit 6
+  tree:
+    path:
+      to:
+        item: Back to being a file
