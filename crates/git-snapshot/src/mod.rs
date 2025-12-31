@@ -1092,6 +1092,7 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
     // Parse commits - build a map of commit references to their definitions
     let mut commit_defs = BTreeMap::new();
     let mut integer_to_hex: HashMap<u32, ObjectId> = HashMap::new();
+    let mut prefix_to_hex: HashMap<String, ObjectId> = HashMap::new();
 
     for (key, value) in mapping.iter() {
         let key_str = key.as_str();
@@ -1137,6 +1138,7 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
             idx,
             prev_commit_ref.as_ref(),
             &mut integer_to_hex,
+            &mut prefix_to_hex,
             &mut commit_processing_state,
         )?;
 
@@ -1146,7 +1148,7 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
     // Convert refs to use resolved ObjectIds
     let mut resolved_refs = BTreeMap::new();
     for (ref_name, commit_ref) in refs {
-        let object_id = resolve_commit_ref(&commit_ref, &integer_to_hex, &commits)?;
+        let object_id = resolve_commit_ref(&commit_ref, &integer_to_hex, &prefix_to_hex, &commits)?;
         resolved_refs.insert(ref_name, object_id);
     }
 
@@ -1154,7 +1156,7 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
     let resolved_head = match head {
         HeadStateOrRef::Symbolic(ref_name) => HeadState::Symbolic(ref_name),
         HeadStateOrRef::Detached(commit_ref) => {
-            let object_id = resolve_commit_ref(&commit_ref, &integer_to_hex, &commits)?;
+            let object_id = resolve_commit_ref(&commit_ref, &integer_to_hex, &prefix_to_hex, &commits)?;
             HeadState::Detached(object_id)
         }
     };
@@ -1342,12 +1344,18 @@ fn parse_commit_ref(value: &serde_yaml::Value) -> Result<CommitRef, ParseError> 
 fn resolve_commit_ref(
     commit_ref: &CommitRef,
     integer_to_hex: &HashMap<u32, ObjectId>,
+    prefix_to_hex: &HashMap<String, ObjectId>,
     commits: &HashMap<ObjectId, Commit>,
 ) -> Result<ObjectId, ParseError> {
     match commit_ref {
         CommitRef::Hex(oid) => Ok(*oid),
         CommitRef::Prefix(prefix) => {
-            // Find all commits that match this prefix
+            // First check if we have a direct mapping from parsing
+            if let Some(oid) = prefix_to_hex.get(prefix) {
+                return Ok(*oid);
+            }
+
+            // Fall back to searching commits by prefix (for validation/ambiguity checking)
             let matches: Vec<ObjectId> = commits
                 .keys()
                 .filter(|oid| {
@@ -1432,6 +1440,7 @@ fn build_commit(
     _idx: usize,
     prev_commit_ref: Option<&CommitRef>,
     integer_to_hex: &mut HashMap<u32, ObjectId>,
+    prefix_to_hex: &mut HashMap<String, ObjectId>,
     processing_state: &mut HashMap<CommitRef, CommitProcessingState>,
 ) -> Result<Commit, ParseError> {
     // Check for cycles
@@ -1479,6 +1488,7 @@ fn build_commit(
                 parent_idx,
                 prev_parent,
                 integer_to_hex,
+                prefix_to_hex,
                 processing_state,
             )?;
             resolved_parents.push(parent_commit);
@@ -1527,6 +1537,10 @@ fn build_commit(
                 committer_date,
                 &message,
             )?;
+
+            // Store the mapping from prefix to calculated ID
+            prefix_to_hex.insert(prefix.clone(), calculated_id);
+            eprintln!("DEBUG: Stored prefix mapping: {} -> {}", prefix, calculated_id.to_hex());
 
             // Optionally verify the prefix matches (for debugging)
             // But don't fail if it doesn't - YAML keys are just labels
