@@ -1020,7 +1020,7 @@ fn build_commit(
     commit_ref: &CommitRef,
     commit_defs: &BTreeMap<CommitRef, &serde_yaml::Mapping>,
     commit_order: &[CommitRef],
-    idx: usize,
+    _idx: usize,
     prev_commit_ref: Option<&CommitRef>,
     integer_to_hex: &mut HashMap<u32, ObjectId>,
     processing_state: &mut HashMap<CommitRef, CommitProcessingState>,
@@ -1048,7 +1048,7 @@ fn build_commit(
     let mut resolved_parents = Vec::new();
     for parent_ref in &parents {
         // Recursively build parent commit if needed
-        if let Some(parent_def) = commit_defs.get(parent_ref) {
+        if let Some(_parent_def) = commit_defs.get(parent_ref) {
             let parent_idx = commit_order
                 .iter()
                 .position(|r| r == parent_ref)
@@ -1380,22 +1380,10 @@ fn apply_tree_delta(
 fn calculate_tree_id(tree: &Tree) -> Result<ObjectId, ParseError> {
     use sha1_checked::Digest;
 
-    // Build tree entries in sorted order
-    let mut entries: Vec<(&str, &str)> = tree.paths().map(|path| {
-        let content = tree.get(path).unwrap();
-        (path, content)
-    }).collect();
-
-    // For a flat tree structure, we need to build the git tree objects hierarchically
-    // This is complex, so for V1 we'll use a simplified approach:
-    // Create a single tree object with all entries
-
-    // Group by directory structure
-    let mut tree_objects: HashMap<String, Vec<(String, ObjectId)>> = HashMap::new();
-
     // First, hash all blobs
     let mut blob_ids: HashMap<String, ObjectId> = HashMap::new();
-    for (path, content) in &entries {
+    for path in tree.paths() {
+        let content = tree.get(path).unwrap();
         let blob_data = format!("blob {}\0{}", content.len(), content);
         let mut hasher = sha1_checked::Sha1::new();
         hasher.update(blob_data.as_bytes());
@@ -1408,7 +1396,7 @@ fn calculate_tree_id(tree: &Tree) -> Result<ObjectId, ParseError> {
     // For simplicity, we'll compute a single root tree hash
     let mut tree_entries: Vec<(String, String, ObjectId)> = Vec::new();
 
-    for (path, content) in tree.paths().zip(tree.paths().map(|p| tree.get(p).unwrap())) {
+    for path in tree.paths() {
         let blob_id = blob_ids.get(path).unwrap();
         tree_entries.push((path.to_string(), "100644".to_string(), *blob_id));
     }
