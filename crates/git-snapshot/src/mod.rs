@@ -2207,6 +2207,137 @@ pub enum CommitIdStyle {
     Integer,
 }
 
+// ============================================================================
+// Deduplication Context and Helper Functions
+// ============================================================================
+
+/// Tracks serialized content locations for deduplication
+struct SerializationContext {
+    /// Maps blob hash to (commit_id, path) where content first appeared physically
+    blob_locations: HashMap<ObjectId, (ObjectId, String)>,
+
+    /// Maps tree hash to (commit_id, path) where content first appeared physically
+    tree_locations: HashMap<ObjectId, (ObjectId, String)>,
+
+    /// All commits in topological order
+    all_commits: Vec<ObjectId>,
+
+    /// Computed truncated hash length for non-head commits
+    truncated_len: usize,
+
+    /// Head commits (use full 40-char hash)
+    head_commits: std::collections::HashSet<ObjectId>,
+
+    /// Current commit being serialized
+    current_commit: ObjectId,
+
+    /// Repository reference
+    repo: *const Repository,
+}
+
+impl SerializationContext {
+    fn new(repo: &Repository, ordered_commits: Vec<ObjectId>, head_commits: std::collections::HashSet<ObjectId>) -> Self {
+        let truncated_len = compute_truncated_hash_length(&ordered_commits);
+
+        SerializationContext {
+            blob_locations: HashMap::new(),
+            tree_locations: HashMap::new(),
+            all_commits: ordered_commits,
+            truncated_len,
+            head_commits,
+            current_commit: ObjectId([0u8; 20]),
+            repo: repo as *const Repository,
+        }
+    }
+
+    fn repo(&self) -> &Repository {
+        unsafe { &*self.repo }
+    }
+}
+
+/// Compute minimum truncated hash length needed to avoid ambiguity
+fn compute_truncated_hash_length(commits: &[ObjectId]) -> usize {
+    if commits.len() <= 1 {
+        return 4;
+    }
+
+    // Try increasing lengths until we have no collisions
+    for len in (4..=40).step_by(2) {
+        let mut seen = std::collections::HashSet::new();
+        let mut collision = false;
+
+        for commit in commits {
+            let truncated = commit.to_hex_truncated(len);
+            if !seen.insert(truncated) {
+                collision = true;
+                break;
+            }
+        }
+
+        if !collision {
+            // Add 2 digits safety margin, ensure even, minimum 4
+            let with_margin = len + 2;
+            return with_margin.min(40);
+        }
+    }
+
+    // If we get here, use full length
+    40
+}
+
+/// Compute path similarity score for choosing best reference target
+/// Returns (suffix_match_len, -boundary_diff, -extra_prefix)
+fn compute_path_similarity_score(target: &str, candidate: &str) -> (i32, i32, i32) {
+    let target_parts: Vec<&str> = target.split('/').collect();
+    let candidate_parts: Vec<&str> = candidate.split('/').collect();
+
+    // Find longest suffix match
+    let mut suffix_match = 0;
+    for i in 1..=target_parts.len().min(candidate_parts.len()) {
+        if target_parts[target_parts.len() - i] == candidate_parts[candidate_parts.len() - i] {
+            suffix_match = i;
+        } else {
+            break;
+        }
+    }
+
+    // Count differing components at boundary
+    let boundary_diff = if suffix_match < target_parts.len().min(candidate_parts.len()) {
+        1
+    } else {
+        0
+    };
+
+    // Count extra prefix components in candidate
+    let extra_prefix = if suffix_match == target_parts.len() {
+        (candidate_parts.len() - target_parts.len()) as i32
+    } else {
+        (candidate_parts.len() - suffix_match) as i32 - (target_parts.len() - suffix_match) as i32
+    };
+
+    (suffix_match as i32, -boundary_diff, extra_prefix.abs() * -1)
+}
+
+/// Find best reference target from candidates based on path similarity
+fn find_best_reference(target_path: &str, candidates: &[(ObjectId, String)]) -> (ObjectId, String) {
+    if candidates.is_empty() {
+        panic!("find_best_reference called with empty candidates");
+    }
+
+    let mut best = &candidates[0];
+    let mut best_score = compute_path_similarity_score(target_path, &best.1);
+
+    for candidate in &candidates[1..] {
+        let score = compute_path_similarity_score(target_path, &candidate.1);
+        if score > best_score || (score == best_score && candidate.1 < best.1) {
+            best = candidate;
+            best_score = score;
+        }
+    }
+
+    best.clone()
+}
+
 /// Serialize a Repository to YAML format
 pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
     let mut root = serde_yaml::Mapping::new();
