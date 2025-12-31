@@ -1,0 +1,61 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 6
+    feature: 5
+
+# Criss-cross merge pattern (common in long-lived branches)
+1:
+  tree:
+    base.txt: "base"
+
+# Main branch commits
+2:
+  parents: [1]
+  tree:
+    main-work.txt: "main work 1"
+
+# Feature branch commits
+3:
+  parents: [1]
+  tree:
+    feature-work.txt: "feature work 1"
+
+# Main merges feature
+4:
+  parents: [2, 3]
+  message: "Merge feature into main (first time)"
+  tree:
+    # Combine both branches
+    main-work.txt:
+      [commit]: 2
+      [path]: main-work.txt
+    feature-work.txt:
+      [commit]: 3
+      [path]: feature-work.txt
+
+# Feature merges main (creating criss-cross)
+5:
+  parents: [3, 4]
+  message: "Merge main into feature"
+  tree:
+    # Feature now has everything
+    feature-work.txt:
+      [commit]: 3
+      [path]: feature-work.txt
+    main-work.txt:
+      [commit]: 4
+      [path]: main-work.txt
+    # Additional feature work
+    feature-work-2.txt: "feature work 2"
+
+# Main merges feature again
+6:
+  parents: [4, 5]
+  message: "Merge feature into main (second time)"
+  tree:
+    # Final state with all work
+    feature-work-2.txt:
+      [commit]: 5
+      [path]: feature-work-2.txt

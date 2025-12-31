@@ -1,0 +1,54 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 7
+
+# Test chained renames (A→B→C→D) to verify reference tracking
+1:
+  tree:
+    original-name.txt: "content that moves around"
+    static.txt: "never moves"
+
+2:
+  tree:
+    # First rename
+    renamed-once.txt:
+      [commit]: 1
+      [path]: original-name.txt
+
+3:
+  tree:
+    # Second rename
+    renamed-twice.txt:
+      [commit]: 2
+      [path]: renamed-once.txt
+
+4:
+  tree:
+    # Third rename
+    renamed-thrice.txt:
+      [commit]: 3
+      [path]: renamed-twice.txt
+
+5:
+  tree:
+    # Fourth rename
+    final-name.txt:
+      [commit]: 4
+      [path]: renamed-thrice.txt
+
+6:
+  tree:
+    # Move to subdirectory
+    archive:
+      final-name.txt:
+        [commit]: 5
+        [path]: final-name.txt
+
+7:
+  tree:
+    # Bring back to root with new name
+    restored.txt:
+      [commit]: 6
+      [path]: archive/final-name.txt
