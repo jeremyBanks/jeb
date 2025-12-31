@@ -16,6 +16,12 @@ refs:
   parents: []
   tree: {}
 3:
+  message: commit 2
+  parents:
+  - 1
+  tree:
+    README.md: '# Main Project v2'
+4:
   committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'src/lib'
@@ -27,15 +33,7 @@ refs:
   tree:
     main.rs: fn main() {}
     utils.rs: fn util() {}
-4:
-  message: commit 2
-  parents:
-  - 1
-  tree:
-    README.md: '# Main Project v2'
 5:
-  parents:
-  - 3
   tree:
     tests.rs: fn test() {}
 6:
@@ -45,7 +43,7 @@ refs:
 
     git-zoom-out: src/lib
   parents:
-  - 4
+  - 3
   - 5
   tree:
     src:
