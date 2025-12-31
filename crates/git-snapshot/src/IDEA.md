@@ -17,7 +17,8 @@ We're going to use `serde_yaml`, but we're not using any actual `Serialize` or
 
 The on-disk representation is designed to be human-readable and writeable, with
 a focus on minimal duplication and sensible defaults. It will be a YAML 1.2 file
-using UTF-8 encoding (but no `%` header or anything).
+using UTF-8 encoding (but no `%` header or anything, we'll use parsers that are
+configured to use 1.2 without requiring it).
 
 In the on-disk representation, each commit must be consistently referenced by
 either its full real correct 40-character hex object ID as a `Value::String`, or
