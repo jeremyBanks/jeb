@@ -98,7 +98,7 @@ impl fmt::Debug for ObjectId {
 // ============================================================================
 
 /// A git timestamp: Unix epoch seconds with a timezone offset.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Timestamp {
     /// Seconds since Unix epoch (must be non-negative for git compatibility)
     pub seconds: i64,
@@ -1568,6 +1568,526 @@ fn prune_unreachable(repo: &mut Repository) {
 
     // Remove unreachable commits
     repo.commits.retain(|id, _| reachable.contains(id));
+}
+
+// ============================================================================
+// Serialization Implementation
+// ============================================================================
+
+/// Control how commits are referenced in the serialized output
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommitIdStyle {
+    /// Use full 40-character hex object IDs
+    Hex,
+    /// Use sequential integer IDs (1, 2, 3, ...)
+    Integer,
+}
+
+/// Serialize a Repository to YAML format
+pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
+    let mut root = serde_yaml::Mapping::new();
+
+    // Sort commits in topological order with tiebreaking
+    let ordered_commits = topological_sort_with_tiebreak(repo);
+
+    // Build mapping from ObjectId to commit reference (hex or integer)
+    let mut commit_refs: HashMap<ObjectId, serde_yaml::Value> = HashMap::new();
+    for (idx, commit_id) in ordered_commits.iter().enumerate() {
+        let ref_value = match id_style {
+            CommitIdStyle::Hex => serde_yaml::Value::String(commit_id.to_hex()),
+            CommitIdStyle::Integer => serde_yaml::Value::Number((idx + 1).into()),
+        };
+        commit_refs.insert(*commit_id, ref_value);
+    }
+
+    // Serialize HEAD
+    let head_value = match &repo.head {
+        HeadState::Symbolic(ref_name) => serde_yaml::Value::String(ref_name.as_str().to_string()),
+        HeadState::Detached(oid) => commit_refs.get(oid).cloned().unwrap_or_else(|| {
+            serde_yaml::Value::String(oid.to_hex())
+        }),
+    };
+    root.insert(
+        serde_yaml::Value::String("HEAD".to_string()),
+        head_value,
+    );
+
+    // Serialize refs
+    let mut refs_map = serde_yaml::Mapping::new();
+    for (ref_name, target_id) in repo.refs() {
+        let target_value = commit_refs.get(target_id).cloned().unwrap_or_else(|| {
+            serde_yaml::Value::String(target_id.to_hex())
+        });
+
+        // Split ref path and build nested structure
+        // e.g., "refs/heads/main" -> refs -> heads -> main: value
+        let path_parts: Vec<&str> = ref_name.as_str().split('/').collect();
+        if path_parts.len() >= 2 && path_parts[0] == "refs" {
+            insert_nested_ref(&mut refs_map, &path_parts[1..], target_value);
+        }
+    }
+    root.insert(
+        serde_yaml::Value::String("refs".to_string()),
+        serde_yaml::Value::Mapping(refs_map),
+    );
+
+    // Serialize commits
+    for (idx, commit_id) in ordered_commits.iter().enumerate() {
+        let commit = repo.get_commit(commit_id).expect("commit should exist");
+        let prev_commit = if idx > 0 {
+            Some(repo.get_commit(&ordered_commits[idx - 1]).expect("prev commit should exist"))
+        } else {
+            None
+        };
+
+        let commit_key = commit_refs.get(commit_id).cloned().unwrap();
+        let commit_value = serialize_commit(commit, prev_commit, &commit_refs, id_style, repo);
+
+        root.insert(commit_key, commit_value);
+    }
+
+    // Convert to YAML string
+    serde_yaml::to_string(&serde_yaml::Value::Mapping(root))
+        .expect("serialization should succeed")
+}
+
+/// Insert a nested ref into the refs mapping
+fn insert_nested_ref(mapping: &mut serde_yaml::Mapping, path: &[&str], value: serde_yaml::Value) {
+    if path.is_empty() {
+        return;
+    }
+
+    if path.len() == 1 {
+        // Leaf node
+        mapping.insert(
+            serde_yaml::Value::String(path[0].to_string()),
+            value,
+        );
+    } else {
+        // Intermediate node
+        let key = serde_yaml::Value::String(path[0].to_string());
+        let nested = mapping.entry(key.clone())
+            .or_insert_with(|| serde_yaml::Value::Mapping(serde_yaml::Mapping::new()));
+
+        if let serde_yaml::Value::Mapping(nested_map) = nested {
+            insert_nested_ref(nested_map, &path[1..], value);
+        }
+    }
+}
+
+/// Serialize a single commit
+fn serialize_commit(
+    commit: &Commit,
+    prev_commit: Option<&Commit>,
+    commit_refs: &HashMap<ObjectId, serde_yaml::Value>,
+    id_style: CommitIdStyle,
+    repo: &Repository,
+) -> serde_yaml::Value {
+    let mut mapping = serde_yaml::Mapping::new();
+
+    // Get parent commits
+    let parent_commits: Vec<&Commit> = commit.parents.iter()
+        .filter_map(|id| repo.get_commit(id))
+        .collect();
+    let first_parent = parent_commits.first().copied();
+
+    // Serialize parents (omit if default)
+    let default_parents = if let Some(prev) = prev_commit {
+        vec![prev.id]
+    } else {
+        vec![]
+    };
+
+    if commit.parents != default_parents {
+        let parents_array: Vec<serde_yaml::Value> = commit.parents.iter()
+            .map(|parent_id| {
+                commit_refs.get(parent_id).cloned().unwrap_or_else(|| {
+                    serde_yaml::Value::String(parent_id.to_hex())
+                })
+            })
+            .collect();
+        mapping.insert(
+            serde_yaml::Value::String("parents".to_string()),
+            serde_yaml::Value::Sequence(parents_array),
+        );
+    }
+
+    // Serialize message (omit if default)
+    let default_message = match id_style {
+        CommitIdStyle::Integer => {
+            // Find the integer ID for this commit
+            let mut int_id = 0u32;
+            for (oid, ref_val) in commit_refs.iter() {
+                if *oid == commit.id {
+                    if let serde_yaml::Value::Number(n) = ref_val {
+                        int_id = n.as_u64().unwrap_or(0) as u32;
+                        break;
+                    }
+                }
+            }
+            if int_id > 0 {
+                format!("commit {}", int_id)
+            } else {
+                format!("commit at {}", commit.committer_date.to_iso8601())
+            }
+        }
+        CommitIdStyle::Hex => {
+            format!("commit at {}", commit.committer_date.to_iso8601())
+        }
+    };
+
+    if commit.message != default_message {
+        mapping.insert(
+            serde_yaml::Value::String("message".to_string()),
+            serde_yaml::Value::String(commit.message.clone()),
+        );
+    }
+
+    // Serialize author (omit if default)
+    let default_author = if let Some(parent) = first_parent {
+        parent.author.clone()
+    } else {
+        Identity::parse("User <user@localhost>").unwrap()
+    };
+
+    if commit.author != default_author {
+        mapping.insert(
+            serde_yaml::Value::String("author".to_string()),
+            serde_yaml::Value::String(commit.author.to_string()),
+        );
+    }
+
+    // Serialize author-date (omit if default)
+    let default_author_date = if parent_commits.is_empty() {
+        Timestamp::from_iso8601("2021-01-14T08:25:36Z").unwrap()
+    } else {
+        let max_parent = parent_commits.iter()
+            .max_by_key(|p| (p.author_date.seconds, p.author_date.offset_minutes))
+            .unwrap();
+        Timestamp {
+            seconds: max_parent.author_date.seconds + 256,
+            offset_minutes: max_parent.author_date.offset_minutes,
+        }
+    };
+
+    if commit.author_date != default_author_date {
+        mapping.insert(
+            serde_yaml::Value::String("author-date".to_string()),
+            serde_yaml::Value::String(commit.author_date.to_iso8601()),
+        );
+    }
+
+    // Serialize committer (omit if same as author)
+    if commit.committer != commit.author {
+        mapping.insert(
+            serde_yaml::Value::String("committer".to_string()),
+            serde_yaml::Value::String(commit.committer.to_string()),
+        );
+    }
+
+    // Serialize commit-date (omit if default)
+    let mut max_seconds = commit.author_date.seconds;
+    let mut max_offset = commit.author_date.offset_minutes;
+    for parent in &parent_commits {
+        if parent.committer_date.seconds > max_seconds
+            || (parent.committer_date.seconds == max_seconds
+                && parent.committer_date.offset_minutes > max_offset)
+        {
+            max_seconds = parent.committer_date.seconds;
+            max_offset = parent.committer_date.offset_minutes;
+        }
+    }
+    let default_committer_date = Timestamp {
+        seconds: max_seconds + 3,
+        offset_minutes: max_offset,
+    };
+
+    if commit.committer_date != default_committer_date {
+        mapping.insert(
+            serde_yaml::Value::String("commit-date".to_string()),
+            serde_yaml::Value::String(commit.committer_date.to_iso8601()),
+        );
+    }
+
+    // Serialize tree (compute delta from first parent)
+    let first_parent_tree = first_parent.map(|p| &p.tree);
+    let tree_delta = compute_tree_delta(&commit.tree, first_parent_tree);
+
+    // Only include tree if it's non-empty or if this is the root commit with an empty tree
+    let tree_is_empty = match &tree_delta {
+        serde_yaml::Value::Mapping(m) => m.is_empty(),
+        _ => false,
+    };
+
+    if !tree_is_empty {
+        mapping.insert(
+            serde_yaml::Value::String("tree".to_string()),
+            tree_delta,
+        );
+    } else if parent_commits.is_empty() && commit.tree.is_empty() {
+        // Root commit with empty tree - explicitly serialize empty tree
+        mapping.insert(
+            serde_yaml::Value::String("tree".to_string()),
+            serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
+        );
+    }
+
+    serde_yaml::Value::Mapping(mapping)
+}
+
+/// Compute tree delta between current tree and base tree
+fn compute_tree_delta(tree: &Tree, base_tree: Option<&Tree>) -> serde_yaml::Value {
+    let base_tree = match base_tree {
+        Some(t) => t,
+        None => {
+            // No base tree, serialize entire tree
+            if tree.is_empty() {
+                return serde_yaml::Value::Mapping(serde_yaml::Mapping::new());
+            }
+            return serialize_tree_full(tree);
+        }
+    };
+
+    let mut delta = serde_yaml::Mapping::new();
+
+    // Collect all paths from both trees
+    let mut all_paths = std::collections::BTreeSet::new();
+    for path in tree.paths() {
+        all_paths.insert(path);
+    }
+    for path in base_tree.paths() {
+        all_paths.insert(path);
+    }
+
+    // Build delta structure
+    for path in all_paths {
+        let current_content = tree.get(path);
+        let base_content = base_tree.get(path);
+
+        if current_content != base_content {
+            // Path has changed
+            let path_parts: Vec<&str> = path.split('/').collect();
+            insert_tree_change(&mut delta, &path_parts, current_content);
+        }
+    }
+
+    serde_yaml::Value::Mapping(delta)
+}
+
+/// Serialize a full tree (no delta)
+fn serialize_tree_full(tree: &Tree) -> serde_yaml::Value {
+    let mut root = serde_yaml::Mapping::new();
+
+    for path in tree.paths() {
+        let content = tree.get(path).expect("path should exist");
+        let path_parts: Vec<&str> = path.split('/').collect();
+        insert_tree_change(&mut root, &path_parts, Some(content));
+    }
+
+    serde_yaml::Value::Mapping(root)
+}
+
+/// Insert a tree change into the delta mapping
+fn insert_tree_change(
+    mapping: &mut serde_yaml::Mapping,
+    path_parts: &[&str],
+    content: Option<&str>,
+) {
+    if path_parts.is_empty() {
+        return;
+    }
+
+    if path_parts.len() == 1 {
+        // Leaf node
+        let key = serde_yaml::Value::String(path_parts[0].to_string());
+        let value = match content {
+            Some(s) => serde_yaml::Value::String(s.to_string()),
+            None => serde_yaml::Value::Null, // Deletion
+        };
+        mapping.insert(key, value);
+    } else {
+        // Intermediate node
+        let key = serde_yaml::Value::String(path_parts[0].to_string());
+        let nested = mapping.entry(key.clone())
+            .or_insert_with(|| serde_yaml::Value::Mapping(serde_yaml::Mapping::new()));
+
+        if let serde_yaml::Value::Mapping(nested_map) = nested {
+            insert_tree_change(nested_map, &path_parts[1..], content);
+        }
+    }
+}
+
+/// Topologically sort commits with tiebreaking algorithm from IDEA.md
+fn topological_sort_with_tiebreak(repo: &Repository) -> Vec<ObjectId> {
+    // Build tiebreak keys for all commits
+    let mut tiebreak_keys: HashMap<ObjectId, Vec<TiebreakComponent>> = HashMap::new();
+
+    // Initialize empty tiebreak keys
+    for commit in repo.commits() {
+        tiebreak_keys.insert(commit.id, Vec::new());
+    }
+
+    // Collect head commits
+    let mut head_commits = Vec::new();
+
+    // Add HEAD first
+    match &repo.head {
+        HeadState::Detached(id) => {
+            if repo.get_commit(id).is_some() {
+                head_commits.push(*id);
+            }
+        }
+        HeadState::Symbolic(ref_name) => {
+            if let Some(id) = repo.get_ref(ref_name) {
+                if repo.get_commit(id).is_some() {
+                    head_commits.push(*id);
+                }
+            }
+        }
+    }
+
+    // Add refs in lexicographic order
+    let mut ref_targets: Vec<(String, ObjectId)> = repo.refs()
+        .map(|(name, id)| (name.as_str().to_string(), *id))
+        .collect();
+    ref_targets.sort_by(|a, b| a.0.cmp(&b.0));
+
+    for (_, id) in ref_targets {
+        if !head_commits.contains(&id) {
+            head_commits.push(id);
+        }
+    }
+
+    // Walk ancestors depth-first, recording parent indices
+    let mut visited = std::collections::HashSet::new();
+
+    for head_id in head_commits {
+        walk_ancestors_for_tiebreak(
+            head_id,
+            None, // No parent index for head commits
+            repo,
+            &mut visited,
+            &mut tiebreak_keys,
+        );
+    }
+
+    // Append timestamps to tiebreak keys
+    for commit in repo.commits() {
+        if let Some(key) = tiebreak_keys.get_mut(&commit.id) {
+            key.push(TiebreakComponent::Timestamp(commit.committer_date));
+            key.push(TiebreakComponent::Timestamp(commit.author_date));
+        }
+    }
+
+    // Topologically sort with tiebreaking
+    let mut sorted = Vec::new();
+    let mut visited = std::collections::HashSet::new();
+    let mut in_progress = std::collections::HashSet::new();
+
+    // Sort commits by tiebreak key for deterministic iteration order
+    let mut all_commits: Vec<ObjectId> = repo.commits().map(|c| c.id).collect();
+    all_commits.sort_by(|a, b| {
+        tiebreak_keys.get(a).unwrap().cmp(tiebreak_keys.get(b).unwrap())
+    });
+
+    for commit_id in all_commits {
+        topological_visit(
+            commit_id,
+            repo,
+            &tiebreak_keys,
+            &mut visited,
+            &mut in_progress,
+            &mut sorted,
+        );
+    }
+
+    sorted
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum TiebreakComponent {
+    ParentIndex(usize),
+    Timestamp(Timestamp),
+}
+
+/// Walk ancestors depth-first, recording parent indices in tiebreak keys
+fn walk_ancestors_for_tiebreak(
+    commit_id: ObjectId,
+    parent_index: Option<usize>,
+    repo: &Repository,
+    visited: &mut std::collections::HashSet<ObjectId>,
+    tiebreak_keys: &mut HashMap<ObjectId, Vec<TiebreakComponent>>,
+) {
+    // Record parent index if provided
+    if let Some(idx) = parent_index {
+        if let Some(key) = tiebreak_keys.get_mut(&commit_id) {
+            key.push(TiebreakComponent::ParentIndex(idx));
+        }
+    }
+
+    // If already visited, don't recurse further
+    if visited.contains(&commit_id) {
+        return;
+    }
+    visited.insert(commit_id);
+
+    // Visit parents
+    if let Some(commit) = repo.get_commit(&commit_id) {
+        for (idx, parent_id) in commit.parents.iter().enumerate() {
+            walk_ancestors_for_tiebreak(
+                *parent_id,
+                Some(idx),
+                repo,
+                visited,
+                tiebreak_keys,
+            );
+        }
+    }
+}
+
+/// Topological visit for sorting
+fn topological_visit(
+    commit_id: ObjectId,
+    repo: &Repository,
+    tiebreak_keys: &HashMap<ObjectId, Vec<TiebreakComponent>>,
+    visited: &mut std::collections::HashSet<ObjectId>,
+    in_progress: &mut std::collections::HashSet<ObjectId>,
+    sorted: &mut Vec<ObjectId>,
+) {
+    if visited.contains(&commit_id) {
+        return;
+    }
+
+    if in_progress.contains(&commit_id) {
+        // Cycle detected, but we should handle this gracefully
+        return;
+    }
+
+    in_progress.insert(commit_id);
+
+    // Visit parents first (they should come before this commit)
+    if let Some(commit) = repo.get_commit(&commit_id) {
+        // Sort parents by tiebreak key for deterministic order
+        let mut parents = commit.parents.clone();
+        parents.sort_by(|a, b| {
+            tiebreak_keys.get(a).unwrap().cmp(tiebreak_keys.get(b).unwrap())
+        });
+
+        for parent_id in parents {
+            topological_visit(
+                parent_id,
+                repo,
+                tiebreak_keys,
+                visited,
+                in_progress,
+                sorted,
+            );
+        }
+    }
+
+    in_progress.remove(&commit_id);
+    visited.insert(commit_id);
+    sorted.push(commit_id);
 }
 
 pub fn main() {}
