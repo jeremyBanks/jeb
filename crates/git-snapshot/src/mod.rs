@@ -1894,11 +1894,20 @@ fn resolve_path(
 ) -> Result<String, ParseError> {
     // Determine the base path for resolution
     // According to spec: relative paths are resolved relative to the inherited
-    // source path
+    // source path. But the inherited source path points to THIS entry (file/dir),
+    // so we need to resolve relative to its parent directory.
     let base_path = if path_ref == "." || path_ref.starts_with("./") || path_ref.starts_with("../")
     {
-        // Relative path - use the inherited source path as base
-        inherited_source_path.unwrap_or(target_path)
+        // Relative path - use the parent of the inherited source path as base
+        let inherited = inherited_source_path.unwrap_or(target_path);
+
+        // Get the parent directory of the inherited path
+        if let Some(pos) = inherited.rfind('/') {
+            &inherited[..pos]
+        } else {
+            // No slash means inherited is at root, so parent is root
+            ""
+        }
     } else {
         // Absolute path (relative to repository root) - ignore inheritance
         ""

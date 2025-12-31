@@ -1,0 +1,75 @@
+HEAD: refs/heads/full-tree
+refs:
+  heads:
+    backend-subtree: 6
+    frontend-subtree: 3
+    full-tree: 7
+1:
+  tree:
+    README.md: '# Full Stack App'
+    backend:
+      db.py: 'def connect(): pass'
+      server.py: 'def serve(): pass'
+    frontend:
+      app.js: console.log('app');
+      style.css: body { }
+2:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: git-zoom-in seed for frontend
+  parents: []
+  tree: {}
+3:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'frontend'
+
+    git-zoom-in: frontend
+  parents:
+  - 2
+  - 1
+  tree:
+    app.js: console.log('app');
+    style.css: body { }
+    utils.js: export const util = () => {};
+4:
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'frontend'
+
+    git-zoom-out: frontend
+  parents:
+  - 1
+  - 3
+  tree:
+    frontend:
+      utils.js: export const util = () => {};
+5:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: git-zoom-in seed for backend
+  parents: []
+  tree: {}
+6:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'backend'
+
+    git-zoom-in: backend
+  parents:
+  - 5
+  - 4
+  tree:
+    db.py: 'def connect(): pass'
+    routes.py: 'def routes(): pass'
+    server.py: 'def serve(): pass'
+7:
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'backend'
+
+    git-zoom-out: backend
+  parents:
+  - 4
+  - 6
+  tree:
+    backend:
+      routes.py: 'def routes(): pass'
