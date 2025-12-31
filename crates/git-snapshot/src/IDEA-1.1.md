@@ -226,5 +226,3 @@ If an expected output file does not exist, the test should:
 4. Mark the test as failed at the end
 
 This allows multiple missing output files to be generated in a single test run.
-Git status will naturally show which files are new and need review—no special
-tracking is required.
