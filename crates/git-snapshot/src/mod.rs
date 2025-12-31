@@ -3801,7 +3801,8 @@ refs:
   parents: []
   tree:
     file.txt: "original content"
-    dir/nested.rs: "nested file"
+    dir:
+      nested.rs: "nested file"
 2:
   tree:
     file.txt:
@@ -3854,8 +3855,9 @@ refs:
 1:
   parents: []
   tree:
-    src/lib.rs: "pub fn main() {}"
-    src/util.rs: "pub fn helper() {}"
+    src:
+      lib.rs: "pub fn main() {}"
+      util.rs: "pub fn helper() {}"
 2:
   tree:
     copied-src:
