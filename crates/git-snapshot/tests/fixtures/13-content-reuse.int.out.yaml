@@ -11,21 +11,33 @@ refs:
       header.txt: Licensed under MIT
 2:
   tree:
-    ABOUT.md: '# Shared Documentation'
+    ABOUT.md:
+      '[commit]': 1
+      '[path]': README.md
 3:
   tree:
     examples:
-      header.txt: Licensed under MIT
+      header.txt:
+        '[commit]': 1
+        '[path]': lib/header.txt
     lib:
       header.txt: null
     src:
-      header.txt: Licensed under MIT
+      header.txt:
+        '[commit]': 1
+        '[path]': lib/header.txt
     tests:
-      header.txt: Licensed under MIT
+      header.txt:
+        '[commit]': 1
+        '[path]': lib/header.txt
 4:
   tree:
     src:
-      LICENSE.txt: Licensed under MIT
+      LICENSE.txt:
+        '[commit]': 1
+        '[path]': lib/header.txt
 5:
   tree:
-    COPYING: Licensed under MIT
+    COPYING:
+      '[commit]': 1
+      '[path]': lib/header.txt

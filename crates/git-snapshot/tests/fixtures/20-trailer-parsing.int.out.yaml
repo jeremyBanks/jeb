@@ -35,7 +35,9 @@ refs:
     path:
       to:
         subtree:
-          file.txt: content
+          file.txt:
+            '[commit]': 3
+            '[path]': file.txt
 5:
   message: |
     Another merge

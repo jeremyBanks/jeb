@@ -1,6 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
+    diverged: 3
     main: 4
 1:
   tree:
@@ -9,7 +10,6 @@ refs:
       a.txt: a1
       b.txt: b1
 2:
-  message: commit 4
   parents: []
   tree: {}
 3:
@@ -21,8 +21,12 @@ refs:
   - 2
   - 1
   tree:
-    a.txt: a1
-    b.txt: b1
+    a.txt:
+      '[commit]': 1
+      '[path]': subtree/a.txt
+    b.txt:
+      '[commit]': 1
+      '[path]': subtree/b.txt
 4:
   message: |
     Zoom out to commit 1

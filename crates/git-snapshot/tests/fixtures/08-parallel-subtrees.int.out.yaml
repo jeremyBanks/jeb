@@ -28,8 +28,12 @@ refs:
   - 2
   - 1
   tree:
-    app.js: console.log('app');
-    style.css: body { }
+    app.js:
+      '[commit]': 1
+      '[path]': frontend/app.js
+    style.css:
+      '[commit]': 1
+      '[path]': frontend/style.css
     utils.js: export const util = () => {};
 4:
   committer: git-zoom-out <git-zoom-out@localhost>
@@ -42,7 +46,9 @@ refs:
   - 3
   tree:
     frontend:
-      utils.js: export const util = () => {};
+      utils.js:
+        '[commit]': 3
+        '[path]': utils.js
 5:
   committer: git-zoom-in <git-zoom-in@localhost>
   message: git-zoom-in seed for backend
@@ -58,9 +64,13 @@ refs:
   - 5
   - 4
   tree:
-    db.py: 'def connect(): pass'
+    db.py:
+      '[commit]': 1
+      '[path]': backend/db.py
     routes.py: 'def routes(): pass'
-    server.py: 'def serve(): pass'
+    server.py:
+      '[commit]': 1
+      '[path]': backend/server.py
 7:
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
@@ -72,4 +82,6 @@ refs:
   - 6
   tree:
     backend:
-      routes.py: 'def routes(): pass'
+      routes.py:
+        '[commit]': 6
+        '[path]': routes.py

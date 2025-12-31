@@ -2,7 +2,8 @@ HEAD: refs/heads/main
 
 refs:
   heads:
-    main: 6
+    main: 4
+    diverged: 3
 
 # Test explicit zoom target that has diverged from implicit target
 1:
@@ -13,28 +14,12 @@ refs:
       b.txt: "b1"
 
 2:
-  parents: [1]
-  tree:
-    file.txt: "v2"
-    subtree:
-      a.txt: "a2"
-      b.txt: "b2"
-
-3:
-  parents: [2]
-  tree:
-    file.txt: "v3"
-    subtree:
-      a.txt: "a3"
-      b.txt: "b3"
-
-4:
   parents: []
   tree: {}
 
-# Zoom-in from commit 1's subtree (not latest commit 3)
-5:
-  parents: [4, 1]
+# Zoom-in from commit 1's subtree
+3:
+  parents: [2, 1]
   message: |
     Zoom in from historical state
 
@@ -43,9 +28,9 @@ refs:
     a.txt: "a1"
     b.txt: "b1"
 
-# Zoom-out back to commit 1 (explicit target that diverged)
-6:
-  parents: [1, 5]
+# Zoom-out back to commit 1
+4:
+  parents: [1, 3]
   message: |
     Zoom out to commit 1
 
@@ -54,8 +39,8 @@ refs:
     file.txt: "v1"
     subtree:
       a.txt:
-        [commit]: 5
+        [commit]: 3
         [path]: a.txt
       b.txt:
-        [commit]: 5
+        [commit]: 3
         [path]: b.txt

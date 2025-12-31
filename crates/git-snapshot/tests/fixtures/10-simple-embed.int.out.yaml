@@ -12,7 +12,11 @@ refs:
   tree:
     dir:
       dir:
-        inner.txt: inner
+        inner.txt:
+          '[commit]': 1
+          '[path]': dir/inner.txt
       file-a.txt: a
       file-b.txt: b
-      outer.txt: outer
+      outer.txt:
+        '[commit]': 1
+        '[path]': outer.txt

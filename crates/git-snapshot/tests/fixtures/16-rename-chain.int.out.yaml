@@ -8,20 +8,32 @@ refs:
     static.txt: never moves
 2:
   tree:
-    renamed-once.txt: content that moves around
+    renamed-once.txt:
+      '[commit]': 1
+      '[path]': original-name.txt
 3:
   tree:
-    renamed-twice.txt: content that moves around
+    renamed-twice.txt:
+      '[commit]': 1
+      '[path]': original-name.txt
 4:
   tree:
-    renamed-thrice.txt: content that moves around
+    renamed-thrice.txt:
+      '[commit]': 1
+      '[path]': original-name.txt
 5:
   tree:
-    final-name.txt: content that moves around
+    final-name.txt:
+      '[commit]': 1
+      '[path]': original-name.txt
 6:
   tree:
     archive:
-      final-name.txt: content that moves around
+      final-name.txt:
+        '[commit]': 1
+        '[path]': original-name.txt
 7:
   tree:
-    restored.txt: content that moves around
+    restored.txt:
+      '[commit]': 1
+      '[path]': original-name.txt

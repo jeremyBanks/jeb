@@ -19,19 +19,25 @@ refs:
   - 2
   - 1
   tree:
-    file.txt: content that travels
+    file.txt:
+      '[commit]': 1
+      '[path]': original-location/file.txt
 4:
   message: commit 2
   parents:
   - 1
   tree:
     second-location:
-      file.txt: content that travels
+      file.txt:
+        '[commit]': 1
+        '[path]': original-location/file.txt
 5:
   message: commit 3
   tree:
     third-location:
-      file.txt: content that travels
+      file.txt:
+        '[commit]': 1
+        '[path]': original-location/file.txt
 6:
   parents:
   - 3
@@ -48,8 +54,12 @@ refs:
   - 6
   tree:
     third-location:
-      file.txt: modified content
-      new.txt: new file
+      file.txt:
+        '[commit]': 6
+        '[path]': file.txt
+      new.txt:
+        '[commit]': 6
+        '[path]': new.txt
 8:
   tree:
     other.txt: unrelated

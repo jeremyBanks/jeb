@@ -28,9 +28,13 @@ refs:
         engine.rs: pub fn run() { /* v2 - refactored */ }
 3:
   tree:
-    README-GUIDE.md: '# User Guide'
+    README-GUIDE.md:
+      '[commit]': 1
+      '[path]': docs/guide.md
 4:
   tree:
     src:
       runtime:
-        shared.rs: pub fn helper() {}
+        shared.rs:
+          '[commit]': 1
+          '[path]': src/core/utils.rs

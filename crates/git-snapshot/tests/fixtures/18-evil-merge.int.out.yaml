@@ -36,4 +36,6 @@ refs:
   - 6
   tree:
     INTEGRATION.md: How we integrated the orphan history
-    orphan-data.json: '{"source": "orphan"}'
+    orphan-data.json:
+      '[commit]': 6
+      '[path]': data.json

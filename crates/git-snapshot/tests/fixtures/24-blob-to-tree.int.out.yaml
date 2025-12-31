@@ -1,7 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 5
+    alternate: 5
+    main: 6
 1:
   tree:
     path:
@@ -33,9 +34,21 @@ refs:
     path:
       to:
         item:
-          content.txt: extracted blob as tree
+          content.txt:
+            '[commit]': 3
+            '[path]': content.txt
 5:
-  message: commit 6
+  message: commit 2
+  parents:
+  - 1
+  tree:
+    path:
+      to:
+        item:
+          replaced.txt: Now it's a directory
+6:
+  parents:
+  - 4
   tree:
     path:
       to:

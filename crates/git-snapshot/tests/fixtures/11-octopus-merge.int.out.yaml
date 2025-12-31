@@ -26,6 +26,12 @@ refs:
   - 3
   - 4
   tree:
-    feature-a.txt: Feature A
-    feature-b.txt: Feature B
-    feature-c.txt: Feature C
+    feature-a.txt:
+      '[commit]': 2
+      '[path]': feature-a.txt
+    feature-b.txt:
+      '[commit]': 3
+      '[path]': feature-b.txt
+    feature-c.txt:
+      '[commit]': 4
+      '[path]': feature-c.txt

@@ -34,10 +34,16 @@ refs:
   - 3
   - 1
   tree:
-    api.rs: fn api() {}
+    api.rs:
+      '[commit]': 1
+      '[path]': src/lib/api.rs
     core:
-      engine.rs: fn engine() {}
-      types.rs: struct Type;
+      engine.rs:
+        '[commit]': 1
+        '[path]': src/lib/core/engine.rs
+      types.rs:
+        '[commit]': 1
+        '[path]': src/lib/core/types.rs
 5:
   committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
@@ -48,8 +54,12 @@ refs:
   - 2
   - 4
   tree:
-    engine.rs: fn engine() {}
-    types.rs: struct Type;
+    engine.rs:
+      '[commit]': 1
+      '[path]': src/lib/core/engine.rs
+    types.rs:
+      '[commit]': 1
+      '[path]': src/lib/core/types.rs
 6:
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
@@ -92,7 +102,13 @@ refs:
   tree:
     src:
       lib:
-        api.rs: fn api() { /* updated */ }
+        api.rs:
+          '[commit]': 8
+          '[path]': api.rs
         core:
-          engine.rs: fn engine() { /* v3 */ }
-        tests.rs: fn test_lib() {}
+          engine.rs:
+            '[commit]': 10
+            '[path]': engine.rs
+        tests.rs:
+          '[commit]': 7
+          '[path]': tests.rs

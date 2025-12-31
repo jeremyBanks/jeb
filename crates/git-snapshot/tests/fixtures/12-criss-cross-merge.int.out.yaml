@@ -20,7 +20,9 @@ refs:
   - 2
   - 3
   tree:
-    feature-work.txt: feature work 1
+    feature-work.txt:
+      '[commit]': 3
+      '[path]': feature-work.txt
 5:
   message: Merge main into feature
   parents:
@@ -28,11 +30,15 @@ refs:
   - 4
   tree:
     feature-work-2.txt: feature work 2
-    main-work.txt: main work 1
+    main-work.txt:
+      '[commit]': 2
+      '[path]': main-work.txt
 6:
   message: Merge feature into main (second time)
   parents:
   - 4
   - 5
   tree:
-    feature-work-2.txt: feature work 2
+    feature-work-2.txt:
+      '[commit]': 5
+      '[path]': feature-work-2.txt

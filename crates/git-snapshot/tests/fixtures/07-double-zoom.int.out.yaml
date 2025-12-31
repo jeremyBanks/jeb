@@ -29,7 +29,9 @@ refs:
   - 3
   - 2
   tree:
-    init.rs: fn init() {}
+    init.rs:
+      '[commit]': 1
+      '[path]': modules/core/init.rs
 5:
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
@@ -70,4 +72,6 @@ refs:
   tree:
     modules:
       core:
-        cleanup.rs: fn cleanup() {}
+        cleanup.rs:
+          '[commit]': 8
+          '[path]': cleanup.rs

@@ -13,6 +13,10 @@ refs:
 6f201eff9c107ae840660d6bd4bcc0fe2103835a:
   message: commit 2
   tree:
-    c-moved.txt: content c
+    c-moved.txt:
+      '[commit]': '466346'
+      '[path]': bar/c.txt
     foo:
-      moved-b.txt: content b
+      moved-b.txt:
+        '[commit]': '466346'
+        '[path]': foo/b.txt

@@ -2407,8 +2407,35 @@ impl SerializationContext {
     ) -> Self {
         let truncated_len = compute_truncated_hash_length(&ordered_commits);
 
+        // Build blob_locations map: for each blob, record the first location where it appears
+        let mut blob_locations = HashMap::new();
+        let mut content_to_blob: HashMap<String, ObjectId> = HashMap::new();
+
+        for commit_id in &ordered_commits {
+            if let Some(commit) = repo.get_commit(commit_id) {
+                for path in commit.tree.paths() {
+                    if let Some(content) = commit.tree.get(path) {
+                        // Get or create blob ID for this content
+                        let blob_id = if let Some(&existing_id) = content_to_blob.get(content) {
+                            existing_id
+                        } else {
+                            // Calculate blob ID from content
+                            let blob_id = compute_blob_hash(content);
+                            content_to_blob.insert(content.to_string(), blob_id);
+                            blob_id
+                        };
+
+                        // Record first occurrence of this blob
+                        blob_locations
+                            .entry(blob_id)
+                            .or_insert((*commit_id, path.to_string()));
+                    }
+                }
+            }
+        }
+
         SerializationContext {
-            blob_locations: HashMap::new(),
+            blob_locations,
             tree_locations: HashMap::new(),
             all_commits: ordered_commits,
             truncated_len,
@@ -2420,6 +2447,11 @@ impl SerializationContext {
 
     fn repo(&self) -> &Repository {
         unsafe { &*self.repo }
+    }
+
+    /// Get blob ID for given content
+    fn get_blob_id_for_content(&self, content: &str) -> ObjectId {
+        compute_blob_hash(content)
     }
 }
 
@@ -2951,9 +2983,42 @@ fn insert_tree_change(
         let key = serde_yaml::Value::String(path_parts[0].to_string());
         let value = match content {
             Some(s) => {
-                // TODO: Implement deduplication by checking blob_locations
-                // For now, just output inline content
-                serde_yaml::Value::String(s.to_string())
+                // Check if this content should be deduplicated
+                let blob_id = ctx.get_blob_id_for_content(s);
+
+                // Find where this blob first appeared
+                if let Some(&(ref_commit, ref ref_path)) = ctx.blob_locations.get(&blob_id) {
+                    // Only use reference if it's not the current location AND
+                    // the reference target comes earlier in the commit order
+                    let ref_position = ctx.all_commits.iter().position(|id| *id == ref_commit);
+                    let current_position = ctx.all_commits.iter().position(|id| *id == ctx.current_commit);
+                    let should_reference = (ref_commit != ctx.current_commit || ref_path != full_path)
+                        && ref_position.is_some()
+                        && current_position.is_some()
+                        && ref_position < current_position;
+
+                    if should_reference {
+                        // Use [commit]/[path] reference
+                        let mut ref_mapping = serde_yaml::Mapping::new();
+                        ref_mapping.insert(
+                            serde_yaml::Value::String("[commit]".to_string()),
+                            commit_refs.get(&ref_commit).cloned().unwrap_or_else(|| {
+                                serde_yaml::Value::String(ref_commit.to_hex())
+                            }),
+                        );
+                        ref_mapping.insert(
+                            serde_yaml::Value::String("[path]".to_string()),
+                            serde_yaml::Value::String(ref_path.clone()),
+                        );
+                        serde_yaml::Value::Mapping(ref_mapping)
+                    } else {
+                        // Default: inline content
+                        serde_yaml::Value::String(s.to_string())
+                    }
+                } else {
+                    // No prior occurrence found, use inline content
+                    serde_yaml::Value::String(s.to_string())
+                }
             }
             None => serde_yaml::Value::Null, // Deletion
         };

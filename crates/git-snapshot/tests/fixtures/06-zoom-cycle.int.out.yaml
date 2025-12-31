@@ -31,8 +31,12 @@ refs:
   - 2
   - 1
   tree:
-    main.rs: fn main() {}
-    utils.rs: fn util() {}
+    main.rs:
+      '[commit]': 1
+      '[path]': src/lib/main.rs
+    utils.rs:
+      '[commit]': 1
+      '[path]': src/lib/utils.rs
 5:
   tree:
     tests.rs: fn test() {}
@@ -48,4 +52,6 @@ refs:
   tree:
     src:
       lib:
-        tests.rs: fn test() {}
+        tests.rs:
+          '[commit]': 5
+          '[path]': tests.rs

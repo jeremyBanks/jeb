@@ -12,7 +12,9 @@ refs:
 b9d0b12d6c37ac7e529e6206bf28c0168e85de61:
   message: commit 2
   tree:
-    GUIDE.md: '# Original README'
+    GUIDE.md:
+      '[commit]': 77a352
+      '[path]': README.md
     src:
       helper.rs: pub fn help() { /* updated */ }
       new.rs: pub fn new_func() {}

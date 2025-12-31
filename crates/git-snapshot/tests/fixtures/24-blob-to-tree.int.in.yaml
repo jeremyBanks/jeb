@@ -3,6 +3,7 @@ HEAD: refs/heads/main
 refs:
   heads:
     main: 6
+    alternate: 2
 
 # Test replacing a blob (file) with a tree (directory)
 1:

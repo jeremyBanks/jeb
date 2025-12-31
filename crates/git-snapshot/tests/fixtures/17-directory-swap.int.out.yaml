@@ -13,16 +13,28 @@ refs:
 2:
   tree:
     frontend:
-      database.py: backend database
-      server.py: backend server
+      database.py:
+        '[commit]': 1
+        '[path]': backend/database.py
+      server.py:
+        '[commit]': 1
+        '[path]': backend/server.py
     temp-frontend:
-      app.js: frontend app
-      utils.js: frontend utils
+      app.js:
+        '[commit]': 1
+        '[path]': frontend/app.js
+      utils.js:
+        '[commit]': 1
+        '[path]': frontend/utils.js
 3:
   tree:
     backend:
-      app.js: frontend app
-      utils.js: frontend utils
+      app.js:
+        '[commit]': 1
+        '[path]': frontend/app.js
+      utils.js:
+        '[commit]': 1
+        '[path]': frontend/utils.js
     temp-frontend:
       app.js: null
       utils.js: null

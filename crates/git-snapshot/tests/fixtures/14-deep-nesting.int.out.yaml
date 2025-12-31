@@ -16,7 +16,9 @@ refs:
     x:
       y:
         z:
-          moved-deep.txt: very deep file
+          moved-deep.txt:
+            '[commit]': 1
+            '[path]': a/b/c/d/e/f/deep.txt
 3:
   tree:
     a:
@@ -28,9 +30,17 @@ refs:
                 g:
                   h:
                     i:
-                      very-deep.txt: very deep file
+                      very-deep.txt:
+                        '[commit]': 1
+                        '[path]': a/b/c/d/e/f/deep.txt
 4:
   tree:
-    flat-1.txt: very deep file
-    flat-2.txt: very deep file
-    flat-3.txt: very deep file
+    flat-1.txt:
+      '[commit]': 1
+      '[path]': a/b/c/d/e/f/deep.txt
+    flat-2.txt:
+      '[commit]': 1
+      '[path]': a/b/c/d/e/f/deep.txt
+    flat-3.txt:
+      '[commit]': 1
+      '[path]': a/b/c/d/e/f/deep.txt

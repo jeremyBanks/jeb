@@ -19,7 +19,9 @@ refs:
       file-b.txt: null
 4:
   tree:
-    delete-soon.txt: will be deleted
+    delete-soon.txt:
+      '[commit]': 1
+      '[path]': delete-soon.txt
 5:
   tree:
     dir:
@@ -28,5 +30,7 @@ refs:
 6:
   tree:
     dir:
-      file-a.txt: a
+      file-a.txt:
+        '[commit]': 1
+        '[path]': dir/file-a.txt
       new-file.txt: new
