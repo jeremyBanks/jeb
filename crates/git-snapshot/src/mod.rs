@@ -3788,4 +3788,200 @@ refs:
         let repo2 = parse(&serialized).unwrap();
         assert_eq!(repo2.commits().count(), 1);
     }
+
+    #[test]
+    fn test_parse_commit_reference() {
+        // Test basic [commit] reference to copy content from previous commit
+        let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  parents: []
+  tree:
+    file.txt: "original content"
+    dir/nested.rs: "nested file"
+2:
+  tree:
+    file.txt:
+      [commit]: 1
+      [path]: file.txt
+"#;
+        let repo = parse(yaml).unwrap();
+        let commits: Vec<_> = repo.commits().collect();
+        assert_eq!(commits.len(), 2);
+
+        let commit2 = commits.iter().find(|c| c.message == "commit 2").unwrap();
+        assert_eq!(commit2.tree.get("file.txt"), Some("original content"));
+    }
+
+    #[test]
+    fn test_parse_path_reference_with_rename() {
+        // Test [path] reference for renaming a file
+        let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  parents: []
+  tree:
+    old-name.txt: "file content"
+2:
+  tree:
+    new-name.txt:
+      [commit]: 1
+      [path]: old-name.txt
+"#;
+        let repo = parse(yaml).unwrap();
+        let commits: Vec<_> = repo.commits().collect();
+        assert_eq!(commits.len(), 2);
+
+        let commit2 = commits.iter().find(|c| c.message == "commit 2").unwrap();
+        assert_eq!(commit2.tree.get("new-name.txt"), Some("file content"));
+        assert_eq!(commit2.tree.get("old-name.txt"), None);
+    }
+
+    #[test]
+    fn test_parse_tree_reference() {
+        // Test referencing an entire tree (directory)
+        let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  parents: []
+  tree:
+    src/lib.rs: "pub fn main() {}"
+    src/util.rs: "pub fn helper() {}"
+2:
+  tree:
+    copied-src:
+      [commit]: 1
+      [path]: src
+"#;
+        let repo = parse(yaml).unwrap();
+        let commits: Vec<_> = repo.commits().collect();
+        assert_eq!(commits.len(), 2);
+
+        let commit2 = commits.iter().find(|c| c.message == "commit 2").unwrap();
+        assert_eq!(commit2.tree.get("copied-src/lib.rs"), Some("pub fn main() {}"));
+        assert_eq!(commit2.tree.get("copied-src/util.rs"), Some("pub fn helper() {}"));
+    }
+
+    #[test]
+    fn test_parse_path_inheritance() {
+        // Test that [path] is inherited through nested structures
+        let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  parents: []
+  tree:
+    foo/src/main.rs: "fn main() {}"
+    foo/src/lib.rs: "pub fn lib() {}"
+2:
+  tree:
+    bar:
+      [commit]: 1
+      [path]: foo/src
+      extra.rs: "// extra"
+"#;
+        let repo = parse(yaml).unwrap();
+        let commits: Vec<_> = repo.commits().collect();
+        assert_eq!(commits.len(), 2);
+
+        let commit2 = commits.iter().find(|c| c.message == "commit 2").unwrap();
+        // Should have inherited files from foo/src
+        assert_eq!(commit2.tree.get("bar/main.rs"), Some("fn main() {}"));
+        assert_eq!(commit2.tree.get("bar/lib.rs"), Some("pub fn lib() {}"));
+        // Plus the extra file
+        assert_eq!(commit2.tree.get("bar/extra.rs"), Some("// extra"));
+    }
+
+    #[test]
+    fn test_parse_relative_path_sibling() {
+        // Test relative path resolution with ./
+        let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  parents: []
+  tree:
+    src/lib.rs: "library"
+    src/foo.rs: "foo content"
+2:
+  tree:
+    src/lib.rs:
+      [commit]: 1
+      [path]: ./foo.rs
+"#;
+        let repo = parse(yaml).unwrap();
+        let commits: Vec<_> = repo.commits().collect();
+        assert_eq!(commits.len(), 2);
+
+        let commit2 = commits.iter().find(|c| c.message == "commit 2").unwrap();
+        assert_eq!(commit2.tree.get("src/lib.rs"), Some("foo content"));
+    }
+
+    #[test]
+    fn test_parse_relative_path_parent() {
+        // Test relative path resolution with ../
+        let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  parents: []
+  tree:
+    root.txt: "root content"
+    dir/file.txt: "nested"
+2:
+  tree:
+    dir/file.txt:
+      [commit]: 1
+      [path]: ../root.txt
+"#;
+        let repo = parse(yaml).unwrap();
+        let commits: Vec<_> = repo.commits().collect();
+        assert_eq!(commits.len(), 2);
+
+        let commit2 = commits.iter().find(|c| c.message == "commit 2").unwrap();
+        assert_eq!(commit2.tree.get("dir/file.txt"), Some("root content"));
+    }
+
+    #[test]
+    fn test_parse_commit_inheritance() {
+        // Test that [commit] defaults to first parent
+        let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  parents: []
+  tree:
+    file.txt: "content from commit 1"
+2:
+  tree:
+    copy.txt:
+      [path]: file.txt
+"#;
+        let repo = parse(yaml).unwrap();
+        let commits: Vec<_> = repo.commits().collect();
+        assert_eq!(commits.len(), 2);
+
+        let commit2 = commits.iter().find(|c| c.message == "commit 2").unwrap();
+        // Should inherit [commit]: 1 by default
+        assert_eq!(commit2.tree.get("copy.txt"), Some("content from commit 1"));
+        // Original file should still be there (inherited from parent)
+        assert_eq!(commit2.tree.get("file.txt"), Some("content from commit 1"));
+    }
 }
