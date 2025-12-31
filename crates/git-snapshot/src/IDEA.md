@@ -274,6 +274,9 @@ wrong type, or a top-level like `this-is-not-defined` under a commit), or values
 of unexpected types (beyond explicitly-described edge case/lenience handling
 above) result in an error.
 
+When serializing or deserializing, if anything that we say above must not or
+cannot or will not happen, does happen, that's an error.
+
 ### In-Memory Representation
 
 TODO
