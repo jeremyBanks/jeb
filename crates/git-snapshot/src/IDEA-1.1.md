@@ -106,25 +106,56 @@ The target path does not have an inherent type. Whatever object exists at the
 source location (blob or tree) is what gets written to the target. A blob can
 overwrite a tree, and a tree can overwrite a blob.
 
-## Tree Serialization Algorithm
+## Serialization Algorithm for Trees and Blobs
 
-When serializing a commit's tree, we want to minimize redundancy by referencing
-existing identical trees where possible, and by inheriting from parent trees
-when the content is similar.
+When serializing a repository, we want to minimize redundancy. Each unique blob
+or tree hash should have its content appear exactly once in the serialized
+document. All other occurrences become references.
 
-### Phase 1: Exact Hash Matching
+### Physical vs. Logical References
 
-First, we search for exact tree hash matches. We traverse the tree structure
-breadth-first (processing trees at shallower depths before their subtrees). For
-each tree, if we find an exact hash match, we can represent it as a reference
-and skip processing its subtrees (since they are already covered by the match).
+**Physical appearance**: The actual content of a blob or tree appears exactly
+once in the document—at its first occurrence in document order. This is where
+the content "physically lives."
 
-When searching for exact matches, we search ancestor commits in depth-first
-order. Within each commit, the same hash may exist at multiple paths. We rank
-candidates by path similarity to the target path, preferring matches with more
-path components in common.
+**Logical references**: When serializing a commit, we create references that
+point to other commits. These references prefer to follow the commit's own
+history, creating natural chains: commit 3 references commit 2, which references
+commit 1 (where the content physically lives). This makes the references
+meaningful in terms of git history.
 
-#### Path Similarity Scoring
+**Reference chains must terminate**: Every chain of references must eventually
+reach a physical location where the content actually appears. Usually the
+ancestor reference is also the physical location, but not always (e.g., when
+content appears on parallel branches).
+
+### Traversal and Matching
+
+We traverse the tree structure depth-first. For each blob or tree we encounter:
+
+1. **Check if already serialized**: If this exact hash has already been written
+   to the document (at any path, in any commit), we must emit a reference
+   instead of repeating the content.
+
+2. **Search ancestors for a reference target**: Search the current commit's
+   ancestors depth-first for a matching hash. If found, reference that ancestor.
+   This creates history-following reference chains.
+
+3. **Fallback to physical location**: If the hash exists in the document but not
+   in this commit's ancestry (e.g., it appeared on a parallel branch), reference
+   the commit where it physically appears in the document.
+
+4. **First occurrence**: If this is the first time we've seen this hash, write
+   the content directly. This becomes the physical location.
+
+When a tree has an exact match, we do not need to process its subtrees
+separately—they are covered by the tree reference.
+
+### Path Similarity Scoring
+
+When multiple paths contain the same hash (either within a single commit or
+across commits), we choose which one to reference based on path similarity to
+the target path.
 
 Given a target path and a candidate path with a matching hash, we compute a
 score as a tuple of integers, compared lexicographically:
@@ -144,10 +175,13 @@ Example for target `src/bin/main.rs`:
 When there are multiple ways to align the paths, choose the alignment that
 produces the highest score.
 
-### Phase 2: Inheritance for Non-Matching Trees
+This scoring applies both when searching ancestors and when falling back to
+physical locations.
 
-After phase 1, any trees that did not have an exact match need a different
-strategy. For these, we check the immediate parent commits (first parent, then
+### Inheritance for Modified Trees
+
+For trees that do not have an exact hash match anywhere, we use inheritance to
+minimize the diff. We check the immediate parent commits (first parent, then
 second parent, etc.—not recursively through ancestors) to find one that has a
 tree at the same path.
 
