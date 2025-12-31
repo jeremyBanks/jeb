@@ -3884,8 +3884,10 @@ refs:
 1:
   parents: []
   tree:
-    foo/src/main.rs: "fn main() {}"
-    foo/src/lib.rs: "pub fn lib() {}"
+    foo:
+      src:
+        main.rs: "fn main() {}"
+        lib.rs: "pub fn lib() {}"
 2:
   tree:
     bar:
@@ -3916,13 +3918,15 @@ refs:
 1:
   parents: []
   tree:
-    src/lib.rs: "library"
-    src/foo.rs: "foo content"
+    src:
+      lib.rs: "library"
+      foo.rs: "foo content"
 2:
   tree:
-    src/lib.rs:
-      [commit]: 1
-      [path]: ./foo.rs
+    src:
+      lib.rs:
+        [commit]: 1
+        [path]: ./foo.rs
 "#;
         let repo = parse(yaml).unwrap();
         let commits: Vec<_> = repo.commits().collect();
@@ -3944,12 +3948,14 @@ refs:
   parents: []
   tree:
     root.txt: "root content"
-    dir/file.txt: "nested"
+    dir:
+      file.txt: "nested"
 2:
   tree:
-    dir/file.txt:
-      [commit]: 1
-      [path]: ../root.txt
+    dir:
+      file.txt:
+        [commit]: 1
+        [path]: ../root.txt
 "#;
         let repo = parse(yaml).unwrap();
         let commits: Vec<_> = repo.commits().collect();
