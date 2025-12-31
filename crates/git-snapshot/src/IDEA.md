@@ -81,8 +81,8 @@ We'll go over the specific meaning and behavior of each field one at a time.
 ```
 
 `parents` is an array of commit references. If not present, it defaults to an
-array containing a reference to the previous commit in the document. If this is
-the first commit in the list, then it's empty.
+array containing a reference to the previous commit in document order. If this
+is the first commit in the list, then it's empty.
 
 ```yaml
 # ...
