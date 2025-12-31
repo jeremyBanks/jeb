@@ -491,10 +491,10 @@ impl Identity {
 /// Compute the git blob hash for the given content.
 /// Git blobs are hashed as: SHA-1("blob {size}\0{content}")
 fn compute_blob_hash(content: &str) -> ObjectId {
-    use sha1::{Digest, Sha1};
+    use sha1_checked::Digest;
 
     let header = format!("blob {}\0", content.len());
-    let mut hasher = Sha1::new();
+    let mut hasher = sha1_checked::Sha1::new();
     hasher.update(header.as_bytes());
     hasher.update(content.as_bytes());
     let result = hasher.finalize();
@@ -508,7 +508,7 @@ fn compute_blob_hash(content: &str) -> ObjectId {
 /// Git trees are hashed as: SHA-1("tree {size}\0{entries}")
 /// where entries are sorted by name and formatted as: "{mode} {name}\0{hash_bytes}"
 fn compute_tree_hash_from_entries(entries: &BTreeMap<String, (u32, ObjectId)>) -> ObjectId {
-    use sha1::{Digest, Sha1};
+    use sha1_checked::Digest;
 
     // Build the tree object content
     let mut content = Vec::new();
@@ -518,7 +518,7 @@ fn compute_tree_hash_from_entries(entries: &BTreeMap<String, (u32, ObjectId)>) -
     }
 
     let header = format!("tree {}\0", content.len());
-    let mut hasher = Sha1::new();
+    let mut hasher = sha1_checked::Sha1::new();
     hasher.update(header.as_bytes());
     hasher.update(&content);
     let result = hasher.finalize();
