@@ -124,6 +124,7 @@
     "HISTSIZE",
     "ignoreboth",
     "indexmap",
+    "itertools",
     "libjeb",
     "mergeoptions",
     "miri",

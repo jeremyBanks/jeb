@@ -691,7 +691,7 @@ fn get_git_user(args: &Save, repo: &Repository, head: &Option<Commit>) -> Result
     Ok((user_name, user_email))
 }
 
-/// Opens or initializes a new [git2::Repository] in CWD or GIT_DIR, if args
+/// Opens or initializes a new [`git2::Repository`] in `CWD` or `GIT_DIR`, if args
 /// allow it.
 /// XXX: This should be removed or merged into git2.rs.
 #[instrument(level = "debug")]

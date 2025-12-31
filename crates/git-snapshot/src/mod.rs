@@ -1469,7 +1469,7 @@ fn build_commit(
     let message = parse_message(commit_mapping, commit_ref, &committer_date)?;
 
     // Parse tree (with default)
-    let tree = parse_tree(commit_mapping, first_parent)?;
+    let tree = parse_tree(commit_mapping, first_parent, processing_state)?;
 
     // Calculate object ID
     let parent_ids: Vec<ObjectId> = resolved_parents.iter().map(|c| c.id).collect();
@@ -1661,7 +1661,7 @@ fn parse_message(
         // Default: "commit N" for integer refs, "commit at <date>" for hex refs
         match commit_ref {
             CommitRef::Int(n) => Ok(format!("commit {}", n)),
-            CommitRef::Hex(_) => Ok(format!("commit at {}", committer_date.to_iso8601())),
+            CommitRef::Hex(_) | CommitRef::Prefix(_) => Ok(format!("commit at {}", committer_date.to_iso8601())),
         }
     }
 }
@@ -1669,6 +1669,7 @@ fn parse_message(
 fn parse_tree(
     mapping: &serde_yaml::Mapping,
     first_parent: Option<&Commit>,
+    processing_state: &HashMap<CommitRef, CommitProcessingState>,
 ) -> Result<Tree, ParseError> {
     let key = serde_yaml::Value::String("tree".to_string());
 
@@ -1689,7 +1690,18 @@ fn parse_tree(
             } else {
                 // Apply modifications on top of base tree
                 let mut tree = base_tree;
-                apply_tree_delta(&mut tree, "", tree_mapping)?;
+
+                // Set up initial context for [commit] and [path] inheritance
+                let default_commit = first_parent.map(|p| p.id);
+
+                apply_tree_delta(
+                    &mut tree,
+                    "",
+                    tree_mapping,
+                    default_commit,
+                    None, // path starts as None (which means ".")
+                    processing_state,
+                )?;
                 Ok(tree)
             }
         } else {
@@ -1704,36 +1716,284 @@ fn parse_tree(
     }
 }
 
+/// Context for resolving [commit] and [path] references during tree parsing
+#[derive(Debug, Clone)]
+struct ReferenceContext {
+    /// The commit to reference (None means no default commit - error for root commit)
+    commit: Option<ObjectId>,
+    /// The source path within that commit (None means use target path)
+    path: Option<String>,
+}
+
+/// Resolve a commit reference to an ObjectId using the processing state
+fn resolve_commit_from_state(
+    commit_ref: &CommitRef,
+    processing_state: &HashMap<CommitRef, CommitProcessingState>,
+) -> Result<ObjectId, ParseError> {
+    match commit_ref {
+        CommitRef::Hex(oid) => Ok(*oid),
+        CommitRef::Prefix(prefix) => {
+            // Search through all commits in the processing state
+            let matches: Vec<ObjectId> = processing_state
+                .values()
+                .filter_map(|state| {
+                    if let CommitProcessingState::Complete(commit) = state {
+                        let hex_str = commit.id.to_hex();
+                        if hex_str.starts_with(prefix) {
+                            Some(commit.id)
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            match matches.len() {
+                0 => Err(ParseError::CommitNotFound(format!(
+                    "no commit found matching prefix: {}",
+                    prefix
+                ))),
+                1 => Ok(matches[0]),
+                _ => Err(ParseError::AmbiguousHash(prefix.clone())),
+            }
+        }
+        CommitRef::Int(_) => {
+            // Look for this commit ref in the processing state
+            if let Some(CommitProcessingState::Complete(commit)) = processing_state.get(commit_ref) {
+                Ok(commit.id)
+            } else {
+                Err(ParseError::CommitNotFound(format!(
+                    "integer commit reference {:?} not found in processing state",
+                    commit_ref
+                )))
+            }
+        }
+    }
+}
+
+/// Get a commit from the processing state by ObjectId
+fn get_commit_from_state(
+    commit_id: ObjectId,
+    processing_state: &HashMap<CommitRef, CommitProcessingState>,
+) -> Result<&Commit, ParseError> {
+    for state in processing_state.values() {
+        if let CommitProcessingState::Complete(commit) = state {
+            if commit.id == commit_id {
+                return Ok(commit);
+            }
+        }
+    }
+    Err(ParseError::CommitNotFound(format!(
+        "commit {} not found in processing state",
+        commit_id.to_hex()
+    )))
+}
+
+/// Resolve a path reference, handling relative paths (./foo, ../bar) and absolute paths
+fn resolve_path(
+    path_ref: &str,
+    target_path: &str,
+    inherited_source_path: Option<&str>,
+) -> Result<String, ParseError> {
+    // Determine the base path for resolution
+    // According to spec: relative paths are resolved relative to the inherited source path
+    let base_path = if path_ref == "." || path_ref.starts_with("./") || path_ref.starts_with("../") {
+        // Relative path - use the inherited source path as base
+        inherited_source_path.unwrap_or(target_path)
+    } else {
+        // Absolute path (relative to repository root) - ignore inheritance
+        ""
+    };
+
+    // Now resolve the path
+    if path_ref == "." {
+        return Ok(base_path.to_string());
+    }
+
+    let mut components: Vec<&str> = if !base_path.is_empty() {
+        base_path.split('/').collect()
+    } else {
+        Vec::new()
+    };
+
+    // Parse the path reference
+    for part in path_ref.split('/') {
+        match part {
+            "" | "." => {
+                // Skip empty components and current directory references
+            }
+            ".." => {
+                if components.is_empty() {
+                    return Err(ParseError::InvalidPathReference(
+                        "path resolution goes above repository root".to_string(),
+                    ));
+                }
+                components.pop();
+            }
+            component => {
+                components.push(component);
+            }
+        }
+    }
+
+    Ok(components.join("/"))
+}
+
 fn apply_tree_delta(
     tree: &mut Tree,
-    prefix: &str,
+    target_prefix: &str,
     mapping: &serde_yaml::Mapping,
+    inherited_commit: Option<ObjectId>,
+    inherited_path: Option<String>,
+    processing_state: &HashMap<CommitRef, CommitProcessingState>,
 ) -> Result<(), ParseError> {
+    // Extract special keys if present and update context
+    let mut current_commit = inherited_commit;
+    let mut current_path = inherited_path;
+
+    if let Some(commit_value) = get_special_key(mapping, "commit") {
+        // Parse the commit reference
+        if commit_value.is_null() {
+            current_commit = None;
+        } else {
+            let commit_ref = parse_commit_ref(commit_value)?;
+            // Resolve the commit reference to an ObjectId
+            let commit_id = resolve_commit_from_state(&commit_ref, processing_state)?;
+            current_commit = Some(commit_id);
+        }
+    }
+
+    if let Some(path_value) = get_special_key(mapping, "path") {
+        // Parse the path reference
+        let path_str = path_value.as_str().ok_or_else(|| ParseError::UnexpectedType {
+            expected: "string",
+            actual: format!("{:?}", path_value),
+        })?;
+
+        // Resolve the path
+        current_path = Some(resolve_path(path_str, target_prefix, current_path.as_deref())?);
+    }
+
+    // Check if this is a pure reference (only special keys, no regular keys)
+    let has_regular_keys = mapping.iter().any(|(k, _)| {
+        !is_special_key(k, "commit") && !is_special_key(k, "path")
+    });
+
+    if !has_regular_keys && !mapping.is_empty() {
+        // Pure reference - resolve and copy the content
+        if current_commit.is_none() {
+            return Err(ParseError::InvalidPathReference(
+                "cannot use [path] reference without a [commit]".to_string(),
+            ));
+        }
+
+        let source_commit_id = current_commit.unwrap();
+        let source_path = current_path.unwrap_or_else(|| target_prefix.to_string());
+
+        // Look up the commit
+        let source_commit = get_commit_from_state(source_commit_id, processing_state)?;
+
+        // Get the content at the source path
+        if let Some(content) = source_commit.tree.get(&source_path) {
+            // It's a blob - copy it
+            let target_path = target_prefix.to_string();
+            tree.insert(target_path, content.to_string());
+        } else {
+            // Check if it's a tree (has entries with this prefix)
+            let source_prefix = if source_path.is_empty() {
+                String::new()
+            } else {
+                format!("{}/", source_path)
+            };
+
+            let mut found_any = false;
+            for path in source_commit.tree.paths() {
+                if path == &source_path || path.starts_with(&source_prefix) {
+                    found_any = true;
+                    let relative_path = if path == &source_path {
+                        // This shouldn't happen for a tree, but handle it
+                        String::new()
+                    } else {
+                        path[source_prefix.len()..].to_string()
+                    };
+
+                    let target_path = if target_prefix.is_empty() {
+                        relative_path
+                    } else if relative_path.is_empty() {
+                        target_prefix.to_string()
+                    } else {
+                        format!("{}/{}", target_prefix, relative_path)
+                    };
+
+                    let content = source_commit.tree.get(path).unwrap();
+                    tree.insert(target_path, content.to_string());
+                }
+            }
+
+            if !found_any {
+                return Err(ParseError::InvalidPathReference(format!(
+                    "path '{}' not found in commit",
+                    source_path
+                )));
+            }
+        }
+
+        return Ok(());
+    }
+
+    // Process regular string keys (with inherited context for nested entries)
     for (key, value) in mapping.iter() {
+        // Skip special keys
+        if is_special_key(key, "commit") || is_special_key(key, "path") {
+            continue;
+        }
+
+        // This must be a string/number key
         let name = normalize_yaml_key(key)?;
 
         // Validate the name component
         Tree::validate_component(&name)?;
 
-        let path = if prefix.is_empty() {
+        let target_path = if target_prefix.is_empty() {
             name.clone()
         } else {
-            format!("{}/{}", prefix, name)
+            format!("{}/{}", target_prefix, name)
+        };
+
+        // Compute the inherited source path for this entry
+        let inherited_source_path = if let Some(ref src_path) = current_path {
+            if src_path.is_empty() {
+                Some(name.clone())
+            } else {
+                Some(format!("{}/{}", src_path, name))
+            }
+        } else {
+            // No explicit path set, so source path follows target path
+            Some(target_path.clone())
         };
 
         if value.is_null() {
             // Delete
-            tree.remove(&path);
+            tree.remove(&target_path);
         } else if let Some(s) = value.as_str() {
             // Blob content
-            tree.insert(path, s.to_string());
+            tree.insert(target_path, s.to_string());
         } else if let Some(nested_mapping) = value.as_mapping() {
             if nested_mapping.is_empty() {
                 // Empty mapping means delete
-                tree.remove(&path);
+                tree.remove(&target_path);
             } else {
-                // Recursively apply nested modifications
-                apply_tree_delta(tree, &path, nested_mapping)?;
+                // Recursively process with inherited context
+                apply_tree_delta(
+                    tree,
+                    &target_path,
+                    nested_mapping,
+                    current_commit,
+                    inherited_source_path,
+                    processing_state,
+                )?;
             }
         } else if matches!(value, serde_yaml::Value::Tagged(_)) {
             return Err(ParseError::UnexpectedField(
