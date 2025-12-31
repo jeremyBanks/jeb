@@ -3029,6 +3029,7 @@ fn topological_sort_with_tiebreak(repo: &Repository) -> Vec<ObjectId> {
             .get(a)
             .unwrap()
             .cmp(tiebreak_keys.get(b).unwrap())
+            .then_with(|| a.cmp(b))
     });
 
     for commit_id in all_commits {
@@ -3109,6 +3110,7 @@ fn topological_visit(
                 .get(a)
                 .unwrap()
                 .cmp(tiebreak_keys.get(b).unwrap())
+                .then_with(|| a.cmp(b))
         });
 
         for parent_id in parents {
