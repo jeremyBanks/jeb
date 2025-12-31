@@ -1646,9 +1646,59 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
         root.insert(commit_key, commit_value);
     }
 
+    // Sort all mappings lexicographically
+    let sorted_root = sort_mapping_recursive(serde_yaml::Value::Mapping(root));
+
     // Convert to YAML string
-    serde_yaml::to_string(&serde_yaml::Value::Mapping(root))
+    serde_yaml::to_string(&sorted_root)
         .expect("serialization should succeed")
+}
+
+/// Recursively sort all mappings in a Value by their keys (lexicographically)
+fn sort_mapping_recursive(value: serde_yaml::Value) -> serde_yaml::Value {
+    match value {
+        serde_yaml::Value::Mapping(mapping) => {
+            let mut sorted_mapping = serde_yaml::Mapping::new();
+
+            // Collect and sort keys
+            let mut keys: Vec<serde_yaml::Value> = mapping.keys().cloned().collect();
+            keys.sort_by(|a, b| {
+                // Convert to strings for comparison
+                let a_str = value_to_sort_key(a);
+                let b_str = value_to_sort_key(b);
+                a_str.cmp(&b_str)
+            });
+
+            // Insert in sorted order, recursively sorting values
+            for key in keys {
+                if let Some(val) = mapping.get(&key) {
+                    sorted_mapping.insert(key, sort_mapping_recursive(val.clone()));
+                }
+            }
+
+            serde_yaml::Value::Mapping(sorted_mapping)
+        }
+        serde_yaml::Value::Sequence(seq) => {
+            // Recursively sort mappings in sequences
+            serde_yaml::Value::Sequence(
+                seq.into_iter()
+                    .map(sort_mapping_recursive)
+                    .collect()
+            )
+        }
+        other => other,
+    }
+}
+
+/// Convert a YAML value to a string for sorting purposes
+fn value_to_sort_key(value: &serde_yaml::Value) -> String {
+    match value {
+        serde_yaml::Value::String(s) => s.clone(),
+        serde_yaml::Value::Number(n) => n.to_string(),
+        serde_yaml::Value::Bool(b) => b.to_string(),
+        serde_yaml::Value::Null => "null".to_string(),
+        _ => format!("{:?}", value),
+    }
 }
 
 /// Insert a nested ref into the refs mapping
