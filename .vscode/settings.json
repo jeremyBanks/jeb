@@ -138,6 +138,8 @@
     "repr",
     "reqwest",
     "reserialize",
+    "RETCON",
+    "Retcons",
     "rustc",
     "RUSTFLAGS",
     "rustup",

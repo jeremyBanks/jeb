@@ -1366,6 +1366,29 @@ fn normalize_yaml_key(key: &serde_yaml::Value) -> Result<String, ParseError> {
     }
 }
 
+/// Check if a YAML key is a special key like [commit] or [path]
+/// These are sequences containing a single string element
+fn is_special_key(key: &serde_yaml::Value, name: &str) -> bool {
+    if let Some(seq) = key.as_sequence() {
+        if seq.len() == 1 {
+            if let Some(s) = seq[0].as_str() {
+                return s == name;
+            }
+        }
+    }
+    false
+}
+
+/// Try to get a special key value from a mapping
+fn get_special_key<'a>(mapping: &'a serde_yaml::Mapping, name: &str) -> Option<&'a serde_yaml::Value> {
+    for (key, value) in mapping.iter() {
+        if is_special_key(key, name) {
+            return Some(value);
+        }
+    }
+    None
+}
+
 fn build_commit(
     commit_ref: &CommitRef,
     commit_defs: &BTreeMap<CommitRef, &serde_yaml::Mapping>,

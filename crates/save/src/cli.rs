@@ -356,7 +356,7 @@ pub struct Save {
 }
 
 impl Save {
-    pub fn with<F: FnOnce(&mut Save) -> T, T>(f: F) -> Save {
+    pub fn with<F: FnOnce(&mut Self) -> T, T>(f: F) -> Self {
         let mut save = Default::default();
         f(&mut save);
         save
@@ -369,7 +369,7 @@ impl Save {
         let log_env = env::var("RUST_LOG").unwrap_or_default();
 
         let rust_log = if self.verbose == 0 && self.quiet == 0 && !log_env.is_empty() {
-            if log_env.to_ascii_lowercase() == "off" {
+            if log_env.eq_ignore_ascii_case("off") {
                 None
             } else {
                 Some(log_env)
