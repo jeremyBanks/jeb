@@ -2091,3 +2091,117 @@ fn topological_visit(
 }
 
 pub fn main() {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_serialize_roundtrip_integer() {
+        // Create a simple repository
+        let mut repo = Repository::new();
+
+        // Create a root commit
+        let root_commit = Commit {
+            id: ObjectId::from_hex("0000000000000000000000000000000000000001").unwrap(),
+            parents: vec![],
+            tree: {
+                let mut tree = Tree::new();
+                tree.insert("README.md".to_string(), "# Hello".to_string());
+                tree
+            },
+            author: Identity::parse("User <user@localhost>").unwrap(),
+            author_date: Timestamp::from_iso8601("2021-01-14T08:25:36Z").unwrap(),
+            committer: Identity::parse("User <user@localhost>").unwrap(),
+            committer_date: Timestamp::from_iso8601("2021-01-14T08:25:39Z").unwrap(),
+            message: "commit 1".to_string(),
+        };
+
+        repo.insert_commit(root_commit.clone());
+        repo.insert_ref(
+            RefName::new("refs/heads/main".to_string()).unwrap(),
+            root_commit.id,
+        );
+        repo.set_head(HeadState::Symbolic(
+            RefName::new("refs/heads/main".to_string()).unwrap(),
+        ));
+
+        // Serialize with integer IDs
+        let yaml = serialize(&repo, CommitIdStyle::Integer);
+        println!("Serialized YAML:\n{}", yaml);
+
+        // Parse it back
+        let repo2 = parse(&yaml).expect("should parse");
+
+        // Verify the round-trip
+        assert_eq!(repo.refs().count(), repo2.refs().count());
+        assert_eq!(repo.commits().count(), repo2.commits().count());
+
+        // Note: The object IDs will be different because we're recalculating them
+        // from the commit contents during parsing
+    }
+
+    #[test]
+    fn test_serialize_roundtrip_hex() {
+        // Create a simple repository
+        let mut repo = Repository::new();
+
+        // Create a root commit with calculated ID
+        let author = Identity::parse("User <user@localhost>").unwrap();
+        let author_date = Timestamp::from_iso8601("2021-01-14T08:25:36Z").unwrap();
+        let committer = author.clone();
+        let committer_date = Timestamp::from_iso8601("2021-01-14T08:25:39Z").unwrap();
+
+        let tree = {
+            let mut t = Tree::new();
+            t.insert("README.md".to_string(), "# Hello".to_string());
+            t
+        };
+
+        let tree_id = calculate_tree_id(&tree).unwrap();
+        let commit_id = calculate_commit_id(
+            &tree_id,
+            &[],
+            &author,
+            author_date,
+            &committer,
+            committer_date,
+            "Initial commit",
+        )
+        .unwrap();
+
+        let root_commit = Commit {
+            id: commit_id,
+            parents: vec![],
+            tree,
+            author,
+            author_date,
+            committer,
+            committer_date,
+            message: "Initial commit".to_string(),
+        };
+
+        repo.insert_commit(root_commit.clone());
+        repo.insert_ref(
+            RefName::new("refs/heads/main".to_string()).unwrap(),
+            root_commit.id,
+        );
+        repo.set_head(HeadState::Symbolic(
+            RefName::new("refs/heads/main".to_string()).unwrap(),
+        ));
+
+        // Serialize with hex IDs
+        let yaml = serialize(&repo, CommitIdStyle::Hex);
+        println!("Serialized YAML:\n{}", yaml);
+
+        // Parse it back
+        let repo2 = parse(&yaml).expect("should parse");
+
+        // Verify the round-trip - IDs should match since we used correct hashes
+        assert_eq!(repo.commits().count(), repo2.commits().count());
+        assert_eq!(
+            repo.get_commit(&commit_id).unwrap().id,
+            repo2.get_commit(&commit_id).unwrap().id
+        );
+    }
+}
