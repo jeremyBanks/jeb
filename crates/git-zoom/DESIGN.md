@@ -690,7 +690,8 @@ heads, then finally go through all commits and append a final component of their
 commit timestamp, followed by their authoring timestamp.
 
 This gives us a topological sort which will also reflect the git structure in a
-way that prioritizes the HEAD branch but includes all of them.
+way that prioritizes the HEAD branch but includes all of them, with the
+most-recent commits appearing near the bottom.
 
 Yeah that's what we'll do when re-serializing.
 

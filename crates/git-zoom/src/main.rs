@@ -9,10 +9,11 @@ mod scan;
 mod tree;
 mod zoom_in;
 mod zoom_out;
-mod git_snapshot;
 
-use std::env;
-use std::process::ExitCode;
+use std::{
+    env,
+    process::ExitCode,
+};
 
 fn print_usage() {
     eprintln!("Usage:");

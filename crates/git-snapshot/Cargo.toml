@@ -14,7 +14,6 @@ version.workspace = true
 tempfile = "3"
 
 [dependencies]
-git2 = "0.20.3"
 indexmap.workspace = true
 serde = { workspace = true, features = ["rc"] }
 serde_bytes.workspace = true
