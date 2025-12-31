@@ -9,14 +9,15 @@ For version 1, we're not actually interacting with real git at all, we're only
 interacting with our serialized and in-memory representations (which are quite
 different from each other).
 
-We're going to use `serde`, but we're not using any actual `Serialize` or
+We're going to use `serde_yaml`, but we're not using any actual `Serialize` or
 `Deserialize` derived implementations, we're just going to use dynamic
 `serde_yaml::Value` values in our own parsing logic, and write them to disk.
 
 ### On-Disk Representation
 
 The on-disk representation is designed to be human-readable and writeable, with
-a focus on minimal duplication and sensible defaults.
+a focus on minimal duplication and sensible defaults. It will be a YAML 1.2 file
+using UTF-8 encoding (but no `%` header or anything).
 
 In the on-disk representation, each commit must be consistently referenced by
 either its full real correct 40-character hex object ID as a `Value::String`, or
@@ -80,8 +81,8 @@ We'll go over the specific meaning and behavior of each field one at a time.
 ```
 
 `parents` is an array of commit references. If not present, it defaults to an
-array containing a reference to the previous commit in the list. If this is the
-first commit in the list, then it's empty.
+array containing a reference to the previous commit in the document. If this is
+the first commit in the list, then it's empty.
 
 ```yaml
 # ...
@@ -94,7 +95,9 @@ first commit in the list, then it's empty.
 `message` is a string. If absent, then if the commit is referenced by an integer
 then the commit message is "commit N" where `N` is that integer. Otherwise, the
 default is "commit at <commit date as ISO 8601 string>". As you would expect,
-this may be a multi-line string and may include trailers.
+this may be a multi-line string and may include trailers. The explicit empty
+string is also valid, meaning a commit with no message (NOT the default
+message).
 
 ```yaml
 # ...
@@ -134,10 +137,10 @@ When serializing use `Z` for the zero/UTC offset, and the colon form like
 `-02:00` for nonzero offsets, separate date components with `-`, time components
 with `:`, and join them with a `T`.
 
-When parsing, we accept any valid ISO 8601 timestamp (so we accept other valid
-delimiters), as long as it's a time git can support (so it can't be before the
-Unix epoch, and it can't have nonzero fractional seconds). At minimum, the year
-needs to be specified, but any number of other trailing components can be
+When parsing, we accept any valid ISO 8601 date or datetime (so we accept other
+valid delimiters), as long as it's a time git can support (so it can't be before
+the Unix epoch, and it can't have nonzero fractional seconds). At minimum, the
+year needs to be specified, but any number of other trailing components can be
 omitted (as long as they're all trailing, with no gaps in between). We default
 to month 02, day 04, hour 08, minute 16, second 32, and offset Z (UTC / 0).
 
@@ -167,9 +170,10 @@ deletion, instead of `null` or `{}`, but they're both supported when parsing.
 
 A value of `null`/missing/the empty object `{}`, that represents deletion. If
 it's the root tree for the commit, it means the commit contains no files/has the
-empty tree as its root. (The empty tree cannot exist anywhere but the root.) If
-it's a nested tree entry, it means that the file or tree at that path is
-deleted, it if even existed.
+empty tree as its root. (The empty tree cannot exist anywhere but the root, so
+this unambiguously represents deletion anywhere else.) If it's a nested tree
+entry, it means that the file or tree at that path is deleted, it if even
+existed.
 
 A value which is a string represents the contents of a blob (must be UTF-8). If
 any blob or tree already existed there, it's replaced with this new blob. The
@@ -184,19 +188,19 @@ empty/`null`/`{}` for deletion, a string for a blob, or a mapping with the
 changes to apply to a tree. (If we have mapping object in the path where a blob
 previously was, the mapping replaces the blob.)
 
-Tree entry names (file/directory names) must not contain `/` or null bytes, or
-be equal to `"."`, `".."`, or `""`, or we return an error. Names will always be
-serialized as strings. For convenience to humans authors, when parsing, we also
-accept _integer_ numbers by converted to their integer string representations
-(not fractional/float values because we don't want to deal with the ambiguities
-of floating point stringification), and name values which are equal to `true`,
-`false`, or `null` are interpreted as the corresponding strings `"true"`,
-`"false"` or `"null"`. (Due to the YAML parser, this implicitly means that
-`True` will become `"true"`, and `~` will become `"null"`, and we tolerate that
-as an unfortunate edge case, which will never occur in data we've serialized
-ourselves.) Other special YAML symbols/keywords such as `.inf` and `.nan` are
-not supported and result in errors. All of this same logic is also applied to
-keys in our `refs` mappings, too.
+Tree entry names (file/directory names) must not contain `/`, `\`, `:`, null
+bytes, or be equal to `"."`, `".."`, or `""`, or we return an error. Names will
+always be serialized as strings. For convenience to humans authors, when
+parsing, we also accept _integer_ numbers by converted to their integer string
+representations (not fractional/float values because we don't want to deal with
+the ambiguities of floating point stringification), and name values which are
+equal to `true`, `false`, or `null` are interpreted as the corresponding strings
+`"true"`, `"false"` or `"null"`. (Due to the YAML parser, this implicitly means
+that `True` will become `"true"`, and `~` will become `"null"`, and we tolerate
+that as an unfortunate edge case, which will never occur in data we've
+serialized ourselves.) Other special YAML symbols/keywords such as `.inf` and
+`.nan` are not supported and result in errors. All of this same logic is also
+applied to keys in our `refs` mappings, too.
 
 This scheme has no way to store non-default flags, such as whether a files is
 executable or a symlink. Those files are not supported.
@@ -263,6 +267,12 @@ a potential infinite loop or stack overflow.
 When we're serializing, we implicitly only include commits which are reachable
 from our `refs` or `HEAD`. When we're deserializing, non-reachable commits are
 ignored (they do not raise an error, but they're not preserved).
+
+During serialization, unexpected object entries (such as a top-level key that's
+not `HEAD`, `refs`, an integer, or a 40-character hex string, or a value of the
+wrong type, or a top-level like `this-is-not-defined` under a commit), or values
+of unexpected types (beyond explicitly-described edge case/lenience handling
+above) result in an error.
 
 ### In-Memory Representation
 
