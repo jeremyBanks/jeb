@@ -1716,15 +1716,6 @@ fn parse_tree(
     }
 }
 
-/// Context for resolving [commit] and [path] references during tree parsing
-#[derive(Debug, Clone)]
-struct ReferenceContext {
-    /// The commit to reference (None means no default commit - error for root commit)
-    commit: Option<ObjectId>,
-    /// The source path within that commit (None means use target path)
-    path: Option<String>,
-}
-
 /// Resolve a commit reference to an ObjectId using the processing state
 fn resolve_commit_from_state(
     commit_ref: &CommitRef,
