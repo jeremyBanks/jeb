@@ -485,6 +485,50 @@ impl Identity {
 }
 
 // ============================================================================
+// Hash Computation Helpers
+// ============================================================================
+
+/// Compute the git blob hash for the given content.
+/// Git blobs are hashed as: SHA-1("blob {size}\0{content}")
+fn compute_blob_hash(content: &str) -> ObjectId {
+    use sha1::{Digest, Sha1};
+
+    let header = format!("blob {}\0", content.len());
+    let mut hasher = Sha1::new();
+    hasher.update(header.as_bytes());
+    hasher.update(content.as_bytes());
+    let result = hasher.finalize();
+
+    let mut bytes = [0u8; 20];
+    bytes.copy_from_slice(&result);
+    ObjectId(bytes)
+}
+
+/// Compute the git tree hash for the given tree entries.
+/// Git trees are hashed as: SHA-1("tree {size}\0{entries}")
+/// where entries are sorted by name and formatted as: "{mode} {name}\0{hash_bytes}"
+fn compute_tree_hash_from_entries(entries: &BTreeMap<String, (u32, ObjectId)>) -> ObjectId {
+    use sha1::{Digest, Sha1};
+
+    // Build the tree object content
+    let mut content = Vec::new();
+    for (name, (mode, hash)) in entries {
+        content.extend_from_slice(format!("{} {}\0", mode, name).as_bytes());
+        content.extend_from_slice(hash.as_bytes());
+    }
+
+    let header = format!("tree {}\0", content.len());
+    let mut hasher = Sha1::new();
+    hasher.update(header.as_bytes());
+    hasher.update(&content);
+    let result = hasher.finalize();
+
+    let mut bytes = [0u8; 20];
+    bytes.copy_from_slice(&result);
+    ObjectId(bytes)
+}
+
+// ============================================================================
 // Tree
 // ============================================================================
 
@@ -511,6 +555,8 @@ impl Tree {
     pub fn new() -> Self {
         Tree {
             entries: BTreeMap::new(),
+            blob_hashes: BTreeMap::new(),
+            tree_hash: None,
         }
     }
 
@@ -526,7 +572,16 @@ impl Tree {
             // For now, just insert anyway. Validation should be done before calling.
             // In a full implementation, we might want to return Result here.
         }
+
+        // Compute and store the blob hash
+        let blob_hash = compute_blob_hash(&content);
+        self.blob_hashes.insert(path.clone(), blob_hash);
+
+        // Insert the content
         self.entries.insert(path, content);
+
+        // Invalidate the tree hash cache
+        self.tree_hash = None;
     }
 
     /// Remove a file or directory at the given path
@@ -534,6 +589,9 @@ impl Tree {
     pub fn remove(&mut self, path: &str) -> bool {
         // Remove the exact path if it exists
         let exact_removed = self.entries.remove(path).is_some();
+        if exact_removed {
+            self.blob_hashes.remove(path);
+        }
 
         // Remove all paths that start with this path followed by '/'
         let prefix = format!("{}/", path);
@@ -547,6 +605,12 @@ impl Tree {
         let dir_removed = !keys_to_remove.is_empty();
         for key in keys_to_remove {
             self.entries.remove(&key);
+            self.blob_hashes.remove(&key);
+        }
+
+        // Invalidate the tree hash cache if anything was removed
+        if exact_removed || dir_removed {
+            self.tree_hash = None;
         }
 
         exact_removed || dir_removed
