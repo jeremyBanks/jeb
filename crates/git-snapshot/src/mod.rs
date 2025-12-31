@@ -1863,8 +1863,14 @@ fn apply_tree_delta(
             actual: format!("{:?}", path_value),
         })?;
 
+        // According to spec (IDEA-1.1.md lines 95-99):
+        // Relative paths are resolved relative to "the source path that would be computed by inheritance"
+        // which is: parent's effective source path + this entry's name
+        // This is the same as target_prefix in our case, since we're called with target_prefix set correctly
+        let inherited_source_base = target_prefix;
+
         // Resolve the path
-        current_path = Some(resolve_path(path_str, target_prefix, current_path.as_deref())?);
+        current_path = Some(resolve_path(path_str, target_prefix, Some(inherited_source_base))?);
     }
 
     // Check if this is a pure reference (only special keys, no regular keys)
