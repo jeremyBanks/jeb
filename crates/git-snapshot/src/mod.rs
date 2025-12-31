@@ -550,6 +550,38 @@ pub struct Tree {
     tree_hash: Option<ObjectId>,
 }
 
+/// A tree delta represents changes to apply on top of a base tree.
+/// This is used during deserialization when parsing the on-disk format.
+pub type TreeDelta = BTreeMap<String, TreeEntry>;
+
+/// An entry in a tree delta
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TreeEntry {
+    /// Set a blob to this content
+    Blob(String),
+
+    /// Recursively modify a subtree
+    Tree(BTreeMap<String, TreeEntry>),
+
+    /// Delete this path
+    Delete,
+
+    /// Reference to content from another commit/path
+    /// Used during deserialization when encountering [commit] and/or [path] references
+    Reference(TreeReference),
+}
+
+/// A reference to a tree or blob from another location.
+/// Represents the [commit] and [path] special keys in the on-disk format.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TreeReference {
+    /// The commit to reference (None means use the inherited [commit] value)
+    pub commit: Option<ObjectId>,
+
+    /// The path within that commit's tree to reference (None means use the inherited path)
+    pub path: Option<String>,
+}
+
 impl Tree {
     /// Create an empty tree
     pub fn new() -> Self {
@@ -770,6 +802,40 @@ impl Tree {
         }
 
         subtree
+    }
+
+    /// Apply a tree delta on top of this tree (used during deserialization)
+    pub fn apply_delta(&mut self, delta: &TreeDelta) {
+        self.apply_delta_internal("", delta);
+        // Invalidate the tree hash cache after applying delta
+        self.tree_hash = None;
+    }
+
+    /// Internal recursive helper for applying deltas
+    fn apply_delta_internal(&mut self, prefix: &str, delta: &TreeDelta) {
+        for (name, entry) in delta {
+            let path = if prefix.is_empty() {
+                name.clone()
+            } else {
+                format!("{}/{}", prefix, name)
+            };
+
+            match entry {
+                TreeEntry::Blob(content) => {
+                    self.insert(path, content.clone());
+                }
+                TreeEntry::Tree(nested_delta) => {
+                    self.apply_delta_internal(&path, nested_delta);
+                }
+                TreeEntry::Delete => {
+                    self.remove(&path);
+                }
+                TreeEntry::Reference(_) => {
+                    // References should be resolved before calling apply_delta
+                    // For now, just skip them
+                }
+            }
+        }
     }
 }
 
