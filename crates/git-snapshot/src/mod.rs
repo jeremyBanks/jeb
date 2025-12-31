@@ -3831,6 +3831,7 @@ refs:
     old-name.txt: "file content"
 2:
   tree:
+    old-name.txt: null
     new-name.txt:
       [commit]: 1
       [path]: old-name.txt
