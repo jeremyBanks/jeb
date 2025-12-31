@@ -22,11 +22,15 @@ refs:
   - 1
   tree:
     a.txt:
-      '[commit]': 1
-      '[path]': subtree/a.txt
+      ? - commit
+      : 1
+      ? - path
+      : subtree/a.txt
     b.txt:
-      '[commit]': 1
-      '[path]': subtree/b.txt
+      ? - commit
+      : 1
+      ? - path
+      : subtree/b.txt
 4:
   message: |
     Zoom out to commit 1

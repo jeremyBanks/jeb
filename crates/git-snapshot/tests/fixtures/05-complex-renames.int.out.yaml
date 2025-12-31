@@ -29,12 +29,16 @@ refs:
 3:
   tree:
     README-GUIDE.md:
-      '[commit]': 1
-      '[path]': docs/guide.md
+      ? - commit
+      : 1
+      ? - path
+      : docs/guide.md
 4:
   tree:
     src:
       runtime:
         shared.rs:
-          '[commit]': 1
-          '[path]': src/core/utils.rs
+          ? - commit
+          : 1
+          ? - path
+          : src/core/utils.rs

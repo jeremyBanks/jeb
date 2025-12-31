@@ -43,32 +43,27 @@ fn test_fixture(input_path: &Path, expected_path: &Path, id_style: CommitIdStyle
     // Serialize back
     let output_yaml = serialize(&repo, id_style);
 
-    // Check if expected output exists
+    // Check if expected output matches
     let expected_exists = expected_path.exists();
     let mut test_failed = false;
 
     if expected_exists {
-        // Compare with expected
         let expected_yaml = fs::read_to_string(expected_path)
             .unwrap_or_else(|e| panic!("Failed to read expected file {:?}: {}", expected_path, e));
 
         if output_yaml != expected_yaml {
-            eprintln!("MISMATCH in fixture: {}", input_path.display());
-            eprintln!("Expected output differs from actual output");
-            eprintln!("\n=== EXPECTED ===\n{}", expected_yaml);
-            eprintln!("\n=== ACTUAL ===\n{}", output_yaml);
+            eprintln!("MISMATCH - Regenerating: {}", expected_path.display());
+            fs::write(expected_path, &output_yaml).unwrap_or_else(|e| {
+                panic!("Failed to write expected output {:?}: {}", expected_path, e)
+            });
             test_failed = true;
         }
     } else {
-        // Generate expected output
-        eprintln!(
-            "Generating missing expected output: {}",
-            expected_path.display()
-        );
+        eprintln!("Generating: {}", expected_path.display());
         fs::write(expected_path, &output_yaml).unwrap_or_else(|e| {
             panic!("Failed to write expected output {:?}: {}", expected_path, e)
         });
-        test_failed = true; // Fail the test so user knows to review generated file
+        test_failed = true;
     }
 
     // Round-trip stability check

@@ -2999,15 +2999,16 @@ fn insert_tree_change(
 
                     if should_reference {
                         // Use [commit]/[path] reference
+                        // Note: [commit] and [path] must be sequences, not strings!
                         let mut ref_mapping = serde_yaml::Mapping::new();
                         ref_mapping.insert(
-                            serde_yaml::Value::String("[commit]".to_string()),
+                            serde_yaml::Value::Sequence(vec![serde_yaml::Value::String("commit".to_string())]),
                             commit_refs.get(&ref_commit).cloned().unwrap_or_else(|| {
                                 serde_yaml::Value::String(ref_commit.to_hex())
                             }),
                         );
                         ref_mapping.insert(
-                            serde_yaml::Value::String("[path]".to_string()),
+                            serde_yaml::Value::Sequence(vec![serde_yaml::Value::String("path".to_string())]),
                             serde_yaml::Value::String(ref_path.clone()),
                         );
                         serde_yaml::Value::Mapping(ref_mapping)

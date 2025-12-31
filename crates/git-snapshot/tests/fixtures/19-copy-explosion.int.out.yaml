@@ -8,47 +8,69 @@ refs:
 2:
   tree:
     copy-1.txt:
-      '[commit]': 1
-      '[path]': template.txt
+      ? - commit
+      : 1
+      ? - path
+      : template.txt
     copy-2.txt:
-      '[commit]': 1
-      '[path]': template.txt
+      ? - commit
+      : 1
+      ? - path
+      : template.txt
     copy-3.txt:
-      '[commit]': 1
-      '[path]': template.txt
+      ? - commit
+      : 1
+      ? - path
+      : template.txt
 3:
   tree:
     dir-a:
       template.txt:
-        '[commit]': 1
-        '[path]': template.txt
+        ? - commit
+        : 1
+        ? - path
+        : template.txt
     dir-b:
       template.txt:
-        '[commit]': 1
-        '[path]': template.txt
+        ? - commit
+        : 1
+        ? - path
+        : template.txt
     dir-c:
       template.txt:
-        '[commit]': 1
-        '[path]': template.txt
+        ? - commit
+        : 1
+        ? - path
+        : template.txt
 4:
   tree:
     level1:
       level2:
         level3:
           template.txt:
-            '[commit]': 1
-            '[path]': template.txt
+            ? - commit
+            : 1
+            ? - path
+            : template.txt
 5:
   tree:
     from-commit-1.txt:
-      '[commit]': 1
-      '[path]': template.txt
+      ? - commit
+      : 1
+      ? - path
+      : template.txt
     from-commit-2.txt:
-      '[commit]': 1
-      '[path]': template.txt
+      ? - commit
+      : 1
+      ? - path
+      : template.txt
     from-commit-3.txt:
-      '[commit]': 1
-      '[path]': template.txt
+      ? - commit
+      : 1
+      ? - path
+      : template.txt
     from-commit-4.txt:
-      '[commit]': 1
-      '[path]': template.txt
+      ? - commit
+      : 1
+      ? - path
+      : template.txt
