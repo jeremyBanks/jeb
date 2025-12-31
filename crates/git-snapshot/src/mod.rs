@@ -665,6 +665,112 @@ impl Tree {
 
         Ok(())
     }
+
+    /// Get the hash of a blob at the given path
+    pub fn get_blob_hash(&self, path: &str) -> Option<ObjectId> {
+        self.blob_hashes.get(path).copied()
+    }
+
+    /// Get the cached tree hash if available
+    pub fn hash(&self) -> Option<ObjectId> {
+        self.tree_hash
+    }
+
+    /// Compute and cache the tree hash for this tree
+    /// Returns the cached hash if already computed
+    pub fn compute_hash(&mut self) -> ObjectId {
+        if let Some(hash) = self.tree_hash {
+            return hash;
+        }
+
+        // Build a hierarchical tree structure from the flat entries
+        // This is needed to compute hashes correctly for git's tree objects
+        let hash = self.compute_tree_hash_for_path("");
+        self.tree_hash = Some(hash);
+        hash
+    }
+
+    /// Compute the tree hash for a specific path prefix
+    /// This reconstructs the hierarchical tree structure from the flat representation
+    fn compute_tree_hash_for_path(&self, prefix: &str) -> ObjectId {
+        use std::collections::BTreeMap;
+
+        // Collect all direct children (files and subdirectories) at this level
+        let mut entries: BTreeMap<String, (u32, ObjectId)> = BTreeMap::new();
+
+        let prefix_with_slash = if prefix.is_empty() {
+            String::new()
+        } else {
+            format!("{}/", prefix)
+        };
+
+        for (path, _content) in &self.entries {
+            // Skip entries that don't start with our prefix
+            if !prefix.is_empty() && !path.starts_with(&prefix_with_slash) {
+                continue;
+            }
+
+            // Get the relative path from this prefix
+            let relative = if prefix.is_empty() {
+                path.as_str()
+            } else {
+                &path[prefix_with_slash.len()..]
+            };
+
+            // Split into first component and rest
+            if let Some(slash_pos) = relative.find('/') {
+                // This is a subdirectory
+                let dir_name = &relative[..slash_pos];
+
+                // Only compute the subtree hash once per directory
+                if !entries.contains_key(dir_name) {
+                    let subtree_prefix = if prefix.is_empty() {
+                        dir_name.to_string()
+                    } else {
+                        format!("{}/{}", prefix, dir_name)
+                    };
+                    let subtree_hash = self.compute_tree_hash_for_path(&subtree_prefix);
+                    entries.insert(dir_name.to_string(), (40000, subtree_hash)); // mode 040000 = directory
+                }
+            } else {
+                // This is a file at this level
+                let blob_hash = self.blob_hashes.get(path).copied().unwrap_or_else(|| {
+                    // Should not happen if blob_hashes is maintained correctly
+                    compute_blob_hash(self.entries.get(path).unwrap())
+                });
+                entries.insert(relative.to_string(), (100644, blob_hash)); // mode 100644 = regular file
+            }
+        }
+
+        // Compute the hash for this tree object
+        compute_tree_hash_from_entries(&entries)
+    }
+
+    /// Get the tree at a specific path (returns a subtree containing only entries under that path)
+    pub fn get_tree(&self, prefix: &str) -> Tree {
+        let mut subtree = Tree::new();
+
+        let prefix_with_slash = if prefix.is_empty() {
+            String::new()
+        } else {
+            format!("{}/", prefix)
+        };
+
+        for (path, content) in &self.entries {
+            if prefix.is_empty() || path.starts_with(&prefix_with_slash) {
+                // Get the relative path
+                let relative = if prefix.is_empty() {
+                    path.clone()
+                } else {
+                    path[prefix_with_slash.len()..].to_string()
+                };
+
+                subtree.insert(relative, content.clone());
+            }
+        }
+
+        subtree
+    }
 }
 
 // ============================================================================
