@@ -156,7 +156,7 @@ pub struct Commit {
     pub committer: Identity,
 
     /// Commit timestamp
-    pub commit_date: Timestamp,
+    pub committer_date: Timestamp,
 
     /// Commit message (may be empty string, but never None)
     pub message: String,
@@ -263,14 +263,10 @@ These types are used during serialization/deserialization but are not part of th
 ```rust
 /// A tree delta represents changes to apply on top of a base tree.
 /// This is used during deserialization when parsing the on-disk format.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TreeDelta {
-    /// Replace the entire tree with new contents
-    Replace(Tree),
-
-    /// Apply modifications to the existing tree
-    Modify(BTreeMap<String, TreeEntry>),
-}
+/// The delta is always applied on top of the parent's tree (or the empty tree for root commits).
+/// An empty delta means no modifications (use parent's tree as-is).
+/// A null/empty root tree in the on-disk format means the empty tree (no files), not "replace".
+pub type TreeDelta = BTreeMap<String, TreeEntry>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TreeEntry {
@@ -392,7 +388,9 @@ For V1, performance is not critical (we're targeting test fixtures, not large re
 The data structures should maintain certain invariants:
 - `ObjectId` is always exactly 20 bytes
 - `Timestamp.seconds` is non-negative (git can't represent pre-epoch times)
-- `Tree` paths don't contain invalid characters (`/\:` null bytes, or equal `.`, `..`, `""`)
+- `Tree` paths are stored in the flat BTreeMap using `/` as the path separator (e.g., "src/main.rs")
+- Individual path components (file/directory names) must not contain `/`, `\`, `:`, null bytes, or equal `.`, `..`, `""`
+- Note: The `/` character is forbidden in individual components but used internally to separate components in stored paths
 - `RefName` must start with `refs/`
 - `Repository::commits` only contains commits reachable from HEAD or refs
 - No cycles in the commit graph
