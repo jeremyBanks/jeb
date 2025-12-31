@@ -66,7 +66,7 @@ Path resolution:
 
 A mapping value in a tree can be:
 
-1. **A pure reference**: A mapping containing *only* `[commit]` and/or `[path]`
+1. **A pure reference**: A mapping containing _only_ `[commit]` and/or `[path]`
    (no string keys). This resolves to whatever object exists at the specified
    source location. If the source is a blob, the target becomes that blob. If
    the source is a tree, the target becomes that tree.
@@ -97,7 +97,7 @@ new-name.rs:
 new-name.rs:
   [commit]: 1
   [path]: old-name.rs
-  something: "content"  # ERROR if old-name.rs is a blob
+  something: "content" # ERROR if old-name.rs is a blob
 ```
 
 ### Type Flexibility
@@ -166,14 +166,15 @@ score as a tuple of integers, compared lexicographically:
 
 Example for target `src/bin/main.rs`:
 
-| Candidate | Score | Explanation |
-|-----------|-------|-------------|
-| `src/bin/main.rs` | [3, 0, 0] | Full match of all 3 components |
-| `src/bin/test.rs` | [2, -1, 0] | 2 components match, 1 differs |
+| Candidate                 | Score      | Explanation                     |
+| ------------------------- | ---------- | ------------------------------- |
+| `src/bin/main.rs`         | [3, 0, 0]  | Full match of all 3 components  |
+| `src/bin/test.rs`         | [2, -1, 0] | 2 components match, 1 differs   |
 | `foo/bar/src/bin/main.rs` | [3, 0, -2] | All 3 match, but 2 extra prefix |
 
 When there are multiple ways to align the paths, choose the alignment that
-produces the highest score.
+produces the highest score. When the scores are identical, break the tie by path
+lexicographically.
 
 This scoring applies both when searching ancestors and when falling back to
 physical locations.
@@ -186,11 +187,7 @@ second parent, etc.—not recursively through ancestors) to find one that has a
 tree at the same path.
 
 If found, we set `[commit]` to reference that parent and compute the necessary
-modifications:
-
-- Entries that exist in the parent but not in the current tree become deletions
-- Entries that exist in the current tree but not the parent become additions
-- Entries that differ become modifications
+modifications based on this new default/base tree.
 
 If no parent has a tree at that path, we serialize the tree contents directly
 without a base reference.
