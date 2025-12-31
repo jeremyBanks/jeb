@@ -1,3 +1,11 @@
+use std::{
+    fs,
+    path::{
+        Path,
+        PathBuf,
+    },
+};
+
 /// Fixture-based tests for git-snapshot library
 ///
 /// Tests follow the pattern described in IDEA-1.1.md:
@@ -8,15 +16,18 @@
 /// 5. Verify round-trip stability (deserialize output, serialize again)
 ///
 /// If expected output doesn't exist, it's auto-generated and the test fails.
-
-use git_snapshot::{parse, serialize, CommitIdStyle};
-use std::fs;
-use std::path::{Path, PathBuf};
+use git_snapshot::{
+    CommitIdStyle,
+    parse,
+    serialize,
+};
 
 /// Test a single fixture file
 ///
-/// - `input_path`: Path to the input .yaml file (e.g., "tests/fixtures/basic.in.yaml")
-/// - `expected_path`: Path to expected output .yaml file (e.g., "tests/fixtures/basic.out.yaml")
+/// - `input_path`: Path to the input .yaml file (e.g.,
+///   "tests/fixtures/basic.in.yaml")
+/// - `expected_path`: Path to expected output .yaml file (e.g.,
+///   "tests/fixtures/basic.out.yaml")
 /// - `id_style`: Whether to use hex or integer commit IDs in output
 fn test_fixture(input_path: &Path, expected_path: &Path, id_style: CommitIdStyle) {
     eprintln!("Testing fixture: {}", input_path.display());
@@ -50,9 +61,13 @@ fn test_fixture(input_path: &Path, expected_path: &Path, id_style: CommitIdStyle
         }
     } else {
         // Generate expected output
-        eprintln!("Generating missing expected output: {}", expected_path.display());
-        fs::write(expected_path, &output_yaml)
-            .unwrap_or_else(|e| panic!("Failed to write expected output {:?}: {}", expected_path, e));
+        eprintln!(
+            "Generating missing expected output: {}",
+            expected_path.display()
+        );
+        fs::write(expected_path, &output_yaml).unwrap_or_else(|e| {
+            panic!("Failed to write expected output {:?}: {}", expected_path, e)
+        });
         test_failed = true; // Fail the test so user knows to review generated file
     }
 
@@ -63,7 +78,10 @@ fn test_fixture(input_path: &Path, expected_path: &Path, id_style: CommitIdStyle
     let output_yaml2 = serialize(&repo2, id_style);
 
     if output_yaml != output_yaml2 {
-        eprintln!("ROUND-TRIP INSTABILITY in fixture: {}", input_path.display());
+        eprintln!(
+            "ROUND-TRIP INSTABILITY in fixture: {}",
+            input_path.display()
+        );
         eprintln!("Second serialization differs from first");
         eprintln!("\n=== FIRST ===\n{}", output_yaml);
         eprintln!("\n=== SECOND ===\n{}", output_yaml2);
@@ -72,7 +90,10 @@ fn test_fixture(input_path: &Path, expected_path: &Path, id_style: CommitIdStyle
 
     if test_failed {
         if !expected_exists {
-            panic!("Generated missing expected output file: {:?}. Please review and re-run tests.", expected_path);
+            panic!(
+                "Generated missing expected output file: {:?}. Please review and re-run tests.",
+                expected_path
+            );
         } else {
             panic!("Output mismatch for fixture: {:?}", input_path);
         }
@@ -141,6 +162,10 @@ fn test_all_fixtures() {
     }
 
     if !failed.is_empty() {
-        panic!("Fixture tests failed for {} file(s): {:?}", failed.len(), failed);
+        panic!(
+            "Fixture tests failed for {} file(s): {:?}",
+            failed.len(),
+            failed
+        );
     }
 }

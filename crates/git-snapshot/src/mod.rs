@@ -1,5 +1,10 @@
-use std::collections::{BTreeMap, HashMap};
-use std::fmt;
+use std::{
+    collections::{
+        BTreeMap,
+        HashMap,
+    },
+    fmt,
+};
 
 // ============================================================================
 // Error Types
@@ -116,10 +121,7 @@ impl ObjectId {
 
     /// Convert to 40-character lowercase hex string
     pub fn to_hex(self) -> String {
-        self.0
-            .iter()
-            .map(|byte| format!("{:02x}", byte))
-            .collect()
+        self.0.iter().map(|byte| format!("{:02x}", byte)).collect()
     }
 
     /// Convert to truncated hex string of specified length
@@ -166,7 +168,8 @@ pub struct Timestamp {
 
 impl Timestamp {
     /// Parse from ISO 8601 string with lenient parsing.
-    /// Defaults: month=02, day=04, hour=08, minute=16, second=32, offset=Z (UTC/0)
+    /// Defaults: month=02, day=04, hour=08, minute=16, second=32, offset=Z
+    /// (UTC/0)
     pub fn from_iso8601(s: &str) -> Result<Self, ParseError> {
         let s = s.trim();
 
@@ -185,9 +188,9 @@ impl Timestamp {
             return Err(ParseError::InvalidTimestamp("missing year".to_string()));
         }
 
-        let year: i32 = date_components[0]
-            .parse()
-            .map_err(|_| ParseError::InvalidTimestamp(format!("invalid year: {}", date_components[0])))?;
+        let year: i32 = date_components[0].parse().map_err(|_| {
+            ParseError::InvalidTimestamp(format!("invalid year: {}", date_components[0]))
+        })?;
 
         let month: u32 = if date_components.len() > 1 {
             date_components[1].parse().map_err(|_| {
@@ -209,7 +212,8 @@ impl Timestamp {
         let (hour, minute, second, offset_minutes) = if parts.len() > 1 {
             let time_part = parts[1];
 
-            // Extract timezone offset first (can be Z, +HH:MM, -HH:MM, +HHMM, -HHMM, +HH, -HH)
+            // Extract timezone offset first (can be Z, +HH:MM, -HH:MM, +HHMM, -HHMM, +HH,
+            // -HH)
             let (time_part, offset) = if time_part.ends_with('Z') || time_part.ends_with('z') {
                 (&time_part[..time_part.len() - 1], 0i16)
             } else if let Some(pos) = time_part.rfind(['+', '-']) {
@@ -230,22 +234,34 @@ impl Timestamp {
                         ParseError::InvalidTimestamp(format!("invalid offset hours: {}", parts[0]))
                     })?;
                     let mins: i16 = parts[1].parse().map_err(|_| {
-                        ParseError::InvalidTimestamp(format!("invalid offset minutes: {}", parts[1]))
+                        ParseError::InvalidTimestamp(format!(
+                            "invalid offset minutes: {}",
+                            parts[1]
+                        ))
                     })?;
                     sign * (hours * 60 + mins)
                 } else if offset_digits.len() == 4 {
                     // Format: +HHMM or -HHMM
                     let hours: i16 = offset_digits[0..2].parse().map_err(|_| {
-                        ParseError::InvalidTimestamp(format!("invalid offset hours: {}", &offset_digits[0..2]))
+                        ParseError::InvalidTimestamp(format!(
+                            "invalid offset hours: {}",
+                            &offset_digits[0..2]
+                        ))
                     })?;
                     let mins: i16 = offset_digits[2..4].parse().map_err(|_| {
-                        ParseError::InvalidTimestamp(format!("invalid offset minutes: {}", &offset_digits[2..4]))
+                        ParseError::InvalidTimestamp(format!(
+                            "invalid offset minutes: {}",
+                            &offset_digits[2..4]
+                        ))
                     })?;
                     sign * (hours * 60 + mins)
                 } else if offset_digits.len() == 2 {
                     // Format: +HH or -HH
                     let hours: i16 = offset_digits.parse().map_err(|_| {
-                        ParseError::InvalidTimestamp(format!("invalid offset hours: {}", offset_digits))
+                        ParseError::InvalidTimestamp(format!(
+                            "invalid offset hours: {}",
+                            offset_digits
+                        ))
                     })?;
                     sign * (hours * 60)
                 } else {
@@ -293,7 +309,8 @@ impl Timestamp {
         };
 
         // Convert to Unix timestamp
-        // Simplified calculation (doesn't handle all edge cases perfectly, but good enough for our use)
+        // Simplified calculation (doesn't handle all edge cases perfectly, but good
+        // enough for our use)
         let days_from_epoch = Self::days_since_epoch(year, month, day)
             .ok_or_else(|| ParseError::InvalidTimestamp("date before Unix epoch".to_string()))?;
 
@@ -436,13 +453,13 @@ impl Identity {
         let s = s.trim();
 
         // Find the '<' and '>' brackets
-        let open_bracket = s.rfind('<').ok_or_else(|| {
-            ParseError::InvalidIdentity("missing '<' before email".to_string())
-        })?;
+        let open_bracket = s
+            .rfind('<')
+            .ok_or_else(|| ParseError::InvalidIdentity("missing '<' before email".to_string()))?;
 
-        let close_bracket = s.rfind('>').ok_or_else(|| {
-            ParseError::InvalidIdentity("missing '>' after email".to_string())
-        })?;
+        let close_bracket = s
+            .rfind('>')
+            .ok_or_else(|| ParseError::InvalidIdentity("missing '>' after email".to_string()))?;
 
         if close_bracket != s.len() - 1 {
             return Err(ParseError::InvalidIdentity(
@@ -478,7 +495,9 @@ impl Identity {
         let email = email_part.to_string();
 
         if name.is_empty() {
-            return Err(ParseError::InvalidIdentity("name cannot be empty".to_string()));
+            return Err(ParseError::InvalidIdentity(
+                "name cannot be empty".to_string(),
+            ));
         }
 
         Ok(Identity { name, email })
@@ -512,7 +531,8 @@ fn compute_blob_hash(content: &str) -> ObjectId {
 
 /// Compute the git tree hash for the given tree entries.
 /// Git trees are hashed as: SHA-1("tree {size}\0{entries}")
-/// where entries are sorted by name and formatted as: "{mode} {name}\0{hash_bytes}"
+/// where entries are sorted by name and formatted as: "{mode}
+/// {name}\0{hash_bytes}"
 fn compute_tree_hash_from_entries(entries: &BTreeMap<String, (u32, ObjectId)>) -> ObjectId {
     use sha1_checked::Digest;
 
@@ -543,16 +563,19 @@ fn compute_tree_hash_from_entries(entries: &BTreeMap<String, (u32, ObjectId)>) -
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Tree {
     /// Map from file paths to blob contents.
-    /// Paths use forward slashes as separators, never have leading/trailing slashes.
+    /// Paths use forward slashes as separators, never have leading/trailing
+    /// slashes.
     entries: BTreeMap<String, String>,
 
     /// Map from file paths to blob object IDs (hashes).
-    /// Each blob's hash is computed from its content using git's blob hashing algorithm.
+    /// Each blob's hash is computed from its content using git's blob hashing
+    /// algorithm.
     blob_hashes: BTreeMap<String, ObjectId>,
 
     /// Cached tree hash for this tree.
-    /// Computed from the tree's contents following git's tree hashing algorithm.
-    /// This is used during serialization to enable deduplication via references.
+    /// Computed from the tree's contents following git's tree hashing
+    /// algorithm. This is used during serialization to enable deduplication
+    /// via references.
     tree_hash: Option<ObjectId>,
 }
 
@@ -573,7 +596,8 @@ pub enum TreeEntry {
     Delete,
 
     /// Reference to content from another commit/path
-    /// Used during deserialization when encountering [commit] and/or [path] references
+    /// Used during deserialization when encountering [commit] and/or [path]
+    /// references
     Reference(TreeReference),
 }
 
@@ -584,7 +608,8 @@ pub struct TreeReference {
     /// The commit to reference (None means use the inherited [commit] value)
     pub commit: Option<ObjectId>,
 
-    /// The path within that commit's tree to reference (None means use the inherited path)
+    /// The path within that commit's tree to reference (None means use the
+    /// inherited path)
     pub path: Option<String>,
 }
 
@@ -607,8 +632,9 @@ impl Tree {
     pub fn insert(&mut self, path: String, content: String) {
         // Validate path components
         if Self::validate_path(&path).is_err() {
-            // For now, just insert anyway. Validation should be done before calling.
-            // In a full implementation, we might want to return Result here.
+            // For now, just insert anyway. Validation should be done before
+            // calling. In a full implementation, we might want to
+            // return Result here.
         }
 
         // Compute and store the blob hash
@@ -729,7 +755,8 @@ impl Tree {
     }
 
     /// Compute the tree hash for a specific path prefix
-    /// This reconstructs the hierarchical tree structure from the flat representation
+    /// This reconstructs the hierarchical tree structure from the flat
+    /// representation
     fn compute_tree_hash_for_path(&self, prefix: &str) -> ObjectId {
         use std::collections::BTreeMap;
 
@@ -784,7 +811,8 @@ impl Tree {
         compute_tree_hash_from_entries(&entries)
     }
 
-    /// Get the tree at a specific path (returns a subtree containing only entries under that path)
+    /// Get the tree at a specific path (returns a subtree containing only
+    /// entries under that path)
     pub fn get_tree(&self, prefix: &str) -> Tree {
         let mut subtree = Tree::new();
 
@@ -929,7 +957,8 @@ impl fmt::Debug for RefName {
 // HeadState
 // ============================================================================
 
-/// The state of HEAD: either pointing to a ref (symbolic) or directly to a commit (detached).
+/// The state of HEAD: either pointing to a ref (symbolic) or directly to a
+/// commit (detached).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HeadState {
     /// HEAD points to a branch ref (e.g., "refs/heads/main")
@@ -1073,10 +1102,12 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
         // Parse commit reference
         let commit_ref = parse_commit_ref_key(key)?;
 
-        let commit_mapping = value.as_mapping().ok_or_else(|| ParseError::UnexpectedType {
-            expected: "mapping",
-            actual: format!("{:?}", value),
-        })?;
+        let commit_mapping = value
+            .as_mapping()
+            .ok_or_else(|| ParseError::UnexpectedType {
+                expected: "mapping",
+                actual: format!("{:?}", value),
+            })?;
 
         commit_defs.insert(commit_ref.clone(), commit_mapping);
     }
@@ -1193,10 +1224,12 @@ enum HeadStateOrRef {
 }
 
 fn parse_refs(value: &serde_yaml::Value) -> Result<BTreeMap<RefName, CommitRef>, ParseError> {
-    let mapping = value.as_mapping().ok_or_else(|| ParseError::UnexpectedType {
-        expected: "mapping",
-        actual: format!("{:?}", value),
-    })?;
+    let mapping = value
+        .as_mapping()
+        .ok_or_else(|| ParseError::UnexpectedType {
+            expected: "mapping",
+            actual: format!("{:?}", value),
+        })?;
 
     let mut refs = BTreeMap::new();
     parse_refs_recursive("refs", mapping, &mut refs)?;
@@ -1380,7 +1413,10 @@ fn is_special_key(key: &serde_yaml::Value, name: &str) -> bool {
 }
 
 /// Try to get a special key value from a mapping
-fn get_special_key<'a>(mapping: &'a serde_yaml::Mapping, name: &str) -> Option<&'a serde_yaml::Value> {
+fn get_special_key<'a>(
+    mapping: &'a serde_yaml::Mapping,
+    name: &str,
+) -> Option<&'a serde_yaml::Value> {
     for (key, value) in mapping.iter() {
         if is_special_key(key, name) {
             return Some(value);
@@ -1410,9 +1446,9 @@ fn build_commit(
 
     processing_state.insert(commit_ref.clone(), CommitProcessingState::InProgress);
 
-    let commit_mapping = commit_defs.get(commit_ref).ok_or_else(|| {
-        ParseError::CommitNotFound(format!("commit {:?} not found", commit_ref))
-    })?;
+    let commit_mapping = commit_defs
+        .get(commit_ref)
+        .ok_or_else(|| ParseError::CommitNotFound(format!("commit {:?} not found", commit_ref)))?;
 
     // Parse parents (with default)
     let parents = parse_parents(commit_mapping, prev_commit_ref)?;
@@ -1426,7 +1462,10 @@ fn build_commit(
                 .iter()
                 .position(|r| r == parent_ref)
                 .ok_or_else(|| {
-                    ParseError::CommitNotFound(format!("parent commit {:?} not in order", parent_ref))
+                    ParseError::CommitNotFound(format!(
+                        "parent commit {:?} not in order",
+                        parent_ref
+                    ))
                 })?;
             let prev_parent = if parent_idx > 0 {
                 Some(&commit_order[parent_idx - 1])
@@ -1500,7 +1539,10 @@ fn build_commit(
         message,
     };
 
-    processing_state.insert(commit_ref.clone(), CommitProcessingState::Complete(Box::new(commit.clone())));
+    processing_state.insert(
+        commit_ref.clone(),
+        CommitProcessingState::Complete(Box::new(commit.clone())),
+    );
 
     Ok(commit)
 }
@@ -1517,10 +1559,13 @@ fn parse_parents(
             return Ok(Vec::new());
         }
 
-        let parents_seq = parents_value.as_sequence().ok_or_else(|| ParseError::UnexpectedType {
-            expected: "array",
-            actual: format!("{:?}", parents_value),
-        })?;
+        let parents_seq =
+            parents_value
+                .as_sequence()
+                .ok_or_else(|| ParseError::UnexpectedType {
+                    expected: "array",
+                    actual: format!("{:?}", parents_value),
+                })?;
 
         let mut parents = Vec::new();
         for parent_value in parents_seq {
@@ -1545,10 +1590,12 @@ fn parse_author(
     let author_key = serde_yaml::Value::String("author".to_string());
 
     if let Some(author_value) = mapping.get(&author_key) {
-        let author_str = author_value.as_str().ok_or_else(|| ParseError::UnexpectedType {
-            expected: "string",
-            actual: format!("{:?}", author_value),
-        })?;
+        let author_str = author_value
+            .as_str()
+            .ok_or_else(|| ParseError::UnexpectedType {
+                expected: "string",
+                actual: format!("{:?}", author_value),
+            })?;
         Identity::parse(author_str)
     } else {
         // Default: first parent's author, or "User <user@localhost>"
@@ -1575,7 +1622,8 @@ fn parse_author_date(
         })?;
         Timestamp::from_iso8601(date_str)
     } else {
-        // Default: 256 seconds after max parent author-date, or 2021-01-14T08:25:36Z for first commit
+        // Default: 256 seconds after max parent author-date, or 2021-01-14T08:25:36Z
+        // for first commit
         if parents.is_empty() {
             Timestamp::from_iso8601("2021-01-14T08:25:36Z")
         } else {
@@ -1661,7 +1709,9 @@ fn parse_message(
         // Default: "commit N" for integer refs, "commit at <date>" for hex refs
         match commit_ref {
             CommitRef::Int(n) => Ok(format!("commit {}", n)),
-            CommitRef::Hex(_) | CommitRef::Prefix(_) => Ok(format!("commit at {}", committer_date.to_iso8601())),
+            CommitRef::Hex(_) | CommitRef::Prefix(_) => {
+                Ok(format!("commit at {}", committer_date.to_iso8601()))
+            }
         }
     }
 }
@@ -1752,7 +1802,8 @@ fn resolve_commit_from_state(
         }
         CommitRef::Int(_) => {
             // Look for this commit ref in the processing state
-            if let Some(CommitProcessingState::Complete(commit)) = processing_state.get(commit_ref) {
+            if let Some(CommitProcessingState::Complete(commit)) = processing_state.get(commit_ref)
+            {
                 Ok(commit.id)
             } else {
                 Err(ParseError::CommitNotFound(format!(
@@ -1782,15 +1833,18 @@ fn get_commit_from_state(
     )))
 }
 
-/// Resolve a path reference, handling relative paths (./foo, ../bar) and absolute paths
+/// Resolve a path reference, handling relative paths (./foo, ../bar) and
+/// absolute paths
 fn resolve_path(
     path_ref: &str,
     target_path: &str,
     inherited_source_path: Option<&str>,
 ) -> Result<String, ParseError> {
     // Determine the base path for resolution
-    // According to spec: relative paths are resolved relative to the inherited source path
-    let base_path = if path_ref == "." || path_ref.starts_with("./") || path_ref.starts_with("../") {
+    // According to spec: relative paths are resolved relative to the inherited
+    // source path
+    let base_path = if path_ref == "." || path_ref.starts_with("./") || path_ref.starts_with("../")
+    {
         // Relative path - use the inherited source path as base
         inherited_source_path.unwrap_or(target_path)
     } else {
@@ -1858,25 +1912,32 @@ fn apply_tree_delta(
 
     if let Some(path_value) = get_special_key(mapping, "path") {
         // Parse the path reference
-        let path_str = path_value.as_str().ok_or_else(|| ParseError::UnexpectedType {
-            expected: "string",
-            actual: format!("{:?}", path_value),
-        })?;
+        let path_str = path_value
+            .as_str()
+            .ok_or_else(|| ParseError::UnexpectedType {
+                expected: "string",
+                actual: format!("{:?}", path_value),
+            })?;
 
         // According to spec (IDEA-1.1.md lines 95-99):
-        // Relative paths are resolved relative to "the source path that would be computed by inheritance"
-        // which is: parent's effective source path + this entry's name
-        // This is the same as target_prefix in our case, since we're called with target_prefix set correctly
+        // Relative paths are resolved relative to "the source path that would be
+        // computed by inheritance" which is: parent's effective source path +
+        // this entry's name This is the same as target_prefix in our case,
+        // since we're called with target_prefix set correctly
         let inherited_source_base = target_prefix;
 
         // Resolve the path
-        current_path = Some(resolve_path(path_str, target_prefix, Some(inherited_source_base))?);
+        current_path = Some(resolve_path(
+            path_str,
+            target_prefix,
+            Some(inherited_source_base),
+        )?);
     }
 
     // Check if this is a pure reference (only special keys, no regular keys)
-    let has_regular_keys = mapping.iter().any(|(k, _)| {
-        !is_special_key(k, "commit") && !is_special_key(k, "path")
-    });
+    let has_regular_keys = mapping
+        .iter()
+        .any(|(k, _)| !is_special_key(k, "commit") && !is_special_key(k, "path"));
 
     if !has_regular_keys && !mapping.is_empty() {
         // Pure reference - resolve and copy the content
@@ -2054,8 +2115,16 @@ fn calculate_tree_id(tree: &Tree) -> Result<ObjectId, ParseError> {
     // Sort directories by depth (deepest first)
     let mut dirs: Vec<String> = dir_entries.keys().cloned().collect();
     dirs.sort_by(|a, b| {
-        let a_depth = if a.is_empty() { 0 } else { a.matches('/').count() + 1 };
-        let b_depth = if b.is_empty() { 0 } else { b.matches('/').count() + 1 };
+        let a_depth = if a.is_empty() {
+            0
+        } else {
+            a.matches('/').count() + 1
+        };
+        let b_depth = if b.is_empty() {
+            0
+        } else {
+            b.matches('/').count() + 1
+        };
         b_depth.cmp(&a_depth) // Reverse order (deepest first)
     });
 
@@ -2219,10 +2288,12 @@ pub enum CommitIdStyle {
 
 /// Tracks serialized content locations for deduplication
 struct SerializationContext {
-    /// Maps blob hash to (commit_id, path) where content first appeared physically
+    /// Maps blob hash to (commit_id, path) where content first appeared
+    /// physically
     blob_locations: HashMap<ObjectId, (ObjectId, String)>,
 
-    /// Maps tree hash to (commit_id, path) where content first appeared physically
+    /// Maps tree hash to (commit_id, path) where content first appeared
+    /// physically
     tree_locations: HashMap<ObjectId, (ObjectId, String)>,
 
     /// All commits in topological order
@@ -2242,7 +2313,11 @@ struct SerializationContext {
 }
 
 impl SerializationContext {
-    fn new(repo: &Repository, ordered_commits: Vec<ObjectId>, head_commits: std::collections::HashSet<ObjectId>) -> Self {
+    fn new(
+        repo: &Repository,
+        ordered_commits: Vec<ObjectId>,
+        head_commits: std::collections::HashSet<ObjectId>,
+    ) -> Self {
         let truncated_len = compute_truncated_hash_length(&ordered_commits);
 
         SerializationContext {
@@ -2387,21 +2462,20 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
     // Serialize HEAD
     let head_value = match &repo.head {
         HeadState::Symbolic(ref_name) => serde_yaml::Value::String(ref_name.as_str().to_string()),
-        HeadState::Detached(oid) => commit_refs.get(oid).cloned().unwrap_or_else(|| {
-            serde_yaml::Value::String(oid.to_hex())
-        }),
+        HeadState::Detached(oid) => commit_refs
+            .get(oid)
+            .cloned()
+            .unwrap_or_else(|| serde_yaml::Value::String(oid.to_hex())),
     };
-    root.insert(
-        serde_yaml::Value::String("HEAD".to_string()),
-        head_value,
-    );
+    root.insert(serde_yaml::Value::String("HEAD".to_string()), head_value);
 
     // Serialize refs
     let mut refs_map = serde_yaml::Mapping::new();
     for (ref_name, target_id) in repo.refs() {
-        let target_value = commit_refs.get(target_id).cloned().unwrap_or_else(|| {
-            serde_yaml::Value::String(target_id.to_hex())
-        });
+        let target_value = commit_refs
+            .get(target_id)
+            .cloned()
+            .unwrap_or_else(|| serde_yaml::Value::String(target_id.to_hex()));
 
         // Split ref path and build nested structure
         // e.g., "refs/heads/main" -> refs -> heads -> main: value
@@ -2419,7 +2493,10 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
     for (idx, commit_id) in ordered_commits.iter().enumerate() {
         let commit = repo.get_commit(commit_id).expect("commit should exist");
         let prev_commit = if idx > 0 {
-            Some(repo.get_commit(&ordered_commits[idx - 1]).expect("prev commit should exist"))
+            Some(
+                repo.get_commit(&ordered_commits[idx - 1])
+                    .expect("prev commit should exist"),
+            )
         } else {
             None
         };
@@ -2436,8 +2513,7 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
     let sorted_root = sort_mapping_recursive(serde_yaml::Value::Mapping(root));
 
     // Convert to YAML string
-    serde_yaml::to_string(&sorted_root)
-        .expect("serialization should succeed")
+    serde_yaml::to_string(&sorted_root).expect("serialization should succeed")
 }
 
 /// Recursively sort all mappings in a Value by their keys (lexicographically)
@@ -2466,11 +2542,7 @@ fn sort_mapping_recursive(value: serde_yaml::Value) -> serde_yaml::Value {
         }
         serde_yaml::Value::Sequence(seq) => {
             // Recursively sort mappings in sequences
-            serde_yaml::Value::Sequence(
-                seq.into_iter()
-                    .map(sort_mapping_recursive)
-                    .collect()
-            )
+            serde_yaml::Value::Sequence(seq.into_iter().map(sort_mapping_recursive).collect())
         }
         other => other,
     }
@@ -2495,14 +2567,12 @@ fn insert_nested_ref(mapping: &mut serde_yaml::Mapping, path: &[&str], value: se
 
     if path.len() == 1 {
         // Leaf node
-        mapping.insert(
-            serde_yaml::Value::String(path[0].to_string()),
-            value,
-        );
+        mapping.insert(serde_yaml::Value::String(path[0].to_string()), value);
     } else {
         // Intermediate node
         let key = serde_yaml::Value::String(path[0].to_string());
-        let nested = mapping.entry(key.clone())
+        let nested = mapping
+            .entry(key.clone())
             .or_insert_with(|| serde_yaml::Value::Mapping(serde_yaml::Mapping::new()));
 
         if let serde_yaml::Value::Mapping(nested_map) = nested {
@@ -2522,7 +2592,9 @@ fn serialize_commit(
     let mut mapping = serde_yaml::Mapping::new();
 
     // Get parent commits
-    let parent_commits: Vec<&Commit> = commit.parents.iter()
+    let parent_commits: Vec<&Commit> = commit
+        .parents
+        .iter()
         .filter_map(|id| repo.get_commit(id))
         .collect();
     let first_parent = parent_commits.first().copied();
@@ -2535,11 +2607,14 @@ fn serialize_commit(
     };
 
     if commit.parents != default_parents {
-        let parents_array: Vec<serde_yaml::Value> = commit.parents.iter()
+        let parents_array: Vec<serde_yaml::Value> = commit
+            .parents
+            .iter()
             .map(|parent_id| {
-                commit_refs.get(parent_id).cloned().unwrap_or_else(|| {
-                    serde_yaml::Value::String(parent_id.to_hex())
-                })
+                commit_refs
+                    .get(parent_id)
+                    .cloned()
+                    .unwrap_or_else(|| serde_yaml::Value::String(parent_id.to_hex()))
             })
             .collect();
         mapping.insert(
@@ -2597,7 +2672,8 @@ fn serialize_commit(
     let default_author_date = if parent_commits.is_empty() {
         Timestamp::from_iso8601("2021-01-14T08:25:36Z").unwrap()
     } else {
-        let max_parent = parent_commits.iter()
+        let max_parent = parent_commits
+            .iter()
             .max_by_key(|p| (p.author_date.seconds, p.author_date.offset_minutes))
             .unwrap();
         Timestamp {
@@ -2649,17 +2725,15 @@ fn serialize_commit(
     let first_parent_tree = first_parent.map(|p| &p.tree);
     let tree_delta = compute_tree_delta(&commit.tree, first_parent_tree);
 
-    // Only include tree if it's non-empty or if this is the root commit with an empty tree
+    // Only include tree if it's non-empty or if this is the root commit with an
+    // empty tree
     let tree_is_empty = match &tree_delta {
         serde_yaml::Value::Mapping(m) => m.is_empty(),
         _ => false,
     };
 
     if !tree_is_empty {
-        mapping.insert(
-            serde_yaml::Value::String("tree".to_string()),
-            tree_delta,
-        );
+        mapping.insert(serde_yaml::Value::String("tree".to_string()), tree_delta);
     } else if parent_commits.is_empty() && commit.tree.is_empty() {
         // Root commit with empty tree - explicitly serialize empty tree
         mapping.insert(
@@ -2744,7 +2818,8 @@ fn insert_tree_change(
     } else {
         // Intermediate node
         let key = serde_yaml::Value::String(path_parts[0].to_string());
-        let nested = mapping.entry(key.clone())
+        let nested = mapping
+            .entry(key.clone())
             .or_insert_with(|| serde_yaml::Value::Mapping(serde_yaml::Mapping::new()));
 
         if let serde_yaml::Value::Mapping(nested_map) = nested {
@@ -2783,7 +2858,8 @@ fn topological_sort_with_tiebreak(repo: &Repository) -> Vec<ObjectId> {
     }
 
     // Add refs in lexicographic order
-    let mut ref_targets: Vec<(String, ObjectId)> = repo.refs()
+    let mut ref_targets: Vec<(String, ObjectId)> = repo
+        .refs()
         .map(|(name, id)| (name.as_str().to_string(), *id))
         .collect();
     ref_targets.sort_by(|a, b| a.0.cmp(&b.0));
@@ -2823,7 +2899,10 @@ fn topological_sort_with_tiebreak(repo: &Repository) -> Vec<ObjectId> {
     // Sort commits by tiebreak key for deterministic iteration order
     let mut all_commits: Vec<ObjectId> = repo.commits().map(|c| c.id).collect();
     all_commits.sort_by(|a, b| {
-        tiebreak_keys.get(a).unwrap().cmp(tiebreak_keys.get(b).unwrap())
+        tiebreak_keys
+            .get(a)
+            .unwrap()
+            .cmp(tiebreak_keys.get(b).unwrap())
     });
 
     for commit_id in all_commits {
@@ -2870,13 +2949,7 @@ fn walk_ancestors_for_tiebreak(
     // Visit parents
     if let Some(commit) = repo.get_commit(&commit_id) {
         for (idx, parent_id) in commit.parents.iter().enumerate() {
-            walk_ancestors_for_tiebreak(
-                *parent_id,
-                Some(idx),
-                repo,
-                visited,
-                tiebreak_keys,
-            );
+            walk_ancestors_for_tiebreak(*parent_id, Some(idx), repo, visited, tiebreak_keys);
         }
     }
 }
@@ -2906,18 +2979,14 @@ fn topological_visit(
         // Sort parents by tiebreak key for deterministic order
         let mut parents = commit.parents.clone();
         parents.sort_by(|a, b| {
-            tiebreak_keys.get(a).unwrap().cmp(tiebreak_keys.get(b).unwrap())
+            tiebreak_keys
+                .get(a)
+                .unwrap()
+                .cmp(tiebreak_keys.get(b).unwrap())
         });
 
         for parent_id in parents {
-            topological_visit(
-                parent_id,
-                repo,
-                tiebreak_keys,
-                visited,
-                in_progress,
-                sorted,
-            );
+            topological_visit(parent_id, repo, tiebreak_keys, visited, in_progress, sorted);
         }
     }
 
@@ -2973,8 +3042,8 @@ mod tests {
         assert_eq!(repo.refs().count(), repo2.refs().count());
         assert_eq!(repo.commits().count(), repo2.commits().count());
 
-        // Note: The object IDs will be different because we're recalculating them
-        // from the commit contents during parsing
+        // Note: The object IDs will be different because we're recalculating
+        // them from the commit contents during parsing
     }
 
     #[test]
@@ -3000,7 +3069,10 @@ mod tests {
             &author,
             author_date,
             &author,
-            Timestamp { seconds: author_date.seconds + 3, offset_minutes: author_date.offset_minutes },
+            Timestamp {
+                seconds: author_date.seconds + 3,
+                offset_minutes: author_date.offset_minutes,
+            },
             "commit 1",
         )
         .unwrap();
@@ -3012,7 +3084,10 @@ mod tests {
             author: author.clone(),
             author_date,
             committer: author.clone(),
-            committer_date: Timestamp { seconds: author_date.seconds + 3, offset_minutes: author_date.offset_minutes },
+            committer_date: Timestamp {
+                seconds: author_date.seconds + 3,
+                offset_minutes: author_date.offset_minutes,
+            },
             message: "commit 1".to_string(),
         };
 
@@ -3024,14 +3099,20 @@ mod tests {
         };
 
         let tree_id2 = calculate_tree_id(&tree2).unwrap();
-        let author_date2 = Timestamp { seconds: author_date.seconds + 256, offset_minutes: author_date.offset_minutes };
+        let author_date2 = Timestamp {
+            seconds: author_date.seconds + 256,
+            offset_minutes: author_date.offset_minutes,
+        };
         let commit_id2 = calculate_commit_id(
             &tree_id2,
             &[commit_id1],
             &author,
             author_date2,
             &author,
-            Timestamp { seconds: author_date2.seconds + 3, offset_minutes: author_date2.offset_minutes },
+            Timestamp {
+                seconds: author_date2.seconds + 3,
+                offset_minutes: author_date2.offset_minutes,
+            },
             "commit 2",
         )
         .unwrap();
@@ -3043,7 +3124,10 @@ mod tests {
             author: author.clone(),
             author_date: author_date2,
             committer: author.clone(),
-            committer_date: Timestamp { seconds: author_date2.seconds + 3, offset_minutes: author_date2.offset_minutes },
+            committer_date: Timestamp {
+                seconds: author_date2.seconds + 3,
+                offset_minutes: author_date2.offset_minutes,
+            },
             message: "commit 2".to_string(),
         };
 
@@ -3242,7 +3326,8 @@ mod tests {
 
     #[test]
     fn test_timestamp_default_values() {
-        // Test that defaults are: month=02, day=04, hour=08, minute=16, second=32, offset=Z
+        // Test that defaults are: month=02, day=04, hour=08, minute=16, second=32,
+        // offset=Z
         let ts = Timestamp::from_iso8601("2021").unwrap();
         let iso = ts.to_iso8601();
         assert!(iso.starts_with("2021-02-04T08:16:32"));
@@ -3643,10 +3728,11 @@ refs:
 
     #[test]
     fn test_parse_yaml_tags_in_value() {
-        // Note: The current version of serde_yaml (0.9.x) strips YAML tags during parsing,
-        // so they don't make it to our code. Our normalize_yaml_key function has the check
-        // for Tagged values (as per spec), but serde_yaml removes them before we see them.
-        // This test documents that tags in values are currently accepted (stripped by parser).
+        // Note: The current version of serde_yaml (0.9.x) strips YAML tags during
+        // parsing, so they don't make it to our code. Our normalize_yaml_key
+        // function has the check for Tagged values (as per spec), but
+        // serde_yaml removes them before we see them. This test documents that
+        // tags in values are currently accepted (stripped by parser).
         // A future version with a different YAML parser might need stricter handling.
         let yaml = r#"
 HEAD: refs/heads/main
@@ -3680,7 +3766,7 @@ refs:
         let result = parse(yaml);
         assert!(result.is_err());
         match result {
-            Err(ParseError::CycleDetected) => {},
+            Err(ParseError::CycleDetected) => {}
             _ => panic!("Expected CycleDetected error"),
         }
     }
@@ -3877,7 +3963,10 @@ refs:
         let repo2 = parse(&serialized).unwrap();
 
         assert_eq!(repo2.commits().count(), 4);
-        let merge = repo2.commits().find(|c| c.message.contains("Merge")).unwrap();
+        let merge = repo2
+            .commits()
+            .find(|c| c.message.contains("Merge"))
+            .unwrap();
         assert_eq!(merge.parents.len(), 2);
     }
 
@@ -3943,9 +4032,22 @@ refs:
         // Should contain 40-character hex IDs
         let lines: Vec<&str> = serialized.lines().collect();
         let has_hex_key = lines.iter().any(|line| {
-            line.contains("main:") && line.split(':').nth(1).map(|s| s.trim().len() == 40).unwrap_or(false)
+            line.contains("main:")
+                && line
+                    .split(':')
+                    .nth(1)
+                    .map(|s| s.trim().len() == 40)
+                    .unwrap_or(false)
         });
-        assert!(has_hex_key || serialized.contains("main: ") && serialized.split("main: ").nth(1).map(|s| s.trim().len() >= 40).unwrap_or(false));
+        assert!(
+            has_hex_key
+                || serialized.contains("main: ")
+                    && serialized
+                        .split("main: ")
+                        .nth(1)
+                        .map(|s| s.trim().len() >= 40)
+                        .unwrap_or(false)
+        );
 
         let repo2 = parse(&serialized).unwrap();
         assert_eq!(repo2.commits().count(), 1);
@@ -4032,8 +4134,14 @@ refs:
         assert_eq!(commits.len(), 2);
 
         let commit2 = commits.iter().find(|c| c.message == "commit 2").unwrap();
-        assert_eq!(commit2.tree.get("copied-src/lib.rs"), Some("pub fn main() {}"));
-        assert_eq!(commit2.tree.get("copied-src/util.rs"), Some("pub fn helper() {}"));
+        assert_eq!(
+            commit2.tree.get("copied-src/lib.rs"),
+            Some("pub fn main() {}")
+        );
+        assert_eq!(
+            commit2.tree.get("copied-src/util.rs"),
+            Some("pub fn helper() {}")
+        );
     }
 
     #[test]
