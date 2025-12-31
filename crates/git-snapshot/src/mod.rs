@@ -838,7 +838,7 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
     Ok(repo)
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 enum CommitRef {
     Hex(ObjectId),
     Int(u32),
@@ -1362,7 +1362,7 @@ fn apply_tree_delta(
                 // Recursively apply nested modifications
                 apply_tree_delta(tree, &path, nested_mapping)?;
             }
-        } else if value.is_tagged() {
+        } else if matches!(value, serde_yaml::Value::Tagged(_)) {
             return Err(ParseError::UnexpectedField(
                 "YAML tags are not supported".to_string(),
             ));
@@ -1378,7 +1378,7 @@ fn apply_tree_delta(
 }
 
 fn calculate_tree_id(tree: &Tree) -> Result<ObjectId, ParseError> {
-    use sha1_checked::Sha1;
+    use sha1_checked::Digest;
 
     // Build tree entries in sorted order
     let mut entries: Vec<(&str, &str)> = tree.paths().map(|path| {
@@ -1397,7 +1397,9 @@ fn calculate_tree_id(tree: &Tree) -> Result<ObjectId, ParseError> {
     let mut blob_ids: HashMap<String, ObjectId> = HashMap::new();
     for (path, content) in &entries {
         let blob_data = format!("blob {}\0{}", content.len(), content);
-        let hash = Sha1::hash(blob_data.as_bytes());
+        let mut hasher = sha1_checked::Sha1::new();
+        hasher.update(blob_data.as_bytes());
+        let hash: [u8; 20] = hasher.finalize().into();
         let oid = ObjectId(hash);
         blob_ids.insert(path.to_string(), oid);
     }
@@ -1425,7 +1427,9 @@ fn calculate_tree_id(tree: &Tree) -> Result<ObjectId, ParseError> {
     let mut full_tree_data = tree_data.as_bytes().to_vec();
     full_tree_data.extend_from_slice(&tree_content);
 
-    let hash = Sha1::hash(&full_tree_data);
+    let mut hasher = sha1_checked::Sha1::new();
+    hasher.update(&full_tree_data);
+    let hash: [u8; 20] = hasher.finalize().into();
     Ok(ObjectId(hash))
 }
 
@@ -1438,7 +1442,7 @@ fn calculate_commit_id(
     committer_date: Timestamp,
     message: &str,
 ) -> Result<ObjectId, ParseError> {
-    use sha1_checked::Sha1;
+    use sha1_checked::Digest;
 
     let mut commit_content = String::new();
     commit_content.push_str(&format!("tree {}\n", tree_id.to_hex()));
@@ -1465,7 +1469,9 @@ fn calculate_commit_id(
     commit_content.push_str(message);
 
     let commit_data = format!("commit {}\0{}", commit_content.len(), commit_content);
-    let hash = Sha1::hash(commit_data.as_bytes());
+    let mut hasher = sha1_checked::Sha1::new();
+    hasher.update(commit_data.as_bytes());
+    let hash: [u8; 20] = hasher.finalize().into();
     Ok(ObjectId(hash))
 }
 
