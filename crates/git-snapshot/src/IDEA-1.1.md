@@ -6,10 +6,18 @@ serialization behavior.
 
 ## Hash Length in Serialized Output
 
+Object IDs are computed using the Checked SHA-1 algorithm, matching git's
+behavior.
+
 When serializing commit references as hex strings (as opposed to integer IDs),
-we use 8-character truncated hashes for all commits except for head commits
-(those directly referenced by `refs` or `HEAD`), which use the full 40-character
-hash.
+we use truncated hashes for non-head commits. The truncation length is computed
+as: the minimum number of hex digits required to avoid ambiguity among all
+commits in the document, plus 2, rounded up to the next multiple of 2, with a
+minimum of 4. This ensures we always have at least 2 digits of margin, the
+length is always even, and is at least 4 digits.
+
+Head commits (those directly referenced by `refs` or `HEAD`) always use the full
+40-character hash.
 
 When parsing, we accept hex strings between 4 and 40 characters in length. If a
 truncated hash is ambiguous (matches multiple commits), that is a fatal error.
@@ -25,7 +33,8 @@ filename, which must be a string.
 These special keys allow referencing content from other commits or paths,
 enabling deduplication and expressing renames without repeating content.
 
-When serializing, special keys sort before string keys in the mapping output.
+When serializing, special keys sort lexicographically among themselves (so
+`[commit]` before `[path]`), and all special keys sort before string keys.
 
 ### Syntax
 
@@ -48,7 +57,17 @@ tree or reference. Its value is a commit reference (integer or hex string).
 
 `[commit]` is inherited through nested tree structures. If not specified at a
 given level, it inherits from the parent mapping. At the root `tree` level, if
-not specified, it defaults to the first parent commit.
+not specified, it defaults to the first parent commit. If there is no first
+parent (i.e., this is a root commit), `[commit]` defaults to null, meaning there
+is no base tree to inherit from (equivalent to the empty tree). Explicitly
+setting `[commit]` to null has the same effect.
+
+If `[commit]` is null (whether explicitly or by default for a root commit), then
+specifying `[path]` is an error—there is no tree to reference a path within.
+
+Changing `[commit]` at a nested level does not reset the effective source path.
+The `[path]` inheritance continues from wherever it was; only the commit being
+referenced changes.
 
 ### Semantics of `[path]`
 
@@ -64,7 +83,8 @@ new tree) and source paths (where we're reading from in the referenced commit).
 
 1. **At the root `tree` level**: If `[path]` is not specified, it defaults to
    `.` (the root of the commit's tree). This means source path = target path by
-   default.
+   default. A null or absent value is equivalent to the empty string `""`, which
+   is equivalent to `.` for paths.
 
 2. **At nested levels without explicit `[path]`**: The effective source path is
    the parent's effective source path plus this entry's name. This extends the
@@ -73,9 +93,12 @@ new tree) and source paths (where we're reading from in the referenced commit).
 3. **When `[path]` is explicitly specified**:
    - If the path is `.`, or starts with `./` or `../`, it is resolved relative
      to the source path that would be computed by inheritance (i.e., parent's
-     effective source path plus this entry's name).
+     effective source path plus this entry's name). For example, if the parent's
+     effective source is `src` and this entry is named `dir`, the inherited
+     source would be `src/dir`. A `[path]: ./other` then resolves to
+     `src/dir/other`, and `[path]: ../sibling` resolves to `src/sibling`.
    - Otherwise (e.g., `src/bin`), it is resolved relative to the repository
-     root.
+     root, ignoring inheritance entirely.
    - Resolving `..` past the repository root is an error.
 
 **Example of path inheritance:**
@@ -161,6 +184,14 @@ inputs appropriately.
 The target path does not have an inherent type. Whatever object exists at the
 source location (blob or tree) is what gets written to the target. A blob can
 overwrite a tree, and a tree can overwrite a blob.
+
+If a reference points to a source path that does not exist in the referenced
+commit, that is an error. References must resolve to an actual blob or tree.
+
+As noted in IDEA.md, cycles in commit parent references are invalid. Since
+`[commit]` references can only point to commits (which form a DAG), and `[path]`
+references operate within a single commit's tree, reference cycles cannot occur
+in valid data.
 
 ## Serialization Algorithm for Trees and Blobs
 
@@ -282,3 +313,5 @@ If an expected output file does not exist, the test should:
 4. Mark the test as failed at the end
 
 This allows multiple missing output files to be generated in a single test run.
+If we need to intentionally re-generate an existing snapshot, we can just delete
+one (or all) of them and run the tests again.
