@@ -1,3 +1,7 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: b9d0b12d6c37ac7e529e6206bf28c0168e85de61
 77a352:
   message: commit 1
   tree:
@@ -5,7 +9,6 @@
     src:
       helper.rs: pub fn help() {}
       lib.rs: pub fn original() {}
-HEAD: refs/heads/main
 b9d0b12d6c37ac7e529e6206bf28c0168e85de61:
   message: commit 2
   tree:
@@ -13,6 +16,3 @@ b9d0b12d6c37ac7e529e6206bf28c0168e85de61:
     src:
       helper.rs: pub fn help() { /* updated */ }
       new.rs: pub fn new_func() {}
-refs:
-  heads:
-    main: b9d0b12d6c37ac7e529e6206bf28c0168e85de61

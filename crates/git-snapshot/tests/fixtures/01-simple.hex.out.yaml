@@ -1,10 +1,10 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 000ebeaba52d4b8488bd317fbea4503489c0a1a3
 000ebeaba52d4b8488bd317fbea4503489c0a1a3:
   message: commit 1
   tree:
     README.md: '# Hello World'
     src:
       lib.rs: pub fn main() {}
-HEAD: refs/heads/main
-refs:
-  heads:
-    main: 000ebeaba52d4b8488bd317fbea4503489c0a1a3

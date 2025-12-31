@@ -1130,8 +1130,6 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
             None
         };
 
-        eprintln!("DEBUG: Building commit {:?} (idx={}, prev={:?})", commit_ref, idx, prev_commit_ref);
-
         let commit = build_commit(
             commit_ref,
             &commit_defs,
@@ -1142,20 +1140,13 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
             &mut commit_processing_state,
         )?;
 
-        eprintln!("DEBUG: Built commit {} with {} parents", commit.id.to_hex(), commit.parents.len());
-        for (i, p) in commit.parents.iter().enumerate() {
-            eprintln!("DEBUG:   Parent {}: {}", i, p.to_hex());
-        }
-
         commits.insert(commit.id, commit);
     }
 
     // Convert refs to use resolved ObjectIds
     let mut resolved_refs = BTreeMap::new();
     for (ref_name, commit_ref) in refs {
-        eprintln!("DEBUG: Resolving ref {} -> {:?}", ref_name.as_str(), commit_ref);
         let object_id = resolve_commit_ref(&commit_ref, &integer_to_hex, &commits)?;
-        eprintln!("DEBUG: Resolved to {}", object_id.to_hex());
         resolved_refs.insert(ref_name, object_id);
     }
 
