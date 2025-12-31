@@ -667,8 +667,8 @@ impl Tree {
     }
 
     /// Get the hash of a blob at the given path
-    pub fn get_blob_hash(&self, path: &str) -> Option<ObjectId> {
-        self.blob_hashes.get(path).copied()
+    pub fn get_blob_hash(&self, path: &str) -> Option<&ObjectId> {
+        self.blob_hashes.get(path)
     }
 
     /// Get the cached tree hash if available
