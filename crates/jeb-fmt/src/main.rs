@@ -474,12 +474,6 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
                     }
 
                     if let Some(dep) = parse_dependency(key, value, member_path, workspace_root, Some(&workspace_doc))? {
-                        // Exclude dependencies with default-features = false from voting
-                        // Those members will keep their inlined version with their specific config
-                        if dep.config.default_features == Some(false) {
-                            continue;
-                        }
-
                         all_deps
                             .entry(dep.name.clone())
                             .or_default()
@@ -587,6 +581,7 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
 struct EquivalenceClass {
     resolution: ResolutionFields,
     votes: HashMap<PathBuf, Vec<Dependency>>,
+    needs_default_features_false: bool,
 }
 
 impl EquivalenceClass {
@@ -594,6 +589,7 @@ impl EquivalenceClass {
         Self {
             resolution,
             votes: HashMap::new(),
+            needs_default_features_false: false,
         }
     }
 
@@ -608,6 +604,11 @@ impl EquivalenceClass {
             if new > current {
                 self.resolution.version = Some(new.clone());
             }
+        }
+
+        // Track if any voter needs default-features = false
+        if dep.config.default_features == Some(false) {
+            self.needs_default_features_false = true;
         }
 
         self.votes.entry(member).or_default().push(dep);
