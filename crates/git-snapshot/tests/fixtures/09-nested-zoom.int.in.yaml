@@ -1,0 +1,136 @@
+HEAD: refs/heads/full-tree
+
+refs:
+  heads:
+    full-tree: 11
+    lib-subtree: 8
+    core-subtree: 10
+
+# Full-tree root
+1:
+  tree:
+    README.md: "# Project"
+    src:
+      lib:
+        core:
+          engine.rs: "fn engine() {}"
+          types.rs: "struct Type;"
+        api.rs: "fn api() {}"
+      main.rs: "fn main() {}"
+
+# Zoom into src/lib
+2:
+  parents: []
+  tree:  # seed
+  message: "zoom-in seed for src/lib"
+  committer: "git-zoom-in <git-zoom-in@localhost>"
+
+3:
+  parents: [2, 1]
+  message: |-
+    Merge from 'src/lib'
+
+    git-zoom-in: src/lib
+  committer: "git-zoom-in <git-zoom-in@localhost>"
+  tree:
+    core:
+      engine.rs:
+        [commit]: 1
+        [path]: src/lib/core/engine.rs
+      types.rs:
+        [commit]: 1
+        [path]: src/lib/core/types.rs
+    api.rs:
+      [commit]: 1
+      [path]: src/lib/api.rs
+
+# Zoom into core from subtree (nested zoom)
+4:
+  parents: []
+  tree:  # seed
+  message: "zoom-in seed for core"
+  committer: "git-zoom-in <git-zoom-in@localhost>"
+
+5:
+  parents: [4, 3]
+  message: |-
+    Merge from 'core'
+
+    git-zoom-in: core
+  committer: "git-zoom-in <git-zoom-in@localhost>"
+  tree:
+    # Extract core from subtree
+    engine.rs:
+      [commit]: 3
+      [path]: core/engine.rs
+    types.rs:
+      [commit]: 3
+      [path]: core/types.rs
+
+# Zoom out core to lib subtree
+6:
+  parents: [3, 5]
+  message: |-
+    Merge to 'core'
+
+    git-zoom-out: core
+  committer: "git-zoom-out <git-zoom-out@localhost>"
+  tree:
+    core:
+      [commit]: 5
+      [path]: .
+    # api.rs inherited
+
+# Continue lib subtree work
+7:
+  parents: [6]
+  tree:
+    # Add test file
+    tests.rs: "fn test_lib() {}"
+
+8:
+  parents: [7]
+  tree:
+    # Modify api
+    api.rs: "fn api() { /* updated */ }"
+
+# Zoom back into core for more work
+9:
+  parents: [5, 8]
+  message: |-
+    Merge from 'core'
+
+    git-zoom-in: core
+  committer: "git-zoom-in <git-zoom-in@localhost>"
+  tree:
+    # Core subtree unchanged from commit 5
+
+10:
+  parents: [9]
+  tree:
+    # Modify engine in deep subtree
+    engine.rs: "fn engine() { /* v3 */ }"
+
+# Zoom all the way out to full-tree
+11:
+  parents: [1, 10]
+  message: |-
+    Merge to 'src/lib/core'
+
+    git-zoom-out: src/lib/core
+  committer: "git-zoom-out <git-zoom-out@localhost>"
+  tree:
+    # Final tree with nested updates
+    src:
+      lib:
+        core:
+          [commit]: 10
+          [path]: .
+        # api.rs and tests.rs from commit 8
+        api.rs:
+          [commit]: 8
+          [path]: api.rs
+        tests.rs:
+          [commit]: 8
+          [path]: tests.rs
+      # main.rs inherited from commit 1

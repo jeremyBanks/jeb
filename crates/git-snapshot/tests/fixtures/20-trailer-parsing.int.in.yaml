@@ -1,0 +1,53 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 5
+
+# Test trailer parsing edge cases
+1:
+  tree:
+    base.txt: "base content"
+
+2:
+  parents: []
+  message: "orphan seed"
+  tree: {}
+
+# Zoom-in with trailer at end of multi-line message
+3:
+  parents: [2, 1]
+  message: |
+    Merge from subtree
+
+    This is a detailed explanation of why
+    we're merging this subtree into our repo.
+
+    git-zoom-in: path/to/subtree
+  tree:
+    file.txt: "content"
+
+# Zoom-out with trailer and extra text after
+4:
+  parents: [1, 3]
+  message: |
+    Merge to subtree
+
+    git-zoom-out: path/to/subtree
+    This line appears after the trailer
+  tree:
+    path:
+      to:
+        subtree:
+          file.txt: "content"
+
+# Trailer with unusual formatting (spaces, case)
+5:
+  parents: [4]
+  message: |
+    Another merge
+
+    GIT-ZOOM-IN:   spaces/around/path
+    git-zoom-out:path/no/space
+  tree:
+    result.txt: "done"

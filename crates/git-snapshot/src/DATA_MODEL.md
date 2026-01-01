@@ -19,6 +19,8 @@ This document describes the in-memory Rust data structures used by the git-snaps
 ```rust
 /// A git object ID (SHA-1 hash), always 40 hex characters / 20 bytes.
 /// We store this as bytes internally for efficiency and to match git's internal representation.
+/// During serialization, these may be truncated to shorter hex strings, but in-memory we always
+/// store the full 20 bytes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ObjectId([u8; 20]);
 
@@ -26,8 +28,16 @@ impl ObjectId {
     /// Parse from 40-character hex string
     pub fn from_hex(s: &str) -> Result<Self, ParseError> { /* ... */ }
 
+    /// Parse from truncated hex string (4-40 characters)
+    /// Used during deserialization when reading truncated hashes
+    pub fn from_hex_prefix(s: &str) -> Result<Self, ParseError> { /* ... */ }
+
     /// Convert to 40-character lowercase hex string
     pub fn to_hex(&self) -> String { /* ... */ }
+
+    /// Convert to truncated hex string of specified length
+    /// Used during serialization for non-head commits
+    pub fn to_hex_truncated(&self, len: usize) -> String { /* ... */ }
 
     /// Get the raw bytes
     pub fn as_bytes(&self) -> &[u8; 20] { /* ... */ }
@@ -85,12 +95,22 @@ impl Identity {
 /// The contents of a git tree (directory).
 /// This is stored as a flat map from full paths to blob contents.
 /// Empty string path represents the root, which cannot contain content directly.
+/// Each tree has a computed object ID (hash) based on its contents, following git's tree hashing algorithm.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tree {
     /// Map from file paths to blob contents.
     /// Paths use forward slashes as separators, never have leading/trailing slashes.
     /// Empty tree is represented by an empty map.
     entries: BTreeMap<String, String>,
+
+    /// Map from file paths to blob object IDs (hashes).
+    /// Each blob's hash is computed from its content using git's blob hashing algorithm.
+    blob_hashes: BTreeMap<String, ObjectId>,
+
+    /// Cached tree hash for this tree.
+    /// Computed from the tree's contents following git's tree hashing algorithm.
+    /// This is used during serialization to enable deduplication via references.
+    tree_hash: Option<ObjectId>,
 }
 
 impl Tree {
@@ -100,11 +120,16 @@ impl Tree {
     /// Get the content of a blob at the given path
     pub fn get(&self, path: &str) -> Option<&str> { /* ... */ }
 
+    /// Get the hash of a blob at the given path
+    pub fn get_blob_hash(&self, path: &str) -> Option<&ObjectId> { /* ... */ }
+
     /// Set the content of a blob at the given path (creating parent dirs as needed)
+    /// Invalidates the cached tree hash
     pub fn insert(&mut self, path: String, content: String) { /* ... */ }
 
     /// Remove a file or directory at the given path
     /// Returns true if something was removed
+    /// Invalidates the cached tree hash
     pub fn remove(&mut self, path: &str) -> bool { /* ... */ }
 
     /// List all paths in the tree
@@ -114,7 +139,18 @@ impl Tree {
     pub fn is_empty(&self) -> bool { /* ... */ }
 
     /// Apply a tree delta on top of this tree (used during deserialization)
+    /// Invalidates the cached tree hash
     pub fn apply_delta(&mut self, delta: &TreeDelta) { /* ... */ }
+
+    /// Compute and cache the tree hash for this tree
+    /// Returns the cached hash if already computed
+    pub fn compute_hash(&mut self) -> ObjectId { /* ... */ }
+
+    /// Get the cached tree hash if available
+    pub fn hash(&self) -> Option<ObjectId> { /* ... */ }
+
+    /// Get the tree at a specific path (returns a view of entries under that path)
+    pub fn get_tree(&self, path: &str) -> Option<Tree> { /* ... */ }
 }
 ```
 
@@ -125,9 +161,11 @@ impl Tree {
 - We can iterate in sorted path order for deterministic serialization
 - Memory overhead is minimal compared to nested structures with many internal nodes
 
+The main downside is that computing subtree hashes requires filtering and reconstructing the nested structure. However, this is only needed during serialization, and the performance cost is acceptable for the simplicity gained in the primary API.
+
 Alternative designs considered:
 - Nested `HashMap<String, TreeEntry>` where `TreeEntry` is `enum { Blob(String), Tree(HashMap<...>) }`
-- This would more closely mirror git's internal structure
+- This would more closely mirror git's internal structure and make subtree hash computation more natural
 - But it's more complex to traverse and modify
 - We can always refactor to this later if needed for performance
 
@@ -278,6 +316,86 @@ pub enum TreeEntry {
 
     /// Delete this path
     Delete,
+
+    /// Reference to content from another commit/path
+    /// Used during deserialization when encountering [commit] and/or [path] references
+    Reference(TreeReference),
+}
+```
+
+### TreeReference
+
+```rust
+/// A reference to a tree or blob from another location.
+/// Represents the [commit] and [path] special keys in the on-disk format.
+/// These references enable deduplication and expressing renames without repeating content.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TreeReference {
+    /// The commit to reference (None means use the inherited [commit] value)
+    pub commit: Option<CommitRef>,
+
+    /// The path within that commit's tree to reference (None means use the inherited path)
+    /// Paths can be absolute (e.g., "src/lib") or relative (e.g., "./other", "../sibling")
+    pub path: Option<String>,
+}
+
+impl TreeReference {
+    /// Resolve this reference to an actual tree or blob
+    /// Takes the current commit context and inherited source path
+    pub fn resolve(
+        &self,
+        repo: &Repository,
+        inherited_commit: Option<&ObjectId>,
+        inherited_path: &str,
+    ) -> Result<ResolvedReference, ParseError> { /* ... */ }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ResolvedReference {
+    /// Reference resolved to a blob
+    Blob { content: String, hash: ObjectId },
+
+    /// Reference resolved to a tree
+    Tree(Tree),
+}
+```
+
+### SerializationContext
+
+```rust
+/// Context maintained during serialization to track which objects have been serialized.
+/// This enables deduplication: each unique blob/tree hash appears exactly once in the
+/// serialized output, with subsequent occurrences becoming [commit]/[path] references.
+#[derive(Debug, Default)]
+pub struct SerializationContext {
+    /// Map from blob hash to the first (commit, path) where it was serialized
+    serialized_blobs: HashMap<ObjectId, (ObjectId, String)>,
+
+    /// Map from tree hash to the first (commit, path) where it was serialized
+    serialized_trees: HashMap<ObjectId, (ObjectId, String)>,
+
+    /// Map from commit hash to integer ID (for computing truncated hash length)
+    commit_ids: HashMap<ObjectId, u32>,
+
+    /// Length to use for truncated hashes (computed based on ambiguity + margin)
+    truncated_hash_len: usize,
+}
+
+impl SerializationContext {
+    /// Check if a blob hash has already been serialized
+    pub fn has_blob(&self, hash: &ObjectId) -> Option<&(ObjectId, String)> { /* ... */ }
+
+    /// Record that a blob has been serialized at the given location
+    pub fn record_blob(&mut self, hash: ObjectId, commit: ObjectId, path: String) { /* ... */ }
+
+    /// Check if a tree hash has already been serialized
+    pub fn has_tree(&self, hash: &ObjectId) -> Option<&(ObjectId, String)> { /* ... */ }
+
+    /// Record that a tree has been serialized at the given location
+    pub fn record_tree(&mut self, hash: ObjectId, commit: ObjectId, path: String) { /* ... */ }
+
+    /// Compute the appropriate truncated hash length for this repository
+    pub fn compute_hash_length(&self) -> usize { /* ... */ }
 }
 ```
 
@@ -347,11 +465,19 @@ Note that `Commit::id` is stored in the struct, but it should be calculated from
 
 For V1, since we're not interacting with real git, we could potentially use a simpler ID scheme (like sequential integers or random UUIDs converted to hex). However, using real git object IDs would make V2 integration much easier, so we should implement proper git hashing from the start.
 
-### Tree Hashing
+### Tree and Blob Hashing
 
-Similarly, git tree objects also have their own object IDs based on their contents. We might not need to store or calculate these in V1, but we should be aware that they exist in git's model. Each tree entry in git contains the mode, name, and object ID of the blob or subtree.
+Git computes object IDs (hashes) for both blobs and trees:
 
-For V1, since we're storing trees as a flat map of path->content, we don't have tree object IDs at all. This is fine because we're not interacting with real git yet.
+**Blob hashing**: Each blob's hash is computed from its content using git's standard blob hashing algorithm (SHA-1 of "blob {size}\0{content}"). The `Tree` struct maintains a `blob_hashes` map that caches these hashes for each blob path.
+
+**Tree hashing**: Each tree has its own object ID based on its contents. In git's model, a tree is a list of entries, where each entry has a mode (file permissions), name (filename), and object ID (the hash of the blob or subtree). The tree's hash is the SHA-1 of this serialized representation.
+
+The `Tree` struct maintains a cached `tree_hash` field that stores the computed hash for the tree. This cache is invalidated whenever the tree is modified, and recomputed on demand.
+
+**Subtree hashing**: Since we store trees as a flat map of paths to content, computing a subtree's hash (e.g., for the "src" directory) requires extracting all paths under that prefix, computing their blob hashes, and then computing the tree hash from those entries. The `get_tree()` method provides this functionality.
+
+These hashes are essential for the serialization algorithm described in IDEA-1.1.md, which uses hash-based deduplication to minimize redundancy in the serialized output. Each unique hash appears at most once as actual content; subsequent occurrences become references via `[commit]` and `[path]` keys.
 
 ### Memory vs Disk Trade-offs
 

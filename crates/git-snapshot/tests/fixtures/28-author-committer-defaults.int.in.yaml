@@ -1,0 +1,35 @@
+# Test author and committer field defaults and inheritance
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 5
+
+# Root commit - should get default author "User <user@localhost>"
+1:
+  tree:
+    file.txt: "base"
+
+# Set explicit author - committer should default to author
+2:
+  author: "Alice <alice@example.com>"
+  tree:
+    file.txt: "alice change"
+
+# Inherit author from first parent, override committer
+3:
+  committer: "Bob <bob@example.com>"
+  tree:
+    file.txt: "bob committed"
+
+# Both explicit
+4:
+  author: "Charlie <charlie@example.com>"
+  committer: "Dave <dave@example.com>"
+  tree:
+    file.txt: "charlie authored dave committed"
+
+# Inherit from first parent again
+5:
+  tree:
+    file.txt: "inherited"

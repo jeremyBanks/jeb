@@ -41,7 +41,8 @@ const V_VERSION: &'static str = concat!("v", env!("CARGO_PKG_VERSION"));
 LINKS:
     https://docs.rs/save/{VERSION}
     https://crates.io/crates/save/{VERSION}"));
-        S.as_ref()
+        let s: &str = S.as_ref();
+        s
     },
     dont_collapse_args_in_usage = true,
     infer_long_args = true,
@@ -355,7 +356,7 @@ pub struct Save {
 }
 
 impl Save {
-    pub fn with<F: FnOnce(&mut Save) -> T, T>(f: F) -> Save {
+    pub fn with<F: FnOnce(&mut Self) -> T, T>(f: F) -> Self {
         let mut save = Default::default();
         f(&mut save);
         save
@@ -368,7 +369,7 @@ impl Save {
         let log_env = env::var("RUST_LOG").unwrap_or_default();
 
         let rust_log = if self.verbose == 0 && self.quiet == 0 && !log_env.is_empty() {
-            if log_env.to_ascii_lowercase() == "off" {
+            if log_env.eq_ignore_ascii_case("off") {
                 None
             } else {
                 Some(log_env)
@@ -580,7 +581,7 @@ pub fn main(args: Save) -> Result<()> {
     eprintln!();
 
     Command::new("git")
-        .args(&[
+        .args([
             "--no-pager",
             "log",
             "--name-status",
@@ -597,7 +598,7 @@ pub fn main(args: Save) -> Result<()> {
     eprintln!();
 
     Command::new("git")
-        .args(&[
+        .args([
             "--no-pager",
             "log",
             "--name-status",
@@ -690,7 +691,7 @@ fn get_git_user(args: &Save, repo: &Repository, head: &Option<Commit>) -> Result
     Ok((user_name, user_email))
 }
 
-/// Opens or initializes a new [git2::Repository] in CWD or GIT_DIR, if args
+/// Opens or initializes a new [`git2::Repository`] in `CWD` or `GIT_DIR`, if args
 /// allow it.
 /// XXX: This should be removed or merged into git2.rs.
 #[instrument(level = "debug")]

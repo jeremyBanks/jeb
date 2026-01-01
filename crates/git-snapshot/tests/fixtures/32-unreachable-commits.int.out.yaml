@@ -1,0 +1,13 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 3
+1:
+  tree:
+    unreachable.txt: should be filtered out
+2:
+  tree:
+    reachable.txt: on main branch
+3:
+  tree:
+    reachable.txt: also on main
