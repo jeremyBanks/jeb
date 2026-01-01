@@ -346,11 +346,15 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
     // Group into equivalence classes and vote
     let mut workspace_updates: HashMap<String, (ResolutionFields, String)> = HashMap::new();
 
+    eprintln!("DEBUG: Found {} unique dependency names", all_deps.len());
+
     for (dep_name, occurrences) in &all_deps {
+        eprintln!("DEBUG: Processing dependency '{}' with {} occurrences", dep_name, occurrences.len());
+
         // Group by equivalence class
         let mut equivalence_classes: Vec<EquivalenceClass> = Vec::new();
 
-        for (member_path, section, dep) in occurrences {
+        for (member_path, _section, dep) in occurrences {
             // Find or create equivalence class
             let mut found = false;
             for ec in &mut equivalence_classes {
@@ -368,13 +372,20 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
             }
         }
 
+        eprintln!("DEBUG: Found {} equivalence classes", equivalence_classes.len());
+
         // Find the winning equivalence class
         if let Some(winner) = find_winner(&equivalence_classes) {
             // Determine the key to use in workspace.dependencies
             let key = winner.get_preferred_key();
+            eprintln!("DEBUG: Winner for '{}': key='{}', votes={}", dep_name, key, winner.vote_count());
             workspace_updates.insert(key, (winner.resolution.clone(), dep_name.clone()));
+        } else {
+            eprintln!("DEBUG: No winner found for '{}'", dep_name);
         }
     }
+
+    eprintln!("DEBUG: workspace_updates has {} entries", workspace_updates.len());
 
     // Update workspace Cargo.toml
     update_workspace_toml(&mut workspace_doc, &workspace_updates, workspace_root)?;
@@ -802,13 +813,15 @@ anyhow = "1.0"
 
         // Read the updated workspace Cargo.toml
         let workspace_content = fs::read_to_string(temp.path().join("Cargo.toml"))?;
+        println!("Workspace Cargo.toml:\n{}", workspace_content);
 
         // serde should be promoted (used by both crates)
-        assert!(workspace_content.contains("serde"));
+        assert!(workspace_content.contains("serde"), "serde not found in workspace");
 
         // Check that member Cargo.tomls now use workspace = true
         let crate_a_content = fs::read_to_string(temp.path().join("crate-a/Cargo.toml"))?;
-        assert!(crate_a_content.contains("workspace = true"));
+        println!("Crate-a Cargo.toml:\n{}", crate_a_content);
+        assert!(crate_a_content.contains("workspace = true"), "workspace = true not found in crate-a");
 
         Ok(())
     }
