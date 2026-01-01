@@ -416,6 +416,25 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
     let workspace_content = std::fs::read_to_string(&workspace_toml_path)?;
     let mut workspace_doc = workspace_content.parse::<DocumentMut>()?;
 
+    // Run initial cargo check to verify workspace builds
+    eprintln!("Running initial cargo check...");
+    let initial_check = std::process::Command::new("cargo")
+        .arg("check")
+        .current_dir(workspace_root)
+        .output();
+
+    let initial_build_success = match initial_check {
+        Ok(output) => output.status.success(),
+        Err(e) => {
+            eprintln!("Warning: Failed to run initial cargo check: {}", e);
+            false
+        }
+    };
+
+    if !initial_build_success {
+        eprintln!("Warning: Initial cargo check failed, but continuing anyway...");
+    }
+
     // Check for configuration fields in workspace.dependencies
     let workspace_deps = workspace_doc
         .get("workspace")
@@ -471,6 +490,20 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
         }
     }
 
+    // Save original contents of all Cargo.toml files for potential rollback
+    let mut original_contents: HashMap<PathBuf, String> = HashMap::new();
+
+    // Save workspace Cargo.toml
+    original_contents.insert(workspace_toml_path.clone(), workspace_content.clone());
+
+    // Save all member Cargo.toml files
+    for member_path in &members {
+        let member_toml = member_path.join("Cargo.toml");
+        if let Ok(content) = std::fs::read_to_string(&member_toml) {
+            original_contents.insert(member_toml, content);
+        }
+    }
+
     // Group into equivalence classes and vote
     let mut workspace_updates: HashMap<String, (ResolutionFields, String)> = HashMap::new();
 
@@ -514,6 +547,36 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
     // Update member Cargo.toml files
     for member_path in &members {
         update_member_toml(member_path, &all_deps, &workspace_updates, workspace_root, &workspace_doc, &old_workspace_deps)?;
+    }
+
+    // Run final cargo check to verify workspace still builds
+    eprintln!("Running final cargo check...");
+    let final_check = std::process::Command::new("cargo")
+        .arg("check")
+        .current_dir(workspace_root)
+        .output();
+
+    let final_build_success = match final_check {
+        Ok(output) => output.status.success(),
+        Err(e) => {
+            eprintln!("Error: Failed to run final cargo check: {}", e);
+            false
+        }
+    };
+
+    // If initial build succeeded but final build failed, rollback
+    if initial_build_success && !final_build_success {
+        eprintln!("Error: Workspace built before normalization but fails after.");
+        eprintln!("Rolling back all changes...");
+
+        // Restore all Cargo.toml files to original state
+        for (path, content) in &original_contents {
+            if let Err(e) = std::fs::write(path, content) {
+                eprintln!("Warning: Failed to restore {}: {}", path.display(), e);
+            }
+        }
+
+        anyhow::bail!("Normalization broke the build. All changes have been reverted.");
     }
 
     Ok(())
