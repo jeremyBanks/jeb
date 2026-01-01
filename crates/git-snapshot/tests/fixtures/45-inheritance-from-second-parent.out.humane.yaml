@@ -31,9 +31,7 @@ refs:
   - 4
   tree:
     other.txt:
-      ? - commit
-      : 4
-      ? - path
-      : other.txt
+      //commit: 4
+      //path: other.txt
     shared:
       file.txt: merged content

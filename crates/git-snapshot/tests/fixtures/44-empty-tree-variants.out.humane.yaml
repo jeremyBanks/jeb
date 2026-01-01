@@ -22,7 +22,5 @@ refs:
   tree:
     has-content:
       file.txt:
-        ? - commit
-        : 1
-        ? - path
-        : file.txt
+        //commit: 1
+        //path: file.txt

@@ -20,10 +20,8 @@ refs:
 4:
   tree:
     delete-soon.txt:
-      ? - commit
-      : 1
-      ? - path
-      : delete-soon.txt
+      //commit: 1
+      //path: delete-soon.txt
 5:
   tree:
     dir:
@@ -33,8 +31,6 @@ refs:
   tree:
     dir:
       file-a.txt:
-        ? - commit
-        : 1
-        ? - path
-        : dir/file-a.txt
+        //commit: 1
+        //path: dir/file-a.txt
       new-file.txt: new

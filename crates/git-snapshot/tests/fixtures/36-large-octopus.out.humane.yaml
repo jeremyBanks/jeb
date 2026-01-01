@@ -38,37 +38,23 @@ refs:
   - 8
   tree:
     branch1.txt:
-      ? - commit
-      : 2
-      ? - path
-      : branch1.txt
+      //commit: 2
+      //path: branch1.txt
     branch2.txt:
-      ? - commit
-      : 3
-      ? - path
-      : branch2.txt
+      //commit: 3
+      //path: branch2.txt
     branch3.txt:
-      ? - commit
-      : 4
-      ? - path
-      : branch3.txt
+      //commit: 4
+      //path: branch3.txt
     branch4.txt:
-      ? - commit
-      : 5
-      ? - path
-      : branch4.txt
+      //commit: 5
+      //path: branch4.txt
     branch5.txt:
-      ? - commit
-      : 6
-      ? - path
-      : branch5.txt
+      //commit: 6
+      //path: branch5.txt
     branch6.txt:
-      ? - commit
-      : 7
-      ? - path
-      : branch6.txt
+      //commit: 7
+      //path: branch6.txt
     branch7.txt:
-      ? - commit
-      : 8
-      ? - path
-      : branch7.txt
+      //commit: 8
+      //path: branch7.txt

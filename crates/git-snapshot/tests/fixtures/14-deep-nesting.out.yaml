@@ -19,10 +19,8 @@ cd4b0b:
       y:
         z:
           moved-deep.txt:
-            ? - commit
-            : cd4b0b
-            ? - path
-            : a/b/c/d/e/f/deep.txt
+            //commit: cd4b0b
+            //path: a/b/c/d/e/f/deep.txt
 8134bc:
   message: commit 3
   tree:
@@ -36,25 +34,17 @@ cd4b0b:
                   h:
                     i:
                       very-deep.txt:
-                        ? - commit
-                        : cd4b0b
-                        ? - path
-                        : a/b/c/d/e/f/deep.txt
+                        //commit: cd4b0b
+                        //path: a/b/c/d/e/f/deep.txt
 d5549e5e04924dfd472169e7ebada1f4fd7e23e8:
   message: commit 4
   tree:
     flat-1.txt:
-      ? - commit
-      : 63e6cc
-      ? - path
-      : x/y/z/moved-deep.txt
+      //commit: 63e6cc
+      //path: x/y/z/moved-deep.txt
     flat-2.txt:
-      ? - commit
-      : 63e6cc
-      ? - path
-      : x/y/z/moved-deep.txt
+      //commit: 63e6cc
+      //path: x/y/z/moved-deep.txt
     flat-3.txt:
-      ? - commit
-      : 63e6cc
-      ? - path
-      : x/y/z/moved-deep.txt
+      //commit: 63e6cc
+      //path: x/y/z/moved-deep.txt

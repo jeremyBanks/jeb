@@ -35,21 +35,15 @@ refs:
   - 1
   tree:
     api.rs:
-      ? - commit
-      : 1
-      ? - path
-      : src/lib/api.rs
+      //commit: 1
+      //path: src/lib/api.rs
     core:
       engine.rs:
-        ? - commit
-        : 1
-        ? - path
-        : src/lib/core/engine.rs
+        //commit: 1
+        //path: src/lib/core/engine.rs
       types.rs:
-        ? - commit
-        : 1
-        ? - path
-        : src/lib/core/types.rs
+        //commit: 1
+        //path: src/lib/core/types.rs
 5:
   committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
@@ -61,15 +55,11 @@ refs:
   - 4
   tree:
     engine.rs:
-      ? - commit
-      : 4
-      ? - path
-      : core/engine.rs
+      //commit: 4
+      //path: core/engine.rs
     types.rs:
-      ? - commit
-      : 4
-      ? - path
-      : core/types.rs
+      //commit: 4
+      //path: core/types.rs
 6:
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
@@ -113,18 +103,12 @@ refs:
     src:
       lib:
         api.rs:
-          ? - commit
-          : 8
-          ? - path
-          : api.rs
+          //commit: 8
+          //path: api.rs
         core:
           engine.rs:
-            ? - commit
-            : 10
-            ? - path
-            : engine.rs
+            //commit: 10
+            //path: engine.rs
         tests.rs:
-          ? - commit
-          : 7
-          ? - path
-          : tests.rs
+          //commit: 7
+          //path: tests.rs

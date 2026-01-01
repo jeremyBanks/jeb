@@ -20,10 +20,8 @@ refs:
   - 1
   tree:
     file.txt:
-      ? - commit
-      : 1
-      ? - path
-      : original-location/file.txt
+      //commit: 1
+      //path: original-location/file.txt
 4:
   message: commit 2
   parents:
@@ -31,19 +29,15 @@ refs:
   tree:
     second-location:
       file.txt:
-        ? - commit
-        : 3
-        ? - path
-        : file.txt
+        //commit: 3
+        //path: file.txt
 5:
   message: commit 3
   tree:
     third-location:
       file.txt:
-        ? - commit
-        : 3
-        ? - path
-        : file.txt
+        //commit: 3
+        //path: file.txt
 6:
   parents:
   - 3
@@ -61,15 +55,11 @@ refs:
   tree:
     third-location:
       file.txt:
-        ? - commit
-        : 6
-        ? - path
-        : file.txt
+        //commit: 6
+        //path: file.txt
       new.txt:
-        ? - commit
-        : 6
-        ? - path
-        : new.txt
+        //commit: 6
+        //path: new.txt
 8:
   tree:
     other.txt: unrelated

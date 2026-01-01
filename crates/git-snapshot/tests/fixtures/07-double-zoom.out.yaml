@@ -32,10 +32,8 @@ refs:
   - 6e947b
   tree:
     init.rs:
-      ? - commit
-      : 577c26
-      ? - path
-      : modules/core/init.rs
+      //commit: 577c26
+      //path: modules/core/init.rs
 22299b:
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
@@ -79,7 +77,5 @@ f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c:
     modules:
       core:
         cleanup.rs:
-          ? - commit
-          : f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c
-          ? - path
-          : cleanup.rs
+          //commit: f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c
+          //path: cleanup.rs

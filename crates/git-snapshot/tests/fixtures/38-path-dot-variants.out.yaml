@@ -14,29 +14,21 @@ cba38c:
     root-ref:
       dir:
         nested.txt:
-          ? - commit
-          : cba38c
-          ? - path
-          : dir/nested.txt
+          //commit: cba38c
+          //path: dir/nested.txt
       file.txt:
-        ? - commit
-        : cba38c
-        ? - path
-        : file.txt
+        //commit: cba38c
+        //path: file.txt
 3b0984:
   message: commit 3
   tree:
     empty-path-ref:
       dir:
         nested.txt:
-          ? - commit
-          : cba38c
-          ? - path
-          : dir/nested.txt
+          //commit: cba38c
+          //path: dir/nested.txt
       file.txt:
-        ? - commit
-        : cba38c
-        ? - path
-        : file.txt
+        //commit: cba38c
+        //path: file.txt
 f464a016ea2ebb445907206e7ee3619ae735145a:
   message: commit 4

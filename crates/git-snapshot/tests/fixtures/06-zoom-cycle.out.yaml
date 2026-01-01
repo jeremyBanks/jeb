@@ -33,15 +33,11 @@ refs:
   - 87d87d
   tree:
     main.rs:
-      ? - commit
-      : 87d87d
-      ? - path
-      : src/lib/main.rs
+      //commit: 87d87d
+      //path: src/lib/main.rs
     utils.rs:
-      ? - commit
-      : 87d87d
-      ? - path
-      : src/lib/utils.rs
+      //commit: 87d87d
+      //path: src/lib/utils.rs
 d49288745105ec09688fa9112bb13aff97ba966d:
   message: commit 5
   tree:
@@ -59,7 +55,5 @@ a1f3ccb4e07282c8a518f54326612b33bc8a38a5:
     src:
       lib:
         tests.rs:
-          ? - commit
-          : d49288745105ec09688fa9112bb13aff97ba966d
-          ? - path
-          : tests.rs
+          //commit: d49288745105ec09688fa9112bb13aff97ba966d
+          //path: tests.rs

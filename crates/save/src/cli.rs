@@ -1,10 +1,7 @@
 //! The CLI.
 
 use {
-    crate::{
-        git2::*,
-        graph_stats::GraphStatsCalculator,
-    },
+    crate::{git2::*, graph_stats::GraphStatsCalculator},
     ::{
         clap::{AppSettings, Parser},
         eyre::{bail, Result},
@@ -566,12 +563,12 @@ pub fn main(args: Save) -> Result<()> {
                 } else {
                     repo.set_head(&commit.id().to_string())?;
                 }
-            }
+            },
             Err(err) if err.code() == ErrorCode::UnbornBranch => {
                 // First commit on unborn branch - set HEAD to point to the new commit
                 info!("Creating first commit on unborn branch");
                 repo.set_head_detached(commit.id())?;
-            }
+            },
             Err(err) => return Err(err.into()),
         }
     } else {

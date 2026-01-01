@@ -93,7 +93,8 @@ mod tests {
             let (x2, y2): (u8, u8) = hilbert(u + 1);
             let manhattan = (x1 as i32 - x2 as i32).abs() + (y1 as i32 - y2 as i32).abs();
             assert_eq!(
-                manhattan, 1,
+                manhattan,
+                1,
                 "adjacent values {u} and {} should have Manhattan distance 1, got {manhattan}",
                 u + 1
             );
@@ -129,7 +130,8 @@ mod tests {
             let (x2, y2): (u16, u16) = hilbert(u + 1);
             let manhattan = (x1 as i32 - x2 as i32).abs() + (y1 as i32 - y2 as i32).abs();
             assert_eq!(
-                manhattan, 1,
+                manhattan,
+                1,
                 "adjacent values {u} and {} should have Manhattan distance 1, got {manhattan}",
                 u + 1
             );

@@ -1,5 +1,10 @@
 use ::{
-    core::{mem, ops::Range, panic, fmt::{self, Debug}},
+    core::{
+        fmt::{self, Debug},
+        mem,
+        ops::Range,
+        panic,
+    },
     once_cell::sync::{Lazy, OnceCell},
     std::{
         collections::HashMap,
@@ -10,7 +15,6 @@ use ::{
     },
 };
 
-//
 // Note: Custom assert_eq and Expected types appear to be unfinished experimental code
 // Commenting out until/unless needed
 // #[track_caller]
@@ -60,13 +64,8 @@ impl<Literal: self::Literal> PartialEq<Literal> for Expected<Literal> {
 
 #[derive(Clone, Debug)]
 pub enum ExpectedLocation {
-    InlineLiteral {
-        line: usize,
-        column: usize,
-    },
-    ExternalFile {
-        path: PathBuf,
-    },
+    InlineLiteral { line: usize, column: usize },
+    ExternalFile { path: PathBuf },
 }
 
 #[track_caller]
@@ -96,7 +95,7 @@ pub fn expect(data: &'static str) -> Expect {
             line: location.line(),
             column: location.column(),
         },
-        data: data,
+        data,
         indent: true,
     }
 }
@@ -108,7 +107,6 @@ macro_rules! expect_file {
         position: file!(),
     }};
 }
-
 
 pub fn expect_file(path: impl Into<PathBuf>) -> ExpectFile {
     ExpectFile {

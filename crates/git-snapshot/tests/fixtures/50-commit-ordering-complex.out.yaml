@@ -41,10 +41,8 @@ d0368b:
   - 56e73d8006ecefa8469318404d75e5f113c6e396
   tree:
     feature-a.txt:
-      ? - commit
-      : 56e73d8006ecefa8469318404d75e5f113c6e396
-      ? - path
-      : feature-a.txt
+      //commit: 56e73d8006ecefa8469318404d75e5f113c6e396
+      //path: feature-a.txt
 546fcfd2d87913b6b172e5a1d9b834defe36f28c:
   message: commit 8
   parents:
@@ -58,10 +56,8 @@ d0368b:
   - 546fcfd2d87913b6b172e5a1d9b834defe36f28c
   tree:
     feature-b.txt:
-      ? - commit
-      : 546fcfd2d87913b6b172e5a1d9b834defe36f28c
-      ? - path
-      : feature-b.txt
+      //commit: 546fcfd2d87913b6b172e5a1d9b834defe36f28c
+      //path: feature-b.txt
 b4d2a1a7072448bdfae5f12e561a89831787617e:
   message: commit 10
   tree:

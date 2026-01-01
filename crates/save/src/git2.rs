@@ -293,7 +293,10 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
             let part = part.trim();
             if part.starts_with('x') {
                 let msg_tree = part.strip_prefix('x')?;
-                debug!("Validating tree hash: msg={}, actual={}", msg_tree, tree_prefix);
+                debug!(
+                    "Validating tree hash: msg={}, actual={}",
+                    msg_tree, tree_prefix
+                );
                 if msg_tree != tree_prefix {
                     debug!("Tree hash mismatch, cannot trust");
                     return None; // Tree hash doesn't match, can't trust

@@ -442,7 +442,11 @@ mod tests {
             for y in i8::MIN..=i8::MAX {
                 let u: u16 = scatter_square::<0, _>((x, y));
                 let (back_x, back_y): (i8, i8) = scatter_square::<0, _>(u);
-                assert_eq!((x, y), (back_x, back_y), "roundtrip failed for ({x}, {y}) -> {u}");
+                assert_eq!(
+                    (x, y),
+                    (back_x, back_y),
+                    "roundtrip failed for ({x}, {y}) -> {u}"
+                );
             }
         }
     }

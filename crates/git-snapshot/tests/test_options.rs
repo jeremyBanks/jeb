@@ -14,7 +14,11 @@ fn test_serialization_options() {
     let repo = parse(&input_yaml).expect("should parse");
 
     // Test 1: Default options (dedup yes, short hashes yes, integer IDs)
-    let output_default = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
+    let output_default = serialize(
+        &repo,
+        CommitIdStyle::Integer,
+        SerializationOptions::default(),
+    );
     println!("=== DEFAULT (dedup=yes, short=yes, int) ===");
     println!("{}\n", output_default);
 
@@ -39,7 +43,8 @@ fn test_serialization_options() {
     println!("=== HEX FULL (dedup=yes, full hashes, hex) ===");
     println!("{}\n", output_hex_full);
 
-    // Test 5: Hex with no short hashes (same as force_full_hashes but without the flag)
+    // Test 5: Hex with no short hashes (same as force_full_hashes but without the
+    // flag)
     let output_hex_no_short = serialize(&repo, CommitIdStyle::Hex, SerializationOptions {
         use_short_hashes: false,
         ..SerializationOptions::default()
@@ -58,29 +63,58 @@ fn test_serialization_options() {
 
     // Verify all outputs can be round-tripped
     for (name, output, id_style, options) in [
-        ("default", &output_default, CommitIdStyle::Integer, SerializationOptions::default()),
-        ("no_dedup", &output_no_dedup, CommitIdStyle::Integer, SerializationOptions {
-            use_deduplication: false,
-            ..SerializationOptions::default()
-        }),
-        ("hex_short", &output_hex_short, CommitIdStyle::Hex, SerializationOptions::default()),
-        ("hex_full", &output_hex_full, CommitIdStyle::Hex, SerializationOptions {
-            force_full_hashes: true,
-            ..SerializationOptions::default()
-        }),
-        ("hex_no_short", &output_hex_no_short, CommitIdStyle::Hex, SerializationOptions {
-            use_short_hashes: false,
-            ..SerializationOptions::default()
-        }),
-        ("no_dedup_full", &output_no_dedup_full, CommitIdStyle::Hex, SerializationOptions {
-            use_deduplication: false,
-            force_full_hashes: true,
-            ..SerializationOptions::default()
-        }),
+        (
+            "default",
+            &output_default,
+            CommitIdStyle::Integer,
+            SerializationOptions::default(),
+        ),
+        (
+            "no_dedup",
+            &output_no_dedup,
+            CommitIdStyle::Integer,
+            SerializationOptions {
+                use_deduplication: false,
+                ..SerializationOptions::default()
+            },
+        ),
+        (
+            "hex_short",
+            &output_hex_short,
+            CommitIdStyle::Hex,
+            SerializationOptions::default(),
+        ),
+        (
+            "hex_full",
+            &output_hex_full,
+            CommitIdStyle::Hex,
+            SerializationOptions {
+                force_full_hashes: true,
+                ..SerializationOptions::default()
+            },
+        ),
+        (
+            "hex_no_short",
+            &output_hex_no_short,
+            CommitIdStyle::Hex,
+            SerializationOptions {
+                use_short_hashes: false,
+                ..SerializationOptions::default()
+            },
+        ),
+        (
+            "no_dedup_full",
+            &output_no_dedup_full,
+            CommitIdStyle::Hex,
+            SerializationOptions {
+                use_deduplication: false,
+                force_full_hashes: true,
+                ..SerializationOptions::default()
+            },
+        ),
     ] {
-        let repo2 = parse(output).unwrap_or_else(|e| {
-            panic!("Failed to parse {} output: {}", name, e)
-        });
+        let repo2 =
+            parse(output).unwrap_or_else(|e| panic!("Failed to parse {} output: {}", name, e));
 
         // Re-serialize with same options should be stable
         let output2 = serialize(&repo2, id_style, options);

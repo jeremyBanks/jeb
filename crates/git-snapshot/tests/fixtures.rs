@@ -67,7 +67,12 @@ fn get_option_variants() -> Vec<OptionVariant> {
 ///   "tests/fixtures/basic.out.yaml")
 /// - `id_style`: Whether to use hex or integer commit IDs in output
 /// - `options`: Serialization options to use
-fn test_fixture(input_path: &Path, expected_path: &Path, id_style: CommitIdStyle, options: SerializationOptions) {
+fn test_fixture(
+    input_path: &Path,
+    expected_path: &Path,
+    id_style: CommitIdStyle,
+    options: SerializationOptions,
+) {
     eprintln!("Testing fixture: {}", input_path.display());
 
     // Read input
@@ -159,7 +164,12 @@ fn find_fixtures() -> Vec<(PathBuf, PathBuf, CommitIdStyle, SerializationOptions
                     let out_file_name = format!("{}.{}", base_name, variant.suffix);
                     let expected_path = path.with_file_name(out_file_name);
 
-                    fixtures.push((path.clone(), expected_path, variant.id_style, variant.options));
+                    fixtures.push((
+                        path.clone(),
+                        expected_path,
+                        variant.id_style,
+                        variant.options,
+                    ));
                 }
             }
         }

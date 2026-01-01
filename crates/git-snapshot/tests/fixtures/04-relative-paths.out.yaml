@@ -14,13 +14,9 @@ refs:
   message: commit 2
   tree:
     c-moved.txt:
-      ? - commit
-      : '466346'
-      ? - path
-      : bar/c.txt
+      //commit: '466346'
+      //path: bar/c.txt
     foo:
       moved-b.txt:
-        ? - commit
-        : '466346'
-        ? - path
-        : foo/b.txt
+        //commit: '466346'
+        //path: foo/b.txt

@@ -37,10 +37,8 @@ d220a8:
       to:
         subtree:
           file.txt:
-            ? - commit
-            : eca4c7
-            ? - path
-            : file.txt
+            //commit: eca4c7
+            //path: file.txt
 cbdb59f634ecc8e8c04157df8feb7e89695908d6:
   message: |
     Another merge

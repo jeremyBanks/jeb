@@ -37,10 +37,8 @@ refs:
   - 6
   tree:
     feature-a.txt:
-      ? - commit
-      : 6
-      ? - path
-      : feature-a.txt
+      //commit: 6
+      //path: feature-a.txt
 8:
   parents:
   - 5
@@ -52,10 +50,8 @@ refs:
   - 8
   tree:
     feature-b.txt:
-      ? - commit
-      : 8
-      ? - path
-      : feature-b.txt
+      //commit: 8
+      //path: feature-b.txt
 10:
   tree:
     main.txt: main final

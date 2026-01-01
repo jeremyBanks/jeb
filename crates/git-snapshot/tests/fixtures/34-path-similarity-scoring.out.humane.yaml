@@ -16,7 +16,5 @@ refs:
     foo:
       bar:
         renamed.txt:
-          ? - commit
-          : 1
-          ? - path
-          : completely/different/path.txt
+          //commit: 1
+          //path: completely/different/path.txt

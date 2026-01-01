@@ -36,9 +36,7 @@ b36320:
   - 9c362c
   tree:
     other.txt:
-      ? - commit
-      : 9c362c
-      ? - path
-      : other.txt
+      //commit: 9c362c
+      //path: other.txt
     shared:
       file.txt: merged content

@@ -1,7 +1,13 @@
 //! Wrapper functions for git commands.
 
-use std::io::Write;
-use std::process::{Command, Output, Stdio};
+use std::{
+    io::Write,
+    process::{
+        Command,
+        Output,
+        Stdio,
+    },
+};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -21,13 +27,10 @@ impl std::error::Error for Error {}
 
 /// Run a git command and return the output.
 fn git(args: &[&str]) -> Result<Output> {
-    let output = Command::new("git")
-        .args(args)
-        .output()
-        .map_err(|e| Error {
-            command: args.join(" "),
-            message: format!("failed to execute: {}", e),
-        })?;
+    let output = Command::new("git").args(args).output().map_err(|e| Error {
+        command: args.join(" "),
+        message: format!("failed to execute: {}", e),
+    })?;
     Ok(output)
 }
 
@@ -46,11 +49,10 @@ fn git_stdout(args: &[&str]) -> Result<String> {
 /// Check if we're at the root of a git repository.
 pub fn check_repo_root() -> Result<()> {
     let toplevel = git_stdout(&["rev-parse", "--show-toplevel"])?;
-    let cwd = std::env::current_dir()
-        .map_err(|e| Error {
-            command: "cwd".to_string(),
-            message: e.to_string(),
-        })?;
+    let cwd = std::env::current_dir().map_err(|e| Error {
+        command: "cwd".to_string(),
+        message: e.to_string(),
+    })?;
 
     let cwd_str = cwd.to_string_lossy();
     if cwd_str != toplevel {
@@ -91,7 +93,9 @@ pub fn rev_parse(rev: &str) -> Result<String> {
 pub fn try_rev_parse(rev: &str) -> Result<Option<String>> {
     let output = git(&["rev-parse", "--verify", "--quiet", rev])?;
     if output.status.success() {
-        Ok(Some(String::from_utf8_lossy(&output.stdout).trim().to_string()))
+        Ok(Some(
+            String::from_utf8_lossy(&output.stdout).trim().to_string(),
+        ))
     } else {
         Ok(None)
     }
@@ -260,10 +264,7 @@ pub fn walk_first_parent(start: &str) -> Result<Vec<(String, Vec<String>, String
             continue;
         }
         let hash = parts[0].to_string();
-        let parent_list: Vec<String> = parts[1]
-            .split_whitespace()
-            .map(|s| s.to_string())
-            .collect();
+        let parent_list: Vec<String> = parts[1].split_whitespace().map(|s| s.to_string()).collect();
         let body = parts[2].to_string();
         results.push((hash, parent_list, body));
     }
@@ -272,9 +273,11 @@ pub fn walk_first_parent(start: &str) -> Result<Vec<(String, Vec<String>, String
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::fs;
-    use tempfile::TempDir;
+    use {
+        super::*,
+        std::fs,
+        tempfile::TempDir,
+    };
 
     fn setup_test_repo() -> TempDir {
         let dir = TempDir::new().unwrap();

@@ -11,10 +11,8 @@ refs:
 2:
   tree:
     GUIDE.md:
-      ? - commit
-      : 1
-      ? - path
-      : README.md
+      //commit: 1
+      //path: README.md
     src:
       helper.rs: pub fn help() { /* updated */ }
       new.rs: pub fn new_func() {}

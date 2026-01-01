@@ -9,9 +9,11 @@
 //! The algorithm supports depth-limited scanning ("z-mode") to bound complexity
 //! in large repositories.
 
-use std::collections::{HashMap, HashSet};
-use std::fmt::Debug;
-use std::hash::Hash;
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+    hash::Hash,
+};
 
 /// Statistics about a commit's position in the repository graph.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,9 +53,9 @@ pub struct ParsedMessage {
 /// Commit message prefix indicating repository state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MessagePrefix {
-    Regular,  // 'r'
-    Shallow,  // 's'
-    ZMode,    // 'z'
+    Regular, // 'r'
+    Shallow, // 's'
+    ZMode,   // 'z'
 }
 
 /// Abstract interface for commit data needed by the graph statistics algorithm.
@@ -89,8 +91,11 @@ pub trait RepositoryView<'repo> {
 
     /// Validate that a tree prefix matches the actual tree ID.
     /// This is used to verify parsed commit messages.
-    fn validate_tree_prefix(&self, tree_id: &<Self::Commit as CommitView>::Id, prefix: &str)
-        -> bool;
+    fn validate_tree_prefix(
+        &self,
+        tree_id: &<Self::Commit as CommitView>::Id,
+        prefix: &str,
+    ) -> bool;
 }
 
 /// Parser for commit messages in our format.
@@ -257,10 +262,11 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
 
                         if trusted {
                             // Inherit stats from head, increment indices
-                            let generation_index = parsed.generation_index
-                                .unwrap_or(parsed.revision_index) + 1;
-                            let commit_index = parsed.commit_index
-                                .unwrap_or_else(|| parsed.generation_index.unwrap_or(parsed.revision_index)) + 1;
+                            let generation_index =
+                                parsed.generation_index.unwrap_or(parsed.revision_index) + 1;
+                            let commit_index = parsed.commit_index.unwrap_or_else(|| {
+                                parsed.generation_index.unwrap_or(parsed.revision_index)
+                            }) + 1;
 
                             return GraphStats {
                                 revision_index: parsed.revision_index + 1,
@@ -311,7 +317,8 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
 
                 // Check if we should continue scanning from this commit
                 let should_continue = if depth == 0 {
-                    // Never check trust for HEAD itself - we're calculating for the commit ON TOP of it
+                    // Never check trust for HEAD itself - we're calculating for the commit ON TOP
+                    // of it
                     true
                 } else {
                     // For depth > 0, check trust first, then depth limit
@@ -429,7 +436,8 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             count
         };
 
-        let generation_index = self.calculate_generation_bounded(&parent_map, &head.id(), &boundary_commits);
+        let generation_index =
+            self.calculate_generation_bounded(&parent_map, &head.id(), &boundary_commits);
         let commit_index = visited.len().saturating_sub(1) as u32;
 
         let origin = if revision_index == 0 {
@@ -491,7 +499,16 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             let parents = parent_map.get(id).map(|p| p.as_slice()).unwrap_or(&[]);
             let max_parent_dist = parents
                 .iter()
-                .map(|p| visit(p, parent_map, distances, processed, max_distance, boundary_commits))
+                .map(|p| {
+                    visit(
+                        p,
+                        parent_map,
+                        distances,
+                        processed,
+                        max_distance,
+                        boundary_commits,
+                    )
+                })
                 .max()
                 .unwrap_or(0);
 
@@ -503,7 +520,14 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             dist
         }
 
-        visit(head_id, parent_map, &mut distances, &mut processed, &mut max_distance, boundary_commits);
+        visit(
+            head_id,
+            parent_map,
+            &mut distances,
+            &mut processed,
+            &mut max_distance,
+            boundary_commits,
+        );
         max_distance
     }
 
@@ -548,7 +572,12 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         }
     }
 
-    fn full_graph_walk(&self, head: &R::Commit, _is_shallow: bool, _unlimited_depth: bool) -> GraphStats {
+    fn full_graph_walk(
+        &self,
+        head: &R::Commit,
+        _is_shallow: bool,
+        _unlimited_depth: bool,
+    ) -> GraphStats {
         // Build a complete graph using BFS
         let mut visited = HashSet::new();
         let mut queue = vec![head.id()];
@@ -659,7 +688,13 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             dist
         }
 
-        visit(head_id, parent_map, &mut distances, &mut processed, &mut max_distance);
+        visit(
+            head_id,
+            parent_map,
+            &mut distances,
+            &mut processed,
+            &mut max_distance,
+        );
         max_distance
     }
 

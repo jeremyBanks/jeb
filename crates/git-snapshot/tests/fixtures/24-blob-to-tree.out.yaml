@@ -36,10 +36,8 @@ ee9d6a:
       to:
         item:
           content.txt:
-            ? - commit
-            : 04782d
-            ? - path
-            : content.txt
+            //commit: 04782d
+            //path: content.txt
 b1e6a88243d5c297082d327de49f23e77c67dbd9:
   message: commit 2
   parents:

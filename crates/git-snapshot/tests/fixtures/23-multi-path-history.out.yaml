@@ -21,10 +21,8 @@ c36e23:
   - c36e23
   tree:
     file.txt:
-      ? - commit
-      : c36e23
-      ? - path
-      : original-location/file.txt
+      //commit: c36e23
+      //path: original-location/file.txt
 4b3150:
   message: commit 2
   parents:
@@ -32,19 +30,15 @@ c36e23:
   tree:
     second-location:
       file.txt:
-        ? - commit
-        : '122756'
-        ? - path
-        : file.txt
+        //commit: '122756'
+        //path: file.txt
 1d7043:
   message: commit 3
   tree:
     third-location:
       file.txt:
-        ? - commit
-        : '122756'
-        ? - path
-        : file.txt
+        //commit: '122756'
+        //path: file.txt
 03f594:
   message: commit 6
   parents:
@@ -63,15 +57,11 @@ c36e23:
   tree:
     third-location:
       file.txt:
-        ? - commit
-        : 03f594
-        ? - path
-        : file.txt
+        //commit: 03f594
+        //path: file.txt
       new.txt:
-        ? - commit
-        : 03f594
-        ? - path
-        : new.txt
+        //commit: 03f594
+        //path: new.txt
 3cbe233b7f2f7eef369d80a1377e200b509b74cf:
   message: commit 8
   tree:
