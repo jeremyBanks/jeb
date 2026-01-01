@@ -670,7 +670,27 @@ fn build_dependency_value(
     workspace_root: &Path,
     _include_config: bool,
 ) -> Result<Item> {
-    // Always use inline table form to include default-features = false
+    let mut has_extra_fields = false;
+
+    // Check if we have fields other than version
+    if resolution.package.is_some()
+        || resolution.path.is_some()
+        || resolution.git.is_some()
+        || resolution.branch.is_some()
+        || resolution.tag.is_some()
+        || resolution.rev.is_some()
+        || resolution.registry.is_some()
+    {
+        has_extra_fields = true;
+    }
+
+    if !has_extra_fields && resolution.version.is_some() {
+        // Simple string form
+        let version_str = resolution.version.as_ref().unwrap().to_string();
+        return Ok(value(version_str).into());
+    }
+
+    // Inline table form
     let mut table = InlineTable::new();
 
     // Add fields in order
@@ -713,9 +733,6 @@ fn build_dependency_value(
     if let Some(ref registry) = resolution.registry {
         table.insert("registry", Value::from(registry.as_str()));
     }
-
-    // Always add default-features = false to workspace dependencies
-    table.insert("default-features", Value::from(false));
 
     Ok(Item::Value(Value::InlineTable(table)))
 }
