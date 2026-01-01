@@ -168,6 +168,75 @@ fn versions_compatible(v1: &Version, v2: &Version) -> bool {
     }
 }
 
+/// Manually normalize a path by resolving .. and . components
+/// This doesn't require filesystem access
+fn normalize_path_components(path: &Path) -> PathBuf {
+    let mut components = Vec::new();
+
+    for component in path.components() {
+        match component {
+            std::path::Component::ParentDir => {
+                // Pop the last component (if it's not a root)
+                if !components.is_empty() {
+                    if let Some(last) = components.last() {
+                        match last {
+                            std::path::Component::RootDir | std::path::Component::Prefix(_) => {
+                                // Can't go up from root
+                            }
+                            _ => {
+                                components.pop();
+                            }
+                        }
+                    }
+                }
+            }
+            std::path::Component::CurDir => {
+                // Skip . components
+            }
+            other => {
+                components.push(other);
+            }
+        }
+    }
+
+    components.iter().collect()
+}
+
+/// Normalize a version string to be parseable by semver crate
+/// Handles:
+/// - `=1.0.0` (exact) -> `1.0.0`
+/// - `^1.0.0` (caret) -> `1.0.0`
+/// - `~1.0.0` (tilde) -> `1.0.0`
+/// - `1.0` (shortened) -> `1.0.0`
+/// - `0.3` (shortened) -> `0.3.0`
+///
+/// Complex specs like `>=1.0, <2.0` cannot be normalized and will fail parsing,
+/// which causes the dependency to be skipped (won't be normalized).
+fn normalize_version_string(v_str: &str) -> String {
+    // Remove common single-character prefixes
+    let trimmed = v_str
+        .trim_start_matches('=')
+        .trim_start_matches('^')
+        .trim_start_matches('~')
+        .trim();
+
+    // Split on whitespace or comma to check if this is a complex spec
+    // If it contains space or comma, it's likely ">= 1.0, < 2.0" which we can't handle
+    if trimmed.contains(',') || trimmed.contains(' ') {
+        // Return as-is, will likely fail parsing and be skipped
+        return trimmed.to_string();
+    }
+
+    // Count how many version components we have
+    let parts: Vec<&str> = trimmed.split('.').collect();
+
+    match parts.len() {
+        1 => format!("{}.0.0", parts[0]),  // "1" -> "1.0.0"
+        2 => format!("{}.{}.0", parts[0], parts[1]),  // "1.0" -> "1.0.0"
+        _ => trimmed.to_string(),  // Already complete or has pre-release/build metadata
+    }
+}
+
 /// Parse a dependency from a TOML value
 fn parse_dependency(
     key: &str,
@@ -284,16 +353,10 @@ fn parse_dependency(
 
     // Parse version if present
     let version = if let Some(v_str) = version_str {
-        // Remove optional ^ prefix
-        let trimmed = v_str.trim_start_matches('^');
+        // Normalize version string by removing prefixes and completing shortened versions
+        let normalized = normalize_version_string(v_str);
 
-        // Only accept bare version or ^ prefix
-        if !v_str.starts_with('^') && v_str != trimmed {
-            // Has some other prefix, skip
-            return Ok(None);
-        }
-
-        match Version::parse(trimmed) {
+        match Version::parse(&normalized) {
             Ok(v) => Some(v),
             Err(_) => {
                 // Skip dependencies with invalid versions
@@ -308,18 +371,13 @@ fn parse_dependency(
     let path = if let Some(p) = path_str {
         let full_path = base_path.join(&p);
         // Try to canonicalize, but if it fails (e.g., path doesn't exist yet),
-        // use a normalized relative path instead
+        // manually normalize by resolving .. and .
         match full_path.canonicalize() {
             Ok(canonical) => Some(canonical),
             Err(_) => {
-                // Path doesn't exist - normalize it manually
-                // Convert to absolute path without requiring file existence
-                let absolute = if full_path.is_absolute() {
-                    full_path
-                } else {
-                    base_path.join(&p)
-                };
-                Some(absolute)
+                // Path doesn't exist - normalize it manually without filesystem access
+                // We need to resolve .. and . components manually
+                Some(normalize_path_components(&full_path))
             }
         }
     } else {
@@ -439,7 +497,7 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
     }
 
     // Capture old workspace.dependencies state before updating
-    let old_workspace_deps = capture_old_workspace_deps(&workspace_doc);
+    let old_workspace_deps = capture_old_workspace_deps(&workspace_doc, workspace_root);
 
     // Update workspace Cargo.toml
     update_workspace_toml(&mut workspace_doc, &workspace_updates, workspace_root)?;
@@ -543,15 +601,15 @@ fn find_winner(classes: &[EquivalenceClass]) -> Option<&EquivalenceClass> {
     candidates.first().copied()
 }
 
-fn capture_old_workspace_deps(doc: &DocumentMut) -> HashMap<String, ResolutionFields> {
+fn capture_old_workspace_deps(doc: &DocumentMut, workspace_root: &Path) -> HashMap<String, ResolutionFields> {
     let mut old_deps = HashMap::new();
 
     if let Some(workspace) = doc.get("workspace") {
         if let Some(deps) = workspace.get("dependencies").and_then(|d| d.as_table()) {
             for (key, value) in deps.iter() {
                 // Parse the old workspace dependency
-                // Use a fake base path since we're just capturing resolution fields
-                if let Ok(Some(dep)) = parse_dependency(key, value, Path::new("."), None) {
+                // Use workspace root as base path since paths in workspace.dependencies are relative to it
+                if let Ok(Some(dep)) = parse_dependency(key, value, workspace_root, None) {
                     old_deps.insert(key.to_string(), dep.resolution);
                 }
             }
