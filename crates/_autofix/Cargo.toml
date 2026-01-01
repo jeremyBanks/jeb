@@ -18,19 +18,12 @@ path = "src/lib.rs"
 name = "_autofix"
 path = "src/main.rs"
 
-[[bin]]
-name = "_autofix_prettyplease"
-path = "bin/_autofix_prettyplease.rs"
-
 [dependencies]
 toml_edit = { workspace = true }
 semver = { workspace = true }
 glob = { workspace = true }
 anyhow = { workspace = true }
 pathdiff = { workspace = true }
-prettyplease = { workspace = true }
-syn = { workspace = true, features = ["full", "parsing"] }
-walkdir = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

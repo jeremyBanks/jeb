@@ -5,5 +5,4 @@ pub mod cargo_fmt;
 pub mod command_runner;
 pub mod deno_fmt;
 pub mod deno_lint;
-pub mod prettyplease;
 pub mod workspace_deps;
