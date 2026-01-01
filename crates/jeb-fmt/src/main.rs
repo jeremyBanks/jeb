@@ -543,6 +543,24 @@ fn find_winner(classes: &[EquivalenceClass]) -> Option<&EquivalenceClass> {
     candidates.first().copied()
 }
 
+fn capture_old_workspace_deps(doc: &DocumentMut) -> HashMap<String, ResolutionFields> {
+    let mut old_deps = HashMap::new();
+
+    if let Some(workspace) = doc.get("workspace") {
+        if let Some(deps) = workspace.get("dependencies").and_then(|d| d.as_table()) {
+            for (key, value) in deps.iter() {
+                // Parse the old workspace dependency
+                // Use a fake base path since we're just capturing resolution fields
+                if let Ok(Some(dep)) = parse_dependency(key, value, Path::new("."), None) {
+                    old_deps.insert(key.to_string(), dep.resolution);
+                }
+            }
+        }
+    }
+
+    old_deps
+}
+
 fn update_workspace_toml(
     doc: &mut DocumentMut,
     updates: &HashMap<String, (ResolutionFields, String)>,
@@ -664,6 +682,7 @@ fn update_member_toml(
     _all_deps: &HashMap<String, Vec<(PathBuf, String, Dependency)>>,
     workspace_updates: &HashMap<String, (ResolutionFields, String)>,
     workspace_doc: &DocumentMut,
+    old_workspace_deps: &HashMap<String, ResolutionFields>,
 ) -> Result<()> {
     let member_toml = member_path.join("Cargo.toml");
     let content = std::fs::read_to_string(&member_toml)?;
@@ -688,10 +707,17 @@ fn update_member_toml(
                         == Some(true);
 
                     if let Ok(Some(dep)) = parse_dependency(&key, dep_item, member_path, Some(workspace_doc)) {
+                        eprintln!("Processing key={}, dep.name={}, currently_uses_workspace={}", key, dep.name, currently_uses_workspace);
+                        eprintln!("  dep_name_to_workspace_key contains '{}': {}", dep.name, dep_name_to_workspace_key.contains_key(&dep.name));
+
                         // Check if this dependency is in the winning equivalence class
                         if let Some(workspace_key) = dep_name_to_workspace_key.get(&dep.name) {
+                            eprintln!("  Found workspace_key={}", workspace_key);
+                            let should_use = should_use_workspace(&dep, workspace_updates, workspace_key);
+                            eprintln!("  should_use_workspace={}", should_use);
+
                             // Check if this specific occurrence should use workspace = true
-                            if should_use_workspace(&dep, workspace_updates, workspace_key) {
+                            if should_use {
                                 // Update to use workspace = true
                                 let mut table = InlineTable::new();
                                 table.insert("workspace", Value::from(true));
@@ -715,13 +741,35 @@ fn update_member_toml(
                                 deps[&key] = Item::Value(Value::InlineTable(table));
                             } else if currently_uses_workspace {
                                 // This dependency was using workspace = true but is now a loser
-                                // Inline it with the actual resolution fields
-                                inline_dependency(&key, &dep, deps, member_path)?;
+                                // Inline it with the OLD workspace resolution (before we updated it)
+                                if let Some(old_resolution) = old_workspace_deps.get(&key) {
+                                    let loser_dep = Dependency {
+                                        key: key.clone(),
+                                        name: dep.name.clone(),
+                                        resolution: old_resolution.clone(),
+                                        config: dep.config.clone(),
+                                    };
+                                    inline_dependency(&key, &loser_dep, deps, member_path)?;
+                                } else {
+                                    // Fall back to current resolution if we can't find old one
+                                    inline_dependency(&key, &dep, deps, member_path)?;
+                                }
                             }
                         } else if currently_uses_workspace {
                             // This dependency was using workspace = true but is no longer in workspace
-                            // Inline it with the actual resolution fields
-                            inline_dependency(&key, &dep, deps, member_path)?;
+                            // Inline it with the OLD workspace resolution
+                            if let Some(old_resolution) = old_workspace_deps.get(&key) {
+                                let loser_dep = Dependency {
+                                    key: key.clone(),
+                                    name: dep.name.clone(),
+                                    resolution: old_resolution.clone(),
+                                    config: dep.config.clone(),
+                                };
+                                inline_dependency(&key, &loser_dep, deps, member_path)?;
+                            } else {
+                                // Fall back to current resolution if we can't find old one
+                                inline_dependency(&key, &dep, deps, member_path)?;
+                            }
                         }
                     }
                 }
