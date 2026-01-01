@@ -843,6 +843,31 @@ anyhow = "1.0.0"
     }
 
     #[test]
+    fn test_idempotency_with_workspace_true() -> Result<()> {
+        let temp = create_test_workspace()?;
+
+        // First run: normalize the workspace
+        normalize_workspace_dependencies(temp.path())?;
+
+        // Read the results
+        let workspace_content_1 = fs::read_to_string(temp.path().join("Cargo.toml"))?;
+        let crate_a_content_1 = fs::read_to_string(temp.path().join("crate-a/Cargo.toml"))?;
+
+        // Second run: should be idempotent
+        normalize_workspace_dependencies(temp.path())?;
+
+        // Read the results again
+        let workspace_content_2 = fs::read_to_string(temp.path().join("Cargo.toml"))?;
+        let crate_a_content_2 = fs::read_to_string(temp.path().join("crate-a/Cargo.toml"))?;
+
+        // Results should be identical
+        assert_eq!(workspace_content_1, workspace_content_2, "Workspace Cargo.toml changed on second run");
+        assert_eq!(crate_a_content_1, crate_a_content_2, "Member Cargo.toml changed on second run");
+
+        Ok(())
+    }
+
+    #[test]
     fn test_prerelease_versions() {
         let v1 = Version::parse("1.0.0-alpha").unwrap();
         let v2 = Version::parse("1.0.0-alpha").unwrap();
