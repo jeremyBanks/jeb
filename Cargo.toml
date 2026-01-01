@@ -25,10 +25,9 @@ split-debuginfo = "packed"
 panic = "abort"
 
 [workspace.dependencies]
-jeb = { path = "crates/jeb" }
-jeb-common = { path = "crates/jeb-common", version = "0.0.0-dev-2025-12-26.7705" }
-jeb-stream = { path = "crates/jeb-stream", version = "0.0.0-dev-2025-12-26.7705" }
-jeb-value = { path = "crates/jeb-value", version = "0.0.0-dev-2025-12-26.7705" }
+jeb-common = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/jeb-common" }
+jeb-stream = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/jeb-stream" }
+jeb-value = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/jeb-value" }
 async-stream = "0.3.6"
 cfg-if = "1.0.4"
 color-eyre = "0.6.5"

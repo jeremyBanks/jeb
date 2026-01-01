@@ -19,6 +19,5 @@ doc = false
 document-features = { workspace = true }
 js-sys = { workspace = true }
 wasm-bindgen = { workspace = true }
-
-jeb = { workspace = true, features = ["wasm"], default-features = false }
+jeb = { path = "../jeb", features = ["wasm"], default-features = false }
 

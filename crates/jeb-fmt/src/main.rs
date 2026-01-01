@@ -455,6 +455,12 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
                     }
 
                     if let Some(dep) = parse_dependency(key, value, member_path, workspace_root, Some(&workspace_doc))? {
+                        // Exclude dependencies with default-features = false from voting
+                        // Those members will keep their inlined version with their specific config
+                        if dep.config.default_features == Some(false) {
+                            continue;
+                        }
+
                         all_deps
                             .entry(dep.name.clone())
                             .or_default()

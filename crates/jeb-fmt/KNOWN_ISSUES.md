@@ -36,9 +36,19 @@ The tool now gracefully handles path dependencies to non-existent paths:
 - Normalizes paths relative to base directory
 - No fatal errors for paths that don't exist yet
 
+### 4. default-features = false Exclusion Policy
+**Status**: ✅ IMPLEMENTED
+**Location**: `normalize_workspace_dependencies` line 458-462
+
+The tool now correctly handles dependencies with `default-features = false`:
+- Members specifying `default-features = false` are excluded from voting for that dependency
+- The dependency can still be promoted based on other members
+- Members with `default-features = false` keep their inlined version
+- This prevents workspace dependency conflicts where some members need different feature configurations
+
 ## Important Issues
 
-### 4. Section-Form Dependencies Not Converted
+### 5. Section-Form Dependencies Not Converted
 **Status**: Not handled
 **Spec Reference**: Lines 214-217
 
@@ -48,7 +58,7 @@ Dependencies defined as `[dependencies.foo]` sections are not converted to inlin
 - Detect section-form dependencies in member Cargo.toml files
 - Convert them to inline table form: `foo = { ... }`
 
-### 5. Blocked Dependencies Use Key Instead of Name
+### 6. Blocked Dependencies Use Key Instead of Name
 **Status**: Bug in warning system
 **Spec Reference**: Lines 55-57
 
@@ -58,7 +68,7 @@ When blocking dependencies with configuration fields in `[workspace.dependencies
 - Parse the `package` field to get the true dependency name
 - Block by dependency name across all members
 
-### 6. Key Selection Doesn't Check Existing Workspace
+### 7. Key Selection Doesn't Check Existing Workspace
 **Status**: Incomplete implementation
 **Spec Reference**: Lines 124-126
 
@@ -69,7 +79,7 @@ When selecting which key to use for `[workspace.dependencies]`, the spec says to
 2. If yes, use that key
 3. Otherwise, use key from alphabetically-first member name (not key name)
 
-### 7. Path Handling for Member Cargo.toml
+### 8. Path Handling for Member Cargo.toml
 **Status**: Potential bug
 **Location**: `build_dependency_value`
 
@@ -79,7 +89,7 @@ Paths in `[workspace.dependencies]` are relative to workspace root (correct), bu
 - Add a parameter to `build_dependency_value` for the target directory
 - Convert paths appropriately based on context
 
-### 8. Version Field for Path/Git Dependencies
+### 9. Version Field for Path/Git Dependencies
 **Status**: Semantic question
 **Location**: `versions_compatible_opt`
 
@@ -89,7 +99,7 @@ Path and git dependencies don't use the version field for resolution in Cargo. S
 
 ## Code Quality Issues
 
-### 9. Minimal Test Coverage
+### 10. Minimal Test Coverage
 Tests only cover basic happy path. Need tests for:
 - Losing equivalence classes
 - `workspace = true` handling
@@ -101,7 +111,7 @@ Tests only cover basic happy path. Need tests for:
 - Re-running behavior
 - Edge cases (empty workspace, malformed data)
 
-### 10. New Entry Ordering Not Implemented
+### 11. New Entry Ordering Not Implemented
 **Status**: Simplified
 **Spec Reference**: Lines 228-238
 
@@ -109,7 +119,7 @@ The "scan upward from bottom" insertion algorithm is not implemented. Currently 
 
 **Impact**: Minor - order is not critical for functionality
 
-### 11. Unused Parameters
+### 12. Unused Parameters
 - `update_member_toml`: `_all_deps` parameter
 - `build_dependency_value`: `_include_config` parameter
 
@@ -117,15 +127,15 @@ These were kept for future use but should be cleaned up or utilized.
 
 ## Non-Critical Issues
 
-### 12. Single-Voter Dependencies Promoted
+### 13. Single-Voter Dependencies Promoted
 Dependencies used by only one crate are still promoted to `[workspace.dependencies]`. This is technically correct per spec, but arguably wasteful.
 
 **Consider**: Add flag to skip promoting single-voter dependencies
 
-### 13. Features Array Silently Filters Non-strings
+### 14. Features Array Silently Filters Non-strings
 If features array contains non-string values, they're filtered out silently. Could be an error instead.
 
-### 14. Empty Workspace Handling
+### 15. Empty Workspace Handling
 No special handling for empty `[workspace.members]` array. Works correctly but untested.
 
 ## Assessment
@@ -140,6 +150,7 @@ No special handling for empty `[workspace.members]` array. Works correctly but u
 ✅ Happy path for fresh normalization
 ✅ **NEW**: Handles existing `workspace = true` dependencies
 ✅ **NEW**: Idempotent - can re-run on own output
+✅ **NEW**: Excludes members with `default-features = false` from voting
 
 ### Fully Idempotent
 ✅ Can handle re-running on normalized workspaces
@@ -150,5 +161,6 @@ No special handling for empty `[workspace.members]` array. Works correctly but u
 1. ✅ ~~Implement `workspace = true` parsing (Critical #1)~~ - DONE
 2. ✅ ~~Implement loser inlining (Critical #2)~~ - DONE
 3. ✅ ~~Fix path canonicalization (Critical #3)~~ - DONE
-4. **All critical issues resolved!** Tool is now production-ready
-5. Optional improvements: section-form dependencies, key selection, comprehensive tests
+4. ✅ ~~Implement `default-features = false` exclusion policy~~ - DONE
+5. **All critical issues resolved!** Tool is now production-ready
+6. Optional improvements: section-form dependencies, key selection, comprehensive tests
