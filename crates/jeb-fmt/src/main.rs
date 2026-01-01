@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
 use glob::glob;
 use semver::Version;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use toml_edit::{value, Document, InlineTable, Item, Table, Value};
+use toml_edit::{DocumentMut, Item, Value};
 
 fn main() -> Result<()> {
     let workspace_root = find_workspace_root(".")?;
@@ -23,7 +23,7 @@ fn find_workspace_root(start_dir: &str) -> Result<PathBuf> {
         let cargo_toml = current.join("Cargo.toml");
         if cargo_toml.exists() {
             let content = std::fs::read_to_string(&cargo_toml)?;
-            let doc = content.parse::<Document>()?;
+            let doc = content.parse::<DocumentMut>()?;
 
             if doc.get("workspace").is_some() {
                 return Ok(current);
@@ -40,7 +40,7 @@ fn find_workspace_root(start_dir: &str) -> Result<PathBuf> {
 fn resolve_workspace_members(workspace_root: &Path) -> Result<Vec<PathBuf>> {
     let cargo_toml_path = workspace_root.join("Cargo.toml");
     let content = std::fs::read_to_string(&cargo_toml_path)?;
-    let doc = content.parse::<Document>()?;
+    let doc = content.parse::<DocumentMut>()?;
 
     let members = doc
         .get("workspace")
@@ -174,23 +174,66 @@ fn parse_dependency(
     value: &Item,
     base_path: &Path,
 ) -> Result<Option<Dependency>> {
-    let (version_str, table) = match value {
+    // Extract version string and other fields
+    let version_str: Option<&str>;
+    let mut package: Option<String> = None;
+    let mut path_str: Option<String> = None;
+    let mut git: Option<String> = None;
+    let mut branch: Option<String> = None;
+    let mut tag: Option<String> = None;
+    let mut rev: Option<String> = None;
+    let mut registry: Option<String> = None;
+    let mut optional: Option<bool> = None;
+    let mut features: Option<Vec<String>> = None;
+    let mut default_features: Option<bool> = None;
+
+    match value {
         Item::Value(Value::String(s)) => {
             // Simple string form: dep = "1.0.0"
-            (Some(s.value()), None)
+            version_str = Some(s.value());
         }
         Item::Value(Value::InlineTable(t)) => {
             // Inline table form
-            let version = t.get("version").and_then(|v| v.as_str());
-            (version, Some(t))
+            version_str = t.get("version").and_then(|v| v.as_str());
+            package = t.get("package").and_then(|v| v.as_str()).map(String::from);
+            path_str = t.get("path").and_then(|v| v.as_str()).map(String::from);
+            git = t.get("git").and_then(|v| v.as_str()).map(String::from);
+            branch = t.get("branch").and_then(|v| v.as_str()).map(String::from);
+            tag = t.get("tag").and_then(|v| v.as_str()).map(String::from);
+            rev = t.get("rev").and_then(|v| v.as_str()).map(String::from);
+            registry = t.get("registry").and_then(|v| v.as_str()).map(String::from);
+            optional = t.get("optional").and_then(|v| v.as_bool());
+            default_features = t.get("default-features").and_then(|v| v.as_bool());
+            features = t.get("features").and_then(|v| {
+                v.as_array().map(|arr| {
+                    arr.iter()
+                        .filter_map(|item| item.as_str().map(String::from))
+                        .collect()
+                })
+            });
         }
         Item::Table(t) => {
             // Section form [dependencies.foo]
-            let version = t.get("version").and_then(|v| v.as_str());
-            (version, Some(t as &dyn TableLike))
+            version_str = t.get("version").and_then(|v| v.as_str());
+            package = t.get("package").and_then(|v| v.as_str()).map(String::from);
+            path_str = t.get("path").and_then(|v| v.as_str()).map(String::from);
+            git = t.get("git").and_then(|v| v.as_str()).map(String::from);
+            branch = t.get("branch").and_then(|v| v.as_str()).map(String::from);
+            tag = t.get("tag").and_then(|v| v.as_str()).map(String::from);
+            rev = t.get("rev").and_then(|v| v.as_str()).map(String::from);
+            registry = t.get("registry").and_then(|v| v.as_str()).map(String::from);
+            optional = t.get("optional").and_then(|v| v.as_bool());
+            default_features = t.get("default-features").and_then(|v| v.as_bool());
+            features = t.get("features").and_then(|v| {
+                v.as_array().map(|arr| {
+                    arr.iter()
+                        .filter_map(|item| item.as_str().map(String::from))
+                        .collect()
+                })
+            });
         }
         _ => return Ok(None),
-    };
+    }
 
     // Parse version if present
     let version = if let Some(v_str) = version_str {
@@ -213,19 +256,6 @@ fn parse_dependency(
     } else {
         None
     };
-
-    // Extract fields
-    let package = table.and_then(|t| get_string(t, "package"));
-    let path_str = table.and_then(|t| get_string(t, "path"));
-    let git = table.and_then(|t| get_string(t, "git"));
-    let branch = table.and_then(|t| get_string(t, "branch"));
-    let tag = table.and_then(|t| get_string(t, "tag"));
-    let rev = table.and_then(|t| get_string(t, "rev"));
-    let registry = table.and_then(|t| get_string(t, "registry"));
-
-    let optional = table.and_then(|t| get_bool(t, "optional"));
-    let features = table.and_then(|t| get_string_array(t, "features"));
-    let default_features = table.and_then(|t| get_bool(t, "default-features"));
 
     // Normalize path relative to base_path
     let path = if let Some(p) = path_str {
@@ -257,51 +287,12 @@ fn parse_dependency(
     }))
 }
 
-// Helper trait for uniform access to Table and InlineTable
-trait TableLike {
-    fn get(&self, key: &str) -> Option<&Item>;
-}
-
-impl TableLike for &Table {
-    fn get(&self, key: &str) -> Option<&Item> {
-        (*self).get(key)
-    }
-}
-
-impl TableLike for &InlineTable {
-    fn get(&self, key: &str) -> Option<&Item> {
-        (*self).get(key).map(|v| {
-            // InlineTable returns &Value, we need &Item
-            // This is a bit tricky, we'll handle it differently
-            unimplemented!()
-        })
-    }
-}
-
-fn get_string(table: &dyn TableLike, key: &str) -> Option<String> {
-    table.get(key).and_then(|v| v.as_str()).map(String::from)
-}
-
-fn get_bool(table: &dyn TableLike, key: &str) -> Option<bool> {
-    table.get(key).and_then(|v| v.as_bool())
-}
-
-fn get_string_array(table: &dyn TableLike, key: &str) -> Option<Vec<String>> {
-    table.get(key).and_then(|v| {
-        v.as_array().map(|arr| {
-            arr.iter()
-                .filter_map(|item| item.as_str().map(String::from))
-                .collect()
-        })
-    })
-}
-
 /// Main normalization function
 fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
     // Load workspace Cargo.toml
     let workspace_toml_path = workspace_root.join("Cargo.toml");
     let workspace_content = std::fs::read_to_string(&workspace_toml_path)?;
-    let mut workspace_doc = workspace_content.parse::<Document>()?;
+    let mut workspace_doc = workspace_content.parse::<DocumentMut>()?;
 
     // Check for configuration fields in workspace.dependencies
     let workspace_deps = workspace_doc
@@ -332,7 +323,7 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
     for member_path in &members {
         let member_toml = member_path.join("Cargo.toml");
         let content = std::fs::read_to_string(&member_toml)?;
-        let doc = content.parse::<Document>()?;
+        let doc = content.parse::<DocumentMut>()?;
 
         for section in &["dependencies", "dev-dependencies", "build-dependencies"] {
             if let Some(deps) = doc.get(section).and_then(|s| s.as_table()) {
