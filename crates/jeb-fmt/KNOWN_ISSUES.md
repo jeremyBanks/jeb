@@ -5,18 +5,14 @@ This document tracks known limitations and issues identified during code review 
 ## Critical Issues (Block Re-running)
 
 ### 1. Missing `workspace = true` Handling
-**Status**: Not implemented
+**Status**: ✅ FIXED
 **Spec Reference**: Lines 163-164
 
-The tool does not parse or handle dependencies that already use `workspace = true`. When re-running on an already-normalized workspace:
-- Dependencies with `workspace = true` are completely skipped
-- Their votes are not counted in the equivalence class algorithm
-- This breaks idempotency
-
-**Fix Required**:
-1. Detect `workspace = true` in `parse_dependency`
-2. Look up resolution fields from `[workspace.dependencies]`
-3. Use those fields as the dependency's vote
+The tool now correctly parses and handles dependencies that use `workspace = true`:
+- When encountering `workspace = true`, looks up resolution fields from `[workspace.dependencies]`
+- Uses those fields for voting in the equivalence class algorithm
+- Preserves configuration fields from the member Cargo.toml
+- Idempotency test passes (tool can re-run on its own output)
 
 ### 2. Losing Equivalence Classes Not Inlined
 **Status**: Not implemented
@@ -144,11 +140,13 @@ No special handling for empty `[workspace.members]` array. Works correctly but u
 ✅ Basic TOML manipulation
 ✅ Configuration field detection in workspace
 ✅ Happy path for fresh normalization
+✅ **NEW**: Handles existing `workspace = true` dependencies
+✅ **NEW**: Idempotent - can re-run on own output
 
-### Not Idempotent
-❌ Cannot handle existing `workspace = true` dependencies
-❌ Does not inline losing classes
-❌ Will break when re-run on own output
+### Partially Idempotent
+⚠️ Can handle re-running on normalized workspaces
+❌ Does not inline losing classes when majority flips
+❌ May have issues when workspace membership changes
 
 ### Recommended Next Steps
 1. Implement `workspace = true` parsing (Critical #1)
