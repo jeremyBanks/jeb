@@ -11,12 +11,12 @@ repository.workspace = true
 version.workspace = true
 
 [dev-dependencies]
-tempfile = { workspace = true }
+tempfile = "3"
 
 [dependencies]
 indexmap.workspace = true
 serde = { workspace = true, features = ["rc"] }
 serde_bytes.workspace = true
 serde_json = { workspace = true, features = ["preserve_order"] }
-serde_yaml = { workspace = true }
-sha1-checked = { workspace = true, features = ["std"], default-features = true }
+serde_yaml = "0.9.34"
+sha1-checked = { version = "0.10.0", default-features = true, features = ["std"]}
