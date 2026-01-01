@@ -520,13 +520,8 @@ fn update_workspace_toml(
                 }
             }
 
-            // Insert at the determined position
-            if let Some(pos) = insert_pos {
-                // toml_edit doesn't have easy positional insert, so we'll just append
-                deps.insert(key.as_str(), value);
-            } else {
-                deps.insert(key.as_str(), value);
-            }
+            // toml_edit doesn't have easy positional insert, so we'll just append
+            deps.insert(key.as_str(), value);
         }
     }
 
@@ -544,7 +539,7 @@ fn update_workspace_toml(
 fn build_dependency_value(
     resolution: &ResolutionFields,
     workspace_root: &Path,
-    include_config: bool,
+    _include_config: bool,
 ) -> Result<Item> {
     let mut has_extra_fields = false;
 
@@ -615,7 +610,7 @@ fn build_dependency_value(
 
 fn update_member_toml(
     member_path: &Path,
-    all_deps: &HashMap<String, Vec<(PathBuf, String, Dependency)>>,
+    _all_deps: &HashMap<String, Vec<(PathBuf, String, Dependency)>>,
     workspace_updates: &HashMap<String, (ResolutionFields, String)>,
 ) -> Result<()> {
     let member_toml = member_path.join("Cargo.toml");
