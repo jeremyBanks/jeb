@@ -52,6 +52,10 @@ files):
 - `features`
 - `default-features`
 
+If any configuration fields are found in `[workspace.dependencies]`, the tool
+emits a warning and does not process that dependency name anywhere in the
+workspace.
+
 ### Field ordering
 
 When writing dependency tables, fields are ordered as follows:
@@ -76,7 +80,8 @@ We only process version specifications in these formats:
 - `"1.2.3"` (bare version)
 - `"^1.2.3"` (caret prefix)
 
-Any other format (e.g., `">=1.0, <2"`, `"~1.2"`, `"=1.2.3"`) is skipped and left
+Both formats are treated identically when determining compatibility. Any other
+format (e.g., `">=1.0, <2"`, `"~1.2"`, `"=1.2.3"`) is skipped and left
 unchanged.
 
 When writing versions to `[workspace.dependencies]`, we use the bare format
@@ -94,15 +99,43 @@ major/minor/patch component is the same:
 - `1.2.3` and `2.0.0` are NOT compatible
 - `0.2.3` and `0.3.0` are NOT compatible
 
-Pre-release versions (e.g., `1.0.0-alpha`) are excluded from compatibility
-grouping and are not processed.
+Pre-release versions (e.g., `1.0.0-alpha`) are treated as exact matches only -
+they are only compatible with themselves. A crate using `workspace = true` votes
+for the exact pre-release version in the workspace.
+
+## Dependency naming and the package field
+
+The **dependency name** used for grouping is determined as follows:
+
+- If the `package` field is present, use its value
+- Otherwise, use the TOML table key
+
+Example: Both of these refer to the same dependency (`tokio`):
+```toml
+# Member A
+[dependencies]
+tokio = "1.0"
+
+# Member B
+[dependencies]
+tokio-crate = { package = "tokio", version = "1.0" }
+```
+
+These would be grouped together and normalized to use the same key (the first
+one encountered alphabetically by member name, or the existing workspace entry's
+key if present).
+
+## Path dependencies
+
+Relative paths in `path` fields are normalized relative to the workspace root
+Cargo.toml before comparison. Two path dependencies are considered equal if
+their normalized absolute paths are the same.
 
 ## Equivalence classes
 
 Dependencies are grouped into **equivalence classes** based on:
 
-1. The dependency name (the key in the TOML table, or `package` field if
-   present)
+1. The dependency name (as determined by the package field rules above)
 2. All resolution fields must match exactly, EXCEPT for `version`
 3. For `version`, the compatibility class (as defined above)
 
@@ -123,7 +156,9 @@ multiple votes for the same compatibility range.
 When a crate specifies the same dependency multiple times with compatible
 versions (e.g., `foo = "1.2"` in `[dependencies]` and `foo = "1.5"` in
 `[dev-dependencies]`), it contributes one vote for that compatibility range,
-with the maximum version (`1.5`) as its suggested version.
+with the maximum version (`1.5`) as its suggested version. After normalization,
+both sections will use `workspace = true`, pointing to version `1.5` (or higher
+if other crates vote for higher compatible versions).
 
 A crate using `workspace = true` for a dependency votes for the current
 workspace version's equivalence class.
@@ -134,13 +169,17 @@ For each dependency name:
 2. Count votes (one per crate per compatibility range) for each equivalence
    class
 3. The equivalence class with the **most votes wins**
-4. **Tie-breaker**: if two equivalence classes have the same vote count, the one
-   with the greater version wins
-5. Within the winning class, use the **maximum version** as the workspace
-   version
-6. All crates in the winning class inherit via `workspace = true`
+4. **Tie-breaker**: if two equivalence classes have the same vote count, compare
+   using:
+   - First, compare by maximum version using semver ordering
+   - If versions are equal, sort all resolution fields by key name, then compare
+     the resulting `[(key, value)]` lists lexicographically
+5. Within the winning class, use the **maximum version** (by semver ordering) as
+   the workspace version
+6. All crates in the winning class inherit via `workspace = true` in all
+   sections where they specify that dependency
 7. All crates in losing classes have their dependency **inlined** in their own
-   Cargo.toml
+   Cargo.toml with configuration fields preserved
 
 ## Re-running behavior
 
@@ -150,7 +189,7 @@ When the tool is re-run:
   crates being added), it becomes the new winner
 - Crates that were using `workspace = true` for the old winner get that version
   **inlined** into their Cargo.toml (using the version that was in
-  `[workspace.dependencies]`)
+  `[workspace.dependencies]`), with their configuration fields preserved
 - The new winner's version is promoted to `[workspace.dependencies]`
 - Crates in the new winning class switch to `workspace = true`
 
@@ -161,9 +200,11 @@ inherited by any member is removed.
 
 ## Formatting rules
 
-### Preserving existing formatting
+### General preservation principle
 
-We preserve formatting as much as possible when modifying Cargo.toml files.
+Comments, whitespace, and all other formatting that does not need to be changed
+should be preserved as-is, except where explicitly stated otherwise in this
+specification.
 
 ### Dependency table syntax in member Cargo.toml files
 
@@ -185,39 +226,53 @@ We preserve formatting as much as possible when modifying Cargo.toml files.
 
 ### Ordering of new entries
 
-Existing entries preserve their position. When inserting a new entry:
+Existing entries preserve their position. When inserting a new entry into a
+non-empty table:
 
 1. Scan upward from the bottom of the table
 2. Find the first entry whose name sorts before the new entry's name
+   (lexicographically)
 3. Insert the new entry after that position
 
 This preserves sorting if the table was already sorted, and appends near the
 bottom otherwise.
+
+## Error handling
+
+The tool fails with a fatal error in the following cases:
+
+- Malformed TOML files that cannot be parsed
+- Invalid version strings that cannot be parsed by the `semver` crate
+- Missing workspace members (paths in `[workspace].members` that don't exist or
+  don't contain Cargo.toml files)
+- Any I/O errors when reading or writing files
 
 ## Implementation notes
 
 ### Libraries to use
 
 - `toml_edit` - for parsing and modifying Cargo.toml while preserving formatting
-- `semver` - for parsing and comparing versions
+- `semver` - for parsing and comparing versions (provides total ordering)
 - `glob` - for resolving workspace member patterns
 
 ### Algorithm outline
 
 1. Find the workspace root Cargo.toml
 2. Parse `[workspace].members` and resolve globs to find all member Cargo.toml
-   files
-3. For each member, parse all dependencies from `[dependencies]`,
+   files (fatal error if any glob matches nothing or paths are missing)
+3. Check `[workspace.dependencies]` for configuration fields; emit warnings and
+   skip those dependency names entirely
+4. For each member, parse all dependencies from `[dependencies]`,
    `[dev-dependencies]`, and `[build-dependencies]`
-4. Skip any dependency with:
+5. Skip any dependency with:
    - Non-standard version format
-   - Pre-release version
    - Target-specific definition
-5. Build equivalence classes for each dependency name
-6. For each dependency name, determine the winning equivalence class (using vote
-   count, then version as tie-breaker)
-7. Update `[workspace.dependencies]` with winners
-8. Update member Cargo.toml files:
-   - Winners get `workspace = true` (keeping configuration fields)
-   - Losers get version inlined
-9. Remove unused entries from `[workspace.dependencies]`
+6. Normalize all path dependencies relative to workspace root
+7. Build equivalence classes for each dependency name
+8. For each dependency name, determine the winning equivalence class (using vote
+   count, then version + field ordering as tie-breaker)
+9. Update `[workspace.dependencies]` with winners
+10. Update member Cargo.toml files:
+    - Winners get `workspace = true` (keeping configuration fields)
+    - Losers get version inlined (keeping configuration fields)
+11. Remove unused entries from `[workspace.dependencies]`
