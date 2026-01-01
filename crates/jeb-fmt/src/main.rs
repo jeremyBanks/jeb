@@ -571,42 +571,43 @@ fn build_dependency_value(
 
     // Add fields in order
     if let Some(ref package) = resolution.package {
-        table.insert("package", value(package.as_str()).into());
+        table.insert("package", value(package.as_str()));
     }
 
     if let Some(ref version) = resolution.version {
-        table.insert("version", value(version.to_string()).into());
+        table.insert("version", value(version.to_string()));
     }
 
     if let Some(ref path) = resolution.path {
         // Convert to relative path from workspace root
-        let rel_path = path.strip_prefix(workspace_root)
-            .or_else(|_| {
-                // If not under workspace, try to make relative
-                pathdiff::diff_paths(path, workspace_root)
-                    .ok_or_else(|| anyhow::anyhow!("Could not create relative path"))
-            })?;
-        table.insert("path", value(rel_path.display().to_string()).into());
+        let rel_path = if let Ok(stripped) = path.strip_prefix(workspace_root) {
+            stripped
+        } else {
+            // If not under workspace, try to make relative
+            &pathdiff::diff_paths(path, workspace_root)
+                .ok_or_else(|| anyhow::anyhow!("Could not create relative path"))?
+        };
+        table.insert("path", value(rel_path.display().to_string()));
     }
 
     if let Some(ref git) = resolution.git {
-        table.insert("git", value(git.as_str()).into());
+        table.insert("git", value(git.as_str()));
     }
 
     if let Some(ref branch) = resolution.branch {
-        table.insert("branch", value(branch.as_str()).into());
+        table.insert("branch", value(branch.as_str()));
     }
 
     if let Some(ref tag) = resolution.tag {
-        table.insert("tag", value(tag.as_str()).into());
+        table.insert("tag", value(tag.as_str()));
     }
 
     if let Some(ref rev) = resolution.rev {
-        table.insert("rev", value(rev.as_str()).into());
+        table.insert("rev", value(rev.as_str()));
     }
 
     if let Some(ref registry) = resolution.registry {
-        table.insert("registry", value(registry.as_str()).into());
+        table.insert("registry", value(registry.as_str()));
     }
 
     Ok(Item::Value(Value::InlineTable(table)))
@@ -640,22 +641,22 @@ fn update_member_toml(
                             if should_use_workspace(&dep, workspace_updates, workspace_key) {
                                 // Update to use workspace = true
                                 let mut table = InlineTable::new();
-                                table.insert("workspace", value(true).into());
+                                table.insert("workspace", value(true));
 
                                 // Keep configuration fields
                                 if let Some(optional) = dep.config.optional {
-                                    table.insert("optional", value(optional).into());
+                                    table.insert("optional", value(optional));
                                 }
 
                                 if let Some(ref features) = dep.config.features {
                                     let arr: toml_edit::Array = features.iter()
                                         .map(|s| value(s.as_str()))
                                         .collect();
-                                    table.insert("features", value(arr).into());
+                                    table.insert("features", value(arr));
                                 }
 
                                 if let Some(default_features) = dep.config.default_features {
-                                    table.insert("default-features", value(default_features).into());
+                                    table.insert("default-features", value(default_features));
                                 }
 
                                 deps[&key] = Item::Value(Value::InlineTable(table));
