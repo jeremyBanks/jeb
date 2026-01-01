@@ -11,11 +11,11 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-toml_edit = "0.22"
-semver = "1.0"
-glob = "0.3"
-anyhow = "1.0"
-pathdiff = "0.2"
+toml_edit = { workspace = true }
+semver = { workspace = true }
+glob = { workspace = true }
+anyhow = { workspace = true }
+pathdiff = { workspace = true }
 
 [dev-dependencies]
-tempfile = "3.0"
+tempfile = { workspace = true }

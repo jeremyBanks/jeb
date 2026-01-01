@@ -168,6 +168,40 @@ fn versions_compatible(v1: &Version, v2: &Version) -> bool {
     }
 }
 
+/// Manually normalize a path by resolving .. and . components
+/// This doesn't require filesystem access
+fn normalize_path_components(path: &Path) -> PathBuf {
+    let mut components = Vec::new();
+
+    for component in path.components() {
+        match component {
+            std::path::Component::ParentDir => {
+                // Pop the last component (if it's not a root)
+                if !components.is_empty() {
+                    if let Some(last) = components.last() {
+                        match last {
+                            std::path::Component::RootDir | std::path::Component::Prefix(_) => {
+                                // Can't go up from root
+                            }
+                            _ => {
+                                components.pop();
+                            }
+                        }
+                    }
+                }
+            }
+            std::path::Component::CurDir => {
+                // Skip . components
+            }
+            other => {
+                components.push(other);
+            }
+        }
+    }
+
+    components.iter().collect()
+}
+
 /// Normalize a version string to be parseable by semver crate
 /// Handles:
 /// - `=1.0.0` (exact) -> `1.0.0`
@@ -337,18 +371,13 @@ fn parse_dependency(
     let path = if let Some(p) = path_str {
         let full_path = base_path.join(&p);
         // Try to canonicalize, but if it fails (e.g., path doesn't exist yet),
-        // use a normalized relative path instead
+        // manually normalize by resolving .. and .
         match full_path.canonicalize() {
             Ok(canonical) => Some(canonical),
             Err(_) => {
-                // Path doesn't exist - normalize it manually
-                // Convert to absolute path without requiring file existence
-                let absolute = if full_path.is_absolute() {
-                    full_path
-                } else {
-                    base_path.join(&p)
-                };
-                Some(absolute)
+                // Path doesn't exist - normalize it manually without filesystem access
+                // We need to resolve .. and . components manually
+                Some(normalize_path_components(&full_path))
             }
         }
     } else {

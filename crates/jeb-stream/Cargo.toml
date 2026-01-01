@@ -25,13 +25,12 @@ derive_more = { workspace = true, features = ["full"] }
 document-features = { workspace = true }
 futures = { workspace = true }
 macro_rules_attribute = { workspace = true }
-parking_lot = "0.12"
+parking_lot = { workspace = true }
 serde = { workspace = true, optional = true, features = ["derive"] }
 static_assertions = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "io-util"] }
 tokio-stream = { workspace = true }
 tokio-util = { workspace = true, features = ["codec", "io"] }
 wasm-bindgen = { workspace = true, optional = true }
-
-jeb-common = { workspace = true }
-jeb-value = { workspace = true }
+jeb-common = { version = "0.0.0-dev-2025-12-26.7705", path = "../jeb-common" }
+jeb-value = { version = "0.0.0-dev-2025-12-26.7705", path = "../jeb-value" }
