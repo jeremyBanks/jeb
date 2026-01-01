@@ -18,6 +18,7 @@ use std::{
 /// If expected output doesn't exist, it's auto-generated and the test fails.
 use git_snapshot::{
     CommitIdStyle,
+    SerializationOptions,
     parse,
     serialize,
 };
@@ -40,8 +41,8 @@ fn test_fixture(input_path: &Path, expected_path: &Path, id_style: CommitIdStyle
     let repo = parse(&input_yaml)
         .unwrap_or_else(|e| panic!("Failed to parse input {:?}: {}", input_path, e));
 
-    // Serialize back
-    let output_yaml = serialize(&repo, id_style);
+    // Serialize back with default options
+    let output_yaml = serialize(&repo, id_style, SerializationOptions::default());
 
     // Check if expected output matches
     let expected_exists = expected_path.exists();
@@ -70,7 +71,7 @@ fn test_fixture(input_path: &Path, expected_path: &Path, id_style: CommitIdStyle
     let repo2 = parse(&output_yaml)
         .unwrap_or_else(|e| panic!("Failed to parse serialized output {:?}: {}", input_path, e));
 
-    let output_yaml2 = serialize(&repo2, id_style);
+    let output_yaml2 = serialize(&repo2, id_style, SerializationOptions::default());
 
     if output_yaml != output_yaml2 {
         eprintln!(
