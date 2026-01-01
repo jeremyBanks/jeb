@@ -2377,6 +2377,41 @@ pub enum CommitIdStyle {
     Integer,
 }
 
+/// Options controlling serialization behavior
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SerializationOptions {
+    /// Whether to use deduplication via [commit]/[path] references
+    /// Default: true
+    pub use_deduplication: bool,
+
+    /// Whether to use short (truncated) hashes for non-head commits
+    /// Only applies when id_style is CommitIdStyle::Hex
+    /// Default: true
+    pub use_short_hashes: bool,
+
+    /// Whether to force use of integer IDs regardless of id_style
+    /// Overrides id_style parameter if true
+    /// Default: false
+    pub force_integer_ids: bool,
+
+    /// Whether to force use of full 40-char hashes for all commits
+    /// Only applies when id_style is CommitIdStyle::Hex
+    /// Overrides use_short_hashes if true
+    /// Default: false
+    pub force_full_hashes: bool,
+}
+
+impl Default for SerializationOptions {
+    fn default() -> Self {
+        Self {
+            use_deduplication: true,
+            use_short_hashes: true,
+            force_integer_ids: false,
+            force_full_hashes: false,
+        }
+    }
+}
+
 // ============================================================================
 // Deduplication Context and Helper Functions
 // ============================================================================
@@ -2405,6 +2440,9 @@ struct SerializationContext {
 
     /// Repository reference
     repo: *const Repository,
+
+    /// Serialization options
+    options: SerializationOptions,
 }
 
 impl SerializationContext {
@@ -2412,6 +2450,7 @@ impl SerializationContext {
         repo: &Repository,
         ordered_commits: Vec<ObjectId>,
         head_commits: std::collections::HashSet<ObjectId>,
+        options: SerializationOptions,
     ) -> Self {
         let truncated_len = compute_truncated_hash_length(&ordered_commits);
 
@@ -2452,6 +2491,7 @@ impl SerializationContext {
             head_commits,
             current_commit: ObjectId([0u8; 20]),
             repo: repo as *const Repository,
+            options,
         }
     }
 
@@ -2549,7 +2589,7 @@ fn find_best_reference(target_path: &str, candidates: &[(ObjectId, String)]) -> 
 }
 
 /// Serialize a Repository to YAML format
-pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
+pub fn serialize(repo: &Repository, id_style: CommitIdStyle, options: SerializationOptions) -> String {
     let mut root = serde_yaml::Mapping::new();
 
     // Sort commits in topological order with tiebreaking
@@ -2568,18 +2608,33 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
     }
 
     // Initialize serialization context for deduplication
-    let mut ctx = SerializationContext::new(repo, ordered_commits.clone(), head_commits.clone());
+    let mut ctx = SerializationContext::new(repo, ordered_commits.clone(), head_commits.clone(), options);
 
     // Build mapping from ObjectId to commit reference (hex or integer)
     let mut commit_refs: HashMap<ObjectId, serde_yaml::Value> = HashMap::new();
     for (idx, commit_id) in ordered_commits.iter().enumerate() {
-        let ref_value = match id_style {
+        // Determine effective ID style based on options
+        let effective_id_style = if options.force_integer_ids {
+            CommitIdStyle::Integer
+        } else {
+            id_style
+        };
+
+        let ref_value = match effective_id_style {
             CommitIdStyle::Hex => {
-                // Use full hash for head commits, truncated for others
-                let hash_str = if ctx.head_commits.contains(commit_id) {
+                // Determine hash length based on options
+                let hash_str = if options.force_full_hashes {
+                    // Always use full 40-char hash
                     commit_id.to_hex()
-                } else {
+                } else if ctx.head_commits.contains(commit_id) {
+                    // Use full hash for head commits
+                    commit_id.to_hex()
+                } else if options.use_short_hashes {
+                    // Use truncated hash for non-head commits
                     commit_id.to_hex_truncated(ctx.truncated_len)
+                } else {
+                    // Use full hash for all commits
+                    commit_id.to_hex()
                 };
                 serde_yaml::Value::String(hash_str)
             }
@@ -3012,66 +3067,72 @@ fn insert_tree_change(
         let key = serde_yaml::Value::String(path_parts[0].to_string());
         let value = match content {
             Some(s) => {
-                // Check if this content should be deduplicated
-                let blob_id = ctx.get_blob_id_for_content(s);
+                // Check if deduplication is enabled and should be used
+                if ctx.options.use_deduplication {
+                    // Check if this content should be deduplicated
+                    let blob_id = ctx.get_blob_id_for_content(s);
 
-                // Find all locations where this blob appeared
-                if let Some(locations) = ctx.blob_locations.get(&blob_id) {
-                    // Filter to only earlier commits (not current location, comes before current)
-                    let current_position = ctx
-                        .all_commits
-                        .iter()
-                        .position(|id| *id == ctx.current_commit);
+                    // Find all locations where this blob appeared
+                    if let Some(locations) = ctx.blob_locations.get(&blob_id) {
+                        // Filter to only earlier commits (not current location, comes before current)
+                        let current_position = ctx
+                            .all_commits
+                            .iter()
+                            .position(|id| *id == ctx.current_commit);
 
-                    let valid_candidates: Vec<(ObjectId, String)> = locations
-                        .iter()
-                        .filter(|(commit_id, path)| {
-                            // Exclude current location
-                            if *commit_id == ctx.current_commit && path == full_path {
-                                return false;
-                            }
-                            // Only use commits that come earlier in order
-                            if let (Some(ref_pos), Some(curr_pos)) = (
-                                ctx.all_commits.iter().position(|id| id == commit_id),
-                                current_position,
-                            ) {
-                                ref_pos < curr_pos
-                            } else {
-                                false
-                            }
-                        })
-                        .cloned()
-                        .collect();
+                        let valid_candidates: Vec<(ObjectId, String)> = locations
+                            .iter()
+                            .filter(|(commit_id, path)| {
+                                // Exclude current location
+                                if *commit_id == ctx.current_commit && path == full_path {
+                                    return false;
+                                }
+                                // Only use commits that come earlier in order
+                                if let (Some(ref_pos), Some(curr_pos)) = (
+                                    ctx.all_commits.iter().position(|id| id == commit_id),
+                                    current_position,
+                                ) {
+                                    ref_pos < curr_pos
+                                } else {
+                                    false
+                                }
+                            })
+                            .cloned()
+                            .collect();
 
-                    if !valid_candidates.is_empty() {
-                        // Use path similarity scoring to find best reference
-                        let (ref_commit, ref_path) = find_best_reference(full_path, &valid_candidates);
+                        if !valid_candidates.is_empty() {
+                            // Use path similarity scoring to find best reference
+                            let (ref_commit, ref_path) = find_best_reference(full_path, &valid_candidates);
 
-                        // Use [commit]/[path] reference
-                        // Note: [commit] and [path] must be sequences, not strings!
-                        let mut ref_mapping = serde_yaml::Mapping::new();
-                        ref_mapping.insert(
-                            serde_yaml::Value::Sequence(vec![serde_yaml::Value::String(
-                                "commit".to_string(),
-                            )]),
-                            commit_refs
-                                .get(&ref_commit)
-                                .cloned()
-                                .unwrap_or_else(|| serde_yaml::Value::String(ref_commit.to_hex())),
-                        );
-                        ref_mapping.insert(
-                            serde_yaml::Value::Sequence(vec![serde_yaml::Value::String(
-                                "path".to_string(),
-                            )]),
-                            serde_yaml::Value::String(ref_path),
-                        );
-                        serde_yaml::Value::Mapping(ref_mapping)
+                            // Use [commit]/[path] reference
+                            // Note: [commit] and [path] must be sequences, not strings!
+                            let mut ref_mapping = serde_yaml::Mapping::new();
+                            ref_mapping.insert(
+                                serde_yaml::Value::Sequence(vec![serde_yaml::Value::String(
+                                    "commit".to_string(),
+                                )]),
+                                commit_refs
+                                    .get(&ref_commit)
+                                    .cloned()
+                                    .unwrap_or_else(|| serde_yaml::Value::String(ref_commit.to_hex())),
+                            );
+                            ref_mapping.insert(
+                                serde_yaml::Value::Sequence(vec![serde_yaml::Value::String(
+                                    "path".to_string(),
+                                )]),
+                                serde_yaml::Value::String(ref_path),
+                            );
+                            serde_yaml::Value::Mapping(ref_mapping)
+                        } else {
+                            // No valid candidates, use inline content
+                            serde_yaml::Value::String(s.to_string())
+                        }
                     } else {
-                        // No valid candidates, use inline content
+                        // No prior occurrence found, use inline content
                         serde_yaml::Value::String(s.to_string())
                     }
                 } else {
-                    // No prior occurrence found, use inline content
+                    // Deduplication disabled, always use inline content
                     serde_yaml::Value::String(s.to_string())
                 }
             }
@@ -3306,7 +3367,7 @@ mod tests {
         ));
 
         // Serialize with integer IDs
-        let yaml = serialize(&repo, CommitIdStyle::Integer);
+        let yaml = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
         println!("Serialized YAML:\n{}", yaml);
 
         // Parse it back
@@ -3416,7 +3477,7 @@ mod tests {
         ));
 
         // Serialize with integer IDs
-        let yaml = serialize(&repo, CommitIdStyle::Integer);
+        let yaml = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
         println!("Serialized YAML with deletion:\n{}", yaml);
 
         // Parse it back
@@ -3474,7 +3535,7 @@ mod tests {
         ));
 
         // Serialize with hex IDs
-        let yaml = serialize(&repo, CommitIdStyle::Hex);
+        let yaml = serialize(&repo, CommitIdStyle::Hex, SerializationOptions::default());
         println!("Serialized YAML:\n{}", yaml);
 
         // Parse it back
@@ -4065,7 +4126,7 @@ refs:
     file.txt: "updated"
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer);
+        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
 
         // The serialized output should omit default values
         // Second commit should not have explicit author since it inherits
@@ -4094,7 +4155,7 @@ refs:
     b.txt: "modified"
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer);
+        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
 
         // The second commit should only include the delta (modified b.txt)
         // Not the entire tree
@@ -4120,7 +4181,7 @@ refs:
     file.txt: "second"
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer);
+        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
 
         // Commits should be in topological order (parent before child)
         let pos1 = serialized.find("1:").unwrap();
@@ -4144,7 +4205,7 @@ refs:
   tree: {}
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer);
+        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
         let repo2 = parse(&serialized).unwrap();
 
         assert_eq!(repo.commits().count(), repo2.commits().count());
@@ -4170,7 +4231,7 @@ refs:
     README.md: "# Project"
 "##;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer);
+        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
         let repo2 = parse(&serialized).unwrap();
 
         let commit = repo2.commits().next().unwrap();
@@ -4201,7 +4262,7 @@ refs:
     file.txt: "dev"
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer);
+        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
         let repo2 = parse(&serialized).unwrap();
 
         assert_eq!(repo2.commits().count(), 3);
@@ -4233,7 +4294,7 @@ refs:
     file.txt: "merged"
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer);
+        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
         let repo2 = parse(&serialized).unwrap();
 
         assert_eq!(repo2.commits().count(), 4);
@@ -4258,7 +4319,7 @@ refs:
   tree: {}
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer);
+        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
         let repo2 = parse(&serialized).unwrap();
 
         let commit = repo2.commits().next().unwrap();
@@ -4280,7 +4341,7 @@ refs:
   tree: {}
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer);
+        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
         let repo2 = parse(&serialized).unwrap();
 
         let commit = repo2.commits().next().unwrap();
@@ -4301,7 +4362,7 @@ refs:
     file.txt: "content"
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Hex);
+        let serialized = serialize(&repo, CommitIdStyle::Hex, SerializationOptions::default());
 
         // Should contain 40-character hex IDs
         let lines: Vec<&str> = serialized.lines().collect();
