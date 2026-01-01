@@ -1004,7 +1004,13 @@ fn update_member_toml(
         }
     }
 
-    std::fs::write(&member_toml, doc.to_string())?;
+    let doc_str = doc.to_string();
+    if doc_str != content {
+        if stats.record_file_edit(&member_toml, false) {
+            eprintln!("  Editing: {}", member_toml.display());
+        }
+        std::fs::write(&member_toml, doc_str)?;
+    }
     Ok(())
 }
 
