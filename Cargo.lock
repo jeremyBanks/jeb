@@ -3,6 +3,18 @@
 version = 4
 
 [[package]]
+name = "_autofix"
+version = "0.0.0-dev-2025-12-26.7705"
+dependencies = [
+ "anyhow",
+ "glob",
+ "pathdiff",
+ "semver",
+ "tempfile",
+ "toml_edit",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -830,18 +842,6 @@ dependencies = [
  "fast_hilbert",
  "indexmap 2.12.1",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "jeb-fmt"
-version = "0.0.0-dev-2025-12-26.7705"
-dependencies = [
- "anyhow",
- "glob",
- "pathdiff",
- "semver",
- "tempfile",
- "toml_edit",
 ]
 
 [[package]]
