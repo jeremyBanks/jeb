@@ -3,7 +3,7 @@ use glob::glob;
 use semver::Version;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use toml_edit::{DocumentMut, Item, Value};
+use toml_edit::{value, DocumentMut, InlineTable, Item, Value};
 
 fn main() -> Result<()> {
     let workspace_root = find_workspace_root(".")?;
@@ -546,8 +546,6 @@ fn build_dependency_value(
     workspace_root: &Path,
     include_config: bool,
 ) -> Result<Item> {
-    use toml_edit::{value, InlineTable};
-
     let mut has_extra_fields = false;
 
     // Check if we have fields other than version
@@ -565,7 +563,7 @@ fn build_dependency_value(
     if !has_extra_fields && resolution.version.is_some() {
         // Simple string form
         let version_str = resolution.version.as_ref().unwrap().to_string();
-        return Ok(Item::Value(value(version_str)));
+        return Ok(value(version_str).into());
     }
 
     // Inline table form
