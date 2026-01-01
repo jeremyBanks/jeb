@@ -136,6 +136,7 @@
     "peekable",
     "petgraph",
     "pipefail",
+    "println",
     "pushd",
     "realpath",
     "redirections",

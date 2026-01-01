@@ -2605,6 +2605,17 @@ impl Default for SerializationOptions {
 // Deduplication Context and Helper Functions
 // ============================================================================
 
+/// Tracks what type of tree is being serialized for redundancy checking
+#[derive(Debug, Clone)]
+enum TreeSerializationContext {
+    /// Serializing a commit's tree (inherits from first parent)
+    Commit { first_parent_id: Option<ObjectId> },
+    /// Serializing the staged tree (inherits from HEAD commit)
+    Staged { head_commit_id: Option<ObjectId> },
+    /// Serializing the working tree (inherits from staged or HEAD)
+    Working { default_commit_id: Option<ObjectId> },
+}
+
 /// Tracks serialized content locations for deduplication
 struct SerializationContext {
     /// Maps blob hash to all (commit_id, path) locations where it appears
@@ -2632,6 +2643,9 @@ struct SerializationContext {
 
     /// Serialization options
     options: SerializationOptions,
+
+    /// Tree serialization context (for redundancy checking)
+    tree_context: TreeSerializationContext,
 }
 
 impl SerializationContext {
@@ -2640,6 +2654,7 @@ impl SerializationContext {
         ordered_commits: Vec<ObjectId>,
         head_commits: std::collections::HashSet<ObjectId>,
         options: SerializationOptions,
+        tree_context: TreeSerializationContext,
     ) -> Self {
         let truncated_len = compute_truncated_hash_length(&ordered_commits);
 
@@ -2681,6 +2696,7 @@ impl SerializationContext {
             current_commit: ObjectId([0u8; 20]),
             repo: repo as *const Repository,
             options,
+            tree_context,
         }
     }
 
@@ -2820,8 +2836,16 @@ pub fn serialize(
     }
 
     // Initialize serialization context for deduplication
-    let mut ctx =
-        SerializationContext::new(repo, ordered_commits.clone(), head_commits.clone(), options);
+    // Start with Commit context as default (will be updated for each tree type)
+    let mut ctx = SerializationContext::new(
+        repo,
+        ordered_commits.clone(),
+        head_commits.clone(),
+        options,
+        TreeSerializationContext::Commit {
+            first_parent_id: None,
+        },
+    );
 
     // Build mapping from ObjectId to commit reference (hex or integer)
     let mut commit_refs: HashMap<ObjectId, serde_yaml::Value> = HashMap::new();
@@ -2900,6 +2924,11 @@ pub fn serialize(
 
         ctx.current_commit = *commit_id;
 
+        // Update tree context for this commit (inherits from first parent)
+        ctx.tree_context = TreeSerializationContext::Commit {
+            first_parent_id: commit.parents.first().copied(),
+        };
+
         let commit_key = commit_refs.get(commit_id).cloned().unwrap();
         let commit_value =
             serialize_commit(commit, prev_commit, &commit_refs, id_style, repo, &ctx);
@@ -2919,6 +2948,11 @@ pub fn serialize(
         let default_staged = repo.head_commit().map(|c| &c.tree);
 
         if Some(staged_tree) != default_staged {
+            // Update tree context for staged tree (inherits from HEAD)
+            ctx.tree_context = TreeSerializationContext::Staged {
+                head_commit_id: repo.head_commit().map(|c| c.id),
+            };
+
             // staged is different from default, serialize it
             let staged_value = compute_tree_delta(staged_tree, default_staged, &ctx, &commit_refs);
 
@@ -2942,6 +2976,20 @@ pub fn serialize(
             .or_else(|| repo.head_commit().map(|c| &c.tree));
 
         if Some(working_tree) != default_working {
+            // Update tree context for working tree (inherits from staged or HEAD)
+            // If staged exists, working inherits from staged which itself inherits from HEAD
+            // So we don't emit references to HEAD from working in that case
+            // If no staged, working inherits directly from HEAD
+            ctx.tree_context = TreeSerializationContext::Working {
+                default_commit_id: if repo.staged().is_some() {
+                    // Staged exists - working should not reference HEAD directly
+                    None
+                } else {
+                    // No staged - working inherits from HEAD
+                    repo.head_commit().map(|c| c.id)
+                },
+            };
+
             // working is different from default, serialize it
             let working_value =
                 compute_tree_delta(working_tree, default_working, &ctx, &commit_refs);
@@ -3367,19 +3415,40 @@ fn insert_tree_change(
                             let (ref_commit, ref_path) =
                                 find_best_reference(full_path, &valid_candidates);
 
-                            // Use //commit and //path reference
-                            let mut ref_mapping = serde_yaml::Mapping::new();
-                            ref_mapping.insert(
-                                serde_yaml::Value::String("//commit".to_string()),
-                                commit_refs.get(&ref_commit).cloned().unwrap_or_else(|| {
-                                    serde_yaml::Value::String(ref_commit.to_hex())
-                                }),
-                            );
-                            ref_mapping.insert(
-                                serde_yaml::Value::String("//path".to_string()),
-                                serde_yaml::Value::String(ref_path),
-                            );
-                            serde_yaml::Value::Mapping(ref_mapping)
+                            // Check if this reference is redundant with default inheritance
+                            let is_redundant = match &ctx.tree_context {
+                                TreeSerializationContext::Commit { first_parent_id } => {
+                                    first_parent_id.as_ref() == Some(&ref_commit)
+                                        && ref_path == full_path
+                                }
+                                TreeSerializationContext::Staged { head_commit_id } => {
+                                    head_commit_id.as_ref() == Some(&ref_commit)
+                                        && ref_path == full_path
+                                }
+                                TreeSerializationContext::Working { default_commit_id } => {
+                                    default_commit_id.as_ref() == Some(&ref_commit)
+                                        && ref_path == full_path
+                                }
+                            };
+
+                            if is_redundant {
+                                // Redundant reference - use inline content instead
+                                serde_yaml::Value::String(s.to_string())
+                            } else {
+                                // Non-redundant reference - use //commit and //path
+                                let mut ref_mapping = serde_yaml::Mapping::new();
+                                ref_mapping.insert(
+                                    serde_yaml::Value::String("//commit".to_string()),
+                                    commit_refs.get(&ref_commit).cloned().unwrap_or_else(|| {
+                                        serde_yaml::Value::String(ref_commit.to_hex())
+                                    }),
+                                );
+                                ref_mapping.insert(
+                                    serde_yaml::Value::String("//path".to_string()),
+                                    serde_yaml::Value::String(ref_path),
+                                );
+                                serde_yaml::Value::Mapping(ref_mapping)
+                            }
                         } else {
                             // No valid candidates, use inline content
                             serde_yaml::Value::String(s.to_string())
