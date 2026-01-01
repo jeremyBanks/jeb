@@ -173,6 +173,7 @@ fn parse_dependency(
     key: &str,
     value: &Item,
     base_path: &Path,
+    workspace_doc: Option<&DocumentMut>,
 ) -> Result<Option<Dependency>> {
     // Extract version string and other fields
     let version_str: Option<&str>;
@@ -193,7 +194,53 @@ fn parse_dependency(
             version_str = Some(s.value());
         }
         Item::Value(Value::InlineTable(t)) => {
-            // Inline table form
+            // Check if this uses workspace = true
+            if let Some(workspace_val) = t.get("workspace") {
+                if workspace_val.as_bool() == Some(true) {
+                    // Look up resolution fields from workspace.dependencies
+                    if let Some(ws_doc) = workspace_doc {
+                        if let Some(ws_deps) = ws_doc
+                            .get("workspace")
+                            .and_then(|w| w.get("dependencies"))
+                            .and_then(|d| d.as_table())
+                        {
+                            if let Some(ws_dep) = ws_deps.get(key) {
+                                // Parse the workspace dependency to get resolution fields
+                                if let Ok(Some(ws_parsed)) = parse_dependency(key, ws_dep, base_path, None) {
+                                    // Keep configuration fields from member
+                                    let optional = t.get("optional").and_then(|v| v.as_bool());
+                                    let default_features = t.get("default-features").and_then(|v| v.as_bool());
+                                    let features = t.get("features").and_then(|v| {
+                                        v.as_array().map(|arr| {
+                                            arr.iter()
+                                                .filter_map(|item| item.as_str().map(String::from))
+                                                .collect()
+                                        })
+                                    });
+
+                                    let name = ws_parsed.resolution.package.clone().unwrap_or_else(|| key.to_string());
+
+                                    return Ok(Some(Dependency {
+                                        key: key.to_string(),
+                                        name,
+                                        resolution: ws_parsed.resolution,
+                                        config: ConfigFields {
+                                            optional,
+                                            features,
+                                            default_features,
+                                        },
+                                    }));
+                                }
+                            }
+                        }
+                    }
+
+                    // If we couldn't find workspace dependency, skip this
+                    return Ok(None);
+                }
+            }
+
+            // Regular inline table form
             version_str = t.get("version").and_then(|v| v.as_str());
             package = t.get("package").and_then(|v| v.as_str()).map(String::from);
             path_str = t.get("path").and_then(|v| v.as_str()).map(String::from);
@@ -332,7 +379,7 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
                         continue;
                     }
 
-                    if let Some(dep) = parse_dependency(key, value, member_path)? {
+                    if let Some(dep) = parse_dependency(key, value, member_path, Some(&workspace_doc))? {
                         all_deps
                             .entry(dep.name.clone())
                             .or_default()
@@ -382,7 +429,7 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
 
     // Update member Cargo.toml files
     for member_path in &members {
-        update_member_toml(member_path, &all_deps, &workspace_updates)?;
+        update_member_toml(member_path, &all_deps, &workspace_updates, &workspace_doc)?;
     }
 
     Ok(())
@@ -598,6 +645,7 @@ fn update_member_toml(
     member_path: &Path,
     _all_deps: &HashMap<String, Vec<(PathBuf, String, Dependency)>>,
     workspace_updates: &HashMap<String, (ResolutionFields, String)>,
+    workspace_doc: &DocumentMut,
 ) -> Result<()> {
     let member_toml = member_path.join("Cargo.toml");
     let content = std::fs::read_to_string(&member_toml)?;
@@ -615,7 +663,7 @@ fn update_member_toml(
 
             for key in keys {
                 if let Some(dep_item) = deps.get(&key) {
-                    if let Ok(Some(dep)) = parse_dependency(&key, dep_item, member_path) {
+                    if let Ok(Some(dep)) = parse_dependency(&key, dep_item, member_path, Some(workspace_doc)) {
                         // Check if this dependency is in the winning equivalence class
                         if let Some(workspace_key) = dep_name_to_workspace_key.get(&dep.name) {
                             // Check if this specific occurrence should use workspace = true

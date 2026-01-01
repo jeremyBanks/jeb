@@ -1,0 +1,22 @@
+# Test default message generation for integer IDs ("commit N")
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 3
+
+# No message specified - should default to "commit 1"
+1:
+  tree:
+    file.txt: "first"
+
+# No message - should default to "commit 2"
+2:
+  tree:
+    file.txt: "second"
+
+# Explicit message
+3:
+  message: "explicit message"
+  tree:
+    file.txt: "third"
