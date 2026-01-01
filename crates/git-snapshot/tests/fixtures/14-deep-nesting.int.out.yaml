@@ -41,16 +41,16 @@ refs:
   tree:
     flat-1.txt:
       ? - commit
-      : 1
+      : 2
       ? - path
-      : a/b/c/d/e/f/deep.txt
+      : x/y/z/moved-deep.txt
     flat-2.txt:
       ? - commit
-      : 1
+      : 2
       ? - path
-      : a/b/c/d/e/f/deep.txt
+      : x/y/z/moved-deep.txt
     flat-3.txt:
       ? - commit
-      : 1
+      : 2
       ? - path
-      : a/b/c/d/e/f/deep.txt
+      : x/y/z/moved-deep.txt

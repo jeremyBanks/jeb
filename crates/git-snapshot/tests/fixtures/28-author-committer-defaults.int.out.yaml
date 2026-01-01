@@ -1,0 +1,23 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 5
+1:
+  tree:
+    file.txt: base
+2:
+  author: Alice <alice@example.com>
+  tree:
+    file.txt: alice change
+3:
+  committer: Bob <bob@example.com>
+  tree:
+    file.txt: bob committed
+4:
+  author: Charlie <charlie@example.com>
+  committer: Dave <dave@example.com>
+  tree:
+    file.txt: charlie authored dave committed
+5:
+  tree:
+    file.txt: inherited
