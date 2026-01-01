@@ -321,24 +321,37 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
     let mut all_deps: HashMap<String, Vec<(PathBuf, String, Dependency)>> = HashMap::new();
 
     for member_path in &members {
+        eprintln!("DEBUG: Parsing member: {}", member_path.display());
         let member_toml = member_path.join("Cargo.toml");
         let content = std::fs::read_to_string(&member_toml)?;
         let doc = content.parse::<DocumentMut>()?;
 
         for section in &["dependencies", "dev-dependencies", "build-dependencies"] {
             if let Some(deps) = doc.get(section).and_then(|s| s.as_table()) {
+                eprintln!("DEBUG:   Section [{}] has {} deps", section, deps.len());
                 for (key, value) in deps.iter() {
                     if blocked_deps.contains(key) {
                         continue;
                     }
 
-                    if let Some(dep) = parse_dependency(key, value, member_path)? {
-                        all_deps
-                            .entry(dep.name.clone())
-                            .or_default()
-                            .push((member_path.clone(), section.to_string(), dep));
+                    match parse_dependency(key, value, member_path) {
+                        Ok(Some(dep)) => {
+                            eprintln!("DEBUG:     Parsed dep: {} (name={})", key, dep.name);
+                            all_deps
+                                .entry(dep.name.clone())
+                                .or_default()
+                                .push((member_path.clone(), section.to_string(), dep));
+                        }
+                        Ok(None) => {
+                            eprintln!("DEBUG:     Skipped dep: {}", key);
+                        }
+                        Err(e) => {
+                            eprintln!("DEBUG:     Error parsing dep {}: {}", key, e);
+                        }
                     }
                 }
+            } else {
+                eprintln!("DEBUG:   Section [{}] not found or not a table", section);
             }
         }
     }
