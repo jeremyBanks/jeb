@@ -29,14 +29,14 @@ When an equivalence class loses majority:
 3. Preserve configuration fields during inlining
 
 ### 3. Path Canonicalization Fails for Non-existent Paths
-**Status**: Will cause fatal errors
-**Location**: `parse_dependency` line 262
+**Status**: ✅ FIXED
+**Location**: `parse_dependency` line 307-327
 
-Calling `canonicalize()` on path dependencies fails if the path doesn't exist yet.
-
-**Fix Required**:
-- Use path normalization that doesn't require file existence
-- Or handle the error gracefully as a warning rather than fatal error
+The tool now gracefully handles path dependencies to non-existent paths:
+- Attempts `canonicalize()` first for existing paths
+- Falls back to manual path construction for non-existent paths
+- Normalizes paths relative to base directory
+- No fatal errors for paths that don't exist yet
 
 ## Important Issues
 
@@ -150,7 +150,7 @@ No special handling for empty `[workspace.members]` array. Works correctly but u
 
 ### Recommended Next Steps
 1. ✅ ~~Implement `workspace = true` parsing (Critical #1)~~ - DONE
-2. Implement loser inlining (Critical #2) - High priority
-3. Fix path canonicalization (Critical #3) - High priority
+2. Implement loser inlining (Critical #2) - High priority **← NEXT**
+3. ✅ ~~Fix path canonicalization (Critical #3)~~ - DONE
 4. Add comprehensive tests
 5. Address remaining issues as needed
