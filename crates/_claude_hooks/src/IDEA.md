@@ -3,6 +3,9 @@ agents are forbidden from editing.
 
 In `PreToolUse` we try to stop it directly for `Write`.
 
+In `SessionStart` we export JEB_CLAUDE_INITIAL_COMMIT to the current HEAD commit
+ID
+
 In `Stop` hook we review git history and if any of those files have lines in
 them that were added by commits which were authored-by or committed-by an AI,
 then we revert those files to the state they had prior to those changes.
