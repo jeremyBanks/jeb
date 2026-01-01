@@ -2676,6 +2676,24 @@ impl SerializationContext {
     fn get_blob_id_for_content(&self, content: &str) -> ObjectId {
         compute_blob_hash(content)
     }
+
+    /// Track a tree's blobs for deduplication (used for staged/working trees)
+    /// This updates blob_locations to enable deduplication references to staged/working
+    fn track_tree_for_dedup(&mut self, tree: &Tree) {
+        // Use a special commit ID for staged/working (won't be used for actual references,
+        // just for tracking in blob_locations)
+        let pseudo_commit_id = self.current_commit;
+
+        for path in tree.paths() {
+            if let Some(content) = tree.get(path) {
+                let blob_id = compute_blob_hash(content);
+                self.blob_locations
+                    .entry(blob_id)
+                    .or_insert_with(Vec::new)
+                    .push((pseudo_commit_id, path.to_string()));
+            }
+        }
+    }
 }
 
 /// Compute minimum truncated hash length needed to avoid ambiguity
@@ -2865,6 +2883,64 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle, options: Serializat
             serialize_commit(commit, prev_commit, &commit_refs, id_style, repo, &ctx);
 
         root.insert(commit_key, commit_value);
+    }
+
+    // Serialize staged and working trees (if different from defaults)
+    // These are treated as pseudo-commits for deduplication purposes
+
+    // Serialize staged and working trees (if different from defaults)
+    // Note: ctx needs to be mutable for track_tree_for_dedup
+    let mut ctx = ctx;
+
+    // Serialize staged tree (defaults to HEAD commit's tree)
+    if let Some(staged_tree) = repo.staged() {
+        let default_staged = repo.head_commit().map(|c| &c.tree);
+
+        if Some(staged_tree) != default_staged {
+            // staged is different from default, serialize it
+            let staged_value = compute_tree_delta(
+                staged_tree,
+                default_staged,
+                &ctx,
+                &commit_refs,
+            );
+
+            if let serde_yaml::Value::Mapping(m) = &staged_value {
+                if !m.is_empty() {
+                    root.insert(
+                        serde_yaml::Value::String("staged".to_string()),
+                        staged_value,
+                    );
+                }
+            }
+
+            // Update deduplication context to track blobs in staged tree
+            ctx.track_tree_for_dedup(staged_tree);
+        }
+    }
+
+    // Serialize working tree (defaults to staged tree, or HEAD if no staged)
+    if let Some(working_tree) = repo.working() {
+        let default_working = repo.staged().or_else(|| repo.head_commit().map(|c| &c.tree));
+
+        if Some(working_tree) != default_working {
+            // working is different from default, serialize it
+            let working_value = compute_tree_delta(
+                working_tree,
+                default_working,
+                &ctx,
+                &commit_refs,
+            );
+
+            if let serde_yaml::Value::Mapping(m) = &working_value {
+                if !m.is_empty() {
+                    root.insert(
+                        serde_yaml::Value::String("working".to_string()),
+                        working_value,
+                    );
+                }
+            }
+        }
     }
 
     // Sort the root mapping, but preserve commit order

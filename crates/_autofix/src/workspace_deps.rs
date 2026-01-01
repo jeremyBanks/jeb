@@ -1275,7 +1275,8 @@ anyhow = "1.0.0"
     #[test]
     fn test_normalize_shared_dependencies() -> Result<()> {
         let temp = create_test_workspace()?;
-        normalize_workspace_dependencies(temp.path())?;
+        let mut stats = NormalizationStats::default();
+        normalize_workspace_dependencies(temp.path(), &mut stats)?;
 
         // Read the updated workspace Cargo.toml
         let workspace_content = fs::read_to_string(temp.path().join("Cargo.toml"))?;
@@ -1295,14 +1296,16 @@ anyhow = "1.0.0"
         let temp = create_test_workspace()?;
 
         // First run: normalize the workspace
-        normalize_workspace_dependencies(temp.path())?;
+        let mut stats = NormalizationStats::default();
+        normalize_workspace_dependencies(temp.path(), &mut stats)?;
 
         // Read the results
         let workspace_content_1 = fs::read_to_string(temp.path().join("Cargo.toml"))?;
         let crate_a_content_1 = fs::read_to_string(temp.path().join("crate-a/Cargo.toml"))?;
 
         // Second run: should be idempotent
-        normalize_workspace_dependencies(temp.path())?;
+        let mut stats = NormalizationStats::default();
+        normalize_workspace_dependencies(temp.path(), &mut stats)?;
 
         // Read the results again
         let workspace_content_2 = fs::read_to_string(temp.path().join("Cargo.toml"))?;
@@ -1383,7 +1386,8 @@ serde = "2.0.0"
         )?;
 
         // First run: serde 1.0.0 should win
-        normalize_workspace_dependencies(workspace_root)?;
+        let mut stats = NormalizationStats::default();
+        normalize_workspace_dependencies(workspace_root, &mut stats)?;
 
         let workspace_content = fs::read_to_string(workspace_root.join("Cargo.toml"))?;
         assert!(workspace_content.contains("serde = \"1.0.0\""), "serde 1.0.0 should win initially");
@@ -1423,7 +1427,8 @@ serde = "2.0.0"
         )?;
 
         // Second run: serde 2.0.0 should now win
-        normalize_workspace_dependencies(workspace_root)?;
+        let mut stats = NormalizationStats::default();
+        normalize_workspace_dependencies(workspace_root, &mut stats)?;
 
         let workspace_content_2 = fs::read_to_string(workspace_root.join("Cargo.toml"))?;
         assert!(workspace_content_2.contains("serde = \"2.0.0\""), "serde 2.0.0 should win after adding crate-d");
