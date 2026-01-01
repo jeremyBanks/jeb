@@ -1069,15 +1069,15 @@ fn inline_dependency(
 }
 
 fn has_config_fields(value: &Item) -> bool {
+    // Note: default-features is no longer considered a blocking config field,
+    // as we now intentionally set it in workspace.dependencies when needed
     if let Some(table) = value.as_inline_table() {
         return table.contains_key("optional")
-            || table.contains_key("features")
-            || table.contains_key("default-features");
+            || table.contains_key("features");
     }
     if let Some(table) = value.as_table() {
         return table.contains_key("optional")
-            || table.contains_key("features")
-            || table.contains_key("default-features");
+            || table.contains_key("features");
     }
     false
 }
