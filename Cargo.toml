@@ -83,3 +83,4 @@ dissimilar = "1.0.4"
 expect-test = { version = "1.4.0", git = "https://github.com/jeremyBanks/expect-test", rev = "bf056e6c5cd3baed9ad2ef3d30bc06dad2778089" }
 semver = "1.0.0"
 num-traits = "0.2.15"
+jeb = { path = "crates/jeb", default-features = false }
