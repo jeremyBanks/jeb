@@ -174,6 +174,8 @@ fn parse_dependency(
     value: &Item,
     base_path: &Path,
 ) -> Result<Option<Dependency>> {
+    eprintln!("DEBUG parse_dependency: key={}, value kind={:?}", key, value);
+
     // Extract version string and other fields
     let version_str: Option<&str>;
     let mut package: Option<String> = None;
@@ -191,6 +193,7 @@ fn parse_dependency(
         Item::Value(Value::String(s)) => {
             // Simple string form: dep = "1.0.0"
             version_str = Some(s.value());
+            eprintln!("DEBUG: Simple string form, version={}", s.value());
         }
         Item::Value(Value::InlineTable(t)) => {
             // Inline table form
@@ -232,24 +235,33 @@ fn parse_dependency(
                 })
             });
         }
-        _ => return Ok(None),
+        _ => {
+            eprintln!("DEBUG: Unrecognized value type, returning None");
+            return Ok(None);
+        }
     }
 
     // Parse version if present
     let version = if let Some(v_str) = version_str {
+        eprintln!("DEBUG: Parsing version string: {}", v_str);
         // Remove optional ^ prefix
         let trimmed = v_str.trim_start_matches('^');
 
         // Only accept bare version or ^ prefix
         if !v_str.starts_with('^') && v_str != trimmed {
             // Has some other prefix, skip
+            eprintln!("DEBUG: Version has unexpected prefix, skipping");
             return Ok(None);
         }
 
         match Version::parse(trimmed) {
-            Ok(v) => Some(v),
-            Err(_) => {
+            Ok(v) => {
+                eprintln!("DEBUG: Parsed version: {}", v);
+                Some(v)
+            }
+            Err(e) => {
                 // Skip dependencies with invalid versions
+                eprintln!("DEBUG: Version parse error: {}, skipping", e);
                 return Ok(None);
             }
         }
