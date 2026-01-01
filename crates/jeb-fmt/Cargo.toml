@@ -15,3 +15,6 @@ toml_edit = "0.22"
 semver = "1.0"
 glob = "0.3"
 anyhow = "1.0"
+
+[dev-dependencies]
+tempfile = "3.0"
