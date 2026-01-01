@@ -2383,9 +2383,9 @@ pub enum CommitIdStyle {
 
 /// Tracks serialized content locations for deduplication
 struct SerializationContext {
-    /// Maps blob hash to (commit_id, path) where content first appeared
-    /// physically
-    blob_locations: HashMap<ObjectId, (ObjectId, String)>,
+    /// Maps blob hash to all (commit_id, path) locations where it appears
+    /// Used for path similarity scoring to choose best reference
+    blob_locations: HashMap<ObjectId, Vec<(ObjectId, String)>>,
 
     /// Maps tree hash to (commit_id, path) where content first appeared
     /// physically
@@ -2434,10 +2434,11 @@ impl SerializationContext {
                             blob_id
                         };
 
-                        // Record first occurrence of this blob
+                        // Record ALL occurrences of this blob for path similarity scoring
                         blob_locations
                             .entry(blob_id)
-                            .or_insert((*commit_id, path.to_string()));
+                            .or_insert_with(Vec::new)
+                            .push((*commit_id, path.to_string()));
                     }
                 }
             }
@@ -3014,22 +3015,38 @@ fn insert_tree_change(
                 // Check if this content should be deduplicated
                 let blob_id = ctx.get_blob_id_for_content(s);
 
-                // Find where this blob first appeared
-                if let Some(&(ref_commit, ref ref_path)) = ctx.blob_locations.get(&blob_id) {
-                    // Only use reference if it's not the current location AND
-                    // the reference target comes earlier in the commit order
-                    let ref_position = ctx.all_commits.iter().position(|id| *id == ref_commit);
+                // Find all locations where this blob appeared
+                if let Some(locations) = ctx.blob_locations.get(&blob_id) {
+                    // Filter to only earlier commits (not current location, comes before current)
                     let current_position = ctx
                         .all_commits
                         .iter()
                         .position(|id| *id == ctx.current_commit);
-                    let should_reference = (ref_commit != ctx.current_commit
-                        || ref_path != full_path)
-                        && ref_position.is_some()
-                        && current_position.is_some()
-                        && ref_position < current_position;
 
-                    if should_reference {
+                    let valid_candidates: Vec<(ObjectId, String)> = locations
+                        .iter()
+                        .filter(|(commit_id, path)| {
+                            // Exclude current location
+                            if *commit_id == ctx.current_commit && path == full_path {
+                                return false;
+                            }
+                            // Only use commits that come earlier in order
+                            if let (Some(ref_pos), Some(curr_pos)) = (
+                                ctx.all_commits.iter().position(|id| id == commit_id),
+                                current_position,
+                            ) {
+                                ref_pos < curr_pos
+                            } else {
+                                false
+                            }
+                        })
+                        .cloned()
+                        .collect();
+
+                    if !valid_candidates.is_empty() {
+                        // Use path similarity scoring to find best reference
+                        let (ref_commit, ref_path) = find_best_reference(full_path, &valid_candidates);
+
                         // Use [commit]/[path] reference
                         // Note: [commit] and [path] must be sequences, not strings!
                         let mut ref_mapping = serde_yaml::Mapping::new();
@@ -3046,11 +3063,11 @@ fn insert_tree_change(
                             serde_yaml::Value::Sequence(vec![serde_yaml::Value::String(
                                 "path".to_string(),
                             )]),
-                            serde_yaml::Value::String(ref_path.clone()),
+                            serde_yaml::Value::String(ref_path),
                         );
                         serde_yaml::Value::Mapping(ref_mapping)
                     } else {
-                        // Default: inline content
+                        // No valid candidates, use inline content
                         serde_yaml::Value::String(s.to_string())
                     }
                 } else {
@@ -3124,23 +3141,25 @@ fn topological_sort_with_tiebreak(repo: &Repository) -> Vec<ObjectId> {
     }
 
     // Walk ancestors depth-first, recording parent indices
-    let mut visited = std::collections::HashSet::new();
+    let mut reachable_commits = std::collections::HashSet::new();
 
     for head_id in head_commits {
         walk_ancestors_for_tiebreak(
             head_id,
             None, // No parent index for head commits
             repo,
-            &mut visited,
+            &mut reachable_commits,
             &mut tiebreak_keys,
         );
     }
 
-    // Append timestamps to tiebreak keys
-    for commit in repo.commits() {
-        if let Some(key) = tiebreak_keys.get_mut(&commit.id) {
-            key.push(TiebreakComponent::Timestamp(commit.committer_date));
-            key.push(TiebreakComponent::Timestamp(commit.author_date));
+    // Append timestamps to tiebreak keys (only for reachable commits)
+    for commit_id in &reachable_commits {
+        if let Some(commit) = repo.get_commit(commit_id) {
+            if let Some(key) = tiebreak_keys.get_mut(commit_id) {
+                key.push(TiebreakComponent::Timestamp(commit.committer_date));
+                key.push(TiebreakComponent::Timestamp(commit.author_date));
+            }
         }
     }
 
@@ -3149,8 +3168,8 @@ fn topological_sort_with_tiebreak(repo: &Repository) -> Vec<ObjectId> {
     let mut visited = std::collections::HashSet::new();
     let mut in_progress = std::collections::HashSet::new();
 
-    // Sort commits by tiebreak key for deterministic iteration order
-    let mut all_commits: Vec<ObjectId> = repo.commits().map(|c| c.id).collect();
+    // Sort ONLY reachable commits by tiebreak key for deterministic iteration order
+    let mut all_commits: Vec<ObjectId> = reachable_commits.into_iter().collect();
     all_commits.sort_by(|a, b| {
         tiebreak_keys
             .get(a)
