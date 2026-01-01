@@ -1,0 +1,55 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: a18507536a59b6e9fe7cef6bc356fd4e25e0a413
+a5e7ae8cf82ae6d4a1d8d7d407951cb0108637be:
+  message: commit 1
+  tree:
+    base.txt: base
+ddf88380f3472d88135d3b453d8d8c1b82e82935:
+  message: commit 2
+  tree:
+    branch1.txt: first
+baf721b4377bb64d578feeae9e3d62262c170ce7:
+  message: commit 3
+  tree:
+    branch2.txt: second
+b5b1daf3846d6effef378be21799d103dda5c964:
+  message: commit 4
+  tree:
+    branch3.txt: third
+aab9c2381a2fe1d17cc6b024e6f7d83f61fcd531:
+  message: commit 5
+  tree:
+    branch4.txt: fourth
+5370a863b9d5e6432d6ffd5a16b813a55af5dd26:
+  message: commit 6
+  tree:
+    branch5.txt: fifth
+fac27bfbe03900d00829fc6d5fd862d9d1ea1870:
+  message: commit 7
+  tree:
+    branch6.txt: sixth
+d5e01d2f94d868b1ae307a14932a94795f0cca75:
+  message: commit 8
+  tree:
+    branch7.txt: seventh
+a18507536a59b6e9fe7cef6bc356fd4e25e0a413:
+  message: commit 9
+  parents:
+  - a5e7ae8cf82ae6d4a1d8d7d407951cb0108637be
+  - ddf88380f3472d88135d3b453d8d8c1b82e82935
+  - baf721b4377bb64d578feeae9e3d62262c170ce7
+  - b5b1daf3846d6effef378be21799d103dda5c964
+  - aab9c2381a2fe1d17cc6b024e6f7d83f61fcd531
+  - 5370a863b9d5e6432d6ffd5a16b813a55af5dd26
+  - fac27bfbe03900d00829fc6d5fd862d9d1ea1870
+  - d5e01d2f94d868b1ae307a14932a94795f0cca75
+  tree:
+    branch1.txt: first
+    branch2.txt: second
+    branch3.txt: third
+    branch4.txt: fourth
+    branch5.txt: fifth
+    branch6.txt: sixth
+    branch7.txt: seventh

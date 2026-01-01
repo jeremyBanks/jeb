@@ -1,0 +1,77 @@
+HEAD: refs/heads/full-tree
+refs:
+  heads:
+    full-tree: 9d7b56108f4cb3d49e2bf7d937c4f05f023a12f6
+    subtree: f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c
+577c26ae589f37c68b86f00fe8a471c8fceec372:
+  message: commit 1
+  tree:
+    config.yaml: 'version: 1'
+    modules:
+      core:
+        init.rs: fn init() {}
+      extra:
+        addon.rs: fn addon() {}
+6e947bd52eb360e79191322a5793cf7045ff76c1:
+  message: commit 2
+  tree:
+    config.yaml: 'version: 2'
+0fcdb08f390a6996c3e55f1b1e5ed6ff96699b3f:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: git-zoom-in seed
+  parents: []
+  tree: {}
+2927506cc544b19f96f7d73138685db53c4b7dca:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'modules/core'
+
+    git-zoom-in: modules/core
+  parents:
+  - 0fcdb08f390a6996c3e55f1b1e5ed6ff96699b3f
+  - 6e947bd52eb360e79191322a5793cf7045ff76c1
+  tree:
+    init.rs: fn init() {}
+22299b287b211d24042f5851b2cb0fd2d743d2a1:
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'modules/core'
+
+    git-zoom-out: modules/core
+  parents:
+  - 6e947bd52eb360e79191322a5793cf7045ff76c1
+  - 2927506cc544b19f96f7d73138685db53c4b7dca
+3f417eab41de1eb24278a35502292c31a5af5c3a:
+  message: commit 6
+  tree:
+    modules:
+      extra:
+        plugin.rs: fn plugin() {}
+01da7440079fcf0362984730cae7c4fdf3a6a656:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'modules/core'
+
+    git-zoom-in: modules/core
+  parents:
+  - 2927506cc544b19f96f7d73138685db53c4b7dca
+  - 3f417eab41de1eb24278a35502292c31a5af5c3a
+  tree:
+    init.rs: null
+f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c:
+  message: commit 8
+  tree:
+    cleanup.rs: fn cleanup() {}
+9d7b56108f4cb3d49e2bf7d937c4f05f023a12f6:
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'modules/core'
+
+    git-zoom-out: modules/core
+  parents:
+  - 3f417eab41de1eb24278a35502292c31a5af5c3a
+  - f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c
+  tree:
+    modules:
+      core:
+        cleanup.rs: fn cleanup() {}

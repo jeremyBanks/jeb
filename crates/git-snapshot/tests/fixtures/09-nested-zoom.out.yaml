@@ -1,0 +1,134 @@
+HEAD: refs/heads/full-tree
+refs:
+  heads:
+    core-subtree: 4f727e9883aa830a07607759cce4d8899ffcccca
+    full-tree: 17adbb8ef7e4b2b2a7abadaa5c8ab2be2d9f7606
+    lib-subtree: d32dfb65816952cf65c6298e773a61ae842fde02
+2217d2:
+  message: commit 1
+  tree:
+    README.md: '# Project'
+    src:
+      lib:
+        api.rs: fn api() {}
+        core:
+          engine.rs: fn engine() {}
+          types.rs: struct Type;
+      main.rs: fn main() {}
+9932ad:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: zoom-in seed for core
+  parents: []
+  tree: {}
+11a736:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: zoom-in seed for src/lib
+  parents: []
+  tree: {}
+c53f24:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'src/lib'
+
+    git-zoom-in: src/lib
+  parents:
+  - 11a736
+  - 2217d2
+  tree:
+    api.rs:
+      ? - commit
+      : 2217d2
+      ? - path
+      : src/lib/api.rs
+    core:
+      engine.rs:
+        ? - commit
+        : 2217d2
+        ? - path
+        : src/lib/core/engine.rs
+      types.rs:
+        ? - commit
+        : 2217d2
+        ? - path
+        : src/lib/core/types.rs
+23fd5c:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'core'
+
+    git-zoom-in: core
+  parents:
+  - 9932ad
+  - c53f24
+  tree:
+    engine.rs:
+      ? - commit
+      : c53f24
+      ? - path
+      : core/engine.rs
+    types.rs:
+      ? - commit
+      : c53f24
+      ? - path
+      : core/types.rs
+c3dd4f:
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'core'
+
+    git-zoom-out: core
+  parents:
+  - c53f24
+  - 23fd5c
+040a71:
+  message: commit 7
+  tree:
+    tests.rs: fn test_lib() {}
+d32dfb65816952cf65c6298e773a61ae842fde02:
+  message: commit 8
+  tree:
+    api.rs: fn api() { /* updated */ }
+246ada:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'core'
+
+    git-zoom-in: core
+  parents:
+  - 23fd5c
+  - d32dfb65816952cf65c6298e773a61ae842fde02
+  tree:
+    engine.rs: null
+    types.rs: null
+4f727e9883aa830a07607759cce4d8899ffcccca:
+  message: commit 10
+  tree:
+    engine.rs: fn engine() { /* v3 */ }
+17adbb8ef7e4b2b2a7abadaa5c8ab2be2d9f7606:
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'src/lib/core'
+
+    git-zoom-out: src/lib/core
+  parents:
+  - 2217d2
+  - 4f727e9883aa830a07607759cce4d8899ffcccca
+  tree:
+    src:
+      lib:
+        api.rs:
+          ? - commit
+          : d32dfb65816952cf65c6298e773a61ae842fde02
+          ? - path
+          : api.rs
+        core:
+          engine.rs:
+            ? - commit
+            : 4f727e9883aa830a07607759cce4d8899ffcccca
+            ? - path
+            : engine.rs
+        tests.rs:
+          ? - commit
+          : 040a71
+          ? - path
+          : tests.rs

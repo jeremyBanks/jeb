@@ -1,0 +1,80 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 3cbe233b7f2f7eef369d80a1377e200b509b74cf
+c36e23:
+  message: commit 1
+  tree:
+    original-location:
+      file.txt: content that travels
+'471739':
+  message: commit 4
+  parents: []
+  tree: {}
+'122756':
+  message: |
+    Zoom in from original-location
+
+    git-zoom-in: original-location
+  parents:
+  - '471739'
+  - c36e23
+  tree:
+    file.txt:
+      ? - commit
+      : c36e23
+      ? - path
+      : original-location/file.txt
+4b3150:
+  message: commit 2
+  parents:
+  - c36e23
+  tree:
+    second-location:
+      file.txt:
+        ? - commit
+        : '122756'
+        ? - path
+        : file.txt
+1d7043:
+  message: commit 3
+  tree:
+    third-location:
+      file.txt:
+        ? - commit
+        : '122756'
+        ? - path
+        : file.txt
+03f594:
+  message: commit 6
+  parents:
+  - '122756'
+  tree:
+    file.txt: modified content
+    new.txt: new file
+08295c:
+  message: |
+    Zoom out to third-location
+
+    git-zoom-out: third-location
+  parents:
+  - 1d7043
+  - 03f594
+  tree:
+    third-location:
+      file.txt:
+        ? - commit
+        : 03f594
+        ? - path
+        : file.txt
+      new.txt:
+        ? - commit
+        : 03f594
+        ? - path
+        : new.txt
+3cbe233b7f2f7eef369d80a1377e200b509b74cf:
+  message: commit 8
+  tree:
+    other.txt: unrelated
+    third-location:
+      file.txt: final content

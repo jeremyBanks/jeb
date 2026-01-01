@@ -1,0 +1,41 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    feature: 79ee737da3eb086315c6f270f42ab4f24c1e9649
+    main: b490b6e36fee921d2fe4cdeadeb0f82cc6d0ebd1
+a5e7ae8cf82ae6d4a1d8d7d407951cb0108637be:
+  message: commit 1
+  tree:
+    base.txt: base
+692b9a7f5c4962cf385e62fe7533f1d074deb56e:
+  message: commit 2
+  tree:
+    main-work.txt: main work 1
+8691dd92e3ea97609f1b9794e56b02ec2a8eeeee:
+  message: commit 3
+  parents:
+  - a5e7ae8cf82ae6d4a1d8d7d407951cb0108637be
+  tree:
+    feature-work.txt: feature work 1
+9d0c1feb4bb853e60a1c5e7b0a7ecd6a1c60cd7e:
+  message: Merge feature into main (first time)
+  parents:
+  - 692b9a7f5c4962cf385e62fe7533f1d074deb56e
+  - 8691dd92e3ea97609f1b9794e56b02ec2a8eeeee
+  tree:
+    feature-work.txt: feature work 1
+79ee737da3eb086315c6f270f42ab4f24c1e9649:
+  message: Merge main into feature
+  parents:
+  - 8691dd92e3ea97609f1b9794e56b02ec2a8eeeee
+  - 9d0c1feb4bb853e60a1c5e7b0a7ecd6a1c60cd7e
+  tree:
+    feature-work-2.txt: feature work 2
+    main-work.txt: main work 1
+b490b6e36fee921d2fe4cdeadeb0f82cc6d0ebd1:
+  message: Merge feature into main (second time)
+  parents:
+  - 9d0c1feb4bb853e60a1c5e7b0a7ecd6a1c60cd7e
+  - 79ee737da3eb086315c6f270f42ab4f24c1e9649
+  tree:
+    feature-work-2.txt: feature work 2

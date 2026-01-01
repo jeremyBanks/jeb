@@ -1,0 +1,28 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 6d65b810a20b2e638b7e8181995bdafda1f542e6
+efd4b5a31c5d41a034d62914c920bcfe851692e1:
+  message: commit 1
+  tree:
+    file.txt: base
+278ab3637b228fc54a161f5e4ec2aefe849f0c68:
+  author: Alice <alice@example.com>
+  message: commit 2
+  tree:
+    file.txt: alice change
+d5529d1581a4ad50bd1a07d7f719f249340252fc:
+  committer: Bob <bob@example.com>
+  message: commit 3
+  tree:
+    file.txt: bob committed
+c6b6c316e78730f13f6d2a1eef7e1b417eb56127:
+  author: Charlie <charlie@example.com>
+  committer: Dave <dave@example.com>
+  message: commit 4
+  tree:
+    file.txt: charlie authored dave committed
+6d65b810a20b2e638b7e8181995bdafda1f542e6:
+  message: commit 5
+  tree:
+    file.txt: inherited

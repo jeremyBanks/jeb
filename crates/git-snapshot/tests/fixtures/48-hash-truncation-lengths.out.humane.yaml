@@ -1,0 +1,36 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 8
+1:
+  message: commit at 2021-01-14T08:25:39Z
+  tree:
+    file.txt: commit 1
+2:
+  message: commit at 2021-01-14T08:29:55Z
+  tree:
+    file.txt: commit 2
+3:
+  message: commit at 2021-01-14T08:34:11Z
+  tree:
+    file.txt: commit 3
+4:
+  message: commit at 2021-01-14T08:38:27Z
+  tree:
+    file.txt: commit 4
+5:
+  message: commit at 2021-01-14T08:42:43Z
+  tree:
+    file.txt: commit 5
+6:
+  message: commit at 2021-01-14T08:46:59Z
+  tree:
+    file.txt: commit 6
+7:
+  message: commit at 2021-01-14T08:51:15Z
+  tree:
+    file.txt: commit 7
+8:
+  message: commit at 2021-01-14T08:55:31Z
+  tree:
+    file.txt: commit 8 (head)

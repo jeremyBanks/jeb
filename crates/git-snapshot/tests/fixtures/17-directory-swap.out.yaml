@@ -1,0 +1,55 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 52bdea7fa3e14de4375159024cb26be65a70b7c2
+6254d9:
+  message: commit 1
+  tree:
+    backend:
+      database.py: backend database
+      server.py: backend server
+    frontend:
+      app.js: frontend app
+      utils.js: frontend utils
+05438c:
+  message: commit 2
+  tree:
+    frontend:
+      database.py:
+        ? - commit
+        : 6254d9
+        ? - path
+        : backend/database.py
+      server.py:
+        ? - commit
+        : 6254d9
+        ? - path
+        : backend/server.py
+    temp-frontend:
+      app.js:
+        ? - commit
+        : 6254d9
+        ? - path
+        : frontend/app.js
+      utils.js:
+        ? - commit
+        : 6254d9
+        ? - path
+        : frontend/utils.js
+52bdea7fa3e14de4375159024cb26be65a70b7c2:
+  message: commit 3
+  tree:
+    backend:
+      app.js:
+        ? - commit
+        : 6254d9
+        ? - path
+        : frontend/app.js
+      utils.js:
+        ? - commit
+        : 6254d9
+        ? - path
+        : frontend/utils.js
+    temp-frontend:
+      app.js: null
+      utils.js: null
