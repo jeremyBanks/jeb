@@ -99,7 +99,7 @@ struct Dependency {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct ResolutionFields {
     package: Option<String>,
-    version: Option<Version>,
+    version: Option<String>,
     path: Option<PathBuf>,
     git: Option<String>,
     branch: Option<String>,
@@ -362,14 +362,20 @@ fn parse_dependency(
 
     // Parse version if present
     let version = if let Some(v_str) = version_str {
-        // Normalize version string by removing prefixes and completing shortened versions
-        let normalized = normalize_version_string(v_str);
+        // Allow "*" as unconstrained version
+        if v_str == "*" {
+            Some(v_str.to_string())
+        } else {
+            // Normalize version string by removing prefixes and completing shortened versions
+            let normalized = normalize_version_string(v_str);
 
-        match Version::parse(&normalized) {
-            Ok(v) => Some(v),
-            Err(_) => {
-                // Skip dependencies with invalid versions
-                return Ok(None);
+            // Validate that it's a parseable version
+            match Version::parse(&normalized) {
+                Ok(_) => Some(normalized),
+                Err(_) => {
+                    // Skip dependencies with invalid versions
+                    return Ok(None);
+                }
             }
         }
     } else {
@@ -642,10 +648,35 @@ impl EquivalenceClass {
     }
 
     fn add_vote(&mut self, member: PathBuf, dep: Dependency) {
-        // Update to max version if this dep has a higher version
+        // Update version selection with "*" special handling
         if let (Some(current), Some(new)) = (&self.resolution.version, &dep.resolution.version) {
-            if new > current {
-                self.resolution.version = Some(new.clone());
+            match (current.as_str(), new.as_str()) {
+                // If current is "*", any specific version replaces it
+                ("*", new_ver) if new_ver != "*" => {
+                    self.resolution.version = Some(new.clone());
+                }
+                // If new is "*" but current is specific, keep current (ignore "*")
+                (current_ver, "*") if current_ver != "*" => {
+                    // Keep current, don't update
+                }
+                // If both are "*", keep "*"
+                ("*", "*") => {
+                    // Keep current "*"
+                }
+                // If both are specific versions, take the higher one (normal behavior)
+                _ => {
+                    // Compare versions - only update if new is higher
+                    match (Version::parse(current), Version::parse(new)) {
+                        (Ok(curr_v), Ok(new_v)) => {
+                            if new_v > curr_v {
+                                self.resolution.version = Some(new.clone());
+                            }
+                        }
+                        _ => {
+                            // If either fails to parse, keep current
+                        }
+                    }
+                }
             }
         }
 
@@ -672,11 +703,21 @@ impl EquivalenceClass {
     }
 }
 
-fn versions_compatible_opt(v1: &Option<Version>, v2: &Option<Version>) -> bool {
+fn versions_compatible_opt(v1: &Option<String>, v2: &Option<String>) -> bool {
     match (v1, v2) {
-        (Some(a), Some(b)) => versions_compatible(a, b),
         (None, None) => true,
-        _ => false,
+        (None, Some(_)) | (Some(_), None) => false,
+        (Some(v1_str), Some(v2_str)) => {
+            // "*" is compatible with everything
+            if v1_str == "*" || v2_str == "*" {
+                return true;
+            }
+            // Parse and compare versions
+            match (Version::parse(v1_str), Version::parse(v2_str)) {
+                (Ok(v1), Ok(v2)) => versions_compatible(&v1, &v2),
+                _ => false,  // If either fails to parse, not compatible
+            }
+        }
     }
 }
 
@@ -698,10 +739,30 @@ fn find_winner(classes: &[EquivalenceClass]) -> Option<&EquivalenceClass> {
     candidates.sort_by(|a, b| {
         // First compare by version (descending)
         match (&a.resolution.version, &b.resolution.version) {
-            (Some(v1), Some(v2)) => {
-                let cmp = v2.cmp(v1); // Note: reversed for descending
-                if cmp != std::cmp::Ordering::Equal {
-                    return cmp;
+            (Some(v1_str), Some(v2_str)) => {
+                // "*" is lowest priority
+                let v1_is_star = v1_str == "*";
+                let v2_is_star = v2_str == "*";
+
+                if v1_is_star && !v2_is_star {
+                    return std::cmp::Ordering::Greater;  // v1 is lower
+                } else if !v1_is_star && v2_is_star {
+                    return std::cmp::Ordering::Less;  // v2 is lower
+                } else if v1_is_star && v2_is_star {
+                    // Both are "*", equal
+                } else {
+                    // Both are specific versions, parse and compare
+                    match (Version::parse(v1_str), Version::parse(v2_str)) {
+                        (Ok(v1), Ok(v2)) => {
+                            let cmp = v2.cmp(&v1); // Note: reversed for descending
+                            if cmp != std::cmp::Ordering::Equal {
+                                return cmp;
+                            }
+                        }
+                        _ => {
+                            // If parse fails, fall through to field comparison
+                        }
+                    }
                 }
             }
             (Some(_), None) => return std::cmp::Ordering::Less,
