@@ -1,9 +1,9 @@
 pub fn decode_hex_nibbles(s: impl AsRef<str>) -> MaskedBytes {
     let mut hex_bytes = s.as_ref().as_bytes();
-    if hex_bytes.get(0) == Some(&b'0') && matches!(hex_bytes.get(1), Some(b'x' | b'X')) {
+    if hex_bytes.first() == Some(&b'0') && matches!(hex_bytes.get(1), Some(b'x' | b'X')) {
         hex_bytes = &hex_bytes[2..];
     }
-    let capacity = (hex_bytes.len() + 1) / 2;
+    let capacity = hex_bytes.len().div_ceil(2);
     let mut bytes = Vec::<u8>::with_capacity(capacity);
     let mut mask = Vec::<u8>::with_capacity(capacity);
     let mut buffer_byte: Option<u8> = None;
@@ -48,6 +48,7 @@ pub struct MaskedBytes {
 }
 
 impl MaskedBytes {
+    #[must_use] 
     pub fn new(bytes: Vec<u8>, mask: Vec<u8>) -> Self {
         assert_eq!(bytes.len(), mask.len());
         Self { bytes, mask }
@@ -72,7 +73,7 @@ impl IntoIterator for MaskedBytes {
     type Item = (u8, u8);
 
     fn into_iter(self) -> Self::IntoIter {
-        self.bytes.into_iter().zip(self.mask.into_iter())
+        self.bytes.into_iter().zip(self.mask)
     }
 }
 

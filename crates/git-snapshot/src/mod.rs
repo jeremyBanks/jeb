@@ -90,14 +90,14 @@ impl ObjectId {
         let len = s.len();
 
         // Validate length: must be even, >= 4, <= 40
-        if len < 4 || len > 40 {
+        if !(4..=40).contains(&len) {
             return Err(ParseError::InvalidObjectId(format!(
                 "truncated hash must be 4-40 characters, got {}",
                 len
             )));
         }
 
-        if len % 2 != 0 {
+        if !len.is_multiple_of(2) {
             return Err(ParseError::InvalidObjectId(format!(
                 "truncated hash must have even length, got {}",
                 len
@@ -128,7 +128,7 @@ impl ObjectId {
     /// Used during serialization for non-head commits
     pub fn to_hex_truncated(&self, len: usize) -> String {
         // Validate length: must be even, >= 4, <= 40
-        if len < 4 || len > 40 || len % 2 != 0 {
+        if !(4..=40).contains(&len) || !len.is_multiple_of(2) {
             // Fall back to full length if invalid
             return self.to_hex();
         }
@@ -769,7 +769,7 @@ impl Tree {
             format!("{}/", prefix)
         };
 
-        for (path, _content) in &self.entries {
+        for path in self.entries.keys() {
             // Skip entries that don't start with our prefix
             if !prefix.is_empty() && !path.starts_with(&prefix_with_slash) {
                 continue;
@@ -1133,7 +1133,7 @@ fn parse_head_and_refs_with_defaults(
         // Case 2: refs defined, HEAD not defined
         (None, false) => {
             // Search order: trunk -> main -> master -> first refs/heads/* -> any ref
-            let search_order = vec!["refs/heads/trunk", "refs/heads/main", "refs/heads/master"];
+            let search_order = ["refs/heads/trunk", "refs/heads/main", "refs/heads/master"];
 
             let head_target = search_order
                 .iter()
@@ -1311,7 +1311,7 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
                     actual: format!("{:?}", staged_value),
                 })?;
 
-        let base_tree = head_tree.clone().unwrap_or_else(Tree::new);
+        let base_tree = head_tree.clone().unwrap_or_default();
         let mut staged_tree = base_tree;
 
         if !staged_mapping.is_empty() {
@@ -1340,10 +1340,9 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
                 })?;
 
         let base_tree = repo
-            .staged()
-            .map(|t| t.clone())
+            .staged().cloned()
             .or(head_tree.clone())
-            .unwrap_or_else(Tree::new);
+            .unwrap_or_default();
         let mut working_tree = base_tree;
 
         if !working_mapping.is_empty() {
@@ -1470,7 +1469,7 @@ fn parse_commit_ref_key(key: &serde_yaml::Value) -> Result<CommitRef, ParseError
         if len == 40 {
             let oid = ObjectId::from_hex(s)?;
             Ok(CommitRef::Hex(oid))
-        } else if len >= 4 && len <= 40 {
+        } else if (4..=40).contains(&len) {
             // Truncated hash - will be resolved later
             Ok(CommitRef::Prefix(s.to_string()))
         } else {
@@ -1510,7 +1509,7 @@ fn parse_commit_ref(value: &serde_yaml::Value) -> Result<CommitRef, ParseError> 
         if len == 40 {
             let oid = ObjectId::from_hex(s)?;
             Ok(CommitRef::Hex(oid))
-        } else if len >= 4 && len <= 40 {
+        } else if (4..=40).contains(&len) {
             // Truncated hash reference
             Ok(CommitRef::Prefix(s.to_string()))
         } else {
@@ -1605,20 +1604,17 @@ fn normalize_yaml_key(key: &serde_yaml::Value) -> Result<String, ParseError> {
 /// These are sequences containing a single string element
 fn is_special_key(key: &serde_yaml::Value, name: &str) -> bool {
     // New format: string key with // prefix (e.g., "//commit", "//path")
-    if let Some(s) = key.as_str() {
-        if s == format!("//{}", name) {
+    if let Some(s) = key.as_str()
+        && s == format!("//{}", name) {
             return true;
         }
-    }
 
     // Legacy format: sequence key (e.g., [commit], [path])
-    if let Some(seq) = key.as_sequence() {
-        if seq.len() == 1 {
-            if let Some(s) = seq[0].as_str() {
+    if let Some(seq) = key.as_sequence()
+        && seq.len() == 1
+            && let Some(s) = seq[0].as_str() {
                 return s == name;
             }
-        }
-    }
 
     false
 }
@@ -2075,11 +2071,10 @@ fn get_commit_from_state(
     processing_state: &HashMap<CommitRef, CommitProcessingState>,
 ) -> Result<&Commit, ParseError> {
     for state in processing_state.values() {
-        if let CommitProcessingState::Complete(commit) = state {
-            if commit.id == commit_id {
+        if let CommitProcessingState::Complete(commit) = state
+            && commit.id == commit_id {
                 return Ok(commit);
             }
-        }
     }
     Err(ParseError::CommitNotFound(format!(
         "commit {} not found in processing state",
@@ -2236,9 +2231,9 @@ fn apply_tree_delta(
 
             let mut found_any = false;
             for path in source_commit.tree.paths() {
-                if path == &source_path || path.starts_with(&source_prefix) {
+                if path == source_path || path.starts_with(&source_prefix) {
                     found_any = true;
-                    let relative_path = if path == &source_path {
+                    let relative_path = if path == source_path {
                         // This shouldn't happen for a tree, but handle it
                         String::new()
                     } else {
@@ -2711,7 +2706,7 @@ impl SerializationContext {
                 let blob_id = compute_blob_hash(content);
                 self.blob_locations
                     .entry(blob_id)
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push((pseudo_commit_id, path.to_string()));
             }
         }
@@ -2778,7 +2773,7 @@ fn compute_path_similarity_score(target: &str, candidate: &str) -> (i32, i32, i3
         (candidate_parts.len() - suffix_match) as i32 - (target_parts.len() - suffix_match) as i32
     };
 
-    (suffix_match as i32, -boundary_diff, extra_prefix.abs() * -1)
+    (suffix_match as i32, -boundary_diff, -extra_prefix.abs())
 }
 
 /// Find best reference target from candidates based on path similarity
@@ -2927,14 +2922,13 @@ pub fn serialize(
             // staged is different from default, serialize it
             let staged_value = compute_tree_delta(staged_tree, default_staged, &ctx, &commit_refs);
 
-            if let serde_yaml::Value::Mapping(m) = &staged_value {
-                if !m.is_empty() {
+            if let serde_yaml::Value::Mapping(m) = &staged_value
+                && !m.is_empty() {
                     root.insert(
                         serde_yaml::Value::String("staged".to_string()),
                         staged_value,
                     );
                 }
-            }
 
             // Update deduplication context to track blobs in staged tree
             ctx.track_tree_for_dedup(staged_tree);
@@ -2952,14 +2946,13 @@ pub fn serialize(
             let working_value =
                 compute_tree_delta(working_tree, default_working, &ctx, &commit_refs);
 
-            if let serde_yaml::Value::Mapping(m) = &working_value {
-                if !m.is_empty() {
+            if let serde_yaml::Value::Mapping(m) = &working_value
+                && !m.is_empty() {
                     root.insert(
                         serde_yaml::Value::String("working".to_string()),
                         working_value,
                     );
                 }
-            }
         }
     }
 
@@ -3000,14 +2993,13 @@ fn sort_root_mapping(
 
     // Then, insert commits in document order (topological order)
     for commit_id in ordered_commits {
-        if let Some(commit_key) = commit_refs.get(commit_id) {
-            if let Some(commit_val) = root.get(commit_key) {
+        if let Some(commit_key) = commit_refs.get(commit_id)
+            && let Some(commit_val) = root.get(commit_key) {
                 sorted.insert(
                     commit_key.clone(),
                     sort_mapping_recursive(commit_val.clone()),
                 );
             }
-        }
     }
 
     serde_yaml::Value::Mapping(sorted)
@@ -3481,12 +3473,11 @@ fn topological_sort_with_tiebreak(repo: &Repository) -> Vec<ObjectId> {
 
     // Append timestamps to tiebreak keys (only for reachable commits)
     for commit_id in &reachable_commits {
-        if let Some(commit) = repo.get_commit(commit_id) {
-            if let Some(key) = tiebreak_keys.get_mut(commit_id) {
+        if let Some(commit) = repo.get_commit(commit_id)
+            && let Some(key) = tiebreak_keys.get_mut(commit_id) {
                 key.push(TiebreakComponent::Timestamp(commit.committer_date));
                 key.push(TiebreakComponent::Timestamp(commit.author_date));
             }
-        }
     }
 
     // Topologically sort with tiebreaking

@@ -24,7 +24,23 @@ use {
     },
 };
 
-pub fn main() -> Result<()> {
+pub fn main() -> i32 {
+    eprintln!("Running: workspace dependency normalization");
+
+    match run_normalization() {
+        Ok(()) => {
+            eprintln!(); // Blank line at end
+            0
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            eprintln!(); // Blank line at end
+            1
+        }
+    }
+}
+
+fn run_normalization() -> Result<()> {
     let workspace_root = find_workspace_root(".")?;
     let mut stats = NormalizationStats::default();
 
@@ -208,8 +224,8 @@ fn normalize_path_components(path: &Path) -> PathBuf {
         match component {
             std::path::Component::ParentDir => {
                 // Pop the last component (if it's not a root)
-                if !components.is_empty() {
-                    if let Some(last) = components.last() {
+                if !components.is_empty()
+                    && let Some(last) = components.last() {
                         match last {
                             std::path::Component::RootDir | std::path::Component::Prefix(_) => {
                                 // Can't go up from root
@@ -219,7 +235,6 @@ fn normalize_path_components(path: &Path) -> PathBuf {
                             }
                         }
                     }
-                }
             }
             std::path::Component::CurDir => {
                 // Skip . components
@@ -298,16 +313,15 @@ fn parse_dependency(
         }
         Item::Value(Value::InlineTable(t)) => {
             // Check if this uses workspace = true
-            if let Some(workspace_val) = t.get("workspace") {
-                if workspace_val.as_bool() == Some(true) {
+            if let Some(workspace_val) = t.get("workspace")
+                && workspace_val.as_bool() == Some(true) {
                     // Look up resolution fields from workspace.dependencies
-                    if let Some(ws_doc) = workspace_doc {
-                        if let Some(ws_deps) = ws_doc
+                    if let Some(ws_doc) = workspace_doc
+                        && let Some(ws_deps) = ws_doc
                             .get("workspace")
                             .and_then(|w| w.get("dependencies"))
                             .and_then(|d| d.as_table())
-                        {
-                            if let Some(ws_dep) = ws_deps.get(key) {
+                            && let Some(ws_dep) = ws_deps.get(key) {
                                 // Parse the workspace dependency to get resolution fields
                                 // Use workspace_root as base since workspace deps are relative to
                                 // workspace root
@@ -348,13 +362,10 @@ fn parse_dependency(
                                     }));
                                 }
                             }
-                        }
-                    }
 
                     // If we couldn't find workspace dependency, skip this
                     return Ok(None);
                 }
-            }
 
             // Regular inline table form
             version_str = t.get("version").and_then(|v| v.as_str());
@@ -854,8 +865,8 @@ fn capture_old_workspace_deps(
 ) -> HashMap<String, ResolutionFields> {
     let mut old_deps = HashMap::new();
 
-    if let Some(workspace) = doc.get("workspace") {
-        if let Some(deps) = workspace.get("dependencies").and_then(|d| d.as_table()) {
+    if let Some(workspace) = doc.get("workspace")
+        && let Some(deps) = workspace.get("dependencies").and_then(|d| d.as_table()) {
             for (key, value) in deps.iter() {
                 // Parse the old workspace dependency
                 // Use workspace root as base path since paths in workspace.dependencies are
@@ -867,7 +878,6 @@ fn capture_old_workspace_deps(
                 }
             }
         }
-    }
 
     old_deps
 }
@@ -947,7 +957,7 @@ fn build_dependency_value(
     if !has_extra_fields && !needs_default_features_false && resolution.version.is_some() {
         // Simple string form
         let version_str = resolution.version.as_ref().unwrap().to_string();
-        return Ok(value(version_str).into());
+        return Ok(value(version_str));
     }
 
     // Inline table form
@@ -1029,7 +1039,7 @@ fn parse_resolution_from_value(value: &Item) -> Result<ResolutionFields> {
         resolution.path = table
             .get("path")
             .and_then(|v| v.as_str())
-            .map(|s| PathBuf::from(s));
+            .map(PathBuf::from);
         resolution.git = table.get("git").and_then(|v| v.as_str()).map(String::from);
         resolution.registry = table
             .get("registry")
@@ -1053,7 +1063,7 @@ fn parse_resolution_from_value(value: &Item) -> Result<ResolutionFields> {
         resolution.path = table
             .get("path")
             .and_then(|v| v.as_str())
-            .map(|s| PathBuf::from(s));
+            .map(PathBuf::from);
         resolution.git = table.get("git").and_then(|v| v.as_str()).map(String::from);
         resolution.registry = table
             .get("registry")
@@ -1344,7 +1354,7 @@ fn inline_dependency(
     // Use simple string form only if version is the only field overall
     if !has_extra_fields && !has_config_fields && dep.resolution.version.is_some() {
         let version_str = dep.resolution.version.as_ref().unwrap().to_string();
-        deps.insert(key, value(version_str).into());
+        deps.insert(key, value(version_str));
         return Ok(());
     }
 
@@ -1425,11 +1435,7 @@ fn has_config_fields(value: &Item) -> bool {
 fn extract_config_fields(value: &Item) -> ConfigFields {
     let table = if let Some(t) = value.as_inline_table() {
         Some(t as &dyn toml_edit::TableLike)
-    } else if let Some(t) = value.as_table() {
-        Some(t as &dyn toml_edit::TableLike)
-    } else {
-        None
-    };
+    } else { value.as_table().map(|t| t as &dyn toml_edit::TableLike) };
 
     let mut config = ConfigFields {
         optional: None,

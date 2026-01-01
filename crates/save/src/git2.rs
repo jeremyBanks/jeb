@@ -264,7 +264,7 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
         body
     }
 
-    /// Parse a commit message in our format to extract GraphStats
+    /// Parse a commit message in our format to extract `GraphStats`
     /// Returns Some(stats) if the message matches our format and tree hash validates
     fn parse_commit_message(commit: &Commit, repo: &Repository) -> Option<GraphStats> {
         let msg = commit.summary()?;
@@ -364,8 +364,8 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
         let mut graph = DiGraphMap::<Oid, u32>::new();
 
         let mut heads: Vec<Commit> = vec![commit.clone()];
-        while !heads.is_empty() {
-            let head = heads.pop().unwrap();
+        while let Some(head) = heads.pop() {
+            
             let oid = head.id();
 
             if graph.edges_directed(oid, Outgoing).count() > 0 {
@@ -544,10 +544,7 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
             .unwrap_or({
                 static DEFAULT: &[u8] = &[0xFF; 20];
                 &DEFAULT[..target_prefix.len().min(DEFAULT.len())]
-            })
-            .iter()
-            .copied()
-            .collect::<Vec<_>>();
+            }).to_vec();
         trace!("Brute forcing a timestamp for {target_prefix:2x?} with mask {target_mask:2x?}");
 
         let thread_count = num_cpus::get() as u64;
@@ -753,7 +750,7 @@ pub trait OidExt: Borrow<Oid> + Debug {
             .chain_update(" ")
             .chain_update(body.len().to_string())
             .chain_update([0x00])
-            .chain_update(&body)
+            .chain_update(body)
             .finalize();
         let oid: [u8; 20] = oid.into();
         let oid = Oid::from_array(oid);
@@ -801,7 +798,7 @@ impl<'repo> RepositoryView<'repo> for Repository {
     type Commit = Commit<'repo>;
 
     fn is_shallow(&self) -> bool {
-        Repository::is_shallow(self)
+        Self::is_shallow(self)
     }
 
     fn find_commit(&'repo self, id: Oid) -> Option<Self::Commit> {
