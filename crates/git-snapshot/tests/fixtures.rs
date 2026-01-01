@@ -23,6 +23,42 @@ use git_snapshot::{
     serialize,
 };
 
+/// Defines a serialization output variant
+struct OptionVariant {
+    name: &'static str,
+    suffix: &'static str,
+    id_style: CommitIdStyle,
+    options: SerializationOptions,
+}
+
+/// Get the 3 output variants we want to test
+fn get_option_variants() -> Vec<OptionVariant> {
+    vec![
+        OptionVariant {
+            name: "default",
+            suffix: "out.yaml",
+            id_style: CommitIdStyle::Hex,
+            options: SerializationOptions::default(),
+        },
+        OptionVariant {
+            name: "complete",
+            suffix: "out.complete.yaml",
+            id_style: CommitIdStyle::Hex,
+            options: SerializationOptions {
+                use_deduplication: false,
+                force_full_hashes: true,
+                ..SerializationOptions::default()
+            },
+        },
+        OptionVariant {
+            name: "humane",
+            suffix: "out.humane.yaml",
+            id_style: CommitIdStyle::Integer,
+            options: SerializationOptions::default(),
+        },
+    ]
+}
+
 /// Test a single fixture file
 ///
 /// - `input_path`: Path to the input .yaml file (e.g.,
@@ -30,7 +66,8 @@ use git_snapshot::{
 /// - `expected_path`: Path to expected output .yaml file (e.g.,
 ///   "tests/fixtures/basic.out.yaml")
 /// - `id_style`: Whether to use hex or integer commit IDs in output
-fn test_fixture(input_path: &Path, expected_path: &Path, id_style: CommitIdStyle) {
+/// - `options`: Serialization options to use
+fn test_fixture(input_path: &Path, expected_path: &Path, id_style: CommitIdStyle, options: SerializationOptions) {
     eprintln!("Testing fixture: {}", input_path.display());
 
     // Read input
@@ -41,8 +78,8 @@ fn test_fixture(input_path: &Path, expected_path: &Path, id_style: CommitIdStyle
     let repo = parse(&input_yaml)
         .unwrap_or_else(|e| panic!("Failed to parse input {:?}: {}", input_path, e));
 
-    // Serialize back with default options
-    let output_yaml = serialize(&repo, id_style, SerializationOptions::default());
+    // Serialize back with specified options
+    let output_yaml = serialize(&repo, id_style, options);
 
     // Check if expected output matches
     let expected_exists = expected_path.exists();
@@ -71,7 +108,7 @@ fn test_fixture(input_path: &Path, expected_path: &Path, id_style: CommitIdStyle
     let repo2 = parse(&output_yaml)
         .unwrap_or_else(|e| panic!("Failed to parse serialized output {:?}: {}", input_path, e));
 
-    let output_yaml2 = serialize(&repo2, id_style, SerializationOptions::default());
+    let output_yaml2 = serialize(&repo2, id_style, options);
 
     if output_yaml != output_yaml2 {
         eprintln!(
@@ -96,14 +133,16 @@ fn test_fixture(input_path: &Path, expected_path: &Path, id_style: CommitIdStyle
     }
 }
 
-/// Find all fixture input files in the fixtures directory
-fn find_fixtures() -> Vec<(PathBuf, PathBuf, CommitIdStyle)> {
+/// Find all fixture input files and generate 3 variants per input
+fn find_fixtures() -> Vec<(PathBuf, PathBuf, CommitIdStyle, SerializationOptions)> {
     let fixtures_dir = Path::new("tests/fixtures");
     let mut fixtures = Vec::new();
 
     if !fixtures_dir.exists() {
         return fixtures;
     }
+
+    let variants = get_option_variants();
 
     for entry in fs::read_dir(fixtures_dir).expect("Failed to read fixtures directory") {
         let entry = entry.expect("Failed to read directory entry");
@@ -112,21 +151,16 @@ fn find_fixtures() -> Vec<(PathBuf, PathBuf, CommitIdStyle)> {
         // Look for files ending with .in.yaml
         if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
             if file_name.ends_with(".in.yaml") {
-                // Determine the ID style based on filename
-                let id_style = if file_name.contains(".hex.") {
-                    CommitIdStyle::Hex
-                } else if file_name.contains(".int.") {
-                    CommitIdStyle::Integer
-                } else {
-                    // Default to hex
-                    CommitIdStyle::Hex
-                };
+                // Extract base name (remove .in.yaml)
+                let base_name = file_name.replace(".in.yaml", "");
 
-                // Construct expected output path
-                let out_file_name = file_name.replace(".in.yaml", ".out.yaml");
-                let expected_path = path.with_file_name(out_file_name);
+                // Generate 3 tuples, one per variant
+                for variant in &variants {
+                    let out_file_name = format!("{}.{}", base_name, variant.suffix);
+                    let expected_path = path.with_file_name(out_file_name);
 
-                fixtures.push((path, expected_path, id_style));
+                    fixtures.push((path.clone(), expected_path, variant.id_style, variant.options));
+                }
             }
         }
     }
@@ -147,9 +181,9 @@ fn test_all_fixtures() {
 
     let mut failed = Vec::new();
 
-    for (input_path, expected_path, id_style) in fixtures {
+    for (input_path, expected_path, id_style, options) in fixtures {
         let result = std::panic::catch_unwind(|| {
-            test_fixture(&input_path, &expected_path, id_style);
+            test_fixture(&input_path, &expected_path, id_style, options);
         });
 
         if result.is_err() {
