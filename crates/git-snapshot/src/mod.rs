@@ -2440,6 +2440,9 @@ struct SerializationContext {
 
     /// Repository reference
     repo: *const Repository,
+
+    /// Serialization options
+    options: SerializationOptions,
 }
 
 impl SerializationContext {
@@ -2447,6 +2450,7 @@ impl SerializationContext {
         repo: &Repository,
         ordered_commits: Vec<ObjectId>,
         head_commits: std::collections::HashSet<ObjectId>,
+        options: SerializationOptions,
     ) -> Self {
         let truncated_len = compute_truncated_hash_length(&ordered_commits);
 
@@ -2487,6 +2491,7 @@ impl SerializationContext {
             head_commits,
             current_commit: ObjectId([0u8; 20]),
             repo: repo as *const Repository,
+            options,
         }
     }
 
@@ -2584,7 +2589,7 @@ fn find_best_reference(target_path: &str, candidates: &[(ObjectId, String)]) -> 
 }
 
 /// Serialize a Repository to YAML format
-pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
+pub fn serialize(repo: &Repository, id_style: CommitIdStyle, options: SerializationOptions) -> String {
     let mut root = serde_yaml::Mapping::new();
 
     // Sort commits in topological order with tiebreaking
@@ -2603,18 +2608,33 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle) -> String {
     }
 
     // Initialize serialization context for deduplication
-    let mut ctx = SerializationContext::new(repo, ordered_commits.clone(), head_commits.clone());
+    let mut ctx = SerializationContext::new(repo, ordered_commits.clone(), head_commits.clone(), options);
 
     // Build mapping from ObjectId to commit reference (hex or integer)
     let mut commit_refs: HashMap<ObjectId, serde_yaml::Value> = HashMap::new();
     for (idx, commit_id) in ordered_commits.iter().enumerate() {
-        let ref_value = match id_style {
+        // Determine effective ID style based on options
+        let effective_id_style = if options.force_integer_ids {
+            CommitIdStyle::Integer
+        } else {
+            id_style
+        };
+
+        let ref_value = match effective_id_style {
             CommitIdStyle::Hex => {
-                // Use full hash for head commits, truncated for others
-                let hash_str = if ctx.head_commits.contains(commit_id) {
+                // Determine hash length based on options
+                let hash_str = if options.force_full_hashes {
+                    // Always use full 40-char hash
                     commit_id.to_hex()
-                } else {
+                } else if ctx.head_commits.contains(commit_id) {
+                    // Use full hash for head commits
+                    commit_id.to_hex()
+                } else if options.use_short_hashes {
+                    // Use truncated hash for non-head commits
                     commit_id.to_hex_truncated(ctx.truncated_len)
+                } else {
+                    // Use full hash for all commits
+                    commit_id.to_hex()
                 };
                 serde_yaml::Value::String(hash_str)
             }
