@@ -1,5 +1,5 @@
 [package]
-name = "jeb-fmt"
+name = "_autofix"
 publish = false
 description = ""
 keywords = []
