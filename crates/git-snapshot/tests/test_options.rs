@@ -8,7 +8,7 @@ use git_snapshot::{
 #[test]
 fn test_serialization_options() {
     // Load a simple fixture
-    let input_yaml = std::fs::read_to_string("tests/fixtures/02-linear-history.int.in.yaml")
+    let input_yaml = std::fs::read_to_string("tests/fixtures/02-linear-history.in.yaml")
         .expect("fixture should exist");
 
     let repo = parse(&input_yaml).expect("should parse");

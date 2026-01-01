@@ -44,3 +44,10 @@ are named with underscores (instead of hyphens) and have a leading underscore
 prefix, to mark them as internal and prevent any potential clashes with real
 crate names. If we need to run these, we typically do so with
 `cargo run --bin NAME --`.
+
+---
+
+When you're using the `Bash` tool to run a shell command directly, avoid using
+bash `for` loops or similar constructs that are incompatible with Claude Code's
+command allow-listing logic: these require manual re-approval every time you use
+them, which is very disruptive to our intended workflows.
