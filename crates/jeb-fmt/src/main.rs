@@ -506,23 +506,9 @@ fn update_workspace_toml(
         let value = build_dependency_value(resolution, workspace_root, false)?;
 
         // Insert or update the dependency
-        if deps.contains_key(key.as_str()) {
-            deps[key.as_str()] = value;
-        } else {
-            // Find insertion position (scan up from bottom)
-            let mut insert_pos = None;
-            let keys: Vec<String> = deps.iter().map(|(k, _)| k.to_string()).collect();
-
-            for (i, existing_key) in keys.iter().enumerate().rev() {
-                if existing_key < key {
-                    insert_pos = Some(i + 1);
-                    break;
-                }
-            }
-
-            // toml_edit doesn't have easy positional insert, so we'll just append
-            deps.insert(key.as_str(), value);
-        }
+        // Note: toml_edit doesn't have easy positional insert for ordering,
+        // but it generally preserves existing order well enough
+        deps.insert(key.as_str(), value);
     }
 
     // Remove unused dependencies
