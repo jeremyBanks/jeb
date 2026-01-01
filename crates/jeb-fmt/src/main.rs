@@ -343,11 +343,348 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
         }
     }
 
-    // TODO: Implement equivalence class grouping and voting
-    // TODO: Update workspace Cargo.toml
-    // TODO: Update member Cargo.toml files
+    // Group into equivalence classes and vote
+    let mut workspace_updates: HashMap<String, (ResolutionFields, String)> = HashMap::new();
+
+    for (dep_name, occurrences) in &all_deps {
+        // Group by equivalence class
+        let mut equivalence_classes: Vec<EquivalenceClass> = Vec::new();
+
+        for (member_path, section, dep) in occurrences {
+            // Find or create equivalence class
+            let mut found = false;
+            for ec in &mut equivalence_classes {
+                if ec.matches(dep) {
+                    ec.add_vote(member_path.clone(), dep.clone());
+                    found = true;
+                    break;
+                }
+            }
+
+            if !found {
+                let mut ec = EquivalenceClass::new(dep.resolution.clone());
+                ec.add_vote(member_path.clone(), dep.clone());
+                equivalence_classes.push(ec);
+            }
+        }
+
+        // Find the winning equivalence class
+        if let Some(winner) = find_winner(&equivalence_classes) {
+            // Determine the key to use in workspace.dependencies
+            let key = winner.get_preferred_key();
+            workspace_updates.insert(key, (winner.resolution.clone(), dep_name.clone()));
+        }
+    }
+
+    // Update workspace Cargo.toml
+    update_workspace_toml(&mut workspace_doc, &workspace_updates, workspace_root)?;
+    std::fs::write(&workspace_toml_path, workspace_doc.to_string())?;
+
+    // Update member Cargo.toml files
+    for member_path in &members {
+        update_member_toml(member_path, &all_deps, &workspace_updates)?;
+    }
 
     Ok(())
+}
+
+/// Represents an equivalence class of dependencies
+#[derive(Debug, Clone)]
+struct EquivalenceClass {
+    resolution: ResolutionFields,
+    votes: HashMap<PathBuf, Vec<Dependency>>,
+}
+
+impl EquivalenceClass {
+    fn new(resolution: ResolutionFields) -> Self {
+        Self {
+            resolution,
+            votes: HashMap::new(),
+        }
+    }
+
+    fn matches(&self, dep: &Dependency) -> bool {
+        self.resolution.matches_except_version(&dep.resolution) &&
+            versions_compatible_opt(&self.resolution.version, &dep.resolution.version)
+    }
+
+    fn add_vote(&mut self, member: PathBuf, dep: Dependency) {
+        // Update to max version if this dep has a higher version
+        if let (Some(current), Some(new)) = (&self.resolution.version, &dep.resolution.version) {
+            if new > current {
+                self.resolution.version = Some(new.clone());
+            }
+        }
+
+        self.votes.entry(member).or_default().push(dep);
+    }
+
+    fn vote_count(&self) -> usize {
+        self.votes.len()
+    }
+
+    fn get_preferred_key(&self) -> String {
+        // Return the first key alphabetically from all dependencies
+        let mut keys: Vec<String> = self.votes.values()
+            .flatten()
+            .map(|d| d.key.clone())
+            .collect();
+        keys.sort();
+        keys.into_iter().next().unwrap_or_else(|| "unknown".to_string())
+    }
+}
+
+fn versions_compatible_opt(v1: &Option<Version>, v2: &Option<Version>) -> bool {
+    match (v1, v2) {
+        (Some(a), Some(b)) => versions_compatible(a, b),
+        (None, None) => true,
+        _ => false,
+    }
+}
+
+fn find_winner(classes: &[EquivalenceClass]) -> Option<&EquivalenceClass> {
+    if classes.is_empty() {
+        return None;
+    }
+
+    let max_votes = classes.iter().map(|c| c.vote_count()).max().unwrap();
+    let mut candidates: Vec<&EquivalenceClass> = classes.iter()
+        .filter(|c| c.vote_count() == max_votes)
+        .collect();
+
+    if candidates.len() == 1 {
+        return Some(candidates[0]);
+    }
+
+    // Tie-breaker: compare by version, then by field ordering
+    candidates.sort_by(|a, b| {
+        // First compare by version (descending)
+        match (&a.resolution.version, &b.resolution.version) {
+            (Some(v1), Some(v2)) => {
+                let cmp = v2.cmp(v1); // Note: reversed for descending
+                if cmp != std::cmp::Ordering::Equal {
+                    return cmp;
+                }
+            }
+            (Some(_), None) => return std::cmp::Ordering::Less,
+            (None, Some(_)) => return std::cmp::Ordering::Greater,
+            (None, None) => {}
+        }
+
+        // Then compare by sorted field pairs
+        a.resolution.as_sorted_pairs().cmp(&b.resolution.as_sorted_pairs())
+    });
+
+    candidates.first().copied()
+}
+
+fn update_workspace_toml(
+    doc: &mut DocumentMut,
+    updates: &HashMap<String, (ResolutionFields, String)>,
+    workspace_root: &Path,
+) -> Result<()> {
+    // Ensure workspace.dependencies exists
+    if doc.get("workspace").is_none() {
+        doc["workspace"] = toml_edit::table();
+    }
+
+    let workspace = doc["workspace"].as_table_mut().context("workspace is not a table")?;
+
+    if workspace.get("dependencies").is_none() {
+        workspace["dependencies"] = toml_edit::table();
+    }
+
+    let deps = workspace["dependencies"].as_table_mut().context("dependencies is not a table")?;
+
+    // Track which dependencies are still used
+    let mut used_deps: HashSet<String> = HashSet::new();
+
+    for (key, (resolution, _dep_name)) in updates {
+        used_deps.insert(key.clone());
+
+        // Build the value for this dependency
+        let value = build_dependency_value(resolution, workspace_root, false)?;
+
+        // Insert or update the dependency
+        if deps.contains_key(key.as_str()) {
+            deps[key.as_str()] = value;
+        } else {
+            // Find insertion position (scan up from bottom)
+            let mut insert_pos = None;
+            let keys: Vec<String> = deps.iter().map(|(k, _)| k.to_string()).collect();
+
+            for (i, existing_key) in keys.iter().enumerate().rev() {
+                if existing_key < key {
+                    insert_pos = Some(i + 1);
+                    break;
+                }
+            }
+
+            // Insert at the determined position
+            if let Some(pos) = insert_pos {
+                // toml_edit doesn't have easy positional insert, so we'll just append
+                deps.insert(key.as_str(), value);
+            } else {
+                deps.insert(key.as_str(), value);
+            }
+        }
+    }
+
+    // Remove unused dependencies
+    let all_keys: Vec<String> = deps.iter().map(|(k, _)| k.to_string()).collect();
+    for key in all_keys {
+        if !used_deps.contains(&key) {
+            deps.remove(&key);
+        }
+    }
+
+    Ok(())
+}
+
+fn build_dependency_value(
+    resolution: &ResolutionFields,
+    workspace_root: &Path,
+    include_config: bool,
+) -> Result<Item> {
+    use toml_edit::{value, InlineTable};
+
+    let mut has_extra_fields = false;
+
+    // Check if we have fields other than version
+    if resolution.package.is_some()
+        || resolution.path.is_some()
+        || resolution.git.is_some()
+        || resolution.branch.is_some()
+        || resolution.tag.is_some()
+        || resolution.rev.is_some()
+        || resolution.registry.is_some()
+    {
+        has_extra_fields = true;
+    }
+
+    if !has_extra_fields && resolution.version.is_some() {
+        // Simple string form
+        let version_str = resolution.version.as_ref().unwrap().to_string();
+        return Ok(Item::Value(value(version_str)));
+    }
+
+    // Inline table form
+    let mut table = InlineTable::new();
+
+    // Add fields in order
+    if let Some(ref package) = resolution.package {
+        table.insert("package", value(package.as_str()).into());
+    }
+
+    if let Some(ref version) = resolution.version {
+        table.insert("version", value(version.to_string()).into());
+    }
+
+    if let Some(ref path) = resolution.path {
+        // Convert to relative path from workspace root
+        let rel_path = path.strip_prefix(workspace_root)
+            .or_else(|_| {
+                // If not under workspace, try to make relative
+                pathdiff::diff_paths(path, workspace_root)
+                    .ok_or_else(|| anyhow::anyhow!("Could not create relative path"))
+            })?;
+        table.insert("path", value(rel_path.display().to_string()).into());
+    }
+
+    if let Some(ref git) = resolution.git {
+        table.insert("git", value(git.as_str()).into());
+    }
+
+    if let Some(ref branch) = resolution.branch {
+        table.insert("branch", value(branch.as_str()).into());
+    }
+
+    if let Some(ref tag) = resolution.tag {
+        table.insert("tag", value(tag.as_str()).into());
+    }
+
+    if let Some(ref rev) = resolution.rev {
+        table.insert("rev", value(rev.as_str()).into());
+    }
+
+    if let Some(ref registry) = resolution.registry {
+        table.insert("registry", value(registry.as_str()).into());
+    }
+
+    Ok(Item::Value(Value::InlineTable(table)))
+}
+
+fn update_member_toml(
+    member_path: &Path,
+    all_deps: &HashMap<String, Vec<(PathBuf, String, Dependency)>>,
+    workspace_updates: &HashMap<String, (ResolutionFields, String)>,
+) -> Result<()> {
+    let member_toml = member_path.join("Cargo.toml");
+    let content = std::fs::read_to_string(&member_toml)?;
+    let mut doc = content.parse::<DocumentMut>()?;
+
+    // Build a map of dep_name -> workspace_key
+    let mut dep_name_to_workspace_key: HashMap<String, String> = HashMap::new();
+    for (workspace_key, (_resolution, dep_name)) in workspace_updates {
+        dep_name_to_workspace_key.insert(dep_name.clone(), workspace_key.clone());
+    }
+
+    for section in &["dependencies", "dev-dependencies", "build-dependencies"] {
+        if let Some(deps) = doc.get_mut(section).and_then(|s| s.as_table_mut()) {
+            let keys: Vec<String> = deps.iter().map(|(k, _)| k.to_string()).collect();
+
+            for key in keys {
+                if let Some(dep_item) = deps.get(&key) {
+                    if let Ok(Some(dep)) = parse_dependency(&key, dep_item, member_path) {
+                        // Check if this dependency is in the winning equivalence class
+                        if let Some(workspace_key) = dep_name_to_workspace_key.get(&dep.name) {
+                            // Check if this specific occurrence should use workspace = true
+                            if should_use_workspace(&dep, workspace_updates, workspace_key) {
+                                // Update to use workspace = true
+                                let mut table = InlineTable::new();
+                                table.insert("workspace", value(true).into());
+
+                                // Keep configuration fields
+                                if let Some(optional) = dep.config.optional {
+                                    table.insert("optional", value(optional).into());
+                                }
+
+                                if let Some(ref features) = dep.config.features {
+                                    let arr: toml_edit::Array = features.iter()
+                                        .map(|s| value(s.as_str()))
+                                        .collect();
+                                    table.insert("features", value(arr).into());
+                                }
+
+                                if let Some(default_features) = dep.config.default_features {
+                                    table.insert("default-features", value(default_features).into());
+                                }
+
+                                deps[&key] = Item::Value(Value::InlineTable(table));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    std::fs::write(&member_toml, doc.to_string())?;
+    Ok(())
+}
+
+fn should_use_workspace(
+    dep: &Dependency,
+    workspace_updates: &HashMap<String, (ResolutionFields, String)>,
+    workspace_key: &str,
+) -> bool {
+    if let Some((workspace_resolution, _)) = workspace_updates.get(workspace_key) {
+        // Check if this dependency matches the workspace resolution
+        workspace_resolution.matches_except_version(&dep.resolution) &&
+            versions_compatible_opt(&workspace_resolution.version, &dep.resolution.version)
+    } else {
+        false
+    }
 }
 
 fn has_config_fields(value: &Item) -> bool {
