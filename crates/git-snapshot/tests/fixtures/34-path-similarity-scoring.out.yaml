@@ -18,7 +18,5 @@ f3b2a7784c070643e0986cdfe4cef492ba97e2d1:
     foo:
       bar:
         renamed.txt:
-          ? - commit
-          : d60737
-          ? - path
-          : completely/different/path.txt
+          //commit: d60737
+          //path: completely/different/path.txt

@@ -12,10 +12,8 @@ refs:
   parents: []
   tree:
     shared.txt:
-      ? - commit
-      : 1
-      ? - path
-      : shared.txt
+      //commit: 1
+      //path: shared.txt
 3:
   message: commit 4
   tree:
@@ -32,7 +30,5 @@ refs:
   - 4
   tree:
     other.txt:
-      ? - commit
-      : 4
-      ? - path
-      : other.txt
+      //commit: 4
+      //path: other.txt

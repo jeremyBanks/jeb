@@ -12,27 +12,19 @@ refs:
     root-ref:
       dir:
         nested.txt:
-          ? - commit
-          : 1
-          ? - path
-          : dir/nested.txt
+          //commit: 1
+          //path: dir/nested.txt
       file.txt:
-        ? - commit
-        : 1
-        ? - path
-        : file.txt
+        //commit: 1
+        //path: file.txt
 3:
   tree:
     empty-path-ref:
       dir:
         nested.txt:
-          ? - commit
-          : 1
-          ? - path
-          : dir/nested.txt
+          //commit: 1
+          //path: dir/nested.txt
       file.txt:
-        ? - commit
-        : 1
-        ? - path
-        : file.txt
+        //commit: 1
+        //path: file.txt
 4: {}

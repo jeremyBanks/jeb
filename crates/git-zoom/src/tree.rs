@@ -50,7 +50,8 @@ fn replace_subtree_recursive(
                 } else {
                     hash
                 };
-                let new_hash = replace_subtree_recursive(&subtree_hash, remaining_path, new_subtree)?;
+                let new_hash =
+                    replace_subtree_recursive(&subtree_hash, remaining_path, new_subtree)?;
                 new_entries.push(("040000".to_string(), "tree".to_string(), new_hash, name));
             }
         } else {
@@ -86,10 +87,14 @@ fn replace_subtree_recursive(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::fs;
-    use std::process::Command;
-    use tempfile::TempDir;
+    use {
+        super::*,
+        std::{
+            fs,
+            process::Command,
+        },
+        tempfile::TempDir,
+    };
 
     fn setup_test_repo() -> TempDir {
         let dir = TempDir::new().unwrap();

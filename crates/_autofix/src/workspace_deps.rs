@@ -1,9 +1,28 @@
-use anyhow::{Context, Result};
-use glob::glob;
-use semver::Version;
-use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
-use toml_edit::{value, DocumentMut, InlineTable, Item, Value};
+use {
+    anyhow::{
+        Context,
+        Result,
+    },
+    glob::glob,
+    semver::Version,
+    std::{
+        collections::{
+            HashMap,
+            HashSet,
+        },
+        path::{
+            Path,
+            PathBuf,
+        },
+    },
+    toml_edit::{
+        DocumentMut,
+        InlineTable,
+        Item,
+        Value,
+        value,
+    },
+};
 
 pub fn main() -> Result<()> {
     let workspace_root = find_workspace_root(".")?;
@@ -15,8 +34,14 @@ pub fn main() -> Result<()> {
     eprintln!("\nSummary:");
     eprintln!("  Workspaces examined: {}", stats.workspaces_processed);
     eprintln!("  Crates examined: {}", stats.crates_examined);
-    eprintln!("  Workspace Cargo.toml files edited: {}", stats.workspace_tomls_edited);
-    eprintln!("  Member Cargo.toml files edited: {}", stats.member_tomls_edited);
+    eprintln!(
+        "  Workspace Cargo.toml files edited: {}",
+        stats.workspace_tomls_edited
+    );
+    eprintln!(
+        "  Member Cargo.toml files edited: {}",
+        stats.member_tomls_edited
+    );
     eprintln!("  Total files edited: {}", stats.edited_files.len());
 
     Ok(())
@@ -58,9 +83,7 @@ fn resolve_workspace_members(workspace_root: &Path) -> Result<Vec<PathBuf>> {
     let mut member_paths = Vec::new();
 
     for member in members.iter() {
-        let pattern = member
-            .as_str()
-            .context("member pattern is not a string")?;
+        let pattern = member.as_str().context("member pattern is not a string")?;
 
         let full_pattern = workspace_root.join(pattern);
         let pattern_str = full_pattern.to_str().context("invalid path")?;
@@ -116,7 +139,8 @@ struct ConfigFields {
 }
 
 impl ResolutionFields {
-    /// Check if two resolution fields are equal except for version compatibility
+    /// Check if two resolution fields are equal except for version
+    /// compatibility
     fn matches_except_version(&self, other: &Self) -> bool {
         self.package == other.package
             && self.path == other.path
@@ -228,7 +252,8 @@ fn normalize_version_string(v_str: &str) -> String {
         .trim();
 
     // Split on whitespace or comma to check if this is a complex spec
-    // If it contains space or comma, it's likely ">= 1.0, < 2.0" which we can't handle
+    // If it contains space or comma, it's likely ">= 1.0, < 2.0" which we can't
+    // handle
     if trimmed.contains(',') || trimmed.contains(' ') {
         // Return as-is, will likely fail parsing and be skipped
         return trimmed.to_string();
@@ -238,9 +263,10 @@ fn normalize_version_string(v_str: &str) -> String {
     let parts: Vec<&str> = trimmed.split('.').collect();
 
     match parts.len() {
-        1 => format!("{}.0.0", parts[0]),  // "1" -> "1.0.0"
-        2 => format!("{}.{}.0", parts[0], parts[1]),  // "1.0" -> "1.0.0"
-        _ => trimmed.to_string(),  // Already complete or has pre-release/build metadata
+        1 => format!("{}.0.0", parts[0]),            // "1" -> "1.0.0"
+        2 => format!("{}.{}.0", parts[0], parts[1]), // "1.0" -> "1.0.0"
+        _ => trimmed.to_string(),                    /* Already complete or has
+                                                       * pre-release/build metadata */
     }
 }
 
@@ -283,11 +309,19 @@ fn parse_dependency(
                         {
                             if let Some(ws_dep) = ws_deps.get(key) {
                                 // Parse the workspace dependency to get resolution fields
-                                // Use workspace_root as base since workspace deps are relative to workspace root
-                                if let Ok(Some(ws_parsed)) = parse_dependency(key, ws_dep, workspace_root, workspace_root, None) {
+                                // Use workspace_root as base since workspace deps are relative to
+                                // workspace root
+                                if let Ok(Some(ws_parsed)) = parse_dependency(
+                                    key,
+                                    ws_dep,
+                                    workspace_root,
+                                    workspace_root,
+                                    None,
+                                ) {
                                     // Keep configuration fields from member
                                     let optional = t.get("optional").and_then(|v| v.as_bool());
-                                    let default_features = t.get("default-features").and_then(|v| v.as_bool());
+                                    let default_features =
+                                        t.get("default-features").and_then(|v| v.as_bool());
                                     let features = t.get("features").and_then(|v| {
                                         v.as_array().map(|arr| {
                                             arr.iter()
@@ -296,7 +330,11 @@ fn parse_dependency(
                                         })
                                     });
 
-                                    let name = ws_parsed.resolution.package.clone().unwrap_or_else(|| key.to_string());
+                                    let name = ws_parsed
+                                        .resolution
+                                        .package
+                                        .clone()
+                                        .unwrap_or_else(|| key.to_string());
 
                                     return Ok(Some(Dependency {
                                         key: key.to_string(),
@@ -366,7 +404,8 @@ fn parse_dependency(
         if v_str == "*" {
             Some(v_str.to_string())
         } else {
-            // Normalize version string by removing prefixes and completing shortened versions
+            // Normalize version string by removing prefixes and completing shortened
+            // versions
             let normalized = normalize_version_string(v_str);
 
             // Validate that it's a parseable version
@@ -446,7 +485,10 @@ impl NormalizationStats {
 }
 
 /// Main normalization function
-fn normalize_workspace_dependencies(workspace_root: &Path, stats: &mut NormalizationStats) -> Result<()> {
+fn normalize_workspace_dependencies(
+    workspace_root: &Path,
+    stats: &mut NormalizationStats,
+) -> Result<()> {
     eprintln!("Processing workspace: {}", workspace_root.display());
     stats.workspaces_processed += 1;
 
@@ -514,11 +556,18 @@ fn normalize_workspace_dependencies(workspace_root: &Path, stats: &mut Normaliza
                         continue;
                     }
 
-                    if let Some(dep) = parse_dependency(key, value, member_path, workspace_root, Some(&workspace_doc))? {
-                        all_deps
-                            .entry(dep.name.clone())
-                            .or_default()
-                            .push((member_path.clone(), section.to_string(), dep));
+                    if let Some(dep) = parse_dependency(
+                        key,
+                        value,
+                        member_path,
+                        workspace_root,
+                        Some(&workspace_doc),
+                    )? {
+                        all_deps.entry(dep.name.clone()).or_default().push((
+                            member_path.clone(),
+                            section.to_string(),
+                            dep,
+                        ));
                     }
                 }
             }
@@ -568,7 +617,14 @@ fn normalize_workspace_dependencies(workspace_root: &Path, stats: &mut Normaliza
         if let Some(winner) = find_winner(&equivalence_classes) {
             // Determine the key to use in workspace.dependencies
             let key = winner.get_preferred_key();
-            workspace_updates.insert(key, (winner.resolution.clone(), dep_name.clone(), winner.needs_default_features_false));
+            workspace_updates.insert(
+                key,
+                (
+                    winner.resolution.clone(),
+                    dep_name.clone(),
+                    winner.needs_default_features_false,
+                ),
+            );
         }
     }
 
@@ -587,7 +643,15 @@ fn normalize_workspace_dependencies(workspace_root: &Path, stats: &mut Normaliza
 
     // Update member Cargo.toml files
     for member_path in &members {
-        update_member_toml(member_path, &all_deps, &workspace_updates, workspace_root, &workspace_doc, &old_workspace_deps, stats)?;
+        update_member_toml(
+            member_path,
+            &all_deps,
+            &workspace_updates,
+            workspace_root,
+            &workspace_doc,
+            &old_workspace_deps,
+            stats,
+        )?;
     }
 
     // Run final cargo check to verify workspace still builds
@@ -643,8 +707,8 @@ impl EquivalenceClass {
     }
 
     fn matches(&self, dep: &Dependency) -> bool {
-        self.resolution.matches_except_version(&dep.resolution) &&
-            versions_compatible_opt(&self.resolution.version, &dep.resolution.version)
+        self.resolution.matches_except_version(&dep.resolution)
+            && versions_compatible_opt(&self.resolution.version, &dep.resolution.version)
     }
 
     fn add_vote(&mut self, member: PathBuf, dep: Dependency) {
@@ -694,12 +758,16 @@ impl EquivalenceClass {
 
     fn get_preferred_key(&self) -> String {
         // Return the first key alphabetically from all dependencies
-        let mut keys: Vec<String> = self.votes.values()
+        let mut keys: Vec<String> = self
+            .votes
+            .values()
             .flatten()
             .map(|d| d.key.clone())
             .collect();
         keys.sort();
-        keys.into_iter().next().unwrap_or_else(|| "unknown".to_string())
+        keys.into_iter()
+            .next()
+            .unwrap_or_else(|| "unknown".to_string())
     }
 }
 
@@ -715,7 +783,7 @@ fn versions_compatible_opt(v1: &Option<String>, v2: &Option<String>) -> bool {
             // Parse and compare versions
             match (Version::parse(v1_str), Version::parse(v2_str)) {
                 (Ok(v1), Ok(v2)) => versions_compatible(&v1, &v2),
-                _ => false,  // If either fails to parse, not compatible
+                _ => false, // If either fails to parse, not compatible
             }
         }
     }
@@ -727,7 +795,8 @@ fn find_winner(classes: &[EquivalenceClass]) -> Option<&EquivalenceClass> {
     }
 
     let max_votes = classes.iter().map(|c| c.vote_count()).max().unwrap();
-    let mut candidates: Vec<&EquivalenceClass> = classes.iter()
+    let mut candidates: Vec<&EquivalenceClass> = classes
+        .iter()
         .filter(|c| c.vote_count() == max_votes)
         .collect();
 
@@ -745,9 +814,9 @@ fn find_winner(classes: &[EquivalenceClass]) -> Option<&EquivalenceClass> {
                 let v2_is_star = v2_str == "*";
 
                 if v1_is_star && !v2_is_star {
-                    return std::cmp::Ordering::Greater;  // v1 is lower
+                    return std::cmp::Ordering::Greater; // v1 is lower
                 } else if !v1_is_star && v2_is_star {
-                    return std::cmp::Ordering::Less;  // v2 is lower
+                    return std::cmp::Ordering::Less; // v2 is lower
                 } else if v1_is_star && v2_is_star {
                     // Both are "*", equal
                 } else {
@@ -771,21 +840,29 @@ fn find_winner(classes: &[EquivalenceClass]) -> Option<&EquivalenceClass> {
         }
 
         // Then compare by sorted field pairs
-        a.resolution.as_sorted_pairs().cmp(&b.resolution.as_sorted_pairs())
+        a.resolution
+            .as_sorted_pairs()
+            .cmp(&b.resolution.as_sorted_pairs())
     });
 
     candidates.first().copied()
 }
 
-fn capture_old_workspace_deps(doc: &DocumentMut, workspace_root: &Path) -> HashMap<String, ResolutionFields> {
+fn capture_old_workspace_deps(
+    doc: &DocumentMut,
+    workspace_root: &Path,
+) -> HashMap<String, ResolutionFields> {
     let mut old_deps = HashMap::new();
 
     if let Some(workspace) = doc.get("workspace") {
         if let Some(deps) = workspace.get("dependencies").and_then(|d| d.as_table()) {
             for (key, value) in deps.iter() {
                 // Parse the old workspace dependency
-                // Use workspace root as base path since paths in workspace.dependencies are relative to it
-                if let Ok(Some(dep)) = parse_dependency(key, value, workspace_root, workspace_root, None) {
+                // Use workspace root as base path since paths in workspace.dependencies are
+                // relative to it
+                if let Ok(Some(dep)) =
+                    parse_dependency(key, value, workspace_root, workspace_root, None)
+                {
                     old_deps.insert(key.to_string(), dep.resolution);
                 }
             }
@@ -805,13 +882,17 @@ fn update_workspace_toml(
         doc["workspace"] = toml_edit::table();
     }
 
-    let workspace = doc["workspace"].as_table_mut().context("workspace is not a table")?;
+    let workspace = doc["workspace"]
+        .as_table_mut()
+        .context("workspace is not a table")?;
 
     if workspace.get("dependencies").is_none() {
         workspace["dependencies"] = toml_edit::table();
     }
 
-    let deps = workspace["dependencies"].as_table_mut().context("dependencies is not a table")?;
+    let deps = workspace["dependencies"]
+        .as_table_mut()
+        .context("dependencies is not a table")?;
 
     // Track which dependencies are still used
     let mut used_deps: HashSet<String> = HashSet::new();
@@ -820,7 +901,8 @@ fn update_workspace_toml(
         used_deps.insert(key.clone());
 
         // Build the value for this dependency
-        let value = build_dependency_value(resolution, workspace_root, *needs_default_features_false)?;
+        let value =
+            build_dependency_value(resolution, workspace_root, *needs_default_features_false)?;
 
         // Insert or update the dependency
         // Note: toml_edit doesn't have easy positional insert for ordering,
@@ -921,14 +1003,17 @@ fn build_dependency_value(
 }
 
 /// Determine sort order for workspace dependencies
-fn workspace_dep_sort_key(key: &str, resolution: &ResolutionFields) -> (bool, bool, bool, bool, bool, String) {
+fn workspace_dep_sort_key(
+    key: &str,
+    resolution: &ResolutionFields,
+) -> (bool, bool, bool, bool, bool, String) {
     (
-        resolution.path.is_none(),      // false (0) if path present = sort first
-        resolution.git.is_none(),       // false (0) if git present = sort first
-        resolution.registry.is_none(),  // false (0) if registry present = sort first
-        resolution.package.is_none(),   // false (0) if package present = sort first
-        resolution.version.is_some(),   // true (1) if version present = sort later
-        key.to_lowercase(),             // alphabetically by name
+        resolution.path.is_none(),     // false (0) if path present = sort first
+        resolution.git.is_none(),      // false (0) if git present = sort first
+        resolution.registry.is_none(), // false (0) if registry present = sort first
+        resolution.package.is_none(),  // false (0) if package present = sort first
+        resolution.version.is_some(),  // true (1) if version present = sort later
+        key.to_lowercase(),            // alphabetically by name
     )
 }
 
@@ -937,21 +1022,51 @@ fn parse_resolution_from_value(value: &Item) -> Result<ResolutionFields> {
     let mut resolution = ResolutionFields::default();
 
     if let Some(table) = value.as_inline_table() {
-        resolution.version = table.get("version").and_then(|v| v.as_str()).map(String::from);
-        resolution.path = table.get("path").and_then(|v| v.as_str()).map(|s| PathBuf::from(s));
+        resolution.version = table
+            .get("version")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+        resolution.path = table
+            .get("path")
+            .and_then(|v| v.as_str())
+            .map(|s| PathBuf::from(s));
         resolution.git = table.get("git").and_then(|v| v.as_str()).map(String::from);
-        resolution.registry = table.get("registry").and_then(|v| v.as_str()).map(String::from);
-        resolution.package = table.get("package").and_then(|v| v.as_str()).map(String::from);
-        resolution.branch = table.get("branch").and_then(|v| v.as_str()).map(String::from);
+        resolution.registry = table
+            .get("registry")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+        resolution.package = table
+            .get("package")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+        resolution.branch = table
+            .get("branch")
+            .and_then(|v| v.as_str())
+            .map(String::from);
         resolution.tag = table.get("tag").and_then(|v| v.as_str()).map(String::from);
         resolution.rev = table.get("rev").and_then(|v| v.as_str()).map(String::from);
     } else if let Some(table) = value.as_table() {
-        resolution.version = table.get("version").and_then(|v| v.as_str()).map(String::from);
-        resolution.path = table.get("path").and_then(|v| v.as_str()).map(|s| PathBuf::from(s));
+        resolution.version = table
+            .get("version")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+        resolution.path = table
+            .get("path")
+            .and_then(|v| v.as_str())
+            .map(|s| PathBuf::from(s));
         resolution.git = table.get("git").and_then(|v| v.as_str()).map(String::from);
-        resolution.registry = table.get("registry").and_then(|v| v.as_str()).map(String::from);
-        resolution.package = table.get("package").and_then(|v| v.as_str()).map(String::from);
-        resolution.branch = table.get("branch").and_then(|v| v.as_str()).map(String::from);
+        resolution.registry = table
+            .get("registry")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+        resolution.package = table
+            .get("package")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+        resolution.branch = table
+            .get("branch")
+            .and_then(|v| v.as_str())
+            .map(String::from);
         resolution.tag = table.get("tag").and_then(|v| v.as_str()).map(String::from);
         resolution.rev = table.get("rev").and_then(|v| v.as_str()).map(String::from);
     } else if let Some(s) = value.as_str() {
@@ -1014,7 +1129,8 @@ fn update_member_toml(
     let content = std::fs::read_to_string(&member_toml)?;
     let mut doc = content.parse::<DocumentMut>()?;
 
-    // Build a map of dep_name -> workspace_key and dep_name -> needs_default_features_false
+    // Build a map of dep_name -> workspace_key and dep_name ->
+    // needs_default_features_false
     let mut dep_name_to_workspace_key: HashMap<String, String> = HashMap::new();
     let mut dep_name_to_needs_default_features: HashMap<String, bool> = HashMap::new();
     for (workspace_key, (_resolution, dep_name, needs_df_false)) in workspace_updates {
@@ -1029,13 +1145,15 @@ fn update_member_toml(
             for key in keys {
                 if let Some(dep_item) = deps.get(&key) {
                     // Check if this dependency currently uses workspace = true
-                    let currently_uses_workspace = dep_item.as_inline_table()
+                    let currently_uses_workspace = dep_item
+                        .as_inline_table()
                         .and_then(|t| t.get("workspace"))
                         .and_then(|v| v.as_bool())
                         == Some(true);
 
-                    // For dependencies using workspace = true, we need to check against the OLD workspace
-                    // to decide if they should stay as workspace = true or be inlined
+                    // For dependencies using workspace = true, we need to check against the OLD
+                    // workspace to decide if they should stay as workspace =
+                    // true or be inlined
                     let dep = if currently_uses_workspace {
                         // Parse with old workspace context to get what it WAS pointing to
                         // This is a bit tricky - we can't easily create a fake document
@@ -1045,16 +1163,35 @@ fn update_member_toml(
                             let config = extract_config_fields(dep_item);
                             Some(Dependency {
                                 key: key.clone(),
-                                name: old_resolution.package.clone().unwrap_or_else(|| key.clone()),
+                                name: old_resolution
+                                    .package
+                                    .clone()
+                                    .unwrap_or_else(|| key.clone()),
                                 resolution: old_resolution.clone(),
                                 config,
                             })
                         } else {
                             // Fall back to parsing with workspace if we can't find old resolution
-                            parse_dependency(&key, dep_item, member_path, workspace_root, Some(workspace_doc)).ok().flatten()
+                            parse_dependency(
+                                &key,
+                                dep_item,
+                                member_path,
+                                workspace_root,
+                                Some(workspace_doc),
+                            )
+                            .ok()
+                            .flatten()
                         }
                     } else {
-                        parse_dependency(&key, dep_item, member_path, workspace_root, Some(workspace_doc)).ok().flatten()
+                        parse_dependency(
+                            &key,
+                            dep_item,
+                            member_path,
+                            workspace_root,
+                            Some(workspace_doc),
+                        )
+                        .ok()
+                        .flatten()
                     };
 
                     if let Some(dep) = dep {
@@ -1080,40 +1217,51 @@ fn update_member_toml(
                                 if workspace_needs_df_false {
                                     // Workspace has default-features = false
                                     if dep.config.default_features == Some(false) {
-                                        // Member also wants false - add features first, then default-features
+                                        // Member also wants false - add features first, then
+                                        // default-features
                                         if let Some(ref features) = dep.config.features {
-                                            let arr: toml_edit::Array = features.iter()
+                                            let arr: toml_edit::Array = features
+                                                .iter()
                                                 .map(|s| Value::from(s.as_str()))
                                                 .collect();
                                             table.insert("features", Value::Array(arr));
                                         }
                                         table.insert("default-features", Value::from(false));
                                     } else {
-                                        // Member wants defaults enabled - use features = ["default", ...]
-                                        let features_with_default = prepend_default_feature(dep.config.features.clone());
-                                        let arr: toml_edit::Array = features_with_default.iter()
+                                        // Member wants defaults enabled - use features =
+                                        // ["default", ...]
+                                        let features_with_default =
+                                            prepend_default_feature(dep.config.features.clone());
+                                        let arr: toml_edit::Array = features_with_default
+                                            .iter()
                                             .map(|s| Value::from(s.as_str()))
                                             .collect();
                                         table.insert("features", Value::Array(arr));
                                     }
                                 } else {
-                                    // Normal handling - workspace doesn't have default-features = false
+                                    // Normal handling - workspace doesn't have default-features =
+                                    // false
                                     if let Some(ref features) = dep.config.features {
-                                        let arr: toml_edit::Array = features.iter()
+                                        let arr: toml_edit::Array = features
+                                            .iter()
                                             .map(|s| Value::from(s.as_str()))
                                             .collect();
                                         table.insert("features", Value::Array(arr));
                                     }
 
                                     if let Some(default_features) = dep.config.default_features {
-                                        table.insert("default-features", Value::from(default_features));
+                                        table.insert(
+                                            "default-features",
+                                            Value::from(default_features),
+                                        );
                                     }
                                 }
 
                                 deps[&key] = Item::Value(Value::InlineTable(table));
                             } else if currently_uses_workspace {
                                 // This dependency was using workspace = true but is now a loser
-                                // Inline it with the OLD workspace resolution (before we updated it)
+                                // Inline it with the OLD workspace resolution (before we updated
+                                // it)
                                 if let Some(old_resolution) = old_workspace_deps.get(&key) {
                                     let loser_dep = Dependency {
                                         key: key.clone(),
@@ -1128,8 +1276,9 @@ fn update_member_toml(
                                 }
                             }
                         } else if currently_uses_workspace {
-                            // This dependency was using workspace = true but is no longer in workspace
-                            // Inline it with the OLD workspace resolution
+                            // This dependency was using workspace = true but is no longer in
+                            // workspace Inline it with the OLD
+                            // workspace resolution
                             if let Some(old_resolution) = old_workspace_deps.get(&key) {
                                 let loser_dep = Dependency {
                                     key: key.clone(),
@@ -1166,8 +1315,8 @@ fn should_use_workspace(
 ) -> bool {
     if let Some((workspace_resolution, _, _)) = workspace_updates.get(workspace_key) {
         // Check if this dependency matches the workspace resolution
-        workspace_resolution.matches_except_version(&dep.resolution) &&
-            versions_compatible_opt(&workspace_resolution.version, &dep.resolution.version)
+        workspace_resolution.matches_except_version(&dep.resolution)
+            && versions_compatible_opt(&workspace_resolution.version, &dep.resolution.version)
     } else {
         false
     }
@@ -1249,9 +1398,7 @@ fn inline_dependency(
     }
 
     if let Some(ref features) = dep.config.features {
-        let arr: toml_edit::Array = features.iter()
-            .map(|s| Value::from(s.as_str()))
-            .collect();
+        let arr: toml_edit::Array = features.iter().map(|s| Value::from(s.as_str())).collect();
         table.insert("features", Value::Array(arr));
     }
 
@@ -1267,12 +1414,10 @@ fn has_config_fields(value: &Item) -> bool {
     // Note: default-features is no longer considered a blocking config field,
     // as we now intentionally set it in workspace.dependencies when needed
     if let Some(table) = value.as_inline_table() {
-        return table.contains_key("optional")
-            || table.contains_key("features");
+        return table.contains_key("optional") || table.contains_key("features");
     }
     if let Some(table) = value.as_table() {
-        return table.contains_key("optional")
-            || table.contains_key("features");
+        return table.contains_key("optional") || table.contains_key("features");
     }
     false
 }
@@ -1295,13 +1440,11 @@ fn extract_config_fields(value: &Item) -> ConfigFields {
     if let Some(table) = table {
         config.optional = table.get("optional").and_then(|v| v.as_bool());
 
-        config.features = table.get("features")
-            .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_str().map(String::from))
-                    .collect()
-            });
+        config.features = table.get("features").and_then(|v| v.as_array()).map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        });
 
         config.default_features = table.get("default-features").and_then(|v| v.as_bool());
     }
@@ -1314,7 +1457,8 @@ fn prepend_default_feature(features: Option<Vec<String>>) -> Vec<String> {
     let mut result = vec!["default".to_string()];
     if let Some(feat) = features {
         for f in feat {
-            if f != "default" {  // Skip if already present
+            if f != "default" {
+                // Skip if already present
                 result.push(f);
             }
         }
@@ -1324,9 +1468,11 @@ fn prepend_default_feature(features: Option<Vec<String>>) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::fs;
-    use tempfile::TempDir;
+    use {
+        super::*,
+        std::fs,
+        tempfile::TempDir,
+    };
 
     fn create_test_workspace() -> Result<TempDir> {
         let dir = TempDir::new()?;
@@ -1457,8 +1603,14 @@ anyhow = "1.0.0"
         let crate_a_content_2 = fs::read_to_string(temp.path().join("crate-a/Cargo.toml"))?;
 
         // Results should be identical
-        assert_eq!(workspace_content_1, workspace_content_2, "Workspace Cargo.toml changed on second run");
-        assert_eq!(crate_a_content_1, crate_a_content_2, "Member Cargo.toml changed on second run");
+        assert_eq!(
+            workspace_content_1, workspace_content_2,
+            "Workspace Cargo.toml changed on second run"
+        );
+        assert_eq!(
+            crate_a_content_1, crate_a_content_2,
+            "Member Cargo.toml changed on second run"
+        );
 
         Ok(())
     }
@@ -1535,17 +1687,32 @@ serde = "2.0.0"
         normalize_workspace_dependencies(workspace_root, &mut stats)?;
 
         let workspace_content = fs::read_to_string(workspace_root.join("Cargo.toml"))?;
-        assert!(workspace_content.contains("serde = \"1.0.0\""), "serde 1.0.0 should win initially");
+        assert!(
+            workspace_content.contains("serde = \"1.0.0\""),
+            "serde 1.0.0 should win initially"
+        );
 
         let crate_a_content = fs::read_to_string(workspace_root.join("crate-a/Cargo.toml"))?;
         let crate_b_content = fs::read_to_string(workspace_root.join("crate-b/Cargo.toml"))?;
-        assert!(crate_a_content.contains("workspace = true"), "crate-a should use workspace = true");
-        assert!(crate_b_content.contains("workspace = true"), "crate-b should use workspace = true");
+        assert!(
+            crate_a_content.contains("workspace = true"),
+            "crate-a should use workspace = true"
+        );
+        assert!(
+            crate_b_content.contains("workspace = true"),
+            "crate-b should use workspace = true"
+        );
 
         // crate-c should have serde inlined (loser)
         let crate_c_content = fs::read_to_string(workspace_root.join("crate-c/Cargo.toml"))?;
-        assert!(crate_c_content.contains("serde = \"2.0.0\""), "crate-c should have serde 2.0.0 inlined");
-        assert!(!crate_c_content.contains("workspace = true"), "crate-c should not use workspace = true");
+        assert!(
+            crate_c_content.contains("serde = \"2.0.0\""),
+            "crate-c should have serde 2.0.0 inlined"
+        );
+        assert!(
+            !crate_c_content.contains("workspace = true"),
+            "crate-c should not use workspace = true"
+        );
 
         // Now modify: add crate-d using serde 2.0.0
         // This shifts majority to serde 2.0.0 (2 votes vs 2, but version tie-breaker)
@@ -1567,7 +1734,7 @@ serde = "2.0.0"
             workspace_root.join("Cargo.toml"),
             workspace_content.replace(
                 r#"members = ["crate-a", "crate-b", "crate-c"]"#,
-                r#"members = ["crate-a", "crate-b", "crate-c", "crate-d"]"#
+                r#"members = ["crate-a", "crate-b", "crate-c", "crate-d"]"#,
             ),
         )?;
 
@@ -1576,22 +1743,43 @@ serde = "2.0.0"
         normalize_workspace_dependencies(workspace_root, &mut stats)?;
 
         let workspace_content_2 = fs::read_to_string(workspace_root.join("Cargo.toml"))?;
-        assert!(workspace_content_2.contains("serde = \"2.0.0\""), "serde 2.0.0 should win after adding crate-d");
+        assert!(
+            workspace_content_2.contains("serde = \"2.0.0\""),
+            "serde 2.0.0 should win after adding crate-d"
+        );
 
         // crate-a and crate-b should now have serde 1.0.0 inlined (losers)
         let crate_a_content_2 = fs::read_to_string(workspace_root.join("crate-a/Cargo.toml"))?;
         let crate_b_content_2 = fs::read_to_string(workspace_root.join("crate-b/Cargo.toml"))?;
 
-        assert!(crate_a_content_2.contains("serde = \"1.0.0\""), "crate-a should have serde 1.0.0 inlined");
-        assert!(!crate_a_content_2.contains("workspace = true"), "crate-a should not use workspace = true");
-        assert!(crate_b_content_2.contains("serde = \"1.0.0\""), "crate-b should have serde 1.0.0 inlined");
-        assert!(!crate_b_content_2.contains("workspace = true"), "crate-b should not use workspace = true");
+        assert!(
+            crate_a_content_2.contains("serde = \"1.0.0\""),
+            "crate-a should have serde 1.0.0 inlined"
+        );
+        assert!(
+            !crate_a_content_2.contains("workspace = true"),
+            "crate-a should not use workspace = true"
+        );
+        assert!(
+            crate_b_content_2.contains("serde = \"1.0.0\""),
+            "crate-b should have serde 1.0.0 inlined"
+        );
+        assert!(
+            !crate_b_content_2.contains("workspace = true"),
+            "crate-b should not use workspace = true"
+        );
 
         // crate-c and crate-d should use workspace = true (winners)
         let crate_c_content_2 = fs::read_to_string(workspace_root.join("crate-c/Cargo.toml"))?;
         let crate_d_content = fs::read_to_string(workspace_root.join("crate-d/Cargo.toml"))?;
-        assert!(crate_c_content_2.contains("workspace = true"), "crate-c should use workspace = true");
-        assert!(crate_d_content.contains("workspace = true"), "crate-d should use workspace = true");
+        assert!(
+            crate_c_content_2.contains("workspace = true"),
+            "crate-c should use workspace = true"
+        );
+        assert!(
+            crate_d_content.contains("workspace = true"),
+            "crate-d should use workspace = true"
+        );
 
         Ok(())
     }

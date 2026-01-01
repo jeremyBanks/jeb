@@ -36,21 +36,15 @@ c53f24:
   - 2217d2
   tree:
     api.rs:
-      ? - commit
-      : 2217d2
-      ? - path
-      : src/lib/api.rs
+      //commit: 2217d2
+      //path: src/lib/api.rs
     core:
       engine.rs:
-        ? - commit
-        : 2217d2
-        ? - path
-        : src/lib/core/engine.rs
+        //commit: 2217d2
+        //path: src/lib/core/engine.rs
       types.rs:
-        ? - commit
-        : 2217d2
-        ? - path
-        : src/lib/core/types.rs
+        //commit: 2217d2
+        //path: src/lib/core/types.rs
 23fd5c:
   committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
@@ -62,15 +56,11 @@ c53f24:
   - c53f24
   tree:
     engine.rs:
-      ? - commit
-      : c53f24
-      ? - path
-      : core/engine.rs
+      //commit: c53f24
+      //path: core/engine.rs
     types.rs:
-      ? - commit
-      : c53f24
-      ? - path
-      : core/types.rs
+      //commit: c53f24
+      //path: core/types.rs
 c3dd4f:
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
@@ -117,18 +107,12 @@ d32dfb65816952cf65c6298e773a61ae842fde02:
     src:
       lib:
         api.rs:
-          ? - commit
-          : d32dfb65816952cf65c6298e773a61ae842fde02
-          ? - path
-          : api.rs
+          //commit: d32dfb65816952cf65c6298e773a61ae842fde02
+          //path: api.rs
         core:
           engine.rs:
-            ? - commit
-            : 4f727e9883aa830a07607759cce4d8899ffcccca
-            ? - path
-            : engine.rs
+            //commit: 4f727e9883aa830a07607759cce4d8899ffcccca
+            //path: engine.rs
         tests.rs:
-          ? - commit
-          : 040a71
-          ? - path
-          : tests.rs
+          //commit: 040a71
+          //path: tests.rs

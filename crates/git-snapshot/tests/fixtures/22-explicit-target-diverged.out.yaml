@@ -24,15 +24,11 @@ a90f996c4ea148e358e8d2cc5109e78b67aa3dbb:
   - a8f73a
   tree:
     a.txt:
-      ? - commit
-      : a8f73a
-      ? - path
-      : subtree/a.txt
+      //commit: a8f73a
+      //path: subtree/a.txt
     b.txt:
-      ? - commit
-      : a8f73a
-      ? - path
-      : subtree/b.txt
+      //commit: a8f73a
+      //path: subtree/b.txt
 4a4d63ef394202b572e09a741e17401893d26bea:
   message: |
     Zoom out to commit 1

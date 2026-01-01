@@ -30,15 +30,11 @@ daaad3a9b4af1b390e6cb3f08c39fe99786a5aa3:
   - a59e32
   tree:
     app.js:
-      ? - commit
-      : a59e32
-      ? - path
-      : frontend/app.js
+      //commit: a59e32
+      //path: frontend/app.js
     style.css:
-      ? - commit
-      : a59e32
-      ? - path
-      : frontend/style.css
+      //commit: a59e32
+      //path: frontend/style.css
     utils.js: export const util = () => {};
 e23b0a:
   committer: git-zoom-out <git-zoom-out@localhost>
@@ -52,10 +48,8 @@ e23b0a:
   tree:
     frontend:
       utils.js:
-        ? - commit
-        : daaad3a9b4af1b390e6cb3f08c39fe99786a5aa3
-        ? - path
-        : utils.js
+        //commit: daaad3a9b4af1b390e6cb3f08c39fe99786a5aa3
+        //path: utils.js
 962d09:
   committer: git-zoom-in <git-zoom-in@localhost>
   message: git-zoom-in seed for backend
@@ -72,16 +66,12 @@ e23b0a:
   - e23b0a
   tree:
     db.py:
-      ? - commit
-      : a59e32
-      ? - path
-      : backend/db.py
+      //commit: a59e32
+      //path: backend/db.py
     routes.py: 'def routes(): pass'
     server.py:
-      ? - commit
-      : a59e32
-      ? - path
-      : backend/server.py
+      //commit: a59e32
+      //path: backend/server.py
 22db47f144628c05df18db5f92845c075a5d2270:
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
@@ -94,7 +84,5 @@ e23b0a:
   tree:
     backend:
       routes.py:
-        ? - commit
-        : 36665a33582000afb18e6d5770f87d671864544d
-        ? - path
-        : routes.py
+        //commit: 36665a33582000afb18e6d5770f87d671864544d
+        //path: routes.py

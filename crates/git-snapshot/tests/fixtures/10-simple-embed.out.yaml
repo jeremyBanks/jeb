@@ -14,14 +14,10 @@ f05d76:
     dir:
       dir:
         inner.txt:
-          ? - commit
-          : f05d76
-          ? - path
-          : dir/inner.txt
+          //commit: f05d76
+          //path: dir/inner.txt
       file-a.txt: a
       file-b.txt: b
       outer.txt:
-        ? - commit
-        : f05d76
-        ? - path
-        : outer.txt
+        //commit: f05d76
+        //path: outer.txt

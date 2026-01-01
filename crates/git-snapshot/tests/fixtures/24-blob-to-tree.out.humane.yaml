@@ -35,10 +35,8 @@ refs:
       to:
         item:
           content.txt:
-            ? - commit
-            : 3
-            ? - path
-            : content.txt
+            //commit: 3
+            //path: content.txt
 5:
   message: commit 2
   parents:

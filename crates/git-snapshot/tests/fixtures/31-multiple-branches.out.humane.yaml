@@ -26,13 +26,9 @@ refs:
   - 4
   tree:
     feature-a.txt:
-      ? - commit
-      : 3
-      ? - path
-      : feature-a.txt
+      //commit: 3
+      //path: feature-a.txt
     feature-b.txt:
-      ? - commit
-      : 4
-      ? - path
-      : feature-b.txt
+      //commit: 4
+      //path: feature-b.txt
     file.txt: merged

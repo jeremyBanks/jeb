@@ -12,44 +12,32 @@ refs:
 2:
   tree:
     ABOUT.md:
-      ? - commit
-      : 1
-      ? - path
-      : README.md
+      //commit: 1
+      //path: README.md
 3:
   tree:
     examples:
       header.txt:
-        ? - commit
-        : 1
-        ? - path
-        : lib/header.txt
+        //commit: 1
+        //path: lib/header.txt
     lib:
       header.txt: null
     src:
       header.txt:
-        ? - commit
-        : 1
-        ? - path
-        : lib/header.txt
+        //commit: 1
+        //path: lib/header.txt
     tests:
       header.txt:
-        ? - commit
-        : 1
-        ? - path
-        : lib/header.txt
+        //commit: 1
+        //path: lib/header.txt
 4:
   tree:
     src:
       LICENSE.txt:
-        ? - commit
-        : 3
-        ? - path
-        : examples/header.txt
+        //commit: 3
+        //path: examples/header.txt
 5:
   tree:
     COPYING:
-      ? - commit
-      : 3
-      ? - path
-      : examples/header.txt
+      //commit: 3
+      //path: examples/header.txt

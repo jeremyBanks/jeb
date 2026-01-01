@@ -12,13 +12,9 @@ refs:
 2:
   tree:
     c-moved.txt:
-      ? - commit
-      : 1
-      ? - path
-      : bar/c.txt
+      //commit: 1
+      //path: bar/c.txt
     foo:
       moved-b.txt:
-        ? - commit
-        : 1
-        ? - path
-        : foo/b.txt
+        //commit: 1
+        //path: foo/b.txt

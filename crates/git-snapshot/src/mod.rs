@@ -1106,16 +1106,22 @@ impl Default for Repository {
 /// Parse HEAD and refs with smart defaults
 ///
 /// Handles three cases:
-/// 1. Neither HEAD nor refs defined: Allow empty repo with unborn refs/heads/trunk
-/// 2. refs defined, HEAD not: Search for refs/heads/trunk, main, master, then first ref
-/// 3. HEAD defined, refs not: If HEAD is commit ref, refs empty; if ref string, create ref to last commit
+/// 1. Neither HEAD nor refs defined: Allow empty repo with unborn
+///    refs/heads/trunk
+/// 2. refs defined, HEAD not: Search for refs/heads/trunk, main, master, then
+///    first ref
+/// 3. HEAD defined, refs not: If HEAD is commit ref, refs empty; if ref string,
+///    create ref to last commit
 fn parse_head_and_refs_with_defaults(
     head_value: Option<&serde_yaml::Value>,
     refs_value: Option<&serde_yaml::Value>,
     commit_defs_vec: &[(CommitRef, &serde_yaml::Mapping)],
 ) -> Result<(HeadStateOrRef, BTreeMap<RefName, CommitRef>), ParseError> {
     let head_parsed = head_value.map(parse_head).transpose()?;
-    let refs_parsed = refs_value.map(parse_refs).transpose()?.unwrap_or_else(BTreeMap::new);
+    let refs_parsed = refs_value
+        .map(parse_refs)
+        .transpose()?
+        .unwrap_or_else(BTreeMap::new);
 
     match (head_parsed, refs_parsed.is_empty()) {
         // Case 1: Neither HEAD nor refs defined
@@ -1127,11 +1133,7 @@ fn parse_head_and_refs_with_defaults(
         // Case 2: refs defined, HEAD not defined
         (None, false) => {
             // Search order: trunk -> main -> master -> first refs/heads/* -> any ref
-            let search_order = vec![
-                "refs/heads/trunk",
-                "refs/heads/main",
-                "refs/heads/master",
-            ];
+            let search_order = vec!["refs/heads/trunk", "refs/heads/main", "refs/heads/master"];
 
             let head_target = search_order
                 .iter()
@@ -1205,7 +1207,11 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
 
     for (key, value) in mapping.iter() {
         let key_str = key.as_str();
-        if key_str == Some("HEAD") || key_str == Some("refs") || key_str == Some("staged") || key_str == Some("working") {
+        if key_str == Some("HEAD")
+            || key_str == Some("refs")
+            || key_str == Some("staged")
+            || key_str == Some("working")
+        {
             continue;
         }
 
@@ -1297,12 +1303,13 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
 
     // Parse staged tree (defaults to HEAD commit's tree)
     if let Some(staged_value) = mapping.get(serde_yaml::Value::String("staged".to_string())) {
-        let staged_mapping = staged_value
-            .as_mapping()
-            .ok_or_else(|| ParseError::UnexpectedType {
-                expected: "mapping",
-                actual: format!("{:?}", staged_value),
-            })?;
+        let staged_mapping =
+            staged_value
+                .as_mapping()
+                .ok_or_else(|| ParseError::UnexpectedType {
+                    expected: "mapping",
+                    actual: format!("{:?}", staged_value),
+                })?;
 
         let base_tree = head_tree.clone().unwrap_or_else(Tree::new);
         let mut staged_tree = base_tree;
@@ -1324,14 +1331,19 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
 
     // Parse working tree (defaults to staged tree, or HEAD if no staged)
     if let Some(working_value) = mapping.get(serde_yaml::Value::String("working".to_string())) {
-        let working_mapping = working_value
-            .as_mapping()
-            .ok_or_else(|| ParseError::UnexpectedType {
-                expected: "mapping",
-                actual: format!("{:?}", working_value),
-            })?;
+        let working_mapping =
+            working_value
+                .as_mapping()
+                .ok_or_else(|| ParseError::UnexpectedType {
+                    expected: "mapping",
+                    actual: format!("{:?}", working_value),
+                })?;
 
-        let base_tree = repo.staged().map(|t| t.clone()).or(head_tree.clone()).unwrap_or_else(Tree::new);
+        let base_tree = repo
+            .staged()
+            .map(|t| t.clone())
+            .or(head_tree.clone())
+            .unwrap_or_else(Tree::new);
         let mut working_tree = base_tree;
 
         if !working_mapping.is_empty() {
@@ -1592,6 +1604,14 @@ fn normalize_yaml_key(key: &serde_yaml::Value) -> Result<String, ParseError> {
 /// Check if a YAML key is a special key like [commit] or [path]
 /// These are sequences containing a single string element
 fn is_special_key(key: &serde_yaml::Value, name: &str) -> bool {
+    // New format: string key with // prefix (e.g., "//commit", "//path")
+    if let Some(s) = key.as_str() {
+        if s == format!("//{}", name) {
+            return true;
+        }
+    }
+
+    // Legacy format: sequence key (e.g., [commit], [path])
     if let Some(seq) = key.as_sequence() {
         if seq.len() == 1 {
             if let Some(s) = seq[0].as_str() {
@@ -1599,6 +1619,7 @@ fn is_special_key(key: &serde_yaml::Value, name: &str) -> bool {
             }
         }
     }
+
     false
 }
 
@@ -2678,10 +2699,11 @@ impl SerializationContext {
     }
 
     /// Track a tree's blobs for deduplication (used for staged/working trees)
-    /// This updates blob_locations to enable deduplication references to staged/working
+    /// This updates blob_locations to enable deduplication references to
+    /// staged/working
     fn track_tree_for_dedup(&mut self, tree: &Tree) {
-        // Use a special commit ID for staged/working (won't be used for actual references,
-        // just for tracking in blob_locations)
+        // Use a special commit ID for staged/working (won't be used for actual
+        // references, just for tracking in blob_locations)
         let pseudo_commit_id = self.current_commit;
 
         for path in tree.paths() {
@@ -2780,7 +2802,11 @@ fn find_best_reference(target_path: &str, candidates: &[(ObjectId, String)]) -> 
 }
 
 /// Serialize a Repository to YAML format
-pub fn serialize(repo: &Repository, id_style: CommitIdStyle, options: SerializationOptions) -> String {
+pub fn serialize(
+    repo: &Repository,
+    id_style: CommitIdStyle,
+    options: SerializationOptions,
+) -> String {
     let mut root = serde_yaml::Mapping::new();
 
     // Sort commits in topological order with tiebreaking
@@ -2799,7 +2825,8 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle, options: Serializat
     }
 
     // Initialize serialization context for deduplication
-    let mut ctx = SerializationContext::new(repo, ordered_commits.clone(), head_commits.clone(), options);
+    let mut ctx =
+        SerializationContext::new(repo, ordered_commits.clone(), head_commits.clone(), options);
 
     // Build mapping from ObjectId to commit reference (hex or integer)
     let mut commit_refs: HashMap<ObjectId, serde_yaml::Value> = HashMap::new();
@@ -2898,12 +2925,7 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle, options: Serializat
 
         if Some(staged_tree) != default_staged {
             // staged is different from default, serialize it
-            let staged_value = compute_tree_delta(
-                staged_tree,
-                default_staged,
-                &ctx,
-                &commit_refs,
-            );
+            let staged_value = compute_tree_delta(staged_tree, default_staged, &ctx, &commit_refs);
 
             if let serde_yaml::Value::Mapping(m) = &staged_value {
                 if !m.is_empty() {
@@ -2921,16 +2943,14 @@ pub fn serialize(repo: &Repository, id_style: CommitIdStyle, options: Serializat
 
     // Serialize working tree (defaults to staged tree, or HEAD if no staged)
     if let Some(working_tree) = repo.working() {
-        let default_working = repo.staged().or_else(|| repo.head_commit().map(|c| &c.tree));
+        let default_working = repo
+            .staged()
+            .or_else(|| repo.head_commit().map(|c| &c.tree));
 
         if Some(working_tree) != default_working {
             // working is different from default, serialize it
-            let working_value = compute_tree_delta(
-                working_tree,
-                default_working,
-                &ctx,
-                &commit_refs,
-            );
+            let working_value =
+                compute_tree_delta(working_tree, default_working, &ctx, &commit_refs);
 
             if let serde_yaml::Value::Mapping(m) = &working_value {
                 if !m.is_empty() {
@@ -3323,7 +3343,8 @@ fn insert_tree_change(
 
                     // Find all locations where this blob appeared
                     if let Some(locations) = ctx.blob_locations.get(&blob_id) {
-                        // Filter to only earlier commits (not current location, comes before current)
+                        // Filter to only earlier commits (not current location, comes before
+                        // current)
                         let current_position = ctx
                             .all_commits
                             .iter()
@@ -3351,24 +3372,19 @@ fn insert_tree_change(
 
                         if !valid_candidates.is_empty() {
                             // Use path similarity scoring to find best reference
-                            let (ref_commit, ref_path) = find_best_reference(full_path, &valid_candidates);
+                            let (ref_commit, ref_path) =
+                                find_best_reference(full_path, &valid_candidates);
 
-                            // Use [commit]/[path] reference
-                            // Note: [commit] and [path] must be sequences, not strings!
+                            // Use //commit and //path reference
                             let mut ref_mapping = serde_yaml::Mapping::new();
                             ref_mapping.insert(
-                                serde_yaml::Value::Sequence(vec![serde_yaml::Value::String(
-                                    "commit".to_string(),
-                                )]),
-                                commit_refs
-                                    .get(&ref_commit)
-                                    .cloned()
-                                    .unwrap_or_else(|| serde_yaml::Value::String(ref_commit.to_hex())),
+                                serde_yaml::Value::String("//commit".to_string()),
+                                commit_refs.get(&ref_commit).cloned().unwrap_or_else(|| {
+                                    serde_yaml::Value::String(ref_commit.to_hex())
+                                }),
                             );
                             ref_mapping.insert(
-                                serde_yaml::Value::Sequence(vec![serde_yaml::Value::String(
-                                    "path".to_string(),
-                                )]),
+                                serde_yaml::Value::String("//path".to_string()),
                                 serde_yaml::Value::String(ref_path),
                             );
                             serde_yaml::Value::Mapping(ref_mapping)
@@ -3616,7 +3632,11 @@ mod tests {
         ));
 
         // Serialize with integer IDs
-        let yaml = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
+        let yaml = serialize(
+            &repo,
+            CommitIdStyle::Integer,
+            SerializationOptions::default(),
+        );
         println!("Serialized YAML:\n{}", yaml);
 
         // Parse it back
@@ -3726,7 +3746,11 @@ mod tests {
         ));
 
         // Serialize with integer IDs
-        let yaml = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
+        let yaml = serialize(
+            &repo,
+            CommitIdStyle::Integer,
+            SerializationOptions::default(),
+        );
         println!("Serialized YAML with deletion:\n{}", yaml);
 
         // Parse it back
@@ -4375,7 +4399,11 @@ refs:
     file.txt: "updated"
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
+        let serialized = serialize(
+            &repo,
+            CommitIdStyle::Integer,
+            SerializationOptions::default(),
+        );
 
         // The serialized output should omit default values
         // Second commit should not have explicit author since it inherits
@@ -4404,7 +4432,11 @@ refs:
     b.txt: "modified"
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
+        let serialized = serialize(
+            &repo,
+            CommitIdStyle::Integer,
+            SerializationOptions::default(),
+        );
 
         // The second commit should only include the delta (modified b.txt)
         // Not the entire tree
@@ -4430,7 +4462,11 @@ refs:
     file.txt: "second"
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
+        let serialized = serialize(
+            &repo,
+            CommitIdStyle::Integer,
+            SerializationOptions::default(),
+        );
 
         // Commits should be in topological order (parent before child)
         let pos1 = serialized.find("1:").unwrap();
@@ -4454,7 +4490,11 @@ refs:
   tree: {}
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
+        let serialized = serialize(
+            &repo,
+            CommitIdStyle::Integer,
+            SerializationOptions::default(),
+        );
         let repo2 = parse(&serialized).unwrap();
 
         assert_eq!(repo.commits().count(), repo2.commits().count());
@@ -4480,7 +4520,11 @@ refs:
     README.md: "# Project"
 "##;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
+        let serialized = serialize(
+            &repo,
+            CommitIdStyle::Integer,
+            SerializationOptions::default(),
+        );
         let repo2 = parse(&serialized).unwrap();
 
         let commit = repo2.commits().next().unwrap();
@@ -4511,7 +4555,11 @@ refs:
     file.txt: "dev"
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
+        let serialized = serialize(
+            &repo,
+            CommitIdStyle::Integer,
+            SerializationOptions::default(),
+        );
         let repo2 = parse(&serialized).unwrap();
 
         assert_eq!(repo2.commits().count(), 3);
@@ -4543,7 +4591,11 @@ refs:
     file.txt: "merged"
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
+        let serialized = serialize(
+            &repo,
+            CommitIdStyle::Integer,
+            SerializationOptions::default(),
+        );
         let repo2 = parse(&serialized).unwrap();
 
         assert_eq!(repo2.commits().count(), 4);
@@ -4568,7 +4620,11 @@ refs:
   tree: {}
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
+        let serialized = serialize(
+            &repo,
+            CommitIdStyle::Integer,
+            SerializationOptions::default(),
+        );
         let repo2 = parse(&serialized).unwrap();
 
         let commit = repo2.commits().next().unwrap();
@@ -4590,7 +4646,11 @@ refs:
   tree: {}
 "#;
         let repo = parse(yaml).unwrap();
-        let serialized = serialize(&repo, CommitIdStyle::Integer, SerializationOptions::default());
+        let serialized = serialize(
+            &repo,
+            CommitIdStyle::Integer,
+            SerializationOptions::default(),
+        );
         let repo2 = parse(&serialized).unwrap();
 
         let commit = repo2.commits().next().unwrap();

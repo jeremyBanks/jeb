@@ -16,7 +16,5 @@ refs:
       also-empty.txt: also has content now
     empty.txt: now has content
     nonempty.txt:
-      ? - commit
-      : '168541'
-      ? - path
-      : empty.txt
+      //commit: '168541'
+      //path: empty.txt

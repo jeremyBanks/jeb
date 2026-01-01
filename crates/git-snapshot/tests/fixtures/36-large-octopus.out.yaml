@@ -47,37 +47,23 @@ a18507536a59b6e9fe7cef6bc356fd4e25e0a413:
   - d5e01d
   tree:
     branch1.txt:
-      ? - commit
-      : ddf883
-      ? - path
-      : branch1.txt
+      //commit: ddf883
+      //path: branch1.txt
     branch2.txt:
-      ? - commit
-      : baf721
-      ? - path
-      : branch2.txt
+      //commit: baf721
+      //path: branch2.txt
     branch3.txt:
-      ? - commit
-      : b5b1da
-      ? - path
-      : branch3.txt
+      //commit: b5b1da
+      //path: branch3.txt
     branch4.txt:
-      ? - commit
-      : aab9c2
-      ? - path
-      : branch4.txt
+      //commit: aab9c2
+      //path: branch4.txt
     branch5.txt:
-      ? - commit
-      : 5370a8
-      ? - path
-      : branch5.txt
+      //commit: 5370a8
+      //path: branch5.txt
     branch6.txt:
-      ? - commit
-      : fac27b
-      ? - path
-      : branch6.txt
+      //commit: fac27b
+      //path: branch6.txt
     branch7.txt:
-      ? - commit
-      : d5e01d
-      ? - path
-      : branch7.txt
+      //commit: d5e01d
+      //path: branch7.txt

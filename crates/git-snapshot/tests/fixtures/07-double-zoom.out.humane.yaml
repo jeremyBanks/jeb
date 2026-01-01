@@ -30,10 +30,8 @@ refs:
   - 2
   tree:
     init.rs:
-      ? - commit
-      : 1
-      ? - path
-      : modules/core/init.rs
+      //commit: 1
+      //path: modules/core/init.rs
 5:
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
@@ -75,7 +73,5 @@ refs:
     modules:
       core:
         cleanup.rs:
-          ? - commit
-          : 8
-          ? - path
-          : cleanup.rs
+          //commit: 8
+          //path: cleanup.rs

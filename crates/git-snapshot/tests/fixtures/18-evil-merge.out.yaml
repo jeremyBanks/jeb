@@ -41,7 +41,5 @@ fab2e4:
   tree:
     INTEGRATION.md: How we integrated the orphan history
     orphan-data.json:
-      ? - commit
-      : 05dc6b
-      ? - path
-      : data.json
+      //commit: 05dc6b
+      //path: data.json

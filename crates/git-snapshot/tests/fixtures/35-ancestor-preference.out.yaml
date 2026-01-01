@@ -12,10 +12,8 @@ ca2e2f:
   parents: []
   tree:
     shared.txt:
-      ? - commit
-      : 7c3b2f
-      ? - path
-      : shared.txt
+      //commit: 7c3b2f
+      //path: shared.txt
 c8de9f:
   message: commit 4
   tree:
@@ -33,7 +31,5 @@ c8de9f:
   - 3abf047f49b179bbfc9c8549db88721f9f6bf52c
   tree:
     other.txt:
-      ? - commit
-      : 3abf047f49b179bbfc9c8549db88721f9f6bf52c
-      ? - path
-      : other.txt
+      //commit: 3abf047f49b179bbfc9c8549db88721f9f6bf52c
+      //path: other.txt

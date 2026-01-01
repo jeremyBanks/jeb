@@ -8,7 +8,5 @@ refs:
 2:
   tree:
     combined:
-      ? - commit
-      : 1
-      ? - path
-      : base.txt
+      //commit: 1
+      //path: base.txt

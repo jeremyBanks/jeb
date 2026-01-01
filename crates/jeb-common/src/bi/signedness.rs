@@ -95,7 +95,8 @@ mod tests {
         }
     }
 
-    // Test distance preservation: |a - b| signed == |signedness(a) - signedness(b)| unsigned
+    // Test distance preservation: |a - b| signed == |signedness(a) - signedness(b)|
+    // unsigned
     #[test]
     fn distance_preservation_i8() {
         for a in i8::MIN..=i8::MAX {
@@ -106,7 +107,8 @@ mod tests {
                 let unsigned_dist = (ua as i32 - ub as i32).unsigned_abs();
                 assert_eq!(
                     signed_dist, unsigned_dist,
-                    "distance not preserved: {a} - {b} = {signed_dist}, but {ua} - {ub} = {unsigned_dist}"
+                    "distance not preserved: {a} - {b} = {signed_dist}, but {ua} - {ub} = \
+                     {unsigned_dist}"
                 );
             }
         }

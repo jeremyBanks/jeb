@@ -31,13 +31,9 @@ ca4f32a86d763bfd83e171045c7f21b3563821f9:
   - 1358732b7bdfe5ecad14a0c2991534153e2a3cdb
   tree:
     feature-a.txt:
-      ? - commit
-      : 50f34d9f92212773ff99c6b67e9d4e69b541aef4
-      ? - path
-      : feature-a.txt
+      //commit: 50f34d9f92212773ff99c6b67e9d4e69b541aef4
+      //path: feature-a.txt
     feature-b.txt:
-      ? - commit
-      : 1358732b7bdfe5ecad14a0c2991534153e2a3cdb
-      ? - path
-      : feature-b.txt
+      //commit: 1358732b7bdfe5ecad14a0c2991534153e2a3cdb
+      //path: feature-b.txt
     file.txt: merged

@@ -114,7 +114,7 @@ mod tests {
         // And for |a| == |b| where a < 0 and b > 0, zig_zag(a) < zig_zag(b)
         for n in 0i8..127i8 {
             let neg = -n - 1; // -1, -2, -3, ...
-            let pos = n + 1;  // 1, 2, 3, ...
+            let pos = n + 1; // 1, 2, 3, ...
             let u_neg: u8 = zig_zag(neg);
             let u_pos: u8 = zig_zag(pos);
             // Same magnitude, negative comes first
@@ -154,7 +154,7 @@ mod tests {
         assert_eq!(zig_zag(-1i16), 1u16);
         assert_eq!(zig_zag(1i16), 2u16);
         assert_eq!(zig_zag(i16::MAX), (u16::MAX - 1)); // 32767 -> 65534
-        assert_eq!(zig_zag(i16::MIN), u16::MAX);       // -32768 -> 65535
+        assert_eq!(zig_zag(i16::MIN), u16::MAX); // -32768 -> 65535
     }
 
     // Test roundtrip for larger types (sampled)

@@ -10,39 +10,29 @@ b4e417:
   message: commit 2
   tree:
     step1.txt:
-      ? - commit
-      : 025fb5
-      ? - path
-      : original.txt
+      //commit: 025fb5
+      //path: original.txt
 51cfb1:
   message: commit 3
   tree:
     step2.txt:
-      ? - commit
-      : 025fb5
-      ? - path
-      : original.txt
+      //commit: 025fb5
+      //path: original.txt
 9d6b0e:
   message: commit 4
   tree:
     step3.txt:
-      ? - commit
-      : 025fb5
-      ? - path
-      : original.txt
+      //commit: 025fb5
+      //path: original.txt
 39bc85:
   message: commit 5
   tree:
     step4.txt:
-      ? - commit
-      : 025fb5
-      ? - path
-      : original.txt
+      //commit: 025fb5
+      //path: original.txt
 fe8abc226d126996232b0940346ba275b463a124:
   message: commit 6
   tree:
     final.txt:
-      ? - commit
-      : 025fb5
-      ? - path
-      : original.txt
+      //commit: 025fb5
+      //path: original.txt

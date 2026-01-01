@@ -31,17 +31,11 @@ refs:
   - 7a777b
   tree:
     feature-a.txt:
-      ? - commit
-      : 0144ba
-      ? - path
-      : feature-a.txt
+      //commit: 0144ba
+      //path: feature-a.txt
     feature-b.txt:
-      ? - commit
-      : 21e82c
-      ? - path
-      : feature-b.txt
+      //commit: 21e82c
+      //path: feature-b.txt
     feature-c.txt:
-      ? - commit
-      : 7a777b
-      ? - path
-      : feature-c.txt
+      //commit: 7a777b
+      //path: feature-c.txt
