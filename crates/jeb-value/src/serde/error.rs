@@ -1,8 +1,4 @@
-use std::fmt::{
-    self,
-    Display,
-};
-
+use std::fmt::{self, Display};
 /// Error type for both serialization and deserialization of `Value`.
 ///
 /// This error type is used by both:
@@ -12,12 +8,8 @@ use std::fmt::{
 #[derive(Debug, Clone)]
 pub enum SerdeError {
     Message(Box<str>),
-    InvalidType {
-        unexpected: Unexpected,
-        expected: Box<str>,
-    },
+    InvalidType { unexpected: Unexpected, expected: Box<str> },
 }
-
 #[derive(Debug, Clone)]
 pub enum Unexpected {
     Bool(bool),
@@ -31,21 +23,16 @@ pub enum Unexpected {
     Seq,
     Map,
 }
-
 impl Display for SerdeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SerdeError::Message(msg) => f.write_str(msg),
-            SerdeError::InvalidType {
-                unexpected,
-                expected,
-            } => {
+            SerdeError::InvalidType { unexpected, expected } => {
                 write!(f, "invalid type: {}, expected {}", unexpected, expected)
             }
         }
     }
 }
-
 impl Display for Unexpected {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -62,15 +49,12 @@ impl Display for Unexpected {
         }
     }
 }
-
 impl std::error::Error for SerdeError {}
-
 impl serde::ser::Error for SerdeError {
     fn custom<T: Display>(msg: T) -> Self {
         SerdeError::Message(msg.to_string().into_boxed_str())
     }
 }
-
 impl SerdeError {
     pub(crate) fn invalid_type(unexp: Unexpected, exp: &str) -> Self {
         SerdeError::InvalidType {
@@ -78,18 +62,18 @@ impl SerdeError {
             expected: exp.into(),
         }
     }
-
     pub(crate) fn custom<T: Display>(msg: T) -> Self {
         SerdeError::Message(msg.to_string().into_boxed_str())
     }
 }
-
 impl serde::de::Error for SerdeError {
     fn custom<T: Display>(msg: T) -> Self {
         SerdeError::Message(msg.to_string().into_boxed_str())
     }
-
-    fn invalid_type(unexpected: serde::de::Unexpected, exp: &dyn serde::de::Expected) -> Self {
+    fn invalid_type(
+        unexpected: serde::de::Unexpected,
+        exp: &dyn serde::de::Expected,
+    ) -> Self {
         let unexpected = match unexpected {
             serde::de::Unexpected::Bool(b) => Unexpected::Bool(b),
             serde::de::Unexpected::Unsigned(u) => Unexpected::Unsigned(u),
@@ -126,7 +110,6 @@ impl serde::de::Error for SerdeError {
                 return SerdeError::Message(format!("invalid type: {}", other).into());
             }
         };
-
         SerdeError::InvalidType {
             unexpected,
             expected: exp.to_string().into_boxed_str(),

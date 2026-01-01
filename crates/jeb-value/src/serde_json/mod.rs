@@ -11,24 +11,18 @@ impl From<serde_json::Value> for crate::Value {
         }
     }
 }
-
 impl From<Vec<serde_json::Value>> for crate::Value {
     fn from(value: Vec<serde_json::Value>) -> Self {
         crate::Value::Array(value.into_iter().map(crate::Value::from).collect())
     }
 }
-
 impl From<serde_json::Map<String, serde_json::Value>> for crate::Value {
     fn from(value: serde_json::Map<String, serde_json::Value>) -> Self {
         crate::Value::TextMap(
-            value
-                .into_iter()
-                .map(|(k, v)| (k.into(), crate::Value::from(v)))
-                .collect(),
+            value.into_iter().map(|(k, v)| (k.into(), crate::Value::from(v))).collect(),
         )
     }
 }
-
 impl From<serde_json::Number> for crate::Value {
     fn from(value: serde_json::Number) -> Self {
         if let Some(value) = value.as_u64() {

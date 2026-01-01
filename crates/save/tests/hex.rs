@@ -2,7 +2,6 @@ use ::save::{
     hex::{decode_hex_nibbles, hex, MaskedBytes},
     testing::assert_debug_eq,
 };
-
 #[test]
 fn hex() {
     assert_debug_eq(
@@ -13,14 +12,8 @@ fn hex() {
         "MaskedBytes { bytes: [18, 52, 86, 120], mask: [255, 255, 255, 255] }",
         decode_hex_nibbles("0x12345678"),
     );
-    assert_debug_eq(
-        "MaskedBytes { bytes: [], mask: [] }",
-        decode_hex_nibbles(""),
-    );
-    assert_debug_eq(
-        "MaskedBytes { bytes: [0], mask: [0] }",
-        decode_hex_nibbles("_"),
-    );
+    assert_debug_eq("MaskedBytes { bytes: [], mask: [] }", decode_hex_nibbles(""));
+    assert_debug_eq("MaskedBytes { bytes: [0], mask: [0] }", decode_hex_nibbles("_"));
     assert_debug_eq(
         "MaskedBytes { bytes: [18, 32, 60, 32, 52], mask: [255, 255, 255, 255, 255] }",
         MaskedBytes::from("\x12 < \x34".to_string()),
