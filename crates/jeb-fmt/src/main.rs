@@ -168,6 +168,31 @@ fn versions_compatible(v1: &Version, v2: &Version) -> bool {
     }
 }
 
+/// Normalize a version string to be parseable by semver crate
+/// Handles:
+/// - `=1.0.0` (exact) -> `1.0.0`
+/// - `^1.0.0` (caret) -> `1.0.0`
+/// - `~1.0.0` (tilde) -> `1.0.0`
+/// - `1.0` (shortened) -> `1.0.0`
+/// - `0.3` (shortened) -> `0.3.0`
+fn normalize_version_string(v_str: &str) -> String {
+    // Remove common prefixes
+    let trimmed = v_str
+        .trim_start_matches('=')
+        .trim_start_matches('^')
+        .trim_start_matches('~')
+        .trim();
+
+    // Count how many version components we have
+    let parts: Vec<&str> = trimmed.split('.').collect();
+
+    match parts.len() {
+        1 => format!("{}.0.0", parts[0]),  // "1" -> "1.0.0"
+        2 => format!("{}.{}.0", parts[0], parts[1]),  // "1.0" -> "1.0.0"
+        _ => trimmed.to_string(),  // Already complete or has pre-release/build metadata
+    }
+}
+
 /// Parse a dependency from a TOML value
 fn parse_dependency(
     key: &str,
@@ -284,16 +309,10 @@ fn parse_dependency(
 
     // Parse version if present
     let version = if let Some(v_str) = version_str {
-        // Remove optional ^ prefix
-        let trimmed = v_str.trim_start_matches('^');
+        // Normalize version string by removing prefixes and completing shortened versions
+        let normalized = normalize_version_string(v_str);
 
-        // Only accept bare version or ^ prefix
-        if !v_str.starts_with('^') && v_str != trimmed {
-            // Has some other prefix, skip
-            return Ok(None);
-        }
-
-        match Version::parse(trimmed) {
+        match Version::parse(&normalized) {
             Ok(v) => Some(v),
             Err(_) => {
                 // Skip dependencies with invalid versions
