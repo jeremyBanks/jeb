@@ -571,11 +571,11 @@ fn build_dependency_value(
 
     // Add fields in order
     if let Some(ref package) = resolution.package {
-        table.insert("package", value(package.as_str()));
+        table.insert("package", Value::from(package.as_str()));
     }
 
     if let Some(ref version) = resolution.version {
-        table.insert("version", value(version.to_string()));
+        table.insert("version", Value::from(version.to_string()));
     }
 
     if let Some(ref path) = resolution.path {
@@ -587,27 +587,27 @@ fn build_dependency_value(
             &pathdiff::diff_paths(path, workspace_root)
                 .ok_or_else(|| anyhow::anyhow!("Could not create relative path"))?
         };
-        table.insert("path", value(rel_path.display().to_string()));
+        table.insert("path", Value::from(rel_path.display().to_string()));
     }
 
     if let Some(ref git) = resolution.git {
-        table.insert("git", value(git.as_str()));
+        table.insert("git", Value::from(git.as_str()));
     }
 
     if let Some(ref branch) = resolution.branch {
-        table.insert("branch", value(branch.as_str()));
+        table.insert("branch", Value::from(branch.as_str()));
     }
 
     if let Some(ref tag) = resolution.tag {
-        table.insert("tag", value(tag.as_str()));
+        table.insert("tag", Value::from(tag.as_str()));
     }
 
     if let Some(ref rev) = resolution.rev {
-        table.insert("rev", value(rev.as_str()));
+        table.insert("rev", Value::from(rev.as_str()));
     }
 
     if let Some(ref registry) = resolution.registry {
-        table.insert("registry", value(registry.as_str()));
+        table.insert("registry", Value::from(registry.as_str()));
     }
 
     Ok(Item::Value(Value::InlineTable(table)))
@@ -641,22 +641,22 @@ fn update_member_toml(
                             if should_use_workspace(&dep, workspace_updates, workspace_key) {
                                 // Update to use workspace = true
                                 let mut table = InlineTable::new();
-                                table.insert("workspace", value(true));
+                                table.insert("workspace", Value::from(true));
 
                                 // Keep configuration fields
                                 if let Some(optional) = dep.config.optional {
-                                    table.insert("optional", value(optional));
+                                    table.insert("optional", Value::from(optional));
                                 }
 
                                 if let Some(ref features) = dep.config.features {
                                     let arr: toml_edit::Array = features.iter()
-                                        .map(|s| value(s.as_str()))
+                                        .map(|s| Value::from(s.as_str()))
                                         .collect();
-                                    table.insert("features", value(arr));
+                                    table.insert("features", Value::Array(arr));
                                 }
 
                                 if let Some(default_features) = dep.config.default_features {
-                                    table.insert("default-features", value(default_features));
+                                    table.insert("default-features", Value::from(default_features));
                                 }
 
                                 deps[&key] = Item::Value(Value::InlineTable(table));
