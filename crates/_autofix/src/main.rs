@@ -1,16 +1,12 @@
-mod cargo_clippy;
-mod cargo_fix;
-mod cargo_fmt;
-mod command_runner;
-mod deno_fmt;
-mod deno_lint;
-mod workspace_deps;
+use _autofix::{
+    autofix_runner, cargo_clippy, cargo_fix, cargo_fmt, deno_fmt, deno_lint, prettyplease,
+    workspace_deps,
+};
 
 fn main() {
-    let mut first_error: Option<i32> = None;
-
-    // Run all autofixes sequentially
+    // Run all autofixes with prettyplease FIRST
     let modules: &[(&str, fn() -> i32)] = &[
+        ("prettyplease", prettyplease::main),
         ("cargo_fmt", cargo_fmt::main),
         ("cargo_fix", cargo_fix::main),
         ("cargo_clippy", cargo_clippy::main),
@@ -19,29 +15,6 @@ fn main() {
         ("deno_fmt", deno_fmt::main),
     ];
 
-    let mut failed_count = 0;
-
-    for (name, func) in modules {
-        let code = func();
-        if code != 0 {
-            eprintln!("[{}] returned exit code: {}", name, code);
-            if first_error.is_none() {
-                first_error = Some(code);
-            }
-            failed_count += 1;
-        }
-    }
-
-    // Print summary
-    let total = modules.len();
-    if failed_count == 0 {
-        eprintln!("Ran {} autofixes (all successful)", total);
-    } else if failed_count == total {
-        eprintln!("Ran {} autofixes (all failed)", total);
-    } else {
-        eprintln!("Ran {} autofixes ({} failed)", total, failed_count);
-    }
-
-    // Exit with first error code, or 0 if all succeeded
-    std::process::exit(first_error.unwrap_or(0));
+    let exit_code = autofix_runner::run_autofixes(modules);
+    std::process::exit(exit_code);
 }
