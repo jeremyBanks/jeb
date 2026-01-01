@@ -1,0 +1,43 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 9e7048731d151875a1c3f7ca4cc8fec644e655f2
+544e63b0db0f457bc0bb89d2576ffcccc53cf7aa:
+  message: commit 1
+  tree:
+    file.txt: version A
+c4e88d76e17a1ba223d788ffca5f0e2b8beccd93:
+  message: commit 2
+  tree:
+    file.txt: version B (from main)
+10925075eaeefebca20b1eab272adf1d6832a49d:
+  message: commit 3
+  parents:
+  - 544e63b0db0f457bc0bb89d2576ffcccc53cf7aa
+  tree:
+    file.txt: version C (from feature)
+fab2e4dfc8df79d2633e03220026e2ee2fee87b7:
+  message: Merge with conflict resolution AND extra changes
+  parents:
+  - c4e88d76e17a1ba223d788ffca5f0e2b8beccd93
+  - 10925075eaeefebca20b1eab272adf1d6832a49d
+  tree:
+    MERGE-NOTES.txt: This merge also fixed a critical bug
+    file.txt: version D (merged + fixed bug)
+7a102927e1e31645e529daac19107476712d036a:
+  message: commit 5
+  tree:
+    another-file.txt: normal work
+05dc6bc29db90b83532e85e84d37a95b90f69483:
+  message: commit 20
+  parents: []
+  tree:
+    data.json: '{"source": "orphan"}'
+9e7048731d151875a1c3f7ca4cc8fec644e655f2:
+  message: Merge unrelated history
+  parents:
+  - 7a102927e1e31645e529daac19107476712d036a
+  - 05dc6bc29db90b83532e85e84d37a95b90f69483
+  tree:
+    INTEGRATION.md: How we integrated the orphan history
+    orphan-data.json: '{"source": "orphan"}'

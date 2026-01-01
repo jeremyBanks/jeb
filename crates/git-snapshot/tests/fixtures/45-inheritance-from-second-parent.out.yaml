@@ -1,0 +1,44 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 4ef38f2beee18c0b77912dc1b85c2a4f95be7c90
+0a2a3c:
+  message: commit 1
+  tree:
+    shared:
+      file.txt: from first parent
+94c4f6:
+  message: commit 2
+  parents: []
+  tree:
+    shared:
+      file.txt: from second parent - different
+b36320:
+  message: commit 3
+  parents:
+  - 0a2a3c
+  tree:
+    main.txt: main only
+    shared:
+      file.txt: updated on first
+9c362c:
+  message: commit 4
+  parents:
+  - 94c4f6
+  tree:
+    other.txt: other only
+    shared:
+      file.txt: updated on second
+4ef38f2beee18c0b77912dc1b85c2a4f95be7c90:
+  message: commit 5
+  parents:
+  - b36320
+  - 9c362c
+  tree:
+    other.txt:
+      ? - commit
+      : 9c362c
+      ? - path
+      : other.txt
+    shared:
+      file.txt: merged content

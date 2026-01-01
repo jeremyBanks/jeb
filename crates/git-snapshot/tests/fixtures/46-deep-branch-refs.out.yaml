@@ -1,0 +1,23 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    feature:
+      subsystem:
+        component:
+          branch: 280795efcd9059e2d491c3159c1aadaf3df6a225
+    main: f3f7e59cd50f4b845c41c932872da0cbe33883c5
+    release:
+      v1:
+        hotfix: b9bec1cff939839449c18b0b93c0dc10c4afea46
+f3f7e59cd50f4b845c41c932872da0cbe33883c5:
+  message: commit 1
+  tree:
+    main.txt: main branch
+280795efcd9059e2d491c3159c1aadaf3df6a225:
+  message: commit 2
+  tree:
+    feature.txt: deep feature branch
+b9bec1cff939839449c18b0b93c0dc10c4afea46:
+  message: commit 3
+  tree:
+    release.txt: release hotfix

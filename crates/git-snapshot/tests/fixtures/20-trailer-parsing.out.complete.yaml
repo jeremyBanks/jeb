@@ -1,0 +1,47 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: cbdb59f634ecc8e8c04157df8feb7e89695908d6
+bde99557f75bbf215febeb02158d800c7362416d:
+  message: commit 1
+  tree:
+    base.txt: base content
+cfbf380f99f5f24217e4990b7cdc7841e28b9f2e:
+  message: orphan seed
+  parents: []
+  tree: {}
+eca4c7c3915f031d3af8c46e7878c39c154a9bb0:
+  message: |
+    Merge from subtree
+
+    This is a detailed explanation of why
+    we're merging this subtree into our repo.
+
+    git-zoom-in: path/to/subtree
+  parents:
+  - cfbf380f99f5f24217e4990b7cdc7841e28b9f2e
+  - bde99557f75bbf215febeb02158d800c7362416d
+  tree:
+    file.txt: content
+d220a88dfcf7efa74174ff6250defb77a01469b3:
+  message: |
+    Merge to subtree
+
+    git-zoom-out: path/to/subtree
+    This line appears after the trailer
+  parents:
+  - bde99557f75bbf215febeb02158d800c7362416d
+  - eca4c7c3915f031d3af8c46e7878c39c154a9bb0
+  tree:
+    path:
+      to:
+        subtree:
+          file.txt: content
+cbdb59f634ecc8e8c04157df8feb7e89695908d6:
+  message: |
+    Another merge
+
+    GIT-ZOOM-IN:   spaces/around/path
+    git-zoom-out:path/no/space
+  tree:
+    result.txt: done

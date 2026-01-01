@@ -1,0 +1,77 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 8
+1:
+  tree:
+    original-location:
+      file.txt: content that travels
+2:
+  message: commit 4
+  parents: []
+  tree: {}
+3:
+  message: |
+    Zoom in from original-location
+
+    git-zoom-in: original-location
+  parents:
+  - 2
+  - 1
+  tree:
+    file.txt:
+      ? - commit
+      : 1
+      ? - path
+      : original-location/file.txt
+4:
+  message: commit 2
+  parents:
+  - 1
+  tree:
+    second-location:
+      file.txt:
+        ? - commit
+        : 3
+        ? - path
+        : file.txt
+5:
+  message: commit 3
+  tree:
+    third-location:
+      file.txt:
+        ? - commit
+        : 3
+        ? - path
+        : file.txt
+6:
+  parents:
+  - 3
+  tree:
+    file.txt: modified content
+    new.txt: new file
+7:
+  message: |
+    Zoom out to third-location
+
+    git-zoom-out: third-location
+  parents:
+  - 5
+  - 6
+  tree:
+    third-location:
+      file.txt:
+        ? - commit
+        : 6
+        ? - path
+        : file.txt
+      new.txt:
+        ? - commit
+        : 6
+        ? - path
+        : new.txt
+8:
+  tree:
+    other.txt: unrelated
+    third-location:
+      file.txt: final content

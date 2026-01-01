@@ -1,0 +1,50 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 5
+1:
+  tree:
+    base.txt: base content
+2:
+  message: orphan seed
+  parents: []
+  tree: {}
+3:
+  message: |
+    Merge from subtree
+
+    This is a detailed explanation of why
+    we're merging this subtree into our repo.
+
+    git-zoom-in: path/to/subtree
+  parents:
+  - 2
+  - 1
+  tree:
+    file.txt: content
+4:
+  message: |
+    Merge to subtree
+
+    git-zoom-out: path/to/subtree
+    This line appears after the trailer
+  parents:
+  - 1
+  - 3
+  tree:
+    path:
+      to:
+        subtree:
+          file.txt:
+            ? - commit
+            : 3
+            ? - path
+            : file.txt
+5:
+  message: |
+    Another merge
+
+    GIT-ZOOM-IN:   spaces/around/path
+    git-zoom-out:path/no/space
+  tree:
+    result.txt: done

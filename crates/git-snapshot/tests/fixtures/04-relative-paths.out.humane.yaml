@@ -1,0 +1,24 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  tree:
+    bar:
+      c.txt: content c
+    foo:
+      a.txt: content a
+      b.txt: content b
+2:
+  tree:
+    c-moved.txt:
+      ? - commit
+      : 1
+      ? - path
+      : bar/c.txt
+    foo:
+      moved-b.txt:
+        ? - commit
+        : 1
+        ? - path
+        : foo/b.txt

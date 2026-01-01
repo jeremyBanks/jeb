@@ -1,0 +1,60 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 3cbe233b7f2f7eef369d80a1377e200b509b74cf
+c36e23deaaf1a76db6d304f32fc010985cf9feb7:
+  message: commit 1
+  tree:
+    original-location:
+      file.txt: content that travels
+471739935d2d94d4ebc507d97c1aaec9f6c87357:
+  message: commit 4
+  parents: []
+  tree: {}
+12275684e10dbe0a4fe6e6680cafd0be4bb3880c:
+  message: |
+    Zoom in from original-location
+
+    git-zoom-in: original-location
+  parents:
+  - 471739935d2d94d4ebc507d97c1aaec9f6c87357
+  - c36e23deaaf1a76db6d304f32fc010985cf9feb7
+  tree:
+    file.txt: content that travels
+4b31500b5326aef50efe3c10c7fdfbdbf2f5afe7:
+  message: commit 2
+  parents:
+  - c36e23deaaf1a76db6d304f32fc010985cf9feb7
+  tree:
+    second-location:
+      file.txt: content that travels
+1d70434558a63abaeadb8ff39155d1e68cc1fa5c:
+  message: commit 3
+  tree:
+    third-location:
+      file.txt: content that travels
+03f59405ddde508b2560c2930a6ce6c2cc0f33be:
+  message: commit 6
+  parents:
+  - 12275684e10dbe0a4fe6e6680cafd0be4bb3880c
+  tree:
+    file.txt: modified content
+    new.txt: new file
+08295c1699d6f52961d9f4b2c425d75676aa3cfc:
+  message: |
+    Zoom out to third-location
+
+    git-zoom-out: third-location
+  parents:
+  - 1d70434558a63abaeadb8ff39155d1e68cc1fa5c
+  - 03f59405ddde508b2560c2930a6ce6c2cc0f33be
+  tree:
+    third-location:
+      file.txt: modified content
+      new.txt: new file
+3cbe233b7f2f7eef369d80a1377e200b509b74cf:
+  message: commit 8
+  tree:
+    other.txt: unrelated
+    third-location:
+      file.txt: final content

@@ -1,0 +1,100 @@
+HEAD: refs/heads/full-tree
+refs:
+  heads:
+    backend-subtree: 36665a33582000afb18e6d5770f87d671864544d
+    frontend-subtree: daaad3a9b4af1b390e6cb3f08c39fe99786a5aa3
+    full-tree: 22db47f144628c05df18db5f92845c075a5d2270
+a59e32:
+  message: commit 1
+  tree:
+    README.md: '# Full Stack App'
+    backend:
+      db.py: 'def connect(): pass'
+      server.py: 'def serve(): pass'
+    frontend:
+      app.js: console.log('app');
+      style.css: body { }
+54ab7b:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: git-zoom-in seed for frontend
+  parents: []
+  tree: {}
+daaad3a9b4af1b390e6cb3f08c39fe99786a5aa3:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'frontend'
+
+    git-zoom-in: frontend
+  parents:
+  - 54ab7b
+  - a59e32
+  tree:
+    app.js:
+      ? - commit
+      : a59e32
+      ? - path
+      : frontend/app.js
+    style.css:
+      ? - commit
+      : a59e32
+      ? - path
+      : frontend/style.css
+    utils.js: export const util = () => {};
+e23b0a:
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'frontend'
+
+    git-zoom-out: frontend
+  parents:
+  - a59e32
+  - daaad3a9b4af1b390e6cb3f08c39fe99786a5aa3
+  tree:
+    frontend:
+      utils.js:
+        ? - commit
+        : daaad3a9b4af1b390e6cb3f08c39fe99786a5aa3
+        ? - path
+        : utils.js
+962d09:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: git-zoom-in seed for backend
+  parents: []
+  tree: {}
+36665a33582000afb18e6d5770f87d671864544d:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'backend'
+
+    git-zoom-in: backend
+  parents:
+  - 962d09
+  - e23b0a
+  tree:
+    db.py:
+      ? - commit
+      : a59e32
+      ? - path
+      : backend/db.py
+    routes.py: 'def routes(): pass'
+    server.py:
+      ? - commit
+      : a59e32
+      ? - path
+      : backend/server.py
+22db47f144628c05df18db5f92845c075a5d2270:
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'backend'
+
+    git-zoom-out: backend
+  parents:
+  - e23b0a
+  - 36665a33582000afb18e6d5770f87d671864544d
+  tree:
+    backend:
+      routes.py:
+        ? - commit
+        : 36665a33582000afb18e6d5770f87d671864544d
+        ? - path
+        : routes.py

@@ -1,0 +1,85 @@
+HEAD: refs/heads/full-tree
+refs:
+  heads:
+    full-tree: 9d7b56108f4cb3d49e2bf7d937c4f05f023a12f6
+    subtree: f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c
+577c26:
+  message: commit 1
+  tree:
+    config.yaml: 'version: 1'
+    modules:
+      core:
+        init.rs: fn init() {}
+      extra:
+        addon.rs: fn addon() {}
+6e947b:
+  message: commit 2
+  tree:
+    config.yaml: 'version: 2'
+0fcdb0:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: git-zoom-in seed
+  parents: []
+  tree: {}
+'292750':
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'modules/core'
+
+    git-zoom-in: modules/core
+  parents:
+  - 0fcdb0
+  - 6e947b
+  tree:
+    init.rs:
+      ? - commit
+      : 577c26
+      ? - path
+      : modules/core/init.rs
+22299b:
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'modules/core'
+
+    git-zoom-out: modules/core
+  parents:
+  - 6e947b
+  - '292750'
+3f417e:
+  message: commit 6
+  tree:
+    modules:
+      extra:
+        plugin.rs: fn plugin() {}
+01da74:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'modules/core'
+
+    git-zoom-in: modules/core
+  parents:
+  - '292750'
+  - 3f417e
+  tree:
+    init.rs: null
+f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c:
+  message: commit 8
+  tree:
+    cleanup.rs: fn cleanup() {}
+9d7b56108f4cb3d49e2bf7d937c4f05f023a12f6:
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'modules/core'
+
+    git-zoom-out: modules/core
+  parents:
+  - 3f417e
+  - f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c
+  tree:
+    modules:
+      core:
+        cleanup.rs:
+          ? - commit
+          : f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c
+          ? - path
+          : cleanup.rs

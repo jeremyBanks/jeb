@@ -1,0 +1,12 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: e6b003c5740eebaa97d8c2d1d2cc90b15a7392f6
+bde99557f75bbf215febeb02158d800c7362416d:
+  message: commit 1
+  tree:
+    base.txt: base content
+e6b003c5740eebaa97d8c2d1d2cc90b15a7392f6:
+  message: commit 2
+  tree:
+    combined: base content
