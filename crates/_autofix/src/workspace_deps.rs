@@ -96,7 +96,7 @@ struct Dependency {
     config: ConfigFields,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 struct ResolutionFields {
     package: Option<String>,
     version: Option<String>,
@@ -836,6 +836,9 @@ fn update_workspace_toml(
         }
     }
 
+    // Sort workspace dependencies
+    sort_workspace_dependencies(deps, updates)?;
+
     Ok(())
 }
 
@@ -915,6 +918,87 @@ fn build_dependency_value(
     }
 
     Ok(Item::Value(Value::InlineTable(table)))
+}
+
+/// Determine sort order for workspace dependencies
+fn workspace_dep_sort_key(key: &str, resolution: &ResolutionFields) -> (bool, bool, bool, bool, bool, String) {
+    (
+        resolution.path.is_none(),      // false (0) if path present = sort first
+        resolution.git.is_none(),       // false (0) if git present = sort first
+        resolution.registry.is_none(),  // false (0) if registry present = sort first
+        resolution.package.is_none(),   // false (0) if package present = sort first
+        resolution.version.is_some(),   // true (1) if version present = sort later
+        key.to_lowercase(),             // alphabetically by name
+    )
+}
+
+/// Parse resolution fields from a TOML value (for sorting non-updated deps)
+fn parse_resolution_from_value(value: &Item) -> Result<ResolutionFields> {
+    let mut resolution = ResolutionFields::default();
+
+    if let Some(table) = value.as_inline_table() {
+        resolution.version = table.get("version").and_then(|v| v.as_str()).map(String::from);
+        resolution.path = table.get("path").and_then(|v| v.as_str()).map(|s| PathBuf::from(s));
+        resolution.git = table.get("git").and_then(|v| v.as_str()).map(String::from);
+        resolution.registry = table.get("registry").and_then(|v| v.as_str()).map(String::from);
+        resolution.package = table.get("package").and_then(|v| v.as_str()).map(String::from);
+        resolution.branch = table.get("branch").and_then(|v| v.as_str()).map(String::from);
+        resolution.tag = table.get("tag").and_then(|v| v.as_str()).map(String::from);
+        resolution.rev = table.get("rev").and_then(|v| v.as_str()).map(String::from);
+    } else if let Some(table) = value.as_table() {
+        resolution.version = table.get("version").and_then(|v| v.as_str()).map(String::from);
+        resolution.path = table.get("path").and_then(|v| v.as_str()).map(|s| PathBuf::from(s));
+        resolution.git = table.get("git").and_then(|v| v.as_str()).map(String::from);
+        resolution.registry = table.get("registry").and_then(|v| v.as_str()).map(String::from);
+        resolution.package = table.get("package").and_then(|v| v.as_str()).map(String::from);
+        resolution.branch = table.get("branch").and_then(|v| v.as_str()).map(String::from);
+        resolution.tag = table.get("tag").and_then(|v| v.as_str()).map(String::from);
+        resolution.rev = table.get("rev").and_then(|v| v.as_str()).map(String::from);
+    } else if let Some(s) = value.as_str() {
+        resolution.version = Some(s.to_string());
+    }
+
+    Ok(resolution)
+}
+
+/// Sort workspace dependencies table according to our priority rules
+fn sort_workspace_dependencies(
+    deps_table: &mut dyn toml_edit::TableLike,
+    updates: &HashMap<String, (ResolutionFields, String, bool)>,
+) -> Result<()> {
+    // Collect all entries with their sort keys
+    let mut entries: Vec<(String, Item, (bool, bool, bool, bool, bool, String))> = Vec::new();
+
+    for (key, value) in deps_table.iter() {
+        let key_str = key.to_string();
+
+        // Get resolution fields for this dependency
+        let resolution = if let Some((res, _, _)) = updates.get(&key_str) {
+            res.clone()
+        } else {
+            // For dependencies not in updates, parse from existing value
+            // to determine sort order
+            parse_resolution_from_value(value)?
+        };
+
+        let sort_key = workspace_dep_sort_key(&key_str, &resolution);
+        entries.push((key_str, value.clone(), sort_key));
+    }
+
+    // Sort by the sort key
+    entries.sort_by(|a, b| a.2.cmp(&b.2));
+
+    // Clear and rebuild table in sorted order
+    let keys: Vec<String> = deps_table.iter().map(|(k, _)| k.to_string()).collect();
+    for key in keys {
+        deps_table.remove(&key);
+    }
+
+    for (key, value, _) in entries {
+        deps_table.insert(&key, value);
+    }
+
+    Ok(())
 }
 
 fn update_member_toml(
