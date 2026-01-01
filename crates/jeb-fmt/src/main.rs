@@ -175,13 +175,23 @@ fn versions_compatible(v1: &Version, v2: &Version) -> bool {
 /// - `~1.0.0` (tilde) -> `1.0.0`
 /// - `1.0` (shortened) -> `1.0.0`
 /// - `0.3` (shortened) -> `0.3.0`
+///
+/// Complex specs like `>=1.0, <2.0` cannot be normalized and will fail parsing,
+/// which causes the dependency to be skipped (won't be normalized).
 fn normalize_version_string(v_str: &str) -> String {
-    // Remove common prefixes
+    // Remove common single-character prefixes
     let trimmed = v_str
         .trim_start_matches('=')
         .trim_start_matches('^')
         .trim_start_matches('~')
         .trim();
+
+    // Split on whitespace or comma to check if this is a complex spec
+    // If it contains space or comma, it's likely ">= 1.0, < 2.0" which we can't handle
+    if trimmed.contains(',') || trimmed.contains(' ') {
+        // Return as-is, will likely fail parsing and be skipped
+        return trimmed.to_string();
+    }
 
     // Count how many version components we have
     let parts: Vec<&str> = trimmed.split('.').collect();
@@ -458,7 +468,7 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
     }
 
     // Capture old workspace.dependencies state before updating
-    let old_workspace_deps = capture_old_workspace_deps(&workspace_doc);
+    let old_workspace_deps = capture_old_workspace_deps(&workspace_doc, workspace_root);
 
     // Update workspace Cargo.toml
     update_workspace_toml(&mut workspace_doc, &workspace_updates, workspace_root)?;
@@ -562,15 +572,15 @@ fn find_winner(classes: &[EquivalenceClass]) -> Option<&EquivalenceClass> {
     candidates.first().copied()
 }
 
-fn capture_old_workspace_deps(doc: &DocumentMut) -> HashMap<String, ResolutionFields> {
+fn capture_old_workspace_deps(doc: &DocumentMut, workspace_root: &Path) -> HashMap<String, ResolutionFields> {
     let mut old_deps = HashMap::new();
 
     if let Some(workspace) = doc.get("workspace") {
         if let Some(deps) = workspace.get("dependencies").and_then(|d| d.as_table()) {
             for (key, value) in deps.iter() {
                 // Parse the old workspace dependency
-                // Use a fake base path since we're just capturing resolution fields
-                if let Ok(Some(dep)) = parse_dependency(key, value, Path::new("."), None) {
+                // Use workspace root as base path since paths in workspace.dependencies are relative to it
+                if let Ok(Some(dep)) = parse_dependency(key, value, workspace_root, None) {
                     old_deps.insert(key.to_string(), dep.resolution);
                 }
             }
