@@ -1,0 +1,36 @@
+# Test date handling with explicit author-date and commit-date
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 5
+
+# Explicit full ISO 8601 date
+1:
+  author-date: 2021-01-14T08:25:36Z
+  tree:
+    file.txt: "explicit date"
+
+# Explicit date with timezone offset
+2:
+  author-date: 2021-01-14T14:25:36-02:00
+  commit-date: 2021-01-14T14:25:39-02:00
+  tree:
+    file.txt: "with timezone"
+
+# Partial date - year-month only
+3:
+  author-date: 2021-02
+  tree:
+    file.txt: "partial date"
+
+# Merge commit - should use max parent author-date + 256s
+4:
+  parents: [2, 3]
+  tree:
+    file.txt: "merge"
+
+# Regular commit - should inherit + 256s
+5:
+  tree:
+    file.txt: "inherited date"

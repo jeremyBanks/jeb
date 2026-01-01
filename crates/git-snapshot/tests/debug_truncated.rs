@@ -1,5 +1,6 @@
 use git_snapshot::{
     CommitIdStyle,
+    SerializationOptions,
     parse,
     serialize,
 };
@@ -34,7 +35,7 @@ fn test_truncated_hash_roundtrip() {
             eprintln!("Refs: {} refs", repo.refs().count());
 
             eprintln!("\n=== Serializing back ===");
-            let output = serialize(&repo, CommitIdStyle::Hex);
+            let output = serialize(&repo, CommitIdStyle::Hex, SerializationOptions::default());
             eprintln!("{}", output);
 
             eprintln!("\n=== Second parse ===");

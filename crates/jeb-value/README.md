@@ -1,4 +1,4 @@
-The in-memory types supported by `jeb`.
+The in-memory dynamic types supported by `jeb`.
 
 This is an extension of the standard JavaScript JSON data model. Like JavaScript
 JSON, it includes null, booleans, UTF-8 text strings, finite 64-bit

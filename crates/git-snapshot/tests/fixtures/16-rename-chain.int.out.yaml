@@ -39,13 +39,13 @@ refs:
     archive:
       final-name.txt:
         ? - commit
-        : 1
+        : 5
         ? - path
-        : original-name.txt
+        : final-name.txt
 7:
   tree:
     restored.txt:
       ? - commit
-      : 1
+      : 5
       ? - path
-      : original-name.txt
+      : final-name.txt
