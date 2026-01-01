@@ -581,7 +581,7 @@ fn normalize_workspace_dependencies(workspace_root: &Path, stats: &mut Normaliza
 
     // Update member Cargo.toml files
     for member_path in &members {
-        update_member_toml(member_path, &all_deps, &workspace_updates, workspace_root, &workspace_doc, &old_workspace_deps)?;
+        update_member_toml(member_path, &all_deps, &workspace_updates, workspace_root, &workspace_doc, &old_workspace_deps, stats)?;
     }
 
     // Run final cargo check to verify workspace still builds
@@ -863,6 +863,7 @@ fn update_member_toml(
     workspace_root: &Path,
     workspace_doc: &DocumentMut,
     old_workspace_deps: &HashMap<String, ResolutionFields>,
+    stats: &mut NormalizationStats,
 ) -> Result<()> {
     let member_toml = member_path.join("Cargo.toml");
     let content = std::fs::read_to_string(&member_toml)?;

@@ -40,6 +40,7 @@ backward-looking context when it's important.
 ---
 
 Crates that are internal-only and not meant to be published in the near future
-are named with underscores (instead of hyphens) and have a leading undescore
+are named with underscores (instead of hyphens) and have a leading underscore
 prefix, to mark them as internal and prevent any potential clashes with real
-crate names.
+crate names. If we need to run these, we typically do so with
+`cargo run --bin NAME --`.

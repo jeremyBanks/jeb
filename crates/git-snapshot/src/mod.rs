@@ -1291,6 +1291,64 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
         working: None,
     };
 
+    // Parse staged and working trees
+    // Get HEAD commit for default base tree
+    let head_tree = repo.head_commit().map(|c| c.tree.clone());
+
+    // Parse staged tree (defaults to HEAD commit's tree)
+    if let Some(staged_value) = mapping.get(serde_yaml::Value::String("staged".to_string())) {
+        let staged_mapping = staged_value
+            .as_mapping()
+            .ok_or_else(|| ParseError::UnexpectedType {
+                expected: "mapping",
+                actual: format!("{:?}", staged_value),
+            })?;
+
+        let base_tree = head_tree.clone().unwrap_or_else(Tree::new);
+        let mut staged_tree = base_tree;
+
+        if !staged_mapping.is_empty() {
+            // Apply tree modifications
+            apply_tree_delta(
+                &mut staged_tree,
+                "",
+                staged_mapping,
+                repo.head_commit().map(|c| c.id),
+                None,
+                &commit_processing_state,
+            )?;
+        }
+
+        repo.set_staged(Some(staged_tree));
+    }
+
+    // Parse working tree (defaults to staged tree, or HEAD if no staged)
+    if let Some(working_value) = mapping.get(serde_yaml::Value::String("working".to_string())) {
+        let working_mapping = working_value
+            .as_mapping()
+            .ok_or_else(|| ParseError::UnexpectedType {
+                expected: "mapping",
+                actual: format!("{:?}", working_value),
+            })?;
+
+        let base_tree = repo.staged().map(|t| t.clone()).or(head_tree.clone()).unwrap_or_else(Tree::new);
+        let mut working_tree = base_tree;
+
+        if !working_mapping.is_empty() {
+            // Apply tree modifications
+            apply_tree_delta(
+                &mut working_tree,
+                "",
+                working_mapping,
+                repo.head_commit().map(|c| c.id),
+                None,
+                &commit_processing_state,
+            )?;
+        }
+
+        repo.set_working(Some(working_tree));
+    }
+
     // Prune unreachable commits
     prune_unreachable(&mut repo);
 
