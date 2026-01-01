@@ -242,6 +242,7 @@ fn parse_dependency(
     key: &str,
     value: &Item,
     base_path: &Path,
+    workspace_root: &Path,
     workspace_doc: Option<&DocumentMut>,
 ) -> Result<Option<Dependency>> {
     // Extract version string and other fields
@@ -275,7 +276,8 @@ fn parse_dependency(
                         {
                             if let Some(ws_dep) = ws_deps.get(key) {
                                 // Parse the workspace dependency to get resolution fields
-                                if let Ok(Some(ws_parsed)) = parse_dependency(key, ws_dep, base_path, None) {
+                                // Use workspace_root as base since workspace deps are relative to workspace root
+                                if let Ok(Some(ws_parsed)) = parse_dependency(key, ws_dep, workspace_root, workspace_root, None) {
                                     // Keep configuration fields from member
                                     let optional = t.get("optional").and_then(|v| v.as_bool());
                                     let default_features = t.get("default-features").and_then(|v| v.as_bool());
@@ -452,7 +454,7 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
                         continue;
                     }
 
-                    if let Some(dep) = parse_dependency(key, value, member_path, Some(&workspace_doc))? {
+                    if let Some(dep) = parse_dependency(key, value, member_path, workspace_root, Some(&workspace_doc))? {
                         all_deps
                             .entry(dep.name.clone())
                             .or_default()
@@ -467,13 +469,6 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
     let mut workspace_updates: HashMap<String, (ResolutionFields, String)> = HashMap::new();
 
     for (dep_name, occurrences) in &all_deps {
-        if dep_name == "jeb-common" {
-            eprintln!("=== Analyzing jeb-common ===");
-            for (member_path, _section, dep) in occurrences {
-                eprintln!("  From {:?}:", member_path.file_name());
-                eprintln!("    path: {:?}", dep.resolution.path);
-            }
-        }
         // Group by equivalence class
         let mut equivalence_classes: Vec<EquivalenceClass> = Vec::new();
 
@@ -512,7 +507,7 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
 
     // Update member Cargo.toml files
     for member_path in &members {
-        update_member_toml(member_path, &all_deps, &workspace_updates, &workspace_doc, &old_workspace_deps)?;
+        update_member_toml(member_path, &all_deps, &workspace_updates, workspace_root, &workspace_doc, &old_workspace_deps)?;
     }
 
     Ok(())
@@ -616,7 +611,7 @@ fn capture_old_workspace_deps(doc: &DocumentMut, workspace_root: &Path) -> HashM
             for (key, value) in deps.iter() {
                 // Parse the old workspace dependency
                 // Use workspace root as base path since paths in workspace.dependencies are relative to it
-                if let Ok(Some(dep)) = parse_dependency(key, value, workspace_root, None) {
+                if let Ok(Some(dep)) = parse_dependency(key, value, workspace_root, workspace_root, None) {
                     old_deps.insert(key.to_string(), dep.resolution);
                 }
             }
@@ -746,6 +741,7 @@ fn update_member_toml(
     member_path: &Path,
     _all_deps: &HashMap<String, Vec<(PathBuf, String, Dependency)>>,
     workspace_updates: &HashMap<String, (ResolutionFields, String)>,
+    workspace_root: &Path,
     workspace_doc: &DocumentMut,
     old_workspace_deps: &HashMap<String, ResolutionFields>,
 ) -> Result<()> {
@@ -788,10 +784,10 @@ fn update_member_toml(
                             })
                         } else {
                             // Fall back to parsing with workspace if we can't find old resolution
-                            parse_dependency(&key, dep_item, member_path, Some(workspace_doc)).ok().flatten()
+                            parse_dependency(&key, dep_item, member_path, workspace_root, Some(workspace_doc)).ok().flatten()
                         }
                     } else {
-                        parse_dependency(&key, dep_item, member_path, Some(workspace_doc)).ok().flatten()
+                        parse_dependency(&key, dep_item, member_path, workspace_root, Some(workspace_doc)).ok().flatten()
                     };
 
                     if let Some(dep) = dep {
