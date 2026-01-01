@@ -306,7 +306,22 @@ fn parse_dependency(
 
     // Normalize path relative to base_path
     let path = if let Some(p) = path_str {
-        Some(base_path.join(p).canonicalize()?)
+        let full_path = base_path.join(&p);
+        // Try to canonicalize, but if it fails (e.g., path doesn't exist yet),
+        // use a normalized relative path instead
+        match full_path.canonicalize() {
+            Ok(canonical) => Some(canonical),
+            Err(_) => {
+                // Path doesn't exist - normalize it manually
+                // Convert to absolute path without requiring file existence
+                let absolute = if full_path.is_absolute() {
+                    full_path
+                } else {
+                    base_path.join(&p)
+                };
+                Some(absolute)
+            }
+        }
     } else {
         None
     };

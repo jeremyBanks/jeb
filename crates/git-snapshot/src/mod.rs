@@ -3124,23 +3124,25 @@ fn topological_sort_with_tiebreak(repo: &Repository) -> Vec<ObjectId> {
     }
 
     // Walk ancestors depth-first, recording parent indices
-    let mut visited = std::collections::HashSet::new();
+    let mut reachable_commits = std::collections::HashSet::new();
 
     for head_id in head_commits {
         walk_ancestors_for_tiebreak(
             head_id,
             None, // No parent index for head commits
             repo,
-            &mut visited,
+            &mut reachable_commits,
             &mut tiebreak_keys,
         );
     }
 
-    // Append timestamps to tiebreak keys
-    for commit in repo.commits() {
-        if let Some(key) = tiebreak_keys.get_mut(&commit.id) {
-            key.push(TiebreakComponent::Timestamp(commit.committer_date));
-            key.push(TiebreakComponent::Timestamp(commit.author_date));
+    // Append timestamps to tiebreak keys (only for reachable commits)
+    for commit_id in &reachable_commits {
+        if let Some(commit) = repo.get_commit(commit_id) {
+            if let Some(key) = tiebreak_keys.get_mut(commit_id) {
+                key.push(TiebreakComponent::Timestamp(commit.committer_date));
+                key.push(TiebreakComponent::Timestamp(commit.author_date));
+            }
         }
     }
 
@@ -3149,8 +3151,8 @@ fn topological_sort_with_tiebreak(repo: &Repository) -> Vec<ObjectId> {
     let mut visited = std::collections::HashSet::new();
     let mut in_progress = std::collections::HashSet::new();
 
-    // Sort commits by tiebreak key for deterministic iteration order
-    let mut all_commits: Vec<ObjectId> = repo.commits().map(|c| c.id).collect();
+    // Sort ONLY reachable commits by tiebreak key for deterministic iteration order
+    let mut all_commits: Vec<ObjectId> = reachable_commits.into_iter().collect();
     all_commits.sort_by(|a, b| {
         tiebreak_keys
             .get(a)
