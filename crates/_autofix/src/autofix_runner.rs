@@ -3,7 +3,6 @@
 pub fn run_autofixes(modules: &[(&str, fn() -> i32)]) -> i32 {
     let mut first_error: Option<i32> = None;
     let mut failed_count = 0;
-
     for (name, func) in modules {
         let code = func();
         if code != 0 {
@@ -14,8 +13,6 @@ pub fn run_autofixes(modules: &[(&str, fn() -> i32)]) -> i32 {
             failed_count += 1;
         }
     }
-
-    // Print summary
     let total = modules.len();
     if failed_count == 0 {
         eprintln!("Ran {} autofixes (all successful)", total);
@@ -24,6 +21,5 @@ pub fn run_autofixes(modules: &[(&str, fn() -> i32)]) -> i32 {
     } else {
         eprintln!("Ran {} autofixes ({} failed)", total, failed_count);
     }
-
     first_error.unwrap_or(0)
 }
