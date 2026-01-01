@@ -1,0 +1,25 @@
+# Test deeply nested branch ref paths
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 1
+    feature:
+      subsystem:
+        component:
+          branch: 2
+    release:
+      v1:
+        hotfix: 3
+
+1:
+  tree:
+    main.txt: "main branch"
+
+2:
+  tree:
+    feature.txt: "deep feature branch"
+
+3:
+  tree:
+    release.txt: "release hotfix"
