@@ -1,5 +1,5 @@
 [package]
-name = "jeb-claude-hooks"
+name = "_claude_hooks"
 publish = false
 description = ""
 keywords = []

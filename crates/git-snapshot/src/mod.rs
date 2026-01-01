@@ -986,6 +986,14 @@ pub struct Repository {
 
     /// Current HEAD state
     head: HeadState,
+
+    /// Optional staging area tree (git index).
+    /// Defaults to HEAD commit's tree if not specified.
+    staged: Option<Tree>,
+
+    /// Optional working directory tree.
+    /// Defaults to staged tree (or HEAD if staged is None) if not specified.
+    working: Option<Tree>,
 }
 
 impl Repository {
@@ -998,6 +1006,8 @@ impl Repository {
                 RefName::new("refs/heads/trunk".to_string())
                     .expect("hardcoded ref name should be valid"),
             ),
+            staged: None,
+            working: None,
         }
     }
 
@@ -1050,6 +1060,36 @@ impl Repository {
     /// Set the HEAD state
     pub fn set_head(&mut self, head: HeadState) {
         self.head = head;
+    }
+
+    /// Get the staging area tree
+    pub fn staged(&self) -> Option<&Tree> {
+        self.staged.as_ref()
+    }
+
+    /// Get the working directory tree
+    pub fn working(&self) -> Option<&Tree> {
+        self.working.as_ref()
+    }
+
+    /// Get a mutable reference to the staging area tree
+    pub fn staged_mut(&mut self) -> &mut Option<Tree> {
+        &mut self.staged
+    }
+
+    /// Get a mutable reference to the working directory tree
+    pub fn working_mut(&mut self) -> &mut Option<Tree> {
+        &mut self.working
+    }
+
+    /// Set the staging area tree
+    pub fn set_staged(&mut self, tree: Option<Tree>) {
+        self.staged = tree;
+    }
+
+    /// Set the working directory tree
+    pub fn set_working(&mut self, tree: Option<Tree>) {
+        self.working = tree;
     }
 }
 
