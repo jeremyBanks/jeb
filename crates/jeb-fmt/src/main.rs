@@ -706,18 +706,34 @@ fn update_member_toml(
                         .and_then(|v| v.as_bool())
                         == Some(true);
 
-                    if let Ok(Some(dep)) = parse_dependency(&key, dep_item, member_path, Some(workspace_doc)) {
-                        eprintln!("Processing key={}, dep.name={}, currently_uses_workspace={}", key, dep.name, currently_uses_workspace);
-                        eprintln!("  dep_name_to_workspace_key contains '{}': {}", dep.name, dep_name_to_workspace_key.contains_key(&dep.name));
+                    // For dependencies using workspace = true, we need to check against the OLD workspace
+                    // to decide if they should stay as workspace = true or be inlined
+                    let dep = if currently_uses_workspace {
+                        // Parse with old workspace context to get what it WAS pointing to
+                        // This is a bit tricky - we can't easily create a fake document
+                        // Instead, just look up the old resolution directly
+                        if let Some(old_resolution) = old_workspace_deps.get(&key) {
+                            // Extract config fields from the current dep_item
+                            let config = extract_config_fields(dep_item);
+                            Some(Dependency {
+                                key: key.clone(),
+                                name: old_resolution.package.clone().unwrap_or_else(|| key.clone()),
+                                resolution: old_resolution.clone(),
+                                config,
+                            })
+                        } else {
+                            // Fall back to parsing with workspace if we can't find old resolution
+                            parse_dependency(&key, dep_item, member_path, Some(workspace_doc)).ok().flatten()
+                        }
+                    } else {
+                        parse_dependency(&key, dep_item, member_path, Some(workspace_doc)).ok().flatten()
+                    };
 
+                    if let Some(dep) = dep {
                         // Check if this dependency is in the winning equivalence class
                         if let Some(workspace_key) = dep_name_to_workspace_key.get(&dep.name) {
-                            eprintln!("  Found workspace_key={}", workspace_key);
-                            let should_use = should_use_workspace(&dep, workspace_updates, workspace_key);
-                            eprintln!("  should_use_workspace={}", should_use);
-
                             // Check if this specific occurrence should use workspace = true
-                            if should_use {
+                            if should_use_workspace(&dep, workspace_updates, workspace_key) {
                                 // Update to use workspace = true
                                 let mut table = InlineTable::new();
                                 table.insert("workspace", Value::from(true));
@@ -897,6 +913,38 @@ fn has_config_fields(value: &Item) -> bool {
             || table.contains_key("default-features");
     }
     false
+}
+
+fn extract_config_fields(value: &Item) -> ConfigFields {
+    let table = if let Some(t) = value.as_inline_table() {
+        Some(t as &dyn toml_edit::TableLike)
+    } else if let Some(t) = value.as_table() {
+        Some(t as &dyn toml_edit::TableLike)
+    } else {
+        None
+    };
+
+    let mut config = ConfigFields {
+        optional: None,
+        features: None,
+        default_features: None,
+    };
+
+    if let Some(table) = table {
+        config.optional = table.get("optional").and_then(|v| v.as_bool());
+
+        config.features = table.get("features")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            });
+
+        config.default_features = table.get("default-features").and_then(|v| v.as_bool());
+    }
+
+    config
 }
 
 #[cfg(test)]
@@ -1153,11 +1201,6 @@ serde = "2.0.0"
         // crate-a and crate-b should now have serde 1.0.0 inlined (losers)
         let crate_a_content_2 = fs::read_to_string(workspace_root.join("crate-a/Cargo.toml"))?;
         let crate_b_content_2 = fs::read_to_string(workspace_root.join("crate-b/Cargo.toml"))?;
-
-        eprintln!("=== crate-a/Cargo.toml after second run ===");
-        eprintln!("{}", crate_a_content_2);
-        eprintln!("=== crate-b/Cargo.toml after second run ===");
-        eprintln!("{}", crate_b_content_2);
 
         assert!(crate_a_content_2.contains("serde = \"1.0.0\""), "crate-a should have serde 1.0.0 inlined");
         assert!(!crate_a_content_2.contains("workspace = true"), "crate-a should not use workspace = true");
