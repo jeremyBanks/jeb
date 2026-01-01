@@ -36,15 +36,18 @@ The tool now gracefully handles path dependencies to non-existent paths:
 - Normalizes paths relative to base directory
 - No fatal errors for paths that don't exist yet
 
-### 4. default-features = false Exclusion Policy
-**Status**: ✅ IMPLEMENTED
-**Location**: `normalize_workspace_dependencies` line 458-462
+### 4. default-features Handling with "default" Feature
+**Status**: ✅ FULLY IMPLEMENTED
+**Location**: Multiple locations (EquivalenceClass, build_dependency_value, update_member_toml, has_config_fields)
 
 The tool now correctly handles dependencies with `default-features = false`:
-- Members specifying `default-features = false` are excluded from voting for that dependency
-- The dependency can still be promoted based on other members
-- Members with `default-features = false` keep their inlined version
-- This prevents workspace dependency conflicts where some members need different feature configurations
+- ALL dependencies (including those with `default-features = false`) participate in voting
+- If ANY member has `default-features = false`, workspace.dependencies gets `default-features = false`
+- Members with `default-features = false` use: `workspace = true, features = [...], default-features = false`
+- Members wanting defaults enabled use: `workspace = true, features = ["default", ...]` (prepends "default")
+- Field ordering: features always comes BEFORE default-features when both are present
+- The blocking logic now allows `default-features` in workspace.dependencies (only blocks `optional` and `features`)
+- Tool is fully idempotent with this feature
 
 ## Important Issues
 
@@ -148,19 +151,24 @@ No special handling for empty `[workspace.members]` array. Works correctly but u
 ✅ Basic TOML manipulation
 ✅ Configuration field detection in workspace
 ✅ Happy path for fresh normalization
-✅ **NEW**: Handles existing `workspace = true` dependencies
-✅ **NEW**: Idempotent - can re-run on own output
-✅ **NEW**: Excludes members with `default-features = false` from voting
+✅ Handles existing `workspace = true` dependencies
+✅ Idempotent - can re-run on own output
+✅ **NEW**: Includes members with `default-features = false` in voting
+✅ **NEW**: Sets `default-features = false` in workspace when needed
+✅ **NEW**: Uses `features = ["default", ...]` for members wanting defaults
+✅ **NEW**: Cargo check safety with rollback on failure
 
 ### Fully Idempotent
 ✅ Can handle re-running on normalized workspaces
 ✅ Inlines losing classes when majority flips
 ✅ Handles workspace membership changes correctly
+✅ Handles `default-features = false` in workspace.dependencies
 
 ### Recommended Next Steps
 1. ✅ ~~Implement `workspace = true` parsing (Critical #1)~~ - DONE
 2. ✅ ~~Implement loser inlining (Critical #2)~~ - DONE
 3. ✅ ~~Fix path canonicalization (Critical #3)~~ - DONE
-4. ✅ ~~Implement `default-features = false` exclusion policy~~ - DONE
-5. **All critical issues resolved!** Tool is now production-ready
-6. Optional improvements: section-form dependencies, key selection, comprehensive tests
+4. ✅ ~~Implement `default-features` handling with "default" feature (Critical #4)~~ - DONE
+5. ✅ ~~Add cargo check safety mechanism~~ - DONE
+6. **All critical issues resolved!** Tool is now production-ready
+7. Optional improvements: section-form dependencies, key selection, comprehensive tests
