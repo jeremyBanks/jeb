@@ -17,4 +17,4 @@ refs:
       ? - commit
       : 1
       ? - path
-      : dir/also-empty.txt
+      : empty.txt

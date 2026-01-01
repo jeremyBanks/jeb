@@ -43,13 +43,13 @@ refs:
     src:
       LICENSE.txt:
         ? - commit
-        : 1
+        : 3
         ? - path
-        : lib/header.txt
+        : examples/header.txt
 5:
   tree:
     COPYING:
       ? - commit
-      : 1
+      : 3
       ? - path
-      : lib/header.txt
+      : examples/header.txt

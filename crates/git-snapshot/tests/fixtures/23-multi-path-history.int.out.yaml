@@ -32,18 +32,18 @@ refs:
     second-location:
       file.txt:
         ? - commit
-        : 1
+        : 3
         ? - path
-        : original-location/file.txt
+        : file.txt
 5:
   message: commit 3
   tree:
     third-location:
       file.txt:
         ? - commit
-        : 1
+        : 3
         ? - path
-        : original-location/file.txt
+        : file.txt
 6:
   parents:
   - 3

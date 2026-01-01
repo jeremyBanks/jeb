@@ -438,13 +438,16 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
         }
     }
 
+    // Capture old workspace.dependencies state before updating
+    let old_workspace_deps = capture_old_workspace_deps(&workspace_doc);
+
     // Update workspace Cargo.toml
     update_workspace_toml(&mut workspace_doc, &workspace_updates, workspace_root)?;
     std::fs::write(&workspace_toml_path, workspace_doc.to_string())?;
 
     // Update member Cargo.toml files
     for member_path in &members {
-        update_member_toml(member_path, &all_deps, &workspace_updates, &workspace_doc)?;
+        update_member_toml(member_path, &all_deps, &workspace_updates, &workspace_doc, &old_workspace_deps)?;
     }
 
     Ok(())
@@ -678,6 +681,12 @@ fn update_member_toml(
 
             for key in keys {
                 if let Some(dep_item) = deps.get(&key) {
+                    // Check if this dependency currently uses workspace = true
+                    let currently_uses_workspace = dep_item.as_inline_table()
+                        .and_then(|t| t.get("workspace"))
+                        .and_then(|v| v.as_bool())
+                        == Some(true);
+
                     if let Ok(Some(dep)) = parse_dependency(&key, dep_item, member_path, Some(workspace_doc)) {
                         // Check if this dependency is in the winning equivalence class
                         if let Some(workspace_key) = dep_name_to_workspace_key.get(&dep.name) {
@@ -704,7 +713,15 @@ fn update_member_toml(
                                 }
 
                                 deps[&key] = Item::Value(Value::InlineTable(table));
+                            } else if currently_uses_workspace {
+                                // This dependency was using workspace = true but is now a loser
+                                // Inline it with the actual resolution fields
+                                inline_dependency(&key, &dep, deps, member_path)?;
                             }
+                        } else if currently_uses_workspace {
+                            // This dependency was using workspace = true but is no longer in workspace
+                            // Inline it with the actual resolution fields
+                            inline_dependency(&key, &dep, deps, member_path)?;
                         }
                     }
                 }
@@ -728,6 +745,96 @@ fn should_use_workspace(
     } else {
         false
     }
+}
+
+fn inline_dependency(
+    key: &str,
+    dep: &Dependency,
+    deps: &mut dyn toml_edit::TableLike,
+    member_path: &Path,
+) -> Result<()> {
+    // Check if version is the only resolution field
+    let has_extra_fields = dep.resolution.package.is_some()
+        || dep.resolution.path.is_some()
+        || dep.resolution.git.is_some()
+        || dep.resolution.branch.is_some()
+        || dep.resolution.tag.is_some()
+        || dep.resolution.rev.is_some()
+        || dep.resolution.registry.is_some();
+
+    let has_config_fields = dep.config.optional.is_some()
+        || dep.config.features.is_some()
+        || dep.config.default_features.is_some();
+
+    // Use simple string form only if version is the only field overall
+    if !has_extra_fields && !has_config_fields && dep.resolution.version.is_some() {
+        let version_str = dep.resolution.version.as_ref().unwrap().to_string();
+        deps.insert(key, value(version_str).into());
+        return Ok(());
+    }
+
+    // Use inline table form
+    let mut table = InlineTable::new();
+
+    // Add resolution fields in order
+    if let Some(ref package) = dep.resolution.package {
+        table.insert("package", Value::from(package.as_str()));
+    }
+
+    if let Some(ref version) = dep.resolution.version {
+        table.insert("version", Value::from(version.to_string()));
+    }
+
+    if let Some(ref path) = dep.resolution.path {
+        // Convert to relative path from member directory
+        let rel_path = if let Ok(stripped) = path.strip_prefix(member_path) {
+            stripped
+        } else {
+            // Try to make relative
+            &pathdiff::diff_paths(path, member_path)
+                .ok_or_else(|| anyhow::anyhow!("Could not create relative path"))?
+        };
+        table.insert("path", Value::from(rel_path.display().to_string()));
+    }
+
+    if let Some(ref git) = dep.resolution.git {
+        table.insert("git", Value::from(git.as_str()));
+    }
+
+    if let Some(ref branch) = dep.resolution.branch {
+        table.insert("branch", Value::from(branch.as_str()));
+    }
+
+    if let Some(ref tag) = dep.resolution.tag {
+        table.insert("tag", Value::from(tag.as_str()));
+    }
+
+    if let Some(ref rev) = dep.resolution.rev {
+        table.insert("rev", Value::from(rev.as_str()));
+    }
+
+    if let Some(ref registry) = dep.resolution.registry {
+        table.insert("registry", Value::from(registry.as_str()));
+    }
+
+    // Add configuration fields
+    if let Some(optional) = dep.config.optional {
+        table.insert("optional", Value::from(optional));
+    }
+
+    if let Some(ref features) = dep.config.features {
+        let arr: toml_edit::Array = features.iter()
+            .map(|s| Value::from(s.as_str()))
+            .collect();
+        table.insert("features", Value::Array(arr));
+    }
+
+    if let Some(default_features) = dep.config.default_features {
+        table.insert("default-features", Value::from(default_features));
+    }
+
+    deps.insert(key, Item::Value(Value::InlineTable(table)));
+    Ok(())
 }
 
 fn has_config_fields(value: &Item) -> bool {
@@ -890,5 +997,131 @@ anyhow = "1.0.0"
 
         assert!(versions_compatible(&v1, &v2));
         assert!(!versions_compatible(&v1, &v3));
+    }
+
+    #[test]
+    fn test_loser_inlining() -> Result<()> {
+        let temp = TempDir::new()?;
+        let workspace_root = temp.path();
+
+        // Create workspace with 3 crates
+        // crate-a and crate-b use serde 1.0.0
+        // crate-c uses serde 2.0.0
+        // Initially, serde 1.0.0 wins (2 votes vs 1)
+        fs::write(
+            workspace_root.join("Cargo.toml"),
+            r#"[workspace]
+members = ["crate-a", "crate-b", "crate-c"]
+
+[workspace.dependencies]
+"#,
+        )?;
+
+        fs::create_dir(workspace_root.join("crate-a"))?;
+        fs::write(
+            workspace_root.join("crate-a/Cargo.toml"),
+            r#"[package]
+name = "crate-a"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = "1.0.0"
+"#,
+        )?;
+
+        fs::create_dir(workspace_root.join("crate-b"))?;
+        fs::write(
+            workspace_root.join("crate-b/Cargo.toml"),
+            r#"[package]
+name = "crate-b"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = "1.0.0"
+"#,
+        )?;
+
+        fs::create_dir(workspace_root.join("crate-c"))?;
+        fs::write(
+            workspace_root.join("crate-c/Cargo.toml"),
+            r#"[package]
+name = "crate-c"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = "2.0.0"
+"#,
+        )?;
+
+        // First run: serde 1.0.0 should win
+        normalize_workspace_dependencies(workspace_root)?;
+
+        let workspace_content = fs::read_to_string(workspace_root.join("Cargo.toml"))?;
+        assert!(workspace_content.contains("serde = \"1.0.0\""), "serde 1.0.0 should win initially");
+
+        let crate_a_content = fs::read_to_string(workspace_root.join("crate-a/Cargo.toml"))?;
+        let crate_b_content = fs::read_to_string(workspace_root.join("crate-b/Cargo.toml"))?;
+        assert!(crate_a_content.contains("workspace = true"), "crate-a should use workspace = true");
+        assert!(crate_b_content.contains("workspace = true"), "crate-b should use workspace = true");
+
+        // crate-c should have serde inlined (loser)
+        let crate_c_content = fs::read_to_string(workspace_root.join("crate-c/Cargo.toml"))?;
+        assert!(crate_c_content.contains("serde = \"2.0.0\""), "crate-c should have serde 2.0.0 inlined");
+        assert!(!crate_c_content.contains("workspace = true"), "crate-c should not use workspace = true");
+
+        // Now modify: add crate-d using serde 2.0.0
+        // This shifts majority to serde 2.0.0 (2 votes vs 2, but version tie-breaker)
+        fs::create_dir(workspace_root.join("crate-d"))?;
+        fs::write(
+            workspace_root.join("crate-d/Cargo.toml"),
+            r#"[package]
+name = "crate-d"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = "2.0.0"
+"#,
+        )?;
+
+        // Update workspace members
+        fs::write(
+            workspace_root.join("Cargo.toml"),
+            workspace_content.replace(
+                r#"members = ["crate-a", "crate-b", "crate-c"]"#,
+                r#"members = ["crate-a", "crate-b", "crate-c", "crate-d"]"#
+            ),
+        )?;
+
+        // Second run: serde 2.0.0 should now win
+        normalize_workspace_dependencies(workspace_root)?;
+
+        let workspace_content_2 = fs::read_to_string(workspace_root.join("Cargo.toml"))?;
+        assert!(workspace_content_2.contains("serde = \"2.0.0\""), "serde 2.0.0 should win after adding crate-d");
+
+        // crate-a and crate-b should now have serde 1.0.0 inlined (losers)
+        let crate_a_content_2 = fs::read_to_string(workspace_root.join("crate-a/Cargo.toml"))?;
+        let crate_b_content_2 = fs::read_to_string(workspace_root.join("crate-b/Cargo.toml"))?;
+
+        eprintln!("=== crate-a/Cargo.toml after second run ===");
+        eprintln!("{}", crate_a_content_2);
+        eprintln!("=== crate-b/Cargo.toml after second run ===");
+        eprintln!("{}", crate_b_content_2);
+
+        assert!(crate_a_content_2.contains("serde = \"1.0.0\""), "crate-a should have serde 1.0.0 inlined");
+        assert!(!crate_a_content_2.contains("workspace = true"), "crate-a should not use workspace = true");
+        assert!(crate_b_content_2.contains("serde = \"1.0.0\""), "crate-b should have serde 1.0.0 inlined");
+        assert!(!crate_b_content_2.contains("workspace = true"), "crate-b should not use workspace = true");
+
+        // crate-c and crate-d should use workspace = true (winners)
+        let crate_c_content_2 = fs::read_to_string(workspace_root.join("crate-c/Cargo.toml"))?;
+        let crate_d_content = fs::read_to_string(workspace_root.join("crate-d/Cargo.toml"))?;
+        assert!(crate_c_content_2.contains("workspace = true"), "crate-c should use workspace = true");
+        assert!(crate_d_content.contains("workspace = true"), "crate-d should use workspace = true");
+
+        Ok(())
     }
 }
