@@ -2377,6 +2377,41 @@ pub enum CommitIdStyle {
     Integer,
 }
 
+/// Options controlling serialization behavior
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SerializationOptions {
+    /// Whether to use deduplication via [commit]/[path] references
+    /// Default: true
+    pub use_deduplication: bool,
+
+    /// Whether to use short (truncated) hashes for non-head commits
+    /// Only applies when id_style is CommitIdStyle::Hex
+    /// Default: true
+    pub use_short_hashes: bool,
+
+    /// Whether to force use of integer IDs regardless of id_style
+    /// Overrides id_style parameter if true
+    /// Default: false
+    pub force_integer_ids: bool,
+
+    /// Whether to force use of full 40-char hashes for all commits
+    /// Only applies when id_style is CommitIdStyle::Hex
+    /// Overrides use_short_hashes if true
+    /// Default: false
+    pub force_full_hashes: bool,
+}
+
+impl Default for SerializationOptions {
+    fn default() -> Self {
+        Self {
+            use_deduplication: true,
+            use_short_hashes: true,
+            force_integer_ids: false,
+            force_full_hashes: false,
+        }
+    }
+}
+
 // ============================================================================
 // Deduplication Context and Helper Functions
 // ============================================================================
