@@ -801,6 +801,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "jeb-claude-hooks"
+version = "0.0.0-dev-2025-12-26.7705"
+dependencies = [
+ "indexmap 2.12.1",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "jeb-common"
 version = "0.0.0-dev-2025-12-26.7705"
 dependencies = [
@@ -810,6 +819,10 @@ dependencies = [
  "indexmap 2.12.1",
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "jeb-fmt"
+version = "0.0.0-dev-2025-12-26.7705"
 
 [[package]]
 name = "jeb-stream"

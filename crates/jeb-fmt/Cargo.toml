@@ -1,0 +1,13 @@
+[package]
+name = "jeb-fmt"
+publish = false
+description = ""
+keywords = []
+categories = []
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
