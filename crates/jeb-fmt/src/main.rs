@@ -467,6 +467,13 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
     let mut workspace_updates: HashMap<String, (ResolutionFields, String)> = HashMap::new();
 
     for (dep_name, occurrences) in &all_deps {
+        if dep_name == "jeb-common" {
+            eprintln!("=== Analyzing jeb-common ===");
+            for (member_path, _section, dep) in occurrences {
+                eprintln!("  From {:?}:", member_path.file_name());
+                eprintln!("    path: {:?}", dep.resolution.path);
+            }
+        }
         // Group by equivalence class
         let mut equivalence_classes: Vec<EquivalenceClass> = Vec::new();
 
