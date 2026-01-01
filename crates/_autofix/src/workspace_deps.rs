@@ -7,11 +7,18 @@ use toml_edit::{value, DocumentMut, InlineTable, Item, Value};
 
 pub fn main() -> Result<()> {
     let workspace_root = find_workspace_root(".")?;
-    println!("Found workspace root: {}", workspace_root.display());
+    let mut stats = NormalizationStats::default();
 
-    normalize_workspace_dependencies(&workspace_root)?;
+    normalize_workspace_dependencies(&workspace_root, &mut stats)?;
 
-    println!("Workspace dependencies normalized successfully!");
+    // Print final summary
+    eprintln!("\nSummary:");
+    eprintln!("  Workspaces examined: {}", stats.workspaces_processed);
+    eprintln!("  Crates examined: {}", stats.crates_examined);
+    eprintln!("  Workspace Cargo.toml files edited: {}", stats.workspace_tomls_edited);
+    eprintln!("  Member Cargo.toml files edited: {}", stats.member_tomls_edited);
+    eprintln!("  Total files edited: {}", stats.edited_files.len());
+
     Ok(())
 }
 
@@ -409,8 +416,34 @@ fn parse_dependency(
     }))
 }
 
+#[derive(Default)]
+struct NormalizationStats {
+    workspaces_processed: usize,
+    crates_examined: usize,
+    workspace_tomls_edited: usize,
+    member_tomls_edited: usize,
+    edited_files: HashSet<PathBuf>,
+}
+
+impl NormalizationStats {
+    fn record_file_edit(&mut self, path: &Path, is_workspace: bool) -> bool {
+        let newly_edited = self.edited_files.insert(path.to_path_buf());
+        if newly_edited {
+            if is_workspace {
+                self.workspace_tomls_edited += 1;
+            } else {
+                self.member_tomls_edited += 1;
+            }
+        }
+        newly_edited
+    }
+}
+
 /// Main normalization function
-fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
+fn normalize_workspace_dependencies(workspace_root: &Path, stats: &mut NormalizationStats) -> Result<()> {
+    eprintln!("Processing workspace: {}", workspace_root.display());
+    stats.workspaces_processed += 1;
+
     // Load workspace Cargo.toml
     let workspace_toml_path = workspace_root.join("Cargo.toml");
     let workspace_content = std::fs::read_to_string(&workspace_toml_path)?;
@@ -457,6 +490,8 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
 
     // Resolve members
     let members = resolve_workspace_members(workspace_root)?;
+    stats.crates_examined = members.len();
+    eprintln!("  Found {} member crate(s)", members.len());
 
     // Parse all dependencies from all members
     let mut all_deps: HashMap<String, Vec<(PathBuf, String, Dependency)>> = HashMap::new();
@@ -536,7 +571,13 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
 
     // Update workspace Cargo.toml
     update_workspace_toml(&mut workspace_doc, &workspace_updates, workspace_root)?;
-    std::fs::write(&workspace_toml_path, workspace_doc.to_string())?;
+    let workspace_doc_str = workspace_doc.to_string();
+    if workspace_doc_str != workspace_content {
+        if stats.record_file_edit(&workspace_toml_path, true) {
+            eprintln!("  Editing: {}", workspace_toml_path.display());
+        }
+        std::fs::write(&workspace_toml_path, workspace_doc_str)?;
+    }
 
     // Update member Cargo.toml files
     for member_path in &members {
@@ -572,6 +613,8 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
 
         anyhow::bail!("Normalization broke the build. All changes have been reverted.");
     }
+
+    eprintln!("  Finished processing workspace");
 
     Ok(())
 }

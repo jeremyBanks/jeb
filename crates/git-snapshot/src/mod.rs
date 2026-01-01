@@ -1103,6 +1103,89 @@ impl Default for Repository {
 // Parsing Implementation
 // ============================================================================
 
+/// Parse HEAD and refs with smart defaults
+///
+/// Handles three cases:
+/// 1. Neither HEAD nor refs defined: Allow empty repo with unborn refs/heads/trunk
+/// 2. refs defined, HEAD not: Search for refs/heads/trunk, main, master, then first ref
+/// 3. HEAD defined, refs not: If HEAD is commit ref, refs empty; if ref string, create ref to last commit
+fn parse_head_and_refs_with_defaults(
+    head_value: Option<&serde_yaml::Value>,
+    refs_value: Option<&serde_yaml::Value>,
+    commit_defs_vec: &[(CommitRef, &serde_yaml::Mapping)],
+) -> Result<(HeadStateOrRef, BTreeMap<RefName, CommitRef>), ParseError> {
+    let head_parsed = head_value.map(parse_head).transpose()?;
+    let refs_parsed = refs_value.map(parse_refs).transpose()?.unwrap_or_else(BTreeMap::new);
+
+    match (head_parsed, refs_parsed.is_empty()) {
+        // Case 1: Neither HEAD nor refs defined
+        (None, true) => {
+            let trunk_ref = RefName::new("refs/heads/trunk".to_string())?;
+            Ok((HeadStateOrRef::Symbolic(trunk_ref), BTreeMap::new()))
+        }
+
+        // Case 2: refs defined, HEAD not defined
+        (None, false) => {
+            // Search order: trunk -> main -> master -> first refs/heads/* -> any ref
+            let search_order = vec![
+                "refs/heads/trunk",
+                "refs/heads/main",
+                "refs/heads/master",
+            ];
+
+            let head_target = search_order
+                .iter()
+                .find_map(|s| {
+                    let ref_name = RefName::new(s.to_string()).ok()?;
+                    refs_parsed.contains_key(&ref_name).then_some(ref_name)
+                })
+                .or_else(|| {
+                    // Find first refs/heads/* lexicographically
+                    refs_parsed
+                        .keys()
+                        .filter(|name| name.as_str().starts_with("refs/heads/"))
+                        .min_by_key(|name| name.as_str())
+                        .cloned()
+                })
+                .or_else(|| {
+                    // Find any ref lexicographically
+                    refs_parsed.keys().min_by_key(|name| name.as_str()).cloned()
+                })
+                .ok_or(ParseError::MissingField("HEAD"))?;
+
+            Ok((HeadStateOrRef::Symbolic(head_target), refs_parsed))
+        }
+
+        // Case 3: HEAD defined, refs not defined
+        (Some(head), true) => {
+            match &head {
+                HeadStateOrRef::Detached(_) => {
+                    // HEAD is a commit ref, refs stays empty
+                    Ok((head, BTreeMap::new()))
+                }
+                HeadStateOrRef::Symbolic(ref_name) => {
+                    // HEAD points to a ref, create that ref pointing to last commit
+                    if commit_defs_vec.is_empty() {
+                        // No commits, unborn branch
+                        Ok((head, BTreeMap::new()))
+                    } else {
+                        // Find topologically last commit
+                        // For now, use the last commit in document order as a simple heuristic
+                        // The proper topological sort will be applied after full parsing
+                        let last_commit_ref = commit_defs_vec.last().unwrap().0.clone();
+                        let mut refs = BTreeMap::new();
+                        refs.insert(ref_name.clone(), last_commit_ref);
+                        Ok((head, refs))
+                    }
+                }
+            }
+        }
+
+        // Case 4: Both HEAD and refs defined
+        (Some(head), false) => Ok((head, refs_parsed)),
+    }
+}
+
 /// Parse a YAML string into a Repository.
 pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
     let value: serde_yaml::Value = serde_yaml::from_str(yaml)?;
@@ -1114,22 +1197,7 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
             actual: format!("{:?}", value),
         })?;
 
-    // Parse HEAD
-    let head_value = mapping
-        .get(serde_yaml::Value::String("HEAD".to_string()))
-        .ok_or(ParseError::MissingField("HEAD"))?;
-
-    let head = parse_head(head_value)?;
-
-    // Parse refs
-    let refs_value = mapping.get(serde_yaml::Value::String("refs".to_string()));
-    let refs = if let Some(refs_value) = refs_value {
-        parse_refs(refs_value)?
-    } else {
-        BTreeMap::new()
-    };
-
-    // Parse commits - build a map of commit references to their definitions
+    // Parse commits first - build a map of commit references to their definitions
     // Use a Vec to preserve document order, not BTreeMap which sorts by CommitRef
     let mut commit_defs_vec: Vec<(CommitRef, &serde_yaml::Mapping)> = Vec::new();
     let mut integer_to_hex: HashMap<u32, ObjectId> = HashMap::new();
@@ -1137,7 +1205,7 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
 
     for (key, value) in mapping.iter() {
         let key_str = key.as_str();
-        if key_str == Some("HEAD") || key_str == Some("refs") {
+        if key_str == Some("HEAD") || key_str == Some("refs") || key_str == Some("staged") || key_str == Some("working") {
             continue;
         }
 
@@ -1153,6 +1221,11 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
 
         commit_defs_vec.push((commit_ref.clone(), commit_mapping));
     }
+
+    // Parse HEAD and refs with defaults
+    let head_value = mapping.get(serde_yaml::Value::String("HEAD".to_string()));
+    let refs_value = mapping.get(serde_yaml::Value::String("refs".to_string()));
+    let (head, refs) = parse_head_and_refs_with_defaults(head_value, refs_value, &commit_defs_vec)?;
 
     // First pass: compute ObjectIds for integer-keyed commits
     // We need to resolve the commit graph to compute object IDs
@@ -1214,6 +1287,8 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
         commits,
         refs: resolved_refs,
         head: resolved_head,
+        staged: None,
+        working: None,
     };
 
     // Prune unreachable commits

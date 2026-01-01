@@ -25,8 +25,7 @@ EOF
 
 The optional `[target]` argument specifies the ancestor commit that marks the
 start of the work you're describing (defaults to the most recent first-parent
-ancestor that is a merge commit). The script creates a
-merge commit where:
+ancestor that is a merge commit). The script creates a merge commit where:
 
 - The tree is unchanged (same as HEAD)
 - First parent is the target commit
@@ -39,3 +38,8 @@ or considerations you think would be useful, potentially including forward- or
 backward-looking context when it's important.
 
 ---
+
+Crates that are internal-only and not meant to be published in the near future
+are named with underscores (instead of hyphens) and have a leading undescore
+prefix, to mark them as internal and prevent any potential clashes with real
+crate names.
