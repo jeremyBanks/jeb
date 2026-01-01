@@ -56,21 +56,21 @@ refs:
   tree:
     from-commit-1.txt:
       ? - commit
-      : 1
+      : 2
       ? - path
-      : template.txt
+      : copy-1.txt
     from-commit-2.txt:
       ? - commit
-      : 1
+      : 2
       ? - path
-      : template.txt
+      : copy-1.txt
     from-commit-3.txt:
       ? - commit
-      : 1
+      : 2
       ? - path
-      : template.txt
+      : copy-1.txt
     from-commit-4.txt:
       ? - commit
-      : 1
+      : 2
       ? - path
-      : template.txt
+      : copy-1.txt

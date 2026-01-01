@@ -1,13 +1,12 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 3
+    main: 2
 1:
-  tree:
-    unreachable.txt: should be filtered out
-2:
+  message: commit 2
   tree:
     reachable.txt: on main branch
-3:
+2:
+  message: commit 3
   tree:
     reachable.txt: also on main
