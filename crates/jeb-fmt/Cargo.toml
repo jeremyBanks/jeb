@@ -1,0 +1,21 @@
+[package]
+name = "jeb-fmt"
+publish = false
+description = ""
+keywords = []
+categories = []
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+toml_edit = "0.22"
+semver = "1.0"
+glob = "0.3"
+anyhow = "1.0"
+pathdiff = "0.2"
+
+[dev-dependencies]
+tempfile = "3.0"

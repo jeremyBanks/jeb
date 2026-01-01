@@ -1,0 +1,103 @@
+{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}
