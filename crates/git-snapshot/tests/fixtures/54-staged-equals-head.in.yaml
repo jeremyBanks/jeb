@@ -1,0 +1,13 @@
+HEAD: 1
+1:
+  message: Initial commit
+  tree:
+    README.md: '# Project'
+    src:
+      lib.rs: pub fn main() {}
+
+# staged tree is explicitly the same as HEAD - should be omitted
+staged:
+  README.md: '# Project'
+  src:
+    lib.rs: pub fn main() {}

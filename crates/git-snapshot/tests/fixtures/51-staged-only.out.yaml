@@ -1,0 +1,13 @@
+HEAD: 8eaa35e3cb8418d8e6532e11b968ee8aa5f5c400
+refs: {}
+staged:
+  CHANGELOG.md: '## v0.1.0'
+  README.md: '# Project (staged changes)'
+  src:
+    lib.rs: pub fn main() { println!("hello"); }
+8eaa35e3cb8418d8e6532e11b968ee8aa5f5c400:
+  message: Initial commit
+  tree:
+    README.md: '# Project'
+    src:
+      lib.rs: pub fn main() {}
