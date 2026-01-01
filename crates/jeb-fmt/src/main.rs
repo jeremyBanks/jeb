@@ -174,8 +174,6 @@ fn parse_dependency(
     value: &Item,
     base_path: &Path,
 ) -> Result<Option<Dependency>> {
-    eprintln!("DEBUG parse_dependency: key={}, value kind={:?}", key, value);
-
     // Extract version string and other fields
     let version_str: Option<&str>;
     let mut package: Option<String> = None;
@@ -193,7 +191,6 @@ fn parse_dependency(
         Item::Value(Value::String(s)) => {
             // Simple string form: dep = "1.0.0"
             version_str = Some(s.value());
-            eprintln!("DEBUG: Simple string form, version={}", s.value());
         }
         Item::Value(Value::InlineTable(t)) => {
             // Inline table form
@@ -235,33 +232,24 @@ fn parse_dependency(
                 })
             });
         }
-        _ => {
-            eprintln!("DEBUG: Unrecognized value type, returning None");
-            return Ok(None);
-        }
+        _ => return Ok(None),
     }
 
     // Parse version if present
     let version = if let Some(v_str) = version_str {
-        eprintln!("DEBUG: Parsing version string: {}", v_str);
         // Remove optional ^ prefix
         let trimmed = v_str.trim_start_matches('^');
 
         // Only accept bare version or ^ prefix
         if !v_str.starts_with('^') && v_str != trimmed {
             // Has some other prefix, skip
-            eprintln!("DEBUG: Version has unexpected prefix, skipping");
             return Ok(None);
         }
 
         match Version::parse(trimmed) {
-            Ok(v) => {
-                eprintln!("DEBUG: Parsed version: {}", v);
-                Some(v)
-            }
-            Err(e) => {
+            Ok(v) => Some(v),
+            Err(_) => {
                 // Skip dependencies with invalid versions
-                eprintln!("DEBUG: Version parse error: {}, skipping", e);
                 return Ok(None);
             }
         }
@@ -333,37 +321,24 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
     let mut all_deps: HashMap<String, Vec<(PathBuf, String, Dependency)>> = HashMap::new();
 
     for member_path in &members {
-        eprintln!("DEBUG: Parsing member: {}", member_path.display());
         let member_toml = member_path.join("Cargo.toml");
         let content = std::fs::read_to_string(&member_toml)?;
         let doc = content.parse::<DocumentMut>()?;
 
         for section in &["dependencies", "dev-dependencies", "build-dependencies"] {
             if let Some(deps) = doc.get(section).and_then(|s| s.as_table()) {
-                eprintln!("DEBUG:   Section [{}] has {} deps", section, deps.len());
                 for (key, value) in deps.iter() {
                     if blocked_deps.contains(key) {
                         continue;
                     }
 
-                    match parse_dependency(key, value, member_path) {
-                        Ok(Some(dep)) => {
-                            eprintln!("DEBUG:     Parsed dep: {} (name={})", key, dep.name);
-                            all_deps
-                                .entry(dep.name.clone())
-                                .or_default()
-                                .push((member_path.clone(), section.to_string(), dep));
-                        }
-                        Ok(None) => {
-                            eprintln!("DEBUG:     Skipped dep: {}", key);
-                        }
-                        Err(e) => {
-                            eprintln!("DEBUG:     Error parsing dep {}: {}", key, e);
-                        }
+                    if let Some(dep) = parse_dependency(key, value, member_path)? {
+                        all_deps
+                            .entry(dep.name.clone())
+                            .or_default()
+                            .push((member_path.clone(), section.to_string(), dep));
                     }
                 }
-            } else {
-                eprintln!("DEBUG:   Section [{}] not found or not a table", section);
             }
         }
     }
@@ -371,11 +346,7 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
     // Group into equivalence classes and vote
     let mut workspace_updates: HashMap<String, (ResolutionFields, String)> = HashMap::new();
 
-    eprintln!("DEBUG: Found {} unique dependency names", all_deps.len());
-
     for (dep_name, occurrences) in &all_deps {
-        eprintln!("DEBUG: Processing dependency '{}' with {} occurrences", dep_name, occurrences.len());
-
         // Group by equivalence class
         let mut equivalence_classes: Vec<EquivalenceClass> = Vec::new();
 
@@ -397,20 +368,13 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
             }
         }
 
-        eprintln!("DEBUG: Found {} equivalence classes", equivalence_classes.len());
-
         // Find the winning equivalence class
         if let Some(winner) = find_winner(&equivalence_classes) {
             // Determine the key to use in workspace.dependencies
             let key = winner.get_preferred_key();
-            eprintln!("DEBUG: Winner for '{}': key='{}', votes={}", dep_name, key, winner.vote_count());
             workspace_updates.insert(key, (winner.resolution.clone(), dep_name.clone()));
-        } else {
-            eprintln!("DEBUG: No winner found for '{}'", dep_name);
         }
     }
-
-    eprintln!("DEBUG: workspace_updates has {} entries", workspace_updates.len());
 
     // Update workspace Cargo.toml
     update_workspace_toml(&mut workspace_doc, &workspace_updates, workspace_root)?;
@@ -766,8 +730,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serde = "1.0"
-tokio = "1.0"
+serde = "1.0.0"
+tokio = "1.0.0"
 "#,
         )?;
 
@@ -781,8 +745,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serde = "1.0"
-anyhow = "1.0"
+serde = "1.0.0"
+anyhow = "1.0.0"
 "#,
         )?;
 
@@ -838,15 +802,13 @@ anyhow = "1.0"
 
         // Read the updated workspace Cargo.toml
         let workspace_content = fs::read_to_string(temp.path().join("Cargo.toml"))?;
-        println!("Workspace Cargo.toml:\n{}", workspace_content);
 
         // serde should be promoted (used by both crates)
-        assert!(workspace_content.contains("serde"), "serde not found in workspace");
+        assert!(workspace_content.contains("serde"));
 
         // Check that member Cargo.tomls now use workspace = true
         let crate_a_content = fs::read_to_string(temp.path().join("crate-a/Cargo.toml"))?;
-        println!("Crate-a Cargo.toml:\n{}", crate_a_content);
-        assert!(crate_a_content.contains("workspace = true"), "workspace = true not found in crate-a");
+        assert!(crate_a_content.contains("workspace = true"));
 
         Ok(())
     }
