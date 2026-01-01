@@ -499,7 +499,7 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
     }
 
     // Group into equivalence classes and vote
-    let mut workspace_updates: HashMap<String, (ResolutionFields, String)> = HashMap::new();
+    let mut workspace_updates: HashMap<String, (ResolutionFields, String, bool)> = HashMap::new();
 
     for (dep_name, occurrences) in &all_deps {
         // Group by equivalence class
@@ -527,7 +527,7 @@ fn normalize_workspace_dependencies(workspace_root: &Path) -> Result<()> {
         if let Some(winner) = find_winner(&equivalence_classes) {
             // Determine the key to use in workspace.dependencies
             let key = winner.get_preferred_key();
-            workspace_updates.insert(key, (winner.resolution.clone(), dep_name.clone()));
+            workspace_updates.insert(key, (winner.resolution.clone(), dep_name.clone(), winner.needs_default_features_false));
         }
     }
 
@@ -693,7 +693,7 @@ fn capture_old_workspace_deps(doc: &DocumentMut, workspace_root: &Path) -> HashM
 
 fn update_workspace_toml(
     doc: &mut DocumentMut,
-    updates: &HashMap<String, (ResolutionFields, String)>,
+    updates: &HashMap<String, (ResolutionFields, String, bool)>,
     workspace_root: &Path,
 ) -> Result<()> {
     // Ensure workspace.dependencies exists
@@ -712,11 +712,11 @@ fn update_workspace_toml(
     // Track which dependencies are still used
     let mut used_deps: HashSet<String> = HashSet::new();
 
-    for (key, (resolution, _dep_name)) in updates {
+    for (key, (resolution, _dep_name, needs_default_features_false)) in updates {
         used_deps.insert(key.clone());
 
         // Build the value for this dependency
-        let value = build_dependency_value(resolution, workspace_root, false)?;
+        let value = build_dependency_value(resolution, workspace_root, *needs_default_features_false)?;
 
         // Insert or update the dependency
         // Note: toml_edit doesn't have easy positional insert for ordering,
@@ -738,7 +738,7 @@ fn update_workspace_toml(
 fn build_dependency_value(
     resolution: &ResolutionFields,
     workspace_root: &Path,
-    _include_config: bool,
+    needs_default_features_false: bool,
 ) -> Result<Item> {
     let mut has_extra_fields = false;
 
@@ -754,7 +754,8 @@ fn build_dependency_value(
         has_extra_fields = true;
     }
 
-    if !has_extra_fields && resolution.version.is_some() {
+    // Can't use simple string form if we need default-features = false
+    if !has_extra_fields && !needs_default_features_false && resolution.version.is_some() {
         // Simple string form
         let version_str = resolution.version.as_ref().unwrap().to_string();
         return Ok(value(version_str).into());
@@ -804,13 +805,18 @@ fn build_dependency_value(
         table.insert("registry", Value::from(registry.as_str()));
     }
 
+    // Add default-features = false if needed
+    if needs_default_features_false {
+        table.insert("default-features", Value::from(false));
+    }
+
     Ok(Item::Value(Value::InlineTable(table)))
 }
 
 fn update_member_toml(
     member_path: &Path,
     _all_deps: &HashMap<String, Vec<(PathBuf, String, Dependency)>>,
-    workspace_updates: &HashMap<String, (ResolutionFields, String)>,
+    workspace_updates: &HashMap<String, (ResolutionFields, String, bool)>,
     workspace_root: &Path,
     workspace_doc: &DocumentMut,
     old_workspace_deps: &HashMap<String, ResolutionFields>,
@@ -819,10 +825,12 @@ fn update_member_toml(
     let content = std::fs::read_to_string(&member_toml)?;
     let mut doc = content.parse::<DocumentMut>()?;
 
-    // Build a map of dep_name -> workspace_key
+    // Build a map of dep_name -> workspace_key and dep_name -> needs_default_features_false
     let mut dep_name_to_workspace_key: HashMap<String, String> = HashMap::new();
-    for (workspace_key, (_resolution, dep_name)) in workspace_updates {
+    let mut dep_name_to_needs_default_features: HashMap<String, bool> = HashMap::new();
+    for (workspace_key, (_resolution, dep_name, needs_df_false)) in workspace_updates {
         dep_name_to_workspace_key.insert(dep_name.clone(), workspace_key.clone());
+        dep_name_to_needs_default_features.insert(dep_name.clone(), *needs_df_false);
     }
 
     for section in &["dependencies", "dev-dependencies", "build-dependencies"] {
@@ -874,15 +882,43 @@ fn update_member_toml(
                                     table.insert("optional", Value::from(optional));
                                 }
 
-                                if let Some(ref features) = dep.config.features {
-                                    let arr: toml_edit::Array = features.iter()
-                                        .map(|s| Value::from(s.as_str()))
-                                        .collect();
-                                    table.insert("features", Value::Array(arr));
-                                }
+                                // Handle default-features logic
+                                let workspace_needs_df_false = dep_name_to_needs_default_features
+                                    .get(&dep.name)
+                                    .copied()
+                                    .unwrap_or(false);
 
-                                if let Some(default_features) = dep.config.default_features {
-                                    table.insert("default-features", Value::from(default_features));
+                                if workspace_needs_df_false {
+                                    // Workspace has default-features = false
+                                    if dep.config.default_features == Some(false) {
+                                        // Member also wants false - add features first, then default-features
+                                        if let Some(ref features) = dep.config.features {
+                                            let arr: toml_edit::Array = features.iter()
+                                                .map(|s| Value::from(s.as_str()))
+                                                .collect();
+                                            table.insert("features", Value::Array(arr));
+                                        }
+                                        table.insert("default-features", Value::from(false));
+                                    } else {
+                                        // Member wants defaults enabled - use features = ["default", ...]
+                                        let features_with_default = prepend_default_feature(dep.config.features.clone());
+                                        let arr: toml_edit::Array = features_with_default.iter()
+                                            .map(|s| Value::from(s.as_str()))
+                                            .collect();
+                                        table.insert("features", Value::Array(arr));
+                                    }
+                                } else {
+                                    // Normal handling - workspace doesn't have default-features = false
+                                    if let Some(ref features) = dep.config.features {
+                                        let arr: toml_edit::Array = features.iter()
+                                            .map(|s| Value::from(s.as_str()))
+                                            .collect();
+                                        table.insert("features", Value::Array(arr));
+                                    }
+
+                                    if let Some(default_features) = dep.config.default_features {
+                                        table.insert("default-features", Value::from(default_features));
+                                    }
                                 }
 
                                 deps[&key] = Item::Value(Value::InlineTable(table));
@@ -930,10 +966,10 @@ fn update_member_toml(
 
 fn should_use_workspace(
     dep: &Dependency,
-    workspace_updates: &HashMap<String, (ResolutionFields, String)>,
+    workspace_updates: &HashMap<String, (ResolutionFields, String, bool)>,
     workspace_key: &str,
 ) -> bool {
-    if let Some((workspace_resolution, _)) = workspace_updates.get(workspace_key) {
+    if let Some((workspace_resolution, _, _)) = workspace_updates.get(workspace_key) {
         // Check if this dependency matches the workspace resolution
         workspace_resolution.matches_except_version(&dep.resolution) &&
             versions_compatible_opt(&workspace_resolution.version, &dep.resolution.version)
@@ -1076,6 +1112,19 @@ fn extract_config_fields(value: &Item) -> ConfigFields {
     }
 
     config
+}
+
+/// Prepend "default" to features list, avoiding duplication
+fn prepend_default_feature(features: Option<Vec<String>>) -> Vec<String> {
+    let mut result = vec!["default".to_string()];
+    if let Some(feat) = features {
+        for f in feat {
+            if f != "default" {  // Skip if already present
+                result.push(f);
+            }
+        }
+    }
+    result
 }
 
 #[cfg(test)]
