@@ -79,7 +79,7 @@ where
 
         // Find which shell: base(m) = (2m-1)^2, so m = floor((sqrt(u)+1)/2)
         let r = isqrt(u);
-        let m = (r + 1) / 2; // shell number, 1..=MAX (floor division)
+        let m = r.div_ceil(2); // shell number, 1..=MAX (floor division)
 
         // base(m) = (2m-1)^2 for m >= 1
         let side = 2 * m - 1;
@@ -257,7 +257,7 @@ fn isqrt(n: u64) -> u64 {
         return 0;
     }
     let mut x = n;
-    let mut y = (x + 1) / 2;
+    let mut y = x.div_ceil(2);
     while y < x {
         x = y;
         y = (x + n / x) / 2;

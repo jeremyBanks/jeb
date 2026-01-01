@@ -2,20 +2,17 @@ fn main() {
     let json: serde_json::Value = serde_json::from_reader(std::io::stdin()).unwrap();
     let input: HookInput = serde_json::from_value(json.clone()).unwrap();
 
-    match &input.details {
-        Some(HookInputDetails::SessionStart { .. }) => {
-            let claude_env_file_path = std::env::var("CLAUDE_ENV_FILE").ok();
-            if let Some(claude_env_file_path) = claude_env_file_path {
-                use std::io::Write;
-                let mut file = std::fs::OpenOptions::new()
-                    .append(true)
-                    .create(true)
-                    .open(claude_env_file_path)
-                    .unwrap();
-                writeln!(file, "JEB_CLAUDE_SESSION_ID={}", input.session_id).unwrap();
-            }
+    if let Some(HookInputDetails::SessionStart { .. }) = &input.details {
+        let claude_env_file_path = std::env::var("CLAUDE_ENV_FILE").ok();
+        if let Some(claude_env_file_path) = claude_env_file_path {
+            use std::io::Write;
+            let mut file = std::fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(claude_env_file_path)
+                .unwrap();
+            writeln!(file, "JEB_CLAUDE_SESSION_ID={}", input.session_id).unwrap();
         }
-        _ => {}
     }
 }
 

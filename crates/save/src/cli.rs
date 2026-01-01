@@ -14,8 +14,8 @@ use {
     },
 };
 
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-const V_VERSION: &'static str = concat!("v", env!("CARGO_PKG_VERSION"));
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const V_VERSION: &str = concat!("v", env!("CARGO_PKG_VERSION"));
 
 /// Commit everything in the current directory and repository -- no questions asked.
 ///
@@ -52,13 +52,13 @@ LINKS:
 pub struct Save {
     /// Decrease log verbosity. May be repeated to decrease verbosity further.
     ///
-    /// [env: RUST_LOG=]
+    /// [env: `RUST_LOG`=]
     #[clap(long, short = 'q', parse(from_occurrences))]
     pub quiet: i32,
 
     /// Increase log verbosity. May be repeated to increase verbosity further.
     ///
-    /// [env: RUST_LOG=]
+    /// [env: `RUST_LOG`=]
     #[clap(long, short = 'v', parse(from_occurrences))]
     pub verbose: i32,
 

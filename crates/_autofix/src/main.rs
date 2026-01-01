@@ -1,10 +1,10 @@
-mod command_runner;
-mod cargo_fmt;
-mod cargo_fix;
 mod cargo_clippy;
-mod workspace_deps;
-mod deno_lint;
+mod cargo_fix;
+mod cargo_fmt;
+mod command_runner;
 mod deno_fmt;
+mod deno_lint;
+mod workspace_deps;
 
 fn main() {
     let mut first_error: Option<i32> = None;

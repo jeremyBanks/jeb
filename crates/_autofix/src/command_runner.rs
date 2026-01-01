@@ -1,4 +1,7 @@
-use std::process::{Command, Stdio};
+use std::process::{
+    Command,
+    Stdio,
+};
 
 /// Run a command, logging it first, letting stdio pass through.
 /// Returns the exit code (0 = success).
@@ -21,12 +24,12 @@ pub fn run_command(program: &str, args: &[&str]) -> i32 {
     {
         Ok(status) => {
             let code = status.code().unwrap_or(1);
-            eprintln!();  // Blank line after command
+            eprintln!(); // Blank line after command
             code
         }
         Err(e) => {
             eprintln!("Error running command: {}", e);
-            eprintln!();  // Blank line after error
+            eprintln!(); // Blank line after error
             1
         }
     }

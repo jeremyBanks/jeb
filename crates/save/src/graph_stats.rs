@@ -1,9 +1,9 @@
 //! Graph statistics calculation with z-mode support for depth-limited scanning.
 //!
 //! This module implements the core algorithm for calculating commit statistics:
-//! - revision_index: count along first-parent chain
-//! - generation_index: maximum topological distance from roots
-//! - commit_index: total number of reachable commits
+//! - `revision_index`: count along first-parent chain
+//! - `generation_index`: maximum topological distance from roots
+//! - `commit_index`: total number of reachable commits
 //! - origin: identifier derived from root commit(s)
 //!
 //! The algorithm supports depth-limited scanning ("z-mode") to bound complexity
@@ -17,6 +17,7 @@ use std::{
 
 /// Statistics about a commit's position in the repository graph.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub struct GraphStats {
     pub revision_index: u32,
     pub generation_index: u32,
@@ -28,17 +29,6 @@ pub struct GraphStats {
     pub z_mode: bool,
 }
 
-impl Default for GraphStats {
-    fn default() -> Self {
-        Self {
-            revision_index: 0,
-            generation_index: 0,
-            commit_index: 0,
-            origin: None,
-            z_mode: false,
-        }
-    }
-}
 
 /// Parsed commit message in our format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -106,6 +96,7 @@ impl MessageParser {
     /// Parse a commit message to extract graph statistics.
     ///
     /// Returns None if the message doesn't match our format or is untrusted.
+    #[must_use] 
     pub fn parse(message: &str) -> Option<ParsedMessage> {
         // Format: [r|s|z]N [/ gG] [/ nC] [/ xHHHH] [/ oHHHH]
         let parts: Vec<&str> = message.split(" / ").collect();
@@ -204,7 +195,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> Debug for GraphStatsCalculator<
 }
 
 impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a, R> {
-    pub fn new(repo: &'a R, max_depth: i32) -> Self {
+    pub const fn new(repo: &'a R, max_depth: i32) -> Self {
         Self {
             repo,
             max_depth,
@@ -213,7 +204,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         }
     }
 
-    pub fn new_rebuild(repo: &'a R, max_depth: i32) -> Self {
+    pub const fn new_rebuild(repo: &'a R, max_depth: i32) -> Self {
         Self {
             repo,
             max_depth,
@@ -225,7 +216,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
     /// Calculate graph statistics for a commit.
     ///
     /// This implements the z-mode algorithm:
-    /// 1. Scan all parent paths up to max_depth
+    /// 1. Scan all parent paths up to `max_depth`
     /// 2. Trust r commits (if not shallow) or s commits (if shallow)
     /// 3. Don't trust z commits during initial scan
     /// 4. If ANY path hits depth limit: enter z-mode
@@ -401,13 +392,12 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 if let Some(commit) = commit_map.get(&z_id) {
                     if let Some(summary) = commit.summary() {
                         if let Some(parsed) = MessageParser::parse(&summary) {
-                            if MessageParser::validate(self.repo, commit, &summary, &parsed) {
-                                if parsed.prefix == MessagePrefix::ZMode {
+                            if MessageParser::validate(self.repo, commit, &summary, &parsed)
+                                && parsed.prefix == MessagePrefix::ZMode {
                                     // This z commit is now trusted, stop scanning from it
                                     // We don't need to do anything special here since we already
                                     // have it in our graph
                                 }
-                            }
                         }
                     }
                 }
@@ -496,7 +486,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 return 0;
             }
 
-            let parents = parent_map.get(id).map(|p| p.as_slice()).unwrap_or(&[]);
+            let parents = parent_map.get(id).map(std::vec::Vec::as_slice).unwrap_or(&[]);
             let max_parent_dist = parents
                 .iter()
                 .map(|p| {
@@ -534,7 +524,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
     /// Calculate origin for bounded graph.
     fn calculate_origin_bounded(
         &self,
-        parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
+        _parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
         commit_map: &HashMap<<R::Commit as CommitView>::Id, R::Commit>,
         boundary_commits: &HashSet<<R::Commit as CommitView>::Id>,
     ) -> Option<u16> {
@@ -673,7 +663,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 return 0;
             }
 
-            let parents = parent_map.get(id).map(|p| p.as_slice()).unwrap_or(&[]);
+            let parents = parent_map.get(id).map(std::vec::Vec::as_slice).unwrap_or(&[]);
             let max_parent_dist = parents
                 .iter()
                 .map(|p| visit(p, parent_map, distances, processed, max_distance))
