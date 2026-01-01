@@ -24,7 +24,23 @@ use {
     },
 };
 
-pub fn main() -> Result<()> {
+pub fn main() -> i32 {
+    eprintln!("Running: workspace dependency normalization");
+
+    match run_normalization() {
+        Ok(()) => {
+            eprintln!();  // Blank line at end
+            0
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            eprintln!();  // Blank line at end
+            1
+        }
+    }
+}
+
+fn run_normalization() -> Result<()> {
     let workspace_root = find_workspace_root(".")?;
     let mut stats = NormalizationStats::default();
 
