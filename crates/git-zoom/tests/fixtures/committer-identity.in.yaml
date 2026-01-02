@@ -1,0 +1,8 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 1
+1:
+  tree:
+    src:
+      file.txt: "content"
