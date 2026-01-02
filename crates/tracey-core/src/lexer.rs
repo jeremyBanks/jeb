@@ -324,6 +324,19 @@ fn extract_references_from_text(
                                 line: base_line,
                                 span,
                             });
+
+                            // Check for markdown reference-style link: [text][ref]
+                            // If the next character is '[', skip past the reference part
+                            if let Some(&(_, '[')) = chars.peek() {
+                                // Skip past the reference link [ref-name]
+                                chars.next(); // consume '['
+                                while let Some(&(_, c)) = chars.peek() {
+                                    chars.next();
+                                    if c == ']' {
+                                        break;
+                                    }
+                                }
+                            }
                         }
                     } else {
                         // Unknown verb - emit warning
@@ -350,6 +363,19 @@ fn extract_references_from_text(
                             line: base_line,
                             span,
                         });
+
+                        // Check for markdown reference-style link: [text][ref]
+                        // If the next character is '[', skip past the reference part
+                        if let Some(&(_, '[')) = chars.peek() {
+                            // Skip past the reference link [ref-name]
+                            chars.next(); // consume '['
+                            while let Some(&(_, c)) = chars.peek() {
+                                chars.next();
+                                if c == ']' {
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
             }
