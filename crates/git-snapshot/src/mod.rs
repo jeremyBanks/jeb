@@ -3950,6 +3950,7 @@ fn read_commit(git_commit: &git2::Commit, repo: &git2::Repository) -> Result<Com
     let message = git_commit
         .message()
         .ok_or_else(|| git2::Error::from_str("commit message is not valid UTF-8"))?
+        .trim_end()  // Strip trailing whitespace (git convention via git-stripspace)
         .to_string();
 
     let git_tree = git_commit.tree()?;

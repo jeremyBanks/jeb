@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 6fef2698d223f9bad47d6dfc47d32da7443c87d0
-514a4a:
+    main: 6f35dcdead3029b65e2c0852122c00087143670b
+4c68de:
   author: Developer <dev@test.org>
   author-date: 2025-03-01T09:00:00-08:00
   message: commit 1
@@ -15,119 +15,115 @@ refs:
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
-  message: |
-    Initial commit
+  message: Initial commit
   parents: []
   tree: {}
-532eb3:
+9764da:
   author-date: 2025-03-01T09:00:03-08:00
   commit-date: 2025-03-01T09:00:03-08:00
   committer: 🔎 <git-zoom-in@localhost>
-  message: |
+  message: |-
     Merge from 'src'
 
     git-zoom-in: src
   parents:
   - 136d8a
-  - 514a4a
+  - 4c68de
   tree:
     file.txt:
-      //commit: 514a4a
+      //commit: 4c68de
       //path: src/file.txt
-6f28ae:
+a59fd7:
   author: User <user@localhost>
   author-date: 2025-03-01T09:00:03-08:00
   commit-date: 2025-03-01T09:00:03-08:00
-  message: |
-    Update 1
+  message: Update 1
   tree:
     file.txt: v1
-56535f:
+5c931b:
   author: Jeremy Banks <_@jeremy.ca>
   author-date: 2025-03-01T09:00:03-08:00
   commit-date: 2025-03-01T09:00:03-08:00
   committer: 🔍 <git-zoom-out@localhost>
-  message: |
+  message: |-
     Merge to 'src'
 
     git-zoom-out: src
   parents:
-  - 514a4a
-  - 6f28ae
+  - 4c68de
+  - a59fd7
   tree:
     src:
       file.txt:
-        //commit: 6f28ae
+        //commit: a59fd7
         //path: file.txt
-b43380:
+7dc7f0:
   author: Jeremy Banks <_@jeremy.ca>
   author-date: 2025-03-01T09:00:03-08:00
   commit-date: 2025-03-01T09:00:03-08:00
   committer: 🔎 <git-zoom-in@localhost>
-  message: |
+  message: |-
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - 6f28ae
-  - 56535f
-9e9e2c:
+  - a59fd7
+  - 5c931b
+b76523:
   author: User <user@localhost>
   author-date: 2025-03-01T09:00:03-08:00
   commit-date: 2025-03-01T09:00:03-08:00
-  message: |
-    Update 2
+  message: Update 2
   tree:
     file.txt: v2
-14a4d4:
+49e2b5:
   author-date: 2025-03-01T09:00:03-08:00
   commit-date: 2025-03-01T09:00:03-08:00
   committer: 🔍 <git-zoom-out@localhost>
-  message: |
+  message: |-
     Merge to 'src'
 
     git-zoom-out: src
   parents:
-  - 56535f
-  - 9e9e2c
+  - 5c931b
+  - b76523
   tree:
     src:
       file.txt:
-        //commit: 9e9e2c
+        //commit: b76523
         //path: file.txt
-53cf29:
+f208cc:
   author: Jeremy Banks <_@jeremy.ca>
   author-date: 2025-03-01T09:00:03-08:00
   commit-date: 2025-03-01T09:00:03-08:00
   committer: 🔎 <git-zoom-in@localhost>
-  message: |
+  message: |-
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - 9e9e2c
-  - 14a4d4
-1c8903:
+  - b76523
+  - 49e2b5
+'3122e6':
   author: User <user@localhost>
   author-date: 2025-03-01T09:00:03-08:00
   commit-date: 2025-03-01T09:00:03-08:00
-  message: |
-    Update 3
+  message: Update 3
   tree:
     file.txt: v3
-6fef2698d223f9bad47d6dfc47d32da7443c87d0:
+6f35dcdead3029b65e2c0852122c00087143670b:
   author-date: 2025-03-01T09:00:03-08:00
   commit-date: 2025-03-01T09:00:03-08:00
   committer: 🔍 <git-zoom-out@localhost>
-  message: |
+  message: |-
     Merge to 'src'
 
     git-zoom-out: src
   parents:
-  - 14a4d4
-  - 1c8903
+  - 49e2b5
+  - '3122e6'
   tree:
     src:
       file.txt:
-        //commit: 1c8903
+        //commit: '3122e6'
         //path: file.txt
