@@ -1,7 +1,7 @@
 use {
     super::{
         bytes::Bytes,
-        float::Float,
+        float::Number,
         text::Text,
     },
     derive_more::{
@@ -24,9 +24,7 @@ pub enum Value {
     #[default]
     Null,
     Bool(bool),
-    Unsigned(u64),
-    Signed(i64),
-    Float(Float),
+    Number(Number),
     Bytes(Bytes),
     Text(Text),
     Array(Vec<Value>),
@@ -55,7 +53,7 @@ impl PartialEq for Value {
                     u64::try_from(*a) == Ok(*b)
                 }
             }
-            (Float(a), Float(b)) => a == b,
+            (Number(a), Number(b)) => a == b,
             (Bytes(a), Bytes(b)) => a == b,
             (Text(a), Text(b)) => a == b,
             (Array(a), Array(b)) => a == b,
@@ -84,7 +82,7 @@ impl core::hash::Hash for Value {
                 2u8.hash(state);
                 value.hash(state);
             }
-            Value::Float(value) => {
+            Value::Number(value) => {
                 3u8.hash(state);
                 value.hash(state);
             }
@@ -128,7 +126,7 @@ impl Ord for Value {
             match value {
                 Bytes(_) => 0,
                 Text(_) => 1,
-                Unsigned(_) | Signed(_) | Float(_) => 2,
+                Unsigned(_) | Signed(_) | Number(_) => 2,
                 Array(_) => 3,
                 Bool(false) => 4,
                 Null => 5,
@@ -145,7 +143,7 @@ impl Ord for Value {
                 (Bool(left), Bool(right)) => left.cmp(right),
                 (Unsigned(left), Unsigned(right)) => left.cmp(right),
                 (Signed(left), Signed(right)) => left.cmp(right),
-                (Float(left), Float(right)) => left.cmp(right),
+                (Number(left), Number(right)) => left.cmp(right),
                 (Bytes(left), Bytes(right)) => left.cmp(right),
                 (Text(left), Text(right)) => left.cmp(right),
                 (Array(left), Array(right)) => left.cmp(right),
@@ -171,7 +169,7 @@ impl Ord for Value {
                         }
                     }
                 }
-                (Unsigned(left), Float(right)) => {
+                (Unsigned(left), Number(right)) => {
                     if **right < 0.0 {
                         return Greater;
                     }
@@ -187,8 +185,8 @@ impl Ord for Value {
                         Equal => Less,
                     }
                 }
-                (Float(_), Unsigned(_)) => other.cmp(self).reverse(),
-                (Signed(left), Float(right)) => {
+                (Number(_), Unsigned(_)) => other.cmp(self).reverse(),
+                (Signed(left), Number(right)) => {
                     const I64_MAX_PLUS_1: f64 = 9223372036854775808.0;
                     const I64_MIN: f64 = -9223372036854775808.0;
                     if **right >= I64_MAX_PLUS_1 {
@@ -213,7 +211,7 @@ impl Ord for Value {
                         }
                     }
                 }
-                (Float(_), Signed(_)) => other.cmp(self).reverse(),
+                (Number(_), Signed(_)) => other.cmp(self).reverse(),
                 _ => unreachable!("type_rank equality should prevent this"),
             },
             ord => ord,

@@ -29,7 +29,7 @@ impl<'de> de::Deserializer<'de> for Value {
             Value::Bool(b) => visitor.visit_bool(b),
             Value::Unsigned(u) => visitor.visit_u64(u),
             Value::Signed(i) => visitor.visit_i64(i),
-            Value::Float(f) => visitor.visit_f64(*f),
+            Value::Number(f) => visitor.visit_f64(*f),
             Value::Text(t) => visitor.visit_string(t.into()),
             Value::Bytes(b) => visitor.visit_byte_buf(b.into()),
             Value::Array(a) => visitor.visit_seq(SeqDeserializer::new(a)),
@@ -192,7 +192,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Float(f) => visitor.visit_f32(*f as f32),
+            Value::Number(f) => visitor.visit_f32(*f as f32),
             Value::Bytes(b) if b.len() == 4 => {
                 let slice: &[u8] = b.as_ref();
                 let bytes: [u8; 4] = slice.try_into().unwrap();
@@ -208,7 +208,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Float(f) => visitor.visit_f64(*f),
+            Value::Number(f) => visitor.visit_f64(*f),
             Value::Bytes(b) if b.len() == 8 => {
                 let slice: &[u8] = b.as_ref();
                 let bytes: [u8; 8] = slice.try_into().unwrap();
@@ -471,7 +471,7 @@ impl Value {
             Value::Bool(b) => Unexpected::Bool(*b),
             Value::Unsigned(u) => Unexpected::Unsigned(*u),
             Value::Signed(i) => Unexpected::Signed(*i),
-            Value::Float(f) => Unexpected::Float(**f),
+            Value::Number(f) => Unexpected::Float(**f),
             Value::Text(t) => {
                 let s: String = t.clone().into();
                 Unexpected::Str(s.into_boxed_str())

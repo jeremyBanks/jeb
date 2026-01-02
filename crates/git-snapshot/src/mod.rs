@@ -1154,11 +1154,96 @@ impl Repository {
     pub fn set_working(&mut self, tree: Option<Tree>) {
         self.working = tree;
     }
+
+    /// Read a snapshot from a real git directory
+    ///
+    /// Reads all commits reachable from HEAD and refs/heads/* branches,
+    /// captures HEAD state, staging area (index), and working tree.
+    ///
+    /// # Errors
+    /// - `GitError::UnsupportedFeature` for symlinks, executables, submodules
+    /// - `GitError::Git2` for underlying git2 errors
+    /// - `GitError::InvalidUtf8` for non-UTF8 paths or content
+    pub fn from_git_dir<P: AsRef<Path>>(path: P) -> Result<Self, GitError> {
+        git2_from_git_dir(path.as_ref())
+    }
+
+    /// Create a temporary git repository from this snapshot
+    ///
+    /// Materializes all commits, refs, HEAD state, staging area, and working tree
+    /// into a real git repository backed by a temporary directory.
+    /// The directory is automatically cleaned up when dropped.
+    ///
+    /// # Errors
+    /// - `GitError::Git2` for underlying git2 errors
+    pub fn to_temporary_repository(&self) -> Result<TemporaryRepository, GitError> {
+        git2_to_temporary_repository(self)
+    }
 }
 
 impl Default for Repository {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// ============================================================================
+// TemporaryRepository
+// ============================================================================
+
+/// A git2::Repository in a temporary directory.
+///
+/// Because the backing directory for the repository will be deleted when this
+/// struct is dropped, we don't provide any way to move the Repository out,
+/// just deref to it.
+///
+/// # Panic Safety
+///
+/// If this isn't dropped, the temporary directory will not be deleted. See
+/// [`tempfile::TempDir`]'s docs for more information.
+#[must_use]
+pub struct TemporaryRepository {
+    repo: git2::Repository,
+    #[allow(unused)]
+    dir: tempfile::TempDir,
+}
+
+impl TemporaryRepository {
+    /// Get the path to the repository's .git directory
+    pub fn path(&self) -> &Path {
+        self.repo.path()
+    }
+
+    /// Get the path to the repository's working directory
+    pub fn workdir(&self) -> Option<&Path> {
+        self.repo.workdir()
+    }
+
+    /// Read the current state back into a snapshot
+    ///
+    /// This enables round-trip testing: snapshot -> temp repo -> snapshot
+    pub fn to_snapshot(&self) -> Result<Repository, GitError> {
+        Repository::from_git_dir(self.repo.path())
+    }
+}
+
+impl Deref for TemporaryRepository {
+    type Target = git2::Repository;
+
+    fn deref(&self) -> &git2::Repository {
+        &self.repo
+    }
+}
+
+impl DerefMut for TemporaryRepository {
+    fn deref_mut(&mut self) -> &mut git2::Repository {
+        &mut self.repo
+    }
+}
+
+impl fmt::Debug for TemporaryRepository {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "TemporaryRepository {{ at {:?} }}", self.repo.path())
     }
 }
 
