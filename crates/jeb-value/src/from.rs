@@ -1,65 +1,65 @@
 use crate::{
     Bytes,
-    Number,
+    Float,
     Text,
     Value,
 };
-impl TryFrom<f64> for Number {
+impl TryFrom<f64> for Float {
     type Error = f64;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
-        Number::new(value).ok_or(value)
+        Float::new(value).ok_or(value)
     }
 }
-impl TryFrom<f32> for Number {
+impl TryFrom<f32> for Float {
     type Error = f32;
 
     fn try_from(value: f32) -> Result<Self, Self::Error> {
-        Number::new(value.into()).ok_or(value)
+        Float::new(value.into()).ok_or(value)
     }
 }
-impl From<i32> for Number {
+impl From<i32> for Float {
     fn from(value: i32) -> Self {
-        Number(value.into())
+        Float(value.into())
     }
 }
-impl From<u32> for Number {
+impl From<u32> for Float {
     fn from(value: u32) -> Self {
-        Number(value.into())
+        Float(value.into())
     }
 }
-impl From<i16> for Number {
+impl From<i16> for Float {
     fn from(value: i16) -> Self {
-        Number(value.into())
+        Float(value.into())
     }
 }
-impl From<u16> for Number {
+impl From<u16> for Float {
     fn from(value: u16) -> Self {
-        Number(value.into())
+        Float(value.into())
     }
 }
-impl From<i8> for Number {
+impl From<i8> for Float {
     fn from(value: i8) -> Self {
-        Number(value.into())
+        Float(value.into())
     }
 }
-impl From<u8> for Number {
+impl From<u8> for Float {
     fn from(value: u8) -> Self {
-        Number(value.into())
+        Float(value.into())
     }
 }
 impl TryFrom<f32> for Value {
     type Error = f32;
 
     fn try_from(value: f32) -> Result<Self, Self::Error> {
-        Number::try_from(value).map(Value::from)
+        Float::try_from(value).map(Value::from)
     }
 }
 impl TryFrom<f64> for Value {
     type Error = f64;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
-        Number::try_from(value).map(Value::from)
+        Float::try_from(value).map(Value::from)
     }
 }
 impl TryFrom<u128> for Value {

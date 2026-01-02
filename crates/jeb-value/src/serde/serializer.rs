@@ -2,7 +2,7 @@
 use {
     crate::{
         Bytes,
-        Number,
+        Float,
         Text,
         Value,
         serde::SerdeError,
@@ -79,7 +79,7 @@ impl ser::Serializer for Serializer {
 
     fn serialize_f32(self, v: f32) -> Result<Value, SerdeError> {
         if v.is_finite() {
-            Ok(Value::Number(Number::new(v as f64).expect(
+            Ok(Value::Float(Float::new(v as f64).expect(
                 "f32 is_finite check guarantees Float::new success",
             )))
         } else {
@@ -89,7 +89,7 @@ impl ser::Serializer for Serializer {
 
     fn serialize_f64(self, v: f64) -> Result<Value, SerdeError> {
         if v.is_finite() {
-            Ok(Value::Number(Number::new(v).expect(
+            Ok(Value::Float(Float::new(v).expect(
                 "f64 is_finite check guarantees Float::new success",
             )))
         } else {

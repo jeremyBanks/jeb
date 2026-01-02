@@ -1,7 +1,7 @@
 use {
     super::{
         bytes::Bytes,
-        float::Number,
+        float::Float,
         text::Text,
     },
     derive_more::{
@@ -13,15 +13,6 @@ use {
     },
     indexmap::IndexMap,
 };
-/// The core Value enum representing all supported data types.
-/// [impl value.types.null]
-/// [impl value.types.bool]
-/// [impl value.types.number]
-/// [impl value.types.bytes]
-/// [impl value.types.text]
-/// [impl value.types.array]
-/// [impl value.types.bytes-map]
-/// [impl value.types.text-map]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Serialize),
@@ -33,15 +24,15 @@ pub enum Value {
     #[default]
     Null,
     Bool(bool),
-    Number(Number),
+    Unsigned(u64),
+    Signed(i64),
+    Float(Float),
     Bytes(Bytes),
     Text(Text),
     Array(Vec<Value>),
     BytesMap(IndexMap<Bytes, Value>),
     TextMap(IndexMap<Text, Value>),
 }
-/// Implements structural equality for values.
-/// [impl value.equality.structural]
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         use Value::*;
@@ -64,7 +55,7 @@ impl PartialEq for Value {
                     u64::try_from(*a) == Ok(*b)
                 }
             }
-            (Number(a), Number(b)) => a == b,
+            (Float(a), Float(b)) => a == b,
             (Bytes(a), Bytes(b)) => a == b,
             (Text(a), Text(b)) => a == b,
             (Array(a), Array(b)) => a == b,
@@ -74,11 +65,7 @@ impl PartialEq for Value {
         }
     }
 }
-/// [impl value.equality.hashable]
 impl Eq for Value {}
-/// Implements hashing with type discriminants.
-/// [impl value.equality.hashable]
-/// [impl value.hash.discriminant]
 impl core::hash::Hash for Value {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         match self {
@@ -97,7 +84,7 @@ impl core::hash::Hash for Value {
                 2u8.hash(state);
                 value.hash(state);
             }
-            Value::Number(value) => {
+            Value::Float(value) => {
                 3u8.hash(state);
                 value.hash(state);
             }
@@ -141,7 +128,7 @@ impl Ord for Value {
             match value {
                 Bytes(_) => 0,
                 Text(_) => 1,
-                Unsigned(_) | Signed(_) | Number(_) => 2,
+                Unsigned(_) | Signed(_) | Float(_) => 2,
                 Array(_) => 3,
                 Bool(false) => 4,
                 Null => 5,
@@ -158,7 +145,7 @@ impl Ord for Value {
                 (Bool(left), Bool(right)) => left.cmp(right),
                 (Unsigned(left), Unsigned(right)) => left.cmp(right),
                 (Signed(left), Signed(right)) => left.cmp(right),
-                (Number(left), Number(right)) => left.cmp(right),
+                (Float(left), Float(right)) => left.cmp(right),
                 (Bytes(left), Bytes(right)) => left.cmp(right),
                 (Text(left), Text(right)) => left.cmp(right),
                 (Array(left), Array(right)) => left.cmp(right),
@@ -184,7 +171,7 @@ impl Ord for Value {
                         }
                     }
                 }
-                (Unsigned(left), Number(right)) => {
+                (Unsigned(left), Float(right)) => {
                     if **right < 0.0 {
                         return Greater;
                     }
@@ -200,8 +187,8 @@ impl Ord for Value {
                         Equal => Less,
                     }
                 }
-                (Number(_), Unsigned(_)) => other.cmp(self).reverse(),
-                (Signed(left), Number(right)) => {
+                (Float(_), Unsigned(_)) => other.cmp(self).reverse(),
+                (Signed(left), Float(right)) => {
                     const I64_MAX_PLUS_1: f64 = 9223372036854775808.0;
                     const I64_MIN: f64 = -9223372036854775808.0;
                     if **right >= I64_MAX_PLUS_1 {
@@ -226,7 +213,7 @@ impl Ord for Value {
                         }
                     }
                 }
-                (Number(_), Signed(_)) => other.cmp(self).reverse(),
+                (Float(_), Signed(_)) => other.cmp(self).reverse(),
                 _ => unreachable!("type_rank equality should prevent this"),
             },
             ord => ord,

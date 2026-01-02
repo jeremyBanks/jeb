@@ -1,6 +1,6 @@
 use {
     jeb_value::{
-        Number,
+        Float,
         Value,
     },
     std::{
@@ -51,7 +51,7 @@ fn test_negative_signed_vs_unsigned() {
 fn test_integer_vs_float_distinct() {
     let u = Value::Unsigned(5);
     let s = Value::Signed(5);
-    let f = Value::Number(5.0.try_into().unwrap());
+    let f = Value::Float(5.0.try_into().unwrap());
     assert_ne!(u, f, "Unsigned(5) should not equal Float(5.0)");
     assert_ne!(s, f, "Signed(5) should not equal Float(5.0)");
 }
@@ -59,14 +59,14 @@ fn test_integer_vs_float_distinct() {
 fn test_integer_vs_float_ordering() {
     let u = Value::Unsigned(5);
     let s = Value::Signed(5);
-    let f = Value::Number(5.0.try_into().unwrap());
+    let f = Value::Float(5.0.try_into().unwrap());
     assert!(u < f, "Unsigned(5) should be less than Float(5.0)");
     assert!(s < f, "Signed(5) should be less than Float(5.0)");
 }
 #[test]
 fn test_integer_vs_float_hash_distinct() {
     let u = Value::Unsigned(5);
-    let f = Value::Number(5.0.try_into().unwrap());
+    let f = Value::Float(5.0.try_into().unwrap());
     assert_ne!(
         hash_value(&u),
         hash_value(&f),
@@ -95,21 +95,21 @@ fn test_mixed_integer_ordering() {
 #[test]
 fn test_integer_float_mixed_ordering() {
     let mut vals = vec![
-        Value::Number(5.0.try_into().unwrap()),
+        Value::Float(5.0.try_into().unwrap()),
         Value::Unsigned(5),
         Value::Signed(5),
-        Value::Number(4.0.try_into().unwrap()),
+        Value::Float(4.0.try_into().unwrap()),
         Value::Unsigned(6),
     ];
     vals.sort();
     match &vals[0] {
-        Value::Number(f) if **f == 4.0 => {}
+        Value::Float(f) if **f == 4.0 => {}
         _ => panic!("Expected Float(4.0) at position 0"),
     }
     assert!(matches!(vals[1], Value::Unsigned(5) | Value::Signed(5)));
     assert!(matches!(vals[2], Value::Unsigned(5) | Value::Signed(5)));
     match &vals[3] {
-        Value::Number(f) if **f == 5.0 => {}
+        Value::Float(f) if **f == 5.0 => {}
         _ => panic!("Expected Float(5.0) at position 3, got {:?}", vals[3]),
     }
     assert_eq!(vals[4], Value::Unsigned(6));
@@ -127,12 +127,12 @@ fn test_hashmap_integer_equivalence() {
 #[test]
 fn test_edge_case_stable_sort() {
     let mut vals = vec![
-        Value::Number(Number::new(0.0).unwrap()),
+        Value::Float(Float::new(0.0).unwrap()),
         Value::Signed(-1),
         Value::Unsigned(0),
-        Value::Number(Number::new(-0.0).unwrap()),
+        Value::Float(Float::new(-0.0).unwrap()),
         Value::Signed(0),
-        Value::Number(Number::new(-1.0).unwrap()),
+        Value::Float(Float::new(-1.0).unwrap()),
     ];
     vals.sort();
     println!("Sorted order:");
@@ -145,7 +145,7 @@ fn test_edge_case_stable_sort() {
         "Expected Signed(-1) at position 0"
     );
     match &vals[1] {
-        Value::Number(f) if **f == -1.0 => {}
+        Value::Float(f) if **f == -1.0 => {}
         _ => panic!("Expected Float(-1.0) at position 1, got {:?}", vals[1]),
     }
     assert_eq!(
@@ -159,18 +159,18 @@ fn test_edge_case_stable_sort() {
         "Expected Signed(0) at position 3"
     );
     match &vals[4] {
-        Value::Number(f) if f.is_sign_negative() && **f == 0.0 => {}
+        Value::Float(f) if f.is_sign_negative() && **f == 0.0 => {}
         _ => panic!("Expected Float(-0.0) at position 4, got {:?}", vals[4]),
     }
     match &vals[5] {
-        Value::Number(f) if f.is_sign_positive() && **f == 0.0 => {}
+        Value::Float(f) if f.is_sign_positive() && **f == 0.0 => {}
         _ => panic!("Expected Float(0.0) at position 5, got {:?}", vals[5]),
     }
 }
 #[test]
 fn test_negative_zero_float_ordering() {
-    let neg_zero = Value::Number(Number::new(-0.0).unwrap());
-    let pos_zero = Value::Number(Number::new(0.0).unwrap());
+    let neg_zero = Value::Float(Float::new(-0.0).unwrap());
+    let pos_zero = Value::Float(Float::new(0.0).unwrap());
     assert!(
         neg_zero < pos_zero,
         "-0.0 should be less than 0.0 in total ordering"
@@ -182,13 +182,13 @@ fn test_stable_sort_order_preservation() {
         Value::Signed(-1),
         Value::Unsigned(0),
         Value::Signed(0),
-        Value::Number(Number::new(5.0).unwrap()),
+        Value::Float(Float::new(5.0).unwrap()),
     ];
     let mut vals_b = vec![
         Value::Signed(-1),
         Value::Signed(0),
         Value::Unsigned(0),
-        Value::Number(Number::new(5.0).unwrap()),
+        Value::Float(Float::new(5.0).unwrap()),
     ];
     vals_a.sort();
     vals_b.sort();
@@ -223,11 +223,11 @@ fn test_stable_sort_order_preservation() {
         "Order B: Unsigned(0) should come second"
     );
     match &vals_a[3] {
-        Value::Number(f) if **f == 5.0 => {}
+        Value::Float(f) if **f == 5.0 => {}
         _ => panic!("Order A: Expected Float(5.0) at position 3"),
     }
     match &vals_b[3] {
-        Value::Number(f) if **f == 5.0 => {}
+        Value::Float(f) if **f == 5.0 => {}
         _ => panic!("Order B: Expected Float(5.0) at position 3"),
     }
     assert!(
@@ -242,29 +242,29 @@ fn test_stable_sort_order_preservation() {
 #[test]
 fn test_stable_sort_with_floats() {
     let mut vals_a = vec![
-        Value::Number(Number::new(0.0).unwrap()),
-        Value::Number(Number::new(-0.0).unwrap()),
+        Value::Float(Float::new(0.0).unwrap()),
+        Value::Float(Float::new(-0.0).unwrap()),
     ];
     let mut vals_b = vec![
-        Value::Number(Number::new(-0.0).unwrap()),
-        Value::Number(Number::new(0.0).unwrap()),
+        Value::Float(Float::new(-0.0).unwrap()),
+        Value::Float(Float::new(0.0).unwrap()),
     ];
     vals_a.sort();
     vals_b.sort();
     match &vals_a[0] {
-        Value::Number(f) if f.is_sign_negative() && **f == 0.0 => {}
+        Value::Float(f) if f.is_sign_negative() && **f == 0.0 => {}
         _ => panic!("Expected -0.0 at position 0 in order A"),
     }
     match &vals_a[1] {
-        Value::Number(f) if f.is_sign_positive() && **f == 0.0 => {}
+        Value::Float(f) if f.is_sign_positive() && **f == 0.0 => {}
         _ => panic!("Expected 0.0 at position 1 in order A"),
     }
     match &vals_b[0] {
-        Value::Number(f) if f.is_sign_negative() && **f == 0.0 => {}
+        Value::Float(f) if f.is_sign_negative() && **f == 0.0 => {}
         _ => panic!("Expected -0.0 at position 0 in order B"),
     }
     match &vals_b[1] {
-        Value::Number(f) if f.is_sign_positive() && **f == 0.0 => {}
+        Value::Float(f) if f.is_sign_positive() && **f == 0.0 => {}
         _ => panic!("Expected 0.0 at position 1 in order B"),
     }
 }

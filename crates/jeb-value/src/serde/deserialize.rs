@@ -3,7 +3,7 @@
 use {
     crate::{
         Bytes,
-        Number,
+        Float,
         Text,
         Value,
     },
@@ -118,8 +118,8 @@ impl<'de> Visitor<'de> for ValueVisitor {
     where
         E: de::Error,
     {
-        Number::try_from(value)
-            .map(Value::Number)
+        Float::try_from(value)
+            .map(Value::Float)
             .map_err(|_| de::Error::custom("invalid float value (NaN or infinity)"))
     }
 
@@ -127,8 +127,8 @@ impl<'de> Visitor<'de> for ValueVisitor {
     where
         E: de::Error,
     {
-        Number::try_from(value)
-            .map(Value::Number)
+        Float::try_from(value)
+            .map(Value::Float)
             .map_err(|_| de::Error::custom("invalid float value (NaN or infinity)"))
     }
 
