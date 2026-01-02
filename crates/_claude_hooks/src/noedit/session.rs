@@ -13,9 +13,13 @@ use {
 pub fn handle(input: &HookInput) -> Result<()> {
     // Get CLAUDE_ENV_FILE path from environment
     let claude_env_file = match std::env::var("CLAUDE_ENV_FILE") {
-        Ok(path) => path,
+        Ok(path) => {
+            eprintln!("Found CLAUDE_ENV_FILE={}", path);
+            path
+        }
         Err(_) => {
-            eprintln!("CLAUDE_ENV_FILE not set, skipping .noedit session initialization");
+            eprintln!("⚠ CLAUDE_ENV_FILE not set, skipping .noedit session initialization");
+            eprintln!("  This is normal if not running in a SessionStart hook");
             return Ok(());
         }
     };
@@ -45,11 +49,13 @@ pub fn handle(input: &HookInput) -> Result<()> {
     let mut file = std::fs::OpenOptions::new()
         .append(true)
         .create(true)
-        .open(claude_env_file)
+        .open(&claude_env_file)
         .context("Failed to open CLAUDE_ENV_FILE")?;
 
-    writeln!(file, "JEB_CLAUDE_INITIAL_COMMIT={}", initial_commit)
+    writeln!(file, "export JEB_CLAUDE_INITIAL_COMMIT={}", initial_commit)
         .context("Failed to write to CLAUDE_ENV_FILE")?;
+
+    eprintln!("✓ Wrote JEB_CLAUDE_INITIAL_COMMIT={} to {}", initial_commit, claude_env_file);
 
     Ok(())
 }

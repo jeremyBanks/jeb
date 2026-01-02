@@ -26,7 +26,7 @@ fn main() {
             }
         }
         Some(HookInputDetails::Stop { .. }) | Some(HookInputDetails::SubagentStop { .. }) => {
-            match noedit::stop::handle(&input) {
+            match noedit::validation::handle(&input) {
                 Ok(result) => result,
                 Err(e) => {
                     eprintln!("noedit Stop error: {}", e);
@@ -36,6 +36,23 @@ fn main() {
                         stop_reason: Some(format!("noedit validation failed: {}", e)),
                         suppress_output: None,
                         system_message: Some(format!("Error validating .noedit: {}", e)),
+                        permission_decision: None,
+                        hook_specific_output: None,
+                    })
+                }
+            }
+        }
+        Some(HookInputDetails::SessionEnd { .. }) => {
+            match noedit::validation::handle(&input) {
+                Ok(result) => result,
+                Err(e) => {
+                    eprintln!("noedit SessionEnd error: {}", e);
+                    // Don't block session end, just warn
+                    Some(HookOutput {
+                        should_continue: None,
+                        stop_reason: None,
+                        suppress_output: None,
+                        system_message: Some(format!("Warning: .noedit validation failed: {}", e)),
                         permission_decision: None,
                         hook_specific_output: None,
                     })
