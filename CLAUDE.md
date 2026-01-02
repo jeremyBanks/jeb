@@ -68,3 +68,28 @@ If you are unable to find an expected binary, it might be missing from your
 `PATH` due to bugs or sandboxing. Before anything else, you may want to check if
 you can run it from `~/.cargo/bin/$NAME` explicitly, and just do that if it
 works.
+
+---
+
+This project uses `.noedit` files to indicate files and paths that can not be
+directly edited by agents, and must be manually edited by humans instead. These
+follow the same syntax as `.gitignore`, except that if a `.noedit` file is empty
+(no content except potentially whitespace) it defaults to applying to the entire
+directory it's in, as though the file contained `*`. You don't need to go out of
+your way to look for these files (we have tooling that will catch accidental
+disallowed edits and revert them sooner or later), but if you happen to
+incidentally notice a `.noedit` file in a directory where you'll be making
+changes, have a look at it to know if you're able to proceed. (Do not attempt to
+edit `.noedit` files or to circumvent this policy.)
+
+---
+
+This project has begun experimenting with some initial tentative uses of the
+`tracey` CLI tool for specification traceability annotations. You may see
+`TRACEY.md` files with rule specifications `r[like.this]`, or comments in code
+indicating rule implementations `[impl like.this]` or tests
+`[verify like.this]`, and similar things. Most of the code doesn't use them, and
+they're not used consistently, so you probably won't need to interact with them,
+but we're providing this context so you understand what you're seeing, and in
+case related work is requested or required. Note that the `tracey` CLI is still
+in beta, and it's possible that it has bugs.
