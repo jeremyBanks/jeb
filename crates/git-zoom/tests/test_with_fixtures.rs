@@ -17,16 +17,6 @@ fn test_zoom_in_with_fixture() {
     // Get actual resulting state
     let actual = repo.to_snapshot();
 
-    // DEBUG: Print actual structure
-    println!("\n=== Actual commits after zoom-in ===");
-    for commit in actual.commits() {
-        println!("Message: {}", commit.message.lines().next().unwrap_or(""));
-        println!("  Parents: {}", commit.parents.len());
-        println!("  Committer: {} <{}>", commit.committer.name, commit.committer.email);
-        println!("  Tree paths: {}", commit.tree.paths().count());
-        println!();
-    }
-
     // Load expected state from fixture
     let expected_yaml = include_str!("fixtures/after_zoom_in_src_lib.yaml");
     let expected = git_snapshot::parse(expected_yaml).expect("failed to parse expected fixture");
@@ -57,36 +47,9 @@ fn test_complete_zoom_cycle() {
     // Get actual state
     let actual = repo.to_snapshot();
 
-    // Debug: print actual commits
-    println!("\nActual commits ({}):", actual.commits().count());
-    for commit in actual.commits() {
-        println!(
-            "  {} | parents:{} | {} | committer:{} <{}> | paths:{}",
-            commit.id.to_hex().chars().take(7).collect::<String>(),
-            commit.parents.len(),
-            commit.message.lines().next().unwrap_or(""),
-            commit.committer.name,
-            commit.committer.email,
-            commit.tree.paths().count()
-        );
-    }
-
     // Load expected state
     let expected_yaml = include_str!("fixtures/complete_cycle_final.yaml");
     let expected = git_snapshot::parse(expected_yaml).expect("failed to parse expected fixture");
-
-    println!("\nExpected commits ({}):", expected.commits().count());
-    for commit in expected.commits() {
-        println!(
-            "  {} | parents:{} | {} | committer:{} <{}> | paths:{}",
-            commit.id.to_hex().chars().take(7).collect::<String>(),
-            commit.parents.len(),
-            commit.message.lines().next().unwrap_or(""),
-            commit.committer.name,
-            commit.committer.email,
-            commit.tree.paths().count()
-        );
-    }
 
     // Compare
     assert_snapshots_equal(&actual, &expected);
