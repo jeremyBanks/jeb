@@ -613,6 +613,7 @@ dependencies = [
 name = "git-zoom"
 version = "0.0.0-dev-2025-12-26.7705"
 dependencies = [
+ "git-snapshot",
  "indexmap 2.12.1",
  "serde",
  "serde_bytes",
