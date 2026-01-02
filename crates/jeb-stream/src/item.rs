@@ -12,6 +12,7 @@ use {
         Value,
     },
 };
+
 #[cfg_attr(
     feature = "serde",
     derive(serde::Serialize),
@@ -26,6 +27,7 @@ pub enum Item {
     Text(Text),
     Value(Value),
 }
+
 impl Item {
     pub fn into_value(self) -> Value {
         match self {
@@ -53,6 +55,7 @@ impl Item {
         }
     }
 }
+
 impl<'a> TryFrom<&'a Item> for &'a [u8] {
     type Error = &'a Value;
 
@@ -64,26 +67,31 @@ impl<'a> TryFrom<&'a Item> for &'a [u8] {
         }
     }
 }
+
 impl Default for Item {
     fn default() -> Self {
         Item::Text(Text::default())
     }
 }
+
 impl From<&str> for Item {
     fn from(s: &str) -> Self {
         Item::Text(s.into())
     }
 }
+
 impl From<String> for Item {
     fn from(s: String) -> Self {
         Item::Text(s.into())
     }
 }
+
 impl From<&[u8]> for Item {
     fn from(b: &[u8]) -> Self {
         Item::Bytes(b.into())
     }
 }
+
 impl From<Vec<u8>> for Item {
     fn from(b: Vec<u8>) -> Self {
         Item::Bytes(b.into())

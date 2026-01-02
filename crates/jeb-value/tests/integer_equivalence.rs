@@ -30,7 +30,7 @@ fn test_unsigned_signed_hash_consistency() {
     assert_eq!(
         hash_value(&u),
         hash_value(&s),
-        "Unsigned(42) and Signed(42) should have the same hash",
+        "Unsigned(42) and Signed(42) should have the same hash"
     );
 }
 #[test]
@@ -70,7 +70,7 @@ fn test_integer_vs_float_hash_distinct() {
     assert_ne!(
         hash_value(&u),
         hash_value(&f),
-        "Unsigned(5) and Float(5.0) should have different hashes",
+        "Unsigned(5) and Float(5.0) should have different hashes"
     );
 }
 #[test]
@@ -236,7 +236,7 @@ fn test_stable_sort_order_preservation() {
             (Value::Unsigned(_), Value::Unsigned(_)) | (Value::Signed(_), Value::Signed(_))
         ),
         "Stable sort should preserve different initial orders - position 1 should have different \
-         types",
+         types"
     );
 }
 #[test]

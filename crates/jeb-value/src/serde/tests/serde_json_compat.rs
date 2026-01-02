@@ -54,11 +54,8 @@ fn test_integer_cross_conversion() {
 fn test_array_as_bytes() {
     let arr = Value::Array(
         vec![
-            Value::Unsigned(72),
-            Value::Unsigned(101),
-            Value::Unsigned(108),
-            Value::Unsigned(108),
-            Value::Unsigned(111),
+            Value::Unsigned(72), Value::Unsigned(101), Value::Unsigned(108),
+            Value::Unsigned(108), Value::Unsigned(111),
         ],
     );
     let bytes: Vec<u8> = from_value(arr).unwrap();
@@ -80,7 +77,7 @@ fn test_struct_from_array() {
     }
     let arr = Value::Array(vec![Value::Signed(10), Value::Signed(20)]);
     let point: Point = from_value(arr).unwrap();
-    assert_eq!(point, Point { x: 10, y: 20 });
+    assert_eq!(point, Point { x : 10, y : 20 });
 }
 #[test]
 fn test_enum_as_text() {

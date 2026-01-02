@@ -19,8 +19,8 @@ fn test_float_zero_ordering() {
     assert!(neg_zero < pos_zero);
     assert!(pos_zero > neg_zero);
     use std::cmp::Ordering;
-    assert_eq!(neg_zero.cmp(&pos_zero), Ordering::Less);
-    assert_eq!(pos_zero.cmp(&neg_zero), Ordering::Greater);
+    assert_eq!(neg_zero.cmp(& pos_zero), Ordering::Less);
+    assert_eq!(pos_zero.cmp(& neg_zero), Ordering::Greater);
 }
 #[test]
 fn test_float_zero_hashing() {
@@ -40,8 +40,8 @@ fn test_float_zero_as_hashmap_key() {
     map.insert(pos_zero, "positive zero");
     map.insert(neg_zero, "negative zero");
     assert_eq!(map.len(), 2);
-    assert_eq!(map.get(&pos_zero), Some(&"positive zero"));
-    assert_eq!(map.get(&neg_zero), Some(&"negative zero"));
+    assert_eq!(map.get(& pos_zero), Some(& "positive zero"));
+    assert_eq!(map.get(& neg_zero), Some(& "negative zero"));
 }
 #[test]
 fn test_float_zero_bit_representation() {
@@ -67,8 +67,8 @@ fn test_value_zero_ordering() {
     assert!(neg_zero < pos_zero);
     assert!(pos_zero > neg_zero);
     use std::cmp::Ordering;
-    assert_eq!(neg_zero.cmp(&pos_zero), Ordering::Less);
-    assert_eq!(pos_zero.cmp(&neg_zero), Ordering::Greater);
+    assert_eq!(neg_zero.cmp(& pos_zero), Ordering::Less);
+    assert_eq!(pos_zero.cmp(& neg_zero), Ordering::Greater);
 }
 #[test]
 fn test_value_zero_hashing() {
@@ -88,8 +88,8 @@ fn test_value_zero_as_hashmap_key() {
     map.insert(pos_zero.clone(), "positive zero");
     map.insert(neg_zero.clone(), "negative zero");
     assert_eq!(map.len(), 2);
-    assert_eq!(map.get(&pos_zero), Some(&"positive zero"));
-    assert_eq!(map.get(&neg_zero), Some(&"negative zero"));
+    assert_eq!(map.get(& pos_zero), Some(& "positive zero"));
+    assert_eq!(map.get(& neg_zero), Some(& "negative zero"));
 }
 #[test]
 fn test_value_zero_in_arrays() {
@@ -119,11 +119,11 @@ fn test_value_zero_cross_type_comparison() {
     let neg_zero_float = Value::Float(Float::try_from(-0.0f64).unwrap());
     let unsigned_zero = Value::from(0u64);
     let signed_zero = Value::from(0i64);
-    assert_eq!(unsigned_zero.cmp(&neg_zero_float), Ordering::Greater);
-    assert_eq!(unsigned_zero.cmp(&pos_zero_float), Ordering::Less);
-    assert_eq!(neg_zero_float.cmp(&pos_zero_float), Ordering::Less);
-    assert_eq!(signed_zero.cmp(&neg_zero_float), Ordering::Greater);
-    assert_eq!(signed_zero.cmp(&pos_zero_float), Ordering::Less);
+    assert_eq!(unsigned_zero.cmp(& neg_zero_float), Ordering::Greater);
+    assert_eq!(unsigned_zero.cmp(& pos_zero_float), Ordering::Less);
+    assert_eq!(neg_zero_float.cmp(& pos_zero_float), Ordering::Less);
+    assert_eq!(signed_zero.cmp(& neg_zero_float), Ordering::Greater);
+    assert_eq!(signed_zero.cmp(& pos_zero_float), Ordering::Less);
 }
 #[test]
 fn test_value_zero_sorted() {
@@ -134,7 +134,7 @@ fn test_value_zero_sorted() {
         Value::from(0i64),
     ];
     values.sort();
-    assert_eq!(values[0], Value::Float(Float::try_from(-0.0f64).unwrap()));
+    assert_eq!(values[0], Value::Float(Float::try_from(- 0.0f64).unwrap()));
     assert_eq!(values[1], Value::from(0u64));
     assert_eq!(values[2], Value::from(0i64));
     assert_eq!(values[3], Value::Float(Float::try_from(0.0f64).unwrap()));

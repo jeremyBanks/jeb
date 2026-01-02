@@ -24,9 +24,6 @@ semver = { workspace = true }
 glob = { workspace = true }
 anyhow = { workspace = true }
 pathdiff = { workspace = true }
-prettyplease = { workspace = true }
-syn = { workspace = true }
-walkdir = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

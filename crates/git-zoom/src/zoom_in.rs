@@ -75,7 +75,7 @@ pub fn zoom_in(path: Option<&str>, allow_empty: bool) -> git::Result<()> {
     };
     let merge_msg = format!(
         "Merge from '{}'\n\ngit-zoom-in: {}",
-        target_path, target_path,
+        target_path, target_path
     );
     let merge_commit = git::commit_tree(
         &subtree_hash,
