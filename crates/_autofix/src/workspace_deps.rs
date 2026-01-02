@@ -1153,6 +1153,10 @@ fn update_member_toml(
     let member_toml = member_path.join("Cargo.toml");
     let content = std::fs::read_to_string(&member_toml)?;
     let mut doc = content.parse::<DocumentMut>()?;
+
+    // Ensure workspace metadata inheritance
+    ensure_workspace_metadata_inheritance(&mut doc)?;
+
     let mut dep_name_to_workspace_key: HashMap<String, String> = HashMap::new();
     let mut dep_name_to_needs_default_features: HashMap<String, bool> = HashMap::new();
     for (workspace_key, (_resolution, dep_name, needs_df_false)) in workspace_updates {
@@ -1297,6 +1301,10 @@ fn update_member_toml(
             }
         }
     }
+
+    // Sort features section
+    sort_features_section(&mut doc)?;
+
     let doc_str = doc.to_string();
     if doc_str != content {
         if stats.record_file_edit(&member_toml, false) {
