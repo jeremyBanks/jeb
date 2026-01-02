@@ -1126,6 +1126,10 @@ fn update_member_toml(
                                 }
                                 // Use dotted key syntax for simple case (workspace only)
                                 if table.len() == 1 && table.contains_key("workspace") {
+                                    // Create a table entry first, then set the workspace field
+                                    if !deps.contains_key(&key) {
+                                        deps[&key] = Item::Table(toml_edit::Table::new());
+                                    }
                                     deps[&key]["workspace"] = value(true);
                                 } else {
                                     // Use inline table for complex cases with multiple fields
