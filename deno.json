@@ -1,7 +1,7 @@
 {
   "exports": "./js/mod.ts",
   "fmt": {
-    "exclude": ["slop", "target", "**/*.yaml", "**/*.yml"]
+    "exclude": ["target", "**/*.yaml", "**/*.yml", "**/spec/**/*"]
   },
   "lint": {
     "rules": {
