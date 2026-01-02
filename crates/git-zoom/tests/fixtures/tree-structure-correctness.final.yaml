@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 21968cd3a5267718533aca4789a072bd5ba71256
+    main: 5289921504d7f7a9e603b5d7489a6a06a73eeee3
 '057668':
   message: commit 1
   tree:
@@ -40,20 +40,20 @@ a3eaf3:
     mid.txt:
       //commit: '057668'
       //path: a/b/mid.txt
-032ed9:
+68775a:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:30:10Z
-  commit-date: 2026-01-02T21:30:10Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   message: |
     Add files
   tree:
     another.txt: at b level
     c:
       new.txt: new file
-21968cd3a5267718533aca4789a072bd5ba71256:
+5289921504d7f7a9e603b5d7489a6a06a73eeee3:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:30:10Z
-  commit-date: 2026-01-02T21:30:10Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'a/b'
@@ -61,14 +61,14 @@ a3eaf3:
     git-zoom-out: a/b
   parents:
   - '057668'
-  - 032ed9
+  - 68775a
   tree:
     a:
       b:
         another.txt:
-          //commit: 032ed9
+          //commit: 68775a
           //path: another.txt
         c:
           new.txt:
-            //commit: 032ed9
+            //commit: 68775a
             //path: c/new.txt

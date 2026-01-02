@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 8d5e34ee8b11b6c00e8b81c593b18644fe7e9ebf
+    main: b6302e6c32f9e5bf2939853ba931531fe961c6b9
 3d81b3:
   message: commit 1
   tree:
@@ -39,10 +39,10 @@ b2cef5:
     c.txt:
       //commit: 3d81b3
       //path: src/c.txt
-'963370':
+96986f:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:30:10Z
-  commit-date: 2026-01-02T21:30:10Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   message: |
     Modify all files
   tree:
@@ -50,10 +50,10 @@ b2cef5:
     b.txt: B
     c.txt: C
     d.txt: D
-8d5e34ee8b11b6c00e8b81c593b18644fe7e9ebf:
+b6302e6c32f9e5bf2939853ba931531fe961c6b9:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:30:10Z
-  commit-date: 2026-01-02T21:30:10Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src'
@@ -61,18 +61,18 @@ b2cef5:
     git-zoom-out: src
   parents:
   - 3d81b3
-  - '963370'
+  - 96986f
   tree:
     src:
       a.txt:
-        //commit: '963370'
+        //commit: 96986f
         //path: a.txt
       b.txt:
-        //commit: '963370'
+        //commit: 96986f
         //path: b.txt
       c.txt:
-        //commit: '963370'
+        //commit: 96986f
         //path: c.txt
       d.txt:
-        //commit: '963370'
+        //commit: 96986f
         //path: d.txt

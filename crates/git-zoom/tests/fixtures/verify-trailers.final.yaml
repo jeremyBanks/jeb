@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 8a0da812b68dfbb41c62257f868a9d6bfb5c6ed8
+    main: 4427531511d4b51c7ac8a18a97221ef313ad6d0d
 7b692b:
   message: commit 1
   tree:
@@ -31,18 +31,18 @@ refs:
     code.txt:
       //commit: 7b692b
       //path: src/code.txt
-4826ba:
+ba11d9:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:30:11Z
-  commit-date: 2026-01-02T21:30:11Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   message: |
     Update
   tree:
     code.txt: modified
-8a0da812b68dfbb41c62257f868a9d6bfb5c6ed8:
+4427531511d4b51c7ac8a18a97221ef313ad6d0d:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:30:11Z
-  commit-date: 2026-01-02T21:30:11Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src'
@@ -50,9 +50,9 @@ refs:
     git-zoom-out: src
   parents:
   - 7b692b
-  - 4826ba
+  - ba11d9
   tree:
     src:
       code.txt:
-        //commit: 4826ba
+        //commit: ba11d9
         //path: code.txt

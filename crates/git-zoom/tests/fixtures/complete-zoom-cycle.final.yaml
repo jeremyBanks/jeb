@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: a3f58edcb097d3bbcaa225f7ffe97fbe41175804
+    main: 67c1424cecfc64abad3ad549d4a998d4a58ad47e
 3cfd2a:
   author: Jeremy Banks <_@jeremy.ca>
   author-date: 2026-01-02T21:10:36Z
@@ -41,18 +41,18 @@ refs:
     foo.txt:
       //commit: 3cfd2a
       //path: src/lib/foo.txt
-9bebbf:
+b13e94:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:30:08Z
-  commit-date: 2026-01-02T21:30:08Z
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
   message: |
     Update library
   tree:
     foo.txt: modified
     new.txt: new file
-a3f58edcb097d3bbcaa225f7ffe97fbe41175804:
-  author-date: 2026-01-02T21:30:08Z
-  commit-date: 2026-01-02T21:30:08Z
+67c1424cecfc64abad3ad549d4a998d4a58ad47e:
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src/lib'
@@ -60,13 +60,13 @@ a3f58edcb097d3bbcaa225f7ffe97fbe41175804:
     git-zoom-out: src/lib
   parents:
   - 3cfd2a
-  - 9bebbf
+  - b13e94
   tree:
     src:
       lib:
         foo.txt:
-          //commit: 9bebbf
+          //commit: b13e94
           //path: foo.txt
         new.txt:
-          //commit: 9bebbf
+          //commit: b13e94
           //path: new.txt

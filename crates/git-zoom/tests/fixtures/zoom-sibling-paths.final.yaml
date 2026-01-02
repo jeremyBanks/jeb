@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 0925548485fec6b3203892b99740dae7f0c3b9e9
+    main: a885ddd36903723ed62a4f960e71fbc84545fbcb
 136d8a:
   author: Jeremy Banks <_@jeremy.ca>
   author-date: 2024-12-06T12:36:24-06:24
@@ -36,18 +36,18 @@ ea3927:
     lib.txt:
       //commit: 50f528
       //path: src/lib/lib.txt
-62744d:
+fdfc67:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:30:11Z
-  commit-date: 2026-01-02T21:30:11Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   message: |
     Update lib
   tree:
     lib.txt: library v2
-07f7cc:
+add4a7:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:30:11Z
-  commit-date: 2026-01-02T21:30:11Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src/lib'
@@ -55,16 +55,16 @@ ea3927:
     git-zoom-out: src/lib
   parents:
   - 50f528
-  - 62744d
+  - fdfc67
   tree:
     src:
       lib:
         lib.txt:
-          //commit: 62744d
+          //commit: fdfc67
           //path: lib.txt
-8cf887:
-  author-date: 2026-01-02T21:30:11Z
-  commit-date: 2026-01-02T21:30:11Z
+e471f7:
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src/bin'
@@ -72,33 +72,33 @@ ea3927:
     git-zoom-in: src/bin
   parents:
   - 136d8a
-  - 07f7cc
+  - add4a7
   tree:
     main.txt:
       //commit: 50f528
       //path: src/bin/main.txt
-b76758:
+9ccd4e:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:30:11Z
-  commit-date: 2026-01-02T21:30:11Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   message: |
     Update bin
   tree:
     main.txt: binary v2
-0925548485fec6b3203892b99740dae7f0c3b9e9:
-  author-date: 2026-01-02T21:30:11Z
-  commit-date: 2026-01-02T21:30:11Z
+a885ddd36903723ed62a4f960e71fbc84545fbcb:
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src/bin'
 
     git-zoom-out: src/bin
   parents:
-  - 07f7cc
-  - b76758
+  - add4a7
+  - 9ccd4e
   tree:
     src:
       bin:
         main.txt:
-          //commit: b76758
+          //commit: 9ccd4e
           //path: main.txt

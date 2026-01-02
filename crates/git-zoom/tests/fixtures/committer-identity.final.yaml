@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 4fb07046398c5bbd1565bc810cbfee99413027e6
+    main: 6dd60126650df89238e8ed3588c161a5e97ff244
 771dd6:
   author: Test User <test@example.com>
   commit-date: 2024-12-25T00:00:00Z
@@ -33,18 +33,18 @@ f63ce7:
     file.txt:
       //commit: 771dd6
       //path: src/file.txt
-4a2258:
+266a9b:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:30:10Z
-  commit-date: 2026-01-02T21:30:10Z
+  author-date: 2024-12-25T00:00:00Z
+  commit-date: 2024-12-25T00:00:00Z
   message: |
     Update
   tree:
     file.txt: modified
-4fb07046398c5bbd1565bc810cbfee99413027e6:
+6dd60126650df89238e8ed3588c161a5e97ff244:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:30:10Z
-  commit-date: 2026-01-02T21:30:10Z
+  author-date: 2024-12-25T00:00:00Z
+  commit-date: 2024-12-25T00:00:00Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src'
@@ -52,9 +52,9 @@ f63ce7:
     git-zoom-out: src
   parents:
   - 771dd6
-  - 4a2258
+  - 266a9b
   tree:
     src:
       file.txt:
-        //commit: 4a2258
+        //commit: 266a9b
         //path: file.txt

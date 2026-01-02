@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 621377bb94ab09f443a2df26e631584891d8506e
+    main: 7ffed853f4d5d9c6373a7c3f956eec60a2caf946
 136d8a:
   author: Jeremy Banks <_@jeremy.ca>
   author-date: 2024-12-06T12:36:24-06:24
@@ -54,17 +54,17 @@ cb2827:
     mod.rs:
       //commit: cb2827
       //path: core/mod.rs
-c425d3:
+ae252c:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:30:11Z
-  commit-date: 2026-01-02T21:30:11Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   message: |
     Update core
   tree:
     mod.rs: modified core
-7dea7a:
-  author-date: 2026-01-02T21:30:11Z
-  commit-date: 2026-01-02T21:30:11Z
+3b547d:
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'core'
@@ -72,16 +72,16 @@ c425d3:
     git-zoom-out: core
   parents:
   - cb2827
-  - c425d3
+  - ae252c
   tree:
     core:
       mod.rs:
-        //commit: c425d3
+        //commit: ae252c
         //path: mod.rs
-621377bb94ab09f443a2df26e631584891d8506e:
+7ffed853f4d5d9c6373a7c3f956eec60a2caf946:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:30:11Z
-  commit-date: 2026-01-02T21:30:11Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src/lib'
@@ -89,11 +89,11 @@ c425d3:
     git-zoom-out: src/lib
   parents:
   - 79bac8
-  - 7dea7a
+  - 3b547d
   tree:
     src:
       lib:
         core:
           mod.rs:
-            //commit: 7dea7a
+            //commit: 3b547d
             //path: core/mod.rs
