@@ -1684,4 +1684,164 @@ serde = "2.0.0"
         );
         Ok(())
     }
+
+    #[test]
+    fn test_workspace_metadata_inheritance() -> Result<()> {
+        let toml_content = r#"[package]
+name = "test-crate"
+"#;
+
+        let mut doc = toml_content.parse::<DocumentMut>()?;
+        ensure_workspace_metadata_inheritance(&mut doc)?;
+
+        let result = doc.to_string();
+
+        // Check dotted key format for workspace fields
+        assert!(
+            result.contains("repository.workspace = true"),
+            "Should have repository.workspace = true"
+        );
+        assert!(
+            result.contains("license.workspace = true"),
+            "Should have license.workspace = true"
+        );
+        assert!(
+            result.contains("version.workspace = true"),
+            "Should have version.workspace = true"
+        );
+        assert!(
+            result.contains("edition.workspace = true"),
+            "Should have edition.workspace = true"
+        );
+
+        // Check empty values
+        assert!(result.contains(r#"description = """#), "Should have empty description");
+        assert!(result.contains("categories = []"), "Should have empty categories");
+        assert!(result.contains("keywords = []"), "Should have empty keywords");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_workspace_metadata_preserves_existing() -> Result<()> {
+        let toml_content = r#"[package]
+name = "test-crate"
+version = "1.0.0"
+description = "Custom description"
+"#;
+
+        let mut doc = toml_content.parse::<DocumentMut>()?;
+        ensure_workspace_metadata_inheritance(&mut doc)?;
+
+        let result = doc.to_string();
+
+        // Should preserve existing values
+        assert!(
+            result.contains(r#"version = "1.0.0""#),
+            "Should preserve existing version"
+        );
+        assert!(
+            result.contains(r#"description = "Custom description""#),
+            "Should preserve existing description"
+        );
+
+        // Should add missing ones
+        assert!(
+            result.contains("repository.workspace = true"),
+            "Should add repository.workspace = true"
+        );
+        assert!(
+            result.contains("license.workspace = true"),
+            "Should add license.workspace = true"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_features_section_sorting() -> Result<()> {
+        let toml_content = r#"[package]
+name = "test"
+version = "0.1.0"
+
+[features]
+wasm = ["dep:wasm-bindgen", "jeb-value/wasm"]
+bin = ["default", "fs", "dep:color-eyre", "jeb-stream/stdio"]
+default = ["serde"]
+"#;
+
+        let mut doc = toml_content.parse::<DocumentMut>()?;
+        sort_features_section(&mut doc)?;
+
+        let result = doc.to_string();
+        let features_start = result.find("[features]").unwrap();
+        let features_section = &result[features_start..];
+
+        // Check that "default" comes first
+        let default_pos = features_section.find("default = ").unwrap();
+        let bin_pos = features_section.find("bin = ").unwrap();
+        let wasm_pos = features_section.find("wasm = ").unwrap();
+
+        assert!(default_pos < bin_pos, "default should come before bin");
+        assert!(bin_pos < wasm_pos, "bin should come before wasm");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_feature_deps_sorting() -> Result<()> {
+        let toml_content = r#"[features]
+test = ["dep:color-eyre", "default", "fs", "jeb-stream/stdio", "dep:anyhow"]
+"#;
+
+        let mut doc = toml_content.parse::<DocumentMut>()?;
+        sort_features_section(&mut doc)?;
+
+        let result = doc.to_string();
+
+        // Should be: bare names first (default, fs), then dep: items sorted
+        assert!(
+            result.contains(r#"test = ["default", "fs", "dep:anyhow", "dep:color-eyre", "jeb-stream/stdio"]"#),
+            "Features should be sorted: bare names first, then dep/slash references"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_feature_deps_default_suffix_priority() -> Result<()> {
+        let toml_content = r#"[features]
+test = ["jeb-stream/stdio", "jeb-value/default", "dep:color-eyre", "jeb-stream/default"]
+"#;
+
+        let mut doc = toml_content.parse::<DocumentMut>()?;
+        sort_features_section(&mut doc)?;
+
+        let result = doc.to_string();
+
+        // Items ending with /default should come before other items in category 1
+        // Expected order: dep:color-eyre, jeb-stream/default, jeb-stream/stdio, jeb-value/default
+        // (sorted by: category 1, !ends_with_default [false=has /default, true=no /default], normalized name)
+        assert!(
+            result.contains(r#"test = ["dep:color-eyre", "jeb-stream/default", "jeb-stream/stdio", "jeb-value/default"]"#),
+            "Items with /default should sort first within their category, but actual result was:\n{}",
+            result
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_no_features_section() -> Result<()> {
+        let toml_content = r#"[package]
+name = "test"
+version = "0.1.0"
+"#;
+
+        let mut doc = toml_content.parse::<DocumentMut>()?;
+        // Should not error when there's no features section
+        sort_features_section(&mut doc)?;
+
+        Ok(())
+    }
 }
