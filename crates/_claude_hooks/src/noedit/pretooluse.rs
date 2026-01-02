@@ -56,7 +56,7 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
                 "Cannot write to {}: file is protected by .noedit",
                 file_path
             )),
-            permission_decision: Some(PermissionDecision::Deny),
+            permission_decision: None,
             hook_specific_output: Some(HookOutputDetails::PreToolUse {
                 permission_decision: Some(PermissionDecision::Deny),
                 permission_decision_reason: Some(format!(
