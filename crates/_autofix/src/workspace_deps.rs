@@ -1116,13 +1116,11 @@ fn sort_features_section(doc: &mut DocumentMut) -> Result<()> {
     }
 
     // Step 2: Sort the features themselves (default first, then lexicographic)
-    feature_entries.sort_by(|a, b| {
-        match (a.0.as_str(), b.0.as_str()) {
-            ("default", "default") => std::cmp::Ordering::Equal,
-            ("default", _) => std::cmp::Ordering::Less,
-            (_, "default") => std::cmp::Ordering::Greater,
-            (a_key, b_key) => a_key.cmp(b_key),
-        }
+    feature_entries.sort_by(|a, b| match (a.0.as_str(), b.0.as_str()) {
+        ("default", "default") => std::cmp::Ordering::Equal,
+        ("default", _) => std::cmp::Ordering::Less,
+        (_, "default") => std::cmp::Ordering::Greater,
+        (a_key, b_key) => a_key.cmp(b_key),
     });
 
     // Step 3: Rebuild the table in sorted order
@@ -1617,9 +1615,11 @@ serde = "2.0.0"
             crate_c_content.contains("serde = \"2.0.0\""),
             "crate-c should have serde 2.0.0 inlined"
         );
-        // Check that serde dependency doesn't use workspace (may have workspace metadata fields though)
+        // Check that serde dependency doesn't use workspace (may have workspace
+        // metadata fields though)
         assert!(
-            !crate_c_content.contains("serde = { workspace = true }") && !crate_c_content.contains("serde.workspace = true"),
+            !crate_c_content.contains("serde = { workspace = true }")
+                && !crate_c_content.contains("serde.workspace = true"),
             "crate-c serde dependency should not use workspace"
         );
         fs::create_dir(workspace_root.join("crate-d"))?;
@@ -1655,9 +1655,11 @@ serde = "2.0.0"
             "crate-a should have serde 1.0.0 inlined. Content:\n{}",
             crate_a_content_2
         );
-        // Check that serde dependency doesn't use workspace (may have workspace metadata fields though)
+        // Check that serde dependency doesn't use workspace (may have workspace
+        // metadata fields though)
         assert!(
-            !crate_a_content_2.contains("serde = { workspace = true }") && !crate_a_content_2.contains("serde.workspace = true"),
+            !crate_a_content_2.contains("serde = { workspace = true }")
+                && !crate_a_content_2.contains("serde.workspace = true"),
             "crate-a serde dependency should not use workspace"
         );
         assert!(
@@ -1665,17 +1667,20 @@ serde = "2.0.0"
             "crate-b should have serde 1.0.0 inlined"
         );
         assert!(
-            !crate_b_content_2.contains("serde = { workspace = true }") && !crate_b_content_2.contains("serde.workspace = true"),
+            !crate_b_content_2.contains("serde = { workspace = true }")
+                && !crate_b_content_2.contains("serde.workspace = true"),
             "crate-b serde dependency should not use workspace"
         );
         let crate_c_content_2 = fs::read_to_string(workspace_root.join("crate-c/Cargo.toml"))?;
         let crate_d_content = fs::read_to_string(workspace_root.join("crate-d/Cargo.toml"))?;
         assert!(
-            crate_c_content_2.contains("workspace = true") || crate_c_content_2.contains("serde.workspace = true"),
+            crate_c_content_2.contains("workspace = true")
+                || crate_c_content_2.contains("serde.workspace = true"),
             "crate-c should use workspace inheritance (either inline table or dotted key)"
         );
         assert!(
-            crate_d_content.contains("workspace = true") || crate_d_content.contains("serde.workspace = true"),
+            crate_d_content.contains("workspace = true")
+                || crate_d_content.contains("serde.workspace = true"),
             "crate-d should use workspace inheritance (either inline table or dotted key)"
         );
         Ok(())
@@ -1694,26 +1699,39 @@ name = "test-crate"
 
         // Check workspace inheritance (inline table format)
         assert!(
-            result.contains("repository.workspace = true") || result.contains("repository = { workspace = true }"),
+            result.contains("repository.workspace = true")
+                || result.contains("repository = { workspace = true }"),
             "Should have repository workspace inheritance"
         );
         assert!(
-            result.contains("license.workspace = true") || result.contains("license = { workspace = true }"),
+            result.contains("license.workspace = true")
+                || result.contains("license = { workspace = true }"),
             "Should have license workspace inheritance"
         );
         assert!(
-            result.contains("version.workspace = true") || result.contains("version = { workspace = true }"),
+            result.contains("version.workspace = true")
+                || result.contains("version = { workspace = true }"),
             "Should have version workspace inheritance"
         );
         assert!(
-            result.contains("edition.workspace = true") || result.contains("edition = { workspace = true }"),
+            result.contains("edition.workspace = true")
+                || result.contains("edition = { workspace = true }"),
             "Should have edition workspace inheritance"
         );
 
         // Check empty values
-        assert!(result.contains(r#"description = """#), "Should have empty description");
-        assert!(result.contains("categories = []"), "Should have empty categories");
-        assert!(result.contains("keywords = []"), "Should have empty keywords");
+        assert!(
+            result.contains(r#"description = """#),
+            "Should have empty description"
+        );
+        assert!(
+            result.contains("categories = []"),
+            "Should have empty categories"
+        );
+        assert!(
+            result.contains("keywords = []"),
+            "Should have empty keywords"
+        );
 
         Ok(())
     }
@@ -1743,11 +1761,13 @@ description = "Custom description"
 
         // Should add missing ones (inline table format)
         assert!(
-            result.contains("repository.workspace = true") || result.contains("repository = { workspace = true }"),
+            result.contains("repository.workspace = true")
+                || result.contains("repository = { workspace = true }"),
             "Should add repository workspace inheritance"
         );
         assert!(
-            result.contains("license.workspace = true") || result.contains("license = { workspace = true }"),
+            result.contains("license.workspace = true")
+                || result.contains("license = { workspace = true }"),
             "Should add license workspace inheritance"
         );
 
@@ -1797,7 +1817,9 @@ test = ["dep:color-eyre", "default", "fs", "jeb-stream/stdio", "dep:anyhow"]
 
         // Should be: bare names first (default, fs), then dep: items sorted
         assert!(
-            result.contains(r#"test = ["default", "fs", "dep:anyhow", "dep:color-eyre", "jeb-stream/stdio"]"#),
+            result.contains(
+                r#"test = ["default", "fs", "dep:anyhow", "dep:color-eyre", "jeb-stream/stdio"]"#
+            ),
             "Features should be sorted: bare names first, then dep/slash references"
         );
 
@@ -1816,8 +1838,9 @@ test = ["jeb-stream/stdio", "jeb-value/default", "dep:color-eyre", "jeb-stream/d
         let result = doc.to_string();
 
         // Items ending with /default should come before other items in category 1
-        // Expected order: items with /default first (sorted), then items without (sorted)
-        // (sorted by: category 1, !ends_with_default [false=has /default, true=no /default], normalized name)
+        // Expected order: items with /default first (sorted), then items without
+        // (sorted) (sorted by: category 1, !ends_with_default [false=has
+        // /default, true=no /default], normalized name)
         assert!(
             result.contains(r#"test = ["jeb-stream/default", "jeb-value/default", "dep:color-eyre", "jeb-stream/stdio"]"#),
             "Items with /default should sort first, then other items, but actual result was:\n{}",

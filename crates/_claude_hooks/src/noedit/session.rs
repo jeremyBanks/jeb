@@ -55,7 +55,10 @@ pub fn handle(input: &HookInput) -> Result<()> {
     writeln!(file, "export JEB_CLAUDE_INITIAL_COMMIT={}", initial_commit)
         .context("Failed to write to CLAUDE_ENV_FILE")?;
 
-    eprintln!("✓ Wrote JEB_CLAUDE_INITIAL_COMMIT={} to {}", initial_commit, claude_env_file);
+    eprintln!(
+        "✓ Wrote JEB_CLAUDE_INITIAL_COMMIT={} to {}",
+        initial_commit, claude_env_file
+    );
 
     Ok(())
 }

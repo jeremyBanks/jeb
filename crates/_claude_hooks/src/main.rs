@@ -36,7 +36,8 @@ fn main() {
                         stop_reason: None,
                         suppress_output: None,
                         system_message: Some(format!(
-                            "⚠️ .noedit validation error: {}\nSome protected files may not have been reverted.",
+                            "⚠️ .noedit validation error: {}\nSome protected files may not have \
+                             been reverted.",
                             e
                         )),
                         permission_decision: None,
@@ -163,7 +164,10 @@ pub enum HookInputDetails {
     rename_all = "camelCase"
 )]
 pub struct HookOutput {
-    #[serde(rename = "continue", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "continue",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub should_continue: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stop_reason: Option<String>,

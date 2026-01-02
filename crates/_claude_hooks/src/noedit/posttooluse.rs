@@ -53,8 +53,8 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
         .context("Failed to load .noedit patterns from initial commit")?;
 
     // 5. Get all changed files since initial commit
-    let changed_files = get_changed_files(&repo, &initial_commit)
-        .context("Failed to get changed files")?;
+    let changed_files =
+        get_changed_files(&repo, &initial_commit).context("Failed to get changed files")?;
 
     // 6. Filter to only .noedit-protected files
     let violated_files: Vec<PathBuf> = changed_files
@@ -81,7 +81,7 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
 
     // 9. Create commit if there are staged changes
     let index = repo.index().context("Failed to get index")?;
-    if index.len() > 0 {
+    if !index.is_empty() {
         create_revert_commit(
             &repo,
             &violated_files,
@@ -89,9 +89,15 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
             &input.transcript_path,
         )
         .context("Failed to create revert commit")?;
-        eprintln!("PostToolUse: Created revert commit for {} files", violated_files.len());
+        eprintln!(
+            "PostToolUse: Created revert commit for {} files",
+            violated_files.len()
+        );
     } else {
-        eprintln!("PostToolUse: Restored {} files (no commit needed)", violated_files.len());
+        eprintln!(
+            "PostToolUse: Restored {} files (no commit needed)",
+            violated_files.len()
+        );
     }
 
     // 10. Return system message to agent
@@ -100,8 +106,8 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
         stop_reason: None,
         suppress_output: None,
         system_message: Some(format!(
-            "⚠️ Reverted {} .noedit-protected file(s): {}\n\n\
-             These files are read-only per .noedit patterns.",
+            "⚠️ Reverted {} .noedit-protected file(s): {}\n\nThese files are read-only per \
+             .noedit patterns.",
             violated_files.len(),
             violated_files
                 .iter()

@@ -251,14 +251,9 @@ pub fn create_revert_commit(
         .peel_to_commit()
         .context("Failed to peel HEAD to commit")?;
 
-    repo.commit(
-        Some("HEAD"),
-        &signature,
-        &signature,
-        &message,
-        &tree,
-        &[&parent_commit],
-    )
+    repo.commit(Some("HEAD"), &signature, &signature, &message, &tree, &[
+        &parent_commit,
+    ])
     .context("Failed to create commit")?;
 
     Ok(())

@@ -7,6 +7,8 @@ include.workspace = true
 license.workspace = true
 repository.workspace = true
 version.workspace = true
+categories = []
+keywords = []
 
 [dependencies]
 toml_edit.workspace = true
