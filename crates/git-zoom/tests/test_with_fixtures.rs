@@ -25,6 +25,36 @@ fn test_zoom_in_with_fixture() {
     assert_snapshots_equal(&actual, &expected);
 }
 
+#[test]
+fn test_complete_zoom_cycle() {
+    // Load initial state
+    let initial_yaml = include_str!("fixtures/complete_cycle_initial.yaml");
+    let repo = TestRepo::from_yaml(initial_yaml);
+
+    // Zoom in
+    repo.run_zoom(&["in", "src"]).expect("zoom in failed");
+
+    // Make modifications
+    repo.write_file("lib.txt", "MODIFIED library code");
+    repo.git_add_and_commit("Update lib");
+
+    repo.write_file("new.txt", "new content");
+    repo.git_add_and_commit("Add new file");
+
+    // Zoom out
+    repo.run_zoom(&["out"]).expect("zoom out failed");
+
+    // Get actual state
+    let actual = repo.to_snapshot();
+
+    // Load expected state
+    let expected_yaml = include_str!("fixtures/complete_cycle_final.yaml");
+    let expected = git_snapshot::parse(expected_yaml).expect("failed to parse expected fixture");
+
+    // Compare
+    assert_snapshots_equal(&actual, &expected);
+}
+
 /// Compare two snapshots, ignoring commit IDs (since they're non-deterministic)
 /// but verifying structure, messages, trees, and parent relationships
 ///

@@ -1,0 +1,77 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 7
+
+# Original initial commit
+1:
+  message: "Initial commit"
+  tree:
+    README.md: "root readme"
+    src/lib.txt: "library code"
+    src/utils.txt: "utils"
+
+# Seed commit for zoom-in
+2:
+  parents: []
+  message: "Initial commit"
+  committer: "🔎 <git-zoom-in@localhost>"
+  tree: {}
+
+# Zoom-in merge
+3:
+  parents: [2, 1]
+  message: |
+    Merge from 'src'
+
+    git-zoom-in: src
+  committer: "🔎 <git-zoom-in@localhost>"
+  tree:
+    lib.txt: "library code"
+    utils.txt: "utils"
+
+# User modifications during zoom
+4:
+  parents: [3]
+  message: "Update lib"
+  tree:
+    lib.txt: "MODIFIED library code"
+    utils.txt: "utils"
+
+5:
+  parents: [4]
+  message: "Add new file"
+  tree:
+    lib.txt: "MODIFIED library code"
+    utils.txt: "utils"
+    new.txt: "new content"
+
+# Subtree after modifications
+6:
+  parents: [1]
+  message: |
+    Subtree at 'src' from merge parents
+
+
+    Lineage:
+    - Update lib
+    - Add new file
+  tree:
+    src/lib.txt: "MODIFIED library code"
+    src/utils.txt: "utils"
+    src/new.txt: "new content"
+    README.md: "root readme"
+
+# Zoom-out merge
+7:
+  parents: [6, 5]
+  message: |
+    Merge to 'src'
+
+    git-zoom-out: src
+  committer: "🔍 <git-zoom-out@localhost>"
+  tree:
+    README.md: "root readme"
+    src/lib.txt: "MODIFIED library code"
+    src/utils.txt: "utils"
+    src/new.txt: "new content"

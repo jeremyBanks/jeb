@@ -13,6 +13,7 @@ refs:
 
 # Seed commit (orphan, empty tree)
 2:
+  parents: []
   message: "Initial commit"
   committer: "🔎 <git-zoom-in@localhost>"
   tree: {}
