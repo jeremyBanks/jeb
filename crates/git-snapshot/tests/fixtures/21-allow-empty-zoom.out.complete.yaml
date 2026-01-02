@@ -3,16 +3,29 @@ refs:
   heads:
     main: 0b1517b47fc6b6059c65e0253a4ef0a649590a12
 f526e424f369f85279b11f04d209642b4eb3e482:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
   message: commit 1
+  parents: []
   tree:
     dir:
       file.txt: content
     existing.txt: exists
 94759215060cb9470081435870c081413c48517c:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
   message: commit 2
   parents: []
   tree: {}
 d4f009a0fbb42a903fe10c77eaa4c8c985a635c0:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
   message: |
     Zoom in from non-existent path
 
@@ -21,6 +34,10 @@ d4f009a0fbb42a903fe10c77eaa4c8c985a635c0:
   - 94759215060cb9470081435870c081413c48517c
   - f526e424f369f85279b11f04d209642b4eb3e482
 0b1517b47fc6b6059c65e0253a4ef0a649590a12:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: User <user@localhost>
   message: |
     Zoom out to different path
 

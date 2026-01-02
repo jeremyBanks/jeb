@@ -5,7 +5,12 @@ refs:
     frontend-subtree: 0189413d88e8ffd4b2597653be61153064d71455
     full-tree: 3a76942e8653a9924893e1ad5de135a4f391c279
 7e5b85be33eacb0ab9b6dfddfcf3897f5f27904f:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
   message: commit 1
+  parents: []
   tree:
     README.md: '# Full Stack App'
     backend:
@@ -15,11 +20,17 @@ refs:
       app.js: console.log('app');
       style.css: body { }
 ac5de9cd73828b5e4b939e0c7aa8af3c091e7934:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
   committer: git-zoom-in <git-zoom-in@localhost>
   message: git-zoom-in seed for frontend
   parents: []
   tree: {}
 0189413d88e8ffd4b2597653be61153064d71455:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
   committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'frontend'
@@ -33,6 +44,9 @@ ac5de9cd73828b5e4b939e0c7aa8af3c091e7934:
     style.css: body { }
     utils.js: export const util = () => {};
 728566bf41f23175473e9202ac8d6ce8a2bd3bdd:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'frontend'
@@ -45,11 +59,17 @@ ac5de9cd73828b5e4b939e0c7aa8af3c091e7934:
     frontend:
       utils.js: export const util = () => {};
 2cc798cda49519165889e15af101fe685039fa06:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
   committer: git-zoom-in <git-zoom-in@localhost>
   message: git-zoom-in seed for backend
   parents: []
   tree: {}
 afed887203378ee8156e6d893cc820282ad0e5c5:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
   committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'backend'
@@ -63,6 +83,9 @@ afed887203378ee8156e6d893cc820282ad0e5c5:
     routes.py: 'def routes(): pass'
     server.py: 'def serve(): pass'
 3a76942e8653a9924893e1ad5de135a4f391c279:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'backend'

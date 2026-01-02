@@ -3,38 +3,89 @@ refs:
   heads:
     main: 0a793be59d25486cbb0898c99a38fac0c6100464
 2e2dfd439e961033e26b7f628d97ad89a3e941eb:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
   message: commit 1
+  parents: []
   tree:
     base.txt: base
 61db9ce04b5075890aa10199c3107eaf022f5ea5:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
   message: commit 2
+  parents:
+  - 2e2dfd439e961033e26b7f628d97ad89a3e941eb
   tree:
     branch1.txt: first
 707d8191b4a89d9bcbaf84e5093a865909def3e6:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: User <user@localhost>
   message: commit 3
+  parents:
+  - 61db9ce04b5075890aa10199c3107eaf022f5ea5
   tree:
     branch2.txt: second
 d5d5cddb13e094649311bc0d1c940758bffab0f9:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: User <user@localhost>
   message: commit 4
+  parents:
+  - 707d8191b4a89d9bcbaf84e5093a865909def3e6
   tree:
     branch3.txt: third
 da71518bbf43b9a75a5cc8e2d3934aa053c7e8d9:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: User <user@localhost>
   message: commit 5
+  parents:
+  - d5d5cddb13e094649311bc0d1c940758bffab0f9
   tree:
     branch4.txt: fourth
 3a5766a1f1f29e02fe93d4d20b7a5dd1d15204d6:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:33:44-06:24
+  commit-date: 2024-12-06T06:33:47-06:24
+  committer: User <user@localhost>
   message: commit 6
+  parents:
+  - da71518bbf43b9a75a5cc8e2d3934aa053c7e8d9
   tree:
     branch5.txt: fifth
 2d0ecfd1d12ae37c43575a36c8c1499703b98859:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:38:00-06:24
+  commit-date: 2024-12-06T06:38:03-06:24
+  committer: User <user@localhost>
   message: commit 7
+  parents:
+  - 3a5766a1f1f29e02fe93d4d20b7a5dd1d15204d6
   tree:
     branch6.txt: sixth
 71445e0614ceef6fc6b11efdfb6c76e99a42e7c8:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:42:16-06:24
+  commit-date: 2024-12-06T06:42:19-06:24
+  committer: User <user@localhost>
   message: commit 8
+  parents:
+  - 2d0ecfd1d12ae37c43575a36c8c1499703b98859
   tree:
     branch7.txt: seventh
 0a793be59d25486cbb0898c99a38fac0c6100464:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:46:32-06:24
+  commit-date: 2024-12-06T06:46:35-06:24
+  committer: User <user@localhost>
   message: commit 9
   parents:
   - 2e2dfd439e961033e26b7f628d97ad89a3e941eb

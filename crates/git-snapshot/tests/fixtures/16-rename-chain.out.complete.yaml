@@ -3,32 +3,73 @@ refs:
   heads:
     main: 30f444d2344ab132fcb640142ee9f87229428fc0
 2699a41ee6b8efdf0da27b5fa2cf773e0f5d3538:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
   message: commit 1
+  parents: []
   tree:
     original-name.txt: content that moves around
     static.txt: never moves
 7cd471b40d16ba571227abda46555a7e297a73f5:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
   message: commit 2
+  parents:
+  - 2699a41ee6b8efdf0da27b5fa2cf773e0f5d3538
   tree:
     renamed-once.txt: content that moves around
 d58c784004bf9d04539691dad0df76d7b9d44c54:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: User <user@localhost>
   message: commit 3
+  parents:
+  - 7cd471b40d16ba571227abda46555a7e297a73f5
   tree:
     renamed-twice.txt: content that moves around
 05e5cfbc320ad19905d98e0d29b7694d39f2a8b8:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: User <user@localhost>
   message: commit 4
+  parents:
+  - d58c784004bf9d04539691dad0df76d7b9d44c54
   tree:
     renamed-thrice.txt: content that moves around
 afd815b6798a4998266a97aa82275f31da562895:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: User <user@localhost>
   message: commit 5
+  parents:
+  - 05e5cfbc320ad19905d98e0d29b7694d39f2a8b8
   tree:
     final-name.txt: content that moves around
 08855da8ef82073a5c293e5be39ac4c40437d515:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:33:44-06:24
+  commit-date: 2024-12-06T06:33:47-06:24
+  committer: User <user@localhost>
   message: commit 6
+  parents:
+  - afd815b6798a4998266a97aa82275f31da562895
   tree:
     archive:
       final-name.txt: content that moves around
 30f444d2344ab132fcb640142ee9f87229428fc0:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:38:00-06:24
+  commit-date: 2024-12-06T06:38:03-06:24
+  committer: User <user@localhost>
   message: commit 7
+  parents:
+  - 08855da8ef82073a5c293e5be39ac4c40437d515
   tree:
     restored.txt: content that moves around

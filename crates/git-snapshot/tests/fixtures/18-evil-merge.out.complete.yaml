@@ -3,20 +3,39 @@ refs:
   heads:
     main: 25512ac8a697bd0c531ceb78315ae816beed4c55
 f6ed4b6982fb4da9402037a96eb94339faa68cae:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
   message: commit 1
+  parents: []
   tree:
     file.txt: version A
 0a0be395070217bc7516b382e07dd1be04f410b3:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
   message: commit 2
+  parents:
+  - f6ed4b6982fb4da9402037a96eb94339faa68cae
   tree:
     file.txt: version B (from main)
 9aa9553feacfa59e181b57865433c0bfb9681c0e:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
   message: commit 3
   parents:
   - f6ed4b6982fb4da9402037a96eb94339faa68cae
   tree:
     file.txt: version C (from feature)
 584eac191d9f598d79cc49eae9b24d93e4ef32c8:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: User <user@localhost>
   message: Merge with conflict resolution AND extra changes
   parents:
   - 0a0be395070217bc7516b382e07dd1be04f410b3
@@ -25,15 +44,29 @@ f6ed4b6982fb4da9402037a96eb94339faa68cae:
     MERGE-NOTES.txt: This merge also fixed a critical bug
     file.txt: version D (merged + fixed bug)
 6bd3a0906801ecd67e8830d5b7f46db7603516e0:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: User <user@localhost>
   message: commit 5
+  parents:
+  - 584eac191d9f598d79cc49eae9b24d93e4ef32c8
   tree:
     another-file.txt: normal work
 632ce707ba5cb1a2fb97df68fb7a92040bb6b32b:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
   message: commit 20
   parents: []
   tree:
     data.json: '{"source": "orphan"}'
 25512ac8a697bd0c531ceb78315ae816beed4c55:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: User <user@localhost>
   message: Merge unrelated history
   parents:
   - 6bd3a0906801ecd67e8830d5b7f46db7603516e0

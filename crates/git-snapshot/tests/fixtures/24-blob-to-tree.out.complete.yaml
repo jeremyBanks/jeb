@@ -4,16 +4,29 @@ refs:
     alternate: 1981d7affbfcaf06f17e6097d7386e683c8d3216
     main: 7dd50f00fe7a898c1e9792833ddda72c03095036
 7e7ccd4dbf58cf833c63d33a0ce05e19f34736cb:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
   message: commit 1
+  parents: []
   tree:
     path:
       to:
         item: This is a file
 93f4d5da45cba40df5427d24321203cdc0b44f31:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
   message: commit 3
   parents: []
   tree: {}
 c5d9f3b791aa24400a3161781df5dd2c8a5a6dad:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
   message: |
     Zoom in to path/to/item
 
@@ -24,6 +37,10 @@ c5d9f3b791aa24400a3161781df5dd2c8a5a6dad:
   tree:
     content.txt: extracted blob as tree
 82822dbc56648218d7226e4f5e6370f10f0e7505:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: User <user@localhost>
   message: |
     Zoom out to path/to/item
 
@@ -37,6 +54,10 @@ c5d9f3b791aa24400a3161781df5dd2c8a5a6dad:
         item:
           content.txt: extracted blob as tree
 1981d7affbfcaf06f17e6097d7386e683c8d3216:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
   message: commit 2
   parents:
   - 7e7ccd4dbf58cf833c63d33a0ce05e19f34736cb
@@ -46,6 +67,10 @@ c5d9f3b791aa24400a3161781df5dd2c8a5a6dad:
         item:
           replaced.txt: Now it's a directory
 7dd50f00fe7a898c1e9792833ddda72c03095036:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: User <user@localhost>
   message: commit 6
   parents:
   - 82822dbc56648218d7226e4f5e6370f10f0e7505

@@ -13,12 +13,17 @@ use {
     },
     indexmap::IndexMap,
 };
+// [impl jeb-value.dependencies.cfg]
+// [impl jeb-value.serde.traits]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Serialize),
     serde(untagged)
 )]
+// [impl jeb-value.value.clone]
+// [impl jeb-value.value.debug]
 #[derive(Debug, Clone, From, Default, TryInto, IsVariant, TryUnwrap, Unwrap)]
+// [impl jeb-value.value.must-use]
 #[must_use]
 pub enum Value {
     #[default]
@@ -33,6 +38,7 @@ pub enum Value {
     BytesMap(IndexMap<Bytes, Value>),
     TextMap(IndexMap<Text, Value>),
 }
+// [impl jeb-value.value.cmp]
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         use Value::*;
@@ -66,6 +72,7 @@ impl PartialEq for Value {
     }
 }
 impl Eq for Value {}
+// [impl jeb-value.value.cmp]
 impl core::hash::Hash for Value {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         match self {
@@ -117,6 +124,7 @@ impl core::hash::Hash for Value {
         }
     }
 }
+// [impl jeb-value.value.cmp]
 impl Ord for Value {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         use {
@@ -220,6 +228,7 @@ impl Ord for Value {
         }
     }
 }
+// [impl jeb-value.value.cmp]
 impl PartialOrd for Value {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))

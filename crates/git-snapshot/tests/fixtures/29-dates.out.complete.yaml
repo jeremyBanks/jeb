@@ -3,21 +3,39 @@ refs:
   heads:
     main: 4254e4205fa54e7770ee118b2a3f7b9e6dba63b9
 c40f52de48dda3fb3436cf1207709a440c16ea96:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
   message: commit 1
+  parents: []
   tree:
     file.txt: explicit date
 8f7dc354817bf366977a875b6aaa0cdc51caa497:
+  author: User <user@localhost>
   author-date: 2021-01-14T14:25:36-02:00
   commit-date: 2021-01-14T14:25:39-02:00
+  committer: User <user@localhost>
   message: commit 2
+  parents:
+  - c40f52de48dda3fb3436cf1207709a440c16ea96
   tree:
     file.txt: with timezone
 c492e2d37ce10d8330fc3c5cb2319995794a854a:
+  author: User <user@localhost>
   author-date: 2021-02-04T08:16:32Z
+  commit-date: 2021-02-04T08:16:35Z
+  committer: User <user@localhost>
   message: commit 3
+  parents:
+  - 8f7dc354817bf366977a875b6aaa0cdc51caa497
   tree:
     file.txt: partial date
 754068e2407f710be6133d3761fc02db15202780:
+  author: User <user@localhost>
+  author-date: 2021-02-04T08:20:48Z
+  commit-date: 2021-02-04T08:20:51Z
+  committer: User <user@localhost>
   message: commit 4
   parents:
   - 8f7dc354817bf366977a875b6aaa0cdc51caa497
@@ -25,6 +43,12 @@ c492e2d37ce10d8330fc3c5cb2319995794a854a:
   tree:
     file.txt: merge
 4254e4205fa54e7770ee118b2a3f7b9e6dba63b9:
+  author: User <user@localhost>
+  author-date: 2021-02-04T08:25:04Z
+  commit-date: 2021-02-04T08:25:07Z
+  committer: User <user@localhost>
   message: commit 5
+  parents:
+  - 754068e2407f710be6133d3761fc02db15202780
   tree:
     file.txt: inherited date

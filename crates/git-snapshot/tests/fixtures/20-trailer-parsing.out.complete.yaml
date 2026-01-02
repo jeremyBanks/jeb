@@ -3,14 +3,27 @@ refs:
   heads:
     main: 6bc21e59a7eafc4db9bf115c0b102206eb42d959
 ddd158642751c1416bbc83f3ff66563a805bc335:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
   message: commit 1
+  parents: []
   tree:
     base.txt: base content
 3b7d809195d472ea272da962f212a4f945775830:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
   message: orphan seed
   parents: []
   tree: {}
 5d698d7fe5224ed7c69f9889c0967b5062a5b50a:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
   message: |
     Merge from subtree
 
@@ -24,6 +37,10 @@ ddd158642751c1416bbc83f3ff66563a805bc335:
   tree:
     file.txt: content
 bb03a0e402993058411a3668a587f928ac60122a:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: User <user@localhost>
   message: |
     Merge to subtree
 
@@ -38,10 +55,16 @@ bb03a0e402993058411a3668a587f928ac60122a:
         subtree:
           file.txt: content
 6bc21e59a7eafc4db9bf115c0b102206eb42d959:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: User <user@localhost>
   message: |
     Another merge
 
     GIT-ZOOM-IN:   spaces/around/path
     git-zoom-out:path/no/space
+  parents:
+  - bb03a0e402993058411a3668a587f928ac60122a
   tree:
     result.txt: done
