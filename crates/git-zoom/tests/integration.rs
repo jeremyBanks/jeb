@@ -15,38 +15,39 @@ use helpers::*;
 
 #[test]
 fn test_basic_zoom_in() {
-    let yaml = include_str!("fixtures/basic-zoom-in.initial.yaml");
-    let repo = TestRepo::from_yaml(yaml);
+    test_fixture("basic-zoom-in", |repo| {
+        // Zoom into src/lib
+        repo.run_zoom(&["in", "src/lib"])?;
 
-    // Zoom into src/lib
-    repo.run_zoom(&["in", "src/lib"]).expect("zoom in failed");
+        // Verify working directory shows subtree at root
+        assert!(repo.file_exists("foo.txt"), "foo.txt should exist at root");
+        assert!(repo.file_exists("bar.txt"), "bar.txt should exist at root");
+        assert_eq!(repo.read_file("foo.txt"), "library code");
+        assert_eq!(repo.read_file("bar.txt"), "more code");
 
-    // Verify working directory shows subtree at root
-    assert!(repo.file_exists("foo.txt"), "foo.txt should exist at root");
-    assert!(repo.file_exists("bar.txt"), "bar.txt should exist at root");
-    assert_eq!(repo.read_file("foo.txt"), "library code");
-    assert_eq!(repo.read_file("bar.txt"), "more code");
+        // Verify files from outside subtree are gone
+        assert!(
+            !repo.file_exists("README.md"),
+            "README.md should not exist after zoom"
+        );
+        assert!(
+            !repo.file_exists("src"),
+            "src directory should not exist after zoom"
+        );
 
-    // Verify files from outside subtree are gone
-    assert!(
-        !repo.file_exists("README.md"),
-        "README.md should not exist after zoom"
-    );
-    assert!(
-        !repo.file_exists("src"),
-        "src directory should not exist after zoom"
-    );
+        // Verify commit structure
+        let snapshot = repo.to_snapshot();
+        let head_commit = snapshot.head_commit().unwrap();
 
-    // Verify commit structure
-    let snapshot = repo.to_snapshot();
-    let head_commit = snapshot.head_commit().unwrap();
+        // Should be a merge commit with zoom-in trailer
+        verify_zoom_in_commit(head_commit);
 
-    // Should be a merge commit with zoom-in trailer
-    verify_zoom_in_commit(head_commit);
+        // Check trailer has correct path
+        let path = extract_trailer(&head_commit.message, "git-zoom-in");
+        assert_eq!(path, Some("src/lib".to_string()));
 
-    // Check trailer has correct path
-    let path = extract_trailer(&head_commit.message, "git-zoom-in");
-    assert_eq!(path, Some("src/lib".to_string()));
+        Ok(())
+    });
 }
 
 #[test]
