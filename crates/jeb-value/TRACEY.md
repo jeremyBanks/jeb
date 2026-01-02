@@ -59,7 +59,7 @@ r[jeb-value.variant.into-value]
 appropriate enum variant.
 
 r[jeb-value.variant.try-from]
-Each variant MUST implement `TryFrom<INNER>` for their wrapper inner type. This
+Each variant MUST implement `TryFrom<INNER>` for their wrapped inner type. This
 may be implicit from a `From<INNER>` implementation or explicit if it's
 fallible.
 
@@ -67,7 +67,8 @@ r[jeb-value.variants.into-inner]
 Each variant type MUST provide an `into_inner(self)` implementation which
 returns the wrapped inner value.
 
-Each variant type 
+r[jeb-value.variants.]
+For each variant type, their inner type must implement `From<VARIANT>`.
 
 r[jeb-value.variants.transparent]
 Each variant type MUST be marked `#[repr(transparent)]`.
