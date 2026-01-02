@@ -157,13 +157,18 @@ impl WalkSources {
 impl Sources for WalkSources {
     fn extract(self) -> Result<Rules> {
         use ignore::WalkBuilder;
-        use std::sync::Mutex;
+        use std::sync::{Arc, Mutex};
 
-        let rules = Mutex::new(Rules::new());
+        let rules = Arc::new(Mutex::new(Rules::new()));
+
+        // Extract values we need to capture in closure
+        let root = self.root.clone();
+        let include = self.include.clone();
+        let exclude = self.exclude.clone();
 
         // Build the walker
         // [impl walk.gitignore]
-        let walker = WalkBuilder::new(&self.root)
+        let walker = WalkBuilder::new(&root)
             .follow_links(true)
             .hidden(false) // Don't skip hidden files (but .git is in .gitignore)
             .git_ignore(true)
@@ -173,7 +178,11 @@ impl Sources for WalkSources {
 
         // Process files in parallel using ignore's parallel walker
         walker.run(|| {
-            Box::new(|entry| {
+            let root = root.clone();
+            let include = include.clone();
+            let exclude = exclude.clone();
+            let rules = Arc::clone(&rules);
+            Box::new(move |entry| {
                 let entry = match entry {
                     Ok(e) => e,
                     Err(_) => return ignore::WalkState::Continue,
@@ -190,12 +199,12 @@ impl Sources for WalkSources {
                 }
 
                 // Check include patterns
-                if !self.include.is_empty() && !is_included(path, &self.root, &self.include) {
+                if !include.is_empty() && !is_included(path, &root, &include) {
                     return ignore::WalkState::Continue;
                 }
 
                 // Check exclude patterns
-                if is_excluded(path, &self.root, &self.exclude) {
+                if is_excluded(path, &root, &exclude) {
                     return ignore::WalkState::Continue;
                 }
 
@@ -212,7 +221,12 @@ impl Sources for WalkSources {
             })
         });
 
-        Ok(rules.into_inner().unwrap())
+        // Extract the inner Mutex from the Arc, then get the Rules from the Mutex
+        let rules = Arc::try_unwrap(rules)
+            .expect("Arc should have only one strong reference after walker completes")
+            .into_inner()
+            .unwrap();
+        Ok(rules)
     }
 }
 
