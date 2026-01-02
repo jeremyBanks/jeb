@@ -1,0 +1,57 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    alternate: 1981d7affbfcaf06f17e6097d7386e683c8d3216
+    main: 7dd50f00fe7a898c1e9792833ddda72c03095036
+7e7ccd:
+  message: commit 1
+  tree:
+    path:
+      to:
+        item: This is a file
+93f4d5:
+  message: commit 3
+  parents: []
+  tree: {}
+c5d9f3:
+  message: |
+    Zoom in to path/to/item
+
+    git-zoom-in: path/to/item
+  parents:
+  - 93f4d5
+  - 7e7ccd
+  tree:
+    content.txt: extracted blob as tree
+82822d:
+  message: |
+    Zoom out to path/to/item
+
+    git-zoom-out: path/to/item
+  parents:
+  - 7e7ccd
+  - c5d9f3
+  tree:
+    path:
+      to:
+        item:
+          content.txt:
+            //commit: c5d9f3
+            //path: content.txt
+1981d7affbfcaf06f17e6097d7386e683c8d3216:
+  message: commit 2
+  parents:
+  - 7e7ccd
+  tree:
+    path:
+      to:
+        item:
+          replaced.txt: Now it's a directory
+7dd50f00fe7a898c1e9792833ddda72c03095036:
+  message: commit 6
+  parents:
+  - 82822d
+  tree:
+    path:
+      to:
+        item: Back to being a file

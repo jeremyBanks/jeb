@@ -1,0 +1,16 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: e3c79b04e8b72041b123facbf8cfbab1f8a88237
+a5067dba554a51e25c9d962257ffeade774d3851:
+  message: commit 1
+  tree:
+    file.txt: content
+337d2b4d2496576967981d85ab2555f7be204699:
+  message: ''
+  tree:
+    file.txt: empty message commit
+e3c79b04e8b72041b123facbf8cfbab1f8a88237:
+  message: normal message
+  tree:
+    file.txt: final
