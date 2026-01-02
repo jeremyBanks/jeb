@@ -88,7 +88,8 @@
     "editor.tabSize": 2
   },
   "[markdown]": {
-    "editor.defaultFormatter": "denoland.vscode-deno"
+    "editor.defaultFormatter": "denoland.vscode-deno",
+    "files.trimTrailingWhitespace": false
   },
   "chat.useClaudeSkills": true,
   "cSpell.enabledNotifications": {

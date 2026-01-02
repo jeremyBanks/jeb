@@ -52,8 +52,11 @@ bash `for` loops or similar constructs that are incompatible with Claude Code's
 command allow-listing logic: these require manual re-approval every time you use
 them, which is very disruptive to our intended workflows.
 
-Similarly, avoid writing to files under paths like `/tmp/` which are outside of
-the project directory, because these also trigger user permission prompts.
+Similarly, you should almost NEVER write files under paths like `/tmp/` which
+are outside of the project directory, because these also trigger user permission
+prompts. You should always prefer to create test scripts within the project that
+can be run using the standard tools like `cargo run` or `cargo test` or
+`deno run`, even if they're only temporary and you delete them after.
 
 ---
 
