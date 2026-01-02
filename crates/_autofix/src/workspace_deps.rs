@@ -613,7 +613,8 @@ fn normalize_workspace_dependencies(
         .get("workspace")
         .and_then(|w| w.get("dependencies"))
         .and_then(|d| d.as_table());
-    // Collect features from workspace dependencies so we can move them to member crates
+    // Collect features from workspace dependencies so we can move them to member
+    // crates
     let mut workspace_features: HashMap<String, Vec<String>> = HashMap::new();
     if let Some(deps_table) = workspace_deps {
         for (key, value) in deps_table.iter() {
@@ -658,8 +659,10 @@ fn normalize_workspace_dependencies(
             original_contents.insert(member_toml, content);
         }
     }
-    let mut workspace_updates: HashMap<String, (ResolutionFields, String, bool, Option<Vec<String>>)> =
-        HashMap::new();
+    let mut workspace_updates: HashMap<
+        String,
+        (ResolutionFields, String, bool, Option<Vec<String>>),
+    > = HashMap::new();
     for (dep_name, occurrences) in &all_deps {
         let mut equivalence_classes: Vec<EquivalenceClass> = Vec::new();
         for (member_path, _section, dep) in occurrences {
@@ -679,7 +682,8 @@ fn normalize_workspace_dependencies(
         }
         if let Some(winner) = find_winner(&equivalence_classes) {
             let key = winner.get_preferred_key();
-            // Get workspace features for this dependency key (will be propagated to members)
+            // Get workspace features for this dependency key (will be propagated to
+            // members)
             let ws_features = workspace_features.get(&key).cloned();
             workspace_updates.insert(
                 key,
@@ -1217,10 +1221,14 @@ fn update_member_toml(
                                     .unwrap_or(false);
                                 if workspace_needs_df_false {
                                     if dep.config.default_features == Some(false) {
-                                        // Use member features if present, otherwise use workspace features
-                                        let features_to_use = dep.config.features.clone().or_else(|| {
-                                            dep_name_to_workspace_features.get(&dep.name).cloned()
-                                        });
+                                        // Use member features if present, otherwise use workspace
+                                        // features
+                                        let features_to_use =
+                                            dep.config.features.clone().or_else(|| {
+                                                dep_name_to_workspace_features
+                                                    .get(&dep.name)
+                                                    .cloned()
+                                            });
                                         if let Some(ref features) = features_to_use {
                                             let arr: toml_edit::Array = features
                                                 .iter()
@@ -1230,10 +1238,14 @@ fn update_member_toml(
                                         }
                                         table.insert("default-features", Value::from(false));
                                     } else {
-                                        // Use member features if present, otherwise use workspace features
-                                        let base_features = dep.config.features.clone().or_else(|| {
-                                            dep_name_to_workspace_features.get(&dep.name).cloned()
-                                        });
+                                        // Use member features if present, otherwise use workspace
+                                        // features
+                                        let base_features =
+                                            dep.config.features.clone().or_else(|| {
+                                                dep_name_to_workspace_features
+                                                    .get(&dep.name)
+                                                    .cloned()
+                                            });
                                         let features_with_default =
                                             prepend_default_feature(base_features);
                                         let arr: toml_edit::Array = features_with_default
@@ -1243,7 +1255,8 @@ fn update_member_toml(
                                         table.insert("features", Value::Array(arr));
                                     }
                                 } else {
-                                    // Use member features if present, otherwise use workspace features
+                                    // Use member features if present, otherwise use workspace
+                                    // features
                                     if let Some(ref features) = dep.config.features {
                                         let arr: toml_edit::Array = features
                                             .iter()

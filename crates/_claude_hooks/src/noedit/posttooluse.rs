@@ -40,8 +40,8 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
                 stop_reason: None,
                 suppress_output: None,
                 system_message: Some(
-                    "⚠️ .noedit protection not active: JEB_CLAUDE_INITIAL_COMMIT not set.\n\
-                     Protection will activate on next session start."
+                    "⚠️ .noedit protection not active: JEB_CLAUDE_INITIAL_COMMIT not \
+                     set.\nProtection will activate on next session start."
                         .to_string(),
                 ),
                 permission_decision: None,
