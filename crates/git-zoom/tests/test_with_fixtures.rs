@@ -27,6 +27,8 @@ fn test_zoom_in_with_fixture() {
 
 /// Compare two snapshots, ignoring commit IDs (since they're non-deterministic)
 /// but verifying structure, messages, trees, and parent relationships
+///
+/// Matches commits by structure: message + parents + committer + tree
 fn assert_snapshots_equal(actual: &git_snapshot::Repository, expected: &git_snapshot::Repository) {
     // Compare HEAD state
     assert_eq!(actual.head(), expected.head(), "HEAD reference mismatch");
@@ -43,79 +45,81 @@ fn assert_snapshots_equal(actual: &git_snapshot::Repository, expected: &git_snap
         actual_commits.len()
     );
 
-    // Build maps by message (assumes messages are unique enough to identify commits)
-    let mut actual_by_msg: std::collections::HashMap<_, _> = std::collections::HashMap::new();
+    // Create a signature for each commit based on structural properties
+    fn commit_signature(commit: &git_snapshot::Commit) -> String {
+        format!(
+            "{}|{}|{}|{}|{}",
+            commit.message.trim(),
+            commit.parents.len(),
+            commit.committer.name,
+            commit.committer.email,
+            commit.tree.paths().count()
+        )
+    }
+
+    // Build maps by signature
+    let mut actual_by_sig: std::collections::HashMap<String, Vec<&git_snapshot::Commit>> =
+        std::collections::HashMap::new();
     for commit in &actual_commits {
-        let msg_first_line = commit.message.lines().next().unwrap_or("");
-        actual_by_msg.insert(msg_first_line, commit);
+        let sig = commit_signature(commit);
+        actual_by_sig.entry(sig).or_insert_with(Vec::new).push(commit);
     }
 
-    let mut expected_by_msg: std::collections::HashMap<_, _> = std::collections::HashMap::new();
+    let mut expected_by_sig: std::collections::HashMap<String, Vec<&git_snapshot::Commit>> =
+        std::collections::HashMap::new();
     for commit in &expected_commits {
-        let msg_first_line = commit.message.lines().next().unwrap_or("");
-        expected_by_msg.insert(msg_first_line, commit);
+        let sig = commit_signature(commit);
+        expected_by_sig.entry(sig).or_insert_with(Vec::new).push(commit);
     }
 
-    // For each expected commit, find matching actual commit and compare details
-    for expected_commit in &expected_commits {
-        let expected_msg_first = expected_commit.message.lines().next().unwrap_or("");
-
-        let actual_commit = actual_by_msg
-            .get(expected_msg_first)
-            .expect(&format!(
-                "Actual snapshot is missing commit with message: {}",
-                expected_msg_first
-            ));
-
-        // Compare commit details
-        assert_eq!(
-            actual_commit.message.trim(),
-            expected_commit.message.trim(),
-            "Message mismatch for commit: {}",
-            expected_msg_first
-        );
-
-        assert_eq!(
-            actual_commit.parents.len(),
-            expected_commit.parents.len(),
-            "Parent count mismatch for commit '{}': expected {}, got {}",
-            expected_msg_first,
-            expected_commit.parents.len(),
-            actual_commit.parents.len()
-        );
-
-        assert_eq!(
-            actual_commit.committer.name,
-            expected_commit.committer.name,
-            "Committer name mismatch for commit: {}",
-            expected_msg_first
-        );
-
-        assert_eq!(
-            actual_commit.committer.email,
-            expected_commit.committer.email,
-            "Committer email mismatch for commit: {}",
-            expected_msg_first
-        );
-
-        // Compare tree contents
-        let actual_paths: std::collections::HashSet<_> = actual_commit.tree.paths().collect();
-        let expected_paths: std::collections::HashSet<_> = expected_commit.tree.paths().collect();
-
-        assert_eq!(
-            actual_paths, expected_paths,
-            "Tree paths mismatch for commit '{}': expected {:?}, got {:?}",
-            expected_msg_first, expected_paths, actual_paths
-        );
-
-        for path in &expected_paths {
-            assert_eq!(
-                actual_commit.tree.get(path),
-                expected_commit.tree.get(path),
-                "Tree content mismatch for path '{}' in commit '{}'",
-                path,
-                expected_msg_first
+    // Check that each expected signature exists in actual
+    for (sig, expected_commits_with_sig) in &expected_by_sig {
+        let actual_commits_with_sig = actual_by_sig.get(sig).unwrap_or_else(|| {
+            let sample = expected_commits_with_sig[0];
+            panic!(
+                "Missing commit in actual snapshot:\n\
+                 Message: {}\n\
+                 Parents: {}\n\
+                 Committer: {} <{}>\n\
+                 Tree paths: {}",
+                sample.message.lines().next().unwrap_or(""),
+                sample.parents.len(),
+                sample.committer.name,
+                sample.committer.email,
+                sample.tree.paths().count()
             );
+        });
+
+        assert_eq!(
+            actual_commits_with_sig.len(),
+            expected_commits_with_sig.len(),
+            "Different number of commits with same signature: {}",
+            sig
+        );
+
+        // Compare tree contents for each matching pair
+        for (actual_commit, expected_commit) in
+            actual_commits_with_sig.iter().zip(expected_commits_with_sig.iter())
+        {
+            let actual_paths: std::collections::HashSet<_> = actual_commit.tree.paths().collect();
+            let expected_paths: std::collections::HashSet<_> =
+                expected_commit.tree.paths().collect();
+
+            assert_eq!(
+                actual_paths, expected_paths,
+                "Tree paths mismatch for commit '{}'",
+                expected_commit.message.lines().next().unwrap_or("")
+            );
+
+            for path in &expected_paths {
+                assert_eq!(
+                    actual_commit.tree.get(path),
+                    expected_commit.tree.get(path),
+                    "Tree content mismatch for path '{}' in commit '{}'",
+                    path,
+                    expected_commit.message.lines().next().unwrap_or("")
+                );
+            }
         }
     }
 
