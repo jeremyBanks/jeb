@@ -35,7 +35,9 @@ Each `Value` enum variant MUST be a single-element tuple variant over a type
 r[jeb-value.value.round-trip]  
 If `Value` defines `From<T>` or `TryFrom<T>` for any type `T`, then `T` MUST
 also implement `TryFrom<Value>` which can losslessly recover any values that
-were converted using `From<T>` or a successful `TryFrom<T>`.
+were converted using `From<T>` or a successful `TryFrom<T>`. This is a universal
+requirement applying to all such conversions, regardless of whether the other
+type is internal, external, or built-in.
 
 r[jeb-value.value.cmp]  
 `Value` MUST implement `Eq`, `PartialEq`, `Ord`, `PartialOrd`, and `Hash`, with
@@ -75,7 +77,9 @@ appropriate enum variant.
 r[jeb-value.variant.round-trip]  
 If a variant type `V` defines `From<T>` or `TryFrom<T>` for any type `T`, then
 `T` MUST also implement `TryFrom<V>` which can losslessly recover any values
-that were converted using `From<T>` or a successful `TryFrom<T>`.
+that were converted using `From<T>` or a successful `TryFrom<T>`. This is a
+universal requirement applying to all such conversions, regardless of whether
+the other type is internal, external, or built-in.
 
 r[jeb-value.variant.try-from]  
 Each variant MUST implement `TryFrom<INNER>` for their wrapped inner type. This
