@@ -159,7 +159,8 @@ that variant type.
 ### `Null`
 
 r[jeb-value.null]  
-The `Null` variant type MUST be a unit struct.
+The `Null` variant type MUST be a single-item tuple struct wrapping an inner
+primitive unit value `()`.
 
 r[jeb-value.null.must-use]  
 The `Null` variant type MUST NOT be marked `#[must_use]`.
@@ -178,7 +179,7 @@ inner primitive `f64`.
 
 r[jeb-value.number.finite]
 The `Number` variant type MUST only be constructible with finite `f64` values
-(excluding NaN or Infinity, including -0). By enforcing this everywhere the a
+(excluding NaN or Infinity, including -0). By enforcing this everywhere that a
 value can be constructed, all operations on `Number` can safely assume the inner
 value is always finite without needing to re-validate it.
 
