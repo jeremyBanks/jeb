@@ -1,8 +1,10 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 1bf61584c13e2b774ca51f1106f11956b054ccc1
-1bf61584c13e2b774ca51f1106f11956b054ccc1:
+    main: fbd8a88bacd9033dd4e8a12fcdad738dbbcfdd78
+fbd8a88bacd9033dd4e8a12fcdad738dbbcfdd78:
+  author: Test User <test@example.com>
+  commit-date: 2024-12-25T00:00:00Z
   message: commit 1
   tree:
     src:

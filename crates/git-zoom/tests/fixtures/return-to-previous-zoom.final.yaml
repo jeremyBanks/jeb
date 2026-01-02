@@ -1,11 +1,11 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 70c424f9571ea56266cf67f59f9910cbc41c8d45
-'29e281':
+    main: 7fd268655609ff2c14493316376bfa410c3174bf
+136d8a:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
@@ -17,33 +17,33 @@ refs:
     root.txt: root
     src:
       file.txt: original
-4b3fb0:
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+0b5979:
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - '29e281'
+  - 136d8a
   - 7ce26a
   tree:
     file.txt:
       //commit: 7ce26a
       //path: src/file.txt
-5eed75:
+1070d0:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   message: |
     Update
   tree:
     file.txt: modified
-05d4d1:
+abfc51:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src'
@@ -51,21 +51,21 @@ refs:
     git-zoom-out: src
   parents:
   - 7ce26a
-  - 5eed75
+  - 1070d0
   tree:
     src:
       file.txt:
-        //commit: 5eed75
+        //commit: 1070d0
         //path: file.txt
-70c424f9571ea56266cf67f59f9910cbc41c8d45:
+7fd268655609ff2c14493316376bfa410c3174bf:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:38Z
-  commit-date: 2026-01-02T21:10:38Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - 5eed75
-  - 05d4d1
+  - 1070d0
+  - abfc51

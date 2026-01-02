@@ -1,131 +1,133 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: a41fddb84ceb298667baf46d6c2f927d5190e08c
-'479270':
+    main: 6fef2698d223f9bad47d6dfc47d32da7443c87d0
+514a4a:
+  author: Developer <dev@test.org>
+  author-date: 2025-03-01T09:00:00-08:00
   message: commit 1
   tree:
     README.md: root
     src:
       file.txt: original
-0c5d7b:
+136d8a:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:36Z
-  commit-date: 2026-01-02T21:10:36Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
   parents: []
   tree: {}
-d3136d:
-  author-date: 2026-01-02T21:10:36Z
-  commit-date: 2026-01-02T21:10:36Z
+532eb3:
+  author-date: 2025-03-01T09:00:03-08:00
+  commit-date: 2025-03-01T09:00:03-08:00
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - 0c5d7b
-  - '479270'
+  - 136d8a
+  - 514a4a
   tree:
     file.txt:
-      //commit: '479270'
+      //commit: 514a4a
       //path: src/file.txt
-'089173':
+6f28ae:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+  author-date: 2025-03-01T09:00:03-08:00
+  commit-date: 2025-03-01T09:00:03-08:00
   message: |
     Update 1
   tree:
     file.txt: v1
-1f4d8b:
+56535f:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+  author-date: 2025-03-01T09:00:03-08:00
+  commit-date: 2025-03-01T09:00:03-08:00
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src'
 
     git-zoom-out: src
   parents:
-  - '479270'
-  - '089173'
+  - 514a4a
+  - 6f28ae
   tree:
     src:
       file.txt:
-        //commit: '089173'
+        //commit: 6f28ae
         //path: file.txt
-4c5e71:
+b43380:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+  author-date: 2025-03-01T09:00:03-08:00
+  commit-date: 2025-03-01T09:00:03-08:00
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - '089173'
-  - 1f4d8b
-0de736:
+  - 6f28ae
+  - 56535f
+9e9e2c:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+  author-date: 2025-03-01T09:00:03-08:00
+  commit-date: 2025-03-01T09:00:03-08:00
   message: |
     Update 2
   tree:
     file.txt: v2
-'0238e7':
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+14a4d4:
+  author-date: 2025-03-01T09:00:03-08:00
+  commit-date: 2025-03-01T09:00:03-08:00
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src'
 
     git-zoom-out: src
   parents:
-  - 1f4d8b
-  - 0de736
+  - 56535f
+  - 9e9e2c
   tree:
     src:
       file.txt:
-        //commit: 0de736
+        //commit: 9e9e2c
         //path: file.txt
-e39946:
+53cf29:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+  author-date: 2025-03-01T09:00:03-08:00
+  commit-date: 2025-03-01T09:00:03-08:00
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - 0de736
-  - '0238e7'
-4cbbc3:
+  - 9e9e2c
+  - 14a4d4
+1c8903:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:10:38Z
-  commit-date: 2026-01-02T21:10:38Z
+  author-date: 2025-03-01T09:00:03-08:00
+  commit-date: 2025-03-01T09:00:03-08:00
   message: |
     Update 3
   tree:
     file.txt: v3
-a41fddb84ceb298667baf46d6c2f927d5190e08c:
-  author-date: 2026-01-02T21:10:38Z
-  commit-date: 2026-01-02T21:10:38Z
+6fef2698d223f9bad47d6dfc47d32da7443c87d0:
+  author-date: 2025-03-01T09:00:03-08:00
+  commit-date: 2025-03-01T09:00:03-08:00
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src'
 
     git-zoom-out: src
   parents:
-  - '0238e7'
-  - 4cbbc3
+  - 14a4d4
+  - 1c8903
   tree:
     src:
       file.txt:
-        //commit: 4cbbc3
+        //commit: 1c8903
         //path: file.txt

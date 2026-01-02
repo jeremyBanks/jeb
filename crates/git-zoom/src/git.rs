@@ -161,6 +161,7 @@ pub fn empty_tree() -> Result<String> {
 }
 /// Create a commit with the given tree, parents, and message.
 /// Uses custom committer identity.
+/// Timestamps are deterministically derived from parent commits.
 pub fn commit_tree(
     tree: &str,
     parents: &[&str],
@@ -175,10 +176,22 @@ pub fn commit_tree(
     }
     args.push("-m");
     args.push(message);
+
+    // Determine timestamp deterministically from parents
+    let timestamp = if parents.is_empty() {
+        // Root commit - use a fixed default
+        "2024-12-06T06:12:24-06:24".to_string()
+    } else {
+        // Use latest parent timestamp
+        latest_parent_timestamp(parents)?
+    };
+
     let output = Command::new("git")
         .args(&args)
         .env("GIT_COMMITTER_NAME", committer_name)
         .env("GIT_COMMITTER_EMAIL", committer_email)
+        .env("GIT_AUTHOR_DATE", &timestamp)
+        .env("GIT_COMMITTER_DATE", &timestamp)
         .output()
         .map_err(|e| Error {
             command: args.join(" "),
@@ -192,6 +205,178 @@ pub fn commit_tree(
     }
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
+
+/// Get author and committer timestamps for a commit in ISO8601 format.
+/// Returns (author_date, committer_date).
+pub fn get_commit_timestamps(commit: &str) -> Result<(String, String)> {
+    let output = git_stdout(&["show", "-s", "--format=%aI%n%cI", commit])?;
+    let mut lines = output.lines();
+    let author_date = lines
+        .next()
+        .ok_or_else(|| Error {
+            command: "show".to_string(),
+            message: "missing author date in output".to_string(),
+        })?
+        .to_string();
+    let committer_date = lines
+        .next()
+        .ok_or_else(|| Error {
+            command: "show".to_string(),
+            message: "missing committer date in output".to_string(),
+        })?
+        .to_string();
+    Ok((author_date, committer_date))
+}
+
+/// Parse ISO8601 timestamp to comparable form (unix seconds).
+/// Handles formats like "2026-01-02T21:10:36Z" or "2026-01-02T21:10:36+05:00".
+/// Returns unix timestamp in seconds (UTC).
+fn parse_timestamp(iso8601: &str) -> Result<i64> {
+    // Parse the date-time part
+    let (datetime_part, tz_part) = if iso8601.ends_with('Z') {
+        (&iso8601[..iso8601.len() - 1], "+00:00")
+    } else if let Some(pos) = iso8601.rfind(|c| c == '+' || c == '-') {
+        if pos > 10 {
+            // Make sure it's a timezone offset, not part of the date
+            (&iso8601[..pos], &iso8601[pos..])
+        } else {
+            return Err(Error {
+                command: "parse_timestamp".to_string(),
+                message: format!("invalid timestamp format: {}", iso8601),
+            });
+        }
+    } else {
+        return Err(Error {
+            command: "parse_timestamp".to_string(),
+            message: format!("missing timezone in timestamp: {}", iso8601),
+        });
+    };
+
+    // Parse datetime: "2026-01-02T21:10:36"
+    let parts: Vec<&str> = datetime_part.split('T').collect();
+    if parts.len() != 2 {
+        return Err(Error {
+            command: "parse_timestamp".to_string(),
+            message: format!("invalid datetime format: {}", datetime_part),
+        });
+    }
+
+    let date_parts: Vec<&str> = parts[0].split('-').collect();
+    let time_parts: Vec<&str> = parts[1].split(':').collect();
+
+    if date_parts.len() != 3 || time_parts.len() != 3 {
+        return Err(Error {
+            command: "parse_timestamp".to_string(),
+            message: format!("invalid date/time components: {}", datetime_part),
+        });
+    }
+
+    let year: i32 = date_parts[0].parse().map_err(|_| Error {
+        command: "parse_timestamp".to_string(),
+        message: format!("invalid year: {}", date_parts[0]),
+    })?;
+    let month: i32 = date_parts[1].parse().map_err(|_| Error {
+        command: "parse_timestamp".to_string(),
+        message: format!("invalid month: {}", date_parts[1]),
+    })?;
+    let day: i32 = date_parts[2].parse().map_err(|_| Error {
+        command: "parse_timestamp".to_string(),
+        message: format!("invalid day: {}", date_parts[2]),
+    })?;
+    let hour: i32 = time_parts[0].parse().map_err(|_| Error {
+        command: "parse_timestamp".to_string(),
+        message: format!("invalid hour: {}", time_parts[0]),
+    })?;
+    let minute: i32 = time_parts[1].parse().map_err(|_| Error {
+        command: "parse_timestamp".to_string(),
+        message: format!("invalid minute: {}", time_parts[1]),
+    })?;
+    let second: i32 = time_parts[2].parse().map_err(|_| Error {
+        command: "parse_timestamp".to_string(),
+        message: format!("invalid second: {}", time_parts[2]),
+    })?;
+
+    // Parse timezone offset: "+05:00" or "-06:24"
+    let tz_sign = if tz_part.starts_with('+') { 1 } else { -1 };
+    let tz_nums: Vec<&str> = tz_part[1..].split(':').collect();
+    if tz_nums.len() != 2 {
+        return Err(Error {
+            command: "parse_timestamp".to_string(),
+            message: format!("invalid timezone format: {}", tz_part),
+        });
+    }
+    let tz_hours: i32 = tz_nums[0].parse().map_err(|_| Error {
+        command: "parse_timestamp".to_string(),
+        message: format!("invalid timezone hours: {}", tz_nums[0]),
+    })?;
+    let tz_minutes: i32 = tz_nums[1].parse().map_err(|_| Error {
+        command: "parse_timestamp".to_string(),
+        message: format!("invalid timezone minutes: {}", tz_nums[1]),
+    })?;
+    let tz_offset_seconds = tz_sign * (tz_hours * 3600 + tz_minutes * 60);
+
+    // Simplified unix timestamp calculation (good enough for comparison)
+    // Days since epoch (1970-01-01)
+    let mut days = 0i64;
+
+    // Add days for complete years
+    for y in 1970..year {
+        days += if is_leap_year(y) { 366 } else { 365 };
+    }
+
+    // Add days for complete months
+    let days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    for m in 1..month {
+        days += days_in_month[(m - 1) as usize] as i64;
+        if m == 2 && is_leap_year(year) {
+            days += 1;
+        }
+    }
+
+    // Add remaining days
+    days += (day - 1) as i64;
+
+    // Convert to seconds and add time
+    let mut seconds = days * 86400 + hour as i64 * 3600 + minute as i64 * 60 + second as i64;
+
+    // Adjust for timezone (subtract offset to get UTC)
+    seconds -= tz_offset_seconds as i64;
+
+    Ok(seconds)
+}
+
+fn is_leap_year(year: i32) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+}
+
+/// Find the latest timestamp among parent commits.
+/// Checks author-date first, then commit-date for each parent in order.
+/// Returns the timestamp string with its original timezone.
+pub fn latest_parent_timestamp(parent_commits: &[&str]) -> Result<String> {
+    let mut latest_seconds = 0i64;
+    let mut latest_timestamp = String::new();
+
+    for parent in parent_commits {
+        let (author_date, commit_date) = get_commit_timestamps(parent)?;
+
+        // Check author-date first
+        let author_secs = parse_timestamp(&author_date)?;
+        if author_secs > latest_seconds {
+            latest_seconds = author_secs;
+            latest_timestamp = author_date;
+        }
+
+        // Then check commit-date
+        let commit_secs = parse_timestamp(&commit_date)?;
+        if commit_secs > latest_seconds {
+            latest_seconds = commit_secs;
+            latest_timestamp = commit_date;
+        }
+    }
+
+    Ok(latest_timestamp)
+}
+
 /// Update HEAD to point to a commit.
 pub fn update_ref_head(commit: &str) -> Result<()> {
     git_stdout(&["update-ref", "HEAD", commit])?;

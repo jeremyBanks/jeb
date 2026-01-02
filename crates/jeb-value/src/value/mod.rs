@@ -14,7 +14,6 @@ use {
     indexmap::IndexMap,
 };
 // [impl jeb-value.dependencies.cfg]
-// [impl jeb-value.serde.traits]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Serialize),
@@ -72,7 +71,6 @@ impl PartialEq for Value {
     }
 }
 impl Eq for Value {}
-// [impl jeb-value.value.cmp]
 impl core::hash::Hash for Value {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         match self {

@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: c870a5cdb5e8cf7b28fa948364143a8233311960
+    main: afc0bd642d24fe3cd3d8bab47e21d72b81745b14
 b50a41:
   message: commit 1
   tree:
@@ -12,25 +12,25 @@ b50a41:
       lib:
         core.rs: pub fn core() { /* complex code */ }
         utils.rs: pub fn utils() {}
-0c5d7b:
+136d8a:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:36Z
-  commit-date: 2026-01-02T21:10:36Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
   parents: []
   tree: {}
-47a7ec:
-  author-date: 2026-01-02T21:10:36Z
-  commit-date: 2026-01-02T21:10:36Z
+da70bf:
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src/lib'
 
     git-zoom-in: src/lib
   parents:
-  - 0c5d7b
+  - 136d8a
   - b50a41
   tree:
     core.rs:
@@ -39,18 +39,18 @@ b50a41:
     utils.rs:
       //commit: b50a41
       //path: src/lib/utils.rs
-e4d60d:
+84578b:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:10:36Z
-  commit-date: 2026-01-02T21:10:36Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   message: |
     Update core
   tree:
     core.rs: pub fn core() { /* UPDATED */ }
-c870a5cdb5e8cf7b28fa948364143a8233311960:
+afc0bd642d24fe3cd3d8bab47e21d72b81745b14:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src/lib'
@@ -58,10 +58,10 @@ c870a5cdb5e8cf7b28fa948364143a8233311960:
     git-zoom-out: src/lib
   parents:
   - b50a41
-  - e4d60d
+  - 84578b
   tree:
     src:
       lib:
         core.rs:
-          //commit: e4d60d
+          //commit: 84578b
           //path: core.rs
