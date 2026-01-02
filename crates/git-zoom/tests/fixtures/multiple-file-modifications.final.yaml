@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: c35be72fec9694e9c4aa5bf4746a4b7956cf0bec
+    main: 98daa47ff06b89167e3b5b3d7438e3b630ee4de7
 3d81b3:
   message: commit 1
   tree:
@@ -9,25 +9,25 @@ refs:
       a.txt: a
       b.txt: b
       c.txt: c
-4a3b6c:
+985cd0:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:03:07Z
-  commit-date: 2026-01-02T21:03:07Z
+  author-date: 2026-01-02T21:08:22Z
+  commit-date: 2026-01-02T21:08:22Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
   parents: []
   tree: {}
-44aefe:
-  author-date: 2026-01-02T21:03:07Z
-  commit-date: 2026-01-02T21:03:07Z
+df47fb:
+  author-date: 2026-01-02T21:08:22Z
+  commit-date: 2026-01-02T21:08:22Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - 4a3b6c
+  - 985cd0
   - 3d81b3
   tree:
     a.txt:
@@ -39,10 +39,10 @@ refs:
     c.txt:
       //commit: 3d81b3
       //path: src/c.txt
-86e565:
+b1eb4d:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:03:07Z
-  commit-date: 2026-01-02T21:03:07Z
+  author-date: 2026-01-02T21:08:23Z
+  commit-date: 2026-01-02T21:08:23Z
   message: |
     Modify all files
   tree:
@@ -50,10 +50,10 @@ refs:
     b.txt: B
     c.txt: C
     d.txt: D
-c35be72fec9694e9c4aa5bf4746a4b7956cf0bec:
+98daa47ff06b89167e3b5b3d7438e3b630ee4de7:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:03:08Z
-  commit-date: 2026-01-02T21:03:08Z
+  author-date: 2026-01-02T21:08:23Z
+  commit-date: 2026-01-02T21:08:23Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src'
@@ -61,18 +61,18 @@ c35be72fec9694e9c4aa5bf4746a4b7956cf0bec:
     git-zoom-out: src
   parents:
   - 3d81b3
-  - 86e565
+  - b1eb4d
   tree:
     src:
       a.txt:
-        //commit: 86e565
+        //commit: b1eb4d
         //path: a.txt
       b.txt:
-        //commit: 86e565
+        //commit: b1eb4d
         //path: b.txt
       c.txt:
-        //commit: 86e565
+        //commit: b1eb4d
         //path: c.txt
       d.txt:
-        //commit: 86e565
+        //commit: b1eb4d
         //path: d.txt

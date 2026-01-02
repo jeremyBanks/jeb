@@ -5,6 +5,7 @@ use {
 /// Test the precision fix for comparing large integers with floats.
 /// Previously, casting u64 to f64 lost precision for values > 2^53.
 #[test]
+// [verify jeb-value.value.cmp]
 fn test_unsigned_float_precision() {
     let max_safe = 1u64 << 53;
     let u1 = Value::Unsigned(max_safe + 1);
@@ -12,6 +13,7 @@ fn test_unsigned_float_precision() {
     assert_eq!(u1.cmp(&f1), Ordering::Greater);
     assert_eq!(f1.cmp(&u1), Ordering::Less);
 }
+// [verify jeb-value.value.cmp]
 #[test]
 fn test_unsigned_float_fractional() {
     let u = Value::Unsigned(100);
@@ -52,6 +54,7 @@ fn test_signed_float_negative() {
     let f1 = Value::Float((-(max_safe as f64)).try_into().unwrap());
     assert_eq!(i1.cmp(&f1), Ordering::Less);
     assert_eq!(f1.cmp(&i1), Ordering::Greater);
+// [verify jeb-value.value.cmp]
 }
 #[test]
 fn test_transitivity() {

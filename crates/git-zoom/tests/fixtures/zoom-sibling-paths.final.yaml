@@ -1,18 +1,9 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: a4b7773ffb3864f62c4709216fea0a5a2481c02e
-a737f0:
-  author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:03:09Z
-  commit-date: 2026-01-02T21:03:09Z
-  committer: 🔎 <git-zoom-in@localhost>
-  message: |
-    Initial commit
-  tree: {}
+    main: e249b6f132c75e44c2514af3ce2f74b491872988
 50f528:
   message: Initial commit
-  parents: []
   tree:
     docs:
       guide.md: docs
@@ -21,33 +12,42 @@ a737f0:
         main.txt: binary
       lib:
         lib.txt: library
-a14ee0:
-  author-date: 2026-01-02T21:03:09Z
-  commit-date: 2026-01-02T21:03:09Z
+11080a:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:08:23Z
+  commit-date: 2026-01-02T21:08:23Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Initial commit
+  parents: []
+  tree: {}
+9c9548:
+  author-date: 2026-01-02T21:08:23Z
+  commit-date: 2026-01-02T21:08:23Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src/lib'
 
     git-zoom-in: src/lib
   parents:
-  - a737f0
+  - 11080a
   - 50f528
   tree:
     lib.txt:
       //commit: 50f528
       //path: src/lib/lib.txt
-3e6833:
+a22852:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:03:09Z
-  commit-date: 2026-01-02T21:03:09Z
+  author-date: 2026-01-02T21:08:24Z
+  commit-date: 2026-01-02T21:08:24Z
   message: |
     Update lib
   tree:
     lib.txt: library v2
-8871b8:
+89fb0f:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:03:09Z
-  commit-date: 2026-01-02T21:03:09Z
+  author-date: 2026-01-02T21:08:24Z
+  commit-date: 2026-01-02T21:08:24Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src/lib'
@@ -55,50 +55,59 @@ a14ee0:
     git-zoom-out: src/lib
   parents:
   - 50f528
-  - 3e6833
+  - a22852
   tree:
     src:
       lib:
         lib.txt:
-          //commit: 3e6833
+          //commit: a22852
           //path: lib.txt
-a6dba0:
-  author-date: 2026-01-02T21:03:09Z
-  commit-date: 2026-01-02T21:03:09Z
+2c3883:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:08:24Z
+  commit-date: 2026-01-02T21:08:24Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Initial commit
+  parents: []
+  tree: {}
+71dbf1:
+  author-date: 2026-01-02T21:08:24Z
+  commit-date: 2026-01-02T21:08:24Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src/bin'
 
     git-zoom-in: src/bin
   parents:
-  - a737f0
-  - 8871b8
+  - 2c3883
+  - 89fb0f
   tree:
     main.txt:
       //commit: 50f528
       //path: src/bin/main.txt
-332c5f:
+e65dd3:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:03:09Z
-  commit-date: 2026-01-02T21:03:09Z
+  author-date: 2026-01-02T21:08:24Z
+  commit-date: 2026-01-02T21:08:24Z
   message: |
     Update bin
   tree:
     main.txt: binary v2
-a4b7773ffb3864f62c4709216fea0a5a2481c02e:
-  author-date: 2026-01-02T21:03:09Z
-  commit-date: 2026-01-02T21:03:09Z
+e249b6f132c75e44c2514af3ce2f74b491872988:
+  author-date: 2026-01-02T21:08:24Z
+  commit-date: 2026-01-02T21:08:24Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src/bin'
 
     git-zoom-out: src/bin
   parents:
-  - 8871b8
-  - 332c5f
+  - 89fb0f
+  - e65dd3
   tree:
     src:
       bin:
         main.txt:
-          //commit: 332c5f
+          //commit: e65dd3
           //path: main.txt

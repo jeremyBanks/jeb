@@ -6,6 +6,8 @@ use {
     std::hash::{Hash, Hasher},
 };
 #[test]
+// [verify jeb-value.variants.cmp]
+// [verify jeb-value.number.cmp]
 fn test_float_zero_equality() {
     let pos_zero = Float::try_from(0.0f64).unwrap();
     let neg_zero = Float::try_from(-0.0f64).unwrap();
@@ -13,6 +15,8 @@ fn test_float_zero_equality() {
     assert_ne!(neg_zero, pos_zero);
 }
 #[test]
+// [verify jeb-value.variants.cmp]
+// [verify jeb-value.number.cmp]
 fn test_float_zero_ordering() {
     let pos_zero = Float::try_from(0.0f64).unwrap();
     let neg_zero = Float::try_from(-0.0f64).unwrap();
@@ -23,6 +27,8 @@ fn test_float_zero_ordering() {
     assert_eq!(pos_zero.cmp(& neg_zero), Ordering::Greater);
 }
 #[test]
+// [verify jeb-value.variants.cmp]
+// [verify jeb-value.number.cmp]
 fn test_float_zero_hashing() {
     let pos_zero = Float::try_from(0.0f64).unwrap();
     let neg_zero = Float::try_from(-0.0f64).unwrap();
@@ -33,6 +39,8 @@ fn test_float_zero_hashing() {
     assert_ne!(hasher1.finish(), hasher2.finish());
 }
 #[test]
+// [verify jeb-value.variants.cmp]
+// [verify jeb-value.number.cmp]
 fn test_float_zero_as_hashmap_key() {
     let mut map = HashMap::new();
     let pos_zero = Float::try_from(0.0f64).unwrap();
@@ -44,6 +52,7 @@ fn test_float_zero_as_hashmap_key() {
     assert_eq!(map.get(& neg_zero), Some(& "negative zero"));
 }
 #[test]
+// [verify jeb-value.number.cmp]
 fn test_float_zero_bit_representation() {
     let pos_zero = Float::try_from(0.0f64).unwrap();
     let neg_zero = Float::try_from(-0.0f64).unwrap();
@@ -54,6 +63,7 @@ fn test_float_zero_bit_representation() {
     assert_eq!(neg_bits, 0x8000_0000_0000_0000u64);
 }
 #[test]
+// [verify jeb-value.value.cmp]
 fn test_value_zero_equality() {
     let pos_zero = Value::Float(Float::try_from(0.0f64).unwrap());
     let neg_zero = Value::Float(Float::try_from(-0.0f64).unwrap());
@@ -61,6 +71,7 @@ fn test_value_zero_equality() {
     assert_ne!(neg_zero, pos_zero);
 }
 #[test]
+// [verify jeb-value.value.cmp]
 fn test_value_zero_ordering() {
     let pos_zero = Value::Float(Float::try_from(0.0f64).unwrap());
     let neg_zero = Value::Float(Float::try_from(-0.0f64).unwrap());
@@ -71,6 +82,7 @@ fn test_value_zero_ordering() {
     assert_eq!(pos_zero.cmp(& neg_zero), Ordering::Greater);
 }
 #[test]
+// [verify jeb-value.value.cmp]
 fn test_value_zero_hashing() {
     let pos_zero = Value::Float(Float::try_from(0.0f64).unwrap());
     let neg_zero = Value::Float(Float::try_from(-0.0f64).unwrap());
@@ -113,6 +125,7 @@ fn test_value_zero_in_maps() {
     assert_ne!(map_pos, map_neg);
 }
 #[test]
+// [verify jeb-value.value.cmp]
 fn test_value_zero_cross_type_comparison() {
     use std::cmp::Ordering;
     let pos_zero_float = Value::Float(Float::try_from(0.0f64).unwrap());
@@ -126,6 +139,7 @@ fn test_value_zero_cross_type_comparison() {
     assert_eq!(signed_zero.cmp(& pos_zero_float), Ordering::Less);
 }
 #[test]
+// [verify jeb-value.value.cmp]
 fn test_value_zero_sorted() {
     let mut values = [
         Value::Float(Float::try_from(0.0f64).unwrap()),
