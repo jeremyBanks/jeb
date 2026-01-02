@@ -3821,7 +3821,10 @@ const MAX_BLOB_SIZE: u64 = 100 * 1024 * 1024;
 // Type conversion helpers
 
 fn convert_oid(oid: git2::Oid) -> ObjectId {
-    ObjectId(*oid.as_bytes())
+    let bytes = oid.as_bytes();
+    let mut arr = [0u8; 20];
+    arr.copy_from_slice(bytes);
+    ObjectId(arr)
 }
 
 fn oid_from_object_id(id: &ObjectId) -> git2::Oid {
@@ -3883,7 +3886,7 @@ fn read_tree_from_git2_tree(
                     // Regular file
                     let blob = repo.find_blob(entry.id())?;
 
-                    if blob.size() > MAX_BLOB_SIZE {
+                    if blob.size() as u64 > MAX_BLOB_SIZE {
                         return Err(GitError::BlobTooLarge {
                             size: blob.size() as u64,
                             max_size: MAX_BLOB_SIZE,
@@ -4057,7 +4060,7 @@ fn git2_from_git_dir(path: &Path) -> Result<Repository, GitError> {
 
     // Read staging area (index)
     let staged = if !git_repo.is_bare() {
-        let index = git_repo.index()?;
+        let mut index = git_repo.index()?;
         let tree_oid = index.write_tree()?;
         let tree = git_repo.find_tree(tree_oid)?;
         Some(read_tree_from_git2_tree(&tree, &git_repo)?)
@@ -4155,7 +4158,7 @@ fn topological_sort_commits_for_writing(commits: &HashMap<ObjectId, Commit>) -> 
     // Start with root commits (in_degree == 0)
     let mut queue: VecDeque<_> = in_degree
         .iter()
-        .filter(|(_, &deg)| deg == 0)
+        .filter(|(_, deg)| **deg == 0)
         .map(|(id, _)| *id)
         .collect();
 
@@ -4246,7 +4249,7 @@ fn git2_to_temporary_repository(snapshot: &Repository) -> Result<TemporaryReposi
             .collect();
         let parent_commits: Result<Vec<_>, _> = parent_oids
             .iter()
-            .map(|oid| repo.find_commit(*oid))
+            .map(|&oid| repo.find_commit(oid))
             .collect();
         let parent_commits = parent_commits?;
         let parent_refs: Vec<_> = parent_commits.iter().collect();
