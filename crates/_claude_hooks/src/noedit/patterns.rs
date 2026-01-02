@@ -43,8 +43,14 @@ impl NoeditMatcher {
                     let dir = path
                         .parent()
                         .context("Failed to get parent directory of .noedit")?;
+
+                    // Convert to relative path from cwd
+                    let relative_dir = dir.strip_prefix(cwd).unwrap_or(dir);
+
+                    // Add pattern relative to cwd
+                    let pattern = format!("{}/**", relative_dir.display());
                     builder
-                        .add_line(Some(dir.to_path_buf()), "**/*")
+                        .add_line(None, &pattern)
                         .context("Failed to add empty .noedit pattern")?;
                 } else {
                     builder.add(path);

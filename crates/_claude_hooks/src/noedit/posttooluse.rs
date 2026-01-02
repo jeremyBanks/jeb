@@ -34,7 +34,19 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
         }
         Err(_) => {
             eprintln!("PostToolUse: JEB_CLAUDE_INITIAL_COMMIT not set, skipping validation");
-            return Ok(None); // Fail open if not set
+            // Return warning to user instead of silent fail-open
+            return Ok(Some(HookOutput {
+                should_continue: None,
+                stop_reason: None,
+                suppress_output: None,
+                system_message: Some(
+                    "⚠️ .noedit protection not active: JEB_CLAUDE_INITIAL_COMMIT not set.\n\
+                     Protection will activate on next session start."
+                        .to_string(),
+                ),
+                permission_decision: None,
+                hook_specific_output: None,
+            }));
         }
     };
 
