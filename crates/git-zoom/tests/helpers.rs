@@ -8,6 +8,12 @@ use git_snapshot::{parse, Commit, HeadState, Repository};
 use std::env;
 use std::path::Path;
 use std::process::Command;
+use std::sync::Mutex;
+
+/// Global mutex to synchronize directory changes across tests
+/// This prevents parallel tests from interfering with each other when changing
+/// the process's current directory.
+static DIR_MUTEX: Mutex<()> = Mutex::new(());
 
 /// Wrapper around git-snapshot's TemporaryRepository with git-zoom-specific utilities
 pub struct TestRepo {
@@ -26,6 +32,7 @@ impl TestRepo {
 
         // Reset working tree to match HEAD
         // git-snapshot creates commits but doesn't populate the working directory
+        let _guard = DIR_MUTEX.lock().unwrap();
         let original_dir = env::current_dir().unwrap();
         env::set_current_dir(test_repo.workdir()).unwrap();
 
@@ -35,6 +42,7 @@ impl TestRepo {
             .expect("Failed to reset working tree");
 
         env::set_current_dir(original_dir).unwrap();
+        drop(_guard);
 
         test_repo
     }
@@ -52,6 +60,7 @@ impl TestRepo {
     /// then restores the original directory. Returns Ok(()) on success or
     /// Err(stderr) on failure.
     pub fn run_zoom(&self, args: &[&str]) -> Result<(), String> {
+        let _guard = DIR_MUTEX.lock().unwrap();
         let original_dir = env::current_dir().unwrap();
         env::set_current_dir(self.workdir()).unwrap();
 
@@ -60,6 +69,7 @@ impl TestRepo {
             .output();
 
         env::set_current_dir(original_dir).unwrap();
+        drop(_guard);
 
         match result {
             Ok(output) if output.status.success() => Ok(()),
@@ -102,6 +112,7 @@ impl TestRepo {
 
     /// Add all changes and create a commit with the given message
     pub fn git_add_and_commit(&self, message: &str) {
+        let _guard = DIR_MUTEX.lock().unwrap();
         let original_dir = env::current_dir().unwrap();
         env::set_current_dir(self.workdir()).unwrap();
 
@@ -114,6 +125,7 @@ impl TestRepo {
             .output();
 
         env::set_current_dir(original_dir).unwrap();
+        drop(_guard);
 
         add_result.expect("Failed to run git add");
         commit_result.expect("Failed to run git commit");
