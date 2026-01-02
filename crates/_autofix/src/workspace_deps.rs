@@ -1124,7 +1124,13 @@ fn update_member_toml(
                                         );
                                     }
                                 }
-                                deps[&key] = Item::Value(Value::InlineTable(table));
+                                // Use dotted key syntax for simple case (workspace only)
+                                if table.len() == 1 && table.contains_key("workspace") {
+                                    deps[&key]["workspace"] = value(true);
+                                } else {
+                                    // Use inline table for complex cases with multiple fields
+                                    deps[&key] = Item::Value(Value::InlineTable(table));
+                                }
                             } else if currently_uses_workspace {
                                 if let Some(old_resolution) = old_workspace_deps.get(&key) {
                                     let loser_dep = Dependency {
