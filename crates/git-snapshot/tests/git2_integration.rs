@@ -1,6 +1,6 @@
 //! Integration tests for git2 repository reading and writing
 
-use git_snapshot::{GitError, HeadState, RefName, Repository, UnsupportedFeature};
+use git_snapshot::{GitError, HeadState, Repository, UnsupportedFeature};
 use std::fs;
 use std::path::Path;
 use tempfile::TempDir;
@@ -61,8 +61,8 @@ refs:
   parents: []
   message: test commit
   tree:
-    README.md: "# Test"
-    src/main.rs: "fn main() {}"
+    README.md: "test content"
+    src/main.rs: "code content"
 "#;
     let original = git_snapshot::parse(yaml).unwrap();
 
