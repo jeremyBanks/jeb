@@ -12,11 +12,11 @@ version.workspace = true
 
 [features]
 default = []
-serde = ["jeb-value/serde", "dep:serde"]
 fs = ["tokio/fs"]
 json = []
+serde = ["jeb-value/serde", "dep:serde"]
 stdio = ["tokio/io-std"]
-wasm = ["dep:wasm-bindgen", "jeb-value/wasm", "jeb-common/wasm"]
+wasm = ["jeb-common/wasm", "jeb-value/wasm", "dep:wasm-bindgen"]
 
 [dependencies]
 async-stream = { workspace = true }

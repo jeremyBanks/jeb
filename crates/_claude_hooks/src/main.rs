@@ -25,8 +25,32 @@ fn main() {
                 }
             }
         }
+        Some(HookInputDetails::PostToolUse { .. }) => {
+            match noedit::posttooluse::handle(&input) {
+                Ok(result) => result,
+                Err(e) => {
+                    eprintln!("noedit PostToolUse error: {}", e);
+                    // Return error as additional context
+                    Some(HookOutput {
+                        should_continue: None,
+                        stop_reason: None,
+                        suppress_output: None,
+                        system_message: Some(format!(
+                            "⚠️ .noedit validation error: {}\nSome protected files may not have \
+                             been reverted.",
+                            e
+                        )),
+                        permission_decision: None,
+                        hook_specific_output: Some(HookOutputDetails::PostToolUse {
+                            additional_context: format!("Error during .noedit validation: {}", e),
+                        }),
+                    })
+                }
+            }
+        }
         Some(HookInputDetails::Stop { .. }) | Some(HookInputDetails::SubagentStop { .. }) => {
-            match noedit::stop::handle(&input) {
+            eprintln!(">>> Stop/SubagentStop hook triggered");
+            match noedit::validation::handle(&input) {
                 Ok(result) => result,
                 Err(e) => {
                     eprintln!("noedit Stop error: {}", e);
@@ -36,6 +60,24 @@ fn main() {
                         stop_reason: Some(format!("noedit validation failed: {}", e)),
                         suppress_output: None,
                         system_message: Some(format!("Error validating .noedit: {}", e)),
+                        permission_decision: None,
+                        hook_specific_output: None,
+                    })
+                }
+            }
+        }
+        Some(HookInputDetails::SessionEnd { .. }) => {
+            eprintln!(">>> SessionEnd hook triggered");
+            match noedit::validation::handle(&input) {
+                Ok(result) => result,
+                Err(e) => {
+                    eprintln!("noedit SessionEnd error: {}", e);
+                    // Don't block session end, just warn
+                    Some(HookOutput {
+                        should_continue: None,
+                        stop_reason: None,
+                        suppress_output: None,
+                        system_message: Some(format!("Warning: .noedit validation failed: {}", e)),
                         permission_decision: None,
                         hook_specific_output: None,
                     })
@@ -122,12 +164,20 @@ pub enum HookInputDetails {
     rename_all = "camelCase"
 )]
 pub struct HookOutput {
-    #[serde(rename = "continue")]
+    #[serde(
+        rename = "continue",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub should_continue: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub stop_reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub suppress_output: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub system_message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub permission_decision: Option<PermissionDecision>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub hook_specific_output: Option<HookOutputDetails>,
 }
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -143,8 +193,11 @@ pub enum HookOutputDetails {
         other: serde_json::Value,
     },
     PreToolUse {
+        #[serde(skip_serializing_if = "Option::is_none")]
         permission_decision: Option<PermissionDecision>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         permission_decision_reason: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         updated_input: Option<String>,
     },
     PostToolUse {
