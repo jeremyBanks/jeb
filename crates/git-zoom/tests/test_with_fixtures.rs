@@ -14,12 +14,22 @@ fn test_zoom_in_with_fixture() {
     repo.run_zoom(&["in", "src/lib"])
         .expect("zoom in should succeed");
 
+    // Get actual resulting state
+    let actual = repo.to_snapshot();
+
+    // DEBUG: Print actual structure
+    println!("\n=== Actual commits after zoom-in ===");
+    for commit in actual.commits() {
+        println!("Message: {}", commit.message.lines().next().unwrap_or(""));
+        println!("  Parents: {}", commit.parents.len());
+        println!("  Committer: {} <{}>", commit.committer.name, commit.committer.email);
+        println!("  Tree paths: {}", commit.tree.paths().count());
+        println!();
+    }
+
     // Load expected state from fixture
     let expected_yaml = include_str!("fixtures/after_zoom_in_src_lib.yaml");
     let expected = git_snapshot::parse(expected_yaml).expect("failed to parse expected fixture");
-
-    // Get actual resulting state
-    let actual = repo.to_snapshot();
 
     // Compare snapshots
     assert_snapshots_equal(&actual, &expected);
@@ -47,9 +57,30 @@ fn test_complete_zoom_cycle() {
     // Get actual state
     let actual = repo.to_snapshot();
 
+    // Debug: print actual commits
+    println!("\nActual commits ({}):", actual.commits().count());
+    for commit in actual.commits() {
+        println!(
+            "  {} | parents:{} | {}",
+            commit.id.to_hex().chars().take(7).collect::<String>(),
+            commit.parents.len(),
+            commit.message.lines().next().unwrap_or("")
+        );
+    }
+
     // Load expected state
     let expected_yaml = include_str!("fixtures/complete_cycle_final.yaml");
     let expected = git_snapshot::parse(expected_yaml).expect("failed to parse expected fixture");
+
+    println!("\nExpected commits ({}):", expected.commits().count());
+    for commit in expected.commits() {
+        println!(
+            "  {} | parents:{} | {}",
+            commit.id.to_hex().chars().take(7).collect::<String>(),
+            commit.parents.len(),
+            commit.message.lines().next().unwrap_or("")
+        );
+    }
 
     // Compare
     assert_snapshots_equal(&actual, &expected);

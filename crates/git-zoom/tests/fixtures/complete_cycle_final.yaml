@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 7
+    main: 6
 
 # Original initial commit
 1:
@@ -46,25 +46,9 @@ refs:
     utils.txt: "utils"
     new.txt: "new content"
 
-# Subtree after modifications
+# Zoom-out merge (merges original commit 1 with subtree changes from commit 5)
 6:
-  parents: [1]
-  message: |
-    Subtree at 'src' from merge parents
-
-
-    Lineage:
-    - Update lib
-    - Add new file
-  tree:
-    src/lib.txt: "MODIFIED library code"
-    src/utils.txt: "utils"
-    src/new.txt: "new content"
-    README.md: "root readme"
-
-# Zoom-out merge
-7:
-  parents: [6, 5]
+  parents: [1, 5]
   message: |
     Merge to 'src'
 
