@@ -310,6 +310,13 @@ The `Bytes` variant type MUST implement `FromIterator<u8>>`.
 r[jeb-value.bytes.from-slice-iterator]
 The `Bytes` variant type MUST implement `FromIterator<&[u8]>>`.
 
+r[jeb-value.bytes.from-primitive]
+The `Bytes` variant type MUST implement `From<T>` for all of primitive types
+`()`, `bool`, `f32`, `f64`, `char` and all integer types. The unit type MUST
+map to an empty byte string, `false` to a single zero byte, `true` to a single
+byte with value `0x01`, and all numeric types to their big-endian byte
+representations.
+
 ### `String`
 
 r[jeb-value.string.struct]  
