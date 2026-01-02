@@ -485,4 +485,44 @@ mod tests {
         assert_eq!(rules.len(), 1);
         assert_eq!(rules.references[0].span.offset, 3); // after "// "
     }
+
+    #[test]
+    fn test_ignore_markdown_inline_links() {
+        // Markdown inline links like [text](url) should not be parsed
+        let content = r#"
+            // See [impl foo.bar](https://example.com) for details
+            // Also check [verify baz.qux](http://test.org/page)
+        "#;
+
+        let rules = Rules::extract_from_content(Path::new("test.rs"), content);
+        // Should only find the rule references, not treat them as malformed
+        assert_eq!(rules.len(), 2);
+        assert_eq!(rules.references[0].rule_id, "foo.bar");
+        assert_eq!(rules.references[0].verb, RefVerb::Impl);
+        assert_eq!(rules.references[1].rule_id, "baz.qux");
+        assert_eq!(rules.references[1].verb, RefVerb::Verify);
+    }
+
+    #[test]
+    fn test_ignore_markdown_reference_style_links() {
+        // Markdown reference-style links like [text][ref] should not parse the [ref] part
+        let content = r#"
+            // See [impl foo.bar][some-reference] for more info
+            // Also [verify baz.qux][another.ref] is important
+            // Plain reference: [test.rule][ref-name]
+        "#;
+
+        let rules = Rules::extract_from_content(Path::new("test.rs"), content);
+        // Should only find the actual rule references, not the reference labels
+        assert_eq!(rules.len(), 3, "Should find 3 rule references");
+        assert_eq!(rules.references[0].rule_id, "foo.bar");
+        assert_eq!(rules.references[0].verb, RefVerb::Impl);
+        assert_eq!(rules.references[1].rule_id, "baz.qux");
+        assert_eq!(rules.references[1].verb, RefVerb::Verify);
+        assert_eq!(rules.references[2].rule_id, "test.rule");
+        assert_eq!(rules.references[2].verb, RefVerb::Impl); // legacy format
+
+        // Should not have warnings about malformed references
+        assert_eq!(rules.warnings.len(), 0, "Should not have warnings for markdown reference links");
+    }
 }
