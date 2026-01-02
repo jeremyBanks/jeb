@@ -72,7 +72,7 @@ fn test_from_json_number_float() {
         assert_eq!(direct, via_serde, "Failed for f64: {}", num);
         match direct {
             Value::Float(f) => {
-                assert_eq!(* f, num);
+                assert_eq!(*f, num);
             }
             _ => panic!("Expected Float variant for {}", num),
         }
@@ -97,7 +97,7 @@ fn test_from_json_string() {
         let direct: Value = json.clone().into();
         let via_serde = from_serde_json_via_serde(&json);
         assert_eq!(direct, via_serde, "Failed for string: {}", s);
-        assert_eq!(direct, Value::from(* s));
+        assert_eq!(direct, Value::from(*s));
     }
 }
 #[test]
@@ -123,9 +123,10 @@ fn test_from_json_array_primitives() {
             assert_eq!(arr[1], Value::Bool(true));
             assert_eq!(arr[2], Value::Bool(false));
             assert_eq!(arr[3], Value::Unsigned(42));
-            assert_eq!(arr[4], Value::Signed(- 42));
+            assert_eq!(arr[4], Value::Signed(-42));
             assert_eq!(
-                arr[5], Value::Float(Float::try_from(core::f64::consts::PI).unwrap())
+                arr[5],
+                Value::Float(Float::try_from(core::f64::consts::PI).unwrap()),
             );
             assert_eq!(arr[6], Value::from("hello"));
         }
@@ -164,10 +165,10 @@ fn test_from_json_object_simple() {
         Value::TextMap(map) => {
             use jeb_value::Text;
             assert_eq!(map.len(), 4);
-            assert_eq!(map.get(& Text::from("null")), Some(& Value::Null));
-            assert_eq!(map.get(& Text::from("bool")), Some(& Value::Bool(true)));
-            assert_eq!(map.get(& Text::from("number")), Some(& Value::Unsigned(42)));
-            assert_eq!(map.get(& Text::from("string")), Some(& Value::from("hello")));
+            assert_eq!(map.get(&Text::from("null")), Some(&Value::Null));
+            assert_eq!(map.get(&Text::from("bool")), Some(&Value::Bool(true)));
+            assert_eq!(map.get(&Text::from("number")), Some(&Value::Unsigned(42)));
+            assert_eq!(map.get(&Text::from("string")), Some(&Value::from("hello")));
         }
         _ => panic!("Expected TextMap variant"),
     }
@@ -193,13 +194,23 @@ fn test_from_json_complex_nested() {
 #[test]
 fn test_roundtrip_primitives() {
     let values = vec![
-        Value::Null, Value::Bool(true), Value::Bool(false), Value::Unsigned(0),
-        Value::Unsigned(42), Value::Unsigned(u64::MAX), Value::Signed(0), Value::Signed(-
-        42), Value::Signed(i64::MIN), Value::Signed(i64::MAX),
-        Value::Float(Float::try_from(0.0).unwrap()), Value::Float(Float::try_from(- 0.0)
-        .unwrap()), Value::Float(Float::try_from(core::f64::consts::PI).unwrap()),
-        Value::Float(Float::try_from(- core::f64::consts::PI).unwrap()), Value::from(""),
-        Value::from("hello"), Value::from("unicode: 你好"),
+        Value::Null,
+        Value::Bool(true),
+        Value::Bool(false),
+        Value::Unsigned(0),
+        Value::Unsigned(42),
+        Value::Unsigned(u64::MAX),
+        Value::Signed(0),
+        Value::Signed(-42),
+        Value::Signed(i64::MIN),
+        Value::Signed(i64::MAX),
+        Value::Float(Float::try_from(0.0).unwrap()),
+        Value::Float(Float::try_from(-0.0).unwrap()),
+        Value::Float(Float::try_from(core::f64::consts::PI).unwrap()),
+        Value::Float(Float::try_from(-core::f64::consts::PI).unwrap()),
+        Value::from(""),
+        Value::from("hello"),
+        Value::from("unicode: 你好"),
     ];
     for original in values {
         let json = to_serde_json_via_serde(&original);
@@ -209,8 +220,11 @@ fn test_roundtrip_primitives() {
         match original {
             Value::Signed(n) if n >= 0 => {
                 assert_eq!(
-                    via_direct, Value::Unsigned(n as u64),
-                    "Signed({}) should normalize to Unsigned({})", n, n
+                    via_direct,
+                    Value::Unsigned(n as u64),
+                    "Signed({}) should normalize to Unsigned({})",
+                    n,
+                    n,
                 );
             }
             _ => {
@@ -222,10 +236,10 @@ fn test_roundtrip_primitives() {
 #[test]
 fn test_roundtrip_arrays() {
     let values = vec![
-        Value::Array(vec![]), Value::from([Value::from(1u64), Value::from(2u64),
-        Value::from(3u64)]), Value::from([Value::Null, Value::Bool(true),
-        Value::from("test")]), Value::from([Value::from([Value::from(1u64)]),
-        Value::from([Value::from(2u64)]),]),
+        Value::Array(vec![]),
+        Value::from([Value::from(1u64), Value::from(2u64), Value::from(3u64)]),
+        Value::from([Value::Null, Value::Bool(true), Value::from("test")]),
+        Value::from([Value::from([Value::from(1u64)]), Value::from([Value::from(2u64)])]),
     ];
     for original in values {
         let json = to_serde_json_via_serde(&original);
@@ -239,11 +253,16 @@ fn test_roundtrip_arrays() {
 fn test_roundtrip_objects() {
     use jeb_value::Text;
     let values = vec![
-        Value::TextMap(Default::default()), [(Text::from("a"), Value::from(1u64))]
-        .into_iter().collect::< Value > (), [(Text::from("null"), Value::Null),
-        (Text::from("bool"), Value::Bool(true)), (Text::from("number"),
-        Value::from(42u64)), (Text::from("string"), Value::from("hello")),].into_iter()
-        .collect::< Value > (),
+        Value::TextMap(Default::default()),
+        [(Text::from("a"), Value::from(1u64))].into_iter().collect::<Value>(),
+        [
+            (Text::from("null"), Value::Null),
+            (Text::from("bool"), Value::Bool(true)),
+            (Text::from("number"), Value::from(42u64)),
+            (Text::from("string"), Value::from("hello")),
+        ]
+            .into_iter()
+            .collect::<Value>(),
     ];
     for original in values {
         let json = to_serde_json_via_serde(&original);

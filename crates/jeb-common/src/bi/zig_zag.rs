@@ -83,7 +83,7 @@ mod tests {
             let u_pos: u8 = zig_zag(pos);
             assert!(
                 u_neg < u_pos,
-                "magnitude ordering: {neg} should map before {pos}, got {u_neg} vs {u_pos}"
+                "magnitude ordering: {neg} should map before {pos}, got {u_neg} vs {u_pos}",
             );
         }
     }

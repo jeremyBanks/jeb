@@ -207,23 +207,23 @@ mod tests {
         assert_eq!(parse_target_path(None), (None, None));
         assert_eq!(
             parse_target_path(Some("abc123")),
-            (Some("abc123".to_string()), None)
+            (Some("abc123".to_string()), None),
         );
         assert_eq!(
             parse_target_path(Some("abc123:src/lib")),
-            (Some("abc123".to_string()), Some("src/lib".to_string()))
+            (Some("abc123".to_string()), Some("src/lib".to_string())),
         );
         assert_eq!(
             parse_target_path(Some(":src/lib")),
-            (None, Some("src/lib".to_string()))
+            (None, Some("src/lib".to_string())),
         );
         assert_eq!(
             parse_target_path(Some(":src/lib/")),
-            (None, Some("src/lib".to_string()))
+            (None, Some("src/lib".to_string())),
         );
         assert_eq!(
             parse_target_path(Some("abc123:/src/lib/")),
-            (Some("abc123".to_string()), Some("src/lib".to_string()))
+            (Some("abc123".to_string()), Some("src/lib".to_string())),
         );
         assert_eq!(parse_target_path(Some(":")), (None, None));
         assert_eq!(parse_target_path(Some(":/")), (None, None));

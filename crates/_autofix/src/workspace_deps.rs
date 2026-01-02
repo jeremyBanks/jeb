@@ -40,14 +40,10 @@ pub fn main() -> i32 {
 }
 fn run_normalization() -> Result<()> {
     let workspace_root = find_workspace_root(".")?;
-
-    // Ensure all crates are in workspace members
     let added_members = ensure_workspace_members(&workspace_root)?;
     if added_members > 0 {
         eprintln!("  Added {} missing workspace member(s)", added_members);
     }
-
-    // Ensure internal crates have publish = false
     let updated_publish = ensure_publish_false_for_internal_crates(&workspace_root)?;
     if updated_publish > 0 {
         eprintln!(
@@ -55,7 +51,6 @@ fn run_normalization() -> Result<()> {
             updated_publish
         );
     }
-
     let mut stats = NormalizationStats::default();
     normalize_workspace_dependencies(&workspace_root, &mut stats)?;
     eprintln!("\nSummary:");
@@ -125,17 +120,12 @@ fn ensure_workspace_members(workspace_root: &Path) -> Result<usize> {
     let cargo_toml_path = workspace_root.join("Cargo.toml");
     let content = std::fs::read_to_string(&cargo_toml_path)?;
     let mut doc = content.parse::<DocumentMut>()?;
-
-    // Get existing members patterns
     let existing_members = resolve_workspace_members(workspace_root)?;
     let existing_members_set: HashSet<PathBuf> = existing_members.into_iter().collect();
-
-    // Scan crates/ directory for all Cargo.toml files
     let crates_dir = workspace_root.join("crates");
     if !crates_dir.exists() {
         return Ok(0);
     }
-
     let mut missing_crates = Vec::new();
     for entry in std::fs::read_dir(&crates_dir)? {
         let entry = entry?;
@@ -150,26 +140,21 @@ fn ensure_workspace_members(workspace_root: &Path) -> Result<usize> {
             }
         }
     }
-
     if missing_crates.is_empty() {
         return Ok(0);
     }
-
-    // Add missing crates to workspace.members
     if doc.get("workspace").is_none() {
         doc["workspace"] = toml_edit::table();
     }
     let workspace = doc["workspace"]
         .as_table_mut()
         .context("workspace is not a table")?;
-
     if workspace.get("members").is_none() {
         workspace["members"] = Item::Value(Value::Array(toml_edit::Array::new()));
     }
     let members = workspace["members"]
         .as_array_mut()
         .context("members is not an array")?;
-
     let added_count = missing_crates.len();
     for crate_path in missing_crates {
         let rel_path = if let Ok(stripped) = crate_path.strip_prefix(workspace_root) {
@@ -183,41 +168,33 @@ fn ensure_workspace_members(workspace_root: &Path) -> Result<usize> {
         eprintln!("  Adding missing workspace member: {}", rel_path);
         members.push(rel_path);
     }
-
     let doc_str = doc.to_string();
     if doc_str != content {
         std::fs::write(&cargo_toml_path, doc_str)?;
     }
-
     Ok(added_count)
 }
 /// Ensure crates with names starting with _ have publish = false
 fn ensure_publish_false_for_internal_crates(workspace_root: &Path) -> Result<usize> {
     let members = resolve_workspace_members(workspace_root)?;
     let mut modified_count = 0;
-
     for member_path in members {
         let member_toml = member_path.join("Cargo.toml");
         let content = std::fs::read_to_string(&member_toml)?;
         let mut doc = content.parse::<DocumentMut>()?;
-
-        // Get the package name
         let package_name = doc
             .get("package")
             .and_then(|p| p.get("name"))
             .and_then(|n| n.as_str());
-
         if let Some(name) = package_name
             && name.starts_with('_')
         {
             let name_owned = name.to_string();
-            // Check if publish is already set to false
             let needs_update = doc
                 .get("package")
                 .and_then(|p| p.get("publish"))
                 .and_then(|pub_val| pub_val.as_bool())
                 != Some(false);
-
             if needs_update {
                 if doc.get("package").is_none() {
                     doc["package"] = toml_edit::table();
@@ -226,36 +203,29 @@ fn ensure_publish_false_for_internal_crates(workspace_root: &Path) -> Result<usi
                     .as_table_mut()
                     .context("package is not a table")?;
                 package["publish"] = value(false);
-
                 let doc_str = doc.to_string();
                 if doc_str != content {
                     std::fs::write(&member_toml, doc_str)?;
                     modified_count += 1;
                     eprintln!(
                         "  Setting publish = false for internal crate: {}",
-                        name_owned
+                        name_owned,
                     );
                 }
             }
         }
     }
-
     Ok(modified_count)
 }
 /// Ensure workspace crates have standard metadata fields set
 fn ensure_workspace_metadata_inheritance(doc: &mut DocumentMut) -> Result<bool> {
     let mut modified = false;
-
     if doc.get("package").is_none() {
         doc["package"] = toml_edit::table();
     }
     let package = doc["package"]
         .as_table_mut()
         .context("package is not a table")?;
-
-    // Workspace-inherited fields
-    // Note: Using inline table format { workspace = true } instead of dotted key
-    // because toml_edit doesn't support dotted key format for package fields
     for field in ["repository", "license", "version", "edition"] {
         if package.get(field).is_none() {
             let mut table = InlineTable::new();
@@ -264,8 +234,6 @@ fn ensure_workspace_metadata_inheritance(doc: &mut DocumentMut) -> Result<bool> 
             modified = true;
         }
     }
-
-    // Empty default fields
     if package.get("description").is_none() {
         package["description"] = value("");
         modified = true;
@@ -278,7 +246,6 @@ fn ensure_workspace_metadata_inheritance(doc: &mut DocumentMut) -> Result<bool> 
         package["keywords"] = Item::Value(Value::Array(toml_edit::Array::new()));
         modified = true;
     }
-
     Ok(modified)
 }
 /// Represents a dependency with all its fields
@@ -619,7 +586,7 @@ fn normalize_workspace_dependencies(
             if has_config_fields(value) {
                 eprintln!(
                     "Warning: workspace dependency '{}' has configuration fields, skipping",
-                    key
+                    key,
                 );
                 blocked_deps.insert(key.to_string());
             }
@@ -1067,42 +1034,29 @@ fn feature_dep_sort_key(dep: &str) -> (u8, bool, String) {
     let has_dep_prefix = dep.starts_with("dep:");
     let has_slash = dep.contains('/');
     let ends_with_default = dep.ends_with("/default");
-
-    // Category: bare names (0), then dep/slash references (1)
     let category = if has_dep_prefix || has_slash { 1 } else { 0 };
-
-    // Normalize by removing dep: prefix
     let normalized = if has_dep_prefix {
         dep.strip_prefix("dep:").unwrap_or(dep).to_string()
     } else {
         dep.to_string()
     };
-
-    // Use !ends_with_default so /default items sort first
     (category, !ends_with_default, normalized)
 }
 /// Sort the [features] section in a Cargo.toml
 fn sort_features_section(doc: &mut DocumentMut) -> Result<()> {
     let features_table = match doc.get_mut("features").and_then(|f| f.as_table_mut()) {
         Some(table) => table,
-        None => return Ok(()), // No features section
+        None => return Ok(()),
     };
-
-    // Step 1: Extract and sort each feature's dependency list
     let mut feature_entries: Vec<(String, Item)> = Vec::new();
-
     for (key, value) in features_table.iter() {
         let key_str = key.to_string();
-
-        // Sort the dependency list if it's an array
         let sorted_value = if let Some(array) = value.as_array() {
             let mut deps: Vec<String> = array
                 .iter()
                 .filter_map(|v| v.as_str().map(String::from))
                 .collect();
-
             deps.sort_by_key(|dep| feature_dep_sort_key(dep));
-
             let mut new_array = toml_edit::Array::new();
             for dep in deps {
                 new_array.push(dep);
@@ -1111,19 +1065,14 @@ fn sort_features_section(doc: &mut DocumentMut) -> Result<()> {
         } else {
             value.clone()
         };
-
         feature_entries.push((key_str, sorted_value));
     }
-
-    // Step 2: Sort the features themselves (default first, then lexicographic)
     feature_entries.sort_by(|a, b| match (a.0.as_str(), b.0.as_str()) {
         ("default", "default") => std::cmp::Ordering::Equal,
         ("default", _) => std::cmp::Ordering::Less,
         (_, "default") => std::cmp::Ordering::Greater,
         (a_key, b_key) => a_key.cmp(b_key),
     });
-
-    // Step 3: Rebuild the table in sorted order
     let all_keys: Vec<String> = features_table.iter().map(|(k, _)| k.to_string()).collect();
     for key in all_keys {
         features_table.remove(&key);
@@ -1131,7 +1080,6 @@ fn sort_features_section(doc: &mut DocumentMut) -> Result<()> {
     for (key, value) in feature_entries {
         features_table.insert(&key, value);
     }
-
     Ok(())
 }
 fn update_member_toml(
@@ -1146,10 +1094,7 @@ fn update_member_toml(
     let member_toml = member_path.join("Cargo.toml");
     let content = std::fs::read_to_string(&member_toml)?;
     let mut doc = content.parse::<DocumentMut>()?;
-
-    // Ensure workspace metadata inheritance
     ensure_workspace_metadata_inheritance(&mut doc)?;
-
     let mut dep_name_to_workspace_key: HashMap<String, String> = HashMap::new();
     let mut dep_name_to_needs_default_features: HashMap<String, bool> = HashMap::new();
     for (workspace_key, (_resolution, dep_name, needs_df_false)) in workspace_updates {
@@ -1200,7 +1145,6 @@ fn update_member_toml(
                         .ok()
                         .flatten()
                     };
-
                     if let Some(dep) = dep {
                         if let Some(workspace_key) = dep_name_to_workspace_key.get(&dep.name) {
                             if should_use_workspace(&dep, workspace_updates, workspace_key) {
@@ -1247,22 +1191,17 @@ fn update_member_toml(
                                         );
                                     }
                                 }
-                                // Use dotted key syntax for simple case (workspace only)
                                 if table.len() == 1 && table.contains_key("workspace") {
-                                    // Use Key::parse to create a dotted key
                                     let dotted_key_str = format!("{}.workspace", key);
                                     if let Ok(dotted_key) = dotted_key_str.parse::<Key>() {
                                         deps.insert_formatted(&dotted_key, value(true));
                                     } else {
-                                        // Fallback to inline table if parsing fails
                                         deps[&key] = Item::Value(Value::InlineTable(table));
                                     }
                                 } else {
-                                    // Use inline table for complex cases with multiple fields
                                     deps[&key] = Item::Value(Value::InlineTable(table));
                                 }
                             } else if currently_uses_workspace {
-                                // This dependency uses workspace but shouldn't - inline it
                                 if let Some(old_resolution) = old_workspace_deps.get(&key) {
                                     let loser_dep = Dependency {
                                         key: key.clone(),
@@ -1276,7 +1215,6 @@ fn update_member_toml(
                                 }
                             }
                         } else if currently_uses_workspace {
-                            // This dependency uses workspace but shouldn't - inline it
                             if let Some(old_resolution) = old_workspace_deps.get(&key) {
                                 let loser_dep = Dependency {
                                     key: key.clone(),
@@ -1294,10 +1232,7 @@ fn update_member_toml(
             }
         }
     }
-
-    // Sort features section
     sort_features_section(&mut doc)?;
-
     let doc_str = doc.to_string();
     if doc_str != content {
         if stats.record_file_edit(&member_toml, false) {
@@ -1529,11 +1464,11 @@ anyhow = "1.0.0"
         let crate_a_content_2 = fs::read_to_string(temp.path().join("crate-a/Cargo.toml"))?;
         assert_eq!(
             workspace_content_1, workspace_content_2,
-            "Workspace Cargo.toml changed on second run"
+            "Workspace Cargo.toml changed on second run",
         );
         assert_eq!(
             crate_a_content_1, crate_a_content_2,
-            "Member Cargo.toml changed on second run"
+            "Member Cargo.toml changed on second run",
         );
         Ok(())
     }
@@ -1598,29 +1533,27 @@ serde = "2.0.0"
         let workspace_content = fs::read_to_string(workspace_root.join("Cargo.toml"))?;
         assert!(
             workspace_content.contains("serde = \"1.0.0\""),
-            "serde 1.0.0 should win initially"
+            "serde 1.0.0 should win initially",
         );
         let crate_a_content = fs::read_to_string(workspace_root.join("crate-a/Cargo.toml"))?;
         let crate_b_content = fs::read_to_string(workspace_root.join("crate-b/Cargo.toml"))?;
         assert!(
             crate_a_content.contains("workspace = true"),
-            "crate-a should use workspace = true"
+            "crate-a should use workspace = true",
         );
         assert!(
             crate_b_content.contains("workspace = true"),
-            "crate-b should use workspace = true"
+            "crate-b should use workspace = true",
         );
         let crate_c_content = fs::read_to_string(workspace_root.join("crate-c/Cargo.toml"))?;
         assert!(
             crate_c_content.contains("serde = \"2.0.0\""),
-            "crate-c should have serde 2.0.0 inlined"
+            "crate-c should have serde 2.0.0 inlined",
         );
-        // Check that serde dependency doesn't use workspace (may have workspace
-        // metadata fields though)
         assert!(
             !crate_c_content.contains("serde = { workspace = true }")
                 && !crate_c_content.contains("serde.workspace = true"),
-            "crate-c serde dependency should not use workspace"
+            "crate-c serde dependency should not use workspace",
         );
         fs::create_dir(workspace_root.join("crate-d"))?;
         fs::write(
@@ -1646,80 +1579,71 @@ serde = "2.0.0"
         let workspace_content_2 = fs::read_to_string(workspace_root.join("Cargo.toml"))?;
         assert!(
             workspace_content_2.contains("serde = \"2.0.0\""),
-            "serde 2.0.0 should win after adding crate-d"
+            "serde 2.0.0 should win after adding crate-d",
         );
         let crate_a_content_2 = fs::read_to_string(workspace_root.join("crate-a/Cargo.toml"))?;
         let crate_b_content_2 = fs::read_to_string(workspace_root.join("crate-b/Cargo.toml"))?;
         assert!(
             crate_a_content_2.contains("serde = \"1.0.0\""),
             "crate-a should have serde 1.0.0 inlined. Content:\n{}",
-            crate_a_content_2
+            crate_a_content_2,
         );
-        // Check that serde dependency doesn't use workspace (may have workspace
-        // metadata fields though)
         assert!(
             !crate_a_content_2.contains("serde = { workspace = true }")
                 && !crate_a_content_2.contains("serde.workspace = true"),
-            "crate-a serde dependency should not use workspace"
+            "crate-a serde dependency should not use workspace",
         );
         assert!(
             crate_b_content_2.contains("serde = \"1.0.0\""),
-            "crate-b should have serde 1.0.0 inlined"
+            "crate-b should have serde 1.0.0 inlined",
         );
         assert!(
             !crate_b_content_2.contains("serde = { workspace = true }")
                 && !crate_b_content_2.contains("serde.workspace = true"),
-            "crate-b serde dependency should not use workspace"
+            "crate-b serde dependency should not use workspace",
         );
         let crate_c_content_2 = fs::read_to_string(workspace_root.join("crate-c/Cargo.toml"))?;
         let crate_d_content = fs::read_to_string(workspace_root.join("crate-d/Cargo.toml"))?;
         assert!(
             crate_c_content_2.contains("workspace = true")
                 || crate_c_content_2.contains("serde.workspace = true"),
-            "crate-c should use workspace inheritance (either inline table or dotted key)"
+            "crate-c should use workspace inheritance (either inline table or dotted key)",
         );
         assert!(
             crate_d_content.contains("workspace = true")
                 || crate_d_content.contains("serde.workspace = true"),
-            "crate-d should use workspace inheritance (either inline table or dotted key)"
+            "crate-d should use workspace inheritance (either inline table or dotted key)",
         );
         Ok(())
     }
-
     #[test]
     fn test_workspace_metadata_inheritance() -> Result<()> {
         let toml_content = r#"[package]
 name = "test-crate"
 "#;
-
         let mut doc = toml_content.parse::<DocumentMut>()?;
         ensure_workspace_metadata_inheritance(&mut doc)?;
-
         let result = doc.to_string();
-
-        // Check workspace inheritance (inline table format)
         assert!(
             result.contains("repository.workspace = true")
                 || result.contains("repository = { workspace = true }"),
-            "Should have repository workspace inheritance"
+            "Should have repository workspace inheritance",
         );
         assert!(
             result.contains("license.workspace = true")
                 || result.contains("license = { workspace = true }"),
-            "Should have license workspace inheritance"
+            "Should have license workspace inheritance",
         );
         assert!(
             result.contains("version.workspace = true")
                 || result.contains("version = { workspace = true }"),
-            "Should have version workspace inheritance"
+            "Should have version workspace inheritance",
         );
         assert!(
             result.contains("edition.workspace = true")
                 || result.contains("edition = { workspace = true }"),
-            "Should have edition workspace inheritance"
+            "Should have edition workspace inheritance",
         );
-
-        // Check empty values
         assert!(
             result.contains(r#"description = """#),
             "Should have empty description"
@@ -1732,10 +1656,8 @@ name = "test-crate"
             result.contains("keywords = []"),
             "Should have empty keywords"
         );
-
         Ok(())
     }
-
     #[test]
     fn test_workspace_metadata_preserves_existing() -> Result<()> {
         let toml_content = r#"[package]
@@ -1743,37 +1665,29 @@ name = "test-crate"
 version = "1.0.0"
 description = "Custom description"
 "#;
-
         let mut doc = toml_content.parse::<DocumentMut>()?;
         ensure_workspace_metadata_inheritance(&mut doc)?;
-
         let result = doc.to_string();
-
-        // Should preserve existing values
         assert!(
             result.contains(r#"version = "1.0.0""#),
-            "Should preserve existing version"
+            "Should preserve existing version",
         );
         assert!(
             result.contains(r#"description = "Custom description""#),
-            "Should preserve existing description"
+            "Should preserve existing description",
         );
-
-        // Should add missing ones (inline table format)
         assert!(
             result.contains("repository.workspace = true")
                 || result.contains("repository = { workspace = true }"),
-            "Should add repository workspace inheritance"
+            "Should add repository workspace inheritance",
         );
         assert!(
             result.contains("license.workspace = true")
                 || result.contains("license = { workspace = true }"),
-            "Should add license workspace inheritance"
+            "Should add license workspace inheritance",
         );
-
         Ok(())
     }
-
     #[test]
     fn test_features_section_sorting() -> Result<()> {
         let toml_content = r#"[package]
@@ -1785,82 +1699,60 @@ wasm = ["dep:wasm-bindgen", "jeb-value/wasm"]
 bin = ["default", "fs", "dep:color-eyre", "jeb-stream/stdio"]
 default = ["serde"]
 "#;
-
         let mut doc = toml_content.parse::<DocumentMut>()?;
         sort_features_section(&mut doc)?;
-
         let result = doc.to_string();
         let features_start = result.find("[features]").unwrap();
         let features_section = &result[features_start..];
-
-        // Check that "default" comes first
         let default_pos = features_section.find("default = ").unwrap();
         let bin_pos = features_section.find("bin = ").unwrap();
         let wasm_pos = features_section.find("wasm = ").unwrap();
-
         assert!(default_pos < bin_pos, "default should come before bin");
         assert!(bin_pos < wasm_pos, "bin should come before wasm");
-
         Ok(())
     }
-
     #[test]
     fn test_feature_deps_sorting() -> Result<()> {
         let toml_content = r#"[features]
 test = ["dep:color-eyre", "default", "fs", "jeb-stream/stdio", "dep:anyhow"]
 "#;
-
         let mut doc = toml_content.parse::<DocumentMut>()?;
         sort_features_section(&mut doc)?;
-
         let result = doc.to_string();
-
-        // Should be: bare names first (default, fs), then dep: items sorted
         assert!(
             result.contains(
-                r#"test = ["default", "fs", "dep:anyhow", "dep:color-eyre", "jeb-stream/stdio"]"#
+                r#"test = ["default", "fs", "dep:anyhow", "dep:color-eyre", "jeb-stream/stdio"]"#,
             ),
-            "Features should be sorted: bare names first, then dep/slash references"
+            "Features should be sorted: bare names first, then dep/slash references",
         );
-
         Ok(())
     }
-
     #[test]
     fn test_feature_deps_default_suffix_priority() -> Result<()> {
         let toml_content = r#"[features]
 test = ["jeb-stream/stdio", "jeb-value/default", "dep:color-eyre", "jeb-stream/default"]
 "#;
-
         let mut doc = toml_content.parse::<DocumentMut>()?;
         sort_features_section(&mut doc)?;
-
         let result = doc.to_string();
-
-        // Items ending with /default should come before other items in category 1
-        // Expected order: items with /default first (sorted), then items without
-        // (sorted) (sorted by: category 1, !ends_with_default [false=has
-        // /default, true=no /default], normalized name)
         assert!(
-            result.contains(r#"test = ["jeb-stream/default", "jeb-value/default", "dep:color-eyre", "jeb-stream/stdio"]"#),
-            "Items with /default should sort first, then other items, but actual result was:\n{}",
             result
+                .contains(
+                    r#"test = ["jeb-stream/default", "jeb-value/default", "dep:color-eyre", "jeb-stream/stdio"]"#,
+                ),
+            "Items with /default should sort first, then other items, but actual result was:\n{}",
+            result,
         );
-
         Ok(())
     }
-
     #[test]
     fn test_no_features_section() -> Result<()> {
         let toml_content = r#"[package]
 name = "test"
 version = "0.1.0"
 "#;
-
         let mut doc = toml_content.parse::<DocumentMut>()?;
-        // Should not error when there's no features section
         sort_features_section(&mut doc)?;
-
         Ok(())
     }
 }

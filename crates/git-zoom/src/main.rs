@@ -22,7 +22,7 @@ fn print_usage() {
     eprintln!("  out  Zoom out, embedding current tree back into full tree");
     eprintln!();
     eprintln!("Options:");
-    eprintln!("  --allow-empty  Allow zooming into non-existent path (creates empty tree)");
+    eprintln!("  --allow-empty  Allow zooming into non-existent path (creates empty tree)",);
     eprintln!("  --deny-empty   Error if subtree would be empty when zooming out");
 }
 fn main() -> ExitCode {
@@ -49,7 +49,7 @@ fn main() -> ExitCode {
                     allow_empty = true;
                 } else if !arg.starts_with('-') {
                     if path.is_some() {
-                        eprintln!("Error: multiple paths provided (expected at most one)");
+                        eprintln!("Error: multiple paths provided (expected at most one)",);
                         return ExitCode::from(1);
                     }
                     path = Some(arg);
@@ -71,7 +71,7 @@ fn main() -> ExitCode {
                     deny_empty = true;
                 } else if !arg.starts_with('-') {
                     if target_path.is_some() {
-                        eprintln!("Error: multiple arguments provided (expected at most one)");
+                        eprintln!("Error: multiple arguments provided (expected at most one)",);
                         return ExitCode::from(1);
                     }
                     target_path = Some(arg);

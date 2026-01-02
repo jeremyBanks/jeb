@@ -87,7 +87,7 @@ mod tests {
                 a.total_cmp(&b).is_lt(),
                 "Test data should be ordered: {} < {}",
                 a,
-                b
+                b,
             );
             assert!(
                 a_enc < b_enc,
@@ -95,7 +95,7 @@ mod tests {
                 a_enc,
                 b_enc,
                 a,
-                b
+                b,
             );
         }
     }
@@ -137,7 +137,7 @@ mod tests {
                 "Round-trip failed for {}: encoded={}, decoded={}",
                 val,
                 encoded,
-                decoded
+                decoded,
             );
         }
     }
@@ -179,7 +179,7 @@ mod tests {
                 a.total_cmp(&b).is_lt(),
                 "Test data should be ordered: {} < {}",
                 a,
-                b
+                b,
             );
             assert!(
                 a_enc < b_enc,
@@ -187,7 +187,7 @@ mod tests {
                 a_enc,
                 b_enc,
                 a,
-                b
+                b,
             );
         }
     }
@@ -229,7 +229,7 @@ mod tests {
                 "Round-trip failed for {}: encoded={}, decoded={}",
                 val,
                 encoded,
-                decoded
+                decoded,
             );
         }
     }

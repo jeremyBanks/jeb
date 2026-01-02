@@ -59,7 +59,7 @@ mod tests {
             if let Some(prev) = last_u {
                 assert!(
                     u > prev,
-                    "order not preserved: i8 {i} -> u8 {u}, but previous was {prev}"
+                    "order not preserved: i8 {i} -> u8 {u}, but previous was {prev}",
                 );
             }
             last_u = Some(u);
@@ -76,7 +76,7 @@ mod tests {
                 assert_eq!(
                     signed_dist, unsigned_dist,
                     "distance not preserved: {a} - {b} = {signed_dist}, but {ua} - {ub} = \
-                     {unsigned_dist}"
+                     {unsigned_dist}",
                 );
             }
         }

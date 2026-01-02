@@ -1,5 +1,4 @@
 //! The CLI.
-
 use {
     crate::{git2::*, graph_stats::GraphStatsCalculator},
     ::{
@@ -13,10 +12,8 @@ use {
         tracing::{debug, info, instrument, trace, warn},
     },
 };
-
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const V_VERSION: &str = concat!("v", env!("CARGO_PKG_VERSION"));
-
 /// Commit everything in the current directory and repository -- no questions asked.
 ///
 /// ╔══════════════════╗╔════╗
@@ -25,8 +22,10 @@ const V_VERSION: &str = concat!("v", env!("CARGO_PKG_VERSION"));
 /// ╚══════════════════╝╚════╝
 #[derive(Parser, Debug, Clone, Default)]
 #[clap(
-    after_help = {
-        static S: Lazy<String> = Lazy::new(|| format!("INSTALLATION:
+    after_help = {static
+    S:Lazy<String>= Lazy::new(
+        ||format!(
+            "INSTALLATION:
     save can be installed from a source release using the Cargo package manager:
 
         cargo install save --version {VERSION}
@@ -37,10 +36,10 @@ const V_VERSION: &str = concat!("v", env!("CARGO_PKG_VERSION"));
 
 LINKS:
     https://docs.rs/save/{VERSION}
-    https://crates.io/crates/save/{VERSION}"));
-        let s: &str = S.as_ref();
-        s
-    },
+    https://crates.io/crates/save/{VERSION}"
+        )
+    );let
+    s:&str = S.as_ref();s},
     dont_collapse_args_in_usage = true,
     infer_long_args = true,
     setting = AppSettings::DeriveDisplayOrder,
@@ -55,13 +54,11 @@ pub struct Save {
     /// [env: `RUST_LOG`=]
     #[clap(long, short = 'q', parse(from_occurrences))]
     pub quiet: i32,
-
     /// Increase log verbosity. May be repeated to increase verbosity further.
     ///
     /// [env: `RUST_LOG`=]
     #[clap(long, short = 'v', parse(from_occurrences))]
     pub verbose: i32,
-
     /// Commit all files in the repository. This is the default.
     ///
     /// The commit will fail if there are no changes, unless `--allow-empty` is
@@ -70,10 +67,11 @@ pub struct Save {
         help_heading = "CONTENT OPTIONS",
         long,
         short = 'a',
-        conflicts_with_all = &["staged", "tree", "empty"]
+        conflicts_with_all = &["staged",
+        "tree",
+        "empty"]
     )]
     pub all: bool,
-
     /// Commit only files that have been explicitly staged with `git add`.
     ///
     /// This is like the default behaviour of `git commit`.
@@ -83,33 +81,36 @@ pub struct Save {
         help_heading = "CONTENT OPTIONS",
         long,
         short = 's',
-        conflicts_with_all = &["all", "tree", "empty"]
+        conflicts_with_all = &["all",
+        "tree",
+        "empty"]
     )]
     pub staged: bool,
-
     /// Include the specified tree object in the commit, without looking at or
     /// modifying the index or working tree.
     #[clap(
         help_heading = "CONTENT OPTIONS",
         long,
-        conflicts_with_all = &["all", "staged", "empty"]
+        conflicts_with_all = &["all",
+        "staged",
+        "empty"]
     )]
     pub tree: Option<String>,
-
     /// Don't include any file changes in the commit.
     ///
     /// This commit will have the same tree hash as its parent.
     #[clap(
         help_heading = "CONTENT OPTIONS",
         long,
-        short = 'e', conflicts_with_all = &["all", "staged", "tree"]
+        short = 'e',
+        conflicts_with_all = &["all",
+        "staged",
+        "tree"]
     )]
     pub empty: bool,
-
     /// Create the commit even if it contains no changes.
     #[clap(help_heading = "CONTENT OPTIONS", long, env = "SAVE_ALLOW_EMPTY")]
     pub allow_empty: bool,
-
     /// The commit message.
     ///
     /// [default: a short string based on the commit's tree hash and ancestry graph]
@@ -121,7 +122,6 @@ pub struct Save {
         conflicts_with = "message-prefix"
     )]
     pub message: Option<String>,
-
     /// A prefix to put on its own line before the commit message. This is typically only useful if
     /// you're squashing/amending commits with existing messages you want to add to.
     #[clap(
@@ -131,7 +131,6 @@ pub struct Save {
         env = "SAVE_COMMIT_MESSAGE_PREFIX"
     )]
     pub message_prefix: Option<String>,
-
     /// The required commit ID hash or prefix, in hex. This will be brute-forced.
     ///
     /// This supports some non-hex values with special meanings:
@@ -153,8 +152,6 @@ pub struct Save {
         verbatim_doc_comment
     )]
     pub prefix_hex: Option<String>,
-
-    // SIGNATURE OPTIONS:
     /// Override the system clock timestamp value.
     #[clap(
         help_heading = "SIGNATURE OPTIONS",
@@ -163,7 +160,6 @@ pub struct Save {
         env = "SAVE_TIMESTAMP"
     )]
     pub timestamp: Option<i64>,
-
     /// Use the next available timestamp after the parent commit's timestamps,  regardless of the
     /// actual current clock time. Assuming there is a parent  commit, this is equivalent to
     /// `--timestamp=0`. If we're creating an  initial commit (with no parents), this uses the next
@@ -179,19 +175,16 @@ pub struct Save {
         env = "SAVE_TIMELESS"
     )]
     pub timeless: bool,
-
     /// The name and email to use for the commit's author.
     ///
     /// [default: name from git, or else from parent commit, or else "user <user@localhost>"]
     #[clap(help_heading = "SIGNATURE OPTIONS", long, env = "SAVE_AUTHOR")]
     pub author: Option<String>,
-
     /// The name and email to use for the commit's committer.
     ///
     /// [default: copied from the commit author]
     #[clap(help_heading = "SIGNATURE OPTIONS", long, env = "SAVE_COMMITTER")]
     pub committer: Option<String>,
-
     /// What branch head are we updating? Defaults to `"HEAD"` (which also
     /// updates the current branch if one is checked out). Setting it to any
     /// value name will create or force-update that branch without modifying
@@ -203,7 +196,6 @@ pub struct Save {
         env = "SAVE_HEAD"
     )]
     pub head: Option<i64>,
-
     /// Prepare the commit, but don't actually update any references in Git.
     ///
     /// The commit will be written to the Git database, so it is still possible
@@ -217,7 +209,6 @@ pub struct Save {
         env = "SAVE_NO_HEAD"
     )]
     pub no_head: bool,
-
     /// Maximum depth to search back through commit history when calculating
     /// graph statistics. If this depth is reached without finding a trusted
     /// commit message, the tool enters "z-mode" and treats the commit at
@@ -233,7 +224,6 @@ pub struct Save {
         default_value = "255"
     )]
     pub max_depth: i32,
-
     /// Rebuild commit statistics from scratch, ignoring all existing commit
     /// messages. This forces a full graph walk and recalculates all indices.
     ///
@@ -244,7 +234,6 @@ pub struct Save {
         env = "SAVE_REBUILD"
     )]
     pub rebuild: bool,
-
     /// Adds another parent to the new commit. May be repeated to add multiple
     /// parents, though duplicated parents will are ignored.
     #[clap(
@@ -254,7 +243,6 @@ pub struct Save {
         env = "SAVE_ADD_PARENT"
     )]
     pub added_parent_ref: Vec<String>,
-
     /// Removes a parent from the new commit. May be repeated to remove multiple
     /// parents. If the parent is not present, this will fail with an error.
     #[clap(
@@ -263,7 +251,6 @@ pub struct Save {
         env = "SAVE_REMOVE_PARENTS"
     )]
     pub removed_parent_ref: Vec<String>,
-
     /// Squashes these changes into the first parent. May be repeated multiple
     /// times to squash multiple generations. Authors of squashed commits will
     /// be added using the Co-Authored-By header.
@@ -277,7 +264,6 @@ pub struct Save {
         env = "SAVE_SQUASH_COUNT"
     )]
     pub squash: u32,
-
     /// Squashes all changes from this commit up to the specified ancestor
     /// commit(s). Authors of squashed commits will be added using the
     /// Co-Authored-By header.
@@ -290,7 +276,6 @@ pub struct Save {
         env = "SAVE_SQUASH_TO"
     )]
     pub squash_to_ref: Vec<String>,
-
     /// Squashes every ancestor commit that isn't part included in the target
     /// head(s).
     ///
@@ -299,21 +284,21 @@ pub struct Save {
     #[clap(
         long = "squash-after",
         help_heading = "HISTORY OPTIONS",
-        conflicts_with_all = &["squash-to-ref", "retcon-all"],
+        conflicts_with_all = &["squash-to-ref",
+        "retcon-all"],
         env = "SAVE_SQUASH_AFTER"
     )]
     pub squash_after_ref: Vec<String>,
-
     /// Squashes the entire repository into a single commit. You probably don't want to use this.
     /// If you really do, you must set this flag to the value `CONFIRM_SQUASH_ALL`.
     #[clap(
         long = "squash-all",
         help_heading = "HISTORY OPTIONS",
-        conflicts_with_all = &["squash-after-ref", "squash-to-ref"],
+        conflicts_with_all = &["squash-after-ref",
+        "squash-to-ref"],
         env = "SAVE_SQUASH_ALL"
     )]
     pub squash_all: Option<String>,
-
     /// Rewrites the timestamps and authorship information of all commits up to
     /// the given ancestors based on the current settings.
     ///
@@ -322,11 +307,11 @@ pub struct Save {
     #[clap(
         long = "retcon-to-ref",
         help_heading = "HISTORY OPTIONS",
-        conflicts_with_all = &["retcon-after-ref", "retcon-all"],
+        conflicts_with_all = &["retcon-after-ref",
+        "retcon-all"],
         env = "SAVE_RETCON_TO"
     )]
     pub retcon_to_ref: Vec<String>,
-
     /// Retcons every ancestor commit that isn't part included in the target
     /// head(s).
     ///
@@ -335,23 +320,23 @@ pub struct Save {
     #[clap(
         long = "retcon-after",
         help_heading = "HISTORY OPTIONS",
-        conflicts_with_all = &["retcon-to-ref", "retcon-all"],
+        conflicts_with_all = &["retcon-to-ref",
+        "retcon-all"],
         env = "SAVE_RETCON_AFTER"
     )]
     pub retcon_after_ref: Vec<String>,
-
     /// Retcons the entire history. You probably don't want to use this,
     /// but if you do use it consistently it should only affect the most
     /// recent commit.
     #[clap(
         long,
         help_heading = "HISTORY OPTIONS",
-        conflicts_with_all = &["retcon-after-ref", "retcon-to-ref"],
+        conflicts_with_all = &["retcon-after-ref",
+        "retcon-to-ref"],
         env = "SAVE_RETCON_ALL"
     )]
     pub retcon_all: bool,
 }
-
 impl Save {
     pub fn with<F: FnOnce(&mut Self) -> T, T>(f: F) -> Self {
         let mut save = Default::default();
@@ -362,9 +347,7 @@ impl Save {
     pub fn save(&self) -> Result<(), ::eyre::Report> {
         let default_verbosity_self = 3;
         let default_verbosity_other = 1;
-
         let log_env = env::var("RUST_LOG").unwrap_or_default();
-
         let rust_log = if self.verbose == 0 && self.quiet == 0 && !log_env.is_empty() {
             if log_env.eq_ignore_ascii_case("off") {
                 None
@@ -396,7 +379,6 @@ impl Save {
                 Some(format!("{verbosity_other},save={verbosity_self}"))
             }
         };
-
         if let Some(rust_log) = rust_log {
             let installed_tracing_subscriber =
                 ::tracing_subscriber::util::SubscriberInitExt::try_init(
@@ -413,28 +395,18 @@ impl Save {
                             .finish(),
                     ),
                 );
-
             if let Err(err) = installed_tracing_subscriber {
                 debug!("Failed to register global tracing_subscriber: {err}");
             }
-        } else {
-            // don't enable the tracing/logging systems at all if they won't emit anything
-        }
-
+        } 
         trace!("Running main with: {self:#?}");
-
-        // Actually perform the save operation
         main(self.clone())
     }
 }
-
 /// CLI entry point.
 #[instrument(level = "debug", skip(args))]
 pub fn main(args: Save) -> Result<()> {
     let repo = open_or_init_repo(&args)?;
-
-    // TODO: move most of the following to RepositoryExt::Save
-
     let head = match repo.head() {
         Ok(head) => Some(head.peel_to_commit().unwrap()),
         Err(err) if err.code() == ErrorCode::UnbornBranch => None,
@@ -442,10 +414,7 @@ pub fn main(args: Save) -> Result<()> {
             bail!("Unexpected error from Git: {:#?}", err);
         },
     };
-
     let (user_name, user_email) = get_git_user(&args, &repo, &head)?;
-
-    // Calculate graph statistics using the new calculator
     let graph_stats = if let Some(ref commit) = head {
         let calculator = if args.rebuild {
             GraphStatsCalculator::new_rebuild(&repo, args.max_depth)
@@ -454,14 +423,10 @@ pub fn main(args: Save) -> Result<()> {
         };
         calculator.calculate(commit)
     } else {
-        // No HEAD commit, use defaults
         crate::graph_stats::GraphStats::default()
     };
-
     let mut index = repo.working_index()?;
-
     let tree = index.write_tree()?;
-
     if let Some(ref head) = head {
         if tree == head.tree_id() {
             if args.message.is_some() {
@@ -474,24 +439,16 @@ pub fn main(args: Save) -> Result<()> {
             }
         }
     }
-
     if !args.no_head {
         index.write()?;
     } else {
         info!("Skipping index write because this is a dry run.");
     }
-
     let tree4 = tree.to_string()[..4].to_string().to_ascii_uppercase();
-
     let target = crate::hex::decode_hex_nibbles(args.prefix_hex.unwrap_or_else(|| tree4.clone()));
-
     let tree = repo.find_tree(tree)?;
-
-    // Format the commit message
     let mut message = String::new();
     let is_shallow = repo.is_shallow();
-
-    // Determine prefix based on z_mode and shallow state
     let prefix_char = if graph_stats.z_mode {
         'z'
     } else if is_shallow {
@@ -499,38 +456,23 @@ pub fn main(args: Save) -> Result<()> {
     } else {
         'r'
     };
-
-    // Prefix: [r|s|z]N
     write!(message, "{}{}", prefix_char, graph_stats.revision_index)?;
-
-    // Optional: / gG (only if different from revision)
     if graph_stats.generation_index != graph_stats.revision_index {
         write!(message, " / g{}", graph_stats.generation_index)?;
     }
-
-    // Optional: / nC (only if different from generation)
     if graph_stats.commit_index != graph_stats.generation_index {
         write!(message, " / n{}", graph_stats.commit_index)?;
     }
-
-    // Optional: / xHHHH (tree hash, if non-empty)
     if !tree.is_empty() {
         write!(message, " / x{tree4}")?;
     }
-
-    // Optional: / oHHHH (origin, omitted for root commits)
     if let Some(origin) = graph_stats.origin {
         write!(message, " / o{:04X}", origin)?;
     }
-
-    // TODO: look at merge heads too, and set our minimum timestamp to one greater
-    // than the maximum of all heads
     let previous_seconds = head.as_ref().map(|c| c.time().seconds()).unwrap_or(0);
     let time = Signature::now(&user_name, &user_email)?.when();
     let seconds = time.seconds();
-
     let parents = &head.iter().collect::<Vec<_>>();
-
     let base_commit = repo.commit(
         None,
         &Signature::new(&user_name, &user_email, &Time::new(seconds, 0)).unwrap(),
@@ -540,10 +482,8 @@ pub fn main(args: Save) -> Result<()> {
         parents,
     )?;
     let base_commit = repo.find_commit(base_commit)?;
-
     let min_timestamp = previous_seconds;
     let target_timestamp = seconds;
-
     let commit = base_commit.brute_force_timestamps(
         &repo,
         &target.bytes,
@@ -551,9 +491,7 @@ pub fn main(args: Save) -> Result<()> {
         min_timestamp,
         target_timestamp,
     );
-
     debug!("Prepared commit {}", commit.id());
-
     if !args.no_head {
         match repo.head() {
             Ok(mut head_ref) => {
@@ -565,7 +503,6 @@ pub fn main(args: Save) -> Result<()> {
                 }
             },
             Err(err) if err.code() == ErrorCode::UnbornBranch => {
-                // First commit on unborn branch - set HEAD to point to the new commit
                 info!("Creating first commit on unborn branch");
                 repo.set_head_detached(commit.id())?;
             },
@@ -574,9 +511,7 @@ pub fn main(args: Save) -> Result<()> {
     } else {
         info!("Not updating HEAD because this is a dry run.");
     }
-
     eprintln!();
-
     Command::new("git")
         .args([
             "--no-pager",
@@ -591,9 +526,7 @@ pub fn main(args: Save) -> Result<()> {
             &commit.id().to_string(),
         ])
         .status()?;
-
     eprintln!();
-
     Command::new("git")
         .args([
             "--no-pager",
@@ -609,20 +542,14 @@ pub fn main(args: Save) -> Result<()> {
             &commit.id().to_string(),
         ])
         .status()?;
-
     eprintln!();
-
     Ok(())
 }
-
 /// Determine the Git user name and email to use.
 /// XXX: This should be removed or merged into git2.rs.
 #[instrument(level = "debug", skip(repo))]
 fn get_git_user(args: &Save, repo: &Repository, head: &Option<Commit>) -> Result<(String, String)> {
-    // TODO: move this to git2.rs, right?
-
     let config = repo.config()?;
-
     let user_name: String = {
         if let Some(ref args_name) = args.author {
             trace!(
@@ -654,7 +581,6 @@ fn get_git_user(args: &Save, repo: &Repository, head: &Option<Commit>) -> Result
             placeholder_name.to_string()
         }
     };
-
     let user_email: String = if let Some(ref args_email) = args.author {
         trace!(
             "Using author email from command line argument: {:?}",
@@ -684,10 +610,8 @@ fn get_git_user(args: &Save, repo: &Repository, head: &Option<Commit>) -> Result
         );
         placeholder_email.to_string()
     };
-
     Ok((user_name, user_email))
 }
-
 /// Opens or initializes a new [`git2::Repository`] in `CWD` or `GIT_DIR`, if args
 /// allow it.
 /// XXX: This should be removed or merged into git2.rs.
@@ -701,7 +625,6 @@ fn open_or_init_repo(args: &Save) -> Result<Repository> {
                     repo.path()
                 );
             }
-
             debug!("Found Git repository: {:?}", repo.workdir().unwrap());
             repo
         },
@@ -709,9 +632,7 @@ fn open_or_init_repo(args: &Save) -> Result<Repository> {
             let path = env::current_dir()?;
             let empty = fs::read_dir(&path)?.next().is_none();
             info!("No Git repository found.");
-
             let dangerous = (path == home::home_dir().unwrap()) || (path.to_str() == Some("/"));
-
             if dangerous {
                 bail!(
                     "Current directory seems important, refusing to run `git init` automatically."
@@ -732,13 +653,11 @@ fn open_or_init_repo(args: &Save) -> Result<Repository> {
             }
         },
     };
-
     if repo.state() != RepositoryState::Clean {
         bail!(
             "Repository is in the middle of another operation: {:?}",
             repo.state()
         );
     }
-
     Ok(repo)
 }

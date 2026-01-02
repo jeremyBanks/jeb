@@ -58,7 +58,6 @@
     clippy::use_self,
     clippy::useless_transmute
 )]
-
 pub mod cli;
 #[doc(hidden)]
 pub mod ez;

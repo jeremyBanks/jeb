@@ -10,7 +10,6 @@ use {
     },
     tokio::io::AsyncWriteExt,
 };
-
 /// Consumes a stream and writes items to stdout.
 ///
 /// Handles `Item::Bytes` and `Item::Text`, panicking on other variants.
@@ -25,7 +24,6 @@ where
 {
     let mut input = pin!(input);
     let mut writer = tokio::io::stdout();
-
     while let Some(item) = input.next().await {
         match item {
             Item::Bytes(bytes) => {
@@ -44,7 +42,6 @@ where
         }
     }
 }
-
 /// Consumes a stream and writes items to stderr.
 ///
 /// Handles `Item::Bytes` and `Item::Text`, panicking on other variants.
@@ -59,7 +56,6 @@ where
 {
     let mut input = pin!(input);
     let mut writer = tokio::io::stderr();
-
     while let Some(item) = input.next().await {
         match item {
             Item::Bytes(bytes) => {
@@ -78,7 +74,6 @@ where
         }
     }
 }
-
 /// Consumes a stream and writes items to a file.
 ///
 /// Handles `Item::Bytes` and `Item::Text`, panicking on other variants.
@@ -97,7 +92,6 @@ where
     let mut writer = tokio::fs::File::create(path)
         .await
         .expect("failed to create file");
-
     while let Some(item) = input.next().await {
         match item {
             Item::Bytes(bytes) => {
