@@ -18,8 +18,12 @@ pub use self::serde::*;
 #[cfg(feature = "serde_json")]
 pub use self::serde_json::*;
 pub use self::{
+    array::*,
+    boolean::*,
     bytes::*,
-    float::*,
+    bytes_map::*,
+    number::*,
     text::*,
+    text_map::*,
     value::*,
 };

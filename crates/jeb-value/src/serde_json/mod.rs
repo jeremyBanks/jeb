@@ -33,7 +33,7 @@ impl From<serde_json::Number> for crate::Value {
         } else if let Some(value) = value.as_i64() {
             value.into()
         } else if let Some(value) = value.as_f64()
-            && let Some(value) = crate::float::Float::new(value)
+            && let Some(value) = crate::float::Number::new(value)
         {
             value.into()
         } else {
