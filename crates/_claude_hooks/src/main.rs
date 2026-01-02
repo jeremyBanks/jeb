@@ -25,6 +25,28 @@ fn main() {
                 }
             }
         }
+        Some(HookInputDetails::PostToolUse { .. }) => {
+            match noedit::posttooluse::handle(&input) {
+                Ok(result) => result,
+                Err(e) => {
+                    eprintln!("noedit PostToolUse error: {}", e);
+                    // Return error as additional context
+                    Some(HookOutput {
+                        should_continue: None,
+                        stop_reason: None,
+                        suppress_output: None,
+                        system_message: Some(format!(
+                            "⚠️ .noedit validation error: {}\nSome protected files may not have been reverted.",
+                            e
+                        )),
+                        permission_decision: None,
+                        hook_specific_output: Some(HookOutputDetails::PostToolUse {
+                            additional_context: format!("Error during .noedit validation: {}", e),
+                        }),
+                    })
+                }
+            }
+        }
         Some(HookInputDetails::Stop { .. }) | Some(HookInputDetails::SubagentStop { .. }) => {
             eprintln!(">>> Stop/SubagentStop hook triggered");
             match noedit::validation::handle(&input) {

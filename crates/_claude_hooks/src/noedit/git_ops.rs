@@ -226,3 +226,40 @@ pub fn create_restoration_commit(
 
     Ok(())
 }
+
+/// Create a commit reverting .noedit violations
+pub fn create_revert_commit(
+    repo: &Repository,
+    _files: &[PathBuf],
+    session_id: &str,
+    transcript_path: &str,
+) -> Result<()> {
+    let signature = repo.signature().context("Failed to get signature")?;
+
+    // Message format per user requirements
+    let message = format!(
+        "revert changes disallowed by .noedit\n\nSession-Id: {}\nTranscript: {}",
+        session_id, transcript_path
+    );
+
+    let mut index = repo.index().context("Failed to get index")?;
+    let tree_oid = index.write_tree().context("Failed to write tree")?;
+    let tree = repo.find_tree(tree_oid).context("Failed to find tree")?;
+
+    let head = repo.head().context("Failed to get HEAD")?;
+    let parent_commit = head
+        .peel_to_commit()
+        .context("Failed to peel HEAD to commit")?;
+
+    repo.commit(
+        Some("HEAD"),
+        &signature,
+        &signature,
+        &message,
+        &tree,
+        &[&parent_commit],
+    )
+    .context("Failed to create commit")?;
+
+    Ok(())
+}
