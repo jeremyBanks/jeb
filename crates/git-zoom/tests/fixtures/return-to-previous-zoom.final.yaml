@@ -1,11 +1,11 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 6797040c2a06bbe3477b61ed7843e9467510b7be
-985cd0:
+    main: 70c424f9571ea56266cf67f59f9910cbc41c8d45
+'29e281':
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:08:22Z
-  commit-date: 2026-01-02T21:08:22Z
+  author-date: 2026-01-02T21:10:37Z
+  commit-date: 2026-01-02T21:10:37Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
@@ -17,33 +17,33 @@ refs:
     root.txt: root
     src:
       file.txt: original
-f338be:
-  author-date: 2026-01-02T21:08:22Z
-  commit-date: 2026-01-02T21:08:22Z
+4b3fb0:
+  author-date: 2026-01-02T21:10:37Z
+  commit-date: 2026-01-02T21:10:37Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - 985cd0
+  - '29e281'
   - 7ce26a
   tree:
     file.txt:
       //commit: 7ce26a
       //path: src/file.txt
-c4791c:
+5eed75:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:08:23Z
-  commit-date: 2026-01-02T21:08:23Z
+  author-date: 2026-01-02T21:10:37Z
+  commit-date: 2026-01-02T21:10:37Z
   message: |
     Update
   tree:
     file.txt: modified
-e7ad21:
+05d4d1:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:08:23Z
-  commit-date: 2026-01-02T21:08:23Z
+  author-date: 2026-01-02T21:10:37Z
+  commit-date: 2026-01-02T21:10:37Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src'
@@ -51,21 +51,21 @@ e7ad21:
     git-zoom-out: src
   parents:
   - 7ce26a
-  - c4791c
+  - 5eed75
   tree:
     src:
       file.txt:
-        //commit: c4791c
+        //commit: 5eed75
         //path: file.txt
-6797040c2a06bbe3477b61ed7843e9467510b7be:
+70c424f9571ea56266cf67f59f9910cbc41c8d45:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:08:24Z
-  commit-date: 2026-01-02T21:08:24Z
+  author-date: 2026-01-02T21:10:38Z
+  commit-date: 2026-01-02T21:10:38Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - c4791c
-  - e7ad21
+  - 5eed75
+  - 05d4d1

@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 9982eb99ac0cb47550ffa7b1077c55c74c06dffc
+    main: ab1f839ff7a2c9bfca1d173478b3f627aca51a08
 '057668':
   message: commit 1
   tree:
@@ -12,25 +12,25 @@ refs:
         mid.txt: mid
       top.txt: top
     root.txt: root
-11080a:
+'29e281':
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:08:23Z
-  commit-date: 2026-01-02T21:08:23Z
+  author-date: 2026-01-02T21:10:37Z
+  commit-date: 2026-01-02T21:10:37Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
   parents: []
   tree: {}
-39c44e:
-  author-date: 2026-01-02T21:08:23Z
-  commit-date: 2026-01-02T21:08:23Z
+7f5d6b:
+  author-date: 2026-01-02T21:10:37Z
+  commit-date: 2026-01-02T21:10:37Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'a/b'
 
     git-zoom-in: a/b
   parents:
-  - 11080a
+  - '29e281'
   - '057668'
   tree:
     c:
@@ -40,20 +40,20 @@ refs:
     mid.txt:
       //commit: '057668'
       //path: a/b/mid.txt
-a88ccd:
+e317d4:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:08:23Z
-  commit-date: 2026-01-02T21:08:23Z
+  author-date: 2026-01-02T21:10:38Z
+  commit-date: 2026-01-02T21:10:38Z
   message: |
     Add files
   tree:
     another.txt: at b level
     c:
       new.txt: new file
-9982eb99ac0cb47550ffa7b1077c55c74c06dffc:
+ab1f839ff7a2c9bfca1d173478b3f627aca51a08:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:08:23Z
-  commit-date: 2026-01-02T21:08:23Z
+  author-date: 2026-01-02T21:10:38Z
+  commit-date: 2026-01-02T21:10:38Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'a/b'
@@ -61,14 +61,14 @@ a88ccd:
     git-zoom-out: a/b
   parents:
   - '057668'
-  - a88ccd
+  - e317d4
   tree:
     a:
       b:
         another.txt:
-          //commit: a88ccd
+          //commit: e317d4
           //path: another.txt
         c:
           new.txt:
-            //commit: a88ccd
+            //commit: e317d4
             //path: c/new.txt
