@@ -24,17 +24,25 @@ use {
     std::path::Path,
 };
 
-/// Handle Stop hook: validate and restore any violated .noedit files
+/// Handle Stop/SessionEnd hook: validate and restore any violated .noedit files
 pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
+    eprintln!("=== .noedit validation hook CALLED ===");
+    eprintln!("Session ID: {}", input.session_id);
+
     // Find git repository root from current working directory
     let repo_path = find_git_root(&input.cwd).context("Failed to find git repository")?;
+    eprintln!("Found git repo at: {}", repo_path.display());
     let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
     // 1. Validate JEB_CLAUDE_INITIAL_COMMIT exists
     let initial_commit_sha = match std::env::var("JEB_CLAUDE_INITIAL_COMMIT") {
-        Ok(sha) => sha,
+        Ok(sha) => {
+            eprintln!("Found JEB_CLAUDE_INITIAL_COMMIT: {}", sha);
+            sha
+        }
         Err(_) => {
-            eprintln!("JEB_CLAUDE_INITIAL_COMMIT not set, skipping .noedit validation");
+            eprintln!("⚠ JEB_CLAUDE_INITIAL_COMMIT not set, skipping .noedit validation");
+            eprintln!("  Validation hook will not check for violations");
             return Ok(None);
         }
     };

@@ -26,6 +26,7 @@ fn main() {
             }
         }
         Some(HookInputDetails::Stop { .. }) | Some(HookInputDetails::SubagentStop { .. }) => {
+            eprintln!(">>> Stop/SubagentStop hook triggered");
             match noedit::validation::handle(&input) {
                 Ok(result) => result,
                 Err(e) => {
@@ -43,6 +44,7 @@ fn main() {
             }
         }
         Some(HookInputDetails::SessionEnd { .. }) => {
+            eprintln!(">>> SessionEnd hook triggered");
             match noedit::validation::handle(&input) {
                 Ok(result) => result,
                 Err(e) => {
