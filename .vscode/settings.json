@@ -169,6 +169,7 @@
     "vecs",
     "veuo",
     "vexu",
+    "walkdir",
     "wasmbuild",
     "wbindgen"
   ],
