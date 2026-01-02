@@ -1,10 +1,27 @@
-use crate::{HookInput, HookOutput};
-use eyre::{bail, Context, Result};
-use git2::{Oid, Repository};
-use std::path::Path;
-
-use super::git_ops::{create_restoration_commit, get_changed_files, restore_file_from_commit};
-use super::patterns::NoeditMatcher;
+use {
+    super::{
+        git_ops::{
+            create_restoration_commit,
+            get_changed_files,
+            restore_file_from_commit,
+        },
+        patterns::NoeditMatcher,
+    },
+    crate::{
+        HookInput,
+        HookOutput,
+    },
+    eyre::{
+        Context,
+        Result,
+        bail,
+    },
+    git2::{
+        Oid,
+        Repository,
+    },
+    std::path::Path,
+};
 
 /// Handle Stop hook: validate and restore any violated .noedit files
 pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
@@ -27,7 +44,9 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
         .context("Failed to find initial commit")?;
 
     let head = repo.head().context("Failed to get HEAD")?;
-    let head_commit = head.peel_to_commit().context("Failed to peel HEAD to commit")?;
+    let head_commit = head
+        .peel_to_commit()
+        .context("Failed to peel HEAD to commit")?;
 
     // Check if initial_commit is ancestor of HEAD
     if !repo
@@ -35,8 +54,8 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
         .context("Failed to check ancestry")?
     {
         bail!(
-            "HEAD is not a descendant of JEB_CLAUDE_INITIAL_COMMIT ({}). \
-             History may have been rewritten.",
+            "HEAD is not a descendant of JEB_CLAUDE_INITIAL_COMMIT ({}). History may have been \
+             rewritten.",
             initial_commit_sha
         );
     }
@@ -46,8 +65,8 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
         .context("Failed to load .noedit patterns from initial commit")?;
 
     // 4. Get changed files (index and working tree)
-    let changed_files = get_changed_files(&repo, &initial_commit)
-        .context("Failed to get changed files")?;
+    let changed_files =
+        get_changed_files(&repo, &initial_commit).context("Failed to get changed files")?;
 
     // 5. Find violated files (changed AND in .noedit)
     let cwd = Path::new(&input.cwd);
@@ -63,7 +82,10 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
         return Ok(None); // No violations, pass through
     }
 
-    eprintln!("Found {} .noedit violations, restoring...", violated_files.len());
+    eprintln!(
+        "Found {} .noedit violations, restoring...",
+        violated_files.len()
+    );
 
     // 6. Restore violated files to their state in initial_commit
     for file in &violated_files {

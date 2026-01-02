@@ -1340,7 +1340,8 @@ pub fn parse(yaml: &str) -> Result<Repository, ParseError> {
                 })?;
 
         let base_tree = repo
-            .staged().cloned()
+            .staged()
+            .cloned()
             .or(head_tree.clone())
             .unwrap_or_default();
         let mut working_tree = base_tree;
@@ -1605,16 +1606,18 @@ fn normalize_yaml_key(key: &serde_yaml::Value) -> Result<String, ParseError> {
 fn is_special_key(key: &serde_yaml::Value, name: &str) -> bool {
     // New format: string key with // prefix (e.g., "//commit", "//path")
     if let Some(s) = key.as_str()
-        && s == format!("//{}", name) {
-            return true;
-        }
+        && s == format!("//{}", name)
+    {
+        return true;
+    }
 
     // Legacy format: sequence key (e.g., [commit], [path])
     if let Some(seq) = key.as_sequence()
         && seq.len() == 1
-            && let Some(s) = seq[0].as_str() {
-                return s == name;
-            }
+        && let Some(s) = seq[0].as_str()
+    {
+        return s == name;
+    }
 
     false
 }
@@ -2072,9 +2075,10 @@ fn get_commit_from_state(
 ) -> Result<&Commit, ParseError> {
     for state in processing_state.values() {
         if let CommitProcessingState::Complete(commit) = state
-            && commit.id == commit_id {
-                return Ok(commit);
-            }
+            && commit.id == commit_id
+        {
+            return Ok(commit);
+        }
     }
     Err(ParseError::CommitNotFound(format!(
         "commit {} not found in processing state",
@@ -2957,12 +2961,13 @@ pub fn serialize(
             let staged_value = compute_tree_delta(staged_tree, default_staged, &ctx, &commit_refs);
 
             if let serde_yaml::Value::Mapping(m) = &staged_value
-                && !m.is_empty() {
-                    root.insert(
-                        serde_yaml::Value::String("staged".to_string()),
-                        staged_value,
-                    );
-                }
+                && !m.is_empty()
+            {
+                root.insert(
+                    serde_yaml::Value::String("staged".to_string()),
+                    staged_value,
+                );
+            }
 
             // Update deduplication context to track blobs in staged tree
             ctx.track_tree_for_dedup(staged_tree);
@@ -2977,9 +2982,9 @@ pub fn serialize(
 
         if Some(working_tree) != default_working {
             // Update tree context for working tree (inherits from staged or HEAD)
-            // If staged exists, working inherits from staged which itself inherits from HEAD
-            // So we don't emit references to HEAD from working in that case
-            // If no staged, working inherits directly from HEAD
+            // If staged exists, working inherits from staged which itself inherits from
+            // HEAD So we don't emit references to HEAD from working in that
+            // case If no staged, working inherits directly from HEAD
             ctx.tree_context = TreeSerializationContext::Working {
                 default_commit_id: if repo.staged().is_some() {
                     // Staged exists - working should not reference HEAD directly
@@ -2995,12 +3000,13 @@ pub fn serialize(
                 compute_tree_delta(working_tree, default_working, &ctx, &commit_refs);
 
             if let serde_yaml::Value::Mapping(m) = &working_value
-                && !m.is_empty() {
-                    root.insert(
-                        serde_yaml::Value::String("working".to_string()),
-                        working_value,
-                    );
-                }
+                && !m.is_empty()
+            {
+                root.insert(
+                    serde_yaml::Value::String("working".to_string()),
+                    working_value,
+                );
+            }
         }
     }
 
@@ -3042,12 +3048,13 @@ fn sort_root_mapping(
     // Then, insert commits in document order (topological order)
     for commit_id in ordered_commits {
         if let Some(commit_key) = commit_refs.get(commit_id)
-            && let Some(commit_val) = root.get(commit_key) {
-                sorted.insert(
-                    commit_key.clone(),
-                    sort_mapping_recursive(commit_val.clone()),
-                );
-            }
+            && let Some(commit_val) = root.get(commit_key)
+        {
+            sorted.insert(
+                commit_key.clone(),
+                sort_mapping_recursive(commit_val.clone()),
+            );
+        }
     }
 
     serde_yaml::Value::Mapping(sorted)
@@ -3543,10 +3550,11 @@ fn topological_sort_with_tiebreak(repo: &Repository) -> Vec<ObjectId> {
     // Append timestamps to tiebreak keys (only for reachable commits)
     for commit_id in &reachable_commits {
         if let Some(commit) = repo.get_commit(commit_id)
-            && let Some(key) = tiebreak_keys.get_mut(commit_id) {
-                key.push(TiebreakComponent::Timestamp(commit.committer_date));
-                key.push(TiebreakComponent::Timestamp(commit.author_date));
-            }
+            && let Some(key) = tiebreak_keys.get_mut(commit_id)
+        {
+            key.push(TiebreakComponent::Timestamp(commit.committer_date));
+            key.push(TiebreakComponent::Timestamp(commit.author_date));
+        }
     }
 
     // Topologically sort with tiebreaking

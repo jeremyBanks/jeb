@@ -115,9 +115,9 @@ fn zugzug_known_values() {
     assert_debug_eq("(-2, 1)", 11_u8.zugzug());
     assert_debug_eq("(-11, 1)", 254_u8.zugzug());
     assert_debug_eq("(-11, -1)", 255_u8.zugzug());
-    assert_eq!(u8::MAX.zugzug(), (- 11_i8, - 1_i8));
-    assert_eq!(u16::MAX.zugzug(), (- 97_i16, 181_i16));
-    assert_eq!(u32::MAX.zugzug(), (- 18537_i32, 46341_i32));
+    assert_eq!(u8::MAX.zugzug(), (-11_i8, -1_i8));
+    assert_eq!(u16::MAX.zugzug(), (-97_i16, 181_i16));
+    assert_eq!(u32::MAX.zugzug(), (-18537_i32, 46341_i32));
     assert_eq!(u64::MAX.zugzug(), (1373026058_i64, 3037000500_i64));
     assert_eq!(usize::MAX.zugzug(), (1373026058_isize, 3037000500_isize));
 }

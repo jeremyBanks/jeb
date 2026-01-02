@@ -1,4 +1,8 @@
-use {crate::Panic, jeb_stream::Item, tokio::task::JoinHandle};
+use {
+    crate::Panic,
+    jeb_stream::Item,
+    tokio::task::JoinHandle,
+};
 pub trait Node {
     fn spawn(&self, stack: Vec<Receiver>) -> (Vec<Receiver>, Task);
 }

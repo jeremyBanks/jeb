@@ -55,11 +55,11 @@ mod tests {
     #[test]
     fn specific_values_i8() {
         assert_eq!(zig_zag(0i8), 0u8);
-        assert_eq!(zig_zag(- 1i8), 1u8);
+        assert_eq!(zig_zag(-1i8), 1u8);
         assert_eq!(zig_zag(1i8), 2u8);
-        assert_eq!(zig_zag(- 2i8), 3u8);
+        assert_eq!(zig_zag(-2i8), 3u8);
         assert_eq!(zig_zag(2i8), 4u8);
-        assert_eq!(zig_zag(- 3i8), 5u8);
+        assert_eq!(zig_zag(-3i8), 5u8);
         assert_eq!(zig_zag(3i8), 6u8);
         assert_eq!(zig_zag(i8::MAX), 254u8);
         assert_eq!(zig_zag(i8::MIN), 255u8);
@@ -67,12 +67,12 @@ mod tests {
     #[test]
     fn specific_values_u8_to_i8() {
         assert_eq!(zig_zag(0u8), 0i8);
-        assert_eq!(zig_zag(1u8), - 1i8);
+        assert_eq!(zig_zag(1u8), -1i8);
         assert_eq!(zig_zag(2u8), 1i8);
-        assert_eq!(zig_zag(3u8), - 2i8);
+        assert_eq!(zig_zag(3u8), -2i8);
         assert_eq!(zig_zag(4u8), 2i8);
         assert_eq!(zig_zag(254u8), 127i8);
-        assert_eq!(zig_zag(255u8), - 128i8);
+        assert_eq!(zig_zag(255u8), -128i8);
     }
     #[test]
     fn magnitude_ordering_i8() {
@@ -108,7 +108,7 @@ mod tests {
     #[test]
     fn specific_values_i16() {
         assert_eq!(zig_zag(0i16), 0u16);
-        assert_eq!(zig_zag(- 1i16), 1u16);
+        assert_eq!(zig_zag(-1i16), 1u16);
         assert_eq!(zig_zag(1i16), 2u16);
         assert_eq!(zig_zag(i16::MAX), (u16::MAX - 1));
         assert_eq!(zig_zag(i16::MIN), u16::MAX);
@@ -127,15 +127,7 @@ mod tests {
     }
     #[test]
     fn roundtrip_i128_sample() {
-        let test_values: Vec<i128> = [
-            i128::MIN,
-            i128::MIN + 1,
-            -1,
-            0,
-            1,
-            i128::MAX - 1,
-            i128::MAX,
-        ]
+        let test_values: Vec<i128> = [i128::MIN, i128::MIN + 1, -1, 0, 1, i128::MAX - 1, i128::MAX]
             .into_iter()
             .collect();
         for i in test_values {

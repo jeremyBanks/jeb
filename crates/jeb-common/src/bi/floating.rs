@@ -52,12 +52,31 @@ mod tests {
     #[test]
     fn test_f64_ordering_preservation() {
         let test_values = vec![
-            f64::from_bits(F64_QNAN_NEG), f64::from_bits(F64_SNAN_NEG),
-            f64::NEG_INFINITY, - f64::MAX, - 1e100, - 100.0, - 1.0, - 0.5, -
-            f64::MIN_POSITIVE, - f64::from_bits(F64_SUBNORMAL_MAX), - F64_SUBNORMAL_MIN,
-            - 0.0, 0.0, F64_SUBNORMAL_MIN, f64::from_bits(F64_SUBNORMAL_MAX),
-            f64::MIN_POSITIVE, 0.5, 1.0, 100.0, 1e100, f64::MAX, f64::INFINITY,
-            f64::from_bits(F64_SNAN), F64_QNAN, f64::from_bits(F64_QNAN_PAYLOAD),
+            f64::from_bits(F64_QNAN_NEG),
+            f64::from_bits(F64_SNAN_NEG),
+            f64::NEG_INFINITY,
+            -f64::MAX,
+            -1e100,
+            -100.0,
+            -1.0,
+            -0.5,
+            -f64::MIN_POSITIVE,
+            -f64::from_bits(F64_SUBNORMAL_MAX),
+            -F64_SUBNORMAL_MIN,
+            -0.0,
+            0.0,
+            F64_SUBNORMAL_MIN,
+            f64::from_bits(F64_SUBNORMAL_MAX),
+            f64::MIN_POSITIVE,
+            0.5,
+            1.0,
+            100.0,
+            1e100,
+            f64::MAX,
+            f64::INFINITY,
+            f64::from_bits(F64_SNAN),
+            F64_QNAN,
+            f64::from_bits(F64_QNAN_PAYLOAD),
         ];
         for i in 0..test_values.len() - 1 {
             let a = test_values[i];
@@ -65,43 +84,91 @@ mod tests {
             let a_enc = floating(a);
             let b_enc = floating(b);
             assert!(
-                a.total_cmp(& b).is_lt(), "Test data should be ordered: {} < {}", a, b
+                a.total_cmp(&b).is_lt(),
+                "Test data should be ordered: {} < {}",
+                a,
+                b
             );
             assert!(
                 a_enc < b_enc,
-                "Encoded values should preserve order: {} < {} (from {} < {})", a_enc,
-                b_enc, a, b
+                "Encoded values should preserve order: {} < {} (from {} < {})",
+                a_enc,
+                b_enc,
+                a,
+                b
             );
         }
     }
     #[test]
     fn test_f64_bijection() {
         let test_values = vec![
-            f64::from_bits(F64_QNAN_NEG), f64::from_bits(F64_SNAN_NEG), F64_QNAN,
-            f64::from_bits(F64_SNAN), f64::from_bits(F64_QNAN_PAYLOAD),
-            f64::NEG_INFINITY, f64::INFINITY, - f64::MAX, - 1e100, - 100.0, - 1.0, - 0.5,
-            - f64::MIN_POSITIVE, f64::MIN_POSITIVE, 0.5, 1.0, 100.0, 1e100, f64::MAX, -
-            f64::from_bits(F64_SUBNORMAL_MAX), - F64_SUBNORMAL_MIN, F64_SUBNORMAL_MIN,
-            f64::from_bits(F64_SUBNORMAL_MAX), - 0.0, 0.0,
+            f64::from_bits(F64_QNAN_NEG),
+            f64::from_bits(F64_SNAN_NEG),
+            F64_QNAN,
+            f64::from_bits(F64_SNAN),
+            f64::from_bits(F64_QNAN_PAYLOAD),
+            f64::NEG_INFINITY,
+            f64::INFINITY,
+            -f64::MAX,
+            -1e100,
+            -100.0,
+            -1.0,
+            -0.5,
+            -f64::MIN_POSITIVE,
+            f64::MIN_POSITIVE,
+            0.5,
+            1.0,
+            100.0,
+            1e100,
+            f64::MAX,
+            -f64::from_bits(F64_SUBNORMAL_MAX),
+            -F64_SUBNORMAL_MIN,
+            F64_SUBNORMAL_MIN,
+            f64::from_bits(F64_SUBNORMAL_MAX),
+            -0.0,
+            0.0,
         ];
         for &val in &test_values {
             let encoded = floating(val);
             let decoded: f64 = floating(encoded);
             assert_eq!(
-                val.to_bits(), decoded.to_bits(),
-                "Round-trip failed for {}: encoded={}, decoded={}", val, encoded, decoded
+                val.to_bits(),
+                decoded.to_bits(),
+                "Round-trip failed for {}: encoded={}, decoded={}",
+                val,
+                encoded,
+                decoded
             );
         }
     }
     #[test]
     fn test_f32_ordering_preservation() {
         let test_values = vec![
-            f32::from_bits(F32_QNAN_NEG), f32::from_bits(F32_SNAN_NEG),
-            f32::NEG_INFINITY, - f32::MAX, - 1e30, - 100.0, - 1.0, - 0.5, -
-            f32::MIN_POSITIVE, - f32::from_bits(F32_SUBNORMAL_MAX), - F32_SUBNORMAL_MIN,
-            - 0.0, 0.0, F32_SUBNORMAL_MIN, f32::from_bits(F32_SUBNORMAL_MAX),
-            f32::MIN_POSITIVE, 0.5, 1.0, 100.0, 1e30, f32::MAX, f32::INFINITY,
-            f32::from_bits(F32_SNAN), f32::NAN, f32::from_bits(F32_QNAN_PAYLOAD),
+            f32::from_bits(F32_QNAN_NEG),
+            f32::from_bits(F32_SNAN_NEG),
+            f32::NEG_INFINITY,
+            -f32::MAX,
+            -1e30,
+            -100.0,
+            -1.0,
+            -0.5,
+            -f32::MIN_POSITIVE,
+            -f32::from_bits(F32_SUBNORMAL_MAX),
+            -F32_SUBNORMAL_MIN,
+            -0.0,
+            0.0,
+            F32_SUBNORMAL_MIN,
+            f32::from_bits(F32_SUBNORMAL_MAX),
+            f32::MIN_POSITIVE,
+            0.5,
+            1.0,
+            100.0,
+            1e30,
+            f32::MAX,
+            f32::INFINITY,
+            f32::from_bits(F32_SNAN),
+            f32::NAN,
+            f32::from_bits(F32_QNAN_PAYLOAD),
         ];
         for i in 0..test_values.len() - 1 {
             let a = test_values[i];
@@ -109,31 +176,60 @@ mod tests {
             let a_enc = floating(a);
             let b_enc = floating(b);
             assert!(
-                a.total_cmp(& b).is_lt(), "Test data should be ordered: {} < {}", a, b
+                a.total_cmp(&b).is_lt(),
+                "Test data should be ordered: {} < {}",
+                a,
+                b
             );
             assert!(
                 a_enc < b_enc,
-                "Encoded values should preserve order: {} < {} (from {} < {})", a_enc,
-                b_enc, a, b
+                "Encoded values should preserve order: {} < {} (from {} < {})",
+                a_enc,
+                b_enc,
+                a,
+                b
             );
         }
     }
     #[test]
     fn test_f32_bijection() {
         let test_values = vec![
-            f32::from_bits(F32_QNAN_NEG), f32::from_bits(F32_SNAN_NEG), f32::NAN,
-            f32::from_bits(F32_SNAN), f32::from_bits(F32_QNAN_PAYLOAD),
-            f32::NEG_INFINITY, f32::INFINITY, - f32::MAX, - 1e30, - 100.0, - 1.0, - 0.5,
-            - f32::MIN_POSITIVE, f32::MIN_POSITIVE, 0.5, 1.0, 100.0, 1e30, f32::MAX, -
-            f32::from_bits(F32_SUBNORMAL_MAX), - F32_SUBNORMAL_MIN, F32_SUBNORMAL_MIN,
-            f32::from_bits(F32_SUBNORMAL_MAX), - 0.0, 0.0,
+            f32::from_bits(F32_QNAN_NEG),
+            f32::from_bits(F32_SNAN_NEG),
+            f32::NAN,
+            f32::from_bits(F32_SNAN),
+            f32::from_bits(F32_QNAN_PAYLOAD),
+            f32::NEG_INFINITY,
+            f32::INFINITY,
+            -f32::MAX,
+            -1e30,
+            -100.0,
+            -1.0,
+            -0.5,
+            -f32::MIN_POSITIVE,
+            f32::MIN_POSITIVE,
+            0.5,
+            1.0,
+            100.0,
+            1e30,
+            f32::MAX,
+            -f32::from_bits(F32_SUBNORMAL_MAX),
+            -F32_SUBNORMAL_MIN,
+            F32_SUBNORMAL_MIN,
+            f32::from_bits(F32_SUBNORMAL_MAX),
+            -0.0,
+            0.0,
         ];
         for &val in &test_values {
             let encoded = floating(val);
             let decoded: f32 = floating(encoded);
             assert_eq!(
-                val.to_bits(), decoded.to_bits(),
-                "Round-trip failed for {}: encoded={}, decoded={}", val, encoded, decoded
+                val.to_bits(),
+                decoded.to_bits(),
+                "Round-trip failed for {}: encoded={}, decoded={}",
+                val,
+                encoded,
+                decoded
             );
         }
     }

@@ -94,7 +94,7 @@ mod tests {
     #[test]
     fn specific_values_i8() {
         assert_eq!(signedness(i8::MIN), 0u8);
-        assert_eq!(signedness(- 1i8), 127u8);
+        assert_eq!(signedness(-1i8), 127u8);
         assert_eq!(signedness(0i8), 128u8);
         assert_eq!(signedness(i8::MAX), 255u8);
     }
@@ -145,15 +145,7 @@ mod tests {
     }
     #[test]
     fn roundtrip_i128_sample() {
-        let test_values: Vec<i128> = [
-            i128::MIN,
-            i128::MIN + 1,
-            -1,
-            0,
-            1,
-            i128::MAX - 1,
-            i128::MAX,
-        ]
+        let test_values: Vec<i128> = [i128::MIN, i128::MIN + 1, -1, 0, 1, i128::MAX - 1, i128::MAX]
             .into_iter()
             .collect();
         for i in test_values {

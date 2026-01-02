@@ -87,7 +87,7 @@ To update expectations, set SAVE_EXPECTATIONS=1 or UPDATE_EXPECT=1 environment v
 ";
 
 #[track_caller]
-#[must_use] 
+#[must_use]
 pub const fn expect(data: &'static str) -> Expect {
     let location = std::panic::Location::caller();
     Expect {
@@ -202,7 +202,7 @@ impl Expect {
         self.indent = yes;
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn data(&self) -> &str {
         self.data
     }
@@ -229,7 +229,8 @@ impl Expect {
                 let byte_offset = line
                     .char_indices()
                     .skip((self.position.column - 1).try_into().unwrap())
-                    .skip_while(|&(_, c)| !matches!(c, '[' | '(' | '{')).nth(1)
+                    .skip_while(|&(_, c)| !matches!(c, '[' | '(' | '{'))
+                    .nth(1)
                     .expect("Failed to parse macro invocation")
                     .0;
 

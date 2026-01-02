@@ -15,8 +15,17 @@ fn readme() {
         .unwrap()
         .wait_with_output()
         .unwrap();
-    assert!(long.status.success(), "failed to generate --help for readme");
-    assert_at("../README.txt", &String::from_utf8(long.stdout.clone()).unwrap());
+    assert!(
+        long.status.success(),
+        "failed to generate --help for readme"
+    );
+    assert_at(
+        "../README.txt",
+        &String::from_utf8(long.stdout.clone()).unwrap(),
+    );
     assert_at("./usage-long.txt", &String::from_utf8(long.stdout).unwrap());
-    assert_at("./usage-short.txt", &String::from_utf8(short.stdout).unwrap());
+    assert_at(
+        "./usage-short.txt",
+        &String::from_utf8(short.stdout).unwrap(),
+    );
 }

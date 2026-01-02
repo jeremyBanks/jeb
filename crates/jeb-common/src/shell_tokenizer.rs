@@ -67,7 +67,8 @@ impl core::fmt::Display for ErrorKind {
             Self::Semicolon => write!(f, "semicolon (command separator not interpreted)"),
             Self::Newline => {
                 write!(
-                    f, "newline (command separator interpreted as whitespace instead)"
+                    f,
+                    "newline (command separator interpreted as whitespace instead)"
                 )
             }
             Self::OpenParen => write!(f, "open parenthesis (subshell not interpreted)"),
@@ -101,8 +102,9 @@ pub struct Error {
 impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
-            f, "error at position {}: {} (byte 0x{:02x})", self.position, self.kind, self
-            .byte
+            f,
+            "error at position {}: {} (byte 0x{:02x})",
+            self.position, self.kind, self.byte
         )
     }
 }
@@ -170,12 +172,11 @@ pub fn tokenize(input: &[u8]) -> TokenizeResult {
                             at_word_start = false;
                         }
                     } else {
-                        errors
-                            .push(Error {
-                                kind: ErrorKind::TrailingBackslash,
-                                byte: b,
-                                position,
-                            });
+                        errors.push(Error {
+                            kind: ErrorKind::TrailingBackslash,
+                            byte: b,
+                            position,
+                        });
                     }
                 } else if b == b'\'' {
                     state = State::SingleQuoted;
@@ -194,33 +195,30 @@ pub fn tokenize(input: &[u8]) -> TokenizeResult {
                     }
                     at_word_start = true;
                 } else if b == b'\n' || b == b'\r' {
-                    errors
-                        .push(Error {
-                            kind: ErrorKind::Newline,
-                            byte: b,
-                            position,
-                        });
+                    errors.push(Error {
+                        kind: ErrorKind::Newline,
+                        byte: b,
+                        position,
+                    });
                     if token_started || !current_token.is_empty() {
                         args.push(core::mem::take(&mut current_token));
                         token_started = false;
                     }
                     at_word_start = true;
                 } else if b == b'~' && at_word_start {
-                    errors
-                        .push(Error {
-                            kind: ErrorKind::Tilde,
-                            byte: b,
-                            position,
-                        });
+                    errors.push(Error {
+                        kind: ErrorKind::Tilde,
+                        byte: b,
+                        position,
+                    });
                     current_token.push(b);
                     at_word_start = false;
                 } else if b == b'#' && at_word_start {
-                    errors
-                        .push(Error {
-                            kind: ErrorKind::Hash,
-                            byte: b,
-                            position,
-                        });
+                    errors.push(Error {
+                        kind: ErrorKind::Hash,
+                        byte: b,
+                        position,
+                    });
                     current_token.push(b);
                     at_word_start = false;
                 } else if UNQUOTED_WARN_BYTES.contains(&b) {
@@ -239,7 +237,11 @@ pub fn tokenize(input: &[u8]) -> TokenizeResult {
                         b'[' => ErrorKind::OpenBracket,
                         _ => unreachable!(),
                     };
-                    errors.push(Error { kind, byte: b, position });
+                    errors.push(Error {
+                        kind,
+                        byte: b,
+                        position,
+                    });
                     current_token.push(b);
                     at_word_start = false;
                 } else {
@@ -275,20 +277,18 @@ pub fn tokenize(input: &[u8]) -> TokenizeResult {
                     at_word_start = false;
                     quote_start_position = None;
                 } else if b == b'`' {
-                    errors
-                        .push(Error {
-                            kind: ErrorKind::Backtick,
-                            byte: b,
-                            position,
-                        });
+                    errors.push(Error {
+                        kind: ErrorKind::Backtick,
+                        byte: b,
+                        position,
+                    });
                     current_token.push(b);
                 } else if b == b'$' {
-                    errors
-                        .push(Error {
-                            kind: ErrorKind::DollarSign,
-                            byte: b,
-                            position,
-                        });
+                    errors.push(Error {
+                        kind: ErrorKind::DollarSign,
+                        byte: b,
+                        position,
+                    });
                     current_token.push(b);
                 } else {
                     current_token.push(b);
@@ -303,20 +303,18 @@ pub fn tokenize(input: &[u8]) -> TokenizeResult {
     match state {
         State::Normal => {}
         State::SingleQuoted => {
-            errors
-                .push(Error {
-                    kind: ErrorKind::UnclosedSingleQuote,
-                    byte: b'\'',
-                    position: quote_start_position.unwrap_or(0),
-                });
+            errors.push(Error {
+                kind: ErrorKind::UnclosedSingleQuote,
+                byte: b'\'',
+                position: quote_start_position.unwrap_or(0),
+            });
         }
         State::DoubleQuoted => {
-            errors
-                .push(Error {
-                    kind: ErrorKind::UnclosedDoubleQuote,
-                    byte: b'"',
-                    position: quote_start_position.unwrap_or(0),
-                });
+            errors.push(Error {
+                kind: ErrorKind::UnclosedDoubleQuote,
+                byte: b'"',
+                position: quote_start_position.unwrap_or(0),
+            });
         }
     }
     TokenizeResult { args, errors }
@@ -359,9 +357,7 @@ pub fn tokenize_str(input: &str) -> (Vec<String>, Vec<Error>) {
     let args = result
         .args
         .into_iter()
-        .map(|bytes| {
-            String::from_utf8(bytes).expect("tokenizer should preserve UTF-8 validity")
-        })
+        .map(|bytes| String::from_utf8(bytes).expect("tokenizer should preserve UTF-8 validity"))
         .collect();
     (args, result.errors)
 }
@@ -371,23 +367,34 @@ mod tests {
     fn assert_args_str(input: &str, expected: &[&str]) {
         let (args, errors) = tokenize_str(input);
         assert_eq!(
-            args, expected.iter().map(| s | (* s).to_string()).collect::< Vec < _ >> ()
+            args,
+            expected
+                .iter()
+                .map(|s| (*s).to_string())
+                .collect::<Vec<_>>()
         );
         assert!(errors.is_empty(), "expected no errors, got: {errors:?}");
     }
     fn assert_args(input: &[u8], expected: &[&[u8]]) {
         let result = tokenize(input);
         assert_eq!(
-            result.args, expected.iter().map(| s | s.to_vec()).collect::< Vec < _ >> ()
+            result.args,
+            expected.iter().map(|s| s.to_vec()).collect::<Vec<_>>()
         );
         assert!(
-            result.errors.is_empty(), "expected no errors, got: {:?}", result.errors
+            result.errors.is_empty(),
+            "expected no errors, got: {:?}",
+            result.errors
         );
     }
     fn assert_args_with_errors_str(input: &str, expected: &[&str], error_bytes: &[u8]) {
         let (args, errors) = tokenize_str(input);
         assert_eq!(
-            args, expected.iter().map(| s | (* s).to_string()).collect::< Vec < _ >> ()
+            args,
+            expected
+                .iter()
+                .map(|s| (*s).to_string())
+                .collect::<Vec<_>>()
         );
         let actual_error_bytes: Vec<u8> = errors.iter().map(|e| e.byte).collect();
         assert_eq!(actual_error_bytes, error_bytes);
@@ -395,7 +402,8 @@ mod tests {
     fn assert_args_with_errors(input: &[u8], expected: &[&[u8]], error_bytes: &[u8]) {
         let result = tokenize(input);
         assert_eq!(
-            result.args, expected.iter().map(| s | s.to_vec()).collect::< Vec < _ >> ()
+            result.args,
+            expected.iter().map(|s| s.to_vec()).collect::<Vec<_>>()
         );
         let actual_error_bytes: Vec<u8> = result.errors.iter().map(|e| e.byte).collect();
         assert_eq!(actual_error_bytes, error_bytes);
@@ -403,7 +411,7 @@ mod tests {
     fn assert_has_error(input: &str, expected_kind: ErrorKind) {
         let (_, errors) = tokenize_str(input);
         assert!(
-            errors.iter().any(| e | e.kind == expected_kind),
+            errors.iter().any(|e| e.kind == expected_kind),
             "expected error {expected_kind:?}, got: {errors:?}"
         );
     }
@@ -584,7 +592,10 @@ mod tests {
     fn test_bytes_unclosed_quote() {
         let result = tokenize(b"'hello");
         assert!(
-            result.errors.iter().any(| e | e.kind == ErrorKind::UnclosedSingleQuote)
+            result
+                .errors
+                .iter()
+                .any(|e| e.kind == ErrorKind::UnclosedSingleQuote)
         );
     }
 }

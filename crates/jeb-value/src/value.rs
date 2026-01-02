@@ -1,9 +1,23 @@
 use {
-    super::{bytes::Bytes, float::Float, text::Text},
-    derive_more::{From, IsVariant, TryInto, TryUnwrap, Unwrap},
+    super::{
+        bytes::Bytes,
+        float::Float,
+        text::Text,
+    },
+    derive_more::{
+        From,
+        IsVariant,
+        TryInto,
+        TryUnwrap,
+        Unwrap,
+    },
     indexmap::IndexMap,
 };
-#[cfg_attr(feature = "serde", derive(serde::Serialize), serde(untagged))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize),
+    serde(untagged)
+)]
 #[derive(Debug, Clone, From, Default, TryInto, IsVariant, TryUnwrap, Unwrap)]
 #[must_use]
 pub enum Value {
@@ -28,10 +42,18 @@ impl PartialEq for Value {
             (Unsigned(a), Unsigned(b)) => a == b,
             (Signed(a), Signed(b)) => a == b,
             (Unsigned(a), Signed(b)) => {
-                if *b < 0 { false } else { u64::try_from(*b) == Ok(*a) }
+                if *b < 0 {
+                    false
+                } else {
+                    u64::try_from(*b) == Ok(*a)
+                }
             }
             (Signed(a), Unsigned(b)) => {
-                if *a < 0 { false } else { u64::try_from(*a) == Ok(*b) }
+                if *a < 0 {
+                    false
+                } else {
+                    u64::try_from(*a) == Ok(*b)
+                }
             }
             (Float(a), Float(b)) => a == b,
             (Bytes(a), Bytes(b)) => a == b,
@@ -97,7 +119,10 @@ impl core::hash::Hash for Value {
 }
 impl Ord for Value {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        use {Value::*, core::cmp::Ordering::*};
+        use {
+            Value::*,
+            core::cmp::Ordering::*,
+        };
         fn type_rank(value: &Value) -> usize {
             use Value::*;
             match value {
@@ -115,84 +140,82 @@ impl Ord for Value {
         let self_rank = type_rank(self);
         let other_rank = type_rank(other);
         match self_rank.cmp(&other_rank) {
-            Equal => {
-                match (self, other) {
-                    (Null, Null) => Equal,
-                    (Bool(left), Bool(right)) => left.cmp(right),
-                    (Unsigned(left), Unsigned(right)) => left.cmp(right),
-                    (Signed(left), Signed(right)) => left.cmp(right),
-                    (Float(left), Float(right)) => left.cmp(right),
-                    (Bytes(left), Bytes(right)) => left.cmp(right),
-                    (Text(left), Text(right)) => left.cmp(right),
-                    (Array(left), Array(right)) => left.cmp(right),
-                    (BytesMap(left), BytesMap(right)) => left.iter().cmp(right),
-                    (TextMap(left), TextMap(right)) => left.iter().cmp(right),
-                    (Unsigned(left), Signed(right)) => {
-                        if *right < 0 {
-                            Greater
-                        } else {
-                            match u64::try_from(*right) {
-                                Ok(b_as_u64) => left.cmp(&b_as_u64),
-                                Err(_) => Less,
-                            }
+            Equal => match (self, other) {
+                (Null, Null) => Equal,
+                (Bool(left), Bool(right)) => left.cmp(right),
+                (Unsigned(left), Unsigned(right)) => left.cmp(right),
+                (Signed(left), Signed(right)) => left.cmp(right),
+                (Float(left), Float(right)) => left.cmp(right),
+                (Bytes(left), Bytes(right)) => left.cmp(right),
+                (Text(left), Text(right)) => left.cmp(right),
+                (Array(left), Array(right)) => left.cmp(right),
+                (BytesMap(left), BytesMap(right)) => left.iter().cmp(right),
+                (TextMap(left), TextMap(right)) => left.iter().cmp(right),
+                (Unsigned(left), Signed(right)) => {
+                    if *right < 0 {
+                        Greater
+                    } else {
+                        match u64::try_from(*right) {
+                            Ok(b_as_u64) => left.cmp(&b_as_u64),
+                            Err(_) => Less,
                         }
                     }
-                    (Signed(left), Unsigned(right)) => {
-                        if *left < 0 {
-                            Less
-                        } else {
-                            match u64::try_from(*left) {
-                                Ok(a_as_u64) => a_as_u64.cmp(right),
-                                Err(_) => Greater,
-                            }
-                        }
-                    }
-                    (Unsigned(left), Float(right)) => {
-                        if **right < 0.0 {
-                            return Greater;
-                        }
-                        const U64_MAX_PLUS_1: f64 = 18446744073709551616.0;
-                        if **right >= U64_MAX_PLUS_1 {
-                            return Less;
-                        }
-                        let right_trunc = right.trunc();
-                        let right_int = right_trunc as u64;
-                        match left.cmp(&right_int) {
-                            Less => Less,
-                            Greater => Greater,
-                            Equal => Less,
-                        }
-                    }
-                    (Float(_), Unsigned(_)) => other.cmp(self).reverse(),
-                    (Signed(left), Float(right)) => {
-                        const I64_MAX_PLUS_1: f64 = 9223372036854775808.0;
-                        const I64_MIN: f64 = -9223372036854775808.0;
-                        if **right >= I64_MAX_PLUS_1 {
-                            return Less;
-                        }
-                        if **right < I64_MIN {
-                            return Greater;
-                        }
-                        let right_trunc = right.trunc();
-                        let right_int = right_trunc as i64;
-                        match left.cmp(&right_int) {
-                            Less => Less,
-                            Greater => Greater,
-                            Equal => {
-                                if **right > right_trunc {
-                                    Less
-                                } else if **right < right_trunc {
-                                    Greater
-                                } else {
-                                    Less
-                                }
-                            }
-                        }
-                    }
-                    (Float(_), Signed(_)) => other.cmp(self).reverse(),
-                    _ => unreachable!("type_rank equality should prevent this"),
                 }
-            }
+                (Signed(left), Unsigned(right)) => {
+                    if *left < 0 {
+                        Less
+                    } else {
+                        match u64::try_from(*left) {
+                            Ok(a_as_u64) => a_as_u64.cmp(right),
+                            Err(_) => Greater,
+                        }
+                    }
+                }
+                (Unsigned(left), Float(right)) => {
+                    if **right < 0.0 {
+                        return Greater;
+                    }
+                    const U64_MAX_PLUS_1: f64 = 18446744073709551616.0;
+                    if **right >= U64_MAX_PLUS_1 {
+                        return Less;
+                    }
+                    let right_trunc = right.trunc();
+                    let right_int = right_trunc as u64;
+                    match left.cmp(&right_int) {
+                        Less => Less,
+                        Greater => Greater,
+                        Equal => Less,
+                    }
+                }
+                (Float(_), Unsigned(_)) => other.cmp(self).reverse(),
+                (Signed(left), Float(right)) => {
+                    const I64_MAX_PLUS_1: f64 = 9223372036854775808.0;
+                    const I64_MIN: f64 = -9223372036854775808.0;
+                    if **right >= I64_MAX_PLUS_1 {
+                        return Less;
+                    }
+                    if **right < I64_MIN {
+                        return Greater;
+                    }
+                    let right_trunc = right.trunc();
+                    let right_int = right_trunc as i64;
+                    match left.cmp(&right_int) {
+                        Less => Less,
+                        Greater => Greater,
+                        Equal => {
+                            if **right > right_trunc {
+                                Less
+                            } else if **right < right_trunc {
+                                Greater
+                            } else {
+                                Less
+                            }
+                        }
+                    }
+                }
+                (Float(_), Signed(_)) => other.cmp(self).reverse(),
+                _ => unreachable!("type_rank equality should prevent this"),
+            },
             ord => ord,
         }
     }

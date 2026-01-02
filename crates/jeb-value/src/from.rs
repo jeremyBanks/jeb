@@ -1,12 +1,19 @@
-use crate::{Bytes, Float, Text, Value};
+use crate::{
+    Bytes,
+    Float,
+    Text,
+    Value,
+};
 impl TryFrom<f64> for Float {
     type Error = f64;
+
     fn try_from(value: f64) -> Result<Self, Self::Error> {
         Float::new(value).ok_or(value)
     }
 }
 impl TryFrom<f32> for Float {
     type Error = f32;
+
     fn try_from(value: f32) -> Result<Self, Self::Error> {
         Float::new(value.into()).ok_or(value)
     }
@@ -43,24 +50,28 @@ impl From<u8> for Float {
 }
 impl TryFrom<f32> for Value {
     type Error = f32;
+
     fn try_from(value: f32) -> Result<Self, Self::Error> {
         Float::try_from(value).map(Value::from)
     }
 }
 impl TryFrom<f64> for Value {
     type Error = f64;
+
     fn try_from(value: f64) -> Result<Self, Self::Error> {
         Float::try_from(value).map(Value::from)
     }
 }
 impl TryFrom<u128> for Value {
     type Error = u128;
+
     fn try_from(value: u128) -> Result<Self, Self::Error> {
         u64::try_from(value).map(Value::Unsigned).map_err(|_| value)
     }
 }
 impl TryFrom<i128> for Value {
     type Error = i128;
+
     fn try_from(value: i128) -> Result<Self, Self::Error> {
         i64::try_from(value).map(Value::Signed).map_err(|_| value)
     }
@@ -168,7 +179,9 @@ impl FromIterator<(String, Value)> for Value {
 impl<'a> FromIterator<(&'a str, Value)> for Value {
     fn from_iter<T: IntoIterator<Item = (&'a str, Value)>>(iter: T) -> Self {
         Value::TextMap(
-            iter.into_iter().map(|(k, v)| (Text::from(k.to_string()), v)).collect(),
+            iter.into_iter()
+                .map(|(k, v)| (Text::from(k.to_string()), v))
+                .collect(),
         )
     }
 }

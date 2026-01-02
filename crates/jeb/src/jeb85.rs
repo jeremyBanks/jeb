@@ -1,7 +1,15 @@
 use crate::{
-    ASCII_INLINE_TEXT_LUT, Z85, div_exact, pow, usize_eq,
+    ASCII_INLINE_TEXT_LUT,
+    Z85,
+    div_exact,
+    pow,
+    usize_eq,
     z85::{
-        BASE_85, BLOCK_BYTES_4, BLOCK_DIGITS_5, BLOCK_DIGITS_BY_BYTES, encode_z85_block,
+        BASE_85,
+        BLOCK_BYTES_4,
+        BLOCK_DIGITS_5,
+        BLOCK_DIGITS_BY_BYTES,
+        encode_z85_block,
         encoded_z85_length,
     },
 };
@@ -14,17 +22,11 @@ pub const MAX_RAW_BYTES: usize = usize_eq(208_802_508, MAX_RAW_BLOCKS * BLOCK_BY
 /// This encoding's number of raw blocks in a raw chunk is limited by the
 /// maximum raw prefix size value that can fit in the initial block with
 /// `RAW_PREFIX`.
-pub const MAX_RAW_BLOCKS: usize = usize_eq(
-    52_200_627,
-    2 + pow(BASE_85, BLOCK_DIGITS_5 - 1),
-);
+pub const MAX_RAW_BLOCKS: usize = usize_eq(52_200_627, 2 + pow(BASE_85, BLOCK_DIGITS_5 - 1));
 /// We encode a maximum of 64 KiB of raw data per raw chunk.
 pub const TARGET_RAW_BYTES: usize = usize_eq(65_536, 64 * 1024);
 /// We encode a maximum of 16 Ki blocks per raw chunk.
-pub const TARGET_RAW_BLOCKS: usize = usize_eq(
-    16_384,
-    div_exact(TARGET_RAW_BYTES, BLOCK_BYTES_4),
-);
+pub const TARGET_RAW_BLOCKS: usize = usize_eq(16_384, div_exact(TARGET_RAW_BYTES, BLOCK_BYTES_4));
 /// When this encoding is used to convert binary data into line of text, our
 /// implementation limits each line to 80 digits.
 pub const TARGET_LINE_SIZE_DIGITS: usize = 80;
@@ -34,7 +36,10 @@ pub const TARGET_LINE_SIZE_BYTES: usize = usize_eq(
     64,
     div_exact(TARGET_LINE_SIZE_DIGITS * BLOCK_BYTES_4, BLOCK_DIGITS_5),
 );
-#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
+#[cfg_attr(
+    feature = "wasm",
+    wasm_bindgen::prelude::wasm_bindgen
+)]
 #[must_use]
 pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
     let encoded_length = encoded_z85_length(bytes.len());
@@ -53,7 +58,9 @@ pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
             } else {
                 let block_count_prefix_value = raw_block_count - 1;
                 let block_count_prefix_block = encode_z85_block(
-                    u32::try_from(block_count_prefix_value).unwrap().to_be_bytes(),
+                    u32::try_from(block_count_prefix_value)
+                        .unwrap()
+                        .to_be_bytes(),
                 );
                 let mut block_count_prefix = &block_count_prefix_block[..];
                 while block_count_prefix.first() == Some(&b'0') {
@@ -62,8 +69,7 @@ pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
                 let mut block_prefix = block_count_prefix.to_vec();
                 block_prefix.extend([RAW_PREFIX]);
                 let raw_block_digits = raw_block_count * BLOCK_DIGITS_5;
-                let padding_needed = raw_block_digits - block_prefix.len()
-                    - raw_buffer.len();
+                let padding_needed = raw_block_digits - block_prefix.len() - raw_buffer.len();
                 let mut padding = vec![RAW_PADDING; padding_needed];
                 let mut cosmetic_padding = Vec::new();
                 for byte in bytes {
@@ -75,8 +81,7 @@ pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
                 }
                 cosmetic_padding.push(RAW_PREFIX);
                 let available_len = padding.len().min(cosmetic_padding.len());
-                padding[..available_len]
-                    .copy_from_slice(&cosmetic_padding[..available_len]);
+                padding[..available_len].copy_from_slice(&cosmetic_padding[..available_len]);
                 output.extend(&block_prefix);
                 output.extend(&raw_buffer);
                 output.extend(&padding);

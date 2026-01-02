@@ -29,10 +29,20 @@ pub trait SpiralSquare {
 }
 macro_rules! impl_with {
     ($U:ty, $S:ty, $UB:ty, $W:expr) => {
-        impl SpiralSquare for $U { type Out = ($S, $S); fn spiral_square(self) ->
-        Self::Out { to_xy::<$U, $S, $UB, $W > (self) } } impl SpiralSquare for ($S, $S) {
-        type Out = $U; fn spiral_square(self) -> Self::Out { from_xy::<$U, $S, $UB, $W >
-        (self.0, self.1) } }
+        impl SpiralSquare for $U {
+            type Out = ($S, $S);
+
+            fn spiral_square(self) -> Self::Out {
+                to_xy::<$U, $S, $UB, $W>(self)
+            }
+        }
+        impl SpiralSquare for ($S, $S) {
+            type Out = $U;
+
+            fn spiral_square(self) -> Self::Out {
+                from_xy::<$U, $S, $UB, $W>(self.0, self.1)
+            }
+        }
     };
 }
 use impl_with;
@@ -195,7 +205,8 @@ mod tests {
             let expected = 8 * m as u32;
             assert_eq!(
                 shell_counts[m], expected,
-                "shell {m} should have {expected} points, got {}", shell_counts[m]
+                "shell {m} should have {expected} points, got {}",
+                shell_counts[m]
             );
         }
         assert_eq!(shell_counts[128], 511, "shell 128 should have 511 points");
@@ -218,10 +229,19 @@ mod tests {
     fn angular_order_within_shell() {
         let shell1: Vec<(i8, i8)> = (1u16..9).map(|u| spiral_square(u)).collect();
         let expected = vec![
-            (1i8, 0i8), (1, 1), (0, 1), (- 1, 1), (- 1, 0), (- 1, - 1), (0, - 1), (1, -
-            1),
+            (1i8, 0i8),
+            (1, 1),
+            (0, 1),
+            (-1, 1),
+            (-1, 0),
+            (-1, -1),
+            (0, -1),
+            (1, -1),
         ];
-        assert_eq!(shell1, expected, "shell 1 should be in counterclockwise order");
+        assert_eq!(
+            shell1, expected,
+            "shell 1 should be in counterclockwise order"
+        );
     }
     #[test]
     fn region_b_points() {
@@ -234,7 +254,7 @@ mod tests {
         assert_eq!(region_b_points.len(), 511);
         for (x, y) in &region_b_points {
             assert!(
-                * x == i8::MIN || * y == i8::MIN,
+                *x == i8::MIN || *y == i8::MIN,
                 "region B point ({x}, {y}) doesn't involve MIN"
             );
         }

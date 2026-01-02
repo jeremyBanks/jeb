@@ -145,60 +145,178 @@ fn isqrt_u64(x: u64) -> u64 {
 }
 macro_rules! impl_with {
     ($U:ty, $S:ty, $UB:ty, $W:expr, $mod:ident) => {
-        mod $mod { use super::*; const W : u32 = $W; const MAX_S : i64 = <$S >::MAX as
-        i64; const MIN_S : i64 = <$S >::MIN as i64; const BANNED : $UB = (1 as $UB) << (W
-        - 1); #[inline(always)] fn two_w() -> u64 { 1u64 << W } #[doc =
-        " Region A size: (2^W - 1)^2"] #[inline(always)] fn region_a_size() -> u64 { let
-        side = two_w() - 1; side * side } #[doc = " Outer layer id: MAX+1 = 2^(W-1)"]
-        #[inline(always)] fn outer_layer_id() -> u64 { (MAX_S as u64) + 1 } #[doc =
-        " Outer ragged size: 2^(W+1) - 1"] #[inline(always)] fn outer_size() -> u64 {
-        (1u64 << (W + 1)) - 1 } #[inline(always)] fn base(m : u64) -> u64 { if m == 0 { 0
-        } else { (2 * m - 1) * (2 * m - 1) } } #[inline(always)] fn shell_len(m : u64) ->
-        u64 { if m == 0 { 1 } else { 8 * m } } #[doc =
-        " Map perimeter index j in [0, 8M) to point on shell max(|x|,|y|)=M (M>0)."]
-        #[inline(always)] fn perimeter_point(m : i64, j : u64) -> (i64, i64) { let s =
-        2u64 * (m as u64); if j < s { (- m + j as i64, m) } else if j < 2 * s { let jj =
-        j - s; (m, m - jj as i64) } else if j < 3 * s { let jj = j - 2 * s; (m - jj as
-        i64, - m) } else { let jj = j - 3 * s; (- m, - m + jj as i64) } } #[doc =
-        " Inverse of perimeter_point. Requires shell perimeter point at M>0."]
-        #[inline(always)] fn perimeter_index(m : i64, x : i64, y : i64) -> u64 { let s =
-        2u64 * (m as u64); if y == m && x != m { (x + m) as u64 } else if x == m && y !=
-        - m { s + (m - y) as u64 } else if y == - m && x != - m { 2 * s + (m - x) as u64
-        } else { 3 * s + (y + m) as u64 } } #[inline(always)] fn bits_to_signed(bits :
-        $UB) -> $S { bits as $S } #[inline(always)] fn signed_to_bits(v : $S) -> $UB { v
-        as $UB } #[doc =
-        " Map k in [0, 2^W - 2] to all $UB except the banned value (MIN bit"] #[doc =
-        " pattern)."] #[inline(always)] fn decompress_skip_banned(k : $UB) -> $UB { if k
-        < BANNED { k } else { k.wrapping_add(1) } } #[doc =
-        " Inverse of decompress_skip_banned for x_bits != banned."] #[inline(always)] fn
-        compress_skip_banned(x_bits : $UB) -> $UB { debug_assert!(x_bits != BANNED); if
-        x_bits < BANNED { x_bits } else { x_bits.wrapping_sub(1) } } #[doc =
-        " u -> (x,y), total on full $U domain."] pub fn to_xy < const SEED : u64 > (u_in
-        : $U) -> ($S, $S) { let u = u_in as u64; let n0 = region_a_size(); if u < n0 { if
-        u == 0 { return (0 as $S, 0 as $S); } let r = isqrt_u64(u); let m = r.div_ceil(2)
-        as u64; let b = base(m); let t = u - b; let n = shell_len(m); let j =
-        permute_layer(t, n, m, SEED); let (x, y) = perimeter_point(m as i64, j); return
-        (x as $S, y as $S); } let r = u - n0; let n = outer_size(); debug_assert!(r < n);
-        let layer_id = outer_layer_id(); let rp = permute_layer(r, n, layer_id, SEED);
-        let two_w = two_w(); if rp < two_w { let y_bits = rp as $UB; (MIN_S as $S,
-        bits_to_signed(y_bits)) } else { let k = (rp - two_w) as $UB; let x_bits =
-        decompress_skip_banned(k); (bits_to_signed(x_bits), MIN_S as $S) } } #[doc =
-        " (x,y) -> u, total on full ($S,$S) domain."] pub fn from_xy < const SEED : u64 >
-        (x : $S, y : $S) -> $U { let n0 = region_a_size(); if (x as i64) == MIN_S || (y
-        as i64) == MIN_S { let n = outer_size(); let layer_id = outer_layer_id(); let
-        two_w = two_w(); let rp : u64 = if (x as i64) == MIN_S { signed_to_bits(y) as u64
-        } else { debug_assert!((y as i64) == MIN_S); let x_bits = signed_to_bits(x);
-        debug_assert!(x_bits != BANNED); let k = compress_skip_banned(x_bits) as u64;
-        two_w + k }; let r = permute_layer_inv(rp, n, layer_id, SEED); let u = n0 + r;
-        return u as $U; } let xi = x as i64; let yi = y as i64; let ax = xi
-        .unsigned_abs(); let ay = yi.unsigned_abs(); let m = ax.max(ay); if m == 0 {
-        return 0 as $U; } let j = perimeter_index(m as i64, xi, yi); let n =
-        shell_len(m); let t = permute_layer_inv(j, n, m, SEED); let u = base(m) + t; u as
-        $U } } impl < const SEED : u64 > ScatterSquare < SEED > for $U { type Out = ($S,
-        $S); #[inline(always)] fn scatter_square(self) -> Self::Out { $mod ::to_xy::<
-        SEED > (self) } } impl < const SEED : u64 > ScatterSquare < SEED > for ($S, $S) {
-        type Out = $U; #[inline(always)] fn scatter_square(self) -> Self::Out { $mod
-        ::from_xy::< SEED > (self.0, self.1) } }
+        mod $mod {
+            use super::*;
+            const W: u32 = $W;
+            const MAX_S: i64 = <$S>::MAX as i64;
+            const MIN_S: i64 = <$S>::MIN as i64;
+            const BANNED: $UB = (1 as $UB) << (W - 1);
+            #[inline(always)]
+            fn two_w() -> u64 {
+                1u64 << W
+            }
+            #[doc = " Region A size: (2^W - 1)^2"]
+            #[inline(always)]
+            fn region_a_size() -> u64 {
+                let side = two_w() - 1;
+                side * side
+            }
+            #[doc = " Outer layer id: MAX+1 = 2^(W-1)"]
+            #[inline(always)]
+            fn outer_layer_id() -> u64 {
+                (MAX_S as u64) + 1
+            }
+            #[doc = " Outer ragged size: 2^(W+1) - 1"]
+            #[inline(always)]
+            fn outer_size() -> u64 {
+                (1u64 << (W + 1)) - 1
+            }
+            #[inline(always)]
+            fn base(m: u64) -> u64 {
+                if m == 0 { 0 } else { (2 * m - 1) * (2 * m - 1) }
+            }
+            #[inline(always)]
+            fn shell_len(m: u64) -> u64 {
+                if m == 0 { 1 } else { 8 * m }
+            }
+            #[doc = " Map perimeter index j in [0, 8M) to point on shell max(|x|,|y|)=M (M>0)."]
+            #[inline(always)]
+            fn perimeter_point(m: i64, j: u64) -> (i64, i64) {
+                let s = 2u64 * (m as u64);
+                if j < s {
+                    (-m + j as i64, m)
+                } else if j < 2 * s {
+                    let jj = j - s;
+                    (m, m - jj as i64)
+                } else if j < 3 * s {
+                    let jj = j - 2 * s;
+                    (m - jj as i64, -m)
+                } else {
+                    let jj = j - 3 * s;
+                    (-m, -m + jj as i64)
+                }
+            }
+            #[doc = " Inverse of perimeter_point. Requires shell perimeter point at M>0."]
+            #[inline(always)]
+            fn perimeter_index(m: i64, x: i64, y: i64) -> u64 {
+                let s = 2u64 * (m as u64);
+                if y == m && x != m {
+                    (x + m) as u64
+                } else if x == m && y != -m {
+                    s + (m - y) as u64
+                } else if y == -m && x != -m {
+                    2 * s + (m - x) as u64
+                } else {
+                    3 * s + (y + m) as u64
+                }
+            }
+            #[inline(always)]
+            fn bits_to_signed(bits: $UB) -> $S {
+                bits as $S
+            }
+            #[inline(always)]
+            fn signed_to_bits(v: $S) -> $UB {
+                v as $UB
+            }
+            #[doc = " Map k in [0, 2^W - 2] to all $UB except the banned value (MIN bit"]
+            #[doc = " pattern)."]
+            #[inline(always)]
+            fn decompress_skip_banned(k: $UB) -> $UB {
+                if k < BANNED { k } else { k.wrapping_add(1) }
+            }
+            #[doc = " Inverse of decompress_skip_banned for x_bits != banned."]
+            #[inline(always)]
+            fn compress_skip_banned(x_bits: $UB) -> $UB {
+                debug_assert!(x_bits != BANNED);
+                if x_bits < BANNED {
+                    x_bits
+                } else {
+                    x_bits.wrapping_sub(1)
+                }
+            }
+            #[doc = " u -> (x,y), total on full $U domain."]
+            pub fn to_xy<const SEED: u64>(u_in: $U) -> ($S, $S) {
+                let u = u_in as u64;
+                let n0 = region_a_size();
+                if u < n0 {
+                    if u == 0 {
+                        return (0 as $S, 0 as $S);
+                    }
+                    let r = isqrt_u64(u);
+                    let m = r.div_ceil(2) as u64;
+                    let b = base(m);
+                    let t = u - b;
+                    let n = shell_len(m);
+                    let j = permute_layer(t, n, m, SEED);
+                    let (x, y) = perimeter_point(m as i64, j);
+                    return (x as $S, y as $S);
+                }
+                let r = u - n0;
+                let n = outer_size();
+                debug_assert!(r < n);
+                let layer_id = outer_layer_id();
+                let rp = permute_layer(r, n, layer_id, SEED);
+                let two_w = two_w();
+                if rp < two_w {
+                    let y_bits = rp as $UB;
+                    (MIN_S as $S, bits_to_signed(y_bits))
+                } else {
+                    let k = (rp - two_w) as $UB;
+                    let x_bits = decompress_skip_banned(k);
+                    (bits_to_signed(x_bits), MIN_S as $S)
+                }
+            }
+            #[doc = " (x,y) -> u, total on full ($S,$S) domain."]
+            pub fn from_xy<const SEED: u64>(x: $S, y: $S) -> $U {
+                let n0 = region_a_size();
+                if (x as i64) == MIN_S || (y as i64) == MIN_S {
+                    let n = outer_size();
+                    let layer_id = outer_layer_id();
+                    let two_w = two_w();
+                    let rp: u64 = if (x as i64) == MIN_S {
+                        signed_to_bits(y) as u64
+                    } else {
+                        debug_assert!((y as i64) == MIN_S);
+                        let x_bits = signed_to_bits(x);
+                        debug_assert!(x_bits != BANNED);
+                        let k = compress_skip_banned(x_bits) as u64;
+                        two_w + k
+                    };
+                    let r = permute_layer_inv(rp, n, layer_id, SEED);
+                    let u = n0 + r;
+                    return u as $U;
+                }
+                let xi = x as i64;
+                let yi = y as i64;
+                let ax = xi.unsigned_abs();
+                let ay = yi.unsigned_abs();
+                let m = ax.max(ay);
+                if m == 0 {
+                    return 0 as $U;
+                }
+                let j = perimeter_index(m as i64, xi, yi);
+                let n = shell_len(m);
+                let t = permute_layer_inv(j, n, m, SEED);
+                let u = base(m) + t;
+                u as $U
+            }
+        }
+        impl<const SEED: u64> ScatterSquare<SEED> for $U {
+            type Out = ($S, $S);
+
+            #[inline(always)]
+            fn scatter_square(self) -> Self::Out {
+                $mod::to_xy::<SEED>(self)
+            }
+        }
+        impl<const SEED: u64> ScatterSquare<SEED> for ($S, $S) {
+            type Out = $U;
+
+            #[inline(always)]
+            fn scatter_square(self) -> Self::Out {
+                $mod::from_xy::<SEED>(self.0, self.1)
+            }
+        }
     };
 }
 use impl_with;
@@ -220,7 +338,9 @@ mod tests {
                 let u: u16 = scatter_square::<0, _>((x, y));
                 let (back_x, back_y): (i8, i8) = scatter_square::<0, _>(u);
                 assert_eq!(
-                    (x, y), (back_x, back_y), "roundtrip failed for ({x}, {y}) -> {u}"
+                    (x, y),
+                    (back_x, back_y),
+                    "roundtrip failed for ({x}, {y}) -> {u}"
                 );
             }
         }
@@ -253,11 +373,13 @@ mod tests {
             let expected = 8 * m as u32;
             assert_eq!(
                 shell_counts[m], expected,
-                "shell {m} should have {expected} points, got {}", shell_counts[m]
+                "shell {m} should have {expected} points, got {}",
+                shell_counts[m]
             );
         }
         assert_eq!(
-            shell_counts[128], 511, "shell 128 (ragged) should have 511 points, got {}",
+            shell_counts[128], 511,
+            "shell 128 (ragged) should have 511 points, got {}",
             shell_counts[128]
         );
     }
@@ -285,7 +407,10 @@ mod tests {
                 same_count += 1;
             }
         }
-        assert!(same_count < 50, "too many matches between seeds: {same_count}/999");
+        assert!(
+            same_count < 50,
+            "too many matches between seeds: {same_count}/999"
+        );
     }
     #[test]
     fn roundtrip_u32_sample() {
@@ -322,14 +447,14 @@ mod tests {
         assert_eq!(region_b_points.len(), 511);
         for (x, y) in &region_b_points {
             assert!(
-                * x == i8::MIN || * y == i8::MIN,
+                *x == i8::MIN || *y == i8::MIN,
                 "region B point ({x}, {y}) doesn't involve MIN"
             );
         }
     }
     #[test]
     fn specific_values() {
-        assert_eq!(scatter_square::< 0, _ > (0u16), (0i8, 0i8));
+        assert_eq!(scatter_square::<0, _>(0u16), (0i8, 0i8));
         let (x, y): (i8, i8) = scatter_square::<0, _>(65024u16);
         let shell = (x as i32).abs().max((y as i32).abs());
         assert_eq!(shell, 127, "last region A point should be in shell 127");

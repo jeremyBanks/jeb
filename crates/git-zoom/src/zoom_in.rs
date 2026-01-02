@@ -1,5 +1,8 @@
 //! git zoom in implementation.
-use crate::{git, scan};
+use crate::{
+    git,
+    scan,
+};
 const COMMITTER_NAME: &str = "🔎";
 const COMMITTER_EMAIL: &str = "git-zoom-in@localhost";
 /// Normalize a path: strip trailing slashes, remove `.` components, reject
@@ -34,8 +37,7 @@ pub fn zoom_in(path: Option<&str>, allow_empty: bool) -> git::Result<()> {
                 None => {
                     return Err(git::Error {
                         command: "zoom in".to_string(),
-                        message: "no path specified and no previous zoom-out found"
-                            .to_string(),
+                        message: "no path specified and no previous zoom-out found".to_string(),
                     });
                 }
                 Some(f) => (f.path.clone(), Some(f)),
@@ -64,25 +66,16 @@ pub fn zoom_in(path: Option<&str>, allow_empty: bool) -> git::Result<()> {
         None => {
             let empty_tree = git::empty_tree()?;
             let seed_msg = "Initial commit".to_string();
-            git::commit_tree(
-                &empty_tree,
-                &[],
-                &seed_msg,
-                COMMITTER_NAME,
-                COMMITTER_EMAIL,
-            )?
+            git::commit_tree(&empty_tree, &[], &seed_msg, COMMITTER_NAME, COMMITTER_EMAIL)?
         }
-        Some(found) => {
-            found
-                .second_parent
-                .ok_or_else(|| git::Error {
-                    command: "zoom in".to_string(),
-                    message: "zoom-out commit has no second parent".to_string(),
-                })?
-        }
+        Some(found) => found.second_parent.ok_or_else(|| git::Error {
+            command: "zoom in".to_string(),
+            message: "zoom-out commit has no second parent".to_string(),
+        })?,
     };
     let merge_msg = format!(
-        "Merge from '{}'\n\ngit-zoom-in: {}", target_path, target_path
+        "Merge from '{}'\n\ngit-zoom-in: {}",
+        target_path, target_path
     );
     let merge_commit = git::commit_tree(
         &subtree_hash,
@@ -93,19 +86,27 @@ pub fn zoom_in(path: Option<&str>, allow_empty: bool) -> git::Result<()> {
     )?;
     git::update_ref_head(&merge_commit)?;
     git::reset_hard()?;
-    eprintln!("Zoomed in to '{}' at {}", target_path, & merge_commit[..8]);
+    eprintln!("Zoomed in to '{}' at {}", target_path, &merge_commit[..8]);
     Ok(())
 }
 #[cfg(test)]
 mod tests {
     use {
-        super::*, std::{fs, process::Command},
+        super::*,
+        std::{
+            fs,
+            process::Command,
+        },
         tempfile::TempDir,
     };
     fn setup_test_repo() -> TempDir {
         let dir = TempDir::new().unwrap();
         std::env::set_current_dir(dir.path()).unwrap();
-        Command::new("git").args(["init"]).current_dir(dir.path()).output().unwrap();
+        Command::new("git")
+            .args(["init"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
         Command::new("git")
             .args(["config", "user.email", "test@test.com"])
             .current_dir(dir.path())
@@ -124,7 +125,11 @@ mod tests {
         fs::create_dir_all(dir.path().join("src/lib")).unwrap();
         fs::write(dir.path().join("src/lib/foo.txt"), "hello").unwrap();
         fs::write(dir.path().join("root.txt"), "root").unwrap();
-        Command::new("git").args(["add", "."]).current_dir(dir.path()).output().unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
         Command::new("git")
             .args(["commit", "-m", "initial"])
             .current_dir(dir.path())
@@ -132,8 +137,8 @@ mod tests {
             .unwrap();
         zoom_in(Some("src/lib"), false).unwrap();
         assert!(dir.path().join("foo.txt").exists());
-        assert!(! dir.path().join("root.txt").exists());
-        assert!(! dir.path().join("src").exists());
+        assert!(!dir.path().join("root.txt").exists());
+        assert!(!dir.path().join("src").exists());
         let body = git::commit_body("HEAD").unwrap();
         assert!(body.contains("git-zoom-in: src/lib"));
         let parents = git::parents("HEAD").unwrap();
@@ -143,7 +148,11 @@ mod tests {
     fn test_zoom_in_path_not_exist() {
         let dir = setup_test_repo();
         fs::write(dir.path().join("root.txt"), "root").unwrap();
-        Command::new("git").args(["add", "."]).current_dir(dir.path()).output().unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
         Command::new("git")
             .args(["commit", "-m", "initial"])
             .current_dir(dir.path())
@@ -156,7 +165,11 @@ mod tests {
     fn test_zoom_in_allow_empty() {
         let dir = setup_test_repo();
         fs::write(dir.path().join("root.txt"), "root").unwrap();
-        Command::new("git").args(["add", "."]).current_dir(dir.path()).output().unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
         Command::new("git")
             .args(["commit", "-m", "initial"])
             .current_dir(dir.path())
@@ -174,7 +187,11 @@ mod tests {
         let dir = setup_test_repo();
         fs::create_dir_all(dir.path().join("src/lib")).unwrap();
         fs::write(dir.path().join("src/lib/foo.txt"), "hello").unwrap();
-        Command::new("git").args(["add", "."]).current_dir(dir.path()).output().unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
         Command::new("git")
             .args(["commit", "-m", "initial"])
             .current_dir(dir.path())
@@ -183,13 +200,17 @@ mod tests {
         zoom_in(Some("src/lib/"), false).unwrap();
         let body = git::commit_body("HEAD").unwrap();
         assert!(body.contains("git-zoom-in: src/lib"));
-        assert!(! body.contains("git-zoom-in: src/lib/"));
+        assert!(!body.contains("git-zoom-in: src/lib/"));
     }
     #[test]
     fn test_zoom_in_invalid_paths() {
         let dir = setup_test_repo();
         fs::write(dir.path().join("root.txt"), "root").unwrap();
-        Command::new("git").args(["add", "."]).current_dir(dir.path()).output().unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
         Command::new("git")
             .args(["commit", "-m", "initial"])
             .current_dir(dir.path())
@@ -208,7 +229,11 @@ mod tests {
         let dir = setup_test_repo();
         fs::create_dir_all(dir.path().join("src/lib")).unwrap();
         fs::write(dir.path().join("src/lib/foo.txt"), "hello").unwrap();
-        Command::new("git").args(["add", "."]).current_dir(dir.path()).output().unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
         Command::new("git")
             .args(["commit", "-m", "initial"])
             .current_dir(dir.path())
@@ -217,6 +242,6 @@ mod tests {
         zoom_in(Some("./src/./lib"), false).unwrap();
         let body = git::commit_body("HEAD").unwrap();
         assert!(body.contains("git-zoom-in: src/lib"));
-        assert!(! body.contains("./"));
+        assert!(!body.contains("./"));
     }
 }

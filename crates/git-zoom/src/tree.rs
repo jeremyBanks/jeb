@@ -3,11 +3,7 @@ use crate::git;
 /// Replace a subtree at a given path within a tree.
 /// The path can be nested (e.g., "src/lib/core").
 /// If intermediate components are blobs, they are replaced with trees.
-pub fn replace_subtree(
-    base_tree: &str,
-    path: &str,
-    new_subtree: &str,
-) -> git::Result<String> {
+pub fn replace_subtree(base_tree: &str, path: &str, new_subtree: &str) -> git::Result<String> {
     let parts: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
     if parts.is_empty() {
         return Ok(new_subtree.to_string());
@@ -31,26 +27,21 @@ fn replace_subtree_recursive(
         if name == target_name {
             found = true;
             if remaining_path.is_empty() {
-                new_entries
-                    .push((
-                        "040000".to_string(),
-                        "tree".to_string(),
-                        new_subtree.to_string(),
-                        name,
-                    ));
+                new_entries.push((
+                    "040000".to_string(),
+                    "tree".to_string(),
+                    new_subtree.to_string(),
+                    name,
+                ));
             } else {
                 let subtree_hash = if obj_type == "blob" {
                     git::empty_tree()?
                 } else {
                     hash
                 };
-                let new_hash = replace_subtree_recursive(
-                    &subtree_hash,
-                    remaining_path,
-                    new_subtree,
-                )?;
-                new_entries
-                    .push(("040000".to_string(), "tree".to_string(), new_hash, name));
+                let new_hash =
+                    replace_subtree_recursive(&subtree_hash, remaining_path, new_subtree)?;
+                new_entries.push(("040000".to_string(), "tree".to_string(), new_hash, name));
             }
         } else {
             new_entries.push((mode, obj_type, hash, name));
@@ -58,27 +49,21 @@ fn replace_subtree_recursive(
     }
     if !found {
         if remaining_path.is_empty() {
-            new_entries
-                .push((
-                    "040000".to_string(),
-                    "tree".to_string(),
-                    new_subtree.to_string(),
-                    target_name.to_string(),
-                ));
+            new_entries.push((
+                "040000".to_string(),
+                "tree".to_string(),
+                new_subtree.to_string(),
+                target_name.to_string(),
+            ));
         } else {
             let empty = git::empty_tree()?;
-            let new_hash = replace_subtree_recursive(
-                &empty,
-                remaining_path,
-                new_subtree,
-            )?;
-            new_entries
-                .push((
-                    "040000".to_string(),
-                    "tree".to_string(),
-                    new_hash,
-                    target_name.to_string(),
-                ));
+            let new_hash = replace_subtree_recursive(&empty, remaining_path, new_subtree)?;
+            new_entries.push((
+                "040000".to_string(),
+                "tree".to_string(),
+                new_hash,
+                target_name.to_string(),
+            ));
         }
     }
     git::mktree(&new_entries)
@@ -86,13 +71,21 @@ fn replace_subtree_recursive(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, std::{fs, process::Command},
+        super::*,
+        std::{
+            fs,
+            process::Command,
+        },
         tempfile::TempDir,
     };
     fn setup_test_repo() -> TempDir {
         let dir = TempDir::new().unwrap();
         std::env::set_current_dir(dir.path()).unwrap();
-        Command::new("git").args(["init"]).current_dir(dir.path()).output().unwrap();
+        Command::new("git")
+            .args(["init"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
         Command::new("git")
             .args(["config", "user.email", "test@test.com"])
             .current_dir(dir.path())
@@ -111,7 +104,11 @@ mod tests {
         fs::create_dir_all(dir.path().join("src/lib")).unwrap();
         fs::write(dir.path().join("src/lib/foo.txt"), "original").unwrap();
         fs::write(dir.path().join("root.txt"), "root").unwrap();
-        Command::new("git").args(["add", "."]).current_dir(dir.path()).output().unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
         Command::new("git")
             .args(["commit", "-m", "initial"])
             .current_dir(dir.path())
@@ -120,7 +117,11 @@ mod tests {
         let base_tree = git::rev_parse("HEAD^{tree}").unwrap();
         fs::write(dir.path().join("src/lib/foo.txt"), "modified").unwrap();
         fs::write(dir.path().join("src/lib/bar.txt"), "new file").unwrap();
-        Command::new("git").args(["add", "."]).current_dir(dir.path()).output().unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
         let output = Command::new("git")
             .args(["write-tree", "--prefix=src/lib"])
             .current_dir(dir.path())
@@ -140,7 +141,11 @@ mod tests {
     fn test_replace_subtree_create_path() {
         let dir = setup_test_repo();
         fs::write(dir.path().join("root.txt"), "root").unwrap();
-        Command::new("git").args(["add", "."]).current_dir(dir.path()).output().unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
         Command::new("git")
             .args(["commit", "-m", "initial"])
             .current_dir(dir.path())
@@ -149,7 +154,11 @@ mod tests {
         let base_tree = git::rev_parse("HEAD^{tree}").unwrap();
         fs::create_dir_all(dir.path().join("newdir")).unwrap();
         fs::write(dir.path().join("newdir/new.txt"), "new content").unwrap();
-        Command::new("git").args(["add", "."]).current_dir(dir.path()).output().unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
         let output = Command::new("git")
             .args(["write-tree", "--prefix=newdir"])
             .current_dir(dir.path())
