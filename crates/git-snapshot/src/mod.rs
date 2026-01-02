@@ -1875,10 +1875,10 @@ fn parse_author_date(
         })?;
         Timestamp::from_iso8601(date_str)
     } else {
-        // Default: 256 seconds after max parent author-date, or 2021-01-14T08:25:36Z
+        // Default: 256 seconds after max parent author-date, or 2024-12-06T06:12:24-06:24
         // for first commit
         if parents.is_empty() {
-            Timestamp::from_iso8601("2021-01-14T08:25:36Z")
+            Timestamp::from_iso8601("2024-12-06T06:12:24-06:24")
         } else {
             let max_parent = parents
                 .iter()
@@ -3215,7 +3215,7 @@ fn serialize_commit(
 
     // Serialize author-date (omit if default)
     let default_author_date = if parent_commits.is_empty() {
-        Timestamp::from_iso8601("2021-01-14T08:25:36Z").unwrap()
+        Timestamp::from_iso8601("2024-12-06T06:12:24-06:24").unwrap()
     } else {
         let max_parent = parent_commits
             .iter()
