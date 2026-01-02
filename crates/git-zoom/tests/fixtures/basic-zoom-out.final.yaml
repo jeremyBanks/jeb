@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 18128b8fc6c1a90c77cac597ea7f0e775068e763
+    main: 55b3c38f3b263e0af7423a9700b3c3c71e327bad
 56e7e5:
   message: Initial commit
   tree:
@@ -9,42 +9,42 @@ refs:
     src:
       lib:
         foo.txt: original
-4a3b6c:
+985cd0:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:03:07Z
-  commit-date: 2026-01-02T21:03:07Z
+  author-date: 2026-01-02T21:08:22Z
+  commit-date: 2026-01-02T21:08:22Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
   parents: []
   tree: {}
-aab005:
-  author-date: 2026-01-02T21:03:07Z
-  commit-date: 2026-01-02T21:03:07Z
+'178363':
+  author-date: 2026-01-02T21:08:22Z
+  commit-date: 2026-01-02T21:08:22Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src/lib'
 
     git-zoom-in: src/lib
   parents:
-  - 4a3b6c
+  - 985cd0
   - 56e7e5
   tree:
     foo.txt:
       //commit: 56e7e5
       //path: src/lib/foo.txt
-594a4a:
+f8f309:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:03:08Z
-  commit-date: 2026-01-02T21:03:08Z
+  author-date: 2026-01-02T21:08:22Z
+  commit-date: 2026-01-02T21:08:22Z
   message: |
     Update foo.txt
   tree:
     foo.txt: modified
-18128b8fc6c1a90c77cac597ea7f0e775068e763:
+55b3c38f3b263e0af7423a9700b3c3c71e327bad:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:03:09Z
-  commit-date: 2026-01-02T21:03:09Z
+  author-date: 2026-01-02T21:08:23Z
+  commit-date: 2026-01-02T21:08:23Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src/lib'
@@ -52,10 +52,10 @@ aab005:
     git-zoom-out: src/lib
   parents:
   - 56e7e5
-  - 594a4a
+  - f8f309
   tree:
     src:
       lib:
         foo.txt:
-          //commit: 594a4a
+          //commit: f8f309
           //path: foo.txt

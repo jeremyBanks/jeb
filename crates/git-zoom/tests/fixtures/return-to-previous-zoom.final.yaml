@@ -1,11 +1,11 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 1babc9bbd6b7eb078b92d5792769ee86fe026c6e
-4a3b6c:
+    main: 6797040c2a06bbe3477b61ed7843e9467510b7be
+985cd0:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:03:07Z
-  commit-date: 2026-01-02T21:03:07Z
+  author-date: 2026-01-02T21:08:22Z
+  commit-date: 2026-01-02T21:08:22Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
@@ -17,33 +17,33 @@ refs:
     root.txt: root
     src:
       file.txt: original
-52753b:
-  author-date: 2026-01-02T21:03:07Z
-  commit-date: 2026-01-02T21:03:07Z
+f338be:
+  author-date: 2026-01-02T21:08:22Z
+  commit-date: 2026-01-02T21:08:22Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - 4a3b6c
+  - 985cd0
   - 7ce26a
   tree:
     file.txt:
       //commit: 7ce26a
       //path: src/file.txt
-89948b:
+c4791c:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:03:08Z
-  commit-date: 2026-01-02T21:03:08Z
+  author-date: 2026-01-02T21:08:23Z
+  commit-date: 2026-01-02T21:08:23Z
   message: |
     Update
   tree:
     file.txt: modified
-b88777:
+e7ad21:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:03:08Z
-  commit-date: 2026-01-02T21:03:08Z
+  author-date: 2026-01-02T21:08:23Z
+  commit-date: 2026-01-02T21:08:23Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src'
@@ -51,21 +51,21 @@ b88777:
     git-zoom-out: src
   parents:
   - 7ce26a
-  - 89948b
+  - c4791c
   tree:
     src:
       file.txt:
-        //commit: 89948b
+        //commit: c4791c
         //path: file.txt
-1babc9bbd6b7eb078b92d5792769ee86fe026c6e:
+6797040c2a06bbe3477b61ed7843e9467510b7be:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:03:09Z
-  commit-date: 2026-01-02T21:03:09Z
+  author-date: 2026-01-02T21:08:24Z
+  commit-date: 2026-01-02T21:08:24Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - 89948b
-  - b88777
+  - c4791c
+  - e7ad21
