@@ -1,5 +1,12 @@
 //! Wrapper functions for git commands.
-use std::{io::Write, process::{Command, Output, Stdio}};
+use std::{
+    io::Write,
+    process::{
+        Command,
+        Output,
+        Stdio,
+    },
+};
 pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug)]
 pub struct Error {
@@ -14,13 +21,10 @@ impl std::fmt::Display for Error {
 impl std::error::Error for Error {}
 /// Run a git command and return the output.
 fn git(args: &[&str]) -> Result<Output> {
-    let output = Command::new("git")
-        .args(args)
-        .output()
-        .map_err(|e| Error {
-            command: args.join(" "),
-            message: format!("failed to execute: {}", e),
-        })?;
+    let output = Command::new("git").args(args).output().map_err(|e| Error {
+        command: args.join(" "),
+        message: format!("failed to execute: {}", e),
+    })?;
     Ok(output)
 }
 /// Run a git command and return stdout as string, or error if non-zero exit.
@@ -37,18 +41,17 @@ fn git_stdout(args: &[&str]) -> Result<String> {
 /// Check if we're at the root of a git repository.
 pub fn check_repo_root() -> Result<()> {
     let toplevel = git_stdout(&["rev-parse", "--show-toplevel"])?;
-    let cwd = std::env::current_dir()
-        .map_err(|e| Error {
-            command: "cwd".to_string(),
-            message: e.to_string(),
-        })?;
+    let cwd = std::env::current_dir().map_err(|e| Error {
+        command: "cwd".to_string(),
+        message: e.to_string(),
+    })?;
     let cwd_str = cwd.to_string_lossy();
     if cwd_str != toplevel {
         return Err(Error {
             command: "check_repo_root".to_string(),
             message: format!(
-                "must be run from repository root (current: {}, root: {})", cwd_str,
-                toplevel
+                "must be run from repository root (current: {}, root: {})",
+                cwd_str, toplevel
             ),
         });
     }
@@ -77,7 +80,9 @@ pub fn rev_parse(rev: &str) -> Result<String> {
 pub fn try_rev_parse(rev: &str) -> Result<Option<String>> {
     let output = git(&["rev-parse", "--verify", "--quiet", rev])?;
     if output.status.success() {
-        Ok(Some(String::from_utf8_lossy(&output.stdout).trim().to_string()))
+        Ok(Some(
+            String::from_utf8_lossy(&output.stdout).trim().to_string(),
+        ))
     } else {
         Ok(None)
     }
@@ -96,12 +101,10 @@ pub fn ls_tree(tree: &str) -> Result<Vec<(String, String, String, String)>> {
         if line.is_empty() {
             continue;
         }
-        let (meta, name) = line
-            .split_once('\t')
-            .ok_or_else(|| Error {
-                command: "ls-tree".to_string(),
-                message: format!("malformed line: {}", line),
-            })?;
+        let (meta, name) = line.split_once('\t').ok_or_else(|| Error {
+            command: "ls-tree".to_string(),
+            message: format!("malformed line: {}", line),
+        })?;
         let parts: Vec<&str> = meta.split_whitespace().collect();
         if parts.len() != 3 {
             return Err(Error {
@@ -109,13 +112,12 @@ pub fn ls_tree(tree: &str) -> Result<Vec<(String, String, String, String)>> {
                 message: format!("malformed line: {}", line),
             });
         }
-        entries
-            .push((
-                parts[0].to_string(),
-                parts[1].to_string(),
-                parts[2].to_string(),
-                name.to_string(),
-            ));
+        entries.push((
+            parts[0].to_string(),
+            parts[1].to_string(),
+            parts[2].to_string(),
+            name.to_string(),
+        ));
     }
     Ok(entries)
 }
@@ -135,19 +137,16 @@ pub fn mktree(entries: &[(String, String, String, String)]) -> Result<String> {
     {
         let stdin = child.stdin.as_mut().unwrap();
         for (mode, obj_type, hash, name) in entries {
-            writeln!(stdin, "{} {} {}\t{}", mode, obj_type, hash, name)
-                .map_err(|e| Error {
-                    command: "mktree".to_string(),
-                    message: format!("failed to write: {}", e),
-                })?;
+            writeln!(stdin, "{} {} {}\t{}", mode, obj_type, hash, name).map_err(|e| Error {
+                command: "mktree".to_string(),
+                message: format!("failed to write: {}", e),
+            })?;
         }
     }
-    let output = child
-        .wait_with_output()
-        .map_err(|e| Error {
-            command: "mktree".to_string(),
-            message: format!("failed to wait: {}", e),
-        })?;
+    let output = child.wait_with_output().map_err(|e| Error {
+        command: "mktree".to_string(),
+        message: format!("failed to wait: {}", e),
+    })?;
     if !output.status.success() {
         return Err(Error {
             command: "mktree".to_string(),
@@ -214,9 +213,12 @@ pub fn parents(commit: &str) -> Result<Vec<String>> {
 }
 /// Walk first-parent history, yielding (commit_hash, parents, body) for each.
 pub fn walk_first_parent(start: &str) -> Result<Vec<(String, Vec<String>, String)>> {
-    let output = git_stdout(
-        &["log", "--first-parent", "--format=%H%x00%P%x00%B%x1e", start],
-    )?;
+    let output = git_stdout(&[
+        "log",
+        "--first-parent",
+        "--format=%H%x00%P%x00%B%x1e",
+        start,
+    ])?;
     let mut results = Vec::new();
     for record in output.split('\x1e') {
         let record = record.trim();
@@ -228,10 +230,7 @@ pub fn walk_first_parent(start: &str) -> Result<Vec<(String, Vec<String>, String
             continue;
         }
         let hash = parts[0].to_string();
-        let parent_list: Vec<String> = parts[1]
-            .split_whitespace()
-            .map(|s| s.to_string())
-            .collect();
+        let parent_list: Vec<String> = parts[1].split_whitespace().map(|s| s.to_string()).collect();
         let body = parts[2].to_string();
         results.push((hash, parent_list, body));
     }
@@ -239,11 +238,19 @@ pub fn walk_first_parent(start: &str) -> Result<Vec<(String, Vec<String>, String
 }
 #[cfg(test)]
 mod tests {
-    use {super::*, std::fs, tempfile::TempDir};
+    use {
+        super::*,
+        std::fs,
+        tempfile::TempDir,
+    };
     fn setup_test_repo() -> TempDir {
         let dir = TempDir::new().unwrap();
         std::env::set_current_dir(dir.path()).unwrap();
-        Command::new("git").args(["init"]).current_dir(dir.path()).output().unwrap();
+        Command::new("git")
+            .args(["init"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
         Command::new("git")
             .args(["config", "user.email", "test@test.com"])
             .current_dir(dir.path())

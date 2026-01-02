@@ -1,10 +1,22 @@
 use {
-    crate::text::Text, core::hash::Hash,
+    crate::text::Text,
+    core::hash::Hash,
     derive_more::{
-        AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut, Into, IntoIterator,
+        AsMut,
+        AsRef,
+        Deref,
+        DerefMut,
+        From,
+        Index,
+        IndexMut,
+        Into,
+        IntoIterator,
     },
 };
-#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
+#[cfg_attr(
+    feature = "wasm",
+    wasm_bindgen::prelude::wasm_bindgen
+)]
 #[derive(
     AsMut,
     AsRef,
@@ -26,7 +38,9 @@ use {
 )]
 #[repr(transparent)]
 #[as_ref(Vec<u8>, [u8])]
-#[into_iterator(owned, ref, ref_mut)]
+#[into_iterator(
+    owned, ref, ref_mut
+)]
 #[must_use]
 pub struct Bytes(pub(crate) Vec<u8>);
 impl From<&[u8]> for Bytes {
@@ -62,21 +76,25 @@ impl<'de> serde::Deserialize<'de> for Bytes {
         struct BytesVisitor;
         impl<'de> serde::de::Visitor<'de> for BytesVisitor {
             type Value = Bytes;
+
             fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
                 f.write_str("a byte array")
             }
+
             fn visit_bytes<E>(self, v: &[u8]) -> Result<Bytes, E>
             where
                 E: serde::de::Error,
             {
                 Ok(Bytes::from(v.to_vec()))
             }
+
             fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Bytes, E>
             where
                 E: serde::de::Error,
             {
                 Ok(Bytes::from(v))
             }
+
             fn visit_seq<A>(self, mut seq: A) -> Result<Bytes, A::Error>
             where
                 A: serde::de::SeqAccess<'de>,

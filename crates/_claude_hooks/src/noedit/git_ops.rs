@@ -1,7 +1,41 @@
-use eyre::{Context, ContextCompat, Result};
-use git2::{Commit, DiffOptions, ObjectType, Repository, TreeWalkMode, TreeWalkResult};
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use {
+    eyre::{
+        Context,
+        ContextCompat,
+        Result,
+        bail,
+    },
+    git2::{
+        Commit,
+        DiffOptions,
+        ObjectType,
+        Repository,
+        TreeWalkMode,
+        TreeWalkResult,
+    },
+    std::{
+        collections::HashMap,
+        path::{
+            Path,
+            PathBuf,
+        },
+    },
+};
+
+/// Find git repository root by walking up from a starting path
+pub fn find_git_root(start_path: &str) -> Result<PathBuf> {
+    let mut current = PathBuf::from(start_path);
+
+    loop {
+        if current.join(".git").exists() {
+            return Ok(current);
+        }
+
+        if !current.pop() {
+            bail!("Not in a git repository (no .git directory found)");
+        }
+    }
+}
 
 /// Represents the content of a .noedit file found in a git tree
 pub struct NoeditFile {
@@ -30,7 +64,10 @@ pub fn read_noedit_files_from_commit(
                     PathBuf::from(root).join(".noedit")
                 };
 
-                noedit_files.push(NoeditFile { path, content: content_str });
+                noedit_files.push(NoeditFile {
+                    path,
+                    content: content_str,
+                });
             }
         }
         TreeWalkResult::Ok
@@ -40,7 +77,8 @@ pub fn read_noedit_files_from_commit(
     Ok(noedit_files)
 }
 
-/// Get list of files changed between a base commit and current state (index + working tree)
+/// Get list of files changed between a base commit and current state (index +
+/// working tree)
 pub fn get_changed_files(repo: &Repository, base_commit: &Commit) -> Result<Vec<PathBuf>> {
     let base_tree = base_commit.tree().context("Failed to get base tree")?;
     let mut changed = HashMap::new();
@@ -48,7 +86,9 @@ pub fn get_changed_files(repo: &Repository, base_commit: &Commit) -> Result<Vec<
     // Get changes in index (staged)
     let mut index = repo.index().context("Failed to get index")?;
     let index_tree_oid = index.write_tree().context("Failed to write index tree")?;
-    let index_tree = repo.find_tree(index_tree_oid).context("Failed to find index tree")?;
+    let index_tree = repo
+        .find_tree(index_tree_oid)
+        .context("Failed to find index tree")?;
 
     let diff = repo
         .diff_tree_to_tree(Some(&base_tree), Some(&index_tree), None)
@@ -91,12 +131,9 @@ pub fn get_changed_files(repo: &Repository, base_commit: &Commit) -> Result<Vec<
     Ok(changed.into_keys().collect())
 }
 
-/// Restore a file to its state in a specific commit, or delete it if it didn't exist
-pub fn restore_file_from_commit(
-    repo: &Repository,
-    commit: &Commit,
-    path: &Path,
-) -> Result<()> {
+/// Restore a file to its state in a specific commit, or delete it if it didn't
+/// exist
+pub fn restore_file_from_commit(repo: &Repository, commit: &Commit, path: &Path) -> Result<()> {
     let tree = commit.tree().context("Failed to get tree from commit")?;
 
     match tree.get_path(path) {
@@ -105,20 +142,22 @@ pub fn restore_file_from_commit(
             let oid = entry.id();
             let blob = repo.find_blob(oid).context("Failed to find blob")?;
 
-            let workdir = repo.workdir().context("Repository has no working directory")?;
+            let workdir = repo
+                .workdir()
+                .context("Repository has no working directory")?;
             let full_path = workdir.join(path);
 
             if let Some(parent) = full_path.parent() {
-                std::fs::create_dir_all(parent)
-                    .context("Failed to create parent directories")?;
+                std::fs::create_dir_all(parent).context("Failed to create parent directories")?;
             }
 
-            std::fs::write(&full_path, blob.content())
-                .context("Failed to write file content")?;
+            std::fs::write(&full_path, blob.content()).context("Failed to write file content")?;
 
             // Stage the restored file
             let mut index = repo.index().context("Failed to get index")?;
-            index.add_path(path).context("Failed to add path to index")?;
+            index
+                .add_path(path)
+                .context("Failed to add path to index")?;
             index.write().context("Failed to write index")?;
         }
         Err(_) => {
@@ -132,17 +171,20 @@ pub fn restore_file_from_commit(
 
 /// Delete a file from both working directory and index
 pub fn delete_file(repo: &Repository, path: &Path) -> Result<()> {
-    let workdir = repo.workdir().context("Repository has no working directory")?;
+    let workdir = repo
+        .workdir()
+        .context("Repository has no working directory")?;
     let full_path = workdir.join(path);
 
     if full_path.exists() {
-        std::fs::remove_file(&full_path)
-            .context("Failed to remove file from working directory")?;
+        std::fs::remove_file(&full_path).context("Failed to remove file from working directory")?;
     }
 
     // Remove from index
     let mut index = repo.index().context("Failed to get index")?;
-    index.remove_path(path).context("Failed to remove path from index")?;
+    index
+        .remove_path(path)
+        .context("Failed to remove path from index")?;
     index.write().context("Failed to write index")?;
 
     Ok(())
@@ -157,10 +199,9 @@ pub fn create_restoration_commit(
     let signature = repo.signature().context("Failed to get signature")?;
 
     let message = format!(
-        "Restore .noedit-protected files\n\n\
-         The following files were modified but are protected by .noedit patterns\n\
-         from commit {}:\n\n{}\n\n\
-         These files have been restored to their original state.",
+        "Restore .noedit-protected files\n\nThe following files were modified but are protected \
+         by .noedit patterns\nfrom commit {}:\n\n{}\n\nThese files have been restored to their \
+         original state.",
         initial_commit_sha,
         files
             .iter()
@@ -174,16 +215,13 @@ pub fn create_restoration_commit(
     let tree = repo.find_tree(tree_oid).context("Failed to find tree")?;
 
     let head = repo.head().context("Failed to get HEAD")?;
-    let parent_commit = head.peel_to_commit().context("Failed to peel HEAD to commit")?;
+    let parent_commit = head
+        .peel_to_commit()
+        .context("Failed to peel HEAD to commit")?;
 
-    repo.commit(
-        Some("HEAD"),
-        &signature,
-        &signature,
-        &message,
-        &tree,
-        &[&parent_commit],
-    )
+    repo.commit(Some("HEAD"), &signature, &signature, &message, &tree, &[
+        &parent_commit,
+    ])
     .context("Failed to create commit")?;
 
     Ok(())

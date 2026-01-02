@@ -24,7 +24,21 @@ dependencies = [
  "indexmap 2.12.1",
  "serde",
  "serde_json",
+ "tempfile",
  "walkdir",
+]
+
+[[package]]
+name = "_scripts"
+version = "0.0.0-dev-2025-12-26.7705"
+dependencies = [
+ "anyhow",
+ "glob",
+ "pathdiff",
+ "semver",
+ "tempfile",
+ "tokio",
+ "toml_edit",
 ]
 
 [[package]]

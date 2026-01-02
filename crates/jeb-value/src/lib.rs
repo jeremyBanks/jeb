@@ -1,6 +1,9 @@
 #![doc = include_str!("../README.md")]
 #![doc = ::document_features::document_features!()]
-#![allow(unused_imports, clippy::approx_constant)]
+#![allow(
+    unused_imports,
+    clippy::approx_constant
+)]
 mod bytes;
 mod float;
 mod from;
@@ -14,4 +17,9 @@ mod value;
 pub use self::serde::*;
 #[cfg(feature = "serde_json")]
 pub use self::serde_json::*;
-pub use self::{bytes::*, float::*, text::*, value::*};
+pub use self::{
+    bytes::*,
+    float::*,
+    text::*,
+    value::*,
+};

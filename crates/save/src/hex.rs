@@ -48,7 +48,7 @@ pub struct MaskedBytes {
 }
 
 impl MaskedBytes {
-    #[must_use] 
+    #[must_use]
     pub fn new(bytes: Vec<u8>, mask: Vec<u8>) -> Self {
         assert_eq!(bytes.len(), mask.len());
         Self { bytes, mask }

@@ -1,11 +1,25 @@
 //! `Deserializer` deserializing from our `Value` type into arbitrary
 //! `Deserialize` types.
 use {
-    crate::{Bytes, Text, Value, serde::{SerdeError, error::Unexpected}},
-    indexmap::IndexMap, serde::de::{self, DeserializeSeed, Visitor},
+    crate::{
+        Bytes,
+        Text,
+        Value,
+        serde::{
+            SerdeError,
+            error::Unexpected,
+        },
+    },
+    indexmap::IndexMap,
+    serde::de::{
+        self,
+        DeserializeSeed,
+        Visitor,
+    },
 };
 impl<'de> de::Deserializer<'de> for Value {
     type Error = SerdeError;
+
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -23,6 +37,7 @@ impl<'de> de::Deserializer<'de> for Value {
             Value::BytesMap(m) => visitor.visit_map(BytesMapDeserializer::new(m)),
         }
     }
+
     fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -32,24 +47,28 @@ impl<'de> de::Deserializer<'de> for Value {
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a boolean")),
         }
     }
+
     fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
     {
         self.deserialize_i64(visitor)
     }
+
     fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
     {
         self.deserialize_i64(visitor)
     }
+
     fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
     {
         self.deserialize_i64(visitor)
     }
+
     fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -76,6 +95,7 @@ impl<'de> de::Deserializer<'de> for Value {
             _ => Err(SerdeError::invalid_type(self.unexpected(), "an integer")),
         }
     }
+
     fn deserialize_i128<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -92,24 +112,28 @@ impl<'de> de::Deserializer<'de> for Value {
             _ => Err(SerdeError::invalid_type(self.unexpected(), "an i128")),
         }
     }
+
     fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
     {
         self.deserialize_u64(visitor)
     }
+
     fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
     {
         self.deserialize_u64(visitor)
     }
+
     fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
     {
         self.deserialize_u64(visitor)
     }
+
     fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -133,9 +157,13 @@ impl<'de> de::Deserializer<'de> for Value {
                     Err(SerdeError::custom("u128 value out of range for u64"))
                 }
             }
-            _ => Err(SerdeError::invalid_type(self.unexpected(), "an unsigned integer")),
+            _ => Err(SerdeError::invalid_type(
+                self.unexpected(),
+                "an unsigned integer",
+            )),
         }
     }
+
     fn deserialize_u128<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -158,6 +186,7 @@ impl<'de> de::Deserializer<'de> for Value {
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a u128")),
         }
     }
+
     fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -173,6 +202,7 @@ impl<'de> de::Deserializer<'de> for Value {
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a float")),
         }
     }
+
     fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -194,6 +224,7 @@ impl<'de> de::Deserializer<'de> for Value {
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a float")),
         }
     }
+
     fn deserialize_char<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -202,19 +233,20 @@ impl<'de> de::Deserializer<'de> for Value {
             Value::Text(t) => {
                 let s: String = t.into();
                 let mut chars = s.chars();
-                if let Some(c) = chars.next() && chars.next().is_none() {
+                if let Some(c) = chars.next()
+                    && chars.next().is_none()
+                {
                     return visitor.visit_char(c);
                 }
-                Err(
-                    SerdeError::invalid_type(
-                        Unexpected::Str(s.into_boxed_str()),
-                        "a single character",
-                    ),
-                )
+                Err(SerdeError::invalid_type(
+                    Unexpected::Str(s.into_boxed_str()),
+                    "a single character",
+                ))
             }
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a character")),
         }
     }
+
     fn deserialize_str<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -224,12 +256,14 @@ impl<'de> de::Deserializer<'de> for Value {
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a string")),
         }
     }
+
     fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
     {
         self.deserialize_str(visitor)
     }
+
     fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -243,11 +277,9 @@ impl<'de> de::Deserializer<'de> for Value {
                         Value::Unsigned(u) if u <= 255 => bytes.push(u as u8),
                         Value::Signed(i) if (0..=255).contains(&i) => bytes.push(i as u8),
                         _ => {
-                            return Err(
-                                SerdeError::custom(
-                                    "array contains non-byte values for bytes deserialization",
-                                ),
-                            );
+                            return Err(SerdeError::custom(
+                                "array contains non-byte values for bytes deserialization",
+                            ));
                         }
                     }
                 }
@@ -260,12 +292,14 @@ impl<'de> de::Deserializer<'de> for Value {
             _ => Err(SerdeError::invalid_type(self.unexpected(), "bytes")),
         }
     }
+
     fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
     {
         self.deserialize_bytes(visitor)
     }
+
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -273,7 +307,9 @@ impl<'de> de::Deserializer<'de> for Value {
         match self {
             Value::Null => visitor.visit_none(),
             Value::TextMap(map) if map.len() == 1 => {
-                if let Some((key, value)) = map.iter().next() && key.as_str() == "Some" {
+                if let Some((key, value)) = map.iter().next()
+                    && key.as_str() == "Some"
+                {
                     let value = value.clone();
                     return visitor.visit_some(value);
                 }
@@ -282,6 +318,7 @@ impl<'de> de::Deserializer<'de> for Value {
             value => visitor.visit_some(value),
         }
     }
+
     fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -291,6 +328,7 @@ impl<'de> de::Deserializer<'de> for Value {
             _ => Err(SerdeError::invalid_type(self.unexpected(), "null")),
         }
     }
+
     fn deserialize_unit_struct<V>(
         self,
         _name: &'static str,
@@ -301,6 +339,7 @@ impl<'de> de::Deserializer<'de> for Value {
     {
         self.deserialize_unit(visitor)
     }
+
     fn deserialize_newtype_struct<V>(
         self,
         _name: &'static str,
@@ -311,6 +350,7 @@ impl<'de> de::Deserializer<'de> for Value {
     {
         visitor.visit_newtype_struct(self)
     }
+
     fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -320,16 +360,14 @@ impl<'de> de::Deserializer<'de> for Value {
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a sequence")),
         }
     }
-    fn deserialize_tuple<V>(
-        self,
-        _len: usize,
-        visitor: V,
-    ) -> Result<V::Value, SerdeError>
+
+    fn deserialize_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
     {
         self.deserialize_seq(visitor)
     }
+
     fn deserialize_tuple_struct<V>(
         self,
         _name: &'static str,
@@ -341,6 +379,7 @@ impl<'de> de::Deserializer<'de> for Value {
     {
         self.deserialize_seq(visitor)
     }
+
     fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -363,6 +402,7 @@ impl<'de> de::Deserializer<'de> for Value {
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a map")),
         }
     }
+
     fn deserialize_struct<V>(
         self,
         _name: &'static str,
@@ -379,6 +419,7 @@ impl<'de> de::Deserializer<'de> for Value {
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a struct")),
         }
     }
+
     fn deserialize_enum<V>(
         self,
         _name: &'static str,
@@ -396,15 +437,15 @@ impl<'de> de::Deserializer<'de> for Value {
             Value::TextMap(m) if m.len() == 1 => {
                 let (key, value) = m.into_iter().next().unwrap();
                 let variant: String = key.into();
-                visitor
-                    .visit_enum(EnumDeserializer {
-                        variant,
-                        value: Some(value),
-                    })
+                visitor.visit_enum(EnumDeserializer {
+                    variant,
+                    value: Some(value),
+                })
             }
             _ => Err(SerdeError::invalid_type(self.unexpected(), "an enum")),
         }
     }
+
     fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -415,6 +456,7 @@ impl<'de> de::Deserializer<'de> for Value {
             _ => Err(SerdeError::invalid_type(self.unexpected(), "an identifier")),
         }
     }
+
     fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -455,6 +497,7 @@ impl SeqDeserializer {
 }
 impl<'de> de::SeqAccess<'de> for SeqDeserializer {
     type Error = SerdeError;
+
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, SerdeError>
     where
         T: DeserializeSeed<'de>,
@@ -464,6 +507,7 @@ impl<'de> de::SeqAccess<'de> for SeqDeserializer {
             None => Ok(None),
         }
     }
+
     fn size_hint(&self) -> Option<usize> {
         Some(self.iter.len())
     }
@@ -482,6 +526,7 @@ impl TextMapDeserializer {
 }
 impl<'de> de::MapAccess<'de> for TextMapDeserializer {
     type Error = SerdeError;
+
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, SerdeError>
     where
         K: DeserializeSeed<'de>,
@@ -494,18 +539,17 @@ impl<'de> de::MapAccess<'de> for TextMapDeserializer {
             None => Ok(None),
         }
     }
+
     fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value, SerdeError>
     where
         V: DeserializeSeed<'de>,
     {
-        let value = self
-            .value
-            .take()
-            .ok_or_else(|| {
-                SerdeError::Message("next_value_seed called before next_key_seed".into())
-            })?;
+        let value = self.value.take().ok_or_else(|| {
+            SerdeError::Message("next_value_seed called before next_key_seed".into())
+        })?;
         seed.deserialize(value)
     }
+
     fn size_hint(&self) -> Option<usize> {
         Some(self.iter.len())
     }
@@ -524,6 +568,7 @@ impl BytesMapDeserializer {
 }
 impl<'de> de::MapAccess<'de> for BytesMapDeserializer {
     type Error = SerdeError;
+
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, SerdeError>
     where
         K: DeserializeSeed<'de>,
@@ -536,18 +581,17 @@ impl<'de> de::MapAccess<'de> for BytesMapDeserializer {
             None => Ok(None),
         }
     }
+
     fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value, SerdeError>
     where
         V: DeserializeSeed<'de>,
     {
-        let value = self
-            .value
-            .take()
-            .ok_or_else(|| {
-                SerdeError::Message("next_value_seed called before next_key_seed".into())
-            })?;
+        let value = self.value.take().ok_or_else(|| {
+            SerdeError::Message("next_value_seed called before next_key_seed".into())
+        })?;
         seed.deserialize(value)
     }
+
     fn size_hint(&self) -> Option<usize> {
         Some(self.iter.len())
     }
@@ -566,6 +610,7 @@ impl PairsDeserializer {
 }
 impl<'de> de::MapAccess<'de> for PairsDeserializer {
     type Error = SerdeError;
+
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, SerdeError>
     where
         K: DeserializeSeed<'de>,
@@ -581,18 +626,17 @@ impl<'de> de::MapAccess<'de> for PairsDeserializer {
             None => Ok(None),
         }
     }
+
     fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value, SerdeError>
     where
         V: DeserializeSeed<'de>,
     {
-        let value = self
-            .value
-            .take()
-            .ok_or_else(|| {
-                SerdeError::Message("next_value_seed called before next_key_seed".into())
-            })?;
+        let value = self.value.take().ok_or_else(|| {
+            SerdeError::Message("next_value_seed called before next_key_seed".into())
+        })?;
         seed.deserialize(value)
     }
+
     fn size_hint(&self) -> Option<usize> {
         Some(self.pairs.len())
     }
@@ -604,18 +648,14 @@ struct EnumDeserializer {
 impl<'de> de::EnumAccess<'de> for EnumDeserializer {
     type Error = SerdeError;
     type Variant = VariantDeserializer;
+
     fn variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant), SerdeError>
     where
         V: DeserializeSeed<'de>,
     {
         let variant = self.variant.clone();
         let visitor = seed.deserialize(variant.into_deserializer())?;
-        Ok((
-            visitor,
-            VariantDeserializer {
-                value: self.value,
-            },
-        ))
+        Ok((visitor, VariantDeserializer { value: self.value }))
     }
 }
 struct VariantDeserializer {
@@ -623,12 +663,14 @@ struct VariantDeserializer {
 }
 impl<'de> de::VariantAccess<'de> for VariantDeserializer {
     type Error = SerdeError;
+
     fn unit_variant(self) -> Result<(), SerdeError> {
         match self.value {
             None => Ok(()),
             Some(_) => Err(SerdeError::custom("expected unit variant")),
         }
     }
+
     fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, SerdeError>
     where
         T: DeserializeSeed<'de>,
@@ -638,6 +680,7 @@ impl<'de> de::VariantAccess<'de> for VariantDeserializer {
             None => Err(SerdeError::custom("expected newtype variant")),
         }
     }
+
     fn tuple_variant<V>(self, _len: usize, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
@@ -648,6 +691,7 @@ impl<'de> de::VariantAccess<'de> for VariantDeserializer {
             None => Err(SerdeError::custom("expected tuple variant")),
         }
     }
+
     fn struct_variant<V>(
         self,
         _fields: &'static [&'static str],
@@ -679,17 +723,20 @@ impl IntoDeserializer for String {
 struct StringDeserializer(String);
 impl<'de> de::Deserializer<'de> for StringDeserializer {
     type Error = SerdeError;
+
     serde::forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string bytes
         byte_buf option unit unit_struct newtype_struct seq tuple tuple_struct map struct
         identifier ignored_any
     }
+
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
     {
         visitor.visit_string(self.0)
     }
+
     fn deserialize_enum<V>(
         self,
         _name: &'static str,
@@ -705,6 +752,7 @@ impl<'de> de::Deserializer<'de> for StringDeserializer {
 impl<'de> de::EnumAccess<'de> for StringDeserializer {
     type Error = SerdeError;
     type Variant = UnitVariant;
+
     fn variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant), SerdeError>
     where
         V: DeserializeSeed<'de>,
@@ -716,21 +764,25 @@ impl<'de> de::EnumAccess<'de> for StringDeserializer {
 struct UnitVariant;
 impl<'de> de::VariantAccess<'de> for UnitVariant {
     type Error = SerdeError;
+
     fn unit_variant(self) -> Result<(), SerdeError> {
         Ok(())
     }
+
     fn newtype_variant_seed<T>(self, _seed: T) -> Result<T::Value, SerdeError>
     where
         T: DeserializeSeed<'de>,
     {
         Err(SerdeError::custom("expected unit variant"))
     }
+
     fn tuple_variant<V>(self, _len: usize, _visitor: V) -> Result<V::Value, SerdeError>
     where
         V: Visitor<'de>,
     {
         Err(SerdeError::custom("expected unit variant"))
     }
+
     fn struct_variant<V>(
         self,
         _fields: &'static [&'static str],

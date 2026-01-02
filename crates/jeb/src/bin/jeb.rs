@@ -1,17 +1,29 @@
 #![cfg(feature = "bin")]
 use {
-    jeb::{Panic, model::Bytes},
-    jeb_common::shell_tokenizer, owo_colors::OwoColorize, regex::Regex,
+    jeb::{
+        Panic,
+        model::Bytes,
+    },
+    jeb_common::shell_tokenizer,
+    owo_colors::OwoColorize,
+    regex::Regex,
     std::{
-        convert::Infallible, io::{Read, Write},
-        mem::take, sync::LazyLock,
+        convert::Infallible,
+        io::{
+            Read,
+            Write,
+        },
+        mem::take,
+        sync::LazyLock,
     },
     tracing::debug,
 };
 /// Pre-defined aliases that expand a single command into one or more commands.
-static ALIASES: &[(&str, &[&str])] = &[
-    ("to-jeb85-lines", &["encode-jeb85", "split-80", "join-lines"]),
-];
+static ALIASES: &[(&str, &[&str])] = &[("to-jeb85-lines", &[
+    "encode-jeb85",
+    "split-80",
+    "join-lines",
+])];
 static PRELUDE: &str = include_str!("jeb/prelude.jeb");
 /// Expand an alias into its component commands, or return the original command.
 fn expand_alias(command: &str) -> Vec<String> {
@@ -49,11 +61,11 @@ pub async fn inner_main() -> Result<(), Panic> {
         .into_iter()
         .chain(args)
         .flat_map(|s| {
-            static REGEX: LazyLock<Regex> = LazyLock::new(|| {
-                Regex::new(r#"\s\|\s"#).unwrap()
-            });
+            static REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"\s\|\s"#).unwrap());
             if REGEX.is_match(&s) {
-                s.split('|').map(|s| s.trim_ascii().to_string()).collect::<Vec<String>>()
+                s.split('|')
+                    .map(|s| s.trim_ascii().to_string())
+                    .collect::<Vec<String>>()
             } else {
                 vec![s]
             }

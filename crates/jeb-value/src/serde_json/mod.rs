@@ -19,7 +19,10 @@ impl From<Vec<serde_json::Value>> for crate::Value {
 impl From<serde_json::Map<String, serde_json::Value>> for crate::Value {
     fn from(value: serde_json::Map<String, serde_json::Value>) -> Self {
         crate::Value::TextMap(
-            value.into_iter().map(|(k, v)| (k.into(), crate::Value::from(v))).collect(),
+            value
+                .into_iter()
+                .map(|(k, v)| (k.into(), crate::Value::from(v)))
+                .collect(),
         )
     }
 }

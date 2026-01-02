@@ -365,7 +365,6 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
 
         let mut heads: Vec<Commit> = vec![commit.clone()];
         while let Some(head) = heads.pop() {
-            
             let oid = head.id();
 
             if graph.edges_directed(oid, Outgoing).count() > 0 {
@@ -544,7 +543,8 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
             .unwrap_or({
                 static DEFAULT: &[u8] = &[0xFF; 20];
                 &DEFAULT[..target_prefix.len().min(DEFAULT.len())]
-            }).to_vec();
+            })
+            .to_vec();
         trace!("Brute forcing a timestamp for {target_prefix:2x?} with mask {target_mask:2x?}");
 
         let thread_count = num_cpus::get() as u64;

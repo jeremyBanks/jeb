@@ -4,7 +4,7 @@
       {
         "hooks": [
           {
-            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "command": "cargo run --quiet --bin _claude_hooks --",
             "timeout": 30,
             "type": "command"
           }
@@ -15,7 +15,7 @@
       {
         "hooks": [
           {
-            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "command": "cargo run --quiet --bin _claude_hooks --",
             "timeout": 30,
             "type": "command"
           }
@@ -26,7 +26,7 @@
       {
         "hooks": [
           {
-            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "command": "cargo run --quiet --bin _claude_hooks --",
             "timeout": 30,
             "type": "command"
           }
@@ -37,7 +37,18 @@
       {
         "hooks": [
           {
-            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "command": "cargo run --quiet --bin _claude_hooks --",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "cargo run --quiet --bin _claude_hooks --",
             "timeout": 30,
             "type": "command"
           }
@@ -48,7 +59,7 @@
       {
         "hooks": [
           {
-            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "command": "cargo run --quiet --bin _claude_hooks --",
             "timeout": 30,
             "type": "command"
           }
@@ -59,7 +70,7 @@
       {
         "hooks": [
           {
-            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "command": "cargo run --quiet --bin _claude_hooks --",
             "timeout": 30,
             "type": "command"
           }
@@ -70,7 +81,7 @@
       {
         "hooks": [
           {
-            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "command": "cargo run --quiet --bin _claude_hooks --",
             "timeout": 30,
             "type": "command"
           }
@@ -81,7 +92,7 @@
       {
         "hooks": [
           {
-            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "command": "cargo run --quiet --bin _claude_hooks --",
             "timeout": 30,
             "type": "command"
           }
@@ -92,7 +103,7 @@
       {
         "hooks": [
           {
-            "command": "cd ${CLAUDE_PROJECT_DIR} && cargo run --quiet --",
+            "command": "cargo run --quiet --bin _claude_hooks --",
             "timeout": 30,
             "type": "command"
           }

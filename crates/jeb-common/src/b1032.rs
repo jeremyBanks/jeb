@@ -109,7 +109,11 @@ fn to_base32_raw(mut n: u64) -> String {
 /// Base32 encode n and left-pad with '0' to at least 4 chars.
 fn to_base32_min4(n: u64) -> String {
     let raw = to_base32_raw(n);
-    if raw.len() >= 4 { raw } else { format!("{:0>4}", raw) }
+    if raw.len() >= 4 {
+        raw
+    } else {
+        format!("{:0>4}", raw)
+    }
 }
 /// Parse base32 token using the alphabet.
 fn from_base32(s: &str) -> Result<u64, Error> {
@@ -220,6 +224,7 @@ impl B1032 for u64 {
     fn to_b1032(self) -> String {
         encode_u64(self)
     }
+
     fn from_b1032(s: &str) -> Result<Self, Error> {
         decode_u64(s)
     }
@@ -228,6 +233,7 @@ impl B1032 for u32 {
     fn to_b1032(self) -> String {
         encode_u64(self as u64)
     }
+
     fn from_b1032(s: &str) -> Result<Self, Error> {
         let v = decode_u64(s)?;
         v.try_into().map_err(|_| Error::Overflow)
@@ -237,6 +243,7 @@ impl B1032 for u16 {
     fn to_b1032(self) -> String {
         encode_u64(self as u64)
     }
+
     fn from_b1032(s: &str) -> Result<Self, Error> {
         let v = decode_u64(s)?;
         v.try_into().map_err(|_| Error::Overflow)
@@ -246,6 +253,7 @@ impl B1032 for u8 {
     fn to_b1032(self) -> String {
         encode_u64(self as u64)
     }
+
     fn from_b1032(s: &str) -> Result<Self, Error> {
         let v = decode_u64(s)?;
         v.try_into().map_err(|_| Error::Overflow)
@@ -260,6 +268,7 @@ impl B1032 for i64 {
             format!("-{}", encode_u64(abs))
         }
     }
+
     fn from_b1032(s: &str) -> Result<Self, Error> {
         if let Some(rest) = s.strip_prefix('-') {
             if rest.is_empty() {
@@ -283,6 +292,7 @@ impl B1032 for i32 {
     fn to_b1032(self) -> String {
         (self as i64).to_b1032()
     }
+
     fn from_b1032(s: &str) -> Result<Self, Error> {
         let v = i64::from_b1032(s)?;
         v.try_into().map_err(|_| Error::Overflow)
@@ -292,6 +302,7 @@ impl B1032 for i16 {
     fn to_b1032(self) -> String {
         (self as i64).to_b1032()
     }
+
     fn from_b1032(s: &str) -> Result<Self, Error> {
         let v = i64::from_b1032(s)?;
         v.try_into().map_err(|_| Error::Overflow)
@@ -301,6 +312,7 @@ impl B1032 for i8 {
     fn to_b1032(self) -> String {
         (self as i64).to_b1032()
     }
+
     fn from_b1032(s: &str) -> Result<Self, Error> {
         let v = i64::from_b1032(s)?;
         v.try_into().map_err(|_| Error::Overflow)
@@ -314,10 +326,7 @@ mod tests {
         let back = from_b1032(&tok).unwrap();
         assert_eq!(n, back, "roundtrip failed for n={}, tok={}", n, tok);
     }
-    fn assert_roundtrip<T: B1032 + Copy + PartialEq + std::fmt::Debug>(
-        n: T,
-        expected_tok: &str,
-    ) {
+    fn assert_roundtrip<T: B1032 + Copy + PartialEq + std::fmt::Debug>(n: T, expected_tok: &str) {
         let tok = to_b1032(n);
         assert_eq!(tok, expected_tok, "encode mismatch for {:?}", n);
         let back: T = from_b1032(&tok).unwrap();
@@ -422,8 +431,11 @@ mod tests {
             let tok = to_b1032(n);
             assert!(
                 tok > prev_tok,
-                "lexicographic order violated: {} ({}) should be > {} ({})", n, tok, n -
-                1, prev_tok
+                "lexicographic order violated: {} ({}) should be > {} ({})",
+                n,
+                tok,
+                n - 1,
+                prev_tok
             );
             prev_tok = tok;
         }
@@ -434,8 +446,12 @@ mod tests {
         for n in (C + 1)..B {
             let tok = to_b1032(n);
             assert!(
-                tok > prev_tok, "post-C order violated: {} ({}) should be > {} ({})", n,
-                tok, n - 1, prev_tok
+                tok > prev_tok,
+                "post-C order violated: {} ({}) should be > {} ({})",
+                n,
+                tok,
+                n - 1,
+                prev_tok
             );
             prev_tok = tok;
         }
@@ -450,8 +466,12 @@ mod tests {
                 let tok = to_b1032(n);
                 assert!(
                     tok > prev_tok,
-                    "decimal order violated at len {}: {} ({}) should be > {} ({})", len,
-                    n, tok, n - 1, prev_tok
+                    "decimal order violated at len {}: {} ({}) should be > {} ({})",
+                    len,
+                    n,
+                    tok,
+                    n - 1,
+                    prev_tok
                 );
                 prev_tok = tok;
             }
@@ -487,11 +507,11 @@ mod tests {
     }
     #[test]
     fn test_specific_decodings() {
-        assert_eq!(from_b1032::< u64 > ("9999").unwrap(), 9999);
-        assert_eq!(from_b1032::< u64 > ("000A").unwrap(), 10000);
-        assert_eq!(from_b1032::< u64 > ("999A").unwrap(), 304426);
-        assert_eq!(from_b1032::< u64 > ("VVVV").unwrap(), 1048575);
-        assert_eq!(from_b1032::< u64 > ("10000").unwrap(), 1048576);
+        assert_eq!(from_b1032::<u64>("9999").unwrap(), 9999);
+        assert_eq!(from_b1032::<u64>("000A").unwrap(), 10000);
+        assert_eq!(from_b1032::<u64>("999A").unwrap(), 304426);
+        assert_eq!(from_b1032::<u64>("VVVV").unwrap(), 1048575);
+        assert_eq!(from_b1032::<u64>("10000").unwrap(), 1048576);
     }
     #[test]
     fn test_decimal_tokens_no_leading_zeros() {
@@ -506,74 +526,90 @@ mod tests {
             let tok = to_b1032(n);
             if tok.len() == 4 {
                 assert!(
-                    ! tok.chars().all(| c | c.is_ascii_digit()),
-                    "n={} produced ambiguous token: {}", n, tok
+                    !tok.chars().all(|c| c.is_ascii_digit()),
+                    "n={} produced ambiguous token: {}",
+                    n,
+                    tok
                 );
             }
         }
     }
     #[test]
     fn test_case_insensitive_decode() {
-        assert_eq!(from_b1032::< u64 > ("000a").unwrap(), 10000);
-        assert_eq!(from_b1032::< u64 > ("999a").unwrap(), 304426);
-        assert_eq!(from_b1032::< u64 > ("vvvv").unwrap(), 1048575);
+        assert_eq!(from_b1032::<u64>("000a").unwrap(), 10000);
+        assert_eq!(from_b1032::<u64>("999a").unwrap(), 304426);
+        assert_eq!(from_b1032::<u64>("vvvv").unwrap(), 1048575);
     }
     #[test]
     fn test_mixed_case_decode() {
-        assert_eq!(from_b1032::< u64 > ("VvVv").unwrap(), 1048575);
+        assert_eq!(from_b1032::<u64>("VvVv").unwrap(), 1048575);
         assert_eq!(
-            from_b1032::< u64 > ("aB").unwrap(), from_b1032::< u64 > ("AB").unwrap()
+            from_b1032::<u64>("aB").unwrap(),
+            from_b1032::<u64>("AB").unwrap()
         );
         assert_eq!(
-            from_b1032::< u64 > ("Ab").unwrap(), from_b1032::< u64 > ("AB").unwrap()
+            from_b1032::<u64>("Ab").unwrap(),
+            from_b1032::<u64>("AB").unwrap()
         );
     }
     #[test]
     fn test_decode_with_leading_zeros() {
-        assert_eq!(from_b1032::< u64 > ("0007").unwrap(), 7);
-        assert_eq!(from_b1032::< u64 > ("0042").unwrap(), 42);
-        assert_eq!(from_b1032::< u64 > ("0100").unwrap(), 100);
+        assert_eq!(from_b1032::<u64>("0007").unwrap(), 7);
+        assert_eq!(from_b1032::<u64>("0042").unwrap(), 42);
+        assert_eq!(from_b1032::<u64>("0100").unwrap(), 100);
     }
     #[test]
     fn test_leading_zeros_stripped() {
-        assert_eq!(from_b1032::< u64 > ("00007").unwrap(), 7);
-        assert_eq!(from_b1032::< u64 > ("000042").unwrap(), 42);
-        assert_eq!(from_b1032::< u64 > ("0000000000000000007").unwrap(), 7);
-        assert_eq!(from_b1032::< u64 > ("0000A").unwrap(), 10000);
-        assert_eq!(from_b1032::< u64 > ("0000").unwrap(), 0);
-        assert_eq!(from_b1032::< u64 > ("00000000").unwrap(), 0);
+        assert_eq!(from_b1032::<u64>("00007").unwrap(), 7);
+        assert_eq!(from_b1032::<u64>("000042").unwrap(), 42);
+        assert_eq!(from_b1032::<u64>("0000000000000000007").unwrap(), 7);
+        assert_eq!(from_b1032::<u64>("0000A").unwrap(), 10000);
+        assert_eq!(from_b1032::<u64>("0000").unwrap(), 0);
+        assert_eq!(from_b1032::<u64>("00000000").unwrap(), 0);
     }
     #[test]
     fn test_extra_leading_zeros_with_letters() {
-        assert_eq!(from_b1032::< u64 > ("000A").unwrap(), 10000);
-        assert_eq!(from_b1032::< u64 > ("0000A").unwrap(), 10000);
-        assert_eq!(from_b1032::< u64 > ("00000A").unwrap(), 10000);
+        assert_eq!(from_b1032::<u64>("000A").unwrap(), 10000);
+        assert_eq!(from_b1032::<u64>("0000A").unwrap(), 10000);
+        assert_eq!(from_b1032::<u64>("00000A").unwrap(), 10000);
     }
     #[test]
     fn test_error_empty_string() {
-        assert_eq!(from_b1032::< u64 > (""), Err(Error::EmptyString));
-        assert_eq!(from_b1032::< i64 > (""), Err(Error::EmptyString));
+        assert_eq!(from_b1032::<u64>(""), Err(Error::EmptyString));
+        assert_eq!(from_b1032::<i64>(""), Err(Error::EmptyString));
     }
     #[test]
     fn test_error_invalid_characters() {
-        assert_eq!(from_b1032::< u64 > ("W"), Err(Error::InvalidCharacter('W')));
-        assert_eq!(from_b1032::< u64 > ("w"), Err(Error::InvalidCharacter('w')));
-        assert_eq!(from_b1032::< u64 > ("X"), Err(Error::InvalidCharacter('X')));
-        assert_eq!(from_b1032::< u64 > ("Z"), Err(Error::InvalidCharacter('Z')));
-        assert_eq!(from_b1032::< u64 > (" "), Err(Error::InvalidCharacter(' ')));
-        assert_eq!(from_b1032::< u64 > ("123 "), Err(Error::InvalidCharacter(' ')));
-        assert_eq!(from_b1032::< u64 > (" 123"), Err(Error::InvalidCharacter(' ')));
-        assert_eq!(from_b1032::< u64 > ("12 34"), Err(Error::InvalidCharacter(' ')));
-        assert_eq!(from_b1032::< u64 > ("\t"), Err(Error::InvalidCharacter('\t')));
-        assert_eq!(from_b1032::< u64 > ("\n"), Err(Error::InvalidCharacter('\n')));
-        assert_eq!(from_b1032::< u64 > ("123\n"), Err(Error::InvalidCharacter('\n')));
-        assert_eq!(from_b1032::< u64 > ("1_000"), Err(Error::InvalidCharacter('_')));
-        assert_eq!(from_b1032::< u64 > ("1,000"), Err(Error::InvalidCharacter(',')));
-        assert_eq!(from_b1032::< u64 > ("1.5"), Err(Error::InvalidCharacter('.')));
-        assert_eq!(from_b1032::< u64 > ("-1"), Err(Error::InvalidCharacter('-')));
-        assert_eq!(from_b1032::< u64 > ("+1"), Err(Error::InvalidCharacter('+')));
-        assert_eq!(from_b1032::< i32 > ("-1").unwrap(), - 1);
-        assert_eq!(from_b1032::< u64 > ("!@#$"), Err(Error::InvalidCharacter('!')));
+        assert_eq!(from_b1032::<u64>("W"), Err(Error::InvalidCharacter('W')));
+        assert_eq!(from_b1032::<u64>("w"), Err(Error::InvalidCharacter('w')));
+        assert_eq!(from_b1032::<u64>("X"), Err(Error::InvalidCharacter('X')));
+        assert_eq!(from_b1032::<u64>("Z"), Err(Error::InvalidCharacter('Z')));
+        assert_eq!(from_b1032::<u64>(" "), Err(Error::InvalidCharacter(' ')));
+        assert_eq!(from_b1032::<u64>("123 "), Err(Error::InvalidCharacter(' ')));
+        assert_eq!(from_b1032::<u64>(" 123"), Err(Error::InvalidCharacter(' ')));
+        assert_eq!(
+            from_b1032::<u64>("12 34"),
+            Err(Error::InvalidCharacter(' '))
+        );
+        assert_eq!(from_b1032::<u64>("\t"), Err(Error::InvalidCharacter('\t')));
+        assert_eq!(from_b1032::<u64>("\n"), Err(Error::InvalidCharacter('\n')));
+        assert_eq!(
+            from_b1032::<u64>("123\n"),
+            Err(Error::InvalidCharacter('\n'))
+        );
+        assert_eq!(
+            from_b1032::<u64>("1_000"),
+            Err(Error::InvalidCharacter('_'))
+        );
+        assert_eq!(
+            from_b1032::<u64>("1,000"),
+            Err(Error::InvalidCharacter(','))
+        );
+        assert_eq!(from_b1032::<u64>("1.5"), Err(Error::InvalidCharacter('.')));
+        assert_eq!(from_b1032::<u64>("-1"), Err(Error::InvalidCharacter('-')));
+        assert_eq!(from_b1032::<u64>("+1"), Err(Error::InvalidCharacter('+')));
+        assert_eq!(from_b1032::<i32>("-1").unwrap(), -1);
+        assert_eq!(from_b1032::<u64>("!@#$"), Err(Error::InvalidCharacter('!')));
     }
     #[test]
     fn test_u8_roundtrip() {
@@ -591,9 +627,9 @@ mod tests {
     }
     #[test]
     fn test_u8_overflow() {
-        assert_eq!(from_b1032::< u8 > ("256"), Err(Error::Overflow));
-        assert_eq!(from_b1032::< u8 > ("1000"), Err(Error::Overflow));
-        assert_eq!(from_b1032::< u8 > ("000A"), Err(Error::Overflow));
+        assert_eq!(from_b1032::<u8>("256"), Err(Error::Overflow));
+        assert_eq!(from_b1032::<u8>("1000"), Err(Error::Overflow));
+        assert_eq!(from_b1032::<u8>("000A"), Err(Error::Overflow));
     }
     #[test]
     fn test_u16_roundtrip() {
@@ -612,8 +648,8 @@ mod tests {
     }
     #[test]
     fn test_u16_overflow() {
-        assert_eq!(from_b1032::< u16 > ("65536"), Err(Error::Overflow));
-        assert_eq!(from_b1032::< u16 > ("VVVV"), Err(Error::Overflow));
+        assert_eq!(from_b1032::<u16>("65536"), Err(Error::Overflow));
+        assert_eq!(from_b1032::<u16>("VVVV"), Err(Error::Overflow));
     }
     #[test]
     fn test_u32_roundtrip() {
@@ -640,9 +676,9 @@ mod tests {
     }
     #[test]
     fn test_u32_overflow() {
-        assert_eq!(from_b1032::< u32 > ("4000000"), Err(Error::Overflow));
+        assert_eq!(from_b1032::<u32>("4000000"), Err(Error::Overflow));
         let max_tok = to_b1032(u64::MAX);
-        assert_eq!(from_b1032::< u32 > (& max_tok), Err(Error::Overflow));
+        assert_eq!(from_b1032::<u32>(&max_tok), Err(Error::Overflow));
     }
     #[test]
     fn test_u64_boundaries() {
@@ -690,8 +726,8 @@ mod tests {
     }
     #[test]
     fn test_i8_overflow() {
-        assert_eq!(from_b1032::< i8 > ("128"), Err(Error::Overflow));
-        assert_eq!(from_b1032::< i8 > ("-129"), Err(Error::Overflow));
+        assert_eq!(from_b1032::<i8>("128"), Err(Error::Overflow));
+        assert_eq!(from_b1032::<i8>("-129"), Err(Error::Overflow));
     }
     #[test]
     fn test_i16_signed() {
@@ -704,28 +740,28 @@ mod tests {
     }
     #[test]
     fn test_i16_overflow() {
-        assert_eq!(from_b1032::< i16 > ("0N6O"), Err(Error::Overflow));
-        assert_eq!(from_b1032::< i16 > ("-0N6P"), Err(Error::Overflow));
+        assert_eq!(from_b1032::<i16>("0N6O"), Err(Error::Overflow));
+        assert_eq!(from_b1032::<i16>("-0N6P"), Err(Error::Overflow));
     }
     #[test]
     fn test_i32_overflow() {
-        assert_eq!(from_b1032::< i32 > ("2000000"), Err(Error::Overflow));
-        assert_eq!(from_b1032::< i32 > ("-2000001"), Err(Error::Overflow));
+        assert_eq!(from_b1032::<i32>("2000000"), Err(Error::Overflow));
+        assert_eq!(from_b1032::<i32>("-2000001"), Err(Error::Overflow));
     }
     #[test]
     fn test_i64_overflow() {
-        assert_eq!(from_b1032::< i64 > ("8000000000000"), Err(Error::Overflow));
-        assert_eq!(from_b1032::< i64 > ("-8000000000001"), Err(Error::Overflow));
+        assert_eq!(from_b1032::<i64>("8000000000000"), Err(Error::Overflow));
+        assert_eq!(from_b1032::<i64>("-8000000000001"), Err(Error::Overflow));
     }
     #[test]
     fn test_signed_negative_zero() {
-        assert_eq!(from_b1032::< i32 > ("-0").unwrap(), 0);
-        assert_eq!(from_b1032::< i64 > ("-0").unwrap(), 0);
+        assert_eq!(from_b1032::<i32>("-0").unwrap(), 0);
+        assert_eq!(from_b1032::<i64>("-0").unwrap(), 0);
     }
     #[test]
     fn test_signed_leading_zeros() {
-        assert_eq!(from_b1032::< i32 > ("-007").unwrap(), - 7);
-        assert_eq!(from_b1032::< i32 > ("-0042").unwrap(), - 42);
+        assert_eq!(from_b1032::<i32>("-007").unwrap(), -7);
+        assert_eq!(from_b1032::<i32>("-0042").unwrap(), -42);
     }
     #[test]
     fn test_roundtrip_signed_zones() {
@@ -774,7 +810,8 @@ mod tests {
             let reencoded = to_b1032(decoded);
             let redecoded: u64 = from_b1032(&reencoded).unwrap();
             assert_eq!(
-                decoded, redecoded, "1-char roundtrip failed: '{}' -> {} -> '{}' -> {}",
+                decoded, redecoded,
+                "1-char roundtrip failed: '{}' -> {} -> '{}' -> {}",
                 s, decoded, reencoded, redecoded
             );
         }
@@ -786,8 +823,8 @@ mod tests {
                 let redecoded: u64 = from_b1032(&reencoded).unwrap();
                 assert_eq!(
                     decoded, redecoded,
-                    "2-char roundtrip failed: '{}' -> {} -> '{}' -> {}", s, decoded,
-                    reencoded, redecoded
+                    "2-char roundtrip failed: '{}' -> {} -> '{}' -> {}",
+                    s, decoded, reencoded, redecoded
                 );
             }
         }
@@ -800,8 +837,8 @@ mod tests {
                     let redecoded: u64 = from_b1032(&reencoded).unwrap();
                     assert_eq!(
                         decoded, redecoded,
-                        "3-char roundtrip failed: '{}' -> {} -> '{}' -> {}", s, decoded,
-                        reencoded, redecoded
+                        "3-char roundtrip failed: '{}' -> {} -> '{}' -> {}",
+                        s, decoded, reencoded, redecoded
                     );
                 }
             }
@@ -816,8 +853,8 @@ mod tests {
                         let redecoded: u64 = from_b1032(&reencoded).unwrap();
                         assert_eq!(
                             decoded, redecoded,
-                            "4-char roundtrip failed: '{}' -> {} -> '{}' -> {}", s,
-                            decoded, reencoded, redecoded
+                            "4-char roundtrip failed: '{}' -> {} -> '{}' -> {}",
+                            s, decoded, reencoded, redecoded
                         );
                     }
                 }
@@ -840,7 +877,11 @@ mod tests {
             let n = next_random(&mut rng);
             let tok = to_b1032(n);
             let back: u64 = from_b1032(&tok).unwrap();
-            assert_eq!(n, back, "u64 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+            assert_eq!(
+                n, back,
+                "u64 roundtrip failed: {} -> '{}' -> {}",
+                n, tok, back
+            );
         }
     }
     #[test]
@@ -850,7 +891,11 @@ mod tests {
             let n = next_random(&mut rng) as u32;
             let tok = to_b1032(n);
             let back: u32 = from_b1032(&tok).unwrap();
-            assert_eq!(n, back, "u32 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+            assert_eq!(
+                n, back,
+                "u32 roundtrip failed: {} -> '{}' -> {}",
+                n, tok, back
+            );
         }
     }
     #[test]
@@ -860,7 +905,11 @@ mod tests {
             let n = next_random(&mut rng) as u16;
             let tok = to_b1032(n);
             let back: u16 = from_b1032(&tok).unwrap();
-            assert_eq!(n, back, "u16 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+            assert_eq!(
+                n, back,
+                "u16 roundtrip failed: {} -> '{}' -> {}",
+                n, tok, back
+            );
         }
     }
     #[test]
@@ -870,7 +919,11 @@ mod tests {
             let n = next_random(&mut rng) as i64;
             let tok = to_b1032(n);
             let back: i64 = from_b1032(&tok).unwrap();
-            assert_eq!(n, back, "i64 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+            assert_eq!(
+                n, back,
+                "i64 roundtrip failed: {} -> '{}' -> {}",
+                n, tok, back
+            );
         }
     }
     #[test]
@@ -880,7 +933,11 @@ mod tests {
             let n = next_random(&mut rng) as i32;
             let tok = to_b1032(n);
             let back: i32 = from_b1032(&tok).unwrap();
-            assert_eq!(n, back, "i32 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+            assert_eq!(
+                n, back,
+                "i32 roundtrip failed: {} -> '{}' -> {}",
+                n, tok, back
+            );
         }
     }
     #[test]
@@ -890,7 +947,11 @@ mod tests {
             let n = next_random(&mut rng) as i16;
             let tok = to_b1032(n);
             let back: i16 = from_b1032(&tok).unwrap();
-            assert_eq!(n, back, "i16 roundtrip failed: {} -> '{}' -> {}", n, tok, back);
+            assert_eq!(
+                n, back,
+                "i16 roundtrip failed: {} -> '{}' -> {}",
+                n, tok, back
+            );
         }
     }
     #[test]
@@ -902,7 +963,8 @@ mod tests {
                 let u_tok = to_b1032(u);
                 let i_tok = to_b1032(i);
                 assert_eq!(
-                    u_tok, i_tok, "u32/i32 mismatch: u32({}) -> '{}', i32({}) -> '{}'",
+                    u_tok, i_tok,
+                    "u32/i32 mismatch: u32({}) -> '{}', i32({}) -> '{}'",
                     u, u_tok, i, i_tok
                 );
             }
@@ -917,7 +979,8 @@ mod tests {
                 let u_tok = to_b1032(u);
                 let i_tok = to_b1032(i);
                 assert_eq!(
-                    u_tok, i_tok, "u64/i64 mismatch: u64({}) -> '{}', i64({}) -> '{}'",
+                    u_tok, i_tok,
+                    "u64/i64 mismatch: u64({}) -> '{}', i64({}) -> '{}'",
                     u, u_tok, i, i_tok
                 );
             }
@@ -932,7 +995,8 @@ mod tests {
                 let u_tok = to_b1032(u);
                 let i_tok = to_b1032(i);
                 assert_eq!(
-                    u_tok, i_tok, "u16/i16 mismatch: u16({}) -> '{}', i16({}) -> '{}'",
+                    u_tok, i_tok,
+                    "u16/i16 mismatch: u16({}) -> '{}', i16({}) -> '{}'",
                     u, u_tok, i, i_tok
                 );
             }

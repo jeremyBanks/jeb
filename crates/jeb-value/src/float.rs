@@ -1,6 +1,21 @@
-use {core::hash::Hash, derive_more::{AsRef, Deref, Display, Into}};
-#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize), serde(transparent))]
+use {
+    core::hash::Hash,
+    derive_more::{
+        AsRef,
+        Deref,
+        Display,
+        Into,
+    },
+};
+#[cfg_attr(
+    feature = "wasm",
+    wasm_bindgen::prelude::wasm_bindgen
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize),
+    serde(transparent)
+)]
 #[derive(AsRef, Clone, Copy, Debug, Default, Deref, Display, Into)]
 #[repr(transparent)]
 #[must_use]
@@ -8,7 +23,11 @@ pub struct Float(pub(crate) f64);
 impl Float {
     #[must_use]
     pub const fn new(value: f64) -> Option<Self> {
-        if value.is_finite() { Some(Float(value)) } else { None }
+        if value.is_finite() {
+            Some(Float(value))
+        } else {
+            None
+        }
     }
 }
 #[cfg(feature = "serde")]
@@ -18,13 +37,12 @@ impl<'de> serde::Deserialize<'de> for Float {
         D: serde::Deserializer<'de>,
     {
         let value = f64::deserialize(deserializer)?;
-        Float::new(value)
-            .ok_or_else(|| {
-                serde::de::Error::invalid_value(
-                    serde::de::Unexpected::Float(value),
-                    &"a finite floating point number",
-                )
-            })
+        Float::new(value).ok_or_else(|| {
+            serde::de::Error::invalid_value(
+                serde::de::Unexpected::Float(value),
+                &"a finite floating point number",
+            )
+        })
     }
 }
 impl Ord for Float {

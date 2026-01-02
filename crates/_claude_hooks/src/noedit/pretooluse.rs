@@ -1,8 +1,18 @@
-use crate::{HookInput, HookInputDetails, HookOutput, HookOutputDetails, PermissionDecision};
-use eyre::{ContextCompat, Result};
-use std::path::Path;
-
-use super::patterns::NoeditMatcher;
+use {
+    super::patterns::NoeditMatcher,
+    crate::{
+        HookInput,
+        HookInputDetails,
+        HookOutput,
+        HookOutputDetails,
+        PermissionDecision,
+    },
+    eyre::{
+        ContextCompat,
+        Result,
+    },
+    std::path::Path,
+};
 
 /// Handle PreToolUse hook: block Write operations to .noedit-protected files
 pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {

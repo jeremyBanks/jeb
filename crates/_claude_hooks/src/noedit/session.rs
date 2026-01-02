@@ -1,7 +1,13 @@
-use crate::HookInput;
-use eyre::{Context, Result};
-use git2::Repository;
-use std::io::Write;
+use {
+    super::git_ops::find_git_root,
+    crate::HookInput,
+    eyre::{
+        Context,
+        Result,
+    },
+    git2::Repository,
+    std::io::Write,
+};
 
 /// Handle SessionStart hook: initialize or preserve JEB_CLAUDE_INITIAL_COMMIT
 pub fn handle(input: &HookInput) -> Result<()> {
@@ -17,13 +23,19 @@ pub fn handle(input: &HookInput) -> Result<()> {
     // Check if JEB_CLAUDE_INITIAL_COMMIT already exists in env
     let initial_commit = if let Ok(existing) = std::env::var("JEB_CLAUDE_INITIAL_COMMIT") {
         // Preserve existing value
-        eprintln!("Preserving existing JEB_CLAUDE_INITIAL_COMMIT: {}", existing);
+        eprintln!(
+            "Preserving existing JEB_CLAUDE_INITIAL_COMMIT: {}",
+            existing
+        );
         existing
     } else {
-        // Get current HEAD
-        let repo = Repository::open(&input.cwd).context("Failed to open repository")?;
+        // Find git repository root from current working directory
+        let repo_path = find_git_root(&input.cwd).context("Failed to find git repository")?;
+        let repo = Repository::open(&repo_path).context("Failed to open repository")?;
         let head = repo.head().context("Failed to get HEAD")?;
-        let commit = head.peel_to_commit().context("Failed to peel HEAD to commit")?;
+        let commit = head
+            .peel_to_commit()
+            .context("Failed to peel HEAD to commit")?;
         let commit_id = commit.id().to_string();
         eprintln!("Initializing JEB_CLAUDE_INITIAL_COMMIT: {}", commit_id);
         commit_id

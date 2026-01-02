@@ -1,5 +1,8 @@
 //! Converting from `serde_bytes` types to `jeb-value` types.
-use crate::{Bytes, Value};
+use crate::{
+    Bytes,
+    Value,
+};
 impl From<serde_bytes::ByteBuf> for Bytes {
     fn from(value: serde_bytes::ByteBuf) -> Self {
         Bytes(value.into_vec())

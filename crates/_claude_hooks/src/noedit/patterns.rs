@@ -1,10 +1,18 @@
-use eyre::{Context, ContextCompat, Result};
-use git2::{Commit, Repository};
-use ignore::gitignore::GitignoreBuilder;
-use std::path::Path;
-use walkdir::WalkDir;
-
-use super::git_ops::read_noedit_files_from_commit;
+use {
+    super::git_ops::read_noedit_files_from_commit,
+    eyre::{
+        Context,
+        ContextCompat,
+        Result,
+    },
+    git2::{
+        Commit,
+        Repository,
+    },
+    ignore::gitignore::GitignoreBuilder,
+    std::path::Path,
+    walkdir::WalkDir,
+};
 
 /// Matcher for .noedit patterns
 pub struct NoeditMatcher {
@@ -27,8 +35,8 @@ impl NoeditMatcher {
 
             if entry.file_name() == ".noedit" {
                 let path = entry.path();
-                let metadata = std::fs::metadata(path)
-                    .context("Failed to read .noedit file metadata")?;
+                let metadata =
+                    std::fs::metadata(path).context("Failed to read .noedit file metadata")?;
 
                 // Special case: empty .noedit matches everything in this directory
                 if metadata.len() == 0 {
@@ -101,7 +109,8 @@ impl NoeditMatcher {
         matched.is_ignore()
     }
 
-    /// Check if a path (potentially absolute) matches, converting to relative if needed
+    /// Check if a path (potentially absolute) matches, converting to relative
+    /// if needed
     pub fn matches_path(&self, base: &Path, path: &Path) -> bool {
         let relative_path = if path.is_absolute() {
             path.strip_prefix(base).unwrap_or(path)
@@ -114,9 +123,11 @@ impl NoeditMatcher {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::fs;
-    use tempfile::TempDir;
+    use {
+        super::*,
+        std::fs,
+        tempfile::TempDir,
+    };
 
     #[test]
     fn test_basic_pattern_matching() -> Result<()> {

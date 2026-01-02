@@ -12,9 +12,10 @@ version.workspace = true
 
 [dependencies]
 eyre = { workspace = true }
+tempfile = "*"
 git2 = { workspace = true }
-ignore = "0.4"
+ignore = { workspace = true }
 indexmap.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, features = ["preserve_order"] }
-walkdir = "2"
+walkdir = { workspace = true }

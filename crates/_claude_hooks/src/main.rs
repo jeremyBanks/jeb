@@ -75,25 +75,52 @@ pub struct HookInput {
     pub details: Option<HookInputDetails>,
 }
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, PartialEq, Eq, Hash)]
-#[serde(deny_unknown_fields, tag = "hook_event_name", rename_all = "PascalCase")]
+#[serde(
+    deny_unknown_fields,
+    tag = "hook_event_name",
+    rename_all = "PascalCase"
+)]
 pub enum HookInputDetails {
-    Notification { message: String, notification_type: String },
-    PreToolUse { tool_name: String, tool_input: serde_json::Value, tool_use_id: String },
+    Notification {
+        message: String,
+        notification_type: String,
+    },
+    PreToolUse {
+        tool_name: String,
+        tool_input: serde_json::Value,
+        tool_use_id: String,
+    },
     PostToolUse {
         tool_name: String,
         tool_input: serde_json::Value,
         tool_response: serde_json::Value,
         tool_use_id: String,
     },
-    PreCompactInput { trigger: String, custom_instructions: String },
-    SessionEnd { reason: String },
-    SessionStart { source: String },
-    Stop { stop_hook_active: bool },
-    SubagentStop { stop_hook_active: bool },
-    UserPromptSubmit { prompt: String },
+    PreCompactInput {
+        trigger: String,
+        custom_instructions: String,
+    },
+    SessionEnd {
+        reason: String,
+    },
+    SessionStart {
+        source: String,
+    },
+    Stop {
+        stop_hook_active: bool,
+    },
+    SubagentStop {
+        stop_hook_active: bool,
+    },
+    UserPromptSubmit {
+        prompt: String,
+    },
 }
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, PartialEq, Eq, Hash)]
-#[serde(deny_unknown_fields, rename_all = "camelCase")]
+#[serde(
+    deny_unknown_fields,
+    rename_all = "camelCase"
+)]
 pub struct HookOutput {
     #[serde(rename = "continue")]
     pub should_continue: Option<bool>,
@@ -107,36 +134,53 @@ pub struct HookOutput {
 #[serde(
     deny_unknown_fields,
     tag = "hookEventName",
-    rename_all = "camelCase",
+    rename_all = "PascalCase",
     rename_all_fields = "camelCase"
 )]
 pub enum HookOutputDetails {
-    Notification { #[serde(flatten)] other: serde_json::Value },
+    Notification {
+        #[serde(flatten)]
+        other: serde_json::Value,
+    },
     PreToolUse {
         permission_decision: Option<PermissionDecision>,
         permission_decision_reason: Option<String>,
         updated_input: Option<String>,
     },
-    PostToolUse { additional_context: String },
-    PreCompactInput { #[serde(flatten)] other: serde_json::Value },
-    SessionEnd { #[serde(flatten)] other: serde_json::Value },
-    SessionStart { #[serde(flatten)] other: serde_json::Value },
-    Stop { #[serde(flatten)] other: serde_json::Value },
-    SubagentStop { #[serde(flatten)] other: serde_json::Value },
-    UserPromptSubmit { additional_context: String },
+    PostToolUse {
+        additional_context: String,
+    },
+    PreCompactInput {
+        #[serde(flatten)]
+        other: serde_json::Value,
+    },
+    SessionEnd {
+        #[serde(flatten)]
+        other: serde_json::Value,
+    },
+    SessionStart {
+        #[serde(flatten)]
+        other: serde_json::Value,
+    },
+    Stop {
+        #[serde(flatten)]
+        other: serde_json::Value,
+    },
+    SubagentStop {
+        #[serde(flatten)]
+        other: serde_json::Value,
+    },
+    UserPromptSubmit {
+        additional_context: String,
+    },
 }
 #[derive(
-    serde::Deserialize,
-    serde::Serialize,
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
+    serde::Deserialize, serde::Serialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
-#[serde(deny_unknown_fields, rename_all = "camelCase")]
+#[serde(
+    deny_unknown_fields,
+    rename_all = "camelCase"
+)]
 pub enum PermissionMode {
     Plan,
     Default,
@@ -144,15 +188,7 @@ pub enum PermissionMode {
     BypassPermissions,
 }
 #[derive(
-    serde::Deserialize,
-    serde::Serialize,
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
+    serde::Deserialize, serde::Serialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
 #[serde(rename_all = "camelCase")]
 pub enum PermissionDecision {

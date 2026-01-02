@@ -1,11 +1,27 @@
 use {
-    anyhow::{Context, Result},
-    glob::glob, semver::Version,
-    std::{
-        collections::{HashMap, HashSet},
-        path::{Path, PathBuf},
+    anyhow::{
+        Context,
+        Result,
     },
-    toml_edit::{DocumentMut, InlineTable, Item, Value, value},
+    glob::glob,
+    semver::Version,
+    std::{
+        collections::{
+            HashMap,
+            HashSet,
+        },
+        path::{
+            Path,
+            PathBuf,
+        },
+    },
+    toml_edit::{
+        DocumentMut,
+        InlineTable,
+        Item,
+        Value,
+        value,
+    },
 };
 pub fn main() -> i32 {
     eprintln!("Running: workspace dependency normalization");
@@ -23,13 +39,35 @@ pub fn main() -> i32 {
 }
 fn run_normalization() -> Result<()> {
     let workspace_root = find_workspace_root(".")?;
+
+    // Ensure all crates are in workspace members
+    let added_members = ensure_workspace_members(&workspace_root)?;
+    if added_members > 0 {
+        eprintln!("  Added {} missing workspace member(s)", added_members);
+    }
+
+    // Ensure internal crates have publish = false
+    let updated_publish = ensure_publish_false_for_internal_crates(&workspace_root)?;
+    if updated_publish > 0 {
+        eprintln!(
+            "  Updated publish = false for {} internal crate(s)",
+            updated_publish
+        );
+    }
+
     let mut stats = NormalizationStats::default();
     normalize_workspace_dependencies(&workspace_root, &mut stats)?;
     eprintln!("\nSummary:");
     eprintln!("  Workspaces examined: {}", stats.workspaces_processed);
     eprintln!("  Crates examined: {}", stats.crates_examined);
-    eprintln!("  Workspace Cargo.toml files edited: {}", stats.workspace_tomls_edited);
-    eprintln!("  Member Cargo.toml files edited: {}", stats.member_tomls_edited);
+    eprintln!(
+        "  Workspace Cargo.toml files edited: {}",
+        stats.workspace_tomls_edited
+    );
+    eprintln!(
+        "  Member Cargo.toml files edited: {}",
+        stats.member_tomls_edited
+    );
     eprintln!("  Total files edited: {}", stats.edited_files.len());
     Ok(())
 }
@@ -80,6 +118,128 @@ fn resolve_workspace_members(workspace_root: &Path) -> Result<Vec<PathBuf>> {
     }
     Ok(member_paths)
 }
+/// Ensure all crates in the crates/ directory are referenced in
+/// workspace.members
+fn ensure_workspace_members(workspace_root: &Path) -> Result<usize> {
+    let cargo_toml_path = workspace_root.join("Cargo.toml");
+    let content = std::fs::read_to_string(&cargo_toml_path)?;
+    let mut doc = content.parse::<DocumentMut>()?;
+
+    // Get existing members patterns
+    let existing_members = resolve_workspace_members(workspace_root)?;
+    let existing_members_set: HashSet<PathBuf> = existing_members.into_iter().collect();
+
+    // Scan crates/ directory for all Cargo.toml files
+    let crates_dir = workspace_root.join("crates");
+    if !crates_dir.exists() {
+        return Ok(0);
+    }
+
+    let mut missing_crates = Vec::new();
+    for entry in std::fs::read_dir(&crates_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            let cargo_toml = path.join("Cargo.toml");
+            if cargo_toml.exists() {
+                let canonical_path = path.canonicalize().unwrap_or_else(|_| path.clone());
+                if !existing_members_set.contains(&canonical_path) {
+                    missing_crates.push(path.clone());
+                }
+            }
+        }
+    }
+
+    if missing_crates.is_empty() {
+        return Ok(0);
+    }
+
+    // Add missing crates to workspace.members
+    if doc.get("workspace").is_none() {
+        doc["workspace"] = toml_edit::table();
+    }
+    let workspace = doc["workspace"]
+        .as_table_mut()
+        .context("workspace is not a table")?;
+
+    if workspace.get("members").is_none() {
+        workspace["members"] = Item::Value(Value::Array(toml_edit::Array::new()));
+    }
+    let members = workspace["members"]
+        .as_array_mut()
+        .context("members is not an array")?;
+
+    let added_count = missing_crates.len();
+    for crate_path in missing_crates {
+        let rel_path = if let Ok(stripped) = crate_path.strip_prefix(workspace_root) {
+            stripped.display().to_string()
+        } else {
+            pathdiff::diff_paths(&crate_path, workspace_root)
+                .ok_or_else(|| anyhow::anyhow!("Could not create relative path"))?
+                .display()
+                .to_string()
+        };
+        eprintln!("  Adding missing workspace member: {}", rel_path);
+        members.push(rel_path);
+    }
+
+    let doc_str = doc.to_string();
+    if doc_str != content {
+        std::fs::write(&cargo_toml_path, doc_str)?;
+    }
+
+    Ok(added_count)
+}
+/// Ensure crates with names starting with _ have publish = false
+fn ensure_publish_false_for_internal_crates(workspace_root: &Path) -> Result<usize> {
+    let members = resolve_workspace_members(workspace_root)?;
+    let mut modified_count = 0;
+
+    for member_path in members {
+        let member_toml = member_path.join("Cargo.toml");
+        let content = std::fs::read_to_string(&member_toml)?;
+        let mut doc = content.parse::<DocumentMut>()?;
+
+        // Get the package name
+        let package_name = doc
+            .get("package")
+            .and_then(|p| p.get("name"))
+            .and_then(|n| n.as_str());
+
+        if let Some(name) = package_name
+            && name.starts_with('_') {
+                let name_owned = name.to_string();
+                // Check if publish is already set to false
+                let needs_update = doc
+                    .get("package")
+                    .and_then(|p| p.get("publish"))
+                    .and_then(|pub_val| pub_val.as_bool())
+                    != Some(false);
+
+                if needs_update {
+                    if doc.get("package").is_none() {
+                        doc["package"] = toml_edit::table();
+                    }
+                    let package = doc["package"]
+                        .as_table_mut()
+                        .context("package is not a table")?;
+                    package["publish"] = value(false);
+
+                    let doc_str = doc.to_string();
+                    if doc_str != content {
+                        std::fs::write(&member_toml, doc_str)?;
+                        modified_count += 1;
+                        eprintln!(
+                            "  Setting publish = false for internal crate: {}",
+                            name_owned
+                        );
+                    }
+                }
+            }
+    }
+
+    Ok(modified_count)
+}
 /// Represents a dependency with all its fields
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Dependency {
@@ -113,10 +273,15 @@ impl ResolutionFields {
     /// Check if two resolution fields are equal except for version
     /// compatibility
     fn matches_except_version(&self, other: &Self) -> bool {
-        self.package == other.package && self.path == other.path && self.git == other.git
-            && self.branch == other.branch && self.tag == other.tag
-            && self.rev == other.rev && self.registry == other.registry
+        self.package == other.package
+            && self.path == other.path
+            && self.git == other.git
+            && self.branch == other.branch
+            && self.tag == other.tag
+            && self.rev == other.rev
+            && self.registry == other.registry
     }
+
     /// Get a sorted vector of (key, value) for tie-breaking
     fn as_sorted_pairs(&self) -> Vec<(&str, String)> {
         let mut pairs = Vec::new();
@@ -165,10 +330,11 @@ fn normalize_path_components(path: &Path) -> PathBuf {
     for component in path.components() {
         match component {
             std::path::Component::ParentDir => {
-                if !components.is_empty() && let Some(last) = components.last() {
+                if !components.is_empty()
+                    && let Some(last) = components.last()
+                {
                     match last {
-                        std::path::Component::RootDir
-                        | std::path::Component::Prefix(_) => {}
+                        std::path::Component::RootDir | std::path::Component::Prefix(_) => {}
                         _ => {
                             components.pop();
                         }
@@ -242,47 +408,34 @@ fn parse_dependency(
                         .and_then(|w| w.get("dependencies"))
                         .and_then(|d| d.as_table())
                     && let Some(ws_dep) = ws_deps.get(key)
-                {
-                    if let Ok(Some(ws_parsed)) = parse_dependency(
-                        key,
-                        ws_dep,
-                        workspace_root,
-                        workspace_root,
-                        None,
-                    ) {
+                    && let Ok(Some(ws_parsed)) =
+                        parse_dependency(key, ws_dep, workspace_root, workspace_root, None)
+                    {
                         let optional = t.get("optional").and_then(|v| v.as_bool());
-                        let default_features = t
-                            .get("default-features")
-                            .and_then(|v| v.as_bool());
-                        let features = t
-                            .get("features")
-                            .and_then(|v| {
-                                v.as_array()
-                                    .map(|arr| {
-                                        arr.iter()
-                                            .filter_map(|item| item.as_str().map(String::from))
-                                            .collect()
-                                    })
-                            });
+                        let default_features = t.get("default-features").and_then(|v| v.as_bool());
+                        let features = t.get("features").and_then(|v| {
+                            v.as_array().map(|arr| {
+                                arr.iter()
+                                    .filter_map(|item| item.as_str().map(String::from))
+                                    .collect()
+                            })
+                        });
                         let name = ws_parsed
                             .resolution
                             .package
                             .clone()
                             .unwrap_or_else(|| key.to_string());
-                        return Ok(
-                            Some(Dependency {
-                                key: key.to_string(),
-                                name,
-                                resolution: ws_parsed.resolution,
-                                config: ConfigFields {
-                                    optional,
-                                    features,
-                                    default_features,
-                                },
-                            }),
-                        );
+                        return Ok(Some(Dependency {
+                            key: key.to_string(),
+                            name,
+                            resolution: ws_parsed.resolution,
+                            config: ConfigFields {
+                                optional,
+                                features,
+                                default_features,
+                            },
+                        }));
                     }
-                }
                 return Ok(None);
             }
             version_str = t.get("version").and_then(|v| v.as_str());
@@ -295,16 +448,13 @@ fn parse_dependency(
             registry = t.get("registry").and_then(|v| v.as_str()).map(String::from);
             optional = t.get("optional").and_then(|v| v.as_bool());
             default_features = t.get("default-features").and_then(|v| v.as_bool());
-            features = t
-                .get("features")
-                .and_then(|v| {
-                    v.as_array()
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|item| item.as_str().map(String::from))
-                                .collect()
-                        })
-                });
+            features = t.get("features").and_then(|v| {
+                v.as_array().map(|arr| {
+                    arr.iter()
+                        .filter_map(|item| item.as_str().map(String::from))
+                        .collect()
+                })
+            });
         }
         Item::Table(t) => {
             version_str = t.get("version").and_then(|v| v.as_str());
@@ -317,16 +467,13 @@ fn parse_dependency(
             registry = t.get("registry").and_then(|v| v.as_str()).map(String::from);
             optional = t.get("optional").and_then(|v| v.as_bool());
             default_features = t.get("default-features").and_then(|v| v.as_bool());
-            features = t
-                .get("features")
-                .and_then(|v| {
-                    v.as_array()
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|item| item.as_str().map(String::from))
-                                .collect()
-                        })
-                });
+            features = t.get("features").and_then(|v| {
+                v.as_array().map(|arr| {
+                    arr.iter()
+                        .filter_map(|item| item.as_str().map(String::from))
+                        .collect()
+                })
+            });
         }
         _ => return Ok(None),
     }
@@ -355,27 +502,25 @@ fn parse_dependency(
         None
     };
     let name = package.clone().unwrap_or_else(|| key.to_string());
-    Ok(
-        Some(Dependency {
-            key: key.to_string(),
-            name,
-            resolution: ResolutionFields {
-                package,
-                version,
-                path,
-                git,
-                branch,
-                tag,
-                rev,
-                registry,
-            },
-            config: ConfigFields {
-                optional,
-                features,
-                default_features,
-            },
-        }),
-    )
+    Ok(Some(Dependency {
+        key: key.to_string(),
+        name,
+        resolution: ResolutionFields {
+            package,
+            version,
+            path,
+            git,
+            branch,
+            tag,
+            rev,
+            registry,
+        },
+        config: ConfigFields {
+            optional,
+            features,
+            default_features,
+        },
+    }))
 }
 #[derive(Default)]
 struct NormalizationStats {
@@ -460,10 +605,11 @@ fn normalize_workspace_dependencies(
                         workspace_root,
                         Some(&workspace_doc),
                     )? {
-                        all_deps
-                            .entry(dep.name.clone())
-                            .or_default()
-                            .push((member_path.clone(), section.to_string(), dep));
+                        all_deps.entry(dep.name.clone()).or_default().push((
+                            member_path.clone(),
+                            section.to_string(),
+                            dep,
+                        ));
                     }
                 }
             }
@@ -497,15 +643,14 @@ fn normalize_workspace_dependencies(
         }
         if let Some(winner) = find_winner(&equivalence_classes) {
             let key = winner.get_preferred_key();
-            workspace_updates
-                .insert(
-                    key,
-                    (
-                        winner.resolution.clone(),
-                        dep_name.clone(),
-                        winner.needs_default_features_false,
-                    ),
-                );
+            workspace_updates.insert(
+                key,
+                (
+                    winner.resolution.clone(),
+                    dep_name.clone(),
+                    winner.needs_default_features_false,
+                ),
+            );
         }
     }
     let old_workspace_deps = capture_old_workspace_deps(&workspace_doc, workspace_root);
@@ -568,31 +713,25 @@ impl EquivalenceClass {
             needs_default_features_false: false,
         }
     }
+
     fn matches(&self, dep: &Dependency) -> bool {
         self.resolution.matches_except_version(&dep.resolution)
             && versions_compatible_opt(&self.resolution.version, &dep.resolution.version)
     }
+
     fn add_vote(&mut self, member: PathBuf, dep: Dependency) {
-        if let (Some(current), Some(new)) = (
-            &self.resolution.version,
-            &dep.resolution.version,
-        ) {
+        if let (Some(current), Some(new)) = (&self.resolution.version, &dep.resolution.version) {
             match (current.as_str(), new.as_str()) {
                 ("*", new_ver) if new_ver != "*" => {
                     self.resolution.version = Some(new.clone());
                 }
                 (current_ver, "*") if current_ver != "*" => {}
                 ("*", "*") => {}
-                _ => {
-                    match (Version::parse(current), Version::parse(new)) {
-                        (Ok(curr_v), Ok(new_v)) => {
-                            if new_v > curr_v {
-                                self.resolution.version = Some(new.clone());
-                            }
-                        }
-                        _ => {}
+                _ => if let (Ok(curr_v), Ok(new_v)) = (Version::parse(current), Version::parse(new)) {
+                    if new_v > curr_v {
+                        self.resolution.version = Some(new.clone());
                     }
-                }
+                },
             }
         }
         if dep.config.default_features == Some(false) {
@@ -600,9 +739,11 @@ impl EquivalenceClass {
         }
         self.votes.entry(member).or_default().push(dep);
     }
+
     fn vote_count(&self) -> usize {
         self.votes.len()
     }
+
     fn get_preferred_key(&self) -> String {
         let mut keys: Vec<String> = self
             .votes
@@ -611,7 +752,9 @@ impl EquivalenceClass {
             .map(|d| d.key.clone())
             .collect();
         keys.sort();
-        keys.into_iter().next().unwrap_or_else(|| "unknown".to_string())
+        keys.into_iter()
+            .next()
+            .unwrap_or_else(|| "unknown".to_string())
     }
 }
 fn versions_compatible_opt(v1: &Option<String>, v2: &Option<String>) -> bool {
@@ -641,34 +784,33 @@ fn find_winner(classes: &[EquivalenceClass]) -> Option<&EquivalenceClass> {
     if candidates.len() == 1 {
         return Some(candidates[0]);
     }
-    candidates
-        .sort_by(|a, b| {
-            match (&a.resolution.version, &b.resolution.version) {
-                (Some(v1_str), Some(v2_str)) => {
-                    let v1_is_star = v1_str == "*";
-                    let v2_is_star = v2_str == "*";
-                    if v1_is_star && !v2_is_star {
-                        return std::cmp::Ordering::Greater;
-                    } else if !v1_is_star && v2_is_star {
-                        return std::cmp::Ordering::Less;
-                    } else if v1_is_star && v2_is_star {} else {
-                        match (Version::parse(v1_str), Version::parse(v2_str)) {
-                            (Ok(v1), Ok(v2)) => {
-                                let cmp = v2.cmp(&v1);
-                                if cmp != std::cmp::Ordering::Equal {
-                                    return cmp;
-                                }
-                            }
-                            _ => {}
+    candidates.sort_by(|a, b| {
+        match (&a.resolution.version, &b.resolution.version) {
+            (Some(v1_str), Some(v2_str)) => {
+                let v1_is_star = v1_str == "*";
+                let v2_is_star = v2_str == "*";
+                if v1_is_star && !v2_is_star {
+                    return std::cmp::Ordering::Greater;
+                } else if !v1_is_star && v2_is_star {
+                    return std::cmp::Ordering::Less;
+                } else if v1_is_star && v2_is_star {
+                } else {
+                    if let (Ok(v1), Ok(v2)) = (Version::parse(v1_str), Version::parse(v2_str)) {
+                        let cmp = v2.cmp(&v1);
+                        if cmp != std::cmp::Ordering::Equal {
+                            return cmp;
                         }
                     }
                 }
-                (Some(_), None) => return std::cmp::Ordering::Less,
-                (None, Some(_)) => return std::cmp::Ordering::Greater,
-                (None, None) => {}
             }
-            a.resolution.as_sorted_pairs().cmp(&b.resolution.as_sorted_pairs())
-        });
+            (Some(_), None) => return std::cmp::Ordering::Less,
+            (None, Some(_)) => return std::cmp::Ordering::Greater,
+            (None, None) => {}
+        }
+        a.resolution
+            .as_sorted_pairs()
+            .cmp(&b.resolution.as_sorted_pairs())
+    });
     candidates.first().copied()
 }
 fn capture_old_workspace_deps(
@@ -680,13 +822,9 @@ fn capture_old_workspace_deps(
         && let Some(deps) = workspace.get("dependencies").and_then(|d| d.as_table())
     {
         for (key, value) in deps.iter() {
-            if let Ok(Some(dep)) = parse_dependency(
-                key,
-                value,
-                workspace_root,
-                workspace_root,
-                None,
-            ) {
+            if let Ok(Some(dep)) =
+                parse_dependency(key, value, workspace_root, workspace_root, None)
+            {
                 old_deps.insert(key.to_string(), dep.resolution);
             }
         }
@@ -701,7 +839,9 @@ fn update_workspace_toml(
     if doc.get("workspace").is_none() {
         doc["workspace"] = toml_edit::table();
     }
-    let workspace = doc["workspace"].as_table_mut().context("workspace is not a table")?;
+    let workspace = doc["workspace"]
+        .as_table_mut()
+        .context("workspace is not a table")?;
     if workspace.get("dependencies").is_none() {
         workspace["dependencies"] = toml_edit::table();
     }
@@ -711,11 +851,8 @@ fn update_workspace_toml(
     let mut used_deps: HashSet<String> = HashSet::new();
     for (key, (resolution, _dep_name, needs_default_features_false)) in updates {
         used_deps.insert(key.clone());
-        let value = build_dependency_value(
-            resolution,
-            workspace_root,
-            *needs_default_features_false,
-        )?;
+        let value =
+            build_dependency_value(resolution, workspace_root, *needs_default_features_false)?;
         deps.insert(key.as_str(), value);
     }
     let all_keys: Vec<String> = deps.iter().map(|(k, _)| k.to_string()).collect();
@@ -733,15 +870,17 @@ fn build_dependency_value(
     needs_default_features_false: bool,
 ) -> Result<Item> {
     let mut has_extra_fields = false;
-    if resolution.package.is_some() || resolution.path.is_some()
-        || resolution.git.is_some() || resolution.branch.is_some()
-        || resolution.tag.is_some() || resolution.rev.is_some()
+    if resolution.package.is_some()
+        || resolution.path.is_some()
+        || resolution.git.is_some()
+        || resolution.branch.is_some()
+        || resolution.tag.is_some()
+        || resolution.rev.is_some()
         || resolution.registry.is_some()
     {
         has_extra_fields = true;
     }
-    if !has_extra_fields && !needs_default_features_false && resolution.version.is_some()
-    {
+    if !has_extra_fields && !needs_default_features_false && resolution.version.is_some() {
         let version_str = resolution.version.as_ref().unwrap().to_string();
         return Ok(value(version_str));
     }
@@ -803,7 +942,10 @@ fn parse_resolution_from_value(value: &Item) -> Result<ResolutionFields> {
             .get("version")
             .and_then(|v| v.as_str())
             .map(String::from);
-        resolution.path = table.get("path").and_then(|v| v.as_str()).map(PathBuf::from);
+        resolution.path = table
+            .get("path")
+            .and_then(|v| v.as_str())
+            .map(PathBuf::from);
         resolution.git = table.get("git").and_then(|v| v.as_str()).map(String::from);
         resolution.registry = table
             .get("registry")
@@ -824,7 +966,10 @@ fn parse_resolution_from_value(value: &Item) -> Result<ResolutionFields> {
             .get("version")
             .and_then(|v| v.as_str())
             .map(String::from);
-        resolution.path = table.get("path").and_then(|v| v.as_str()).map(PathBuf::from);
+        resolution.path = table
+            .get("path")
+            .and_then(|v| v.as_str())
+            .map(PathBuf::from);
         resolution.git = table.get("git").and_then(|v| v.as_str()).map(String::from);
         resolution.registry = table
             .get("registry")
@@ -897,7 +1042,8 @@ fn update_member_toml(
                     let currently_uses_workspace = dep_item
                         .as_inline_table()
                         .and_then(|t| t.get("workspace"))
-                        .and_then(|v| v.as_bool()) == Some(true);
+                        .and_then(|v| v.as_bool())
+                        == Some(true);
                     let dep = if currently_uses_workspace {
                         if let Some(old_resolution) = old_workspace_deps.get(&key) {
                             let config = extract_config_fields(dep_item);
@@ -912,17 +1058,6 @@ fn update_member_toml(
                             })
                         } else {
                             parse_dependency(
-                                    &key,
-                                    dep_item,
-                                    member_path,
-                                    workspace_root,
-                                    Some(workspace_doc),
-                                )
-                                .ok()
-                                .flatten()
-                        }
-                    } else {
-                        parse_dependency(
                                 &key,
                                 dep_item,
                                 member_path,
@@ -931,16 +1066,21 @@ fn update_member_toml(
                             )
                             .ok()
                             .flatten()
+                        }
+                    } else {
+                        parse_dependency(
+                            &key,
+                            dep_item,
+                            member_path,
+                            workspace_root,
+                            Some(workspace_doc),
+                        )
+                        .ok()
+                        .flatten()
                     };
                     if let Some(dep) = dep {
-                        if let Some(workspace_key) = dep_name_to_workspace_key
-                            .get(&dep.name)
-                        {
-                            if should_use_workspace(
-                                &dep,
-                                workspace_updates,
-                                workspace_key,
-                            ) {
+                        if let Some(workspace_key) = dep_name_to_workspace_key.get(&dep.name) {
+                            if should_use_workspace(&dep, workspace_updates, workspace_key) {
                                 let mut table = InlineTable::new();
                                 table.insert("workspace", Value::from(true));
                                 if let Some(optional) = dep.config.optional {
@@ -961,9 +1101,8 @@ fn update_member_toml(
                                         }
                                         table.insert("default-features", Value::from(false));
                                     } else {
-                                        let features_with_default = prepend_default_feature(
-                                            dep.config.features.clone(),
-                                        );
+                                        let features_with_default =
+                                            prepend_default_feature(dep.config.features.clone());
                                         let arr: toml_edit::Array = features_with_default
                                             .iter()
                                             .map(|s| Value::from(s.as_str()))
@@ -978,10 +1117,11 @@ fn update_member_toml(
                                             .collect();
                                         table.insert("features", Value::Array(arr));
                                     }
-                                    if let Some(default_features) = dep.config.default_features
-                                    {
-                                        table
-                                            .insert("default-features", Value::from(default_features));
+                                    if let Some(default_features) = dep.config.default_features {
+                                        table.insert(
+                                            "default-features",
+                                            Value::from(default_features),
+                                        );
                                     }
                                 }
                                 deps[&key] = Item::Value(Value::InlineTable(table));
@@ -1032,10 +1172,7 @@ fn should_use_workspace(
 ) -> bool {
     if let Some((workspace_resolution, _, _)) = workspace_updates.get(workspace_key) {
         workspace_resolution.matches_except_version(&dep.resolution)
-            && versions_compatible_opt(
-                &workspace_resolution.version,
-                &dep.resolution.version,
-            )
+            && versions_compatible_opt(&workspace_resolution.version, &dep.resolution.version)
     } else {
         false
     }
@@ -1047,11 +1184,15 @@ fn inline_dependency(
     member_path: &Path,
 ) -> Result<()> {
     let has_extra_fields = dep.resolution.package.is_some()
-        || dep.resolution.path.is_some() || dep.resolution.git.is_some()
-        || dep.resolution.branch.is_some() || dep.resolution.tag.is_some()
-        || dep.resolution.rev.is_some() || dep.resolution.registry.is_some();
+        || dep.resolution.path.is_some()
+        || dep.resolution.git.is_some()
+        || dep.resolution.branch.is_some()
+        || dep.resolution.tag.is_some()
+        || dep.resolution.rev.is_some()
+        || dep.resolution.registry.is_some();
     let has_config_fields = dep.config.optional.is_some()
-        || dep.config.features.is_some() || dep.config.default_features.is_some();
+        || dep.config.features.is_some()
+        || dep.config.default_features.is_some();
     if !has_extra_fields && !has_config_fields && dep.resolution.version.is_some() {
         let version_str = dep.resolution.version.as_ref().unwrap().to_string();
         deps.insert(key, value(version_str));
@@ -1092,10 +1233,7 @@ fn inline_dependency(
         table.insert("optional", Value::from(optional));
     }
     if let Some(ref features) = dep.config.features {
-        let arr: toml_edit::Array = features
-            .iter()
-            .map(|s| Value::from(s.as_str()))
-            .collect();
+        let arr: toml_edit::Array = features.iter().map(|s| Value::from(s.as_str())).collect();
         table.insert("features", Value::Array(arr));
     }
     if let Some(default_features) = dep.config.default_features {
@@ -1126,15 +1264,12 @@ fn extract_config_fields(value: &Item) -> ConfigFields {
     };
     if let Some(table) = table {
         config.optional = table.get("optional").and_then(|v| v.as_bool());
-        config.features = table
-            .get("features")
-            .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter().filter_map(|v| v.as_str().map(String::from)).collect()
-            });
-        config.default_features = table
-            .get("default-features")
-            .and_then(|v| v.as_bool());
+        config.features = table.get("features").and_then(|v| v.as_array()).map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        });
+        config.default_features = table.get("default-features").and_then(|v| v.as_bool());
     }
     config
 }
@@ -1152,7 +1287,11 @@ fn prepend_default_feature(features: Option<Vec<String>>) -> Vec<String> {
 }
 #[cfg(test)]
 mod tests {
-    use {super::*, std::fs, tempfile::TempDir};
+    use {
+        super::*,
+        std::fs,
+        tempfile::TempDir,
+    };
     fn create_test_workspace() -> Result<TempDir> {
         let dir = TempDir::new()?;
         let workspace_root = dir.path();
@@ -1196,7 +1335,7 @@ anyhow = "1.0.0"
     fn test_find_workspace_root() -> Result<()> {
         let temp = create_test_workspace()?;
         let workspace_root = find_workspace_root(temp.path().to_str().unwrap())?;
-        assert_eq!(workspace_root, temp.path().canonicalize() ?);
+        assert_eq!(workspace_root, temp.path().canonicalize()?);
         Ok(())
     }
     #[test]
@@ -1211,18 +1350,18 @@ anyhow = "1.0.0"
         let v1 = Version::parse("1.2.3").unwrap();
         let v2 = Version::parse("1.5.0").unwrap();
         let v3 = Version::parse("2.0.0").unwrap();
-        assert!(versions_compatible(& v1, & v2));
-        assert!(! versions_compatible(& v1, & v3));
+        assert!(versions_compatible(&v1, &v2));
+        assert!(!versions_compatible(&v1, &v3));
         let v4 = Version::parse("0.2.3").unwrap();
         let v5 = Version::parse("0.2.7").unwrap();
         let v6 = Version::parse("0.3.0").unwrap();
-        assert!(versions_compatible(& v4, & v5));
-        assert!(! versions_compatible(& v4, & v6));
+        assert!(versions_compatible(&v4, &v5));
+        assert!(!versions_compatible(&v4, &v6));
         let v7 = Version::parse("0.0.3").unwrap();
         let v8 = Version::parse("0.0.3").unwrap();
         let v9 = Version::parse("0.0.4").unwrap();
-        assert!(versions_compatible(& v7, & v8));
-        assert!(! versions_compatible(& v7, & v9));
+        assert!(versions_compatible(&v7, &v8));
+        assert!(!versions_compatible(&v7, &v9));
     }
     #[test]
     fn test_normalize_shared_dependencies() -> Result<()> {
@@ -1231,9 +1370,7 @@ anyhow = "1.0.0"
         normalize_workspace_dependencies(temp.path(), &mut stats)?;
         let workspace_content = fs::read_to_string(temp.path().join("Cargo.toml"))?;
         assert!(workspace_content.contains("serde"));
-        let crate_a_content = fs::read_to_string(
-            temp.path().join("crate-a/Cargo.toml"),
-        )?;
+        let crate_a_content = fs::read_to_string(temp.path().join("crate-a/Cargo.toml"))?;
         assert!(crate_a_content.contains("workspace = true"));
         Ok(())
     }
@@ -1243,15 +1380,11 @@ anyhow = "1.0.0"
         let mut stats = NormalizationStats::default();
         normalize_workspace_dependencies(temp.path(), &mut stats)?;
         let workspace_content_1 = fs::read_to_string(temp.path().join("Cargo.toml"))?;
-        let crate_a_content_1 = fs::read_to_string(
-            temp.path().join("crate-a/Cargo.toml"),
-        )?;
+        let crate_a_content_1 = fs::read_to_string(temp.path().join("crate-a/Cargo.toml"))?;
         let mut stats = NormalizationStats::default();
         normalize_workspace_dependencies(temp.path(), &mut stats)?;
         let workspace_content_2 = fs::read_to_string(temp.path().join("Cargo.toml"))?;
-        let crate_a_content_2 = fs::read_to_string(
-            temp.path().join("crate-a/Cargo.toml"),
-        )?;
+        let crate_a_content_2 = fs::read_to_string(temp.path().join("crate-a/Cargo.toml"))?;
         assert_eq!(
             workspace_content_1, workspace_content_2,
             "Workspace Cargo.toml changed on second run"
@@ -1267,8 +1400,8 @@ anyhow = "1.0.0"
         let v1 = Version::parse("1.0.0-alpha").unwrap();
         let v2 = Version::parse("1.0.0-alpha").unwrap();
         let v3 = Version::parse("1.0.0-beta").unwrap();
-        assert!(versions_compatible(& v1, & v2));
-        assert!(! versions_compatible(& v1, & v3));
+        assert!(versions_compatible(&v1, &v2));
+        assert!(!versions_compatible(&v1, &v3));
     }
     #[test]
     fn test_loser_inlining() -> Result<()> {
@@ -1325,12 +1458,8 @@ serde = "2.0.0"
             workspace_content.contains("serde = \"1.0.0\""),
             "serde 1.0.0 should win initially"
         );
-        let crate_a_content = fs::read_to_string(
-            workspace_root.join("crate-a/Cargo.toml"),
-        )?;
-        let crate_b_content = fs::read_to_string(
-            workspace_root.join("crate-b/Cargo.toml"),
-        )?;
+        let crate_a_content = fs::read_to_string(workspace_root.join("crate-a/Cargo.toml"))?;
+        let crate_b_content = fs::read_to_string(workspace_root.join("crate-b/Cargo.toml"))?;
         assert!(
             crate_a_content.contains("workspace = true"),
             "crate-a should use workspace = true"
@@ -1339,15 +1468,13 @@ serde = "2.0.0"
             crate_b_content.contains("workspace = true"),
             "crate-b should use workspace = true"
         );
-        let crate_c_content = fs::read_to_string(
-            workspace_root.join("crate-c/Cargo.toml"),
-        )?;
+        let crate_c_content = fs::read_to_string(workspace_root.join("crate-c/Cargo.toml"))?;
         assert!(
             crate_c_content.contains("serde = \"2.0.0\""),
             "crate-c should have serde 2.0.0 inlined"
         );
         assert!(
-            ! crate_c_content.contains("workspace = true"),
+            !crate_c_content.contains("workspace = true"),
             "crate-c should not use workspace = true"
         );
         fs::create_dir(workspace_root.join("crate-d"))?;
@@ -1364,11 +1491,10 @@ serde = "2.0.0"
         )?;
         fs::write(
             workspace_root.join("Cargo.toml"),
-            workspace_content
-                .replace(
-                    r#"members = ["crate-a", "crate-b", "crate-c"]"#,
-                    r#"members = ["crate-a", "crate-b", "crate-c", "crate-d"]"#,
-                ),
+            workspace_content.replace(
+                r#"members = ["crate-a", "crate-b", "crate-c"]"#,
+                r#"members = ["crate-a", "crate-b", "crate-c", "crate-d"]"#,
+            ),
         )?;
         let mut stats = NormalizationStats::default();
         normalize_workspace_dependencies(workspace_root, &mut stats)?;
@@ -1377,18 +1503,14 @@ serde = "2.0.0"
             workspace_content_2.contains("serde = \"2.0.0\""),
             "serde 2.0.0 should win after adding crate-d"
         );
-        let crate_a_content_2 = fs::read_to_string(
-            workspace_root.join("crate-a/Cargo.toml"),
-        )?;
-        let crate_b_content_2 = fs::read_to_string(
-            workspace_root.join("crate-b/Cargo.toml"),
-        )?;
+        let crate_a_content_2 = fs::read_to_string(workspace_root.join("crate-a/Cargo.toml"))?;
+        let crate_b_content_2 = fs::read_to_string(workspace_root.join("crate-b/Cargo.toml"))?;
         assert!(
             crate_a_content_2.contains("serde = \"1.0.0\""),
             "crate-a should have serde 1.0.0 inlined"
         );
         assert!(
-            ! crate_a_content_2.contains("workspace = true"),
+            !crate_a_content_2.contains("workspace = true"),
             "crate-a should not use workspace = true"
         );
         assert!(
@@ -1396,15 +1518,11 @@ serde = "2.0.0"
             "crate-b should have serde 1.0.0 inlined"
         );
         assert!(
-            ! crate_b_content_2.contains("workspace = true"),
+            !crate_b_content_2.contains("workspace = true"),
             "crate-b should not use workspace = true"
         );
-        let crate_c_content_2 = fs::read_to_string(
-            workspace_root.join("crate-c/Cargo.toml"),
-        )?;
-        let crate_d_content = fs::read_to_string(
-            workspace_root.join("crate-d/Cargo.toml"),
-        )?;
+        let crate_c_content_2 = fs::read_to_string(workspace_root.join("crate-c/Cargo.toml"))?;
+        let crate_d_content = fs::read_to_string(workspace_root.join("crate-d/Cargo.toml"))?;
         assert!(
             crate_c_content_2.contains("workspace = true"),
             "crate-c should use workspace = true"

@@ -27,13 +27,11 @@ pub fn scan_for_trailer(
                 if filter_path.is_some_and(|filter| path != filter) {
                     continue;
                 }
-                return Ok(
-                    Some(Found {
-                        commit: commit_hash,
-                        path: path.to_string(),
-                        second_parent: parents.get(1).cloned(),
-                    }),
-                );
+                return Ok(Some(Found {
+                    commit: commit_hash,
+                    path: path.to_string(),
+                    second_parent: parents.get(1).cloned(),
+                }));
             }
         }
     }
@@ -50,13 +48,21 @@ pub fn scan_for_zoom_out(filter_path: Option<&str>) -> git::Result<Option<Found>
 #[cfg(test)]
 mod tests {
     use {
-        super::*, std::{fs, process::Command},
+        super::*,
+        std::{
+            fs,
+            process::Command,
+        },
         tempfile::TempDir,
     };
     fn setup_test_repo() -> TempDir {
         let dir = TempDir::new().unwrap();
         std::env::set_current_dir(dir.path()).unwrap();
-        Command::new("git").args(["init"]).current_dir(dir.path()).output().unwrap();
+        Command::new("git")
+            .args(["init"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
         Command::new("git")
             .args(["config", "user.email", "test@test.com"])
             .current_dir(dir.path())

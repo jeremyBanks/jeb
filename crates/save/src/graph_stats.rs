@@ -10,11 +10,11 @@
 //! in large repositories.
 use std::{
     collections::{HashMap, HashSet},
-    fmt::Debug, hash::Hash,
+    fmt::Debug,
+    hash::Hash,
 };
 /// Statistics about a commit's position in the repository graph.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct GraphStats {
     pub revision_index: u32,
     pub generation_index: u32,
@@ -62,10 +62,7 @@ pub trait RepositoryView<'repo> {
     /// Check if this is a shallow clone.
     fn is_shallow(&self) -> bool;
     /// Find a commit by its ID.
-    fn find_commit(
-        &'repo self,
-        id: <Self::Commit as CommitView>::Id,
-    ) -> Option<Self::Commit>;
+    fn find_commit(&'repo self, id: <Self::Commit as CommitView>::Id) -> Option<Self::Commit>;
     /// Validate that a tree prefix matches the actual tree ID.
     /// This is used to verify parsed commit messages.
     fn validate_tree_prefix(
@@ -119,6 +116,7 @@ impl MessageParser {
             origin,
         })
     }
+
     /// Validate a parsed message against actual commit data.
     ///
     /// Returns true if the message can be trusted based on:
@@ -152,8 +150,7 @@ pub struct GraphStatsCalculator<'repo, 'a: 'repo, R: RepositoryView<'repo>> {
     trust_messages: bool,
     _phantom: std::marker::PhantomData<&'repo ()>,
 }
-impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> Debug
-for GraphStatsCalculator<'repo, 'a, R> {
+impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> Debug for GraphStatsCalculator<'repo, 'a, R> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GraphStatsCalculator")
             .field("max_depth", &self.max_depth)
@@ -170,6 +167,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             _phantom: std::marker::PhantomData,
         }
     }
+
     pub const fn new_rebuild(repo: &'a R, max_depth: i32) -> Self {
         Self {
             repo,
@@ -178,6 +176,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             _phantom: std::marker::PhantomData,
         }
     }
+
     /// Calculate graph statistics for a commit.
     ///
     /// This implements the z-mode algorithm:
@@ -209,14 +208,11 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                             _ => false,
                         };
                         if trusted {
-                            let generation_index = parsed
-                                .generation_index
-                                .unwrap_or(parsed.revision_index) + 1;
-                            let commit_index = parsed
-                                .commit_index
-                                .unwrap_or_else(|| {
-                                    parsed.generation_index.unwrap_or(parsed.revision_index)
-                                }) + 1;
+                            let generation_index =
+                                parsed.generation_index.unwrap_or(parsed.revision_index) + 1;
+                            let commit_index = parsed.commit_index.unwrap_or_else(|| {
+                                parsed.generation_index.unwrap_or(parsed.revision_index)
+                            }) + 1;
                             return GraphStats {
                                 revision_index: parsed.revision_index + 1,
                                 generation_index,
@@ -235,6 +231,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             self.depth_limited_scan(head, is_shallow)
         }
     }
+
     /// Depth-limited scan implementing z-mode algorithm.
     fn depth_limited_scan(&self, head: &R::Commit, is_shallow: bool) -> GraphStats {
         let max_depth = self.max_depth as usize;
@@ -256,12 +253,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                     let has_trusted = if self.trust_messages {
                         if let Some(summary) = commit.summary() {
                             if let Some(parsed) = MessageParser::parse(&summary) {
-                                if MessageParser::validate(
-                                    self.repo,
-                                    &commit,
-                                    &summary,
-                                    &parsed,
-                                ) {
+                                if MessageParser::validate(self.repo, &commit, &summary, &parsed) {
                                     if parsed.prefix == MessagePrefix::ZMode {
                                         z_commits.insert(id.clone());
                                         false
@@ -299,10 +291,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 if should_continue {
                     for parent_id in parents {
                         if visited.insert(parent_id.clone()) {
-                            if let Some(parent) = self
-                                .repo
-                                .find_commit(parent_id.clone())
-                            {
+                            if let Some(parent) = self.repo.find_commit(parent_id.clone()) {
                                 commit_map.insert(parent_id.clone(), parent);
                                 queue.push((parent_id, depth + 1));
                             } else {
@@ -322,13 +311,10 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 if let Some(commit) = commit_map.get(&z_id) {
                     if let Some(summary) = commit.summary() {
                         if let Some(parsed) = MessageParser::parse(&summary) {
-                            if MessageParser::validate(
-                                self.repo,
-                                commit,
-                                &summary,
-                                &parsed,
-                            ) && parsed.prefix == MessagePrefix::ZMode
-                            {}
+                            if MessageParser::validate(self.repo, commit, &summary, &parsed)
+                                && parsed.prefix == MessagePrefix::ZMode
+                            {
+                            }
                         }
                     }
                 }
@@ -353,8 +339,8 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             }
             count
         };
-        let generation_index = self
-            .calculate_generation_bounded(&parent_map, &head.id(), &boundary_commits);
+        let generation_index =
+            self.calculate_generation_bounded(&parent_map, &head.id(), &boundary_commits);
         let commit_index = visited.len().saturating_sub(1) as u32;
         let origin = if revision_index == 0 {
             None
@@ -369,13 +355,11 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             z_mode,
         }
     }
+
     /// Calculate generation index for bounded graph (depth-limited scan).
     fn calculate_generation_bounded(
         &self,
-        parent_map: &HashMap<
-            <R::Commit as CommitView>::Id,
-            Vec<<R::Commit as CommitView>::Id>,
-        >,
+        parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
         head_id: &<R::Commit as CommitView>::Id,
         boundary_commits: &HashSet<<R::Commit as CommitView>::Id>,
     ) -> u32 {
@@ -403,7 +387,10 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 distances.insert(id.clone(), 0);
                 return 0;
             }
-            let parents = parent_map.get(id).map(std::vec::Vec::as_slice).unwrap_or(&[]);
+            let parents = parent_map
+                .get(id)
+                .map(Vec::as_slice)
+                .unwrap_or(&[]);
             let max_parent_dist = parents
                 .iter()
                 .map(|p| {
@@ -435,13 +422,11 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         );
         max_distance
     }
+
     /// Calculate origin for bounded graph.
     fn calculate_origin_bounded(
         &self,
-        _parent_map: &HashMap<
-            <R::Commit as CommitView>::Id,
-            Vec<<R::Commit as CommitView>::Id>,
-        >,
+        _parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
         commit_map: &HashMap<<R::Commit as CommitView>::Id, R::Commit>,
         boundary_commits: &HashSet<<R::Commit as CommitView>::Id>,
     ) -> Option<u16> {
@@ -471,6 +456,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             Some(u16::from_be_bytes([hash[18], hash[19]]))
         }
     }
+
     fn full_graph_walk(
         &self,
         head: &R::Commit,
@@ -524,12 +510,10 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             z_mode: false,
         }
     }
+
     fn calculate_generation(
         &self,
-        parent_map: &HashMap<
-            <R::Commit as CommitView>::Id,
-            Vec<<R::Commit as CommitView>::Id>,
-        >,
+        parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
         head_id: &<R::Commit as CommitView>::Id,
     ) -> u32 {
         let mut distances = HashMap::new();
@@ -553,7 +537,10 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             if !processed.insert(id.clone()) {
                 return 0;
             }
-            let parents = parent_map.get(id).map(std::vec::Vec::as_slice).unwrap_or(&[]);
+            let parents = parent_map
+                .get(id)
+                .map(Vec::as_slice)
+                .unwrap_or(&[]);
             let max_parent_dist = parents
                 .iter()
                 .map(|p| visit(p, parent_map, distances, processed, max_distance))
@@ -566,15 +553,19 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             }
             dist
         }
-        visit(head_id, parent_map, &mut distances, &mut processed, &mut max_distance);
+        visit(
+            head_id,
+            parent_map,
+            &mut distances,
+            &mut processed,
+            &mut max_distance,
+        );
         max_distance
     }
+
     fn calculate_origin(
         &self,
-        parent_map: &HashMap<
-            <R::Commit as CommitView>::Id,
-            Vec<<R::Commit as CommitView>::Id>,
-        >,
+        parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
         commit_map: &HashMap<<R::Commit as CommitView>::Id, R::Commit>,
     ) -> Option<u16> {
         let mut roots: Vec<_> = parent_map
@@ -625,18 +616,23 @@ mod tests {
     }
     impl CommitView for MockCommit {
         type Id = MockId;
+
         fn id(&self) -> Self::Id {
             self.id.clone()
         }
+
         fn parent_ids(&self) -> Vec<Self::Id> {
             self.parent_ids.clone()
         }
+
         fn summary(&self) -> Option<String> {
             self.message.clone()
         }
+
         fn tree_id(&self) -> Self::Id {
             self.tree_id.clone()
         }
+
         fn id_bytes(&self) -> Vec<u8> {
             self.id.0.as_bytes().to_vec()
         }
@@ -652,12 +648,8 @@ mod tests {
                 is_shallow,
             }
         }
-        fn add_commit(
-            &mut self,
-            id: &str,
-            parents: Vec<&str>,
-            message: Option<&str>,
-        ) -> MockId {
+
+        fn add_commit(&mut self, id: &str, parents: Vec<&str>, message: Option<&str>) -> MockId {
             let mock_id = MockId(id.to_string());
             let commit = MockCommit {
                 id: mock_id.clone(),
@@ -671,12 +663,15 @@ mod tests {
     }
     impl<'repo> RepositoryView<'repo> for MockRepo {
         type Commit = MockCommit;
+
         fn is_shallow(&self) -> bool {
             self.is_shallow
         }
+
         fn find_commit(&'repo self, id: MockId) -> Option<Self::Commit> {
             self.commits.get(&id).cloned()
         }
+
         fn validate_tree_prefix(&self, _tree_id: &MockId, _prefix: &str) -> bool {
             true
         }
@@ -730,7 +725,7 @@ mod tests {
         assert_eq!(stats.revision_index, 3);
         assert_eq!(stats.generation_index, 3);
         assert_eq!(stats.commit_index, 3);
-        assert!(! stats.z_mode);
+        assert!(!stats.z_mode);
         assert!(stats.origin.is_some());
     }
     #[test]
@@ -743,7 +738,7 @@ mod tests {
         let calculator = GraphStatsCalculator::new(&repo, -1);
         let stats = calculator.calculate(head);
         assert_eq!(stats.revision_index, 2);
-        assert!(! stats.z_mode);
+        assert!(!stats.z_mode);
         assert_eq!(stats.origin, Some(0x1234));
     }
     #[test]
@@ -771,7 +766,7 @@ mod tests {
         let head = repo.commits.get(&head_id).unwrap();
         let calculator = GraphStatsCalculator::new(&repo, 5);
         let stats = calculator.calculate(head);
-        assert!(! stats.z_mode);
+        assert!(!stats.z_mode);
         assert_eq!(stats.revision_index, 2);
     }
     #[test]
@@ -782,7 +777,7 @@ mod tests {
         let calculator = GraphStatsCalculator::new(&repo, -1);
         let stats = calculator.calculate(head);
         assert_eq!(stats.revision_index, 1);
-        assert!(! stats.z_mode);
+        assert!(!stats.z_mode);
     }
     #[test]
     fn test_max_depth_zero() {
@@ -821,7 +816,7 @@ mod tests {
         let head = repo.commits.get(&head_id).unwrap();
         let calculator = GraphStatsCalculator::new(&repo, 5);
         let stats = calculator.calculate(head);
-        assert!(! stats.z_mode);
+        assert!(!stats.z_mode);
         assert_eq!(stats.revision_index, 3);
     }
     #[test]
