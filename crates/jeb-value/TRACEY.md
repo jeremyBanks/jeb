@@ -275,10 +275,23 @@ r[jeb-value.serde.optional]
 Any dependencies on `serde` and other `serde-*` ecosystem crates MUST be
 optional, gated behind a `serde` Cargo feature.
 
+r[jeb-value.serde.serialize]  
+`Value` MUST implement `serde::Serialize`.
+
+r[jeb-value.serde.deserialize]  
+`Value` MUST implement `serde::Deserialize`.
+
+r[jeb-value.serde.representation]
+`Value`'s implementations of `serde::Serialize` and `serde::Deserialize` must
+be compatible with the (default) externally-tagged enum representation.
+
+r[jeb-value.serde.bytes.representation]
+`Bytes`'s implementations of `serde::Serialize` and `serde::Deserialize` MUST
+be compatible with `serde_bytes` crate's representation for byte strings (i.e.
+it should support the bytes-specific serde logic, not only the generic sequence
+logic).
+
 r[jeb-value.serde.traits]  
-When the `serde` Cargo feature is enabled, `Value` MUST implement
-`serde::Serialize` and `serde::Deserialize` and must use using the (default)
-externally-tagged enum representation.
 
 ## Facet
 
@@ -286,6 +299,6 @@ r[jeb-value.facet.optional]
 Any dependencies on `facet` and other `facet-*` ecosystem crates MUST be
 optional, gated behind a `facet` Cargo feature.
 
-r[jeb-value.facet.traits]  
+r[jeb-value.facet.facet]  
 When the `facet` Cargo feature is enabled, `Value` and all variant types MUST
 implement `Facet`.

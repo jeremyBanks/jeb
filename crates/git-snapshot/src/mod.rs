@@ -1870,10 +1870,34 @@ fn build_commit(
     // Parse tree (with default)
     let tree = parse_tree(commit_mapping, first_parent, processing_state)?;
 
-    // Determine object ID: use the key for hex/prefix refs, calculate for integer
-    // refs
+    // Determine object ID: use the key for hex refs, calculate for others
     let object_id = match commit_ref {
-        CommitRef::Hex(oid) => *oid,
+        CommitRef::Hex(oid) => {
+            // For hex refs, verify that the key matches the calculated hash
+            // This ensures self-consistency of the input
+            let parent_ids: Vec<ObjectId> = resolved_parents.iter().map(|c| c.id).collect();
+            let tree_id = calculate_tree_id(&tree)?;
+            let calculated_id = calculate_commit_id(
+                &tree_id,
+                &parent_ids,
+                &author,
+                author_date,
+                &committer,
+                committer_date,
+                &message,
+            )?;
+
+            if *oid != calculated_id {
+                return Err(ParseError::InvalidObjectId(format!(
+                    "commit key {} doesn't match calculated hash from content {}. \
+                     The input is not self-consistent.",
+                    oid.to_hex(),
+                    calculated_id.to_hex()
+                )));
+            }
+
+            *oid
+        }
         CommitRef::Prefix(prefix) => {
             // For truncated hashes, we calculate the full hash from content
             // The prefix in the YAML is just a label for human readability

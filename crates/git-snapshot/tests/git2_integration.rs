@@ -392,3 +392,118 @@ refs:
         hash_before, hash_after
     );
 }
+
+#[test]
+fn test_minimal_hash_discrepancy() {
+    // Test that demonstrates the fix:
+    // YAML hex keys must match the calculated hash from content.
+    // If they don't match, parsing fails with a clear error.
+    // This ensures hash consistency across parse/write/read cycles.
+
+    eprintln!("\n=== HASH CONSISTENCY TEST ===\n");
+
+    // First, demonstrate that WRONG hex keys are rejected
+    eprintln!("1. Testing with WRONG hex key (should fail):");
+    let yaml_with_wrong_key = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: "1111111111111111111111111111111111111111"
+"1111111111111111111111111111111111111111":
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  message: Initial commit
+  tree:
+    README.md: root readme
+    src:
+      lib:
+        bar.txt: more code
+        foo.txt: library code
+"#;
+
+    let result = git_snapshot::parse(yaml_with_wrong_key);
+    assert!(result.is_err(), "Expected parse to fail with wrong hex key");
+    eprintln!("   ✓ Correctly rejected: {}", result.unwrap_err());
+
+    // Now test with the CORRECT hex key
+    eprintln!("\n2. Testing with CORRECT hex key (should succeed):");
+    // First calculate what the correct hash should be
+    let temp_parse = git_snapshot::parse(r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 1
+1:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  message: Initial commit
+  tree:
+    README.md: root readme
+    src:
+      lib:
+        bar.txt: more code
+        foo.txt: library code
+"#).unwrap();
+    let correct_hash = temp_parse.commits().next().unwrap().id.to_hex();
+    eprintln!("   Calculated correct hash: {}", correct_hash);
+
+    // Now use that correct hash in the YAML
+    let yaml_with_correct_key = format!(r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: "{hash}"
+"{hash}":
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  message: Initial commit
+  tree:
+    README.md: root readme
+    src:
+      lib:
+        bar.txt: more code
+        foo.txt: library code
+"#, hash = correct_hash);
+
+    let original = git_snapshot::parse(&yaml_with_correct_key).unwrap();
+    let original_commit = original.commits().next().unwrap();
+    let hash_from_parsing = original_commit.id.clone();
+
+    eprintln!("Hash from YAML parse (validated): {}", hash_from_parsing.to_hex());
+    eprintln!("  Author: {:?}", original_commit.author);
+    eprintln!("  Author-date: {:?}", original_commit.author_date);
+    eprintln!("  Committer-date: {:?}", original_commit.committer_date);
+    eprintln!("  Message: {:?}", original_commit.message.as_bytes());
+    eprintln!("  Message (display): '{}'", original_commit.message);
+    eprintln!("  Tree entries: {}", original_commit.tree.paths().count());
+
+    // Write to git and read back
+    eprintln!("\n--- Writing to git and reading back ---");
+    let temp_repo = original.to_temporary_repository().unwrap();
+    let roundtrip = Repository::from_git_dir(temp_repo.path()).unwrap();
+    let roundtrip_commit = roundtrip.commits().next().unwrap();
+    let hash_from_git = roundtrip_commit.id.clone();
+
+    eprintln!("Hash from git round-trip: {}", hash_from_git.to_hex());
+    eprintln!("  Author: {:?}", roundtrip_commit.author);
+    eprintln!("  Author-date: {:?}", roundtrip_commit.author_date);
+    eprintln!("  Committer-date: {:?}", roundtrip_commit.committer_date);
+    eprintln!("  Message: {:?}", roundtrip_commit.message.as_bytes());
+    eprintln!("  Message (display): '{}'", roundtrip_commit.message);
+    eprintln!("  Tree entries: {}", roundtrip_commit.tree.paths().count());
+
+    eprintln!("\n--- THE FIX ---");
+    eprintln!("Hash from YAML parse (recalculated): {}", hash_from_parsing.to_hex());
+    eprintln!("Hash from git round-trip:            {}", hash_from_git.to_hex());
+    eprintln!("Hashes match: {}", hash_from_parsing == hash_from_git);
+
+    if hash_from_parsing == hash_from_git {
+        eprintln!("\n✓ FIX VERIFIED: Hashes are consistent!");
+        eprintln!("  YAML hex keys are now validated/recalculated to match content");
+    } else {
+        panic!("Hash mismatch after fix!");
+    }
+}
