@@ -149,8 +149,8 @@ fn ensure_workspace_members(workspace_root: &Path) -> Result<usize> {
                 .display()
                 .to_string()
         };
-        members.push(rel_path);
         eprintln!("  Adding missing workspace member: {}", rel_path);
+        members.push(rel_path);
     }
 
     let doc_str = doc.to_string();
@@ -178,6 +178,7 @@ fn ensure_publish_false_for_internal_crates(workspace_root: &Path) -> Result<usi
 
         if let Some(name) = package_name {
             if name.starts_with('_') {
+                let name_owned = name.to_string();
                 // Check if publish is already set to false
                 let needs_update = doc
                     .get("package")
@@ -200,7 +201,7 @@ fn ensure_publish_false_for_internal_crates(workspace_root: &Path) -> Result<usi
                         modified_count += 1;
                         eprintln!(
                             "  Setting publish = false for internal crate: {}",
-                            name
+                            name_owned
                         );
                     }
                 }
