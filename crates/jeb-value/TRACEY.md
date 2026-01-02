@@ -93,15 +93,15 @@ r[jeb-value.variant.value-as]
 `Value` MUST implement an `as_VARIANT(&self) -> Option<&VARIANT>` method for
 each variant type.
 
-r[jeb-value.variant.value-to]
+r[jeb-value.variant.value-to]  
 `Value` MUST implement a `to_VARIANT(&self) -> Option<VARIANT>` method for each
 variant type.
 
-r[jeb-value.variant.value-into]
+r[jeb-value.variant.value-into]  
 `Value` MUST implement an `into_VARIANT(self) -> Option<VARIANT>` method for
 each variant type.
 
-r[jeb-value.variant.value-unwrap]
+r[jeb-value.variant.value-unwrap]  
 `Value` MUST implement an `unwrap_VARIANT(self) -> VARIANT` method for each
 variant type, which panics if the `Value` is not of the expected variant type.
 
@@ -112,12 +112,21 @@ that were converted using `From<T>` or a successful `TryFrom<T>`. This is a
 universal requirement applying to all such conversions, regardless of whether
 the other type is internal, external, or built-in.
 
-r[jeb-value.variant.try-from]  
+r[jeb-value.variant.try-from-inner]  
 Each variant MUST implement `TryFrom<INNER>` for their wrapped inner type. This
 may be implicit from a `From<INNER>` implementation or explicit if it's
 fallible.
 
-r[jeb-value.variants.constructor]
+r[jeb-value.variant.try-from-other-via-inner]  
+Given two variant types `V` and `W`, and their respective inner types `INNER_V`
+and `INNER_W`, then if `V` implements `From<INNER_W>` then `V` MUST also
+implement `From<W>` by unwrapping `W` to get its inner type and then using
+the `From<INNER_W>` implementation to convert it to `V`. Otherwise, if `V`
+implements `TryFrom<INNER_W>`, then `V` MUST also implement `TryFrom<W>` by
+unwrapping `W` to get its inner type and then using the `TryFrom<INNER_W>`
+implementation to convert it to `V`.
+
+r[jeb-value.variants.constructor]  
 If a variant implements infallible `From<INNER>`, it MUST also provide a public
 `new(inner: INNER) -> Self` constructor function.
 
@@ -201,7 +210,7 @@ Each variant type MUST be `Send`.
 r[jeb-value.variants.sync]  
 Each variant type MUST be `Sync`.
 
-r[jeb-value.variant.must-use]
+r[jeb-value.variant.must-use]  
 Each variant type MUST be marked `#[must_use]` unless specified otherwise for
 that variant type.
 
@@ -214,11 +223,43 @@ primitive unit value `()`.
 r[jeb-value.null.must-use]  
 The `Null` variant type MUST NOT be marked `#[must_use]`.
 
+r[jeb-value.null.from-inner]  
+The `Null` variant type MUST implement `From<()>`.
+
+r[jeb-value.null.try-from-primitive]  
+The `Null` variant type MUST implement `TryFrom<T>` where `T` is any of
+`bool` (with only `false` being accepted), `f32` and `f64` (with only `+0.0`
+being accepted), and all integer types (with only `0` being accepted).
+
+r[jeb-value.null.try-from-vec]  
+The `Null` variant type MUST implement `Vec<T>` (where T is _unconstrained_)
+with only the empty vector being accepted.
+
+r[jeb-value.null.try-from-indexmap]  
+The `Null` variant type MUST implement `IndexMap<K, V>` (where K and V are
+_unconstrained_) with only the empty map being accepted.
+
+r[jeb-value.null.primitive-from]  
+All of the primitive types `()`, `bool`, `f32`, `f64`, and all integer types,
+and `Vec<T>` and `IndexMap<K, V>` (where T, K, and V are unconstrained)
+MUST implement `From<Null>`, mapping to their respective default values.
+
 ### `Boolean`
 
 r[jeb-value.boolean]  
 The `Boolean` variant type MUST be a single-item tuple struct wrapping an
 inner primitive `bool`.
+
+r[jeb-value.boolean.from-inner]  
+The `Boolean` variant type MUST implement `From<bool>`.
+
+r[jeb-value.boolean.from-false]  
+The `Boolean` variant type MUST implement `From<()>` (mapping to `false`).
+
+r[jeb-value.boolean.try-from-primitive]  
+The `Boolean` variant type MUST implement `TryFrom<T>` where `T` is any of
+`f32` and `f64`, and all integer types, with (positive) zero being false,
+positive one being true, and all other values being rejected.
 
 ### `Number`
 
@@ -226,13 +267,25 @@ r[jeb-value.number]
 The `Number` variant type MUST be a single-item tuple struct wrapping an
 inner primitive `f64`.
 
-r[jeb-value.number.finite]
+r[jeb-value.number.finite]  
 The `Number` variant type MUST only be constructible with finite `f64` values
-(excluding NaN or Infinity, including -0). By enforcing this everywhere that a
+(excluding NaN or Infinity, including `-0`). By enforcing this everywhere that a
 value can be constructed, all operations on `Number` can safely assume the inner
 value is always finite without needing to re-validate it.
 
-r[jeb-value.number.cmp]
+r[jeb-value.number.constructor]  
+The `Number` variant type MUST provide a public
+`new(value: f64) -> Option<Self>` constructor function which returns `Some` if
+the provided `f64` is finite, and `None` otherwise.
+
+r[jeb-value.number.try-from-inner]  
+The `Number` variant type MUST implement `TryFrom<f64>`, returning an error
+if the provided `f64` is not finite.
+
+r[jeb-value.number.no-from-inner]  
+The `Number` variant type MUST NOT implement `From<f64>`.
+
+r[jeb-value.number.cmp]  
 The `Number` variant type's implementations of `Eq`, `PartialEq`, `Ord`,
 `PartialOrd`, and `Hash` MUST NOT delegate to the inner `f64` type, but should
 instead delegate comparison and equality to `f64::total_cmp` and should delegate
@@ -245,11 +298,17 @@ r[jeb-value.bytes.struct]
 The `Bytes` variant type MUST be a single-item tuple struct wrapping an
 inner `Vec<u8>`.
 
+r[jeb-value.bytes.from-inner]  
+The `Bytes` variant type MUST implement `From<Vec<u8>>`.
+
 ### `String`
 
 r[jeb-value.string.struct]  
 The `String` variant type MUST be a single-item tuple struct wrapping an
 inner `String`.
+
+r[jeb-value.string.from-inner]  
+The `String` variant type MUST implement `From<String>`.
 
 ### `Array`
 
@@ -257,17 +316,28 @@ r[jeb-value.array.struct]
 The `Array` variant type MUST be a single-item tuple struct wrapping an
 inner `Vec<Value>`.
 
+r[jeb-value.array.from-inner]  
+The `Array` variant type MUST implement `From<Vec<Value>>`.
+
 ### `BytesMap`
 
 r[jeb-value.bytes-map.struct]  
 The `BytesMap` variant type MUST be a single-item tuple struct wrapping an
 inner `indexmap::IndexMap<Vec<u8>, Value>`.
 
+r[jeb-value.bytes-map.from-inner]  
+The `BytesMap` variant type MUST implement
+`From<indexmap::IndexMap<Vec<u8>, Value>>`.
+
 ### `StringMap`
 
 r[jeb-value.string-map.struct]  
 The `StringMap` variant type MUST be a single-item tuple struct wrapping an
 inner `indexmap::IndexMap<String, Value>`.
+
+r[jeb-value.string-map.from-inner]  
+The `StringMap` variant type MUST implement
+`From<indexmap::IndexMap<String, Value>>`.
 
 ## Serde
 
@@ -281,11 +351,11 @@ r[jeb-value.serde.serialize]
 r[jeb-value.serde.deserialize]  
 `Value` MUST implement `serde::Deserialize`.
 
-r[jeb-value.serde.representation]
+r[jeb-value.serde.representation]  
 `Value`'s implementations of `serde::Serialize` and `serde::Deserialize` must
 be compatible with the (default) externally-tagged enum representation.
 
-r[jeb-value.serde.bytes.representation]
+r[jeb-value.serde.bytes.representation]  
 `Bytes`'s implementations of `serde::Serialize` and `serde::Deserialize` MUST
 be compatible with `serde_bytes` crate's representation for byte strings (i.e.
 it should support the bytes-specific serde logic, not only the generic sequence
