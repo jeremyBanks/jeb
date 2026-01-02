@@ -4249,7 +4249,7 @@ fn git2_to_temporary_repository(snapshot: &Repository) -> Result<TemporaryReposi
             .collect();
         let parent_commits: Result<Vec<_>, _> = parent_oids
             .iter()
-            .map(|&oid| repo.find_commit(oid))
+            .map(|&&oid| repo.find_commit(oid))
             .collect();
         let parent_commits = parent_commits?;
         let parent_refs: Vec<_> = parent_commits.iter().collect();
