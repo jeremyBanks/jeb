@@ -387,10 +387,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 distances.insert(id.clone(), 0);
                 return 0;
             }
-            let parents = parent_map
-                .get(id)
-                .map(Vec::as_slice)
-                .unwrap_or(&[]);
+            let parents = parent_map.get(id).map(Vec::as_slice).unwrap_or(&[]);
             let max_parent_dist = parents
                 .iter()
                 .map(|p| {
@@ -537,10 +534,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             if !processed.insert(id.clone()) {
                 return 0;
             }
-            let parents = parent_map
-                .get(id)
-                .map(Vec::as_slice)
-                .unwrap_or(&[]);
+            let parents = parent_map.get(id).map(Vec::as_slice).unwrap_or(&[]);
             let max_parent_dist = parents
                 .iter()
                 .map(|p| visit(p, parent_map, distances, processed, max_distance))

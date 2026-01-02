@@ -20,18 +20,10 @@ path = "src/bin/jeb.rs"
 
 [features]
 default = ["bin", "fs", "stdio"]
-wasm = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys", "jeb-value/wasm", "jeb-stream/wasm", "jeb-common/wasm"]
-bin = [
-    "fs",
-    "stdio",
-    "dep:color-eyre",
-    "dep:dotenv",
-    "dep:owo-colors",
-    "tracing-subscriber/env-filter",
-]
-
-fs = ["tokio/fs", "jeb-stream/fs"]
-stdio = ["tokio/io-std", "jeb-stream/stdio"]
+bin = ["fs", "stdio", "dep:color-eyre", "dep:dotenv", "dep:owo-colors", "tracing-subscriber/env-filter"]
+fs = ["jeb-stream/fs", "tokio/fs"]
+stdio = ["jeb-stream/stdio", "tokio/io-std"]
+wasm = ["jeb-common/wasm", "jeb-stream/wasm", "jeb-value/wasm", "dep:js-sys", "dep:wasm-bindgen", "dep:web-sys"]
 
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/{ version }/{ name }-{ target }{ archive-suffix }"
