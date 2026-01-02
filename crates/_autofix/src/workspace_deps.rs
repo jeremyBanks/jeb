@@ -23,6 +23,19 @@ pub fn main() -> i32 {
 }
 fn run_normalization() -> Result<()> {
     let workspace_root = find_workspace_root(".")?;
+
+    // Ensure all crates are in workspace members
+    let added_members = ensure_workspace_members(&workspace_root)?;
+    if added_members > 0 {
+        eprintln!("  Added {} missing workspace member(s)", added_members);
+    }
+
+    // Ensure internal crates have publish = false
+    let updated_publish = ensure_publish_false_for_internal_crates(&workspace_root)?;
+    if updated_publish > 0 {
+        eprintln!("  Updated publish = false for {} internal crate(s)", updated_publish);
+    }
+
     let mut stats = NormalizationStats::default();
     normalize_workspace_dependencies(&workspace_root, &mut stats)?;
     eprintln!("\nSummary:");
@@ -79,6 +92,123 @@ fn resolve_workspace_members(workspace_root: &Path) -> Result<Vec<PathBuf>> {
         }
     }
     Ok(member_paths)
+}
+/// Ensure all crates in the crates/ directory are referenced in workspace.members
+fn ensure_workspace_members(workspace_root: &Path) -> Result<usize> {
+    let cargo_toml_path = workspace_root.join("Cargo.toml");
+    let content = std::fs::read_to_string(&cargo_toml_path)?;
+    let mut doc = content.parse::<DocumentMut>()?;
+
+    // Get existing members patterns
+    let existing_members = resolve_workspace_members(workspace_root)?;
+    let existing_members_set: HashSet<PathBuf> = existing_members.into_iter().collect();
+
+    // Scan crates/ directory for all Cargo.toml files
+    let crates_dir = workspace_root.join("crates");
+    if !crates_dir.exists() {
+        return Ok(0);
+    }
+
+    let mut missing_crates = Vec::new();
+    for entry in std::fs::read_dir(&crates_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            let cargo_toml = path.join("Cargo.toml");
+            if cargo_toml.exists() {
+                let canonical_path = path.canonicalize().unwrap_or_else(|_| path.clone());
+                if !existing_members_set.contains(&canonical_path) {
+                    missing_crates.push(path.clone());
+                }
+            }
+        }
+    }
+
+    if missing_crates.is_empty() {
+        return Ok(0);
+    }
+
+    // Add missing crates to workspace.members
+    if doc.get("workspace").is_none() {
+        doc["workspace"] = toml_edit::table();
+    }
+    let workspace = doc["workspace"].as_table_mut().context("workspace is not a table")?;
+
+    if workspace.get("members").is_none() {
+        workspace["members"] = Item::Value(Value::Array(toml_edit::Array::new()));
+    }
+    let members = workspace["members"].as_array_mut().context("members is not an array")?;
+
+    let added_count = missing_crates.len();
+    for crate_path in missing_crates {
+        let rel_path = if let Ok(stripped) = crate_path.strip_prefix(workspace_root) {
+            stripped.display().to_string()
+        } else {
+            pathdiff::diff_paths(&crate_path, workspace_root)
+                .ok_or_else(|| anyhow::anyhow!("Could not create relative path"))?
+                .display()
+                .to_string()
+        };
+        members.push(rel_path);
+        eprintln!("  Adding missing workspace member: {}", rel_path);
+    }
+
+    let doc_str = doc.to_string();
+    if doc_str != content {
+        std::fs::write(&cargo_toml_path, doc_str)?;
+    }
+
+    Ok(added_count)
+}
+/// Ensure crates with names starting with _ have publish = false
+fn ensure_publish_false_for_internal_crates(workspace_root: &Path) -> Result<usize> {
+    let members = resolve_workspace_members(workspace_root)?;
+    let mut modified_count = 0;
+
+    for member_path in members {
+        let member_toml = member_path.join("Cargo.toml");
+        let content = std::fs::read_to_string(&member_toml)?;
+        let mut doc = content.parse::<DocumentMut>()?;
+
+        // Get the package name
+        let package_name = doc
+            .get("package")
+            .and_then(|p| p.get("name"))
+            .and_then(|n| n.as_str());
+
+        if let Some(name) = package_name {
+            if name.starts_with('_') {
+                // Check if publish is already set to false
+                let needs_update = doc
+                    .get("package")
+                    .and_then(|p| p.get("publish"))
+                    .and_then(|pub_val| pub_val.as_bool())
+                    != Some(false);
+
+                if needs_update {
+                    if doc.get("package").is_none() {
+                        doc["package"] = toml_edit::table();
+                    }
+                    let package = doc["package"]
+                        .as_table_mut()
+                        .context("package is not a table")?;
+                    package["publish"] = value(false);
+
+                    let doc_str = doc.to_string();
+                    if doc_str != content {
+                        std::fs::write(&member_toml, doc_str)?;
+                        modified_count += 1;
+                        eprintln!(
+                            "  Setting publish = false for internal crate: {}",
+                            name
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(modified_count)
 }
 /// Represents a dependency with all its fields
 #[derive(Debug, Clone, PartialEq, Eq)]
