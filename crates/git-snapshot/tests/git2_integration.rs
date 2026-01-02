@@ -62,7 +62,8 @@ refs:
   message: test commit
   tree:
     README.md: "test content"
-    src/main.rs: "code content"
+    src:
+      main.rs: "code content"
 "#;
     let original = git_snapshot::parse(yaml).unwrap();
 
@@ -225,9 +226,12 @@ refs:
 1:
   parents: []
   tree:
-    a/b/c/file.txt: "deep"
-    a/b/other.txt: "mid"
-    a/top.txt: "shallow"
+    a:
+      b:
+        c:
+          file.txt: "deep"
+        other.txt: "mid"
+      top.txt: "shallow"
     root.txt: "root"
 "#;
     let original = git_snapshot::parse(yaml).unwrap();

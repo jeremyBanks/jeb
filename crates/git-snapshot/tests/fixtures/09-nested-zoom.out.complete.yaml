@@ -5,7 +5,12 @@ refs:
     full-tree: 8d0e063197c6410966725f07a7a7d214561177db
     lib-subtree: 93adfa51c8170e3392a012129980906cc1c359a2
 1eb3c6079cec0b0d7f2a2f62ac7292eb54a5f7f7:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
   message: commit 1
+  parents: []
   tree:
     README.md: '# Project'
     src:
@@ -16,16 +21,25 @@ refs:
           types.rs: struct Type;
       main.rs: fn main() {}
 0023ced6e09ff443f6eec3031e74082982081548:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
   committer: git-zoom-in <git-zoom-in@localhost>
   message: zoom-in seed for core
   parents: []
   tree: {}
 5e85d0619aac919373fdb33267fe5cf9421ad0e0:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
   committer: git-zoom-in <git-zoom-in@localhost>
   message: zoom-in seed for src/lib
   parents: []
   tree: {}
 a36f59e499ddf752ddea5b0acf8138658b3e979a:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
   committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'src/lib'
@@ -40,6 +54,9 @@ a36f59e499ddf752ddea5b0acf8138658b3e979a:
       engine.rs: fn engine() {}
       types.rs: struct Type;
 06510e80bdfe2d792d764ea12426647764a4c665:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
   committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'core'
@@ -52,6 +69,9 @@ a36f59e499ddf752ddea5b0acf8138658b3e979a:
     engine.rs: fn engine() {}
     types.rs: struct Type;
 f6cb56eeccbdd09a70039c74b0c764c05d01c5b5:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'core'
@@ -61,14 +81,29 @@ f6cb56eeccbdd09a70039c74b0c764c05d01c5b5:
   - a36f59e499ddf752ddea5b0acf8138658b3e979a
   - 06510e80bdfe2d792d764ea12426647764a4c665
 537c6b3cb24e2e5b76f5250d76919b0b14d49f8c:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: User <user@localhost>
   message: commit 7
+  parents:
+  - f6cb56eeccbdd09a70039c74b0c764c05d01c5b5
   tree:
     tests.rs: fn test_lib() {}
 93adfa51c8170e3392a012129980906cc1c359a2:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:33:44-06:24
+  commit-date: 2024-12-06T06:33:47-06:24
+  committer: User <user@localhost>
   message: commit 8
+  parents:
+  - 537c6b3cb24e2e5b76f5250d76919b0b14d49f8c
   tree:
     api.rs: fn api() { /* updated */ }
 9922c425fb2b660a31c54d6d4280e31b8474eb5d:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:38:00-06:24
+  commit-date: 2024-12-06T06:38:03-06:24
   committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'core'
@@ -81,10 +116,19 @@ f6cb56eeccbdd09a70039c74b0c764c05d01c5b5:
     engine.rs: null
     types.rs: null
 7b95a711f69fe09aabd7bcca922b8ec9dee89751:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:42:16-06:24
+  commit-date: 2024-12-06T06:42:19-06:24
+  committer: User <user@localhost>
   message: commit 10
+  parents:
+  - 9922c425fb2b660a31c54d6d4280e31b8474eb5d
   tree:
     engine.rs: fn engine() { /* v3 */ }
 8d0e063197c6410966725f07a7a7d214561177db:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:46:32-06:24
+  commit-date: 2024-12-06T06:46:35-06:24
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'src/lib/core'

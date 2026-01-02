@@ -3,10 +3,21 @@ refs:
   heads:
     main: df7d95125d2846dc2aff17b13725f9ed3752c242
 ddd158642751c1416bbc83f3ff66563a805bc335:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
   message: commit 1
+  parents: []
   tree:
     base.txt: base content
 df7d95125d2846dc2aff17b13725f9ed3752c242:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
   message: commit 2
+  parents:
+  - ddd158642751c1416bbc83f3ff66563a805bc335
   tree:
     combined: base content
