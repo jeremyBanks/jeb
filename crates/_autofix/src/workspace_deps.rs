@@ -1149,7 +1149,8 @@ fn update_member_toml(
                                     deps[&key] = Item::Value(Value::InlineTable(table));
                                 }
                             } else if currently_uses_workspace && !is_simple_inline_workspace {
-                                // Keep existing workspace dependency as-is if it has additional fields
+                                // Keep existing workspace dependency as-is if it has additional
+                                // fields
                                 if let Some(old_resolution) = old_workspace_deps.get(&key) {
                                     let loser_dep = Dependency {
                                         key: key.clone(),
@@ -1163,7 +1164,13 @@ fn update_member_toml(
                                 }
                             }
                         } else if currently_uses_workspace {
-                            if let Some(old_resolution) = old_workspace_deps.get(&key) {
+                            // Convert simple inline workspace to dotted key, or keep complex as-is
+                            if is_simple_inline_workspace {
+                                let dotted_key_str = format!("{}.workspace", key);
+                                if let Ok(dotted_key) = dotted_key_str.parse::<Key>() {
+                                    deps.insert_formatted(&dotted_key, value(true));
+                                }
+                            } else if let Some(old_resolution) = old_workspace_deps.get(&key) {
                                 let loser_dep = Dependency {
                                     key: key.clone(),
                                     name: dep.name.clone(),
