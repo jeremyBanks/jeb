@@ -1,9 +1,38 @@
-use crate::{
-    Float,
-    Value,
+use {
+    super::{
+        bytes::Bytes,
+        float::Float,
+        text::Text,
+    },
+    derive_more::{
+        From,
+        IsVariant,
+        TryInto,
+        TryUnwrap,
+        Unwrap,
+    },
+    indexmap::IndexMap,
 };
-
-/// Implements structural equality for values.
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize),
+    serde(untagged)
+)]
+#[derive(Debug, Clone, From, Default, TryInto, IsVariant, TryUnwrap, Unwrap)]
+#[must_use]
+pub enum Value {
+    #[default]
+    Null,
+    Bool(bool),
+    Unsigned(u64),
+    Signed(i64),
+    Float(Float),
+    Bytes(Bytes),
+    Text(Text),
+    Array(Vec<Value>),
+    BytesMap(IndexMap<Bytes, Value>),
+    TextMap(IndexMap<Text, Value>),
+}
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         use Value::*;
@@ -36,11 +65,7 @@ impl PartialEq for Value {
         }
     }
 }
-/// [impl value.equality.hashable]
 impl Eq for Value {}
-/// Implements hashing with type discriminants.
-/// [impl value.equality.hashable]
-/// [impl value.hash.discriminant]
 impl core::hash::Hash for Value {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         match self {
