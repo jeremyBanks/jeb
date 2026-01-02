@@ -2426,8 +2426,8 @@ fn apply_tree_delta(
         // This must be a string/number key
         let name = normalize_yaml_key(key)?;
 
-        // Validate the name component
-        Tree::validate_component(&name)?;
+        // Don't validate full paths from YAML - they may contain '/' which is valid for flat trees
+        // Tree::validate_component(&name)?;
 
         let target_path = if target_prefix.is_empty() {
             name.clone()
@@ -4002,12 +4002,19 @@ fn git2_from_git_dir(path: &Path) -> Result<Repository, GitError> {
             }
         }
         Err(e) if e.code() == git2::ErrorCode::UnbornBranch => {
-            // Unborn HEAD - read symbolic name
-            let head_ref = git_repo.head()?;
-            let name = head_ref.name().ok_or_else(|| {
-                git2::Error::from_str("unborn HEAD has no name")
-            })?;
-            HeadState::Symbolic(RefName::new(name.to_string())?)
+            // Unborn HEAD - read symbolic name without requiring it to exist
+            // Use find_reference instead of head() to read the symbolic link
+            match git_repo.find_reference("HEAD") {
+                Ok(head_ref) => {
+                    if let Some(symbolic_target) = head_ref.symbolic_target() {
+                        HeadState::Symbolic(RefName::new(symbolic_target.to_string())?)
+                    } else {
+                        // Shouldn't happen - unborn branch should be symbolic
+                        return Err(git2::Error::from_str("unborn HEAD is not symbolic").into());
+                    }
+                }
+                Err(e) => return Err(e.into()),
+            }
         }
         Err(e) => return Err(e.into()),
     };

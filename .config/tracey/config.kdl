@@ -4,3 +4,9 @@ spec {
   include "crates/jeb-value/src/**/*.rs"
   include "crates/save/src/**/*.rs"
 }
+
+spec {
+  name "jeb-value"
+  rules_glob "crates/jeb-value/docs/spec/**/*.md"
+  include "crates/jeb-value/src/**/*.rs"
+}
