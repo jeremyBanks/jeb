@@ -1329,10 +1329,10 @@ fn update_member_toml(
 }
 fn should_use_workspace(
     dep: &Dependency,
-    workspace_updates: &HashMap<String, (ResolutionFields, String, bool)>,
+    workspace_updates: &HashMap<String, (ResolutionFields, String, bool, Option<Vec<String>>)>,
     workspace_key: &str,
 ) -> bool {
-    if let Some((workspace_resolution, _, _)) = workspace_updates.get(workspace_key) {
+    if let Some((workspace_resolution, _, _, _)) = workspace_updates.get(workspace_key) {
         workspace_resolution.matches_except_version(&dep.resolution)
             && versions_compatible_opt(&workspace_resolution.version, &dep.resolution.version)
     } else {
@@ -1403,15 +1403,6 @@ fn inline_dependency(
     }
     deps.insert(key, Item::Value(Value::InlineTable(table)));
     Ok(())
-}
-fn has_config_fields(value: &Item) -> bool {
-    if let Some(table) = value.as_inline_table() {
-        return table.contains_key("optional") || table.contains_key("features");
-    }
-    if let Some(table) = value.as_table() {
-        return table.contains_key("optional") || table.contains_key("features");
-    }
-    false
 }
 fn extract_config_fields(value: &Item) -> ConfigFields {
     let table = if let Some(t) = value.as_inline_table() {
@@ -1898,6 +1889,83 @@ version = "0.1.0"
         let mut doc = toml_content.parse::<DocumentMut>()?;
         // Should not error when there's no features section
         sort_features_section(&mut doc)?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_workspace_features_propagation() -> Result<()> {
+        let temp = TempDir::new()?;
+        let workspace_root = temp.path();
+
+        // Create workspace with a dependency that has features
+        fs::write(
+            workspace_root.join("Cargo.toml"),
+            r#"[workspace]
+members = ["crate-a", "crate-b"]
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive", "alloc"] }
+"#,
+        )?;
+
+        // Create crate-a that uses workspace dependency without specifying features
+        fs::create_dir(workspace_root.join("crate-a"))?;
+        fs::write(
+            workspace_root.join("crate-a/Cargo.toml"),
+            r#"[package]
+name = "crate-a"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+"#,
+        )?;
+
+        // Create crate-b that uses workspace dependency with its own features
+        fs::create_dir(workspace_root.join("crate-b"))?;
+        fs::write(
+            workspace_root.join("crate-b/Cargo.toml"),
+            r#"[package]
+name = "crate-b"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true, features = ["rc"] }
+"#,
+        )?;
+
+        let mut stats = NormalizationStats::default();
+        normalize_workspace_dependencies(workspace_root, &mut stats)?;
+
+        // Check workspace - features should be removed
+        let workspace_content = fs::read_to_string(workspace_root.join("Cargo.toml"))?;
+        assert!(
+            !workspace_content.contains(r#"features = ["derive", "alloc"]"#),
+            "Workspace should not have features in serde dependency after normalization"
+        );
+
+        // Check crate-a - should have workspace features propagated
+        let crate_a_content = fs::read_to_string(workspace_root.join("crate-a/Cargo.toml"))?;
+        assert!(
+            crate_a_content.contains("derive") && crate_a_content.contains("alloc"),
+            "crate-a should have workspace features propagated. Content:\n{}",
+            crate_a_content
+        );
+
+        // Check crate-b - should keep its own features (not get workspace features)
+        let crate_b_content = fs::read_to_string(workspace_root.join("crate-b/Cargo.toml"))?;
+        assert!(
+            crate_b_content.contains("rc"),
+            "crate-b should keep its own features"
+        );
+        assert!(
+            !crate_b_content.contains("derive"),
+            "crate-b should NOT get workspace features since it has its own. Content:\n{}",
+            crate_b_content
+        );
 
         Ok(())
     }
