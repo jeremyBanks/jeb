@@ -536,12 +536,36 @@ refs:
     let commit_count = snapshot.commits().count();
     println!("\nTotal commits in repository: {}", commit_count);
 
+    // Build a map of commit ID to commit
+    let mut commit_map: std::collections::HashMap<_, _> = std::collections::HashMap::new();
     for commit in snapshot.commits() {
+        commit_map.insert(commit.id, commit);
+    }
+
+    // Print commits with parent relationships
+    for commit in snapshot.commits() {
+        let parent_info: Vec<String> = commit
+            .parents
+            .iter()
+            .map(|p| {
+                commit_map
+                    .get(p)
+                    .map(|c| {
+                        format!(
+                            "{}",
+                            c.message.lines().next().unwrap_or("").chars().take(20).collect::<String>()
+                        )
+                    })
+                    .unwrap_or_else(|| "???".to_string())
+            })
+            .collect();
+
         println!(
-            "Commit: {} | Parents: {} | Message: {}",
+            "Commit: {} | Parents: {} | Message: {} | Parent messages: [{}]",
             commit.id.to_hex().chars().take(7).collect::<String>(),
             commit.parents.len(),
-            commit.message.lines().next().unwrap_or("")
+            commit.message.lines().next().unwrap_or(""),
+            parent_info.join(", ")
         );
     }
 
