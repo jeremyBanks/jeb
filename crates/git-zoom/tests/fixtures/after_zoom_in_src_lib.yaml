@@ -23,9 +23,7 @@ refs:
     Merge from 'src/lib'
 
     git-zoom-in: src/lib
-  committer:
-    name: "🔎"
-    email: "git-zoom-in@localhost"
+  committer: "🔎 <git-zoom-in@localhost>"
   tree:
     foo.txt: "library code"
     bar.txt: "more code"
