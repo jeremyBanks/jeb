@@ -1,19 +1,69 @@
+mod noedit;
+
 fn main() {
     let json: serde_json::Value = serde_json::from_reader(std::io::stdin()).unwrap();
     let input: HookInput = serde_json::from_value(json.clone()).unwrap();
-    if let Some(HookInputDetails::SessionStart { .. }) = &input.details {
-        let claude_env_file_path = std::env::var("CLAUDE_ENV_FILE").ok();
-        if let Some(claude_env_file_path) = claude_env_file_path {
-            use std::io::Write;
-            let mut file = std::fs::OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(claude_env_file_path)
-                .unwrap();
-            writeln!(file, "JEB_CLAUDE_SESSION_ID={}", input.session_id).unwrap();
+
+    // Handle different hook events
+    let output = match &input.details {
+        Some(HookInputDetails::SessionStart { .. }) => {
+            // Existing session ID logic
+            handle_session_start(&input);
+
+            // New .noedit initialization
+            if let Err(e) = noedit::session::handle(&input) {
+                eprintln!("noedit SessionStart error: {}", e);
+            }
+            None
         }
+        Some(HookInputDetails::PreToolUse { .. }) => {
+            match noedit::pretooluse::handle(&input) {
+                Ok(result) => result,
+                Err(e) => {
+                    eprintln!("noedit PreToolUse error: {}", e);
+                    None // Fail open
+                }
+            }
+        }
+        Some(HookInputDetails::Stop { .. }) | Some(HookInputDetails::SubagentStop { .. }) => {
+            match noedit::stop::handle(&input) {
+                Ok(result) => result,
+                Err(e) => {
+                    eprintln!("noedit Stop error: {}", e);
+                    // Return error as stop reason
+                    Some(HookOutput {
+                        should_continue: Some(false),
+                        stop_reason: Some(format!("noedit validation failed: {}", e)),
+                        suppress_output: None,
+                        system_message: Some(format!("Error validating .noedit: {}", e)),
+                        permission_decision: None,
+                        hook_specific_output: None,
+                    })
+                }
+            }
+        }
+        _ => None,
+    };
+
+    // Output the hook result if any
+    if let Some(output) = output {
+        serde_json::to_writer(std::io::stdout(), &output).unwrap();
     }
 }
+
+fn handle_session_start(input: &HookInput) {
+    let claude_env_file_path = std::env::var("CLAUDE_ENV_FILE").ok();
+    if let Some(claude_env_file_path) = claude_env_file_path {
+        use std::io::Write;
+        let mut file = std::fs::OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(claude_env_file_path)
+            .unwrap();
+        writeln!(file, "JEB_CLAUDE_SESSION_ID={}", input.session_id).unwrap();
+    }
+}
+
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub struct HookInput {
