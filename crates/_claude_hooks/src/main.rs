@@ -134,7 +134,7 @@ pub struct HookOutput {
 #[serde(
     deny_unknown_fields,
     tag = "hookEventName",
-    rename_all = "camelCase",
+    rename_all = "PascalCase",
     rename_all_fields = "camelCase"
 )]
 pub enum HookOutputDetails {

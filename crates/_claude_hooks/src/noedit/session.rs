@@ -1,4 +1,5 @@
 use {
+    super::git_ops::find_git_root,
     crate::HookInput,
     eyre::{
         Context,
@@ -28,8 +29,9 @@ pub fn handle(input: &HookInput) -> Result<()> {
         );
         existing
     } else {
-        // Get current HEAD
-        let repo = Repository::open(&input.cwd).context("Failed to open repository")?;
+        // Find git repository root from current working directory
+        let repo_path = find_git_root(&input.cwd).context("Failed to find git repository")?;
+        let repo = Repository::open(&repo_path).context("Failed to open repository")?;
         let head = repo.head().context("Failed to get HEAD")?;
         let commit = head
             .peel_to_commit()

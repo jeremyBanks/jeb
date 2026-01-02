@@ -2,6 +2,7 @@ use {
     super::{
         git_ops::{
             create_restoration_commit,
+            find_git_root,
             get_changed_files,
             restore_file_from_commit,
         },
@@ -25,7 +26,9 @@ use {
 
 /// Handle Stop hook: validate and restore any violated .noedit files
 pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
-    let repo = Repository::open(&input.cwd).context("Failed to open repository")?;
+    // Find git repository root from current working directory
+    let repo_path = find_git_root(&input.cwd).context("Failed to find git repository")?;
+    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
     // 1. Validate JEB_CLAUDE_INITIAL_COMMIT exists
     let initial_commit_sha = match std::env::var("JEB_CLAUDE_INITIAL_COMMIT") {

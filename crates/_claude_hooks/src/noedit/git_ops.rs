@@ -3,6 +3,7 @@ use {
         Context,
         ContextCompat,
         Result,
+        bail,
     },
     git2::{
         Commit,
@@ -20,6 +21,21 @@ use {
         },
     },
 };
+
+/// Find git repository root by walking up from a starting path
+pub fn find_git_root(start_path: &str) -> Result<PathBuf> {
+    let mut current = PathBuf::from(start_path);
+
+    loop {
+        if current.join(".git").exists() {
+            return Ok(current);
+        }
+
+        if !current.pop() {
+            bail!("Not in a git repository (no .git directory found)");
+        }
+    }
+}
 
 /// Represents the content of a .noedit file found in a git tree
 pub struct NoeditFile {
