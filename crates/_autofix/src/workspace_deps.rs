@@ -613,15 +613,13 @@ fn normalize_workspace_dependencies(
         .get("workspace")
         .and_then(|w| w.get("dependencies"))
         .and_then(|d| d.as_table());
-    let mut blocked_deps = HashSet::new();
+    // Collect features from workspace dependencies so we can move them to member
+    // crates
+    let mut workspace_features: HashMap<String, Vec<String>> = HashMap::new();
     if let Some(deps_table) = workspace_deps {
         for (key, value) in deps_table.iter() {
-            if has_config_fields(value) {
-                eprintln!(
-                    "Warning: workspace dependency '{}' has configuration fields, skipping",
-                    key
-                );
-                blocked_deps.insert(key.to_string());
+            if let Some(features) = extract_features_from_value(value) {
+                workspace_features.insert(key.to_string(), features);
             }
         }
     }
@@ -636,9 +634,6 @@ fn normalize_workspace_dependencies(
         for section in &["dependencies", "dev-dependencies", "build-dependencies"] {
             if let Some(deps) = doc.get(section).and_then(|s| s.as_table()) {
                 for (key, value) in deps.iter() {
-                    if blocked_deps.contains(key) {
-                        continue;
-                    }
                     if let Some(dep) = parse_dependency(
                         key,
                         value,
@@ -664,7 +659,10 @@ fn normalize_workspace_dependencies(
             original_contents.insert(member_toml, content);
         }
     }
-    let mut workspace_updates: HashMap<String, (ResolutionFields, String, bool)> = HashMap::new();
+    let mut workspace_updates: HashMap<
+        String,
+        (ResolutionFields, String, bool, Option<Vec<String>>),
+    > = HashMap::new();
     for (dep_name, occurrences) in &all_deps {
         let mut equivalence_classes: Vec<EquivalenceClass> = Vec::new();
         for (member_path, _section, dep) in occurrences {
@@ -684,12 +682,16 @@ fn normalize_workspace_dependencies(
         }
         if let Some(winner) = find_winner(&equivalence_classes) {
             let key = winner.get_preferred_key();
+            // Get workspace features for this dependency key (will be propagated to
+            // members)
+            let ws_features = workspace_features.get(&key).cloned();
             workspace_updates.insert(
                 key,
                 (
                     winner.resolution.clone(),
                     dep_name.clone(),
                     winner.needs_default_features_false,
+                    ws_features,
                 ),
             );
         }
@@ -874,7 +876,7 @@ fn capture_old_workspace_deps(
 }
 fn update_workspace_toml(
     doc: &mut DocumentMut,
-    updates: &HashMap<String, (ResolutionFields, String, bool)>,
+    updates: &HashMap<String, (ResolutionFields, String, bool, Option<Vec<String>>)>,
     workspace_root: &Path,
 ) -> Result<()> {
     if doc.get("workspace").is_none() {
@@ -890,7 +892,7 @@ fn update_workspace_toml(
         .as_table_mut()
         .context("dependencies is not a table")?;
     let mut used_deps: HashSet<String> = HashSet::new();
-    for (key, (resolution, _dep_name, needs_default_features_false)) in updates {
+    for (key, (resolution, _dep_name, needs_default_features_false, _ws_features)) in updates {
         used_deps.insert(key.clone());
         let value =
             build_dependency_value(resolution, workspace_root, *needs_default_features_false)?;
@@ -1034,12 +1036,12 @@ fn parse_resolution_from_value(value: &Item) -> Result<ResolutionFields> {
 /// Sort workspace dependencies table according to our priority rules
 fn sort_workspace_dependencies(
     deps_table: &mut dyn toml_edit::TableLike,
-    updates: &HashMap<String, (ResolutionFields, String, bool)>,
+    updates: &HashMap<String, (ResolutionFields, String, bool, Option<Vec<String>>)>,
 ) -> Result<()> {
     let mut entries: Vec<(String, Item, (bool, bool, bool, bool, bool, String))> = Vec::new();
     for (key, value) in deps_table.iter() {
         let key_str = key.to_string();
-        let resolution = if let Some((res, _, _)) = updates.get(&key_str) {
+        let resolution = if let Some((res, _, _, _)) = updates.get(&key_str) {
             res.clone()
         } else {
             parse_resolution_from_value(value)?
@@ -1137,7 +1139,7 @@ fn sort_features_section(doc: &mut DocumentMut) -> Result<()> {
 fn update_member_toml(
     member_path: &Path,
     _all_deps: &HashMap<String, Vec<(PathBuf, String, Dependency)>>,
-    workspace_updates: &HashMap<String, (ResolutionFields, String, bool)>,
+    workspace_updates: &HashMap<String, (ResolutionFields, String, bool, Option<Vec<String>>)>,
     workspace_root: &Path,
     workspace_doc: &DocumentMut,
     old_workspace_deps: &HashMap<String, ResolutionFields>,
@@ -1152,9 +1154,13 @@ fn update_member_toml(
 
     let mut dep_name_to_workspace_key: HashMap<String, String> = HashMap::new();
     let mut dep_name_to_needs_default_features: HashMap<String, bool> = HashMap::new();
-    for (workspace_key, (_resolution, dep_name, needs_df_false)) in workspace_updates {
+    let mut dep_name_to_workspace_features: HashMap<String, Vec<String>> = HashMap::new();
+    for (workspace_key, (_resolution, dep_name, needs_df_false, ws_features)) in workspace_updates {
         dep_name_to_workspace_key.insert(dep_name.clone(), workspace_key.clone());
         dep_name_to_needs_default_features.insert(dep_name.clone(), *needs_df_false);
+        if let Some(features) = ws_features {
+            dep_name_to_workspace_features.insert(dep_name.clone(), features.clone());
+        }
     }
     for section in &["dependencies", "dev-dependencies", "build-dependencies"] {
         if let Some(deps) = doc.get_mut(section).and_then(|s| s.as_table_mut()) {
@@ -1215,7 +1221,15 @@ fn update_member_toml(
                                     .unwrap_or(false);
                                 if workspace_needs_df_false {
                                     if dep.config.default_features == Some(false) {
-                                        if let Some(ref features) = dep.config.features {
+                                        // Use member features if present, otherwise use workspace
+                                        // features
+                                        let features_to_use =
+                                            dep.config.features.clone().or_else(|| {
+                                                dep_name_to_workspace_features
+                                                    .get(&dep.name)
+                                                    .cloned()
+                                            });
+                                        if let Some(ref features) = features_to_use {
                                             let arr: toml_edit::Array = features
                                                 .iter()
                                                 .map(|s| Value::from(s.as_str()))
@@ -1224,8 +1238,16 @@ fn update_member_toml(
                                         }
                                         table.insert("default-features", Value::from(false));
                                     } else {
+                                        // Use member features if present, otherwise use workspace
+                                        // features
+                                        let base_features =
+                                            dep.config.features.clone().or_else(|| {
+                                                dep_name_to_workspace_features
+                                                    .get(&dep.name)
+                                                    .cloned()
+                                            });
                                         let features_with_default =
-                                            prepend_default_feature(dep.config.features.clone());
+                                            prepend_default_feature(base_features);
                                         let arr: toml_edit::Array = features_with_default
                                             .iter()
                                             .map(|s| Value::from(s.as_str()))
@@ -1233,8 +1255,19 @@ fn update_member_toml(
                                         table.insert("features", Value::Array(arr));
                                     }
                                 } else {
+                                    // Use member features if present, otherwise use workspace
+                                    // features
                                     if let Some(ref features) = dep.config.features {
                                         let arr: toml_edit::Array = features
+                                            .iter()
+                                            .map(|s| Value::from(s.as_str()))
+                                            .collect();
+                                        table.insert("features", Value::Array(arr));
+                                    } else if let Some(ws_features) =
+                                        dep_name_to_workspace_features.get(&dep.name)
+                                    {
+                                        // Propagate workspace features to member
+                                        let arr: toml_edit::Array = ws_features
                                             .iter()
                                             .map(|s| Value::from(s.as_str()))
                                             .collect();
@@ -1309,10 +1342,10 @@ fn update_member_toml(
 }
 fn should_use_workspace(
     dep: &Dependency,
-    workspace_updates: &HashMap<String, (ResolutionFields, String, bool)>,
+    workspace_updates: &HashMap<String, (ResolutionFields, String, bool, Option<Vec<String>>)>,
     workspace_key: &str,
 ) -> bool {
-    if let Some((workspace_resolution, _, _)) = workspace_updates.get(workspace_key) {
+    if let Some((workspace_resolution, _, _, _)) = workspace_updates.get(workspace_key) {
         workspace_resolution.matches_except_version(&dep.resolution)
             && versions_compatible_opt(&workspace_resolution.version, &dep.resolution.version)
     } else {
@@ -1384,15 +1417,6 @@ fn inline_dependency(
     deps.insert(key, Item::Value(Value::InlineTable(table)));
     Ok(())
 }
-fn has_config_fields(value: &Item) -> bool {
-    if let Some(table) = value.as_inline_table() {
-        return table.contains_key("optional") || table.contains_key("features");
-    }
-    if let Some(table) = value.as_table() {
-        return table.contains_key("optional") || table.contains_key("features");
-    }
-    false
-}
 fn extract_config_fields(value: &Item) -> ConfigFields {
     let table = if let Some(t) = value.as_inline_table() {
         Some(t as &dyn toml_edit::TableLike)
@@ -1414,6 +1438,24 @@ fn extract_config_fields(value: &Item) -> ConfigFields {
         config.default_features = table.get("default-features").and_then(|v| v.as_bool());
     }
     config
+}
+/// Extract features from a workspace dependency value
+fn extract_features_from_value(value: &Item) -> Option<Vec<String>> {
+    let table = if let Some(t) = value.as_inline_table() {
+        Some(t as &dyn toml_edit::TableLike)
+    } else {
+        value.as_table().map(|t| t as &dyn toml_edit::TableLike)
+    };
+
+    table.and_then(|t| {
+        t.get("features").and_then(|v| {
+            v.as_array().map(|arr| {
+                arr.iter()
+                    .filter_map(|item| item.as_str().map(String::from))
+                    .collect()
+            })
+        })
+    })
 }
 /// Prepend "default" to features list, avoiding duplication
 fn prepend_default_feature(features: Option<Vec<String>>) -> Vec<String> {
@@ -1860,6 +1902,83 @@ version = "0.1.0"
         let mut doc = toml_content.parse::<DocumentMut>()?;
         // Should not error when there's no features section
         sort_features_section(&mut doc)?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_workspace_features_propagation() -> Result<()> {
+        let temp = TempDir::new()?;
+        let workspace_root = temp.path();
+
+        // Create workspace with a dependency that has features
+        fs::write(
+            workspace_root.join("Cargo.toml"),
+            r#"[workspace]
+members = ["crate-a", "crate-b"]
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive", "alloc"] }
+"#,
+        )?;
+
+        // Create crate-a that uses workspace dependency without specifying features
+        fs::create_dir(workspace_root.join("crate-a"))?;
+        fs::write(
+            workspace_root.join("crate-a/Cargo.toml"),
+            r#"[package]
+name = "crate-a"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+"#,
+        )?;
+
+        // Create crate-b that uses workspace dependency with its own features
+        fs::create_dir(workspace_root.join("crate-b"))?;
+        fs::write(
+            workspace_root.join("crate-b/Cargo.toml"),
+            r#"[package]
+name = "crate-b"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true, features = ["rc"] }
+"#,
+        )?;
+
+        let mut stats = NormalizationStats::default();
+        normalize_workspace_dependencies(workspace_root, &mut stats)?;
+
+        // Check workspace - features should be removed
+        let workspace_content = fs::read_to_string(workspace_root.join("Cargo.toml"))?;
+        assert!(
+            !workspace_content.contains(r#"features = ["derive", "alloc"]"#),
+            "Workspace should not have features in serde dependency after normalization"
+        );
+
+        // Check crate-a - should have workspace features propagated
+        let crate_a_content = fs::read_to_string(workspace_root.join("crate-a/Cargo.toml"))?;
+        assert!(
+            crate_a_content.contains("derive") && crate_a_content.contains("alloc"),
+            "crate-a should have workspace features propagated. Content:\n{}",
+            crate_a_content
+        );
+
+        // Check crate-b - should keep its own features (not get workspace features)
+        let crate_b_content = fs::read_to_string(workspace_root.join("crate-b/Cargo.toml"))?;
+        assert!(
+            crate_b_content.contains("rc"),
+            "crate-b should keep its own features"
+        );
+        assert!(
+            !crate_b_content.contains("derive"),
+            "crate-b should NOT get workspace features since it has its own. Content:\n{}",
+            crate_b_content
+        );
 
         Ok(())
     }
