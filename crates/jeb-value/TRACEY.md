@@ -241,31 +241,31 @@ total ordering and distinct hashing for all possible `f64` values.
 
 ### `Bytes`
 
-r[jeb-value.bytes]  
+r[jeb-value.bytes.struct]  
 The `Bytes` variant type MUST be a single-item tuple struct wrapping an
 inner `Vec<u8>`.
 
 ### `String`
 
-r[jeb-value.string]  
+r[jeb-value.string.struct]  
 The `String` variant type MUST be a single-item tuple struct wrapping an
 inner `String`.
 
 ### `Array`
 
-r[jeb-value.array]  
+r[jeb-value.array.struct]  
 The `Array` variant type MUST be a single-item tuple struct wrapping an
 inner `Vec<Value>`.
 
 ### `BytesMap`
 
-r[jeb-value.bytes-map]  
+r[jeb-value.bytes-map.struct]  
 The `BytesMap` variant type MUST be a single-item tuple struct wrapping an
 inner `indexmap::IndexMap<Vec<u8>, Value>`.
 
 ### `StringMap`
 
-r[jeb-value.string-map]  
+r[jeb-value.string-map.struct]  
 The `StringMap` variant type MUST be a single-item tuple struct wrapping an
 inner `indexmap::IndexMap<String, Value>`.
 

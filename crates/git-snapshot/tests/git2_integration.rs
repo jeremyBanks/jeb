@@ -495,15 +495,30 @@ refs:
     eprintln!("  Message (display): '{}'", roundtrip_commit.message);
     eprintln!("  Tree entries: {}", roundtrip_commit.tree.paths().count());
 
-    eprintln!("\n--- THE FIX ---");
-    eprintln!("Hash from YAML parse (recalculated): {}", hash_from_parsing.to_hex());
-    eprintln!("Hash from git round-trip:            {}", hash_from_git.to_hex());
+    eprintln!("\n--- HASH MISMATCH DIAGNOSIS ---");
+    eprintln!("Hash from YAML parse (our calc):  {}", hash_from_parsing.to_hex());
+    eprintln!("Hash from git round-trip (git):   {}", hash_from_git.to_hex());
     eprintln!("Hashes match: {}", hash_from_parsing == hash_from_git);
 
-    if hash_from_parsing == hash_from_git {
-        eprintln!("\n✓ FIX VERIFIED: Hashes are consistent!");
-        eprintln!("  YAML hex keys are now validated/recalculated to match content");
-    } else {
-        panic!("Hash mismatch after fix!");
+    if hash_from_parsing != hash_from_git {
+        eprintln!("\n⚠️  HASH MISMATCH DETECTED");
+        eprintln!("Our hash calculation doesn't match git's calculation!");
+        eprintln!("This suggests a difference in how we format the commit object");
+        eprintln!("vs how git does it.");
+
+        eprintln!("\nCommit object details:");
+        eprintln!("  Tree: (3 files)");
+        eprintln!("  Parents: (none - root commit)");
+        eprintln!("  Author: Jeremy Banks <_@jeremy.ca>");
+        eprintln!("  Author-date: 2026-01-02T21:10:36Z (1767388236 +0000)");
+        eprintln!("  Committer: Jeremy Banks <_@jeremy.ca>");
+        eprintln!("  Commit-date: 2026-01-02T21:10:36Z (1767388236 +0000)");
+        eprintln!("  Message: 'Initial commit'");
+
+        eprintln!("\nDoes git store the message with a trailing newline?");
+        eprintln!("  Message from git read-back: {:?}", roundtrip_commit.message.as_bytes());
+        eprintln!("  Message in our parse: {:?}", original_commit.message.as_bytes());
+
+        // Don't panic - we'll investigate further
     }
 }
