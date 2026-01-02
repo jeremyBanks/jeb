@@ -1,7 +1,7 @@
 use {
     super::{
         bytes::Bytes,
-        number::Number,
+        float::Float,
         text::Text,
     },
     derive_more::{
@@ -28,10 +28,10 @@ pub enum Value {
     // [impl jeb-value.null]
     #[default]
     Null,
-    // [impl jeb-value.boolean]
     Bool(bool),
-    // [impl jeb-value.integer.number]
-    Number(Number),
+    Float(f64),
+    Signed(i64),
+    Unsigned(u64),
     // [impl jeb-value.integer.bytes]
     Bytes(Bytes),
     // [impl jeb-value.text]

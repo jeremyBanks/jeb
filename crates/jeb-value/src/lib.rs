@@ -8,8 +8,8 @@ mod array;
 mod boolean;
 mod bytes;
 mod bytes_map;
+mod float;
 mod from;
-mod number;
 #[cfg(feature = "serde")]
 mod serde;
 #[cfg(feature = "serde_json")]
@@ -26,7 +26,7 @@ pub use self::{
     boolean::*,
     bytes::*,
     bytes_map::*,
-    number::*,
+    float::*,
     text::*,
     text_map::*,
     value::*,

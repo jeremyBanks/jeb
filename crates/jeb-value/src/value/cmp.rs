@@ -1,4 +1,7 @@
-use crate::Value;
+use crate::{
+    Float,
+    Value,
+};
 
 /// Implements structural equality for values.
 impl PartialEq for Value {
@@ -23,7 +26,7 @@ impl PartialEq for Value {
                     u64::try_from(*a) == Ok(*b)
                 }
             }
-            (Number(a), Number(b)) => a == b,
+            (Float(a), Float(b)) => a == b,
             (Bytes(a), Bytes(b)) => a == b,
             (Text(a), Text(b)) => a == b,
             (Array(a), Array(b)) => a == b,
@@ -48,31 +51,39 @@ impl core::hash::Hash for Value {
                 1u8.hash(state);
                 value.hash(state);
             }
-            Value::Number(value) => {
+            Value::Unsigned(value) => {
                 2u8.hash(state);
                 value.hash(state);
             }
-            Value::Bytes(value) => {
+            Value::Signed(value) => {
+                2u8.hash(state);
+                value.hash(state);
+            }
+            Value::Float(value) => {
                 3u8.hash(state);
                 value.hash(state);
             }
-            Value::Text(value) => {
+            Value::Bytes(value) => {
                 4u8.hash(state);
                 value.hash(state);
             }
-            Value::Array(value) => {
+            Value::Text(value) => {
                 5u8.hash(state);
                 value.hash(state);
             }
-            Value::TextMap(value) => {
+            Value::Array(value) => {
                 6u8.hash(state);
+                value.hash(state);
+            }
+            Value::TextMap(value) => {
+                7u8.hash(state);
                 value.len().hash(state);
                 for item in value {
                     item.hash(state);
                 }
             }
             Value::BytesMap(value) => {
-                7u8.hash(state);
+                8u8.hash(state);
                 value.len().hash(state);
                 for item in value {
                     item.hash(state);
@@ -92,7 +103,7 @@ impl Ord for Value {
             match value {
                 Bytes(_) => 0,
                 Text(_) => 1,
-                Unsigned(_) | Signed(_) | Number(_) => 2,
+                Unsigned(_) | Signed(_) | Float(_) => 2,
                 Array(_) => 3,
                 Bool(false) => 4,
                 Null => 5,
@@ -109,7 +120,7 @@ impl Ord for Value {
                 (Bool(left), Bool(right)) => left.cmp(right),
                 (Unsigned(left), Unsigned(right)) => left.cmp(right),
                 (Signed(left), Signed(right)) => left.cmp(right),
-                (Number(left), Number(right)) => left.cmp(right),
+                (Float(left), Float(right)) => left.cmp(right),
                 (Bytes(left), Bytes(right)) => left.cmp(right),
                 (Text(left), Text(right)) => left.cmp(right),
                 (Array(left), Array(right)) => left.cmp(right),
@@ -135,7 +146,7 @@ impl Ord for Value {
                         }
                     }
                 }
-                (Unsigned(left), Number(right)) => {
+                (Unsigned(left), Float(right)) => {
                     if **right < 0.0 {
                         return Greater;
                     }
@@ -151,8 +162,8 @@ impl Ord for Value {
                         Equal => Less,
                     }
                 }
-                (Number(_), Unsigned(_)) => other.cmp(self).reverse(),
-                (Signed(left), Number(right)) => {
+                (Float(_), Unsigned(_)) => other.cmp(self).reverse(),
+                (Signed(left), Float(right)) => {
                     const I64_MAX_PLUS_1: f64 = 9223372036854775808.0;
                     const I64_MIN: f64 = -9223372036854775808.0;
                     if **right >= I64_MAX_PLUS_1 {
@@ -177,7 +188,7 @@ impl Ord for Value {
                         }
                     }
                 }
-                (Number(_), Signed(_)) => other.cmp(self).reverse(),
+                (Float(_), Signed(_)) => other.cmp(self).reverse(),
                 _ => unreachable!("type_rank equality should prevent this"),
             },
             ord => ord,
