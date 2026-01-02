@@ -61,3 +61,10 @@ When running Rust tests, prefer to use `cargo nextest run` wherever you would
 otherwise use `cargo test`. This is a backwards-compatible enhanced test runner
 that supports all of the same options as cargo test, but with more helpful
 output and options for more nuanced control of test execution.
+
+---
+
+If you are unable to find an expected binary, it might be missing from your
+`PATH` due to bugs or sandboxing. Before anything else, you may want to check if
+you can run it from `~/.cargo/bin/$NAME` explicitly, and just do that if it
+works.

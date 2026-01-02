@@ -149,6 +149,7 @@
     "rustc",
     "RUSTFLAGS",
     "rustup",
+    "sandboxing",
     "scattersquare",
     "serde",
     "shellcheck",
