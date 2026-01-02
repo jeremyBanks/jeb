@@ -5,16 +5,18 @@ This is the [Tracey](https://crates.io/crates/tracey) specification for the
 
 ## Cargo Features
 
-r[jeb-value.serde.feature]  
-The crate MUST have a non-default `serde` feature.
+r[jeb-value.dependencies.optional]  
+Any optional dependencies SHOULD have a corresponding Cargo feature to enable
+them. Multiple optional dependencies MAY be grouped behind a single feature if
+they're both required for a single set of functionality.
 
-r[jeb-value.serde.optional]  
-The crate SHOULD not depend on the `serde` crate unless the `serde` feature is
-enabled.
+r[jeb-value.dependencies.limit-internal]
+This crate MUST NOT have any non-test dependencies on other crates within this 
+workspace except for `jeb-common` (which MAY be added).
 
-r[jeb-value.serde.flagged]  
-Any reference to the `serde` crate MUST be gated behind the `serde` feature
-using `cfg!`, `#[cfg ...]`, `#[cfg_attr ...]` or similar.
+r[jeb-value.dependencies.cfg]  
+Any use of an optional dependency MUST be gated behind the corresponding Cargo
+feature using `cfg!`, `#[cfg ...]`, `#[cfg_attr ...]` or similar.
 
 ## `Value`
 
@@ -32,8 +34,8 @@ Each `Value` enum variant MUST be a single-element tuple variant over a type
 
 r[jeb-value.value.round-trip]  
 If `Value` defines `From<T>` or `TryFrom<T>` for any type `T`, then `T` MUST
-also implement `TryFrom<Value>` which can losslessly recover any values that was
-converted using `From<T>` or a successful `TryFrom<T>`.
+also implement `TryFrom<Value>` which can losslessly recover any values that
+were converted using `From<T>` or a successful `TryFrom<T>`.
 
 r[jeb-value.value.cmp]
 `Value` MUST implement `Eq`, `PartialEq`, `Ord`, `PartialOrd`, and `Hash`, with
@@ -45,9 +47,18 @@ r[jeb-value.value.clone]
 r[jeb-value.value.debug]
 `Value` MUST implement `Debug`.
 
+r[jeb-value.value.static]
+`Value` MUST be `'static`.
+
+r[jeb-value.value.send]
+`Value` MUST be `Send`.
+
+r[jeb-value.value.sync]
+`Value` MUST be `Sync`.
+
 ## Variants
 
-r[jeb-value.variants.pub]
+r[jeb-value.variants.pub]  
 The crate MUST publicly export each variant type from its root (and nowhere
 else).
 
@@ -58,53 +69,108 @@ r[jeb-value.variant.into-value]
 `Value` MUST implement `From<T>` for each variant type, wrapping it in the
 appropriate enum variant.
 
+r[jeb-value.variant.round-trip]  
+If a variant type `V` defines `From<T>` or `TryFrom<T>` for any type `T`, then
+`T` MUST also implement `TryFrom<V>` which can losslessly recover any values
+that were converted using `From<T>` or a successful `TryFrom<T>`.
+
 r[jeb-value.variant.try-from]
 Each variant MUST implement `TryFrom<INNER>` for their wrapped inner type. This
 may be implicit from a `From<INNER>` implementation or explicit if it's
 fallible.
 
-r[jeb-value.variants.into-inner]
+r[jeb-value.variants.into-inner]  
 Each variant type MUST provide an `into_inner(self)` implementation which
 returns the wrapped inner value.
 
-r[jeb-value.variants.]
-For each variant type, their inner type must implement `From<VARIANT>`.
+r[jeb-value.variants.inner-from]  
+For each variant type, their inner type MUST implement `From<VARIANT>`.
 
-r[jeb-value.variants.transparent]
+r[jeb-value.variants.transparent]  
 Each variant type MUST be marked `#[repr(transparent)]`.
 
-r[jeb-value.value.cmp]
+r[jeb-value.variants.cmp]  
 Each variant type MUST implement `Eq`, `PartialEq`, `Ord`, `PartialOrd`, and
 `Hash`, with correct non-panicking behavior for all possible values.
 
-r[jeb-value.value.clone]
+r[jeb-value.variants.clone]  
 Each variant type MUST implement `Clone`.
 
-r[jeb-value.value.debug]
+r[jeb-value.variants.debug]  
 Each variant type MUST implement `Debug`.
 
+r[jeb-value.variants.static]  
+Each variant type MUST be `'static`.
 
+r[jeb-value.variants.send]  
+Each variant type MUST be `Send`.
 
-
-r[jeb-value.variants.round-trip]  
-If a variant type `V` defines `From<T>` or `TryFrom<T>` for any type `T`, then
-`T` MUST also implement `TryFrom<V>` which can losslessly recover any values
-that was converted using `From<T>` or a successful `TryFrom<T>`.
-
-r[jeb-value.variants.to-inner]  
-Each 
+r[jeb-value.variants.sync]  
+Each variant type MUST be `Sync`.
 
 ### `Null`
 
 r[jeb-value.null]  
 The `Null` variant type MUST be a unit struct.
 
+### `Boolean`
+
 r[jeb-value.boolean]  
-The `Boolean` variant type MUST be a single-item tuple struct wrapping a
-primitive `bool`.
+The `Boolean` variant type MUST be a single-item tuple struct wrapping an
+inner primitive `bool`.
+
+### `Number`
 
 r[jeb-value.number]  
-The `Number` variant type MUST be a single-item tuple struct wrapping a
-primitive `f64`.
+The `Number` variant type MUST be a single-item tuple struct wrapping an
+inner primitive `f64`.
 
+### `Bytes`
 
+r[jeb-value.bytes]  
+The `Bytes` variant type MUST be a single-item tuple struct wrapping an
+inner `Vec<u8>`.
+
+### `String`
+
+r[jeb-value.string]  
+The `String` variant type MUST be a single-item tuple struct wrapping an
+inner `String`.
+
+### `Array`
+
+r[jeb-value.array]  
+The `Array` variant type MUST be a single-item tuple struct wrapping an
+inner `Vec<Value>`.
+
+### `BytesMap`
+
+r[jeb-value.bytes-map]  
+The `BytesMap` variant type MUST be a single-item tuple struct wrapping an
+inner `indexmap::IndexMap<Vec<u8>, Value>`.
+
+### `StringMap`
+
+r[jeb-value.string-map]  
+The `StringMap` variant type MUST be a single-item tuple struct wrapping an
+inner `indexmap::IndexMap<String, Value>`.
+
+## Serde
+
+r[jeb-value.serde.optional]
+Any dependencies on `serde` and other `serde-*` ecosystem crates MUST be
+optional, gated behind a `serde` Cargo feature.
+
+r[jeb-value.serde.traits]
+When the `serde` Cargo feature is enabled, `Value` MUST implement
+`serde::Serialize` and `serde::Deserialize`.
+
+## Facet
+
+r[jeb-value.facet.optional]
+Any dependencies on `facet` and other `facet-*` ecosystem crates MUST be
+optional, gated behind a `facet` Cargo feature.
+
+r[jeb-value.facet.traits]
+When the `facet` Cargo feature is enabled, `Value` and all variant types MUST
+implement `Facet`.
