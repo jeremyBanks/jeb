@@ -54,3 +54,10 @@ them, which is very disruptive to our intended workflows.
 
 Similarly, avoid writing to files under paths like `/tmp/` which are outside of
 the project directory, because these also trigger user permission prompts.
+
+---
+
+When running Rust tests, prefer to use `cargo nextest run` wherever you would
+otherwise use `cargo test`. This is a backwards-compatible enhanced test runner
+that supports all of the same options as cargo test, but with more helpful
+output and options for more nuanced control of test execution.

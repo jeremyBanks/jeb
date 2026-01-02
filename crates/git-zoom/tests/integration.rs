@@ -13,19 +13,7 @@ use helpers::*;
 
 #[test]
 fn test_basic_zoom_in() {
-    let yaml = r#"
-HEAD: refs/heads/main
-refs:
-  heads:
-    main: 1
-1:
-  message: "Initial commit"
-  tree:
-    README.md: "root readme"
-    src/lib/foo.txt: "library code"
-    src/lib/bar.txt: "more code"
-"#;
-
+    let yaml = include_str!("fixtures/basic-zoom-in.initial.yaml");
     let repo = TestRepo::from_yaml(yaml);
 
     // Zoom into src/lib
@@ -70,7 +58,9 @@ refs:
   message: "Initial commit"
   tree:
     README.md: "root readme"
-    src/lib/foo.txt: "original"
+    src:
+      lib:
+        foo.txt: "original"
 "#;
 
     let repo = TestRepo::from_yaml(yaml);
