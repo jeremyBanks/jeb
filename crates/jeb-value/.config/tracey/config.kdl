@@ -1,7 +1,0 @@
-spec {
-    name "my-spec"
-    rules_glob "docs/spec/**/*.md"
-    include "src/**/*.rs"
-    include "crates/**/*.rs"
-    exclude "target/**"
-}
