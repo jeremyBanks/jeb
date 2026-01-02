@@ -340,7 +340,7 @@ mod tests {
                 assert_eq!(
                     (x, y),
                     (back_x, back_y),
-                    "roundtrip failed for ({x}, {y}) -> {u}"
+                    "roundtrip failed for ({x}, {y}) -> {u}",
                 );
             }
         }
@@ -374,13 +374,13 @@ mod tests {
             assert_eq!(
                 shell_counts[m], expected,
                 "shell {m} should have {expected} points, got {}",
-                shell_counts[m]
+                shell_counts[m],
             );
         }
         assert_eq!(
             shell_counts[128], 511,
             "shell 128 (ragged) should have 511 points, got {}",
-            shell_counts[128]
+            shell_counts[128],
         );
     }
     #[test]
@@ -392,7 +392,7 @@ mod tests {
             let shell = (x as i32).abs().max((y as i32).abs());
             assert!(
                 shell >= max_shell_seen,
-                "shell decreased at u={u}: was {max_shell_seen}, now {shell}"
+                "shell decreased at u={u}: was {max_shell_seen}, now {shell}",
             );
             max_shell_seen = shell;
         }
@@ -448,7 +448,7 @@ mod tests {
         for (x, y) in &region_b_points {
             assert!(
                 *x == i8::MIN || *y == i8::MIN,
-                "region B point ({x}, {y}) doesn't involve MIN"
+                "region B point ({x}, {y}) doesn't involve MIN",
             );
         }
     }

@@ -1,7 +1,10 @@
-use std::fs;
-use std::path::Path;
-use walkdir::WalkDir;
-
+use {
+    std::{
+        fs,
+        path::Path,
+    },
+    walkdir::WalkDir,
+};
 pub fn main() -> i32 {
     eprintln!("Running: prettyplease formatting on all .rs files");
     let mut failed_count = 0;
@@ -30,17 +33,13 @@ pub fn main() -> i32 {
     }
     eprintln!(
         "  Processed {} files, modified {}, {} errors",
-        processed_count, modified_count, failed_count
+        processed_count, modified_count, failed_count,
     );
     eprintln!();
-    if failed_count > 0 {
-        1
-    } else {
-        0
-    }
+    if failed_count > 0 { 1 } else { 0 }
 }
-
-/// Format a single Rust file. Returns Ok(true) if modified, Ok(false) if unchanged.
+/// Format a single Rust file. Returns Ok(true) if modified, Ok(false) if
+/// unchanged.
 fn format_file(path: &Path) -> Result<bool, Box<dyn std::error::Error>> {
     let original = fs::read_to_string(path)?;
     let syntax_tree = syn::parse_file(&original).map_err(|e| format!("parse error: {}", e))?;

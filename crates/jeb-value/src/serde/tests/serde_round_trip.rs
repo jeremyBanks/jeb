@@ -108,8 +108,8 @@ fn test_maps() {
     let value = to_value(&map).unwrap();
     assert!(matches!(value, Value::TextMap(_)));
     let recovered: HashMap<String, i32> = from_value(value).unwrap();
-    assert_eq!(recovered.get("key1"), Some(& 1));
-    assert_eq!(recovered.get("key2"), Some(& 2));
+    assert_eq!(recovered.get("key1"), Some(&1));
+    assert_eq!(recovered.get("key2"), Some(&2));
     let empty: HashMap<String, i32> = HashMap::new();
     let value = to_value(&empty).unwrap();
     assert!(matches!(value, Value::Array(_)));
@@ -174,7 +174,7 @@ fn test_bytes() {
     let recovered: Bytes = from_value(value).unwrap();
     assert_eq!(recovered, bytes);
     let arr_value = Value::Array(
-        vec![Value::Unsigned(0), Value::Unsigned(1), Value::Unsigned(255),],
+        vec![Value::Unsigned(0), Value::Unsigned(1), Value::Unsigned(255)],
     );
     let as_vec: Vec<u8> = from_value(arr_value.clone()).unwrap();
     assert_eq!(as_vec, vec![0, 1, 255]);

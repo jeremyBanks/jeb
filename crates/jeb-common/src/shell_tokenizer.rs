@@ -68,7 +68,7 @@ impl core::fmt::Display for ErrorKind {
             Self::Newline => {
                 write!(
                     f,
-                    "newline (command separator interpreted as whitespace instead)"
+                    "newline (command separator interpreted as whitespace instead)",
                 )
             }
             Self::OpenParen => write!(f, "open parenthesis (subshell not interpreted)"),
@@ -104,7 +104,7 @@ impl core::fmt::Display for Error {
         write!(
             f,
             "error at position {}: {} (byte 0x{:02x})",
-            self.position, self.kind, self.byte
+            self.position, self.kind, self.byte,
         )
     }
 }
@@ -384,7 +384,7 @@ mod tests {
         assert!(
             result.errors.is_empty(),
             "expected no errors, got: {:?}",
-            result.errors
+            result.errors,
         );
     }
     fn assert_args_with_errors_str(input: &str, expected: &[&str], error_bytes: &[u8]) {
@@ -412,7 +412,7 @@ mod tests {
         let (_, errors) = tokenize_str(input);
         assert!(
             errors.iter().any(|e| e.kind == expected_kind),
-            "expected error {expected_kind:?}, got: {errors:?}"
+            "expected error {expected_kind:?}, got: {errors:?}",
         );
     }
     #[test]
