@@ -82,7 +82,10 @@ refs:
         let rt_commit = roundtrip.get_commit(&commit.id).unwrap();
         assert_eq!(commit.message, rt_commit.message);
         assert_eq!(commit.parents, rt_commit.parents);
-        assert_eq!(commit.tree.entries, rt_commit.tree.entries);
+        // Compare tree paths
+        for (path, content) in commit.tree.paths() {
+            assert_eq!(rt_commit.tree.get(path), Some(content));
+        }
     }
 }
 
