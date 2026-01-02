@@ -1,9 +1,9 @@
 HEAD: refs/heads/full-tree
 refs:
   heads:
-    full-tree: 6450d8e8ffd24c35af759a46896e9bfa72a65679
-    subtree: b2b454e84ada1deaaceb88414c59ccb4681ed857
-92403297d87814b333bd580694096182634f6211:
+    full-tree: bc6b5f87ef4348824e7aeb32b636e29c302e7d32
+    subtree: 3e8906156055d8d4efcfea531711f44d6d1a51ac
+6fd9970a679a361865933b380ed3467702baf203:
   author: User <user@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
@@ -17,17 +17,17 @@ refs:
         init.rs: fn init() {}
       extra:
         addon.rs: fn addon() {}
-4a024081b2466e4aef7af8b1502c3d889010164b:
+96ca2ca58ffb47516c55fc6c05f1e45d4ee0e6e0:
   author: User <user@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
   committer: User <user@localhost>
   message: commit 2
   parents:
-  - 92403297d87814b333bd580694096182634f6211
+  - 6fd9970a679a361865933b380ed3467702baf203
   tree:
     config.yaml: 'version: 2'
-114fc0e48044cff455d648243bb6985aee9ff036:
+406061d91e70ca20af6ad9ff3bba75bde57057c8:
   author: User <user@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
@@ -35,7 +35,7 @@ refs:
   message: git-zoom-in seed
   parents: []
   tree: {}
-2f99644a18d6452696f2a355637511c018c4bf5c:
+0653561f2646b09b3918543f52ccc77a97bb5d24:
   author: User <user@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
@@ -45,11 +45,11 @@ refs:
 
     git-zoom-in: modules/core
   parents:
-  - 114fc0e48044cff455d648243bb6985aee9ff036
-  - 4a024081b2466e4aef7af8b1502c3d889010164b
+  - 406061d91e70ca20af6ad9ff3bba75bde57057c8
+  - 96ca2ca58ffb47516c55fc6c05f1e45d4ee0e6e0
   tree:
     init.rs: fn init() {}
-e2f6050953be8651b199609f79ce1a4746533052:
+d157d529a0806a0f60fd243b9b39d6bb7f89c57f:
   author: User <user@localhost>
   author-date: 2024-12-06T06:25:12-06:24
   commit-date: 2024-12-06T06:25:15-06:24
@@ -59,21 +59,21 @@ e2f6050953be8651b199609f79ce1a4746533052:
 
     git-zoom-out: modules/core
   parents:
-  - 4a024081b2466e4aef7af8b1502c3d889010164b
-  - 2f99644a18d6452696f2a355637511c018c4bf5c
-fd76d82e09de730346794ea31e7822fdbbbed807:
+  - 96ca2ca58ffb47516c55fc6c05f1e45d4ee0e6e0
+  - 0653561f2646b09b3918543f52ccc77a97bb5d24
+267faecc62d14362db7085f98d16a27eee788490:
   author: User <user@localhost>
   author-date: 2024-12-06T06:29:28-06:24
   commit-date: 2024-12-06T06:29:31-06:24
   committer: User <user@localhost>
   message: commit 6
   parents:
-  - e2f6050953be8651b199609f79ce1a4746533052
+  - d157d529a0806a0f60fd243b9b39d6bb7f89c57f
   tree:
     modules:
       extra:
         plugin.rs: fn plugin() {}
-fbc8d58bc343bda0946f53ba7e0566991d4e69df:
+f290663bd8085103deb2fe7e8e709651deebaff9:
   author: User <user@localhost>
   author-date: 2024-12-06T06:33:44-06:24
   commit-date: 2024-12-06T06:33:47-06:24
@@ -83,21 +83,21 @@ fbc8d58bc343bda0946f53ba7e0566991d4e69df:
 
     git-zoom-in: modules/core
   parents:
-  - 2f99644a18d6452696f2a355637511c018c4bf5c
-  - fd76d82e09de730346794ea31e7822fdbbbed807
+  - 0653561f2646b09b3918543f52ccc77a97bb5d24
+  - 267faecc62d14362db7085f98d16a27eee788490
   tree:
     init.rs: null
-b2b454e84ada1deaaceb88414c59ccb4681ed857:
+3e8906156055d8d4efcfea531711f44d6d1a51ac:
   author: User <user@localhost>
   author-date: 2024-12-06T06:38:00-06:24
   commit-date: 2024-12-06T06:38:03-06:24
   committer: User <user@localhost>
   message: commit 8
   parents:
-  - fbc8d58bc343bda0946f53ba7e0566991d4e69df
+  - f290663bd8085103deb2fe7e8e709651deebaff9
   tree:
     cleanup.rs: fn cleanup() {}
-6450d8e8ffd24c35af759a46896e9bfa72a65679:
+bc6b5f87ef4348824e7aeb32b636e29c302e7d32:
   author: User <user@localhost>
   author-date: 2024-12-06T06:42:16-06:24
   commit-date: 2024-12-06T06:42:19-06:24
@@ -107,8 +107,8 @@ b2b454e84ada1deaaceb88414c59ccb4681ed857:
 
     git-zoom-out: modules/core
   parents:
-  - fd76d82e09de730346794ea31e7822fdbbbed807
-  - b2b454e84ada1deaaceb88414c59ccb4681ed857
+  - 267faecc62d14362db7085f98d16a27eee788490
+  - 3e8906156055d8d4efcfea531711f44d6d1a51ac
   tree:
     modules:
       core:

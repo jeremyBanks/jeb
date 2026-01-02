@@ -1,16 +1,15 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: a885ddd36903723ed62a4f960e71fbc84545fbcb
+    main: 0be809ba02439a499bc7ea4bb6040e174daa90fc
 136d8a:
   author: Jeremy Banks <_@jeremy.ca>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
-  message: |
-    Initial commit
+  message: Initial commit
   tree: {}
-50f528:
+01b3d9:
   message: Initial commit
   parents: []
   tree:
@@ -21,84 +20,82 @@ refs:
         main.txt: binary
       lib:
         lib.txt: library
-ea3927:
+462eea:
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
-  message: |
+  message: |-
     Merge from 'src/lib'
 
     git-zoom-in: src/lib
   parents:
   - 136d8a
-  - 50f528
+  - 01b3d9
   tree:
     lib.txt:
-      //commit: 50f528
+      //commit: 01b3d9
       //path: src/lib/lib.txt
-fdfc67:
+1d7f18:
   author: User <user@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
-  message: |
-    Update lib
+  message: Update lib
   tree:
     lib.txt: library v2
-add4a7:
+22b9b0:
   author: Jeremy Banks <_@jeremy.ca>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
-  message: |
+  message: |-
     Merge to 'src/lib'
 
     git-zoom-out: src/lib
   parents:
-  - 50f528
-  - fdfc67
+  - 01b3d9
+  - 1d7f18
   tree:
     src:
       lib:
         lib.txt:
-          //commit: fdfc67
+          //commit: 1d7f18
           //path: lib.txt
-e471f7:
+'781769':
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
-  message: |
+  message: |-
     Merge from 'src/bin'
 
     git-zoom-in: src/bin
   parents:
   - 136d8a
-  - add4a7
+  - 22b9b0
   tree:
     main.txt:
-      //commit: 50f528
+      //commit: 01b3d9
       //path: src/bin/main.txt
-9ccd4e:
+767d3e:
   author: User <user@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
-  message: |
-    Update bin
+  message: Update bin
   tree:
     main.txt: binary v2
-a885ddd36903723ed62a4f960e71fbc84545fbcb:
+0be809ba02439a499bc7ea4bb6040e174daa90fc:
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
-  message: |
+  message: |-
     Merge to 'src/bin'
 
     git-zoom-out: src/bin
   parents:
-  - add4a7
-  - 9ccd4e
+  - 22b9b0
+  - 767d3e
   tree:
     src:
       bin:
         main.txt:
-          //commit: 9ccd4e
+          //commit: 767d3e
           //path: main.txt

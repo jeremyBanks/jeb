@@ -1,47 +1,47 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    feature: cef8d7cb2af0d1fa4af3067846db9169cfb42533
-    main: c2c1e375de1f07e026d10882923e4a632bfac000
-2e2dfd:
+    feature: 6303ebf04a0aa65c1eff2d7aaf1f028b00f10e00
+    main: 70b63053d1dfcfb5288bab439b346ee5f335f7ee
+5f1791:
   message: commit 1
   tree:
     base.txt: base
-d0a16c:
+cb588e:
   message: commit 2
   tree:
     main-work.txt: main work 1
-'375553':
+f46bf8:
   message: commit 3
   parents:
-  - 2e2dfd
+  - 5f1791
   tree:
     feature-work.txt: feature work 1
-cfd3db:
+635fe7:
   message: Merge feature into main (first time)
   parents:
-  - d0a16c
-  - '375553'
+  - cb588e
+  - f46bf8
   tree:
     feature-work.txt:
-      //commit: '375553'
+      //commit: f46bf8
       //path: feature-work.txt
-cef8d7cb2af0d1fa4af3067846db9169cfb42533:
+6303ebf04a0aa65c1eff2d7aaf1f028b00f10e00:
   message: Merge main into feature
   parents:
-  - '375553'
-  - cfd3db
+  - f46bf8
+  - 635fe7
   tree:
     feature-work-2.txt: feature work 2
     main-work.txt:
-      //commit: d0a16c
+      //commit: cb588e
       //path: main-work.txt
-c2c1e375de1f07e026d10882923e4a632bfac000:
+70b63053d1dfcfb5288bab439b346ee5f335f7ee:
   message: Merge feature into main (second time)
   parents:
-  - cfd3db
-  - cef8d7cb2af0d1fa4af3067846db9169cfb42533
+  - 635fe7
+  - 6303ebf04a0aa65c1eff2d7aaf1f028b00f10e00
   tree:
     feature-work-2.txt:
-      //commit: cef8d7cb2af0d1fa4af3067846db9169cfb42533
+      //commit: 6303ebf04a0aa65c1eff2d7aaf1f028b00f10e00
       //path: feature-work-2.txt

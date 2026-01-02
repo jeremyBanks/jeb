@@ -1,56 +1,56 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    alternate: 1981d7affbfcaf06f17e6097d7386e683c8d3216
-    main: 7dd50f00fe7a898c1e9792833ddda72c03095036
-7e7ccd:
+    alternate: cf7323f990b58d7151cacb94e1b2f7cfcece9983
+    main: ab6d12b4b52fb77dc0053552320685f3b8ddddaf
+2ae2e9:
   message: commit 1
   tree:
     path:
       to:
         item: This is a file
-93f4d5:
+9beba4:
   message: commit 3
   parents: []
   tree: {}
-c5d9f3:
+'735718':
   message: |
     Zoom in to path/to/item
 
     git-zoom-in: path/to/item
   parents:
-  - 93f4d5
-  - 7e7ccd
+  - 9beba4
+  - 2ae2e9
   tree:
     content.txt: extracted blob as tree
-82822d:
+d6c85e:
   message: |
     Zoom out to path/to/item
 
     git-zoom-out: path/to/item
   parents:
-  - 7e7ccd
-  - c5d9f3
+  - 2ae2e9
+  - '735718'
   tree:
     path:
       to:
         item:
           content.txt:
-            //commit: c5d9f3
+            //commit: '735718'
             //path: content.txt
-1981d7affbfcaf06f17e6097d7386e683c8d3216:
+cf7323f990b58d7151cacb94e1b2f7cfcece9983:
   message: commit 2
   parents:
-  - 7e7ccd
+  - 2ae2e9
   tree:
     path:
       to:
         item:
           replaced.txt: Now it's a directory
-7dd50f00fe7a898c1e9792833ddda72c03095036:
+ab6d12b4b52fb77dc0053552320685f3b8ddddaf:
   message: commit 6
   parents:
-  - 82822d
+  - d6c85e
   tree:
     path:
       to:

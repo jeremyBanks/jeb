@@ -1,16 +1,15 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 7344589c3c6101b8324789e541715f774d3749d7
+    main: 2cad1565916c7755b5e5fda8d5d7504c0200f908
 136d8a:
   author: Jeremy Banks <_@jeremy.ca>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
-  message: |
-    Initial commit
+  message: Initial commit
   tree: {}
-fcdd5d:
+7c6f42:
   author-date: 2025-06-15T14:30:00+05:00
   message: Initial commit
   parents: []
@@ -22,21 +21,21 @@ fcdd5d:
         core:
           engine.rs: engine code
           utils.rs: utils code
-7344589c3c6101b8324789e541715f774d3749d7:
+2cad1565916c7755b5e5fda8d5d7504c0200f908:
   author-date: 2025-06-15T14:30:03+05:00
   commit-date: 2025-06-15T14:30:03+05:00
   committer: 🔎 <git-zoom-in@localhost>
-  message: |
+  message: |-
     Merge from 'src/lib/core'
 
     git-zoom-in: src/lib/core
   parents:
   - 136d8a
-  - fcdd5d
+  - 7c6f42
   tree:
     engine.rs:
-      //commit: fcdd5d
+      //commit: 7c6f42
       //path: src/lib/core/engine.rs
     utils.rs:
-      //commit: fcdd5d
+      //commit: 7c6f42
       //path: src/lib/core/utils.rs

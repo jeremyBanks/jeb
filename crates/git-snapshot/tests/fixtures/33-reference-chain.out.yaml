@@ -1,38 +1,38 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 4551cfe63ba4e89b4dba36b0891052185305fba3
-75f41a:
+    main: b586180f483d6d8d3bf7d7a6acc0021fd0c1ed3e
+85adb6:
   message: commit 1
   tree:
     original.txt: original content
-84e6ee:
+951f84:
   message: commit 2
   tree:
     step1.txt:
-      //commit: 75f41a
+      //commit: 85adb6
       //path: original.txt
-904bda:
+2da132:
   message: commit 3
   tree:
     step2.txt:
-      //commit: 75f41a
+      //commit: 85adb6
       //path: original.txt
-ec8d09:
+f2eed6:
   message: commit 4
   tree:
     step3.txt:
-      //commit: 75f41a
+      //commit: 85adb6
       //path: original.txt
-1ac609:
+ad799e:
   message: commit 5
   tree:
     step4.txt:
-      //commit: 75f41a
+      //commit: 85adb6
       //path: original.txt
-4551cfe63ba4e89b4dba36b0891052185305fba3:
+b586180f483d6d8d3bf7d7a6acc0021fd0c1ed3e:
   message: commit 6
   tree:
     final.txt:
-      //commit: 75f41a
+      //commit: 85adb6
       //path: original.txt

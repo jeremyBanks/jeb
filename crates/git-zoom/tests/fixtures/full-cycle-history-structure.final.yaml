@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 732031ba0f230f7d15436617e03f81b144699847
-306bce:
+    main: 184cb363a24c487677bc4b5062cd539ebd4f9ac3
+884fc1:
   message: Initial commit
   tree:
     README.md: readme
@@ -13,47 +13,45 @@ refs:
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
-  message: |
-    Initial commit
+  message: Initial commit
   parents: []
   tree: {}
-ecb0e5:
+5473ad:
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
-  message: |
+  message: |-
     Merge from 'src'
 
     git-zoom-in: src
   parents:
   - 136d8a
-  - 306bce
+  - 884fc1
   tree:
     lib.txt:
-      //commit: 306bce
+      //commit: 884fc1
       //path: src/lib.txt
-44ce1a:
+eead56:
   author: User <user@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
-  message: |
-    Modify lib
+  message: Modify lib
   tree:
     lib.txt: modified lib
-732031ba0f230f7d15436617e03f81b144699847:
+184cb363a24c487677bc4b5062cd539ebd4f9ac3:
   author: Jeremy Banks <_@jeremy.ca>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
-  message: |
+  message: |-
     Merge to 'src'
 
     git-zoom-out: src
   parents:
-  - 306bce
-  - 44ce1a
+  - 884fc1
+  - eead56
   tree:
     src:
       lib.txt:
-        //commit: 44ce1a
+        //commit: eead56
         //path: lib.txt

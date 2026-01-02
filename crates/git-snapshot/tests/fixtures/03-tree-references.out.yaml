@@ -1,19 +1,19 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: b3cd00b98f93c9b4f2cd154c693f392128d1532b
-3d3092:
+    main: caf4b78240b137e02c65cfc6c5ce4f075c199b15
+f89224:
   message: commit 1
   tree:
     README.md: '# Original README'
     src:
       helper.rs: pub fn help() {}
       lib.rs: pub fn original() {}
-b3cd00b98f93c9b4f2cd154c693f392128d1532b:
+caf4b78240b137e02c65cfc6c5ce4f075c199b15:
   message: commit 2
   tree:
     GUIDE.md:
-      //commit: 3d3092
+      //commit: f89224
       //path: README.md
     src:
       helper.rs: pub fn help() { /* updated */ }

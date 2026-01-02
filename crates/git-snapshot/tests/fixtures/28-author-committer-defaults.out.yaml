@@ -1,28 +1,28 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 91667f127385e2f4441efbfe8865a89cee240dd6
-4bc624:
+    main: 270148713378aca7f06cb918a727a751472feacd
+d0d5ca:
   message: commit 1
   tree:
     file.txt: base
-e88061:
+2aa4ca:
   author: Alice <alice@example.com>
   message: commit 2
   tree:
     file.txt: alice change
-b35f30:
+c0322f:
   committer: Bob <bob@example.com>
   message: commit 3
   tree:
     file.txt: bob committed
-8623de:
+8275a4:
   author: Charlie <charlie@example.com>
   committer: Dave <dave@example.com>
   message: commit 4
   tree:
     file.txt: charlie authored dave committed
-91667f127385e2f4441efbfe8865a89cee240dd6:
+270148713378aca7f06cb918a727a751472feacd:
   message: commit 5
   tree:
     file.txt: inherited
