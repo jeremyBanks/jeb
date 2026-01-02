@@ -207,35 +207,36 @@ fn ensure_publish_false_for_internal_crates(workspace_root: &Path) -> Result<usi
             .and_then(|n| n.as_str());
 
         if let Some(name) = package_name
-            && name.starts_with('_') {
-                let name_owned = name.to_string();
-                // Check if publish is already set to false
-                let needs_update = doc
-                    .get("package")
-                    .and_then(|p| p.get("publish"))
-                    .and_then(|pub_val| pub_val.as_bool())
-                    != Some(false);
+            && name.starts_with('_')
+        {
+            let name_owned = name.to_string();
+            // Check if publish is already set to false
+            let needs_update = doc
+                .get("package")
+                .and_then(|p| p.get("publish"))
+                .and_then(|pub_val| pub_val.as_bool())
+                != Some(false);
 
-                if needs_update {
-                    if doc.get("package").is_none() {
-                        doc["package"] = toml_edit::table();
-                    }
-                    let package = doc["package"]
-                        .as_table_mut()
-                        .context("package is not a table")?;
-                    package["publish"] = value(false);
+            if needs_update {
+                if doc.get("package").is_none() {
+                    doc["package"] = toml_edit::table();
+                }
+                let package = doc["package"]
+                    .as_table_mut()
+                    .context("package is not a table")?;
+                package["publish"] = value(false);
 
-                    let doc_str = doc.to_string();
-                    if doc_str != content {
-                        std::fs::write(&member_toml, doc_str)?;
-                        modified_count += 1;
-                        eprintln!(
-                            "  Setting publish = false for internal crate: {}",
-                            name_owned
-                        );
-                    }
+                let doc_str = doc.to_string();
+                if doc_str != content {
+                    std::fs::write(&member_toml, doc_str)?;
+                    modified_count += 1;
+                    eprintln!(
+                        "  Setting publish = false for internal crate: {}",
+                        name_owned
+                    );
                 }
             }
+        }
     }
 
     Ok(modified_count)
@@ -410,32 +411,32 @@ fn parse_dependency(
                     && let Some(ws_dep) = ws_deps.get(key)
                     && let Ok(Some(ws_parsed)) =
                         parse_dependency(key, ws_dep, workspace_root, workspace_root, None)
-                    {
-                        let optional = t.get("optional").and_then(|v| v.as_bool());
-                        let default_features = t.get("default-features").and_then(|v| v.as_bool());
-                        let features = t.get("features").and_then(|v| {
-                            v.as_array().map(|arr| {
-                                arr.iter()
-                                    .filter_map(|item| item.as_str().map(String::from))
-                                    .collect()
-                            })
-                        });
-                        let name = ws_parsed
-                            .resolution
-                            .package
-                            .clone()
-                            .unwrap_or_else(|| key.to_string());
-                        return Ok(Some(Dependency {
-                            key: key.to_string(),
-                            name,
-                            resolution: ws_parsed.resolution,
-                            config: ConfigFields {
-                                optional,
-                                features,
-                                default_features,
-                            },
-                        }));
-                    }
+                {
+                    let optional = t.get("optional").and_then(|v| v.as_bool());
+                    let default_features = t.get("default-features").and_then(|v| v.as_bool());
+                    let features = t.get("features").and_then(|v| {
+                        v.as_array().map(|arr| {
+                            arr.iter()
+                                .filter_map(|item| item.as_str().map(String::from))
+                                .collect()
+                        })
+                    });
+                    let name = ws_parsed
+                        .resolution
+                        .package
+                        .clone()
+                        .unwrap_or_else(|| key.to_string());
+                    return Ok(Some(Dependency {
+                        key: key.to_string(),
+                        name,
+                        resolution: ws_parsed.resolution,
+                        config: ConfigFields {
+                            optional,
+                            features,
+                            default_features,
+                        },
+                    }));
+                }
                 return Ok(None);
             }
             version_str = t.get("version").and_then(|v| v.as_str());
@@ -727,11 +728,12 @@ impl EquivalenceClass {
                 }
                 (current_ver, "*") if current_ver != "*" => {}
                 ("*", "*") => {}
-                _ => if let (Ok(curr_v), Ok(new_v)) = (Version::parse(current), Version::parse(new)) {
-                    if new_v > curr_v {
-                        self.resolution.version = Some(new.clone());
-                    }
-                },
+                _ => {
+                    if let (Ok(curr_v), Ok(new_v)) = (Version::parse(current), Version::parse(new))
+                        && new_v > curr_v {
+                            self.resolution.version = Some(new.clone());
+                        }
+                }
             }
         }
         if dep.config.default_features == Some(false) {
@@ -794,12 +796,10 @@ fn find_winner(classes: &[EquivalenceClass]) -> Option<&EquivalenceClass> {
                 } else if !v1_is_star && v2_is_star {
                     return std::cmp::Ordering::Less;
                 } else if v1_is_star && v2_is_star {
-                } else {
-                    if let (Ok(v1), Ok(v2)) = (Version::parse(v1_str), Version::parse(v2_str)) {
-                        let cmp = v2.cmp(&v1);
-                        if cmp != std::cmp::Ordering::Equal {
-                            return cmp;
-                        }
+                } else if let (Ok(v1), Ok(v2)) = (Version::parse(v1_str), Version::parse(v2_str)) {
+                    let cmp = v2.cmp(&v1);
+                    if cmp != std::cmp::Ordering::Equal {
+                        return cmp;
                     }
                 }
             }
