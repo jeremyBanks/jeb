@@ -1062,6 +1062,85 @@ fn sort_workspace_dependencies(
     }
     Ok(())
 }
+/// Sort key for feature dependencies
+/// Returns: (category, !ends_with_default, normalized_name)
+/// - category 0: bare names (no dep: prefix, no /)
+/// - category 1: dependency references (with dep: or /)
+/// - !ends_with_default: false sorts before true (so /default items come first)
+/// - normalized_name: lexicographic ordering with dep: prefix removed
+fn feature_dep_sort_key(dep: &str) -> (u8, bool, String) {
+    let has_dep_prefix = dep.starts_with("dep:");
+    let has_slash = dep.contains('/');
+    let ends_with_default = dep.ends_with("/default");
+
+    // Category: bare names (0), then dep/slash references (1)
+    let category = if has_dep_prefix || has_slash { 1 } else { 0 };
+
+    // Normalize by removing dep: prefix
+    let normalized = if has_dep_prefix {
+        dep.strip_prefix("dep:").unwrap_or(dep).to_string()
+    } else {
+        dep.to_string()
+    };
+
+    // Use !ends_with_default so /default items sort first
+    (category, !ends_with_default, normalized)
+}
+/// Sort the [features] section in a Cargo.toml
+fn sort_features_section(doc: &mut DocumentMut) -> Result<()> {
+    let features_table = match doc.get_mut("features").and_then(|f| f.as_table_mut()) {
+        Some(table) => table,
+        None => return Ok(()), // No features section
+    };
+
+    // Step 1: Extract and sort each feature's dependency list
+    let mut feature_entries: Vec<(String, Item)> = Vec::new();
+
+    for (key, value) in features_table.iter() {
+        let key_str = key.to_string();
+
+        // Sort the dependency list if it's an array
+        let sorted_value = if let Some(array) = value.as_array() {
+            let mut deps: Vec<String> = array
+                .iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect();
+
+            deps.sort_by_key(|dep| feature_dep_sort_key(dep));
+
+            let mut new_array = toml_edit::Array::new();
+            for dep in deps {
+                new_array.push(dep);
+            }
+            Item::Value(Value::Array(new_array))
+        } else {
+            value.clone()
+        };
+
+        feature_entries.push((key_str, sorted_value));
+    }
+
+    // Step 2: Sort the features themselves (default first, then lexicographic)
+    feature_entries.sort_by(|a, b| {
+        match (a.0.as_str(), b.0.as_str()) {
+            ("default", "default") => std::cmp::Ordering::Equal,
+            ("default", _) => std::cmp::Ordering::Less,
+            (_, "default") => std::cmp::Ordering::Greater,
+            (a_key, b_key) => a_key.cmp(b_key),
+        }
+    });
+
+    // Step 3: Rebuild the table in sorted order
+    let all_keys: Vec<String> = features_table.iter().map(|(k, _)| k.to_string()).collect();
+    for key in all_keys {
+        features_table.remove(&key);
+    }
+    for (key, value) in feature_entries {
+        features_table.insert(&key, value);
+    }
+
+    Ok(())
+}
 fn update_member_toml(
     member_path: &Path,
     _all_deps: &HashMap<String, Vec<(PathBuf, String, Dependency)>>,
