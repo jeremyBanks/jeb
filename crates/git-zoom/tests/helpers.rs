@@ -22,7 +22,21 @@ impl TestRepo {
             .to_temporary_repository()
             .expect("Failed to create temporary repository");
 
-        Self { temp_repo }
+        let test_repo = Self { temp_repo };
+
+        // Reset working tree to match HEAD
+        // git-snapshot creates commits but doesn't populate the working directory
+        let original_dir = env::current_dir().unwrap();
+        env::set_current_dir(test_repo.workdir()).unwrap();
+
+        let _reset = Command::new("git")
+            .args(&["reset", "--hard", "HEAD"])
+            .output()
+            .expect("Failed to reset working tree");
+
+        env::set_current_dir(original_dir).unwrap();
+
+        test_repo
     }
 
     /// Get the working directory path
@@ -166,8 +180,8 @@ pub fn extract_trailer(message: &str, trailer_name: &str) -> Option<String> {
 pub fn verify_first_parent_lineage(snapshot: &Repository, expected_messages: &[&str]) {
     // Get starting commit ID from HEAD
     let mut current_id = match snapshot.head() {
-        HeadState::Symbolic(ref_name) => snapshot
-            .resolve_ref(ref_name)
+        HeadState::Symbolic(ref_name) => *snapshot
+            .get_ref(ref_name)
             .expect("HEAD reference not found"),
         HeadState::Detached(id) => *id,
     };

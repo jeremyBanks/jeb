@@ -1,47 +1,6 @@
-use {
-    super::{
-        bytes::Bytes,
-        float::Number,
-        text::Text,
-    },
-    derive_more::{
-        From,
-        IsVariant,
-        TryInto,
-        TryUnwrap,
-        Unwrap,
-    },
-    indexmap::IndexMap,
-};
-/// The core Value enum representing all supported data types.
-/// [impl value.types.null]
-/// [impl value.types.bool]
-/// [impl value.types.number]
-/// [impl value.types.bytes]
-/// [impl value.types.text]
-/// [impl value.types.array]
-/// [impl value.types.bytes-map]
-/// [impl value.types.text-map]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize),
-    serde(untagged)
-)]
-#[derive(Debug, Clone, From, Default, TryInto, IsVariant, TryUnwrap, Unwrap)]
-#[must_use]
-pub enum Value {
-    #[default]
-    Null,
-    Bool(bool),
-    Number(Number),
-    Bytes(Bytes),
-    Text(Text),
-    Array(Vec<Value>),
-    BytesMap(IndexMap<Bytes, Value>),
-    TextMap(IndexMap<Text, Value>),
-}
+use crate::Value;
+
 /// Implements structural equality for values.
-/// [impl value.equality.structural]
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         use Value::*;
@@ -89,39 +48,31 @@ impl core::hash::Hash for Value {
                 1u8.hash(state);
                 value.hash(state);
             }
-            Value::Unsigned(value) => {
-                2u8.hash(state);
-                value.hash(state);
-            }
-            Value::Signed(value) => {
-                2u8.hash(state);
-                value.hash(state);
-            }
             Value::Number(value) => {
-                3u8.hash(state);
+                2u8.hash(state);
                 value.hash(state);
             }
             Value::Bytes(value) => {
-                4u8.hash(state);
+                3u8.hash(state);
                 value.hash(state);
             }
             Value::Text(value) => {
-                5u8.hash(state);
+                4u8.hash(state);
                 value.hash(state);
             }
             Value::Array(value) => {
-                6u8.hash(state);
+                5u8.hash(state);
                 value.hash(state);
             }
             Value::TextMap(value) => {
-                7u8.hash(state);
+                6u8.hash(state);
                 value.len().hash(state);
                 for item in value {
                     item.hash(state);
                 }
             }
             Value::BytesMap(value) => {
-                8u8.hash(state);
+                7u8.hash(state);
                 value.len().hash(state);
                 for item in value {
                     item.hash(state);

@@ -1,7 +1,4 @@
 spec {
   name "jeb"
   rules_glob "**/*.md"
-  include "crates/**/src/**/*.rs"
-  exclude "target/**"
-  exclude "crates/tracey/**"
 }

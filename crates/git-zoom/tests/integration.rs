@@ -49,7 +49,7 @@ refs:
 
     // Verify commit structure
     let snapshot = repo.to_snapshot();
-    let head_commit = snapshot.get_head_commit().unwrap();
+    let head_commit = snapshot.head_commit().unwrap();
 
     // Should be a merge commit with zoom-in trailer
     verify_zoom_in_commit(head_commit);
@@ -94,7 +94,7 @@ refs:
 
     // Verify commit structure
     let snapshot = repo.to_snapshot();
-    let head_commit = snapshot.get_head_commit().unwrap();
+    let head_commit = snapshot.head_commit().unwrap();
     verify_zoom_out_commit(head_commit);
 }
 
@@ -144,7 +144,7 @@ refs:
 
     // Verify commit structure
     let snapshot = repo.to_snapshot();
-    let head = snapshot.get_head_commit().unwrap();
+    let head = snapshot.head_commit().unwrap();
     verify_zoom_out_commit(head);
 
     // Verify the path is correct in trailer
