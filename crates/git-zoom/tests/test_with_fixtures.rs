@@ -61,10 +61,13 @@ fn test_complete_zoom_cycle() {
     println!("\nActual commits ({}):", actual.commits().count());
     for commit in actual.commits() {
         println!(
-            "  {} | parents:{} | {}",
+            "  {} | parents:{} | {} | committer:{} <{}> | paths:{}",
             commit.id.to_hex().chars().take(7).collect::<String>(),
             commit.parents.len(),
-            commit.message.lines().next().unwrap_or("")
+            commit.message.lines().next().unwrap_or(""),
+            commit.committer.name,
+            commit.committer.email,
+            commit.tree.paths().count()
         );
     }
 
@@ -75,10 +78,13 @@ fn test_complete_zoom_cycle() {
     println!("\nExpected commits ({}):", expected.commits().count());
     for commit in expected.commits() {
         println!(
-            "  {} | parents:{} | {}",
+            "  {} | parents:{} | {} | committer:{} <{}> | paths:{}",
             commit.id.to_hex().chars().take(7).collect::<String>(),
             commit.parents.len(),
-            commit.message.lines().next().unwrap_or("")
+            commit.message.lines().next().unwrap_or(""),
+            commit.committer.name,
+            commit.committer.email,
+            commit.tree.paths().count()
         );
     }
 
