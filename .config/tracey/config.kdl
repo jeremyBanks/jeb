@@ -1,6 +1,6 @@
 spec {
-  name "tracey-test"
-  rules_glob "docs/tracey-test/**/*.md"
-  root "."
-  include "**/*.rs"
+  name "jeb"
+  rules_glob "docs/spec/**/*.md"
+  include "crates/jeb-value/src/**/*.rs"
+  include "crates/save/src/**/*.rs"
 }

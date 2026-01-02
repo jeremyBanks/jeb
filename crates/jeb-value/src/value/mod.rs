@@ -13,6 +13,15 @@ use {
     },
     indexmap::IndexMap,
 };
+/// The core Value enum representing all supported data types.
+/// [impl value.types.null]
+/// [impl value.types.bool]
+/// [impl value.types.number]
+/// [impl value.types.bytes]
+/// [impl value.types.text]
+/// [impl value.types.array]
+/// [impl value.types.bytes-map]
+/// [impl value.types.text-map]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Serialize),
@@ -31,6 +40,8 @@ pub enum Value {
     BytesMap(IndexMap<Bytes, Value>),
     TextMap(IndexMap<Text, Value>),
 }
+/// Implements structural equality for values.
+/// [impl value.equality.structural]
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         use Value::*;
@@ -63,7 +74,11 @@ impl PartialEq for Value {
         }
     }
 }
+/// [impl value.equality.hashable]
 impl Eq for Value {}
+/// Implements hashing with type discriminants.
+/// [impl value.equality.hashable]
+/// [impl value.hash.discriminant]
 impl core::hash::Hash for Value {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         match self {

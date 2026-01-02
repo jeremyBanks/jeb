@@ -3834,17 +3834,11 @@ fn oid_from_object_id(id: &ObjectId) -> git2::Oid {
 fn convert_signature(sig: &git2::Signature) -> Result<Identity, GitError> {
     let name = sig
         .name()
-        .ok_or(GitError::InvalidUtf8 {
-            context: "signature name",
-            source: std::str::from_utf8(&[]).unwrap_err(),
-        })?
+        .ok_or_else(|| git2::Error::from_str("signature has no name"))?
         .to_string();
     let email = sig
         .email()
-        .ok_or(GitError::InvalidUtf8 {
-            context: "signature email",
-            source: std::str::from_utf8(&[]).unwrap_err(),
-        })?
+        .ok_or_else(|| git2::Error::from_str("signature has no email"))?
         .to_string();
     Ok(Identity { name, email })
 }
@@ -3871,10 +3865,7 @@ fn read_tree_from_git2_tree(
             let mode = entry.filemode() as u32;
             let name = entry
                 .name()
-                .ok_or(GitError::InvalidUtf8 {
-                    context: "filename",
-                    source: std::str::from_utf8(&[]).unwrap_err(),
-                })?;
+                .ok_or_else(|| git2::Error::from_str("filename is not valid UTF-8"))?;
             let path = if prefix.is_empty() {
                 name.to_string()
             } else {
@@ -3948,10 +3939,7 @@ fn read_commit(git_commit: &git2::Commit, repo: &git2::Repository) -> Result<Com
 
     let message = git_commit
         .message()
-        .ok_or(GitError::InvalidUtf8 {
-            context: "commit message",
-            source: std::str::from_utf8(&[]).unwrap_err(),
-        })?
+        .ok_or_else(|| git2::Error::from_str("commit message is not valid UTF-8"))?
         .to_string();
 
     let git_tree = git_commit.tree()?;
@@ -4081,10 +4069,9 @@ fn git2_from_git_dir(path: &Path) -> Result<Repository, GitError> {
                 let entry = entry?;
                 let path = entry.path();
                 let name = entry.file_name();
-                let name_str = name.to_str().ok_or(GitError::InvalidUtf8 {
-                    context: "filename",
-                    source: std::str::from_utf8(&[]).unwrap_err(),
-                })?;
+                let name_str = name
+                    .to_str()
+                    .ok_or_else(|| git2::Error::from_str("filename is not valid UTF-8"))?;
 
                 // Skip .git directory
                 if name_str == ".git" {
