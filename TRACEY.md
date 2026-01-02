@@ -23,5 +23,10 @@ inheritor), the default feature MUST be enabled by using adding `"default"` to
 the beginning of the `features` array. This implies that
 `no-default-feature = false` MUST never ber used.
 
+r[workspace.ci.github]
+GitHub actions MUST be used for the CI configuration.
 
+r[workspace.ci.build]
+The CI configuration MUST ensure that all Rust targets are able to build
+successfully.
 
