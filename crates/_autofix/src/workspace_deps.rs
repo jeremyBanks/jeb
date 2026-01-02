@@ -1148,7 +1148,8 @@ fn update_member_toml(
                                     // Use inline table for complex cases with multiple fields
                                     deps[&key] = Item::Value(Value::InlineTable(table));
                                 }
-                            } else if currently_uses_workspace {
+                            } else if currently_uses_workspace && !is_simple_inline_workspace {
+                                // Keep existing workspace dependency as-is if it has additional fields
                                 if let Some(old_resolution) = old_workspace_deps.get(&key) {
                                     let loser_dep = Dependency {
                                         key: key.clone(),
