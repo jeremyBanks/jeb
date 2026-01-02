@@ -27,10 +27,8 @@ mod value;
 // [impl jeb-value.variants.debug]
 // [impl jeb-value.variants.deref]
 // [impl jeb-value.variants.as-ref]
-// [impl jeb-value.variants.mut]
 // [impl jeb-value.variants.cmp]
 // [impl jeb-value.variants.cmp.delegate-inner]
-// [impl jeb-value.variants.borrow]
 #[derive(
     AsMut,
     AsRef,

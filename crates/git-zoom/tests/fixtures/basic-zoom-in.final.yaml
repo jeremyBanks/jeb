@@ -1,16 +1,19 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 5a764f0b638be9d827e60b18e2189bed1be1f89a
-0c5d7b:
+    main: f4b8222c26a78f1edf2b385a04b329c3f75a248b
+136d8a:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:36Z
-  commit-date: 2026-01-02T21:10:36Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
   tree: {}
-08c005:
+ea2e71:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
   message: Initial commit
   parents: []
   tree:
@@ -19,7 +22,7 @@ refs:
       lib:
         bar.txt: more code
         foo.txt: library code
-5a764f0b638be9d827e60b18e2189bed1be1f89a:
+f4b8222c26a78f1edf2b385a04b329c3f75a248b:
   author-date: 2026-01-02T21:10:36Z
   commit-date: 2026-01-02T21:10:36Z
   committer: 🔎 <git-zoom-in@localhost>
@@ -28,12 +31,12 @@ refs:
 
     git-zoom-in: src/lib
   parents:
-  - 0c5d7b
-  - 08c005
+  - 136d8a
+  - ea2e71
   tree:
     bar.txt:
-      //commit: 08c005
+      //commit: ea2e71
       //path: src/lib/bar.txt
     foo.txt:
-      //commit: 08c005
+      //commit: ea2e71
       //path: src/lib/foo.txt

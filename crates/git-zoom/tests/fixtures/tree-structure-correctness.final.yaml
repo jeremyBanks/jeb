@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: ab1f839ff7a2c9bfca1d173478b3f627aca51a08
+    main: 21968cd3a5267718533aca4789a072bd5ba71256
 '057668':
   message: commit 1
   tree:
@@ -12,25 +12,25 @@ refs:
         mid.txt: mid
       top.txt: top
     root.txt: root
-'29e281':
+136d8a:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
   parents: []
   tree: {}
-7f5d6b:
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+a3eaf3:
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'a/b'
 
     git-zoom-in: a/b
   parents:
-  - '29e281'
+  - 136d8a
   - '057668'
   tree:
     c:
@@ -40,20 +40,20 @@ refs:
     mid.txt:
       //commit: '057668'
       //path: a/b/mid.txt
-e317d4:
+032ed9:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:10:38Z
-  commit-date: 2026-01-02T21:10:38Z
+  author-date: 2026-01-02T21:30:10Z
+  commit-date: 2026-01-02T21:30:10Z
   message: |
     Add files
   tree:
     another.txt: at b level
     c:
       new.txt: new file
-ab1f839ff7a2c9bfca1d173478b3f627aca51a08:
+21968cd3a5267718533aca4789a072bd5ba71256:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:38Z
-  commit-date: 2026-01-02T21:10:38Z
+  author-date: 2026-01-02T21:30:10Z
+  commit-date: 2026-01-02T21:30:10Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'a/b'
@@ -61,14 +61,14 @@ ab1f839ff7a2c9bfca1d173478b3f627aca51a08:
     git-zoom-out: a/b
   parents:
   - '057668'
-  - e317d4
+  - 032ed9
   tree:
     a:
       b:
         another.txt:
-          //commit: e317d4
+          //commit: 032ed9
           //path: another.txt
         c:
           new.txt:
-            //commit: e317d4
+            //commit: 032ed9
             //path: c/new.txt

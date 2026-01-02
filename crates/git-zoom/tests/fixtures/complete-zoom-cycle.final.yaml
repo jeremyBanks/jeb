@@ -1,8 +1,11 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: e017a61b3a9a3dbf3001385cb157c778277525ad
-2c041b:
+    main: a3f58edcb097d3bbcaa225f7ffe97fbe41175804
+3cfd2a:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
   message: Initial commit
   tree:
     README.md: root readme
@@ -11,16 +14,16 @@ refs:
       lib:
         bar.txt: bar
         foo.txt: original
-0c5d7b:
+136d8a:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:36Z
-  commit-date: 2026-01-02T21:10:36Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
   parents: []
   tree: {}
-5bc1e9:
+17ca73:
   author-date: 2026-01-02T21:10:36Z
   commit-date: 2026-01-02T21:10:36Z
   committer: 🔎 <git-zoom-in@localhost>
@@ -29,42 +32,41 @@ refs:
 
     git-zoom-in: src/lib
   parents:
-  - 0c5d7b
-  - 2c041b
+  - 136d8a
+  - 3cfd2a
   tree:
     bar.txt:
-      //commit: 2c041b
+      //commit: 3cfd2a
       //path: src/lib/bar.txt
     foo.txt:
-      //commit: 2c041b
+      //commit: 3cfd2a
       //path: src/lib/foo.txt
-1269fb:
+9bebbf:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:10:38Z
-  commit-date: 2026-01-02T21:10:38Z
+  author-date: 2026-01-02T21:30:08Z
+  commit-date: 2026-01-02T21:30:08Z
   message: |
     Update library
   tree:
     foo.txt: modified
     new.txt: new file
-e017a61b3a9a3dbf3001385cb157c778277525ad:
-  author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:38Z
-  commit-date: 2026-01-02T21:10:38Z
+a3f58edcb097d3bbcaa225f7ffe97fbe41175804:
+  author-date: 2026-01-02T21:30:08Z
+  commit-date: 2026-01-02T21:30:08Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src/lib'
 
     git-zoom-out: src/lib
   parents:
-  - 2c041b
-  - 1269fb
+  - 3cfd2a
+  - 9bebbf
   tree:
     src:
       lib:
         foo.txt:
-          //commit: 1269fb
+          //commit: 9bebbf
           //path: foo.txt
         new.txt:
-          //commit: 1269fb
+          //commit: 9bebbf
           //path: new.txt

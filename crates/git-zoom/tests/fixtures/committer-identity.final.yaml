@@ -1,58 +1,60 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 05f02b295fafd5b5981e54a667a4c53501374f00
-ef5e82:
+    main: 4fb07046398c5bbd1565bc810cbfee99413027e6
+771dd6:
+  author: Test User <test@example.com>
+  commit-date: 2024-12-25T00:00:00Z
   message: commit 1
   tree:
     src:
       file.txt: content
-0c5d7b:
+136d8a:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:36Z
-  commit-date: 2026-01-02T21:10:36Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
   parents: []
   tree: {}
-b70bac:
-  author-date: 2026-01-02T21:10:36Z
-  commit-date: 2026-01-02T21:10:36Z
+f63ce7:
+  author-date: 2024-12-25T00:00:00Z
+  commit-date: 2024-12-25T00:00:00Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - 0c5d7b
-  - ef5e82
+  - 136d8a
+  - 771dd6
   tree:
     file.txt:
-      //commit: ef5e82
+      //commit: 771dd6
       //path: src/file.txt
-a6a94e:
+4a2258:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:10:36Z
-  commit-date: 2026-01-02T21:10:36Z
+  author-date: 2026-01-02T21:30:10Z
+  commit-date: 2026-01-02T21:30:10Z
   message: |
     Update
   tree:
     file.txt: modified
-05f02b295fafd5b5981e54a667a4c53501374f00:
+4fb07046398c5bbd1565bc810cbfee99413027e6:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:36Z
-  commit-date: 2026-01-02T21:10:36Z
+  author-date: 2026-01-02T21:30:10Z
+  commit-date: 2026-01-02T21:30:10Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src'
 
     git-zoom-out: src
   parents:
-  - ef5e82
-  - a6a94e
+  - 771dd6
+  - 4a2258
   tree:
     src:
       file.txt:
-        //commit: a6a94e
+        //commit: 4a2258
         //path: file.txt

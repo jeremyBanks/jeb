@@ -1,9 +1,18 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 6c60597b93f146453f5176fb74590e84a9675c47
+    main: 0925548485fec6b3203892b99740dae7f0c3b9e9
+136d8a:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Initial commit
+  tree: {}
 50f528:
   message: Initial commit
+  parents: []
   tree:
     docs:
       guide.md: docs
@@ -12,42 +21,33 @@ refs:
         main.txt: binary
       lib:
         lib.txt: library
-6ec6e5:
-  author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:38Z
-  commit-date: 2026-01-02T21:10:38Z
-  committer: 🔎 <git-zoom-in@localhost>
-  message: |
-    Initial commit
-  parents: []
-  tree: {}
-e2a0f8:
-  author-date: 2026-01-02T21:10:38Z
-  commit-date: 2026-01-02T21:10:38Z
+ea3927:
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src/lib'
 
     git-zoom-in: src/lib
   parents:
-  - 6ec6e5
+  - 136d8a
   - 50f528
   tree:
     lib.txt:
       //commit: 50f528
       //path: src/lib/lib.txt
-eb99c3:
+62744d:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:10:38Z
-  commit-date: 2026-01-02T21:10:38Z
+  author-date: 2026-01-02T21:30:11Z
+  commit-date: 2026-01-02T21:30:11Z
   message: |
     Update lib
   tree:
     lib.txt: library v2
-8c1923:
+07f7cc:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:38Z
-  commit-date: 2026-01-02T21:10:38Z
+  author-date: 2026-01-02T21:30:11Z
+  commit-date: 2026-01-02T21:30:11Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src/lib'
@@ -55,59 +55,50 @@ eb99c3:
     git-zoom-out: src/lib
   parents:
   - 50f528
-  - eb99c3
+  - 62744d
   tree:
     src:
       lib:
         lib.txt:
-          //commit: eb99c3
+          //commit: 62744d
           //path: lib.txt
-ccd171:
-  author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:39Z
-  commit-date: 2026-01-02T21:10:39Z
-  committer: 🔎 <git-zoom-in@localhost>
-  message: |
-    Initial commit
-  parents: []
-  tree: {}
-42642d:
-  author-date: 2026-01-02T21:10:39Z
-  commit-date: 2026-01-02T21:10:39Z
+8cf887:
+  author-date: 2026-01-02T21:30:11Z
+  commit-date: 2026-01-02T21:30:11Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src/bin'
 
     git-zoom-in: src/bin
   parents:
-  - ccd171
-  - 8c1923
+  - 136d8a
+  - 07f7cc
   tree:
     main.txt:
       //commit: 50f528
       //path: src/bin/main.txt
-64b621:
+b76758:
   author: User <user@localhost>
-  author-date: 2026-01-02T21:10:39Z
-  commit-date: 2026-01-02T21:10:39Z
+  author-date: 2026-01-02T21:30:11Z
+  commit-date: 2026-01-02T21:30:11Z
   message: |
     Update bin
   tree:
     main.txt: binary v2
-6c60597b93f146453f5176fb74590e84a9675c47:
-  author-date: 2026-01-02T21:10:39Z
-  commit-date: 2026-01-02T21:10:39Z
+0925548485fec6b3203892b99740dae7f0c3b9e9:
+  author-date: 2026-01-02T21:30:11Z
+  commit-date: 2026-01-02T21:30:11Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src/bin'
 
     git-zoom-out: src/bin
   parents:
-  - 8c1923
-  - 64b621
+  - 07f7cc
+  - b76758
   tree:
     src:
       bin:
         main.txt:
-          //commit: 64b621
+          //commit: b76758
           //path: main.txt

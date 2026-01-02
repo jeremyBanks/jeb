@@ -41,7 +41,6 @@ impl Float {
     }
 }
 // [impl jeb-value.dependencies.cfg]
-// [impl jeb-value.number.finite]
 #[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for Float {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -75,8 +74,6 @@ impl PartialOrd for Float {
         Some(self.cmp(other))
     }
 }
-// [impl jeb-value.variants.cmp]
-// [impl jeb-value.number.cmp]
 impl Hash for Float {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         state.write_u64(self.0.to_bits());

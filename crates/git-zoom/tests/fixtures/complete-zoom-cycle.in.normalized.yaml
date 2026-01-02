@@ -1,8 +1,11 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 1e8b317005701f7d749b1215b9d560e53add3001
-1e8b317005701f7d749b1215b9d560e53add3001:
+    main: b4e0dac0f2b4d9ae400c79606f32b9457bbcf693
+b4e0dac0f2b4d9ae400c79606f32b9457bbcf693:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
   message: Initial commit
   tree:
     README.md: root readme

@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 0bf41af21fd5fe91bc52e140718de6d031707d8b
+    main: 8d5e34ee8b11b6c00e8b81c593b18644fe7e9ebf
 3d81b3:
   message: commit 1
   tree:
@@ -9,25 +9,25 @@ refs:
       a.txt: a
       b.txt: b
       c.txt: c
-'29e281':
+136d8a:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
   parents: []
   tree: {}
-107ebf:
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+b2cef5:
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - '29e281'
+  - 136d8a
   - 3d81b3
   tree:
     a.txt:
@@ -39,10 +39,10 @@ refs:
     c.txt:
       //commit: 3d81b3
       //path: src/c.txt
-'25e028':
+'963370':
   author: User <user@localhost>
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+  author-date: 2026-01-02T21:30:10Z
+  commit-date: 2026-01-02T21:30:10Z
   message: |
     Modify all files
   tree:
@@ -50,10 +50,10 @@ refs:
     b.txt: B
     c.txt: C
     d.txt: D
-0bf41af21fd5fe91bc52e140718de6d031707d8b:
+8d5e34ee8b11b6c00e8b81c593b18644fe7e9ebf:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:10:37Z
-  commit-date: 2026-01-02T21:10:37Z
+  author-date: 2026-01-02T21:30:10Z
+  commit-date: 2026-01-02T21:30:10Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src'
@@ -61,18 +61,18 @@ refs:
     git-zoom-out: src
   parents:
   - 3d81b3
-  - '25e028'
+  - '963370'
   tree:
     src:
       a.txt:
-        //commit: '25e028'
+        //commit: '963370'
         //path: a.txt
       b.txt:
-        //commit: '25e028'
+        //commit: '963370'
         //path: b.txt
       c.txt:
-        //commit: '25e028'
+        //commit: '963370'
         //path: c.txt
       d.txt:
-        //commit: '25e028'
+        //commit: '963370'
         //path: d.txt
