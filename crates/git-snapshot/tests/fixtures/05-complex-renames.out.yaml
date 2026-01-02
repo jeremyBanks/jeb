@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 00ff30a3100b4b1f69579656281065e6ed4dc149
-c412cc:
+    main: c87163e6687827d670e303f238df99e255e2f3c9
+1d6610:
   message: commit 1
   tree:
     README.md: '# Project Alpha'
@@ -14,7 +14,7 @@ c412cc:
       core:
         engine.rs: pub fn run() { /* v1 */ }
         utils.rs: pub fn helper() {}
-92e7c7:
+28bc52:
   message: commit 2
   tree:
     README.md: |-
@@ -28,17 +28,17 @@ c412cc:
         server.rs: null
       runtime:
         engine.rs: pub fn run() { /* v2 - refactored */ }
-83a814:
+e322b6:
   message: commit 3
   tree:
     README-GUIDE.md:
-      //commit: c412cc
+      //commit: 1d6610
       //path: docs/guide.md
-00ff30a3100b4b1f69579656281065e6ed4dc149:
+c87163e6687827d670e303f238df99e255e2f3c9:
   message: commit 4
   tree:
     src:
       runtime:
         shared.rs:
-          //commit: c412cc
+          //commit: 1d6610
           //path: src/core/utils.rs

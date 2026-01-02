@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: c916de90468c617d557f37ae0348a048d073b383
-9e7c278623ef39ae01837d46251428532dc42ef6:
+    main: 0b1517b47fc6b6059c65e0253a4ef0a649590a12
+f526e424f369f85279b11f04d209642b4eb3e482:
   author: User <user@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
@@ -13,7 +13,7 @@ refs:
     dir:
       file.txt: content
     existing.txt: exists
-9e4b7465b7a83b287212d1df4d73b6890ff80516:
+94759215060cb9470081435870c081413c48517c:
   author: User <user@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
@@ -21,7 +21,7 @@ refs:
   message: commit 2
   parents: []
   tree: {}
-dc62e191c72ff649006ed6fbd80bb28bcbe9d61e:
+d4f009a0fbb42a903fe10c77eaa4c8c985a635c0:
   author: User <user@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
@@ -31,9 +31,9 @@ dc62e191c72ff649006ed6fbd80bb28bcbe9d61e:
 
     git-zoom-in: path/that/does/not/exist
   parents:
-  - 9e4b7465b7a83b287212d1df4d73b6890ff80516
-  - 9e7c278623ef39ae01837d46251428532dc42ef6
-c916de90468c617d557f37ae0348a048d073b383:
+  - 94759215060cb9470081435870c081413c48517c
+  - f526e424f369f85279b11f04d209642b4eb3e482
+0b1517b47fc6b6059c65e0253a4ef0a649590a12:
   author: User <user@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
@@ -43,5 +43,5 @@ c916de90468c617d557f37ae0348a048d073b383:
 
     git-zoom-out: another/path
   parents:
-  - 9e7c278623ef39ae01837d46251428532dc42ef6
-  - dc62e191c72ff649006ed6fbd80bb28bcbe9d61e
+  - f526e424f369f85279b11f04d209642b4eb3e482
+  - d4f009a0fbb42a903fe10c77eaa4c8c985a635c0

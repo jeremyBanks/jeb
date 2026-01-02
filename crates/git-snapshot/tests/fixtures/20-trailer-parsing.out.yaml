@@ -1,16 +1,16 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 75a80a72a90949f2d1b170053f77cb3185f64b41
-593c96:
+    main: 6bc21e59a7eafc4db9bf115c0b102206eb42d959
+ddd158:
   message: commit 1
   tree:
     base.txt: base content
-8ac271:
+3b7d80:
   message: orphan seed
   parents: []
   tree: {}
-052b2f:
+5d698d:
   message: |
     Merge from subtree
 
@@ -19,27 +19,27 @@ refs:
 
     git-zoom-in: path/to/subtree
   parents:
-  - 8ac271
-  - 593c96
+  - 3b7d80
+  - ddd158
   tree:
     file.txt: content
-8b9228:
+bb03a0:
   message: |
     Merge to subtree
 
     git-zoom-out: path/to/subtree
     This line appears after the trailer
   parents:
-  - 593c96
-  - 052b2f
+  - ddd158
+  - 5d698d
   tree:
     path:
       to:
         subtree:
           file.txt:
-            //commit: 052b2f
+            //commit: 5d698d
             //path: file.txt
-75a80a72a90949f2d1b170053f77cb3185f64b41:
+6bc21e59a7eafc4db9bf115c0b102206eb42d959:
   message: |
     Another merge
 

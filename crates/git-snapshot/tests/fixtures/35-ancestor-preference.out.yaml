@@ -1,35 +1,37 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: d85930dcbf81e1749c9bc12b4859c877215df9a0
-    other: 4e048763c124f68371e2970a62882c2266963181
-28848f:
-  message: commit 2
+    main: 463366d731a8615b27009d341f44107a1186e705
+    other: 090e50ee37d6e562bc8706f62e65dda93c780396
+32b00f:
+  message: commit 1
   tree:
     shared.txt: shared content
-853c64:
-  message: commit 1
+728d7e:
+  message: commit 2
   parents: []
   tree:
     shared.txt:
-      //commit: 28848f
+      //commit: 32b00f
       //path: shared.txt
-720c67:
+3dd39c:
   message: commit 4
+  parents:
+  - 32b00f
   tree:
     main.txt: main branch
-4e048763c124f68371e2970a62882c2266963181:
+090e50ee37d6e562bc8706f62e65dda93c780396:
   message: commit 3
   parents:
-  - 28848f
+  - 728d7e
   tree:
     other.txt: other branch
-d85930dcbf81e1749c9bc12b4859c877215df9a0:
+463366d731a8615b27009d341f44107a1186e705:
   message: commit 5
   parents:
-  - 720c67
-  - 4e048763c124f68371e2970a62882c2266963181
+  - 3dd39c
+  - 090e50ee37d6e562bc8706f62e65dda93c780396
   tree:
     other.txt:
-      //commit: 4e048763c124f68371e2970a62882c2266963181
+      //commit: 090e50ee37d6e562bc8706f62e65dda93c780396
       //path: other.txt

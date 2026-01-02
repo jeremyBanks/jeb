@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 62ee58a25ae288fb49cf227bd3da3756751d7a5a
-9d78bb:
+    main: 4427531511d4b51c7ac8a18a97221ef313ad6d0d
+7b692b:
   message: commit 1
   tree:
     src:
@@ -15,7 +15,7 @@ refs:
   message: Initial commit
   parents: []
   tree: {}
-01b610:
+'001053':
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
@@ -25,19 +25,19 @@ refs:
     git-zoom-in: src
   parents:
   - 136d8a
-  - 9d78bb
+  - 7b692b
   tree:
     code.txt:
-      //commit: 9d78bb
+      //commit: 7b692b
       //path: src/code.txt
-da91ab:
+ba11d9:
   author: User <user@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   message: Update
   tree:
     code.txt: modified
-62ee58a25ae288fb49cf227bd3da3756751d7a5a:
+4427531511d4b51c7ac8a18a97221ef313ad6d0d:
   author: Jeremy Banks <_@jeremy.ca>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
@@ -47,10 +47,10 @@ da91ab:
 
     git-zoom-out: src
   parents:
-  - 9d78bb
-  - da91ab
+  - 7b692b
+  - ba11d9
   tree:
     src:
       code.txt:
-        //commit: da91ab
+        //commit: ba11d9
         //path: code.txt

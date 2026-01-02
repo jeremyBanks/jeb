@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: e13361cc86e737638d1a16a62403bcbbd4636042
-59aa95c768af6493d23dcd895f0899f9c4b4dc0f:
+    main: cff27db92d75ffaec2929a1a76afe2bc0dff8b89
+b05bfdd35bc0c27e2c294cf22aa4f6f8e0222280:
   author: User <user@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
@@ -15,14 +15,14 @@ refs:
     foo:
       a.txt: content a
       b.txt: content b
-e13361cc86e737638d1a16a62403bcbbd4636042:
+cff27db92d75ffaec2929a1a76afe2bc0dff8b89:
   author: User <user@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
   committer: User <user@localhost>
   message: commit 2
   parents:
-  - 59aa95c768af6493d23dcd895f0899f9c4b4dc0f
+  - b05bfdd35bc0c27e2c294cf22aa4f6f8e0222280
   tree:
     c-moved.txt: content c
     foo:

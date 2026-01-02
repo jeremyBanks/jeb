@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: b966dbe9708d91c4f73b15d67c7ddf036075bc6d
-49cde922007999fec05b6e165be8937b1fd05d35:
+    main: d48bbc67bf53c4f2081c4cb0fd53b9c94e82c687
+8f02ea50c20104760cc63568d1397c098f9f675b:
   author: User <user@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
@@ -14,14 +14,14 @@ refs:
       also-empty.txt: ''
     empty.txt: ''
     nonempty.txt: has content
-b966dbe9708d91c4f73b15d67c7ddf036075bc6d:
+d48bbc67bf53c4f2081c4cb0fd53b9c94e82c687:
   author: User <user@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
   committer: User <user@localhost>
   message: commit 2
   parents:
-  - 49cde922007999fec05b6e165be8937b1fd05d35
+  - 8f02ea50c20104760cc63568d1397c098f9f675b
   tree:
     dir:
       also-empty.txt: also has content now

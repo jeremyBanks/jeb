@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 2cd23eb2d3637ef017aaed49b46b53855f8c7410
-6789915ca8e3b3273e5974993a56c2bbf5b7af97:
+    main: 54921803effca54967ecdc3c6491aef07462974f
+4727b165ce5686e80653545dce2a81ab3fcd07f9:
   author: User <user@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
@@ -11,7 +11,7 @@ refs:
   parents: []
   tree:
     file.txt: content
-9defd84796b97c2d83c73f7f4834b426c1332f8e:
+c674bd11f7c71b1fe0292a2a1667a1cbfc653252:
   author: User <user@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
@@ -23,10 +23,10 @@ refs:
 
     Multiple paragraphs.
   parents:
-  - 6789915ca8e3b3273e5974993a56c2bbf5b7af97
+  - 4727b165ce5686e80653545dce2a81ab3fcd07f9
   tree:
     file.txt: change
-4db5986b78d1b365afbed355baab1d766879a5c0:
+f67ede3f12d342bc85ce442d98b79a7e6a50ffcf:
   author: User <user@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
@@ -40,10 +40,10 @@ refs:
 
     Signed-off-by: Author <author@example.com>
   parents:
-  - 9defd84796b97c2d83c73f7f4834b426c1332f8e
+  - c674bd11f7c71b1fe0292a2a1667a1cbfc653252
   tree:
     file.txt: special
-2cd23eb2d3637ef017aaed49b46b53855f8c7410:
+54921803effca54967ecdc3c6491aef07462974f:
   author: User <user@localhost>
   author-date: 2024-12-06T06:25:12-06:24
   commit-date: 2024-12-06T06:25:15-06:24
@@ -57,6 +57,6 @@ refs:
     Tested-by: Tester <tester@example.com>
     Cc: Someone <someone@example.com>
   parents:
-  - 4db5986b78d1b365afbed355baab1d766879a5c0
+  - f67ede3f12d342bc85ce442d98b79a7e6a50ffcf
   tree:
     file.txt: trailers

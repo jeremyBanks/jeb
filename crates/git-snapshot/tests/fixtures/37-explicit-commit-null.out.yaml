@@ -1,12 +1,12 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 08aee67f982a6c0188b1c3cfc8ffe38bd90d2e43
-cf0527:
+    main: a05713ae039a1b7fd91d7658d326bb209f6169ed
+a85ec0:
   message: commit 1
   tree:
     dir:
       nested.txt: nested
     file.txt: content
-08aee67f982a6c0188b1c3cfc8ffe38bd90d2e43:
+a05713ae039a1b7fd91d7658d326bb209f6169ed:
   message: commit 2

@@ -1,16 +1,16 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 62dff585f0bb1df3b937a743a36f017365406e77
-f6dcc5:
+    main: e3c79b04e8b72041b123facbf8cfbab1f8a88237
+a5067d:
   message: commit 1
   tree:
     file.txt: content
-2586d1:
+337d2b:
   message: ''
   tree:
     file.txt: empty message commit
-62dff585f0bb1df3b937a743a36f017365406e77:
+e3c79b04e8b72041b123facbf8cfbab1f8a88237:
   message: normal message
   tree:
     file.txt: final

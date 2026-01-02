@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: f673f4c1fe2dfaabf8b1d72e3935a437a851e93c
-e04d6a6f16a102c74f7d7ed6874f6906683d05be:
+    main: c32451d91ab8d549b142d5dd83054d9b82298497
+6a7afa9d1dd2f547d76024a1ed5a0e87ca8934ee:
   author: User <user@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
@@ -16,57 +16,57 @@ e04d6a6f16a102c74f7d7ed6874f6906683d05be:
       file-b.txt: b
       file-c.txt: c
     keep.txt: kept
-432f0278d3300b0c4f8573612047ca3fa10c9ea0:
+68adfe2f791adf839127c010824f1b125f250e16:
   author: User <user@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
   committer: User <user@localhost>
   message: commit 2
   parents:
-  - e04d6a6f16a102c74f7d7ed6874f6906683d05be
+  - 6a7afa9d1dd2f547d76024a1ed5a0e87ca8934ee
   tree:
     delete-soon.txt: null
-dbc8ef10c1be1d7e889a9d044b133e3c6da3e205:
+2c4821f1955e432d45295a0b3bd765b6ece8d6cd:
   author: User <user@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
   committer: User <user@localhost>
   message: commit 3
   parents:
-  - 432f0278d3300b0c4f8573612047ca3fa10c9ea0
+  - 68adfe2f791adf839127c010824f1b125f250e16
   tree:
     dir:
       file-b.txt: null
-463183449a0e0c14b09f194e36b11c429ffac799:
+88deb4609514fda987ea37e8624df811ea716ab2:
   author: User <user@localhost>
   author-date: 2024-12-06T06:25:12-06:24
   commit-date: 2024-12-06T06:25:15-06:24
   committer: User <user@localhost>
   message: commit 4
   parents:
-  - dbc8ef10c1be1d7e889a9d044b133e3c6da3e205
+  - 2c4821f1955e432d45295a0b3bd765b6ece8d6cd
   tree:
     delete-soon.txt: will be deleted
-315cb7fb985c80782b4fad7abcabd5ab05427468:
+f330d75cdc83190ccaa968a89e5fde63ce0367c1:
   author: User <user@localhost>
   author-date: 2024-12-06T06:29:28-06:24
   commit-date: 2024-12-06T06:29:31-06:24
   committer: User <user@localhost>
   message: commit 5
   parents:
-  - 463183449a0e0c14b09f194e36b11c429ffac799
+  - 88deb4609514fda987ea37e8624df811ea716ab2
   tree:
     dir:
       file-a.txt: null
       file-c.txt: null
-f673f4c1fe2dfaabf8b1d72e3935a437a851e93c:
+c32451d91ab8d549b142d5dd83054d9b82298497:
   author: User <user@localhost>
   author-date: 2024-12-06T06:33:44-06:24
   commit-date: 2024-12-06T06:33:47-06:24
   committer: User <user@localhost>
   message: commit 6
   parents:
-  - 315cb7fb985c80782b4fad7abcabd5ab05427468
+  - f330d75cdc83190ccaa968a89e5fde63ce0367c1
   tree:
     dir:
       file-a.txt: a
