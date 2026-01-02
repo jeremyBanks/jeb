@@ -22,6 +22,7 @@ use git_snapshot::{
     parse,
     serialize,
 };
+
 /// Defines a serialization output variant
 struct OptionVariant {
     name: &'static str,
@@ -29,6 +30,7 @@ struct OptionVariant {
     id_style: CommitIdStyle,
     options: SerializationOptions,
 }
+
 /// Get the 3 output variants we want to test
 fn get_option_variants() -> Vec<OptionVariant> {
     vec![
@@ -56,6 +58,7 @@ fn get_option_variants() -> Vec<OptionVariant> {
         },
     ]
 }
+
 /// Test a single fixture file
 ///
 /// - `input_path`: Path to the input .yaml file (e.g.,
@@ -71,16 +74,26 @@ fn test_fixture(
     options: SerializationOptions,
 ) {
     eprintln!("Testing fixture: {}", input_path.display());
+
+    // Read input
     let input_yaml = fs::read_to_string(input_path)
         .unwrap_or_else(|e| panic!("Failed to read input file {:?}: {}", input_path, e));
+
+    // Parse input
     let repo = parse(&input_yaml)
         .unwrap_or_else(|e| panic!("Failed to parse input {:?}: {}", input_path, e));
+
+    // Serialize back with specified options
     let output_yaml = serialize(&repo, id_style, options);
+
+    // Check if expected output matches
     let expected_exists = expected_path.exists();
     let mut test_failed = false;
+
     if expected_exists {
         let expected_yaml = fs::read_to_string(expected_path)
             .unwrap_or_else(|e| panic!("Failed to read expected file {:?}: {}", expected_path, e));
+
         if output_yaml != expected_yaml {
             eprintln!("MISMATCH - Regenerating: {}", expected_path.display());
             fs::write(expected_path, &output_yaml).unwrap_or_else(|e| {
@@ -95,9 +108,13 @@ fn test_fixture(
         });
         test_failed = true;
     }
+
+    // Round-trip stability check
     let repo2 = parse(&output_yaml)
         .unwrap_or_else(|e| panic!("Failed to parse serialized output {:?}: {}", input_path, e));
+
     let output_yaml2 = serialize(&repo2, id_style, options);
+
     if output_yaml != output_yaml2 {
         eprintln!(
             "ROUND-TRIP INSTABILITY in fixture: {}",
@@ -108,34 +125,45 @@ fn test_fixture(
         eprintln!("\n=== SECOND ===\n{}", output_yaml2);
         panic!("Round-trip stability check failed for {:?}", input_path);
     }
+
     if test_failed {
         if !expected_exists {
             panic!(
                 "Generated missing expected output file: {:?}. Please review and re-run tests.",
-                expected_path,
+                expected_path
             );
         } else {
             panic!("Output mismatch for fixture: {:?}", input_path);
         }
     }
 }
+
 /// Find all fixture input files and generate 3 variants per input
 fn find_fixtures() -> Vec<(PathBuf, PathBuf, CommitIdStyle, SerializationOptions)> {
     let fixtures_dir = Path::new("tests/fixtures");
     let mut fixtures = Vec::new();
+
     if !fixtures_dir.exists() {
         return fixtures;
     }
+
     let variants = get_option_variants();
+
     for entry in fs::read_dir(fixtures_dir).expect("Failed to read fixtures directory") {
         let entry = entry.expect("Failed to read directory entry");
         let path = entry.path();
+
+        // Look for files ending with .in.yaml
         if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
             if file_name.ends_with(".in.yaml") {
+                // Extract base name (remove .in.yaml)
                 let base_name = file_name.replace(".in.yaml", "");
+
+                // Generate 3 tuples, one per variant
                 for variant in &variants {
                     let out_file_name = format!("{}.{}", base_name, variant.suffix);
                     let expected_path = path.with_file_name(out_file_name);
+
                     fixtures.push((
                         path.clone(),
                         expected_path,
@@ -146,26 +174,33 @@ fn find_fixtures() -> Vec<(PathBuf, PathBuf, CommitIdStyle, SerializationOptions
             }
         }
     }
+
     fixtures.sort_by(|a, b| a.0.cmp(&b.0));
     fixtures
 }
+
 #[test]
 fn test_all_fixtures() {
     let fixtures = find_fixtures();
+
     if fixtures.is_empty() {
         eprintln!("WARNING: No fixture files found in tests/fixtures/");
-        eprintln!("Fixture files should be named *.in.yaml with optional .hex. or .int. markers",);
+        eprintln!("Fixture files should be named *.in.yaml with optional .hex. or .int. markers");
         return;
     }
+
     let mut failed = Vec::new();
+
     for (input_path, expected_path, id_style, options) in fixtures {
         let result = std::panic::catch_unwind(|| {
             test_fixture(&input_path, &expected_path, id_style, options);
         });
+
         if result.is_err() {
             failed.push(input_path.clone());
         }
     }
+
     if !failed.is_empty() {
         panic!(
             "Fixture tests failed for {} file(s): {:?}",

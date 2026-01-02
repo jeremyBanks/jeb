@@ -5,12 +5,10 @@ use _autofix::{
     cargo_fmt,
     deno_fmt,
     deno_lint,
-    prettyplease,
     workspace_deps,
 };
 fn main() {
     let modules: &[(&str, fn() -> i32)] = &[
-        ("prettyplease", prettyplease::main),
         ("cargo_fmt", cargo_fmt::main),
         ("cargo_fix", cargo_fix::main),
         ("cargo_clippy", cargo_clippy::main),

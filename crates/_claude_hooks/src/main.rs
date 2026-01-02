@@ -1,48 +1,60 @@
 mod noedit;
+
 fn main() {
     let json: serde_json::Value = serde_json::from_reader(std::io::stdin()).unwrap();
     let input: HookInput = serde_json::from_value(json.clone()).unwrap();
+
+    // Handle different hook events
     let output = match &input.details {
         Some(HookInputDetails::SessionStart { .. }) => {
+            // Existing session ID logic
             handle_session_start(&input);
+
+            // New .noedit initialization
             if let Err(e) = noedit::session::handle(&input) {
                 eprintln!("noedit SessionStart error: {}", e);
             }
             None
         }
-        Some(HookInputDetails::PreToolUse { .. }) => match noedit::pretooluse::handle(&input) {
-            Ok(result) => result,
-            Err(e) => {
-                eprintln!("noedit PreToolUse error: {}", e);
-                None
+        Some(HookInputDetails::PreToolUse { .. }) => {
+            match noedit::pretooluse::handle(&input) {
+                Ok(result) => result,
+                Err(e) => {
+                    eprintln!("noedit PreToolUse error: {}", e);
+                    None // Fail open
+                }
             }
-        },
-        Some(HookInputDetails::PostToolUse { .. }) => match noedit::posttooluse::handle(&input) {
-            Ok(result) => result,
-            Err(e) => {
-                eprintln!("noedit PostToolUse error: {}", e);
-                Some(HookOutput {
-                    should_continue: None,
-                    stop_reason: None,
-                    suppress_output: None,
-                    system_message: Some(format!(
-                        "⚠️ .noedit validation error: {}\nSome protected files may not have been \
-                         reverted.",
-                        e,
-                    )),
-                    permission_decision: None,
-                    hook_specific_output: Some(HookOutputDetails::PostToolUse {
-                        additional_context: format!("Error during .noedit validation: {}", e,),
-                    }),
-                })
+        }
+        Some(HookInputDetails::PostToolUse { .. }) => {
+            match noedit::posttooluse::handle(&input) {
+                Ok(result) => result,
+                Err(e) => {
+                    eprintln!("noedit PostToolUse error: {}", e);
+                    // Return error as additional context
+                    Some(HookOutput {
+                        should_continue: None,
+                        stop_reason: None,
+                        suppress_output: None,
+                        system_message: Some(format!(
+                            "⚠️ .noedit validation error: {}\nSome protected files may not have \
+                             been reverted.",
+                            e
+                        )),
+                        permission_decision: None,
+                        hook_specific_output: Some(HookOutputDetails::PostToolUse {
+                            additional_context: format!("Error during .noedit validation: {}", e),
+                        }),
+                    })
+                }
             }
-        },
+        }
         Some(HookInputDetails::Stop { .. }) | Some(HookInputDetails::SubagentStop { .. }) => {
             eprintln!(">>> Stop/SubagentStop hook triggered");
             match noedit::validation::handle(&input) {
                 Ok(result) => result,
                 Err(e) => {
                     eprintln!("noedit Stop error: {}", e);
+                    // Return error as stop reason
                     Some(HookOutput {
                         should_continue: Some(false),
                         stop_reason: Some(format!("noedit validation failed: {}", e)),
@@ -60,6 +72,7 @@ fn main() {
                 Ok(result) => result,
                 Err(e) => {
                     eprintln!("noedit SessionEnd error: {}", e);
+                    // Don't block session end, just warn
                     Some(HookOutput {
                         should_continue: None,
                         stop_reason: None,
@@ -73,10 +86,13 @@ fn main() {
         }
         _ => None,
     };
+
+    // Output the hook result if any
     if let Some(output) = output {
         serde_json::to_writer(std::io::stdout(), &output).unwrap();
     }
 }
+
 fn handle_session_start(input: &HookInput) {
     let claude_env_file_path = std::env::var("CLAUDE_ENV_FILE").ok();
     if let Some(claude_env_file_path) = claude_env_file_path {
@@ -89,6 +105,7 @@ fn handle_session_start(input: &HookInput) {
         writeln!(file, "JEB_CLAUDE_SESSION_ID={}", input.session_id).unwrap();
     }
 }
+
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub struct HookInput {

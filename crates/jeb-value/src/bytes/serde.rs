@@ -1,5 +1,6 @@
 #[cfg(feature = "serde")]
 use crate::Bytes;
+
 #[cfg(feature = "serde")]
 impl serde::Serialize for Bytes {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

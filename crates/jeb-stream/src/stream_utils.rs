@@ -6,6 +6,7 @@ use {
     },
     std::pin::pin,
 };
+
 /// Filters a Result stream to only yield Ok values, discarding Err values.
 ///
 /// This is a simpler alternative to `oks_and_errs()` when you don't need
@@ -17,10 +18,15 @@ where
     E: Send,
 {
     stream! {
-        let mut input = pin!(input); while let Some(item) = input.next(). await { if let
-        Ok(value) = item { yield value; } }
+        let mut input = pin!(input);
+        while let Some(item) = input.next().await {
+            if let Ok(value) = item {
+                yield value;
+            }
+        }
     }
 }
+
 /// Filters a Result stream to only yield Err values, discarding Ok values.
 ///
 /// This is a simpler alternative to `oks_and_errs()` when you don't need
@@ -32,10 +38,15 @@ where
     E: Send,
 {
     stream! {
-        let mut input = pin!(input); while let Some(item) = input.next(). await { if let
-        Err(error) = item { yield error; } }
+        let mut input = pin!(input);
+        while let Some(item) = input.next().await {
+            if let Err(error) = item {
+                yield error;
+            }
+        }
     }
 }
+
 /// Unwraps Ok values from a Result stream, panicking on Err values.
 ///
 /// # Panics
@@ -48,10 +59,13 @@ where
     E: Send + std::fmt::Debug,
 {
     stream! {
-        let mut input = pin!(input); while let Some(item) = input.next(). await { yield
-        item.unwrap(); }
+        let mut input = pin!(input);
+        while let Some(item) = input.next().await {
+            yield item.unwrap();
+        }
     }
 }
+
 /// Yields Ok values from a Result stream until the first Err is encountered.
 ///
 /// Once an Err is encountered, the stream terminates without yielding the
@@ -63,7 +77,12 @@ where
     E: Send,
 {
     stream! {
-        let mut input = pin!(input); while let Some(item) = input.next(). await { match
-        item { Ok(value) => yield value, Err(_) => break, } }
+        let mut input = pin!(input);
+        while let Some(item) = input.next().await {
+            match item {
+                Ok(value) => yield value,
+                Err(_) => break,
+            }
+        }
     }
 }

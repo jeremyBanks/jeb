@@ -64,7 +64,7 @@ mod tests {
                 manhattan,
                 1,
                 "adjacent values {u} and {} should have Manhattan distance 1, got {manhattan}",
-                u + 1,
+                u + 1
             );
         }
     }
@@ -94,7 +94,7 @@ mod tests {
                 manhattan,
                 1,
                 "adjacent values {u} and {} should have Manhattan distance 1, got {manhattan}",
-                u + 1,
+                u + 1
             );
         }
     }

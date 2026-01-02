@@ -51,7 +51,7 @@ pub fn check_repo_root() -> Result<()> {
             command: "check_repo_root".to_string(),
             message: format!(
                 "must be run from repository root (current: {}, root: {})",
-                cwd_str, toplevel,
+                cwd_str, toplevel
             ),
         });
     }

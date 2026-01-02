@@ -435,7 +435,7 @@ mod tests {
                 n,
                 tok,
                 n - 1,
-                prev_tok,
+                prev_tok
             );
             prev_tok = tok;
         }
@@ -451,7 +451,7 @@ mod tests {
                 n,
                 tok,
                 n - 1,
-                prev_tok,
+                prev_tok
             );
             prev_tok = tok;
         }
@@ -471,7 +471,7 @@ mod tests {
                     n,
                     tok,
                     n - 1,
-                    prev_tok,
+                    prev_tok
                 );
                 prev_tok = tok;
             }
@@ -529,7 +529,7 @@ mod tests {
                     !tok.chars().all(|c| c.is_ascii_digit()),
                     "n={} produced ambiguous token: {}",
                     n,
-                    tok,
+                    tok
                 );
             }
         }
@@ -812,7 +812,7 @@ mod tests {
             assert_eq!(
                 decoded, redecoded,
                 "1-char roundtrip failed: '{}' -> {} -> '{}' -> {}",
-                s, decoded, reencoded, redecoded,
+                s, decoded, reencoded, redecoded
             );
         }
         for &c1 in alphabet {
@@ -824,7 +824,7 @@ mod tests {
                 assert_eq!(
                     decoded, redecoded,
                     "2-char roundtrip failed: '{}' -> {} -> '{}' -> {}",
-                    s, decoded, reencoded, redecoded,
+                    s, decoded, reencoded, redecoded
                 );
             }
         }
@@ -838,7 +838,7 @@ mod tests {
                     assert_eq!(
                         decoded, redecoded,
                         "3-char roundtrip failed: '{}' -> {} -> '{}' -> {}",
-                        s, decoded, reencoded, redecoded,
+                        s, decoded, reencoded, redecoded
                     );
                 }
             }
@@ -854,7 +854,7 @@ mod tests {
                         assert_eq!(
                             decoded, redecoded,
                             "4-char roundtrip failed: '{}' -> {} -> '{}' -> {}",
-                            s, decoded, reencoded, redecoded,
+                            s, decoded, reencoded, redecoded
                         );
                     }
                 }
@@ -965,7 +965,7 @@ mod tests {
                 assert_eq!(
                     u_tok, i_tok,
                     "u32/i32 mismatch: u32({}) -> '{}', i32({}) -> '{}'",
-                    u, u_tok, i, i_tok,
+                    u, u_tok, i, i_tok
                 );
             }
         }
@@ -981,7 +981,7 @@ mod tests {
                 assert_eq!(
                     u_tok, i_tok,
                     "u64/i64 mismatch: u64({}) -> '{}', i64({}) -> '{}'",
-                    u, u_tok, i, i_tok,
+                    u, u_tok, i, i_tok
                 );
             }
         }
@@ -997,7 +997,7 @@ mod tests {
                 assert_eq!(
                     u_tok, i_tok,
                     "u16/i16 mismatch: u16({}) -> '{}', i16({}) -> '{}'",
-                    u, u_tok, i, i_tok,
+                    u, u_tok, i, i_tok
                 );
             }
         }
