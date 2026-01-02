@@ -1,11 +1,11 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: e8d386596c72a6c65f080cf5b7a56c77213a834a
-985cd0:
+    main: 5a764f0b638be9d827e60b18e2189bed1be1f89a
+0c5d7b:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:08:22Z
-  commit-date: 2026-01-02T21:08:22Z
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
@@ -19,16 +19,16 @@ refs:
       lib:
         bar.txt: more code
         foo.txt: library code
-e8d386596c72a6c65f080cf5b7a56c77213a834a:
-  author-date: 2026-01-02T21:08:22Z
-  commit-date: 2026-01-02T21:08:22Z
+5a764f0b638be9d827e60b18e2189bed1be1f89a:
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src/lib'
 
     git-zoom-in: src/lib
   parents:
-  - 985cd0
+  - 0c5d7b
   - 08c005
   tree:
     bar.txt:

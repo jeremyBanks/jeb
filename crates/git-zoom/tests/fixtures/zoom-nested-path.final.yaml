@@ -1,11 +1,11 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: c259f8865f5f250601a6bb0fd28a8f735a9fb747
-11080a:
+    main: 4a84f79ee04bc4e1bfe433aedf1e6b5a19664e8c
+6ec6e5:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T21:08:23Z
-  commit-date: 2026-01-02T21:08:23Z
+  author-date: 2026-01-02T21:10:38Z
+  commit-date: 2026-01-02T21:10:38Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
@@ -21,16 +21,16 @@ ec9730:
         core:
           engine.rs: engine code
           utils.rs: utils code
-c259f8865f5f250601a6bb0fd28a8f735a9fb747:
-  author-date: 2026-01-02T21:08:23Z
-  commit-date: 2026-01-02T21:08:23Z
+4a84f79ee04bc4e1bfe433aedf1e6b5a19664e8c:
+  author-date: 2026-01-02T21:10:38Z
+  commit-date: 2026-01-02T21:10:38Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src/lib/core'
 
     git-zoom-in: src/lib/core
   parents:
-  - 11080a
+  - 6ec6e5
   - ec9730
   tree:
     engine.rs:
