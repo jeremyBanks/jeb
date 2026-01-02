@@ -1,0 +1,10 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 669a1301d1fffafec1d73e968163b9eac88a4985
+669a1301d1fffafec1d73e968163b9eac88a4985:
+  message: commit 1
+  tree:
+    README.md: root
+    src:
+      file.txt: original

@@ -1,0 +1,11 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 53011f0aadb6ba0309b5eb5cac28353a0c06b60c
+53011f0aadb6ba0309b5eb5cac28353a0c06b60c:
+  message: Initial commit
+  tree:
+    README.md: root readme
+    src:
+      lib:
+        foo.txt: original

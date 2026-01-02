@@ -25,7 +25,10 @@ pub fn test_fixture<F>(name: &str, operations: F)
 where
     F: FnOnce(&TestRepo) -> Result<(), String>,
 {
-    let fixtures_dir = Path::new("tests/fixtures");
+    // Use absolute path based on CARGO_MANIFEST_DIR
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR")
+        .expect("CARGO_MANIFEST_DIR not set");
+    let fixtures_dir = Path::new(&manifest_dir).join("tests/fixtures");
 
     // Paths for this test's fixtures
     let in_path = fixtures_dir.join(format!("{}.in.yaml", name));
