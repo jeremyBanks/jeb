@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: cbcf742c5ae2d975f4ef4c0267b7b706e80bcbb0
-b309f1e4bcb6324a6e3d54d0db97ff087f74fc08:
+    main: 30f444d2344ab132fcb640142ee9f87229428fc0
+2699a41ee6b8efdf0da27b5fa2cf773e0f5d3538:
   author: User <user@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
@@ -12,64 +12,64 @@ b309f1e4bcb6324a6e3d54d0db97ff087f74fc08:
   tree:
     original-name.txt: content that moves around
     static.txt: never moves
-b73401cce1de6f5105059e3ff98d2c2ce515e4e4:
+7cd471b40d16ba571227abda46555a7e297a73f5:
   author: User <user@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
   committer: User <user@localhost>
   message: commit 2
   parents:
-  - b309f1e4bcb6324a6e3d54d0db97ff087f74fc08
+  - 2699a41ee6b8efdf0da27b5fa2cf773e0f5d3538
   tree:
     renamed-once.txt: content that moves around
-356ea0998996b8e40fcdee20dcff5386b3f95dcf:
+d58c784004bf9d04539691dad0df76d7b9d44c54:
   author: User <user@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
   committer: User <user@localhost>
   message: commit 3
   parents:
-  - b73401cce1de6f5105059e3ff98d2c2ce515e4e4
+  - 7cd471b40d16ba571227abda46555a7e297a73f5
   tree:
     renamed-twice.txt: content that moves around
-a4805746b568dc589ea88b06767b33c9f2339a82:
+05e5cfbc320ad19905d98e0d29b7694d39f2a8b8:
   author: User <user@localhost>
   author-date: 2024-12-06T06:25:12-06:24
   commit-date: 2024-12-06T06:25:15-06:24
   committer: User <user@localhost>
   message: commit 4
   parents:
-  - 356ea0998996b8e40fcdee20dcff5386b3f95dcf
+  - d58c784004bf9d04539691dad0df76d7b9d44c54
   tree:
     renamed-thrice.txt: content that moves around
-5d88288083100ba04f77514fb03cb3e19f75f282:
+afd815b6798a4998266a97aa82275f31da562895:
   author: User <user@localhost>
   author-date: 2024-12-06T06:29:28-06:24
   commit-date: 2024-12-06T06:29:31-06:24
   committer: User <user@localhost>
   message: commit 5
   parents:
-  - a4805746b568dc589ea88b06767b33c9f2339a82
+  - 05e5cfbc320ad19905d98e0d29b7694d39f2a8b8
   tree:
     final-name.txt: content that moves around
-add3aa562729b4ad3b6d98afbf222753de6e720b:
+08855da8ef82073a5c293e5be39ac4c40437d515:
   author: User <user@localhost>
   author-date: 2024-12-06T06:33:44-06:24
   commit-date: 2024-12-06T06:33:47-06:24
   committer: User <user@localhost>
   message: commit 6
   parents:
-  - 5d88288083100ba04f77514fb03cb3e19f75f282
+  - afd815b6798a4998266a97aa82275f31da562895
   tree:
     archive:
       final-name.txt: content that moves around
-cbcf742c5ae2d975f4ef4c0267b7b706e80bcbb0:
+30f444d2344ab132fcb640142ee9f87229428fc0:
   author: User <user@localhost>
   author-date: 2024-12-06T06:38:00-06:24
   commit-date: 2024-12-06T06:38:03-06:24
   committer: User <user@localhost>
   message: commit 7
   parents:
-  - add3aa562729b4ad3b6d98afbf222753de6e720b
+  - 08855da8ef82073a5c293e5be39ac4c40437d515
   tree:
     restored.txt: content that moves around

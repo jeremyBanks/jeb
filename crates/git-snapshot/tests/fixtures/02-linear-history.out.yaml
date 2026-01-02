@@ -1,12 +1,12 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: d19fd099d0f74946d96245d0851bf69c177eccc3
-b6b369:
+    main: 6d2df2f188c322654ca84a63d56a9a9a1127ca7c
+d50c37:
   message: commit 1
   tree:
     README.md: '# Project'
-2faba3:
+82d5ac:
   message: commit 2
   tree:
     README.md: |-
@@ -15,7 +15,7 @@ b6b369:
       Added description.
     src:
       lib.rs: pub fn hello() {}
-d19fd099d0f74946d96245d0851bf69c177eccc3:
+6d2df2f188c322654ca84a63d56a9a9a1127ca7c:
   message: commit 3
   tree:
     README.md: |-

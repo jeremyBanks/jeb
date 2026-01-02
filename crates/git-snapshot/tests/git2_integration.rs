@@ -249,6 +249,42 @@ refs:
 }
 
 #[test]
+fn test_git2_message_behavior() {
+    // Test: What does git2 actually return for commit messages?
+    // This helps us understand the git-stripspace behavior.
+
+    let temp = TempDir::new().unwrap();
+    let repo = git2::Repository::init(temp.path()).unwrap();
+
+    // Create a file
+    fs::write(temp.path().join("test.txt"), "content").unwrap();
+    let mut index = repo.index().unwrap();
+    index.add_path(Path::new("test.txt")).unwrap();
+    index.write().unwrap();
+
+    let tree_id = index.write_tree().unwrap();
+    let tree = repo.find_tree(tree_id).unwrap();
+    let sig = git2::Signature::now("Test", "test@example.com").unwrap();
+
+    // Create commit with message that has no trailing newline
+    repo.commit(Some("HEAD"), &sig, &sig, "Test message", &tree, &[])
+        .unwrap();
+
+    // Read it back
+    let head = repo.head().unwrap();
+    let git_commit = head.peel_to_commit().unwrap();
+    let message = git_commit.message().unwrap();
+
+    eprintln!("Message from git2:");
+    eprintln!("  bytes: {:?}", message.as_bytes());
+    eprintln!("  ends_with newline: {}", message.ends_with('\n'));
+    eprintln!("  trimmed: '{}'", message.trim_end());
+
+    // Now test: what message should we use for hash calculation?
+    // If git stores WITHOUT trailing newline, our hash calc should NOT add one.
+}
+
+#[test]
 fn test_commit_hash_stability_plain_message() {
     // CRITICAL BUG TEST: Commit hash should remain stable when round-tripped through git
     // This tests for the bug where plain scalar messages produce different hashes
@@ -275,6 +311,12 @@ refs:
     let roundtrip = Repository::from_git_dir(temp_repo.path()).unwrap();
     let roundtrip_commit = roundtrip.commits().next().unwrap();
     let hash_after = roundtrip_commit.id.clone();
+
+    eprintln!("Message round-trip test:");
+    eprintln!("  Original message bytes: {:?}", original_commit.message.as_bytes());
+    eprintln!("  After RT message bytes: {:?}", roundtrip_commit.message.as_bytes());
+    eprintln!("  Hash before: {:?}", hash_before);
+    eprintln!("  Hash after:  {:?}", hash_after);
 
     // Hash should be IDENTICAL - this tests that message normalization is consistent
     assert_eq!(

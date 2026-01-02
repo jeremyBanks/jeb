@@ -1,11 +1,11 @@
-HEAD: 0c605dc36b442b4c2f276367c36bc8032de6d162
+HEAD: 7b7d52448ce9234a47b1c5bc0c2dbcfaab184a29
 refs: {}
 working:
   README.md: '# Project (working tree changes)'
   TODO.txt: Add tests
   src:
     lib.rs: pub fn main() { println!("working"); }
-0c605dc36b442b4c2f276367c36bc8032de6d162:
+7b7d52448ce9234a47b1c5bc0c2dbcfaab184a29:
   message: Initial commit
   tree:
     README.md: '# Project'

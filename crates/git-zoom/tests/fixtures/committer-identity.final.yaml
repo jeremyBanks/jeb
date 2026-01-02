@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 2499474b3ce61f43a5d43dc3715817d12096ac8a
-14bdfc:
+    main: 6dd60126650df89238e8ed3588c161a5e97ff244
+771dd6:
   author: Test User <test@example.com>
   commit-date: 2024-12-25T00:00:00Z
   message: commit 1
@@ -17,7 +17,7 @@ refs:
   message: Initial commit
   parents: []
   tree: {}
-754a32:
+f63ce7:
   author-date: 2024-12-25T00:00:00Z
   commit-date: 2024-12-25T00:00:00Z
   committer: 🔎 <git-zoom-in@localhost>
@@ -27,19 +27,19 @@ refs:
     git-zoom-in: src
   parents:
   - 136d8a
-  - 14bdfc
+  - 771dd6
   tree:
     file.txt:
-      //commit: 14bdfc
+      //commit: 771dd6
       //path: src/file.txt
-bfee4c:
+266a9b:
   author: User <user@localhost>
   author-date: 2024-12-25T00:00:00Z
   commit-date: 2024-12-25T00:00:00Z
   message: Update
   tree:
     file.txt: modified
-2499474b3ce61f43a5d43dc3715817d12096ac8a:
+6dd60126650df89238e8ed3588c161a5e97ff244:
   author: Jeremy Banks <_@jeremy.ca>
   author-date: 2024-12-25T00:00:00Z
   commit-date: 2024-12-25T00:00:00Z
@@ -49,10 +49,10 @@ bfee4c:
 
     git-zoom-out: src
   parents:
-  - 14bdfc
-  - bfee4c
+  - 771dd6
+  - 266a9b
   tree:
     src:
       file.txt:
-        //commit: bfee4c
+        //commit: 266a9b
         //path: file.txt

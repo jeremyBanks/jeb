@@ -1,9 +1,9 @@
 HEAD: refs/heads/full-tree
 refs:
   heads:
-    full-tree: 050b914ead2971d979a53e5eeede71b6b4d7610f
-    subtree: 6c5a9c68c67a65fdc9200903ca9936286de9e31a
-8badc9:
+    full-tree: 2c0f57ec58d0035612f2f6d22e73453323f2c96a
+    subtree: e40865c9056c98544c687bf9a8dd6c3152705665
+ff5cc7:
   message: commit 1
   tree:
     README.md: '# Main Project'
@@ -11,49 +11,49 @@ refs:
       lib:
         main.rs: fn main() {}
         utils.rs: fn util() {}
-8684dd:
+e369af:
   committer: git-zoom-in <git-zoom-in@localhost>
   message: git-zoom-in seed commit
   parents: []
   tree: {}
-97f529:
+7f1d3b:
   message: commit 2
   parents:
-  - 8badc9
+  - ff5cc7
   tree:
     README.md: '# Main Project v2'
-ad466c:
+80bca0:
   committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'src/lib'
 
     git-zoom-in: src/lib
   parents:
-  - 8684dd
-  - 8badc9
+  - e369af
+  - ff5cc7
   tree:
     main.rs:
-      //commit: 8badc9
+      //commit: ff5cc7
       //path: src/lib/main.rs
     utils.rs:
-      //commit: 8badc9
+      //commit: ff5cc7
       //path: src/lib/utils.rs
-6c5a9c68c67a65fdc9200903ca9936286de9e31a:
+e40865c9056c98544c687bf9a8dd6c3152705665:
   message: commit 5
   tree:
     tests.rs: fn test() {}
-050b914ead2971d979a53e5eeede71b6b4d7610f:
+2c0f57ec58d0035612f2f6d22e73453323f2c96a:
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'src/lib'
 
     git-zoom-out: src/lib
   parents:
-  - 97f529
-  - 6c5a9c68c67a65fdc9200903ca9936286de9e31a
+  - 7f1d3b
+  - e40865c9056c98544c687bf9a8dd6c3152705665
   tree:
     src:
       lib:
         tests.rs:
-          //commit: 6c5a9c68c67a65fdc9200903ca9936286de9e31a
+          //commit: e40865c9056c98544c687bf9a8dd6c3152705665
           //path: tests.rs
