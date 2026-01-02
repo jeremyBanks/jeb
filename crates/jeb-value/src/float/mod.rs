@@ -7,21 +7,31 @@ use {
         Into,
     },
 };
+// [impl jeb-value.dependencies.cfg]
 #[cfg_attr(
     feature = "wasm",
     wasm_bindgen::prelude::wasm_bindgen
 )]
+// [impl jeb-value.dependencies.cfg]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Serialize),
     serde(transparent)
 )]
+// [impl jeb-value.variants.clone]
+// [impl jeb-value.variants.debug]
+// [impl jeb-value.variants.deref]
+// [impl jeb-value.variants.as-ref]
 #[derive(AsRef, Clone, Copy, Debug, Default, Deref, Display, Into)]
+// [impl jeb-value.variants.transparent]
 #[repr(transparent)]
+// [impl jeb-value.variant.must-use]
 #[must_use]
+// [impl jeb-value.number]
 pub struct Float(pub(crate) f64);
 impl Float {
     #[must_use]
+    // [impl jeb-value.number.finite]
     pub const fn new(value: f64) -> Option<Self> {
         if value.is_finite() {
             Some(Float(value))
@@ -30,6 +40,8 @@ impl Float {
         }
     }
 }
+// [impl jeb-value.dependencies.cfg]
+// [impl jeb-value.number.finite]
 #[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for Float {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -45,6 +57,8 @@ impl<'de> serde::Deserialize<'de> for Float {
         })
     }
 }
+// [impl jeb-value.variants.cmp]
+// [impl jeb-value.number.cmp]
 impl Ord for Float {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.0.total_cmp(&other.0)
@@ -61,6 +75,8 @@ impl PartialOrd for Float {
         Some(self.cmp(other))
     }
 }
+// [impl jeb-value.variants.cmp]
+// [impl jeb-value.number.cmp]
 impl Hash for Float {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         state.write_u64(self.0.to_bits());

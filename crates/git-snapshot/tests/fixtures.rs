@@ -47,6 +47,7 @@ fn get_option_variants() -> Vec<OptionVariant> {
             options: SerializationOptions {
                 use_deduplication: false,
                 force_full_hashes: true,
+                include_all_fields: true,
                 ..SerializationOptions::default()
             },
         },

@@ -2740,6 +2740,11 @@ pub struct SerializationOptions {
     /// Overrides use_short_hashes if true
     /// Default: false
     pub force_full_hashes: bool,
+
+    /// Whether to include all optional fields even when they match defaults
+    /// When true, always includes: parents, author, author-date, committer, commit-date
+    /// Default: false
+    pub include_all_fields: bool,
 }
 
 impl Default for SerializationOptions {
@@ -2749,6 +2754,7 @@ impl Default for SerializationOptions {
             use_short_hashes: true,
             force_integer_ids: false,
             force_full_hashes: false,
+            include_all_fields: false,
         }
     }
 }
@@ -3292,14 +3298,14 @@ fn serialize_commit(
         .collect();
     let first_parent = parent_commits.first().copied();
 
-    // Serialize parents (omit if default)
+    // Serialize parents (omit if default, unless include_all_fields)
     let default_parents = if let Some(prev) = prev_commit {
         vec![prev.id]
     } else {
         vec![]
     };
 
-    if commit.parents != default_parents {
+    if ctx.options.include_all_fields || commit.parents != default_parents {
         let parents_array: Vec<serde_yaml::Value> = commit
             .parents
             .iter()
@@ -3347,21 +3353,21 @@ fn serialize_commit(
         );
     }
 
-    // Serialize author (omit if default)
+    // Serialize author (omit if default, unless include_all_fields)
     let default_author = if let Some(parent) = first_parent {
         parent.author.clone()
     } else {
         Identity::parse("User <user@localhost>").unwrap()
     };
 
-    if commit.author != default_author {
+    if ctx.options.include_all_fields || commit.author != default_author {
         mapping.insert(
             serde_yaml::Value::String("author".to_string()),
             serde_yaml::Value::String(commit.author.format()),
         );
     }
 
-    // Serialize author-date (omit if default)
+    // Serialize author-date (omit if default, unless include_all_fields)
     let default_author_date = if parent_commits.is_empty() {
         Timestamp::from_iso8601("2024-12-06T06:12:24-06:24").unwrap()
     } else {
@@ -3375,22 +3381,22 @@ fn serialize_commit(
         }
     };
 
-    if commit.author_date != default_author_date {
+    if ctx.options.include_all_fields || commit.author_date != default_author_date {
         mapping.insert(
             serde_yaml::Value::String("author-date".to_string()),
             serde_yaml::Value::String(commit.author_date.to_iso8601()),
         );
     }
 
-    // Serialize committer (omit if same as author)
-    if commit.committer != commit.author {
+    // Serialize committer (omit if same as author, unless include_all_fields)
+    if ctx.options.include_all_fields || commit.committer != commit.author {
         mapping.insert(
             serde_yaml::Value::String("committer".to_string()),
             serde_yaml::Value::String(commit.committer.format()),
         );
     }
 
-    // Serialize commit-date (omit if default)
+    // Serialize commit-date (omit if default, unless include_all_fields)
     let mut max_seconds = commit.author_date.seconds;
     let mut max_offset = commit.author_date.offset_minutes;
     for parent in &parent_commits {
@@ -3407,7 +3413,7 @@ fn serialize_commit(
         offset_minutes: max_offset,
     };
 
-    if commit.committer_date != default_committer_date {
+    if ctx.options.include_all_fields || commit.committer_date != default_committer_date {
         mapping.insert(
             serde_yaml::Value::String("commit-date".to_string()),
             serde_yaml::Value::String(commit.committer_date.to_iso8601()),

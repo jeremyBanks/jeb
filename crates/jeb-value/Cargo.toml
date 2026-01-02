@@ -10,12 +10,15 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
+# [impl jeb-value.dependencies.optional]
+# [impl jeb-value.serde.optional]
 [features]
 default = []
 serde = ["indexmap/serde", "dep:serde", "serde/derive", "dep:serde_bytes"]
 serde_json = ["serde", "dep:serde_json"]
 wasm = ["dep:wasm-bindgen"]
 
+# [impl jeb-value.dependencies.limit-internal]
 [dependencies]
 derive_more = { workspace = true, features = ["full"] }
 document-features = { workspace = true }

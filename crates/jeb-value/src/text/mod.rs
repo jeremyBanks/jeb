@@ -13,10 +13,12 @@ use {
         Into,
     },
 };
+// [impl jeb-value.dependencies.cfg]
 #[cfg_attr(
     feature = "wasm",
     wasm_bindgen::prelude::wasm_bindgen
 )]
+// [impl jeb-value.dependencies.cfg]
 #[cfg_attr(
     feature = "serde",
     derive(
@@ -25,6 +27,14 @@ use {
     ),
     serde(transparent)
 )]
+// [impl jeb-value.variants.clone]
+// [impl jeb-value.variants.debug]
+// [impl jeb-value.variants.deref]
+// [impl jeb-value.variants.as-ref]
+// [impl jeb-value.variants.mut]
+// [impl jeb-value.variants.cmp]
+// [impl jeb-value.variants.cmp.delegate-inner]
+// [impl jeb-value.variants.borrow]
 #[derive(
     AsMut,
     AsRef,
@@ -44,9 +54,12 @@ use {
     PartialEq,
     PartialOrd,
 )]
+// [impl jeb-value.variants.transparent]
 #[repr(transparent)]
 #[as_ref(String, str, [u8])]
+// [impl jeb-value.variant.must-use]
 #[must_use]
+// [impl jeb-value.string]
 pub struct Text(pub(crate) String);
 impl From<&str> for Text {
     fn from(s: &str) -> Self {
