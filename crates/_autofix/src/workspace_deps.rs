@@ -730,9 +730,10 @@ impl EquivalenceClass {
                 ("*", "*") => {}
                 _ => {
                     if let (Ok(curr_v), Ok(new_v)) = (Version::parse(current), Version::parse(new))
-                        && new_v > curr_v {
-                            self.resolution.version = Some(new.clone());
-                        }
+                        && new_v > curr_v
+                    {
+                        self.resolution.version = Some(new.clone());
+                    }
                 }
             }
         }
@@ -1126,11 +1127,9 @@ fn update_member_toml(
                                 }
                                 // Use dotted key syntax for simple case (workspace only)
                                 if table.len() == 1 && table.contains_key("workspace") {
-                                    // Create a table entry first, then set the workspace field
-                                    if !deps.contains_key(&key) {
-                                        deps[&key] = Item::Table(toml_edit::Table::new());
-                                    }
-                                    deps[&key]["workspace"] = value(true);
+                                    // Use dotted key string for insertion
+                                    let dotted_key = format!("{}.workspace", key);
+                                    deps.insert(&dotted_key, value(true));
                                 } else {
                                     // Use inline table for complex cases with multiple fields
                                     deps[&key] = Item::Value(Value::InlineTable(table));

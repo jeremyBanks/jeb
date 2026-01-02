@@ -47,20 +47,17 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
     if matcher.matches_path(cwd, path) {
         eprintln!("Blocking write to .noedit-protected file: {}", file_path);
 
-        // Deny the tool use - set continue to false to block the operation
+        // Deny the tool use - minimal output with only hookSpecificOutput fields
         return Ok(Some(HookOutput {
-            should_continue: Some(false),
-            stop_reason: Some("File is protected by .noedit".to_string()),
+            should_continue: None,
+            stop_reason: None,
             suppress_output: None,
-            system_message: Some(format!(
-                "Cannot write to {}: file is protected by .noedit",
-                file_path
-            )),
-            permission_decision: Some(PermissionDecision::Deny),
+            system_message: None,
+            permission_decision: None,
             hook_specific_output: Some(HookOutputDetails::PreToolUse {
                 permission_decision: Some(PermissionDecision::Deny),
                 permission_decision_reason: Some(format!(
-                    "File {} is protected by .noedit patterns",
+                    "Cannot write to {}: file is protected by .noedit",
                     file_path
                 )),
                 updated_input: None,
