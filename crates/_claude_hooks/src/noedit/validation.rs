@@ -3,6 +3,7 @@ use {
         git_ops::{
             create_restoration_commit,
             find_git_root,
+            find_session_boundary,
             get_changed_files,
             restore_file_from_commit,
         },
@@ -15,12 +16,8 @@ use {
     eyre::{
         Context,
         Result,
-        bail,
     },
-    git2::{
-        Oid,
-        Repository,
-    },
+    git2::Repository,
     std::path::Path,
 };
 
@@ -34,42 +31,15 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
     eprintln!("Found git repo at: {}", repo_path.display());
     let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
-    // 1. Validate JEB_CLAUDE_INITIAL_COMMIT exists
-    let initial_commit_sha = match std::env::var("JEB_CLAUDE_INITIAL_COMMIT") {
-        Ok(sha) => {
-            eprintln!("Found JEB_CLAUDE_INITIAL_COMMIT: {}", sha);
-            sha
-        }
-        Err(_) => {
-            eprintln!("⚠ JEB_CLAUDE_INITIAL_COMMIT not set, skipping .noedit validation");
-            eprintln!("  Validation hook will not check for violations");
-            return Ok(None);
-        }
-    };
+    // 1. Find session boundary by scanning git history
+    let initial_commit =
+        find_session_boundary(&repo).context("Failed to find session boundary")?;
 
-    // 2. Parse commit and verify it's an ancestor of HEAD
-    let initial_oid = Oid::from_str(&initial_commit_sha)
-        .context("Failed to parse JEB_CLAUDE_INITIAL_COMMIT as git OID")?;
-    let initial_commit = repo
-        .find_commit(initial_oid)
-        .context("Failed to find initial commit")?;
-
-    let head = repo.head().context("Failed to get HEAD")?;
-    let head_commit = head
-        .peel_to_commit()
-        .context("Failed to peel HEAD to commit")?;
-
-    // Check if initial_commit is ancestor of HEAD
-    if !repo
-        .graph_descendant_of(head_commit.id(), initial_oid)
-        .context("Failed to check ancestry")?
-    {
-        bail!(
-            "HEAD is not a descendant of JEB_CLAUDE_INITIAL_COMMIT ({}). History may have been \
-             rewritten.",
-            initial_commit_sha
-        );
-    }
+    eprintln!(
+        "Validation: Found session boundary at commit {} ({})",
+        initial_commit.id(),
+        initial_commit.summary().unwrap_or("<no summary>")
+    );
 
     // 3. Read .noedit files from initial commit
     let matcher = NoeditMatcher::from_commit(&repo, &initial_commit)
@@ -105,7 +75,7 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
     }
 
     // 7. Create commit documenting the restoration
-    create_restoration_commit(&repo, &violated_files, &initial_commit_sha)
+    create_restoration_commit(&repo, &violated_files, &initial_commit.id().to_string())
         .context("Failed to create restoration commit")?;
 
     // 8. Return system message to inform user
