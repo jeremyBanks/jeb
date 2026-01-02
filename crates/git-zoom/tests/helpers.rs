@@ -4,9 +4,9 @@
 //! with git-zoom-specific utilities for running zoom commands, manipulating files, and
 //! verifying results.
 
-use git_snapshot::{parse, Commit, HeadState, Repository};
+use git_snapshot::{parse, serialize, Commit, CommitIdStyle, HeadState, Repository, SerializationOptions};
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Mutex;
 
@@ -18,17 +18,27 @@ static DIR_MUTEX: Mutex<()> = Mutex::new(());
 /// Wrapper around git-snapshot's TemporaryRepository with git-zoom-specific utilities
 pub struct TestRepo {
     pub temp_repo: git_snapshot::TemporaryRepository,
+    /// If set, TestRepo will compare final state against this fixture on drop
+    expected_fixture_path: Option<PathBuf>,
 }
 
 impl TestRepo {
     /// Create a test repository from YAML string
     pub fn from_yaml(yaml: &str) -> Self {
         let snapshot = parse(yaml).expect("Failed to parse YAML");
+        Self::from_snapshot(snapshot)
+    }
+
+    /// Create a test repository from a git-snapshot Repository
+    pub fn from_snapshot(snapshot: Repository) -> Self {
         let temp_repo = snapshot
             .to_temporary_repository()
             .expect("Failed to create temporary repository");
 
-        let test_repo = Self { temp_repo };
+        let test_repo = Self {
+            temp_repo,
+            expected_fixture_path: None,
+        };
 
         // Reset working tree to match HEAD
         // git-snapshot creates commits but doesn't populate the working directory
@@ -45,6 +55,11 @@ impl TestRepo {
         drop(_guard);
 
         test_repo
+    }
+
+    /// Set the expected fixture path for final state comparison
+    pub fn set_expected_fixture(&mut self, path: PathBuf) {
+        self.expected_fixture_path = Some(path);
     }
 
     /// Get the working directory path
@@ -244,5 +259,26 @@ pub fn verify_first_parent_lineage(snapshot: &Repository, expected_messages: &[&
             "Commit {} message mismatch. Expected '{}', got '{}'",
             i, expected, actual
         );
+    }
+}
+
+/// Drop implementation for TestRepo to handle fixture comparison
+impl Drop for TestRepo {
+    fn drop(&mut self) {
+        // Only compare if an expected fixture path was set
+        if let Some(ref expected_path) = self.expected_fixture_path {
+            // Capture final snapshot
+            let snapshot = self.to_snapshot();
+
+            // Serialize with default normalization style
+            let actual_yaml = serialize(
+                &snapshot,
+                CommitIdStyle::Hex,
+                SerializationOptions::default(),
+            );
+
+            // Use the comparison function from fixtures module
+            crate::fixtures::compare_or_update_fixture(expected_path, &actual_yaml);
+        }
     }
 }
