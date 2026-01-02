@@ -1088,9 +1088,7 @@ fn update_member_toml(
 
                     if let Some(dep) = dep {
                         if let Some(workspace_key) = dep_name_to_workspace_key.get(&dep.name) {
-                            if should_use_workspace(&dep, workspace_updates, workspace_key)
-                                || (currently_uses_workspace && is_simple_inline_workspace)
-                            {
+                            if should_use_workspace(&dep, workspace_updates, workspace_key) {
                                 let mut table = InlineTable::new();
                                 table.insert("workspace", Value::from(true));
                                 if let Some(optional) = dep.config.optional {
@@ -1164,13 +1162,8 @@ fn update_member_toml(
                                 }
                             }
                         } else if currently_uses_workspace {
-                            // Convert simple inline workspace to dotted key, or keep complex as-is
-                            if is_simple_inline_workspace {
-                                let dotted_key_str = format!("{}.workspace", key);
-                                if let Ok(dotted_key) = dotted_key_str.parse::<Key>() {
-                                    deps.insert_formatted(&dotted_key, value(true));
-                                }
-                            } else if let Some(old_resolution) = old_workspace_deps.get(&key) {
+                            // This dependency uses workspace but shouldn't - inline it
+                            if let Some(old_resolution) = old_workspace_deps.get(&key) {
                                 let loser_dep = Dependency {
                                     key: key.clone(),
                                     name: dep.name.clone(),
@@ -1536,9 +1529,11 @@ serde = "2.0.0"
         );
         let crate_a_content_2 = fs::read_to_string(workspace_root.join("crate-a/Cargo.toml"))?;
         let crate_b_content_2 = fs::read_to_string(workspace_root.join("crate-b/Cargo.toml"))?;
+        eprintln!("crate-a content:\n{}", crate_a_content_2);
         assert!(
             crate_a_content_2.contains("serde = \"1.0.0\""),
-            "crate-a should have serde 1.0.0 inlined"
+            "crate-a should have serde 1.0.0 inlined. Content:\n{}",
+            crate_a_content_2
         );
         assert!(
             !crate_a_content_2.contains("workspace = true"),
@@ -1555,12 +1550,12 @@ serde = "2.0.0"
         let crate_c_content_2 = fs::read_to_string(workspace_root.join("crate-c/Cargo.toml"))?;
         let crate_d_content = fs::read_to_string(workspace_root.join("crate-d/Cargo.toml"))?;
         assert!(
-            crate_c_content_2.contains("workspace = true"),
-            "crate-c should use workspace = true"
+            crate_c_content_2.contains("workspace = true") || crate_c_content_2.contains("serde.workspace = true"),
+            "crate-c should use workspace inheritance (either inline table or dotted key)"
         );
         assert!(
-            crate_d_content.contains("workspace = true"),
-            "crate-d should use workspace = true"
+            crate_d_content.contains("workspace = true") || crate_d_content.contains("serde.workspace = true"),
+            "crate-d should use workspace inheritance (either inline table or dotted key)"
         );
         Ok(())
     }

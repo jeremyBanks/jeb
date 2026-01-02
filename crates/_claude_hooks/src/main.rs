@@ -122,12 +122,17 @@ pub enum HookInputDetails {
     rename_all = "camelCase"
 )]
 pub struct HookOutput {
-    #[serde(rename = "continue")]
+    #[serde(rename = "continue", skip_serializing_if = "Option::is_none")]
     pub should_continue: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub stop_reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub suppress_output: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub system_message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub permission_decision: Option<PermissionDecision>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub hook_specific_output: Option<HookOutputDetails>,
 }
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -143,8 +148,11 @@ pub enum HookOutputDetails {
         other: serde_json::Value,
     },
     PreToolUse {
+        #[serde(skip_serializing_if = "Option::is_none")]
         permission_decision: Option<PermissionDecision>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         permission_decision_reason: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         updated_input: Option<String>,
     },
     PostToolUse {
