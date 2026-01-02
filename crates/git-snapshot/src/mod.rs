@@ -1875,8 +1875,8 @@ fn parse_author_date(
         })?;
         Timestamp::from_iso8601(date_str)
     } else {
-        // Default: 256 seconds after max parent author-date, or 2024-12-06T06:12:24-06:24
-        // for first commit
+        // Default: 256 seconds after max parent author-date, or
+        // 2024-12-06T06:12:24-06:24 for first commit
         if parents.is_empty() {
             Timestamp::from_iso8601("2024-12-06T06:12:24-06:24")
         } else {
@@ -4283,7 +4283,10 @@ refs:
         // Should have default date: 2024-12-06T06:12:24-06:24
         assert_eq!(commit.author_date.to_iso8601(), "2024-12-06T06:12:24-06:24");
         // Commit date should be author_date + 3 seconds
-        assert_eq!(commit.committer_date.to_iso8601(), "2024-12-06T06:12:27-06:24");
+        assert_eq!(
+            commit.committer_date.to_iso8601(),
+            "2024-12-06T06:12:27-06:24"
+        );
     }
 
     #[test]

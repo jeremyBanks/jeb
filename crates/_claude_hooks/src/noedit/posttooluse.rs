@@ -29,8 +29,7 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
     let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
     // 2. Find session boundary by scanning git history
-    let initial_commit =
-        find_session_boundary(&repo).context("Failed to find session boundary")?;
+    let initial_commit = find_session_boundary(&repo).context("Failed to find session boundary")?;
 
     eprintln!(
         "PostToolUse: Found session boundary at commit {} ({})",

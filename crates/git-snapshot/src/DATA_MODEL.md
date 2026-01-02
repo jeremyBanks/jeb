@@ -1,16 +1,24 @@
 # Internal Data Model for git-snapshot
 
-This document describes the in-memory Rust data structures used by the git-snapshot library. These structures are **different** from the on-disk YAML representation described in IDEA.md.
+This document describes the in-memory Rust data structures used by the
+git-snapshot library. These structures are **different** from the on-disk YAML
+representation described in IDEA.md.
 
 ## Key Design Principles
 
-1. **No integer commit references**: In memory, we always use full 40-character hex object IDs. Integer references are purely an on-disk serialization optimization.
+1. **No integer commit references**: In memory, we always use full 40-character
+   hex object IDs. Integer references are purely an on-disk serialization
+   optimization.
 
-2. **All defaults resolved**: The in-memory representation has all default values fully materialized. We don't track whether a value came from an explicit field or was inferred.
+2. **All defaults resolved**: The in-memory representation has all default
+   values fully materialized. We don't track whether a value came from an
+   explicit field or was inferred.
 
-3. **Normalized structure**: Trees are fully expanded (not stored as deltas/patches). Each commit has its complete tree state.
+3. **Normalized structure**: Trees are fully expanded (not stored as
+   deltas/patches). Each commit has its complete tree state.
 
-4. **Type safety**: We use newtypes for object IDs, timestamps with timezones, etc. to prevent mixing up different kinds of strings.
+4. **Type safety**: We use newtypes for object IDs, timestamps with timezones,
+   etc. to prevent mixing up different kinds of strings.
 
 ## Core Data Types
 
@@ -154,18 +162,27 @@ impl Tree {
 }
 ```
 
-**Design note**: We use a flat `BTreeMap<String, String>` rather than a nested tree structure for several reasons:
+**Design note**: We use a flat `BTreeMap<String, String>` rather than a nested
+tree structure for several reasons:
+
 - Simpler to work with programmatically
 - Easier to implement operations like "list all files" or "does path X exist"
 - Path lookups are still O(log n)
 - We can iterate in sorted path order for deterministic serialization
-- Memory overhead is minimal compared to nested structures with many internal nodes
+- Memory overhead is minimal compared to nested structures with many internal
+  nodes
 
-The main downside is that computing subtree hashes requires filtering and reconstructing the nested structure. However, this is only needed during serialization, and the performance cost is acceptable for the simplicity gained in the primary API.
+The main downside is that computing subtree hashes requires filtering and
+reconstructing the nested structure. However, this is only needed during
+serialization, and the performance cost is acceptable for the simplicity gained
+in the primary API.
 
 Alternative designs considered:
-- Nested `HashMap<String, TreeEntry>` where `TreeEntry` is `enum { Blob(String), Tree(HashMap<...>) }`
-- This would more closely mirror git's internal structure and make subtree hash computation more natural
+
+- Nested `HashMap<String, TreeEntry>` where `TreeEntry` is
+  `enum { Blob(String), Tree(HashMap<...>) }`
+- This would more closely mirror git's internal structure and make subtree hash
+  computation more natural
 - But it's more complex to traverse and modify
 - We can always refactor to this later if needed for performance
 
@@ -294,7 +311,8 @@ impl Repository {
 
 ## Serialization-Specific Types
 
-These types are used during serialization/deserialization but are not part of the main in-memory model:
+These types are used during serialization/deserialization but are not part of
+the main in-memory model:
 
 ### TreeDelta
 
@@ -461,64 +479,103 @@ pub enum ParseError {
 
 ### Object ID Calculation
 
-Note that `Commit::id` is stored in the struct, but it should be calculated from the commit's contents (parents, tree, author, dates, message) using git's standard commit hashing algorithm. We'll need to implement this calculation and ensure the stored ID matches the computed one, or compute it on the fly when needed.
+Note that `Commit::id` is stored in the struct, but it should be calculated from
+the commit's contents (parents, tree, author, dates, message) using git's
+standard commit hashing algorithm. We'll need to implement this calculation and
+ensure the stored ID matches the computed one, or compute it on the fly when
+needed.
 
-For V1, since we're not interacting with real git, we could potentially use a simpler ID scheme (like sequential integers or random UUIDs converted to hex). However, using real git object IDs would make V2 integration much easier, so we should implement proper git hashing from the start.
+For V1, since we're not interacting with real git, we could potentially use a
+simpler ID scheme (like sequential integers or random UUIDs converted to hex).
+However, using real git object IDs would make V2 integration much easier, so we
+should implement proper git hashing from the start.
 
 ### Tree and Blob Hashing
 
 Git computes object IDs (hashes) for both blobs and trees:
 
-**Blob hashing**: Each blob's hash is computed from its content using git's standard blob hashing algorithm (SHA-1 of "blob {size}\0{content}"). The `Tree` struct maintains a `blob_hashes` map that caches these hashes for each blob path.
+**Blob hashing**: Each blob's hash is computed from its content using git's
+standard blob hashing algorithm (SHA-1 of "blob {size}\0{content}"). The `Tree`
+struct maintains a `blob_hashes` map that caches these hashes for each blob
+path.
 
-**Tree hashing**: Each tree has its own object ID based on its contents. In git's model, a tree is a list of entries, where each entry has a mode (file permissions), name (filename), and object ID (the hash of the blob or subtree). The tree's hash is the SHA-1 of this serialized representation.
+**Tree hashing**: Each tree has its own object ID based on its contents. In
+git's model, a tree is a list of entries, where each entry has a mode (file
+permissions), name (filename), and object ID (the hash of the blob or subtree).
+The tree's hash is the SHA-1 of this serialized representation.
 
-The `Tree` struct maintains a cached `tree_hash` field that stores the computed hash for the tree. This cache is invalidated whenever the tree is modified, and recomputed on demand.
+The `Tree` struct maintains a cached `tree_hash` field that stores the computed
+hash for the tree. This cache is invalidated whenever the tree is modified, and
+recomputed on demand.
 
-**Subtree hashing**: Since we store trees as a flat map of paths to content, computing a subtree's hash (e.g., for the "src" directory) requires extracting all paths under that prefix, computing their blob hashes, and then computing the tree hash from those entries. The `get_tree()` method provides this functionality.
+**Subtree hashing**: Since we store trees as a flat map of paths to content,
+computing a subtree's hash (e.g., for the "src" directory) requires extracting
+all paths under that prefix, computing their blob hashes, and then computing the
+tree hash from those entries. The `get_tree()` method provides this
+functionality.
 
-These hashes are essential for the serialization algorithm described in IDEA-1.1.md, which uses hash-based deduplication to minimize redundancy in the serialized output. Each unique hash appears at most once as actual content; subsequent occurrences become references via `[commit]` and `[path]` keys.
+These hashes are essential for the serialization algorithm described in
+IDEA-1.1.md, which uses hash-based deduplication to minimize redundancy in the
+serialized output. Each unique hash appears at most once as actual content;
+subsequent occurrences become references via `[commit]` and `[path]` keys.
 
 ### Memory vs Disk Trade-offs
 
 The in-memory representation prioritizes:
+
 - **Simplicity**: Easy to work with programmatically
 - **Type safety**: Using newtypes to prevent mistakes
 - **Completeness**: All defaults are resolved, no implicit state
 
 The on-disk representation prioritizes:
+
 - **Compactness**: Defaults can be omitted
 - **Human readability**: Trees as nested deltas, sensible ordering
 - **Editability**: Easy to write by hand or generate from scripts
 
-This is the right trade-off: the complex logic for defaults and deltas lives in the serializer/deserializer, while both the in-memory code and the human author of on-disk files get simpler interfaces.
+This is the right trade-off: the complex logic for defaults and deltas lives in
+the serializer/deserializer, while both the in-memory code and the human author
+of on-disk files get simpler interfaces.
 
 ### Performance Considerations
 
-For V1, performance is not critical (we're targeting test fixtures, not large repos). However, some notes for potential future optimization:
+For V1, performance is not critical (we're targeting test fixtures, not large
+repos). However, some notes for potential future optimization:
 
-- `Tree` uses `BTreeMap` for deterministic ordering, which adds log(n) overhead vs `HashMap`. For small test repos this is negligible.
-- `Repository::commits` uses `HashMap` for O(1) lookups by ID, which is appropriate.
-- `Repository::refs` uses `BTreeMap` for deterministic iteration order and efficient prefix operations if needed later.
-- Storing `Tree` as a flat map means some operations (like "delete directory foo and everything under it") require iteration. For small trees this is fine.
+- `Tree` uses `BTreeMap` for deterministic ordering, which adds log(n) overhead
+  vs `HashMap`. For small test repos this is negligible.
+- `Repository::commits` uses `HashMap` for O(1) lookups by ID, which is
+  appropriate.
+- `Repository::refs` uses `BTreeMap` for deterministic iteration order and
+  efficient prefix operations if needed later.
+- Storing `Tree` as a flat map means some operations (like "delete directory foo
+  and everything under it") require iteration. For small trees this is fine.
 
 ### Clone and Copy
 
 - `ObjectId` is `Copy` because it's just 20 bytes
 - `Timestamp` is `Copy` because it's just two integers
-- `Identity`, `Tree`, `Commit`, etc. are `Clone` but not `Copy` because they contain `String` or collections
-- This allows efficient passing of IDs and timestamps while preventing accidental large copies
+- `Identity`, `Tree`, `Commit`, etc. are `Clone` but not `Copy` because they
+  contain `String` or collections
+- This allows efficient passing of IDs and timestamps while preventing
+  accidental large copies
 
 ### Validation
 
 The data structures should maintain certain invariants:
+
 - `ObjectId` is always exactly 20 bytes
 - `Timestamp.seconds` is non-negative (git can't represent pre-epoch times)
-- `Tree` paths are stored in the flat BTreeMap using `/` as the path separator (e.g., "src/main.rs")
-- Individual path components (file/directory names) must not contain `/`, `\`, `:`, null bytes, or equal `.`, `..`, `""`
-- Note: The `/` character is forbidden in individual components but used internally to separate components in stored paths
+- `Tree` paths are stored in the flat BTreeMap using `/` as the path separator
+  (e.g., "src/main.rs")
+- Individual path components (file/directory names) must not contain `/`, `\`,
+  `:`, null bytes, or equal `.`, `..`, `""`
+- Note: The `/` character is forbidden in individual components but used
+  internally to separate components in stored paths
 - `RefName` must start with `refs/`
 - `Repository::commits` only contains commits reachable from HEAD or refs
 - No cycles in the commit graph
 
-These should be enforced at construction time (returning `ParseError` on invalid input) rather than using runtime assertions, so that parsing untrusted data can't panic.
+These should be enforced at construction time (returning `ParseError` on invalid
+input) rather than using runtime assertions, so that parsing untrusted data
+can't panic.

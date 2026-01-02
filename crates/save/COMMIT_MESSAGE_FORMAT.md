@@ -2,7 +2,9 @@
 
 ## Overview
 
-The `save` tool automatically generates commit messages that encode information about the commit's position in the repository's history and whether the repository is shallow.
+The `save` tool automatically generates commit messages that encode information
+about the commit's position in the repository's history and whether the
+repository is shallow.
 
 ## Format
 
@@ -63,7 +65,8 @@ s8B8E-4 / x5678         # 5th commit in shallow history
 s8B8E-9 / g15 / n71 / xABCD  # Depth=10 clone with merges
 ```
 
-The `s` prefix immediately indicates the repository is shallow, and the root hash is always included to track the shallow boundary.
+The `s` prefix immediately indicates the repository is shallow, and the root
+hash is always included to track the shallow boundary.
 
 ### History Changes
 
@@ -72,24 +75,30 @@ r1234-50 / xABCD        # Normal commit
 r5678-51 / xDEF0        # After merging unrelated history
 ```
 
-When the root hash changes (e.g., from merging an unrelated history or grafting), the new root hash is shown to indicate the change in the repository's foundation.
+When the root hash changes (e.g., from merging an unrelated history or
+grafting), the new root hash is shown to indicate the change in the repository's
+foundation.
 
 ## Root Hash Calculation
 
 The root hash is calculated by:
+
 1. Finding all commits with no parents in the reachable history
 2. Sorting their OIDs
 3. Concatenating and hashing them with SHA1
 4. Taking the first 16 bits (2 bytes) as a `u16`
 5. Formatting as 4 uppercase hexadecimal digits
 
-In shallow clones, "root commits" are those at the shallow boundary - they have parent references in their commit objects, but those parent objects don't exist in the repository.
+In shallow clones, "root commits" are those at the shallow boundary - they have
+parent references in their commit objects, but those parent objects don't exist
+in the repository.
 
 ## Purpose
 
 The commit message format serves several purposes:
 
-1. **Version Tracking**: Revision index provides a simple, incrementing version number
+1. **Version Tracking**: Revision index provides a simple, incrementing version
+   number
 2. **Shallow Detection**: The `s` prefix immediately indicates limited history
 3. **History Integrity**: Root hash changes alert to history modifications
 4. **Merge Detection**: Generation and commit indices reveal complex history
@@ -98,6 +107,7 @@ The commit message format serves several purposes:
 ## Implementation
 
 See:
+
 - `src/git2.rs:186-192` - `GraphStats` struct definition
 - `src/git2.rs:335-352` - Root hash calculation
 - `src/cli.rs:454-510` - Message formatting logic

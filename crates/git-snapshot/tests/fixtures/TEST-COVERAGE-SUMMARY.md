@@ -16,9 +16,11 @@ IDEA.md and IDEA-1.1.md specifications.
 ### IDEA.md (On-Disk Representation) - ~80% Coverage
 
 **Well Covered:**
+
 - ✅ HEAD and refs structure (fixtures 01-46, various patterns)
 - ✅ Commit references (integer and hex IDs)
-- ✅ Parent arrays and merge commits (11-octopus, 12-criss-cross, 18-evil, 36-large-octopus)
+- ✅ Parent arrays and merge commits (11-octopus, 12-criss-cross, 18-evil,
+  36-large-octopus)
 - ✅ Tree structures and inheritance (all fixtures)
 - ✅ Blob content (all fixtures)
 - ✅ Deletion patterns (15, 44)
@@ -36,8 +38,10 @@ IDEA.md and IDEA-1.1.md specifications.
 - ✅ Deep branch refs (46)
 
 **Gaps:**
+
 - ❌ Error conditions (28+ documented in ERROR-TESTS-TODO.md)
-- ⚠️ Unreachable commit filtering (fixture 32 documents current behavior differs from spec)
+- ⚠️ Unreachable commit filtering (fixture 32 documents current behavior differs
+  from spec)
 - ⚠️ Default message verification (implicitly tested but not explicit)
 - ⚠️ Hash length validation
 - ⚠️ Cycle detection
@@ -45,6 +49,7 @@ IDEA.md and IDEA-1.1.md specifications.
 ### IDEA-1.1.md (Tree References) - ~85% Coverage
 
 **Well Covered:**
+
 - ✅ [commit] and [path] special keys (03-24, 33-39, 45, 47)
 - ✅ Relative paths (./, ../) (04, 14)
 - ✅ Path inheritance (04-05, 09, 38)
@@ -66,6 +71,7 @@ IDEA.md and IDEA-1.1.md specifications.
 - ✅ Truncated hash output (01, 03, 04)
 
 **Gaps:**
+
 - ❌ Error conditions (see ERROR-TESTS-TODO.md):
   - [path] without [commit]
   - Reference to non-existent path
@@ -79,6 +85,7 @@ IDEA.md and IDEA-1.1.md specifications.
 ## Fixture Organization
 
 ### Basic Repository Structure (01-05)
+
 - 01-simple.hex: Basic repository
 - 02-linear-history.int: Linear commit chain
 - 03-tree-references.hex: Basic [commit]/[path] references
@@ -86,6 +93,7 @@ IDEA.md and IDEA-1.1.md specifications.
 - 05-complex-renames.int: Complex rename patterns
 
 ### Git-Zoom Operations (06-10, 20-24)
+
 - 06-zoom-cycle.int: Single zoom in/out cycle
 - 07-double-zoom.int: Nested zoom operations
 - 08-parallel-subtrees.int: Multiple independent subtrees
@@ -98,12 +106,14 @@ IDEA.md and IDEA-1.1.md specifications.
 - 24-blob-to-tree.int: File becoming directory
 
 ### Complex Merges (11-12, 18, 36)
+
 - 11-octopus-merge.int: 4-way merge
 - 12-criss-cross-merge.int: Criss-cross pattern
 - 18-evil-merge.int: Merge with new content
 - 36-large-octopus.int: 8-way merge
 
 ### Content and Structure (13-17, 19)
+
 - 13-content-reuse.int: Deduplication
 - 14-deep-nesting.int: Deep directory nesting
 - 15-deletion-patterns.int: Various deletion forms
@@ -112,6 +122,7 @@ IDEA.md and IDEA-1.1.md specifications.
 - 19-copy-explosion.int: Multiple copies
 
 ### Edge Cases and Features (25-47)
+
 - 25-detached-head.int: Detached HEAD state
 - 26-empty-message.int: Empty commit message
 - 27-empty-blob.int: Empty file content
@@ -155,6 +166,7 @@ implemented or differ from specification:
 ## Future Work
 
 ### High Priority
+
 1. Implement error test infrastructure
 2. Add 28 error test cases (see ERROR-TESTS-TODO.md)
 3. Fix unreachable commit filtering
@@ -162,12 +174,14 @@ implemented or differ from specification:
 5. Implement tree deduplication (tree_locations usage)
 
 ### Medium Priority
+
 6. Test hash truncation edge cases
 7. Test ambiguous truncated hashes
 8. More explicit validation tests for defaults
 9. Performance/scale testing with large repositories
 
 ### Lower Priority
+
 10. Mixed integer/hex ID support (complex due to hash computation)
 11. Additional message format edge cases
 12. Timezone edge case testing
@@ -190,5 +204,5 @@ IDEA-1.1.md specifications for happy-path scenarios. The main gaps are:
 - **Edge cases**: Some boundary conditions untested
 - **Implementation gaps**: Some spec features not fully implemented
 
-All 71 tests currently pass, with 46 fixtures ensuring round-trip stability
-for a comprehensive range of repository structures and operations.
+All 71 tests currently pass, with 46 fixtures ensuring round-trip stability for
+a comprehensive range of repository structures and operations.

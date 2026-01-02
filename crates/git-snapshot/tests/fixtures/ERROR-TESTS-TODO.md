@@ -1,8 +1,8 @@
 # Error Test Cases TODO
 
-This document lists error conditions from the IDEA.md and IDEA-1.1.md specifications
-that should be tested but require a different test infrastructure (tests that expect
-parsing/validation failures).
+This document lists error conditions from the IDEA.md and IDEA-1.1.md
+specifications that should be tested but require a different test infrastructure
+(tests that expect parsing/validation failures).
 
 ## Implementation Note
 
@@ -25,6 +25,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ### 1. Invalid Tree Entry Names (IDEA.md lines 195-207)
 
 **error-01-slash-in-name.int.error.yaml**
+
 ```yaml
 1:
   tree:
@@ -32,6 +33,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ```
 
 **error-02-backslash-in-name.int.error.yaml**
+
 ```yaml
 1:
   tree:
@@ -39,6 +41,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ```
 
 **error-03-colon-in-name.int.error.yaml**
+
 ```yaml
 1:
   tree:
@@ -46,6 +49,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ```
 
 **error-04-dot-name.int.error.yaml**
+
 ```yaml
 1:
   tree:
@@ -53,6 +57,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ```
 
 **error-05-dotdot-name.int.error.yaml**
+
 ```yaml
 1:
   tree:
@@ -60,6 +65,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ```
 
 **error-06-empty-name.int.error.yaml**
+
 ```yaml
 1:
   tree:
@@ -69,6 +75,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ### 2. Commit Reference Cycles (IDEA.md lines 269-270)
 
 **error-07-self-reference.int.error.yaml**
+
 ```yaml
 1:
   parents: [1]
@@ -77,6 +84,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ```
 
 **error-08-circular-parents.int.error.yaml**
+
 ```yaml
 1:
   parents: [2]
@@ -88,6 +96,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ```
 
 **error-09-three-way-cycle.int.error.yaml**
+
 ```yaml
 1:
   parents: [3]
@@ -105,6 +114,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ### 3. YAML Tag Rejection (IDEA.md error conditions)
 
 **error-10-binary-tag.int.error.yaml**
+
 ```yaml
 1:
   tree:
@@ -112,6 +122,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ```
 
 **error-11-str-tag.int.error.yaml**
+
 ```yaml
 1:
   tree:
@@ -121,6 +132,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ### 4. Special YAML Values (IDEA.md)
 
 **error-12-infinity.int.error.yaml**
+
 ```yaml
 1:
   tree:
@@ -128,6 +140,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ```
 
 **error-13-nan.int.error.yaml**
+
 ```yaml
 1:
   tree:
@@ -137,6 +150,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ### 5. Date Validation (IDEA.md lines 125-149)
 
 **error-14-date-before-epoch.int.error.yaml**
+
 ```yaml
 1:
   author-date: 1969-12-31T23:59:59Z
@@ -144,6 +158,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ```
 
 **error-15-date-with-fractional-seconds.int.error.yaml**
+
 ```yaml
 1:
   author-date: 2021-01-14T08:25:36.123Z
@@ -153,6 +168,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ### 6. IDEA-1.1 Reference Errors
 
 **error-16-path-without-commit.int.error.yaml**
+
 ```yaml
 1:
   tree:
@@ -166,6 +182,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ```
 
 **error-17-reference-to-nonexistent-path.int.error.yaml**
+
 ```yaml
 1:
   tree:
@@ -179,6 +196,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ```
 
 **error-18-blob-with-extra-keys.int.error.yaml**
+
 ```yaml
 1:
   tree:
@@ -193,6 +211,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ```
 
 **error-19-dotdot-past-root.int.error.yaml**
+
 ```yaml
 1:
   tree:
@@ -206,6 +225,7 @@ if input_path.to_str().unwrap().contains(".error.") {
 ```
 
 **error-20-commit-null-with-path.int.error.yaml**
+
 ```yaml
 1:
   tree:
@@ -221,12 +241,14 @@ if input_path.to_str().unwrap().contains(".error.") {
 ### 7. Hash Validation (IDEA-1.1)
 
 **error-21-ambiguous-truncated-hash.hex.error.yaml**
+
 ```yaml
 # Would need commits with hash collision in truncated form
 # This is hard to create without brute-forcing hashes
 ```
 
 **error-22-invalid-hex-characters.hex.error.yaml**
+
 ```yaml
 HEAD: "gggggggggggggggggggggggggggggggggggggggg"
 refs:
@@ -237,6 +259,7 @@ refs:
 ```
 
 **error-23-odd-length-hex.hex.error.yaml**
+
 ```yaml
 HEAD: "abc"
 refs:
@@ -249,6 +272,7 @@ refs:
 ### 8. Type Validation
 
 **error-24-wrong-type-parents.int.error.yaml**
+
 ```yaml
 1:
   parents: "should be array"
@@ -256,12 +280,14 @@ refs:
 ```
 
 **error-25-wrong-type-tree.int.error.yaml**
+
 ```yaml
 1:
   tree: "should be mapping"
 ```
 
 **error-26-wrong-type-refs.int.error.yaml**
+
 ```yaml
 HEAD: refs/heads/main
 refs: "should be mapping"
@@ -270,6 +296,7 @@ refs: "should be mapping"
 ### 9. Unknown Keys (IDEA.md)
 
 **error-27-unknown-top-level-key.int.error.yaml**
+
 ```yaml
 HEAD: refs/heads/main
 refs:
@@ -281,6 +308,7 @@ unknown-key: "not allowed"
 ```
 
 **error-28-unknown-commit-key.int.error.yaml**
+
 ```yaml
 1:
   tree: {}

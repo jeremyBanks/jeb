@@ -12,7 +12,7 @@ on:
       - trunk
 
   schedule:
-    - cron: '12 3 * * 4'
+    - cron: "12 3 * * 4"
 
   workflow_dispatch:
 

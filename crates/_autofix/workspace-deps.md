@@ -111,6 +111,7 @@ The **dependency name** used for grouping is determined as follows:
 - Otherwise, use the TOML table key
 
 Example: Both of these refer to the same dependency (`tokio`):
+
 ```toml
 # Member A
 [dependencies]
