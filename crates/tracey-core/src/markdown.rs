@@ -1150,4 +1150,47 @@ Some content.
         assert_eq!(result.warnings.len(), 1);
         assert_eq!(result.warnings[0].rule_id, "another.rule");
     }
+
+    #[test]
+    fn test_rule_with_trailing_whitespace() {
+        // Rule definitions with trailing whitespace should be recognized
+        // This supports markdown formatters that use two trailing spaces for hard line breaks
+        let markdown = "r[rule.with.spaces]  \nThis MUST be recognized.\n";
+
+        let result = MarkdownProcessor::process(markdown).unwrap();
+        assert_eq!(result.rules.len(), 1, "Should parse rule with trailing whitespace");
+        assert_eq!(result.rules[0].id, "rule.with.spaces");
+    }
+
+    #[test]
+    fn test_rule_with_trailing_backslash() {
+        // Rule definitions with trailing backslash should be recognized
+        // The backslash is markdown's line continuation syntax (alternative to two spaces)
+        let markdown = "r[rule.with.backslash]\\\nThis MUST be recognized.\n";
+
+        let result = MarkdownProcessor::process(markdown).unwrap();
+        assert_eq!(result.rules.len(), 1, "Should parse rule with trailing backslash");
+        assert_eq!(result.rules[0].id, "rule.with.backslash");
+    }
+
+    #[test]
+    fn test_rule_with_both_trailing_syntax() {
+        // Test both trailing whitespace and backslash in the same document
+        let markdown = r#"
+r[rule.one]
+This MUST work.
+
+r[rule.two]\
+This MUST also work.
+
+r[rule.three]
+This MUST work too.
+"#;
+
+        let result = MarkdownProcessor::process(markdown).unwrap();
+        assert_eq!(result.rules.len(), 3, "Should parse all three rules");
+        assert_eq!(result.rules[0].id, "rule.one");
+        assert_eq!(result.rules[1].id, "rule.two");
+        assert_eq!(result.rules[2].id, "rule.three");
+    }
 }
