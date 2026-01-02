@@ -242,6 +242,50 @@ fn ensure_publish_false_for_internal_crates(workspace_root: &Path) -> Result<usi
 
     Ok(modified_count)
 }
+/// Ensure workspace crates have standard metadata fields set
+fn ensure_workspace_metadata_inheritance(doc: &mut DocumentMut) -> Result<bool> {
+    let mut modified = false;
+
+    if doc.get("package").is_none() {
+        doc["package"] = toml_edit::table();
+    }
+    let package = doc["package"]
+        .as_table_mut()
+        .context("package is not a table")?;
+
+    // Workspace-inherited fields using dotted key syntax
+    for field in ["repository", "license", "version", "edition"] {
+        if package.get(field).is_none() {
+            let dotted_key_str = format!("{}.workspace", field);
+            if let Ok(dotted_key) = dotted_key_str.parse::<Key>() {
+                package.insert_formatted(&dotted_key, value(true));
+                modified = true;
+            } else {
+                // Fallback to inline table if parsing fails
+                let mut table = InlineTable::new();
+                table.insert("workspace", Value::from(true));
+                package[field] = Item::Value(Value::InlineTable(table));
+                modified = true;
+            }
+        }
+    }
+
+    // Empty default fields
+    if package.get("description").is_none() {
+        package["description"] = value("");
+        modified = true;
+    }
+    if package.get("categories").is_none() {
+        package["categories"] = Item::Value(Value::Array(toml_edit::Array::new()));
+        modified = true;
+    }
+    if package.get("keywords").is_none() {
+        package["keywords"] = Item::Value(Value::Array(toml_edit::Array::new()));
+        modified = true;
+    }
+
+    Ok(modified)
+}
 /// Represents a dependency with all its fields
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Dependency {
