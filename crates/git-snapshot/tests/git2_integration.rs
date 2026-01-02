@@ -83,8 +83,13 @@ refs:
         assert_eq!(commit.message, rt_commit.message);
         assert_eq!(commit.parents, rt_commit.parents);
         // Compare tree paths
-        for (path, content) in commit.tree.paths() {
-            assert_eq!(rt_commit.tree.get(path), Some(content));
+        for path in commit.tree.paths() {
+            assert_eq!(
+                rt_commit.tree.get(path),
+                commit.tree.get(path),
+                "Path {} content differs",
+                path
+            );
         }
     }
 }
