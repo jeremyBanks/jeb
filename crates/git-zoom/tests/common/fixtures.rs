@@ -9,7 +9,7 @@ use std::{env, fs, path::Path};
 
 use git_snapshot::{parse, serialize, CommitIdStyle, SerializationOptions};
 
-use crate::helpers::TestRepo;
+use super::helpers::TestRepo;
 
 /// Run a fixture-based test
 ///

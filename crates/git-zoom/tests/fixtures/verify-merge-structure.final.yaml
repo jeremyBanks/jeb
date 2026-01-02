@@ -1,11 +1,11 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 172c2c755162276ca9cb488d3c7659e3a125e0af
-95b23f:
+    main: b6ffbd389faa57171a934ad38184ff1d222a1489
+a737f0:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T20:59:33Z
-  commit-date: 2026-01-02T20:59:33Z
+  author-date: 2026-01-02T21:03:09Z
+  commit-date: 2026-01-02T21:03:09Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
@@ -17,16 +17,16 @@ refs:
     root.txt: root
     src:
       file.txt: content
-172c2c755162276ca9cb488d3c7659e3a125e0af:
-  author-date: 2026-01-02T20:59:33Z
-  commit-date: 2026-01-02T20:59:33Z
+b6ffbd389faa57171a934ad38184ff1d222a1489:
+  author-date: 2026-01-02T21:03:09Z
+  commit-date: 2026-01-02T21:03:09Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - 95b23f
+  - a737f0
   - 0410a5
   tree:
     file.txt:

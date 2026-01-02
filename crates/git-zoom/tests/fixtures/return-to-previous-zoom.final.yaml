@@ -1,11 +1,11 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: f8d5b7112a9d1796170c3f9292b54e77d31979bb
-b92732:
+    main: 1babc9bbd6b7eb078b92d5792769ee86fe026c6e
+4a3b6c:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T20:59:31Z
-  commit-date: 2026-01-02T20:59:31Z
+  author-date: 2026-01-02T21:03:07Z
+  commit-date: 2026-01-02T21:03:07Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Initial commit
@@ -17,33 +17,33 @@ b92732:
     root.txt: root
     src:
       file.txt: original
-7d9cac:
-  author-date: 2026-01-02T20:59:31Z
-  commit-date: 2026-01-02T20:59:31Z
+52753b:
+  author-date: 2026-01-02T21:03:07Z
+  commit-date: 2026-01-02T21:03:07Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - b92732
+  - 4a3b6c
   - 7ce26a
   tree:
     file.txt:
       //commit: 7ce26a
       //path: src/file.txt
-a90fcc:
+89948b:
   author: User <user@localhost>
-  author-date: 2026-01-02T20:59:31Z
-  commit-date: 2026-01-02T20:59:31Z
+  author-date: 2026-01-02T21:03:08Z
+  commit-date: 2026-01-02T21:03:08Z
   message: |
     Update
   tree:
     file.txt: modified
-6096ae:
+b88777:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T20:59:31Z
-  commit-date: 2026-01-02T20:59:31Z
+  author-date: 2026-01-02T21:03:08Z
+  commit-date: 2026-01-02T21:03:08Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src'
@@ -51,21 +51,21 @@ a90fcc:
     git-zoom-out: src
   parents:
   - 7ce26a
-  - a90fcc
+  - 89948b
   tree:
     src:
       file.txt:
-        //commit: a90fcc
+        //commit: 89948b
         //path: file.txt
-f8d5b7112a9d1796170c3f9292b54e77d31979bb:
+1babc9bbd6b7eb078b92d5792769ee86fe026c6e:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T20:59:32Z
-  commit-date: 2026-01-02T20:59:32Z
+  author-date: 2026-01-02T21:03:09Z
+  commit-date: 2026-01-02T21:03:09Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - a90fcc
-  - 6096ae
+  - 89948b
+  - b88777

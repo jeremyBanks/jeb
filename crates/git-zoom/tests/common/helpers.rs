@@ -278,7 +278,7 @@ impl Drop for TestRepo {
             );
 
             // Use the comparison function from fixtures module
-            crate::fixtures::compare_or_update_fixture(expected_path, &actual_yaml);
+            super::fixtures::compare_or_update_fixture(expected_path, &actual_yaml);
         }
     }
 }

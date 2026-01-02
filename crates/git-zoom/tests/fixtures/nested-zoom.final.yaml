@@ -1,9 +1,18 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 8d9b738a5801b01dfe271cc1be3bfa46a1edc01c
+    main: 80253d1e7bb5ddb0ef8912e9fe5a759f84a89fb1
+4a3b6c:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:03:07Z
+  commit-date: 2026-01-02T21:03:07Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Initial commit
+  tree: {}
 79bac8:
   message: commit 1
+  parents: []
   tree:
     root.txt: root
     src:
@@ -11,25 +20,16 @@ refs:
         core:
           mod.rs: core module
         lib.rs: lib root
-b92732:
-  author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T20:59:31Z
-  commit-date: 2026-01-02T20:59:31Z
-  committer: 🔎 <git-zoom-in@localhost>
-  message: |
-    Initial commit
-  parents: []
-  tree: {}
-75c61d:
-  author-date: 2026-01-02T20:59:31Z
-  commit-date: 2026-01-02T20:59:31Z
+2dcbb1:
+  author-date: 2026-01-02T21:03:07Z
+  commit-date: 2026-01-02T21:03:07Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'src/lib'
 
     git-zoom-in: src/lib
   parents:
-  - b92732
+  - 4a3b6c
   - 79bac8
   tree:
     core:
@@ -39,58 +39,49 @@ b92732:
     lib.rs:
       //commit: 79bac8
       //path: src/lib/lib.rs
-a3a095:
-  author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T20:59:32Z
-  commit-date: 2026-01-02T20:59:32Z
-  committer: 🔎 <git-zoom-in@localhost>
-  message: |
-    Initial commit
-  parents: []
-  tree: {}
-df31d6:
-  author-date: 2026-01-02T20:59:32Z
-  commit-date: 2026-01-02T20:59:32Z
+e4a256:
+  author-date: 2026-01-02T21:03:07Z
+  commit-date: 2026-01-02T21:03:07Z
   committer: 🔎 <git-zoom-in@localhost>
   message: |
     Merge from 'core'
 
     git-zoom-in: core
   parents:
-  - a3a095
-  - 75c61d
+  - 4a3b6c
+  - 2dcbb1
   tree:
     mod.rs:
-      //commit: 75c61d
+      //commit: 2dcbb1
       //path: core/mod.rs
-9a090d:
+9ec78e:
   author: User <user@localhost>
-  author-date: 2026-01-02T20:59:32Z
-  commit-date: 2026-01-02T20:59:32Z
+  author-date: 2026-01-02T21:03:08Z
+  commit-date: 2026-01-02T21:03:08Z
   message: |
     Update core
   tree:
     mod.rs: modified core
-977c46:
-  author-date: 2026-01-02T20:59:32Z
-  commit-date: 2026-01-02T20:59:32Z
+54db4d:
+  author-date: 2026-01-02T21:03:08Z
+  commit-date: 2026-01-02T21:03:08Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'core'
 
     git-zoom-out: core
   parents:
-  - 75c61d
-  - 9a090d
+  - 2dcbb1
+  - 9ec78e
   tree:
     core:
       mod.rs:
-        //commit: 9a090d
+        //commit: 9ec78e
         //path: mod.rs
-8d9b738a5801b01dfe271cc1be3bfa46a1edc01c:
+80253d1e7bb5ddb0ef8912e9fe5a759f84a89fb1:
   author: Jeremy Banks <_@jeremy.ca>
-  author-date: 2026-01-02T20:59:33Z
-  commit-date: 2026-01-02T20:59:33Z
+  author-date: 2026-01-02T21:03:08Z
+  commit-date: 2026-01-02T21:03:08Z
   committer: 🔍 <git-zoom-out@localhost>
   message: |
     Merge to 'src/lib'
@@ -98,11 +89,11 @@ df31d6:
     git-zoom-out: src/lib
   parents:
   - 79bac8
-  - 977c46
+  - 54db4d
   tree:
     src:
       lib:
         core:
           mod.rs:
-            //commit: 977c46
+            //commit: 54db4d
             //path: core/mod.rs

@@ -1,8 +1,8 @@
 //! Debug test to understand git-snapshot behavior
 
-mod helpers;
+mod common;
 
-use helpers::*;
+use common::helpers::*;
 use std::process::Command;
 use std::env;
 

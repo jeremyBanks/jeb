@@ -3,11 +3,10 @@
 //! These tests verify complete zoom in/out cycles using declarative YAML repository
 //! snapshots for test setup and verification.
 
-mod fixtures;
-mod helpers;
+mod common;
 
-use fixtures::test_fixture;
-use helpers::*;
+use common::fixtures::test_fixture;
+use common::helpers::*;
 
 // ============================================================================
 // Category A: Basic Operations
