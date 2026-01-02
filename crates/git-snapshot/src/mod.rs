@@ -2,8 +2,15 @@ use std::{
     collections::{
         BTreeMap,
         HashMap,
+        HashSet,
+        VecDeque,
     },
     fmt,
+    ops::{
+        Deref,
+        DerefMut,
+    },
+    path::Path,
 };
 
 // ============================================================================
@@ -53,6 +60,62 @@ pub enum ParseError {
 
     #[error("unexpected field: {0}")]
     UnexpectedField(String),
+}
+
+/// Errors that can occur when working with real git repositories
+#[derive(Debug, thiserror::Error)]
+pub enum GitError {
+    #[error("git2 error: {0}")]
+    Git2(#[from] git2::Error),
+
+    #[error("unsupported feature: {feature} at {path}")]
+    UnsupportedFeature {
+        feature: UnsupportedFeature,
+        path: String,
+    },
+
+    #[error("invalid UTF-8 in {context}: {source}")]
+    InvalidUtf8 {
+        context: &'static str,
+        #[source]
+        source: std::str::Utf8Error,
+    },
+
+    #[error("blob too large: {size} bytes (max {max_size} bytes)")]
+    BlobTooLarge { size: u64, max_size: u64 },
+
+    #[error("parse error: {0}")]
+    Parse(#[from] ParseError),
+
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+}
+
+/// Types of unsupported git features
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnsupportedFeature {
+    /// File has executable bit set (mode 100755)
+    ExecutableBit,
+
+    /// Entry is a symbolic link (mode 120000)
+    Symlink,
+
+    /// Entry is a gitlink/submodule (mode 160000)
+    Submodule,
+
+    /// File mode is not regular or directory
+    UnknownFileMode { mode: u32 },
+}
+
+impl fmt::Display for UnsupportedFeature {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ExecutableBit => write!(f, "executable bit (mode 100755)"),
+            Self::Symlink => write!(f, "symbolic link (mode 120000)"),
+            Self::Submodule => write!(f, "submodule/gitlink (mode 160000)"),
+            Self::UnknownFileMode { mode } => write!(f, "unknown file mode {:#o}", mode),
+        }
+    }
 }
 
 // ============================================================================
