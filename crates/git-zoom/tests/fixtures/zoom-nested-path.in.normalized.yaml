@@ -1,0 +1,14 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 93b585e1b48bbd99a4cfd33b9e70e773fca485f1
+93b585e1b48bbd99a4cfd33b9e70e773fca485f1:
+  message: Initial commit
+  tree:
+    README.md: root
+    src:
+      lib:
+        api.rs: api code
+        core:
+          engine.rs: engine code
+          utils.rs: utils code

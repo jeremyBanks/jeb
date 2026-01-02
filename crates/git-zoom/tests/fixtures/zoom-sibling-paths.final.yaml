@@ -1,0 +1,113 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 1ba20854a5a3a1c1c841d0e998230e1fdb56cc70
+50f528:
+  message: Initial commit
+  tree:
+    docs:
+      guide.md: docs
+    src:
+      bin:
+        main.txt: binary
+      lib:
+        lib.txt: library
+95b23f:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T20:59:33Z
+  commit-date: 2026-01-02T20:59:33Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Initial commit
+  parents: []
+  tree: {}
+eec90a:
+  author-date: 2026-01-02T20:59:33Z
+  commit-date: 2026-01-02T20:59:33Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Merge from 'src/lib'
+
+    git-zoom-in: src/lib
+  parents:
+  - 95b23f
+  - 50f528
+  tree:
+    lib.txt:
+      //commit: 50f528
+      //path: src/lib/lib.txt
+3458a1:
+  author: User <user@localhost>
+  author-date: 2026-01-02T20:59:33Z
+  commit-date: 2026-01-02T20:59:33Z
+  message: |
+    Update lib
+  tree:
+    lib.txt: library v2
+3795c0:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T20:59:33Z
+  commit-date: 2026-01-02T20:59:33Z
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |
+    Merge to 'src/lib'
+
+    git-zoom-out: src/lib
+  parents:
+  - 50f528
+  - 3458a1
+  tree:
+    src:
+      lib:
+        lib.txt:
+          //commit: 3458a1
+          //path: lib.txt
+96bf8f:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T20:59:34Z
+  commit-date: 2026-01-02T20:59:34Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Initial commit
+  parents: []
+  tree: {}
+c33064:
+  author-date: 2026-01-02T20:59:34Z
+  commit-date: 2026-01-02T20:59:34Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Merge from 'src/bin'
+
+    git-zoom-in: src/bin
+  parents:
+  - 96bf8f
+  - 3795c0
+  tree:
+    main.txt:
+      //commit: 50f528
+      //path: src/bin/main.txt
+06b98a:
+  author: User <user@localhost>
+  author-date: 2026-01-02T20:59:34Z
+  commit-date: 2026-01-02T20:59:34Z
+  message: |
+    Update bin
+  tree:
+    main.txt: binary v2
+1ba20854a5a3a1c1c841d0e998230e1fdb56cc70:
+  author-date: 2026-01-02T20:59:34Z
+  commit-date: 2026-01-02T20:59:34Z
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |
+    Merge to 'src/bin'
+
+    git-zoom-out: src/bin
+  parents:
+  - 3795c0
+  - 06b98a
+  tree:
+    src:
+      bin:
+        main.txt:
+          //commit: 06b98a
+          //path: main.txt

@@ -84,11 +84,35 @@ pub fn compare_or_update_fixture(expected_path: &Path, actual_yaml: &str) {
             } else {
                 eprintln!("\n❌ Fixture mismatch: {}", expected_path.display());
                 eprintln!("\nTo update fixtures, run:");
-                eprintln!("  JEB_UPDATE_FIXTURES=1 cargo test");
-                eprintln!("\n=== EXPECTED ===");
-                eprintln!("{}", expected_yaml);
-                eprintln!("\n=== ACTUAL ===");
-                eprintln!("{}", actual_yaml);
+                eprintln!("  JEB_UPDATE_FIXTURES=1 cargo test\n");
+
+                // Show line-by-line diff
+                let expected_lines: Vec<&str> = expected_yaml.lines().collect();
+                let actual_lines: Vec<&str> = actual_yaml.lines().collect();
+
+                eprintln!("Differences:");
+                let max_lines = expected_lines.len().max(actual_lines.len());
+                let mut diff_count = 0;
+
+                for i in 0..max_lines {
+                    let exp_line = expected_lines.get(i).copied().unwrap_or("");
+                    let act_line = actual_lines.get(i).copied().unwrap_or("");
+
+                    if exp_line != act_line {
+                        diff_count += 1;
+                        if diff_count <= 20 {  // Show first 20 differences
+                            eprintln!("  Line {}:", i + 1);
+                            eprintln!("    - {}", exp_line);
+                            eprintln!("    + {}", act_line);
+                        }
+                    }
+                }
+
+                if diff_count > 20 {
+                    eprintln!("  ... and {} more differences", diff_count - 20);
+                }
+
+                eprintln!("\nTotal: {} lines differ", diff_count);
                 panic!("Fixture mismatch for {:?}. Run with JEB_UPDATE_FIXTURES=1 to update.", expected_path);
             }
         } else {
