@@ -1,0 +1,28 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 6d2df2f188c322654ca84a63d56a9a9a1127ca7c
+d50c379966bbddacd758b6678410c60b0181ee00:
+  message: commit 1
+  tree:
+    README.md: '# Project'
+82d5ac32ba8a151f69d856ae1e09ab9c4b070bd0:
+  message: commit 2
+  tree:
+    README.md: |-
+      # Project
+
+      Added description.
+    src:
+      lib.rs: pub fn hello() {}
+6d2df2f188c322654ca84a63d56a9a9a1127ca7c:
+  message: commit 3
+  tree:
+    README.md: |-
+      # Project
+
+      Added description.
+
+      ## Usage
+    src:
+      lib.rs: pub fn hello() { println!("Hi"); }

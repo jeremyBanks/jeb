@@ -1,0 +1,15 @@
+# Test unborn branch (HEAD points to ref that doesn't exist)
+HEAD: refs/heads/nonexistent
+
+refs:
+  heads:
+    main: 1
+    other: 2
+
+1:
+  tree:
+    file.txt: "on main"
+
+2:
+  tree:
+    file.txt: "on other"

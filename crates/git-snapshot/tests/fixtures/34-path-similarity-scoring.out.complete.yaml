@@ -1,0 +1,20 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: b1e87ce43ce99a5a69a62ee35e1e1464ef8eb48c
+992f669d1540b4c43910fc192dc67ec3e0571352:
+  message: commit 1
+  tree:
+    completely:
+      different:
+        path.txt: duplicate content
+    foo:
+      bar:
+        baz.txt: duplicate content
+        qux.txt: duplicate content
+b1e87ce43ce99a5a69a62ee35e1e1464ef8eb48c:
+  message: commit 2
+  tree:
+    foo:
+      bar:
+        renamed.txt: duplicate content

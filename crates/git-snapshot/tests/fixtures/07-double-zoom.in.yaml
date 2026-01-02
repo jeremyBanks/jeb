@@ -1,0 +1,96 @@
+HEAD: refs/heads/full-tree
+
+refs:
+  heads:
+    full-tree: 9
+    subtree: 8
+
+# Full-tree lineage
+1:
+  tree:
+    config.yaml: "version: 1"
+    modules:
+      core:
+        init.rs: "fn init() {}"
+      extra:
+        addon.rs: "fn addon() {}"
+
+2:
+  tree:
+    config.yaml: "version: 2"
+    # modules inherited
+
+# First zoom cycle
+3:
+  parents: []
+  tree:  # empty seed
+  message: "git-zoom-in seed"
+  committer: "git-zoom-in <git-zoom-in@localhost>"
+
+4:
+  parents: [3, 2]
+  message: |-
+    Merge from 'modules/core'
+
+    git-zoom-in: modules/core
+  committer: "git-zoom-in <git-zoom-in@localhost>"
+  tree:
+    init.rs:
+      [commit]: 2
+      [path]: modules/core/init.rs
+
+5:
+  parents: [2, 4]
+  message: |-
+    Merge to 'modules/core'
+
+    git-zoom-out: modules/core
+  committer: "git-zoom-out <git-zoom-out@localhost>"
+  tree:
+    # Merge subtree back (no changes)
+    modules:
+      core:
+        [commit]: 4
+        [path]: .
+      # extra inherited
+
+# Full-tree continues
+6:
+  parents: [5]
+  tree:
+    # Add new module outside zoomed subtree
+    modules:
+      extra:
+        plugin.rs: "fn plugin() {}"
+
+# Second zoom cycle (continues from previous subtree)
+7:
+  parents: [4, 6]
+  message: |-
+    Merge from 'modules/core'
+
+    git-zoom-in: modules/core
+  committer: "git-zoom-in <git-zoom-in@localhost>"
+  tree:
+    # Subtree continues - init.rs inherited from commit 4
+    # (no new files from full-tree because modules/core unchanged)
+
+8:
+  parents: [7]
+  tree:
+    # Work in subtree
+    cleanup.rs: "fn cleanup() {}"
+
+9:
+  parents: [6, 8]
+  message: |-
+    Merge to 'modules/core'
+
+    git-zoom-out: modules/core
+  committer: "git-zoom-out <git-zoom-out@localhost>"
+  tree:
+    # Final tree with both addon cycles
+    modules:
+      core:
+        [commit]: 8
+        [path]: .

@@ -1,0 +1,55 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 5
+
+# Test deduplication: same content appears at multiple paths
+1:
+  tree:
+    README.md: "# Shared Documentation"
+    docs:
+      guide.md: "# Shared Documentation"  # Same as README
+    lib:
+      header.txt: "Licensed under MIT"
+
+2:
+  tree:
+    # Move README to different location
+    ABOUT.md:
+      [commit]: 1
+      [path]: README.md
+    # Keep docs/guide.md (should be deduplicated with ABOUT.md)
+
+3:
+  tree:
+    # Copy header to multiple locations
+    lib:
+      header.txt: null  # Delete original
+    src:
+      header.txt:
+        [commit]: 1
+        [path]: lib/header.txt
+    tests:
+      header.txt:
+        [commit]: 1
+        [path]: lib/header.txt
+    examples:
+      header.txt:
+        [commit]: 1
+        [path]: lib/header.txt
+
+4:
+  tree:
+    # Rename one of the copies
+    src:
+      LICENSE.txt:
+        [commit]: 3
+        [path]: src/header.txt
+
+5:
+  tree:
+    # Create new file with same content as existing files
+    COPYING:
+      [commit]: 4
+      [path]: src/LICENSE.txt

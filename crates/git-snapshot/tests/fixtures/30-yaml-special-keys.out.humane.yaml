@@ -1,0 +1,12 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 1
+1:
+  tree:
+    '3.14': float as string key
+    '42': integer as string key
+    'false': boolean false as string key
+    'null': null as string key
+    'true': boolean true as string key
+    '~': tilde as string key

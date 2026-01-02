@@ -1,0 +1,12 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  message: commit 2
+  tree:
+    reachable.txt: on main branch
+2:
+  message: commit 3
+  tree:
+    reachable.txt: also on main

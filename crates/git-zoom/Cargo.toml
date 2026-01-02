@@ -1,0 +1,23 @@
+[package]
+name = "git-zoom"
+publish = false
+description = "git zoom in; git zoom out"
+keywords = []
+categories = []
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dev-dependencies]
+git-snapshot = { path = "../git-snapshot" }
+tempfile = { workspace = true }
+
+[dependencies]
+indexmap.workspace = true
+serde = { workspace = true, features = ["rc"] }
+serde_bytes = { workspace = true }
+serde_json = { workspace = true, features = ["preserve_order"] }
+serde_yaml = { workspace = true }
+sha1-checked = { workspace = true, features = ["std"], default-features = true }

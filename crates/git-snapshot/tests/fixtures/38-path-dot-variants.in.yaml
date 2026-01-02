@@ -1,0 +1,33 @@
+# Test various forms of root path (., empty string, absent)
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 4
+
+1:
+  tree:
+    file.txt: "original"
+    dir:
+      nested.txt: "nested"
+
+# Reference with [path]: . (explicit root)
+2:
+  tree:
+    root-ref:
+      [commit]: 1
+      [path]: .
+
+# Reference with [path]: "" (empty string, should be same as .)
+3:
+  tree:
+    empty-path-ref:
+      [commit]: 1
+      [path]: ""
+
+# Reference without [path] (should default to current path context)
+4:
+  tree:
+    file.txt:
+      [commit]: 1
+      [path]: file.txt

@@ -3,11 +3,17 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.0.0-dev-2025-12-25.6030"
+version = "0.0.0-dev-2025-12-26.7705"
 repository = "https://github.com/jeremyBanks/jeb"
+description = "(part of https://crates.io/crates/jeb)"
+keywords = []
+categories = []
 edition = "2024"
 license = "MIT OR Apache-2.0"
 include = ["**/*.rs", "**/*.toml", "**/*.lock", "**/*.md", "**/LICENSE*", "!.*"]
+
+[profile.dev.package.backtrace]
+opt-level = 3
 
 [profile.small]
 inherits = "release"
@@ -17,3 +23,66 @@ codegen-units = 1
 strip = true
 split-debuginfo = "packed"
 panic = "abort"
+
+[workspace.dependencies]
+jeb = { path = "crates/jeb", default-features = false }
+jeb-common = { path = "crates/jeb-common" }
+jeb-stream = { path = "crates/jeb-stream" }
+jeb-value = { path = "crates/jeb-value" }
+anyhow = "1.0.0"
+async-stream = "0.3.6"
+bstr = "0.2.17"
+cfg-if = "1.0.4"
+clap = "3.2.8"
+color-eyre = "0.6.5"
+derive_more = "2.0.1"
+digest = "0.10.3"
+dissimilar = "1.0.4"
+document-features = "0.2.12"
+dotenv = "0.15.0"
+expect-test = "1.4.0"
+eyre = "0.6.8"
+fast_hilbert = "2.0.2"
+futures = "0.3.0"
+getset = "0.1.6"
+git2 = "0.14.4"
+glob = "0.3.0"
+home = "0.5.3"
+ignorable = "0.1.2"
+ignore = "0.4.0"
+indexmap = "2.0.0"
+itertools = "0.10.3"
+js-sys = "0.3.82"
+macro_rules_attribute = "0.2.2"
+num-integer = "0.1.45"
+num-traits = "0.2.15"
+num_cpus = "1.13.1"
+once_cell = "1.13.0"
+owo-colors = "4.2.3"
+parking_lot = "0.12.1"
+pathdiff = "0.2.0"
+petgraph = "0.6.2"
+proc-macro2 = "1.0.40"
+regex = "1.12.2"
+semver = "1.0.0"
+serde = "1.0.0"
+serde_bytes = "0.11.0"
+serde_json = "1.0.0"
+serde_yaml = "0.9.34"
+sha-1 = "0.10.0"
+sha1-checked = "0.10.0"
+static_assertions = "1.1.0"
+tap = "1.0.1"
+tempfile = "3.3.0"
+thiserror = "2.0.0"
+thousands = "0.2.0"
+tokio = "1.0.0"
+tokio-stream = "0.1.0"
+tokio-util = "0.7.17"
+toml_edit = "0.22.0"
+tracing = "0.1.43"
+tracing-error = "0.2.0"
+tracing-subscriber = "0.3.22"
+walkdir = "2.0.0"
+wasm-bindgen = "0.2.105"
+web-sys = "0.3.82"
