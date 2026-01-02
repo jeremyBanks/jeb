@@ -119,9 +119,17 @@ impl TestRepo {
         // Git add all
         let add_result = Command::new("git").args(&["add", "."]).output();
 
-        // Git commit
+        // Git commit (with explicit author/committer matching git-snapshot defaults)
         let commit_result = Command::new("git")
-            .args(&["commit", "-m", message])
+            .args(&[
+                "-c",
+                "user.name=User",
+                "-c",
+                "user.email=user@localhost",
+                "commit",
+                "-m",
+                message,
+            ])
             .output();
 
         env::set_current_dir(original_dir).unwrap();
