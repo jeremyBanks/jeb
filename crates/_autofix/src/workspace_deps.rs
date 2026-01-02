@@ -1080,10 +1080,16 @@ fn update_member_toml(
                         .ok()
                         .flatten()
                     };
+                    // Check if it's a simple inline table that should be converted to dotted key
+                    let is_simple_inline_workspace = dep_item
+                        .as_inline_table()
+                        .map(|t| t.len() == 1 && t.contains_key("workspace"))
+                        .unwrap_or(false);
+
                     if let Some(dep) = dep {
                         if let Some(workspace_key) = dep_name_to_workspace_key.get(&dep.name) {
                             if should_use_workspace(&dep, workspace_updates, workspace_key)
-                                || currently_uses_workspace
+                                || (currently_uses_workspace && is_simple_inline_workspace)
                             {
                                 let mut table = InlineTable::new();
                                 table.insert("workspace", Value::from(true));
