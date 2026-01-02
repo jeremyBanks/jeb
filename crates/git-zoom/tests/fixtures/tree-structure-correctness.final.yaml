@@ -1,0 +1,74 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: c3cf1551d8d84d4858e9f9580d636a6c4a5a4441
+'057668':
+  message: commit 1
+  tree:
+    a:
+      b:
+        c:
+          deep.txt: deep
+        mid.txt: mid
+      top.txt: top
+    root.txt: root
+c44347:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:03:08Z
+  commit-date: 2026-01-02T21:03:08Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Initial commit
+  parents: []
+  tree: {}
+3634c3:
+  author-date: 2026-01-02T21:03:08Z
+  commit-date: 2026-01-02T21:03:08Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Merge from 'a/b'
+
+    git-zoom-in: a/b
+  parents:
+  - c44347
+  - '057668'
+  tree:
+    c:
+      deep.txt:
+        //commit: '057668'
+        //path: a/b/c/deep.txt
+    mid.txt:
+      //commit: '057668'
+      //path: a/b/mid.txt
+fb87a4:
+  author: User <user@localhost>
+  author-date: 2026-01-02T21:03:09Z
+  commit-date: 2026-01-02T21:03:09Z
+  message: |
+    Add files
+  tree:
+    another.txt: at b level
+    c:
+      new.txt: new file
+c3cf1551d8d84d4858e9f9580d636a6c4a5a4441:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:03:09Z
+  commit-date: 2026-01-02T21:03:09Z
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |
+    Merge to 'a/b'
+
+    git-zoom-out: a/b
+  parents:
+  - '057668'
+  - fb87a4
+  tree:
+    a:
+      b:
+        another.txt:
+          //commit: fb87a4
+          //path: another.txt
+        c:
+          new.txt:
+            //commit: fb87a4
+            //path: c/new.txt

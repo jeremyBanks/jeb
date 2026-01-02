@@ -1,0 +1,67 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: d50b3984631731908741b6e37a811417a708949b
+b50a41:
+  message: commit 1
+  tree:
+    README.md: Project Documentation - This is important.
+    docs:
+      guide.md: Guide - Step 1 Install
+    src:
+      lib:
+        core.rs: pub fn core() { /* complex code */ }
+        utils.rs: pub fn utils() {}
+4a3b6c:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:03:07Z
+  commit-date: 2026-01-02T21:03:07Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Initial commit
+  parents: []
+  tree: {}
+1ebefe:
+  author-date: 2026-01-02T21:03:07Z
+  commit-date: 2026-01-02T21:03:07Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Merge from 'src/lib'
+
+    git-zoom-in: src/lib
+  parents:
+  - 4a3b6c
+  - b50a41
+  tree:
+    core.rs:
+      //commit: b50a41
+      //path: src/lib/core.rs
+    utils.rs:
+      //commit: b50a41
+      //path: src/lib/utils.rs
+06ffac:
+  author: User <user@localhost>
+  author-date: 2026-01-02T21:03:08Z
+  commit-date: 2026-01-02T21:03:08Z
+  message: |
+    Update core
+  tree:
+    core.rs: pub fn core() { /* UPDATED */ }
+d50b3984631731908741b6e37a811417a708949b:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:03:08Z
+  commit-date: 2026-01-02T21:03:08Z
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |
+    Merge to 'src/lib'
+
+    git-zoom-out: src/lib
+  parents:
+  - b50a41
+  - 06ffac
+  tree:
+    src:
+      lib:
+        core.rs:
+          //commit: 06ffac
+          //path: core.rs

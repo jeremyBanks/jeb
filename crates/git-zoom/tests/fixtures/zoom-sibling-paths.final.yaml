@@ -1,0 +1,104 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: a4b7773ffb3864f62c4709216fea0a5a2481c02e
+a737f0:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:03:09Z
+  commit-date: 2026-01-02T21:03:09Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Initial commit
+  tree: {}
+50f528:
+  message: Initial commit
+  parents: []
+  tree:
+    docs:
+      guide.md: docs
+    src:
+      bin:
+        main.txt: binary
+      lib:
+        lib.txt: library
+a14ee0:
+  author-date: 2026-01-02T21:03:09Z
+  commit-date: 2026-01-02T21:03:09Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Merge from 'src/lib'
+
+    git-zoom-in: src/lib
+  parents:
+  - a737f0
+  - 50f528
+  tree:
+    lib.txt:
+      //commit: 50f528
+      //path: src/lib/lib.txt
+3e6833:
+  author: User <user@localhost>
+  author-date: 2026-01-02T21:03:09Z
+  commit-date: 2026-01-02T21:03:09Z
+  message: |
+    Update lib
+  tree:
+    lib.txt: library v2
+8871b8:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:03:09Z
+  commit-date: 2026-01-02T21:03:09Z
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |
+    Merge to 'src/lib'
+
+    git-zoom-out: src/lib
+  parents:
+  - 50f528
+  - 3e6833
+  tree:
+    src:
+      lib:
+        lib.txt:
+          //commit: 3e6833
+          //path: lib.txt
+a6dba0:
+  author-date: 2026-01-02T21:03:09Z
+  commit-date: 2026-01-02T21:03:09Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Merge from 'src/bin'
+
+    git-zoom-in: src/bin
+  parents:
+  - a737f0
+  - 8871b8
+  tree:
+    main.txt:
+      //commit: 50f528
+      //path: src/bin/main.txt
+332c5f:
+  author: User <user@localhost>
+  author-date: 2026-01-02T21:03:09Z
+  commit-date: 2026-01-02T21:03:09Z
+  message: |
+    Update bin
+  tree:
+    main.txt: binary v2
+a4b7773ffb3864f62c4709216fea0a5a2481c02e:
+  author-date: 2026-01-02T21:03:09Z
+  commit-date: 2026-01-02T21:03:09Z
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |
+    Merge to 'src/bin'
+
+    git-zoom-out: src/bin
+  parents:
+  - 8871b8
+  - 332c5f
+  tree:
+    src:
+      bin:
+        main.txt:
+          //commit: 332c5f
+          //path: main.txt

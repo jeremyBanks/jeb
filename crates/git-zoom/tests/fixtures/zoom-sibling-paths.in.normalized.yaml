@@ -1,0 +1,14 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: acabfd6f8f0fa4e1c1fe6bee9b09d0e6c88bb105
+acabfd6f8f0fa4e1c1fe6bee9b09d0e6c88bb105:
+  message: Initial commit
+  tree:
+    docs:
+      guide.md: docs
+    src:
+      bin:
+        main.txt: binary
+      lib:
+        lib.txt: library

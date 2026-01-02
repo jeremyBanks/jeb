@@ -1,0 +1,99 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 80253d1e7bb5ddb0ef8912e9fe5a759f84a89fb1
+4a3b6c:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:03:07Z
+  commit-date: 2026-01-02T21:03:07Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Initial commit
+  tree: {}
+79bac8:
+  message: commit 1
+  parents: []
+  tree:
+    root.txt: root
+    src:
+      lib:
+        core:
+          mod.rs: core module
+        lib.rs: lib root
+2dcbb1:
+  author-date: 2026-01-02T21:03:07Z
+  commit-date: 2026-01-02T21:03:07Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Merge from 'src/lib'
+
+    git-zoom-in: src/lib
+  parents:
+  - 4a3b6c
+  - 79bac8
+  tree:
+    core:
+      mod.rs:
+        //commit: 79bac8
+        //path: src/lib/core/mod.rs
+    lib.rs:
+      //commit: 79bac8
+      //path: src/lib/lib.rs
+e4a256:
+  author-date: 2026-01-02T21:03:07Z
+  commit-date: 2026-01-02T21:03:07Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Merge from 'core'
+
+    git-zoom-in: core
+  parents:
+  - 4a3b6c
+  - 2dcbb1
+  tree:
+    mod.rs:
+      //commit: 2dcbb1
+      //path: core/mod.rs
+9ec78e:
+  author: User <user@localhost>
+  author-date: 2026-01-02T21:03:08Z
+  commit-date: 2026-01-02T21:03:08Z
+  message: |
+    Update core
+  tree:
+    mod.rs: modified core
+54db4d:
+  author-date: 2026-01-02T21:03:08Z
+  commit-date: 2026-01-02T21:03:08Z
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |
+    Merge to 'core'
+
+    git-zoom-out: core
+  parents:
+  - 2dcbb1
+  - 9ec78e
+  tree:
+    core:
+      mod.rs:
+        //commit: 9ec78e
+        //path: mod.rs
+80253d1e7bb5ddb0ef8912e9fe5a759f84a89fb1:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:03:08Z
+  commit-date: 2026-01-02T21:03:08Z
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |
+    Merge to 'src/lib'
+
+    git-zoom-out: src/lib
+  parents:
+  - 79bac8
+  - 54db4d
+  tree:
+    src:
+      lib:
+        core:
+          mod.rs:
+            //commit: 54db4d
+            //path: core/mod.rs
