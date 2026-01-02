@@ -1,20 +1,20 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 8378a70182963f6c21c7e79ec3023c693e713b00
-'168541':
+    main: d48bbc67bf53c4f2081c4cb0fd53b9c94e82c687
+8f02ea:
   message: commit 1
   tree:
     dir:
       also-empty.txt: ''
     empty.txt: ''
     nonempty.txt: has content
-8378a70182963f6c21c7e79ec3023c693e713b00:
+d48bbc67bf53c4f2081c4cb0fd53b9c94e82c687:
   message: commit 2
   tree:
     dir:
       also-empty.txt: also has content now
     empty.txt: now has content
     nonempty.txt:
-      //commit: '168541'
+      //commit: 8f02ea
       //path: empty.txt

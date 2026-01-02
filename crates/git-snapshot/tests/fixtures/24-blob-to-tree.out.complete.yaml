@@ -1,54 +1,54 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    alternate: b1e6a88243d5c297082d327de49f23e77c67dbd9
-    main: 246c71fca462a89d2c8bec6e2bd5fe0907ecb0cb
-6b3fdadc2617771e12d7f22f31ee9d00999ad134:
+    alternate: 1981d7affbfcaf06f17e6097d7386e683c8d3216
+    main: 7dd50f00fe7a898c1e9792833ddda72c03095036
+7e7ccd4dbf58cf833c63d33a0ce05e19f34736cb:
   message: commit 1
   tree:
     path:
       to:
         item: This is a file
-211419ad71ac3f6f76269b617eeaec0e53c66864:
+93f4d5da45cba40df5427d24321203cdc0b44f31:
   message: commit 3
   parents: []
   tree: {}
-04782d139f0298a0e5af4a129b28a41cda9218e0:
+c5d9f3b791aa24400a3161781df5dd2c8a5a6dad:
   message: |
     Zoom in to path/to/item
 
     git-zoom-in: path/to/item
   parents:
-  - 211419ad71ac3f6f76269b617eeaec0e53c66864
-  - 6b3fdadc2617771e12d7f22f31ee9d00999ad134
+  - 93f4d5da45cba40df5427d24321203cdc0b44f31
+  - 7e7ccd4dbf58cf833c63d33a0ce05e19f34736cb
   tree:
     content.txt: extracted blob as tree
-ee9d6aa77139b5a07be8ff79a46f0d7b7b7cf5f3:
+82822dbc56648218d7226e4f5e6370f10f0e7505:
   message: |
     Zoom out to path/to/item
 
     git-zoom-out: path/to/item
   parents:
-  - 6b3fdadc2617771e12d7f22f31ee9d00999ad134
-  - 04782d139f0298a0e5af4a129b28a41cda9218e0
+  - 7e7ccd4dbf58cf833c63d33a0ce05e19f34736cb
+  - c5d9f3b791aa24400a3161781df5dd2c8a5a6dad
   tree:
     path:
       to:
         item:
           content.txt: extracted blob as tree
-b1e6a88243d5c297082d327de49f23e77c67dbd9:
+1981d7affbfcaf06f17e6097d7386e683c8d3216:
   message: commit 2
   parents:
-  - 6b3fdadc2617771e12d7f22f31ee9d00999ad134
+  - 7e7ccd4dbf58cf833c63d33a0ce05e19f34736cb
   tree:
     path:
       to:
         item:
           replaced.txt: Now it's a directory
-246c71fca462a89d2c8bec6e2bd5fe0907ecb0cb:
+7dd50f00fe7a898c1e9792833ddda72c03095036:
   message: commit 6
   parents:
-  - ee9d6aa77139b5a07be8ff79a46f0d7b7b7cf5f3
+  - 82822dbc56648218d7226e4f5e6370f10f0e7505
   tree:
     path:
       to:

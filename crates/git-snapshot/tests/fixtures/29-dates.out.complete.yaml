@@ -1,29 +1,30 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 5c16b86890d152d26de4f9d2a65d523768dfcd84
-fda6b12ba5d05cb75b9bbd2db18e72a4903a303c:
+    main: 4254e4205fa54e7770ee118b2a3f7b9e6dba63b9
+c40f52de48dda3fb3436cf1207709a440c16ea96:
   message: commit 1
   tree:
     file.txt: explicit date
-ec5f26662790cc46f6fddca789a136ccdcfc94dc:
+8f7dc354817bf366977a875b6aaa0cdc51caa497:
   author-date: 2021-01-14T14:25:36-02:00
+  commit-date: 2021-01-14T14:25:39-02:00
   message: commit 2
   tree:
     file.txt: with timezone
-336de131f39dbf355f1892b8dd5ec32c5d0197bc:
+c492e2d37ce10d8330fc3c5cb2319995794a854a:
   author-date: 2021-02-04T08:16:32Z
   message: commit 3
   tree:
     file.txt: partial date
-ba56e606a874bf728b7d5c2d9657c826190d78a1:
+754068e2407f710be6133d3761fc02db15202780:
   message: commit 4
   parents:
-  - ec5f26662790cc46f6fddca789a136ccdcfc94dc
-  - 336de131f39dbf355f1892b8dd5ec32c5d0197bc
+  - 8f7dc354817bf366977a875b6aaa0cdc51caa497
+  - c492e2d37ce10d8330fc3c5cb2319995794a854a
   tree:
     file.txt: merge
-5c16b86890d152d26de4f9d2a65d523768dfcd84:
+4254e4205fa54e7770ee118b2a3f7b9e6dba63b9:
   message: commit 5
   tree:
     file.txt: inherited date

@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 6f201eff9c107ae840660d6bd4bcc0fe2103835a
-466346a81f02bd540b2e43b530171162eeab2009:
+    main: cff27db92d75ffaec2929a1a76afe2bc0dff8b89
+b05bfdd35bc0c27e2c294cf22aa4f6f8e0222280:
   message: commit 1
   tree:
     bar:
@@ -10,7 +10,7 @@ refs:
     foo:
       a.txt: content a
       b.txt: content b
-6f201eff9c107ae840660d6bd4bcc0fe2103835a:
+cff27db92d75ffaec2929a1a76afe2bc0dff8b89:
   message: commit 2
   tree:
     c-moved.txt: content c

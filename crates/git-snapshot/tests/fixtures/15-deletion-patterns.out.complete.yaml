@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: f7a86a5c32167741ac95e3f4d776269f0803f7ea
-854e76b905b18b0a451c3a4ab2cfb210859cbab1:
+    main: c32451d91ab8d549b142d5dd83054d9b82298497
+6a7afa9d1dd2f547d76024a1ed5a0e87ca8934ee:
   message: commit 1
   tree:
     delete-soon.txt: will be deleted
@@ -11,26 +11,26 @@ refs:
       file-b.txt: b
       file-c.txt: c
     keep.txt: kept
-f2dadac594e975cf4975712aefbe3f53eb55380f:
+68adfe2f791adf839127c010824f1b125f250e16:
   message: commit 2
   tree:
     delete-soon.txt: null
-a0bb27d45760662b694d78de830e2a689f45890a:
+2c4821f1955e432d45295a0b3bd765b6ece8d6cd:
   message: commit 3
   tree:
     dir:
       file-b.txt: null
-3808d55f8b4a6ceb8271e14db88895268e2bf221:
+88deb4609514fda987ea37e8624df811ea716ab2:
   message: commit 4
   tree:
     delete-soon.txt: will be deleted
-01de44a0a2813195b1875135815da0c945a97370:
+f330d75cdc83190ccaa968a89e5fde63ce0367c1:
   message: commit 5
   tree:
     dir:
       file-a.txt: null
       file-c.txt: null
-f7a86a5c32167741ac95e3f4d776269f0803f7ea:
+c32451d91ab8d549b142d5dd83054d9b82298497:
   message: commit 6
   tree:
     dir:

@@ -1,41 +1,41 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    feature: 79ee737da3eb086315c6f270f42ab4f24c1e9649
-    main: b490b6e36fee921d2fe4cdeadeb0f82cc6d0ebd1
-a5e7ae8cf82ae6d4a1d8d7d407951cb0108637be:
+    feature: cef8d7cb2af0d1fa4af3067846db9169cfb42533
+    main: c2c1e375de1f07e026d10882923e4a632bfac000
+2e2dfd439e961033e26b7f628d97ad89a3e941eb:
   message: commit 1
   tree:
     base.txt: base
-692b9a7f5c4962cf385e62fe7533f1d074deb56e:
+d0a16c8eecffe9841e7497f00ac97f456579a35b:
   message: commit 2
   tree:
     main-work.txt: main work 1
-8691dd92e3ea97609f1b9794e56b02ec2a8eeeee:
+375553154680233f14d847eea4d0b9d8eb4688e4:
   message: commit 3
   parents:
-  - a5e7ae8cf82ae6d4a1d8d7d407951cb0108637be
+  - 2e2dfd439e961033e26b7f628d97ad89a3e941eb
   tree:
     feature-work.txt: feature work 1
-9d0c1feb4bb853e60a1c5e7b0a7ecd6a1c60cd7e:
+cfd3db107afe45123dfe717bfa5e53f0c79549ed:
   message: Merge feature into main (first time)
   parents:
-  - 692b9a7f5c4962cf385e62fe7533f1d074deb56e
-  - 8691dd92e3ea97609f1b9794e56b02ec2a8eeeee
+  - d0a16c8eecffe9841e7497f00ac97f456579a35b
+  - 375553154680233f14d847eea4d0b9d8eb4688e4
   tree:
     feature-work.txt: feature work 1
-79ee737da3eb086315c6f270f42ab4f24c1e9649:
+cef8d7cb2af0d1fa4af3067846db9169cfb42533:
   message: Merge main into feature
   parents:
-  - 8691dd92e3ea97609f1b9794e56b02ec2a8eeeee
-  - 9d0c1feb4bb853e60a1c5e7b0a7ecd6a1c60cd7e
+  - 375553154680233f14d847eea4d0b9d8eb4688e4
+  - cfd3db107afe45123dfe717bfa5e53f0c79549ed
   tree:
     feature-work-2.txt: feature work 2
     main-work.txt: main work 1
-b490b6e36fee921d2fe4cdeadeb0f82cc6d0ebd1:
+c2c1e375de1f07e026d10882923e4a632bfac000:
   message: Merge feature into main (second time)
   parents:
-  - 9d0c1feb4bb853e60a1c5e7b0a7ecd6a1c60cd7e
-  - 79ee737da3eb086315c6f270f42ab4f24c1e9649
+  - cfd3db107afe45123dfe717bfa5e53f0c79549ed
+  - cef8d7cb2af0d1fa4af3067846db9169cfb42533
   tree:
     feature-work-2.txt: feature work 2

@@ -1,16 +1,16 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: cbdb59f634ecc8e8c04157df8feb7e89695908d6
-bde99557f75bbf215febeb02158d800c7362416d:
+    main: 6bc21e59a7eafc4db9bf115c0b102206eb42d959
+ddd158642751c1416bbc83f3ff66563a805bc335:
   message: commit 1
   tree:
     base.txt: base content
-cfbf380f99f5f24217e4990b7cdc7841e28b9f2e:
+3b7d809195d472ea272da962f212a4f945775830:
   message: orphan seed
   parents: []
   tree: {}
-eca4c7c3915f031d3af8c46e7878c39c154a9bb0:
+5d698d7fe5224ed7c69f9889c0967b5062a5b50a:
   message: |
     Merge from subtree
 
@@ -19,25 +19,25 @@ eca4c7c3915f031d3af8c46e7878c39c154a9bb0:
 
     git-zoom-in: path/to/subtree
   parents:
-  - cfbf380f99f5f24217e4990b7cdc7841e28b9f2e
-  - bde99557f75bbf215febeb02158d800c7362416d
+  - 3b7d809195d472ea272da962f212a4f945775830
+  - ddd158642751c1416bbc83f3ff66563a805bc335
   tree:
     file.txt: content
-d220a88dfcf7efa74174ff6250defb77a01469b3:
+bb03a0e402993058411a3668a587f928ac60122a:
   message: |
     Merge to subtree
 
     git-zoom-out: path/to/subtree
     This line appears after the trailer
   parents:
-  - bde99557f75bbf215febeb02158d800c7362416d
-  - eca4c7c3915f031d3af8c46e7878c39c154a9bb0
+  - ddd158642751c1416bbc83f3ff66563a805bc335
+  - 5d698d7fe5224ed7c69f9889c0967b5062a5b50a
   tree:
     path:
       to:
         subtree:
           file.txt: content
-cbdb59f634ecc8e8c04157df8feb7e89695908d6:
+6bc21e59a7eafc4db9bf115c0b102206eb42d959:
   message: |
     Another merge
 

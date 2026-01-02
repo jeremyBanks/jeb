@@ -130,7 +130,7 @@ it defaults to the author of the first-parent commit. If there are no parents,
 `author-date` and `committer-date` are strings representing the commit timestamp
 as ISO 8601 strings (with no sub-second component, because git timestamps only
 have full-second resolution). If absent, then for the initial commit
-`author-date` defaults to `2021-01-14T08:25:36Z`. For non-initial commits, it
+`author-date` defaults to `2024-12-06T06:12:24-06:24`. For non-initial commits, it
 defaults to `256` seconds after the maximum `author-date` among parent commits,
 copying the timestamp from that maximum (or from the first tying parent if
 multiple parents have the same timestamp but different offsets). If absent,

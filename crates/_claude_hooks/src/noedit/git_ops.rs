@@ -258,3 +258,65 @@ pub fn create_revert_commit(
 
     Ok(())
 }
+
+/// Find the commit where the current Claude session started by walking
+/// first-parent history backward until we find a commit that's NOT from Claude.
+pub fn find_session_boundary(repo: &Repository) -> Result<Commit<'_>> {
+    let mut commit = repo
+        .head()
+        .context("Failed to get HEAD")?
+        .peel_to_commit()
+        .context("Failed to peel HEAD to commit")?;
+
+    loop {
+        // Check if this commit is from Claude
+        if !is_claude_commit(&commit)? {
+            // Found the boundary - this is the last non-Claude commit
+            return Ok(commit);
+        }
+
+        // Walk to first parent
+        let parents: Vec<_> = commit.parents().collect();
+        if parents.is_empty() {
+            // Reached initial commit, it's the boundary
+            return Ok(commit);
+        }
+
+        commit = parents[0].clone();
+    }
+}
+
+/// Check if a commit was made by Claude
+fn is_claude_commit(commit: &Commit) -> Result<bool> {
+    let message = commit.message().unwrap_or("");
+
+    // Check for Session-Id trailer
+    if message.contains("Session-Id:") {
+        return Ok(true);
+    }
+
+    // Check for Co-Authored-By trailer with noreply@anthropic.com
+    // Check both capitalizations: Co-Authored-By and Co-authored-by
+    for line in message.lines() {
+        let line_lower = line.to_lowercase();
+        if line_lower.starts_with("co-authored-by:") && line.contains("noreply@anthropic.com") {
+            return Ok(true);
+        }
+    }
+
+    // Check author email
+    if let Some(email) = commit.author().email() {
+        if email.contains("noreply@anthropic.com") {
+            return Ok(true);
+        }
+    }
+
+    // Check committer email
+    if let Some(email) = commit.committer().email() {
+        if email.contains("noreply@anthropic.com") {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}

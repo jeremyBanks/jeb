@@ -1,30 +1,30 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: ee0cd917fbc71c0feb4dd2f81cc92f353c356eee
-127e71d722dc37683e813c798de2c2fc0542bdad:
+    main: 0b1517b47fc6b6059c65e0253a4ef0a649590a12
+f526e424f369f85279b11f04d209642b4eb3e482:
   message: commit 1
   tree:
     dir:
       file.txt: content
     existing.txt: exists
-c67b813effac6e946b8809de9082da20f74027a4:
+94759215060cb9470081435870c081413c48517c:
   message: commit 2
   parents: []
   tree: {}
-c605eb3f77e7eff55e2b2226b7c119093239cf62:
+d4f009a0fbb42a903fe10c77eaa4c8c985a635c0:
   message: |
     Zoom in from non-existent path
 
     git-zoom-in: path/that/does/not/exist
   parents:
-  - c67b813effac6e946b8809de9082da20f74027a4
-  - 127e71d722dc37683e813c798de2c2fc0542bdad
-ee0cd917fbc71c0feb4dd2f81cc92f353c356eee:
+  - 94759215060cb9470081435870c081413c48517c
+  - f526e424f369f85279b11f04d209642b4eb3e482
+0b1517b47fc6b6059c65e0253a4ef0a649590a12:
   message: |
     Zoom out to different path
 
     git-zoom-out: another/path
   parents:
-  - 127e71d722dc37683e813c798de2c2fc0542bdad
-  - c605eb3f77e7eff55e2b2226b7c119093239cf62
+  - f526e424f369f85279b11f04d209642b4eb3e482
+  - d4f009a0fbb42a903fe10c77eaa4c8c985a635c0

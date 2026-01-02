@@ -4,20 +4,20 @@ refs:
     feature:
       subsystem:
         component:
-          branch: 280795efcd9059e2d491c3159c1aadaf3df6a225
-    main: f3f7e59cd50f4b845c41c932872da0cbe33883c5
+          branch: 9d00ee2e5cacc8222610a6375624170ffd6d7c4e
+    main: 2d91ba8f589d3d13b12efdbae2cec75fec3745aa
     release:
       v1:
-        hotfix: b9bec1cff939839449c18b0b93c0dc10c4afea46
-f3f7e59cd50f4b845c41c932872da0cbe33883c5:
+        hotfix: 4d2296fb81e2db4ee1a1bdd4b09fb4b131501912
+2d91ba8f589d3d13b12efdbae2cec75fec3745aa:
   message: commit 1
   tree:
     main.txt: main branch
-280795efcd9059e2d491c3159c1aadaf3df6a225:
+9d00ee2e5cacc8222610a6375624170ffd6d7c4e:
   message: commit 2
   tree:
     feature.txt: deep feature branch
-b9bec1cff939839449c18b0b93c0dc10c4afea46:
+4d2296fb81e2db4ee1a1bdd4b09fb4b131501912:
   message: commit 3
   tree:
     release.txt: release hotfix

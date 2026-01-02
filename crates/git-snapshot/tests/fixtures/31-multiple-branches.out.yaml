@@ -1,39 +1,39 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    feature-a: 50f34d9f92212773ff99c6b67e9d4e69b541aef4
-    feature-b: 1358732b7bdfe5ecad14a0c2991534153e2a3cdb
-    main: ca4f32a86d763bfd83e171045c7f21b3563821f9
-    zzz-last: e7056ea9941c45ed32d39233d6c67519955609f7
-2c6eb7:
+    feature-a: 819ab9bae3aa6ed47bc4443b1d9012aecde2d251
+    feature-b: e686c90e978e8d577b81abdacf588a9cb2bdedfe
+    main: bf58a50d779f9cae1be60094c89acb5aa7b2a6eb
+    zzz-last: 24042d00f3e50c9fb24a1ebcf2491577f1f39e36
+'775669':
   message: commit 1
   tree:
     file.txt: initial
-e7056ea9941c45ed32d39233d6c67519955609f7:
+24042d00f3e50c9fb24a1ebcf2491577f1f39e36:
   message: commit 2
   tree:
     file.txt: branch zzz-last
-50f34d9f92212773ff99c6b67e9d4e69b541aef4:
+819ab9bae3aa6ed47bc4443b1d9012aecde2d251:
   message: commit 3
   tree:
     feature-a.txt: a specific
     file.txt: feature a
-1358732b7bdfe5ecad14a0c2991534153e2a3cdb:
+e686c90e978e8d577b81abdacf588a9cb2bdedfe:
   message: commit 4
   tree:
     feature-b.txt: b specific
     file.txt: feature b
-ca4f32a86d763bfd83e171045c7f21b3563821f9:
+bf58a50d779f9cae1be60094c89acb5aa7b2a6eb:
   message: commit 5
   parents:
-  - 2c6eb7
-  - 50f34d9f92212773ff99c6b67e9d4e69b541aef4
-  - 1358732b7bdfe5ecad14a0c2991534153e2a3cdb
+  - '775669'
+  - 819ab9bae3aa6ed47bc4443b1d9012aecde2d251
+  - e686c90e978e8d577b81abdacf588a9cb2bdedfe
   tree:
     feature-a.txt:
-      //commit: 50f34d9f92212773ff99c6b67e9d4e69b541aef4
+      //commit: 819ab9bae3aa6ed47bc4443b1d9012aecde2d251
       //path: feature-a.txt
     feature-b.txt:
-      //commit: 1358732b7bdfe5ecad14a0c2991534153e2a3cdb
+      //commit: e686c90e978e8d577b81abdacf588a9cb2bdedfe
       //path: feature-b.txt
     file.txt: merged

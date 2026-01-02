@@ -1,34 +1,34 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 623e49fe52e9dd8baabd5ee3f4a231154573e708
-7987aa681f8a6a0f65769557efd58bc74f204c63:
+    main: b5fa79aff55abb9d401a28fba6329ce342821166
+dcaeacc6c7af4624f191f86421e7fb887c8047c1:
   message: commit 1
   tree:
     README.md: '# Base'
-0144ba681571762dafad528aa199775532719bcd:
+37b96c36957c178d9c9f78f8aa0e5c9d9ae8bbb8:
   message: commit 2
   tree:
     feature-a.txt: Feature A
-21e82ce3c0f05863528ab07643bf3dd5b6ac846a:
+a91345bbc69a11d1b54d2c4274a75ee70f82d3dc:
   message: commit 3
   parents:
-  - 7987aa681f8a6a0f65769557efd58bc74f204c63
+  - dcaeacc6c7af4624f191f86421e7fb887c8047c1
   tree:
     feature-b.txt: Feature B
-7a777b7f81aed3cf76577e5f19c278432fb97e3d:
+c981d7f112c5207422c983330bb1d41d85da41ab:
   message: commit 4
   parents:
-  - 7987aa681f8a6a0f65769557efd58bc74f204c63
+  - dcaeacc6c7af4624f191f86421e7fb887c8047c1
   tree:
     feature-c.txt: Feature C
-623e49fe52e9dd8baabd5ee3f4a231154573e708:
+b5fa79aff55abb9d401a28fba6329ce342821166:
   message: Merge branches feature-a, feature-b, and feature-c
   parents:
-  - 7987aa681f8a6a0f65769557efd58bc74f204c63
-  - 0144ba681571762dafad528aa199775532719bcd
-  - 21e82ce3c0f05863528ab07643bf3dd5b6ac846a
-  - 7a777b7f81aed3cf76577e5f19c278432fb97e3d
+  - dcaeacc6c7af4624f191f86421e7fb887c8047c1
+  - 37b96c36957c178d9c9f78f8aa0e5c9d9ae8bbb8
+  - a91345bbc69a11d1b54d2c4274a75ee70f82d3dc
+  - c981d7f112c5207422c983330bb1d41d85da41ab
   tree:
     feature-a.txt: Feature A
     feature-b.txt: Feature B

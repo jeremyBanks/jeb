@@ -3,6 +3,7 @@ use {
         git_ops::{
             create_revert_commit,
             find_git_root,
+            find_session_boundary,
             get_changed_files,
             restore_file_from_commit,
         },
@@ -17,48 +18,25 @@ use {
         Context,
         Result,
     },
-    git2::{
-        Oid,
-        Repository,
-    },
+    git2::Repository,
     std::path::PathBuf,
 };
 
 /// Handle PostToolUse hook: detect and auto-revert .noedit violations
 pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
-    // 1. Get JEB_CLAUDE_INITIAL_COMMIT from environment
-    let initial_commit_sha = match std::env::var("JEB_CLAUDE_INITIAL_COMMIT") {
-        Ok(sha) => {
-            eprintln!("PostToolUse: Found JEB_CLAUDE_INITIAL_COMMIT={}", sha);
-            sha
-        }
-        Err(_) => {
-            eprintln!("PostToolUse: JEB_CLAUDE_INITIAL_COMMIT not set, skipping validation");
-            // Return warning to user instead of silent fail-open
-            return Ok(Some(HookOutput {
-                should_continue: None,
-                stop_reason: None,
-                suppress_output: None,
-                system_message: Some(
-                    "⚠️ .noedit protection not active: JEB_CLAUDE_INITIAL_COMMIT not \
-                     set.\nProtection will activate on next session start."
-                        .to_string(),
-                ),
-                permission_decision: None,
-                hook_specific_output: None,
-            }));
-        }
-    };
-
-    // 2. Open git repository
+    // 1. Open git repository
     let repo_path = find_git_root(&input.cwd).context("Failed to find git repository")?;
     let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
-    // 3. Get initial commit object
-    let initial_oid = Oid::from_str(&initial_commit_sha).context("Invalid commit SHA")?;
-    let initial_commit = repo
-        .find_commit(initial_oid)
-        .context("Failed to find initial commit")?;
+    // 2. Find session boundary by scanning git history
+    let initial_commit =
+        find_session_boundary(&repo).context("Failed to find session boundary")?;
+
+    eprintln!(
+        "PostToolUse: Found session boundary at commit {} ({})",
+        initial_commit.id(),
+        initial_commit.summary().unwrap_or("<no summary>")
+    );
 
     // 4. Load .noedit patterns from initial commit
     let matcher = NoeditMatcher::from_commit(&repo, &initial_commit)

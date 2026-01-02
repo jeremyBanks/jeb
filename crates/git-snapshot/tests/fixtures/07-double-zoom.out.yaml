@@ -1,9 +1,9 @@
 HEAD: refs/heads/full-tree
 refs:
   heads:
-    full-tree: 9d7b56108f4cb3d49e2bf7d937c4f05f023a12f6
-    subtree: f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c
-577c26:
+    full-tree: 6450d8e8ffd24c35af759a46896e9bfa72a65679
+    subtree: b2b454e84ada1deaaceb88414c59ccb4681ed857
+'924032':
   message: commit 1
   tree:
     config.yaml: 'version: 1'
@@ -12,70 +12,70 @@ refs:
         init.rs: fn init() {}
       extra:
         addon.rs: fn addon() {}
-6e947b:
+4a0240:
   message: commit 2
   tree:
     config.yaml: 'version: 2'
-0fcdb0:
+114fc0:
   committer: git-zoom-in <git-zoom-in@localhost>
   message: git-zoom-in seed
   parents: []
   tree: {}
-'292750':
+2f9964:
   committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'modules/core'
 
     git-zoom-in: modules/core
   parents:
-  - 0fcdb0
-  - 6e947b
+  - 114fc0
+  - 4a0240
   tree:
     init.rs:
-      //commit: 577c26
+      //commit: '924032'
       //path: modules/core/init.rs
-22299b:
+e2f605:
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'modules/core'
 
     git-zoom-out: modules/core
   parents:
-  - 6e947b
-  - '292750'
-3f417e:
+  - 4a0240
+  - 2f9964
+fd76d8:
   message: commit 6
   tree:
     modules:
       extra:
         plugin.rs: fn plugin() {}
-01da74:
+fbc8d5:
   committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'modules/core'
 
     git-zoom-in: modules/core
   parents:
-  - '292750'
-  - 3f417e
+  - 2f9964
+  - fd76d8
   tree:
     init.rs: null
-f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c:
+b2b454e84ada1deaaceb88414c59ccb4681ed857:
   message: commit 8
   tree:
     cleanup.rs: fn cleanup() {}
-9d7b56108f4cb3d49e2bf7d937c4f05f023a12f6:
+6450d8e8ffd24c35af759a46896e9bfa72a65679:
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'modules/core'
 
     git-zoom-out: modules/core
   parents:
-  - 3f417e
-  - f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c
+  - fd76d8
+  - b2b454e84ada1deaaceb88414c59ccb4681ed857
   tree:
     modules:
       core:
         cleanup.rs:
-          //commit: f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c
+          //commit: b2b454e84ada1deaaceb88414c59ccb4681ed857
           //path: cleanup.rs

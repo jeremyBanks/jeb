@@ -7,7 +7,7 @@ refs:
 
 # Explicit full ISO 8601 date
 1:
-  author-date: 2021-01-14T08:25:36Z
+  author-date: 2024-12-06T06:12:24-06:24
   tree:
     file.txt: "explicit date"
 

@@ -1,9 +1,9 @@
 HEAD: refs/heads/full-tree
 refs:
   heads:
-    full-tree: 9d7b56108f4cb3d49e2bf7d937c4f05f023a12f6
-    subtree: f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c
-577c26ae589f37c68b86f00fe8a471c8fceec372:
+    full-tree: 6450d8e8ffd24c35af759a46896e9bfa72a65679
+    subtree: b2b454e84ada1deaaceb88414c59ccb4681ed857
+92403297d87814b333bd580694096182634f6211:
   message: commit 1
   tree:
     config.yaml: 'version: 1'
@@ -12,65 +12,65 @@ refs:
         init.rs: fn init() {}
       extra:
         addon.rs: fn addon() {}
-6e947bd52eb360e79191322a5793cf7045ff76c1:
+4a024081b2466e4aef7af8b1502c3d889010164b:
   message: commit 2
   tree:
     config.yaml: 'version: 2'
-0fcdb08f390a6996c3e55f1b1e5ed6ff96699b3f:
+114fc0e48044cff455d648243bb6985aee9ff036:
   committer: git-zoom-in <git-zoom-in@localhost>
   message: git-zoom-in seed
   parents: []
   tree: {}
-2927506cc544b19f96f7d73138685db53c4b7dca:
+2f99644a18d6452696f2a355637511c018c4bf5c:
   committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'modules/core'
 
     git-zoom-in: modules/core
   parents:
-  - 0fcdb08f390a6996c3e55f1b1e5ed6ff96699b3f
-  - 6e947bd52eb360e79191322a5793cf7045ff76c1
+  - 114fc0e48044cff455d648243bb6985aee9ff036
+  - 4a024081b2466e4aef7af8b1502c3d889010164b
   tree:
     init.rs: fn init() {}
-22299b287b211d24042f5851b2cb0fd2d743d2a1:
+e2f6050953be8651b199609f79ce1a4746533052:
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'modules/core'
 
     git-zoom-out: modules/core
   parents:
-  - 6e947bd52eb360e79191322a5793cf7045ff76c1
-  - 2927506cc544b19f96f7d73138685db53c4b7dca
-3f417eab41de1eb24278a35502292c31a5af5c3a:
+  - 4a024081b2466e4aef7af8b1502c3d889010164b
+  - 2f99644a18d6452696f2a355637511c018c4bf5c
+fd76d82e09de730346794ea31e7822fdbbbed807:
   message: commit 6
   tree:
     modules:
       extra:
         plugin.rs: fn plugin() {}
-01da7440079fcf0362984730cae7c4fdf3a6a656:
+fbc8d58bc343bda0946f53ba7e0566991d4e69df:
   committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'modules/core'
 
     git-zoom-in: modules/core
   parents:
-  - 2927506cc544b19f96f7d73138685db53c4b7dca
-  - 3f417eab41de1eb24278a35502292c31a5af5c3a
+  - 2f99644a18d6452696f2a355637511c018c4bf5c
+  - fd76d82e09de730346794ea31e7822fdbbbed807
   tree:
     init.rs: null
-f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c:
+b2b454e84ada1deaaceb88414c59ccb4681ed857:
   message: commit 8
   tree:
     cleanup.rs: fn cleanup() {}
-9d7b56108f4cb3d49e2bf7d937c4f05f023a12f6:
+6450d8e8ffd24c35af759a46896e9bfa72a65679:
   committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'modules/core'
 
     git-zoom-out: modules/core
   parents:
-  - 3f417eab41de1eb24278a35502292c31a5af5c3a
-  - f9dd3a8577faa7165cfad3a8c83ff6010fcbd16c
+  - fd76d82e09de730346794ea31e7822fdbbbed807
+  - b2b454e84ada1deaaceb88414c59ccb4681ed857
   tree:
     modules:
       core:

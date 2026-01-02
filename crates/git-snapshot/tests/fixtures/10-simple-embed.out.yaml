@@ -1,23 +1,23 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 6b90c780687048d89b41651c099c4a56e4fe9d9c
-f05d76:
+    main: d1d549c06dc01dd61b409ca4794940da2fd89b9c
+ab1702:
   message: commit 1
   tree:
     dir:
       inner.txt: inner
     outer.txt: outer
-6b90c780687048d89b41651c099c4a56e4fe9d9c:
+d1d549c06dc01dd61b409ca4794940da2fd89b9c:
   message: commit 3
   tree:
     dir:
       dir:
         inner.txt:
-          //commit: f05d76
+          //commit: ab1702
           //path: dir/inner.txt
       file-a.txt: a
       file-b.txt: b
       outer.txt:
-        //commit: f05d76
+        //commit: ab1702
         //path: outer.txt

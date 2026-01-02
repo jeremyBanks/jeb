@@ -1,12 +1,12 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: c0a2d22c76efee158a9d1f5e735801c9ac491e46
-2e675b:
+    main: f10aff0e68edae8eebf6ba80ba3265cc4b70d3b8
+69f3cd:
   message: commit 2
   tree:
     reachable.txt: on main branch
-c0a2d22c76efee158a9d1f5e735801c9ac491e46:
+f10aff0e68edae8eebf6ba80ba3265cc4b70d3b8:
   message: commit 3
   tree:
     reachable.txt: also on main

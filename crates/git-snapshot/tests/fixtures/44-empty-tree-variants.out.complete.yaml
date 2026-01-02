@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 3beaea42ac782bf47c72401788de8a7de150b272
-71ab3cc984816834bb19fe013b82e9f5684469fb:
+    main: b427d3b5c5e93c0597c822d36ae7071a27ea431c
+d97511cec3f0db874f8353b522966ef7efaff5f0:
   message: commit 1
   tree:
     dir:
@@ -10,7 +10,7 @@ refs:
     file.txt: content
     other-dir:
       file.txt: other
-596506e93e8081c0f8f4857b95073e640432eb47:
+5679445bf87b0a949f90b20b04cc974c149ab5bc:
   message: commit 3
   tree:
     dir:
@@ -18,7 +18,7 @@ refs:
     file.txt: kept
     other-dir:
       file.txt: null
-3beaea42ac782bf47c72401788de8a7de150b272:
+b427d3b5c5e93c0597c822d36ae7071a27ea431c:
   message: commit 4
   tree:
     has-content:

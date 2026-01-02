@@ -11,6 +11,15 @@ refs:
   parents: []
   tree: {}
 3:
+  message: commit 2
+  parents:
+  - 1
+  tree:
+    second-location:
+      file.txt:
+        //commit: 1
+        //path: original-location/file.txt
+4:
   message: |
     Zoom in from original-location
 
@@ -22,25 +31,18 @@ refs:
     file.txt:
       //commit: 1
       //path: original-location/file.txt
-4:
-  message: commit 2
-  parents:
-  - 1
-  tree:
-    second-location:
-      file.txt:
-        //commit: 3
-        //path: file.txt
 5:
   message: commit 3
+  parents:
+  - 3
   tree:
     third-location:
       file.txt:
-        //commit: 3
+        //commit: 4
         //path: file.txt
 6:
   parents:
-  - 3
+  - 4
   tree:
     file.txt: modified content
     new.txt: new file

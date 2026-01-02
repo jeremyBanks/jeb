@@ -1,13 +1,13 @@
 HEAD: refs/heads/nonexistent
 refs:
   heads:
-    main: c5a56831883d79187695972f37869285b6623d06
-    other: 60e3416618f1784fad9ca7bb61c078606aae9425
-c5a56831883d79187695972f37869285b6623d06:
+    main: d899f9456f21f78f1c22920331a0ed63999215aa
+    other: faef872891e4afdecfdd027fff36684926df8aff
+d899f9456f21f78f1c22920331a0ed63999215aa:
   message: commit 1
   tree:
     file.txt: on main
-60e3416618f1784fad9ca7bb61c078606aae9425:
+faef872891e4afdecfdd027fff36684926df8aff:
   message: commit 2
   tree:
     file.txt: on other

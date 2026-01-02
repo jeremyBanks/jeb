@@ -1,12 +1,12 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 5114f40ecce02a350255851b60e83b7bbc812849
-aaac89:
+    main: 54921803effca54967ecdc3c6491aef07462974f
+4727b1:
   message: Simple single-line message
   tree:
     file.txt: content
-4e8483:
+c674bd:
   message: |
     Multi-line message
 
@@ -15,7 +15,7 @@ aaac89:
     Multiple paragraphs.
   tree:
     file.txt: change
-f19726:
+f67ede:
   message: |
     Message with special YAML characters
 
@@ -26,7 +26,7 @@ f19726:
     Signed-off-by: Author <author@example.com>
   tree:
     file.txt: special
-5114f40ecce02a350255851b60e83b7bbc812849:
+54921803effca54967ecdc3c6491aef07462974f:
   message: |
     Message with trailers
 

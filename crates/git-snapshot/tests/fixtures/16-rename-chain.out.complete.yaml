@@ -1,34 +1,34 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: add347d1d43bbe1fc67a5b0e1ce3b4ed324b8369
-46906de8557cec7896ec31543bab52cc6c93f8fc:
+    main: 30f444d2344ab132fcb640142ee9f87229428fc0
+2699a41ee6b8efdf0da27b5fa2cf773e0f5d3538:
   message: commit 1
   tree:
     original-name.txt: content that moves around
     static.txt: never moves
-16568a18a66e3173c6284b0b3906d71ede3384b6:
+7cd471b40d16ba571227abda46555a7e297a73f5:
   message: commit 2
   tree:
     renamed-once.txt: content that moves around
-668b7ece7376c543578b50fa327024123bdbc23e:
+d58c784004bf9d04539691dad0df76d7b9d44c54:
   message: commit 3
   tree:
     renamed-twice.txt: content that moves around
-a7663335d8b73a5b5023d755188c51b0d8d03f3c:
+05e5cfbc320ad19905d98e0d29b7694d39f2a8b8:
   message: commit 4
   tree:
     renamed-thrice.txt: content that moves around
-533f30db4076f3bf8eac43b13a139bc6399e5186:
+afd815b6798a4998266a97aa82275f31da562895:
   message: commit 5
   tree:
     final-name.txt: content that moves around
-06b5e8b13748fcdacd79b919cf8c2a9a80e64b36:
+08855da8ef82073a5c293e5be39ac4c40437d515:
   message: commit 6
   tree:
     archive:
       final-name.txt: content that moves around
-add347d1d43bbe1fc67a5b0e1ce3b4ed324b8369:
+30f444d2344ab132fcb640142ee9f87229428fc0:
   message: commit 7
   tree:
     restored.txt: content that moves around

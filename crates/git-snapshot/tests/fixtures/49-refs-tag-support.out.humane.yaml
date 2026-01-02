@@ -1,24 +1,22 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    develop: 3
-    main: 2
+    develop: 2
+    main: 3
   remotes:
     origin:
-      main: 2
+      main: 3
   tags:
     v1.0: 1
-    v2.0: 2
+    v2.0: 3
 1:
   tree:
     README.md: Version 1.0
 2:
-  message: commit 3
   tree:
-    README.md: Version 2.0
+    README.md: Version 2.0-dev
 3:
-  message: commit 2
   parents:
   - 1
   tree:
-    README.md: Version 2.0-dev
+    README.md: Version 2.0

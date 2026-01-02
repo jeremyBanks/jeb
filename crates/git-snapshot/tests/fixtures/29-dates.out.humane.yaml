@@ -7,6 +7,7 @@ refs:
     file.txt: explicit date
 2:
   author-date: 2021-01-14T14:25:36-02:00
+  commit-date: 2021-01-14T14:25:39-02:00
   tree:
     file.txt: with timezone
 3:

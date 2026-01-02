@@ -1,16 +1,16 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: cade35fc6609c4411f29cda64eb46f680df2c62a
-3c19c8:
+    main: 2719667f69902168190c10c4ab7edb21286847fb
+39a4db:
   message: commit 1
   tree:
     file.txt: first
-1417fc:
+a26fee:
   message: commit 2
   tree:
     file.txt: second
-cade35fc6609c4411f29cda64eb46f680df2c62a:
+2719667f69902168190c10c4ab7edb21286847fb:
   message: explicit message
   tree:
     file.txt: third

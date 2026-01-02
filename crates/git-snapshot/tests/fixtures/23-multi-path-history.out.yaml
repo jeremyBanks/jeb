@@ -1,68 +1,70 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 3cbe233b7f2f7eef369d80a1377e200b509b74cf
-c36e23:
+    main: bbf1918341748c8dcc21d4b2436f8bbde2b454fd
+6296bc:
   message: commit 1
   tree:
     original-location:
       file.txt: content that travels
-'471739':
+85944b:
   message: commit 4
   parents: []
   tree: {}
-'122756':
+5bf7bc:
+  message: commit 2
+  parents:
+  - 6296bc
+  tree:
+    second-location:
+      file.txt:
+        //commit: 6296bc
+        //path: original-location/file.txt
+fc2f5c:
   message: |
     Zoom in from original-location
 
     git-zoom-in: original-location
   parents:
-  - '471739'
-  - c36e23
+  - 85944b
+  - 6296bc
   tree:
     file.txt:
-      //commit: c36e23
+      //commit: 6296bc
       //path: original-location/file.txt
-4b3150:
-  message: commit 2
-  parents:
-  - c36e23
-  tree:
-    second-location:
-      file.txt:
-        //commit: '122756'
-        //path: file.txt
-1d7043:
+af2adb:
   message: commit 3
+  parents:
+  - 5bf7bc
   tree:
     third-location:
       file.txt:
-        //commit: '122756'
+        //commit: fc2f5c
         //path: file.txt
-03f594:
+f6f218:
   message: commit 6
   parents:
-  - '122756'
+  - fc2f5c
   tree:
     file.txt: modified content
     new.txt: new file
-08295c:
+a79f40:
   message: |
     Zoom out to third-location
 
     git-zoom-out: third-location
   parents:
-  - 1d7043
-  - 03f594
+  - af2adb
+  - f6f218
   tree:
     third-location:
       file.txt:
-        //commit: 03f594
+        //commit: f6f218
         //path: file.txt
       new.txt:
-        //commit: 03f594
+        //commit: f6f218
         //path: new.txt
-3cbe233b7f2f7eef369d80a1377e200b509b74cf:
+bbf1918341748c8dcc21d4b2436f8bbde2b454fd:
   message: commit 8
   tree:
     other.txt: unrelated

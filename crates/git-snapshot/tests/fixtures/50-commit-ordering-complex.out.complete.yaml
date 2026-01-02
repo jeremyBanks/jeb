@@ -1,60 +1,60 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    feature-a: 56e73d8006ecefa8469318404d75e5f113c6e396
-    feature-b: 546fcfd2d87913b6b172e5a1d9b834defe36f28c
-    main: b4d2a1a7072448bdfae5f12e561a89831787617e
-59eb675daa706af63b2d1e4fe171bf1d134a3ea0:
+    feature-a: 9d091d0299a9f2909d15512a7f2bb9d3be95707a
+    feature-b: 6d09da17e930fd559c467d9fb1e6f18a92748521
+    main: 371c3672d56163a9a2d80d6cc3db2ddb8f46deaa
+b54bd7c5dc1eb355e3590ce5604d88d2b260dfe3:
   message: commit 1
   tree:
     main.txt: initial
-1cc0fe8d7164bab4dbb10ff5111304bbbb351c28:
+b015b53bd215b3fd8c4942c98ffed83dedd7b696:
   message: commit 2
   tree:
     main.txt: main commit 2
-521feeccb77a7a4d8d899615c1721b7302ae9d04:
+8c6d47101f5ebbecbf555be846ec0a60dbb6eb3b:
   message: commit 3
   parents:
-  - 59eb675daa706af63b2d1e4fe171bf1d134a3ea0
+  - b54bd7c5dc1eb355e3590ce5604d88d2b260dfe3
   tree:
     feature-a.txt: feature a work
-6790e193f120ada34f4c73820ccc332ec4f7e3fa:
+0723564a921e6c3f25025034b4e88d5e6355be67:
   message: commit 4
   tree:
     feature-a.txt: feature a more work
-7c0d5091b4bf05e12206179b165a5603e350652c:
+1f946ab18ed7fc259130cd1a28e41fd8a97108f1:
   message: commit 7
   parents:
-  - 1cc0fe8d7164bab4dbb10ff5111304bbbb351c28
+  - b015b53bd215b3fd8c4942c98ffed83dedd7b696
   tree:
     feature-b.txt: feature b work
-56e73d8006ecefa8469318404d75e5f113c6e396:
+9d091d0299a9f2909d15512a7f2bb9d3be95707a:
   message: commit 5
   parents:
-  - 6790e193f120ada34f4c73820ccc332ec4f7e3fa
+  - 0723564a921e6c3f25025034b4e88d5e6355be67
   tree:
     feature-a.txt: feature a complete
-d0368bf32f7d4b31ca43bbcb7569c1af50893352:
+0b7025e43346adce308ecfc2a16194edcf6692a9:
   message: commit 6
   parents:
-  - 1cc0fe8d7164bab4dbb10ff5111304bbbb351c28
-  - 56e73d8006ecefa8469318404d75e5f113c6e396
+  - b015b53bd215b3fd8c4942c98ffed83dedd7b696
+  - 9d091d0299a9f2909d15512a7f2bb9d3be95707a
   tree:
     feature-a.txt: feature a complete
-546fcfd2d87913b6b172e5a1d9b834defe36f28c:
+6d09da17e930fd559c467d9fb1e6f18a92748521:
   message: commit 8
   parents:
-  - 7c0d5091b4bf05e12206179b165a5603e350652c
+  - 1f946ab18ed7fc259130cd1a28e41fd8a97108f1
   tree:
     feature-b.txt: feature b complete
-4ed7a8e1cc103cbba60140f06e5cf3fe5f6f11ba:
+4e15ebe6c755ec1a4f81fa66cc630bd80f31330d:
   message: commit 9
   parents:
-  - d0368bf32f7d4b31ca43bbcb7569c1af50893352
-  - 546fcfd2d87913b6b172e5a1d9b834defe36f28c
+  - 0b7025e43346adce308ecfc2a16194edcf6692a9
+  - 6d09da17e930fd559c467d9fb1e6f18a92748521
   tree:
     feature-b.txt: feature b complete
-b4d2a1a7072448bdfae5f12e561a89831787617e:
+371c3672d56163a9a2d80d6cc3db2ddb8f46deaa:
   message: commit 10
   tree:
     main.txt: main final

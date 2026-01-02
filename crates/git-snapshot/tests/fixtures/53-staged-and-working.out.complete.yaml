@@ -1,4 +1,4 @@
-HEAD: 8eaa35e3cb8418d8e6532e11b968ee8aa5f5c400
+HEAD: 7b7d52448ce9234a47b1c5bc0c2dbcfaab184a29
 refs: {}
 staged:
   README.md: '# Project v0.1'
@@ -8,7 +8,7 @@ working:
   README.md: '# Project v0.1 (WIP)'
   tests:
     test.rs: '#[test] fn test_it() {}'
-8eaa35e3cb8418d8e6532e11b968ee8aa5f5c400:
+7b7d52448ce9234a47b1c5bc0c2dbcfaab184a29:
   message: Initial commit
   tree:
     README.md: '# Project'

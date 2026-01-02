@@ -1,34 +1,34 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: f464a016ea2ebb445907206e7ee3619ae735145a
-cba38c:
+    main: 14aa7697ae9406502172b0d1c5b1f06eada68deb
+e5aca0:
   message: commit 1
   tree:
     dir:
       nested.txt: nested
     file.txt: original
-8825be:
+50abcb:
   message: commit 2
   tree:
     root-ref:
       dir:
         nested.txt:
-          //commit: cba38c
+          //commit: e5aca0
           //path: dir/nested.txt
       file.txt:
-        //commit: cba38c
+        //commit: e5aca0
         //path: file.txt
-3b0984:
+c9ff17:
   message: commit 3
   tree:
     empty-path-ref:
       dir:
         nested.txt:
-          //commit: cba38c
+          //commit: e5aca0
           //path: dir/nested.txt
       file.txt:
-        //commit: cba38c
+        //commit: e5aca0
         //path: file.txt
-f464a016ea2ebb445907206e7ee3619ae735145a:
+14aa7697ae9406502172b0d1c5b1f06eada68deb:
   message: commit 4
