@@ -301,6 +301,15 @@ inner `Vec<u8>`.
 r[jeb-value.bytes.from-inner]  
 The `Bytes` variant type MUST implement `From<Vec<u8>>`.
 
+r[jeb-value.bytes.from-slice]
+The `Bytes` variant type MUST implement `From<&[u8]>`.
+
+r[jeb-value.bytes.from-iterator]
+The `Bytes` variant type MUST implement `FromIterator<u8>>`.
+
+r[jeb-value.bytes.from-slice-iterator]
+The `Bytes` variant type MUST implement `FromIterator<&[u8]>>`.
+
 ### `String`
 
 r[jeb-value.string.struct]  
@@ -310,14 +319,44 @@ inner `String`.
 r[jeb-value.string.from-inner]  
 The `String` variant type MUST implement `From<String>`.
 
+r[jeb-value.string.from-str]  
+The `String` variant type MUST implement `From<&str>`.
+
+r[jeb-value.string.from-char-iterator]
+The `String` variant type MUST implement `FromIterator<char>>`.
+
+r[jeb-value.string.from-string-iterator]
+The `String` variant type MUST implement `FromIterator<String>>`.
+
+r[jeb-value.string.from-str-iterator]
+The `String` variant type MUST implement `FromIterator<&str>>`.
+
 ### `Array`
 
 r[jeb-value.array.struct]  
 The `Array` variant type MUST be a single-item tuple struct wrapping an
 inner `Vec<Value>`.
 
+r[jeb-value.array.len]  
+The `Array` variant type MUST implement `.len(&self) -> usize`.
+
+r[jeb-value.array.is-empty]  
+The `Array` variant type MUST implement `.is_empty(&self) -> bool`.
+
+r[jeb-value.array.iter]
+The `Array` variant type MUST implement `.iter(&self) -> impl Iterator<Item=&Value>`.
+
+r[jeb-value.array.into-iterator]
+The `Array` variant type MUST implement `IntoIterator<Item=Value>`.
+
 r[jeb-value.array.from-inner]  
 The `Array` variant type MUST implement `From<Vec<Value>>`.
+
+r[jeb-value.array.from-slice]
+The `Array` variant type MUST implement `From<&[Value]>`.
+
+r[jeb-value.array.from-iterator]
+The `Array` variant type MUST implement `FromIterator<Value>`.
 
 ### `BytesMap`
 
@@ -325,9 +364,46 @@ r[jeb-value.bytes-map.struct]
 The `BytesMap` variant type MUST be a single-item tuple struct wrapping an
 inner `indexmap::IndexMap<Vec<u8>, Value>`.
 
+r[jeb-value.bytes-map.len]  
+The `BytesMap` variant type MUST implement `.len(&self) -> usize`.
+
+r[jeb-value.bytes-map.is-empty]  
+The `BytesMap` variant type MUST implement `.is_empty(&self) -> bool`.
+
+r[jeb-value.bytes-map.index]  
+The `BytesMap` variant type MUST implement `Index` delegating to the inner map.
+XXX: However, it must also implement `Index` accepting a `Value`. Do these
+requirements contradict?
+
+r[jeb-value.bytes-map.get]
+The `BytesMap` variant type MUST implement `.get` delegating to the inner map.
+XXX: However, it must also implement `.get` accepting a `Value`. Do these
+requirements contradict?
+
+r[jeb-value.bytes-map.contains-key]
+The `BytesMap` variant type MUST implement `.contains_key` delegating to the inner map.
+XXX: However, it must also implement `.contains_key` accepting a `Value`. Do
+these requirements contradict?
+
 r[jeb-value.bytes-map.from-inner]  
 The `BytesMap` variant type MUST implement
 `From<indexmap::IndexMap<Vec<u8>, Value>>`.
+
+r[jeb-value.bytes-map.keys]  
+The `BytesMap` variant type MUST implement
+`.keys(&self) -> impl Iterator<Item=&Vec<u8>>`.
+
+r[jeb-value.bytes-map.values]  
+The `BytesMap` variant type MUST implement
+`.values(&self) -> impl Iterator<Item=&Value>`.
+
+r[jeb-value.bytes-map.iter]  
+The `BytesMap` variant type MUST implement
+`.iter(&self) -> impl Iterator<Item=(&Vec<u8>, &Value)>`.
+
+r[jeb-value.bytes-map.into-iterator]  
+The `BytesMap` variant type MUST implement
+`IntoIterator<Item=(Vec<u8>, Value)>`.
 
 ### `StringMap`
 
@@ -335,9 +411,46 @@ r[jeb-value.string-map.struct]
 The `StringMap` variant type MUST be a single-item tuple struct wrapping an
 inner `indexmap::IndexMap<String, Value>`.
 
+r[jeb-value.string-map.len]  
+The `StringMap` variant type MUST implement `.len` delegating to the inner map.
+
+r[jeb-value.string-map.is-empty]  
+The `StringMap` variant type MUST implement `.is_empty` delegating to the inner map.
+
+r[jeb-value.string-map.index]  
+The `StringMap` variant type MUST implement `Index` delegating to the inner map.
+XXX: However, it must also implement `Index` accepting a `Value`. Do these
+requirements contradict?
+
+r[jeb-value.string-map.get]
+The `StringMap` variant type MUST implement `.get` delegating to the inner map.
+XXX: However, it must also implement `.get` accepting a `Value`. Do these
+requirements contradict?
+
+r[jeb-value.string-map.contains-key]
+The `StringMap` variant type MUST implement `.contains_key` delegating to the inner map.
+XXX: However, it must also implement `.contains_key` accepting a `Value`. Do
+these requirements contradict?
+
 r[jeb-value.string-map.from-inner]  
 The `StringMap` variant type MUST implement
 `From<indexmap::IndexMap<String, Value>>`.
+
+r[jeb-value.string-map.keys]  
+The `StringMap` variant type MUST implement
+`.keys(&self) -> impl Iterator<Item=&String>`.
+
+r[jeb-value.string-map.values]  
+The `StringMap` variant type MUST implement
+`.values(&self) -> impl Iterator<Item=&Value>`.
+
+r[jeb-value.string-map.iter]  
+The `StringMap` variant type MUST implement
+`.iter(&self) -> impl Iterator<Item=(&String, &Value)>`.
+
+r[jeb-value.string-map.into-iterator]  
+The `StringMap` variant type MUST implement
+`IntoIterator<Item=(String, Value)>`.
 
 ## Serde
 
@@ -355,13 +468,38 @@ r[jeb-value.serde.representation]
 `Value`'s implementations of `serde::Serialize` and `serde::Deserialize` must
 be compatible with the (default) externally-tagged enum representation.
 
+r[jeb-value.serde.serializer]
+The crate MUST provide a `ValueSerializer` type implementing
+`serde::ser::Serializer` which serializes an arbitrary serde-serializable type
+into a `Value`. This MUST NOT use on our own `Value`'s `serde::Serialize`
+implementation, as the behavior will differ. This type MUST be publicly exported
+from `crate::serde`.
+
+r[jeb-value.serde.deserializer]
+The crate MUST provide a `ValueDeserializer` type implementing
+`serde::de::Deserializer` which deserializes an arbitrary serde-deserializable
+type from a `Value`. This MUST NOT use on our own `Value`'s `serde::Deserialize`
+implementation, as the behavior will differ. This type MUST be publicly exported
+from `crate::serde`.
+
+r[jeb-value.serde.convert]  
+`Value` MUST implement
+`Self::from_serde(T: impl serde::Serialize) -> Result<Self, E>`
+and `Self::to_serde(&self) -> T where T: serde::Deserialize`, which convert
+between `Value` and any serde-serializable/deserializable type `T` using the
+`ValueSerializer` and `ValueDeserializer` types respectively.
+
 r[jeb-value.serde.bytes.representation]  
 `Bytes`'s implementations of `serde::Serialize` and `serde::Deserialize` MUST
 be compatible with `serde_bytes` crate's representation for byte strings (i.e.
 it should support the bytes-specific serde logic, not only the generic sequence
 logic).
 
-r[jeb-value.serde.traits]  
+r[jeb-value.serde.bytes-map.representation]  
+`BytesMap`'s implementations of `serde::Serialize` and `serde::Deserialize` MUST
+serialize and deserialize map keys using `serde_bytes` crate's representation
+for byte strings (i.e. it should support the bytes-specific serde logic, not
+only the generic sequence logic).
 
 ## Facet
 
