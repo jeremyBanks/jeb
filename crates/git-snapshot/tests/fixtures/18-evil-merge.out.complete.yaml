@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 25512ac8a697bd0c531ceb78315ae816beed4c55
-f6ed4b6982fb4da9402037a96eb94339faa68cae:
+    main: 4077b5aa8ab76798a38b3fcf71204532ecc0bedc
+786927a338d7a850676ded4f72adab7acf838d82:
   author: User <user@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
@@ -11,49 +11,49 @@ f6ed4b6982fb4da9402037a96eb94339faa68cae:
   parents: []
   tree:
     file.txt: version A
-0a0be395070217bc7516b382e07dd1be04f410b3:
+d71cc93db098154fec79536a2248745715c22f51:
   author: User <user@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
   committer: User <user@localhost>
   message: commit 2
   parents:
-  - f6ed4b6982fb4da9402037a96eb94339faa68cae
+  - 786927a338d7a850676ded4f72adab7acf838d82
   tree:
     file.txt: version B (from main)
-9aa9553feacfa59e181b57865433c0bfb9681c0e:
+f39b664da4f7b5ba3d8e7f24321092b80b10b05f:
   author: User <user@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
   committer: User <user@localhost>
   message: commit 3
   parents:
-  - f6ed4b6982fb4da9402037a96eb94339faa68cae
+  - 786927a338d7a850676ded4f72adab7acf838d82
   tree:
     file.txt: version C (from feature)
-584eac191d9f598d79cc49eae9b24d93e4ef32c8:
+d1a01a2e89f033c32f19c1e1935936342c63c049:
   author: User <user@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
   committer: User <user@localhost>
   message: Merge with conflict resolution AND extra changes
   parents:
-  - 0a0be395070217bc7516b382e07dd1be04f410b3
-  - 9aa9553feacfa59e181b57865433c0bfb9681c0e
+  - d71cc93db098154fec79536a2248745715c22f51
+  - f39b664da4f7b5ba3d8e7f24321092b80b10b05f
   tree:
     MERGE-NOTES.txt: This merge also fixed a critical bug
     file.txt: version D (merged + fixed bug)
-6bd3a0906801ecd67e8830d5b7f46db7603516e0:
+ed6e06aebe02af0c5940e8d039a557b7de9716d7:
   author: User <user@localhost>
   author-date: 2024-12-06T06:25:12-06:24
   commit-date: 2024-12-06T06:25:15-06:24
   committer: User <user@localhost>
   message: commit 5
   parents:
-  - 584eac191d9f598d79cc49eae9b24d93e4ef32c8
+  - d1a01a2e89f033c32f19c1e1935936342c63c049
   tree:
     another-file.txt: normal work
-632ce707ba5cb1a2fb97df68fb7a92040bb6b32b:
+abe116e7b3aaab8c4a5b6ecb1e2d531d8668cc40:
   author: User <user@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
@@ -62,15 +62,15 @@ f6ed4b6982fb4da9402037a96eb94339faa68cae:
   parents: []
   tree:
     data.json: '{"source": "orphan"}'
-25512ac8a697bd0c531ceb78315ae816beed4c55:
+4077b5aa8ab76798a38b3fcf71204532ecc0bedc:
   author: User <user@localhost>
   author-date: 2024-12-06T06:29:28-06:24
   commit-date: 2024-12-06T06:29:31-06:24
   committer: User <user@localhost>
   message: Merge unrelated history
   parents:
-  - 6bd3a0906801ecd67e8830d5b7f46db7603516e0
-  - 632ce707ba5cb1a2fb97df68fb7a92040bb6b32b
+  - ed6e06aebe02af0c5940e8d039a557b7de9716d7
+  - abe116e7b3aaab8c4a5b6ecb1e2d531d8668cc40
   tree:
     INTEGRATION.md: How we integrated the orphan history
     orphan-data.json: '{"source": "orphan"}'

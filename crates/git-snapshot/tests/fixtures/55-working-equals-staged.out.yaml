@@ -1,10 +1,10 @@
-HEAD: 7b7d52448ce9234a47b1c5bc0c2dbcfaab184a29
+HEAD: 0c605dc36b442b4c2f276367c36bc8032de6d162
 refs: {}
 staged:
   README.md: '# Project v0.1'
   src:
     lib.rs: pub fn main() { println!("hello"); }
-7b7d52448ce9234a47b1c5bc0c2dbcfaab184a29:
+0c605dc36b442b4c2f276367c36bc8032de6d162:
   message: Initial commit
   tree:
     README.md: '# Project'

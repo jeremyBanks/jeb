@@ -247,3 +247,106 @@ refs:
     assert_eq!(commit.tree.get("a/top.txt"), Some("shallow"));
     assert_eq!(commit.tree.get("root.txt"), Some("root"));
 }
+
+#[test]
+fn test_commit_hash_stability_plain_message() {
+    // CRITICAL BUG TEST: Commit hash should remain stable when round-tripped through git
+    // This tests for the bug where plain scalar messages produce different hashes
+    // than block scalar messages due to inconsistent trailing newline handling.
+
+    let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 1
+1:
+  message: Test commit
+  tree:
+    file.txt: content
+"#;
+
+    // Parse original
+    let original = git_snapshot::parse(yaml).unwrap();
+    let original_commit = original.commits().next().unwrap();
+    let hash_before = original_commit.id.clone();
+
+    // Write to git and read back
+    let temp_repo = original.to_temporary_repository().unwrap();
+    let roundtrip = Repository::from_git_dir(temp_repo.path()).unwrap();
+    let roundtrip_commit = roundtrip.commits().next().unwrap();
+    let hash_after = roundtrip_commit.id.clone();
+
+    // Hash should be IDENTICAL - this tests that message normalization is consistent
+    assert_eq!(
+        hash_before, hash_after,
+        "Commit hash changed after git round-trip! Message handling is inconsistent.\n\
+         Before: {:?}\n\
+         After:  {:?}\n\
+         This indicates message newline normalization is not deterministic.",
+        hash_before, hash_after
+    );
+}
+
+#[test]
+fn test_commit_hash_stability_block_message() {
+    // Test hash stability with block scalar messages (which have trailing newlines)
+    let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 1
+1:
+  message: |
+    Test commit
+  tree:
+    file.txt: content
+"#;
+
+    let original = git_snapshot::parse(yaml).unwrap();
+    let original_commit = original.commits().next().unwrap();
+    let hash_before = original_commit.id.clone();
+
+    let temp_repo = original.to_temporary_repository().unwrap();
+    let roundtrip = Repository::from_git_dir(temp_repo.path()).unwrap();
+    let roundtrip_commit = roundtrip.commits().next().unwrap();
+    let hash_after = roundtrip_commit.id.clone();
+
+    assert_eq!(
+        hash_before, hash_after,
+        "Commit hash changed with block message! Before: {:?} After: {:?}",
+        hash_before, hash_after
+    );
+}
+
+#[test]
+fn test_commit_hash_stability_multiline_message() {
+    // Test hash stability with multi-line commit messages
+    let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 1
+1:
+  message: |
+    Subject line
+
+    Body paragraph with details
+  tree:
+    file.txt: content
+"#;
+
+    let original = git_snapshot::parse(yaml).unwrap();
+    let original_commit = original.commits().next().unwrap();
+    let hash_before = original_commit.id.clone();
+
+    let temp_repo = original.to_temporary_repository().unwrap();
+    let roundtrip = Repository::from_git_dir(temp_repo.path()).unwrap();
+    let roundtrip_commit = roundtrip.commits().next().unwrap();
+    let hash_after = roundtrip_commit.id.clone();
+
+    assert_eq!(
+        hash_before, hash_after,
+        "Commit hash changed with multiline message! Before: {:?} After: {:?}",
+        hash_before, hash_after
+    );
+}

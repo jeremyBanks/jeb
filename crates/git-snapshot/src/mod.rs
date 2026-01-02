@@ -2642,6 +2642,10 @@ fn calculate_commit_id(
 
     commit_content.push('\n');
     commit_content.push_str(message);
+    // Ensure message ends with newline (git convention for commit objects)
+    if !message.ends_with('\n') {
+        commit_content.push('\n');
+    }
 
     let commit_data = format!("commit {}\0{}", commit_content.len(), commit_content);
     let mut hasher = sha1_checked::Sha1::new();
@@ -4270,11 +4274,18 @@ fn git2_to_temporary_repository(snapshot: &Repository) -> Result<TemporaryReposi
         )?;
 
         // Create commit (not updating any ref yet)
+        // Normalize message to ensure it ends with newline (git convention)
+        let normalized_message = if commit.message.ends_with('\n') {
+            commit.message.clone()
+        } else {
+            format!("{}\n", commit.message)
+        };
+
         let new_oid = repo.commit(
             None, // don't update any ref
             &author,
             &committer,
-            &commit.message,
+            &normalized_message,
             &tree,
             &parent_refs,
         )?;

@@ -24,6 +24,13 @@ r[jeb-value.value.pub]
 The crate MUST publicly export the `Value` enum from its root (and nowhere else),
 such that users might `use json_value::Value`.
 
+r[jeb-value.value.src]  
+`Value` must be defined in `src/value/mod.rs`. That file should not directly
+contain anything except the definition of `Value` and any item macros (such as
+derive) that we apply to it, and declarations or sub-modules. All related code,
+even including inherent impls and trait implementations, must go in sub-modules
+under `src/value/`.
+
 r[jeb-value.value.enum-variants]  
 `Value` MUST be an enum with variants `Null`, `Boolean`, `Number`, `Bytes`,
 `String`, `Array`, `BytesMap`, and `StringMap`. This list is exhaustive.
@@ -67,12 +74,36 @@ r[jeb-value.variants.pub]
 The crate MUST publicly export each variant type from its root (and nowhere
 else).
 
+r[jeb-value.variant.src]  
+Each variant type must be defined in `src/VARIANT/mod.rs`, where variant is
+the appropriate snake_case name. That file should not directly contain anything
+except the definition of the variant type and any item macros (such as derive)
+that we apply to it, and declarations or sub-modules. All related code, even
+including inherent impls and trait implementations, must go in sub-modules under
+`src/value/`.
+
 r[jeb-value.variants.tuple]  
 Each variant type MUST be a single-item tuple wrapping an inner value.
 
-r[jeb-value.variant.into-value]  
+r[jeb-value.variant.value-from]  
 `Value` MUST implement `From<T>` for each variant type, wrapping it in the
 appropriate enum variant.
+
+r[jeb-value.variant.value-as]  
+`Value` MUST implement an `as_VARIANT(&self) -> Option<&VARIANT>` method for
+each variant type.
+
+r[jeb-value.variant.value-to]
+`Value` MUST implement a `to_VARIANT(&self) -> Option<VARIANT>` method for each
+variant type.
+
+r[jeb-value.variant.value-into]
+`Value` MUST implement an `into_VARIANT(self) -> Option<VARIANT>` method for
+each variant type.
+
+r[jeb-value.variant.value-unwrap]
+`Value` MUST implement an `unwrap_VARIANT(self) -> VARIANT` method for each
+variant type, which panics if the `Value` is not of the expected variant type.
 
 r[jeb-value.variant.round-trip]  
 If a variant type `V` defines `From<T>` or `TryFrom<T>` for any type `T`, then
@@ -90,9 +121,6 @@ r[jeb-value.variants.constructor]
 If a variant implements infallible `From<INNER>`, it MUST also provide a public
 `new(inner: INNER) -> Self` constructor function.
 
-r[jeb-value.variants.into-inner]  
-Each variant type MUST implement `into_inner(self): INNER`.
-
 r[jeb-value.variants.as-ref]  
 Each variant type MUST implement `AsRef<INNER>`.
 
@@ -101,6 +129,27 @@ Each variant type MUST implement `Deref<Target=INNER>`.
 
 r[jeb-value.variants.inner-from]  
 For each variant type, their inner type MUST implement `From<VARIANT>`.
+
+r[jeb-value.variants.into-inner]  
+Each variant type MUST implement `into_inner(self): INNER`.
+
+r[jeb-value.variants.to-inner]  
+Each variant type MUST implement `to_inner(&self): INNER`.
+
+r[jeb-value.variants.as-inner]  
+Each variant type MUST implement `as_inner(&self): &INNER`.
+
+r[jeb-value.variants.into-named-inner]  
+Each variant type MUST implement `into_INNER(self): INNER`, where INNER is the
+appropriately-formatted inner type name (ignoring any generic parameters).
+
+r[jeb-value.variants.to-named-inner]  
+Each variant type MUST implement `to_INNER(&self): INNER`, where INNER is the
+appropriately-formatted inner type name (ignoring any generic parameters).
+
+r[jeb-value.variants.as-named-inner]  
+Each variant type MUST implement `as_INNER(&self): &INNER`, where INNER is the
+appropriately-formatted inner type name (ignoring any generic parameters).
 
 r[jeb-value.variants.transparent]  
 Each variant type MUST be marked `#[repr(transparent)]`.
@@ -228,7 +277,8 @@ optional, gated behind a `serde` Cargo feature.
 
 r[jeb-value.serde.traits]  
 When the `serde` Cargo feature is enabled, `Value` MUST implement
-`serde::Serialize` and `serde::Deserialize`.
+`serde::Serialize` and `serde::Deserialize` and must use using the (default)
+externally-tagged enum representation.
 
 ## Facet
 

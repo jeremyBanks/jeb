@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: d1d549c06dc01dd61b409ca4794940da2fd89b9c
-ab17027985d93002ea2521ef5da65ff7a1d62d01:
+    main: 8ed60dc8746d94c401c8875a5145f93a271b8e5f
+fe5d0e7e8baf7da0654d173759930ac8060db238:
   author: User <user@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
@@ -13,14 +13,14 @@ ab17027985d93002ea2521ef5da65ff7a1d62d01:
     dir:
       inner.txt: inner
     outer.txt: outer
-d1d549c06dc01dd61b409ca4794940da2fd89b9c:
+8ed60dc8746d94c401c8875a5145f93a271b8e5f:
   author: User <user@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
   committer: User <user@localhost>
   message: commit 3
   parents:
-  - ab17027985d93002ea2521ef5da65ff7a1d62d01
+  - fe5d0e7e8baf7da0654d173759930ac8060db238
   tree:
     dir:
       dir:

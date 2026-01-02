@@ -1,64 +1,64 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    feature-a: 9d091d0299a9f2909d15512a7f2bb9d3be95707a
-    feature-b: 6d09da17e930fd559c467d9fb1e6f18a92748521
-    main: 371c3672d56163a9a2d80d6cc3db2ddb8f46deaa
-b54bd7:
+    feature-a: 3257dd9f989e58fcfff79e746b38ffd64da7722d
+    feature-b: 6c09ec02d9828d27d6ddcc3ab4c26ebd408a95db
+    main: ad728faa80fca9209a0bba19f6319b4500ac6214
+'749744':
   message: commit 1
   tree:
     main.txt: initial
-b015b5:
+'280091':
   message: commit 2
   tree:
     main.txt: main commit 2
-8c6d47:
+'24e048':
   message: commit 3
   parents:
-  - b54bd7
+  - '749744'
   tree:
     feature-a.txt: feature a work
-'072356':
+1295b1:
   message: commit 4
   tree:
     feature-a.txt: feature a more work
-1f946a:
+d20ec6:
   message: commit 7
   parents:
-  - b015b5
+  - '280091'
   tree:
     feature-b.txt: feature b work
-9d091d0299a9f2909d15512a7f2bb9d3be95707a:
+3257dd9f989e58fcfff79e746b38ffd64da7722d:
   message: commit 5
   parents:
-  - '072356'
+  - 1295b1
   tree:
     feature-a.txt: feature a complete
-0b7025:
+'777175':
   message: commit 6
   parents:
-  - b015b5
-  - 9d091d0299a9f2909d15512a7f2bb9d3be95707a
+  - '280091'
+  - 3257dd9f989e58fcfff79e746b38ffd64da7722d
   tree:
     feature-a.txt:
-      //commit: 9d091d0299a9f2909d15512a7f2bb9d3be95707a
+      //commit: 3257dd9f989e58fcfff79e746b38ffd64da7722d
       //path: feature-a.txt
-6d09da17e930fd559c467d9fb1e6f18a92748521:
+6c09ec02d9828d27d6ddcc3ab4c26ebd408a95db:
   message: commit 8
   parents:
-  - 1f946a
+  - d20ec6
   tree:
     feature-b.txt: feature b complete
-4e15eb:
+958cc3:
   message: commit 9
   parents:
-  - 0b7025
-  - 6d09da17e930fd559c467d9fb1e6f18a92748521
+  - '777175'
+  - 6c09ec02d9828d27d6ddcc3ab4c26ebd408a95db
   tree:
     feature-b.txt:
-      //commit: 6d09da17e930fd559c467d9fb1e6f18a92748521
+      //commit: 6c09ec02d9828d27d6ddcc3ab4c26ebd408a95db
       //path: feature-b.txt
-371c3672d56163a9a2d80d6cc3db2ddb8f46deaa:
+ad728faa80fca9209a0bba19f6319b4500ac6214:
   message: commit 10
   tree:
     main.txt: main final

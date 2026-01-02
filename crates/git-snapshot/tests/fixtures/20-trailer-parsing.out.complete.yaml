@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 6bc21e59a7eafc4db9bf115c0b102206eb42d959
-ddd158642751c1416bbc83f3ff66563a805bc335:
+    main: 75a80a72a90949f2d1b170053f77cb3185f64b41
+593c96ab433a686c1b7e4778800679c696afcc8b:
   author: User <user@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
@@ -11,7 +11,7 @@ ddd158642751c1416bbc83f3ff66563a805bc335:
   parents: []
   tree:
     base.txt: base content
-3b7d809195d472ea272da962f212a4f945775830:
+8ac2712a21563d7308823695202e6ad9727b99c9:
   author: User <user@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
@@ -19,7 +19,7 @@ ddd158642751c1416bbc83f3ff66563a805bc335:
   message: orphan seed
   parents: []
   tree: {}
-5d698d7fe5224ed7c69f9889c0967b5062a5b50a:
+052b2fd4982339af912b9420b0c472c1cdef88cf:
   author: User <user@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
@@ -32,11 +32,11 @@ ddd158642751c1416bbc83f3ff66563a805bc335:
 
     git-zoom-in: path/to/subtree
   parents:
-  - 3b7d809195d472ea272da962f212a4f945775830
-  - ddd158642751c1416bbc83f3ff66563a805bc335
+  - 8ac2712a21563d7308823695202e6ad9727b99c9
+  - 593c96ab433a686c1b7e4778800679c696afcc8b
   tree:
     file.txt: content
-bb03a0e402993058411a3668a587f928ac60122a:
+8b9228fce773af9f939dace8c12b4d76e6fccf15:
   author: User <user@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
@@ -47,14 +47,14 @@ bb03a0e402993058411a3668a587f928ac60122a:
     git-zoom-out: path/to/subtree
     This line appears after the trailer
   parents:
-  - ddd158642751c1416bbc83f3ff66563a805bc335
-  - 5d698d7fe5224ed7c69f9889c0967b5062a5b50a
+  - 593c96ab433a686c1b7e4778800679c696afcc8b
+  - 052b2fd4982339af912b9420b0c472c1cdef88cf
   tree:
     path:
       to:
         subtree:
           file.txt: content
-6bc21e59a7eafc4db9bf115c0b102206eb42d959:
+75a80a72a90949f2d1b170053f77cb3185f64b41:
   author: User <user@localhost>
   author-date: 2024-12-06T06:25:12-06:24
   commit-date: 2024-12-06T06:25:15-06:24
@@ -65,6 +65,6 @@ bb03a0e402993058411a3668a587f928ac60122a:
     GIT-ZOOM-IN:   spaces/around/path
     git-zoom-out:path/no/space
   parents:
-  - bb03a0e402993058411a3668a587f928ac60122a
+  - 8b9228fce773af9f939dace8c12b4d76e6fccf15
   tree:
     result.txt: done

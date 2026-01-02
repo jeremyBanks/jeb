@@ -1,18 +1,9 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 463366d731a8615b27009d341f44107a1186e705
-    other: 090e50ee37d6e562bc8706f62e65dda93c780396
-32b00f21c3eec551a3ae7fba674a5bc5097a6b8c:
-  author: User <user@localhost>
-  author-date: 2024-12-06T06:12:24-06:24
-  commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
-  message: commit 1
-  parents: []
-  tree:
-    shared.txt: shared content
-728d7e934bc5e8bdd1dcea0904466c2e9d1d1d3b:
+    main: d85930dcbf81e1749c9bc12b4859c877215df9a0
+    other: 4e048763c124f68371e2970a62882c2266963181
+28848f1692fa11e74c64d8ef0fc131dc0667ec3f:
   author: User <user@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
@@ -21,34 +12,43 @@ refs:
   parents: []
   tree:
     shared.txt: shared content
-3dd39ca3befe7ad11b55c10261c1d0c3ec562aa8:
+853c640926482b31a52c81a859dce3a9ce9acb2d:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    shared.txt: shared content
+720c676388743210f0395ce30693f29e7ee04c41:
   author: User <user@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
   committer: User <user@localhost>
   message: commit 4
   parents:
-  - 32b00f21c3eec551a3ae7fba674a5bc5097a6b8c
+  - 853c640926482b31a52c81a859dce3a9ce9acb2d
   tree:
     main.txt: main branch
-090e50ee37d6e562bc8706f62e65dda93c780396:
+4e048763c124f68371e2970a62882c2266963181:
   author: User <user@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
   committer: User <user@localhost>
   message: commit 3
   parents:
-  - 728d7e934bc5e8bdd1dcea0904466c2e9d1d1d3b
+  - 28848f1692fa11e74c64d8ef0fc131dc0667ec3f
   tree:
     other.txt: other branch
-463366d731a8615b27009d341f44107a1186e705:
+d85930dcbf81e1749c9bc12b4859c877215df9a0:
   author: User <user@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
   committer: User <user@localhost>
   message: commit 5
   parents:
-  - 3dd39ca3befe7ad11b55c10261c1d0c3ec562aa8
-  - 090e50ee37d6e562bc8706f62e65dda93c780396
+  - 720c676388743210f0395ce30693f29e7ee04c41
+  - 4e048763c124f68371e2970a62882c2266963181
   tree:
     other.txt: other branch
