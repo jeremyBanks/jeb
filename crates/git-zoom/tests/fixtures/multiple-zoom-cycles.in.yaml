@@ -3,6 +3,8 @@ refs:
   heads:
     main: 1
 1:
+  author: "Developer <dev@test.org>"
+  author-date: "2025-03-01T09:00:00-08:00"
   tree:
     README.md: "root"
     src:
