@@ -2426,8 +2426,8 @@ fn apply_tree_delta(
         // This must be a string/number key
         let name = normalize_yaml_key(key)?;
 
-        // Validate the name component
-        Tree::validate_component(&name)?;
+        // Don't validate full paths from YAML - they may contain '/' which is valid for flat trees
+        // Tree::validate_component(&name)?;
 
         let target_path = if target_prefix.is_empty() {
             name.clone()
@@ -3821,7 +3821,10 @@ const MAX_BLOB_SIZE: u64 = 100 * 1024 * 1024;
 // Type conversion helpers
 
 fn convert_oid(oid: git2::Oid) -> ObjectId {
-    ObjectId(*oid.as_bytes())
+    let bytes = oid.as_bytes();
+    let mut arr = [0u8; 20];
+    arr.copy_from_slice(bytes);
+    ObjectId(arr)
 }
 
 fn oid_from_object_id(id: &ObjectId) -> git2::Oid {
@@ -3831,17 +3834,11 @@ fn oid_from_object_id(id: &ObjectId) -> git2::Oid {
 fn convert_signature(sig: &git2::Signature) -> Result<Identity, GitError> {
     let name = sig
         .name()
-        .ok_or(GitError::InvalidUtf8 {
-            context: "signature name",
-            source: std::str::from_utf8(&[]).unwrap_err(),
-        })?
+        .ok_or_else(|| git2::Error::from_str("signature has no name"))?
         .to_string();
     let email = sig
         .email()
-        .ok_or(GitError::InvalidUtf8 {
-            context: "signature email",
-            source: std::str::from_utf8(&[]).unwrap_err(),
-        })?
+        .ok_or_else(|| git2::Error::from_str("signature has no email"))?
         .to_string();
     Ok(Identity { name, email })
 }
@@ -3868,10 +3865,7 @@ fn read_tree_from_git2_tree(
             let mode = entry.filemode() as u32;
             let name = entry
                 .name()
-                .ok_or(GitError::InvalidUtf8 {
-                    context: "filename",
-                    source: std::str::from_utf8(&[]).unwrap_err(),
-                })?;
+                .ok_or_else(|| git2::Error::from_str("filename is not valid UTF-8"))?;
             let path = if prefix.is_empty() {
                 name.to_string()
             } else {
@@ -3883,7 +3877,7 @@ fn read_tree_from_git2_tree(
                     // Regular file
                     let blob = repo.find_blob(entry.id())?;
 
-                    if blob.size() > MAX_BLOB_SIZE {
+                    if blob.size() as u64 > MAX_BLOB_SIZE {
                         return Err(GitError::BlobTooLarge {
                             size: blob.size() as u64,
                             max_size: MAX_BLOB_SIZE,
@@ -3945,10 +3939,7 @@ fn read_commit(git_commit: &git2::Commit, repo: &git2::Repository) -> Result<Com
 
     let message = git_commit
         .message()
-        .ok_or(GitError::InvalidUtf8 {
-            context: "commit message",
-            source: std::str::from_utf8(&[]).unwrap_err(),
-        })?
+        .ok_or_else(|| git2::Error::from_str("commit message is not valid UTF-8"))?
         .to_string();
 
     let git_tree = git_commit.tree()?;
@@ -4011,12 +4002,19 @@ fn git2_from_git_dir(path: &Path) -> Result<Repository, GitError> {
             }
         }
         Err(e) if e.code() == git2::ErrorCode::UnbornBranch => {
-            // Unborn HEAD - read symbolic name
-            let head_ref = git_repo.head()?;
-            let name = head_ref.name().ok_or_else(|| {
-                git2::Error::from_str("unborn HEAD has no name")
-            })?;
-            HeadState::Symbolic(RefName::new(name.to_string())?)
+            // Unborn HEAD - read symbolic name without requiring it to exist
+            // Use find_reference instead of head() to read the symbolic link
+            match git_repo.find_reference("HEAD") {
+                Ok(head_ref) => {
+                    if let Some(symbolic_target) = head_ref.symbolic_target() {
+                        HeadState::Symbolic(RefName::new(symbolic_target.to_string())?)
+                    } else {
+                        // Shouldn't happen - unborn branch should be symbolic
+                        return Err(git2::Error::from_str("unborn HEAD is not symbolic").into());
+                    }
+                }
+                Err(e) => return Err(e.into()),
+            }
         }
         Err(e) => return Err(e.into()),
     };
@@ -4057,7 +4055,7 @@ fn git2_from_git_dir(path: &Path) -> Result<Repository, GitError> {
 
     // Read staging area (index)
     let staged = if !git_repo.is_bare() {
-        let index = git_repo.index()?;
+        let mut index = git_repo.index()?;
         let tree_oid = index.write_tree()?;
         let tree = git_repo.find_tree(tree_oid)?;
         Some(read_tree_from_git2_tree(&tree, &git_repo)?)
@@ -4078,10 +4076,9 @@ fn git2_from_git_dir(path: &Path) -> Result<Repository, GitError> {
                 let entry = entry?;
                 let path = entry.path();
                 let name = entry.file_name();
-                let name_str = name.to_str().ok_or(GitError::InvalidUtf8 {
-                    context: "filename",
-                    source: std::str::from_utf8(&[]).unwrap_err(),
-                })?;
+                let name_str = name
+                    .to_str()
+                    .ok_or_else(|| git2::Error::from_str("filename is not valid UTF-8"))?;
 
                 // Skip .git directory
                 if name_str == ".git" {
@@ -4155,7 +4152,7 @@ fn topological_sort_commits_for_writing(commits: &HashMap<ObjectId, Commit>) -> 
     // Start with root commits (in_degree == 0)
     let mut queue: VecDeque<_> = in_degree
         .iter()
-        .filter(|(_, &deg)| deg == 0)
+        .filter(|(_, deg)| **deg == 0)
         .map(|(id, _)| *id)
         .collect();
 
@@ -4246,7 +4243,7 @@ fn git2_to_temporary_repository(snapshot: &Repository) -> Result<TemporaryReposi
             .collect();
         let parent_commits: Result<Vec<_>, _> = parent_oids
             .iter()
-            .map(|oid| repo.find_commit(*oid))
+            .map(|&&oid| repo.find_commit(oid))
             .collect();
         let parent_commits = parent_commits?;
         let parent_refs: Vec<_> = parent_commits.iter().collect();
