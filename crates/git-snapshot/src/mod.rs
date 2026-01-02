@@ -3811,6 +3811,541 @@ fn topological_visit(
     sorted.push(commit_id);
 }
 
+// ============================================================================
+// Git2 Integration
+// ============================================================================
+
+/// Maximum blob size we'll read (100MB)
+const MAX_BLOB_SIZE: u64 = 100 * 1024 * 1024;
+
+// Type conversion helpers
+
+fn convert_oid(oid: git2::Oid) -> ObjectId {
+    ObjectId(*oid.as_bytes())
+}
+
+fn oid_from_object_id(id: &ObjectId) -> git2::Oid {
+    git2::Oid::from_bytes(id.as_bytes()).expect("ObjectId is always 20 bytes")
+}
+
+fn convert_signature(sig: &git2::Signature) -> Result<Identity, GitError> {
+    let name = sig
+        .name()
+        .ok_or(GitError::InvalidUtf8 {
+            context: "signature name",
+            source: std::str::from_utf8(&[]).unwrap_err(),
+        })?
+        .to_string();
+    let email = sig
+        .email()
+        .ok_or(GitError::InvalidUtf8 {
+            context: "signature email",
+            source: std::str::from_utf8(&[]).unwrap_err(),
+        })?
+        .to_string();
+    Ok(Identity { name, email })
+}
+
+fn convert_time(time: &git2::Time) -> Timestamp {
+    Timestamp {
+        seconds: time.seconds(),
+        offset_minutes: time.offset_minutes() as i16,
+    }
+}
+
+/// Read a tree from git2 into our flat Tree structure
+fn read_tree_from_git2_tree(
+    git_tree: &git2::Tree,
+    repo: &git2::Repository,
+) -> Result<Tree, GitError> {
+    let mut tree = Tree::new();
+    let mut stack = vec![("".to_string(), git_tree.id())];
+
+    while let Some((prefix, tree_id)) = stack.pop() {
+        let current_tree = repo.find_tree(tree_id)?;
+
+        for entry in current_tree.iter() {
+            let mode = entry.filemode() as u32;
+            let name = entry
+                .name()
+                .ok_or(GitError::InvalidUtf8 {
+                    context: "filename",
+                    source: std::str::from_utf8(&[]).unwrap_err(),
+                })?;
+            let path = if prefix.is_empty() {
+                name.to_string()
+            } else {
+                format!("{}/{}", prefix, name)
+            };
+
+            match mode {
+                0o100644 => {
+                    // Regular file
+                    let blob = repo.find_blob(entry.id())?;
+
+                    if blob.size() > MAX_BLOB_SIZE {
+                        return Err(GitError::BlobTooLarge {
+                            size: blob.size() as u64,
+                            max_size: MAX_BLOB_SIZE,
+                        });
+                    }
+
+                    let content = std::str::from_utf8(blob.content()).map_err(|e| {
+                        GitError::InvalidUtf8 {
+                            context: "file content",
+                            source: e,
+                        }
+                    })?;
+                    tree.insert(path, content.to_string());
+                }
+                0o040000 => {
+                    // Directory - add to stack for processing
+                    stack.push((path, entry.id()));
+                }
+                0o100755 => {
+                    return Err(GitError::UnsupportedFeature {
+                        feature: UnsupportedFeature::ExecutableBit,
+                        path,
+                    });
+                }
+                0o120000 => {
+                    return Err(GitError::UnsupportedFeature {
+                        feature: UnsupportedFeature::Symlink,
+                        path,
+                    });
+                }
+                0o160000 => {
+                    return Err(GitError::UnsupportedFeature {
+                        feature: UnsupportedFeature::Submodule,
+                        path,
+                    });
+                }
+                mode => {
+                    return Err(GitError::UnsupportedFeature {
+                        feature: UnsupportedFeature::UnknownFileMode { mode },
+                        path,
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(tree)
+}
+
+/// Read a single commit from git2
+fn read_commit(git_commit: &git2::Commit, repo: &git2::Repository) -> Result<Commit, GitError> {
+    let id = convert_oid(git_commit.id());
+    let parents = git_commit.parents().map(|p| convert_oid(p.id())).collect();
+
+    let author = convert_signature(&git_commit.author())?;
+    let author_date = convert_time(&git_commit.author().when());
+    let committer = convert_signature(&git_commit.committer())?;
+    let committer_date = convert_time(&git_commit.committer().when());
+
+    let message = git_commit
+        .message()
+        .ok_or(GitError::InvalidUtf8 {
+            context: "commit message",
+            source: std::str::from_utf8(&[]).unwrap_err(),
+        })?
+        .to_string();
+
+    let git_tree = git_commit.tree()?;
+    let tree = read_tree_from_git2_tree(&git_tree, repo)?;
+
+    Ok(Commit {
+        id,
+        parents,
+        tree,
+        author,
+        author_date,
+        committer,
+        committer_date,
+        message,
+    })
+}
+
+/// Collect all commits reachable from a set of starting OIDs
+fn collect_reachable_commits(
+    repo: &git2::Repository,
+    starting_oids: Vec<git2::Oid>,
+) -> Result<Vec<git2::Commit>, GitError> {
+    let mut visited = HashSet::new();
+    let mut queue = VecDeque::from(starting_oids);
+    let mut commits = Vec::new();
+
+    while let Some(oid) = queue.pop_front() {
+        if !visited.insert(oid) {
+            continue;
+        }
+
+        let commit = repo.find_commit(oid)?;
+
+        for parent in commit.parents() {
+            queue.push_back(parent.id());
+        }
+
+        commits.push(commit);
+    }
+
+    Ok(commits)
+}
+
+/// Read a snapshot from a git directory
+fn git2_from_git_dir(path: &Path) -> Result<Repository, GitError> {
+    let git_repo = git2::Repository::open(path)?;
+
+    // Read HEAD state
+    let head = match git_repo.head() {
+        Ok(reference) => {
+            if let Some(name) = reference.name() {
+                // Symbolic reference
+                HeadState::Symbolic(RefName::new(name.to_string())?)
+            } else {
+                // Detached HEAD
+                let oid = reference.target().ok_or_else(|| {
+                    git2::Error::from_str("HEAD has no target")
+                })?;
+                HeadState::Detached(convert_oid(oid))
+            }
+        }
+        Err(e) if e.code() == git2::ErrorCode::UnbornBranch => {
+            // Unborn HEAD - read symbolic name
+            let head_ref = git_repo.head()?;
+            let name = head_ref.name().ok_or_else(|| {
+                git2::Error::from_str("unborn HEAD has no name")
+            })?;
+            HeadState::Symbolic(RefName::new(name.to_string())?)
+        }
+        Err(e) => return Err(e.into()),
+    };
+
+    // Read refs (only refs/heads/*)
+    let mut refs = BTreeMap::new();
+    for reference in git_repo.references()? {
+        let reference = reference?;
+        if let Some(name) = reference.name() {
+            if name.starts_with("refs/heads/") {
+                if let Some(oid) = reference.target() {
+                    refs.insert(RefName::new(name.to_string())?, convert_oid(oid));
+                }
+            }
+        }
+    }
+
+    // Collect starting OIDs for commit traversal
+    let mut starting_oids = Vec::new();
+
+    // Add HEAD commit if it exists
+    if let Ok(head_commit) = git_repo.head().and_then(|r| r.peel_to_commit()) {
+        starting_oids.push(head_commit.id());
+    }
+
+    // Add all branch refs
+    for oid_ref in refs.values() {
+        starting_oids.push(oid_from_object_id(oid_ref));
+    }
+
+    // Traverse and read all reachable commits
+    let git_commits = collect_reachable_commits(&git_repo, starting_oids)?;
+    let mut commits = HashMap::new();
+    for git_commit in git_commits {
+        let commit = read_commit(&git_commit, &git_repo)?;
+        commits.insert(commit.id, commit);
+    }
+
+    // Read staging area (index)
+    let staged = if !git_repo.is_bare() {
+        let index = git_repo.index()?;
+        let tree_oid = index.write_tree()?;
+        let tree = git_repo.find_tree(tree_oid)?;
+        Some(read_tree_from_git2_tree(&tree, &git_repo)?)
+    } else {
+        None
+    };
+
+    // Read working tree
+    let working = if let Some(workdir) = git_repo.workdir() {
+        let mut tree = Tree::new();
+        fn visit_dir(
+            tree: &mut Tree,
+            dir: &Path,
+            prefix: &str,
+            git_repo: &git2::Repository,
+        ) -> Result<(), GitError> {
+            for entry in std::fs::read_dir(dir)? {
+                let entry = entry?;
+                let path = entry.path();
+                let name = entry.file_name();
+                let name_str = name.to_str().ok_or(GitError::InvalidUtf8 {
+                    context: "filename",
+                    source: std::str::from_utf8(&[]).unwrap_err(),
+                })?;
+
+                // Skip .git directory
+                if name_str == ".git" {
+                    continue;
+                }
+
+                let full_path = if prefix.is_empty() {
+                    name_str.to_string()
+                } else {
+                    format!("{}/{}", prefix, name_str)
+                };
+
+                if path.is_dir() {
+                    visit_dir(tree, &path, &full_path, git_repo)?;
+                } else if path.is_file() {
+                    let content = std::fs::read(&path)?;
+
+                    if content.len() as u64 > MAX_BLOB_SIZE {
+                        return Err(GitError::BlobTooLarge {
+                            size: content.len() as u64,
+                            max_size: MAX_BLOB_SIZE,
+                        });
+                    }
+
+                    let content_str = std::str::from_utf8(&content).map_err(|e| {
+                        GitError::InvalidUtf8 {
+                            context: "file content",
+                            source: e,
+                        }
+                    })?;
+                    tree.insert(full_path, content_str.to_string());
+                } else {
+                    // Symlink or other - error
+                    return Err(GitError::UnsupportedFeature {
+                        feature: UnsupportedFeature::Symlink,
+                        path: full_path,
+                    });
+                }
+            }
+            Ok(())
+        }
+        visit_dir(&mut tree, workdir, "", &git_repo)?;
+        Some(tree)
+    } else {
+        None
+    };
+
+    Ok(Repository {
+        commits,
+        refs,
+        head,
+        staged,
+        working,
+    })
+}
+
+/// Topologically sort commits (parents before children)
+fn topological_sort_commits_for_writing(commits: &HashMap<ObjectId, Commit>) -> Vec<ObjectId> {
+    let mut in_degree: HashMap<ObjectId, usize> = HashMap::new();
+    let mut children: HashMap<ObjectId, Vec<ObjectId>> = HashMap::new();
+
+    // Build dependency graph
+    for commit in commits.values() {
+        in_degree.entry(commit.id).or_insert(0);
+        for parent in &commit.parents {
+            children.entry(*parent).or_default().push(commit.id);
+            *in_degree.entry(commit.id).or_insert(0) += 1;
+        }
+    }
+
+    // Start with root commits (in_degree == 0)
+    let mut queue: VecDeque<_> = in_degree
+        .iter()
+        .filter(|(_, &deg)| deg == 0)
+        .map(|(id, _)| *id)
+        .collect();
+
+    let mut result = Vec::new();
+
+    while let Some(id) = queue.pop_front() {
+        result.push(id);
+
+        if let Some(child_ids) = children.get(&id) {
+            for child_id in child_ids {
+                let degree = in_degree.get_mut(child_id).unwrap();
+                *degree -= 1;
+                if *degree == 0 {
+                    queue.push_back(*child_id);
+                }
+            }
+        }
+    }
+
+    result
+}
+
+/// Materialize a tree into git2 format
+fn materialize_tree(tree: &Tree, repo: &git2::Repository) -> Result<git2::Oid, GitError> {
+    // Group entries by directory structure
+    let mut direct_files: BTreeMap<String, String> = BTreeMap::new();
+    let mut subdirs: BTreeMap<String, BTreeMap<String, String>> = BTreeMap::new();
+
+    for (path, content) in tree.entries.iter() {
+        if let Some(slash_pos) = path.find('/') {
+            let dir = &path[..slash_pos];
+            let rest = &path[slash_pos + 1..];
+            subdirs
+                .entry(dir.to_string())
+                .or_default()
+                .insert(rest.to_string(), content.clone());
+        } else {
+            direct_files.insert(path.clone(), content.clone());
+        }
+    }
+
+    // Build the tree
+    let mut builder = repo.treebuilder(None)?;
+
+    // Add direct files
+    for (name, content) in direct_files {
+        let blob_oid = repo.blob(content.as_bytes())?;
+        builder.insert(&name, blob_oid, 0o100644)?; // regular file
+    }
+
+    // Recursively add subdirectories
+    for (dir_name, entries) in subdirs {
+        let mut subtree = Tree::new();
+        for (subpath, content) in entries {
+            subtree.insert(subpath, content);
+        }
+        let subtree_oid = materialize_tree(&subtree, repo)?;
+        builder.insert(&dir_name, subtree_oid, 0o040000)?; // directory
+    }
+
+    Ok(builder.write()?)
+}
+
+/// Create a temporary repository from a snapshot
+fn git2_to_temporary_repository(snapshot: &Repository) -> Result<TemporaryRepository, GitError> {
+    let dir = tempfile::TempDir::new()?;
+    let repo = git2::Repository::init(dir.path())?;
+
+    // Topologically sort commits
+    let sorted_ids = topological_sort_commits_for_writing(&snapshot.commits);
+
+    // Track ObjectId -> git2::Oid mappings
+    let mut oid_map: HashMap<ObjectId, git2::Oid> = HashMap::new();
+
+    // Create commits in order
+    for commit_id in sorted_ids {
+        let commit = snapshot.get_commit(&commit_id).unwrap();
+
+        // Materialize tree
+        let tree_oid = materialize_tree(&commit.tree, &repo)?;
+        let tree = repo.find_tree(tree_oid)?;
+
+        // Convert parent OIDs
+        let parent_oids: Vec<_> = commit
+            .parents
+            .iter()
+            .map(|id| oid_map.get(id).expect("parent should already be written"))
+            .collect();
+        let parent_commits: Result<Vec<_>, _> = parent_oids
+            .iter()
+            .map(|oid| repo.find_commit(*oid))
+            .collect();
+        let parent_commits = parent_commits?;
+        let parent_refs: Vec<_> = parent_commits.iter().collect();
+
+        // Create signatures
+        let author = git2::Signature::new(
+            &commit.author.name,
+            &commit.author.email,
+            &git2::Time::new(commit.author_date.seconds, commit.author_date.offset_minutes as i32),
+        )?;
+        let committer = git2::Signature::new(
+            &commit.committer.name,
+            &commit.committer.email,
+            &git2::Time::new(
+                commit.committer_date.seconds,
+                commit.committer_date.offset_minutes as i32,
+            ),
+        )?;
+
+        // Create commit (not updating any ref yet)
+        let new_oid = repo.commit(
+            None, // don't update any ref
+            &author,
+            &committer,
+            &commit.message,
+            &tree,
+            &parent_refs,
+        )?;
+
+        oid_map.insert(commit_id, new_oid);
+    }
+
+    // Write refs
+    for (ref_name, target_id) in &snapshot.refs {
+        let git_oid = oid_map
+            .get(target_id)
+            .ok_or_else(|| git2::Error::from_str("ref target commit not found"))?;
+        repo.reference(ref_name.as_str(), *git_oid, true, "snapshot")?;
+    }
+
+    // Set HEAD
+    match &snapshot.head {
+        HeadState::Symbolic(ref_name) => {
+            repo.set_head(ref_name.as_str())?;
+        }
+        HeadState::Detached(oid) => {
+            let git_oid = oid_map
+                .get(oid)
+                .ok_or_else(|| git2::Error::from_str("HEAD target commit not found"))?;
+            repo.set_head_detached(*git_oid)?;
+        }
+    }
+
+    // Write staging area
+    if let Some(staged_tree) = &snapshot.staged {
+        let mut index = repo.index()?;
+        index.clear()?;
+
+        for (path, content) in staged_tree.entries.iter() {
+            let blob_oid = repo.blob(content.as_bytes())?;
+            let entry = git2::IndexEntry {
+                ctime: git2::IndexTime::new(0, 0),
+                mtime: git2::IndexTime::new(0, 0),
+                dev: 0,
+                ino: 0,
+                mode: 0o100644,
+                uid: 0,
+                gid: 0,
+                file_size: content.len() as u32,
+                id: blob_oid,
+                flags: path.len() as u16,
+                flags_extended: 0,
+                path: path.as_bytes().to_vec(),
+            };
+            index.add(&entry)?;
+        }
+
+        index.write()?;
+    }
+
+    // Write working tree
+    if let Some(working_tree) = &snapshot.working {
+        if let Some(workdir) = repo.workdir() {
+            for (path, content) in working_tree.entries.iter() {
+                let file_path = workdir.join(path);
+
+                // Ensure parent directory exists
+                if let Some(parent) = file_path.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+
+                std::fs::write(&file_path, content)?;
+            }
+        }
+    }
+
+    Ok(TemporaryRepository { repo, dir })
+}
+
 pub fn main() {}
 
 #[cfg(test)]
