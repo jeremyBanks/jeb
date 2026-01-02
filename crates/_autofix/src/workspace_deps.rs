@@ -1080,11 +1080,6 @@ fn update_member_toml(
                         .ok()
                         .flatten()
                     };
-                    // Check if it's a simple inline table that should be converted to dotted key
-                    let is_simple_inline_workspace = dep_item
-                        .as_inline_table()
-                        .map(|t| t.len() == 1 && t.contains_key("workspace"))
-                        .unwrap_or(false);
 
                     if let Some(dep) = dep {
                         if let Some(workspace_key) = dep_name_to_workspace_key.get(&dep.name) {
@@ -1146,9 +1141,8 @@ fn update_member_toml(
                                     // Use inline table for complex cases with multiple fields
                                     deps[&key] = Item::Value(Value::InlineTable(table));
                                 }
-                            } else if currently_uses_workspace && !is_simple_inline_workspace {
-                                // Keep existing workspace dependency as-is if it has additional
-                                // fields
+                            } else if currently_uses_workspace {
+                                // This dependency uses workspace but shouldn't - inline it
                                 if let Some(old_resolution) = old_workspace_deps.get(&key) {
                                     let loser_dep = Dependency {
                                         key: key.clone(),
