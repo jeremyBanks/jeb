@@ -86,6 +86,10 @@ Each variant MUST implement `TryFrom<INNER>` for their wrapped inner type. This
 may be implicit from a `From<INNER>` implementation or explicit if it's
 fallible.
 
+r[jeb-value.variants.constructor]
+If a variant implements infallible `From<INNER>`, it MUST also provide a public
+`new(inner: INNER) -> Self` constructor function.
+
 r[jeb-value.variants.into-inner]  
 Each variant type MUST implement `into_inner(self): INNER`.
 
@@ -148,13 +152,17 @@ Each variant type MUST be `Send`.
 r[jeb-value.variants.sync]  
 Each variant type MUST be `Sync`.
 
-r[jeb-value.value.must-use]
-Each variant MUST be marked `#[must_use]`, except for `Null` which MUST NOT.
+r[jeb-value.variant.must-use]
+Each variant type MUST be marked `#[must_use]` unless specified otherwise for
+that variant type.
 
 ### `Null`
 
 r[jeb-value.null]  
 The `Null` variant type MUST be a unit struct.
+
+r[jeb-value.null.must-use]  
+The `Null` variant type MUST NOT be marked `#[must_use]`.
 
 ### `Boolean`
 
@@ -167,6 +175,19 @@ inner primitive `bool`.
 r[jeb-value.number]  
 The `Number` variant type MUST be a single-item tuple struct wrapping an
 inner primitive `f64`.
+
+r[jeb-value.number.finite]
+The `Number` variant type MUST only be constructible with finite `f64` values
+(excluding NaN or Infinity, including -0). By enforcing this everywhere the a
+value can be constructed, all operations on `Number` can safely assume the inner
+value is always finite without needing to re-validate it.
+
+r[jeb-value.number.cmp]
+The `Number` variant type's implementations of `Eq`, `PartialEq`, `Ord`,
+`PartialOrd`, and `Hash` MUST NOT delegate to the inner `f64` type, but should
+instead delegate comparison and equality to `f64::total_cmp` and should delegate
+the `Hash` implementation to the result of `.to_be_bytes()`. This ensures a
+total ordering and distinct hashing for all possible `f64` values.
 
 ### `Bytes`
 
