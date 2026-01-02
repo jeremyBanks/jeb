@@ -14,7 +14,7 @@ semver = { workspace = true }
 glob = { workspace = true }
 anyhow = { workspace = true }
 pathdiff = { workspace = true }
-tokio = "*"
+tokio = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

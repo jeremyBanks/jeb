@@ -19,6 +19,7 @@ use {
         DocumentMut,
         InlineTable,
         Item,
+        Key,
         Value,
         value,
     },
@@ -1081,7 +1082,9 @@ fn update_member_toml(
                     };
                     if let Some(dep) = dep {
                         if let Some(workspace_key) = dep_name_to_workspace_key.get(&dep.name) {
-                            if should_use_workspace(&dep, workspace_updates, workspace_key) {
+                            if should_use_workspace(&dep, workspace_updates, workspace_key)
+                                || currently_uses_workspace
+                            {
                                 let mut table = InlineTable::new();
                                 table.insert("workspace", Value::from(true));
                                 if let Some(optional) = dep.config.optional {
@@ -1127,9 +1130,14 @@ fn update_member_toml(
                                 }
                                 // Use dotted key syntax for simple case (workspace only)
                                 if table.len() == 1 && table.contains_key("workspace") {
-                                    // Use dotted key string for insertion
-                                    let dotted_key = format!("{}.workspace", key);
-                                    deps.insert(&dotted_key, value(true));
+                                    // Use Key::parse to create a dotted key
+                                    let dotted_key_str = format!("{}.workspace", key);
+                                    if let Ok(dotted_key) = dotted_key_str.parse::<Key>() {
+                                        deps.insert_formatted(&dotted_key, value(true));
+                                    } else {
+                                        // Fallback to inline table if parsing fails
+                                        deps[&key] = Item::Value(Value::InlineTable(table));
+                                    }
                                 } else {
                                     // Use inline table for complex cases with multiple fields
                                     deps[&key] = Item::Value(Value::InlineTable(table));
