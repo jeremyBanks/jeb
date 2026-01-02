@@ -8,9 +8,13 @@ refs:
   message: "Initial commit"
   tree:
     README.md: "root"
-    src/core/engine/mod.rs: "engine module"
-    src/core/types.rs: "types"
-    src/utils/helpers.rs: "helpers"
+    src:
+      core:
+        engine:
+          mod.rs: "engine module"
+        types.rs: "types"
+      utils:
+        helpers.rs: "helpers"
 
 # Seed
 2:
@@ -28,5 +32,6 @@ refs:
     git-zoom-in: src/core
   committer: "🔎 <git-zoom-in@localhost>"
   tree:
-    engine/mod.rs: "engine module"
+    engine:
+      mod.rs: "engine module"
     types.rs: "types"

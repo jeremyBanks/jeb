@@ -145,10 +145,12 @@ refs:
   message: "Initial commit"
   tree:
     README.md: "root readme"
-    lib/a.txt: "file a"
-    lib/b.txt: "file b"
-    lib/c.txt: "file c"
-    lib/sub/d.txt: "file d"
+    lib:
+      a.txt: "file a"
+      b.txt: "file b"
+      c.txt: "file c"
+      sub:
+        d.txt: "file d"
 "#;
 
     let repo = TestRepo::from_yaml(yaml);

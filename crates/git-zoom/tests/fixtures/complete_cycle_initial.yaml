@@ -6,5 +6,6 @@ refs:
   message: "Initial commit"
   tree:
     README.md: "root readme"
-    src/lib.txt: "library code"
-    src/utils.txt: "utils"
+    src:
+      lib.txt: "library code"
+      utils.txt: "utils"

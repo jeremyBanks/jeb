@@ -2426,8 +2426,8 @@ fn apply_tree_delta(
         // This must be a string/number key
         let name = normalize_yaml_key(key)?;
 
-        // Don't validate full paths from YAML - they may contain '/' which is valid for flat trees
-        // Tree::validate_component(&name)?;
+        // Validate that the component doesn't contain slashes or other invalid characters
+        Tree::validate_component(&name)?;
 
         let target_path = if target_prefix.is_empty() {
             name.clone()

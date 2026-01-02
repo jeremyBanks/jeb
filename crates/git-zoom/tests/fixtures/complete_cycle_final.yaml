@@ -8,8 +8,9 @@ refs:
   message: "Initial commit"
   tree:
     README.md: "root readme"
-    src/lib.txt: "library code"
-    src/utils.txt: "utils"
+    src:
+      lib.txt: "library code"
+      utils.txt: "utils"
 
 # Seed commit for zoom-in
 2:
@@ -56,6 +57,7 @@ refs:
   committer: "🔍 <git-zoom-out@localhost>"
   tree:
     README.md: "root readme"
-    src/lib.txt: "MODIFIED library code"
-    src/utils.txt: "utils"
-    src/new.txt: "new content"
+    src:
+      lib.txt: "MODIFIED library code"
+      utils.txt: "utils"
+      new.txt: "new content"
