@@ -134,7 +134,24 @@ impl TestRepo {
         // Git add all
         let add_result = Command::new("git").args(&["add", "."]).output();
 
+        // Get current HEAD timestamp to derive from
+        let timestamp_result = Command::new("git")
+            .args(&["show", "-s", "--format=%aI", "HEAD"])
+            .output();
+
+        let timestamp = if let Ok(output) = timestamp_result {
+            if output.status.success() {
+                String::from_utf8_lossy(&output.stdout).trim().to_string()
+            } else {
+                // No HEAD commit yet, use default
+                "2024-12-06T06:12:24-06:24".to_string()
+            }
+        } else {
+            "2024-12-06T06:12:24-06:24".to_string()
+        };
+
         // Git commit (with explicit author/committer matching git-snapshot defaults)
+        // Use deterministic timestamp derived from parent
         let commit_result = Command::new("git")
             .args(&[
                 "-c",
@@ -145,6 +162,8 @@ impl TestRepo {
                 "-m",
                 message,
             ])
+            .env("GIT_AUTHOR_DATE", &timestamp)
+            .env("GIT_COMMITTER_DATE", &timestamp)
             .output();
 
         env::set_current_dir(original_dir).unwrap();
