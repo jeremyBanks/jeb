@@ -511,8 +511,18 @@ impl MarkdownProcessor {
             // [impl markdown.syntax.standalone]
             // [impl markdown.syntax.inline-ignored]
             // By requiring the trimmed line to START with "r[", inline occurrences are ignored
-            if trimmed.starts_with("r[") && trimmed.ends_with(']') && trimmed.len() > 3 {
-                let inner = &trimmed[2..trimmed.len() - 1];
+            // Also support trailing backslash for markdown line continuation: r[rule.id]\
+            let has_trailing_backslash = trimmed.ends_with("]\\");
+            let ends_correctly = trimmed.ends_with(']') || has_trailing_backslash;
+
+            if trimmed.starts_with("r[") && ends_correctly && trimmed.len() > 3 {
+                // Extract the inner content, stripping the backslash if present
+                let end_pos = if has_trailing_backslash {
+                    trimmed.len() - 2  // Remove ]\
+                } else {
+                    trimmed.len() - 1  // Remove ]
+                };
+                let inner = &trimmed[2..end_pos];
 
                 // Parse the rule ID and optional attributes
                 // Format: "rule.id" or "rule.id attr=value attr=value"
