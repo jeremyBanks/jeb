@@ -22,7 +22,7 @@ use {
 };
 
 pub fn main() -> i32 {
-    eprintln!("Running: Cargo.toml feature normalization");
+    eprintln!("Running: Cargo.toml normalization (features and section ordering)");
     match run_normalization() {
         Ok(()) => {
             eprintln!();
@@ -74,10 +74,7 @@ fn run_normalization() -> Result<()> {
         let mut doc = content.parse::<DocumentMut>()?;
 
         let features_modified = normalize_crate_features(&mut doc, &mut stats)?;
-        // DISABLED: Section reordering not possible with toml_edit v0.22
-        // Both remove/insert and sort_values_by fail to affect serialization order
-        // let sections_modified = sort_cargo_toml_sections(&mut doc)?;
-        let sections_modified = false;
+        let sections_modified = sort_cargo_toml_sections(&mut doc)?;
 
         if features_modified || sections_modified {
             stats.crates_modified += 1;
@@ -483,13 +480,23 @@ fn sort_cargo_toml_sections(doc: &mut DocumentMut) -> Result<bool> {
         return Ok(false);
     }
 
-    // NOTE: sort_values_by() reorders the iterator but does NOT affect serialization order.
-    // toml_edit v0.22 maintains position metadata independently from iteration order.
-    // Both remove/insert and sort_values_by approaches fail to reorder the final output.
-    // Reordering top-level sections while preserving comments requires reconstructing
-    // the entire document, which defeats the purpose of using toml_edit.
+    // Use set_position() to explicitly set the position of each section
+    // This should affect the serialization order
+    for key in &current_keys {
+        let target_position = section_order
+            .iter()
+            .position(|&s| s == key)
+            .unwrap_or(section_order.len());
 
-    Ok(false)  // Section reordering not possible with toml_edit v0.22
+        // Get mutable reference to the item and set its position
+        if let Some(item) = doc.get_mut(key) {
+            if let Some(table) = item.as_table_mut() {
+                table.set_position(target_position);
+            }
+        }
+    }
+
+    Ok(true)
 }
 
 /// Find the workspace root by looking for a Cargo.toml with [workspace]
