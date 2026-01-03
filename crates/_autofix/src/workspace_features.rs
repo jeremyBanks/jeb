@@ -334,16 +334,56 @@ fn update_features_section(
     doc: &mut DocumentMut,
     features: HashMap<String, Vec<String>>,
 ) -> Result<()> {
-    // Remove existing features section if it exists
-    if doc.get("features").is_some() {
-        doc.remove("features");
-    }
+    // Case 1: Features section already exists - modify in place
+    if let Some(features_table) = doc.get_mut("features").and_then(|f| f.as_table_mut()) {
+        // Remove features that are no longer needed
+        let current_keys: Vec<String> = features_table.iter().map(|(k, _)| k.to_string()).collect();
+        for key in current_keys {
+            if !features.contains_key(&key) {
+                features_table.remove(&key);
+            }
+        }
 
-    // Create new features table
-    if !features.is_empty() {
+        // Add/update features
+        for (feature_name, feature_deps) in features.iter() {
+            // Sort the dependencies within each feature
+            let mut sorted_deps = feature_deps.clone();
+            sorted_deps.sort_by_key(|dep| feature_dep_sort_key(dep));
+
+            let mut array = toml_edit::Array::new();
+            for dep in sorted_deps {
+                array.push(dep);
+            }
+            features_table.insert(feature_name, toml_edit::Item::Value(Value::Array(array)));
+        }
+
+        // Sort in place (reuse workspace_deps pattern)
+        // Extract all entries, sort them, remove all, re-insert in order
+        let mut sorted_entries: Vec<(String, Item)> = features_table
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.clone()))
+            .collect();
+
+        sorted_entries.sort_by(|a, b| match (&a.0[..], &b.0[..]) {
+            ("default", "default") => std::cmp::Ordering::Equal,
+            ("default", _) => std::cmp::Ordering::Less,
+            (_, "default") => std::cmp::Ordering::Greater,
+            (a_key, b_key) => a_key.cmp(b_key),
+        });
+
+        let all_keys: Vec<String> = features_table.iter().map(|(k, _)| k.to_string()).collect();
+        for key in all_keys {
+            features_table.remove(&key);
+        }
+        for (key, value) in sorted_entries {
+            features_table.insert(&key, value);
+        }
+    }
+    // Case 2: No features section yet - create it
+    else if !features.is_empty() {
         let mut features_table = toml_edit::Table::new();
 
-        // Sort features: "default" first, then alphabetically
+        // Sort features before inserting
         let mut sorted_features: Vec<_> = features.into_iter().collect();
         sorted_features.sort_by(|a, b| match (&a.0[..], &b.0[..]) {
             ("default", "default") => std::cmp::Ordering::Equal,
@@ -360,7 +400,6 @@ fn update_features_section(
             for dep in feature_deps {
                 array.push(dep);
             }
-
             features_table.insert(&feature_name, toml_edit::Item::Value(Value::Array(array)));
         }
 
