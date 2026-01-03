@@ -22,7 +22,7 @@ use {
 };
 
 pub fn main() -> i32 {
-    eprintln!("Running: Cargo.toml normalization (features and section ordering)");
+    eprintln!("Running: Cargo.toml feature normalization");
     match run_normalization() {
         Ok(()) => {
             eprintln!();
@@ -74,7 +74,11 @@ fn run_normalization() -> Result<()> {
         let mut doc = content.parse::<DocumentMut>()?;
 
         let features_modified = normalize_crate_features(&mut doc, &mut stats)?;
-        let sections_modified = sort_cargo_toml_sections(&mut doc)?;
+        // DISABLED: Section reordering doesn't work with toml_edit - it preserves
+        // original section order even when removing and re-inserting. This is a
+        // limitation of how toml_edit tracks position/formatting.
+        // let sections_modified = sort_cargo_toml_sections(&mut doc)?;
+        let sections_modified = false;
 
         if features_modified || sections_modified {
             stats.crates_modified += 1;
@@ -483,9 +487,7 @@ fn sort_cargo_toml_sections(doc: &mut DocumentMut) -> Result<bool> {
     // Collect entries with their values (preserving decoration/comments)
     let mut entries: Vec<(String, Item)> = current_keys
         .iter()
-        .filter_map(|key| {
-            doc.get(key).map(|value| (key.clone(), value.clone()))
-        })
+        .filter_map(|key| doc.get(key).map(|value| (key.clone(), value.clone())))
         .collect();
 
     // Sort by canonical order
