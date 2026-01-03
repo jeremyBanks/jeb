@@ -483,9 +483,7 @@ fn sort_cargo_toml_sections(doc: &mut DocumentMut) -> Result<bool> {
     // Collect entries with their values (preserving decoration/comments)
     let mut entries: Vec<(String, Item)> = current_keys
         .iter()
-        .filter_map(|key| {
-            doc.get(key).map(|value| (key.clone(), value.clone()))
-        })
+        .filter_map(|key| doc.get(key).map(|value| (key.clone(), value.clone())))
         .collect();
 
     // Sort by canonical order
