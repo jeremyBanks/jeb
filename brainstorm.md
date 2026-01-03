@@ -27,3 +27,6 @@
 21. In my local environment define a task or skill which fetches this branch to see my recent notes
 22. Agent: That last message didn't start with agent: - it was not an instruction, it was a topic for the list
 23. Update the playlist updater with ai
+24. Maybe it should be git-jeb, the crate name, after all
+   1. save and git-uncommit et al have to become shallow re-exports of this
+   2. Should it busybox?
