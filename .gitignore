@@ -1,4 +1,7 @@
-*.pdb
-*.rs.bk
-**/mutants.out*/
-/target
+*.git
+*.local
+*.local.*
+*.tmp
+*.wasm
+/examples/self.sh
+/target/

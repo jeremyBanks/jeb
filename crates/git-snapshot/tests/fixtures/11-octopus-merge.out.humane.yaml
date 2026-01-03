@@ -1,0 +1,37 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 5
+1:
+  tree:
+    README.md: '# Base'
+2:
+  tree:
+    feature-a.txt: Feature A
+3:
+  parents:
+  - 1
+  tree:
+    feature-b.txt: Feature B
+4:
+  parents:
+  - 1
+  tree:
+    feature-c.txt: Feature C
+5:
+  message: Merge branches feature-a, feature-b, and feature-c
+  parents:
+  - 1
+  - 2
+  - 3
+  - 4
+  tree:
+    feature-a.txt:
+      //commit: 2
+      //path: feature-a.txt
+    feature-b.txt:
+      //commit: 3
+      //path: feature-b.txt
+    feature-c.txt:
+      //commit: 4
+      //path: feature-c.txt

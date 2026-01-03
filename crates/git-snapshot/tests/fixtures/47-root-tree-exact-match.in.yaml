@@ -1,0 +1,25 @@
+# Test exact tree hash matching optimization (entire tree unchanged)
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 3
+
+1:
+  tree:
+    file.txt: "content"
+    dir:
+      nested.txt: "nested"
+
+# Exact same tree - hash should match
+2:
+  tree:
+    file.txt: "content"
+    dir:
+      nested.txt: "nested"
+
+# Reference the entire tree from commit 1
+3:
+  tree:
+    [commit]: 1
+    [path]: .

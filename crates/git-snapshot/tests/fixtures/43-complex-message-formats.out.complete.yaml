@@ -1,0 +1,62 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 54921803effca54967ecdc3c6491aef07462974f
+4727b165ce5686e80653545dce2a81ab3fcd07f9:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
+  message: Simple single-line message
+  parents: []
+  tree:
+    file.txt: content
+c674bd11f7c71b1fe0292a2a1667a1cbfc653252:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
+  message: |
+    Multi-line message
+
+    With blank lines and details.
+
+    Multiple paragraphs.
+  parents:
+  - 4727b165ce5686e80653545dce2a81ab3fcd07f9
+  tree:
+    file.txt: change
+f67ede3f12d342bc85ce442d98b79a7e6a50ffcf:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: User <user@localhost>
+  message: |
+    Message with special YAML characters
+
+    Contains: colons: and "quotes"
+    Also 'single quotes'
+    And [brackets] and {braces}
+
+    Signed-off-by: Author <author@example.com>
+  parents:
+  - c674bd11f7c71b1fe0292a2a1667a1cbfc653252
+  tree:
+    file.txt: special
+54921803effca54967ecdc3c6491aef07462974f:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: User <user@localhost>
+  message: |
+    Message with trailers
+
+    Body paragraph explaining the change.
+
+    Reviewed-by: Reviewer <reviewer@example.com>
+    Tested-by: Tester <tester@example.com>
+    Cc: Someone <someone@example.com>
+  parents:
+  - f67ede3f12d342bc85ce442d98b79a7e6a50ffcf
+  tree:
+    file.txt: trailers

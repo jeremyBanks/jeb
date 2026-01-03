@@ -1,0 +1,15 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: e473f3ac12b6f678eb5c5757fe3b376898b92583
+e473f3ac12b6f678eb5c5757fe3b376898b92583:
+  author-date: 2025-06-15T14:30:00+05:00
+  message: Initial commit
+  tree:
+    README.md: root
+    src:
+      lib:
+        api.rs: api code
+        core:
+          engine.rs: engine code
+          utils.rs: utils code

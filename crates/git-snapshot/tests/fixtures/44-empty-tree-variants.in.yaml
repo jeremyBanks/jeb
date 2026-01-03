@@ -1,0 +1,34 @@
+# Test various forms of empty trees and deletion
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 4
+
+1:
+  tree:
+    file.txt: "content"
+    dir:
+      nested.txt: "nested"
+    other-dir:
+      file.txt: "other"
+
+# Explicit empty tree at root
+2:
+  tree: {}
+
+# Deletion with null
+3:
+  parents: [1]
+  tree:
+    file.txt: "kept"
+    dir: null
+    other-dir: {}
+
+# Multiple empty directories
+4:
+  tree:
+    empty-one: {}
+    empty-two: {}
+    has-content:
+      file.txt: "content"

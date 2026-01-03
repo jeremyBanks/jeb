@@ -1,0 +1,15 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 1
+1:
+  author-date: "2025-06-15T14:30:00+05:00"
+  message: "Initial commit"
+  tree:
+    README.md: "root"
+    src:
+      lib:
+        core:
+          engine.rs: "engine code"
+          utils.rs: "utils code"
+        api.rs: "api code"

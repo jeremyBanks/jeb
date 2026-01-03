@@ -1,0 +1,31 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: b1e87ce43ce99a5a69a62ee35e1e1464ef8eb48c
+992f669d1540b4c43910fc192dc67ec3e0571352:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    completely:
+      different:
+        path.txt: duplicate content
+    foo:
+      bar:
+        baz.txt: duplicate content
+        qux.txt: duplicate content
+b1e87ce43ce99a5a69a62ee35e1e1464ef8eb48c:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
+  message: commit 2
+  parents:
+  - 992f669d1540b4c43910fc192dc67ec3e0571352
+  tree:
+    foo:
+      bar:
+        renamed.txt: duplicate content

@@ -1,0 +1,12 @@
+HEAD: 1
+refs: {}
+staged:
+  README.md: '# Project v0.1'
+  src:
+    lib.rs: pub fn main() { println!("hello"); }
+1:
+  message: Initial commit
+  tree:
+    README.md: '# Project'
+    src:
+      lib.rs: pub fn main() {}

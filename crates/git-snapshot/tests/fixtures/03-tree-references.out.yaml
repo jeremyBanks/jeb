@@ -1,0 +1,20 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: b3cd00b98f93c9b4f2cd154c693f392128d1532b
+3d3092:
+  message: commit 1
+  tree:
+    README.md: '# Original README'
+    src:
+      helper.rs: pub fn help() {}
+      lib.rs: pub fn original() {}
+b3cd00b98f93c9b4f2cd154c693f392128d1532b:
+  message: commit 2
+  tree:
+    GUIDE.md:
+      //commit: 3d3092
+      //path: README.md
+    src:
+      helper.rs: pub fn help() { /* updated */ }
+      new.rs: pub fn new_func() {}
