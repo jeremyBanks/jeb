@@ -1,0 +1,38 @@
+[package]
+name = "jeb-stream"
+publish = true
+description = "(part of https://crates.io/crates/jeb)"
+keywords = []
+categories = []
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+async-stream = { workspace = true }
+cfg-if = { workspace = true }
+derive_more = { workspace = true, features = ["full"] }
+document-features = { workspace = true }
+futures = { workspace = true }
+macro_rules_attribute = { workspace = true }
+parking_lot = { workspace = true }
+serde = { workspace = true, optional = true, features = ["derive"] }
+static_assertions = { workspace = true }
+tokio = { workspace = true, features = ["rt", "macros", "sync", "io-util"] }
+tokio-stream = { workspace = true }
+tokio-util = { workspace = true, features = ["codec", "io"] }
+wasm-bindgen = { workspace = true, optional = true }
+
+jeb-common = { workspace = true }
+jeb-value = { workspace = true }
+
+[features]
+default = []
+fs = ["tokio/fs"]
+json = []
+serde = ["jeb-value/serde", "dep:serde"]
+stdio = ["tokio/io-std"]
+wasm = ["jeb-common/wasm", "jeb-value/wasm", "dep:wasm-bindgen"]
+wasm_bindgen = ["dep:wasm-bindgen"]

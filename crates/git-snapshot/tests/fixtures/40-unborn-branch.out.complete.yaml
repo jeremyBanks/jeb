@@ -1,0 +1,24 @@
+HEAD: refs/heads/nonexistent
+refs:
+  heads:
+    main: d899f9456f21f78f1c22920331a0ed63999215aa
+    other: faef872891e4afdecfdd027fff36684926df8aff
+d899f9456f21f78f1c22920331a0ed63999215aa:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    file.txt: on main
+faef872891e4afdecfdd027fff36684926df8aff:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
+  message: commit 2
+  parents:
+  - d899f9456f21f78f1c22920331a0ed63999215aa
+  tree:
+    file.txt: on other

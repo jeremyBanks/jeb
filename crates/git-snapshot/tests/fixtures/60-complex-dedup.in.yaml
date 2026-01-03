@@ -1,0 +1,47 @@
+HEAD: 1
+1:
+  message: Initial commit
+  tree:
+    README.md: '# Project'
+    src:
+      lib.rs: pub fn original() {}
+    docs:
+      api.md: '# API Documentation'
+    LICENSE: MIT
+
+staged:
+  # Reuse README from HEAD
+  README.md:
+    //commit: 1
+    //path: README.md
+  # Modified in staged
+  src:
+    lib.rs: pub fn original() { println!("staged"); }
+  # Reuse docs from HEAD
+  docs:
+    api.md:
+      //commit: 1
+      //path: docs/api.md
+  # New file in staged
+  CHANGELOG.md: '## v0.1.0'
+  # Reuse LICENSE from HEAD
+  LICENSE:
+    //commit: 1
+    //path: LICENSE
+
+working:
+  # Modified in working (different from both HEAD and staged)
+  README.md: '# Project v0.2 (WIP)'
+  # Keep src/lib.rs from staged
+  src:
+    lib.rs: pub fn original() { println!("staged"); }  # Same as staged
+  # Reuse docs from HEAD
+  docs:
+    api.md:
+      //commit: 1
+      //path: docs/api.md
+  # Keep CHANGELOG from staged
+  CHANGELOG.md: '## v0.1.0'  # Same as staged
+  # New file in working only
+  TODO.txt: Add tests
+  # LICENSE deleted in working (omitted)

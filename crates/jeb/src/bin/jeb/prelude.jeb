@@ -1,0 +1,5 @@
+default-source=stdin
+default-sink=stdout
+default-error-sink=stderr
+
+to-jeb85-lines="encode-jeb85 split-80 join-lines"

@@ -1,0 +1,27 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: b427d3b5c5e93c0597c822d36ae7071a27ea431c
+d97511:
+  message: commit 1
+  tree:
+    dir:
+      nested.txt: nested
+    file.txt: content
+    other-dir:
+      file.txt: other
+'567944':
+  message: commit 3
+  tree:
+    dir:
+      nested.txt: null
+    file.txt: kept
+    other-dir:
+      file.txt: null
+b427d3b5c5e93c0597c822d36ae7071a27ea431c:
+  message: commit 4
+  tree:
+    has-content:
+      file.txt:
+        //commit: d97511
+        //path: file.txt

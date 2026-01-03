@@ -1,0 +1,13 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 1
+1:
+  tree:
+    README.md: "Project Documentation - This is important."
+    src:
+      lib:
+        core.rs: "pub fn core() { /* complex code */ }"
+        utils.rs: "pub fn utils() {}"
+    docs:
+      guide.md: "Guide - Step 1 Install"

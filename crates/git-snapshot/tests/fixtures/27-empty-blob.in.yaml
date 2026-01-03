@@ -1,0 +1,20 @@
+# Test empty blob (empty string content)
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 2
+
+1:
+  tree:
+    empty.txt: ""
+    nonempty.txt: "has content"
+    dir:
+      also-empty.txt: ""
+
+2:
+  tree:
+    empty.txt: "now has content"
+    nonempty.txt: ""
+    dir:
+      also-empty.txt: "also has content now"

@@ -1,0 +1,18 @@
+HEAD: 1
+1:
+  message: Initial commit
+  tree:
+    README.md: '# Project'
+    src:
+      lib.rs: pub fn main() {}
+
+staged:
+  README.md: '# Project v0.1'
+  src:
+    lib.rs: pub fn main() { println!("hello"); }
+
+# working equals staged - should be omitted
+working:
+  README.md: '# Project v0.1'
+  src:
+    lib.rs: pub fn main() { println!("hello"); }

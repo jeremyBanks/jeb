@@ -1,45 +1,34 @@
 use crate::const_checked::OBS;
-
-
-
 /// Digits of hex/base16 encoding as defined by
 /// [RFC-3548](https://datatracker.ietf.org/doc/html/rfc3548#section-6).
 pub const HEX: &[u8; 16] = b"0123456789ABCDEF";
 pub const HEX_LUT: [u8; 256] = OBS(HEX).index_lut();
-
 /// Digits of base32 encoding as defined by
 /// [RFC-3548](https://datatracker.ietf.org/doc/html/rfc3548#section-5).
 pub const BASE32: &[u8; 32] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 pub const BASE32_LUT: [u8; 256] = OBS(BASE32).index_lut();
 pub const BASE32_PADDING: u8 = b'=';
-
 /// Digits of base64 encoding as defined by
 /// [RFC-3548](https://datatracker.ietf.org/doc/html/rfc3548#section-3).
 pub const BASE64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 pub const BASE64_LUT: [u8; 256] = OBS(BASE64).index_lut();
 pub const BASE64_PADDING: u8 = b'=';
-
 /// Digits of base64url encoding as defined by
 /// [RFC-3548](https://datatracker.ietf.org/doc/html/rfc3548#section-4).
 pub const BASE64URL: &[u8; 64] =
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 pub const BASE64URL_LUT: [u8; 256] = OBS(BASE64).index_lut();
 pub const BASE64URL_PADDING: u8 = b'=';
-
 /// Digits of Z85 encoding as defined by
 /// [ZeroMQ RFC 32](https://rfc.zeromq.org/spec/32/).
 pub const Z85: &[u8; 85] =
     b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
 pub const Z85_LUT: [u8; 256] = OBS(Z85).index_lut();
-
 /// Digits of Ascii85 encoding.
 pub const ASCII85: &[u8; 85] =
     b"!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstu";
 pub const ASCII85_LUT: [u8; 256] = OBS(ASCII85).index_lut();
 pub const ASCII85_ZERO: u8 = b'z';
-
-
-
 /// Byte sequences that can potentially occur in UTF-8 data, although not every
 /// arrangement of these bytes will constitute value UTF-8 data.
 pub const UTF8: &[u8; 243] = &[
@@ -61,7 +50,6 @@ pub const UTF8: &[u8; 243] = &[
     0xF2, 0xF3, 0xF4,
 ];
 pub const UTF8_LUT: [bool; 256] = OBS(UTF8).presence_lut();
-
 /// Bytes that can occur in ASCII data.
 pub const ASCII: &[u8; 128] = &[
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
@@ -74,45 +62,41 @@ pub const ASCII: &[u8; 128] = &[
     0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F,
 ];
 pub const ASCII_LUT: [bool; 256] = OBS(ASCII).presence_lut();
-
 /// ASCII control characters except for the common whitespace (`\t`, `\n`,
 /// `\r`).
 pub const ASCII_NON_WHITESPACE_CONTROL_CHARACTERS: &[u8; 30] = &[
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x0B, 0x0C, 0x0E, 0x0F, 0x10, 0x11, 0x12,
     0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x7F,
 ];
-
 /// Bytes that can occur in ASCII text data, excluding control characters other
 /// than `\t`, `\n`, and `\r`.
 pub const ASCII_TEXT: &[u8; 98] = &OBS(ASCII)
     .sub(OBS(ASCII_NON_WHITESPACE_CONTROL_CHARACTERS))
     .sort()
-    .eq(b"\t\n\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~")
+    .eq(
+        b"\t\n\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+    )
     .to_array();
 pub const ASCII_TEXT_LUT: [bool; 256] = OBS(ASCII_TEXT).presence_lut();
-
 /// Bytes that may occur in UTF-8 text data, excluding ASCII control characters
 /// other than `\t`, `\n`, and `\r`.
 pub const UTF8_TEXT: &[u8; 213] = &OBS(UTF8)
     .sub(OBS(ASCII_NON_WHITESPACE_CONTROL_CHARACTERS))
     .to_array();
 pub const UTF8_TEXT_LUT: [bool; 256] = OBS(UTF8_TEXT).presence_lut();
-
 /// Bytes that can occur in ASCII text data, excluding control characters.
 pub const ASCII_INLINE_TEXT: &[u8; 95] = &OBS(ASCII_TEXT)
     .sub(OBS(b"\t\n\r"))
-    .eq(b" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~")
+    .eq(
+        b" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+    )
     .to_array();
 pub const ASCII_INLINE_TEXT_LUT: [bool; 256] = OBS(ASCII_INLINE_TEXT).presence_lut();
-
-
-
 /// ASCII characters that are safe as-is as non-leading characters in
 /// identifiers in practically all languages.
 pub const SAFE_IN_IDENTIFIER: &[u8; 63] =
     b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 pub const SAFE_IN_IDENTIFIER_LUT: [bool; 256] = OBS(SAFE_IN_IDENTIFIER).presence_lut();
-
 /// Characters that are safe as-is in in URLs according to the current
 /// [RFC 3986](https://datatracker.ietf.org/doc/html/rfc3986).
 pub const SAFE_IN_URL: &[u8; 66] = &OBS(SAFE_IN_IDENTIFIER)
@@ -121,7 +105,6 @@ pub const SAFE_IN_URL: &[u8; 66] = &OBS(SAFE_IN_IDENTIFIER)
     .eq(b"-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~")
     .to_array();
 pub const SAFE_IN_URL_LUT: [bool; 256] = OBS(SAFE_IN_URL).presence_lut();
-
 /// Characters that were safe as-is in in URLs according to the older
 /// now-obsolete [RFC 2396](https://datatracker.ietf.org/doc/html/rfc2396).
 pub const SAFE_IN_URL_RFC_2396: &[u8; 70] = &OBS(SAFE_IN_URL)
@@ -130,30 +113,34 @@ pub const SAFE_IN_URL_RFC_2396: &[u8; 70] = &OBS(SAFE_IN_URL)
     .eq(b"!'()-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~")
     .to_array();
 pub const SAFE_IN_URL_RFC_2396_LUT: [bool; 256] = OBS(SAFE_IN_URL_RFC_2396).presence_lut();
-
 /// Monospace ASCII characters that are safe as-is in all types of strings in
 /// JavaScript, JSON, and languages with similar syntax.
 pub const SAFE_IN_STRING: &[u8; 91] = &OBS(ASCII_INLINE_TEXT)
     .sub(OBS(b"\"$'\\"))
-    .eq(b" !#%&()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}~")
+    .eq(
+        b" !#%&()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+    )
     .to_array();
-
 /// Monospace ASCII characters that are safe as-is in double-quoted strings in
 /// JavaScript, JSON, and languages with similar syntax.
 pub const SAFE_IN_STRING_JSON: &[u8; 93] = &OBS(SAFE_IN_STRING)
     .add(OBS(b"$'"))
     .sort()
-    .eq(b" !#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}~").to_array();
+    .eq(
+        b" !#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+    )
+    .to_array();
 pub const SAFE_IN_STRING_JSON_LUT: [bool; 256] = OBS(SAFE_IN_STRING_JSON).presence_lut();
-
 /// Monospace ASCII characters that are safe as-is in single-quoted strings in
 /// JavaScript and languages with similar syntax.
 pub const SAFE_IN_STRING_SINGLE_QUOTED: &[u8; 93] = &OBS(ASCII_INLINE_TEXT)
     .sub(OBS(b"'\\"))
-    .eq(b" !\"#$%&()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}~").to_array();
+    .eq(
+        b" !\"#$%&()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+    )
+    .to_array();
 pub const SAFE_IN_STRING_SINGLE_QUOTED_LUT: [bool; 256] =
     OBS(SAFE_IN_STRING_SINGLE_QUOTED).presence_lut();
-
 /// Monospace ASCII characters that are safe as-is in backtick-quoted strings in
 /// JavaScript and languages with similar syntax.
 ///
@@ -161,6 +148,9 @@ pub const SAFE_IN_STRING_SINGLE_QUOTED_LUT: [bool; 256] =
 /// it excluded when it occurs before a raw `{`.
 pub const SAFE_IN_STRING_BACKTICKED: &[u8; 92] = &OBS(ASCII_INLINE_TEXT)
     .sub(OBS(b"$`\\"))
-    .eq(b" !\"#%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_abcdefghijklmnopqrstuvwxyz{|}~").to_array();
+    .eq(
+        b" !\"#%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_abcdefghijklmnopqrstuvwxyz{|}~",
+    )
+    .to_array();
 pub const SAFE_IN_STRING_BACKTICKED_LUT: [bool; 256] =
     OBS(SAFE_IN_STRING_BACKTICKED).presence_lut();

@@ -1,0 +1,58 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 6
+
+# "Evil merge" - merge that introduces changes not in either parent
+1:
+  tree:
+    file.txt: "version A"
+
+2:
+  parents: [1]
+  tree:
+    file.txt: "version B (from main)"
+
+3:
+  parents: [1]
+  tree:
+    file.txt: "version C (from feature)"
+
+# Evil merge: tree doesn't match either parent
+4:
+  parents: [2, 3]
+  message: "Merge with conflict resolution AND extra changes"
+  tree:
+    # Resolved version (different from both parents)
+    file.txt: "version D (merged + fixed bug)"
+    # New file added during merge (evil!)
+    MERGE-NOTES.txt: "This merge also fixed a critical bug"
+
+5:
+  parents: [4]
+  tree:
+    # Regular commit
+    another-file.txt: "normal work"
+
+# Another evil merge combining orphan content
+6:
+  parents: [5, 20]
+  message: "Merge unrelated history"
+  tree:
+    # Keep main branch content
+    MERGE-NOTES.txt:
+      [commit]: 4
+      [path]: MERGE-NOTES.txt
+    # Bring in content from orphan branch
+    orphan-data.json:
+      [commit]: 20
+      [path]: data.json
+    # New content created in merge
+    INTEGRATION.md: "How we integrated the orphan history"
+
+# Orphan branch
+20:
+  parents: []
+  tree:
+    data.json: '{"source": "orphan"}'

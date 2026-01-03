@@ -1,0 +1,48 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 6
+
+# Test various deletion and restoration patterns
+1:
+  tree:
+    keep.txt: "kept"
+    delete-soon.txt: "will be deleted"
+    dir:
+      file-a.txt: "a"
+      file-b.txt: "b"
+      file-c.txt: "c"
+
+2:
+  tree:
+    # Delete one file
+    delete-soon.txt: null
+
+3:
+  tree:
+    # Delete one file from directory
+    dir:
+      file-b.txt: null
+
+4:
+  tree:
+    # Restore deleted file from commit 1
+    delete-soon.txt:
+      [commit]: 1
+      [path]: delete-soon.txt
+
+5:
+  tree:
+    # Delete entire directory by setting to empty mapping
+    dir: {}
+
+6:
+  tree:
+    # Restore directory but with different content
+    dir:
+      file-a.txt:
+        [commit]: 1
+        [path]: dir/file-a.txt
+      # file-b and file-c remain deleted
+      new-file.txt: "new"
