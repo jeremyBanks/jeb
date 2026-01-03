@@ -1,4 +1,4 @@
-# jeb-value specification
+# `jeb-value` specification
 
 This is the [Tracey](https://crates.io/crates/tracey) specification for the
 `jeb-value` crate. Run the `tracey` command-line tool to evaluate coverage.
@@ -6,8 +6,13 @@ This is the [Tracey](https://crates.io/crates/tracey) specification for the
 ## Cargo Features
 
 r[jeb-value.dependencies.optional]  
-Any optional dependencies SHOULD have a corresponding Cargo feature to enable
-them. Multiple optional dependencies MAY be grouped behind a single feature if
+Any optional dependency MUST have a correspondingly-named Cargo feature to 
+enable it. If an optional dependency is known to depend on another optional 
+dependency, their corresponding features MUST also have the same dependency 
+relationship (e.g. if they were both dependencies of a crate, the
+ `serde-json` feature would need to depend on `serde`).
+
+Multiple optional dependencies MAY be grouped behind a single feature if
 they're both required for a single set of functionality.
 
 r[jeb-value.dependencies.limit-internal]  
@@ -18,7 +23,7 @@ r[jeb-value.dependencies.cfg]
 Any use of an optional dependency MUST be gated behind the corresponding Cargo
 feature using `cfg!`, `#[cfg ...]`, `#[cfg_attr ...]` or similar.
 
-## `Value`
+## `Value` (`jeb-value.value.`)
 
 r[jeb-value.value.pub]  
 The crate MUST publicly export the `Value` enum from its root (and nowhere else),
