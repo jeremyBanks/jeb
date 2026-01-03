@@ -64,5 +64,5 @@ refs:
     // by getting the git object directly
     eprintln!("\nTree hashes:");
     eprintln!("  Our tree: (calculated from files)");
-    eprintln!("  Git tree: {}", git_commit.tree.paths().next());
+    eprintln!("  Git tree: {:?}", git_commit.tree.paths().next());
 }
