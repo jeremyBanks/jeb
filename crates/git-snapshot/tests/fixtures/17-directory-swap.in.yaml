@@ -1,0 +1,35 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 3
+
+# Test swapping contents of two directories
+1:
+  tree:
+    frontend:
+      app.js: "frontend app"
+      utils.js: "frontend utils"
+    backend:
+      server.py: "backend server"
+      database.py: "backend database"
+
+2:
+  tree:
+    # Temporarily move frontend to temp location
+    temp-frontend:
+      [commit]: 1
+      [path]: frontend
+    # Move backend to frontend
+    frontend:
+      [commit]: 1
+      [path]: backend
+
+3:
+  tree:
+    # Complete the swap: temp-frontend → backend
+    backend:
+      [commit]: 2
+      [path]: temp-frontend
+    # Delete temp
+    temp-frontend: {}

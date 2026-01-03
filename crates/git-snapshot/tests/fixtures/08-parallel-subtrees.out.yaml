@@ -1,0 +1,88 @@
+HEAD: refs/heads/full-tree
+refs:
+  heads:
+    backend-subtree: afed887203378ee8156e6d893cc820282ad0e5c5
+    frontend-subtree: 0189413d88e8ffd4b2597653be61153064d71455
+    full-tree: 3a76942e8653a9924893e1ad5de135a4f391c279
+7e5b85:
+  message: commit 1
+  tree:
+    README.md: '# Full Stack App'
+    backend:
+      db.py: 'def connect(): pass'
+      server.py: 'def serve(): pass'
+    frontend:
+      app.js: console.log('app');
+      style.css: body { }
+ac5de9:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: git-zoom-in seed for frontend
+  parents: []
+  tree: {}
+0189413d88e8ffd4b2597653be61153064d71455:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'frontend'
+
+    git-zoom-in: frontend
+  parents:
+  - ac5de9
+  - 7e5b85
+  tree:
+    app.js:
+      //commit: 7e5b85
+      //path: frontend/app.js
+    style.css:
+      //commit: 7e5b85
+      //path: frontend/style.css
+    utils.js: export const util = () => {};
+'728566':
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'frontend'
+
+    git-zoom-out: frontend
+  parents:
+  - 7e5b85
+  - 0189413d88e8ffd4b2597653be61153064d71455
+  tree:
+    frontend:
+      utils.js:
+        //commit: 0189413d88e8ffd4b2597653be61153064d71455
+        //path: utils.js
+2cc798:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: git-zoom-in seed for backend
+  parents: []
+  tree: {}
+afed887203378ee8156e6d893cc820282ad0e5c5:
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'backend'
+
+    git-zoom-in: backend
+  parents:
+  - 2cc798
+  - '728566'
+  tree:
+    db.py:
+      //commit: 7e5b85
+      //path: backend/db.py
+    routes.py: 'def routes(): pass'
+    server.py:
+      //commit: 7e5b85
+      //path: backend/server.py
+3a76942e8653a9924893e1ad5de135a4f391c279:
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'backend'
+
+    git-zoom-out: backend
+  parents:
+  - '728566'
+  - afed887203378ee8156e6d893cc820282ad0e5c5
+  tree:
+    backend:
+      routes.py:
+        //commit: afed887203378ee8156e6d893cc820282ad0e5c5
+        //path: routes.py

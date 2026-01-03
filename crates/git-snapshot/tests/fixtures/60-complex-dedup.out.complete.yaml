@@ -1,0 +1,23 @@
+HEAD: e21906528d4c7fa7cf1588aee6933961fd27b587
+refs: {}
+staged:
+  CHANGELOG.md: '## v0.1.0'
+  src:
+    lib.rs: pub fn original() { println!("staged"); }
+working:
+  README.md: '# Project v0.2 (WIP)'
+  TODO.txt: Add tests
+e21906528d4c7fa7cf1588aee6933961fd27b587:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
+  message: Initial commit
+  parents: []
+  tree:
+    LICENSE: MIT
+    README.md: '# Project'
+    docs:
+      api.md: '# API Documentation'
+    src:
+      lib.rs: pub fn original() {}

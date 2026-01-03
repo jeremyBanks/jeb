@@ -1,0 +1,68 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    feature: cef8d7cb2af0d1fa4af3067846db9169cfb42533
+    main: c2c1e375de1f07e026d10882923e4a632bfac000
+2e2dfd439e961033e26b7f628d97ad89a3e941eb:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    base.txt: base
+d0a16c8eecffe9841e7497f00ac97f456579a35b:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
+  message: commit 2
+  parents:
+  - 2e2dfd439e961033e26b7f628d97ad89a3e941eb
+  tree:
+    main-work.txt: main work 1
+375553154680233f14d847eea4d0b9d8eb4688e4:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
+  message: commit 3
+  parents:
+  - 2e2dfd439e961033e26b7f628d97ad89a3e941eb
+  tree:
+    feature-work.txt: feature work 1
+cfd3db107afe45123dfe717bfa5e53f0c79549ed:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: User <user@localhost>
+  message: Merge feature into main (first time)
+  parents:
+  - d0a16c8eecffe9841e7497f00ac97f456579a35b
+  - 375553154680233f14d847eea4d0b9d8eb4688e4
+  tree:
+    feature-work.txt: feature work 1
+cef8d7cb2af0d1fa4af3067846db9169cfb42533:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: User <user@localhost>
+  message: Merge main into feature
+  parents:
+  - 375553154680233f14d847eea4d0b9d8eb4688e4
+  - cfd3db107afe45123dfe717bfa5e53f0c79549ed
+  tree:
+    feature-work-2.txt: feature work 2
+    main-work.txt: main work 1
+c2c1e375de1f07e026d10882923e4a632bfac000:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: User <user@localhost>
+  message: Merge feature into main (second time)
+  parents:
+  - cfd3db107afe45123dfe717bfa5e53f0c79549ed
+  - cef8d7cb2af0d1fa4af3067846db9169cfb42533
+  tree:
+    feature-work-2.txt: feature work 2

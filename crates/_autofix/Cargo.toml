@@ -1,0 +1,31 @@
+[package]
+name = "_autofix"
+publish = false
+description = ""
+keywords = []
+categories = []
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[lib]
+name = "_autofix"
+path = "src/lib.rs"
+
+[[bin]]
+name = "_autofix"
+path = "src/main.rs"
+
+[dependencies]
+toml_edit = { workspace = true }
+semver = { workspace = true }
+glob = { workspace = true }
+anyhow = { workspace = true }
+pathdiff = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter", "fmt"] }
+
+[dev-dependencies]
+tempfile = { workspace = true }

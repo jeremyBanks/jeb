@@ -1,0 +1,65 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 5
+
+# Test copying same content to many locations (deduplication opportunity)
+1:
+  tree:
+    template.txt: "TEMPLATE CONTENT"
+
+2:
+  tree:
+    # Copy to 3 locations
+    copy-1.txt:
+      [commit]: 1
+      [path]: template.txt
+    copy-2.txt:
+      [commit]: 1
+      [path]: template.txt
+    copy-3.txt:
+      [commit]: 1
+      [path]: template.txt
+
+3:
+  tree:
+    # Copy to subdirectories
+    dir-a:
+      template.txt:
+        [commit]: 1
+        [path]: template.txt
+    dir-b:
+      template.txt:
+        [commit]: 1
+        [path]: template.txt
+    dir-c:
+      template.txt:
+        [commit]: 1
+        [path]: template.txt
+
+4:
+  tree:
+    # Nested copies
+    level1:
+      level2:
+        level3:
+          template.txt:
+            [commit]: 1
+            [path]: template.txt
+
+5:
+  tree:
+    # Mix references from different commits pointing to same content
+    from-commit-1.txt:
+      [commit]: 1
+      [path]: template.txt
+    from-commit-2.txt:
+      [commit]: 2
+      [path]: copy-1.txt
+    from-commit-3.txt:
+      [commit]: 3
+      [path]: dir-a/template.txt
+    from-commit-4.txt:
+      [commit]: 4
+      [path]: level1/level2/level3/template.txt

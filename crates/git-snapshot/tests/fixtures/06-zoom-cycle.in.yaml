@@ -1,0 +1,64 @@
+HEAD: refs/heads/full-tree
+
+refs:
+  heads:
+    full-tree: 6
+    subtree: 5
+
+# Full-tree commits
+1:
+  tree:
+    README.md: "# Main Project"
+    src:
+      lib:
+        main.rs: "fn main() {}"
+        utils.rs: "fn util() {}"
+
+2:
+  tree:
+    README.md: "# Main Project v2"
+    # src/lib inherited
+
+# Subtree lineage (orphan seed)
+3:
+  parents: []
+  tree:  # empty tree
+  message: "git-zoom-in seed commit"
+  committer: "git-zoom-in <git-zoom-in@localhost>"
+
+4:
+  parents: [3, 1]
+  message: |-
+    Merge from 'src/lib'
+
+    git-zoom-in: src/lib
+  committer: "git-zoom-in <git-zoom-in@localhost>"
+  tree:
+    # Extract src/lib from commit 1
+    main.rs:
+      [commit]: 1
+      [path]: src/lib/main.rs
+    utils.rs:
+      [commit]: 1
+      [path]: src/lib/utils.rs
+
+5:
+  parents: [4]
+  tree:
+    # Add new file in subtree
+    tests.rs: "fn test() {}"
+
+# Back to full-tree with merge
+6:
+  parents: [2, 5]
+  message: |-
+    Merge to 'src/lib'
+
+    git-zoom-out: src/lib
+  committer: "git-zoom-out <git-zoom-out@localhost>"
+  tree:
+    # Embed subtree back into src/lib
+    src:
+      lib:
+        [commit]: 5
+        [path]: .

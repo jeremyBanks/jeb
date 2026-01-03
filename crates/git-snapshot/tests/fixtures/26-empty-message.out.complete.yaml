@@ -1,0 +1,33 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: e3c79b04e8b72041b123facbf8cfbab1f8a88237
+a5067dba554a51e25c9d962257ffeade774d3851:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    file.txt: content
+337d2b4d2496576967981d85ab2555f7be204699:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
+  message: ''
+  parents:
+  - a5067dba554a51e25c9d962257ffeade774d3851
+  tree:
+    file.txt: empty message commit
+e3c79b04e8b72041b123facbf8cfbab1f8a88237:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: User <user@localhost>
+  message: normal message
+  parents:
+  - 337d2b4d2496576967981d85ab2555f7be204699
+  tree:
+    file.txt: final

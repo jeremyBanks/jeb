@@ -1,0 +1,69 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 8
+
+# Test content that moves through multiple paths in history
+1:
+  tree:
+    original-location:
+      file.txt: "content that travels"
+
+2:
+  parents: [1]
+  tree:
+    second-location:
+      file.txt:
+        [commit]: 1
+        [path]: original-location/file.txt
+
+3:
+  parents: [2]
+  tree:
+    third-location:
+      file.txt:
+        [commit]: 2
+        [path]: second-location/file.txt
+
+4:
+  parents: []
+  tree: {}
+
+# Zoom-in from first location
+5:
+  parents: [4, 1]
+  message: |
+    Zoom in from original-location
+
+    git-zoom-in: original-location
+  tree:
+    file.txt: "content that travels"
+
+# Work on zoomed subtree
+6:
+  parents: [5]
+  tree:
+    file.txt: "modified content"
+    new.txt: "new file"
+
+# Zoom-out to third location (different from zoom-in)
+7:
+  parents: [3, 6]
+  message: |
+    Zoom out to third-location
+
+    git-zoom-out: third-location
+  tree:
+    third-location:
+      file.txt: "modified content"
+      new.txt: "new file"
+
+# Continue work after zoom
+8:
+  parents: [7]
+  tree:
+    third-location:
+      file.txt: "final content"
+      new.txt: "new file"
+    other.txt: "unrelated"
