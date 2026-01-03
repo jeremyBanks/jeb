@@ -343,3 +343,57 @@ jobs:
           jeb --help
 
           echo "✓ cargo-binstall verification successful!"
+
+      - name: Publish git-zoom subtree branch
+        continue-on-error: true
+        run: |
+          echo "Publishing git-zoom subtree branch..."
+
+          # Build git-zoom binary
+          cargo build --release --package git-zoom
+          GIT_ZOOM="./target/release/git-zoom"
+
+          if [ ! -f "$GIT_ZOOM" ]; then
+            echo "::warning::git-zoom binary not found, skipping subtree publish"
+            exit 0
+          fi
+
+          # Fetch the remote git-zoom branch if it exists
+          git fetch origin git-zoom:refs/remotes/origin/git-zoom 2>/dev/null || true
+
+          # Run git zoom in to create the subtree view
+          if ! $GIT_ZOOM in crates/git-zoom; then
+            echo "::warning::git zoom in failed, skipping subtree publish"
+            exit 0
+          fi
+
+          # Try to push to the git-zoom branch
+          if git push origin HEAD:git-zoom 2>&1; then
+            echo "✓ Successfully pushed to git-zoom branch"
+          else
+            echo "Push failed, attempting to merge upstream..."
+
+            # Fetch latest git-zoom branch
+            git fetch origin git-zoom:refs/remotes/origin/git-zoom 2>/dev/null || {
+              echo "::warning::Failed to fetch git-zoom branch"
+              exit 0
+            }
+
+            # Try to merge upstream with --no-commit first to check for conflicts
+            if git merge origin/git-zoom --no-commit --no-ff 2>&1; then
+              # No conflicts, complete the merge
+              git commit -m "Merge upstream git-zoom branch" || true
+              if git push origin HEAD:git-zoom 2>&1; then
+                echo "✓ Successfully merged and pushed to git-zoom branch"
+              else
+                echo "::warning::Failed to push after merge"
+                git merge --abort 2>/dev/null || true
+              fi
+            else
+              # Conflicts detected, abort
+              echo "::warning::Merge conflicts detected, skipping subtree publish"
+              git merge --abort 2>/dev/null || true
+            fi
+          fi
+
+          echo "git-zoom subtree publish step completed"
