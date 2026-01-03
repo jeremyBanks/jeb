@@ -17,3 +17,4 @@
 13. Agent: Reminder - display only pinned topics and last two messages (skip instruction-only messages when finding last two, but they still count toward numbering)
 14. Agent: Define "pin:" prefix - identifies messages to pin; "pin" with no target means pin last topic
 15. Agent: Retroactively add all agent messages back to the file and reorder everything appropriately
+16. Use cargo workspace exclude to temporarily create non-workspace versions of crates in order to reduce the lock file down to only what that crate needs, like workspace-subset-lockfile
