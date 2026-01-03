@@ -22,7 +22,7 @@ use {
 };
 
 pub fn main() -> i32 {
-    eprintln!("Running: Cargo.toml feature normalization");
+    eprintln!("Running: Cargo.toml normalization (features and section ordering)");
     match run_normalization() {
         Ok(()) => {
             eprintln!();
@@ -74,16 +74,15 @@ fn run_normalization() -> Result<()> {
         let mut doc = content.parse::<DocumentMut>()?;
 
         let features_modified = normalize_crate_features(&mut doc, &mut stats)?;
-        // DISABLED: Section reordering doesn't work with toml_edit - it preserves
-        // original section order even when removing and re-inserting. This is a
-        // limitation of how toml_edit tracks position/formatting.
-        // let sections_modified = sort_cargo_toml_sections(&mut doc)?;
-        let sections_modified = false;
+        let sections_modified = sort_cargo_toml_sections(&mut doc)?;
 
         if features_modified || sections_modified {
             stats.crates_modified += 1;
             stats.edited_files.insert(member_toml.clone());
-            std::fs::write(&member_toml, doc.to_string())?;
+            eprintln!("  DEBUG: Writing changes to {:?}", member_toml);
+            let new_content = doc.to_string();
+            eprintln!("  DEBUG: New content sections: {}", new_content.lines().take(5).collect::<Vec<_>>().join(" | "));
+            std::fs::write(&member_toml, new_content)?;
         }
     }
 
@@ -484,29 +483,32 @@ fn sort_cargo_toml_sections(doc: &mut DocumentMut) -> Result<bool> {
         return Ok(false);
     }
 
-    // Collect entries with their values (preserving decoration/comments)
-    let mut entries: Vec<(String, Item)> = current_keys
-        .iter()
-        .filter_map(|key| doc.get(key).map(|value| (key.clone(), value.clone())))
-        .collect();
+    eprintln!(
+        "  DEBUG: Before sort_values_by, sections: {:?}",
+        doc.iter().map(|(k, _)| k.to_string()).collect::<Vec<_>>()
+    );
 
-    // Sort by canonical order
-    entries.sort_by_key(|(key, _)| {
-        section_order
-            .iter()
-            .position(|&s| s == key)
-            .unwrap_or(section_order.len())
-    });
+    // Use sort_values_by to reorder sections at the syntactic table level
+    // This preserves comments and formatting while updating the serialization order
+    doc.as_table_mut()
+        .sort_values_by(|key1, _val1, key2, _val2| {
+            let key1_str = key1.get();
+            let key2_str = key2.get();
+            let idx1 = section_order
+                .iter()
+                .position(|&s| s == key1_str)
+                .unwrap_or(section_order.len());
+            let idx2 = section_order
+                .iter()
+                .position(|&s| s == key2_str)
+                .unwrap_or(section_order.len());
+            idx1.cmp(&idx2)
+        });
 
-    // Remove all sections
-    for key in &current_keys {
-        doc.remove(key);
-    }
-
-    // Re-insert in sorted order
-    for (key, value) in entries {
-        doc.insert(&key, value);
-    }
+    eprintln!(
+        "  DEBUG: After sort_values_by, sections: {:?}",
+        doc.iter().map(|(k, _)| k.to_string()).collect::<Vec<_>>()
+    );
 
     Ok(true)
 }
