@@ -2950,6 +2950,89 @@ fn compute_path_similarity_score(target: &str, candidate: &str) -> (i32, i32, i3
     (suffix_match as i32, -boundary_diff, -extra_prefix.abs())
 }
 
+/// Search ancestors depth-first for a commit containing a specific blob
+/// Returns (commit_id, path) of the first ancestor found, or None if not in ancestry
+fn find_ancestor_with_blob(
+    repo: &Repository,
+    start_commit_id: ObjectId,
+    target_path: &str,
+    blob_id: &ObjectId,
+    blob_locations: &HashMap<ObjectId, Vec<(ObjectId, String)>>,
+) -> Option<(ObjectId, String)> {
+    let mut visited = std::collections::HashSet::new();
+
+    // Get the starting commit
+    let start_commit = repo.get_commit(&start_commit_id)?;
+
+    // Recursive DFS helper
+    fn dfs_search(
+        repo: &Repository,
+        commit_id: ObjectId,
+        target_path: &str,
+        blob_id: &ObjectId,
+        blob_locations: &HashMap<ObjectId, Vec<(ObjectId, String)>>,
+        visited: &mut std::collections::HashSet<ObjectId>,
+    ) -> Option<(ObjectId, String)> {
+        // Skip if already visited (prevents cycles)
+        if visited.contains(&commit_id) {
+            return None;
+        }
+        visited.insert(commit_id);
+
+        // Check if this commit contains the blob
+        if let Some(locations_in_commit) = blob_locations.get(blob_id) {
+            let candidates: Vec<_> = locations_in_commit
+                .iter()
+                .filter(|(cid, _)| *cid == commit_id)
+                .cloned()
+                .collect();
+
+            if !candidates.is_empty() {
+                // Found the blob in this ancestor!
+                // Use path similarity to pick best if multiple paths
+                if candidates.len() == 1 {
+                    return Some(candidates[0].clone());
+                } else {
+                    return Some(find_best_reference(target_path, &candidates));
+                }
+            }
+        }
+
+        // Not found in this commit, recurse to parents
+        let commit = repo.get_commit(&commit_id)?;
+        for parent_id in &commit.parents {
+            if let Some(result) = dfs_search(
+                repo,
+                *parent_id,
+                target_path,
+                blob_id,
+                blob_locations,
+                visited,
+            ) {
+                return Some(result); // Found in ancestor, stop searching
+            }
+        }
+
+        None // Not found in this branch
+    }
+
+    // Search through parents of start_commit
+    for parent_id in &start_commit.parents {
+        if let Some(result) = dfs_search(
+            repo,
+            *parent_id,
+            target_path,
+            blob_id,
+            blob_locations,
+            &mut visited,
+        ) {
+            return Some(result);
+        }
+    }
+
+    None // Not found in any ancestor
+}
+
 /// Find best reference target from candidates based on path similarity
 fn find_best_reference(target_path: &str, candidates: &[(ObjectId, String)]) -> (ObjectId, String) {
     if candidates.is_empty() {
@@ -3544,32 +3627,44 @@ fn insert_tree_change(
 
                     // Find all locations where this blob appeared
                     if let Some(locations) = ctx.blob_locations.get(&blob_id) {
-                        // Filter to only earlier commits (not current location, comes before
-                        // current)
-                        let current_position = ctx
-                            .all_commits
-                            .iter()
-                            .position(|id| *id == ctx.current_commit);
+                        // First try to find in ancestors via DFS
+                        let valid_candidates: Vec<(ObjectId, String)> = if let Some((commit, path)) = unsafe {
+                            find_ancestor_with_blob(
+                                &*ctx.repo,
+                                ctx.current_commit,
+                                &full_path,
+                                &blob_id,
+                                &ctx.blob_locations,
+                            )
+                        } {
+                            vec![(commit, path)]
+                        } else {
+                            // Fallback: use topological order (for parallel branches not in ancestry)
+                            let current_position = ctx
+                                .all_commits
+                                .iter()
+                                .position(|id| *id == ctx.current_commit);
 
-                        let valid_candidates: Vec<(ObjectId, String)> = locations
-                            .iter()
-                            .filter(|(commit_id, path)| {
-                                // Exclude current location
-                                if *commit_id == ctx.current_commit && path == full_path {
-                                    return false;
-                                }
-                                // Only use commits that come earlier in order
-                                if let (Some(ref_pos), Some(curr_pos)) = (
-                                    ctx.all_commits.iter().position(|id| id == commit_id),
-                                    current_position,
-                                ) {
-                                    ref_pos < curr_pos
-                                } else {
-                                    false
-                                }
-                            })
-                            .cloned()
-                            .collect();
+                            locations
+                                .iter()
+                                .filter(|(commit_id, path)| {
+                                    // Exclude current location
+                                    if *commit_id == ctx.current_commit && path == full_path {
+                                        return false;
+                                    }
+                                    // Only use commits that come earlier in order
+                                    if let (Some(ref_pos), Some(curr_pos)) = (
+                                        ctx.all_commits.iter().position(|id| id == commit_id),
+                                        current_position,
+                                    ) {
+                                        ref_pos < curr_pos
+                                    } else {
+                                        false
+                                    }
+                                })
+                                .cloned()
+                                .collect()
+                        };
 
                         if !valid_candidates.is_empty() {
                             // Use path similarity scoring to find best reference
