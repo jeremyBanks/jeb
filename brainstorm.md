@@ -24,3 +24,5 @@
 19. Agent: When there are multiple non-agent topics (list items or paragraphs) in a message, they should be displayed in the summary as nested bullets
 20. Since the actual name doesn't matter for overrides if we specify package=, let's always specify with a standardized naming convention
    1. Format: __serde__0_1_8_beta_3 (real name then __ before each dot, and each non-numeric character of the version replaced with an underscore)
+21. In my local environment define a task or skill which fetches this branch to see my recent notes
+22. Agent: That last message didn't start with agent: - it was not an instruction, it was a topic for the list
