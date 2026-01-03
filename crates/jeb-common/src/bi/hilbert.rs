@@ -10,60 +10,32 @@ integers whose Manhattan distance is at less-than or equal to X and 3√X.
     };
 }
 use description;
-
 #[doc = description!()]
 pub fn hilbert<T: Hilbert>(value: T) -> T::Out {
     value.hilbert()
 }
-
 impls! {
-    u16: (u8, u8);
-    u32: (u16, u16);
-    u64: (u32, u32);
-    u128: (u64, u64);
+    u16 : (u8, u8); u32 : (u16, u16); u64 : (u32, u32); u128 : (u64, u64);
 }
-
 #[doc = description!()]
 pub trait Hilbert {
     type Out;
-
     #[doc = description!()]
     fn hilbert(self) -> Self::Out;
 }
-
 macro_rules! impls {
-    {
-        $( $full:ident: ($half1:ident, $half2:ident); )+
-    } => {
-        $(
-            impl Hilbert for $full {
-                type Out = ($half1, $half2);
-
-                fn hilbert(self) -> ($half1, $half2) {
-                    _ = |assert: $half1| -> $half2 { assert };
-
-                    ::fast_hilbert::h2xy(self, $half1::BITS.try_into().unwrap())
-                }
-            }
-
-            impl Hilbert for ($half1, $half2) {
-                type Out = $full;
-
-                fn hilbert(self) -> $full {
-                    let (x, y) = self;
-                    ::fast_hilbert::xy2h(x, y, $half1::BITS.try_into().unwrap())
-                }
-            }
-        )+
-    }
+    {$($full:ident : ($half1:ident, $half2:ident);)+} => {
+        $(impl Hilbert for $full { type Out = ($half1, $half2); fn hilbert(self) ->
+        ($half1, $half2) { _ = | assert : $half1 | -> $half2 { assert };
+        ::fast_hilbert::h2xy(self, $half1 ::BITS.try_into().unwrap()) } } impl Hilbert
+        for ($half1, $half2) { type Out = $full; fn hilbert(self) -> $full { let (x, y) =
+        self; ::fast_hilbert::xy2h(x, y, $half1 ::BITS.try_into().unwrap()) } })+
+    };
 }
 use impls;
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // Test roundtrip: u -> (x, y) -> u
     #[test]
     fn roundtrip_u16_to_pair() {
         for u in 0u16..=u16::MAX {
@@ -72,7 +44,6 @@ mod tests {
             assert_eq!(u, back, "roundtrip failed for u16 {u}");
         }
     }
-
     #[test]
     fn roundtrip_pair_to_u16() {
         for x in 0u8..=u8::MAX {
@@ -83,9 +54,6 @@ mod tests {
             }
         }
     }
-
-    // Test that adjacent integers map to adjacent points (Manhattan distance 1)
-    // This is the key locality property of Hilbert curves
     #[test]
     fn locality_adjacent_u16() {
         for u in 0u16..u16::MAX {
@@ -93,80 +61,67 @@ mod tests {
             let (x2, y2): (u8, u8) = hilbert(u + 1);
             let manhattan = (x1 as i32 - x2 as i32).abs() + (y1 as i32 - y2 as i32).abs();
             assert_eq!(
-                manhattan, 1,
+                manhattan,
+                1,
                 "adjacent values {u} and {} should have Manhattan distance 1, got {manhattan}",
                 u + 1
             );
         }
     }
-
-    // Test roundtrip for u32 (sample due to size)
     #[test]
     fn roundtrip_u32_sample() {
-        // Test boundaries and samples
         let test_values: Vec<u32> = (0..1000)
             .chain((u32::MAX - 1000)..=u32::MAX)
-            .chain((0..10000).map(|i| i * 429496)) // spread across range
+            .chain((0..10000).map(|i| i * 429496))
             .collect();
-
         for u in test_values {
             let (x, y): (u16, u16) = hilbert(u);
             let back: u32 = hilbert((x, y));
             assert_eq!(u, back, "roundtrip failed for u32 {u}");
         }
     }
-
-    // Test locality for u32 (sample)
     #[test]
     fn locality_adjacent_u32_sample() {
         let test_values: Vec<u32> = (0u32..1000)
             .chain((u32::MAX - 1000)..u32::MAX)
             .chain((0..1000).map(|i| i * 4294967))
             .collect();
-
         for u in test_values {
             let (x1, y1): (u16, u16) = hilbert(u);
             let (x2, y2): (u16, u16) = hilbert(u + 1);
             let manhattan = (x1 as i32 - x2 as i32).abs() + (y1 as i32 - y2 as i32).abs();
             assert_eq!(
-                manhattan, 1,
+                manhattan,
+                1,
                 "adjacent values {u} and {} should have Manhattan distance 1, got {manhattan}",
                 u + 1
             );
         }
     }
-
-    // Test roundtrip for u64 (sample)
     #[test]
     fn roundtrip_u64_sample() {
         let test_values: Vec<u64> = (0..1000)
             .chain((u64::MAX - 1000)..=u64::MAX)
             .chain((0..10000).map(|i| i * 1844674407370955))
             .collect();
-
         for u in test_values {
             let (x, y): (u32, u32) = hilbert(u);
             let back: u64 = hilbert((x, y));
             assert_eq!(u, back, "roundtrip failed for u64 {u}");
         }
     }
-
-    // Test roundtrip for u128 (sample)
     #[test]
     fn roundtrip_u128_sample() {
         let test_values: Vec<u128> = (0..1000u128)
             .chain((u128::MAX - 1000)..=u128::MAX)
             .chain((0..10000u128).map(|i| i * 34028236692093846346337460743176821))
             .collect();
-
         for u in test_values {
             let (x, y): (u64, u64) = hilbert(u);
             let back: u128 = hilbert((x, y));
             assert_eq!(u, back, "roundtrip failed for u128 {u}");
         }
     }
-
-    // Test that the bijection covers all output pairs (for u16)
     #[test]
     fn bijection_coverage_u16() {
         use std::collections::HashSet;

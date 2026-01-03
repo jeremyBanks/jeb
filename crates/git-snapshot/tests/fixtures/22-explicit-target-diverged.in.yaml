@@ -1,0 +1,46 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 4
+    diverged: 3
+
+# Test explicit zoom target that has diverged from implicit target
+1:
+  tree:
+    file.txt: "v1"
+    subtree:
+      a.txt: "a1"
+      b.txt: "b1"
+
+2:
+  parents: []
+  tree: {}
+
+# Zoom-in from commit 1's subtree
+3:
+  parents: [2, 1]
+  message: |
+    Zoom in from historical state
+
+    git-zoom-in: subtree
+  tree:
+    a.txt: "a1"
+    b.txt: "b1"
+
+# Zoom-out back to commit 1
+4:
+  parents: [1, 3]
+  message: |
+    Zoom out to commit 1
+
+    git-zoom-out: subtree
+  tree:
+    file.txt: "v1"
+    subtree:
+      a.txt:
+        [commit]: 3
+        [path]: a.txt
+      b.txt:
+        [commit]: 3
+        [path]: b.txt

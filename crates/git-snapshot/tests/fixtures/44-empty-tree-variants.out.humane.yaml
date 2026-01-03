@@ -1,0 +1,26 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 3
+1:
+  tree:
+    dir:
+      nested.txt: nested
+    file.txt: content
+    other-dir:
+      file.txt: other
+2:
+  message: commit 3
+  tree:
+    dir:
+      nested.txt: null
+    file.txt: kept
+    other-dir:
+      file.txt: null
+3:
+  message: commit 4
+  tree:
+    has-content:
+      file.txt:
+        //commit: 1
+        //path: file.txt

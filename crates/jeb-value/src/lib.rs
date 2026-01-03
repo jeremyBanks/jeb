@@ -4,7 +4,6 @@
     unused_imports,
     clippy::approx_constant
 )]
-
 mod bytes;
 mod float;
 mod from;
@@ -14,7 +13,6 @@ mod serde;
 mod serde_json;
 mod text;
 mod value;
-
 #[cfg(feature = "serde")]
 pub use self::serde::*;
 #[cfg(feature = "serde_json")]

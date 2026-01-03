@@ -18,6 +18,11 @@ rustup default nightly-2025-11-28
 
 curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
 
-cargo binstall --no-confirm --strategies crate-meta-data jj-cli
+binstall=(
+    cargo-nextest
+    tracey
+    jj-cli
+)
+cargo binstall --secure --no-confirm --strategies crate-meta-data "${binstall[@]}"
 
 curl -fsSL https://claude.ai/install.sh | bash

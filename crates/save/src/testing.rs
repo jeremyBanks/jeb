@@ -1,5 +1,10 @@
 use ::{
-    core::{mem, ops::Range, panic, fmt::{self, Debug}},
+    core::{
+        fmt::{self, Debug},
+        mem,
+        ops::Range,
+        panic,
+    },
     once_cell::sync::{Lazy, OnceCell},
     std::{
         collections::HashMap,
@@ -10,7 +15,6 @@ use ::{
     },
 };
 
-//
 // Note: Custom assert_eq and Expected types appear to be unfinished experimental code
 // Commenting out until/unless needed
 // #[track_caller]
@@ -60,13 +64,8 @@ impl<Literal: self::Literal> PartialEq<Literal> for Expected<Literal> {
 
 #[derive(Clone, Debug)]
 pub enum ExpectedLocation {
-    InlineLiteral {
-        line: usize,
-        column: usize,
-    },
-    ExternalFile {
-        path: PathBuf,
-    },
+    InlineLiteral { line: usize, column: usize },
+    ExternalFile { path: PathBuf },
 }
 
 #[track_caller]
@@ -88,7 +87,8 @@ To update expectations, set SAVE_EXPECTATIONS=1 or UPDATE_EXPECT=1 environment v
 ";
 
 #[track_caller]
-pub fn expect(data: &'static str) -> Expect {
+#[must_use]
+pub const fn expect(data: &'static str) -> Expect {
     let location = std::panic::Location::caller();
     Expect {
         position: Position {
@@ -96,7 +96,7 @@ pub fn expect(data: &'static str) -> Expect {
             line: location.line(),
             column: location.column(),
         },
-        data: data,
+        data,
         indent: true,
     }
 }
@@ -108,7 +108,6 @@ macro_rules! expect_file {
         position: file!(),
     }};
 }
-
 
 pub fn expect_file(path: impl Into<PathBuf>) -> ExpectFile {
     ExpectFile {
@@ -196,14 +195,15 @@ impl Expect {
 
     pub fn assert_debug_eq(&self, actual: &impl Debug) {
         let actual = format!("{:#?}\n", actual);
-        self.assert_eq(&actual)
+        self.assert_eq(&actual);
     }
 
-    pub fn indent(&mut self, yes: bool) {
+    pub const fn indent(&mut self, yes: bool) {
         self.indent = yes;
     }
 
-    pub fn data(&self) -> &str {
+    #[must_use]
+    pub const fn data(&self) -> &str {
         self.data
     }
 
@@ -230,9 +230,7 @@ impl Expect {
                     .char_indices()
                     .skip((self.position.column - 1).try_into().unwrap())
                     .skip_while(|&(_, c)| !matches!(c, '[' | '(' | '{'))
-                    // .skip_while(|&(_, c)| matches!(c, '[' | '(' | '{') || c.is_whitespace())
-                    .skip(1)
-                    .next()
+                    .nth(1)
                     .expect("Failed to parse macro invocation")
                     .0;
 
@@ -270,7 +268,7 @@ fn locate_end(arg_start_to_eof: &str) -> Option<usize> {
         '[' | '(' => {
             let end = if c == '[' { ']' } else { ')' };
             let str_start_to_eof = arg_start_to_eof[1..].trim_start();
-            if str_start_to_eof.chars().next() == Some(end) {
+            if str_start_to_eof.starts_with(end) {
                 return Some(2);
             }
             let str_len = find_str_lit_len(str_start_to_eof)?;
@@ -354,7 +352,7 @@ impl ExpectFile {
 
     pub fn assert_debug_eq(&self, actual: &impl Debug) {
         let actual = format!("{:#?}\n", actual);
-        self.assert_eq(&actual)
+        self.assert_eq(&actual);
     }
 
     fn read(&self) -> String {
@@ -364,12 +362,12 @@ impl ExpectFile {
     }
 
     fn write(&self, contents: &str) {
-        fs::write(self.abs_path(), contents).unwrap()
+        fs::write(self.abs_path(), contents).unwrap();
     }
 
     fn abs_path(&self) -> PathBuf {
         if self.path.is_absolute() {
-            self.path.to_owned()
+            self.path.clone()
         } else {
             let dir = Path::new(self.position).parent().unwrap();
             to_abs_ws_path(&dir.join(&self.path))
@@ -386,7 +384,7 @@ static RT: Lazy<Mutex<Runtime>> = Lazy::new(Default::default);
 
 impl Runtime {
     fn fail_expect(expect: &Expect, expected: &str, actual: &str) {
-        let mut rt = RT.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut rt = RT.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         if update_expect() {
             println!("\x1b[1m\x1b[92mupdating\x1b[0m: {}", expect.position);
             rt.per_file
@@ -399,7 +397,7 @@ impl Runtime {
     }
 
     fn fail_file(expect: &ExpectFile, expected: &str, actual: &str) {
-        let mut rt = RT.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut rt = RT.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         if update_expect() {
             println!("\x1b[1m\x1b[92mupdating\x1b[0m: {}", expect.path.display());
             expect.write(actual);
@@ -452,11 +450,11 @@ struct FileRuntime {
 }
 
 impl FileRuntime {
-    fn new(expect: &Expect) -> FileRuntime {
+    fn new(expect: &Expect) -> Self {
         let path = to_abs_ws_path(Path::new(expect.position.file));
         let original_text = fs::read_to_string(&path).unwrap();
         let patchwork = Patchwork::new(original_text.clone());
-        FileRuntime {
+        Self {
             path,
             original_text,
             patchwork,
@@ -472,7 +470,7 @@ impl FileRuntime {
         };
         let patch = format_patch(desired_indent, actual);
         self.patchwork.patch(loc.literal_range, &patch);
-        fs::write(&self.path, &self.patchwork.text).unwrap()
+        fs::write(&self.path, &self.patchwork.text).unwrap();
     }
 }
 
@@ -490,8 +488,8 @@ struct Patchwork {
 }
 
 impl Patchwork {
-    fn new(text: String) -> Patchwork {
-        Patchwork {
+    const fn new(text: String) -> Self {
+        Self {
             text,
             indels: Vec::new(),
         }
@@ -506,14 +504,14 @@ impl Patchwork {
             .iter()
             .take_while(|(delete, _)| delete.start < range.start)
             .map(|(delete, insert)| (delete.end - delete.start, insert))
-            .fold((0usize, 0usize), |(x1, y1), (x2, y2)| (x1 + x2, y1 + y2));
+            .fold((0_usize, 0_usize), |(x1, y1), (x2, y2)| (x1 + x2, y1 + y2));
 
         for pos in &mut [&mut range.start, &mut range.end] {
             **pos -= delete;
             **pos += insert;
         }
 
-        self.text.replace_range(range, &patch);
+        self.text.replace_range(range, patch);
     }
 }
 
@@ -622,7 +620,7 @@ fn trim_indent(mut text: &str) -> String {
         .collect()
 }
 
-fn lines_with_ends(text: &str) -> LinesWithEnds<'_> {
+const fn lines_with_ends(text: &str) -> LinesWithEnds<'_> {
     LinesWithEnds { text }
 }
 

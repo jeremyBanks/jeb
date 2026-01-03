@@ -1,5 +1,4 @@
 use ::save::testing::assert_at;
-
 #[test]
 fn readme() {
     let long = std::process::Command::new("cargo")

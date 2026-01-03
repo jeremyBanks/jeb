@@ -17,7 +17,6 @@ use {
         Visitor,
     },
 };
-
 impl<'de> de::Deserializer<'de> for Value {
     type Error = SerdeError;
 
@@ -389,15 +388,12 @@ impl<'de> de::Deserializer<'de> for Value {
             Value::TextMap(m) => visitor.visit_map(TextMapDeserializer::new(m)),
             Value::BytesMap(m) => visitor.visit_map(BytesMapDeserializer::new(m)),
             Value::Array(arr) => {
-                // Check if this looks like array-of-pairs
                 if arr.is_empty() {
-                    // Empty array is empty map
                     visitor.visit_map(PairsDeserializer::new(Vec::new()))
                 } else if arr
                     .iter()
                     .all(|v| matches!(v, Value::Array(inner) if inner.len() == 2))
                 {
-                    // Array of 2-element arrays: treat as pairs
                     visitor.visit_map(PairsDeserializer::new(arr))
                 } else {
                     Err(SerdeError::invalid_type(Unexpected::Seq, "a map"))
@@ -468,7 +464,6 @@ impl<'de> de::Deserializer<'de> for Value {
         self.deserialize_any(visitor)
     }
 }
-
 impl Value {
     fn unexpected(&self) -> Unexpected {
         match self {
@@ -490,11 +485,9 @@ impl Value {
         }
     }
 }
-
 struct SeqDeserializer {
     iter: std::vec::IntoIter<Value>,
 }
-
 impl SeqDeserializer {
     fn new(vec: Vec<Value>) -> Self {
         SeqDeserializer {
@@ -502,7 +495,6 @@ impl SeqDeserializer {
         }
     }
 }
-
 impl<'de> de::SeqAccess<'de> for SeqDeserializer {
     type Error = SerdeError;
 
@@ -520,12 +512,10 @@ impl<'de> de::SeqAccess<'de> for SeqDeserializer {
         Some(self.iter.len())
     }
 }
-
 struct TextMapDeserializer {
     iter: <IndexMap<Text, Value> as IntoIterator>::IntoIter,
     value: Option<Value>,
 }
-
 impl TextMapDeserializer {
     fn new(map: IndexMap<Text, Value>) -> Self {
         TextMapDeserializer {
@@ -534,7 +524,6 @@ impl TextMapDeserializer {
         }
     }
 }
-
 impl<'de> de::MapAccess<'de> for TextMapDeserializer {
     type Error = SerdeError;
 
@@ -565,12 +554,10 @@ impl<'de> de::MapAccess<'de> for TextMapDeserializer {
         Some(self.iter.len())
     }
 }
-
 struct BytesMapDeserializer {
     iter: <IndexMap<Bytes, Value> as IntoIterator>::IntoIter,
     value: Option<Value>,
 }
-
 impl BytesMapDeserializer {
     fn new(map: IndexMap<Bytes, Value>) -> Self {
         BytesMapDeserializer {
@@ -579,7 +566,6 @@ impl BytesMapDeserializer {
         }
     }
 }
-
 impl<'de> de::MapAccess<'de> for BytesMapDeserializer {
     type Error = SerdeError;
 
@@ -610,12 +596,10 @@ impl<'de> de::MapAccess<'de> for BytesMapDeserializer {
         Some(self.iter.len())
     }
 }
-
 struct PairsDeserializer {
     pairs: std::vec::IntoIter<Value>,
     value: Option<Value>,
 }
-
 impl PairsDeserializer {
     fn new(arr: Vec<Value>) -> Self {
         PairsDeserializer {
@@ -624,7 +608,6 @@ impl PairsDeserializer {
         }
     }
 }
-
 impl<'de> de::MapAccess<'de> for PairsDeserializer {
     type Error = SerdeError;
 
@@ -658,12 +641,10 @@ impl<'de> de::MapAccess<'de> for PairsDeserializer {
         Some(self.pairs.len())
     }
 }
-
 struct EnumDeserializer {
     variant: String,
     value: Option<Value>,
 }
-
 impl<'de> de::EnumAccess<'de> for EnumDeserializer {
     type Error = SerdeError;
     type Variant = VariantDeserializer;
@@ -677,11 +658,9 @@ impl<'de> de::EnumAccess<'de> for EnumDeserializer {
         Ok((visitor, VariantDeserializer { value: self.value }))
     }
 }
-
 struct VariantDeserializer {
     value: Option<Value>,
 }
-
 impl<'de> de::VariantAccess<'de> for VariantDeserializer {
     type Error = SerdeError;
 
@@ -730,30 +709,25 @@ impl<'de> de::VariantAccess<'de> for VariantDeserializer {
         }
     }
 }
-
 pub fn from_value<T: de::DeserializeOwned>(value: Value) -> Result<T, SerdeError> {
     T::deserialize(value)
 }
-
 trait IntoDeserializer {
     fn into_deserializer(self) -> StringDeserializer;
 }
-
 impl IntoDeserializer for String {
     fn into_deserializer(self) -> StringDeserializer {
         StringDeserializer(self)
     }
 }
-
 struct StringDeserializer(String);
-
 impl<'de> de::Deserializer<'de> for StringDeserializer {
     type Error = SerdeError;
 
     serde::forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
-        tuple_struct map struct identifier ignored_any
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string bytes
+        byte_buf option unit unit_struct newtype_struct seq tuple tuple_struct map struct
+        identifier ignored_any
     }
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, SerdeError>
@@ -775,7 +749,6 @@ impl<'de> de::Deserializer<'de> for StringDeserializer {
         visitor.visit_enum(self.0.into_deserializer())
     }
 }
-
 impl<'de> de::EnumAccess<'de> for StringDeserializer {
     type Error = SerdeError;
     type Variant = UnitVariant;
@@ -788,9 +761,7 @@ impl<'de> de::EnumAccess<'de> for StringDeserializer {
         Ok((visitor, UnitVariant))
     }
 }
-
 struct UnitVariant;
-
 impl<'de> de::VariantAccess<'de> for UnitVariant {
     type Error = SerdeError;
 

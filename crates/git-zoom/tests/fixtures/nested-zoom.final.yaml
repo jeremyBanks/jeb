@@ -1,0 +1,108 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 9c8b7f94431ec0b84777798257e6dda53e8e9881
+79bac8:
+  message: commit 1
+  tree:
+    root.txt: root
+    src:
+      lib:
+        core:
+          mod.rs: core module
+        lib.rs: lib root
+ae0e24:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T20:56:02Z
+  commit-date: 2026-01-02T20:56:02Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Initial commit
+  parents: []
+  tree: {}
+490fae:
+  author-date: 2026-01-02T20:56:02Z
+  commit-date: 2026-01-02T20:56:02Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Merge from 'src/lib'
+
+    git-zoom-in: src/lib
+  parents:
+  - ae0e24
+  - 79bac8
+  tree:
+    core:
+      mod.rs:
+        //commit: 79bac8
+        //path: src/lib/core/mod.rs
+    lib.rs:
+      //commit: 79bac8
+      //path: src/lib/lib.rs
+df4cf8:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T20:56:03Z
+  commit-date: 2026-01-02T20:56:03Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Initial commit
+  parents: []
+  tree: {}
+a919fb:
+  author-date: 2026-01-02T20:56:03Z
+  commit-date: 2026-01-02T20:56:03Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |
+    Merge from 'core'
+
+    git-zoom-in: core
+  parents:
+  - df4cf8
+  - 490fae
+  tree:
+    mod.rs:
+      //commit: 490fae
+      //path: core/mod.rs
+e2d505:
+  author: User <user@localhost>
+  author-date: 2026-01-02T20:56:03Z
+  commit-date: 2026-01-02T20:56:03Z
+  message: |
+    Update core
+  tree:
+    mod.rs: modified core
+d167b2:
+  author-date: 2026-01-02T20:56:03Z
+  commit-date: 2026-01-02T20:56:03Z
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |
+    Merge to 'core'
+
+    git-zoom-out: core
+  parents:
+  - 490fae
+  - e2d505
+  tree:
+    core:
+      mod.rs:
+        //commit: e2d505
+        //path: mod.rs
+9c8b7f94431ec0b84777798257e6dda53e8e9881:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T20:56:03Z
+  commit-date: 2026-01-02T20:56:03Z
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |
+    Merge to 'src/lib'
+
+    git-zoom-out: src/lib
+  parents:
+  - 79bac8
+  - d167b2
+  tree:
+    src:
+      lib:
+        core:
+          mod.rs:
+            //commit: d167b2
+            //path: core/mod.rs

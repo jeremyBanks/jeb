@@ -1,0 +1,13 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 1
+1:
+  message: "Initial commit"
+  tree:
+    README.md: "root readme"
+    other.txt: "other file"
+    src:
+      lib:
+        foo.txt: "original"
+        bar.txt: "bar"

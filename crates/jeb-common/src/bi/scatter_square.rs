@@ -16,58 +16,24 @@ picking points within each shell using a weakly-pseudorandom ordering.
     };
 }
 use description;
-
 impl_with!(u16, i8, u8, 8, scatter_square_u16);
 impl_with!(u32, i16, u16, 16, scatter_square_u32);
 impl_with!(u64, i32, u32, 32, scatter_square_u64);
-
-// Chebyshev (L∞) shell bijections between:
-//   u16 <-> (i8,  i8)
-//   u32 <-> (i16, i16)
-//   u64 <-> (i32, i32)
-//   u128 <-> (i64, i64)
-//
-// Design summary:
-// - Region A: enumerate the full symmetric square [-MAX..MAX]^2 in true
-//   Chebyshev shells: M = max(|x|, |y|), base(M) = (2M-1)^2, shell size = 8M.
-//   Within each shell, apply a per-layer Feistel permutation to remove
-//   perimeter bias.
-// - Region B: treat all points involving MIN as the “next shell” (M = MAX+1),
-//   which is necessarily ragged because +2^(w-1) does not exist in signed
-//   twos-complement. The ragged set is exactly: (MIN, y) for all y   plus   (x
-//   != MIN, MIN) and is also permuted with the same Feistel+cycle-walk
-//   machinery.
-// - Total, infallible, bijective, and covers all values of the involved types.
-//
-// Seed:
-// - Seed is a const generic on the trait with a default of 0.
-// - `chebyshev(value)` uses SEED=0.
-// - `chebyshev_with::<SEED>(value)` lets you choose a compile-time seed.
 #[doc = description!()]
 pub fn scatter_square<const SEED: u64, T: ScatterSquare<SEED>>(value: T) -> T::Out {
     value.scatter_square()
 }
-
 #[doc = description!()]
 pub trait ScatterSquare<const SEED: u64 = 0> {
     type Out;
-
     #[doc = description!()]
     fn scatter_square(self) -> Self::Out;
 }
-
-// -------------------------
-// Shared mixing + Feistel core (u64)
-// -------------------------
-
 const ROUNDS: u32 = 4;
-
 const MIX_MUL1: u64 = 0xBF58_476D_1CE4_E5B9;
 const MIX_MUL2: u64 = 0x94D0_49BB_1331_11EB;
-
 const KEY_CONST: u64 = 0xD6E8_FEB8_6659_FD93;
 const ROUND_CONST: u64 = 0x9E37_79B9_7F4A_7C15;
-
 #[inline(always)]
 fn mix64(mut z: u64) -> u64 {
     z ^= z >> 30;
@@ -77,13 +43,10 @@ fn mix64(mut z: u64) -> u64 {
     z ^= z >> 31;
     z
 }
-
 #[inline(always)]
 fn key_for_layer(layer_id: u64, seed: u64) -> u64 {
-    // With seed=0 => mix64(layer_id * KEY_CONST)
     mix64(seed ^ layer_id.wrapping_mul(KEY_CONST))
 }
-
 #[inline(always)]
 fn next_pow2(mut n: u64) -> u64 {
     if n <= 1 {
@@ -98,25 +61,21 @@ fn next_pow2(mut n: u64) -> u64 {
     n |= n >> 32;
     n + 1
 }
-
 #[inline(always)]
 fn domain_bits_for(n: u64) -> u32 {
     let d = next_pow2(n);
-    let mut bits = d.trailing_zeros(); // log2(d)
+    let mut bits = d.trailing_zeros();
     if bits % 2 == 1 {
         bits += 1;
     }
     bits
 }
-
 #[inline(always)]
 fn feistel_pow2(x: u64, bits: u32, rounds: u32, key: u64) -> u64 {
     let half = bits / 2;
     let mask = (1u64 << half) - 1;
-
     let mut l = (x >> half) & mask;
     let mut r = x & mask;
-
     for round in 0..rounds {
         let f = mix64(r ^ key ^ ROUND_CONST.wrapping_mul(round as u64)) & mask;
         let new_l = r;
@@ -126,15 +85,12 @@ fn feistel_pow2(x: u64, bits: u32, rounds: u32, key: u64) -> u64 {
     }
     (l << half) | r
 }
-
 #[inline(always)]
 fn feistel_pow2_inv(x: u64, bits: u32, rounds: u32, key: u64) -> u64 {
     let half = bits / 2;
     let mask = (1u64 << half) - 1;
-
     let mut l = (x >> half) & mask;
     let mut r = x & mask;
-
     for round in (0..rounds).rev() {
         let f = mix64(l ^ key ^ ROUND_CONST.wrapping_mul(round as u64)) & mask;
         let r_old = l;
@@ -144,7 +100,6 @@ fn feistel_pow2_inv(x: u64, bits: u32, rounds: u32, key: u64) -> u64 {
     }
     (l << half) | r
 }
-
 #[inline(always)]
 fn permute_layer(idx: u64, n: u64, layer_id: u64, seed: u64) -> u64 {
     let key = key_for_layer(layer_id, seed);
@@ -157,7 +112,6 @@ fn permute_layer(idx: u64, n: u64, layer_id: u64, seed: u64) -> u64 {
         }
     }
 }
-
 #[inline(always)]
 fn permute_layer_inv(idx: u64, n: u64, layer_id: u64, seed: u64) -> u64 {
     let key = key_for_layer(layer_id, seed);
@@ -170,13 +124,11 @@ fn permute_layer_inv(idx: u64, n: u64, layer_id: u64, seed: u64) -> u64 {
         }
     }
 }
-
 /// Exact integer sqrt floor for u64.
 fn isqrt_u64(x: u64) -> u64 {
     let mut op = x;
     let mut res = 0u64;
-    let mut one = 1u64 << 62; // highest power of four <= 2^64
-
+    let mut one = 1u64 << 62;
     while one > op {
         one >>= 2;
     }
@@ -191,59 +143,43 @@ fn isqrt_u64(x: u64) -> u64 {
     }
     res
 }
-
-// -------------------------
-// Rung generator macro
-// -------------------------
-
 macro_rules! impl_with {
     ($U:ty, $S:ty, $UB:ty, $W:expr, $mod:ident) => {
         mod $mod {
             use super::*;
-
-            // Width parameters
             const W: u32 = $W;
             const MAX_S: i64 = <$S>::MAX as i64;
             const MIN_S: i64 = <$S>::MIN as i64;
-
-            // MIN bit pattern in the corresponding unsigned bits type
             const BANNED: $UB = (1 as $UB) << (W - 1);
-
             #[inline(always)]
             fn two_w() -> u64 {
                 1u64 << W
-            } // 2^W
-
-            /// Region A size: (2^W - 1)^2
+            }
+            #[doc = " Region A size: (2^W - 1)^2"]
             #[inline(always)]
             fn region_a_size() -> u64 {
                 let side = two_w() - 1;
                 side * side
             }
-
-            /// Outer layer id: MAX+1 = 2^(W-1)
+            #[doc = " Outer layer id: MAX+1 = 2^(W-1)"]
             #[inline(always)]
             fn outer_layer_id() -> u64 {
                 (MAX_S as u64) + 1
             }
-
-            /// Outer ragged size: 2^(W+1) - 1
+            #[doc = " Outer ragged size: 2^(W+1) - 1"]
             #[inline(always)]
             fn outer_size() -> u64 {
                 (1u64 << (W + 1)) - 1
             }
-
             #[inline(always)]
             fn base(m: u64) -> u64 {
                 if m == 0 { 0 } else { (2 * m - 1) * (2 * m - 1) }
             }
-
             #[inline(always)]
             fn shell_len(m: u64) -> u64 {
                 if m == 0 { 1 } else { 8 * m }
             }
-
-            /// Map perimeter index j in [0, 8M) to point on shell max(|x|,|y|)=M (M>0).
+            #[doc = " Map perimeter index j in [0, 8M) to point on shell max(|x|,|y|)=M (M>0)."]
             #[inline(always)]
             fn perimeter_point(m: i64, j: u64) -> (i64, i64) {
                 let s = 2u64 * (m as u64);
@@ -260,8 +196,7 @@ macro_rules! impl_with {
                     (-m, -m + jj as i64)
                 }
             }
-
-            /// Inverse of perimeter_point. Requires shell perimeter point at M>0.
+            #[doc = " Inverse of perimeter_point. Requires shell perimeter point at M>0."]
             #[inline(always)]
             fn perimeter_index(m: i64, x: i64, y: i64) -> u64 {
                 let s = 2u64 * (m as u64);
@@ -275,26 +210,21 @@ macro_rules! impl_with {
                     3 * s + (y + m) as u64
                 }
             }
-
-            // Bit-pattern casts (two's complement, stable as modulo cast)
             #[inline(always)]
             fn bits_to_signed(bits: $UB) -> $S {
                 bits as $S
             }
-
             #[inline(always)]
             fn signed_to_bits(v: $S) -> $UB {
                 v as $UB
             }
-
-            /// Map k in [0, 2^W - 2] to all $UB except the banned value (MIN bit
-            /// pattern).
+            #[doc = " Map k in [0, 2^W - 2] to all $UB except the banned value (MIN bit"]
+            #[doc = " pattern)."]
             #[inline(always)]
             fn decompress_skip_banned(k: $UB) -> $UB {
                 if k < BANNED { k } else { k.wrapping_add(1) }
             }
-
-            /// Inverse of decompress_skip_banned for x_bits != banned.
+            #[doc = " Inverse of decompress_skip_banned for x_bits != banned."]
             #[inline(always)]
             fn compress_skip_banned(x_bits: $UB) -> $UB {
                 debug_assert!(x_bits != BANNED);
@@ -304,102 +234,73 @@ macro_rules! impl_with {
                     x_bits.wrapping_sub(1)
                 }
             }
-
-            /// u -> (x,y), total on full $U domain.
+            #[doc = " u -> (x,y), total on full $U domain."]
             pub fn to_xy<const SEED: u64>(u_in: $U) -> ($S, $S) {
                 let u = u_in as u64;
                 let n0 = region_a_size();
-
-                // Region A
                 if u < n0 {
                     if u == 0 {
                         return (0 as $S, 0 as $S);
                     }
-
                     let r = isqrt_u64(u);
-                    let m = r.div_ceil(2) as u64; // 1..=MAX
-
+                    let m = r.div_ceil(2) as u64;
                     let b = base(m);
                     let t = u - b;
                     let n = shell_len(m);
-
                     let j = permute_layer(t, n, m, SEED);
                     let (x, y) = perimeter_point(m as i64, j);
-
-                    // Guaranteed in [-MAX..MAX], never MIN.
                     return (x as $S, y as $S);
                 }
-
-                // Region B: ragged outer layer (M = MAX+1)
-                let r = u - n0; // 0..outer_size-1
+                let r = u - n0;
                 let n = outer_size();
                 debug_assert!(r < n);
-
                 let layer_id = outer_layer_id();
                 let rp = permute_layer(r, n, layer_id, SEED);
-
-                let two_w = two_w(); // 2^W
+                let two_w = two_w();
                 if rp < two_w {
-                    // (MIN, y) for all y
                     let y_bits = rp as $UB;
                     (MIN_S as $S, bits_to_signed(y_bits))
                 } else {
-                    // (x != MIN, MIN)
-                    let k = (rp - two_w) as $UB; // 0..2^W-2
+                    let k = (rp - two_w) as $UB;
                     let x_bits = decompress_skip_banned(k);
                     (bits_to_signed(x_bits), MIN_S as $S)
                 }
             }
-
-            /// (x,y) -> u, total on full ($S,$S) domain.
+            #[doc = " (x,y) -> u, total on full ($S,$S) domain."]
             pub fn from_xy<const SEED: u64>(x: $S, y: $S) -> $U {
                 let n0 = region_a_size();
-
-                // Region B first: anything touching MIN is outside Region A.
                 if (x as i64) == MIN_S || (y as i64) == MIN_S {
                     let n = outer_size();
                     let layer_id = outer_layer_id();
                     let two_w = two_w();
-
                     let rp: u64 = if (x as i64) == MIN_S {
-                        // rp = y_bits in [0, 2^W)
                         signed_to_bits(y) as u64
                     } else {
-                        // must have y==MIN and x!=MIN
                         debug_assert!((y as i64) == MIN_S);
                         let x_bits = signed_to_bits(x);
                         debug_assert!(x_bits != BANNED);
-                        let k = compress_skip_banned(x_bits) as u64; // 0..2^W-2
+                        let k = compress_skip_banned(x_bits) as u64;
                         two_w + k
                     };
-
                     let r = permute_layer_inv(rp, n, layer_id, SEED);
                     let u = n0 + r;
                     return u as $U;
                 }
-
-                // Region A
                 let xi = x as i64;
                 let yi = y as i64;
-
                 let ax = xi.unsigned_abs();
                 let ay = yi.unsigned_abs();
                 let m = ax.max(ay);
-
                 if m == 0 {
                     return 0 as $U;
                 }
-
                 let j = perimeter_index(m as i64, xi, yi);
                 let n = shell_len(m);
-
                 let t = permute_layer_inv(j, n, m, SEED);
                 let u = base(m) + t;
                 u as $U
             }
         }
-
-        // Trait impls (both directions)
         impl<const SEED: u64> ScatterSquare<SEED> for $U {
             type Out = ($S, $S);
 
@@ -408,7 +309,6 @@ macro_rules! impl_with {
                 $mod::to_xy::<SEED>(self)
             }
         }
-
         impl<const SEED: u64> ScatterSquare<SEED> for ($S, $S) {
             type Out = $U;
 
@@ -420,12 +320,9 @@ macro_rules! impl_with {
     };
 }
 use impl_with;
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // Test roundtrip: u16 -> (i8, i8) -> u16
     #[test]
     fn roundtrip_u16_to_pair() {
         for u in 0u16..=u16::MAX {
@@ -434,20 +331,20 @@ mod tests {
             assert_eq!(u, back, "roundtrip failed for u16 {u} -> ({x}, {y})");
         }
     }
-
-    // Test roundtrip: (i8, i8) -> u16 -> (i8, i8)
     #[test]
     fn roundtrip_pair_to_u16() {
         for x in i8::MIN..=i8::MAX {
             for y in i8::MIN..=i8::MAX {
                 let u: u16 = scatter_square::<0, _>((x, y));
                 let (back_x, back_y): (i8, i8) = scatter_square::<0, _>(u);
-                assert_eq!((x, y), (back_x, back_y), "roundtrip failed for ({x}, {y}) -> {u}");
+                assert_eq!(
+                    (x, y),
+                    (back_x, back_y),
+                    "roundtrip failed for ({x}, {y}) -> {u}"
+                );
             }
         }
     }
-
-    // Test bijection coverage
     #[test]
     fn bijection_coverage_u16() {
         use std::collections::HashSet;
@@ -458,34 +355,20 @@ mod tests {
         }
         assert_eq!(seen.len(), 65536);
     }
-
-    // Test that 0 maps to origin
     #[test]
     fn zero_maps_to_origin() {
         let (x, y): (i8, i8) = scatter_square::<0, _>(0u16);
         assert_eq!((x, y), (0, 0), "0 should map to (0, 0)");
     }
-
-    // Test shell structure: values are placed in L∞ shells
-    // Shell 0: just (0,0)
-    // Shell 1: max(|x|,|y|) = 1, size 8 points
-    // Shell 2: max(|x|,|y|) = 2, size 16 points
-    // Shell M: size 8*M points
-    // Shell 128 (ragged): points involving i8::MIN
     #[test]
     fn shell_structure() {
-        // Count points in each shell (need 129 for shells 0..=128)
         let mut shell_counts: [u32; 129] = [0; 129];
         for u in 0u16..=u16::MAX {
             let (x, y): (i8, i8) = scatter_square::<0, _>(u);
             let shell = (x as i32).abs().max((y as i32).abs()) as usize;
             shell_counts[shell] += 1;
         }
-
-        // Shell 0: 1 point (0,0)
         assert_eq!(shell_counts[0], 1, "shell 0 should have 1 point");
-
-        // Shell M (1 <= M <= 127): 8*M points
         for m in 1..=127usize {
             let expected = 8 * m as u32;
             assert_eq!(
@@ -494,25 +377,15 @@ mod tests {
                 shell_counts[m]
             );
         }
-
-        // Shell 128 (ragged, involving MIN): 511 points
-        // This is 2^(W+1) - 1 = 2^9 - 1 = 511
         assert_eq!(
             shell_counts[128], 511,
             "shell 128 (ragged) should have 511 points, got {}",
             shell_counts[128]
         );
     }
-
-    // Test that shells are filled in order (monotonically)
-    // As u increases, max(|x|,|y|) should never decrease (within regions)
-    // Note: actually this property holds because region A fills shells 0..=MAX_S
-    // and region B fills the "ragged" outer shell
     #[test]
     fn shells_filled_in_order() {
-        // Calculate region A size for u16: (2^8 - 1)^2 = 255^2 = 65025
         let region_a_size = 65025u16;
-
         let mut max_shell_seen = 0i32;
         for u in 0u16..region_a_size {
             let (x, y): (i8, i8) = scatter_square::<0, _>(u);
@@ -524,8 +397,6 @@ mod tests {
             max_shell_seen = shell;
         }
     }
-
-    // Test with different seeds produce different orderings
     #[test]
     fn different_seeds_differ() {
         let mut same_count = 0;
@@ -536,60 +407,44 @@ mod tests {
                 same_count += 1;
             }
         }
-        // With different seeds, very few should match (statistically near zero)
         assert!(
             same_count < 50,
             "too many matches between seeds: {same_count}/999"
         );
     }
-
-    // Test roundtrip for u32 (sampled)
     #[test]
     fn roundtrip_u32_sample() {
         let test_values: Vec<u32> = (0..1000)
             .chain((u32::MAX - 1000)..=u32::MAX)
             .chain((0..10000).map(|i| i * 429496))
             .collect();
-
         for u in test_values {
             let (x, y): (i16, i16) = scatter_square::<0, _>(u);
             let back: u32 = scatter_square::<0, _>((x, y));
             assert_eq!(u, back, "roundtrip failed for u32 {u}");
         }
     }
-
-    // Test roundtrip for u64 (sampled)
     #[test]
     fn roundtrip_u64_sample() {
         let test_values: Vec<u64> = (0..1000)
             .chain((u64::MAX - 1000)..=u64::MAX)
             .chain((0..10000).map(|i| i * 1844674407370955))
             .collect();
-
         for u in test_values {
             let (x, y): (i32, i32) = scatter_square::<0, _>(u);
             let back: u64 = scatter_square::<0, _>((x, y));
             assert_eq!(u, back, "roundtrip failed for u64 {u}");
         }
     }
-
-    // Test that region B (ragged outer shell) is handled correctly
-    // Region B is indices >= (2^W - 1)^2
     #[test]
     fn region_b_points() {
-        let region_a_size = 65025u16; // (255)^2
-
-        // Collect all region B points
+        let region_a_size = 65025u16;
         let mut region_b_points: Vec<(i8, i8)> = Vec::new();
         for u in region_a_size..=u16::MAX {
             let (x, y): (i8, i8) = scatter_square::<0, _>(u);
             region_b_points.push((x, y));
         }
-
-        // Region B should have 65536 - 65025 = 511 points
         assert_eq!(region_b_points.len(), 511);
-
-        // All region B points should involve i8::MIN (-128)
         for (x, y) in &region_b_points {
             assert!(
                 *x == i8::MIN || *y == i8::MIN,
@@ -597,19 +452,12 @@ mod tests {
             );
         }
     }
-
-    // Test specific values (origin and boundary)
     #[test]
     fn specific_values() {
-        // u = 0 -> (0, 0)
         assert_eq!(scatter_square::<0, _>(0u16), (0i8, 0i8));
-
-        // The last point in region A (65024) should be in shell 127
         let (x, y): (i8, i8) = scatter_square::<0, _>(65024u16);
         let shell = (x as i32).abs().max((y as i32).abs());
         assert_eq!(shell, 127, "last region A point should be in shell 127");
-
-        // All points in shell 127 should have max component 127 or -127
         let mut found_127 = false;
         for u in ((255u16 - 2) * (255u16 - 2))..65025 {
             let (px, py): (i8, i8) = scatter_square::<0, _>(u);

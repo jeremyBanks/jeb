@@ -2,7 +2,6 @@ use std::fmt::{
     self,
     Display,
 };
-
 /// Error type for both serialization and deserialization of `Value`.
 ///
 /// This error type is used by both:
@@ -17,7 +16,6 @@ pub enum SerdeError {
         expected: Box<str>,
     },
 }
-
 #[derive(Debug, Clone)]
 pub enum Unexpected {
     Bool(bool),
@@ -31,7 +29,6 @@ pub enum Unexpected {
     Seq,
     Map,
 }
-
 impl Display for SerdeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -45,7 +42,6 @@ impl Display for SerdeError {
         }
     }
 }
-
 impl Display for Unexpected {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -62,15 +58,12 @@ impl Display for Unexpected {
         }
     }
 }
-
 impl std::error::Error for SerdeError {}
-
 impl serde::ser::Error for SerdeError {
     fn custom<T: Display>(msg: T) -> Self {
         SerdeError::Message(msg.to_string().into_boxed_str())
     }
 }
-
 impl SerdeError {
     pub(crate) fn invalid_type(unexp: Unexpected, exp: &str) -> Self {
         SerdeError::InvalidType {
@@ -83,7 +76,6 @@ impl SerdeError {
         SerdeError::Message(msg.to_string().into_boxed_str())
     }
 }
-
 impl serde::de::Error for SerdeError {
     fn custom<T: Display>(msg: T) -> Self {
         SerdeError::Message(msg.to_string().into_boxed_str())
@@ -126,7 +118,6 @@ impl serde::de::Error for SerdeError {
                 return SerdeError::Message(format!("invalid type: {}", other).into());
             }
         };
-
         SerdeError::InvalidType {
             unexpected,
             expected: exp.to_string().into_boxed_str(),

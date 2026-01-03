@@ -10,7 +10,6 @@
 //! substitution, globs, or other shell features), the tokenizer produces a
 //! best-effort result but populates the `errors` list in the result, indicating
 //! that the output should not be trusted.
-
 /// The kind of error encountered during shell tokenization.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorKind {
@@ -51,29 +50,38 @@ pub enum ErrorKind {
     /// Tilde at word start for tilde expansion (not interpreted).
     Tilde,
 }
-
 impl core::fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::UnclosedSingleQuote => write!(f, "unclosed single quote"),
             Self::UnclosedDoubleQuote => write!(f, "unclosed double quote"),
             Self::TrailingBackslash => write!(f, "trailing backslash"),
-            Self::DollarSign => write!(f, "dollar sign (variable expansion not interpreted)"),
-            Self::Backtick => write!(f, "backtick (command substitution not interpreted)"),
+            Self::DollarSign => {
+                write!(f, "dollar sign (variable expansion not interpreted)")
+            }
+            Self::Backtick => {
+                write!(f, "backtick (command substitution not interpreted)")
+            }
             Self::Pipe => write!(f, "pipe (piping not interpreted)"),
             Self::Ampersand => write!(f, "ampersand (background/AND not interpreted)"),
             Self::Semicolon => write!(f, "semicolon (command separator not interpreted)"),
-            Self::Newline => write!(
-                f,
-                "newline (command separator interpreted as whitespace instead)"
-            ),
+            Self::Newline => {
+                write!(
+                    f,
+                    "newline (command separator interpreted as whitespace instead)"
+                )
+            }
             Self::OpenParen => write!(f, "open parenthesis (subshell not interpreted)"),
             Self::CloseParen => write!(f, "close parenthesis (subshell not interpreted)"),
             Self::LessThan => write!(f, "less-than (input redirection not interpreted)"),
-            Self::GreaterThan => write!(f, "greater-than (output redirection not interpreted)"),
+            Self::GreaterThan => {
+                write!(f, "greater-than (output redirection not interpreted)")
+            }
             Self::Hash => write!(f, "hash (comment not interpreted)"),
             Self::Asterisk => write!(f, "asterisk (glob wildcard not interpreted)"),
-            Self::QuestionMark => write!(f, "question mark (glob wildcard not interpreted)"),
+            Self::QuestionMark => {
+                write!(f, "question mark (glob wildcard not interpreted)")
+            }
             Self::OpenBracket => {
                 write!(f, "open bracket (glob bracket expression not interpreted)")
             }
@@ -81,7 +89,6 @@ impl core::fmt::Display for ErrorKind {
         }
     }
 }
-
 /// An error encountered during shell tokenization.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Error {
@@ -92,7 +99,6 @@ pub struct Error {
     /// The byte position in the input where the error occurred.
     pub position: usize,
 }
-
 impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
@@ -102,7 +108,6 @@ impl core::fmt::Display for Error {
         )
     }
 }
-
 /// The result of tokenizing a shell command line.
 ///
 /// If `errors` is non-empty, the `args` should not be trusted as they may be
@@ -115,7 +120,6 @@ pub struct TokenizeResult {
     /// incorrect.
     pub errors: Vec<Error>,
 }
-
 /// The internal state of the tokenizer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum State {
@@ -123,10 +127,8 @@ enum State {
     SingleQuoted,
     DoubleQuoted,
 }
-
 /// Bytes that trigger errors when unquoted.
 const UNQUOTED_WARN_BYTES: &[u8] = b"$`|&;()<>*?[";
-
 /// Tokenize a shell command line (as bytes) into arguments according to POSIX
 /// shell rules.
 ///
@@ -153,22 +155,16 @@ pub fn tokenize(input: &[u8]) -> TokenizeResult {
     let mut token_started = false;
     let mut args = Vec::new();
     let mut errors = Vec::new();
-
-    // Track the position where a quote started, for error messages
     let mut quote_start_position: Option<usize> = None;
-
     let mut i = 0;
-
     while i < input.len() {
         let b = input[i];
         let position = i;
-
         match state {
             State::Normal => {
                 if b == b'\\' {
                     if let Some(&next) = input.get(i + 1) {
                         if next == b'\n' {
-                            // Line continuation - skip both bytes
                             i += 1;
                         } else {
                             current_token.push(next);
@@ -269,7 +265,6 @@ pub fn tokenize(input: &[u8]) -> TokenizeResult {
                             current_token.push(next);
                             i += 1;
                         } else if next == b'\n' {
-                            // Line continuation - skip both bytes
                             i += 1;
                         } else {
                             current_token.push(b'\\');
@@ -300,14 +295,11 @@ pub fn tokenize(input: &[u8]) -> TokenizeResult {
                 }
             }
         }
-
         i += 1;
     }
-
     if token_started || !current_token.is_empty() {
         args.push(current_token);
     }
-
     match state {
         State::Normal => {}
         State::SingleQuoted => {
@@ -325,10 +317,8 @@ pub fn tokenize(input: &[u8]) -> TokenizeResult {
             });
         }
     }
-
     TokenizeResult { args, errors }
 }
-
 /// Tokenize a shell command line string into arguments according to POSIX shell
 /// rules.
 ///
@@ -371,12 +361,9 @@ pub fn tokenize_str(input: &str) -> (Vec<String>, Vec<Error>) {
         .collect();
     (args, result.errors)
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // Helper to assert args without errors using tokenize_str
     fn assert_args_str(input: &str, expected: &[&str]) {
         let (args, errors) = tokenize_str(input);
         assert_eq!(
@@ -388,8 +375,6 @@ mod tests {
         );
         assert!(errors.is_empty(), "expected no errors, got: {errors:?}");
     }
-
-    // Helper to assert args without errors using tokenize (bytes)
     fn assert_args(input: &[u8], expected: &[&[u8]]) {
         let result = tokenize(input);
         assert_eq!(
@@ -402,8 +387,6 @@ mod tests {
             result.errors
         );
     }
-
-    // Helper to assert args with errors using tokenize_str
     fn assert_args_with_errors_str(input: &str, expected: &[&str], error_bytes: &[u8]) {
         let (args, errors) = tokenize_str(input);
         assert_eq!(
@@ -416,8 +399,6 @@ mod tests {
         let actual_error_bytes: Vec<u8> = errors.iter().map(|e| e.byte).collect();
         assert_eq!(actual_error_bytes, error_bytes);
     }
-
-    // Helper to assert args with errors using tokenize (bytes)
     fn assert_args_with_errors(input: &[u8], expected: &[&[u8]], error_bytes: &[u8]) {
         let result = tokenize(input);
         assert_eq!(
@@ -427,8 +408,6 @@ mod tests {
         let actual_error_bytes: Vec<u8> = result.errors.iter().map(|e| e.byte).collect();
         assert_eq!(actual_error_bytes, error_bytes);
     }
-
-    // Helper to assert specific error kind
     fn assert_has_error(input: &str, expected_kind: ErrorKind) {
         let (_, errors) = tokenize_str(input);
         assert!(
@@ -436,9 +415,6 @@ mod tests {
             "expected error {expected_kind:?}, got: {errors:?}"
         );
     }
-
-    // MARK: Basic Tokenization (using tokenize_str)
-
     #[test]
     fn test_basic_tokenization() {
         assert_args_str("hello world", &["hello", "world"]);
@@ -448,15 +424,11 @@ mod tests {
         assert_args_str("", &[]);
         assert_args_str("   ", &[]);
     }
-
     #[test]
     fn test_tabs() {
         assert_args_str("hello\tworld", &["hello", "world"]);
         assert_args_str("hello \t world", &["hello", "world"]);
     }
-
-    // MARK: Basic Tokenization (using tokenize with bytes)
-
     #[test]
     fn test_basic_tokenization_bytes() {
         assert_args(b"hello world", &[b"hello", b"world"]);
@@ -466,9 +438,6 @@ mod tests {
         assert_args(b"", &[]);
         assert_args(b"   ", &[]);
     }
-
-    // MARK: Single Quotes
-
     #[test]
     fn test_single_quotes() {
         assert_args_str("'hello world'", &["hello world"]);
@@ -476,14 +445,10 @@ mod tests {
         assert_args_str("'\\n'", &["\\n"]);
         assert_args_str("'it'\\''s'", &["it's"]);
     }
-
     #[test]
     fn test_unclosed_single_quote() {
         assert_has_error("'hello", ErrorKind::UnclosedSingleQuote);
     }
-
-    // MARK: Double Quotes
-
     #[test]
     fn test_double_quotes() {
         assert_args_str("\"hello world\"", &["hello world"]);
@@ -493,24 +458,18 @@ mod tests {
         assert_args_str("\"\\n\"", &["\\n"]);
         assert_args_str("\"\\z\"", &["\\z"]);
     }
-
     #[test]
     fn test_dollar_in_double_quotes_warns() {
         assert_args_with_errors_str("\"$HOME\"", &["$HOME"], b"$");
     }
-
     #[test]
     fn test_backtick_in_double_quotes_warns() {
         assert_args_with_errors_str("\"`cmd`\"", &["`cmd`"], b"``");
     }
-
     #[test]
     fn test_unclosed_double_quote() {
         assert_has_error("\"hello", ErrorKind::UnclosedDoubleQuote);
     }
-
-    // MARK: Unquoted Escapes
-
     #[test]
     fn test_unquoted_escapes() {
         assert_args_str("hello\\ world", &["hello world"]);
@@ -518,73 +477,57 @@ mod tests {
         assert_args_str("\\\\", &["\\"]);
         assert_args_str("\\*", &["*"]);
     }
-
     #[test]
     fn test_trailing_backslash_error() {
         assert_has_error("hello\\", ErrorKind::TrailingBackslash);
     }
-
     #[test]
     fn test_line_continuation() {
         assert_args_str("hello\\\nworld", &["helloworld"]);
         assert_args_str("hello \\\n world", &["hello", "world"]);
     }
-
     #[test]
     fn test_line_continuation_in_double_quotes() {
         assert_args_str("\"hello\\\nworld\"", &["helloworld"]);
     }
-
-    // MARK: Errors
-
     #[test]
     fn test_unquoted_dollar_warns() {
         assert_args_with_errors_str("$HOME", &["$HOME"], b"$");
     }
-
     #[test]
     fn test_unquoted_glob_warns() {
         assert_args_with_errors_str("*.txt", &["*.txt"], b"*");
         assert_args_with_errors_str("file?", &["file?"], b"?");
         assert_args_with_errors_str("file[0]", &["file[0]"], b"[");
     }
-
     #[test]
     fn test_tilde_at_word_start_warns() {
         assert_args_with_errors_str("~user", &["~user"], b"~");
     }
-
     #[test]
     fn test_tilde_mid_word_no_warn() {
         assert_args_str("a~b", &["a~b"]);
     }
-
     #[test]
     fn test_hash_at_word_start_warns() {
         assert_args_with_errors_str("#comment", &["#comment"], b"#");
         assert_args_with_errors_str("echo #test", &["echo", "#test"], b"#");
     }
-
     #[test]
     fn test_hash_mid_word_no_warn() {
         assert_args_str("foo#bar", &["foo#bar"]);
         assert_args_str("C#", &["C#"]);
     }
-
     #[test]
     fn test_pipe_and_semicolon_warn() {
         assert_args_with_errors_str("echo hello|cat", &["echo", "hello|cat"], b"|");
         assert_args_with_errors_str("echo; ls", &["echo;", "ls"], b";");
     }
-
     #[test]
     fn test_redirections_warn() {
         assert_args_with_errors_str("echo > file", &["echo", ">", "file"], b">");
         assert_args_with_errors_str("cat < file", &["cat", "<", "file"], b"<");
     }
-
-    // MARK: Token Concatenation
-
     #[test]
     fn test_concatenation() {
         assert_args_str("a'b'c", &["abc"]);
@@ -592,59 +535,42 @@ mod tests {
         assert_args_str("'a'\"b\"c", &["abc"]);
         assert_args_str("x=\"foo\"", &["x=foo"]);
     }
-
-    // MARK: Empty Quotes
-
     #[test]
     fn test_empty_quotes() {
         assert_args_str("''", &[""]);
         assert_args_str("\"\"", &[""]);
         assert_args_str("'' ''", &["", ""]);
     }
-
     #[test]
     fn test_adjacent_empty_quotes() {
         assert_args_str("a''b", &["ab"]);
         assert_args_str("a\"\"b", &["ab"]);
         assert_args_str("''\"\"", &[""]);
     }
-
-    // MARK: Newlines in Quotes
-
     #[test]
     fn test_newlines_in_single_quotes() {
         assert_args_str("'hello\nworld'", &["hello\nworld"]);
     }
-
     #[test]
     fn test_newlines_in_double_quotes() {
         assert_args_str("\"hello\nworld\"", &["hello\nworld"]);
     }
-
-    // MARK: Escaped Quote Characters
-
     #[test]
     fn test_escaped_single_quote() {
         assert_args_str("\\'", &["'"]);
     }
-
     #[test]
     fn test_escaped_double_quote() {
         assert_args_str("\\\"", &["\""]);
     }
-
     #[test]
     fn test_escaped_quote_in_double_quotes() {
         assert_args_str("\"he said \\\"hi\\\"\"", &["he said \"hi\""]);
     }
-
-    // MARK: Complex Cases
-
     #[test]
     fn test_complex_concatenation() {
         assert_args_str("a\"b\"c'd'e", &["abcde"]);
     }
-
     #[test]
     fn test_multiple_warnings() {
         let (args, errors) = tokenize_str("$HOME/*.txt");
@@ -653,20 +579,15 @@ mod tests {
         assert_eq!(errors[0].byte, b'$');
         assert_eq!(errors[1].byte, b'*');
     }
-
     #[test]
     fn test_backslash_in_double_quotes_before_regular_char() {
         assert_args_str("\"\\a\"", &["\\a"]);
         assert_args_str("\"\\x\"", &["\\x"]);
     }
-
-    // MARK: Bytes API tests
-
     #[test]
     fn test_bytes_with_errors() {
         assert_args_with_errors(b"$HOME", &[b"$HOME"], b"$");
     }
-
     #[test]
     fn test_bytes_unclosed_quote() {
         let result = tokenize(b"'hello");

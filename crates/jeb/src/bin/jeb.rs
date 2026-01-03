@@ -1,5 +1,4 @@
 #![cfg(feature = "bin")]
-
 use {
     jeb::{
         Panic,
@@ -19,16 +18,13 @@ use {
     },
     tracing::debug,
 };
-
 /// Pre-defined aliases that expand a single command into one or more commands.
 static ALIASES: &[(&str, &[&str])] = &[("to-jeb85-lines", &[
     "encode-jeb85",
     "split-80",
     "join-lines",
 ])];
-
 static PRELUDE: &str = include_str!("jeb/prelude.jeb");
-
 /// Expand an alias into its component commands, or return the original command.
 fn expand_alias(command: &str) -> Vec<String> {
     for (alias, expansion) in ALIASES {
@@ -38,15 +34,11 @@ fn expand_alias(command: &str) -> Vec<String> {
     }
     vec![command.to_string()]
 }
-
-// XXX: Consider switching to a real entry point so we can do
-//      set .unhandled_panic(UnhandledPanic::ShutdownRuntime).
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), Infallible> {
     inner_main().await.ok();
     Ok(())
 }
-
 pub async fn inner_main() -> Result<(), Panic> {
     color_eyre::install()?;
     dotenv::dotenv().ok();
@@ -54,11 +46,8 @@ pub async fn inner_main() -> Result<(), Panic> {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .pretty()
         .init();
-
     let mut args = Vec::<String>::from_iter(std::env::args());
     let own_path: String = args.remove(0);
-
-    // Parse prelude and prepend to args
     let prelude_result = shell_tokenizer::tokenize(PRELUDE.as_bytes());
     for error in &prelude_result.errors {
         debug!("prelude error: {error}");
@@ -68,13 +57,11 @@ pub async fn inner_main() -> Result<(), Panic> {
         .into_iter()
         .map(|bytes| String::from_utf8(bytes).expect("prelude should be valid UTF-8"))
         .collect();
-
     args = prelude_args
         .into_iter()
         .chain(args)
         .flat_map(|s| {
             static REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"\s\|\s"#).unwrap());
-
             if REGEX.is_match(&s) {
                 s.split('|')
                     .map(|s| s.trim_ascii().to_string())
@@ -83,33 +70,25 @@ pub async fn inner_main() -> Result<(), Panic> {
                 vec![s]
             }
         })
-        // Expand any aliases into their component commands
         .flat_map(|s| expand_alias(&s))
         .collect();
-
     let mut commands = args;
     let mut commands_fmt = commands
         .iter()
         .map(|s| s.yellow().to_string())
         .collect::<Vec<String>>()
         .join(" ");
-
     if commands.is_empty() {
         commands.push("help".to_string());
         commands_fmt.push_str("help".red().to_string().as_str());
     }
-
     if commands.last().map(|s| s.as_str()) != Some("stdout") {
         commands.push("stdout".to_string());
         commands_fmt.push_str(" stdout".red().to_string().as_str());
     }
-
     let mut state = Vec::<Bytes>::new();
-
     eprintln!("{} {}", own_path.magenta(), commands_fmt);
-
     let mut _default_mode: &'static str = "last";
-
     for command in commands {
         state = match command.as_str() {
             "help" | "--help" | "-h" | "-?" => help(state)?,
@@ -145,10 +124,7 @@ pub async fn inner_main() -> Result<(), Panic> {
                 _default_mode = "first";
                 state
             }
-            _ if command.contains('=') => {
-                // Assignment - no-op for now
-                state
-            }
+            _ if command.contains('=') => state,
             _ => {
                 if command.starts_with(".") || command.starts_with("/") {
                     read(state, &command)?
@@ -165,46 +141,38 @@ pub async fn inner_main() -> Result<(), Panic> {
                     std::process::exit(1);
                 }
             }
-        }
+        };
     }
-
     Ok(())
 }
-
 fn help(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     static README: &str = include_str!("../../README.md");
     state.push(README.into());
-
     Ok(state)
 }
-
 fn read(mut state: Vec<Bytes>, path: &str) -> Result<Vec<Bytes>, Panic> {
     let data = std::fs::read(path)?;
     state.push(Bytes::from(data));
     Ok(state)
 }
-
 fn self_(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let own_path = std::env::current_exe()?;
     let own_data = std::fs::read(own_path)?;
     state.push(Bytes::from(own_data));
     Ok(state)
 }
-
 fn stdin(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let mut buffer = Vec::<u8>::new();
     std::io::stdin().read_to_end(&mut buffer)?;
     state.push(Bytes::from(buffer));
     Ok(state)
 }
-
 fn stdout(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for item in state {
         std::io::stdout().write_all(&item)?;
     }
     Ok(Vec::new())
 }
-
 fn encode_z85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let bytes = take(piece);
@@ -213,7 +181,6 @@ fn encode_z85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     }
     Ok(state)
 }
-
 fn encode_jeb85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let bytes = take(piece);
@@ -222,7 +189,6 @@ fn encode_jeb85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     }
     Ok(state)
 }
-
 fn decode_z85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let encoded = take(piece);
@@ -231,14 +197,12 @@ fn decode_z85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     }
     Ok(state)
 }
-
 fn first(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     while state.len() > 1 {
         state.pop();
     }
     Ok(state)
 }
-
 fn first_n(mut state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
     let n: usize = arg.parse()?;
     while state.len() > n {
@@ -246,7 +210,6 @@ fn first_n(mut state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
     }
     Ok(state)
 }
-
 fn last(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let last = state.pop();
     state.clear();
@@ -255,7 +218,6 @@ fn last(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     }
     Ok(state)
 }
-
 fn last_n(mut state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
     let n: usize = arg.parse()?;
     if state.len() > n {
@@ -263,21 +225,13 @@ fn last_n(mut state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
     }
     Ok(state)
 }
-
 async fn collapse(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     use futures::StreamExt;
-
-    // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
     let source = jeb_stream::bytes_source(byte_vecs);
-
-    // Apply transformation
     let transformed = jeb_stream::collapse(source);
-
-    // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
     let mut result = Vec::new();
-
     for item_result in items {
         match item_result {
             Ok(jeb_stream::Item::Bytes(bytes)) => {
@@ -286,28 +240,20 @@ async fn collapse(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
             Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
-            Ok(_) => {} // Skip other item types
+            Ok(_) => {}
             #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
     Ok(result)
 }
-
 async fn split_lines(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     use futures::StreamExt;
-
-    // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
     let source = jeb_stream::bytes_source(byte_vecs);
-
-    // Apply transformation (lines() splits on newlines)
     let transformed = jeb_stream::lines(source);
-
-    // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
     let mut result = Vec::new();
-
     for item_result in items {
         match item_result {
             Ok(jeb_stream::Item::Bytes(bytes)) => {
@@ -316,20 +262,17 @@ async fn split_lines(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
             Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
-            Ok(_) => {} // Skip other item types
+            Ok(_) => {}
             #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
     Ok(result)
 }
-
 fn parse_size_notation(arg: &str) -> Result<usize, Panic> {
     let rest = arg.to_ascii_uppercase();
     let mut rest = rest.as_str();
-
     let mut unit = 1;
-
     let binary;
     if let Some(next) = rest.strip_suffix("IB") {
         rest = next;
@@ -343,7 +286,6 @@ fn parse_size_notation(arg: &str) -> Result<usize, Panic> {
     } else {
         binary = true;
     }
-
     loop {
         if let Some(next) = rest.strip_suffix("K") {
             if binary {
@@ -370,28 +312,18 @@ fn parse_size_notation(arg: &str) -> Result<usize, Panic> {
             break;
         }
     }
-
     let coefficient: usize = rest.parse()?;
     let size = coefficient * unit;
     Ok(size)
 }
-
 async fn split_n(state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
     use futures::StreamExt;
-
     let size = parse_size_notation(arg)?;
-
-    // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
     let source = jeb_stream::bytes_source(byte_vecs);
-
-    // Apply transformation
     let transformed = jeb_stream::chunks(source, size);
-
-    // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
     let mut result = Vec::new();
-
     for item_result in items {
         match item_result {
             Ok(jeb_stream::Item::Bytes(bytes)) => {
@@ -407,7 +339,6 @@ async fn split_n(state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
     }
     Ok(result)
 }
-
 fn find_target(state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
     let target = arg.as_bytes();
     let mut result = Vec::<Bytes>::new();
@@ -418,13 +349,11 @@ fn find_target(state: Vec<Bytes>, arg: &str) -> Result<Vec<Bytes>, Panic> {
     }
     Ok(result)
 }
-
 fn join(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let input = take(&mut state).into_iter().flatten().collect::<Vec<u8>>();
     state.push(Bytes::from(input));
     Ok(state)
 }
-
 fn join_lines(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let input = take(&mut state)
         .into_iter()
@@ -433,7 +362,6 @@ fn join_lines(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     state.push(Bytes::from(input));
     Ok(state)
 }
-
 fn join_space(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     let mut input = take(&mut state)
         .into_iter()
@@ -443,21 +371,13 @@ fn join_space(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     state.push(Bytes::from(input));
     Ok(state)
 }
-
 async fn filter(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     use futures::StreamExt;
-
-    // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
     let source = jeb_stream::bytes_source(byte_vecs);
-
-    // Apply transformation
     let transformed = jeb_stream::filter(source);
-
-    // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
     let mut result = Vec::new();
-
     for item_result in items {
         match item_result {
             Ok(jeb_stream::Item::Bytes(bytes)) => {
@@ -466,28 +386,20 @@ async fn filter(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
             Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
-            Ok(_) => {} // Skip other item types
+            Ok(_) => {}
             #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
     Ok(result)
 }
-
 async fn split_shell(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     use futures::StreamExt;
-
-    // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
     let source = jeb_stream::bytes_source(byte_vecs);
-
-    // Apply transformation (split_shell tokenizes using shell rules)
     let transformed = jeb_stream::split_shell(source);
-
-    // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
     let mut result = Vec::new();
-
     for item_result in items {
         match item_result {
             Ok(jeb_stream::Item::Bytes(bytes)) => {
@@ -496,28 +408,20 @@ async fn split_shell(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
             Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
-            Ok(_) => {} // Skip other item types
+            Ok(_) => {}
             #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
     Ok(result)
 }
-
 async fn split_whitespace(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     use futures::StreamExt;
-
-    // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
     let source = jeb_stream::bytes_source(byte_vecs);
-
-    // Apply transformation
     let transformed = jeb_stream::split_whitespace(source);
-
-    // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
     let mut result = Vec::new();
-
     for item_result in items {
         match item_result {
             Ok(jeb_stream::Item::Bytes(bytes)) => {
@@ -526,28 +430,20 @@ async fn split_whitespace(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
             Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
-            Ok(_) => {} // Skip other item types
+            Ok(_) => {}
             #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
     Ok(result)
 }
-
 async fn parse_hex(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     use futures::StreamExt;
-
-    // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
     let source = jeb_stream::bytes_source(byte_vecs);
-
-    // Apply transformation
     let transformed = jeb_stream::parse_hex(source);
-
-    // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
     let mut result = Vec::new();
-
     for item_result in items {
         match item_result {
             Ok(jeb_stream::Item::Bytes(bytes)) => {
@@ -556,28 +452,20 @@ async fn parse_hex(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
             Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
-            Ok(_) => {} // Skip other item types
+            Ok(_) => {}
             #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
     Ok(result)
 }
-
 async fn to_hex(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     use futures::StreamExt;
-
-    // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
     let source = jeb_stream::bytes_source(byte_vecs);
-
-    // Apply transformation
     let transformed = jeb_stream::to_hex(source);
-
-    // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
     let mut result = Vec::new();
-
     for item_result in items {
         match item_result {
             Ok(jeb_stream::Item::Text(text)) => {
@@ -586,28 +474,20 @@ async fn to_hex(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
             Ok(jeb_stream::Item::Bytes(bytes)) => {
                 result.push(Bytes::from(bytes.to_vec()));
             }
-            Ok(_) => {} // Skip other item types
+            Ok(_) => {}
             #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
     Ok(result)
 }
-
 async fn parse_binary(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     use futures::StreamExt;
-
-    // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
     let source = jeb_stream::bytes_source(byte_vecs);
-
-    // Apply transformation
     let transformed = jeb_stream::parse_binary(source);
-
-    // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
     let mut result = Vec::new();
-
     for item_result in items {
         match item_result {
             Ok(jeb_stream::Item::Bytes(bytes)) => {
@@ -616,28 +496,20 @@ async fn parse_binary(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
             Ok(jeb_stream::Item::Text(text)) => {
                 result.push(Bytes::from(text.as_bytes().to_vec()));
             }
-            Ok(_) => {} // Skip other item types
+            Ok(_) => {}
             #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }
     }
     Ok(result)
 }
-
 async fn to_binary(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     use futures::StreamExt;
-
-    // Convert Vec<Bytes> to stream of Vec<u8>
     let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
     let source = jeb_stream::bytes_source(byte_vecs);
-
-    // Apply transformation
     let transformed = jeb_stream::to_binary(source);
-
-    // Collect back to Vec<Bytes>
     let items: Vec<_> = transformed.collect().await;
     let mut result = Vec::new();
-
     for item_result in items {
         match item_result {
             Ok(jeb_stream::Item::Text(text)) => {
@@ -646,7 +518,7 @@ async fn to_binary(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
             Ok(jeb_stream::Item::Bytes(bytes)) => {
                 result.push(Bytes::from(bytes.to_vec()));
             }
-            Ok(_) => {} // Skip other item types
+            Ok(_) => {}
             #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
         }

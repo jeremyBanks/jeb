@@ -2,19 +2,25 @@
 
 ## Overview
 
-The `save` tool works correctly with shallow Git clones, but has limited graph information available.
+The `save` tool works correctly with shallow Git clones, but has limited graph
+information available.
 
 ## Detection
 
-Git stores shallow clone metadata in `.git/shallow` file, which contains commit OIDs of "grafted" commits (commits whose parents are hidden by the shallow boundary).
+Git stores shallow clone metadata in `.git/shallow` file, which contains commit
+OIDs of "grafted" commits (commits whose parents are hidden by the shallow
+boundary).
 
-The `git2` crate provides `Repository::is_shallow()` to detect shallow repositories.
+The `git2` crate provides `Repository::is_shallow()` to detect shallow
+repositories.
 
 ## Behavior in Shallow Clones
 
 When running `save` in a shallow clone:
 
-1. **Graph Statistics Are Limited**: The `graph_stats()` function walks all reachable commits from HEAD, stopping at the shallow boundary where parents aren't available.
+1. **Graph Statistics Are Limited**: The `graph_stats()` function walks all
+   reachable commits from HEAD, stopping at the shallow boundary where parents
+   aren't available.
 
 2. **Example - Depth 1 Clone**:
    ```
@@ -86,12 +92,15 @@ There are multiple ways to conceptualize shallow depth:
 ## Implementation Notes
 
 From `src/git2.rs:270-338`, the `graph_stats()` function:
+
 - Walks ALL parents recursively from HEAD
-- Stops when it encounters commits with no parents (either root commits or shallow boundary)
+- Stops when it encounters commits with no parents (either root commits or
+  shallow boundary)
 - Uses petgraph to build a directed graph of reachable commits
 - Calculates three indices based on this limited graph
 
-The tool does not crash or error in shallow clones - it simply works with the limited history available.
+The tool does not crash or error in shallow clones - it simply works with the
+limited history available.
 
 ## Finding the Oldest Commits
 
@@ -114,24 +123,31 @@ The tool does not crash or error in shallow clones - it simply works with the li
    ```
 
 3. **Understand the boundary semantics**:
-   - Commits in `.git/shallow` are **not** root commits (they have `parent_count() > 0`)
+   - Commits in `.git/shallow` are **not** root commits (they have
+     `parent_count() > 0`)
    - Their parent commit objects simply **don't exist** in the repository
-   - Calling `commit.parent(i)` on these commits returns `Err("object not found")`
+   - Calling `commit.parent(i)` on these commits returns
+     `Err("object not found")`
    - This is why they appear as "leaf nodes" in graph traversal
 
 **Example from depth=10 Linux clone:**
+
 ```
 Boundary commit: 0edc78b82bea - "x86/msi: Make irq_retrigger() functional..."
   parent_count(): 1
   parent(0): ERROR - object not found (21433d3e3c...)
 ```
 
-The commit has a parent reference encoded in its object, but that parent doesn't exist in `.git/objects/`.
+The commit has a parent reference encoded in its object, but that parent doesn't
+exist in `.git/objects/`.
 
 ## Recommendation
 
-For shallow clones, the commit_index provides the most useful information: the number of commits reachable from HEAD minus 1. This gives users a sense of how much history is available in their shallow clone.
+For shallow clones, the commit_index provides the most useful information: the
+number of commits reachable from HEAD minus 1. This gives users a sense of how
+much history is available in their shallow clone.
 
-To find the "oldest" commits (shallow boundary), read `.git/shallow` directly or detect when `commit.parent(i)` fails with "object not found".
+To find the "oldest" commits (shallow boundary), read `.git/shallow` directly or
+detect when `commit.parent(i)` fails with "object not found".
 
 No code changes are needed - the tool handles shallow clones correctly as-is.

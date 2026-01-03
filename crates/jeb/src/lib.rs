@@ -27,17 +27,12 @@
 )]
 #![doc = include_str!("../README.md")]
 #![doc = ::document_features::document_features!()]
-
-// cSpell:ignoreRegExp b"(\\?.){5}"
-
-
 pub mod byte_ranges;
 pub mod const_checked;
 pub mod jeb85;
 pub mod model;
 pub mod nodes;
 pub mod z85;
-
 pub use {
     crate::{
         byte_ranges::*,

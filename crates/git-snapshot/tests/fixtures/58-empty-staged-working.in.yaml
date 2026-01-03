@@ -1,0 +1,11 @@
+HEAD: 1
+1:
+  message: Initial commit
+  tree:
+    README.md: '# Project'
+    src:
+      lib.rs: pub fn main() {}
+
+# Both staged and working are empty (all files deleted)
+staged: {}
+working: {}

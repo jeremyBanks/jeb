@@ -1,6 +1,5 @@
 //! Non-derived `Deserialize` implementations for our `Value` types, to allow
 //! them to be deserialized by arbitrary serde `Deserializer`s.
-
 use {
     crate::{
         Bytes,
@@ -14,7 +13,6 @@ use {
         Visitor,
     },
 };
-
 impl<'de> serde::Deserialize<'de> for Value {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -23,9 +21,7 @@ impl<'de> serde::Deserialize<'de> for Value {
         deserializer.deserialize_any(ValueVisitor)
     }
 }
-
 struct ValueVisitor;
-
 impl<'de> Visitor<'de> for ValueVisitor {
     type Value = Value;
 
@@ -72,7 +68,6 @@ impl<'de> Visitor<'de> for ValueVisitor {
     where
         E: de::Error,
     {
-        // Try to fit in i64, otherwise use Bytes for larger values
         if let Ok(i64_val) = i64::try_from(value) {
             Ok(Value::Signed(i64_val))
         } else {
@@ -112,7 +107,6 @@ impl<'de> Visitor<'de> for ValueVisitor {
     where
         E: de::Error,
     {
-        // Try to fit in u64, otherwise use Bytes for larger values
         if let Ok(u64_val) = u64::try_from(value) {
             Ok(Value::Unsigned(u64_val))
         } else {
@@ -230,20 +224,14 @@ impl<'de> Visitor<'de> for ValueVisitor {
     where
         A: de::MapAccess<'de>,
     {
-        // Collect all entries first
         let mut entries: Vec<(Value, Value)> = Vec::new();
         while let Some((key, value)) = map.next_entry()? {
             entries.push((key, value));
         }
-
         if entries.is_empty() {
-            // Empty map - default to TextMap for JSON compatibility
             return Ok(Value::TextMap(IndexMap::new()));
         }
-
-        // Determine map type based on first key
         let is_text_map = matches!(entries[0].0, Value::Text(_));
-
         if is_text_map {
             let mut text_map = IndexMap::new();
             for (key, value) in entries {
@@ -260,7 +248,6 @@ impl<'de> Visitor<'de> for ValueVisitor {
             }
             Ok(Value::TextMap(text_map))
         } else {
-            // Assume BytesMap
             let mut bytes_map = IndexMap::new();
             for (key, value) in entries {
                 match key {

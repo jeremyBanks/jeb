@@ -1,12 +1,10 @@
 //! Bijections between numeric types.
-
 pub mod floating;
 pub mod hilbert;
 pub mod scatter_square;
 pub mod signedness;
 pub mod spiral_square;
 pub mod zig_zag;
-
 pub use {
     floating::floating,
     hilbert::hilbert,

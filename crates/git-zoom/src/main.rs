@@ -3,17 +3,15 @@
 //! Usage:
 //!   git zoom in [path] [--allow-empty]
 //!   git zoom out [target[:path]] [--deny-empty]
-
 mod git;
 mod scan;
 mod tree;
 mod zoom_in;
 mod zoom_out;
-mod git_snapshot;
-
-use std::env;
-use std::process::ExitCode;
-
+use std::{
+    env,
+    process::ExitCode,
+};
 fn print_usage() {
     eprintln!("Usage:");
     eprintln!("  git-zoom in [path] [--allow-empty]");
@@ -27,33 +25,25 @@ fn print_usage() {
     eprintln!("  --allow-empty  Allow zooming into non-existent path (creates empty tree)");
     eprintln!("  --deny-empty   Error if subtree would be empty when zooming out");
 }
-
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
-
     if args.len() < 2 {
         print_usage();
         return ExitCode::from(1);
     }
-
-    // Check preconditions
     if let Err(e) = git::check_repo_root() {
         eprintln!("Error: {}", e);
         return ExitCode::from(1);
     }
-
     if let Err(e) = git::check_clean() {
         eprintln!("Error: {}", e);
         return ExitCode::from(1);
     }
-
     let command = &args[1];
-
     match command.as_str() {
         "in" => {
             let mut path: Option<&str> = None;
             let mut allow_empty = false;
-
             for arg in &args[2..] {
                 if arg == "--allow-empty" {
                     allow_empty = true;
@@ -68,7 +58,6 @@ fn main() -> ExitCode {
                     return ExitCode::from(1);
                 }
             }
-
             if let Err(e) = zoom_in::zoom_in(path, allow_empty) {
                 eprintln!("Error: {}", e);
                 return ExitCode::from(1);
@@ -77,7 +66,6 @@ fn main() -> ExitCode {
         "out" => {
             let mut target_path: Option<&str> = None;
             let mut deny_empty = false;
-
             for arg in &args[2..] {
                 if arg == "--deny-empty" {
                     deny_empty = true;
@@ -92,7 +80,6 @@ fn main() -> ExitCode {
                     return ExitCode::from(1);
                 }
             }
-
             if let Err(e) = zoom_out::zoom_out(target_path, deny_empty) {
                 eprintln!("Error: {}", e);
                 return ExitCode::from(1);
@@ -107,6 +94,5 @@ fn main() -> ExitCode {
             return ExitCode::from(1);
         }
     }
-
     ExitCode::SUCCESS
 }

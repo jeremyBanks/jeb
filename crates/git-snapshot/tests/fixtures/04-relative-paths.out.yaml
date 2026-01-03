@@ -1,0 +1,22 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: cff27db92d75ffaec2929a1a76afe2bc0dff8b89
+b05bfd:
+  message: commit 1
+  tree:
+    bar:
+      c.txt: content c
+    foo:
+      a.txt: content a
+      b.txt: content b
+cff27db92d75ffaec2929a1a76afe2bc0dff8b89:
+  message: commit 2
+  tree:
+    c-moved.txt:
+      //commit: b05bfd
+      //path: bar/c.txt
+    foo:
+      moved-b.txt:
+        //commit: b05bfd
+        //path: foo/b.txt

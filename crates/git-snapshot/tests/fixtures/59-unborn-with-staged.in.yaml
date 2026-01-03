@@ -1,0 +1,8 @@
+# Unborn HEAD (no commits yet) but files in staging
+HEAD: refs/heads/main
+
+staged:
+  README.md: '# New Project'
+  src:
+    lib.rs: pub fn init() {}
+  Cargo.toml: '[package]\nname = "new"'

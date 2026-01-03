@@ -1,10 +1,7 @@
 //! The CLI.
 
 use {
-    crate::{
-        git2::*,
-        graph_stats::GraphStatsCalculator,
-    },
+    crate::{git2::*, graph_stats::GraphStatsCalculator},
     ::{
         clap::{AppSettings, Parser},
         eyre::{bail, Result},
@@ -17,8 +14,8 @@ use {
     },
 };
 
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-const V_VERSION: &'static str = concat!("v", env!("CARGO_PKG_VERSION"));
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const V_VERSION: &str = concat!("v", env!("CARGO_PKG_VERSION"));
 
 /// Commit everything in the current directory and repository -- no questions asked.
 ///
@@ -41,7 +38,8 @@ const V_VERSION: &'static str = concat!("v", env!("CARGO_PKG_VERSION"));
 LINKS:
     https://docs.rs/save/{VERSION}
     https://crates.io/crates/save/{VERSION}"));
-        S.as_ref()
+        let s: &str = S.as_ref();
+        s
     },
     dont_collapse_args_in_usage = true,
     infer_long_args = true,
@@ -54,13 +52,13 @@ LINKS:
 pub struct Save {
     /// Decrease log verbosity. May be repeated to decrease verbosity further.
     ///
-    /// [env: RUST_LOG=]
+    /// [env: `RUST_LOG`=]
     #[clap(long, short = 'q', parse(from_occurrences))]
     pub quiet: i32,
 
     /// Increase log verbosity. May be repeated to increase verbosity further.
     ///
-    /// [env: RUST_LOG=]
+    /// [env: `RUST_LOG`=]
     #[clap(long, short = 'v', parse(from_occurrences))]
     pub verbose: i32,
 
@@ -355,7 +353,7 @@ pub struct Save {
 }
 
 impl Save {
-    pub fn with<F: FnOnce(&mut Save) -> T, T>(f: F) -> Save {
+    pub fn with<F: FnOnce(&mut Self) -> T, T>(f: F) -> Self {
         let mut save = Default::default();
         f(&mut save);
         save
@@ -368,7 +366,7 @@ impl Save {
         let log_env = env::var("RUST_LOG").unwrap_or_default();
 
         let rust_log = if self.verbose == 0 && self.quiet == 0 && !log_env.is_empty() {
-            if log_env.to_ascii_lowercase() == "off" {
+            if log_env.eq_ignore_ascii_case("off") {
                 None
             } else {
                 Some(log_env)
@@ -565,12 +563,12 @@ pub fn main(args: Save) -> Result<()> {
                 } else {
                     repo.set_head(&commit.id().to_string())?;
                 }
-            }
+            },
             Err(err) if err.code() == ErrorCode::UnbornBranch => {
                 // First commit on unborn branch - set HEAD to point to the new commit
                 info!("Creating first commit on unborn branch");
                 repo.set_head_detached(commit.id())?;
-            }
+            },
             Err(err) => return Err(err.into()),
         }
     } else {
@@ -580,7 +578,7 @@ pub fn main(args: Save) -> Result<()> {
     eprintln!();
 
     Command::new("git")
-        .args(&[
+        .args([
             "--no-pager",
             "log",
             "--name-status",
@@ -597,7 +595,7 @@ pub fn main(args: Save) -> Result<()> {
     eprintln!();
 
     Command::new("git")
-        .args(&[
+        .args([
             "--no-pager",
             "log",
             "--name-status",
@@ -690,7 +688,7 @@ fn get_git_user(args: &Save, repo: &Repository, head: &Option<Commit>) -> Result
     Ok((user_name, user_email))
 }
 
-/// Opens or initializes a new [git2::Repository] in CWD or GIT_DIR, if args
+/// Opens or initializes a new [`git2::Repository`] in `CWD` or `GIT_DIR`, if args
 /// allow it.
 /// XXX: This should be removed or merged into git2.rs.
 #[instrument(level = "debug")]

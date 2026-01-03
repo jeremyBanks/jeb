@@ -1,0 +1,63 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 6
+
+# Original initial commit
+1:
+  message: "Initial commit"
+  tree:
+    README.md: "root readme"
+    src:
+      lib.txt: "library code"
+      utils.txt: "utils"
+
+# Seed commit for zoom-in
+2:
+  parents: []
+  message: "Initial commit"
+  committer: "🔎 <git-zoom-in@localhost>"
+  tree: {}
+
+# Zoom-in merge
+3:
+  parents: [2, 1]
+  message: |
+    Merge from 'src'
+
+    git-zoom-in: src
+  committer: "🔎 <git-zoom-in@localhost>"
+  tree:
+    lib.txt: "library code"
+    utils.txt: "utils"
+
+# User modifications during zoom
+4:
+  parents: [3]
+  message: "Update lib"
+  tree:
+    lib.txt: "MODIFIED library code"
+    utils.txt: "utils"
+
+5:
+  parents: [4]
+  message: "Add new file"
+  tree:
+    lib.txt: "MODIFIED library code"
+    utils.txt: "utils"
+    new.txt: "new content"
+
+# Zoom-out merge (merges original commit 1 with subtree changes from commit 5)
+6:
+  parents: [1, 5]
+  message: |
+    Merge to 'src'
+
+    git-zoom-out: src
+  committer: "🔍 <git-zoom-out@localhost>"
+  tree:
+    README.md: "root readme"
+    src:
+      lib.txt: "MODIFIED library code"
+      utils.txt: "utils"
+      new.txt: "new content"

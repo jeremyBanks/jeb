@@ -1,5 +1,4 @@
 //! Serializer serializing arbitrary `Serialize` values into our `Value` type.
-
 use {
     crate::{
         Bytes,
@@ -14,9 +13,7 @@ use {
         ser,
     },
 };
-
 pub struct Serializer;
-
 impl ser::Serializer for Serializer {
     type Error = SerdeError;
     type Ok = Value;
@@ -234,11 +231,9 @@ impl ser::Serializer for Serializer {
         true
     }
 }
-
 pub struct SerializeVec {
     vec: Vec<Value>,
 }
-
 impl ser::SerializeSeq for SerializeVec {
     type Error = SerdeError;
     type Ok = Value;
@@ -252,7 +247,6 @@ impl ser::SerializeSeq for SerializeVec {
         Ok(Value::Array(self.vec))
     }
 }
-
 impl ser::SerializeTuple for SerializeVec {
     type Error = SerdeError;
     type Ok = Value;
@@ -266,7 +260,6 @@ impl ser::SerializeTuple for SerializeVec {
         Ok(Value::Array(self.vec))
     }
 }
-
 impl ser::SerializeTupleStruct for SerializeVec {
     type Error = SerdeError;
     type Ok = Value;
@@ -280,12 +273,10 @@ impl ser::SerializeTupleStruct for SerializeVec {
         Ok(Value::Array(self.vec))
     }
 }
-
 pub struct SerializeTupleVariant {
     variant: String,
     vec: Vec<Value>,
 }
-
 impl ser::SerializeTupleVariant for SerializeTupleVariant {
     type Error = SerdeError;
     type Ok = Value;
@@ -301,19 +292,16 @@ impl ser::SerializeTupleVariant for SerializeTupleVariant {
         Ok(Value::TextMap(map))
     }
 }
-
 pub struct SerializeMap {
     entries: Vec<(MapKey, Value)>,
     next_key: Option<MapKey>,
 }
-
 #[derive(Debug)]
 enum MapKey {
     Text(Text),
     Bytes(Bytes),
     Complex(Value),
 }
-
 impl ser::SerializeMap for SerializeMap {
     type Error = SerdeError;
     type Ok = Value;
@@ -335,11 +323,8 @@ impl ser::SerializeMap for SerializeMap {
         if self.entries.is_empty() {
             return Ok(Value::Array(Vec::new()));
         }
-
-        // Analyze keys to determine representation
         let mut all_text = true;
         let mut all_bytes = true;
-
         for (key, _) in &self.entries {
             match key {
                 MapKey::Text(_) => all_bytes = false,
@@ -350,7 +335,6 @@ impl ser::SerializeMap for SerializeMap {
                 }
             }
         }
-
         if all_text {
             let mut map = IndexMap::new();
             for (key, value) in self.entries {
@@ -374,7 +358,6 @@ impl ser::SerializeMap for SerializeMap {
             }
             Ok(Value::BytesMap(map))
         } else {
-            // Mixed or complex keys: use array of pairs
             let pairs = self
                 .entries
                 .into_iter()
@@ -391,7 +374,6 @@ impl ser::SerializeMap for SerializeMap {
         }
     }
 }
-
 impl ser::SerializeStruct for SerializeMap {
     type Error = SerdeError;
     type Ok = Value;
@@ -410,12 +392,10 @@ impl ser::SerializeStruct for SerializeMap {
         ser::SerializeMap::end(self)
     }
 }
-
 pub struct SerializeStructVariant {
     variant: String,
     map: SerializeMap,
 }
-
 impl ser::SerializeStructVariant for SerializeStructVariant {
     type Error = SerdeError;
     type Ok = Value;
@@ -435,14 +415,10 @@ impl ser::SerializeStructVariant for SerializeStructVariant {
         Ok(Value::TextMap(map))
     }
 }
-
 struct MapKeySerializer;
-
-// Helper for serializing compound types as map keys
 struct MapKeySeq {
     elements: Vec<Value>,
 }
-
 impl ser::SerializeSeq for MapKeySeq {
     type Error = SerdeError;
     type Ok = MapKey;
@@ -456,7 +432,6 @@ impl ser::SerializeSeq for MapKeySeq {
         Ok(MapKey::Complex(Value::Array(self.elements)))
     }
 }
-
 impl ser::SerializeTuple for MapKeySeq {
     type Error = SerdeError;
     type Ok = MapKey;
@@ -470,7 +445,6 @@ impl ser::SerializeTuple for MapKeySeq {
         Ok(MapKey::Complex(Value::Array(self.elements)))
     }
 }
-
 impl ser::SerializeTupleStruct for MapKeySeq {
     type Error = SerdeError;
     type Ok = MapKey;
@@ -484,7 +458,6 @@ impl ser::SerializeTupleStruct for MapKeySeq {
         Ok(MapKey::Complex(Value::Array(self.elements)))
     }
 }
-
 impl ser::SerializeTupleVariant for MapKeySeq {
     type Error = SerdeError;
     type Ok = MapKey;
@@ -498,11 +471,9 @@ impl ser::SerializeTupleVariant for MapKeySeq {
         Ok(MapKey::Complex(Value::Array(self.elements)))
     }
 }
-
 struct MapKeyStruct {
     fields: IndexMap<Text, Value>,
 }
-
 impl ser::SerializeStruct for MapKeyStruct {
     type Error = SerdeError;
     type Ok = MapKey;
@@ -521,7 +492,6 @@ impl ser::SerializeStruct for MapKeyStruct {
         Ok(MapKey::Complex(Value::TextMap(self.fields)))
     }
 }
-
 impl ser::SerializeStructVariant for MapKeyStruct {
     type Error = SerdeError;
     type Ok = MapKey;
@@ -540,12 +510,10 @@ impl ser::SerializeStructVariant for MapKeyStruct {
         Ok(MapKey::Complex(Value::TextMap(self.fields)))
     }
 }
-
 struct MapKeyMap {
     entries: Vec<(MapKey, Value)>,
     next_key: Option<MapKey>,
 }
-
 impl ser::SerializeMap for MapKeyMap {
     type Error = SerdeError;
     type Ok = MapKey;
@@ -567,11 +535,8 @@ impl ser::SerializeMap for MapKeyMap {
         if self.entries.is_empty() {
             return Ok(MapKey::Complex(Value::Array(Vec::new())));
         }
-
-        // Analyze keys to determine representation
         let mut all_text = true;
         let mut all_bytes = true;
-
         for (key, _) in &self.entries {
             match key {
                 MapKey::Text(_) => all_bytes = false,
@@ -582,7 +547,6 @@ impl ser::SerializeMap for MapKeyMap {
                 }
             }
         }
-
         if all_text {
             let mut map = IndexMap::new();
             for (key, value) in self.entries {
@@ -606,7 +570,6 @@ impl ser::SerializeMap for MapKeyMap {
             }
             Ok(MapKey::Complex(Value::BytesMap(map)))
         } else {
-            // Mixed or complex keys: use array of pairs
             let pairs = self
                 .entries
                 .into_iter()
@@ -623,7 +586,6 @@ impl ser::SerializeMap for MapKeyMap {
         }
     }
 }
-
 impl ser::Serializer for MapKeySerializer {
     type Error = SerdeError;
     type Ok = MapKey;
@@ -808,7 +770,6 @@ impl ser::Serializer for MapKeySerializer {
         })
     }
 }
-
 pub fn to_value<T: Serialize>(value: T) -> Result<Value, SerdeError> {
     value.serialize(Serializer)
 }

@@ -2,7 +2,6 @@ use ::save::{
     hex::{decode_hex_nibbles, hex, MaskedBytes},
     testing::assert_debug_eq,
 };
-
 #[test]
 fn hex() {
     assert_debug_eq(
