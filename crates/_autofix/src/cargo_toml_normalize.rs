@@ -79,9 +79,13 @@ fn run_normalization() -> Result<()> {
         if features_modified || sections_modified {
             stats.crates_modified += 1;
             stats.edited_files.insert(member_toml.clone());
-            eprintln!("  DEBUG: Writing changes to {:?}", member_toml);
             let new_content = doc.to_string();
-            eprintln!("  DEBUG: New content sections: {}", new_content.lines().take(5).collect::<Vec<_>>().join(" | "));
+            let section_lines: Vec<_> =
+                new_content.lines().filter(|l| l.starts_with('[')).collect();
+            eprintln!(
+                "  DEBUG: Sections in serialized output: {:?}",
+                section_lines
+            );
             std::fs::write(&member_toml, new_content)?;
         }
     }
