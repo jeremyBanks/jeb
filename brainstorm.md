@@ -30,3 +30,4 @@
 24. Maybe it should be git-jeb, the crate name, after all
    1. save and git-uncommit et al have to become shallow re-exports of this
    2. Should it busybox?
+25. jeb-git-core lib, jeb-git bin importing git-zoom and save which are both lib and bin and depend on core
