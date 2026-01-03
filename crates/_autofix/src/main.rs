@@ -3,10 +3,10 @@ use _autofix::{
     cargo_clippy,
     cargo_fix,
     cargo_fmt,
+    cargo_toml_normalize,
     deno_fmt,
     deno_lint,
     workspace_deps,
-    workspace_features,
 };
 fn main() {
     let modules: &[(&str, fn() -> i32)] = &[
@@ -14,7 +14,7 @@ fn main() {
         ("cargo_fix", cargo_fix::main),
         ("cargo_clippy", cargo_clippy::main),
         ("workspace_deps", workspace_deps::main),
-        ("workspace_features", workspace_features::main),
+        ("cargo_toml_normalize", cargo_toml_normalize::main),
         ("deno_lint", deno_lint::main),
         ("deno_fmt", deno_fmt::main),
     ];

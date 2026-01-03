@@ -22,7 +22,7 @@ use {
 };
 
 pub fn main() -> i32 {
-    eprintln!("Running: workspace feature normalization");
+    eprintln!("Running: Cargo.toml normalization (features and section ordering)");
     match run_normalization() {
         Ok(()) => {
             eprintln!();
@@ -73,8 +73,10 @@ fn run_normalization() -> Result<()> {
         let content = std::fs::read_to_string(&member_toml)?;
         let mut doc = content.parse::<DocumentMut>()?;
 
-        let crate_modified = normalize_crate_features(&mut doc, &mut stats)?;
-        if crate_modified {
+        let features_modified = normalize_crate_features(&mut doc, &mut stats)?;
+        let sections_modified = sort_cargo_toml_sections(&mut doc)?;
+
+        if features_modified || sections_modified {
             stats.crates_modified += 1;
             stats.edited_files.insert(member_toml.clone());
             std::fs::write(&member_toml, doc.to_string())?;
@@ -422,6 +424,89 @@ fn feature_dep_sort_key(dep: &str) -> (u32, String) {
         // Bare feature names
         (0, dep.to_string())
     }
+}
+
+/// Sort top-level sections in Cargo.toml according to canonical Cargo ordering
+fn sort_cargo_toml_sections(doc: &mut DocumentMut) -> Result<bool> {
+    // Canonical ordering from Cargo documentation
+    let section_order = [
+        "cargo-features",
+        "package",
+        "lib",
+        "bin",
+        "example",
+        "test",
+        "bench",
+        "dependencies",
+        "dev-dependencies",
+        "build-dependencies",
+        "target",
+        "badges",
+        "features",
+        "lints",
+        "hints",
+        "patch",
+        "replace",
+        "profile",
+        "workspace",
+    ];
+
+    // Collect all current sections
+    let current_keys: Vec<String> = doc.iter().map(|(k, _)| k.to_string()).collect();
+
+    // Check if reordering is needed
+    let needs_reordering = {
+        let mut last_order_idx = -1i32;
+        let mut needs_order = false;
+
+        for key in &current_keys {
+            let order_idx = section_order
+                .iter()
+                .position(|&s| s == key)
+                .map(|i| i as i32)
+                .unwrap_or(section_order.len() as i32);
+
+            if order_idx < last_order_idx {
+                needs_order = true;
+                break;
+            }
+            last_order_idx = order_idx;
+        }
+
+        needs_order
+    };
+
+    if !needs_reordering {
+        return Ok(false);
+    }
+
+    // Collect entries with their values (preserving decoration/comments)
+    let mut entries: Vec<(String, Item)> = current_keys
+        .iter()
+        .filter_map(|key| {
+            doc.get(key).map(|value| (key.clone(), value.clone()))
+        })
+        .collect();
+
+    // Sort by canonical order
+    entries.sort_by_key(|(key, _)| {
+        section_order
+            .iter()
+            .position(|&s| s == key)
+            .unwrap_or(section_order.len())
+    });
+
+    // Remove all sections
+    for key in &current_keys {
+        doc.remove(key);
+    }
+
+    // Re-insert in sorted order
+    for (key, value) in entries {
+        doc.insert(&key, value);
+    }
+
+    Ok(true)
 }
 
 /// Find the workspace root by looking for a Cargo.toml with [workspace]
