@@ -1,0 +1,13 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 3eaf1d9f7947dc254cc8f2c4291772f3f3fbd0b4
+3eaf1d9f7947dc254cc8f2c4291772f3f3fbd0b4:
+  author: Tester <test@example.com>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  message: Repository with tab in filename
+  tree:
+    README.md: root readme
+    src:
+      "file\twith\ttabs.txt": content with tabs in name

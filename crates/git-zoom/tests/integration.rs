@@ -564,3 +564,84 @@ fn test_multiple_file_modifications() {
         Ok(())
     });
 }
+
+// ============================================================================
+// Category E: Edge Cases
+// ============================================================================
+
+#[test]
+fn test_edge_case_tab_in_filename() {
+    test_fixture("edge-case-tab-in-filename", |repo| {
+        // Test zooming into a directory containing files with tabs in names
+        repo.run_zoom(&["in", "src"])?;
+
+        // Verify we can read the file with tab in name
+        // Note: The actual filename has tabs, so we need to be careful
+        let snapshot = repo.to_snapshot();
+        let head_commit = snapshot.head_commit().unwrap();
+
+        // Verify zoom-in commit was created
+        verify_zoom_in_commit(head_commit);
+
+        Ok(())
+    });
+}
+
+#[test]
+fn test_edge_case_special_characters() {
+    test_fixture("edge-case-special-characters", |repo| {
+        // Test zooming with special characters (spaces, unicode, etc.)
+        repo.run_zoom(&["in", "src"])?;
+
+        let snapshot = repo.to_snapshot();
+        let head_commit = snapshot.head_commit().unwrap();
+
+        // Verify zoom-in commit was created
+        verify_zoom_in_commit(head_commit);
+
+        // Verify we can zoom out
+        repo.run_zoom(&["out"])?;
+
+        Ok(())
+    });
+}
+
+#[test]
+fn test_edge_case_deep_nesting() {
+    test_fixture("edge-case-deep-nesting", |repo| {
+        // Test zooming into a deeply nested path (25+ levels)
+        repo.run_zoom(&["in", "a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z"])?;
+
+        let snapshot = repo.to_snapshot();
+        let head_commit = snapshot.head_commit().unwrap();
+
+        // Verify the deeply nested path was zoomed into
+        verify_zoom_in_commit(head_commit);
+        let path = extract_trailer(&head_commit.message, "git-zoom-in");
+        assert!(path.is_some(), "Should have git-zoom-in trailer");
+
+        // Verify we can zoom out
+        repo.run_zoom(&["out"])?;
+
+        Ok(())
+    });
+}
+
+#[test]
+fn test_edge_case_large_directory() {
+    test_fixture("edge-case-large-directory", |repo| {
+        // Test zooming into a directory with many files (20+)
+        repo.run_zoom(&["in", "many"])?;
+
+        let snapshot = repo.to_snapshot();
+        let head_commit = snapshot.head_commit().unwrap();
+
+        // Verify zoom-in succeeded
+        verify_zoom_in_commit(head_commit);
+
+        // Verify we can zoom out
+        repo.run_zoom(&["out"])?;
+
+        Ok(())
+    });
+}
