@@ -1,0 +1,25 @@
+# Test path similarity scoring for reference selection
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 2
+
+1:
+  tree:
+    foo:
+      bar:
+        baz.txt: "duplicate content"
+        qux.txt: "duplicate content"
+    completely:
+      different:
+        path.txt: "duplicate content"
+
+# When serializing, references should prefer similar paths
+2:
+  tree:
+    foo:
+      bar:
+        renamed.txt: "duplicate content"
+    # Serialization should reference foo/bar/baz.txt or foo/bar/qux.txt
+    # over completely/different/path.txt due to path similarity

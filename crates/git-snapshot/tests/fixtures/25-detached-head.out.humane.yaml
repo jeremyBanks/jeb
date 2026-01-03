@@ -1,0 +1,13 @@
+HEAD: 2
+refs:
+  heads:
+    main: 3
+1:
+  tree:
+    file.txt: initial
+2:
+  tree:
+    file.txt: detached state
+3:
+  tree:
+    file.txt: on branch

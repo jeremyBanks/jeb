@@ -1,0 +1,10 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 1
+1:
+  author: "Test User <test@example.com>"
+  commit-date: "2024-12-25T00:00:00Z"
+  tree:
+    src:
+      file.txt: "content"

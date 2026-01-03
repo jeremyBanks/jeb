@@ -1,0 +1,41 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: b5fa79aff55abb9d401a28fba6329ce342821166
+dcaeac:
+  message: commit 1
+  tree:
+    README.md: '# Base'
+37b96c:
+  message: commit 2
+  tree:
+    feature-a.txt: Feature A
+a91345:
+  message: commit 3
+  parents:
+  - dcaeac
+  tree:
+    feature-b.txt: Feature B
+c981d7:
+  message: commit 4
+  parents:
+  - dcaeac
+  tree:
+    feature-c.txt: Feature C
+b5fa79aff55abb9d401a28fba6329ce342821166:
+  message: Merge branches feature-a, feature-b, and feature-c
+  parents:
+  - dcaeac
+  - 37b96c
+  - a91345
+  - c981d7
+  tree:
+    feature-a.txt:
+      //commit: 37b96c
+      //path: feature-a.txt
+    feature-b.txt:
+      //commit: a91345
+      //path: feature-b.txt
+    feature-c.txt:
+      //commit: c981d7
+      //path: feature-c.txt

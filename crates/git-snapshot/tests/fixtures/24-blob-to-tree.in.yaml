@@ -1,0 +1,56 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 6
+    alternate: 2
+
+# Test replacing a blob (file) with a tree (directory)
+1:
+  tree:
+    path:
+      to:
+        item: "This is a file"
+
+2:
+  parents: [1]
+  tree:
+    path:
+      to:
+        item:
+          replaced.txt: "Now it's a directory"
+
+3:
+  parents: []
+  tree: {}
+
+# Zoom-in treating file as if it were a directory
+4:
+  parents: [3, 1]
+  message: |
+    Zoom in to path/to/item
+
+    git-zoom-in: path/to/item
+  tree:
+    content.txt: "extracted blob as tree"
+
+# Zoom-out back as directory
+5:
+  parents: [1, 4]
+  message: |
+    Zoom out to path/to/item
+
+    git-zoom-out: path/to/item
+  tree:
+    path:
+      to:
+        item:
+          content.txt: "extracted blob as tree"
+
+# Replace directory back to file
+6:
+  parents: [5]
+  tree:
+    path:
+      to:
+        item: "Back to being a file"

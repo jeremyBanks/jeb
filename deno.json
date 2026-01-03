@@ -1,16 +1,29 @@
 {
+  "exports": "./js/mod.ts",
   "fmt": {
-    "exclude": ["slop", "target"]
+    "exclude": [
+      "target",
+      "**/*.yaml",
+      "**/*.yml",
+      "**/spec/**/*.md",
+      "**/TRACEY.md"
+    ]
+  },
+  "lint": {
+    "rules": {
+      "exclude": ["no-import-prefix", "no-unversioned-import"]
+    }
+  },
+  "imports": {
+    "wasmbuild": "jsr:@deno/wasmbuild@0.20.0",
+    "jsr:@jeb/jeb": "./js/mod.ts"
   },
   "lock": {
     "frozen": true
   },
-  "imports": {
-    "wasmbuild": "jsr:@deno/wasmbuild@0.20.0"
-  },
   "tasks": {
-    "wasmbuild": "deno run --allow-all wasmbuild",
-    "build-wasm": "rm -rf build/wasm; mkdir -p build/wasm; deno task wasmbuild --project jeb-wasm --out build/wasm; deno task wasmbuild --project jeb-wasm --out build/wasm --inline",
-    "build-wasm-docs": "deno doc --output=./target/doc/jeb-wasm --html ./build/wasm/jeb.js"
+    "build-wasm": "export RUSTFLAGS=\"--remap-path-prefix=/home/=~ --remap-path-prefix=/Users/=~ --remap-path-prefix=/usr/home/=~ --remap-path-prefix=/home/_/=~/ --remap-path-prefix=/home/jeb/=~/ --remap-path-prefix=/home/runner/=~/ --remap-path-prefix=/home/user/=~/ --remap-path-prefix=/home/vscode/=~/ --remap-path-prefix=/root/=~/ --remap-path-prefix=/.cargo/=~/.cargo --remap-path-prefix=/usr/local/cargo/=~/.cargo --remap-path-prefix=usr/local/cargo/=~/.cargo --remap-path-prefix=/.rustup/=~/.rustup --remap-path-prefix=/usr/local/rustup/=~/.rustup --remap-path-prefix=/workspaces/=../ --remap-path-prefix=~/work/jeb/=../ --remap-path-prefix=/workspaces/jeb/=./ --remap-path-prefix=/home/runner/work/jeb/jeb/=./\"; rm -rf js/generated; mkdir -p js/generated; deno task wasmbuild --project jeb-wasm --out js/generated; deno task wasmbuild --project jeb-wasm --out js/generated --inline",
+    "build-wasm-docs": "deno doc --output=./target/doc/jeb.js --html --name=jeb ./js/generated/jeb.js",
+    "wasmbuild": "deno run --allow-all wasmbuild"
   }
 }

@@ -1,0 +1,13 @@
+HEAD: 7b7d52448ce9234a47b1c5bc0c2dbcfaab184a29
+refs: {}
+7b7d52448ce9234a47b1c5bc0c2dbcfaab184a29:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
+  message: Initial commit
+  parents: []
+  tree:
+    README.md: '# Project'
+    src:
+      lib.rs: pub fn main() {}

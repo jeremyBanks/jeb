@@ -1,0 +1,18 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 58871fc784fd3f468205e8d2ab527f44fe2747a8
+58871fc784fd3f468205e8d2ab527f44fe2747a8:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    '3.14': float as string key
+    '42': integer as string key
+    'false': boolean false as string key
+    'null': null as string key
+    'true': boolean true as string key
+    '~': tilde as string key

@@ -1,0 +1,73 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: c32451d91ab8d549b142d5dd83054d9b82298497
+6a7afa9d1dd2f547d76024a1ed5a0e87ca8934ee:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    delete-soon.txt: will be deleted
+    dir:
+      file-a.txt: a
+      file-b.txt: b
+      file-c.txt: c
+    keep.txt: kept
+68adfe2f791adf839127c010824f1b125f250e16:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: User <user@localhost>
+  message: commit 2
+  parents:
+  - 6a7afa9d1dd2f547d76024a1ed5a0e87ca8934ee
+  tree:
+    delete-soon.txt: null
+2c4821f1955e432d45295a0b3bd765b6ece8d6cd:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: User <user@localhost>
+  message: commit 3
+  parents:
+  - 68adfe2f791adf839127c010824f1b125f250e16
+  tree:
+    dir:
+      file-b.txt: null
+88deb4609514fda987ea37e8624df811ea716ab2:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: User <user@localhost>
+  message: commit 4
+  parents:
+  - 2c4821f1955e432d45295a0b3bd765b6ece8d6cd
+  tree:
+    delete-soon.txt: will be deleted
+f330d75cdc83190ccaa968a89e5fde63ce0367c1:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: User <user@localhost>
+  message: commit 5
+  parents:
+  - 88deb4609514fda987ea37e8624df811ea716ab2
+  tree:
+    dir:
+      file-a.txt: null
+      file-c.txt: null
+c32451d91ab8d549b142d5dd83054d9b82298497:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:33:44-06:24
+  commit-date: 2024-12-06T06:33:47-06:24
+  committer: User <user@localhost>
+  message: commit 6
+  parents:
+  - f330d75cdc83190ccaa968a89e5fde63ce0367c1
+  tree:
+    dir:
+      file-a.txt: a
+      new-file.txt: new

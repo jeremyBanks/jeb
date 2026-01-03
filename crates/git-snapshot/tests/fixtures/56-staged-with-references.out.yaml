@@ -1,0 +1,14 @@
+HEAD: aad943162e4fad0716e1ac9b4611fc2e9ab9b588
+refs: {}
+staged:
+  NEW.md: New file in staging
+  src:
+    lib.rs: pub fn main() { println!("staged"); }
+aad943162e4fad0716e1ac9b4611fc2e9ab9b588:
+  message: Initial commit
+  tree:
+    README.md: '# Project'
+    docs:
+      guide.md: '# Guide'
+    src:
+      lib.rs: pub fn main() {}
