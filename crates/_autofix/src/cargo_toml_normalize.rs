@@ -22,7 +22,7 @@ use {
 };
 
 pub fn main() -> i32 {
-    eprintln!("Running: Cargo.toml feature normalization");
+    eprintln!("Running: Cargo.toml normalization (features and section ordering)");
     match run_normalization() {
         Ok(()) => {
             eprintln!();
@@ -74,11 +74,7 @@ fn run_normalization() -> Result<()> {
         let mut doc = content.parse::<DocumentMut>()?;
 
         let features_modified = normalize_crate_features(&mut doc, &mut stats)?;
-        // DISABLED: Section reordering doesn't work with toml_edit - it preserves
-        // original section order even when removing and re-inserting. This is a
-        // limitation of how toml_edit tracks position/formatting.
-        // let sections_modified = sort_cargo_toml_sections(&mut doc)?;
-        let sections_modified = false;
+        let sections_modified = sort_cargo_toml_sections(&mut doc)?;
 
         if features_modified || sections_modified {
             stats.crates_modified += 1;
@@ -484,28 +480,20 @@ fn sort_cargo_toml_sections(doc: &mut DocumentMut) -> Result<bool> {
         return Ok(false);
     }
 
-    // Collect entries with their values (preserving decoration/comments)
-    let mut entries: Vec<(String, Item)> = current_keys
-        .iter()
-        .filter_map(|key| doc.get(key).map(|value| (key.clone(), value.clone())))
-        .collect();
-
-    // Sort by canonical order
-    entries.sort_by_key(|(key, _)| {
-        section_order
+    // Use set_position() to explicitly set the position of each section
+    // This should affect the serialization order
+    for key in &current_keys {
+        let target_position = section_order
             .iter()
             .position(|&s| s == key)
-            .unwrap_or(section_order.len())
-    });
+            .unwrap_or(section_order.len());
 
-    // Remove all sections
-    for key in &current_keys {
-        doc.remove(key);
-    }
-
-    // Re-insert in sorted order
-    for (key, value) in entries {
-        doc.insert(&key, value);
+        // Get mutable reference to the item and set its position
+        if let Some(item) = doc.get_mut(key) {
+            if let Some(table) = item.as_table_mut() {
+                table.set_position(target_position);
+            }
+        }
     }
 
     Ok(true)

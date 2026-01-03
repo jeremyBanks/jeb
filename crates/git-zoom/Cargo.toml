@@ -10,10 +10,6 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
-[dev-dependencies]
-git-snapshot = { workspace = true }
-tempfile = { workspace = true }
-
 [dependencies]
 indexmap.workspace = true
 serde = { workspace = true, features = ["rc"] }
@@ -21,3 +17,7 @@ serde_bytes = { workspace = true }
 serde_json = { workspace = true, features = ["preserve_order"] }
 serde_yaml = { workspace = true }
 sha1-checked = { workspace = true, features = ["std"], default-features = true }
+
+[dev-dependencies]
+git-snapshot = { workspace = true }
+tempfile = { workspace = true }
