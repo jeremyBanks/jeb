@@ -22,7 +22,7 @@ use {
 };
 
 pub fn main() -> i32 {
-    eprintln!("Running: workspace feature normalization");
+    eprintln!("Running: Cargo.toml normalization (features and section ordering)");
     match run_normalization() {
         Ok(()) => {
             eprintln!();
@@ -73,8 +73,10 @@ fn run_normalization() -> Result<()> {
         let content = std::fs::read_to_string(&member_toml)?;
         let mut doc = content.parse::<DocumentMut>()?;
 
-        let crate_modified = normalize_crate_features(&mut doc, &mut stats)?;
-        if crate_modified {
+        let features_modified = normalize_crate_features(&mut doc, &mut stats)?;
+        let sections_modified = sort_cargo_toml_sections(&mut doc)?;
+
+        if features_modified || sections_modified {
             stats.crates_modified += 1;
             stats.edited_files.insert(member_toml.clone());
             std::fs::write(&member_toml, doc.to_string())?;
@@ -334,16 +336,56 @@ fn update_features_section(
     doc: &mut DocumentMut,
     features: HashMap<String, Vec<String>>,
 ) -> Result<()> {
-    // Remove existing features section if it exists
-    if doc.get("features").is_some() {
-        doc.remove("features");
-    }
+    // Case 1: Features section already exists - modify in place
+    if let Some(features_table) = doc.get_mut("features").and_then(|f| f.as_table_mut()) {
+        // Remove features that are no longer needed
+        let current_keys: Vec<String> = features_table.iter().map(|(k, _)| k.to_string()).collect();
+        for key in current_keys {
+            if !features.contains_key(&key) {
+                features_table.remove(&key);
+            }
+        }
 
-    // Create new features table
-    if !features.is_empty() {
+        // Add/update features
+        for (feature_name, feature_deps) in features.iter() {
+            // Sort the dependencies within each feature
+            let mut sorted_deps = feature_deps.clone();
+            sorted_deps.sort_by_key(|dep| feature_dep_sort_key(dep));
+
+            let mut array = toml_edit::Array::new();
+            for dep in sorted_deps {
+                array.push(dep);
+            }
+            features_table.insert(feature_name, toml_edit::Item::Value(Value::Array(array)));
+        }
+
+        // Sort in place (reuse workspace_deps pattern)
+        // Extract all entries, sort them, remove all, re-insert in order
+        let mut sorted_entries: Vec<(String, Item)> = features_table
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.clone()))
+            .collect();
+
+        sorted_entries.sort_by(|a, b| match (&a.0[..], &b.0[..]) {
+            ("default", "default") => std::cmp::Ordering::Equal,
+            ("default", _) => std::cmp::Ordering::Less,
+            (_, "default") => std::cmp::Ordering::Greater,
+            (a_key, b_key) => a_key.cmp(b_key),
+        });
+
+        let all_keys: Vec<String> = features_table.iter().map(|(k, _)| k.to_string()).collect();
+        for key in all_keys {
+            features_table.remove(&key);
+        }
+        for (key, value) in sorted_entries {
+            features_table.insert(&key, value);
+        }
+    }
+    // Case 2: No features section yet - create it
+    else if !features.is_empty() {
         let mut features_table = toml_edit::Table::new();
 
-        // Sort features: "default" first, then alphabetically
+        // Sort features before inserting
         let mut sorted_features: Vec<_> = features.into_iter().collect();
         sorted_features.sort_by(|a, b| match (&a.0[..], &b.0[..]) {
             ("default", "default") => std::cmp::Ordering::Equal,
@@ -360,7 +402,6 @@ fn update_features_section(
             for dep in feature_deps {
                 array.push(dep);
             }
-
             features_table.insert(&feature_name, toml_edit::Item::Value(Value::Array(array)));
         }
 
@@ -383,6 +424,89 @@ fn feature_dep_sort_key(dep: &str) -> (u32, String) {
         // Bare feature names
         (0, dep.to_string())
     }
+}
+
+/// Sort top-level sections in Cargo.toml according to canonical Cargo ordering
+fn sort_cargo_toml_sections(doc: &mut DocumentMut) -> Result<bool> {
+    // Canonical ordering from Cargo documentation
+    let section_order = [
+        "cargo-features",
+        "package",
+        "lib",
+        "bin",
+        "example",
+        "test",
+        "bench",
+        "dependencies",
+        "dev-dependencies",
+        "build-dependencies",
+        "target",
+        "badges",
+        "features",
+        "lints",
+        "hints",
+        "patch",
+        "replace",
+        "profile",
+        "workspace",
+    ];
+
+    // Collect all current sections
+    let current_keys: Vec<String> = doc.iter().map(|(k, _)| k.to_string()).collect();
+
+    // Check if reordering is needed
+    let needs_reordering = {
+        let mut last_order_idx = -1i32;
+        let mut needs_order = false;
+
+        for key in &current_keys {
+            let order_idx = section_order
+                .iter()
+                .position(|&s| s == key)
+                .map(|i| i as i32)
+                .unwrap_or(section_order.len() as i32);
+
+            if order_idx < last_order_idx {
+                needs_order = true;
+                break;
+            }
+            last_order_idx = order_idx;
+        }
+
+        needs_order
+    };
+
+    if !needs_reordering {
+        return Ok(false);
+    }
+
+    // Collect entries with their values (preserving decoration/comments)
+    let mut entries: Vec<(String, Item)> = current_keys
+        .iter()
+        .filter_map(|key| {
+            doc.get(key).map(|value| (key.clone(), value.clone()))
+        })
+        .collect();
+
+    // Sort by canonical order
+    entries.sort_by_key(|(key, _)| {
+        section_order
+            .iter()
+            .position(|&s| s == key)
+            .unwrap_or(section_order.len())
+    });
+
+    // Remove all sections
+    for key in &current_keys {
+        doc.remove(key);
+    }
+
+    // Re-insert in sorted order
+    for (key, value) in entries {
+        doc.insert(&key, value);
+    }
+
+    Ok(true)
 }
 
 /// Find the workspace root by looking for a Cargo.toml with [workspace]
