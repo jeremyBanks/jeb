@@ -18,3 +18,5 @@
 14. Agent: Define "pin:" prefix - identifies messages to pin; "pin" with no target means pin last topic
 15. Agent: Retroactively add all agent messages back to the file and reorder everything appropriately
 16. Use cargo workspace exclude to temporarily create non-workspace versions of crates in order to reduce the lock file down to only what that crate needs, like workspace-subset-lockfile
+17. Our normalization script needs to strictly enforce that all path dependencies (within our workspace) specify the same version as is actually specified in the crate's file, because that needs to match to be able to publish correctly (in most cases that will be .workspace=true so we'll need to make sure we resolve that correctly)
+   1. We can use [patch.crates-io] my_lib = { path = "crates/my_lib" } in the workspace to allow the crate files to avoid specifying paths, so they work on their own
