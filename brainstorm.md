@@ -8,3 +8,5 @@
 3. Message 3
    1. jeb-git crate which adds a git jeb subcommand with my other sub sub commands, but also has a feature flag to export multiple binaries so as to promote them to full subcommands, and git-zoom is just one of then for now
       1. Example: cargo install jeb-git —features=zoom-in,zoom-out,save,git-save-bin-save and we'll have a whole matrix controlling whether they get a git-X binary or a direct X binary, and zoom has the sub sub commands in and out so "zoom" refers to both unless specified and features that aren't required aren't compiled into any binaries and there are like "jeb-all" to enable all of them but only as sub sub commands etc
+4. Message 4
+   1. Consider whether to update feature formatting code to put underscore-prefixed features at the bottom of the list — default behavior may be fine as-is
