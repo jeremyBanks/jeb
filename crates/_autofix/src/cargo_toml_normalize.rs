@@ -22,7 +22,7 @@ use {
 };
 
 pub fn main() -> i32 {
-    eprintln!("Running: Cargo.toml normalization (features and section ordering)");
+    eprintln!("Running: Cargo.toml feature normalization");
     match run_normalization() {
         Ok(()) => {
             eprintln!();
@@ -74,19 +74,15 @@ fn run_normalization() -> Result<()> {
         let mut doc = content.parse::<DocumentMut>()?;
 
         let features_modified = normalize_crate_features(&mut doc, &mut stats)?;
-        let sections_modified = sort_cargo_toml_sections(&mut doc)?;
+        // DISABLED: Section reordering not possible with toml_edit v0.22
+        // Both remove/insert and sort_values_by fail to affect serialization order
+        // let sections_modified = sort_cargo_toml_sections(&mut doc)?;
+        let sections_modified = false;
 
         if features_modified || sections_modified {
             stats.crates_modified += 1;
             stats.edited_files.insert(member_toml.clone());
-            let new_content = doc.to_string();
-            let section_lines: Vec<_> =
-                new_content.lines().filter(|l| l.starts_with('[')).collect();
-            eprintln!(
-                "  DEBUG: Sections in serialized output: {:?}",
-                section_lines
-            );
-            std::fs::write(&member_toml, new_content)?;
+            std::fs::write(&member_toml, doc.to_string())?;
         }
     }
 
@@ -487,34 +483,13 @@ fn sort_cargo_toml_sections(doc: &mut DocumentMut) -> Result<bool> {
         return Ok(false);
     }
 
-    eprintln!(
-        "  DEBUG: Before sort_values_by, sections: {:?}",
-        doc.iter().map(|(k, _)| k.to_string()).collect::<Vec<_>>()
-    );
+    // NOTE: sort_values_by() reorders the iterator but does NOT affect serialization order.
+    // toml_edit v0.22 maintains position metadata independently from iteration order.
+    // Both remove/insert and sort_values_by approaches fail to reorder the final output.
+    // Reordering top-level sections while preserving comments requires reconstructing
+    // the entire document, which defeats the purpose of using toml_edit.
 
-    // Use sort_values_by to reorder sections at the syntactic table level
-    // This preserves comments and formatting while updating the serialization order
-    doc.as_table_mut()
-        .sort_values_by(|key1, _val1, key2, _val2| {
-            let key1_str = key1.get();
-            let key2_str = key2.get();
-            let idx1 = section_order
-                .iter()
-                .position(|&s| s == key1_str)
-                .unwrap_or(section_order.len());
-            let idx2 = section_order
-                .iter()
-                .position(|&s| s == key2_str)
-                .unwrap_or(section_order.len());
-            idx1.cmp(&idx2)
-        });
-
-    eprintln!(
-        "  DEBUG: After sort_values_by, sections: {:?}",
-        doc.iter().map(|(k, _)| k.to_string()).collect::<Vec<_>>()
-    );
-
-    Ok(true)
+    Ok(false)  // Section reordering not possible with toml_edit v0.22
 }
 
 /// Find the workspace root by looking for a Cargo.toml with [workspace]
