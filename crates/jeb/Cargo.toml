@@ -18,13 +18,6 @@ path = "src/lib.rs"
 name = "jeb"
 path = "src/bin/jeb.rs"
 
-[features]
-default = ["bin", "fs", "stdio"]
-bin = ["fs", "stdio", "dep:color-eyre", "dep:dotenv", "dep:owo-colors", "tracing-subscriber/env-filter"]
-fs = ["jeb-stream/fs", "tokio/fs"]
-stdio = ["jeb-stream/stdio", "tokio/io-std"]
-wasm = ["jeb-common/wasm", "jeb-stream/wasm", "jeb-value/wasm", "dep:js-sys", "dep:wasm-bindgen", "dep:web-sys"]
-
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/{ version }/{ name }-{ target }{ archive-suffix }"
 bin-dir = "{ bin }{ binary-ext }"
@@ -59,3 +52,17 @@ web-sys = { workspace = true, optional = true }
 jeb-common = { workspace = true }
 jeb-stream = { workspace = true, features = ["json", "serde"] }
 jeb-value = { workspace = true, features = ["serde", "serde_json"] }
+
+[features]
+default = ["bin", "fs", "stdio"]
+bin = ["fs", "stdio", "tracing-subscriber/env-filter", "dep:color-eyre", "dep:dotenv", "dep:owo-colors"]
+color_eyre = ["dep:color-eyre"]
+dotenv = ["dep:dotenv"]
+fs = ["jeb-stream/fs", "tokio/fs"]
+js_sys = ["dep:js-sys"]
+owo_colors = ["dep:owo-colors"]
+stdio = ["jeb-stream/stdio", "tokio/io-std"]
+tracing_subscriber = ["dep:tracing-subscriber"]
+wasm = ["jeb-common/wasm", "jeb-stream/wasm", "jeb-value/wasm", "dep:js-sys", "dep:wasm-bindgen", "dep:web-sys"]
+wasm_bindgen = ["dep:wasm-bindgen"]
+web_sys = ["dep:web-sys"]

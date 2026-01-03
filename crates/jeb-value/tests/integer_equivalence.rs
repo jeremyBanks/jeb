@@ -34,7 +34,7 @@ fn test_unsigned_signed_hash_consistency() {
         hash_value(&s),
         "Unsigned(42) and Signed(42) should have the same hash"
     );
-// [verify jeb-value.value.cmp]
+    // [verify jeb-value.value.cmp]
 }
 #[test]
 fn test_unsigned_signed_ordering() {
@@ -48,7 +48,7 @@ fn test_negative_signed_vs_unsigned() {
     let s_neg = Value::Signed(-5);
     let u = Value::Unsigned(0);
     assert_ne!(s_neg, u);
-// [verify jeb-value.value.cmp]
+    // [verify jeb-value.value.cmp]
     assert!(s_neg < u);
 }
 #[test]
@@ -56,7 +56,7 @@ fn test_integer_vs_float_distinct() {
     let u = Value::Unsigned(5);
     let s = Value::Signed(5);
     let f = Value::Float(5.0.try_into().unwrap());
-// [verify jeb-value.value.cmp]
+    // [verify jeb-value.value.cmp]
     assert_ne!(u, f, "Unsigned(5) should not equal Float(5.0)");
     assert_ne!(s, f, "Signed(5) should not equal Float(5.0)");
 }
@@ -64,7 +64,7 @@ fn test_integer_vs_float_distinct() {
 fn test_integer_vs_float_ordering() {
     let u = Value::Unsigned(5);
     let s = Value::Signed(5);
-// [verify jeb-value.value.cmp]
+    // [verify jeb-value.value.cmp]
     let f = Value::Float(5.0.try_into().unwrap());
     assert!(u < f, "Unsigned(5) should be less than Float(5.0)");
     assert!(s < f, "Signed(5) should be less than Float(5.0)");
@@ -116,7 +116,7 @@ fn test_integer_float_mixed_ordering() {
     assert!(matches!(vals[2], Value::Unsigned(5) | Value::Signed(5)));
     match &vals[3] {
         Value::Float(f) if **f == 5.0 => {}
-// [verify jeb-value.value.cmp]
+        // [verify jeb-value.value.cmp]
         _ => panic!("Expected Float(5.0) at position 3, got {:?}", vals[3]),
     }
     assert_eq!(vals[4], Value::Unsigned(6));
@@ -168,7 +168,7 @@ fn test_edge_case_stable_sort() {
     match &vals[4] {
         Value::Float(f) if f.is_sign_negative() && **f == 0.0 => {}
         _ => panic!("Expected Float(-0.0) at position 4, got {:?}", vals[4]),
-// [verify jeb-value.number.cmp]
+        // [verify jeb-value.number.cmp]
     }
     match &vals[5] {
         Value::Float(f) if f.is_sign_positive() && **f == 0.0 => {}

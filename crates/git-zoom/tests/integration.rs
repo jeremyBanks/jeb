@@ -1,12 +1,14 @@
 //! Integration tests for git-zoom using git-snapshot
 //!
-//! These tests verify complete zoom in/out cycles using declarative YAML repository
-//! snapshots for test setup and verification.
+//! These tests verify complete zoom in/out cycles using declarative YAML
+//! repository snapshots for test setup and verification.
 
 mod common;
 
-use common::fixtures::test_fixture;
-use common::helpers::*;
+use common::{
+    fixtures::test_fixture,
+    helpers::*,
+};
 
 // ============================================================================
 // Category A: Basic Operations
@@ -422,7 +424,13 @@ fn test_full_cycle_history_structure() {
                         .map(|c| {
                             format!(
                                 "{}",
-                                c.message.lines().next().unwrap_or("").chars().take(20).collect::<String>()
+                                c.message
+                                    .lines()
+                                    .next()
+                                    .unwrap_or("")
+                                    .chars()
+                                    .take(20)
+                                    .collect::<String>()
                             )
                         })
                         .unwrap_or_else(|| "???".to_string())

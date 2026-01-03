@@ -54,7 +54,7 @@ fn test_signed_float_negative() {
     let f1 = Value::Float((-(max_safe as f64)).try_into().unwrap());
     assert_eq!(i1.cmp(&f1), Ordering::Less);
     assert_eq!(f1.cmp(&i1), Ordering::Greater);
-// [verify jeb-value.value.cmp]
+    // [verify jeb-value.value.cmp]
 }
 #[test]
 fn test_transitivity() {

@@ -5,29 +5,39 @@
 //! - `{test-name}.in.normalized.yaml` - auto-generated normalized version
 //! - `{test-name}.final.yaml` - expected final state after operations
 
-use std::{env, fs, path::Path};
-
-use git_snapshot::{parse, serialize, CommitIdStyle, SerializationOptions};
-
-use super::helpers::TestRepo;
+use {
+    super::helpers::TestRepo,
+    git_snapshot::{
+        CommitIdStyle,
+        SerializationOptions,
+        parse,
+        serialize,
+    },
+    std::{
+        env,
+        fs,
+        path::Path,
+    },
+};
 
 /// Run a fixture-based test
 ///
 /// This function:
 /// 1. Loads `{name}.in.yaml` from the fixtures directory
-/// 2. Normalizes it and saves as `{name}.in.normalized.yaml` (always overwrites)
+/// 2. Normalizes it and saves as `{name}.in.normalized.yaml` (always
+///    overwrites)
 /// 3. Creates a TestRepo with the parsed state
 /// 4. Runs the user-provided operations
 /// 5. On TestRepo drop, compares final state with `{name}.final.yaml`
 ///
-/// If `JEB_UPDATE_FIXTURES=1` is set, mismatched `.final.yaml` files are updated without failing.
+/// If `JEB_UPDATE_FIXTURES=1` is set, mismatched `.final.yaml` files are
+/// updated without failing.
 pub fn test_fixture<F>(name: &str, operations: F)
 where
     F: FnOnce(&TestRepo) -> Result<(), String>,
 {
     // Use absolute path based on CARGO_MANIFEST_DIR
-    let manifest_dir = env::var("CARGO_MANIFEST_DIR")
-        .expect("CARGO_MANIFEST_DIR not set");
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
     let fixtures_dir = Path::new(&manifest_dir).join("tests/fixtures");
 
     // Paths for this test's fixtures
@@ -51,8 +61,12 @@ where
         CommitIdStyle::Hex,
         SerializationOptions::default(),
     );
-    fs::write(&normalized_path, &normalized_yaml)
-        .unwrap_or_else(|e| panic!("Failed to write normalized fixture {:?}: {}", normalized_path, e));
+    fs::write(&normalized_path, &normalized_yaml).unwrap_or_else(|e| {
+        panic!(
+            "Failed to write normalized fixture {:?}: {}",
+            normalized_path, e
+        )
+    });
 
     // 4. Create TestRepo with expectation tracking
     let mut repo = TestRepo::from_snapshot(repo_snapshot);
@@ -73,14 +87,16 @@ pub fn compare_or_update_fixture(expected_path: &Path, actual_yaml: &str) {
     let expected_exists = expected_path.exists();
 
     if expected_exists {
-        let expected_yaml = fs::read_to_string(expected_path)
-            .unwrap_or_else(|e| panic!("Failed to read expected fixture {:?}: {}", expected_path, e));
+        let expected_yaml = fs::read_to_string(expected_path).unwrap_or_else(|e| {
+            panic!("Failed to read expected fixture {:?}: {}", expected_path, e)
+        });
 
         if actual_yaml != expected_yaml {
             if update_mode {
                 eprintln!("UPDATE MODE: Overwriting {}", expected_path.display());
-                fs::write(expected_path, actual_yaml)
-                    .unwrap_or_else(|e| panic!("Failed to update fixture {:?}: {}", expected_path, e));
+                fs::write(expected_path, actual_yaml).unwrap_or_else(|e| {
+                    panic!("Failed to update fixture {:?}: {}", expected_path, e)
+                });
             } else {
                 eprintln!("\n❌ Fixture mismatch: {}", expected_path.display());
                 eprintln!("\nTo update fixtures, run:");
@@ -100,7 +116,8 @@ pub fn compare_or_update_fixture(expected_path: &Path, actual_yaml: &str) {
 
                     if exp_line != act_line {
                         diff_count += 1;
-                        if diff_count <= 20 {  // Show first 20 differences
+                        if diff_count <= 20 {
+                            // Show first 20 differences
                             eprintln!("  Line {}:", i + 1);
                             eprintln!("    - {}", exp_line);
                             eprintln!("    + {}", act_line);
@@ -113,7 +130,10 @@ pub fn compare_or_update_fixture(expected_path: &Path, actual_yaml: &str) {
                 }
 
                 eprintln!("\nTotal: {} lines differ", diff_count);
-                panic!("Fixture mismatch for {:?}. Run with JEB_UPDATE_FIXTURES=1 to update.", expected_path);
+                panic!(
+                    "Fixture mismatch for {:?}. Run with JEB_UPDATE_FIXTURES=1 to update.",
+                    expected_path
+                );
             }
         } else {
             eprintln!("✓ Fixture matches: {}", expected_path.display());

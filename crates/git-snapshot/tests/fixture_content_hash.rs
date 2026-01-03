@@ -1,4 +1,7 @@
-use git_snapshot::{parse, Repository};
+use git_snapshot::{
+    Repository,
+    parse,
+};
 
 #[test]
 fn test_fixture_hash_validation() {
@@ -27,11 +30,16 @@ refs:
 
     eprintln!("Fixture key: 03199c304255cb51507aef9ac1bb27bb858c67fd");
     eprintln!("Our hash:    {}", commit.id.to_hex());
-    eprintln!("Match: {}", commit.id.to_hex() == "03199c304255cb51507aef9ac1bb27bb858c67fd");
+    eprintln!(
+        "Match: {}",
+        commit.id.to_hex() == "03199c304255cb51507aef9ac1bb27bb858c67fd"
+    );
 
     // Write to git and see what hash we get
     eprintln!("\nWriting to git...");
-    let temp_repo = repo.to_temporary_repository().expect("Should create temp repo");
+    let temp_repo = repo
+        .to_temporary_repository()
+        .expect("Should create temp repo");
     let read_back = Repository::from_git_dir(temp_repo.path()).expect("Should read from git");
     let git_commit = read_back.commits().next().expect("Should have commit");
 

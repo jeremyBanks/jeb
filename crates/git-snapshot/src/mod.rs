@@ -1170,8 +1170,8 @@ impl Repository {
 
     /// Create a temporary git repository from this snapshot
     ///
-    /// Materializes all commits, refs, HEAD state, staging area, and working tree
-    /// into a real git repository backed by a temporary directory.
+    /// Materializes all commits, refs, HEAD state, staging area, and working
+    /// tree into a real git repository backed by a temporary directory.
     /// The directory is automatically cleaned up when dropped.
     ///
     /// # Errors
@@ -2425,7 +2425,8 @@ fn apply_tree_delta(
         // This must be a string/number key
         let name = normalize_yaml_key(key)?;
 
-        // Validate that the component doesn't contain slashes or other invalid characters
+        // Validate that the component doesn't contain slashes or other invalid
+        // characters
         Tree::validate_component(&name)?;
 
         let target_path = if target_prefix.is_empty() {
@@ -2741,8 +2742,8 @@ pub struct SerializationOptions {
     pub force_full_hashes: bool,
 
     /// Whether to include all optional fields even when they match defaults
-    /// When true, always includes: parents, author, author-date, committer, commit-date
-    /// Default: false
+    /// When true, always includes: parents, author, author-date, committer,
+    /// commit-date Default: false
     pub include_all_fields: bool,
 }
 
@@ -3889,12 +3890,11 @@ fn read_tree_from_git2_tree(
                         });
                     }
 
-                    let content = std::str::from_utf8(blob.content()).map_err(|e| {
-                        GitError::InvalidUtf8 {
+                    let content =
+                        std::str::from_utf8(blob.content()).map_err(|e| GitError::InvalidUtf8 {
                             context: "file content",
                             source: e,
-                        }
-                    })?;
+                        })?;
                     tree.insert(path, content.to_string());
                 }
                 0o040000 => {
@@ -3945,7 +3945,7 @@ fn read_commit(git_commit: &git2::Commit, repo: &git2::Repository) -> Result<Com
     let message = git_commit
         .message()
         .ok_or_else(|| git2::Error::from_str("commit message is not valid UTF-8"))?
-        .trim_end()  // Strip trailing whitespace (git convention via git-stripspace)
+        .trim_end() // Strip trailing whitespace (git convention via git-stripspace)
         .to_string();
 
     let git_tree = git_commit.tree()?;
@@ -3967,7 +3967,7 @@ fn read_commit(git_commit: &git2::Commit, repo: &git2::Repository) -> Result<Com
 fn collect_reachable_commits(
     repo: &git2::Repository,
     starting_oids: Vec<git2::Oid>,
-) -> Result<Vec<git2::Commit>, GitError> {
+) -> Result<Vec<git2::Commit<'_>>, GitError> {
     let mut visited = HashSet::new();
     let mut queue = VecDeque::from(starting_oids);
     let mut commits = Vec::new();
@@ -4001,9 +4001,9 @@ fn git2_from_git_dir(path: &Path) -> Result<Repository, GitError> {
                 HeadState::Symbolic(RefName::new(name.to_string())?)
             } else {
                 // Detached HEAD
-                let oid = reference.target().ok_or_else(|| {
-                    git2::Error::from_str("HEAD has no target")
-                })?;
+                let oid = reference
+                    .target()
+                    .ok_or_else(|| git2::Error::from_str("HEAD has no target"))?;
                 HeadState::Detached(convert_oid(oid))
             }
         }
@@ -4029,12 +4029,11 @@ fn git2_from_git_dir(path: &Path) -> Result<Repository, GitError> {
     let mut refs = BTreeMap::new();
     for reference in git_repo.references()? {
         let reference = reference?;
-        if let Some(name) = reference.name() {
-            if name.starts_with("refs/heads/") {
-                if let Some(oid) = reference.target() {
-                    refs.insert(RefName::new(name.to_string())?, convert_oid(oid));
-                }
-            }
+        if let Some(name) = reference.name()
+            && name.starts_with("refs/heads/")
+            && let Some(oid) = reference.target()
+        {
+            refs.insert(RefName::new(name.to_string())?, convert_oid(oid));
         }
     }
 
@@ -4109,12 +4108,11 @@ fn git2_from_git_dir(path: &Path) -> Result<Repository, GitError> {
                         });
                     }
 
-                    let content_str = std::str::from_utf8(&content).map_err(|e| {
-                        GitError::InvalidUtf8 {
+                    let content_str =
+                        std::str::from_utf8(&content).map_err(|e| GitError::InvalidUtf8 {
                             context: "file content",
                             source: e,
-                        }
-                    })?;
+                        })?;
                     tree.insert(full_path, content_str.to_string());
                 } else {
                     // Symlink or other - error
@@ -4258,7 +4256,10 @@ fn git2_to_temporary_repository(snapshot: &Repository) -> Result<TemporaryReposi
         let author = git2::Signature::new(
             &commit.author.name,
             &commit.author.email,
-            &git2::Time::new(commit.author_date.seconds, commit.author_date.offset_minutes as i32),
+            &git2::Time::new(
+                commit.author_date.seconds,
+                commit.author_date.offset_minutes as i32,
+            ),
         )?;
         let committer = git2::Signature::new(
             &commit.committer.name,
@@ -4331,18 +4332,18 @@ fn git2_to_temporary_repository(snapshot: &Repository) -> Result<TemporaryReposi
     }
 
     // Write working tree
-    if let Some(working_tree) = &snapshot.working {
-        if let Some(workdir) = repo.workdir() {
-            for (path, content) in working_tree.entries.iter() {
-                let file_path = workdir.join(path);
+    if let Some(working_tree) = &snapshot.working
+        && let Some(workdir) = repo.workdir()
+    {
+        for (path, content) in working_tree.entries.iter() {
+            let file_path = workdir.join(path);
 
-                // Ensure parent directory exists
-                if let Some(parent) = file_path.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-
-                std::fs::write(&file_path, content)?;
+            // Ensure parent directory exists
+            if let Some(parent) = file_path.parent() {
+                std::fs::create_dir_all(parent)?;
             }
+
+            std::fs::write(&file_path, content)?;
         }
     }
 

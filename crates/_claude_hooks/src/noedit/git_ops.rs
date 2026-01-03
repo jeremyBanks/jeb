@@ -306,15 +306,17 @@ fn is_claude_commit(commit: &Commit) -> Result<bool> {
 
     // Check author email
     if let Some(email) = commit.author().email()
-        && email.contains("noreply@anthropic.com") {
-            return Ok(true);
-        }
+        && email.contains("noreply@anthropic.com")
+    {
+        return Ok(true);
+    }
 
     // Check committer email
     if let Some(email) = commit.committer().email()
-        && email.contains("noreply@anthropic.com") {
-            return Ok(true);
-        }
+        && email.contains("noreply@anthropic.com")
+    {
+        return Ok(true);
+    }
 
     Ok(false)
 }

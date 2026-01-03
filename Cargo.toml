@@ -25,6 +25,7 @@ split-debuginfo = "packed"
 panic = "abort"
 
 [workspace.dependencies]
+git-snapshot = { path = "crates/git-snapshot" }
 jeb = { path = "crates/jeb", default-features = false }
 jeb-common = { path = "crates/jeb-common" }
 jeb-stream = { path = "crates/jeb-stream" }

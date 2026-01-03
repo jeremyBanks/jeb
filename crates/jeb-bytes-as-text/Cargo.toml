@@ -1,0 +1,17 @@
+[package]
+name = "jeb-bytes-as-text"
+publish = true
+description = "(part of https://crates.io/crates/jeb)"
+keywords = []
+categories = []
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+jeb-common = { workspace = true }
+
+[features]
+default = []

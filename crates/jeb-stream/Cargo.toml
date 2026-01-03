@@ -10,14 +10,6 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
-[features]
-default = []
-fs = ["tokio/fs"]
-json = []
-serde = ["jeb-value/serde", "dep:serde"]
-stdio = ["tokio/io-std"]
-wasm = ["jeb-common/wasm", "jeb-value/wasm", "dep:wasm-bindgen"]
-
 [dependencies]
 async-stream = { workspace = true }
 cfg-if = { workspace = true }
@@ -35,3 +27,12 @@ wasm-bindgen = { workspace = true, optional = true }
 
 jeb-common = { workspace = true }
 jeb-value = { workspace = true }
+
+[features]
+default = []
+fs = ["tokio/fs"]
+json = []
+serde = ["jeb-value/serde", "dep:serde"]
+stdio = ["tokio/io-std"]
+wasm = ["jeb-common/wasm", "jeb-value/wasm", "dep:wasm-bindgen"]
+wasm_bindgen = ["dep:wasm-bindgen"]

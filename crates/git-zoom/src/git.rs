@@ -235,7 +235,7 @@ fn parse_timestamp(iso8601: &str) -> Result<i64> {
     // Parse the date-time part
     let (datetime_part, tz_part) = if iso8601.ends_with('Z') {
         (&iso8601[..iso8601.len() - 1], "+00:00")
-    } else if let Some(pos) = iso8601.rfind(|c| c == '+' || c == '-') {
+    } else if let Some(pos) = iso8601.rfind(['+', '-']) {
         if pos > 10 {
             // Make sure it's a timezone offset, not part of the date
             (&iso8601[..pos], &iso8601[pos..])

@@ -1,21 +1,37 @@
 //! Test helper utilities for git-zoom integration tests
 //!
-//! This module provides a `TestRepo` wrapper around git-snapshot's `TemporaryRepository`
-//! with git-zoom-specific utilities for running zoom commands, manipulating files, and
-//! verifying results.
+//! This module provides a `TestRepo` wrapper around git-snapshot's
+//! `TemporaryRepository` with git-zoom-specific utilities for running zoom
+//! commands, manipulating files, and verifying results.
 
-use git_snapshot::{parse, serialize, Commit, CommitIdStyle, HeadState, Repository, SerializationOptions};
-use std::env;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::sync::Mutex;
+use {
+    git_snapshot::{
+        Commit,
+        CommitIdStyle,
+        HeadState,
+        Repository,
+        SerializationOptions,
+        parse,
+        serialize,
+    },
+    std::{
+        env,
+        path::{
+            Path,
+            PathBuf,
+        },
+        process::Command,
+        sync::Mutex,
+    },
+};
 
 /// Global mutex to synchronize directory changes across tests
 /// This prevents parallel tests from interfering with each other when changing
 /// the process's current directory.
 static DIR_MUTEX: Mutex<()> = Mutex::new(());
 
-/// Wrapper around git-snapshot's TemporaryRepository with git-zoom-specific utilities
+/// Wrapper around git-snapshot's TemporaryRepository with git-zoom-specific
+/// utilities
 pub struct TestRepo {
     pub temp_repo: git_snapshot::TemporaryRepository,
     /// If set, TestRepo will compare final state against this fixture on drop

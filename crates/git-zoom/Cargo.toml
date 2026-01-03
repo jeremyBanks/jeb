@@ -11,7 +11,7 @@ repository.workspace = true
 version.workspace = true
 
 [dev-dependencies]
-git-snapshot = { path = "../git-snapshot" }
+git-snapshot = { workspace = true }
 tempfile = { workspace = true }
 
 [dependencies]

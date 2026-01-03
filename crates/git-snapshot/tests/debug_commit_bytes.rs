@@ -1,5 +1,10 @@
-use git_snapshot::{parse, Repository};
-use sha1_checked::Digest;
+use {
+    git_snapshot::{
+        Repository,
+        parse,
+    },
+    sha1_checked::Digest,
+};
 
 #[test]
 fn test_debug_commit_bytes() {
@@ -36,7 +41,9 @@ refs:
 
     // Write to git
     eprintln!("\nWriting to git...");
-    let temp_repo = repo.to_temporary_repository().expect("Should create temp repo");
+    let temp_repo = repo
+        .to_temporary_repository()
+        .expect("Should create temp repo");
     let read_back = Repository::from_git_dir(temp_repo.path()).expect("Should read from git");
     let git_commit = read_back.commits().next().expect("Should have commit");
 

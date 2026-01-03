@@ -1,9 +1,18 @@
 //! Integration tests for git2 repository reading and writing
 
-use git_snapshot::{GitError, HeadState, Repository, UnsupportedFeature};
-use std::fs;
-use std::path::Path;
-use tempfile::TempDir;
+use {
+    git_snapshot::{
+        GitError,
+        HeadState,
+        Repository,
+        UnsupportedFeature,
+    },
+    std::{
+        fs,
+        path::Path,
+    },
+    tempfile::TempDir,
+};
 
 #[test]
 fn test_empty_repository() {
@@ -87,7 +96,8 @@ refs:
             .find(|c| c.message == commit.message)
             .expect("Should find commit with matching message");
 
-        // Compare number of parents (can't compare parent IDs directly due to ID changes)
+        // Compare number of parents (can't compare parent IDs directly due to ID
+        // changes)
         assert_eq!(commit.parents.len(), rt_commit.parents.len());
 
         // Compare tree paths
@@ -174,14 +184,9 @@ fn test_multiple_commits_with_merge() {
     let tree_id = index.write_tree().unwrap();
     let tree = repo.find_tree(tree_id).unwrap();
     let commit3 = repo
-        .commit(
-            Some("refs/heads/feature"),
-            &sig,
-            &sig,
-            "Branch",
-            &tree,
-            &[&commit1_obj],
-        )
+        .commit(Some("refs/heads/feature"), &sig, &sig, "Branch", &tree, &[
+            &commit1_obj,
+        ])
         .unwrap();
     let commit3_obj = repo.find_commit(commit3).unwrap();
 
@@ -191,14 +196,10 @@ fn test_multiple_commits_with_merge() {
     index.add_path(Path::new("file.txt")).unwrap();
     let tree_id = index.write_tree().unwrap();
     let tree = repo.find_tree(tree_id).unwrap();
-    repo.commit(
-        Some("HEAD"),
-        &sig,
-        &sig,
-        "Merge",
-        &tree,
-        &[&commit2_obj, &commit3_obj],
-    )
+    repo.commit(Some("HEAD"), &sig, &sig, "Merge", &tree, &[
+        &commit2_obj,
+        &commit3_obj,
+    ])
     .unwrap();
 
     // Read snapshot
@@ -286,9 +287,10 @@ fn test_git2_message_behavior() {
 
 #[test]
 fn test_commit_hash_stability_plain_message() {
-    // CRITICAL BUG TEST: Commit hash should remain stable when round-tripped through git
-    // This tests for the bug where plain scalar messages produce different hashes
-    // than block scalar messages due to inconsistent trailing newline handling.
+    // CRITICAL BUG TEST: Commit hash should remain stable when round-tripped
+    // through git This tests for the bug where plain scalar messages produce
+    // different hashes than block scalar messages due to inconsistent trailing
+    // newline handling.
 
     let yaml = r#"
 HEAD: refs/heads/main
@@ -313,18 +315,23 @@ refs:
     let hash_after = roundtrip_commit.id.clone();
 
     eprintln!("Message round-trip test:");
-    eprintln!("  Original message bytes: {:?}", original_commit.message.as_bytes());
-    eprintln!("  After RT message bytes: {:?}", roundtrip_commit.message.as_bytes());
+    eprintln!(
+        "  Original message bytes: {:?}",
+        original_commit.message.as_bytes()
+    );
+    eprintln!(
+        "  After RT message bytes: {:?}",
+        roundtrip_commit.message.as_bytes()
+    );
     eprintln!("  Hash before: {:?}", hash_before);
     eprintln!("  Hash after:  {:?}", hash_after);
 
-    // Hash should be IDENTICAL - this tests that message normalization is consistent
+    // Hash should be IDENTICAL - this tests that message normalization is
+    // consistent
     assert_eq!(
         hash_before, hash_after,
-        "Commit hash changed after git round-trip! Message handling is inconsistent.\n\
-         Before: {:?}\n\
-         After:  {:?}\n\
-         This indicates message newline normalization is not deterministic.",
+        "Commit hash changed after git round-trip! Message handling is inconsistent.\nBefore: \
+         {:?}\nAfter:  {:?}\nThis indicates message newline normalization is not deterministic.",
         hash_before, hash_after
     );
 }
@@ -429,7 +436,8 @@ refs:
     // Now test with the CORRECT hex key
     eprintln!("\n2. Testing with CORRECT hex key (should succeed):");
     // First calculate what the correct hash should be
-    let temp_parse = git_snapshot::parse(r#"
+    let temp_parse = git_snapshot::parse(
+        r#"
 HEAD: refs/heads/main
 refs:
   heads:
@@ -445,12 +453,15 @@ refs:
       lib:
         bar.txt: more code
         foo.txt: library code
-"#).unwrap();
+"#,
+    )
+    .unwrap();
     let correct_hash = temp_parse.commits().next().unwrap().id.to_hex();
     eprintln!("   Calculated correct hash: {}", correct_hash);
 
     // Now use that correct hash in the YAML
-    let yaml_with_correct_key = format!(r#"
+    let yaml_with_correct_key = format!(
+        r#"
 HEAD: refs/heads/main
 refs:
   heads:
@@ -466,13 +477,18 @@ refs:
       lib:
         bar.txt: more code
         foo.txt: library code
-"#, hash = correct_hash);
+"#,
+        hash = correct_hash
+    );
 
     let original = git_snapshot::parse(&yaml_with_correct_key).unwrap();
     let original_commit = original.commits().next().unwrap();
     let hash_from_parsing = original_commit.id.clone();
 
-    eprintln!("Hash from YAML parse (validated): {}", hash_from_parsing.to_hex());
+    eprintln!(
+        "Hash from YAML parse (validated): {}",
+        hash_from_parsing.to_hex()
+    );
     eprintln!("  Author: {:?}", original_commit.author);
     eprintln!("  Author-date: {:?}", original_commit.author_date);
     eprintln!("  Committer-date: {:?}", original_commit.committer_date);
@@ -496,8 +512,14 @@ refs:
     eprintln!("  Tree entries: {}", roundtrip_commit.tree.paths().count());
 
     eprintln!("\n--- HASH MISMATCH DIAGNOSIS ---");
-    eprintln!("Hash from YAML parse (our calc):  {}", hash_from_parsing.to_hex());
-    eprintln!("Hash from git round-trip (git):   {}", hash_from_git.to_hex());
+    eprintln!(
+        "Hash from YAML parse (our calc):  {}",
+        hash_from_parsing.to_hex()
+    );
+    eprintln!(
+        "Hash from git round-trip (git):   {}",
+        hash_from_git.to_hex()
+    );
     eprintln!("Hashes match: {}", hash_from_parsing == hash_from_git);
 
     if hash_from_parsing != hash_from_git {
@@ -516,8 +538,14 @@ refs:
         eprintln!("  Message: 'Initial commit'");
 
         eprintln!("\nDoes git store the message with a trailing newline?");
-        eprintln!("  Message from git read-back: {:?}", roundtrip_commit.message.as_bytes());
-        eprintln!("  Message in our parse: {:?}", original_commit.message.as_bytes());
+        eprintln!(
+            "  Message from git read-back: {:?}",
+            roundtrip_commit.message.as_bytes()
+        );
+        eprintln!(
+            "  Message in our parse: {:?}",
+            original_commit.message.as_bytes()
+        );
 
         // Don't panic - we'll investigate further
     }
