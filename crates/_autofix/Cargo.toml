@@ -24,6 +24,8 @@ semver = { workspace = true }
 glob = { workspace = true }
 anyhow = { workspace = true }
 pathdiff = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter", "fmt"] }
 
 [dev-dependencies]
 tempfile = { workspace = true }

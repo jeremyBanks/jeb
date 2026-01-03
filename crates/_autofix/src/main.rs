@@ -8,7 +8,19 @@ use _autofix::{
     deno_lint,
     workspace_deps,
 };
+use tracing_subscriber::filter::EnvFilter;
+
 fn main() {
+    // Initialize tracing with env-filter
+    // Default: warn for external crates, debug for this crate
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("_autofix=debug,warn"));
+
+    tracing_subscriber::fmt()
+        .with_env_filter(env_filter)
+        .with_writer(std::io::stderr)
+        .init();
+
     let modules: &[(&str, fn() -> i32)] = &[
         ("cargo_fmt", cargo_fmt::main),
         ("cargo_fix", cargo_fix::main),

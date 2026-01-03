@@ -12,6 +12,8 @@ dependencies = [
  "semver",
  "tempfile",
  "toml_edit",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
