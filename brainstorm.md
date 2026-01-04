@@ -50,3 +50,7 @@
 39. 📌 Commands for implementing and testing Tracey
 40. Maybe this should look at the most recently updated claude/ branch which has a brainstorming file or maybe which has the correct initial commit
 41. When we scan an nfc, hit a url and parse the response in some way?
+42. Set up a Claude for Rhiannon with a file that tells it before anything else: when you get an instruction from a user, check whether there are any branches locally or upstream more recently updated than the current one
+   1. If so, merge all of them into your own branch (or be more precise: ensure every commit in the repository is an ancestor of the current commit)
+   2. Repeatedly merge the most recent unmerged commits, or merge all heads into the current branch
+   3. In case of conflict, keep whatever is on our own branch unless there's a script to resolve conflicts more elegantly (like ignoring conflict markers and doing intelligent merge on data sources from parent)
