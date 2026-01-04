@@ -41,4 +41,4 @@
 32. Agent: If messages have multiple pins (only when explicitly stated), any with two or more pins appear at the bottom of the list regardless of number (sort by number of pins, then by message number, but 0 and 1 count as equal per previous logic)
 33. Agent: Double pin message 31
 34. Agent: When appropriate, also add (and when requested, remove) pins from messages in the file, not just in the output
-35. The command should display the graph for the last 16 commits regardless of ancestry, and then the last eight first parents with the full commit message, after fetching everything from the remote
+35. The command should display the graph for the last 16 commits regardless of ancestry, and then the last eight first parents with the full commit message, after fetching everything from the remote (regarding the current local branch; for the brainstorm.md command we'll probably just look at the file and grep out lines around pins and near the end of the file or something)
