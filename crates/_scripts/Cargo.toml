@@ -1,14 +1,14 @@
 [package]
 name = "_scripts"
 publish = false
-description = ""
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
 edition.workspace = true
 include.workspace = true
 license.workspace = true
 repository.workspace = true
 version.workspace = true
-categories = []
-keywords = []
 
 [dependencies]
 toml_edit.workspace = true

@@ -2,8 +2,8 @@
 name = "git-snapshot"
 publish = false
 description = "git repository snapshots for testing"
-keywords = []
-categories = []
+keywords = ["git"]
+categories = ["development-tools::testing"]
 edition.workspace = true
 include.workspace = true
 license.workspace = true

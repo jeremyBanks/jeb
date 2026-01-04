@@ -2,8 +2,8 @@
 name = "git-zoom"
 publish = false
 description = "git zoom in; git zoom out"
-keywords = []
-categories = []
+keywords = ["git"]
+categories = ["command-line-utilities", "development-tools"]
 edition.workspace = true
 include.workspace = true
 license.workspace = true

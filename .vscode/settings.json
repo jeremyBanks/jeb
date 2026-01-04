@@ -129,6 +129,7 @@
     "itertools",
     "libjeb",
     "mergeoptions",
+    "minisign",
     "miri",
     "mktree",
     "newtype",

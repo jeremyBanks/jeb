@@ -1,9 +1,9 @@
 [package]
 name = "_autofix"
 publish = false
-description = ""
-keywords = []
-categories = []
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
 edition.workspace = true
 include.workspace = true
 license.workspace = true
