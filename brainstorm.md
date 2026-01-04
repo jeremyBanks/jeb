@@ -76,3 +76,5 @@
    3. Maybe both directions should happen in their source (where they were thought up), which might require a both-way merge
 51. https://docs.rs/shlex/latest/shlex/ may make us redundant
 52. TryFrom and TryInto with numerical exactness between… uh. Maybe already done?
+53. If there's no macro body default to default default
+54. Zoom in maybe should copy in symlinks? But that's hard to round trip. But we need that for readme…
