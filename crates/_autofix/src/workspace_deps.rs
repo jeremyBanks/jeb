@@ -907,7 +907,15 @@ fn normalize_workspace_dependencies(
         .current_dir(workspace_root)
         .output();
     let final_build_success = match final_check {
-        Ok(output) => output.status.success(),
+        Ok(output) => {
+            if !output.status.success() {
+                eprintln!("Final cargo check failed with stderr:");
+                eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+                eprintln!("stdout:");
+                eprintln!("{}", String::from_utf8_lossy(&output.stdout));
+            }
+            output.status.success()
+        }
         Err(e) => {
             eprintln!("Error: Failed to run final cargo check: {}", e);
             false
