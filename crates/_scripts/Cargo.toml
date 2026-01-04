@@ -11,12 +11,12 @@ categories = []
 keywords = []
 
 [dependencies]
-toml_edit.workspace = true
+tokio.workspace = true
 anyhow.workspace = true
 glob.workspace = true
 pathdiff.workspace = true
 semver.workspace = true
-tokio.workspace = true
+toml_edit.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

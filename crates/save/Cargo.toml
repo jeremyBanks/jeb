@@ -10,10 +10,10 @@ categories = []
 keywords = []
 
 [dependencies]
-thiserror = "1.0.31"
+tracing = { version = "0.1.43", features = ["log"] }
+color-eyre.workspace = true
 bstr.workspace = true
 clap = { workspace = true, features = ["derive", "env", "cargo", "unicode", "wrap_help"] }
-color-eyre.workspace = true
 digest.workspace = true
 dissimilar.workspace = true
 expect-test.workspace = true
@@ -31,8 +31,8 @@ proc-macro2.workspace = true
 regex.workspace = true
 sha-1.workspace = true
 tempfile.workspace = true
+thiserror.workspace = true
 thousands.workspace = true
-tracing = { workspace = true, features = ["log"] }
 tracing-error = { workspace = true, features = ["traced-error"] }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 

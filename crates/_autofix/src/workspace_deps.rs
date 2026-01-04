@@ -1213,7 +1213,10 @@ fn add_workspace_crate_versions(
             let existing_version = if let Some(s) = existing.as_str() {
                 Some(s.to_string())
             } else if let Some(table) = existing.as_inline_table() {
-                table.get("version").and_then(|v| v.as_str()).map(String::from)
+                table
+                    .get("version")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
             } else {
                 None
             };
@@ -1236,19 +1239,35 @@ fn add_workspace_crate_versions(
                 false
             };
 
+            // Need to get extra fields BEFORE removing the entry
+            let extra_fields: Vec<(String, toml_edit::Value)> = if has_extra_fields {
+                if let Some(existing) = deps.get(name) {
+                    if let Some(existing_table) = existing.as_inline_table() {
+                        existing_table
+                            .iter()
+                            .filter(|(k, _)| *k != "version" && *k != "path")
+                            .map(|(k, v)| (k.to_string(), v.clone()))
+                            .collect()
+                    } else {
+                        Vec::new()
+                    }
+                } else {
+                    Vec::new()
+                }
+            } else {
+                Vec::new()
+            };
+
+            // Remove existing entry first to ensure clean replacement
+            deps.remove(name);
+
             if has_extra_fields {
                 // Build inline table with version and preserved extra fields (but NOT path)
                 let mut table = InlineTable::new();
                 table.insert("version", Value::from(info.version.as_str()));
 
-                if let Some(existing) = deps.get(name) {
-                    if let Some(existing_table) = existing.as_inline_table() {
-                        for (key, value) in existing_table.iter() {
-                            if key != "version" && key != "path" {
-                                table.insert(key, value.clone());
-                            }
-                        }
-                    }
+                for (key, value) in extra_fields {
+                    table.insert(&key, value);
                 }
 
                 deps.insert(name, Item::Value(Value::InlineTable(table)));

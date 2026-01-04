@@ -27,6 +27,8 @@ pkg-fmt = "tgz"
 algorithm = "minisign"
 
 [dependencies]
+indexmap = { version = "2.0.0", features = ["serde"] }
+serde_json.workspace = true
 jeb-common.workspace = true
 jeb-stream = { workspace = true, features = ["json", "serde"] }
 jeb-value = { workspace = true, features = ["serde", "serde_json"] }
@@ -42,10 +44,8 @@ document-features.workspace = true
 futures.workspace = true
 getset.workspace = true
 ignorable.workspace = true
-indexmap = { workspace = true, features = ["serde"] }
 regex.workspace = true
 serde = { workspace = true, features = ["derive"] }
-serde_json.workspace = true
 tap.workspace = true
 tokio = { workspace = true, features = ["rt", "macros", "sync", "io-util"] }
 tokio-stream.workspace = true

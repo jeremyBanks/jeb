@@ -11,8 +11,8 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-jeb-common.workspace = true
 jeb-value.workspace = true
+jeb-common.workspace = true
 serde = { workspace = true, optional = true, features = ["derive"] }
 wasm-bindgen = { workspace = true, optional = true }
 async-stream.workspace = true
