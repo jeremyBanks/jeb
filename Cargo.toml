@@ -41,9 +41,9 @@ jeb-wasm = { path = "crates/jeb-wasm" }
 save = { path = "crates/save" }
 
 [workspace.dependencies]
-_autofix = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/_autofix" }
-_claude_hooks = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/_claude_hooks" }
-_scripts = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/_scripts" }
+_autofix = { path = "crates/_autofix" }
+_claude_hooks = { path = "crates/_claude_hooks" }
+_scripts = { path = "crates/_scripts" }
 git-snapshot = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/git-snapshot" }
 git-zoom = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/git-zoom" }
 jeb = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/jeb", default-features = false }

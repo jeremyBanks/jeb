@@ -1258,7 +1258,35 @@ fn add_workspace_crate_versions(
         .as_table_mut()
         .context("dependencies is not a table")?;
 
+    // First pass: Remove versions from internal crates (those starting with _)
+    for (name, _info) in workspace_crates.iter() {
+        if name.starts_with('_') {
+            if let Some(existing) = deps.get(name) {
+                if let Some(existing_table) = existing.as_inline_table() {
+                    // Check if it has a version field
+                    if existing_table.get("version").is_some() {
+                        // Rebuild without version
+                        let mut new_table = InlineTable::new();
+                        for (k, v) in existing_table.iter() {
+                            if k != "version" {
+                                new_table.insert(k, v.clone());
+                            }
+                        }
+                        deps.insert(name, Item::Value(Value::InlineTable(new_table)));
+                        synced += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    // Second pass: Add/update versions for non-internal crates
     for (name, info) in workspace_crates {
+        // Skip internal crates (those starting with _) - they don't get versions
+        if name.starts_with('_') {
+            continue;
+        }
+
         // Check if we need to add/update the version
         let needs_update = if let Some(existing) = deps.get(name) {
             // Check existing version
