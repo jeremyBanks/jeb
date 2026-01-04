@@ -1207,30 +1207,44 @@ fn add_workspace_crate_versions(
         .context("dependencies is not a table")?;
 
     for (name, info) in workspace_crates {
-        // Check if entry exists
-        if let Some(existing) = deps.get_mut(name) {
-            // Update existing entry to add/update version field
-            if let Some(table) = existing.as_inline_table_mut() {
-                let existing_version = table
-                    .get("version")
-                    .and_then(|v| v.as_str())
-                    .map(String::from);
+        // Build the correct inline table with version and path (in correct order)
+        let mut table = InlineTable::new();
+        table.insert("version", Value::from(info.version.as_str()));
+        table.insert("path", Value::from(info.relative_path.as_str()));
 
-                if existing_version.as_ref() != Some(&info.version) {
-                    table.insert("version", Value::from(info.version.as_str()));
-                    synced += 1;
-                }
-            } else if existing.as_str().is_some() {
-                // Convert simple string to inline table with version
-                let mut table = InlineTable::new();
-                table.insert("version", Value::from(info.version.as_str()));
-                *existing = Item::Value(Value::InlineTable(table));
-                synced += 1;
+        // Check if we need to update (preserve other fields if they exist)
+        let needs_update = if let Some(existing) = deps.get(name) {
+            if let Some(existing_table) = existing.as_inline_table() {
+                // Check if version or path differ
+                let existing_version = existing_table
+                    .get("version")
+                    .and_then(|v| v.as_str());
+                let existing_path = existing_table
+                    .get("path")
+                    .and_then(|v| v.as_str());
+
+                existing_version != Some(&info.version)
+                    || existing_path != Some(&info.relative_path)
+            } else {
+                true // Not an inline table, needs update
             }
         } else {
-            // Entry doesn't exist - add new entry with just version
-            // (path will be handled by [patch.crates-io])
-            deps.insert(name, value(info.version.clone()));
+            true // Doesn't exist, needs to be added
+        };
+
+        if needs_update {
+            // Preserve any other fields from existing entry (like default-features)
+            if let Some(existing) = deps.get(name) {
+                if let Some(existing_table) = existing.as_inline_table() {
+                    for (key, value) in existing_table.iter() {
+                        if key != "version" && key != "path" {
+                            table.insert(key, value.clone());
+                        }
+                    }
+                }
+            }
+
+            deps.insert(name, Item::Value(Value::InlineTable(table)));
             synced += 1;
         }
     }
