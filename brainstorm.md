@@ -32,3 +32,4 @@
    2. Should it busybox?
 25. jeb-git-core lib, jeb-git bin importing git-zoom and save which are both lib and bin and depend on core
 26. Agent: Pin message 25; remove headers from output; show single nested list with pinned messages marked with 📌 before number
+27. We are normalizing lock files and stuff; it depends on versions being available, so we have to stop bumping the version as part of the release process—it needs to be a separate thing
