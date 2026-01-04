@@ -80,3 +80,4 @@
 54. Zoom in maybe should copy in symlinks? But that's hard to round trip. But we need that for readme…
 55. Tracey rules depending on each other
 56. Tracey style rules for design docs going down multiple levels
+57. I want to know if I can define high level requirements which are satisfied by several more specific requirements which are satisfied by code. Is there a way to express that? Like the higher level depends on the lower level maybe?
