@@ -1,7 +1,7 @@
 [package]
 name = "jeb-bytes-as-text"
 publish = true
-description = "(part of https://crates.io/crates/jeb)"
+description.workspace = true
 keywords = []
 categories = []
 edition.workspace = true
