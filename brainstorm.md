@@ -46,3 +46,4 @@
    1. Command: `grep -B3 -A8 "📌" /home/user/jeb/brainstorm.md && echo -e "\n---\n" && tail -54 /home/user/jeb/brainstorm.md`
 37. Alternative: show pinned messages and diff from HEAD to 12 commits previously
    1. Command: `grep -B3 -A8 "📌" brainstorm.md && echo -e "\n---\n" && git diff HEAD~12..HEAD -- brainstorm.md`
+38. Consider zero lines before for clarity (in the grep commands)
