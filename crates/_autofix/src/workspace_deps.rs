@@ -1287,7 +1287,7 @@ fn add_workspace_crate_versions(
             continue;
         }
 
-        // Check if we need to add/update the version
+        // Check if we need to add/update the entry
         let needs_update = if let Some(existing) = deps.get(name) {
             // Check existing version
             let existing_version = if let Some(s) = existing.as_str() {
@@ -1301,7 +1301,15 @@ fn add_workspace_crate_versions(
                 None
             };
 
-            existing_version.as_ref() != Some(&info.version)
+            // Check if it has a path field that needs to be removed
+            let has_path = if let Some(table) = existing.as_inline_table() {
+                table.get("path").is_some()
+            } else {
+                false
+            };
+
+            // Update if version differs OR if path needs to be removed
+            existing_version.as_ref() != Some(&info.version) || has_path
         } else {
             true // Doesn't exist, needs to be added
         };

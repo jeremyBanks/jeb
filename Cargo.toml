@@ -44,15 +44,11 @@ save = { path = "crates/save" }
 _autofix = { path = "crates/_autofix" }
 _claude_hooks = { path = "crates/_claude_hooks" }
 _scripts = { path = "crates/_scripts" }
-git-snapshot = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/git-snapshot" }
-git-zoom = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/git-zoom" }
-jeb = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/jeb", default-features = false }
-jeb-bytes-as-text = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/jeb-bytes-as-text" }
-jeb-common = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/jeb-common" }
-jeb-stream = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/jeb-stream" }
-jeb-value = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/jeb-value" }
-jeb-wasm = { version = "0.0.0-dev-2025-12-26.7705", path = "crates/jeb-wasm" }
-save = { version = "0.20220708.0", path = "crates/save" }
+git-snapshot = "0.0.0-dev-2025-12-26.7705"
+jeb = { version = "0.0.0-dev-2025-12-26.7705", default-features = false }
+jeb-common = "0.0.0-dev-2025-12-26.7705"
+jeb-stream = "0.0.0-dev-2025-12-26.7705"
+jeb-value = "0.0.0-dev-2025-12-26.7705"
 anyhow = "1.0.0"
 async-stream = "0.3.6"
 bstr = "0.2.17"
@@ -69,6 +65,7 @@ eyre = "0.6.8"
 fast_hilbert = "2.0.2"
 futures = "0.3.0"
 getset = "0.1.6"
+git-zoom = "0.0.0-dev-2025-12-26.7705"
 git2 = "0.14.4"
 glob = "0.3.0"
 home = "0.5.3"
@@ -76,6 +73,8 @@ ignorable = "0.1.2"
 ignore = "0.4.0"
 indexmap = "2.0.0"
 itertools = "0.10.3"
+jeb-bytes-as-text = "0.0.0-dev-2025-12-26.7705"
+jeb-wasm = "0.0.0-dev-2025-12-26.7705"
 js-sys = "0.3.82"
 macro_rules_attribute = "0.2.2"
 num-integer = "0.1.45"
@@ -88,6 +87,7 @@ pathdiff = "0.2.0"
 petgraph = "0.6.2"
 proc-macro2 = "1.0.40"
 regex = "1.12.2"
+save = "0.20220708.0"
 semver = "1.0.0"
 serde = "1.0.0"
 serde_bytes = "0.11.0"
