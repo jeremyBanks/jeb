@@ -37,3 +37,6 @@
 29. Cargo publish can make a version of the cargo.toml that's normalized canonically, so we'll use that plus a new cargo build with the existing lock file to produce our pared down lock file—make sure to share target directory!
    1. And maybe we also need to normalize the .gitignore… that may be trickier. We may not try.
 30. Agent: Pin message 29 (the Cargo publish topic)
+31. We need to make a Claude command or task to read this branch, maybe the same one that reads the recent local git history
+32. Agent: If messages have multiple pins (only when explicitly stated), any with two or more pins appear at the bottom of the list regardless of number (sort by number of pins, then by message number, but 0 and 1 count as equal per previous logic)
+33. Agent: Double pin message 31
