@@ -67,3 +67,4 @@
    5. Event types can never form a cycle—creates upper bound on recursive event invocations and prevents runaway effects
 45. Maybe it could be an mcp
 46. ChatGPT may have lied about lock file stuff so let's just blindly copy it
+47. Stream that takes two inputs and only emits when they differ, or maybe if we can assume sorted then more specifically when present in one but not the other
