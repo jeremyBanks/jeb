@@ -626,6 +626,46 @@ fn parse_dependency(
             });
         }
         Item::Table(t) => {
+            // Handle workspace = true in dotted key syntax (e.g., anyhow.workspace = true)
+            if let Some(workspace_val) = t.get("workspace")
+                && workspace_val.as_bool() == Some(true)
+            {
+                if let Some(ws_doc) = workspace_doc
+                    && let Some(ws_deps) = ws_doc
+                        .get("workspace")
+                        .and_then(|w| w.get("dependencies"))
+                        .and_then(|d| d.as_table())
+                    && let Some(ws_dep) = ws_deps.get(key)
+                    && let Ok(Some(ws_parsed)) =
+                        parse_dependency(key, ws_dep, workspace_root, workspace_root, None)
+                {
+                    let optional = t.get("optional").and_then(|v| v.as_bool());
+                    let default_features = t.get("default-features").and_then(|v| v.as_bool());
+                    let features = t.get("features").and_then(|v| {
+                        v.as_array().map(|arr| {
+                            arr.iter()
+                                .filter_map(|item| item.as_str().map(String::from))
+                                .collect()
+                        })
+                    });
+                    let name = ws_parsed
+                        .resolution
+                        .package
+                        .clone()
+                        .unwrap_or_else(|| key.to_string());
+                    return Ok(Some(Dependency {
+                        key: key.to_string(),
+                        name,
+                        resolution: ws_parsed.resolution,
+                        config: ConfigFields {
+                            optional,
+                            features,
+                            default_features,
+                        },
+                    }));
+                }
+                return Ok(None);
+            }
             version_str = t.get("version").and_then(|v| v.as_str());
             package = t.get("package").and_then(|v| v.as_str()).map(String::from);
             path_str = t.get("path").and_then(|v| v.as_str()).map(String::from);
@@ -875,7 +915,10 @@ fn normalize_workspace_dependencies(
 
     // Sort [workspace.dependencies] after all modifications are done
     if let Some(workspace) = workspace_doc.get_mut("workspace") {
-        if let Some(deps) = workspace.get_mut("dependencies").and_then(|d| d.as_table_mut()) {
+        if let Some(deps) = workspace
+            .get_mut("dependencies")
+            .and_then(|d| d.as_table_mut())
+        {
             sort_workspace_dependencies(deps, &workspace_updates)?;
         }
     }

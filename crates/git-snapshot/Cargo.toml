@@ -11,7 +11,6 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-thiserror.workspace = true
 git2.workspace = true
 indexmap.workspace = true
 serde = { workspace = true, features = ["rc"] }
@@ -20,3 +19,4 @@ serde_json = { workspace = true, features = ["preserve_order"] }
 serde_yaml.workspace = true
 sha1-checked = { workspace = true, features = ["std"], default-features = true }
 tempfile.workspace = true
+thiserror.workspace = true
