@@ -49,3 +49,4 @@
 38. 📌 Consider zero lines before for clarity (in the grep commands)
 39. 📌 Commands for implementing and testing Tracey
 40. Maybe this should look at the most recently updated claude/ branch which has a brainstorming file or maybe which has the correct initial commit
+41. When we scan an nfc, hit a url and parse the response in some way?
