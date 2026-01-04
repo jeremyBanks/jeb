@@ -242,6 +242,76 @@ fn ensure_publish_false_for_internal_crates(workspace_root: &Path) -> Result<usi
 
     Ok(modified_count)
 }
+/// Collect information about all workspace crates (name, version, path)
+/// Used for [patch.crates-io] generation and version syncing
+fn collect_workspace_crates(
+    workspace_root: &Path,
+    workspace_doc: &DocumentMut,
+) -> Result<HashMap<String, WorkspaceCrateInfo>> {
+    let members = resolve_workspace_members(workspace_root)?;
+    let mut workspace_crates = HashMap::new();
+
+    // Get workspace package version for resolving version.workspace = true
+    let workspace_version = workspace_doc
+        .get("workspace")
+        .and_then(|w| w.get("package"))
+        .and_then(|p| p.get("version"))
+        .and_then(|v| v.as_str())
+        .map(String::from);
+
+    for member_path in members {
+        let member_toml = member_path.join("Cargo.toml");
+        let content = std::fs::read_to_string(&member_toml)?;
+        let doc = content.parse::<DocumentMut>()?;
+
+        // Get package name
+        let name = doc
+            .get("package")
+            .and_then(|p| p.get("name"))
+            .and_then(|n| n.as_str())
+            .map(String::from);
+
+        // Get package version (resolve workspace = true if needed)
+        let version = doc
+            .get("package")
+            .and_then(|p| p.get("version"))
+            .and_then(|v| {
+                // Check if it's a simple string
+                if let Some(s) = v.as_str() {
+                    return Some(s.to_string());
+                }
+                // Check if it's { workspace = true }
+                if let Some(table) = v.as_inline_table() {
+                    if table.get("workspace").and_then(|w| w.as_bool()) == Some(true) {
+                        return workspace_version.clone();
+                    }
+                }
+                None
+            });
+
+        // Get relative path from workspace root
+        let relative_path = if let Ok(stripped) = member_path.strip_prefix(workspace_root) {
+            stripped.display().to_string()
+        } else {
+            pathdiff::diff_paths(&member_path, workspace_root)
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| member_path.display().to_string())
+        };
+
+        if let (Some(name), Some(version)) = (name, version) {
+            workspace_crates.insert(
+                name.clone(),
+                WorkspaceCrateInfo {
+                    name,
+                    version,
+                    relative_path,
+                },
+            );
+        }
+    }
+
+    Ok(workspace_crates)
+}
 /// Ensure workspace crates have standard metadata fields set
 fn ensure_workspace_metadata_inheritance(doc: &mut DocumentMut) -> Result<bool> {
     let mut modified = false;
