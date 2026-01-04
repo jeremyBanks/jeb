@@ -1,4 +1,5 @@
 ---
+allowed-tools: Bash(git:*), Bash(grep:*), Bash(cat:*), Bash(xargs:*)
 description: Summarize recent changes and brainstorming.
 argument-hint: [focus]
 ---
@@ -35,19 +36,18 @@ git show origin/claude/note-taking-tracker-wJTFN:brainstorm.md |
 !`git show origin/claude/note-taking-tracker-wJTFN:brainstorm.md | grep --before=2 --after=2 --line-number --regexp="📌" --regexp="⭐" --regexp="🔖"`
 
 ```
-git diff \
+git merge-base \
+    origin/claude/note-taking-tracker-wJTFN@'{2 days ago}' \
+    origin/claude/note-taking-tracker-wJTFN~8 \
+| xargs -I {} git diff \
     --unified=2 \
-    "$( \
-        git merge-base \
-            origin/claude/note-taking-tracker-wJTFN@'{2 days ago}' \
-            origin/claude/note-taking-tracker-wJTFN~8 \
-    )" \
+    {} \
     origin/claude/note-taking-tracker-wJTFN \
     -- \
     brainstorm.md
 ```
 
-!`git diff --unified=2 "$(git merge-base origin/claude/note-taking-tracker-wJTFN@'{2 days ago}' origin/claude/note-taking-tracker-wJTFN~8)" origin/claude/note-taking-tracker-wJTFN -- brainstorm.md`
+!`git merge-base origin/claude/note-taking-tracker-wJTFN@'{2 days ago}' origin/claude/note-taking-tracker-wJTFN~8 | xargs -I {} git diff --unified=2 {} origin/claude/note-taking-tracker-wJTFN -- brainstorm.md`
 
 # Local Changes
 
