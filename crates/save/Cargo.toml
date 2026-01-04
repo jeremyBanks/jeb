@@ -10,6 +10,7 @@ categories = []
 keywords = []
 
 [dependencies]
+thiserror = "1.0.31"
 bstr = { workspace = true }
 clap = { workspace = true, features = ["derive", "env", "cargo", "unicode", "wrap_help"] }
 color-eyre = { workspace = true }
@@ -20,9 +21,9 @@ eyre = { workspace = true }
 git2 = { workspace = true }
 home = { workspace = true }
 itertools = { workspace = true }
+num_cpus = { workspace = true }
 num-integer = { workspace = true }
 num-traits = { workspace = true }
-num_cpus = { workspace = true }
 once_cell = { workspace = true }
 parking_lot = { workspace = true }
 petgraph = { workspace = true }
@@ -30,7 +31,6 @@ proc-macro2 = { workspace = true }
 regex = { workspace = true }
 sha-1 = { workspace = true }
 tempfile = { workspace = true }
-thiserror = "1.0.31"
 thousands = { workspace = true }
 tracing = { workspace = true, features = ["log"] }
 tracing-error = { workspace = true, features = ["traced-error"] }

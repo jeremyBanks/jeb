@@ -12,13 +12,13 @@ version.workspace = true
 
 # [impl jeb-value.dependencies.limit-internal]
 [dependencies]
-derive_more = { workspace = true, features = ["full"] }
-document-features = { workspace = true }
-indexmap = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_bytes = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
+derive_more = { workspace = true, features = ["full"] }
+document-features = { workspace = true }
+indexmap = { workspace = true }
 
 [features]
 default = []

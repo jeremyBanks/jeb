@@ -12,10 +12,10 @@ keywords = []
 
 [dependencies]
 toml_edit.workspace = true
-semver = { workspace = true }
-glob = { workspace = true }
 anyhow = { workspace = true }
+glob = { workspace = true }
 pathdiff = { workspace = true }
+semver = { workspace = true }
 tokio = { workspace = true }
 
 [dev-dependencies]
