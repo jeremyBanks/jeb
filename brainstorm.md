@@ -47,3 +47,4 @@
 37. Alternative: show pinned messages and diff from HEAD to 12 commits previously
    1. Command: `grep -B3 -A8 "📌" brainstorm.md && echo -e "\n---\n" && git diff HEAD~12..HEAD -- brainstorm.md`
 38. Consider zero lines before for clarity (in the grep commands)
+39. Commands for implementing and testing Tracey
