@@ -18,11 +18,11 @@
 14. Agent: Define "pin:" prefix - identifies messages to pin; "pin" with no target means pin last topic
 15. Agent: Retroactively add all agent messages back to the file and reorder everything appropriately
 16. Use cargo workspace exclude to temporarily create non-workspace versions of crates in order to reduce the lock file down to only what that crate needs, like workspace-subset-lockfile
-17. 📌 Our normalization script needs to strictly enforce that all path dependencies (within our workspace) specify the same version as is actually specified in the crate's file, because that needs to match to be able to publish correctly (in most cases that will be .workspace=true so we'll need to make sure we resolve that correctly)
+17. Our normalization script needs to strictly enforce that all path dependencies (within our workspace) specify the same version as is actually specified in the crate's file, because that needs to match to be able to publish correctly (in most cases that will be .workspace=true so we'll need to make sure we resolve that correctly)
    1. We can use [patch.crates-io] my_lib = { path = "crates/my_lib" } in the workspace to allow the crate files to avoid specifying paths, so they work on their own
-18. 📌 Reference: https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#using-patch-with-multiple-versions
+18. Reference: https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#using-patch-with-multiple-versions
 19. Agent: When there are multiple non-agent topics (list items or paragraphs) in a message, they should be displayed in the summary as nested bullets
-20. 📌 Since the actual name doesn't matter for overrides if we specify package=, let's always specify with a standardized naming convention
+20. Since the actual name doesn't matter for overrides if we specify package=, let's always specify with a standardized naming convention
    1. Format: __serde__0_1_8_beta_3 (real name then __ before each dot, and each non-numeric character of the version replaced with an underscore)
 21. In my local environment define a task or skill which fetches this branch to see my recent notes
 22. Agent: That last message didn't start with agent: - it was not an instruction, it was a topic for the list
@@ -44,9 +44,9 @@
 35. The command should display the graph for the last 16 commits regardless of ancestry, and then the last eight first parents with the full commit message, after fetching everything from the remote (regarding the current local branch; for the brainstorm.md command we'll probably just look at the file and grep out lines around pins and near the end of the file or something)
 36. Grep pins with 3 lines before and 8 lines after plus last 54 lines
    1. Command: `grep -B3 -A8 "📌" /home/user/jeb/brainstorm.md && echo -e "\n---\n" && tail -54 /home/user/jeb/brainstorm.md`
-37. 📌 Alternative: show pinned messages and diff from HEAD to 12 commits previously
+37. Alternative: show pinned messages and diff from HEAD to 12 commits previously
    1. Command: `grep -B3 -A8 "📌" brainstorm.md && echo -e "\n---\n" && git diff HEAD~12..HEAD -- brainstorm.md`
-38. 📌 Consider zero lines before for clarity (in the grep commands)
+38. Consider zero lines before for clarity (in the grep commands)
 39. 📌 Commands for implementing and testing Tracey
 40. Maybe this should look at the most recently updated claude/ branch which has a brainstorming file or maybe which has the correct initial commit
 41. When we scan an nfc, hit a url and parse the response in some way?
@@ -66,7 +66,7 @@
    4. Tap events might all have one prefix; policy: events can only trigger events of different types
    5. Event types can never form a cycle—creates upper bound on recursive event invocations and prevents runaway effects
 45. Maybe it could be an mcp
-46. 📌 ChatGPT may have lied about lock file stuff so let's just blindly copy it
+46. ChatGPT may have lied about lock file stuff so let's just blindly copy it
 47. Stream that takes two inputs and only emits when they differ, or maybe if we can assume sorted then more specifically when present in one but not the other
 48. Prefer to resolve merges while zoomed out so if you are going to merge a zoomed in a non-zoomed branch, you should sync the changes over to the merge side and do the canonical resolution there
 49. Agent: If you get a conflict when attempting to pull upstream, you should merge, NEVER force. If there are conflicts, create new nested message ids for each conflict
