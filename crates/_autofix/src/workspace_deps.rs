@@ -290,8 +290,14 @@ fn collect_workspace_crates(
                 if let Some(s) = v.as_str() {
                     return Some(s.to_string());
                 }
-                // Check if it's { workspace = true }
+                // Check if it's { workspace = true } (inline table)
                 if let Some(table) = v.as_inline_table() {
+                    if table.get("workspace").and_then(|w| w.as_bool()) == Some(true) {
+                        return workspace_version.clone();
+                    }
+                }
+                // Check if it's version.workspace = true (dotted key syntax creates a table)
+                if let Some(table) = v.as_table() {
                     if table.get("workspace").and_then(|w| w.as_bool()) == Some(true) {
                         return workspace_version.clone();
                     }
@@ -309,14 +315,11 @@ fn collect_workspace_crates(
         };
 
         if let (Some(name), Some(version)) = (name, version) {
-            workspace_crates.insert(
-                name.clone(),
-                WorkspaceCrateInfo {
-                    name,
-                    version,
-                    relative_path,
-                },
-            );
+            workspace_crates.insert(name.clone(), WorkspaceCrateInfo {
+                name,
+                version,
+                relative_path,
+            });
         }
     }
 
@@ -424,7 +427,8 @@ struct ConfigFields {
     features: Option<Vec<String>>,
     default_features: Option<bool>,
 }
-/// Information about a workspace crate (for [patch.crates-io] and version syncing)
+/// Information about a workspace crate (for [patch.crates-io] and version
+/// syncing)
 #[derive(Debug, Clone)]
 struct WorkspaceCrateInfo {
     /// Package name from [package].name
@@ -1184,7 +1188,10 @@ fn add_workspace_crate_versions(
             if let Some(s) = v.as_str() {
                 Some(s.to_string())
             } else if let Some(table) = v.as_inline_table() {
-                table.get("version").and_then(|v| v.as_str()).map(String::from)
+                table
+                    .get("version")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
             } else {
                 None
             }
@@ -1206,7 +1213,8 @@ fn sort_patch_crates_io(table: &mut dyn toml_edit::TableLike) -> Result<()> {
         .map(|(k, v)| (k.to_string(), v.clone()))
         .collect();
 
-    // Sort by normalized name (- and _ treated as same), then original name as tiebreaker
+    // Sort by normalized name (- and _ treated as same), then original name as
+    // tiebreaker
     entries.sort_by(|a, b| {
         let norm_a = a.0.to_lowercase().replace('-', "_");
         let norm_b = b.0.to_lowercase().replace('-', "_");
@@ -1233,7 +1241,8 @@ fn normalized_name_for_sort(name: &str) -> (String, String) {
 fn apply_dotted_key_syntax(toml_string: String) -> String {
     toml_string.replace(" = { workspace = true }", ".workspace = true")
 }
-/// Sort member dependency sections ([dependencies], [dev-dependencies], [build-dependencies])
+/// Sort member dependency sections ([dependencies], [dev-dependencies],
+/// [build-dependencies])
 fn sort_member_dependencies(
     doc: &mut DocumentMut,
     member_package_name: &str,
@@ -1268,17 +1277,15 @@ fn sort_member_dependencies(
                 };
 
                 // Helper to check if has git field
-                let has_git = |item: &Item| {
-                    item.as_inline_table()
-                        .and_then(|t| t.get("git"))
-                        .is_some()
-                };
+                let has_git =
+                    |item: &Item| item.as_inline_table().and_then(|t| t.get("git")).is_some();
 
                 // Helper to check if has extra fields
                 let has_extra_fields = |item: &Item| {
                     if let Some(table) = item.as_inline_table() {
                         for key in table.iter().map(|(k, _)| k) {
-                            if key != "workspace" && key != "features" && key != "default-features" {
+                            if key != "workspace" && key != "features" && key != "default-features"
+                            {
                                 return true;
                             }
                         }
@@ -1540,7 +1547,8 @@ fn sort_workspace_dependencies(
 /// - category 0: bare names (no dep: prefix, no /)
 /// - category 1: dependency references (with dep: or /)
 /// - !ends_with_default: false sorts before true (so /default items come first)
-/// - normalized_name: lexicographic ordering with - and _ normalized, dep: prefix removed
+/// - normalized_name: lexicographic ordering with - and _ normalized, dep:
+///   prefix removed
 /// - original_name: tiebreaker
 fn feature_dep_sort_key(dep: &str) -> (u8, bool, String, String) {
     let has_dep_prefix = dep.starts_with("dep:");
