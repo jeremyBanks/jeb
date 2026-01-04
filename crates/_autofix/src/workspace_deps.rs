@@ -1271,12 +1271,9 @@ fn normalized_name_for_sort(name: &str) -> (String, String) {
 /// Post-process TOML to use dotted key syntax for workspace = true
 /// Only applies when workspace = true is the ONLY field in the inline table
 fn apply_dotted_key_syntax(toml_string: String) -> String {
-    use regex::Regex;
-
-    // Match " = { workspace = true }" but ONLY when it's the only field
-    // (no comma before or after workspace)
-    let re = Regex::new(r" = \{ workspace = true \}").unwrap();
-    re.replace_all(&toml_string, ".workspace = true").to_string()
+    // Replace " = { workspace = true }" with ".workspace = true"
+    // This only matches when workspace = true is the ONLY field (no commas)
+    toml_string.replace(" = { workspace = true }", ".workspace = true")
 }
 /// Sort member dependency sections ([dependencies], [dev-dependencies],
 /// [build-dependencies])
