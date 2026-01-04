@@ -33,7 +33,7 @@
 25. 📌 jeb-git-core lib, jeb-git bin importing git-zoom and save which are both lib and bin and depend on core
 26. Agent: Pin message 25; remove headers from output; show single nested list with pinned messages marked with 📌 before number
 27. We are normalizing lock files and stuff; it depends on versions being available, so we have to stop bumping the version as part of the release process—it needs to be a separate thing
-28. 📌 Manually zoom in and zoom out and see if it produces reasonable results before deciding whether to move forward
+28. 📌📌 Manually zoom in and zoom out and see if it produces reasonable results before deciding whether to move forward
 29. 📌 Cargo publish can make a version of the cargo.toml that's normalized canonically, so we'll use that plus a new cargo build with the existing lock file to produce our pared down lock file—make sure to share target directory!
    1. And maybe we also need to normalize the .gitignore… that may be trickier. We may not try.
 30. Agent: Pin message 29 (the Cargo publish topic)
