@@ -59,3 +59,10 @@
    2. Include as much private/personal/identifying/location/contextual information as we can unless it seems problematic
    3. The shortcut will give us this information
    4. Make it available to agents to trigger different things based on location or other context
+44. Plain language event handlers—she can tell the agent what needs to happen in response to events and refer to context like "the card I just tapped"
+   1. Get request by default returns last several results; use private key/password/namespacing to prevent random internet access
+   2. Agents can fetch latest items when responding to messages
+   3. Tap unregistered tag, press button to dictate instruction (e.g., "whenever I tap that tag please send a message" or "record an event of type fed the dog")
+   4. Tap events might all have one prefix; policy: events can only trigger events of different types
+   5. Event types can never form a cycle—creates upper bound on recursive event invocations and prevents runaway effects
+45. Maybe it could be an mcp
