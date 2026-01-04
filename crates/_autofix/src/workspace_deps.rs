@@ -873,6 +873,13 @@ fn normalize_workspace_dependencies(
     stats.workspace_dep_versions_synced =
         add_workspace_crate_versions(&mut workspace_doc, &workspace_crates)?;
 
+    // Sort [workspace.dependencies] after all modifications are done
+    if let Some(workspace) = workspace_doc.get_mut("workspace") {
+        if let Some(deps) = workspace.get_mut("dependencies").and_then(|d| d.as_table_mut()) {
+            sort_workspace_dependencies(deps, &workspace_updates)?;
+        }
+    }
+
     // Update [patch.crates-io] with all workspace crates
     let (added, updated, removed) = update_patch_crates_io(&mut workspace_doc, &workspace_crates)?;
     stats.patch_entries_added = added;
@@ -1117,7 +1124,9 @@ fn update_workspace_toml(
     //         deps.remove(&key);
     //     }
     // }
-    sort_workspace_dependencies(deps, updates)?;
+
+    // NOTE: Sorting is done AFTER add_workspace_crate_versions() is called
+    // (see main pipeline), so it can sort all entries including workspace crates
     Ok(())
 }
 /// Update [patch.crates-io] section to include all workspace crates
