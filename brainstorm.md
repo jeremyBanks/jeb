@@ -42,3 +42,5 @@
 33. Agent: Double pin message 31
 34. Agent: When appropriate, also add (and when requested, remove) pins from messages in the file, not just in the output
 35. The command should display the graph for the last 16 commits regardless of ancestry, and then the last eight first parents with the full commit message, after fetching everything from the remote (regarding the current local branch; for the brainstorm.md command we'll probably just look at the file and grep out lines around pins and near the end of the file or something)
+36. Grep pins with 3 lines before and 8 lines after plus last 54 lines
+   1. Command: `grep -B3 -A8 "📌" /home/user/jeb/brainstorm.md && echo -e "\n---\n" && tail -54 /home/user/jeb/brainstorm.md`
