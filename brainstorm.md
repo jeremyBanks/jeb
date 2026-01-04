@@ -66,3 +66,4 @@
    4. Tap events might all have one prefix; policy: events can only trigger events of different types
    5. Event types can never form a cycle—creates upper bound on recursive event invocations and prevents runaway effects
 45. Maybe it could be an mcp
+46. ChatGPT may have lied about lock file stuff so let's just blindly copy it
