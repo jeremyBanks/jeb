@@ -79,3 +79,4 @@
 53. If there's no macro body default to default default
 54. Zoom in maybe should copy in symlinks? But that's hard to round trip. But we need that for readme…
 55. Tracey rules depending on each other
+56. Tracey style rules for design docs going down multiple levels
