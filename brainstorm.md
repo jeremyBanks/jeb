@@ -70,4 +70,8 @@
 47. Stream that takes two inputs and only emits when they differ, or maybe if we can assume sorted then more specifically when present in one but not the other
 48. Prefer to resolve merges while zoomed out so if you are going to merge a zoomed in a non-zoomed branch, you should sync the changes over to the merge side and do the canonical resolution there
 49. Agent: If you get a conflict when attempting to pull upstream, you should merge, NEVER force. If there are conflicts, create new nested message ids for each conflict
-50. https://docs.rs/shlex/latest/shlex/ may make us redundant.
+50. Scenario: zoom in on main branch with /package flag, create synthetic initial commit (copy timestamp/author), branch with initial commit as first parent and main branch commit as parent (deterministic); work on both branches; zoom merge source branch (zoom out with original fork base, then merge)
+   1. Maybe "zoom merge" should work in both directions by detecting how they're zoom-related (giving up if it can't tell)
+   2. Need special git-zoom: cutoff after which commands stop scanning to sever history and ignore broken metadata from development days
+   3. Maybe both directions should happen in their source (where they were thought up), which might require a both-way merge
+51. https://docs.rs/shlex/latest/shlex/ may make us redundant
