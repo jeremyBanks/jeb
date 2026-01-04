@@ -17,7 +17,7 @@
 13. Agent: Reminder - display only pinned topics and last two messages (skip instruction-only messages when finding last two, but they still count toward numbering)
 14. Agent: Define "pin:" prefix - identifies messages to pin; "pin" with no target means pin last topic
 15. Agent: Retroactively add all agent messages back to the file and reorder everything appropriately
-16. 📌 Use cargo workspace exclude to temporarily create non-workspace versions of crates in order to reduce the lock file down to only what that crate needs, like workspace-subset-lockfile
+16. Use cargo workspace exclude to temporarily create non-workspace versions of crates in order to reduce the lock file down to only what that crate needs, like workspace-subset-lockfile
 17. 📌 Our normalization script needs to strictly enforce that all path dependencies (within our workspace) specify the same version as is actually specified in the crate's file, because that needs to match to be able to publish correctly (in most cases that will be .workspace=true so we'll need to make sure we resolve that correctly)
    1. We can use [patch.crates-io] my_lib = { path = "crates/my_lib" } in the workspace to allow the crate files to avoid specifying paths, so they work on their own
 18. 📌 Reference: https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#using-patch-with-multiple-versions
@@ -34,7 +34,7 @@
 26. Agent: Pin message 25; remove headers from output; show single nested list with pinned messages marked with 📌 before number
 27. We are normalizing lock files and stuff; it depends on versions being available, so we have to stop bumping the version as part of the release process—it needs to be a separate thing
 28. 📌📌 Manually zoom in and zoom out and see if it produces reasonable results before deciding whether to move forward
-29. 📌 Cargo publish can make a version of the cargo.toml that's normalized canonically, so we'll use that plus a new cargo build with the existing lock file to produce our pared down lock file—make sure to share target directory!
+29. Cargo publish can make a version of the cargo.toml that's normalized canonically, so we'll use that plus a new cargo build with the existing lock file to produce our pared down lock file—make sure to share target directory!
    1. And maybe we also need to normalize the .gitignore… that may be trickier. We may not try.
 30. Agent: Pin message 29 (the Cargo publish topic)
 31. We need to make a Claude command or task to read this branch, maybe the same one that reads the recent local git history
