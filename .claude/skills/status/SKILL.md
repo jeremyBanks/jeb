@@ -24,7 +24,7 @@ Invoke this skill when you want to:
 Ensure the branch is available locally:
 
 ```bash
-git fetch origin claude/note-taking-tracker-wJTFN:claude/note-taking-tracker-wJTFN 2>/dev/null || true
+git fetch origin claude/note-taking-tracker-wJTFN
 ```
 
 ### Step 2: Display the File
@@ -32,7 +32,7 @@ git fetch origin claude/note-taking-tracker-wJTFN:claude/note-taking-tracker-wJT
 Show the contents of `brainstorm.md` from that branch:
 
 ```bash
-git show claude/note-taking-tracker-wJTFN:brainstorm.md
+git show origin/claude/note-taking-tracker-wJTFN:brainstorm.md
 ```
 
 ### Step 3: Handle Errors Gracefully
