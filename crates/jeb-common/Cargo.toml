@@ -13,9 +13,9 @@ version.workspace = true
 [dependencies]
 wasm-bindgen = { workspace = true, optional = true }
 derive_more = { workspace = true, features = ["full"] }
-document-features = { workspace = true }
-fast_hilbert = { workspace = true }
-indexmap = { workspace = true }
+document-features.workspace = true
+fast_hilbert.workspace = true
+indexmap.workspace = true
 
 [features]
 default = []

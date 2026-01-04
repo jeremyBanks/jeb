@@ -17,7 +17,7 @@ doc = false
 
 [dependencies]
 jeb = { workspace = true, features = ["wasm"], default-features = false }
-document-features = { workspace = true }
-js-sys = { workspace = true }
-wasm-bindgen = { workspace = true }
+document-features.workspace = true
+js-sys.workspace = true
+wasm-bindgen.workspace = true
 

@@ -1216,12 +1216,8 @@ fn add_workspace_crate_versions(
         let needs_update = if let Some(existing) = deps.get(name) {
             if let Some(existing_table) = existing.as_inline_table() {
                 // Check if version or path differ
-                let existing_version = existing_table
-                    .get("version")
-                    .and_then(|v| v.as_str());
-                let existing_path = existing_table
-                    .get("path")
-                    .and_then(|v| v.as_str());
+                let existing_version = existing_table.get("version").and_then(|v| v.as_str());
+                let existing_path = existing_table.get("path").and_then(|v| v.as_str());
 
                 existing_version != Some(&info.version)
                     || existing_path != Some(&info.relative_path)
