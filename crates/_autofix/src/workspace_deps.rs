@@ -1498,6 +1498,13 @@ fn workspace_dep_sort_key(
 /// Parse resolution fields from a TOML value (for sorting non-updated deps)
 fn parse_resolution_from_value(value: &Item) -> Result<ResolutionFields> {
     let mut resolution = ResolutionFields::default();
+
+    // Handle simple string version (e.g., anyhow = "1.0.0")
+    if let Some(version_str) = value.as_str() {
+        resolution.version = Some(version_str.to_string());
+        return Ok(resolution);
+    }
+
     if let Some(table) = value.as_inline_table() {
         resolution.version = table
             .get("version")
