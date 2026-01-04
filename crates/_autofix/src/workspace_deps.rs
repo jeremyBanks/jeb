@@ -351,6 +351,40 @@ fn ensure_workspace_metadata_inheritance(doc: &mut DocumentMut) -> Result<bool> 
 
     Ok(modified)
 }
+/// Sort package.keywords and package.categories arrays alphabetically
+fn sort_package_metadata_arrays(doc: &mut DocumentMut) -> Result<bool> {
+    let mut modified = false;
+
+    if let Some(package) = doc.get_mut("package").and_then(|p| p.as_table_mut()) {
+        for field in ["keywords", "categories"] {
+            if let Some(array) = package.get_mut(field).and_then(|v| v.as_array_mut()) {
+                let mut items: Vec<String> = array
+                    .iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect();
+
+                let original_items = items.clone();
+
+                // Sort with normalized comparison (- and _ treated as same)
+                items.sort_by(|a, b| {
+                    let (norm_a, orig_a) = normalized_name_for_sort(a);
+                    let (norm_b, orig_b) = normalized_name_for_sort(b);
+                    norm_a.cmp(&norm_b).then_with(|| orig_a.cmp(&orig_b))
+                });
+
+                if items != original_items {
+                    array.clear();
+                    for item in items {
+                        array.push(item);
+                    }
+                    modified = true;
+                }
+            }
+        }
+    }
+
+    Ok(modified)
+}
 /// Represents a dependency with all its fields
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Dependency {
@@ -663,6 +697,37 @@ impl NormalizationStats {
         }
         newly_edited
     }
+}
+/// Copy workspace Cargo.lock to all member crates
+fn copy_lockfiles(workspace_root: &Path, members: &[PathBuf]) -> Result<usize> {
+    let workspace_lock = workspace_root.join("Cargo.lock");
+
+    if !workspace_lock.exists() {
+        // No lock file to copy
+        return Ok(0);
+    }
+
+    let lock_content = std::fs::read(&workspace_lock)?;
+    let mut copied = 0;
+
+    for member_path in members {
+        let member_lock = member_path.join("Cargo.lock");
+
+        // Check if we need to copy (file doesn't exist or content differs)
+        let needs_copy = if member_lock.exists() {
+            let existing_content = std::fs::read(&member_lock)?;
+            existing_content != lock_content
+        } else {
+            true
+        };
+
+        if needs_copy {
+            std::fs::write(&member_lock, &lock_content)?;
+            copied += 1;
+        }
+    }
+
+    Ok(copied)
 }
 /// Main normalization function
 fn normalize_workspace_dependencies(
@@ -1427,12 +1492,13 @@ fn sort_workspace_dependencies(
     Ok(())
 }
 /// Sort key for feature dependencies
-/// Returns: (category, !ends_with_default, normalized_name)
+/// Returns: (category, !ends_with_default, normalized_name, original_name)
 /// - category 0: bare names (no dep: prefix, no /)
 /// - category 1: dependency references (with dep: or /)
 /// - !ends_with_default: false sorts before true (so /default items come first)
-/// - normalized_name: lexicographic ordering with dep: prefix removed
-fn feature_dep_sort_key(dep: &str) -> (u8, bool, String) {
+/// - normalized_name: lexicographic ordering with - and _ normalized, dep: prefix removed
+/// - original_name: tiebreaker
+fn feature_dep_sort_key(dep: &str) -> (u8, bool, String, String) {
     let has_dep_prefix = dep.starts_with("dep:");
     let has_slash = dep.contains('/');
     let ends_with_default = dep.ends_with("/default");
@@ -1440,15 +1506,18 @@ fn feature_dep_sort_key(dep: &str) -> (u8, bool, String) {
     // Category: bare names (0), then dep/slash references (1)
     let category = if has_dep_prefix || has_slash { 1 } else { 0 };
 
-    // Normalize by removing dep: prefix
-    let normalized = if has_dep_prefix {
-        dep.strip_prefix("dep:").unwrap_or(dep).to_string()
+    // Remove dep: prefix for normalization
+    let without_prefix = if has_dep_prefix {
+        dep.strip_prefix("dep:").unwrap_or(dep)
     } else {
-        dep.to_string()
+        dep
     };
 
+    // Normalize - and _ for comparison
+    let (normalized, _) = normalized_name_for_sort(without_prefix);
+
     // Use !ends_with_default so /default items sort first
-    (category, !ends_with_default, normalized)
+    (category, !ends_with_default, normalized, dep.to_string())
 }
 /// Sort the [features] section in a Cargo.toml
 fn sort_features_section(doc: &mut DocumentMut) -> Result<()> {
