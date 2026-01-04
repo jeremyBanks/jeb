@@ -61,6 +61,16 @@ fn run_normalization() -> Result<()> {
     eprintln!("\nSummary:");
     eprintln!("  Workspaces examined: {}", stats.workspaces_processed);
     eprintln!("  Crates examined: {}", stats.crates_examined);
+    eprintln!("  Workspace crates found: {}", stats.workspace_crates_found);
+    eprintln!(
+        "  Patch entries: {} added, {} updated, {} removed",
+        stats.patch_entries_added, stats.patch_entries_updated, stats.patch_entries_removed
+    );
+    eprintln!(
+        "  Workspace dep versions synced: {}",
+        stats.workspace_dep_versions_synced
+    );
+    eprintln!("  Lockfiles copied: {}", stats.lockfiles_copied);
     eprintln!(
         "  Workspace Cargo.toml files edited: {}",
         stats.workspace_tomls_edited
@@ -684,6 +694,12 @@ struct NormalizationStats {
     workspace_tomls_edited: usize,
     member_tomls_edited: usize,
     edited_files: HashSet<PathBuf>,
+    workspace_crates_found: usize,
+    patch_entries_added: usize,
+    patch_entries_updated: usize,
+    patch_entries_removed: usize,
+    workspace_dep_versions_synced: usize,
+    lockfiles_copied: usize,
 }
 impl NormalizationStats {
     fn record_file_edit(&mut self, path: &Path, is_workspace: bool) -> bool {
@@ -771,6 +787,11 @@ fn normalize_workspace_dependencies(
     let members = resolve_workspace_members(workspace_root)?;
     stats.crates_examined = members.len();
     eprintln!("  Found {} member crate(s)", members.len());
+
+    // Collect workspace crate info for [patch.crates-io] and version syncing
+    let workspace_crates = collect_workspace_crates(workspace_root, &workspace_doc)?;
+    stats.workspace_crates_found = workspace_crates.len();
+
     let mut all_deps: HashMap<String, Vec<(PathBuf, String, Dependency)>> = HashMap::new();
     for member_path in &members {
         let member_toml = member_path.join("Cargo.toml");
@@ -843,13 +864,27 @@ fn normalize_workspace_dependencies(
     }
     let old_workspace_deps = capture_old_workspace_deps(&workspace_doc, workspace_root);
     update_workspace_toml(&mut workspace_doc, &workspace_updates, workspace_root)?;
-    let workspace_doc_str = workspace_doc.to_string();
+
+    // Add workspace crate versions to [workspace.dependencies]
+    stats.workspace_dep_versions_synced =
+        add_workspace_crate_versions(&mut workspace_doc, &workspace_crates)?;
+
+    // Update [patch.crates-io] with all workspace crates
+    let (added, updated, removed) = update_patch_crates_io(&mut workspace_doc, &workspace_crates)?;
+    stats.patch_entries_added = added;
+    stats.patch_entries_updated = updated;
+    stats.patch_entries_removed = removed;
+
+    let workspace_doc_str = apply_dotted_key_syntax(workspace_doc.to_string());
     if workspace_doc_str != workspace_content {
         if stats.record_file_edit(&workspace_toml_path, true) {
             eprintln!("  Editing: {}", workspace_toml_path.display());
         }
         std::fs::write(&workspace_toml_path, workspace_doc_str)?;
     }
+    // Build workspace crate names set for sorting
+    let workspace_crate_names: HashSet<String> = workspace_crates.keys().cloned().collect();
+
     for member_path in &members {
         update_member_toml(
             member_path,
@@ -858,6 +893,7 @@ fn normalize_workspace_dependencies(
             workspace_root,
             &workspace_doc,
             &old_workspace_deps,
+            &workspace_crate_names,
             stats,
         )?;
     }
@@ -883,6 +919,10 @@ fn normalize_workspace_dependencies(
         }
         anyhow::bail!("Normalization broke the build. All changes have been reverted.");
     }
+
+    // Copy Cargo.lock to all member crates (after successful build)
+    stats.lockfiles_copied = copy_lockfiles(workspace_root, &members)?;
+
     eprintln!("  Finished processing workspace");
     Ok(())
 }
@@ -1188,6 +1228,10 @@ fn sort_patch_crates_io(table: &mut dyn toml_edit::TableLike) -> Result<()> {
 fn normalized_name_for_sort(name: &str) -> (String, String) {
     let normalized = name.to_lowercase().replace('-', "_");
     (normalized, name.to_string())
+}
+/// Post-process TOML to use dotted key syntax for workspace = true
+fn apply_dotted_key_syntax(toml_string: String) -> String {
+    toml_string.replace(" = { workspace = true }", ".workspace = true")
 }
 /// Sort member dependency sections ([dependencies], [dev-dependencies], [build-dependencies])
 fn sort_member_dependencies(
@@ -1579,14 +1623,26 @@ fn update_member_toml(
     workspace_root: &Path,
     workspace_doc: &DocumentMut,
     old_workspace_deps: &HashMap<String, ResolutionFields>,
+    workspace_crate_names: &HashSet<String>,
     stats: &mut NormalizationStats,
 ) -> Result<()> {
     let member_toml = member_path.join("Cargo.toml");
     let content = std::fs::read_to_string(&member_toml)?;
     let mut doc = content.parse::<DocumentMut>()?;
 
+    // Get member package name for sorting
+    let member_package_name = doc
+        .get("package")
+        .and_then(|p| p.get("name"))
+        .and_then(|n| n.as_str())
+        .unwrap_or("")
+        .to_string();
+
     // Ensure workspace metadata inheritance
     ensure_workspace_metadata_inheritance(&mut doc)?;
+
+    // Sort package metadata arrays
+    sort_package_metadata_arrays(&mut doc)?;
 
     let mut dep_name_to_workspace_key: HashMap<String, String> = HashMap::new();
     let mut dep_name_to_needs_default_features: HashMap<String, bool> = HashMap::new();
@@ -1764,10 +1820,13 @@ fn update_member_toml(
         }
     }
 
+    // Sort dependencies sections
+    sort_member_dependencies(&mut doc, &member_package_name, workspace_crate_names)?;
+
     // Sort features section
     sort_features_section(&mut doc)?;
 
-    let doc_str = doc.to_string();
+    let doc_str = apply_dotted_key_syntax(doc.to_string());
     if doc_str != content {
         if stats.record_file_edit(&member_toml, false) {
             eprintln!("  Editing: {}", member_toml.display());
