@@ -1253,8 +1253,12 @@ fn normalized_name_for_sort(name: &str) -> (String, String) {
     (normalized, name.to_string())
 }
 /// Post-process TOML to use dotted key syntax for workspace = true
+/// Only applies when workspace = true is the ONLY field in the inline table
 fn apply_dotted_key_syntax(toml_string: String) -> String {
-    toml_string.replace(" = { workspace = true }", ".workspace = true")
+    // DISABLED: Cargo doesn't actually support dotted key syntax for dependencies
+    // The syntax `dep.workspace = true` is not recognized by Cargo
+    // We must use `dep = { workspace = true }` instead
+    toml_string
 }
 /// Sort member dependency sections ([dependencies], [dev-dependencies],
 /// [build-dependencies])
