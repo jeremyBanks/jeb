@@ -54,3 +54,8 @@
    1. If so, merge all of them into your own branch (or be more precise: ensure every commit in the repository is an ancestor of the current commit)
    2. Repeatedly merge the most recent unmerged commits, or merge all heads into the current branch
    3. In case of conflict, keep whatever is on our own branch unless there's a script to resolve conflicts more elegantly (like ignoring conflict markers and doing intelligent merge on data sources from parent)
+43. Tags and other things submit events to server; workflow accepts manual text input or speech input or both
+   1. Different kinds of submissions with a mediator to distinguish them
+   2. Include as much private/personal/identifying/location/contextual information as we can unless it seems problematic
+   3. The shortcut will give us this information
+   4. Make it available to agents to trigger different things based on location or other context
