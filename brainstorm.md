@@ -75,3 +75,4 @@
    2. Need special git-zoom: cutoff after which commands stop scanning to sever history and ignore broken metadata from development days
    3. Maybe both directions should happen in their source (where they were thought up), which might require a both-way merge
 51. https://docs.rs/shlex/latest/shlex/ may make us redundant
+52. TryFrom and TryInto with numerical exactness between… uh. Maybe already done?
