@@ -84,3 +84,4 @@
 58. In line, let equals inside of macro body mutable binding, implicit assignment, variable in enclosing scope let mut
    1. Or even consider whether we could use an attribute macro which we put on the assignment itself and the assignment is just a normal mutable variable declaration or put it on the variable decoration (not the assignment)
 59. A way to more effectively handoff state, including branches, but also worker state agent state between devices virtual machine machines could be useful for development, potentially at work
+60. 📌 Use a real property based testing framework, this seems vitally useful. Here's one suggestion that we might read but we just need something simple: https://lpalmieri.com/posts/an-introduction-to-property-based-testing-in-rust/
