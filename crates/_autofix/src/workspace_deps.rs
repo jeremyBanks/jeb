@@ -987,6 +987,95 @@ fn update_workspace_toml(
     sort_workspace_dependencies(deps, updates)?;
     Ok(())
 }
+/// Update [patch.crates-io] section to include all workspace crates
+fn update_patch_crates_io(
+    doc: &mut DocumentMut,
+    workspace_crates: &HashMap<String, WorkspaceCrateInfo>,
+) -> Result<(usize, usize, usize)> {
+    // Track stats: (added, updated, removed)
+    let mut added = 0;
+    let mut updated = 0;
+    let mut removed = 0;
+
+    // Get or create [patch] table
+    if doc.get("patch").is_none() {
+        doc["patch"] = toml_edit::table();
+    }
+    let patch = doc["patch"]
+        .as_table_mut()
+        .context("patch is not a table")?;
+
+    // Get or create [patch.crates-io] table
+    if patch.get("crates-io").is_none() {
+        patch["crates-io"] = toml_edit::table();
+    }
+    let crates_io = patch["crates-io"]
+        .as_table_mut()
+        .context("crates-io is not a table")?;
+
+    // Track existing entries for removal check
+    let existing_keys: HashSet<String> = crates_io.iter().map(|(k, _)| k.to_string()).collect();
+    let workspace_crate_names: HashSet<String> = workspace_crates.keys().cloned().collect();
+
+    // Add/update entries for all workspace crates
+    for (name, info) in workspace_crates {
+        let mut table = InlineTable::new();
+        table.insert("path", Value::from(info.relative_path.as_str()));
+
+        if let Some(existing) = crates_io.get(name) {
+            // Check if update needed
+            let existing_path = existing
+                .as_inline_table()
+                .and_then(|t| t.get("path"))
+                .and_then(|v| v.as_str());
+            if existing_path != Some(&info.relative_path) {
+                crates_io.insert(name, Item::Value(Value::InlineTable(table)));
+                updated += 1;
+            }
+        } else {
+            crates_io.insert(name, Item::Value(Value::InlineTable(table)));
+            added += 1;
+        }
+    }
+
+    // Remove stale entries (crates no longer in workspace)
+    for key in &existing_keys {
+        if !workspace_crate_names.contains(key) {
+            crates_io.remove(key);
+            removed += 1;
+        }
+    }
+
+    // Sort entries alphabetically by name (with - and _ normalized)
+    sort_patch_crates_io(crates_io)?;
+
+    Ok((added, updated, removed))
+}
+/// Sort [patch.crates-io] entries alphabetically
+fn sort_patch_crates_io(table: &mut dyn toml_edit::TableLike) -> Result<()> {
+    let mut entries: Vec<(String, Item)> = table
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.clone()))
+        .collect();
+
+    // Sort by normalized name (- and _ treated as same), then original name as tiebreaker
+    entries.sort_by(|a, b| {
+        let norm_a = a.0.to_lowercase().replace('-', "_");
+        let norm_b = b.0.to_lowercase().replace('-', "_");
+        norm_a.cmp(&norm_b).then_with(|| a.0.cmp(&b.0))
+    });
+
+    // Remove all and re-insert in sorted order
+    let keys: Vec<String> = table.iter().map(|(k, _)| k.to_string()).collect();
+    for key in keys {
+        table.remove(&key);
+    }
+    for (key, value) in entries {
+        table.insert(&key, value);
+    }
+
+    Ok(())
+}
 fn build_dependency_value(
     resolution: &ResolutionFields,
     workspace_root: &Path,
