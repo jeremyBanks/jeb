@@ -1207,40 +1207,56 @@ fn add_workspace_crate_versions(
         .context("dependencies is not a table")?;
 
     for (name, info) in workspace_crates {
-        // Build the correct inline table with version and path (in correct order)
-        let mut table = InlineTable::new();
-        table.insert("version", Value::from(info.version.as_str()));
-        table.insert("path", Value::from(info.relative_path.as_str()));
-
-        // Check if we need to update (preserve other fields if they exist)
+        // Check if we need to add/update the version
         let needs_update = if let Some(existing) = deps.get(name) {
-            if let Some(existing_table) = existing.as_inline_table() {
-                // Check if version or path differ
-                let existing_version = existing_table.get("version").and_then(|v| v.as_str());
-                let existing_path = existing_table.get("path").and_then(|v| v.as_str());
-
-                existing_version != Some(&info.version)
-                    || existing_path != Some(&info.relative_path)
+            // Check existing version
+            let existing_version = if let Some(s) = existing.as_str() {
+                Some(s.to_string())
+            } else if let Some(table) = existing.as_inline_table() {
+                table.get("version").and_then(|v| v.as_str()).map(String::from)
             } else {
-                true // Not an inline table, needs update
-            }
+                None
+            };
+
+            existing_version.as_ref() != Some(&info.version)
         } else {
             true // Doesn't exist, needs to be added
         };
 
         if needs_update {
-            // Preserve any other fields from existing entry (like default-features)
-            if let Some(existing) = deps.get(name) {
-                if let Some(existing_table) = existing.as_inline_table() {
-                    for (key, value) in existing_table.iter() {
-                        if key != "version" && key != "path" {
-                            table.insert(key, value.clone());
+            // Check if existing entry has extra fields (besides version and path)
+            let has_extra_fields = if let Some(existing) = deps.get(name) {
+                if let Some(table) = existing.as_inline_table() {
+                    // Check if there are fields other than version and path
+                    table.iter().any(|(k, _)| k != "version" && k != "path")
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+
+            if has_extra_fields {
+                // Build inline table with version and preserved extra fields (but NOT path)
+                let mut table = InlineTable::new();
+                table.insert("version", Value::from(info.version.as_str()));
+
+                if let Some(existing) = deps.get(name) {
+                    if let Some(existing_table) = existing.as_inline_table() {
+                        for (key, value) in existing_table.iter() {
+                            if key != "version" && key != "path" {
+                                table.insert(key, value.clone());
+                            }
                         }
                     }
                 }
+
+                deps.insert(name, Item::Value(Value::InlineTable(table)));
+            } else {
+                // Simple string version (no extra fields, no path needed)
+                deps.insert(name, value(info.version.clone()));
             }
 
-            deps.insert(name, Item::Value(Value::InlineTable(table)));
             synced += 1;
         }
     }
