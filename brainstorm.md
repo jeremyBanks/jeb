@@ -21,7 +21,7 @@
 17. 📌 Our normalization script needs to strictly enforce that all path dependencies (within our workspace) specify the same version as is actually specified in the crate's file, because that needs to match to be able to publish correctly (in most cases that will be .workspace=true so we'll need to make sure we resolve that correctly)
    1. We can use [patch.crates-io] my_lib = { path = "crates/my_lib" } in the workspace to allow the crate files to avoid specifying paths, so they work on their own
 18. 📌 Reference: https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#using-patch-with-multiple-versions
-19. 📌 Agent: When there are multiple non-agent topics (list items or paragraphs) in a message, they should be displayed in the summary as nested bullets
+19. Agent: When there are multiple non-agent topics (list items or paragraphs) in a message, they should be displayed in the summary as nested bullets
 20. 📌 Since the actual name doesn't matter for overrides if we specify package=, let's always specify with a standardized naming convention
    1. Format: __serde__0_1_8_beta_3 (real name then __ before each dot, and each non-numeric character of the version replaced with an underscore)
 21. In my local environment define a task or skill which fetches this branch to see my recent notes
@@ -33,7 +33,7 @@
 25. 📌 jeb-git-core lib, jeb-git bin importing git-zoom and save which are both lib and bin and depend on core
 26. Agent: Pin message 25; remove headers from output; show single nested list with pinned messages marked with 📌 before number
 27. We are normalizing lock files and stuff; it depends on versions being available, so we have to stop bumping the version as part of the release process—it needs to be a separate thing
-28. Manually zoom in and zoom out and see if it produces reasonable results before deciding whether to move forward
+28. 📌 Manually zoom in and zoom out and see if it produces reasonable results before deciding whether to move forward
 29. 📌 Cargo publish can make a version of the cargo.toml that's normalized canonically, so we'll use that plus a new cargo build with the existing lock file to produce our pared down lock file—make sure to share target directory!
    1. And maybe we also need to normalize the .gitignore… that may be trickier. We may not try.
 30. Agent: Pin message 29 (the Cargo publish topic)
