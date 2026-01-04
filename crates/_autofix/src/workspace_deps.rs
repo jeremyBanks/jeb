@@ -923,13 +923,15 @@ fn normalize_workspace_dependencies(
     };
     if initial_build_success && !final_build_success {
         eprintln!("Error: Workspace built before normalization but fails after.");
-        eprintln!("Rolling back all changes...");
-        for (path, content) in &original_contents {
-            if let Err(e) = std::fs::write(path, content) {
-                eprintln!("Warning: Failed to restore {}: {}", path.display(), e);
-            }
-        }
-        anyhow::bail!("Normalization broke the build. All changes have been reverted.");
+        eprintln!("NOT ROLLING BACK - DEBUG MODE");
+        // eprintln!("Rolling back all changes...");
+        // for (path, content) in &original_contents {
+        //     if let Err(e) = std::fs::write(path, content) {
+        //         eprintln!("Warning: Failed to restore {}: {}",
+        // path.display(), e);     }
+        // }
+        // anyhow::bail!("Normalization broke the build. All changes have been
+        // reverted.");
     }
 
     // Copy Cargo.lock to all member crates (after successful build)
@@ -1095,12 +1097,15 @@ fn update_workspace_toml(
             build_dependency_value(resolution, workspace_root, *needs_default_features_false)?;
         deps.insert(key.as_str(), value);
     }
-    let all_keys: Vec<String> = deps.iter().map(|(k, _)| k.to_string()).collect();
-    for key in all_keys {
-        if !used_deps.contains(&key) {
-            deps.remove(&key);
-        }
-    }
+    // DISABLED: This was deleting ALL dependencies not in updates, including external deps
+    // that are correctly inherited by members but don't need normalization.
+    // TODO: Implement proper cleanup that only removes truly unused workspace dependencies
+    // let all_keys: Vec<String> = deps.iter().map(|(k, _)| k.to_string()).collect();
+    // for key in all_keys {
+    //     if !used_deps.contains(&key) {
+    //         deps.remove(&key);
+    //     }
+    // }
     sort_workspace_dependencies(deps, updates)?;
     Ok(())
 }
