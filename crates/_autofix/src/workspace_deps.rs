@@ -1183,22 +1183,29 @@ fn add_workspace_crate_versions(
         .context("dependencies is not a table")?;
 
     for (name, info) in workspace_crates {
-        // Check if already exists with correct version
-        let existing_version = deps.get(name).and_then(|v| {
-            if let Some(s) = v.as_str() {
-                Some(s.to_string())
-            } else if let Some(table) = v.as_inline_table() {
-                table
+        // Check if entry exists
+        if let Some(existing) = deps.get_mut(name) {
+            // Update existing entry to add/update version field
+            if let Some(table) = existing.as_inline_table_mut() {
+                let existing_version = table
                     .get("version")
                     .and_then(|v| v.as_str())
-                    .map(String::from)
-            } else {
-                None
-            }
-        });
+                    .map(String::from);
 
-        if existing_version.as_ref() != Some(&info.version) {
-            // Add or update with simple version string
+                if existing_version.as_ref() != Some(&info.version) {
+                    table.insert("version", Value::from(info.version.as_str()));
+                    synced += 1;
+                }
+            } else if existing.as_str().is_some() {
+                // Convert simple string to inline table with version
+                let mut table = InlineTable::new();
+                table.insert("version", Value::from(info.version.as_str()));
+                *existing = Item::Value(Value::InlineTable(table));
+                synced += 1;
+            }
+        } else {
+            // Entry doesn't exist - add new entry with just version
+            // (path will be handled by [patch.crates-io])
             deps.insert(name, value(info.version.clone()));
             synced += 1;
         }
