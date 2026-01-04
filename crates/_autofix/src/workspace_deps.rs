@@ -1097,11 +1097,11 @@ fn update_workspace_toml(
             build_dependency_value(resolution, workspace_root, *needs_default_features_false)?;
         deps.insert(key.as_str(), value);
     }
-    // DISABLED: This was deleting ALL dependencies not in updates, including external deps
-    // that are correctly inherited by members but don't need normalization.
-    // TODO: Implement proper cleanup that only removes truly unused workspace dependencies
-    // let all_keys: Vec<String> = deps.iter().map(|(k, _)| k.to_string()).collect();
-    // for key in all_keys {
+    // DISABLED: This was deleting ALL dependencies not in updates, including
+    // external deps that are correctly inherited by members but don't need
+    // normalization. TODO: Implement proper cleanup that only removes truly
+    // unused workspace dependencies let all_keys: Vec<String> =
+    // deps.iter().map(|(k, _)| k.to_string()).collect(); for key in all_keys {
     //     if !used_deps.contains(&key) {
     //         deps.remove(&key);
     //     }
