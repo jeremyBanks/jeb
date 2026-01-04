@@ -1119,6 +1119,161 @@ fn sort_patch_crates_io(table: &mut dyn toml_edit::TableLike) -> Result<()> {
 
     Ok(())
 }
+/// Helper to get normalized name for sorting (- and _ treated as same)
+fn normalized_name_for_sort(name: &str) -> (String, String) {
+    let normalized = name.to_lowercase().replace('-', "_");
+    (normalized, name.to_string())
+}
+/// Sort member dependency sections ([dependencies], [dev-dependencies], [build-dependencies])
+fn sort_member_dependencies(
+    doc: &mut DocumentMut,
+    member_package_name: &str,
+    workspace_crate_names: &HashSet<String>,
+) -> Result<()> {
+    for section in &["dependencies", "dev-dependencies", "build-dependencies"] {
+        if let Some(deps_table) = doc.get_mut(section).and_then(|s| s.as_table_mut()) {
+            let mut entries: Vec<(String, Item)> = deps_table
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.clone()))
+                .collect();
+
+            entries.sort_by(|a, b| {
+                // Build category list for each dependency
+                let mut cats_a = Vec::new();
+                let mut cats_b = Vec::new();
+
+                // Helper to check if uses workspace = true
+                let uses_workspace = |item: &Item| {
+                    item.as_inline_table()
+                        .and_then(|t| t.get("workspace"))
+                        .and_then(|v| v.as_bool())
+                        == Some(true)
+                };
+
+                // Helper to check if has optional = true
+                let is_optional = |item: &Item| {
+                    item.as_inline_table()
+                        .and_then(|t| t.get("optional"))
+                        .and_then(|v| v.as_bool())
+                        == Some(true)
+                };
+
+                // Helper to check if has git field
+                let has_git = |item: &Item| {
+                    item.as_inline_table()
+                        .and_then(|t| t.get("git"))
+                        .is_some()
+                };
+
+                // Helper to check if has extra fields
+                let has_extra_fields = |item: &Item| {
+                    if let Some(table) = item.as_inline_table() {
+                        for key in table.iter().map(|(k, _)| k) {
+                            if key != "workspace" && key != "features" && key != "default-features" {
+                                return true;
+                            }
+                        }
+                    }
+                    false
+                };
+
+                // Category 1: Self-dependency
+                if a.0 == member_package_name {
+                    cats_a.push(1);
+                }
+                if b.0 == member_package_name {
+                    cats_b.push(1);
+                }
+
+                // Category 2: NOT using workspace = true
+                if !uses_workspace(&a.1) {
+                    cats_a.push(2);
+                }
+                if !uses_workspace(&b.1) {
+                    cats_b.push(2);
+                }
+
+                // Category 3: Internal crates (workspace crates starting with _)
+                if workspace_crate_names.contains(&a.0) && a.0.starts_with('_') {
+                    cats_a.push(3);
+                }
+                if workspace_crate_names.contains(&b.0) && b.0.starts_with('_') {
+                    cats_b.push(3);
+                }
+
+                // Category 4: Other workspace crates
+                if workspace_crate_names.contains(&a.0) && !a.0.starts_with('_') {
+                    cats_a.push(4);
+                }
+                if workspace_crate_names.contains(&b.0) && !b.0.starts_with('_') {
+                    cats_b.push(4);
+                }
+
+                // Category 5: Git dependencies
+                if has_git(&a.1) {
+                    cats_a.push(5);
+                }
+                if has_git(&b.1) {
+                    cats_b.push(5);
+                }
+
+                // Category 6: Using workspace = true
+                if uses_workspace(&a.1) {
+                    cats_a.push(6);
+                }
+                if uses_workspace(&b.1) {
+                    cats_b.push(6);
+                }
+
+                // Category 7: Has extra fields
+                if has_extra_fields(&a.1) {
+                    cats_a.push(7);
+                }
+                if has_extra_fields(&b.1) {
+                    cats_b.push(7);
+                }
+
+                // Category 8: Optional (at bottom)
+                if is_optional(&a.1) {
+                    cats_a.push(8);
+                }
+                if is_optional(&b.1) {
+                    cats_b.push(8);
+                }
+
+                // Pad with MAX for comparison (more categories = earlier)
+                while cats_a.len() < 8 {
+                    cats_a.push(usize::MAX);
+                }
+                while cats_b.len() < 8 {
+                    cats_b.push(usize::MAX);
+                }
+
+                // Compare category lists
+                let cat_cmp = cats_a.cmp(&cats_b);
+                if cat_cmp != std::cmp::Ordering::Equal {
+                    return cat_cmp;
+                }
+
+                // Final tiebreaker: normalized name, then original name
+                let (norm_a, orig_a) = normalized_name_for_sort(&a.0);
+                let (norm_b, orig_b) = normalized_name_for_sort(&b.0);
+                norm_a.cmp(&norm_b).then_with(|| orig_a.cmp(&orig_b))
+            });
+
+            // Remove all and re-insert in sorted order (preserves formatting)
+            let keys: Vec<String> = deps_table.iter().map(|(k, _)| k.to_string()).collect();
+            for key in keys {
+                deps_table.remove(&key);
+            }
+            for (key, value) in entries {
+                deps_table.insert(&key, value);
+            }
+        }
+    }
+
+    Ok(())
+}
 fn build_dependency_value(
     resolution: &ResolutionFields,
     workspace_root: &Path,
