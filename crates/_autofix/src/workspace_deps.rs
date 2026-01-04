@@ -310,6 +310,16 @@ struct ConfigFields {
     features: Option<Vec<String>>,
     default_features: Option<bool>,
 }
+/// Information about a workspace crate (for [patch.crates-io] and version syncing)
+#[derive(Debug, Clone)]
+struct WorkspaceCrateInfo {
+    /// Package name from [package].name
+    name: String,
+    /// Version from [package].version (resolved if workspace-inherited)
+    version: String,
+    /// Relative path from workspace root
+    relative_path: String,
+}
 impl ResolutionFields {
     /// Check if two resolution fields are equal except for version
     /// compatibility
