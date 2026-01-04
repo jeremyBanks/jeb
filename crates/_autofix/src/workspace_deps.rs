@@ -1093,9 +1093,20 @@ fn update_workspace_toml(
     let mut used_deps: HashSet<String> = HashSet::new();
     for (key, (resolution, _dep_name, needs_default_features_false, _ws_features)) in updates {
         used_deps.insert(key.clone());
-        let value =
-            build_dependency_value(resolution, workspace_root, *needs_default_features_false)?;
-        deps.insert(key.as_str(), value);
+        // Only update if the entry needs changing
+        // Check if existing entry matches the resolution
+        let needs_update = if let Some(existing) = deps.get(key.as_str()) {
+            let existing_resolution = parse_resolution_from_value(existing).ok();
+            existing_resolution.as_ref() != Some(resolution)
+        } else {
+            true // Entry doesn't exist, needs to be added
+        };
+
+        if needs_update {
+            let value =
+                build_dependency_value(resolution, workspace_root, *needs_default_features_false)?;
+            deps.insert(key.as_str(), value);
+        }
     }
     // DISABLED: This was deleting ALL dependencies not in updates, including
     // external deps that are correctly inherited by members but don't need
