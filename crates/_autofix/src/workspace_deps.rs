@@ -1051,6 +1051,49 @@ fn update_patch_crates_io(
 
     Ok((added, updated, removed))
 }
+/// Add workspace crate versions to [workspace.dependencies]
+/// Returns the number of versions synced (updated or added)
+fn add_workspace_crate_versions(
+    doc: &mut DocumentMut,
+    workspace_crates: &HashMap<String, WorkspaceCrateInfo>,
+) -> Result<usize> {
+    let mut synced = 0;
+
+    // Get or create [workspace.dependencies]
+    if doc.get("workspace").is_none() {
+        doc["workspace"] = toml_edit::table();
+    }
+    let workspace = doc["workspace"]
+        .as_table_mut()
+        .context("workspace is not a table")?;
+    if workspace.get("dependencies").is_none() {
+        workspace["dependencies"] = toml_edit::table();
+    }
+    let deps = workspace["dependencies"]
+        .as_table_mut()
+        .context("dependencies is not a table")?;
+
+    for (name, info) in workspace_crates {
+        // Check if already exists with correct version
+        let existing_version = deps.get(name).and_then(|v| {
+            if let Some(s) = v.as_str() {
+                Some(s.to_string())
+            } else if let Some(table) = v.as_inline_table() {
+                table.get("version").and_then(|v| v.as_str()).map(String::from)
+            } else {
+                None
+            }
+        });
+
+        if existing_version.as_ref() != Some(&info.version) {
+            // Add or update with simple version string
+            deps.insert(name, value(info.version.clone()));
+            synced += 1;
+        }
+    }
+
+    Ok(synced)
+}
 /// Sort [patch.crates-io] entries alphabetically
 fn sort_patch_crates_io(table: &mut dyn toml_edit::TableLike) -> Result<()> {
     let mut entries: Vec<(String, Item)> = table
