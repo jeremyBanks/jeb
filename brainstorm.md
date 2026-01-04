@@ -70,3 +70,4 @@
 47. Stream that takes two inputs and only emits when they differ, or maybe if we can assume sorted then more specifically when present in one but not the other
 48. Prefer to resolve merges while zoomed out so if you are going to merge a zoomed in a non-zoomed branch, you should sync the changes over to the merge side and do the canonical resolution there
 49. Agent: If you get a conflict when attempting to pull upstream, you should merge, NEVER force. If there are conflicts, create new nested message ids for each conflict
+50. https://docs.rs/shlex/latest/shlex/ may make us redundant.

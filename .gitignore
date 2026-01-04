@@ -1,4 +1,0 @@
-*.pdb
-*.rs.bk
-**/mutants.out*/
-/target
