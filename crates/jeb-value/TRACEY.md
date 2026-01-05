@@ -243,9 +243,25 @@ a type (which we'll refer to as a "variant type") of the same name.
 
 ### Traits (`jeb-value.value.traits.`)
 
-r[jeb-value.value.traits.cmp]
-`jeb_value::Value` MUST implement `Eq`, `PartialEq`, `Ord`, `PartialOrd`, and
-`Hash`, with correct non-panicking behavior for all possible values.
+r[jeb-value.value.traits.eq]
+`jeb_value::Value` MUST implement `Eq` with correct non-panicking behavior for
+all possible values.
+
+r[jeb-value.value.traits.partial-eq]
+`jeb_value::Value` MUST implement `PartialEq` with correct non-panicking
+behavior for all possible values.
+
+r[jeb-value.value.traits.ord]
+`jeb_value::Value` MUST implement `Ord` with correct non-panicking behavior for
+all possible values.
+
+r[jeb-value.value.traits.partial-ord]
+`jeb_value::Value` MUST implement `PartialOrd` with correct non-panicking
+behavior for all possible values.
+
+r[jeb-value.value.traits.hash]
+`jeb_value::Value` MUST implement `Hash` with correct non-panicking behavior for
+all possible values.
 
 r[jeb-value.value.traits.clone]
 `jeb_value::Value` MUST implement `Clone`.
@@ -353,9 +369,25 @@ parameters).
 r[jeb-value.variant.common.transparent]
 Each variant type MUST be marked `#[repr(transparent)]`.
 
-r[jeb-value.variant.common.cmp]
-Each variant type MUST implement `Eq`, `PartialEq`, `Ord`, `PartialOrd`, and
-`Hash`, with correct non-panicking behavior for all possible values.
+r[jeb-value.variant.common.eq]
+Each variant type MUST implement `Eq` with correct non-panicking behavior for
+all possible values.
+
+r[jeb-value.variant.common.partial-eq]
+Each variant type MUST implement `PartialEq` with correct non-panicking behavior
+for all possible values.
+
+r[jeb-value.variant.common.ord]
+Each variant type MUST implement `Ord` with correct non-panicking behavior for
+all possible values.
+
+r[jeb-value.variant.common.partial-ord]
+Each variant type MUST implement `PartialOrd` with correct non-panicking
+behavior for all possible values.
+
+r[jeb-value.variant.common.hash]
+Each variant type MUST implement `Hash` with correct non-panicking behavior for
+all possible values.
 
 r[jeb-value.variant.common.cmp-delegate-variants]
 When comparing two `jeb_value::Value` instances containing the same variant
@@ -367,10 +399,29 @@ When comparing two `jeb_value::Value` instances of different variant types, they
 MUST NOT be equal and MUST follow the order: Null, Boolean, Number, Bytes,
 String, Array, BytesMap, StringMap.
 
-r[jeb-value.variant.common.cmp-delegate-inner]
-When comparing two instances of a variant type, the comparison MUST delegate to
-the inner type's comparison implementations unless specified otherwise for that
-variant type, for all of `Eq`, `PartialEq`, `Ord`, `PartialOrd`, and `Hash`.
+r[jeb-value.variant.common.eq-delegate-inner]
+When comparing two instances of a variant type for equality, `Eq` MUST delegate
+to the inner type's `Eq` implementation unless specified otherwise for that
+variant type.
+
+r[jeb-value.variant.common.partial-eq-delegate-inner]
+When comparing two instances of a variant type for equality, `PartialEq` MUST
+delegate to the inner type's `PartialEq` implementation unless specified
+otherwise for that variant type.
+
+r[jeb-value.variant.common.ord-delegate-inner]
+When comparing two instances of a variant type for ordering, `Ord` MUST delegate
+to the inner type's `Ord` implementation unless specified otherwise for that
+variant type.
+
+r[jeb-value.variant.common.partial-ord-delegate-inner]
+When comparing two instances of a variant type for ordering, `PartialOrd` MUST
+delegate to the inner type's `PartialOrd` implementation unless specified
+otherwise for that variant type.
+
+r[jeb-value.variant.common.hash-delegate-inner]
+When hashing a variant type, `Hash` MUST delegate to the inner type's `Hash`
+implementation unless specified otherwise for that variant type.
 
 r[jeb-value.variant.common.borrow]
 Each variant type MUST implement `Borrow<INNER>` if its comparison
@@ -475,12 +526,30 @@ provided `f64` is not finite.
 r[jeb-value.number.no-from-inner]
 `jeb_value::Number` MUST NOT implement `From<f64>`.
 
-r[jeb-value.number.cmp]
+r[jeb-value.number.cmp-no-delegate]
 `jeb_value::Number`'s implementations of `Eq`, `PartialEq`, `Ord`, `PartialOrd`,
-and `Hash` MUST NOT delegate to the inner `f64` type, but MUST instead delegate
-comparison and equality to `f64::total_cmp` and MUST delegate the `Hash`
-implementation to the result of `.to_be_bytes()`. This ensures a total ordering
-and distinct hashing for all possible `f64` values.
+and `Hash` MUST NOT delegate directly to the inner `f64` type's trait
+implementations.
+
+r[jeb-value.number.eq-total-cmp]
+`jeb_value::Number`'s `Eq` implementation MUST delegate comparison to
+`f64::total_cmp`. This ensures a total ordering for all possible `f64` values.
+
+r[jeb-value.number.partial-eq-total-cmp]
+`jeb_value::Number`'s `PartialEq` implementation MUST delegate comparison to
+`f64::total_cmp`. This ensures a total ordering for all possible `f64` values.
+
+r[jeb-value.number.ord-total-cmp]
+`jeb_value::Number`'s `Ord` implementation MUST delegate comparison to
+`f64::total_cmp`. This ensures a total ordering for all possible `f64` values.
+
+r[jeb-value.number.partial-ord-total-cmp]
+`jeb_value::Number`'s `PartialOrd` implementation MUST delegate comparison to
+`f64::total_cmp`. This ensures a total ordering for all possible `f64` values.
+
+r[jeb-value.number.hash-to-be-bytes]
+`jeb_value::Number`'s `Hash` implementation MUST delegate to the result of
+`.to_be_bytes()`. This ensures distinct hashing for all possible `f64` values.
 
 ## Bytes (`jeb-value.bytes.`)
 
