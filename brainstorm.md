@@ -98,3 +98,4 @@
 71. Release include rust tool chain file with precise release version then revert to less generic in post-release commit
 72. Have a post release commit
 73. Name it amend
+74. Maybe each time a thread local is dropped we do it and also atexit maybe
