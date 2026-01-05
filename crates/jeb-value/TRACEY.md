@@ -467,10 +467,44 @@ r[jeb-value.null.must-use]
 r[jeb-value.null.from-inner]
 `jeb_value::Null` MUST implement `From<()>`.
 
-r[jeb-value.null.try-from-primitive]
-`jeb_value::Null` MUST implement `TryFrom<T>` where `T` is any of `bool` (with
-only `false` being accepted), `f32` and `f64` (with only `+0.0` being accepted),
-and all integer types (with only `0` being accepted).
+r[jeb-value.null.try-from-bool]
+`jeb_value::Null` MUST implement `TryFrom<bool>`, accepting only `false`.
+
+r[jeb-value.null.try-from-f32]
+`jeb_value::Null` MUST implement `TryFrom<f32>`, accepting only `+0.0`.
+
+r[jeb-value.null.try-from-f64]
+`jeb_value::Null` MUST implement `TryFrom<f64>`, accepting only `+0.0`.
+
+r[jeb-value.null.try-from-i8]
+`jeb_value::Null` MUST implement `TryFrom<i8>`, accepting only `0`.
+
+r[jeb-value.null.try-from-i16]
+`jeb_value::Null` MUST implement `TryFrom<i16>`, accepting only `0`.
+
+r[jeb-value.null.try-from-i32]
+`jeb_value::Null` MUST implement `TryFrom<i32>`, accepting only `0`.
+
+r[jeb-value.null.try-from-i64]
+`jeb_value::Null` MUST implement `TryFrom<i64>`, accepting only `0`.
+
+r[jeb-value.null.try-from-i128]
+`jeb_value::Null` MUST implement `TryFrom<i128>`, accepting only `0`.
+
+r[jeb-value.null.try-from-u8]
+`jeb_value::Null` MUST implement `TryFrom<u8>`, accepting only `0`.
+
+r[jeb-value.null.try-from-u16]
+`jeb_value::Null` MUST implement `TryFrom<u16>`, accepting only `0`.
+
+r[jeb-value.null.try-from-u32]
+`jeb_value::Null` MUST implement `TryFrom<u32>`, accepting only `0`.
+
+r[jeb-value.null.try-from-u64]
+`jeb_value::Null` MUST implement `TryFrom<u64>`, accepting only `0`.
+
+r[jeb-value.null.try-from-u128]
+`jeb_value::Null` MUST implement `TryFrom<u128>`, accepting only `0`.
 
 r[jeb-value.null.try-from-vec]
 `jeb_value::Null` MUST implement `TryFrom<Vec<T>>` (where T is _unconstrained_)
@@ -480,10 +514,55 @@ r[jeb-value.null.try-from-indexmap]
 `jeb_value::Null` MUST implement `TryFrom<IndexMap<K, V>>` (where K and V are
 _unconstrained_) with only the empty map being accepted.
 
-r[jeb-value.null.primitive-from]
-All of the primitive types `()`, `bool`, `f32`, `f64`, and all integer types,
-and `Vec<T>` and `IndexMap<K, V>` (where T, K, and V are unconstrained) MUST
-implement `From<jeb_value::Null>`, mapping to their respective default values.
+r[jeb-value.null.into-unit]
+The unit type `()` MUST implement `From<jeb_value::Null>`.
+
+r[jeb-value.null.into-bool]
+`bool` MUST implement `From<jeb_value::Null>`, mapping to `false`.
+
+r[jeb-value.null.into-f32]
+`f32` MUST implement `From<jeb_value::Null>`, mapping to `0.0`.
+
+r[jeb-value.null.into-f64]
+`f64` MUST implement `From<jeb_value::Null>`, mapping to `0.0`.
+
+r[jeb-value.null.into-i8]
+`i8` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-i16]
+`i16` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-i32]
+`i32` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-i64]
+`i64` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-i128]
+`i128` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-u8]
+`u8` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-u16]
+`u16` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-u32]
+`u32` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-u64]
+`u64` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-u128]
+`u128` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-vec]
+`Vec<T>` (where T is unconstrained) MUST implement `From<jeb_value::Null>`,
+mapping to an empty vector.
+
+r[jeb-value.null.into-indexmap]
+`IndexMap<K, V>` (where K and V are unconstrained) MUST implement
+`From<jeb_value::Null>`, mapping to an empty map.
 
 ## Boolean (`jeb-value.boolean.`)
 
@@ -497,10 +576,53 @@ r[jeb-value.boolean.from-inner]
 r[jeb-value.boolean.from-false]
 `jeb_value::Boolean` MUST implement `From<()>` (mapping to `false`).
 
-r[jeb-value.boolean.try-from-primitive]
-`jeb_value::Boolean` MUST implement `TryFrom<T>` where `T` is any of `f32` and
-`f64`, and all integer types, with (positive) zero being false, positive one
-being true, and all other values being rejected.
+r[jeb-value.boolean.try-from-f32]
+`jeb_value::Boolean` MUST implement `TryFrom<f32>`, with `+0.0` mapping to
+false, `1.0` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-f64]
+`jeb_value::Boolean` MUST implement `TryFrom<f64>`, with `+0.0` mapping to
+false, `1.0` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-i8]
+`jeb_value::Boolean` MUST implement `TryFrom<i8>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-i16]
+`jeb_value::Boolean` MUST implement `TryFrom<i16>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-i32]
+`jeb_value::Boolean` MUST implement `TryFrom<i32>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-i64]
+`jeb_value::Boolean` MUST implement `TryFrom<i64>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-i128]
+`jeb_value::Boolean` MUST implement `TryFrom<i128>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-u8]
+`jeb_value::Boolean` MUST implement `TryFrom<u8>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-u16]
+`jeb_value::Boolean` MUST implement `TryFrom<u16>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-u32]
+`jeb_value::Boolean` MUST implement `TryFrom<u32>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-u64]
+`jeb_value::Boolean` MUST implement `TryFrom<u64>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-u128]
+`jeb_value::Boolean` MUST implement `TryFrom<u128>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
 
 ## Number (`jeb-value.number.`)
 
@@ -569,11 +691,65 @@ r[jeb-value.bytes.from-iterator]
 r[jeb-value.bytes.from-slice-iterator]
 `jeb_value::Bytes` MUST implement `FromIterator<&[u8]>`.
 
-r[jeb-value.bytes.from-primitive]
-`jeb_value::Bytes` MUST implement `From<T>` for all of primitive types `()`,
-`bool`, `f32`, `f64`, `char` and all integer types. The unit type MUST map to an
-empty byte string, `false` to a single zero byte, `true` to a single byte with
-value `0x01`, and all numeric types to their big-endian byte representations.
+r[jeb-value.bytes.from-unit]
+`jeb_value::Bytes` MUST implement `From<()>`, mapping the unit type to an empty
+byte string.
+
+r[jeb-value.bytes.from-bool]
+`jeb_value::Bytes` MUST implement `From<bool>`, with `false` mapping to a single
+zero byte and `true` mapping to a single byte with value `0x01`.
+
+r[jeb-value.bytes.from-char]
+`jeb_value::Bytes` MUST implement `From<char>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-f32]
+`jeb_value::Bytes` MUST implement `From<f32>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-f64]
+`jeb_value::Bytes` MUST implement `From<f64>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-i8]
+`jeb_value::Bytes` MUST implement `From<i8>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-i16]
+`jeb_value::Bytes` MUST implement `From<i16>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-i32]
+`jeb_value::Bytes` MUST implement `From<i32>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-i64]
+`jeb_value::Bytes` MUST implement `From<i64>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-i128]
+`jeb_value::Bytes` MUST implement `From<i128>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-u8]
+`jeb_value::Bytes` MUST implement `From<u8>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-u16]
+`jeb_value::Bytes` MUST implement `From<u16>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-u32]
+`jeb_value::Bytes` MUST implement `From<u32>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-u64]
+`jeb_value::Bytes` MUST implement `From<u64>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-u128]
+`jeb_value::Bytes` MUST implement `From<u128>`, mapping to its big-endian byte
+representation.
 
 ### Bytes-String Bijective Encoding (`jeb-value.bytes.encoding.`)
 
