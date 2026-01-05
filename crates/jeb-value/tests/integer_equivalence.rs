@@ -168,7 +168,7 @@ fn test_edge_case_stable_sort() {
     match &vals[4] {
         Value::Float(f) if f.is_sign_negative() && **f == 0.0 => {}
         _ => panic!("Expected Float(-0.0) at position 4, got {:?}", vals[4]),
-        // [verify jeb-value.number.cmp]
+        // [verify jeb-value.number.ord-total-cmp]
     }
     match &vals[5] {
         Value::Float(f) if f.is_sign_positive() && **f == 0.0 => {}
