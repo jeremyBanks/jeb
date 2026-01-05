@@ -86,3 +86,4 @@
 59. A way to more effectively handoff state, including branches, but also worker state agent state between devices virtual machine machines could be useful for development, potentially at work
 60. 📌 Use a real property based testing framework, this seems vitally useful. Here's one suggestion that we might read but we just need something simple: https://lpalmieri.com/posts/an-introduction-to-property-based-testing-in-rust/
 61. ref mut for inline literal variables
+62. I really need to go deep on property based testing
