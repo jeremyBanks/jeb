@@ -1,7 +1,11 @@
-use std::env;
-use std::fs;
-use tempfile::TempDir;
-use jeb_literal::LiteralPrivate;
+use {
+    jeb_literal::LiteralPrivate,
+    std::{
+        env,
+        fs,
+    },
+    tempfile::TempDir,
+};
 
 #[test]
 fn test_line_number_stability_with_multiple_litters() {

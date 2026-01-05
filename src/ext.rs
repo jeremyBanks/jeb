@@ -1,25 +1,33 @@
 //! Extension traits and utilities for `Literal<T>`.
 //!
-//! This module provides traits with methods that extend `Literal<T>` functionality
-//! without polluting the namespace of the inner type `T`.
+//! This module provides traits with methods that extend `Literal<T>`
+//! functionality without polluting the namespace of the inner type `T`.
 
-use crate::inline::Literal;
-use crate::literal::Value;
-use std::path::Path;
+use {
+    crate::{
+        inline::Literal,
+        literal::Value,
+    },
+    std::path::Path,
+};
 
 /// Extension methods for `Literal<T>` that require explicit import.
 ///
-/// These methods are available on `Literal<T>` but only when this trait is in scope.
-/// This prevents name collisions with methods on the inner type `T`.
+/// These methods are available on `Literal<T>` but only when this trait is in
+/// scope. This prevents name collisions with methods on the inner type `T`.
 ///
 /// # Example
 ///
 /// ```no_run
-/// use jeb_literal::{literal, LiteralExt};
+/// use jeb_literal::{
+///     LiteralExt,
+///     literal,
+/// };
 ///
 /// let mut x = literal!(42);
 /// x.literal = 100;
 /// x.flush()?; // Requires LiteralExt in scope
+///     
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub trait LiteralExt<T: Value + 'static> {
@@ -38,11 +46,15 @@ pub trait LiteralExt<T: Value + 'static> {
     /// # Example
     ///
     /// ```no_run
-    /// use jeb_literal::{literal, LiteralExt};
+    /// use jeb_literal::{
+    ///     LiteralExt,
+    ///     literal,
+    /// };
     ///
     /// let mut counter = literal!(0);
     /// counter.literal = 42;
     /// counter.flush()?; // Write immediately, don't wait for Drop
+    ///     
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     fn flush(&mut self) -> Result<(), Box<dyn std::error::Error>>;
@@ -54,30 +66,29 @@ pub trait LiteralExt<T: Value + 'static> {
 
     /// Get the source line number for this literal.
     ///
-    /// Returns the line number (1-indexed) where this literal appears in the source.
+    /// Returns the line number (1-indexed) where this literal appears in the
+    /// source.
     fn line(&self) -> u32;
 
     /// Get the source column number for this literal.
     ///
-    /// Returns the column number (0-indexed) where this literal appears in the source.
+    /// Returns the column number (0-indexed) where this literal appears in the
+    /// source.
     fn column(&self) -> u32;
 
     /// Get the stable index for this literal, if resolved.
     ///
-    /// Returns `Some(index)` if the literal's position has been resolved to a stable
-    /// index (Nth literal in the file). Returns `None` if the index hasn't been
-    /// resolved yet (e.g., for non-existent files in testing scenarios).
+    /// Returns `Some(index)` if the literal's position has been resolved to a
+    /// stable index (Nth literal in the file). Returns `None` if the index
+    /// hasn't been resolved yet (e.g., for non-existent files in testing
+    /// scenarios).
     fn index(&self) -> Option<usize>;
 }
 
 impl<T: Value + 'static> LiteralExt<T> for Literal<T> {
     fn flush(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         // Mark as dirty for tracking
-        crate::dirty::mark_dirty(
-            &self.guard.file,
-            self.guard.line,
-            self.guard.column,
-        );
+        crate::dirty::mark_dirty(&self.guard.file, self.guard.line, self.guard.column);
 
         // Get the mode and check if we should write
         let mode = crate::runtime::get_mode();
@@ -109,11 +120,7 @@ impl<T: Value + 'static> LiteralExt<T> for Literal<T> {
             self.guard.update_source(&self.literal)?;
 
             // Clear dirty flag after successful write
-            crate::dirty::clear_dirty(
-                &self.guard.file,
-                self.guard.line,
-                self.guard.column,
-            );
+            crate::dirty::clear_dirty(&self.guard.file, self.guard.line, self.guard.column);
         }
 
         Ok(())
@@ -150,6 +157,7 @@ impl<T: Value + 'static> LiteralExt<T> for Literal<T> {
 /// let mut x = literal!(42);
 /// x.literal = 100;
 /// jeb_literal::flush(&mut x)?; // No trait import needed
+///     
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn flush<T: Value + 'static>(

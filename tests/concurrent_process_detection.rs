@@ -1,4 +1,5 @@
-/// Test that we detect and panic on concurrent modifications from other processes
+/// Test that we detect and panic on concurrent modifications from other
+/// processes
 use std::fs;
 
 fn find_litter_positions(file_path: &std::path::Path) -> Vec<(u32, u32)> {
@@ -118,7 +119,8 @@ fn test_multiple_writes_without_external_modification() {
     jeb_literal::runtime::update_macro_by_index(&test_file, 0, tokens1).unwrap();
     jeb_literal::runtime::write_to_disk(&test_file).unwrap();
 
-    // Second write - should work because we track the disk state after the first write
+    // Second write - should work because we track the disk state after the first
+    // write
     let tokens2: proc_macro2::TokenStream = "200".parse().unwrap();
     jeb_literal::runtime::update_macro_by_index(&test_file, 0, tokens2).unwrap();
     jeb_literal::runtime::write_to_disk(&test_file).unwrap();

@@ -1,6 +1,10 @@
-use std::env;
-use std::fs;
-use tempfile::TempDir;
+use {
+    std::{
+        env,
+        fs,
+    },
+    tempfile::TempDir,
+};
 
 #[test]
 fn debug_litter_update() {

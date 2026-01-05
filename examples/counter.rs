@@ -1,6 +1,7 @@
 // Example: Self-modifying counter
 //
-// This program increments a counter each time it runs, updating its own source code.
+// This program increments a counter each time it runs, updating its own source
+// code.
 //
 // To run:
 // 1. Compile: rustc --edition 2021 -L ../target/debug/deps examples/counter.rs

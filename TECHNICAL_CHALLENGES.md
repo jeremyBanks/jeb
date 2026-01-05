@@ -3,14 +3,18 @@
 ## Challenge 1: Accurate Location Tracking
 
 ### The Problem
-We need to find the exact `inline!()` macro invocation in the AST using only `(file, line, column)` from `file!()`, `line!()`, `column!()` macros.
+
+We need to find the exact `inline!()` macro invocation in the AST using only
+`(file, line, column)` from `file!()`, `line!()`, `column!()` macros.
 
 ### Why It's Hard
+
 - `file!()` etc. give us the location of the macro invocation
 - `syn::parse_file()` parses source text into an AST
 - Spans in the parsed AST may or may not preserve original line/column info
 
 ### Solution
+
 Use `proc_macro2::Span` which preserves source locations:
 
 ```rust
@@ -32,12 +36,15 @@ impl VisitMut for MacroReplacer {
 ```
 
 ### Fallback Plan
+
 If spans don't work:
+
 1. Manually count lines and columns in source text
 2. Use byte offsets instead
 3. Add explicit IDs: `inline!(id = "counter", 0)`
 
 ### Validation Test
+
 ```rust
 #[test]
 fn verify_span_accuracy() {
@@ -52,17 +59,21 @@ fn verify_span_accuracy() {
 ## Challenge 2: Shared Mutable AST
 
 ### The Problem
+
 Multiple `Inline` instances in the same file need to:
+
 - Share the same parsed AST (to avoid reparsing)
 - Mutate it independently (to update different values)
 - Synchronize access (to prevent corruption)
 
 ### Why It's Hard
+
 - `Arc<FileState>` is shared but immutable
 - Can't get `&mut` to the AST when wrapped in Arc
 - Need interior mutability without UB
 
 ### Solution
+
 Use `RefCell` for interior mutability:
 
 ```rust
@@ -79,12 +90,15 @@ visitor.visit_file_mut(&mut *ast);        // Modify
 ```
 
 ### Risk
+
 `RefCell` panics if borrowing rules are violated at runtime. We prevent this by:
+
 1. Always holding the `Mutex` guard while borrowing
 2. Only one borrow_mut() at a time per file
 3. No holding references across function boundaries
 
 ### Alternative
+
 Instead of RefCell, use `parking_lot::RwLock`:
 
 ```rust
@@ -105,6 +119,7 @@ This might be cleaner - consider switching to this.
 ## Challenge 3: databake Output Format
 
 ### The Problem
+
 databake generates fully-qualified Rust code:
 
 ```rust
@@ -116,12 +131,15 @@ let baked = vec.bake(&CrateEnv::default());
 This is verbose and may not match the original format.
 
 ### Why It Might Not Matter
+
 - The code is correct and compiles
 - prettyplease will format it nicely
 - Self-modifying scripts don't need human-readable format
 
 ### If We Need To Fix It
+
 Options:
+
 1. Configure `CrateEnv` to use shorter paths
 2. Post-process the TokenStream to simplify paths
 3. Implement custom `Bake` impls with prettier output
@@ -134,15 +152,19 @@ For now: **accept verbose output**, revisit if it's a problem.
 ## Challenge 4: File State Invalidation
 
 ### The Problem
+
 The AST in memory becomes stale if:
+
 - File is edited externally (user edits in IDE)
 - Another process modifies the file
 - File is moved/renamed
 
 ### Why It's Hard
+
 We don't have filesystem watchers or inotify integration.
 
 ### Solution (Simple)
+
 **Don't cache indefinitely**. Options:
 
 1. **Reload on every update** (simple, but slow)
@@ -165,11 +187,13 @@ We don't have filesystem watchers or inotify integration.
    - Works for self-modifying scripts
 
 **Recommendation**: Start with option 3 (never reload), since:
+
 - Self-modifying scripts are single-process
 - External edits would break line numbers anyway
 - Can add reloading later if needed
 
 ### For Production
+
 Add a `reload()` method that users can call explicitly:
 
 ```rust
@@ -189,6 +213,7 @@ inline::reload_file(file!());  // Force reload before updates
 ## Challenge 5: Macro Invocation Context
 
 ### The Problem
+
 `inline!()` can appear in different contexts:
 
 ```rust
@@ -202,6 +227,7 @@ inline!(println!("hi"));          // StmtMacro
 Our visitor only handles `ExprMacro` currently.
 
 ### Solution
+
 Implement multiple visitor methods:
 
 ```rust
@@ -234,6 +260,7 @@ impl VisitMut for MacroReplacer {
 This handles both expression and statement contexts.
 
 ### Test
+
 ```rust
 #[test]
 fn test_stmt_macro() {
@@ -251,28 +278,35 @@ fn main() {
 ## Challenge 6: Type Erasure in Generic Inline<T>
 
 ### The Problem
+
 ```rust
 let x = inline!(42);  // What is T?
 ```
 
 Without type annotations, Rust infers `i32`. But we need to know the type to:
+
 - Serialize with databake
 - Verify type matches on reload
 
 ### Current Non-Issue
+
 For now, this isn't a problem because:
+
 - User specifies the type explicitly: `inline!(42u32)`
 - Or Rust infers it from usage: `let x: u32 = inline!(42);`
 - databake handles the types that have `Bake` implemented
 
 ### Future Issue
+
 If we want to support:
+
 ```rust
 let x = inline!(MyStruct { ... });
 // Later, how do we know it's MyStruct when parsing?
 ```
 
 We'd need to:
+
 1. Store type info in the macro: `inline!("MyStruct", MyStruct { ... })`
 2. Or parse the tokens and infer type from structure
 3. Or require type annotations always
@@ -284,7 +318,9 @@ We'd need to:
 ## Challenge 7: Formatting Stability
 
 ### The Problem
+
 After updates, prettyplease formats the code. This might:
+
 - Change indentation
 - Reorder imports
 - Modify spacing
@@ -292,7 +328,9 @@ After updates, prettyplease formats the code. This might:
 Users may not want their code reformatted.
 
 ### Example
+
 Original:
+
 ```rust
 fn main() {
     let x=inline!(42);    // weird spacing
@@ -300,6 +338,7 @@ fn main() {
 ```
 
 After update:
+
 ```rust
 fn main() {
     let x = inline!(100); // normalized spacing
@@ -327,6 +366,7 @@ fn main() {
 **Recommendation**: Start with option 1 (accept formatting).
 
 Rationale:
+
 - Self-modifying scripts are often auto-generated
 - Consistent formatting is usually desirable
 - Much simpler implementation
@@ -337,6 +377,7 @@ Rationale:
 ## Challenge 8: Error Recovery
 
 ### The Problem
+
 What if updating fails?
 
 ```rust
@@ -347,6 +388,7 @@ inline.set(new_value);
 The in-memory value is updated but file write failed.
 
 ### Solution
+
 Transactional updates:
 
 ```rust
@@ -387,6 +429,7 @@ pub fn set(&mut self, new_value: T) {
 ```
 
 **Recommendation**: Optimistic update with rollback.
+
 - Matches current API (no Result return)
 - Graceful degradation
 - Logs errors but doesn't panic
@@ -395,16 +438,16 @@ pub fn set(&mut self, new_value: T) {
 
 ## Summary of Decisions
 
-| Challenge | Solution | Confidence |
-|-----------|----------|------------|
-| Location tracking | Use proc_macro2 spans | High - standard approach |
-| Shared mutable AST | RefCell or RwLock | High - proven pattern |
-| databake format | Accept verbose output | Medium - may need tweaking |
-| File invalidation | Never reload | Medium - works for our use case |
-| Macro contexts | Handle Expr + Stmt | High - covers 99% of cases |
-| Type erasure | Explicit annotations | High - not an issue yet |
-| Formatting stability | Accept formatting changes | Medium - may need option later |
-| Error recovery | Optimistic with rollback | High - safe and simple |
+| Challenge            | Solution                  | Confidence                      |
+| -------------------- | ------------------------- | ------------------------------- |
+| Location tracking    | Use proc_macro2 spans     | High - standard approach        |
+| Shared mutable AST   | RefCell or RwLock         | High - proven pattern           |
+| databake format      | Accept verbose output     | Medium - may need tweaking      |
+| File invalidation    | Never reload              | Medium - works for our use case |
+| Macro contexts       | Handle Expr + Stmt        | High - covers 99% of cases      |
+| Type erasure         | Explicit annotations      | High - not an issue yet         |
+| Formatting stability | Accept formatting changes | Medium - may need option later  |
+| Error recovery       | Optimistic with rollback  | High - safe and simple          |
 
 ## Next Steps
 

@@ -4,7 +4,9 @@
 
 ## Overview
 
-jeb-literal lets you create values that can update themselves in your source code. This is an experimental approach to snapshot testing and self-modifying code in Rust.
+jeb-literal lets you create values that can update themselves in your source
+code. This is an experimental approach to snapshot testing and self-modifying
+code in Rust.
 
 ```rust
 use jeb_literal::literal;
@@ -62,9 +64,11 @@ value.literal = 100u32;
 
 ## Modes
 
-jeb-literal has four modes, controlled by the `LITERAL_MODE` environment variable:
+jeb-literal has four modes, controlled by the `LITERAL_MODE` environment
+variable:
 
-- **Write** (default outside tests when running under cargo): Changes are written back to source files
+- **Write** (default outside tests when running under cargo): Changes are
+  written back to source files
 - **Verify** (default in tests): Validates that values round-trip correctly
 - **Memory** (`LITERAL_MODE=memory`): Changes in memory only, no file writes
 - **Reject** (`LITERAL_MODE=reject`): Rejects any write attempts, always fails
@@ -88,13 +92,16 @@ cargo regenerate-test-literals
 cargo regenerate-test-literals -- --test-threads=1
 ```
 
-This is equivalent to `LITERAL_MODE=write cargo test` but easier to remember and type.
+This is equivalent to `LITERAL_MODE=write cargo test` but easier to remember and
+type.
 
 ## How It Works
 
 1. The `literal!()` macro captures the source location (file, line, column)
-2. Values implement the `Bake` trait from [databake](https://docs.rs/databake) for serialization
-3. The registry uses **index-based keys** (Nth literal in file) for stability across line insertions
+2. Values implement the `Bake` trait from [databake](https://docs.rs/databake)
+   for serialization
+3. The registry uses **index-based keys** (Nth literal in file) for stability
+   across line insertions
 4. When mutated (via `.literal =` field or `DerefMut`), jeb-literal:
    - Detects the change (using `PartialEq`)
    - Parses the source file
@@ -111,11 +118,13 @@ Any type implementing `Bake + Clone + PartialEq` works with jeb-literal:
 - Collections: `Vec<T>`, arrays, tuples
 - And more via databake's built-in implementations
 
-Note: `Clone` is required for write-on-drop functionality. Values are compared using `PartialEq` to detect changes; `Bake` is only used for serialization.
+Note: `Clone` is required for write-on-drop functionality. Values are compared
+using `PartialEq` to detect changes; `Bake` is only used for serialization.
 
 ### Extension Trait
 
-The `LiteralExt` trait provides additional methods without polluting the inner type's namespace:
+The `LiteralExt` trait provides additional methods without polluting the inner
+type's namespace:
 
 ```rust
 use jeb_literal::{literal, LiteralExt};
@@ -129,11 +138,16 @@ Methods: `flush()`, `path()`, `line()`, `column()`, `index()`.
 
 ### Future Ideas
 
-**Serde Compatibility**: Add support for any type implementing `Serialize + Deserialize`, expanding beyond databake's current type coverage.
+**Serde Compatibility**: Add support for any type implementing
+`Serialize + Deserialize`, expanding beyond databake's current type coverage.
 
-**Tooling Integration**: A `cargo-literal` command for reviewing and accepting snapshot changes interactively, similar to `git add -p`.
+**Tooling Integration**: A `cargo-literal` command for reviewing and accepting
+snapshot changes interactively, similar to `git add -p`.
 
-**File-Backed Literals**: Support external snapshot files for better organization and stability. This would provide stable identifiers independent of line numbers, but requires careful design around compile-time vs runtime tradeoffs.
+**File-Backed Literals**: Support external snapshot files for better
+organization and stability. This would provide stable identifiers independent of
+line numbers, but requires careful design around compile-time vs runtime
+tradeoffs.
 
 ## Examples
 
@@ -172,8 +186,10 @@ Note: This is an experimental library. Production use is not recommended.
 
 Tests are organized into two categories:
 
-- **Parallel-safe tests**: `concurrent_process_detection`, `multi_threaded` (don't use environment variables)
-- **Serial tests**: All tests with `_serial` in the filename (use environment variables)
+- **Parallel-safe tests**: `concurrent_process_detection`, `multi_threaded`
+  (don't use environment variables)
+- **Serial tests**: All tests with `_serial` in the filename (use environment
+  variables)
 
 Run all tests serially (recommended):
 
@@ -195,9 +211,13 @@ cargo test --test integration_serial_test -- --test-threads=1
 
 ## License
 
-`jeb-literal` is Copyright Jeremy Banks, released under the familiar choice of `MIT OR Apache-2.0`.
+`jeb-literal` is Copyright Jeremy Banks, released under the familiar choice of
+`MIT OR Apache-2.0`.
 
-This is heavily based on [the `expect-test` library](https://docs.rs/expect-test), which is also under `MIT OR Apache-2.0` and is Copyright the rust-analyzer developers, including Aleksey Kladov and Dylan MacKenzie.
+This is heavily based on
+[the `expect-test` library](https://docs.rs/expect-test), which is also under
+`MIT OR Apache-2.0` and is Copyright the rust-analyzer developers, including
+Aleksey Kladov and Dylan MacKenzie.
 
 ## Related Work
 
