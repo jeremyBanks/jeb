@@ -97,3 +97,4 @@
 70. sccache in release artifacts
 71. Release include rust tool chain file with precise release version then revert to less generic in post-release commit
    1. Have a post release commit
+   2. Name it amend
