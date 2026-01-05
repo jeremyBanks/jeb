@@ -89,3 +89,4 @@
 62. I really need to go deep on property based testing
 63. Property based testing around git-snapshots?
 64. What if it's never dropped? Atexit?
+65. Teleport to worktrees
