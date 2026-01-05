@@ -91,3 +91,4 @@
 64. What if it's never dropped? Atexit?
 65. Teleport to worktrees
 66. zoom into repo by url or path in examples - implicit fetch?
+67. https://github.com/electrikmilk/cherri shortcuts programming language, maybe goes well with pushcut, although setting up automation is still awful
