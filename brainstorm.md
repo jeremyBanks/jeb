@@ -93,3 +93,4 @@
 66. zoom into repo by url or path in examples - implicit fetch?
 67. https://github.com/electrikmilk/cherri shortcuts programming language, maybe goes well with pushcut, although setting up automation is still awful
 68. miette - Fancy diagnostic reporting library and protocol for us mere mortals who aren't compiler hackers
+69. sccache
