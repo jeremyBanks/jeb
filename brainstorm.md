@@ -95,3 +95,5 @@
 68. miette - Fancy diagnostic reporting library and protocol for us mere mortals who aren't compiler hackers
 69. sccache
 70. sccache in release artifacts
+71. Release include rust tool chain file with precise release version then revert to less generic in post-release commit
+   1. Have a post release commit
