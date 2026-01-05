@@ -67,15 +67,22 @@ the foundation. Other conversion mechanisms MUST delegate to these traits.
 
 r[jeb-value.conv.foundation.deref]
 `Deref<Target=INNER>` MUST return `&self.0` (foundational for borrowed access).
+
+r[jeb-value.conv.foundation.deref-mut]
 `DerefMut<Target=INNER>` MUST return `&mut self.0`.
 
-r[jeb-value.conv.foundation.asref]
-`AsRef<INNER>` MUST delegate to `Deref::deref()`. `AsMut<INNER>` MUST delegate
-to `DerefMut::deref_mut()`.
+r[jeb-value.conv.foundation.as-ref]
+`AsRef<INNER>` MUST delegate to `Deref::deref()`.
+
+r[jeb-value.conv.foundation.as-mut]
+`AsMut<INNER>` MUST delegate to `DerefMut::deref_mut()`.
 
 r[jeb-value.conv.foundation.borrow]
 `Borrow<INNER>` MUST delegate to `Deref::deref()` (when allowed per borrow
-rules). `BorrowMut<INNER>` MUST delegate to `DerefMut::deref_mut()`.
+rules).
+
+r[jeb-value.conv.foundation.borrow-mut]
+`BorrowMut<INNER>` MUST delegate to `DerefMut::deref_mut()`.
 
 r[jeb-value.conv.foundation.into-inner]
 `.into_inner(self) -> INNER` MUST use `INNER::from(self)` (delegates to `From`).
