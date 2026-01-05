@@ -56,24 +56,37 @@ impl<'de> serde::Deserialize<'de> for Float {
         })
     }
 }
-// [impl jeb-value.variants.cmp]
-// [impl jeb-value.number.cmp]
+// [impl jeb-value.variant.common.ord]
+// [impl jeb-value.number.cmp-no-delegate]
+// [impl jeb-value.number.ord-total-cmp]
 impl Ord for Float {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.0.total_cmp(&other.0)
     }
 }
+// [impl jeb-value.variant.common.partial-eq]
+// [impl jeb-value.number.cmp-no-delegate]
+// [impl jeb-value.number.partial-eq-total-cmp]
 impl PartialEq for Float {
     fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == core::cmp::Ordering::Equal
     }
 }
+// [impl jeb-value.variant.common.eq]
+// [impl jeb-value.number.cmp-no-delegate]
+// [impl jeb-value.number.eq-total-cmp]
 impl Eq for Float {}
+// [impl jeb-value.variant.common.partial-ord]
+// [impl jeb-value.number.cmp-no-delegate]
+// [impl jeb-value.number.partial-ord-total-cmp]
 impl PartialOrd for Float {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
+// [impl jeb-value.variant.common.hash]
+// [impl jeb-value.number.cmp-no-delegate]
+// [impl jeb-value.number.hash-to-be-bytes]
 impl Hash for Float {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         state.write_u64(self.0.to_bits());
