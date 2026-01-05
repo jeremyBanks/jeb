@@ -90,3 +90,4 @@
 63. Property based testing around git-snapshots?
 64. What if it's never dropped? Atexit?
 65. Teleport to worktrees
+66. zoom into repo by url or path in examples - implicit fetch?
