@@ -87,3 +87,4 @@
 60. 📌 Use a real property based testing framework, this seems vitally useful. Here's one suggestion that we might read but we just need something simple: https://lpalmieri.com/posts/an-introduction-to-property-based-testing-in-rust/
 61. ref mut for inline literal variables
 62. I really need to go deep on property based testing
+63. Property based testing around git-snapshots?
