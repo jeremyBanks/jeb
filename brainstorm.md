@@ -99,3 +99,4 @@
 72. Have a post release commit
 73. Name it amend
 74. Maybe each time a thread local is dropped we do it and also atexit maybe
+75. feature aliases via optional dependencies for __development and __build and possibly even __debug versus __release  which can be used instead of specifying things in several different places
