@@ -67,15 +67,22 @@ the foundation. Other conversion mechanisms MUST delegate to these traits.
 
 r[jeb-value.conv.foundation.deref]
 `Deref<Target=INNER>` MUST return `&self.0` (foundational for borrowed access).
+
+r[jeb-value.conv.foundation.deref-mut]
 `DerefMut<Target=INNER>` MUST return `&mut self.0`.
 
-r[jeb-value.conv.foundation.asref]
-`AsRef<INNER>` MUST delegate to `Deref::deref()`. `AsMut<INNER>` MUST delegate
-to `DerefMut::deref_mut()`.
+r[jeb-value.conv.foundation.as-ref]
+`AsRef<INNER>` MUST delegate to `Deref::deref()`.
+
+r[jeb-value.conv.foundation.as-mut]
+`AsMut<INNER>` MUST delegate to `DerefMut::deref_mut()`.
 
 r[jeb-value.conv.foundation.borrow]
 `Borrow<INNER>` MUST delegate to `Deref::deref()` (when allowed per borrow
-rules). `BorrowMut<INNER>` MUST delegate to `DerefMut::deref_mut()`.
+rules).
+
+r[jeb-value.conv.foundation.borrow-mut]
+`BorrowMut<INNER>` MUST delegate to `DerefMut::deref_mut()`.
 
 r[jeb-value.conv.foundation.into-inner]
 `.into_inner(self) -> INNER` MUST use `INNER::from(self)` (delegates to `From`).
@@ -243,9 +250,25 @@ a type (which we'll refer to as a "variant type") of the same name.
 
 ### Traits (`jeb-value.value.traits.`)
 
-r[jeb-value.value.traits.cmp]
-`jeb_value::Value` MUST implement `Eq`, `PartialEq`, `Ord`, `PartialOrd`, and
-`Hash`, with correct non-panicking behavior for all possible values.
+r[jeb-value.value.traits.eq]
+`jeb_value::Value` MUST implement `Eq` with correct non-panicking behavior for
+all possible values.
+
+r[jeb-value.value.traits.partial-eq]
+`jeb_value::Value` MUST implement `PartialEq` with correct non-panicking
+behavior for all possible values.
+
+r[jeb-value.value.traits.ord]
+`jeb_value::Value` MUST implement `Ord` with correct non-panicking behavior for
+all possible values.
+
+r[jeb-value.value.traits.partial-ord]
+`jeb_value::Value` MUST implement `PartialOrd` with correct non-panicking
+behavior for all possible values.
+
+r[jeb-value.value.traits.hash]
+`jeb_value::Value` MUST implement `Hash` with correct non-panicking behavior for
+all possible values.
 
 r[jeb-value.value.traits.clone]
 `jeb_value::Value` MUST implement `Clone`.
@@ -353,9 +376,25 @@ parameters).
 r[jeb-value.variant.common.transparent]
 Each variant type MUST be marked `#[repr(transparent)]`.
 
-r[jeb-value.variant.common.cmp]
-Each variant type MUST implement `Eq`, `PartialEq`, `Ord`, `PartialOrd`, and
-`Hash`, with correct non-panicking behavior for all possible values.
+r[jeb-value.variant.common.eq]
+Each variant type MUST implement `Eq` with correct non-panicking behavior for
+all possible values.
+
+r[jeb-value.variant.common.partial-eq]
+Each variant type MUST implement `PartialEq` with correct non-panicking behavior
+for all possible values.
+
+r[jeb-value.variant.common.ord]
+Each variant type MUST implement `Ord` with correct non-panicking behavior for
+all possible values.
+
+r[jeb-value.variant.common.partial-ord]
+Each variant type MUST implement `PartialOrd` with correct non-panicking
+behavior for all possible values.
+
+r[jeb-value.variant.common.hash]
+Each variant type MUST implement `Hash` with correct non-panicking behavior for
+all possible values.
 
 r[jeb-value.variant.common.cmp-delegate-variants]
 When comparing two `jeb_value::Value` instances containing the same variant
@@ -367,10 +406,29 @@ When comparing two `jeb_value::Value` instances of different variant types, they
 MUST NOT be equal and MUST follow the order: Null, Boolean, Number, Bytes,
 String, Array, BytesMap, StringMap.
 
-r[jeb-value.variant.common.cmp-delegate-inner]
-When comparing two instances of a variant type, the comparison MUST delegate to
-the inner type's comparison implementations unless specified otherwise for that
-variant type, for all of `Eq`, `PartialEq`, `Ord`, `PartialOrd`, and `Hash`.
+r[jeb-value.variant.common.eq-delegate-inner]
+When comparing two instances of a variant type for equality, `Eq` MUST delegate
+to the inner type's `Eq` implementation unless specified otherwise for that
+variant type.
+
+r[jeb-value.variant.common.partial-eq-delegate-inner]
+When comparing two instances of a variant type for equality, `PartialEq` MUST
+delegate to the inner type's `PartialEq` implementation unless specified
+otherwise for that variant type.
+
+r[jeb-value.variant.common.ord-delegate-inner]
+When comparing two instances of a variant type for ordering, `Ord` MUST delegate
+to the inner type's `Ord` implementation unless specified otherwise for that
+variant type.
+
+r[jeb-value.variant.common.partial-ord-delegate-inner]
+When comparing two instances of a variant type for ordering, `PartialOrd` MUST
+delegate to the inner type's `PartialOrd` implementation unless specified
+otherwise for that variant type.
+
+r[jeb-value.variant.common.hash-delegate-inner]
+When hashing a variant type, `Hash` MUST delegate to the inner type's `Hash`
+implementation unless specified otherwise for that variant type.
 
 r[jeb-value.variant.common.borrow]
 Each variant type MUST implement `Borrow<INNER>` if its comparison
@@ -416,10 +474,44 @@ r[jeb-value.null.must-use]
 r[jeb-value.null.from-inner]
 `jeb_value::Null` MUST implement `From<()>`.
 
-r[jeb-value.null.try-from-primitive]
-`jeb_value::Null` MUST implement `TryFrom<T>` where `T` is any of `bool` (with
-only `false` being accepted), `f32` and `f64` (with only `+0.0` being accepted),
-and all integer types (with only `0` being accepted).
+r[jeb-value.null.try-from-bool]
+`jeb_value::Null` MUST implement `TryFrom<bool>`, accepting only `false`.
+
+r[jeb-value.null.try-from-f32]
+`jeb_value::Null` MUST implement `TryFrom<f32>`, accepting only `+0.0`.
+
+r[jeb-value.null.try-from-f64]
+`jeb_value::Null` MUST implement `TryFrom<f64>`, accepting only `+0.0`.
+
+r[jeb-value.null.try-from-i8]
+`jeb_value::Null` MUST implement `TryFrom<i8>`, accepting only `0`.
+
+r[jeb-value.null.try-from-i16]
+`jeb_value::Null` MUST implement `TryFrom<i16>`, accepting only `0`.
+
+r[jeb-value.null.try-from-i32]
+`jeb_value::Null` MUST implement `TryFrom<i32>`, accepting only `0`.
+
+r[jeb-value.null.try-from-i64]
+`jeb_value::Null` MUST implement `TryFrom<i64>`, accepting only `0`.
+
+r[jeb-value.null.try-from-i128]
+`jeb_value::Null` MUST implement `TryFrom<i128>`, accepting only `0`.
+
+r[jeb-value.null.try-from-u8]
+`jeb_value::Null` MUST implement `TryFrom<u8>`, accepting only `0`.
+
+r[jeb-value.null.try-from-u16]
+`jeb_value::Null` MUST implement `TryFrom<u16>`, accepting only `0`.
+
+r[jeb-value.null.try-from-u32]
+`jeb_value::Null` MUST implement `TryFrom<u32>`, accepting only `0`.
+
+r[jeb-value.null.try-from-u64]
+`jeb_value::Null` MUST implement `TryFrom<u64>`, accepting only `0`.
+
+r[jeb-value.null.try-from-u128]
+`jeb_value::Null` MUST implement `TryFrom<u128>`, accepting only `0`.
 
 r[jeb-value.null.try-from-vec]
 `jeb_value::Null` MUST implement `TryFrom<Vec<T>>` (where T is _unconstrained_)
@@ -429,10 +521,55 @@ r[jeb-value.null.try-from-indexmap]
 `jeb_value::Null` MUST implement `TryFrom<IndexMap<K, V>>` (where K and V are
 _unconstrained_) with only the empty map being accepted.
 
-r[jeb-value.null.primitive-from]
-All of the primitive types `()`, `bool`, `f32`, `f64`, and all integer types,
-and `Vec<T>` and `IndexMap<K, V>` (where T, K, and V are unconstrained) MUST
-implement `From<jeb_value::Null>`, mapping to their respective default values.
+r[jeb-value.null.into-unit]
+The unit type `()` MUST implement `From<jeb_value::Null>`.
+
+r[jeb-value.null.into-bool]
+`bool` MUST implement `From<jeb_value::Null>`, mapping to `false`.
+
+r[jeb-value.null.into-f32]
+`f32` MUST implement `From<jeb_value::Null>`, mapping to `0.0`.
+
+r[jeb-value.null.into-f64]
+`f64` MUST implement `From<jeb_value::Null>`, mapping to `0.0`.
+
+r[jeb-value.null.into-i8]
+`i8` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-i16]
+`i16` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-i32]
+`i32` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-i64]
+`i64` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-i128]
+`i128` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-u8]
+`u8` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-u16]
+`u16` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-u32]
+`u32` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-u64]
+`u64` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-u128]
+`u128` MUST implement `From<jeb_value::Null>`, mapping to `0`.
+
+r[jeb-value.null.into-vec]
+`Vec<T>` (where T is unconstrained) MUST implement `From<jeb_value::Null>`,
+mapping to an empty vector.
+
+r[jeb-value.null.into-indexmap]
+`IndexMap<K, V>` (where K and V are unconstrained) MUST implement
+`From<jeb_value::Null>`, mapping to an empty map.
 
 ## Boolean (`jeb-value.boolean.`)
 
@@ -446,10 +583,53 @@ r[jeb-value.boolean.from-inner]
 r[jeb-value.boolean.from-false]
 `jeb_value::Boolean` MUST implement `From<()>` (mapping to `false`).
 
-r[jeb-value.boolean.try-from-primitive]
-`jeb_value::Boolean` MUST implement `TryFrom<T>` where `T` is any of `f32` and
-`f64`, and all integer types, with (positive) zero being false, positive one
-being true, and all other values being rejected.
+r[jeb-value.boolean.try-from-f32]
+`jeb_value::Boolean` MUST implement `TryFrom<f32>`, with `+0.0` mapping to
+false, `1.0` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-f64]
+`jeb_value::Boolean` MUST implement `TryFrom<f64>`, with `+0.0` mapping to
+false, `1.0` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-i8]
+`jeb_value::Boolean` MUST implement `TryFrom<i8>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-i16]
+`jeb_value::Boolean` MUST implement `TryFrom<i16>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-i32]
+`jeb_value::Boolean` MUST implement `TryFrom<i32>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-i64]
+`jeb_value::Boolean` MUST implement `TryFrom<i64>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-i128]
+`jeb_value::Boolean` MUST implement `TryFrom<i128>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-u8]
+`jeb_value::Boolean` MUST implement `TryFrom<u8>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-u16]
+`jeb_value::Boolean` MUST implement `TryFrom<u16>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-u32]
+`jeb_value::Boolean` MUST implement `TryFrom<u32>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-u64]
+`jeb_value::Boolean` MUST implement `TryFrom<u64>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
+
+r[jeb-value.boolean.try-from-u128]
+`jeb_value::Boolean` MUST implement `TryFrom<u128>`, with `0` mapping to false,
+`1` mapping to true, and all other values being rejected.
 
 ## Number (`jeb-value.number.`)
 
@@ -475,12 +655,30 @@ provided `f64` is not finite.
 r[jeb-value.number.no-from-inner]
 `jeb_value::Number` MUST NOT implement `From<f64>`.
 
-r[jeb-value.number.cmp]
+r[jeb-value.number.cmp-no-delegate]
 `jeb_value::Number`'s implementations of `Eq`, `PartialEq`, `Ord`, `PartialOrd`,
-and `Hash` MUST NOT delegate to the inner `f64` type, but MUST instead delegate
-comparison and equality to `f64::total_cmp` and MUST delegate the `Hash`
-implementation to the result of `.to_be_bytes()`. This ensures a total ordering
-and distinct hashing for all possible `f64` values.
+and `Hash` MUST NOT delegate directly to the inner `f64` type's trait
+implementations.
+
+r[jeb-value.number.eq-total-cmp]
+`jeb_value::Number`'s `Eq` implementation MUST delegate comparison to
+`f64::total_cmp`. This ensures a total ordering for all possible `f64` values.
+
+r[jeb-value.number.partial-eq-total-cmp]
+`jeb_value::Number`'s `PartialEq` implementation MUST delegate comparison to
+`f64::total_cmp`. This ensures a total ordering for all possible `f64` values.
+
+r[jeb-value.number.ord-total-cmp]
+`jeb_value::Number`'s `Ord` implementation MUST delegate comparison to
+`f64::total_cmp`. This ensures a total ordering for all possible `f64` values.
+
+r[jeb-value.number.partial-ord-total-cmp]
+`jeb_value::Number`'s `PartialOrd` implementation MUST delegate comparison to
+`f64::total_cmp`. This ensures a total ordering for all possible `f64` values.
+
+r[jeb-value.number.hash-to-be-bytes]
+`jeb_value::Number`'s `Hash` implementation MUST delegate to the result of
+`.to_be_bytes()`. This ensures distinct hashing for all possible `f64` values.
 
 ## Bytes (`jeb-value.bytes.`)
 
@@ -500,11 +698,65 @@ r[jeb-value.bytes.from-iterator]
 r[jeb-value.bytes.from-slice-iterator]
 `jeb_value::Bytes` MUST implement `FromIterator<&[u8]>`.
 
-r[jeb-value.bytes.from-primitive]
-`jeb_value::Bytes` MUST implement `From<T>` for all of primitive types `()`,
-`bool`, `f32`, `f64`, `char` and all integer types. The unit type MUST map to an
-empty byte string, `false` to a single zero byte, `true` to a single byte with
-value `0x01`, and all numeric types to their big-endian byte representations.
+r[jeb-value.bytes.from-unit]
+`jeb_value::Bytes` MUST implement `From<()>`, mapping the unit type to an empty
+byte string.
+
+r[jeb-value.bytes.from-bool]
+`jeb_value::Bytes` MUST implement `From<bool>`, with `false` mapping to a single
+zero byte and `true` mapping to a single byte with value `0x01`.
+
+r[jeb-value.bytes.from-char]
+`jeb_value::Bytes` MUST implement `From<char>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-f32]
+`jeb_value::Bytes` MUST implement `From<f32>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-f64]
+`jeb_value::Bytes` MUST implement `From<f64>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-i8]
+`jeb_value::Bytes` MUST implement `From<i8>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-i16]
+`jeb_value::Bytes` MUST implement `From<i16>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-i32]
+`jeb_value::Bytes` MUST implement `From<i32>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-i64]
+`jeb_value::Bytes` MUST implement `From<i64>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-i128]
+`jeb_value::Bytes` MUST implement `From<i128>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-u8]
+`jeb_value::Bytes` MUST implement `From<u8>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-u16]
+`jeb_value::Bytes` MUST implement `From<u16>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-u32]
+`jeb_value::Bytes` MUST implement `From<u32>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-u64]
+`jeb_value::Bytes` MUST implement `From<u64>`, mapping to its big-endian byte
+representation.
+
+r[jeb-value.bytes.from-u128]
+`jeb_value::Bytes` MUST implement `From<u128>`, mapping to its big-endian byte
+representation.
 
 ### Bytes-String Bijective Encoding (`jeb-value.bytes.encoding.`)
 

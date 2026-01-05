@@ -16,8 +16,8 @@ crate-type = ["cdylib"]
 doc = false
 
 [dependencies]
-document-features = { workspace = true }
-js-sys = { workspace = true }
-wasm-bindgen = { workspace = true }
 jeb = { workspace = true, features = ["wasm"], default-features = false }
+document-features.workspace = true
+js-sys.workspace = true
+wasm-bindgen.workspace = true
 

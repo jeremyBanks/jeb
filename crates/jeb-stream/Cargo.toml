@@ -11,22 +11,21 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-async-stream = { workspace = true }
-cfg-if = { workspace = true }
-derive_more = { workspace = true, features = ["full"] }
-document-features = { workspace = true }
-futures = { workspace = true }
-macro_rules_attribute = { workspace = true }
-parking_lot = { workspace = true }
+jeb-common.workspace = true
+jeb-value.workspace = true
 serde = { workspace = true, optional = true, features = ["derive"] }
-static_assertions = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync", "io-util"] }
-tokio-stream = { workspace = true }
-tokio-util = { workspace = true, features = ["codec", "io"] }
 wasm-bindgen = { workspace = true, optional = true }
-
-jeb-common = { workspace = true }
-jeb-value = { workspace = true }
+async-stream.workspace = true
+cfg-if.workspace = true
+derive_more = { workspace = true, features = ["full"] }
+document-features.workspace = true
+futures.workspace = true
+macro_rules_attribute.workspace = true
+parking_lot.workspace = true
+static_assertions.workspace = true
+tokio = { workspace = true, features = ["rt", "macros", "sync", "io-util"] }
+tokio-stream.workspace = true
+tokio-util = { workspace = true, features = ["codec", "io"] }
 
 [features]
 default = []

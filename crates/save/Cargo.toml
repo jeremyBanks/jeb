@@ -5,33 +5,33 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 name = "save"
 version = "0.20220708.0"
-repository = { workspace = true }
+repository.workspace = true
 categories = []
 keywords = []
 
 [dependencies]
-bstr = { workspace = true }
+bstr.workspace = true
 clap = { workspace = true, features = ["derive", "env", "cargo", "unicode", "wrap_help"] }
-color-eyre = { workspace = true }
-digest = { workspace = true }
-dissimilar = { workspace = true }
-expect-test = { workspace = true }
-eyre = { workspace = true }
-git2 = { workspace = true }
-home = { workspace = true }
-itertools = { workspace = true }
-num-integer = { workspace = true }
-num-traits = { workspace = true }
-num_cpus = { workspace = true }
-once_cell = { workspace = true }
-parking_lot = { workspace = true }
-petgraph = { workspace = true }
-proc-macro2 = { workspace = true }
-regex = { workspace = true }
-sha-1 = { workspace = true }
-tempfile = { workspace = true }
-thiserror = "1.0.31"
-thousands = { workspace = true }
+color-eyre.workspace = true
+digest.workspace = true
+dissimilar.workspace = true
+expect-test.workspace = true
+eyre.workspace = true
+git2.workspace = true
+home.workspace = true
+itertools.workspace = true
+num_cpus.workspace = true
+num-integer.workspace = true
+num-traits.workspace = true
+once_cell.workspace = true
+parking_lot.workspace = true
+petgraph.workspace = true
+proc-macro2.workspace = true
+regex.workspace = true
+sha-1.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+thousands.workspace = true
 tracing = { workspace = true, features = ["log"] }
 tracing-error = { workspace = true, features = ["traced-error"] }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }

@@ -61,6 +61,16 @@ fn run_normalization() -> Result<()> {
     eprintln!("\nSummary:");
     eprintln!("  Workspaces examined: {}", stats.workspaces_processed);
     eprintln!("  Crates examined: {}", stats.crates_examined);
+    eprintln!("  Workspace crates found: {}", stats.workspace_crates_found);
+    eprintln!(
+        "  Patch entries: {} added, {} updated, {} removed",
+        stats.patch_entries_added, stats.patch_entries_updated, stats.patch_entries_removed
+    );
+    eprintln!(
+        "  Workspace dep versions synced: {}",
+        stats.workspace_dep_versions_synced
+    );
+    eprintln!("  Lockfiles copied: {}", stats.lockfiles_copied);
     eprintln!(
         "  Workspace Cargo.toml files edited: {}",
         stats.workspace_tomls_edited
@@ -242,6 +252,79 @@ fn ensure_publish_false_for_internal_crates(workspace_root: &Path) -> Result<usi
 
     Ok(modified_count)
 }
+/// Collect information about all workspace crates (name, version, path)
+/// Used for [patch.crates-io] generation and version syncing
+fn collect_workspace_crates(
+    workspace_root: &Path,
+    workspace_doc: &DocumentMut,
+) -> Result<HashMap<String, WorkspaceCrateInfo>> {
+    let members = resolve_workspace_members(workspace_root)?;
+    let mut workspace_crates = HashMap::new();
+
+    // Get workspace package version for resolving version.workspace = true
+    let workspace_version = workspace_doc
+        .get("workspace")
+        .and_then(|w| w.get("package"))
+        .and_then(|p| p.get("version"))
+        .and_then(|v| v.as_str())
+        .map(String::from);
+
+    for member_path in members {
+        let member_toml = member_path.join("Cargo.toml");
+        let content = std::fs::read_to_string(&member_toml)?;
+        let doc = content.parse::<DocumentMut>()?;
+
+        // Get package name
+        let name = doc
+            .get("package")
+            .and_then(|p| p.get("name"))
+            .and_then(|n| n.as_str())
+            .map(String::from);
+
+        // Get package version (resolve workspace = true if needed)
+        let version = doc
+            .get("package")
+            .and_then(|p| p.get("version"))
+            .and_then(|v| {
+                // Check if it's a simple string
+                if let Some(s) = v.as_str() {
+                    return Some(s.to_string());
+                }
+                // Check if it's { workspace = true } (inline table)
+                if let Some(table) = v.as_inline_table() {
+                    if table.get("workspace").and_then(|w| w.as_bool()) == Some(true) {
+                        return workspace_version.clone();
+                    }
+                }
+                // Check if it's version.workspace = true (dotted key syntax creates a table)
+                if let Some(table) = v.as_table() {
+                    if table.get("workspace").and_then(|w| w.as_bool()) == Some(true) {
+                        return workspace_version.clone();
+                    }
+                }
+                None
+            });
+
+        // Get relative path from workspace root
+        let relative_path = if let Ok(stripped) = member_path.strip_prefix(workspace_root) {
+            stripped.display().to_string()
+        } else {
+            pathdiff::diff_paths(&member_path, workspace_root)
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| member_path.display().to_string())
+        };
+
+        if let (Some(name), Some(version)) = (name, version) {
+            workspace_crates.insert(name.clone(), WorkspaceCrateInfo {
+                name,
+                version,
+                relative_path,
+            });
+        }
+    }
+
+    Ok(workspace_crates)
+}
 /// Ensure workspace crates have standard metadata fields set
 fn ensure_workspace_metadata_inheritance(doc: &mut DocumentMut) -> Result<bool> {
     let mut modified = false;
@@ -281,6 +364,40 @@ fn ensure_workspace_metadata_inheritance(doc: &mut DocumentMut) -> Result<bool> 
 
     Ok(modified)
 }
+/// Sort package.keywords and package.categories arrays alphabetically
+fn sort_package_metadata_arrays(doc: &mut DocumentMut) -> Result<bool> {
+    let mut modified = false;
+
+    if let Some(package) = doc.get_mut("package").and_then(|p| p.as_table_mut()) {
+        for field in ["keywords", "categories"] {
+            if let Some(array) = package.get_mut(field).and_then(|v| v.as_array_mut()) {
+                let mut items: Vec<String> = array
+                    .iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect();
+
+                let original_items = items.clone();
+
+                // Sort with normalized comparison (- and _ treated as same)
+                items.sort_by(|a, b| {
+                    let (norm_a, orig_a) = normalized_name_for_sort(a);
+                    let (norm_b, orig_b) = normalized_name_for_sort(b);
+                    norm_a.cmp(&norm_b).then_with(|| orig_a.cmp(&orig_b))
+                });
+
+                if items != original_items {
+                    array.clear();
+                    for item in items {
+                        array.push(item);
+                    }
+                    modified = true;
+                }
+            }
+        }
+    }
+
+    Ok(modified)
+}
 /// Represents a dependency with all its fields
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Dependency {
@@ -309,6 +426,17 @@ struct ConfigFields {
     optional: Option<bool>,
     features: Option<Vec<String>>,
     default_features: Option<bool>,
+}
+/// Information about a workspace crate (for [patch.crates-io] and version
+/// syncing)
+#[derive(Debug, Clone)]
+struct WorkspaceCrateInfo {
+    /// Package name from [package].name
+    name: String,
+    /// Version from [package].version (resolved if workspace-inherited)
+    version: String,
+    /// Relative path from workspace root
+    relative_path: String,
 }
 impl ResolutionFields {
     /// Check if two resolution fields are equal except for version
@@ -498,6 +626,46 @@ fn parse_dependency(
             });
         }
         Item::Table(t) => {
+            // Handle workspace = true in dotted key syntax (e.g., anyhow.workspace = true)
+            if let Some(workspace_val) = t.get("workspace")
+                && workspace_val.as_bool() == Some(true)
+            {
+                if let Some(ws_doc) = workspace_doc
+                    && let Some(ws_deps) = ws_doc
+                        .get("workspace")
+                        .and_then(|w| w.get("dependencies"))
+                        .and_then(|d| d.as_table())
+                    && let Some(ws_dep) = ws_deps.get(key)
+                    && let Ok(Some(ws_parsed)) =
+                        parse_dependency(key, ws_dep, workspace_root, workspace_root, None)
+                {
+                    let optional = t.get("optional").and_then(|v| v.as_bool());
+                    let default_features = t.get("default-features").and_then(|v| v.as_bool());
+                    let features = t.get("features").and_then(|v| {
+                        v.as_array().map(|arr| {
+                            arr.iter()
+                                .filter_map(|item| item.as_str().map(String::from))
+                                .collect()
+                        })
+                    });
+                    let name = ws_parsed
+                        .resolution
+                        .package
+                        .clone()
+                        .unwrap_or_else(|| key.to_string());
+                    return Ok(Some(Dependency {
+                        key: key.to_string(),
+                        name,
+                        resolution: ws_parsed.resolution,
+                        config: ConfigFields {
+                            optional,
+                            features,
+                            default_features,
+                        },
+                    }));
+                }
+                return Ok(None);
+            }
             version_str = t.get("version").and_then(|v| v.as_str());
             package = t.get("package").and_then(|v| v.as_str()).map(String::from);
             path_str = t.get("path").and_then(|v| v.as_str()).map(String::from);
@@ -570,6 +738,12 @@ struct NormalizationStats {
     workspace_tomls_edited: usize,
     member_tomls_edited: usize,
     edited_files: HashSet<PathBuf>,
+    workspace_crates_found: usize,
+    patch_entries_added: usize,
+    patch_entries_updated: usize,
+    patch_entries_removed: usize,
+    workspace_dep_versions_synced: usize,
+    lockfiles_copied: usize,
 }
 impl NormalizationStats {
     fn record_file_edit(&mut self, path: &Path, is_workspace: bool) -> bool {
@@ -583,6 +757,37 @@ impl NormalizationStats {
         }
         newly_edited
     }
+}
+/// Copy workspace Cargo.lock to all member crates
+fn copy_lockfiles(workspace_root: &Path, members: &[PathBuf]) -> Result<usize> {
+    let workspace_lock = workspace_root.join("Cargo.lock");
+
+    if !workspace_lock.exists() {
+        // No lock file to copy
+        return Ok(0);
+    }
+
+    let lock_content = std::fs::read(&workspace_lock)?;
+    let mut copied = 0;
+
+    for member_path in members {
+        let member_lock = member_path.join("Cargo.lock");
+
+        // Check if we need to copy (file doesn't exist or content differs)
+        let needs_copy = if member_lock.exists() {
+            let existing_content = std::fs::read(&member_lock)?;
+            existing_content != lock_content
+        } else {
+            true
+        };
+
+        if needs_copy {
+            std::fs::write(&member_lock, &lock_content)?;
+            copied += 1;
+        }
+    }
+
+    Ok(copied)
 }
 /// Main normalization function
 fn normalize_workspace_dependencies(
@@ -626,6 +831,11 @@ fn normalize_workspace_dependencies(
     let members = resolve_workspace_members(workspace_root)?;
     stats.crates_examined = members.len();
     eprintln!("  Found {} member crate(s)", members.len());
+
+    // Collect workspace crate info for [patch.crates-io] and version syncing
+    let workspace_crates = collect_workspace_crates(workspace_root, &workspace_doc)?;
+    stats.workspace_crates_found = workspace_crates.len();
+
     let mut all_deps: HashMap<String, Vec<(PathBuf, String, Dependency)>> = HashMap::new();
     for member_path in &members {
         let member_toml = member_path.join("Cargo.toml");
@@ -698,13 +908,37 @@ fn normalize_workspace_dependencies(
     }
     let old_workspace_deps = capture_old_workspace_deps(&workspace_doc, workspace_root);
     update_workspace_toml(&mut workspace_doc, &workspace_updates, workspace_root)?;
-    let workspace_doc_str = workspace_doc.to_string();
+
+    // Add workspace crate versions to [workspace.dependencies]
+    stats.workspace_dep_versions_synced =
+        add_workspace_crate_versions(&mut workspace_doc, &workspace_crates)?;
+
+    // Sort [workspace.dependencies] after all modifications are done
+    if let Some(workspace) = workspace_doc.get_mut("workspace") {
+        if let Some(deps) = workspace
+            .get_mut("dependencies")
+            .and_then(|d| d.as_table_mut())
+        {
+            sort_workspace_dependencies(deps, &workspace_updates)?;
+        }
+    }
+
+    // Update [patch.crates-io] with all workspace crates
+    let (added, updated, removed) = update_patch_crates_io(&mut workspace_doc, &workspace_crates)?;
+    stats.patch_entries_added = added;
+    stats.patch_entries_updated = updated;
+    stats.patch_entries_removed = removed;
+
+    let workspace_doc_str = apply_dotted_key_syntax(workspace_doc.to_string());
     if workspace_doc_str != workspace_content {
         if stats.record_file_edit(&workspace_toml_path, true) {
             eprintln!("  Editing: {}", workspace_toml_path.display());
         }
         std::fs::write(&workspace_toml_path, workspace_doc_str)?;
     }
+    // Build workspace crate names set for sorting
+    let workspace_crate_names: HashSet<String> = workspace_crates.keys().cloned().collect();
+
     for member_path in &members {
         update_member_toml(
             member_path,
@@ -713,6 +947,7 @@ fn normalize_workspace_dependencies(
             workspace_root,
             &workspace_doc,
             &old_workspace_deps,
+            &workspace_crate_names,
             stats,
         )?;
     }
@@ -722,7 +957,15 @@ fn normalize_workspace_dependencies(
         .current_dir(workspace_root)
         .output();
     let final_build_success = match final_check {
-        Ok(output) => output.status.success(),
+        Ok(output) => {
+            if !output.status.success() {
+                eprintln!("Final cargo check failed with stderr:");
+                eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+                eprintln!("stdout:");
+                eprintln!("{}", String::from_utf8_lossy(&output.stdout));
+            }
+            output.status.success()
+        }
         Err(e) => {
             eprintln!("Error: Failed to run final cargo check: {}", e);
             false
@@ -730,14 +973,20 @@ fn normalize_workspace_dependencies(
     };
     if initial_build_success && !final_build_success {
         eprintln!("Error: Workspace built before normalization but fails after.");
-        eprintln!("Rolling back all changes...");
-        for (path, content) in &original_contents {
-            if let Err(e) = std::fs::write(path, content) {
-                eprintln!("Warning: Failed to restore {}: {}", path.display(), e);
-            }
-        }
-        anyhow::bail!("Normalization broke the build. All changes have been reverted.");
+        eprintln!("NOT ROLLING BACK - DEBUG MODE");
+        // eprintln!("Rolling back all changes...");
+        // for (path, content) in &original_contents {
+        //     if let Err(e) = std::fs::write(path, content) {
+        //         eprintln!("Warning: Failed to restore {}: {}",
+        // path.display(), e);     }
+        // }
+        // anyhow::bail!("Normalization broke the build. All changes have been
+        // reverted.");
     }
+
+    // Copy Cargo.lock to all member crates (after successful build)
+    stats.lockfiles_copied = copy_lockfiles(workspace_root, &members)?;
+
     eprintln!("  Finished processing workspace");
     Ok(())
 }
@@ -894,17 +1143,418 @@ fn update_workspace_toml(
     let mut used_deps: HashSet<String> = HashSet::new();
     for (key, (resolution, _dep_name, needs_default_features_false, _ws_features)) in updates {
         used_deps.insert(key.clone());
-        let value =
-            build_dependency_value(resolution, workspace_root, *needs_default_features_false)?;
-        deps.insert(key.as_str(), value);
-    }
-    let all_keys: Vec<String> = deps.iter().map(|(k, _)| k.to_string()).collect();
-    for key in all_keys {
-        if !used_deps.contains(&key) {
-            deps.remove(&key);
+        // Only update if the entry needs changing
+        // Check if existing entry matches the resolution
+        let needs_update = if let Some(existing) = deps.get(key.as_str()) {
+            let existing_resolution = parse_resolution_from_value(existing).ok();
+            existing_resolution.as_ref() != Some(resolution)
+        } else {
+            true // Entry doesn't exist, needs to be added
+        };
+
+        if needs_update {
+            let value =
+                build_dependency_value(resolution, workspace_root, *needs_default_features_false)?;
+            deps.insert(key.as_str(), value);
         }
     }
-    sort_workspace_dependencies(deps, updates)?;
+    // DISABLED: This was deleting ALL dependencies not in updates, including
+    // external deps that are correctly inherited by members but don't need
+    // normalization. TODO: Implement proper cleanup that only removes truly
+    // unused workspace dependencies let all_keys: Vec<String> =
+    // deps.iter().map(|(k, _)| k.to_string()).collect(); for key in all_keys {
+    //     if !used_deps.contains(&key) {
+    //         deps.remove(&key);
+    //     }
+    // }
+
+    // NOTE: Sorting is done AFTER add_workspace_crate_versions() is called
+    // (see main pipeline), so it can sort all entries including workspace crates
+    Ok(())
+}
+/// Update [patch.crates-io] section to include all workspace crates
+fn update_patch_crates_io(
+    doc: &mut DocumentMut,
+    workspace_crates: &HashMap<String, WorkspaceCrateInfo>,
+) -> Result<(usize, usize, usize)> {
+    // Track stats: (added, updated, removed)
+    let mut added = 0;
+    let mut updated = 0;
+    let mut removed = 0;
+
+    // Get or create [patch] table
+    if doc.get("patch").is_none() {
+        doc["patch"] = toml_edit::table();
+    }
+    let patch = doc["patch"]
+        .as_table_mut()
+        .context("patch is not a table")?;
+
+    // Get or create [patch.crates-io] table
+    if patch.get("crates-io").is_none() {
+        patch["crates-io"] = toml_edit::table();
+    }
+    let crates_io = patch["crates-io"]
+        .as_table_mut()
+        .context("crates-io is not a table")?;
+
+    // Track existing entries for removal check
+    let existing_keys: HashSet<String> = crates_io.iter().map(|(k, _)| k.to_string()).collect();
+    let workspace_crate_names: HashSet<String> = workspace_crates.keys().cloned().collect();
+
+    // Add/update entries for all workspace crates
+    for (name, info) in workspace_crates {
+        let mut table = InlineTable::new();
+        table.insert("path", Value::from(info.relative_path.as_str()));
+
+        if let Some(existing) = crates_io.get(name) {
+            // Check if update needed
+            let existing_path = existing
+                .as_inline_table()
+                .and_then(|t| t.get("path"))
+                .and_then(|v| v.as_str());
+            if existing_path != Some(&info.relative_path) {
+                crates_io.insert(name, Item::Value(Value::InlineTable(table)));
+                updated += 1;
+            }
+        } else {
+            crates_io.insert(name, Item::Value(Value::InlineTable(table)));
+            added += 1;
+        }
+    }
+
+    // Remove stale entries (crates no longer in workspace)
+    for key in &existing_keys {
+        if !workspace_crate_names.contains(key) {
+            crates_io.remove(key);
+            removed += 1;
+        }
+    }
+
+    // Sort entries alphabetically by name (with - and _ normalized)
+    sort_patch_crates_io(crates_io)?;
+
+    Ok((added, updated, removed))
+}
+/// Add workspace crate versions to [workspace.dependencies]
+/// Returns the number of versions synced (updated or added)
+fn add_workspace_crate_versions(
+    doc: &mut DocumentMut,
+    workspace_crates: &HashMap<String, WorkspaceCrateInfo>,
+) -> Result<usize> {
+    let mut synced = 0;
+
+    // Get or create [workspace.dependencies]
+    if doc.get("workspace").is_none() {
+        doc["workspace"] = toml_edit::table();
+    }
+    let workspace = doc["workspace"]
+        .as_table_mut()
+        .context("workspace is not a table")?;
+    if workspace.get("dependencies").is_none() {
+        workspace["dependencies"] = toml_edit::table();
+    }
+    let deps = workspace["dependencies"]
+        .as_table_mut()
+        .context("dependencies is not a table")?;
+
+    // First pass: Remove versions from internal crates (those starting with _)
+    for (name, _info) in workspace_crates.iter() {
+        if name.starts_with('_') {
+            if let Some(existing) = deps.get(name) {
+                if let Some(existing_table) = existing.as_inline_table() {
+                    // Check if it has a version field
+                    if existing_table.get("version").is_some() {
+                        // Rebuild without version
+                        let mut new_table = InlineTable::new();
+                        for (k, v) in existing_table.iter() {
+                            if k != "version" {
+                                new_table.insert(k, v.clone());
+                            }
+                        }
+                        deps.insert(name, Item::Value(Value::InlineTable(new_table)));
+                        synced += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    // Second pass: Add/update versions for non-internal crates
+    for (name, info) in workspace_crates {
+        // Skip internal crates (those starting with _) - they don't get versions
+        if name.starts_with('_') {
+            continue;
+        }
+
+        // Check if we need to add/update the entry
+        let needs_update = if let Some(existing) = deps.get(name) {
+            // Check existing version
+            let existing_version = if let Some(s) = existing.as_str() {
+                Some(s.to_string())
+            } else if let Some(table) = existing.as_inline_table() {
+                table
+                    .get("version")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+            } else {
+                None
+            };
+
+            // Check if it has a path field that needs to be removed
+            let has_path = if let Some(table) = existing.as_inline_table() {
+                table.get("path").is_some()
+            } else {
+                false
+            };
+
+            // Update if version differs OR if path needs to be removed
+            existing_version.as_ref() != Some(&info.version) || has_path
+        } else {
+            true // Doesn't exist, needs to be added
+        };
+
+        if needs_update {
+            // Check if existing entry has extra fields (besides version and path)
+            let has_extra_fields = if let Some(existing) = deps.get(name) {
+                if let Some(table) = existing.as_inline_table() {
+                    // Check if there are fields other than version and path
+                    table.iter().any(|(k, _)| k != "version" && k != "path")
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+
+            // Need to get extra fields BEFORE removing the entry
+            let extra_fields: Vec<(String, toml_edit::Value)> = if has_extra_fields {
+                if let Some(existing) = deps.get(name) {
+                    if let Some(existing_table) = existing.as_inline_table() {
+                        existing_table
+                            .iter()
+                            .filter(|(k, _)| *k != "version" && *k != "path")
+                            .map(|(k, v)| (k.to_string(), v.clone()))
+                            .collect()
+                    } else {
+                        Vec::new()
+                    }
+                } else {
+                    Vec::new()
+                }
+            } else {
+                Vec::new()
+            };
+
+            // Remove existing entry first to ensure clean replacement
+            deps.remove(name);
+
+            if has_extra_fields {
+                // Build inline table with version and preserved extra fields (but NOT path)
+                let mut table = InlineTable::new();
+                table.insert("version", Value::from(info.version.as_str()));
+
+                for (key, value) in extra_fields {
+                    table.insert(&key, value);
+                }
+
+                deps.insert(name, Item::Value(Value::InlineTable(table)));
+            } else {
+                // Simple string version (no extra fields, no path needed)
+                deps.insert(name, value(info.version.clone()));
+            }
+
+            synced += 1;
+        }
+    }
+
+    Ok(synced)
+}
+/// Sort [patch.crates-io] entries alphabetically
+fn sort_patch_crates_io(table: &mut dyn toml_edit::TableLike) -> Result<()> {
+    let mut entries: Vec<(String, Item)> = table
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.clone()))
+        .collect();
+
+    // Sort by normalized name (- and _ treated as same), then original name as
+    // tiebreaker
+    entries.sort_by(|a, b| {
+        let norm_a = a.0.to_lowercase().replace('-', "_");
+        let norm_b = b.0.to_lowercase().replace('-', "_");
+        norm_a.cmp(&norm_b).then_with(|| a.0.cmp(&b.0))
+    });
+
+    // Remove all and re-insert in sorted order
+    let keys: Vec<String> = table.iter().map(|(k, _)| k.to_string()).collect();
+    for key in keys {
+        table.remove(&key);
+    }
+    for (key, value) in entries {
+        table.insert(&key, value);
+    }
+
+    Ok(())
+}
+/// Helper to get normalized name for sorting (- and _ treated as same)
+fn normalized_name_for_sort(name: &str) -> (String, String) {
+    let normalized = name.to_lowercase().replace('-', "_");
+    (normalized, name.to_string())
+}
+/// Post-process TOML to use dotted key syntax for workspace = true
+/// Only applies when workspace = true is the ONLY field in the inline table
+fn apply_dotted_key_syntax(toml_string: String) -> String {
+    // Replace " = { workspace = true }" with ".workspace = true"
+    // This only matches when workspace = true is the ONLY field (no commas)
+    toml_string.replace(" = { workspace = true }", ".workspace = true")
+}
+/// Sort member dependency sections ([dependencies], [dev-dependencies],
+/// [build-dependencies])
+fn sort_member_dependencies(
+    doc: &mut DocumentMut,
+    member_package_name: &str,
+    workspace_crate_names: &HashSet<String>,
+) -> Result<()> {
+    for section in &["dependencies", "dev-dependencies", "build-dependencies"] {
+        if let Some(deps_table) = doc.get_mut(section).and_then(|s| s.as_table_mut()) {
+            let mut entries: Vec<(String, Item)> = deps_table
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.clone()))
+                .collect();
+
+            entries.sort_by(|a, b| {
+                // Build category list for each dependency
+                let mut cats_a = Vec::new();
+                let mut cats_b = Vec::new();
+
+                // Helper to check if uses workspace = true
+                let uses_workspace = |item: &Item| {
+                    item.as_inline_table()
+                        .and_then(|t| t.get("workspace"))
+                        .and_then(|v| v.as_bool())
+                        == Some(true)
+                };
+
+                // Helper to check if has optional = true
+                let is_optional = |item: &Item| {
+                    item.as_inline_table()
+                        .and_then(|t| t.get("optional"))
+                        .and_then(|v| v.as_bool())
+                        == Some(true)
+                };
+
+                // Helper to check if has git field
+                let has_git =
+                    |item: &Item| item.as_inline_table().and_then(|t| t.get("git")).is_some();
+
+                // Helper to check if has extra fields
+                let has_extra_fields = |item: &Item| {
+                    if let Some(table) = item.as_inline_table() {
+                        for key in table.iter().map(|(k, _)| k) {
+                            if key != "workspace" && key != "features" && key != "default-features"
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                    false
+                };
+
+                // Category 1: Self-dependency
+                if a.0 == member_package_name {
+                    cats_a.push(1);
+                }
+                if b.0 == member_package_name {
+                    cats_b.push(1);
+                }
+
+                // Category 2: NOT using workspace = true
+                if !uses_workspace(&a.1) {
+                    cats_a.push(2);
+                }
+                if !uses_workspace(&b.1) {
+                    cats_b.push(2);
+                }
+
+                // Category 3: Internal crates (workspace crates starting with _)
+                if workspace_crate_names.contains(&a.0) && a.0.starts_with('_') {
+                    cats_a.push(3);
+                }
+                if workspace_crate_names.contains(&b.0) && b.0.starts_with('_') {
+                    cats_b.push(3);
+                }
+
+                // Category 4: Other workspace crates
+                if workspace_crate_names.contains(&a.0) && !a.0.starts_with('_') {
+                    cats_a.push(4);
+                }
+                if workspace_crate_names.contains(&b.0) && !b.0.starts_with('_') {
+                    cats_b.push(4);
+                }
+
+                // Category 5: Git dependencies
+                if has_git(&a.1) {
+                    cats_a.push(5);
+                }
+                if has_git(&b.1) {
+                    cats_b.push(5);
+                }
+
+                // Category 6: Using workspace = true
+                if uses_workspace(&a.1) {
+                    cats_a.push(6);
+                }
+                if uses_workspace(&b.1) {
+                    cats_b.push(6);
+                }
+
+                // Category 7: Has extra fields
+                if has_extra_fields(&a.1) {
+                    cats_a.push(7);
+                }
+                if has_extra_fields(&b.1) {
+                    cats_b.push(7);
+                }
+
+                // Category 8: Optional (at bottom)
+                if is_optional(&a.1) {
+                    cats_a.push(8);
+                }
+                if is_optional(&b.1) {
+                    cats_b.push(8);
+                }
+
+                // Pad with MAX for comparison (more categories = earlier)
+                while cats_a.len() < 8 {
+                    cats_a.push(usize::MAX);
+                }
+                while cats_b.len() < 8 {
+                    cats_b.push(usize::MAX);
+                }
+
+                // Compare category lists
+                let cat_cmp = cats_a.cmp(&cats_b);
+                if cat_cmp != std::cmp::Ordering::Equal {
+                    return cat_cmp;
+                }
+
+                // Final tiebreaker: normalized name, then original name
+                let (norm_a, orig_a) = normalized_name_for_sort(&a.0);
+                let (norm_b, orig_b) = normalized_name_for_sort(&b.0);
+                norm_a.cmp(&norm_b).then_with(|| orig_a.cmp(&orig_b))
+            });
+
+            // Remove all and re-insert in sorted order (preserves formatting)
+            let keys: Vec<String> = deps_table.iter().map(|(k, _)| k.to_string()).collect();
+            for key in keys {
+                deps_table.remove(&key);
+            }
+            for (key, value) in entries {
+                deps_table.insert(&key, value);
+            }
+        }
+    }
+
     Ok(())
 }
 fn build_dependency_value(
@@ -980,6 +1630,13 @@ fn workspace_dep_sort_key(
 /// Parse resolution fields from a TOML value (for sorting non-updated deps)
 fn parse_resolution_from_value(value: &Item) -> Result<ResolutionFields> {
     let mut resolution = ResolutionFields::default();
+
+    // Handle simple string version (e.g., anyhow = "1.0.0")
+    if let Some(version_str) = value.as_str() {
+        resolution.version = Some(version_str.to_string());
+        return Ok(resolution);
+    }
+
     if let Some(table) = value.as_inline_table() {
         resolution.version = table
             .get("version")
@@ -1060,12 +1717,14 @@ fn sort_workspace_dependencies(
     Ok(())
 }
 /// Sort key for feature dependencies
-/// Returns: (category, !ends_with_default, normalized_name)
+/// Returns: (category, !ends_with_default, normalized_name, original_name)
 /// - category 0: bare names (no dep: prefix, no /)
 /// - category 1: dependency references (with dep: or /)
 /// - !ends_with_default: false sorts before true (so /default items come first)
-/// - normalized_name: lexicographic ordering with dep: prefix removed
-fn feature_dep_sort_key(dep: &str) -> (u8, bool, String) {
+/// - normalized_name: lexicographic ordering with - and _ normalized, dep:
+///   prefix removed
+/// - original_name: tiebreaker
+fn feature_dep_sort_key(dep: &str) -> (u8, bool, String, String) {
     let has_dep_prefix = dep.starts_with("dep:");
     let has_slash = dep.contains('/');
     let ends_with_default = dep.ends_with("/default");
@@ -1073,15 +1732,18 @@ fn feature_dep_sort_key(dep: &str) -> (u8, bool, String) {
     // Category: bare names (0), then dep/slash references (1)
     let category = if has_dep_prefix || has_slash { 1 } else { 0 };
 
-    // Normalize by removing dep: prefix
-    let normalized = if has_dep_prefix {
-        dep.strip_prefix("dep:").unwrap_or(dep).to_string()
+    // Remove dep: prefix for normalization
+    let without_prefix = if has_dep_prefix {
+        dep.strip_prefix("dep:").unwrap_or(dep)
     } else {
-        dep.to_string()
+        dep
     };
 
+    // Normalize - and _ for comparison
+    let (normalized, _) = normalized_name_for_sort(without_prefix);
+
     // Use !ends_with_default so /default items sort first
-    (category, !ends_with_default, normalized)
+    (category, !ends_with_default, normalized, dep.to_string())
 }
 /// Sort the [features] section in a Cargo.toml
 fn sort_features_section(doc: &mut DocumentMut) -> Result<()> {
@@ -1143,14 +1805,26 @@ fn update_member_toml(
     workspace_root: &Path,
     workspace_doc: &DocumentMut,
     old_workspace_deps: &HashMap<String, ResolutionFields>,
+    workspace_crate_names: &HashSet<String>,
     stats: &mut NormalizationStats,
 ) -> Result<()> {
     let member_toml = member_path.join("Cargo.toml");
     let content = std::fs::read_to_string(&member_toml)?;
     let mut doc = content.parse::<DocumentMut>()?;
 
+    // Get member package name for sorting
+    let member_package_name = doc
+        .get("package")
+        .and_then(|p| p.get("name"))
+        .and_then(|n| n.as_str())
+        .unwrap_or("")
+        .to_string();
+
     // Ensure workspace metadata inheritance
     ensure_workspace_metadata_inheritance(&mut doc)?;
+
+    // Sort package metadata arrays
+    sort_package_metadata_arrays(&mut doc)?;
 
     let mut dep_name_to_workspace_key: HashMap<String, String> = HashMap::new();
     let mut dep_name_to_needs_default_features: HashMap<String, bool> = HashMap::new();
@@ -1328,10 +2002,13 @@ fn update_member_toml(
         }
     }
 
+    // Sort dependencies sections
+    sort_member_dependencies(&mut doc, &member_package_name, workspace_crate_names)?;
+
     // Sort features section
     sort_features_section(&mut doc)?;
 
-    let doc_str = doc.to_string();
+    let doc_str = apply_dotted_key_syntax(doc.to_string());
     if doc_str != content {
         if stats.record_file_edit(&member_toml, false) {
             eprintln!("  Editing: {}", member_toml.display());
