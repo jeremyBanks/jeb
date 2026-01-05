@@ -1,5 +1,7 @@
-use std::sync::Arc;
-use std::thread;
+use std::{
+    sync::Arc,
+    thread,
+};
 
 fn find_litter_positions(file_path: &std::path::Path) -> Vec<(u32, u32)> {
     use syn::visit::Visit;
@@ -78,7 +80,8 @@ fn test_multi_threaded_access() {
             thread::spawn(move || {
                 // Each thread reads all three macros
                 for i in 0..3 {
-                    let tokens = jeb_literal::runtime::get_macro_tokens_by_index(&test_file, i).unwrap();
+                    let tokens =
+                        jeb_literal::runtime::get_macro_tokens_by_index(&test_file, i).unwrap();
                     assert!(!tokens.is_empty());
                 }
                 thread_id

@@ -1,14 +1,18 @@
-use crate::literal::Value;
-use std::ops::Deref;
-use std::path::PathBuf;
+use {
+    crate::literal::Value,
+    std::{
+        ops::Deref,
+        path::PathBuf,
+    },
+};
 
 /// Internal implementation of a self-modifying value.
 ///
 /// This type wraps a value and provides the ability to update both the
 /// in-memory value and its representation in the source code file.
 ///
-/// **Note:** This is an internal type. Users should interact with the [`Literal`]
-/// wrapper returned by the `literal!` macro instead.
+/// **Note:** This is an internal type. Users should interact with the
+/// [`Literal`] wrapper returned by the `literal!` macro instead.
 #[doc(hidden)]
 pub struct LiteralInner<T: Value> {
     pub(crate) value: T,
@@ -75,18 +79,18 @@ impl<T: Value> LiteralInner<T> {
         let env = databake::CrateEnv::default();
         let expected_tokens = new_value.bake(&env);
 
-        // Parse both token streams and compare the parsed AST instead of string representation
-        // This handles formatting differences like trailing commas and module paths
-        let current_expr: syn::Expr = syn::parse2(current_tokens.clone()).map_err(|e| {
-            format!("Failed to parse source tokens: {}", e)
-        })?;
+        // Parse both token streams and compare the parsed AST instead of string
+        // representation This handles formatting differences like trailing
+        // commas and module paths
+        let current_expr: syn::Expr = syn::parse2(current_tokens.clone())
+            .map_err(|e| format!("Failed to parse source tokens: {}", e))?;
 
-        let expected_expr: syn::Expr = syn::parse2(expected_tokens.clone()).map_err(|e| {
-            format!("Failed to parse baked tokens: {}", e)
-        })?;
+        let expected_expr: syn::Expr = syn::parse2(expected_tokens.clone())
+            .map_err(|e| format!("Failed to parse baked tokens: {}", e))?;
 
         // Compare AST semantically using syn's PartialEq implementation
-        // This handles formatting differences like trailing commas, whitespace, and module paths
+        // This handles formatting differences like trailing commas, whitespace, and
+        // module paths
         if current_expr != expected_expr {
             return Err(format!(
                 "Value mismatch!\n  Expected: {}\n  Found in source: {}",
@@ -153,8 +157,8 @@ impl<T: Value + std::fmt::Debug> std::fmt::Debug for LiteralInner<T> {
 /// use jeb_literal::literal;
 ///
 /// let mut counter = literal!(0u32);
-/// println!("Value: {}", *counter);  // Single deref to read
-/// counter.literal = *counter + 1;   // Assign to public field
+/// println!("Value: {}", *counter); // Single deref to read
+/// counter.literal = *counter + 1; // Assign to public field
 /// // Value is automatically written on drop
 /// ```
 ///
@@ -164,7 +168,7 @@ impl<T: Value + std::fmt::Debug> std::fmt::Debug for LiteralInner<T> {
 /// use jeb_literal::literal;
 ///
 /// let mut counter = literal!(0u32);
-/// *counter += 1;  // Mutate directly via DerefMut
+/// *counter += 1; // Mutate directly via DerefMut
 /// // Value is automatically written on drop
 /// ```
 
@@ -197,7 +201,11 @@ impl<T: Value + 'static> Literal<T> {
         // Clone the value twice: once for working copy, once for change detection
         let literal = guard.value.clone();
         let original = guard.value.clone();
-        Literal { literal, guard, original }
+        Literal {
+            literal,
+            guard,
+            original,
+        }
     }
 
     /// Get a reference to the current value
@@ -291,7 +299,11 @@ impl<T: Value + 'static> Drop for Literal<T> {
                     // Silently ignore errors in drop - we can't panic or return an error
                     if self.guard.update_source(&self.guard.value).is_ok() {
                         // Clear dirty flag after successful write
-                        crate::dirty::clear_dirty(&self.guard.file, self.guard.line, self.guard.column);
+                        crate::dirty::clear_dirty(
+                            &self.guard.file,
+                            self.guard.line,
+                            self.guard.column,
+                        );
                     }
                 }
             }
@@ -339,7 +351,7 @@ impl<T: Value + std::fmt::Debug + 'static> std::fmt::Debug for Literal<T> {
 /// use jeb_literal::literal;
 ///
 /// let mut counter = literal!(0u32);
-/// let current = *counter;  // Single dereference
+/// let current = *counter; // Single dereference
 /// counter.literal = current + 1;
 /// // In Write mode, the source file is updated
 /// // Lock is released when counter goes out of scope
@@ -352,7 +364,8 @@ impl<T: Value + std::fmt::Debug + 'static> std::fmt::Debug for Literal<T> {
 /// # Returns
 ///
 /// An [`Literal<T>`] that holds the lock and derefs to `&T`.
-/// The same underlying value is returned for all calls from the same source location.
+/// The same underlying value is returned for all calls from the same source
+/// location.
 ///
 /// # Default Values
 ///
@@ -360,19 +373,24 @@ impl<T: Value + std::fmt::Debug + 'static> std::fmt::Debug for Literal<T> {
 /// ```no_run
 /// use jeb_literal::literal;
 ///
-/// let counter: jeb_literal::Literal<u32> = literal!();  // Uses 0u32 (default)
+/// let counter: jeb_literal::Literal<u32> = literal!(); // Uses 0u32 (default)
 /// ```
 #[macro_export]
 macro_rules! literal {
     () => {{
-        $crate::Literal::from_guard($crate::registry::get_or_create(
-            ::std::default::Default::default(),
-            file!(),
-            line!(),
-            column!()
-        ).lock())
+        $crate::Literal::from_guard(
+            $crate::registry::get_or_create(
+                ::std::default::Default::default(),
+                file!(),
+                line!(),
+                column!(),
+            )
+            .lock(),
+        )
     }};
     ($value:expr) => {{
-        $crate::Literal::from_guard($crate::registry::get_or_create($value, file!(), line!(), column!()).lock())
+        $crate::Literal::from_guard(
+            $crate::registry::get_or_create($value, file!(), line!(), column!()).lock(),
+        )
     }};
 }

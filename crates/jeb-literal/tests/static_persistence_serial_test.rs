@@ -1,5 +1,7 @@
-use jeb_literal::literal;
-use std::env;
+use {
+    jeb_literal::literal,
+    std::env,
+};
 
 #[test]
 fn test_static_persistence_same_value() {
@@ -7,14 +9,14 @@ fn test_static_persistence_same_value() {
 
     // Calling the macro from the same line should give the same underlying value
     fn get_value() -> jeb_literal::Literal<u32> {
-        literal!(42u32)  // Always the same source location
+        literal!(42u32) // Always the same source location
     }
 
     let mut val1 = get_value();
     assert_eq!(*val1, 42);
 
     val1.literal = 100;
-    drop(val1);  // Release lock
+    drop(val1); // Release lock
 
     // Get it again from same location - should see the updated value
     let val2 = get_value();
@@ -28,7 +30,7 @@ fn test_static_persistence_value_mutation() {
     env::set_var("LITERAL_MODE", "memory");
 
     fn get_counter() -> jeb_literal::Literal<u32> {
-        literal!(1u32)  // Always same source location
+        literal!(1u32) // Always same source location
     }
 
     let mut val = get_counter();
@@ -37,7 +39,7 @@ fn test_static_persistence_value_mutation() {
     val.literal = 100;
     assert_eq!(*val, 100);
 
-    drop(val);  // Release lock
+    drop(val); // Release lock
 
     // Get again from same location - should persist
     let val2 = get_counter();

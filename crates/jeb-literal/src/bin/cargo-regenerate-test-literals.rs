@@ -12,18 +12,25 @@
 //!   cargo regenerate-test-literals -- --nocapture
 //!   cargo regenerate-test-literals test_name
 
-use std::env;
-use std::process::{Command, exit};
+use std::{
+    env,
+    process::{
+        Command,
+        exit,
+    },
+};
 
 fn main() {
-    // Cargo invokes this as: cargo-regenerate-test-literals regenerate-test-literals [args...]
-    // We need to skip the first argument if it's the subcommand name
+    // Cargo invokes this as: cargo-regenerate-test-literals
+    // regenerate-test-literals [args...] We need to skip the first argument if
+    // it's the subcommand name
     let mut args: Vec<String> = env::args().collect();
 
     // Remove the binary name
     args.remove(0);
 
-    // If the first arg is "regenerate-test-literals", remove it (cargo passes the subcommand name)
+    // If the first arg is "regenerate-test-literals", remove it (cargo passes the
+    // subcommand name)
     if args.first().map(|s| s.as_str()) == Some("regenerate-test-literals") {
         args.remove(0);
     }

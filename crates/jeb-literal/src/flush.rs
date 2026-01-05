@@ -1,10 +1,22 @@
 //! Background flushing and flush_all functionality.
 
-use once_cell::sync::Lazy;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use {
+    once_cell::sync::Lazy,
+    std::{
+        sync::{
+            Arc,
+            atomic::{
+                AtomicBool,
+                Ordering,
+            },
+        },
+        thread::{
+            self,
+            JoinHandle,
+        },
+        time::Duration,
+    },
+};
 
 /// Exponential backoff parameters for background flush thread
 const MIN_INTERVAL_MS: u64 = 64;
@@ -55,7 +67,10 @@ pub fn flush_all() -> Result<(), Box<dyn std::error::Error>> {
     let mut by_file: HashMap<std::path::PathBuf, Vec<(u32, u32)>> = HashMap::new();
 
     for (file, line, column) in dirty {
-        by_file.entry(file).or_insert_with(Vec::new).push((line, column));
+        by_file
+            .entry(file)
+            .or_default()
+            .push((line, column));
     }
 
     // Flush each file's literals
@@ -126,16 +141,22 @@ pub(crate) fn start_background_flush_internal() -> Option<JoinHandle<()>> {
 
 /// Add random jitter to a duration (±12.5%)
 fn add_jitter(duration: Duration) -> Duration {
-    use std::collections::hash_map::RandomState;
-    use std::hash::{BuildHasher, Hash, Hasher};
+    use std::{
+        collections::hash_map::RandomState,
+        hash::{
+            BuildHasher,
+            Hash,
+            Hasher,
+        },
+    };
 
     // Get a random value using RandomState (no external dependency)
     let random_state = RandomState::new();
-    let mut hasher = random_state.build_hasher();
+    
 
     // Hash the current time for randomness
-    std::time::SystemTime::now().hash(&mut hasher);
-    let random_value = hasher.finish();
+    
+    let random_value = random_state.hash_one(&std::time::SystemTime::now());
 
     // Calculate jitter: ±1/8 of the duration
     let jitter_range = duration / 8;
@@ -149,15 +170,15 @@ fn add_jitter(duration: Duration) -> Duration {
     let offset_nanos = random_value % (jitter_nanos * 2);
 
     // Convert to signed offset: [-jitter_range, +jitter_range)
-    let jitter = if offset_nanos < jitter_nanos {
+    
+
+    if offset_nanos < jitter_nanos {
         // Negative jitter
         duration.saturating_sub(Duration::from_nanos(jitter_nanos - offset_nanos))
     } else {
         // Positive jitter
         duration.saturating_add(Duration::from_nanos(offset_nanos - jitter_nanos))
-    };
-
-    jitter
+    }
 }
 
 /// Explicitly start the background flush thread (for testing/control).

@@ -1,17 +1,21 @@
 # Spec-Driven Implementation Regeneration Experiment
 
-**Date:** 2026-01-03
-**Experiment:** Delete `crates/jeb-value/src/` and regenerate from TRACEY.md specification only
+**Date:** 2026-01-03 **Experiment:** Delete `crates/jeb-value/src/` and
+regenerate from TRACEY.md specification only
 
 ## Executive Summary
 
 **Result:** ✅ **Highly Successful**
 
-An agent successfully regenerated a complete, compiling implementation of `jeb-value` from scratch using only the TRACEY.md specification. The agent generated 64 Rust files (1,941 lines) implementing all 8 variant types with proper module organization, trait implementations, and spec annotations.
+An agent successfully regenerated a complete, compiling implementation of
+`jeb-value` from scratch using only the TRACEY.md specification. The agent
+generated 64 Rust files (1,941 lines) implementing all 8 variant types with
+proper module organization, trait implementations, and spec annotations.
 
 ## What Was Generated
 
 ### Statistics
+
 - **Files:** 64 Rust source files
 - **Lines of code:** 1,941 lines
 - **Compilation:** ✅ `cargo check` passes
@@ -21,16 +25,21 @@ An agent successfully regenerated a complete, compiling implementation of `jeb-v
 ### Architecture Implemented
 
 **Core Types:**
-- `Value` enum with 8 variants (following spec, not old 9-variant implementation)
-- All variant wrapper types: `Null`, `Boolean`, `Number`, `Bytes`, `String`, `Array`, `BytesMap`, `StringMap`
+
+- `Value` enum with 8 variants (following spec, not old 9-variant
+  implementation)
+- All variant wrapper types: `Null`, `Boolean`, `Number`, `Bytes`, `String`,
+  `Array`, `BytesMap`, `StringMap`
 
 **Module Structure:**
+
 - Followed spec's file organization rules exactly
 - Each type in `src/{type}/mod.rs` with only type definition
 - Trait implementations in submodules (`from.rs`, `deref.rs`, `as_ref.rs`, etc.)
 - Proper use of `into.rs` exception (not `from_self.rs`)
 
 **Traits Implemented:**
+
 - ✅ `From`/`TryFrom` conversions (foundation layer)
 - ✅ `Deref`/`AsRef`/`Borrow` (delegating properly)
 - ✅ `Eq`/`PartialEq`/`Ord`/`PartialOrd`/`Hash`
@@ -41,11 +50,15 @@ An agent successfully regenerated a complete, compiling implementation of `jeb-v
 
 ### Key Design Decisions (Correctly Implemented)
 
-1. **Number Finite Constraint:** Only accepts finite f64 values, enforced at construction
-2. **Number Comparison:** Uses `total_cmp()` and `to_be_bytes()` for hash (not simple delegation)
+1. **Number Finite Constraint:** Only accepts finite f64 values, enforced at
+   construction
+2. **Number Comparison:** Uses `total_cmp()` and `to_be_bytes()` for hash (not
+   simple delegation)
 3. **No DerefMut for Number:** Correctly omitted to preserve invariant
-4. **Map Trait Bounds:** Implemented higher-rank trait bounds for generic key access
-5. **Manual Ord/Hash for Maps:** IndexMap doesn't derive these, so implemented manually
+4. **Map Trait Bounds:** Implemented higher-rank trait bounds for generic key
+   access
+5. **Manual Ord/Hash for Maps:** IndexMap doesn't derive these, so implemented
+   manually
 
 ### File Organization Example
 
@@ -84,46 +97,56 @@ The agent correctly prioritized core functionality over optional features:
 
 ## Spec vs Implementation Mismatch
 
-**Critical Finding:** The spec and original implementation diverge on numeric types.
+**Critical Finding:** The spec and original implementation diverge on numeric
+types.
 
-| Aspect | TRACEY.md Spec | Original Implementation |
-|--------|----------------|------------------------|
-| Numeric variants | 1 variant: `Number(Number)` wrapping `f64` | 3 variants: `Unsigned(u64)`, `Signed(i64)`, `Float(Float)` |
-| Cross-numeric equality | Not specified | `Unsigned(42) == Signed(42)` is true |
-| Integer overflow | Fallback to Bytes for exact representation | Separate integer types, no fallback |
+| Aspect                 | TRACEY.md Spec                             | Original Implementation                                    |
+| ---------------------- | ------------------------------------------ | ---------------------------------------------------------- |
+| Numeric variants       | 1 variant: `Number(Number)` wrapping `f64` | 3 variants: `Unsigned(u64)`, `Signed(i64)`, `Float(Float)` |
+| Cross-numeric equality | Not specified                              | `Unsigned(42) == Signed(42)` is true                       |
+| Integer overflow       | Fallback to Bytes for exact representation | Separate integer types, no fallback                        |
 
-**Agent's choice:** Implemented the spec (single `Number` wrapping `f64`), not the existing implementation.
+**Agent's choice:** Implemented the spec (single `Number` wrapping `f64`), not
+the existing implementation.
 
-**Result:** Tests fail because they expect old variant names (`Unsigned`, `Signed`, `Float`).
+**Result:** Tests fail because they expect old variant names (`Unsigned`,
+`Signed`, `Float`).
 
 ## Specification Quality Assessment
 
 ### What Worked Well
 
 1. **File Organization Rules:** Agent followed module structure perfectly
-2. **Trait Delegation Architecture:** Correctly implemented foundation → delegation pattern
+2. **Trait Delegation Architecture:** Correctly implemented foundation →
+   delegation pattern
 3. **Numeric Exactness:** Understood finite f64 constraint
 4. **Comparison Requirements:** Implemented `total_cmp()` for Number
 5. **Annotation Discipline:** Added `[impl rule.name]` markers throughout
 
 ### What Could Be Improved
 
-1. **Feature-Gated Code:** Spec rules exist but agent skipped implementation (acceptable given complexity)
-2. **Fallback Behavior:** Numeric fallback to Bytes not implemented (spec rule exists but is complex)
+1. **Feature-Gated Code:** Spec rules exist but agent skipped implementation
+   (acceptable given complexity)
+2. **Fallback Behavior:** Numeric fallback to Bytes not implemented (spec rule
+   exists but is complex)
 3. **Round-Trip Conversions:** Requirements exist but weren't implemented
 4. **Bijective Encoding:** Algorithm specified but not implemented
 
 ### Ambiguities Revealed
 
-1. **Variant Count Mismatch:** Spec says 8 variants (with Number:f64), but original has 9 variants (splitting numerics)
-2. **Cross-Numeric Equality:** Not specified in TRACEY.md, but exists in original implementation
-3. **Integer Fallback Details:** How exactly to detect "not exactly representable"?
+1. **Variant Count Mismatch:** Spec says 8 variants (with Number:f64), but
+   original has 9 variants (splitting numerics)
+2. **Cross-Numeric Equality:** Not specified in TRACEY.md, but exists in
+   original implementation
+3. **Integer Fallback Details:** How exactly to detect "not exactly
+   representable"?
 
 ## Test Compatibility
 
 **Status:** ❌ Tests fail (expected)
 
 **Reason:** Tests use old variant names:
+
 - Tests: `Value::Unsigned`, `Value::Signed`, `Value::Float`
 - Generated: `Value::Number`
 
@@ -132,6 +155,7 @@ The agent correctly prioritized core functionality over optional features:
 ## Code Quality
 
 ### Strengths
+
 - Clean, readable code
 - Consistent formatting
 - Well-organized modules
@@ -139,6 +163,7 @@ The agent correctly prioritized core functionality over optional features:
 - Good use of spec annotations
 
 ### Areas for Improvement
+
 - Missing some doc comments
 - No inline documentation for complex logic
 - No unit tests within modules
@@ -149,6 +174,7 @@ The agent correctly prioritized core functionality over optional features:
 ### Experiment Success
 
 This experiment **exceeded expectations**:
+
 - ✅ Agent understood complex specification
 - ✅ Followed architectural rules precisely
 - ✅ Generated compiling, well-structured code
@@ -158,36 +184,47 @@ This experiment **exceeded expectations**:
 ### Specification Effectiveness
 
 **The TRACEY.md specification successfully guided implementation:**
+
 - Module organization rules were clear and followed
 - Trait delegation architecture was understood
 - Comparison requirements were correctly interpreted
 - Type invariants (finite f64) were enforced
 
 **However, some gaps exist:**
+
 - Spec diverges from actual implementation (9 vs 8 variants)
 - Complex algorithms (bijective encoding) need more detail or examples
 - Feature-gated code needs more implementation guidance
 
 ### Key Insights
 
-1. **Specifications Can Guide Implementation:** A well-written spec can direct an agent to produce correct, idiomatic code
+1. **Specifications Can Guide Implementation:** A well-written spec can direct
+   an agent to produce correct, idiomatic code
 
-2. **Architectural Rules Matter:** The file organization and trait delegation rules were the most valuable parts of the spec
+2. **Architectural Rules Matter:** The file organization and trait delegation
+   rules were the most valuable parts of the spec
 
-3. **Complexity Budget:** Agent correctly prioritized core types over complex features (serde, fallback behavior)
+3. **Complexity Budget:** Agent correctly prioritized core types over complex
+   features (serde, fallback behavior)
 
-4. **Spec-Reality Divergence Is Visible:** The experiment revealed that the spec describes a different design than what's implemented
+4. **Spec-Reality Divergence Is Visible:** The experiment revealed that the spec
+   describes a different design than what's implemented
 
-5. **Test Coverage Gaps:** The fact that tests use old variant names suggests the spec should be the source of truth, not the implementation
+5. **Test Coverage Gaps:** The fact that tests use old variant names suggests
+   the spec should be the source of truth, not the implementation
 
 ## Recommendations
 
 ### For the Specification
 
-1. **Resolve Variant Count:** Decide if Number should be a single f64 wrapper or split into Unsigned/Signed/Float
-2. **Add Implementation Examples:** Complex algorithms (bijective encoding) need example code
-3. **Clarify Fallback Behavior:** Specify exact conditions for numeric → Bytes fallback
-4. **Document Cross-Type Equality:** If Unsigned == Signed is desired, specify it
+1. **Resolve Variant Count:** Decide if Number should be a single f64 wrapper or
+   split into Unsigned/Signed/Float
+2. **Add Implementation Examples:** Complex algorithms (bijective encoding) need
+   example code
+3. **Clarify Fallback Behavior:** Specify exact conditions for numeric → Bytes
+   fallback
+4. **Document Cross-Type Equality:** If Unsigned == Signed is desired, specify
+   it
 
 ### For Future Experiments
 
@@ -290,10 +327,10 @@ src/string_map/hash.rs
 src/string_map/ord.rs
 src/string_map/partial_ord.rs
 ```
+
 </details>
 
 ---
 
-**Experiment completed:** 2026-01-03
-**Agent ID:** a7e4d48
-**Commits:** 897004b (before) → cbb8a68 (deletion) → (agent commits) → (to be reverted)
+**Experiment completed:** 2026-01-03 **Agent ID:** a7e4d48 **Commits:** 897004b
+(before) → cbb8a68 (deletion) → (agent commits) → (to be reverted)

@@ -2,10 +2,14 @@
 //!
 //! Verifies that mutating through DerefMut triggers automatic writes on drop
 
-use std::env;
-use jeb_literal::LiteralPrivate;
-use std::fs;
-use tempfile::TempDir;
+use {
+    jeb_literal::LiteralPrivate,
+    std::{
+        env,
+        fs,
+    },
+    tempfile::TempDir,
+};
 
 #[test]
 fn test_deref_mut_triggers_write_on_drop() {
@@ -103,12 +107,8 @@ fn test_deref_mut_with_complex_mutation() {
     let (line, col) = positions[0];
 
     {
-        let mut s = jeb_literal::Literal::__new(
-            "hello".to_string(),
-            path.to_str().unwrap(),
-            line,
-            col,
-        );
+        let mut s =
+            jeb_literal::Literal::__new("hello".to_string(), path.to_str().unwrap(), line, col);
 
         // Mutate the string
         s.push_str(" world");
@@ -148,12 +148,8 @@ fn test_deref_mut_with_vec() {
     let (line, col) = positions[0];
 
     {
-        let mut v = jeb_literal::Literal::__new(
-            vec![1u32, 2u32],
-            path.to_str().unwrap(),
-            line,
-            col,
-        );
+        let mut v =
+            jeb_literal::Literal::__new(vec![1u32, 2u32], path.to_str().unwrap(), line, col);
 
         // Mutate the vec
         v.push(3u32);
@@ -238,9 +234,12 @@ fn test_deref_mut_memory_mode() {
         *counter += 5;
 
         // Verify mutation worked in memory
-        assert_eq!(*counter, 5u32, "Mutation through DerefMut should work in memory mode");
-        // Drop in memory mode - should not write to file (but we can't reliably test this
-        // due to parallel test execution affecting env vars)
+        assert_eq!(
+            *counter, 5u32,
+            "Mutation through DerefMut should work in memory mode"
+        );
+        // Drop in memory mode - should not write to file (but we can't reliably
+        // test this due to parallel test execution affecting env vars)
     }
 
     env::remove_var("LITERAL_MODE");
@@ -272,7 +271,7 @@ fn test_multiple_mutations_before_drop() {
         *counter += 2;
         *counter *= 3;
 
-        assert_eq!(*counter, 9u32);  // (0 + 1 + 2) * 3 = 9
+        assert_eq!(*counter, 9u32); // (0 + 1 + 2) * 3 = 9
         // Drop - should write final value
     }
 

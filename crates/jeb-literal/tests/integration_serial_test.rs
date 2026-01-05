@@ -1,8 +1,12 @@
-use std::env;
-use std::fs;
-use std::path::PathBuf;
-use tempfile::TempDir;
-use jeb_literal::LiteralPrivate;
+use {
+    jeb_literal::LiteralPrivate,
+    std::{
+        env,
+        fs,
+        path::PathBuf,
+    },
+    tempfile::TempDir,
+};
 
 /// Helper to create a test file with Rust source code
 struct TestFile {
@@ -172,7 +176,8 @@ fn test() {
 
     // Create a Inline instance manually (simulating what the macro does)
     {
-        let mut value = jeb_literal::Literal::__new(42u32, test_file.path.to_str().unwrap(), line, column);
+        let mut value =
+            jeb_literal::Literal::__new(42u32, test_file.path.to_str().unwrap(), line, column);
 
         // Update the value
         value.literal = 100u32;
@@ -204,7 +209,8 @@ fn test_litter_no_update_in_memory_mode() {
     assert_eq!(positions.len(), 1);
     let (line, column) = positions[0];
 
-    let mut value = jeb_literal::Literal::__new(42u32, test_file.path.to_str().unwrap(), line, column);
+    let mut value =
+        jeb_literal::Literal::__new(42u32, test_file.path.to_str().unwrap(), line, column);
 
     // Update the value
     value.literal = 100u32;
@@ -317,7 +323,8 @@ fn test_litter_no_change_optimization() {
     let positions = find_litter_positions(&test_file.path);
     let (line, column) = positions[0];
 
-    let mut value = jeb_literal::Literal::__new(42u32, test_file.path.to_str().unwrap(), line, column);
+    let mut value =
+        jeb_literal::Literal::__new(42u32, test_file.path.to_str().unwrap(), line, column);
 
     // Set to the same value
     value.literal = 42u32;

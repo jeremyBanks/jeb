@@ -1,7 +1,11 @@
-use std::env;
-use std::fs;
-use tempfile::TempDir;
-use jeb_literal::LiteralPrivate;
+use {
+    jeb_literal::LiteralPrivate,
+    std::{
+        env,
+        fs,
+    },
+    tempfile::TempDir,
+};
 
 #[test]
 fn test_long_vec_causes_line_wrapping() {
@@ -101,7 +105,8 @@ fn test_long_vec_causes_line_wrapping() {
         println!("Let's still verify the index-based approach works by updating B");
 
         {
-            let mut litter_b = jeb_literal::Literal::__new(100u32, path.to_str().unwrap(), b_line, b_col);
+            let mut litter_b =
+                jeb_literal::Literal::__new(100u32, path.to_str().unwrap(), b_line, b_col);
 
             litter_b.literal = 999u32;
             // Drop happens here - triggers write

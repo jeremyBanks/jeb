@@ -2,10 +2,14 @@
 //!
 //! Verifies that literal!() with no arguments uses Default::default()
 
-use std::env;
-use jeb_literal::LiteralPrivate;
-use std::fs;
-use tempfile::TempDir;
+use {
+    jeb_literal::LiteralPrivate,
+    std::{
+        env,
+        fs,
+    },
+    tempfile::TempDir,
+};
 
 #[test]
 fn test_empty_literal_uses_default() {
@@ -33,7 +37,10 @@ fn test_empty_literal_uses_default() {
         jeb_literal::Literal::__new(u32::default(), path.to_str().unwrap(), line, col);
 
     // Should start at 0 (default for u32)
-    assert_eq!(*counter, 0u32, "Empty literal!() should use Default::default() (0 for u32)");
+    assert_eq!(
+        *counter, 0u32,
+        "Empty literal!() should use Default::default() (0 for u32)"
+    );
 
     env::remove_var("LITERAL_MODE");
 }
@@ -60,23 +67,39 @@ fn test_empty_literal_with_various_types() {
     assert_eq!(positions.len(), 4, "Should find 4 literals");
 
     // Test u32
-    let lit_u32: jeb_literal::Literal<u32> =
-        jeb_literal::Literal::__new(u32::default(), path.to_str().unwrap(), positions[0].0, positions[0].1);
+    let lit_u32: jeb_literal::Literal<u32> = jeb_literal::Literal::__new(
+        u32::default(),
+        path.to_str().unwrap(),
+        positions[0].0,
+        positions[0].1,
+    );
     assert_eq!(*lit_u32, 0u32);
 
     // Test i32
-    let lit_i32: jeb_literal::Literal<i32> =
-        jeb_literal::Literal::__new(i32::default(), path.to_str().unwrap(), positions[1].0, positions[1].1);
+    let lit_i32: jeb_literal::Literal<i32> = jeb_literal::Literal::__new(
+        i32::default(),
+        path.to_str().unwrap(),
+        positions[1].0,
+        positions[1].1,
+    );
     assert_eq!(*lit_i32, 0i32);
 
     // Test String
-    let lit_string: jeb_literal::Literal<String> =
-        jeb_literal::Literal::__new(String::default(), path.to_str().unwrap(), positions[2].0, positions[2].1);
+    let lit_string: jeb_literal::Literal<String> = jeb_literal::Literal::__new(
+        String::default(),
+        path.to_str().unwrap(),
+        positions[2].0,
+        positions[2].1,
+    );
     assert_eq!(*lit_string, "");
 
     // Test Vec<u8>
-    let lit_vec: jeb_literal::Literal<Vec<u8>> =
-        jeb_literal::Literal::__new(Vec::default(), path.to_str().unwrap(), positions[3].0, positions[3].1);
+    let lit_vec: jeb_literal::Literal<Vec<u8>> = jeb_literal::Literal::__new(
+        Vec::default(),
+        path.to_str().unwrap(),
+        positions[3].0,
+        positions[3].1,
+    );
     assert_eq!(*lit_vec, Vec::<u8>::new());
 
     env::remove_var("LITERAL_MODE");
@@ -129,21 +152,39 @@ fn test_mixed_empty_and_explicit_literals() {
     assert_eq!(positions.len(), 4);
 
     // Empty u32
-    let lit_a: jeb_literal::Literal<u32> =
-        jeb_literal::Literal::__new(u32::default(), path.to_str().unwrap(), positions[0].0, positions[0].1);
+    let lit_a: jeb_literal::Literal<u32> = jeb_literal::Literal::__new(
+        u32::default(),
+        path.to_str().unwrap(),
+        positions[0].0,
+        positions[0].1,
+    );
     assert_eq!(*lit_a, 0u32);
 
     // Explicit u32
-    let lit_b = jeb_literal::Literal::__new(100u32, path.to_str().unwrap(), positions[1].0, positions[1].1);
+    let lit_b = jeb_literal::Literal::__new(
+        100u32,
+        path.to_str().unwrap(),
+        positions[1].0,
+        positions[1].1,
+    );
     assert_eq!(*lit_b, 100u32);
 
     // Empty String
-    let lit_c: jeb_literal::Literal<String> =
-        jeb_literal::Literal::__new(String::default(), path.to_str().unwrap(), positions[2].0, positions[2].1);
+    let lit_c: jeb_literal::Literal<String> = jeb_literal::Literal::__new(
+        String::default(),
+        path.to_str().unwrap(),
+        positions[2].0,
+        positions[2].1,
+    );
     assert_eq!(*lit_c, "");
 
     // Explicit String
-    let lit_d = jeb_literal::Literal::__new("hello".to_string(), path.to_str().unwrap(), positions[3].0, positions[3].1);
+    let lit_d = jeb_literal::Literal::__new(
+        "hello".to_string(),
+        path.to_str().unwrap(),
+        positions[3].0,
+        positions[3].1,
+    );
     assert_eq!(*lit_d, "hello");
 
     env::remove_var("LITERAL_MODE");

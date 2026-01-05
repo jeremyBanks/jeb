@@ -1,7 +1,11 @@
-use std::env;
-use std::fs;
-use tempfile::TempDir;
-use jeb_literal::LiteralPrivate;
+use {
+    jeb_literal::LiteralPrivate,
+    std::{
+        env,
+        fs,
+    },
+    tempfile::TempDir,
+};
 
 /// Helper to find all literal! macro positions in a file
 fn find_litter_positions(file_path: &std::path::Path) -> Vec<(u32, u32)> {
@@ -141,8 +145,12 @@ fn test_verify_mode_complex_value_mismatch() {
     let (line, column) = positions[0];
 
     {
-        let mut value =
-            jeb_literal::Literal::__new(vec![1u32, 2u32, 3u32], path.to_str().unwrap(), line, column);
+        let mut value = jeb_literal::Literal::__new(
+            vec![1u32, 2u32, 3u32],
+            path.to_str().unwrap(),
+            line,
+            column,
+        );
 
         // Setting to a different value should panic
         value.literal = vec![1u32, 2u32, 3u32, 4u32];
