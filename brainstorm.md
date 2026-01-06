@@ -108,3 +108,5 @@
 81. entire workflow built around these annotations and just grep I guess
 82. cargo-generate-lockfile is faster than a new build
 83. Autofix needs to be decomposed
+84. ::inline::this(2 * 64)
+85. ::inline::var(245)
