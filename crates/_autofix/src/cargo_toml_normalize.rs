@@ -458,18 +458,6 @@ fn clean_invalid_feature_deps(
     total_removed
 }
 
-/// Extract dependency name from a dependency reference (dep:NAME or
-/// NAME/feature)
-fn extract_dep_reference(dep_ref: &str) -> Option<String> {
-    if let Some(stripped) = dep_ref.strip_prefix("dep:") {
-        Some(normalize_dep_name_for_feature(stripped))
-    } else {
-        dep_ref
-            .find('/')
-            .map(|slash_pos| normalize_dep_name_for_feature(&dep_ref[..slash_pos]))
-    }
-}
-
 /// Update the features section in the document
 fn update_features_section(
     doc: &mut DocumentMut,
