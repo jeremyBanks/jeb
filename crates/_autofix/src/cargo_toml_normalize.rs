@@ -1,4 +1,8 @@
 use {
+    crate::lockfile::{
+        build_dependency_graph,
+        parse_cargo_lock,
+    },
     anyhow::{
         Context,
         Result,
@@ -40,6 +44,15 @@ fn run_normalization() -> Result<()> {
     let workspace_root = find_workspace_root(".")?;
     let members = resolve_workspace_members(&workspace_root)?;
 
+    // Parse workspace Cargo.lock for dependency graph
+    let workspace_lock = workspace_root.join("Cargo.lock");
+    let lockfile_graph = if workspace_lock.exists() {
+        let (_, packages) = parse_cargo_lock(&workspace_lock)?;
+        Some(build_dependency_graph(&packages))
+    } else {
+        None
+    };
+
     // Run initial cargo check to establish baseline
     let initial_check = std::process::Command::new("cargo")
         .arg("check")
@@ -73,7 +86,7 @@ fn run_normalization() -> Result<()> {
         let content = std::fs::read_to_string(&member_toml)?;
         let mut doc = content.parse::<DocumentMut>()?;
 
-        let features_modified = normalize_crate_features(&mut doc, &mut stats)?;
+        let features_modified = normalize_crate_features(&mut doc, &mut stats, &lockfile_graph)?;
         let sections_modified = sort_cargo_toml_sections(&mut doc)?;
 
         if features_modified || sections_modified {
@@ -88,11 +101,17 @@ fn run_normalization() -> Result<()> {
         .arg("check")
         .current_dir(&workspace_root)
         .output();
-    let final_build_success = matches!(final_check, Ok(output) if output.status.success());
+    let final_build_success = matches!(final_check, Ok(ref output) if output.status.success());
 
     // Rollback if build broke
     if initial_build_success && !final_build_success {
         eprintln!("Error: Workspace built before normalization but fails after.");
+        if let Ok(output) = &final_check {
+            eprintln!(
+                "Cargo check stderr:\n{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
         eprintln!("Rolling back all changes...");
         for (path, content) in &original_contents {
             std::fs::write(path, content)?;
@@ -140,6 +159,7 @@ struct DependencyInfo {
 fn normalize_crate_features(
     doc: &mut DocumentMut,
     stats: &mut FeatureNormalizationStats,
+    lockfile_graph: &Option<HashMap<String, HashSet<String>>>,
 ) -> Result<bool> {
     // Collect all dependencies from all sections
     let all_deps = collect_all_dependencies(doc)?;
@@ -168,11 +188,63 @@ fn normalize_crate_features(
         })
         .collect();
 
-    for dep_name in optional_dep_names {
-        if !features.contains_key(&dep_name) {
-            let dep_info = &all_deps[&dep_name];
+    // Map from normalized name (underscores) to cargo key (may have hyphens)
+    let optional_dep_cargo_keys: HashMap<String, String> = all_deps
+        .iter()
+        .filter_map(|(name, info)| {
+            if info.optional {
+                Some((name.clone(), info.cargo_toml_key.clone()))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    for dep_name in &optional_dep_names {
+        if !features.contains_key(dep_name) {
+            let dep_info = &all_deps[dep_name];
             let feature_value = format!("dep:{}", dep_info.cargo_toml_key);
-            features.insert(dep_name, vec![feature_value]);
+            features.insert(dep_name.clone(), vec![feature_value]);
+        }
+    }
+
+    // Add transitive feature dependencies based on lockfile graph
+    // If optional dep A depends on optional dep B (per Cargo.lock), add B to A's
+    // feature
+    if let Some(graph) = lockfile_graph {
+        for dep_name in &optional_dep_names {
+            // Get the cargo key for this dep (may have hyphens)
+            let cargo_key = optional_dep_cargo_keys
+                .get(dep_name)
+                .map(|s| s.as_str())
+                .unwrap_or(dep_name);
+
+            // Look up dependencies in the lockfile graph (uses actual crate names with
+            // hyphens)
+            if let Some(transitive_deps) = graph.get(cargo_key) {
+                // Find which of these are also optional deps in this crate
+                let feature_deps: Vec<String> = transitive_deps
+                    .iter()
+                    .filter_map(|trans_dep| {
+                        // Normalize the transitive dep name for comparison
+                        let normalized = normalize_dep_name_for_feature(trans_dep);
+                        if optional_dep_names.contains(&normalized) && &normalized != dep_name {
+                            Some(normalized)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                // Add these as feature dependencies
+                if let Some(feature_list) = features.get_mut(dep_name) {
+                    for feat_dep in feature_deps {
+                        if !feature_list.contains(&feat_dep) {
+                            feature_list.push(feat_dep);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -209,7 +281,7 @@ fn normalize_crate_features(
 
     // Update the document if there are features to write
     if !features.is_empty() || doc.get("features").is_some() {
-        update_features_section(doc, features)?;
+        update_features_section(doc, features, &optional_dep_names)?;
         Ok(true)
     } else {
         Ok(false)
@@ -280,61 +352,117 @@ fn parse_existing_features(doc: &DocumentMut) -> HashMap<String, Vec<String>> {
     features
 }
 
-/// Clean up invalid feature dependencies (those referencing non-existent deps)
+/// Clean up invalid feature dependencies (those referencing non-existent
+/// optional deps)
+///
+/// Only deletes a feature if:
+/// 1. It was auto-generated (had `dep:same_name` where name matches feature
+///    name)
+/// 2. That dep is no longer optional (removed or made non-optional)
+///
+/// Does NOT delete intentionally empty features like `_implicit_all = []`
 fn clean_invalid_feature_deps(
     features: &mut HashMap<String, Vec<String>>,
     all_deps: &HashMap<String, DependencyInfo>,
 ) -> usize {
     let mut total_removed = 0;
-    let mut features_to_delete = Vec::new();
 
-    for (feature_name, feature_deps) in features.iter_mut() {
-        let original_len = feature_deps.len();
+    // First pass: identify features that should be deleted
+    // A feature should be deleted if it had `dep:feature_name` and that dep is gone
+    let mut features_to_delete: HashSet<String> = HashSet::new();
 
-        // Keep only valid dependency references and non-dependency refs
-        feature_deps.retain(|dep_ref| {
-            if let Some(dep_name) = extract_dep_reference(dep_ref) {
-                // This is a dependency reference (dep:NAME or NAME/feature)
-                all_deps.contains_key(&dep_name)
+    for (feature_name, feature_deps) in features.iter() {
+        // Check if this feature has `dep:feature_name` (normalized)
+        let has_self_dep = feature_deps.iter().any(|dep| {
+            if let Some(stripped) = dep.strip_prefix("dep:") {
+                normalize_dep_name_for_feature(stripped) == *feature_name
             } else {
-                // Not a dependency reference (e.g., another feature), keep it
-                true
+                false
             }
         });
 
-        let removed = original_len - feature_deps.len();
-        total_removed += removed;
+        // If it had a self-referencing dep:, check if that dep is still optional
+        if has_self_dep {
+            let dep_still_optional = all_deps
+                .get(feature_name)
+                .map(|info| info.optional)
+                .unwrap_or(false);
 
-        // Mark feature for deletion if it became empty
-        if feature_deps.is_empty() && original_len > 0 {
-            features_to_delete.push(feature_name.clone());
+            if !dep_still_optional {
+                // The dep is no longer optional - mark feature for deletion
+                features_to_delete.insert(feature_name.clone());
+            }
         }
     }
 
-    // Remove features that became empty
-    for feature_name in features_to_delete {
-        features.remove(&feature_name);
+    // Cascade: if feature A references feature B, and B is being deleted,
+    // we need to remove that reference. Iterate until stable.
+    loop {
+        let mut changed = false;
+
+        for (feature_name, feature_deps) in features.iter_mut() {
+            if features_to_delete.contains(feature_name) {
+                continue;
+            }
+
+            let before_len = feature_deps.len();
+
+            // Remove references to features being deleted
+            feature_deps.retain(|dep| !features_to_delete.contains(dep));
+
+            // Remove invalid dep: references (dep no longer optional)
+            // Note: NAME/feature refs are valid for non-optional deps, only remove dep:NAME
+            // refs
+            feature_deps.retain(|dep_ref| {
+                if let Some(stripped) = dep_ref.strip_prefix("dep:") {
+                    // This is a dep:NAME reference - check if dep is still optional
+                    let dep_name = normalize_dep_name_for_feature(stripped);
+                    all_deps
+                        .get(&dep_name)
+                        .map(|info| info.optional)
+                        .unwrap_or(false)
+                } else {
+                    // NAME/feature refs or bare feature names - keep them
+                    true
+                }
+            });
+
+            let removed = before_len - feature_deps.len();
+            if removed > 0 {
+                total_removed += removed;
+                changed = true;
+            }
+
+            // If this was an auto-generated feature and is now empty, mark for deletion
+            let was_auto_generated = all_deps.contains_key(feature_name);
+            if feature_deps.is_empty()
+                && was_auto_generated
+                && !features_to_delete.contains(feature_name)
+            {
+                // Check if it originally had a self dep
+                features_to_delete.insert(feature_name.clone());
+                changed = true;
+            }
+        }
+
+        if !changed {
+            break;
+        }
+    }
+
+    // Delete marked features
+    for feature_name in &features_to_delete {
+        features.remove(feature_name);
     }
 
     total_removed
-}
-
-/// Extract dependency name from a dependency reference (dep:NAME or
-/// NAME/feature)
-fn extract_dep_reference(dep_ref: &str) -> Option<String> {
-    if let Some(stripped) = dep_ref.strip_prefix("dep:") {
-        Some(normalize_dep_name_for_feature(stripped))
-    } else if let Some(slash_pos) = dep_ref.find('/') {
-        Some(normalize_dep_name_for_feature(&dep_ref[..slash_pos]))
-    } else {
-        None
-    }
 }
 
 /// Update the features section in the document
 fn update_features_section(
     doc: &mut DocumentMut,
     features: HashMap<String, Vec<String>>,
+    internal_feature_names: &HashSet<String>,
 ) -> Result<()> {
     // Case 1: Features section already exists - modify in place
     if let Some(features_table) = doc.get_mut("features").and_then(|f| f.as_table_mut()) {
@@ -350,7 +478,7 @@ fn update_features_section(
         for (feature_name, feature_deps) in features.iter() {
             // Sort the dependencies within each feature
             let mut sorted_deps = feature_deps.clone();
-            sorted_deps.sort_by_key(|dep| feature_dep_sort_key(dep));
+            sorted_deps.sort_by_key(|dep| feature_dep_sort_key(dep, internal_feature_names));
 
             let mut array = toml_edit::Array::new();
             for dep in sorted_deps {
@@ -396,7 +524,7 @@ fn update_features_section(
 
         for (feature_name, mut feature_deps) in sorted_features {
             // Sort the dependencies within each feature
-            feature_deps.sort_by_key(|dep| feature_dep_sort_key(dep));
+            feature_deps.sort_by_key(|dep| feature_dep_sort_key(dep, internal_feature_names));
 
             let mut array = toml_edit::Array::new();
             for dep in feature_deps {
@@ -411,18 +539,21 @@ fn update_features_section(
     Ok(())
 }
 
-/// Sort key for feature dependencies (bare names first, then dep:/slash refs)
-fn feature_dep_sort_key(dep: &str) -> (u32, String) {
+/// Sort key for feature dependencies
+/// Order: internal bare names, external bare names, slash refs (/default
+/// first), dep: refs
+fn feature_dep_sort_key(dep: &str, internal_names: &HashSet<String>) -> (u32, u32, String) {
     if dep.contains('/') {
         // Slash refs: sort with /default first
         let has_default = dep.ends_with("/default");
-        (if has_default { 1 } else { 2 }, dep.to_string())
+        (2, if has_default { 0 } else { 1 }, dep.to_string())
     } else if dep.starts_with("dep:") {
-        // dep: refs
-        (3, dep.to_string())
+        // dep: refs come last
+        (3, 0, dep.to_string())
     } else {
-        // Bare feature names
-        (0, dep.to_string())
+        // Bare feature names: internal (matching optional deps) come first
+        let is_internal = internal_names.contains(dep);
+        (0, if is_internal { 0 } else { 1 }, dep.to_string())
     }
 }
 
@@ -489,10 +620,10 @@ fn sort_cargo_toml_sections(doc: &mut DocumentMut) -> Result<bool> {
             .unwrap_or(section_order.len());
 
         // Get mutable reference to the item and set its position
-        if let Some(item) = doc.get_mut(key) {
-            if let Some(table) = item.as_table_mut() {
-                table.set_position(target_position);
-            }
+        if let Some(item) = doc.get_mut(key)
+            && let Some(table) = item.as_table_mut()
+        {
+            table.set_position(target_position);
         }
     }
 
