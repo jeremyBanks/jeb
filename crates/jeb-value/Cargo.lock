@@ -48,6 +48,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rustc_version",
+ "syn 2.0.111",
  "unicode-xid",
 ]
 
@@ -73,6 +74,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bd070e393353796e801d209ad339e89596eb4c8d430d18ede6a1cced8fafbd99"
 dependencies = [
  "autocfg",
+ "hashbrown 0.12.3",
 ]
 
 [[package]]
@@ -82,6 +84,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ad4bb2b565bca0645f4d68c5c9af97fba094e9791da685bf83cb5f3ce74acf2"
 dependencies = [
  "equivalent",
+ "hashbrown 0.16.1",
  "serde",
  "serde_core",
 ]
@@ -98,6 +101,7 @@ version = "0.0.0-dev-2025-12-26.7705"
 dependencies = [
  "derive_more",
  "document-features",
+ "indexmap 2.12.1",
  "serde",
  "serde_bytes",
  "serde_json",
@@ -198,6 +202,7 @@ checksum = "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79"
 dependencies = [
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -206,6 +211,7 @@ version = "1.0.147"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6af14725505314343e673e9ecb7cd7e8a36aa9791eb936235a3567cc31447ae4"
 dependencies = [
+ "indexmap 2.12.1",
  "itoa",
  "memchr",
  "serde",
@@ -263,6 +269,7 @@ dependencies = [
  "bumpalo",
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
  "wasm-bindgen-shared",
 ]
 

@@ -126,6 +126,8 @@ dependencies = [
  "fastrand",
  "getrandom",
  "once_cell",
+ "rustix 1.1.3",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -147,6 +149,7 @@ checksum = "af407857209536a95c8e56f8231ef2c2e2aff839b22e07a1ffcbc617e9db9fa5"
 dependencies = [
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -161,6 +164,7 @@ version = "0.22.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "41fe8c660ae4257887cf66394862d21dbca4a6ddd26f04a3560410406a2f819a"
 dependencies = [
+ "indexmap 2.12.1",
  "toml_datetime",
  "toml_write",
  "winnow",

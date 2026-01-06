@@ -45,6 +45,7 @@ checksum = "c7c24de15d275a1ecfd47a380fb4d5ec9bfe0933f309ed5e705b775596a3574d"
 dependencies = [
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -141,6 +142,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rustc_version",
+ "syn 2.0.111",
  "unicode-xid",
 ]
 
@@ -237,6 +239,7 @@ checksum = "162ee34ebcb7c64a8abebc059ce0fee27c2262618d7b60ed8faf72fef13c3650"
 dependencies = [
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -278,6 +281,7 @@ dependencies = [
  "proc-macro-error2",
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -294,6 +298,7 @@ checksum = "e37cabdb99bee3bd91a5e85b81e2782fe249963f8ab2a8e1e53ce00bc4c6d08c"
 dependencies = [
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -309,6 +314,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bd070e393353796e801d209ad339e89596eb4c8d430d18ede6a1cced8fafbd99"
 dependencies = [
  "autocfg",
+ "hashbrown 0.12.3",
 ]
 
 [[package]]
@@ -318,6 +324,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ad4bb2b565bca0645f4d68c5c9af97fba094e9791da685bf83cb5f3ce74acf2"
 dependencies = [
  "equivalent",
+ "hashbrown 0.16.1",
  "serde",
  "serde_core",
 ]
@@ -339,6 +346,7 @@ dependencies = [
  "futures",
  "getset",
  "ignorable",
+ "indexmap 2.12.1",
  "jeb-common",
  "jeb-stream",
  "jeb-value",
@@ -364,6 +372,7 @@ dependencies = [
  "derive_more",
  "document-features",
  "fast_hilbert",
+ "indexmap 2.12.1",
  "wasm-bindgen",
 ]
 
@@ -394,6 +403,7 @@ version = "0.0.0-dev-2025-12-26.7705"
 dependencies = [
  "derive_more",
  "document-features",
+ "indexmap 2.12.1",
  "serde",
  "serde_bytes",
  "serde_json",
@@ -464,6 +474,9 @@ name = "matchers"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d1525a2a28c7f4fa0fc98bb91ae755d1e2d1505079e05539e35bc876b5d65ae9"
+dependencies = [
+ "regex-automata 0.4.13",
+]
 
 [[package]]
 name = "memchr"
@@ -485,6 +498,9 @@ name = "nu-ansi-term"
 version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
+dependencies = [
+ "windows-sys 0.61.2",
+]
 
 [[package]]
 name = "object"
@@ -567,6 +583,7 @@ dependencies = [
  "proc-macro-error-attr2",
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -592,6 +609,9 @@ name = "redox_syscall"
 version = "0.5.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed2bf2547551a7053d6fdfafda3f938979645c44812fbfcda098faae3f1a362d"
+dependencies = [
+ "bitflags 2.10.0",
+]
 
 [[package]]
 name = "regex"
@@ -601,6 +621,7 @@ checksum = "843bc0191f75f3e22651ae5f1e72939ab2f72a4bc30fa80a066bd66edefc24d4"
 dependencies = [
  "aho-corasick",
  "memchr",
+ "regex-automata 0.4.13",
  "regex-syntax",
 ]
 
@@ -680,6 +701,7 @@ checksum = "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79"
 dependencies = [
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -688,6 +710,7 @@ version = "1.0.147"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6af14725505314343e673e9ecb7cd7e8a36aa9791eb936235a3567cc31447ae4"
 dependencies = [
+ "indexmap 2.12.1",
  "itoa",
  "memchr",
  "serde",
@@ -756,6 +779,7 @@ checksum = "af407857209536a95c8e56f8231ef2c2e2aff839b22e07a1ffcbc617e9db9fa5"
 dependencies = [
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -802,6 +826,7 @@ checksum = "7490cfa5ec963746568740651ac6781f701c9c5ea257c58e057f3ba8cf69e8da"
 dependencies = [
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -844,6 +869,7 @@ dependencies = [
  "matchers",
  "nu-ansi-term",
  "once_cell",
+ "regex-automata 0.4.13",
  "sharded-slab",
  "smallvec",
  "thread_local",
@@ -908,6 +934,7 @@ dependencies = [
  "bumpalo",
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
  "wasm-bindgen-shared",
 ]
 

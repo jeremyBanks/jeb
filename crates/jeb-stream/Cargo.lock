@@ -21,6 +21,7 @@ checksum = "c7c24de15d275a1ecfd47a380fb4d5ec9bfe0933f309ed5e705b775596a3574d"
 dependencies = [
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -69,6 +70,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rustc_version",
+ "syn 2.0.111",
  "unicode-xid",
 ]
 
@@ -143,6 +145,7 @@ checksum = "162ee34ebcb7c64a8abebc059ce0fee27c2262618d7b60ed8faf72fef13c3650"
 dependencies = [
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -188,6 +191,7 @@ dependencies = [
  "derive_more",
  "document-features",
  "fast_hilbert",
+ "indexmap 2.12.1",
  "wasm-bindgen",
 ]
 
@@ -218,6 +222,7 @@ version = "0.0.0-dev-2025-12-26.7705"
 dependencies = [
  "derive_more",
  "document-features",
+ "indexmap 2.12.1",
  "serde",
  "serde_bytes",
  "serde_json",
@@ -337,6 +342,9 @@ name = "redox_syscall"
 version = "0.5.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed2bf2547551a7053d6fdfafda3f938979645c44812fbfcda098faae3f1a362d"
+dependencies = [
+ "bitflags 2.10.0",
+]
 
 [[package]]
 name = "rustc_version"
@@ -402,6 +410,7 @@ checksum = "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79"
 dependencies = [
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -410,6 +419,7 @@ version = "1.0.147"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6af14725505314343e673e9ecb7cd7e8a36aa9791eb936235a3567cc31447ae4"
 dependencies = [
+ "indexmap 2.12.1",
  "itoa",
  "memchr",
  "serde",
@@ -454,6 +464,7 @@ checksum = "af407857209536a95c8e56f8231ef2c2e2aff839b22e07a1ffcbc617e9db9fa5"
 dependencies = [
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -530,6 +541,7 @@ dependencies = [
  "bumpalo",
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
  "wasm-bindgen-shared",
 ]
 

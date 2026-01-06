@@ -1,4 +1,10 @@
 use {
+    crate::lockfile::{
+        LockPackage,
+        build_dependency_graph,
+        get_transitive_dependencies,
+        parse_cargo_lock,
+    },
     anyhow::{
         Context,
         Result,
@@ -291,17 +297,15 @@ fn collect_workspace_crates(
                     return Some(s.to_string());
                 }
                 // Check if it's { workspace = true } (inline table)
-                if let Some(table) = v.as_inline_table() {
-                    if table.get("workspace").and_then(|w| w.as_bool()) == Some(true) {
+                if let Some(table) = v.as_inline_table()
+                    && table.get("workspace").and_then(|w| w.as_bool()) == Some(true) {
                         return workspace_version.clone();
                     }
-                }
                 // Check if it's version.workspace = true (dotted key syntax creates a table)
-                if let Some(table) = v.as_table() {
-                    if table.get("workspace").and_then(|w| w.as_bool()) == Some(true) {
+                if let Some(table) = v.as_table()
+                    && table.get("workspace").and_then(|w| w.as_bool()) == Some(true) {
                         return workspace_version.clone();
                     }
-                }
                 None
             });
 
@@ -758,116 +762,6 @@ impl NormalizationStats {
         newly_edited
     }
 }
-/// Represents a package entry from Cargo.lock
-#[derive(Debug, Clone)]
-struct LockPackage {
-    name: String,
-    version: String,
-    source: Option<String>,
-    checksum: Option<String>,
-    dependencies: Vec<String>,
-}
-
-/// Parse Cargo.lock (version 4 format) into a list of packages
-fn parse_cargo_lock(lock_path: &Path) -> Result<(i64, Vec<LockPackage>)> {
-    let content = std::fs::read_to_string(lock_path)?;
-    let doc = content.parse::<DocumentMut>()?;
-
-    let version = doc.get("version").and_then(|v| v.as_integer()).unwrap_or(4);
-
-    let mut packages = Vec::new();
-
-    if let Some(pkg_array) = doc.get("package").and_then(|p| p.as_array_of_tables()) {
-        for pkg in pkg_array.iter() {
-            let name = pkg
-                .get("name")
-                .and_then(|n| n.as_str())
-                .unwrap_or("")
-                .to_string();
-            let version = pkg
-                .get("version")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            let source = pkg.get("source").and_then(|s| s.as_str()).map(String::from);
-            let checksum = pkg
-                .get("checksum")
-                .and_then(|c| c.as_str())
-                .map(String::from);
-
-            let dependencies = pkg
-                .get("dependencies")
-                .and_then(|d| d.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|item| item.as_str().map(String::from))
-                        .collect()
-                })
-                .unwrap_or_default();
-
-            packages.push(LockPackage {
-                name,
-                version,
-                source,
-                checksum,
-                dependencies,
-            });
-        }
-    }
-
-    Ok((version, packages))
-}
-
-/// Build a dependency graph from lock packages.
-/// Returns a map from package name to list of package names it depends on.
-/// Also returns a set of all package names that exist in the lockfile.
-fn build_dependency_graph(
-    packages: &[LockPackage],
-) -> (HashMap<String, HashSet<String>>, HashSet<String>) {
-    let mut graph: HashMap<String, HashSet<String>> = HashMap::new();
-    let mut all_names: HashSet<String> = HashSet::new();
-
-    for pkg in packages {
-        all_names.insert(pkg.name.clone());
-        let deps = graph.entry(pkg.name.clone()).or_default();
-        for dep in &pkg.dependencies {
-            deps.insert(dep.clone());
-        }
-    }
-
-    (graph, all_names)
-}
-
-/// Get all transitive dependencies starting from a set of root package names.
-/// Uses BFS to traverse the dependency graph.
-/// Conservative: if we need any version of a package, we include the name.
-fn get_transitive_dependencies(
-    roots: &HashSet<String>,
-    graph: &HashMap<String, HashSet<String>>,
-    all_names: &HashSet<String>,
-) -> HashSet<String> {
-    let mut needed: HashSet<String> = HashSet::new();
-    let mut queue: Vec<String> = roots.iter().cloned().collect();
-
-    while let Some(pkg_name) = queue.pop() {
-        if needed.contains(&pkg_name) {
-            continue;
-        }
-        // Only add if it exists in the lockfile
-        if all_names.contains(&pkg_name) {
-            needed.insert(pkg_name.clone());
-            if let Some(deps) = graph.get(&pkg_name) {
-                for dep in deps {
-                    if !needed.contains(dep) {
-                        queue.push(dep.clone());
-                    }
-                }
-            }
-        }
-    }
-
-    needed
-}
 
 /// Parse a member's Cargo.toml to extract all dependency names
 /// (from dependencies, dev-dependencies, and build-dependencies)
@@ -963,7 +857,7 @@ fn copy_lockfiles(workspace_root: &Path, members: &[PathBuf]) -> Result<usize> {
     }
 
     let (version, packages) = parse_cargo_lock(&workspace_lock)?;
-    let (graph, all_names) = build_dependency_graph(&packages);
+    let graph = build_dependency_graph(&packages);
 
     let mut copied = 0;
 
@@ -974,7 +868,7 @@ fn copy_lockfiles(workspace_root: &Path, members: &[PathBuf]) -> Result<usize> {
         let direct_deps = get_member_dependency_names(member_path)?;
 
         // Get all transitive dependencies
-        let needed_names = get_transitive_dependencies(&direct_deps, &graph, &all_names);
+        let needed_names = get_transitive_dependencies(&direct_deps, &graph);
 
         // Generate pruned lockfile
         let pruned_content = generate_pruned_lockfile(version, &packages, &needed_names);
@@ -1120,14 +1014,13 @@ fn normalize_workspace_dependencies(
         add_workspace_crate_versions(&mut workspace_doc, &workspace_crates)?;
 
     // Sort [workspace.dependencies] after all modifications are done
-    if let Some(workspace) = workspace_doc.get_mut("workspace") {
-        if let Some(deps) = workspace
+    if let Some(workspace) = workspace_doc.get_mut("workspace")
+        && let Some(deps) = workspace
             .get_mut("dependencies")
             .and_then(|d| d.as_table_mut())
         {
             sort_workspace_dependencies(deps, &workspace_updates)?;
         }
-    }
 
     // Update [patch.crates-io] with all workspace crates
     let (added, updated, removed) = update_patch_crates_io(&mut workspace_doc, &workspace_crates)?;
@@ -1466,9 +1359,9 @@ fn add_workspace_crate_versions(
 
     // First pass: Remove versions from internal crates (those starting with _)
     for (name, _info) in workspace_crates.iter() {
-        if name.starts_with('_') {
-            if let Some(existing) = deps.get(name) {
-                if let Some(existing_table) = existing.as_inline_table() {
+        if name.starts_with('_')
+            && let Some(existing) = deps.get(name)
+                && let Some(existing_table) = existing.as_inline_table() {
                     // Check if it has a version field
                     if existing_table.get("version").is_some() {
                         // Rebuild without version
@@ -1482,8 +1375,6 @@ fn add_workspace_crate_versions(
                         synced += 1;
                     }
                 }
-            }
-        }
     }
 
     // Second pass: Add/update versions for non-internal crates

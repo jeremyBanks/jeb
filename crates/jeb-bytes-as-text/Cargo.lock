@@ -42,6 +42,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rustc_version",
+ "syn 2.0.111",
  "unicode-xid",
 ]
 
@@ -74,6 +75,7 @@ dependencies = [
  "derive_more",
  "document-features",
  "fast_hilbert",
+ "indexmap 2.12.1",
  "wasm-bindgen",
 ]
 
@@ -178,6 +180,7 @@ dependencies = [
  "bumpalo",
  "proc-macro2",
  "quote",
+ "syn 2.0.111",
  "wasm-bindgen-shared",
 ]
 
