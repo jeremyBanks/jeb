@@ -107,3 +107,4 @@
 80. We can use lock file to determine what dependencies depend on another dependency and automatically insert a feature with a feature deependency
 81. entire workflow built around these annotations and just grep I guess
 82. cargo-generate-lockfile is faster than a new build
+83. Autofix needs to be decomposed
