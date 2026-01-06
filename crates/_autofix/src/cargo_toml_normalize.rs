@@ -101,11 +101,17 @@ fn run_normalization() -> Result<()> {
         .arg("check")
         .current_dir(&workspace_root)
         .output();
-    let final_build_success = matches!(final_check, Ok(output) if output.status.success());
+    let final_build_success = matches!(final_check, Ok(ref output) if output.status.success());
 
     // Rollback if build broke
     if initial_build_success && !final_build_success {
         eprintln!("Error: Workspace built before normalization but fails after.");
+        if let Ok(output) = &final_check {
+            eprintln!(
+                "Cargo check stderr:\n{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
         eprintln!("Rolling back all changes...");
         for (path, content) in &original_contents {
             std::fs::write(path, content)?;
@@ -405,15 +411,18 @@ fn clean_invalid_feature_deps(
             feature_deps.retain(|dep| !features_to_delete.contains(dep));
 
             // Remove invalid dep: references (dep no longer optional)
+            // Note: NAME/feature refs are valid for non-optional deps, only remove dep:NAME
+            // refs
             feature_deps.retain(|dep_ref| {
-                if let Some(dep_name) = extract_dep_reference(dep_ref) {
-                    // Check if dep is still optional
+                if let Some(stripped) = dep_ref.strip_prefix("dep:") {
+                    // This is a dep:NAME reference - check if dep is still optional
+                    let dep_name = normalize_dep_name_for_feature(stripped);
                     all_deps
                         .get(&dep_name)
                         .map(|info| info.optional)
                         .unwrap_or(false)
                 } else {
-                    // Not a dependency reference, keep it
+                    // NAME/feature refs or bare feature names - keep them
                     true
                 }
             });
@@ -454,7 +463,11 @@ fn clean_invalid_feature_deps(
 fn extract_dep_reference(dep_ref: &str) -> Option<String> {
     if let Some(stripped) = dep_ref.strip_prefix("dep:") {
         Some(normalize_dep_name_for_feature(stripped))
-    } else { dep_ref.find('/').map(|slash_pos| normalize_dep_name_for_feature(&dep_ref[..slash_pos])) }
+    } else {
+        dep_ref
+            .find('/')
+            .map(|slash_pos| normalize_dep_name_for_feature(&dep_ref[..slash_pos]))
+    }
 }
 
 /// Update the features section in the document
@@ -620,9 +633,10 @@ fn sort_cargo_toml_sections(doc: &mut DocumentMut) -> Result<bool> {
 
         // Get mutable reference to the item and set its position
         if let Some(item) = doc.get_mut(key)
-            && let Some(table) = item.as_table_mut() {
-                table.set_position(target_position);
-            }
+            && let Some(table) = item.as_table_mut()
+        {
+            table.set_position(target_position);
+        }
     }
 
     Ok(true)

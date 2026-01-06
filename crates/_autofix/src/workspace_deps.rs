@@ -298,14 +298,16 @@ fn collect_workspace_crates(
                 }
                 // Check if it's { workspace = true } (inline table)
                 if let Some(table) = v.as_inline_table()
-                    && table.get("workspace").and_then(|w| w.as_bool()) == Some(true) {
-                        return workspace_version.clone();
-                    }
+                    && table.get("workspace").and_then(|w| w.as_bool()) == Some(true)
+                {
+                    return workspace_version.clone();
+                }
                 // Check if it's version.workspace = true (dotted key syntax creates a table)
                 if let Some(table) = v.as_table()
-                    && table.get("workspace").and_then(|w| w.as_bool()) == Some(true) {
-                        return workspace_version.clone();
-                    }
+                    && table.get("workspace").and_then(|w| w.as_bool()) == Some(true)
+                {
+                    return workspace_version.clone();
+                }
                 None
             });
 
@@ -1018,9 +1020,9 @@ fn normalize_workspace_dependencies(
         && let Some(deps) = workspace
             .get_mut("dependencies")
             .and_then(|d| d.as_table_mut())
-        {
-            sort_workspace_dependencies(deps, &workspace_updates)?;
-        }
+    {
+        sort_workspace_dependencies(deps, &workspace_updates)?;
+    }
 
     // Update [patch.crates-io] with all workspace crates
     let (added, updated, removed) = update_patch_crates_io(&mut workspace_doc, &workspace_crates)?;
@@ -1361,20 +1363,21 @@ fn add_workspace_crate_versions(
     for (name, _info) in workspace_crates.iter() {
         if name.starts_with('_')
             && let Some(existing) = deps.get(name)
-                && let Some(existing_table) = existing.as_inline_table() {
-                    // Check if it has a version field
-                    if existing_table.get("version").is_some() {
-                        // Rebuild without version
-                        let mut new_table = InlineTable::new();
-                        for (k, v) in existing_table.iter() {
-                            if k != "version" {
-                                new_table.insert(k, v.clone());
-                            }
-                        }
-                        deps.insert(name, Item::Value(Value::InlineTable(new_table)));
-                        synced += 1;
+            && let Some(existing_table) = existing.as_inline_table()
+        {
+            // Check if it has a version field
+            if existing_table.get("version").is_some() {
+                // Rebuild without version
+                let mut new_table = InlineTable::new();
+                for (k, v) in existing_table.iter() {
+                    if k != "version" {
+                        new_table.insert(k, v.clone());
                     }
                 }
+                deps.insert(name, Item::Value(Value::InlineTable(new_table)));
+                synced += 1;
+            }
+        }
     }
 
     // Second pass: Add/update versions for non-internal crates
