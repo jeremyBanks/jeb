@@ -114,3 +114,4 @@
 87. ::inline::REPLACE_ME(env!("USER"))
 88. REPLACE_ME! For macros maybe could replace with the source tree that was passed into the macro? Like as it sees it?
 89. Maybe actually that could be ::inline::expand!(…)
+90. And as future work maybe inline::expand  which is replaced with the tokens its macro body sees? But I don't know if t
