@@ -24,8 +24,8 @@ impl<T, E: Debug + Any> DebugResultExt for Result<T, E> {
         match self {
             Ok(ok) => Ok(ok),
             Err(err) => {
-                let prefix = if err.type_id() == TypeId::of::<windows::core::Error>() {
-                    "windows::core::"
+                let prefix = if err.type_id() == TypeId::of::<windows_core::Error>() {
+                    "windows_core::"
                 } else {
                     let prefix = type_name::<E>();
                     &prefix[..prefix.rfind("::").map(|x| x + 2).unwrap_or(prefix.len())]

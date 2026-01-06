@@ -10,9 +10,9 @@ use tracing::instrument;
 use tracing::metadata::LevelFilter;
 use tracing::trace as log;
 use tracing_subscriber::fmt::format::FmtSpan;
-use windows::core::InParam;
-use windows::core::Interface;
-use windows::w;
+use windows_core::InParam;
+use windows_core::Interface;
+use windows_core::w;
 use windows::Media::SpeechSynthesis::SpeechSynthesizer;
 use windows::Storage::Streams::Buffer;
 use windows::Storage::Streams::DataReader;
@@ -136,8 +136,8 @@ impl<T, E: Debug + Any> DebugResultExt for Result<T, E> {
         match self {
             Ok(ok) => Ok(ok),
             Err(err) => {
-                let prefix = if err.type_id() == TypeId::of::<windows::core::Error>() {
-                    "windows::core::"
+                let prefix = if err.type_id() == TypeId::of::<windows_core::Error>() {
+                    "windows_core::"
                 } else {
                     let prefix = type_name::<E>();
                     &prefix[..prefix.rfind("::").map(|x| x + 2).unwrap_or(prefix.len())]
