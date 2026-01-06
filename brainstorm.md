@@ -110,3 +110,7 @@
 83. Autofix needs to be decomposed
 84. ::inline::this(2 * 64)
 85. ::inline::var(245)
+86. ::inline::replace
+87. ::inline::REPLACE_ME(env!("USER"))
+88. REPLACE_ME! For macros maybe could replace with the source tree that was passed into the macro? Like as it sees it?
+89. Maybe actually that could be ::inline::expand!(…)
