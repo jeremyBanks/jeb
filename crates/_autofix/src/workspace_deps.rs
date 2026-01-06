@@ -758,7 +758,202 @@ impl NormalizationStats {
         newly_edited
     }
 }
-/// Copy workspace Cargo.lock to all member crates
+/// Represents a package entry from Cargo.lock
+#[derive(Debug, Clone)]
+struct LockPackage {
+    name: String,
+    version: String,
+    source: Option<String>,
+    checksum: Option<String>,
+    dependencies: Vec<String>,
+}
+
+/// Parse Cargo.lock (version 4 format) into a list of packages
+fn parse_cargo_lock(lock_path: &Path) -> Result<(i64, Vec<LockPackage>)> {
+    let content = std::fs::read_to_string(lock_path)?;
+    let doc = content.parse::<DocumentMut>()?;
+
+    let version = doc.get("version").and_then(|v| v.as_integer()).unwrap_or(4);
+
+    let mut packages = Vec::new();
+
+    if let Some(pkg_array) = doc.get("package").and_then(|p| p.as_array_of_tables()) {
+        for pkg in pkg_array.iter() {
+            let name = pkg
+                .get("name")
+                .and_then(|n| n.as_str())
+                .unwrap_or("")
+                .to_string();
+            let version = pkg
+                .get("version")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let source = pkg.get("source").and_then(|s| s.as_str()).map(String::from);
+            let checksum = pkg
+                .get("checksum")
+                .and_then(|c| c.as_str())
+                .map(String::from);
+
+            let dependencies = pkg
+                .get("dependencies")
+                .and_then(|d| d.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|item| item.as_str().map(String::from))
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            packages.push(LockPackage {
+                name,
+                version,
+                source,
+                checksum,
+                dependencies,
+            });
+        }
+    }
+
+    Ok((version, packages))
+}
+
+/// Build a dependency graph from lock packages.
+/// Returns a map from package name to list of package names it depends on.
+/// Also returns a set of all package names that exist in the lockfile.
+fn build_dependency_graph(
+    packages: &[LockPackage],
+) -> (HashMap<String, HashSet<String>>, HashSet<String>) {
+    let mut graph: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut all_names: HashSet<String> = HashSet::new();
+
+    for pkg in packages {
+        all_names.insert(pkg.name.clone());
+        let deps = graph.entry(pkg.name.clone()).or_default();
+        for dep in &pkg.dependencies {
+            deps.insert(dep.clone());
+        }
+    }
+
+    (graph, all_names)
+}
+
+/// Get all transitive dependencies starting from a set of root package names.
+/// Uses BFS to traverse the dependency graph.
+/// Conservative: if we need any version of a package, we include the name.
+fn get_transitive_dependencies(
+    roots: &HashSet<String>,
+    graph: &HashMap<String, HashSet<String>>,
+    all_names: &HashSet<String>,
+) -> HashSet<String> {
+    let mut needed: HashSet<String> = HashSet::new();
+    let mut queue: Vec<String> = roots.iter().cloned().collect();
+
+    while let Some(pkg_name) = queue.pop() {
+        if needed.contains(&pkg_name) {
+            continue;
+        }
+        // Only add if it exists in the lockfile
+        if all_names.contains(&pkg_name) {
+            needed.insert(pkg_name.clone());
+            if let Some(deps) = graph.get(&pkg_name) {
+                for dep in deps {
+                    if !needed.contains(dep) {
+                        queue.push(dep.clone());
+                    }
+                }
+            }
+        }
+    }
+
+    needed
+}
+
+/// Parse a member's Cargo.toml to extract all dependency names
+/// (from dependencies, dev-dependencies, and build-dependencies)
+fn get_member_dependency_names(member_path: &Path) -> Result<HashSet<String>> {
+    let cargo_toml = member_path.join("Cargo.toml");
+    let content = std::fs::read_to_string(&cargo_toml)?;
+    let doc = content.parse::<DocumentMut>()?;
+
+    let mut deps = HashSet::new();
+
+    // Get the member's own package name
+    if let Some(name) = doc
+        .get("package")
+        .and_then(|p| p.get("name"))
+        .and_then(|n| n.as_str())
+    {
+        deps.insert(name.to_string());
+    }
+
+    // Collect from all dependency sections
+    for section in &["dependencies", "dev-dependencies", "build-dependencies"] {
+        if let Some(deps_table) = doc.get(section).and_then(|s| s.as_table()) {
+            for (key, _) in deps_table.iter() {
+                // Normalize: Cargo.toml uses hyphens, but Cargo.lock uses the actual crate name
+                // which may also use hyphens. The key in Cargo.toml is what we need.
+                deps.insert(key.to_string());
+            }
+        }
+    }
+
+    Ok(deps)
+}
+
+/// Generate a pruned Cargo.lock containing only the specified packages
+fn generate_pruned_lockfile(
+    version: i64,
+    packages: &[LockPackage],
+    needed_names: &HashSet<String>,
+) -> String {
+    let mut output = String::new();
+    output.push_str("# This file is automatically @generated by Cargo.\n");
+    output.push_str("# It is not intended for manual editing.\n");
+    output.push_str(&format!("version = {}\n", version));
+
+    // Filter and sort packages by name then version for deterministic output
+    let mut filtered: Vec<&LockPackage> = packages
+        .iter()
+        .filter(|pkg| needed_names.contains(&pkg.name))
+        .collect();
+    filtered.sort_by(|a, b| (&a.name, &a.version).cmp(&(&b.name, &b.version)));
+
+    for pkg in filtered {
+        output.push_str("\n[[package]]\n");
+        output.push_str(&format!("name = \"{}\"\n", pkg.name));
+        output.push_str(&format!("version = \"{}\"\n", pkg.version));
+
+        if let Some(source) = &pkg.source {
+            output.push_str(&format!("source = \"{}\"\n", source));
+        }
+
+        if let Some(checksum) = &pkg.checksum {
+            output.push_str(&format!("checksum = \"{}\"\n", checksum));
+        }
+
+        // Only include dependencies that are in our needed set
+        let filtered_deps: Vec<&String> = pkg
+            .dependencies
+            .iter()
+            .filter(|d| needed_names.contains(*d))
+            .collect();
+
+        if !filtered_deps.is_empty() {
+            output.push_str("dependencies = [\n");
+            for dep in filtered_deps {
+                output.push_str(&format!(" \"{}\",\n", dep));
+            }
+            output.push_str("]\n");
+        }
+    }
+
+    output
+}
+
+/// Copy workspace Cargo.lock to all member crates, pruned to only include
+/// packages that each member actually depends on (directly or transitively).
+/// Errs on the side of including unnecessary entries to avoid breaking builds.
 fn copy_lockfiles(workspace_root: &Path, members: &[PathBuf]) -> Result<usize> {
     let workspace_lock = workspace_root.join("Cargo.lock");
 
@@ -767,22 +962,33 @@ fn copy_lockfiles(workspace_root: &Path, members: &[PathBuf]) -> Result<usize> {
         return Ok(0);
     }
 
-    let lock_content = std::fs::read(&workspace_lock)?;
+    let (version, packages) = parse_cargo_lock(&workspace_lock)?;
+    let (graph, all_names) = build_dependency_graph(&packages);
+
     let mut copied = 0;
 
     for member_path in members {
         let member_lock = member_path.join("Cargo.lock");
 
-        // Check if we need to copy (file doesn't exist or content differs)
-        let needs_copy = if member_lock.exists() {
-            let existing_content = std::fs::read(&member_lock)?;
-            existing_content != lock_content
+        // Get the member's direct dependencies
+        let direct_deps = get_member_dependency_names(member_path)?;
+
+        // Get all transitive dependencies
+        let needed_names = get_transitive_dependencies(&direct_deps, &graph, &all_names);
+
+        // Generate pruned lockfile
+        let pruned_content = generate_pruned_lockfile(version, &packages, &needed_names);
+
+        // Check if we need to write (file doesn't exist or content differs)
+        let needs_write = if member_lock.exists() {
+            let existing_content = std::fs::read_to_string(&member_lock)?;
+            existing_content != pruned_content
         } else {
             true
         };
 
-        if needs_copy {
-            std::fs::write(&member_lock, &lock_content)?;
+        if needs_write {
+            std::fs::write(&member_lock, &pruned_content)?;
             copied += 1;
         }
     }
