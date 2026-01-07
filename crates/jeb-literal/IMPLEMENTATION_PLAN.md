@@ -1,14 +1,11 @@
 # Inline Implementation Plan
 
 ## Overview
-
-Implement self-modifying literals that use databake for serialization and
-maintain a stable in-memory AST per source file.
+Implement self-modifying literals that use databake for serialization and maintain a stable in-memory AST per source file.
 
 ## Architecture Decisions
 
 ### 1. Global State Structure
-
 ```rust
 static FILE_STATES: Lazy<Mutex<HashMap<PathBuf, Arc<FileState>>>> = ...;
 
@@ -19,25 +16,21 @@ struct FileState {
 ```
 
 **Rationale**:
-
 - One AST per file, shared by all inline instances in that file
 - File-level locking prevents concurrent modification races
 - Arc allows cloning the reference while keeping single instance
 
 ### 2. Location-Based Identification
-
 - Each `Inline` stores `(file, line, column)` from macro expansion
 - Locations are stable because we only modify macro token contents
 - No need for unique IDs or complex indexing
 
 ### 3. Immediate Writes
-
 - Updates write to disk immediately after modifying AST
 - Simple, predictable behavior
 - No flush() needed, no lost updates on crash
 
 ### 4. databake Integration
-
 - Use existing `Bake` implementations (primitives, std types)
 - Don't implement custom Bake traits (for now)
 - Focus on infrastructure, not type support
@@ -47,7 +40,6 @@ struct FileState {
 ### Phase 1: Core Infrastructure
 
 #### 1.1 Update Dependencies
-
 ```toml
 [dependencies]
 databake = "0.1"
@@ -59,7 +51,6 @@ prettyplease = "0.2"
 ```
 
 #### 1.2 Implement `runtime.rs`
-
 ```rust
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
@@ -109,7 +100,6 @@ impl FileState {
 ```
 
 #### 1.3 Implement `inline.rs` Core Type
-
 ```rust
 use databake::Bake;
 use std::path::PathBuf;
@@ -177,8 +167,7 @@ impl<T: Bake + PartialEq + Clone> Inline<T> {
 }
 ```
 
-Wait, there's an issue with Arc::try_unwrap - we can't get mutable access
-easily. Need to use interior mutability:
+Wait, there's an issue with Arc::try_unwrap - we can't get mutable access easily. Need to use interior mutability:
 
 ```rust
 struct FileState {
@@ -188,7 +177,6 @@ struct FileState {
 ```
 
 #### 1.4 Implement Macro
-
 ```rust
 #[macro_export]
 macro_rules! inline {
@@ -206,7 +194,6 @@ macro_rules! inline {
 ### Phase 2: AST Visitor Implementation
 
 #### 2.1 Implement MacroReplacer in `runtime.rs`
-
 ```rust
 use syn::visit_mut::{self, VisitMut};
 use proc_macro2::TokenStream;
@@ -276,7 +263,6 @@ impl FileState {
 ### Phase 3: Testing Strategy
 
 #### 3.1 Test File Setup
-
 Create `tests/integration_tests.rs`:
 
 ```rust
@@ -306,7 +292,6 @@ fn test_simple_update() {
 ```
 
 #### 3.2 Test Cases
-
 1. **Single value update**: Update one inline, verify AST changes
 2. **Multiple values**: Two inline in same file, update both
 3. **Type preservation**: Ensure baked type matches original
@@ -314,7 +299,6 @@ fn test_simple_update() {
 5. **Error handling**: Invalid file, parse errors, etc.
 
 #### 3.3 Verification Strategy
-
 ```rust
 fn verify_file_contains(path: &Path, expected: &str) {
     let content = fs::read_to_string(path).unwrap();
@@ -327,12 +311,9 @@ fn verify_file_contains(path: &Path, expected: &str) {
 ### Phase 4: Issues to Resolve
 
 #### 4.1 Span Information
-
-**Problem**: When `syn::parse_file` parses from a string, does it preserve
-accurate line/column info?
+**Problem**: When `syn::parse_file` parses from a string, does it preserve accurate line/column info?
 
 **Test**:
-
 ```rust
 let source = r#"
 fn main() {
@@ -344,16 +325,13 @@ let ast = syn::parse_file(source).unwrap();
 ```
 
 **Solution if spans are relative**:
-
 - Keep line offset when parsing
 - Or use syn's SourceFile APIs
 
 #### 4.2 Interior Mutability
-
 **Problem**: Arc<FileState> needs mutability but is shared
 
 **Solution**: Use RefCell inside Arc:
-
 ```rust
 struct FileState {
     ast: RefCell<syn::File>,
@@ -366,11 +344,9 @@ replacer.visit_file_mut(&mut *ast_ref);
 ```
 
 #### 4.3 databake Import Paths
-
 **Problem**: Baked code might need imports like `alloc::borrow::Cow`
 
 **Solution**: Either:
-
 - Accept that generated code has full paths
 - Or implement import management (complex)
 - For now: full paths are fine
@@ -378,7 +354,6 @@ replacer.visit_file_mut(&mut *ast_ref);
 ### Phase 5: Minimal Working Example
 
 Target usage:
-
 ```rust
 use inline::inline;
 
@@ -392,7 +367,6 @@ fn main() {
 ```
 
 After first run, source becomes:
-
 ```rust
 let mut counter = inline!(1u32);
 ```
@@ -414,10 +388,8 @@ let mut counter = inline!(1u32);
 ## Open Questions
 
 1. **Span accuracy**: Do we get accurate line/column from syn::parse_file?
-2. **Macro contexts**: Does inline! work in all positions (expr, stmt, const,
-   etc.)?
-3. **Type inference**: Can we avoid explicit type annotations like
-   `inline!(42u32)`?
+2. **Macro contexts**: Does inline! work in all positions (expr, stmt, const, etc.)?
+3. **Type inference**: Can we avoid explicit type annotations like `inline!(42u32)`?
 4. **Performance**: Is parsing/formatting on every update acceptable?
 
 ## Success Criteria

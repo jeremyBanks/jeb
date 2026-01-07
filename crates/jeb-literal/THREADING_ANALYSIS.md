@@ -6,15 +6,13 @@ The system uses a three-tier synchronization model:
 
 1. **Global state**: `FILE_STATES` - `RwLock<HashMap<PathBuf, FileState>>`
 2. **Shared state per file**: `FileState::shared` - `Arc<RwLock<SharedState>>`
-3. **Thread-local cache**: Each thread has
-   `RefCell<HashMap<PathBuf, CachedState>>`
+3. **Thread-local cache**: Each thread has `RefCell<HashMap<PathBuf, CachedState>>`
 
 ## Race Condition Analysis
 
 ### ✅ Scenario 1: Concurrent Updates to Different Macros
 
 **Timeline:**
-
 ```
 T1: litter1.set(100)  // macro at index 0
 T2: litter2.set(200)  // macro at index 1
@@ -34,7 +32,6 @@ T2: litter2.set(200)  // macro at index 1
 ### ✅ Scenario 2: Read During Write
 
 **Timeline:**
-
 ```
 T1: litter1.set(100)
 T2: litter2.get()
@@ -50,7 +47,6 @@ T2: litter2.get()
 ### ✅ Scenario 3: Lazy Initialization Race
 
 **Code** (lines 614-636):
-
 ```rust
 fn get_or_load_file_state(path: &Path) -> Result<FileState, io::Error> {
     let states = FILE_STATES.read();
@@ -76,21 +72,18 @@ fn get_or_load_file_state(path: &Path) -> Result<FileState, io::Error> {
 ### ✅ Scenario 4: Mutable Access to Same Inline Instance
 
 **Prevented by Rust's borrow checker:**
-
 ```rust
 impl<T: Literal> Inline<T> {
     pub fn set(&mut self, new_value: T) { ... }
 }
 ```
 
-Since `set()` requires `&mut self`, the borrow checker prevents concurrent
-mutable access. You'd need `Arc<Mutex<Inline<T>>>` to share across threads,
-which provides synchronization.
+Since `set()` requires `&mut self`, the borrow checker prevents concurrent mutable access.
+You'd need `Arc<Mutex<Inline<T>>>` to share across threads, which provides synchronization.
 
 ### ✅ Scenario 5: External File Modification
 
 **Detection in `write_to_disk`** (lines 478-512):
-
 ```rust
 pub fn write_to_disk(&self) -> Result<(), io::Error> {
     let current_disk_content = fs::read_to_string(&self.path)?;
@@ -108,7 +101,6 @@ pub fn write_to_disk(&self) -> Result<(), io::Error> {
 ```
 
 **Safe because:**
-
 - `disk_source` tracks what we last wrote/read
 - Any external changes are detected and rejected
 - Prevents data loss from concurrent external modifications
@@ -116,7 +108,6 @@ pub fn write_to_disk(&self) -> Result<(), io::Error> {
 ### ✅ Scenario 6: Thread-Local Cache Staleness
 
 **Version-based invalidation** (lines 151-190):
-
 ```rust
 fn get_cached_ast(&self) -> Result<...> {
     CACHE.with(|cache| {
@@ -139,7 +130,6 @@ fn get_cached_ast(&self) -> Result<...> {
 ```
 
 **Safe because:**
-
 - Each modification increments `shared.version`
 - Thread-local caches check version before using cached AST
 - Stale caches are automatically invalidated
@@ -147,7 +137,6 @@ fn get_cached_ast(&self) -> Result<...> {
 ### ✅ Scenario 7: Critical Section Atomicity
 
 **Character-range splicing** (lines 297-334):
-
 ```rust
 pub fn update_macro_by_index(...) -> Result<(), String> {
     let mut shared = self.shared.write();  // ACQUIRE WRITE LOCK
@@ -171,7 +160,6 @@ pub fn update_macro_by_index(...) -> Result<(), String> {
 ```
 
 **Safe because:**
-
 - Write lock held for entire operation
 - Byte span calculation and source update are atomic
 - No interleaving possible
@@ -179,7 +167,6 @@ pub fn update_macro_by_index(...) -> Result<(), String> {
 ### ✅ Scenario 8: Sequential Updates to Same File
 
 **Example:**
-
 ```
 T1: update index 0, write to disk
 T2: update index 1, write to disk
@@ -194,7 +181,6 @@ T2: update index 1, write to disk
 ```
 
 **Safe because:**
-
 - In-memory `shared.source` is the source of truth
 - `disk_source` tracks expected disk state
 - T2 applies its changes to T1's modified source
@@ -205,11 +191,9 @@ T2: update index 1, write to disk
 1. **In-memory state is authoritative**: `shared.source` is the source of truth
 2. **Disk is persistence layer**: `write_to_disk` is a separate operation
 3. **Write locks serialize modifications**: Only one thread modifies at a time
-4. **Character-range splicing composes correctly**: Each update reads latest
-   shared.source
+4. **Character-range splicing composes correctly**: Each update reads latest shared.source
 5. **Version-based invalidation**: Thread-local caches stay coherent
-6. **Concurrent modification detection**: External changes are caught and
-   rejected
+6. **Concurrent modification detection**: External changes are caught and rejected
 
 ## Potential Issues
 
@@ -218,7 +202,6 @@ T2: update index 1, write to disk
 After thorough analysis, I found **no race conditions or threading bugs**.
 
 The synchronization strategy is sound and handles all edge cases correctly:
-
 - Concurrent updates to same file: serialized via write lock
 - Concurrent reads during writes: blocked until write completes
 - Thread-local cache staleness: detected via version checking
@@ -261,7 +244,6 @@ To gain additional confidence, consider adding tests for:
 ## Conclusion
 
 **The implementation is thread-safe.** The combination of:
-
 - RwLock for shared state
 - Thread-local caching with version checking
 - Write lock held during entire critical section
