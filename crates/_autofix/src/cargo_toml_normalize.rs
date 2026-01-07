@@ -478,7 +478,8 @@ fn update_features_section(
         for (feature_name, feature_deps) in features.iter() {
             // Sort the dependencies within each feature
             let mut sorted_deps = feature_deps.clone();
-            sorted_deps.sort_by_key(|dep| feature_dep_sort_key(dep, feature_name, internal_feature_names));
+            sorted_deps
+                .sort_by_key(|dep| feature_dep_sort_key(dep, feature_name, internal_feature_names));
 
             let mut array = toml_edit::Array::new();
             for dep in sorted_deps {
@@ -524,7 +525,9 @@ fn update_features_section(
 
         for (feature_name, mut feature_deps) in sorted_features {
             // Sort the dependencies within each feature
-            feature_deps.sort_by_key(|dep| feature_dep_sort_key(dep, &feature_name, internal_feature_names));
+            feature_deps.sort_by_key(|dep| {
+                feature_dep_sort_key(dep, &feature_name, internal_feature_names)
+            });
 
             let mut array = toml_edit::Array::new();
             for dep in feature_deps {
@@ -547,9 +550,9 @@ fn feature_dep_sort_key(
     feature_name: &str,
     internal_names: &HashSet<String>,
 ) -> (u32, u32, String) {
-    if dep.starts_with("dep:") {
-        let dep_name = &dep[4..];
-        // Check if this dep: matches the feature name (with hyphen/underscore normalization)
+    if let Some(dep_name) = dep.strip_prefix("dep:") {
+        // Check if this dep: matches the feature name (with hyphen/underscore
+        // normalization)
         let normalized_dep = dep_name.replace('-', "_");
         if normalized_dep == feature_name {
             // dep:FEATURE_NAME comes first

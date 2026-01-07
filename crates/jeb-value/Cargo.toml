@@ -22,8 +22,8 @@ indexmap.workspace = true
 
 [features]
 default = []
-serde = ["indexmap/serde", "serde/derive", "dep:serde", "dep:serde_bytes"]
-serde_bytes = ["serde", "dep:serde_bytes"]
-serde_json = ["serde", "dep:serde_json"]
+serde = ["dep:serde", "indexmap/serde", "serde/derive", "dep:serde_bytes"]
+serde_bytes = ["dep:serde_bytes", "serde"]
+serde_json = ["dep:serde_json", "serde"]
 wasm = ["dep:wasm-bindgen"]
 wasm_bindgen = ["dep:wasm-bindgen"]
