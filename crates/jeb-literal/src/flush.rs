@@ -67,10 +67,7 @@ pub fn flush_all() -> Result<(), Box<dyn std::error::Error>> {
     let mut by_file: HashMap<std::path::PathBuf, Vec<(u32, u32)>> = HashMap::new();
 
     for (file, line, column) in dirty {
-        by_file
-            .entry(file)
-            .or_default()
-            .push((line, column));
+        by_file.entry(file).or_default().push((line, column));
     }
 
     // Flush each file's literals
@@ -143,20 +140,16 @@ pub(crate) fn start_background_flush_internal() -> Option<JoinHandle<()>> {
 fn add_jitter(duration: Duration) -> Duration {
     use std::{
         collections::hash_map::RandomState,
-        hash::{
-            BuildHasher,
-            Hash,
-            Hasher,
-        },
+        hash::BuildHasher,
     };
 
     // Get a random value using RandomState (no external dependency)
     let random_state = RandomState::new();
-    
+
 
     // Hash the current time for randomness
-    
-    let random_value = random_state.hash_one(&std::time::SystemTime::now());
+
+    let random_value = random_state.hash_one(std::time::SystemTime::now());
 
     // Calculate jitter: ±1/8 of the duration
     let jitter_range = duration / 8;
@@ -170,7 +163,7 @@ fn add_jitter(duration: Duration) -> Duration {
     let offset_nanos = random_value % (jitter_nanos * 2);
 
     // Convert to signed offset: [-jitter_range, +jitter_range)
-    
+
 
     if offset_nanos < jitter_nanos {
         // Negative jitter

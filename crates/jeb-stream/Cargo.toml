@@ -31,7 +31,7 @@ tokio-util = { workspace = true, features = ["codec", "io"] }
 default = []
 fs = ["tokio/fs"]
 json = []
-serde = ["jeb-value/serde", "dep:serde"]
+serde = ["dep:serde", "jeb-value/serde"]
 stdio = ["tokio/io-std"]
 wasm = ["jeb-common/wasm", "jeb-value/wasm", "dep:wasm-bindgen"]
 wasm_bindgen = ["dep:wasm-bindgen"]
