@@ -115,3 +115,8 @@
 88. REPLACE_ME! For macros maybe could replace with the source tree that was passed into the macro? Like as it sees it?
 89. Maybe actually that could be ::inline::expand!(…)
 90. And as future work maybe inline::expand  which is replaced with the tokens its macro body sees? But I don't know if t
+91. git zoom should really have branching capability, maybe even automatically
+   1. Naming scheme discussion: trunk,path=src/bin seems best (safe, won't collide with anything)
+   2. Enables clean setup of different remotes for different sub-branches, could make multi-repo integration really excellent
+   3. Example: git zoom fetch src/bin https://github.com/jeremyBanks/bin with automatic upstream setup
+   4. This could be excellent UX
