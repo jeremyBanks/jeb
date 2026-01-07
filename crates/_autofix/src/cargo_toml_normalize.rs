@@ -478,7 +478,7 @@ fn update_features_section(
         for (feature_name, feature_deps) in features.iter() {
             // Sort the dependencies within each feature
             let mut sorted_deps = feature_deps.clone();
-            sorted_deps.sort_by_key(|dep| feature_dep_sort_key(dep, internal_feature_names));
+            sorted_deps.sort_by_key(|dep| feature_dep_sort_key(dep, feature_name, internal_feature_names));
 
             let mut array = toml_edit::Array::new();
             for dep in sorted_deps {
@@ -524,7 +524,7 @@ fn update_features_section(
 
         for (feature_name, mut feature_deps) in sorted_features {
             // Sort the dependencies within each feature
-            feature_deps.sort_by_key(|dep| feature_dep_sort_key(dep, internal_feature_names));
+            feature_deps.sort_by_key(|dep| feature_dep_sort_key(dep, &feature_name, internal_feature_names));
 
             let mut array = toml_edit::Array::new();
             for dep in feature_deps {
@@ -540,20 +540,32 @@ fn update_features_section(
 }
 
 /// Sort key for feature dependencies
-/// Order: internal bare names, external bare names, slash refs (/default
-/// first), dep: refs
-fn feature_dep_sort_key(dep: &str, internal_names: &HashSet<String>) -> (u32, u32, String) {
-    if dep.contains('/') {
+/// Order: dep:FEATURE_NAME first, internal bare names, external bare names,
+/// slash refs (/default first), other dep: refs
+fn feature_dep_sort_key(
+    dep: &str,
+    feature_name: &str,
+    internal_names: &HashSet<String>,
+) -> (u32, u32, String) {
+    if dep.starts_with("dep:") {
+        let dep_name = &dep[4..];
+        // Check if this dep: matches the feature name (with hyphen/underscore normalization)
+        let normalized_dep = dep_name.replace('-', "_");
+        if normalized_dep == feature_name {
+            // dep:FEATURE_NAME comes first
+            (0, 0, dep.to_string())
+        } else {
+            // Other dep: refs come last
+            (4, 0, dep.to_string())
+        }
+    } else if dep.contains('/') {
         // Slash refs: sort with /default first
         let has_default = dep.ends_with("/default");
-        (2, if has_default { 0 } else { 1 }, dep.to_string())
-    } else if dep.starts_with("dep:") {
-        // dep: refs come last
-        (3, 0, dep.to_string())
+        (3, if has_default { 0 } else { 1 }, dep.to_string())
     } else {
         // Bare feature names: internal (matching optional deps) come first
         let is_internal = internal_names.contains(dep);
-        (0, if is_internal { 0 } else { 1 }, dep.to_string())
+        (1, if is_internal { 0 } else { 1 }, dep.to_string())
     }
 }
 
