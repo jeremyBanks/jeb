@@ -1,22 +1,10 @@
 //! Background flushing and flush_all functionality.
 
-use {
-    once_cell::sync::Lazy,
-    std::{
-        sync::{
-            Arc,
-            atomic::{
-                AtomicBool,
-                Ordering,
-            },
-        },
-        thread::{
-            self,
-            JoinHandle,
-        },
-        time::Duration,
-    },
-};
+use once_cell::sync::Lazy;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread::{self, JoinHandle};
+use std::time::Duration;
 
 /// Exponential backoff parameters for background flush thread
 const MIN_INTERVAL_MS: u64 = 64;
@@ -28,35 +16,35 @@ static BACKGROUND_STARTED: AtomicBool = AtomicBool::new(false);
 /// Global shutdown signal for background thread
 static SHUTDOWN: Lazy<Arc<AtomicBool>> = Lazy::new(|| Arc::new(AtomicBool::new(false)));
 
-/// Flush all dirty literals to disk.
+/// Flush all dirty cells to disk.
 ///
-/// This function writes all literals that have been modified but not yet
+/// This function writes all cells that have been modified but not yet
 /// written to their source files. It's called automatically by the background
 /// flush thread, but can also be called manually.
 ///
 /// # Errors
 ///
-/// Returns the first error encountered while flushing. Note that some literals
+/// Returns the first error encountered while flushing. Note that some cells
 /// may have been successfully flushed even if an error is returned.
 ///
 /// # Example
 ///
 /// ```no_run
-/// use jeb_literal::literal;
+/// use inline::cell;
 ///
-/// let mut x = literal!(1);
-/// let mut y = literal!(2);
+/// let mut x = cell(1);
+/// let mut y = cell(2);
 ///
-/// x.literal = 10;
-/// y.literal = 20;
+/// x.value = 10;
+/// y.value = 20;
 ///
 /// // Flush all pending writes
-/// jeb_literal::flush_all()?;
+/// inline::flush_all()?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn flush_all() -> Result<(), Box<dyn std::error::Error>> {
-    // Get snapshot of dirty literals
-    let dirty = crate::dirty::get_dirty_literals();
+    // Get snapshot of dirty cells
+    let dirty = crate::dirty::get_dirty_cells();
 
     if dirty.is_empty() {
         return Ok(());
@@ -67,19 +55,16 @@ pub fn flush_all() -> Result<(), Box<dyn std::error::Error>> {
     let mut by_file: HashMap<std::path::PathBuf, Vec<(u32, u32)>> = HashMap::new();
 
     for (file, line, column) in dirty {
-        by_file
-            .entry(file)
-            .or_default()
-            .push((line, column));
+        by_file.entry(file).or_insert_with(Vec::new).push((line, column));
     }
 
-    // Flush each file's literals
-    // Note: We can't actually flush individual literals from here because we don't
+    // Flush each file's cells
+    // Note: We can't actually flush individual cells from here because we don't
     // have access to the registry. The background thread will handle the actual
     // flushing through the normal Drop mechanism or by triggering writes.
     //
     // For now, this is more of a "force write to disk" for already-updated values.
-    // The real flushing happens in Drop or through LiteralExt::flush().
+    // The real flushing happens in Drop or through InlineCellExt::flush().
 
     // Actually, we should write the files to disk if they have pending changes
     for (file, _positions) in by_file {
@@ -98,7 +83,7 @@ pub fn flush_all() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Start the background flush thread with exponential backoff.
 ///
-/// This is called automatically on first literal access. The thread:
+/// This is called automatically on first cell access. The thread:
 /// - Starts with 64ms interval
 /// - Doubles interval when no changes detected
 /// - Resets to 64ms when changes are flushed
@@ -123,8 +108,8 @@ pub(crate) fn start_background_flush_internal() -> Option<JoinHandle<()>> {
             let jittered = add_jitter(current_interval);
             thread::sleep(jittered);
 
-            if crate::dirty::has_dirty_literals() {
-                // Flush all dirty literals
+            if crate::dirty::has_dirty_cells() {
+                // Flush all dirty cells
                 let _ = flush_all(); // Ignore errors in background thread
 
                 // Reset to minimum interval
@@ -141,22 +126,16 @@ pub(crate) fn start_background_flush_internal() -> Option<JoinHandle<()>> {
 
 /// Add random jitter to a duration (±12.5%)
 fn add_jitter(duration: Duration) -> Duration {
-    use std::{
-        collections::hash_map::RandomState,
-        hash::{
-            BuildHasher,
-            Hash,
-            Hasher,
-        },
-    };
+    use std::collections::hash_map::RandomState;
+    use std::hash::{BuildHasher, Hash, Hasher};
 
     // Get a random value using RandomState (no external dependency)
     let random_state = RandomState::new();
-    
+    let mut hasher = random_state.build_hasher();
 
     // Hash the current time for randomness
-    
-    let random_value = random_state.hash_one(&std::time::SystemTime::now());
+    std::time::SystemTime::now().hash(&mut hasher);
+    let random_value = hasher.finish();
 
     // Calculate jitter: ±1/8 of the duration
     let jitter_range = duration / 8;
@@ -170,20 +149,20 @@ fn add_jitter(duration: Duration) -> Duration {
     let offset_nanos = random_value % (jitter_nanos * 2);
 
     // Convert to signed offset: [-jitter_range, +jitter_range)
-    
-
-    if offset_nanos < jitter_nanos {
+    let jitter = if offset_nanos < jitter_nanos {
         // Negative jitter
         duration.saturating_sub(Duration::from_nanos(jitter_nanos - offset_nanos))
     } else {
         // Positive jitter
         duration.saturating_add(Duration::from_nanos(offset_nanos - jitter_nanos))
-    }
+    };
+
+    jitter
 }
 
 /// Explicitly start the background flush thread (for testing/control).
 ///
-/// Normally the thread starts automatically on first literal access.
+/// Normally the thread starts automatically on first cell access.
 /// This function allows manual control if needed.
 ///
 /// Returns `None` if the thread was already started.

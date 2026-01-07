@@ -1,25 +1,17 @@
-use {
-    once_cell::sync::Lazy,
-    parking_lot::RwLock,
-    std::{
-        cell::RefCell,
-        collections::HashMap,
-        env,
-        fs,
-        io,
-        path::{
-            Path,
-            PathBuf,
-        },
-        sync::Arc,
-    },
-};
+use once_cell::sync::Lazy;
+use parking_lot::RwLock;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::env;
+use std::fs;
+use std::io;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 /// Check if we're running under cargo by looking for cargo-specific env vars.
 ///
 /// Returns `true` if any of CARGO, CARGO_MANIFEST_DIR, or CARGO_PKG_NAME
-/// environment variables are set, indicating the program was launched via
-/// cargo.
+/// environment variables are set, indicating the program was launched via cargo.
 pub fn is_running_under_cargo() -> bool {
     env::var("CARGO").is_ok()
         || env::var("CARGO_MANIFEST_DIR").is_ok()
@@ -33,14 +25,14 @@ pub enum Mode {
     /// DEFAULT IN TESTS
     Verify,
     /// Actually writes changes to source files
-    /// Fails if files can't be found or literal macros missing at expected
-    /// positions DEFAULT OUTSIDE TESTS (self-modifying code!)
+    /// Fails if files can't be found or calls/macros missing at expected positions
+    /// DEFAULT OUTSIDE TESTS (self-modifying code!)
     Write,
     /// Changes in memory only, never writes to disk
-    /// Must be explicitly enabled via LITERAL_MODE=memory
+    /// Must be explicitly enabled via INLINE_MODE=memory
     Memory,
     /// Rejects any attempt to write, always fails
-    /// Must be explicitly enabled via LITERAL_MODE=reject
+    /// Must be explicitly enabled via INLINE_MODE=reject
     Reject,
 }
 
@@ -57,22 +49,12 @@ impl Mode {
         }
 
         // If write feature is disabled, Write mode behaves like Memory mode
-        #[cfg(
-            all(
-                not(feature = "no-write"),
-                feature = "write"
-            )
-        )]
+        #[cfg(all(not(feature = "no-write"), feature = "write"))]
         {
             matches!(self, Mode::Write)
         }
 
-        #[cfg(
-            all(
-                not(feature = "no-write"),
-                not(feature = "write")
-            )
-        )]
+        #[cfg(all(not(feature = "no-write"), not(feature = "write")))]
         {
             false
         }
@@ -103,30 +85,26 @@ impl Mode {
 
 /// Get the current mode by checking environment variable
 ///
-/// Modes (set via LITERAL_MODE environment variable):
+/// Modes (set via INLINE_MODE environment variable):
 /// - "verify": Verify values match source (DEFAULT IN TESTS)
 /// - "write": Write changes to source files (DEFAULT OUTSIDE TESTS)
 /// - "memory": Changes in memory only (opt-in only)
 /// - "reject": Reject any write attempts (opt-in only)
 ///
 /// Examples:
-///   LITERAL_MODE=write cargo test     # Update all snapshots
+///   INLINE_MODE=write cargo test     # Update all snapshots
 ///   cargo test                        # Verify snapshots (default in tests)
-///   cargo run                         # Self-modifying mode (default outside
-/// tests)   LITERAL_MODE=memory cargo run     # Run without file writes
+///   cargo run                         # Self-modifying mode (default outside tests)
+///   INLINE_MODE=memory cargo run     # Run without file writes
 pub fn get_mode() -> Mode {
-    if let Ok(mode_str) = env::var("LITERAL_MODE") {
+    if let Ok(mode_str) = env::var("INLINE_MODE") {
         return match mode_str.to_lowercase().as_str() {
             "write" | "update" => Mode::Write,
             "verify" => Mode::Verify,
             "memory" => Mode::Memory,
             "reject" => Mode::Reject,
             _ => {
-                eprintln!(
-                    "Warning: Unknown LITERAL_MODE='{}', using default. Valid: write, verify, \
-                     memory, reject",
-                    mode_str
-                );
+                eprintln!("Warning: Unknown INLINE_MODE='{}', using default. Valid: write, verify, memory, reject", mode_str);
                 Mode::default_for_context()
             }
         };
@@ -135,17 +113,15 @@ pub fn get_mode() -> Mode {
     Mode::default_for_context()
 }
 
-/// Shared state across threads - the source code (with original formatting) is
-/// the source of truth
+/// Shared state across threads - the source code (with original formatting) is the source of truth
 #[derive(Clone)]
 struct SharedState {
-    /// The source code (preserves original formatting via character-range
-    /// splicing)
+    /// The source code (preserves original formatting via character-range splicing)
     source: String,
     /// Version counter - incremented on every modification
     version: u64,
-    /// The source code as it exists on disk (for detecting external
-    /// modifications) Updated only when we read from or write to disk
+    /// The source code as it exists on disk (for detecting external modifications)
+    /// Updated only when we read from or write to disk
     disk_source: String,
 }
 
@@ -206,13 +182,11 @@ impl FileState {
         })
     }
 
-    /// Get a thread-local cached AST, re-parsing if the shared version has
-    /// changed
+    /// Get a thread-local cached AST, re-parsing if the shared version has changed
     ///
-    /// IMPORTANT: Always parses from disk_source (the original file content),
-    /// not from the modified source. This ensures compile-time (line,
-    /// column) coordinates always resolve against the original source, even
-    /// after runtime modifications.
+    /// IMPORTANT: Always parses from disk_source (the original file content), not from
+    /// the modified source. This ensures compile-time (line, column) coordinates always
+    /// resolve against the original source, even after runtime modifications.
     fn get_cached_ast(&self) -> CachedAstResult {
         CACHE.with(|cache| {
             let mut cache = cache.borrow_mut();
@@ -220,7 +194,7 @@ impl FileState {
             // Get current version and DISK source from shared state
             let shared = self.shared.read();
             let current_version = shared.version;
-            let disk_source = shared.disk_source.clone(); // Parse from original, not modified source
+            let disk_source = shared.disk_source.clone();  // Parse from original, not modified source
             drop(shared); // Release read lock immediately
 
             // Check if we have a valid cached version
@@ -242,17 +216,20 @@ impl FileState {
             let position_to_index = Self::build_index_map(&ast);
 
             // Update thread-local cache
-            cache.insert(self.path.clone(), CachedState {
-                ast: ast.clone(),
-                position_to_index: position_to_index.clone(),
-                version: current_version,
-            });
+            cache.insert(
+                self.path.clone(),
+                CachedState {
+                    ast: ast.clone(),
+                    position_to_index: position_to_index.clone(),
+                    version: current_version,
+                },
+            );
 
             Ok((ast, position_to_index))
         })
     }
 
-    /// Build a map from (line, column) to macro index by traversing the AST
+    /// Build a map from (line, column) to call/macro index by traversing the AST
     /// Indices are assigned in AST traversal order and never change
     fn build_index_map(ast: &syn::File) -> HashMap<(u32, u32), usize> {
         use syn::visit::Visit;
@@ -260,60 +237,91 @@ impl FileState {
         struct IndexBuilder {
             map: HashMap<(u32, u32), usize>,
             current_index: usize,
+            /// When true, don't index macros (we're inside a function call's args)
+            skip_macros: bool,
         }
 
         impl<'ast> Visit<'ast> for IndexBuilder {
-            fn visit_expr_macro(&mut self, node: &'ast syn::ExprMacro) {
-                let is_literal_macro = if let Some(segment) = node.mac.path.segments.last() {
-                    segment.ident == "literal"
-                } else {
-                    false
-                };
+            fn visit_expr(&mut self, node: &'ast syn::Expr) {
+                use syn::spanned::Spanned;
 
-                if is_literal_macro {
-                    let span = node.mac.path.segments.last().unwrap().ident.span();
-                    let start = span.start();
-                    let pos = (start.line as u32, start.column as u32);
-                    self.map.insert(pos, self.current_index);
-                    self.current_index += 1;
+                // Index function calls, method calls, and macro invocations by position.
+                // When a macro like cell!() expands to cell(), #[track_caller]
+                // reports the macro call site. So we need to index macros too.
+                //
+                // IMPORTANT: We skip macros inside function/method call arguments
+                // (like vec![] in cell(vec![1,2])) to avoid indexing confusion.
+                match node {
+                    syn::Expr::Call(call) => {
+                        // Index this function call
+                        let start = call.func.span().start();
+                        let pos = (start.line as u32, start.column as u32);
+                        self.map.insert(pos, self.current_index);
+                        self.current_index += 1;
+
+                        // Recurse into function position (for chained calls like foo().bar())
+                        self.visit_expr(&call.func);
+
+                        // Recurse into args, but skip any macros found there
+                        let was_skipping = self.skip_macros;
+                        self.skip_macros = true;
+                        for arg in &call.args {
+                            self.visit_expr(arg);
+                        }
+                        self.skip_macros = was_skipping;
+                        return;
+                    }
+                    syn::Expr::MethodCall(method) => {
+                        // Index this method call
+                        let start = method.receiver.span().start();
+                        let pos = (start.line as u32, start.column as u32);
+                        self.map.insert(pos, self.current_index);
+                        self.current_index += 1;
+
+                        // Recurse into receiver (for chained calls)
+                        self.visit_expr(&method.receiver);
+
+                        // Recurse into args, but skip any macros found there
+                        let was_skipping = self.skip_macros;
+                        self.skip_macros = true;
+                        for arg in &method.args {
+                            self.visit_expr(arg);
+                        }
+                        self.skip_macros = was_skipping;
+                        return;
+                    }
+                    syn::Expr::Macro(mac) => {
+                        // Only index macros if we're not inside a function call's args
+                        if !self.skip_macros {
+                            let start = mac.mac.path.span().start();
+                            let pos = (start.line as u32, start.column as u32);
+                            self.map.insert(pos, self.current_index);
+                            self.current_index += 1;
+                        }
+                        // Don't recurse into macro tokens - they're opaque
+                        return;
+                    }
+                    _ => {}
                 }
 
-                syn::visit::visit_expr_macro(self, node);
-            }
-
-            fn visit_stmt_macro(&mut self, node: &'ast syn::StmtMacro) {
-                let is_literal_macro = if let Some(segment) = node.mac.path.segments.last() {
-                    segment.ident == "literal"
-                } else {
-                    false
-                };
-
-                if is_literal_macro {
-                    let span = node.mac.path.segments.last().unwrap().ident.span();
-                    let start = span.start();
-                    let pos = (start.line as u32, start.column as u32);
-                    self.map.insert(pos, self.current_index);
-                    self.current_index += 1;
-                }
-
-                syn::visit::visit_stmt_macro(self, node);
+                syn::visit::visit_expr(self, node);
             }
         }
 
         let mut builder = IndexBuilder {
             map: HashMap::new(),
             current_index: 0,
+            skip_macros: false,
         };
         builder.visit_file(ast);
         builder.map
     }
 
-    /// Get the stable index for a macro at the given position
+    /// Get the stable index for a call/macro at the given position
     ///
-    /// Note: column matching is flexible because column!() returns the start of
-    /// the macro invocation (e.g., "inline::literal!") but syn's span might
-    /// point to the last segment. We match on line and find the closest
-    /// macro on that line.
+    /// Note: column matching is flexible because Location::caller().column()
+    /// returns the start of the expression. We match on line and find the
+    /// closest call/macro on that line.
     pub fn get_index(&self, line: u32, column: u32) -> Result<usize, io::Error> {
         let (_, position_to_index) = self.get_cached_ast()?;
 
@@ -322,30 +330,30 @@ impl FileState {
             return Ok(index);
         }
 
-        // If no exact match, find all macros on the same line
-        let macros_on_line: Vec<_> = position_to_index
+        // If no exact match, find all function calls on the same line
+        let calls_on_line: Vec<_> = position_to_index
             .iter()
             .filter(|((l, _c), _idx)| *l == line)
             .collect();
 
-        if macros_on_line.is_empty() {
+        if calls_on_line.is_empty() {
             return Err(io::Error::new(
                 io::ErrorKind::NotFound,
                 format!(
-                    "No literal! macro found on line {} in {}",
+                    "No function call found on line {} in {}",
                     line,
                     self.path.display()
                 ),
             ));
         }
 
-        // If there's only one macro on this line, use it
-        if macros_on_line.len() == 1 {
-            return Ok(*macros_on_line[0].1);
+        // If there's only one call on this line, use it
+        if calls_on_line.len() == 1 {
+            return Ok(*calls_on_line[0].1);
         }
 
-        // Multiple macros on same line - find closest by column
-        let closest = macros_on_line
+        // Multiple calls on same line - find closest by column
+        let closest = calls_on_line
             .iter()
             .min_by_key(|((_, c), _)| (*c as i32 - column as i32).abs())
             .unwrap();
@@ -353,13 +361,15 @@ impl FileState {
         Ok(*closest.1)
     }
 
-    /// Update the macro at the given index with new tokens
-    /// CRITICAL: Holds write lock for the entire operation to prevent
-    /// concurrent modifications
+    /// Update the call/macro at the given index with new tokens
+    /// CRITICAL: Holds write lock for the entire operation to prevent concurrent modifications
     ///
     /// IMPORTANT: Uses character-range splicing to preserve formatting!
-    /// Only the macro value is replaced - everything else stays untouched.
-    pub fn update_macro_by_index(
+    /// What gets replaced depends on the expression type:
+    /// - Function calls: the last argument (trailing position)
+    /// - Method calls: the receiver
+    /// - Macros: entire contents inside delimiters
+    pub fn update_value_by_index(
         &self,
         index: usize,
         new_tokens: proc_macro2::TokenStream,
@@ -370,12 +380,13 @@ impl FileState {
         // Get the source while holding the lock (avoid deadlock)
         let source = shared.source.clone();
 
-        // Parse the current source to find the macro
-        let ast = syn::parse_file(&source).map_err(|e| format!("Failed to parse source: {}", e))?;
+        // Parse the current source to find the call
+        let ast = syn::parse_file(&source)
+            .map_err(|e| format!("Failed to parse source: {}", e))?;
 
-        // Find the byte span of the target macro's value tokens
+        // Find the byte span of the target call's argument
         // Pass source as parameter to avoid deadlock
-        let value_span = Self::find_macro_value_span_static(&ast, index, &source)?;
+        let value_span = Self::find_value_span_static(&ast, index, &source)?;
 
         // Generate the new value string
         let new_value_str = new_tokens.to_string();
@@ -397,9 +408,20 @@ impl FileState {
         Ok(())
     }
 
-    /// Find the byte span of a macro's value tokens in the source code (static
-    /// method)
-    fn find_macro_value_span_static(
+    // Keep old name as alias for compatibility during transition
+    pub fn update_macro_by_index(
+        &self,
+        index: usize,
+        new_tokens: proc_macro2::TokenStream,
+    ) -> Result<(), String> {
+        self.update_value_by_index(index, new_tokens)
+    }
+
+    /// Find the byte span of the replaceable part of a call/macro (static method)
+    /// - Function calls: span of the last argument
+    /// - Method calls: span of the receiver
+    /// - Macros: span of contents inside delimiters
+    fn find_value_span_static(
         ast: &syn::File,
         target_index: usize,
         source: &str,
@@ -410,50 +432,75 @@ impl FileState {
             target_index: usize,
             current_index: usize,
             span: Option<(proc_macro2::LineColumn, proc_macro2::LineColumn)>,
-        }
-
-        impl SpanFinder {
-            fn try_find_span(&mut self, mac: &syn::Macro) {
-                let is_literal_macro = if let Some(segment) = mac.path.segments.last() {
-                    segment.ident == "literal"
-                } else {
-                    false
-                };
-
-                if is_literal_macro {
-                    if self.current_index == self.target_index {
-                        // Found our target! Extract the line/column span of the tokens
-                        if !mac.tokens.is_empty() {
-                            // Non-empty macro: Get the span from the first to last token
-                            let first_span = mac.tokens.clone().into_iter().next().unwrap().span();
-                            let last_span = mac.tokens.clone().into_iter().last().unwrap().span();
-
-                            self.span = Some((first_span.start(), last_span.end()));
-                        } else {
-                            // Empty macro like literal!()
-                            // Use the delimiter span - this gives us the position inside the parens
-                            // For literal!(), the delimiter span is between ( and )
-                            let delimiter_span = mac.delimiter.span();
-                            let open_span = delimiter_span.open();
-                            // For empty macros, we want to insert at the position right after '('
-                            // which is the same as the open span's end position
-                            self.span = Some((open_span.end(), open_span.end()));
-                        }
-                    }
-                    self.current_index += 1;
-                }
-            }
+            skip_macros: bool,
         }
 
         impl<'ast> Visit<'ast> for SpanFinder {
-            fn visit_expr_macro(&mut self, node: &'ast syn::ExprMacro) {
-                self.try_find_span(&node.mac);
-                syn::visit::visit_expr_macro(self, node);
-            }
+            fn visit_expr(&mut self, node: &'ast syn::Expr) {
+                use syn::spanned::Spanned;
 
-            fn visit_stmt_macro(&mut self, node: &'ast syn::StmtMacro) {
-                self.try_find_span(&node.mac);
-                syn::visit::visit_stmt_macro(self, node);
+                // Must match the same traversal logic as IndexBuilder
+                match node {
+                    syn::Expr::Call(call) => {
+                        // Check if this is our target - use LAST arg (trailing position)
+                        if self.current_index == self.target_index {
+                            if let Some(arg) = call.args.last() {
+                                self.span = Some((arg.span().start(), arg.span().end()));
+                            }
+                        }
+                        self.current_index += 1;
+
+                        // Recurse into function position
+                        self.visit_expr(&call.func);
+
+                        // Recurse into args, but skip macros
+                        let was_skipping = self.skip_macros;
+                        self.skip_macros = true;
+                        for arg in &call.args {
+                            self.visit_expr(arg);
+                        }
+                        self.skip_macros = was_skipping;
+                        return;
+                    }
+                    syn::Expr::MethodCall(method) => {
+                        // Check if this is our target - replace RECEIVER
+                        if self.current_index == self.target_index {
+                            let receiver = &method.receiver;
+                            self.span = Some((receiver.span().start(), receiver.span().end()));
+                        }
+                        self.current_index += 1;
+
+                        // Recurse into receiver
+                        self.visit_expr(&method.receiver);
+
+                        // Recurse into args, but skip macros
+                        let was_skipping = self.skip_macros;
+                        self.skip_macros = true;
+                        for arg in &method.args {
+                            self.visit_expr(arg);
+                        }
+                        self.skip_macros = was_skipping;
+                        return;
+                    }
+                    syn::Expr::Macro(mac) => {
+                        if !self.skip_macros {
+                            if self.current_index == self.target_index {
+                                // For macros, parse tokens as expression for full span
+                                let tokens = mac.mac.tokens.clone();
+                                if !tokens.is_empty() {
+                                    if let Ok(expr) = syn::parse2::<syn::Expr>(tokens) {
+                                        self.span = Some((expr.span().start(), expr.span().end()));
+                                    }
+                                }
+                            }
+                            self.current_index += 1;
+                        }
+                        return;
+                    }
+                    _ => {}
+                }
+
+                syn::visit::visit_expr(self, node);
             }
         }
 
@@ -461,13 +508,14 @@ impl FileState {
             target_index,
             current_index: 0,
             span: None,
+            skip_macros: false,
         };
 
         finder.visit_file(ast);
 
         let (start_lc, end_lc) = finder
             .span
-            .ok_or_else(|| format!("Could not find literal! macro at index {}", target_index))?;
+            .ok_or_else(|| format!("Could not find call/macro at index {}", target_index))?;
 
         // Convert line/column to byte offsets
         let start_byte = Self::line_col_to_byte_static(source, start_lc.line, start_lc.column)?;
@@ -476,9 +524,12 @@ impl FileState {
         Ok(start_byte..end_byte)
     }
 
-    /// Convert line/column (1-indexed line, 0-indexed column) to byte offset
-    /// (static method)
-    fn line_col_to_byte_static(source: &str, line: usize, column: usize) -> Result<usize, String> {
+    /// Convert line/column (1-indexed line, 0-indexed column) to byte offset (static method)
+    fn line_col_to_byte_static(
+        source: &str,
+        line: usize,
+        column: usize,
+    ) -> Result<usize, String> {
         let mut current_line = 0;
         let mut byte_offset = 0;
 
@@ -521,16 +572,17 @@ impl FileState {
         ))
     }
 
-    /// Get the current tokens of a literal macro at the given index
-    pub fn get_macro_tokens(&self, index: usize) -> Result<proc_macro2::TokenStream, String> {
+    /// Get the current tokens of the replaceable value at the given index
+    pub fn get_value_tokens(&self, index: usize) -> Result<proc_macro2::TokenStream, String> {
         let (ast, _) = self
             .get_cached_ast()
             .map_err(|e| format!("Failed to get AST: {}", e))?;
 
-        let mut reader = IndexedMacroReader {
+        let mut reader = IndexedValueReader {
             target_index: index,
             current_index: 0,
             tokens: None,
+            skip_macros: false,
         };
 
         use syn::visit::Visit;
@@ -538,17 +590,20 @@ impl FileState {
 
         reader
             .tokens
-            .ok_or_else(|| format!("Could not find literal! macro at index {}", index))
+            .ok_or_else(|| format!("Could not find function call at index {}", index))
+    }
+
+    // Keep old name as alias for compatibility
+    pub fn get_macro_tokens(&self, index: usize) -> Result<proc_macro2::TokenStream, String> {
+        self.get_value_tokens(index)
     }
 
     /// Write the current shared source to disk.
     ///
-    /// Character-range splicing preserves the original formatting, so no
-    /// reformatting is needed.
+    /// Character-range splicing preserves the original formatting, so no reformatting is needed.
     ///
-    /// IMPORTANT: Before writing, this verifies the file hasn't been modified
-    /// by another process. If the file on disk differs from our expected
-    /// state, this panics to prevent data loss.
+    /// IMPORTANT: Before writing, this verifies the file hasn't been modified by another process.
+    /// If the file on disk differs from our expected state, this panics to prevent data loss.
     pub fn write_to_disk(&self) -> Result<(), io::Error> {
         // First, re-read the file from disk to detect concurrent modifications
         let current_disk_content = fs::read_to_string(&self.path).map_err(|e| {
@@ -567,11 +622,18 @@ impl FileState {
         // Verify the file hasn't been modified by another process
         if current_disk_content != shared.disk_source {
             panic!(
-                "CONCURRENT MODIFICATION DETECTED!\nFile: {}\n\nAnother process has modified this \
-                 file since we loaded it.\nThis is unsafe and could cause data loss.\n\nExpected \
-                 content length: {} bytes\nActual content length: {} bytes\n\nTo avoid this \
-                 error:\n- Run only one process that modifies this file at a time\n- Or use \
-                 proper inter-process coordination\n",
+                "CONCURRENT MODIFICATION DETECTED!\n\
+                 File: {}\n\
+                 \n\
+                 Another process has modified this file since we loaded it.\n\
+                 This is unsafe and could cause data loss.\n\
+                 \n\
+                 Expected content length: {} bytes\n\
+                 Actual content length: {} bytes\n\
+                 \n\
+                 To avoid this error:\n\
+                 - Run only one process that modifies this file at a time\n\
+                 - Or use proper inter-process coordination\n",
                 self.path.display(),
                 shared.disk_source.len(),
                 current_disk_content.len(),
@@ -590,46 +652,204 @@ impl FileState {
 
         Ok(())
     }
+
+    /// Replace the entire function call expression at the given index with new tokens.
+    ///
+    /// Unlike `update_value_by_index` which only replaces the argument,
+    /// this replaces the entire `func(arg)` expression with the replacement tokens.
+    ///
+    /// Used by `replace_me()` to substitute the whole call with the baked value.
+    pub fn replace_expression_by_index(
+        &self,
+        index: usize,
+        replacement: proc_macro2::TokenStream,
+    ) -> Result<(), String> {
+        // ACQUIRE WRITE LOCK
+        let mut shared = self.shared.write();
+
+        let source = shared.source.clone();
+
+        // Parse to find the expression
+        let ast = syn::parse_file(&source)
+            .map_err(|e| format!("Failed to parse source: {}", e))?;
+
+        // Find the byte span of the entire call expression
+        let expr_span = Self::find_call_expression_span_static(&ast, index, &source)?;
+
+        // Generate the replacement string
+        let replacement_str = replacement.to_string();
+
+        // Perform character-range splicing
+        let mut new_source = String::with_capacity(source.len());
+        new_source.push_str(&source[..expr_span.start]);
+        new_source.push_str(&replacement_str);
+        new_source.push_str(&source[expr_span.end..]);
+
+        // Update shared state
+        shared.source = new_source;
+        shared.version += 1;
+
+        Ok(())
+    }
+
+    /// Find the byte span of an entire function call or macro expression at the given index.
+    fn find_call_expression_span_static(
+        ast: &syn::File,
+        target_index: usize,
+        source: &str,
+    ) -> Result<std::ops::Range<usize>, String> {
+        use syn::visit::Visit;
+
+        struct ExprSpanFinder {
+            target_index: usize,
+            current_index: usize,
+            span: Option<(proc_macro2::LineColumn, proc_macro2::LineColumn)>,
+            skip_macros: bool,
+        }
+
+        impl<'ast> Visit<'ast> for ExprSpanFinder {
+            fn visit_expr(&mut self, node: &'ast syn::Expr) {
+                use syn::spanned::Spanned;
+
+                // Must match the same traversal logic as IndexBuilder
+                match node {
+                    syn::Expr::Call(call) => {
+                        if self.current_index == self.target_index {
+                            self.span = Some((call.span().start(), call.span().end()));
+                        }
+                        self.current_index += 1;
+
+                        self.visit_expr(&call.func);
+
+                        let was_skipping = self.skip_macros;
+                        self.skip_macros = true;
+                        for arg in &call.args {
+                            self.visit_expr(arg);
+                        }
+                        self.skip_macros = was_skipping;
+                        return;
+                    }
+                    syn::Expr::MethodCall(method) => {
+                        if self.current_index == self.target_index {
+                            self.span = Some((method.span().start(), method.span().end()));
+                        }
+                        self.current_index += 1;
+
+                        self.visit_expr(&method.receiver);
+
+                        let was_skipping = self.skip_macros;
+                        self.skip_macros = true;
+                        for arg in &method.args {
+                            self.visit_expr(arg);
+                        }
+                        self.skip_macros = was_skipping;
+                        return;
+                    }
+                    syn::Expr::Macro(mac) => {
+                        if !self.skip_macros {
+                            if self.current_index == self.target_index {
+                                self.span = Some((mac.span().start(), mac.span().end()));
+                            }
+                            self.current_index += 1;
+                        }
+                        return;
+                    }
+                    _ => {}
+                }
+
+                syn::visit::visit_expr(self, node);
+            }
+        }
+
+        let mut finder = ExprSpanFinder {
+            target_index,
+            current_index: 0,
+            span: None,
+            skip_macros: false,
+        };
+
+        finder.visit_file(ast);
+
+        let (start_lc, end_lc) = finder
+            .span
+            .ok_or_else(|| format!("Could not find function call at index {}", target_index))?;
+
+        // Convert line/column to byte offsets
+        let start_byte = Self::line_col_to_byte_static(source, start_lc.line, start_lc.column)?;
+        let end_byte = Self::line_col_to_byte_static(source, end_lc.line, end_lc.column)?;
+
+        Ok(start_byte..end_byte)
+    }
 }
 
-/// Visitor that reads the Nth literal! macro (by index)
-struct IndexedMacroReader {
+/// Visitor that reads the replaceable part of the Nth call/macro (by index)
+/// - Function calls: reads the last argument tokens
+/// - Method calls: reads the receiver tokens
+/// - Macros: reads the contents inside delimiters
+struct IndexedValueReader {
     target_index: usize,
     current_index: usize,
     tokens: Option<proc_macro2::TokenStream>,
+    skip_macros: bool,
 }
 
-impl IndexedMacroReader {
-    fn try_read_macro(&mut self, mac: &syn::Macro) {
-        if self.tokens.is_some() {
-            return;
-        }
+impl<'ast> syn::visit::Visit<'ast> for IndexedValueReader {
+    fn visit_expr(&mut self, node: &'ast syn::Expr) {
+        // Must match the same traversal logic as IndexBuilder
+        match node {
+            syn::Expr::Call(call) => {
+                // Use LAST arg (trailing position)
+                if self.tokens.is_none() && self.current_index == self.target_index {
+                    if let Some(last_arg) = call.args.last() {
+                        self.tokens = Some(quote::quote!(#last_arg));
+                    }
+                }
+                self.current_index += 1;
 
-        let is_literal_macro = if let Some(segment) = mac.path.segments.last() {
-            segment.ident == "literal"
-        } else {
-            false
-        };
+                self.visit_expr(&call.func);
 
-        if is_literal_macro {
-            if self.current_index == self.target_index {
-                // Found our target!
-                self.tokens = Some(mac.tokens.clone());
+                let was_skipping = self.skip_macros;
+                self.skip_macros = true;
+                for arg in &call.args {
+                    self.visit_expr(arg);
+                }
+                self.skip_macros = was_skipping;
+                return;
             }
-            self.current_index += 1;
+            syn::Expr::MethodCall(method) => {
+                // Use RECEIVER
+                if self.tokens.is_none() && self.current_index == self.target_index {
+                    let receiver = &method.receiver;
+                    self.tokens = Some(quote::quote!(#receiver));
+                }
+                self.current_index += 1;
+
+                self.visit_expr(&method.receiver);
+
+                let was_skipping = self.skip_macros;
+                self.skip_macros = true;
+                for arg in &method.args {
+                    self.visit_expr(arg);
+                }
+                self.skip_macros = was_skipping;
+                return;
+            }
+            syn::Expr::Macro(mac) => {
+                if !self.skip_macros {
+                    if self.tokens.is_none() && self.current_index == self.target_index {
+                        let tokens = mac.mac.tokens.clone();
+                        if !tokens.is_empty() {
+                            self.tokens = Some(tokens);
+                        }
+                    }
+                    self.current_index += 1;
+                }
+                return;
+            }
+            _ => {}
         }
-    }
-}
 
-impl<'ast> syn::visit::Visit<'ast> for IndexedMacroReader {
-    fn visit_expr_macro(&mut self, node: &'ast syn::ExprMacro) {
-        self.try_read_macro(&node.mac);
-        syn::visit::visit_expr_macro(self, node);
-    }
-
-    fn visit_stmt_macro(&mut self, node: &'ast syn::StmtMacro) {
-        self.try_read_macro(&node.mac);
-        syn::visit::visit_stmt_macro(self, node);
+        syn::visit::visit_expr(self, node);
     }
 }
 
@@ -658,13 +878,13 @@ fn get_or_load_file_state(path: &Path) -> Result<FileState, io::Error> {
     Ok(state)
 }
 
-/// Get the stable index for a literal macro at the given position
+/// Get the stable index for a call/macro at the given position
 pub fn get_macro_index(path: &Path, line: u32, column: u32) -> Result<usize, io::Error> {
     let state = get_or_load_file_state(path)?;
     state.get_index(line, column)
 }
 
-/// Update a literal macro by its stable index
+/// Update a call/macro by its stable index
 /// This only updates the in-memory shared state.
 /// To persist to disk, you must call write_to_disk separately.
 pub fn update_macro_by_index(
@@ -683,7 +903,7 @@ pub fn write_to_disk(path: &Path) -> Result<(), io::Error> {
     state.write_to_disk()
 }
 
-/// Convenience function: update a literal macro at the given position
+/// Convenience function: update a call/macro at the given position
 /// This combines get_macro_index, update_macro_by_index, and write_to_disk
 pub fn update_source_file(
     path: &Path,
@@ -697,7 +917,7 @@ pub fn update_source_file(
     Ok(())
 }
 
-/// Get the current tokens of a literal macro by its stable index
+/// Get the current tokens of a call/macro's replaceable part by stable index
 pub fn get_macro_tokens_by_index(
     path: &Path,
     index: usize,
@@ -712,8 +932,7 @@ pub fn get_macro_tokens_by_index(
 /// the normal runtime update flow. In production, the cache is managed
 /// automatically through the update_macro_by_index flow.
 ///
-/// **WARNING:** This is for testing purposes only. Do not use in production
-/// code.
+/// **WARNING:** This is for testing purposes only. Do not use in production code.
 #[doc(hidden)]
 pub fn clear_file_state_cache() {
     // Clear the global FILE_STATES cache
@@ -725,4 +944,21 @@ pub fn clear_file_state_cache() {
     CACHE.with(|cache| {
         cache.borrow_mut().clear();
     });
+}
+
+/// Replace an entire call/macro expression with new tokens.
+///
+/// Unlike `update_macro_by_index` which replaces only the replaceable part,
+/// this replaces the entire expression with the replacement tokens.
+///
+/// Used by `replace()` to substitute the whole call with the baked value.
+pub fn replace_expression(
+    path: &Path,
+    index: usize,
+    replacement: proc_macro2::TokenStream,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let state = get_or_load_file_state(path)?;
+    state.replace_expression_by_index(index, replacement)?;
+    write_to_disk(path)?;
+    Ok(())
 }

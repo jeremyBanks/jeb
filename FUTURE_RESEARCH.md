@@ -2,24 +2,18 @@
 
 ## Cargo Script Compatibility
 
-Investigate compatibility with `cargo-script` / `rust-script` for single-file
-Rust programs with shebang support.
+Investigate compatibility with `cargo-script` / `rust-script` for single-file Rust programs with shebang support.
 
-**Goal**: Self-modifying single-file Rust scripts that can update their own
-embedded configuration values.
+**Goal**: Self-modifying single-file Rust scripts that can update their own embedded configuration values.
 
 **Questions**:
-
-- Does cargo-script set the same env vars as `cargo run`? (CARGO,
-  CARGO_MANIFEST_DIR, etc.)
+- Does cargo-script set the same env vars as `cargo run`? (CARGO, CARGO_MANIFEST_DIR, etc.)
 - Can we detect cargo-script execution separately?
 - Do file paths work correctly in cargo-script context?
-- How do we handle source file location when script is run from different
-  directories?
+- How do we handle source file location when script is run from different directories?
 
 **Use case**:
-
-````rust
+```rust
 #!/usr/bin/env rust-script
 //! ```cargo
 //! [dependencies]
@@ -31,7 +25,7 @@ fn main() {
     // Script modifies its own config value
     config.set(calculate_new_value());
 }
-````
+```
 
 ## Other Topics
 
