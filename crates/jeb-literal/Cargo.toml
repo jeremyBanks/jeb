@@ -1,26 +1,27 @@
 [package]
-name = "jeb-literal"
+name = "inline"
 version = "0.0.1-dev.1"
 edition = "2021"
 authors = ["Jeremy Banks"]
 license = "MIT OR Apache-2.0"
-description = "Self-modifying literal values that update their source code at runtime"
+description = "Self-modifying values that update their source code at runtime"
 repository = "https://github.com/jeremyBanks/inline"
 homepage = "https://github.com/jeremyBanks/inline"
-documentation = "https://docs.rs/jeb-literal"
+documentation = "https://docs.rs/inline"
 readme = "README.md"
 keywords = ["codegen", "self-modifying", "snapshot", "testing"]
 categories = ["development-tools", "development-tools::testing"]
 
 [[bin]]
-name = "cargo-regenerate-test-literals"
-path = "src/bin/cargo-regenerate-test-literals.rs"
+name = "cargo-inline-write"
+path = "src/bin/cargo-inline-write.rs"
 
 [dependencies]
 databake.workspace = true
 once_cell.workspace = true
 parking_lot.workspace = true
 proc-macro2 = { workspace = true, features = ["span-locations"] }
+quote.workspace = true
 syn = { workspace = true, features = ["full", "visit", "extra-traits"] }
 
 [dev-dependencies]
