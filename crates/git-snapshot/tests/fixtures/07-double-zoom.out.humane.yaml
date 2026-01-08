@@ -30,7 +30,7 @@ refs:
   - 2
   tree:
     init.rs:
-      //commit: 1
+      //commit: 2
       //path: modules/core/init.rs
 5:
   committer: git-zoom-out <git-zoom-out@localhost>

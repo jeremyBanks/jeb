@@ -20,15 +20,15 @@ refs:
   tree:
     dir-a:
       template.txt:
-        //commit: 1
+        //commit: 2
         //path: template.txt
     dir-b:
       template.txt:
-        //commit: 1
+        //commit: 2
         //path: template.txt
     dir-c:
       template.txt:
-        //commit: 1
+        //commit: 2
         //path: template.txt
 4:
   tree:
@@ -36,19 +36,19 @@ refs:
       level2:
         level3:
           template.txt:
-            //commit: 1
+            //commit: 3
             //path: template.txt
 5:
   tree:
     from-commit-1.txt:
-      //commit: 2
+      //commit: 4
       //path: copy-1.txt
     from-commit-2.txt:
-      //commit: 2
+      //commit: 4
       //path: copy-1.txt
     from-commit-3.txt:
-      //commit: 2
+      //commit: 4
       //path: copy-1.txt
     from-commit-4.txt:
-      //commit: 2
+      //commit: 4
       //path: copy-1.txt

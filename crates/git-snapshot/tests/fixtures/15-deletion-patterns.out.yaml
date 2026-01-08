@@ -37,6 +37,6 @@ c32451d91ab8d549b142d5dd83054d9b82298497:
   tree:
     dir:
       file-a.txt:
-        //commit: 6a7afa
+        //commit: 88deb4
         //path: dir/file-a.txt
       new-file.txt: new

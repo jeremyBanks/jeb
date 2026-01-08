@@ -32,7 +32,7 @@ refs:
   - 4a0240
   tree:
     init.rs:
-      //commit: '924032'
+      //commit: 4a0240
       //path: modules/core/init.rs
 e2f605:
   committer: git-zoom-out <git-zoom-out@localhost>

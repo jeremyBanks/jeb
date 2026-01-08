@@ -34,17 +34,17 @@ bca7d0:
                   h:
                     i:
                       very-deep.txt:
-                        //commit: 93c0a2
+                        //commit: cc763a
                         //path: a/b/c/d/e/f/deep.txt
 5079625b78bbe7c0827258c1b230433acff1fdae:
   message: commit 4
   tree:
     flat-1.txt:
-      //commit: cc763a
+      //commit: bca7d0
       //path: x/y/z/moved-deep.txt
     flat-2.txt:
-      //commit: cc763a
+      //commit: bca7d0
       //path: x/y/z/moved-deep.txt
     flat-3.txt:
-      //commit: cc763a
+      //commit: bca7d0
       //path: x/y/z/moved-deep.txt

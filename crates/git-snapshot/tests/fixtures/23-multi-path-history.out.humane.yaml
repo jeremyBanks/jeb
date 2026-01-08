@@ -38,8 +38,8 @@ refs:
   tree:
     third-location:
       file.txt:
-        //commit: 4
-        //path: file.txt
+        //commit: 3
+        //path: original-location/file.txt
 6:
   parents:
   - 4

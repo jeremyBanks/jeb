@@ -23,15 +23,15 @@ d57460:
   tree:
     dir-a:
       template.txt:
-        //commit: 2a9473
+        //commit: 45b644
         //path: template.txt
     dir-b:
       template.txt:
-        //commit: 2a9473
+        //commit: 45b644
         //path: template.txt
     dir-c:
       template.txt:
-        //commit: 2a9473
+        //commit: 45b644
         //path: template.txt
 eb8a8d:
   message: commit 4
@@ -40,20 +40,20 @@ eb8a8d:
       level2:
         level3:
           template.txt:
-            //commit: 2a9473
+            //commit: d57460
             //path: template.txt
 4060fe6a763d686576022d51b59931feb18e4442:
   message: commit 5
   tree:
     from-commit-1.txt:
-      //commit: 45b644
+      //commit: eb8a8d
       //path: copy-1.txt
     from-commit-2.txt:
-      //commit: 45b644
+      //commit: eb8a8d
       //path: copy-1.txt
     from-commit-3.txt:
-      //commit: 45b644
+      //commit: eb8a8d
       //path: copy-1.txt
     from-commit-4.txt:
-      //commit: 45b644
+      //commit: eb8a8d
       //path: copy-1.txt
