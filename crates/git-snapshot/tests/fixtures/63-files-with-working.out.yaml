@@ -1,0 +1,7 @@
+HEAD: refs/heads/trunk
+refs: {}
+working:
+  README.md: v1 (edited)
+  new-file.txt: added in working dir
+  src:
+    lib.rs: // v1 (edited)
