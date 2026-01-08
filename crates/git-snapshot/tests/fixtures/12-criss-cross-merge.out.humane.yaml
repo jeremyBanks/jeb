@@ -31,7 +31,7 @@ refs:
   tree:
     feature-work-2.txt: feature work 2
     main-work.txt:
-      //commit: 2
+      //commit: 4
       //path: main-work.txt
 6:
   message: Merge feature into main (second time)

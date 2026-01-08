@@ -17,19 +17,19 @@ d58c78:
   message: commit 3
   tree:
     renamed-twice.txt:
-      //commit: 2699a4
+      //commit: 7cd471
       //path: original-name.txt
 05e5cf:
   message: commit 4
   tree:
     renamed-thrice.txt:
-      //commit: 2699a4
+      //commit: d58c78
       //path: original-name.txt
 afd815:
   message: commit 5
   tree:
     final-name.txt:
-      //commit: 2699a4
+      //commit: 05e5cf
       //path: original-name.txt
 08855d:
   message: commit 6
@@ -42,5 +42,5 @@ afd815:
   message: commit 7
   tree:
     restored.txt:
-      //commit: afd815
+      //commit: 08855d
       //path: final-name.txt

@@ -36,5 +36,5 @@ refs:
     src:
       runtime:
         shared.rs:
-          //commit: 1
+          //commit: 3
           //path: src/core/utils.rs

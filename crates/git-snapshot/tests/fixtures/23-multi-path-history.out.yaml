@@ -39,8 +39,8 @@ af2adb:
   tree:
     third-location:
       file.txt:
-        //commit: fc2f5c
-        //path: file.txt
+        //commit: 5bf7bc
+        //path: original-location/file.txt
 f6f218:
   message: commit 6
   parents:

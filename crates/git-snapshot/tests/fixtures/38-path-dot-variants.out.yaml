@@ -25,10 +25,10 @@ c9ff17:
     empty-path-ref:
       dir:
         nested.txt:
-          //commit: e5aca0
+          //commit: 50abcb
           //path: dir/nested.txt
       file.txt:
-        //commit: e5aca0
+        //commit: 50abcb
         //path: file.txt
 14aa7697ae9406502172b0d1c5b1f06eada68deb:
   message: commit 4

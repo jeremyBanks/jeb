@@ -16,23 +16,23 @@ refs:
   message: commit 3
   tree:
     step2.txt:
-      //commit: 75f41a
+      //commit: 84e6ee
       //path: original.txt
 ec8d09:
   message: commit 4
   tree:
     step3.txt:
-      //commit: 75f41a
+      //commit: 904bda
       //path: original.txt
 1ac609:
   message: commit 5
   tree:
     step4.txt:
-      //commit: 75f41a
+      //commit: ec8d09
       //path: original.txt
 4551cfe63ba4e89b4dba36b0891052185305fba3:
   message: commit 6
   tree:
     final.txt:
-      //commit: 75f41a
+      //commit: 1ac609
       //path: original.txt

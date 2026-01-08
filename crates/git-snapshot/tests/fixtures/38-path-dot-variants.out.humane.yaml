@@ -22,9 +22,9 @@ refs:
     empty-path-ref:
       dir:
         nested.txt:
-          //commit: 1
+          //commit: 2
           //path: dir/nested.txt
       file.txt:
-        //commit: 1
+        //commit: 2
         //path: file.txt
 4: {}

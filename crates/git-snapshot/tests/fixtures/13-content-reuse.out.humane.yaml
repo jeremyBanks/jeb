@@ -18,17 +18,17 @@ refs:
   tree:
     examples:
       header.txt:
-        //commit: 1
+        //commit: 2
         //path: lib/header.txt
     lib:
       header.txt: null
     src:
       header.txt:
-        //commit: 1
+        //commit: 2
         //path: lib/header.txt
     tests:
       header.txt:
-        //commit: 1
+        //commit: 2
         //path: lib/header.txt
 4:
   tree:
@@ -39,5 +39,5 @@ refs:
 5:
   tree:
     COPYING:
-      //commit: 3
+      //commit: 4
       //path: examples/header.txt
