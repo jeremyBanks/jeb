@@ -1,12 +1,16 @@
 /// End-to-end tests that modify REAL source files
-/// These tests actually modify the fixture source files on disk and verify the changes
+/// These tests actually modify the fixture source files on disk and verify the
+/// changes
 ///
-/// CRITICAL: Each test modifies a DIFFERENT fixture file to allow parallel execution
+/// CRITICAL: Each test modifies a DIFFERENT fixture file to allow parallel
+/// execution
 mod fixtures;
 
-use std::env;
-use std::fs;
-use std::panic;
+use std::{
+    env,
+    fs,
+    panic,
+};
 
 #[test]
 fn test_counter_a_modification() {
@@ -299,7 +303,8 @@ pub fn get() -> inline::InlineCell<u32> {
 
 #[test]
 fn test_formatting_preservation() {
-    // This test demonstrates what happens to formatting when we modify a inline value
+    // This test demonstrates what happens to formatting when we modify a inline
+    // value
     env::set_var("INLINE_MODE", "write");
 
     // Capture the original content before any modifications
@@ -430,53 +435,75 @@ fn test_multiple_files_interleaved() {
 
     // Modify in arbitrary interleaved order
     counter_a.value = 1u32;
-    assert!(fs::read_to_string("tests/fixtures/counter_a.rs")
-        .unwrap()
-        .contains("cell(1u32)"));
+    assert!(
+        fs::read_to_string("tests/fixtures/counter_a.rs")
+            .unwrap()
+            .contains("cell(1u32)")
+    );
 
     counter_b.value = 2u32;
-    assert!(fs::read_to_string("tests/fixtures/counter_b.rs")
-        .unwrap()
-        .contains("cell(2u32)"));
+    assert!(
+        fs::read_to_string("tests/fixtures/counter_b.rs")
+            .unwrap()
+            .contains("cell(2u32)")
+    );
 
     counter_a.value = 11u32; // Modify counter_a again
-    assert!(fs::read_to_string("tests/fixtures/counter_a.rs")
-        .unwrap()
-        .contains("cell(11u32)"));
+    assert!(
+        fs::read_to_string("tests/fixtures/counter_a.rs")
+            .unwrap()
+            .contains("cell(11u32)")
+    );
 
     config_a.value = "test_value".to_string();
-    assert!(fs::read_to_string("tests/fixtures/config_a.rs")
-        .unwrap()
-        .contains(r#""test_value""#));
+    assert!(
+        fs::read_to_string("tests/fixtures/config_a.rs")
+            .unwrap()
+            .contains(r#""test_value""#)
+    );
 
     counter_d.value = 4u32;
-    assert!(fs::read_to_string("tests/fixtures/counter_d.rs")
-        .unwrap()
-        .contains("cell(4u32)"));
+    assert!(
+        fs::read_to_string("tests/fixtures/counter_d.rs")
+            .unwrap()
+            .contains("cell(4u32)")
+    );
 
     counter_b.value = 22u32; // Modify counter_b again
-    assert!(fs::read_to_string("tests/fixtures/counter_b.rs")
-        .unwrap()
-        .contains("cell(22u32)"));
+    assert!(
+        fs::read_to_string("tests/fixtures/counter_b.rs")
+            .unwrap()
+            .contains("cell(22u32)")
+    );
 
     counter_a.value = 111u32; // Modify counter_a third time
-    assert!(fs::read_to_string("tests/fixtures/counter_a.rs")
-        .unwrap()
-        .contains("cell(111u32)"));
+    assert!(
+        fs::read_to_string("tests/fixtures/counter_a.rs")
+            .unwrap()
+            .contains("cell(111u32)")
+    );
 
     // Verify all files have correct values
-    assert!(fs::read_to_string("tests/fixtures/counter_a.rs")
-        .unwrap()
-        .contains("cell(111u32)"));
-    assert!(fs::read_to_string("tests/fixtures/counter_b.rs")
-        .unwrap()
-        .contains("cell(22u32)"));
-    assert!(fs::read_to_string("tests/fixtures/config_a.rs")
-        .unwrap()
-        .contains(r#""test_value""#));
-    assert!(fs::read_to_string("tests/fixtures/counter_d.rs")
-        .unwrap()
-        .contains("cell(4u32)"));
+    assert!(
+        fs::read_to_string("tests/fixtures/counter_a.rs")
+            .unwrap()
+            .contains("cell(111u32)")
+    );
+    assert!(
+        fs::read_to_string("tests/fixtures/counter_b.rs")
+            .unwrap()
+            .contains("cell(22u32)")
+    );
+    assert!(
+        fs::read_to_string("tests/fixtures/config_a.rs")
+            .unwrap()
+            .contains(r#""test_value""#)
+    );
+    assert!(
+        fs::read_to_string("tests/fixtures/counter_d.rs")
+            .unwrap()
+            .contains("cell(4u32)")
+    );
 
     // Restore all to defaults
     counter_a.value = 0u32;
@@ -485,18 +512,26 @@ fn test_multiple_files_interleaved() {
     counter_d.value = 0u32;
 
     // Verify restoration
-    assert!(fs::read_to_string("tests/fixtures/counter_a.rs")
-        .unwrap()
-        .contains("cell(0u32)"));
-    assert!(fs::read_to_string("tests/fixtures/counter_b.rs")
-        .unwrap()
-        .contains("cell(0u32)"));
-    assert!(fs::read_to_string("tests/fixtures/config_a.rs")
-        .unwrap()
-        .contains(r#""default""#));
-    assert!(fs::read_to_string("tests/fixtures/counter_d.rs")
-        .unwrap()
-        .contains("cell(0u32)"));
+    assert!(
+        fs::read_to_string("tests/fixtures/counter_a.rs")
+            .unwrap()
+            .contains("cell(0u32)")
+    );
+    assert!(
+        fs::read_to_string("tests/fixtures/counter_b.rs")
+            .unwrap()
+            .contains("cell(0u32)")
+    );
+    assert!(
+        fs::read_to_string("tests/fixtures/config_a.rs")
+            .unwrap()
+            .contains(r#""default""#)
+    );
+    assert!(
+        fs::read_to_string("tests/fixtures/counter_d.rs")
+            .unwrap()
+            .contains("cell(0u32)")
+    );
 
     env::remove_var("INLINE_MODE");
 }

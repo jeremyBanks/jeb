@@ -1,7 +1,8 @@
 //! Self-modifying values that update their source code at runtime.
 //!
 //! `inline` provides smart pointers that can modify their own source code.
-//! This is an experimental approach to snapshot testing and self-modifying code.
+//! This is an experimental approach to snapshot testing and self-modifying
+//! code.
 //!
 //! # Example
 //!
@@ -17,7 +18,8 @@
 //!
 //! # Modes
 //!
-//! InlineCell has four modes controlled by the `INLINE_MODE` environment variable:
+//! InlineCell has four modes controlled by the `INLINE_MODE` environment
+//! variable:
 //!
 //! - **Write** (default outside tests): Changes are written to source files
 //! - **Verify** (default in tests): Validates values match the source
@@ -73,7 +75,8 @@
 //! 2. Mutations are detected on drop (comparing original vs current value)
 //! 3. The source file is parsed and the call is located by stable index
 //! 4. Character-range splicing replaces the appropriate part:
-//!    - **Function calls**: the last argument (trailing position for extensibility)
+//!    - **Function calls**: the last argument (trailing position for
+//!      extensibility)
 //!    - **Method calls**: the receiver expression
 //!    - **Macros**: entire contents inside delimiters
 //! 5. Original formatting is preserved
@@ -81,34 +84,53 @@
 //! For `replace()` mode, the entire call/macro expression is replaced.
 
 // Compile-time check: write and no-write features are mutually exclusive
-#[cfg(all(feature = "write", feature = "no-write"))]
+#[cfg(
+    all(
+        feature = "write",
+        feature = "no-write"
+    )
+)]
 compile_error!("Features 'write' and 'no-write' are mutually exclusive. Enable only one.");
 
-mod value;
-mod inline;
 mod dirty;
 mod ext;
 mod flush;
+mod inline;
+pub mod registry;
 mod replace;
 pub mod runtime;
-pub mod registry;
-
-pub use value::*;
-pub use inline::*;
-pub use runtime::*;
-pub use ext::*;
-pub use flush::{flush_all, start_background_flush};
-pub use dirty::{has_dirty_cells, dirty_count};
+mod value;
 
 // Re-export replace functions and aliases
-pub use replace::{replace, replace_at, replace_default, val, eval, REPLACE_ME};
+pub use replace::{
+    REPLACE_ME,
+    eval,
+    replace,
+    replace_at,
+    replace_default,
+    val,
+};
+pub use {
+    dirty::{
+        dirty_count,
+        has_dirty_cells,
+    },
+    ext::*,
+    flush::{
+        flush_all,
+        start_background_flush,
+    },
+    inline::*,
+    runtime::*,
+    value::*,
+};
 
 // =============================================================================
 // Macro wrappers
 // =============================================================================
-// These macros provide an alternative syntax for users who prefer macro invocations.
-// They work identically to the function versions - #[track_caller] on the inner
-// function captures the macro call site correctly.
+// These macros provide an alternative syntax for users who prefer macro
+// invocations. They work identically to the function versions - #[track_caller]
+// on the inner function captures the macro call site correctly.
 
 /// Macro version of [`cell()`].
 ///
@@ -151,7 +173,8 @@ macro_rules! cell_default {
 /// Macro version of [`replace()`].
 ///
 /// One-shot code generation that replaces the entire macro invocation
-/// with the baked value. Identical to calling the `replace()` function directly.
+/// with the baked value. Identical to calling the `replace()` function
+/// directly.
 ///
 /// # Example
 ///

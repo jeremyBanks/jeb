@@ -2,7 +2,8 @@
 //!
 //! Unlike `cell()` which provides ongoing mutable persistence,
 //! `replace()` is for one-time code generation: it evaluates an expression,
-//! bakes it to source code, and replaces the entire call with the literal value.
+//! bakes it to source code, and replaces the entire call with the literal
+//! value.
 //!
 //! # Example
 //!
@@ -10,7 +11,12 @@
 //! use inline::replace;
 //!
 //! // First run: computes current time, writes to source, returns value
-//! let timestamp = replace(std::time::SystemTime::UNIX_EPOCH.elapsed().unwrap().as_secs());
+//! let timestamp = replace(
+//!     std::time::SystemTime::UNIX_EPOCH
+//!         .elapsed()
+//!         .unwrap()
+//!         .as_secs(),
+//! );
 //!
 //! // After source replacement, the code becomes:
 //! // let timestamp = 1234567890u64;
@@ -18,16 +24,22 @@
 //!
 //! # Semantics
 //!
-//! - **First call**: Evaluates argument, stores in memory, writes to source, returns value
-//! - **Subsequent calls (same run)**: Returns clone from memory, ignores argument
+//! - **First call**: Evaluates argument, stores in memory, writes to source,
+//!   returns value
+//! - **Subsequent calls (same run)**: Returns clone from memory, ignores
+//!   argument
 //! - **After replacement**: The `replace(...)` call no longer exists in source
 
-use crate::value::Value;
-use once_cell::sync::Lazy;
-use parking_lot::Mutex;
-use std::any::TypeId;
-use std::collections::HashMap;
-use std::path::PathBuf;
+use {
+    crate::value::Value,
+    once_cell::sync::Lazy,
+    parking_lot::Mutex,
+    std::{
+        any::TypeId,
+        collections::HashMap,
+        path::PathBuf,
+    },
+};
 
 /// Registry key for replace: (file, index_or_position, type_id)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -60,8 +72,8 @@ static REPLACE_REGISTRY: Lazy<Mutex<HashMap<RegistryKey, usize>>> =
 /// returns the value. On subsequent executions within the same run, returns a
 /// clone of the persisted value (ignoring the new argument).
 ///
-/// After the source file is modified, the `replace(...)` call no longer exists -
-/// it has been replaced with the literal value.
+/// After the source file is modified, the `replace(...)` call no longer exists
+/// - it has been replaced with the literal value.
 ///
 /// # Example
 ///
@@ -77,7 +89,8 @@ static REPLACE_REGISTRY: Lazy<Mutex<HashMap<RegistryKey, usize>>> =
 ///
 /// # Requirements
 ///
-/// The value type must implement `Value` (which requires `Bake + Clone + PartialEq`).
+/// The value type must implement `Value` (which requires `Bake + Clone +
+/// PartialEq`).
 #[track_caller]
 pub fn replace<T: Value + 'static>(value: T) -> T {
     let loc = std::panic::Location::caller();
@@ -88,12 +101,7 @@ pub fn replace<T: Value + 'static>(value: T) -> T {
 ///
 /// Used for testing with synthetic file locations.
 #[doc(hidden)]
-pub fn replace_at<T: Value + 'static>(
-    value: T,
-    file: &str,
-    line: u32,
-    column: u32,
-) -> T {
+pub fn replace_at<T: Value + 'static>(value: T, file: &str, line: u32, column: u32) -> T {
     // Try to resolve stable index
     let path = PathBuf::from(file);
     let index_or_position = match crate::runtime::get_macro_index(&path, line, column) {
@@ -101,7 +109,11 @@ pub fn replace_at<T: Value + 'static>(
         Err(_) => IndexOrPosition::Position(line, column),
     };
 
-    let key = (path.clone(), index_or_position, TypeId::of::<StoredValue<T>>());
+    let key = (
+        path.clone(),
+        index_or_position,
+        TypeId::of::<StoredValue<T>>(),
+    );
 
     // Check if we already have a value stored
     let ptr_as_usize = {

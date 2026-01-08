@@ -12,8 +12,13 @@
 //!   cargo inline-write -- --nocapture
 //!   cargo inline-write test_name
 
-use std::env;
-use std::process::{Command, exit};
+use std::{
+    env,
+    process::{
+        Command,
+        exit,
+    },
+};
 
 fn main() {
     // Cargo invokes this as: cargo-inline-write inline-write [args...]
@@ -23,7 +28,8 @@ fn main() {
     // Remove the binary name
     args.remove(0);
 
-    // If the first arg is "inline-write", remove it (cargo passes the subcommand name)
+    // If the first arg is "inline-write", remove it (cargo passes the subcommand
+    // name)
     if args.first().map(|s| s.as_str()) == Some("inline-write") {
         args.remove(0);
     }

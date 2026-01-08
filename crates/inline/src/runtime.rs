@@ -1,17 +1,25 @@
-use once_cell::sync::Lazy;
-use parking_lot::RwLock;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::env;
-use std::fs;
-use std::io;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use {
+    once_cell::sync::Lazy,
+    parking_lot::RwLock,
+    std::{
+        cell::RefCell,
+        collections::HashMap,
+        env,
+        fs,
+        io,
+        path::{
+            Path,
+            PathBuf,
+        },
+        sync::Arc,
+    },
+};
 
 /// Check if we're running under cargo by looking for cargo-specific env vars.
 ///
 /// Returns `true` if any of CARGO, CARGO_MANIFEST_DIR, or CARGO_PKG_NAME
-/// environment variables are set, indicating the program was launched via cargo.
+/// environment variables are set, indicating the program was launched via
+/// cargo.
 pub fn is_running_under_cargo() -> bool {
     env::var("CARGO").is_ok()
         || env::var("CARGO_MANIFEST_DIR").is_ok()
@@ -25,8 +33,8 @@ pub enum Mode {
     /// DEFAULT IN TESTS
     Verify,
     /// Actually writes changes to source files
-    /// Fails if files can't be found or calls/macros missing at expected positions
-    /// DEFAULT OUTSIDE TESTS (self-modifying code!)
+    /// Fails if files can't be found or calls/macros missing at expected
+    /// positions DEFAULT OUTSIDE TESTS (self-modifying code!)
     Write,
     /// Changes in memory only, never writes to disk
     /// Must be explicitly enabled via INLINE_MODE=memory
@@ -49,12 +57,22 @@ impl Mode {
         }
 
         // If write feature is disabled, Write mode behaves like Memory mode
-        #[cfg(all(not(feature = "no-write"), feature = "write"))]
+        #[cfg(
+            all(
+                not(feature = "no-write"),
+                feature = "write"
+            )
+        )]
         {
             matches!(self, Mode::Write)
         }
 
-        #[cfg(all(not(feature = "no-write"), not(feature = "write")))]
+        #[cfg(
+            all(
+                not(feature = "no-write"),
+                not(feature = "write")
+            )
+        )]
         {
             false
         }
@@ -94,8 +112,8 @@ impl Mode {
 /// Examples:
 ///   INLINE_MODE=write cargo test     # Update all snapshots
 ///   cargo test                        # Verify snapshots (default in tests)
-///   cargo run                         # Self-modifying mode (default outside tests)
-///   INLINE_MODE=memory cargo run     # Run without file writes
+///   cargo run                         # Self-modifying mode (default outside
+/// tests)   INLINE_MODE=memory cargo run     # Run without file writes
 pub fn get_mode() -> Mode {
     if let Ok(mode_str) = env::var("INLINE_MODE") {
         return match mode_str.to_lowercase().as_str() {
@@ -104,7 +122,11 @@ pub fn get_mode() -> Mode {
             "memory" => Mode::Memory,
             "reject" => Mode::Reject,
             _ => {
-                eprintln!("Warning: Unknown INLINE_MODE='{}', using default. Valid: write, verify, memory, reject", mode_str);
+                eprintln!(
+                    "Warning: Unknown INLINE_MODE='{}', using default. Valid: write, verify, \
+                     memory, reject",
+                    mode_str
+                );
                 Mode::default_for_context()
             }
         };
@@ -113,15 +135,17 @@ pub fn get_mode() -> Mode {
     Mode::default_for_context()
 }
 
-/// Shared state across threads - the source code (with original formatting) is the source of truth
+/// Shared state across threads - the source code (with original formatting) is
+/// the source of truth
 #[derive(Clone)]
 struct SharedState {
-    /// The source code (preserves original formatting via character-range splicing)
+    /// The source code (preserves original formatting via character-range
+    /// splicing)
     source: String,
     /// Version counter - incremented on every modification
     version: u64,
-    /// The source code as it exists on disk (for detecting external modifications)
-    /// Updated only when we read from or write to disk
+    /// The source code as it exists on disk (for detecting external
+    /// modifications) Updated only when we read from or write to disk
     disk_source: String,
 }
 
@@ -182,11 +206,13 @@ impl FileState {
         })
     }
 
-    /// Get a thread-local cached AST, re-parsing if the shared version has changed
+    /// Get a thread-local cached AST, re-parsing if the shared version has
+    /// changed
     ///
-    /// IMPORTANT: Always parses from disk_source (the original file content), not from
-    /// the modified source. This ensures compile-time (line, column) coordinates always
-    /// resolve against the original source, even after runtime modifications.
+    /// IMPORTANT: Always parses from disk_source (the original file content),
+    /// not from the modified source. This ensures compile-time (line,
+    /// column) coordinates always resolve against the original source, even
+    /// after runtime modifications.
     fn get_cached_ast(&self) -> CachedAstResult {
         CACHE.with(|cache| {
             let mut cache = cache.borrow_mut();
@@ -194,7 +220,7 @@ impl FileState {
             // Get current version and DISK source from shared state
             let shared = self.shared.read();
             let current_version = shared.version;
-            let disk_source = shared.disk_source.clone();  // Parse from original, not modified source
+            let disk_source = shared.disk_source.clone(); // Parse from original, not modified source
             drop(shared); // Release read lock immediately
 
             // Check if we have a valid cached version
@@ -216,28 +242,26 @@ impl FileState {
             let position_to_index = Self::build_index_map(&ast);
 
             // Update thread-local cache
-            cache.insert(
-                self.path.clone(),
-                CachedState {
-                    ast: ast.clone(),
-                    position_to_index: position_to_index.clone(),
-                    version: current_version,
-                },
-            );
+            cache.insert(self.path.clone(), CachedState {
+                ast: ast.clone(),
+                position_to_index: position_to_index.clone(),
+                version: current_version,
+            });
 
             Ok((ast, position_to_index))
         })
     }
 
-    /// Build a map from (line, column) to call/macro index by traversing the AST
-    /// Indices are assigned in AST traversal order and never change
+    /// Build a map from (line, column) to call/macro index by traversing the
+    /// AST Indices are assigned in AST traversal order and never change
     fn build_index_map(ast: &syn::File) -> HashMap<(u32, u32), usize> {
         use syn::visit::Visit;
 
         struct IndexBuilder {
             map: HashMap<(u32, u32), usize>,
             current_index: usize,
-            /// When true, don't index macros (we're inside a function call's args)
+            /// When true, don't index macros (we're inside a function call's
+            /// args)
             skip_macros: bool,
         }
 
@@ -362,7 +386,8 @@ impl FileState {
     }
 
     /// Update the call/macro at the given index with new tokens
-    /// CRITICAL: Holds write lock for the entire operation to prevent concurrent modifications
+    /// CRITICAL: Holds write lock for the entire operation to prevent
+    /// concurrent modifications
     ///
     /// IMPORTANT: Uses character-range splicing to preserve formatting!
     /// What gets replaced depends on the expression type:
@@ -381,8 +406,7 @@ impl FileState {
         let source = shared.source.clone();
 
         // Parse the current source to find the call
-        let ast = syn::parse_file(&source)
-            .map_err(|e| format!("Failed to parse source: {}", e))?;
+        let ast = syn::parse_file(&source).map_err(|e| format!("Failed to parse source: {}", e))?;
 
         // Find the byte span of the target call's argument
         // Pass source as parameter to avoid deadlock
@@ -417,7 +441,8 @@ impl FileState {
         self.update_value_by_index(index, new_tokens)
     }
 
-    /// Find the byte span of the replaceable part of a call/macro (static method)
+    /// Find the byte span of the replaceable part of a call/macro (static
+    /// method)
     /// - Function calls: span of the last argument
     /// - Method calls: span of the receiver
     /// - Macros: span of contents inside delimiters
@@ -524,12 +549,9 @@ impl FileState {
         Ok(start_byte..end_byte)
     }
 
-    /// Convert line/column (1-indexed line, 0-indexed column) to byte offset (static method)
-    fn line_col_to_byte_static(
-        source: &str,
-        line: usize,
-        column: usize,
-    ) -> Result<usize, String> {
+    /// Convert line/column (1-indexed line, 0-indexed column) to byte offset
+    /// (static method)
+    fn line_col_to_byte_static(source: &str, line: usize, column: usize) -> Result<usize, String> {
         let mut current_line = 0;
         let mut byte_offset = 0;
 
@@ -600,10 +622,12 @@ impl FileState {
 
     /// Write the current shared source to disk.
     ///
-    /// Character-range splicing preserves the original formatting, so no reformatting is needed.
+    /// Character-range splicing preserves the original formatting, so no
+    /// reformatting is needed.
     ///
-    /// IMPORTANT: Before writing, this verifies the file hasn't been modified by another process.
-    /// If the file on disk differs from our expected state, this panics to prevent data loss.
+    /// IMPORTANT: Before writing, this verifies the file hasn't been modified
+    /// by another process. If the file on disk differs from our expected
+    /// state, this panics to prevent data loss.
     pub fn write_to_disk(&self) -> Result<(), io::Error> {
         // First, re-read the file from disk to detect concurrent modifications
         let current_disk_content = fs::read_to_string(&self.path).map_err(|e| {
@@ -622,18 +646,11 @@ impl FileState {
         // Verify the file hasn't been modified by another process
         if current_disk_content != shared.disk_source {
             panic!(
-                "CONCURRENT MODIFICATION DETECTED!\n\
-                 File: {}\n\
-                 \n\
-                 Another process has modified this file since we loaded it.\n\
-                 This is unsafe and could cause data loss.\n\
-                 \n\
-                 Expected content length: {} bytes\n\
-                 Actual content length: {} bytes\n\
-                 \n\
-                 To avoid this error:\n\
-                 - Run only one process that modifies this file at a time\n\
-                 - Or use proper inter-process coordination\n",
+                "CONCURRENT MODIFICATION DETECTED!\nFile: {}\n\nAnother process has modified this \
+                 file since we loaded it.\nThis is unsafe and could cause data loss.\n\nExpected \
+                 content length: {} bytes\nActual content length: {} bytes\n\nTo avoid this \
+                 error:\n- Run only one process that modifies this file at a time\n- Or use \
+                 proper inter-process coordination\n",
                 self.path.display(),
                 shared.disk_source.len(),
                 current_disk_content.len(),
@@ -653,12 +670,15 @@ impl FileState {
         Ok(())
     }
 
-    /// Replace the entire function call expression at the given index with new tokens.
+    /// Replace the entire function call expression at the given index with new
+    /// tokens.
     ///
     /// Unlike `update_value_by_index` which only replaces the argument,
-    /// this replaces the entire `func(arg)` expression with the replacement tokens.
+    /// this replaces the entire `func(arg)` expression with the replacement
+    /// tokens.
     ///
-    /// Used by `replace_me()` to substitute the whole call with the baked value.
+    /// Used by `replace_me()` to substitute the whole call with the baked
+    /// value.
     pub fn replace_expression_by_index(
         &self,
         index: usize,
@@ -670,8 +690,7 @@ impl FileState {
         let source = shared.source.clone();
 
         // Parse to find the expression
-        let ast = syn::parse_file(&source)
-            .map_err(|e| format!("Failed to parse source: {}", e))?;
+        let ast = syn::parse_file(&source).map_err(|e| format!("Failed to parse source: {}", e))?;
 
         // Find the byte span of the entire call expression
         let expr_span = Self::find_call_expression_span_static(&ast, index, &source)?;
@@ -692,7 +711,8 @@ impl FileState {
         Ok(())
     }
 
-    /// Find the byte span of an entire function call or macro expression at the given index.
+    /// Find the byte span of an entire function call or macro expression at the
+    /// given index.
     fn find_call_expression_span_static(
         ast: &syn::File,
         target_index: usize,
@@ -932,7 +952,8 @@ pub fn get_macro_tokens_by_index(
 /// the normal runtime update flow. In production, the cache is managed
 /// automatically through the update_macro_by_index flow.
 ///
-/// **WARNING:** This is for testing purposes only. Do not use in production code.
+/// **WARNING:** This is for testing purposes only. Do not use in production
+/// code.
 #[doc(hidden)]
 pub fn clear_file_state_cache() {
     // Clear the global FILE_STATES cache

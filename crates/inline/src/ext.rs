@@ -1,25 +1,33 @@
 //! Extension traits and utilities for `InlineCell<T>`.
 //!
-//! This module provides traits with methods that extend `InlineCell<T>` functionality
-//! without polluting the namespace of the inner type `T`.
+//! This module provides traits with methods that extend `InlineCell<T>`
+//! functionality without polluting the namespace of the inner type `T`.
 
-use crate::inline::InlineCell;
-use crate::value::Value;
-use std::path::Path;
+use {
+    crate::{
+        inline::InlineCell,
+        value::Value,
+    },
+    std::path::Path,
+};
 
 /// Extension methods for `InlineCell<T>` that require explicit import.
 ///
-/// These methods are available on `InlineCell<T>` but only when this trait is in scope.
-/// This prevents name collisions with methods on the inner type `T`.
+/// These methods are available on `InlineCell<T>` but only when this trait is
+/// in scope. This prevents name collisions with methods on the inner type `T`.
 ///
 /// # Example
 ///
 /// ```no_run
-/// use inline::{cell, InlineCellExt};
+/// use inline::{
+///     InlineCellExt,
+///     cell,
+/// };
 ///
 /// let mut x = cell(42);
 /// x.value = 100;
 /// x.flush()?; // Requires InlineCellExt in scope
+///     
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub trait InlineCellExt<T: Value + 'static> {
@@ -38,11 +46,15 @@ pub trait InlineCellExt<T: Value + 'static> {
     /// # Example
     ///
     /// ```no_run
-    /// use inline::{cell, InlineCellExt};
+    /// use inline::{
+    ///     InlineCellExt,
+    ///     cell,
+    /// };
     ///
     /// let mut counter = cell(0);
     /// counter.value = 42;
     /// counter.flush()?; // Write immediately, don't wait for Drop
+    ///     
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     fn flush(&mut self) -> Result<(), Box<dyn std::error::Error>>;
@@ -54,19 +66,22 @@ pub trait InlineCellExt<T: Value + 'static> {
 
     /// Get the source line number for this code cell.
     ///
-    /// Returns the line number (1-indexed) where this cell appears in the source.
+    /// Returns the line number (1-indexed) where this cell appears in the
+    /// source.
     fn line(&self) -> u32;
 
     /// Get the source column number for this code cell.
     ///
-    /// Returns the column number (0-indexed) where this cell appears in the source.
+    /// Returns the column number (0-indexed) where this cell appears in the
+    /// source.
     fn column(&self) -> u32;
 
     /// Get the stable index for this code cell, if resolved.
     ///
-    /// Returns `Some(index)` if the cell's position has been resolved to a stable
-    /// index (Nth call in the file). Returns `None` if the index hasn't been
-    /// resolved yet (e.g., for non-existent files in testing scenarios).
+    /// Returns `Some(index)` if the cell's position has been resolved to a
+    /// stable index (Nth call in the file). Returns `None` if the index
+    /// hasn't been resolved yet (e.g., for non-existent files in testing
+    /// scenarios).
     fn index(&self) -> Option<usize>;
 
     /// Reset the cell's value to the type's default.
@@ -77,7 +92,10 @@ pub trait InlineCellExt<T: Value + 'static> {
     /// # Example
     ///
     /// ```no_run
-    /// use inline::{cell, InlineCellExt};
+    /// use inline::{
+    ///     InlineCellExt,
+    ///     cell,
+    /// };
     ///
     /// let mut counter = cell(42u32);
     /// counter.reset_to_default(); // Sets to 0
@@ -91,11 +109,7 @@ pub trait InlineCellExt<T: Value + 'static> {
 impl<T: Value + 'static> InlineCellExt<T> for InlineCell<T> {
     fn flush(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         // Mark as dirty for tracking
-        crate::dirty::mark_dirty(
-            &self.guard.file,
-            self.guard.line,
-            self.guard.column,
-        );
+        crate::dirty::mark_dirty(&self.guard.file, self.guard.line, self.guard.column);
 
         // Get the mode and check if we should write
         let mode = crate::runtime::get_mode();
@@ -127,11 +141,7 @@ impl<T: Value + 'static> InlineCellExt<T> for InlineCell<T> {
             self.guard.update_source(&self.value)?;
 
             // Clear dirty flag after successful write
-            crate::dirty::clear_dirty(
-                &self.guard.file,
-                self.guard.line,
-                self.guard.column,
-            );
+            crate::dirty::clear_dirty(&self.guard.file, self.guard.line, self.guard.column);
         }
 
         Ok(())
@@ -175,6 +185,7 @@ impl<T: Value + 'static> InlineCellExt<T> for InlineCell<T> {
 /// let mut x = cell(42);
 /// x.value = 100;
 /// inline::flush(&mut x)?; // No trait import needed
+///     
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn flush<T: Value + 'static>(

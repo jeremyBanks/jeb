@@ -2,10 +2,14 @@
 //!
 //! These tests verify the one-shot code generation feature.
 
-use inline::replace_at;
-use std::env;
-use std::fs;
-use tempfile::TempDir;
+use {
+    inline::replace_at,
+    std::{
+        env,
+        fs,
+    },
+    tempfile::TempDir,
+};
 
 /// Helper to create a test file with Rust source code
 struct TestFile {
@@ -153,7 +157,8 @@ fn test_replace_me_persistence() {
     let result1 = replace_at(100u32, test_file.path.to_str().unwrap(), line, column);
     assert_eq!(result1, 100u32);
 
-    // Second call from same location returns the stored value, ignoring the new argument
+    // Second call from same location returns the stored value, ignoring the new
+    // argument
     let result2 = replace_at(999u32, test_file.path.to_str().unwrap(), line, column);
     assert_eq!(result2, 100u32); // Should still be 100, not 999
 
@@ -191,13 +196,16 @@ fn test_replace_me_different_locations() {
                 use syn::spanned::Spanned;
                 let span = call.func.span();
                 let start = span.start();
-                self.positions.push((start.line as u32, start.column as u32));
+                self.positions
+                    .push((start.line as u32, start.column as u32));
             }
             syn::visit::visit_expr(self, node);
         }
     }
 
-    let mut finder = CallFinder { positions: Vec::new() };
+    let mut finder = CallFinder {
+        positions: Vec::new(),
+    };
     finder.visit_file(&ast);
 
     assert_eq!(finder.positions.len(), 2, "Should find two calls");
@@ -233,7 +241,12 @@ fn test_replace_me_with_vec() {
     let (line, column) = find_call_position(&test_file.path);
 
     // Call replace_at with a vec
-    let result = replace_at(vec![1i32, 2, 3], test_file.path.to_str().unwrap(), line, column);
+    let result = replace_at(
+        vec![1i32, 2, 3],
+        test_file.path.to_str().unwrap(),
+        line,
+        column,
+    );
 
     assert_eq!(result, vec![1i32, 2, 3]);
 

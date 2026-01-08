@@ -1,7 +1,11 @@
-use std::env;
-use std::fs;
-use tempfile::TempDir;
-use inline::InlineCellPrivate;
+use {
+    inline::InlineCellPrivate,
+    std::{
+        env,
+        fs,
+    },
+    tempfile::TempDir,
+};
 
 /// Helper to find all cell() call positions in a file
 fn find_litter_positions(file_path: &std::path::Path) -> Vec<(u32, u32)> {
@@ -21,7 +25,8 @@ fn find_litter_positions(file_path: &std::path::Path) -> Vec<(u32, u32)> {
                         if segment.ident == "cell" {
                             let span = segment.ident.span();
                             let start = span.start();
-                            self.positions.push((start.line as u32, start.column as u32));
+                            self.positions
+                                .push((start.line as u32, start.column as u32));
                         }
                     }
                 }
