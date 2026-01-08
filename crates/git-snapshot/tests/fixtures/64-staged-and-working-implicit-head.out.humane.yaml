@@ -1,5 +1,10 @@
-HEAD: refs/heads/trunk
+HEAD: 1
 refs: {}
+1:
+  tree:
+    Cargo.toml: '[package]'
+    src:
+      lib.rs: pub fn foo() {}
 staged:
   src:
     lib.rs: pub fn foo() { /* updated */ }

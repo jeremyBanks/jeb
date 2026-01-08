@@ -1,2 +1,7 @@
-HEAD: refs/heads/trunk
+HEAD: 0000000000000000000000000000000000000001
 refs: {}
+0000000000000000000000000000000000000001:
+  tree:
+    README.md: Hello
+    src:
+      main.rs: fn main() {}
