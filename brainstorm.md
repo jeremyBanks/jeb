@@ -123,3 +123,4 @@
 92. Look at the ideas I had on my old computer and try to fetch them up such as for the image generating network
 93. can we make a macro which databake Bake trait bakes into a macro call instead of whatever it does by default? And I only want it to preserve the tokens passed to the macro originally
 94. any tests that are like, just some files no heads explicitly set? Just files implicitly in a commit and some edited in the working directly? This would be for like cases where we don't really need the git, we're just using it a subset of its capabilities in order to assert what files are changed and how, so it's okay that all of the git metadata is minimal/inferred.
+95. make a wrapper function or macro which performs custom conversions between a serialized string form and an internal form
