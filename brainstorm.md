@@ -121,3 +121,4 @@
    3. Example: git zoom fetch src/bin https://github.com/jeremyBanks/bin with automatic upstream setup
    4. This could be excellent UX
 92. Look at the ideas I had on my old computer and try to fetch them up such as for the image generating network
+93. can we make a macro which databake Bake trait bakes into a macro call instead of whatever it does by default? And I only want it to preserve the tokens passed to the macro originally
