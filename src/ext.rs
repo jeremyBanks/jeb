@@ -27,7 +27,7 @@ use {
 /// let mut x = literal!(42);
 /// x.literal = 100;
 /// x.flush()?; // Requires LiteralExt in scope
-///     
+///
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub trait LiteralExt<T: Value + 'static> {
@@ -54,7 +54,7 @@ pub trait LiteralExt<T: Value + 'static> {
     /// let mut counter = literal!(0);
     /// counter.literal = 42;
     /// counter.flush()?; // Write immediately, don't wait for Drop
-    ///     
+    ///
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     fn flush(&mut self) -> Result<(), Box<dyn std::error::Error>>;
@@ -157,7 +157,7 @@ impl<T: Value + 'static> LiteralExt<T> for Literal<T> {
 /// let mut x = literal!(42);
 /// x.literal = 100;
 /// jeb_literal::flush(&mut x)?; // No trait import needed
-///     
+///
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn flush<T: Value + 'static>(
