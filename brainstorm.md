@@ -120,3 +120,4 @@
    2. Enables clean setup of different remotes for different sub-branches, could make multi-repo integration really excellent
    3. Example: git zoom fetch src/bin https://github.com/jeremyBanks/bin with automatic upstream setup
    4. This could be excellent UX
+92. Look at the ideas I had on my old computer and try to fetch them up such as for the image generating network
