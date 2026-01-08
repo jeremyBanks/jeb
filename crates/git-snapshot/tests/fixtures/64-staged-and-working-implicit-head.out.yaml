@@ -1,4 +1,4 @@
-HEAD: refs/heads/trunk
+HEAD: fca6968c19e32af5e8b14632db32c32434065e1a
 refs: {}
 staged:
   src:
@@ -8,3 +8,9 @@ working:
     lib.rs: pub fn foo() { /* wip */ }
   tests:
     test.rs: '#[test] fn it_works() {}'
+fca6968c19e32af5e8b14632db32c32434065e1a:
+  message: commit 1
+  tree:
+    Cargo.toml: '[package]'
+    src:
+      lib.rs: pub fn foo() {}

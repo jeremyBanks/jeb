@@ -1,2 +1,8 @@
-HEAD: refs/heads/trunk
+HEAD: f8bd5583d511fd893c4d79ec2be497bf2bf6ab2d
 refs: {}
+f8bd5583d511fd893c4d79ec2be497bf2bf6ab2d:
+  message: commit 1
+  tree:
+    README.md: Hello
+    src:
+      main.rs: fn main() {}

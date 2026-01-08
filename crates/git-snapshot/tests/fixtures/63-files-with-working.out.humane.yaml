@@ -1,7 +1,12 @@
-HEAD: refs/heads/trunk
+HEAD: 1
 refs: {}
 working:
   README.md: v1 (edited)
   new-file.txt: added in working dir
   src:
     lib.rs: // v1 (edited)
+1:
+  tree:
+    README.md: v1
+    src:
+      lib.rs: // v1

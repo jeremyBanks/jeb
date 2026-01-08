@@ -1253,13 +1253,15 @@ impl fmt::Debug for TemporaryRepository {
 
 /// Parse HEAD and refs with smart defaults
 ///
-/// Handles three cases:
-/// 1. Neither HEAD nor refs defined: Allow empty repo with unborn
-///    refs/heads/trunk
+/// Handles four cases:
+/// 1. Neither HEAD nor refs defined:
+///    - If no commits: unborn refs/heads/trunk
+///    - If commits exist: detached HEAD pointing to last commit
 /// 2. refs defined, HEAD not: Search for refs/heads/trunk, main, master, then
 ///    first ref
 /// 3. HEAD defined, refs not: If HEAD is commit ref, refs empty; if ref string,
 ///    create ref to last commit
+/// 4. Both HEAD and refs defined: use as-is
 fn parse_head_and_refs_with_defaults(
     head_value: Option<&serde_yaml::Value>,
     refs_value: Option<&serde_yaml::Value>,
@@ -1274,8 +1276,15 @@ fn parse_head_and_refs_with_defaults(
     match (head_parsed, refs_parsed.is_empty()) {
         // Case 1: Neither HEAD nor refs defined
         (None, true) => {
-            let trunk_ref = RefName::new("refs/heads/trunk".to_string())?;
-            Ok((HeadStateOrRef::Symbolic(trunk_ref), BTreeMap::new()))
+            if commit_defs_vec.is_empty() {
+                // No commits, unborn branch is appropriate
+                let trunk_ref = RefName::new("refs/heads/trunk".to_string())?;
+                Ok((HeadStateOrRef::Symbolic(trunk_ref), BTreeMap::new()))
+            } else {
+                // Commits exist, default to detached HEAD pointing to last commit
+                let last_commit_ref = commit_defs_vec.last().unwrap().0.clone();
+                Ok((HeadStateOrRef::Detached(last_commit_ref), BTreeMap::new()))
+            }
         }
 
         // Case 2: refs defined, HEAD not defined
