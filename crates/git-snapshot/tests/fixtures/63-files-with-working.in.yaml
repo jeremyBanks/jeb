@@ -1,0 +1,12 @@
+# Files implicitly in a commit, with working directory changes
+# No explicit HEAD or refs
+
+1:
+  tree:
+    README.md: "v1"
+    src/lib.rs: "// v1"
+
+working:
+  README.md: "v1 (edited)"
+  src/lib.rs: "// v1 (edited)"
+  new-file.txt: "added in working dir"
