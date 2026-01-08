@@ -1,6 +1,12 @@
-HEAD: 0000000000000000000000000000000000000001
+HEAD: f8bd5583d511fd893c4d79ec2be497bf2bf6ab2d
 refs: {}
-0000000000000000000000000000000000000001:
+f8bd5583d511fd893c4d79ec2be497bf2bf6ab2d:
+  author: User <user@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: User <user@localhost>
+  message: commit 1
+  parents: []
   tree:
     README.md: Hello
     src:
