@@ -1,14 +1,18 @@
-use crate::value::Value;
-use std::ops::Deref;
-use std::path::PathBuf;
+use {
+    crate::value::Value,
+    std::{
+        ops::Deref,
+        path::PathBuf,
+    },
+};
 
 /// Internal implementation of a self-modifying value.
 ///
 /// This type wraps a value and provides the ability to update both the
 /// in-memory value and its representation in the source code file.
 ///
-/// **Note:** This is an internal type. Users should interact with the [`InlineCell`]
-/// wrapper returned by the [`cell()`] function instead.
+/// **Note:** This is an internal type. Users should interact with the
+/// [`InlineCell`] wrapper returned by the [`cell()`] function instead.
 #[doc(hidden)]
 pub struct InlineCellInner<T: Value> {
     pub(crate) value: T,
@@ -75,18 +79,18 @@ impl<T: Value> InlineCellInner<T> {
         let env = databake::CrateEnv::default();
         let expected_tokens = new_value.bake(&env);
 
-        // Parse both token streams and compare the parsed AST instead of string representation
-        // This handles formatting differences like trailing commas and module paths
-        let current_expr: syn::Expr = syn::parse2(current_tokens.clone()).map_err(|e| {
-            format!("Failed to parse source tokens: {}", e)
-        })?;
+        // Parse both token streams and compare the parsed AST instead of string
+        // representation This handles formatting differences like trailing
+        // commas and module paths
+        let current_expr: syn::Expr = syn::parse2(current_tokens.clone())
+            .map_err(|e| format!("Failed to parse source tokens: {}", e))?;
 
-        let expected_expr: syn::Expr = syn::parse2(expected_tokens.clone()).map_err(|e| {
-            format!("Failed to parse baked tokens: {}", e)
-        })?;
+        let expected_expr: syn::Expr = syn::parse2(expected_tokens.clone())
+            .map_err(|e| format!("Failed to parse baked tokens: {}", e))?;
 
         // Compare AST semantically using syn's PartialEq implementation
-        // This handles formatting differences like trailing commas, whitespace, and module paths
+        // This handles formatting differences like trailing commas, whitespace, and
+        // module paths
         if current_expr != expected_expr {
             return Err(format!(
                 "Value mismatch!\n  Expected: {}\n  Found in source: {}",
@@ -153,8 +157,8 @@ impl<T: Value + std::fmt::Debug> std::fmt::Debug for InlineCellInner<T> {
 /// use inline::cell;
 ///
 /// let mut counter = cell(0u32);
-/// println!("Value: {}", *counter);  // Single deref to read
-/// counter.value = *counter + 1;     // Assign to public field
+/// println!("Value: {}", *counter); // Single deref to read
+/// counter.value = *counter + 1; // Assign to public field
 /// // Value is automatically written on drop
 /// ```
 ///
@@ -164,7 +168,7 @@ impl<T: Value + std::fmt::Debug> std::fmt::Debug for InlineCellInner<T> {
 /// use inline::cell;
 ///
 /// let mut counter = cell(0u32);
-/// *counter += 1;  // Mutate directly via DerefMut
+/// *counter += 1; // Mutate directly via DerefMut
 /// // Value is automatically written on drop
 /// ```
 pub struct InlineCell<T: Value + 'static> {
@@ -195,7 +199,11 @@ impl<T: Value + 'static> InlineCell<T> {
         // Clone the value twice: once for working copy, once for change detection
         let value = guard.value.clone();
         let original = guard.value.clone();
-        InlineCell { value, guard, original }
+        InlineCell {
+            value,
+            guard,
+            original,
+        }
     }
 
     /// Get a reference to the current value
@@ -287,7 +295,11 @@ impl<T: Value + 'static> Drop for InlineCell<T> {
                     // Silently ignore errors in drop - we can't panic or return an error
                     if self.guard.update_source(&self.guard.value).is_ok() {
                         // Clear dirty flag after successful write
-                        crate::dirty::clear_dirty(&self.guard.file, self.guard.line, self.guard.column);
+                        crate::dirty::clear_dirty(
+                            &self.guard.file,
+                            self.guard.line,
+                            self.guard.column,
+                        );
                     }
                 }
             }
@@ -339,7 +351,7 @@ impl<T: Value + std::fmt::Debug + 'static> std::fmt::Debug for InlineCell<T> {
 /// use inline::cell;
 ///
 /// let mut counter = cell(0u32);
-/// let current = *counter;  // Single dereference
+/// let current = *counter; // Single dereference
 /// counter.value = current + 1;
 /// // In Write mode, the source file is updated
 /// // Lock is released when counter goes out of scope
@@ -352,7 +364,8 @@ impl<T: Value + std::fmt::Debug + 'static> std::fmt::Debug for InlineCell<T> {
 /// # Returns
 ///
 /// An [`InlineCell<T>`] that holds the lock and derefs to `&T`.
-/// The same underlying value is returned for all calls from the same source location.
+/// The same underlying value is returned for all calls from the same source
+/// location.
 #[track_caller]
 pub fn cell<T: Value + 'static>(value: T) -> InlineCell<T> {
     InlineCell::from_guard(crate::registry::get_or_create(value).lock())

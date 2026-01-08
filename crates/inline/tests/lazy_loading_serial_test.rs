@@ -1,5 +1,7 @@
-use std::env;
-use inline::InlineCellPrivate;
+use {
+    inline::InlineCellPrivate,
+    std::env,
+};
 
 #[test]
 fn test_lazy_loading_allows_missing_files_on_read() {

@@ -1,11 +1,16 @@
 //! Tests for macro syntax: cell!() and replace!()
 //!
-//! These tests verify that the macro versions work identically to the function versions.
+//! These tests verify that the macro versions work identically to the function
+//! versions.
 
-use inline::InlineCellPrivate;
-use std::env;
-use std::fs;
-use tempfile::TempDir;
+use {
+    inline::InlineCellPrivate,
+    std::{
+        env,
+        fs,
+    },
+    tempfile::TempDir,
+};
 
 /// Helper to find macro invocations positions in a file
 fn find_macro_positions(path: &std::path::Path) -> Vec<(u32, u32)> {
@@ -26,7 +31,8 @@ fn find_macro_positions(path: &std::path::Path) -> Vec<(u32, u32)> {
                         use syn::spanned::Spanned;
                         let span = mac.mac.path.span();
                         let start = span.start();
-                        self.positions.push((start.line as u32, start.column as u32));
+                        self.positions
+                            .push((start.line as u32, start.column as u32));
                     }
                 }
             }
@@ -34,7 +40,9 @@ fn find_macro_positions(path: &std::path::Path) -> Vec<(u32, u32)> {
         }
     }
 
-    let mut finder = MacroFinder { positions: Vec::new() };
+    let mut finder = MacroFinder {
+        positions: Vec::new(),
+    };
     finder.visit_file(&ast);
     finder.positions
 }

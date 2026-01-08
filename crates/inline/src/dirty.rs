@@ -2,17 +2,23 @@
 //!
 //! Tracks which cells have been modified but not yet written to disk.
 
-use once_cell::sync::Lazy;
-use parking_lot::Mutex;
-use std::collections::HashSet;
-use std::path::{Path, PathBuf};
+use {
+    once_cell::sync::Lazy,
+    parking_lot::Mutex,
+    std::{
+        collections::HashSet,
+        path::{
+            Path,
+            PathBuf,
+        },
+    },
+};
 
 /// Key identifying a unique cell location
 type DirtyKey = (PathBuf, u32, u32); // (file, line, column)
 
 /// Global set of dirty cell locations
-static DIRTY_CELLS: Lazy<Mutex<HashSet<DirtyKey>>> =
-    Lazy::new(|| Mutex::new(HashSet::new()));
+static DIRTY_CELLS: Lazy<Mutex<HashSet<DirtyKey>>> = Lazy::new(|| Mutex::new(HashSet::new()));
 
 /// Mark a cell as dirty (modified but not written)
 pub(crate) fn mark_dirty(file: &Path, line: u32, column: u32) {

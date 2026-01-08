@@ -3,11 +3,14 @@
 //! These tests verify that literal values persist across line insertions,
 //! which is the critical behavior enabled by index-based registry keys.
 
-use inline::InlineCellPrivate;
-
-use std::env;
-use std::fs;
-use tempfile::TempDir;
+use {
+    inline::InlineCellPrivate,
+    std::{
+        env,
+        fs,
+    },
+    tempfile::TempDir,
+};
 
 #[test]
 fn test_value_persists_across_line_insertions() {
@@ -38,12 +41,8 @@ fn test_value_persists_across_line_insertions() {
     println!("{}", original);
 
     // Create the literal and set it to a new value
-    let mut counter = inline::InlineCell::__new(
-        0u32,
-        path.to_str().unwrap(),
-        initial_line,
-        initial_col,
-    );
+    let mut counter =
+        inline::InlineCell::__new(0u32, path.to_str().unwrap(), initial_line, initial_col);
 
     println!("\n=== SETTING VALUE TO 42 ===");
     counter.value = 42u32;
@@ -84,15 +83,16 @@ fn main() {
 
     // Find the new position
     let new_positions = find_all_literal_positions(&path);
-    assert_eq!(new_positions.len(), 1, "Should still find exactly 1 literal");
+    assert_eq!(
+        new_positions.len(),
+        1,
+        "Should still find exactly 1 literal"
+    );
     let (new_line, new_col) = new_positions[0];
 
     println!("\n=== AFTER LINE INSERTION ===");
     println!("Literal now at line {}, column {}", new_line, new_col);
-    println!(
-        "Line number changed: {} -> {}",
-        initial_line, new_line
-    );
+    println!("Line number changed: {} -> {}", initial_line, new_line);
 
     // THE CRITICAL TEST: Access the literal at its NEW position
     // With index-based keys, this should resolve to the SAME registry entry
@@ -106,14 +106,17 @@ fn main() {
 
     assert_eq!(
         value, 42,
-        "CRITICAL: Value should persist across line insertions! \
-         Expected 42 (the value we set), but got {} (likely the initial value). \
-         This means the registry key changed when lines shifted.",
+        "CRITICAL: Value should persist across line insertions! Expected 42 (the value we set), \
+         but got {} (likely the initial value). This means the registry key changed when lines \
+         shifted.",
         value
     );
 
     println!("\n✓ SUCCESS: Value persisted across line insertion!");
-    println!("  The literal moved from line {} to line {}", initial_line, new_line);
+    println!(
+        "  The literal moved from line {} to line {}",
+        initial_line, new_line
+    );
     println!("  But its value remained 42 (not reset to 0)");
     println!("  This proves index-based registry keys are working!");
 
@@ -202,10 +205,7 @@ fn test_multiple_literals_maintain_distinct_identities() {
         inline::InlineCell::__new(30u32, path.to_str().unwrap(), new_c_line, new_c_col);
 
     // Verify each maintained its unique value
-    assert_eq!(
-        *lit_a_after, 111,
-        "Literal A should maintain its value"
-    );
+    assert_eq!(*lit_a_after, 111, "Literal A should maintain its value");
     assert_eq!(
         *lit_b_after, 222,
         "Literal B should maintain its value despite line shift"
@@ -276,9 +276,8 @@ fn main() {
     // THE TEST: Both should resolve to the same index
     assert_eq!(
         index1, index2,
-        "The same literal should always resolve to the same index, \
-         regardless of line number. Got index {} at line {}, \
-         but index {} at line {}.",
+        "The same literal should always resolve to the same index, regardless of line number. Got \
+         index {} at line {}, but index {} at line {}.",
         index1, line1, index2, line2
     );
 
