@@ -6,13 +6,14 @@ authors = ["Jeremy Banks"]
 license = "MIT OR Apache-2.0"
 description = "A proc-macro that stringifies tokens while preserving original whitespace"
 repository = "https://github.com/jeremyBanks/inline"
-keywords = ["stringify", "whitespace", "proc-macro", "tokens"]
+keywords = ["proc-macro", "stringify", "tokens", "whitespace"]
 categories = ["development-tools::procedural-macro-helpers"]
+publish = false
 
 [lib]
 proc-macro = true
 
 [dependencies]
-proc-macro2 = { version = "1", features = ["span-locations"] }
-quote = "1"
-syn = { version = "2", features = ["parsing"] }
+proc-macro2 = { workspace = true, features = ["span-locations"] }
+quote.workspace = true
+syn = { workspace = true, features = ["parsing"] }

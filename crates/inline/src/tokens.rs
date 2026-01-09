@@ -32,8 +32,7 @@ use {
 ///
 /// For a raw `Tokens` value without the cell wrapper, use
 /// [`Tokens::from_str()`].
-#[derive(Clone, PartialEq, Eq, Debug)]
-#[derive(Default)]
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct Tokens {
     /// The string representation of the tokens
     source: String,

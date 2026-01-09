@@ -58,7 +58,7 @@ fn test_leading_whitespace_before_first_token() {
 fn test_trailing_whitespace_after_last_token() {
     // Trailing whitespace after the last token cannot be captured
     // because there's no subsequent token to measure distance to
-    let s = stringify_verbatim!(token   );
+    let s = stringify_verbatim!(token);
 
     assert!(s.contains("token"));
     // Trailing spaces after "token" are lost - we can't know they existed
@@ -71,8 +71,11 @@ fn test_trailing_whitespace_after_last_token() {
 
 #[test]
 fn test_whitespace_inside_string_literals_is_literal_content() {
-    // Note: whitespace INSIDE string literals is the literal's content, not formatting
-    // This is preserved because it's part of the token value
+    // Note: whitespace INSIDE string literals is the literal's content, not
+    // formatting This is preserved because it's part of the token value
     let s = stringify_verbatim!("hello   world");
-    assert_eq!(s, "\"hello   world\"", "String content is preserved as token value");
+    assert_eq!(
+        s, "\"hello   world\"",
+        "String content is preserved as token value"
+    );
 }

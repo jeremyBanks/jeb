@@ -1,7 +1,8 @@
 //! A proc-macro that stringifies tokens while preserving original whitespace.
 //!
-//! Unlike the built-in `stringify!` macro which normalizes whitespace to single spaces,
-//! `stringify_verbatim!` uses span information to reconstruct the original formatting.
+//! Unlike the built-in `stringify!` macro which normalizes whitespace to single
+//! spaces, `stringify_verbatim!` uses span information to reconstruct the
+//! original formatting.
 //!
 //! # Example
 //!
@@ -22,8 +23,13 @@
 //! - Trailing whitespace after the last token cannot be captured
 //! - Accuracy depends on `proc_macro2`'s span-locations feature
 
-use proc_macro::TokenStream;
-use proc_macro2::{LineColumn, TokenTree};
+use {
+    proc_macro::TokenStream,
+    proc_macro2::{
+        LineColumn,
+        TokenTree,
+    },
+};
 
 /// Stringify tokens while preserving original whitespace.
 ///
@@ -51,7 +57,8 @@ pub fn stringify_verbatim(input: TokenStream) -> TokenStream {
     proc_macro2::TokenStream::from(proc_macro2::TokenTree::Literal(lit)).into()
 }
 
-/// Reconstruct the token stream as a string, preserving whitespace from span info.
+/// Reconstruct the token stream as a string, preserving whitespace from span
+/// info.
 fn reconstruct_with_whitespace(tokens: proc_macro2::TokenStream) -> String {
     let tts: Vec<TokenTree> = tokens.into_iter().collect();
 
@@ -100,11 +107,13 @@ fn reconstruct_with_whitespace(tokens: proc_macro2::TokenStream) -> String {
     result
 }
 
-/// Try to parse a doc attribute pattern and convert it back to /// or //! syntax.
-/// Returns (doc_comment_string, tokens_consumed, end_position) if successful.
+/// Try to parse a doc attribute pattern and convert it back to /// or //!
+/// syntax. Returns (doc_comment_string, tokens_consumed, end_position) if
+/// successful.
 ///
-/// Only converts if the span positions indicate this was originally a `///` comment
-/// (where all tokens map to the same location), NOT an explicit `#[doc = "..."]`.
+/// Only converts if the span positions indicate this was originally a `///`
+/// comment (where all tokens map to the same location), NOT an explicit `#[doc
+/// = "..."]`.
 fn try_parse_doc_attribute(tokens: &[TokenTree]) -> Option<(String, usize, LineColumn)> {
     // Pattern: # [ doc = "..." ] or # ! [ doc = "..." ]
     if tokens.is_empty() {
@@ -149,14 +158,15 @@ fn try_parse_doc_attribute(tokens: &[TokenTree]) -> Option<(String, usize, LineC
     // Parse the group contents: doc = "..." or doc="..."
     let inner: Vec<TokenTree> = group.stream().into_iter().collect();
 
-    // Need at least: doc = "string" (3 tokens) or doc="string" with no space (still 3)
+    // Need at least: doc = "string" (3 tokens) or doc="string" with no space (still
+    // 3)
     if inner.len() < 3 {
         return None;
     }
 
     // Check for "doc" ident
     let is_doc = match &inner[0] {
-        TokenTree::Ident(i) => i.to_string() == "doc",
+        TokenTree::Ident(i) => *i == "doc",
         _ => false,
     };
 
@@ -178,8 +188,7 @@ fn try_parse_doc_attribute(tokens: &[TokenTree]) -> Option<(String, usize, LineC
     let doc_content = match &inner[2] {
         TokenTree::Literal(lit) => {
             // Use syn to properly parse the string literal and unescape it
-            let token_stream: proc_macro2::TokenStream =
-                TokenTree::Literal(lit.clone()).into();
+            let token_stream: proc_macro2::TokenStream = TokenTree::Literal(lit.clone()).into();
             let lit_str: syn::LitStr = syn::parse2(token_stream).ok()?;
             lit_str.value()
         }
@@ -197,8 +206,8 @@ fn try_parse_doc_attribute(tokens: &[TokenTree]) -> Option<(String, usize, LineC
     //   - Both hash and group have the same start position (line AND column)
     // For "#[doc = "comment"]" (explicit):
     //   - hash is at position of #, group starts at position of [
-    let is_synthetic = hash_start.line == group_start.line
-        && hash_start.column == group_start.column;
+    let is_synthetic =
+        hash_start.line == group_start.line && hash_start.column == group_start.column;
 
     if !is_synthetic {
         // This is an explicit #[doc = "..."], don't convert

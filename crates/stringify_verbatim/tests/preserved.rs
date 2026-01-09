@@ -1,6 +1,8 @@
-//! Tests for things that ARE preserved by stringify_verbatim (lossless round-trip)
+//! Tests for things that ARE preserved by stringify_verbatim (lossless
+//! round-trip)
 //!
-//! These tests document what stringify_verbatim successfully preserves from the original source.
+//! These tests document what stringify_verbatim successfully preserves from the
+//! original source.
 
 use stringify_verbatim::stringify_verbatim;
 
@@ -35,7 +37,10 @@ fn test_indentation_preserved() {
     if lines.len() >= 2 {
         let outer_indent = lines[0].len() - lines[0].trim_start().len();
         let inner_indent = lines[1].len() - lines[1].trim_start().len();
-        assert!(inner_indent > outer_indent, "Relative indentation should be preserved");
+        assert!(
+            inner_indent > outer_indent,
+            "Relative indentation should be preserved"
+        );
     }
 }
 
@@ -124,8 +129,14 @@ fn test_doc_comment_triple_slash() {
         /// This is a doc comment
         fn example() {}
     );
-    assert!(s.contains("/// This is a doc comment"), "/// comments should round-trip");
-    assert!(s.contains("fn example"), "Code after doc should be preserved");
+    assert!(
+        s.contains("/// This is a doc comment"),
+        "/// comments should round-trip"
+    );
+    assert!(
+        s.contains("fn example"),
+        "Code after doc should be preserved"
+    );
 }
 
 #[test]
@@ -166,7 +177,10 @@ fn test_inner_doc_comment() {
         //! Inner doc comment
         mod example {}
     );
-    assert!(s.contains("//! Inner doc comment"), "//! comments should round-trip");
+    assert!(
+        s.contains("//! Inner doc comment"),
+        "//! comments should round-trip"
+    );
 }
 
 #[test]
@@ -191,8 +205,10 @@ fn test_doc_comment_with_escape_sequences() {
     );
     println!("doc with quotes: {:?}", s);
     // The quote should appear as a literal quote, not as \"
-    assert!(s.contains(r#"/// This has a "quote" in it"#),
-        "Escape sequences in doc comments should be unescaped");
+    assert!(
+        s.contains(r#"/// This has a "quote" in it"#),
+        "Escape sequences in doc comments should be unescaped"
+    );
 }
 
 #[test]
@@ -204,8 +220,10 @@ fn test_doc_comment_with_backslash() {
     );
     println!("doc with backslash: {:?}", s);
     // Backslashes should appear correctly
-    assert!(s.contains(r"/// Path: C:\Users\test"),
-        "Backslashes in doc comments should be preserved");
+    assert!(
+        s.contains(r"/// Path: C:\Users\test"),
+        "Backslashes in doc comments should be preserved"
+    );
 }
 
 #[test]
@@ -218,8 +236,10 @@ fn test_doc_comment_backslash_n_is_literal() {
     );
     println!("doc with backslash-n: {:?}", s);
     // Should contain literal backslash-n, not a newline
-    assert!(s.contains(r"/// Line1\nLine2"),
-        "Backslash-n in doc comments is literal, not an escape");
+    assert!(
+        s.contains(r"/// Line1\nLine2"),
+        "Backslash-n in doc comments is literal, not an escape"
+    );
 }
 
 #[test]
@@ -231,8 +251,10 @@ fn test_doc_comment_backslash_t_is_literal() {
     );
     println!("doc with backslash-t: {:?}", s);
     // Should contain literal backslash-t, not a tab
-    assert!(s.contains(r"/// Col1\tCol2"),
-        "Backslash-t in doc comments is literal, not an escape");
+    assert!(
+        s.contains(r"/// Col1\tCol2"),
+        "Backslash-t in doc comments is literal, not an escape"
+    );
 }
 
 #[test]
@@ -244,8 +266,10 @@ fn test_doc_comment_backslash_u_is_literal() {
     );
     println!("doc with backslash-u: {:?}", s);
     // Should contain literal \u{2764}, not the heart character
-    assert!(s.contains(r"/// Heart: \u{2764}"),
-        "Backslash-u in doc comments is literal, not an escape");
+    assert!(
+        s.contains(r"/// Heart: \u{2764}"),
+        "Backslash-u in doc comments is literal, not an escape"
+    );
 }
 
 // =============================================================================
@@ -307,7 +331,13 @@ fn test_doc_comment_vs_explicit_attribute() {
         fn b() {}
     );
 
-    assert!(from_triple_slash.contains("/// Text with space"), "/// round-trips");
+    assert!(
+        from_triple_slash.contains("/// Text with space"),
+        "/// round-trips"
+    );
     assert!(from_explicit.contains("#"), "Explicit stays as attr");
-    assert!(!from_explicit.starts_with("///"), "Explicit doesn't become ///");
+    assert!(
+        !from_explicit.starts_with("///"),
+        "Explicit doesn't become ///"
+    );
 }

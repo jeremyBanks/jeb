@@ -31,7 +31,10 @@ fn test_compare_with_stringify() {
     let verbatim = stringify_verbatim!(foo   bar   baz);
 
     // Standard stringify normalizes to single spaces
-    assert_eq!(standard, "foo bar baz", "Standard stringify normalizes whitespace");
+    assert_eq!(
+        standard, "foo bar baz",
+        "Standard stringify normalizes whitespace"
+    );
 
     // Verbatim preserves multiple spaces
     assert_eq!(verbatim, "foo   bar   baz", "Verbatim preserves whitespace");
