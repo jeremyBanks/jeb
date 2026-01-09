@@ -36,6 +36,9 @@ tracing = { workspace = true, features = ["log"] }
 tracing-error = { workspace = true, features = ["traced-error"] }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 
+[dev-dependencies]
+inline = { path = "../inline" }
+
 [package.metadata.release]
 allow-branch = ["trunk"]
 post-release-commit-message = "v{{next_version}}"
