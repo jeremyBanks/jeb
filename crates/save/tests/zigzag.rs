@@ -1,7 +1,9 @@
 use ::save::{
-    testing::{assert_at, assert_debug_eq},
+    testing::assert_at,
     zigzag::{ZigZag, ZugZug},
 };
+use inline::snapshot;
+
 #[test]
 fn zigzag_round_trip() {
     for uint in u8::MIN..=u8::MAX {
@@ -17,36 +19,37 @@ fn zigzag_round_trip() {
         assert_eq!(int, int.zigzag().zigzag());
     }
 }
+
 #[test]
 fn zigzag_known_values() {
-    assert_debug_eq("0", 0_u8.zigzag());
-    assert_debug_eq("0", 0_u16.zigzag());
-    assert_debug_eq("0", 0_u32.zigzag());
-    assert_debug_eq("0", 0_u64.zigzag());
-    assert_debug_eq("0", 0_u128.zigzag());
-    assert_debug_eq("0", 0_usize.zigzag());
-    assert_debug_eq("1", 1_u8.zigzag());
-    assert_debug_eq("-1", 2_u8.zigzag());
-    assert_debug_eq("2", 3_u8.zigzag());
-    assert_debug_eq("-2", 4_u8.zigzag());
-    assert_debug_eq("3", 5_u8.zigzag());
-    assert_debug_eq("63", 125_u8.zigzag());
-    assert_debug_eq("-63", 126_u8.zigzag());
-    assert_debug_eq("64", 127_u8.zigzag());
-    assert_debug_eq("-64", 128_u8.zigzag());
-    assert_debug_eq("65", 129_u8.zigzag());
-    assert_debug_eq("-65", 130_u8.zigzag());
-    assert_debug_eq("-125", 250_u8.zigzag());
-    assert_debug_eq("126", 251_u8.zigzag());
-    assert_debug_eq("-126", 252_u8.zigzag());
-    assert_debug_eq("127", 253_u8.zigzag());
-    assert_debug_eq("-127", 254_u8.zigzag());
-    assert_debug_eq("-128", 255_u8.zigzag());
-    assert_debug_eq("128", 255_u16.zigzag());
-    assert_debug_eq("128", 255_u32.zigzag());
-    assert_debug_eq("128", 255_u64.zigzag());
-    assert_debug_eq("128", 255_u128.zigzag());
-    assert_debug_eq("128", 255_usize.zigzag());
+    assert_eq!(format!("{:?}", 0_u8.zigzag()), *snapshot("0"));
+    assert_eq!(format!("{:?}", 0_u16.zigzag()), *snapshot("0"));
+    assert_eq!(format!("{:?}", 0_u32.zigzag()), *snapshot("0"));
+    assert_eq!(format!("{:?}", 0_u64.zigzag()), *snapshot("0"));
+    assert_eq!(format!("{:?}", 0_u128.zigzag()), *snapshot("0"));
+    assert_eq!(format!("{:?}", 0_usize.zigzag()), *snapshot("0"));
+    assert_eq!(format!("{:?}", 1_u8.zigzag()), *snapshot("1"));
+    assert_eq!(format!("{:?}", 2_u8.zigzag()), *snapshot("-1"));
+    assert_eq!(format!("{:?}", 3_u8.zigzag()), *snapshot("2"));
+    assert_eq!(format!("{:?}", 4_u8.zigzag()), *snapshot("-2"));
+    assert_eq!(format!("{:?}", 5_u8.zigzag()), *snapshot("3"));
+    assert_eq!(format!("{:?}", 125_u8.zigzag()), *snapshot("63"));
+    assert_eq!(format!("{:?}", 126_u8.zigzag()), *snapshot("-63"));
+    assert_eq!(format!("{:?}", 127_u8.zigzag()), *snapshot("64"));
+    assert_eq!(format!("{:?}", 128_u8.zigzag()), *snapshot("-64"));
+    assert_eq!(format!("{:?}", 129_u8.zigzag()), *snapshot("65"));
+    assert_eq!(format!("{:?}", 130_u8.zigzag()), *snapshot("-65"));
+    assert_eq!(format!("{:?}", 250_u8.zigzag()), *snapshot("-125"));
+    assert_eq!(format!("{:?}", 251_u8.zigzag()), *snapshot("126"));
+    assert_eq!(format!("{:?}", 252_u8.zigzag()), *snapshot("-126"));
+    assert_eq!(format!("{:?}", 253_u8.zigzag()), *snapshot("127"));
+    assert_eq!(format!("{:?}", 254_u8.zigzag()), *snapshot("-127"));
+    assert_eq!(format!("{:?}", 255_u8.zigzag()), *snapshot("-128"));
+    assert_eq!(format!("{:?}", 255_u16.zigzag()), *snapshot("128"));
+    assert_eq!(format!("{:?}", 255_u32.zigzag()), *snapshot("128"));
+    assert_eq!(format!("{:?}", 255_u64.zigzag()), *snapshot("128"));
+    assert_eq!(format!("{:?}", 255_u128.zigzag()), *snapshot("128"));
+    assert_eq!(format!("{:?}", 255_usize.zigzag()), *snapshot("128"));
     assert_eq!(u8::MAX.zigzag(), i8::MIN);
     assert_eq!(u16::MAX.zigzag(), i16::MIN);
     assert_eq!(u32::MAX.zigzag(), i32::MIN);
@@ -60,6 +63,7 @@ fn zigzag_known_values() {
     assert_eq!((u128::MAX - 2).zigzag(), i128::MAX);
     assert_eq!((usize::MAX - 2).zigzag(), isize::MAX);
 }
+
 #[test]
 fn zigzag_snapshot() {
     let mut actual = String::new();
@@ -84,6 +88,7 @@ fn zigzag_snapshot() {
     }
     assert_at("zigzag.txt", &actual);
 }
+
 #[test]
 fn zugzug_round_trip() {
     for uint in u8::MIN..=u8::MAX {
@@ -99,28 +104,30 @@ fn zugzug_round_trip() {
         assert_eq!(int, int.zigzag().zugzug().zugzug().zigzag());
     }
 }
+
 #[test]
 fn zugzug_known_values() {
-    assert_debug_eq("(0, 0)", 0_u8.zugzug());
-    assert_debug_eq("(0, 1)", 1_u8.zugzug());
-    assert_debug_eq("(1, 1)", 2_u8.zugzug());
-    assert_debug_eq("(-1, 0)", 3_u8.zugzug());
-    assert_debug_eq("(-1, 1)", 4_u8.zugzug());
-    assert_debug_eq("(-1, -1)", 5_u8.zugzug());
-    assert_debug_eq("(0, 2)", 6_u8.zugzug());
-    assert_debug_eq("(1, 2)", 7_u8.zugzug());
-    assert_debug_eq("(-1, 2)", 8_u8.zugzug());
-    assert_debug_eq("(2, 2)", 9_u8.zugzug());
-    assert_debug_eq("(-2, 0)", 10_u8.zugzug());
-    assert_debug_eq("(-2, 1)", 11_u8.zugzug());
-    assert_debug_eq("(-11, 1)", 254_u8.zugzug());
-    assert_debug_eq("(-11, -1)", 255_u8.zugzug());
+    assert_eq!(format!("{:?}", 0_u8.zugzug()), *snapshot("(0, 0)"));
+    assert_eq!(format!("{:?}", 1_u8.zugzug()), *snapshot("(0, 1)"));
+    assert_eq!(format!("{:?}", 2_u8.zugzug()), *snapshot("(1, 1)"));
+    assert_eq!(format!("{:?}", 3_u8.zugzug()), *snapshot("(-1, 0)"));
+    assert_eq!(format!("{:?}", 4_u8.zugzug()), *snapshot("(-1, 1)"));
+    assert_eq!(format!("{:?}", 5_u8.zugzug()), *snapshot("(-1, -1)"));
+    assert_eq!(format!("{:?}", 6_u8.zugzug()), *snapshot("(0, 2)"));
+    assert_eq!(format!("{:?}", 7_u8.zugzug()), *snapshot("(1, 2)"));
+    assert_eq!(format!("{:?}", 8_u8.zugzug()), *snapshot("(-1, 2)"));
+    assert_eq!(format!("{:?}", 9_u8.zugzug()), *snapshot("(2, 2)"));
+    assert_eq!(format!("{:?}", 10_u8.zugzug()), *snapshot("(-2, 0)"));
+    assert_eq!(format!("{:?}", 11_u8.zugzug()), *snapshot("(-2, 1)"));
+    assert_eq!(format!("{:?}", 254_u8.zugzug()), *snapshot("(-11, 1)"));
+    assert_eq!(format!("{:?}", 255_u8.zugzug()), *snapshot("(-11, -1)"));
     assert_eq!(u8::MAX.zugzug(), (-11_i8, -1_i8));
     assert_eq!(u16::MAX.zugzug(), (-97_i16, 181_i16));
     assert_eq!(u32::MAX.zugzug(), (-18537_i32, 46341_i32));
     assert_eq!(u64::MAX.zugzug(), (1373026058_i64, 3037000500_i64));
     assert_eq!(usize::MAX.zugzug(), (1373026058_isize, 3037000500_isize));
 }
+
 #[test]
 fn zugzug_snapshot() {
     let mut actual = String::new();
