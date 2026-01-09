@@ -9,8 +9,8 @@ repository = "https://github.com/jeremyBanks/inline"
 homepage = "https://github.com/jeremyBanks/inline"
 documentation = "https://docs.rs/inline"
 readme = "README.md"
-keywords = ["codegen", "self-modifying", "snapshot", "testing"]
-categories = ["development-tools", "development-tools::testing"]
+keywords = ["snapshot", "testing", "self-modifying", "codegen"]
+categories = ["development-tools::testing", "development-tools"]
 
 [[bin]]
 name = "cargo-inline-write"
