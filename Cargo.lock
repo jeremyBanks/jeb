@@ -875,6 +875,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "inline"
+version = "0.0.1-dev.1"
+dependencies = [
+ "databake",
+ "once_cell",
+ "parking_lot",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.111",
+ "tempfile",
+]
+
+[[package]]
 name = "io-lifetimes"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -946,18 +959,6 @@ dependencies = [
  "fast_hilbert",
  "indexmap 2.12.1",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "jeb-literal"
-version = "0.0.1-dev.1"
-dependencies = [
- "databake",
- "once_cell",
- "parking_lot",
- "proc-macro2",
- "syn 2.0.111",
- "tempfile",
 ]
 
 [[package]]
@@ -1672,6 +1673,15 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "stringify_verbatim"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.111",
+]
 
 [[package]]
 name = "strsim"

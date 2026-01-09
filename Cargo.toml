@@ -32,14 +32,15 @@ _claude_hooks = { path = "crates/_claude_hooks" }
 _scripts = { path = "crates/_scripts" }
 git-snapshot = { path = "crates/git-snapshot" }
 git-zoom = { path = "crates/git-zoom" }
+inline = { path = "crates/inline" }
 jeb = { path = "crates/jeb" }
 jeb-bytes-as-text = { path = "crates/jeb-bytes-as-text" }
 jeb-common = { path = "crates/jeb-common" }
-jeb-literal = { path = "crates/jeb-literal" }
 jeb-stream = { path = "crates/jeb-stream" }
 jeb-value = { path = "crates/jeb-value" }
 jeb-wasm = { path = "crates/jeb-wasm" }
 save = { path = "crates/save" }
+stringify_verbatim = { path = "crates/stringify_verbatim" }
 
 [workspace.dependencies]
 _autofix = { path = "crates/_autofix" }
@@ -70,11 +71,11 @@ home = "0.5.3"
 ignorable = "0.1.2"
 ignore = "0.4.0"
 indexmap = "2.0.0"
+inline = "0.0.1-dev.1"
 itertools = "0.10.3"
 jeb = { version = "0.0.0-dev-2025-12-26.7705", default-features = false }
 jeb-bytes-as-text = "0.0.0-dev-2025-12-26.7705"
 jeb-common = "0.0.0-dev-2025-12-26.7705"
-jeb-literal = "0.0.1-dev.1"
 jeb-stream = "0.0.0-dev-2025-12-26.7705"
 jeb-value = "0.0.0-dev-2025-12-26.7705"
 jeb-wasm = "0.0.0-dev-2025-12-26.7705"
@@ -89,6 +90,7 @@ parking_lot = "0.12.1"
 pathdiff = "0.2.0"
 petgraph = "0.6.2"
 proc-macro2 = "1.0.40"
+quote = "1.0.0"
 regex = "1.12.2"
 save = "0.20220708.0"
 semver = "1.0.0"
@@ -99,6 +101,7 @@ serde_yaml = "0.9.34"
 sha-1 = "0.10.0"
 sha1-checked = "0.10.0"
 static_assertions = "1.1.0"
+stringify_verbatim = "0.1.0"
 syn = "2.0.0"
 tap = "1.0.1"
 tempfile = "3.3.0"
