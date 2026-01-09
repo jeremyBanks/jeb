@@ -35,6 +35,7 @@
 use {
     crate::{
         inline::InlineCellInner,
+        runtime::resolve_source_path,
         value::Value,
     },
     once_cell::sync::Lazy,
@@ -42,47 +43,9 @@ use {
     std::{
         any::TypeId,
         collections::HashMap,
-        env,
-        path::{Path, PathBuf},
+        path::PathBuf,
     },
 };
-
-/// Resolve a source file path from `#[track_caller]` to an absolute path.
-///
-/// `#[track_caller]` returns paths relative to the crate root (e.g.,
-/// `crates/foo/src/lib.rs` or `src/main.rs`). These need to be resolved
-/// against `CARGO_MANIFEST_DIR` to get an absolute path that can be read
-/// regardless of the current working directory.
-fn resolve_source_path(file: &str) -> PathBuf {
-    let path = Path::new(file);
-
-    // If the path is already absolute, use it directly
-    if path.is_absolute() {
-        return path.to_path_buf();
-    }
-
-    // Try to resolve against CARGO_MANIFEST_DIR
-    if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
-        let resolved = PathBuf::from(&manifest_dir).join(path);
-        if resolved.exists() {
-            return resolved;
-        }
-
-        // For workspace crates, the path might be relative to the workspace root
-        // Try walking up from CARGO_MANIFEST_DIR to find the file
-        let mut search_dir = PathBuf::from(&manifest_dir);
-        while let Some(parent) = search_dir.parent() {
-            let candidate = parent.join(path);
-            if candidate.exists() {
-                return candidate;
-            }
-            search_dir = parent.to_path_buf();
-        }
-    }
-
-    // Fallback: return the relative path as-is (will likely fail to read)
-    path.to_path_buf()
-}
 
 /// Registry key that can represent either a stable index or a (line, column)
 /// position
