@@ -109,6 +109,7 @@ macro_rules! expect_file {
     }};
 }
 
+#[track_caller]
 pub fn expect_file(path: impl Into<PathBuf>) -> ExpectFile {
     ExpectFile {
         path: path.into(),

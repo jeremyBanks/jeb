@@ -15,6 +15,39 @@ use {
     },
 };
 
+/// Resolve a source file path from `#[track_caller]` to an absolute path.
+///
+/// `#[track_caller]` returns paths relative to the crate root (e.g.,
+/// `crates/foo/src/lib.rs` or `src/main.rs`). These need to be resolved
+/// against `CARGO_MANIFEST_DIR` to get an absolute path that can be read
+/// regardless of the current working directory.
+pub fn resolve_source_path(file: &str) -> PathBuf {
+    let path = Path::new(file);
+
+    if path.is_absolute() {
+        return path.to_path_buf();
+    }
+
+    if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
+        let resolved = PathBuf::from(&manifest_dir).join(path);
+        if resolved.exists() {
+            return resolved;
+        }
+
+        // For workspace crates, the path might be relative to the workspace root
+        let mut search_dir = PathBuf::from(&manifest_dir);
+        while let Some(parent) = search_dir.parent() {
+            let candidate = parent.join(path);
+            if candidate.exists() {
+                return candidate;
+            }
+            search_dir = parent.to_path_buf();
+        }
+    }
+
+    path.to_path_buf()
+}
+
 /// Check if we're running under cargo by looking for cargo-specific env vars.
 ///
 /// Returns `true` if any of CARGO, CARGO_MANIFEST_DIR, or CARGO_PKG_NAME

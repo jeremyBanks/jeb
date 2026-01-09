@@ -31,7 +31,10 @@
 //! - **After replacement**: The `replace(...)` call no longer exists in source
 
 use {
-    crate::value::Value,
+    crate::{
+        runtime::resolve_source_path,
+        value::Value,
+    },
     once_cell::sync::Lazy,
     parking_lot::Mutex,
     std::{
@@ -102,8 +105,8 @@ pub fn replace<T: Value + 'static>(value: T) -> T {
 /// Used for testing with synthetic file locations.
 #[doc(hidden)]
 pub fn replace_at<T: Value + 'static>(value: T, file: &str, line: u32, column: u32) -> T {
-    // Try to resolve stable index
-    let path = PathBuf::from(file);
+    // Resolve to absolute path to work regardless of CWD
+    let path = resolve_source_path(file);
     let index_or_position = match crate::runtime::get_macro_index(&path, line, column) {
         Ok(index) => IndexOrPosition::Index(index),
         Err(_) => IndexOrPosition::Position(line, column),
