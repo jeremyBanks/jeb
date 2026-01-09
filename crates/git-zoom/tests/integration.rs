@@ -51,14 +51,11 @@ fn test_basic_zoom_in() {
         // Inline snapshot: verify tree structure after zoom-in
         let mut tree_paths: Vec<_> = head_commit.tree.paths().collect();
         tree_paths.sort();
-        assert_eq!(
-            format!("{:?}", tree_paths),
-            *snapshot(r#"["bar.txt", "foo.txt"]"#)
-        );
+        snapshot(r#"["bar.txt", "foo.txt"]"#.to_string()).value = format!("{:?}", tree_paths);
 
         // Inline snapshot: verify commit message first line
         let msg_first_line = head_commit.message.lines().next().unwrap_or("");
-        assert_eq!(msg_first_line, *snapshot("Merge from 'src/lib'"));
+        snapshot("Merge from 'src/lib'".to_string()).value = msg_first_line.to_string();
 
         Ok(())
     });
