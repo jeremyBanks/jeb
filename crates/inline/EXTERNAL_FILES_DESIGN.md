@@ -290,3 +290,373 @@ crates/inline/
    - `tests/foo.rs` → `tests/.snapshots/foo_0.snap`
 
    No collision - `.snapshots` is per-directory.
+
+---
+
+## Alternative: Macro-Based `outside!` Approach
+
+The above design uses a function-based side-channel approach. This section explores an alternative: a macro that uses `include_bytes!`/`include_str!` to compile external file contents into the binary, maintaining the "no runtime file dependency" property for verify mode.
+
+### Motivation
+
+The function-based `external()` approach has a limitation: reading external files at runtime means verify mode depends on those files existing. With a macro using `include_*!`, the file contents are embedded at compile time, so verify mode needs no file I/O at all.
+
+### Core Idea
+
+```rust
+// Usage:
+outside!("snapshots/large_output.txt").value = generate_large_output();
+
+// The data is compiled in via include_str!/include_bytes!
+// Write mode updates the external file
+// Verify mode compares against compiled-in data
+```
+
+### Type Support via `TryFrom<&[u8]>`
+
+To support both `String` and `Vec<u8>` (and potentially other types), use a trait bound:
+
+```rust
+pub trait OutsideValue: Sized + PartialEq {
+    /// Parse from raw bytes (file contents)
+    fn from_bytes(bytes: &[u8]) -> Result<Self, OutsideError>;
+
+    /// Serialize to raw bytes (for file writing)
+    fn to_bytes(&self) -> Vec<u8>;
+}
+
+impl OutsideValue for String {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, OutsideError> {
+        String::from_utf8(bytes.to_vec())
+            .map_err(|e| OutsideError::Utf8(e))
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.as_bytes().to_vec()
+    }
+}
+
+impl OutsideValue for Vec<u8> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, OutsideError> {
+        Ok(bytes.to_vec())
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.clone()
+    }
+}
+```
+
+The return type is inferred from usage context:
+```rust
+// Type inferred as OutsideCell<String> from .value assignment
+outside!("output.txt").value = some_string;
+
+// Type inferred as OutsideCell<Vec<u8>>
+outside!("output.bin").value = some_bytes;
+```
+
+### Macro Expansion (Declarative Macro Approach)
+
+A declarative macro using `include_bytes!` (works for both String and Vec<u8>):
+
+```rust
+#[macro_export]
+macro_rules! outside {
+    ($path:literal) => {{
+        // Embed file contents at compile time
+        static __OUTSIDE_DATA: &'static [u8] = include_bytes!($path);
+
+        // Compute path for runtime file operations
+        // file!() gives source file, $path is relative to it
+        $crate::OutsideCell::new(
+            __OUTSIDE_DATA,
+            file!(),      // Source file path
+            $path,        // Relative path to snapshot
+            line!(),
+            column!(),
+        )
+    }};
+}
+```
+
+**Path resolution at runtime:**
+```rust
+impl<T: OutsideValue> OutsideCell<T> {
+    pub fn new(
+        compiled_data: &'static [u8],
+        source_file: &'static str,
+        relative_path: &'static str,
+        line: u32,
+        column: u32,
+    ) -> Self {
+        // Resolve absolute path: source_file's directory + relative_path
+        let source_dir = Path::new(source_file).parent().unwrap_or(Path::new("."));
+        let absolute_path = source_dir.join(relative_path);
+
+        // Parse compiled data into T
+        let value = T::from_bytes(compiled_data)
+            .expect("compiled snapshot data should be valid");
+
+        OutsideCell {
+            compiled_data,
+            absolute_path,
+            value,
+            dirty: false,
+            line,
+            column,
+        }
+    }
+}
+```
+
+### The Chicken-and-Egg Problem
+
+**Problem:** `include_bytes!("file.txt")` fails at compile time if `file.txt` doesn't exist. But you need to run the code to create the file.
+
+**Solutions:**
+
+#### Option A: Manual Bootstrap (Simplest)
+Create an empty/placeholder file before first compilation:
+```bash
+mkdir -p snapshots
+touch snapshots/output.txt
+cargo test  # Now compiles
+```
+
+#### Option B: Proc Macro with Fallback
+A proc macro can check file existence and emit empty data if missing:
+
+```rust
+#[proc_macro]
+pub fn outside(input: TokenStream) -> TokenStream {
+    let path: LitStr = syn::parse(input).expect("expected string literal");
+
+    // Get source file location
+    let span = Span::call_site();
+    // Note: span.source_file() is unstable, may need nightly or workaround
+
+    // Check if file exists at compile time
+    // If not, use empty bytes (bootstrap mode)
+    let file_exists = Path::new(&resolved_path).exists();
+
+    if file_exists {
+        quote! {{
+            static __DATA: &'static [u8] = include_bytes!(#path);
+            ::inline::OutsideCell::new(__DATA, file!(), #path, line!(), column!())
+        }}
+    } else {
+        // Bootstrap: empty data, first write-mode run will create file
+        quote! {{
+            static __DATA: &'static [u8] = &[];
+            ::inline::OutsideCell::new(__DATA, file!(), #path, line!(), column!())
+        }}
+    }
+}
+```
+
+**Proc macro caveats:**
+- `Span::source_file()` is unstable (requires nightly or `proc_macro_span` feature)
+- Adds proc-macro crate dependency
+- More complex build
+
+#### Option C: Separate Init Tool
+A `cargo inline init` command that:
+1. Parses source files for `outside!("...")` calls
+2. Creates missing snapshot files with empty content
+3. Run before first compilation
+
+### OutsideCell Structure
+
+```rust
+pub struct OutsideCell<T: OutsideValue> {
+    /// Compiled-in data (from include_bytes!)
+    compiled_data: &'static [u8],
+
+    /// Absolute path to external file (for write mode)
+    absolute_path: PathBuf,
+
+    /// Current value (parsed from compiled_data)
+    value: T,
+
+    /// Has the value been modified?
+    dirty: bool,
+
+    /// Source location (for error messages)
+    line: u32,
+    column: u32,
+}
+
+/// Inner type for DerefMut pattern (matches InlineCell's approach)
+pub struct OutsideInner<T: OutsideValue> {
+    pub value: T,
+    cell: *mut OutsideCell<T>,  // Back-reference for write
+}
+```
+
+### Mode Behavior
+
+Uses the same `INLINE_MODE` environment variable as inline cells:
+
+| Mode | Behavior |
+|------|----------|
+| **Verify** (default in tests) | Compare `.value` assignment against compiled-in data. Panic on mismatch. No file I/O. |
+| **Write** | Write new value to external file. Next recompilation picks up changes. |
+| **Memory** | Accept any value, no persistence. |
+| **Reject** | Panic on any `.value` assignment. |
+
+```rust
+impl<T: OutsideValue> Drop for OutsideCell<T> {
+    fn drop(&mut self) {
+        if !self.dirty {
+            return;
+        }
+
+        match get_mode() {
+            Mode::Verify => {
+                // Compare against compiled-in data
+                let expected = T::from_bytes(self.compiled_data)
+                    .expect("compiled data should be valid");
+                if self.value != expected {
+                    panic!(
+                        "Outside snapshot mismatch at line {}!\n\
+                         Expected (compiled): {:?}\n\
+                         Got: {:?}\n\
+                         File: {}",
+                        self.line,
+                        expected,
+                        self.value,
+                        self.absolute_path.display()
+                    );
+                }
+            }
+            Mode::Write => {
+                // Write to external file
+                let bytes = self.value.to_bytes();
+                if let Some(parent) = self.absolute_path.parent() {
+                    std::fs::create_dir_all(parent).ok();
+                }
+                std::fs::write(&self.absolute_path, &bytes)
+                    .expect("failed to write outside snapshot");
+            }
+            Mode::Memory => {
+                // Nothing to do
+            }
+            Mode::Reject => {
+                panic!("Outside snapshot modification rejected (INLINE_MODE=reject)");
+            }
+        }
+    }
+}
+```
+
+### Comparison: `outside!` vs `snapshot()` + `external()`
+
+| Aspect | `snapshot(external(...))` | `outside!(...)` |
+|--------|---------------------------|-----------------|
+| **Compile-time embedding** | No | Yes (include_bytes!) |
+| **Runtime file read (verify)** | Yes | No |
+| **Requires file at compile** | No | Yes (or proc macro fallback) |
+| **Implementation complexity** | Lower (no macro) | Higher (macro + proc-macro for bootstrap) |
+| **Type support** | String only (initially) | Any OutsideValue (String, Vec<u8>, extensible) |
+| **Source modification** | Yes (rewrites call) | No (file path is static) |
+
+### Key Differences from Inline Snapshots
+
+| Aspect | Inline (`snapshot()`) | Outside (`outside!()`) |
+|--------|----------------------|------------------------|
+| **Data location** | Embedded in source code | External file (compiled in) |
+| **Serialization** | `databake::Bake` → Rust tokens | Raw bytes (UTF-8 for String) |
+| **Write target** | Source file (modifies Rust code) | External file (no source change) |
+| **Registry** | Yes (file, index, type) | No (path is the key) |
+| **Diffing** | AST comparison | Byte comparison |
+| **git diff** | Shows in source file | Shows in snapshot file |
+
+### Integration with Existing Code
+
+The `outside!` macro would be a parallel system to `snapshot()`:
+
+**Shared:**
+- `INLINE_MODE` environment variable and `Mode` enum
+- `get_mode()` function
+- Conceptual model (verify vs write)
+
+**Separate:**
+- No registry (path is implicit key)
+- Different cell type (`OutsideCell<T>` vs `InlineCell<T>`)
+- Different serialization (`to_bytes()` vs `Bake`)
+- No source code modification
+
+**File structure:**
+```
+crates/inline/
+├── src/
+│   ├── lib.rs              # Add: pub mod outside; pub use outside::*;
+│   ├── outside.rs          # NEW: OutsideCell, OutsideValue trait, outside! macro
+│   ├── inline.rs           # Unchanged
+│   └── runtime.rs          # Unchanged (Mode is shared)
+└── tests/
+    └── outside_test.rs     # NEW: tests for outside!
+```
+
+### Potential Proc-Macro Crate
+
+If using the proc-macro bootstrap approach:
+
+```
+crates/inline-macros/         # NEW proc-macro crate
+├── Cargo.toml
+└── src/
+    └── lib.rs                # outside! proc macro
+```
+
+The proc macro enables:
+1. File existence check at compile time
+2. Automatic empty-file fallback for bootstrapping
+3. Future: type-aware expansion (include_str! vs include_bytes!)
+
+### Open Questions for `outside!`
+
+1. **Proc macro or declarative?**
+   - Declarative: simpler, but requires manual file creation
+   - Proc macro: bootstrap support, but more complex and may need nightly
+
+2. **Line ending normalization?**
+   - Should `\r\n` vs `\n` differences cause verification failure?
+   - Recommendation: normalize to `\n` on both read and write
+
+3. **Trailing newline?**
+   - Should files always end with newline?
+   - Recommendation: preserve exactly what's written (no auto-add)
+
+4. **Binary vs text distinction?**
+   - Could have `outside!` for text (String) and `outside_bytes!` for binary
+   - Or infer from type annotation / return type context
+   - Recommendation: single macro, type inferred from context
+
+5. **Snapshot directory convention?**
+   - Allow arbitrary paths: `outside!("../fixtures/data.txt")`
+   - Or enforce convention: `outside!("foo")` → `snapshots/foo.snap`
+   - Recommendation: allow arbitrary paths for flexibility
+
+### Implementation Phases
+
+**Phase 0: Declarative Macro (MVP)**
+1. Implement `OutsideValue` trait for String and Vec<u8>
+2. Implement `OutsideCell<T>` with mode-aware Drop
+3. Declarative `outside!` macro using `include_bytes!`
+4. Require manual file creation (document bootstrap process)
+
+**Phase 1: Bootstrap Tooling**
+1. `cargo inline init` command to create missing snapshot files
+2. Scans source for `outside!("...")` patterns
+3. Creates empty files so compilation succeeds
+
+**Phase 2: Proc Macro (Optional)**
+1. Proc-macro crate with file-existence check
+2. Automatic fallback to empty data if file missing
+3. Removes need for manual bootstrap
+
+**Phase 3: Extended Type Support**
+1. More `OutsideValue` implementations
+2. Potentially serde-based generic impl for any Serialize+Deserialize
