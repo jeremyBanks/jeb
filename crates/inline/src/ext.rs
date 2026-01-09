@@ -27,7 +27,7 @@ use {
 /// let mut x = cell(42);
 /// x.value = 100;
 /// x.flush()?; // Requires InlineCellExt in scope
-///     
+///
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub trait InlineCellExt<T: Value + 'static> {
@@ -54,7 +54,7 @@ pub trait InlineCellExt<T: Value + 'static> {
     /// let mut counter = cell(0);
     /// counter.value = 42;
     /// counter.flush()?; // Write immediately, don't wait for Drop
-    ///     
+    ///
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     fn flush(&mut self) -> Result<(), Box<dyn std::error::Error>>;
@@ -185,7 +185,7 @@ impl<T: Value + 'static> InlineCellExt<T> for InlineCell<T> {
 /// let mut x = cell(42);
 /// x.value = 100;
 /// inline::flush(&mut x)?; // No trait import needed
-///     
+///
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn flush<T: Value + 'static>(

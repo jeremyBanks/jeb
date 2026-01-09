@@ -98,19 +98,11 @@ mod flush;
 mod inline;
 pub mod registry;
 mod replace;
-mod tokens;
 pub mod runtime;
+mod tokens;
 mod value;
 
 // Re-export replace functions and aliases
-pub use replace::{
-    REPLACE_ME,
-    eval,
-    replace,
-    replace_at,
-    replace_default,
-    val,
-};
 pub use {
     dirty::{
         dirty_count,
@@ -122,6 +114,14 @@ pub use {
         start_background_flush,
     },
     inline::*,
+    replace::{
+        REPLACE_ME,
+        eval,
+        replace,
+        replace_at,
+        replace_default,
+        val,
+    },
     runtime::*,
     tokens::Tokens,
     value::*,
@@ -209,8 +209,8 @@ macro_rules! replace_default {
 
 /// Create a self-modifying [`InlineCell`] containing arbitrary tokens.
 ///
-/// The [`Tokens`] type implements [`Bake`](databake::Bake) to produce a macro call
-/// that reproduces the original tokens. This macro wraps the tokens in an
+/// The [`Tokens`] type implements [`Bake`](databake::Bake) to produce a macro
+/// call that reproduces the original tokens. This macro wraps the tokens in an
 /// `InlineCell` for automatic source code updates.
 ///
 /// # Example

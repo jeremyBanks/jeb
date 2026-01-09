@@ -3,13 +3,18 @@
 //! The `Tokens` type stores arbitrary tokens and implements `Bake` to
 //! reproduce them directly, preserving the original token structure.
 
-use databake::{Bake, CrateEnv};
-use proc_macro2::TokenStream;
+use {
+    databake::{
+        Bake,
+        CrateEnv,
+    },
+    proc_macro2::TokenStream,
+};
 
 /// A wrapper for arbitrary tokens that preserves them through baking.
 ///
-/// When used with the [`tokens!`](crate::tokens) macro, creates a self-modifying
-/// cell that updates its source code when the tokens change.
+/// When used with the [`tokens!`](crate::tokens) macro, creates a
+/// self-modifying cell that updates its source code when the tokens change.
 ///
 /// # Example
 ///
@@ -25,8 +30,10 @@ use proc_macro2::TokenStream;
 /// // On drop, source updates to: tokens!(new value)
 /// ```
 ///
-/// For a raw `Tokens` value without the cell wrapper, use [`Tokens::from_str()`].
+/// For a raw `Tokens` value without the cell wrapper, use
+/// [`Tokens::from_str()`].
 #[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Default)]
 pub struct Tokens {
     /// The string representation of the tokens
     source: String,
@@ -74,13 +81,6 @@ impl Bake for Tokens {
     }
 }
 
-impl Default for Tokens {
-    fn default() -> Self {
-        Self {
-            source: String::new(),
-        }
-    }
-}
 
 impl std::fmt::Display for Tokens {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -149,8 +149,11 @@ mod tests {
 
         // More complex tokens
         let toks: Tokens = quote!(
-            fn example() -> i32 { 42 }
-        ).into();
+            fn example() -> i32 {
+                42
+            }
+        )
+        .into();
         assert!(toks.as_str().contains("fn example"));
     }
 }

@@ -1,12 +1,20 @@
 //! Integration tests for tokens!() macro
 //!
-//! These tests verify that the tokens! macro works correctly with the inline cell system,
-//! including updating token contents and persisting them to source files.
+//! These tests verify that the tokens! macro works correctly with the inline
+//! cell system, including updating token contents and persisting them to source
+//! files.
 
-use inline::{InlineCellPrivate, Tokens};
-use std::env;
-use std::fs;
-use tempfile::TempDir;
+use {
+    inline::{
+        InlineCellPrivate,
+        Tokens,
+    },
+    std::{
+        env,
+        fs,
+    },
+    tempfile::TempDir,
+};
 
 /// Helper to find tokens! macro invocations in a file
 fn find_tokens_macro_positions(path: &std::path::Path) -> Vec<(u32, u32)> {
@@ -27,7 +35,8 @@ fn find_tokens_macro_positions(path: &std::path::Path) -> Vec<(u32, u32)> {
                         use syn::spanned::Spanned;
                         let span = mac.mac.path.span();
                         let start = span.start();
-                        self.positions.push((start.line as u32, start.column as u32));
+                        self.positions
+                            .push((start.line as u32, start.column as u32));
                     }
                 }
             }
@@ -35,7 +44,9 @@ fn find_tokens_macro_positions(path: &std::path::Path) -> Vec<(u32, u32)> {
         }
     }
 
-    let mut finder = MacroFinder { positions: Vec::new() };
+    let mut finder = MacroFinder {
+        positions: Vec::new(),
+    };
     finder.visit_file(&ast);
     finder.positions
 }
@@ -301,7 +312,12 @@ fn test_tokens_macro_with_quote() {
         let mut cell = inline::InlineCell::__new(initial, path.to_str().unwrap(), line, col);
         // Use quote! to generate new tokens
         use quote::quote;
-        cell.value = quote!(struct Generated { field: i32 }).into();
+        cell.value = quote!(
+            struct Generated {
+                field: i32,
+            }
+        )
+        .into();
     }
 
     let content = fs::read_to_string(&path).unwrap();
