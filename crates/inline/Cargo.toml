@@ -13,8 +13,8 @@ keywords = ["codegen", "self-modifying", "snapshot", "testing"]
 categories = ["development-tools", "development-tools::testing"]
 
 [[bin]]
-name = "cargo-inline-write"
-path = "src/bin/cargo-inline-write.rs"
+name = "cargo-inline"
+path = "src/bin/cargo-inline.rs"
 
 [dependencies]
 databake.workspace = true

@@ -37,9 +37,38 @@ use {
     std::{
         any::TypeId,
         collections::HashMap,
-        path::PathBuf,
+        env,
+        path::{Path, PathBuf},
     },
 };
+
+/// Resolve a source file path from `#[track_caller]` to an absolute path.
+/// See registry.rs for detailed documentation.
+fn resolve_source_path(file: &str) -> PathBuf {
+    let path = Path::new(file);
+
+    if path.is_absolute() {
+        return path.to_path_buf();
+    }
+
+    if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
+        let resolved = PathBuf::from(&manifest_dir).join(path);
+        if resolved.exists() {
+            return resolved;
+        }
+
+        let mut search_dir = PathBuf::from(&manifest_dir);
+        while let Some(parent) = search_dir.parent() {
+            let candidate = parent.join(path);
+            if candidate.exists() {
+                return candidate;
+            }
+            search_dir = parent.to_path_buf();
+        }
+    }
+
+    path.to_path_buf()
+}
 
 /// Registry key for replace: (file, index_or_position, type_id)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -102,8 +131,8 @@ pub fn replace<T: Value + 'static>(value: T) -> T {
 /// Used for testing with synthetic file locations.
 #[doc(hidden)]
 pub fn replace_at<T: Value + 'static>(value: T, file: &str, line: u32, column: u32) -> T {
-    // Try to resolve stable index
-    let path = PathBuf::from(file);
+    // Resolve to absolute path to work regardless of CWD
+    let path = resolve_source_path(file);
     let index_or_position = match crate::runtime::get_macro_index(&path, line, column) {
         Ok(index) => IndexOrPosition::Index(index),
         Err(_) => IndexOrPosition::Position(line, column),

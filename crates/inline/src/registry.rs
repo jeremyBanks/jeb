@@ -42,9 +42,47 @@ use {
     std::{
         any::TypeId,
         collections::HashMap,
-        path::PathBuf,
+        env,
+        path::{Path, PathBuf},
     },
 };
+
+/// Resolve a source file path from `#[track_caller]` to an absolute path.
+///
+/// `#[track_caller]` returns paths relative to the crate root (e.g.,
+/// `crates/foo/src/lib.rs` or `src/main.rs`). These need to be resolved
+/// against `CARGO_MANIFEST_DIR` to get an absolute path that can be read
+/// regardless of the current working directory.
+fn resolve_source_path(file: &str) -> PathBuf {
+    let path = Path::new(file);
+
+    // If the path is already absolute, use it directly
+    if path.is_absolute() {
+        return path.to_path_buf();
+    }
+
+    // Try to resolve against CARGO_MANIFEST_DIR
+    if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
+        let resolved = PathBuf::from(&manifest_dir).join(path);
+        if resolved.exists() {
+            return resolved;
+        }
+
+        // For workspace crates, the path might be relative to the workspace root
+        // Try walking up from CARGO_MANIFEST_DIR to find the file
+        let mut search_dir = PathBuf::from(&manifest_dir);
+        while let Some(parent) = search_dir.parent() {
+            let candidate = parent.join(path);
+            if candidate.exists() {
+                return candidate;
+            }
+            search_dir = parent.to_path_buf();
+        }
+    }
+
+    // Fallback: return the relative path as-is (will likely fail to read)
+    path.to_path_buf()
+}
 
 /// Registry key that can represent either a stable index or a (line, column)
 /// position
@@ -110,7 +148,7 @@ pub fn get_or_create_at<T: Value + 'static>(
     // This parses the file once per file and caches the (line, column) → index
     // mapping If the file doesn't exist (e.g., in tests or compiled binaries),
     // fall back to (line, column)
-    let path = PathBuf::from(file);
+    let path = resolve_source_path(file);
     let index_or_position = match crate::runtime::get_macro_index(&path, line, column) {
         Ok(index) => IndexOrPosition::Index(index),
         Err(_) => {
@@ -123,14 +161,16 @@ pub fn get_or_create_at<T: Value + 'static>(
     // Build the registry key
     // Prefers stable index for files that exist, falls back to (line, column)
     // otherwise
-    let key = (path, index_or_position, TypeId::of::<InlineCellInner<T>>());
+    let key = (path.clone(), index_or_position, TypeId::of::<InlineCellInner<T>>());
 
     // Get or create the raw pointer in the registry
     let ptr_as_usize = {
         let mut registry = VALUE_REGISTRY.lock();
+        let resolved_path = path.to_string_lossy().to_string();
         *registry.entry(key).or_insert_with(|| {
             // Create a new boxed value and leak it for 'static lifetime
-            let inner = InlineCellInner::new(initial.clone(), file, line, column);
+            // Pass the resolved absolute path so it works regardless of CWD
+            let inner = InlineCellInner::new(initial.clone(), &resolved_path, line, column);
 
             // TODO: Initial value verification disabled due to false positives
             // When databake serializes values like vec![1,2,3], it produces

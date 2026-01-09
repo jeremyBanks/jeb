@@ -5,15 +5,15 @@ use inline::snapshot;
 fn hex() {
     assert_eq!(
         format!("{:?}", decode_hex_nibbles("FAE")),
-        *snapshot("MaskedBytes { bytes: [250, 224], mask: [255, 240] }")
+        *snapshot("WRONG VALUE")
     );
     assert_eq!(
         format!("{:?}", decode_hex_nibbles("0x12345678")),
-        *snapshot("MaskedBytes { bytes: [18, 52, 86, 120], mask: [255, 255, 255, 255] }")
+        *snapshot("ALSO WRONG")
     );
     assert_eq!(
         format!("{:?}", decode_hex_nibbles("")),
-        *snapshot("MaskedBytes { bytes: [], mask: [] }")
+        *snapshot("BROKEN")
     );
     assert_eq!(
         format!("{:?}", decode_hex_nibbles("_")),
