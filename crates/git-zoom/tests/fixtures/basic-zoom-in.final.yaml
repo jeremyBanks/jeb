@@ -1,9 +1,9 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: b2846e80eaadc98ed2e8b82131068b43d374627e
-102b80:
-  author: Claude <noreply@anthropic.com>
+    main: f4b8222c26a78f1edf2b385a04b329c3f75a248b
+136d8a:
+  author: Jeremy Banks <_@jeremy.ca>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
@@ -21,7 +21,7 @@ ea2e71:
       lib:
         bar.txt: more code
         foo.txt: library code
-b2846e80eaadc98ed2e8b82131068b43d374627e:
+f4b8222c26a78f1edf2b385a04b329c3f75a248b:
   author-date: 2026-01-02T21:10:36Z
   commit-date: 2026-01-02T21:10:36Z
   committer: 🔎 <git-zoom-in@localhost>
@@ -30,7 +30,7 @@ b2846e80eaadc98ed2e8b82131068b43d374627e:
 
     git-zoom-in: src/lib
   parents:
-  - 102b80
+  - 136d8a
   - ea2e71
   tree:
     bar.txt:

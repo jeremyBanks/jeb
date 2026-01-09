@@ -1,11 +1,9 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 22d3327382251f534198ab4307a25cbf5e9f8dc0
-staged:
-  mod.rs: modified core
-102b80:
-  author: Claude <noreply@anthropic.com>
+    main: 7ffed853f4d5d9c6373a7c3f956eec60a2caf946
+136d8a:
+  author: Jeremy Banks <_@jeremy.ca>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
@@ -21,7 +19,7 @@ staged:
         core:
           mod.rs: core module
         lib.rs: lib root
-fcd37b:
+cb2827:
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
@@ -30,7 +28,7 @@ fcd37b:
 
     git-zoom-in: src/lib
   parents:
-  - 102b80
+  - 136d8a
   - 79bac8
   tree:
     core:
@@ -40,7 +38,7 @@ fcd37b:
     lib.rs:
       //commit: 79bac8
       //path: src/lib/lib.rs
-22d3327382251f534198ab4307a25cbf5e9f8dc0:
+9843a1:
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
@@ -49,9 +47,51 @@ fcd37b:
 
     git-zoom-in: core
   parents:
-  - 102b80
-  - fcd37b
+  - 136d8a
+  - cb2827
   tree:
     mod.rs:
-      //commit: fcd37b
+      //commit: cb2827
       //path: core/mod.rs
+ae252c:
+  author: User <user@localhost>
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  message: Update core
+  tree:
+    mod.rs: modified core
+3b547d:
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |-
+    Merge to 'core'
+
+    git-zoom-out: core
+  parents:
+  - cb2827
+  - ae252c
+  tree:
+    core:
+      mod.rs:
+        //commit: ae252c
+        //path: mod.rs
+7ffed853f4d5d9c6373a7c3f956eec60a2caf946:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |-
+    Merge to 'src/lib'
+
+    git-zoom-out: src/lib
+  parents:
+  - 79bac8
+  - 3b547d
+  tree:
+    src:
+      lib:
+        core:
+          mod.rs:
+            //commit: 3b547d
+            //path: core/mod.rs
