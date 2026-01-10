@@ -416,7 +416,57 @@ impl<T: OutsideValue> OutsideCell<T> {
 
 **Solutions:**
 
-#### Option A: Manual Bootstrap (Simplest)
+#### Option A: Explicit "New" Flag (APPROVED for MVP)
+
+Use an explicit flag or prefix in the macro to indicate the file doesn't exist yet:
+
+```rust
+// File exists - include it
+outside!("snapshots/output.txt").value = generate_output();
+
+// File doesn't exist yet - explicit "new" marker
+outside!(new "snapshots/output.txt").value = generate_output();
+// Or alternative syntax:
+outside_new!("snapshots/output.txt").value = generate_output();
+```
+
+The `new` variant skips `include_bytes!` and uses empty data. First write-mode run creates the file, then user removes the `new` flag and recompiles.
+
+**Advantages:**
+- Explicit intent - clear when bootstrapping vs established
+- No magic file-existence detection at compile time
+- Simple declarative macro implementation
+- User controls when to "promote" to normal mode
+
+```rust
+#[macro_export]
+macro_rules! outside {
+    (new $path:literal) => {{
+        // Bootstrap mode: no file yet, use empty data
+        static __OUTSIDE_DATA: &'static [u8] = &[];
+        $crate::OutsideCell::new(
+            __OUTSIDE_DATA,
+            file!(),
+            $path,
+            line!(),
+            column!(),
+        )
+    }};
+    ($path:literal) => {{
+        // Normal mode: file must exist
+        static __OUTSIDE_DATA: &'static [u8] = include_bytes!($path);
+        $crate::OutsideCell::new(
+            __OUTSIDE_DATA,
+            file!(),
+            $path,
+            line!(),
+            column!(),
+        )
+    }};
+}
+```
+
+#### Option B: Manual File Creation
 Create an empty/placeholder file before first compilation:
 ```bash
 mkdir -p snapshots
@@ -424,43 +474,15 @@ touch snapshots/output.txt
 cargo test  # Now compiles
 ```
 
-#### Option B: Proc Macro with Fallback
-A proc macro can check file existence and emit empty data if missing:
+#### ~~Option C: Proc Macro with Fallback~~ (REJECTED)
 
-```rust
-#[proc_macro]
-pub fn outside(input: TokenStream) -> TokenStream {
-    let path: LitStr = syn::parse(input).expect("expected string literal");
+A proc macro could theoretically check file existence at compile time and emit empty data if missing. However, this approach is **rejected** because:
+- Affects build caching in unpredictable ways (file existence checks aren't tracked by cargo)
+- `Span::source_file()` is unstable (requires nightly)
+- Adds proc-macro crate dependency and complexity
+- The explicit `new` flag (Option A) is cleaner and more predictable
 
-    // Get source file location
-    let span = Span::call_site();
-    // Note: span.source_file() is unstable, may need nightly or workaround
-
-    // Check if file exists at compile time
-    // If not, use empty bytes (bootstrap mode)
-    let file_exists = Path::new(&resolved_path).exists();
-
-    if file_exists {
-        quote! {{
-            static __DATA: &'static [u8] = include_bytes!(#path);
-            ::inline::OutsideCell::new(__DATA, file!(), #path, line!(), column!())
-        }}
-    } else {
-        // Bootstrap: empty data, first write-mode run will create file
-        quote! {{
-            static __DATA: &'static [u8] = &[];
-            ::inline::OutsideCell::new(__DATA, file!(), #path, line!(), column!())
-        }}
-    }
-}
-```
-
-**Proc macro caveats:**
-- `Span::source_file()` is unstable (requires nightly or `proc_macro_span` feature)
-- Adds proc-macro crate dependency
-- More complex build
-
-#### Option C: Separate Init Tool
+#### Option D: Separate Init Tool (NOT PLANNED)
 A `cargo inline init` command that:
 1. Parses source files for `outside!("...")` calls
 2. Creates missing snapshot files with empty content
@@ -599,27 +621,13 @@ crates/inline/
     └── outside_test.rs     # NEW: tests for outside!
 ```
 
-### Potential Proc-Macro Crate
+### ~~Potential Proc-Macro Crate~~ (NOT PLANNED)
 
-If using the proc-macro bootstrap approach:
-
-```
-crates/inline-macros/         # NEW proc-macro crate
-├── Cargo.toml
-└── src/
-    └── lib.rs                # outside! proc macro
-```
-
-The proc macro enables:
-1. File existence check at compile time
-2. Automatic empty-file fallback for bootstrapping
-3. Future: type-aware expansion (include_str! vs include_bytes!)
+A proc-macro crate was considered but rejected due to build caching complexity. The declarative macro with explicit `new` flag is the approved approach.
 
 ### Open Questions for `outside!`
 
-1. **Proc macro or declarative?**
-   - Declarative: simpler, but requires manual file creation
-   - Proc macro: bootstrap support, but more complex and may need nightly
+1. **Proc macro or declarative?** → DECIDED: Declarative with explicit `new` flag
 
 2. **Line ending normalization?**
    - Should `\r\n` vs `\n` differences cause verification failure?
@@ -639,24 +647,16 @@ The proc macro enables:
    - Or enforce convention: `outside!("foo")` → `snapshots/foo.snap`
    - Recommendation: allow arbitrary paths for flexibility
 
-### Implementation Phases
+### Implementation Phases (APPROVED)
 
-**Phase 0: Declarative Macro (MVP)**
+**Phase 1: Declarative Macro with Explicit `new` Flag (MVP)**
 1. Implement `OutsideValue` trait for String and Vec<u8>
 2. Implement `OutsideCell<T>` with mode-aware Drop
-3. Declarative `outside!` macro using `include_bytes!`
-4. Require manual file creation (document bootstrap process)
+3. Declarative `outside!` macro with two variants:
+   - `outside!("path")` - includes file via `include_bytes!`
+   - `outside!(new "path")` - bootstrap mode, empty data
+4. Document workflow: start with `new`, run write mode, remove `new`
 
-**Phase 1: Bootstrap Tooling**
-1. `cargo inline init` command to create missing snapshot files
-2. Scans source for `outside!("...")` patterns
-3. Creates empty files so compilation succeeds
-
-**Phase 2: Proc Macro (Optional)**
-1. Proc-macro crate with file-existence check
-2. Automatic fallback to empty data if file missing
-3. Removes need for manual bootstrap
-
-**Phase 3: Extended Type Support**
+**Phase 2: Extended Type Support (FUTURE)**
 1. More `OutsideValue` implementations
 2. Potentially serde-based generic impl for any Serialize+Deserialize
