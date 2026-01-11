@@ -1,4 +1,4 @@
-We search for the annotations in all files matching **/*.md or src/**/*.
+We search for the annotations in all files matching **/*.md or src/**/*. (Truly any file under src/, this is entirely language agnostic - doesn't even need to be programming code.)
 
 Annotations are always wrapped in [...] (we're not using a suffix like `r` any more).
 Annotations are not preceded by `]` or `)`,  nor followed by `[` or `(`.
@@ -12,12 +12,12 @@ Each annotations we record the file path, line (1-indexed), and column (1-indexe
 
 The following are recognized annotations types:
 
-`def` defines a requirement. Each requirement ID may only be defined once. A def also implies the existence of its ancestor requirements (if no definition for an ancestor is found, it is treated as  if it exists with a simple default `[def some.ancestor.name]` with no associated description text.
+`def` defines a requirement. Each requirement ID may only be defined once. A def also implies the existence of its ancestor requirements (if no definition for an ancestor is found, it is treated as  if it exists with a simple default `[def some.ancestor.name]` with no associated description text. Implicit ancestors inherit from their ancestors following normal rules - if foo.bar is implicit but foo exists, foo.bar inherits from foo; if foo is also implicit, it inherits from the global default.
 It is a non-fatal error to define the same ID more than once. (For determinism, we'll pick the one whose path comes first lexicographically.)
 Each definition has certain annotations types that it must be found with the same ID for it to be satisfied.
 By default these are inherited from their parent. If no ancestors modify them, the default required annotation types are `impl` and `test`. Annotation types may be any string of at least one alphanumeric/underscore/dash characters (requiring a `def` is a bit silly because this _is_ the def, so it's a non-fatal error and we ignore it after emitting the message). Required annotations types are added or removed in a `def` for an requirement and its descendants by appending them, joined, with `+` and `-` indicators, as another component. It is a non-fatal error to attempt to remove a type that didn't exist or add one which already did.
-[def some.id +impl+verify]
-The final possible part is the special-case `@child`, `@self`, or `@either` (default if not defined by ancestors) as a final of the space-delimited components, defines whether the criteria need to be explicitly satisfied for this ID, or if they need to be satisfied for all children (and there needs to be at least one child), or the default: either one works.
+[def some.id +impl+test]
+The final possible part is the special-case `@child`, `@self`, or `@either` (default if not defined by ancestors) as a final of the space-delimited components, defines whether the criteria need to be explicitly satisfied for this ID, or if they need to be satisfied for all children (and there needs to be at least one child), or the default: either one works. More precisely for `@child`: for each required type, all direct children who also require that type must satisfy it, AND there must be at least one direct child who requires it. If `@child` has zero children, it is automatically unsatisfied.
 It is a non-fatal error to add an annotation of a type that's not required.
 
 We limit output to 32 items by default, but if there are more we end with a message telling the user they can use --skip and --limit to get more.
@@ -35,3 +35,5 @@ Showing X of Y definitions. You may use `--limit` and `--skip` etc etc etc.
 You may use `_trace --context` to see the context for every annotation, including paths/line/col. Or `_trace --lines` to just show paths/line/col, not context.  Or `_trace --context-of=def,test` to only expand the full context for specific types.
 ---
 something like that
+
+It MAY be common to ues RFC 2119 requirement levels keywords MUST, MUST NOT, SHOULD, SHOULD NOT, MAY in descriptions. We MAY add support them in the future  but not in the initial release.
