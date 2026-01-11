@@ -11,5 +11,5 @@ keywords = []
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
-glob.workspace = true
+ignore.workspace = true
 regex.workspace = true

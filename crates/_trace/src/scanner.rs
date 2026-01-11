@@ -2,10 +2,7 @@
 //! [impl _trace.files]
 
 use {
-    glob::{
-        MatchOptions,
-        glob_with,
-    },
+    ignore::WalkBuilder,
     std::{
         fs,
         path::PathBuf,
@@ -25,49 +22,42 @@ pub struct ScannedFile {
 pub fn scan_files(root: &PathBuf) -> Vec<ScannedFile> {
     let mut files = Vec::new();
 
-    // Options to include hidden directories (like .claude/)
-    let options = MatchOptions {
-        require_literal_leading_dot: false,
-        ..Default::default()
-    };
+    // Use WalkBuilder which respects .gitignore automatically
+    // Include hidden files (for .claude/ etc) but exclude .git explicitly
+    let walker = WalkBuilder::new(root)
+        .hidden(false) // Include hidden files/directories like .claude/
+        .git_ignore(true) // Respect .gitignore
+        .git_exclude(true) // Respect .git/info/exclude
+        .require_git(false) // Still work in non-git directories
+        .build();
 
-    // Pattern 1: **/*.md (all markdown files, including hidden directories)
-    let md_pattern = root.join("**/*.md");
-    if let Ok(paths) = glob_with(md_pattern.to_str().unwrap_or(""), options) {
-        for entry in paths.flatten() {
-            // Skip .git directory
-            if is_in_git_dir(&entry) {
-                continue;
-            }
-            if let Some(file) = read_file(&entry) {
-                files.push(file);
-            }
+    for result in walker {
+        let entry = match result {
+            Ok(entry) => entry,
+            Err(_) => continue,
+        };
+
+        let path = entry.path();
+
+        // Skip directories
+        if entry.file_type().map_or(true, |ft| ft.is_dir()) {
+            continue;
         }
-    }
 
-    // Pattern 2: src/**/* (all files under root src/)
-    let src_pattern = root.join("src/**/*");
-    if let Ok(paths) = glob_with(src_pattern.to_str().unwrap_or(""), options) {
-        for entry in paths.flatten() {
-            // Skip directories and .git
-            if entry.is_dir() || is_in_git_dir(&entry) {
-                continue;
-            }
-            if let Some(file) = read_file(&entry) {
-                files.push(file);
-            }
+        // Skip .git directory explicitly (even though gitignore should handle it)
+        if path.components().any(|c| c.as_os_str() == ".git") {
+            continue;
         }
-    }
 
-    // Pattern 3: crates/*/src/**/* (all files under crate src/)
-    let crates_src_pattern = root.join("crates/*/src/**/*");
-    if let Ok(paths) = glob_with(crates_src_pattern.to_str().unwrap_or(""), options) {
-        for entry in paths.flatten() {
-            // Skip directories and .git
-            if entry.is_dir() || is_in_git_dir(&entry) {
-                continue;
-            }
-            if let Some(file) = read_file(&entry) {
+        // Only include:
+        // 1. All .md files (**/*.md)
+        // 2. All files under any src/ directory (**/src/**/*)
+        let path_str = path.to_string_lossy();
+        let is_markdown = path.extension().map_or(false, |ext| ext == "md");
+        let is_in_src = path_str.contains("/src/");
+
+        if is_markdown || is_in_src {
+            if let Some(file) = read_file(&path.to_path_buf()) {
                 files.push(file);
             }
         }
@@ -77,12 +67,6 @@ pub fn scan_files(root: &PathBuf) -> Vec<ScannedFile> {
     files.sort_by(|a, b| a.path.cmp(&b.path));
 
     files
-}
-
-/// Check if a path is inside a .git directory
-/// [impl _trace.files.globs]
-fn is_in_git_dir(path: &PathBuf) -> bool {
-    path.components().any(|c| c.as_os_str() == ".git")
 }
 
 /// Read a file if it's text content
