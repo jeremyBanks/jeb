@@ -46,6 +46,7 @@ pub trait InlineSnapExt: Sized {
     /// ```no_run
     /// use inline::InlineSnapExt;
     ///
+    /// fn compute() -> i32 { 42 }
     /// let result = compute().snap(42);
     /// // If compute() != 42, source is updated with actual value
     /// ```
@@ -69,7 +70,8 @@ pub trait InlineSnapExt: Sized {
     /// ```no_run
     /// use inline::InlineSnapExt;
     ///
-    /// let result = compute().snap_dbg("expected debug output");
+    /// fn compute() -> i32 { 42 }
+    /// let result = compute().snap_dbg("42");
     /// // If debug output differs, source is updated with actual debug string
     /// ```
     #[track_caller]
