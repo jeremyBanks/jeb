@@ -124,7 +124,7 @@ pub use {
         val,
     },
     runtime::*,
-    snapshot::Snapshot,
+    snapshot::InlineSnapExt,
     tokens::Tokens,
     value::*,
 };

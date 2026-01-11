@@ -1,36 +1,39 @@
-//! Snapshot testing extension trait.
+//! Snapshot testing extension traits.
 //!
-//! Provides a `.snapshot(expected)` method that can be called on any value
-//! implementing `Value`. The method compares the actual value with the expected
-//! snapshot and updates the source code if they differ.
+//! Provides `.snap(expected)` and `.snap_dbg(expected)` methods for inline
+//! snapshot testing. These methods compare actual values with expected snapshots
+//! and update the source code if they differ.
 //!
 //! # Example
 //!
 //! ```no_run
-//! use inline::Snapshot;
+//! use inline::InlineSnapExt;
 //!
 //! fn compute() -> i32 { 42 }
 //!
-//! // In a test:
-//! let result = compute().snapshot(0);  // Expected value in source
-//! // If compute() returns 42 but source says 0, the source is updated to 42
+//! // Snapshot with Bake serialization:
+//! let result = compute().snap(0);
+//!
+//! // Snapshot with Debug formatting:
+//! let result = compute().snap_dbg("");
 //! ```
 
-use std::panic::Location;
+use std::{fmt::Debug, panic::Location};
 
 use crate::{runtime, value::Value};
 
-/// Extension trait for snapshot testing on any `Value` type.
+/// Extension trait for inline snapshot testing.
 ///
-/// This trait provides a `.snapshot(expected)` method that:
-/// 1. Compares the actual value (`self`) with the expected value
-/// 2. If they differ and we're in Write mode, updates the source file
-/// 3. Returns the actual value
+/// Provides two snapshot methods:
+/// - `.snap(expected)` - For types implementing `Value` (Bake + Clone + PartialEq)
+/// - `.snap_dbg(expected)` - For types implementing `Debug`, compares debug output
 ///
-/// The expected value in the source code is updated to match the actual value,
-/// making this ideal for snapshot testing workflows.
-pub trait Snapshot: Sized {
-    /// Compare this value against an expected snapshot.
+/// Both methods:
+/// 1. Compare the actual value with the expected value
+/// 2. If they differ and we're in Write mode, update the source file
+/// 3. Return the actual value (self)
+pub trait InlineSnapExt: Sized {
+    /// Compare this value against an expected snapshot using Bake serialization.
     ///
     /// If the values differ and the runtime mode allows writes, the source
     /// file is updated to replace the `expected` argument with the baked
@@ -41,21 +44,43 @@ pub trait Snapshot: Sized {
     /// # Example
     ///
     /// ```no_run
-    /// use inline::Snapshot;
+    /// use inline::InlineSnapExt;
     ///
-    /// let actual = some_computation();
-    /// let result = actual.snapshot(expected_value);
-    /// // result == actual, and source is updated if actual != expected_value
+    /// let result = compute().snap(42);
+    /// // If compute() != 42, source is updated with actual value
     /// ```
     #[track_caller]
-    fn snapshot(self, expected: Self) -> Self
+    fn snap(self, expected: Self) -> Self
     where
         Self: Value + 'static;
+
+    /// Compare this value's Debug output against an expected string snapshot.
+    ///
+    /// Uses `{:#?}` (pretty Debug) formatting to convert the value to a string,
+    /// then compares with the expected string. If they differ and the runtime
+    /// mode allows writes, the source file is updated.
+    ///
+    /// This is useful for types that implement `Debug` but not `Bake`.
+    ///
+    /// Returns `self` (the actual value), not the expected value.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use inline::InlineSnapExt;
+    ///
+    /// let result = compute().snap_dbg("expected debug output");
+    /// // If debug output differs, source is updated with actual debug string
+    /// ```
+    #[track_caller]
+    fn snap_dbg(self, expected: &str) -> Self
+    where
+        Self: Debug;
 }
 
-impl<T> Snapshot for T {
+impl<T> InlineSnapExt for T {
     #[track_caller]
-    fn snapshot(self, expected: Self) -> Self
+    fn snap(self, expected: Self) -> Self
     where
         Self: Value + 'static,
     {
@@ -80,17 +105,54 @@ impl<T> Snapshot for T {
                 runtime::update_source_file(&file_path, location.line(), location.column(), baked)
             {
                 eprintln!(
-                    "inline::snapshot: failed to update source at {}:{}:{}: {}",
+                    "inline::snap: failed to update source at {}:{}:{}: {}",
                     location.file(),
                     location.line(),
                     location.column(),
                     e
                 );
             }
-        } else if mode.should_reject_write() {
-            // In Reject/Verify mode, we might want to panic or warn
-            // For now, just note the mismatch silently
-            // TODO: Consider panicking in Verify mode?
+        }
+
+        self
+    }
+
+    #[track_caller]
+    fn snap_dbg(self, expected: &str) -> Self
+    where
+        Self: Debug,
+    {
+        let location = Location::caller();
+        let mode = runtime::get_mode();
+
+        // Get the pretty debug representation
+        let actual_dbg = format!("{:#?}", self);
+
+        // If debug strings are equal, nothing to do
+        if actual_dbg == expected {
+            return self;
+        }
+
+        // Values differ - check if we should update the source
+        if mode.can_write() {
+            // Resolve the source file path
+            let file_path = runtime::resolve_source_path(location.file());
+
+            // Create a string literal token for the debug output
+            let baked = quote::quote! { #actual_dbg };
+
+            // Update the source file
+            if let Err(e) =
+                runtime::update_source_file(&file_path, location.line(), location.column(), baked)
+            {
+                eprintln!(
+                    "inline::snap_dbg: failed to update source at {}:{}:{}: {}",
+                    location.file(),
+                    location.line(),
+                    location.column(),
+                    e
+                );
+            }
         }
 
         self
@@ -102,18 +164,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_snapshot_equal_values() {
+    fn test_snap_equal_values() {
         // When values are equal, just returns self
-        let result = 42.snapshot(42);
+        let result = 42.snap(42);
         assert_eq!(result, 42);
     }
 
     #[test]
-    fn test_snapshot_returns_actual() {
+    fn test_snap_returns_actual() {
         // Always returns the actual value, not the expected
-        // File updates only happen in Write mode; in tests we're typically in Verify mode
-        // which doesn't write, so this just tests the return value behavior
-        let result = 100.snapshot(42);
+        let result = 100.snap(42);
+        assert_eq!(result, 100);
+    }
+
+    #[test]
+    fn test_snap_dbg_equal_values() {
+        let result = 42.snap_dbg("42");
+        assert_eq!(result, 42);
+    }
+
+    #[test]
+    fn test_snap_dbg_returns_actual() {
+        let result = 100.snap_dbg("42");
         assert_eq!(result, 100);
     }
 }
