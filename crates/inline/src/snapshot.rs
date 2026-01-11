@@ -1,15 +1,17 @@
 //! Snapshot testing extension traits.
 //!
 //! Provides `.snap(expected)` and `.snap_dbg(expected)` methods for inline
-//! snapshot testing. These methods compare actual values with expected snapshots
-//! and update the source code if they differ.
+//! snapshot testing. These methods compare actual values with expected
+//! snapshots and update the source code if they differ.
 //!
 //! # Example
 //!
 //! ```no_run
 //! use inline::InlineSnapExt;
 //!
-//! fn compute() -> i32 { 42 }
+//! fn compute() -> i32 {
+//!     42
+//! }
 //!
 //! // Snapshot with Bake serialization:
 //! let result = compute().snap(0);
@@ -18,22 +20,32 @@
 //! let result = compute().snap_dbg("");
 //! ```
 
-use std::{fmt::Debug, panic::Location};
-
-use crate::{runtime, value::Value};
+use {
+    crate::{
+        runtime,
+        value::Value,
+    },
+    std::{
+        fmt::Debug,
+        panic::Location,
+    },
+};
 
 /// Extension trait for inline snapshot testing.
 ///
 /// Provides two snapshot methods:
-/// - `.snap(expected)` - For types implementing `Value` (Bake + Clone + PartialEq)
-/// - `.snap_dbg(expected)` - For types implementing `Debug`, compares debug output
+/// - `.snap(expected)` - For types implementing `Value` (Bake + Clone +
+///   PartialEq)
+/// - `.snap_dbg(expected)` - For types implementing `Debug`, compares debug
+///   output
 ///
 /// Both methods:
 /// 1. Compare the actual value with the expected value
 /// 2. If they differ and we're in Write mode, update the source file
 /// 3. Return the actual value (self)
 pub trait InlineSnapExt: Sized {
-    /// Compare this value against an expected snapshot using Bake serialization.
+    /// Compare this value against an expected snapshot using Bake
+    /// serialization.
     ///
     /// If the values differ and the runtime mode allows writes, the source
     /// file is updated to replace the `expected` argument with the baked
@@ -46,7 +58,9 @@ pub trait InlineSnapExt: Sized {
     /// ```no_run
     /// use inline::InlineSnapExt;
     ///
-    /// fn compute() -> i32 { 42 }
+    /// fn compute() -> i32 {
+    ///     42
+    /// }
     /// let result = compute().snap(42);
     /// // If compute() != 42, source is updated with actual value
     /// ```
@@ -70,7 +84,9 @@ pub trait InlineSnapExt: Sized {
     /// ```no_run
     /// use inline::InlineSnapExt;
     ///
-    /// fn compute() -> i32 { 42 }
+    /// fn compute() -> i32 {
+    ///     42
+    /// }
     /// let result = compute().snap_dbg("42");
     /// // If debug output differs, source is updated with actual debug string
     /// ```
@@ -101,10 +117,8 @@ impl<T> InlineSnapExt for T {
                 let actual_baked = databake::Bake::bake(&self, &Default::default());
                 let expected_baked = databake::Bake::bake(&expected, &Default::default());
                 panic!(
-                    "Snapshot mismatch at {}:{}:{}\n\n\
-                     Expected:\n{}\n\n\
-                     Actual:\n{}\n\n\
-                     Run with INLINE_MODE=write to update snapshots.",
+                    "Snapshot mismatch at {}:{}:{}\n\nExpected:\n{}\n\nActual:\n{}\n\nRun with \
+                     INLINE_MODE=write to update snapshots.",
                     location.file(),
                     location.line(),
                     location.column(),
@@ -120,9 +134,12 @@ impl<T> InlineSnapExt for T {
                 let baked = databake::Bake::bake(&self, &Default::default());
 
                 // Update the source file
-                if let Err(e) =
-                    runtime::update_source_file(&file_path, location.line(), location.column(), baked)
-                {
+                if let Err(e) = runtime::update_source_file(
+                    &file_path,
+                    location.line(),
+                    location.column(),
+                    baked,
+                ) {
                     eprintln!(
                         "inline::snap: failed to update source at {}:{}:{}: {}",
                         location.file(),
@@ -169,10 +186,8 @@ impl<T> InlineSnapExt for T {
             runtime::Mode::Verify => {
                 // In verify mode, panic with both expected and actual
                 panic!(
-                    "Snapshot mismatch at {}:{}:{}\n\n\
-                     Expected:\n{}\n\n\
-                     Actual:\n{}\n\n\
-                     Run with INLINE_MODE=write to update snapshots.",
+                    "Snapshot mismatch at {}:{}:{}\n\nExpected:\n{}\n\nActual:\n{}\n\nRun with \
+                     INLINE_MODE=write to update snapshots.",
                     location.file(),
                     location.line(),
                     location.column(),
@@ -188,9 +203,12 @@ impl<T> InlineSnapExt for T {
                 let baked = quote::quote! { #actual_dbg };
 
                 // Update the source file
-                if let Err(e) =
-                    runtime::update_source_file(&file_path, location.line(), location.column(), baked)
-                {
+                if let Err(e) = runtime::update_source_file(
+                    &file_path,
+                    location.line(),
+                    location.column(),
+                    baked,
+                ) {
                     eprintln!(
                         "inline::snap_dbg: failed to update source at {}:{}:{}: {}",
                         location.file(),
@@ -333,7 +351,12 @@ mod tests {
 
             // Should parse without error
             let result: Result<proc_macro2::TokenStream, _> = tokens_str.parse();
-            assert!(result.is_ok(), "Failed to parse string with {}: {:?}", name, result.err());
+            assert!(
+                result.is_ok(),
+                "Failed to parse string with {}: {:?}",
+                name,
+                result.err()
+            );
         }
     }
 }

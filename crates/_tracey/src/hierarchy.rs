@@ -1,9 +1,21 @@
 //! Requirement hierarchy building
 //! [impl _trace.hierarchy]
 
-use crate::errors::ErrorCollector;
-use crate::model::{Annotation, Requirement, RequirementTree, SatisfactionMode};
-use std::collections::{HashMap, HashSet};
+use {
+    crate::{
+        errors::ErrorCollector,
+        model::{
+            Annotation,
+            Requirement,
+            RequirementTree,
+            SatisfactionMode,
+        },
+    },
+    std::collections::{
+        HashMap,
+        HashSet,
+    },
+};
 
 /// Default required types
 /// [impl _trace.satisfaction.defaults]
@@ -189,9 +201,11 @@ fn get_parent_id(id: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::model::Location;
-    use std::path::PathBuf;
+    use {
+        super::*,
+        crate::model::Location,
+        std::path::PathBuf,
+    };
 
     fn make_def(id: &str) -> Annotation {
         Annotation {
@@ -262,7 +276,10 @@ mod tests {
         assert!(parent.required_types.contains("doc"));
 
         let child = tree.requirements.get("parent.child").unwrap();
-        assert!(child.required_types.contains("doc"), "Child should inherit +doc from parent");
+        assert!(
+            child.required_types.contains("doc"),
+            "Child should inherit +doc from parent"
+        );
     }
 
     /// [test _trace.satisfaction.modifier-descendants]
@@ -277,19 +294,21 @@ mod tests {
         let tree = build_tree(annotations, &mut errors);
 
         let child = tree.requirements.get("parent.child").unwrap();
-        assert!(!child.required_types.contains("test"), "Child should inherit -test from parent");
-        assert!(child.required_types.contains("impl"), "Child should still have impl");
+        assert!(
+            !child.required_types.contains("test"),
+            "Child should inherit -test from parent"
+        );
+        assert!(
+            child.required_types.contains("impl"),
+            "Child should still have impl"
+        );
     }
 
     /// [test _trace.hierarchy.completion]
     #[test]
     fn test_parent_child_relationships() {
         let mut errors = ErrorCollector::new();
-        let annotations = vec![
-            make_def("root"),
-            make_def("root.a"),
-            make_def("root.b"),
-        ];
+        let annotations = vec![make_def("root"), make_def("root.a"), make_def("root.b")];
         let tree = build_tree(annotations, &mut errors);
 
         let root = tree.requirements.get("root").unwrap();
@@ -307,24 +326,25 @@ mod tests {
 
         let mut errors = ErrorCollector::new();
         // Try to add +def as a required type - should produce an error
-        let annotations = vec![
-            Annotation {
-                kind: "def".to_string(),
-                id: "bad.requirement".to_string(),
-                modifiers: crate::model::Modifiers {
-                    add_types: vec!["def".to_string()],
-                    remove_types: vec![],
-                    mode: None,
-                },
-                location: Location::new(PathBuf::from("test.md"), 1, 1),
-                context: String::new(),
+        let annotations = vec![Annotation {
+            kind: "def".to_string(),
+            id: "bad.requirement".to_string(),
+            modifiers: crate::model::Modifiers {
+                add_types: vec!["def".to_string()],
+                remove_types: vec![],
+                mode: None,
             },
-        ];
+            location: Location::new(PathBuf::from("test.md"), 1, 1),
+            context: String::new(),
+        }];
         let _tree = build_tree(annotations, &mut errors);
 
         assert!(!errors.is_empty(), "Should have an error for +def");
         assert!(
-            errors.errors.iter().any(|e| e.kind == ErrorKind::DefAsRequired),
+            errors
+                .errors
+                .iter()
+                .any(|e| e.kind == ErrorKind::DefAsRequired),
             "Error should be DefAsRequired"
         );
     }

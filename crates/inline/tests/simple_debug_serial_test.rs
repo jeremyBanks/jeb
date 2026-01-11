@@ -42,7 +42,9 @@ fn debug_litter_update() {
                             self.column = Some(start.column as u32 + 1);
                             println!(
                                 "Found cell() call at line {}, column {} (1-indexed: {})",
-                                start.line, start.column, start.column + 1
+                                start.line,
+                                start.column,
+                                start.column + 1
                             );
                         }
                     }

@@ -14,12 +14,25 @@ pub mod satisfaction;
 pub mod scanner;
 pub mod skills;
 
-pub use context::extract_contexts;
-pub use errors::ErrorCollector;
-pub use hierarchy::build_tree;
-pub use model::{Annotation, Location, Requirement, RequirementTree, SatisfactionMode};
-pub use output::{print_errors, print_list, print_summary, OutputOptions};
-pub use parser::parse_annotations;
-pub use satisfaction::compute_satisfaction;
-pub use scanner::scan_files;
-pub use skills::install_skills;
+pub use {
+    context::extract_contexts,
+    errors::ErrorCollector,
+    hierarchy::build_tree,
+    model::{
+        Annotation,
+        Location,
+        Requirement,
+        RequirementTree,
+        SatisfactionMode,
+    },
+    output::{
+        OutputOptions,
+        print_errors,
+        print_list,
+        print_summary,
+    },
+    parser::parse_annotations,
+    satisfaction::compute_satisfaction,
+    scanner::scan_files,
+    skills::install_skills,
+};

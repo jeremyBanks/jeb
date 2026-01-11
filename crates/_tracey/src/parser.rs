@@ -1,10 +1,19 @@
 //! Annotation parsing
 //! [impl _trace.syntax]
 
-use crate::model::{Annotation, Location, Modifiers, SatisfactionMode};
-use regex::Regex;
-use std::path::PathBuf;
-use std::sync::LazyLock;
+use {
+    crate::model::{
+        Annotation,
+        Location,
+        Modifiers,
+        SatisfactionMode,
+    },
+    regex::Regex,
+    std::{
+        path::PathBuf,
+        sync::LazyLock,
+    },
+};
 
 /// Regex pattern for finding annotations
 /// [impl _trace.syntax.brackets]
@@ -12,7 +21,8 @@ use std::sync::LazyLock;
 /// [impl _trace.syntax.not-followed]
 static ANNOTATION_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     // Match [...] not preceded by ]/) and not followed by [/(
-    // We handle the not-preceded/not-followed checks in code since lookbehind is limited
+    // We handle the not-preceded/not-followed checks in code since lookbehind is
+    // limited
     Regex::new(r"\[([^\[\]]+)\]").unwrap()
 });
 
@@ -166,7 +176,8 @@ pub fn is_valid_id(s: &str) -> bool {
         return false;
     }
 
-    // Each segment must be non-empty and contain only alphanumeric, dash, underscore
+    // Each segment must be non-empty and contain only alphanumeric, dash,
+    // underscore
     s.split('.').all(|seg| {
         !seg.is_empty()
             && seg
@@ -297,18 +308,27 @@ mod tests {
         let content = "Example: `[def example.id]` is escaped";
         let contexts = vec![String::new()];
         let annotations = parse_annotations(&path, content, &contexts);
-        assert!(annotations.is_empty(), "Backtick-wrapped annotations should be ignored");
+        assert!(
+            annotations.is_empty(),
+            "Backtick-wrapped annotations should be ignored"
+        );
 
         // Backtick on just one side also prevents parsing
         let content2 = "Code `[impl foo]";
         let contexts2 = vec![String::new()];
         let annotations2 = parse_annotations(&path, content2, &contexts2);
-        assert!(annotations2.is_empty(), "Backtick before should prevent parsing");
+        assert!(
+            annotations2.is_empty(),
+            "Backtick before should prevent parsing"
+        );
 
         let content3 = "[test bar]` ends code";
         let contexts3 = vec![String::new()];
         let annotations3 = parse_annotations(&path, content3, &contexts3);
-        assert!(annotations3.is_empty(), "Backtick after should prevent parsing");
+        assert!(
+            annotations3.is_empty(),
+            "Backtick after should prevent parsing"
+        );
     }
 
     /// [test _trace.syntax.brackets]
@@ -342,7 +362,10 @@ mod tests {
         let content = "[link](url) and [ref][target]";
         let contexts = vec![String::new()];
         let annotations = parse_annotations(&path, content, &contexts);
-        assert!(annotations.is_empty(), "Text followed by [ or ( should be ignored");
+        assert!(
+            annotations.is_empty(),
+            "Text followed by [ or ( should be ignored"
+        );
     }
 
     /// [test _trace.syntax.structure]

@@ -479,7 +479,8 @@ impl FileState {
     /// Find the byte span of the replaceable part of a call/macro (static
     /// method)
     /// - Function calls: span of the last argument
-    /// - Method calls: span of the last argument (if any), otherwise the receiver
+    /// - Method calls: span of the last argument (if any), otherwise the
+    ///   receiver
     /// - Macros: span of contents inside delimiters
     fn find_value_span_static(
         ast: &syn::File,
@@ -958,11 +959,13 @@ fn get_or_load_file_state(path: &Path) -> Result<FileState, io::Error> {
 
 /// Get the stable index for a call/macro at the given position
 ///
-/// Note: `column` is expected to be 1-indexed (from `Location::caller().column()`),
-/// but proc_macro2 uses 0-indexed columns, so we convert internally.
+/// Note: `column` is expected to be 1-indexed (from
+/// `Location::caller().column()`), but proc_macro2 uses 0-indexed columns, so
+/// we convert internally.
 pub fn get_macro_index(path: &Path, line: u32, column: u32) -> Result<usize, io::Error> {
     let state = get_or_load_file_state(path)?;
-    // Location::caller().column() is 1-indexed, but proc_macro2 uses 0-indexed columns
+    // Location::caller().column() is 1-indexed, but proc_macro2 uses 0-indexed
+    // columns
     let column = column.saturating_sub(1);
     state.get_index(line, column)
 }

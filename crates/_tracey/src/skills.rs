@@ -1,9 +1,11 @@
 //! Embedded skill files
 //! [impl _trace.skills.embedded]
 
-use std::fs;
-use std::io;
-use std::path::Path;
+use std::{
+    fs,
+    io,
+    path::Path,
+};
 
 /// Embedded skill file content
 /// [impl _trace.skills.embedded]
@@ -72,7 +74,10 @@ mod tests {
         for skill in SKILLS {
             assert!(!skill.filename.is_empty(), "Skill should have filename");
             assert!(!skill.content.is_empty(), "Skill should have content");
-            assert!(skill.filename.ends_with(".md"), "Skills should be markdown files");
+            assert!(
+                skill.filename.ends_with(".md"),
+                "Skills should be markdown files"
+            );
         }
     }
 

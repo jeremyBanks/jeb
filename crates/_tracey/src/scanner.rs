@@ -1,9 +1,16 @@
 //! File discovery and scanning
 //! [impl _trace.files]
 
-use glob::{glob_with, MatchOptions};
-use std::fs;
-use std::path::PathBuf;
+use {
+    glob::{
+        MatchOptions,
+        glob_with,
+    },
+    std::{
+        fs,
+        path::PathBuf,
+    },
+};
 
 /// A file with its content
 #[derive(Debug)]
@@ -81,8 +88,10 @@ fn read_file(path: &PathBuf) -> Option<ScannedFile> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::env;
+    use {
+        super::*,
+        std::env,
+    };
 
     /// [test _trace.files]
     /// [test _trace.files.globs]
@@ -106,7 +115,9 @@ mod tests {
 
         // Should find source files under src/ (tests src/**/* pattern)
         assert!(
-            files.iter().any(|f| f.path.to_string_lossy().contains("src/")),
+            files
+                .iter()
+                .any(|f| f.path.to_string_lossy().contains("src/")),
             "Should find files under src/"
         );
     }
@@ -118,8 +129,12 @@ mod tests {
         let files = scan_files(&root);
 
         // Should find both .rs and .md files (language-agnostic)
-        let has_rs = files.iter().any(|f| f.path.extension().map(|e| e == "rs").unwrap_or(false));
-        let has_md = files.iter().any(|f| f.path.extension().map(|e| e == "md").unwrap_or(false));
+        let has_rs = files
+            .iter()
+            .any(|f| f.path.extension().map(|e| e == "rs").unwrap_or(false));
+        let has_md = files
+            .iter()
+            .any(|f| f.path.extension().map(|e| e == "md").unwrap_or(false));
 
         assert!(has_rs, "Should find .rs files");
         assert!(has_md, "Should find .md files");

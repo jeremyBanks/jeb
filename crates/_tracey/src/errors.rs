@@ -107,8 +107,10 @@ impl std::fmt::Display for TraceError {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::path::PathBuf;
+    use {
+        super::*,
+        std::path::PathBuf,
+    };
 
     /// [test _trace.errors]
     /// [test _trace.errors.duplicate-def]

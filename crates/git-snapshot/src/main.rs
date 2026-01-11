@@ -1,7 +1,16 @@
-use std::path::PathBuf;
-
-use clap::{Parser, Subcommand};
-use git_snapshot::{CommitIdStyle, Repository, SerializationOptions, Tree};
+use {
+    clap::{
+        Parser,
+        Subcommand,
+    },
+    git_snapshot::{
+        CommitIdStyle,
+        Repository,
+        SerializationOptions,
+        Tree,
+    },
+    std::path::PathBuf,
+};
 
 #[derive(Parser)]
 #[clap(name = "git-snapshot")]
@@ -16,11 +25,20 @@ enum Command {
     /// Capture a git repository or directory to a YAML snapshot file
     Capture {
         /// Path to the git repository (mutually exclusive with --dir)
-        #[clap(long, required_unless_present = "dir", conflicts_with = "dir")]
+        #[clap(
+            long,
+            required_unless_present = "dir",
+            conflicts_with = "dir"
+        )]
         repo: Option<PathBuf>,
 
-        /// Path to a plain directory to capture as working tree only (mutually exclusive with --repo)
-        #[clap(long, required_unless_present = "repo", conflicts_with = "repo")]
+        /// Path to a plain directory to capture as working tree only (mutually
+        /// exclusive with --repo)
+        #[clap(
+            long,
+            required_unless_present = "repo",
+            conflicts_with = "repo"
+        )]
         dir: Option<PathBuf>,
 
         /// Path to write the snapshot file
@@ -43,11 +61,20 @@ enum Command {
         snapshot: PathBuf,
 
         /// Path to create the git repository (mutually exclusive with --dir)
-        #[clap(long, required_unless_present = "dir", conflicts_with = "dir")]
+        #[clap(
+            long,
+            required_unless_present = "dir",
+            conflicts_with = "dir"
+        )]
         repo: Option<PathBuf>,
 
-        /// Path to extract working tree only as plain directory (mutually exclusive with --repo)
-        #[clap(long, required_unless_present = "repo", conflicts_with = "repo")]
+        /// Path to extract working tree only as plain directory (mutually
+        /// exclusive with --repo)
+        #[clap(
+            long,
+            required_unless_present = "repo",
+            conflicts_with = "repo"
+        )]
         dir: Option<PathBuf>,
     },
 }
@@ -75,10 +102,7 @@ fn capture_directory(dir: &PathBuf) -> Result<Repository, Box<dyn std::error::Er
         }
 
         // Skip .git directory
-        if path
-            .components()
-            .any(|c| c.as_os_str() == ".git")
-        {
+        if path.components().any(|c| c.as_os_str() == ".git") {
             continue;
         }
 
@@ -186,7 +210,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        Command::Expand { snapshot, repo, dir } => {
+        Command::Expand {
+            snapshot,
+            repo,
+            dir,
+        } => {
             let yaml = std::fs::read_to_string(&snapshot)?;
             let repository = git_snapshot::parse(&yaml)?;
 
@@ -209,8 +237,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::collections::BTreeSet;
+    use {
+        super::*,
+        std::collections::BTreeSet,
+    };
 
     fn create_test_dir() -> tempfile::TempDir {
         tempfile::TempDir::new().expect("Failed to create temp dir")

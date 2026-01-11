@@ -1,14 +1,26 @@
 //! _trace CLI
 //! [impl _trace.cli]
 
-use clap::Parser;
-use std::env;
-use std::path::PathBuf;
-use std::process;
-
-use _trace::{
-    build_tree, compute_satisfaction, extract_contexts, install_skills, parse_annotations,
-    print_errors, print_list, print_summary, scan_files, ErrorCollector, OutputOptions,
+use {
+    _trace::{
+        ErrorCollector,
+        OutputOptions,
+        build_tree,
+        compute_satisfaction,
+        extract_contexts,
+        install_skills,
+        parse_annotations,
+        print_errors,
+        print_list,
+        print_summary,
+        scan_files,
+    },
+    clap::Parser,
+    std::{
+        env,
+        path::PathBuf,
+        process,
+    },
 };
 
 /// A language-agnostic requirements tracking tool
@@ -39,22 +51,34 @@ struct Args {
 
     /// Show context only for specific annotation types (comma-separated)
     /// [impl _trace.cli.context-of]
-    #[arg(long, value_delimiter = ',')]
+    #[arg(
+        long,
+        value_delimiter = ','
+    )]
     context_of: Vec<String>,
 
     /// Filter by annotation type (comma-separated)
     /// [impl _trace.cli.filter-type]
-    #[arg(long = "type", value_delimiter = ',')]
+    #[arg(
+        long = "type",
+        value_delimiter = ','
+    )]
     types: Vec<String>,
 
     /// Maximum number of items to show
     /// [impl _trace.cli.limit]
-    #[arg(long, default_value = "32")]
+    #[arg(
+        long,
+        default_value = "32"
+    )]
     limit: usize,
 
     /// Number of items to skip
     /// [impl _trace.cli.pagination]
-    #[arg(long, default_value = "0")]
+    #[arg(
+        long,
+        default_value = "0"
+    )]
     skip: usize,
 
     /// Install Claude Code skills to .claude/skills/

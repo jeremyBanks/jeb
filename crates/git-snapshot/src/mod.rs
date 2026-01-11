@@ -1189,7 +1189,10 @@ impl Repository {
     /// # Errors
     /// - `GitError::Git2` for underlying git2 errors
     /// - `GitError::Io` for filesystem errors
-    pub fn to_repository_at_path<P: AsRef<Path>>(&self, path: P) -> Result<git2::Repository, GitError> {
+    pub fn to_repository_at_path<P: AsRef<Path>>(
+        &self,
+        path: P,
+    ) -> Result<git2::Repository, GitError> {
         git2_to_repository_at_path(self, path.as_ref())
     }
 }
@@ -1915,7 +1918,8 @@ fn build_commit(
     // Parse tree (with default)
     let tree = parse_tree(commit_mapping, first_parent, processing_state)?;
 
-    // Determine object ID: validate hex keys match calculated hash, calculate for others
+    // Determine object ID: validate hex keys match calculated hash, calculate for
+    // others
     let object_id = match commit_ref {
         CommitRef::Hex(oid) => *oid,
         CommitRef::Prefix(prefix) => {
@@ -3533,8 +3537,10 @@ fn serialize_commit(
 
     // Serialize committer (omit if matches default, unless include_all_fields)
     // Default committer is:
-    // - If author is being serialized (author != default_author), committer defaults to author
-    // - Otherwise, committer defaults to parent's committer or "Committer <committer@localhost>"
+    // - If author is being serialized (author != default_author), committer
+    //   defaults to author
+    // - Otherwise, committer defaults to parent's committer or "Committer
+    //   <committer@localhost>"
     let author_is_explicit = commit.author != default_author;
     let default_committer = if author_is_explicit {
         commit.author.clone()
@@ -4526,7 +4532,10 @@ fn git2_to_temporary_repository(snapshot: &Repository) -> Result<TemporaryReposi
     Ok(TemporaryRepository { repo, dir })
 }
 
-fn git2_to_repository_at_path(snapshot: &Repository, path: &Path) -> Result<git2::Repository, GitError> {
+fn git2_to_repository_at_path(
+    snapshot: &Repository,
+    path: &Path,
+) -> Result<git2::Repository, GitError> {
     std::fs::create_dir_all(path)?;
     let repo = git2::Repository::init(path)?;
 

@@ -1,8 +1,13 @@
 //! Satisfaction computation
 //! [impl _trace.satisfaction]
 
-use crate::model::{RequirementTree, SatisfactionMode};
-use std::collections::HashMap;
+use {
+    crate::model::{
+        RequirementTree,
+        SatisfactionMode,
+    },
+    std::collections::HashMap,
+};
 
 /// Satisfaction status for a requirement
 #[derive(Debug, Clone)]
@@ -63,7 +68,7 @@ fn compute_requirement_satisfaction(
                 complete: false,
                 satisfied_types: vec![],
                 missing_types: vec![],
-            }
+            };
         }
     };
 
@@ -210,11 +215,20 @@ fn is_complete(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::errors::ErrorCollector;
-    use crate::hierarchy::build_tree;
-    use crate::model::{Annotation, Location, Modifiers, SatisfactionMode};
-    use std::path::PathBuf;
+    use {
+        super::*,
+        crate::{
+            errors::ErrorCollector,
+            hierarchy::build_tree,
+            model::{
+                Annotation,
+                Location,
+                Modifiers,
+                SatisfactionMode,
+            },
+        },
+        std::path::PathBuf,
+    };
 
     fn make_annotation(kind: &str, id: &str) -> Annotation {
         Annotation {
@@ -295,7 +309,10 @@ mod tests {
         let statuses = compute_satisfaction(&tree);
 
         let status = statuses.get("either.req").unwrap();
-        assert!(status.satisfied, "@either should be satisfied by self annotations");
+        assert!(
+            status.satisfied,
+            "@either should be satisfied by self annotations"
+        );
     }
 
     /// [test _trace.satisfaction.mode.child]
@@ -321,21 +338,25 @@ mod tests {
 
         // Parent with @children should be satisfied when all children are satisfied
         let parent_status = statuses.get("parent").unwrap();
-        assert!(parent_status.satisfied, "@children mode should be satisfied when children are satisfied");
+        assert!(
+            parent_status.satisfied,
+            "@children mode should be satisfied when children are satisfied"
+        );
     }
 
     /// [test _trace.satisfaction.mode.child]
     #[test]
     fn test_child_mode_no_children() {
         let mut errors = ErrorCollector::new();
-        let annotations = vec![
-            make_def_with_mode("lonely", SatisfactionMode::Children),
-        ];
+        let annotations = vec![make_def_with_mode("lonely", SatisfactionMode::Children)];
 
         let tree = build_tree(annotations, &mut errors);
         let statuses = compute_satisfaction(&tree);
 
         let status = statuses.get("lonely").unwrap();
-        assert!(!status.satisfied, "@children mode with no children should not be satisfied");
+        assert!(
+            !status.satisfied,
+            "@children mode with no children should not be satisfied"
+        );
     }
 }

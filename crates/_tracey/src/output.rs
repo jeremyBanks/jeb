@@ -1,10 +1,14 @@
 //! CLI output formatting
 //! [impl _trace.cli]
 
-use crate::errors::ErrorCollector;
-use crate::model::RequirementTree;
-use crate::satisfaction::SatisfactionStatus;
-use std::collections::HashMap;
+use {
+    crate::{
+        errors::ErrorCollector,
+        model::RequirementTree,
+        satisfaction::SatisfactionStatus,
+    },
+    std::collections::HashMap,
+};
 
 /// Output options
 pub struct OutputOptions {
@@ -45,14 +49,21 @@ pub fn print_summary(
 ) {
     // Brief tool description for AI agents
     // [impl _trace.cli.description]
-    println!("_trace is a requirements tracking tool. It scans source files for annotations such as `[def ID]`, `[impl ID]`, `[test ID]` and tracks whether requirements are satisfied. Run with --install-skills to install Claude Code skills for working with requirements.");
+    println!(
+        "_trace is a requirements tracking tool. It scans source files for annotations such as \
+         `[def ID]`, `[impl ID]`, `[test ID]` and tracks whether requirements are satisfied. Run \
+         with --install-skills to install Claude Code skills for working with requirements."
+    );
     println!();
 
     let total = tree.requirements.len();
     let satisfied = statuses.values().filter(|s| s.satisfied).count();
     let unsatisfied = total - satisfied;
 
-    println!("Requirements: {} total, {} satisfied, {} unsatisfied", total, satisfied, unsatisfied);
+    println!(
+        "Requirements: {} total, {} satisfied, {} unsatisfied",
+        total, satisfied, unsatisfied
+    );
 
     if !errors.is_empty() {
         println!("\nWarnings: {} non-fatal error(s)", errors.len());
@@ -75,7 +86,12 @@ pub fn print_list(
     // Brief tool description for AI agents (when showing default list output)
     // [impl _trace.cli.description]
     if options.filter_prefixes.is_empty() && options.skip == 0 {
-        println!("_trace is a requirements tracking tool. It scans source files for annotations such as `[def ID]`, `[impl ID]`, `[test ID]` and tracks whether requirements are satisfied. Run with --install-skills to install Claude Code skills for working with requirements.");
+        println!(
+            "_trace is a requirements tracking tool. It scans source files for annotations such \
+             as `[def ID]`, `[impl ID]`, `[test ID]` and tracks whether requirements are \
+             satisfied. Run with --install-skills to install Claude Code skills for working with \
+             requirements."
+        );
         println!();
     }
 
@@ -103,12 +119,7 @@ pub fn print_list(
     } else {
         prefix_filtered
             .into_iter()
-            .filter(|id| {
-                statuses
-                    .get(*id)
-                    .map(|s| !s.complete)
-                    .unwrap_or(true)
-            })
+            .filter(|id| statuses.get(*id).map(|s| !s.complete).unwrap_or(true))
             .collect()
     };
 
@@ -332,8 +343,10 @@ mod tests {
         let _f1: fn() = print_help_hints;
 
         // print_summary and print_list exist as public functions
-        use crate::model::RequirementTree;
-        use crate::errors::ErrorCollector;
+        use crate::{
+            errors::ErrorCollector,
+            model::RequirementTree,
+        };
 
         let tree = RequirementTree::new();
         let statuses: HashMap<String, SatisfactionStatus> = HashMap::new();
@@ -349,7 +362,8 @@ mod tests {
         // The description should explain what _trace does
         // We can't easily capture stdout, but we can verify the description is defined
         // Note: Using backticks to avoid parsing as annotations
-        let description = "_trace is a requirements tracking tool. It finds annotations in source files and tracks whether requirements are satisfied.";
+        let description = "_trace is a requirements tracking tool. It finds annotations in source \
+                           files and tracks whether requirements are satisfied.";
 
         // Verify it mentions key concepts
         assert!(description.contains("requirements tracking"));

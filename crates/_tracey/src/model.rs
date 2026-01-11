@@ -2,8 +2,13 @@
 //! [impl _trace.location]
 //! [impl _trace.types]
 
-use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::{
+    collections::{
+        HashMap,
+        HashSet,
+    },
+    path::PathBuf,
+};
 
 /// Location of an annotation in a file
 /// [impl _trace.location.file]

@@ -60,7 +60,8 @@ fn strip_common_prefix(lines: &[&str]) -> Vec<String> {
     }
 
     // Find the common prefix length from the first line
-    // The prefix consists of non-alphanumeric chars (excluding dash, underscore, period)
+    // The prefix consists of non-alphanumeric chars (excluding dash, underscore,
+    // period)
     let first_line = lines[0];
     let prefix_len = first_line
         .chars()
