@@ -277,3 +277,4 @@ The following are explicitly out of scope for the initial release but may be add
 - **Configuration file**: Custom glob patterns, default satisfaction criteria, output format preferences.
 - **Watch mode**: Continuous monitoring for changes.
 - **Machine-readable output**: JSON or other structured output formats.
+- **Git index mode**: A `--git-index` flag to read files from the git index/tree instead of the filesystem directly, enabling analysis of staged changes or specific commits.
