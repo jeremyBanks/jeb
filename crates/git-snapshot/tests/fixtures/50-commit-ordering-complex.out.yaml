@@ -1,64 +1,64 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    feature-a: 9d091d0299a9f2909d15512a7f2bb9d3be95707a
-    feature-b: 6d09da17e930fd559c467d9fb1e6f18a92748521
-    main: 371c3672d56163a9a2d80d6cc3db2ddb8f46deaa
-b54bd7:
+    feature-a: 564e48a4ad5b255274826652936def25bc9664e0
+    feature-b: c3c092efb8862fd9bc04816a03569c8d00a7ece6
+    main: 0bfa495826e7c8277aa231326d544fb07225af70
+e18a60:
   message: commit 1
   tree:
     main.txt: initial
-b015b5:
+631c5d:
   message: commit 2
   tree:
     main.txt: main commit 2
-8c6d47:
+1402ef:
   message: commit 3
   parents:
-  - b54bd7
+  - e18a60
   tree:
     feature-a.txt: feature a work
-'072356':
+a9613d:
   message: commit 4
   tree:
     feature-a.txt: feature a more work
-1f946a:
+f08a17:
   message: commit 7
   parents:
-  - b015b5
+  - 631c5d
   tree:
     feature-b.txt: feature b work
-9d091d0299a9f2909d15512a7f2bb9d3be95707a:
+564e48a4ad5b255274826652936def25bc9664e0:
   message: commit 5
   parents:
-  - '072356'
+  - a9613d
   tree:
     feature-a.txt: feature a complete
-0b7025:
+8feb6f:
   message: commit 6
   parents:
-  - b015b5
-  - 9d091d0299a9f2909d15512a7f2bb9d3be95707a
+  - 631c5d
+  - 564e48a4ad5b255274826652936def25bc9664e0
   tree:
     feature-a.txt:
-      //commit: 9d091d0299a9f2909d15512a7f2bb9d3be95707a
+      //commit: 564e48a4ad5b255274826652936def25bc9664e0
       //path: feature-a.txt
-6d09da17e930fd559c467d9fb1e6f18a92748521:
+c3c092efb8862fd9bc04816a03569c8d00a7ece6:
   message: commit 8
   parents:
-  - 1f946a
+  - f08a17
   tree:
     feature-b.txt: feature b complete
-4e15eb:
+ac6153:
   message: commit 9
   parents:
-  - 0b7025
-  - 6d09da17e930fd559c467d9fb1e6f18a92748521
+  - 8feb6f
+  - c3c092efb8862fd9bc04816a03569c8d00a7ece6
   tree:
     feature-b.txt:
-      //commit: 6d09da17e930fd559c467d9fb1e6f18a92748521
+      //commit: c3c092efb8862fd9bc04816a03569c8d00a7ece6
       //path: feature-b.txt
-371c3672d56163a9a2d80d6cc3db2ddb8f46deaa:
+0bfa495826e7c8277aa231326d544fb07225af70:
   message: commit 10
   tree:
     main.txt: main final

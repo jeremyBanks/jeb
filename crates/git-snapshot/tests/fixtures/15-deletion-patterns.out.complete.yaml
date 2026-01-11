@@ -1,12 +1,12 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: c32451d91ab8d549b142d5dd83054d9b82298497
-6a7afa9d1dd2f547d76024a1ed5a0e87ca8934ee:
-  author: User <user@localhost>
+    main: 00c66b05e4e1bf40a6171783e568fab10cf0d54f
+631ebfc595ddda4ea406581483620ccb99b44a4a:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 1
   parents: []
   tree:
@@ -16,57 +16,57 @@ refs:
       file-b.txt: b
       file-c.txt: c
     keep.txt: kept
-68adfe2f791adf839127c010824f1b125f250e16:
-  author: User <user@localhost>
+569f1713ddb94b3c095b6dd6dfb5d25703d04447:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 2
   parents:
-  - 6a7afa9d1dd2f547d76024a1ed5a0e87ca8934ee
+  - 631ebfc595ddda4ea406581483620ccb99b44a4a
   tree:
     delete-soon.txt: null
-2c4821f1955e432d45295a0b3bd765b6ece8d6cd:
-  author: User <user@localhost>
+00e0a4463d875d23f00fde24b2638dbe265cf695:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 3
   parents:
-  - 68adfe2f791adf839127c010824f1b125f250e16
+  - 569f1713ddb94b3c095b6dd6dfb5d25703d04447
   tree:
     dir:
       file-b.txt: null
-88deb4609514fda987ea37e8624df811ea716ab2:
-  author: User <user@localhost>
+4465a0e7075a5f3ba1295466e7a6a695c9e1ad55:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:25:12-06:24
   commit-date: 2024-12-06T06:25:15-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 4
   parents:
-  - 2c4821f1955e432d45295a0b3bd765b6ece8d6cd
+  - 00e0a4463d875d23f00fde24b2638dbe265cf695
   tree:
     delete-soon.txt: will be deleted
-f330d75cdc83190ccaa968a89e5fde63ce0367c1:
-  author: User <user@localhost>
+4e5b52102bc483d4ae1dd85f3670d0cdd9a590f2:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:29:28-06:24
   commit-date: 2024-12-06T06:29:31-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 5
   parents:
-  - 88deb4609514fda987ea37e8624df811ea716ab2
+  - 4465a0e7075a5f3ba1295466e7a6a695c9e1ad55
   tree:
     dir:
       file-a.txt: null
       file-c.txt: null
-c32451d91ab8d549b142d5dd83054d9b82298497:
-  author: User <user@localhost>
+00c66b05e4e1bf40a6171783e568fab10cf0d54f:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:33:44-06:24
   commit-date: 2024-12-06T06:33:47-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 6
   parents:
-  - f330d75cdc83190ccaa968a89e5fde63ce0367c1
+  - 4e5b52102bc483d4ae1dd85f3670d0cdd9a590f2
   tree:
     dir:
       file-a.txt: a

@@ -1,13 +1,13 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    diverged: e8cf0db0193636bf316f58f26587df9fc13a4831
-    main: 62515e1f46be775f528be661636fd9456f287925
-7910a54fc392b8fd79a35bacf465728cdd44f2ba:
-  author: User <user@localhost>
+    diverged: ea16f84c9717a0837b008a671cd4d2fd9d722c3e
+    main: 83b2400e8d354dbd67e3b1cf73c987701e59fb8e
+035076a2cd88b775e8e7a45e04bb0135ec5cb99d:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 1
   parents: []
   tree:
@@ -15,38 +15,38 @@ refs:
     subtree:
       a.txt: a1
       b.txt: b1
-94759215060cb9470081435870c081413c48517c:
-  author: User <user@localhost>
+319fd0337322b4924d248b278e233b3e6572bda8:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 2
   parents: []
   tree: {}
-e8cf0db0193636bf316f58f26587df9fc13a4831:
-  author: User <user@localhost>
+ea16f84c9717a0837b008a671cd4d2fd9d722c3e:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: |
     Zoom in from historical state
 
     git-zoom-in: subtree
   parents:
-  - 94759215060cb9470081435870c081413c48517c
-  - 7910a54fc392b8fd79a35bacf465728cdd44f2ba
+  - 319fd0337322b4924d248b278e233b3e6572bda8
+  - 035076a2cd88b775e8e7a45e04bb0135ec5cb99d
   tree:
     a.txt: a1
     b.txt: b1
-62515e1f46be775f528be661636fd9456f287925:
-  author: User <user@localhost>
+83b2400e8d354dbd67e3b1cf73c987701e59fb8e:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: |
     Zoom out to commit 1
 
     git-zoom-out: subtree
   parents:
-  - 7910a54fc392b8fd79a35bacf465728cdd44f2ba
-  - e8cf0db0193636bf316f58f26587df9fc13a4831
+  - 035076a2cd88b775e8e7a45e04bb0135ec5cb99d
+  - ea16f84c9717a0837b008a671cd4d2fd9d722c3e

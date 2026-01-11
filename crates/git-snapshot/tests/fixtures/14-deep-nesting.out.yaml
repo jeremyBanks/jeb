@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 5079625b78bbe7c0827258c1b230433acff1fdae
-93c0a2:
+    main: 18125178bef74833e42996644ad942f68407ddad
+7be0b2:
   message: commit 1
   tree:
     a:
@@ -12,16 +12,16 @@ refs:
             e:
               f:
                 deep.txt: very deep file
-cc763a:
+5e2611:
   message: commit 2
   tree:
     x:
       y:
         z:
           moved-deep.txt:
-            //commit: 93c0a2
+            //commit: 7be0b2
             //path: a/b/c/d/e/f/deep.txt
-bca7d0:
+7a3dbd:
   message: commit 3
   tree:
     a:
@@ -34,17 +34,17 @@ bca7d0:
                   h:
                     i:
                       very-deep.txt:
-                        //commit: cc763a
+                        //commit: 5e2611
                         //path: a/b/c/d/e/f/deep.txt
-5079625b78bbe7c0827258c1b230433acff1fdae:
+18125178bef74833e42996644ad942f68407ddad:
   message: commit 4
   tree:
     flat-1.txt:
-      //commit: bca7d0
+      //commit: 7a3dbd
       //path: x/y/z/moved-deep.txt
     flat-2.txt:
-      //commit: bca7d0
+      //commit: 7a3dbd
       //path: x/y/z/moved-deep.txt
     flat-3.txt:
-      //commit: bca7d0
+      //commit: 7a3dbd
       //path: x/y/z/moved-deep.txt

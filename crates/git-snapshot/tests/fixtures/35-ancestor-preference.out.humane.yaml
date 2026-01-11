@@ -4,9 +4,11 @@ refs:
     main: 5
     other: 4
 1:
+  message: commit 2
   tree:
     shared.txt: shared content
 2:
+  message: commit 1
   parents: []
   tree:
     shared.txt:
@@ -14,14 +16,12 @@ refs:
       //path: shared.txt
 3:
   message: commit 4
-  parents:
-  - 1
   tree:
     main.txt: main branch
 4:
   message: commit 3
   parents:
-  - 2
+  - 1
   tree:
     other.txt: other branch
 5:

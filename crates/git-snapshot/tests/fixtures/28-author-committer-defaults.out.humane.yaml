@@ -10,7 +10,7 @@ refs:
   tree:
     file.txt: alice change
 3:
-  committer: Bob <bob@example.com>
+  author: Bob <bob@example.com>
   tree:
     file.txt: bob committed
 4:

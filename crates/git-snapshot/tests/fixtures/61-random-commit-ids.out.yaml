@@ -1,21 +1,21 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: f5f57b30d685259059c2c883fe4253f1dce3e31d
-6ab701:
+    main: 3494bb305b5c54ca2f07cb84bcc5f903f93df5bd
+57db70:
   message: First commit with random ID
   tree:
     README.md: '# Random IDs Test'
     src:
       init.rs: pub fn init() {}
-bfabe1:
+5f2620:
   message: Second commit
   tree:
     README.md: '# Random IDs Test v2'
     src:
       init.rs: pub fn init() { println!("v2"); }
       utils.rs: pub fn util() {}
-f5f57b30d685259059c2c883fe4253f1dce3e31d:
+3494bb305b5c54ca2f07cb84bcc5f903f93df5bd:
   message: Third commit with large ID
   tree:
     src:

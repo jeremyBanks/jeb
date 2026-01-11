@@ -15,12 +15,11 @@ refs:
   tree:
     config.yaml: 'version: 2'
 3:
-  committer: git-zoom-in <git-zoom-in@localhost>
+  author: git-zoom-in <git-zoom-in@localhost>
   message: git-zoom-in seed
   parents: []
   tree: {}
 4:
-  committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'modules/core'
 
@@ -33,7 +32,7 @@ refs:
       //commit: 2
       //path: modules/core/init.rs
 5:
-  committer: git-zoom-out <git-zoom-out@localhost>
+  author: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'modules/core'
 
@@ -47,7 +46,6 @@ refs:
       extra:
         plugin.rs: fn plugin() {}
 7:
-  committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'modules/core'
 
@@ -61,7 +59,6 @@ refs:
   tree:
     cleanup.rs: fn cleanup() {}
 9:
-  committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'modules/core'
 

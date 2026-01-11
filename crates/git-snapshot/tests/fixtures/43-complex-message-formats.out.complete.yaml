@@ -1,21 +1,21 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 54921803effca54967ecdc3c6491aef07462974f
-4727b165ce5686e80653545dce2a81ab3fcd07f9:
-  author: User <user@localhost>
+    main: 2ede6ac597d3865fc91d309e45c5cd2c78d3873c
+0e1478f24b0e583b2049b5e2fa4c5ddc84a9d15a:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: Simple single-line message
   parents: []
   tree:
     file.txt: content
-c674bd11f7c71b1fe0292a2a1667a1cbfc653252:
-  author: User <user@localhost>
+816b6a7ae87f16a4aaac96c77f011e708b0ba1d0:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: |
     Multi-line message
 
@@ -23,14 +23,14 @@ c674bd11f7c71b1fe0292a2a1667a1cbfc653252:
 
     Multiple paragraphs.
   parents:
-  - 4727b165ce5686e80653545dce2a81ab3fcd07f9
+  - 0e1478f24b0e583b2049b5e2fa4c5ddc84a9d15a
   tree:
     file.txt: change
-f67ede3f12d342bc85ce442d98b79a7e6a50ffcf:
-  author: User <user@localhost>
+197a726f6bdafe93e28fd053f7358233871107b8:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: |
     Message with special YAML characters
 
@@ -40,14 +40,14 @@ f67ede3f12d342bc85ce442d98b79a7e6a50ffcf:
 
     Signed-off-by: Author <author@example.com>
   parents:
-  - c674bd11f7c71b1fe0292a2a1667a1cbfc653252
+  - 816b6a7ae87f16a4aaac96c77f011e708b0ba1d0
   tree:
     file.txt: special
-54921803effca54967ecdc3c6491aef07462974f:
-  author: User <user@localhost>
+2ede6ac597d3865fc91d309e45c5cd2c78d3873c:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:25:12-06:24
   commit-date: 2024-12-06T06:25:15-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: |
     Message with trailers
 
@@ -57,6 +57,6 @@ f67ede3f12d342bc85ce442d98b79a7e6a50ffcf:
     Tested-by: Tester <tester@example.com>
     Cc: Someone <someone@example.com>
   parents:
-  - f67ede3f12d342bc85ce442d98b79a7e6a50ffcf
+  - 197a726f6bdafe93e28fd053f7358233871107b8
   tree:
     file.txt: trailers

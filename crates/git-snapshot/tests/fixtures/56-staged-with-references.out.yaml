@@ -1,10 +1,10 @@
-HEAD: aad943162e4fad0716e1ac9b4611fc2e9ab9b588
+HEAD: 6a28e9933d3671a3f396df5c80c30389200caf8c
 refs: {}
 staged:
   NEW.md: New file in staging
   src:
     lib.rs: pub fn main() { println!("staged"); }
-aad943162e4fad0716e1ac9b4611fc2e9ab9b588:
+6a28e9933d3671a3f396df5c80c30389200caf8c:
   message: Initial commit
   tree:
     README.md: '# Project'

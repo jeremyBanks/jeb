@@ -1,29 +1,29 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 6bc21e59a7eafc4db9bf115c0b102206eb42d959
-ddd158642751c1416bbc83f3ff66563a805bc335:
-  author: User <user@localhost>
+    main: d2c20480b6e5ff901f5c6fdd633d8264e42948b0
+4cfc82e53a85b668e673a7e3f0aa8b821661474d:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 1
   parents: []
   tree:
     base.txt: base content
-3b7d809195d472ea272da962f212a4f945775830:
-  author: User <user@localhost>
+0913e915171846da08a98e6aacceb6cfea9d885d:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: orphan seed
   parents: []
   tree: {}
-5d698d7fe5224ed7c69f9889c0967b5062a5b50a:
-  author: User <user@localhost>
+446cc29275643fdaf3bfcb1ae8bd79249a78c3eb:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: |
     Merge from subtree
 
@@ -32,39 +32,39 @@ ddd158642751c1416bbc83f3ff66563a805bc335:
 
     git-zoom-in: path/to/subtree
   parents:
-  - 3b7d809195d472ea272da962f212a4f945775830
-  - ddd158642751c1416bbc83f3ff66563a805bc335
+  - 0913e915171846da08a98e6aacceb6cfea9d885d
+  - 4cfc82e53a85b668e673a7e3f0aa8b821661474d
   tree:
     file.txt: content
-bb03a0e402993058411a3668a587f928ac60122a:
-  author: User <user@localhost>
+60fdaf456b96c9e2f59cfa407919368c9df7760b:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: |
     Merge to subtree
 
     git-zoom-out: path/to/subtree
     This line appears after the trailer
   parents:
-  - ddd158642751c1416bbc83f3ff66563a805bc335
-  - 5d698d7fe5224ed7c69f9889c0967b5062a5b50a
+  - 4cfc82e53a85b668e673a7e3f0aa8b821661474d
+  - 446cc29275643fdaf3bfcb1ae8bd79249a78c3eb
   tree:
     path:
       to:
         subtree:
           file.txt: content
-6bc21e59a7eafc4db9bf115c0b102206eb42d959:
-  author: User <user@localhost>
+d2c20480b6e5ff901f5c6fdd633d8264e42948b0:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:25:12-06:24
   commit-date: 2024-12-06T06:25:15-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: |
     Another merge
 
     GIT-ZOOM-IN:   spaces/around/path
     git-zoom-out:path/no/space
   parents:
-  - bb03a0e402993058411a3668a587f928ac60122a
+  - 60fdaf456b96c9e2f59cfa407919368c9df7760b
   tree:
     result.txt: done

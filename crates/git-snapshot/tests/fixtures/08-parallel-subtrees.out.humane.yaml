@@ -14,12 +14,11 @@ refs:
       app.js: console.log('app');
       style.css: body { }
 2:
-  committer: git-zoom-in <git-zoom-in@localhost>
+  author: git-zoom-in <git-zoom-in@localhost>
   message: git-zoom-in seed for frontend
   parents: []
   tree: {}
 3:
-  committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'frontend'
 
@@ -36,7 +35,7 @@ refs:
       //path: frontend/style.css
     utils.js: export const util = () => {};
 4:
-  committer: git-zoom-out <git-zoom-out@localhost>
+  author: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'frontend'
 
@@ -50,12 +49,11 @@ refs:
         //commit: 3
         //path: utils.js
 5:
-  committer: git-zoom-in <git-zoom-in@localhost>
+  author: git-zoom-in <git-zoom-in@localhost>
   message: git-zoom-in seed for backend
   parents: []
   tree: {}
 6:
-  committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'backend'
 
@@ -72,7 +70,6 @@ refs:
       //commit: 4
       //path: backend/server.py
 7:
-  committer: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'backend'
 

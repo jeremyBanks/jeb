@@ -1874,14 +1874,37 @@ fn build_commit(
 
     let first_parent = resolved_parents.first();
 
-    // Parse author (with default)
-    let author = parse_author(commit_mapping, first_parent)?;
+    // Check if author/committer are explicitly specified for cross-defaulting
+    let author_key = serde_yaml::Value::String("author".to_string());
+    let committer_key = serde_yaml::Value::String("committer".to_string());
+    let author_explicit = commit_mapping.contains_key(&author_key);
+    let committer_explicit = commit_mapping.contains_key(&committer_key);
+
+    // Parse author and committer with cross-defaulting logic
+    let (author, committer) = if author_explicit && committer_explicit {
+        // Both specified - parse each independently
+        let author = parse_author(commit_mapping, first_parent, None)?;
+        let committer = parse_committer(commit_mapping, first_parent, None)?;
+        (author, committer)
+    } else if author_explicit {
+        // Only author specified - committer defaults to author
+        let author = parse_author(commit_mapping, first_parent, None)?;
+        let committer = parse_committer(commit_mapping, first_parent, Some(&author))?;
+        (author, committer)
+    } else if committer_explicit {
+        // Only committer specified - author defaults to committer
+        let committer = parse_committer(commit_mapping, first_parent, None)?;
+        let author = parse_author(commit_mapping, first_parent, Some(&committer))?;
+        (author, committer)
+    } else {
+        // Neither specified - each inherits from parent independently
+        let author = parse_author(commit_mapping, first_parent, None)?;
+        let committer = parse_committer(commit_mapping, first_parent, None)?;
+        (author, committer)
+    };
 
     // Parse author-date (with default)
     let author_date = parse_author_date(commit_mapping, &resolved_parents)?;
-
-    // Parse committer (with default)
-    let committer = parse_committer(commit_mapping, &author)?;
 
     // Parse commit-date (with default)
     let committer_date = parse_committer_date(commit_mapping, author_date, &resolved_parents)?;
@@ -2008,6 +2031,7 @@ fn parse_parents(
 fn parse_author(
     mapping: &serde_yaml::Mapping,
     first_parent: Option<&Commit>,
+    explicit_committer: Option<&Identity>,
 ) -> Result<Identity, ParseError> {
     let author_key = serde_yaml::Value::String("author".to_string());
 
@@ -2019,12 +2043,15 @@ fn parse_author(
                 actual: format!("{:?}", author_value),
             })?;
         Identity::parse(author_str)
+    } else if let Some(committer) = explicit_committer {
+        // If committer is explicitly specified but author is not, default to committer
+        Ok(committer.clone())
     } else {
-        // Default: first parent's author, or "User <user@localhost>"
+        // Default: first parent's author, or "Author <author@localhost>"
         if let Some(parent) = first_parent {
             Ok(parent.author.clone())
         } else {
-            Identity::parse("User <user@localhost>").map_err(|_| {
+            Identity::parse("Author <author@localhost>").map_err(|_| {
                 ParseError::InvalidIdentity("failed to parse default identity".to_string())
             })
         }
@@ -2063,7 +2090,8 @@ fn parse_author_date(
 
 fn parse_committer(
     mapping: &serde_yaml::Mapping,
-    author: &Identity,
+    first_parent: Option<&Commit>,
+    explicit_author: Option<&Identity>,
 ) -> Result<Identity, ParseError> {
     let key = serde_yaml::Value::String("committer".to_string());
 
@@ -2073,9 +2101,18 @@ fn parse_committer(
             actual: format!("{:?}", value),
         })?;
         Identity::parse(committer_str)
-    } else {
-        // Default: same as author
+    } else if let Some(author) = explicit_author {
+        // If author is explicitly specified but committer is not, default to author
         Ok(author.clone())
+    } else {
+        // Default: first parent's committer, or "Committer <committer@localhost>"
+        if let Some(parent) = first_parent {
+            Ok(parent.committer.clone())
+        } else {
+            Identity::parse("Committer <committer@localhost>").map_err(|_| {
+                ParseError::InvalidIdentity("failed to parse default identity".to_string())
+            })
+        }
     }
 }
 
@@ -3463,7 +3500,7 @@ fn serialize_commit(
     let default_author = if let Some(parent) = first_parent {
         parent.author.clone()
     } else {
-        Identity::parse("User <user@localhost>").unwrap()
+        Identity::parse("Author <author@localhost>").unwrap()
     };
 
     if ctx.options.include_all_fields || commit.author != default_author {
@@ -3494,8 +3531,20 @@ fn serialize_commit(
         );
     }
 
-    // Serialize committer (omit if same as author, unless include_all_fields)
-    if ctx.options.include_all_fields || commit.committer != commit.author {
+    // Serialize committer (omit if matches default, unless include_all_fields)
+    // Default committer is:
+    // - If author is being serialized (author != default_author), committer defaults to author
+    // - Otherwise, committer defaults to parent's committer or "Committer <committer@localhost>"
+    let author_is_explicit = commit.author != default_author;
+    let default_committer = if author_is_explicit {
+        commit.author.clone()
+    } else if let Some(parent) = first_parent {
+        parent.committer.clone()
+    } else {
+        Identity::parse("Committer <committer@localhost>").unwrap()
+    };
+
+    if ctx.options.include_all_fields || commit.committer != default_committer {
         mapping.insert(
             serde_yaml::Value::String("committer".to_string()),
             serde_yaml::Value::String(commit.committer.format()),
@@ -4345,6 +4394,13 @@ fn git2_to_temporary_repository(snapshot: &Repository) -> Result<TemporaryReposi
     let dir = tempfile::TempDir::new()?;
     let repo = git2::Repository::init(dir.path())?;
 
+    // Set git config so code running in tests can be distinguished
+    {
+        let mut config = repo.config()?;
+        config.set_str("user.name", "Temp")?;
+        config.set_str("user.email", "temp@localhost")?;
+    }
+
     // Topologically sort commits
     let sorted_ids = topological_sort_commits_for_writing(&snapshot.commits);
 
@@ -4473,6 +4529,13 @@ fn git2_to_temporary_repository(snapshot: &Repository) -> Result<TemporaryReposi
 fn git2_to_repository_at_path(snapshot: &Repository, path: &Path) -> Result<git2::Repository, GitError> {
     std::fs::create_dir_all(path)?;
     let repo = git2::Repository::init(path)?;
+
+    // Set git config so code running in tests can be distinguished
+    {
+        let mut config = repo.config()?;
+        config.set_str("user.name", "Temp")?;
+        config.set_str("user.email", "temp@localhost")?;
+    }
 
     // Topologically sort commits
     let sorted_ids = topological_sort_commits_for_writing(&snapshot.commits);
@@ -4617,9 +4680,9 @@ mod tests {
                 tree.insert("README.md".to_string(), "# Hello".to_string());
                 tree
             },
-            author: Identity::parse("User <user@localhost>").unwrap(),
+            author: Identity::parse("Author <author@localhost>").unwrap(),
             author_date: Timestamp::from_iso8601("2021-01-14T08:25:36Z").unwrap(),
-            committer: Identity::parse("User <user@localhost>").unwrap(),
+            committer: Identity::parse("Committer <committer@localhost>").unwrap(),
             committer_date: Timestamp::from_iso8601("2021-01-14T08:25:39Z").unwrap(),
             message: "commit 1".to_string(),
         };
@@ -4657,7 +4720,8 @@ mod tests {
         // Create a repository with two commits, second one deletes a file
         let mut repo = Repository::new();
 
-        let author = Identity::parse("User <user@localhost>").unwrap();
+        let author = Identity::parse("Author <author@localhost>").unwrap();
+        let committer = Identity::parse("Committer <committer@localhost>").unwrap();
         let author_date = Timestamp::from_iso8601("2021-01-14T08:25:36Z").unwrap();
 
         // First commit
@@ -4674,7 +4738,7 @@ mod tests {
             &[],
             &author,
             author_date,
-            &author,
+            &committer,
             Timestamp {
                 seconds: author_date.seconds + 3,
                 offset_minutes: author_date.offset_minutes,
@@ -4689,7 +4753,7 @@ mod tests {
             tree: tree1,
             author: author.clone(),
             author_date,
-            committer: author.clone(),
+            committer: committer.clone(),
             committer_date: Timestamp {
                 seconds: author_date.seconds + 3,
                 offset_minutes: author_date.offset_minutes,
@@ -4714,7 +4778,7 @@ mod tests {
             &[commit_id1],
             &author,
             author_date2,
-            &author,
+            &committer,
             Timestamp {
                 seconds: author_date2.seconds + 3,
                 offset_minutes: author_date2.offset_minutes,
@@ -4729,7 +4793,7 @@ mod tests {
             tree: tree2,
             author: author.clone(),
             author_date: author_date2,
-            committer: author.clone(),
+            committer: committer.clone(),
             committer_date: Timestamp {
                 seconds: author_date2.seconds + 3,
                 offset_minutes: author_date2.offset_minutes,
@@ -4766,9 +4830,9 @@ mod tests {
         let mut repo = Repository::new();
 
         // Create a root commit with calculated ID
-        let author = Identity::parse("User <user@localhost>").unwrap();
+        let author = Identity::parse("Author <author@localhost>").unwrap();
         let author_date = Timestamp::from_iso8601("2021-01-14T08:25:36Z").unwrap();
-        let committer = author.clone();
+        let committer = Identity::parse("Committer <committer@localhost>").unwrap();
         let committer_date = Timestamp::from_iso8601("2021-01-14T08:25:39Z").unwrap();
 
         let tree = {

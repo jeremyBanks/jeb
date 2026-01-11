@@ -1,59 +1,59 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 4060fe6a763d686576022d51b59931feb18e4442
-2a9473:
+    main: 7c112acf565b51d027697bfb081bc3dbfe4c513f
+5b79aa:
   message: commit 1
   tree:
     template.txt: TEMPLATE CONTENT
-45b644:
+8467d0:
   message: commit 2
   tree:
     copy-1.txt:
-      //commit: 2a9473
+      //commit: 5b79aa
       //path: template.txt
     copy-2.txt:
-      //commit: 2a9473
+      //commit: 5b79aa
       //path: template.txt
     copy-3.txt:
-      //commit: 2a9473
+      //commit: 5b79aa
       //path: template.txt
-d57460:
+ca6fbb:
   message: commit 3
   tree:
     dir-a:
       template.txt:
-        //commit: 45b644
+        //commit: 8467d0
         //path: template.txt
     dir-b:
       template.txt:
-        //commit: 45b644
+        //commit: 8467d0
         //path: template.txt
     dir-c:
       template.txt:
-        //commit: 45b644
+        //commit: 8467d0
         //path: template.txt
-eb8a8d:
+95045b:
   message: commit 4
   tree:
     level1:
       level2:
         level3:
           template.txt:
-            //commit: d57460
+            //commit: ca6fbb
             //path: template.txt
-4060fe6a763d686576022d51b59931feb18e4442:
+7c112acf565b51d027697bfb081bc3dbfe4c513f:
   message: commit 5
   tree:
     from-commit-1.txt:
-      //commit: eb8a8d
+      //commit: 95045b
       //path: copy-1.txt
     from-commit-2.txt:
-      //commit: eb8a8d
+      //commit: 95045b
       //path: copy-1.txt
     from-commit-3.txt:
-      //commit: eb8a8d
+      //commit: 95045b
       //path: copy-1.txt
     from-commit-4.txt:
-      //commit: eb8a8d
+      //commit: 95045b
       //path: copy-1.txt
