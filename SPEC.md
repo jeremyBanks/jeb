@@ -15,7 +15,7 @@ This specification uses its own annotation syntax to define requirements.
 Requirements for discovering files to scan for annotations.
 
 [def _trace.files.globs]
-The tool searches for annotations in all files matching `**/*.md` or `src/**/*`.
+The tool searches for annotations in all files matching `**/*.md` or `src/**/*`. Hidden directories (dotfiles) are included by default, except `.git/` which is always excluded.
 
 [def _trace.files.language-agnostic]
 File scanning is entirely language-agnostic. Files under `src/` may be any format—source code, configuration, documentation, or any other text content.
@@ -35,6 +35,9 @@ An annotation is not recognized if immediately preceded by `]`, `)`, or a backti
 
 [def _trace.syntax.not-followed]
 An annotation is not recognized if immediately followed by `[`, `(`, or a backtick. This prevents matching markdown link syntax and inline code.
+
+[def _trace.syntax.backtick-escape]
+An annotation wrapped in backticks on both sides (e.g., `` `[def foo]` ``) is not recognized. This allows documentation and tests to include example annotations without them being parsed. Note: a backtick on only one side also prevents recognition per the not-preceded/not-followed rules.
 
 [def _trace.syntax.structure]
 An annotation contains space-separated components. There must be at least two components: the type and the ID. Brackets containing only one component (or zero) are not recognized as annotations.
@@ -123,7 +126,7 @@ A requirement is complete when it is satisfied AND all of its descendants are co
 ## Satisfaction Criteria
 
 [def _trace.satisfaction @children]
-Requirements for determining when a requirement is satisfied.
+Requirements for determining when a requirement is satisfied. Note the distinction between "satisfied" (the requirement's own criteria are met) and "complete" (satisfied AND all descendants are complete). The CLI shows incomplete requirements by default.
 
 [def _trace.satisfaction.defaults]
 By default, a requirement needs both `impl` and `test` annotations with matching IDs to be satisfied.
@@ -179,7 +182,7 @@ Requirements for the command-line interface.
 Every CLI command output includes a succinct summary of available options and related commands, helping users (including AI agents) discover functionality.
 
 [def _trace.cli.default-output]
-Running `_trace` with no arguments displays summary counts: total requirements, satisfied count, and unsatisfied count.
+Running `_trace` with no arguments shows incomplete requirements by default. If all requirements are complete, it displays a summary with counts (total, satisfied, unsatisfied). If any are incomplete, it displays the list of incomplete items. Use `--all` to show all requirements regardless of completion status.
 
 [def _trace.cli.list]
 The tool can list requirements as a nested tree showing each requirement's satisfaction status.

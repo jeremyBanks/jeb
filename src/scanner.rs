@@ -28,6 +28,10 @@ pub fn scan_files(root: &PathBuf) -> Vec<ScannedFile> {
     let md_pattern = root.join("**/*.md");
     if let Ok(paths) = glob_with(md_pattern.to_str().unwrap_or(""), options) {
         for entry in paths.flatten() {
+            // Skip .git directory
+            if is_in_git_dir(&entry) {
+                continue;
+            }
             if let Some(file) = read_file(&entry) {
                 files.push(file);
             }
@@ -38,8 +42,8 @@ pub fn scan_files(root: &PathBuf) -> Vec<ScannedFile> {
     let src_pattern = root.join("src/**/*");
     if let Ok(paths) = glob_with(src_pattern.to_str().unwrap_or(""), options) {
         for entry in paths.flatten() {
-            // Skip directories
-            if entry.is_dir() {
+            // Skip directories and .git
+            if entry.is_dir() || is_in_git_dir(&entry) {
                 continue;
             }
             if let Some(file) = read_file(&entry) {
@@ -52,6 +56,12 @@ pub fn scan_files(root: &PathBuf) -> Vec<ScannedFile> {
     files.sort_by(|a, b| a.path.cmp(&b.path));
 
     files
+}
+
+/// Check if a path is inside a .git directory
+/// [impl _trace.files.globs]
+fn is_in_git_dir(path: &PathBuf) -> bool {
+    path.components().any(|c| c.as_os_str() == ".git")
 }
 
 /// Read a file if it's text content

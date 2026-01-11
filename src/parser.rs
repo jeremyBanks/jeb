@@ -45,8 +45,9 @@ pub fn parse_annotations(path: &PathBuf, content: &str, contexts: &[String]) -> 
             let start = mat.start();
             let end = mat.end();
 
-            // Check not-preceded constraint
+            // Check not-preceded constraint (also enables backtick-escape)
             // [impl _trace.syntax.not-preceded]
+            // [impl _trace.syntax.backtick-escape]
             if start > 0 {
                 let prev_char = line.chars().nth(start - 1);
                 if prev_char == Some(']') || prev_char == Some(')') || prev_char == Some('`') {
@@ -54,8 +55,9 @@ pub fn parse_annotations(path: &PathBuf, content: &str, contexts: &[String]) -> 
                 }
             }
 
-            // Check not-followed constraint
+            // Check not-followed constraint (also enables backtick-escape)
             // [impl _trace.syntax.not-followed]
+            // [impl _trace.syntax.backtick-escape]
             if end < line.len() {
                 let next_char = line.chars().nth(end);
                 if next_char == Some('[') || next_char == Some('(') || next_char == Some('`') {
@@ -183,7 +185,7 @@ fn parse_modifiers(parts: &[&str]) -> Modifiers {
             // Satisfaction mode
             match *part {
                 "@self" => modifiers.mode = Some(SatisfactionMode::Self_),
-                "@childrenren" => modifiers.mode = Some(SatisfactionMode::Children),
+                "@children" => modifiers.mode = Some(SatisfactionMode::Children),
                 "@either" => modifiers.mode = Some(SatisfactionMode::Either),
                 _ => {}
             }
@@ -283,8 +285,30 @@ mod tests {
         assert_eq!(mods2.add_types, vec!["doc"]);
         assert_eq!(mods2.remove_types, vec!["test"]);
 
-        let mods3 = parse_modifiers(&["@childrenren"]);
+        let mods3 = parse_modifiers(&["@children"]);
         assert_eq!(mods3.mode, Some(SatisfactionMode::Children));
+    }
+
+    /// [test _trace.syntax.backtick-escape]
+    #[test]
+    fn test_backtick_escape() {
+        let path = PathBuf::from("test.md");
+        // Backticks on both sides should prevent parsing
+        let content = "Example: `[def example.id]` is escaped";
+        let contexts = vec![String::new()];
+        let annotations = parse_annotations(&path, content, &contexts);
+        assert!(annotations.is_empty(), "Backtick-wrapped annotations should be ignored");
+
+        // Backtick on just one side also prevents parsing
+        let content2 = "Code `[impl foo]";
+        let contexts2 = vec![String::new()];
+        let annotations2 = parse_annotations(&path, content2, &contexts2);
+        assert!(annotations2.is_empty(), "Backtick before should prevent parsing");
+
+        let content3 = "[test bar]` ends code";
+        let contexts3 = vec![String::new()];
+        let annotations3 = parse_annotations(&path, content3, &contexts3);
+        assert!(annotations3.is_empty(), "Backtick after should prevent parsing");
     }
 
     /// [test _trace.syntax.brackets]
