@@ -45,9 +45,23 @@ pub fn scan_files(root: &PathBuf) -> Vec<ScannedFile> {
         }
     }
 
-    // Pattern 2: **/src/**/* (all files under any src/ directory)
-    let src_pattern = root.join("**/src/**/*");
+    // Pattern 2: src/**/* (all files under root src/)
+    let src_pattern = root.join("src/**/*");
     if let Ok(paths) = glob_with(src_pattern.to_str().unwrap_or(""), options) {
+        for entry in paths.flatten() {
+            // Skip directories and .git
+            if entry.is_dir() || is_in_git_dir(&entry) {
+                continue;
+            }
+            if let Some(file) = read_file(&entry) {
+                files.push(file);
+            }
+        }
+    }
+
+    // Pattern 3: crates/*/src/**/* (all files under crate src/)
+    let crates_src_pattern = root.join("crates/*/src/**/*");
+    if let Ok(paths) = glob_with(crates_src_pattern.to_str().unwrap_or(""), options) {
         for entry in paths.flatten() {
             // Skip directories and .git
             if entry.is_dir() || is_in_git_dir(&entry) {
