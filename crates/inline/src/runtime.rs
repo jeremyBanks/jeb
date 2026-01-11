@@ -329,8 +329,10 @@ impl FileState {
                         return;
                     }
                     syn::Expr::MethodCall(method) => {
-                        // Index this method call
-                        let start = method.receiver.span().start();
+                        // Index this method call at the METHOD NAME position, not receiver
+                        // This avoids conflicts with chained calls like a().b() where both
+                        // the Call and MethodCall would otherwise have the same position
+                        let start = method.method.span().start();
                         let pos = (start.line as u32, start.column as u32);
                         self.map.insert(pos, self.current_index);
                         self.current_index += 1;
@@ -955,8 +957,13 @@ fn get_or_load_file_state(path: &Path) -> Result<FileState, io::Error> {
 }
 
 /// Get the stable index for a call/macro at the given position
+///
+/// Note: `column` is expected to be 1-indexed (from `Location::caller().column()`),
+/// but proc_macro2 uses 0-indexed columns, so we convert internally.
 pub fn get_macro_index(path: &Path, line: u32, column: u32) -> Result<usize, io::Error> {
     let state = get_or_load_file_state(path)?;
+    // Location::caller().column() is 1-indexed, but proc_macro2 uses 0-indexed columns
+    let column = column.saturating_sub(1);
     state.get_index(line, column)
 }
 
