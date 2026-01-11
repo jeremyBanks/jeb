@@ -68,15 +68,44 @@ mod tests {
     use super::*;
     use std::env;
 
+    /// [test _trace.files]
+    /// [test _trace.files.globs]
     #[test]
     fn test_scan_finds_spec() {
         let root = env::current_dir().unwrap();
         let files = scan_files(&root);
 
-        // Should find SPEC.md at minimum
+        // Should find SPEC.md at minimum (tests **/*.md pattern)
         assert!(
             files.iter().any(|f| f.path.ends_with("SPEC.md")),
             "Should find SPEC.md"
         );
+    }
+
+    /// [test _trace.files.globs]
+    #[test]
+    fn test_scan_finds_source_files() {
+        let root = env::current_dir().unwrap();
+        let files = scan_files(&root);
+
+        // Should find source files under src/ (tests src/**/* pattern)
+        assert!(
+            files.iter().any(|f| f.path.to_string_lossy().contains("src/")),
+            "Should find files under src/"
+        );
+    }
+
+    /// [test _trace.files.language-agnostic]
+    #[test]
+    fn test_scan_is_language_agnostic() {
+        let root = env::current_dir().unwrap();
+        let files = scan_files(&root);
+
+        // Should find both .rs and .md files (language-agnostic)
+        let has_rs = files.iter().any(|f| f.path.extension().map(|e| e == "rs").unwrap_or(false));
+        let has_md = files.iter().any(|f| f.path.extension().map(|e| e == "md").unwrap_or(false));
+
+        assert!(has_rs, "Should find .rs files");
+        assert!(has_md, "Should find .md files");
     }
 }

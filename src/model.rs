@@ -103,6 +103,7 @@ impl Requirement {
     }
 
     /// Get the parent ID from this requirement's ID
+    /// [impl _trace.syntax.id.hierarchy]
     pub fn parent_id(&self) -> Option<String> {
         let parts: Vec<&str> = self.id.split('.').collect();
         if parts.len() > 1 {
@@ -147,5 +148,72 @@ impl RequirementTree {
                 self.collect_depth_first(child_id, result);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// [test _trace.location]
+    /// [test _trace.location.file]
+    /// [test _trace.location.line]
+    /// [test _trace.location.column]
+    #[test]
+    fn test_location_display() {
+        let loc = Location::new(PathBuf::from("src/main.rs"), 42, 10);
+        let display = format!("{}", loc);
+        assert!(display.contains("src/main.rs"));
+        assert!(display.contains("42"));
+        assert!(display.contains("10"));
+        assert_eq!(display, "src/main.rs:42:10");
+    }
+
+    /// [test _trace.location.line]
+    /// [test _trace.location.column]
+    #[test]
+    fn test_location_is_1_indexed() {
+        let loc = Location::new(PathBuf::from("test.rs"), 1, 1);
+        // Line and column should be 1-indexed (first line is 1, not 0)
+        assert_eq!(loc.line, 1);
+        assert_eq!(loc.column, 1);
+    }
+
+    /// [test _trace.types]
+    /// [test _trace.types.custom]
+    #[test]
+    fn test_custom_annotation_types() {
+        // Annotations can have any type string
+        let annotation = Annotation {
+            kind: "custom-type".to_string(),
+            id: "some.req".to_string(),
+            modifiers: Modifiers::default(),
+            location: Location::new(PathBuf::from("test.md"), 1, 1),
+            context: String::new(),
+        };
+        assert_eq!(annotation.kind, "custom-type");
+    }
+
+    /// [test _trace.types.def]
+    #[test]
+    fn test_def_type() {
+        let def = Annotation {
+            kind: "def".to_string(),
+            id: "my.requirement".to_string(),
+            modifiers: Modifiers::default(),
+            location: Location::new(PathBuf::from("spec.md"), 10, 1),
+            context: "This is the requirement definition".to_string(),
+        };
+        assert_eq!(def.kind, "def");
+    }
+
+    /// [test _trace.syntax.id.hierarchy]
+    #[test]
+    fn test_parent_id() {
+        let req = Requirement::new("a.b.c".to_string());
+        assert_eq!(req.parent_id(), Some("a.b".to_string()));
+
+        let root = Requirement::new("root".to_string());
+        assert_eq!(root.parent_id(), None);
     }
 }

@@ -91,6 +91,7 @@ fn strip_common_prefix(lines: &[&str]) -> Vec<String> {
 mod tests {
     use super::*;
 
+    /// [test _trace.context.boundaries]
     #[test]
     fn test_has_alphanumeric() {
         assert!(has_alphanumeric("hello"));
@@ -101,6 +102,7 @@ mod tests {
         assert!(!has_alphanumeric("   "));
     }
 
+    /// [test _trace.context.prefix-strip]
     #[test]
     fn test_strip_common_prefix() {
         let lines = vec!["// hello", "// world", "// test"];
@@ -108,6 +110,7 @@ mod tests {
         assert_eq!(stripped, vec!["hello", "world", "test"]);
     }
 
+    /// [test _trace.context.prefix-strip]
     #[test]
     fn test_strip_common_prefix_no_common() {
         let lines = vec!["// hello", "world", "// test"];
@@ -115,12 +118,15 @@ mod tests {
         assert_eq!(stripped, vec!["// hello", "world", "// test"]);
     }
 
+    /// [test _trace.context]
+    /// [test _trace.context.boundaries]
+    /// [test _trace.context.shared]
     #[test]
     fn test_context_extraction() {
-        let content = "// First line\n// [def foo.bar]\n// Third line\n\n// Another block";
+        let content = "// First line\n// Second line\n// Third line\n\n// Another block";
         let contexts = extract_contexts(content);
 
-        // Lines 0, 1, 2 should share the same context
+        // Lines 0, 1, 2 should share the same context (no blank line between them)
         assert_eq!(contexts[0], contexts[1]);
         assert_eq!(contexts[1], contexts[2]);
 

@@ -1,5 +1,6 @@
 # _trace Specification
 
+[def _trace @child]
 _trace is a language-agnostic requirements tracking tool. It finds annotations in source files, extracts their context, and tracks whether requirements are satisfied by corresponding implementations and tests.
 
 This is a simplified variant of [tracey](https://github.com/bearcove/tracey), exploring some ideas to see if anything is worth suggesting upstream. Key simplifications include looser annotation detection (anywhere in text, not position-dependent), unified file handling (no separate spec vs. source distinction), and a minimal CLI focused on AI-agent usability.
@@ -30,10 +31,10 @@ Requirements for annotation syntax and parsing.
 An annotation is text wrapped in square brackets: `[...]`.
 
 [def _trace.syntax.not-preceded]
-An annotation is not recognized if immediately preceded by `]` or `)`. This prevents matching markdown link syntax like `[text](url)` or `[text][ref]`.
+An annotation is not recognized if immediately preceded by `]`, `)`, or a backtick. This prevents matching markdown link syntax like `[text](url)` or `[text][ref]`, and inline code like `` `[example]` ``.
 
 [def _trace.syntax.not-followed]
-An annotation is not recognized if immediately followed by `[` or `(`. This prevents matching markdown link syntax.
+An annotation is not recognized if immediately followed by `[`, `(`, or a backtick. This prevents matching markdown link syntax and inline code.
 
 [def _trace.syntax.structure]
 An annotation contains space-separated components. There must be at least two components: the type and the ID. Brackets containing only one component (or zero) are not recognized as annotations.
@@ -212,17 +213,20 @@ The `--context-of=type1,type2` flag expands full context only for specific annot
 ## Examples
 
 [example _trace.syntax.id]
+[example _trace.syntax.id.segments]
+[example _trace.syntax.id.minimum]
+[example _trace.syntax.id.hierarchy]
 Valid IDs:
-- `foo` (single segment)
-- `foo.bar` (two segments)
-- `foo.bar.baz-qux` (with dash)
-- `my_module.some_feature` (with underscores)
+- `foo` (single segment - satisfies minimum requirement)
+- `foo.bar` (two segments - `bar` is child of `foo`)
+- `foo.bar.baz-qux` (with dash in segment)
+- `my_module.some_feature` (with underscores in segments)
 
 Invalid IDs:
-- `.foo` (empty first segment)
+- `.foo` (empty first segment violates segments rule)
 - `foo.` (empty last segment)
 - `foo..bar` (empty middle segment)
-- `foo.bar!` (invalid character)
+- `foo.bar!` (invalid character - only alphanumeric, dash, underscore allowed)
 
 [example _trace.satisfaction.modifiers]
 ```
@@ -265,6 +269,38 @@ All lines share `// ` prefix, so the extracted context becomes:
 This feature does something.
 It has multiple lines.
 ```
+
+---
+
+## CLI Enhancements
+
+[def _trace.cli.description]
+When run with no arguments (default output), the CLI includes a brief (2-3 sentence) description of what the tool is and how it works, sufficient for an AI agent to understand its purpose without additional context.
+
+[def _trace.cli.install-skills]
+The CLI provides an `--install-skills` option that installs Claude Code skill files into the current project's `.claude/skills/` directory. The command fails with an error if any target files already exist, preventing accidental overwrites.
+
+---
+
+## Claude Code Skills
+
+[def _trace.skills @child]
+Requirements for Claude Code skills that help AI agents work with the requirements system.
+
+[def _trace.skills.embedded]
+Skill files are embedded in the binary at compile time and can be installed via `--install-skills`.
+
+[def _trace.skills.self-contained]
+Each skill must contain enough context about the _trace model and workflow that an AI agent can effectively use the tool with no other documentation. Skills should explain: annotation syntax, requirement hierarchy, satisfaction modes, and the iterative workflow.
+
+[def _trace.skills.validate]
+A skill for deep validation of requirements - checking whether implementations semantically satisfy their definitions, not just whether annotations exist.
+
+[def _trace.skills.work]
+A skill for autonomous work on requirements - selecting unsatisfied requirements, implementing or testing them, and iterating until satisfied.
+
+[def _trace.skills.add]
+A skill for adding or updating requirements with careful attention to clarity, proper placement in the hierarchy, and ensuring complete mutual understanding between the agent and user before committing changes.
 
 ---
 

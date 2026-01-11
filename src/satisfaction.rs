@@ -140,7 +140,7 @@ fn check_child_satisfaction(
 
     // For each required type, check that:
     // 1. At least one child requires this type
-    // 2. All children that require this type have it satisfied
+    // 2. All children that require this type are satisfied (overall, not just self)
     for required_type in &req.required_types {
         let mut has_child_requiring_type = false;
         let mut all_requiring_satisfied = true;
@@ -150,9 +150,10 @@ fn check_child_satisfaction(
                 if child_req.required_types.contains(required_type) {
                     has_child_requiring_type = true;
 
-                    // Check if this child has the type satisfied
+                    // Check if this child is satisfied overall (not just self)
+                    // A child can be satisfied via @self, @child, or @either
                     if let Some(child_status) = child_statuses.get(child_id) {
-                        if !child_status.satisfied_types.contains(required_type) {
+                        if !child_status.satisfied {
                             all_requiring_satisfied = false;
                         }
                     } else {
@@ -209,7 +210,7 @@ mod tests {
     use super::*;
     use crate::errors::ErrorCollector;
     use crate::hierarchy::build_tree;
-    use crate::model::{Annotation, Location, Modifiers};
+    use crate::model::{Annotation, Location, Modifiers, SatisfactionMode};
     use std::path::PathBuf;
 
     fn make_annotation(kind: &str, id: &str) -> Annotation {
@@ -222,39 +223,116 @@ mod tests {
         }
     }
 
+    fn make_def_with_mode(id: &str, mode: SatisfactionMode) -> Annotation {
+        Annotation {
+            kind: "def".to_string(),
+            id: id.to_string(),
+            modifiers: Modifiers {
+                add_types: vec![],
+                remove_types: vec![],
+                mode: Some(mode),
+            },
+            location: Location::new(PathBuf::from("test.md"), 1, 1),
+            context: String::new(),
+        }
+    }
+
+    /// [test _trace.satisfaction]
+    /// [test _trace.satisfaction.mode.self]
     #[test]
     fn test_self_satisfaction() {
         let mut errors = ErrorCollector::new();
         let annotations = vec![
-            make_annotation("def", "foo"),
-            make_annotation("impl", "foo"),
-            make_annotation("test", "foo"),
+            make_annotation("def", "myreq"),
+            make_annotation("impl", "myreq"),
+            make_annotation("test", "myreq"),
         ];
 
         let tree = build_tree(annotations, &mut errors);
         let statuses = compute_satisfaction(&tree);
 
-        let status = statuses.get("foo").unwrap();
+        let status = statuses.get("myreq").unwrap();
         assert!(status.satisfied);
         assert!(status.complete);
         assert!(status.missing_types.is_empty());
     }
 
+    /// [test _trace.satisfaction]
     #[test]
     fn test_missing_type() {
         let mut errors = ErrorCollector::new();
         let annotations = vec![
-            make_annotation("def", "foo"),
-            make_annotation("impl", "foo"),
+            make_annotation("def", "myreq"),
+            make_annotation("impl", "myreq"),
             // missing test
         ];
 
         let tree = build_tree(annotations, &mut errors);
         let statuses = compute_satisfaction(&tree);
 
-        let status = statuses.get("foo").unwrap();
+        let status = statuses.get("myreq").unwrap();
         assert!(!status.satisfied);
         assert!(!status.complete);
         assert_eq!(status.missing_types, vec!["test"]);
+    }
+
+    /// [test _trace.satisfaction.mode]
+    /// [test _trace.satisfaction.mode.either]
+    #[test]
+    fn test_either_mode_self() {
+        // @either mode: satisfied by self
+        let mut errors = ErrorCollector::new();
+        let annotations = vec![
+            make_annotation("def", "either.req"),
+            make_annotation("impl", "either.req"),
+            make_annotation("test", "either.req"),
+        ];
+
+        let tree = build_tree(annotations, &mut errors);
+        let statuses = compute_satisfaction(&tree);
+
+        let status = statuses.get("either.req").unwrap();
+        assert!(status.satisfied, "@either should be satisfied by self annotations");
+    }
+
+    /// [test _trace.satisfaction.mode.child]
+    #[test]
+    fn test_child_mode() {
+        let mut errors = ErrorCollector::new();
+        let annotations = vec![
+            make_def_with_mode("parent", SatisfactionMode::Child),
+            make_annotation("def", "parent.a"),
+            make_annotation("impl", "parent.a"),
+            make_annotation("test", "parent.a"),
+            make_annotation("def", "parent.b"),
+            make_annotation("impl", "parent.b"),
+            make_annotation("test", "parent.b"),
+        ];
+
+        let tree = build_tree(annotations, &mut errors);
+        let statuses = compute_satisfaction(&tree);
+
+        // Children should be satisfied
+        assert!(statuses.get("parent.a").unwrap().satisfied);
+        assert!(statuses.get("parent.b").unwrap().satisfied);
+
+        // Parent with @child should be satisfied when all children are satisfied
+        let parent_status = statuses.get("parent").unwrap();
+        assert!(parent_status.satisfied, "@child mode should be satisfied when children are satisfied");
+    }
+
+    /// [test _trace.satisfaction.mode.child]
+    #[test]
+    fn test_child_mode_no_children() {
+        let mut errors = ErrorCollector::new();
+        let annotations = vec![
+            make_def_with_mode("lonely", SatisfactionMode::Child),
+        ];
+
+        let tree = build_tree(annotations, &mut errors);
+        let statuses = compute_satisfaction(&tree);
+
+        let status = statuses.get("lonely").unwrap();
+        assert!(!status.satisfied, "@child mode with no children should not be satisfied");
     }
 }

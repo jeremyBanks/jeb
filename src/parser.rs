@@ -49,7 +49,7 @@ pub fn parse_annotations(path: &PathBuf, content: &str, contexts: &[String]) -> 
             // [impl _trace.syntax.not-preceded]
             if start > 0 {
                 let prev_char = line.chars().nth(start - 1);
-                if prev_char == Some(']') || prev_char == Some(')') {
+                if prev_char == Some(']') || prev_char == Some(')') || prev_char == Some('`') {
                     continue;
                 }
             }
@@ -58,7 +58,7 @@ pub fn parse_annotations(path: &PathBuf, content: &str, contexts: &[String]) -> 
             // [impl _trace.syntax.not-followed]
             if end < line.len() {
                 let next_char = line.chars().nth(end);
-                if next_char == Some('[') || next_char == Some('(') {
+                if next_char == Some('[') || next_char == Some('(') || next_char == Some('`') {
                     continue;
                 }
             }
@@ -99,6 +99,7 @@ fn parse_annotation_inner(
         return None;
     }
 
+    // [impl _trace.types.custom]
     let kind = parts[0].to_string();
 
     // Find the ID - it's the last component that looks like an ID
@@ -244,6 +245,8 @@ fn parse_type_modifiers(s: &str, modifiers: &mut Modifiers) {
 mod tests {
     use super::*;
 
+    /// [test _trace.syntax.id]
+    /// [test _trace.syntax.id.segments]
     #[test]
     fn test_valid_ids() {
         assert!(is_valid_id("foo"));
@@ -257,6 +260,8 @@ mod tests {
         assert!(is_valid_id("_trace.syntax.id"));
     }
 
+    /// [test _trace.syntax.id]
+    /// [test _trace.syntax.id.minimum]
     #[test]
     fn test_invalid_ids() {
         assert!(!is_valid_id(""));
@@ -267,6 +272,7 @@ mod tests {
         assert!(!is_valid_id("foo bar"));
     }
 
+    /// [test _trace.satisfaction.modifiers]
     #[test]
     fn test_parse_modifiers() {
         let mods = parse_modifiers(&["+doc", "-test"]);
@@ -279,5 +285,52 @@ mod tests {
 
         let mods3 = parse_modifiers(&["@child"]);
         assert_eq!(mods3.mode, Some(SatisfactionMode::Child));
+    }
+
+    /// [test _trace.syntax.brackets]
+    #[test]
+    fn test_brackets_detection() {
+        let path = PathBuf::from("test.md");
+        let content = "Here is [impl some.id] in text";
+        let contexts = vec![String::new()];
+        let annotations = parse_annotations(&path, content, &contexts);
+        assert_eq!(annotations.len(), 1);
+        assert_eq!(annotations[0].kind, "impl");
+        assert_eq!(annotations[0].id, "some.id");
+    }
+
+    /// [test _trace.syntax.not-preceded]
+    #[test]
+    fn test_not_preceded() {
+        let path = PathBuf::from("test.md");
+        // Markdown link syntax should NOT be parsed
+        let content = "[text](url) and [text][ref]";
+        let contexts = vec![String::new()];
+        let annotations = parse_annotations(&path, content, &contexts);
+        assert!(annotations.is_empty(), "Markdown links should be ignored");
+    }
+
+    /// [test _trace.syntax.not-followed]
+    #[test]
+    fn test_not_followed() {
+        let path = PathBuf::from("test.md");
+        // Text followed by [ or ( should be ignored
+        let content = "[link](url) and [ref][target]";
+        let contexts = vec![String::new()];
+        let annotations = parse_annotations(&path, content, &contexts);
+        assert!(annotations.is_empty(), "Text followed by [ or ( should be ignored");
+    }
+
+    /// [test _trace.syntax.structure]
+    /// [test _trace.syntax.type]
+    #[test]
+    fn test_structure_requires_two_parts() {
+        let path = PathBuf::from("test.md");
+        // Single word should NOT be an annotation
+        let content = "[single] but [impl valid.id] works";
+        let contexts = vec![String::new()];
+        let annotations = parse_annotations(&path, content, &contexts);
+        assert_eq!(annotations.len(), 1, "Only [impl valid.id] should be found");
+        assert_eq!(annotations[0].kind, "impl");
     }
 }

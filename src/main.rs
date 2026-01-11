@@ -22,6 +22,10 @@ struct Args {
     #[arg(value_name = "PREFIX")]
     prefixes: Vec<String>,
 
+    /// Show all requirements (including complete ones)
+    #[arg(long)]
+    all: bool,
+
     /// Show full context for all annotations
     /// [impl _trace.cli.context]
     #[arg(long)]
@@ -81,13 +85,6 @@ fn main() {
     // Print errors first if any
     print_errors(&errors);
 
-    // Check if we should show summary (before moving values)
-    let show_summary = args.prefixes.is_empty()
-        && !args.context
-        && !args.lines
-        && args.context_of.is_empty()
-        && args.types.is_empty();
-
     // Determine output mode
     let options = OutputOptions {
         limit: args.limit,
@@ -97,14 +94,19 @@ fn main() {
         context_of: args.context_of,
         filter_types: args.types,
         filter_prefixes: args.prefixes,
+        show_all: args.all,
+        show_incomplete: !args.all, // Show incomplete by default
     };
 
-    if show_summary {
-        // Default: show summary
+    // Count incomplete requirements
+    let incomplete_count = statuses.values().filter(|s| !s.complete).count();
+
+    if incomplete_count == 0 && !args.all {
+        // All requirements complete - show success summary
         // [impl _trace.cli.default-output]
         print_summary(&tree, &statuses, &errors);
     } else {
-        // Show list with options
+        // Show list with options (incomplete items by default)
         // [impl _trace.cli.list]
         print_list(&tree, &statuses, &options);
     }

@@ -104,3 +104,58 @@ impl std::fmt::Display for TraceError {
         write!(f, "{}: {}", self.location, self.message)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    /// [test _trace.errors]
+    /// [test _trace.errors.duplicate-def]
+    #[test]
+    fn test_duplicate_def_error() {
+        let mut errors = ErrorCollector::new();
+        let loc = Location::new(PathBuf::from("test.md"), 10, 5);
+        errors.duplicate_def(&loc, "my.requirement");
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors.errors[0].kind, ErrorKind::DuplicateDef);
+        assert!(errors.errors[0].message.contains("my.requirement"));
+    }
+
+    /// [test _trace.errors.add-existing]
+    #[test]
+    fn test_add_existing_error() {
+        let mut errors = ErrorCollector::new();
+        let loc = Location::new(PathBuf::from("test.md"), 10, 5);
+        errors.add_existing(&loc, "impl");
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors.errors[0].kind, ErrorKind::AddExisting);
+        assert!(errors.errors[0].message.contains("impl"));
+    }
+
+    /// [test _trace.errors.remove-missing]
+    #[test]
+    fn test_remove_missing_error() {
+        let mut errors = ErrorCollector::new();
+        let loc = Location::new(PathBuf::from("test.md"), 10, 5);
+        errors.remove_missing(&loc, "test");
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors.errors[0].kind, ErrorKind::RemoveMissing);
+        assert!(errors.errors[0].message.contains("test"));
+    }
+
+    /// [test _trace.errors.unrequired-annotation]
+    #[test]
+    fn test_unrequired_annotation_error() {
+        let mut errors = ErrorCollector::new();
+        let loc = Location::new(PathBuf::from("test.md"), 10, 5);
+        errors.unrequired_annotation(&loc, "doc", "my.req");
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors.errors[0].kind, ErrorKind::UnrequiredAnnotation);
+        assert!(errors.errors[0].message.contains("doc"));
+    }
+}

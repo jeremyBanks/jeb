@@ -21,6 +21,7 @@ pub fn build_tree(annotations: Vec<Annotation>, errors: &mut ErrorCollector) -> 
     let mut tree = RequirementTree::new();
 
     // Separate def annotations from others
+    // [impl _trace.types.def]
     let (defs, others): (Vec<_>, Vec<_>) = annotations.into_iter().partition(|a| a.kind == "def");
 
     // First pass: create explicit requirements from defs
@@ -94,6 +95,7 @@ fn ensure_ancestors(tree: &mut RequirementTree, id: &str) {
 }
 
 /// Compute inherited required_types for all requirements
+/// [impl _trace.hierarchy.inheritance]
 /// [impl _trace.satisfaction.inheritance]
 /// [impl _trace.satisfaction.modifier-descendants]
 fn compute_inherited_types(tree: &mut RequirementTree, errors: &mut ErrorCollector) {
@@ -201,29 +203,129 @@ mod tests {
         }
     }
 
+    fn make_def_with_modifiers(id: &str, add: Vec<&str>, remove: Vec<&str>) -> Annotation {
+        Annotation {
+            kind: "def".to_string(),
+            id: id.to_string(),
+            modifiers: crate::model::Modifiers {
+                add_types: add.into_iter().map(String::from).collect(),
+                remove_types: remove.into_iter().map(String::from).collect(),
+                mode: None,
+            },
+            location: Location::new(PathBuf::from("test.md"), 1, 1),
+            context: String::new(),
+        }
+    }
+
+    /// [test _trace.hierarchy]
+    /// [test _trace.hierarchy.implicit-ancestors]
     #[test]
     fn test_implicit_ancestors() {
         let mut errors = ErrorCollector::new();
-        let annotations = vec![make_def("foo.bar.baz")];
+        let annotations = vec![make_def("req.sub.leaf")];
         let tree = build_tree(annotations, &mut errors);
 
-        assert!(tree.requirements.contains_key("foo"));
-        assert!(tree.requirements.contains_key("foo.bar"));
-        assert!(tree.requirements.contains_key("foo.bar.baz"));
+        assert!(tree.requirements.contains_key("req"));
+        assert!(tree.requirements.contains_key("req.sub"));
+        assert!(tree.requirements.contains_key("req.sub.leaf"));
 
-        assert!(tree.requirements.get("foo").unwrap().implicit);
-        assert!(tree.requirements.get("foo.bar").unwrap().implicit);
-        assert!(!tree.requirements.get("foo.bar.baz").unwrap().implicit);
+        assert!(tree.requirements.get("req").unwrap().implicit);
+        assert!(tree.requirements.get("req.sub").unwrap().implicit);
+        assert!(!tree.requirements.get("req.sub.leaf").unwrap().implicit);
     }
 
+    /// [test _trace.satisfaction.defaults]
     #[test]
     fn test_default_required_types() {
         let mut errors = ErrorCollector::new();
-        let annotations = vec![make_def("foo")];
+        let annotations = vec![make_def("myreq")];
         let tree = build_tree(annotations, &mut errors);
 
-        let req = tree.requirements.get("foo").unwrap();
+        let req = tree.requirements.get("myreq").unwrap();
         assert!(req.required_types.contains("impl"));
         assert!(req.required_types.contains("test"));
+    }
+
+    /// [test _trace.hierarchy.inheritance]
+    /// [test _trace.satisfaction.inheritance]
+    #[test]
+    fn test_type_inheritance() {
+        let mut errors = ErrorCollector::new();
+        // Parent adds +doc, child should inherit it
+        let annotations = vec![
+            make_def_with_modifiers("parent", vec!["doc"], vec![]),
+            make_def("parent.child"),
+        ];
+        let tree = build_tree(annotations, &mut errors);
+
+        let parent = tree.requirements.get("parent").unwrap();
+        assert!(parent.required_types.contains("doc"));
+
+        let child = tree.requirements.get("parent.child").unwrap();
+        assert!(child.required_types.contains("doc"), "Child should inherit +doc from parent");
+    }
+
+    /// [test _trace.satisfaction.modifier-descendants]
+    #[test]
+    fn test_modifier_descendants() {
+        let mut errors = ErrorCollector::new();
+        // Parent removes -test, child should inherit that removal
+        let annotations = vec![
+            make_def_with_modifiers("parent", vec![], vec!["test"]),
+            make_def("parent.child"),
+        ];
+        let tree = build_tree(annotations, &mut errors);
+
+        let child = tree.requirements.get("parent.child").unwrap();
+        assert!(!child.required_types.contains("test"), "Child should inherit -test from parent");
+        assert!(child.required_types.contains("impl"), "Child should still have impl");
+    }
+
+    /// [test _trace.hierarchy.completion]
+    #[test]
+    fn test_parent_child_relationships() {
+        let mut errors = ErrorCollector::new();
+        let annotations = vec![
+            make_def("root"),
+            make_def("root.a"),
+            make_def("root.b"),
+        ];
+        let tree = build_tree(annotations, &mut errors);
+
+        let root = tree.requirements.get("root").unwrap();
+        assert!(root.children.contains(&"root.a".to_string()));
+        assert!(root.children.contains(&"root.b".to_string()));
+
+        let child_a = tree.requirements.get("root.a").unwrap();
+        assert_eq!(child_a.parent, Some("root".to_string()));
+    }
+
+    /// [test _trace.types.def-required]
+    #[test]
+    fn test_def_as_required_type_is_error() {
+        use crate::errors::ErrorKind;
+
+        let mut errors = ErrorCollector::new();
+        // Try to add +def as a required type - should produce an error
+        let annotations = vec![
+            Annotation {
+                kind: "def".to_string(),
+                id: "bad.requirement".to_string(),
+                modifiers: crate::model::Modifiers {
+                    add_types: vec!["def".to_string()],
+                    remove_types: vec![],
+                    mode: None,
+                },
+                location: Location::new(PathBuf::from("test.md"), 1, 1),
+                context: String::new(),
+            },
+        ];
+        let _tree = build_tree(annotations, &mut errors);
+
+        assert!(!errors.is_empty(), "Should have an error for +def");
+        assert!(
+            errors.errors.iter().any(|e| e.kind == ErrorKind::DefAsRequired),
+            "Error should be DefAsRequired"
+        );
     }
 }
