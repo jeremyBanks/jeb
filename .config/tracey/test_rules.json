@@ -1,7 +1,0 @@
-{
-  "reqs": {
-    "test.req.one": { "url": "#one" },
-    "test.req.two": { "url": "#two" },
-    "test.req.three": { "url": "#three" }
-  }
-}
