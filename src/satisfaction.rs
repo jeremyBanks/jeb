@@ -35,7 +35,10 @@ pub fn compute_satisfaction(tree: &RequirementTree) -> HashMap<String, Satisfact
     }
 
     // Second pass: compute completion (requires children to be computed first)
-    let ids_for_completion: Vec<String> = statuses.keys().cloned().collect();
+    // Process in reverse depth order (leaves first, then parents) so children
+    // have their complete status set before parents check it
+    let mut ids_for_completion: Vec<String> = statuses.keys().cloned().collect();
+    ids_for_completion.sort_by_key(|id| std::cmp::Reverse(id.matches('.').count()));
     for id in ids_for_completion {
         let complete = is_complete(tree, &id, &statuses);
         if let Some(status) = statuses.get_mut(&id) {
