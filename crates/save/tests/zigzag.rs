@@ -1,8 +1,10 @@
-use ::save::{
-    testing::assert_at,
-    zigzag::{ZigZag, ZugZug},
+use {
+    ::save::{
+        testing::assert_at,
+        zigzag::{ZigZag, ZugZug},
+    },
+    inline::snapshot,
 };
-use inline::snapshot;
 
 #[test]
 fn zigzag_round_trip() {

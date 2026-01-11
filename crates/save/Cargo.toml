@@ -37,7 +37,7 @@ tracing-error = { workspace = true, features = ["traced-error"] }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 
 [dev-dependencies]
-inline = { path = "../inline" }
+inline.workspace = true
 
 [package.metadata.release]
 allow-branch = ["trunk"]

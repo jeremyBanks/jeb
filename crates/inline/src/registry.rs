@@ -124,7 +124,11 @@ pub fn get_or_create_at<T: Value + 'static>(
     // Build the registry key
     // Prefers stable index for files that exist, falls back to (line, column)
     // otherwise
-    let key = (path.clone(), index_or_position, TypeId::of::<InlineCellInner<T>>());
+    let key = (
+        path.clone(),
+        index_or_position,
+        TypeId::of::<InlineCellInner<T>>(),
+    );
 
     // Get or create the raw pointer in the registry
     let ptr_as_usize = {

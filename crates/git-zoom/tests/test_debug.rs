@@ -157,7 +157,10 @@ fn test_debug_fixture_simulation() {
         .current_dir(&manifest_dir)
         .output()
         .unwrap();
-    println!("Main project status: {:?}", String::from_utf8_lossy(&main_status.stdout));
+    println!(
+        "Main project status: {:?}",
+        String::from_utf8_lossy(&main_status.stdout)
+    );
 
     // 6. Run zoom in temp directory
     let original_dir = env::current_dir().unwrap();
@@ -179,7 +182,10 @@ fn test_debug_fixture_simulation() {
         .args(&["status", "--porcelain"])
         .output()
         .unwrap();
-    println!("Temp status: {:?}", String::from_utf8_lossy(&temp_status.stdout));
+    println!(
+        "Temp status: {:?}",
+        String::from_utf8_lossy(&temp_status.stdout)
+    );
 
     // Use an inline snapshot like the integration tests do
     snapshot("test".to_string()).value = "test".to_string();
