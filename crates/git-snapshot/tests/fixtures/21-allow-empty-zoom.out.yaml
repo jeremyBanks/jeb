@@ -1,30 +1,30 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 0b1517b47fc6b6059c65e0253a4ef0a649590a12
-f526e4:
+    main: b12f7eddad51e46019f39ab9e272f2d8b3ed59f2
+1d397a:
   message: commit 1
   tree:
     dir:
       file.txt: content
     existing.txt: exists
-'947592':
+319fd0:
   message: commit 2
   parents: []
   tree: {}
-d4f009:
+60c517:
   message: |
     Zoom in from non-existent path
 
     git-zoom-in: path/that/does/not/exist
   parents:
-  - '947592'
-  - f526e4
-0b1517b47fc6b6059c65e0253a4ef0a649590a12:
+  - 319fd0
+  - 1d397a
+b12f7eddad51e46019f39ab9e272f2d8b3ed59f2:
   message: |
     Zoom out to different path
 
     git-zoom-out: another/path
   parents:
-  - f526e4
-  - d4f009
+  - 1d397a
+  - 60c517

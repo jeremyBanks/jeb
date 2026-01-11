@@ -43,6 +43,9 @@ pub enum ParseError {
     #[error("ambiguous commit hash: {0} matches multiple commits")]
     AmbiguousHash(String),
 
+    #[error("commit hash mismatch: declared {declared} but calculated {calculated}")]
+    HashMismatch { declared: String, calculated: String },
+
     #[error("cycle detected in commit graph")]
     CycleDetected,
 
@@ -1179,6 +1182,19 @@ impl Repository {
     pub fn to_temporary_repository(&self) -> Result<TemporaryRepository, GitError> {
         git2_to_temporary_repository(self)
     }
+
+    /// Create a git repository from this snapshot at the specified path
+    ///
+    /// Materializes all commits, refs, HEAD state, staging area, and working
+    /// tree into a real git repository at the given path. The path should
+    /// either not exist or be an empty directory.
+    ///
+    /// # Errors
+    /// - `GitError::Git2` for underlying git2 errors
+    /// - `GitError::Io` for filesystem errors
+    pub fn to_repository_at_path<P: AsRef<Path>>(&self, path: P) -> Result<git2::Repository, GitError> {
+        git2_to_repository_at_path(self, path.as_ref())
+    }
 }
 
 impl Default for Repository {
@@ -1861,14 +1877,37 @@ fn build_commit(
 
     let first_parent = resolved_parents.first();
 
-    // Parse author (with default)
-    let author = parse_author(commit_mapping, first_parent)?;
+    // Check if author/committer are explicitly specified for cross-defaulting
+    let author_key = serde_yaml::Value::String("author".to_string());
+    let committer_key = serde_yaml::Value::String("committer".to_string());
+    let author_explicit = commit_mapping.contains_key(&author_key);
+    let committer_explicit = commit_mapping.contains_key(&committer_key);
+
+    // Parse author and committer with cross-defaulting logic
+    let (author, committer) = if author_explicit && committer_explicit {
+        // Both specified - parse each independently
+        let author = parse_author(commit_mapping, first_parent, None)?;
+        let committer = parse_committer(commit_mapping, first_parent, None)?;
+        (author, committer)
+    } else if author_explicit {
+        // Only author specified - committer defaults to author
+        let author = parse_author(commit_mapping, first_parent, None)?;
+        let committer = parse_committer(commit_mapping, first_parent, Some(&author))?;
+        (author, committer)
+    } else if committer_explicit {
+        // Only committer specified - author defaults to committer
+        let committer = parse_committer(commit_mapping, first_parent, None)?;
+        let author = parse_author(commit_mapping, first_parent, Some(&committer))?;
+        (author, committer)
+    } else {
+        // Neither specified - each inherits from parent independently
+        let author = parse_author(commit_mapping, first_parent, None)?;
+        let committer = parse_committer(commit_mapping, first_parent, None)?;
+        (author, committer)
+    };
 
     // Parse author-date (with default)
     let author_date = parse_author_date(commit_mapping, &resolved_parents)?;
-
-    // Parse committer (with default)
-    let committer = parse_committer(commit_mapping, &author)?;
 
     // Parse commit-date (with default)
     let committer_date = parse_committer_date(commit_mapping, author_date, &resolved_parents)?;
@@ -1879,9 +1918,31 @@ fn build_commit(
     // Parse tree (with default)
     let tree = parse_tree(commit_mapping, first_parent, processing_state)?;
 
-    // Determine object ID: use the key for hex refs, calculate for others
+    // Determine object ID: validate hex keys match calculated hash, calculate for others
     let object_id = match commit_ref {
-        CommitRef::Hex(oid) => *oid,
+        CommitRef::Hex(oid) => {
+            // For full hex keys, validate that the declared hash matches the calculated hash
+            let parent_ids: Vec<ObjectId> = resolved_parents.iter().map(|c| c.id).collect();
+            let tree_id = calculate_tree_id(&tree)?;
+            let calculated_id = calculate_commit_id(
+                &tree_id,
+                &parent_ids,
+                &author,
+                author_date,
+                &committer,
+                committer_date,
+                &message,
+            )?;
+
+            if *oid != calculated_id {
+                return Err(ParseError::HashMismatch {
+                    declared: oid.to_hex(),
+                    calculated: calculated_id.to_hex(),
+                });
+            }
+
+            *oid
+        }
         CommitRef::Prefix(prefix) => {
             // For truncated hashes, we calculate the full hash from content
             // The prefix in the YAML is just a label for human readability
@@ -1995,6 +2056,7 @@ fn parse_parents(
 fn parse_author(
     mapping: &serde_yaml::Mapping,
     first_parent: Option<&Commit>,
+    explicit_committer: Option<&Identity>,
 ) -> Result<Identity, ParseError> {
     let author_key = serde_yaml::Value::String("author".to_string());
 
@@ -2006,12 +2068,15 @@ fn parse_author(
                 actual: format!("{:?}", author_value),
             })?;
         Identity::parse(author_str)
+    } else if let Some(committer) = explicit_committer {
+        // If committer is explicitly specified but author is not, default to committer
+        Ok(committer.clone())
     } else {
-        // Default: first parent's author, or "User <user@localhost>"
+        // Default: first parent's author, or "Author <author@localhost>"
         if let Some(parent) = first_parent {
             Ok(parent.author.clone())
         } else {
-            Identity::parse("User <user@localhost>").map_err(|_| {
+            Identity::parse("Author <author@localhost>").map_err(|_| {
                 ParseError::InvalidIdentity("failed to parse default identity".to_string())
             })
         }
@@ -2050,7 +2115,8 @@ fn parse_author_date(
 
 fn parse_committer(
     mapping: &serde_yaml::Mapping,
-    author: &Identity,
+    first_parent: Option<&Commit>,
+    explicit_author: Option<&Identity>,
 ) -> Result<Identity, ParseError> {
     let key = serde_yaml::Value::String("committer".to_string());
 
@@ -2060,9 +2126,18 @@ fn parse_committer(
             actual: format!("{:?}", value),
         })?;
         Identity::parse(committer_str)
-    } else {
-        // Default: same as author
+    } else if let Some(author) = explicit_author {
+        // If author is explicitly specified but committer is not, default to author
         Ok(author.clone())
+    } else {
+        // Default: first parent's committer, or "Committer <committer@localhost>"
+        if let Some(parent) = first_parent {
+            Ok(parent.committer.clone())
+        } else {
+            Identity::parse("Committer <committer@localhost>").map_err(|_| {
+                ParseError::InvalidIdentity("failed to parse default identity".to_string())
+            })
+        }
     }
 }
 
@@ -3450,7 +3525,7 @@ fn serialize_commit(
     let default_author = if let Some(parent) = first_parent {
         parent.author.clone()
     } else {
-        Identity::parse("User <user@localhost>").unwrap()
+        Identity::parse("Author <author@localhost>").unwrap()
     };
 
     if ctx.options.include_all_fields || commit.author != default_author {
@@ -3481,8 +3556,20 @@ fn serialize_commit(
         );
     }
 
-    // Serialize committer (omit if same as author, unless include_all_fields)
-    if ctx.options.include_all_fields || commit.committer != commit.author {
+    // Serialize committer (omit if matches default, unless include_all_fields)
+    // Default committer is:
+    // - If author is being serialized (author != default_author), committer defaults to author
+    // - Otherwise, committer defaults to parent's committer or "Committer <committer@localhost>"
+    let author_is_explicit = commit.author != default_author;
+    let default_committer = if author_is_explicit {
+        commit.author.clone()
+    } else if let Some(parent) = first_parent {
+        parent.committer.clone()
+    } else {
+        Identity::parse("Committer <committer@localhost>").unwrap()
+    };
+
+    if ctx.options.include_all_fields || commit.committer != default_committer {
         mapping.insert(
             serde_yaml::Value::String("committer".to_string()),
             serde_yaml::Value::String(commit.committer.format()),
@@ -4332,6 +4419,13 @@ fn git2_to_temporary_repository(snapshot: &Repository) -> Result<TemporaryReposi
     let dir = tempfile::TempDir::new()?;
     let repo = git2::Repository::init(dir.path())?;
 
+    // Set git config so code running in tests can be distinguished
+    {
+        let mut config = repo.config()?;
+        config.set_str("user.name", "Temp")?;
+        config.set_str("user.email", "temp@localhost")?;
+    }
+
     // Topologically sort commits
     let sorted_ids = topological_sort_commits_for_writing(&snapshot.commits);
 
@@ -4457,7 +4551,141 @@ fn git2_to_temporary_repository(snapshot: &Repository) -> Result<TemporaryReposi
     Ok(TemporaryRepository { repo, dir })
 }
 
-pub fn main() {}
+fn git2_to_repository_at_path(snapshot: &Repository, path: &Path) -> Result<git2::Repository, GitError> {
+    std::fs::create_dir_all(path)?;
+    let repo = git2::Repository::init(path)?;
+
+    // Set git config so code running in tests can be distinguished
+    {
+        let mut config = repo.config()?;
+        config.set_str("user.name", "Temp")?;
+        config.set_str("user.email", "temp@localhost")?;
+    }
+
+    // Topologically sort commits
+    let sorted_ids = topological_sort_commits_for_writing(&snapshot.commits);
+
+    // Track ObjectId -> git2::Oid mappings
+    let mut oid_map: HashMap<ObjectId, git2::Oid> = HashMap::new();
+
+    // Create commits in order
+    for commit_id in sorted_ids {
+        let commit = snapshot.get_commit(&commit_id).unwrap();
+
+        // Materialize tree
+        let tree_oid = materialize_tree(&commit.tree, &repo)?;
+        let tree = repo.find_tree(tree_oid)?;
+
+        // Convert parent OIDs
+        let parent_oids: Vec<_> = commit
+            .parents
+            .iter()
+            .map(|id| oid_map.get(id).expect("parent should already be written"))
+            .collect();
+        let parent_commits: Result<Vec<_>, _> = parent_oids
+            .iter()
+            .map(|&&oid| repo.find_commit(oid))
+            .collect();
+        let parent_commits = parent_commits?;
+        let parent_refs: Vec<_> = parent_commits.iter().collect();
+
+        // Create signatures
+        let author = git2::Signature::new(
+            &commit.author.name,
+            &commit.author.email,
+            &git2::Time::new(
+                commit.author_date.seconds,
+                commit.author_date.offset_minutes as i32,
+            ),
+        )?;
+        let committer = git2::Signature::new(
+            &commit.committer.name,
+            &commit.committer.email,
+            &git2::Time::new(
+                commit.committer_date.seconds,
+                commit.committer_date.offset_minutes as i32,
+            ),
+        )?;
+
+        // Create commit (not updating any ref yet)
+        let new_oid = repo.commit(
+            None, // don't update any ref
+            &author,
+            &committer,
+            &commit.message,
+            &tree,
+            &parent_refs,
+        )?;
+
+        oid_map.insert(commit_id, new_oid);
+    }
+
+    // Write refs
+    for (ref_name, target_id) in &snapshot.refs {
+        let git_oid = oid_map
+            .get(target_id)
+            .ok_or_else(|| git2::Error::from_str("ref target commit not found"))?;
+        repo.reference(ref_name.as_str(), *git_oid, true, "snapshot")?;
+    }
+
+    // Set HEAD
+    match &snapshot.head {
+        HeadState::Symbolic(ref_name) => {
+            repo.set_head(ref_name.as_str())?;
+        }
+        HeadState::Detached(oid) => {
+            let git_oid = oid_map
+                .get(oid)
+                .ok_or_else(|| git2::Error::from_str("HEAD target commit not found"))?;
+            repo.set_head_detached(*git_oid)?;
+        }
+    }
+
+    // Write staging area
+    if let Some(staged_tree) = &snapshot.staged {
+        let mut index = repo.index()?;
+        index.clear()?;
+
+        for (path, content) in staged_tree.entries.iter() {
+            let blob_oid = repo.blob(content.as_bytes())?;
+            let entry = git2::IndexEntry {
+                ctime: git2::IndexTime::new(0, 0),
+                mtime: git2::IndexTime::new(0, 0),
+                dev: 0,
+                ino: 0,
+                mode: 0o100644,
+                uid: 0,
+                gid: 0,
+                file_size: content.len() as u32,
+                id: blob_oid,
+                flags: path.len() as u16,
+                flags_extended: 0,
+                path: path.as_bytes().to_vec(),
+            };
+            index.add(&entry)?;
+        }
+
+        index.write()?;
+    }
+
+    // Write working tree
+    if let Some(working_tree) = &snapshot.working
+        && let Some(workdir) = repo.workdir()
+    {
+        for (path, content) in working_tree.entries.iter() {
+            let file_path = workdir.join(path);
+
+            // Ensure parent directory exists
+            if let Some(parent) = file_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+
+            std::fs::write(&file_path, content)?;
+        }
+    }
+
+    Ok(repo)
+}
 
 #[cfg(test)]
 mod tests {
@@ -4477,9 +4705,9 @@ mod tests {
                 tree.insert("README.md".to_string(), "# Hello".to_string());
                 tree
             },
-            author: Identity::parse("User <user@localhost>").unwrap(),
+            author: Identity::parse("Author <author@localhost>").unwrap(),
             author_date: Timestamp::from_iso8601("2021-01-14T08:25:36Z").unwrap(),
-            committer: Identity::parse("User <user@localhost>").unwrap(),
+            committer: Identity::parse("Committer <committer@localhost>").unwrap(),
             committer_date: Timestamp::from_iso8601("2021-01-14T08:25:39Z").unwrap(),
             message: "commit 1".to_string(),
         };
@@ -4517,7 +4745,8 @@ mod tests {
         // Create a repository with two commits, second one deletes a file
         let mut repo = Repository::new();
 
-        let author = Identity::parse("User <user@localhost>").unwrap();
+        let author = Identity::parse("Author <author@localhost>").unwrap();
+        let committer = Identity::parse("Committer <committer@localhost>").unwrap();
         let author_date = Timestamp::from_iso8601("2021-01-14T08:25:36Z").unwrap();
 
         // First commit
@@ -4534,7 +4763,7 @@ mod tests {
             &[],
             &author,
             author_date,
-            &author,
+            &committer,
             Timestamp {
                 seconds: author_date.seconds + 3,
                 offset_minutes: author_date.offset_minutes,
@@ -4549,7 +4778,7 @@ mod tests {
             tree: tree1,
             author: author.clone(),
             author_date,
-            committer: author.clone(),
+            committer: committer.clone(),
             committer_date: Timestamp {
                 seconds: author_date.seconds + 3,
                 offset_minutes: author_date.offset_minutes,
@@ -4574,7 +4803,7 @@ mod tests {
             &[commit_id1],
             &author,
             author_date2,
-            &author,
+            &committer,
             Timestamp {
                 seconds: author_date2.seconds + 3,
                 offset_minutes: author_date2.offset_minutes,
@@ -4589,7 +4818,7 @@ mod tests {
             tree: tree2,
             author: author.clone(),
             author_date: author_date2,
-            committer: author.clone(),
+            committer: committer.clone(),
             committer_date: Timestamp {
                 seconds: author_date2.seconds + 3,
                 offset_minutes: author_date2.offset_minutes,
@@ -4626,9 +4855,9 @@ mod tests {
         let mut repo = Repository::new();
 
         // Create a root commit with calculated ID
-        let author = Identity::parse("User <user@localhost>").unwrap();
+        let author = Identity::parse("Author <author@localhost>").unwrap();
         let author_date = Timestamp::from_iso8601("2021-01-14T08:25:36Z").unwrap();
-        let committer = author.clone();
+        let committer = Identity::parse("Committer <committer@localhost>").unwrap();
         let committer_date = Timestamp::from_iso8601("2021-01-14T08:25:39Z").unwrap();
 
         let tree = {

@@ -1,10 +1,10 @@
-HEAD: f8bd5583d511fd893c4d79ec2be497bf2bf6ab2d
+HEAD: a1e64b2671595dc2a71d6819e8134dbf0d25bfbe
 refs: {}
-f8bd5583d511fd893c4d79ec2be497bf2bf6ab2d:
-  author: User <user@localhost>
+a1e64b2671595dc2a71d6819e8134dbf0d25bfbe:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 1
   parents: []
   tree:

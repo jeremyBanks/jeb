@@ -1,96 +1,96 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: bbf1918341748c8dcc21d4b2436f8bbde2b454fd
-6296bc5afa6e43bab2eb915858e8aedcd84691f7:
-  author: User <user@localhost>
+    main: 0716b1499eb60bd3df681f075ccad235fd4fb114
+c1809e063eebb5a582a4e3ea2e27e373b58f0f39:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 1
   parents: []
   tree:
     original-location:
       file.txt: content that travels
-85944b904881453e7e052cb39ec09c5b5a68cdba:
-  author: User <user@localhost>
+a4542b276c3075a7084783a3561afd19f04efd37:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 4
   parents: []
   tree: {}
-5bf7bcd0c75e8880ecaae2a3f0f0b448503d3bd0:
-  author: User <user@localhost>
+2fff163ad8a3bb1c18876154da51cbb0ba135fa6:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 2
   parents:
-  - 6296bc5afa6e43bab2eb915858e8aedcd84691f7
+  - c1809e063eebb5a582a4e3ea2e27e373b58f0f39
   tree:
     second-location:
       file.txt: content that travels
-fc2f5c9440891d4dc22c2c24427f60f2035e1805:
-  author: User <user@localhost>
+798e45793672089ddd0671ed8c9d90eebd887d9c:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: |
     Zoom in from original-location
 
     git-zoom-in: original-location
   parents:
-  - 85944b904881453e7e052cb39ec09c5b5a68cdba
-  - 6296bc5afa6e43bab2eb915858e8aedcd84691f7
+  - a4542b276c3075a7084783a3561afd19f04efd37
+  - c1809e063eebb5a582a4e3ea2e27e373b58f0f39
   tree:
     file.txt: content that travels
-af2adb05fcc58349f07d551d51fc454333f2a027:
-  author: User <user@localhost>
+c7dd9ed3b17f14f97596c7cd869cc2935f21081a:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 3
   parents:
-  - 5bf7bcd0c75e8880ecaae2a3f0f0b448503d3bd0
+  - 2fff163ad8a3bb1c18876154da51cbb0ba135fa6
   tree:
     third-location:
       file.txt: content that travels
-f6f2180fe70cc080375cdf6dafbde19d257f1950:
-  author: User <user@localhost>
+2378cfe23750dd7348bf3127db66ba6806dbd089:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 6
   parents:
-  - fc2f5c9440891d4dc22c2c24427f60f2035e1805
+  - 798e45793672089ddd0671ed8c9d90eebd887d9c
   tree:
     file.txt: modified content
     new.txt: new file
-a79f405b00f10378d139712504d1afe098624b77:
-  author: User <user@localhost>
+31fde46c11f09d7323914096eb45f687c2915d3b:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:25:12-06:24
   commit-date: 2024-12-06T06:25:15-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: |
     Zoom out to third-location
 
     git-zoom-out: third-location
   parents:
-  - af2adb05fcc58349f07d551d51fc454333f2a027
-  - f6f2180fe70cc080375cdf6dafbde19d257f1950
+  - c7dd9ed3b17f14f97596c7cd869cc2935f21081a
+  - 2378cfe23750dd7348bf3127db66ba6806dbd089
   tree:
     third-location:
       file.txt: modified content
       new.txt: new file
-bbf1918341748c8dcc21d4b2436f8bbde2b454fd:
-  author: User <user@localhost>
+0716b1499eb60bd3df681f075ccad235fd4fb114:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:29:28-06:24
   commit-date: 2024-12-06T06:29:31-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 8
   parents:
-  - a79f405b00f10378d139712504d1afe098624b77
+  - 31fde46c11f09d7323914096eb45f687c2915d3b
   tree:
     other.txt: unrelated
     third-location:

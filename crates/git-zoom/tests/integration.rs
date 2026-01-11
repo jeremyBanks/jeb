@@ -5,11 +5,13 @@
 
 mod common;
 
-use common::{
-    fixtures::test_fixture,
-    helpers::*,
+use {
+    common::{
+        fixtures::test_fixture,
+        helpers::*,
+    },
+    inline::snapshot,
 };
-use inline::snapshot;
 
 // ============================================================================
 // Category A: Basic Operations
@@ -49,9 +51,9 @@ fn test_basic_zoom_in() {
         assert_eq!(path, Some("src/lib".to_string()));
 
         // Inline snapshot: verify tree structure after zoom-in
-        let mut tree_paths: Vec<_> = head_commit.tree.paths().collect();
+        let mut tree_paths: Vec<String> = head_commit.tree.paths().map(String::from).collect();
         tree_paths.sort();
-        snapshot(r#"["bar.txt", "foo.txt"]"#.to_string()).value = format!("{:?}", tree_paths);
+        snapshot(vec!["bar.txt".to_string(), "foo.txt".to_string()]).value = tree_paths;
 
         // Inline snapshot: verify commit message first line
         let msg_first_line = head_commit.message.lines().next().unwrap_or("");

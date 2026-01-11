@@ -1,9 +1,9 @@
 HEAD: refs/heads/full-tree
 refs:
   heads:
-    full-tree: 2c0f57ec58d0035612f2f6d22e73453323f2c96a
-    subtree: e40865c9056c98544c687bf9a8dd6c3152705665
-ff5cc7:
+    full-tree: 902f08a86893284d75ad988643c27586e0172dd2
+    subtree: 404a93b3e01cc9541c46e1b020fa823fedac4ce2
+df21ce:
   message: commit 1
   tree:
     README.md: '# Main Project'
@@ -11,49 +11,48 @@ ff5cc7:
       lib:
         main.rs: fn main() {}
         utils.rs: fn util() {}
-e369af:
-  committer: git-zoom-in <git-zoom-in@localhost>
+8b79aa:
+  author: git-zoom-in <git-zoom-in@localhost>
   message: git-zoom-in seed commit
   parents: []
   tree: {}
-7f1d3b:
+a581df:
   message: commit 2
   parents:
-  - ff5cc7
+  - df21ce
   tree:
     README.md: '# Main Project v2'
-80bca0:
-  committer: git-zoom-in <git-zoom-in@localhost>
+acfd5f:
   message: |-
     Merge from 'src/lib'
 
     git-zoom-in: src/lib
   parents:
-  - e369af
-  - ff5cc7
+  - 8b79aa
+  - df21ce
   tree:
     main.rs:
-      //commit: ff5cc7
+      //commit: df21ce
       //path: src/lib/main.rs
     utils.rs:
-      //commit: ff5cc7
+      //commit: df21ce
       //path: src/lib/utils.rs
-e40865c9056c98544c687bf9a8dd6c3152705665:
+404a93b3e01cc9541c46e1b020fa823fedac4ce2:
   message: commit 5
   tree:
     tests.rs: fn test() {}
-2c0f57ec58d0035612f2f6d22e73453323f2c96a:
-  committer: git-zoom-out <git-zoom-out@localhost>
+902f08a86893284d75ad988643c27586e0172dd2:
+  author: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'src/lib'
 
     git-zoom-out: src/lib
   parents:
-  - 7f1d3b
-  - e40865c9056c98544c687bf9a8dd6c3152705665
+  - a581df
+  - 404a93b3e01cc9541c46e1b020fa823fedac4ce2
   tree:
     src:
       lib:
         tests.rs:
-          //commit: e40865c9056c98544c687bf9a8dd6c3152705665
+          //commit: 404a93b3e01cc9541c46e1b020fa823fedac4ce2
           //path: tests.rs

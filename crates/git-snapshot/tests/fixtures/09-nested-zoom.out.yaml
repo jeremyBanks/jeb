@@ -1,10 +1,10 @@
 HEAD: refs/heads/full-tree
 refs:
   heads:
-    core-subtree: 7b95a711f69fe09aabd7bcca922b8ec9dee89751
-    full-tree: 8d0e063197c6410966725f07a7a7d214561177db
-    lib-subtree: 93adfa51c8170e3392a012129980906cc1c359a2
-1eb3c6:
+    core-subtree: 169715bea611e39f1643a73383610ecc06ccb2a9
+    full-tree: 1644bf08e0d733337b0dd09a3c4dc2825104bbd7
+    lib-subtree: d1489d9a0102c250abaa112a76e6d696e2ef842d
+e40c6c:
   message: commit 1
   tree:
     README.md: '# Project'
@@ -15,104 +15,101 @@ refs:
           engine.rs: fn engine() {}
           types.rs: struct Type;
       main.rs: fn main() {}
-0023ce:
-  committer: git-zoom-in <git-zoom-in@localhost>
+a240e0:
+  author: git-zoom-in <git-zoom-in@localhost>
   message: zoom-in seed for core
   parents: []
   tree: {}
-5e85d0:
-  committer: git-zoom-in <git-zoom-in@localhost>
+7c3da2:
+  author: git-zoom-in <git-zoom-in@localhost>
   message: zoom-in seed for src/lib
   parents: []
   tree: {}
-a36f59:
-  committer: git-zoom-in <git-zoom-in@localhost>
+c15317:
   message: |-
     Merge from 'src/lib'
 
     git-zoom-in: src/lib
   parents:
-  - 5e85d0
-  - 1eb3c6
+  - 7c3da2
+  - e40c6c
   tree:
     api.rs:
-      //commit: 1eb3c6
+      //commit: e40c6c
       //path: src/lib/api.rs
     core:
       engine.rs:
-        //commit: 1eb3c6
+        //commit: e40c6c
         //path: src/lib/core/engine.rs
       types.rs:
-        //commit: 1eb3c6
+        //commit: e40c6c
         //path: src/lib/core/types.rs
-06510e:
-  committer: git-zoom-in <git-zoom-in@localhost>
+547aee:
   message: |-
     Merge from 'core'
 
     git-zoom-in: core
   parents:
-  - 0023ce
-  - a36f59
+  - a240e0
+  - c15317
   tree:
     engine.rs:
-      //commit: a36f59
+      //commit: c15317
       //path: core/engine.rs
     types.rs:
-      //commit: a36f59
+      //commit: c15317
       //path: core/types.rs
-f6cb56:
-  committer: git-zoom-out <git-zoom-out@localhost>
+bf08f2:
+  author: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'core'
 
     git-zoom-out: core
   parents:
-  - a36f59
-  - 06510e
-537c6b:
+  - c15317
+  - 547aee
+'992575':
   message: commit 7
   tree:
     tests.rs: fn test_lib() {}
-93adfa51c8170e3392a012129980906cc1c359a2:
+d1489d9a0102c250abaa112a76e6d696e2ef842d:
   message: commit 8
   tree:
     api.rs: fn api() { /* updated */ }
-9922c4:
-  committer: git-zoom-in <git-zoom-in@localhost>
+830b1b:
   message: |-
     Merge from 'core'
 
     git-zoom-in: core
   parents:
-  - 06510e
-  - 93adfa51c8170e3392a012129980906cc1c359a2
+  - 547aee
+  - d1489d9a0102c250abaa112a76e6d696e2ef842d
   tree:
     engine.rs: null
     types.rs: null
-7b95a711f69fe09aabd7bcca922b8ec9dee89751:
+169715bea611e39f1643a73383610ecc06ccb2a9:
   message: commit 10
   tree:
     engine.rs: fn engine() { /* v3 */ }
-8d0e063197c6410966725f07a7a7d214561177db:
-  committer: git-zoom-out <git-zoom-out@localhost>
+1644bf08e0d733337b0dd09a3c4dc2825104bbd7:
+  author: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'src/lib/core'
 
     git-zoom-out: src/lib/core
   parents:
-  - 1eb3c6
-  - 7b95a711f69fe09aabd7bcca922b8ec9dee89751
+  - e40c6c
+  - 169715bea611e39f1643a73383610ecc06ccb2a9
   tree:
     src:
       lib:
         api.rs:
-          //commit: 93adfa51c8170e3392a012129980906cc1c359a2
+          //commit: d1489d9a0102c250abaa112a76e6d696e2ef842d
           //path: api.rs
         core:
           engine.rs:
-            //commit: 7b95a711f69fe09aabd7bcca922b8ec9dee89751
+            //commit: 169715bea611e39f1643a73383610ecc06ccb2a9
             //path: engine.rs
         tests.rs:
-          //commit: 93adfa51c8170e3392a012129980906cc1c359a2
+          //commit: d1489d9a0102c250abaa112a76e6d696e2ef842d
           //path: tests.rs

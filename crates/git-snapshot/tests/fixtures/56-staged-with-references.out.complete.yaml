@@ -1,14 +1,14 @@
-HEAD: aad943162e4fad0716e1ac9b4611fc2e9ab9b588
+HEAD: 6a28e9933d3671a3f396df5c80c30389200caf8c
 refs: {}
 staged:
   NEW.md: New file in staging
   src:
     lib.rs: pub fn main() { println!("staged"); }
-aad943162e4fad0716e1ac9b4611fc2e9ab9b588:
-  author: User <user@localhost>
+6a28e9933d3671a3f396df5c80c30389200caf8c:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: Initial commit
   parents: []
   tree:

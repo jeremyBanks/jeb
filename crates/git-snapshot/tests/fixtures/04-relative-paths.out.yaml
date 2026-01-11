@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: cff27db92d75ffaec2929a1a76afe2bc0dff8b89
-b05bfd:
+    main: 8cdded34091c50f0ec0ed7a1f0013e43feb8bb65
+'720210':
   message: commit 1
   tree:
     bar:
@@ -10,13 +10,13 @@ b05bfd:
     foo:
       a.txt: content a
       b.txt: content b
-cff27db92d75ffaec2929a1a76afe2bc0dff8b89:
+8cdded34091c50f0ec0ed7a1f0013e43feb8bb65:
   message: commit 2
   tree:
     c-moved.txt:
-      //commit: b05bfd
+      //commit: '720210'
       //path: bar/c.txt
     foo:
       moved-b.txt:
-        //commit: b05bfd
+        //commit: '720210'
         //path: foo/b.txt

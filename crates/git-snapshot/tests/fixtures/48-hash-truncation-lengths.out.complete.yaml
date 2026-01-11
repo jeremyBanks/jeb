@@ -1,75 +1,83 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: '0000000000000000000000000000000000000008'
-'0000000000000000000000000000000000000001':
-  author: User <user@localhost>
+    main: af5273314d9936fa2df80d0c059fc2f4cbe5adb6
+cb673672da3de88568b45e0f60ce45e0363dcb81:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
+  message: commit 1
   parents: []
   tree:
     file.txt: commit 1
-'0000000000000000000000000000000000000002':
-  author: User <user@localhost>
+9a001087c52d42c5e0742a2e70aae453300b3f85:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
+  message: commit 2
   parents:
-  - '0000000000000000000000000000000000000001'
+  - cb673672da3de88568b45e0f60ce45e0363dcb81
   tree:
     file.txt: commit 2
-'0000000000000000000000000000000000000003':
-  author: User <user@localhost>
+98279ca9476f1221e6c3202509960cdb5e0ed8a4:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
+  message: commit 3
   parents:
-  - '0000000000000000000000000000000000000002'
+  - 9a001087c52d42c5e0742a2e70aae453300b3f85
   tree:
     file.txt: commit 3
-'0000000000000000000000000000000000000004':
-  author: User <user@localhost>
+1eb115b7ad57dec802b6ecfd8ea7b6231f7dcfb7:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:25:12-06:24
   commit-date: 2024-12-06T06:25:15-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
+  message: commit 4
   parents:
-  - '0000000000000000000000000000000000000003'
+  - 98279ca9476f1221e6c3202509960cdb5e0ed8a4
   tree:
     file.txt: commit 4
-'0000000000000000000000000000000000000005':
-  author: User <user@localhost>
+847cd09da023c8044f1049465ecd27b2109a4bd3:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:29:28-06:24
   commit-date: 2024-12-06T06:29:31-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
+  message: commit 5
   parents:
-  - '0000000000000000000000000000000000000004'
+  - 1eb115b7ad57dec802b6ecfd8ea7b6231f7dcfb7
   tree:
     file.txt: commit 5
-'0000000000000000000000000000000000000006':
-  author: User <user@localhost>
+9c7b1f752c2434b9105ef0228fe5a53ff88d3696:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:33:44-06:24
   commit-date: 2024-12-06T06:33:47-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
+  message: commit 6
   parents:
-  - '0000000000000000000000000000000000000005'
+  - 847cd09da023c8044f1049465ecd27b2109a4bd3
   tree:
     file.txt: commit 6
-'0000000000000000000000000000000000000007':
-  author: User <user@localhost>
+56860015150030f6707a9adcb56cb9fa625db022:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:38:00-06:24
   commit-date: 2024-12-06T06:38:03-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
+  message: commit 7
   parents:
-  - '0000000000000000000000000000000000000006'
+  - 9c7b1f752c2434b9105ef0228fe5a53ff88d3696
   tree:
     file.txt: commit 7
-'0000000000000000000000000000000000000008':
-  author: User <user@localhost>
+af5273314d9936fa2df80d0c059fc2f4cbe5adb6:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:42:16-06:24
   commit-date: 2024-12-06T06:42:19-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
+  message: commit 8
   parents:
-  - '0000000000000000000000000000000000000007'
+  - 56860015150030f6707a9adcb56cb9fa625db022
   tree:
     file.txt: commit 8 (head)

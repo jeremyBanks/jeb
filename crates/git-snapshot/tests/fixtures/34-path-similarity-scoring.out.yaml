@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: b1e87ce43ce99a5a69a62ee35e1e1464ef8eb48c
-992f66:
+    main: 091a974c40be1c91d3cd20aac84307cb8cccb4fb
+10f9d7:
   message: commit 1
   tree:
     completely:
@@ -12,11 +12,11 @@ refs:
       bar:
         baz.txt: duplicate content
         qux.txt: duplicate content
-b1e87ce43ce99a5a69a62ee35e1e1464ef8eb48c:
+091a974c40be1c91d3cd20aac84307cb8cccb4fb:
   message: commit 2
   tree:
     foo:
       bar:
         renamed.txt:
-          //commit: 992f66
+          //commit: 10f9d7
           //path: completely/different/path.txt
