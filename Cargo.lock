@@ -612,6 +612,7 @@ version = "0.0.0-dev-2025-12-26.7705"
 dependencies = [
  "clap",
  "git2",
+ "ignore",
  "indexmap 2.12.1",
  "serde",
  "serde_bytes",
