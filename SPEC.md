@@ -2,6 +2,8 @@
 
 _trace is a language-agnostic requirements tracking tool. It finds annotations in source files, extracts their context, and tracks whether requirements are satisfied by corresponding implementations and tests.
 
+This is a simplified variant of [tracey](https://github.com/bearcove/tracey), exploring some ideas to see if anything is worth suggesting upstream. Key simplifications include looser annotation detection (anywhere in text, not position-dependent), unified file handling (no separate spec vs. source distinction), and a minimal CLI focused on AI-agent usability.
+
 This specification uses its own annotation syntax to define requirements.
 
 ---
