@@ -15,6 +15,39 @@ use {
     },
 };
 
+/// Resolve a source file path from `#[track_caller]` to an absolute path.
+///
+/// `#[track_caller]` returns paths relative to the crate root (e.g.,
+/// `crates/foo/src/lib.rs` or `src/main.rs`). These need to be resolved
+/// against `CARGO_MANIFEST_DIR` to get an absolute path that can be read
+/// regardless of the current working directory.
+pub fn resolve_source_path(file: &str) -> PathBuf {
+    let path = Path::new(file);
+
+    if path.is_absolute() {
+        return path.to_path_buf();
+    }
+
+    if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
+        let resolved = PathBuf::from(&manifest_dir).join(path);
+        if resolved.exists() {
+            return resolved;
+        }
+
+        // For workspace crates, the path might be relative to the workspace root
+        let mut search_dir = PathBuf::from(&manifest_dir);
+        while let Some(parent) = search_dir.parent() {
+            let candidate = parent.join(path);
+            if candidate.exists() {
+                return candidate;
+            }
+            search_dir = parent.to_path_buf();
+        }
+    }
+
+    path.to_path_buf()
+}
+
 /// Check if we're running under cargo by looking for cargo-specific env vars.
 ///
 /// Returns `true` if any of CARGO, CARGO_MANIFEST_DIR, or CARGO_PKG_NAME
@@ -296,8 +329,10 @@ impl FileState {
                         return;
                     }
                     syn::Expr::MethodCall(method) => {
-                        // Index this method call
-                        let start = method.receiver.span().start();
+                        // Index this method call at the METHOD NAME position, not receiver
+                        // This avoids conflicts with chained calls like a().b() where both
+                        // the Call and MethodCall would otherwise have the same position
+                        let start = method.method.span().start();
                         let pos = (start.line as u32, start.column as u32);
                         self.map.insert(pos, self.current_index);
                         self.current_index += 1;
@@ -444,7 +479,7 @@ impl FileState {
     /// Find the byte span of the replaceable part of a call/macro (static
     /// method)
     /// - Function calls: span of the last argument
-    /// - Method calls: span of the receiver
+    /// - Method calls: span of the last argument (if any), otherwise the receiver
     /// - Macros: span of contents inside delimiters
     fn find_value_span_static(
         ast: &syn::File,
@@ -488,10 +523,16 @@ impl FileState {
                         return;
                     }
                     syn::Expr::MethodCall(method) => {
-                        // Check if this is our target - replace RECEIVER
+                        // Check if this is our target - prefer LAST ARG, fallback to RECEIVER
                         if self.current_index == self.target_index {
-                            let receiver = &method.receiver;
-                            self.span = Some((receiver.span().start(), receiver.span().end()));
+                            if let Some(arg) = method.args.last() {
+                                // Has arguments: replace the last one (like function calls)
+                                self.span = Some((arg.span().start(), arg.span().end()));
+                            } else {
+                                // No arguments: fall back to replacing the receiver
+                                let receiver = &method.receiver;
+                                self.span = Some((receiver.span().start(), receiver.span().end()));
+                            }
                         }
                         self.current_index += 1;
 
@@ -916,8 +957,13 @@ fn get_or_load_file_state(path: &Path) -> Result<FileState, io::Error> {
 }
 
 /// Get the stable index for a call/macro at the given position
+///
+/// Note: `column` is expected to be 1-indexed (from `Location::caller().column()`),
+/// but proc_macro2 uses 0-indexed columns, so we convert internally.
 pub fn get_macro_index(path: &Path, line: u32, column: u32) -> Result<usize, io::Error> {
     let state = get_or_load_file_state(path)?;
+    // Location::caller().column() is 1-indexed, but proc_macro2 uses 0-indexed columns
+    let column = column.saturating_sub(1);
     state.get_index(line, column)
 }
 

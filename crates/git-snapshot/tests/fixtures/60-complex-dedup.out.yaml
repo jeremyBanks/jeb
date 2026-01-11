@@ -1,4 +1,4 @@
-HEAD: e21906528d4c7fa7cf1588aee6933961fd27b587
+HEAD: 77b3b272df129847402b36f603eccb0b952f0f0a
 refs: {}
 staged:
   CHANGELOG.md: '## v0.1.0'
@@ -7,7 +7,7 @@ staged:
 working:
   README.md: '# Project v0.2 (WIP)'
   TODO.txt: Add tests
-e21906528d4c7fa7cf1588aee6933961fd27b587:
+77b3b272df129847402b36f603eccb0b952f0f0a:
   message: Initial commit
   tree:
     LICENSE: MIT

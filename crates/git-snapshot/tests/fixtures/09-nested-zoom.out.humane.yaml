@@ -15,17 +15,16 @@ refs:
           types.rs: struct Type;
       main.rs: fn main() {}
 2:
-  committer: git-zoom-in <git-zoom-in@localhost>
+  author: git-zoom-in <git-zoom-in@localhost>
   message: zoom-in seed for core
   parents: []
   tree: {}
 3:
-  committer: git-zoom-in <git-zoom-in@localhost>
+  author: git-zoom-in <git-zoom-in@localhost>
   message: zoom-in seed for src/lib
   parents: []
   tree: {}
 4:
-  committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'src/lib'
 
@@ -45,7 +44,6 @@ refs:
         //commit: 1
         //path: src/lib/core/types.rs
 5:
-  committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'core'
 
@@ -61,7 +59,7 @@ refs:
       //commit: 4
       //path: core/types.rs
 6:
-  committer: git-zoom-out <git-zoom-out@localhost>
+  author: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'core'
 
@@ -76,7 +74,6 @@ refs:
   tree:
     api.rs: fn api() { /* updated */ }
 9:
-  committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'core'
 
@@ -91,7 +88,7 @@ refs:
   tree:
     engine.rs: fn engine() { /* v3 */ }
 11:
-  committer: git-zoom-out <git-zoom-out@localhost>
+  author: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'src/lib/core'
 

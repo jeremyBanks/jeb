@@ -4,37 +4,37 @@ refs:
     feature:
       subsystem:
         component:
-          branch: 9d00ee2e5cacc8222610a6375624170ffd6d7c4e
-    main: 2d91ba8f589d3d13b12efdbae2cec75fec3745aa
+          branch: e20d2d779e1387dbcd49664e4222bea4ad9506f2
+    main: 38040cbed21021d4d8e4b3f19bf752fd0d93ed4e
     release:
       v1:
-        hotfix: 4d2296fb81e2db4ee1a1bdd4b09fb4b131501912
-2d91ba8f589d3d13b12efdbae2cec75fec3745aa:
-  author: User <user@localhost>
+        hotfix: 4d862e95aca8e0ac22e5a0c70eda2233a0821538
+38040cbed21021d4d8e4b3f19bf752fd0d93ed4e:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 1
   parents: []
   tree:
     main.txt: main branch
-9d00ee2e5cacc8222610a6375624170ffd6d7c4e:
-  author: User <user@localhost>
+e20d2d779e1387dbcd49664e4222bea4ad9506f2:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 2
   parents:
-  - 2d91ba8f589d3d13b12efdbae2cec75fec3745aa
+  - 38040cbed21021d4d8e4b3f19bf752fd0d93ed4e
   tree:
     feature.txt: deep feature branch
-4d2296fb81e2db4ee1a1bdd4b09fb4b131501912:
-  author: User <user@localhost>
+4d862e95aca8e0ac22e5a0c70eda2233a0821538:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 3
   parents:
-  - 9d00ee2e5cacc8222610a6375624170ffd6d7c4e
+  - e20d2d779e1387dbcd49664e4222bea4ad9506f2
   tree:
     release.txt: release hotfix

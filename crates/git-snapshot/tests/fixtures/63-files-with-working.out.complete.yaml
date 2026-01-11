@@ -1,15 +1,15 @@
-HEAD: 67af567406a85d88e5a810e7fdd7935123d6e547
+HEAD: 054b9e1e7f0f75bb0315c81d24d993669ecc6aa0
 refs: {}
 working:
   README.md: v1 (edited)
   new-file.txt: added in working dir
   src:
     lib.rs: // v1 (edited)
-67af567406a85d88e5a810e7fdd7935123d6e547:
-  author: User <user@localhost>
+054b9e1e7f0f75bb0315c81d24d993669ecc6aa0:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 1
   parents: []
   tree:

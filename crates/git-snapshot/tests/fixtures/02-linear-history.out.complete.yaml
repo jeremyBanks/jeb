@@ -1,24 +1,24 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 6d2df2f188c322654ca84a63d56a9a9a1127ca7c
-d50c379966bbddacd758b6678410c60b0181ee00:
-  author: User <user@localhost>
+    main: a6649c8000b332298cf9ca21cf9b280ea061fbfc
+3355a0d922fb095eb0b2e6b2dacb327e27acd186:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 1
   parents: []
   tree:
     README.md: '# Project'
-82d5ac32ba8a151f69d856ae1e09ab9c4b070bd0:
-  author: User <user@localhost>
+a40298116dee26af89e8d4cb57cc79d1522dbdc7:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 2
   parents:
-  - d50c379966bbddacd758b6678410c60b0181ee00
+  - 3355a0d922fb095eb0b2e6b2dacb327e27acd186
   tree:
     README.md: |-
       # Project
@@ -26,14 +26,14 @@ d50c379966bbddacd758b6678410c60b0181ee00:
       Added description.
     src:
       lib.rs: pub fn hello() {}
-6d2df2f188c322654ca84a63d56a9a9a1127ca7c:
-  author: User <user@localhost>
+a6649c8000b332298cf9ca21cf9b280ea061fbfc:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 3
   parents:
-  - 82d5ac32ba8a151f69d856ae1e09ab9c4b070bd0
+  - a40298116dee26af89e8d4cb57cc79d1522dbdc7
   tree:
     README.md: |-
       # Project

@@ -42,7 +42,9 @@ fn test_multiple_updates_same_litter() {
                             let span = segment.ident.span();
                             let start = span.start();
                             self.line = Some(start.line as u32);
-                            self.column = Some(start.column as u32);
+                            // proc_macro2 uses 0-indexed columns, but Location::caller()
+                            // uses 1-indexed columns. Add 1 to match the runtime API.
+                            self.column = Some(start.column as u32 + 1);
                         }
                     }
                 }

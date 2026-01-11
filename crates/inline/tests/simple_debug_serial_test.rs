@@ -37,10 +37,12 @@ fn debug_litter_update() {
                             let span = segment.ident.span();
                             let start = span.start();
                             self.line = Some(start.line as u32);
-                            self.column = Some(start.column as u32);
+                            // proc_macro2 uses 0-indexed columns, but Location::caller()
+                            // uses 1-indexed columns. Add 1 to match the runtime API.
+                            self.column = Some(start.column as u32 + 1);
                             println!(
-                                "Found cell() call at line {}, column {}",
-                                start.line, start.column
+                                "Found cell() call at line {}, column {} (1-indexed: {})",
+                                start.line, start.column, start.column + 1
                             );
                         }
                     }

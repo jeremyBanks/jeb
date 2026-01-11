@@ -1,39 +1,39 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: f5f57b30d685259059c2c883fe4253f1dce3e31d
-6ab701e13873d51337371a8478a8aa951c82fc86:
-  author: User <user@localhost>
+    main: 3494bb305b5c54ca2f07cb84bcc5f903f93df5bd
+57db70aa82e9097bbb77f566c855d2c68b2fb40c:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: First commit with random ID
   parents: []
   tree:
     README.md: '# Random IDs Test'
     src:
       init.rs: pub fn init() {}
-bfabe1a961728c7a317fd3ca0d6ce4f7530fb591:
-  author: User <user@localhost>
+5f26208f84d1127833232f86f14221112f1ac052:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: Second commit
   parents:
-  - 6ab701e13873d51337371a8478a8aa951c82fc86
+  - 57db70aa82e9097bbb77f566c855d2c68b2fb40c
   tree:
     README.md: '# Random IDs Test v2'
     src:
       init.rs: pub fn init() { println!("v2"); }
       utils.rs: pub fn util() {}
-f5f57b30d685259059c2c883fe4253f1dce3e31d:
-  author: User <user@localhost>
+3494bb305b5c54ca2f07cb84bcc5f903f93df5bd:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: Third commit with large ID
   parents:
-  - bfabe1a961728c7a317fd3ca0d6ce4f7530fb591
+  - 5f26208f84d1127833232f86f14221112f1ac052
   tree:
     src:
       utils.rs: pub fn util() { /* updated */ }

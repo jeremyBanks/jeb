@@ -11,7 +11,7 @@ refs:
         main.rs: fn main() {}
         utils.rs: fn util() {}
 2:
-  committer: git-zoom-in <git-zoom-in@localhost>
+  author: git-zoom-in <git-zoom-in@localhost>
   message: git-zoom-in seed commit
   parents: []
   tree: {}
@@ -22,7 +22,6 @@ refs:
   tree:
     README.md: '# Main Project v2'
 4:
-  committer: git-zoom-in <git-zoom-in@localhost>
   message: |-
     Merge from 'src/lib'
 
@@ -41,7 +40,7 @@ refs:
   tree:
     tests.rs: fn test() {}
 6:
-  committer: git-zoom-out <git-zoom-out@localhost>
+  author: git-zoom-out <git-zoom-out@localhost>
   message: |-
     Merge to 'src/lib'
 

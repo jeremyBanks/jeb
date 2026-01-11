@@ -35,6 +35,7 @@
 use {
     crate::{
         inline::InlineCellInner,
+        runtime::resolve_source_path,
         value::Value,
     },
     once_cell::sync::Lazy,
@@ -110,7 +111,7 @@ pub fn get_or_create_at<T: Value + 'static>(
     // This parses the file once per file and caches the (line, column) → index
     // mapping If the file doesn't exist (e.g., in tests or compiled binaries),
     // fall back to (line, column)
-    let path = PathBuf::from(file);
+    let path = resolve_source_path(file);
     let index_or_position = match crate::runtime::get_macro_index(&path, line, column) {
         Ok(index) => IndexOrPosition::Index(index),
         Err(_) => {
@@ -123,14 +124,20 @@ pub fn get_or_create_at<T: Value + 'static>(
     // Build the registry key
     // Prefers stable index for files that exist, falls back to (line, column)
     // otherwise
-    let key = (path, index_or_position, TypeId::of::<InlineCellInner<T>>());
+    let key = (
+        path.clone(),
+        index_or_position,
+        TypeId::of::<InlineCellInner<T>>(),
+    );
 
     // Get or create the raw pointer in the registry
     let ptr_as_usize = {
         let mut registry = VALUE_REGISTRY.lock();
+        let resolved_path = path.to_string_lossy().to_string();
         *registry.entry(key).or_insert_with(|| {
             // Create a new boxed value and leak it for 'static lifetime
-            let inner = InlineCellInner::new(initial.clone(), file, line, column);
+            // Pass the resolved absolute path so it works regardless of CWD
+            let inner = InlineCellInner::new(initial.clone(), &resolved_path, line, column);
 
             // TODO: Initial value verification disabled due to false positives
             // When databake serializes values like vec![1,2,3], it produces

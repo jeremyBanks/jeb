@@ -1,79 +1,79 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    alternate: 1981d7affbfcaf06f17e6097d7386e683c8d3216
-    main: 7dd50f00fe7a898c1e9792833ddda72c03095036
-7e7ccd4dbf58cf833c63d33a0ce05e19f34736cb:
-  author: User <user@localhost>
+    alternate: 5220416d39b748b0f7a70e715c728e0f1da1087a
+    main: 6686eb585c39ff194d9d3283af5e120fa71fd9d4
+c103b6c8d5d09ced084ea9f043f9d9aed97b6239:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 1
   parents: []
   tree:
     path:
       to:
         item: This is a file
-93f4d5da45cba40df5427d24321203cdc0b44f31:
-  author: User <user@localhost>
+a75201d239e0f8c8af496aebfee760e16e1e356c:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 3
   parents: []
   tree: {}
-c5d9f3b791aa24400a3161781df5dd2c8a5a6dad:
-  author: User <user@localhost>
+b15e85fb9743921dffa4f004a6674202e034f41c:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: |
     Zoom in to path/to/item
 
     git-zoom-in: path/to/item
   parents:
-  - 93f4d5da45cba40df5427d24321203cdc0b44f31
-  - 7e7ccd4dbf58cf833c63d33a0ce05e19f34736cb
+  - a75201d239e0f8c8af496aebfee760e16e1e356c
+  - c103b6c8d5d09ced084ea9f043f9d9aed97b6239
   tree:
     content.txt: extracted blob as tree
-82822dbc56648218d7226e4f5e6370f10f0e7505:
-  author: User <user@localhost>
+571b94842dd6ff67881b1e829eb8058bfa0e4824:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:20:56-06:24
   commit-date: 2024-12-06T06:20:59-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: |
     Zoom out to path/to/item
 
     git-zoom-out: path/to/item
   parents:
-  - 7e7ccd4dbf58cf833c63d33a0ce05e19f34736cb
-  - c5d9f3b791aa24400a3161781df5dd2c8a5a6dad
+  - c103b6c8d5d09ced084ea9f043f9d9aed97b6239
+  - b15e85fb9743921dffa4f004a6674202e034f41c
   tree:
     path:
       to:
         item:
           content.txt: extracted blob as tree
-1981d7affbfcaf06f17e6097d7386e683c8d3216:
-  author: User <user@localhost>
+5220416d39b748b0f7a70e715c728e0f1da1087a:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 2
   parents:
-  - 7e7ccd4dbf58cf833c63d33a0ce05e19f34736cb
+  - c103b6c8d5d09ced084ea9f043f9d9aed97b6239
   tree:
     path:
       to:
         item:
           replaced.txt: Now it's a directory
-7dd50f00fe7a898c1e9792833ddda72c03095036:
-  author: User <user@localhost>
+6686eb585c39ff194d9d3283af5e120fa71fd9d4:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:25:12-06:24
   commit-date: 2024-12-06T06:25:15-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 6
   parents:
-  - 82822dbc56648218d7226e4f5e6370f10f0e7505
+  - 571b94842dd6ff67881b1e829eb8058bfa0e4824
   tree:
     path:
       to:

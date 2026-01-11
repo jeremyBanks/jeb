@@ -77,7 +77,7 @@
 //! 4. Character-range splicing replaces the appropriate part:
 //!    - **Function calls**: the last argument (trailing position for
 //!      extensibility)
-//!    - **Method calls**: the receiver expression
+//!    - **Method calls**: the last argument (if any), otherwise the receiver
 //!    - **Macros**: entire contents inside delimiters
 //! 5. Original formatting is preserved
 //!
@@ -99,6 +99,7 @@ mod inline;
 pub mod registry;
 mod replace;
 pub mod runtime;
+mod snapshot;
 mod tokens;
 mod value;
 
@@ -123,6 +124,7 @@ pub use {
         val,
     },
     runtime::*,
+    snapshot::InlineSnapExt,
     tokens::Tokens,
     value::*,
 };

@@ -1,23 +1,23 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: f10aff0e68edae8eebf6ba80ba3265cc4b70d3b8
-69f3cd3bd5ee446d218b1f947fa5c9b9785ad869:
-  author: User <user@localhost>
+    main: 1561ad71f5d9ccd8cffca44dcf06b7320cac7e63
+a7d274b4e8d4059c3fd17ba998ff0c9a55e702e2:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 2
   parents: []
   tree:
     reachable.txt: on main branch
-f10aff0e68edae8eebf6ba80ba3265cc4b70d3b8:
-  author: User <user@localhost>
+1561ad71f5d9ccd8cffca44dcf06b7320cac7e63:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 3
   parents:
-  - 69f3cd3bd5ee446d218b1f947fa5c9b9785ad869
+  - a7d274b4e8d4059c3fd17ba998ff0c9a55e702e2
   tree:
     reachable.txt: also on main

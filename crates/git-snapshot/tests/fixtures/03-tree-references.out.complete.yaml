@@ -1,12 +1,12 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: b3cd00b98f93c9b4f2cd154c693f392128d1532b
-3d3092d58e1bc9f5fe74aabcce02e3e6346d04db:
-  author: User <user@localhost>
+    main: a98674941f4e1c965ffe8442cf29edbced803f3e
+c34c370eea3e2abd498436c8896ffe77a3b3bad9:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:12:24-06:24
   commit-date: 2024-12-06T06:12:27-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 1
   parents: []
   tree:
@@ -14,14 +14,14 @@ refs:
     src:
       helper.rs: pub fn help() {}
       lib.rs: pub fn original() {}
-b3cd00b98f93c9b4f2cd154c693f392128d1532b:
-  author: User <user@localhost>
+a98674941f4e1c965ffe8442cf29edbced803f3e:
+  author: Author <author@localhost>
   author-date: 2024-12-06T06:16:40-06:24
   commit-date: 2024-12-06T06:16:43-06:24
-  committer: User <user@localhost>
+  committer: Committer <committer@localhost>
   message: commit 2
   parents:
-  - 3d3092d58e1bc9f5fe74aabcce02e3e6346d04db
+  - c34c370eea3e2abd498436c8896ffe77a3b3bad9
   tree:
     GUIDE.md: '# Original README'
     src:

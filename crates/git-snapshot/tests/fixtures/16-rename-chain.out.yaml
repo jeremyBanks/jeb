@@ -1,46 +1,46 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 30f444d2344ab132fcb640142ee9f87229428fc0
-2699a4:
+    main: 60d088dd0e92f130372207939aafb6b400f59ea3
+e698cf:
   message: commit 1
   tree:
     original-name.txt: content that moves around
     static.txt: never moves
-7cd471:
+fafdc0:
   message: commit 2
   tree:
     renamed-once.txt:
-      //commit: 2699a4
+      //commit: e698cf
       //path: original-name.txt
-d58c78:
+f9c7f1:
   message: commit 3
   tree:
     renamed-twice.txt:
-      //commit: 7cd471
+      //commit: fafdc0
       //path: original-name.txt
-05e5cf:
+3be589:
   message: commit 4
   tree:
     renamed-thrice.txt:
-      //commit: d58c78
+      //commit: f9c7f1
       //path: original-name.txt
-afd815:
+32f67e:
   message: commit 5
   tree:
     final-name.txt:
-      //commit: 05e5cf
+      //commit: 3be589
       //path: original-name.txt
-08855d:
+64cc88:
   message: commit 6
   tree:
     archive:
       final-name.txt:
-        //commit: afd815
+        //commit: 32f67e
         //path: final-name.txt
-30f444d2344ab132fcb640142ee9f87229428fc0:
+60d088dd0e92f130372207939aafb6b400f59ea3:
   message: commit 7
   tree:
     restored.txt:
-      //commit: 08855d
+      //commit: 64cc88
       //path: final-name.txt

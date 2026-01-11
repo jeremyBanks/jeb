@@ -1,4 +1,4 @@
-HEAD: fca6968c19e32af5e8b14632db32c32434065e1a
+HEAD: 31b05ed6da54a8e2424841198b54e1098555db05
 refs: {}
 staged:
   src:
@@ -8,7 +8,7 @@ working:
     lib.rs: pub fn foo() { /* wip */ }
   tests:
     test.rs: '#[test] fn it_works() {}'
-fca6968c19e32af5e8b14632db32c32434065e1a:
+31b05ed6da54a8e2424841198b54e1098555db05:
   message: commit 1
   tree:
     Cargo.toml: '[package]'

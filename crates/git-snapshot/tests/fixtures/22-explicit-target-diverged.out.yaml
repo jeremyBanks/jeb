@@ -1,39 +1,39 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    diverged: e8cf0db0193636bf316f58f26587df9fc13a4831
-    main: 62515e1f46be775f528be661636fd9456f287925
-7910a5:
+    diverged: ea16f84c9717a0837b008a671cd4d2fd9d722c3e
+    main: 83b2400e8d354dbd67e3b1cf73c987701e59fb8e
+'035076':
   message: commit 1
   tree:
     file.txt: v1
     subtree:
       a.txt: a1
       b.txt: b1
-'947592':
+319fd0:
   message: commit 2
   parents: []
   tree: {}
-e8cf0db0193636bf316f58f26587df9fc13a4831:
+ea16f84c9717a0837b008a671cd4d2fd9d722c3e:
   message: |
     Zoom in from historical state
 
     git-zoom-in: subtree
   parents:
-  - '947592'
-  - 7910a5
+  - 319fd0
+  - '035076'
   tree:
     a.txt:
-      //commit: 7910a5
+      //commit: '035076'
       //path: subtree/a.txt
     b.txt:
-      //commit: 7910a5
+      //commit: '035076'
       //path: subtree/b.txt
-62515e1f46be775f528be661636fd9456f287925:
+83b2400e8d354dbd67e3b1cf73c987701e59fb8e:
   message: |
     Zoom out to commit 1
 
     git-zoom-out: subtree
   parents:
-  - 7910a5
-  - e8cf0db0193636bf316f58f26587df9fc13a4831
+  - '035076'
+  - ea16f84c9717a0837b008a671cd4d2fd9d722c3e

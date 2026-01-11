@@ -65,7 +65,9 @@ fn find_call_position(file_path: &std::path::Path) -> (u32, u32) {
                     use syn::spanned::Spanned;
                     let span = call.func.span();
                     let start = span.start();
-                    self.position = Some((start.line as u32, start.column as u32));
+                    // proc_macro2 uses 0-indexed columns, but Location::caller()
+                    // uses 1-indexed columns. Add 1 to match the runtime API.
+                    self.position = Some((start.line as u32, start.column as u32 + 1));
                 }
             }
             syn::visit::visit_expr(self, node);
@@ -196,8 +198,10 @@ fn test_replace_me_different_locations() {
                 use syn::spanned::Spanned;
                 let span = call.func.span();
                 let start = span.start();
+                // proc_macro2 uses 0-indexed columns, but Location::caller()
+                // uses 1-indexed columns. Add 1 to match the runtime API.
                 self.positions
-                    .push((start.line as u32, start.column as u32));
+                    .push((start.line as u32, start.column as u32 + 1));
             }
             syn::visit::visit_expr(self, node);
         }

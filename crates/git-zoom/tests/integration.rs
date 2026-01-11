@@ -5,9 +5,12 @@
 
 mod common;
 
-use common::{
-    fixtures::test_fixture,
-    helpers::*,
+use {
+    common::{
+        fixtures::test_fixture,
+        helpers::*,
+    },
+    inline::snapshot,
 };
 
 // ============================================================================
@@ -37,8 +40,8 @@ fn test_basic_zoom_in() {
         );
 
         // Verify commit structure
-        let snapshot = repo.to_snapshot();
-        let head_commit = snapshot.head_commit().unwrap();
+        let repo_snapshot = repo.to_snapshot();
+        let head_commit = repo_snapshot.head_commit().unwrap();
 
         // Should be a merge commit with zoom-in trailer
         verify_zoom_in_commit(head_commit);
@@ -46,6 +49,15 @@ fn test_basic_zoom_in() {
         // Check trailer has correct path
         let path = extract_trailer(&head_commit.message, "git-zoom-in");
         assert_eq!(path, Some("src/lib".to_string()));
+
+        // Inline snapshot: verify tree structure after zoom-in
+        let mut tree_paths: Vec<String> = head_commit.tree.paths().map(String::from).collect();
+        tree_paths.sort();
+        snapshot(vec!["bar.txt".to_string(), "foo.txt".to_string()]).value = tree_paths;
+
+        // Inline snapshot: verify commit message first line
+        let msg_first_line = head_commit.message.lines().next().unwrap_or("");
+        snapshot("Merge from 'src/lib'".to_string()).value = msg_first_line.to_string();
 
         Ok(())
     });
@@ -110,8 +122,8 @@ fn test_complete_zoom_cycle() {
         assert_eq!(repo.read_file("other.txt"), "other file");
 
         // Verify commit structure
-        let snapshot = repo.to_snapshot();
-        let head = snapshot.head_commit().unwrap();
+        let repo_snapshot = repo.to_snapshot();
+        let head = repo_snapshot.head_commit().unwrap();
         verify_zoom_out_commit(head);
 
         // Verify the path is correct in trailer
