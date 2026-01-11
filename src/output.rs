@@ -45,7 +45,7 @@ pub fn print_summary(
 ) {
     // Brief tool description for AI agents
     // [impl _trace.cli.description]
-    println!("_trace is a requirements tracking tool. It finds `[def ID]`, `[impl ID]`, `[test ID]` annotations in source files and tracks whether requirements are satisfied.");
+    println!("_trace is a requirements tracking tool. It scans source files for annotations such as `[def ID]`, `[impl ID]`, `[test ID]` and tracks whether requirements are satisfied. Run with --install-skills to install Claude Code skills for working with requirements.");
     println!();
 
     let total = tree.requirements.len();
@@ -75,7 +75,7 @@ pub fn print_list(
     // Brief tool description for AI agents (when showing default list output)
     // [impl _trace.cli.description]
     if options.filter_prefixes.is_empty() && options.skip == 0 {
-        println!("_trace is a requirements tracking tool. It finds `[def ID]`, `[impl ID]`, `[test ID]` annotations in source files and tracks whether requirements are satisfied.");
+        println!("_trace is a requirements tracking tool. It scans source files for annotations such as `[def ID]`, `[impl ID]`, `[test ID]` and tracks whether requirements are satisfied. Run with --install-skills to install Claude Code skills for working with requirements.");
         println!();
     }
 

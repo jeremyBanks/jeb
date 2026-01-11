@@ -275,7 +275,7 @@ It has multiple lines.
 ## CLI Enhancements
 
 [def _trace.cli.description]
-When run with no arguments (default output), the CLI includes a brief (2-3 sentence) description of what the tool is and how it works, sufficient for an AI agent to understand its purpose without additional context.
+When run with no arguments (default output), the CLI includes a brief (2-3 sentence) description of what the tool is and how it works, sufficient for an AI agent to understand its purpose without additional context. The description should mention the `--install-skills` option to help AI agents discover the available skills.
 
 [def _trace.cli.install-skills]
 The CLI provides an `--install-skills` option that installs Claude Code skill files into the current project's `.claude/skills/` directory. The command fails with an error if any target files already exist, preventing accidental overwrites.
