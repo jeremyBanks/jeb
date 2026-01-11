@@ -391,6 +391,19 @@ fn extract_references_from_text(
                                 line: base_line,
                                 span,
                             });
+
+                            // Check for markdown reference-style link: [text][ref]
+                            // If the next character is '[', skip past the reference part
+                            if let Some(&(_, '[')) = chars.peek() {
+                                // Skip past the reference link [ref-name]
+                                chars.next(); // consume '['
+                                while let Some(&(_, c)) = chars.peek() {
+                                    chars.next();
+                                    if c == ']' {
+                                        break;
+                                    }
+                                }
+                            }
                         }
                     } else {
                         // Not a known verb - just ignore it. We only match rule
@@ -413,6 +426,19 @@ fn extract_references_from_text(
                             line: base_line,
                             span,
                         });
+
+                        // Check for markdown reference-style link: [text][ref]
+                        // If the next character is '[', skip past the reference part
+                        if let Some(&(_, '[')) = chars.peek() {
+                            // Skip past the reference link [ref-name]
+                            chars.next(); // consume '['
+                            while let Some(&(_, c)) = chars.peek() {
+                                chars.next();
+                                if c == ']' {
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -580,5 +606,45 @@ mod tests {
         assert_eq!(reqs.references[0].prefix, "r");
         assert_eq!(reqs.references[0].verb, RefVerb::Impl);
         assert_eq!(reqs.references[0].req_id, "dashboard.header.search");
+    }
+
+    #[test]
+    fn test_ignore_markdown_inline_links() {
+        // Markdown inline links like r[text](url) should parse the reference, not the URL
+        let content = r#"
+            // See r[impl foo.bar](https://example.com) for details
+            // Also check r[verify baz.qux](http://test.org/page)
+        "#;
+
+        let reqs = Reqs::extract_from_content(Path::new("test.rs"), content);
+        // Should find the rule references (inline links with URLs are handled by ignoring the parenthetical part)
+        assert_eq!(reqs.len(), 2);
+        assert_eq!(reqs.references[0].req_id, "foo.bar");
+        assert_eq!(reqs.references[0].verb, RefVerb::Impl);
+        assert_eq!(reqs.references[1].req_id, "baz.qux");
+        assert_eq!(reqs.references[1].verb, RefVerb::Verify);
+    }
+
+    #[test]
+    fn test_ignore_markdown_reference_style_links() {
+        // Markdown reference-style links like r[text][ref] should not parse the [ref] part as another reference
+        let content = r#"
+            // See r[impl foo.bar][some-reference] for more info
+            // Also r[verify baz.qux][another.ref] is important
+            // Plain reference: r[test.rule][ref-name]
+        "#;
+
+        let reqs = Reqs::extract_from_content(Path::new("test.rs"), content);
+        // Should only find the actual rule references, not the reference labels
+        assert_eq!(reqs.len(), 3, "Should find 3 rule references");
+        assert_eq!(reqs.references[0].req_id, "foo.bar");
+        assert_eq!(reqs.references[0].verb, RefVerb::Impl);
+        assert_eq!(reqs.references[1].req_id, "baz.qux");
+        assert_eq!(reqs.references[1].verb, RefVerb::Verify);
+        assert_eq!(reqs.references[2].req_id, "test.rule");
+        assert_eq!(reqs.references[2].verb, RefVerb::Impl); // legacy format
+
+        // Should not have warnings about malformed references
+        assert_eq!(reqs.warnings.len(), 0, "Should not have warnings for markdown reference links");
     }
 }
