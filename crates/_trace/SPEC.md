@@ -15,10 +15,10 @@ This specification uses its own annotation syntax to define requirements.
 Requirements for discovering files to scan for annotations.
 
 [def _trace.files.globs]
-The tool searches for annotations in all files matching `**/*.md` or `src/**/*`. Hidden directories (dotfiles) are included by default, except `.git/` which is always excluded.
+The tool searches for annotations in all files matching `**/*.md`, `src/**/*`, or `crates/*/src/**/*`. Hidden directories (dotfiles) are included by default, except `.git/` which is always excluded.
 
 [def _trace.files.language-agnostic]
-File scanning is entirely language-agnostic. Files under `src/` may be any format—source code, configuration, documentation, or any other text content.
+File scanning is entirely language-agnostic. Files under `src/` or `crates/*/src/` may be any format—source code, configuration, documentation, or any other text content.
 
 ---
 
