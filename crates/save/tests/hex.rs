@@ -6,19 +6,19 @@ use {
 #[test]
 fn hex() {
     decode_hex_nibbles("FAE")
-        .snap_dbg("MaskedBytes { bytes: [250, 224], mask: [255, 240] }");
+        .snap_dbg("MaskedBytes {\n    bytes: [\n        250,\n        224,\n    ],\n    mask: [\n        255,\n        240,\n    ],\n}");
     decode_hex_nibbles("0x12345678")
-        .snap_dbg("MaskedBytes { bytes: [18, 52, 86, 120], mask: [255, 255, 255, 255] }");
+        .snap_dbg("MaskedBytes {\n    bytes: [\n        18,\n        52,\n        86,\n        120,\n    ],\n    mask: [\n        255,\n        255,\n        255,\n        255,\n    ],\n}");
     decode_hex_nibbles("")
-        .snap_dbg("MaskedBytes { bytes: [], mask: [] }");
+        .snap_dbg("MaskedBytes {\n    bytes: [],\n    mask: [],\n}");
     decode_hex_nibbles("_")
-        .snap_dbg("MaskedBytes { bytes: [0], mask: [0] }");
+        .snap_dbg("MaskedBytes {\n    bytes: [\n        0,\n    ],\n    mask: [\n        0,\n    ],\n}");
     MaskedBytes::from("\x12 < \x34".to_string())
-        .snap_dbg("MaskedBytes { bytes: [18, 32, 60, 32, 52], mask: [255, 255, 255, 255, 255] }");
+        .snap_dbg("MaskedBytes {\n    bytes: [\n        18,\n        32,\n        60,\n        32,\n        52,\n    ],\n    mask: [\n        255,\n        255,\n        255,\n        255,\n        255,\n    ],\n}");
     decode_hex_nibbles("__01 2 3 4")
-        .snap_dbg("MaskedBytes { bytes: [0, 1, 35, 64], mask: [0, 255, 255, 240] }");
+        .snap_dbg("MaskedBytes {\n    bytes: [\n        0,\n        1,\n        35,\n        64,\n    ],\n    mask: [\n        0,\n        255,\n        255,\n        240,\n    ],\n}");
     hex![0x12345]
-        .snap_dbg("MaskedBytes { bytes: [18, 52, 80], mask: [255, 255, 240] }");
+        .snap_dbg("MaskedBytes {\n    bytes: [\n        18,\n        52,\n        80,\n    ],\n    mask: [\n        255,\n        255,\n        240,\n    ],\n}");
     hex![00__FF]
-        .snap_dbg("MaskedBytes { bytes: [0, 0, 255], mask: [255, 0, 255] }");
+        .snap_dbg("MaskedBytes {\n    bytes: [\n        0,\n        0,\n        255,\n    ],\n    mask: [\n        255,\n        0,\n        255,\n    ],\n}");
 }
