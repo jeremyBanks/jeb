@@ -401,7 +401,6 @@ refs:
 }
 
 #[test]
-#[ignore = "hex key validation not yet implemented - parsing accepts any hex key without validating against calculated hash"]
 fn test_minimal_hash_discrepancy() {
     // Test that demonstrates the fix:
     // YAML hex keys must match the calculated hash from content.
