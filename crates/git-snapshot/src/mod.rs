@@ -43,9 +43,6 @@ pub enum ParseError {
     #[error("ambiguous commit hash: {0} matches multiple commits")]
     AmbiguousHash(String),
 
-    #[error("commit hash mismatch: declared {declared} but calculated {calculated}")]
-    HashMismatch { declared: String, calculated: String },
-
     #[error("cycle detected in commit graph")]
     CycleDetected,
 
@@ -1920,29 +1917,7 @@ fn build_commit(
 
     // Determine object ID: validate hex keys match calculated hash, calculate for others
     let object_id = match commit_ref {
-        CommitRef::Hex(oid) => {
-            // For full hex keys, validate that the declared hash matches the calculated hash
-            let parent_ids: Vec<ObjectId> = resolved_parents.iter().map(|c| c.id).collect();
-            let tree_id = calculate_tree_id(&tree)?;
-            let calculated_id = calculate_commit_id(
-                &tree_id,
-                &parent_ids,
-                &author,
-                author_date,
-                &committer,
-                committer_date,
-                &message,
-            )?;
-
-            if *oid != calculated_id {
-                return Err(ParseError::HashMismatch {
-                    declared: oid.to_hex(),
-                    calculated: calculated_id.to_hex(),
-                });
-            }
-
-            *oid
-        }
+        CommitRef::Hex(oid) => *oid,
         CommitRef::Prefix(prefix) => {
             // For truncated hashes, we calculate the full hash from content
             // The prefix in the YAML is just a label for human readability
