@@ -45,8 +45,8 @@ pub fn scan_files(root: &PathBuf) -> Vec<ScannedFile> {
         }
     }
 
-    // Pattern 2: src/**/* (all files under src/)
-    let src_pattern = root.join("src/**/*");
+    // Pattern 2: **/src/**/* (all files under any src/ directory)
+    let src_pattern = root.join("**/src/**/*");
     if let Ok(paths) = glob_with(src_pattern.to_str().unwrap_or(""), options) {
         for entry in paths.flatten() {
             // Skip directories and .git
