@@ -36,10 +36,10 @@ An annotation is not recognized if immediately preceded by `]` or `)`. This prev
 An annotation is not recognized if immediately followed by `[` or `(`. This prevents matching markdown link syntax.
 
 [def _trace.syntax.structure]
-An annotation contains space-separated components. The last component is the requirement ID. Preceding components specify the annotation type and optional modifiers.
+An annotation contains space-separated components. There must be at least two components: the type and the ID. Brackets containing only one component (or zero) are not recognized as annotations.
 
 [def _trace.syntax.type]
-The first component of an annotation is its type (e.g., `def`, `impl`, `test`, `example`). If only one component exists, the type is `impl` by default.
+The first component of an annotation is its type (e.g., `def`, `impl`, `test`, `example`). There is no default type—the type must be explicitly specified.
 
 [def _trace.syntax.id +example]
 The requirement ID is the last space-separated component. It consists of period-separated segments representing a hierarchy.
@@ -137,7 +137,7 @@ Required types are modified in a `def` annotation using `+type` to add a require
 Modifications to required types apply to the requirement and all its descendants (unless overridden by a descendant's own modifiers).
 
 [def _trace.satisfaction.mode]
-A `def` may specify `@self`, `@child`, or `@either` as the satisfaction mode. The default is `@either` (inherited from ancestors, or `@either` if no ancestor specifies).
+A `def` may specify `@self`, `@child`, or `@either` as the satisfaction mode. The default is `@either`. Unlike required types, the satisfaction mode does not inherit—each requirement defaults to `@either` unless explicitly specified.
 
 [def _trace.satisfaction.mode.self]
 With `@self`, the requirement is satisfied when annotations of all required types exist for this exact ID.
