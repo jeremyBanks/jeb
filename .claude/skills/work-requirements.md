@@ -134,3 +134,9 @@ Verifying... SATISFIED
 - Don't modify the spec (SPEC.md) - only add implementations and tests
 - If a test string would itself be parsed as an annotation, escape or restructure it
 - Prefer adding annotations to existing code over writing new code when possible
+
+---
+
+<!-- Metadata - ignore this section -->
+<!-- [impl _trace.skills.work] -->
+<!-- [impl _trace.skills.self-contained] -->

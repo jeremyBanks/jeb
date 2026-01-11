@@ -1,7 +1,7 @@
 //! File discovery and scanning
 //! [impl _trace.files]
 
-use glob::glob;
+use glob::{glob_with, MatchOptions};
 use std::fs;
 use std::path::PathBuf;
 
@@ -18,9 +18,15 @@ pub struct ScannedFile {
 pub fn scan_files(root: &PathBuf) -> Vec<ScannedFile> {
     let mut files = Vec::new();
 
-    // Pattern 1: **/*.md (all markdown files)
+    // Options to include hidden directories (like .claude/)
+    let options = MatchOptions {
+        require_literal_leading_dot: false,
+        ..Default::default()
+    };
+
+    // Pattern 1: **/*.md (all markdown files, including hidden directories)
     let md_pattern = root.join("**/*.md");
-    if let Ok(paths) = glob(md_pattern.to_str().unwrap_or("")) {
+    if let Ok(paths) = glob_with(md_pattern.to_str().unwrap_or(""), options) {
         for entry in paths.flatten() {
             if let Some(file) = read_file(&entry) {
                 files.push(file);
@@ -30,7 +36,7 @@ pub fn scan_files(root: &PathBuf) -> Vec<ScannedFile> {
 
     // Pattern 2: src/**/* (all files under src/)
     let src_pattern = root.join("src/**/*");
-    if let Ok(paths) = glob(src_pattern.to_str().unwrap_or("")) {
+    if let Ok(paths) = glob_with(src_pattern.to_str().unwrap_or(""), options) {
         for entry in paths.flatten() {
             // Skip directories
             if entry.is_dir() {

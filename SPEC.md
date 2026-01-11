@@ -1,6 +1,6 @@
 # _trace Specification
 
-[def _trace @child]
+[def _trace @children]
 _trace is a language-agnostic requirements tracking tool. It finds annotations in source files, extracts their context, and tracks whether requirements are satisfied by corresponding implementations and tests.
 
 This is a simplified variant of [tracey](https://github.com/bearcove/tracey), exploring some ideas to see if anything is worth suggesting upstream. Key simplifications include looser annotation detection (anywhere in text, not position-dependent), unified file handling (no separate spec vs. source distinction), and a minimal CLI focused on AI-agent usability.
@@ -11,7 +11,7 @@ This specification uses its own annotation syntax to define requirements.
 
 ## File Discovery
 
-[def _trace.files @child]
+[def _trace.files @children]
 Requirements for discovering files to scan for annotations.
 
 [def _trace.files.globs]
@@ -24,7 +24,7 @@ File scanning is entirely language-agnostic. Files under `src/` may be any forma
 
 ## Annotation Syntax
 
-[def _trace.syntax @child]
+[def _trace.syntax @children]
 Requirements for annotation syntax and parsing.
 
 [def _trace.syntax.brackets]
@@ -58,7 +58,7 @@ ID segments represent a hierarchy. The order of segments is significant: `foo.ba
 
 ## Context Extraction
 
-[def _trace.context @child]
+[def _trace.context @children]
 Requirements for extracting the descriptive context around an annotation.
 
 [def _trace.context.boundaries]
@@ -74,7 +74,7 @@ Multiple annotations on the same line share the same context. This is not a conf
 
 ## Location Tracking
 
-[def _trace.location @child]
+[def _trace.location @children]
 Requirements for recording annotation locations.
 
 [def _trace.location.file]
@@ -90,7 +90,7 @@ Each annotation records its column number, 1-indexed, pointing to the opening `[
 
 ## Annotation Types
 
-[def _trace.types @child]
+[def _trace.types @children]
 Requirements for annotation type handling.
 
 [def _trace.types.def]
@@ -106,7 +106,7 @@ Requiring `def` as a satisfaction type is a non-fatal error (the definition itse
 
 ## Hierarchy
 
-[def _trace.hierarchy @child]
+[def _trace.hierarchy @children]
 Requirements for hierarchical requirement relationships.
 
 [def _trace.hierarchy.implicit-ancestors]
@@ -122,7 +122,7 @@ A requirement is complete when it is satisfied AND all of its descendants are co
 
 ## Satisfaction Criteria
 
-[def _trace.satisfaction @child]
+[def _trace.satisfaction @children]
 Requirements for determining when a requirement is satisfied.
 
 [def _trace.satisfaction.defaults]
@@ -138,22 +138,22 @@ Required types are modified in a `def` annotation using `+type` to add a require
 Modifications to required types apply to the requirement and all its descendants (unless overridden by a descendant's own modifiers).
 
 [def _trace.satisfaction.mode]
-A `def` may specify `@self`, `@child`, or `@either` as the satisfaction mode. The default is `@either`. Unlike required types, the satisfaction mode does not inherit—each requirement defaults to `@either` unless explicitly specified.
+A `def` may specify `@self`, `@children`, or `@either` as the satisfaction mode. The default is `@either`. Unlike required types, the satisfaction mode does not inherit—each requirement defaults to `@either` unless explicitly specified.
 
 [def _trace.satisfaction.mode.self]
 With `@self`, the requirement is satisfied when annotations of all required types exist for this exact ID.
 
 [def _trace.satisfaction.mode.child]
-With `@child`, the requirement is satisfied when: (1) for each required type, all direct children that also require that type have it satisfied, AND (2) at least one direct child requires each type. A requirement with `@child` and zero children is automatically unsatisfied.
+With `@children`, the requirement is satisfied when: (1) for each required type, all direct children that also require that type have it satisfied, AND (2) at least one direct child requires each type. A requirement with `@children` and zero children is automatically unsatisfied.
 
 [def _trace.satisfaction.mode.either]
-With `@either`, the requirement is satisfied if either the `@self` or `@child` condition is met.
+With `@either`, the requirement is satisfied if either the `@self` or `@children` condition is met.
 
 ---
 
 ## Error Handling
 
-[def _trace.errors @child -test]
+[def _trace.errors @children -test]
 Requirements for error handling. All errors described here are non-fatal—the tool continues processing and reports them.
 
 [def _trace.errors.duplicate-def]
@@ -172,7 +172,7 @@ An annotation of a type not required by the target requirement is a non-fatal er
 
 ## CLI Interface
 
-[def _trace.cli @child]
+[def _trace.cli @children]
 Requirements for the command-line interface.
 
 [def _trace.cli.help-in-output]
@@ -284,8 +284,8 @@ The CLI provides an `--install-skills` option that installs Claude Code skill fi
 
 ## Claude Code Skills
 
-[def _trace.skills @child]
-Requirements for Claude Code skills that help AI agents work with the requirements system.
+[def _trace.skills @children -test]
+Requirements for Claude Code skills that help AI agents work with the requirements system. Skills are documentation for AI agents and cannot be programmatically tested.
 
 [def _trace.skills.embedded]
 Skill files are embedded in the binary at compile time and can be installed via `--install-skills`.
@@ -313,4 +313,4 @@ The following are explicitly out of scope for the initial release but may be add
 - **Configuration file**: Custom glob patterns, default satisfaction criteria, output format preferences.
 - **Watch mode**: Continuous monitoring for changes.
 - **Machine-readable output**: JSON or other structured output formats.
-- **Git index mode**: A `--git-index` flag to read files from the git index/tree instead of the filesystem directly, enabling analysis of staged changes or specific commits.
+- **Git index mode**: A `--git-index` flag to read files from the git index/tree instead of the filesystem directly, enabling analysis of staged changes or specific commits. The current working directory is still respected—scanning starts from the corresponding subdirectory in the index tree.

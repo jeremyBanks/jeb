@@ -4,10 +4,11 @@
 use clap::Parser;
 use std::env;
 use std::path::PathBuf;
+use std::process;
 
 use _trace::{
-    build_tree, compute_satisfaction, extract_contexts, parse_annotations, print_errors,
-    print_list, print_summary, scan_files, ErrorCollector, OutputOptions,
+    build_tree, compute_satisfaction, extract_contexts, install_skills, parse_annotations,
+    print_errors, print_list, print_summary, scan_files, ErrorCollector, OutputOptions,
 };
 
 /// A language-agnostic requirements tracking tool
@@ -55,6 +56,11 @@ struct Args {
     /// [impl _trace.cli.pagination]
     #[arg(long, default_value = "0")]
     skip: usize,
+
+    /// Install Claude Code skills to .claude/skills/
+    /// [impl _trace.cli.install-skills]
+    #[arg(long)]
+    install_skills: bool,
 }
 
 fn main() {
@@ -62,6 +68,20 @@ fn main() {
 
     // Get the current directory as root
     let root = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+
+    // Handle --install-skills
+    // [impl _trace.cli.install-skills]
+    if args.install_skills {
+        match install_skills(&root) {
+            Ok(()) => {
+                process::exit(0);
+            }
+            Err(e) => {
+                eprintln!("Error installing skills: {}", e);
+                process::exit(1);
+            }
+        }
+    }
 
     // Scan files
     // [impl _trace.files]

@@ -103,7 +103,7 @@ fn parse_annotation_inner(
     let kind = parts[0].to_string();
 
     // Find the ID - it's the last component that looks like an ID
-    // (not a modifier like @child or +type or -type)
+    // (not a modifier like @children or +type or -type)
     // The ID must be after the type, so we look backwards from the end
     let mut id_idx = parts.len() - 1;
     while id_idx > 0 {
@@ -183,7 +183,7 @@ fn parse_modifiers(parts: &[&str]) -> Modifiers {
             // Satisfaction mode
             match *part {
                 "@self" => modifiers.mode = Some(SatisfactionMode::Self_),
-                "@child" => modifiers.mode = Some(SatisfactionMode::Child),
+                "@childrenren" => modifiers.mode = Some(SatisfactionMode::Children),
                 "@either" => modifiers.mode = Some(SatisfactionMode::Either),
                 _ => {}
             }
@@ -283,8 +283,8 @@ mod tests {
         assert_eq!(mods2.add_types, vec!["doc"]);
         assert_eq!(mods2.remove_types, vec!["test"]);
 
-        let mods3 = parse_modifiers(&["@child"]);
-        assert_eq!(mods3.mode, Some(SatisfactionMode::Child));
+        let mods3 = parse_modifiers(&["@childrenren"]);
+        assert_eq!(mods3.mode, Some(SatisfactionMode::Children));
     }
 
     /// [test _trace.syntax.brackets]

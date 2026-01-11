@@ -43,14 +43,14 @@ Show the user what you found:
 Based on the existing spec, I see:
 - Related requirements: _trace.syntax.brackets, _trace.syntax.structure
 - This appears to be about [topic], which would fit under _trace.syntax
-- Similar requirements use @child mode and require impl + test
+- Similar requirements use @children mode and require impl + test
 ```
 
 ### 3. Propose the Requirement Definition
 
 Draft the requirement with:
 - **ID**: Where it fits in the hierarchy
-- **Mode**: @self, @child, or @either (default)
+- **Mode**: @self, @children, or @either (default)
 - **Required types**: What modifiers (+type, -type) apply
 - **Definition text**: Clear, testable description
 
@@ -159,3 +159,9 @@ Agent: [immediately edits SPEC.md without clarification]
 - Ambiguity now means confusion later.
 - It's always better to ask one more question than to define something wrong.
 - The user's time spent clarifying now saves everyone's time later.
+
+---
+
+<!-- Metadata - ignore this section -->
+<!-- [impl _trace.skills.add] -->
+<!-- [impl _trace.skills.self-contained] -->

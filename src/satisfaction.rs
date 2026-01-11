@@ -71,7 +71,7 @@ fn compute_requirement_satisfaction(
     // [impl _trace.satisfaction.mode.self]
     let self_satisfied = check_self_satisfaction(req, &mut satisfied_types, &mut missing_types);
 
-    // Check @child satisfaction
+    // Check @children satisfaction
     // [impl _trace.satisfaction.mode.child]
     let child_satisfied = check_child_satisfaction(tree, id, child_statuses);
 
@@ -79,7 +79,7 @@ fn compute_requirement_satisfaction(
     // [impl _trace.satisfaction.mode]
     let satisfied = match req.mode {
         SatisfactionMode::Self_ => self_satisfied,
-        SatisfactionMode::Child => child_satisfied,
+        SatisfactionMode::Children => child_satisfied,
         SatisfactionMode::Either => self_satisfied || child_satisfied,
     };
 
@@ -121,7 +121,7 @@ fn check_self_satisfaction(
     all_satisfied
 }
 
-/// Check if requirement is satisfied by children (@child)
+/// Check if requirement is satisfied by children (@children)
 /// [impl _trace.satisfaction.mode.child]
 fn check_child_satisfaction(
     tree: &RequirementTree,
@@ -151,7 +151,7 @@ fn check_child_satisfaction(
                     has_child_requiring_type = true;
 
                     // Check if this child is satisfied overall (not just self)
-                    // A child can be satisfied via @self, @child, or @either
+                    // A child can be satisfied via @self, @children, or @either
                     if let Some(child_status) = child_statuses.get(child_id) {
                         if !child_status.satisfied {
                             all_requiring_satisfied = false;
@@ -300,7 +300,7 @@ mod tests {
     fn test_child_mode() {
         let mut errors = ErrorCollector::new();
         let annotations = vec![
-            make_def_with_mode("parent", SatisfactionMode::Child),
+            make_def_with_mode("parent", SatisfactionMode::Children),
             make_annotation("def", "parent.a"),
             make_annotation("impl", "parent.a"),
             make_annotation("test", "parent.a"),
@@ -316,9 +316,9 @@ mod tests {
         assert!(statuses.get("parent.a").unwrap().satisfied);
         assert!(statuses.get("parent.b").unwrap().satisfied);
 
-        // Parent with @child should be satisfied when all children are satisfied
+        // Parent with @children should be satisfied when all children are satisfied
         let parent_status = statuses.get("parent").unwrap();
-        assert!(parent_status.satisfied, "@child mode should be satisfied when children are satisfied");
+        assert!(parent_status.satisfied, "@children mode should be satisfied when children are satisfied");
     }
 
     /// [test _trace.satisfaction.mode.child]
@@ -326,13 +326,13 @@ mod tests {
     fn test_child_mode_no_children() {
         let mut errors = ErrorCollector::new();
         let annotations = vec![
-            make_def_with_mode("lonely", SatisfactionMode::Child),
+            make_def_with_mode("lonely", SatisfactionMode::Children),
         ];
 
         let tree = build_tree(annotations, &mut errors);
         let statuses = compute_satisfaction(&tree);
 
         let status = statuses.get("lonely").unwrap();
-        assert!(!status.satisfied, "@child mode with no children should not be satisfied");
+        assert!(!status.satisfied, "@children mode with no children should not be satisfied");
     }
 }

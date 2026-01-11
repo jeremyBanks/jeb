@@ -97,3 +97,9 @@ Priority items:
 - If unsure whether something satisfies a requirement, mark it NEEDS REVIEW
 - Consider the full context of requirements (parent/child relationships)
 - For hierarchical projects, requirements in child documents should trace back to parent requirements
+
+---
+
+<!-- Metadata - ignore this section -->
+<!-- [impl _trace.skills.validate] -->
+<!-- [impl _trace.skills.self-contained] -->

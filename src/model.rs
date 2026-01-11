@@ -35,8 +35,8 @@ pub enum SatisfactionMode {
     /// Requirement must be satisfied by annotations on this exact ID
     Self_,
     /// Requirement is satisfied when all children are satisfied
-    Child,
-    /// Either self or child satisfaction works (default)
+    Children,
+    /// Either self or children satisfaction works (default)
     #[default]
     Either,
 }
