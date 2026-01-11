@@ -17,7 +17,7 @@ When this skill is invoked:
 
 1. **Run the _trace CLI** to get current requirement status:
    ```bash
-   cargo run --quiet -- [prefix] --limit=100 2>&1
+   cargo run --bin _trace -- [prefix] --limit=100 2>&1
    ```
    If a prefix argument was provided, use it. Otherwise run without prefix to get all incomplete items.
 

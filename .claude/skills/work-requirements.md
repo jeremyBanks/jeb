@@ -17,7 +17,7 @@ When this skill is invoked:
 
 1. **Get current status** by running:
    ```bash
-   cargo run --quiet -- [prefix] --limit=100 2>&1
+   cargo run --bin _trace -- [prefix] --limit=100 2>&1
    ```
 
 2. **Parse the output** to identify all incomplete requirements. Build a list of:
@@ -53,7 +53,7 @@ When this skill is invoked:
 
 5. **Verify completion** by running the CLI again:
    ```bash
-   cargo run --quiet -- <id> 2>&1
+   cargo run --bin _trace -- <id> 2>&1
    ```
    The requirement should now show as satisfied.
 
