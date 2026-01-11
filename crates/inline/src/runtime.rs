@@ -477,7 +477,7 @@ impl FileState {
     /// Find the byte span of the replaceable part of a call/macro (static
     /// method)
     /// - Function calls: span of the last argument
-    /// - Method calls: span of the receiver
+    /// - Method calls: span of the last argument (if any), otherwise the receiver
     /// - Macros: span of contents inside delimiters
     fn find_value_span_static(
         ast: &syn::File,
@@ -521,10 +521,16 @@ impl FileState {
                         return;
                     }
                     syn::Expr::MethodCall(method) => {
-                        // Check if this is our target - replace RECEIVER
+                        // Check if this is our target - prefer LAST ARG, fallback to RECEIVER
                         if self.current_index == self.target_index {
-                            let receiver = &method.receiver;
-                            self.span = Some((receiver.span().start(), receiver.span().end()));
+                            if let Some(arg) = method.args.last() {
+                                // Has arguments: replace the last one (like function calls)
+                                self.span = Some((arg.span().start(), arg.span().end()));
+                            } else {
+                                // No arguments: fall back to replacing the receiver
+                                let receiver = &method.receiver;
+                                self.span = Some((receiver.span().start(), receiver.span().end()));
+                            }
                         }
                         self.current_index += 1;
 
