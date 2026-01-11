@@ -13,6 +13,10 @@ use {
 };
 
 /// Helper to find macro invocations positions in a file
+///
+/// Returns (line, column) positions where both are 1-indexed to match
+/// `Location::caller()` behavior. proc_macro2 uses 0-indexed columns,
+/// so we add 1 to the column.
 fn find_macro_positions(path: &std::path::Path) -> Vec<(u32, u32)> {
     let source = fs::read_to_string(path).unwrap();
     let ast = syn::parse_file(&source).unwrap();
@@ -31,8 +35,10 @@ fn find_macro_positions(path: &std::path::Path) -> Vec<(u32, u32)> {
                         use syn::spanned::Spanned;
                         let span = mac.mac.path.span();
                         let start = span.start();
+                        // proc_macro2 uses 0-indexed columns, but Location::caller()
+                        // uses 1-indexed columns. Add 1 to match the runtime API.
                         self.positions
-                            .push((start.line as u32, start.column as u32));
+                            .push((start.line as u32, start.column as u32 + 1));
                     }
                 }
             }

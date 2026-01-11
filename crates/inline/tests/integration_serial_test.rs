@@ -71,8 +71,10 @@ fn find_litter_positions(file_path: &std::path::Path) -> Vec<(u32, u32)> {
                         if segment.ident == "cell" {
                             let span = segment.ident.span();
                             let start = span.start();
+                            // proc_macro2 uses 0-indexed columns, but Location::caller()
+                            // uses 1-indexed columns. Add 1 to match the runtime API.
                             self.positions
-                                .push((start.line as u32, start.column as u32));
+                                .push((start.line as u32, start.column as u32 + 1));
                         }
                     }
                 }
