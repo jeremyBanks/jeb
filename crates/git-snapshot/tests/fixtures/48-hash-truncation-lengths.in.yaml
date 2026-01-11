@@ -4,38 +4,38 @@ HEAD: refs/heads/main
 
 refs:
   heads:
-    main: 8
+    main: 0000000000000000000000000000000000000008
 
 # Create 8 commits to test truncation algorithm
-1:
+0000000000000000000000000000000000000001:
   tree:
     file.txt: "commit 1"
 
-2:
+0000000000000000000000000000000000000002:
   tree:
     file.txt: "commit 2"
 
-3:
+0000000000000000000000000000000000000003:
   tree:
     file.txt: "commit 3"
 
-4:
+0000000000000000000000000000000000000004:
   tree:
     file.txt: "commit 4"
 
-5:
+0000000000000000000000000000000000000005:
   tree:
     file.txt: "commit 5"
 
-6:
+0000000000000000000000000000000000000006:
   tree:
     file.txt: "commit 6"
 
-7:
+0000000000000000000000000000000000000007:
   tree:
     file.txt: "commit 7"
 
 # Head commit - should use full 40-char hash
-8:
+0000000000000000000000000000000000000008:
   tree:
     file.txt: "commit 8 (head)"
