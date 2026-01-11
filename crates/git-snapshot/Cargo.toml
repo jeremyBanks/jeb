@@ -20,3 +20,7 @@ serde_yaml.workspace = true
 sha1-checked = { workspace = true, features = ["std"], default-features = true }
 tempfile.workspace = true
 thiserror.workspace = true
+
+[dependencies.clap]
+workspace = true
+features = ["derive"]

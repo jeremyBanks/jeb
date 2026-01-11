@@ -1179,6 +1179,19 @@ impl Repository {
     pub fn to_temporary_repository(&self) -> Result<TemporaryRepository, GitError> {
         git2_to_temporary_repository(self)
     }
+
+    /// Create a git repository from this snapshot at the specified path
+    ///
+    /// Materializes all commits, refs, HEAD state, staging area, and working
+    /// tree into a real git repository at the given path. The path should
+    /// either not exist or be an empty directory.
+    ///
+    /// # Errors
+    /// - `GitError::Git2` for underlying git2 errors
+    /// - `GitError::Io` for filesystem errors
+    pub fn to_repository_at_path<P: AsRef<Path>>(&self, path: P) -> Result<git2::Repository, GitError> {
+        git2_to_repository_at_path(self, path.as_ref())
+    }
 }
 
 impl Default for Repository {
@@ -4457,7 +4470,134 @@ fn git2_to_temporary_repository(snapshot: &Repository) -> Result<TemporaryReposi
     Ok(TemporaryRepository { repo, dir })
 }
 
-pub fn main() {}
+fn git2_to_repository_at_path(snapshot: &Repository, path: &Path) -> Result<git2::Repository, GitError> {
+    std::fs::create_dir_all(path)?;
+    let repo = git2::Repository::init(path)?;
+
+    // Topologically sort commits
+    let sorted_ids = topological_sort_commits_for_writing(&snapshot.commits);
+
+    // Track ObjectId -> git2::Oid mappings
+    let mut oid_map: HashMap<ObjectId, git2::Oid> = HashMap::new();
+
+    // Create commits in order
+    for commit_id in sorted_ids {
+        let commit = snapshot.get_commit(&commit_id).unwrap();
+
+        // Materialize tree
+        let tree_oid = materialize_tree(&commit.tree, &repo)?;
+        let tree = repo.find_tree(tree_oid)?;
+
+        // Convert parent OIDs
+        let parent_oids: Vec<_> = commit
+            .parents
+            .iter()
+            .map(|id| oid_map.get(id).expect("parent should already be written"))
+            .collect();
+        let parent_commits: Result<Vec<_>, _> = parent_oids
+            .iter()
+            .map(|&&oid| repo.find_commit(oid))
+            .collect();
+        let parent_commits = parent_commits?;
+        let parent_refs: Vec<_> = parent_commits.iter().collect();
+
+        // Create signatures
+        let author = git2::Signature::new(
+            &commit.author.name,
+            &commit.author.email,
+            &git2::Time::new(
+                commit.author_date.seconds,
+                commit.author_date.offset_minutes as i32,
+            ),
+        )?;
+        let committer = git2::Signature::new(
+            &commit.committer.name,
+            &commit.committer.email,
+            &git2::Time::new(
+                commit.committer_date.seconds,
+                commit.committer_date.offset_minutes as i32,
+            ),
+        )?;
+
+        // Create commit (not updating any ref yet)
+        let new_oid = repo.commit(
+            None, // don't update any ref
+            &author,
+            &committer,
+            &commit.message,
+            &tree,
+            &parent_refs,
+        )?;
+
+        oid_map.insert(commit_id, new_oid);
+    }
+
+    // Write refs
+    for (ref_name, target_id) in &snapshot.refs {
+        let git_oid = oid_map
+            .get(target_id)
+            .ok_or_else(|| git2::Error::from_str("ref target commit not found"))?;
+        repo.reference(ref_name.as_str(), *git_oid, true, "snapshot")?;
+    }
+
+    // Set HEAD
+    match &snapshot.head {
+        HeadState::Symbolic(ref_name) => {
+            repo.set_head(ref_name.as_str())?;
+        }
+        HeadState::Detached(oid) => {
+            let git_oid = oid_map
+                .get(oid)
+                .ok_or_else(|| git2::Error::from_str("HEAD target commit not found"))?;
+            repo.set_head_detached(*git_oid)?;
+        }
+    }
+
+    // Write staging area
+    if let Some(staged_tree) = &snapshot.staged {
+        let mut index = repo.index()?;
+        index.clear()?;
+
+        for (path, content) in staged_tree.entries.iter() {
+            let blob_oid = repo.blob(content.as_bytes())?;
+            let entry = git2::IndexEntry {
+                ctime: git2::IndexTime::new(0, 0),
+                mtime: git2::IndexTime::new(0, 0),
+                dev: 0,
+                ino: 0,
+                mode: 0o100644,
+                uid: 0,
+                gid: 0,
+                file_size: content.len() as u32,
+                id: blob_oid,
+                flags: path.len() as u16,
+                flags_extended: 0,
+                path: path.as_bytes().to_vec(),
+            };
+            index.add(&entry)?;
+        }
+
+        index.write()?;
+    }
+
+    // Write working tree
+    if let Some(working_tree) = &snapshot.working
+        && let Some(workdir) = repo.workdir()
+    {
+        for (path, content) in working_tree.entries.iter() {
+            let file_path = workdir.join(path);
+
+            // Ensure parent directory exists
+            if let Some(parent) = file_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+
+            std::fs::write(&file_path, content)?;
+        }
+    }
+
+    Ok(repo)
+}
 
 #[cfg(test)]
 mod tests {
