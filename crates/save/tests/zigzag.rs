@@ -3,7 +3,7 @@ use {
         testing::assert_at,
         zigzag::{ZigZag, ZugZug},
     },
-    inline::snapshot,
+    inline::InlineSnapExt,
 };
 
 #[test]
@@ -24,34 +24,45 @@ fn zigzag_round_trip() {
 
 #[test]
 fn zigzag_known_values() {
-    snapshot(0i8).value = 0_u8.zigzag();
-    snapshot(0i16).value = 0_u16.zigzag();
-    snapshot(0i32).value = 0_u32.zigzag();
-    snapshot(0i64).value = 0_u64.zigzag();
-    snapshot(0i128).value = 0_u128.zigzag();
-    snapshot(0isize).value = 0_usize.zigzag();
-    snapshot(1i8).value = 1_u8.zigzag();
-    snapshot(-1i8).value = 2_u8.zigzag();
-    snapshot(2i8).value = 3_u8.zigzag();
-    snapshot(-2i8).value = 4_u8.zigzag();
-    snapshot(3i8).value = 5_u8.zigzag();
-    snapshot(63i8).value = 125_u8.zigzag();
-    snapshot(-63i8).value = 126_u8.zigzag();
-    snapshot(64i8).value = 127_u8.zigzag();
-    snapshot(-64i8).value = 128_u8.zigzag();
-    snapshot(65i8).value = 129_u8.zigzag();
-    snapshot(-65i8).value = 130_u8.zigzag();
-    snapshot(-125i8).value = 250_u8.zigzag();
-    snapshot(126i8).value = 251_u8.zigzag();
-    snapshot(-126i8).value = 252_u8.zigzag();
-    snapshot(127i8).value = 253_u8.zigzag();
-    snapshot(-127i8).value = 254_u8.zigzag();
-    snapshot(-128i8).value = 255_u8.zigzag();
-    snapshot(128i16).value = 255_u16.zigzag();
-    snapshot(128i32).value = 255_u32.zigzag();
-    snapshot(128i64).value = 255_u64.zigzag();
-    snapshot(128i128).value = 255_u128.zigzag();
-    snapshot(128isize).value = 255_usize.zigzag();
+    // Test zigzag encoding of unsigned to signed
+    0_u8.zigzag().snap(0i8);
+    0_u16.zigzag().snap(0i16);
+    0_u32.zigzag().snap(0i32);
+    0_u64.zigzag().snap(0i64);
+    0_u128.zigzag().snap(0i128);
+    0_usize.zigzag().snap(0isize);
+
+    // Test small values
+    1_u8.zigzag().snap(1i8);
+    2_u8.zigzag().snap(-1i8);
+    3_u8.zigzag().snap(2i8);
+    4_u8.zigzag().snap(-2i8);
+    5_u8.zigzag().snap(3i8);
+
+    // Test boundary values
+    125_u8.zigzag().snap(63i8);
+    126_u8.zigzag().snap(-63i8);
+    127_u8.zigzag().snap(64i8);
+    128_u8.zigzag().snap(-64i8);
+    129_u8.zigzag().snap(65i8);
+    130_u8.zigzag().snap(-65i8);
+
+    // Test near-max values
+    250_u8.zigzag().snap(-125i8);
+    251_u8.zigzag().snap(126i8);
+    252_u8.zigzag().snap(-126i8);
+    253_u8.zigzag().snap(127i8);
+    254_u8.zigzag().snap(-127i8);
+    255_u8.zigzag().snap(-128i8);
+
+    // Test larger types
+    255_u16.zigzag().snap(128i16);
+    255_u32.zigzag().snap(128i32);
+    255_u64.zigzag().snap(128i64);
+    255_u128.zigzag().snap(128i128);
+    255_usize.zigzag().snap(128isize);
+
+    // Max value assertions
     assert_eq!(u8::MAX.zigzag(), i8::MIN);
     assert_eq!(u16::MAX.zigzag(), i16::MIN);
     assert_eq!(u32::MAX.zigzag(), i32::MIN);
@@ -109,20 +120,23 @@ fn zugzug_round_trip() {
 
 #[test]
 fn zugzug_known_values() {
-    snapshot((0i8, 0i8)).value = 0_u8.zugzug();
-    snapshot((0i8, 1i8)).value = 1_u8.zugzug();
-    snapshot((1i8, 1i8)).value = 2_u8.zugzug();
-    snapshot((-1i8, 0i8)).value = 3_u8.zugzug();
-    snapshot((-1i8, 1i8)).value = 4_u8.zugzug();
-    snapshot((-1i8, -1i8)).value = 5_u8.zugzug();
-    snapshot((0i8, 2i8)).value = 6_u8.zugzug();
-    snapshot((1i8, 2i8)).value = 7_u8.zugzug();
-    snapshot((-1i8, 2i8)).value = 8_u8.zugzug();
-    snapshot((2i8, 2i8)).value = 9_u8.zugzug();
-    snapshot((-2i8, 0i8)).value = 10_u8.zugzug();
-    snapshot((-2i8, 1i8)).value = 11_u8.zugzug();
-    snapshot((-11i8, 1i8)).value = 254_u8.zugzug();
-    snapshot((-11i8, -1i8)).value = 255_u8.zugzug();
+    // Test zugzug encoding
+    0_u8.zugzug().snap((0i8, 0i8));
+    1_u8.zugzug().snap((0i8, 1i8));
+    2_u8.zugzug().snap((1i8, 1i8));
+    3_u8.zugzug().snap((-1i8, 0i8));
+    4_u8.zugzug().snap((-1i8, 1i8));
+    5_u8.zugzug().snap((-1i8, -1i8));
+    6_u8.zugzug().snap((0i8, 2i8));
+    7_u8.zugzug().snap((1i8, 2i8));
+    8_u8.zugzug().snap((-1i8, 2i8));
+    9_u8.zugzug().snap((2i8, 2i8));
+    10_u8.zugzug().snap((-2i8, 0i8));
+    11_u8.zugzug().snap((-2i8, 1i8));
+    254_u8.zugzug().snap((-11i8, 1i8));
+    255_u8.zugzug().snap((-11i8, -1i8));
+
+    // Max value assertions
     assert_eq!(u8::MAX.zugzug(), (-11_i8, -1_i8));
     assert_eq!(u16::MAX.zugzug(), (-97_i16, 181_i16));
     assert_eq!(u32::MAX.zugzug(), (-18537_i32, 46341_i32));

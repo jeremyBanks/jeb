@@ -1,26 +1,24 @@
 use {
     ::save::hex::{decode_hex_nibbles, hex, MaskedBytes},
-    inline::snapshot,
+    inline::InlineSnapExt,
 };
 
 #[test]
 fn hex() {
-    snapshot("MaskedBytes { bytes: [250, 224], mask: [255, 240] }".to_owned()).value =
-        format!("{:?}", decode_hex_nibbles("FAE"));
-    snapshot("MaskedBytes { bytes: [18, 52, 86, 120], mask: [255, 255, 255, 255] }".to_owned())
-        .value = format!("{:?}", decode_hex_nibbles("0x12345678"));
-    snapshot("MaskedBytes { bytes: [], mask: [] }".to_owned()).value =
-        format!("{:?}", decode_hex_nibbles(""));
-    snapshot("MaskedBytes { bytes: [0], mask: [0] }".to_string()).value =
-        format!("{:?}", decode_hex_nibbles("_"));
-    snapshot(
-        "MaskedBytes { bytes: [18, 32, 60, 32, 52], mask: [255, 255, 255, 255, 255] }".to_string(),
-    )
-    .value = format!("{:?}", MaskedBytes::from("\x12 < \x34".to_string()));
-    snapshot("MaskedBytes { bytes: [0, 1, 35, 64], mask: [0, 255, 255, 240] }".to_string()).value =
-        format!("{:?}", decode_hex_nibbles("__01 2 3 4"));
-    snapshot("MaskedBytes { bytes: [18, 52, 80], mask: [255, 255, 240] }".to_string()).value =
-        format!("{:?}", hex![0x12345]);
-    snapshot("MaskedBytes { bytes: [0, 0, 255], mask: [255, 0, 255] }".to_string()).value =
-        format!("{:?}", hex![00__FF]);
+    decode_hex_nibbles("FAE")
+        .snap_dbg("MaskedBytes {\n    bytes: [\n        250,\n        224,\n    ],\n    mask: [\n        255,\n        240,\n    ],\n}");
+    decode_hex_nibbles("0x12345678")
+        .snap_dbg("MaskedBytes {\n    bytes: [\n        18,\n        52,\n        86,\n        120,\n    ],\n    mask: [\n        255,\n        255,\n        255,\n        255,\n    ],\n}");
+    decode_hex_nibbles("")
+        .snap_dbg("MaskedBytes {\n    bytes: [],\n    mask: [],\n}");
+    decode_hex_nibbles("_")
+        .snap_dbg("MaskedBytes {\n    bytes: [\n        0,\n    ],\n    mask: [\n        0,\n    ],\n}");
+    MaskedBytes::from("\x12 < \x34".to_string())
+        .snap_dbg("MaskedBytes {\n    bytes: [\n        18,\n        32,\n        60,\n        32,\n        52,\n    ],\n    mask: [\n        255,\n        255,\n        255,\n        255,\n        255,\n    ],\n}");
+    decode_hex_nibbles("__01 2 3 4")
+        .snap_dbg("MaskedBytes {\n    bytes: [\n        0,\n        1,\n        35,\n        64,\n    ],\n    mask: [\n        0,\n        255,\n        255,\n        240,\n    ],\n}");
+    hex![0x12345]
+        .snap_dbg("MaskedBytes {\n    bytes: [\n        18,\n        52,\n        80,\n    ],\n    mask: [\n        255,\n        255,\n        240,\n    ],\n}");
+    hex![00__FF]
+        .snap_dbg("MaskedBytes {\n    bytes: [\n        0,\n        0,\n        255,\n    ],\n    mask: [\n        255,\n        0,\n        255,\n    ],\n}");
 }
