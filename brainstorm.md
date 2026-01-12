@@ -127,3 +127,5 @@
 96. The get snapshot tests should configure a username and email in the repository by default, but a different one than it uses for its default commits that it infers, so it can distinguish when a program is using the configured username or something like that. Ideally, we'd also do the same for time zone, but I don't think gut has an option for that.
 97. Add external file version of snapshot test: assignment pattern duplicated for internal and external file versions, automatically swap between them based on size (default: external if 128+ lines, internal if 96 lines or less)
 98. MCP or CLI like beads or Tracey but with explicit support for Google Docs as a source (potentially by having a list of all design docs in a file somewhere)
+99. git save —message should by default collect all co-authored by including all committers and authors who aren't alreeady credited
+100. Git save needs to be agent aware
