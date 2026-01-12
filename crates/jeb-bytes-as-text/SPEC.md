@@ -52,3 +52,45 @@ The formulas `c = ceil(b * C / B)` (encoding) and `b = floor(c * B / C)` (decodi
 
 However, not all character counts are valid: a partial block must encode at least 1 byte and at most `B - 1` bytes. This means only specific values of `c` correspond to valid encoded data. For example, in Base64 (B=3, C=4), valid partial block sizes are 2 or 3 characters; 1 character cannot represent any valid partial block.
 
+---
+
+## Alphabets
+
+[def jeb-bat.alphabets @children]
+Specific alphabet definitions for common encoding schemes.
+
+### Base64url
+
+[def jeb-bat.alphabets.base64url @children]
+The Base64url alphabet is a URL-safe variant of Base64 encoding, defined in RFC 4648.
+
+[def jeb-bat.alphabets.base64url.chars]
+The alphabet consists of 64 characters in this exact order:
+```
+ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_
+```
+Where `A` represents value 0, `B` represents 1, through `_` representing 63.
+
+[def jeb-bat.alphabets.base64url.params]
+Using the generic encoding model:
+- `N = 64` (alphabet size)
+- `B = 3` (bytes per block)
+- `C = 4` (characters per block)
+
+### Z85
+
+[def jeb-bat.alphabets.z85 @children]
+The Z85 alphabet is defined in the ZeroMQ ZMQ RFC 32 specification for encoding binary data.
+
+[def jeb-bat.alphabets.z85.chars]
+The alphabet consists of 85 characters in this exact order:
+```
+0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#
+```
+Where `0` represents value 0, `1` represents 1, through `#` representing 84.
+
+[def jeb-bat.alphabets.z85.params]
+Using the generic encoding model:
+- `N = 85` (alphabet size)
+- `B = 4` (bytes per block)
+- `C = 5` (characters per block)
