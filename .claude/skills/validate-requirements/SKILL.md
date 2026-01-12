@@ -1,3 +1,9 @@
+---
+name: validate-requirements
+description: Deep validation of requirement implementations and tests beyond simple annotation detection
+allowed-tools: Read, Grep, Glob, Bash
+---
+
 # Validate Requirements
 
 Deep validation of requirements beyond simple annotation detection.

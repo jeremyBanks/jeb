@@ -1,3 +1,9 @@
+---
+name: add-requirement
+description: Add or update requirements in SPEC.md with full clarity and user confirmation
+allowed-tools: Read, Grep, Glob, Bash, Edit, AskUserQuestion
+---
+
 # Add or Update Requirement
 
 Carefully define new requirements or refine existing ones with full clarity and context.

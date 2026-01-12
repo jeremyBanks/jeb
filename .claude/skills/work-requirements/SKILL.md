@@ -1,3 +1,9 @@
+---
+name: work-requirements
+description: Autonomously implement and test unsatisfied requirements until complete
+allowed-tools: Read, Grep, Glob, Bash, Edit, Write
+---
+
 # Work on Requirements
 
 Autonomously work through unsatisfied requirements until they are complete.
