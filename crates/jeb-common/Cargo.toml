@@ -17,6 +17,9 @@ document-features.workspace = true
 fast_hilbert.workspace = true
 indexmap.workspace = true
 
+[dev-dependencies]
+proptest.workspace = true
+
 [features]
 default = []
 wasm = ["dep:wasm-bindgen"]
