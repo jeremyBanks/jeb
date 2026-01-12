@@ -1,6 +1,6 @@
 [package]
 name = "jeb"
-publish = true
+publish = false
 description = "experimenting with machine- and human-sympathetic encoding"
 keywords = ["encoding"]
 categories = ["encoding"]

@@ -1,5 +1,6 @@
 [package]
 name = "inline"
+publish = false
 version = "0.0.1-dev.1"
 edition = "2021"
 authors = ["Jeremy Banks"]

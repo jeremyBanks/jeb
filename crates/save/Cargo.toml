@@ -3,6 +3,7 @@ description = "Would you like to SAVE the change?"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 name = "save"
+publish = false
 version = "0.20220708.0"
 repository.workspace = true
 categories = []

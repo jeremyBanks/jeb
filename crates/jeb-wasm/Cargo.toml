@@ -1,6 +1,6 @@
 [package]
 name = "jeb-wasm"
-publish = true
+publish = false
 description = "(part of https://crates.io/crates/jeb)"
 keywords = []
 categories = []
