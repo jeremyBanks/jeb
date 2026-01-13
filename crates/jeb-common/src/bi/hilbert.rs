@@ -35,7 +35,141 @@ macro_rules! impls {
 use impls;
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        proptest::prelude::*,
+    };
+
+    // ========================
+    // Property-Based Tests
+    // ========================
+    //
+    // These tests use proptest to verify properties hold for randomly generated
+    // values. Properties tested:
+    // 1. Roundtrip: hilbert(hilbert(x)) == x
+    // 2. Bijection: Every unique input maps to a unique output
+    // 3. Locality: Adjacent values on the curve have Manhattan distance 1
+
+    proptest! {
+        /// Roundtrip property: encoding and decoding returns the original u16 value
+        #[test]
+        fn prop_roundtrip_u16(u in proptest::num::u16::ANY) {
+            let (x, y): (u8, u8) = hilbert(u);
+            let back: u16 = hilbert((x, y));
+            prop_assert_eq!(u, back, "roundtrip failed for u16 {}", u);
+        }
+
+        /// Roundtrip property: decoding and encoding returns the original pair
+        #[test]
+        fn prop_roundtrip_pair_u8(x in proptest::num::u8::ANY, y in proptest::num::u8::ANY) {
+            let u: u16 = hilbert((x, y));
+            let (back_x, back_y): (u8, u8) = hilbert(u);
+            prop_assert_eq!((x, y), (back_x, back_y), "roundtrip failed for ({}, {})", x, y);
+        }
+
+        /// Roundtrip property for u32
+        #[test]
+        fn prop_roundtrip_u32(u in proptest::num::u32::ANY) {
+            let (x, y): (u16, u16) = hilbert(u);
+            let back: u32 = hilbert((x, y));
+            prop_assert_eq!(u, back, "roundtrip failed for u32 {}", u);
+        }
+
+        /// Roundtrip property for u64
+        #[test]
+        fn prop_roundtrip_u64(u in proptest::num::u64::ANY) {
+            let (x, y): (u32, u32) = hilbert(u);
+            let back: u64 = hilbert((x, y));
+            prop_assert_eq!(u, back, "roundtrip failed for u64 {}", u);
+        }
+
+        /// Roundtrip property for u128
+        #[test]
+        fn prop_roundtrip_u128(u in proptest::num::u128::ANY) {
+            let (x, y): (u64, u64) = hilbert(u);
+            let back: u128 = hilbert((x, y));
+            prop_assert_eq!(u, back, "roundtrip failed for u128 {}", u);
+        }
+
+        /// Locality property: Adjacent values have Manhattan distance 1
+        /// This is a key property of Hilbert curves
+        #[test]
+        fn prop_locality_u16(u in 0u16..u16::MAX) {
+            let (x1, y1): (u8, u8) = hilbert(u);
+            let (x2, y2): (u8, u8) = hilbert(u + 1);
+            let manhattan = (x1 as i32 - x2 as i32).abs() + (y1 as i32 - y2 as i32).abs();
+            prop_assert_eq!(
+                manhattan, 1,
+                "adjacent values {} and {} should have Manhattan distance 1, got {}",
+                u, u + 1, manhattan
+            );
+        }
+
+        /// Locality property for u32
+        #[test]
+        fn prop_locality_u32(u in 0u32..u32::MAX) {
+            let (x1, y1): (u16, u16) = hilbert(u);
+            let (x2, y2): (u16, u16) = hilbert(u + 1);
+            let manhattan = (x1 as i32 - x2 as i32).abs() + (y1 as i32 - y2 as i32).abs();
+            prop_assert_eq!(
+                manhattan, 1,
+                "adjacent values {} and {} should have Manhattan distance 1, got {}",
+                u, u + 1, manhattan
+            );
+        }
+
+        /// Coordinates are bounded: for u16, both x and y fit in u8
+        #[test]
+        fn prop_coordinates_bounded_u16(u in proptest::num::u16::ANY) {
+            let (x, y): (u8, u8) = hilbert(u);
+            // Since we get (u8, u8) from u16, this is automatically satisfied
+            // but let's verify the values are within expected range
+            prop_assert!(x <= u8::MAX);
+            prop_assert!(y <= u8::MAX);
+        }
+
+        /// First and last values of the curve
+        #[test]
+        fn prop_curve_endpoints_u16(_unused in Just(())) {
+            let (x0, y0): (u8, u8) = hilbert(0u16);
+            let (x_max, y_max): (u8, u8) = hilbert(u16::MAX);
+            // First point should be (0, 0)
+            prop_assert_eq!((x0, y0), (0, 0), "curve should start at (0, 0)");
+            // Last point should be (255, 0) for a 256x256 grid
+            prop_assert_eq!((x_max, y_max), (255, 0), "curve should end at (255, 0)");
+        }
+
+        /// Bijection: two different inputs should produce different outputs
+        #[test]
+        fn prop_bijection_u16(a in proptest::num::u16::ANY, b in proptest::num::u16::ANY) {
+            prop_assume!(a != b);
+            let pair_a: (u8, u8) = hilbert(a);
+            let pair_b: (u8, u8) = hilbert(b);
+            prop_assert_ne!(pair_a, pair_b, "different inputs {} and {} should produce different outputs", a, b);
+        }
+
+        /// Distance bounds: values that are close on the curve should be somewhat close in 2D
+        /// The Hilbert curve guarantees |x1-x2| + |y1-y2| <= 3*sqrt(|h1-h2|) approximately
+        #[test]
+        fn prop_distance_bound_u16(a in proptest::num::u16::ANY, b in proptest::num::u16::ANY) {
+            let (x1, y1): (u8, u8) = hilbert(a);
+            let (x2, y2): (u8, u8) = hilbert(b);
+            let curve_dist = if a > b { a - b } else { b - a } as f64;
+            let manhattan = ((x1 as i32 - x2 as i32).abs() + (y1 as i32 - y2 as i32).abs()) as f64;
+            // The Hilbert curve property: manhattan distance <= 3 * sqrt(curve_dist)
+            let bound = 3.0 * curve_dist.sqrt();
+            prop_assert!(
+                manhattan <= bound + 1.0, // +1 for rounding tolerance
+                "manhattan distance {} should be <= 3*sqrt({}) = {} for values {} and {}",
+                manhattan, curve_dist, bound, a, b
+            );
+        }
+    }
+
+    // ========================
+    // Original Unit Tests
+    // ========================
+
     #[test]
     fn roundtrip_u16_to_pair() {
         for u in 0u16..=u16::MAX {
