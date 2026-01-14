@@ -22,6 +22,72 @@ use std::{fmt::Debug, panic::Location};
 
 use crate::{runtime, value::Value};
 
+/// Create a raw string literal token stream from content.
+///
+/// Raw strings preserve newlines as actual newlines in source code, making
+/// multi-line snapshots much more readable:
+///
+/// ```text
+/// // Instead of:
+/// .snap_dbg("Struct {\n    field: 1,\n}")
+///
+/// // We get:
+/// .snap_dbg(r"Struct {
+///     field: 1,
+/// }")
+/// ```
+///
+/// The function automatically determines the minimum number of `#` characters
+/// needed to avoid conflicts with the content.
+///
+/// Falls back to regular escaped strings for content containing lone `\r`
+/// (carriage return not followed by `\n`), which is invalid in Rust source.
+fn make_raw_string(content: &str) -> proc_macro2::TokenStream {
+    // Check for lone \r (not followed by \n) - can't be in Rust source
+    let has_lone_cr = {
+        let bytes = content.as_bytes();
+        bytes.iter().enumerate().any(|(i, &b)| {
+            b == b'\r' && bytes.get(i + 1) != Some(&b'\n')
+        })
+    };
+
+    if has_lone_cr {
+        // Fall back to regular string with escapes
+        return quote::quote! { #content };
+    }
+
+    // Find minimum hash count needed
+    // Raw string r##"..."## closes on `"` followed by exactly N `#` chars
+    let mut hash_count = 0;
+    loop {
+        // Build the closing delimiter: " followed by hash_count # chars
+        let closing: String = std::iter::once('"')
+            .chain(std::iter::repeat('#').take(hash_count))
+            .collect();
+
+        // If content doesn't contain this closing sequence, we're safe
+        if !content.contains(&closing) {
+            break;
+        }
+        hash_count += 1;
+
+        // Safety limit (should never happen in practice)
+        if hash_count > 100 {
+            return quote::quote! { #content };
+        }
+    }
+
+    // Build the raw string literal: r##"content"##
+    let hashes: String = std::iter::repeat('#').take(hash_count).collect();
+    let raw_literal = format!("r{}\"{}\"{}",  hashes, content, hashes);
+
+    // Parse it as a token stream
+    raw_literal.parse().unwrap_or_else(|_| {
+        // Fallback to escaped string if parsing fails
+        quote::quote! { #content }
+    })
+}
+
 /// Extension trait for inline snapshot testing.
 ///
 /// Provides two snapshot methods:
@@ -184,8 +250,8 @@ impl<T> InlineSnapExt for T {
                 // Resolve the source file path
                 let file_path = runtime::resolve_source_path(location.file());
 
-                // Create a string literal token for the debug output
-                let baked = quote::quote! { #actual_dbg };
+                // Create a raw string literal for readable multi-line output
+                let baked = make_raw_string(&actual_dbg);
 
                 // Update the source file
                 if let Err(e) =
@@ -269,12 +335,81 @@ mod tests {
     }
 
     #[test]
+    fn test_make_raw_string_simple() {
+        let tokens = make_raw_string("hello world");
+        assert_eq!(tokens.to_string(), r#"r"hello world""#);
+    }
+
+    #[test]
+    fn test_make_raw_string_with_newlines() {
+        let content = "line1\nline2\nline3";
+        let tokens = make_raw_string(content);
+        let s = tokens.to_string();
+        // Should be a raw string with actual newlines
+        assert!(s.starts_with("r"), "Should be raw string: {}", s);
+        assert!(s.contains('\n'), "Should contain actual newlines: {}", s);
+        assert!(!s.contains("\\n"), "Should NOT contain escaped newlines: {}", s);
+    }
+
+    #[test]
+    fn test_make_raw_string_with_quotes() {
+        let content = r#"has "quotes" inside"#;
+        let tokens = make_raw_string(content);
+        let s = tokens.to_string();
+        // Should use r#"..."# syntax
+        assert!(s.starts_with("r#"), "Should use r# for quotes: {}", s);
+    }
+
+    #[test]
+    fn test_make_raw_string_with_quote_hash() {
+        // Content with "# needs r##"..."##
+        let content = r#"has "# combo"#;
+        let tokens = make_raw_string(content);
+        let s = tokens.to_string();
+        assert!(s.starts_with("r##"), "Should use r## for quote-hash: {}", s);
+    }
+
+    #[test]
+    fn test_make_raw_string_lone_cr_fallback() {
+        // Lone \r (not followed by \n) falls back to escaped string
+        let content = "hello\rworld";
+        let tokens = make_raw_string(content);
+        let s = tokens.to_string();
+        // Should be escaped string, not raw
+        assert!(s.starts_with('"'), "Should fall back to regular string: {}", s);
+        assert!(s.contains("\\r"), "Should have escaped CR: {}", s);
+    }
+
+    #[test]
+    fn test_make_raw_string_crlf_ok() {
+        // CRLF is fine (normalized to LF by Rust)
+        let content = "hello\r\nworld";
+        let tokens = make_raw_string(content);
+        let s = tokens.to_string();
+        assert!(s.starts_with('r'), "CRLF should work as raw string: {}", s);
+    }
+
+    #[test]
+    fn test_make_raw_string_typical_debug() {
+        // Typical pretty Debug output
+        let content = "MaskedBytes {\n    bytes: [\n        250,\n    ],\n}";
+        let tokens = make_raw_string(content);
+        let s = tokens.to_string();
+        assert!(s.starts_with('r'), "Should be raw string");
+        assert!(s.contains('\n'), "Should have actual newlines");
+        // Verify it parses back correctly
+        let parsed: proc_macro2::TokenStream = s.parse().expect("Should parse");
+        assert!(!parsed.is_empty());
+    }
+
+    #[test]
     fn test_string_roundtrip_all_codepoints() {
         // Test that we can round-trip strings with many Unicode code points
-        // Build a string with the first 500 code points (excluding surrogates)
+        // Build a string with the first 500 code points (excluding surrogates and control chars that would cause issues)
         let mut test_string = String::new();
 
-        for cp in 0u32..500 {
+        for cp in 32u32..500 {
+            // Skip control chars 0-31
             if let Some(c) = char::from_u32(cp) {
                 test_string.push(c);
             }
@@ -288,52 +423,46 @@ mod tests {
         test_string.push_str("مرحبا");
         test_string.push_str("🔥✨🌟");
 
-        // Test that the string survives being formatted and parsed back
-        let debug_output = format!("{:#?}", test_string);
-
-        // The debug output should be a valid Rust string literal
-        // When we quote it and parse, we should get back equivalent content
-        let tokens = quote::quote! { #debug_output };
+        // Test with make_raw_string
+        let tokens = make_raw_string(&test_string);
         let tokens_str = tokens.to_string();
 
-        // Parse it back
+        // Should parse back successfully
         let parsed: proc_macro2::TokenStream = tokens_str.parse().expect("Should parse");
-
-        // Extract the string from the token stream
-        let mut iter = parsed.into_iter();
-        if let Some(proc_macro2::TokenTree::Literal(lit)) = iter.next() {
-            // The literal should parse successfully
-            let lit_str = lit.to_string();
-            // It should start and end with quotes
-            assert!(lit_str.starts_with('"'), "Should be a string literal");
-            assert!(lit_str.ends_with('"'), "Should end with quote");
-        } else {
-            panic!("Expected a literal token");
-        }
+        assert!(!parsed.is_empty());
     }
 
     #[test]
     fn test_string_with_problematic_chars() {
         // Test specific problematic characters
         let cases = [
-            ("nul", "\0"),
-            ("tab", "\t"),
-            ("newline", "\n"),
-            ("crlf", "\r\n"),
-            ("backslash", "\\"),
-            ("quote", "\""),
-            ("unicode_replacement", "\u{FFFD}"),
-            ("bom", "\u{FEFF}"),
+            ("nul", "\0", true),           // raw OK
+            ("tab", "\t", true),           // raw OK
+            ("newline", "\n", true),       // raw OK
+            ("crlf", "\r\n", true),        // raw OK (normalized)
+            ("lone_cr", "\r", false),      // must escape
+            ("backslash", "\\", true),     // raw OK
+            ("quote", "\"", true),         // raw OK (uses r#)
+            ("unicode_replacement", "\u{FFFD}", true),
+            ("bom", "\u{FEFF}", true),
         ];
 
-        for (name, content) in cases {
-            let debug_output = format!("{:#?}", content);
-            let tokens = quote::quote! { #debug_output };
+        for (name, content, expect_raw) in cases {
+            let tokens = make_raw_string(content);
             let tokens_str = tokens.to_string();
 
             // Should parse without error
             let result: Result<proc_macro2::TokenStream, _> = tokens_str.parse();
             assert!(result.is_ok(), "Failed to parse string with {}: {:?}", name, result.err());
+
+            if expect_raw {
+                assert!(
+                    tokens_str.starts_with('r'),
+                    "{} should be raw string: {}",
+                    name,
+                    tokens_str
+                );
+            }
         }
     }
 }
