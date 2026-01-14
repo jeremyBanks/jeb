@@ -266,4 +266,20 @@ mod tests {
         }
         assert_eq!(seen.len(), 65536);
     }
+
+    #[test]
+    fn visualize() {
+        let mut characters = [[' '; 256]; 256];
+        for u in 0u16..=256 {
+            let (x, y): (u8, u8) = hilbert(u);
+            characters[x as usize][y as usize] = 'X';
+        }
+        let s = characters
+            .iter()
+            .map(|row| row.iter().collect::<String>())
+            .collect::<Vec<String>>()
+            .join("\n");
+
+        inline::inline(&s)
+    }
 }

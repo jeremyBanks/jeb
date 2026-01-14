@@ -127,6 +127,7 @@
     "HISTFILESIZE",
     "HISTSIZE",
     "ignoreboth",
+    "impls",
     "indexmap",
     "itertools",
     "libc",

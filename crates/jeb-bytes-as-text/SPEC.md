@@ -94,3 +94,55 @@ Using the generic encoding model:
 - `N = 85` (alphabet size)
 - `B = 4` (bytes per block)
 - `C = 5` (characters per block)
+
+---
+
+## Translucent Encodings
+
+[def jeb-bat.translucent @children]
+Translucent encodings extend a base encoding (like Z85) to allow preserving "safe" ASCII text in its raw, readable form, while maintaining strict compatibility with the base encoding's block structure.
+
+### Alignment Preservation
+
+[def jeb-bat.translucent.alignment]
+A critical constraint of translucent encodings is **Alignment Preservation**.
+Any encoded data must appear at the same character position in the distinct output stream as it would in a pure, standard encoded stream.
+
+To achieve this, raw data text chunks (including their escape prefixes and padding) must consume exactly the same number of characters as the standard encoding would use for those same bytes.
+For Z85 (4 bytes → 5 chars), this means every raw chunk must have a length (prefix + data + padding) that is a multiple of 5.
+
+*Exception*: The final chunk of the stream does not need to align, as no encoded blocks follow it.
+
+### Raw Data Prefixes
+
+[def jeb-bat.translucent.prefixes]
+Common prefix schemes for Z85:
+
+1.  **`_` (Underscore)**: Prefix for exactly 4 bytes of raw data.
+    *   Input: 4 bytes.
+    *   Output: `_` + 4 bytes = 5 characters.
+    *   Matches Z85 block size (4 bytes → 5 chars). **Preserves Alignment.**
+
+2.  **`~` (Tilde)**: Prefix for exactly 6 bytes of raw data.
+    *   Input: 6 bytes.
+    *   Output: `~` + 6 bytes = 7 characters.
+    *   **Does NOT preserve alignment** (7 is not a multiple of 5).
+    *   Allowed *only* at the end of the stream.
+
+3.  **`|` (Pipe)**: Variable-length or special escape.
+    *   Used for mid-block transitions or other counts.
+    *   Must employ padding to satisfy alignment if followed by more data.
+
+### Mid-Block Transitions & Local Stability
+
+[def jeb-bat.translucent.mid-block]
+Switching from encoded to raw mode in the middle of a block (e.g., after 1 byte of a 4-byte block) is risky because Z85 output characters depend on all bytes in the block.
+
+To ensure **Local Behavior** (no backtracking or non-local output changes), a mid-block transition is permitted **only if the emitted partial characters are stable**.
+
+**The Zero-Bit Rule**:
+A partial block can be emitted (and the mode switched) only if treating the remaining unseen bytes as zeros produces the *exact same* output characters as treating them as any other value.
+
+*   Mathematically: `Encode(CurrentBytes + 00...)` must yield stable leading characters that do not change based on the value of the missing bytes.
+*   For Z85: `b0` determines `c0` stably in ~68% of cases. In the other 32%, `c0` depends on lower bits.
+*   **Constraint**: The encoder MUST NOT switch to raw mode mid-block if the current partial state is unstable. It must continue encoding until a stable boundary (or full block) is reached.

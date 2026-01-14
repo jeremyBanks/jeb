@@ -87,7 +87,8 @@
 #[cfg(
     all(
         feature = "write",
-        feature = "no-write"
+        feature = "no-write",
+        not(feature = "_implicit_all"),
     )
 )]
 compile_error!("Features 'write' and 'no-write' are mutually exclusive. Enable only one.");
