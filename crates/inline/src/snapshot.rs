@@ -42,7 +42,19 @@ use crate::{runtime, value::Value};
 ///
 /// Falls back to regular escaped strings for content containing lone `\r`
 /// (carriage return not followed by `\n`), which is invalid in Rust source.
+/// Check if a string contains only "simple safe ASCII" that needs no escaping.
+/// Safe chars: printable ASCII (space through ~) excluding quote and backslash.
+fn is_simple_ascii(s: &str) -> bool {
+    s.bytes().all(|b| matches!(b, b' '..=b'!' | b'#'..=b'[' | b']'..=b'~'))
+}
+
 fn make_raw_string(content: &str) -> proc_macro2::TokenStream {
+    // If content is simple safe ASCII, use a plain string literal
+    if is_simple_ascii(content) {
+        let literal = format!("\"{}\"", content);
+        return literal.parse().unwrap_or_else(|_| quote::quote! { #content });
+    }
+
     // Check for lone \r (not followed by \n) - can't be in Rust source
     let has_lone_cr = {
         let bytes = content.as_bytes();
@@ -336,8 +348,9 @@ mod tests {
 
     #[test]
     fn test_make_raw_string_simple() {
+        // Simple ASCII uses plain string (no r prefix)
         let tokens = make_raw_string("hello world");
-        assert_eq!(tokens.to_string(), r#"r"hello world""#);
+        assert_eq!(tokens.to_string(), r#""hello world""#);
     }
 
     #[test]
