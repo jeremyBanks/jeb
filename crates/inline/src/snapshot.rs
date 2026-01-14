@@ -65,7 +65,7 @@ pub trait InlineSnapExt: Sized {
     /// // If compute() != 42, source is updated with actual value
     /// ```
     #[track_caller]
-    fn snap(self, expected: Self) -> Self
+    fn snap(self, expected: impl Into<Self>) -> Self
     where
         Self: Value + 'static;
 
@@ -98,10 +98,11 @@ pub trait InlineSnapExt: Sized {
 
 impl<T> InlineSnapExt for T {
     #[track_caller]
-    fn snap(self, expected: Self) -> Self
+    fn snap(self, expected: impl Into<Self>) -> Self
     where
         Self: Value + 'static,
     {
+        let expected = expected.into();
         let location = Location::caller();
         let mode = runtime::get_mode();
 

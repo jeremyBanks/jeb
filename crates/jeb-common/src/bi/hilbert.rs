@@ -119,16 +119,6 @@ mod tests {
             );
         }
 
-        /// Coordinates are bounded: for u16, both x and y fit in u8
-        #[test]
-        fn prop_coordinates_bounded_u16(u in proptest::num::u16::ANY) {
-            let (x, y): (u8, u8) = hilbert(u);
-            // Since we get (u8, u8) from u16, this is automatically satisfied
-            // but let's verify the values are within expected range
-            prop_assert!(x <= u8::MAX);
-            prop_assert!(y <= u8::MAX);
-        }
-
         /// First and last values of the curve
         #[test]
         fn prop_curve_endpoints_u16(_unused in Just(())) {
@@ -155,7 +145,7 @@ mod tests {
         fn prop_distance_bound_u16(a in proptest::num::u16::ANY, b in proptest::num::u16::ANY) {
             let (x1, y1): (u8, u8) = hilbert(a);
             let (x2, y2): (u8, u8) = hilbert(b);
-            let curve_dist = if a > b { a - b } else { b - a } as f64;
+            let curve_dist = a.abs_diff(b) as f64;
             let manhattan = ((x1 as i32 - x2 as i32).abs() + (y1 as i32 - y2 as i32).abs()) as f64;
             // The Hilbert curve property: manhattan distance <= 3 * sqrt(curve_dist)
             let bound = 3.0 * curve_dist.sqrt();
@@ -282,6 +272,6 @@ mod tests {
             .join("\n");
 
 
-        s.snap(String::new());
+        s.snap("");
     }
 }
