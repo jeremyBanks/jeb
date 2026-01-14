@@ -15,7 +15,10 @@ pub fn hilbert<T: Hilbert>(value: T) -> T::Out {
     value.hilbert()
 }
 impls! {
-    u16 : (u8, u8); u32 : (u16, u16); u64 : (u32, u32); u128 : (u64, u64);
+     u16: ( u8,  u8);
+     u32: (u16, u16);
+     u64: (u32, u32);
+    u128: (u64, u64);
 }
 #[doc = description!()]
 pub trait Hilbert {
@@ -25,11 +28,22 @@ pub trait Hilbert {
 }
 macro_rules! impls {
     {$($full:ident : ($half1:ident, $half2:ident);)+} => {
-        $(impl Hilbert for $full { type Out = ($half1, $half2); fn hilbert(self) ->
-        ($half1, $half2) { _ = | assert : $half1 | -> $half2 { assert };
-        ::fast_hilbert::h2xy(self, $half1 ::BITS.try_into().unwrap()) } } impl Hilbert
-        for ($half1, $half2) { type Out = $full; fn hilbert(self) -> $full { let (x, y) =
-        self; ::fast_hilbert::xy2h(x, y, $half1 ::BITS.try_into().unwrap()) } })+
+        $(
+            impl Hilbert for $full {
+                type Out = ($half1, $half2);
+                fn hilbert(self) -> ($half1, $half2) {
+                    _ = | assert : $half1 | -> $half2 { assert };
+                    ::fast_hilbert::h2xy(self, $half1 ::BITS.try_into().unwrap())
+                }
+            }
+            impl Hilbert for ($half1, $half2) {
+                type Out = $full;
+                fn hilbert(self) -> $full {
+                    let (x, y) = self;
+                    ::fast_hilbert::xy2h(x, y, $half1 ::BITS.try_into().unwrap())
+                }
+            }
+        )+
     };
 }
 use impls;
@@ -43,17 +57,17 @@ mod tests {
 
     #[test]
     fn visualize() {
-        use std::collections::HashSet;
+        use std::collections::HashMap;
 
-        let mut seen = HashSet::new();
+        let mut seen = HashMap::new();
         let mut min_x = u8::MAX;
         let mut max_x = u8::MIN;
         let mut min_y = u8::MAX;
         let mut max_y = u8::MIN;
 
-        for u in 0u16..=256 {
+        for (i, u) in (0u16..=256).enumerate() {
             let (x, y): (u8, u8) = hilbert(u);
-            seen.insert((x, y));
+            seen.insert((x, y), i);
             if x < min_x {
                 min_x = x;
             }
@@ -68,17 +82,23 @@ mod tests {
             }
         }
 
+        let chars = b"oOXx";
+
         let mut lines = Vec::new();
         for x in min_x..=max_x {
             let mut line = String::new();
             for y in min_y..=max_y {
-                line.push(if seen.contains(&(x, y)) { 'X' } else { ' ' });
+                if let Some(index) = seen.get(&(x, y)) {
+                    line.push(chars[(index / 8) % 4] as char);
+                } else {
+                    line.push(' ');
+                }
             }
             lines.push(line);
         }
         let s = lines.join("\n");
 
-        s.snap("XXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nX               " . to_owned ());
+        s.snap("");
     }
 
     #[test]
