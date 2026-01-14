@@ -18,7 +18,7 @@
 //! let result = compute().snap_dbg("");
 //! ```
 
-use std::{fmt::Debug, panic::Location};
+use std::{any::TypeId, fmt::Debug, panic::Location};
 
 use crate::{runtime, value::Value};
 
@@ -172,7 +172,7 @@ pub trait InlineSnapExt: Sized {
     /// // If compute() != 42, source is updated with actual value
     /// ```
     #[track_caller]
-    fn snap(self, expected: Self) -> Self
+    fn snap(self, expected: impl Into<Self>) -> Self
     where
         Self: Value + 'static;
 
@@ -203,10 +203,11 @@ pub trait InlineSnapExt: Sized {
 
 impl<T> InlineSnapExt for T {
     #[track_caller]
-    fn snap(self, expected: Self) -> Self
+    fn snap(self, expected: impl Into<Self>) -> Self
     where
         Self: Value + 'static,
     {
+        let expected = expected.into();
         let location = Location::caller();
         let mode = runtime::get_mode();
 
@@ -237,10 +238,18 @@ impl<T> InlineSnapExt for T {
                 // Resolve the source file path
                 let file_path = runtime::resolve_source_path(location.file());
 
-                // Bake the actual value to tokens
-                let baked = databake::Bake::bake(&self, &Default::default());
-                // Convert any escaped string literals to raw strings for readability
-                let baked = convert_strings_to_raw(baked);
+                // Special case for String: output just the raw string literal
+                // (avoids databake's "...".to_owned() suffix)
+                let baked = if TypeId::of::<Self>() == TypeId::of::<String>() {
+                    // SAFETY: We just verified Self is String
+                    let s: &String = unsafe { &*(&self as *const Self as *const String) };
+                    make_raw_string(s)
+                } else {
+                    // Bake the actual value to tokens
+                    let baked = databake::Bake::bake(&self, &Default::default());
+                    // Convert any escaped string literals to raw strings for readability
+                    convert_strings_to_raw(baked)
+                };
 
                 // Update the source file
                 if let Err(e) =
