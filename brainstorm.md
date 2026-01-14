@@ -129,3 +129,4 @@
 98. MCP or CLI like beads or Tracey but with explicit support for Google Docs as a source (potentially by having a list of all design docs in a file somewhere)
 99. git save —message should by default collect all co-authored by including all committers and authors who aren't alreeady credited
 100. Git save needs to be agent aware
+101. A sub module is a tree entry pointing to a commit, but it's like a weak reference.
