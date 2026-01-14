@@ -363,7 +363,7 @@ mod tests {
     #[test]
     fn test_make_raw_string_with_quote_hash() {
         // Content with "# needs r##"..."##
-        let content = r#"has "# combo"#;
+        let content = "has \"# combo";
         let tokens = make_raw_string(content);
         let s = tokens.to_string();
         assert!(s.starts_with("r##"), "Should use r## for quote-hash: {}", s);
