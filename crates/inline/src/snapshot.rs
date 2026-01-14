@@ -113,6 +113,49 @@ fn make_raw_string(content: &str) -> proc_macro2::TokenStream {
     })
 }
 
+/// Convert escaped string literals in a token stream to raw strings.
+///
+/// Walks through the token tree and converts any string literals that contain
+/// escape sequences into raw string literals for better readability.
+fn convert_strings_to_raw(tokens: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
+    use proc_macro2::{TokenTree, Group};
+
+    tokens.into_iter().map(|tt| {
+        match tt {
+            TokenTree::Group(group) => {
+                // Recursively process groups
+                let converted = convert_strings_to_raw(group.stream());
+                let mut new_group = Group::new(group.delimiter(), converted);
+                new_group.set_span(group.span());
+                TokenTree::Group(new_group)
+            }
+            TokenTree::Literal(lit) => {
+                let lit_str = lit.to_string();
+                // Check if it's a non-raw string literal (starts with " but not r")
+                if lit_str.starts_with('"') && !lit_str.starts_with("r") {
+                    // Try to parse as a string literal
+                    if let Ok(syn_lit) = syn::parse_str::<syn::LitStr>(&lit_str) {
+                        let value = syn_lit.value();
+                        // Only convert if the value differs from the literal representation
+                        // (i.e., it had escape sequences)
+                        let simple_check = format!("\"{}\"", value);
+                        if simple_check != lit_str {
+                            // Has escape sequences, convert to raw
+                            let raw_tokens = make_raw_string(&value);
+                            // Extract the literal from the token stream
+                            if let Some(TokenTree::Literal(raw_lit)) = raw_tokens.into_iter().next() {
+                                return TokenTree::Literal(raw_lit);
+                            }
+                        }
+                    }
+                }
+                TokenTree::Literal(lit)
+            }
+            other => other,
+        }
+    }).collect()
+}
+
 /// Extension trait for inline snapshot testing.
 ///
 /// Provides two snapshot methods:
@@ -215,6 +258,8 @@ impl<T> InlineSnapExt for T {
 
                 // Bake the actual value to tokens
                 let baked = databake::Bake::bake(&self, &Default::default());
+                // Convert any escaped string literals to raw strings for readability
+                let baked = convert_strings_to_raw(baked);
 
                 // Update the source file
                 if let Err(e) = runtime::update_source_file(
