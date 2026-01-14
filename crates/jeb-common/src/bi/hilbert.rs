@@ -65,7 +65,7 @@ mod tests {
         let mut min_y = u8::MAX;
         let mut max_y = u8::MIN;
 
-        for (i, u) in (0u16..=256).enumerate() {
+        for (i, u) in (0u16..=1024).enumerate() {
             let (x, y): (u8, u8) = hilbert(u);
             seen.insert((x, y), i);
             if x < min_x {
@@ -82,7 +82,7 @@ mod tests {
             }
         }
 
-        let chars = b"oOXx";
+        let chars = b"oXx.";
 
         let mut lines = Vec::new();
         for x in min_x..=max_x {
@@ -98,7 +98,41 @@ mod tests {
         }
         let s = lines.join("\n");
 
-        s.snap("");
+        s.snap(
+            r"oooo....ooXXxxxxXXXXxx..oooo....o
+oooo....ooXXxxxxXXXXxx..oooo....
+XXXXxxxxooXX....ooooxx..XXXXxxxx
+XXXXxxxxooXX....ooooxx..XXXXxxxx
+xx..ooXX..xxoooo....XXooxx..ooXX
+xx..ooXX..xxoooo....XXooxx..ooXX
+xx..ooXX..xxXXXXxxxxXXooxx..ooXX
+xx..ooXX..xxXXXXxxxxXXooxx..ooXX
+XXoo..xxooXXxxxxXXXXxx..XXoo..xx
+XXoo..xxooXXxxxxXXXXxx..XXoo..xx
+XXoo..xxooXX....ooooxx..XXoo..xx
+XXoo..xxooXX....ooooxx..XXoo..xx
+xxxxXXXX..xxoooo....XXooxxxxXXXX
+xxxxXXXX..xxoooo....XXooxxxxXXXX
+....oooo..xxXXXXxxxxXXoo....oooo
+....oooo..xxXXXXxxxxXXoo....oooo
+ooXXxxxxXXXXxx..ooXXxxxxXXXXxx..
+ooXXxxxxXXXXxx..ooXXxxxxXXXXxx..
+ooXX....ooooxx..ooXX....ooooxx..
+ooXX....ooooxx..ooXX....ooooxx..
+..xxoooo....XXoo..xxoooo....XXoo
+..xxoooo....XXoo..xxoooo....XXoo
+..xxXXXXxxxxXXoo..xxXXXXxxxxXXoo
+..xxXXXXxxxxXXoo..xxXXXXxxxxXXoo
+oooo....oooo....oooo....oooo....
+oooo....oooo....oooo....oooo....
+XXXXxxxxXXXXxxxxXXXXxxxxXXXXxxxx
+XXXXxxxxXXXXxxxxXXXXxxxxXXXXxxxx
+xx..ooXXxx..ooXXxx..ooXXxx..ooXX
+xx..ooXXxx..ooXXxx..ooXXxx..ooXX
+xx..ooXXxx..ooXXxx..ooXXxx..ooXX
+xx..ooXXxx..ooXXxx..ooXXxx..ooXX "
+                .to_owned(),
+        );
     }
 
     #[test]
