@@ -43,18 +43,42 @@ mod tests {
 
     #[test]
     fn visualize() {
-        let mut characters = [[' '; 256]; 256];
+        use std::collections::HashSet;
+
+        let mut seen = HashSet::new();
+        let mut min_x = u8::MAX;
+        let mut max_x = u8::MIN;
+        let mut min_y = u8::MAX;
+        let mut max_y = u8::MIN;
+
         for u in 0u16..=256 {
             let (x, y): (u8, u8) = hilbert(u);
-            characters[x as usize][y as usize] = 'X';
+            seen.insert((x, y));
+            if x < min_x {
+                min_x = x;
+            }
+            if x > max_x {
+                max_x = x;
+            }
+            if y < min_y {
+                min_y = y;
+            }
+            if y > max_y {
+                max_y = y;
+            }
         }
-        let s = characters
-            .iter()
-            .map(|row| row.iter().collect::<String>())
-            .collect::<Vec<String>>()
-            .join("\n");
 
-        s.snap("");
+        let mut lines = Vec::new();
+        for x in min_x..=max_x {
+            let mut line = String::new();
+            for y in min_y..=max_y {
+                line.push(if seen.contains(&(x, y)) { 'X' } else { ' ' });
+            }
+            lines.push(line);
+        }
+        let s = lines.join("\n");
+
+        s.snap("XXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXX\nX               " . to_owned ());
     }
 
     #[test]
