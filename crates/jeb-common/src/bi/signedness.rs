@@ -24,11 +24,22 @@ pub trait Signedness {
 }
 macro_rules! impls {
     {$($signed:ident : $unsigned:ident;)+} => {
-        $(impl Signedness for $signed { type Out = $unsigned; fn signedness(self) ->
-        $unsigned { let high_mask = (is::<$unsigned > (1) << ($unsigned ::BITS - 1));
-        (self as $unsigned) ^ high_mask } } impl Signedness for $unsigned { type Out =
-        $signed; fn signedness(self) -> $signed { let high_mask = (is::<$unsigned > (1)
-        << ($unsigned ::BITS - 1)); (self ^ high_mask) as $signed } })+
+        $(
+            impl Signedness for $signed {
+                type Out = $unsigned;
+                fn signedness(self) -> $unsigned {
+                    let high_mask = (is::<$unsigned > (1) << ($unsigned ::BITS - 1));
+                    (self as $unsigned) ^ high_mask
+                }
+            }
+            impl Signedness for $unsigned {
+                type Out = $signed;
+                fn signedness(self) -> $signed {
+                    let high_mask = (is::<$unsigned > (1) << ($unsigned ::BITS - 1));
+                    (self ^ high_mask) as $signed
+                }
+            }
+        )+
     };
 }
 use impls;

@@ -82,56 +82,58 @@ mod tests {
             }
         }
 
-        let chars = b"oXx.";
+        let chars = b"0123456789.";
 
-        let mut lines = Vec::new();
+        let mut lines = vec!["".to_string()];
         for x in min_x..=max_x {
             let mut line = String::new();
             for y in min_y..=max_y {
                 if let Some(index) = seen.get(&(x, y)) {
-                    line.push(chars[(index / 8) % 4] as char);
+                    line.push(chars[(index / 32) % chars.len()] as char);
                 } else {
                     line.push(' ');
                 }
             }
             lines.push(line);
         }
+        lines.push(String::new());
         let s = lines.join("\n");
 
         s.snap(
-            r"oooo....ooXXxxxxXXXXxx..oooo....o
-oooo....ooXXxxxxXXXXxx..oooo....
-XXXXxxxxooXX....ooooxx..XXXXxxxx
-XXXXxxxxooXX....ooooxx..XXXXxxxx
-xx..ooXX..xxoooo....XXooxx..ooXX
-xx..ooXX..xxoooo....XXooxx..ooXX
-xx..ooXX..xxXXXXxxxxXXooxx..ooXX
-xx..ooXX..xxXXXXxxxxXXooxx..ooXX
-XXoo..xxooXXxxxxXXXXxx..XXoo..xx
-XXoo..xxooXXxxxxXXXXxx..XXoo..xx
-XXoo..xxooXX....ooooxx..XXoo..xx
-XXoo..xxooXX....ooooxx..XXoo..xx
-xxxxXXXX..xxoooo....XXooxxxxXXXX
-xxxxXXXX..xxoooo....XXooxxxxXXXX
-....oooo..xxXXXXxxxxXXoo....oooo
-....oooo..xxXXXXxxxxXXoo....oooo
-ooXXxxxxXXXXxx..ooXXxxxxXXXXxx..
-ooXXxxxxXXXXxx..ooXXxxxxXXXXxx..
-ooXX....ooooxx..ooXX....ooooxx..
-ooXX....ooooxx..ooXX....ooooxx..
-..xxoooo....XXoo..xxoooo....XXoo
-..xxoooo....XXoo..xxoooo....XXoo
-..xxXXXXxxxxXXoo..xxXXXXxxxxXXoo
-..xxXXXXxxxxXXoo..xxXXXXxxxxXXoo
-oooo....oooo....oooo....oooo....
-oooo....oooo....oooo....oooo....
-XXXXxxxxXXXXxxxxXXXXxxxxXXXXxxxx
-XXXXxxxxXXXXxxxxXXXXxxxxXXXXxxxx
-xx..ooXXxx..ooXXxx..ooXXxx..ooXX
-xx..ooXXxx..ooXXxx..ooXXxx..ooXX
-xx..ooXXxx..ooXXxx..ooXXxx..ooXX
-xx..ooXXxx..ooXXxx..ooXXxx..ooXX "
-                .to_owned(),
+            r"
+00001111222222227777777788889999.
+00001111222222227777777788889999 
+00001111222222227777777788889999 
+00001111222222227777777788889999 
+00001111333333336666666688889999 
+00001111333333336666666688889999 
+00001111333333336666666688889999 
+00001111333333336666666688889999 
+77776666444444445555555533332222 
+77776666444444445555555533332222 
+77776666444444445555555533332222 
+77776666444444445555555533332222 
+77776666555555554444444433332222 
+77776666555555554444444433332222 
+77776666555555554444444433332222 
+77776666555555554444444433332222 
+88888888444444445555555511111111 
+88888888444444445555555511111111 
+88888888444444445555555511111111 
+88888888444444445555555511111111 
+99999999333333336666666600000000 
+99999999333333336666666600000000 
+99999999333333336666666600000000 
+99999999333333336666666600000000 
+....000011112222777788889999.... 
+....000011112222777788889999.... 
+....000011112222777788889999.... 
+....000011112222777788889999.... 
+....000011112222777788889999.... 
+....000011112222777788889999.... 
+....000011112222777788889999.... 
+....000011112222777788889999.... 
+",
         );
     }
 
