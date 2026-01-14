@@ -1099,6 +1099,7 @@ dependencies = [
  "document-features",
  "fast_hilbert",
  "indexmap 2.12.1",
+ "inline",
  "proptest",
  "wasm-bindgen",
 ]

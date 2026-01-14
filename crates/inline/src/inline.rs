@@ -400,12 +400,6 @@ pub fn var<T: Value + 'static>(value: T) -> InlineCell<T> {
 }
 
 /// Alias of [`cell()`].
-#[track_caller]
-pub fn snapshot<T: Value + 'static>(value: T) -> InlineCell<T> {
-    cell(value)
-}
-
-/// Alias of [`cell()`].
 ///
 /// A playful placeholder - if you leave this in your code, it's a reminder
 /// to replace it with a proper fallback value!

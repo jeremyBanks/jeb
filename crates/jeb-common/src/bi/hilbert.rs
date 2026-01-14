@@ -37,6 +37,7 @@ use impls;
 mod tests {
     use {
         super::*,
+        inline::InlineSnapExt,
         proptest::prelude::*,
     };
 
@@ -280,6 +281,7 @@ mod tests {
             .collect::<Vec<String>>()
             .join("\n");
 
-        inline::inline(&s)
+
+        s.snap(String::new());
     }
 }
