@@ -49,7 +49,15 @@ literate! {
 /// bits, and each hex digit represents four bits, so we just output two
 /// hex digits for each byte.
 
-println!("test");
+println!("test 1!");
+println!("test 2!");
+println!("{}", {
+    println!("test 3a!");
+    println!("test 3b!");
+    "test 3c!"
+});
+
+
 }
 
 fn print_doc_block(doc_strings: &[&str]) {
