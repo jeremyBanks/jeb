@@ -15,9 +15,19 @@ macro_rules! literate {
         literate!(@process [$($rest)*] $($output)* eprintln!($doc);)
     };
 
-    // Match any other token: print it and execute it
-    (@process [$first:tt $($rest:tt)*] $($output:tt)*) => {
-        literate!(@process [$($rest)*] $($output)* eprintln!(">>> {}", stringify!($first)); $first)
+    // Match a let statement
+    (@process [let $p:pat = $e:expr ; $($rest:tt)*] $($output:tt)*) => {
+        literate!(@process [$($rest)*] $($output)* eprintln!(">>> let {} = {};", stringify!($p), stringify!($e)); let $p = $e;)
+    };
+
+    // Match an expression statement (ending with ;)
+    (@process [$e:expr ; $($rest:tt)*] $($output:tt)*) => {
+        literate!(@process [$($rest)*] $($output)* eprintln!(">>> {};", stringify!($e)); $e;)
+    };
+
+    // Match a trailing expression (no semicolon)
+    (@process [$e:expr] $($output:tt)*) => {
+        $($output)* eprintln!(">>> {}", stringify!($e)); $e
     };
 
     // Main entry: create the test function
