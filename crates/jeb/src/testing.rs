@@ -93,7 +93,12 @@ pub fn print_code(code: &str) {
 /// Internal macro to collect consecutive doc comments
 #[macro_export]
 macro_rules! literate_docs {
-    // Done collecting docs, hit non-doc - emit docs and continue with main macro
+    // Done collecting docs, hit fn item
+    ([$($doc:literal),*] fn $($item:tt)*) => {
+        $crate::testing::print_doc_block(&[$($doc),*]);
+        $crate::literate_item!(fn $($item)*);
+    };
+    // Done collecting docs, hit statement
     ([$($doc:literal),*] $s:stmt ; $($rest:tt)*) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
         $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!($s), ";"));
@@ -115,6 +120,17 @@ macro_rules! literate_docs {
     };
 }
 
+/// Internal macro to handle fn items - find the body and continue after
+#[macro_export]
+macro_rules! literate_item {
+    // fn with body - capture name, params, return type, body
+    (fn $name:ident $params:tt $(-> $ret:ty)? $body:block $($rest:tt)*) => {
+        $crate::testing::print_code(::stringify_verbatim::stringify_verbatim!(fn $name $params $(-> $ret)? $body));
+        fn $name $params $(-> $ret)? $body
+        $crate::literate_inner!($($rest)*);
+    };
+}
+
 /// Internal macro for processing literate body
 #[macro_export]
 macro_rules! literate_inner {
@@ -124,6 +140,11 @@ macro_rules! literate_inner {
     // Doc comment - start collecting
     (#[doc = $doc:literal] $($rest:tt)*) => {
         $crate::literate_docs!([$doc] $($rest)*);
+    };
+
+    // fn item
+    (fn $($item:tt)*) => {
+        $crate::literate_item!(fn $($item)*);
     };
 
     // Statement with semicolon
@@ -152,3 +173,4 @@ macro_rules! literate {
 pub use literate;
 pub use literate_docs;
 pub use literate_inner;
+pub use literate_item;

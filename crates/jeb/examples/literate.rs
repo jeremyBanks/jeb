@@ -72,15 +72,25 @@ literate! {
     alphabet (`A` to `F`). This is a common choice for binary values that may be
     directly manually edited by humans.
 */
-    let HEX: [u8; 16] = b"0123456789ABCDEF";
+    let HEX: &[u8; 16] = b"0123456789ABCDEF";
 /**
     Cleanly splitting each byte in half keeps this encoding quite simple, with
     only one significant design question: which half comes first in the text
     output, the high 4 bits (representing 16, 32, 64, and 128) or the low 4
     bits (representing 1, 2, 4, and 8)? This property is a form of endianness,
     and for hex the answer is always "big endian" (the high 4 bits come first),
-    aligning with how decimal numbers are typically written.
-
+    aligning with how decimal numbers are typically written. This makes encoding
+    and decoding quite simple.
+*/
+    fn hex_encode(bytes: &[u8]) -> String {
+        let mut result = String::with_capacity(bytes.len() * 2);
+        for byte in bytes {
+            result.push(HEX[*byte as usize / 16]);
+            result.push(HEX[*byte as usize % 16]);
+        }
+        result
+    }
+/**
     - **Context compatibility:** as good as it gets. It only uses digits and a
       handful of letters, and typically not case-sensitive.
     - **Overhead:** +100%. You wouldn't pick hex for its efficiency.
