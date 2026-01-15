@@ -3,9 +3,9 @@
     unused
 )]
 use {
-    crate::testing::literate,
     bat::PrettyPrinter,
     inline::*,
+    jeb::testing::literate,
 };
 
 literate! {

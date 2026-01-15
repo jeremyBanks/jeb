@@ -120,8 +120,7 @@ macro_rules! literate {
 
     // Main entry: create the test function with empty buffer
     ($($body:tt)*) => {
-        #[test]
-        fn literate_test() {
+        pub fn main() {
             literate!(@process [$($body)*] []);
         }
     };
