@@ -40,7 +40,7 @@ macro_rules! literate {
 }
 
 literate! {
-    literate {
+    spec {
         /// # Encoding bytes as text
 
         /// There are a lot of different ways to encode binary data as text, with
