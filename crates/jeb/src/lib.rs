@@ -33,6 +33,7 @@ pub mod jeb85;
 pub mod literate;
 pub mod model;
 pub mod nodes;
+mod spec;
 pub mod z85;
 pub use {
     crate::{
