@@ -43,15 +43,21 @@ literate! {
 println!("test");
 }
 
-fn print_doc_block(lines: &[&str]) {
-    if lines.is_empty() {
+fn print_doc_block(doc_strings: &[&str]) {
+    for doc_string in doc_strings {
+        print_single_doc(doc_string);
+    }
+}
+
+fn print_single_doc(doc_string: &str) {
+    if doc_string.is_empty() {
         return;
     }
 
-    // Normalize whitespace-only lines to empty strings
-    let lines: Vec<&str> = lines
-        .iter()
-        .map(|line| if line.trim().is_empty() { "" } else { *line })
+    // Split into lines, normalize whitespace-only to empty
+    let lines: Vec<&str> = doc_string
+        .lines()
+        .map(|line| if line.trim().is_empty() { "" } else { line })
         .collect();
     let mut lines: &[&str] = &lines;
 
