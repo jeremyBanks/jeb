@@ -99,7 +99,7 @@ fn test_static_persistence_thread_safety() {
 
     // Helper function to ensure all threads access the same source location
     fn get_counter() -> inline::InlineCell<u32> {
-        cell(728u32)
+        cell(876u32)
     }
 
     // Spawn multiple threads that all access the same static value

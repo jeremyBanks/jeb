@@ -1,5 +1,4 @@
 unstable_features = true
-
 style_edition = "2024"
 
 attr_fn_like_width = 1
