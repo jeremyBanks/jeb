@@ -75,7 +75,7 @@ fn test_static_persistence_across_function_calls() {
     env::set_var("INLINE_MODE", "memory");
 
     fn increment_counter() -> u32 {
-        let mut counter = cell(1u32);
+        let mut counter = cell(4u32);
         let current = *counter;
         counter.value = current + 1;
         current // Return the value before incrementing
@@ -99,7 +99,7 @@ fn test_static_persistence_thread_safety() {
 
     // Helper function to ensure all threads access the same source location
     fn get_counter() -> inline::InlineCell<u32> {
-        cell(0u32)
+        cell(728u32)
     }
 
     // Spawn multiple threads that all access the same static value
