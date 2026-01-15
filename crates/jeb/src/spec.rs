@@ -2,12 +2,9 @@
     non_snake_case,
     unused_variables
 )]
-use {
-    self::literate,
-    inline::*,
-};
+use inline::*;
 
-macro_rules! literate {
+macro_rules! literate_test {
     // Base case - no more tokens to process
     (@process [] $($output:tt)*) => {
         $($output)*
@@ -15,17 +12,17 @@ macro_rules! literate {
 
     // Match a doc comment and convert to eprintln
     (@process [#[doc = $doc:literal] $($rest:tt)*] $($output:tt)*) => {
-        literate!(@process [$($rest)*] $($output)* eprintln!($doc);)
+        literate_test!(@process [$($rest)*] $($output)* eprintln!($doc);)
     };
 
     // Match a let statement
     (@process [let $p:pat = $e:expr ; $($rest:tt)*] $($output:tt)*) => {
-        literate!(@process [$($rest)*] $($output)* eprintln!(">>> let {} = {};", stringify!($p), stringify!($e)); let $p = $e;)
+        literate_test!(@process [$($rest)*] $($output)* eprintln!(">>> let {} = {};", stringify!($p), stringify!($e)); let $p = $e;)
     };
 
     // Match an expression statement (ending with ;)
     (@process [$e:expr ; $($rest:tt)*] $($output:tt)*) => {
-        literate!(@process [$($rest)*] $($output)* eprintln!(">>> {};", stringify!($e)); $e;)
+        literate_test!(@process [$($rest)*] $($output)* eprintln!(">>> {};", stringify!($e)); $e;)
     };
 
     // Match a trailing expression (no semicolon)
@@ -34,15 +31,15 @@ macro_rules! literate {
     };
 
     // Main entry: create the test function
-    ({ $($body:tt)* }) => {
+    ($($body:tt)*) => {
         #[test]
         fn literate() {
-            literate!(@process [$($body)*]);
+            literate_test!(@process [$($body)*]);
         }
     };
 }
 
-literate! {{
+literate_test! {
     /// # Encoding bytes as text
 
         /// There are a lot of different ways to encode binary data as text, with
@@ -70,4 +67,4 @@ literate! {{
         /// bits, and each hex digit represents four bits, so we just output two
         /// hex digits for each byte.
         let _ = ();
-}}
+}
