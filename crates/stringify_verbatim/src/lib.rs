@@ -66,6 +66,12 @@ fn reconstruct_with_whitespace(tokens: proc_macro2::TokenStream) -> String {
         return String::new();
     }
 
+    // Check if spans look chaotic (macro expansion artifacts)
+    // If so, use simple spacing mode
+    if spans_look_chaotic(&tts) {
+        return reconstruct_with_simple_spacing(&tts);
+    }
+
     // Find the starting position (first token's start) to use as our baseline
     let baseline = find_first_span_start(&tts);
 
@@ -108,6 +114,122 @@ fn reconstruct_with_whitespace(tokens: proc_macro2::TokenStream) -> String {
     }
 
     result
+}
+
+/// Check if the token stream spans look chaotic (typical of macro expansion).
+/// Signs of chaos: tokens jumping backwards in line numbers, or huge gaps.
+fn spans_look_chaotic(tts: &[TokenTree]) -> bool {
+    if tts.len() < 2 {
+        return false;
+    }
+
+    let mut prev_line = 0usize;
+    let mut backwards_count = 0;
+    let mut huge_gap_count = 0;
+
+    fn check_token(tt: &TokenTree, prev_line: &mut usize, backwards: &mut usize, gaps: &mut usize) {
+        let line = tt.span().start().line;
+        if *prev_line > 0 {
+            if line < *prev_line {
+                *backwards += 1;
+            } else if line > *prev_line + 10 {
+                *gaps += 1;
+            }
+        }
+        *prev_line = line;
+
+        // Check inside groups too
+        if let TokenTree::Group(g) = tt {
+            for inner in g.stream() {
+                check_token(&inner, prev_line, backwards, gaps);
+            }
+        }
+    }
+
+    for tt in tts {
+        check_token(tt, &mut prev_line, &mut backwards_count, &mut huge_gap_count);
+    }
+
+    // If we see multiple backwards jumps or gaps, spans are chaotic
+    backwards_count >= 2 || huge_gap_count >= 2
+}
+
+/// Reconstruct with simple spacing - just put spaces between tokens,
+/// with newlines preserved for groups.
+fn reconstruct_with_simple_spacing(tts: &[TokenTree]) -> String {
+    let mut result = String::new();
+    let mut prev_needs_space = false;
+
+    for tt in tts {
+        if prev_needs_space && needs_space_before(tt) {
+            result.push(' ');
+        }
+
+        result.push_str(&token_to_string_simple(tt));
+        prev_needs_space = needs_space_after(tt);
+    }
+
+    result
+}
+
+/// Check if a token needs a space before it
+fn needs_space_before(tt: &TokenTree) -> bool {
+    match tt {
+        TokenTree::Punct(p) => {
+            let c = p.as_char();
+            // These punctuation marks typically don't need space before
+            !matches!(c, ',' | ';' | ':' | '.' | ')' | ']' | '}' | '>' | '?')
+        }
+        TokenTree::Group(g) => {
+            // Groups that are call arguments don't need space before
+            g.delimiter() != proc_macro2::Delimiter::Parenthesis
+        }
+        _ => true,
+    }
+}
+
+/// Check if a token needs a space after it
+fn needs_space_after(tt: &TokenTree) -> bool {
+    match tt {
+        TokenTree::Punct(p) => {
+            let c = p.as_char();
+            // These need space after them typically
+            matches!(c, ',' | ';' | ':' | '=' | '+' | '-' | '*' | '/' | '&' | '|' | '<' | '>')
+                || p.spacing() == proc_macro2::Spacing::Alone
+        }
+        TokenTree::Group(g) => {
+            // Brace groups (blocks) are followed by space
+            g.delimiter() == proc_macro2::Delimiter::Brace
+        }
+        _ => true,
+    }
+}
+
+/// Simple token to string conversion with basic formatting
+fn token_to_string_simple(tt: &TokenTree) -> String {
+    match tt {
+        TokenTree::Group(g) => {
+            let inner: Vec<TokenTree> = g.stream().into_iter().collect();
+            let inner_str = reconstruct_with_simple_spacing(&inner);
+
+            let (open, close) = match g.delimiter() {
+                proc_macro2::Delimiter::Parenthesis => ("(", ")"),
+                proc_macro2::Delimiter::Brace => ("{", "}"),
+                proc_macro2::Delimiter::Bracket => ("[", "]"),
+                proc_macro2::Delimiter::None => ("", ""),
+            };
+
+            // For brace groups, add newlines around content
+            if g.delimiter() == proc_macro2::Delimiter::Brace && !inner_str.is_empty() {
+                format!("{}\n{}\n{}", open, inner_str, close)
+            } else {
+                format!("{}{}{}", open, inner_str, close)
+            }
+        }
+        TokenTree::Ident(i) => i.to_string(),
+        TokenTree::Punct(p) => p.to_string(),
+        TokenTree::Literal(l) => l.to_string(),
+    }
 }
 
 /// Find the first span start position from a list of tokens, looking for the
