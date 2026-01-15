@@ -273,6 +273,17 @@ fn try_parse_doc_attribute(tokens: &[TokenTree]) -> Option<(String, usize, LineC
 /// If span positions appear discontinuous (which happens with macro-expanded
 /// tokens), use minimal spacing to avoid creating huge gaps.
 fn compute_whitespace(from: LineColumn, to: LineColumn, baseline: LineColumn) -> String {
+    // Check if the span positions look suspicious (macro expansion artifacts)
+    // A common sign is: different lines but to.line < from.line (going backwards)
+    // or same line but to.column < from.column (going backwards on same line)
+    let going_backwards =
+        to.line < from.line || (to.line == from.line && to.column < from.column);
+
+    if going_backwards {
+        // Spans are clearly wrong - just use a single space
+        return " ".to_string();
+    }
+
     if from.line == to.line {
         // Same line: just spaces
         let spaces = to.column.saturating_sub(from.column);
@@ -280,6 +291,9 @@ fn compute_whitespace(from: LineColumn, to: LineColumn, baseline: LineColumn) ->
         // Just use a single space in that case
         if spaces > 20 {
             " ".to_string()
+        } else if spaces == 0 {
+            // No space needed (adjacent tokens)
+            String::new()
         } else {
             " ".repeat(spaces)
         }

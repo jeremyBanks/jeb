@@ -83,10 +83,12 @@ literate! {
     and decoding quite simple.
 */
     fn hex_encode(bytes: &[u8]) -> String {
-        let mut result = String::with_capacity(bytes.len() * 2);
+        let mut result = String::new();
         for byte in bytes {
-            result.push(HEX[*byte as usize / 16]);
-            result.push(HEX[*byte as usize % 16]);
+            let high = (byte & 0xF0) >> 4;
+            let low = byte & 0x0F;
+            result.push(HEX[high as usize] as char);
+            result.push(HEX[low as usize] as char);
         }
         result
     }
