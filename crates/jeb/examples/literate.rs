@@ -70,7 +70,9 @@ literate! {
     extending the decimal digits (`0` to `9`) with the first six letters of the
     alphabet (`A` to `F`). This is a common choice for binary values that may be
     directly manually edited by humans.
-
+*/
+    let HEX: [u8; 16] = b"0123456789ABCDEF";
+/**
     Cleanly splitting each byte in half keeps this encoding quite simple, with
     only one significant design question: which half comes first in the text
     output, the high 4 bits (representing 16, 32, 64, and 128) or the low 4
