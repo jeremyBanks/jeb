@@ -1,7 +1,11 @@
 use {
     itertools::{
+        EitherOrBoth::{
+            Both,
+            Left,
+            Right,
+        },
         Itertools,
-        ZipLongest,
     },
     std::collections::HashMap,
 };
@@ -14,7 +18,12 @@ pub fn concat(left: impl AsRef<str>, separator: impl AsRef<str>, right: impl AsR
     let separator = separator.as_ref();
     let max_left_line_length = left_lines.iter().map(|line| line.len()).max().unwrap_or(0);
     let mut lines = vec![];
-    for ZipLongest in left_lines.iter().zip_longest(right_lines.iter()) {
+    for pair in left_lines.iter().zip_longest(right_lines.iter()) {
+        let (left_line, right_line) = match pair {
+            Both(l, r) => (*l, *r),
+            Left(l) => (*l, ""),
+            Right(r) => ("", *r),
+        };
         if left_line.is_empty() && right_line.is_empty() {
             lines.push("".to_string());
         } else {

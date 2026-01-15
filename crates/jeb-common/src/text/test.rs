@@ -13,20 +13,20 @@ use {
 fn test_zig_zag() {
     render_d1((0u16..=14).map(zig_zag)).snap(
         r"
-             : 
-           :   
-         :     
-       .       
-     .         
-   .           
- .             
-.              
-  .            
-    .          
-      .        
-        .      
-          :    
-            :  
+             :
+           :
+         :
+       .
+     .
+   .
+ .
+.
+  .
+    .
+      .
+        .
+          :
+            :
               :
 ",
     );
@@ -36,20 +36,20 @@ fn test_zig_zag() {
 fn test_signedness() {
     render_1d((0u16..=14).map(signedness)).snap(
         r"
-.              
- .             
-  .            
-   .           
-    .          
-     .         
-      .        
-       .       
-        .      
-         :     
-          :    
-           :   
-            :  
-             : 
+.
+ .
+  .
+   .
+    .
+     .
+      .
+       .
+        .
+         :
+          :
+           :
+            :
+             :
               :
 ",
     );
@@ -89,25 +89,25 @@ fn test_scatter_square() {
     render_2d((0u16..=390).map(scatter_square)).snap(
         r"
   # $ #  &  &@      &
- X%ZXZXZVXYW!ZWVVU%U 
- VOPQNONQRPOTOTSQPPX 
- WQLIGMKIHMMJJHMILQ% 
-@VOIGDFEBBGDDDECEKOU 
+ X%ZXZXZVXYW!ZWVVU%U
+ VOPQNONQRPOTOTSQPPX
+ WQLIGMKIHMMJJHMILQ%
+@VOIGDFEBBGDDDECEKOU
  ZNKE7A877BBA898BJN%$
  !TJD76563564657EMS%&
-#XSLG753i3211268BLNY 
+#XSLG753i3211268BLNY
  %SIF942i:ii:367FITW#
- VQHB831:...ii5AFJTY 
- YUKCB61i...:269EHN! 
- !RHC841:...i249EGO! 
+ VQHB831:...ii5AFJTY
+ YUKCB61i...:269EHN!
+ !RHC841:...i249EGO!
 $YTMEA41:i:::357CIR%#
-@YPHGA4211221248CLR! 
- !RHD85463535348CMSZ 
- WPKF9A9AB799A9ADIRX 
- %SJGDCFCEFDGFFGCMRW 
-$YTJJLHLKKHKIKLJLMRU 
+@YPHGA4211221248CLR!
+ !RHD85463535348CMSZ
+ WPKF9A9AB799A9ADIRX
+ %SJGDCFCEFDGFFGCMRW
+$YTJJLHLKKHKIKLJLMRU
 $VONTSNSPPOTQQQPRNSU&
- UXUZWXU!ZWV%$Y!ZVYW 
+ UXUZWXU!ZWV%$Y!ZVYW
 #   &$$& #  & # # @&$
 ",
     );
@@ -127,14 +127,14 @@ fn test_hilbert() {
 44431122MMMMKKKJSSTTUUVV#&&&!!!!
 44333322LLLLKKJJSTTTUUUV##&&$$$$
 54333222LLLLLKJJSSTTUUVV##&$$$$$
-5555BBBCCCCCIIIJ        ##      
-5555BBBCCCDCIIJJ        @#      
-6666BBAADDDDIIHH        @       
-6666BAAADDDDIIHH        @@      
-678888AAEEFFFFHH                
-778898AAEEFFGGHH                
-77789999EEEFGGGH                
-77789999EEFFGGGG                
+5555BBBCCCCCIIIJ        ##
+5555BBBCCCDCIIJJ        @#
+6666BBAADDDDIIHH        @
+6666BAAADDDDIIHH        @@
+678888AAEEFFFFHH
+778898AAEEFFGGHH
+77789999EEEFGGGH
+77789999EEFFGGGG
 ",
     );
 }
