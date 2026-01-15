@@ -38,7 +38,6 @@ literate! {
     special meaning in other encodings or programming languages (e.g. `\`
     backslash, `"` double quote, `$` dollar sign), so these encoded values can
     rarely be embedded without an additional layer of escaping or framing.
-
  */
 
 /// (We'll be focusing primarily on byte-oriented encodings that can produce
@@ -54,18 +53,38 @@ println!("test");
 }
 
 fn print_doc_block(doc_strings: &[&str]) {
-    for doc_string in doc_strings {
-        print_single_doc(doc_string);
-    }
-}
-
-fn print_single_doc(doc_string: &str) {
-    if doc_string.is_empty() {
+    if doc_strings.is_empty() {
         return;
     }
 
-    // Split into lines, normalize whitespace-only to empty
-    let lines: Vec<&str> = doc_string
+    // Group doc strings: multi-line strings (/** */) are processed alone,
+    // consecutive single-line strings (///) are grouped together
+    let mut i = 0;
+    while i < doc_strings.len() {
+        let s = doc_strings[i];
+        if s.contains('\n') {
+            // Multi-line block comment - process alone
+            print_single_doc_group(&[s]);
+            i += 1;
+        } else {
+            // Single-line - gather consecutive single-line strings
+            let start = i;
+            while i < doc_strings.len() && !doc_strings[i].contains('\n') {
+                i += 1;
+            }
+            print_single_doc_group(&doc_strings[start..i]);
+        }
+    }
+}
+
+fn print_single_doc_group(doc_strings: &[&str]) {
+    if doc_strings.is_empty() {
+        return;
+    }
+
+    // Join all doc strings with newlines, then split into lines
+    let combined = doc_strings.join("\n");
+    let lines: Vec<&str> = combined
         .lines()
         .map(|line| if line.trim().is_empty() { "" } else { line })
         .collect();
@@ -104,17 +123,22 @@ fn print_single_doc(doc_string: &str) {
         .collect::<Vec<_>>()
         .join("\n");
 
-    // Print with bat markdown highlighting
+    // Print with bat markdown highlighting (add trailing newline to content)
+    let content = format!("{}\n", dedented);
+    eprintln!();
     PrettyPrinter::new()
-        .input_from_bytes(dedented.as_bytes())
+        .input_from_bytes(content.as_bytes())
         .language("markdown")
         .print()
         .unwrap();
 }
 
 fn print_code(code: &str) {
+    // Add trailing newline to content
+    let content = format!("{}\n", code);
+    eprintln!();
     PrettyPrinter::new()
-        .input_from_bytes(code.as_bytes())
+        .input_from_bytes(content.as_bytes())
         .language("rust")
         .print()
         .unwrap();
