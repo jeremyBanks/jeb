@@ -1,21 +1,10 @@
 #![expect(clippy::must_use_candidate)]
-
-
-
 #[macro_export]
 macro_rules! noop {
     ($($x:expr $(;)?)+) => {
-        $(
-            const _: [(); {
-                {
-                    $x
-                };
-                0
-            }] = [];
-        )+
+        $(const _ : [(); { { $x }; 0 }] = [];)+
     };
 }
-
 /// const-compatible order-preserving set of unique byte values. The byte in the
 /// set will always make up the first `length` items of the `bytes` array, in
 /// specified order (if any). Most of the const method implementations are very
@@ -26,13 +15,11 @@ pub struct OrderedByteSet {
     bytes: [u8; 256],
     len: usize,
 }
-
 impl AsRef<[u8]> for OrderedByteSet {
     fn as_ref(&self) -> &[u8] {
         &self.bytes[..self.len]
     }
 }
-
 impl OrderedByteSet {
     pub const ALL: Self = Self {
         bytes: [
@@ -73,18 +60,14 @@ impl OrderedByteSet {
 
     pub const fn from_bytes(bytes: &[u8]) -> Self {
         let mut set = Self::NONE;
-
         let mut index = 0;
         loop {
             if index >= bytes.len() {
                 break;
             }
-
             set.insert(bytes[index]);
-
             index += 1;
         }
-
         set
     }
 
@@ -94,7 +77,6 @@ impl OrderedByteSet {
             if self.bytes[index] == byte {
                 return index;
             }
-
             index += 1;
             if index > 0xFF {
                 return -1isize as usize;
@@ -104,33 +86,25 @@ impl OrderedByteSet {
 
     pub const fn insert(&mut self, byte: u8) -> Option<u8> {
         let existing_index = self.index_of(byte);
-
         if existing_index < self.len() {
             return Some(byte);
         }
-
         self.bytes.swap(existing_index, self.len);
-
         self.len += 1;
-
         None
     }
 
     pub const fn remove(&mut self, byte: u8) -> Option<u8> {
         let existing_index = self.index_of(byte);
-
         if existing_index >= self.len() {
             return None;
         }
-
         self.len -= 1;
-
         let mut existing_index = existing_index;
         while existing_index < self.len() {
             self.bytes.swap(existing_index, existing_index + 1);
             existing_index += 1;
         }
-
         Some(byte)
     }
 
@@ -172,23 +146,19 @@ impl OrderedByteSet {
     /// Panics if the length of `self` does not match `LENGTH`.
     pub const fn to_array<const LENGTH: usize>(self) -> [u8; LENGTH] {
         let mut array = [0u8; LENGTH];
-
         if self.len() > LENGTH {
             panic!("computed array had larger than expected size")
         } else if self.len() < LENGTH {
             panic!("computed array had smaller than expected size")
         }
-
         let mut index: usize = 0;
         loop {
             array[index] = self.bytes[index];
-
             index += 1;
             if index >= LENGTH {
                 break;
             }
         }
-
         array
     }
 
@@ -202,29 +172,23 @@ impl OrderedByteSet {
 
     pub const fn presence_lut(self) -> [bool; 256] {
         let mut lut = [false; 256];
-
         let mut index = 0;
         while index < self.len() {
             let byte = self.bytes[index];
             lut[byte as usize] = true;
-
             index += 1;
         }
-
         lut
     }
 
     pub const fn index_lut(self) -> [u8; 256] {
         let mut lut = [0xFF; 256];
-
         let mut index = 0;
         while index < self.len() {
             let byte = self.bytes[index];
             lut[byte as usize] = index as u8;
-
             index += 1;
         }
-
         lut
     }
 
@@ -241,7 +205,6 @@ impl OrderedByteSet {
         } else if expected.len() > self.len() {
             panic!("calculated value had greater length than expected value");
         }
-
         let mut index = 0;
         while index < expected.len() {
             if expected[index] != self.bytes[index] {
@@ -249,16 +212,13 @@ impl OrderedByteSet {
             }
             index += 1;
         }
-
         self
     }
 }
-
 #[expect(non_snake_case)]
 pub const fn OBS(b: &[u8]) -> OrderedByteSet {
     OrderedByteSet::from_bytes(b)
 }
-
 /// Asserts that both `usize` arguments are equal, then returns that value.
 ///
 /// # Panics
@@ -268,10 +228,8 @@ pub const fn usize_eq(expected: usize, calculation: usize) -> usize {
     if expected != calculation {
         panic!("calculated value did not match expected value");
     }
-
     expected
 }
-
 /// Asserts that both `&[u8]` arguments are equal, then returns that value.
 ///
 /// # Panics
@@ -284,7 +242,6 @@ pub const fn bytes_eq<'a>(expected: &'a [u8], calculated: &'a [u8]) -> &'a [u8] 
     } else if expected.len() > calculated.len() {
         panic!("calculated value had greater length than expected value");
     }
-
     let mut index = 0;
     while index < expected.len() {
         if expected[index] != calculated[index] {
@@ -292,10 +249,8 @@ pub const fn bytes_eq<'a>(expected: &'a [u8], calculated: &'a [u8]) -> &'a [u8] 
         }
         index += 1;
     }
-
     expected
 }
-
 /// Performs exact division, ensuring there is no remainder.
 ///
 /// # Panics
@@ -305,18 +260,14 @@ pub const fn div_exact(dividend: usize, divisor: usize) -> usize {
     if !dividend.is_multiple_of(divisor) {
         panic!("remainder in div_exact");
     }
-
     dividend / divisor
 }
-
 pub const fn pow(base: usize, exponent: usize) -> usize {
     let mut result: usize = 1;
-
     let mut iterations: usize = 0;
     while iterations < exponent {
         result *= base;
         iterations += 1;
     }
-
     result
 }

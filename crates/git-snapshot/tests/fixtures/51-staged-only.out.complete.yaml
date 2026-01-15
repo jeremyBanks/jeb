@@ -1,0 +1,18 @@
+HEAD: 25592502825624fbc87394a50e5de3e306d97db6
+refs: {}
+staged:
+  CHANGELOG.md: '## v0.1.0'
+  README.md: '# Project (staged changes)'
+  src:
+    lib.rs: pub fn main() { println!("hello"); }
+25592502825624fbc87394a50e5de3e306d97db6:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: Initial commit
+  parents: []
+  tree:
+    README.md: '# Project'
+    src:
+      lib.rs: pub fn main() {}

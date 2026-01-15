@@ -1,0 +1,72 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: c2d96cb2100af52c30896268562b7b8809fbbee8
+dce28f:
+  author: Tester <test@example.com>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  message: Repository with special characters in filenames
+  tree:
+    README.md: root readme
+    src:
+      file with spaces.txt: content
+      file-with-dashes.txt: content
+      file.multiple.dots.txt: content
+      file_with_underscores.txt: content
+      файл.txt: Cyrillic filename
+      文件.txt: Chinese filename
+      😀.txt: Emoji filename
+136d8a:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  committer: 🔎 <git-zoom-in@localhost>
+  message: Initial commit
+  parents: []
+  tree: {}
+'6000e8':
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |-
+    Merge from 'src'
+
+    git-zoom-in: src
+  parents:
+  - 136d8a
+  - dce28f
+  tree:
+    file with spaces.txt:
+      //commit: dce28f
+      //path: src/file with spaces.txt
+    file-with-dashes.txt:
+      //commit: dce28f
+      //path: src/file-with-dashes.txt
+    file.multiple.dots.txt:
+      //commit: dce28f
+      //path: src/file.multiple.dots.txt
+    file_with_underscores.txt:
+      //commit: dce28f
+      //path: src/file_with_underscores.txt
+    файл.txt:
+      //commit: dce28f
+      //path: src/файл.txt
+    文件.txt:
+      //commit: dce28f
+      //path: src/文件.txt
+    😀.txt:
+      //commit: dce28f
+      //path: src/😀.txt
+c2d96cb2100af52c30896268562b7b8809fbbee8:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |-
+    Merge to 'src'
+
+    git-zoom-out: src
+  parents:
+  - dce28f
+  - '6000e8'

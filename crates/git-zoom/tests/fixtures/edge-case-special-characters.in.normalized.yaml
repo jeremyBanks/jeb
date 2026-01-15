@@ -1,0 +1,19 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 0c27e37f88680826731593d4d6eae4acd116bf22
+0c27e37f88680826731593d4d6eae4acd116bf22:
+  author: Tester <test@example.com>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  message: Repository with special characters in filenames
+  tree:
+    README.md: root readme
+    src:
+      file with spaces.txt: content
+      file-with-dashes.txt: content
+      file.multiple.dots.txt: content
+      file_with_underscores.txt: content
+      файл.txt: Cyrillic filename
+      文件.txt: Chinese filename
+      😀.txt: Emoji filename

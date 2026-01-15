@@ -1,0 +1,36 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: ccd8333a49d2935fcafbc1015d3fa49ba9faabd3
+136d8a:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  committer: 🔎 <git-zoom-in@localhost>
+  message: Initial commit
+  tree: {}
+01fe9a:
+  author: Tester <test@example.com>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  message: Repository with tab in filename
+  parents: []
+  tree:
+    README.md: root readme
+    src:
+      "file\twith\ttabs.txt": content with tabs in name
+ccd8333a49d2935fcafbc1015d3fa49ba9faabd3:
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |-
+    Merge from 'src'
+
+    git-zoom-in: src
+  parents:
+  - 136d8a
+  - 01fe9a
+  tree:
+    "file\twith\ttabs.txt":
+      //commit: 01fe9a
+      //path: "src/file\twith\ttabs.txt"

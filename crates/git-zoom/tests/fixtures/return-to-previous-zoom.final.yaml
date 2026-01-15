@@ -1,0 +1,69 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 7fd268655609ff2c14493316376bfa410c3174bf
+136d8a:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  committer: 🔎 <git-zoom-in@localhost>
+  message: Initial commit
+  tree: {}
+7ce26a:
+  message: commit 1
+  parents: []
+  tree:
+    root.txt: root
+    src:
+      file.txt: original
+0b5979:
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |-
+    Merge from 'src'
+
+    git-zoom-in: src
+  parents:
+  - 136d8a
+  - 7ce26a
+  tree:
+    file.txt:
+      //commit: 7ce26a
+      //path: src/file.txt
+1070d0:
+  author: User <user@localhost>
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  message: Update
+  tree:
+    file.txt: modified
+abfc51:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |-
+    Merge to 'src'
+
+    git-zoom-out: src
+  parents:
+  - 7ce26a
+  - 1070d0
+  tree:
+    src:
+      file.txt:
+        //commit: 1070d0
+        //path: file.txt
+7fd268655609ff2c14493316376bfa410c3174bf:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |-
+    Merge from 'src'
+
+    git-zoom-in: src
+  parents:
+  - 1070d0
+  - abfc51

@@ -1,0 +1,9 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 1
+1:
+  tree:
+    root.txt: "root"
+    src:
+      file.txt: "original"

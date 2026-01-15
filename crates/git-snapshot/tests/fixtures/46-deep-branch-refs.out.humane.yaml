@@ -1,0 +1,20 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    feature:
+      subsystem:
+        component:
+          branch: 2
+    main: 1
+    release:
+      v1:
+        hotfix: 3
+1:
+  tree:
+    main.txt: main branch
+2:
+  tree:
+    feature.txt: deep feature branch
+3:
+  tree:
+    release.txt: release hotfix

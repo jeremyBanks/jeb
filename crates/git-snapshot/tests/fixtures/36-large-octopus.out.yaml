@@ -1,0 +1,69 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 9d5c45c4ae95da0a4af5b575a80bb841707b4a03
+92e399:
+  message: commit 1
+  tree:
+    base.txt: base
+db8f73:
+  message: commit 2
+  tree:
+    branch1.txt: first
+1d49d1:
+  message: commit 3
+  tree:
+    branch2.txt: second
+d08211:
+  message: commit 4
+  tree:
+    branch3.txt: third
+'684838':
+  message: commit 5
+  tree:
+    branch4.txt: fourth
+c259fd:
+  message: commit 6
+  tree:
+    branch5.txt: fifth
+56bd7d:
+  message: commit 7
+  tree:
+    branch6.txt: sixth
+29fb3c:
+  message: commit 8
+  tree:
+    branch7.txt: seventh
+9d5c45c4ae95da0a4af5b575a80bb841707b4a03:
+  message: commit 9
+  parents:
+  - 92e399
+  - db8f73
+  - 1d49d1
+  - d08211
+  - '684838'
+  - c259fd
+  - 56bd7d
+  - 29fb3c
+  tree:
+    branch1.txt:
+      //commit: db8f73
+      //path: branch1.txt
+    branch2.txt:
+      //commit: 1d49d1
+      //path: branch2.txt
+    branch3.txt:
+      //commit: d08211
+      //path: branch3.txt
+    branch4.txt:
+      //commit: '684838'
+      //path: branch4.txt
+    branch5.txt:
+      //commit: c259fd
+      //path: branch5.txt
+    branch6.txt:
+      //commit: 56bd7d
+      //path: branch6.txt
+    branch7.txt:
+      //commit: 29fb3c
+      //path: branch7.txt

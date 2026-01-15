@@ -1,0 +1,13 @@
+HEAD: 054b9e1e7f0f75bb0315c81d24d993669ecc6aa0
+refs: {}
+working:
+  README.md: v1 (edited)
+  new-file.txt: added in working dir
+  src:
+    lib.rs: // v1 (edited)
+054b9e1e7f0f75bb0315c81d24d993669ecc6aa0:
+  message: commit 1
+  tree:
+    README.md: v1
+    src:
+      lib.rs: // v1

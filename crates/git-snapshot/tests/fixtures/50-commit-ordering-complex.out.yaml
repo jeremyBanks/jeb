@@ -1,0 +1,64 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    feature-a: 564e48a4ad5b255274826652936def25bc9664e0
+    feature-b: c3c092efb8862fd9bc04816a03569c8d00a7ece6
+    main: 0bfa495826e7c8277aa231326d544fb07225af70
+e18a60:
+  message: commit 1
+  tree:
+    main.txt: initial
+631c5d:
+  message: commit 2
+  tree:
+    main.txt: main commit 2
+1402ef:
+  message: commit 3
+  parents:
+  - e18a60
+  tree:
+    feature-a.txt: feature a work
+a9613d:
+  message: commit 4
+  tree:
+    feature-a.txt: feature a more work
+f08a17:
+  message: commit 7
+  parents:
+  - 631c5d
+  tree:
+    feature-b.txt: feature b work
+564e48a4ad5b255274826652936def25bc9664e0:
+  message: commit 5
+  parents:
+  - a9613d
+  tree:
+    feature-a.txt: feature a complete
+8feb6f:
+  message: commit 6
+  parents:
+  - 631c5d
+  - 564e48a4ad5b255274826652936def25bc9664e0
+  tree:
+    feature-a.txt:
+      //commit: 564e48a4ad5b255274826652936def25bc9664e0
+      //path: feature-a.txt
+c3c092efb8862fd9bc04816a03569c8d00a7ece6:
+  message: commit 8
+  parents:
+  - f08a17
+  tree:
+    feature-b.txt: feature b complete
+ac6153:
+  message: commit 9
+  parents:
+  - 8feb6f
+  - c3c092efb8862fd9bc04816a03569c8d00a7ece6
+  tree:
+    feature-b.txt:
+      //commit: c3c092efb8862fd9bc04816a03569c8d00a7ece6
+      //path: feature-b.txt
+0bfa495826e7c8277aa231326d544fb07225af70:
+  message: commit 10
+  tree:
+    main.txt: main final

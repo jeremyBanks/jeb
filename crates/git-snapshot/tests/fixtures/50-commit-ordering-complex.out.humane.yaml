@@ -1,0 +1,57 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    feature-a: 6
+    feature-b: 8
+    main: 10
+1:
+  tree:
+    main.txt: initial
+2:
+  tree:
+    main.txt: main commit 2
+3:
+  parents:
+  - 1
+  tree:
+    feature-a.txt: feature a work
+4:
+  tree:
+    feature-a.txt: feature a more work
+5:
+  message: commit 7
+  parents:
+  - 2
+  tree:
+    feature-b.txt: feature b work
+6:
+  message: commit 5
+  parents:
+  - 4
+  tree:
+    feature-a.txt: feature a complete
+7:
+  message: commit 6
+  parents:
+  - 2
+  - 6
+  tree:
+    feature-a.txt:
+      //commit: 6
+      //path: feature-a.txt
+8:
+  parents:
+  - 5
+  tree:
+    feature-b.txt: feature b complete
+9:
+  parents:
+  - 7
+  - 8
+  tree:
+    feature-b.txt:
+      //commit: 8
+      //path: feature-b.txt
+10:
+  tree:
+    main.txt: main final

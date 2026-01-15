@@ -1,0 +1,16 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 9009eddfc8818adb7c3154c9f35452e349b83a4e
+89245b:
+  message: commit 1
+  tree:
+    file.txt: first
+52c348:
+  message: commit 2
+  tree:
+    file.txt: second
+9009eddfc8818adb7c3154c9f35452e349b83a4e:
+  message: explicit message
+  tree:
+    file.txt: third

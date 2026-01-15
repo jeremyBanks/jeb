@@ -1,0 +1,35 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: ae727349ee8e3716ef42c2402d926672ed84ec50
+    other: ede4fd7221b4cf48f6e3962add1e046887b73bc5
+e656ad:
+  message: commit 2
+  tree:
+    shared.txt: shared content
+e7a128:
+  message: commit 1
+  parents: []
+  tree:
+    shared.txt:
+      //commit: e656ad
+      //path: shared.txt
+'907646':
+  message: commit 4
+  tree:
+    main.txt: main branch
+ede4fd7221b4cf48f6e3962add1e046887b73bc5:
+  message: commit 3
+  parents:
+  - e656ad
+  tree:
+    other.txt: other branch
+ae727349ee8e3716ef42c2402d926672ed84ec50:
+  message: commit 5
+  parents:
+  - '907646'
+  - ede4fd7221b4cf48f6e3962add1e046887b73bc5
+  tree:
+    other.txt:
+      //commit: ede4fd7221b4cf48f6e3962add1e046887b73bc5
+      //path: other.txt

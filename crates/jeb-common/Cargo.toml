@@ -1,0 +1,26 @@
+[package]
+name = "jeb-common"
+publish = false
+description = "(part of https://crates.io/crates/jeb)"
+keywords = []
+categories = []
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+wasm-bindgen = { workspace = true, optional = true }
+derive_more = { workspace = true, features = ["full"] }
+document-features.workspace = true
+fast_hilbert.workspace = true
+indexmap.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[features]
+default = []
+wasm = ["dep:wasm-bindgen"]
+wasm_bindgen = ["dep:wasm-bindgen"]

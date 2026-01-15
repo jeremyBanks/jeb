@@ -1,0 +1,19 @@
+[package]
+name = "stringify_verbatim"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jeremy Banks"]
+license = "MIT OR Apache-2.0"
+description = "A proc-macro that stringifies tokens while preserving original whitespace"
+repository = "https://github.com/jeremyBanks/inline"
+keywords = ["proc-macro", "stringify", "tokens", "whitespace"]
+categories = ["development-tools::procedural-macro-helpers"]
+publish = false
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = { workspace = true, features = ["span-locations"] }
+quote.workspace = true
+syn = { workspace = true, features = ["parsing"] }

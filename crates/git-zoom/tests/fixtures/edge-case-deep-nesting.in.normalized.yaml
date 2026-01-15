@@ -1,0 +1,38 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 78dbd86cd291afbf2991b719a8df3a327dd8eaf0
+78dbd86cd291afbf2991b719a8df3a327dd8eaf0:
+  author: Tester <test@example.com>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  message: Repository with deeply nested structure
+  tree:
+    README.md: root
+    a:
+      b:
+        c:
+          d:
+            e:
+              f:
+                g:
+                  h:
+                    i:
+                      j:
+                        k:
+                          l:
+                            m:
+                              n:
+                                o:
+                                  p:
+                                    q:
+                                      r:
+                                        s:
+                                          t:
+                                            u:
+                                              v:
+                                                w:
+                                                  x:
+                                                    y:
+                                                      z:
+                                                        deep.txt: very deep file

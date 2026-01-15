@@ -1,0 +1,32 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 0b451915908166917a31aa455234983e9a13ff94
+0b451915908166917a31aa455234983e9a13ff94:
+  author: Tester <test@example.com>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  message: Repository with many files in single directory
+  tree:
+    README.md: root
+    many:
+      file-001.txt: content 1
+      file-002.txt: content 2
+      file-003.txt: content 3
+      file-004.txt: content 4
+      file-005.txt: content 5
+      file-006.txt: content 6
+      file-007.txt: content 7
+      file-008.txt: content 8
+      file-009.txt: content 9
+      file-010.txt: content 10
+      file-011.txt: content 11
+      file-012.txt: content 12
+      file-013.txt: content 13
+      file-014.txt: content 14
+      file-015.txt: content 15
+      file-016.txt: content 16
+      file-017.txt: content 17
+      file-018.txt: content 18
+      file-019.txt: content 19
+      file-020.txt: content 20

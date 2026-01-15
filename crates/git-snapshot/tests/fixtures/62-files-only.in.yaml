@@ -1,0 +1,8 @@
+# Just files in a commit, everything else inferred
+# No explicit HEAD or refs - tests default behavior
+
+1:
+  tree:
+    README.md: "Hello"
+    src:
+      main.rs: "fn main() {}"

@@ -1,0 +1,36 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 4
+
+# Test zooming into non-existent path (allow-empty)
+1:
+  tree:
+    existing.txt: "exists"
+    dir:
+      file.txt: "content"
+
+2:
+  parents: []
+  tree: {}
+
+# Zoom-in from non-existent path (creates empty seed)
+3:
+  parents: [2, 1]
+  message: |
+    Zoom in from non-existent path
+
+    git-zoom-in: path/that/does/not/exist
+  tree: {}
+
+# Zoom-out to different non-existent path
+4:
+  parents: [1, 3]
+  message: |
+    Zoom out to different path
+
+    git-zoom-out: another/path
+  tree:
+    another:
+      path: {}

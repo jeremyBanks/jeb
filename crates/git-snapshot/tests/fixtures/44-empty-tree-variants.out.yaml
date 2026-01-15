@@ -1,0 +1,27 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 3005a032fa157c52c843850358f2247bbf6cbe9e
+5e8a30:
+  message: commit 1
+  tree:
+    dir:
+      nested.txt: nested
+    file.txt: content
+    other-dir:
+      file.txt: other
+38cbb8:
+  message: commit 3
+  tree:
+    dir:
+      nested.txt: null
+    file.txt: kept
+    other-dir:
+      file.txt: null
+3005a032fa157c52c843850358f2247bbf6cbe9e:
+  message: commit 4
+  tree:
+    has-content:
+      file.txt:
+        //commit: 5e8a30
+        //path: file.txt

@@ -1,0 +1,63 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 310e2862f282c487c421f9a08d60da07911b9ed0
+92bca6cdfd855f09d2f676376bca9d621484f98e:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    README.md: '# Project Alpha'
+    docs:
+      guide.md: '# User Guide'
+    src:
+      api:
+        server.rs: pub fn serve() {}
+      core:
+        engine.rs: pub fn run() { /* v1 */ }
+        utils.rs: pub fn helper() {}
+634d6c59bb04ad260ef99089a67d67a80be4ec20:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - 92bca6cdfd855f09d2f676376bca9d621484f98e
+  tree:
+    README.md: |-
+      # Project Alpha
+
+      ## Version 2.0
+    docs:
+      guide.md: null
+    src:
+      api:
+        server.rs: null
+      runtime:
+        engine.rs: pub fn run() { /* v2 - refactored */ }
+5999f510fc164042403f8fd605c3c2cfc6102df1:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents:
+  - 634d6c59bb04ad260ef99089a67d67a80be4ec20
+  tree:
+    README-GUIDE.md: '# User Guide'
+310e2862f282c487c421f9a08d60da07911b9ed0:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: Committer <committer@localhost>
+  message: commit 4
+  parents:
+  - 5999f510fc164042403f8fd605c3c2cfc6102df1
+  tree:
+    src:
+      runtime:
+        shared.rs: pub fn helper() {}

@@ -1,0 +1,40 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    feature:
+      subsystem:
+        component:
+          branch: e20d2d779e1387dbcd49664e4222bea4ad9506f2
+    main: 38040cbed21021d4d8e4b3f19bf752fd0d93ed4e
+    release:
+      v1:
+        hotfix: 4d862e95aca8e0ac22e5a0c70eda2233a0821538
+38040cbed21021d4d8e4b3f19bf752fd0d93ed4e:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    main.txt: main branch
+e20d2d779e1387dbcd49664e4222bea4ad9506f2:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - 38040cbed21021d4d8e4b3f19bf752fd0d93ed4e
+  tree:
+    feature.txt: deep feature branch
+4d862e95aca8e0ac22e5a0c70eda2233a0821538:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents:
+  - e20d2d779e1387dbcd49664e4222bea4ad9506f2
+  tree:
+    release.txt: release hotfix

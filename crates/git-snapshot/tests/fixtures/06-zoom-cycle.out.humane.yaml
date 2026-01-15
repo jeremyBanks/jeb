@@ -1,0 +1,56 @@
+HEAD: refs/heads/full-tree
+refs:
+  heads:
+    full-tree: 6
+    subtree: 5
+1:
+  tree:
+    README.md: '# Main Project'
+    src:
+      lib:
+        main.rs: fn main() {}
+        utils.rs: fn util() {}
+2:
+  author: git-zoom-in <git-zoom-in@localhost>
+  message: git-zoom-in seed commit
+  parents: []
+  tree: {}
+3:
+  message: commit 2
+  parents:
+  - 1
+  tree:
+    README.md: '# Main Project v2'
+4:
+  message: |-
+    Merge from 'src/lib'
+
+    git-zoom-in: src/lib
+  parents:
+  - 2
+  - 1
+  tree:
+    main.rs:
+      //commit: 1
+      //path: src/lib/main.rs
+    utils.rs:
+      //commit: 1
+      //path: src/lib/utils.rs
+5:
+  tree:
+    tests.rs: fn test() {}
+6:
+  author: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'src/lib'
+
+    git-zoom-out: src/lib
+  parents:
+  - 3
+  - 5
+  tree:
+    src:
+      lib:
+        tests.rs:
+          //commit: 5
+          //path: tests.rs

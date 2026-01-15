@@ -1,0 +1,38 @@
+# Test with non-contiguous random integer commit IDs
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 9001
+
+# Use arbitrary positive integers as commit IDs
+42:
+  message: First commit with random ID
+  tree:
+    README.md: '# Random IDs Test'
+    src:
+      init.rs: pub fn init() {}
+
+137:
+  parents: [42]
+  message: Second commit
+  tree:
+    README.md: '# Random IDs Test v2'
+    src:
+      init.rs: pub fn init() { println!("v2"); }
+      utils.rs: pub fn util() {}
+
+9001:
+  parents: [137]
+  message: Third commit with large ID
+  tree:
+    README.md:
+      //commit: 137
+      //path: README.md
+    src:
+      init.rs:
+        //commit: 137
+        //path: src/init.rs
+      utils.rs: pub fn util() { /* updated */ }
+    tests:
+      test.rs: '#[test] fn it_works() {}'

@@ -1,0 +1,21 @@
+[package]
+name = "_claude_hooks"
+publish = false
+description = ""
+keywords = []
+categories = []
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+eyre.workspace = true
+git2.workspace = true
+ignore.workspace = true
+indexmap.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["preserve_order"] }
+tempfile.workspace = true
+walkdir.workspace = true

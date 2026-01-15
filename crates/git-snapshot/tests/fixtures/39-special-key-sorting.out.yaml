@@ -1,0 +1,14 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 383cc29ad2f08a39e93d9afcc5e47bacb9c6a2ec
+4cfc82:
+  message: commit 1
+  tree:
+    base.txt: base content
+383cc29ad2f08a39e93d9afcc5e47bacb9c6a2ec:
+  message: commit 2
+  tree:
+    combined:
+      //commit: 4cfc82
+      //path: base.txt

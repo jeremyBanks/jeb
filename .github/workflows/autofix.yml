@@ -19,13 +19,8 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           rustflags: ""
-      - run: deno fmt
-      - run: cargo fix --allow-dirty
-      - run: cargo clippy --fix --allow-dirty
-      - run: cargo fmt
-      - run: deno task build-wasm
+      - run: cargo run --bin _autofix
       - run: examples/all.sh
-
       - id: last-commit
         run: |
           message="$(git log -1 --pretty=%s)"
@@ -40,7 +35,6 @@ jobs:
           echo "AUTOFIX_EOF" >> "$GITHUB_OUTPUT"
 
           echo "author=$(git log -1 --pretty="%an <%ae>")" >> "$GITHUB_OUTPUT"
-
       - uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "autofix ${{ steps.last-commit.outputs.message }}"

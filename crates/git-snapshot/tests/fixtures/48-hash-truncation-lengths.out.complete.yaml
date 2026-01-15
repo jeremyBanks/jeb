@@ -1,0 +1,75 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: '0000000000000000000000000000000000000008'
+'0000000000000000000000000000000000000001':
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  parents: []
+  tree:
+    file.txt: commit 1
+'0000000000000000000000000000000000000002':
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  parents:
+  - '0000000000000000000000000000000000000001'
+  tree:
+    file.txt: commit 2
+'0000000000000000000000000000000000000003':
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  parents:
+  - '0000000000000000000000000000000000000002'
+  tree:
+    file.txt: commit 3
+'0000000000000000000000000000000000000004':
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: Committer <committer@localhost>
+  parents:
+  - '0000000000000000000000000000000000000003'
+  tree:
+    file.txt: commit 4
+'0000000000000000000000000000000000000005':
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: Committer <committer@localhost>
+  parents:
+  - '0000000000000000000000000000000000000004'
+  tree:
+    file.txt: commit 5
+'0000000000000000000000000000000000000006':
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:33:44-06:24
+  commit-date: 2024-12-06T06:33:47-06:24
+  committer: Committer <committer@localhost>
+  parents:
+  - '0000000000000000000000000000000000000005'
+  tree:
+    file.txt: commit 6
+'0000000000000000000000000000000000000007':
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:38:00-06:24
+  commit-date: 2024-12-06T06:38:03-06:24
+  committer: Committer <committer@localhost>
+  parents:
+  - '0000000000000000000000000000000000000006'
+  tree:
+    file.txt: commit 7
+'0000000000000000000000000000000000000008':
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:42:16-06:24
+  commit-date: 2024-12-06T06:42:19-06:24
+  committer: Committer <committer@localhost>
+  parents:
+  - '0000000000000000000000000000000000000007'
+  tree:
+    file.txt: commit 8 (head)

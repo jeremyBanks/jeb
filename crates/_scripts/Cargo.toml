@@ -1,0 +1,22 @@
+[package]
+name = "_scripts"
+publish = false
+description = ""
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+categories = []
+keywords = []
+
+[dependencies]
+anyhow.workspace = true
+glob.workspace = true
+pathdiff.workspace = true
+semver.workspace = true
+tokio.workspace = true
+toml_edit.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

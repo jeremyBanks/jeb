@@ -1,0 +1,124 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: b65ddcd8d120e93b89df50f93c12103217857e5d
+381a71:
+  author: Tester <test@example.com>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  message: Repository with many files in single directory
+  tree:
+    README.md: root
+    many:
+      file-001.txt: content 1
+      file-002.txt: content 2
+      file-003.txt: content 3
+      file-004.txt: content 4
+      file-005.txt: content 5
+      file-006.txt: content 6
+      file-007.txt: content 7
+      file-008.txt: content 8
+      file-009.txt: content 9
+      file-010.txt: content 10
+      file-011.txt: content 11
+      file-012.txt: content 12
+      file-013.txt: content 13
+      file-014.txt: content 14
+      file-015.txt: content 15
+      file-016.txt: content 16
+      file-017.txt: content 17
+      file-018.txt: content 18
+      file-019.txt: content 19
+      file-020.txt: content 20
+136d8a:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  committer: 🔎 <git-zoom-in@localhost>
+  message: Initial commit
+  parents: []
+  tree: {}
+ad6b22:
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |-
+    Merge from 'many'
+
+    git-zoom-in: many
+  parents:
+  - 136d8a
+  - 381a71
+  tree:
+    file-001.txt:
+      //commit: 381a71
+      //path: many/file-001.txt
+    file-002.txt:
+      //commit: 381a71
+      //path: many/file-002.txt
+    file-003.txt:
+      //commit: 381a71
+      //path: many/file-003.txt
+    file-004.txt:
+      //commit: 381a71
+      //path: many/file-004.txt
+    file-005.txt:
+      //commit: 381a71
+      //path: many/file-005.txt
+    file-006.txt:
+      //commit: 381a71
+      //path: many/file-006.txt
+    file-007.txt:
+      //commit: 381a71
+      //path: many/file-007.txt
+    file-008.txt:
+      //commit: 381a71
+      //path: many/file-008.txt
+    file-009.txt:
+      //commit: 381a71
+      //path: many/file-009.txt
+    file-010.txt:
+      //commit: 381a71
+      //path: many/file-010.txt
+    file-011.txt:
+      //commit: 381a71
+      //path: many/file-011.txt
+    file-012.txt:
+      //commit: 381a71
+      //path: many/file-012.txt
+    file-013.txt:
+      //commit: 381a71
+      //path: many/file-013.txt
+    file-014.txt:
+      //commit: 381a71
+      //path: many/file-014.txt
+    file-015.txt:
+      //commit: 381a71
+      //path: many/file-015.txt
+    file-016.txt:
+      //commit: 381a71
+      //path: many/file-016.txt
+    file-017.txt:
+      //commit: 381a71
+      //path: many/file-017.txt
+    file-018.txt:
+      //commit: 381a71
+      //path: many/file-018.txt
+    file-019.txt:
+      //commit: 381a71
+      //path: many/file-019.txt
+    file-020.txt:
+      //commit: 381a71
+      //path: many/file-020.txt
+b65ddcd8d120e93b89df50f93c12103217857e5d:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |-
+    Merge to 'many'
+
+    git-zoom-out: many
+  parents:
+  - 381a71
+  - ad6b22

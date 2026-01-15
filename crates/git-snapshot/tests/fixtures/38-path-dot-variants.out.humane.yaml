@@ -1,0 +1,30 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 4
+1:
+  tree:
+    dir:
+      nested.txt: nested
+    file.txt: original
+2:
+  tree:
+    root-ref:
+      dir:
+        nested.txt:
+          //commit: 1
+          //path: dir/nested.txt
+      file.txt:
+        //commit: 1
+        //path: file.txt
+3:
+  tree:
+    empty-path-ref:
+      dir:
+        nested.txt:
+          //commit: 2
+          //path: dir/nested.txt
+      file.txt:
+        //commit: 2
+        //path: file.txt
+4: {}

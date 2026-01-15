@@ -1,0 +1,40 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    develop: 2fc4a36d911f3dd2ba5724824a6784d7474c93b9
+    main: 4ffdee43f2d732b680084c249ec2256018881e7c
+  remotes:
+    origin:
+      main: 4ffdee43f2d732b680084c249ec2256018881e7c
+  tags:
+    v1.0: 061783249ea44c2bd57b6e74cbfa7d1d8f29544a
+    v2.0: 4ffdee43f2d732b680084c249ec2256018881e7c
+061783249ea44c2bd57b6e74cbfa7d1d8f29544a:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    README.md: Version 1.0
+2fc4a36d911f3dd2ba5724824a6784d7474c93b9:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - 061783249ea44c2bd57b6e74cbfa7d1d8f29544a
+  tree:
+    README.md: Version 2.0-dev
+4ffdee43f2d732b680084c249ec2256018881e7c:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents:
+  - 061783249ea44c2bd57b6e74cbfa7d1d8f29544a
+  tree:
+    README.md: Version 2.0

@@ -1,0 +1,52 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    diverged: ea16f84c9717a0837b008a671cd4d2fd9d722c3e
+    main: 83b2400e8d354dbd67e3b1cf73c987701e59fb8e
+035076a2cd88b775e8e7a45e04bb0135ec5cb99d:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    file.txt: v1
+    subtree:
+      a.txt: a1
+      b.txt: b1
+319fd0337322b4924d248b278e233b3e6572bda8:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents: []
+  tree: {}
+ea16f84c9717a0837b008a671cd4d2fd9d722c3e:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: |
+    Zoom in from historical state
+
+    git-zoom-in: subtree
+  parents:
+  - 319fd0337322b4924d248b278e233b3e6572bda8
+  - 035076a2cd88b775e8e7a45e04bb0135ec5cb99d
+  tree:
+    a.txt: a1
+    b.txt: b1
+83b2400e8d354dbd67e3b1cf73c987701e59fb8e:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: |
+    Zoom out to commit 1
+
+    git-zoom-out: subtree
+  parents:
+  - 035076a2cd88b775e8e7a45e04bb0135ec5cb99d
+  - ea16f84c9717a0837b008a671cd4d2fd9d722c3e

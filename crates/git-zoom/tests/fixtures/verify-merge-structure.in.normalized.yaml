@@ -1,0 +1,10 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: f1b72e69809c32662cfe1c9a70a4221ba4dcf30a
+f1b72e69809c32662cfe1c9a70a4221ba4dcf30a:
+  message: Initial commit
+  tree:
+    root.txt: root
+    src:
+      file.txt: content

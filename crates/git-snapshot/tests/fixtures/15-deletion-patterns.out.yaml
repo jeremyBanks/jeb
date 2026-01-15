@@ -1,0 +1,42 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 00c66b05e4e1bf40a6171783e568fab10cf0d54f
+631ebf:
+  message: commit 1
+  tree:
+    delete-soon.txt: will be deleted
+    dir:
+      file-a.txt: a
+      file-b.txt: b
+      file-c.txt: c
+    keep.txt: kept
+569f17:
+  message: commit 2
+  tree:
+    delete-soon.txt: null
+00e0a4:
+  message: commit 3
+  tree:
+    dir:
+      file-b.txt: null
+4465a0:
+  message: commit 4
+  tree:
+    delete-soon.txt:
+      //commit: 631ebf
+      //path: delete-soon.txt
+4e5b52:
+  message: commit 5
+  tree:
+    dir:
+      file-a.txt: null
+      file-c.txt: null
+00c66b05e4e1bf40a6171783e568fab10cf0d54f:
+  message: commit 6
+  tree:
+    dir:
+      file-a.txt:
+        //commit: 4465a0
+        //path: dir/file-a.txt
+      new-file.txt: new

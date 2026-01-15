@@ -1,0 +1,53 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 87f507feaef95c95acb0cd84db6d0638e69bfef3
+b0f3b3ea7aeb7658d2de419570d47408ea8b3460:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    file.txt: base
+19e457ed2432fd0c3f3f8b73aa087935d32c3a78:
+  author: Alice <alice@example.com>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Alice <alice@example.com>
+  message: commit 2
+  parents:
+  - b0f3b3ea7aeb7658d2de419570d47408ea8b3460
+  tree:
+    file.txt: alice change
+197075a7275e0f9637629b207a9fd5d913afc2e7:
+  author: Bob <bob@example.com>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Bob <bob@example.com>
+  message: commit 3
+  parents:
+  - 19e457ed2432fd0c3f3f8b73aa087935d32c3a78
+  tree:
+    file.txt: bob committed
+8c39a2fa4e8f7e83e57731bd81efef030b542e26:
+  author: Charlie <charlie@example.com>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: Dave <dave@example.com>
+  message: commit 4
+  parents:
+  - 197075a7275e0f9637629b207a9fd5d913afc2e7
+  tree:
+    file.txt: charlie authored dave committed
+87f507feaef95c95acb0cd84db6d0638e69bfef3:
+  author: Charlie <charlie@example.com>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: Dave <dave@example.com>
+  message: commit 5
+  parents:
+  - 8c39a2fa4e8f7e83e57731bd81efef030b542e26
+  tree:
+    file.txt: inherited
