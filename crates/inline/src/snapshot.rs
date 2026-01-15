@@ -48,7 +48,7 @@ fn is_simple_ascii(s: &str) -> bool {
     s.bytes().all(|b| matches!(b, b' '..=b'!' | b'#'..=b'[' | b']'..=b'~'))
 }
 
-fn make_raw_string(content: &str) -> proc_macro2::TokenStream {
+pub(crate) fn make_raw_string(content: &str) -> proc_macro2::TokenStream {
     // If content is simple safe ASCII, use a plain string literal
     if is_simple_ascii(content) {
         let literal = format!("\"{}\"", content);
