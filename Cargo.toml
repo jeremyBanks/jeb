@@ -49,6 +49,7 @@ _claude_hooks = { path = "crates/_claude_hooks" }
 _scripts = { path = "crates/_scripts" }
 anyhow = "1.0.0"
 async-stream = "0.3.6"
+bat = "0.24"
 bstr = "0.2.17"
 cfg-if = "1.0.4"
 clap = "3.2.8"

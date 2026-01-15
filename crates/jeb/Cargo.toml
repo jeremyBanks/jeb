@@ -53,6 +53,9 @@ tokio-stream.workspace = true
 tokio-util = { workspace = true, features = ["codec", "io"] }
 tracing.workspace = true
 
+[dev-dependencies]
+bat.workspace = true
+
 [features]
 default = ["bin", "fs", "stdio"]
 bin = ["fs", "stdio", "tracing-subscriber/env-filter", "dep:color-eyre", "dep:dotenv", "dep:owo-colors"]

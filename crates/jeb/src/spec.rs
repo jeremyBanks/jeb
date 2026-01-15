@@ -28,7 +28,14 @@ literate! {
     choice. That makes is a good option when you just need to store bytes as
     text due to data format limitations, and there are no other considerations.
 
-    However, is is not
+    However, it's not a very good choice if you actually need to use the encoded
+    data as text where text is actually expected. It includes control
+    characters which may not be expected or well-supported (e.g. `\x00` `NUL`,
+    `\x07` `BEL`, `\x7F` `DEL`). It includes essentially every character with
+    special meaning in other encodings or programming languages (e.g. `\`
+    backslash, `"` double quote, `$` dollar sign), so these encoded values can
+    rarely be embedded without an additional layer of escaping or framing.
+
  */
 
 /// (We'll be focusing primarily on byte-oriented encodings that can produce
