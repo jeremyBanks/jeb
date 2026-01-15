@@ -4,34 +4,59 @@
 )]
 use inline::*;
 
+macro_rules! literate {
+    // Base case - no more tokens to process
+    (@process [] $($output:tt)*) => {
+        $($output)*
+    };
 
-#[test]
-fn literate() {
-    /// # Encoding bytes as text
+    // Match a doc comment and convert to eprintln
+    (@process [#[doc = $doc:literal] $($rest:tt)*] $($output:tt)*) => {
+        literate!(@process [$($rest)*] $($output)* eprintln!($doc);)
+    };
 
-    /// There are a lot of different ways to encode binary data as text, with
-    /// different trade-offs and use cases. The most common considerations as
-    /// size/efficiency (how many characters are required to encode a given
-    /// number of bytes), and what characters are used in the encoded
-    /// representation (determining contexts where the encoded data can be
-    /// used).
+    // Match any other token and pass through
+    (@process [$first:tt $($rest:tt)*] $($output:tt)*) => {
+        literate!(@process [$($rest)*] $($output)* $first)
+    };
 
-    /// ## Latin-1 passthrough
+    // Main entry: create the test function
+    ($name:ident { $($body:tt)* }) => {
+        #[test]
+        fn $name() {
+            literate!(@process [$($body)*]);
+        }
+    };
+}
 
-    /// The simplest possible way to encode binary data as text is just to
-    /// covert byte values directly to Unicode code points. This is
-    /// sometimes referred to **Latin-1 passthrough**, because this is
-    /// equivalent to the legacy "Latin-1" text encoding whose characters
-    /// now make up the first 256 Unicode code points (the "Basic Latin"
-    /// (ASCII) and "Latin-1 Supplement" blocks).
+literate! {
+    literate {
+        /// # Encoding bytes as text
 
-    /// (We'll be focusing primarily on byte-oriented encodings that can produce
-    /// ASCII-safe output.)
+        /// There are a lot of different ways to encode binary data as text, with
+        /// different trade-offs and use cases. The most common considerations as
+        /// size/efficiency (how many characters are required to encode a given
+        /// number of bytes), and what characters are used in the encoded
+        /// representation (determining contexts where the encoded data can be
+        /// used).
 
-    /// One of the simplest as most common ways is hexadecimal ("hex", base 16).
-    /// Each byte is eight bits, which evenly divides into two hex digits.
+        /// ## Latin-1 passthrough
 
-    /// bits, and each hex digit represents four bits, so we just output two
-    /// hex digits for each byte.
-    let _ = ();
+        /// The simplest possible way to encode binary data as text is just to
+        /// covert byte values directly to Unicode code points. This is
+        /// sometimes referred to **Latin-1 passthrough**, because this is
+        /// equivalent to the legacy "Latin-1" text encoding whose characters
+        /// now make up the first 256 Unicode code points (the "Basic Latin"
+        /// (ASCII) and "Latin-1 Supplement" blocks).
+
+        /// (We'll be focusing primarily on byte-oriented encodings that can produce
+        /// ASCII-safe output.)
+
+        /// One of the simplest as most common ways is hexadecimal ("hex", base 16).
+        /// Each byte is eight bits, which evenly divides into two hex digits.
+
+        /// bits, and each hex digit represents four bits, so we just output two
+        /// hex digits for each byte.
+        let _ = ();
+    }
 }
