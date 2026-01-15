@@ -2,7 +2,10 @@
     non_snake_case,
     unused
 )]
-use inline::*;
+use {
+    bat::PrettyPrinter,
+    inline::*,
+};
 
 literate! {
 /**
@@ -88,14 +91,33 @@ fn print_single_doc(doc_string: &str) {
         .min()
         .unwrap_or(0);
 
-    // Print each line with common indent stripped
-    for line in lines {
-        if line.is_empty() {
-            eprintln!();
-        } else {
-            eprintln!("{}", &line[min_indent..]);
-        }
-    }
+    // Build dedented text
+    let dedented: String = lines
+        .iter()
+        .map(|line| {
+            if line.is_empty() {
+                ""
+            } else {
+                &line[min_indent..]
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    // Print with bat markdown highlighting
+    PrettyPrinter::new()
+        .input_from_bytes(dedented.as_bytes())
+        .language("markdown")
+        .print()
+        .unwrap();
+}
+
+fn print_code(code: &str) {
+    PrettyPrinter::new()
+        .input_from_bytes(code.as_bytes())
+        .language("rust")
+        .print()
+        .unwrap();
 }
 
 macro_rules! literate {
@@ -112,17 +134,17 @@ macro_rules! literate {
 
     // Hit a let statement - flush buffer first, then process
     (@process [let $p:pat = $e:expr ; $($rest:tt)*] [$($buf:literal),*] $($output:tt)*) => {
-        literate!(@process [$($rest)*] [] $($output)* print_doc_block(&[$($buf),*]); eprintln!(); eprintln!(">>> let {} = {};", stringify!($p), stringify!($e)); let $p = $e; eprintln!();)
+        literate!(@process [$($rest)*] [] $($output)* print_doc_block(&[$($buf),*]); print_code(concat!("let ", stringify!($p), " = ", stringify!($e), ";")); let $p = $e;)
     };
 
     // Hit an expression statement - flush buffer first, then process
     (@process [$e:expr ; $($rest:tt)*] [$($buf:literal),*] $($output:tt)*) => {
-        literate!(@process [$($rest)*] [] $($output)* print_doc_block(&[$($buf),*]); eprintln!(); eprintln!(">>> {};", stringify!($e)); $e; eprintln!();)
+        literate!(@process [$($rest)*] [] $($output)* print_doc_block(&[$($buf),*]); print_code(concat!(stringify!($e), ";")); $e;)
     };
 
     // Hit a trailing expression - flush buffer first, then process
     (@process [$e:expr] [$($buf:literal),*] $($output:tt)*) => {
-        $($output)* print_doc_block(&[$($buf),*]); eprintln!(); eprintln!(">>> {}", stringify!($e)); $e
+        $($output)* print_doc_block(&[$($buf),*]); print_code(stringify!($e)); $e
     };
 
     // Main entry: create the test function with empty buffer

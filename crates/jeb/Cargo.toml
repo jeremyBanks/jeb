@@ -52,8 +52,6 @@ tokio = { workspace = true, features = ["rt", "macros", "sync", "io-util"] }
 tokio-stream.workspace = true
 tokio-util = { workspace = true, features = ["codec", "io"] }
 tracing.workspace = true
-
-[dev-dependencies]
 bat.workspace = true
 
 [features]
