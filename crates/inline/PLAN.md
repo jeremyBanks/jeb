@@ -2,11 +2,15 @@
 
 ## Summary
 
-The crate currently uses `macro_rules! literal` to capture source location via `file!()`, `line!()`, `column!()`. This can be replaced with `#[track_caller]` and `std::panic::Location::caller()`, which provides the same information at runtime.
+The crate currently uses `macro_rules! literal` to capture source location via
+`file!()`, `line!()`, `column!()`. This can be replaced with `#[track_caller]`
+and `std::panic::Location::caller()`, which provides the same information at
+runtime.
 
 ## Why This Works
 
 ### Current Macro Approach
+
 ```rust
 macro_rules! literal {
     ($value:expr) => {{
@@ -21,6 +25,7 @@ macro_rules! literal {
 ```
 
 ### Replacement with #[track_caller]
+
 ```rust
 #[track_caller]
 pub fn literal<T: Value + 'static>(value: T) -> Literal<T> {
@@ -35,6 +40,7 @@ pub fn literal<T: Value + 'static>(value: T) -> Literal<T> {
 ```
 
 `Location::caller()` provides:
+
 - `file()` → `&'static str` (identical to `file!()`)
 - `line()` → `u32` (identical to `line!()`)
 - `column()` → `u32` (identical to `column!()`)
@@ -44,6 +50,7 @@ pub fn literal<T: Value + 'static>(value: T) -> Literal<T> {
 ### 1. `src/inline.rs` - Replace macro with function
 
 **Remove** (lines 365-378):
+
 ```rust
 #[macro_export]
 macro_rules! literal {
@@ -53,7 +60,8 @@ macro_rules! literal {
 ```
 
 **Add**:
-```rust
+
+````rust
 /// Create a self-modifying value that can update its source code.
 ///
 /// # Example
@@ -84,11 +92,12 @@ pub fn literal<T: Value + 'static + Default>(value: T) -> Literal<T> {
 pub fn literal_default<T: Value + 'static + Default>() -> Literal<T> {
     literal(T::default())
 }
-```
+````
 
 ### 2. `src/runtime.rs` - Change AST scanning from macros to function calls
 
-**Current** (`build_index_map`, lines 232-286): Looks for `ExprMacro`/`StmtMacro` with path ending in `literal`.
+**Current** (`build_index_map`, lines 232-286): Looks for
+`ExprMacro`/`StmtMacro` with path ending in `literal`.
 
 **Change to**: Look for `ExprCall` with path ending in `literal`.
 
@@ -141,9 +150,11 @@ fn build_index_map(ast: &syn::File) -> HashMap<(u32, u32), usize> {
 
 ### 3. `src/runtime.rs` - Update span finding for function call arguments
 
-**Current** (`find_macro_value_span_static`): Finds the span of `mac.tokens` (the macro's token contents).
+**Current** (`find_macro_value_span_static`): Finds the span of `mac.tokens`
+(the macro's token contents).
 
 **Change to**: Find the span of the first argument in `ExprCall`:
+
 - For `literal(42u32)` → span of `42u32`
 - For `literal_default()` → insert position inside `()`
 
@@ -155,15 +166,16 @@ fn build_index_map(ast: &syn::File) -> HashMap<(u32, u32), usize> {
 
 ### 5. Update all usages
 
-| Before | After |
-|--------|-------|
-| `literal!(42u32)` | `literal(42u32)` |
-| `literal!()` | `literal_default()` |
+| Before                           | After                                   |
+| -------------------------------- | --------------------------------------- |
+| `literal!(42u32)`                | `literal(42u32)`                        |
+| `literal!()`                     | `literal_default()`                     |
 | `let x: Literal<T> = literal!()` | `let x: Literal<T> = literal_default()` |
 
 ### 6. Update `src/lib.rs` exports
 
 Export the functions instead of the macro:
+
 ```rust
 pub use inline::{literal, literal_default, Literal, LiteralPrivate};
 ```
@@ -171,7 +183,8 @@ pub use inline::{literal, literal_default, Literal, LiteralPrivate};
 ## Files to Modify
 
 1. **`src/inline.rs`** - Replace macro with functions
-2. **`src/runtime.rs`** - Change AST visitors from macro to function call handling
+2. **`src/runtime.rs`** - Change AST visitors from macro to function call
+   handling
 3. **`src/lib.rs`** - Update exports
 4. **`examples/counter.rs`** - Update usage
 5. **`tests/*.rs`** - Update all test usages
@@ -179,24 +192,31 @@ pub use inline::{literal, literal_default, Literal, LiteralPrivate};
 ## Benefits
 
 1. **Simpler API** - Functions are more intuitive than macros
-2. **Better IDE support** - Function calls have better autocomplete/documentation
-3. **Clearer error messages** - Rust function errors are clearer than macro errors
+2. **Better IDE support** - Function calls have better
+   autocomplete/documentation
+3. **Clearer error messages** - Rust function errors are clearer than macro
+   errors
 4. **No hygiene concerns** - No macro hygiene edge cases
 5. **Easier to debug** - Can step through function code
 
 ## Edge Cases
 
 ### Multiple calls on same line
+
 Both approaches work: the column number distinguishes them.
+
 ```rust
 let (a, b) = (literal(1), literal(2));  // Different columns
 ```
 
 ### Nested calls
+
 `#[track_caller]` propagates through nested function calls with the attribute.
 
 ### Inlined functions
-If `literal()` gets inlined by the optimizer, `#[track_caller]` still works - it captures the source location at the call site before inlining.
+
+If `literal()` gets inlined by the optimizer, `#[track_caller]` still works - it
+captures the source location at the call site before inlining.
 
 ## Testing Strategy
 

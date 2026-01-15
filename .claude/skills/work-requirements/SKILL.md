@@ -26,7 +26,8 @@ When this skill is invoked:
    cargo run --bin _trace -- [prefix] --limit=100 2>&1
    ```
 
-2. **Parse the output** to identify all incomplete requirements. Build a list of:
+2. **Parse the output** to identify all incomplete requirements. Build a list
+   of:
    - Requirement ID
    - What's missing (impl, test, example, etc.)
    - Depth in hierarchy (for prioritization)
@@ -39,23 +40,24 @@ When this skill is invoked:
 
 4. **Work on the selected requirement**:
 
-   a. **Read the definition**: Find `[def <id>]` and understand what needs to be implemented/tested.
+   a. **Read the definition**: Find `[def <id>]` and understand what needs to be
+   implemented/tested.
 
    b. **If missing impl**:
-      - Find where related code should go (look at sibling implementations)
-      - Implement the functionality
-      - Add `[impl <id>]` annotation to the implementation
-      - Verify it compiles
+   - Find where related code should go (look at sibling implementations)
+   - Implement the functionality
+   - Add `[impl <id>]` annotation to the implementation
+   - Verify it compiles
 
    c. **If missing test**:
-      - Find where related tests are (look at sibling tests)
-      - Write a test that verifies the requirement
-      - Add `[test <id>]` annotation to the test
-      - Run `cargo test` to verify it passes
+   - Find where related tests are (look at sibling tests)
+   - Write a test that verifies the requirement
+   - Add `[test <id>]` annotation to the test
+   - Run `cargo test` to verify it passes
 
    d. **If missing example**:
-      - Add example code/documentation demonstrating the requirement
-      - Add `[example <id>]` annotation
+   - Add example code/documentation demonstrating the requirement
+   - Add `[example <id>]` annotation
 
 5. **Verify completion** by running the CLI again:
    ```bash
@@ -63,7 +65,9 @@ When this skill is invoked:
    ```
    The requirement should now show as satisfied.
 
-6. **Loop**: Go back to step 1 and continue with the next requirement until all are satisfied (or until hitting a requirement that can't be easily completed).
+6. **Loop**: Go back to step 1 and continue with the next requirement until all
+   are satisfied (or until hitting a requirement that can't be easily
+   completed).
 
 7. **Report progress** at each iteration:
    ```
@@ -85,6 +89,7 @@ When this skill is invoked:
 ## Stopping Conditions
 
 Stop working when:
+
 - All requirements in scope are satisfied
 - A requirement needs architectural decisions (flag it for human review)
 - A requirement is ambiguous or unclear (flag for review)
@@ -138,7 +143,8 @@ Verifying... SATISFIED
 - Make incremental commits after each requirement is satisfied
 - If you break compilation or tests, fix immediately before proceeding
 - Don't modify the spec (SPEC.md) - only add implementations and tests
-- If a test string would itself be parsed as an annotation, escape or restructure it
+- If a test string would itself be parsed as an annotation, escape or
+  restructure it
 - Prefer adding annotations to existing code over writing new code when possible
 
 ---

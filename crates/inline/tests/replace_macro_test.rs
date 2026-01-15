@@ -1,7 +1,12 @@
 //! Test that replace!() replaces the entire macro invocation
 
-use std::{env, fs};
-use tempfile::TempDir;
+use {
+    std::{
+        env,
+        fs,
+    },
+    tempfile::TempDir,
+};
 
 fn find_macro_positions(path: &std::path::Path) -> Vec<(u32, u32)> {
     let source = fs::read_to_string(path).unwrap();

@@ -88,7 +88,7 @@ pub(crate) fn make_raw_string(content: &str) -> proc_macro2::TokenStream {
     loop {
         // Build the closing delimiter: " followed by hash_count # chars
         let closing: String = std::iter::once('"')
-            .chain(std::iter::repeat('#').take(hash_count))
+            .chain(std::iter::repeat_n('#', hash_count))
             .collect();
 
         // If content doesn't contain this closing sequence, we're safe
@@ -104,7 +104,7 @@ pub(crate) fn make_raw_string(content: &str) -> proc_macro2::TokenStream {
     }
 
     // Build the raw string literal: r##"content"##
-    let hashes: String = std::iter::repeat('#').take(hash_count).collect();
+    let hashes: String = std::iter::repeat_n('#', hash_count).collect();
     let raw_literal = format!("r{}\"{}\"{}", hashes, content, hashes);
 
     // Parse it as a token stream

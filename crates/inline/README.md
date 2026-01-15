@@ -4,7 +4,9 @@ Self-modifying values that update their source code at runtime.
 
 ## Overview
 
-`inline` lets you create values that can update themselves in your source code. This is an experimental approach to snapshot testing and self-modifying code in Rust.
+`inline` lets you create values that can update themselves in your source code.
+This is an experimental approach to snapshot testing and self-modifying code in
+Rust.
 
 ```rust
 use inline::cell;
@@ -108,13 +110,16 @@ cargo inline-write
 cargo inline-write -- --test-threads=1
 ```
 
-This is equivalent to `INLINE_MODE=write cargo test` but easier to remember and type.
+This is equivalent to `INLINE_MODE=write cargo test` but easier to remember and
+type.
 
 ## How It Works
 
 1. Functions capture the source location via `#[track_caller]`
-2. Values implement the `Bake` trait from [databake](https://docs.rs/databake) for serialization
-3. The registry uses **index-based keys** (Nth call in file) for stability across line insertions
+2. Values implement the `Bake` trait from [databake](https://docs.rs/databake)
+   for serialization
+3. The registry uses **index-based keys** (Nth call in file) for stability
+   across line insertions
 4. When mutated, inline:
    - Detects the change (using `PartialEq`)
    - Parses the source file
@@ -124,11 +129,13 @@ This is equivalent to `INLINE_MODE=write cargo test` but easier to remember and 
 
 ### Replacement Behavior
 
-- **Function calls**: the last argument is replaced (trailing position for extensibility)
+- **Function calls**: the last argument is replaced (trailing position for
+  extensibility)
 - **Method calls**: the receiver expression is replaced
 - **Macros**: entire contents inside delimiters are replaced
 
-For `replace()` mode, the entire call/macro expression is replaced with the baked value.
+For `replace()` mode, the entire call/macro expression is replaced with the
+baked value.
 
 ## Supported Types
 
@@ -139,11 +146,13 @@ Any type implementing `Bake + Clone + PartialEq` works with inline:
 - Collections: `Vec<T>`, arrays, tuples
 - And more via databake's built-in implementations
 
-Note: `Clone` is required for write-on-drop functionality. Values are compared using `PartialEq` to detect changes; `Bake` is only used for serialization.
+Note: `Clone` is required for write-on-drop functionality. Values are compared
+using `PartialEq` to detect changes; `Bake` is only used for serialization.
 
 ### Extension Trait
 
-The `InlineCellExt` trait provides additional methods without polluting the inner type's namespace:
+The `InlineCellExt` trait provides additional methods without polluting the
+inner type's namespace:
 
 ```rust
 use inline::{cell, InlineCellExt};
@@ -154,7 +163,8 @@ x.flush()?;  // Write immediately, don't wait for drop
 x.reset_to_default();  // Reset to type's default value
 ```
 
-Methods: `flush()`, `reset_to_default()`, `path()`, `line()`, `column()`, `index()`.
+Methods: `flush()`, `reset_to_default()`, `path()`, `line()`, `column()`,
+`index()`.
 
 ## Examples
 
@@ -193,8 +203,10 @@ Note: This is an experimental library. Production use is not recommended.
 
 Tests are organized into two categories:
 
-- **Parallel-safe tests**: `concurrent_process_detection`, `multi_threaded` (don't use environment variables)
-- **Serial tests**: All tests with `_serial` in the filename (use environment variables)
+- **Parallel-safe tests**: `concurrent_process_detection`, `multi_threaded`
+  (don't use environment variables)
+- **Serial tests**: All tests with `_serial` in the filename (use environment
+  variables)
 
 Run all tests serially (recommended):
 
@@ -204,9 +216,13 @@ cargo test -- --test-threads=1
 
 ## License
 
-`inline` is Copyright Jeremy Banks, released under the familiar choice of `MIT OR Apache-2.0`.
+`inline` is Copyright Jeremy Banks, released under the familiar choice of
+`MIT OR Apache-2.0`.
 
-This is heavily based on [the `expect-test` library](https://docs.rs/expect-test), which is also under `MIT OR Apache-2.0` and is Copyright the rust-analyzer developers, including Aleksey Kladov and Dylan MacKenzie.
+This is heavily based on
+[the `expect-test` library](https://docs.rs/expect-test), which is also under
+`MIT OR Apache-2.0` and is Copyright the rust-analyzer developers, including
+Aleksey Kladov and Dylan MacKenzie.
 
 ## Related Work
 

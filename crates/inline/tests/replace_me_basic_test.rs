@@ -2,7 +2,10 @@
 
 use {
     inline::replace_at,
-    std::{env, fs},
+    std::{
+        env,
+        fs,
+    },
     tempfile::TempDir,
 };
 

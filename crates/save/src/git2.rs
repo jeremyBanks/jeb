@@ -2,31 +2,61 @@
 
 use {
     crate::{
-        graph_stats::{CommitView, RepositoryView},
+        graph_stats::{
+            CommitView,
+            RepositoryView,
+        },
         zigzag::ZugZug,
     },
-    std::borrow::BorrowMut,
     ::{
         core::{
             borrow::Borrow,
             fmt::Debug,
             mem::transmute,
-            ops::{Deref, DerefMut},
+            ops::{
+                Deref,
+                DerefMut,
+            },
         },
-        digest::{generic_array::GenericArray, typenum::U20, Digest},
-        eyre::{Context, Result},
-        git2::{Commit, ErrorCode, Index, ObjectType, Oid, Repository, Signature},
+        digest::{
+            Digest,
+            generic_array::GenericArray,
+            typenum::U20,
+        },
+        eyre::{
+            Context,
+            Result,
+        },
+        git2::{
+            Commit,
+            ErrorCode,
+            Index,
+            ObjectType,
+            Oid,
+            Repository,
+            Signature,
+        },
         itertools::Itertools,
         parking_lot::RwLock,
         petgraph::{
+            EdgeDirection::{
+                Incoming,
+                Outgoing,
+            },
             graphmap::DiGraphMap,
             visit::Topo,
-            EdgeDirection::{Incoming, Outgoing},
         },
         std::path::PathBuf,
         tempfile::TempDir,
-        tracing::{debug, info, instrument, trace, warn},
+        tracing::{
+            debug,
+            info,
+            instrument,
+            trace,
+            warn,
+        },
     },
+    std::borrow::BorrowMut,
 };
 
 /// Extension methods for [`Repository`].
@@ -42,7 +72,10 @@ pub trait RepositoryExt: Borrow<Repository> + BorrowMut<Repository> {
     /// # Panics
     ///
     /// If the repository is bare (per [`Repository::is_bare`]).
-    #[instrument(level = "debug", skip_all)]
+    #[instrument(
+        level = "debug",
+        skip_all
+    )]
     #[must_use]
     fn working_index(&self) -> Result<Index> {
         let repo: &Repository = self.borrow();
@@ -77,7 +110,10 @@ pub trait RepositoryExt: Borrow<Repository> + BorrowMut<Repository> {
     }
 
     /// Creates a [`Repository`] backed by a new temporary directory.
-    #[instrument(level = "debug", skip_all)]
+    #[instrument(
+        level = "debug",
+        skip_all
+    )]
     #[must_use]
     fn temporary() -> Result<TemporaryRepository> {
         let dir = TempDir::new()?;
@@ -107,7 +143,7 @@ pub trait RepositoryExt: Borrow<Repository> + BorrowMut<Repository> {
             Err(err) if err.code() == ErrorCode::UnbornBranch => None,
             Err(err) => {
                 panic!("Unexpected error from Git: {err:#?}");
-            },
+            }
         };
 
         let (_user_name, _user_email) = {
@@ -190,9 +226,11 @@ pub struct GraphStats {
     pub revision_index: u32,
     pub generation_index: u32,
     pub commit_index: u32,
-    /// Hash of all root commit OIDs (first 16 bits of SHA1 of sorted, concatenated root OIDs)
+    /// Hash of all root commit OIDs (first 16 bits of SHA1 of sorted,
+    /// concatenated root OIDs)
     pub roots_hash: u16,
-    /// Origin: last 4 hex digits of root commit ID, or None for root commits (r0/s0)
+    /// Origin: last 4 hex digits of root commit ID, or None for root commits
+    /// (r0/s0)
     pub origin: Option<u16>,
 }
 
@@ -265,7 +303,8 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
     }
 
     /// Parse a commit message in our format to extract `GraphStats`
-    /// Returns Some(stats) if the message matches our format and tree hash validates
+    /// Returns Some(stats) if the message matches our format and tree hash
+    /// validates
     fn parse_commit_message(commit: &Commit, repo: &Repository) -> Option<GraphStats> {
         let msg = commit.summary()?;
         debug!("Parsing commit message: {}", msg);
@@ -334,7 +373,10 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
         })
     }
 
-    #[instrument(level = "debug", skip(repo))]
+    #[instrument(
+        level = "debug",
+        skip(repo)
+    )]
     #[must_use]
     fn graph_stats(&self, repo: &Repository) -> GraphStats {
         let commit: &Commit = self.borrow();
@@ -528,7 +570,10 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
     /// # Panics
     ///
     /// If `min_timestamp` > `max_timestamp`.
-    #[instrument(level = "debug", skip_all)]
+    #[instrument(
+        level = "debug",
+        skip_all
+    )]
     #[must_use]
     fn brute_force_timestamps(
         &self,

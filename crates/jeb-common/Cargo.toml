@@ -11,10 +11,10 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+inline.workspace = true
 wasm-bindgen = { workspace = true, optional = true }
 derive_more = { workspace = true, features = ["full"] }
 document-features.workspace = true
-inline.workspace = true
 fast_hilbert.workspace = true
 indexmap.workspace = true
 itertools.workspace = true

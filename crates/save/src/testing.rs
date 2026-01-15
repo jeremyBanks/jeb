@@ -1,22 +1,32 @@
 use ::{
     core::{
-        fmt::{self, Debug},
+        fmt::{
+            self,
+            Debug,
+        },
         mem,
         ops::Range,
         panic,
     },
-    once_cell::sync::{Lazy, OnceCell},
+    once_cell::sync::{
+        Lazy,
+        OnceCell,
+    },
     std::{
         collections::HashMap,
-        env, fs,
+        env,
+        fs,
         panic::resume_unwind,
-        path::{Path, PathBuf},
+        path::{
+            Path,
+            PathBuf,
+        },
         sync::Mutex,
     },
 };
 
-// Note: Custom assert_eq and Expected types appear to be unfinished experimental code
-// Commenting out until/unless needed
+// Note: Custom assert_eq and Expected types appear to be unfinished
+// experimental code Commenting out until/unless needed
 // #[track_caller]
 // fn assert_eq<Literal: self::Literal>(expected: Literal, actual: Literal) {
 //     assert!(Expected::from_caller() == actual);
@@ -167,7 +177,7 @@ impl StrLitKind {
                     write!(w, "#")?;
                 }
                 write!(w, "\"")
-            },
+            }
         }
     }
 
@@ -180,7 +190,7 @@ impl StrLitKind {
                     write!(w, "#")?;
                 }
                 Ok(())
-            },
+            }
         }
     }
 }
@@ -276,7 +286,7 @@ fn locate_end(arg_start_to_eof: &str) -> Option<usize> {
             let str_end_to_eof = &str_start_to_eof[str_len..];
             let closing_brace_offset = str_end_to_eof.find(end)?;
             Some((arg_start_to_eof.len() - str_end_to_eof.len()) + closing_brace_offset + 1)
-        },
+        }
 
         // expect![] | expect!{} | expect!()
         ']' | '}' | ')' => Some(0),
@@ -315,7 +325,7 @@ fn find_str_lit_len(str_lit_to_eof: &str) -> Option<usize> {
                 return None;
             }
             Raw(n)
-        },
+        }
         _ => return None,
     };
 
@@ -325,7 +335,7 @@ fn find_str_lit_len(str_lit_to_eof: &str) -> Option<usize> {
         match (c, kind) {
             ('\\', Normal) => {
                 let _escaped = s.next()?;
-            },
+            }
             ('"', Normal) => break,
             ('"', Raw(0)) => break,
             ('"', Raw(n)) => {
@@ -334,8 +344,8 @@ fn find_str_lit_len(str_lit_to_eof: &str) -> Option<usize> {
                     break;
                 }
                 oldc = c;
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 
@@ -439,7 +449,8 @@ impl Runtime {
             actual,
             format_chunks(diff)
         );
-        // Use resume_unwind instead of panic!() to prevent a backtrace, which is unnecessary noise.
+        // Use resume_unwind instead of panic!() to prevent a backtrace, which is
+        // unnecessary noise.
         resume_unwind(Box::new(()));
     }
 }

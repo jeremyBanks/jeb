@@ -9,7 +9,8 @@ Deep validation of requirements beyond simple annotation detection.
 ```
 
 - Without arguments: validates all incomplete requirements
-- With prefix: validates only requirements under that prefix (e.g., `_trace.syntax`)
+- With prefix: validates only requirements under that prefix (e.g.,
+  `_trace.syntax`)
 
 ## Instructions
 
@@ -19,7 +20,8 @@ When this skill is invoked:
    ```bash
    cargo run --quiet -- [prefix] --limit=100 2>&1
    ```
-   If a prefix argument was provided, use it. Otherwise run without prefix to get all incomplete items.
+   If a prefix argument was provided, use it. Otherwise run without prefix to
+   get all incomplete items.
 
 2. **Parse the output** to identify incomplete requirements. Each line like:
    ```
@@ -29,26 +31,37 @@ When this skill is invoked:
 
 3. **For each incomplete requirement**, perform deep validation:
 
-   a. **Find the definition**: Search for `[def <requirement-id>]` to locate where the requirement is defined. Read the surrounding context to understand what the requirement specifies.
+   a. **Find the definition**: Search for `[def <requirement-id>]` to locate
+   where the requirement is defined. Read the surrounding context to understand
+   what the requirement specifies.
 
-   b. **Find claimed implementations**: Search for `[impl <requirement-id>]` annotations. For each one:
-      - Read the surrounding code/documentation
-      - Assess whether the implementation actually fulfills the requirement
-      - Note any gaps or concerns
+   b. **Find claimed implementations**: Search for `[impl <requirement-id>]`
+   annotations. For each one:
+   - Read the surrounding code/documentation
+   - Assess whether the implementation actually fulfills the requirement
+   - Note any gaps or concerns
 
-   c. **Find claimed tests**: Search for `[test <requirement-id>]` annotations. For each one:
-      - Read the test code
-      - Assess whether the test adequately verifies the requirement
-      - Note if test coverage seems incomplete
+   c. **Find claimed tests**: Search for `[test <requirement-id>]` annotations.
+   For each one:
+   - Read the test code
+   - Assess whether the test adequately verifies the requirement
+   - Note if test coverage seems incomplete
 
-   d. **Check for unlabeled implementations**: Sometimes code implements a requirement but lacks the annotation. Search for relevant keywords from the requirement definition to find potential implementations that should be annotated.
+   d. **Check for unlabeled implementations**: Sometimes code implements a
+   requirement but lacks the annotation. Search for relevant keywords from the
+   requirement definition to find potential implementations that should be
+   annotated.
 
 4. **Report findings** for each requirement:
-   - **Status**: `SATISFIED`, `PARTIALLY SATISFIED`, `NOT SATISFIED`, or `NEEDS REVIEW`
+   - **Status**: `SATISFIED`, `PARTIALLY SATISFIED`, `NOT SATISFIED`, or
+     `NEEDS REVIEW`
    - **Definition summary**: Brief description of what the requirement specifies
-   - **Implementation assessment**: Whether impl annotations exist and if they truly satisfy the requirement
-   - **Test assessment**: Whether test annotations exist and if they adequately verify the requirement
-   - **Recommendations**: Specific actions needed (add annotation, write implementation, write test, etc.)
+   - **Implementation assessment**: Whether impl annotations exist and if they
+     truly satisfy the requirement
+   - **Test assessment**: Whether test annotations exist and if they adequately
+     verify the requirement
+   - **Recommendations**: Specific actions needed (add annotation, write
+     implementation, write test, etc.)
 
 5. **Summary**: At the end, provide:
    - Count of requirements by status
@@ -96,7 +109,8 @@ Priority items:
 - Be thorough but concise in assessments
 - If unsure whether something satisfies a requirement, mark it NEEDS REVIEW
 - Consider the full context of requirements (parent/child relationships)
-- For hierarchical projects, requirements in child documents should trace back to parent requirements
+- For hierarchical projects, requirements in child documents should trace back
+  to parent requirements
 
 ---
 

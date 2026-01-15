@@ -254,7 +254,7 @@ macro_rules! tokens {
 /// use inline::snap;
 ///
 /// let actual = compute_value();
-/// snap!(expected) == actual;  // Note: snap! on the LEFT side
+/// snap!(expected) == actual; // Note: snap! on the LEFT side
 /// ```
 ///
 /// The `snap!` macro must be on the left side of `==` due to Rust's
@@ -266,10 +266,10 @@ macro_rules! tokens {
 /// use inline::snap;
 ///
 /// let result = 2 + 2;
-/// assert!(snap!(4) == result);  // Passes
+/// assert!(snap!(4) == result); // Passes
 ///
 /// let name = "Alice".to_string();
-/// snap!("Alice") == name;  // Works with String == &str
+/// snap!("Alice") == name; // Works with String == &str
 /// ```
 #[macro_export]
 macro_rules! snap {
