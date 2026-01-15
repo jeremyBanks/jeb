@@ -1,7 +1,7 @@
 /// Literate programming-style test macro.
 ///
-/// Transforms doc comments into printed prose and shows the code being executed.
-/// Useful for creating self-documenting, narrative-style tests.
+/// Transforms doc comments into printed prose and shows the code being
+/// executed. Useful for creating self-documenting, narrative-style tests.
 ///
 /// # Example
 ///
