@@ -11,7 +11,9 @@ pub use {
     scatter_square::scatter_square,
     signedness::signedness,
     spiral_square::spiral_square,
+    z_order::z_order,
     zig_zag::zig_zag,
 };
 
 mod test;
+pub mod z_order;

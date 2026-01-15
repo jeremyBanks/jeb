@@ -27,7 +27,8 @@ fn test_zig_zag() {
         .        |   :             
           :      |               : 
             :    |  :              
-              :  |                :",
+              :  |                :
+",
     );
 }
 
@@ -49,7 +50,8 @@ fn test_signedness() {
            :     |             :   
             :    |              :  
              :   |               : 
-              :  |                :",
+              :  |                :
+",
     );
 }
 
@@ -76,7 +78,8 @@ fn test_spiral_square() {
 !TMGGHHHHHHHHHIIIOW#  |  YQJJJJJJJJIIIIIIIOV&
 !UNNNNNNNNNOOOOOOOW#  |  YQQQQQPPPPPPPPPOOOV#
 $UUUUUUUUVVVVVVVVVW#  |  YXXXXXXXXXWWWWWWWWW#
-$$$$$$$$&&&&&&&&&###  |           @@@@#######",
+$$$$$$$$&&&&&&&&&###  |           @@@@#######
+",
     );
 }
 
@@ -105,7 +108,8 @@ $XQIGEDGFBCCEGDFGJTZ&  |  @VOIGDFEBBGDDDECEKOU
  UPLKJMLIJHGILMIMMNV   |  $YTJJLHLKKHKIKLJLMRU 
  %PQONSNTTNORRSRRRSY@  |  $VONTSNSPPOTQQQPRNSU&
  UX%U%%YWY!!%!ZXWUUW&  |   UXUZWXU!ZWV%$Y!ZVYW 
-&    $& #   #     & $  |  #   &$$& #  & # # @&$",
+&    $& #   #     & $  |  #   &$$& #  & # # @&$
+",
     );
 }
 
@@ -146,6 +150,47 @@ ZYYY&&&$          |
 ZZ%!!!$$          |  
 ZZ%%!!$$          |  
 Z%%%!!$$          |  
-Z%%%!!$$          |  ",
+Z%%%!!$$          |  
+",
+    );
+}
+
+#[test]
+fn test_z_order() {
+    render_d2d((0u16..=390).map(z_order)).snap(
+        r"
+...:1122CCDDFGGG  |  ....::ii55556777QQQRSSSSXXYYZZZZ
+..::1122CCDDFGGH  |  ....iiii55557777QQRRSSSTXXYYZZ%%
+..::2223CCDDGGHH  |  .:::ii1166667788RRRRTTTTYYYZ%%%%
+..::2233CDDDGGHH  |  ::::i11166668888RRSSTTTTYYZZ%%%!
+:iii3344EEEFHHII  |  112233338899AAABUUUUVVWW!!!!$&&&
+:ii13344EEFFHHII  |  112233448999AABBUUUUWWWW!!!!&&&&
+ii113444EEFFIIIJ  |  2223444499AABBBBUVVVWWXX$$$$&&##
+ii113445EEFFIIJJ  |  2233444599AABBCCVVVVWXXX$$$$####
+55668899JJKKMNNO  |  CCCCEEEEJJJJLLLL##@@            
+55668999JJKKNNNO  |  CCCDEEEEJJKKLLLL#@@             
+556699AAJKKKNNOO  |  DDDDEFFFKKKKMMMM                
+556699AAJKKLNNOO  |  DDDDFFFFKKKLMMMM                
+6778AABBLLMMOOPP  |  FFGGHHIIMNNNOOPP                
+7778AABBLLMMOPPP  |  GGGGHHIINNNNOPPP                
+7788ABBCLLMMPPQQ  |  GGHHIIIJNNOOPPQQ                
+7788BBBCLLMMPPQQ  |  GHHHIIJJOOOOPPQQ                
+QQRRUUUV##        |  
+QQRRUUVV#@        |  
+QRRSUUVV@@        |  
+RRRSUUVV@         |  
+SSTTVWWW          |  
+SSTTVWWX          |  
+SSTTWWXX          |  
+STTTWWXX          |  
+XXYY!!$$          |  
+XXYY!!$$          |  
+YYYZ!!$$          |  
+YYZZ!!$$          |  
+ZZ%%$&&#          |  
+ZZ%%&&&#          |  
+Z%%%&&##          |  
+Z%%!&&##          |  
+",
     );
 }

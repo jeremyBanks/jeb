@@ -100,7 +100,7 @@ pub fn render_2d<T: Into<i128>, U: Into<i128>>(points: impl IntoIterator<Item = 
         }
         lines.push(line);
     }
-    let rendered = format!("\n{}\n", lines.join("\n"));
+    let rendered = format!("\n{}\n\n", lines.join("\n"));
 
     rendered
 }
