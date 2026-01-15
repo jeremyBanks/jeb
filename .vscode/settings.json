@@ -193,6 +193,12 @@
   "editor.tokenColorCustomizations": {
     "textMateRules": [
       {
+        "scope": "comment",
+        "settings": {
+          "foreground": "#FFF"
+        }
+      },
+      {
         "scope": "constant.numeric.padding.jeb",
         "settings": {
           "foreground": "#8AD2"
