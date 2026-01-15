@@ -41,37 +41,74 @@ literate! {
 /// hex digits for each byte.
 }
 
+fn print_doc_block(lines: &[&str]) {
+    if lines.is_empty() {
+        return;
+    }
+
+    // Strip one leading and one trailing empty line if present
+    let mut lines = lines;
+    if lines.first().map(|s| s.trim().is_empty()).unwrap_or(false) {
+        lines = &lines[1..];
+    }
+    if lines.last().map(|s| s.trim().is_empty()).unwrap_or(false) {
+        lines = &lines[..lines.len() - 1];
+    }
+
+    if lines.is_empty() {
+        return;
+    }
+
+    // Find minimum leading whitespace among non-empty lines
+    let min_indent = lines
+        .iter()
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| line.len() - line.trim_start().len())
+        .min()
+        .unwrap_or(0);
+
+    // Print each line with common indent stripped
+    for line in lines {
+        if line.trim().is_empty() {
+            eprintln!();
+        } else {
+            eprintln!("{}", &line[min_indent..]);
+        }
+    }
+}
+
 macro_rules! literate {
-    // Base case - no more tokens to process
-    (@process [] $($output:tt)*) => {
+    // Base case - no more tokens, flush any buffered docs
+    (@process [] [$($doc:literal),*] $($output:tt)*) => {
         $($output)*
+        print_doc_block(&[$($doc),*]);
     };
 
-    // Match a doc comment and convert to eprintln
-    (@process [#[doc = $doc:literal] $($rest:tt)*] $($output:tt)*) => {
-        literate!(@process [$($rest)*] $($output)* eprintln!($doc);)
+    // Accumulate consecutive doc comments into buffer
+    (@process [#[doc = $doc:literal] $($rest:tt)*] [$($buf:literal),*] $($output:tt)*) => {
+        literate!(@process [$($rest)*] [$($buf,)* $doc] $($output)*)
     };
 
-    // Match a let statement
-    (@process [let $p:pat = $e:expr ; $($rest:tt)*] $($output:tt)*) => {
-        literate!(@process [$($rest)*] $($output)* eprintln!(">>> let {} = {};", stringify!($p), stringify!($e)); let $p = $e;)
+    // Hit a let statement - flush buffer first, then process
+    (@process [let $p:pat = $e:expr ; $($rest:tt)*] [$($buf:literal),*] $($output:tt)*) => {
+        literate!(@process [$($rest)*] [] $($output)* print_doc_block(&[$($buf),*]); eprintln!(); eprintln!(">>> let {} = {};", stringify!($p), stringify!($e)); let $p = $e; eprintln!();)
     };
 
-    // Match an expression statement (ending with ;)
-    (@process [$e:expr ; $($rest:tt)*] $($output:tt)*) => {
-        literate!(@process [$($rest)*] $($output)* eprintln!(">>> {};", stringify!($e)); $e;)
+    // Hit an expression statement - flush buffer first, then process
+    (@process [$e:expr ; $($rest:tt)*] [$($buf:literal),*] $($output:tt)*) => {
+        literate!(@process [$($rest)*] [] $($output)* print_doc_block(&[$($buf),*]); eprintln!(); eprintln!(">>> {};", stringify!($e)); $e; eprintln!();)
     };
 
-    // Match a trailing expression (no semicolon)
-    (@process [$e:expr] $($output:tt)*) => {
-        $($output)* eprintln!(">>> {}", stringify!($e)); $e
+    // Hit a trailing expression - flush buffer first, then process
+    (@process [$e:expr] [$($buf:literal),*] $($output:tt)*) => {
+        $($output)* print_doc_block(&[$($buf),*]); eprintln!(); eprintln!(">>> {}", stringify!($e)); $e
     };
 
-    // Main entry: create the test function
+    // Main entry: create the test function with empty buffer
     ($($body:tt)*) => {
         #[test]
         fn literate_test() {
-            literate!(@process [$($body)*]);
+            literate!(@process [$($body)*] []);
         }
     };
 }
