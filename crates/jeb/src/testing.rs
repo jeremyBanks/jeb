@@ -105,17 +105,17 @@ macro_rules! literate {
 
     // Hit a let statement - flush buffer first, then process
     (@process [let $p:pat = $e:expr ; $($rest:tt)*] [$($buf:literal),*] $($output:tt)*) => {
-        literate!(@process [$($rest)*] [] $($output)* $crate::testing::print_doc_block(&[$($buf),*]); $crate::testing::print_code(concat!("let ", stringify!($p), " = ", stringify!($e), ";")); let $p = $e;)
+        literate!(@process [$($rest)*] [] $($output)* $crate::testing::print_doc_block(&[$($buf),*]); $crate::testing::print_code(::stringify_verbatim::stringify_verbatim!(let $p = $e;)); let $p = $e;)
     };
 
     // Hit an expression statement - flush buffer first, then process
     (@process [$e:expr ; $($rest:tt)*] [$($buf:literal),*] $($output:tt)*) => {
-        literate!(@process [$($rest)*] [] $($output)* $crate::testing::print_doc_block(&[$($buf),*]); $crate::testing::print_code(concat!(stringify!($e), ";")); $e;)
+        literate!(@process [$($rest)*] [] $($output)* $crate::testing::print_doc_block(&[$($buf),*]); $crate::testing::print_code(::stringify_verbatim::stringify_verbatim!($e;)); $e;)
     };
 
     // Hit a trailing expression - flush buffer first, then process
     (@process [$e:expr] [$($buf:literal),*] $($output:tt)*) => {
-        $($output)* $crate::testing::print_doc_block(&[$($buf),*]); $crate::testing::print_code(stringify!($e)); $e
+        $($output)* $crate::testing::print_doc_block(&[$($buf),*]); $crate::testing::print_code(::stringify_verbatim::stringify_verbatim!($e)); $e
     };
 
     // Main entry: create the test function with empty buffer

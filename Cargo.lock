@@ -1217,6 +1217,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "stringify_verbatim",
  "tap",
  "tokio",
  "tokio-stream",

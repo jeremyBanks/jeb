@@ -53,6 +53,7 @@ tokio-stream.workspace = true
 tokio-util = { workspace = true, features = ["codec", "io"] }
 tracing.workspace = true
 bat.workspace = true
+stringify_verbatim.workspace = true
 
 [features]
 default = ["bin", "fs", "stdio"]

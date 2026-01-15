@@ -3,7 +3,6 @@
     unused
 )]
 use {
-    bat::PrettyPrinter,
     inline::*,
     jeb::testing::literate,
 };
