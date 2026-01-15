@@ -130,6 +130,22 @@ OONMMMLLCCDDFFFF  |  6666BAAADDDDIIHH        @@
 OPPPKKKLIIIIFGGG  |  678888AAEEFFFFHH                
 OOPPKKKKIIIIFGGG  |  778898AAEEFFGGHH                
 QQPPKKJJIJHHHHGG  |  77789999EEEFGGGH                
-QQPPJJJJJJHHHHHG  |  77789999EEFFGGGG                ",
+QQPPJJJJJJHHHHHG  |  77789999EEFFGGGG                
+QQSSSSSS          |  
+QQRRSSTS          |  
+QRRRTTTT          |  
+RRRRTTTT          |  
+WWWWUUUU          |  
+XWWWUUUU          |  
+XXWWVVUV          |  
+XXVVVVVV          |  
+XXYY#####@@@      |  
+XXYY&&#### @      |  
+ZZYY&&&&          |  
+ZYYY&&&$          |  
+ZZ%!!!$$          |  
+ZZ%%!!$$          |  
+Z%%%!!$$          |  
+Z%%%!!$$          |  ",
     );
 }
