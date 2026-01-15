@@ -2,7 +2,10 @@
     non_snake_case,
     unused_variables
 )]
-use inline::*;
+use {
+    self::literate,
+    inline::*,
+};
 
 macro_rules! literate {
     // Base case - no more tokens to process
@@ -31,17 +34,16 @@ macro_rules! literate {
     };
 
     // Main entry: create the test function
-    ($name:ident { $($body:tt)* }) => {
+    ({ $($body:tt)* }) => {
         #[test]
-        fn $name() {
+        fn literate() {
             literate!(@process [$($body)*]);
         }
     };
 }
 
-literate! {
-    spec {
-        /// # Encoding bytes as text
+literate! {{
+    /// # Encoding bytes as text
 
         /// There are a lot of different ways to encode binary data as text, with
         /// different trade-offs and use cases. The most common considerations as
@@ -68,5 +70,4 @@ literate! {
         /// bits, and each hex digit represents four bits, so we just output two
         /// hex digits for each byte.
         let _ = ();
-    }
-}
+}}
