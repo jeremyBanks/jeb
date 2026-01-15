@@ -100,6 +100,7 @@ mod inline;
 pub mod registry;
 mod replace;
 pub mod runtime;
+mod snap;
 mod snapshot;
 mod tokens;
 mod value;
@@ -125,6 +126,7 @@ pub use {
         val,
     },
     runtime::*,
+    snap::Snap,
     snapshot::InlineSnapExt,
     tokens::Tokens,
     value::*,
@@ -235,5 +237,43 @@ macro_rules! replace_default {
 macro_rules! tokens {
     ($($tt:tt)*) => {
         $crate::cell($crate::Tokens::from_str(stringify!($($tt)*)))
+    };
+}
+
+/// Macro for snapshot comparison via `==` operator.
+///
+/// Creates a [`Snap`] wrapper that enables inline snapshot testing using
+/// the equality operator. When compared against an actual value:
+/// - If values match: returns `true`
+/// - If values differ in Write mode: updates source, returns `true`
+/// - If values differ in Verify/Reject mode: panics
+///
+/// # Syntax
+///
+/// ```no_run
+/// use inline::snap;
+///
+/// let actual = compute_value();
+/// snap!(expected) == actual;  // Note: snap! on the LEFT side
+/// ```
+///
+/// The `snap!` macro must be on the left side of `==` due to Rust's
+/// trait implementation rules.
+///
+/// # Example
+///
+/// ```no_run
+/// use inline::snap;
+///
+/// let result = 2 + 2;
+/// assert!(snap!(4) == result);  // Passes
+///
+/// let name = "Alice".to_string();
+/// snap!("Alice") == name;  // Works with String == &str
+/// ```
+#[macro_export]
+macro_rules! snap {
+    ($value:expr) => {
+        $crate::Snap::new($value)
     };
 }

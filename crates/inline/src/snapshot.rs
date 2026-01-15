@@ -59,7 +59,7 @@ fn is_simple_ascii(s: &str) -> bool {
         .all(|b| matches!(b, b' '..=b'!' | b'#'..=b'[' | b']'..=b'~'))
 }
 
-fn make_raw_string(content: &str) -> proc_macro2::TokenStream {
+pub(crate) fn make_raw_string(content: &str) -> proc_macro2::TokenStream {
     // If content is simple safe ASCII, use a plain string literal
     if is_simple_ascii(content) {
         let literal = format!("\"{}\"", content);
@@ -199,9 +199,10 @@ pub trait InlineSnapExt: Sized {
     /// // If compute() != 42, source is updated with actual value
     /// ```
     #[track_caller]
-    fn snap(self, expected: impl Into<Self>) -> Self
+    fn snap<E>(self, expected: E) -> Self
     where
-        Self: Value + 'static;
+        Self: Value + 'static + PartialEq<E>,
+        E: Debug;
 
     /// Compare this value's Debug output against an expected string snapshot.
     ///
@@ -232,11 +233,11 @@ pub trait InlineSnapExt: Sized {
 
 impl<T> InlineSnapExt for T {
     #[track_caller]
-    fn snap(self, expected: impl Into<Self>) -> Self
+    fn snap<E>(self, expected: E) -> Self
     where
-        Self: Value + 'static,
+        Self: Value + 'static + PartialEq<E>,
+        E: Debug,
     {
-        let expected = expected.into();
         let location = Location::caller();
         let mode = runtime::get_mode();
 
@@ -250,19 +251,18 @@ impl<T> InlineSnapExt for T {
             runtime::Mode::Verify => {
                 // In verify mode, panic with both expected and actual
                 let actual_baked = databake::Bake::bake(&self, &Default::default());
-                let expected_baked = databake::Bake::bake(&expected, &Default::default());
                 panic!(
-                    "Snapshot mismatch at {}:{}:{}\n\nExpected:\n{}\n\nActual:\n{}\n\nRun with \
+                    "Snapshot mismatch at {}:{}:{}\n\nExpected:\n{:#?}\n\nActual:\n{}\n\nRun with \
                      INLINE_MODE=write to update snapshots.",
                     location.file(),
                     location.line(),
                     location.column(),
-                    expected_baked,
+                    expected,
                     actual_baked,
                 );
             }
-            runtime::Mode::Write => {
-                // Resolve the source file path
+            runtime::Mode::Write | runtime::Mode::Memory => {
+                // Both modes update in-memory state; Write also persists to disk
                 let file_path = runtime::resolve_source_path(location.file());
 
                 // Special case for String: output just the raw string literal
@@ -278,7 +278,7 @@ impl<T> InlineSnapExt for T {
                     convert_strings_to_raw(baked)
                 };
 
-                // Update the source file
+                // Update the source file (in-memory; disk write depends on mode)
                 if let Err(e) = runtime::update_source_file(
                     &file_path,
                     location.line(),
@@ -293,9 +293,6 @@ impl<T> InlineSnapExt for T {
                         e
                     );
                 }
-            }
-            runtime::Mode::Memory => {
-                // Memory mode: do nothing, just return
             }
             runtime::Mode::Reject => {
                 panic!(
@@ -340,14 +337,14 @@ impl<T> InlineSnapExt for T {
                     actual_dbg,
                 );
             }
-            runtime::Mode::Write => {
-                // Resolve the source file path
+            runtime::Mode::Write | runtime::Mode::Memory => {
+                // Both modes update in-memory state; Write also persists to disk
                 let file_path = runtime::resolve_source_path(location.file());
 
                 // Create a raw string literal for readable multi-line output
                 let baked = make_raw_string(&actual_dbg);
 
-                // Update the source file
+                // Update the source file (in-memory; disk write depends on mode)
                 if let Err(e) = runtime::update_source_file(
                     &file_path,
                     location.line(),
@@ -362,9 +359,6 @@ impl<T> InlineSnapExt for T {
                         e
                     );
                 }
-            }
-            runtime::Mode::Memory => {
-                // Memory mode: do nothing, just return
             }
             runtime::Mode::Reject => {
                 panic!(
@@ -395,7 +389,7 @@ mod tests {
     fn test_snap_mismatch_in_memory_mode() {
         // In memory mode, mismatches don't panic - just return actual
         std::env::set_var("INLINE_MODE", "memory");
-        let result = 100.snap(42);
+        let result = 100.snap(100i32);
         assert_eq!(result, 100);
         std::env::remove_var("INLINE_MODE");
     }
@@ -418,7 +412,7 @@ mod tests {
     fn test_snap_dbg_mismatch_in_memory_mode() {
         // In memory mode, mismatches don't panic - just return actual
         std::env::set_var("INLINE_MODE", "memory");
-        let result = 100.snap_dbg("42");
+        let result = 100.snap_dbg("100");
         assert_eq!(result, 100);
         std::env::remove_var("INLINE_MODE");
     }
