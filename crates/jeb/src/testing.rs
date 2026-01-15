@@ -98,6 +98,16 @@ macro_rules! literate_docs {
         $crate::testing::print_doc_block(&[$($doc),*]);
         $crate::literate_item!(fn $($item)*);
     };
+    // Done collecting docs, hit static item
+    ([$($doc:literal),*] static $($item:tt)*) => {
+        $crate::testing::print_doc_block(&[$($doc),*]);
+        $crate::literate_item!(static $($item)*);
+    };
+    // Done collecting docs, hit const item
+    ([$($doc:literal),*] const $($item:tt)*) => {
+        $crate::testing::print_doc_block(&[$($doc),*]);
+        $crate::literate_item!(const $($item)*);
+    };
     // Done collecting docs, hit statement
     ([$($doc:literal),*] $s:stmt ; $($rest:tt)*) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
@@ -120,13 +130,25 @@ macro_rules! literate_docs {
     };
 }
 
-/// Internal macro to handle fn items - find the body and continue after
+/// Internal macro to handle items - find the body/value and continue after
 #[macro_export]
 macro_rules! literate_item {
     // fn with body - capture name, params, return type, body
     (fn $name:ident $params:tt $(-> $ret:ty)? $body:block $($rest:tt)*) => {
         $crate::testing::print_code(::stringify_verbatim::stringify_verbatim!(fn $name $params $(-> $ret)? $body));
         fn $name $params $(-> $ret)? $body
+        $crate::literate_inner!($($rest)*);
+    };
+    // static item
+    (static $name:ident : $ty:ty = $val:expr ; $($rest:tt)*) => {
+        $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!(static $name : $ty = $val), ";"));
+        static $name: $ty = $val;
+        $crate::literate_inner!($($rest)*);
+    };
+    // const item
+    (const $name:ident : $ty:ty = $val:expr ; $($rest:tt)*) => {
+        $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!(const $name : $ty = $val), ";"));
+        const $name: $ty = $val;
         $crate::literate_inner!($($rest)*);
     };
 }
@@ -145,6 +167,16 @@ macro_rules! literate_inner {
     // fn item
     (fn $($item:tt)*) => {
         $crate::literate_item!(fn $($item)*);
+    };
+
+    // static item
+    (static $($item:tt)*) => {
+        $crate::literate_item!(static $($item)*);
+    };
+
+    // const item
+    (const $($item:tt)*) => {
+        $crate::literate_item!(const $($item)*);
     };
 
     // Statement with semicolon

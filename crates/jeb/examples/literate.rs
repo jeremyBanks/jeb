@@ -72,7 +72,7 @@ literate! {
     alphabet (`A` to `F`). This is a common choice for binary values that may be
     directly manually edited by humans.
 */
-    let HEX: &[u8; 16] = b"0123456789ABCDEF";
+    static HEX: &[u8; 16] = b"0123456789ABCDEF";
 /**
     Cleanly splitting each byte in half keeps this encoding quite simple, with
     only one significant design question: which half comes first in the text
