@@ -5,12 +5,9 @@
 
 mod common;
 
-use {
-    common::{
-        fixtures::test_fixture,
-        helpers::*,
-    },
-    inline::snapshot,
+use common::{
+    fixtures::test_fixture,
+    helpers::*,
 };
 
 // ============================================================================
@@ -53,11 +50,11 @@ fn test_basic_zoom_in() {
         // Inline snapshot: verify tree structure after zoom-in
         let mut tree_paths: Vec<String> = head_commit.tree.paths().map(String::from).collect();
         tree_paths.sort();
-        snapshot(vec!["bar.txt".to_string(), "foo.txt".to_string()]).value = tree_paths;
+        inline::cell(vec!["bar.txt".to_string(), "foo.txt".to_string()]).value = tree_paths;
 
         // Inline snapshot: verify commit message first line
         let msg_first_line = head_commit.message.lines().next().unwrap_or("");
-        snapshot("Merge from 'src/lib'".to_string()).value = msg_first_line.to_string();
+        inline::cell("Merge from 'src/lib'".to_string()).value = msg_first_line.to_string();
 
         Ok(())
     });

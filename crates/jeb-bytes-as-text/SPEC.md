@@ -179,6 +179,17 @@ by the bytes we have already seen.
   MUST NOT switch to raw mode yet; we must continue encoding until we reach a
   stable boundary.
 
+**Decoder Consistency Condition**: Even if a character is stable, we must ensure
+the decoder can recover the original byte.
+
+- Z85 is a many-to-one mapping for the leading character `c0` (multiple values
+  of `b0` can produce the same `c0`).
+- A decoder seeing only `c0` and raw bytes must pick a specific `b0` (usually
+  the smallest valid candidate).
+- **Constraint**: The encoder must ONLY switch to raw mode if the actual `b0`
+  matches the request that the decoder would infer. If `b0` is valid but not the
+  canonical choice, we must continue encoding to avoid ambiguity.
+
 For Z85, the stability of output characters depends on how many bytes are known:
 
 - **1 Byte Known**: First character stable in **~68%** of cases.

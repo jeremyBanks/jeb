@@ -4,7 +4,6 @@ mod common;
 
 use {
     common::helpers::*,
-    inline::snapshot,
     std::{
         env,
         process::Command,
@@ -188,7 +187,7 @@ fn test_debug_fixture_simulation() {
     );
 
     // Use an inline snapshot like the integration tests do
-    snapshot("test".to_string()).value = "test".to_string();
+    inline::cell("test".to_string()).value = "test".to_string();
 
     println!("\n=== Running git-zoom via run_zoom ===");
     // Use the same method as the actual fixture tests

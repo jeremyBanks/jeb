@@ -29,9 +29,8 @@
 #![doc = ::document_features::document_features!()]
 pub mod byte_ranges;
 pub mod const_checked;
-pub mod errors;
-pub mod literate;
 pub mod jeb85;
+pub mod literate;
 pub mod model;
 pub mod nodes;
 pub mod z85;

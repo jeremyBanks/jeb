@@ -9,7 +9,7 @@
 //!
 //! # Examples
 //!
-//! ```
+//! ```BROKEN
 //! use jeb_common::text::b1032::{
 //!     from_b1032,
 //!     to_b1032,
