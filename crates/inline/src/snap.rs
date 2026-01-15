@@ -97,7 +97,8 @@ where
                     actual_baked,
                 );
             }
-            runtime::Mode::Write => {
+            runtime::Mode::Write | runtime::Mode::Memory => {
+                // Both modes update in-memory state; Write also persists to disk
                 let file_path = runtime::resolve_source_path(self.file);
 
                 // Special case for String: output just the raw string literal
@@ -117,9 +118,6 @@ where
                         self.file, self.line, self.column, e
                     );
                 }
-            }
-            runtime::Mode::Memory => {
-                // Memory mode: conceptually updated, no persistence
             }
             runtime::Mode::Reject => {
                 panic!(
@@ -159,7 +157,7 @@ mod tests {
     fn test_snap_eq_mismatch_memory_mode() {
         // In memory mode, mismatch still returns true (conceptually updated)
         std::env::set_var("INLINE_MODE", "memory");
-        let snap = Snap::new(42);
+        let snap = Snap::new(100i32);
         assert!(snap == 100);  // Different values but returns true in memory mode
         std::env::remove_var("INLINE_MODE");
     }

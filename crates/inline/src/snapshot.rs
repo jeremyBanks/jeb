@@ -234,8 +234,8 @@ impl<T> InlineSnapExt for T {
                     actual_baked,
                 );
             }
-            runtime::Mode::Write => {
-                // Resolve the source file path
+            runtime::Mode::Write | runtime::Mode::Memory => {
+                // Both modes update in-memory state; Write also persists to disk
                 let file_path = runtime::resolve_source_path(location.file());
 
                 // Special case for String: output just the raw string literal
@@ -251,7 +251,7 @@ impl<T> InlineSnapExt for T {
                     convert_strings_to_raw(baked)
                 };
 
-                // Update the source file
+                // Update the source file (in-memory; disk write depends on mode)
                 if let Err(e) =
                     runtime::update_source_file(&file_path, location.line(), location.column(), baked)
                 {
@@ -263,9 +263,6 @@ impl<T> InlineSnapExt for T {
                         e
                     );
                 }
-            }
-            runtime::Mode::Memory => {
-                // Memory mode: do nothing, just return
             }
             runtime::Mode::Reject => {
                 panic!(
@@ -312,14 +309,14 @@ impl<T> InlineSnapExt for T {
                     actual_dbg,
                 );
             }
-            runtime::Mode::Write => {
-                // Resolve the source file path
+            runtime::Mode::Write | runtime::Mode::Memory => {
+                // Both modes update in-memory state; Write also persists to disk
                 let file_path = runtime::resolve_source_path(location.file());
 
                 // Create a raw string literal for readable multi-line output
                 let baked = make_raw_string(&actual_dbg);
 
-                // Update the source file
+                // Update the source file (in-memory; disk write depends on mode)
                 if let Err(e) =
                     runtime::update_source_file(&file_path, location.line(), location.column(), baked)
                 {
@@ -331,9 +328,6 @@ impl<T> InlineSnapExt for T {
                         e
                     );
                 }
-            }
-            runtime::Mode::Memory => {
-                // Memory mode: do nothing, just return
             }
             runtime::Mode::Reject => {
                 panic!(
@@ -364,7 +358,7 @@ mod tests {
     fn test_snap_mismatch_in_memory_mode() {
         // In memory mode, mismatches don't panic - just return actual
         std::env::set_var("INLINE_MODE", "memory");
-        let result = 100.snap(42);
+        let result = 100.snap(100i32);
         assert_eq!(result, 100);
         std::env::remove_var("INLINE_MODE");
     }
@@ -387,7 +381,7 @@ mod tests {
     fn test_snap_dbg_mismatch_in_memory_mode() {
         // In memory mode, mismatches don't panic - just return actual
         std::env::set_var("INLINE_MODE", "memory");
-        let result = 100.snap_dbg("42");
+        let result = 100.snap_dbg("100");
         assert_eq!(result, 100);
         std::env::remove_var("INLINE_MODE");
     }
