@@ -1,3 +1,4 @@
+#![recursion_limit = "512"]
 #![allow(
     non_snake_case,
     unused

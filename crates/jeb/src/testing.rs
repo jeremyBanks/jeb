@@ -90,39 +90,65 @@ pub fn print_code(code: &str) {
         .unwrap();
 }
 
+/// Internal macro to collect consecutive doc comments
 #[macro_export]
-macro_rules! literate {
-    // Base case - no more tokens, flush any buffered docs
-    (@process [] [$($doc:literal),*] $($output:tt)*) => {
-        $($output)*
+macro_rules! literate_docs {
+    // Done collecting docs, hit non-doc - emit docs and continue with main macro
+    ([$($doc:literal),*] $s:stmt ; $($rest:tt)*) => {
+        $crate::testing::print_doc_block(&[$($doc),*]);
+        $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!($s), ";"));
+        $s;
+        $crate::literate_inner!($($rest)*);
+    };
+    ([$($doc:literal),*] $e:expr) => {
+        $crate::testing::print_doc_block(&[$($doc),*]);
+        $crate::testing::print_code(::stringify_verbatim::stringify_verbatim!($e));
+        $e
+    };
+    // No more input - just emit the docs
+    ([$($doc:literal),*]) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
     };
+    // Accumulate another doc comment
+    ([$($doc:literal),*] #[doc = $next:literal] $($rest:tt)*) => {
+        $crate::literate_docs!([$($doc,)* $next] $($rest)*);
+    };
+}
 
-    // Accumulate consecutive doc comments into buffer
-    (@process [#[doc = $doc:literal] $($rest:tt)*] [$($buf:literal),*] $($output:tt)*) => {
-        literate!(@process [$($rest)*] [$($buf,)* $doc] $($output)*)
+/// Internal macro for processing literate body
+#[macro_export]
+macro_rules! literate_inner {
+    // Empty - done
+    () => {};
+
+    // Doc comment - start collecting
+    (#[doc = $doc:literal] $($rest:tt)*) => {
+        $crate::literate_docs!([$doc] $($rest)*);
     };
 
-    // Hit a let statement - flush buffer first, then process
-    (@process [let $p:pat = $e:expr ; $($rest:tt)*] [$($buf:literal),*] $($output:tt)*) => {
-        literate!(@process [$($rest)*] [] $($output)* $crate::testing::print_doc_block(&[$($buf),*]); $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!(let $p = $e), ";")); let $p = $e;)
+    // Statement with semicolon
+    ($s:stmt ; $($rest:tt)*) => {
+        $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!($s), ";"));
+        $s;
+        $crate::literate_inner!($($rest)*);
     };
 
-    // Hit an expression statement - flush buffer first, then process
-    (@process [$e:expr ; $($rest:tt)*] [$($buf:literal),*] $($output:tt)*) => {
-        literate!(@process [$($rest)*] [] $($output)* $crate::testing::print_doc_block(&[$($buf),*]); $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!($e), ";")); $e;)
+    // Trailing expression (no semicolon)
+    ($e:expr) => {
+        $crate::testing::print_code(::stringify_verbatim::stringify_verbatim!($e));
+        $e
     };
+}
 
-    // Hit a trailing expression - flush buffer first, then process
-    (@process [$e:expr] [$($buf:literal),*] $($output:tt)*) => {
-        $($output)* $crate::testing::print_doc_block(&[$($buf),*]); $crate::testing::print_code(::stringify_verbatim::stringify_verbatim!($e)); $e
-    };
-
-    // Main entry: create the test function with empty buffer
+/// Main entry point macro - wraps body in a main function
+#[macro_export]
+macro_rules! literate {
     ($($body:tt)*) => {
         pub fn main() {
-            literate!(@process [$($body)*] []);
+            $crate::literate_inner!($($body)*);
         }
     };
 }
 pub use literate;
+pub use literate_docs;
+pub use literate_inner;
