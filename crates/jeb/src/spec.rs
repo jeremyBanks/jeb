@@ -15,9 +15,9 @@ macro_rules! literate {
         literate!(@process [$($rest)*] $($output)* eprintln!($doc);)
     };
 
-    // Match any other token and pass through
+    // Match any other token: print it and execute it
     (@process [$first:tt $($rest:tt)*] $($output:tt)*) => {
-        literate!(@process [$($rest)*] $($output)* $first)
+        literate!(@process [$($rest)*] $($output)* eprintln!(">>> {}", stringify!($first)); $first)
     };
 
     // Main entry: create the test function
