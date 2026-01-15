@@ -14,9 +14,8 @@ literate! {
     There are a lot of different ways to encode binary data as text, with
     different trade-offs and use cases. The most common considerations as
     size/efficiency (how many characters are required to encode a given
-    number of bytes), and what characters are used in the encoded
-    representation (determining contexts where the encoded data can be
-    used).
+    number of bytes), and what characters are used in the encoded representation
+    (determining contexts where the encoded data can be used).
 
     ## Latin-1 passthrough
 
@@ -38,6 +37,10 @@ literate! {
     special meaning in other encodings or programming languages (e.g. `\`
     backslash, `"` double quote, `$` dollar sign), so these encoded values can
     rarely be embedded without an additional layer of escaping or framing.
+
+    ## Hexadecimal ("hex", base 16)
+
+
  */
 
 /// (We'll be focusing primarily on byte-oriented encodings that can produce

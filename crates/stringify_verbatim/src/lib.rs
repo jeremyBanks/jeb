@@ -66,6 +66,9 @@ fn reconstruct_with_whitespace(tokens: proc_macro2::TokenStream) -> String {
         return String::new();
     }
 
+    // Find the starting position (first token's start) to use as our baseline
+    let baseline = find_first_span_start(&tts);
+
     let mut result = String::new();
     let mut prev_end: Option<LineColumn> = None;
     let mut i = 0;
@@ -76,7 +79,7 @@ fn reconstruct_with_whitespace(tokens: proc_macro2::TokenStream) -> String {
             // Add whitespace before the doc comment
             if let Some(prev) = prev_end {
                 let start = tts[i].span().start();
-                let ws = compute_whitespace(prev, start);
+                let ws = compute_whitespace(prev, start, baseline);
                 result.push_str(&ws);
             }
 
@@ -93,18 +96,58 @@ fn reconstruct_with_whitespace(tokens: proc_macro2::TokenStream) -> String {
 
         // Add whitespace between previous token and this one
         if let Some(prev) = prev_end {
-            let ws = compute_whitespace(prev, start);
+            let ws = compute_whitespace(prev, start, baseline);
             result.push_str(&ws);
         }
 
         // Add the token's text
-        result.push_str(&token_to_string(tt));
+        result.push_str(&token_to_string_with_baseline(tt, baseline));
 
         prev_end = Some(end);
         i += 1;
     }
 
     result
+}
+
+/// Find the first span start position from a list of tokens, looking for the
+/// minimum line number to find the original source position rather than macro
+/// expansion positions.
+fn find_first_span_start(tts: &[TokenTree]) -> LineColumn {
+    if tts.is_empty() {
+        return LineColumn { line: 1, column: 0 };
+    }
+
+    // Find the token with the minimum line number - this should be from the
+    // original source, not from macro definition positions
+    let mut min_line = usize::MAX;
+    let mut min_column = 0;
+
+    fn find_min_in_tree(tt: &TokenTree, min_line: &mut usize, min_column: &mut usize) {
+        let start = tt.span().start();
+        if start.line < *min_line || (start.line == *min_line && start.column < *min_column) {
+            *min_line = start.line;
+            *min_column = start.column;
+        }
+        if let TokenTree::Group(g) = tt {
+            for inner in g.stream() {
+                find_min_in_tree(&inner, min_line, min_column);
+            }
+        }
+    }
+
+    for tt in tts {
+        find_min_in_tree(tt, &mut min_line, &mut min_column);
+    }
+
+    if min_line == usize::MAX {
+        LineColumn { line: 1, column: 0 }
+    } else {
+        LineColumn {
+            line: min_line,
+            column: min_column,
+        }
+    }
 }
 
 /// Try to parse a doc attribute pattern and convert it back to /// or //!
@@ -224,23 +267,45 @@ fn try_parse_doc_attribute(tokens: &[TokenTree]) -> Option<(String, usize, LineC
     Some((doc_comment, consumed, end_pos))
 }
 
-/// Compute the whitespace string between two positions.
-fn compute_whitespace(from: LineColumn, to: LineColumn) -> String {
+/// Compute the whitespace string between two positions, using baseline for
+/// column normalization on newlines.
+///
+/// If span positions appear discontinuous (which happens with macro-expanded
+/// tokens), use minimal spacing to avoid creating huge gaps.
+fn compute_whitespace(from: LineColumn, to: LineColumn, baseline: LineColumn) -> String {
     if from.line == to.line {
         // Same line: just spaces
         let spaces = to.column.saturating_sub(from.column);
-        " ".repeat(spaces)
+        // If there's a big gap on the same line, it might be due to macro expansion
+        // Just use a single space in that case
+        if spaces > 20 {
+            " ".to_string()
+        } else {
+            " ".repeat(spaces)
+        }
     } else {
-        // Different lines: newlines + indentation
-        let newlines = to.line.saturating_sub(from.line);
-        let mut ws = "\n".repeat(newlines);
-        ws.push_str(&" ".repeat(to.column));
-        ws
+        // Different lines: check if this looks like normal sequential code
+        // or discontinuous macro-expanded tokens
+        let line_diff = to.line.saturating_sub(from.line);
+
+        // If the line difference is too large (> 5 lines), it's probably
+        // macro expansion artifacts - use just a single newline
+        if line_diff > 5 {
+            "\n".to_string()
+        } else {
+            // Normal case: newlines + indentation relative to baseline
+            let mut ws = "\n".repeat(line_diff);
+            // Normalize column relative to baseline
+            let normalized_column = to.column.saturating_sub(baseline.column);
+            ws.push_str(&" ".repeat(normalized_column));
+            ws
+        }
     }
 }
 
-/// Convert a token tree to its string representation.
-fn token_to_string(tt: &TokenTree) -> String {
+/// Convert a token tree to its string representation, using baseline for
+/// column normalization.
+fn token_to_string_with_baseline(tt: &TokenTree, baseline: LineColumn) -> String {
     match tt {
         TokenTree::Group(g) => {
             // For groups, we need to handle whitespace inside the delimiters
@@ -268,17 +333,25 @@ fn token_to_string(tt: &TokenTree) -> String {
             let leading_ws = if first_start.line == group_start.line {
                 // Same line: compute column difference, minus 1 for the delimiter itself
                 let diff = first_start.column.saturating_sub(group_start.column);
-                if diff > 1 {
+                if diff > 1 && diff <= 20 {
                     " ".repeat(diff - 1)
                 } else {
                     String::new()
                 }
             } else {
                 // Different lines
-                let newlines = first_start.line.saturating_sub(group_start.line);
-                let mut ws = "\n".repeat(newlines);
-                ws.push_str(&" ".repeat(first_start.column));
-                ws
+                let line_diff = first_start.line.saturating_sub(group_start.line);
+                // If line difference is huge, it's a macro artifact
+                if line_diff > 5 {
+                    "\n".to_string()
+                } else {
+                    let mut ws = "\n".repeat(line_diff);
+                    // Normalize column relative to baseline, but preserve inner indentation
+                    // by computing offset from the group's opening, not the outer baseline
+                    let indent = first_start.column.saturating_sub(baseline.column);
+                    ws.push_str(&" ".repeat(indent));
+                    ws
+                }
             };
 
             // Compute trailing whitespace (between last token and close delimiter)
@@ -286,23 +359,30 @@ fn token_to_string(tt: &TokenTree) -> String {
             let last_end = last_token.span().end();
             let trailing_ws = if last_end.line == group_end.line {
                 let diff = group_end.column.saturating_sub(last_end.column);
-                if diff > 1 {
+                if diff > 1 && diff <= 20 {
                     " ".repeat(diff - 1)
                 } else {
                     String::new()
                 }
             } else {
-                let newlines = group_end.line.saturating_sub(last_end.line);
-                let mut ws = "\n".repeat(newlines);
-                // Indentation for closing delimiter
-                if group_end.column > 0 {
-                    ws.push_str(&" ".repeat(group_end.column.saturating_sub(1)));
+                let line_diff = group_end.line.saturating_sub(last_end.line);
+                // If line difference is too large, assume it's macro expansion artifact
+                // and use no trailing whitespace (closing delimiter goes right after content)
+                if line_diff > 5 {
+                    String::new()
+                } else {
+                    let mut ws = "\n".repeat(line_diff);
+                    // Indentation for closing delimiter, relative to baseline
+                    let normalized_column = group_end.column.saturating_sub(baseline.column);
+                    if normalized_column > 0 {
+                        ws.push_str(&" ".repeat(normalized_column.saturating_sub(1)));
+                    }
+                    ws
                 }
-                ws
             };
 
-            // Reconstruct inner content
-            let inner = reconstruct_with_whitespace(g.stream());
+            // Reconstruct inner content with the same baseline
+            let inner = reconstruct_with_whitespace_baseline(g.stream(), baseline);
 
             format!("{}{}{}{}{}", open, leading_ws, inner, trailing_ws, close)
         }
@@ -310,6 +390,59 @@ fn token_to_string(tt: &TokenTree) -> String {
         TokenTree::Punct(p) => p.to_string(),
         TokenTree::Literal(l) => l.to_string(),
     }
+}
+
+/// Reconstruct the token stream with a provided baseline for column
+/// normalization.
+fn reconstruct_with_whitespace_baseline(
+    tokens: proc_macro2::TokenStream,
+    baseline: LineColumn,
+) -> String {
+    let tts: Vec<TokenTree> = tokens.into_iter().collect();
+
+    if tts.is_empty() {
+        return String::new();
+    }
+
+    let mut result = String::new();
+    let mut prev_end: Option<LineColumn> = None;
+    let mut i = 0;
+
+    while i < tts.len() {
+        // Try to detect and convert doc attributes back to /// or //! syntax
+        if let Some((doc_comment, consumed, end_pos)) = try_parse_doc_attribute(&tts[i..]) {
+            // Add whitespace before the doc comment
+            if let Some(prev) = prev_end {
+                let start = tts[i].span().start();
+                let ws = compute_whitespace(prev, start, baseline);
+                result.push_str(&ws);
+            }
+
+            result.push_str(&doc_comment);
+            prev_end = Some(end_pos);
+            i += consumed;
+            continue;
+        }
+
+        let tt = &tts[i];
+        let span = tt.span();
+        let start = span.start();
+        let end = span.end();
+
+        // Add whitespace between previous token and this one
+        if let Some(prev) = prev_end {
+            let ws = compute_whitespace(prev, start, baseline);
+            result.push_str(&ws);
+        }
+
+        // Add the token's text
+        result.push_str(&token_to_string_with_baseline(tt, baseline));
+
+        prev_end = Some(end);
+        i += 1;
+    }
+
+    result
 }
 
 #[cfg(test)]
