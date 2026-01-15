@@ -33,6 +33,7 @@ pub mod jeb85;
 pub mod model;
 pub mod nodes;
 mod spec;
+pub mod testing;
 pub mod z85;
 pub use {
     crate::{
