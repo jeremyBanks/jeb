@@ -172,9 +172,10 @@ pub trait InlineSnapExt: Sized {
     /// // If compute() != 42, source is updated with actual value
     /// ```
     #[track_caller]
-    fn snap(self, expected: impl Into<Self>) -> Self
+    fn snap<E>(self, expected: E) -> Self
     where
-        Self: Value + 'static;
+        Self: Value + 'static + PartialEq<E>,
+        E: Debug;
 
     /// Compare this value's Debug output against an expected string snapshot.
     ///
@@ -203,11 +204,11 @@ pub trait InlineSnapExt: Sized {
 
 impl<T> InlineSnapExt for T {
     #[track_caller]
-    fn snap(self, expected: impl Into<Self>) -> Self
+    fn snap<E>(self, expected: E) -> Self
     where
-        Self: Value + 'static,
+        Self: Value + 'static + PartialEq<E>,
+        E: Debug,
     {
-        let expected = expected.into();
         let location = Location::caller();
         let mode = runtime::get_mode();
 
@@ -221,16 +222,15 @@ impl<T> InlineSnapExt for T {
             runtime::Mode::Verify => {
                 // In verify mode, panic with both expected and actual
                 let actual_baked = databake::Bake::bake(&self, &Default::default());
-                let expected_baked = databake::Bake::bake(&expected, &Default::default());
                 panic!(
                     "Snapshot mismatch at {}:{}:{}\n\n\
-                     Expected:\n{}\n\n\
+                     Expected:\n{:#?}\n\n\
                      Actual:\n{}\n\n\
                      Run with INLINE_MODE=write to update snapshots.",
                     location.file(),
                     location.line(),
                     location.column(),
-                    expected_baked,
+                    expected,
                     actual_baked,
                 );
             }
