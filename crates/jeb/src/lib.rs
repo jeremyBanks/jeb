@@ -30,7 +30,6 @@
 pub mod byte_ranges;
 pub mod const_checked;
 pub mod jeb85;
-pub mod literate;
 pub mod model;
 pub mod nodes;
 mod spec;

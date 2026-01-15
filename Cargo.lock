@@ -1066,6 +1066,7 @@ dependencies = [
  "getset",
  "ignorable",
  "indexmap 2.12.1",
+ "inline",
  "jeb-common",
  "jeb-stream",
  "jeb-value",
