@@ -28,11 +28,16 @@
 /// # Fibonacci Test
 ///
 /// We start with the base cases:
+///
 ///     let a = 0
 ///     let b = 1
+///
 /// Then compute the next value:
+///
 ///     let c = a + b
+///
 /// And verify the result:
+///
 ///     assert_eq!(c, 1)
 /// ```
 #[macro_export]
@@ -49,9 +54,20 @@ macro_rules! literate {
         $crate::literate!(#[$($next_attr)*] $($rest)*);
     };
 
+    // Doc comment followed by statement, then another doc (prose -> code -> prose)
+    (#[doc = $doc:literal] $stmt:stmt; #[$($next_attr:tt)*] $($rest:tt)*) => {
+        println!("{}", $doc.trim());
+        println!();
+        println!("    {}", stringify!($stmt));
+        $stmt
+        println!();
+        $crate::literate!(#[$($next_attr)*] $($rest)*);
+    };
+
     // Doc comment followed by statement
     (#[doc = $doc:literal] $stmt:stmt; $($rest:tt)*) => {
         println!("{}", $doc.trim());
+        println!();
         println!("    {}", stringify!($stmt));
         $stmt
         $crate::literate!($($rest)*);
@@ -62,7 +78,15 @@ macro_rules! literate {
         println!("{}", $doc.trim());
     };
 
-    // Regular statement (no doc comment)
+    // Regular statement followed by doc comment (code -> prose transition)
+    ($stmt:stmt; #[$($next_attr:tt)*] $($rest:tt)*) => {
+        println!("    {}", stringify!($stmt));
+        $stmt
+        println!();
+        $crate::literate!(#[$($next_attr)*] $($rest)*);
+    };
+
+    // Regular statement (no doc comment follows)
     ($stmt:stmt; $($rest:tt)*) => {
         println!("    {}", stringify!($stmt));
         $stmt
