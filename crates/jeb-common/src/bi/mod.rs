@@ -13,3 +13,5 @@ pub use {
     spiral_square::spiral_square,
     zig_zag::zig_zag,
 };
+
+mod test;

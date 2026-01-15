@@ -25,11 +25,25 @@ pub trait ZigZag {
 }
 macro_rules! impls {
     {$($signed:ident : $unsigned:ident;)+} => {
-        $(impl ZigZag for $signed { type Out = $unsigned; fn zig_zag(self) -> $unsigned {
-        let sign_mask = (self >> (<$signed >::BITS - 1)) as $unsigned; ((self as
-        $unsigned) << 1) ^ sign_mask } } impl ZigZag for $unsigned { type Out = $signed;
-        fn zig_zag(self) -> $signed { let lsb : $signed = (self & 1) as $signed; let
-        neg_mask : $signed = - lsb; ((self >> 1) as $signed) ^ neg_mask } })+
+        $(
+            impl ZigZag for $signed {
+                type Out = $unsigned;
+
+                fn zig_zag(self) -> $unsigned {
+                    let sign_mask = (self >> (<$signed>::BITS - 1)) as $unsigned;
+                    ((self as $unsigned) << 1) ^ sign_mask
+                }
+            }
+            impl ZigZag for $unsigned {
+                type Out = $signed;
+
+                fn zig_zag(self) -> $signed {
+                    let lsb: $signed = (self & 1) as $signed;
+                    let neg_mask: $signed = -lsb;
+                    ((self >> 1) as $signed) ^ neg_mask
+                }
+            }
+        )+
     };
 }
 use impls;

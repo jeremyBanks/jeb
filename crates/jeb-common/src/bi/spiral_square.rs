@@ -13,6 +13,7 @@ counterclockwise order starting from the positive x-axis, then shell 2, etc.
         "#
     };
 }
+// spell-checker: disable
 use description;
 impl_with!(u16, i8, u8, 8);
 impl_with!(u32, i16, u16, 16);
@@ -47,11 +48,11 @@ macro_rules! impl_with {
 }
 use impl_with;
 /// Convert unsigned index to (x, y) signed coordinates.
-fn to_xy<U, S, UB, const W: u32>(u: U) -> (S, S)
+fn to_xy<U, S, _UB, const W: u32>(u: U) -> (S, S)
 where
     U: Copy + Into<u64> + TryFrom<u64>,
     S: Copy + TryFrom<i64>,
-    UB: Copy,
+    _UB: Copy,
     <S as TryFrom<i64>>::Error: std::fmt::Debug,
 {
     let u: u64 = u.into();
@@ -83,11 +84,11 @@ where
     }
 }
 /// Convert (x, y) signed coordinates to unsigned index.
-fn from_xy<U, S, UB, const W: u32>(x: S, y: S) -> U
+fn from_xy<U, S, _UB, const W: u32>(x: S, y: S) -> U
 where
     U: Copy + Into<u64> + TryFrom<u64>,
     S: Copy + Into<i64>,
-    UB: Copy,
+    _UB: Copy,
     <U as TryFrom<u64>>::Error: std::fmt::Debug,
 {
     let x: i64 = x.into();
@@ -164,89 +165,6 @@ mod tests {
         proptest::prelude::*,
     };
 
-    #[test]
-    fn visualize() {
-        use std::collections::HashMap;
-
-        let mut seen = HashMap::new();
-        let mut min_x = i8::MAX;
-        let mut max_x = i8::MIN;
-        let mut min_y = i8::MAX;
-        let mut max_y = i8::MIN;
-
-        for (i, u) in (0u16..=1024).enumerate() {
-            let (x, y): (i8, i8) = spiral_square(u);
-            seen.insert((x, y), i);
-            if x < min_x {
-                min_x = x;
-            }
-            if x > max_x {
-                max_x = x;
-            }
-            if y < min_y {
-                min_y = y;
-            }
-            if y > max_y {
-                max_y = y;
-            }
-        }
-
-
-        let chars = b"0123456789.";
-
-        let mut lines = vec!["".to_string()];
-        for x in min_x..=max_x {
-            let mut line = String::new();
-            for y in min_y..=max_y {
-                if let Some(index) = seen.get(&(x, y)) {
-                    line.push(chars[(index / 32) % chars.len()] as char);
-                } else {
-                    line.push(' ');
-                }
-            }
-            lines.push(line);
-        }
-        lines.push(String::new());
-        let s = lines.join("\n");
-
-        s.snap(
-            r"
-                               .
-77766666666666666666666666666669
-73333333333333222222222222222269
-73...........................269
-73.7777777777777777777777777.269
-7307444444444444444444444446.269
-7307422222111111111111111146.259
-730742...................146.259
-730742.88888888888888888.1469259
-730742.86666666666666667.1469259
-730742.86444444444444467.1369259
-730752.86433333333333467.1369259
-730852.8643222222222346791369259
-730852.8643211111111346791369259
-730852.8653210000011345791369259
-730852.8653210000011345791369259
-730852.8653210000011245791369259
-73085208653210000011245791369259
-73085208653210000001245791369259
-73085208653210000001245791369159
-73085208653211111111245791369159
-73085208653222222222245791369159
-74085208653333333444445791369159
-74085208755555555555555790369159
-74085209777777777777777790369159
-74085209999999999999999990369159
-74085200000000000000000000369159
-74085222222233333333333333369159
-74085555555555555556666666669159
-74088888888888888899999999999159
-74000000011111111111111111111159
-84444444444444444444444455555559
-88888888888888888888888888888889
-",
-        );
-    }
     // ========================
     // Property-Based Tests
     // ========================
@@ -431,7 +349,7 @@ mod tests {
     }
     #[test]
     fn angular_order_within_shell() {
-        let shell1: Vec<(i8, i8)> = (1u16..9).map(|u| spiral_square(u)).collect();
+        let shell1: Vec<(i8, i8)> = (1u16..9).map(spiral_square).collect();
         let expected = vec![
             (1i8, 0i8),
             (1, 1),

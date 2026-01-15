@@ -1100,6 +1100,7 @@ dependencies = [
  "fast_hilbert",
  "indexmap 2.12.1",
  "inline",
+ "itertools",
  "proptest",
  "wasm-bindgen",
 ]

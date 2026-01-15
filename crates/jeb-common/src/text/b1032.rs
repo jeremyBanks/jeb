@@ -10,7 +10,7 @@
 //! # Examples
 //!
 //! ```
-//! use jeb_common::b1032::{
+//! use jeb_common::text::b1032::{
 //!     from_b1032,
 //!     to_b1032,
 //! };

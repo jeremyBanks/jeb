@@ -24,12 +24,32 @@ pub trait Floating {
 }
 macro_rules! impls {
     {$($float:ident : $uint:ident;)+} => {
-        $(impl Floating for $float { type Out = $uint; fn floating(self) -> $uint { let
-        bits = self.to_bits(); let sign_bit = is::<$uint > (1) << ($uint ::BITS - 1); if
-        (bits & sign_bit) != 0 { ! bits } else { bits ^ sign_bit } } } impl Floating for
-        $uint { type Out = $float; fn floating(self) -> $float { let sign_bit =
-        is::<$uint > (1) << ($uint ::BITS - 1); let bits = if (self & sign_bit) != 0 {
-        self ^ sign_bit } else { ! self }; $float ::from_bits(bits) } })+
+        $(
+            impl Floating for $float {
+                type Out = $uint;
+                fn floating(self) -> $uint {
+                    let bits = self.to_bits();
+                    let sign_bit = is::<$uint>(1) << ($uint::BITS - 1);
+                    if (bits & sign_bit) != 0 {
+                        !bits
+                    } else {
+                        bits ^ sign_bit
+                    }
+                }
+            }
+            impl Floating for $uint {
+                type Out = $float;
+                fn floating(self) -> $float {
+                    let sign_bit = is::<$uint>(1) << ($uint::BITS - 1);
+                    let bits = if (self & sign_bit) != 0 {
+                        self ^ sign_bit
+                    } else {
+                        !self
+                    };
+                    $float::from_bits(bits)
+                }
+            }
+        )+
     };
 }
 use impls;
