@@ -161,7 +161,6 @@ fn isqrt(n: u64) -> u64 {
 mod tests {
     use {
         super::*,
-        inline::InlineSnapExt,
         proptest::prelude::*,
     };
 

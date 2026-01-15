@@ -52,7 +52,6 @@ use impls;
 mod tests {
     use {
         super::*,
-        inline::InlineSnapExt,
         proptest::prelude::*,
     };
 

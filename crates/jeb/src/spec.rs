@@ -1,6 +1,6 @@
 #![allow(
     non_snake_case,
-    unused_variables
+    unused
 )]
 use inline::*;
 
@@ -28,7 +28,7 @@ literate! {
     choice. That makes is a good option when you just need to store bytes as
     text due to data format limitations, and there are no other considerations.
 
-
+    However, is is not
  */
 
 /// (We'll be focusing primarily on byte-oriented encodings that can produce
@@ -39,6 +39,8 @@ literate! {
 
 /// bits, and each hex digit represents four bits, so we just output two
 /// hex digits for each byte.
+
+println!("test");
 }
 
 fn print_doc_block(lines: &[&str]) {
@@ -46,12 +48,18 @@ fn print_doc_block(lines: &[&str]) {
         return;
     }
 
+    // Normalize whitespace-only lines to empty strings
+    let lines: Vec<&str> = lines
+        .iter()
+        .map(|line| if line.trim().is_empty() { "" } else { *line })
+        .collect();
+    let mut lines: &[&str] = &lines;
+
     // Strip one leading and one trailing empty line if present
-    let mut lines = lines;
-    if lines.first().map(|s| s.trim().is_empty()).unwrap_or(false) {
+    if lines.first().map(|s| s.is_empty()).unwrap_or(false) {
         lines = &lines[1..];
     }
-    if lines.last().map(|s| s.trim().is_empty()).unwrap_or(false) {
+    if lines.last().map(|s| s.is_empty()).unwrap_or(false) {
         lines = &lines[..lines.len() - 1];
     }
 
@@ -62,14 +70,14 @@ fn print_doc_block(lines: &[&str]) {
     // Find minimum leading whitespace among non-empty lines
     let min_indent = lines
         .iter()
-        .filter(|line| !line.trim().is_empty())
+        .filter(|line| !line.is_empty())
         .map(|line| line.len() - line.trim_start().len())
         .min()
         .unwrap_or(0);
 
     // Print each line with common indent stripped
     for line in lines {
-        if line.trim().is_empty() {
+        if line.is_empty() {
             eprintln!();
         } else {
             eprintln!("{}", &line[min_indent..]);
