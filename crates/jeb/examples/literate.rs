@@ -31,6 +31,7 @@ literate! {
     - **Transparency:** How meaningful is the encoded data when viewed as text?
       Are any patterns in the binary data visible in the encoded text? Are any
       values passed through in a way that is meaningful to a reader?
+    - **Sorting:**
 
     ## Latin-1 passthrough
 
@@ -112,7 +113,8 @@ literate! {
       unrecognizable.
 
     REWORD: other encodings don't line up with byte boundaries. How do they deal
-    with partial blocks? It's generalizable!
+    with partial blocks? It's generalizable! But it does result in output
+    sometimes have some wasted bits.
 
     ## Base 64 (URL-safe)
 
