@@ -50,11 +50,50 @@ use {
 #[proc_macro]
 pub fn stringify_verbatim(input: TokenStream) -> TokenStream {
     let input2: proc_macro2::TokenStream = input.into();
-    let result = reconstruct_with_whitespace(input2);
+
+    // Debug: print token spans
+    if std::env::var("DEBUG_STRINGIFY_VERBATIM").is_ok() {
+        eprintln!("=== stringify_verbatim input ===");
+        debug_print_spans(&input2.clone().into_iter().collect::<Vec<_>>(), 0);
+        eprintln!("================================");
+    }
+
+    let result = reconstruct_with_whitespace(input2.clone());
+
+    if std::env::var("DEBUG_STRINGIFY_VERBATIM").is_ok() {
+        let tts: Vec<TokenTree> = input2.into_iter().collect();
+        let bounds = find_valid_bounds(&tts);
+        eprintln!("Bounds: min={} max={}", bounds.min_line, bounds.max_line);
+        eprintln!("Result: {:?}", result);
+    }
 
     // Return as a string literal
     let lit = proc_macro2::Literal::string(&result);
     proc_macro2::TokenStream::from(proc_macro2::TokenTree::Literal(lit)).into()
+}
+
+fn debug_print_spans(tts: &[TokenTree], indent: usize) {
+    for tt in tts {
+        let span = tt.span();
+        let start = span.start();
+        let prefix = " ".repeat(indent);
+        match tt {
+            TokenTree::Group(g) => {
+                eprintln!("{}Group {:?} @ {}:{}", prefix, g.delimiter(), start.line, start.column);
+                let inner: Vec<TokenTree> = g.stream().into_iter().collect();
+                debug_print_spans(&inner, indent + 2);
+            }
+            TokenTree::Ident(i) => {
+                eprintln!("{}Ident '{}' @ {}:{}", prefix, i, start.line, start.column);
+            }
+            TokenTree::Punct(p) => {
+                eprintln!("{}Punct '{}' @ {}:{}", prefix, p, start.line, start.column);
+            }
+            TokenTree::Literal(l) => {
+                eprintln!("{}Literal {} @ {}:{}", prefix, l, start.line, start.column);
+            }
+        }
+    }
 }
 
 /// Represents the valid line range for "correct" token positions.

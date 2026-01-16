@@ -111,14 +111,14 @@ literate! {
       it's not that difficult to interpret positive integers. Text is of course
       unrecognizable.
 
-    REWORD: other encodings don't line up with byte boundaries
+    REWORD: other encodings don't line up with byte boundaries. How do they deal
+    with partial blocks? It's generalizable!
 
     ## Base 64 (URL-safe)
 
     https://datatracker.ietf.org/doc/html/rfc4648#section-5
-
-
  */
+    let BASE64_URL: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
 /// (We'll be focusing primarily on byte-oriented encodings that can produce
 /// ASCII-safe output.)
