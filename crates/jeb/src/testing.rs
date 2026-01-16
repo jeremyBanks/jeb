@@ -96,17 +96,17 @@ macro_rules! literate_docs {
     // Done collecting docs, hit fn item
     ([$($doc:literal),*] fn $($item:tt)*) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
-        $crate::literate_item!(fn $($item)*);
+        $crate::literate_fn!([fn] $($item)*);
     };
     // Done collecting docs, hit static item
     ([$($doc:literal),*] static $($item:tt)*) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
-        $crate::literate_item!(static $($item)*);
+        $crate::literate_static_const!([static] $($item)*);
     };
     // Done collecting docs, hit const item
     ([$($doc:literal),*] const $($item:tt)*) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
-        $crate::literate_item!(const $($item)*);
+        $crate::literate_static_const!([const] $($item)*);
     };
     // Done collecting docs, hit statement
     ([$($doc:literal),*] $s:stmt ; $($rest:tt)*) => {
@@ -211,5 +211,6 @@ macro_rules! literate {
 }
 pub use literate;
 pub use literate_docs;
+pub use literate_fn;
 pub use literate_inner;
-pub use literate_item;
+pub use literate_static_const;
