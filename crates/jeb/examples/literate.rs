@@ -120,6 +120,8 @@ literate! {
  */
     let BASE64_URL: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
+    let Z85: &[u8; 85] =
+        b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
 /// (We'll be focusing primarily on byte-oriented encodings that can produce
 /// ASCII-safe output.)
 

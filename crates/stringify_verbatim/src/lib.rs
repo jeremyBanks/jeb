@@ -63,7 +63,9 @@ pub fn stringify_verbatim(input: TokenStream) -> TokenStream {
     if std::env::var("DEBUG_STRINGIFY_VERBATIM").is_ok() {
         let tts: Vec<TokenTree> = input2.into_iter().collect();
         let bounds = find_valid_bounds(&tts);
+        let baseline = find_first_span_start_bounded(&tts, &bounds);
         eprintln!("Bounds: min={} max={}", bounds.min_line, bounds.max_line);
+        eprintln!("Baseline: {}:{}", baseline.line, baseline.column);
         eprintln!("Result: {:?}", result);
     }
 
@@ -265,15 +267,16 @@ fn reconstruct_with_whitespace(tokens: proc_macro2::TokenStream) -> String {
     result
 }
 
-/// Find the first span start position, but only considering tokens within
-/// bounds.
+/// Find the baseline position for whitespace normalization.
+/// Returns the minimum line and the minimum column among ALL valid tokens.
+/// The minimum column represents the base indentation level.
 fn find_first_span_start_bounded(tts: &[TokenTree], bounds: &ValidBounds) -> LineColumn {
     if tts.is_empty() {
         return LineColumn { line: 1, column: 0 };
     }
 
     let mut min_line = usize::MAX;
-    let mut min_column = 0;
+    let mut min_column = usize::MAX;
 
     fn find_min_in_tree_bounded(
         tt: &TokenTree,
@@ -284,8 +287,12 @@ fn find_first_span_start_bounded(tts: &[TokenTree], bounds: &ValidBounds) -> Lin
         let start = tt.span().start();
         // Only consider tokens within bounds
         if bounds.contains(start.line) {
-            if start.line < *min_line || (start.line == *min_line && start.column < *min_column) {
+            // Track minimum line for the result
+            if start.line < *min_line {
                 *min_line = start.line;
+            }
+            // Track minimum column across ALL valid tokens (base indent level)
+            if start.column < *min_column {
                 *min_column = start.column;
             }
         }
@@ -300,7 +307,7 @@ fn find_first_span_start_bounded(tts: &[TokenTree], bounds: &ValidBounds) -> Lin
         find_min_in_tree_bounded(tt, &mut min_line, &mut min_column, bounds);
     }
 
-    if min_line == usize::MAX {
+    if min_line == usize::MAX || min_column == usize::MAX {
         // No tokens within bounds, fall back to first token
         tts[0].span().start()
     } else {
@@ -357,10 +364,32 @@ fn token_to_string_bounded(tt: &TokenTree, baseline: LineColumn, bounds: &ValidB
             let group_valid = bounds.contains(group_start.line);
             let first_valid = bounds.contains(first_start.line);
 
-            let leading_ws = if !group_valid || !first_valid {
-                // One or both positions invalid - use minimal spacing
+            // For inner content, use the first valid inner token's column as the new baseline
+            // This preserves relative indentation within the block
+            let inner_baseline = if first_valid {
+                LineColumn {
+                    line: first_start.line,
+                    column: first_start.column,
+                }
+            } else {
+                baseline
+            };
+
+            let leading_ws = if !group_valid && first_valid {
+                // Group position invalid but inner content valid
+                // Use the inner token's position relative to outer baseline
                 if g.delimiter() == proc_macro2::Delimiter::Brace {
-                    "\n    ".to_string() // Indent block contents
+                    let mut ws = "\n".to_string();
+                    let indent = first_start.column.saturating_sub(baseline.column);
+                    ws.push_str(&" ".repeat(indent));
+                    ws
+                } else {
+                    String::new()
+                }
+            } else if !first_valid {
+                // Inner content invalid - use minimal spacing
+                if g.delimiter() == proc_macro2::Delimiter::Brace {
+                    "\n    ".to_string()
                 } else {
                     String::new()
                 }
@@ -415,8 +444,8 @@ fn token_to_string_bounded(tt: &TokenTree, baseline: LineColumn, bounds: &ValidB
                 }
             };
 
-            // Reconstruct inner content
-            let inner = reconstruct_with_whitespace_bounded(g.stream(), baseline, bounds);
+            // Reconstruct inner content using the inner baseline
+            let inner = reconstruct_with_whitespace_bounded(g.stream(), inner_baseline, bounds);
 
             format!("{}{}{}{}{}", open, leading_ws, inner, trailing_ws, close)
         }
