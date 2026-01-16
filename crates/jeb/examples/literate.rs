@@ -92,6 +92,9 @@ literate! {
         }
         result
     }
+
+    let data = (0x12..=0x34).collect::<Vec<u8>>();
+    hex_encode(&data).snap("");
 /**
     - **Context compatibility:** as good as it gets. It only uses digits and a
       handful of letters, and typically not case-sensitive.
