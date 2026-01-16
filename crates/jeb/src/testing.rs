@@ -80,7 +80,7 @@ pub fn print_single_doc_group(doc_strings: &[&str]) {
 }
 
 pub fn print_code(code: &str) {
-    // Add trailing newline to content
+    eprintln!(); // Blank line before code
     let content = format!("{}\n", code);
     ::bat::PrettyPrinter::new()
         .input_from_bytes(content.as_bytes())

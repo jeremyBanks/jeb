@@ -12,8 +12,8 @@ literate! {
 /**
     # Encoding bytes as text
 
-    There are a lot of different ways to encode binary data as text, with
-    different trade-offs and use cases.  We're going to describe several options
+    There are a lot of different ways to encode bytes/binary data as text, with
+    different trade-offs and use cases. We're going to describe several options
     and discuss the decisions and trade-offs in their designs. Some properties
     we may look at include:
 
@@ -31,7 +31,9 @@ literate! {
     - **Transparency:** How meaningful is the encoded data when viewed as text?
       Are any patterns in the binary data visible in the encoded text? Are any
       values passed through in a way that is meaningful to a reader?
-    - **Sorting:**
+    - **Ordering:** will two encoded values retain the same relative
+      lexicographic ordering as the original bytes, will the sort order be
+      preserved?
 
     ## Latin-1 passthrough
 
@@ -61,10 +63,11 @@ literate! {
     - **Overhead::** 0 as characters, +50% as UTF-8. The consistent 1 byte:1
       character ratio is good, but half of those characters requiring two bytes
       when encoded as UTF-8 is not good.
-    - **Text transparency:** In theory, this provides provides great
-      transparency because all ASCII characters in the input data are passed
-      through unchanged. However, the broad context compatibility issues limit
-      the cases where this can actually be taken advantage of.
+    - **Text transparency:** this provides provides great transparency in theory
+      because all ASCII characters in the input data are passed through
+      unchanged. However, the broad context compatibility issues limit the cases
+      where this can actually be taken advantage of.
+    - **Ordering:** preserved.
 
     ## Hexadecimal
 
@@ -87,7 +90,8 @@ literate! {
     bits (representing 1, 2, 4, and 8)? This property is a form of endianness,
     and for hex the answer is always "big endian" (the high 4 bits come first),
     aligning with how decimal numbers are typically written. This makes encoding
-    and decoding quite simple.
+    quite simple: just pull out the bits, and use them to index into the
+    alphabet.
 */
     fn hex_encode(bytes: &[u8]) -> String {
         let mut result = String::new();
