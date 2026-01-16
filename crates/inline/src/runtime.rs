@@ -597,6 +597,20 @@ impl FileState {
                             }
                             self.current_index += 1;
                         }
+
+                        // Try to parse macro contents and recurse (must mirror IndexBuilder)
+                        let tokens = mac.mac.tokens.clone();
+                        if !tokens.is_empty() {
+                            if let Ok(block) = syn::parse2::<syn::Block>(
+                                quote::quote! { { #tokens } },
+                            ) {
+                                for stmt in &block.stmts {
+                                    self.visit_stmt(stmt);
+                                }
+                            } else if let Ok(expr) = syn::parse2::<syn::Expr>(tokens) {
+                                self.visit_expr(&expr);
+                            }
+                        }
                         return;
                     }
                     _ => {}
