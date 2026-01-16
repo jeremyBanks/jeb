@@ -130,26 +130,33 @@ macro_rules! literate_docs {
     };
 }
 
-/// Internal macro to handle items - find the body/value and continue after
+/// Internal macro for fn items - accumulate until body, then stringify & emit
 #[macro_export]
-macro_rules! literate_item {
-    // fn with body - capture name, params, return type, body
-    (fn $name:ident $params:tt $(-> $ret:ty)? $body:block $($rest:tt)*) => {
-        $crate::testing::print_code(::stringify_verbatim::stringify_verbatim!(fn $name $params $(-> $ret)? $body));
-        fn $name $params $(-> $ret)? $body
+macro_rules! literate_fn {
+    // Found the body (a brace group) - stringify accumulated + body, emit
+    ([$($acc:tt)*] { $($body:tt)* } $($rest:tt)*) => {
+        $crate::testing::print_code(::stringify_verbatim::stringify_verbatim!($($acc)* { $($body)* }));
+        $($acc)* { $($body)* }
         $crate::literate_inner!($($rest)*);
     };
-    // static item
-    (static $name:ident : $ty:ty = $val:expr ; $($rest:tt)*) => {
-        $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!(static $name : $ty = $val), ";"));
-        static $name: $ty = $val;
+    // Accumulate next token
+    ([$($acc:tt)*] $next:tt $($rest:tt)*) => {
+        $crate::literate_fn!([$($acc)* $next] $($rest)*);
+    };
+}
+
+/// Internal macro for static/const items - accumulate until semicolon, then stringify & emit
+#[macro_export]
+macro_rules! literate_static_const {
+    // Found the semicolon - stringify accumulated tokens, emit
+    ([$($acc:tt)*] ; $($rest:tt)*) => {
+        $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!($($acc)*), ";"));
+        $($acc)*;
         $crate::literate_inner!($($rest)*);
     };
-    // const item
-    (const $name:ident : $ty:ty = $val:expr ; $($rest:tt)*) => {
-        $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!(const $name : $ty = $val), ";"));
-        const $name: $ty = $val;
-        $crate::literate_inner!($($rest)*);
+    // Accumulate next token
+    ([$($acc:tt)*] $next:tt $($rest:tt)*) => {
+        $crate::literate_static_const!([$($acc)* $next] $($rest)*);
     };
 }
 
@@ -164,19 +171,19 @@ macro_rules! literate_inner {
         $crate::literate_docs!([$doc] $($rest)*);
     };
 
-    // fn item
+    // fn item - start accumulating with fn as first token
     (fn $($item:tt)*) => {
-        $crate::literate_item!(fn $($item)*);
+        $crate::literate_fn!([fn] $($item)*);
     };
 
-    // static item
+    // static item - start accumulating with static as first token
     (static $($item:tt)*) => {
-        $crate::literate_item!(static $($item)*);
+        $crate::literate_static_const!([static] $($item)*);
     };
 
-    // const item
+    // const item - start accumulating with const as first token
     (const $($item:tt)*) => {
-        $crate::literate_item!(const $($item)*);
+        $crate::literate_static_const!([const] $($item)*);
     };
 
     // Statement with semicolon

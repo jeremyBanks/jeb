@@ -57,6 +57,118 @@ pub fn stringify_verbatim(input: TokenStream) -> TokenStream {
     proc_macro2::TokenStream::from(proc_macro2::TokenTree::Literal(lit)).into()
 }
 
+/// Represents the valid line range for "correct" token positions.
+/// Tokens outside this range are considered to have wrong positions from macro expansion.
+struct ValidBounds {
+    min_line: usize,
+    max_line: usize,
+}
+
+impl ValidBounds {
+    /// Check if a line number is within the valid bounds
+    fn contains(&self, line: usize) -> bool {
+        line >= self.min_line && line <= self.max_line
+    }
+}
+
+/// Find valid bounds by identifying the densest cluster of line numbers.
+/// The idea: correct tokens cluster together in a relatively narrow line range,
+/// while wrong tokens (from macro expansion) scatter to unrelated line numbers.
+fn find_valid_bounds(tts: &[TokenTree]) -> ValidBounds {
+    if tts.is_empty() {
+        return ValidBounds {
+            min_line: 0,
+            max_line: usize::MAX,
+        };
+    }
+
+    // Collect all line numbers from all tokens (flattening groups)
+    let mut all_lines: Vec<usize> = Vec::new();
+    fn collect_lines(tt: &TokenTree, lines: &mut Vec<usize>) {
+        lines.push(tt.span().start().line);
+        if let TokenTree::Group(g) = tt {
+            for inner in g.stream() {
+                collect_lines(&inner, lines);
+            }
+        }
+    }
+    for tt in tts {
+        collect_lines(tt, &mut all_lines);
+    }
+
+    if all_lines.is_empty() {
+        return ValidBounds {
+            min_line: 0,
+            max_line: usize::MAX,
+        };
+    }
+
+    // Group lines into buckets (regions of 20 lines) and count density
+    use std::collections::HashMap;
+    let mut buckets: HashMap<usize, usize> = HashMap::new();
+    for &line in &all_lines {
+        *buckets.entry(line / 20).or_default() += 1;
+    }
+
+    // Find the densest bucket (most tokens in a 20-line region)
+    let (&densest_bucket, &max_count) = buckets
+        .iter()
+        .max_by_key(|(_, &count)| count)
+        .unwrap_or((&0, &0));
+
+    // Check if there's a clear winner or if it's ambiguous
+    let total_tokens = all_lines.len();
+    let density_threshold = total_tokens / 3; // At least 1/3 of tokens should be in the main cluster
+
+    if max_count < density_threshold && buckets.len() > 1 {
+        // No clear cluster - tokens are scattered
+        // Fall back to accepting a wide range around the densest area
+        let center_line = densest_bucket * 20 + 10;
+        return ValidBounds {
+            min_line: center_line.saturating_sub(50),
+            max_line: center_line.saturating_add(50),
+        };
+    }
+
+    // Expand from the densest bucket to include adjacent populated buckets
+    let mut min_bucket = densest_bucket;
+    let mut max_bucket = densest_bucket;
+
+    // Expand down while adjacent buckets have reasonable token counts
+    while min_bucket > 0 {
+        let prev_bucket = min_bucket - 1;
+        if let Some(&count) = buckets.get(&prev_bucket) {
+            if count >= max_count / 4 {
+                min_bucket = prev_bucket;
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+
+    // Expand up while adjacent buckets have reasonable token counts
+    loop {
+        let next_bucket = max_bucket + 1;
+        if let Some(&count) = buckets.get(&next_bucket) {
+            if count >= max_count / 4 {
+                max_bucket = next_bucket;
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+
+    // Convert bucket range to line range with margin
+    ValidBounds {
+        min_line: (min_bucket * 20).saturating_sub(5),
+        max_line: (max_bucket + 1) * 20 + 10,
+    }
+}
+
 /// Reconstruct the token stream as a string, preserving whitespace from span
 /// info.
 fn reconstruct_with_whitespace(tokens: proc_macro2::TokenStream) -> String {
@@ -66,14 +178,11 @@ fn reconstruct_with_whitespace(tokens: proc_macro2::TokenStream) -> String {
         return String::new();
     }
 
-    // Check if spans look chaotic (macro expansion artifacts)
-    // If so, use simple spacing mode
-    if spans_look_chaotic(&tts) {
-        return reconstruct_with_simple_spacing(&tts);
-    }
+    // Find valid bounds by walking from both ends
+    let bounds = find_valid_bounds(&tts);
 
-    // Find the starting position (first token's start) to use as our baseline
-    let baseline = find_first_span_start(&tts);
+    // Find the baseline (starting position) from tokens within bounds
+    let baseline = find_first_span_start_bounded(&tts, &bounds);
 
     let mut result = String::new();
     let mut prev_end: Option<LineColumn> = None;
@@ -85,7 +194,7 @@ fn reconstruct_with_whitespace(tokens: proc_macro2::TokenStream) -> String {
             // Add whitespace before the doc comment
             if let Some(prev) = prev_end {
                 let start = tts[i].span().start();
-                let ws = compute_whitespace(prev, start, baseline);
+                let ws = compute_whitespace_bounded(prev, start, baseline, &bounds);
                 result.push_str(&ws);
             }
 
@@ -102,15 +211,207 @@ fn reconstruct_with_whitespace(tokens: proc_macro2::TokenStream) -> String {
 
         // Add whitespace between previous token and this one
         if let Some(prev) = prev_end {
-            let ws = compute_whitespace(prev, start, baseline);
+            let ws = compute_whitespace_bounded(prev, start, baseline, &bounds);
             result.push_str(&ws);
         }
 
         // Add the token's text
-        result.push_str(&token_to_string_with_baseline(tt, baseline));
+        result.push_str(&token_to_string_bounded(tt, baseline, &bounds));
 
         prev_end = Some(end);
         i += 1;
+    }
+
+    result
+}
+
+/// Find the first span start position, but only considering tokens within bounds.
+fn find_first_span_start_bounded(tts: &[TokenTree], bounds: &ValidBounds) -> LineColumn {
+    if tts.is_empty() {
+        return LineColumn { line: 1, column: 0 };
+    }
+
+    let mut min_line = usize::MAX;
+    let mut min_column = 0;
+
+    fn find_min_in_tree_bounded(
+        tt: &TokenTree,
+        min_line: &mut usize,
+        min_column: &mut usize,
+        bounds: &ValidBounds,
+    ) {
+        let start = tt.span().start();
+        // Only consider tokens within bounds
+        if bounds.contains(start.line) {
+            if start.line < *min_line || (start.line == *min_line && start.column < *min_column) {
+                *min_line = start.line;
+                *min_column = start.column;
+            }
+        }
+        if let TokenTree::Group(g) = tt {
+            for inner in g.stream() {
+                find_min_in_tree_bounded(&inner, min_line, min_column, bounds);
+            }
+        }
+    }
+
+    for tt in tts {
+        find_min_in_tree_bounded(tt, &mut min_line, &mut min_column, bounds);
+    }
+
+    if min_line == usize::MAX {
+        // No tokens within bounds, fall back to first token
+        tts[0].span().start()
+    } else {
+        LineColumn {
+            line: min_line,
+            column: min_column,
+        }
+    }
+}
+
+/// Compute whitespace, using bounds to detect invalid positions.
+fn compute_whitespace_bounded(
+    from: LineColumn,
+    to: LineColumn,
+    baseline: LineColumn,
+    bounds: &ValidBounds,
+) -> String {
+    let from_valid = bounds.contains(from.line);
+    let to_valid = bounds.contains(to.line);
+
+    // If either position is out of bounds, use simple spacing
+    if !from_valid || !to_valid {
+        return " ".to_string();
+    }
+
+    // Both positions are valid - use normal whitespace computation
+    compute_whitespace(from, to, baseline)
+}
+
+/// Convert a token tree to string, using bounds to handle invalid positions.
+fn token_to_string_bounded(tt: &TokenTree, baseline: LineColumn, bounds: &ValidBounds) -> String {
+    match tt {
+        TokenTree::Group(g) => {
+            let inner_tokens: Vec<TokenTree> = g.stream().into_iter().collect();
+            let (open, close) = match g.delimiter() {
+                proc_macro2::Delimiter::Parenthesis => ("(", ")"),
+                proc_macro2::Delimiter::Brace => ("{", "}"),
+                proc_macro2::Delimiter::Bracket => ("[", "]"),
+                proc_macro2::Delimiter::None => ("", ""),
+            };
+
+            if inner_tokens.is_empty() {
+                return format!("{}{}", open, close);
+            }
+
+            let group_span = g.span();
+            let first_token = inner_tokens.first().unwrap();
+            let last_token = inner_tokens.last().unwrap();
+
+            let group_start = group_span.start();
+            let first_start = first_token.span().start();
+
+            // Check if group position is valid
+            let group_valid = bounds.contains(group_start.line);
+            let first_valid = bounds.contains(first_start.line);
+
+            let leading_ws = if !group_valid || !first_valid {
+                // One or both positions invalid - use minimal spacing
+                if g.delimiter() == proc_macro2::Delimiter::Brace {
+                    "\n    ".to_string() // Indent block contents
+                } else {
+                    String::new()
+                }
+            } else if first_start.line == group_start.line {
+                let diff = first_start.column.saturating_sub(group_start.column);
+                if diff > 1 && diff <= 20 {
+                    " ".repeat(diff - 1)
+                } else {
+                    String::new()
+                }
+            } else {
+                let line_diff = first_start.line.saturating_sub(group_start.line);
+                if line_diff > 5 {
+                    "\n".to_string()
+                } else {
+                    let mut ws = "\n".repeat(line_diff);
+                    let indent = first_start.column.saturating_sub(baseline.column);
+                    ws.push_str(&" ".repeat(indent));
+                    ws
+                }
+            };
+
+            let group_end = group_span.end();
+            let last_end = last_token.span().end();
+            let group_end_valid = bounds.contains(group_end.line);
+            let last_valid = bounds.contains(last_end.line);
+
+            let trailing_ws = if !group_end_valid || !last_valid {
+                if g.delimiter() == proc_macro2::Delimiter::Brace {
+                    "\n".to_string()
+                } else {
+                    String::new()
+                }
+            } else if last_end.line == group_end.line {
+                let diff = group_end.column.saturating_sub(last_end.column);
+                if diff > 1 && diff <= 20 {
+                    " ".repeat(diff - 1)
+                } else {
+                    String::new()
+                }
+            } else {
+                let line_diff = group_end.line.saturating_sub(last_end.line);
+                if line_diff > 5 {
+                    String::new()
+                } else {
+                    let mut ws = "\n".repeat(line_diff);
+                    let normalized_column = group_end.column.saturating_sub(baseline.column);
+                    if normalized_column > 0 {
+                        ws.push_str(&" ".repeat(normalized_column.saturating_sub(1)));
+                    }
+                    ws
+                }
+            };
+
+            // Reconstruct inner content
+            let inner = reconstruct_with_whitespace_bounded(g.stream(), baseline, bounds);
+
+            format!("{}{}{}{}{}", open, leading_ws, inner, trailing_ws, close)
+        }
+        TokenTree::Ident(i) => i.to_string(),
+        TokenTree::Punct(p) => p.to_string(),
+        TokenTree::Literal(l) => l.to_string(),
+    }
+}
+
+/// Reconstruct with bounds checking.
+fn reconstruct_with_whitespace_bounded(
+    tokens: proc_macro2::TokenStream,
+    baseline: LineColumn,
+    bounds: &ValidBounds,
+) -> String {
+    let tts: Vec<TokenTree> = tokens.into_iter().collect();
+
+    if tts.is_empty() {
+        return String::new();
+    }
+
+    let mut result = String::new();
+    let mut prev_end: Option<LineColumn> = None;
+
+    for tt in &tts {
+        let span = tt.span();
+        let start = span.start();
+        let end = span.end();
+
+        if let Some(prev) = prev_end {
+            let ws = compute_whitespace_bounded(prev, start, baseline, bounds);
+            result.push_str(&ws);
+        }
+
+        result.push_str(&token_to_string_bounded(tt, baseline, bounds));
+        prev_end = Some(end);
     }
 
     result
