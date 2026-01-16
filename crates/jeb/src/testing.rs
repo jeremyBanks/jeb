@@ -82,7 +82,6 @@ pub fn print_single_doc_group(doc_strings: &[&str]) {
 pub fn print_code(code: &str) {
     // Add trailing newline to content
     let content = format!("{}\n", code);
-    eprintln!();
     ::bat::PrettyPrinter::new()
         .input_from_bytes(content.as_bytes())
         .language("rust")
@@ -116,7 +115,7 @@ macro_rules! literate_docs {
     ([$($doc:literal),*] #[doc = $next:literal] $($rest:tt)*) => {
         $crate::literate_docs!([$($doc,)* $next] $($rest)*);
     };
-    // Done collecting docs, hit anything else - print docs, then TT-munch statement
+    // Done collecting docs, hit anything else - print docs, then process statement
     ([$($doc:literal),*] $first:tt $($rest:tt)*) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
         $crate::literate_stmt!([$first] $($rest)*);
@@ -154,17 +153,19 @@ macro_rules! literate_static_const {
     };
 }
 
-/// Internal macro for TT-munching statements until semicolon
+/// Internal macro for TT-munching statements until we hit a semicolon.
+/// When we find a semicolon, we stringify THAT statement and emit it, then continue.
+/// This captures verbatim at the right time - before further macro processing.
 #[macro_export]
 macro_rules! literate_stmt {
-    // Hit a semicolon - emit accumulated tokens with the semicolon
+    // Hit a semicolon - stringify the accumulated tokens now (before more processing)
     ([$($acc:tt)*] ; $($rest:tt)*) => {
         $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!($($acc)*), ";"));
         $($acc)*;
         $crate::literate_inner!($($rest)*);
     };
 
-    // Accumulate tokens
+    // Accumulate a token
     ([$($acc:tt)*] $next:tt $($rest:tt)*) => {
         $crate::literate_stmt!([$($acc)* $next] $($rest)*);
     };
@@ -196,7 +197,7 @@ macro_rules! literate_inner {
         $crate::literate_static_const!([const] $($item)*);
     };
 
-    // Anything else - start TT-munching for statement
+    // Anything else - start TT-munching for a statement
     ($first:tt $($rest:tt)*) => {
         $crate::literate_stmt!([$first] $($rest)*);
     };

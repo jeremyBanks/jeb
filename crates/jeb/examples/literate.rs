@@ -113,6 +113,10 @@ literate! {
 
     REWORD: other encodings don't line up with byte boundaries
 
+    ## Base 64 (URL-safe)
+
+    https://datatracker.ietf.org/doc/html/rfc4648#section-5
+
 
  */
 
