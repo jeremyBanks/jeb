@@ -129,6 +129,12 @@ fn token_to_string(tt: &TokenTree) -> String {
                 } else {
                     String::new()
                 }
+            } else if g.delimiter() != proc_macro2::Delimiter::Brace
+                && last_end.line == group_end.line
+            {
+                // For parens/brackets on same line, don't add trailing spaces
+                // (span info for these is often slightly off)
+                String::new()
             } else {
                 compute_whitespace(last_end, group_end)
             };
