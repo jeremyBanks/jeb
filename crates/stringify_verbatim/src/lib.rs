@@ -11,50 +11,9 @@ use proc_macro2::{LineColumn, TokenTree};
 pub fn stringify_verbatim(input: TokenStream) -> TokenStream {
     let input2: proc_macro2::TokenStream = input.into();
     let tts: Vec<TokenTree> = input2.into_iter().collect();
-
-    // Try to infer leading indentation from the first brace group with good inner spans
-    let leading_indent = find_base_indent(&tts).unwrap_or(0);
-    let mut result = " ".repeat(leading_indent);
-    result.push_str(&reconstruct(&tts));
-
+    let result = reconstruct(&tts);
     let lit = proc_macro2::Literal::string(&result);
     proc_macro2::TokenStream::from(proc_macro2::TokenTree::Literal(lit)).into()
-}
-
-/// Find the base indentation by looking for a group with contaminated outer span
-/// but good inner spans.
-fn find_base_indent(tts: &[TokenTree]) -> Option<usize> {
-    for tt in tts {
-        if let TokenTree::Group(g) = tt {
-            let inner: Vec<TokenTree> = g.stream().into_iter().collect();
-            if let Some(first) = inner.first() {
-                let group_start = g.span().start();
-                let first_start = first.span().start();
-
-                // Check if outer span is wrong (big line jump)
-                let line_diff = if first_start.line > group_start.line {
-                    first_start.line - group_start.line
-                } else {
-                    group_start.line - first_start.line
-                };
-
-                if line_diff > 4 {
-                    // Outer span is contaminated, inner is good
-                    if g.delimiter() == proc_macro2::Delimiter::Brace {
-                        // For brace groups (function bodies), subtract 4 for the indent level
-                        return Some(first_start.column.saturating_sub(4));
-                    }
-                    // Don't use brackets/parens for base indent - their inner tokens
-                    // are mid-line and don't tell us about statement indentation
-                }
-            }
-            // Recurse into groups
-            if let Some(indent) = find_base_indent(&inner) {
-                return Some(indent);
-            }
-        }
-    }
-    None
 }
 
 fn reconstruct(tts: &[TokenTree]) -> String {

@@ -81,7 +81,32 @@ pub fn print_single_doc_group(doc_strings: &[&str]) {
 
 pub fn print_code(code: &str) {
     eprintln!(); // Blank line before code
-    let content = format!("{}\n", code);
+
+    // Normalize indentation: strip common leading whitespace, re-indent with 4 spaces
+    let lines: Vec<&str> = code.lines().collect();
+
+    // Find minimum leading whitespace among non-empty lines
+    let min_indent = lines
+        .iter()
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| line.len() - line.trim_start().len())
+        .min()
+        .unwrap_or(0);
+
+    // Build normalized text: strip common indent, add 4-space indent
+    let normalized: String = lines
+        .iter()
+        .map(|line| {
+            if line.trim().is_empty() {
+                String::new()
+            } else {
+                format!("    {}", &line[min_indent..])
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let content = format!("{}\n", normalized);
     ::bat::PrettyPrinter::new()
         .input_from_bytes(content.as_bytes())
         .language("rust")
