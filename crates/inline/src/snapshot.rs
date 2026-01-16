@@ -233,6 +233,15 @@ pub trait InlineSnapExt: Sized {
 
 impl<T> InlineSnapExt for T {
     #[track_caller]
+    fn is<E>(self, expected: E) -> Self
+    where
+        Self: Value + 'static + PartialEq<E>,
+        E: Debug,
+    {
+        self.snap(expected)
+    }
+
+    #[track_caller]
     fn snap<E>(self, expected: E) -> Self
     where
         Self: Value + 'static + PartialEq<E>,
