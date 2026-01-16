@@ -120,6 +120,14 @@ literate! {
  */
     let BASE64_URL: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
+/**
+    Z85
+
+    It's officially defined as requiring 4-byte (32-bit) blocks, but we can use
+    the same approach as base 64 to support partial blocks.
+
+    https://rfc.zeromq.org/spec/32/
+ */
     let Z85: &[u8; 85] =
         b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
 /// (We'll be focusing primarily on byte-oriented encodings that can produce
