@@ -108,18 +108,6 @@ macro_rules! literate_docs {
         $crate::testing::print_doc_block(&[$($doc),*]);
         $crate::literate_static_const!([const] $($item)*);
     };
-    // Done collecting docs, hit statement
-    ([$($doc:literal),*] $s:stmt ; $($rest:tt)*) => {
-        $crate::testing::print_doc_block(&[$($doc),*]);
-        $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!($s), ";"));
-        $s;
-        $crate::literate_inner!($($rest)*);
-    };
-    ([$($doc:literal),*] $e:expr) => {
-        $crate::testing::print_doc_block(&[$($doc),*]);
-        $crate::testing::print_code(::stringify_verbatim::stringify_verbatim!($e));
-        $e
-    };
     // No more input - just emit the docs
     ([$($doc:literal),*]) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
@@ -127,6 +115,11 @@ macro_rules! literate_docs {
     // Accumulate another doc comment
     ([$($doc:literal),*] #[doc = $next:literal] $($rest:tt)*) => {
         $crate::literate_docs!([$($doc,)* $next] $($rest)*);
+    };
+    // Done collecting docs, hit anything else - print docs, then TT-munch statement
+    ([$($doc:literal),*] $first:tt $($rest:tt)*) => {
+        $crate::testing::print_doc_block(&[$($doc),*]);
+        $crate::literate_stmt!([$first] $($rest)*);
     };
 }
 
@@ -160,6 +153,22 @@ macro_rules! literate_static_const {
     };
 }
 
+/// Internal macro for TT-munching statements until semicolon
+#[macro_export]
+macro_rules! literate_stmt {
+    // Hit a semicolon - emit accumulated tokens with the semicolon
+    ([$($acc:tt)*] ; $($rest:tt)*) => {
+        $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!($($acc)*), ";"));
+        $($acc)*;
+        $crate::literate_inner!($($rest)*);
+    };
+
+    // Accumulate tokens
+    ([$($acc:tt)*] $next:tt $($rest:tt)*) => {
+        $crate::literate_stmt!([$($acc)* $next] $($rest)*);
+    };
+}
+
 /// Internal macro for processing literate body
 #[macro_export]
 macro_rules! literate_inner {
@@ -186,17 +195,9 @@ macro_rules! literate_inner {
         $crate::literate_static_const!([const] $($item)*);
     };
 
-    // Statement with semicolon
-    ($s:stmt ; $($rest:tt)*) => {
-        $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!($s), ";"));
-        $s;
-        $crate::literate_inner!($($rest)*);
-    };
-
-    // Trailing expression (no semicolon)
-    ($e:expr) => {
-        $crate::testing::print_code(::stringify_verbatim::stringify_verbatim!($e));
-        $e
+    // Anything else - start TT-munching for statement
+    ($first:tt $($rest:tt)*) => {
+        $crate::literate_stmt!([$first] $($rest)*);
     };
 }
 
@@ -214,3 +215,4 @@ pub use literate_docs;
 pub use literate_fn;
 pub use literate_inner;
 pub use literate_static_const;
+pub use literate_stmt;

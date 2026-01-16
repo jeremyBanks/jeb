@@ -93,7 +93,7 @@ literate! {
         result
     }
 
-    let data = (0x12..=0x34).collect::<Vec<u8>>();
+    let data = Vec::<u8>::from_iter(0x12..=0x34);
     hex_encode(&data).snap("");
 /**
     - **Context compatibility:** as good as it gets. It only uses digits and a
