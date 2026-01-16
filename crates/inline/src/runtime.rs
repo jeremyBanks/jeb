@@ -364,9 +364,9 @@ impl FileState {
                         let tokens = mac.mac.tokens.clone();
                         if !tokens.is_empty() {
                             // Try parsing as a block of statements
-                            if let Ok(block) = syn::parse2::<syn::Block>(
-                                quote::quote! { { #tokens } },
-                            ) {
+                            if let Ok(block) =
+                                syn::parse2::<syn::Block>(quote::quote! { { #tokens } })
+                            {
                                 for stmt in &block.stmts {
                                     self.visit_stmt(stmt);
                                 }
@@ -398,9 +398,7 @@ impl FileState {
                 // Try to parse macro contents and index any calls within
                 let tokens = mac.mac.tokens.clone();
                 if !tokens.is_empty() {
-                    if let Ok(block) = syn::parse2::<syn::Block>(
-                        quote::quote! { { #tokens } },
-                    ) {
+                    if let Ok(block) = syn::parse2::<syn::Block>(quote::quote! { { #tokens } }) {
                         for stmt in &block.stmts {
                             self.visit_stmt(stmt);
                         }
@@ -627,9 +625,9 @@ impl FileState {
                         // Try to parse macro contents and recurse (must mirror IndexBuilder)
                         let tokens = mac.mac.tokens.clone();
                         if !tokens.is_empty() {
-                            if let Ok(block) = syn::parse2::<syn::Block>(
-                                quote::quote! { { #tokens } },
-                            ) {
+                            if let Ok(block) =
+                                syn::parse2::<syn::Block>(quote::quote! { { #tokens } })
+                            {
                                 for stmt in &block.stmts {
                                     self.visit_stmt(stmt);
                                 }
@@ -676,9 +674,7 @@ impl FileState {
                 // Try to parse macro contents and recurse
                 let tokens = mac.mac.tokens.clone();
                 if !tokens.is_empty() {
-                    if let Ok(block) = syn::parse2::<syn::Block>(
-                        quote::quote! { { #tokens } },
-                    ) {
+                    if let Ok(block) = syn::parse2::<syn::Block>(quote::quote! { { #tokens } }) {
                         for stmt in &block.stmts {
                             self.visit_stmt(stmt);
                         }
@@ -936,9 +932,9 @@ impl FileState {
                         // Try to parse macro contents and recurse (must mirror IndexBuilder)
                         let tokens = mac.mac.tokens.clone();
                         if !tokens.is_empty() {
-                            if let Ok(block) = syn::parse2::<syn::Block>(
-                                quote::quote! { { #tokens } },
-                            ) {
+                            if let Ok(block) =
+                                syn::parse2::<syn::Block>(quote::quote! { { #tokens } })
+                            {
                                 for stmt in &block.stmts {
                                     self.visit_stmt(stmt);
                                 }
@@ -968,9 +964,7 @@ impl FileState {
                 // Try to parse macro contents and recurse
                 let tokens = mac.mac.tokens.clone();
                 if !tokens.is_empty() {
-                    if let Ok(block) = syn::parse2::<syn::Block>(
-                        quote::quote! { { #tokens } },
-                    ) {
+                    if let Ok(block) = syn::parse2::<syn::Block>(quote::quote! { { #tokens } }) {
                         for stmt in &block.stmts {
                             self.visit_stmt(stmt);
                         }
@@ -1068,9 +1062,7 @@ impl<'ast> syn::visit::Visit<'ast> for IndexedValueReader {
                 // Try to parse macro contents and recurse (must mirror IndexBuilder)
                 let tokens = mac.mac.tokens.clone();
                 if !tokens.is_empty() {
-                    if let Ok(block) = syn::parse2::<syn::Block>(
-                        quote::quote! { { #tokens } },
-                    ) {
+                    if let Ok(block) = syn::parse2::<syn::Block>(quote::quote! { { #tokens } }) {
                         for stmt in &block.stmts {
                             self.visit_stmt(stmt);
                         }
@@ -1101,9 +1093,7 @@ impl<'ast> syn::visit::Visit<'ast> for IndexedValueReader {
         // Try to parse macro contents and recurse
         let tokens = mac.mac.tokens.clone();
         if !tokens.is_empty() {
-            if let Ok(block) = syn::parse2::<syn::Block>(
-                quote::quote! { { #tokens } },
-            ) {
+            if let Ok(block) = syn::parse2::<syn::Block>(quote::quote! { { #tokens } }) {
                 for stmt in &block.stmts {
                     self.visit_stmt(stmt);
                 }

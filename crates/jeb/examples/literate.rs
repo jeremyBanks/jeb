@@ -36,9 +36,11 @@ literate! {
 
     The simplest possible way to encode binary data as text is just to covert
     byte values directly to Unicode code points. This is sometimes referred to
-    Latin-1 passthrough, because this is equivalent to the legacy Latin-1 text
-    encoding whose characters now make up the first 256 Unicode code points
-    (the Basic Latin (ASCII) and Latin-1 Supplement blocks).
+    Latin-1 passthrough, because this is equivalent to the legacy Latin-1
+    (ISO-8859-1) text encoding whose characters now make up the first 256
+    Unicode code points (the Basic Latin (ASCII) and Latin-1 Supplement blocks).
+
+    https://en.wikipedia.org/wiki/ISO/IEC_8859-1
 
     This has the great virtue of simplicity; it's a natural, almost canonical
     choice. That makes is a good option when you just need to store bytes as
@@ -69,11 +71,15 @@ literate! {
     ("hex", base 16). Each byte (8 bits, a value from 0 to 255) is represented
     by two hexadecimal digits (4 bits, each representing a value from 0 to 15),
     extending the decimal digits (`0` to `9`) with the first six letters of the
-    alphabet (`A` to `F`). This is a common choice for binary values that may be
-    directly manually edited by humans.
+    alphabet (`A` to `F`).
+
+    https://datatracker.ietf.org/doc/html/rfc4648#section-8
 */
     static HEX: &[u8; 16] = b"0123456789ABCDEF";
 /**
+    This is a common choice for binary values that may be
+    directly manually edited by humans.
+
     Cleanly splitting each byte in half keeps this encoding quite simple, with
     only one significant design question: which half comes first in the text
     output, the high 4 bits (representing 16, 32, 64, and 128) or the low 4
@@ -94,11 +100,18 @@ literate! {
     }
 
     let data = Vec::<u8>::from_iter(0x00..=0x20);
-    hex_encode(&data).snap("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20");
+    hex_encode(&data).is("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20");
 /**
     - **Context compatibility:** as good as it gets. It only uses digits and a
       handful of letters, and typically not case-sensitive.
-    - **Overhead:** +100%. You wouldn't pick hex for its efficiency.
+    - **Offset stability:** fully stable.
+    - **Overhead:** +100%, as bad as it gets. You wouldn't pick hex for its
+      efficiency.
+    - **Transparency:** pretty good for numeric/binary data. Zeros are `00` and
+      it's not that difficult to interpret positive integers. Text is of course
+      unrecognizable.
+
+    REWORD: other encodings don't line up with byte boundaries
 
 
  */

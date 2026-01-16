@@ -138,7 +138,8 @@ macro_rules! literate_fn {
     };
 }
 
-/// Internal macro for static/const items - accumulate until semicolon, then stringify & emit
+/// Internal macro for static/const items - accumulate until semicolon, then
+/// stringify & emit
 #[macro_export]
 macro_rules! literate_static_const {
     // Found the semicolon - stringify accumulated tokens, emit
@@ -210,9 +211,11 @@ macro_rules! literate {
         }
     };
 }
-pub use literate;
-pub use literate_docs;
-pub use literate_fn;
-pub use literate_inner;
-pub use literate_static_const;
-pub use literate_stmt;
+pub use {
+    literate,
+    literate_docs,
+    literate_fn,
+    literate_inner,
+    literate_static_const,
+    literate_stmt,
+};

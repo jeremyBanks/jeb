@@ -58,7 +58,8 @@ pub fn stringify_verbatim(input: TokenStream) -> TokenStream {
 }
 
 /// Represents the valid line range for "correct" token positions.
-/// Tokens outside this range are considered to have wrong positions from macro expansion.
+/// Tokens outside this range are considered to have wrong positions from macro
+/// expansion.
 struct ValidBounds {
     min_line: usize,
     max_line: usize,
@@ -225,7 +226,8 @@ fn reconstruct_with_whitespace(tokens: proc_macro2::TokenStream) -> String {
     result
 }
 
-/// Find the first span start position, but only considering tokens within bounds.
+/// Find the first span start position, but only considering tokens within
+/// bounds.
 fn find_first_span_start_bounded(tts: &[TokenTree], bounds: &ValidBounds) -> LineColumn {
     if tts.is_empty() {
         return LineColumn { line: 1, column: 0 };
@@ -543,8 +545,7 @@ fn compute_whitespace(from: LineColumn, to: LineColumn, baseline: LineColumn) ->
     // Check if the span positions look suspicious (macro expansion artifacts)
     // A common sign is: different lines but to.line < from.line (going backwards)
     // or same line but to.column < from.column (going backwards on same line)
-    let going_backwards =
-        to.line < from.line || (to.line == from.line && to.column < from.column);
+    let going_backwards = to.line < from.line || (to.line == from.line && to.column < from.column);
 
     if going_backwards {
         // Spans are clearly wrong - just use a single space

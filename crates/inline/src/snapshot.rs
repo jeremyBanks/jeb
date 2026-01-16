@@ -204,6 +204,15 @@ pub trait InlineSnapExt: Sized {
         Self: Value + 'static + PartialEq<E>,
         E: Debug;
 
+    #[track_caller]
+    fn is<E>(self, expected: E) -> Self
+    where
+        Self: Value + 'static + PartialEq<E>,
+        E: Debug,
+    {
+        self.snap(expected)
+    }
+
     /// Compare this value's Debug output against an expected string snapshot.
     ///
     /// Uses `{:#?}` (pretty Debug) formatting to convert the value to a string,
