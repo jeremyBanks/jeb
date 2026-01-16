@@ -1,7 +1,10 @@
 use {
     ::save::{
         testing::assert_at,
-        zigzag::{ZigZag, ZugZug},
+        zigzag::{
+            ZigZag,
+            ZugZug,
+        },
     },
     inline::InlineSnapExt,
 };

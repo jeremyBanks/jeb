@@ -7,15 +7,23 @@
 //! use inline::snap;
 //!
 //! let actual = compute_something();
-//! snap!("expected value") == actual;  // Updates source if mismatch
+//! snap!("expected value") == actual; // Updates source if mismatch
 //! ```
 //!
 //! The comparison returns `true` if values match or were successfully updated,
 //! and panics in Verify/Reject modes if there's a mismatch.
 
-use std::{fmt::Debug, panic::Location};
-
-use crate::{runtime, snapshot::make_raw_string, value::Value};
+use {
+    crate::{
+        runtime,
+        snapshot::make_raw_string,
+        value::Value,
+    },
+    std::{
+        fmt::Debug,
+        panic::Location,
+    },
+};
 
 /// A snapshot value for comparison with `==`.
 ///
@@ -29,7 +37,7 @@ use crate::{runtime, snapshot::make_raw_string, value::Value};
 /// use inline::snap;
 ///
 /// let result = compute();
-/// snap!(42) == result;  // Updates source if result != 42
+/// snap!(42) == result; // Updates source if result != 42
 /// ```
 pub struct Snap<T> {
     /// The expected value from source code
@@ -42,7 +50,8 @@ pub struct Snap<T> {
 impl<T> Snap<T> {
     /// Create a new Snap with the given value.
     ///
-    /// Usually called via the [`snap!`] macro which captures the source location.
+    /// Usually called via the [`snap!`] macro which captures the source
+    /// location.
     #[track_caller]
     pub fn new(value: T) -> Self {
         let location = Location::caller();
@@ -86,15 +95,9 @@ where
             runtime::Mode::Verify => {
                 let actual_baked = databake::Bake::bake(actual, &Default::default());
                 panic!(
-                    "Snapshot mismatch at {}:{}:{}\n\n\
-                     Expected:\n{:#?}\n\n\
-                     Actual:\n{}\n\n\
-                     Run with INLINE_MODE=write to update snapshots.",
-                    self.file,
-                    self.line,
-                    self.column,
-                    self.value,
-                    actual_baked,
+                    "Snapshot mismatch at {}:{}:{}\n\nExpected:\n{:#?}\n\nActual:\n{}\n\nRun with \
+                     INLINE_MODE=write to update snapshots.",
+                    self.file, self.line, self.column, self.value, actual_baked,
                 );
             }
             runtime::Mode::Write | runtime::Mode::Memory => {
@@ -158,7 +161,7 @@ mod tests {
         // In memory mode, mismatch still returns true (conceptually updated)
         std::env::set_var("INLINE_MODE", "memory");
         let snap = Snap::new(100i32);
-        assert!(snap == 100);  // Different values but returns true in memory mode
+        assert!(snap == 100); // Different values but returns true in memory mode
         std::env::remove_var("INLINE_MODE");
     }
 
@@ -167,7 +170,7 @@ mod tests {
     fn test_snap_eq_mismatch_verify_mode() {
         std::env::set_var("INLINE_MODE", "verify");
         let snap = Snap::new(42);
-        let _ = snap == 100;  // Should panic
+        let _ = snap == 100; // Should panic
         std::env::remove_var("INLINE_MODE");
     }
 }

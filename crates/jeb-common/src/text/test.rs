@@ -2,11 +2,7 @@
 // spell-checker: disable
 
 use {
-    crate::{
-        bi::*,
-        testing::visuals::*,
-        text::b1032::*,
-    },
+    crate::text::b1032::*,
     inline::InlineSnapExt,
     itertools::Itertools,
 };

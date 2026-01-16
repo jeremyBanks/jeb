@@ -2,7 +2,10 @@
 
 use {
     inline::replace_at,
-    std::{env, fs},
+    std::{
+        env,
+        fs,
+    },
     tempfile::TempDir,
 };
 
@@ -56,7 +59,8 @@ fn test_replace_me_persistence() {
     let result1 = replace_at(100u32, path.to_str().unwrap(), line, column);
     assert_eq!(result1, 100u32);
 
-    // Second call from same location returns the stored value, ignoring the new argument
+    // Second call from same location returns the stored value, ignoring the new
+    // argument
     let result2 = replace_at(999u32, path.to_str().unwrap(), line, column);
     assert_eq!(result2, 100u32); // Should still be 100, not 999
 

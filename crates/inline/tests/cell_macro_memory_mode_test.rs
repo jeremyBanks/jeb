@@ -2,7 +2,10 @@
 
 use {
     inline::InlineCellPrivate,
-    std::{env, fs},
+    std::{
+        env,
+        fs,
+    },
     tempfile::TempDir,
 };
 

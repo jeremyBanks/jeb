@@ -1,5 +1,9 @@
 use {
-    ::save::hex::{decode_hex_nibbles, hex, MaskedBytes},
+    ::save::hex::{
+        MaskedBytes,
+        decode_hex_nibbles,
+        hex,
+    },
     inline::InlineSnapExt,
 };
 

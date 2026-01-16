@@ -15,7 +15,7 @@ pub fn decode_hex_nibbles(s: impl AsRef<str>) -> MaskedBytes {
 
         match byte {
             b'0'..=b'9' => nibble = byte.wrapping_sub(b'0'),
-            b'a'..=b'f' => nibble = byte.wrapping_sub(b'a' - 0xa),
+            b'a'..=b'f' => nibble = byte.wrapping_sub(b'a' - 0xA),
             b'A'..=b'F' => nibble = byte.wrapping_sub(b'A' - 0xA),
             b'_' => nibble_mask = 0x0,
             b' ' | b'\n' | b'\t' | b',' | b';' | b'"' | b'\'' => continue,

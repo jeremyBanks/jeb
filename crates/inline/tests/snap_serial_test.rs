@@ -1,7 +1,12 @@
 //! Integration tests for snap! macro and Snap type with source file updates.
 
-use std::{env, fs};
-use tempfile::TempDir;
+use {
+    std::{
+        env,
+        fs,
+    },
+    tempfile::TempDir,
+};
 
 /// Helper to find snap!() macro positions in a file
 fn find_snap_positions(file_path: &std::path::Path) -> Vec<(u32, u32)> {
@@ -103,7 +108,8 @@ fn test_snap_with_string_updates_to_raw_string() {
     let content = fs::read_to_string(&path).unwrap();
     // Should contain the raw string with actual newline
     assert!(
-        content.contains("snap!(r\"hello\nworld\")") || content.contains("snap!(r#\"hello\nworld\"#)"),
+        content.contains("snap!(r\"hello\nworld\")")
+            || content.contains("snap!(r#\"hello\nworld\"#)"),
         "Expected file to contain raw string, got:\n{}",
         content
     );

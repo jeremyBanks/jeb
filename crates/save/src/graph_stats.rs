@@ -9,7 +9,10 @@
 //! The algorithm supports depth-limited scanning ("z-mode") to bound complexity
 //! in large repositories.
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{
+        HashMap,
+        HashSet,
+    },
     fmt::Debug,
     hash::Hash,
 };
@@ -444,7 +447,10 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 Some(0x0000)
             }
         } else {
-            use sha1::{Digest, Sha1};
+            use sha1::{
+                Digest,
+                Sha1,
+            };
             let mut hasher = Sha1::new();
             for root in &roots {
                 hasher.update(root.id_bytes());
@@ -586,7 +592,10 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 Some(0x0000)
             }
         } else {
-            use sha1::{Digest, Sha1};
+            use sha1::{
+                Digest,
+                Sha1,
+            };
             let mut hasher = Sha1::new();
             for root in &roots {
                 hasher.update(root.id_bytes());

@@ -62,7 +62,7 @@ pub fn encode(data: &[u8]) -> String {
 
     // Estimate capacity: 5 chars for every 4 bytes (ceil).
     let len = data.len();
-    let cap = (len * 5 + 3) / 4;
+    let cap = (len * 5).div_ceil(4);
     let mut output = Vec::with_capacity(cap);
 
     let mut chunks = data.chunks_exact(4);
@@ -84,7 +84,7 @@ pub fn encode(data: &[u8]) -> String {
         // Calculate partial length 'c' using ceiling division
         // c = ceil(b * 5 / 4)
         let b = remainder.len();
-        let c = (b * 5 + 3) / 4;
+        let c = (b * 5).div_ceil(4);
         output.extend_from_slice(&buf[..c]);
     }
 
@@ -140,7 +140,7 @@ pub fn decode(data: &str) -> Result<Vec<u8>, String> {
         }
 
         decode_block_5(&padded, &mut buf)
-            .ok_or_else(|| format!("Invalid Z85 partial block at end"))?;
+            .ok_or_else(|| "Invalid Z85 partial block at end".to_string())?;
 
         // Calculate partial byte length 'b' using floor division
         // b = floor(c * 4 / 5)
