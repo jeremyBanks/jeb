@@ -383,6 +383,32 @@ impl FileState {
 
                 syn::visit::visit_expr(self, node);
             }
+
+            fn visit_item_macro(&mut self, mac: &'ast syn::ItemMacro) {
+                use syn::spanned::Spanned;
+
+                // Index item-level macros (like literate! { ... } at top level)
+                if !self.skip_macros {
+                    let start = mac.mac.path.span().start();
+                    let pos = (start.line as u32, start.column as u32);
+                    self.map.insert(pos, self.current_index);
+                    self.current_index += 1;
+                }
+
+                // Try to parse macro contents and index any calls within
+                let tokens = mac.mac.tokens.clone();
+                if !tokens.is_empty() {
+                    if let Ok(block) = syn::parse2::<syn::Block>(
+                        quote::quote! { { #tokens } },
+                    ) {
+                        for stmt in &block.stmts {
+                            self.visit_stmt(stmt);
+                        }
+                    } else if let Ok(expr) = syn::parse2::<syn::Expr>(tokens) {
+                        self.visit_expr(&expr);
+                    }
+                }
+            }
         }
 
         let mut builder = IndexBuilder {
@@ -617,6 +643,49 @@ impl FileState {
                 }
 
                 syn::visit::visit_expr(self, node);
+            }
+
+            fn visit_item_macro(&mut self, mac: &'ast syn::ItemMacro) {
+                use syn::spanned::Spanned;
+
+                // Handle item-level macros (must mirror IndexBuilder)
+                if !self.skip_macros {
+                    if self.current_index == self.target_index {
+                        // For item macros, get the span of the contents
+                        let tokens = mac.mac.tokens.clone();
+                        if !tokens.is_empty() {
+                            if let Ok(expr) = syn::parse2::<syn::Expr>(tokens.clone()) {
+                                self.span = Some((expr.span().start(), expr.span().end()));
+                            } else {
+                                use proc_macro2::TokenTree;
+                                let tts: Vec<TokenTree> = tokens.into_iter().collect();
+                                if !tts.is_empty() {
+                                    let first_span = tts.first().unwrap().span();
+                                    let last_span = tts.last().unwrap().span();
+                                    self.span = Some((first_span.start(), last_span.end()));
+                                }
+                            }
+                        } else {
+                            let path_end = mac.mac.path.span().end();
+                            self.span = Some((path_end, path_end));
+                        }
+                    }
+                    self.current_index += 1;
+                }
+
+                // Try to parse macro contents and recurse
+                let tokens = mac.mac.tokens.clone();
+                if !tokens.is_empty() {
+                    if let Ok(block) = syn::parse2::<syn::Block>(
+                        quote::quote! { { #tokens } },
+                    ) {
+                        for stmt in &block.stmts {
+                            self.visit_stmt(stmt);
+                        }
+                    } else if let Ok(expr) = syn::parse2::<syn::Expr>(tokens) {
+                        self.visit_expr(&expr);
+                    }
+                }
             }
         }
 
@@ -884,6 +953,32 @@ impl FileState {
 
                 syn::visit::visit_expr(self, node);
             }
+
+            fn visit_item_macro(&mut self, mac: &'ast syn::ItemMacro) {
+                use syn::spanned::Spanned;
+
+                // Handle item-level macros (must mirror IndexBuilder)
+                if !self.skip_macros {
+                    if self.current_index == self.target_index {
+                        self.span = Some((mac.span().start(), mac.span().end()));
+                    }
+                    self.current_index += 1;
+                }
+
+                // Try to parse macro contents and recurse
+                let tokens = mac.mac.tokens.clone();
+                if !tokens.is_empty() {
+                    if let Ok(block) = syn::parse2::<syn::Block>(
+                        quote::quote! { { #tokens } },
+                    ) {
+                        for stmt in &block.stmts {
+                            self.visit_stmt(stmt);
+                        }
+                    } else if let Ok(expr) = syn::parse2::<syn::Expr>(tokens) {
+                        self.visit_expr(&expr);
+                    }
+                }
+            }
         }
 
         let mut finder = ExprSpanFinder {
@@ -989,6 +1084,33 @@ impl<'ast> syn::visit::Visit<'ast> for IndexedValueReader {
         }
 
         syn::visit::visit_expr(self, node);
+    }
+
+    fn visit_item_macro(&mut self, mac: &syn::ItemMacro) {
+        // Handle item-level macros (must mirror IndexBuilder)
+        if !self.skip_macros {
+            if self.tokens.is_none() && self.current_index == self.target_index {
+                let tokens = mac.mac.tokens.clone();
+                if !tokens.is_empty() {
+                    self.tokens = Some(tokens);
+                }
+            }
+            self.current_index += 1;
+        }
+
+        // Try to parse macro contents and recurse
+        let tokens = mac.mac.tokens.clone();
+        if !tokens.is_empty() {
+            if let Ok(block) = syn::parse2::<syn::Block>(
+                quote::quote! { { #tokens } },
+            ) {
+                for stmt in &block.stmts {
+                    self.visit_stmt(stmt);
+                }
+            } else if let Ok(expr) = syn::parse2::<syn::Expr>(tokens) {
+                self.visit_expr(&expr);
+            }
+        }
     }
 }
 

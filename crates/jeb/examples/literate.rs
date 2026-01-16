@@ -93,8 +93,8 @@ literate! {
         result
     }
 
-    let data = Vec::<u8>::from_iter(0x12..=0x34);
-    hex_encode(&data).snap("");
+    let data = Vec::<u8>::from_iter(0x00..=0x20);
+    hex_encode(&data).snap("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20");
 /**
     - **Context compatibility:** as good as it gets. It only uses digits and a
       handful of letters, and typically not case-sensitive.
