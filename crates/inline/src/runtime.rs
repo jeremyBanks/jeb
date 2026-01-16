@@ -357,7 +357,25 @@ impl FileState {
                             self.map.insert(pos, self.current_index);
                             self.current_index += 1;
                         }
-                        // Don't recurse into macro tokens - they're opaque
+
+                        // Try to parse macro contents and index any calls within.
+                        // This enables inline::snap to work inside "transparent" macros
+                        // like literate! that preserve source locations.
+                        let tokens = mac.mac.tokens.clone();
+                        if !tokens.is_empty() {
+                            // Try parsing as a block of statements
+                            if let Ok(block) = syn::parse2::<syn::Block>(
+                                quote::quote! { { #tokens } },
+                            ) {
+                                for stmt in &block.stmts {
+                                    self.visit_stmt(stmt);
+                                }
+                            } else if let Ok(expr) = syn::parse2::<syn::Expr>(tokens) {
+                                // Try as a single expression
+                                self.visit_expr(&expr);
+                            }
+                            // If both fail, macro uses DSL syntax - skip
+                        }
                         return;
                     }
                     _ => {}
