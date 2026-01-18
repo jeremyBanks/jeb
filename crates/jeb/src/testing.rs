@@ -118,16 +118,19 @@ macro_rules! literate_docs {
     // Done collecting docs, hit fn item
     ([$($doc:literal),*] fn $($item:tt)*) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
+        eprintln!(); // blank line between prose and code
         $crate::literate_fn!([fn] $($item)*);
     };
     // Done collecting docs, hit static item
     ([$($doc:literal),*] static $($item:tt)*) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
+        eprintln!(); // blank line between prose and code
         $crate::literate_static_const!([static] $($item)*);
     };
     // Done collecting docs, hit const item
     ([$($doc:literal),*] const $($item:tt)*) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
+        eprintln!(); // blank line between prose and code
         $crate::literate_static_const!([const] $($item)*);
     };
     // No more input - just emit the docs
@@ -141,6 +144,7 @@ macro_rules! literate_docs {
     // Done collecting docs, hit anything else - print docs, then process statement
     ([$($doc:literal),*] $first:tt $($rest:tt)*) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
+        eprintln!(); // blank line between prose and code
         $crate::literate_stmt!([$first] $($rest)*);
     };
 }

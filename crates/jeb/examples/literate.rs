@@ -129,9 +129,10 @@ static BINARY: &[u8; 2] = b"01";
     output, the high 4 bits (representing 16, 32, 64, and 128) or the low 4
     bits (representing 1, 2, 4, and 8)? This property is a form of endianness,
     and for hex the answer is always "big endian" (the high 4 bits come first),
-    aligning with how decimal numbers are typically written. This makes encoding
-    quite simple: just pull out the bits, and use them to index into the
-    alphabet.
+    aligning with how decimal numbers are typically written.
+
+    Encoding is quite simple: just pull out the bits, and use them to index into
+    the alphabet.
 */
     fn hex_encode(bytes: &[u8]) -> String {
         let mut result = String::new();
