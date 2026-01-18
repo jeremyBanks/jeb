@@ -16,6 +16,35 @@ pub fn stringify_verbatim(input: TokenStream) -> TokenStream {
     proc_macro2::TokenStream::from(proc_macro2::TokenTree::Literal(lit)).into()
 }
 
+/// Returns the line number of the first token's span start.
+/// Returns 0 if there are no tokens.
+#[proc_macro]
+pub fn line_of_first_token(input: TokenStream) -> TokenStream {
+    let input2: proc_macro2::TokenStream = input.into();
+    let line = if let Some(first) = input2.into_iter().next() {
+        first.span().start().line
+    } else {
+        0
+    };
+    let lit = proc_macro2::Literal::usize_unsuffixed(line);
+    proc_macro2::TokenStream::from(proc_macro2::TokenTree::Literal(lit)).into()
+}
+
+/// Returns the line number of the last token's span end.
+/// Returns 0 if there are no tokens.
+#[proc_macro]
+pub fn line_of_last_token(input: TokenStream) -> TokenStream {
+    let input2: proc_macro2::TokenStream = input.into();
+    let tts: Vec<TokenTree> = input2.into_iter().collect();
+    let line = if let Some(last) = tts.last() {
+        last.span().end().line
+    } else {
+        0
+    };
+    let lit = proc_macro2::Literal::usize_unsuffixed(line);
+    proc_macro2::TokenStream::from(proc_macro2::TokenTree::Literal(lit)).into()
+}
+
 fn reconstruct(tts: &[TokenTree]) -> String {
     if tts.is_empty() {
         return String::new();

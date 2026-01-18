@@ -1,3 +1,34 @@
+use std::cell::Cell;
+
+thread_local! {
+    /// Tracks the last line number of printed code, for detecting gaps between statements
+    static LAST_CODE_LINE: Cell<usize> = const { Cell::new(0) };
+}
+
+/// Record the last line of a printed code block
+pub fn set_last_code_line(line: usize) {
+    LAST_CODE_LINE.with(|l| l.set(line));
+}
+
+/// Reset line tracking (call when transitioning to/from prose)
+pub fn reset_code_line_tracking() {
+    LAST_CODE_LINE.with(|l| l.set(0));
+}
+
+/// Print blank lines if there's a gap between previous code and this line
+pub fn print_gap_if_needed(next_line: usize) {
+    LAST_CODE_LINE.with(|l| {
+        let last = l.get();
+        if last > 0 && next_line > last + 1 {
+            // There was a gap - print blank lines (cap at 2)
+            let gap = (next_line - last - 1).min(2);
+            for _ in 0..gap {
+                eprintln!();
+            }
+        }
+    });
+}
+
 pub fn print_doc_block(doc_strings: &[&str]) {
     if doc_strings.is_empty() {
         return;
@@ -119,18 +150,21 @@ macro_rules! literate_docs {
     ([$($doc:literal),*] fn $($item:tt)*) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
         eprintln!(); // blank line between prose and code
+        $crate::testing::reset_code_line_tracking();
         $crate::literate_fn!([fn] $($item)*);
     };
     // Done collecting docs, hit static item
     ([$($doc:literal),*] static $($item:tt)*) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
         eprintln!(); // blank line between prose and code
+        $crate::testing::reset_code_line_tracking();
         $crate::literate_static_const!([static] $($item)*);
     };
     // Done collecting docs, hit const item
     ([$($doc:literal),*] const $($item:tt)*) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
         eprintln!(); // blank line between prose and code
+        $crate::testing::reset_code_line_tracking();
         $crate::literate_static_const!([const] $($item)*);
     };
     // No more input - just emit the docs
@@ -145,6 +179,7 @@ macro_rules! literate_docs {
     ([$($doc:literal),*] $first:tt $($rest:tt)*) => {
         $crate::testing::print_doc_block(&[$($doc),*]);
         eprintln!(); // blank line between prose and code
+        $crate::testing::reset_code_line_tracking();
         $crate::literate_stmt!([$first] $($rest)*);
     };
 }
@@ -154,7 +189,13 @@ macro_rules! literate_docs {
 macro_rules! literate_fn {
     // Found the body (a brace group) - stringify accumulated + body, emit
     ([$($acc:tt)*] { $($body:tt)* } $($rest:tt)*) => {
+        $crate::testing::print_gap_if_needed(
+            ::stringify_verbatim::line_of_first_token!($($acc)*)
+        );
         $crate::testing::print_code(::stringify_verbatim::stringify_verbatim!($($acc)* { $($body)* }));
+        $crate::testing::set_last_code_line(
+            ::stringify_verbatim::line_of_last_token!($($acc)* { $($body)* })
+        );
         $($acc)* { $($body)* }
         $crate::literate_inner!($($rest)*);
     };
