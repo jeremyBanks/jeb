@@ -69,6 +69,46 @@ literate! {
       where this can actually be taken advantage of.
     - **Ordering:** preserved.
 
+    ## Binary
+
+    REWORD: Pure binary, where each byte is spit into eight `1` or `0`
+    characters, is not suitable as a real production data format, but it can
+    sometimes be useful for human input and output — such as in this document.
+*/
+static BINARY: &[u8; 2] = b"01";
+/**
+    Because we're speaking in terms of byte-oriented encoding (not
+    bit-oriented), we need to specify whether the most-significant-bits (`128`
+    and down) come first (called "big-endian") or the least-significant-bits
+    (`1` and up) comes first called ("little-endian"). We follow the standard
+    choice: big-endian, for consistency with the way normal decimal numbers are
+    written in math and code.
+*/
+    fn to_binary(bytes: impl AsRef<[u8]>) -> String {
+        let bytes = bytes.as_ref();
+        let len = bytes.len() * 8;
+        let mut result = String::with_capacity(len);
+        for byte in bytes {
+            for bit in 0..8 {
+                result.push(BINARY[((*byte as usize) >> (7 - bit)) & 0x1] as char);
+            }
+        }
+        result
+    }
+
+    to_binary([  0_u8]).is("00000000");
+    to_binary([  1_u8]).is("00000001");
+    to_binary([  2_u8]).is("00000010");
+    to_binary([  3_u8]).is("00000011");
+    to_binary([128_u8]).is("10000000");
+    to_binary([255_u8]).is("11111111");
+    255_u16.to_be_bytes().is([0_u8, 255_u8]);
+    256_u16.to_be_bytes().is([1_u8,   0_u8]);
+    to_binary(255_u16.to_be_bytes()).is("0000000011111111");
+    to_binary(256_u16.to_be_bytes()).is("0000000100000000");
+    to_binary(256_u32.to_be_bytes()).is("00000000000000000000000100000000");
+
+/**
     ## Hexadecimal
 
     One of the most common ways to encode binary data as text is hexadecimal
@@ -96,8 +136,8 @@ literate! {
     fn hex_encode(bytes: &[u8]) -> String {
         let mut result = String::new();
         for byte in bytes {
-            let high = (byte & 0xF0) >> 4;
-            let low = byte & 0x0F;
+            let high = byte >> 4; // == byte / 16
+            let low = byte & 0xF; // == byte % 16
             result.push(HEX[high as usize] as char);
             result.push(HEX[low as usize] as char);
         }
@@ -106,7 +146,7 @@ literate! {
 
     let data = Vec::<u8>::from_iter(0x00..=0x20);
     hex_encode(&data).is("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20");
-/** 
+/**
     - **Context compatibility:** as good as it gets. It only uses digits and a
       handful of letters, and typically not case-sensitive.
     - **Offset stability:** fully stable.
@@ -119,7 +159,9 @@ literate! {
     REWORD: other encodings don't line up with byte boundaries. How do they deal
     with partial blocks? It's generalizable! But it does result in output
     sometimes have some wasted bits.
+*/
 
+/**
     ## Base 64 (URL-safe)
 
     https://datatracker.ietf.org/doc/html/rfc4648#section-5

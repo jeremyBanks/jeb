@@ -80,8 +80,6 @@ pub fn print_single_doc_group(doc_strings: &[&str]) {
 }
 
 pub fn print_code(code: &str) {
-    eprintln!(); // Blank line before code
-
     // Normalize indentation: strip common leading whitespace, re-indent with 4 spaces
     let lines: Vec<&str> = code.lines().collect();
 
