@@ -78,11 +78,11 @@ literate! {
 static BINARY: &[u8; 2] = b"01";
 /**
     Because we're speaking in terms of byte-oriented encoding (not
-    bit-oriented), we need to specify whether the most-significant-bits (`128`
-    and down) come first (called "big-endian") or the least-significant-bits
-    (`1` and up) comes first called ("little-endian"). We follow the standard
-    choice: big-endian, for consistency with the way normal decimal numbers are
-    written in math and code.
+    bit-oriented), we need to specify whether the most-significant-bits/
+    higher-order-bits (`128` and down) come first (called "big-endian") or the
+    least-significant-bits/lower-order-bits (`1` and up) come first (called
+    "little-endian"). We follow the standard choice: big-endian, for consistency
+    with the way normal decimal numbers are written in code and math.
 */
     fn to_binary(bytes: impl AsRef<[u8]>) -> String {
         let bytes = bytes.as_ref();
@@ -121,8 +121,8 @@ static BINARY: &[u8; 2] = b"01";
 */
     static HEX: &[u8; 16] = b"0123456789ABCDEF";
 /**
-    This is a common choice for binary values that may be
-    directly manually edited by humans.
+    This is a common choice for binary values that may be directly manually
+    edited by humans.
 
     Cleanly splitting each byte in half keeps this encoding quite simple, with
     only one significant design question: which half comes first in the text
@@ -134,7 +134,8 @@ static BINARY: &[u8; 2] = b"01";
     Encoding is quite simple: just pull out the bits, and use them to index into
     the alphabet.
 */
-    fn hex_encode(bytes: &[u8]) -> String {
+    fn to_hex(bytes: impl AsRef<[u8]>) -> String {
+        let bytes = bytes.as_ref();
         let mut result = String::new();
         for byte in bytes {
             let high = byte >> 4; // == byte / 16
@@ -145,8 +146,17 @@ static BINARY: &[u8; 2] = b"01";
         result
     }
 
-    let data = Vec::<u8>::from_iter(0x00..=0x20);
-    hex_encode(&data).is("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20");
+    to_hex(Vec::<u8>::from_iter(0x00..=0x20)).is(
+        "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20");
+
+    to_hex(from_binary("00000000"        )).is("00"  );
+    to_hex(from_binary("00000001"        )).is("01"  );
+    to_hex(from_binary("10000000"        )).is("80"  );
+    to_hex(from_binary("11111111"        )).is("FF"  );
+    to_hex(from_binary("0000000000000000")).is("0000");
+    to_hex(from_binary("0000000000000001")).is("0001");
+    to_hex(from_binary("1000000000000000")).is("8000");
+    to_hex(from_binary("1111111111111111")).is("FFFF");
 /**
     - **Context compatibility:** as good as it gets. It only uses digits and a
       handful of letters, and typically not case-sensitive.
@@ -163,14 +173,32 @@ static BINARY: &[u8; 2] = b"01";
 */
 
 /**
-    ## Base 64 (URL-safe)
+    ## Base 64
+
+    One of the most common choices for encoding binary data as text in
+    production use cases where human-readability is not a priority is a base 64
+    encoding. We're specifically considering base64url, the standard version
+    which uses a URL-safe alphabet and no padding.
 
     https://datatracker.ietf.org/doc/html/rfc4648#section-5
  */
     let BASE64_URL: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-
 /**
-    Z85
+    WRITE SOMETHING: 4 characters per 3 bytes, doesn't line up with single-byte
+    boundaries, and 3 isn't a power of two so it doesn't line up super-cleanly
+    with any data structures.
+
+    XXX: how does it handle partial blocks? That's key to so many things!
+    And is it big endian?
+
+    - **Context compatibility:** very good if using the base64url alphabet. It
+      doesn't require encoding it any standard string contexts. The only minor
+      conflicts are that the minus (`-`) character is sometimes used as a
+      delimiter and may not be valid in some identifier-like contexts.
+    - **Offset stability:** fully stable.
+    - **Overhead:** +33%,
+
+    ## Z85
 
     It's officially defined as requiring 4-byte (32-bit) blocks, but we can use
     the same approach as base 64 to support partial blocks.
@@ -179,22 +207,34 @@ static BINARY: &[u8; 2] = b"01";
  */
     let Z85: &[u8; 85] =
         b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
-/// (We'll be focusing primarily on byte-oriented encodings that can produce
-/// ASCII-safe output.)
-
-/// One of the simplest as most common ways is hexadecimal ("hex", base 16).
-/// Each byte is eight bits, which evenly divides into two hex digits.
-
-/// bits, and each hex digit represents four bits, so we just output two
-/// hex digits for each byte.
-
-println!("test 1!");
-println!("test 2!");
-println!("{}", {
-    println!("test 3a!");
-    println!("test 3b!");
-    "test 3c!"
-});
 
 
+
+}
+
+// The decoding implementations are mostly down here, outside of the literate
+// block because that's too much code.
+
+fn from_binary(text: impl AsRef<str>) -> Vec<u8> {
+    let text = text.as_ref();
+    let len = text.len() / 8;
+    let mut result = Vec::with_capacity(len);
+    for i in 0..len {
+        let index = i * 8;
+        let byte = u8::from_str_radix(&text[index..index + 8], 2).unwrap();
+        result.push(byte);
+    }
+    result
+}
+
+fn from_hex(text: impl AsRef<str>) -> Vec<u8> {
+    let text = text.as_ref();
+    let len = text.len() / 2;
+    let mut result = Vec::with_capacity(len);
+    for i in 0..len {
+        let index = i * 2;
+        let byte = u8::from_str_radix(&text[index..index + 2], 16).unwrap();
+        result.push(byte);
+    }
+    result
 }
