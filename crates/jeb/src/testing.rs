@@ -211,7 +211,13 @@ macro_rules! literate_fn {
 macro_rules! literate_static_const {
     // Found the semicolon - stringify accumulated tokens, emit
     ([$($acc:tt)*] ; $($rest:tt)*) => {
+        $crate::testing::print_gap_if_needed(
+            ::stringify_verbatim::line_of_first_token!($($acc)*)
+        );
         $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!($($acc)*), ";"));
+        $crate::testing::set_last_code_line(
+            ::stringify_verbatim::line_of_last_token!($($acc)*)
+        );
         $($acc)*;
         $crate::literate_inner!($($rest)*);
     };
@@ -228,7 +234,13 @@ macro_rules! literate_static_const {
 macro_rules! literate_stmt {
     // Hit a semicolon - stringify the accumulated tokens now (before more processing)
     ([$($acc:tt)*] ; $($rest:tt)*) => {
+        $crate::testing::print_gap_if_needed(
+            ::stringify_verbatim::line_of_first_token!($($acc)*)
+        );
         $crate::testing::print_code(concat!(::stringify_verbatim::stringify_verbatim!($($acc)*), ";"));
+        $crate::testing::set_last_code_line(
+            ::stringify_verbatim::line_of_last_token!($($acc)*)
+        );
         $($acc)*;
         $crate::literate_inner!($($rest)*);
     };
