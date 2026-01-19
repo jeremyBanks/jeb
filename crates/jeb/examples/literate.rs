@@ -35,6 +35,10 @@ literate! {
       lexicographic ordering as the original bytes, will the sort order be
       preserved?
 
+    We'll see that different encodings make different trade-offs in this space,
+    particularly around block alignment (how the encoding groups bytes) and
+    numeric transparency (whether small integers remain recognizable).
+
     ## Latin-1 passthrough
 
     The simplest possible way to encode binary data as text is just to covert
