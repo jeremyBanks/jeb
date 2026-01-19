@@ -16,10 +16,42 @@ pub fn stringify_verbatim(input: TokenStream) -> TokenStream {
     proc_macro2::TokenStream::from(proc_macro2::TokenTree::Literal(lit)).into()
 }
 
+/// Returns the line number of the first token's span start.
+/// Returns 0 if there are no tokens.
+#[proc_macro]
+pub fn line_of_first_token(input: TokenStream) -> TokenStream {
+    let input2: proc_macro2::TokenStream = input.into();
+    let line = if let Some(first) = input2.into_iter().next() {
+        first.span().start().line
+    } else {
+        0
+    };
+    let lit = proc_macro2::Literal::usize_unsuffixed(line);
+    proc_macro2::TokenStream::from(proc_macro2::TokenTree::Literal(lit)).into()
+}
+
+/// Returns the line number of the last token's span end.
+/// Returns 0 if there are no tokens.
+#[proc_macro]
+pub fn line_of_last_token(input: TokenStream) -> TokenStream {
+    let input2: proc_macro2::TokenStream = input.into();
+    let tts: Vec<TokenTree> = input2.into_iter().collect();
+    let line = if let Some(last) = tts.last() {
+        last.span().end().line
+    } else {
+        0
+    };
+    let lit = proc_macro2::Literal::usize_unsuffixed(line);
+    proc_macro2::TokenStream::from(proc_macro2::TokenTree::Literal(lit)).into()
+}
+
 fn reconstruct(tts: &[TokenTree]) -> String {
     if tts.is_empty() {
         return String::new();
     }
+
+    // Use the first token's column as the base - all other columns will be relative to this
+    let base_column = tts.first().map(|tt| tt.span().start().column).unwrap_or(0);
 
     let mut result = String::new();
     let mut prev_end: Option<LineColumn> = None;
@@ -29,20 +61,19 @@ fn reconstruct(tts: &[TokenTree]) -> String {
 
         // Add whitespace between tokens
         if let Some(prev) = prev_end {
-            let ws = compute_whitespace(prev, start);
+            let ws = compute_whitespace_relative(prev, start, base_column);
             result.push_str(&ws);
         }
 
-        result.push_str(&token_to_string(tt));
+        result.push_str(&token_to_string_inner(tt, None, base_column));
         prev_end = Some(tt.span().end());
     }
 
     result
 }
 
-/// Compute whitespace between two positions.
-/// If positions seem wrong (backwards or huge jump), just use a single space.
-fn compute_whitespace(from: LineColumn, to: LineColumn) -> String {
+/// Compute whitespace between two positions, with columns relative to a base.
+fn compute_whitespace_relative(from: LineColumn, to: LineColumn, base_column: usize) -> String {
     // Going backwards? Position is wrong, use single space.
     if to.line < from.line || (to.line == from.line && to.column < from.column) {
         return " ".to_string();
@@ -62,15 +93,25 @@ fn compute_whitespace(from: LineColumn, to: LineColumn) -> String {
             " ".repeat(spaces)
         }
     } else {
-        // Different lines - newlines + indentation
+        // Different lines - newlines + relative indentation
         let newlines = to.line - from.line;
         let mut ws = "\n".repeat(newlines);
-        ws.push_str(&" ".repeat(to.column));
+        // Use column relative to base, not absolute
+        let relative_indent = to.column.saturating_sub(base_column);
+        // DEBUG
+        if to.line == 150 {
+            eprintln!("DEBUG whitespace: from {:?} to {:?}, base={}, relative_indent={}",
+                from, to, base_column, relative_indent);
+        }
+        ws.push_str(&" ".repeat(relative_indent));
         ws
     }
 }
 
-fn token_to_string(tt: &TokenTree) -> String {
+/// Process a token tree. `fixed_indent` is Some when we're in "fixed indentation mode"
+/// (parent had wrong span info), which propagates to all nested groups.
+/// `base_column` is the statement's first token's column, used to compute relative indentation.
+fn token_to_string_inner(tt: &TokenTree, fixed_indent: Option<usize>, base_column: usize) -> String {
     match tt {
         TokenTree::Group(g) => {
             let inner: Vec<TokenTree> = g.stream().into_iter().collect();
@@ -100,52 +141,113 @@ fn token_to_string(tt: &TokenTree) -> String {
                 line_diff > 4
             };
 
-            let leading = if group_span_wrong {
-                // Group span is wrong - use newline + first token's column as indent
-                if g.delimiter() == proc_macro2::Delimiter::Brace {
-                    let mut ws = "\n".to_string();
-                    ws.push_str(&" ".repeat(first_start.column));
-                    ws
-                } else {
-                    String::new()
-                }
+            // Use fixed indentation mode if parent was in it, or if this group's span is wrong
+            let use_fixed = fixed_indent.is_some() || group_span_wrong;
+
+            if use_fixed && g.delimiter() == proc_macro2::Delimiter::Brace {
+                // Use fixed indentation for brace groups
+                let base = fixed_indent.unwrap_or(0);
+                let content_indent = base + 4;
+                let inner_str = reconstruct_with_indent(&inner, content_indent);
+                format!(
+                    "{}\n{}{}\n{}{}",
+                    open,
+                    " ".repeat(content_indent),
+                    inner_str,
+                    " ".repeat(base),
+                    close
+                )
+            } else if use_fixed {
+                // Non-brace group in fixed mode - just stringify inner contents
+                let base = fixed_indent.unwrap_or(0);
+                let inner_str = reconstruct_with_indent(&inner, base);
+                format!("{}{}{}", open, inner_str, close)
             } else {
-                // Group span seems ok - compute normally
-                compute_whitespace(
+                // Normal span-based reconstruction with relative columns
+                let leading = compute_whitespace_relative(
                     LineColumn { line: group_start.line, column: group_start.column + 1 },
                     first_start,
-                )
-            };
+                    base_column,
+                );
 
-            let trailing = if group_span_wrong {
-                // Group span is wrong - use newline for brace, nothing for others
-                if g.delimiter() == proc_macro2::Delimiter::Brace {
-                    // Use last token's line to figure out closing brace indent
-                    let mut ws = "\n".to_string();
-                    // Closing brace should be at same indent as content minus one level
-                    // Approximate: use first_start.column - 4, or 0
-                    ws.push_str(&" ".repeat(first_start.column.saturating_sub(4)));
-                    ws
-                } else {
+                let trailing = if g.delimiter() != proc_macro2::Delimiter::Brace
+                    && last_end.line == group_end.line
+                {
+                    // For parens/brackets on same line, don't add trailing spaces
+                    // (span info for these is often slightly off)
                     String::new()
-                }
-            } else if g.delimiter() != proc_macro2::Delimiter::Brace
-                && last_end.line == group_end.line
-            {
-                // For parens/brackets on same line, don't add trailing spaces
-                // (span info for these is often slightly off)
-                String::new()
-            } else {
-                compute_whitespace(last_end, group_end)
-            };
+                } else {
+                    compute_whitespace_relative(last_end, group_end, base_column)
+                };
 
-            let inner_str = reconstruct(&inner);
-            format!("{}{}{}{}{}", open, leading, inner_str, trailing, close)
+                let inner_str = reconstruct_inner(&inner, base_column);
+                format!("{}{}{}{}{}", open, leading, inner_str, trailing, close)
+            }
         }
         TokenTree::Ident(i) => i.to_string(),
         TokenTree::Punct(p) => p.to_string(),
         TokenTree::Literal(l) => l.to_string(),
     }
+}
+
+/// Reconstruct inner token stream with a shared base_column for relative indentation
+fn reconstruct_inner(tts: &[TokenTree], base_column: usize) -> String {
+    if tts.is_empty() {
+        return String::new();
+    }
+
+    let mut result = String::new();
+    let mut prev_end: Option<LineColumn> = None;
+
+    for tt in tts {
+        let start = tt.span().start();
+
+        // Add whitespace between tokens
+        if let Some(prev) = prev_end {
+            let ws = compute_whitespace_relative(prev, start, base_column);
+            result.push_str(&ws);
+        }
+
+        result.push_str(&token_to_string_inner(tt, None, base_column));
+        prev_end = Some(tt.span().end());
+    }
+
+    result
+}
+
+/// Reconstruct token stream with fixed indentation (for groups with wrong spans)
+fn reconstruct_with_indent(tts: &[TokenTree], base_indent: usize) -> String {
+    if tts.is_empty() {
+        return String::new();
+    }
+
+    let mut result = String::new();
+    let mut prev_end: Option<LineColumn> = None;
+
+    for tt in tts {
+        let start = tt.span().start();
+
+        // Add whitespace between tokens
+        if let Some(prev) = prev_end {
+            if start.line > prev.line {
+                // Different line - add newline and base indent
+                let newlines = (start.line - prev.line).min(3);
+                result.push_str(&"\n".repeat(newlines));
+                result.push_str(&" ".repeat(base_indent));
+            } else {
+                // Same line - use column-based spacing
+                let spaces = start.column.saturating_sub(prev.column);
+                if spaces > 0 {
+                    result.push_str(&" ".repeat(spaces));
+                }
+            }
+        }
+
+        result.push_str(&token_to_string_inner(tt, Some(base_indent), base_indent));
+        prev_end = Some(tt.span().end());
+    }
+
+    result
 }
 
 #[cfg(test)]

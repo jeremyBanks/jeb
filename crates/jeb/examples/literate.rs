@@ -35,6 +35,10 @@ literate! {
       lexicographic ordering as the original bytes, will the sort order be
       preserved?
 
+    We'll see that different encodings make different trade-offs in this space,
+    particularly around block alignment (how the encoding groups bytes) and
+    numeric transparency (whether small integers remain recognizable).
+
     ## Latin-1 passthrough
 
     The simplest possible way to encode binary data as text is just to covert
@@ -71,11 +75,10 @@ literate! {
 
     ## Binary
 
-    REWORD: Pure binary, where each byte is spit into eight `1` or `0`
-    characters, is not suitable as a real production data format, but it can
-    sometimes be useful for human input and output — such as in this document.
+    Binary encoding—where each byte becomes eight `0` or `1` characters—isn't
+    practical for production, but it's useful as a pedagogical tool and for
+    human input/output in contexts like this document.
 */
-static BINARY: &[u8; 2] = b"01";
 /**
     Because we're speaking in terms of byte-oriented encoding (not
     bit-oriented), we need to specify whether the most-significant-bits/
@@ -85,12 +88,13 @@ static BINARY: &[u8; 2] = b"01";
     with the way normal decimal numbers are written in code and math.
 */
     fn to_binary(bytes: impl AsRef<[u8]>) -> String {
+        let alphabet = b"01";
         let bytes = bytes.as_ref();
         let len = bytes.len() * 8;
         let mut result = String::with_capacity(len);
         for byte in bytes {
             for bit in 0..8 {
-                result.push(BINARY[((*byte as usize) >> (7 - bit)) & 0x1] as char);
+                result.push(alphabet[((*byte as usize) >> (7 - bit)) & 0x1] as char);
             }
         }
         result
@@ -118,9 +122,7 @@ static BINARY: &[u8; 2] = b"01";
     alphabet (`A` to `F`).
 
     https://datatracker.ietf.org/doc/html/rfc4648#section-8
-*/
-    static HEX: &[u8; 16] = b"0123456789ABCDEF";
-/**
+
     This is a common choice for binary values that may be directly manually
     edited by humans.
 
@@ -135,13 +137,14 @@ static BINARY: &[u8; 2] = b"01";
     the alphabet.
 */
     fn to_hex(bytes: impl AsRef<[u8]>) -> String {
+        let alphabet = b"0123456789ABCDEF";
         let bytes = bytes.as_ref();
         let mut result = String::new();
         for byte in bytes {
             let high = byte >> 4; // == byte / 16
             let low = byte & 0xF; // == byte % 16
-            result.push(HEX[high as usize] as char);
-            result.push(HEX[low as usize] as char);
+            result.push(alphabet[high as usize] as char);
+            result.push(alphabet[low as usize] as char);
         }
         result
     }
@@ -166,10 +169,24 @@ static BINARY: &[u8; 2] = b"01";
     - **Transparency:** pretty good for numeric/binary data. Zeros are `00` and
       it's not that difficult to interpret positive integers. Text is of course
       unrecognizable.
+    - **Ordering:** preserved. The hex alphabet is in ascending order (`0-9`,
+      then `A-F`), so lexicographic comparison of hex strings matches numeric
+      comparison of the underlying bytes.
 
-    REWORD: other encodings don't line up with byte boundaries. How do they deal
-    with partial blocks? It's generalizable! But it does result in output
-    sometimes have some wasted bits.
+    ## Beyond byte boundaries
+
+    Hexadecimal has a special property: 4 bits per character divides evenly into
+    8 bits per byte. This means each byte maps to exactly two characters, with
+    no leftover bits and no need to group multiple bytes together.
+
+    Other bases don't divide so cleanly. Base 64 uses 6 bits per character, and
+    base 85 uses log₂(85) ≈ 6.4 bits per character. Since these don't divide 8
+    evenly, these encodings must work on multi-byte blocks. Base 64 works on
+    3-byte (24-bit) blocks, and base 85 works on 4-byte (32-bit) blocks.
+
+    This raises a question: what happens when the input length isn't a multiple
+    of the block size? Different encodings handle this differently, and we'll
+    see the details as we go.
 */
 
 /**
@@ -181,34 +198,209 @@ static BINARY: &[u8; 2] = b"01";
     which uses a URL-safe alphabet and no padding.
 
     https://datatracker.ietf.org/doc/html/rfc4648#section-5
- */
-    let BASE64_URL: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+    Base 64 uses 6 bits per character (2⁶ = 64). Since 6 doesn't divide 8
+    evenly, we work on 3-byte (24-bit) blocks, which produce exactly 4
+    characters (4 × 6 = 24 bits).
+
+    The encoding algorithm is fundamentally the same as hex: repeated division
+    and modulo to extract digits. For hex, we use `/ 16` and `% 16`. For base
+    64, we'd use `/ 64` and `% 64`. But here's the key insight: because 64 is a
+    power of 2 (2⁶), these operations are equivalent to bit shifts and masks:
+    `>> 6` is `/ 64`, and `& 0x3F` is `% 64`. This is the same optimization hex
+    uses, just with different constants.
+
+    The encoding processes 3 bytes at a time, treating them as a 24-bit big-
+    endian integer, then extracting four 6-bit values from high to low:
+*/
+    fn to_base64(bytes: impl AsRef<[u8]>) -> String {
+        let alphabet = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+        let bytes = bytes.as_ref();
+        let mut result = String::new();
+
+        // Process complete 3-byte blocks
+        let mut i = 0;
+        while i + 3 <= bytes.len() {
+            let b0 = bytes[i] as u32;
+            let b1 = bytes[i + 1] as u32;
+            let b2 = bytes[i + 2] as u32;
+            let block = (b0 << 16) | (b1 << 8) | b2; // 24-bit big-endian
+
+            result.push(alphabet[(block >> 18) as usize & 0x3F] as char);
+            result.push(alphabet[(block >> 12) as usize & 0x3F] as char);
+            result.push(alphabet[(block >>  6) as usize & 0x3F] as char);
+            result.push(alphabet[(block      ) as usize & 0x3F] as char);
+            i += 3;
+        }
+
+        // Handle partial blocks (1 or 2 remaining bytes)
+        let remaining = bytes.len() - i;
+        if remaining == 1 {
+            let b0 = bytes[i] as u32;
+            // Pad with zeros on the right, extract 2 characters
+            result.push(alphabet[(b0 >> 2) as usize] as char);
+            result.push(alphabet[((b0 << 4) & 0x3F) as usize] as char);
+        } else if remaining == 2 {
+            let b0 = bytes[i] as u32;
+            let b1 = bytes[i + 1] as u32;
+            let block = (b0 << 8) | b1; // 16 bits
+            // Pad with zeros on the right, extract 3 characters
+            result.push(alphabet[(block >> 10) as usize & 0x3F] as char);
+            result.push(alphabet[(block >>  4) as usize & 0x3F] as char);
+            result.push(alphabet[((block << 2) & 0x3F) as usize] as char);
+        }
+
+        result
+    }
+
+    // Full 3-byte blocks
+    to_base64([0x00, 0x00, 0x00]).is("AAAA");
+    to_base64([0xFF, 0xFF, 0xFF]).is("____");
+
+    // Visualize the bit grouping: 3 bytes = 24 bits = 4 × 6-bit values
+    to_base64(from_binary("000000 000000 000000 000000".replace(" ", ""))).is("AAAA");
+    to_base64(from_binary("111111 111111 111111 111111".replace(" ", ""))).is("____");
+    to_base64(from_binary("000001 000010 000011 000100".replace(" ", ""))).is("BCDE");
+
+    // Partial blocks
+    to_base64([0x00]).is("AA");           // 1 byte → 2 chars
+    to_base64([0x00, 0x00]).is("AAA");    // 2 bytes → 3 chars
+    to_base64([0xFF]).is("_w");           // 1 byte → 2 chars
+    to_base64([0xFF, 0xFF]).is("__8");    // 2 bytes → 3 chars
+
 /**
-    WRITE SOMETHING: 4 characters per 3 bytes, doesn't line up with single-byte
-    boundaries, and 3 isn't a power of two so it doesn't line up super-cleanly
-    with any data structures.
+    Notice that 24 bits (3 bytes) doesn't align nicely with common data
+    structures. A 32-bit integer spans 1⅓ blocks; a 64-bit integer spans 2⅔
+    blocks. This makes base64 awkward for inspecting structured binary data.
 
-    XXX: how does it handle partial blocks? That's key to so many things!
-    And is it big endian?
-
-    - **Context compatibility:** very good if using the base64url alphabet. It
-      doesn't require encoding it any standard string contexts. The only minor
-      conflicts are that the minus (`-`) character is sometimes used as a
-      delimiter and may not be valid in some identifier-like contexts.
+    - **Context compatibility:** very good with the base64url alphabet. It
+      doesn't require escaping in standard string contexts. The only minor
+      conflict is that `-` is sometimes used as a delimiter.
     - **Offset stability:** fully stable.
-    - **Overhead:** +33%,
+    - **Overhead:** +33% (4 characters per 3 bytes).
+    - **Transparency:** poor. The alphabet doesn't start with digits, so even
+      small integers are unrecognizable. The value 0 encodes as `A`, not `0`.
+    - **Ordering:** NOT preserved. The alphabet starts with `A-Z`, so `A` (0)
+      sorts after digits would. Encoded strings don't sort the same as their
+      underlying bytes.
 
     ## Z85
 
-    It's officially defined as requiring 4-byte (32-bit) blocks, but we can use
-    the same approach as base 64 to support partial blocks.
+    Z85 is a base-85 encoding designed for ZeroMQ. It works on 4-byte (32-bit)
+    blocks, producing 5 characters per block. This works because 85⁵ =
+    4,437,053,125, which is greater than 2³² = 4,294,967,296.
 
     https://rfc.zeromq.org/spec/32/
  */
-    let Z85: &[u8; 85] =
-        b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
+    85_u64.pow(5).is(4_437_053_125_u64);
+    2_u64.pow(32).is(4_294_967_296_u64);
+    (85_u64.pow(5) > 2_u64.pow(32)).is(true);
 
+/**
+    The key difference from base64: because 85 is NOT a power of 2, we can't use
+    bit shifts. We have to do actual division. The algorithm is the same
+    conceptually—repeated divide and modulo to extract digits—but without the
+    fast path.
 
+    The benefit of giving up that fast path is flexibility: we can choose any
+    base, not just powers of 2. Z85 uses this freedom to start its alphabet with
+    `0-9`, which means small integers look like decimal numbers. The value 6
+    encodes to `00006`, not some unrecognizable letter.
+
+    The encoding treats each 4-byte block as a big-endian 32-bit integer, then
+    extracts 5 base-85 digits from low to high (we reverse at the end to get
+    big-endian output):
+*/
+    fn to_z85(bytes: impl AsRef<[u8]>) -> String {
+        let alphabet = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
+        let bytes = bytes.as_ref();
+        let mut result = String::new();
+
+        // Process complete 4-byte blocks
+        let mut i = 0;
+        while i + 4 <= bytes.len() {
+            let block = u32::from_be_bytes([bytes[i], bytes[i+1], bytes[i+2], bytes[i+3]]);
+            let mut value = block as u64;
+
+            // Extract 5 base-85 digits (low to high)
+            let mut chars = [0u8; 5];
+            for j in (0..5).rev() {
+                chars[j] = alphabet[(value % 85) as usize];
+                value /= 85;
+            }
+            for c in chars {
+                result.push(c as char);
+            }
+            i += 4;
+        }
+
+        // Handle partial blocks (1, 2, or 3 remaining bytes)
+        let remaining = bytes.len() - i;
+        if remaining > 0 {
+            // Pad with zeros to make a full block, encode, then truncate output
+            let mut padded = [0u8; 4];
+            for j in 0..remaining {
+                padded[j] = bytes[i + j];
+            }
+            let block = u32::from_be_bytes(padded);
+            let mut value = block as u64;
+
+            let mut chars = [0u8; 5];
+            for j in (0..5).rev() {
+                chars[j] = alphabet[(value % 85) as usize];
+                value /= 85;
+            }
+            // Output chars proportional to input bytes: 1 byte → 2 chars, etc.
+            let out_chars = remaining + 1;
+            for c in &chars[..out_chars] {
+                result.push(*c as char);
+            }
+        }
+
+        result
+    }
+
+    // Small integers are recognizable!
+    to_z85(0_u32.to_be_bytes()).is("00000");
+    to_z85(1_u32.to_be_bytes()).is("00001");
+    to_z85(6_u32.to_be_bytes()).is("00006");
+    to_z85(9_u32.to_be_bytes()).is("00009");
+    to_z85(10_u32.to_be_bytes()).is("0000a");  // 10 is 'a' in base 85
+    to_z85(84_u32.to_be_bytes()).is("0000#");  // 84 is '#', the last character
+    to_z85(85_u32.to_be_bytes()).is("00010");  // 85 rolls over to "10"
+
+    // Maximum value
+    to_z85(0xFFFFFFFF_u32.to_be_bytes()).is("%nSc0");
+
+    // Visualize with binary: a 32-bit block
+    to_z85(from_binary("00000000 00000000 00000000 00000000".replace(" ", ""))).is("00000");
+    to_z85(from_binary("00000000 00000000 00000000 00000110".replace(" ", ""))).is("00006");
+
+    // Partial blocks
+    to_z85([0x00]).is("00");              // 1 byte → 2 chars
+    to_z85([0x00, 0x00]).is("000");       // 2 bytes → 3 chars
+    to_z85([0x00, 0x00, 0x00]).is("0000"); // 3 bytes → 4 chars
+
+/**
+    Z85's 32-bit blocks align perfectly with common data structures. A u32 is
+    exactly one block; a u64 is exactly two blocks. When inspecting binary data,
+    you can often see meaningful structure: pointers, sizes, flags.
+
+    - **Context compatibility:** good, but not as clean as base64. The alphabet
+      includes characters like `*`, `?`, `<`, `>`, `[`, `]`, `{`, `}` which have
+      special meaning in shells, globs, and some markup languages.
+    - **Offset stability:** fully stable.
+    - **Overhead:** +25% (5 characters per 4 bytes), better than base64's +33%.
+    - **Transparency:** excellent for numeric data. Small integers look like
+      integers. Zeros are `00000`. Structure in 32-bit aligned data is visible.
+    - **Ordering:** NOT preserved. This is the trade-off for numeric
+      transparency. Having `0` encode to `0` (instead of the first character
+      in ASCII order) means the alphabet isn't in ascending order, so
+      lexicographic comparison of encoded strings doesn't match byte comparison.
+
+    This is a deliberate design choice: Z85 prioritizes numeric transparency
+    over ordering. A different encoding could make the opposite choice.
+*/
 
 }
 
