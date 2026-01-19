@@ -79,7 +79,6 @@ literate! {
     practical for production, but it's useful as a pedagogical tool and for
     human input/output in contexts like this document.
 */
-static BINARY: &[u8; 2] = b"01";
 /**
     Because we're speaking in terms of byte-oriented encoding (not
     bit-oriented), we need to specify whether the most-significant-bits/
@@ -89,12 +88,13 @@ static BINARY: &[u8; 2] = b"01";
     with the way normal decimal numbers are written in code and math.
 */
     fn to_binary(bytes: impl AsRef<[u8]>) -> String {
+        let alphabet = b"01";
         let bytes = bytes.as_ref();
         let len = bytes.len() * 8;
         let mut result = String::with_capacity(len);
         for byte in bytes {
             for bit in 0..8 {
-                result.push(BINARY[((*byte as usize) >> (7 - bit)) & 0x1] as char);
+                result.push(alphabet[((*byte as usize) >> (7 - bit)) & 0x1] as char);
             }
         }
         result
@@ -122,9 +122,7 @@ static BINARY: &[u8; 2] = b"01";
     alphabet (`A` to `F`).
 
     https://datatracker.ietf.org/doc/html/rfc4648#section-8
-*/
-    static HEX: &[u8; 16] = b"0123456789ABCDEF";
-/**
+
     This is a common choice for binary values that may be directly manually
     edited by humans.
 
@@ -139,13 +137,14 @@ static BINARY: &[u8; 2] = b"01";
     the alphabet.
 */
     fn to_hex(bytes: impl AsRef<[u8]>) -> String {
+        let alphabet = b"0123456789ABCDEF";
         let bytes = bytes.as_ref();
         let mut result = String::new();
         for byte in bytes {
             let high = byte >> 4; // == byte / 16
             let low = byte & 0xF; // == byte % 16
-            result.push(HEX[high as usize] as char);
-            result.push(HEX[low as usize] as char);
+            result.push(alphabet[high as usize] as char);
+            result.push(alphabet[low as usize] as char);
         }
         result
     }
@@ -199,9 +198,7 @@ static BINARY: &[u8; 2] = b"01";
     which uses a URL-safe alphabet and no padding.
 
     https://datatracker.ietf.org/doc/html/rfc4648#section-5
- */
-    let BASE64URL = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-/**
+
     Base 64 uses 6 bits per character (2⁶ = 64). Since 6 doesn't divide 8
     evenly, we work on 3-byte (24-bit) blocks, which produce exactly 4
     characters (4 × 6 = 24 bits).
@@ -295,8 +292,6 @@ static BINARY: &[u8; 2] = b"01";
 
     https://rfc.zeromq.org/spec/32/
  */
-    let Z85 = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
-
     85_u64.pow(5).is(4_437_053_125_u64);
     2_u64.pow(32).is(4_294_967_296_u64);
     (85_u64.pow(5) > 2_u64.pow(32)).is(true);
