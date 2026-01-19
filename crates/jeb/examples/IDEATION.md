@@ -29,10 +29,10 @@ No prefix bytes can exist before the escape, so no endianness interpretation is 
 
 | Escape | Raw bytes following |
 |--------|---------------------|
-| `,` | 3 bytes |
-| `` ` `` | 4 bytes |
-| `;` | 5 bytes |
-| `~` | 6 bytes |
+| `` ` `` | 3 bytes |
+| `,` | 4 bytes |
+| `~` | 5 bytes |
+| `;` | 6 bytes |
 | `_` | 7 bytes |
 
 ### In Middle of Block (Positions 1-4)
