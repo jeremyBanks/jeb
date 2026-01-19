@@ -289,15 +289,123 @@ static BINARY: &[u8; 2] = b"01";
 
     ## Z85
 
-    It's officially defined as requiring 4-byte (32-bit) blocks, but we can use
-    the same approach as base 64 to support partial blocks.
+    Z85 is a base-85 encoding designed for ZeroMQ. It works on 4-byte (32-bit)
+    blocks, producing 5 characters per block. This works because 85⁵ =
+    4,437,053,125, which is greater than 2³² = 4,294,967,296.
 
     https://rfc.zeromq.org/spec/32/
  */
-    let Z85: &[u8; 85] =
-        b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
+    let Z85 = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
 
+    85_u64.pow(5).is(4_437_053_125_u64);
+    2_u64.pow(32).is(4_294_967_296_u64);
+    (85_u64.pow(5) > 2_u64.pow(32)).is(true);
 
+/**
+    The key difference from base64: because 85 is NOT a power of 2, we can't use
+    bit shifts. We have to do actual division. The algorithm is the same
+    conceptually—repeated divide and modulo to extract digits—but without the
+    fast path.
+
+    The benefit of giving up that fast path is flexibility: we can choose any
+    base, not just powers of 2. Z85 uses this freedom to start its alphabet with
+    `0-9`, which means small integers look like decimal numbers. The value 6
+    encodes to `00006`, not some unrecognizable letter.
+
+    The encoding treats each 4-byte block as a big-endian 32-bit integer, then
+    extracts 5 base-85 digits from low to high (we reverse at the end to get
+    big-endian output):
+*/
+    fn to_z85(bytes: impl AsRef<[u8]>) -> String {
+        let alphabet = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
+        let bytes = bytes.as_ref();
+        let mut result = String::new();
+
+        // Process complete 4-byte blocks
+        let mut i = 0;
+        while i + 4 <= bytes.len() {
+            let block = u32::from_be_bytes([bytes[i], bytes[i+1], bytes[i+2], bytes[i+3]]);
+            let mut value = block as u64;
+
+            // Extract 5 base-85 digits (low to high)
+            let mut chars = [0u8; 5];
+            for j in (0..5).rev() {
+                chars[j] = alphabet[(value % 85) as usize];
+                value /= 85;
+            }
+            for c in chars {
+                result.push(c as char);
+            }
+            i += 4;
+        }
+
+        // Handle partial blocks (1, 2, or 3 remaining bytes)
+        let remaining = bytes.len() - i;
+        if remaining > 0 {
+            // Pad with zeros to make a full block, encode, then truncate output
+            let mut padded = [0u8; 4];
+            for j in 0..remaining {
+                padded[j] = bytes[i + j];
+            }
+            let block = u32::from_be_bytes(padded);
+            let mut value = block as u64;
+
+            let mut chars = [0u8; 5];
+            for j in (0..5).rev() {
+                chars[j] = alphabet[(value % 85) as usize];
+                value /= 85;
+            }
+            // Output chars proportional to input bytes: 1 byte → 2 chars, etc.
+            let out_chars = remaining + 1;
+            for c in &chars[..out_chars] {
+                result.push(*c as char);
+            }
+        }
+
+        result
+    }
+
+    // Small integers are recognizable!
+    to_z85(0_u32.to_be_bytes()).is("00000");
+    to_z85(1_u32.to_be_bytes()).is("00001");
+    to_z85(6_u32.to_be_bytes()).is("00006");
+    to_z85(9_u32.to_be_bytes()).is("00009");
+    to_z85(10_u32.to_be_bytes()).is("0000a");  // 10 is 'a' in base 85
+    to_z85(84_u32.to_be_bytes()).is("0000#");  // 84 is '#', the last character
+    to_z85(85_u32.to_be_bytes()).is("00010");  // 85 rolls over to "10"
+
+    // Maximum value
+    to_z85(0xFFFFFFFF_u32.to_be_bytes()).is("%nSc0");
+
+    // Visualize with binary: a 32-bit block
+    to_z85(from_binary("00000000 00000000 00000000 00000000".replace(" ", ""))).is("00000");
+    to_z85(from_binary("00000000 00000000 00000000 00000110".replace(" ", ""))).is("00006");
+
+    // Partial blocks
+    to_z85([0x00]).is("00");              // 1 byte → 2 chars
+    to_z85([0x00, 0x00]).is("000");       // 2 bytes → 3 chars
+    to_z85([0x00, 0x00, 0x00]).is("0000"); // 3 bytes → 4 chars
+
+/**
+    Z85's 32-bit blocks align perfectly with common data structures. A u32 is
+    exactly one block; a u64 is exactly two blocks. When inspecting binary data,
+    you can often see meaningful structure: pointers, sizes, flags.
+
+    - **Context compatibility:** good, but not as clean as base64. The alphabet
+      includes characters like `*`, `?`, `<`, `>`, `[`, `]`, `{`, `}` which have
+      special meaning in shells, globs, and some markup languages.
+    - **Offset stability:** fully stable.
+    - **Overhead:** +25% (5 characters per 4 bytes), better than base64's +33%.
+    - **Transparency:** excellent for numeric data. Small integers look like
+      integers. Zeros are `00000`. Structure in 32-bit aligned data is visible.
+    - **Ordering:** NOT preserved. This is the trade-off for numeric
+      transparency. Having `0` encode to `0` (instead of the first character
+      in ASCII order) means the alphabet isn't in ascending order, so
+      lexicographic comparison of encoded strings doesn't match byte comparison.
+
+    This is a deliberate design choice: Z85 prioritizes numeric transparency
+    over ordering. A different encoding could make the opposite choice.
+*/
 
 }
 
