@@ -39,7 +39,7 @@ No prefix bytes can exist before the escape, so no endianness interpretation is 
 
 Prefix bytes exist before the escape and must be interpreted with endianness:
 
-(Position 4 is invalid - escape characters cannot appear at the last position of a block)
+(Position 4 is invalid for these escapes - they require at least one raw byte following in the current block)
 
 | Escape | Raw bytes | Prefix endianness | Notes |
 |--------|-----------|-------------------|-------|
@@ -53,7 +53,7 @@ Prefix bytes exist before the escape and must be interpreted with endianness:
 
 ### The `|` Escape (8+ bytes)
 
-The `|` character works at any position and signals a **backward-looking length encoding**:
+The `|` character works at **any position (0-4)** and signals a **backward-looking length encoding**:
 
 1. The decoder buffers up to one block (5 chars) to detect `|`
 2. When `|` is encountered, read backwards up to 4 Z85 digits before it
@@ -208,6 +208,21 @@ Length 10, little-endian:
 
 Note: The prefix bytes A and B are reinterpreted as part of the raw output, not as an encoded prefix value in this case.
 
+### Example: `|` at Position 4
+
+Physical layout: `A B C D |` (positions 0,1,2,3,4)
+
+All 4 chars before `|` can encode length:
+- Supports up to 4 base-42 digits
+- Maximum representable value: 42^4 = 3,111,696
+
+**Decoding:**
+1. See `|` at position 4
+2. Read backward 4 digits: D, C, B, A
+3. Decode length using base-42 algorithm
+4. Output literal bytes A, B, C, D as first 4 of the raw sequence
+5. Continue reading raw bytes from next block
+
 ### Special Length Values
 
 - **Length 0:** Infinite length (until end of stream). Only used when encoder knows stream ends. No memory overhead for decoder.
@@ -273,8 +288,10 @@ Example: `ABC|` (simple case, not block-end)
 
 This is why it's called "reinterpretation" - the same characters are interpreted as both length metadata AND content.
 
-**Position 4 is invalid:**
-Escape characters cannot appear at position 4 (the last position in a 5-char block). This is an encoding error. Valid positions are 0-3 only.
+**Position 4:**
+For standard escapes (`,` `` ` `` `;` `~` `_`), position 4 is invalid because these escapes require at least one raw byte following in the current block.
+
+However, `|` CAN appear at position 4 since it looks backward for length encoding and doesn't require following bytes in the same block.
 
 ## Invariants
 
