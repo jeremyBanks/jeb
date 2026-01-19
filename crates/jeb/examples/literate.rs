@@ -280,39 +280,41 @@ literate! {
     - **Overhead:** +33% (4 characters per 3 bytes).
     - **Transparency:** poor. The alphabet doesn't start with digits, so even
       small integers are unrecognizable. The value 0 encodes as `A`, not `0`.
-    - **Ordering:** NOT preserved. The alphabet starts with `A-Z`, so `A` (0)
-      sorts after digits would. Encoded strings don't sort the same as their
-      underlying bytes.
+    - **Ordering:** not preserved. I'm not sure of the reason for the chosen
+      alphabet order.
 
     ## Z85
 
-    Z85 is a base-85 encoding designed for ZeroMQ. It works on 4-byte (32-bit)
-    blocks, producing 5 characters per block. This works because 85⁵ =
-    4,437,053,125, which is greater than 2³² = 4,294,967,296.
+    Base 64 encodes 3 bytes (24 bits) into 4 characters. A less-common
+    alternative are base-85 encodings, which are more efficient but more
+    complicated. 85^5 = 4,437,053,125, which is greater than 2^32 =
+    4,294,967,296, but _not equal_ to it; 85 is not a power of two. We're
+    specifically considering a variation of Z85, a base-85 encoding designed for
+    ZeroMQ. It works on 4-byte (32-bit) blocks, producing 5 characters per
+    block.
 
     https://rfc.zeromq.org/spec/32/
  */
+    static Z85: &[u8; 85] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
+
     85_u64.pow(5).is(4_437_053_125_u64);
     2_u64.pow(32).is(4_294_967_296_u64);
     (85_u64.pow(5) > 2_u64.pow(32)).is(true);
 
 /**
-    The key difference from base64: because 85 is NOT a power of 2, we can't use
-    bit shifts. We have to do actual division. The algorithm is the same
-    conceptually—repeated divide and modulo to extract digits—but without the
-    fast path.
+    Because 85 is NOT a power of 2, we can't use bit shifts. We have to do
+    actual division. The algorithm is the same conceptually—repeated divide and
+    modulo to extract digits—but without the bitwise fast path.
 
-    The benefit of giving up that fast path is flexibility: we can choose any
-    base, not just powers of 2. Z85 uses this freedom to start its alphabet with
-    `0-9`, which means small integers look like decimal numbers. The value 6
-    encodes to `00006`, not some unrecognizable letter.
+    Z85 uses starts its alphabet with `0-9`, which means small integers look
+    like decimal numbers. The value 6 encodes to `00006`, not some
+    unrecognizable letter.
 
     The encoding treats each 4-byte block as a big-endian 32-bit integer, then
     extracts 5 base-85 digits from low to high (we reverse at the end to get
     big-endian output):
 */
     fn to_z85(bytes: impl AsRef<[u8]>) -> String {
-        let alphabet = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
         let bytes = bytes.as_ref();
         let mut result = String::new();
 
@@ -325,7 +327,7 @@ literate! {
             // Extract 5 base-85 digits (low to high)
             let mut chars = [0u8; 5];
             for j in (0..5).rev() {
-                chars[j] = alphabet[(value % 85) as usize];
+                chars[j] = Z85[(value % 85) as usize];
                 value /= 85;
             }
             for c in chars {
@@ -347,7 +349,7 @@ literate! {
 
             let mut chars = [0u8; 5];
             for j in (0..5).rev() {
-                chars[j] = alphabet[(value % 85) as usize];
+                chars[j] = Z85[(value % 85) as usize];
                 value /= 85;
             }
             // Output chars proportional to input bytes: 1 byte → 2 chars, etc.
@@ -386,17 +388,20 @@ literate! {
     exactly one block; a u64 is exactly two blocks. When inspecting binary data,
     you can often see meaningful structure: pointers, sizes, flags.
 
-    - **Context compatibility:** good, but not as clean as base64. The alphabet
-      includes characters like `*`, `?`, `<`, `>`, `[`, `]`, `{`, `}` which have
-      special meaning in shells, globs, and some markup languages.
+    - **Context compatibility:** decent: the alphabet was chosen to avoid the
+      most common string delimiters, so it won't include single- or
+      double-quotes or backslashes `'"\\`, but it does include `$` the dollar
+      sign, `&` ampersand, and other characters that can have special meaning in
+      text in some languages.
     - **Offset stability:** fully stable.
     - **Overhead:** +25% (5 characters per 4 bytes), better than base64's +33%.
     - **Transparency:** excellent for numeric data. Small integers look like
       integers. Zeros are `00000`. Structure in 32-bit aligned data is visible.
     - **Ordering:** NOT preserved. This is the trade-off for numeric
       transparency. Having `0` encode to `0` (instead of the first character
-      in ASCII order) means the alphabet isn't in ascending order, so
-      lexicographic comparison of encoded strings doesn't match byte comparison.
+      in ASCII order) means the alphabet can't be in ascending order (there
+      aren't enough suitable ASCII characters after `0`), so lexicographic
+      comparison of encoded strings doesn't match byte comparison.
 
     This is a deliberate design choice: Z85 prioritizes numeric transparency
     over ordering. A different encoding could make the opposite choice.
