@@ -200,21 +200,92 @@ static BINARY: &[u8; 2] = b"01";
 
     https://datatracker.ietf.org/doc/html/rfc4648#section-5
  */
-    let BASE64_URL: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    let BASE64URL = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 /**
-    WRITE SOMETHING: 4 characters per 3 bytes, doesn't line up with single-byte
-    boundaries, and 3 isn't a power of two so it doesn't line up super-cleanly
-    with any data structures.
+    Base 64 uses 6 bits per character (2⁶ = 64). Since 6 doesn't divide 8
+    evenly, we work on 3-byte (24-bit) blocks, which produce exactly 4
+    characters (4 × 6 = 24 bits).
 
-    XXX: how does it handle partial blocks? That's key to so many things!
-    And is it big endian?
+    The encoding algorithm is fundamentally the same as hex: repeated division
+    and modulo to extract digits. For hex, we use `/ 16` and `% 16`. For base
+    64, we'd use `/ 64` and `% 64`. But here's the key insight: because 64 is a
+    power of 2 (2⁶), these operations are equivalent to bit shifts and masks:
+    `>> 6` is `/ 64`, and `& 0x3F` is `% 64`. This is the same optimization hex
+    uses, just with different constants.
 
-    - **Context compatibility:** very good if using the base64url alphabet. It
-      doesn't require encoding it any standard string contexts. The only minor
-      conflicts are that the minus (`-`) character is sometimes used as a
-      delimiter and may not be valid in some identifier-like contexts.
+    The encoding processes 3 bytes at a time, treating them as a 24-bit big-
+    endian integer, then extracting four 6-bit values from high to low:
+*/
+    fn to_base64(bytes: impl AsRef<[u8]>) -> String {
+        let alphabet = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+        let bytes = bytes.as_ref();
+        let mut result = String::new();
+
+        // Process complete 3-byte blocks
+        let mut i = 0;
+        while i + 3 <= bytes.len() {
+            let b0 = bytes[i] as u32;
+            let b1 = bytes[i + 1] as u32;
+            let b2 = bytes[i + 2] as u32;
+            let block = (b0 << 16) | (b1 << 8) | b2; // 24-bit big-endian
+
+            result.push(alphabet[(block >> 18) as usize & 0x3F] as char);
+            result.push(alphabet[(block >> 12) as usize & 0x3F] as char);
+            result.push(alphabet[(block >>  6) as usize & 0x3F] as char);
+            result.push(alphabet[(block      ) as usize & 0x3F] as char);
+            i += 3;
+        }
+
+        // Handle partial blocks (1 or 2 remaining bytes)
+        let remaining = bytes.len() - i;
+        if remaining == 1 {
+            let b0 = bytes[i] as u32;
+            // Pad with zeros on the right, extract 2 characters
+            result.push(alphabet[(b0 >> 2) as usize] as char);
+            result.push(alphabet[((b0 << 4) & 0x3F) as usize] as char);
+        } else if remaining == 2 {
+            let b0 = bytes[i] as u32;
+            let b1 = bytes[i + 1] as u32;
+            let block = (b0 << 8) | b1; // 16 bits
+            // Pad with zeros on the right, extract 3 characters
+            result.push(alphabet[(block >> 10) as usize & 0x3F] as char);
+            result.push(alphabet[(block >>  4) as usize & 0x3F] as char);
+            result.push(alphabet[((block << 2) & 0x3F) as usize] as char);
+        }
+
+        result
+    }
+
+    // Full 3-byte blocks
+    to_base64([0x00, 0x00, 0x00]).is("AAAA");
+    to_base64([0xFF, 0xFF, 0xFF]).is("____");
+
+    // Visualize the bit grouping: 3 bytes = 24 bits = 4 × 6-bit values
+    to_base64(from_binary("000000 000000 000000 000000".replace(" ", ""))).is("AAAA");
+    to_base64(from_binary("111111 111111 111111 111111".replace(" ", ""))).is("____");
+    to_base64(from_binary("000001 000010 000011 000100".replace(" ", ""))).is("BCDE");
+
+    // Partial blocks
+    to_base64([0x00]).is("AA");           // 1 byte → 2 chars
+    to_base64([0x00, 0x00]).is("AAA");    // 2 bytes → 3 chars
+    to_base64([0xFF]).is("_w");           // 1 byte → 2 chars
+    to_base64([0xFF, 0xFF]).is("__8");    // 2 bytes → 3 chars
+
+/**
+    Notice that 24 bits (3 bytes) doesn't align nicely with common data
+    structures. A 32-bit integer spans 1⅓ blocks; a 64-bit integer spans 2⅔
+    blocks. This makes base64 awkward for inspecting structured binary data.
+
+    - **Context compatibility:** very good with the base64url alphabet. It
+      doesn't require escaping in standard string contexts. The only minor
+      conflict is that `-` is sometimes used as a delimiter.
     - **Offset stability:** fully stable.
-    - **Overhead:** +33%,
+    - **Overhead:** +33% (4 characters per 3 bytes).
+    - **Transparency:** poor. The alphabet doesn't start with digits, so even
+      small integers are unrecognizable. The value 0 encodes as `A`, not `0`.
+    - **Ordering:** NOT preserved. The alphabet starts with `A-Z`, so `A` (0)
+      sorts after digits would. Encoded strings don't sort the same as their
+      underlying bytes.
 
     ## Z85
 
