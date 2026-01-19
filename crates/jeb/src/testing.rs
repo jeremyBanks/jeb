@@ -19,6 +19,7 @@ pub fn reset_code_line_tracking() {
 pub fn print_gap_if_needed(next_line: usize) {
     LAST_CODE_LINE.with(|l| {
         let last = l.get();
+        eprintln!("DEBUG gap: last={}, next={}", last, next_line);
         if last > 0 && next_line > last + 1 {
             // There was a gap - print blank lines (cap at 2)
             let gap = (next_line - last - 1).min(2);
