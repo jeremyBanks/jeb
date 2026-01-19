@@ -2,104 +2,103 @@
 
 ## Summary
 
-`literate.rs` provides an educational walkthrough of binary-to-text encodings (Latin-1 passthrough, binary, hex, base64, Z85), analyzing each along five dimensions: context compatibility, offset stability, overhead, transparency, and ordering. It culminates in Z85 as an encoding that trades ordering preservation for numeric transparency.
+**literate.rs** provides an educational walkthrough of binary-to-text encoding schemes, examining Latin-1 passthrough, binary, hexadecimal, Base64, and Z85, with working implementations and extensive test cases. The document systematically evaluates each encoding against criteria like context compatibility, offset stability, overhead, transparency, and ordering preservation.
 
-`IDEATION.md` proposes an extension to Z85 that allows raw (unencoded) byte sequences to pass through, using escape characters outside Z85's alphabet to signal transitions between encoded and raw modes.
+**IDEATION.md** proposes an extension to Z85 that allows raw (unencoded) byte sequences to pass through while maintaining the standard +25% overhead guarantee, using escape characters outside Z85's alphabet.
 
 ---
 
-## Evaluation 1: Are the ideas clear and understandable?
+## 1. Are the ideas clear and understandable?
 
 ### literate.rs: Yes, very clear
 
-The document is well-structured and genuinely pedagogical. It:
-- Establishes clear evaluation criteria upfront
-- Progresses from simple to complex encodings
-- Uses concrete examples and inline assertions that serve as executable documentation
-- Explains the "why" behind design decisions (e.g., big-endian for human readability)
-- Clearly articulates trade-offs (Z85's numeric transparency vs. ordering preservation)
+The document is well-structured and pedagogically effective:
 
-The code is clean and the literate programming style works well here.
+- The evaluation criteria (context compatibility, offset stability, overhead, transparency, ordering) are defined upfront and applied consistently to each encoding
+- The progression from simple (Latin-1, binary, hex) to complex (Base64, Z85) builds understanding incrementally
+- Binary visualizations alongside test cases make the bit-level operations tangible (e.g., showing `000001 000010 000011 000100` mapping to `BCDE` in Base64)
+- The explanation of why Z85 uses actual division (not bitwise operations) because 85 isn't a power of 2 is a good technical detail
+- The trade-off between numeric transparency and lexicographic ordering preservation is clearly articulated
 
-### IDEATION.md: Mostly clear, but with some gaps
+### IDEATION.md: Mostly clear, but dense
 
-The core idea is understandable: use escape characters to mark sections where bytes pass through unencoded (1:1 character mapping), then pad to maintain Z85's +25% overhead guarantee.
+The proposal is technically detailed and mostly comprehensible, though it requires careful reading:
 
 **Clear aspects:**
-- The motivation (preserve transparency for data that is already text-safe)
-- The escape character selection (outside Z85's alphabet)
-- The position-dependent semantics table
-- The padding rationale to maintain invariants
+- The core principle (maintaining +25% overhead while allowing raw passthrough) is well-stated
+- The table of escape characters and their meanings is helpful
+- The worked examples for the `|` escape encoding are valuable and necessary
 
-**Unclear or underdeveloped aspects:**
-
-1. **Prefix encoding is confusing.** The document says Z85 characters before an escape encode "low-order bits" of prefix bytes, but it is unclear how this interacts with the standard Z85 decoding. Is the decoder expected to first attempt standard Z85 decoding, then reinterpret on seeing an escape? The relationship between the prefix digits and the bytes they represent needs more explicit worked examples.
-
-2. **The `|` escape mechanism is complex.** The backward-looking length encoding is described algorithmically but lacks a concrete worked example. The "subtract 1" step, the continuation flag at 42, and the endianness encoding in the first digit all combine into a dense specification. A numeric example showing how "length 50" would be encoded would help.
-
-3. **Cross-block continuation semantics.** The example in the document shows the state machine, but it is unclear what happens when an escape appears at position 4 (end of block). Can the raw bytes start in the next block entirely?
-
-4. **"Prefix bytes are reinterpreted" for `|`** - this is mentioned but not fully explained. If you have `ABCD|` at the end of a block, are `ABCD` decoded as Z85 first and then somehow reinterpreted as length plus raw prefix? This seems to conflict with the earlier statement that escapes are unambiguous.
+**Areas that could be clearer:**
+- The distinction between "standard escapes" vs the `|` escape (reinterpretation) is crucial but buried in the "Key Clarifications" section near the end. This should appear earlier.
+- The base-42 encoding with continuation flags is the most complex part. The explanation is adequate but dense. A visual diagram showing the bit layout would help.
+- The phrase "prefix bytes" is used to mean different things in different contexts (encoded prefix vs raw prefix for `|`), which can be confusing.
+- The cross-block continuation example (Block 1: `AB,cd`, Block 2: `efGHI`) is helpful but the subsequent statement "GHI = 3-char partial block → 2 encoded bytes" seems inconsistent with being in a continuation state (why would we have a partial block mid-stream?).
 
 ---
 
-## Evaluation 2: Is the idea good and does it make sense?
+## 2. Is the idea good and does it make sense?
 
-### The core idea: Yes, it makes sense
+### literate.rs evaluation criteria: Sound and useful
 
-The premise is sound: if you are encoding data that contains stretches of "safe" bytes (ASCII text, for example), encoding them through Z85 loses transparency and adds overhead. A raw passthrough mode that maintains overall overhead guarantees is a reasonable extension.
+The evaluation framework is sensible. The observation that Z85's numeric transparency (small integers looking like integers) comes at the cost of ordering preservation is an important insight. The document correctly identifies that different use cases favor different trade-offs.
 
-The invariants are well-chosen:
-- Fixed block boundaries (simplifies parsing, enables random access)
-- No cascading changes (crucial for diff-friendliness)
-- Overhead ceiling maintained (predictable sizing)
+### IDEATION.md proposal: Clever but complex
 
-### Concerns and questions
+**Strengths:**
 
-1. **Complexity vs. benefit ratio.** The extension adds significant complexity:
-   - Six escape characters with position-dependent meanings
-   - Endianness variants for prefix interpretation
-   - A variable-length backward-looking encoding for long sequences
-   - Cross-block state tracking
+1. **Overhead invariant is maintained.** The key constraint that raw sequences don't break the +25% guarantee (via padding) is essential for predictability and is correctly identified.
 
-   This is a lot of machinery. The benefit (raw passthrough for ASCII sequences) may not justify this complexity for many use cases. The document would benefit from concrete examples showing where this encoding would be used and how much it helps in practice.
+2. **No cascading effects.** The guarantee that content following a raw sequence is unaffected is important for random access and stream processing.
 
-2. **The 33% coverage for random data is low.** If the data being encoded is truly random (or encrypted), only 33% of single-byte prefixes can use the short escape forms. The extension primarily benefits data with structure (zeros, ASCII text), which is a reasonable target but should be stated more explicitly as the design constraint.
+3. **Endianness flexibility.** Supporting both BE and LE prefix interpretations is practical for handling different data formats (network order vs x86 integers).
 
-3. **Decoder complexity and performance.** The decoder must:
-   - Buffer up to a full block to detect `|`
-   - Track raw-bytes-remaining state across blocks
-   - Handle backward-looking length parsing
+4. **The `|` escape for long sequences is ingenious.** Reinterpreting the length-encoding characters as part of the raw output avoids wasting space on length metadata.
 
-   This is more complex than standard Z85. For streaming scenarios, the buffering requirement might be problematic.
+5. **The escape character choices are reasonable.** Using characters outside Z85's alphabet ensures unambiguous parsing.
 
-4. **The `|` mechanism feels over-engineered.** The backward-looking variable-length encoding is clever but intricate. An alternative design might use a simpler length-prefixed scheme. The current design optimizes for a very specific scenario (long raw sequences where you want minimal escape overhead), but the complexity cost seems high.
+**Concerns:**
 
-5. **Missing: When should an encoder choose raw passthrough?** The document specifies encoder strategy as "maximize raw block length" but does not explain the heuristics for when to start a raw sequence in the first place. Presumably this requires analyzing upcoming bytes to determine if they are all "safe" for raw passthrough, but what defines "safe"?
+1. **Complexity vs. benefit ratio.** The proposal introduces significant complexity (6 escape characters, position-dependent meanings, two endianness modes, base-42 encoding with continuation flags, special cases for position 4, infinite-length mode). The benefit is raw passthrough for specific data patterns. Is this worth it?
 
-6. **Character safety concerns.** The document notes that backtick is problematic in some contexts. If the extension's escape characters introduce context compatibility issues, this partially undermines one of Z85's advantages. The escape character set could use more justification for why these specific characters were chosen.
+   For most use cases where raw passthrough matters, you'd likely just not encode that portion at all (use a framing protocol that switches modes). The value proposition seems to be "seamless embedding of raw regions in a Z85 stream without external framing"—this is a real use case but perhaps niche.
 
-### Overall assessment
+2. **Encoder complexity.** The encoder needs lookahead buffering and must make decisions about which escape form yields the longest raw passthrough. This is non-trivial to implement efficiently.
 
-The idea is **good in principle but over-complicated in specification**. The core insight - that a binary-to-text encoding can benefit from selective raw passthrough - is valid. However, the current design tries to optimize for many edge cases (prefix byte coverage, endianness, variable-length long sequences) simultaneously, resulting in a specification that would be challenging to implement correctly.
+3. **Coverage rates are low for random data.** The document acknowledges that for uniformly random data, prefix coverage drops quickly (33% for 1 byte, 11% for 2 bytes, 3.7% for 3 bytes). The scheme optimizes for zero-heavy data, which is a reasonable assumption for structured binary (headers, padding, null-terminated strings), but limits generality.
 
-A simpler variant might be:
-- Single escape character marking "N raw bytes follow"
-- Fixed-width length encoding
-- Accept slightly higher overhead in exchange for simpler parsing
+4. **Position 4 inconsistency.** Standard escapes can't appear at position 4 (need at least one following raw byte), but `|` can. This asymmetry adds a special case.
 
-The current design feels like it was optimized for theoretical compactness rather than practical implementability.
+5. **Decoder state machine.** The decoder must track `raw_bytes_remaining` across block boundaries, scan for escapes before attempting Z85 decode, and handle the base-42 backward-looking length. This is more complex than standard Z85 decoding.
+
+6. **The base-42 continuation scheme is clever but subtle.** Using values 0-41 for "final digit" and 42-83 for "more digits follow" is a good design, but the special case for non-block-aligned positions (splitting into 0-20 for LE, 21-41 for BE) adds another layer.
+
+**Does it make sense overall?**
+
+Yes, the scheme is internally consistent and mathematically sound. The invariants (overhead preservation, no cascading changes, unambiguous escapes) are maintained. The design choices reflect genuine trade-offs.
+
+However, it feels over-engineered for most use cases. A simpler scheme might be:
+- Single escape character to enter "raw mode"
+- Length-prefixed raw sequences (standard varint encoding)
+- Padding to maintain alignment
+
+The current proposal tries to squeeze every last bit of efficiency out of the prefix encoding, at the cost of complexity.
 
 ---
 
-## Recommendations
+## Conclusion
 
-1. **Add worked examples.** The IDEATION document would benefit greatly from 3-4 complete encode/decode examples showing real byte sequences through the full process.
+**literate.rs** is an excellent educational document that clearly explains binary encoding schemes and their trade-offs.
 
-2. **Clarify the prefix reinterpretation.** The relationship between Z85 digits before an escape and the bytes they represent needs explicit specification with examples.
+**IDEATION.md** describes a technically sound but complex extension to Z85. The ideas are understandable with effort, and the design is internally consistent. Whether the complexity is justified depends on the specific use case. For applications where:
+- Raw data frequently occurs in small chunks mixed with encoded data
+- Zero-heavy prefixes are common
+- Stream integrity (no cascading changes) is required
+- External framing is unavailable or undesirable
 
-3. **Consider simplification.** The complexity of the `|` mechanism and the endianness variants may not be worth the space savings. A prototype implementation would help evaluate this.
+...the scheme makes sense. For simpler use cases, a less sophisticated approach might be preferable.
 
-4. **Define "safe for raw passthrough."** The encoder needs clear rules for when to emit raw bytes vs. encoded bytes.
-
-5. **Benchmark real-world data.** The design makes assumptions about data patterns (zero-heavy, ASCII-containing). Testing against actual target data would validate these assumptions.
+**Recommendation:** If proceeding with implementation, consider:
+1. Starting with a subset (perhaps just the position-0 escapes without endianness variants)
+2. Adding complexity only as specific use cases demand it
+3. Providing clear documentation of which escape forms are useful for which data patterns
