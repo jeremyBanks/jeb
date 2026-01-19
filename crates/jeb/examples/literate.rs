@@ -394,6 +394,7 @@ literate! {
     to_z85([0x00, 0x00]).is("000");       // 2 bytes → 3 chars
     to_z85([0x00, 0x00, 0x00]).is("0000"); // 3 bytes → 4 chars
 
+    to_z85(b"test").is("By/Jn");
 
     to_z85(from_binary("00000000"                        )).is("00"   );
     to_z85(from_binary("00000000000000000000000000000000")).is("00000");
