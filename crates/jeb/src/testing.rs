@@ -19,7 +19,6 @@ pub fn reset_code_line_tracking() {
 pub fn print_gap_if_needed(next_line: usize) {
     LAST_CODE_LINE.with(|l| {
         let last = l.get();
-        eprintln!("DEBUG gap: last={}, next={}", last, next_line);
         if last > 0 && next_line > last + 1 {
             // There was a gap - print blank lines (cap at 2)
             let gap = (next_line - last - 1).min(2);
@@ -112,7 +111,8 @@ pub fn print_single_doc_group(doc_strings: &[&str]) {
 }
 
 pub fn print_code(code: &str) {
-    // Normalize indentation: strip common leading whitespace, re-indent with 4 spaces
+    // Normalize indentation: strip common leading whitespace, re-indent with 4
+    // spaces
     let lines: Vec<&str> = code.lines().collect();
 
     // Find minimum leading whitespace among non-empty lines
@@ -229,8 +229,9 @@ macro_rules! literate_static_const {
 }
 
 /// Internal macro for TT-munching statements until we hit a semicolon.
-/// When we find a semicolon, we stringify THAT statement and emit it, then continue.
-/// This captures verbatim at the right time - before further macro processing.
+/// When we find a semicolon, we stringify THAT statement and emit it, then
+/// continue. This captures verbatim at the right time - before further macro
+/// processing.
 #[macro_export]
 macro_rules! literate_stmt {
     // Hit a semicolon - stringify the accumulated tokens now (before more processing)
@@ -289,7 +290,7 @@ macro_rules! literate_inner {
 macro_rules! literate {
     ($($body:tt)*) => {
         pub fn main() {
-            $crate::literate_inner!($($body)*);
+            $($body)*;
         }
     };
 }

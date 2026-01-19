@@ -114,11 +114,6 @@ fn compute_whitespace_relative(from: LineColumn, to: LineColumn, base_column: us
         let mut ws = "\n".repeat(newlines);
         // Use column relative to base, not absolute
         let relative_indent = to.column.saturating_sub(base_column);
-        // DEBUG
-        if to.line == 150 {
-            eprintln!("DEBUG whitespace: from {:?} to {:?}, base={}, relative_indent={}",
-                from, to, base_column, relative_indent);
-        }
         ws.push_str(&" ".repeat(relative_indent));
         ws
     }
