@@ -170,10 +170,24 @@ static BINARY: &[u8; 2] = b"01";
     - **Transparency:** pretty good for numeric/binary data. Zeros are `00` and
       it's not that difficult to interpret positive integers. Text is of course
       unrecognizable.
+    - **Ordering:** preserved. The hex alphabet is in ascending order (`0-9`,
+      then `A-F`), so lexicographic comparison of hex strings matches numeric
+      comparison of the underlying bytes.
 
-    REWORD: other encodings don't line up with byte boundaries. How do they deal
-    with partial blocks? It's generalizable! But it does result in output
-    sometimes have some wasted bits.
+    ## Beyond byte boundaries
+
+    Hexadecimal has a special property: 4 bits per character divides evenly into
+    8 bits per byte. This means each byte maps to exactly two characters, with
+    no leftover bits and no need to group multiple bytes together.
+
+    Other bases don't divide so cleanly. Base 64 uses 6 bits per character, and
+    base 85 uses log₂(85) ≈ 6.4 bits per character. Since these don't divide 8
+    evenly, these encodings must work on multi-byte blocks. Base 64 works on
+    3-byte (24-bit) blocks, and base 85 works on 4-byte (32-bit) blocks.
+
+    This raises a question: what happens when the input length isn't a multiple
+    of the block size? Different encodings handle this differently, and we'll
+    see the details as we go.
 */
 
 /**
