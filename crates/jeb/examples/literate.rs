@@ -71,9 +71,9 @@ literate! {
 
     ## Binary
 
-    REWORD: Pure binary, where each byte is spit into eight `1` or `0`
-    characters, is not suitable as a real production data format, but it can
-    sometimes be useful for human input and output — such as in this document.
+    Binary encoding—where each byte becomes eight `0` or `1` characters—isn't
+    practical for production, but it's useful as a pedagogical tool and for
+    human input/output in contexts like this document.
 */
 static BINARY: &[u8; 2] = b"01";
 /**
