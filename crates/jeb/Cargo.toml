@@ -54,6 +54,7 @@ tokio-util = { workspace = true, features = ["codec", "io"] }
 tracing.workspace = true
 bat.workspace = true
 stringify_verbatim.workspace = true
+crabtime = "1.1.4"
 
 [features]
 default = ["bin", "fs", "stdio"]

@@ -1,0 +1,17 @@
+[package]
+name = "ideated-encoding"
+publish = false
+description = "Extended Z85 encoding with raw passthrough support"
+keywords = []
+categories = []
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
