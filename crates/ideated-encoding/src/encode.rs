@@ -164,15 +164,15 @@ impl Encoder {
 
         // Check position 0 (no prefix)
         for &(escape, raw_count) in &escapes_pos_0 {
-            if self.buffer.len() >= raw_count {
-                if self.all_safe_for_raw(&self.buffer[..raw_count]) {
-                    return Some(EncodingStrategy::RawPassthrough {
-                        prefix_bytes: 0,
-                        escape,
-                        raw_bytes: raw_count,
-                        is_little_endian: true,
-                    });
-                }
+            if self.buffer.len() >= raw_count
+                && self.all_safe_for_raw(&self.buffer[..raw_count])
+            {
+                return Some(EncodingStrategy::RawPassthrough {
+                    prefix_bytes: 0,
+                    escape,
+                    raw_bytes: raw_count,
+                    is_little_endian: true,
+                });
             }
         }
 
@@ -208,15 +208,15 @@ impl Encoder {
                 }
 
                 let total_bytes = prefix_len + raw_count;
-                if self.buffer.len() >= total_bytes {
-                    if self.all_safe_for_raw(&self.buffer[prefix_len..prefix_len + raw_count]) {
-                        return Some(EncodingStrategy::RawPassthrough {
-                            prefix_bytes: prefix_len,
-                            escape,
-                            raw_bytes: raw_count,
-                            is_little_endian: is_le,
-                        });
-                    }
+                if self.buffer.len() >= total_bytes
+                    && self.all_safe_for_raw(&self.buffer[prefix_len..prefix_len + raw_count])
+                {
+                    return Some(EncodingStrategy::RawPassthrough {
+                        prefix_bytes: prefix_len,
+                        escape,
+                        raw_bytes: raw_count,
+                        is_little_endian: is_le,
+                    });
                 }
             }
         }
@@ -308,7 +308,7 @@ impl Encoder {
 
             // Output only the last c characters (low-order positions)
             // For b bytes, we need ceil(b * 5 / 4) characters
-            let char_count = (byte_count * 5 + 3) / 4;
+            let char_count = (byte_count * 5).div_ceil(4);
             self.output.extend_from_slice(&encoded[5 - char_count..]);
             self.buffer.drain(..byte_count);
             self.block_position = (self.block_position + char_count) % 5;
@@ -420,7 +420,7 @@ impl Encoder {
         // We produced: length_chars + 1 + N chars.
         // The difference is the padding needed.
 
-        let standard_chars = (raw_count * 5 + 3) / 4;
+        let standard_chars = (raw_count * 5).div_ceil(4);
         let prefix_overhead = length_chars.len() + 1;
         let total_chars = prefix_overhead + raw_count;
 

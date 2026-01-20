@@ -93,10 +93,10 @@ impl Decoder {
                 self.raw_bytes_remaining.min(5)
             };
 
-            for i in 0..to_consume {
+            for &byte in block.iter().take(to_consume) {
                 // Skip padding characters in raw mode
-                if block[i] != PADDING_CHAR {
-                    self.output.push(block[i]);
+                if byte != PADDING_CHAR {
+                    self.output.push(byte);
                 }
             }
 
