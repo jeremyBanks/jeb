@@ -21,6 +21,24 @@ We use 6 characters outside Z85's alphabet:
 
 These characters have **position-dependent meanings** within 5-character blocks.
 
+## Two Categories of Escapes
+
+The escape characters fall into two fundamentally different categories:
+
+### Standard Escapes (`,` `` ` `` `;` `~` `_`)
+These signal a fixed number of raw bytes and optionally encode a numeric **prefix value** from the bytes before the escape:
+- The decoder scans for these FIRST, before any Z85 decoding
+- Characters before the escape are decoded as base-85 integers (separate from standard Z85 block decoding)
+- These encoded values become actual bytes in the output
+- No "reinterpretation" occurs - it's a different decoding path
+
+### The `|` Escape (different design)
+This signals a variable-length raw sequence using **backward-looking length encoding**:
+- Characters before `|` serve a dual purpose (reinterpretation)
+- Their Z85 digit VALUES encode the length (base-42 encoding)
+- Their BYTE representations also become part of the raw output
+- Same characters interpreted as both metadata AND content
+
 ## Position-Dependent Escape Meanings
 
 ### At Beginning of Block (Position 0)
@@ -58,13 +76,15 @@ The `|` character works at **any position (0-4)** and signals a **backward-looki
 1. The decoder buffers up to one block (5 chars) to detect `|`
 2. When `|` is encountered, read backwards up to 4 Z85 digits before it
 3. These digits encode the length in a variable-length base-42 encoding (see below)
-4. The digits that encoded the length are **reinterpreted as part of the raw sequence prefix** (not as encoded data)
+4. After decoding the length, output those same characters as literal bytes (the dual-purpose design explained above)
 
-## Prefix Encoding
+## Encoded Prefix Values (Standard Escapes Only)
 
-### Standard Prefixes (3-7 byte escapes)
+### How Encoded Prefixes Work
 
-The Z85 characters before the escape encode the **low-order bits** of the prefix bytes, with high-order bits implicitly zero:
+For standard escapes (`,` `` ` `` `;` `~` `_`), the Z85 characters before the escape encode a **numeric value** that becomes output bytes.
+
+The encoding uses **low-order bits**, with high-order bits implicitly zero:
 
 - 1 char: byte 0 = digit value (0-84)
 - 2 chars: u16 BE or LE < 7,225 (85²)
@@ -104,18 +124,26 @@ The stream is divided into **fixed 5-char blocks**. Block boundaries never chang
 
 When an escape indicates more raw bytes than remain in the current block, the raw bytes continue into the next block. The decoder tracks "raw bytes remaining" as state.
 
-Example:
+Example with 6 total bytes of data:
 ```
+Input data: 6 bytes total
+  Bytes 0-1: encoded as prefix (value < 7,225 for LE)
+  Bytes 2-5: raw passthrough (4 bytes via , escape)
+
 Block 1 (chars 0-4): AB,cd
-  - Decode AB as LE u16 → 2 prefix bytes (must be < 7,225)
+  - Scan for escape, find , at position 2
+  - Decode AB as LE u16 → outputs bytes 0-1
   - , signals: 4 raw bytes follow
-  - cd = 2 raw bytes
-  - State: 2 raw bytes remaining
+  - cd = first 2 raw bytes (bytes 2-3)
+  - State: 2 raw bytes remaining (bytes 4-5)
 
 Block 2 (chars 5-9): efGHI
-  - ef = 2 raw bytes (satisfies remaining count)
-  - GHI = 3-char partial block → 2 encoded bytes
+  - Still in raw continuation state
+  - ef = next 2 raw bytes (bytes 4-5)
   - State: 0 raw bytes remaining
+  - Now resume normal decoding
+  - GHI = standard 3-char partial block → outputs 2 more bytes
+  - (This is new data, unrelated to the previous 6 bytes)
 ```
 
 ## Partial Block Padding
@@ -143,13 +171,41 @@ The `|` escape uses a **backward-looking base-42 encoding** for the length.
 
 ### Algorithm
 
+The encoding uses a variable-length base-42 scheme with continuation flags:
+
+**Value encoding for each Z85 digit:**
+```
+Z85 digit value (0-84)
+       ↓
+   subtract 1
+       ↓
+   value (0-83)
+       ↓
+   ┌───┴───────────────┐
+   │                   │
+ < 42               ≥ 42
+   │                   │
+STOP             CONTINUE
+value % 42       value % 42
+(0-41)           (0-41)
+   │                   │
+   └───────┬───────────┘
+           ↓
+    length contribution
+    (accumulate in base-42)
+```
+
+**Decoding steps:**
 1. Read backwards from `|` up to 4 Z85 digits (stop at block boundary)
 2. For each digit d (read right-to-left):
-   - Subtract 1: `value = d - 1` (range 0-83 for digit 0-84)
+   - Subtract 1: `value = d - 1` (range 0-83)
    - If `value >= 42`: continuation flag is set, more digits follow
    - Extract length contribution: `value % 42` (range 0-41)
-   - Accumulate in base-42: multiply previous total by 42, add contribution
-3. Special case for first digit when not block-aligned: use only 21 values (0-20) for length, remaining bit encodes endianness (LE if < 21, BE if >= 21 after halving)
+   - Accumulate in base-42: `total = total * 42 + contribution`
+3. Special case for leftmost digit when not block-aligned:
+   - Values 0-20 → little-endian, contribution = value
+   - Values 21-41 → big-endian, contribution = value - 21
+   - (This halves the range to encode endianness in the spare bit)
 
 ### Worked Example: Encoding Length 50
 
@@ -184,15 +240,15 @@ The rightmost digit (immediately before `|`) is processed first during decoding:
 
 ### Worked Example: Encoding Length 10 at Non-Block-Aligned Position
 
-If `|` appears at position 3 (not block-aligned), we have prefix bytes and need to encode endianness.
+If `|` appears at position 3 (not block-aligned), we have length-encoding characters at positions 0-2.
 
 Physical layout: `A B (Z85[11]) |` (positions 0,1,2,3)
 
 Length 10, little-endian:
-- 10 < 42 (single base-42 digit)
-- For non-block-aligned first digit, split value to encode endianness:
-  - Values 0-20 → little-endian
-  - Values 21-41 → big-endian (after halving: `(value-21)` gives length contribution)
+- 10 < 42 (single base-42 digit needed)
+- For non-block-aligned leftmost digit, split value to encode endianness:
+  - Values 0-20 → little-endian, contribution = value
+  - Values 21-41 → big-endian, contribution = value - 21
 - For LE with length 10: use 10 directly
 - Add encoding offset: `10 + 1 = 11` → Z85[11]
 
@@ -201,12 +257,12 @@ Length 10, little-endian:
 **Decoding:**
 1. See `|` at position 3
 2. Read backward: find Z85[11] at position 2, B at position 1, A at position 0
-3. Decode Z85[11]: `11-1=10` → `10<42` (no continuation) → `10<21` (LE)
+3. Decode Z85[11]: `11-1=10` → `10<42` (no continuation, stop) → `10<21` (LE)
 4. Length = 10 bytes, endianness = LE
 5. Output literal bytes: A, B, Z85[11] as first 3 of the 10 raw bytes
 6. Read next 7 bytes as raw
 
-Note: The prefix bytes A and B are reinterpreted as part of the raw output, not as an encoded prefix value in this case.
+Note: For `|`, ALL characters before it (A, B, Z85[11]) become literal output bytes after their digit values are used for length decoding. They are NOT decoded as an encoded numeric value like with standard escapes.
 
 ### Example: `|` at Position 4
 
@@ -262,36 +318,23 @@ for each 5-char block:
             decode 5 chars → 4 bytes
 ```
 
-### Key Clarifications
+### Concrete Examples of Each Escape Category
 
-**No reinterpretation in standard escapes (`,` `` ` `` `;` `~` `_`):**
-The decoder scans for escape characters FIRST, before any Z85 decoding. When an escape is found:
-- Characters before the escape are decoded as base-85 integers (not as a standard Z85 block)
-- This is a different decoding path, not a reinterpretation
-
-Example: `AB,cd`
+**Standard escape example: `AB,cd`**
 - Scan block, find `,` at position 2
 - Decode `AB` as base-85 integer: `A=10, B=11` → `10*85 + 11 = 861` → u16 little-endian bytes
 - `,` signals 4 raw bytes follow
 - `cd` provides 2 raw bytes
 - 2 raw bytes continue in next block
 
-**The `|` escape IS reinterpretation:**
-Unlike other escapes, the characters before `|` serve a dual purpose:
-1. Their Z85 digit VALUES encode the length (base-42 encoding)
-2. Their BYTE representations become part of the raw output
-
-Example: `ABC|` (simple case, not block-end)
-- Read `ABC` backward, decode as base-42 to get length N
-- Then output the literal bytes `A`, `B`, `C` as part of the N raw bytes
+**`|` escape example: `ABC|`**
+- Read `ABC` backward, decode digit VALUES as base-42 to get length N
+- Then output the literal BYTES `A`, `B`, `C` as first 3 of the N raw bytes
 - The remaining (N-3) raw bytes follow in the stream
 
-This is why it's called "reinterpretation" - the same characters are interpreted as both length metadata AND content.
-
-**Position 4:**
-For standard escapes (`,` `` ` `` `;` `~` `_`), position 4 is invalid because these escapes require at least one raw byte following in the current block.
-
-However, `|` CAN appear at position 4 since it looks backward for length encoding and doesn't require following bytes in the same block.
+**Position 4 restriction:**
+- Standard escapes (`,` `` ` `` `;` `~` `_`): position 4 is invalid (need ≥1 raw byte in current block)
+- `|` escape: position 4 is valid (looks backward, raw bytes start in next block)
 
 ## Invariants
 
