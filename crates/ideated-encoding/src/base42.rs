@@ -119,10 +119,10 @@ pub fn encode_length(length: usize, position: u8, endianness: Endianness) -> Vec
         let is_leftmost = i == 0;
         let is_rightmost = i == num_digits - 1;
 
-        // Continuation flag: set if there are more digits to the left
-        // But we're processing left-to-right, so rightmost digits need the flag
-        // if they're not the leftmost
-        let has_continuation = !is_rightmost;
+        // Continuation flag: set if there are more digits to the left (from decoder's perspective)
+        // The decoder reads right-to-left, so continuation=1 means "keep reading left"
+        // Therefore: leftmost digit has continuation=0, all others have continuation=1
+        let has_continuation = !is_leftmost;
 
         // For non-block-aligned leftmost digit, encode endianness
         let digit_value = if is_leftmost && !block_aligned && num_digits == available_chars {
@@ -170,10 +170,11 @@ pub fn decode_length(digits: &[u8], block_aligned: bool) -> Result<(usize, Endia
     }
 
     let mut total: usize = 0;
+    let mut power: usize = 1; // 42^0 = 1, starts at low-order digit
     let mut endianness = Endianness::Little;
     let num_digits = digits.len();
 
-    // Process right-to-left (rightmost digit is closest to |)
+    // Process right-to-left (rightmost/low-order digit first, closest to |)
     for (i, &c) in digits.iter().rev().enumerate() {
         let z85_value = z85_digit_value(c).ok_or(DecodeError::InvalidLengthDigit {
             position: num_digits - 1 - i,
@@ -211,8 +212,9 @@ pub fn decode_length(digits: &[u8], block_aligned: bool) -> Result<(usize, Endia
             contribution
         };
 
-        // Accumulate in base-42
-        total = total * 42 + actual_contribution as usize;
+        // Accumulate in base-42 (low-order first, so multiply by power)
+        total += actual_contribution as usize * power;
+        power *= 42;
 
         // If no continuation and not at end, remaining digits are padding
         if !has_continuation && !is_leftmost {
@@ -259,17 +261,40 @@ mod tests {
     #[test]
     fn test_encode_decode_roundtrip() {
         for length in [0, 8, 10, 42, 50, 100, 1000, 10000, MAX_LENGTH] {
-            for position in [2, 3, 4] {
-                // Only test positions where we have enough chars
-                if position as usize >= num_base42_digits(length) {
-                    let encoded = encode_length(length, position, Endianness::Little);
-                    let block_aligned = position == 4;
-                    let (decoded_length, _) = decode_length(&encoded, block_aligned).unwrap();
-                    assert_eq!(
-                        decoded_length, length,
-                        "roundtrip failed for length {} at position {}",
-                        length, position
-                    );
+            // Test block-aligned positions (position 4)
+            let num_digits = num_base42_digits(length);
+            if num_digits <= 4 {
+                let encoded = encode_length(length, 4, Endianness::Little);
+                let (decoded_length, _) = decode_length(&encoded, true).unwrap();
+                assert_eq!(
+                    decoded_length, length,
+                    "roundtrip failed for length {} at position 4 (block-aligned)",
+                    length
+                );
+            }
+
+            // Test non-block-aligned only when high-order digit fits in LE range (0-20)
+            let high_order_digit = if length == 0 {
+                0
+            } else {
+                let mut n = length;
+                while n >= 42 {
+                    n /= 42;
+                }
+                n
+            };
+
+            if high_order_digit <= 20 {
+                for position in [2, 3] {
+                    if position as usize >= num_digits {
+                        let encoded = encode_length(length, position, Endianness::Little);
+                        let (decoded_length, _) = decode_length(&encoded, false).unwrap();
+                        assert_eq!(
+                            decoded_length, length,
+                            "roundtrip failed for length {} at position {} (non-block-aligned)",
+                            length, position
+                        );
+                    }
                 }
             }
         }

@@ -10,6 +10,35 @@ use crate::alphabet::{
 };
 use crate::base42::{encode_length, Endianness};
 
+/// Encoding strategy determined by buffer analysis.
+enum EncodingStrategy {
+    /// Use standard Z85 encoding.
+    StandardZ85 {
+        /// Number of bytes to encode (1-4).
+        bytes: usize,
+    },
+    /// Use raw passthrough with a standard escape.
+    RawPassthrough {
+        /// Number of prefix bytes to encode (0-3).
+        prefix_bytes: usize,
+        /// The escape character to use.
+        escape: u8,
+        /// Number of raw bytes following the escape.
+        raw_bytes: usize,
+        /// Whether to use little-endian for prefix encoding.
+        is_little_endian: bool,
+    },
+    /// Use the pipe escape for 8+ bytes.
+    PipeRaw {
+        /// Total length of raw bytes (0 for infinite).
+        length: usize,
+        /// Position of | within the block.
+        pipe_position: u8,
+        /// Endianness hint.
+        is_little_endian: bool,
+    },
+}
+
 /// Default lookahead buffer size.
 const DEFAULT_LOOKAHEAD: usize = 64;
 
