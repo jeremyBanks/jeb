@@ -131,18 +131,7 @@ impl Encoder {
     }
 
     /// Analyze the buffer to determine the best encoding strategy.
-    fn analyze_buffer(&self, _is_final: bool) -> EncodingStrategy {
-        // For now, always use standard Z85 encoding
-        // TODO: Re-enable raw passthrough after fixing decoder issues
-        let bytes_to_encode = self.buffer.len().min(4);
-        EncodingStrategy::StandardZ85 {
-            bytes: bytes_to_encode,
-        }
-    }
-
-    /// Analyze the buffer to determine the best encoding strategy (with raw passthrough).
-    #[allow(dead_code)]
-    fn analyze_buffer_with_raw(&self, is_final: bool) -> EncodingStrategy {
+    fn analyze_buffer(&self, is_final: bool) -> EncodingStrategy {
         // First, check if standard escapes would be beneficial
         if let Some(strategy) = self.try_standard_escape() {
             return strategy;
@@ -358,24 +347,14 @@ impl Encoder {
             .extend_from_slice(&self.buffer[raw_start..raw_end]);
         self.block_position = (self.block_position + raw_bytes) % 5;
 
-        // Calculate total bytes used
-        let total_bytes = prefix_bytes + raw_bytes;
-
-        // Calculate padding needed
-        // Standard encoding would use: ceil(total_bytes * 5 / 4) chars
-        // We used: prefix_bytes (chars) + 1 (escape) + raw_bytes (chars)
-        let chars_used = prefix_bytes + 1 + raw_bytes;
-        let standard_chars = (total_bytes * 5 + 3) / 4;
-
-        // Padding to maintain alignment
-        if chars_used < standard_chars {
-            let padding = standard_chars - chars_used;
-            for _ in 0..padding {
-                self.output.push(PADDING_CHAR);
-                self.block_position = (self.block_position + 1) % 5;
-            }
+        // Pad to complete the current block
+        // This ensures block alignment is maintained for subsequent content
+        while self.block_position != 0 {
+            self.output.push(PADDING_CHAR);
+            self.block_position = (self.block_position + 1) % 5;
         }
 
+        let total_bytes = prefix_bytes + raw_bytes;
         self.buffer.drain(..total_bytes);
     }
 
