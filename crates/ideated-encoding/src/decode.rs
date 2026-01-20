@@ -158,7 +158,7 @@ impl Decoder {
         pos: usize,
         escape: u8,
     ) -> Result<(), DecodeError> {
-        let (raw_bytes, is_little_endian) = if pos == 0 {
+        let (raw_bytes, _is_little_endian) = if pos == 0 {
             // At position 0, no prefix
             let raw = escape_raw_bytes_at_position_0(escape)
                 .ok_or(DecodeError::InvalidEscapePosition {
@@ -409,7 +409,7 @@ mod tests {
     fn test_decode_escape_at_position_0() {
         // ` at position 0 = 3 raw bytes follow
         // Block: `abc. (backtick + 3 raw bytes + padding)
-        let mut input = vec![ESCAPE_BACKTICK, b'a', b'b', b'c', PADDING_CHAR];
+        let input = vec![ESCAPE_BACKTICK, b'a', b'b', b'c', PADDING_CHAR];
         let decoded = decode(&input).unwrap();
         assert_eq!(decoded, b"abc");
     }

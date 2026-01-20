@@ -404,7 +404,7 @@ impl Encoder {
 
         // Determine how many length digits we need
         let length_chars = encode_length(length, 1, endianness);
-        let pipe_position = length_chars.len();
+        let _pipe_position = length_chars.len();
 
         // Emit length digits
         self.output.extend_from_slice(&length_chars);
@@ -427,7 +427,7 @@ impl Encoder {
         // Calculate padding
         // Total chars used = length_chars + 1 (pipe) + raw_count
         // Standard would use ceil(raw_count * 5 / 4)
-        let chars_used = length_chars.len() + 1 + raw_count;
+        let _chars_used = length_chars.len() + 1 + raw_count;
 
         // We need to pad to maintain alignment relative to what standard encoding
         // would have produced for the same number of bytes

@@ -194,20 +194,22 @@ mod tests {
 
     #[test]
     fn test_z85_known_value() {
-        // From ZeroMQ spec: HelloWorld -> xK#0@zY<mym
-        // But that's for "HelloWorld" which is 10 bytes = not aligned
-        // Let's use a simpler test: 0x00000000 -> "00000"
-        let zeros = [0u8; 4];
-        let encoded = encode_z85_block(&zeros);
-        assert_eq!(&encoded, b"00000");
+        // From ZeroMQ RFC 32 spec test vector:
+        // Bytes: 0x86 0x4F 0xD2 0x6F encodes to "Hello" (first 4 bytes)
+        // Bytes: 0xB5 0x59 0xF7 0x5B encodes to "World" (second 4 bytes)
+        let block1 = [0x86, 0x4F, 0xD2, 0x6F];
+        let encoded1 = encode_z85_block(&block1);
+        assert_eq!(&encoded1, b"Hello");
 
-        // And max value: 0xFFFFFFFF -> "#####" (84 in all positions)
-        let max = [0xFFu8; 4];
-        let encoded = encode_z85_block(&max);
-        // 0xFFFFFFFF = 4294967295
-        // 4294967295 / 85^4 = 82 remainder ...
-        // Actually let's just verify roundtrip
-        let decoded = decode_z85_block(&encoded).unwrap();
-        assert_eq!(max, decoded);
+        let block2 = [0xB5, 0x59, 0xF7, 0x5B];
+        let encoded2 = encode_z85_block(&block2);
+        assert_eq!(&encoded2, b"World");
+
+        // Verify decoding
+        let decoded1 = decode_z85_block(b"Hello").unwrap();
+        assert_eq!(decoded1, block1);
+
+        let decoded2 = decode_z85_block(b"World").unwrap();
+        assert_eq!(decoded2, block2);
     }
 }

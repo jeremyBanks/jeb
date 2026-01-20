@@ -117,7 +117,6 @@ pub fn encode_length(length: usize, position: u8, endianness: Endianness) -> Vec
     // Process from highest-order (leftmost) to lowest-order (rightmost)
     for (i, &contribution) in digits_low_first.iter().rev().enumerate() {
         let is_leftmost = i == 0;
-        let is_rightmost = i == num_digits - 1;
 
         // Continuation flag: set if there are more digits to the left (from decoder's perspective)
         // The decoder reads right-to-left, so continuation=1 means "keep reading left"
