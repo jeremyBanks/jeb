@@ -6,6 +6,7 @@ members = ["crates/*"]
 version = "0.0.0-dev-2025-12-26.7705"
 repository = "https://github.com/jeremyBanks/jeb"
 description = "(part of https://crates.io/crates/jeb)"
+publish = false
 keywords = []
 categories = []
 edition = "2024"

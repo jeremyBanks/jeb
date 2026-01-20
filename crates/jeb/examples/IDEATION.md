@@ -34,10 +34,9 @@ These signal a fixed number of raw bytes and optionally encode a numeric **prefi
 
 ### The `|` Escape (different design)
 This signals a variable-length raw sequence using **backward-looking length encoding**:
-- Characters before `|` serve a dual purpose (reinterpretation)
-- Their Z85 digit VALUES encode the length (base-42 encoding)
-- Their BYTE representations also become part of the raw output
-- Same characters interpreted as both metadata AND content
+- Characters before `|` encode the length as metadata (base-42 encoding using their Z85 digit values)
+- After decoding the length N, read the next N raw bytes from the stream AFTER the `|`
+- The length-encoding characters are metadata only, not part of the output
 
 ## Position-Dependent Escape Meanings
 
@@ -75,8 +74,8 @@ The `|` character works at **any position (0-4)** and signals a **backward-looki
 
 1. The decoder buffers up to one block (5 chars) to detect `|`
 2. When `|` is encountered, read backwards up to 4 Z85 digits before it
-3. These digits encode the length in a variable-length base-42 encoding (see below)
-4. After decoding the length, output those same characters as literal bytes (the dual-purpose design explained above)
+3. These digits encode the length N in a variable-length base-42 encoding (see below)
+4. After decoding the length N, read the next N raw bytes from the stream following the `|`
 
 ## Encoded Prefix Values (Standard Escapes Only)
 
@@ -235,8 +234,7 @@ The rightmost digit (immediately before `|`) is processed first during decoding:
 2. First digit: Z85[51] → `51-1=50` → `50≥42` (continuation set) → contribution: `50%42=8` → accumulator = 8
 3. Second digit: Z85[2] → `2-1=1` → `1<42` (no continuation, stop) → accumulator = `1×42 + 8 = 50`
 4. Length is 50 bytes
-5. Output literal bytes of Z85[2] and Z85[51] (first 2 of the 50 raw bytes)
-6. Read next 48 bytes as raw
+5. Read next 50 raw bytes following the `|`
 
 ### Worked Example: Encoding Length 10 at Non-Block-Aligned Position
 
@@ -259,10 +257,9 @@ Length 10, little-endian:
 2. Read backward: find Z85[11] at position 2, B at position 1, A at position 0
 3. Decode Z85[11]: `11-1=10` → `10<42` (no continuation, stop) → `10<21` (LE)
 4. Length = 10 bytes, endianness = LE
-5. Output literal bytes: A, B, Z85[11] as first 3 of the 10 raw bytes
-6. Read next 7 bytes as raw
+5. Read next 10 raw bytes following the `|`
 
-Note: For `|`, ALL characters before it (A, B, Z85[11]) become literal output bytes after their digit values are used for length decoding. They are NOT decoded as an encoded numeric value like with standard escapes.
+Note: For `|`, characters before it (A, B, Z85[11]) encode the length as metadata only. They are NOT part of the output and are NOT decoded as an encoded numeric value like with standard escapes.
 
 ### Example: `|` at Position 4
 
@@ -275,9 +272,8 @@ All 4 chars before `|` can encode length:
 **Decoding:**
 1. See `|` at position 4
 2. Read backward 4 digits: D, C, B, A
-3. Decode length using base-42 algorithm
-4. Output literal bytes A, B, C, D as first 4 of the raw sequence
-5. Continue reading raw bytes from next block
+3. Decode length N using base-42 algorithm
+4. Read next N raw bytes following the `|` (starting from next block)
 
 ### Special Length Values
 
@@ -329,8 +325,8 @@ for each 5-char block:
 
 **`|` escape example: `ABC|`**
 - Read `ABC` backward, decode digit VALUES as base-42 to get length N
-- Then output the literal BYTES `A`, `B`, `C` as first 3 of the N raw bytes
-- The remaining (N-3) raw bytes follow in the stream
+- Read the next N raw bytes following the `|`
+- The characters `A`, `B`, `C` are metadata only, not part of the output
 
 **Position 4 restriction:**
 - Standard escapes (`,` `` ` `` `;` `~` `_`): position 4 is invalid (need ≥1 raw byte in current block)
