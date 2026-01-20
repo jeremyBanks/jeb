@@ -154,12 +154,13 @@ impl Encoder {
         // For each possible escape position and type, calculate the benefit
 
         // Standard escapes and their raw byte counts at position 0
+        // Ordered by descending raw count to maximize raw passthrough length
         let escapes_pos_0 = [
-            (ESCAPE_BACKTICK, 3),    // `
-            (ESCAPE_COMMA, 4),       // ,
-            (ESCAPE_TILDE, 5),       // ~
-            (ESCAPE_SEMICOLON, 6),   // ;
             (ESCAPE_UNDERSCORE, 7),  // _
+            (ESCAPE_SEMICOLON, 6),   // ;
+            (ESCAPE_TILDE, 5),       // ~
+            (ESCAPE_COMMA, 4),       // ,
+            (ESCAPE_BACKTICK, 3),    // `
         ];
 
         // Check position 0 (no prefix)
@@ -191,12 +192,13 @@ impl Encoder {
             }
 
             // Standard escapes at positions 1-3
+            // Ordered by descending raw count to maximize raw passthrough length
             let escapes_with_prefix = [
-                (ESCAPE_COMMA, 4, true),     // LE
-                (ESCAPE_BACKTICK, 4, false), // BE
+                (ESCAPE_UNDERSCORE, 7, true), // LE only
                 (ESCAPE_SEMICOLON, 6, true), // LE
                 (ESCAPE_TILDE, 6, false),    // BE
-                (ESCAPE_UNDERSCORE, 7, true), // LE only
+                (ESCAPE_COMMA, 4, true),     // LE
+                (ESCAPE_BACKTICK, 4, false), // BE
             ];
 
             for &(escape, raw_count, is_le) in &escapes_with_prefix {
@@ -403,33 +405,25 @@ impl Encoder {
         self.output.extend_from_slice(&self.buffer[..raw_count]);
         self.block_position = (self.block_position + raw_count) % 5;
 
-        // Calculate padding
-        // Total chars used = length_chars + 1 (pipe) + raw_count
-        // Standard would use ceil(raw_count * 5 / 4)
-        let _chars_used = length_chars.len() + 1 + raw_count;
+        // For finite sequences, add padding to maintain alignment.
+        // For infinite sequences (length 0), no padding needed since stream ends.
+        if length != 0 {
+            // The invariant is: following content should appear at the same position
+            // as if everything before it was standard Z85 encoded.
+            // Raw bytes use 1:1 mapping but standard Z85 uses 5:4 mapping.
+            // So for N raw bytes, standard would produce ceil(N * 5 / 4) chars.
+            // We produced: length_chars + 1 + N chars.
+            // The difference is the padding needed.
+            let standard_chars = (raw_count * 5).div_ceil(4);
+            let prefix_overhead = length_chars.len() + 1;
+            let total_chars = prefix_overhead + raw_count;
 
-        // We need to pad to maintain alignment relative to what standard encoding
-        // would have produced for the same number of bytes
-        // But actually, raw bytes don't produce the same overhead as Z85...
-        // Let me reconsider.
-
-        // The invariant is: following content should appear at the same position
-        // as if everything before it was standard Z85 encoded.
-        // Raw bytes use 1:1 mapping but standard Z85 uses 5:4 mapping.
-        // So for N raw bytes, standard would produce ceil(N * 5 / 4) chars.
-        // We produced: length_chars + 1 + N chars.
-        // The difference is the padding needed.
-
-        let standard_chars = (raw_count * 5).div_ceil(4);
-        let prefix_overhead = length_chars.len() + 1;
-        let total_chars = prefix_overhead + raw_count;
-
-        // Padding needed to reach the same total as standard encoding
-        if total_chars < standard_chars {
-            let padding = standard_chars - total_chars;
-            for _ in 0..padding {
-                self.output.push(PADDING_CHAR);
-                self.block_position = (self.block_position + 1) % 5;
+            if total_chars < standard_chars {
+                let padding = standard_chars - total_chars;
+                for _ in 0..padding {
+                    self.output.push(PADDING_CHAR);
+                    self.block_position = (self.block_position + 1) % 5;
+                }
             }
         }
 
