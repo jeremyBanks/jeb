@@ -1097,6 +1097,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "ideated-encoding"
+version = "0.0.0-dev-2026-01-19.4531"
+dependencies = [
+ "proptest",
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "idna"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
