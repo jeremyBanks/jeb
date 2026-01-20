@@ -145,6 +145,7 @@
     "petgraph",
     "pipefail",
     "println",
+    "proptest",
     "pushd",
     "realpath",
     "redirections",

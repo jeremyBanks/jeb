@@ -109,7 +109,13 @@ mod tests {
         for byte in 0..=255u8 {
             let original = [byte];
             let encoded = encode(&original);
+            if byte == 62 {
+                eprintln!("Byte 62: encoded = {:?}, as str = {:?}", encoded, String::from_utf8_lossy(&encoded));
+            }
             let decoded = decode(&encoded).unwrap();
+            if byte == 62 {
+                eprintln!("Byte 62: decoded = {:?}", decoded);
+            }
             assert_eq!(decoded, original, "failed for byte {}", byte);
         }
     }

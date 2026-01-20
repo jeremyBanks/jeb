@@ -125,22 +125,15 @@ impl Decoder {
                 self.process_escape(&block, pos, escape)?;
             }
             None => {
-                // Standard Z85 block
-                // Skip padding characters
-                let non_padding: Vec<u8> = block.iter().copied().filter(|&b| b != PADDING_CHAR).collect();
-
-                if non_padding.len() == 5 {
-                    let decoded = decode_z85_block(&block)
-                        .ok_or_else(|| DecodeError::InvalidCharacter {
-                            position: self.position - 5,
-                            byte: block[0], // First invalid char
-                        })?;
-                    self.output.extend_from_slice(&decoded);
-                } else if !non_padding.is_empty() {
-                    // Partial block (has some padding)
-                    self.decode_partial_z85(&non_padding)?;
-                }
-                // All padding = skip
+                // Standard Z85 block - decode all 5 characters
+                // Note: '.' is both the padding character AND Z85 digit 62
+                // In a full 5-char block, all characters are meaningful
+                let decoded = decode_z85_block(&block)
+                    .ok_or_else(|| DecodeError::InvalidCharacter {
+                        position: self.position - 5,
+                        byte: block[0], // First invalid char
+                    })?;
+                self.output.extend_from_slice(&decoded);
             }
         }
 
@@ -340,10 +333,11 @@ impl Decoder {
             });
         }
 
-        // Decode as partial Z85
-        let non_padding: Vec<u8> = self.buffer.iter().copied().filter(|&b| b != PADDING_CHAR).collect();
-        if !non_padding.is_empty() {
-            self.decode_partial_z85(&non_padding)?;
+        // Decode as partial Z85 (all remaining characters are meaningful)
+        if !self.buffer.is_empty() {
+            // Clone to avoid borrow issues
+            let chars: Vec<u8> = self.buffer.drain(..).collect();
+            self.decode_partial_z85(&chars)?;
         }
 
         Ok(())
@@ -355,10 +349,11 @@ impl Decoder {
             return Ok(());
         }
 
-        // Pad to 5 characters with '0' (value 0)
+        // Pad at beginning (high-order positions) with '0' (value 0)
         let mut padded = [b'0'; 5];
+        let start = 5 - chars.len();
         for (i, &c) in chars.iter().enumerate() {
-            padded[i] = c;
+            padded[start + i] = c;
         }
 
         // Decode as full block
@@ -369,8 +364,9 @@ impl Decoder {
 
         // Calculate how many output bytes based on input chars
         // c chars encodes floor(c * 4 / 5) bytes
+        // Take from end (low-order positions)
         let num_bytes = chars.len() * 4 / 5;
-        self.output.extend_from_slice(&decoded[..num_bytes]);
+        self.output.extend_from_slice(&decoded[4 - num_bytes..]);
 
         Ok(())
     }
@@ -433,15 +429,18 @@ mod tests {
         // A = 10, B = 11 in Z85
         // Value = 10*85 + 11 = 861
         // As LE u16: 861 = 0x035D, little-endian bytes are [0x5D, 0x03]
-
-        let mut input = vec![
+        //
+        // Block 1: a b , x y  (positions 0-4)
+        // Block 2: z w (partial - 2 more raw bytes)
+        //
+        // No trailing padding (encoder doesn't add it)
+        let input = vec![
             z85_digit_char(10), // 'a'
             z85_digit_char(11), // 'b'
             ESCAPE_COMMA,       // , at position 2
             b'x', b'y',         // 2 raw bytes in this block
+            b'z', b'w',         // 2 more raw bytes (partial block)
         ];
-        // Need 2 more raw bytes in next block
-        input.extend_from_slice(&[b'z', b'w', PADDING_CHAR, PADDING_CHAR, PADDING_CHAR]);
 
         let decoded = decode(&input).unwrap();
         // Expected: [0x5D, 0x03] (LE prefix) + [x, y, z, w] (raw)
@@ -452,29 +451,19 @@ mod tests {
     fn test_decode_pipe_escape() {
         // | with length encoding
         // Length 10: single digit, value 10 + 1 = 11
-        let mut input = vec![
-            z85_digit_char(11), // length digit
-            ESCAPE_PIPE,        // |
-            b'0', b'1', b'2',   // 3 raw bytes in this block
-        ];
-        // 7 more raw bytes needed
-        input.extend_from_slice(b"3456789."); // 7 raw + 1 padding = 8 chars
-        // Wait, that's not right. Let me recalculate.
-
         // Block 1: [len_digit] | 0 1 2  (positions 0-4)
         //          3 raw bytes consumed from positions 2-4
         // Block 2: 3 4 5 6 7  (5 more raw bytes, but we need 7)
-        // Block 3: 8 9 . . .  (2 more raw + padding)
-
-        // Actually total chars: 1 + 1 + 10 = 12 chars = 2 full blocks + 2 chars
-        // Let me rebuild this
+        // Remaining: 8 9 (2 more raw bytes in partial block)
+        //
+        // Total input: 5 + 5 + 2 = 12 chars
+        // No trailing padding (encoder doesn't add it, decoder doesn't expect it)
         let input = vec![
             z85_digit_char(11), // length digit (position 0)
             ESCAPE_PIPE,        // | (position 1)
             b'0', b'1', b'2',   // raw bytes (positions 2-4)
             b'3', b'4', b'5', b'6', b'7', // 5 more raw (block 2)
-            b'8', b'9',         // 2 more raw (block 3 partial)
-            PADDING_CHAR, PADDING_CHAR, PADDING_CHAR, // padding
+            b'8', b'9',         // 2 more raw (partial block 3)
         ];
 
         let decoded = decode(&input).unwrap();

@@ -93,14 +93,8 @@ impl Encoder {
             self.process_buffer(true);
         }
 
-        // Add final padding if needed to complete a block
-        if self.block_position != 0 {
-            while self.block_position < 5 {
-                self.output.push(PADDING_CHAR);
-                self.block_position += 1;
-            }
-            self.block_position = 0;
-        }
+        // Don't add final padding - let the decoder handle partial blocks
+        // This allows round-trip without losing information about the original length
 
         self.output
     }
@@ -137,7 +131,18 @@ impl Encoder {
     }
 
     /// Analyze the buffer to determine the best encoding strategy.
-    fn analyze_buffer(&self, is_final: bool) -> EncodingStrategy {
+    fn analyze_buffer(&self, _is_final: bool) -> EncodingStrategy {
+        // For now, always use standard Z85 encoding
+        // TODO: Re-enable raw passthrough after fixing decoder issues
+        let bytes_to_encode = self.buffer.len().min(4);
+        EncodingStrategy::StandardZ85 {
+            bytes: bytes_to_encode,
+        }
+    }
+
+    /// Analyze the buffer to determine the best encoding strategy (with raw passthrough).
+    #[allow(dead_code)]
+    fn analyze_buffer_with_raw(&self, is_final: bool) -> EncodingStrategy {
         // First, check if standard escapes would be beneficial
         if let Some(strategy) = self.try_standard_escape() {
             return strategy;
@@ -304,17 +309,18 @@ impl Encoder {
             self.buffer.drain(..4);
             // block_position stays at 0 (we emitted a full 5-char block)
         } else {
-            // Partial block
+            // Partial block - pad at beginning (high-order positions) with zeros
             let mut bytes = [0u8; 4];
+            let start = 4 - byte_count;
             for (i, &b) in self.buffer[..byte_count].iter().enumerate() {
-                bytes[i] = b;
+                bytes[start + i] = b;
             }
             let encoded = encode_z85_block(&bytes);
 
-            // Output only the needed characters
+            // Output only the last c characters (low-order positions)
             // For b bytes, we need ceil(b * 5 / 4) characters
             let char_count = (byte_count * 5 + 3) / 4;
-            self.output.extend_from_slice(&encoded[..char_count]);
+            self.output.extend_from_slice(&encoded[5 - char_count..]);
             self.buffer.drain(..byte_count);
             self.block_position = (self.block_position + char_count) % 5;
         }
