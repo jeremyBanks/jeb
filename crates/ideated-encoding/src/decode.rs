@@ -104,11 +104,8 @@ impl Decoder {
                 self.raw_bytes_remaining -= to_consume;
                 if self.raw_bytes_remaining == 0 {
                     self.state = State::Normal;
-                    // Process remaining chars in this block as normal
-                    if to_consume < 5 {
-                        self.buffer.drain(..to_consume);
-                        return Ok(());
-                    }
+                    // Remaining chars in this block are padding - skip them all
+                    // (drain the entire block, not just the consumed raw bytes)
                 }
             }
 
