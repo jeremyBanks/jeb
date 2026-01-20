@@ -74,7 +74,7 @@ ignore = "0.4.0"
 indexmap = "2.0.0"
 inline = "0.0.1-dev.1"
 itertools = "0.10.3"
-.0.0-dev-2026-01-19.4526", default-features = false }
+jeb = { version = "0.0.0-dev-2025-12-26.7705", default-features = false }
 jeb-bytes-as-text = "0.0.0-dev-2025-12-26.7705"
 jeb-common = "0.0.0-dev-2025-12-26.7705"
 jeb-stream = "0.0.0-dev-2025-12-26.7705"
