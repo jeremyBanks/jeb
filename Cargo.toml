@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.0.0-dev-2025-12-26.7705"
+version = "0.0.0-dev-2026-01-19.4531"
 repository = "https://github.com/jeremyBanks/jeb"
 description = "(part of https://crates.io/crates/jeb)"
 publish = false
@@ -24,6 +24,7 @@ codegen-units = 1
 strip = true
 split-debuginfo = "packed"
 panic = "abort"
+
 
 [patch.crates-io]
 _autofix = { path = "crates/_autofix" }
