@@ -2,20 +2,11 @@
 //! `Deserialize` types.
 use {
     crate::{
-        Bytes,
-        Text,
-        Value,
-        serde::{
-            SerdeError,
-            error::Unexpected,
-        },
+        Boolean, Bytes, Number, String, Value,
+        serde::{SerdeError, error::Unexpected},
     },
     indexmap::IndexMap,
-    serde::de::{
-        self,
-        DeserializeSeed,
-        Visitor,
-    },
+    serde::de::{self, DeserializeSeed, Visitor},
 };
 impl<'de> de::Deserializer<'de> for Value {
     type Error = SerdeError;
@@ -26,14 +17,12 @@ impl<'de> de::Deserializer<'de> for Value {
     {
         match self {
             Value::Null => visitor.visit_unit(),
-            Value::Bool(b) => visitor.visit_bool(b),
-            Value::Unsigned(u) => visitor.visit_u64(u),
-            Value::Signed(i) => visitor.visit_i64(i),
-            Value::Float(f) => visitor.visit_f64(*f),
-            Value::Text(t) => visitor.visit_string(t.into()),
-            Value::Bytes(b) => visitor.visit_byte_buf(b.into()),
+            Value::Boolean(b) => visitor.visit_bool(*b),
+            Value::Number(n) => visitor.visit_f64(*n),
+            Value::String(s) => visitor.visit_string(s.into_inner()),
+            Value::Bytes(b) => visitor.visit_byte_buf(b.into_inner()),
             Value::Array(a) => visitor.visit_seq(SeqDeserializer::new(a)),
-            Value::TextMap(m) => visitor.visit_map(TextMapDeserializer::new(m)),
+            Value::StringMap(m) => visitor.visit_map(StringMapDeserializer::new(m)),
             Value::BytesMap(m) => visitor.visit_map(BytesMapDeserializer::new(m)),
         }
     }
@@ -43,7 +32,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Bool(b) => visitor.visit_bool(b),
+            Value::Boolean(b) => visitor.visit_bool(*b),
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a boolean")),
         }
     }
@@ -230,7 +219,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Text(t) => {
+            Value::String(t) => {
                 let s: String = t.into();
                 let mut chars = s.chars();
                 if let Some(c) = chars.next()
@@ -252,7 +241,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Text(t) => visitor.visit_string(t.into()),
+            Value::String(t) => visitor.visit_string(t.into()),
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a string")),
         }
     }
@@ -285,7 +274,7 @@ impl<'de> de::Deserializer<'de> for Value {
                 }
                 visitor.visit_byte_buf(bytes)
             }
-            Value::Text(t) => {
+            Value::String(t) => {
                 let s: String = t.into();
                 visitor.visit_byte_buf(s.into_bytes())
             }
@@ -306,14 +295,14 @@ impl<'de> de::Deserializer<'de> for Value {
     {
         match self {
             Value::Null => visitor.visit_none(),
-            Value::TextMap(map) if map.len() == 1 => {
+            Value::StringMap(map) if map.len() == 1 => {
                 if let Some((key, value)) = map.iter().next()
                     && key.as_str() == "Some"
                 {
                     let value = value.clone();
                     return visitor.visit_some(value);
                 }
-                visitor.visit_some(Value::TextMap(map))
+                visitor.visit_some(Value::StringMap(map))
             }
             value => visitor.visit_some(value),
         }
@@ -385,7 +374,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::TextMap(m) => visitor.visit_map(TextMapDeserializer::new(m)),
+            Value::StringMap(m) => visitor.visit_map(TextMapDeserializer::new(m)),
             Value::BytesMap(m) => visitor.visit_map(BytesMapDeserializer::new(m)),
             Value::Array(arr) => {
                 if arr.is_empty() {
@@ -413,7 +402,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::TextMap(m) => visitor.visit_map(TextMapDeserializer::new(m)),
+            Value::StringMap(m) => visitor.visit_map(TextMapDeserializer::new(m)),
             Value::BytesMap(m) => visitor.visit_map(BytesMapDeserializer::new(m)),
             Value::Array(arr) => visitor.visit_seq(SeqDeserializer::new(arr)),
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a struct")),
@@ -430,11 +419,11 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Text(t) => {
+            Value::String(t) => {
                 let s: String = t.into();
                 visitor.visit_enum(s.into_deserializer())
             }
-            Value::TextMap(m) if m.len() == 1 => {
+            Value::StringMap(m) if m.len() == 1 => {
                 let (key, value) = m.into_iter().next().unwrap();
                 let variant: String = key.into();
                 visitor.visit_enum(EnumDeserializer {
@@ -451,7 +440,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Text(t) => visitor.visit_string(t.into()),
+            Value::String(t) => visitor.visit_string(t.into()),
             Value::Unsigned(u) => visitor.visit_u64(u),
             _ => Err(SerdeError::invalid_type(self.unexpected(), "an identifier")),
         }
@@ -468,11 +457,11 @@ impl Value {
     fn unexpected(&self) -> Unexpected {
         match self {
             Value::Null => Unexpected::Unit,
-            Value::Bool(b) => Unexpected::Bool(*b),
+            Value::Boolean(b) => Unexpected::Bool(**b),
             Value::Unsigned(u) => Unexpected::Unsigned(*u),
             Value::Signed(i) => Unexpected::Signed(*i),
             Value::Float(f) => Unexpected::Float(**f),
-            Value::Text(t) => {
+            Value::String(t) => {
                 let s: String = t.clone().into();
                 Unexpected::Str(s.into_boxed_str())
             }
@@ -481,7 +470,7 @@ impl Value {
                 Unexpected::Bytes(slice.to_vec().into_boxed_slice())
             }
             Value::Array(_) => Unexpected::Seq,
-            Value::TextMap(_) | Value::BytesMap(_) => Unexpected::Map,
+            Value::StringMap(_) | Value::BytesMap(_) => Unexpected::Map,
         }
     }
 }
@@ -534,7 +523,7 @@ impl<'de> de::MapAccess<'de> for TextMapDeserializer {
         match self.iter.next() {
             Some((key, value)) => {
                 self.value = Some(value);
-                seed.deserialize(Value::Text(key)).map(Some)
+                seed.deserialize(Value::String(key)).map(Some)
             }
             None => Ok(None),
         }
@@ -701,7 +690,7 @@ impl<'de> de::VariantAccess<'de> for VariantDeserializer {
         V: Visitor<'de>,
     {
         match self.value {
-            Some(Value::TextMap(m)) => visitor.visit_map(TextMapDeserializer::new(m)),
+            Some(Value::StringMap(m)) => visitor.visit_map(TextMapDeserializer::new(m)),
             Some(Value::BytesMap(m)) => visitor.visit_map(BytesMapDeserializer::new(m)),
             Some(Value::Array(arr)) => visitor.visit_map(PairsDeserializer::new(arr)),
             Some(_) => Err(SerdeError::custom("expected struct variant")),

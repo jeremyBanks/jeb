@@ -21,71 +21,51 @@ impl ser::Serializer for Serializer {
     }
 
     fn serialize_i8(self, v: i8) -> Result<Value, SerdeError> {
-        Ok(Value::Signed(v as i64))
+        Ok(Value::Number(Number::from(v)))
     }
 
     fn serialize_i16(self, v: i16) -> Result<Value, SerdeError> {
-        Ok(Value::Signed(v as i64))
+        Ok(Value::Number(Number::from(v)))
     }
 
     fn serialize_i32(self, v: i32) -> Result<Value, SerdeError> {
-        Ok(Value::Signed(v as i64))
+        Ok(Value::Number(Number::from(v)))
     }
 
     fn serialize_i64(self, v: i64) -> Result<Value, SerdeError> {
-        Ok(Value::Signed(v))
+        Ok(Value::from(v))
     }
 
     fn serialize_i128(self, v: i128) -> Result<Value, SerdeError> {
-        if let Ok(i) = i64::try_from(v) {
-            Ok(Value::Signed(i))
-        } else {
-            Ok(Value::Bytes(Bytes::from(v.to_be_bytes().to_vec())))
-        }
+        Ok(Value::from(v))
     }
 
     fn serialize_u8(self, v: u8) -> Result<Value, SerdeError> {
-        Ok(Value::Unsigned(v as u64))
+        Ok(Value::Number(Number::from(v)))
     }
 
     fn serialize_u16(self, v: u16) -> Result<Value, SerdeError> {
-        Ok(Value::Unsigned(v as u64))
+        Ok(Value::Number(Number::from(v)))
     }
 
     fn serialize_u32(self, v: u32) -> Result<Value, SerdeError> {
-        Ok(Value::Unsigned(v as u64))
+        Ok(Value::Number(Number::from(v)))
     }
 
     fn serialize_u64(self, v: u64) -> Result<Value, SerdeError> {
-        Ok(Value::Unsigned(v))
+        Ok(Value::from(v))
     }
 
     fn serialize_u128(self, v: u128) -> Result<Value, SerdeError> {
-        if let Ok(u) = u64::try_from(v) {
-            Ok(Value::Unsigned(u))
-        } else {
-            Ok(Value::Bytes(Bytes::from(v.to_be_bytes().to_vec())))
-        }
+        Ok(Value::from(v))
     }
 
     fn serialize_f32(self, v: f32) -> Result<Value, SerdeError> {
-        if v.is_finite() {
-            Ok(Value::Float(Float::new(v as f64).expect(
-                "f32 is_finite check guarantees Float::new success",
-            )))
-        } else {
-            Ok(Value::Bytes(Bytes::from(v.to_be_bytes().to_vec())))
-        }
+        Ok(Value::from(v))
     }
 
     fn serialize_f64(self, v: f64) -> Result<Value, SerdeError> {
-        if v.is_finite() {
-            Ok(Value::Float(Float::new(v).expect(
-                "f64 is_finite check guarantees Float::new success",
-            )))
-        } else {
-            Ok(Value::Bytes(Bytes::from(v.to_be_bytes().to_vec())))
-        }
+        Ok(Value::from(v))
     }
 
     fn serialize_char(self, v: char) -> Result<Value, SerdeError> {
@@ -593,39 +573,39 @@ impl ser::Serializer for MapKeySerializer {
     }
 
     fn serialize_i8(self, v: i8) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Signed(v as i64)))
+        Ok(MapKey::Complex(Value::Number(Number::from(v))))
     }
 
     fn serialize_i16(self, v: i16) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Signed(v as i64)))
+        Ok(MapKey::Complex(Value::Number(Number::from(v))))
     }
 
     fn serialize_i32(self, v: i32) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Signed(v as i64)))
+        Ok(MapKey::Complex(Value::Number(Number::from(v))))
     }
 
     fn serialize_i64(self, v: i64) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Signed(v)))
+        Ok(MapKey::Complex(Value::from(v)))
     }
 
     fn serialize_i128(self, v: i128) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Serializer.serialize_i128(v)?))
+        Ok(MapKey::Complex(Value::from(v)))
     }
 
     fn serialize_u8(self, v: u8) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Unsigned(v as u64)))
+        Ok(MapKey::Complex(Value::Number(Number::from(v))))
     }
 
     fn serialize_u16(self, v: u16) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Unsigned(v as u64)))
+        Ok(MapKey::Complex(Value::Number(Number::from(v))))
     }
 
     fn serialize_u32(self, v: u32) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Unsigned(v as u64)))
+        Ok(MapKey::Complex(Value::Number(Number::from(v))))
     }
 
     fn serialize_u64(self, v: u64) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Unsigned(v)))
+        Ok(MapKey::Complex(Value::from(v)))
     }
 
     fn serialize_u128(self, v: u128) -> Result<MapKey, SerdeError> {
