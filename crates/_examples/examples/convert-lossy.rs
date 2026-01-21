@@ -2,9 +2,10 @@
 
 /// Potentially-fallible potentially-lossy conversion trait.
 ///
-/// This will be public but it's mostly meant for internal use; most
-/// functionality should be delegated from more standard traits.
-trait TryFromMaybeLossy<T>: Sized {
+/// This specific trait is overcomplicated for internal reasons and is most
+/// users will want to user other interfaces that delegate to these
+/// implementations.
+pub trait TryFromMaybeLossy<T>: Sized {
     /// A warning returned if the conversion is lossy.
     type Warning;
 
@@ -93,5 +94,30 @@ impl Infallible for std::convert::Infallible {
         match self {}
     }
 }
+
+/// Potentially-fallible lossless conversion trait (delegates to
+/// `TryFromMaybeLossy`).
+pub trait TryFromLossless<T>: TryFromMaybeLossy<T> {
+    fn try_from_lossless(value: T) -> Result<Self, Result<Self::Warning, Self::Error>> {
+        TryFromMaybeLossy::try_from_lossless(value)
+    }
+}
+impl<T, Warning, Error> TryFromLossless<T> for T where
+    T: TryFromMaybeLossy<T, Warning = Warning, Error = Error>
+{
+}
+
+
+/// Infallible lossless conversion trait (delegates to `TryFromMaybeLossy`).
+pub trait FromLossless<T>: TryFromMaybeLossy<T> + TryFromLossless<T>
+where
+    Self::Warning: Infallible,
+    Self::Error: Infallible,
+{
+    fn from_lossless(value: T) -> Self {
+        TryFromMaybeLossy::from_lossless(value)
+    }
+}
+impl<T> FromLossless<T> for T where T: TryFromMaybeLossy<T, Warning: Infallible, Error: Infallible> {}
 
 fn main() {}
