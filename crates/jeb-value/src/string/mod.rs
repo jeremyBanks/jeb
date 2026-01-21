@@ -3,6 +3,8 @@ use {
     derive_more::{AsMut, AsRef, Deref, DerefMut, Display, From, Index, IndexMut, Into},
 };
 
+mod iterator;
+
 // [impl jeb-value.features.core.cfg]
 #[cfg_attr(
     feature = "serde",

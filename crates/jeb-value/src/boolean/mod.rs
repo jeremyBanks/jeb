@@ -1,6 +1,6 @@
 use derive_more::{AsRef, Deref, Display, From, Into};
 
-pub mod std;
+pub mod from;
 
 // [impl jeb-value.features.core.cfg]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize), serde(transparent))]

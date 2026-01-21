@@ -1,6 +1,6 @@
 use derive_more::{AsMut, AsRef, Deref, DerefMut, From};
 
-pub mod std;
+pub mod from;
 mod value;
 
 // [impl jeb-value.features.core.cfg]
