@@ -9,7 +9,7 @@ use {
 // [impl jeb-value.variant.common.debug]
 // [impl jeb-value.variant.common.deref]
 // [impl jeb-value.variant.common.as-ref]
-#[derive(AsRef, Clone, Copy, Debug, Default, Deref, Display, Into)]
+#[derive(AsRef, Clone, Copy, Debug, Default, Deref, Display)]
 // [impl jeb-value.variant.common.transparent]
 #[repr(transparent)]
 // [impl jeb-value.variant.common.must-use]

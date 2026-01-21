@@ -1,7 +1,4 @@
-use crate::{
-    Bytes,
-    Text,
-};
+use crate::{Bytes, String};
 
 impl From<&str> for Bytes {
     fn from(value: &str) -> Self {
@@ -9,8 +6,8 @@ impl From<&str> for Bytes {
     }
 }
 
-impl From<Text> for Bytes {
-    fn from(value: Text) -> Self {
-        Bytes(value.0.into_bytes())
+impl From<String> for Bytes {
+    fn from(value: String) -> Self {
+        Bytes(value.into_inner().into_bytes())
     }
 }

@@ -22,7 +22,7 @@ use {
 // [impl jeb-value.variant.common.mut]
 #[derive(
     AsMut, AsRef, Clone, Debug, Default, Deref, DerefMut, Display, Eq, From, Hash, Index, IndexMut,
-    Into, Ord, PartialEq, PartialOrd,
+    Ord, PartialEq, PartialOrd,
 )]
 // [impl jeb-value.variant.common.transparent]
 #[repr(transparent)]

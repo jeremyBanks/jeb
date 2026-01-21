@@ -12,8 +12,7 @@ use derive_more::{AsRef, Deref, Display, From, Into};
 // [impl jeb-value.variant.common.partial-ord-delegate-inner]
 // [impl jeb-value.variant.common.hash-delegate-inner]
 #[derive(
-    AsRef, Clone, Copy, Debug, Default, Deref, Display, Eq, From, Hash, Into, Ord, PartialEq,
-    PartialOrd,
+    AsRef, Clone, Copy, Debug, Default, Deref, Display, Eq, From, Hash, Ord, PartialEq, PartialOrd,
 )]
 // [impl jeb-value.variant.common.transparent]
 #[repr(transparent)]
