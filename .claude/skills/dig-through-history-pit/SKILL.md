@@ -26,8 +26,9 @@ Examples:
 
 ## Workflow
 
-The recommended approach is to **start with text search**, then use the results
-to inform targeted file recovery if needed.
+The approach is: **search → recover → explore**. When searching for text, always
+recover the relevant deleted files proactively, then grep within them for full
+context.
 
 ## Step 1: Text Search (git log -S)
 
@@ -40,37 +41,53 @@ git log --all -S "SEARCH_TEXT" --oneline --reverse | head -20
 
 This shows commits (oldest first) where the text was added or removed.
 
-### Analyze the Results
+### Identify Files and Extensions
 
-For interesting commits, show details:
+For the earliest/most relevant commits, check which files were involved:
 
 ```bash
 git show COMMIT_HASH --stat
 git log --format="%H %ci %s" COMMIT_HASH -1
 ```
 
-To see the text in context:
+Extract:
+- **Which files** contained the text
+- **File extensions** of those files (e.g., `.rs`, `.md`, `.ts`)
+
+## Step 2: Recover Deleted Files (always do this)
+
+If the text search found deleted files, **immediately recover them** using the
+dig-history-pit tool with a targeted glob pattern:
 
 ```bash
-git show COMMIT_HASH -p | head -200
+cargo run --bin dig-history-pit -- *.rs    # if Rust files
+cargo run --bin dig-history-pit -- *.md    # if markdown files
+cargo run --bin dig-history-pit -- *.rs *.md  # if multiple types
 ```
 
-Key things to extract:
-- **Which files** contained the text
-- **Whether those files still exist** in HEAD
-- **File extensions** of the relevant files
+Don't ask - just recover. The user is searching history because they want to
+find something; recovering gives them the full files to explore.
 
-## Step 2: Targeted File Recovery (if needed)
+## Step 3: Grep Recovered Files for Context
 
-If the text search reveals deleted files the user wants to recover, use the
-dig-history-pit tool with a **targeted glob pattern** based on what you learned:
+After recovery, **grep within the recovered files** to find the search text with
+surrounding context:
 
-- If the text was in `docs/old-feature.md` (deleted), recover with `*.md`
-- If it was in `src/utils/encoder.rs`, recover with `*.rs`
-- If multiple file types, combine: `*.md *.rs`
+```bash
+grep -r -n -C 5 "SEARCH_TEXT" history-pit/
+```
 
-This is more efficient than recovering all files of a type - the text search
-narrows down exactly what to look for.
+This provides much richer context than `git show` diffs - you see the text in
+its full file context, can read surrounding code, and understand how it was
+used.
+
+### Explore Further
+
+Use the Grep and Read tools to help the user:
+- Find all occurrences of their search term in recovered files
+- Read specific recovered files in full
+- Compare different versions of the same file
+- Search for related terms or patterns
 
 ## File Recovery Tool Details
 
