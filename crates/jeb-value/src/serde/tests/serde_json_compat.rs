@@ -1,5 +1,5 @@
 use {
-    crate::{from_value, Value},
+    crate::{Null, from_value, Value},
     serde::Deserialize,
 };
 /// Test that our deserializer can accept serde_json-style data
@@ -10,7 +10,7 @@ fn test_option_compat() {
         value: Option<i32>,
     }
     let our_none = Value::StringMap(
-        [(crate::String::from("value"), Value::Null)]
+        [(crate::String::from("value"), Value::Null(Null::new()))]
             .into_iter()
             .collect(),
     );

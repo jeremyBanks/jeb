@@ -70,7 +70,7 @@ fn test_special_floats() {
 fn test_option() {
     let none: Option<i32> = None;
     let value = to_value(none).unwrap();
-    assert!(matches!(value, Value::Null));
+    assert!(matches!(value, Value::Null(_)));
     let recovered: Option<i32> = from_value(value).unwrap();
     assert_eq!(recovered, None);
     let some = Some(42);

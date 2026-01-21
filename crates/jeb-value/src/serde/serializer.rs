@@ -1,6 +1,6 @@
 //! Serializer serializing arbitrary `Serialize` values into our `Value` type.
 use {
-    crate::{Boolean, Bytes, Number, String, Value, serde::SerdeError},
+    crate::{Boolean, Bytes, Null, Number, String, Value, serde::SerdeError},
     indexmap::IndexMap,
     serde::{ser, Serialize},
 };
@@ -81,7 +81,7 @@ impl ser::Serializer for Serializer {
     }
 
     fn serialize_none(self) -> Result<Value, SerdeError> {
-        Ok(Value::Null)
+        Ok(Value::Null(Null::new()))
     }
 
     fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<Value, SerdeError> {
@@ -92,11 +92,11 @@ impl ser::Serializer for Serializer {
     }
 
     fn serialize_unit(self) -> Result<Value, SerdeError> {
-        Ok(Value::Null)
+        Ok(Value::Null(Null::new()))
     }
 
     fn serialize_unit_struct(self, _name: &'static str) -> Result<Value, SerdeError> {
-        Ok(Value::Null)
+        Ok(Value::Null(Null::new()))
     }
 
     fn serialize_unit_variant(
@@ -633,7 +633,7 @@ impl ser::Serializer for MapKeySerializer {
     }
 
     fn serialize_none(self) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Null))
+        Ok(MapKey::Complex(Value::Null(Null::new())))
     }
 
     fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<MapKey, SerdeError> {
@@ -641,11 +641,11 @@ impl ser::Serializer for MapKeySerializer {
     }
 
     fn serialize_unit(self) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Null))
+        Ok(MapKey::Complex(Value::Null(Null::new())))
     }
 
     fn serialize_unit_struct(self, _name: &'static str) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Null))
+        Ok(MapKey::Complex(Value::Null(Null::new())))
     }
 
     fn serialize_unit_variant(

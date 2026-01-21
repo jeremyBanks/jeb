@@ -1,5 +1,5 @@
 use {
-    super::{boolean::Boolean, bytes::Bytes, number::Number, string::String},
+    super::{boolean::Boolean, bytes::Bytes, null::Null, number::Number, string::String},
     derive_more::{From, IsVariant, TryInto, TryUnwrap, Unwrap},
     indexmap::IndexMap,
 };
@@ -16,7 +16,7 @@ use {
 // [impl jeb-value.value.def.variant-types]
 pub enum Value {
     #[default]
-    Null,
+    Null(#[from] Null),
     Boolean(Boolean),
     Number(Number),
     Bytes(Bytes),
@@ -31,7 +31,7 @@ impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         use Value::*;
         match (self, other) {
-            (Null, Null) => true,
+            (Null(a), Null(b)) => a == b,
             (Boolean(a), Boolean(b)) => a == b,
             (Number(a), Number(b)) => a == b,
             (Bytes(a), Bytes(b)) => a == b,
@@ -52,7 +52,7 @@ impl core::hash::Hash for Value {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         core::mem::discriminant(self).hash(state);
         match self {
-            Value::Null => {}
+            Value::Null(value) => value.hash(state),
             Value::Boolean(value) => value.hash(state),
             Value::Number(value) => value.hash(state),
             Value::Bytes(value) => value.hash(state),
@@ -85,7 +85,7 @@ impl Ord for Value {
         // Order: Null, Boolean, Number, Bytes, String, Array, BytesMap, StringMap
         fn type_rank(value: &Value) -> usize {
             match value {
-                Null => 0,
+                Null(_) => 0,
                 Boolean(_) => 1,
                 Number(_) => 2,
                 Bytes(_) => 3,
@@ -101,7 +101,7 @@ impl Ord for Value {
 
         match self_rank.cmp(&other_rank) {
             Equal => match (self, other) {
-                (Null, Null) => Equal,
+                (Null(left), Null(right)) => left.cmp(right),
                 (Boolean(left), Boolean(right)) => left.cmp(right),
                 (Number(left), Number(right)) => left.cmp(right),
                 (Bytes(left), Bytes(right)) => left.cmp(right),

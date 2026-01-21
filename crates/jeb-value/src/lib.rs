@@ -5,6 +5,7 @@
 mod boolean;
 mod bytes;
 mod from;
+mod null;
 mod number;
 // [impl jeb-value.features.core.cfg]
 // [impl jeb-value.features.serde.optional]
@@ -29,6 +30,7 @@ pub use self::serde_json::*;
 pub use self::{
     boolean::Boolean,
     bytes::Bytes,
+    null::{std::NotNullError, Null},
     number::{NotFiniteError, Number},
     string::String,
     value::Value,

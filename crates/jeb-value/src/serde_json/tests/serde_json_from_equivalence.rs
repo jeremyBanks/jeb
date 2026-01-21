@@ -3,7 +3,7 @@
 ///
 /// This verifies the claim in serde_json/mod.rs that the direct conversions
 /// are equivalent to using the serialize trait, just with less overhead.
-use crate::{Number, Value};
+use crate::{Null, Number, Value};
 /// Helper to convert a jeb Value to serde_json::Value via serialization
 fn to_serde_json_via_serde(value: &Value) -> serde_json::Value {
     serde_json::to_value(value).expect("serialization should succeed")
@@ -14,11 +14,11 @@ fn from_serde_json_via_serde(json: &serde_json::Value) -> Value {
 }
 #[test]
 fn test_from_json_null() {
-    let json = serde_json::Value::Null;
+    let json = serde_json::Value::Null(Null::new());
     let direct: Value = json.clone().into();
     let via_serde = from_serde_json_via_serde(&json);
     assert_eq!(direct, via_serde);
-    assert_eq!(direct, Value::Null);
+    assert_eq!(direct, Value::Null(Null::new()));
 }
 #[test]
 fn test_from_json_bool() {
@@ -113,7 +113,7 @@ fn test_from_json_array_primitives() {
     match direct {
         Value::Array(arr) => {
             assert_eq!(arr.len(), 7);
-            assert_eq!(arr[0], Value::Null);
+            assert_eq!(arr[0], Value::Null(Null::new()));
             assert_eq!(arr[1], Value::Boolean(true.into()));
             assert_eq!(arr[2], Value::Boolean(false.into()));
             assert_eq!(arr[3], Value::from(42u64));
@@ -157,7 +157,7 @@ fn test_from_json_object_simple() {
         Value::StringMap(map) => {
             use crate::String;
             assert_eq!(map.len(), 4);
-            assert_eq!(map.get(&String::from("null")), Some(&Value::Null));
+            assert_eq!(map.get(&String::from("null")), Some(&Value::Null(Null::new())));
             assert_eq!(
                 map.get(&String::from("bool")),
                 Some(&Value::Boolean(true.into()))
@@ -194,7 +194,7 @@ fn test_from_json_complex_nested() {
 #[test]
 fn test_roundtrip_primitives() {
     let values = vec![
-        Value::Null,
+        Value::Null(Null::new()),
         Value::Boolean(true.into()),
         Value::Boolean(false.into()),
         Value::from(0u64),
@@ -221,7 +221,7 @@ fn test_roundtrip_arrays() {
     let values = vec![
         Value::Array(vec![]),
         Value::from([Value::from(1u64), Value::from(2u64), Value::from(3u64)]),
-        Value::from([Value::Null, Value::Boolean(true.into()), Value::from("test")]),
+        Value::from([Value::Null(Null::new()), Value::Boolean(true.into()), Value::from("test")]),
         Value::from([
             Value::from([Value::from(1u64)]),
             Value::from([Value::from(2u64)]),
@@ -244,7 +244,7 @@ fn test_roundtrip_objects() {
             .into_iter()
             .collect::<Value>(),
         [
-            (String::from("null"), Value::Null),
+            (String::from("null"), Value::Null(Null::new())),
             (String::from("bool"), Value::Boolean(true.into())),
             (String::from("number"), Value::from(42u64)),
             (String::from("string"), Value::from("hello")),
