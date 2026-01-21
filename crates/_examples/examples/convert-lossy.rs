@@ -39,7 +39,7 @@ pub trait TryFromMaybeLossyImpl<T>: Sized {
     fn try_from_lossless(value: T) -> Result<Self, Result<Self::Warning, Self::Error>> {
         match Self::try_from_maybe_lossy(value) {
             Ok((value, None)) => Ok(value),
-            Ok((value, Some(warning))) => Err(Ok(warning)),
+            Ok((_value, Some(warning))) => Err(Ok(warning)),
             Err(error) => Err(Err(error)),
         }
     }
@@ -96,11 +96,17 @@ impl<T, Warning, Error> TryFromMaybeLossy<T> for T where
 /// Trait identifying the `std::convert::Infallible` type.
 pub trait Infallible {
     fn unreachable(self) -> !;
+
+    fn any<T>(self) -> T;
 }
 
 impl Infallible for std::convert::Infallible {
     fn unreachable(self) -> ! {
         match self {}
+    }
+
+    fn any<T>(self) -> T {
+        self.unreachable()
     }
 }
 
@@ -157,6 +163,61 @@ where
     T: TryFromLossy<T, Warning = Warning, Error = Error>,
     Error: Infallible,
 {
+}
+
+/// Attempts to convert the value to the first type that succeeds losslessly if
+/// any do, otherwise returns the first type that fails losslessly and its
+/// associated warning, otherwise returns the first error.
+///
+/// Requires that each `$intermediary` type implements
+/// `TryFromMaybeLossyImpl<T>` where `T` is the type of the original value, and
+/// that each of those implementations uses the same `Warning` type and the same
+/// `Error` type, and that the `$target` type (which may be explicit or inferred
+/// ) implements `From<T>` for each type `T` in the `$intermediary` types.
+macro_rules! try_from_maybe_lossy_via {
+    ($value:expr => $($intermediary:ty)|+ $( => $target:ty)?) => {
+        {
+            use $crate::TryFromMaybeLossyImpl;
+
+            let value = $value;
+
+            let first_lossless $(: Option<$target>)? = None;
+            let first_lossy $(: (Option<$target>, _))? = None;
+            let first_error = None;
+
+            $(
+                let value = $type::try_from($value)?;
+                if first_lossless.is_none() {
+                    first_lossless = Some(value);
+                } else if first_lossy.is_none() {
+                    first_lossy = Some(value);
+                } else {
+                    first_error = Some(value);
+                }
+            )+
+
+            // XXX: this logic is wrong because we need to pull it inside, of
+            // course. or rather, up above. this is a mess but the gist is
+            // valid.
+
+
+            if let Some(first_lossless) = first_lossless {
+                let value:  = first_lossless.into();
+                $(
+                    let value: $target = value;
+                )?
+                warning = None;
+                Ok((value, warning))
+            } else if let Some(first_lossy) = first_lossy {
+                value = first_lossy.0.into();
+                warning = first_lossy.1;
+            } else let Some(first_error) = first_error {
+                Err(first_error);
+            };
+
+            (value, warning)
+        }
+    }
 }
 
 fn main() {}
