@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(u8)]
 pub struct ValueTypes {
     pub null: bool,
     pub boolean: bool,
@@ -12,13 +13,12 @@ pub struct ValueTypes {
     pub string_map: bool,
 }
 
-pub struct TypedValue {
-    outer_types: ValueTypes,
-    inner_types: ValueTypes,
+pub struct TypedValue<const OUTER_TYPES: ValueTypes, const INNER_TYPES: ValueTypes> {
     // value: Value,
 }
-
-impl ValueTypes {
+impl<const OUTER_TYPES: ValueTypes, const INNER_TYPES: ValueTypes>
+    TypedValue<OUTER_TYPES, INNER_TYPES>
+{
     fn bitmask(&self) -> u8 {
         let mut bits = 0;
         if self.null {
