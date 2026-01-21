@@ -62,6 +62,7 @@ fn find_all_deletions(pattern: &str) -> Result<Vec<BlobDeletion>> {
         "--all",
         "-m",
         "--raw",
+        "--abbrev=40", // Full blob hashes for comparison with HEAD
         "--diff-filter=DT",
         "--format=COMMIT %H %cs",
         "--",
