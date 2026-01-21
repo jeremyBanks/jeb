@@ -158,4 +158,47 @@ mod tests {
         let decoded = decoder.finish().unwrap();
         assert_eq!(decoded, original);
     }
+
+    #[test]
+    fn test_dot_in_raw_sequence() {
+        // '.' is both Z85 digit 62 AND the padding character.
+        // It must be preserved in raw sequences, not skipped as padding.
+        let original = b"ab.cd.ef";
+        let encoded = encode(original);
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn test_dot_in_cross_block_continuation() {
+        // Test case where '.' lands in a continuation block.
+        // 7 raw bytes using _ escape at position 0:
+        // Block 1: _abcd (escape + 4 raw bytes)
+        // Block 2: e.g.. (3 more raw bytes + 2 padding)
+        // The '.' at position 1 of block 2 must NOT be skipped.
+        let original = b"abcde.g";
+        let encoded = encode(original);
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, original, "dot was incorrectly skipped in continuation");
+    }
+
+    #[test]
+    fn test_multiple_dots_in_raw() {
+        // Stress test with many dots
+        let original = b"a.b.c.d.e.f.g.h";
+        let encoded = encode(original);
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn test_all_dots() {
+        // Edge case: entire content is dots
+        for len in 1..=16 {
+            let original = vec![b'.'; len];
+            let encoded = encode(&original);
+            let decoded = decode(&encoded).unwrap();
+            assert_eq!(decoded, original, "failed for len {} all-dots", len);
+        }
+    }
 }

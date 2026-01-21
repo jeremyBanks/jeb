@@ -2,38 +2,3 @@
 SOURCE_DATE_EPOCH = "1608040201"
 LC_ALL = "C"
 TZ = "UTC"
-
-[build]
-# https://doc.rust-lang.org/rustc/remap-source-paths.html#--remap-path-prefix
-#
-# > The replacement is purely textual, with no consideration of the current
-# > system's path separator.
-#
-# > When multiple remappings are given and several of them match, the last
-# > matching one is applied.
-rustflags = [
-
-    "--remap-path-prefix=/home/=~",
-    "--remap-path-prefix=/Users/=~",
-    "--remap-path-prefix=/usr/home/=~",
-
-    "--remap-path-prefix=/home/_/=~/",
-    "--remap-path-prefix=/home/jeb/=~/",
-    "--remap-path-prefix=/home/runner/=~/",
-    "--remap-path-prefix=/home/user/=~/",
-    "--remap-path-prefix=/home/vscode/=~/",
-    "--remap-path-prefix=/root/=~/",
-
-    "--remap-path-prefix=/.cargo/=~/.cargo",
-    "--remap-path-prefix=/usr/local/cargo/=~/.cargo",
-    "--remap-path-prefix=usr/local/cargo/=~/.cargo",
-
-    "--remap-path-prefix=/.rustup/=~/.rustup",
-    "--remap-path-prefix=/usr/local/rustup/=~/.rustup",
-
-    "--remap-path-prefix=/workspaces/=../",
-    "--remap-path-prefix=~/work/jeb/=../",
-
-    "--remap-path-prefix=/workspaces/jeb/=./",
-    "--remap-path-prefix=/home/runner/work/jeb/jeb/=./",
-]

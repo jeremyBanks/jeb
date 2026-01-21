@@ -17,3 +17,5 @@
 
 We _might_ want to define everything as both free functions and as methods on
 our extensions of StreamExt/TryStreamExt.
+
+---

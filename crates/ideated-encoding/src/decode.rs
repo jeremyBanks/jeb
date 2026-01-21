@@ -5,7 +5,7 @@
 
 use crate::alphabet::{
     decode_z85_block, escape_info_at_position_1_to_3, escape_raw_bytes_at_position_0,
-    is_escape_char, z85_digit_value, ESCAPE_PIPE, PADDING_CHAR,
+    is_escape_char, z85_digit_value, ESCAPE_PIPE,
 };
 use crate::base42::{decode_length, Endianness};
 use crate::error::DecodeError;
@@ -93,22 +93,17 @@ impl Decoder {
                 self.raw_bytes_remaining.min(5)
             };
 
-            for i in 0..to_consume {
-                // Skip padding characters in raw mode
-                if block[i] != PADDING_CHAR {
-                    self.output.push(block[i]);
-                }
+            // Raw bytes are consumed verbatim - padding only appears AFTER raw sequence ends
+            for &byte in block.iter().take(to_consume) {
+                self.output.push(byte);
             }
 
             if self.state == State::InRaw {
                 self.raw_bytes_remaining -= to_consume;
                 if self.raw_bytes_remaining == 0 {
                     self.state = State::Normal;
-                    // Process remaining chars in this block as normal
-                    if to_consume < 5 {
-                        self.buffer.drain(..to_consume);
-                        return Ok(());
-                    }
+                    // Remaining chars in this block are padding - skip them all
+                    // (drain the entire block, not just the consumed raw bytes)
                 }
             }
 
@@ -292,25 +287,17 @@ impl Decoder {
 
     /// Process a partial block at end of input.
     fn process_partial(&mut self) -> Result<(), DecodeError> {
-        // In infinite raw mode, consume all remaining
+        // In infinite raw mode, consume all remaining bytes verbatim
         if self.state == State::InfiniteRaw {
-            for &b in &self.buffer {
-                if b != PADDING_CHAR {
-                    self.output.push(b);
-                }
-            }
+            self.output.extend_from_slice(&self.buffer);
             self.buffer.clear();
             return Ok(());
         }
 
-        // In raw mode, consume remaining raw bytes
+        // In raw mode, consume remaining raw bytes verbatim
         if self.state == State::InRaw {
             let to_consume = self.raw_bytes_remaining.min(self.buffer.len());
-            for i in 0..to_consume {
-                if self.buffer[i] != PADDING_CHAR {
-                    self.output.push(self.buffer[i]);
-                }
-            }
+            self.output.extend_from_slice(&self.buffer[..to_consume]);
             self.buffer.drain(..to_consume);
             self.raw_bytes_remaining -= to_consume;
 
@@ -382,7 +369,7 @@ pub fn decode(data: &[u8]) -> Result<Vec<u8>, DecodeError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::alphabet::{encode_z85_block, z85_digit_char, ESCAPE_COMMA, ESCAPE_BACKTICK};
+    use crate::alphabet::{encode_z85_block, z85_digit_char, ESCAPE_COMMA, ESCAPE_BACKTICK, PADDING_CHAR};
 
     #[test]
     fn test_decode_empty() {

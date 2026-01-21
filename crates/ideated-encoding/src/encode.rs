@@ -131,18 +131,7 @@ impl Encoder {
     }
 
     /// Analyze the buffer to determine the best encoding strategy.
-    fn analyze_buffer(&self, _is_final: bool) -> EncodingStrategy {
-        // For now, always use standard Z85 encoding
-        // TODO: Re-enable raw passthrough after fixing decoder issues
-        let bytes_to_encode = self.buffer.len().min(4);
-        EncodingStrategy::StandardZ85 {
-            bytes: bytes_to_encode,
-        }
-    }
-
-    /// Analyze the buffer to determine the best encoding strategy (with raw passthrough).
-    #[allow(dead_code)]
-    fn analyze_buffer_with_raw(&self, is_final: bool) -> EncodingStrategy {
+    fn analyze_buffer(&self, is_final: bool) -> EncodingStrategy {
         // First, check if standard escapes would be beneficial
         if let Some(strategy) = self.try_standard_escape() {
             return strategy;
@@ -165,25 +154,26 @@ impl Encoder {
         // For each possible escape position and type, calculate the benefit
 
         // Standard escapes and their raw byte counts at position 0
+        // Ordered by descending raw count to maximize raw passthrough length
         let escapes_pos_0 = [
-            (ESCAPE_BACKTICK, 3),    // `
-            (ESCAPE_COMMA, 4),       // ,
-            (ESCAPE_TILDE, 5),       // ~
-            (ESCAPE_SEMICOLON, 6),   // ;
             (ESCAPE_UNDERSCORE, 7),  // _
+            (ESCAPE_SEMICOLON, 6),   // ;
+            (ESCAPE_TILDE, 5),       // ~
+            (ESCAPE_COMMA, 4),       // ,
+            (ESCAPE_BACKTICK, 3),    // `
         ];
 
         // Check position 0 (no prefix)
         for &(escape, raw_count) in &escapes_pos_0 {
-            if self.buffer.len() >= raw_count {
-                if self.all_safe_for_raw(&self.buffer[..raw_count]) {
-                    return Some(EncodingStrategy::RawPassthrough {
-                        prefix_bytes: 0,
-                        escape,
-                        raw_bytes: raw_count,
-                        is_little_endian: true,
-                    });
-                }
+            if self.buffer.len() >= raw_count
+                && self.all_safe_for_raw(&self.buffer[..raw_count])
+            {
+                return Some(EncodingStrategy::RawPassthrough {
+                    prefix_bytes: 0,
+                    escape,
+                    raw_bytes: raw_count,
+                    is_little_endian: true,
+                });
             }
         }
 
@@ -202,12 +192,13 @@ impl Encoder {
             }
 
             // Standard escapes at positions 1-3
+            // Ordered by descending raw count to maximize raw passthrough length
             let escapes_with_prefix = [
-                (ESCAPE_COMMA, 4, true),     // LE
-                (ESCAPE_BACKTICK, 4, false), // BE
+                (ESCAPE_UNDERSCORE, 7, true), // LE only
                 (ESCAPE_SEMICOLON, 6, true), // LE
                 (ESCAPE_TILDE, 6, false),    // BE
-                (ESCAPE_UNDERSCORE, 7, true), // LE only
+                (ESCAPE_COMMA, 4, true),     // LE
+                (ESCAPE_BACKTICK, 4, false), // BE
             ];
 
             for &(escape, raw_count, is_le) in &escapes_with_prefix {
@@ -219,15 +210,15 @@ impl Encoder {
                 }
 
                 let total_bytes = prefix_len + raw_count;
-                if self.buffer.len() >= total_bytes {
-                    if self.all_safe_for_raw(&self.buffer[prefix_len..prefix_len + raw_count]) {
-                        return Some(EncodingStrategy::RawPassthrough {
-                            prefix_bytes: prefix_len,
-                            escape,
-                            raw_bytes: raw_count,
-                            is_little_endian: is_le,
-                        });
-                    }
+                if self.buffer.len() >= total_bytes
+                    && self.all_safe_for_raw(&self.buffer[prefix_len..prefix_len + raw_count])
+                {
+                    return Some(EncodingStrategy::RawPassthrough {
+                        prefix_bytes: prefix_len,
+                        escape,
+                        raw_bytes: raw_count,
+                        is_little_endian: is_le,
+                    });
                 }
             }
         }
@@ -319,7 +310,7 @@ impl Encoder {
 
             // Output only the last c characters (low-order positions)
             // For b bytes, we need ceil(b * 5 / 4) characters
-            let char_count = (byte_count * 5 + 3) / 4;
+            let char_count = (byte_count * 5).div_ceil(4);
             self.output.extend_from_slice(&encoded[5 - char_count..]);
             self.buffer.drain(..byte_count);
             self.block_position = (self.block_position + char_count) % 5;
@@ -358,24 +349,14 @@ impl Encoder {
             .extend_from_slice(&self.buffer[raw_start..raw_end]);
         self.block_position = (self.block_position + raw_bytes) % 5;
 
-        // Calculate total bytes used
-        let total_bytes = prefix_bytes + raw_bytes;
-
-        // Calculate padding needed
-        // Standard encoding would use: ceil(total_bytes * 5 / 4) chars
-        // We used: prefix_bytes (chars) + 1 (escape) + raw_bytes (chars)
-        let chars_used = prefix_bytes + 1 + raw_bytes;
-        let standard_chars = (total_bytes * 5 + 3) / 4;
-
-        // Padding to maintain alignment
-        if chars_used < standard_chars {
-            let padding = standard_chars - chars_used;
-            for _ in 0..padding {
-                self.output.push(PADDING_CHAR);
-                self.block_position = (self.block_position + 1) % 5;
-            }
+        // Pad to complete the current block
+        // This ensures block alignment is maintained for subsequent content
+        while self.block_position != 0 {
+            self.output.push(PADDING_CHAR);
+            self.block_position = (self.block_position + 1) % 5;
         }
 
+        let total_bytes = prefix_bytes + raw_bytes;
         self.buffer.drain(..total_bytes);
     }
 
@@ -424,33 +405,25 @@ impl Encoder {
         self.output.extend_from_slice(&self.buffer[..raw_count]);
         self.block_position = (self.block_position + raw_count) % 5;
 
-        // Calculate padding
-        // Total chars used = length_chars + 1 (pipe) + raw_count
-        // Standard would use ceil(raw_count * 5 / 4)
-        let _chars_used = length_chars.len() + 1 + raw_count;
+        // For finite sequences, add padding to maintain alignment.
+        // For infinite sequences (length 0), no padding needed since stream ends.
+        if length != 0 {
+            // The invariant is: following content should appear at the same position
+            // as if everything before it was standard Z85 encoded.
+            // Raw bytes use 1:1 mapping but standard Z85 uses 5:4 mapping.
+            // So for N raw bytes, standard would produce ceil(N * 5 / 4) chars.
+            // We produced: length_chars + 1 + N chars.
+            // The difference is the padding needed.
+            let standard_chars = (raw_count * 5).div_ceil(4);
+            let prefix_overhead = length_chars.len() + 1;
+            let total_chars = prefix_overhead + raw_count;
 
-        // We need to pad to maintain alignment relative to what standard encoding
-        // would have produced for the same number of bytes
-        // But actually, raw bytes don't produce the same overhead as Z85...
-        // Let me reconsider.
-
-        // The invariant is: following content should appear at the same position
-        // as if everything before it was standard Z85 encoded.
-        // Raw bytes use 1:1 mapping but standard Z85 uses 5:4 mapping.
-        // So for N raw bytes, standard would produce ceil(N * 5 / 4) chars.
-        // We produced: length_chars + 1 + N chars.
-        // The difference is the padding needed.
-
-        let standard_chars = (raw_count * 5 + 3) / 4;
-        let prefix_overhead = length_chars.len() + 1;
-        let total_chars = prefix_overhead + raw_count;
-
-        // Padding needed to reach the same total as standard encoding
-        if total_chars < standard_chars {
-            let padding = standard_chars - total_chars;
-            for _ in 0..padding {
-                self.output.push(PADDING_CHAR);
-                self.block_position = (self.block_position + 1) % 5;
+            if total_chars < standard_chars {
+                let padding = standard_chars - total_chars;
+                for _ in 0..padding {
+                    self.output.push(PADDING_CHAR);
+                    self.block_position = (self.block_position + 1) % 5;
+                }
             }
         }
 

@@ -1,3 +1,5 @@
+cargo-features = ["trim-paths"]
+
 [workspace]
 resolver = "2"
 members = ["crates/*"]
@@ -13,6 +15,9 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 include = ["**/*.rs", "**/*.toml", "**/*.lock", "**/*.md", "**/LICENSE*", "!.*"]
 
+[profile.release]
+trim-paths = "all"
+
 [profile.dev.package.backtrace]
 opt-level = 3
 
@@ -25,6 +30,7 @@ strip = true
 split-debuginfo = "packed"
 panic = "abort"
 
+[patch]
 
 [patch.crates-io]
 _autofix = { path = "crates/_autofix" }

@@ -31,6 +31,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "_examples"
+version = "0.0.0-dev-2026-01-19.4531"
+dependencies = [
+ "anyhow",
+]
+
+[[package]]
 name = "_scripts"
 version = "0.0.0-dev-2026-01-19.4531"
 dependencies = [
