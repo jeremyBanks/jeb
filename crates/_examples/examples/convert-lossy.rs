@@ -1,8 +1,8 @@
-/// Potentially-fallible potentially-lossy conversion trait.
-///
-/// This trait is meant to be implemented, but rarely to be used directly. Users
-/// will typically want to use a simpler trait that delegates to this one.
-pub trait TryFromMaybeLossy<T>: Sized {
+/// Implementation helper trait for potentially-fallible potentially-lossy
+/// conversions. Implementors should implement this crate, while users will
+/// instead use one of the narrower delegating traits: `TryFromMaybeLossy`,
+/// `TryFromLossless`, `FromLossless`, `TryFromLossy`, or `FromLossy`.
+pub trait TryFromMaybeLossyImpl<T>: Sized {
     /// A warning returned if the conversion is lossy.
     type Warning;
 
@@ -81,6 +81,18 @@ pub trait TryFromMaybeLossy<T>: Sized {
     }
 }
 
+// Potentially-fallible potentially-lossy conversion trait (delegates to
+// `TryFromMaybeLossyImpl`).
+pub trait TryFromMaybeLossy<T>: TryFromMaybeLossyImpl<T> {
+    fn try_from_maybe_lossy(value: T) -> Result<(Self, Option<Self::Warning>), Self::Error> {
+        TryFromMaybeLossyImpl::try_from_maybe_lossy(value)
+    }
+}
+impl<T, Warning, Error> TryFromMaybeLossy<T> for T where
+    T: TryFromMaybeLossyImpl<T, Warning = Warning, Error = Error>
+{
+}
+
 /// Trait identifying the `std::convert::Infallible` type.
 pub trait Infallible {
     fn unreachable(self) -> !;
@@ -94,37 +106,40 @@ impl Infallible for std::convert::Infallible {
 
 /// Potentially-fallible lossless conversion trait (delegates to
 /// `TryFromMaybeLossy`).
-pub trait TryFromLossless<T>: TryFromMaybeLossy<T> {
+pub trait TryFromLossless<T>: TryFromMaybeLossyImpl<T> {
     fn try_from_lossless(value: T) -> Result<Self, Result<Self::Warning, Self::Error>> {
-        TryFromMaybeLossy::try_from_lossless(value)
+        TryFromMaybeLossyImpl::try_from_lossless(value)
     }
 }
 impl<T, Warning, Error> TryFromLossless<T> for T where
-    T: TryFromMaybeLossy<T, Warning = Warning, Error = Error>
+    T: TryFromMaybeLossyImpl<T, Warning = Warning, Error = Error>
 {
 }
 
 /// Infallible lossless conversion trait (delegates to `TryFromMaybeLossy`).
-pub trait FromLossless<T>: TryFromMaybeLossy<T>
+pub trait FromLossless<T>: TryFromMaybeLossyImpl<T>
 where
     Self::Warning: Infallible,
     Self::Error: Infallible,
 {
     fn from_lossless(value: T) -> Self {
-        TryFromMaybeLossy::from_lossless(value)
+        TryFromMaybeLossyImpl::from_lossless(value)
     }
 }
-impl<T> FromLossless<T> for T where T: TryFromMaybeLossy<T, Warning: Infallible, Error: Infallible> {}
+impl<T> FromLossless<T> for T where
+    T: TryFromMaybeLossyImpl<T, Warning: Infallible, Error: Infallible>
+{
+}
 
 /// Potentially-fallible lossy conversion trait (delegates to
 /// `TryFromMaybeLossy`).
-pub trait TryFromLossy<T>: TryFromMaybeLossy<T> {
+pub trait TryFromLossy<T>: TryFromMaybeLossyImpl<T> {
     fn try_from_lossy(value: T) -> Result<Self, Self::Error> {
-        TryFromMaybeLossy::try_from_lossy(value)
+        TryFromMaybeLossyImpl::try_from_lossy(value)
     }
 }
 impl<T, Warning, Error> TryFromLossy<T> for T where
-    T: TryFromMaybeLossy<T, Warning = Warning, Error = Error>
+    T: TryFromMaybeLossyImpl<T, Warning = Warning, Error = Error>
 {
 }
 
