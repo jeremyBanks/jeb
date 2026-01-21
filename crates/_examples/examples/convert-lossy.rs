@@ -1,6 +1,9 @@
 #![allow(unused)]
 
 /// Potentially-fallible potentially-lossy conversion trait.
+///
+/// This will be public but it's mostly meant for internal use; most
+/// functionality should be delegated from more standard traits.
 trait TryFromMaybeLossy<T>: Sized {
     /// A warning returned if the conversion is lossy.
     type Warning;
@@ -13,7 +16,26 @@ trait TryFromMaybeLossy<T>: Sized {
     /// the conversion is not possible.
     fn try_from_maybe_lossy(value: T) -> Result<(Self, Option<Self::Warning>), Self::Error>;
 
-    /// Attempts to convert the value to Self, potentially instead returning a
+    /// `try_from_maybe_lossy` implementation helper function for lossless
+    /// results.
+    fn lossless(value: Self) -> Result<(Self, Option<Self::Warning>), Self::Error> {
+        Ok((value, None))
+    }
+
+    /// `try_from_maybe_lossy` implementation helper function for lossy results.
+    fn lossy(
+        value: Self,
+        warning: Self::Warning,
+    ) -> Result<(Self, Option<Self::Warning>), Self::Error> {
+        Ok((value, Some(warning)))
+    }
+
+    /// `try_from_maybe_lossy` implementation helper function for error results.
+    fn error(error: Self::Error) -> Result<(Self, Option<Self::Warning>), Self::Error> {
+        Err(error)
+    }
+
+    /// Attempts to convert the value to `Self`, potentially instead returning a
     /// `Warning` if the conversion is lossy or an `Error` if the conversion is
     /// not possible.
     fn try_from_lossless(value: T) -> Result<Self, Result<Self::Warning, Self::Error>> {
@@ -61,10 +83,7 @@ trait TryFromMaybeLossy<T>: Sized {
     }
 }
 
-/// Trait for the `std::from::Infallible` type, used to enable the
-/// `from<T>::from` method for lossless infallible conversions and
-/// `from<T>::from_lossy` method for potentially-lossy infallible
-/// conversions.
+/// Trait identifying the `std::convert::Infallible` type.
 pub trait Infallible {
     fn unreachable(self) -> !;
 }
