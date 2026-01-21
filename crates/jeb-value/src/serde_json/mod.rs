@@ -18,7 +18,7 @@ impl From<Vec<serde_json::Value>> for crate::Value {
 }
 impl From<serde_json::Map<String, serde_json::Value>> for crate::Value {
     fn from(value: serde_json::Map<String, serde_json::Value>) -> Self {
-        crate::Value::TextMap(
+        crate::Value::StringMap(
             value
                 .into_iter()
                 .map(|(k, v)| (k.into(), crate::Value::from(v)))
@@ -33,7 +33,7 @@ impl From<serde_json::Number> for crate::Value {
         } else if let Some(value) = value.as_i64() {
             value.into()
         } else if let Some(value) = value.as_f64()
-            && let Some(value) = crate::float::Float::new(value)
+            && let Some(value) = crate::Number::new(value)
         {
             value.into()
         } else {

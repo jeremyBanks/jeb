@@ -245,7 +245,7 @@ impl ser::SerializeTupleStruct for SerializeVec {
     }
 }
 pub struct SerializeTupleVariant {
-    variant: String,
+    variant: std::string::String,
     vec: Vec<Value>,
 }
 impl ser::SerializeTupleVariant for SerializeTupleVariant {
@@ -259,7 +259,7 @@ impl ser::SerializeTupleVariant for SerializeTupleVariant {
 
     fn end(self) -> Result<Value, SerdeError> {
         let mut map = IndexMap::new();
-        map.insert(String::from(self.variant), Value::Array(self.vec));
+        map.insert(String::from(self.variant.as_str()), Value::Array(self.vec));
         Ok(Value::StringMap(map))
     }
 }
@@ -364,7 +364,7 @@ impl ser::SerializeStruct for SerializeMap {
     }
 }
 pub struct SerializeStructVariant {
-    variant: String,
+    variant: std::string::String,
     map: SerializeMap,
 }
 impl ser::SerializeStructVariant for SerializeStructVariant {
@@ -382,7 +382,7 @@ impl ser::SerializeStructVariant for SerializeStructVariant {
     fn end(self) -> Result<Value, SerdeError> {
         let fields = ser::SerializeMap::end(self.map)?;
         let mut map = IndexMap::new();
-        map.insert(String::from(self.variant), fields);
+        map.insert(String::from(self.variant.as_str()), fields);
         Ok(Value::StringMap(map))
     }
 }
