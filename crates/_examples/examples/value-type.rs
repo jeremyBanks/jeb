@@ -1,5 +1,8 @@
 use std::cmp::Ordering;
 
+// or maybe just JsonValue wraps with a fallible constructor and thats all we
+// need. and conversions functions?
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ValueTypes {
     pub null: bool,
@@ -17,7 +20,6 @@ pub struct TypedValue {
     inner_types: ValueTypes,
     // value: Value,
 }
-
 impl ValueTypes {
     fn bitmask(&self) -> u8 {
         let mut bits = 0;

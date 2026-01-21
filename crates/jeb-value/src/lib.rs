@@ -28,9 +28,9 @@ pub use self::serde_json::*;
 // [impl jeb-value.value.def.pub]
 // [impl jeb-value.variant.common.pub]
 pub use self::{
-    boolean::Boolean,
+    boolean::{from::NotBooleanError, Boolean},
     bytes::Bytes,
-    null::{std::NotNullError, Null},
+    null::{from::NotNullError, Null},
     number::{NotFiniteError, Number},
     string::String,
     value::Value,

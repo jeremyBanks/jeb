@@ -2,8 +2,8 @@ use derive_more::{
     AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut, Into, IntoIterator,
 };
 
+mod from;
 mod serde;
-mod std;
 mod value;
 
 // Note: Serde impls are in bytes/serde.rs (manual impl for serde_bytes compatibility)
