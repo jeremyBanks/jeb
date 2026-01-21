@@ -261,8 +261,9 @@ fn recover_blob_content(blob_hash: &str) -> Result<Vec<u8>> {
 fn main() -> Result<()> {
     let pattern = env::args().nth(1).unwrap_or_else(|| "*.md".to_string());
 
-    let output_dir = Path::new("history-pit");
-    fs::create_dir_all(output_dir)?;
+    let subdir_name = glob_to_dirname(&pattern);
+    let output_dir = Path::new("history-pit").join(&subdir_name);
+    fs::create_dir_all(&output_dir)?;
 
     // Step 1: Get all blobs in HEAD (these are not lost)
     println!("Getting blobs in HEAD...");
