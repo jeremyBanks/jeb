@@ -63,12 +63,12 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Signed(i) => visitor.visit_i64(i),
-            Value::Unsigned(u) => {
-                if let Ok(i) = i64::try_from(u) {
-                    visitor.visit_i64(i)
+            Value::Number(n) => {
+                let f = *n;
+                if f.fract() == 0.0 && f >= i64::MIN as f64 && f <= i64::MAX as f64 {
+                    visitor.visit_i64(f as i64)
                 } else {
-                    Err(SerdeError::custom("unsigned value out of range for i64"))
+                    Err(SerdeError::custom("number value out of range for i64"))
                 }
             }
             Value::Bytes(b) if b.len() == 16 => {
@@ -81,6 +81,11 @@ impl<'de> de::Deserializer<'de> for Value {
                     Err(SerdeError::custom("i128 value out of range for i64"))
                 }
             }
+            Value::Bytes(b) if b.len() == 8 => {
+                let slice: &[u8] = b.as_ref();
+                let bytes: [u8; 8] = slice.try_into().unwrap();
+                visitor.visit_i64(i64::from_be_bytes(bytes))
+            }
             _ => Err(SerdeError::invalid_type(self.unexpected(), "an integer")),
         }
     }
@@ -90,8 +95,14 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Signed(i) => visitor.visit_i128(i as i128),
-            Value::Unsigned(u) => visitor.visit_i128(u as i128),
+            Value::Number(n) => {
+                let f = *n;
+                if f.fract() == 0.0 {
+                    visitor.visit_i128(f as i128)
+                } else {
+                    Err(SerdeError::custom("number is not an integer"))
+                }
+            }
             Value::Bytes(b) if b.len() == 16 => {
                 let slice: &[u8] = b.as_ref();
                 let bytes: [u8; 16] = slice.try_into().unwrap();
@@ -128,12 +139,12 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Unsigned(u) => visitor.visit_u64(u),
-            Value::Signed(i) => {
-                if let Ok(u) = u64::try_from(i) {
-                    visitor.visit_u64(u)
+            Value::Number(n) => {
+                let f = *n;
+                if f.fract() == 0.0 && f >= 0.0 && f <= u64::MAX as f64 {
+                    visitor.visit_u64(f as u64)
                 } else {
-                    Err(SerdeError::custom("signed value out of range for u64"))
+                    Err(SerdeError::custom("number value out of range for u64"))
                 }
             }
             Value::Bytes(b) if b.len() == 16 => {
@@ -158,12 +169,12 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Unsigned(u) => visitor.visit_u128(u as u128),
-            Value::Signed(i) => {
-                if let Ok(u) = u128::try_from(i) {
-                    visitor.visit_u128(u)
+            Value::Number(n) => {
+                let f = *n;
+                if f.fract() == 0.0 && f >= 0.0 {
+                    visitor.visit_u128(f as u128)
                 } else {
-                    Err(SerdeError::custom("signed value is negative"))
+                    Err(SerdeError::custom("number is negative or not an integer"))
                 }
             }
             Value::Bytes(b) if b.len() == 16 => {
@@ -181,7 +192,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Float(f) => visitor.visit_f32(*f as f32),
+            Value::Number(n) => visitor.visit_f32(*n as f32),
             Value::Bytes(b) if b.len() == 4 => {
                 let slice: &[u8] = b.as_ref();
                 let bytes: [u8; 4] = slice.try_into().unwrap();
@@ -197,7 +208,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Float(f) => visitor.visit_f64(*f),
+            Value::Number(n) => visitor.visit_f64(*n),
             Value::Bytes(b) if b.len() == 8 => {
                 let slice: &[u8] = b.as_ref();
                 let bytes: [u8; 8] = slice.try_into().unwrap();
@@ -219,16 +230,16 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::String(t) => {
-                let s: String = t.into();
-                let mut chars = s.chars();
+            Value::String(s) => {
+                let inner = s.into_inner();
+                let mut chars = inner.chars();
                 if let Some(c) = chars.next()
                     && chars.next().is_none()
                 {
                     return visitor.visit_char(c);
                 }
                 Err(SerdeError::invalid_type(
-                    Unexpected::Str(s.into_boxed_str()),
+                    Unexpected::Str(inner.into_boxed_str()),
                     "a single character",
                 ))
             }
@@ -241,7 +252,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::String(t) => visitor.visit_string(t.into()),
+            Value::String(s) => visitor.visit_string(s.into_inner()),
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a string")),
         }
     }
@@ -258,13 +269,21 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Bytes(b) => visitor.visit_byte_buf(b.into()),
+            Value::Bytes(b) => visitor.visit_byte_buf(b.into_inner()),
             Value::Array(arr) => {
                 let mut bytes = Vec::with_capacity(arr.len());
                 for v in arr {
                     match v {
-                        Value::Unsigned(u) if u <= 255 => bytes.push(u as u8),
-                        Value::Signed(i) if (0..=255).contains(&i) => bytes.push(i as u8),
+                        Value::Number(n) => {
+                            let f = *n;
+                            if f.fract() == 0.0 && f >= 0.0 && f <= 255.0 {
+                                bytes.push(f as u8);
+                            } else {
+                                return Err(SerdeError::custom(
+                                    "array contains non-byte values for bytes deserialization",
+                                ));
+                            }
+                        }
                         _ => {
                             return Err(SerdeError::custom(
                                 "array contains non-byte values for bytes deserialization",
@@ -274,9 +293,8 @@ impl<'de> de::Deserializer<'de> for Value {
                 }
                 visitor.visit_byte_buf(bytes)
             }
-            Value::String(t) => {
-                let s: String = t.into();
-                visitor.visit_byte_buf(s.into_bytes())
+            Value::String(s) => {
+                visitor.visit_byte_buf(s.into_inner().into_bytes())
             }
             _ => Err(SerdeError::invalid_type(self.unexpected(), "bytes")),
         }
@@ -374,7 +392,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::StringMap(m) => visitor.visit_map(TextMapDeserializer::new(m)),
+            Value::StringMap(m) => visitor.visit_map(StringMapDeserializer::new(m)),
             Value::BytesMap(m) => visitor.visit_map(BytesMapDeserializer::new(m)),
             Value::Array(arr) => {
                 if arr.is_empty() {
@@ -402,7 +420,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::StringMap(m) => visitor.visit_map(TextMapDeserializer::new(m)),
+            Value::StringMap(m) => visitor.visit_map(StringMapDeserializer::new(m)),
             Value::BytesMap(m) => visitor.visit_map(BytesMapDeserializer::new(m)),
             Value::Array(arr) => visitor.visit_seq(SeqDeserializer::new(arr)),
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a struct")),
@@ -419,13 +437,13 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::String(t) => {
-                let s: String = t.into();
-                visitor.visit_enum(s.into_deserializer())
+            Value::String(s) => {
+                let inner = s.into_inner();
+                visitor.visit_enum(inner.into_deserializer())
             }
             Value::StringMap(m) if m.len() == 1 => {
                 let (key, value) = m.into_iter().next().unwrap();
-                let variant: String = key.into();
+                let variant = key.into_inner();
                 visitor.visit_enum(EnumDeserializer {
                     variant,
                     value: Some(value),
@@ -440,8 +458,15 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::String(t) => visitor.visit_string(t.into()),
-            Value::Unsigned(u) => visitor.visit_u64(u),
+            Value::String(s) => visitor.visit_string(s.into_inner()),
+            Value::Number(n) => {
+                let f = *n;
+                if f.fract() == 0.0 && f >= 0.0 && f <= u64::MAX as f64 {
+                    visitor.visit_u64(f as u64)
+                } else {
+                    Err(SerdeError::invalid_type(self.unexpected(), "an identifier"))
+                }
+            }
             _ => Err(SerdeError::invalid_type(self.unexpected(), "an identifier")),
         }
     }
@@ -458,12 +483,9 @@ impl Value {
         match self {
             Value::Null => Unexpected::Unit,
             Value::Boolean(b) => Unexpected::Bool(**b),
-            Value::Unsigned(u) => Unexpected::Unsigned(*u),
-            Value::Signed(i) => Unexpected::Signed(*i),
-            Value::Float(f) => Unexpected::Float(**f),
-            Value::String(t) => {
-                let s: String = t.clone().into();
-                Unexpected::Str(s.into_boxed_str())
+            Value::Number(n) => Unexpected::Float(**n),
+            Value::String(s) => {
+                Unexpected::Str(s.clone().into_inner().into_boxed_str())
             }
             Value::Bytes(b) => {
                 let slice: &[u8] = b.as_ref();
@@ -501,19 +523,19 @@ impl<'de> de::SeqAccess<'de> for SeqDeserializer {
         Some(self.iter.len())
     }
 }
-struct TextMapDeserializer {
-    iter: <IndexMap<Text, Value> as IntoIterator>::IntoIter,
+struct StringMapDeserializer {
+    iter: <IndexMap<String, Value> as IntoIterator>::IntoIter,
     value: Option<Value>,
 }
-impl TextMapDeserializer {
-    fn new(map: IndexMap<Text, Value>) -> Self {
-        TextMapDeserializer {
+impl StringMapDeserializer {
+    fn new(map: IndexMap<String, Value>) -> Self {
+        StringMapDeserializer {
             iter: map.into_iter(),
             value: None,
         }
     }
 }
-impl<'de> de::MapAccess<'de> for TextMapDeserializer {
+impl<'de> de::MapAccess<'de> for StringMapDeserializer {
     type Error = SerdeError;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, SerdeError>
@@ -631,7 +653,7 @@ impl<'de> de::MapAccess<'de> for PairsDeserializer {
     }
 }
 struct EnumDeserializer {
-    variant: String,
+    variant: std::string::String,
     value: Option<Value>,
 }
 impl<'de> de::EnumAccess<'de> for EnumDeserializer {
@@ -690,7 +712,7 @@ impl<'de> de::VariantAccess<'de> for VariantDeserializer {
         V: Visitor<'de>,
     {
         match self.value {
-            Some(Value::StringMap(m)) => visitor.visit_map(TextMapDeserializer::new(m)),
+            Some(Value::StringMap(m)) => visitor.visit_map(StringMapDeserializer::new(m)),
             Some(Value::BytesMap(m)) => visitor.visit_map(BytesMapDeserializer::new(m)),
             Some(Value::Array(arr)) => visitor.visit_map(PairsDeserializer::new(arr)),
             Some(_) => Err(SerdeError::custom("expected struct variant")),
@@ -704,12 +726,12 @@ pub fn from_value<T: de::DeserializeOwned>(value: Value) -> Result<T, SerdeError
 trait IntoDeserializer {
     fn into_deserializer(self) -> StringDeserializer;
 }
-impl IntoDeserializer for String {
+impl IntoDeserializer for std::string::String {
     fn into_deserializer(self) -> StringDeserializer {
         StringDeserializer(self)
     }
 }
-struct StringDeserializer(String);
+struct StringDeserializer(std::string::String);
 impl<'de> de::Deserializer<'de> for StringDeserializer {
     type Error = SerdeError;
 
