@@ -4,5 +4,5 @@
 *.tmp
 *.wasm
 /examples/self.sh
-/history-pit
+/history-pit/
 /target/

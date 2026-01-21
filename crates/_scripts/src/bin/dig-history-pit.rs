@@ -283,22 +283,29 @@ fn main() -> Result<()> {
         .collect();
     println!("  {} truly lost blobs", lost_deletions.len());
 
-    // Step 4: Deduplicate by (blob_hash, path) - keep most recent deletion
+    // Step 4: Deduplicate by (blob_hash, path) - keep oldest AND newest deletion
     println!("Deduplicating...");
-    let mut dedup_map: HashMap<(String, String), BlobDeletion> = HashMap::new();
+    let mut by_blob_path: HashMap<(String, String), Vec<BlobDeletion>> = HashMap::new();
     for deletion in lost_deletions {
         let key = (deletion.blob_hash.clone(), deletion.path.clone());
-        dedup_map
-            .entry(key)
-            .and_modify(|existing| {
-                // Keep the most recent deletion date
-                if deletion.deleted > existing.deleted {
-                    *existing = deletion.clone();
-                }
-            })
-            .or_insert(deletion);
+        by_blob_path.entry(key).or_default().push(deletion);
     }
-    let mut unique_deletions: Vec<_> = dedup_map.into_values().collect();
+
+    let mut unique_deletions = Vec::new();
+    for (_key, mut deletions) in by_blob_path {
+        deletions.sort_by(|a, b| a.deleted.cmp(&b.deleted)); // Sort by date
+        if deletions.len() == 1 {
+            unique_deletions.push(deletions.remove(0));
+        } else {
+            // Keep oldest and newest
+            let oldest = deletions.remove(0);
+            let newest = deletions.pop().unwrap();
+            unique_deletions.push(oldest.clone());
+            if oldest.delete_commit != newest.delete_commit {
+                unique_deletions.push(newest);
+            }
+        }
+    }
     unique_deletions.sort_by(|a, b| (&a.path, &a.deleted).cmp(&(&b.path, &b.deleted)));
     println!("  {} unique (blob, path) pairs", unique_deletions.len());
 
