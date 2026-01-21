@@ -50,133 +50,87 @@ fn get_head_blobs() -> Result<HashSet<String>> {
     Ok(blobs)
 }
 
-/// Find all commits that deleted files matching the pattern
-fn find_deletion_commits(pattern: &str) -> Result<Vec<(String, String)>> {
-    // Returns (commit_hash, date) pairs
+/// Find all blob deletions using git log --raw
+/// This handles merge commits correctly by using -m flag
+fn find_all_deletions(pattern: &str) -> Result<Vec<BlobDeletion>> {
+    // Use git log with --raw to get both commit info and diff info in one pass
+    // -m shows merge commits as separate diffs against each parent
+    // --diff-filter=D shows only deleted files
+    // --diff-filter=T shows type changes (file -> symlink/submodule)
     let output = git(&[
         "log",
         "--all",
-        "--diff-filter=D",
-        "--format=%H %cs",
-        "--",
-        pattern,
-    ])?;
-
-    let mut commits = Vec::new();
-    for line in output.lines() {
-        if line.is_empty() {
-            continue;
-        }
-        let parts: Vec<&str> = line.splitn(2, ' ').collect();
-        if parts.len() == 2 {
-            commits.push((parts[0].to_string(), parts[1].to_string()));
-        }
-    }
-    Ok(commits)
-}
-
-/// Get the blobs deleted in a specific commit compared to its first parent
-fn get_deleted_blobs(commit: &str, pattern: &str) -> Result<Vec<(String, String)>> {
-    // Returns (blob_hash, path) pairs for deleted regular files
-
-    // Get parent commit
-    let parent = git(&["rev-parse", &format!("{}^", commit)]);
-    let parent = match parent {
-        Ok(p) if !p.is_empty() => p,
-        _ => return Ok(Vec::new()), // Root commit, no deletions possible
-    };
-
-    // Use diff-tree to find deleted files
-    // Format: :old_mode new_mode old_hash new_hash status\tpath
-    let output = git(&[
-        "diff-tree",
-        "-r",
-        "--diff-filter=D",
-        &parent,
-        commit,
+        "-m",
+        "--raw",
+        "--diff-filter=DT",
+        "--format=COMMIT %H %cs",
         "--",
         pattern,
     ])?;
 
     let mut deletions = Vec::new();
+    let mut current_commit = String::new();
+    let mut current_date = String::new();
+
     for line in output.lines() {
-        if line.is_empty() || !line.starts_with(':') {
+        if line.starts_with("COMMIT ") {
+            // Parse: COMMIT <hash> <date>
+            let parts: Vec<&str> = line[7..].splitn(2, ' ').collect();
+            if parts.len() == 2 {
+                current_commit = parts[0].to_string();
+                current_date = parts[1].to_string();
+            }
             continue;
         }
 
-        // Parse the diff-tree output
-        // Example: :100644 000000 abc123... 0000000... D\tpath/to/file.md
-        let parts: Vec<&str> = line[1..].splitn(5, |c| c == ' ' || c == '\t').collect();
-        if parts.len() < 5 {
-            continue;
-        }
+        if line.starts_with(':') && !current_commit.is_empty() {
+            // Raw diff line: :old_mode new_mode old_hash new_hash status\tpath
+            // Example: :100644 000000 abc123... 0000000... D\tpath/to/file.md
+            // Example: :100644 120000 abc123... def456... T\tpath/to/file.md (type change)
 
-        let old_mode = parts[0];
-        let old_hash = parts[2];
+            let parts: Vec<&str> = line[1..].split_whitespace().collect();
+            if parts.len() < 5 {
+                continue;
+            }
 
-        // Only consider regular files (mode 100644 or 100755)
-        if !old_mode.starts_with("100") {
-            continue;
-        }
+            let old_mode = parts[0];
+            let new_mode = parts[1];
+            let old_hash = parts[2];
+            let status = parts[4];
 
-        // Find the path (after the tab)
-        if let Some(tab_pos) = line.find('\t') {
-            let path = &line[tab_pos + 1..];
+            // Only consider regular files (mode 100644 or 100755)
+            if !old_mode.starts_with("100") {
+                continue;
+            }
+
+            // For type changes (T), only count if it became non-regular file
+            if status.starts_with('T') && new_mode.starts_with("100") {
+                continue;
+            }
+
+            // Find the path (after the tab in status field)
+            let status_and_path = parts[4..].join(" ");
+            let path = if let Some(tab_pos) = status_and_path.find('\t') {
+                &status_and_path[tab_pos + 1..]
+            } else if status_and_path.len() > 1 {
+                // No tab, path might be after status letter
+                status_and_path[1..].trim()
+            } else {
+                continue;
+            };
+
             // Skip history-pit output directory
             if path.starts_with("history-pit/") {
                 continue;
             }
-            deletions.push((old_hash.to_string(), path.to_string()));
-        }
-    }
 
-    Ok(deletions)
-}
-
-/// Also detect when a regular file becomes a symlink or submodule (content is "deleted")
-fn get_mode_changes(commit: &str, pattern: &str) -> Result<Vec<(String, String)>> {
-    // Returns (blob_hash, path) pairs where file went from regular to symlink/submodule
-
-    let parent = git(&["rev-parse", &format!("{}^", commit)]);
-    let parent = match parent {
-        Ok(p) if !p.is_empty() => p,
-        _ => return Ok(Vec::new()),
-    };
-
-    // Use diff-tree with --diff-filter=T for type changes
-    let output = git(&[
-        "diff-tree",
-        "-r",
-        "--diff-filter=T",
-        &parent,
-        commit,
-        "--",
-        pattern,
-    ])?;
-
-    let mut deletions = Vec::new();
-    for line in output.lines() {
-        if line.is_empty() || !line.starts_with(':') {
-            continue;
-        }
-
-        let parts: Vec<&str> = line[1..].splitn(5, |c| c == ' ' || c == '\t').collect();
-        if parts.len() < 5 {
-            continue;
-        }
-
-        let old_mode = parts[0];
-        let new_mode = parts[1];
-        let old_hash = parts[2];
-
-        // Only if it was a regular file and became something else
-        if old_mode.starts_with("100") && !new_mode.starts_with("100") {
-            if let Some(tab_pos) = line.find('\t') {
-                let path = &line[tab_pos + 1..];
-                if !path.starts_with("history-pit/") {
-                    deletions.push((old_hash.to_string(), path.to_string()));
-                }
-            }
+            deletions.push(BlobDeletion {
+                blob_hash: old_hash.to_string(),
+                path: path.to_string(),
+                created: String::new(),
+                deleted: current_date.clone(),
+                delete_commit: current_commit.clone(),
+            });
         }
     }
 
@@ -301,43 +255,12 @@ fn main() -> Result<()> {
     let head_blobs = get_head_blobs()?;
     println!("  {} blobs currently in HEAD", head_blobs.len());
 
-    // Step 2: Find all deletion commits
-    println!("Finding deletion commits...");
-    let deletion_commits = find_deletion_commits(&pattern)?;
-    println!("  {} commits with deletions", deletion_commits.len());
-
-    // Step 3: Collect all blob deletions
-    println!("Collecting blob deletions...");
-    let mut all_deletions: Vec<BlobDeletion> = Vec::new();
-
-    for (commit, date) in &deletion_commits {
-        // Get actual file deletions
-        let deleted = get_deleted_blobs(commit, &pattern)?;
-        for (blob_hash, path) in deleted {
-            all_deletions.push(BlobDeletion {
-                blob_hash,
-                path,
-                created: String::new(), // Will fill in later
-                deleted: date.clone(),
-                delete_commit: commit.clone(),
-            });
-        }
-
-        // Get mode changes (regular file -> symlink/submodule)
-        let changed = get_mode_changes(commit, &pattern)?;
-        for (blob_hash, path) in changed {
-            all_deletions.push(BlobDeletion {
-                blob_hash,
-                path,
-                created: String::new(),
-                deleted: date.clone(),
-                delete_commit: commit.clone(),
-            });
-        }
-    }
+    // Step 2: Find all blob deletions (handles merge commits with -m)
+    println!("Finding blob deletions...");
+    let all_deletions = find_all_deletions(&pattern)?;
     println!("  {} total blob deletions found", all_deletions.len());
 
-    // Step 4: Filter out blobs that still exist in HEAD
+    // Step 3: Filter out blobs that still exist in HEAD
     println!("Filtering out blobs still in HEAD...");
     let lost_deletions: Vec<_> = all_deletions
         .into_iter()
@@ -345,7 +268,7 @@ fn main() -> Result<()> {
         .collect();
     println!("  {} truly lost blobs", lost_deletions.len());
 
-    // Step 5: Deduplicate by (blob_hash, path) - keep most recent deletion
+    // Step 4: Deduplicate by (blob_hash, path) - keep most recent deletion
     println!("Deduplicating...");
     let mut dedup_map: HashMap<(String, String), BlobDeletion> = HashMap::new();
     for deletion in lost_deletions {
@@ -364,7 +287,7 @@ fn main() -> Result<()> {
     unique_deletions.sort_by(|a, b| (&a.path, &a.deleted).cmp(&(&b.path, &b.deleted)));
     println!("  {} unique (blob, path) pairs", unique_deletions.len());
 
-    // Step 6: Fill in creation dates and recover content
+    // Step 5: Fill in creation dates and recover content
     println!("Recovering files...");
     let mut recovered = 0;
     let mut failed = 0;
