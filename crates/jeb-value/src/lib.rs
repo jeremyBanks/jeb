@@ -2,8 +2,10 @@
 #![doc = ::document_features::document_features!()]
 #![allow(unused_imports, clippy::approx_constant)]
 
+mod array;
 mod boolean;
 mod bytes;
+mod bytes_map;
 mod from;
 mod null;
 mod number;
@@ -16,6 +18,7 @@ mod serde;
 #[cfg(feature = "serde_json")]
 mod serde_json;
 mod string;
+mod string_map;
 mod value;
 
 // [impl jeb-value.features.core.cfg]
@@ -28,10 +31,13 @@ pub use self::serde_json::*;
 // [impl jeb-value.value.def.pub]
 // [impl jeb-value.variant.common.pub]
 pub use self::{
+    array::Array,
     boolean::{from::NotBooleanError, Boolean},
     bytes::Bytes,
+    bytes_map::BytesMap,
     null::{from::NotNullError, Null},
     number::{NotFiniteError, Number},
     string::String,
+    string_map::StringMap,
     value::Value,
 };

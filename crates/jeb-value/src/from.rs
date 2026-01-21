@@ -1,4 +1,4 @@
-use crate::{Bytes, Null, Number, String, Value};
+use crate::{Array, Bytes, BytesMap, Null, Number, String, StringMap, Value};
 
 // [impl jeb-value.number.try-from-inner]
 // (Note: TryFrom<f64> for Number is in number/mod.rs)
@@ -226,7 +226,7 @@ impl<const N: usize> From<[Value; N]> for Value {
 
 impl FromIterator<Value> for Value {
     fn from_iter<T: IntoIterator<Item = Value>>(iter: T) -> Self {
-        Value::Array(iter.into_iter().collect())
+        Value::Array(Array::from_iter(iter))
     }
 }
 
@@ -250,23 +250,23 @@ impl<const N: usize> From<[(&str, Value); N]> for Value {
 
 impl FromIterator<(String, Value)> for Value {
     fn from_iter<T: IntoIterator<Item = (String, Value)>>(iter: T) -> Self {
-        Value::StringMap(iter.into_iter().collect())
+        Value::StringMap(StringMap::from_iter(iter))
     }
 }
 
 impl FromIterator<(std::string::String, Value)> for Value {
     fn from_iter<T: IntoIterator<Item = (std::string::String, Value)>>(iter: T) -> Self {
-        Value::StringMap(iter.into_iter().map(|(k, v)| (String::from(k), v)).collect())
+        Value::StringMap(StringMap::from_iter(
+            iter.into_iter().map(|(k, v)| (String::from(k), v)),
+        ))
     }
 }
 
 impl<'a> FromIterator<(&'a str, Value)> for Value {
     fn from_iter<T: IntoIterator<Item = (&'a str, Value)>>(iter: T) -> Self {
-        Value::StringMap(
-            iter.into_iter()
-                .map(|(k, v)| (String::from(k), v))
-                .collect(),
-        )
+        Value::StringMap(StringMap::from_iter(
+            iter.into_iter().map(|(k, v)| (String::from(k), v)),
+        ))
     }
 }
 
@@ -290,18 +290,22 @@ impl<const N: usize> From<[(&[u8], Value); N]> for Value {
 
 impl FromIterator<(Bytes, Value)> for Value {
     fn from_iter<T: IntoIterator<Item = (Bytes, Value)>>(iter: T) -> Self {
-        Value::BytesMap(iter.into_iter().collect())
+        Value::BytesMap(BytesMap::from_iter(iter))
     }
 }
 
 impl FromIterator<(Vec<u8>, Value)> for Value {
     fn from_iter<T: IntoIterator<Item = (Vec<u8>, Value)>>(iter: T) -> Self {
-        Value::BytesMap(iter.into_iter().map(|(k, v)| (Bytes::from(k), v)).collect())
+        Value::BytesMap(BytesMap::from_iter(
+            iter.into_iter().map(|(k, v)| (Bytes::from(k), v)),
+        ))
     }
 }
 
 impl<'a> FromIterator<(&'a [u8], Value)> for Value {
     fn from_iter<T: IntoIterator<Item = (&'a [u8], Value)>>(iter: T) -> Self {
-        Value::BytesMap(iter.into_iter().map(|(k, v)| (Bytes::from(k), v)).collect())
+        Value::BytesMap(BytesMap::from_iter(
+            iter.into_iter().map(|(k, v)| (Bytes::from(k), v)),
+        ))
     }
 }

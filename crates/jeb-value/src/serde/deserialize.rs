@@ -1,8 +1,7 @@
 //! Non-derived `Deserialize` implementations for our `Value` types, to allow
 //! them to be deserialized by arbitrary serde `Deserializer`s.
 use {
-    crate::{Boolean, Bytes, Null, Number, String, Value},
-    indexmap::IndexMap,
+    crate::{Array, Boolean, Bytes, BytesMap, Null, Number, String, StringMap, Value},
     serde::de::{self, Visitor},
 };
 
@@ -232,7 +231,7 @@ impl<'de> Visitor<'de> for ValueVisitor {
         while let Some(value) = seq.next_element()? {
             values.push(value);
         }
-        Ok(Value::Array(values))
+        Ok(Value::Array(Array::new(values)))
     }
 
     fn visit_map<A>(self, mut map: A) -> Result<Value, A::Error>
@@ -244,15 +243,15 @@ impl<'de> Visitor<'de> for ValueVisitor {
             entries.push((key, value));
         }
         if entries.is_empty() {
-            return Ok(Value::StringMap(IndexMap::new()));
+            return Ok(Value::StringMap(StringMap::default()));
         }
         let is_string_map = matches!(entries[0].0, Value::String(_));
         if is_string_map {
-            let mut string_map = IndexMap::new();
+            let mut pairs = Vec::new();
             for (key, value) in entries {
                 match key {
                     Value::String(s) => {
-                        string_map.insert(s, value);
+                        pairs.push((s, value));
                     }
                     _ => {
                         return Err(de::Error::custom(
@@ -261,13 +260,13 @@ impl<'de> Visitor<'de> for ValueVisitor {
                     }
                 }
             }
-            Ok(Value::StringMap(string_map))
+            Ok(Value::StringMap(StringMap::from_iter(pairs)))
         } else {
-            let mut bytes_map = IndexMap::new();
+            let mut pairs = Vec::new();
             for (key, value) in entries {
                 match key {
                     Value::Bytes(bytes) => {
-                        bytes_map.insert(bytes, value);
+                        pairs.push((bytes, value));
                     }
                     _ => {
                         return Err(de::Error::custom(
@@ -276,7 +275,7 @@ impl<'de> Visitor<'de> for ValueVisitor {
                     }
                 }
             }
-            Ok(Value::BytesMap(bytes_map))
+            Ok(Value::BytesMap(BytesMap::from_iter(pairs)))
         }
     }
 }

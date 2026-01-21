@@ -1,7 +1,9 @@
 use {
-    super::{boolean::Boolean, bytes::Bytes, null::Null, number::Number, string::String},
+    super::{
+        array::Array, boolean::Boolean, bytes::Bytes, bytes_map::BytesMap, null::Null,
+        number::Number, string::String, string_map::StringMap,
+    },
     derive_more::{From, IsVariant, TryInto, TryUnwrap, Unwrap},
-    indexmap::IndexMap,
 };
 
 // [impl jeb-value.features.core.cfg]
@@ -20,9 +22,9 @@ pub enum Value {
     Number(Number),
     Bytes(Bytes),
     String(String),
-    Array(Vec<Value>),
-    BytesMap(IndexMap<Bytes, Value>),
-    StringMap(IndexMap<String, Value>),
+    Array(#[from] Array),
+    BytesMap(#[from] BytesMap),
+    StringMap(#[from] StringMap),
 }
 
 // [impl jeb-value.value.traits.partial-eq]
@@ -57,18 +59,8 @@ impl core::hash::Hash for Value {
             Value::Bytes(value) => value.hash(state),
             Value::String(value) => value.hash(state),
             Value::Array(value) => value.hash(state),
-            Value::BytesMap(value) => {
-                value.len().hash(state);
-                for item in value {
-                    item.hash(state);
-                }
-            }
-            Value::StringMap(value) => {
-                value.len().hash(state);
-                for item in value {
-                    item.hash(state);
-                }
-            }
+            Value::BytesMap(value) => value.hash(state),
+            Value::StringMap(value) => value.hash(state),
         }
     }
 }
@@ -106,8 +98,8 @@ impl Ord for Value {
                 (Bytes(left), Bytes(right)) => left.cmp(right),
                 (String(left), String(right)) => left.cmp(right),
                 (Array(left), Array(right)) => left.cmp(right),
-                (BytesMap(left), BytesMap(right)) => left.iter().cmp(right.iter()),
-                (StringMap(left), StringMap(right)) => left.iter().cmp(right.iter()),
+                (BytesMap(left), BytesMap(right)) => left.cmp(right),
+                (StringMap(left), StringMap(right)) => left.cmp(right),
                 _ => unreachable!("type_rank equality should prevent this"),
             },
             ord => ord,
