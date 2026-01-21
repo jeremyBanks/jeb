@@ -258,6 +258,10 @@ fn recover_blob_content(blob_hash: &str) -> Result<Vec<u8>> {
     git_raw(&["cat-file", "blob", blob_hash])
 }
 
+fn is_whitespace_only(content: &[u8]) -> bool {
+    content.iter().all(|&b| b.is_ascii_whitespace())
+}
+
 fn main() -> Result<()> {
     let pattern = env::args().nth(1).unwrap_or_else(|| "*.md".to_string());
 
@@ -308,6 +312,44 @@ fn main() -> Result<()> {
     }
     unique_deletions.sort_by(|a, b| (&a.path, &a.deleted).cmp(&(&b.path, &b.deleted)));
     println!("  {} unique (blob, path) pairs", unique_deletions.len());
+
+    // Step 4.5: Filter out whitespace-only blobs unless they're the only version for that path
+    println!("Filtering whitespace-only content...");
+    let mut deletions_by_path: HashMap<String, Vec<usize>> = HashMap::new();
+    for (i, d) in unique_deletions.iter().enumerate() {
+        deletions_by_path.entry(d.path.clone()).or_default().push(i);
+    }
+
+    let mut skip_indices: HashSet<usize> = HashSet::new();
+    for (_path, indices) in &deletions_by_path {
+        // Find which indices have non-whitespace content
+        let non_whitespace: Vec<usize> = indices
+            .iter()
+            .copied()
+            .filter(|&i| {
+                let content = recover_blob_content(&unique_deletions[i].blob_hash).unwrap_or_default();
+                !is_whitespace_only(&content)
+            })
+            .collect();
+
+        if !non_whitespace.is_empty() {
+            // Skip whitespace-only versions since non-empty ones exist
+            for &i in indices {
+                let content = recover_blob_content(&unique_deletions[i].blob_hash).unwrap_or_default();
+                if is_whitespace_only(&content) {
+                    skip_indices.insert(i);
+                }
+            }
+        }
+    }
+
+    let mut unique_deletions: Vec<_> = unique_deletions
+        .into_iter()
+        .enumerate()
+        .filter(|(i, _)| !skip_indices.contains(i))
+        .map(|(_, d)| d)
+        .collect();
+    println!("  {} after whitespace filtering", unique_deletions.len());
 
     // Step 5: Fill in creation dates and recover content
     println!("Recovering files...");
