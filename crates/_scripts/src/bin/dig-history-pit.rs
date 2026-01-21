@@ -50,6 +50,20 @@ fn get_head_blobs() -> Result<HashSet<String>> {
     Ok(blobs)
 }
 
+/// Convert a glob pattern to a safe directory name
+fn glob_to_dirname(pattern: &str) -> String {
+    pattern
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '.' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
 /// Find all blob deletions using git log --raw
 /// This handles merge commits correctly by using -m flag
 fn find_all_deletions(pattern: &str) -> Result<Vec<BlobDeletion>> {
@@ -62,6 +76,7 @@ fn find_all_deletions(pattern: &str) -> Result<Vec<BlobDeletion>> {
         "--all",
         "-m",
         "--raw",
+        "--abbrev=40", // Full blob hashes for comparison with HEAD
         "--diff-filter=DT",
         "--format=COMMIT %H %cs",
         "--",
@@ -120,7 +135,7 @@ fn find_all_deletions(pattern: &str) -> Result<Vec<BlobDeletion>> {
             };
 
             // Skip history-pit output directory
-            if path.starts_with("history-pit/") {
+            if path.starts_with("history-pit/") || path.starts_with("history-pit\\") {
                 continue;
             }
 
@@ -229,35 +244,53 @@ fn build_filename(deletion: &BlobDeletion) -> String {
     let created = deletion.created.replace('-', "");
     let deleted_abbrev = abbreviate_date(&deletion.created, &deletion.deleted);
     let commit_short = &deletion.delete_commit[..6.min(deletion.delete_commit.len())];
+    let blob_short = &deletion.blob_hash[..8.min(deletion.blob_hash.len())];
 
     // Flatten path: replace / with -
     let flattened = deletion.path.replace('/', "-");
 
-    if deleted_abbrev.is_empty() {
-        format!("{}-{}-{}", created, commit_short, flattened)
-    } else {
-        format!("{}-{}-{}-{}", created, deleted_abbrev, commit_short, flattened)
-    }
+    // Concatenate created+abbrev directly (no dash between them)
+    let date_part = format!("{}{}", created, deleted_abbrev);
+    format!("{}-{}-{}-{}", date_part, commit_short, blob_short, flattened)
 }
 
 fn recover_blob_content(blob_hash: &str) -> Result<Vec<u8>> {
     git_raw(&["cat-file", "blob", blob_hash])
 }
 
-fn main() -> Result<()> {
-    let pattern = env::args().nth(1).unwrap_or_else(|| "*.md".to_string());
+fn is_whitespace_only(content: &[u8]) -> bool {
+    content.iter().all(|&b| b.is_ascii_whitespace())
+}
 
-    let output_dir = Path::new("history-pit");
-    fs::create_dir_all(output_dir)?;
+fn main() -> Result<()> {
+    let patterns: Vec<String> = env::args().skip(1).collect();
+    let patterns = if patterns.is_empty() {
+        vec!["*.md".to_string()]
+    } else {
+        patterns
+    };
+
+    // Build subdirectory name from all patterns
+    let subdir_name = patterns
+        .iter()
+        .map(|p| glob_to_dirname(p))
+        .collect::<Vec<_>>()
+        .join("_");
+    let output_dir = Path::new("history-pit").join(&subdir_name);
+    fs::create_dir_all(&output_dir)?;
 
     // Step 1: Get all blobs in HEAD (these are not lost)
     println!("Getting blobs in HEAD...");
     let head_blobs = get_head_blobs()?;
     println!("  {} blobs currently in HEAD", head_blobs.len());
 
-    // Step 2: Find all blob deletions (handles merge commits with -m)
+    // Step 2: Find all blob deletions for each pattern (handles merge commits with -m)
     println!("Finding blob deletions...");
-    let all_deletions = find_all_deletions(&pattern)?;
+    let mut all_deletions = Vec::new();
+    for pattern in &patterns {
+        let deletions = find_all_deletions(pattern)?;
+        all_deletions.extend(deletions);
+    }
     println!("  {} total blob deletions found", all_deletions.len());
 
     // Step 3: Filter out blobs that still exist in HEAD
@@ -268,24 +301,69 @@ fn main() -> Result<()> {
         .collect();
     println!("  {} truly lost blobs", lost_deletions.len());
 
-    // Step 4: Deduplicate by (blob_hash, path) - keep most recent deletion
+    // Step 4: Deduplicate by (blob_hash, path) - keep oldest AND newest deletion
     println!("Deduplicating...");
-    let mut dedup_map: HashMap<(String, String), BlobDeletion> = HashMap::new();
+    let mut by_blob_path: HashMap<(String, String), Vec<BlobDeletion>> = HashMap::new();
     for deletion in lost_deletions {
         let key = (deletion.blob_hash.clone(), deletion.path.clone());
-        dedup_map
-            .entry(key)
-            .and_modify(|existing| {
-                // Keep the most recent deletion date
-                if deletion.deleted > existing.deleted {
-                    *existing = deletion.clone();
-                }
-            })
-            .or_insert(deletion);
+        by_blob_path.entry(key).or_default().push(deletion);
     }
-    let mut unique_deletions: Vec<_> = dedup_map.into_values().collect();
+
+    let mut unique_deletions = Vec::new();
+    for (_key, mut deletions) in by_blob_path {
+        deletions.sort_by(|a, b| a.deleted.cmp(&b.deleted)); // Sort by date
+        if deletions.len() == 1 {
+            unique_deletions.push(deletions.remove(0));
+        } else {
+            // Keep oldest and newest
+            let oldest = deletions.remove(0);
+            let newest = deletions.pop().unwrap();
+            unique_deletions.push(oldest.clone());
+            if oldest.delete_commit != newest.delete_commit {
+                unique_deletions.push(newest);
+            }
+        }
+    }
     unique_deletions.sort_by(|a, b| (&a.path, &a.deleted).cmp(&(&b.path, &b.deleted)));
     println!("  {} unique (blob, path) pairs", unique_deletions.len());
+
+    // Step 4.5: Filter out whitespace-only blobs unless they're the only version for that path
+    println!("Filtering whitespace-only content...");
+    let mut deletions_by_path: HashMap<String, Vec<usize>> = HashMap::new();
+    for (i, d) in unique_deletions.iter().enumerate() {
+        deletions_by_path.entry(d.path.clone()).or_default().push(i);
+    }
+
+    let mut skip_indices: HashSet<usize> = HashSet::new();
+    for (_path, indices) in &deletions_by_path {
+        // Find which indices have non-whitespace content
+        let non_whitespace: Vec<usize> = indices
+            .iter()
+            .copied()
+            .filter(|&i| {
+                let content = recover_blob_content(&unique_deletions[i].blob_hash).unwrap_or_default();
+                !is_whitespace_only(&content)
+            })
+            .collect();
+
+        if !non_whitespace.is_empty() {
+            // Skip whitespace-only versions since non-empty ones exist
+            for &i in indices {
+                let content = recover_blob_content(&unique_deletions[i].blob_hash).unwrap_or_default();
+                if is_whitespace_only(&content) {
+                    skip_indices.insert(i);
+                }
+            }
+        }
+    }
+
+    let mut unique_deletions: Vec<_> = unique_deletions
+        .into_iter()
+        .enumerate()
+        .filter(|(i, _)| !skip_indices.contains(i))
+        .map(|(_, d)| d)
+        .collect();
+    println!("  {} after whitespace filtering", unique_deletions.len());
 
     // Step 5: Fill in creation dates and recover content
     println!("Recovering files...");
