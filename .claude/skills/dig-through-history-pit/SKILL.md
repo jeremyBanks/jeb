@@ -24,70 +24,72 @@ Examples:
 - `/dig-history-pit Z85 encoding` - Search for text "Z85 encoding" in git history
 - `/dig-history-pit "function foo"` - Search for specific text in git history
 
-## Detecting Search Mode
+## Workflow
 
-Determine which mode based on the argument:
+The approach is: **search → recover → explore**. When searching for text, always
+recover the relevant deleted files proactively, then grep within them for full
+context.
 
-- **Glob pattern** (contains `*` or looks like a file extension like `.rs`) →
-  run dig-history-pit tool for file recovery
-- **Plain text** (words, phrases, or quoted strings) → run `git log -S` text
-  search
+## Step 1: Text Search (git log -S)
 
-## Instructions
-
-When this skill is invoked, first determine which mode to use based on the
-argument (see "Detecting Search Mode" above), then follow the appropriate
-section below.
-
----
-
-## Mode A: Text Search (git log -S)
-
-Use this mode when the argument is plain text (not a glob pattern).
-
-### 1. Search for Commits
-
-Run the search to find commits that added or removed the text:
+Unless the user provides an explicit glob pattern (like `*.md`), start by
+searching git history for the text:
 
 ```bash
 git log --all -S "SEARCH_TEXT" --oneline --reverse | head -20
 ```
 
-This shows commits in chronological order (oldest first) where the text was
-added or removed.
+This shows commits (oldest first) where the text was added or removed.
 
-### 2. Show Details of Relevant Commits
+### Identify Files and Extensions
 
-For the commits of interest (typically the oldest one where text first
-appeared), show details:
+For the earliest/most relevant commits, check which files were involved:
 
 ```bash
 git show COMMIT_HASH --stat
 git log --format="%H %ci %s" COMMIT_HASH -1
 ```
 
-You can also show the actual diff to see the text in context:
+Extract:
+- **Which files** contained the text
+- **File extensions** of those files (e.g., `.rs`, `.md`, `.ts`)
+
+## Step 2: Recover Deleted Files (always do this)
+
+If the text search found deleted files, **immediately recover them** using the
+dig-history-pit tool with a targeted glob pattern:
 
 ```bash
-git show COMMIT_HASH -p | head -200
+cargo run --bin dig-history-pit -- *.rs    # if Rust files
+cargo run --bin dig-history-pit -- *.md    # if markdown files
+cargo run --bin dig-history-pit -- *.rs *.md  # if multiple types
 ```
 
-### 3. Help the User Explore
+Don't ask - just recover. The user is searching history because they want to
+find something; recovering gives them the full files to explore.
 
-Based on the search results:
+## Step 3: Grep Recovered Files for Context
 
-- Show which files contained the text
-- Offer to check out or display specific versions
-- Help trace how the text evolved through history
-- If the file was deleted, suggest using file recovery mode
+After recovery, **grep within the recovered files** to find the search text with
+surrounding context:
 
----
+```bash
+grep -r -n -C 5 "SEARCH_TEXT" history-pit/
+```
 
-## Mode B: File Recovery (dig-history-pit tool)
+This provides much richer context than `git show` diffs - you see the text in
+its full file context, can read surrounding code, and understand how it was
+used.
 
-Use this mode when the argument contains glob patterns (like `*.md` or `*.rs`).
+### Explore Further
 
-### 1. Run the Recovery Tool
+Use the Grep and Read tools to help the user:
+- Find all occurrences of their search term in recovered files
+- Read specific recovered files in full
+- Compare different versions of the same file
+- Search for related terms or patterns
+
+## File Recovery Tool Details
 
 Execute the dig-history-pit tool:
 
@@ -105,14 +107,14 @@ The tool will:
 - Filter out empty/whitespace-only files (unless they're the only version)
 - Recover both the oldest and newest versions of each deleted file
 
-### 2. Explain the Output
+### Output Location
 
 Files are recovered to `history-pit/PATTERN/` where PATTERN is derived from the
 glob (e.g., `*.md` -> `_md/`, `*.rs *.toml` -> `_rs__toml/`).
 
-**Filename format**: `YYYYMMDD[abbrev]-COMMIT-BLOBHASH-flattened-path.ext`
+### Filename Format
 
-Components:
+`YYYYMMDD[abbrev]-COMMIT-BLOBHASH-flattened-path.ext`
 
 - `YYYYMMDD` - Creation date (when this content first appeared at this path)
 - `[abbrev]` - Abbreviated deletion date (omitted if same day, DD if same month,
@@ -121,9 +123,9 @@ Components:
 - `BLOBHASH` - 8-char prefix of the blob hash (identifies content)
 - `flattened-path` - Original path with `/` replaced by `-`
 
-### 3. Help the User Explore
+### Exploring Recovered Files
 
-After recovery, help the user find what they're looking for:
+After recovery, help the user:
 
 - List recovered files matching certain patterns
 - Read specific recovered files

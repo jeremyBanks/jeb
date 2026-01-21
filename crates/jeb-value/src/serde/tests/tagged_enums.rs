@@ -1,4 +1,4 @@
-use jeb_value::{from_value, to_value};
+use crate::{from_value, to_value};
 use serde::{Deserialize, Serialize};
 /// Test internally and adjacently tagged enums
 /// These use deserialize_any to peek at the structure

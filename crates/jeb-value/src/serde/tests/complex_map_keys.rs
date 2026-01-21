@@ -1,6 +1,6 @@
 #![expect(clippy::type_complexity)]
 use {
-    jeb_value::{Value, from_value, to_value},
+    crate::{Value, from_value, to_value},
     serde::{Deserialize, Serialize},
     std::collections::{BTreeMap, HashMap},
 };
