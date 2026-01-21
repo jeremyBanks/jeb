@@ -30,6 +30,8 @@ strip = true
 split-debuginfo = "packed"
 panic = "abort"
 
+[patch]
+
 [patch.crates-io]
 _autofix = { path = "crates/_autofix" }
 _claude_hooks = { path = "crates/_claude_hooks" }

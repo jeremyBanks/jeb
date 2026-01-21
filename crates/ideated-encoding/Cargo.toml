@@ -1,5 +1,5 @@
 [package]
-name = "_ideated-encoding"
+name = "ideated-encoding"
 publish = false
 description = "Extended Z85 encoding with raw passthrough support"
 keywords = []

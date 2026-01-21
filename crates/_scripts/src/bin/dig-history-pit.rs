@@ -99,7 +99,7 @@ fn abbreviate_date(created: &str, deleted: &str) -> String {
 
     let c_year = &created_compact[0..4];
     let c_month = &created_compact[4..6];
-    let c_day = &created_compact[6..8];
+    let _c_day = &created_compact[6..8];
 
     let d_year = &deleted_compact[0..4];
     let d_month = &deleted_compact[4..6];
@@ -133,9 +133,13 @@ fn build_filename(info: &FileInfo) -> String {
 }
 
 fn recover_content(commit: &str, path: &str) -> Result<String> {
-    // Get content from parent of deletion commit
+    // Get content from parent of deletion commit (don't trim - preserve exact bytes)
     let spec = format!("{}^:{}", commit, path);
-    git(&["show", &spec])
+    let output = Command::new("git")
+        .args(["show", &spec])
+        .output()
+        .context("failed to run git show")?;
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
 fn main() -> Result<()> {
