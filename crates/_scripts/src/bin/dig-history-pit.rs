@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use std::collections::HashSet;
+use std::env;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -12,7 +13,7 @@ fn git(args: &[&str]) -> Result<String> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
-fn find_deleted_md_files() -> Result<Vec<String>> {
+fn find_deleted_files(pattern: &str) -> Result<Vec<String>> {
     let output = git(&[
         "log",
         "--all",
@@ -20,12 +21,12 @@ fn find_deleted_md_files() -> Result<Vec<String>> {
         "--name-only",
         "--format=",
         "--",
-        "*.md",
+        pattern,
     ])?;
 
     let files: HashSet<String> = output
         .lines()
-        .filter(|line| line.ends_with(".md"))
+        .filter(|line| !line.is_empty())
         .map(|s| s.to_string())
         .collect();
 
@@ -143,11 +144,13 @@ fn recover_content(commit: &str, path: &str) -> Result<String> {
 }
 
 fn main() -> Result<()> {
+    let pattern = env::args().nth(1).unwrap_or_else(|| "*.md".to_string());
+
     let output_dir = Path::new("history-pit");
     fs::create_dir_all(output_dir)?;
 
-    let files = find_deleted_md_files()?;
-    println!("Found {} deleted markdown files", files.len());
+    let files = find_deleted_files(&pattern)?;
+    println!("Found {} deleted files matching '{}'", files.len(), pattern);
 
     let mut recovered = 0;
     let mut failed = 0;
