@@ -244,15 +244,14 @@ fn build_filename(deletion: &BlobDeletion) -> String {
     let created = deletion.created.replace('-', "");
     let deleted_abbrev = abbreviate_date(&deletion.created, &deletion.deleted);
     let commit_short = &deletion.delete_commit[..6.min(deletion.delete_commit.len())];
+    let blob_short = &deletion.blob_hash[..8.min(deletion.blob_hash.len())];
 
     // Flatten path: replace / with -
     let flattened = deletion.path.replace('/', "-");
 
-    if deleted_abbrev.is_empty() {
-        format!("{}-{}-{}", created, commit_short, flattened)
-    } else {
-        format!("{}-{}-{}-{}", created, deleted_abbrev, commit_short, flattened)
-    }
+    // Concatenate created+abbrev directly (no dash between them)
+    let date_part = format!("{}{}", created, deleted_abbrev);
+    format!("{}-{}-{}-{}", date_part, commit_short, blob_short, flattened)
 }
 
 fn recover_blob_content(blob_hash: &str) -> Result<Vec<u8>> {
