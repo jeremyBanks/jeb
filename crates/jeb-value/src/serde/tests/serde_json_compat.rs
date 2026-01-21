@@ -1,5 +1,5 @@
 use {
-    jeb_value::{from_value, Value},
+    crate::{from_value, Value},
     serde::Deserialize,
 };
 /// Test that our deserializer can accept serde_json-style data
@@ -10,14 +10,14 @@ fn test_option_compat() {
         value: Option<i32>,
     }
     let our_none = Value::StringMap(
-        [(jeb_value::String::from("value"), Value::Null)]
+        [(crate::String::from("value"), Value::Null)]
             .into_iter()
             .collect(),
     );
     let container: Container = from_value(our_none).unwrap();
     assert_eq!(container.value, None);
     let json_some = Value::StringMap(
-        [(jeb_value::String::from("value"), Value::from(42u64))]
+        [(crate::String::from("value"), Value::from(42u64))]
             .into_iter()
             .collect(),
     );
@@ -25,9 +25,9 @@ fn test_option_compat() {
     assert_eq!(container.value, Some(42));
     let our_some = Value::StringMap(
         [(
-            jeb_value::String::from("value"),
+            crate::String::from("value"),
             Value::StringMap(
-                [(jeb_value::String::from("Some"), Value::from(42u64))]
+                [(crate::String::from("Some"), Value::from(42u64))]
                     .into_iter()
                     .collect(),
             ),
@@ -88,10 +88,10 @@ fn test_enum_as_string() {
         Inactive,
         Pending,
     }
-    let value = Value::String(jeb_value::String::from("Active"));
+    let value = Value::String(crate::String::from("Active"));
     let status: Status = from_value(value).unwrap();
     assert_eq!(status, Status::Active);
-    let value = Value::String(jeb_value::String::from("Pending"));
+    let value = Value::String(crate::String::from("Pending"));
     let status: Status = from_value(value).unwrap();
     assert_eq!(status, Status::Pending);
 }

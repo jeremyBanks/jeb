@@ -18,7 +18,21 @@ impl<'de> de::Deserializer<'de> for Value {
         match self {
             Value::Null => visitor.visit_unit(),
             Value::Boolean(b) => visitor.visit_bool(*b),
-            Value::Number(n) => visitor.visit_f64(*n),
+            Value::Number(n) => {
+                let f = *n;
+                // Try to represent as integer if it has no fractional part
+                if f.fract() == 0.0 {
+                    if f >= 0.0 && f <= u64::MAX as f64 {
+                        visitor.visit_u64(f as u64)
+                    } else if f >= i64::MIN as f64 && f <= i64::MAX as f64 {
+                        visitor.visit_i64(f as i64)
+                    } else {
+                        visitor.visit_f64(f)
+                    }
+                } else {
+                    visitor.visit_f64(f)
+                }
+            }
             Value::String(s) => visitor.visit_string(s.into_inner()),
             Value::Bytes(b) => visitor.visit_byte_buf(b.into_inner()),
             Value::Array(a) => visitor.visit_seq(SeqDeserializer::new(a)),

@@ -1,7 +1,7 @@
 /// Tests to verify that positive and negative zero are properly distinguished
 /// in Number and Value types for equality, ordering, and hashing.
 use {
-    jeb_value::{Number, Value},
+    crate::{Number, Value},
     std::collections::{hash_map::DefaultHasher, HashMap},
     std::hash::{Hash, Hasher},
 };
@@ -119,7 +119,7 @@ fn test_value_zero_in_arrays() {
 }
 #[test]
 fn test_value_zero_in_maps() {
-    use jeb_value::String;
+    use crate::String;
     let map_pos: Value = [(
         String::from("zero"),
         Value::Number(Number::new(0.0f64).unwrap()),

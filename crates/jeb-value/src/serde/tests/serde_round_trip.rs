@@ -1,5 +1,5 @@
 use {
-    jeb_value::{Bytes, Value, from_value, to_value},
+    crate::{Bytes, Value, from_value, to_value},
     serde::{Deserialize, Serialize},
     std::collections::HashMap,
 };

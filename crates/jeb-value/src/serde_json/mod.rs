@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 impl From<serde_json::Value> for crate::Value {
     fn from(value: serde_json::Value) -> Self {
         use serde_json::Value::*;

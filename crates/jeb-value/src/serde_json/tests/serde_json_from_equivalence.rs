@@ -3,7 +3,7 @@
 ///
 /// This verifies the claim in serde_json/mod.rs that the direct conversions
 /// are equivalent to using the serialize trait, just with less overhead.
-use jeb_value::{Number, Value};
+use crate::{Number, Value};
 /// Helper to convert a jeb Value to serde_json::Value via serialization
 fn to_serde_json_via_serde(value: &Value) -> serde_json::Value {
     serde_json::to_value(value).expect("serialization should succeed")
@@ -155,7 +155,7 @@ fn test_from_json_object_simple() {
     assert_eq!(direct, via_serde);
     match direct {
         Value::StringMap(map) => {
-            use jeb_value::String;
+            use crate::String;
             assert_eq!(map.len(), 4);
             assert_eq!(map.get(&String::from("null")), Some(&Value::Null));
             assert_eq!(
@@ -237,7 +237,7 @@ fn test_roundtrip_arrays() {
 }
 #[test]
 fn test_roundtrip_objects() {
-    use jeb_value::String;
+    use crate::String;
     let values = vec![
         Value::StringMap(Default::default()),
         [(String::from("a"), Value::from(1u64))]

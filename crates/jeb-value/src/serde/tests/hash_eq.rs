@@ -1,5 +1,5 @@
 use {
-    jeb_value::{Bytes, Number, String, Value},
+    crate::{Bytes, Number, String, Value},
     std::collections::{BTreeMap, HashMap, HashSet},
 };
 #[test]
@@ -83,28 +83,28 @@ fn test_hash_consistency() {
 #[test]
 fn test_ordering_type_hierarchy() {
     use std::cmp::Ordering;
-    // Bytes < String < Number < Array < Boolean < Null < BytesMap < StringMap
+    // Null < Boolean < Number < Bytes < String < Array < BytesMap < StringMap
+    assert_eq!(Value::Null.cmp(&Value::from(false)), Ordering::Less);
+    assert_eq!(Value::from(false).cmp(&Value::from(42u64)), Ordering::Less);
+    assert_eq!(
+        Value::from(42u64).cmp(&Value::from(vec![1u8, 2, 3])),
+        Ordering::Less
+    );
     assert_eq!(
         Value::from(vec![1u8, 2, 3]).cmp(&Value::from("hello")),
         Ordering::Less
     );
     assert_eq!(
-        Value::from("hello").cmp(&Value::from(42u64)),
+        Value::from("hello").cmp(&Value::from([Value::from(1u64), Value::from(2u64)])),
         Ordering::Less
     );
-    assert_eq!(
-        Value::from(42u64).cmp(&Value::from([Value::from(1u64), Value::from(2u64)])),
-        Ordering::Less
-    );
-    assert_eq!(
-        Value::from([Value::from(1u64)]).cmp(&Value::from(false)),
-        Ordering::Less
-    );
-    assert_eq!(Value::from(false).cmp(&Value::Null), Ordering::Less);
     let bytes_map: Value = [(Bytes::from(vec![1u8]), Value::from(1u64))]
         .into_iter()
         .collect();
-    assert_eq!(Value::Null.cmp(&bytes_map), Ordering::Less);
+    assert_eq!(
+        Value::from([Value::from(1u64)]).cmp(&bytes_map),
+        Ordering::Less
+    );
     let string_map: Value = [(String::from("a"), Value::from(1u64))]
         .into_iter()
         .collect();
@@ -185,14 +185,14 @@ fn test_value_in_btreemap() {
     map.insert(Value::from("hello"), "string");
     map.insert(Value::from(vec![1u8, 2, 3]), "bytes");
     let keys: Vec<_> = map.keys().cloned().collect();
-    // Order: Bytes < String < Number < Array < Boolean < Null < BytesMap < StringMap
-    assert_eq!(keys[0], Value::from(vec![1u8, 2, 3])); // Bytes
-    assert_eq!(keys[1], Value::from("hello")); // String
-    assert_eq!(keys[2], Value::from(-5i64)); // Number
-    assert_eq!(keys[3], Value::from(10u64)); // Number
-    assert_eq!(keys[4], Value::from(false)); // Boolean
-    assert_eq!(keys[5], Value::Null); // Null
-    assert_eq!(keys[6], Value::from(true)); // Boolean (true > false)
+    // Order: Null < Boolean < Number < Bytes < String < Array < BytesMap < StringMap
+    assert_eq!(keys[0], Value::Null); // Null
+    assert_eq!(keys[1], Value::from(false)); // Boolean
+    assert_eq!(keys[2], Value::from(true)); // Boolean (true > false)
+    assert_eq!(keys[3], Value::from(-5i64)); // Number
+    assert_eq!(keys[4], Value::from(10u64)); // Number
+    assert_eq!(keys[5], Value::from(vec![1u8, 2, 3])); // Bytes
+    assert_eq!(keys[6], Value::from("hello")); // String
 }
 #[test]
 fn test_cmp() {
@@ -217,14 +217,14 @@ fn test_sorted_values() {
         Value::from(false),
     ];
     values.sort();
-    // Order: Bytes < String < Number < Array < Boolean < Null
-    assert_eq!(values[0], Value::from(vec![1u8, 2, 3])); // Bytes
-    assert_eq!(values[1], Value::from("apple")); // String
-    assert_eq!(values[2], Value::from("zebra")); // String
+    // Order: Null < Boolean < Number < Bytes < String < Array
+    assert_eq!(values[0], Value::Null); // Null
+    assert_eq!(values[1], Value::from(false)); // Boolean
+    assert_eq!(values[2], Value::from(true)); // Boolean
     assert_eq!(values[3], Value::from(-10i64)); // Number
     assert_eq!(values[4], Value::from(42u64)); // Number
-    assert_eq!(values[5], Value::from([Value::from(1u64)])); // Array
-    assert_eq!(values[6], Value::from(false)); // Boolean
-    assert_eq!(values[7], Value::Null); // Null
-    assert_eq!(values[8], Value::from(true)); // Boolean
+    assert_eq!(values[5], Value::from(vec![1u8, 2, 3])); // Bytes
+    assert_eq!(values[6], Value::from("apple")); // String
+    assert_eq!(values[7], Value::from("zebra")); // String
+    assert_eq!(values[8], Value::from([Value::from(1u64)])); // Array
 }
