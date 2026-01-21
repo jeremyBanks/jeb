@@ -50,6 +50,20 @@ fn get_head_blobs() -> Result<HashSet<String>> {
     Ok(blobs)
 }
 
+/// Convert a glob pattern to a safe directory name
+fn glob_to_dirname(pattern: &str) -> String {
+    pattern
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '.' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
 /// Find all blob deletions using git log --raw
 /// This handles merge commits correctly by using -m flag
 fn find_all_deletions(pattern: &str) -> Result<Vec<BlobDeletion>> {
@@ -121,7 +135,7 @@ fn find_all_deletions(pattern: &str) -> Result<Vec<BlobDeletion>> {
             };
 
             // Skip history-pit output directory
-            if path.starts_with("history-pit/") {
+            if path.starts_with("history-pit/") || path.starts_with("history-pit\\") {
                 continue;
             }
 
