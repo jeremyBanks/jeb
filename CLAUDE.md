@@ -1,4 +1,4 @@
-While editing files, please run `./scripts/git-save.sh` to commit all changes in
+While editing files, please run `cargo run --bin save` to commit all changes in
 the working tree _very_ often, for the sake of having a lot of snapshots so we
 can cleanly revert exactly as far as we need to, if we ever need to. You'll want
 to ensure that the state before and after you make changes are both fully
