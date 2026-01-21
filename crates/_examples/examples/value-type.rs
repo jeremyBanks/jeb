@@ -12,10 +12,39 @@ pub struct ValueTypes {
     pub string_map: bool,
 }
 
-impl PartialOrd for ValueTypes {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+impl From<ValueTypes> for u8 {
+    fn from(value: ValueTypes) -> Self {
+        let mut bits = 0;
+        if value.null {
+            bits |= 1 << 0;
+        }
+        if value.boolean {
+            bits |= 1 << 1;
+        }
+        if value.number {
+            bits |= 1 << 2;
+        }
+        if value.bytes {
+            bits |= 1 << 3;
+        }
+        if value.string {
+            bits |= 1 << 4;
+        }
+        if value.array {
+            bits |= 1 << 5;
+        }
+        if value.bytes_map {
+            bits |= 1 << 6;
+        }
+        if value.string_map {
+            bits |= 1 << 7;
+        }
+        bits
     }
+}
+
+impl PartialOrd for ValueTypes {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {}
 }
 
 impl ValueTypes {
