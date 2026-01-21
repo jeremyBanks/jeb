@@ -6,8 +6,7 @@ mod serde;
 mod std;
 mod value;
 
-// [impl jeb-value.features.core.cfg]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+// Note: Serde impls are in bytes/serde.rs (manual impl for serde_bytes compatibility)
 // [impl jeb-value.variant.common.clone]
 // [impl jeb-value.variant.common.debug]
 // [impl jeb-value.variant.common.deref]
