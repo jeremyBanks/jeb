@@ -1,5 +1,5 @@
 ---
-name: dig-history-pit
+name: dig-through-history-pit
 description: Recover deleted files from git history and browse recovered content
 allowed-tools: Read, Grep, Glob, Bash
 ---
@@ -16,6 +16,7 @@ help the user browse and explore the recovered content.
 ```
 
 Examples:
+
 - `/dig-history-pit` - Recover deleted markdown files (default: `*.md`)
 - `/dig-history-pit *.rs` - Recover deleted Rust files
 - `/dig-history-pit *.md *.toml` - Recover multiple file types
@@ -35,6 +36,7 @@ cargo run --bin dig-history-pit -- [patterns]
 If no patterns specified, the default is `*.md`.
 
 The tool will:
+
 - Scan git history for deleted files matching the pattern(s)
 - Filter out blobs that still exist in HEAD (content isn't truly lost)
 - Skip files from `history-pit/` paths (avoid re-recovering)
@@ -49,6 +51,7 @@ glob (e.g., `*.md` -> `_md/`, `*.rs *.toml` -> `_rs__toml/`).
 **Filename format**: `YYYYMMDD[abbrev]-COMMIT-BLOBHASH-flattened-path.ext`
 
 Components:
+
 - `YYYYMMDD` - Creation date (when this content first appeared at this path)
 - `[abbrev]` - Abbreviated deletion date (omitted if same day, DD if same month,
   MMDD if same year, full YYYYMMDD if different year)
@@ -79,6 +82,7 @@ After recovery, help the user find what they're looking for:
    re-recovered
 
 For complete file history, use standard git commands:
+
 ```bash
 git log --follow -p -- path/to/file
 ```
