@@ -263,9 +263,19 @@ fn is_whitespace_only(content: &[u8]) -> bool {
 }
 
 fn main() -> Result<()> {
-    let pattern = env::args().nth(1).unwrap_or_else(|| "*.md".to_string());
+    let patterns: Vec<String> = env::args().skip(1).collect();
+    let patterns = if patterns.is_empty() {
+        vec!["*.md".to_string()]
+    } else {
+        patterns
+    };
 
-    let subdir_name = glob_to_dirname(&pattern);
+    // Build subdirectory name from all patterns
+    let subdir_name = patterns
+        .iter()
+        .map(|p| glob_to_dirname(p))
+        .collect::<Vec<_>>()
+        .join("_");
     let output_dir = Path::new("history-pit").join(&subdir_name);
     fs::create_dir_all(&output_dir)?;
 
@@ -274,9 +284,13 @@ fn main() -> Result<()> {
     let head_blobs = get_head_blobs()?;
     println!("  {} blobs currently in HEAD", head_blobs.len());
 
-    // Step 2: Find all blob deletions (handles merge commits with -m)
+    // Step 2: Find all blob deletions for each pattern (handles merge commits with -m)
     println!("Finding blob deletions...");
-    let all_deletions = find_all_deletions(&pattern)?;
+    let mut all_deletions = Vec::new();
+    for pattern in &patterns {
+        let deletions = find_all_deletions(pattern)?;
+        all_deletions.extend(deletions);
+    }
     println!("  {} total blob deletions found", all_deletions.len());
 
     // Step 3: Filter out blobs that still exist in HEAD
