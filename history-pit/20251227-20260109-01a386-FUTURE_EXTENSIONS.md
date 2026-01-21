@@ -1,12 +1,16 @@
 # Future Extensions & Ideas
 
-This document captures rough ideas for potential future extensions to inline. These are **not currently planned for implementation** but are noted for future exploration.
+This document captures rough ideas for potential future extensions to inline.
+These are **not currently planned for implementation** but are noted for future
+exploration.
 
 ## 1. Alternative Serialization Formats (e.g., JSON, TOML, YAML)
 
-**User's idea**: Support serde_json for storing values as JSON strings instead of Rust code.
+**User's idea**: Support serde_json for storing values as JSON strings instead
+of Rust code.
 
 **Example**:
+
 ```rust
 let config: Config = json_litter!(r#"{"host": "localhost", "port": 8080}"#);
 config.set(Config { host: "prod.example.com".into(), port: 443 });
@@ -14,6 +18,7 @@ config.set(Config { host: "prod.example.com".into(), port: 443 });
 ```
 
 **Tentative implementation notes** (Claude):
+
 - New trait: `trait JsonLiteral: Serialize + Deserialize {}`
 - New struct: `JsonLitter<T>` (parallel to `Inline<T>`)
 - Different macro: `json_litter!()` stores string literal containing JSON
@@ -22,6 +27,7 @@ config.set(Config { host: "prod.example.com".into(), port: 443 });
 - Runtime deserializes on creation from string literal
 
 **Challenges**:
+
 - JSON lacks Rust type information (need type annotations/generics)
 - Error handling for malformed JSON at runtime
 - Formatting choices: pretty-print vs compact
@@ -33,27 +39,32 @@ config.set(Config { host: "prod.example.com".into(), port: 443 });
 
 ## 2. Type Annotations / Explicit Type Parameters
 
-**User's idea**: Support statically defining types for values, especially useful for formats like JSON where type can't be inferred from data.
+**User's idea**: Support statically defining types for values, especially useful
+for formats like JSON where type can't be inferred from data.
 
 **Approaches discussed**:
 
 ### A. Type inference (already works)
+
 ```rust
 let config: Inline<Config> = inline!(Config::default());
 ```
 
 ### B. Turbofish syntax (requires proc macro)
+
 ```rust
 let config = inline::<Config>(Config::default());
 ```
 
 ### C. Type as first parameter (for typed variants)
+
 ```rust
 let config = json_litter!(Config, r#"{"x": 1}"#);
 // Expands to: JsonLitter::<Config>::__new_from_json(...)
 ```
 
 **Tentative notes** (Claude):
+
 - Option C makes most sense for JSON/typed variants
 - Turbofish requires proc macro instead of macro_rules
 - Type parameter necessary for deserialization in JSON case
@@ -64,9 +75,11 @@ let config = json_litter!(Config, r#"{"x": 1}"#);
 
 ## 3. Empty Macro / Placeholder Pattern
 
-**User's idea**: Support `inline!()` with no arguments as a placeholder that gets filled in on first write.
+**User's idea**: Support `inline!()` with no arguments as a placeholder that
+gets filled in on first write.
 
 **Example**:
+
 ```rust
 // Write in source initially:
 let config: Inline<Config> = inline!();
@@ -76,6 +89,7 @@ let config: Inline<Config> = inline!(Config { ... });
 ```
 
 **Tentative implementation notes** (Claude):
+
 ```rust
 macro_rules! inline {
     () => {{
@@ -89,11 +103,13 @@ macro_rules! inline {
 ```
 
 **Use cases**:
+
 - Scaffolding new config values
 - "TODO: configure this" markers in code
 - Less boilerplate when adding new litters
 
 **Challenges**:
+
 - Requires `Default` trait (not all types have it)
 - Less readable - `inline!()` doesn't show what type it is
 - File state shows `inline!()` initially, then gets replaced
@@ -104,9 +120,12 @@ macro_rules! inline {
 
 ## 4. Caller Location Without Macros
 
-**User's idea**: Investigate if we can avoid macros entirely using Rust's `#[track_caller]` and `std::panic::Location` to find call sites and replace them.
+**User's idea**: Investigate if we can avoid macros entirely using Rust's
+`#[track_caller]` and `std::panic::Location` to find call sites and replace
+them.
 
 **Example** (hypothetical):
+
 ```rust
 #[track_caller]
 fn inline<T>(value: T) -> Inline<T> {
@@ -117,6 +136,7 @@ fn inline<T>(value: T) -> Inline<T> {
 ```
 
 **Questions to investigate**:
+
 - Can we reliably find the exact call site in the AST?
 - Can we distinguish between different calls on the same line?
 - Does `Location` give us enough precision?
@@ -128,14 +148,17 @@ fn inline<T>(value: T) -> Inline<T> {
 
 ## 5. At-Exit Hooks for Deferred Writes
 
-**Context**: Early design had references/locks, needed at-exit hooks to flush pending changes.
+**Context**: Early design had references/locks, needed at-exit hooks to flush
+pending changes.
 
 **Current status**: **Out of scope by design**
+
 - Writes are immediate (every `set()` writes to disk)
 - No buffering or deferred writes
 - No need for hooks since there's nothing to flush
 
-**Why mentioned**: Historical context - was part of earlier design with different concurrency model.
+**Why mentioned**: Historical context - was part of earlier design with
+different concurrency model.
 
 **Status**: Not applicable to current immediate-write architecture
 
@@ -148,6 +171,7 @@ fn inline<T>(value: T) -> Inline<T> {
 **Challenge**: `proc_macro2` and `syn` types are intentionally NOT Send/Sync.
 
 **Test results**:
+
 ```rust
 // These fail to compile:
 assert_send::<proc_macro2::Span>();      // ✗ not Send
@@ -156,7 +180,8 @@ assert_send::<syn::File>();              // ✗ not Send
 assert_sync::<syn::File>();              // ✗ not Sync
 ```
 
-**Root cause**: `proc_macro2` uses `PhantomData<Rc<()>>` to match real `proc_macro` thread-safety.
+**Root cause**: `proc_macro2` uses `PhantomData<Rc<()>>` to match real
+`proc_macro` thread-safety.
 
 **Solution implemented**: ✅ **Hybrid lock-based architecture**
 
@@ -182,11 +207,12 @@ thread_local! {
 
 ### Features
 
-✅ **Multi-threaded reads**: Fast - uses thread-local cached AST
-✅ **Multi-threaded writes**: Write lock held for entire operation (prevents concurrent modifications)
-✅ **Cross-thread visibility**: Changes from one thread visible to others
-✅ **Multi-process detection**: Panics with clear error if external process modifies file
-✅ **Position stability**: `shared.source` is canonical for line/column lookups (unaffected by cargo fmt)
+✅ **Multi-threaded reads**: Fast - uses thread-local cached AST ✅
+**Multi-threaded writes**: Write lock held for entire operation (prevents
+concurrent modifications) ✅ **Cross-thread visibility**: Changes from one
+thread visible to others ✅ **Multi-process detection**: Panics with clear error
+if external process modifies file ✅ **Position stability**: `shared.source` is
+canonical for line/column lookups (unaffected by cargo fmt)
 
 ### Performance Trade-offs
 
@@ -198,9 +224,11 @@ thread_local! {
 
 - Tests pass with `--test-threads=1`
 - Parallel test failures due to shared environment variables (`INLINE_MODE`)
-- **Recommended**: Use `cargo nextest` for parallel testing (runs each test in separate process)
+- **Recommended**: Use `cargo nextest` for parallel testing (runs each test in
+  separate process)
 
-**Status**: ✅ **IMPLEMENTED** - Fully supports multi-threaded and multi-process usage
+**Status**: ✅ **IMPLEMENTED** - Fully supports multi-threaded and multi-process
+usage
 
 ---
 

@@ -2,7 +2,8 @@
 
 ## Testing Approach
 
-We need to test the core functionality: modifying source code in place while maintaining AST stability.
+We need to test the core functionality: modifying source code in place while
+maintaining AST stability.
 
 ## Test Infrastructure
 
@@ -50,7 +51,8 @@ impl TestFile {
 
 ### Test 1: AST Parsing Preserves Spans
 
-**Purpose**: Verify that `syn::parse_file` gives us accurate line/column information.
+**Purpose**: Verify that `syn::parse_file` gives us accurate line/column
+information.
 
 ```rust
 #[test]
@@ -88,8 +90,8 @@ fn test_span_preservation() {
 }
 ```
 
-**Expected**: Pass if spans are preserved correctly.
-**If fails**: We need alternative location tracking strategy.
+**Expected**: Pass if spans are preserved correctly. **If fails**: We need
+alternative location tracking strategy.
 
 ### Test 2: FileState Load and Parse
 
@@ -367,40 +369,48 @@ fn main() {
 ## Test Execution Plan
 
 ### Phase 1: Foundation
+
 1. Run Test 1 (span preservation) first - this validates our core assumption
 2. Run Test 2 (file state load) - validates parsing
 3. Run Test 3 (macro replacement) - validates AST modification
 
 ### Phase 2: Core Functionality
+
 4. Run Test 4 (single update) - end-to-end single value
 5. Run Test 5 (multiple litters) - multiple values in same file
 6. Run Test 6 (databake) - type serialization
 
 ### Phase 3: Robustness
+
 7. Run Test 7 (concurrency) - thread safety
 8. Run Test 8 (errors) - error handling
 
 ### Phase 4: Real World
+
 9. Run integration test (self-modifying script)
 
 ## Debugging Strategy
 
 ### If Test 1 Fails (Spans)
+
 - Check if proc_macro2 spans are preserved
 - Try alternative: use byte offsets instead
 - Or implement line/column counting manually
 
 ### If Test 3 Fails (Replacement)
+
 - Print the AST structure
 - Check if VisitMut is traversing correctly
 - Verify target line/column calculations
 
 ### If Test 5 Fails (Multiple)
+
 - Check FileState sharing logic
 - Verify locking prevents corruption
 - Check if file state is reloaded after updates
 
 ### If Test 7 Fails (Concurrency)
+
 - Add debug logging to see lock acquisition
 - Check for deadlocks
 - Verify Arc usage is correct

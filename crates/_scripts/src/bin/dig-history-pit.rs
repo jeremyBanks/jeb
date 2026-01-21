@@ -39,7 +39,9 @@ struct FileInfo {
     path: String,
     created: String,
     deleted: String,
-    last_commit: String,
+    delete_commit: String,
+    /// The last commit where the file actually existed (for content recovery)
+    last_good_commit: String,
 }
 
 fn get_file_info(path: &str) -> Result<FileInfo> {
@@ -66,7 +68,7 @@ fn get_file_info(path: &str) -> Result<FileInfo> {
     .to_string();
 
     // Get commit hash of deletion
-    let last_commit = git(&[
+    let delete_commit = git(&[
         "log",
         "--all",
         "-m",
@@ -80,11 +82,28 @@ fn get_file_info(path: &str) -> Result<FileInfo> {
     .unwrap_or("")
     .to_string();
 
+    // Get the last commit where the file existed (added/modified/renamed, not deleted)
+    let last_good_commit = git(&[
+        "log",
+        "--all",
+        "-m",
+        "--diff-filter=ACMR",
+        "--format=%H",
+        "-1",
+        "--",
+        path,
+    ])?
+    .lines()
+    .next()
+    .unwrap_or("")
+    .to_string();
+
     Ok(FileInfo {
         path: path.to_string(),
         created,
         deleted,
-        last_commit,
+        delete_commit,
+        last_good_commit,
     })
 }
 
@@ -121,7 +140,7 @@ fn abbreviate_date(created: &str, deleted: &str) -> String {
 fn build_filename(info: &FileInfo) -> String {
     let created = info.created.replace('-', "");
     let deleted_abbrev = abbreviate_date(&info.created, &info.deleted);
-    let commit_short = &info.last_commit[..6.min(info.last_commit.len())];
+    let commit_short = &info.delete_commit[..6.min(info.delete_commit.len())];
 
     // Flatten path: replace / with -
     let flattened = info.path.replace('/', "-");
@@ -134,13 +153,26 @@ fn build_filename(info: &FileInfo) -> String {
 }
 
 fn recover_content(commit: &str, path: &str) -> Result<String> {
-    // Get content from parent of deletion commit (don't trim - preserve exact bytes)
-    let spec = format!("{}^:{}", commit, path);
+    // Get content from the commit where file last existed (don't trim - preserve exact bytes)
+    let spec = format!("{}:{}", commit, path);
     let output = Command::new("git")
         .args(["show", &spec])
         .output()
         .context("failed to run git show")?;
-    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+
+    if !output.status.success() {
+        anyhow::bail!(
+            "git show failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    let content = String::from_utf8_lossy(&output.stdout).to_string();
+    if content.is_empty() {
+        anyhow::bail!("recovered content is empty");
+    }
+
+    Ok(content)
 }
 
 fn main() -> Result<()> {
@@ -165,13 +197,17 @@ fn main() -> Result<()> {
             }
         };
 
-        if info.created.is_empty() || info.deleted.is_empty() || info.last_commit.is_empty() {
+        if info.created.is_empty()
+            || info.deleted.is_empty()
+            || info.delete_commit.is_empty()
+            || info.last_good_commit.is_empty()
+        {
             eprintln!("Missing metadata for {}", path);
             failed += 1;
             continue;
         }
 
-        let content = match recover_content(&info.last_commit, path) {
+        let content = match recover_content(&info.last_good_commit, path) {
             Ok(c) => c,
             Err(e) => {
                 eprintln!("Failed to recover content for {}: {}", path, e);
