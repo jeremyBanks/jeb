@@ -138,6 +138,7 @@
     "Kladov",
     "libc",
     "libjeb",
+    "lossiness",
     "mergeoptions",
     "minisign",
     "miri",
