@@ -6,24 +6,86 @@ allowed-tools: Read, Grep, Glob, Bash
 
 # Dig History Pit
 
-Recover deleted files from git history into the `history-pit/` directory, then
-help the user browse and explore the recovered content.
+Two capabilities:
+
+1. **Recover deleted files** from git history into the `history-pit/` directory
+2. **Search git history** for commits that added or removed specific text
 
 ## Usage
 
 ```
-/dig-history-pit [optional: file patterns]
+/dig-history-pit [file patterns or search text]
 ```
 
 Examples:
 
-- `/dig-history-pit` - Recover deleted markdown files (default: `*.md`)
-- `/dig-history-pit *.rs` - Recover deleted Rust files
-- `/dig-history-pit *.md *.toml` - Recover multiple file types
+- `/dig-history-pit *.md` - Recover deleted markdown files
+- `/dig-history-pit *.rs *.toml` - Recover multiple file types
+- `/dig-history-pit Z85 encoding` - Search for text "Z85 encoding" in git history
+- `/dig-history-pit "function foo"` - Search for specific text in git history
+
+## Detecting Search Mode
+
+Determine which mode based on the argument:
+
+- **Glob pattern** (contains `*` or looks like a file extension like `.rs`) →
+  run dig-history-pit tool for file recovery
+- **Plain text** (words, phrases, or quoted strings) → run `git log -S` text
+  search
 
 ## Instructions
 
-When this skill is invoked:
+When this skill is invoked, first determine which mode to use based on the
+argument (see "Detecting Search Mode" above), then follow the appropriate
+section below.
+
+---
+
+## Mode A: Text Search (git log -S)
+
+Use this mode when the argument is plain text (not a glob pattern).
+
+### 1. Search for Commits
+
+Run the search to find commits that added or removed the text:
+
+```bash
+git log --all -S "SEARCH_TEXT" --oneline --reverse | head -20
+```
+
+This shows commits in chronological order (oldest first) where the text was
+added or removed.
+
+### 2. Show Details of Relevant Commits
+
+For the commits of interest (typically the oldest one where text first
+appeared), show details:
+
+```bash
+git show COMMIT_HASH --stat
+git log --format="%H %ci %s" COMMIT_HASH -1
+```
+
+You can also show the actual diff to see the text in context:
+
+```bash
+git show COMMIT_HASH -p | head -200
+```
+
+### 3. Help the User Explore
+
+Based on the search results:
+
+- Show which files contained the text
+- Offer to check out or display specific versions
+- Help trace how the text evolved through history
+- If the file was deleted, suggest using file recovery mode
+
+---
+
+## Mode B: File Recovery (dig-history-pit tool)
+
+Use this mode when the argument contains glob patterns (like `*.md` or `*.rs`).
 
 ### 1. Run the Recovery Tool
 
