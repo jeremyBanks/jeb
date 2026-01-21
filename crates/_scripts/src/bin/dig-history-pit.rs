@@ -27,6 +27,8 @@ fn find_deleted_files(pattern: &str) -> Result<Vec<String>> {
     let files: HashSet<String> = output
         .lines()
         .filter(|line| !line.is_empty())
+        // Exclude files in history-pit/ (our output directory)
+        .filter(|line| !line.starts_with("history-pit/"))
         .map(|s| s.to_string())
         .collect();
 
@@ -82,21 +84,32 @@ fn get_file_info(path: &str) -> Result<FileInfo> {
     .unwrap_or("")
     .to_string();
 
-    // Get the last commit where the file existed (added/modified/renamed, not deleted)
-    let last_good_commit = git(&[
+    // Get the last commit where the file was a regular blob (not symlink/submodule/tree)
+    // Mode 100644 or 100755 = regular file, 120000 = symlink, 160000 = submodule
+    let commits: Vec<_> = git(&[
         "log",
         "--all",
         "-m",
         "--diff-filter=ACMR",
         "--format=%H",
-        "-1",
         "--",
         path,
     ])?
     .lines()
-    .next()
-    .unwrap_or("")
-    .to_string();
+    .map(|s| s.to_string())
+    .collect();
+
+    let mut last_good_commit = String::new();
+    for commit in commits {
+        let ls_tree = git(&["ls-tree", &commit, "--", path])?;
+        if let Some(mode) = ls_tree.split_whitespace().next() {
+            // Regular files have mode 100644 or 100755
+            if mode.starts_with("100") {
+                last_good_commit = commit;
+                break;
+            }
+        }
+    }
 
     Ok(FileInfo {
         path: path.to_string(),
