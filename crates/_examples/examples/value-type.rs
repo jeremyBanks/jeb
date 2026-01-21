@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ValueTypes {
+pub struct ValueType {
     pub null: bool,
     pub boolean: bool,
     pub number: bool,
@@ -12,42 +12,63 @@ pub struct ValueTypes {
     pub string_map: bool,
 }
 
-impl From<ValueTypes> for u8 {
-    fn from(value: ValueTypes) -> Self {
+impl ValueType {
+    fn bitmask(&self) -> u8 {
         let mut bits = 0;
-        if value.null {
+        if self.null {
             bits |= 1 << 0;
         }
-        if value.boolean {
+        if self.boolean {
             bits |= 1 << 1;
         }
-        if value.number {
+        if self.number {
             bits |= 1 << 2;
         }
-        if value.bytes {
+        if self.bytes {
             bits |= 1 << 3;
         }
-        if value.string {
+        if self.string {
             bits |= 1 << 4;
         }
-        if value.array {
+        if self.array {
             bits |= 1 << 5;
         }
-        if value.bytes_map {
+        if self.bytes_map {
             bits |= 1 << 6;
         }
-        if value.string_map {
+        if self.string_map {
             bits |= 1 << 7;
         }
         bits
     }
+
+    pub fn is_a(&self, other: ValueType) -> bool {
+        let self_bitmask = self.bitmask();
+        let other_bitmask = other.bitmask();
+        let union = self_bitmask | other_bitmask;
+        union == self_bitmask
+    }
 }
 
-impl PartialOrd for ValueTypes {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {}
+impl PartialOrd for ValueType {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        let self_bitmask = self.bitmask();
+        let other_bitmask = other.bitmask();
+        let union = self_bitmask | other_bitmask;
+
+        if self == other {
+            Some(Ordering::Equal)
+        } else if union == self_bitmask {
+            Some(Ordering::Greater)
+        } else if union == other_bitmask {
+            Some(Ordering::Less)
+        } else {
+            None
+        }
+    }
 }
 
-impl ValueTypes {
+impl ValueType {
     pub const NONE: Self = Self {
         null: false,
         boolean: false,
