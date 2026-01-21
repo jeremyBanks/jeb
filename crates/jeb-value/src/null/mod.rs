@@ -1,9 +1,11 @@
 use derive_more::{AsMut, AsRef, Deref, DerefMut, From};
 
-mod std;
+pub mod std;
 mod value;
 
-// Note: Serde impls would go in null/serde.rs
+// [impl jeb-value.features.core.cfg]
+// [impl jeb-value.features.serde.optional]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 // [impl jeb-value.variant.common.clone]
 // [impl jeb-value.variant.common.debug]
 // [impl jeb-value.variant.common.deref]

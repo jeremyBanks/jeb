@@ -14,7 +14,7 @@ fn from_serde_json_via_serde(json: &serde_json::Value) -> Value {
 }
 #[test]
 fn test_from_json_null() {
-    let json = serde_json::Value::Null(Null::new());
+    let json = serde_json::Value::Null;
     let direct: Value = json.clone().into();
     let via_serde = from_serde_json_via_serde(&json);
     assert_eq!(direct, via_serde);

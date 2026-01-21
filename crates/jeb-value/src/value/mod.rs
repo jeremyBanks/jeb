@@ -9,13 +9,12 @@ use {
 #[cfg_attr(feature = "serde", derive(serde::Serialize), serde(untagged))]
 // [impl jeb-value.value.traits.clone]
 // [impl jeb-value.value.traits.debug]
-#[derive(Debug, Clone, From, Default, IsVariant, TryUnwrap, Unwrap)]
+#[derive(Debug, Clone, From, IsVariant, TryUnwrap, Unwrap)]
 // [impl jeb-value.value.traits.must-use]
 #[must_use]
 // [impl jeb-value.value.def.enum-variants]
 // [impl jeb-value.value.def.variant-types]
 pub enum Value {
-    #[default]
     Null(#[from] Null),
     Boolean(Boolean),
     Number(Number),
@@ -120,6 +119,13 @@ impl Ord for Value {
 impl PartialOrd for Value {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+// [impl jeb-value.value.traits.default]
+impl Default for Value {
+    fn default() -> Self {
+        Value::Null(Null::new())
     }
 }
 
