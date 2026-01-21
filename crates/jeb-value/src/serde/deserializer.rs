@@ -2,7 +2,7 @@
 //! `Deserialize` types.
 use {
     crate::{
-        Boolean, Bytes, Number, String, Value,
+        Boolean, Bytes, Null, Number, String, Value,
         serde::{SerdeError, error::Unexpected},
     },
     indexmap::IndexMap,
@@ -16,7 +16,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Null => visitor.visit_unit(),
+            Value::Null(_) => visitor.visit_unit(),
             Value::Boolean(b) => visitor.visit_bool(*b),
             Value::Number(n) => {
                 let f = *n;
@@ -326,7 +326,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Null => visitor.visit_none(),
+            Value::Null(_) => visitor.visit_none(),
             Value::StringMap(map) if map.len() == 1 => {
                 if let Some((key, value)) = map.iter().next()
                     && key.as_str() == "Some"
@@ -345,7 +345,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Null => visitor.visit_unit(),
+            Value::Null(_) => visitor.visit_unit(),
             _ => Err(SerdeError::invalid_type(self.unexpected(), "null")),
         }
     }
@@ -495,7 +495,7 @@ impl<'de> de::Deserializer<'de> for Value {
 impl Value {
     fn unexpected(&self) -> Unexpected {
         match self {
-            Value::Null => Unexpected::Unit,
+            Value::Null(_) => Unexpected::Unit,
             Value::Boolean(b) => Unexpected::Bool(**b),
             Value::Number(n) => Unexpected::Float(**n),
             Value::String(s) => {

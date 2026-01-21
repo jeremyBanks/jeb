@@ -5,7 +5,7 @@ impl From<serde_json::Value> for crate::Value {
     fn from(value: serde_json::Value) -> Self {
         use serde_json::Value::*;
         match value {
-            Null => crate::Value::Null,
+            Null => crate::Value::Null(crate::Null::new()),
             Bool(x) => x.into(),
             Number(x) => x.into(),
             String(x) => x.into(),

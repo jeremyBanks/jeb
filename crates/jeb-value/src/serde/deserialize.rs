@@ -1,7 +1,7 @@
 //! Non-derived `Deserialize` implementations for our `Value` types, to allow
 //! them to be deserialized by arbitrary serde `Deserializer`s.
 use {
-    crate::{Boolean, Bytes, Number, String, Value},
+    crate::{Boolean, Bytes, Null, Number, String, Value},
     indexmap::IndexMap,
     serde::de::{self, Visitor},
 };
@@ -200,7 +200,7 @@ impl<'de> Visitor<'de> for ValueVisitor {
     where
         E: de::Error,
     {
-        Ok(Value::Null)
+        Ok(Value::Null(Null::new()))
     }
 
     fn visit_some<D>(self, deserializer: D) -> Result<Value, D::Error>
@@ -214,7 +214,7 @@ impl<'de> Visitor<'de> for ValueVisitor {
     where
         E: de::Error,
     {
-        Ok(Value::Null)
+        Ok(Value::Null(Null::new()))
     }
 
     fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Value, D::Error>

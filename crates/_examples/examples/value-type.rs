@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ValueType {
+pub struct ValueTypes {
     pub null: bool,
     pub boolean: bool,
     pub number: bool,
@@ -12,7 +12,13 @@ pub struct ValueType {
     pub string_map: bool,
 }
 
-impl ValueType {
+pub struct TypedValue {
+    outer_types: ValueTypes,
+    inner_types: ValueTypes,
+    // value: Value,
+}
+
+impl ValueTypes {
     fn bitmask(&self) -> u8 {
         let mut bits = 0;
         if self.null {
@@ -42,7 +48,7 @@ impl ValueType {
         bits
     }
 
-    pub fn is_a(&self, other: ValueType) -> bool {
+    pub fn is_a(&self, other: ValueTypes) -> bool {
         let self_bitmask = self.bitmask();
         let other_bitmask = other.bitmask();
         let union = self_bitmask | other_bitmask;
@@ -50,7 +56,7 @@ impl ValueType {
     }
 }
 
-impl PartialOrd for ValueType {
+impl PartialOrd for ValueTypes {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         let self_bitmask = self.bitmask();
         let other_bitmask = other.bitmask();
@@ -68,7 +74,7 @@ impl PartialOrd for ValueType {
     }
 }
 
-impl ValueType {
+impl ValueTypes {
     pub const NONE: Self = Self {
         null: false,
         boolean: false,
@@ -89,6 +95,24 @@ impl ValueType {
         array: true,
         bytes_map: true,
         string_map: true,
+    };
+
+    pub const SCALAR: Self = Self {
+        null: true,
+        boolean: true,
+        number: true,
+        string: true,
+        ..Self::NONE
+    };
+
+    pub const JSON: Self = Self {
+        null: true,
+        boolean: true,
+        number: true,
+        string: true,
+        array: true,
+        string_map: true,
+        ..Self::NONE
     };
 
     pub const NULL: Self = Self {
@@ -122,24 +146,6 @@ impl ValueType {
     };
 
     pub const STRING_MAP: Self = Self {
-        string_map: true,
-        ..Self::NONE
-    };
-
-    pub const SCALAR: Self = Self {
-        null: true,
-        boolean: true,
-        number: true,
-        string: true,
-        ..Self::NONE
-    };
-
-    pub const JSON: Self = Self {
-        null: true,
-        boolean: true,
-        number: true,
-        string: true,
-        array: true,
         string_map: true,
         ..Self::NONE
     };

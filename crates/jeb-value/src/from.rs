@@ -1,4 +1,4 @@
-use crate::{Bytes, Number, String, Value};
+use crate::{Bytes, Null, Number, String, Value};
 
 // [impl jeb-value.number.try-from-inner]
 // (Note: TryFrom<f64> for Number is in number/mod.rs)
@@ -171,7 +171,7 @@ impl From<u128> for Value {
 
 impl From<()> for Value {
     fn from((): ()) -> Self {
-        Value::Null
+        Value::Null(Null::new())
     }
 }
 

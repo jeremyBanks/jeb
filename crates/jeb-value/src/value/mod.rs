@@ -1,5 +1,5 @@
 use {
-    super::{boolean::Boolean, bytes::Bytes, number::Number, string::String},
+    super::{boolean::Boolean, bytes::Bytes, null::Null, number::Number, string::String},
     derive_more::{From, IsVariant, TryInto, TryUnwrap, Unwrap},
     indexmap::IndexMap,
 };
@@ -9,14 +9,13 @@ use {
 #[cfg_attr(feature = "serde", derive(serde::Serialize), serde(untagged))]
 // [impl jeb-value.value.traits.clone]
 // [impl jeb-value.value.traits.debug]
-#[derive(Debug, Clone, From, Default, IsVariant, TryUnwrap, Unwrap)]
+#[derive(Debug, Clone, From, IsVariant, TryUnwrap, Unwrap)]
 // [impl jeb-value.value.traits.must-use]
 #[must_use]
 // [impl jeb-value.value.def.enum-variants]
 // [impl jeb-value.value.def.variant-types]
 pub enum Value {
-    #[default]
-    Null,
+    Null(#[from] Null),
     Boolean(Boolean),
     Number(Number),
     Bytes(Bytes),
@@ -31,7 +30,7 @@ impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         use Value::*;
         match (self, other) {
-            (Null, Null) => true,
+            (Null(a), Null(b)) => a == b,
             (Boolean(a), Boolean(b)) => a == b,
             (Number(a), Number(b)) => a == b,
             (Bytes(a), Bytes(b)) => a == b,
@@ -52,7 +51,7 @@ impl core::hash::Hash for Value {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         core::mem::discriminant(self).hash(state);
         match self {
-            Value::Null => {}
+            Value::Null(value) => value.hash(state),
             Value::Boolean(value) => value.hash(state),
             Value::Number(value) => value.hash(state),
             Value::Bytes(value) => value.hash(state),
@@ -85,7 +84,7 @@ impl Ord for Value {
         // Order: Null, Boolean, Number, Bytes, String, Array, BytesMap, StringMap
         fn type_rank(value: &Value) -> usize {
             match value {
-                Null => 0,
+                Null(_) => 0,
                 Boolean(_) => 1,
                 Number(_) => 2,
                 Bytes(_) => 3,
@@ -101,7 +100,7 @@ impl Ord for Value {
 
         match self_rank.cmp(&other_rank) {
             Equal => match (self, other) {
-                (Null, Null) => Equal,
+                (Null(left), Null(right)) => left.cmp(right),
                 (Boolean(left), Boolean(right)) => left.cmp(right),
                 (Number(left), Number(right)) => left.cmp(right),
                 (Bytes(left), Bytes(right)) => left.cmp(right),
@@ -120,6 +119,13 @@ impl Ord for Value {
 impl PartialOrd for Value {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+// [impl jeb-value.value.traits.default]
+impl Default for Value {
+    fn default() -> Self {
+        Value::Null(Null::new())
     }
 }
 

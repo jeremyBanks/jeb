@@ -1,5 +1,5 @@
 use {
-    crate::{Bytes, Number, String, Value},
+    crate::{Bytes, Null, Number, String, Value},
     std::collections::{BTreeMap, HashMap, HashSet},
 };
 #[test]
@@ -7,13 +7,13 @@ fn test_value_as_hashmap_key() {
     let mut map = HashMap::new();
     map.insert(Value::from(42u64), "number");
     map.insert(Value::from(true), "bool");
-    map.insert(Value::Null, "null");
+    map.insert(Value::Null(Null::new()), "null");
     map.insert(Value::from("hello"), "string");
     map.insert(Value::from(vec![1u8, 2, 3]), "bytes");
     assert_eq!(map.get(&Value::from(42u64)), Some(&"number"));
     assert_eq!(map.get(&Value::from(42i64)), Some(&"number")); // Same value
     assert_eq!(map.get(&Value::from(true)), Some(&"bool"));
-    assert_eq!(map.get(&Value::Null), Some(&"null"));
+    assert_eq!(map.get(&Value::Null(Null::new())), Some(&"null"));
     assert_eq!(map.get(&Value::from("hello")), Some(&"string"));
     assert_eq!(map.get(&Value::from(vec![1u8, 2, 3])), Some(&"bytes"));
 }
@@ -23,13 +23,13 @@ fn test_value_as_hashset_member() {
     set.insert(Value::from(42u64));
     set.insert(Value::from(-42i64));
     set.insert(Value::from(true));
-    set.insert(Value::Null);
+    set.insert(Value::Null(Null::new()));
     set.insert(Value::from("hello"));
     assert!(set.contains(&Value::from(42u64)));
     assert!(set.contains(&Value::from(42i64))); // Same as 42u64
     assert!(set.contains(&Value::from(-42i64)));
     assert!(set.contains(&Value::from(true)));
-    assert!(set.contains(&Value::Null));
+    assert!(set.contains(&Value::Null(Null::new())));
     assert!(set.contains(&Value::from("hello")));
     assert!(!set.contains(&Value::from(999u64)));
 }
@@ -84,7 +84,7 @@ fn test_hash_consistency() {
 fn test_ordering_type_hierarchy() {
     use std::cmp::Ordering;
     // Null < Boolean < Number < Bytes < String < Array < BytesMap < StringMap
-    assert_eq!(Value::Null.cmp(&Value::from(false)), Ordering::Less);
+    assert_eq!(Value::Null(Null::new()).cmp(&Value::from(false)), Ordering::Less);
     assert_eq!(Value::from(false).cmp(&Value::from(42u64)), Ordering::Less);
     assert_eq!(
         Value::from(42u64).cmp(&Value::from(vec![1u8, 2, 3])),
@@ -177,7 +177,7 @@ fn test_ordering_maps_lexicographic() {
 #[test]
 fn test_value_in_btreemap() {
     let mut map = BTreeMap::new();
-    map.insert(Value::Null, "null");
+    map.insert(Value::Null(Null::new()), "null");
     map.insert(Value::from(false), "false");
     map.insert(Value::from(true), "true");
     map.insert(Value::from(10u64), "ten");
@@ -186,7 +186,7 @@ fn test_value_in_btreemap() {
     map.insert(Value::from(vec![1u8, 2, 3]), "bytes");
     let keys: Vec<_> = map.keys().cloned().collect();
     // Order: Null < Boolean < Number < Bytes < String < Array < BytesMap < StringMap
-    assert_eq!(keys[0], Value::Null); // Null
+    assert_eq!(keys[0], Value::Null(Null::new())); // Null
     assert_eq!(keys[1], Value::from(false)); // Boolean
     assert_eq!(keys[2], Value::from(true)); // Boolean (true > false)
     assert_eq!(keys[3], Value::from(-5i64)); // Number
@@ -208,7 +208,7 @@ fn test_sorted_values() {
     let mut values = vec![
         Value::from("zebra"),
         Value::from(42u64),
-        Value::Null,
+        Value::Null(Null::new()),
         Value::from(true),
         Value::from(-10i64),
         Value::from([Value::from(1u64)]),
@@ -218,7 +218,7 @@ fn test_sorted_values() {
     ];
     values.sort();
     // Order: Null < Boolean < Number < Bytes < String < Array
-    assert_eq!(values[0], Value::Null); // Null
+    assert_eq!(values[0], Value::Null(Null::new())); // Null
     assert_eq!(values[1], Value::from(false)); // Boolean
     assert_eq!(values[2], Value::from(true)); // Boolean
     assert_eq!(values[3], Value::from(-10i64)); // Number
