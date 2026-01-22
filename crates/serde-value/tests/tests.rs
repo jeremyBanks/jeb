@@ -1012,3 +1012,34 @@ fn test_struct_field_order_independence() {
     assert_eq!(point.x, 10);
     assert_eq!(point.y, 20);
 }
+
+/// Test that we can deserialize with fields in wrong order but correct names.
+/// This proves name-based (not positional) matching.
+#[test]
+fn test_field_order_mismatch_by_name() {
+    // Manually construct Value with fields in "wrong" positional order
+    // but correct names
+    let value = Value::Struct {
+        name: "Point3D",
+        fields: vec![
+            ("z", Value::I32(30)), // z comes first positionally
+            ("x", Value::I32(10)),
+            ("y", Value::I32(20)),
+        ],
+    };
+
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct Point3D {
+        x: i32,
+        y: i32,
+        z: i32,
+    }
+
+    let point: Point3D = from_value(value).unwrap();
+
+    // If this were positional, we'd get x=30, y=10, z=20 (wrong!)
+    // With name-based matching, we correctly get x=10, y=20, z=30
+    assert_eq!(point.x, 10);
+    assert_eq!(point.y, 20);
+    assert_eq!(point.z, 30);
+}
