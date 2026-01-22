@@ -2010,6 +2010,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-value"
+version = "0.0.0-dev-2025-12-26.7705"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "serde_bytes"
 version = "0.11.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
