@@ -966,6 +966,36 @@ fn test_value_preserves_field_names() {
     }
 }
 
+/// Test that JSON → Value → typed struct works correctly.
+/// This is the primary use case: deserialize JSON to Value, then to a typed struct.
+#[test]
+fn test_json_to_value_to_typed() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    // Serialize typed struct to JSON
+    let original = Point { x: 10, y: 20 };
+    let json = serde_json::to_string(&original).unwrap();
+
+    // Deserialize JSON to Value (self-describing format works!)
+    let value: Value = serde_json::from_str(&json).unwrap();
+
+    // Value should be a Map (JSON doesn't preserve struct names)
+    match &value {
+        Value::Map(entries) => {
+            assert_eq!(entries.len(), 2);
+        }
+        _ => panic!("expected Map, got {:?}", value),
+    }
+
+    // Deserialize Value to typed struct
+    let restored: Point = from_value(value).unwrap();
+    assert_eq!(restored, original);
+}
+
 /// Test JSON roundtrip with various Value types.
 /// JSON is a self-describing format that supports deserialize_any.
 #[test]
@@ -1022,6 +1052,36 @@ fn test_ron_roundtrip() {
         // RON preserves more type info but still has some differences
         let _ = roundtripped;
     }
+}
+
+/// Test that MessagePack → Value → typed struct works correctly.
+/// MessagePack is a BINARY self-describing format.
+#[test]
+fn test_msgpack_to_value_to_typed() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    // Serialize typed struct to MessagePack with named fields
+    let original = Point { x: 10, y: 20 };
+    let bytes = rmp_serde::to_vec_named(&original).unwrap();
+
+    // Deserialize MessagePack to Value (self-describing format works!)
+    let value: Value = rmp_serde::from_slice(&bytes).unwrap();
+
+    // Should be a Map (MessagePack map with string keys)
+    match &value {
+        Value::Map(entries) => {
+            assert_eq!(entries.len(), 2);
+        }
+        _ => panic!("expected Map, got {:?}", value),
+    }
+
+    // Deserialize Value to typed struct
+    let restored: Point = from_value(value).unwrap();
+    assert_eq!(restored, original);
 }
 
 /// Test MessagePack roundtrip via rmp-serde.
