@@ -779,3 +779,156 @@ fn test_deeply_nested() {
     let result: Level1 = from_value(value).unwrap();
     assert_eq!(result, deep);
 }
+
+// ============================================================================
+// Cross-Type Conversion Tests (try_cast scenarios)
+// ============================================================================
+
+#[test]
+fn test_cross_type_conversion_same_field_names() {
+    // Source type
+    #[derive(Serialize)]
+    struct UserV1 {
+        name: String,
+        age: u32,
+    }
+
+    // Target type with same field names
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct UserV2 {
+        name: String,
+        age: u32,
+    }
+
+    let v1 = UserV1 {
+        name: "Alice".to_string(),
+        age: 30,
+    };
+
+    let value = to_value(&v1).unwrap();
+    let v2: UserV2 = from_value(value).unwrap();
+
+    assert_eq!(v2.name, "Alice");
+    assert_eq!(v2.age, 30);
+}
+
+#[test]
+fn test_cross_type_conversion_field_type_coercion() {
+    // Source with i32
+    #[derive(Serialize)]
+    struct SourceConfig {
+        count: i32,
+    }
+
+    // Target with u64 (needs integer coercion)
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct TargetConfig {
+        count: u64,
+    }
+
+    let source = SourceConfig { count: 42 };
+    let value = to_value(&source).unwrap();
+    let target: TargetConfig = from_value(value).unwrap();
+
+    assert_eq!(target.count, 42);
+}
+
+#[test]
+fn test_cross_type_conversion_subset_fields() {
+    // Source with more fields
+    #[derive(Serialize)]
+    struct FullUser {
+        id: u64,
+        name: String,
+        email: String,
+        age: u32,
+    }
+
+    // Target with fewer fields (ignores extra)
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct PartialUser {
+        name: String,
+        age: u32,
+    }
+
+    let full = FullUser {
+        id: 1,
+        name: "Bob".to_string(),
+        email: "bob@example.com".to_string(),
+        age: 25,
+    };
+
+    let value = to_value(&full).unwrap();
+    let partial: PartialUser = from_value(value).unwrap();
+
+    assert_eq!(partial.name, "Bob");
+    assert_eq!(partial.age, 25);
+}
+
+#[test]
+fn test_cross_type_conversion_different_field_order() {
+    // Source with fields in one order
+    #[derive(Serialize)]
+    struct OrderA {
+        first: String,
+        second: i32,
+        third: bool,
+    }
+
+    // Target with same fields, different declaration order
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct OrderB {
+        third: bool,
+        first: String,
+        second: i32,
+    }
+
+    let a = OrderA {
+        first: "hello".to_string(),
+        second: 123,
+        third: true,
+    };
+
+    let value = to_value(&a).unwrap();
+    let b: OrderB = from_value(value).unwrap();
+
+    assert_eq!(b.first, "hello");
+    assert_eq!(b.second, 123);
+    assert!(b.third);
+}
+
+#[test]
+fn test_cross_type_conversion_nested_structs() {
+    #[derive(Serialize)]
+    struct InnerV1 {
+        value: i32,
+    }
+
+    #[derive(Serialize)]
+    struct OuterV1 {
+        inner: InnerV1,
+        label: String,
+    }
+
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct InnerV2 {
+        value: i64, // Widened type
+    }
+
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct OuterV2 {
+        inner: InnerV2,
+        label: String,
+    }
+
+    let v1 = OuterV1 {
+        inner: InnerV1 { value: 999 },
+        label: "test".to_string(),
+    };
+
+    let value = to_value(&v1).unwrap();
+    let v2: OuterV2 = from_value(value).unwrap();
+
+    assert_eq!(v2.inner.value, 999);
+    assert_eq!(v2.label, "test");
+}
