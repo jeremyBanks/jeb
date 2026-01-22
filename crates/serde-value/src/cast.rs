@@ -35,11 +35,6 @@ use serde::{de::DeserializeOwned, Serialize};
 ///
 /// Returns an error if serialization or deserialization fails. This can happen
 /// if the source and target types have incompatible serde representations.
-///
-/// # Note
-///
-/// Currently, numeric type coercion is not implemented. Casting between
-/// different numeric types (e.g., `f32` to `f64`, or `u32` to `u64`) will fail.
 pub fn try_cast<T: Serialize, U: DeserializeOwned>(value: &T) -> Result<U, Error> {
     let intermediate = to_value(value)?;
     from_value(intermediate)
