@@ -1,6 +1,25 @@
 //! `Serialize` implementation for `Value`.
 //!
-//! This allows serializing a `Value` to any serde-compatible format.
+//! # Transparent Serialization
+//!
+//! This implementation is **transparent**: serializing a `Value` produces **identical bytes**
+//! to serializing the original typed value. This is achieved by directly invoking the
+//! appropriate serde serializer methods (e.g., `serialize_struct`, `serialize_i32`) rather
+//! than serializing `Value` as an enum with discriminants.
+//!
+//! This enables interop with ANY serialization format, including non-self-describing binary
+//! formats like bincode:
+//!
+//! ```ignore
+//! let original = Point { x: 10, y: 20 };
+//! let value = to_value(&original)?;
+//!
+//! // These produce IDENTICAL bytes:
+//! assert_eq!(
+//!     bincode::serialize(&original)?,
+//!     bincode::serialize(&value)?
+//! );
+//! ```
 
 use crate::Value;
 use serde::ser::{

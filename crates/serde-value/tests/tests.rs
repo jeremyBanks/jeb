@@ -1049,25 +1049,135 @@ fn test_msgpack_roundtrip() {
     }
 }
 
-/// Test that bincode can serialize Value (but not deserialize without schema).
-/// Bincode is a non-self-describing format that doesn't support deserialize_any.
+/// Test that Value serializes to IDENTICAL bytes as the original type.
+/// This is the core guarantee: to_value() then serialize produces same output.
 #[test]
-fn test_bincode_serialize_only() {
-    let value = Value::Struct {
-        name: "Test",
-        fields: vec![
-            ("x", Value::I32(1)),
-            ("y", Value::I32(2)),
-        ],
+fn test_bincode_transparent_serialization() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    let original = Point { x: 10, y: 20 };
+
+    // Serialize original directly
+    let original_bytes = bincode::serialize(&original).unwrap();
+
+    // Convert to Value, then serialize
+    let value = to_value(&original).unwrap();
+    let value_bytes = bincode::serialize(&value).unwrap();
+
+    // MUST be identical!
+    assert_eq!(
+        original_bytes, value_bytes,
+        "Value serialization must produce identical bytes to original type"
+    );
+
+    // And we can deserialize back to the original type
+    let restored: Point = bincode::deserialize(&value_bytes).unwrap();
+    assert_eq!(restored, original);
+}
+
+/// Test transparent serialization with nested structs.
+#[test]
+fn test_bincode_transparent_nested() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Inner {
+        value: i32,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Outer {
+        inner: Inner,
+        label: String,
+    }
+
+    let original = Outer {
+        inner: Inner { value: 42 },
+        label: "test".to_string(),
     };
 
-    // Serialization works
-    let bytes = bincode::serialize(&value).unwrap();
-    assert!(!bytes.is_empty());
+    let original_bytes = bincode::serialize(&original).unwrap();
+    let value = to_value(&original).unwrap();
+    let value_bytes = bincode::serialize(&value).unwrap();
 
-    // Deserialization to Value fails (expected - bincode needs schema)
-    let result: Result<Value, _> = bincode::deserialize(&bytes);
-    assert!(result.is_err(), "bincode can't deserialize Value without schema");
+    assert_eq!(original_bytes, value_bytes);
+
+    let restored: Outer = bincode::deserialize(&value_bytes).unwrap();
+    assert_eq!(restored, original);
+}
+
+/// Test transparent serialization with Vec.
+#[test]
+fn test_bincode_transparent_vec() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Container {
+        items: Vec<i32>,
+    }
+
+    let original = Container {
+        items: vec![1, 2, 3, 4, 5],
+    };
+
+    let original_bytes = bincode::serialize(&original).unwrap();
+    let value = to_value(&original).unwrap();
+    let value_bytes = bincode::serialize(&value).unwrap();
+
+    assert_eq!(original_bytes, value_bytes);
+
+    let restored: Container = bincode::deserialize(&value_bytes).unwrap();
+    assert_eq!(restored, original);
+}
+
+/// Test transparent serialization with Option.
+#[test]
+fn test_bincode_transparent_option() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct MaybeValue {
+        value: Option<i32>,
+    }
+
+    // Test Some
+    let original = MaybeValue { value: Some(42) };
+    let original_bytes = bincode::serialize(&original).unwrap();
+    let value = to_value(&original).unwrap();
+    let value_bytes = bincode::serialize(&value).unwrap();
+    assert_eq!(original_bytes, value_bytes);
+
+    // Test None
+    let original = MaybeValue { value: None };
+    let original_bytes = bincode::serialize(&original).unwrap();
+    let value = to_value(&original).unwrap();
+    let value_bytes = bincode::serialize(&value).unwrap();
+    assert_eq!(original_bytes, value_bytes);
+}
+
+/// Test transparent serialization with enums.
+#[test]
+fn test_bincode_transparent_enum() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    enum Status {
+        Active,
+        Inactive,
+        Pending { reason: String },
+    }
+
+    // Unit variant
+    let original = Status::Active;
+    let original_bytes = bincode::serialize(&original).unwrap();
+    let value = to_value(&original).unwrap();
+    let value_bytes = bincode::serialize(&value).unwrap();
+    assert_eq!(original_bytes, value_bytes);
+
+    // Struct variant
+    let original = Status::Pending {
+        reason: "waiting".to_string(),
+    };
+    let original_bytes = bincode::serialize(&original).unwrap();
+    let value = to_value(&original).unwrap();
+    let value_bytes = bincode::serialize(&value).unwrap();
+    assert_eq!(original_bytes, value_bytes);
 }
 
 /// Test that field name matching works even when fields are in different order.
