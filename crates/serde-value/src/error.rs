@@ -37,6 +37,12 @@ pub enum Error {
         expected: &'static [&'static str],
         found: String,
     },
+
+    /// Value out of range for target type.
+    OutOfRange(&'static str),
+
+    /// Invalid UTF-8 in bytes-to-string conversion.
+    InvalidUtf8,
 }
 
 impl fmt::Display for Error {
@@ -57,6 +63,12 @@ impl fmt::Display for Error {
             }
             Error::InvalidVariant { expected, found } => {
                 write!(f, "invalid variant: expected one of {expected:?}, found {found}")
+            }
+            Error::OutOfRange(target) => {
+                write!(f, "value out of range for {target}")
+            }
+            Error::InvalidUtf8 => {
+                write!(f, "invalid UTF-8 in bytes")
             }
         }
     }
@@ -80,5 +92,15 @@ impl Error {
     /// Create a type mismatch error.
     pub fn type_mismatch(expected: &'static str, found: &'static str) -> Self {
         Error::TypeMismatch { expected, found }
+    }
+
+    /// Create an out-of-range error.
+    pub fn out_of_range(target: &'static str) -> Self {
+        Error::OutOfRange(target)
+    }
+
+    /// Create an invalid UTF-8 error.
+    pub fn invalid_utf8() -> Self {
+        Error::InvalidUtf8
     }
 }

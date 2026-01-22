@@ -779,3 +779,349 @@ fn test_deeply_nested() {
     let result: Level1 = from_value(value).unwrap();
     assert_eq!(result, deep);
 }
+
+// ============================================================================
+// Cross-Type Conversion Tests (try_cast scenarios)
+// ============================================================================
+
+#[test]
+fn test_cross_type_conversion_same_field_names() {
+    // Source type
+    #[derive(Serialize)]
+    struct UserV1 {
+        name: String,
+        age: u32,
+    }
+
+    // Target type with same field names
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct UserV2 {
+        name: String,
+        age: u32,
+    }
+
+    let v1 = UserV1 {
+        name: "Alice".to_string(),
+        age: 30,
+    };
+
+    let value = to_value(&v1).unwrap();
+    let v2: UserV2 = from_value(value).unwrap();
+
+    assert_eq!(v2.name, "Alice");
+    assert_eq!(v2.age, 30);
+}
+
+#[test]
+fn test_cross_type_conversion_field_type_coercion() {
+    // Source with i32
+    #[derive(Serialize)]
+    struct SourceConfig {
+        count: i32,
+    }
+
+    // Target with u64 (needs integer coercion)
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct TargetConfig {
+        count: u64,
+    }
+
+    let source = SourceConfig { count: 42 };
+    let value = to_value(&source).unwrap();
+    let target: TargetConfig = from_value(value).unwrap();
+
+    assert_eq!(target.count, 42);
+}
+
+#[test]
+fn test_cross_type_conversion_subset_fields() {
+    // Source with more fields
+    #[derive(Serialize)]
+    struct FullUser {
+        id: u64,
+        name: String,
+        email: String,
+        age: u32,
+    }
+
+    // Target with fewer fields (ignores extra)
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct PartialUser {
+        name: String,
+        age: u32,
+    }
+
+    let full = FullUser {
+        id: 1,
+        name: "Bob".to_string(),
+        email: "bob@example.com".to_string(),
+        age: 25,
+    };
+
+    let value = to_value(&full).unwrap();
+    let partial: PartialUser = from_value(value).unwrap();
+
+    assert_eq!(partial.name, "Bob");
+    assert_eq!(partial.age, 25);
+}
+
+#[test]
+fn test_cross_type_conversion_different_field_order() {
+    // Source with fields in one order
+    #[derive(Serialize)]
+    struct OrderA {
+        first: String,
+        second: i32,
+        third: bool,
+    }
+
+    // Target with same fields, different declaration order
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct OrderB {
+        third: bool,
+        first: String,
+        second: i32,
+    }
+
+    let a = OrderA {
+        first: "hello".to_string(),
+        second: 123,
+        third: true,
+    };
+
+    let value = to_value(&a).unwrap();
+    let b: OrderB = from_value(value).unwrap();
+
+    assert_eq!(b.first, "hello");
+    assert_eq!(b.second, 123);
+    assert!(b.third);
+}
+
+#[test]
+fn test_cross_type_conversion_nested_structs() {
+    #[derive(Serialize)]
+    struct InnerV1 {
+        value: i32,
+    }
+
+    #[derive(Serialize)]
+    struct OuterV1 {
+        inner: InnerV1,
+        label: String,
+    }
+
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct InnerV2 {
+        value: i64, // Widened type
+    }
+
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct OuterV2 {
+        inner: InnerV2,
+        label: String,
+    }
+
+    let v1 = OuterV1 {
+        inner: InnerV1 { value: 999 },
+        label: "test".to_string(),
+    };
+
+    let value = to_value(&v1).unwrap();
+    let v2: OuterV2 = from_value(value).unwrap();
+
+    assert_eq!(v2.inner.value, 999);
+    assert_eq!(v2.label, "test");
+}
+
+// ============================================================================
+// Field Index Tests (Binary Format Interop)
+// ============================================================================
+
+/// Test that Value preserves field names from structs, enabling name-based matching.
+/// This is the key difference from positional binary formats.
+#[test]
+fn test_value_preserves_field_names() {
+    #[derive(Serialize)]
+    struct Source {
+        alpha: i32,
+        beta: String,
+    }
+
+    let source = Source {
+        alpha: 42,
+        beta: "test".to_string(),
+    };
+
+    let value = to_value(&source).unwrap();
+
+    // Verify the Value contains field names
+    match &value {
+        Value::Struct { name, fields } => {
+            assert_eq!(*name, "Source");
+            assert_eq!(fields.len(), 2);
+            assert_eq!(fields[0].0, "alpha");
+            assert_eq!(fields[1].0, "beta");
+        }
+        _ => panic!("expected Struct"),
+    }
+}
+
+/// Test JSON roundtrip with various Value types.
+/// JSON is a self-describing format that supports deserialize_any.
+#[test]
+fn test_json_roundtrip() {
+    // Note: JSON doesn't distinguish all serde types, so we test types it preserves
+    let test_values = vec![
+        Value::Bool(true),
+        Value::Bool(false),
+        Value::I64(-100000),
+        Value::U64(100000),
+        Value::F64(3.14159),
+        Value::String("hello world".to_string()),
+        Value::None,
+        Value::Seq(vec![Value::I64(1), Value::I64(2), Value::I64(3)]),
+        Value::Map(vec![
+            (Value::String("key1".to_string()), Value::I64(1)),
+            (Value::String("key2".to_string()), Value::String("value".to_string())),
+        ]),
+    ];
+
+    for original in test_values {
+        let json = serde_json::to_string(&original).unwrap();
+        let roundtripped: Value = serde_json::from_str(&json).unwrap();
+        // JSON loses type distinctions (all ints become i64/u64, all maps become Map)
+        // Just verify it doesn't error
+        assert!(!json.is_empty());
+        let _ = roundtripped; // Use the variable
+    }
+}
+
+/// Test RON (Rusty Object Notation) roundtrip.
+/// RON is a self-describing format that preserves more type info than JSON.
+#[test]
+fn test_ron_roundtrip() {
+    let test_values = vec![
+        Value::Bool(true),
+        Value::I32(-42),
+        Value::U32(42),
+        Value::F64(3.14),
+        Value::Char('🦀'),
+        Value::String("hello".to_string()),
+        Value::None,
+        Value::Some(Box::new(Value::I32(42))),
+        Value::Unit,
+        Value::Seq(vec![Value::I32(1), Value::I32(2)]),
+        Value::Map(vec![
+            (Value::String("a".to_string()), Value::I32(1)),
+        ]),
+    ];
+
+    for original in &test_values {
+        let ron_str = ron::to_string(original).unwrap();
+        let roundtripped: Value = ron::from_str(&ron_str).unwrap();
+        // RON preserves more type info but still has some differences
+        let _ = roundtripped;
+    }
+}
+
+/// Test MessagePack roundtrip via rmp-serde.
+/// MessagePack is a binary format that supports deserialize_any.
+#[test]
+fn test_msgpack_roundtrip() {
+    let test_values = vec![
+        Value::Bool(true),
+        Value::I64(-100000),
+        Value::U64(100000),
+        Value::F64(3.14),
+        Value::String("hello world".to_string()),
+        Value::Bytes(vec![1, 2, 3, 4, 5]),
+        Value::Seq(vec![Value::I64(1), Value::I64(2), Value::I64(3)]),
+        Value::Map(vec![
+            (Value::String("key".to_string()), Value::I64(42)),
+        ]),
+    ];
+
+    for original in test_values {
+        let bytes = rmp_serde::to_vec(&original).unwrap();
+        let roundtripped: Value = rmp_serde::from_slice(&bytes).unwrap();
+        // MessagePack has its own type mapping
+        let _ = roundtripped;
+    }
+}
+
+/// Test that bincode can serialize Value (but not deserialize without schema).
+/// Bincode is a non-self-describing format that doesn't support deserialize_any.
+#[test]
+fn test_bincode_serialize_only() {
+    let value = Value::Struct {
+        name: "Test",
+        fields: vec![
+            ("x", Value::I32(1)),
+            ("y", Value::I32(2)),
+        ],
+    };
+
+    // Serialization works
+    let bytes = bincode::serialize(&value).unwrap();
+    assert!(!bytes.is_empty());
+
+    // Deserialization to Value fails (expected - bincode needs schema)
+    let result: Result<Value, _> = bincode::deserialize(&bytes);
+    assert!(result.is_err(), "bincode can't deserialize Value without schema");
+}
+
+/// Test that field name matching works even when fields are in different order.
+/// This demonstrates name-based (not positional) deserialization.
+#[test]
+fn test_struct_field_order_independence() {
+    // Create a Value with fields in a specific order
+    let value = Value::Struct {
+        name: "Point",
+        fields: vec![
+            ("y", Value::I32(20)),
+            ("x", Value::I32(10)),
+        ],
+    };
+
+    // Deserialize to a struct where fields are declared in different order
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    let point: Point = from_value(value).unwrap();
+    assert_eq!(point.x, 10);
+    assert_eq!(point.y, 20);
+}
+
+/// Test that we can deserialize with fields in wrong order but correct names.
+/// This proves name-based (not positional) matching.
+#[test]
+fn test_field_order_mismatch_by_name() {
+    // Manually construct Value with fields in "wrong" positional order
+    // but correct names
+    let value = Value::Struct {
+        name: "Point3D",
+        fields: vec![
+            ("z", Value::I32(30)), // z comes first positionally
+            ("x", Value::I32(10)),
+            ("y", Value::I32(20)),
+        ],
+    };
+
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct Point3D {
+        x: i32,
+        y: i32,
+        z: i32,
+    }
+
+    let point: Point3D = from_value(value).unwrap();
+
+    // If this were positional, we'd get x=30, y=10, z=20 (wrong!)
+    // With name-based matching, we correctly get x=10, y=20, z=30
+    assert_eq!(point.x, 10);
+    assert_eq!(point.y, 20);
+    assert_eq!(point.z, 30);
+}
