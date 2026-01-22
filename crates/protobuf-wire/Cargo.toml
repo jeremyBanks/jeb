@@ -1,0 +1,12 @@
+[package]
+name = "protobuf-wire"
+description = "A concrete data model for the Protocol Buffers wire format"
+publish = false
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+log = "0.4"
+
+[dev-dependencies]
