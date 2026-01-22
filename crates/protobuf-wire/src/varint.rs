@@ -61,12 +61,13 @@ fn canonical_varint_len(value: u64) -> usize {
     }
     // Number of bits needed, divided by 7, rounded up
     let bits = 64 - value.leading_zeros() as usize;
-    (bits + 6) / 7
+    bits.div_ceil(7)
 }
 
 /// Encode a u64 value as a varint.
 ///
 /// Always produces canonical (minimal) encoding.
+#[cfg(test)]
 pub fn encode_varint(mut value: u64) -> Vec<u8> {
     let mut result = Vec::with_capacity(MAX_VARINT_BYTES);
 
