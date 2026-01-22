@@ -98,123 +98,189 @@ impl<'de> Deserializer<'de> for Value {
     }
 
     fn deserialize_i8<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
-        match self {
-            Value::I8(v) => visitor.visit_i8(v),
-            other => unimplemented!(
-                "integer coercion from {} to i8 not implemented",
-                other.type_name()
-            ),
-        }
+        let v: i8 = match self {
+            Value::I8(v) => v,
+            Value::I16(v) => v.try_into().map_err(|_| Error::out_of_range("i8"))?,
+            Value::I32(v) => v.try_into().map_err(|_| Error::out_of_range("i8"))?,
+            Value::I64(v) => v.try_into().map_err(|_| Error::out_of_range("i8"))?,
+            Value::I128(v) => v.try_into().map_err(|_| Error::out_of_range("i8"))?,
+            Value::U8(v) => v.try_into().map_err(|_| Error::out_of_range("i8"))?,
+            Value::U16(v) => v.try_into().map_err(|_| Error::out_of_range("i8"))?,
+            Value::U32(v) => v.try_into().map_err(|_| Error::out_of_range("i8"))?,
+            Value::U64(v) => v.try_into().map_err(|_| Error::out_of_range("i8"))?,
+            Value::U128(v) => v.try_into().map_err(|_| Error::out_of_range("i8"))?,
+            other => return Err(Error::type_mismatch("integer", other.type_name())),
+        };
+        visitor.visit_i8(v)
     }
 
     fn deserialize_i16<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
-        match self {
-            Value::I16(v) => visitor.visit_i16(v),
-            other => unimplemented!(
-                "integer coercion from {} to i16 not implemented",
-                other.type_name()
-            ),
-        }
+        let v: i16 = match self {
+            Value::I8(v) => v.into(),
+            Value::I16(v) => v,
+            Value::I32(v) => v.try_into().map_err(|_| Error::out_of_range("i16"))?,
+            Value::I64(v) => v.try_into().map_err(|_| Error::out_of_range("i16"))?,
+            Value::I128(v) => v.try_into().map_err(|_| Error::out_of_range("i16"))?,
+            Value::U8(v) => v.into(),
+            Value::U16(v) => v.try_into().map_err(|_| Error::out_of_range("i16"))?,
+            Value::U32(v) => v.try_into().map_err(|_| Error::out_of_range("i16"))?,
+            Value::U64(v) => v.try_into().map_err(|_| Error::out_of_range("i16"))?,
+            Value::U128(v) => v.try_into().map_err(|_| Error::out_of_range("i16"))?,
+            other => return Err(Error::type_mismatch("integer", other.type_name())),
+        };
+        visitor.visit_i16(v)
     }
 
     fn deserialize_i32<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
-        match self {
-            Value::I32(v) => visitor.visit_i32(v),
-            other => unimplemented!(
-                "integer coercion from {} to i32 not implemented",
-                other.type_name()
-            ),
-        }
+        let v: i32 = match self {
+            Value::I8(v) => v.into(),
+            Value::I16(v) => v.into(),
+            Value::I32(v) => v,
+            Value::I64(v) => v.try_into().map_err(|_| Error::out_of_range("i32"))?,
+            Value::I128(v) => v.try_into().map_err(|_| Error::out_of_range("i32"))?,
+            Value::U8(v) => v.into(),
+            Value::U16(v) => v.into(),
+            Value::U32(v) => v.try_into().map_err(|_| Error::out_of_range("i32"))?,
+            Value::U64(v) => v.try_into().map_err(|_| Error::out_of_range("i32"))?,
+            Value::U128(v) => v.try_into().map_err(|_| Error::out_of_range("i32"))?,
+            other => return Err(Error::type_mismatch("integer", other.type_name())),
+        };
+        visitor.visit_i32(v)
     }
 
     fn deserialize_i64<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
-        match self {
-            Value::I64(v) => visitor.visit_i64(v),
-            other => unimplemented!(
-                "integer coercion from {} to i64 not implemented",
-                other.type_name()
-            ),
-        }
+        let v: i64 = match self {
+            Value::I8(v) => v.into(),
+            Value::I16(v) => v.into(),
+            Value::I32(v) => v.into(),
+            Value::I64(v) => v,
+            Value::I128(v) => v.try_into().map_err(|_| Error::out_of_range("i64"))?,
+            Value::U8(v) => v.into(),
+            Value::U16(v) => v.into(),
+            Value::U32(v) => v.into(),
+            Value::U64(v) => v.try_into().map_err(|_| Error::out_of_range("i64"))?,
+            Value::U128(v) => v.try_into().map_err(|_| Error::out_of_range("i64"))?,
+            other => return Err(Error::type_mismatch("integer", other.type_name())),
+        };
+        visitor.visit_i64(v)
     }
 
     fn deserialize_i128<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
-        match self {
-            Value::I128(v) => visitor.visit_i128(v),
-            other => unimplemented!(
-                "integer coercion from {} to i128 not implemented",
-                other.type_name()
-            ),
-        }
+        let v: i128 = match self {
+            Value::I8(v) => v.into(),
+            Value::I16(v) => v.into(),
+            Value::I32(v) => v.into(),
+            Value::I64(v) => v.into(),
+            Value::I128(v) => v,
+            Value::U8(v) => v.into(),
+            Value::U16(v) => v.into(),
+            Value::U32(v) => v.into(),
+            Value::U64(v) => v.into(),
+            Value::U128(v) => v.try_into().map_err(|_| Error::out_of_range("i128"))?,
+            other => return Err(Error::type_mismatch("integer", other.type_name())),
+        };
+        visitor.visit_i128(v)
     }
 
     fn deserialize_u8<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
-        match self {
-            Value::U8(v) => visitor.visit_u8(v),
-            other => unimplemented!(
-                "integer coercion from {} to u8 not implemented",
-                other.type_name()
-            ),
-        }
+        let v: u8 = match self {
+            Value::I8(v) => v.try_into().map_err(|_| Error::out_of_range("u8"))?,
+            Value::I16(v) => v.try_into().map_err(|_| Error::out_of_range("u8"))?,
+            Value::I32(v) => v.try_into().map_err(|_| Error::out_of_range("u8"))?,
+            Value::I64(v) => v.try_into().map_err(|_| Error::out_of_range("u8"))?,
+            Value::I128(v) => v.try_into().map_err(|_| Error::out_of_range("u8"))?,
+            Value::U8(v) => v,
+            Value::U16(v) => v.try_into().map_err(|_| Error::out_of_range("u8"))?,
+            Value::U32(v) => v.try_into().map_err(|_| Error::out_of_range("u8"))?,
+            Value::U64(v) => v.try_into().map_err(|_| Error::out_of_range("u8"))?,
+            Value::U128(v) => v.try_into().map_err(|_| Error::out_of_range("u8"))?,
+            other => return Err(Error::type_mismatch("integer", other.type_name())),
+        };
+        visitor.visit_u8(v)
     }
 
     fn deserialize_u16<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
-        match self {
-            Value::U16(v) => visitor.visit_u16(v),
-            other => unimplemented!(
-                "integer coercion from {} to u16 not implemented",
-                other.type_name()
-            ),
-        }
+        let v: u16 = match self {
+            Value::I8(v) => v.try_into().map_err(|_| Error::out_of_range("u16"))?,
+            Value::I16(v) => v.try_into().map_err(|_| Error::out_of_range("u16"))?,
+            Value::I32(v) => v.try_into().map_err(|_| Error::out_of_range("u16"))?,
+            Value::I64(v) => v.try_into().map_err(|_| Error::out_of_range("u16"))?,
+            Value::I128(v) => v.try_into().map_err(|_| Error::out_of_range("u16"))?,
+            Value::U8(v) => v.into(),
+            Value::U16(v) => v,
+            Value::U32(v) => v.try_into().map_err(|_| Error::out_of_range("u16"))?,
+            Value::U64(v) => v.try_into().map_err(|_| Error::out_of_range("u16"))?,
+            Value::U128(v) => v.try_into().map_err(|_| Error::out_of_range("u16"))?,
+            other => return Err(Error::type_mismatch("integer", other.type_name())),
+        };
+        visitor.visit_u16(v)
     }
 
     fn deserialize_u32<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
-        match self {
-            Value::U32(v) => visitor.visit_u32(v),
-            other => unimplemented!(
-                "integer coercion from {} to u32 not implemented",
-                other.type_name()
-            ),
-        }
+        let v: u32 = match self {
+            Value::I8(v) => v.try_into().map_err(|_| Error::out_of_range("u32"))?,
+            Value::I16(v) => v.try_into().map_err(|_| Error::out_of_range("u32"))?,
+            Value::I32(v) => v.try_into().map_err(|_| Error::out_of_range("u32"))?,
+            Value::I64(v) => v.try_into().map_err(|_| Error::out_of_range("u32"))?,
+            Value::I128(v) => v.try_into().map_err(|_| Error::out_of_range("u32"))?,
+            Value::U8(v) => v.into(),
+            Value::U16(v) => v.into(),
+            Value::U32(v) => v,
+            Value::U64(v) => v.try_into().map_err(|_| Error::out_of_range("u32"))?,
+            Value::U128(v) => v.try_into().map_err(|_| Error::out_of_range("u32"))?,
+            other => return Err(Error::type_mismatch("integer", other.type_name())),
+        };
+        visitor.visit_u32(v)
     }
 
     fn deserialize_u64<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
-        match self {
-            Value::U64(v) => visitor.visit_u64(v),
-            other => unimplemented!(
-                "integer coercion from {} to u64 not implemented",
-                other.type_name()
-            ),
-        }
+        let v: u64 = match self {
+            Value::I8(v) => v.try_into().map_err(|_| Error::out_of_range("u64"))?,
+            Value::I16(v) => v.try_into().map_err(|_| Error::out_of_range("u64"))?,
+            Value::I32(v) => v.try_into().map_err(|_| Error::out_of_range("u64"))?,
+            Value::I64(v) => v.try_into().map_err(|_| Error::out_of_range("u64"))?,
+            Value::I128(v) => v.try_into().map_err(|_| Error::out_of_range("u64"))?,
+            Value::U8(v) => v.into(),
+            Value::U16(v) => v.into(),
+            Value::U32(v) => v.into(),
+            Value::U64(v) => v,
+            Value::U128(v) => v.try_into().map_err(|_| Error::out_of_range("u64"))?,
+            other => return Err(Error::type_mismatch("integer", other.type_name())),
+        };
+        visitor.visit_u64(v)
     }
 
     fn deserialize_u128<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
-        match self {
-            Value::U128(v) => visitor.visit_u128(v),
-            other => unimplemented!(
-                "integer coercion from {} to u128 not implemented",
-                other.type_name()
-            ),
-        }
+        let v: u128 = match self {
+            Value::I8(v) => v.try_into().map_err(|_| Error::out_of_range("u128"))?,
+            Value::I16(v) => v.try_into().map_err(|_| Error::out_of_range("u128"))?,
+            Value::I32(v) => v.try_into().map_err(|_| Error::out_of_range("u128"))?,
+            Value::I64(v) => v.try_into().map_err(|_| Error::out_of_range("u128"))?,
+            Value::I128(v) => v.try_into().map_err(|_| Error::out_of_range("u128"))?,
+            Value::U8(v) => v.into(),
+            Value::U16(v) => v.into(),
+            Value::U32(v) => v.into(),
+            Value::U64(v) => v.into(),
+            Value::U128(v) => v,
+            other => return Err(Error::type_mismatch("integer", other.type_name())),
+        };
+        visitor.visit_u128(v)
     }
 
     fn deserialize_f32<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
         match self {
             Value::F32(v) => visitor.visit_f32(v),
-            other => unimplemented!(
-                "float coercion from {} to f32 not implemented",
-                other.type_name()
-            ),
+            other => Err(Error::type_mismatch("f32", other.type_name())),
         }
     }
 
     fn deserialize_f64<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
-        match self {
-            Value::F64(v) => visitor.visit_f64(v),
-            other => unimplemented!(
-                "float coercion from {} to f64 not implemented",
-                other.type_name()
-            ),
-        }
+        let v: f64 = match self {
+            Value::F32(v) => v.into(),
+            Value::F64(v) => v,
+            other => return Err(Error::type_mismatch("f64", other.type_name())),
+        };
+        visitor.visit_f64(v)
     }
 
     fn deserialize_char<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
@@ -225,10 +291,12 @@ impl<'de> Deserializer<'de> for Value {
     }
 
     fn deserialize_str<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
-        match self {
-            Value::String(v) => visitor.visit_string(v),
-            other => Err(Error::type_mismatch("string", other.type_name())),
-        }
+        let s = match self {
+            Value::String(v) => v,
+            Value::Bytes(v) => String::from_utf8(v).map_err(|_| Error::invalid_utf8())?,
+            other => return Err(Error::type_mismatch("string", other.type_name())),
+        };
+        visitor.visit_string(s)
     }
 
     fn deserialize_string<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
@@ -236,10 +304,12 @@ impl<'de> Deserializer<'de> for Value {
     }
 
     fn deserialize_bytes<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
-        match self {
-            Value::Bytes(v) => visitor.visit_byte_buf(v),
-            other => Err(Error::type_mismatch("bytes", other.type_name())),
-        }
+        let bytes = match self {
+            Value::Bytes(v) => v,
+            Value::String(v) => v.into_bytes(),
+            other => return Err(Error::type_mismatch("bytes", other.type_name())),
+        };
+        visitor.visit_byte_buf(bytes)
     }
 
     fn deserialize_byte_buf<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
