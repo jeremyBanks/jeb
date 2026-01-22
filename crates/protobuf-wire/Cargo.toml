@@ -6,7 +6,12 @@ edition.workspace = true
 version.workspace = true
 license.workspace = true
 
+[features]
+arbitrary = ["dep:arbitrary"]
+
 [dependencies]
 log = "0.4"
+arbitrary = { version = "1", optional = true }
 
 [dev-dependencies]
+arbitrary = { version = "1" }

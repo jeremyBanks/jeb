@@ -1,0 +1,190 @@
+//! Implementation of the `Arbitrary` trait for fuzz testing.
+
+use crate::{Message, Record, Value, WireType};
+use arbitrary::{Arbitrary, Unstructured};
+
+/// Maximum valid field number (2^29 - 1).
+const MAX_FIELD_NUMBER: u32 = 536_870_911;
+
+/// Generate an arbitrary valid field number (1 to MAX_FIELD_NUMBER).
+fn arbitrary_field_number(u: &mut Unstructured<'_>) -> arbitrary::Result<u32> {
+    // Generate a value in range [1, MAX_FIELD_NUMBER]
+    let n: u32 = u.arbitrary()?;
+    // Map to valid range, avoiding 0
+    Ok((n % MAX_FIELD_NUMBER) + 1)
+}
+
+/// Generate arbitrary nested values with bounded depth.
+fn arbitrary_value_with_depth(u: &mut Unstructured<'_>, depth: usize) -> arbitrary::Result<Value> {
+    if depth == 0 {
+        // At max depth, only generate non-recursive variants
+        let variant = u.int_in_range(0..=3)?;
+        return Ok(match variant {
+            0 => Value::Varint(u.arbitrary()?),
+            1 => Value::I64(u.arbitrary()?),
+            2 => Value::I32(u.arbitrary()?),
+            3 => Value::LenDelimited(u.arbitrary()?),
+            _ => unreachable!(),
+        });
+    }
+
+    let variant = u.int_in_range(0..=4)?;
+    Ok(match variant {
+        0 => Value::Varint(u.arbitrary()?),
+        1 => Value::I64(u.arbitrary()?),
+        2 => Value::I32(u.arbitrary()?),
+        3 => Value::LenDelimited(u.arbitrary()?),
+        4 => {
+            // Group with nested records
+            let len = u.int_in_range(0..=4)?;
+            let mut records = Vec::with_capacity(len);
+            for _ in 0..len {
+                records.push(arbitrary_record_with_depth(u, depth - 1)?);
+            }
+            Value::Group(records)
+        }
+        _ => unreachable!(),
+    })
+}
+
+/// Generate an arbitrary record with bounded depth.
+fn arbitrary_record_with_depth(
+    u: &mut Unstructured<'_>,
+    depth: usize,
+) -> arbitrary::Result<Record> {
+    Ok(Record {
+        field_number: arbitrary_field_number(u)?,
+        value: arbitrary_value_with_depth(u, depth)?,
+    })
+}
+
+impl<'a> Arbitrary<'a> for WireType {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let variant = u.int_in_range(0..=5)?;
+        Ok(match variant {
+            0 => WireType::Varint,
+            1 => WireType::I64,
+            2 => WireType::Len,
+            3 => WireType::SGroup,
+            4 => WireType::EGroup,
+            5 => WireType::I32,
+            _ => unreachable!(),
+        })
+    }
+}
+
+impl<'a> Arbitrary<'a> for Value {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        arbitrary_value_with_depth(u, 4)
+    }
+
+    fn size_hint(_depth: usize) -> (usize, Option<usize>) {
+        (1, None)
+    }
+}
+
+impl<'a> Arbitrary<'a> for Record {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        arbitrary_record_with_depth(u, 4)
+    }
+
+    fn size_hint(_depth: usize) -> (usize, Option<usize>) {
+        (5, None) // At least 4 bytes for field number + 1 for value variant
+    }
+}
+
+impl<'a> Arbitrary<'a> for Message {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let len = u.int_in_range(0..=8)?;
+        let mut records = Vec::with_capacity(len);
+        for _ in 0..len {
+            records.push(Record::arbitrary(u)?);
+        }
+        Ok(Message { records })
+    }
+
+    fn size_hint(_depth: usize) -> (usize, Option<usize>) {
+        (1, None)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_arbitrary_wire_type() {
+        let data = [0u8, 1, 2, 3, 4, 5];
+        let mut u = Unstructured::new(&data);
+        let wt = WireType::arbitrary(&mut u);
+        assert!(wt.is_ok());
+    }
+
+    #[test]
+    fn test_arbitrary_value() {
+        let data = [0u8; 256];
+        let mut u = Unstructured::new(&data);
+        let value = Value::arbitrary(&mut u);
+        assert!(value.is_ok());
+    }
+
+    #[test]
+    fn test_arbitrary_record_valid_field_number() {
+        let data: Vec<u8> = (0..=255).collect();
+        let mut u = Unstructured::new(&data);
+
+        for _ in 0..10 {
+            if let Ok(record) = Record::arbitrary(&mut u) {
+                assert!(record.field_number >= 1);
+                assert!(record.field_number <= MAX_FIELD_NUMBER);
+            }
+        }
+    }
+
+    #[test]
+    fn test_arbitrary_message() {
+        let data = [0u8; 512];
+        let mut u = Unstructured::new(&data);
+        let msg = Message::arbitrary(&mut u);
+        assert!(msg.is_ok());
+    }
+
+    #[test]
+    fn test_arbitrary_message_roundtrip() {
+        // Generate arbitrary messages and verify they can serialize/parse
+        let data: Vec<u8> = (0..=255).cycle().take(1024).collect();
+        let mut u = Unstructured::new(&data);
+
+        let mut successful_roundtrips = 0;
+        for _ in 0..10 {
+            if let Ok(msg) = Message::arbitrary(&mut u) {
+                if let Ok(bytes) = msg.serialize() {
+                    if let Ok(parsed) = Message::parse(&bytes) {
+                        assert_eq!(msg, parsed);
+                        successful_roundtrips += 1;
+                    }
+                }
+            }
+        }
+        // At least some should successfully roundtrip
+        assert!(successful_roundtrips > 0);
+    }
+
+    #[test]
+    fn test_field_number_never_zero() {
+        let data: Vec<u8> = (0..=255).collect();
+        let mut u = Unstructured::new(&data);
+
+        for _ in 0..100 {
+            if let Ok(n) = arbitrary_field_number(&mut u) {
+                assert!(n >= 1, "field number must be >= 1, got {}", n);
+                assert!(
+                    n <= MAX_FIELD_NUMBER,
+                    "field number must be <= {}, got {}",
+                    MAX_FIELD_NUMBER,
+                    n
+                );
+            }
+        }
+    }
+}
