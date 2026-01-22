@@ -19,6 +19,8 @@ pub enum ParseError {
     UnterminatedGroup { field_number: u32 },
     /// Length prefix would exceed available data or overflow.
     LengthOverflow,
+    /// Group nesting is too deep.
+    NestingTooDeep,
 }
 
 impl fmt::Display for ParseError {
@@ -41,6 +43,7 @@ impl fmt::Display for ParseError {
                 write!(f, "unterminated group at field {}", field_number)
             }
             ParseError::LengthOverflow => write!(f, "length prefix exceeds available data"),
+            ParseError::NestingTooDeep => write!(f, "group nesting exceeds maximum depth"),
         }
     }
 }

@@ -10,6 +10,7 @@ cargo-fuzz = true
 
 [dependencies]
 arbitrary = { version = "1", features = ["derive"] }
+bincode = "1"
 libfuzzer-sys = "0.4"
 protobuf-wire = { path = "../crates/protobuf-wire", features = ["arbitrary"] }
 serde-value = { path = "../crates/serde-value", features = ["arbitrary"] }
@@ -30,8 +31,8 @@ doc = false
 bench = false
 
 [[bin]]
-name = "serde_value_json_roundtrip"
-path = "fuzz_targets/serde_value_json_roundtrip.rs"
+name = "serde_value_bincode_roundtrip"
+path = "fuzz_targets/serde_value_bincode_roundtrip.rs"
 test = false
 doc = false
 bench = false
