@@ -225,7 +225,7 @@ impl<'de> Deserialize<'de> for VariantId {
                 write!(f, "a variant index (integer) or name (string)")
             }
 
-            // Accept any integer type as variant index
+            // === Integers: variant index ===
             fn visit_i8<E: de::Error>(self, v: i8) -> Result<VariantId, E> {
                 Ok(VariantId(v as u32))
             }
@@ -257,7 +257,26 @@ impl<'de> Deserialize<'de> for VariantId {
                 Ok(VariantId(v as u32))
             }
 
-            // Accept string variant names
+            // === Bool: false=0, true=1 ===
+            fn visit_bool<E: de::Error>(self, v: bool) -> Result<VariantId, E> {
+                Ok(VariantId(v as u32))
+            }
+
+            // === Floats: truncate to integer (lossy but accepting) ===
+            fn visit_f32<E: de::Error>(self, v: f32) -> Result<VariantId, E> {
+                Ok(VariantId(v as u32))
+            }
+            fn visit_f64<E: de::Error>(self, v: f64) -> Result<VariantId, E> {
+                Ok(VariantId(v as u32))
+            }
+
+            // === Char: treat as single-char variant name ===
+            fn visit_char<E: de::Error>(self, v: char) -> Result<VariantId, E> {
+                let mut buf = [0u8; 4];
+                self.visit_str(v.encode_utf8(&mut buf))
+            }
+
+            // === Strings: variant name ===
             fn visit_str<E: de::Error>(self, v: &str) -> Result<VariantId, E> {
                 let index = match v {
                     "Bool" => 0, "I8" => 1, "I16" => 2, "I32" => 3, "I64" => 4, "I128" => 5,
@@ -272,7 +291,7 @@ impl<'de> Deserialize<'de> for VariantId {
                 Ok(VariantId(index))
             }
 
-            // Accept bytes as variant name (some formats might do this)
+            // === Bytes: treat as UTF-8 variant name ===
             fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<VariantId, E> {
                 match std::str::from_utf8(v) {
                     Ok(s) => self.visit_str(s),
@@ -281,6 +300,50 @@ impl<'de> Deserialize<'de> for VariantId {
                         &self,
                     )),
                 }
+            }
+
+            // === Newtype: unwrap and recurse ===
+            fn visit_newtype_struct<D: Deserializer<'de>>(self, deserializer: D) -> Result<VariantId, D::Error> {
+                VariantId::deserialize(deserializer)
+            }
+
+            // === Unit/None: no information, default to variant 0 ===
+            fn visit_unit<E: de::Error>(self) -> Result<VariantId, E> {
+                Ok(VariantId(0))
+            }
+
+            fn visit_none<E: de::Error>(self) -> Result<VariantId, E> {
+                Ok(VariantId(0))
+            }
+
+            // === Some: unwrap and recurse ===
+            fn visit_some<D: Deserializer<'de>>(self, deserializer: D) -> Result<VariantId, D::Error> {
+                VariantId::deserialize(deserializer)
+            }
+
+            // === Seq: take first element as the variant id ===
+            fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<VariantId, A::Error> {
+                match seq.next_element::<VariantId>()? {
+                    Some(id) => Ok(id),
+                    None => Ok(VariantId(0)), // empty seq = variant 0
+                }
+            }
+
+            // === Map: look for "variant" or "index" or "name" key, or take first value ===
+            fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<VariantId, A::Error> {
+                // Try to find a sensible key, otherwise take first value
+                while let Some(key) = map.next_key::<String>()? {
+                    let value = map.next_value::<VariantId>()?;
+                    // Accept any key - just use the first value we find
+                    return Ok(value);
+                }
+                Ok(VariantId(0)) // empty map = variant 0
+            }
+
+            // === Enum: recurse into the variant's value ===
+            fn visit_enum<A: EnumAccess<'de>>(self, access: A) -> Result<VariantId, A::Error> {
+                let (variant, _): (VariantId, _) = access.variant()?;
+                Ok(variant)
             }
         }
 
