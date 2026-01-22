@@ -105,6 +105,7 @@
 
 #[cfg(feature = "arbitrary")]
 mod arbitrary;
+mod cast;
 mod de;
 mod de_value;
 mod error;
@@ -112,6 +113,7 @@ mod ser;
 mod to_value;
 mod value;
 
+pub use cast::try_cast;
 pub use de::from_value;
 pub use error::Error;
 pub use to_value::to_value;
