@@ -7,26 +7,54 @@
 //! enum variant names and indices, and the distinctions between tuples and sequences,
 //! structs and maps, etc.
 //!
+//! # Transparent Serialization (Primary Design Goal)
+//!
+//! **The core guarantee:** When you convert a value to [`Value`] and then serialize it,
+//! you get **identical bytes** as if you had serialized the original value directly.
+//!
+//! This makes [`Value`] a fully transparent intermediate representation that interoperates
+//! with ANY serialization format, including non-self-describing binary formats like bincode:
+//!
+//! ```ignore
+//! let original = Point { x: 10, y: 20 };
+//!
+//! // These produce IDENTICAL bytes:
+//! let bytes1 = bincode::serialize(&original)?;
+//! let bytes2 = bincode::serialize(&to_value(&original)?)?;
+//! assert_eq!(bytes1, bytes2);
+//!
+//! // So you can deserialize back to the original type:
+//! let restored: Point = bincode::deserialize(&bytes2)?;
+//! ```
+//!
+//! This enables workflows like: capture typed data → manipulate as Value → serialize
+//! for transmission → receiver deserializes to their typed representation.
+//!
 //! # Core API
 //!
 //! The crate provides four key capabilities:
 //!
-//! ## 1. `Value` implements `Serialize`
+//! ## 1. `Value` implements `Serialize` (Transparent)
 //!
-//! Serialize a [`Value`] to any serde format:
+//! Serialize a [`Value`] to any serde format. The output is **identical** to serializing
+//! the original value directly - no enum wrappers or type tags are added:
 //!
 //! ```ignore
-//! let value: Value = /* ... */;
-//! let json = serde_json::to_string(&value)?;  // Value → JSON
+//! let value = to_value(&my_struct)?;
+//! let bytes = bincode::serialize(&value)?;  // Same bytes as bincode::serialize(&my_struct)
 //! ```
 //!
 //! ## 2. `Value` implements `Deserialize`
 //!
-//! Deserialize a [`Value`] from any serde format:
+//! Deserialize a [`Value`] from self-describing serde formats (JSON, RON, MessagePack, etc.):
 //!
 //! ```ignore
 //! let value: Value = serde_json::from_str(json)?;  // JSON → Value
 //! ```
+//!
+//! Note: Non-self-describing formats (bincode, postcard) cannot deserialize directly to
+//! [`Value`] because they don't embed type information in the byte stream. For these
+//! formats, use the typed → Value → typed workflow instead.
 //!
 //! ## 3. `to_value<T: Serialize>(T) -> Value`
 //!
