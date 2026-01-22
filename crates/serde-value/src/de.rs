@@ -355,6 +355,7 @@ impl<'de> Deserializer<'de> for Value {
             Value::Seq(v) => visitor.visit_seq(SeqDeserializer::new(v)),
             Value::Tuple(v) => visitor.visit_seq(SeqDeserializer::new(v)),
             Value::TupleStruct { fields, .. } => visitor.visit_seq(SeqDeserializer::new(fields)),
+            Value::Bytes(v) => visitor.visit_seq(BytesSeqDeserializer::new(v)),
             other => Err(Error::type_mismatch("sequence", other.type_name())),
         }
     }
@@ -477,6 +478,42 @@ impl<'de> SeqAccess<'de> for SeqDeserializer {
     ) -> Result<Option<T::Value>, Error> {
         match self.iter.next() {
             Some(value) => seed.deserialize(value).map(Some),
+            None => Ok(None),
+        }
+    }
+
+    fn size_hint(&self) -> Option<usize> {
+        let (lower, upper) = self.iter.size_hint();
+        if Some(lower) == upper {
+            Some(lower)
+        } else {
+            None
+        }
+    }
+}
+
+/// Deserializer for bytes as a sequence of u8.
+struct BytesSeqDeserializer {
+    iter: std::vec::IntoIter<u8>,
+}
+
+impl BytesSeqDeserializer {
+    fn new(bytes: Vec<u8>) -> Self {
+        BytesSeqDeserializer {
+            iter: bytes.into_iter(),
+        }
+    }
+}
+
+impl<'de> SeqAccess<'de> for BytesSeqDeserializer {
+    type Error = Error;
+
+    fn next_element_seed<T: DeserializeSeed<'de>>(
+        &mut self,
+        seed: T,
+    ) -> Result<Option<T::Value>, Error> {
+        match self.iter.next() {
+            Some(byte) => seed.deserialize(Value::U8(byte)).map(Some),
             None => Ok(None),
         }
     }
