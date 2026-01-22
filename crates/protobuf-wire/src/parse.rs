@@ -9,7 +9,7 @@ use crate::wire_type::WireType;
 const MAX_FIELD_NUMBER: u32 = 536_870_911;
 
 /// Maximum nesting depth for groups to prevent stack overflow.
-const MAX_DEPTH: usize = 100;
+const MAX_DEPTH: usize = 1024;
 
 impl Message {
     /// Parse a wire-format message from bytes.
