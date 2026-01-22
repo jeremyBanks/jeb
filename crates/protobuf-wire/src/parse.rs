@@ -49,11 +49,12 @@ impl<'a> Parser<'a> {
 
     /// Read exactly n bytes.
     fn read_bytes(&mut self, n: usize) -> Result<&'a [u8], ParseError> {
-        if self.pos + n > self.bytes.len() {
+        let end = self.pos.checked_add(n).ok_or(ParseError::LengthOverflow)?;
+        if end > self.bytes.len() {
             return Err(ParseError::UnexpectedEof);
         }
-        let result = &self.bytes[self.pos..self.pos + n];
-        self.pos += n;
+        let result = &self.bytes[self.pos..end];
+        self.pos = end;
         Ok(result)
     }
 
