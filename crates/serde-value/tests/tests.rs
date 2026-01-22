@@ -516,15 +516,266 @@ fn test_serialize_value_to_json() {
 
 #[test]
 fn test_deserialize_value_from_json() {
-    // JSON -> Value (note: we lose struct names)
     let json = r#"{"name": "Alice", "age": 30}"#;
     let value: Value = serde_json::from_str(json).unwrap();
 
-    // JSON objects become Maps, not Structs (no struct name in JSON)
     match value {
         Value::Map(entries) => {
             assert_eq!(entries.len(), 2);
         }
         _ => panic!("expected Map from JSON, got {value:?}"),
     }
+}
+
+// ============================================================================
+// Additional Coverage Tests
+// ============================================================================
+
+#[test]
+fn test_all_integer_round_trips() {
+    // Ensure all integer types round-trip correctly
+    assert_eq!(from_value::<i8>(Value::I8(i8::MIN)).unwrap(), i8::MIN);
+    assert_eq!(from_value::<i8>(Value::I8(i8::MAX)).unwrap(), i8::MAX);
+    assert_eq!(from_value::<i16>(Value::I16(i16::MIN)).unwrap(), i16::MIN);
+    assert_eq!(from_value::<i16>(Value::I16(i16::MAX)).unwrap(), i16::MAX);
+    assert_eq!(from_value::<i32>(Value::I32(i32::MIN)).unwrap(), i32::MIN);
+    assert_eq!(from_value::<i32>(Value::I32(i32::MAX)).unwrap(), i32::MAX);
+    assert_eq!(from_value::<i64>(Value::I64(i64::MIN)).unwrap(), i64::MIN);
+    assert_eq!(from_value::<i64>(Value::I64(i64::MAX)).unwrap(), i64::MAX);
+    assert_eq!(from_value::<i128>(Value::I128(i128::MIN)).unwrap(), i128::MIN);
+    assert_eq!(from_value::<i128>(Value::I128(i128::MAX)).unwrap(), i128::MAX);
+
+    assert_eq!(from_value::<u8>(Value::U8(u8::MIN)).unwrap(), u8::MIN);
+    assert_eq!(from_value::<u8>(Value::U8(u8::MAX)).unwrap(), u8::MAX);
+    assert_eq!(from_value::<u16>(Value::U16(u16::MIN)).unwrap(), u16::MIN);
+    assert_eq!(from_value::<u16>(Value::U16(u16::MAX)).unwrap(), u16::MAX);
+    assert_eq!(from_value::<u32>(Value::U32(u32::MIN)).unwrap(), u32::MIN);
+    assert_eq!(from_value::<u32>(Value::U32(u32::MAX)).unwrap(), u32::MAX);
+    assert_eq!(from_value::<u64>(Value::U64(u64::MIN)).unwrap(), u64::MIN);
+    assert_eq!(from_value::<u64>(Value::U64(u64::MAX)).unwrap(), u64::MAX);
+    assert_eq!(from_value::<u128>(Value::U128(u128::MIN)).unwrap(), u128::MIN);
+    assert_eq!(from_value::<u128>(Value::U128(u128::MAX)).unwrap(), u128::MAX);
+}
+
+#[test]
+fn test_float_edge_cases() {
+    // Positive and negative zero
+    assert_eq!(from_value::<f32>(Value::F32(0.0)).unwrap(), 0.0);
+    assert_eq!(from_value::<f32>(Value::F32(-0.0)).unwrap(), -0.0);
+    assert_eq!(from_value::<f64>(Value::F64(0.0)).unwrap(), 0.0);
+    assert_eq!(from_value::<f64>(Value::F64(-0.0)).unwrap(), -0.0);
+
+    // Infinity
+    assert_eq!(from_value::<f32>(Value::F32(f32::INFINITY)).unwrap(), f32::INFINITY);
+    assert_eq!(from_value::<f32>(Value::F32(f32::NEG_INFINITY)).unwrap(), f32::NEG_INFINITY);
+    assert_eq!(from_value::<f64>(Value::F64(f64::INFINITY)).unwrap(), f64::INFINITY);
+    assert_eq!(from_value::<f64>(Value::F64(f64::NEG_INFINITY)).unwrap(), f64::NEG_INFINITY);
+
+    // NaN (use is_nan since NaN != NaN in normal comparison)
+    assert!(from_value::<f32>(Value::F32(f32::NAN)).unwrap().is_nan());
+    assert!(from_value::<f64>(Value::F64(f64::NAN)).unwrap().is_nan());
+
+    // Subnormal numbers
+    assert_eq!(from_value::<f64>(Value::F64(f64::MIN_POSITIVE)).unwrap(), f64::MIN_POSITIVE);
+}
+
+#[test]
+fn test_empty_collections() {
+    // Empty vec
+    let empty_vec: Vec<i32> = vec![];
+    let value = to_value(&empty_vec).unwrap();
+    assert_eq!(value, Value::Seq(vec![]));
+    assert_eq!(from_value::<Vec<i32>>(value).unwrap(), empty_vec);
+
+    // Empty tuple (unit)
+    let empty_tuple = ();
+    assert_eq!(to_value(&empty_tuple).unwrap(), Value::Unit);
+
+    // Empty map
+    use std::collections::HashMap;
+    let empty_map: HashMap<String, i32> = HashMap::new();
+    let value = to_value(&empty_map).unwrap();
+    assert_eq!(value, Value::Map(vec![]));
+    assert_eq!(from_value::<HashMap<String, i32>>(value).unwrap(), empty_map);
+
+    // Empty struct
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Empty {}
+    let empty = Empty {};
+    let value = to_value(&empty).unwrap();
+    match &value {
+        Value::Struct { name, fields } => {
+            assert_eq!(*name, "Empty");
+            assert!(fields.is_empty());
+        }
+        _ => panic!("expected Struct"),
+    }
+    assert_eq!(from_value::<Empty>(value).unwrap(), empty);
+}
+
+#[test]
+fn test_variant_indices() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    enum Multi {
+        First,
+        Second,
+        Third,
+    }
+
+    // Test non-zero variant indices
+    let second = to_value(&Multi::Second).unwrap();
+    match &second {
+        Value::UnitVariant { variant_index, variant, .. } => {
+            assert_eq!(*variant_index, 1);
+            assert_eq!(*variant, "Second");
+        }
+        _ => panic!("expected UnitVariant"),
+    }
+    assert_eq!(from_value::<Multi>(second).unwrap(), Multi::Second);
+
+    let third = to_value(&Multi::Third).unwrap();
+    match &third {
+        Value::UnitVariant { variant_index, variant, .. } => {
+            assert_eq!(*variant_index, 2);
+            assert_eq!(*variant, "Third");
+        }
+        _ => panic!("expected UnitVariant"),
+    }
+    assert_eq!(from_value::<Multi>(third).unwrap(), Multi::Third);
+}
+
+#[test]
+fn test_value_type_name() {
+    assert_eq!(Value::Bool(true).type_name(), "bool");
+    assert_eq!(Value::I8(0).type_name(), "i8");
+    assert_eq!(Value::I16(0).type_name(), "i16");
+    assert_eq!(Value::I32(0).type_name(), "i32");
+    assert_eq!(Value::I64(0).type_name(), "i64");
+    assert_eq!(Value::I128(0).type_name(), "i128");
+    assert_eq!(Value::U8(0).type_name(), "u8");
+    assert_eq!(Value::U16(0).type_name(), "u16");
+    assert_eq!(Value::U32(0).type_name(), "u32");
+    assert_eq!(Value::U64(0).type_name(), "u64");
+    assert_eq!(Value::U128(0).type_name(), "u128");
+    assert_eq!(Value::F32(0.0).type_name(), "f32");
+    assert_eq!(Value::F64(0.0).type_name(), "f64");
+    assert_eq!(Value::Char('a').type_name(), "char");
+    assert_eq!(Value::String("".into()).type_name(), "string");
+    assert_eq!(Value::Bytes(vec![]).type_name(), "bytes");
+    assert_eq!(Value::None.type_name(), "none");
+    assert_eq!(Value::Some(Box::new(Value::Unit)).type_name(), "some");
+    assert_eq!(Value::Unit.type_name(), "unit");
+    assert_eq!(Value::UnitStruct { name: "X" }.type_name(), "unit struct");
+    assert_eq!(Value::Seq(vec![]).type_name(), "sequence");
+    assert_eq!(Value::Tuple(vec![]).type_name(), "tuple");
+    assert_eq!(Value::Map(vec![]).type_name(), "map");
+    assert_eq!(Value::Struct { name: "X", fields: vec![] }.type_name(), "struct");
+}
+
+#[test]
+fn test_value_clone() {
+    let original = Value::Struct {
+        name: "Test",
+        fields: vec![
+            ("a", Value::I32(1)),
+            ("b", Value::String("hello".into())),
+        ],
+    };
+    let cloned = original.clone();
+    assert_eq!(original, cloned);
+}
+
+#[test]
+fn test_value_debug() {
+    let value = Value::I32(42);
+    let debug_str = format!("{:?}", value);
+    assert!(debug_str.contains("I32"));
+    assert!(debug_str.contains("42"));
+}
+
+#[test]
+fn test_nested_options() {
+    let nested: Option<Option<i32>> = Some(Some(42));
+    let value = to_value(&nested).unwrap();
+    assert_eq!(
+        value,
+        Value::Some(Box::new(Value::Some(Box::new(Value::I32(42)))))
+    );
+    assert_eq!(from_value::<Option<Option<i32>>>(value).unwrap(), nested);
+
+    let none_inner: Option<Option<i32>> = Some(None);
+    let value = to_value(&none_inner).unwrap();
+    assert_eq!(value, Value::Some(Box::new(Value::None)));
+    assert_eq!(from_value::<Option<Option<i32>>>(value).unwrap(), none_inner);
+}
+
+#[test]
+fn test_complex_map_keys() {
+    use std::collections::HashMap;
+
+    // Integer keys
+    let mut int_map: HashMap<i32, String> = HashMap::new();
+    int_map.insert(1, "one".into());
+    int_map.insert(2, "two".into());
+
+    let value = to_value(&int_map).unwrap();
+    match &value {
+        Value::Map(entries) => {
+            assert_eq!(entries.len(), 2);
+        }
+        _ => panic!("expected Map"),
+    }
+    let result: HashMap<i32, String> = from_value(value).unwrap();
+    assert_eq!(result.get(&1), Some(&"one".to_string()));
+    assert_eq!(result.get(&2), Some(&"two".to_string()));
+}
+
+#[test]
+fn test_vec_of_structs() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Item {
+        id: u32,
+        name: String,
+    }
+
+    let items = vec![
+        Item { id: 1, name: "first".into() },
+        Item { id: 2, name: "second".into() },
+    ];
+
+    let value = to_value(&items).unwrap();
+    match &value {
+        Value::Seq(elements) => {
+            assert_eq!(elements.len(), 2);
+            match &elements[0] {
+                Value::Struct { name, .. } => assert_eq!(*name, "Item"),
+                _ => panic!("expected Struct"),
+            }
+        }
+        _ => panic!("expected Seq"),
+    }
+
+    assert_eq!(from_value::<Vec<Item>>(value).unwrap(), items);
+}
+
+#[test]
+fn test_deeply_nested() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Level3 { value: i32 }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Level2 { inner: Level3 }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Level1 { inner: Level2 }
+
+    let deep = Level1 {
+        inner: Level2 {
+            inner: Level3 { value: 42 },
+        },
+    };
+
+    let value = to_value(&deep).unwrap();
+    let result: Level1 = from_value(value).unwrap();
+    assert_eq!(result, deep);
 }
