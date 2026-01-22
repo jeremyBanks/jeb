@@ -211,6 +211,47 @@ impl<'de> Deserialize<'de> for Meta {
 
 struct MetaVisitor;
 
+/// Helper to deserialize variant identifier as either u32 index or String name.
+struct VariantId(u32);
+
+impl<'de> Deserialize<'de> for VariantId {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct VariantIdVisitor;
+
+        impl<'de> Visitor<'de> for VariantIdVisitor {
+            type Value = VariantId;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "a variant index (u32) or name (string)")
+            }
+
+            fn visit_u32<E: de::Error>(self, v: u32) -> Result<VariantId, E> {
+                Ok(VariantId(v))
+            }
+
+            fn visit_u64<E: de::Error>(self, v: u64) -> Result<VariantId, E> {
+                Ok(VariantId(v as u32))
+            }
+
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<VariantId, E> {
+                let index = match v {
+                    "Bool" => 0, "I8" => 1, "I16" => 2, "I32" => 3, "I64" => 4, "I128" => 5,
+                    "U8" => 6, "U16" => 7, "U32" => 8, "U64" => 9, "U128" => 10,
+                    "F32" => 11, "F64" => 12, "Char" => 13, "String" => 14, "Bytes" => 15,
+                    "None" => 16, "Some" => 17, "Unit" => 18, "UnitStruct" => 19,
+                    "NewtypeStruct" => 20, "NewtypeVariant" => 21,
+                    "Seq" => 22, "Tuple" => 23, "TupleStruct" => 24, "TupleVariant" => 25,
+                    "Map" => 26, "Struct" => 27, "StructVariant" => 28, "UnitVariant" => 29,
+                    _ => return Err(de::Error::unknown_variant(v, VARIANTS)),
+                };
+                Ok(VariantId(index))
+            }
+        }
+
+        deserializer.deserialize_any(VariantIdVisitor)
+    }
+}
+
 impl<'de> Visitor<'de> for MetaVisitor {
     type Value = Meta;
 
@@ -219,7 +260,7 @@ impl<'de> Visitor<'de> for MetaVisitor {
     }
 
     fn visit_enum<A: EnumAccess<'de>>(self, access: A) -> Result<Meta, A::Error> {
-        let (variant_index, variant_access) = access.variant::<u32>()?;
+        let (VariantId(variant_index), variant_access) = access.variant::<VariantId>()?;
 
         let value = match variant_index {
             0 => Value::Bool(variant_access.newtype_variant()?),
@@ -571,5 +612,125 @@ mod tests {
         let bytes = bincode::serialize(&meta).unwrap();
         let Meta(restored) = bincode::deserialize(&bytes).unwrap();
         assert_eq!(restored, original);
+    }
+
+    // === Meta-ception tests: Meta as Value, layers of abstraction ===
+
+    #[test]
+    fn test_meta_to_value_roundtrip() {
+        use crate::{to_value, from_value};
+
+        // Start with a Value
+        let original = Value::I32(42);
+
+        // Wrap in Meta
+        let meta = Meta(original.clone());
+
+        // Serialize Meta to Value (captures the Meta enum structure)
+        let meta_as_value = to_value(&meta).unwrap();
+
+        // The result should be a NewtypeVariant representing Meta's structure
+        // (Meta serializes Value as a tagged enum)
+        match &meta_as_value {
+            Value::NewtypeVariant { enum_name, variant, .. } => {
+                assert_eq!(*enum_name, "Value");
+                assert_eq!(*variant, "I32");
+            }
+            other => panic!("expected NewtypeVariant, got {:?}", other),
+        }
+
+        // Deserialize back to Meta
+        let meta_back: Meta = from_value(meta_as_value).unwrap();
+        assert_eq!(meta_back.into_inner(), original);
+    }
+
+    #[test]
+    fn test_meta_meta_double_wrap() {
+        use crate::{to_value, from_value};
+
+        // Start with a Value
+        let original = Value::String("hello".to_string());
+
+        // Wrap in Meta
+        let meta1 = Meta(original.clone());
+
+        // Capture Meta as a Value
+        let meta1_as_value = to_value(&meta1).unwrap();
+
+        // Wrap THAT in another Meta (meta-ception!)
+        let meta2 = Meta(meta1_as_value.clone());
+
+        // Roundtrip through bincode
+        let bytes = bincode::serialize(&meta2).unwrap();
+        let meta2_back: Meta = bincode::deserialize(&bytes).unwrap();
+
+        // Unwrap outer Meta
+        let meta1_as_value_back = meta2_back.into_inner();
+        assert_eq!(meta1_as_value_back, meta1_as_value);
+
+        // Deserialize inner to Meta
+        let meta1_back: Meta = from_value(meta1_as_value_back).unwrap();
+        assert_eq!(meta1_back.into_inner(), original);
+    }
+
+    #[test]
+    fn test_meta_three_levels_deep() {
+        use crate::{to_value, from_value};
+
+        // Level 0: a simple value
+        let v0 = Value::I32(42);
+
+        // Level 1: Meta(v0) as Value
+        let v1 = to_value(&Meta(v0.clone())).unwrap();
+
+        // Level 2: Meta(v1) as Value
+        let v2 = to_value(&Meta(v1.clone())).unwrap();
+
+        // Level 3: Meta(v2) as Value
+        let v3 = to_value(&Meta(v2.clone())).unwrap();
+
+        // Wrap in Meta and roundtrip through bincode
+        let bytes = bincode::serialize(&Meta(v3.clone())).unwrap();
+        let restored: Meta = bincode::deserialize(&bytes).unwrap();
+
+        // Unwrap all the layers
+        let r3 = restored.into_inner();
+        assert_eq!(r3, v3);
+
+        let r2: Meta = from_value(r3).unwrap();
+        assert_eq!(r2.inner(), &v2);
+
+        let r1: Meta = from_value(r2.into_inner()).unwrap();
+        assert_eq!(r1.inner(), &v1);
+
+        let r0: Meta = from_value(r1.into_inner()).unwrap();
+        assert_eq!(r0.into_inner(), v0);
+    }
+
+    #[test]
+    fn test_value_containing_meta_representation() {
+        use crate::to_value;
+
+        // Create a struct Value
+        let point = Value::Struct {
+            name: "Point",
+            fields: vec![
+                ("x", Value::I32(10)),
+                ("y", Value::I32(20)),
+            ],
+        };
+
+        // Capture how Meta serializes it
+        let meta_repr = to_value(&Meta(point.clone())).unwrap();
+
+        // It should be a TupleVariant (how Meta serializes Struct)
+        match &meta_repr {
+            Value::TupleVariant { enum_name, variant, fields, .. } => {
+                assert_eq!(*enum_name, "Value");
+                assert_eq!(*variant, "Struct");
+                assert_eq!(fields.len(), 2); // name and fields
+            }
+            other => panic!("expected TupleVariant for Struct, got {:?}", other),
+        }
     }
 }
