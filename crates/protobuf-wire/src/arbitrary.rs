@@ -8,54 +8,8 @@ const MAX_FIELD_NUMBER: u32 = 536_870_911;
 
 /// Generate an arbitrary valid field number (1 to MAX_FIELD_NUMBER).
 fn arbitrary_field_number(u: &mut Unstructured<'_>) -> arbitrary::Result<u32> {
-    // Generate a value in range [1, MAX_FIELD_NUMBER]
     let n: u32 = u.arbitrary()?;
-    // Map to valid range, avoiding 0
     Ok((n % MAX_FIELD_NUMBER) + 1)
-}
-
-/// Generate arbitrary nested values with bounded depth.
-fn arbitrary_value_with_depth(u: &mut Unstructured<'_>, depth: usize) -> arbitrary::Result<Value> {
-    if depth == 0 {
-        // At max depth, only generate non-recursive variants
-        let variant = u.int_in_range(0..=3)?;
-        return Ok(match variant {
-            0 => Value::Varint(u.arbitrary()?),
-            1 => Value::I64(u.arbitrary()?),
-            2 => Value::I32(u.arbitrary()?),
-            3 => Value::LenDelimited(u.arbitrary()?),
-            _ => unreachable!(),
-        });
-    }
-
-    let variant = u.int_in_range(0..=4)?;
-    Ok(match variant {
-        0 => Value::Varint(u.arbitrary()?),
-        1 => Value::I64(u.arbitrary()?),
-        2 => Value::I32(u.arbitrary()?),
-        3 => Value::LenDelimited(u.arbitrary()?),
-        4 => {
-            // Group with nested records
-            let len = u.int_in_range(0..=4)?;
-            let mut records = Vec::with_capacity(len);
-            for _ in 0..len {
-                records.push(arbitrary_record_with_depth(u, depth - 1)?);
-            }
-            Value::Group(records)
-        }
-        _ => unreachable!(),
-    })
-}
-
-/// Generate an arbitrary record with bounded depth.
-fn arbitrary_record_with_depth(
-    u: &mut Unstructured<'_>,
-    depth: usize,
-) -> arbitrary::Result<Record> {
-    Ok(Record {
-        field_number: arbitrary_field_number(u)?,
-        value: arbitrary_value_with_depth(u, depth)?,
-    })
 }
 
 impl<'a> Arbitrary<'a> for WireType {
@@ -75,36 +29,32 @@ impl<'a> Arbitrary<'a> for WireType {
 
 impl<'a> Arbitrary<'a> for Value {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        arbitrary_value_with_depth(u, 4)
-    }
-
-    fn size_hint(_depth: usize) -> (usize, Option<usize>) {
-        (1, None)
+        let variant = u.int_in_range(0..=4)?;
+        Ok(match variant {
+            0 => Value::Varint(u.arbitrary()?),
+            1 => Value::I64(u.arbitrary()?),
+            2 => Value::I32(u.arbitrary()?),
+            3 => Value::LenDelimited(u.arbitrary()?),
+            4 => Value::Group(u.arbitrary()?),
+            _ => unreachable!(),
+        })
     }
 }
 
 impl<'a> Arbitrary<'a> for Record {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        arbitrary_record_with_depth(u, 4)
-    }
-
-    fn size_hint(_depth: usize) -> (usize, Option<usize>) {
-        (5, None) // At least 4 bytes for field number + 1 for value variant
+        Ok(Record {
+            field_number: arbitrary_field_number(u)?,
+            value: u.arbitrary()?,
+        })
     }
 }
 
 impl<'a> Arbitrary<'a> for Message {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        let len = u.int_in_range(0..=8)?;
-        let mut records = Vec::with_capacity(len);
-        for _ in 0..len {
-            records.push(Record::arbitrary(u)?);
-        }
-        Ok(Message { records })
-    }
-
-    fn size_hint(_depth: usize) -> (usize, Option<usize>) {
-        (1, None)
+        Ok(Message {
+            records: u.arbitrary()?,
+        })
     }
 }
 
@@ -151,7 +101,6 @@ mod tests {
 
     #[test]
     fn test_arbitrary_message_roundtrip() {
-        // Generate arbitrary messages and verify they can serialize/parse
         let data: Vec<u8> = (0..=255).cycle().take(1024).collect();
         let mut u = Unstructured::new(&data);
 
@@ -166,7 +115,6 @@ mod tests {
                 }
             }
         }
-        // At least some should successfully roundtrip
         assert!(successful_roundtrips > 0);
     }
 
@@ -177,13 +125,8 @@ mod tests {
 
         for _ in 0..100 {
             if let Ok(n) = arbitrary_field_number(&mut u) {
-                assert!(n >= 1, "field number must be >= 1, got {}", n);
-                assert!(
-                    n <= MAX_FIELD_NUMBER,
-                    "field number must be <= {}, got {}",
-                    MAX_FIELD_NUMBER,
-                    n
-                );
+                assert!(n >= 1);
+                assert!(n <= MAX_FIELD_NUMBER);
             }
         }
     }
