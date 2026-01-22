@@ -10,7 +10,7 @@ license.workspace = true
 arbitrary = ["dep:arbitrary"]
 
 [dependencies]
-serde = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 arbitrary = { version = "1", optional = true }
 
 [dev-dependencies]
@@ -18,3 +18,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 arbitrary = { version = "1" }
 bincode = "1"
+rmp-serde = "1"
+toml = "0.8"
+ron = "0.8"
+postcard = { version = "1", features = ["alloc"] }
