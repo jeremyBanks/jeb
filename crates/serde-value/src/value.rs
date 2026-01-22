@@ -108,6 +108,16 @@ pub enum Value {
     },
 }
 
+impl Value {
+    /// Wrap this Value in [`Meta`](crate::Meta) for tagged serialization.
+    ///
+    /// Use this when you need to serialize Value itself (preserving its enum structure)
+    /// rather than transparently serializing the data it represents.
+    pub fn meta(self) -> crate::Meta {
+        crate::Meta(self)
+    }
+}
+
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         use Value::*;

@@ -49,6 +49,23 @@ use std::fmt;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Meta(pub Value);
 
+impl Meta {
+    /// Wrap a Value in Meta for tagged serialization.
+    pub fn new(value: Value) -> Self {
+        Meta(value)
+    }
+
+    /// Unwrap the inner Value.
+    pub fn into_inner(self) -> Value {
+        self.0
+    }
+
+    /// Get a reference to the inner Value.
+    pub fn inner(&self) -> &Value {
+        &self.0
+    }
+}
+
 impl From<Value> for Meta {
     fn from(value: Value) -> Self {
         Meta(value)
