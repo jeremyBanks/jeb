@@ -238,6 +238,9 @@ impl<'de> Deserialize<'de> for VariantId {
             fn visit_i64<E: de::Error>(self, v: i64) -> Result<VariantId, E> {
                 Ok(VariantId(v as u32))
             }
+            fn visit_i128<E: de::Error>(self, v: i128) -> Result<VariantId, E> {
+                Ok(VariantId(v as u32))
+            }
             fn visit_u8<E: de::Error>(self, v: u8) -> Result<VariantId, E> {
                 Ok(VariantId(v as u32))
             }
@@ -248,6 +251,9 @@ impl<'de> Deserialize<'de> for VariantId {
                 Ok(VariantId(v))
             }
             fn visit_u64<E: de::Error>(self, v: u64) -> Result<VariantId, E> {
+                Ok(VariantId(v as u32))
+            }
+            fn visit_u128<E: de::Error>(self, v: u128) -> Result<VariantId, E> {
                 Ok(VariantId(v as u32))
             }
 
