@@ -23,6 +23,8 @@
 //! assert_eq!(message, parsed);
 //! ```
 
+#[cfg(feature = "arbitrary")]
+mod arbitrary;
 mod error;
 mod parse;
 mod serialize;

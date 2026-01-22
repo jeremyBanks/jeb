@@ -6,9 +6,14 @@ edition.workspace = true
 version.workspace = true
 license.workspace = true
 
+[features]
+arbitrary = ["dep:arbitrary"]
+
 [dependencies]
 serde = { workspace = true }
+arbitrary = { version = "1", optional = true }
 
 [dev-dependencies]
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
+arbitrary = { version = "1" }

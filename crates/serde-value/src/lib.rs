@@ -103,6 +103,8 @@
 //! - **Maps and Structs (3):** `Map`, `Struct`, `StructVariant`
 //! - **Unit Variant (1):** `UnitVariant`
 
+#[cfg(feature = "arbitrary")]
+mod arbitrary;
 mod de;
 mod de_value;
 mod error;
