@@ -8,11 +8,14 @@ use crate::wire_type::WireType;
 /// Maximum valid field number (2^29 - 1).
 const MAX_FIELD_NUMBER: u32 = 536_870_911;
 
+/// Maximum nesting depth for groups to prevent stack overflow.
+const MAX_DEPTH: usize = 100;
+
 impl Message {
     /// Parse a wire-format message from bytes.
     pub fn parse(bytes: &[u8]) -> Result<Self, ParseError> {
         let mut parser = Parser::new(bytes);
-        parser.parse_message(None)
+        parser.parse_message(None, 0)
     }
 }
 
@@ -70,7 +73,11 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse a message, optionally stopping at an EGROUP with the given field number.
-    fn parse_message(&mut self, group_field: Option<u32>) -> Result<Message, ParseError> {
+    fn parse_message(&mut self, group_field: Option<u32>, depth: usize) -> Result<Message, ParseError> {
+        if depth > MAX_DEPTH {
+            return Err(ParseError::NestingTooDeep);
+        }
+
         let mut records = Vec::new();
 
         while !self.is_eof() {
@@ -99,7 +106,7 @@ impl<'a> Parser<'a> {
                 }
             }
 
-            let value = self.read_value(field_number, wire_type)?;
+            let value = self.read_value(field_number, wire_type, depth)?;
             records.push(Record {
                 field_number,
                 value,
@@ -115,7 +122,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Read a value based on wire type.
-    fn read_value(&mut self, field_number: u32, wire_type: WireType) -> Result<Value, ParseError> {
+    fn read_value(&mut self, field_number: u32, wire_type: WireType, depth: usize) -> Result<Value, ParseError> {
         match wire_type {
             WireType::Varint => {
                 let value = self.read_varint()?;
@@ -140,7 +147,7 @@ impl<'a> Parser<'a> {
             }
             WireType::SGroup => {
                 // Recursively parse until matching EGROUP
-                let inner = self.parse_message(Some(field_number))?;
+                let inner = self.parse_message(Some(field_number), depth + 1)?;
                 Ok(Value::Group(inner.records))
             }
             WireType::EGroup => {
