@@ -17,3 +17,4 @@ arbitrary = { version = "1", optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 arbitrary = { version = "1" }
+bincode = "1"

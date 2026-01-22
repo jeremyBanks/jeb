@@ -932,3 +932,83 @@ fn test_cross_type_conversion_nested_structs() {
     assert_eq!(v2.inner.value, 999);
     assert_eq!(v2.label, "test");
 }
+
+// ============================================================================
+// Field Index Tests (Binary Format Interop)
+// ============================================================================
+
+/// Test that Value preserves field names from structs, enabling name-based matching.
+/// This is the key difference from positional binary formats.
+#[test]
+fn test_value_preserves_field_names() {
+    #[derive(Serialize)]
+    struct Source {
+        alpha: i32,
+        beta: String,
+    }
+
+    let source = Source {
+        alpha: 42,
+        beta: "test".to_string(),
+    };
+
+    let value = to_value(&source).unwrap();
+
+    // Verify the Value contains field names
+    match &value {
+        Value::Struct { name, fields } => {
+            assert_eq!(*name, "Source");
+            assert_eq!(fields.len(), 2);
+            assert_eq!(fields[0].0, "alpha");
+            assert_eq!(fields[1].0, "beta");
+        }
+        _ => panic!("expected Struct"),
+    }
+}
+
+/// Test that bincode can serialize Value but not deserialize it directly.
+/// Bincode is a non-self-describing format that doesn't support deserialize_any.
+#[test]
+fn test_bincode_value_serialization() {
+    let value = Value::Struct {
+        name: "Test",
+        fields: vec![
+            ("x", Value::I32(1)),
+            ("y", Value::I32(2)),
+        ],
+    };
+
+    // Serialization works
+    let bytes = bincode::serialize(&value).unwrap();
+    assert!(!bytes.is_empty());
+
+    // But direct deserialization to Value fails because bincode
+    // doesn't support deserialize_any (non-self-describing format)
+    let result: Result<Value, _> = bincode::deserialize(&bytes);
+    assert!(result.is_err());
+}
+
+/// Test that field name matching works even when fields are in different order.
+/// This demonstrates name-based (not positional) deserialization.
+#[test]
+fn test_struct_field_order_independence() {
+    // Create a Value with fields in a specific order
+    let value = Value::Struct {
+        name: "Point",
+        fields: vec![
+            ("y", Value::I32(20)),
+            ("x", Value::I32(10)),
+        ],
+    };
+
+    // Deserialize to a struct where fields are declared in different order
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    let point: Point = from_value(value).unwrap();
+    assert_eq!(point.x, 10);
+    assert_eq!(point.y, 20);
+}
