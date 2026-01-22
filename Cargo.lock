@@ -1760,6 +1760,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "protobuf-wire"
+version = "0.0.0-dev-2025-12-26.7705"
+dependencies = [
+ "log",
+]
+
+[[package]]
 name = "quick-error"
 version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2007,6 +2014,14 @@ checksum = "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"
 dependencies = [
  "serde_core",
  "serde_derive",
+]
+
+[[package]]
+name = "serde-value"
+version = "0.0.0-dev-2025-12-26.7705"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

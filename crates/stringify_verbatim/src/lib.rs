@@ -31,18 +31,34 @@ pub fn line_of_first_token(input: TokenStream) -> TokenStream {
 }
 
 /// Returns the line number of the last token's span end.
+/// For Groups, recursively finds the last actual token inside.
 /// Returns 0 if there are no tokens.
 #[proc_macro]
 pub fn line_of_last_token(input: TokenStream) -> TokenStream {
     let input2: proc_macro2::TokenStream = input.into();
     let tts: Vec<TokenTree> = input2.into_iter().collect();
-    let line = if let Some(last) = tts.last() {
-        last.span().end().line
-    } else {
-        0
-    };
+    let line = get_last_line(&tts);
     let lit = proc_macro2::Literal::usize_unsuffixed(line);
     proc_macro2::TokenStream::from(proc_macro2::TokenTree::Literal(lit)).into()
+}
+
+fn get_last_line(tts: &[TokenTree]) -> usize {
+    if let Some(last) = tts.last() {
+        match last {
+            TokenTree::Group(g) => {
+                // Recursively find last token in group
+                let inner: Vec<TokenTree> = g.stream().into_iter().collect();
+                if inner.is_empty() {
+                    g.span().end().line
+                } else {
+                    get_last_line(&inner)
+                }
+            }
+            _ => last.span().end().line,
+        }
+    } else {
+        0
+    }
 }
 
 fn reconstruct(tts: &[TokenTree]) -> String {
@@ -98,11 +114,6 @@ fn compute_whitespace_relative(from: LineColumn, to: LineColumn, base_column: us
         let mut ws = "\n".repeat(newlines);
         // Use column relative to base, not absolute
         let relative_indent = to.column.saturating_sub(base_column);
-        // DEBUG
-        if to.line == 150 {
-            eprintln!("DEBUG whitespace: from {:?} to {:?}, base={}, relative_indent={}",
-                from, to, base_column, relative_indent);
-        }
         ws.push_str(&" ".repeat(relative_indent));
         ws
     }

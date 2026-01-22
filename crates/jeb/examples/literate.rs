@@ -1,4 +1,4 @@
-#![recursion_limit = "512"]
+#![recursion_limit = "1024"]
 #![allow(
     non_snake_case,
     unused
@@ -9,7 +9,7 @@ use {
 };
 
 literate! {
-/**
+/*
     # Encoding bytes as text
 
     There are a lot of different ways to encode bytes/binary data as text, with
@@ -79,7 +79,7 @@ literate! {
     practical for production, but it's useful as a pedagogical tool and for
     human input/output in contexts like this document.
 */
-/**
+/*
     Because we're speaking in terms of byte-oriented encoding (not
     bit-oriented), we need to specify whether the most-significant-bits/
     higher-order-bits (`128` and down) come first (called "big-endian") or the
@@ -112,7 +112,7 @@ literate! {
     to_binary(256_u16.to_be_bytes()).is("0000000100000000");
     to_binary(256_u32.to_be_bytes()).is("00000000000000000000000100000000");
 
-/**
+/*
     ## Hexadecimal
 
     One of the most common ways to encode binary data as text is hexadecimal
@@ -160,7 +160,7 @@ literate! {
     to_hex(from_binary("0000000000000001")).is("0001");
     to_hex(from_binary("1000000000000000")).is("8000");
     to_hex(from_binary("1111111111111111")).is("FFFF");
-/**
+/*
     - **Context compatibility:** as good as it gets. It only uses digits and a
       handful of letters, and typically not case-sensitive.
     - **Offset stability:** fully stable.
@@ -189,7 +189,7 @@ literate! {
     see the details as we go.
 */
 
-/**
+/*
     ## Base 64
 
     One of the most common choices for encoding binary data as text in
@@ -268,7 +268,7 @@ literate! {
     to_base64([0xFF]).is("_w");           // 1 byte → 2 chars
     to_base64([0xFF, 0xFF]).is("__8");    // 2 bytes → 3 chars
 
-/**
+/*
     Notice that 24 bits (3 bytes) doesn't align nicely with common data
     structures. A 32-bit integer spans 1⅓ blocks; a 64-bit integer spans 2⅔
     blocks. This makes base64 awkward for inspecting structured binary data.
@@ -280,39 +280,41 @@ literate! {
     - **Overhead:** +33% (4 characters per 3 bytes).
     - **Transparency:** poor. The alphabet doesn't start with digits, so even
       small integers are unrecognizable. The value 0 encodes as `A`, not `0`.
-    - **Ordering:** NOT preserved. The alphabet starts with `A-Z`, so `A` (0)
-      sorts after digits would. Encoded strings don't sort the same as their
-      underlying bytes.
+    - **Ordering:** not preserved. I'm not sure of the reason for the chosen
+      alphabet order.
 
     ## Z85
 
-    Z85 is a base-85 encoding designed for ZeroMQ. It works on 4-byte (32-bit)
-    blocks, producing 5 characters per block. This works because 85⁵ =
-    4,437,053,125, which is greater than 2³² = 4,294,967,296.
+    Base 64 encodes 3 bytes (24 bits) into 4 characters. A less-common
+    alternative are base-85 encodings, which are more efficient but more
+    complicated. 85^5 = 4,437,053,125, which is greater than 2^32 =
+    4,294,967,296, but _not equal_ to it; 85 is not a power of two. We're
+    specifically considering a variation of Z85, a base-85 encoding designed for
+    ZeroMQ. It works on 4-byte (32-bit) blocks, producing 5 characters per
+    block.
 
     https://rfc.zeromq.org/spec/32/
  */
+    static Z85: &[u8; 85] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
+
     85_u64.pow(5).is(4_437_053_125_u64);
     2_u64.pow(32).is(4_294_967_296_u64);
     (85_u64.pow(5) > 2_u64.pow(32)).is(true);
 
-/**
-    The key difference from base64: because 85 is NOT a power of 2, we can't use
-    bit shifts. We have to do actual division. The algorithm is the same
-    conceptually—repeated divide and modulo to extract digits—but without the
-    fast path.
+/*
+    Because 85 is NOT a power of 2, we can't use bit shifts. We have to do
+    actual division. The algorithm is the same conceptually—repeated divide and
+    modulo to extract digits—but without the bitwise fast path.
 
-    The benefit of giving up that fast path is flexibility: we can choose any
-    base, not just powers of 2. Z85 uses this freedom to start its alphabet with
-    `0-9`, which means small integers look like decimal numbers. The value 6
-    encodes to `00006`, not some unrecognizable letter.
+    Z85 uses starts its alphabet with `0-9`, which means small integers look
+    like decimal numbers. The value 6 encodes to `00006`, not some
+    unrecognizable letter.
 
     The encoding treats each 4-byte block as a big-endian 32-bit integer, then
     extracts 5 base-85 digits from low to high (we reverse at the end to get
     big-endian output):
 */
     fn to_z85(bytes: impl AsRef<[u8]>) -> String {
-        let alphabet = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
         let bytes = bytes.as_ref();
         let mut result = String::new();
 
@@ -325,7 +327,7 @@ literate! {
             // Extract 5 base-85 digits (low to high)
             let mut chars = [0u8; 5];
             for j in (0..5).rev() {
-                chars[j] = alphabet[(value % 85) as usize];
+                chars[j] = Z85[(value % 85) as usize];
                 value /= 85;
             }
             for c in chars {
@@ -347,7 +349,7 @@ literate! {
 
             let mut chars = [0u8; 5];
             for j in (0..5).rev() {
-                chars[j] = alphabet[(value % 85) as usize];
+                chars[j] = Z85[(value % 85) as usize];
                 value /= 85;
             }
             // Output chars proportional to input bytes: 1 byte → 2 chars, etc.
@@ -381,22 +383,177 @@ literate! {
     to_z85([0x00, 0x00]).is("000");       // 2 bytes → 3 chars
     to_z85([0x00, 0x00, 0x00]).is("0000"); // 3 bytes → 4 chars
 
-/**
+
+    to_z85(from_binary("00000000"                        )).is("00"   );
+    to_z85(from_binary("00000000000000000000000000000000")).is("00000");
+    to_z85(from_binary("00000000000000000000000000000001")).is("00001");
+    to_z85(from_binary("11111111111111111111111111111111")).is("%nSc0");
+
+    to_z85(from_binary("00000000000000000000000000000011")).is("00003");
+    to_z85(from_binary("00000000000000000000000000000010")).is("00002");
+    to_z85(from_binary("11111111111111111111111111111110")).is("%nSb#");
+
+    to_z85(from_binary("00000000000000000000000000000111")).is("00007");
+    to_z85(from_binary("00000000000000000000000000000100")).is("00004");
+    to_z85(from_binary("11111111111111111111111111111100")).is("%nSb%");
+
+    to_z85(from_binary("00000000000000000000000000001111")).is("0000f");
+    to_z85(from_binary("00000000000000000000000000001000")).is("00008");
+    to_z85(from_binary("11111111111111111111111111111000")).is("%nSb]");
+
+    to_z85(from_binary("00000000000000000000000000011111")).is("0000v");
+    to_z85(from_binary("00000000000000000000000000010000")).is("0000g");
+    to_z85(from_binary("11111111111111111111111111110000")).is("%nSb*");
+
+    to_z85(from_binary("00000000000000000000000000111111")).is("0000-");
+    to_z85(from_binary("00000000000000000000000000100000")).is("0000w");
+    to_z85(from_binary("11111111111111111111111111100000")).is("%nSbS");
+
+    to_z85(from_binary("00000000000000000000000001111111")).is("0001G");
+    to_z85(from_binary("00000000000000000000000001000000")).is("0000:");
+    to_z85(from_binary("11111111111111111111111111000000")).is("%nSbm");
+
+    to_z85(from_binary("00000000000000000000000011111111")).is("00030");
+    to_z85(from_binary("00000000000000000000000010000000")).is("0001H");
+    to_z85(from_binary("11111111111111111111111110000000")).is("%nSaH");
+
+    to_z85(from_binary("00000000000000000000000111111111")).is("00061");
+    to_z85(from_binary("00000000000000000000000100000000")).is("00031");
+    to_z85(from_binary("000000000000000000000001"        )).is("0003" );
+    to_z85(from_binary("11111111111111111111111100000000")).is("%nS90");
+
+    to_z85(from_binary("00000000000000000000001111111111")).is("000c3");
+    to_z85(from_binary("00000000000000000000001000000000")).is("00062");
+    to_z85(from_binary("000000000000000000000010"        )).is("0006" );
+    to_z85(from_binary("11111111111111111111111000000000")).is("%nS5#");
+
+    to_z85(from_binary("00000000000000000000011111111111")).is("000o7");
+    to_z85(from_binary("00000000000000000000010000000000")).is("000c4");
+    to_z85(from_binary("000000000000000000000100"        )).is("000c" );
+    to_z85(from_binary("11111111111111111111110000000000")).is("%nR#%");
+
+    to_z85(from_binary("00000000000000000000111111111111")).is("000Mf");
+    to_z85(from_binary("00000000000000000000100000000000")).is("000o8");
+    to_z85(from_binary("000000000000000000001000"        )).is("000o" );
+    to_z85(from_binary("11111111111111111111100000000000")).is("%nR&]");
+
+    to_z85(from_binary("00000000000000000001111111111111")).is("001bv");
+    to_z85(from_binary("00000000000000000001000000000000")).is("000Mg");
+    to_z85(from_binary("000000000000000000010000"        )).is("000M" );
+    to_z85(from_binary("11111111111111111111000000000000")).is("%nRM*");
+
+    to_z85(from_binary("00000000000000000011111111111111")).is("002m-");
+    to_z85(from_binary("00000000000000000010000000000000")).is("001bw");
+    to_z85(from_binary("000000000000000000100000"        )).is("001b" );
+    to_z85(from_binary("11111111111111111110000000000000")).is("%nR0S");
+
+    to_z85(from_binary("00000000000000000111111111111111")).is("004JG");
+    to_z85(from_binary("00000000000000000100000000000000")).is("002m:");
+    to_z85(from_binary("000000000000000001000000"        )).is("002m" );
+    to_z85(from_binary("11111111111111111100000000000000")).is("%nP>m");
+
+    to_z85(from_binary("00000000000000001111111111111111")).is("00960");
+    to_z85(from_binary("00000000000000001000000000000000")).is("004JH");
+    to_z85(from_binary("000000000000000010000000"        )).is("004J" );
+    to_z85(from_binary("11111111111111111000000000000000")).is("%nNPH");
+
+    to_z85(from_binary("00000000000000011111111111111111")).is("00ic1");
+    to_z85(from_binary("00000000000000010000000000000000")).is("00961");
+    to_z85(from_binary("0000000000000001"                )).is("009"  );
+    to_z85(from_binary("11111111111111110000000000000000")).is("%nJ60");
+
+    to_z85(from_binary("00000000000000111111111111111111")).is("00Ao3");
+    to_z85(from_binary("00000000000000100000000000000000")).is("00ic2");
+    to_z85(from_binary("0000000000000010"                )).is("00i"  );
+    to_z85(from_binary("11111111111111100000000000000000")).is("%nz##");
+
+    to_z85(from_binary("00000000000001111111111111111111")).is("00&M7");
+    to_z85(from_binary("00000000000001000000000000000000")).is("00Ao4");
+    to_z85(from_binary("0000000000000100"                )).is("00A"  );
+    to_z85(from_binary("11111111111111000000000000000000")).is("%nh&%");
+
+    to_z85(from_binary("00000000000011111111111111111111")).is("01Ybf");
+    to_z85(from_binary("00000000000010000000000000000000")).is("00&M8");
+    to_z85(from_binary("0000000000001000"                )).is("00&"  );
+    to_z85(from_binary("11111111111110000000000000000000")).is("%m=M]");
+
+    to_z85(from_binary("00000000000111111111111111111111")).is("03zmv");
+    to_z85(from_binary("00000000000100000000000000000000")).is("01Ybg");
+    to_z85(from_binary("0000000000010000"                )).is("01Y"  );
+    to_z85(from_binary("11111111111100000000000000000000")).is("%l{0*");
+
+    to_z85(from_binary("00000000001111111111111111111111")).is("06*I-");
+    to_z85(from_binary("00000000001000000000000000000000")).is("03zmw");
+    to_z85(from_binary("0000000000100000"                )).is("03z"  );
+    to_z85(from_binary("11111111111000000000000000000000")).is("%ki>S");
+
+    to_z85(from_binary("00000000011111111111111111111111")).is("0dU4G");
+    to_z85(from_binary("00000000010000000000000000000000")).is("06*I:");
+    to_z85(from_binary("0000000001000000"                )).is("06*"  );
+    to_z85(from_binary("11111111110000000000000000000000")).is("%g!Qm");
+
+    to_z85(from_binary("00000000111111111111111111111111")).is("0rr90");
+    to_z85(from_binary("00000000100000000000000000000000")).is("0dU4H");
+    to_z85(from_binary("0000000010000000"                )).is("0dU"  );
+    to_z85(from_binary("11111111100000000000000000000000")).is("%9$7H");
+
+    to_z85(from_binary("00000001111111111111111111111111")).is("0SSi1");
+    to_z85(from_binary("00000001000000000000000000000000")).is("0rr91");
+    to_z85(from_binary("00000001"                        )).is("0r"   );
+    to_z85(from_binary("11111111000000000000000000000000")).is("@@r30");
+
+    to_z85(from_binary("00000011111111111111111111111111")).is("1onA3");
+    to_z85(from_binary("00000010000000000000000000000000")).is("0SSi2");
+    to_z85(from_binary("00000010"                        )).is("0S"   );
+    to_z85(from_binary("11111110000000000000000000000000")).is("@R#]#");
+
+    to_z85(from_binary("00000111111111111111111111111111")).is("2MK&7");
+    to_z85(from_binary("00000100000000000000000000000000")).is("1onA4");
+    to_z85(from_binary("00000100"                        )).is("1o"   );
+    to_z85(from_binary("11111100000000000000000000000000")).is("}#uY%");
+
+    to_z85(from_binary("00001111111111111111111111111111")).is("5c8Xf");
+    to_z85(from_binary("00001000000000000000000000000000")).is("2MK&8");
+    to_z85(from_binary("00001000"                        )).is("2M"   );
+    to_z85(from_binary("11111000000000000000000000000000")).is("{Y7o]");
+
+    to_z85(from_binary("00011111111111111111111111111111")).is("aohxv");
+    to_z85(from_binary("00010000000000000000000000000000")).is("5c8Xg");
+    to_z85(from_binary("00010000"                        )).is("5c"   );
+    to_z85(from_binary("11110000000000000000000000000000")).is("[bJB*");
+
+    to_z85(from_binary("00111111111111111111111111111111")).is("kMy=-");
+    to_z85(from_binary("00100000000000000000000000000000")).is("aohxw");
+    to_z85(from_binary("00100000"                        )).is("ao"   );
+    to_z85(from_binary("11100000000000000000000000000000")).is("?#A-S");
+
+    to_z85(from_binary("01111111111111111111111111111111")).is("Fb/MG");
+    to_z85(from_binary("01000000000000000000000000000000")).is("kMy=:");
+    to_z85(from_binary("01000000"                        )).is("kM"   );
+    to_z85(from_binary("11000000000000000000000000000000")).is("ZYjum");
+
+    to_z85(from_binary("11111111111111111111111111111111")).is("%nSc0");
+    to_z85(from_binary("10000000"                        )).is("Fb"   );
+
+/*
     Z85's 32-bit blocks align perfectly with common data structures. A u32 is
     exactly one block; a u64 is exactly two blocks. When inspecting binary data,
     you can often see meaningful structure: pointers, sizes, flags.
 
-    - **Context compatibility:** good, but not as clean as base64. The alphabet
-      includes characters like `*`, `?`, `<`, `>`, `[`, `]`, `{`, `}` which have
-      special meaning in shells, globs, and some markup languages.
+    - **Context compatibility:** decent: the alphabet was chosen to avoid the
+      most common string delimiters, so it won't include single- or
+      double-quotes or backslashes `'"\\`, but it does include `$` the dollar
+      sign, `&` ampersand, and other characters that can have special meaning in
+      text in some languages.
     - **Offset stability:** fully stable.
     - **Overhead:** +25% (5 characters per 4 bytes), better than base64's +33%.
     - **Transparency:** excellent for numeric data. Small integers look like
       integers. Zeros are `00000`. Structure in 32-bit aligned data is visible.
     - **Ordering:** NOT preserved. This is the trade-off for numeric
       transparency. Having `0` encode to `0` (instead of the first character
-      in ASCII order) means the alphabet isn't in ascending order, so
-      lexicographic comparison of encoded strings doesn't match byte comparison.
+      in ASCII order) means the alphabet can't be in ascending order (there
+      aren't enough suitable ASCII characters after `0`), so lexicographic
+      comparison of encoded strings doesn't match byte comparison.
 
     This is a deliberate design choice: Z85 prioritizes numeric transparency
     over ordering. A different encoding could make the opposite choice.
@@ -408,6 +565,7 @@ literate! {
 // block because that's too much code.
 
 fn from_binary(text: impl AsRef<str>) -> Vec<u8> {
+    assert!(text.as_ref().len() % 8 == 0);
     let text = text.as_ref();
     let len = text.len() / 8;
     let mut result = Vec::with_capacity(len);
@@ -420,6 +578,7 @@ fn from_binary(text: impl AsRef<str>) -> Vec<u8> {
 }
 
 fn from_hex(text: impl AsRef<str>) -> Vec<u8> {
+    assert!(text.as_ref().len() % 2 == 0);
     let text = text.as_ref();
     let len = text.len() / 2;
     let mut result = Vec::with_capacity(len);

@@ -1,0 +1,14 @@
+[package]
+name = "serde-value"
+description = "Complete in-memory representation of the serde data model"
+publish = false
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+
+[dev-dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
