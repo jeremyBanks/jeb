@@ -30,6 +30,24 @@
 //! This enables workflows like: capture typed data → manipulate as Value → serialize
 //! for transmission → receiver deserializes to their typed representation.
 //!
+//! # Deserialization and `deserialize_any`
+//!
+//! `Value`'s `Deserialize` impl uses serde's [`Deserializer::deserialize_any`] method,
+//! which asks the format: "what type do you have?". This works with **self-describing
+//! formats** that embed type information in the byte stream:
+//!
+//! - **JSON**: `{"x": 42}` → the format knows it's an object with string keys
+//! - **MessagePack**: type tags precede each value
+//! - **RON**: Rust-like syntax with explicit types
+//!
+//! **Non-self-describing formats** (bincode, postcard) cannot answer this question - they
+//! return an error from `deserialize_any` because the byte stream doesn't contain type
+//! information. For these formats, you must deserialize to a known type first, then use
+//! [`to_value`] to convert.
+//!
+//! If you need to serialize and deserialize `Value` itself through non-self-describing
+//! formats, use [`Meta`] which wraps `Value` with explicit type tags.
+//!
 //! # Core API
 //!
 //! The crate provides four key capabilities:
@@ -44,17 +62,14 @@
 //! let bytes = bincode::serialize(&value)?;  // Same bytes as bincode::serialize(&my_struct)
 //! ```
 //!
-//! ## 2. `Value` implements `Deserialize`
+//! ## 2. `Value` implements `Deserialize` (requires `deserialize_any`)
 //!
 //! Deserialize a [`Value`] from self-describing serde formats (JSON, RON, MessagePack, etc.):
 //!
 //! ```ignore
-//! let value: Value = serde_json::from_str(json)?;  // JSON → Value
+//! let value: Value = serde_json::from_str(json)?;  // JSON → Value (works!)
+//! let value: Value = bincode::deserialize(&bytes)?;  // ERROR: deserialize_any not supported
 //! ```
-//!
-//! Note: Non-self-describing formats (bincode, postcard) cannot deserialize directly to
-//! [`Value`] because they don't embed type information in the byte stream. For these
-//! formats, use the typed → Value → typed workflow instead.
 //!
 //! ## 3. `to_value<T: Serialize>(T) -> Value`
 //!
@@ -101,6 +116,24 @@
 //! assert_eq!(user.age, 30);
 //! ```
 //!
+//! ## 5. `Meta(Value)` - Tagged serialization for Value↔Value roundtrip
+//!
+//! When you need to serialize `Value` itself (not transparently), use [`Meta`]:
+//!
+//! ```ignore
+//! use serde_value::{Value, Meta};
+//!
+//! let value = Value::I32(42);
+//!
+//! // Transparent: serializes as just 42
+//! let bytes1 = bincode::serialize(&value)?;
+//!
+//! // Tagged: serializes as Value::I32(42) with enum discriminant
+//! let bytes2 = bincode::serialize(&Meta(value.clone()))?;
+//! let Meta(restored) = bincode::deserialize(&bytes2)?;  // Works!
+//! assert_eq!(restored, value);
+//! ```
+//!
 //! # Use Case: Universal Serde Intermediate
 //!
 //! [`Value`] can serve as an intermediate representation between any serde-compatible
@@ -137,6 +170,7 @@ mod cast;
 mod de;
 mod de_value;
 mod error;
+mod meta;
 mod ser;
 mod to_value;
 mod value;
@@ -144,5 +178,6 @@ mod value;
 pub use cast::try_cast;
 pub use de::from_value;
 pub use error::Error;
+pub use meta::Meta;
 pub use to_value::to_value;
 pub use value::Value;
