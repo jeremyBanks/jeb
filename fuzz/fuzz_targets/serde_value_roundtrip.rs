@@ -21,8 +21,7 @@ fuzz_target!(|value: Value| {
         Err(_) => return,
     };
 
-    // The roundtrip through from_value/to_value should preserve the value
-    // Note: some information may be normalized (e.g., struct → map)
-    // so we compare the reserialized form
-    let _ = reserialized;
+    // Roundtrip should be lossless
+    assert_eq!(value, deserialized, "from_value mismatch");
+    assert_eq!(deserialized, reserialized, "to_value mismatch");
 });
