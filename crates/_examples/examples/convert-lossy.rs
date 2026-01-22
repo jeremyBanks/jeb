@@ -1,3 +1,22 @@
+// XXX: Okay I think our internal type can actually just bite the bullet and be
+// very precise about what it's returning, since we'll actually expose cleaner
+// external interfaces.
+
+#[allow(unused)]
+mod thinking {
+    enum ConversionResult<
+        T,
+        TypeLossWarning = core::convert::Infallible,
+        ValueLossWarning = core::convert::Infallible,
+        FatalError = core::convert::Infallible,
+    > {
+        Lossless(T),
+        LossyType(T, TypeLossWarning),
+        LossyValue(T, ValueLossWarning),
+        Error(FatalError),
+    }
+}
+
 /// Implementation helper trait for potentially-fallible potentially-lossy
 /// conversions. Implementors should implement this crate, while users will
 /// instead use one of the narrower delegating traits: `TryFromMaybeLossy`,
