@@ -1,3 +1,53 @@
+use core::{
+    fmt::Debug,
+    marker::PhantomData,
+};
+
+pub trait Is<T> {}
+impl<T> Is<T> for T {}
+
+trait Seal {}
+#[expect(private_bounds)]
+pub trait Sealed: Seal {}
+impl<T: Seal> Sealed for T {}
+
+
+pub trait Bool: Sealed {
+    const VALUE: bool;
+}
+
+pub struct True;
+impl Seal for True {}
+impl Bool for True {
+    const VALUE: bool = true;
+}
+
+pub struct False;
+impl Seal for False {}
+impl Bool for False {
+    const VALUE: bool = false;
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ConversionResult<Source, Target> {
+    source: PhantomData<fn(Source)>,
+
+    round_trippable: bool,
+    round_trippable_with_context: bool,
+    clamped: bool,
+    rounded: bool,
+    truncated: bool,
+
+    value: Option<Target>,
+}
+
+pub trait ImplConversionsFrom<Source>: Sized {
+    type Supported: Bool;
+    type Warning: Debug;
+    type Error: Debug;
+}
+
 // XXX: Okay I think our internal type can actually just bite the bullet and be
 // very precise about what it's returning, since we'll actually expose cleaner
 // external interfaces.
