@@ -228,6 +228,7 @@ impl<'de> Deserializer<'de> for Value {
             Value::U32(v) => v,
             Value::U64(v) => v.try_into().map_err(|_| Error::out_of_range("u32"))?,
             Value::U128(v) => v.try_into().map_err(|_| Error::out_of_range("u32"))?,
+            Value::Char(c) => c as u32,
             other => return Err(Error::type_mismatch("integer", other.type_name())),
         };
         visitor.visit_u32(v)
@@ -284,16 +285,36 @@ impl<'de> Deserializer<'de> for Value {
     }
 
     fn deserialize_char<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
-        match self {
-            Value::Char(v) => visitor.visit_char(v),
-            other => Err(Error::type_mismatch("char", other.type_name())),
-        }
+        let c = match self {
+            Value::Char(v) => v,
+            Value::String(s) => {
+                let mut chars = s.chars();
+                match (chars.next(), chars.next()) {
+                    (Some(c), None) => c,
+                    _ => return Err(Error::type_mismatch("single-char string", "String")),
+                }
+            }
+            Value::U32(v) => char::from_u32(v).ok_or_else(|| Error::out_of_range("char"))?,
+            Value::U8(v) => char::from_u32(v.into()).unwrap(),
+            Value::U16(v) => char::from_u32(v.into()).ok_or_else(|| Error::out_of_range("char"))?,
+            Value::U64(v) => {
+                let v32: u32 = v.try_into().map_err(|_| Error::out_of_range("char"))?;
+                char::from_u32(v32).ok_or_else(|| Error::out_of_range("char"))?
+            }
+            Value::U128(v) => {
+                let v32: u32 = v.try_into().map_err(|_| Error::out_of_range("char"))?;
+                char::from_u32(v32).ok_or_else(|| Error::out_of_range("char"))?
+            }
+            other => return Err(Error::type_mismatch("char", other.type_name())),
+        };
+        visitor.visit_char(c)
     }
 
     fn deserialize_str<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
         let s = match self {
             Value::String(v) => v,
             Value::Bytes(v) => String::from_utf8(v).map_err(|_| Error::invalid_utf8())?,
+            Value::Char(c) => c.to_string(),
             other => return Err(Error::type_mismatch("string", other.type_name())),
         };
         visitor.visit_string(s)
@@ -307,6 +328,9 @@ impl<'de> Deserializer<'de> for Value {
         let bytes = match self {
             Value::Bytes(v) => v,
             Value::String(v) => v.into_bytes(),
+            Value::Seq(v) => seq_to_bytes(v)?,
+            Value::Tuple(v) => seq_to_bytes(v)?,
+            Value::TupleStruct { fields, .. } => seq_to_bytes(fields)?,
             other => return Err(Error::type_mismatch("bytes", other.type_name())),
         };
         visitor.visit_byte_buf(bytes)
@@ -452,6 +476,28 @@ impl<'de> Deserializer<'de> for Value {
     fn deserialize_ignored_any<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
         visitor.visit_unit()
     }
+}
+
+// === Helper Functions ===
+
+/// Convert a sequence of Values to bytes, coercing integers to u8.
+fn seq_to_bytes(values: Vec<Value>) -> Result<Vec<u8>, Error> {
+    values
+        .into_iter()
+        .map(|v| match v {
+            Value::U8(b) => Ok(b),
+            Value::I8(b) => b.try_into().map_err(|_| Error::out_of_range("u8")),
+            Value::U16(b) => b.try_into().map_err(|_| Error::out_of_range("u8")),
+            Value::I16(b) => b.try_into().map_err(|_| Error::out_of_range("u8")),
+            Value::U32(b) => b.try_into().map_err(|_| Error::out_of_range("u8")),
+            Value::I32(b) => b.try_into().map_err(|_| Error::out_of_range("u8")),
+            Value::U64(b) => b.try_into().map_err(|_| Error::out_of_range("u8")),
+            Value::I64(b) => b.try_into().map_err(|_| Error::out_of_range("u8")),
+            Value::U128(b) => b.try_into().map_err(|_| Error::out_of_range("u8")),
+            Value::I128(b) => b.try_into().map_err(|_| Error::out_of_range("u8")),
+            other => Err(Error::type_mismatch("integer", other.type_name())),
+        })
+        .collect()
 }
 
 // === Helper Deserializers ===
