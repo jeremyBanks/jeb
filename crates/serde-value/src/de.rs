@@ -380,6 +380,20 @@ impl<'de> Deserializer<'de> for Value {
             Value::Tuple(v) => visitor.visit_seq(SeqDeserializer::new(v)),
             Value::TupleStruct { fields, .. } => visitor.visit_seq(SeqDeserializer::new(fields)),
             Value::Bytes(v) => visitor.visit_seq(BytesSeqDeserializer::new(v)),
+            Value::Map(entries) => {
+                let pairs: Vec<Value> = entries
+                    .into_iter()
+                    .map(|(k, v)| Value::Tuple(vec![k, v]))
+                    .collect();
+                visitor.visit_seq(SeqDeserializer::new(pairs))
+            }
+            Value::Struct { fields, .. } => {
+                let pairs: Vec<Value> = fields
+                    .into_iter()
+                    .map(|(k, v)| Value::Tuple(vec![Value::String(k.to_string()), v]))
+                    .collect();
+                visitor.visit_seq(SeqDeserializer::new(pairs))
+            }
             other => Err(Error::type_mismatch("sequence", other.type_name())),
         }
     }
@@ -401,6 +415,18 @@ impl<'de> Deserializer<'de> for Value {
         match self {
             Value::Map(entries) => visitor.visit_map(MapDeserializer::new(entries)),
             Value::Struct { fields, .. } => visitor.visit_map(StructDeserializer::new(fields)),
+            Value::Seq(v) => {
+                let entries = seq_to_map_entries(v)?;
+                visitor.visit_map(MapDeserializer::new(entries))
+            }
+            Value::Tuple(v) => {
+                let entries = seq_to_map_entries(v)?;
+                visitor.visit_map(MapDeserializer::new(entries))
+            }
+            Value::TupleStruct { fields, .. } => {
+                let entries = seq_to_map_entries(fields)?;
+                visitor.visit_map(MapDeserializer::new(entries))
+            }
             other => Err(Error::type_mismatch("map", other.type_name())),
         }
     }
@@ -496,6 +522,31 @@ fn seq_to_bytes(values: Vec<Value>) -> Result<Vec<u8>, Error> {
             Value::U128(b) => b.try_into().map_err(|_| Error::out_of_range("u8")),
             Value::I128(b) => b.try_into().map_err(|_| Error::out_of_range("u8")),
             other => Err(Error::type_mismatch("integer", other.type_name())),
+        })
+        .collect()
+}
+
+/// Convert a sequence of pairs to map entries.
+fn seq_to_map_entries(values: Vec<Value>) -> Result<Vec<(Value, Value)>, Error> {
+    values
+        .into_iter()
+        .map(|v| match v {
+            Value::Tuple(mut pair) if pair.len() == 2 => {
+                let value = pair.pop().unwrap();
+                let key = pair.pop().unwrap();
+                Ok((key, value))
+            }
+            Value::Seq(mut pair) if pair.len() == 2 => {
+                let value = pair.pop().unwrap();
+                let key = pair.pop().unwrap();
+                Ok((key, value))
+            }
+            Value::TupleStruct { mut fields, .. } if fields.len() == 2 => {
+                let value = fields.pop().unwrap();
+                let key = fields.pop().unwrap();
+                Ok((key, value))
+            }
+            _ => Err(Error::type_mismatch("2-element tuple", "other")),
         })
         .collect()
 }
