@@ -520,6 +520,7 @@ impl<'de> MapAccess<'de> for StructDeserializer {
 }
 
 /// Deserializer for enums.
+#[expect(clippy::enum_variant_names, reason = "these ARE enum variant deserializers")]
 enum EnumDeserializer {
     UnitVariant {
         #[allow(dead_code)]
