@@ -2,20 +2,57 @@
 
 use crate::Value;
 use arbitrary::{Arbitrary, Unstructured};
+use std::collections::HashSet;
+use std::sync::{LazyLock, Mutex};
 
-/// A fixed set of static strings for arbitrary generation.
+/// Maximum length for generated static strings.
+/// This bounds memory usage per unique string.
+const MAX_STRING_LENGTH: usize = 64;
+
+/// Global interner for static strings.
+/// Uses deduplication to avoid leaking duplicate strings.
+static INTERNED_STRINGS: LazyLock<Mutex<HashSet<&'static str>>> =
+    LazyLock::new(|| Mutex::new(HashSet::new()));
+
+/// Intern a string, returning a `&'static str`.
 ///
-/// Since `Value` contains `&'static str` fields, we need to select from
-/// a predefined set of strings rather than generating arbitrary ones.
-const STATIC_NAMES: &[&str] = &[
-    "a", "b", "c", "foo", "bar", "baz", "name", "value", "key", "data", "id", "type", "item",
-    "field", "variant", "struct", "enum", "tuple", "option", "result",
-];
+/// This function deduplicates strings to minimize memory usage during fuzzing.
+/// Strings are leaked (intentionally) to produce `&'static str` references,
+/// but the deduplication ensures each unique string is only leaked once.
+fn intern_string(s: &str) -> &'static str {
+    // Truncate to max length to bound memory per string
+    let s = if s.len() > MAX_STRING_LENGTH {
+        // Find a valid UTF-8 boundary for truncation
+        let mut end = MAX_STRING_LENGTH;
+        while end > 0 && !s.is_char_boundary(end) {
+            end -= 1;
+        }
+        &s[..end]
+    } else {
+        s
+    };
 
-/// Choose a static string from the predefined set.
+    let mut set = INTERNED_STRINGS.lock().unwrap();
+
+    // Check if we already have this string interned
+    if let Some(&existing) = set.get(s) {
+        return existing;
+    }
+
+    // Leak the string to get a &'static str
+    let leaked: &'static str = Box::leak(s.to_owned().into_boxed_str());
+    set.insert(leaked);
+    leaked
+}
+
+/// Generate an arbitrary static string.
+///
+/// This generates a random string and interns it to produce a `&'static str`.
+/// The interner deduplicates strings to minimize memory usage.
 fn arbitrary_static_str(u: &mut Unstructured<'_>) -> arbitrary::Result<&'static str> {
-    let idx = u.choose_index(STATIC_NAMES.len())?;
-    Ok(STATIC_NAMES[idx])
+    // Generate an arbitrary string (will be length-limited by intern_string)
+    let s: String = u.arbitrary()?;
+    Ok(intern_string(&s))
 }
 
 /// Generate arbitrary nested values with bounded depth.
@@ -225,11 +262,37 @@ mod tests {
     }
 
     #[test]
-    fn test_static_str_selection() {
-        let data = [0u8, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    fn test_intern_string_deduplication() {
+        let s1 = intern_string("test_dedup");
+        let s2 = intern_string("test_dedup");
+        // Same string should return same pointer
+        assert!(std::ptr::eq(s1, s2));
+    }
+
+    #[test]
+    fn test_intern_string_truncation() {
+        let long_string = "a".repeat(100);
+        let interned = intern_string(&long_string);
+        assert!(interned.len() <= MAX_STRING_LENGTH);
+    }
+
+    #[test]
+    fn test_intern_string_utf8_boundary() {
+        // Test with a string that has multi-byte UTF-8 characters
+        // Each emoji is 4 bytes, so 20 emojis = 80 bytes
+        let emojis = "😀".repeat(20);
+        let interned = intern_string(&emojis);
+        // Should be truncated but still valid UTF-8
+        assert!(interned.len() <= MAX_STRING_LENGTH);
+        // Should not panic on iteration (proves valid UTF-8)
+        for _ in interned.chars() {}
+    }
+
+    #[test]
+    fn test_arbitrary_static_str() {
+        let data: Vec<u8> = (0..=255).collect();
         let mut u = Unstructured::new(&data);
         let s = arbitrary_static_str(&mut u);
         assert!(s.is_ok());
-        assert!(STATIC_NAMES.contains(&s.unwrap()));
     }
 }
