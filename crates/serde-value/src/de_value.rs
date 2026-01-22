@@ -162,53 +162,10 @@ impl<'de> Visitor<'de> for ValueVisitor {
     // (like our own Value deserializer). In that case, we preserve the information.
 
     fn visit_enum<A: de::EnumAccess<'de>>(self, access: A) -> Result<Value, A::Error> {
-        let (variant, variant_access) = access.variant::<EnumVariantDeserializer>()?;
-        variant_access.deserialize_variant(variant)
-    }
-}
+        use de::VariantAccess;
 
-/// Helper to capture the variant name from enum deserialization.
-struct EnumVariantDeserializer {
-    variant: String,
-}
+        let (variant, variant_access) = access.variant::<String>()?;
 
-impl<'de> Deserialize<'de> for EnumVariantDeserializer {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        struct VariantVisitor;
-
-        impl<'de> Visitor<'de> for VariantVisitor {
-            type Value = EnumVariantDeserializer;
-
-            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(f, "variant identifier")
-            }
-
-            fn visit_str<E: de::Error>(self, v: &str) -> Result<EnumVariantDeserializer, E> {
-                Ok(EnumVariantDeserializer {
-                    variant: v.to_owned(),
-                })
-            }
-
-            fn visit_string<E: de::Error>(self, v: String) -> Result<EnumVariantDeserializer, E> {
-                Ok(EnumVariantDeserializer { variant: v })
-            }
-
-            fn visit_u64<E: de::Error>(self, v: u64) -> Result<EnumVariantDeserializer, E> {
-                Ok(EnumVariantDeserializer {
-                    variant: v.to_string(),
-                })
-            }
-        }
-
-        deserializer.deserialize_identifier(VariantVisitor)
-    }
-}
-
-impl EnumVariantDeserializer {
-    fn deserialize_variant<'de, V: de::VariantAccess<'de>>(
-        self,
-        variant_access: V,
-    ) -> Result<Value, V::Error> {
         // We have to pick one variant type to try. Since unit variants are most common
         // in simple enums, try that. If it fails, we'll get an error from the format.
         //
@@ -225,7 +182,7 @@ impl EnumVariantDeserializer {
 
         // We have to leak the string to get a 'static str.
         // This is the cost of dynamic variant names.
-        let variant_static: &'static str = Box::leak(self.variant.into_boxed_str());
+        let variant_static: &'static str = Box::leak(variant.into_boxed_str());
 
         Ok(Value::UnitVariant {
             enum_name: "",

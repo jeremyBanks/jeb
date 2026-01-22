@@ -7,7 +7,6 @@ use serde::de::{
     self, DeserializeSeed, Deserializer, EnumAccess, IntoDeserializer, MapAccess, SeqAccess,
     VariantAccess, Visitor,
 };
-use serde::Deserialize;
 
 /// Convert a `Value` to any `DeserializeOwned` type.
 pub fn from_value<T: de::DeserializeOwned>(value: Value) -> Result<T, Error> {

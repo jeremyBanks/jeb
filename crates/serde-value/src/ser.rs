@@ -8,6 +8,9 @@ use serde::ser::{
     SerializeTuple, SerializeTupleStruct, SerializeTupleVariant, Serializer,
 };
 
+// Alias to avoid collision with Value::Some
+use std::option::Option::Some as StdSome;
+
 impl Serialize for Value {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         use Value::*;
@@ -58,7 +61,7 @@ impl Serialize for Value {
 
             // === Sequences ===
             Seq(values) => {
-                let mut seq = serializer.serialize_seq(Some(values.len()))?;
+                let mut seq = serializer.serialize_seq(StdSome(values.len()))?;
                 for value in values {
                     seq.serialize_element(value)?;
                 }
@@ -98,7 +101,7 @@ impl Serialize for Value {
 
             // === Maps and Structs ===
             Map(entries) => {
-                let mut map = serializer.serialize_map(Some(entries.len()))?;
+                let mut map = serializer.serialize_map(StdSome(entries.len()))?;
                 for (key, value) in entries {
                     map.serialize_entry(key, value)?;
                 }
