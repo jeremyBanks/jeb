@@ -28,10 +28,6 @@
 //! let value: Value = serde_json::from_str(json)?;  // JSON → Value
 //! ```
 //!
-//! **Note:** When deserializing from formats like JSON that don't preserve type metadata,
-//! struct names and field names are lost. A JSON object becomes `Value::Map`, not
-//! `Value::Struct`.
-//!
 //! ## 3. `to_value<T: Serialize>(T) -> Value`
 //!
 //! Convert any serializable Rust type to [`Value`], preserving all metadata:

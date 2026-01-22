@@ -1,11 +1,4 @@
 //! `Deserialize` implementation for `Value`.
-//!
-//! This allows deserializing a `Value` from any serde-compatible format.
-//!
-//! **Important limitation:** When deserializing from formats like JSON that don't
-//! preserve type metadata, struct names and field names are lost. A JSON object
-//! becomes `Value::Map`, not `Value::Struct`. This is fundamental to how serde works -
-//! the type information flows from `deserialize_struct` to the format, not back.
 
 use crate::Value;
 use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
@@ -17,7 +10,6 @@ impl<'de> Deserialize<'de> for Value {
     }
 }
 
-/// Visitor that produces a `Value`.
 struct ValueVisitor;
 
 impl<'de> Visitor<'de> for ValueVisitor {
@@ -26,8 +18,6 @@ impl<'de> Visitor<'de> for ValueVisitor {
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "any valid serde value")
     }
-
-    // === Primitives ===
 
     fn visit_bool<E: de::Error>(self, v: bool) -> Result<Value, E> {
         Ok(Value::Bool(v))
@@ -85,8 +75,6 @@ impl<'de> Visitor<'de> for ValueVisitor {
         Ok(Value::Char(v))
     }
 
-    // === String and Bytes ===
-
     fn visit_str<E: de::Error>(self, v: &str) -> Result<Value, E> {
         Ok(Value::String(v.to_owned()))
     }
@@ -103,8 +91,6 @@ impl<'de> Visitor<'de> for ValueVisitor {
         Ok(Value::Bytes(v))
     }
 
-    // === Option ===
-
     fn visit_none<E: de::Error>(self) -> Result<Value, E> {
         Ok(Value::None)
     }
@@ -113,25 +99,13 @@ impl<'de> Visitor<'de> for ValueVisitor {
         Ok(Value::Some(Box::new(Value::deserialize(deserializer)?)))
     }
 
-    // === Unit ===
-
     fn visit_unit<E: de::Error>(self) -> Result<Value, E> {
         Ok(Value::Unit)
     }
 
-    // === Newtype Struct ===
-    // Note: We lose the struct name here because the visitor doesn't receive it.
-    // The name is passed to deserialize_newtype_struct, not to the visitor.
-
     fn visit_newtype_struct<D: Deserializer<'de>>(self, deserializer: D) -> Result<Value, D::Error> {
-        // Without the name, we can only capture the inner value.
-        // Return it directly rather than wrapping in NewtypeStruct.
         Value::deserialize(deserializer)
     }
-
-    // === Sequences ===
-    // Note: We cannot distinguish between seq, tuple, and tuple_struct here
-    // because the visitor receives the same visit_seq call for all of them.
 
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Value, A::Error> {
         let mut values = Vec::new();
@@ -141,10 +115,6 @@ impl<'de> Visitor<'de> for ValueVisitor {
         Ok(Value::Seq(values))
     }
 
-    // === Maps ===
-    // Note: We cannot distinguish between map and struct here because
-    // the visitor receives the same visit_map call for both.
-
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Value, A::Error> {
         let mut entries = Vec::new();
         while let Some((key, value)) = map.next_entry()? {
@@ -153,35 +123,12 @@ impl<'de> Visitor<'de> for ValueVisitor {
         Ok(Value::Map(entries))
     }
 
-    // === Enum ===
-    // Note: When deserializing from most formats (JSON, YAML, etc.), enums are
-    // typically represented as strings (for unit variants) or objects (for other
-    // variants). These get handled by visit_str and visit_map respectively.
-    //
-    // visit_enum is called when a format explicitly supports enum representation
-    // (like our own Value deserializer). In that case, we preserve the information.
-
     fn visit_enum<A: de::EnumAccess<'de>>(self, access: A) -> Result<Value, A::Error> {
         use de::VariantAccess;
 
         let (variant, variant_access) = access.variant::<String>()?;
-
-        // We have to pick one variant type to try. Since unit variants are most common
-        // in simple enums, try that. If it fails, we'll get an error from the format.
-        //
-        // The fundamental issue is that serde's VariantAccess is consumed after one call,
-        // so we can't probe for the type. In practice:
-        // - Unit variants call unit_variant()
-        // - Newtype variants call newtype_variant()
-        // - etc.
-        //
-        // For a truly generic deserializer, we'd need format-specific handling.
-        // For now, we support unit variants from visit_enum.
-
         variant_access.unit_variant()?;
 
-        // We have to leak the string to get a 'static str.
-        // This is the cost of dynamic variant names.
         let variant_static: &'static str = Box::leak(variant.into_boxed_str());
 
         Ok(Value::UnitVariant {
