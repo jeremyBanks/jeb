@@ -222,17 +222,36 @@ impl<'de> Deserialize<'de> for VariantId {
             type Value = VariantId;
 
             fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(f, "a variant index (u32) or name (string)")
+                write!(f, "a variant index (integer) or name (string)")
             }
 
+            // Accept any integer type as variant index
+            fn visit_i8<E: de::Error>(self, v: i8) -> Result<VariantId, E> {
+                Ok(VariantId(v as u32))
+            }
+            fn visit_i16<E: de::Error>(self, v: i16) -> Result<VariantId, E> {
+                Ok(VariantId(v as u32))
+            }
+            fn visit_i32<E: de::Error>(self, v: i32) -> Result<VariantId, E> {
+                Ok(VariantId(v as u32))
+            }
+            fn visit_i64<E: de::Error>(self, v: i64) -> Result<VariantId, E> {
+                Ok(VariantId(v as u32))
+            }
+            fn visit_u8<E: de::Error>(self, v: u8) -> Result<VariantId, E> {
+                Ok(VariantId(v as u32))
+            }
+            fn visit_u16<E: de::Error>(self, v: u16) -> Result<VariantId, E> {
+                Ok(VariantId(v as u32))
+            }
             fn visit_u32<E: de::Error>(self, v: u32) -> Result<VariantId, E> {
                 Ok(VariantId(v))
             }
-
             fn visit_u64<E: de::Error>(self, v: u64) -> Result<VariantId, E> {
                 Ok(VariantId(v as u32))
             }
 
+            // Accept string variant names
             fn visit_str<E: de::Error>(self, v: &str) -> Result<VariantId, E> {
                 let index = match v {
                     "Bool" => 0, "I8" => 1, "I16" => 2, "I32" => 3, "I64" => 4, "I128" => 5,
@@ -245,6 +264,17 @@ impl<'de> Deserialize<'de> for VariantId {
                     _ => return Err(de::Error::unknown_variant(v, VARIANTS)),
                 };
                 Ok(VariantId(index))
+            }
+
+            // Accept bytes as variant name (some formats might do this)
+            fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<VariantId, E> {
+                match std::str::from_utf8(v) {
+                    Ok(s) => self.visit_str(s),
+                    Err(_) => Err(de::Error::invalid_value(
+                        de::Unexpected::Bytes(v),
+                        &self,
+                    )),
+                }
             }
         }
 
