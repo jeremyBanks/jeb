@@ -578,6 +578,7 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
         repo: &'repo Repository,
         target_prefix: &[u8],
         target_mask: Option<&[u8]>,
+        letter_suffix: bool,
         min_timestamp: impl Into<Option<i64>>,
         target_timestamp: impl Into<Option<i64>>,
     ) -> Commit<'repo> {
@@ -588,7 +589,7 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
                 &DEFAULT[..target_prefix.len().min(DEFAULT.len())]
             })
             .to_vec();
-        trace!("Brute forcing a timestamp for {target_prefix:2x?} with mask {target_mask:2x?}");
+        trace!("Brute forcing a timestamp for {target_prefix:2x?} with mask {target_mask:2x?} letter_suffix={letter_suffix}");
 
         let thread_count = num_cpus::get() as u64;
         trace!("Using {thread_count} threads");
@@ -691,15 +692,24 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
 
                         let candidate_oid = Oid::for_object("commit", candidate_body.as_ref());
 
-                        if candidate_oid
-                            .as_bytes()
+                        let oid_bytes = candidate_oid.as_bytes();
+
+                        // Check prefix matches via XOR + mask
+                        let prefix_matches = oid_bytes
                             .iter()
                             .zip(target_prefix.iter())
                             .map(|(a, b)| a ^ b)
                             .zip(target_mask.iter())
                             .map(|(x, mask)| x & *mask)
-                            .all(|x| x == 0)
-                        {
+                            .all(|x| x == 0);
+
+                        // Check letter suffix (next nibble must be a-f) if required
+                        let suffix_matches = !letter_suffix || {
+                            let idx = target_prefix.len();
+                            idx < oid_bytes.len() && (oid_bytes[idx] >> 4) >= 0xa
+                        };
+
+                        if prefix_matches && suffix_matches {
                             let mut best = best.write();
                             if best.is_none() || index < best.as_ref().unwrap().index {
                                 *best = Some(Best {
