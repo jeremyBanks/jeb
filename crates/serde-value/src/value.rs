@@ -1,5 +1,6 @@
 //! The core `Value` type representing the complete serde data model.
 
+use serde::Serialize;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
@@ -15,20 +16,21 @@ use std::hash::{Hash, Hasher};
 /// - Struct names and field names
 /// - Enum variant names and indices
 ///
-/// # Serialization (Transparent)
+/// # Serialization (Tagged Enum)
 ///
-/// `Value` serializes **transparently** - producing identical bytes to the original typed
-/// value. This works with ALL formats including bincode.
+/// `Value` serializes as a **tagged enum** - like `#[derive(Serialize)]` would produce.
+/// This works with ALL formats including bincode and postcard.
 ///
-/// # Deserialization (requires `deserialize_any`)
+/// # Deserialization (Tagged Enum)
 ///
-/// `Value` deserializes by calling [`Deserializer::deserialize_any`], which only works
-/// with **self-describing formats** (JSON, MessagePack, RON). Non-self-describing formats
-/// (bincode, postcard) will error because they can't report what type is in the byte stream.
+/// `Value` deserializes using `deserialize_enum`, which works with ALL formats.
 ///
-/// For bincode/postcard: deserialize to a typed value first, then use [`to_value()`](crate::to_value).
-/// Or use [`Meta`](crate::Meta) for Value↔Value roundtrip through any format.
-#[derive(Debug, Clone)]
+/// # Transparent Serialization
+///
+/// To serialize `Value` **transparently** (producing identical bytes to the original type),
+/// use [`Transparent(value)`](crate::Transparent). Note that `Transparent` can only
+/// deserialize from self-describing formats (JSON, MessagePack, RON).
+#[derive(Debug, Clone, Serialize)]
 #[must_use]
 pub enum Value {
     // === Primitives (14) ===
@@ -109,12 +111,12 @@ pub enum Value {
 }
 
 impl Value {
-    /// Wrap this Value in [`Meta`](crate::Meta) for tagged serialization.
+    /// Wrap this Value in [`Transparent`](crate::Transparent) for transparent serialization.
     ///
-    /// Use this when you need to serialize Value itself (preserving its enum structure)
-    /// rather than transparently serializing the data it represents.
-    pub fn meta(self) -> crate::Meta {
-        crate::Meta(self)
+    /// Use this when you need the serialized output to match the original type exactly,
+    /// rather than serializing Value as a tagged enum.
+    pub fn transparent(self) -> crate::Transparent {
+        crate::Transparent(self)
     }
 }
 
