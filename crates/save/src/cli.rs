@@ -187,8 +187,8 @@ pub struct Save {
     ///
     /// May be explicitly set to an empty string to skip brute-forcing the hash.
     ///
-    /// [default: "CCCC", representing the first four hex digits of the commit's
-    /// tree hash]
+    /// [default: the commit index modulo 10000, formatted as 4 decimal digits.
+    /// Use --tree-target to use the first 4 hex digits of the tree hash instead.]
     #[clap(
         help_heading = "COMMIT OPTIONS",
         long = "prefix",
