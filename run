@@ -20,6 +20,10 @@ declare bin=""
 declare -r warning=$'\033[1;33mWARNING:\033[0m'
 declare -r error=$'\033[1;31mERROR:\033[0m'
 
+# XXX: update the below to display the cargo build --bin command in brown and yellow instead of this in blue and cyan but the command name in blue
+echo >&2 -e "\033[1;35m\$\033[0m \033[1;34mcargo\033[0m \033[1;36mbuild --bin \033[1;34m$command\033[0m\033[0m"
+echo >&2
+
 if ! cargo build --bin "$command"; then
     echo >&2 "${warning} Failed to build \`${command}\`. Falling back to existing debug build."
 fi
