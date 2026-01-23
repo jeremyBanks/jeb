@@ -58,8 +58,9 @@ else
     fi
 fi
 
-echo >&2
-echo >&2 -e "${MAGENTA}\$${WHITE} ${CYAN}$bin${WHITE} ${BLUE}$@${WHITE}"
-echo >&2
+echo >&2 -e "${DARK_GRAY_BACKGROUND}"
+echo >&2 -e "${DARK_GRAY_BACKGROUND}  ${MAGENTA}\$${WHITE} ${CYAN}$bin${WHITE} ${BLUE}$@${WHITE}"
+echo >&2 -e "${DARK_GRAY_BACKGROUND}"
+echo >&2 -ne "${RESET}"
 
 exec "$bin" "$@"
