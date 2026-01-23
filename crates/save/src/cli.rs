@@ -554,7 +554,7 @@ pub fn main(args: Save) -> Result<()> {
     }
 
     let tree4 = tree.to_string()[..4].to_string().to_ascii_uppercase();
-    let n4 = format!("{:04}", graph_stats.commit_index % 10000);
+    let n4 = format!("{:04}c", graph_stats.commit_index % 10000);
     let default_target = if args.tree_target { tree4.clone() } else { n4 };
 
     let target = crate::hex::decode_hex_nibbles(args.prefix_hex.unwrap_or_else(|| default_target));
