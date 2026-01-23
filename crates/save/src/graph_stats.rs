@@ -301,6 +301,13 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                                 commit_map.insert(parent_id.clone(), parent);
                                 queue.push((parent_id, depth + 1));
                             } else {
+                                // Parent doesn't exist (shallow clone boundary)
+                                boundary_commits.insert(id.clone());
+                            }
+                        } else {
+                            // Parent was already visited - check if it exists
+                            // This handles the case where multiple commits share a non-existent parent
+                            if !commit_map.contains_key(&parent_id) {
                                 boundary_commits.insert(id.clone());
                             }
                         }
@@ -349,8 +356,14 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                     if parents.is_empty() {
                         break;
                     }
+                    let next_parent = parents[0].clone();
+                    // Check if the parent exists in our explored graph before counting
+                    // This handles shallow clone boundaries where the parent commit doesn't exist
+                    if !parent_map.contains_key(&next_parent) && !boundary_commits.contains(&next_parent) {
+                        break;
+                    }
                     count += 1;
-                    current_id = parents[0].clone();
+                    current_id = next_parent;
                 } else {
                     break;
                 }
