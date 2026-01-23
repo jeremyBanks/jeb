@@ -1,0 +1,40 @@
+#!/bin/bash
+set -euo pipefail
+# capture first CLI argument as the command to run,
+# and the rest as the arguments to the command.
+command="$1"
+shift
+args=("$@")
+
+bin=""
+
+warning=$'\033[1;33mWARNING:\033[0m'
+error=$'\033[1;31mERROR:\033[0m'
+
+if ! cargo build --bin "$command"; then
+    echo >&2 "${warning} Failed to build \`${command}\`. Falling back to existing debug build."
+fi
+
+if [ -x "./target/debug/$command" ]; then
+    bin="./target/debug/$command"
+elif [ -x "./target/release/$command" ]; then
+    echo >&2 "${warning} Existing debug build not found. Falling back to release build."
+    bin="./target/release/$command"
+else
+    echo >&2 "${warning} Existing builds not found. Falling back to \`cargo install\`ed binary."
+
+    if [ -x "$HOME/.cargo/bin/$command" ]; then
+        bin="$HOME/.cargo/bin/$command"
+    else
+        echo >&2 "${warning} \`cargo install\`ed binary not found for \`${command}\`. Falling back to any existing binary or alias."
+
+        if type "$command" >/dev/null 2>&1; then
+            bin="$(type -p "$command")"
+        else
+            echo >&2 "${error} No existing binary or alias found for \`${command}\`. Giving up."
+            exit 1
+        fi
+    fi
+fi
+
+"$bin" "${args[@]}"
