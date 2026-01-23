@@ -14,6 +14,20 @@ use std::hash::{Hash, Hasher};
 /// - The distinction between sequences and tuples
 /// - Struct names and field names
 /// - Enum variant names and indices
+///
+/// # Serialization (Transparent)
+///
+/// `Value` serializes **transparently** - producing identical bytes to the original typed
+/// value. This works with ALL formats including bincode.
+///
+/// # Deserialization (requires `deserialize_any`)
+///
+/// `Value` deserializes by calling [`Deserializer::deserialize_any`], which only works
+/// with **self-describing formats** (JSON, MessagePack, RON). Non-self-describing formats
+/// (bincode, postcard) will error because they can't report what type is in the byte stream.
+///
+/// For bincode/postcard: deserialize to a typed value first, then use [`to_value()`](crate::to_value).
+/// Or use [`Meta`](crate::Meta) for Value↔Value roundtrip through any format.
 #[derive(Debug, Clone)]
 #[must_use]
 pub enum Value {
@@ -92,6 +106,16 @@ pub enum Value {
         variant_index: u32,
         variant: &'static str,
     },
+}
+
+impl Value {
+    /// Wrap this Value in [`Meta`](crate::Meta) for tagged serialization.
+    ///
+    /// Use this when you need to serialize Value itself (preserving its enum structure)
+    /// rather than transparently serializing the data it represents.
+    pub fn meta(self) -> crate::Meta {
+        crate::Meta(self)
+    }
 }
 
 impl PartialEq for Value {

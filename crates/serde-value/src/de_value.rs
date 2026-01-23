@@ -1,26 +1,26 @@
 //! `Deserialize` implementation for `Value`.
-//!
-//! # Self-Describing Formats Only
-//!
-//! This implementation uses `deserialize_any`, which asks the format "what type do you have?".
-//! This works with **self-describing formats** that embed type information in the byte stream:
-//!
-//! - JSON: `{"x": 42}` → knows it's a map with string keys and integer values
-//! - MessagePack: type tags precede each value
-//! - RON: Rust-like syntax with explicit types
-//!
-//! **Non-self-describing formats** (bincode, postcard) cannot deserialize directly to `Value`
-//! because they don't embed type information - they rely on the deserializer knowing the
-//! expected type upfront. For these formats, deserialize to a typed value first, then use
-//! `to_value()` to convert.
-//!
-//! Note: Serialization TO these formats works perfectly (see `ser.rs`) - it's only
-//! deserialization FROM them that requires type information.
 
+use crate::intern::intern_string_owned;
 use crate::Value;
 use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
 use std::fmt;
 
+/// # Requires `deserialize_any`
+///
+/// This implementation calls [`Deserializer::deserialize_any`], which asks the format:
+/// "what type do you have?". This only works with **self-describing formats**:
+///
+/// | Format | Works? | Why |
+/// |--------|--------|-----|
+/// | JSON | Yes | `{"x": 42}` embeds type info (object, string keys, number values) |
+/// | MessagePack | Yes | Type tags precede each value |
+/// | RON | Yes | Rust-like syntax with explicit types |
+/// | bincode | **No** | No type info in byte stream |
+/// | postcard | **No** | No type info in byte stream |
+///
+/// For non-self-describing formats, deserialize to a typed value first, then use
+/// [`to_value()`](crate::to_value) to convert. Or use [`Meta`](crate::Meta) for
+/// Value↔Value roundtrip.
 impl<'de> Deserialize<'de> for Value {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         deserializer.deserialize_any(ValueVisitor)
@@ -146,7 +146,7 @@ impl<'de> Visitor<'de> for ValueVisitor {
         let (variant, variant_access) = access.variant::<String>()?;
         variant_access.unit_variant()?;
 
-        let variant_static: &'static str = Box::leak(variant.into_boxed_str());
+        let variant_static: &'static str = intern_string_owned(variant);
 
         Ok(Value::UnitVariant {
             enum_name: "",
