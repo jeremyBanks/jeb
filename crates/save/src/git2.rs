@@ -1,13 +1,11 @@
 //! Extending [`::git2`] (`libgit2`).
 
 use {
-    crate::{
-        graph_stats::{
-            CommitView,
-            RepositoryView,
-        },
-        zigzag::ZugZug,
+    crate::graph_stats::{
+        CommitView,
+        RepositoryView,
     },
+    jeb_common::bi::scatter_triangle,
     ::{
         core::{
             borrow::Borrow,
@@ -677,7 +675,9 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
                             }
                         }
 
-                        let (d_author, d_committer) = index.zugzug();
+                        let (d_author, d_committer): (i32, i32) = scatter_triangle(index);
+                        let (d_author, d_committer): (i64, i64) =
+                            (d_author.into(), d_committer.into());
 
                         let author_timestamp = target_timestamp + d_author;
                         let committer_timestamp = target_timestamp + d_committer;
