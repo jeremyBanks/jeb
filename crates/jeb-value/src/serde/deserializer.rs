@@ -47,9 +47,9 @@ impl<'de> de::Deserializer<'de> for Value {
             }
             Value::String(s) => visitor.visit_string(s.into_inner()),
             Value::Bytes(b) => visitor.visit_byte_buf(b.into_inner()),
-            Value::Array(a) => visitor.visit_seq(SeqDeserializer::new(a)),
-            Value::StringMap(m) => visitor.visit_map(StringMapDeserializer::new(m)),
-            Value::BytesMap(m) => visitor.visit_map(BytesMapDeserializer::new(m)),
+            Value::Array(a) => visitor.visit_seq(SeqDeserializer::new(a.into())),
+            Value::StringMap(m) => visitor.visit_map(StringMapDeserializer::new(m.into())),
+            Value::BytesMap(m) => visitor.visit_map(BytesMapDeserializer::new(m.into())),
         }
     }
 
@@ -387,7 +387,7 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::Array(arr) => visitor.visit_seq(SeqDeserializer::new(arr)),
+            Value::Array(arr) => visitor.visit_seq(SeqDeserializer::new(arr.into())),
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a sequence")),
         }
     }
@@ -416,8 +416,8 @@ impl<'de> de::Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
-            Value::StringMap(m) => visitor.visit_map(StringMapDeserializer::new(m)),
-            Value::BytesMap(m) => visitor.visit_map(BytesMapDeserializer::new(m)),
+            Value::StringMap(m) => visitor.visit_map(StringMapDeserializer::new(m.into())),
+            Value::BytesMap(m) => visitor.visit_map(BytesMapDeserializer::new(m.into())),
             Value::Array(arr) => {
                 if arr.is_empty() {
                     visitor.visit_map(PairsDeserializer::new(Vec::new()))
@@ -446,7 +446,7 @@ impl<'de> de::Deserializer<'de> for Value {
         match self {
             Value::StringMap(m) => visitor.visit_map(StringMapDeserializer::new(m)),
             Value::BytesMap(m) => visitor.visit_map(BytesMapDeserializer::new(m)),
-            Value::Array(arr) => visitor.visit_seq(SeqDeserializer::new(arr)),
+            Value::Array(arr) => visitor.visit_seq(SeqDeserializer::new(arr.into())),
             _ => Err(SerdeError::invalid_type(self.unexpected(), "a struct")),
         }
     }
