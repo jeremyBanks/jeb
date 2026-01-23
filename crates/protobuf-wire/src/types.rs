@@ -51,7 +51,8 @@ pub enum Value {
     Varint(u64),
 
     /// Wire type 1: I64
-    /// Fixed 64-bit value, stored as native integer (wire format is little-endian).
+    /// Fixed 64-bit value, stored as native integer (wire format is
+    /// little-endian).
     I64(i64),
 
     /// Wire type 2: LEN
@@ -63,6 +64,7 @@ pub enum Value {
     Group(Vec<Record>),
 
     /// Wire type 5: I32
-    /// Fixed 32-bit value, stored as native integer (wire format is little-endian).
+    /// Fixed 32-bit value, stored as native integer (wire format is
+    /// little-endian).
     I32(i32),
 }

@@ -1,9 +1,15 @@
 //! Serialization logic for the protobuf wire format.
 
-use crate::error::SerializeError;
-use crate::types::{Message, Record, Value};
-use crate::varint::encode_varint_into;
-use crate::wire_type::WireType;
+use crate::{
+    error::SerializeError,
+    types::{
+        Message,
+        Record,
+        Value,
+    },
+    varint::encode_varint_into,
+    wire_type::WireType,
+};
 
 /// Maximum valid field number (2^29 - 1).
 const MAX_FIELD_NUMBER: u32 = 536_870_911;

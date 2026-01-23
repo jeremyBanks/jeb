@@ -1,6 +1,9 @@
 use std::{
     collections::HashSet,
-    sync::{LazyLock, Mutex},
+    sync::{
+        LazyLock,
+        Mutex,
+    },
 };
 
 static INTERNED_STRINGS: LazyLock<Mutex<HashSet<&'static str>>> =

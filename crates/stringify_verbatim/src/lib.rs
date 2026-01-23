@@ -4,8 +4,13 @@
 //! spaces, `stringify_verbatim!` uses span information to reconstruct the
 //! original formatting.
 
-use proc_macro::TokenStream;
-use proc_macro2::{LineColumn, TokenTree};
+use {
+    proc_macro::TokenStream,
+    proc_macro2::{
+        LineColumn,
+        TokenTree,
+    },
+};
 
 #[proc_macro]
 pub fn stringify_verbatim(input: TokenStream) -> TokenStream {
@@ -66,7 +71,8 @@ fn reconstruct(tts: &[TokenTree]) -> String {
         return String::new();
     }
 
-    // Use the first token's column as the base - all other columns will be relative to this
+    // Use the first token's column as the base - all other columns will be relative
+    // to this
     let base_column = tts.first().map(|tt| tt.span().start().column).unwrap_or(0);
 
     let mut result = String::new();
@@ -119,10 +125,15 @@ fn compute_whitespace_relative(from: LineColumn, to: LineColumn, base_column: us
     }
 }
 
-/// Process a token tree. `fixed_indent` is Some when we're in "fixed indentation mode"
-/// (parent had wrong span info), which propagates to all nested groups.
-/// `base_column` is the statement's first token's column, used to compute relative indentation.
-fn token_to_string_inner(tt: &TokenTree, fixed_indent: Option<usize>, base_column: usize) -> String {
+/// Process a token tree. `fixed_indent` is Some when we're in "fixed
+/// indentation mode" (parent had wrong span info), which propagates to all
+/// nested groups. `base_column` is the statement's first token's column, used
+/// to compute relative indentation.
+fn token_to_string_inner(
+    tt: &TokenTree,
+    fixed_indent: Option<usize>,
+    base_column: usize,
+) -> String {
     match tt {
         TokenTree::Group(g) => {
             let inner: Vec<TokenTree> = g.stream().into_iter().collect();
@@ -144,15 +155,12 @@ fn token_to_string_inner(tt: &TokenTree, fixed_indent: Option<usize>, base_colum
 
             // Check if group span seems wrong (big jump to first inner token)
             let group_span_wrong = {
-                let line_diff = if first_start.line > group_start.line {
-                    first_start.line - group_start.line
-                } else {
-                    group_start.line - first_start.line
-                };
+                let line_diff = first_start.line.abs_diff(group_start.line);
                 line_diff > 4
             };
 
-            // Use fixed indentation mode if parent was in it, or if this group's span is wrong
+            // Use fixed indentation mode if parent was in it, or if this group's span is
+            // wrong
             let use_fixed = fixed_indent.is_some() || group_span_wrong;
 
             if use_fixed && g.delimiter() == proc_macro2::Delimiter::Brace {
@@ -176,7 +184,10 @@ fn token_to_string_inner(tt: &TokenTree, fixed_indent: Option<usize>, base_colum
             } else {
                 // Normal span-based reconstruction with relative columns
                 let leading = compute_whitespace_relative(
-                    LineColumn { line: group_start.line, column: group_start.column + 1 },
+                    LineColumn {
+                        line: group_start.line,
+                        column: group_start.column + 1,
+                    },
                     first_start,
                     base_column,
                 );
@@ -201,7 +212,8 @@ fn token_to_string_inner(tt: &TokenTree, fixed_indent: Option<usize>, base_colum
     }
 }
 
-/// Reconstruct inner token stream with a shared base_column for relative indentation
+/// Reconstruct inner token stream with a shared base_column for relative
+/// indentation
 fn reconstruct_inner(tts: &[TokenTree], base_column: usize) -> String {
     if tts.is_empty() {
         return String::new();
@@ -226,7 +238,8 @@ fn reconstruct_inner(tts: &[TokenTree], base_column: usize) -> String {
     result
 }
 
-/// Reconstruct token stream with fixed indentation (for groups with wrong spans)
+/// Reconstruct token stream with fixed indentation (for groups with wrong
+/// spans)
 fn reconstruct_with_indent(tts: &[TokenTree], base_indent: usize) -> String {
     if tts.is_empty() {
         return String::new();

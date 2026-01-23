@@ -1,9 +1,15 @@
 //! Parsing logic for the protobuf wire format.
 
-use crate::error::ParseError;
-use crate::types::{Message, Record, Value};
-use crate::varint::decode_varint;
-use crate::wire_type::WireType;
+use crate::{
+    error::ParseError,
+    types::{
+        Message,
+        Record,
+        Value,
+    },
+    varint::decode_varint,
+    wire_type::WireType,
+};
 
 /// Maximum valid field number (2^29 - 1).
 const MAX_FIELD_NUMBER: u32 = 536_870_911;
@@ -73,8 +79,13 @@ impl<'a> Parser<'a> {
         Ok((field_number, wire_type))
     }
 
-    /// Parse a message, optionally stopping at an EGROUP with the given field number.
-    fn parse_message(&mut self, group_field: Option<u32>, depth: usize) -> Result<Message, ParseError> {
+    /// Parse a message, optionally stopping at an EGROUP with the given field
+    /// number.
+    fn parse_message(
+        &mut self,
+        group_field: Option<u32>,
+        depth: usize,
+    ) -> Result<Message, ParseError> {
         if depth > MAX_DEPTH {
             return Err(ParseError::NestingTooDeep);
         }
@@ -123,7 +134,12 @@ impl<'a> Parser<'a> {
     }
 
     /// Read a value based on wire type.
-    fn read_value(&mut self, field_number: u32, wire_type: WireType, depth: usize) -> Result<Value, ParseError> {
+    fn read_value(
+        &mut self,
+        field_number: u32,
+        wire_type: WireType,
+        depth: usize,
+    ) -> Result<Value, ParseError> {
         match wire_type {
             WireType::Varint => {
                 let value = self.read_varint()?;

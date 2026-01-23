@@ -11,7 +11,8 @@ const MAX_VARINT_BYTES: usize = 10;
 /// Decode a varint from a byte slice.
 ///
 /// Returns the decoded value and the number of bytes consumed.
-/// Non-canonical encodings (extra zero bytes) are accepted but logged as warnings.
+/// Non-canonical encodings (extra zero bytes) are accepted but logged as
+/// warnings.
 pub fn decode_varint(bytes: &[u8]) -> Result<(u64, usize), ParseError> {
     let mut result: u64 = 0;
     let mut shift: u32 = 0;
@@ -40,7 +41,8 @@ pub fn decode_varint(bytes: &[u8]) -> Result<(u64, usize), ParseError> {
             let canonical_len = canonical_varint_len(result);
             if i + 1 > canonical_len {
                 log::warn!(
-                    "Non-canonical varint encoding: {} bytes used for value {} (canonical: {} bytes)",
+                    "Non-canonical varint encoding: {} bytes used for value {} (canonical: {} \
+                     bytes)",
                     i + 1,
                     result,
                     canonical_len

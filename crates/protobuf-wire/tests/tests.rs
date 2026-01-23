@@ -1,6 +1,13 @@
 //! Comprehensive tests for protobuf-wire format implementation.
 
-use protobuf_wire::{Message, ParseError, Record, SerializeError, Value, WireType};
+use protobuf_wire::{
+    Message,
+    ParseError,
+    Record,
+    SerializeError,
+    Value,
+    WireType,
+};
 
 // ============================================================================
 // Wire Type Tests
@@ -20,7 +27,10 @@ fn test_wire_type_from_u8_valid() {
 fn test_wire_type_from_u8_invalid() {
     assert_eq!(WireType::from_u8(6), Err(ParseError::InvalidWireType(6)));
     assert_eq!(WireType::from_u8(7), Err(ParseError::InvalidWireType(7)));
-    assert_eq!(WireType::from_u8(255), Err(ParseError::InvalidWireType(255)));
+    assert_eq!(
+        WireType::from_u8(255),
+        Err(ParseError::InvalidWireType(255))
+    );
 }
 
 // ============================================================================
@@ -372,7 +382,10 @@ fn test_parse_unterminated_group() {
     // SGROUP without matching EGROUP
     let bytes = vec![0x0B, 0x08, 0x01]; // field 1 SGROUP, field 1 varint 1
     let result = Message::parse(&bytes);
-    assert_eq!(result, Err(ParseError::UnterminatedGroup { field_number: 1 }));
+    assert_eq!(
+        result,
+        Err(ParseError::UnterminatedGroup { field_number: 1 })
+    );
 }
 
 #[test]
@@ -424,7 +437,9 @@ fn test_i64_encoding_format() {
     let bytes = msg.serialize().unwrap();
     // Tag: field 1, wire type 1 = (1 << 3) | 1 = 0x09
     // Value: 1 as little-endian 8 bytes
-    assert_eq!(bytes, vec![0x09, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    assert_eq!(bytes, vec![
+        0x09, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    ]);
 }
 
 #[test]
@@ -534,8 +549,8 @@ fn test_roundtrip_normalizes_varints() {
 fn test_realistic_message() {
     // Simulate a message like: { id: 1, name: "test", nested: { value: 42 } }
     let msg = Message::from_records(vec![
-        Record::new(1, Value::Varint(1)),                          // id
-        Record::new(2, Value::LenDelimited(b"test".to_vec())),     // name
+        Record::new(1, Value::Varint(1)),                      // id
+        Record::new(2, Value::LenDelimited(b"test".to_vec())), // name
         Record::new(
             3,
             Value::Group(vec![Record::new(1, Value::Varint(42))]), // nested.value
@@ -586,13 +601,10 @@ fn test_parse_error_display() {
         "field number must be in range 1 to 536870911"
     );
     assert_eq!(
-        format!(
-            "{}",
-            ParseError::MismatchedGroupEnd {
-                expected: 1,
-                found: 2
-            }
-        ),
+        format!("{}", ParseError::MismatchedGroupEnd {
+            expected: 1,
+            found: 2
+        }),
         "mismatched group end: expected field 1, found field 2"
     );
     assert_eq!(

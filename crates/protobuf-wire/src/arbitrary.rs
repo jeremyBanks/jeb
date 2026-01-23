@@ -1,7 +1,17 @@
 //! Implementation of the `Arbitrary` trait for fuzz testing.
 
-use crate::{Message, Record, Value, WireType};
-use arbitrary::{Arbitrary, Unstructured};
+use {
+    crate::{
+        Message,
+        Record,
+        Value,
+        WireType,
+    },
+    arbitrary::{
+        Arbitrary,
+        Unstructured,
+    },
+};
 
 /// Maximum valid field number (2^29 - 1).
 const MAX_FIELD_NUMBER: u32 = 536_870_911;

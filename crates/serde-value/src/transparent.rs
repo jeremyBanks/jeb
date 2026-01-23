@@ -36,8 +36,6 @@
 //!   only works with self-describing formats
 
 // Alias to avoid collision with Value::Some
-use std::option::Option::Some as StdSome;
-
 use {
     crate::Value,
     serde::{
@@ -61,7 +59,10 @@ use {
             Serializer,
         },
     },
-    std::fmt,
+    std::{
+        fmt,
+        option::Option::Some as StdSome,
+    },
 };
 
 /// Wrapper that serializes `Value` transparently, producing identical bytes to
