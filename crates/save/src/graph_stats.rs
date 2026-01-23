@@ -202,21 +202,28 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             };
         }
         // Try to trust HEAD's message first (works for both limited and unlimited depth)
+        eprintln!("[CALC] early trust check: trust_messages={}", self.trust_messages);
         if self.trust_messages {
             if let Some(summary) = head.summary() {
+                eprintln!("[CALC] summary={:?}", summary);
                 if let Some(parsed) = MessageParser::parse(&summary) {
-                    if MessageParser::validate(self.repo, head, &summary, &parsed) {
+                    eprintln!("[CALC] parsed: r{} origin={:?} prefix={:?}", parsed.revision_index, parsed.origin, parsed.prefix);
+                    let validates = MessageParser::validate(self.repo, head, &summary, &parsed);
+                    eprintln!("[CALC] validates={}", validates);
+                    if validates {
                         let trusted = match parsed.prefix {
                             MessagePrefix::Regular if !is_shallow => true,
                             MessagePrefix::Shallow if is_shallow => true,
                             _ => false,
                         };
+                        eprintln!("[CALC] trusted={} (is_shallow={})", trusted, is_shallow);
                         if trusted {
                             let generation_index =
                                 parsed.generation_index.unwrap_or(parsed.revision_index) + 1;
                             let commit_index = parsed.commit_index.unwrap_or_else(|| {
                                 parsed.generation_index.unwrap_or(parsed.revision_index)
                             }) + 1;
+                            eprintln!("[CALC] EARLY RETURN: r{} g{} n{}", parsed.revision_index + 1, generation_index, commit_index);
                             return GraphStats {
                                 revision_index: parsed.revision_index + 1,
                                 generation_index,
@@ -226,9 +233,14 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                             };
                         }
                     }
+                } else {
+                    eprintln!("[CALC] parse failed");
                 }
+            } else {
+                eprintln!("[CALC] no summary");
             }
         }
+        eprintln!("[CALC] falling through to scan");
         if unlimited_depth {
             self.full_graph_walk(head, is_shallow, unlimited_depth)
         } else {
