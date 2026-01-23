@@ -1384,6 +1384,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "jeb-tracing"
+version = "0.0.0-dev-2026-01-19.4531"
+dependencies = [
+ "color-eyre",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "jeb-value"
 version = "0.0.0-dev-2026-01-19.4531"
 dependencies = [
