@@ -39,11 +39,33 @@ backward-looking context when it's important.
 
 ---
 
+If you need to add a new reusable script to the workspace: generally, we prefer
+to create scripts as Rust programs instead of bash, see
+`crates/_scripts/src/bin`.
+
+Examples that aren't specific to a single crate, or code we're sketching out and
+haven't decided where to put yet, is sometimes placed in
+`crates/_examples/examples`.
+
+---
+
 Crates that are internal-only and not meant to be published in the near future
 are named with underscores (instead of hyphens) and have a leading underscore
 prefix, to mark them as internal and prevent any potential clashes with real
-crate names. If we need to run these, we typically do so with
-`cargo run --bin NAME --`.
+crate names.
+
+---
+
+`./run` is a wrapper around `cargo run`-like behavior, but falling back to
+existing builds or system installations of tools, if we aren't able to (re)build
+a local copy. This is to mitigate the pain of self-hosting tools inside of our
+own workspace, where changes we're making might break our ability to build the
+tools we want to use while continuing to work on fixing that code!
+
+Therefore any binary implemented in this workspace that we're running as part of
+our workflow (not for the sake of developing/testing them, but to use them for
+their intended purpose) should be run through `./run <command> <args...>`.
+instead of `cargo run --bin <command> -- <args...>`.
 
 ---
 
