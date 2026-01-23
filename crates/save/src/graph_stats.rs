@@ -243,6 +243,8 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         let mut parent_map: HashMap<_, Vec<_>> = HashMap::new();
         let mut z_commits = HashSet::new();
         let mut boundary_commits = HashSet::new();
+        // Store parsed stats from trusted boundary commits
+        let mut trusted_stats: HashMap<_, ParsedMessage> = HashMap::new();
         let mut queue: Vec<(_, usize)> = vec![(head.id(), 0)];
         visited.insert(head.id());
         commit_map.insert(head.id(), head.clone());
@@ -253,33 +255,34 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 let should_continue = if depth == 0 {
                     true
                 } else {
-                    let has_trusted = if self.trust_messages {
+                    let trusted_parsed = if self.trust_messages {
                         if let Some(summary) = commit.summary() {
                             if let Some(parsed) = MessageParser::parse(&summary) {
                                 if MessageParser::validate(self.repo, &commit, &summary, &parsed) {
                                     if parsed.prefix == MessagePrefix::ZMode {
                                         z_commits.insert(id.clone());
-                                        false
+                                        None
                                     } else {
                                         match parsed.prefix {
-                                            MessagePrefix::Regular if !is_shallow => true,
-                                            MessagePrefix::Shallow if is_shallow => true,
-                                            _ => false,
+                                            MessagePrefix::Regular if !is_shallow => Some(parsed),
+                                            MessagePrefix::Shallow if is_shallow => Some(parsed),
+                                            _ => None,
                                         }
                                     }
                                 } else {
-                                    false
+                                    None
                                 }
                             } else {
-                                false
+                                None
                             }
                         } else {
-                            false
+                            None
                         }
                     } else {
-                        false
+                        None
                     };
-                    if has_trusted {
+                    if let Some(parsed) = trusted_parsed {
+                        trusted_stats.insert(id.clone(), parsed);
                         boundary_commits.insert(id.clone());
                         false
                     } else if depth >= max_depth {
@@ -309,6 +312,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         }
         let z_mode = hit_depth_limit;
         if z_mode {
+            // In z-mode, also trust z commits we collected
             let z_commits_vec: Vec<_> = z_commits.iter().cloned().collect();
             for z_id in z_commits_vec {
                 if let Some(commit) = commit_map.get(&z_id) {
@@ -317,16 +321,27 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                             if MessageParser::validate(self.repo, commit, &summary, &parsed)
                                 && parsed.prefix == MessagePrefix::ZMode
                             {
+                                trusted_stats.insert(z_id.clone(), parsed);
                             }
                         }
                     }
                 }
             }
         }
+        // Calculate revision_index: count along first-parent chain, adding trusted stats
         let revision_index = {
-            let mut count = 0;
+            let mut count = 0u32;
             let mut current_id = head.id();
             loop {
+                // If we hit a trusted boundary, add its revision_index and stop
+                // count = number of hops from head to here
+                // boundary's revision_index = position of boundary in chain
+                // so total = boundary position + hops from boundary to head
+                if let Some(parsed) = trusted_stats.get(&current_id) {
+                    count += parsed.revision_index;
+                    break;
+                }
+                // If we hit an untrusted boundary (e.g., depth limit), stop
                 if boundary_commits.contains(&current_id) {
                     break;
                 }
@@ -343,12 +358,13 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             count
         };
         let generation_index =
-            self.calculate_generation_bounded(&parent_map, &head.id(), &boundary_commits);
-        let commit_index = visited.len().saturating_sub(1) as u32;
+            self.calculate_generation_bounded(&parent_map, &head.id(), &boundary_commits, &trusted_stats);
+        let commit_index = self.calculate_commit_index_bounded(&visited, &trusted_stats);
+        // Calculate origin: prefer origin from trusted commits on first-parent chain
         let origin = if revision_index == 0 {
             None
         } else {
-            self.calculate_origin_bounded(&parent_map, &commit_map, &boundary_commits)
+            self.calculate_origin_bounded(&parent_map, &commit_map, &boundary_commits, &trusted_stats)
         };
         GraphStats {
             revision_index,
@@ -365,10 +381,19 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
         head_id: &<R::Commit as CommitView>::Id,
         boundary_commits: &HashSet<<R::Commit as CommitView>::Id>,
+        trusted_stats: &HashMap<<R::Commit as CommitView>::Id, ParsedMessage>,
     ) -> u32 {
         let mut distances = HashMap::new();
+        // Initialize distances for boundary commits
+        // For trusted boundaries, use their generation_index as the base
+        // For untrusted boundaries (depth limit), use 0
         for boundary_id in boundary_commits {
-            distances.insert(boundary_id.clone(), 0);
+            let base_gen = if let Some(parsed) = trusted_stats.get(boundary_id) {
+                parsed.generation_index.unwrap_or(parsed.revision_index)
+            } else {
+                0
+            };
+            distances.insert(boundary_id.clone(), base_gen);
         }
         let mut processed = HashSet::new();
         let mut max_distance = 0;
@@ -378,16 +403,11 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             distances: &mut HashMap<Id, u32>,
             processed: &mut HashSet<Id>,
             max_distance: &mut u32,
-            boundary_commits: &HashSet<Id>,
         ) -> u32 {
             if let Some(&dist) = distances.get(id) {
                 return dist;
             }
             if !processed.insert(id.clone()) {
-                return 0;
-            }
-            if boundary_commits.contains(id) {
-                distances.insert(id.clone(), 0);
                 return 0;
             }
             let parents = parent_map.get(id).map(Vec::as_slice).unwrap_or(&[]);
@@ -400,7 +420,6 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                         distances,
                         processed,
                         max_distance,
-                        boundary_commits,
                     )
                 })
                 .max()
@@ -418,18 +437,68 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             &mut distances,
             &mut processed,
             &mut max_distance,
-            boundary_commits,
         );
         max_distance
     }
 
+    /// Calculate commit index for bounded graph, adding trusted stats.
+    fn calculate_commit_index_bounded(
+        &self,
+        visited: &HashSet<<R::Commit as CommitView>::Id>,
+        trusted_stats: &HashMap<<R::Commit as CommitView>::Id, ParsedMessage>,
+    ) -> u32 {
+        // Start with the commits we actually visited (minus 1 for the current commit)
+        let mut count = visited.len().saturating_sub(1) as u32;
+        // Add commit_index from all trusted boundaries
+        for parsed in trusted_stats.values() {
+            let trusted_commit_index = parsed.commit_index.unwrap_or_else(|| {
+                parsed.generation_index.unwrap_or(parsed.revision_index)
+            });
+            count += trusted_commit_index;
+        }
+        count
+    }
+
     /// Calculate origin for bounded graph.
+    ///
+    /// If all boundaries have trusted origins that match, use that origin.
+    /// Otherwise, fall back to calculating from the boundary commit IDs.
     fn calculate_origin_bounded(
         &self,
         _parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
         commit_map: &HashMap<<R::Commit as CommitView>::Id, R::Commit>,
         boundary_commits: &HashSet<<R::Commit as CommitView>::Id>,
+        trusted_stats: &HashMap<<R::Commit as CommitView>::Id, ParsedMessage>,
     ) -> Option<u16> {
+        // Collect trusted origins from boundary commits
+        let trusted_origins: Vec<u16> = boundary_commits
+            .iter()
+            .filter_map(|id| trusted_stats.get(id))
+            .filter_map(|parsed| parsed.origin)
+            .collect();
+
+        // If we have trusted origins, check if they all agree
+        if !trusted_origins.is_empty() {
+            let first = trusted_origins[0];
+            if trusted_origins.iter().all(|&o| o == first) {
+                return Some(first);
+            }
+            // If trusted origins disagree, hash them together
+            use sha1::{
+                Digest,
+                Sha1,
+            };
+            let mut hasher = Sha1::new();
+            let mut sorted_origins: Vec<u16> = trusted_origins.clone();
+            sorted_origins.sort();
+            for origin in sorted_origins {
+                hasher.update(origin.to_be_bytes());
+            }
+            let hash = hasher.finalize();
+            return Some(u16::from_be_bytes([hash[18], hash[19]]));
+        }
+
+        // Fall back to calculating from boundary commit IDs (for untrusted boundaries)
         let mut roots: Vec<_> = boundary_commits
             .iter()
             .filter_map(|id| commit_map.get(id))
