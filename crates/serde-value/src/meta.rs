@@ -218,11 +218,9 @@ struct MetaVisitor;
 /// - **Strings**: as variant name (caller does lookup)
 /// - **Bytes**: as variant name if valid UTF-8
 /// - **Floats**: as variant index if exact integer (no fractional part, in range)
-/// - **Char**: as single-character variant name
-/// - **Some(x)**: unwraps and recurses
 ///
 /// Rejects (no sensible mapping exists):
-/// - Bool, Unit, None, Sequences, Maps
+/// - Bool, Char, Unit, None, Some, Sequences, Maps
 enum VariantId {
     Index(u32),
     Name(String),
@@ -342,17 +340,7 @@ impl<'de> Deserialize<'de> for VariantId {
                 }
             }
 
-            // === Char: single-character variant name ===
-            fn visit_char<E: de::Error>(self, v: char) -> Result<VariantId, E> {
-                Ok(VariantId::Name(v.to_string()))
-            }
-
-            // === Some: unwrap and recurse ===
-            fn visit_some<D: Deserializer<'de>>(self, deserializer: D) -> Result<VariantId, D::Error> {
-                VariantId::deserialize(deserializer)
-            }
-
-            // All other types (bool, unit, none, seq, map) have no sensible mapping.
+            // All other types (bool, char, unit, none, some, seq, map) have no sensible mapping.
             // The default Visitor implementations return "invalid type" errors.
         }
 
