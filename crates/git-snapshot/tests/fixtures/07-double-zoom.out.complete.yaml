@@ -1,0 +1,115 @@
+HEAD: refs/heads/full-tree
+refs:
+  heads:
+    full-tree: 093664f836ba2a4323d10057c5ffcd0295d108ad
+    subtree: 8a3c6fc6073d56b928981a43877bb70e76f9cb56
+68b35f2d7d9a18b71b1dfb86e1ce5d8313394df3:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    config.yaml: 'version: 1'
+    modules:
+      core:
+        init.rs: fn init() {}
+      extra:
+        addon.rs: fn addon() {}
+2c1b644586cf1ae704718baa3fe1112e1e9947cc:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - 68b35f2d7d9a18b71b1dfb86e1ce5d8313394df3
+  tree:
+    config.yaml: 'version: 2'
+c73f1364b4b206c9c691c8eb4f680b27edf53292:
+  author: git-zoom-in <git-zoom-in@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: git-zoom-in seed
+  parents: []
+  tree: {}
+f3b1e83cfcac119f6cd0dcc2f036c0ffa17d0617:
+  author: git-zoom-in <git-zoom-in@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'modules/core'
+
+    git-zoom-in: modules/core
+  parents:
+  - c73f1364b4b206c9c691c8eb4f680b27edf53292
+  - 2c1b644586cf1ae704718baa3fe1112e1e9947cc
+  tree:
+    init.rs: fn init() {}
+1ef9cf86dd870df536be1a230b7fbe5c6e07723f:
+  author: git-zoom-out <git-zoom-out@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'modules/core'
+
+    git-zoom-out: modules/core
+  parents:
+  - 2c1b644586cf1ae704718baa3fe1112e1e9947cc
+  - f3b1e83cfcac119f6cd0dcc2f036c0ffa17d0617
+ea815c5f8a57cdc44d2cb5928cf9c0d9124871aa:
+  author: git-zoom-out <git-zoom-out@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: commit 6
+  parents:
+  - 1ef9cf86dd870df536be1a230b7fbe5c6e07723f
+  tree:
+    modules:
+      extra:
+        plugin.rs: fn plugin() {}
+d7e13858351acd1bdb58b8e89dedc9a3b065aab0:
+  author: git-zoom-in <git-zoom-in@localhost>
+  author-date: 2024-12-06T06:33:44-06:24
+  commit-date: 2024-12-06T06:33:47-06:24
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'modules/core'
+
+    git-zoom-in: modules/core
+  parents:
+  - f3b1e83cfcac119f6cd0dcc2f036c0ffa17d0617
+  - ea815c5f8a57cdc44d2cb5928cf9c0d9124871aa
+  tree:
+    init.rs: null
+8a3c6fc6073d56b928981a43877bb70e76f9cb56:
+  author: git-zoom-in <git-zoom-in@localhost>
+  author-date: 2024-12-06T06:38:00-06:24
+  commit-date: 2024-12-06T06:38:03-06:24
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: commit 8
+  parents:
+  - d7e13858351acd1bdb58b8e89dedc9a3b065aab0
+  tree:
+    cleanup.rs: fn cleanup() {}
+093664f836ba2a4323d10057c5ffcd0295d108ad:
+  author: git-zoom-out <git-zoom-out@localhost>
+  author-date: 2024-12-06T06:42:16-06:24
+  commit-date: 2024-12-06T06:42:19-06:24
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'modules/core'
+
+    git-zoom-out: modules/core
+  parents:
+  - ea815c5f8a57cdc44d2cb5928cf9c0d9124871aa
+  - 8a3c6fc6073d56b928981a43877bb70e76f9cb56
+  tree:
+    modules:
+      core:
+        cleanup.rs: fn cleanup() {}

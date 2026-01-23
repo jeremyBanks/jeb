@@ -1,0 +1,77 @@
+# Test complex commit ordering with multiple merge patterns
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 10
+    feature-a: 5
+    feature-b: 8
+
+# Main line
+1:
+  parents: []
+  tree:
+    main.txt: "initial"
+
+2:
+  tree:
+    main.txt: "main commit 2"
+
+# Feature A branch
+3:
+  parents: [1]
+  tree:
+    feature-a.txt: "feature a work"
+
+4:
+  parents: [3]
+  tree:
+    feature-a.txt: "feature a more work"
+
+5:
+  parents: [4]
+  tree:
+    feature-a.txt: "feature a complete"
+
+# Merge feature A into main
+6:
+  parents: [2, 5]
+  tree:
+    main.txt: "main commit 2"
+    feature-a.txt:
+      [commit]: 5
+      [path]: feature-a.txt
+
+# Feature B branch (from earlier main)
+7:
+  parents: [2]
+  tree:
+    feature-b.txt: "feature b work"
+
+8:
+  parents: [7]
+  tree:
+    feature-b.txt: "feature b complete"
+
+# Merge feature B into main
+9:
+  parents: [6, 8]
+  tree:
+    main.txt: "main commit 2"
+    feature-a.txt:
+      [commit]: 5
+      [path]: feature-a.txt
+    feature-b.txt:
+      [commit]: 8
+      [path]: feature-b.txt
+
+# Final commit on main
+10:
+  tree:
+    main.txt: "main final"
+    feature-a.txt:
+      [commit]: 5
+      [path]: feature-a.txt
+    feature-b.txt:
+      [commit]: 8
+      [path]: feature-b.txt

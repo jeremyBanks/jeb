@@ -1,0 +1,61 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 9ff59b6663c73e0cfa2dd70daab99f737929fe3d
+870b5f773aa1b5c458f7e41474e3c9ea64eeea5e:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents: []
+  tree:
+    shared:
+      file.txt: from second parent - different
+992ef18a73567bbfdeec7b63ecb60873a2aba075:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    shared:
+      file.txt: from first parent
+6d5f7d0884bc120448975a94bf428b24c46e4136:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents:
+  - 992ef18a73567bbfdeec7b63ecb60873a2aba075
+  tree:
+    main.txt: main only
+    shared:
+      file.txt: updated on first
+523f3670fb0ca0668798e019f03a7267dba2ba73:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 4
+  parents:
+  - 870b5f773aa1b5c458f7e41474e3c9ea64eeea5e
+  tree:
+    other.txt: other only
+    shared:
+      file.txt: updated on second
+9ff59b6663c73e0cfa2dd70daab99f737929fe3d:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: commit 5
+  parents:
+  - 6d5f7d0884bc120448975a94bf428b24c46e4136
+  - 523f3670fb0ca0668798e019f03a7267dba2ba73
+  tree:
+    other.txt: other only
+    shared:
+      file.txt: merged content

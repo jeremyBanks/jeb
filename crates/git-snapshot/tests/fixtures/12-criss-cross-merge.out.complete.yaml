@@ -1,0 +1,68 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    feature: 450d5784977ba3892cbfba1f64b400476048cdb6
+    main: 755f50c4b216df71fd241f259b495ec3ff073b2e
+92e399e773ba5144e9477e2cd05c316f98a7bf14:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    base.txt: base
+253ed86a46a341b537acc91c5ab1c1575f7aba4b:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - 92e399e773ba5144e9477e2cd05c316f98a7bf14
+  tree:
+    main-work.txt: main work 1
+c5c746d7b3762c7fd34f53098ac90bffaf98d764:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents:
+  - 92e399e773ba5144e9477e2cd05c316f98a7bf14
+  tree:
+    feature-work.txt: feature work 1
+9ecb6fd64f2a6f31de2d1b3fa189f446319647f5:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: Merge feature into main (first time)
+  parents:
+  - 253ed86a46a341b537acc91c5ab1c1575f7aba4b
+  - c5c746d7b3762c7fd34f53098ac90bffaf98d764
+  tree:
+    feature-work.txt: feature work 1
+450d5784977ba3892cbfba1f64b400476048cdb6:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: Committer <committer@localhost>
+  message: Merge main into feature
+  parents:
+  - c5c746d7b3762c7fd34f53098ac90bffaf98d764
+  - 9ecb6fd64f2a6f31de2d1b3fa189f446319647f5
+  tree:
+    feature-work-2.txt: feature work 2
+    main-work.txt: main work 1
+755f50c4b216df71fd241f259b495ec3ff073b2e:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: Committer <committer@localhost>
+  message: Merge feature into main (second time)
+  parents:
+  - 9ecb6fd64f2a6f31de2d1b3fa189f446319647f5
+  - 450d5784977ba3892cbfba1f64b400476048cdb6
+  tree:
+    feature-work-2.txt: feature work 2

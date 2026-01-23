@@ -1,0 +1,15 @@
+[package]
+name = "_trace"
+version.workspace = true
+edition.workspace = true
+description = "A language-agnostic requirements tracking tool"
+license.workspace = true
+publish = false
+repository.workspace = true
+categories = []
+keywords = []
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+ignore.workspace = true
+regex.workspace = true

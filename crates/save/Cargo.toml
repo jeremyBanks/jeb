@@ -1,0 +1,48 @@
+[package]
+name = "save"
+description = "Would you like to SAVE the change?"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+version.workspace = true
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
+
+[dependencies]
+bstr.workspace = true
+jeb-common.workspace = true
+clap = { workspace = true, features = ["derive", "env", "cargo", "unicode", "wrap_help"] }
+color-eyre.workspace = true
+digest.workspace = true
+dissimilar.workspace = true
+expect-test.workspace = true
+eyre.workspace = true
+git2.workspace = true
+home.workspace = true
+itertools.workspace = true
+num_cpus.workspace = true
+num-integer.workspace = true
+num-traits.workspace = true
+once_cell.workspace = true
+parking_lot.workspace = true
+petgraph.workspace = true
+proc-macro2.workspace = true
+regex.workspace = true
+sha-1.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+thousands.workspace = true
+tracing = { workspace = true, features = ["log"] }
+tracing-error = { workspace = true, features = ["traced-error"] }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+
+[dev-dependencies]
+inline.workspace = true
+
+[package.metadata.release]
+allow-branch = ["trunk"]
+post-release-commit-message = "v{{next_version}}"
+pre-release-commit-message = "v{{version}}"
+tag-message = "https://crates.io/crates/{{crate_name}}/{{version}}"
+tag-name = "{{version}}"

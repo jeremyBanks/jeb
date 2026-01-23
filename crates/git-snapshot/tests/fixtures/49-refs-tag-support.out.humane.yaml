@@ -1,0 +1,22 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    develop: 2
+    main: 3
+  remotes:
+    origin:
+      main: 3
+  tags:
+    v1.0: 1
+    v2.0: 3
+1:
+  tree:
+    README.md: Version 1.0
+2:
+  tree:
+    README.md: Version 2.0-dev
+3:
+  parents:
+  - 1
+  tree:
+    README.md: Version 2.0

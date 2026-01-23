@@ -1,0 +1,23 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 31e3f139dc3c5fd787faf0ea86416fd0efca9b83
+7d42fe:
+  message: commit 1
+  tree:
+    dir:
+      inner.txt: inner
+    outer.txt: outer
+31e3f139dc3c5fd787faf0ea86416fd0efca9b83:
+  message: commit 3
+  tree:
+    dir:
+      dir:
+        inner.txt:
+          //commit: 7d42fe
+          //path: dir/inner.txt
+      file-a.txt: a
+      file-b.txt: b
+      outer.txt:
+        //commit: 7d42fe
+        //path: outer.txt

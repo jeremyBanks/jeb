@@ -1,0 +1,21 @@
+HEAD: 31b05ed6da54a8e2424841198b54e1098555db05
+refs: {}
+staged:
+  src:
+    lib.rs: pub fn foo() { /* updated */ }
+working:
+  src:
+    lib.rs: pub fn foo() { /* wip */ }
+  tests:
+    test.rs: '#[test] fn it_works() {}'
+31b05ed6da54a8e2424841198b54e1098555db05:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    Cargo.toml: '[package]'
+    src:
+      lib.rs: pub fn foo() {}

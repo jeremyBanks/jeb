@@ -1,0 +1,62 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    feature-a: c392ce3aa579d0465f278bfcf8f73d1f5d05e9cd
+    feature-b: 0d56671e419ffa3cda6de96720176ef3e675b954
+    main: 2da31f22bda79cceea6acb410d90166db816f4a2
+    zzz-last: 63810dd62530379afda546d131e23164d11384d7
+0a52fb88928b59258d1a18fc816affc80b62af6f:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    file.txt: initial
+63810dd62530379afda546d131e23164d11384d7:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - 0a52fb88928b59258d1a18fc816affc80b62af6f
+  tree:
+    file.txt: branch zzz-last
+c392ce3aa579d0465f278bfcf8f73d1f5d05e9cd:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents:
+  - 63810dd62530379afda546d131e23164d11384d7
+  tree:
+    feature-a.txt: a specific
+    file.txt: feature a
+0d56671e419ffa3cda6de96720176ef3e675b954:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: Committer <committer@localhost>
+  message: commit 4
+  parents:
+  - c392ce3aa579d0465f278bfcf8f73d1f5d05e9cd
+  tree:
+    feature-b.txt: b specific
+    file.txt: feature b
+2da31f22bda79cceea6acb410d90166db816f4a2:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: Committer <committer@localhost>
+  message: commit 5
+  parents:
+  - 0a52fb88928b59258d1a18fc816affc80b62af6f
+  - c392ce3aa579d0465f278bfcf8f73d1f5d05e9cd
+  - 0d56671e419ffa3cda6de96720176ef3e675b954
+  tree:
+    feature-a.txt: a specific
+    feature-b.txt: b specific
+    file.txt: merged

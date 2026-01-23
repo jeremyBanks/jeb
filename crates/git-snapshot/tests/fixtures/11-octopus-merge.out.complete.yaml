@@ -1,0 +1,58 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: f457ecc2ddf764641b8d037ee659ef98428d40d3
+56b756974cbf6306c6a3228bbb13076b7d7f5069:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    README.md: '# Base'
+34a0cd6fc8b0962d3bfac049b3140c8b79d13652:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - 56b756974cbf6306c6a3228bbb13076b7d7f5069
+  tree:
+    feature-a.txt: Feature A
+b76488c9bcb3a6f9594f179480611646acaa0330:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents:
+  - 56b756974cbf6306c6a3228bbb13076b7d7f5069
+  tree:
+    feature-b.txt: Feature B
+506af5bbef9fdec09b99008b2757bdc6e92b537c:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 4
+  parents:
+  - 56b756974cbf6306c6a3228bbb13076b7d7f5069
+  tree:
+    feature-c.txt: Feature C
+f457ecc2ddf764641b8d037ee659ef98428d40d3:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: Merge branches feature-a, feature-b, and feature-c
+  parents:
+  - 56b756974cbf6306c6a3228bbb13076b7d7f5069
+  - 34a0cd6fc8b0962d3bfac049b3140c8b79d13652
+  - b76488c9bcb3a6f9594f179480611646acaa0330
+  - 506af5bbef9fdec09b99008b2757bdc6e92b537c
+  tree:
+    feature-a.txt: Feature A
+    feature-b.txt: Feature B
+    feature-c.txt: Feature C

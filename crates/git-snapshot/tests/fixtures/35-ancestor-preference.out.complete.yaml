@@ -1,0 +1,54 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: ae727349ee8e3716ef42c2402d926672ed84ec50
+    other: ede4fd7221b4cf48f6e3962add1e046887b73bc5
+e656ad3e698733e2919587948afbce532743be24:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents: []
+  tree:
+    shared.txt: shared content
+e7a128501bcfd2e144647d4647483b1e17b794eb:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    shared.txt: shared content
+90764667f6353511b45d9a5fb706f7c4d8939b6d:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 4
+  parents:
+  - e7a128501bcfd2e144647d4647483b1e17b794eb
+  tree:
+    main.txt: main branch
+ede4fd7221b4cf48f6e3962add1e046887b73bc5:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents:
+  - e656ad3e698733e2919587948afbce532743be24
+  tree:
+    other.txt: other branch
+ae727349ee8e3716ef42c2402d926672ed84ec50:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: commit 5
+  parents:
+  - 90764667f6353511b45d9a5fb706f7c4d8939b6d
+  - ede4fd7221b4cf48f6e3962add1e046887b73bc5
+  tree:
+    other.txt: other branch

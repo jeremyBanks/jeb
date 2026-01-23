@@ -1,0 +1,38 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 7ae738f59167fa35fc67ee7abe1522ddbf44cf1c
+d541ca:
+  message: commit 1
+  tree:
+    original.txt: original content
+c20331:
+  message: commit 2
+  tree:
+    step1.txt:
+      //commit: d541ca
+      //path: original.txt
+0f7aab:
+  message: commit 3
+  tree:
+    step2.txt:
+      //commit: c20331
+      //path: original.txt
+cce0b5:
+  message: commit 4
+  tree:
+    step3.txt:
+      //commit: 0f7aab
+      //path: original.txt
+e5e806:
+  message: commit 5
+  tree:
+    step4.txt:
+      //commit: cce0b5
+      //path: original.txt
+7ae738f59167fa35fc67ee7abe1522ddbf44cf1c:
+  message: commit 6
+  tree:
+    final.txt:
+      //commit: e5e806
+      //path: original.txt

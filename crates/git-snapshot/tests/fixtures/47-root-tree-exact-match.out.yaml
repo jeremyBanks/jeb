@@ -1,0 +1,14 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 8aa0f2aaea8b1b1862252e467fad9f770a1b6fbf
+71ef90:
+  message: commit 1
+  tree:
+    dir:
+      nested.txt: nested
+    file.txt: content
+476d8a:
+  message: commit 2
+8aa0f2aaea8b1b1862252e467fad9f770a1b6fbf:
+  message: commit 3

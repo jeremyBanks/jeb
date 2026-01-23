@@ -1,0 +1,15 @@
+HEAD: 1
+refs: {}
+staged:
+  src:
+    lib.rs: pub fn foo() { /* updated */ }
+working:
+  src:
+    lib.rs: pub fn foo() { /* wip */ }
+  tests:
+    test.rs: '#[test] fn it_works() {}'
+1:
+  tree:
+    Cargo.toml: '[package]'
+    src:
+      lib.rs: pub fn foo() {}

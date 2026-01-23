@@ -1,0 +1,13 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 294b38dd858722466d7c044d17a9106055344002
+294b38dd858722466d7c044d17a9106055344002:
+  message: commit 1
+  tree:
+    root.txt: root
+    src:
+      lib:
+        core:
+          mod.rs: core module
+        lib.rs: lib root

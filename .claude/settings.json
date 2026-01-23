@@ -1,0 +1,114 @@
+{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}

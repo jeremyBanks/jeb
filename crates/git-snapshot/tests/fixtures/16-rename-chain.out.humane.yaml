@@ -1,0 +1,39 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 7
+1:
+  tree:
+    original-name.txt: content that moves around
+    static.txt: never moves
+2:
+  tree:
+    renamed-once.txt:
+      //commit: 1
+      //path: original-name.txt
+3:
+  tree:
+    renamed-twice.txt:
+      //commit: 2
+      //path: original-name.txt
+4:
+  tree:
+    renamed-thrice.txt:
+      //commit: 3
+      //path: original-name.txt
+5:
+  tree:
+    final-name.txt:
+      //commit: 4
+      //path: original-name.txt
+6:
+  tree:
+    archive:
+      final-name.txt:
+        //commit: 5
+        //path: final-name.txt
+7:
+  tree:
+    restored.txt:
+      //commit: 6
+      //path: final-name.txt

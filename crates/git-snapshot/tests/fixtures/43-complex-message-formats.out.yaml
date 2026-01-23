@@ -1,0 +1,39 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2ede6ac597d3865fc91d309e45c5cd2c78d3873c
+'0e1478':
+  message: Simple single-line message
+  tree:
+    file.txt: content
+816b6a:
+  message: |
+    Multi-line message
+
+    With blank lines and details.
+
+    Multiple paragraphs.
+  tree:
+    file.txt: change
+197a72:
+  message: |
+    Message with special YAML characters
+
+    Contains: colons: and "quotes"
+    Also 'single quotes'
+    And [brackets] and {braces}
+
+    Signed-off-by: Author <author@example.com>
+  tree:
+    file.txt: special
+2ede6ac597d3865fc91d309e45c5cd2c78d3873c:
+  message: |
+    Message with trailers
+
+    Body paragraph explaining the change.
+
+    Reviewed-by: Reviewer <reviewer@example.com>
+    Tested-by: Tester <tester@example.com>
+    Cc: Someone <someone@example.com>
+  tree:
+    file.txt: trailers

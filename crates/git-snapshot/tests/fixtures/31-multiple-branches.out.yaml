@@ -1,0 +1,39 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    feature-a: c392ce3aa579d0465f278bfcf8f73d1f5d05e9cd
+    feature-b: 0d56671e419ffa3cda6de96720176ef3e675b954
+    main: 2da31f22bda79cceea6acb410d90166db816f4a2
+    zzz-last: 63810dd62530379afda546d131e23164d11384d7
+0a52fb:
+  message: commit 1
+  tree:
+    file.txt: initial
+63810dd62530379afda546d131e23164d11384d7:
+  message: commit 2
+  tree:
+    file.txt: branch zzz-last
+c392ce3aa579d0465f278bfcf8f73d1f5d05e9cd:
+  message: commit 3
+  tree:
+    feature-a.txt: a specific
+    file.txt: feature a
+0d56671e419ffa3cda6de96720176ef3e675b954:
+  message: commit 4
+  tree:
+    feature-b.txt: b specific
+    file.txt: feature b
+2da31f22bda79cceea6acb410d90166db816f4a2:
+  message: commit 5
+  parents:
+  - 0a52fb
+  - c392ce3aa579d0465f278bfcf8f73d1f5d05e9cd
+  - 0d56671e419ffa3cda6de96720176ef3e675b954
+  tree:
+    feature-a.txt:
+      //commit: c392ce3aa579d0465f278bfcf8f73d1f5d05e9cd
+      //path: feature-a.txt
+    feature-b.txt:
+      //commit: 0d56671e419ffa3cda6de96720176ef3e675b954
+      //path: feature-b.txt
+    file.txt: merged

@@ -1,0 +1,99 @@
+HEAD: refs/heads/full-tree
+refs:
+  heads:
+    backend-subtree: e5d0f1f76f4b4e0dd29ea6301726a1f3e6376fa8
+    frontend-subtree: 800050a941630c781f05fd4ba8bcd8526a5d675e
+    full-tree: 2ec2c51bb575fa057121f4e7d27c065296ccf776
+a7753e974496ecc08c1b27c89a7e7949286c0f22:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    README.md: '# Full Stack App'
+    backend:
+      db.py: 'def connect(): pass'
+      server.py: 'def serve(): pass'
+    frontend:
+      app.js: console.log('app');
+      style.css: body { }
+1631b2a73c4f86c0c25de0f7a4deb482990d4bbc:
+  author: git-zoom-in <git-zoom-in@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: git-zoom-in seed for frontend
+  parents: []
+  tree: {}
+800050a941630c781f05fd4ba8bcd8526a5d675e:
+  author: git-zoom-in <git-zoom-in@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'frontend'
+
+    git-zoom-in: frontend
+  parents:
+  - 1631b2a73c4f86c0c25de0f7a4deb482990d4bbc
+  - a7753e974496ecc08c1b27c89a7e7949286c0f22
+  tree:
+    app.js: console.log('app');
+    style.css: body { }
+    utils.js: export const util = () => {};
+df41a56569ee55d1f5d49f2294cfe0d11e5eea8e:
+  author: git-zoom-out <git-zoom-out@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'frontend'
+
+    git-zoom-out: frontend
+  parents:
+  - a7753e974496ecc08c1b27c89a7e7949286c0f22
+  - 800050a941630c781f05fd4ba8bcd8526a5d675e
+  tree:
+    frontend:
+      utils.js: export const util = () => {};
+e3892ae6c66f8c347fef259077087aeecd172ce1:
+  author: git-zoom-in <git-zoom-in@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: git-zoom-in seed for backend
+  parents: []
+  tree: {}
+e5d0f1f76f4b4e0dd29ea6301726a1f3e6376fa8:
+  author: git-zoom-in <git-zoom-in@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'backend'
+
+    git-zoom-in: backend
+  parents:
+  - e3892ae6c66f8c347fef259077087aeecd172ce1
+  - df41a56569ee55d1f5d49f2294cfe0d11e5eea8e
+  tree:
+    db.py: 'def connect(): pass'
+    routes.py: 'def routes(): pass'
+    server.py: 'def serve(): pass'
+2ec2c51bb575fa057121f4e7d27c065296ccf776:
+  author: git-zoom-out <git-zoom-out@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'backend'
+
+    git-zoom-out: backend
+  parents:
+  - df41a56569ee55d1f5d49f2294cfe0d11e5eea8e
+  - e5d0f1f76f4b4e0dd29ea6301726a1f3e6376fa8
+  tree:
+    backend:
+      routes.py: 'def routes(): pass'

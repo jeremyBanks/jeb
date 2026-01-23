@@ -1,0 +1,24 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 2
+
+1:
+  tree:
+    foo:
+      a.txt: "content a"
+      b.txt: "content b"
+    bar:
+      c.txt: "content c"
+
+2:
+  tree:
+    foo:
+      # a.txt inherits from parent
+      # b.txt gets moved to sibling using relative path
+      moved-b.txt:
+        [path]: ./b.txt
+    # bar/c.txt gets moved up using ../
+    c-moved.txt:
+      [path]: bar/c.txt

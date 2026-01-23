@@ -1,0 +1,47 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: b12f7eddad51e46019f39ab9e272f2d8b3ed59f2
+1d397a9d17afc8cdac832f1d90105de210575cf3:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    dir:
+      file.txt: content
+    existing.txt: exists
+319fd0337322b4924d248b278e233b3e6572bda8:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents: []
+  tree: {}
+60c5170e1dcea2b213239cec6a331afe16c00f9c:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: |
+    Zoom in from non-existent path
+
+    git-zoom-in: path/that/does/not/exist
+  parents:
+  - 319fd0337322b4924d248b278e233b3e6572bda8
+  - 1d397a9d17afc8cdac832f1d90105de210575cf3
+b12f7eddad51e46019f39ab9e272f2d8b3ed59f2:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: |
+    Zoom out to different path
+
+    git-zoom-out: another/path
+  parents:
+  - 1d397a9d17afc8cdac832f1d90105de210575cf3
+  - 60c5170e1dcea2b213239cec6a331afe16c00f9c

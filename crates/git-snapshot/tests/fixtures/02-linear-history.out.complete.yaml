@@ -1,0 +1,45 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: a6649c8000b332298cf9ca21cf9b280ea061fbfc
+3355a0d922fb095eb0b2e6b2dacb327e27acd186:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    README.md: '# Project'
+a40298116dee26af89e8d4cb57cc79d1522dbdc7:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - 3355a0d922fb095eb0b2e6b2dacb327e27acd186
+  tree:
+    README.md: |-
+      # Project
+
+      Added description.
+    src:
+      lib.rs: pub fn hello() {}
+a6649c8000b332298cf9ca21cf9b280ea061fbfc:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents:
+  - a40298116dee26af89e8d4cb57cc79d1522dbdc7
+  tree:
+    README.md: |-
+      # Project
+
+      Added description.
+
+      ## Usage
+    src:
+      lib.rs: pub fn hello() { println!("Hi"); }

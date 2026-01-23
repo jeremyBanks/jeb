@@ -1,0 +1,42 @@
+# Test that serialization prefers ancestor references over parallel branches
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 5
+    other: 3
+
+1:
+  tree:
+    shared.txt: "shared content"
+
+# Parallel branch
+2:
+  parents: []
+  tree:
+    shared.txt: "shared content"
+
+3:
+  parents: [2]
+  tree:
+    other.txt: "other branch"
+    shared.txt: "shared content"
+
+# Main branch continuation
+4:
+  parents: [1]
+  tree:
+    main.txt: "main branch"
+    shared.txt: "shared content"
+
+# Merge - should prefer referencing ancestor (commit 4) over parallel (commit 3)
+5:
+  parents: [4, 3]
+  tree:
+    main.txt:
+      [commit]: 4
+      [path]: main.txt
+    other.txt:
+      [commit]: 3
+      [path]: other.txt
+    shared.txt: "shared content"

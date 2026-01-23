@@ -1,0 +1,18 @@
+# Test that special keys sort before string keys
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 2
+
+1:
+  tree:
+    base.txt: "base content"
+
+2:
+  tree:
+    combined:
+      # Special keys should sort first: [commit], [path], then string keys
+      [commit]: 1
+      [path]: base.txt
+      # If this had string keys, they would come after special keys
