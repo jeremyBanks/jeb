@@ -146,6 +146,7 @@
     "msvc",
     "newtype",
     "newtypes",
+    "nextest",
     "ordermap",
     "pathdiff",
     "peekable",

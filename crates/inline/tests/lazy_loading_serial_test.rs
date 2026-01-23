@@ -18,7 +18,8 @@ fn test_lazy_loading_allows_missing_files_on_read() {
 #[test]
 fn test_lazy_loading_write_fails_silently_for_missing_file() {
     // Ensure we're in a mode that requires file access
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     // Creating a Inline for a non-existent file should not fail
     {
@@ -33,13 +34,15 @@ fn test_lazy_loading_write_fails_silently_for_missing_file() {
 
     // Test passes - errors in Drop are silently handled
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
 fn test_lazy_loading_memory_mode_works_without_file() {
     // In Memory mode, we should be able to set() without file access
-    env::set_var("INLINE_MODE", "memory");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "memory") };
 
     let mut value = inline::InlineCell::__new(42u32, "/nonexistent/path.rs", 1, 1);
 
@@ -47,13 +50,15 @@ fn test_lazy_loading_memory_mode_works_without_file() {
     value.value = 100u32;
     assert_eq!(*value, 100u32);
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
 fn test_lazy_loading_verify_mode_fails_silently_for_missing_file() {
     // In Verify mode, we need file access
-    env::set_var("INLINE_MODE", "verify");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "verify") };
 
     // Use a different location than other tests to avoid registry collision
     {
@@ -69,5 +74,6 @@ fn test_lazy_loading_verify_mode_fails_silently_for_missing_file() {
 
     // Test passes - errors in Drop are silently handled
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }

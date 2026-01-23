@@ -14,7 +14,8 @@ use std::{
 
 #[test]
 fn test_counter_a_modification() {
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     // Verify starts at default
     {
@@ -53,12 +54,14 @@ fn test_counter_a_modification() {
         disk_content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
 fn test_counter_b_modification() {
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     // Verify starts at default
     {
@@ -97,12 +100,14 @@ fn test_counter_b_modification() {
         disk_content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
 fn test_counter_c_modification() {
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     // Verify starts at default
     {
@@ -141,12 +146,14 @@ fn test_counter_c_modification() {
         disk_content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
 fn test_config_a_modification() {
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     // Verify starts at default
     {
@@ -185,12 +192,14 @@ fn test_config_a_modification() {
         disk_content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
 fn test_multiple_modifications_same_value() {
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     // Do multiple modifications
     {
@@ -226,13 +235,15 @@ fn test_multiple_modifications_same_value() {
     let disk = fs::read_to_string("tests/fixtures/counter_d.rs").unwrap();
     assert!(disk.contains("cell(0u32)"));
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
 #[ignore] // TODO: Adapt for write-on-drop - concurrent modification detection needs redesign
 fn test_concurrent_modification_detection() {
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     let mut value = fixtures::counter_e::get();
 
@@ -298,14 +309,16 @@ pub fn get() -> inline::InlineCell<u32> {
     )
     .unwrap();
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
 fn test_formatting_preservation() {
     // This test demonstrates what happens to formatting when we modify a inline
     // value
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     // Capture the original content before any modifications
     let original_content = fs::read_to_string("tests/fixtures/counter_f.rs").unwrap();
@@ -333,7 +346,8 @@ fn test_formatting_preservation() {
     value.value = 0u32;
     let restored_content = fs::read_to_string("tests/fixtures/counter_f.rs").unwrap();
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 
     // Report findings
     println!("=== FORMATTING ANALYSIS ===");
@@ -356,7 +370,8 @@ fn test_formatting_preservation() {
 fn test_multiple_macros_same_file() {
     // Test modifying multiple different cell() calls in the same file
     // in various orders, including on the same line and different lines
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     let mut first = fixtures::counter_g::get_first();
     let mut second = fixtures::counter_g::get_second();
@@ -413,14 +428,16 @@ fn test_multiple_macros_same_file() {
     assert!(disk.contains("cell(20u32)"));
     assert!(disk.contains("cell(30u32)"));
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
 #[ignore] // TODO: Adapt for write-on-drop - needs explicit drops between modifications
 fn test_multiple_files_interleaved() {
     // Test modifying macros across multiple files in arbitrary order
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     let mut counter_a = fixtures::counter_a::get();
     let mut counter_b = fixtures::counter_b::get();
@@ -533,5 +550,6 @@ fn test_multiple_files_interleaved() {
             .contains("cell(0u32)")
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }

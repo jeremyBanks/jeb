@@ -12,6 +12,7 @@ keywords = []
 
 [dependencies]
 ordermap.workspace = true
+static_assertions.workspace = true
 
 [dev-dependencies]
 anyhow.workspace = true

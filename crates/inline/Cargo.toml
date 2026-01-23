@@ -1,10 +1,10 @@
 [package]
 name = "inline"
 publish = false
-version = "0.0.1-dev.1"
-edition = "2021"
-authors = ["Jeremy Banks"]
-license = "MIT OR Apache-2.0"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
 description = "Self-modifying values that update their source code at runtime"
 repository = "https://github.com/jeremyBanks/inline"
 homepage = "https://github.com/jeremyBanks/inline"

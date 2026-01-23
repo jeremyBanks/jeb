@@ -1,3 +1,5 @@
+#![cfg_attr(not(test), deny(unsafe_code))]
+
 //! Self-modifying values that update their source code at runtime.
 //!
 //! `inline` provides smart pointers that can modify their own source code.

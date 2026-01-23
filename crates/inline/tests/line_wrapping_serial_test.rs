@@ -22,7 +22,8 @@ fn test_long_vec_causes_line_wrapping() {
     println!("=== ORIGINAL ===");
     println!("{}", original);
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     let positions = find_all_positions(&path);
     let (a_line, a_col) = positions[0];
@@ -120,7 +121,8 @@ fn test_long_vec_causes_line_wrapping() {
         println!("✅ B updated successfully");
     }
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 fn find_all_positions(path: &std::path::Path) -> Vec<(u32, u32)> {

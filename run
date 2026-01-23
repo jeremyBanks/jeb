@@ -1,0 +1,86 @@
+#!/bin/bash
+#
+# A wrapper around `cargo run`-like behavior, but falling back to existing
+# builds or system installations of tools, if we aren't able to (re)build a
+# local copy. This is to mitigate the pain of self-hosting tools inside of our
+# own workspace, where changes we're making might break our ability to build
+# the tools we want to use while continuing to work on fixing that code!
+#
+# Therefore any binary implemented in this workspace that we're running as part
+# of our workflow (not for the sake of developing/testing them, but to use them
+# for their intended purpose) should be run through `./run <command> <args...>`.
+# instead of `cargo run --bin <command> -- <args...>`. `./run save` will be
+# common.
+
+set -euo pipefail
+declare command="$1"
+shift
+declare bin=""
+
+declare RESET=""
+declare DARK_BACKGROUND=""
+declare WHITE=""
+declare BROWN=""
+declare YELLOW=""
+declare BLUE=""
+declare CYAN=""
+declare MAGENTA=""
+declare RED=""
+
+if [ -t 2 ] && [ -z "${NO_COLORS-}" ]; then
+    DARK_BACKGROUND=$'\033[40m\033[K'
+    RESET=$'\033[0m'
+    WHITE=$'\033[37m'
+    BROWN=$'\033[33m'
+    YELLOW=$'\033[33m'
+    BLUE=$'\033[34m'
+    CYAN=$'\033[36m'
+    MAGENTA=$'\033[35m'
+    RED=$'\033[31m'
+fi
+
+echo >&2 -e "${DARK_BACKGROUND}"
+echo >&2 -e "${DARK_BACKGROUND}${MAGENTA}  \$${WHITE} ${BROWN}cargo build --release --bin${WHITE} ${CYAN}$command${WHITE}"
+echo >&2 -e "${DARK_BACKGROUND}${RESET}"
+echo >&2
+
+if ! cargo build --bin "$command"; then
+    echo >&2
+    echo >&2 "${YELLOW}WARNING:${WHITE} Failed to build. Falling back to existing builds."
+fi
+
+echo >&2
+
+if [ -x "./target/release/$command" ]; then
+    bin="./target/release/$command"
+elif [ -x "./target/debug/$command" ]; then
+    echo >&2 "${YELLOW}WARNING:${WHITE} Existing release build not found. Falling back to debug build."
+    echo >&2
+
+    bin="./target/debug/$command"
+else
+    echo >&2 "${YELLOW}WARNING:${WHITE} Existing builds not found. Falling back to cargo-installed binary."
+    echo >&2
+
+    if [ -x "$HOME/.cargo/bin/$command" ]; then
+        bin="$HOME/.cargo/bin/$command"
+    else
+        echo >&2 "${YELLOW}WARNING:${WHITE} cargo-installed binary not found. Falling back to any matching command."
+        echo >&2
+
+        if type "$command" >/dev/null 2>&1; then
+            bin="$command"
+        else
+            echo >&2 "${RED}ERROR:${WHITE} No matching command found. Unable to continue."
+
+            exit 1
+        fi
+    fi
+fi
+
+echo >&2 -e "${DARK_BACKGROUND}"
+echo >&2 -e "${DARK_BACKGROUND}  ${MAGENTA}\$${WHITE} ${CYAN}${CYAN}${bin}${WHITE}${WHITE} ${BLUE}${CYAN}$*${WHITE}${WHITE}"
+echo >&2 -e "${DARK_BACKGROUND}${RESET}"
+echo >&2
+
+exec "$bin" "$@"

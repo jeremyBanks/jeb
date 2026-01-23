@@ -57,7 +57,8 @@ fn test_verify_mode_matching_value() {
     fs::write(&path, content).unwrap();
 
     // Enable verify mode
-    env::set_var("INLINE_MODE", "verify");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "verify") };
 
     let positions = find_litter_positions(&path);
     let (line, column) = positions[0];
@@ -67,7 +68,8 @@ fn test_verify_mode_matching_value() {
     // Setting to the same value should succeed in verify mode
     value.value = 42u32;
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -84,7 +86,8 @@ fn test_verify_mode_mismatched_value() {
     fs::write(&path, content).unwrap();
 
     // Enable verify mode
-    env::set_var("INLINE_MODE", "verify");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "verify") };
 
     let positions = find_litter_positions(&path);
     let (line, column) = positions[0];
@@ -97,7 +100,8 @@ fn test_verify_mode_mismatched_value() {
         // Drop happens here - should panic due to verification failure
     }
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -113,7 +117,8 @@ fn test_verify_mode_complex_value() {
     fs::write(&path, content).unwrap();
 
     // Enable verify mode
-    env::set_var("INLINE_MODE", "verify");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "verify") };
 
     let positions = find_litter_positions(&path);
     let (line, column) = positions[0];
@@ -124,7 +129,8 @@ fn test_verify_mode_complex_value() {
     // Setting to the same value should succeed
     value.value = vec![1u32, 2u32, 3u32];
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -141,7 +147,8 @@ fn test_verify_mode_complex_value_mismatch() {
     fs::write(&path, content).unwrap();
 
     // Enable verify mode
-    env::set_var("INLINE_MODE", "verify");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "verify") };
 
     let positions = find_litter_positions(&path);
     let (line, column) = positions[0];
@@ -155,5 +162,6 @@ fn test_verify_mode_complex_value_mismatch() {
         // Drop happens here - should panic due to verification failure
     }
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }

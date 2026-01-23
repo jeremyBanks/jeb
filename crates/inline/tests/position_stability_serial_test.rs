@@ -21,7 +21,8 @@ fn test_multiple_updates_same_litter() {
 "#;
     fs::write(&path, original).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     // Find initial position
     let source = fs::read_to_string(&path).unwrap();
@@ -152,5 +153,6 @@ fn test_multiple_updates_same_litter() {
     );
     println!("  Final:    line {}, column {}", line_after_3, col_after_3);
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }

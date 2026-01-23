@@ -28,7 +28,8 @@ fn test_value_persists_across_line_insertions() {
 "#;
     fs::write(&path, original).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     // Find the literal's initial position
     let positions = find_all_literal_positions(&path);
@@ -120,7 +121,8 @@ fn main() {
     println!("  But its value remained 42 (not reset to 0)");
     println!("  This proves index-based registry keys are working!");
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -139,7 +141,8 @@ fn test_multiple_literals_maintain_distinct_identities() {
 "#;
     fs::write(&path, original).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     // Find all three literals
     let positions = find_all_literal_positions(&path);
@@ -220,7 +223,8 @@ fn test_multiple_literals_maintain_distinct_identities() {
     println!("  B: 222 (shifted from line {} to {})", b_line, new_b_line);
     println!("  C: 333 (shifted from line {} to {})", c_line, new_c_line);
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -237,7 +241,8 @@ fn test_index_resolution_is_consistent() {
 "#;
     fs::write(&path, original).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     // Get initial position
     let positions = find_all_literal_positions(&path);
@@ -285,7 +290,8 @@ fn main() {
     println!("  Position changed: line {} -> {}", line1, line2);
     println!("  But index remained: {}", index1);
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 /// Helper function to find all cell() call positions in a file
