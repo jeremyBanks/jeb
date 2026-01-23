@@ -1,8 +1,13 @@
 use {
     super::{
+        array::Array,
+        boolean::Boolean,
         bytes::Bytes,
-        float::Float,
-        text::Text,
+        bytes_map::BytesMap,
+        null::Null,
+        number::Number,
+        string::String,
+        string_map::StringMap,
     },
     derive_more::{
         From,
@@ -11,224 +16,135 @@ use {
         TryUnwrap,
         Unwrap,
     },
-    indexmap::IndexMap,
 };
-// [impl jeb-value.dependencies.cfg]
+
+// [impl jeb-value.features.core.cfg]
+// [impl jeb-value.features.serde.optional]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Serialize),
     serde(untagged)
 )]
-// [impl jeb-value.value.clone]
-// [impl jeb-value.value.debug]
-#[derive(Debug, Clone, From, Default, TryInto, IsVariant, TryUnwrap, Unwrap)]
-// [impl jeb-value.value.must-use]
+// [impl jeb-value.value.traits.clone]
+// [impl jeb-value.value.traits.debug]
+#[derive(Debug, Clone, From, IsVariant, TryUnwrap, Unwrap)]
+// [impl jeb-value.value.traits.must-use]
 #[must_use]
+// [impl jeb-value.value.def.enum-variants]
+// [impl jeb-value.value.def.variant-types]
 pub enum Value {
-    #[default]
-    Null,
-    Bool(bool),
-    Unsigned(u64),
-    Signed(i64),
-    Float(Float),
+    Null(#[from] Null),
+    Boolean(Boolean),
+    Number(Number),
     Bytes(Bytes),
-    Text(Text),
-    Array(Vec<Value>),
-    BytesMap(IndexMap<Bytes, Value>),
-    TextMap(IndexMap<Text, Value>),
+    String(String),
+    Array(#[from] Array),
+    BytesMap(#[from] BytesMap),
+    StringMap(#[from] StringMap),
 }
-// [impl jeb-value.value.cmp]
+
+// [impl jeb-value.value.traits.partial-eq]
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         use Value::*;
         match (self, other) {
-            (Null, Null) => true,
-            (Bool(a), Bool(b)) => a == b,
-            (Unsigned(a), Unsigned(b)) => a == b,
-            (Signed(a), Signed(b)) => a == b,
-            (Unsigned(a), Signed(b)) => {
-                if *b < 0 {
-                    false
-                } else {
-                    u64::try_from(*b) == Ok(*a)
-                }
-            }
-            (Signed(a), Unsigned(b)) => {
-                if *a < 0 {
-                    false
-                } else {
-                    u64::try_from(*a) == Ok(*b)
-                }
-            }
-            (Float(a), Float(b)) => a == b,
+            (Null(a), Null(b)) => a == b,
+            (Boolean(a), Boolean(b)) => a == b,
+            (Number(a), Number(b)) => a == b,
             (Bytes(a), Bytes(b)) => a == b,
-            (Text(a), Text(b)) => a == b,
+            (String(a), String(b)) => a == b,
             (Array(a), Array(b)) => a == b,
             (BytesMap(a), BytesMap(b)) => a == b,
-            (TextMap(a), TextMap(b)) => a == b,
+            (StringMap(a), StringMap(b)) => a == b,
             _ => false,
         }
     }
 }
+
+// [impl jeb-value.value.traits.eq]
 impl Eq for Value {}
+
+// [impl jeb-value.value.traits.hash]
 impl core::hash::Hash for Value {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
         match self {
-            Value::Null => {
-                0u8.hash(state);
-            }
-            Value::Bool(value) => {
-                1u8.hash(state);
-                value.hash(state);
-            }
-            Value::Unsigned(value) => {
-                2u8.hash(state);
-                value.hash(state);
-            }
-            Value::Signed(value) => {
-                2u8.hash(state);
-                value.hash(state);
-            }
-            Value::Float(value) => {
-                3u8.hash(state);
-                value.hash(state);
-            }
-            Value::Bytes(value) => {
-                4u8.hash(state);
-                value.hash(state);
-            }
-            Value::Text(value) => {
-                5u8.hash(state);
-                value.hash(state);
-            }
-            Value::Array(value) => {
-                6u8.hash(state);
-                value.hash(state);
-            }
-            Value::TextMap(value) => {
-                7u8.hash(state);
-                value.len().hash(state);
-                for item in value {
-                    item.hash(state);
-                }
-            }
-            Value::BytesMap(value) => {
-                8u8.hash(state);
-                value.len().hash(state);
-                for item in value {
-                    item.hash(state);
-                }
-            }
+            Value::Null(value) => value.hash(state),
+            Value::Boolean(value) => value.hash(state),
+            Value::Number(value) => value.hash(state),
+            Value::Bytes(value) => value.hash(state),
+            Value::String(value) => value.hash(state),
+            Value::Array(value) => value.hash(state),
+            Value::BytesMap(value) => value.hash(state),
+            Value::StringMap(value) => value.hash(state),
         }
     }
 }
-// [impl jeb-value.value.cmp]
+
+// [impl jeb-value.value.traits.ord]
+// [impl jeb-value.variant.common.cmp-delegate-variants]
+// [impl jeb-value.variant.common.cmp-mixed-variants]
 impl Ord for Value {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         use {
             Value::*,
             core::cmp::Ordering::*,
         };
+
+        // [impl jeb-value.src.ordering.spec]
+        // Order: Null, Boolean, Number, Bytes, String, Array, BytesMap, StringMap
         fn type_rank(value: &Value) -> usize {
-            use Value::*;
             match value {
-                Bytes(_) => 0,
-                Text(_) => 1,
-                Unsigned(_) | Signed(_) | Float(_) => 2,
-                Array(_) => 3,
-                Bool(false) => 4,
-                Null => 5,
-                Bool(true) => 6,
-                BytesMap(_) => 7,
-                TextMap(_) => 8,
+                Null(_) => 0,
+                Boolean(_) => 1,
+                Number(_) => 2,
+                Bytes(_) => 3,
+                String(_) => 4,
+                Array(_) => 5,
+                BytesMap(_) => 6,
+                StringMap(_) => 7,
             }
         }
+
         let self_rank = type_rank(self);
         let other_rank = type_rank(other);
+
         match self_rank.cmp(&other_rank) {
             Equal => match (self, other) {
-                (Null, Null) => Equal,
-                (Bool(left), Bool(right)) => left.cmp(right),
-                (Unsigned(left), Unsigned(right)) => left.cmp(right),
-                (Signed(left), Signed(right)) => left.cmp(right),
-                (Float(left), Float(right)) => left.cmp(right),
+                (Null(left), Null(right)) => left.cmp(right),
+                (Boolean(left), Boolean(right)) => left.cmp(right),
+                (Number(left), Number(right)) => left.cmp(right),
                 (Bytes(left), Bytes(right)) => left.cmp(right),
-                (Text(left), Text(right)) => left.cmp(right),
+                (String(left), String(right)) => left.cmp(right),
                 (Array(left), Array(right)) => left.cmp(right),
-                (BytesMap(left), BytesMap(right)) => left.iter().cmp(right),
-                (TextMap(left), TextMap(right)) => left.iter().cmp(right),
-                (Unsigned(left), Signed(right)) => {
-                    if *right < 0 {
-                        Greater
-                    } else {
-                        match u64::try_from(*right) {
-                            Ok(b_as_u64) => left.cmp(&b_as_u64),
-                            Err(_) => Less,
-                        }
-                    }
-                }
-                (Signed(left), Unsigned(right)) => {
-                    if *left < 0 {
-                        Less
-                    } else {
-                        match u64::try_from(*left) {
-                            Ok(a_as_u64) => a_as_u64.cmp(right),
-                            Err(_) => Greater,
-                        }
-                    }
-                }
-                (Unsigned(left), Float(right)) => {
-                    if **right < 0.0 {
-                        return Greater;
-                    }
-                    const U64_MAX_PLUS_1: f64 = 18446744073709551616.0;
-                    if **right >= U64_MAX_PLUS_1 {
-                        return Less;
-                    }
-                    let right_trunc = right.trunc();
-                    let right_int = right_trunc as u64;
-                    match left.cmp(&right_int) {
-                        Less => Less,
-                        Greater => Greater,
-                        Equal => Less,
-                    }
-                }
-                (Float(_), Unsigned(_)) => other.cmp(self).reverse(),
-                (Signed(left), Float(right)) => {
-                    const I64_MAX_PLUS_1: f64 = 9223372036854775808.0;
-                    const I64_MIN: f64 = -9223372036854775808.0;
-                    if **right >= I64_MAX_PLUS_1 {
-                        return Less;
-                    }
-                    if **right < I64_MIN {
-                        return Greater;
-                    }
-                    let right_trunc = right.trunc();
-                    let right_int = right_trunc as i64;
-                    match left.cmp(&right_int) {
-                        Less => Less,
-                        Greater => Greater,
-                        Equal => {
-                            if **right > right_trunc {
-                                Less
-                            } else if **right < right_trunc {
-                                Greater
-                            } else {
-                                Less
-                            }
-                        }
-                    }
-                }
-                (Float(_), Signed(_)) => other.cmp(self).reverse(),
+                (BytesMap(left), BytesMap(right)) => left.cmp(right),
+                (StringMap(left), StringMap(right)) => left.cmp(right),
                 _ => unreachable!("type_rank equality should prevent this"),
             },
             ord => ord,
         }
     }
 }
-// [impl jeb-value.value.cmp]
+
+// [impl jeb-value.value.traits.partial-ord]
 impl PartialOrd for Value {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
+
+// [impl jeb-value.value.traits.default]
+impl Default for Value {
+    fn default() -> Self {
+        Value::Null(Null::new())
+    }
+}
+
+// [impl jeb-value.value.accessors.from]
+// (covered by derive(From))
+
+// [impl jeb-value.value.accessors.as]
+// [impl jeb-value.value.accessors.to]
+// [impl jeb-value.value.accessors.into]
+// [impl jeb-value.value.accessors.unwrap]
+// (covered by derive(TryInto, TryUnwrap, Unwrap, IsVariant))

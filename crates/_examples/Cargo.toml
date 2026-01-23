@@ -1,0 +1,18 @@
+[package]
+name = "_examples"
+publish = false
+description = ""
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+categories = []
+keywords = []
+
+[dependencies]
+ordermap.workspace = true
+
+[dev-dependencies]
+anyhow.workspace = true
+

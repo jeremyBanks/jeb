@@ -4,8 +4,8 @@
       {
         "hooks": [
           {
-            "command": "cargo run --quiet --bin _claude_hooks --",
-            "timeout": 16,
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
             "type": "command"
           }
         ]
@@ -15,8 +15,8 @@
       {
         "hooks": [
           {
-            "command": "cargo run --quiet --bin _claude_hooks --",
-            "timeout": 16,
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
             "type": "command"
           }
         ]
@@ -26,8 +26,8 @@
       {
         "hooks": [
           {
-            "command": "cargo run --quiet --bin _claude_hooks --",
-            "timeout": 16,
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
             "type": "command"
           }
         ]
@@ -37,8 +37,8 @@
       {
         "hooks": [
           {
-            "command": "cargo run --quiet --bin _claude_hooks --",
-            "timeout": 16,
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
             "type": "command"
           }
         ]
@@ -48,8 +48,8 @@
       {
         "hooks": [
           {
-            "command": "cargo run --quiet --bin _claude_hooks --",
-            "timeout": 16,
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
             "type": "command"
           }
         ]
@@ -59,8 +59,8 @@
       {
         "hooks": [
           {
-            "command": "cargo run --quiet --bin _claude_hooks --",
-            "timeout": 16,
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
             "type": "command"
           }
         ]
@@ -70,8 +70,8 @@
       {
         "hooks": [
           {
-            "command": "cargo run --quiet --bin _claude_hooks --",
-            "timeout": 16,
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
             "type": "command"
           }
         ]
@@ -81,8 +81,8 @@
       {
         "hooks": [
           {
-            "command": "cargo run --quiet --bin _claude_hooks --",
-            "timeout": 16,
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
             "type": "command"
           }
         ]
@@ -92,8 +92,8 @@
       {
         "hooks": [
           {
-            "command": "cargo run --quiet --bin _claude_hooks --",
-            "timeout": 16,
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
             "type": "command"
           }
         ]
@@ -103,8 +103,8 @@
       {
         "hooks": [
           {
-            "command": "cargo run --quiet --bin _claude_hooks --",
-            "timeout": 16,
+            "command": "target/debug/_claude_hooks",
+            "timeout": 4,
             "type": "command"
           }
         ]

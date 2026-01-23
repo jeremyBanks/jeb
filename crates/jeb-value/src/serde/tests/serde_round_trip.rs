@@ -1,6 +1,14 @@
 use {
-    jeb_value::{Bytes, Value, from_value, to_value},
-    serde::{Deserialize, Serialize},
+    crate::{
+        Bytes,
+        Value,
+        from_value,
+        to_value,
+    },
+    serde::{
+        Deserialize,
+        Serialize,
+    },
     std::collections::HashMap,
 };
 #[test]
@@ -70,12 +78,12 @@ fn test_special_floats() {
 fn test_option() {
     let none: Option<i32> = None;
     let value = to_value(none).unwrap();
-    assert!(matches!(value, Value::Null));
+    assert!(matches!(value, Value::Null(_)));
     let recovered: Option<i32> = from_value(value).unwrap();
     assert_eq!(recovered, None);
     let some = Some(42);
     let value = to_value(some).unwrap();
-    assert!(matches!(value, Value::TextMap(_)));
+    assert!(matches!(value, Value::StringMap(_)));
     let recovered: Option<i32> = from_value(value).unwrap();
     assert_eq!(recovered, Some(42));
 }
@@ -106,10 +114,10 @@ fn test_maps() {
     map.insert("key1".to_string(), 1);
     map.insert("key2".to_string(), 2);
     let value = to_value(&map).unwrap();
-    assert!(matches!(value, Value::TextMap(_)));
+    assert!(matches!(value, Value::StringMap(_)));
     let recovered: HashMap<String, i32> = from_value(value).unwrap();
-    assert_eq!(recovered.get("key1"), Some(& 1));
-    assert_eq!(recovered.get("key2"), Some(& 2));
+    assert_eq!(recovered.get("key1"), Some(&1));
+    assert_eq!(recovered.get("key2"), Some(&2));
     let empty: HashMap<String, i32> = HashMap::new();
     let value = to_value(&empty).unwrap();
     assert!(matches!(value, Value::Array(_)));
@@ -173,9 +181,7 @@ fn test_bytes() {
     assert!(matches!(value, Value::Bytes(_)));
     let recovered: Bytes = from_value(value).unwrap();
     assert_eq!(recovered, bytes);
-    let arr_value = Value::Array(
-        vec![Value::Unsigned(0), Value::Unsigned(1), Value::Unsigned(255),],
-    );
+    let arr_value = Value::Array(vec![Value::from(0), Value::from(1), Value::from(255)]);
     let as_vec: Vec<u8> = from_value(arr_value.clone()).unwrap();
     assert_eq!(as_vec, vec![0, 1, 255]);
     let as_bytes: Bytes = from_value(arr_value).unwrap();

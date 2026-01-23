@@ -1,9 +1,11 @@
 //! Serializer serializing arbitrary `Serialize` values into our `Value` type.
 use {
     crate::{
+        Boolean,
         Bytes,
-        Float,
-        Text,
+        Null,
+        Number,
+        String,
         Value,
         serde::SerdeError,
     },
@@ -26,83 +28,63 @@ impl ser::Serializer for Serializer {
     type SerializeTupleVariant = SerializeTupleVariant;
 
     fn serialize_bool(self, v: bool) -> Result<Value, SerdeError> {
-        Ok(Value::Bool(v))
+        Ok(Value::Boolean(Boolean::from(v)))
     }
 
     fn serialize_i8(self, v: i8) -> Result<Value, SerdeError> {
-        Ok(Value::Signed(v as i64))
+        Ok(Value::Number(Number::from(v)))
     }
 
     fn serialize_i16(self, v: i16) -> Result<Value, SerdeError> {
-        Ok(Value::Signed(v as i64))
+        Ok(Value::Number(Number::from(v)))
     }
 
     fn serialize_i32(self, v: i32) -> Result<Value, SerdeError> {
-        Ok(Value::Signed(v as i64))
+        Ok(Value::Number(Number::from(v)))
     }
 
     fn serialize_i64(self, v: i64) -> Result<Value, SerdeError> {
-        Ok(Value::Signed(v))
+        Ok(Value::from(v))
     }
 
     fn serialize_i128(self, v: i128) -> Result<Value, SerdeError> {
-        if let Ok(i) = i64::try_from(v) {
-            Ok(Value::Signed(i))
-        } else {
-            Ok(Value::Bytes(Bytes::from(v.to_be_bytes().to_vec())))
-        }
+        Ok(Value::from(v))
     }
 
     fn serialize_u8(self, v: u8) -> Result<Value, SerdeError> {
-        Ok(Value::Unsigned(v as u64))
+        Ok(Value::Number(Number::from(v)))
     }
 
     fn serialize_u16(self, v: u16) -> Result<Value, SerdeError> {
-        Ok(Value::Unsigned(v as u64))
+        Ok(Value::Number(Number::from(v)))
     }
 
     fn serialize_u32(self, v: u32) -> Result<Value, SerdeError> {
-        Ok(Value::Unsigned(v as u64))
+        Ok(Value::Number(Number::from(v)))
     }
 
     fn serialize_u64(self, v: u64) -> Result<Value, SerdeError> {
-        Ok(Value::Unsigned(v))
+        Ok(Value::from(v))
     }
 
     fn serialize_u128(self, v: u128) -> Result<Value, SerdeError> {
-        if let Ok(u) = u64::try_from(v) {
-            Ok(Value::Unsigned(u))
-        } else {
-            Ok(Value::Bytes(Bytes::from(v.to_be_bytes().to_vec())))
-        }
+        Ok(Value::from(v))
     }
 
     fn serialize_f32(self, v: f32) -> Result<Value, SerdeError> {
-        if v.is_finite() {
-            Ok(Value::Float(Float::new(v as f64).expect(
-                "f32 is_finite check guarantees Float::new success",
-            )))
-        } else {
-            Ok(Value::Bytes(Bytes::from(v.to_be_bytes().to_vec())))
-        }
+        Ok(Value::from(v))
     }
 
     fn serialize_f64(self, v: f64) -> Result<Value, SerdeError> {
-        if v.is_finite() {
-            Ok(Value::Float(Float::new(v).expect(
-                "f64 is_finite check guarantees Float::new success",
-            )))
-        } else {
-            Ok(Value::Bytes(Bytes::from(v.to_be_bytes().to_vec())))
-        }
+        Ok(Value::from(v))
     }
 
     fn serialize_char(self, v: char) -> Result<Value, SerdeError> {
-        Ok(Value::Text(Text::from(v.to_string())))
+        Ok(Value::String(String::from(v.to_string())))
     }
 
     fn serialize_str(self, v: &str) -> Result<Value, SerdeError> {
-        Ok(Value::Text(Text::from(v.to_string())))
+        Ok(Value::String(String::from(v.to_string())))
     }
 
     fn serialize_bytes(self, v: &[u8]) -> Result<Value, SerdeError> {
@@ -110,22 +92,22 @@ impl ser::Serializer for Serializer {
     }
 
     fn serialize_none(self) -> Result<Value, SerdeError> {
-        Ok(Value::Null)
+        Ok(Value::Null(Null::new()))
     }
 
     fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<Value, SerdeError> {
         let inner = to_value(value)?;
         let mut map = IndexMap::new();
-        map.insert(Text::from("Some".to_string()), inner);
-        Ok(Value::TextMap(map))
+        map.insert(String::from("Some".to_string()), inner);
+        Ok(Value::StringMap(map))
     }
 
     fn serialize_unit(self) -> Result<Value, SerdeError> {
-        Ok(Value::Null)
+        Ok(Value::Null(Null::new()))
     }
 
     fn serialize_unit_struct(self, _name: &'static str) -> Result<Value, SerdeError> {
-        Ok(Value::Null)
+        Ok(Value::Null(Null::new()))
     }
 
     fn serialize_unit_variant(
@@ -134,7 +116,7 @@ impl ser::Serializer for Serializer {
         _variant_index: u32,
         variant: &'static str,
     ) -> Result<Value, SerdeError> {
-        Ok(Value::Text(Text::from(variant.to_string())))
+        Ok(Value::String(String::from(variant.to_string())))
     }
 
     fn serialize_newtype_struct<T: ?Sized + Serialize>(
@@ -154,8 +136,8 @@ impl ser::Serializer for Serializer {
     ) -> Result<Value, SerdeError> {
         let inner = to_value(value)?;
         let mut map = IndexMap::new();
-        map.insert(Text::from(variant.to_string()), inner);
-        Ok(Value::TextMap(map))
+        map.insert(String::from(variant.to_string()), inner);
+        Ok(Value::StringMap(map))
     }
 
     fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, SerdeError> {
@@ -274,7 +256,7 @@ impl ser::SerializeTupleStruct for SerializeVec {
     }
 }
 pub struct SerializeTupleVariant {
-    variant: String,
+    variant: std::string::String,
     vec: Vec<Value>,
 }
 impl ser::SerializeTupleVariant for SerializeTupleVariant {
@@ -288,8 +270,8 @@ impl ser::SerializeTupleVariant for SerializeTupleVariant {
 
     fn end(self) -> Result<Value, SerdeError> {
         let mut map = IndexMap::new();
-        map.insert(Text::from(self.variant), Value::Array(self.vec));
-        Ok(Value::TextMap(map))
+        map.insert(String::from(self.variant.as_str()), Value::Array(self.vec));
+        Ok(Value::StringMap(map))
     }
 }
 pub struct SerializeMap {
@@ -298,7 +280,7 @@ pub struct SerializeMap {
 }
 #[derive(Debug)]
 enum MapKey {
-    Text(Text),
+    String(String),
     Bytes(Bytes),
     Complex(Value),
 }
@@ -327,7 +309,7 @@ impl ser::SerializeMap for SerializeMap {
         let mut all_bytes = true;
         for (key, _) in &self.entries {
             match key {
-                MapKey::Text(_) => all_bytes = false,
+                MapKey::String(_) => all_bytes = false,
                 MapKey::Bytes(_) => all_text = false,
                 MapKey::Complex(_) => {
                     all_text = false;
@@ -339,13 +321,13 @@ impl ser::SerializeMap for SerializeMap {
             let mut map = IndexMap::new();
             for (key, value) in self.entries {
                 match key {
-                    MapKey::Text(t) => {
+                    MapKey::String(t) => {
                         map.insert(t, value);
                     }
                     _ => unreachable!(),
                 }
             }
-            Ok(Value::TextMap(map))
+            Ok(Value::StringMap(map))
         } else if all_bytes {
             let mut map = IndexMap::new();
             for (key, value) in self.entries {
@@ -363,7 +345,7 @@ impl ser::SerializeMap for SerializeMap {
                 .into_iter()
                 .map(|(key, value)| {
                     let key_value = match key {
-                        MapKey::Text(t) => Value::Text(t),
+                        MapKey::String(t) => Value::String(t),
                         MapKey::Bytes(b) => Value::Bytes(b),
                         MapKey::Complex(v) => v,
                     };
@@ -383,8 +365,10 @@ impl ser::SerializeStruct for SerializeMap {
         key: &'static str,
         value: &T,
     ) -> Result<(), SerdeError> {
-        self.entries
-            .push((MapKey::Text(Text::from(key.to_string())), to_value(value)?));
+        self.entries.push((
+            MapKey::String(String::from(key.to_string())),
+            to_value(value)?,
+        ));
         Ok(())
     }
 
@@ -393,7 +377,7 @@ impl ser::SerializeStruct for SerializeMap {
     }
 }
 pub struct SerializeStructVariant {
-    variant: String,
+    variant: std::string::String,
     map: SerializeMap,
 }
 impl ser::SerializeStructVariant for SerializeStructVariant {
@@ -411,8 +395,8 @@ impl ser::SerializeStructVariant for SerializeStructVariant {
     fn end(self) -> Result<Value, SerdeError> {
         let fields = ser::SerializeMap::end(self.map)?;
         let mut map = IndexMap::new();
-        map.insert(Text::from(self.variant), fields);
-        Ok(Value::TextMap(map))
+        map.insert(String::from(self.variant.as_str()), fields);
+        Ok(Value::StringMap(map))
     }
 }
 struct MapKeySerializer;
@@ -472,7 +456,7 @@ impl ser::SerializeTupleVariant for MapKeySeq {
     }
 }
 struct MapKeyStruct {
-    fields: IndexMap<Text, Value>,
+    fields: IndexMap<String, Value>,
 }
 impl ser::SerializeStruct for MapKeyStruct {
     type Error = SerdeError;
@@ -484,12 +468,12 @@ impl ser::SerializeStruct for MapKeyStruct {
         value: &T,
     ) -> Result<(), SerdeError> {
         self.fields
-            .insert(Text::from(key.to_string()), to_value(value)?);
+            .insert(String::from(key.to_string()), to_value(value)?);
         Ok(())
     }
 
     fn end(self) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::TextMap(self.fields)))
+        Ok(MapKey::Complex(Value::StringMap(self.fields)))
     }
 }
 impl ser::SerializeStructVariant for MapKeyStruct {
@@ -502,12 +486,12 @@ impl ser::SerializeStructVariant for MapKeyStruct {
         value: &T,
     ) -> Result<(), SerdeError> {
         self.fields
-            .insert(Text::from(key.to_string()), to_value(value)?);
+            .insert(String::from(key.to_string()), to_value(value)?);
         Ok(())
     }
 
     fn end(self) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::TextMap(self.fields)))
+        Ok(MapKey::Complex(Value::StringMap(self.fields)))
     }
 }
 struct MapKeyMap {
@@ -539,7 +523,7 @@ impl ser::SerializeMap for MapKeyMap {
         let mut all_bytes = true;
         for (key, _) in &self.entries {
             match key {
-                MapKey::Text(_) => all_bytes = false,
+                MapKey::String(_) => all_bytes = false,
                 MapKey::Bytes(_) => all_text = false,
                 MapKey::Complex(_) => {
                     all_text = false;
@@ -551,13 +535,13 @@ impl ser::SerializeMap for MapKeyMap {
             let mut map = IndexMap::new();
             for (key, value) in self.entries {
                 match key {
-                    MapKey::Text(t) => {
+                    MapKey::String(t) => {
                         map.insert(t, value);
                     }
                     _ => unreachable!(),
                 }
             }
-            Ok(MapKey::Complex(Value::TextMap(map)))
+            Ok(MapKey::Complex(Value::StringMap(map)))
         } else if all_bytes {
             let mut map = IndexMap::new();
             for (key, value) in self.entries {
@@ -575,7 +559,7 @@ impl ser::SerializeMap for MapKeyMap {
                 .into_iter()
                 .map(|(key, value)| {
                     let key_value = match key {
-                        MapKey::Text(t) => Value::Text(t),
+                        MapKey::String(t) => Value::String(t),
                         MapKey::Bytes(b) => Value::Bytes(b),
                         MapKey::Complex(v) => v,
                     };
@@ -598,43 +582,43 @@ impl ser::Serializer for MapKeySerializer {
     type SerializeTupleVariant = MapKeySeq;
 
     fn serialize_bool(self, v: bool) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Bool(v)))
+        Ok(MapKey::Complex(Value::Boolean(Boolean::from(v))))
     }
 
     fn serialize_i8(self, v: i8) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Signed(v as i64)))
+        Ok(MapKey::Complex(Value::Number(Number::from(v))))
     }
 
     fn serialize_i16(self, v: i16) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Signed(v as i64)))
+        Ok(MapKey::Complex(Value::Number(Number::from(v))))
     }
 
     fn serialize_i32(self, v: i32) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Signed(v as i64)))
+        Ok(MapKey::Complex(Value::Number(Number::from(v))))
     }
 
     fn serialize_i64(self, v: i64) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Signed(v)))
+        Ok(MapKey::Complex(Value::from(v)))
     }
 
     fn serialize_i128(self, v: i128) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Serializer.serialize_i128(v)?))
+        Ok(MapKey::Complex(Value::from(v)))
     }
 
     fn serialize_u8(self, v: u8) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Unsigned(v as u64)))
+        Ok(MapKey::Complex(Value::Number(Number::from(v))))
     }
 
     fn serialize_u16(self, v: u16) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Unsigned(v as u64)))
+        Ok(MapKey::Complex(Value::Number(Number::from(v))))
     }
 
     fn serialize_u32(self, v: u32) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Unsigned(v as u64)))
+        Ok(MapKey::Complex(Value::Number(Number::from(v))))
     }
 
     fn serialize_u64(self, v: u64) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Unsigned(v)))
+        Ok(MapKey::Complex(Value::from(v)))
     }
 
     fn serialize_u128(self, v: u128) -> Result<MapKey, SerdeError> {
@@ -650,11 +634,11 @@ impl ser::Serializer for MapKeySerializer {
     }
 
     fn serialize_char(self, v: char) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Text(Text::from(v.to_string())))
+        Ok(MapKey::String(String::from(v.to_string())))
     }
 
     fn serialize_str(self, v: &str) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Text(Text::from(v.to_string())))
+        Ok(MapKey::String(String::from(v.to_string())))
     }
 
     fn serialize_bytes(self, v: &[u8]) -> Result<MapKey, SerdeError> {
@@ -662,7 +646,7 @@ impl ser::Serializer for MapKeySerializer {
     }
 
     fn serialize_none(self) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Null))
+        Ok(MapKey::Complex(Value::Null(Null::new())))
     }
 
     fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<MapKey, SerdeError> {
@@ -670,11 +654,11 @@ impl ser::Serializer for MapKeySerializer {
     }
 
     fn serialize_unit(self) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Null))
+        Ok(MapKey::Complex(Value::Null(Null::new())))
     }
 
     fn serialize_unit_struct(self, _name: &'static str) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Complex(Value::Null))
+        Ok(MapKey::Complex(Value::Null(Null::new())))
     }
 
     fn serialize_unit_variant(
@@ -683,7 +667,7 @@ impl ser::Serializer for MapKeySerializer {
         _variant_index: u32,
         variant: &'static str,
     ) -> Result<MapKey, SerdeError> {
-        Ok(MapKey::Text(Text::from(variant.to_string())))
+        Ok(MapKey::String(String::from(variant.to_string())))
     }
 
     fn serialize_newtype_struct<T: ?Sized + Serialize>(
@@ -703,8 +687,8 @@ impl ser::Serializer for MapKeySerializer {
     ) -> Result<MapKey, SerdeError> {
         let inner = to_value(value)?;
         let mut map = IndexMap::new();
-        map.insert(Text::from(variant.to_string()), inner);
-        Ok(MapKey::Complex(Value::TextMap(map)))
+        map.insert(String::from(variant.to_string()), inner);
+        Ok(MapKey::Complex(Value::StringMap(map)))
     }
 
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, SerdeError> {

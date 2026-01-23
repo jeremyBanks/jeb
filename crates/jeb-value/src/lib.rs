@@ -4,28 +4,51 @@
     unused_imports,
     clippy::approx_constant
 )]
+
+mod array;
+mod boolean;
 mod bytes;
-mod float;
+mod bytes_map;
 mod from;
-// [impl jeb-value.dependencies.cfg]
+mod null;
+mod number;
+// [impl jeb-value.features.core.cfg]
+// [impl jeb-value.features.serde.optional]
 #[cfg(feature = "serde")]
 mod serde;
-// [impl jeb-value.dependencies.cfg]
+// [impl jeb-value.features.core.cfg]
+// [impl jeb-value.features.serde-json.depends]
 #[cfg(feature = "serde_json")]
 mod serde_json;
-mod text;
+mod string;
+mod string_map;
 mod value;
-// [impl jeb-value.dependencies.cfg]
+
+// [impl jeb-value.features.core.cfg]
 #[cfg(feature = "serde")]
 pub use self::serde::*;
-// [impl jeb-value.dependencies.cfg]
+// [impl jeb-value.features.core.cfg]
 #[cfg(feature = "serde_json")]
 pub use self::serde_json::*;
-// [impl jeb-value.value.pub]
-// [impl jeb-value.variants.pub]
+// [impl jeb-value.value.def.pub]
+// [impl jeb-value.variant.common.pub]
 pub use self::{
-    bytes::*,
-    float::*,
-    text::*,
-    value::*,
+    array::Array,
+    boolean::{
+        Boolean,
+        from::NotBooleanError,
+    },
+    bytes::Bytes,
+    bytes_map::BytesMap,
+    null::{
+        Null,
+        from::NotNullError,
+    },
+    number::{
+        NotFiniteError,
+        Number,
+    },
+    string::String,
+    string_map::StringMap,
+    value::Value,
 };

@@ -28,9 +28,10 @@ algorithm = "minisign"
 
 [dependencies]
 jeb-common.workspace = true
+inline.workspace = true
 jeb-stream = { workspace = true, features = ["json", "serde"] }
 jeb-value = { workspace = true, features = ["serde", "serde_json"] }
-inline = { workspace = true }
+stringify_verbatim.workspace = true
 color-eyre = { workspace = true, optional = true }
 dotenv = { workspace = true, optional = true }
 js-sys = { workspace = true, optional = true }
@@ -38,6 +39,8 @@ owo-colors = { workspace = true, optional = true }
 tracing-subscriber = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true }
+bat = { workspace = true, features = ["regex-onig"] }
+crabtime.workspace = true
 derive_more = { workspace = true, features = ["full"] }
 document-features.workspace = true
 futures.workspace = true
@@ -52,8 +55,6 @@ tokio = { workspace = true, features = ["rt", "macros", "sync", "io-util"] }
 tokio-stream.workspace = true
 tokio-util = { workspace = true, features = ["codec", "io"] }
 tracing.workspace = true
-bat.workspace = true
-stringify_verbatim.workspace = true
 
 [features]
 default = ["bin", "fs", "stdio"]

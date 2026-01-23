@@ -97,6 +97,7 @@ literate! {
                 result.push(alphabet[((*byte as usize) >> (7 - bit)) & 0x1] as char);
             }
         }
+        assert!(bytes == from_binary(&result));
         result
     }
 
@@ -146,6 +147,7 @@ literate! {
             result.push(alphabet[high as usize] as char);
             result.push(alphabet[low as usize] as char);
         }
+        assert!(bytes == from_hex(&result));
         result
     }
 
@@ -249,6 +251,8 @@ literate! {
             result.push(alphabet[(block >>  4) as usize & 0x3F] as char);
             result.push(alphabet[((block << 2) & 0x3F) as usize] as char);
         }
+
+        // assert!(bytes == from_base64(&result));
 
         result
     }
@@ -359,6 +363,7 @@ literate! {
             }
         }
 
+        // assert!(bytes == from_z85(&result));
         result
     }
 
@@ -378,11 +383,18 @@ literate! {
     to_z85(from_binary("00000000 00000000 00000000 00000000".replace(" ", ""))).is("00000");
     to_z85(from_binary("00000000 00000000 00000000 00000110".replace(" ", ""))).is("00006");
 
-    // Partial blocks
+/*
+    Partial blocks need exactly `n+1` characters for `n` bytes. This works because
+    sqrt(256) < 85 < 256, which means 85^n < 256^n < 85^(n+1) for any n >= 1: n
+    characters can't represent n bytes (85^n is too small), but n+1 characters
+    can (85^(n+1) is enough). The same property holds for base 64, and any base
+    between 16 and 256.
+*/
     to_z85([0x00]).is("00");              // 1 byte → 2 chars
     to_z85([0x00, 0x00]).is("000");       // 2 bytes → 3 chars
     to_z85([0x00, 0x00, 0x00]).is("0000"); // 3 bytes → 4 chars
 
+    to_z85(b"test").is("By/Jn");
 
     to_z85(from_binary("00000000"                        )).is("00"   );
     to_z85(from_binary("00000000000000000000000000000000")).is("00000");
