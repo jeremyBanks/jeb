@@ -258,7 +258,10 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                     let trusted_parsed = if self.trust_messages {
                         if let Some(summary) = commit.summary() {
                             if let Some(parsed) = MessageParser::parse(&summary) {
+                                let tree_id = commit.tree_id();
+                                eprintln!("[DEBUG] depth={} summary={:?} tree_id={:?}", depth, summary, tree_id);
                                 if MessageParser::validate(self.repo, &commit, &summary, &parsed) {
+                                    eprintln!("[DEBUG]   VALID, prefix={:?}", parsed.prefix);
                                     if parsed.prefix == MessagePrefix::ZMode {
                                         z_commits.insert(id.clone());
                                         None
@@ -270,6 +273,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                                         }
                                     }
                                 } else {
+                                    eprintln!("[DEBUG]   INVALID!");
                                     None
                                 }
                             } else {
