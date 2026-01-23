@@ -1,15 +1,16 @@
 #!/bin/bash
+#
 # A wrapper around `cargo run`-like behavior, but falling back to existing
 # builds or system installations of tools, if we aren't able to (re)build a
 # local copy. This is to mitigate the pain of self-hosting tools inside of our
 # own workspace, where changes we're making might break our ability to build
 # the tools we want to use while continuing to work on fixing that code!
 #
-# Therefore any binary inside this workspace that we're running as part of our
-# _workflow_ (not for the sake of developing/testing them, but to use them for
-# their intended purpose) should be run through `./run <command> <args...>`
-# instead of `cargo run --bin <command> -- <args...>`. For example, we may want
-# to `./run _autofix` and `./run save`.
+# Therefore any binary implemented in this workspace that we're running as part
+# of our workflow (not for the sake of developing/testing them, but to use them
+# for their intended purpose) should be run through `./run <command> <args...>`.
+# instead of `cargo run --bin <command> -- <args...>`. `./run save` will be
+# common.
 
 set -euo pipefail
 declare command="$1"
