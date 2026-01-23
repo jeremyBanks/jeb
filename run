@@ -37,7 +37,7 @@ else
         echo >&2 "${warning} \`cargo install\`ed binary not found for \`${command}\`. Falling back to any existing binary or alias."
 
         if type "$command" >/dev/null 2>&1; then
-            bin="$(type -p "$command")"
+            bin="$command"
         else
             echo >&2 "${error} No existing binary or alias found for \`${command}\`. Giving up."
             exit 1
@@ -45,4 +45,5 @@ else
     fi
 fi
 
+set -x
 "$bin" "$@"
