@@ -575,8 +575,14 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 if parents.is_empty() {
                     break;
                 }
+                let next_parent = parents[0].clone();
+                // Check if the parent exists in our explored graph before counting
+                // This handles shallow clone boundaries where the parent doesn't exist
+                if !parent_map.contains_key(&next_parent) {
+                    break;
+                }
                 count += 1;
-                current_id = parents[0].clone();
+                current_id = next_parent;
             }
             count
         };
