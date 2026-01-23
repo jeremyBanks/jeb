@@ -4,6 +4,8 @@ use core::{
     marker::PhantomData,
 };
 
+/// Equivalent to the never type `std::convert::Infallible`/`!`, but with
+/// different trait implementations to satisfy our requirements.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Impossible {}
 
@@ -23,13 +25,21 @@ trait InnerEq<T> {}
 /// Type-level `bool` value.
 #[expect(private_bounds)]
 pub trait Bool: InnerBool {}
-impl InnerBool for True {}
-impl InnerBool for False {}
+impl<T> Bool for T where T: InnerBool {}
+impl InnerBool for True {
+    const VALUE: bool = true;
+}
+impl InnerBool for False {
+    const VALUE: bool = false;
+}
 pub enum True {}
 pub enum False {}
-trait InnerBool {}
+trait InnerBool {
+    const VALUE: bool;
+}
 
 pub trait ImplConversionFrom<Source>: Sized {
+    type Supported: Bool;
     type FatalError: Debug + Default;
     type SelfReversibleWarning: Debug + Default;
     type ContextuallyReversibleWarning: Debug + Default;
@@ -38,9 +48,14 @@ pub trait ImplConversionFrom<Source>: Sized {
     type RoundedWarning: Debug + Default;
 
     fn impl_conversion_from(value: Source) -> Conversion<Self, Source>;
+
+    fn impl_conversion_supported() -> bool {
+        Self::Supported::VALUE
+    }
 }
 
 impl ImplConversionFrom<f32> for f64 {
+    type Supported = True;
     type FatalError = Impossible;
     type SelfReversibleWarning = Impossible;
     type ContextuallyReversibleWarning = Impossible;
@@ -54,6 +69,7 @@ impl ImplConversionFrom<f32> for f64 {
 }
 
 impl ImplConversionFrom<f64> for f32 {
+    type Supported = True;
     type FatalError = Impossible;
     type SelfReversibleWarning = ();
     type ContextuallyReversibleWarning = ();
@@ -72,6 +88,37 @@ impl ImplConversionFrom<f64> for f32 {
             Conversion::with_rounded(value_f32, ())
         }
     }
+}
+
+macro_rules! impl_conversions_not_supported {
+    ($($left:ty => $mid:ty $(=> $rest:tt)+);* $(;)?) => {
+        $(
+            impl_conversions_not_supported!($left => $mid);
+            impl_conversions_not_supported!($mid $(=> $rest)+);
+        )*
+    };
+    ($($source:ty => $target:ty);+ $(;)?) => {
+        $(
+            impl ImplConversionFrom<$source> for $target {
+                type Supported = True;
+                type FatalError = &'static str;
+                type SelfReversibleWarning = Impossible;
+                type ContextuallyReversibleWarning = Impossible;
+                type SemanticallyEquivalentWarning = Impossible;
+                type ClampedWarning = Impossible;
+                type RoundedWarning = Impossible;
+
+                fn impl_conversion_from(_: $source) -> Conversion<$target, $source> {
+                    Conversion::with_error("not supported")
+                }
+            }
+        )+
+    };
+}
+
+impl_conversions_not_supported! {
+    bool => f32 => bool;
+    bool => f64 => bool;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
