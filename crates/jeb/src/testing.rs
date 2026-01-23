@@ -1,4 +1,4 @@
-use std::cell::Cell;
+use core::cell::Cell;
 
 thread_local! {
     /// Tracks the last line number of printed code, for detecting gaps between statements
@@ -68,10 +68,10 @@ pub fn print_single_doc_group(doc_strings: &[&str]) {
     let mut lines: &[&str] = &lines;
 
     // Strip one leading and one trailing empty line if present
-    if lines.first().map(|s| s.is_empty()).unwrap_or(false) {
+    if lines.first().is_some_and(|s| s.is_empty()) {
         lines = &lines[1..];
     }
-    if lines.last().map(|s| s.is_empty()).unwrap_or(false) {
+    if lines.last().is_some_and(|s| s.is_empty()) {
         lines = &lines[..lines.len() - 1];
     }
 
@@ -101,7 +101,7 @@ pub fn print_single_doc_group(doc_strings: &[&str]) {
         .join("\n");
 
     // Print with bat markdown highlighting (add trailing newline to content)
-    let content = format!("{}\n", dedented);
+    let content = format!("{dedented}\n");
     eprintln!();
     ::bat::PrettyPrinter::new()
         .input_from_bytes(content.as_bytes())
@@ -136,7 +136,7 @@ pub fn print_code(code: &str) {
         .collect::<Vec<_>>()
         .join("\n");
 
-    let content = format!("{}\n", normalized);
+    let content = format!("{normalized}\n");
     ::bat::PrettyPrinter::new()
         .input_from_bytes(content.as_bytes())
         .language("rust")

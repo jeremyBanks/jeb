@@ -3,6 +3,7 @@ cargo-features = ["trim-paths"]
 [workspace]
 resolver = "2"
 members = ["crates/*"]
+exclude = ["fuzz"]
 
 [workspace.package]
 version = "0.0.0-dev-2026-01-19.4531"

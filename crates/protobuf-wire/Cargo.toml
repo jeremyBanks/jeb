@@ -1,0 +1,17 @@
+[package]
+name = "protobuf-wire"
+description = "A concrete data model for the Protocol Buffers wire format"
+publish = false
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[features]
+arbitrary = ["dep:arbitrary"]
+
+[dependencies]
+log = "0.4"
+arbitrary = { version = "1", optional = true }
+
+[dev-dependencies]
+arbitrary = { version = "1" }
