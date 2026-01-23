@@ -3,12 +3,21 @@
 //! The decoder processes input in 5-character blocks, detecting escape
 //! characters and handling raw byte sequences that may span multiple blocks.
 
-use crate::alphabet::{
-    decode_z85_block, escape_info_at_position_1_to_3, escape_raw_bytes_at_position_0,
-    is_escape_char, z85_digit_value, ESCAPE_PIPE,
+use crate::{
+    alphabet::{
+        ESCAPE_PIPE,
+        decode_z85_block,
+        escape_info_at_position_1_to_3,
+        escape_raw_bytes_at_position_0,
+        is_escape_char,
+        z85_digit_value,
+    },
+    base42::{
+        Endianness,
+        decode_length,
+    },
+    error::DecodeError,
 };
-use crate::base42::{decode_length, Endianness};
-use crate::error::DecodeError;
 
 /// Decoder state machine.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -93,7 +102,8 @@ impl Decoder {
                 self.raw_bytes_remaining.min(5)
             };
 
-            // Raw bytes are consumed verbatim - padding only appears AFTER raw sequence ends
+            // Raw bytes are consumed verbatim - padding only appears AFTER raw sequence
+            // ends
             for &byte in block.iter().take(to_consume) {
                 self.output.push(byte);
             }
@@ -123,8 +133,8 @@ impl Decoder {
                 // Standard Z85 block - decode all 5 characters
                 // Note: '.' is both the padding character AND Z85 digit 62
                 // In a full 5-char block, all characters are meaningful
-                let decoded = decode_z85_block(&block)
-                    .ok_or_else(|| DecodeError::InvalidCharacter {
+                let decoded =
+                    decode_z85_block(&block).ok_or_else(|| DecodeError::InvalidCharacter {
                         position: self.position - 5,
                         byte: block[0], // First invalid char
                     })?;
@@ -137,7 +147,12 @@ impl Decoder {
     }
 
     /// Process an escape character found at the given position.
-    fn process_escape(&mut self, block: &[u8; 5], pos: usize, escape: u8) -> Result<(), DecodeError> {
+    fn process_escape(
+        &mut self,
+        block: &[u8; 5],
+        pos: usize,
+        escape: u8,
+    ) -> Result<(), DecodeError> {
         if escape == ESCAPE_PIPE {
             self.process_pipe_escape(block, pos)?;
         } else {
@@ -155,19 +170,21 @@ impl Decoder {
     ) -> Result<(), DecodeError> {
         let (raw_bytes, _is_little_endian) = if pos == 0 {
             // At position 0, no prefix
-            let raw = escape_raw_bytes_at_position_0(escape)
-                .ok_or(DecodeError::InvalidEscapePosition {
+            let raw = escape_raw_bytes_at_position_0(escape).ok_or(
+                DecodeError::InvalidEscapePosition {
                     position: self.position - 5 + pos,
                     escape: escape as char,
-                })?;
+                },
+            )?;
             (raw, true) // Endianness doesn't matter for position 0
         } else if pos <= 3 {
             // At positions 1-3, decode prefix
-            let (raw, little_endian) = escape_info_at_position_1_to_3(escape)
-                .ok_or(DecodeError::InvalidEscapePosition {
+            let (raw, little_endian) = escape_info_at_position_1_to_3(escape).ok_or(
+                DecodeError::InvalidEscapePosition {
                     position: self.position - 5 + pos,
                     escape: escape as char,
-                })?;
+                },
+            )?;
 
             // Decode prefix bytes
             let prefix_chars = &block[..pos];
@@ -258,7 +275,8 @@ impl Decoder {
 
         // The prefix represents a big-endian value that will be converted to bytes
         // If little_endian flag is set, the bytes themselves are little-endian
-        // (the digit interpretation is still big-endian, it's the byte order that differs)
+        // (the digit interpretation is still big-endian, it's the byte order that
+        // differs)
         let _ = little_endian; // Used when emitting bytes, not here
 
         Ok(value)
@@ -368,8 +386,16 @@ pub fn decode(data: &[u8]) -> Result<Vec<u8>, DecodeError> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::alphabet::{encode_z85_block, z85_digit_char, ESCAPE_COMMA, ESCAPE_BACKTICK, PADDING_CHAR};
+    use {
+        super::*,
+        crate::alphabet::{
+            ESCAPE_BACKTICK,
+            ESCAPE_COMMA,
+            PADDING_CHAR,
+            encode_z85_block,
+            z85_digit_char,
+        },
+    };
 
     #[test]
     fn test_decode_empty() {
@@ -425,8 +451,10 @@ mod tests {
             z85_digit_char(10), // 'a'
             z85_digit_char(11), // 'b'
             ESCAPE_COMMA,       // , at position 2
-            b'x', b'y',         // 2 raw bytes in this block
-            b'z', b'w',         // 2 more raw bytes (partial block)
+            b'x',
+            b'y', // 2 raw bytes in this block
+            b'z',
+            b'w', // 2 more raw bytes (partial block)
         ];
 
         let decoded = decode(&input).unwrap();
@@ -448,9 +476,16 @@ mod tests {
         let input = vec![
             z85_digit_char(11), // length digit (position 0)
             ESCAPE_PIPE,        // | (position 1)
-            b'0', b'1', b'2',   // raw bytes (positions 2-4)
-            b'3', b'4', b'5', b'6', b'7', // 5 more raw (block 2)
-            b'8', b'9',         // 2 more raw (partial block 3)
+            b'0',
+            b'1',
+            b'2', // raw bytes (positions 2-4)
+            b'3',
+            b'4',
+            b'5',
+            b'6',
+            b'7', // 5 more raw (block 2)
+            b'8',
+            b'9', // 2 more raw (partial block 3)
         ];
 
         let decoded = decode(&input).unwrap();

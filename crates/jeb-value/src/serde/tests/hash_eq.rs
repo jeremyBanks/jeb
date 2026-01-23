@@ -1,6 +1,16 @@
 use {
-    crate::{Bytes, Null, Number, String, Value},
-    std::collections::{BTreeMap, HashMap, HashSet},
+    crate::{
+        Bytes,
+        Null,
+        Number,
+        String,
+        Value,
+    },
+    std::collections::{
+        BTreeMap,
+        HashMap,
+        HashSet,
+    },
 };
 #[test]
 fn test_value_as_hashmap_key() {
@@ -70,7 +80,10 @@ fn test_eq_same_numeric_value() {
 fn test_hash_consistency() {
     use std::{
         collections::hash_map::DefaultHasher,
-        hash::{Hash, Hasher},
+        hash::{
+            Hash,
+            Hasher,
+        },
     };
     let v1 = Value::from(42u64);
     let v2 = Value::from(42u64);
@@ -84,7 +97,10 @@ fn test_hash_consistency() {
 fn test_ordering_type_hierarchy() {
     use std::cmp::Ordering;
     // Null < Boolean < Number < Bytes < String < Array < BytesMap < StringMap
-    assert_eq!(Value::Null(Null::new()).cmp(&Value::from(false)), Ordering::Less);
+    assert_eq!(
+        Value::Null(Null::new()).cmp(&Value::from(false)),
+        Ordering::Less
+    );
     assert_eq!(Value::from(false).cmp(&Value::from(42u64)), Ordering::Less);
     assert_eq!(
         Value::from(42u64).cmp(&Value::from(vec![1u8, 2, 3])),
@@ -185,7 +201,8 @@ fn test_value_in_btreemap() {
     map.insert(Value::from("hello"), "string");
     map.insert(Value::from(vec![1u8, 2, 3]), "bytes");
     let keys: Vec<_> = map.keys().cloned().collect();
-    // Order: Null < Boolean < Number < Bytes < String < Array < BytesMap < StringMap
+    // Order: Null < Boolean < Number < Bytes < String < Array < BytesMap <
+    // StringMap
     assert_eq!(keys[0], Value::Null(Null::new())); // Null
     assert_eq!(keys[1], Value::from(false)); // Boolean
     assert_eq!(keys[2], Value::from(true)); // Boolean (true > false)

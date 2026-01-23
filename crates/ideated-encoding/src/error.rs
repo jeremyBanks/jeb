@@ -13,7 +13,8 @@ pub enum DecodeError {
     #[error("escape character '{escape}' at invalid position {position} within block")]
     InvalidEscapePosition { position: usize, escape: char },
 
-    /// A length value in a `|` escape was invalid (e.g., 1-7 which should use simpler escapes).
+    /// A length value in a `|` escape was invalid (e.g., 1-7 which should use
+    /// simpler escapes).
     #[error("invalid length {length} for | escape (must be 0 or >= 8)")]
     InvalidLength { length: usize },
 

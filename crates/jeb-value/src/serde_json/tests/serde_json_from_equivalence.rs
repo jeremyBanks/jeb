@@ -3,7 +3,11 @@
 ///
 /// This verifies the claim in serde_json/mod.rs that the direct conversions
 /// are equivalent to using the serialize trait, just with less overhead.
-use crate::{Null, Number, Value};
+use crate::{
+    Null,
+    Number,
+    Value,
+};
 /// Helper to convert a jeb Value to serde_json::Value via serialization
 fn to_serde_json_via_serde(value: &Value) -> serde_json::Value {
     serde_json::to_value(value).expect("serialization should succeed")
@@ -88,7 +92,14 @@ fn test_from_json_number_zero_sign() {
 }
 #[test]
 fn test_from_json_string() {
-    for s in &["", "hello", "world", "with spaces", "unicode: 你好", "emoji: 🚀"] {
+    for s in &[
+        "",
+        "hello",
+        "world",
+        "with spaces",
+        "unicode: 你好",
+        "emoji: 🚀",
+    ] {
         let json = serde_json::Value::String(s.to_string());
         let direct: Value = json.clone().into();
         let via_serde = from_serde_json_via_serde(&json);
@@ -157,7 +168,10 @@ fn test_from_json_object_simple() {
         Value::StringMap(map) => {
             use crate::String;
             assert_eq!(map.len(), 4);
-            assert_eq!(map.get(&String::from("null")), Some(&Value::Null(Null::new())));
+            assert_eq!(
+                map.get(&String::from("null")),
+                Some(&Value::Null(Null::new()))
+            );
             assert_eq!(
                 map.get(&String::from("bool")),
                 Some(&Value::Boolean(true.into()))
@@ -221,7 +235,11 @@ fn test_roundtrip_arrays() {
     let values = vec![
         Value::Array(vec![]),
         Value::from([Value::from(1u64), Value::from(2u64), Value::from(3u64)]),
-        Value::from([Value::Null(Null::new()), Value::Boolean(true.into()), Value::from("test")]),
+        Value::from([
+            Value::Null(Null::new()),
+            Value::Boolean(true.into()),
+            Value::from("test"),
+        ]),
         Value::from([
             Value::from([Value::from(1u64)]),
             Value::from([Value::from(2u64)]),

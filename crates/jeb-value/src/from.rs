@@ -1,4 +1,13 @@
-use crate::{Array, Bytes, BytesMap, Null, Number, String, StringMap, Value};
+use crate::{
+    Array,
+    Bytes,
+    BytesMap,
+    Null,
+    Number,
+    String,
+    StringMap,
+    Value,
+};
 
 // [impl jeb-value.number.try-from-inner]
 // (Note: TryFrom<f64> for Number is in number/mod.rs)

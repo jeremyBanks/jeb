@@ -1,9 +1,22 @@
-use derive_more::{AsRef, Deref, Display, From, Into};
+use derive_more::{
+    AsRef,
+    Deref,
+    Display,
+    From,
+    Into,
+};
 
 pub mod from;
 
 // [impl jeb-value.features.core.cfg]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize), serde(transparent))]
+#[cfg_attr(
+    feature = "serde",
+    derive(
+        serde::Serialize,
+        serde::Deserialize
+    ),
+    serde(transparent)
+)]
 // [impl jeb-value.variant.common.clone]
 // [impl jeb-value.variant.common.debug]
 // [impl jeb-value.variant.common.deref]

@@ -1,6 +1,9 @@
 #![doc = include_str!("../README.md")]
 #![doc = ::document_features::document_features!()]
-#![allow(unused_imports, clippy::approx_constant)]
+#![allow(
+    unused_imports,
+    clippy::approx_constant
+)]
 
 mod array;
 mod boolean;
@@ -27,16 +30,24 @@ pub use self::serde::*;
 // [impl jeb-value.features.core.cfg]
 #[cfg(feature = "serde_json")]
 pub use self::serde_json::*;
-
 // [impl jeb-value.value.def.pub]
 // [impl jeb-value.variant.common.pub]
 pub use self::{
     array::Array,
-    boolean::{from::NotBooleanError, Boolean},
+    boolean::{
+        Boolean,
+        from::NotBooleanError,
+    },
     bytes::Bytes,
     bytes_map::BytesMap,
-    null::{from::NotNullError, Null},
-    number::{NotFiniteError, Number},
+    null::{
+        Null,
+        from::NotNullError,
+    },
+    number::{
+        NotFiniteError,
+        Number,
+    },
     string::String,
     string_map::StringMap,
     value::Value,

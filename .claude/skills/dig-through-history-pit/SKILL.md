@@ -21,7 +21,8 @@ Examples:
 
 - `/dig-history-pit *.md` - Recover deleted markdown files
 - `/dig-history-pit *.rs *.toml` - Recover multiple file types
-- `/dig-history-pit Z85 encoding` - Search for text "Z85 encoding" in git history
+- `/dig-history-pit Z85 encoding` - Search for text "Z85 encoding" in git
+  history
 - `/dig-history-pit "function foo"` - Search for specific text in git history
 
 ## Workflow
@@ -51,6 +52,7 @@ git log --format="%H %ci %s" COMMIT_HASH -1
 ```
 
 Extract:
+
 - **Which files** contained the text
 - **File extensions** of those files (e.g., `.rs`, `.md`, `.ts`)
 
@@ -84,6 +86,7 @@ used.
 ### Explore Further
 
 Use the Grep and Read tools to help the user:
+
 - Find all occurrences of their search term in recovered files
 - Read specific recovered files in full
 - Compare different versions of the same file

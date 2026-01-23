@@ -1,5 +1,7 @@
-use crate::Null;
-use indexmap::IndexMap;
+use {
+    crate::Null,
+    indexmap::IndexMap,
+};
 
 /// Error returned when trying to convert a non-zero value to Null.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

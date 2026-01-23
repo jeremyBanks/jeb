@@ -4,11 +4,24 @@
 //! or standard Z85 encoding. It chooses the escape form that maximizes the
 //! length of raw passthrough sequences.
 
-use crate::alphabet::{
-    encode_z85_block, is_safe_for_raw, z85_digit_char, ESCAPE_BACKTICK, ESCAPE_COMMA,
-    ESCAPE_PIPE, ESCAPE_SEMICOLON, ESCAPE_TILDE, ESCAPE_UNDERSCORE, PADDING_CHAR,
+use crate::{
+    alphabet::{
+        ESCAPE_BACKTICK,
+        ESCAPE_COMMA,
+        ESCAPE_PIPE,
+        ESCAPE_SEMICOLON,
+        ESCAPE_TILDE,
+        ESCAPE_UNDERSCORE,
+        PADDING_CHAR,
+        encode_z85_block,
+        is_safe_for_raw,
+        z85_digit_char,
+    },
+    base42::{
+        Endianness,
+        encode_length,
+    },
 };
-use crate::base42::{encode_length, Endianness};
 
 /// Encoding strategy determined by buffer analysis.
 enum EncodingStrategy {
@@ -156,18 +169,16 @@ impl Encoder {
         // Standard escapes and their raw byte counts at position 0
         // Ordered by descending raw count to maximize raw passthrough length
         let escapes_pos_0 = [
-            (ESCAPE_UNDERSCORE, 7),  // _
-            (ESCAPE_SEMICOLON, 6),   // ;
-            (ESCAPE_TILDE, 5),       // ~
-            (ESCAPE_COMMA, 4),       // ,
-            (ESCAPE_BACKTICK, 3),    // `
+            (ESCAPE_UNDERSCORE, 7), // _
+            (ESCAPE_SEMICOLON, 6),  // ;
+            (ESCAPE_TILDE, 5),      // ~
+            (ESCAPE_COMMA, 4),      // ,
+            (ESCAPE_BACKTICK, 3),   // `
         ];
 
         // Check position 0 (no prefix)
         for &(escape, raw_count) in &escapes_pos_0 {
-            if self.buffer.len() >= raw_count
-                && self.all_safe_for_raw(&self.buffer[..raw_count])
-            {
+            if self.buffer.len() >= raw_count && self.all_safe_for_raw(&self.buffer[..raw_count]) {
                 return Some(EncodingStrategy::RawPassthrough {
                     prefix_bytes: 0,
                     escape,
@@ -195,10 +206,10 @@ impl Encoder {
             // Ordered by descending raw count to maximize raw passthrough length
             let escapes_with_prefix = [
                 (ESCAPE_UNDERSCORE, 7, true), // LE only
-                (ESCAPE_SEMICOLON, 6, true), // LE
-                (ESCAPE_TILDE, 6, false),    // BE
-                (ESCAPE_COMMA, 4, true),     // LE
-                (ESCAPE_BACKTICK, 4, false), // BE
+                (ESCAPE_SEMICOLON, 6, true),  // LE
+                (ESCAPE_TILDE, 6, false),     // BE
+                (ESCAPE_COMMA, 4, true),      // LE
+                (ESCAPE_BACKTICK, 4, false),  // BE
             ];
 
             for &(escape, raw_count, is_le) in &escapes_with_prefix {
@@ -458,8 +469,10 @@ pub fn encode(data: &[u8]) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::decode::decode;
+    use {
+        super::*,
+        crate::decode::decode,
+    };
 
     #[test]
     fn test_encode_empty() {

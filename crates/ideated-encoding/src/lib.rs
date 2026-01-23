@@ -1,8 +1,8 @@
 //! Extended Z85 encoding with raw passthrough support.
 //!
-//! This crate implements an extension to Z85 encoding that allows raw (unencoded)
-//! byte sequences to pass through while maintaining the standard Z85 overhead
-//! guarantees of +25% (4 bytes → 5 characters).
+//! This crate implements an extension to Z85 encoding that allows raw
+//! (unencoded) byte sequences to pass through while maintaining the standard
+//! Z85 overhead guarantees of +25% (4 bytes → 5 characters).
 //!
 //! # Overview
 //!
@@ -21,7 +21,10 @@
 //! ## Simple encoding/decoding
 //!
 //! ```
-//! use ideated_encoding::{encode, decode};
+//! use ideated_encoding::{
+//!     decode,
+//!     encode,
+//! };
 //!
 //! let original = b"Hello, World!";
 //! let encoded = encode(original);
@@ -72,18 +75,41 @@ mod encode;
 mod error;
 
 // Re-export public API
-pub use decode::{decode, Decoder};
-pub use encode::{encode, Encoder};
-pub use error::{DecodeError, EncodeError, Error};
-
 // Re-export alphabet constants for advanced usage
 pub use alphabet::{
-    is_escape_char, is_safe_for_raw, is_z85_char, ESCAPE_BACKTICK, ESCAPE_CHARS, ESCAPE_COMMA,
-    ESCAPE_PIPE, ESCAPE_SEMICOLON, ESCAPE_TILDE, ESCAPE_UNDERSCORE, PADDING_CHAR, Z85_ALPHABET,
+    ESCAPE_BACKTICK,
+    ESCAPE_CHARS,
+    ESCAPE_COMMA,
+    ESCAPE_PIPE,
+    ESCAPE_SEMICOLON,
+    ESCAPE_TILDE,
+    ESCAPE_UNDERSCORE,
+    PADDING_CHAR,
+    Z85_ALPHABET,
+    is_escape_char,
+    is_safe_for_raw,
+    is_z85_char,
 };
-
 // Re-export base42 utilities for advanced usage
-pub use base42::{Endianness, MAX_LENGTH};
+pub use base42::{
+    Endianness,
+    MAX_LENGTH,
+};
+pub use {
+    decode::{
+        Decoder,
+        decode,
+    },
+    encode::{
+        Encoder,
+        encode,
+    },
+    error::{
+        DecodeError,
+        EncodeError,
+        Error,
+    },
+};
 
 #[cfg(test)]
 mod tests {
@@ -179,7 +205,10 @@ mod tests {
         let original = b"abcde.g";
         let encoded = encode(original);
         let decoded = decode(&encoded).unwrap();
-        assert_eq!(decoded, original, "dot was incorrectly skipped in continuation");
+        assert_eq!(
+            decoded, original,
+            "dot was incorrectly skipped in continuation"
+        );
     }
 
     #[test]

@@ -7,8 +7,15 @@
 //! - Cross-block continuation tests
 //! - Specific regression tests
 
-use ideated_encoding::{decode, encode, Decoder, Encoder};
-use proptest::prelude::*;
+use {
+    ideated_encoding::{
+        Decoder,
+        Encoder,
+        decode,
+        encode,
+    },
+    proptest::prelude::*,
+};
 
 // =============================================================================
 // Property-Based Tests
@@ -217,7 +224,8 @@ fn test_cross_block_continuation_lengths() {
     // Test lengths that require cross-block continuation
     // At position 0: escape uses 1 char, leaving 4 chars for raw in first block
 
-    // 7 raw bytes at position 0: 1 (escape) + 4 (raw) + 2 (raw continuation) + 3 (padding)
+    // 7 raw bytes at position 0: 1 (escape) + 4 (raw) + 2 (raw continuation) + 3
+    // (padding)
     let data7 = b"1234567";
     let encoded = encode(data7);
     let decoded = decode(&encoded).unwrap();
@@ -348,11 +356,15 @@ fn test_0xff_bytes() {
 #[test]
 fn test_alternating_patterns() {
     // 0x00, 0xFF alternating
-    let data: Vec<u8> = (0..50).map(|i| if i % 2 == 0 { 0x00 } else { 0xFF }).collect();
+    let data: Vec<u8> = (0..50)
+        .map(|i| if i % 2 == 0 { 0x00 } else { 0xFF })
+        .collect();
     assert_eq!(decode(&encode(&data)).unwrap(), data);
 
     // 0x55, 0xAA alternating (bit patterns)
-    let data: Vec<u8> = (0..50).map(|i| if i % 2 == 0 { 0x55 } else { 0xAA }).collect();
+    let data: Vec<u8> = (0..50)
+        .map(|i| if i % 2 == 0 { 0x55 } else { 0xAA })
+        .collect();
     assert_eq!(decode(&encode(&data)).unwrap(), data);
 }
 
@@ -470,7 +482,12 @@ fn test_prefix_value_boundaries() {
     // 1 char prefix: values 0-84
     for v in [0u8, 1, 42, 84] {
         let data = vec![v, b'a', b'b', b'c', b'd']; // 1 prefix byte + 4 raw
-        assert_eq!(decode(&encode(&data)).unwrap(), data, "failed for prefix value {}", v);
+        assert_eq!(
+            decode(&encode(&data)).unwrap(),
+            data,
+            "failed for prefix value {}",
+            v
+        );
     }
 
     // Values just above 84 should not use 1-char prefix (use Z85 instead)

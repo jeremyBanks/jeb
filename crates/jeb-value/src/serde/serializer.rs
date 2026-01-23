@@ -1,8 +1,19 @@
 //! Serializer serializing arbitrary `Serialize` values into our `Value` type.
 use {
-    crate::{Boolean, Bytes, Null, Number, String, Value, serde::SerdeError},
+    crate::{
+        Boolean,
+        Bytes,
+        Null,
+        Number,
+        String,
+        Value,
+        serde::SerdeError,
+    },
     indexmap::IndexMap,
-    serde::{ser, Serialize},
+    serde::{
+        Serialize,
+        ser,
+    },
 };
 pub struct Serializer;
 impl ser::Serializer for Serializer {
@@ -354,8 +365,10 @@ impl ser::SerializeStruct for SerializeMap {
         key: &'static str,
         value: &T,
     ) -> Result<(), SerdeError> {
-        self.entries
-            .push((MapKey::String(String::from(key.to_string())), to_value(value)?));
+        self.entries.push((
+            MapKey::String(String::from(key.to_string())),
+            to_value(value)?,
+        ));
         Ok(())
     }
 

@@ -1,9 +1,19 @@
-use anyhow::{Context, Result};
-use std::collections::{HashMap, HashSet};
-use std::env;
-use std::fs;
-use std::path::Path;
-use std::process::Command;
+use {
+    anyhow::{
+        Context,
+        Result,
+    },
+    std::{
+        collections::{
+            HashMap,
+            HashSet,
+        },
+        env,
+        fs,
+        path::Path,
+        process::Command,
+    },
+};
 
 fn git(args: &[&str]) -> Result<String> {
     let output = Command::new("git")
@@ -19,10 +29,7 @@ fn git_raw(args: &[&str]) -> Result<Vec<u8>> {
         .output()
         .context("failed to run git")?;
     if !output.status.success() {
-        anyhow::bail!(
-            "git failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        anyhow::bail!("git failed: {}", String::from_utf8_lossy(&output.stderr));
     }
     Ok(output.stdout)
 }
@@ -31,8 +38,8 @@ fn git_raw(args: &[&str]) -> Result<Vec<u8>> {
 struct BlobDeletion {
     blob_hash: String,
     path: String,
-    created: String,      // YYYY-MM-DD
-    deleted: String,      // YYYY-MM-DD
+    created: String, // YYYY-MM-DD
+    deleted: String, // YYYY-MM-DD
     delete_commit: String,
 }
 
@@ -154,7 +161,8 @@ fn find_all_deletions(pattern: &str) -> Result<Vec<BlobDeletion>> {
 
 /// Find the creation date of a blob at a specific path
 fn find_creation_date(blob_hash: &str, path: &str, before_commit: &str) -> Result<String> {
-    // Walk back through history to find the earliest commit where this blob existed at this path
+    // Walk back through history to find the earliest commit where this blob existed
+    // at this path
     let output = git(&[
         "log",
         "--format=%H %cs",
@@ -193,14 +201,7 @@ fn find_creation_date(blob_hash: &str, path: &str, before_commit: &str) -> Resul
     // If we couldn't trace back, use the deletion date as creation date
     if creation_date.is_empty() {
         // Try a simpler approach: just get the oldest commit touching this file
-        let oldest = git(&[
-            "log",
-            "--format=%cs",
-            "--follow",
-            before_commit,
-            "--",
-            path,
-        ])?;
+        let oldest = git(&["log", "--format=%cs", "--follow", before_commit, "--", path])?;
         creation_date = oldest.lines().last().unwrap_or("").to_string();
     }
 
@@ -251,7 +252,10 @@ fn build_filename(deletion: &BlobDeletion) -> String {
 
     // Concatenate created+abbrev directly (no dash between them)
     let date_part = format!("{}{}", created, deleted_abbrev);
-    format!("{}-{}-{}-{}", date_part, commit_short, blob_short, flattened)
+    format!(
+        "{}-{}-{}-{}",
+        date_part, commit_short, blob_short, flattened
+    )
 }
 
 fn recover_blob_content(blob_hash: &str) -> Result<Vec<u8>> {
@@ -284,7 +288,8 @@ fn main() -> Result<()> {
     let head_blobs = get_head_blobs()?;
     println!("  {} blobs currently in HEAD", head_blobs.len());
 
-    // Step 2: Find all blob deletions for each pattern (handles merge commits with -m)
+    // Step 2: Find all blob deletions for each pattern (handles merge commits with
+    // -m)
     println!("Finding blob deletions...");
     let mut all_deletions = Vec::new();
     for pattern in &patterns {
@@ -327,7 +332,8 @@ fn main() -> Result<()> {
     unique_deletions.sort_by(|a, b| (&a.path, &a.deleted).cmp(&(&b.path, &b.deleted)));
     println!("  {} unique (blob, path) pairs", unique_deletions.len());
 
-    // Step 4.5: Filter out whitespace-only blobs unless they're the only version for that path
+    // Step 4.5: Filter out whitespace-only blobs unless they're the only version
+    // for that path
     println!("Filtering whitespace-only content...");
     let mut deletions_by_path: HashMap<String, Vec<usize>> = HashMap::new();
     for (i, d) in unique_deletions.iter().enumerate() {
@@ -341,7 +347,8 @@ fn main() -> Result<()> {
             .iter()
             .copied()
             .filter(|&i| {
-                let content = recover_blob_content(&unique_deletions[i].blob_hash).unwrap_or_default();
+                let content =
+                    recover_blob_content(&unique_deletions[i].blob_hash).unwrap_or_default();
                 !is_whitespace_only(&content)
             })
             .collect();
@@ -349,7 +356,8 @@ fn main() -> Result<()> {
         if !non_whitespace.is_empty() {
             // Skip whitespace-only versions since non-empty ones exist
             for &i in indices {
-                let content = recover_blob_content(&unique_deletions[i].blob_hash).unwrap_or_default();
+                let content =
+                    recover_blob_content(&unique_deletions[i].blob_hash).unwrap_or_default();
                 if is_whitespace_only(&content) {
                     skip_indices.insert(i);
                 }
@@ -399,7 +407,11 @@ fn main() -> Result<()> {
         };
 
         if content.is_empty() {
-            eprintln!("Empty content for {} (blob {})", deletion.path, &deletion.blob_hash[..7.min(deletion.blob_hash.len())]);
+            eprintln!(
+                "Empty content for {} (blob {})",
+                deletion.path,
+                &deletion.blob_hash[..7.min(deletion.blob_hash.len())]
+            );
             failed += 1;
             continue;
         }

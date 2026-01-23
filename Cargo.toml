@@ -35,10 +35,12 @@ panic = "abort"
 [patch.crates-io]
 _autofix = { path = "crates/_autofix" }
 _claude_hooks = { path = "crates/_claude_hooks" }
+_examples = { path = "crates/_examples" }
 _scripts = { path = "crates/_scripts" }
 _trace = { path = "crates/_trace" }
 git-snapshot = { path = "crates/git-snapshot" }
 git-zoom = { path = "crates/git-zoom" }
+ideated-encoding = { path = "crates/ideated-encoding" }
 inline = { path = "crates/inline" }
 jeb = { path = "crates/jeb" }
 jeb-bytes-as-text = { path = "crates/jeb-bytes-as-text" }
@@ -48,7 +50,6 @@ jeb-value = { path = "crates/jeb-value" }
 jeb-wasm = { path = "crates/jeb-wasm" }
 save = { path = "crates/save" }
 stringify_verbatim = { path = "crates/stringify_verbatim" }
-ideated-encoding = { path = "crates/ideated-encoding" }
 
 [workspace.dependencies]
 _autofix = { path = "crates/_autofix" }
@@ -56,11 +57,12 @@ _claude_hooks = { path = "crates/_claude_hooks" }
 _scripts = { path = "crates/_scripts" }
 anyhow = "1.0.0"
 async-stream = "0.3.6"
-bat = { version = "0.24", default-features = false, features = ["regex-onig"] }
+bat = "0.24.0"
 bstr = "0.2.17"
 cfg-if = "1.0.4"
 clap = "3.2.8"
 color-eyre = "0.6.5"
+crabtime = "1.1.4"
 databake = "0.1.0"
 derive_more = "2.0.1"
 digest = "0.10.3"
@@ -72,28 +74,30 @@ eyre = "0.6.8"
 fast_hilbert = "2.0.2"
 futures = "0.3.0"
 getset = "0.1.6"
-git-snapshot = "0.0.0-dev-2025-12-26.7705"
-git-zoom = "0.0.0-dev-2025-12-26.7705"
-git2 = "0.14.4"
+git-snapshot = "0.0.0-dev-2026-01-19.4531"
+git-zoom = "0.0.0-dev-2026-01-19.4531"
+git2 = "0.18.0"
 glob = "0.3.0"
 home = "0.5.3"
+ideated-encoding = "0.0.0-dev-2026-01-19.4531"
 ignorable = "0.1.2"
 ignore = "0.4.0"
 indexmap = "2.0.0"
 inline = "0.0.1-dev.1"
 itertools = "0.10.3"
-jeb = { version = "0.0.0-dev-2025-12-26.7705", default-features = false }
-jeb-bytes-as-text = "0.0.0-dev-2025-12-26.7705"
-jeb-common = "0.0.0-dev-2025-12-26.7705"
-jeb-stream = "0.0.0-dev-2025-12-26.7705"
-jeb-value = "0.0.0-dev-2025-12-26.7705"
-jeb-wasm = "0.0.0-dev-2025-12-26.7705"
+jeb = { version = "0.0.0-dev-2026-01-19.4531", default-features = false }
+jeb-bytes-as-text = "0.0.0-dev-2026-01-19.4531"
+jeb-common = "0.0.0-dev-2026-01-19.4531"
+jeb-stream = "0.0.0-dev-2026-01-19.4531"
+jeb-value = "0.0.0-dev-2026-01-19.4531"
+jeb-wasm = "0.0.0-dev-2026-01-19.4531"
 js-sys = "0.3.82"
 macro_rules_attribute = "0.2.2"
 num-integer = "0.1.45"
 num-traits = "0.2.15"
 num_cpus = "1.13.1"
 once_cell = "1.13.0"
+ordermap = "1.1.0"
 owo-colors = "4.2.3"
 parking_lot = "0.12.1"
 pathdiff = "0.2.0"
@@ -127,4 +131,3 @@ tracing-subscriber = "0.3.22"
 walkdir = "2.0.0"
 wasm-bindgen = "0.2.105"
 web-sys = "0.3.82"
-ideated-encoding = { path = "crates/ideated-encoding" }

@@ -4,32 +4,35 @@ use core::{
     marker::PhantomData,
 };
 
+pub mod type_logic {
+    enum TypeOnly {}
 
-pub trait Is<T> {}
-impl<T> Is<T> for T {}
+    trait Seal {}
+    #[expect(private_bounds)]
+    pub trait Sealed: Seal {}
+    impl<T: Seal> Sealed for T {}
 
-trait Seal {}
-#[expect(private_bounds)]
-pub trait Sealed: Seal {}
-impl<T: Seal> Sealed for T {}
+    trait InnerIs<T> {}
+    impl<T> InnerIs<T> for T {}
 
+    #[expect(private_bounds)]
+    pub trait Is<T>: InnerIs<T> {}
+    impl<T> Is<T> for T where T: InnerIs<T> {}
 
-pub trait Bool: Sealed {
-    const VALUE: bool;
+    trait InnerBool {}
+
+    /// Type-level `bool` value.
+    #[expect(private_bounds)]
+    pub trait Bool: InnerBool {}
+
+    pub struct True(TypeOnly);
+    impl InnerBool for True {}
+
+    pub struct False(TypeOnly);
+    impl InnerBool for False {}
 }
 
-pub struct True;
-impl Seal for True {}
-impl Bool for True {
-    const VALUE: bool = true;
-}
-
-pub struct False;
-impl Seal for False {}
-impl Bool for False {
-    const VALUE: bool = false;
-}
-
+use type_logic::*;
 
 
 pub trait ImplConversionsFrom<Source>: Sized {
@@ -46,6 +49,10 @@ pub enum ConversionPriority {
     NotClamped,
     NotTruncated,
 }
+
+// XXX: instead of bools, these need to be optional generic error
+// types so we can statically exclude them if they're defined
+// to be Never.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ConversionResult<Target, Source>

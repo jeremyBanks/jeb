@@ -1,11 +1,20 @@
-use derive_more::{AsMut, AsRef, Deref, DerefMut, From};
+use derive_more::{
+    AsMut,
+    AsRef,
+    Deref,
+    DerefMut,
+    From,
+};
 
 pub mod from;
 mod value;
 
 // [impl jeb-value.features.core.cfg]
 // [impl jeb-value.features.serde.optional]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize)
+)]
 // [impl jeb-value.variant.common.clone]
 // [impl jeb-value.variant.common.debug]
 // [impl jeb-value.variant.common.deref]
@@ -18,7 +27,19 @@ mod value;
 // [impl jeb-value.variant.common.borrow]
 // [impl jeb-value.variant.common.mut]
 #[derive(
-    AsMut, AsRef, Clone, Copy, Debug, Default, Deref, DerefMut, Eq, From, Hash, Ord, PartialEq,
+    AsMut,
+    AsRef,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Deref,
+    DerefMut,
+    Eq,
+    From,
+    Hash,
+    Ord,
+    PartialEq,
     PartialOrd,
 )]
 // [impl jeb-value.variant.common.transparent]

@@ -1,9 +1,18 @@
 /// Tests to verify that positive and negative zero are properly distinguished
 /// in Number and Value types for equality, ordering, and hashing.
 use {
-    crate::{Number, Value},
-    std::collections::{hash_map::DefaultHasher, HashMap},
-    std::hash::{Hash, Hasher},
+    crate::{
+        Number,
+        Value,
+    },
+    std::collections::{
+        HashMap,
+        hash_map::DefaultHasher,
+    },
+    std::hash::{
+        Hash,
+        Hasher,
+    },
 };
 #[test]
 // [verify jeb-value.variant.common.eq]

@@ -1,8 +1,21 @@
 //! Non-derived `Deserialize` implementations for our `Value` types, to allow
 //! them to be deserialized by arbitrary serde `Deserializer`s.
 use {
-    crate::{Array, Boolean, Bytes, BytesMap, Null, Number, String, StringMap, Value},
-    serde::de::{self, Visitor},
+    crate::{
+        Array,
+        Boolean,
+        Bytes,
+        BytesMap,
+        Null,
+        Number,
+        String,
+        StringMap,
+        Value,
+    },
+    serde::de::{
+        self,
+        Visitor,
+    },
 };
 
 // [impl jeb-value.serde.core.deserialize]

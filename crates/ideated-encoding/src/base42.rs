@@ -17,8 +17,13 @@
 //!
 //! This halves the range to encode endianness in the spare bits.
 
-use crate::alphabet::{z85_digit_char, z85_digit_value};
-use crate::error::DecodeError;
+use crate::{
+    alphabet::{
+        z85_digit_char,
+        z85_digit_value,
+    },
+    error::DecodeError,
+};
 
 /// Endianness for prefix bytes (affects padding of interrupted block).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -74,8 +79,9 @@ pub fn encode_length(length: usize, position: u8, endianness: Endianness) -> Vec
     let available_chars = position as usize;
 
     // We need at least as many positions as we have base-42 digits
-    // If position is 0, we have no length encoding chars (raw bytes start immediately after |)
-    // But wait - the spec says | at position 4 can use up to 4 chars before it
+    // If position is 0, we have no length encoding chars (raw bytes start
+    // immediately after |) But wait - the spec says | at position 4 can use up
+    // to 4 chars before it
 
     // Actually, the number of available characters is exactly `position`:
     // - position 0: no chars before |
@@ -102,12 +108,13 @@ pub fn encode_length(length: usize, position: u8, endianness: Endianness) -> Vec
         // This is a complex case - for now, let's just output the digits
         // and let the caller handle placement
         // Actually, looking at the spec more carefully, if | is at position 0,
-        // we read backward from the previous block. Let's output all needed digits.
+        // we read backward from the previous block. Let's output all needed
+        // digits.
     }
 
     // Build output: physical order (leftmost first)
-    // The rightmost digit (closest to |) has continuation=1 if more digits to its left
-    // The leftmost digit has continuation=0
+    // The rightmost digit (closest to |) has continuation=1 if more digits to its
+    // left The leftmost digit has continuation=0
 
     let num_digits = digits_low_first.len();
     let block_aligned = position == 0 || position == 4;
@@ -118,16 +125,17 @@ pub fn encode_length(length: usize, position: u8, endianness: Endianness) -> Vec
     for (i, &contribution) in digits_low_first.iter().rev().enumerate() {
         let is_leftmost = i == 0;
 
-        // Continuation flag: set if there are more digits to the left (from decoder's perspective)
-        // The decoder reads right-to-left, so continuation=1 means "keep reading left"
-        // Therefore: leftmost digit has continuation=0, all others have continuation=1
+        // Continuation flag: set if there are more digits to the left (from decoder's
+        // perspective) The decoder reads right-to-left, so continuation=1 means
+        // "keep reading left" Therefore: leftmost digit has continuation=0, all
+        // others have continuation=1
         let has_continuation = !is_leftmost;
 
         // For non-block-aligned leftmost digit, encode endianness
         let digit_value = if is_leftmost && !block_aligned && num_digits == available_chars {
             // Leftmost digit at non-block-aligned position encodes endianness
             match endianness {
-                Endianness::Little => contribution, // 0-20 range
+                Endianness::Little => contribution,   // 0-20 range
                 Endianness::Big => contribution + 21, // 21-41 range
             }
         } else {
@@ -160,7 +168,10 @@ pub fn encode_length(length: usize, position: u8, endianness: Endianness) -> Vec
 ///
 /// # Returns
 /// `(length, endianness)` where length is the number of raw bytes to follow.
-pub fn decode_length(digits: &[u8], block_aligned: bool) -> Result<(usize, Endianness), DecodeError> {
+pub fn decode_length(
+    digits: &[u8],
+    block_aligned: bool,
+) -> Result<(usize, Endianness), DecodeError> {
     if digits.is_empty() {
         // No length digits means length 0 (infinite) is implied?
         // Actually, the spec doesn't clearly define this case.
@@ -232,20 +243,22 @@ pub fn decode_length(digits: &[u8], block_aligned: bool) -> Result<(usize, Endia
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::alphabet::z85_digit_char;
+    use {
+        super::*,
+        crate::alphabet::z85_digit_char,
+    };
 
     #[test]
     fn test_encode_length_50() {
         // From the spec's worked example:
         // Length 50 = 1×42 + 8
-        // Rightmost digit (8): needs continuation, so 8 + 42 = 50, then +1 = 51 → Z85[51]
-        // Leftmost digit (1): no continuation, so 1, then +1 = 2 → Z85[2]
-        // Output: Z85[2] Z85[51] |
+        // Rightmost digit (8): needs continuation, so 8 + 42 = 50, then +1 = 51 →
+        // Z85[51] Leftmost digit (1): no continuation, so 1, then +1 = 2 →
+        // Z85[2] Output: Z85[2] Z85[51] |
 
         let encoded = encode_length(50, 2, Endianness::Little);
         assert_eq!(encoded.len(), 2);
-        assert_eq!(encoded[0], z85_digit_char(2));  // '2'
+        assert_eq!(encoded[0], z85_digit_char(2)); // '2'
         assert_eq!(encoded[1], z85_digit_char(51)); // Should be 'P' (51st char in Z85)
     }
 
@@ -362,6 +375,9 @@ mod tests {
         // This would be value 5 + 1 = 6
         let invalid_digit = z85_digit_char(6); // represents length 5
         let result = decode_length(&[invalid_digit], false);
-        assert!(matches!(result, Err(DecodeError::InvalidLength { length: 5 })));
+        assert!(matches!(
+            result,
+            Err(DecodeError::InvalidLength { length: 5 })
+        ));
     }
 }

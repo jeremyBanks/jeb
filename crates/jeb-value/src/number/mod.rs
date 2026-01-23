@@ -1,10 +1,19 @@
 use {
     core::hash::Hash,
-    derive_more::{AsRef, Deref, Display, Into},
+    derive_more::{
+        AsRef,
+        Deref,
+        Display,
+        Into,
+    },
 };
 
 // [impl jeb-value.features.core.cfg]
-#[cfg_attr(feature = "serde", derive(serde::Serialize), serde(transparent))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize),
+    serde(transparent)
+)]
 // [impl jeb-value.variant.common.clone]
 // [impl jeb-value.variant.common.debug]
 // [impl jeb-value.variant.common.deref]

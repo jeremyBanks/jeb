@@ -5,19 +5,24 @@
 pub const Z85_ALPHABET: &[u8; 85] =
     b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
 
-/// Escape character: comma - LE 4 raw bytes (positions 1-3), or 4 raw (position 0)
+/// Escape character: comma - LE 4 raw bytes (positions 1-3), or 4 raw (position
+/// 0)
 pub const ESCAPE_COMMA: u8 = b',';
 
-/// Escape character: backtick - BE 4 raw bytes (positions 1-3), or 3 raw (position 0)
+/// Escape character: backtick - BE 4 raw bytes (positions 1-3), or 3 raw
+/// (position 0)
 pub const ESCAPE_BACKTICK: u8 = b'`';
 
-/// Escape character: semicolon - LE 6 raw bytes (positions 1-3), or 6 raw (position 0)
+/// Escape character: semicolon - LE 6 raw bytes (positions 1-3), or 6 raw
+/// (position 0)
 pub const ESCAPE_SEMICOLON: u8 = b';';
 
-/// Escape character: tilde - BE 6 raw bytes (positions 1-3), or 5 raw (position 0)
+/// Escape character: tilde - BE 6 raw bytes (positions 1-3), or 5 raw (position
+/// 0)
 pub const ESCAPE_TILDE: u8 = b'~';
 
-/// Escape character: underscore - LE 7 raw bytes (positions 1-3), or 7 raw (position 0)
+/// Escape character: underscore - LE 7 raw bytes (positions 1-3), or 7 raw
+/// (position 0)
 pub const ESCAPE_UNDERSCORE: u8 = b'_';
 
 /// Escape character: pipe - Variable length (8+ bytes), any position
@@ -115,7 +120,8 @@ pub fn decode_z85_block(chars: &[u8; 5]) -> Option<[u8; 4]> {
 }
 
 /// Raw byte counts for standard escapes at position 0.
-/// Returns None if the escape is not valid at position 0 (only `|` is valid elsewhere).
+/// Returns None if the escape is not valid at position 0 (only `|` is valid
+/// elsewhere).
 pub fn escape_raw_bytes_at_position_0(escape: u8) -> Option<usize> {
     match escape {
         ESCAPE_BACKTICK => Some(3),
@@ -131,10 +137,10 @@ pub fn escape_raw_bytes_at_position_0(escape: u8) -> Option<usize> {
 /// Returns (raw_bytes, is_little_endian).
 pub fn escape_info_at_position_1_to_3(escape: u8) -> Option<(usize, bool)> {
     match escape {
-        ESCAPE_COMMA => Some((4, true)),     // LE
-        ESCAPE_BACKTICK => Some((4, false)), // BE
-        ESCAPE_SEMICOLON => Some((6, true)), // LE
-        ESCAPE_TILDE => Some((6, false)),    // BE
+        ESCAPE_COMMA => Some((4, true)),      // LE
+        ESCAPE_BACKTICK => Some((4, false)),  // BE
+        ESCAPE_SEMICOLON => Some((6, true)),  // LE
+        ESCAPE_TILDE => Some((6, false)),     // BE
         ESCAPE_UNDERSCORE => Some((7, true)), // LE only, no BE variant
         _ => None,
     }
@@ -153,7 +159,11 @@ mod tests {
     fn test_z85_alphabet_unique() {
         let mut seen = [false; 256];
         for &c in Z85_ALPHABET {
-            assert!(!seen[c as usize], "duplicate character in Z85: {}", c as char);
+            assert!(
+                !seen[c as usize],
+                "duplicate character in Z85: {}",
+                c as char
+            );
             seen[c as usize] = true;
         }
     }

@@ -2,11 +2,23 @@
 //! `Deserialize` types.
 use {
     crate::{
-        Boolean, Bytes, Null, Number, String, Value,
-        serde::{SerdeError, error::Unexpected},
+        Boolean,
+        Bytes,
+        Null,
+        Number,
+        String,
+        Value,
+        serde::{
+            SerdeError,
+            error::Unexpected,
+        },
     },
     indexmap::IndexMap,
-    serde::de::{self, DeserializeSeed, Visitor},
+    serde::de::{
+        self,
+        DeserializeSeed,
+        Visitor,
+    },
 };
 impl<'de> de::Deserializer<'de> for Value {
     type Error = SerdeError;
@@ -307,9 +319,7 @@ impl<'de> de::Deserializer<'de> for Value {
                 }
                 visitor.visit_byte_buf(bytes)
             }
-            Value::String(s) => {
-                visitor.visit_byte_buf(s.into_inner().into_bytes())
-            }
+            Value::String(s) => visitor.visit_byte_buf(s.into_inner().into_bytes()),
             _ => Err(SerdeError::invalid_type(self.unexpected(), "bytes")),
         }
     }
@@ -498,9 +508,7 @@ impl Value {
             Value::Null(_) => Unexpected::Unit,
             Value::Boolean(b) => Unexpected::Bool(**b),
             Value::Number(n) => Unexpected::Float(**n),
-            Value::String(s) => {
-                Unexpected::Str(s.clone().into_inner().into_boxed_str())
-            }
+            Value::String(s) => Unexpected::Str(s.clone().into_inner().into_boxed_str()),
             Value::Bytes(b) => {
                 let slice: &[u8] = b.as_ref();
                 Unexpected::Bytes(slice.to_vec().into_boxed_slice())
