@@ -148,6 +148,7 @@ mod cast;
 mod de;
 mod de_value;
 mod error;
+mod intern;
 mod transparent;
 mod to_value;
 mod value;

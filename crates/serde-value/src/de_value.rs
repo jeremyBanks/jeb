@@ -3,6 +3,7 @@
 //! This uses `deserialize_enum` which works with ALL serde formats,
 //! including non-self-describing formats like bincode and postcard.
 
+use crate::intern::intern_string_owned;
 use crate::Value;
 use serde::de::{self, Deserialize, Deserializer, EnumAccess, SeqAccess, VariantAccess, Visitor};
 use std::fmt;
@@ -129,14 +130,14 @@ impl<'de> Visitor<'de> for ValueVisitor {
                 // UnitStruct: name
                 let name: String = variant_access.newtype_variant()?;
                 Ok(Value::UnitStruct {
-                    name: Box::leak(name.into_boxed_str()),
+                    name: intern_string_owned(name),
                 })
             }
             20 => {
                 // NewtypeStruct: (name, value)
                 let (name, value): (String, Value) = variant_access.tuple_variant(2, TupleVisitor2)?;
                 Ok(Value::NewtypeStruct {
-                    name: Box::leak(name.into_boxed_str()),
+                    name: intern_string_owned(name),
                     value: Box::new(value),
                 })
             }
@@ -145,9 +146,9 @@ impl<'de> Visitor<'de> for ValueVisitor {
                 let (enum_name, variant_index, variant, value): (String, u32, String, Value) =
                     variant_access.tuple_variant(4, TupleVisitor4Newtype)?;
                 Ok(Value::NewtypeVariant {
-                    enum_name: Box::leak(enum_name.into_boxed_str()),
+                    enum_name: intern_string_owned(enum_name),
                     variant_index,
-                    variant: Box::leak(variant.into_boxed_str()),
+                    variant: intern_string_owned(variant),
                     value: Box::new(value),
                 })
             }
@@ -165,7 +166,7 @@ impl<'de> Visitor<'de> for ValueVisitor {
                 // TupleStruct: (name, fields)
                 let (name, fields): (String, Vec<Value>) = variant_access.tuple_variant(2, TupleVisitor2Vec)?;
                 Ok(Value::TupleStruct {
-                    name: Box::leak(name.into_boxed_str()),
+                    name: intern_string_owned(name),
                     fields,
                 })
             }
@@ -174,9 +175,9 @@ impl<'de> Visitor<'de> for ValueVisitor {
                 let (enum_name, variant_index, variant, fields): (String, u32, String, Vec<Value>) =
                     variant_access.tuple_variant(4, TupleVisitor4Vec)?;
                 Ok(Value::TupleVariant {
-                    enum_name: Box::leak(enum_name.into_boxed_str()),
+                    enum_name: intern_string_owned(enum_name),
                     variant_index,
-                    variant: Box::leak(variant.into_boxed_str()),
+                    variant: intern_string_owned(variant),
                     fields,
                 })
             }
@@ -189,9 +190,9 @@ impl<'de> Visitor<'de> for ValueVisitor {
                 // Struct: (name, fields)
                 let (name, fields): (String, Vec<(String, Value)>) = variant_access.tuple_variant(2, TupleVisitor2StructFields)?;
                 Ok(Value::Struct {
-                    name: Box::leak(name.into_boxed_str()),
+                    name: intern_string_owned(name),
                     fields: fields.into_iter()
-                        .map(|(k, v)| (Box::leak(k.into_boxed_str()) as &'static str, v))
+                        .map(|(k, v)| (intern_string_owned(k), v))
                         .collect(),
                 })
             }
@@ -200,11 +201,11 @@ impl<'de> Visitor<'de> for ValueVisitor {
                 let (enum_name, variant_index, variant, fields): (String, u32, String, Vec<(String, Value)>) =
                     variant_access.tuple_variant(4, TupleVisitor4StructFields)?;
                 Ok(Value::StructVariant {
-                    enum_name: Box::leak(enum_name.into_boxed_str()),
+                    enum_name: intern_string_owned(enum_name),
                     variant_index,
-                    variant: Box::leak(variant.into_boxed_str()),
+                    variant: intern_string_owned(variant),
                     fields: fields.into_iter()
-                        .map(|(k, v)| (Box::leak(k.into_boxed_str()) as &'static str, v))
+                        .map(|(k, v)| (intern_string_owned(k), v))
                         .collect(),
                 })
             }
@@ -213,9 +214,9 @@ impl<'de> Visitor<'de> for ValueVisitor {
                 let (enum_name, variant_index, variant): (String, u32, String) =
                     variant_access.tuple_variant(3, TupleVisitor3)?;
                 Ok(Value::UnitVariant {
-                    enum_name: Box::leak(enum_name.into_boxed_str()),
+                    enum_name: intern_string_owned(enum_name),
                     variant_index,
-                    variant: Box::leak(variant.into_boxed_str()),
+                    variant: intern_string_owned(variant),
                 })
             }
             _ => Err(de::Error::invalid_value(
