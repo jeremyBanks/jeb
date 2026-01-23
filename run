@@ -46,5 +46,8 @@ else
 fi
 
 # command in blue, args in cyan
-echo -e "\033[1;34m$bin\033[0m \033[1;36m$@\033[0m"
+echo >&2
+echo >&2 -e "\033[1;34m$bin\033[0m \033[1;36m$@\033[0m"
+echo >&2
+
 exec "$bin" "$@"
