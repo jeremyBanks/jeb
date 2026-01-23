@@ -211,7 +211,14 @@ impl<'de> Deserialize<'de> for Meta {
 
 struct MetaVisitor;
 
-/// Helper to deserialize variant identifier as either u32 index or String name.
+/// Helper to deserialize variant identifier as either index (integer) or name (string).
+///
+/// Serde formats identify enum variants in exactly two ways:
+/// - **By index**: bincode sends `3u32` meaning "the 4th variant"
+/// - **By name**: JSON sends `"I32"` meaning "the variant named I32"
+///
+/// No other types make sense as variant identifiers. A bool, float, sequence, or map
+/// cannot meaningfully identify an enum variant, so we return an error for those.
 struct VariantId(u32);
 
 impl<'de> Deserialize<'de> for VariantId {
@@ -222,10 +229,10 @@ impl<'de> Deserialize<'de> for VariantId {
             type Value = VariantId;
 
             fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(f, "a variant index (integer) or name (string)")
+                write!(f, "variant index (integer) or variant name (string)")
             }
 
-            // === Integers: variant index ===
+            // === Integers: variant index (exact) ===
             fn visit_i8<E: de::Error>(self, v: i8) -> Result<VariantId, E> {
                 Ok(VariantId(v as u32))
             }
@@ -257,26 +264,7 @@ impl<'de> Deserialize<'de> for VariantId {
                 Ok(VariantId(v as u32))
             }
 
-            // === Bool: false=0, true=1 ===
-            fn visit_bool<E: de::Error>(self, v: bool) -> Result<VariantId, E> {
-                Ok(VariantId(v as u32))
-            }
-
-            // === Floats: truncate to integer (lossy but accepting) ===
-            fn visit_f32<E: de::Error>(self, v: f32) -> Result<VariantId, E> {
-                Ok(VariantId(v as u32))
-            }
-            fn visit_f64<E: de::Error>(self, v: f64) -> Result<VariantId, E> {
-                Ok(VariantId(v as u32))
-            }
-
-            // === Char: treat as single-char variant name ===
-            fn visit_char<E: de::Error>(self, v: char) -> Result<VariantId, E> {
-                let mut buf = [0u8; 4];
-                self.visit_str(v.encode_utf8(&mut buf))
-            }
-
-            // === Strings: variant name ===
+            // === Strings: variant name (exact lookup) ===
             fn visit_str<E: de::Error>(self, v: &str) -> Result<VariantId, E> {
                 let index = match v {
                     "Bool" => 0, "I8" => 1, "I16" => 2, "I32" => 3, "I64" => 4, "I128" => 5,
@@ -291,60 +279,13 @@ impl<'de> Deserialize<'de> for VariantId {
                 Ok(VariantId(index))
             }
 
-            // === Bytes: treat as UTF-8 variant name ===
-            fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<VariantId, E> {
-                match std::str::from_utf8(v) {
-                    Ok(s) => self.visit_str(s),
-                    Err(_) => Err(de::Error::invalid_value(
-                        de::Unexpected::Bytes(v),
-                        &self,
-                    )),
-                }
+            fn visit_string<E: de::Error>(self, v: String) -> Result<VariantId, E> {
+                self.visit_str(&v)
             }
 
-            // === Newtype: unwrap and recurse ===
-            fn visit_newtype_struct<D: Deserializer<'de>>(self, deserializer: D) -> Result<VariantId, D::Error> {
-                VariantId::deserialize(deserializer)
-            }
-
-            // === Unit/None: no information, default to variant 0 ===
-            fn visit_unit<E: de::Error>(self) -> Result<VariantId, E> {
-                Ok(VariantId(0))
-            }
-
-            fn visit_none<E: de::Error>(self) -> Result<VariantId, E> {
-                Ok(VariantId(0))
-            }
-
-            // === Some: unwrap and recurse ===
-            fn visit_some<D: Deserializer<'de>>(self, deserializer: D) -> Result<VariantId, D::Error> {
-                VariantId::deserialize(deserializer)
-            }
-
-            // === Seq: take first element as the variant id ===
-            fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<VariantId, A::Error> {
-                match seq.next_element::<VariantId>()? {
-                    Some(id) => Ok(id),
-                    None => Ok(VariantId(0)), // empty seq = variant 0
-                }
-            }
-
-            // === Map: look for "variant" or "index" or "name" key, or take first value ===
-            fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<VariantId, A::Error> {
-                // Try to find a sensible key, otherwise take first value
-                while let Some(key) = map.next_key::<String>()? {
-                    let value = map.next_value::<VariantId>()?;
-                    // Accept any key - just use the first value we find
-                    return Ok(value);
-                }
-                Ok(VariantId(0)) // empty map = variant 0
-            }
-
-            // === Enum: recurse into the variant's value ===
-            fn visit_enum<A: EnumAccess<'de>>(self, access: A) -> Result<VariantId, A::Error> {
-                let (variant, _): (VariantId, _) = access.variant()?;
-                Ok(variant)
-            }
+            // All other types are not valid variant identifiers.
+            // The default Visitor implementations return "invalid type" errors,
+            // which is exactly what we want.
         }
 
         deserializer.deserialize_any(VariantIdVisitor)
