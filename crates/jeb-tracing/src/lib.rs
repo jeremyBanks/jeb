@@ -15,6 +15,7 @@ pub static LOG_ENV: LazyLock<String> = LazyLock::new(|| {
     let specific = std::env::var("JEB_LOG");
 
     let default_log_level = "warn";
+    let verbose_log_level = "info";
 
     let verbose_crates = [
         option_env!("CARGO_CRATE_NAME"),
@@ -34,8 +35,11 @@ pub static LOG_ENV: LazyLock<String> = LazyLock::new(|| {
 
     default_parts.push(default_log_level.to_string());
 
+    for crate_name in verbose_crates {
+        default_parts.push(format!("{crate_name}={verbose_log_level}"));
+    }
 
-    let default = "warn,jeb=info,save=info".to_string();
+    let default = default_parts.join(",");
 
     specific.or(common).unwrap_or(default)
 });
