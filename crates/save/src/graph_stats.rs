@@ -950,3 +950,4 @@ mod tests {
         assert_eq!(stats.revision_index, 2);
     }
 }
+

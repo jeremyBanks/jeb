@@ -23,6 +23,8 @@ pub static PANIC_INITIALIZED: LazyLock<bool> = LazyLock::new(|| {
         return false;
     }
 
+    info!("Initialized default `jeb-tracing` configuration for panic handling.");
+
     color_eyre::install().is_ok()
 });
 
@@ -36,13 +38,31 @@ pub static TRACING_INITIALIZED: LazyLock<bool> = LazyLock::new(|| {
         .pretty()
         .init();
 
+    tracing::info!(
+        "Initialized default `jeb-tracing` configuration for global default `tracing` subscriber."
+    );
+
     true
 });
 
-#[macro_export]
-macro_rules! trace {
-    ($($args:tt)*) => {
-        TRACING_INITIALIZED.get().ok();
-        tracing::trace!($($args)*);
+macro_rules! define_tracing_macro_wrappers {
+    ( [$D:tt] $($ident:ident),+ $(,)?) => {
+        $(
+            #[macro_export]
+            macro_rules! $ident {
+                ($D ($D args:tt)*) => {
+                    {
+                        ::std::sync::LazyLock::force(&$crate::TRACING_INITIALIZED);
+                        ::tracing::$ident!($D ($D args)*)
+                    }
+                };
+            }
+        )+
     };
+}
+
+define_tracing_macro_wrappers! {
+    [$] span, enabled, record_all,
+    trace, debug, info, warn, error,
+    trace_span, debug_span, info_span, warn_span, error_span,
 }
