@@ -1,5 +1,6 @@
 //! The core `Value` type representing the complete serde data model.
 
+use serde::Serialize;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
@@ -14,7 +15,22 @@ use std::hash::{Hash, Hasher};
 /// - The distinction between sequences and tuples
 /// - Struct names and field names
 /// - Enum variant names and indices
-#[derive(Debug, Clone)]
+///
+/// # Serialization (Tagged Enum)
+///
+/// `Value` serializes as a **tagged enum** - like `#[derive(Serialize)]` would produce.
+/// This works with ALL formats including bincode and postcard.
+///
+/// # Deserialization (Tagged Enum)
+///
+/// `Value` deserializes using `deserialize_enum`, which works with ALL formats.
+///
+/// # Transparent Serialization
+///
+/// To serialize `Value` **transparently** (producing identical bytes to the original type),
+/// use [`Transparent(value)`](crate::Transparent). Note that `Transparent` can only
+/// deserialize from self-describing formats (JSON, MessagePack, RON).
+#[derive(Debug, Clone, Serialize)]
 #[must_use]
 pub enum Value {
     // === Primitives (14) ===
@@ -92,6 +108,16 @@ pub enum Value {
         variant_index: u32,
         variant: &'static str,
     },
+}
+
+impl Value {
+    /// Wrap this Value in [`Transparent`](crate::Transparent) for transparent serialization.
+    ///
+    /// Use this when you need the serialized output to match the original type exactly,
+    /// rather than serializing Value as a tagged enum.
+    pub fn transparent(self) -> crate::Transparent {
+        crate::Transparent(self)
+    }
 }
 
 impl PartialEq for Value {

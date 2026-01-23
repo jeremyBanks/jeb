@@ -1,7 +1,7 @@
 //! Tests for serde-value.
 
 use serde::{Deserialize, Serialize};
-use serde_value::{from_value, to_value, Value};
+use serde_value::{from_value, to_value, Transparent, Value};
 
 // ============================================================================
 // Primitive Tests
@@ -498,8 +498,8 @@ fn test_value_hash() {
 // ============================================================================
 
 #[test]
-fn test_serialize_value_to_json() {
-    // Value -> JSON (via serde_json)
+fn test_serialize_transparent_to_json() {
+    // Use Transparent for transparent serialization (identical bytes to original type)
     let value = Value::Struct {
         name: "Test",
         fields: vec![
@@ -508,16 +508,17 @@ fn test_serialize_value_to_json() {
         ],
     };
 
-    let json = serde_json::to_string(&value).unwrap();
-    // Structs serialize as JSON objects
+    let json = serde_json::to_string(&Transparent(value)).unwrap();
+    // With Transparent, structs serialize as JSON objects (transparent)
     assert!(json.contains("\"x\":10"));
     assert!(json.contains("\"y\":\"hello\""));
 }
 
 #[test]
-fn test_deserialize_value_from_json() {
+fn test_deserialize_transparent_from_json() {
+    // Use Transparent to capture arbitrary JSON (uses deserialize_any)
     let json = r#"{"name": "Alice", "age": 30}"#;
-    let value: Value = serde_json::from_str(json).unwrap();
+    let Transparent(value) = serde_json::from_str(json).unwrap();
 
     match value {
         Value::Map(entries) => {
@@ -966,11 +967,41 @@ fn test_value_preserves_field_names() {
     }
 }
 
-/// Test JSON roundtrip with various Value types.
-/// JSON is a self-describing format that supports deserialize_any.
+/// Test that JSON → Transparent → Value → typed struct works correctly.
+/// Use Transparent to capture arbitrary JSON, then convert to typed struct.
 #[test]
-fn test_json_roundtrip() {
-    // Note: JSON doesn't distinguish all serde types, so we test types it preserves
+fn test_json_to_transparent_to_typed() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    // Serialize typed struct to JSON
+    let original = Point { x: 10, y: 20 };
+    let json = serde_json::to_string(&original).unwrap();
+
+    // Deserialize JSON to Transparent (uses deserialize_any)
+    let Transparent(value) = serde_json::from_str(&json).unwrap();
+
+    // Value should be a Map (JSON doesn't preserve struct names)
+    match &value {
+        Value::Map(entries) => {
+            assert_eq!(entries.len(), 2);
+        }
+        _ => panic!("expected Map, got {:?}", value),
+    }
+
+    // Deserialize Value to typed struct
+    let restored: Point = from_value(value).unwrap();
+    assert_eq!(restored, original);
+}
+
+/// Test JSON roundtrip with Value as tagged enum.
+/// Value now serializes as a tagged enum and can roundtrip through JSON.
+#[test]
+fn test_json_value_roundtrip() {
+    // With tagged enum serialization, Value roundtrips exactly through JSON
     let test_values = vec![
         Value::Bool(true),
         Value::Bool(false),
@@ -989,10 +1020,8 @@ fn test_json_roundtrip() {
     for original in test_values {
         let json = serde_json::to_string(&original).unwrap();
         let roundtripped: Value = serde_json::from_str(&json).unwrap();
-        // JSON loses type distinctions (all ints become i64/u64, all maps become Map)
-        // Just verify it doesn't error
-        assert!(!json.is_empty());
-        let _ = roundtripped; // Use the variable
+        // With tagged enum, types are preserved exactly
+        assert_eq!(roundtripped, original, "roundtrip failed for JSON: {}", json);
     }
 }
 
@@ -1024,6 +1053,36 @@ fn test_ron_roundtrip() {
     }
 }
 
+/// Test that MessagePack → Value → typed struct works correctly.
+/// MessagePack is a BINARY self-describing format.
+#[test]
+fn test_msgpack_to_transparent_to_typed() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    // Serialize typed struct to MessagePack with named fields
+    let original = Point { x: 10, y: 20 };
+    let bytes = rmp_serde::to_vec_named(&original).unwrap();
+
+    // Deserialize MessagePack to Transparent (uses deserialize_any)
+    let Transparent(value) = rmp_serde::from_slice(&bytes).unwrap();
+
+    // Should be a Map (MessagePack map with string keys)
+    match &value {
+        Value::Map(entries) => {
+            assert_eq!(entries.len(), 2);
+        }
+        _ => panic!("expected Map, got {:?}", value),
+    }
+
+    // Deserialize Value to typed struct
+    let restored: Point = from_value(value).unwrap();
+    assert_eq!(restored, original);
+}
+
 /// Test MessagePack roundtrip via rmp-serde.
 /// MessagePack is a binary format that supports deserialize_any.
 #[test]
@@ -1049,8 +1108,8 @@ fn test_msgpack_roundtrip() {
     }
 }
 
-/// Test that Value serializes to IDENTICAL bytes as the original type.
-/// This is the core guarantee: to_value() then serialize produces same output.
+/// Test that Transparent serializes to IDENTICAL bytes as the original type.
+/// This is the core guarantee: to_value() then Transparent then serialize produces same output.
 #[test]
 fn test_bincode_transparent_serialization() {
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -1064,14 +1123,14 @@ fn test_bincode_transparent_serialization() {
     // Serialize original directly
     let original_bytes = bincode::serialize(&original).unwrap();
 
-    // Convert to Value, then serialize
+    // Convert to Value, wrap in Transparent, then serialize
     let value = to_value(&original).unwrap();
-    let value_bytes = bincode::serialize(&value).unwrap();
+    let value_bytes = bincode::serialize(&Transparent(value)).unwrap();
 
     // MUST be identical!
     assert_eq!(
         original_bytes, value_bytes,
-        "Value serialization must produce identical bytes to original type"
+        "Transparent serialization must produce identical bytes to original type"
     );
 
     // And we can deserialize back to the original type
@@ -1100,7 +1159,7 @@ fn test_bincode_transparent_nested() {
 
     let original_bytes = bincode::serialize(&original).unwrap();
     let value = to_value(&original).unwrap();
-    let value_bytes = bincode::serialize(&value).unwrap();
+    let value_bytes = bincode::serialize(&Transparent(value)).unwrap();
 
     assert_eq!(original_bytes, value_bytes);
 
@@ -1122,7 +1181,7 @@ fn test_bincode_transparent_vec() {
 
     let original_bytes = bincode::serialize(&original).unwrap();
     let value = to_value(&original).unwrap();
-    let value_bytes = bincode::serialize(&value).unwrap();
+    let value_bytes = bincode::serialize(&Transparent(value)).unwrap();
 
     assert_eq!(original_bytes, value_bytes);
 
@@ -1142,14 +1201,14 @@ fn test_bincode_transparent_option() {
     let original = MaybeValue { value: Some(42) };
     let original_bytes = bincode::serialize(&original).unwrap();
     let value = to_value(&original).unwrap();
-    let value_bytes = bincode::serialize(&value).unwrap();
+    let value_bytes = bincode::serialize(&Transparent(value)).unwrap();
     assert_eq!(original_bytes, value_bytes);
 
     // Test None
     let original = MaybeValue { value: None };
     let original_bytes = bincode::serialize(&original).unwrap();
     let value = to_value(&original).unwrap();
-    let value_bytes = bincode::serialize(&value).unwrap();
+    let value_bytes = bincode::serialize(&Transparent(value)).unwrap();
     assert_eq!(original_bytes, value_bytes);
 }
 
@@ -1167,7 +1226,7 @@ fn test_bincode_transparent_enum() {
     let original = Status::Active;
     let original_bytes = bincode::serialize(&original).unwrap();
     let value = to_value(&original).unwrap();
-    let value_bytes = bincode::serialize(&value).unwrap();
+    let value_bytes = bincode::serialize(&Transparent(value)).unwrap();
     assert_eq!(original_bytes, value_bytes);
 
     // Struct variant
@@ -1176,7 +1235,7 @@ fn test_bincode_transparent_enum() {
     };
     let original_bytes = bincode::serialize(&original).unwrap();
     let value = to_value(&original).unwrap();
-    let value_bytes = bincode::serialize(&value).unwrap();
+    let value_bytes = bincode::serialize(&Transparent(value)).unwrap();
     assert_eq!(original_bytes, value_bytes);
 }
 

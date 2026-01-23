@@ -7,56 +7,52 @@
 //! enum variant names and indices, and the distinctions between tuples and sequences,
 //! structs and maps, etc.
 //!
-//! # Transparent Serialization (Primary Design Goal)
+//! # Serialization and Deserialization
 //!
-//! **The core guarantee:** When you convert a value to [`Value`] and then serialize it,
-//! you get **identical bytes** as if you had serialized the original value directly.
+//! `Value` serializes and deserializes as a **tagged enum** (like `#[derive(Serialize, Deserialize)]`
+//! would produce). This works with **ALL formats** including non-self-describing binary formats
+//! like bincode and postcard.
 //!
-//! This makes [`Value`] a fully transparent intermediate representation that interoperates
-//! with ANY serialization format, including non-self-describing binary formats like bincode:
+//! ```ignore
+//! let value = Value::I32(42);
+//!
+//! // Roundtrips through ANY format:
+//! let bytes = bincode::serialize(&value)?;
+//! let restored: Value = bincode::deserialize(&bytes)?;
+//! assert_eq!(restored, value);
+//! ```
+//!
+//! # Transparent Serialization
+//!
+//! To serialize `Value` **transparently** (producing identical bytes to the original type),
+//! use [`Transparent`]:
 //!
 //! ```ignore
 //! let original = Point { x: 10, y: 20 };
+//! let value = to_value(&original)?;
 //!
-//! // These produce IDENTICAL bytes:
+//! // Transparent produces IDENTICAL bytes:
 //! let bytes1 = bincode::serialize(&original)?;
-//! let bytes2 = bincode::serialize(&to_value(&original)?)?;
+//! let bytes2 = bincode::serialize(&Transparent(value))?;
 //! assert_eq!(bytes1, bytes2);
-//!
-//! // So you can deserialize back to the original type:
-//! let restored: Point = bincode::deserialize(&bytes2)?;
 //! ```
 //!
-//! This enables workflows like: capture typed data → manipulate as Value → serialize
-//! for transmission → receiver deserializes to their typed representation.
+//! Note: `Transparent` can only **deserialize** from self-describing formats (JSON, MessagePack, RON)
+//! because it uses `deserialize_any`.
 //!
 //! # Core API
 //!
-//! The crate provides four key capabilities:
+//! ## 1. `Value` implements `Serialize` and `Deserialize`
 //!
-//! ## 1. `Value` implements `Serialize` (Transparent)
-//!
-//! Serialize a [`Value`] to any serde format. The output is **identical** to serializing
-//! the original value directly - no enum wrappers or type tags are added:
+//! Works with ALL serde formats:
 //!
 //! ```ignore
-//! let value = to_value(&my_struct)?;
-//! let bytes = bincode::serialize(&value)?;  // Same bytes as bincode::serialize(&my_struct)
+//! let value = Value::I32(42);
+//! let bytes = bincode::serialize(&value)?;      // Works!
+//! let back: Value = bincode::deserialize(&bytes)?;  // Works!
 //! ```
 //!
-//! ## 2. `Value` implements `Deserialize`
-//!
-//! Deserialize a [`Value`] from self-describing serde formats (JSON, RON, MessagePack, etc.):
-//!
-//! ```ignore
-//! let value: Value = serde_json::from_str(json)?;  // JSON → Value
-//! ```
-//!
-//! Note: Non-self-describing formats (bincode, postcard) cannot deserialize directly to
-//! [`Value`] because they don't embed type information in the byte stream. For these
-//! formats, use the typed → Value → typed workflow instead.
-//!
-//! ## 3. `to_value<T: Serialize>(T) -> Value`
+//! ## 2. `to_value<T: Serialize>(T) -> Value`
 //!
 //! Convert any serializable Rust type to [`Value`], preserving all metadata:
 //!
@@ -80,7 +76,7 @@
 //! }
 //! ```
 //!
-//! ## 4. `from_value<T: Deserialize>(Value) -> T`
+//! ## 3. `from_value<T: Deserialize>(Value) -> T`
 //!
 //! Convert a [`Value`] to any deserializable Rust type:
 //!
@@ -99,6 +95,21 @@
 //! let user: User = from_value(value).unwrap();
 //! assert_eq!(user.name, "Alice");
 //! assert_eq!(user.age, 30);
+//! ```
+//!
+//! ## 4. `Transparent(Value)` - Transparent serialization
+//!
+//! When you need the serialized output to match the original type exactly:
+//!
+//! ```ignore
+//! use serde_value::{Value, Transparent, to_value};
+//!
+//! let original = Point { x: 10, y: 20 };
+//! let value = to_value(&original)?;
+//!
+//! // Transparent: identical bytes to original
+//! let bytes = bincode::serialize(&Transparent(value))?;
+//! let restored: Point = bincode::deserialize(&bytes)?;  // Works!
 //! ```
 //!
 //! # Use Case: Universal Serde Intermediate
@@ -137,12 +148,17 @@ mod cast;
 mod de;
 mod de_value;
 mod error;
-mod ser;
+mod transparent;
 mod to_value;
 mod value;
 
 pub use cast::try_cast;
 pub use de::from_value;
 pub use error::Error;
+pub use transparent::Transparent;
 pub use to_value::to_value;
 pub use value::Value;
+
+/// Backwards-compatible alias for [`Transparent`].
+#[deprecated(since = "0.1.0", note = "Use `Transparent` instead")]
+pub type Meta = Transparent;
