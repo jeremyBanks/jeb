@@ -17,7 +17,7 @@ declare command="$1"
 shift
 declare bin=""
 
-declare -r DARK_GRAY_BACKGROUND=$'\033[1;40m'
+declare -r DARK_GRAY_BACKGROUND=$'\033[1;40m\033[K'
 declare -r RESET=$'\033[0m'
 declare -r WHITE=$'\033[1;37m'
 declare -r BROWN=$'\033[1;33m'
