@@ -13,6 +13,28 @@ pub static ENABLED: OnceLock<bool> = OnceLock::new();
 pub static LOG_ENV: LazyLock<String> = LazyLock::new(|| {
     let common = std::env::var("RUST_LOG");
     let specific = std::env::var("JEB_LOG");
+
+    let default_log_level = "warn";
+
+    let verbose_crates = [
+        option_env!("CARGO_CRATE_NAME"),
+        option_env!("CARGO_PKG_NAME"),
+        option_env!("CARGO_BIN_NAME"),
+        Some("jeb"),
+        Some("save"),
+        Some("inline"),
+        Some("_"),
+        Some("jeb-"),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<&str>>();
+
+    let mut default_parts = Vec::<String>::new();
+
+    default_parts.push(default_log_level.to_string());
+
+
     let default = "warn,jeb=info,save=info".to_string();
 
     specific.or(common).unwrap_or(default)
