@@ -76,26 +76,26 @@ mod error;
 
 // Re-export public API
 // Re-export alphabet constants for advanced usage
-pub use alphabet::{
-    ESCAPE_BACKTICK,
-    ESCAPE_CHARS,
-    ESCAPE_COMMA,
-    ESCAPE_PIPE,
-    ESCAPE_SEMICOLON,
-    ESCAPE_TILDE,
-    ESCAPE_UNDERSCORE,
-    PADDING_CHAR,
-    Z85_ALPHABET,
-    is_escape_char,
-    is_safe_for_raw,
-    is_z85_char,
-};
 // Re-export base42 utilities for advanced usage
 pub use base42::{
     Endianness,
     MAX_LENGTH,
 };
 pub use {
+    alphabet::{
+        ESCAPE_BACKTICK,
+        ESCAPE_CHARS,
+        ESCAPE_COMMA,
+        ESCAPE_PIPE,
+        ESCAPE_SEMICOLON,
+        ESCAPE_TILDE,
+        ESCAPE_UNDERSCORE,
+        PADDING_CHAR,
+        Z85_ALPHABET,
+        is_escape_char,
+        is_safe_for_raw,
+        is_z85_char,
+    },
     decode::{
         Decoder,
         decode,

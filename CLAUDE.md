@@ -1,8 +1,8 @@
-While editing files, please run `cargo run --package save --bin save` to commit
-all changes in the working tree _very_ often, for the sake of having a lot of
-snapshots so we can cleanly revert exactly as far as we need to, if we ever need
-to. You'll want to ensure that the state before and after you make changes are
-both fully captured as well as the incremental snapshots while you work.
+While editing files, please run `./run save` to commit all changes in the
+working tree _very_ often, for the sake of having a lot of snapshots so we can
+cleanly revert exactly as far as we need to, if we ever need to. You'll want to
+ensure that the state before and after you make changes are both fully captured
+as well as the incremental snapshots while you work.
 
 ---
 
