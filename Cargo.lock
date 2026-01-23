@@ -54,7 +54,7 @@ dependencies = [
 
 [[package]]
 name = "_trace"
-version = "0.1.0"
+version = "0.0.0-dev-2026-01-19.4531"
 dependencies = [
  "clap 4.5.54",
  "ignore",
@@ -1264,7 +1264,7 @@ dependencies = [
 
 [[package]]
 name = "inline"
-version = "0.0.1-dev.1"
+version = "0.0.0-dev-2026-01-19.4531"
 dependencies = [
  "databake",
  "once_cell",
@@ -2123,7 +2123,7 @@ dependencies = [
 
 [[package]]
 name = "save"
-version = "0.20220708.0"
+version = "0.0.0-dev-2026-01-19.4531"
 dependencies = [
  "bstr 0.2.17",
  "clap 3.2.25",
@@ -2339,7 +2339,7 @@ checksum = "8207e78455ffdf55661170876f88daf85356e4edd54e0a3dbc79586ca1e50cbe"
 
 [[package]]
 name = "stringify_verbatim"
-version = "0.1.0"
+version = "0.0.0-dev-2026-01-19.4531"
 dependencies = [
  "proc-macro2",
  "quote",

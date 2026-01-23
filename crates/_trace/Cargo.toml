@@ -1,9 +1,9 @@
 [package]
 name = "_trace"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 description = "A language-agnostic requirements tracking tool"
-license = "MIT OR Apache-2.0"
+license.workspace = true
 publish = false
 repository.workspace = true
 categories = []
