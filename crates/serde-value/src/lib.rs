@@ -170,6 +170,7 @@ mod cast;
 mod de;
 mod de_value;
 mod error;
+mod intern;
 mod meta;
 mod ser;
 mod to_value;

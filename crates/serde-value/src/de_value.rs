@@ -1,5 +1,6 @@
 //! `Deserialize` implementation for `Value`.
 
+use crate::intern::intern_string_owned;
 use crate::Value;
 use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
 use std::fmt;
@@ -145,7 +146,7 @@ impl<'de> Visitor<'de> for ValueVisitor {
         let (variant, variant_access) = access.variant::<String>()?;
         variant_access.unit_variant()?;
 
-        let variant_static: &'static str = Box::leak(variant.into_boxed_str());
+        let variant_static: &'static str = intern_string_owned(variant);
 
         Ok(Value::UnitVariant {
             enum_name: "",

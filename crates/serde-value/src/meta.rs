@@ -37,6 +37,7 @@
 //! - `Value` (transparent): Identical bytes to original type, but can't deserialize from bincode
 //! - `Meta<Value>` (tagged): Includes enum tags, but roundtrips through ANY format
 
+use crate::intern::intern_string_owned;
 use crate::Value;
 use serde::de::{self, Deserialize, Deserializer, EnumAccess, SeqAccess, VariantAccess, Visitor};
 use serde::ser::{Serialize, SerializeTupleVariant, Serializer};
@@ -313,14 +314,14 @@ impl<'de> Visitor<'de> for MetaVisitor {
             19 => {
                 let (name,): (String,) = variant_access.newtype_variant()?;
                 Value::UnitStruct {
-                    name: Box::leak(name.into_boxed_str()),
+                    name: intern_string_owned(name),
                 }
             }
             20 => {
                 // NewtypeStruct: (name, value)
                 let (name, Meta(value)): (String, Meta) = variant_access.tuple_variant(2, TupleVisitor2)?;
                 Value::NewtypeStruct {
-                    name: Box::leak(name.into_boxed_str()),
+                    name: intern_string_owned(name),
                     value: Box::new(value),
                 }
             }
@@ -329,9 +330,9 @@ impl<'de> Visitor<'de> for MetaVisitor {
                 let (enum_name, variant_index, variant, Meta(value)): (String, u32, String, Meta) =
                     variant_access.tuple_variant(4, TupleVisitor4Newtype)?;
                 Value::NewtypeVariant {
-                    enum_name: Box::leak(enum_name.into_boxed_str()),
+                    enum_name: intern_string_owned(enum_name),
                     variant_index,
-                    variant: Box::leak(variant.into_boxed_str()),
+                    variant: intern_string_owned(variant),
                     value: Box::new(value),
                 }
             }
@@ -349,7 +350,7 @@ impl<'de> Visitor<'de> for MetaVisitor {
                 // TupleStruct: (name, fields)
                 let (name, wrapped): (String, Vec<Meta>) = variant_access.tuple_variant(2, TupleVisitor2Vec)?;
                 Value::TupleStruct {
-                    name: Box::leak(name.into_boxed_str()),
+                    name: intern_string_owned(name),
                     fields: wrapped.into_iter().map(|m| m.0).collect(),
                 }
             }
@@ -358,9 +359,9 @@ impl<'de> Visitor<'de> for MetaVisitor {
                 let (enum_name, variant_index, variant, wrapped): (String, u32, String, Vec<Meta>) =
                     variant_access.tuple_variant(4, TupleVisitor4Vec)?;
                 Value::TupleVariant {
-                    enum_name: Box::leak(enum_name.into_boxed_str()),
+                    enum_name: intern_string_owned(enum_name),
                     variant_index,
-                    variant: Box::leak(variant.into_boxed_str()),
+                    variant: intern_string_owned(variant),
                     fields: wrapped.into_iter().map(|m| m.0).collect(),
                 }
             }
@@ -373,9 +374,9 @@ impl<'de> Visitor<'de> for MetaVisitor {
                 // Struct: (name, fields)
                 let (name, wrapped): (String, Vec<(String, Meta)>) = variant_access.tuple_variant(2, TupleVisitor2StructFields)?;
                 Value::Struct {
-                    name: Box::leak(name.into_boxed_str()),
+                    name: intern_string_owned(name),
                     fields: wrapped.into_iter()
-                        .map(|(k, v)| (Box::leak(k.into_boxed_str()) as &'static str, v.0))
+                        .map(|(k, v)| (intern_string_owned(k), v.0))
                         .collect(),
                 }
             }
@@ -384,11 +385,11 @@ impl<'de> Visitor<'de> for MetaVisitor {
                 let (enum_name, variant_index, variant, wrapped): (String, u32, String, Vec<(String, Meta)>) =
                     variant_access.tuple_variant(4, TupleVisitor4StructFields)?;
                 Value::StructVariant {
-                    enum_name: Box::leak(enum_name.into_boxed_str()),
+                    enum_name: intern_string_owned(enum_name),
                     variant_index,
-                    variant: Box::leak(variant.into_boxed_str()),
+                    variant: intern_string_owned(variant),
                     fields: wrapped.into_iter()
-                        .map(|(k, v)| (Box::leak(k.into_boxed_str()) as &'static str, v.0))
+                        .map(|(k, v)| (intern_string_owned(k), v.0))
                         .collect(),
                 }
             }
@@ -397,9 +398,9 @@ impl<'de> Visitor<'de> for MetaVisitor {
                 let (enum_name, variant_index, variant): (String, u32, String) =
                     variant_access.tuple_variant(3, TupleVisitor3)?;
                 Value::UnitVariant {
-                    enum_name: Box::leak(enum_name.into_boxed_str()),
+                    enum_name: intern_string_owned(enum_name),
                     variant_index,
-                    variant: Box::leak(variant.into_boxed_str()),
+                    variant: intern_string_owned(variant),
                 }
             }
             _ => return Err(de::Error::invalid_value(
@@ -608,6 +609,31 @@ mod tests {
         let bytes = bincode::serialize(&meta).unwrap();
         let Meta(restored) = bincode::deserialize(&bytes).unwrap();
         assert_eq!(restored, original);
+    }
+
+    #[test]
+    fn test_meta_interns_names() {
+        let original = Value::Struct {
+            name: "Point",
+            fields: vec![("x", Value::I32(10))],
+        };
+        let bytes = bincode::serialize(&Meta(original)).unwrap();
+        let Meta(restored1) = bincode::deserialize(&bytes).unwrap();
+        let Meta(restored2) = bincode::deserialize(&bytes).unwrap();
+
+        let (name1, fields1) = match restored1 {
+            Value::Struct { name, fields } => (name, fields),
+            other => panic!("expected struct, got {:?}", other),
+        };
+        let (name2, fields2) = match restored2 {
+            Value::Struct { name, fields } => (name, fields),
+            other => panic!("expected struct, got {:?}", other),
+        };
+
+        assert!(std::ptr::eq(name1, name2));
+        assert_eq!(fields1.len(), 1);
+        assert_eq!(fields2.len(), 1);
+        assert!(std::ptr::eq(fields1[0].0, fields2[0].0));
     }
 
     #[test]

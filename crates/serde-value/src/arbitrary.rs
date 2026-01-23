@@ -1,43 +1,28 @@
 //! Implementation of the `Arbitrary` trait for fuzz testing.
 
+use crate::intern::{intern_string, intern_string_owned};
 use crate::Value;
 use arbitrary::{Arbitrary, Unstructured};
-use std::collections::HashSet;
-use std::sync::{LazyLock, Mutex};
 
 /// Maximum length for generated static strings.
 const MAX_STRING_LENGTH: usize = 64;
 
-/// Global interner for static strings.
-static INTERNED_STRINGS: LazyLock<Mutex<HashSet<&'static str>>> =
-    LazyLock::new(|| Mutex::new(HashSet::new()));
-
 /// Intern a string, returning a `&'static str`.
-fn intern_string(s: &str) -> &'static str {
-    let s = if s.len() > MAX_STRING_LENGTH {
-        let mut end = MAX_STRING_LENGTH;
-        while end > 0 && !s.is_char_boundary(end) {
-            end -= 1;
-        }
-        &s[..end]
-    } else {
-        s
-    };
-
-    let mut set = INTERNED_STRINGS.lock().unwrap();
-
-    if let Some(&existing) = set.get(s) {
-        return existing;
+fn intern_string_limited(s: String) -> &'static str {
+    if s.len() <= MAX_STRING_LENGTH {
+        return intern_string_owned(s);
     }
 
-    let leaked: &'static str = Box::leak(s.to_owned().into_boxed_str());
-    set.insert(leaked);
-    leaked
+    let mut end = MAX_STRING_LENGTH;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    intern_string(&s[..end])
 }
 
 fn arbitrary_static_str(u: &mut Unstructured<'_>) -> arbitrary::Result<&'static str> {
     let s: String = u.arbitrary()?;
-    Ok(intern_string(&s))
+    Ok(intern_string_limited(s))
 }
 
 /// Generate arbitrary struct fields: Vec<(&'static str, Value)>
@@ -149,22 +134,22 @@ mod tests {
 
     #[test]
     fn test_intern_string_deduplication() {
-        let s1 = intern_string("test_dedup");
-        let s2 = intern_string("test_dedup");
+        let s1 = intern_string_limited("test_dedup".to_string());
+        let s2 = intern_string_limited("test_dedup".to_string());
         assert!(std::ptr::eq(s1, s2));
     }
 
     #[test]
     fn test_intern_string_truncation() {
         let long_string = "a".repeat(100);
-        let interned = intern_string(&long_string);
+        let interned = intern_string_limited(long_string);
         assert!(interned.len() <= MAX_STRING_LENGTH);
     }
 
     #[test]
     fn test_intern_string_utf8_boundary() {
         let emojis = "😀".repeat(20);
-        let interned = intern_string(&emojis);
+        let interned = intern_string_limited(emojis);
         assert!(interned.len() <= MAX_STRING_LENGTH);
         for _ in interned.chars() {}
     }
