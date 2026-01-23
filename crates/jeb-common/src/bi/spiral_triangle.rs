@@ -56,6 +56,7 @@ use impl_with;
 /// Shell size for half-shell m (x ≤ y constraint).
 /// Shell 0 has 1 point, shell m > 0 has 4m + 1 points.
 #[inline(always)]
+#[allow(dead_code)] // Used in tests and for documentation
 fn half_shell_size(m: u64) -> u64 {
     if m == 0 { 1 } else { 4 * m + 1 }
 }

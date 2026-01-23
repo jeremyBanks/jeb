@@ -20,7 +20,10 @@ pub static LOG_ENV: LazyLock<String> = LazyLock::new(|| {
         option_env!("CARGO_CRATE_NAME"),
         option_env!("CARGO_PKG_NAME"),
         option_env!("CARGO_BIN_NAME"),
+        Some("jeb"),
+        Some("jeb-*"),
     ]
+    .into_iter()
     .flatten()
     .collect::<Vec<&str>>();
 
