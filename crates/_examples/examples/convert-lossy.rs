@@ -46,7 +46,6 @@ trait InnerBool {
 }
 
 
-
 pub trait ImplConversionFrom<Source>: Sized {
     type Supported: Bool;
     type Bijective: Bool;
