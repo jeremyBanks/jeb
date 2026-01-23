@@ -6,3 +6,7 @@
 /examples/self.sh
 /history-pit/
 /target/
+
+# cargo-mutants output
+mutants.out/
+mutants.out.old/
