@@ -56,13 +56,15 @@ one.
 
 **Display:** Only shown if different from generation index.
 
-### Tree Hash (`xHHHH`)
+### Tree Hash (`xHHHH`, optional)
 
 **Definition:** First 4 hex characters of the commit's tree object SHA.
 
 **Special behavior:** The commit timestamp is adjusted (brute-forced) so the
 resulting commit hash starts with these same 4 characters, creating a visual
 match between tree and commit hashes.
+
+**Display:** Omitted if the tree is empty.
 
 ### Origin (`oHHHH`, optional)
 
@@ -72,6 +74,8 @@ with no parents).
 **Semantics:** Origin represents the TRUE initial commits of the repository's
 history. It is NOT a "virtual" or "calculated" value that combines different
 histories.
+
+**Display:** Omitted for root commits (r0/s0/z0) since they ARE the origin.
 
 #### Origin Calculation Rules
 
@@ -142,6 +146,19 @@ A parent commit's message is trusted if:
 Z-mode activates when scanning hits the configured depth limit before finding
 trusted commits or true roots. It indicates uncertainty - the values are based
 on incomplete information.
+
+## Purpose
+
+The commit message format serves several purposes:
+
+| Component        | Purpose                                                 |
+| ---------------- | ------------------------------------------------------- |
+| Prefix           | Immediately indicates repository state (full/shallow/uncertain) |
+| Revision Index   | Simple incrementing version number along main branch    |
+| Generation Index | Reveals merge history when different from revision      |
+| Commit Index     | Shows total reachable history size                      |
+| Tree Hash        | Visual identifier; commit hash matches tree hash prefix |
+| Origin           | Detects history changes, verifies same lineage          |
 
 ## Examples
 
