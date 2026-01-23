@@ -45,5 +45,6 @@ else
     fi
 fi
 
-set -x
-"$bin" "$@"
+# command in blue, args in cyan
+echo -e "\033[1;34m$bin\033[0m \033[1;36m$@\033[0m"
+exec "$bin" "$@"
