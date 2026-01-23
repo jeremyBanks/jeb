@@ -18,8 +18,8 @@ shift
 declare bin=""
 
 # XXX: These should all be empty strings unless is a tty, and not NO_COLORS
-declare DARK_GRAY_BACKGROUND=""
 declare RESET=""
+declare DARK_BACKGROUND=""
 declare WHITE=""
 declare BROWN=""
 declare YELLOW=""
@@ -29,61 +29,59 @@ declare MAGENTA=""
 declare RED=""
 
 if [ -t 2 ] && [ -z "${NO_COLORS-}" ]; then
-    DARK_GRAY_BACKGROUND=$'\033[1;40m\033[K'
+    DARK_BACKGROUND=$'\033[40m\033[K'
     RESET=$'\033[0m'
-    WHITE=$'\033[1;37m'
-    BROWN=$'\033[1;33m'
-    YELLOW=$'\033[1;33m'
-    BLUE=$'\033[1;34m'
-    CYAN=$'\033[1;36m'
-    MAGENTA=$'\033[1;35m'
-    RED=$'\033[1;31m'
+    WHITE=$'\033[37m'
+    BROWN=$'\033[33m'
+    YELLOW=$'\033[33m'
+    BLUE=$'\033[34m'
+    CYAN=$'\033[36m'
+    MAGENTA=$'\033[35m'
+    RED=$'\033[31m'
 fi
 
-declare -r DARK_GRAY_BACKGROUND
-declare -r RESET
-declare -r WHITE
-declare -r BROWN
-declare -r YELLOW
-declare -r BLUE
-declare -r CYAN
-declare -r MAGENTA
-declare -r RED
-
-echo >&2 -e "${DARK_GRAY_BACKGROUND}"
-echo >&2 -e "${DARK_GRAY_BACKGROUND}${MAGENTA}  \$${WHITE} ${BROWN}cargo build --bin${WHITE} ${CYAN}$command${WHITE}"
-echo >&2 -e "${DARK_GRAY_BACKGROUND}"
+echo >&2 -e "${DARK_BACKGROUND}"
+echo >&2 -e "${DARK_BACKGROUND}${MAGENTA}  \$${WHITE} ${BROWN}cargo build --bin${WHITE} ${CYAN}$command${WHITE}"
+echo >&2 -e "${DARK_BACKGROUND}"
 echo >&2 -ne "${RESET}"
 
 if ! cargo build --bin "$command"; then
-    echo >&2 "${YELLOW}WARNING:${WHITE} Failed to build \`${command}\`. Falling back to existing debug build."
+    echo >&2
+    echo >&2 "${YELLOW}WARNING:${WHITE} Failed to build. Falling back to existing builds."
 fi
+
+echo >&2
 
 if [ -x "./target/debug/$command" ]; then
     bin="./target/debug/$command"
 elif [ -x "./target/release/$command" ]; then
     echo >&2 "${YELLOW}WARNING:${WHITE} Existing debug build not found. Falling back to release build."
+    echo >&2
+
     bin="./target/release/$command"
 else
-    echo >&2 "${YELLOW}WARNING:${WHITE} Existing builds not found. Falling back to \`cargo install\`ed binary."
+    echo >&2 "${YELLOW}WARNING:${WHITE} Existing builds not found. Falling back to cargo-installed binary."
+    echo >&2
 
     if [ -x "$HOME/.cargo/bin/$command" ]; then
         bin="$HOME/.cargo/bin/$command"
     else
-        echo >&2 "${YELLOW}WARNING:${WHITE} \`cargo install\`ed binary not found for \`${command}\`. Falling back to any matching command."
+        echo >&2 "${YELLOW}WARNING:${WHITE} cargo-installed binary not found. Falling back to any matching command."
+        echo >&2
 
         if type "$command" >/dev/null 2>&1; then
             bin="$command"
         else
-            echo >&2 "${RED}ERROR:${WHITE} No matching command found for \`${command}\`. Giving up."
+            echo >&2 "${RED}ERROR:${WHITE} No matching command found. Unable to continue."
+
             exit 1
         fi
     fi
 fi
 
-echo >&2 -e "${DARK_GRAY_BACKGROUND}"
-echo >&2 -e "${DARK_GRAY_BACKGROUND}  ${MAGENTA}\$${WHITE} ${CYAN}$bin${WHITE} ${BLUE}$@${WHITE}"
-echo >&2 -e "${DARK_GRAY_BACKGROUND}"
+echo >&2 -e "${DARK_BACKGROUND}"
+echo >&2 -e "${DARK_BACKGROUND}  ${MAGENTA}\$${WHITE} ${CYAN}${CYAN}${bin}${WHITE}${WHITE} ${BLUE}${CYAN}$@${WHITE}${WHITE}"
+echo >&2 -e "${DARK_BACKGROUND}"
 echo >&2 -ne "${RESET}"
 
 exec "$bin" "$@"
