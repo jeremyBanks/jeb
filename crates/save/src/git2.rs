@@ -853,8 +853,6 @@ impl<'repo> RepositoryView<'repo> for Repository {
     fn validate_tree_prefix(&self, tree_id: &Oid, prefix: &str) -> bool {
         let tree_hex = format!("{}", tree_id);
         let tree_prefix = tree_hex[..prefix.len().min(tree_hex.len())].to_uppercase();
-        let result = tree_prefix == prefix.to_uppercase();
-        eprintln!("[VALIDATE] tree_id={} prefix={:?} tree_prefix={:?} result={}", tree_id, prefix, tree_prefix, result);
-        result
+        tree_prefix == prefix.to_uppercase()
     }
 }

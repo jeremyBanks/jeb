@@ -202,28 +202,21 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             };
         }
         // Try to trust HEAD's message first (works for both limited and unlimited depth)
-        eprintln!("[CALC] early trust check: trust_messages={}", self.trust_messages);
         if self.trust_messages {
             if let Some(summary) = head.summary() {
-                eprintln!("[CALC] summary={:?}", summary);
                 if let Some(parsed) = MessageParser::parse(&summary) {
-                    eprintln!("[CALC] parsed: r{} origin={:?} prefix={:?}", parsed.revision_index, parsed.origin, parsed.prefix);
-                    let validates = MessageParser::validate(self.repo, head, &summary, &parsed);
-                    eprintln!("[CALC] validates={}", validates);
-                    if validates {
+                    if MessageParser::validate(self.repo, head, &summary, &parsed) {
                         let trusted = match parsed.prefix {
                             MessagePrefix::Regular if !is_shallow => true,
                             MessagePrefix::Shallow if is_shallow => true,
                             _ => false,
                         };
-                        eprintln!("[CALC] trusted={} (is_shallow={})", trusted, is_shallow);
                         if trusted {
                             let generation_index =
                                 parsed.generation_index.unwrap_or(parsed.revision_index) + 1;
                             let commit_index = parsed.commit_index.unwrap_or_else(|| {
                                 parsed.generation_index.unwrap_or(parsed.revision_index)
                             }) + 1;
-                            eprintln!("[CALC] EARLY RETURN: r{} g{} n{}", parsed.revision_index + 1, generation_index, commit_index);
                             return GraphStats {
                                 revision_index: parsed.revision_index + 1,
                                 generation_index,
@@ -233,14 +226,9 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                             };
                         }
                     }
-                } else {
-                    eprintln!("[CALC] parse failed");
                 }
-            } else {
-                eprintln!("[CALC] no summary");
             }
         }
-        eprintln!("[CALC] falling through to scan");
         if unlimited_depth {
             self.full_graph_walk(head, is_shallow, unlimited_depth)
         } else {
@@ -270,41 +258,25 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 } else {
                     let trusted_parsed = if self.trust_messages {
                         if let Some(summary) = commit.summary() {
-                            eprintln!("[TRUST] depth={} summary={:?}", depth, summary);
                             if let Some(parsed) = MessageParser::parse(&summary) {
-                                eprintln!("[TRUST]   parsed: prefix={:?} r={}", parsed.prefix, parsed.revision_index);
                                 if MessageParser::validate(self.repo, &commit, &summary, &parsed) {
-                                    eprintln!("[TRUST]   validate=true, is_shallow={}", is_shallow);
                                     if parsed.prefix == MessagePrefix::ZMode {
-                                        eprintln!("[TRUST]   -> z_commit");
                                         z_commits.insert(id.clone());
                                         None
                                     } else {
                                         match parsed.prefix {
-                                            MessagePrefix::Regular if !is_shallow => {
-                                                eprintln!("[TRUST]   -> TRUSTED as Regular");
-                                                Some(parsed)
-                                            },
-                                            MessagePrefix::Shallow if is_shallow => {
-                                                eprintln!("[TRUST]   -> TRUSTED as Shallow");
-                                                Some(parsed)
-                                            },
-                                            _ => {
-                                                eprintln!("[TRUST]   -> NOT trusted (prefix/shallow mismatch)");
-                                                None
-                                            },
+                                            MessagePrefix::Regular if !is_shallow => Some(parsed),
+                                            MessagePrefix::Shallow if is_shallow => Some(parsed),
+                                            _ => None,
                                         }
                                     }
                                 } else {
-                                    eprintln!("[TRUST]   validate=false");
                                     None
                                 }
                             } else {
-                                eprintln!("[TRUST]   parse failed");
                                 None
                             }
                         } else {
-                            eprintln!("[TRUST]   no summary");
                             None
                         }
                     } else {
@@ -950,7 +922,3 @@ mod tests {
         assert_eq!(stats.revision_index, 2);
     }
 }
-
-
-
-
