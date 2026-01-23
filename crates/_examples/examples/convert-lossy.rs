@@ -4,6 +4,15 @@ use core::{
     marker::PhantomData,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Impossible {}
+
+impl Default for Impossible {
+    fn default() -> Self {
+        unreachable!()
+    }
+}
+
 /// Type level `Eq` operation.
 #[expect(private_bounds)]
 pub trait Eq<T>: InnerEq<T> {}
@@ -20,12 +29,49 @@ pub enum True {}
 pub enum False {}
 trait InnerBool {}
 
+pub trait ImplConversionFrom<Source>: Sized {
+    type FatalError: Debug + Default;
+    type SelfReversibleWarning: Debug + Default;
+    type ContextuallyReversibleWarning: Debug + Default;
+    type SemanticallyEquivalentWarning: Debug + Default;
+    type ClampedWarning: Debug + Default;
+    type RoundedWarning: Debug + Default;
 
+    fn impl_conversion_from(value: Source) -> Conversion<Self, Source>;
+}
 
-pub trait ImplConversionsFrom<Source>: Sized {
-    type Supported: Bool;
-    type Warning: Debug;
-    type Error: Debug;
+impl ImplConversionFrom<f32> for f64 {
+    type FatalError = Impossible;
+    type SelfReversibleWarning = Impossible;
+    type ContextuallyReversibleWarning = Impossible;
+    type SemanticallyEquivalentWarning = Impossible;
+    type ClampedWarning = Impossible;
+    type RoundedWarning = Impossible;
+
+    fn impl_conversion_from(value: f32) -> Conversion<f64, f32> {
+        Conversion::with_identical(value.into())
+    }
+}
+
+impl ImplConversionFrom<f64> for f32 {
+    type FatalError = Impossible;
+    type SelfReversibleWarning = ();
+    type ContextuallyReversibleWarning = ();
+    type SemanticallyEquivalentWarning = Impossible;
+    type ClampedWarning = ();
+    type RoundedWarning = ();
+
+    fn impl_conversion_from(value: f64) -> Conversion<f32, f64> {
+        let value_f32 = value as f32;
+
+        if value_f32 as f64 == value {
+            Conversion::with_identical(value_f32)
+        } else if value.is_finite() && !value_f32.is_finite() {
+            Conversion::with_overflowing(value_f32, ())
+        } else {
+            Conversion::with_rounded(value_f32, ())
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -44,19 +90,19 @@ pub enum ConversionPriority {
 // like NotSelfReversibleError = () etc by default or something, hah
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ConversionResult<Target, Source>
+pub struct Conversion<Target, Source>
 where
-    Target: ImplConversionsFrom<Source>,
+    Target: ImplConversionFrom<Source>,
 {
     source: PhantomData<fn(Source)>,
 
     /// The converted value, or an error if we were unable to produce one.
-    value: Result<Target, Target::Error>,
+    value: Result<Target, Target::FatalError>,
 
     /// Whether this conversion can be losslessly infallibly converted back to
     /// the source by the inverse operation, with no additional context except
     /// the types `Source` and `Target`.
-    self_reversible: bool,
+    not_self_reversible: Option<Target::SelfReversibleWarning>,
 
     /// Whether this conversion could hypothetically be losslessly converted
     /// back to the source given some additional context/metadata such as a
@@ -64,7 +110,7 @@ where
     /// support that. This usually implies that if the source if of a consistent
     /// non-pathological format, the content will be preserved in full detail
     /// (even if restoring the original structure is more complicated).
-    contextually_reversible: bool,
+    not_contextually_reversible: Option<Target::ContextuallyReversibleWarning>,
 
     /// Whether value and its type still have roughly the same semantic meaning,
     /// even if it's represented differently. Example: different numeric types
@@ -74,35 +120,35 @@ where
     /// more-or-less respectful of the semantic value. (However, an overflowing
     /// value that wraps around is _not_ semantically equivalent — we're not
     /// thinking in modular arithmetic.)
-    semantically_equivalent: bool,
+    not_semantically_equivalent: Option<Target::SemanticallyEquivalentWarning>,
 
     /// Whether the value was clamped to a minimum or maximum value (which may
     /// be finite or infinite) due to being outside the supported range.
-    clamped: bool,
+    clamped: Option<Target::ClampedWarning>,
 
     /// Whether the value was truncated or rounded to a lower precision or to
     /// align with a different value (but not due to going fully out of range),
     /// or due to the value being too large (in data size, not magnitude).
-    truncated: bool,
+    truncated: Option<Target::RoundedWarning>,
 }
 
-impl<Target, Source> ConversionResult<Target, Source>
+impl<Target, Source> Conversion<Target, Source>
 where
-    Target: ImplConversionsFrom<Source>,
+    Target: ImplConversionFrom<Source>,
 {
-    pub fn with_error(error: Target::Error) -> Self {
+    pub fn with_error(error: Target::FatalError) -> Self {
         Self {
             value: Err(error),
             source: PhantomData,
-            self_reversible: false,
-            contextually_reversible: false,
-            semantically_equivalent: false,
-            clamped: false,
-            truncated: false,
+            not_self_reversible: None,
+            not_contextually_reversible: None,
+            not_semantically_equivalent: None,
+            clamped: None,
+            truncated: None,
         }
     }
 
-    pub fn error(&self) -> Option<&Target::Error> {
+    pub fn error(&self) -> Option<&Target::FatalError> {
         self.value.as_ref().err()
     }
 
@@ -110,44 +156,51 @@ where
         Self {
             value: Ok(value),
             source: PhantomData,
-            self_reversible: true,
-            contextually_reversible: true,
-            semantically_equivalent: true,
-            clamped: false,
-            truncated: false,
+            not_self_reversible: None,
+            not_contextually_reversible: None,
+            not_semantically_equivalent: None,
+            clamped: None,
+            truncated: None,
+        }
+    }
+
+    pub fn with_overflowing(value: Target, warning: Target::SelfReversibleWarning) -> Self {
+        Self {
+            value: Ok(value),
+            source: PhantomData,
+            not_self_reversible: Some(warning),
+            not_contextually_reversible: Some(Default::default()),
+            not_semantically_equivalent: None,
+            clamped: Some(Default::default()),
+            truncated: None,
         }
     }
 
     pub fn is_identical(&self) -> bool {
-        self.value.is_ok()
-            && self.self_reversible
-            && self.contextually_reversible
-            && self.semantically_equivalent
-            && !self.clamped
-            && !self.truncated
+        self.is_self_reversible() && self.is_semantically_equivalent()
     }
 
     pub fn is_self_reversible(&self) -> bool {
-        self.value.is_ok() && self.self_reversible
+        self.value.is_ok() && self.not_self_reversible.is_none()
     }
 
     pub fn is_contextually_reversible(&self) -> bool {
-        self.value.is_ok() && self.contextually_reversible
+        self.value.is_ok() && self.not_contextually_reversible.is_none()
     }
 
     pub fn is_semantically_equivalent(&self) -> bool {
-        self.value.is_ok() && self.semantically_equivalent
+        self.value.is_ok() && self.not_semantically_equivalent.is_none()
     }
 
     pub fn with_reversible_opaque(value: Target) -> Self {
         Self {
             value: Ok(value),
             source: PhantomData,
-            self_reversible: true,
-            contextually_reversible: true,
-            semantically_equivalent: false,
-            clamped: false,
-            truncated: false,
+            not_self_reversible: None,
+            not_contextually_reversible: None,
+            not_semantically_equivalent: None,
+            clamped: None,
+            truncated: None,
         }
     }
 
@@ -155,11 +208,59 @@ where
         Self {
             value: Ok(value),
             source: PhantomData,
-            self_reversible: false,
-            contextually_reversible: true,
-            semantically_equivalent: false,
-            clamped: false,
-            truncated: false,
+            not_self_reversible: None,
+            not_contextually_reversible: Some(Default::default()),
+            not_semantically_equivalent: None,
+            clamped: None,
+            truncated: None,
+        }
+    }
+
+    pub fn with_semantically_equivalent_opaque(value: Target) -> Self {
+        Self {
+            value: Ok(value),
+            source: PhantomData,
+            not_self_reversible: None,
+            not_contextually_reversible: None,
+            not_semantically_equivalent: Some(Default::default()),
+            clamped: None,
+            truncated: None,
+        }
+    }
+
+    pub fn with_clamped(value: Target, warning: Target::ClampedWarning) -> Self {
+        Self {
+            value: Ok(value),
+            source: PhantomData,
+            not_self_reversible: None,
+            not_contextually_reversible: None,
+            not_semantically_equivalent: None,
+            clamped: Some(warning),
+            truncated: None,
+        }
+    }
+
+    pub fn with_rounded(value: Target, warning: Target::RoundedWarning) -> Self {
+        Self {
+            value: Ok(value),
+            source: PhantomData,
+            not_self_reversible: None,
+            not_contextually_reversible: None,
+            not_semantically_equivalent: None,
+            clamped: None,
+            truncated: Some(warning),
+        }
+    }
+
+    pub fn with_truncated(value: Target, warning: Target::RoundedWarning) -> Self {
+        Self {
+            value: Ok(value),
+            source: PhantomData,
+            not_self_reversible: None,
+            not_contextually_reversible: None,
+            not_semantically_equivalent: None,
+            clamped: None,
+            truncated: Some(warning),
         }
     }
 }
