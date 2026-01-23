@@ -257,25 +257,41 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 } else {
                     let trusted_parsed = if self.trust_messages {
                         if let Some(summary) = commit.summary() {
+                            eprintln!("[TRUST] depth={} summary={:?}", depth, summary);
                             if let Some(parsed) = MessageParser::parse(&summary) {
+                                eprintln!("[TRUST]   parsed: prefix={:?} r={}", parsed.prefix, parsed.revision_index);
                                 if MessageParser::validate(self.repo, &commit, &summary, &parsed) {
+                                    eprintln!("[TRUST]   validate=true, is_shallow={}", is_shallow);
                                     if parsed.prefix == MessagePrefix::ZMode {
+                                        eprintln!("[TRUST]   -> z_commit");
                                         z_commits.insert(id.clone());
                                         None
                                     } else {
                                         match parsed.prefix {
-                                            MessagePrefix::Regular if !is_shallow => Some(parsed),
-                                            MessagePrefix::Shallow if is_shallow => Some(parsed),
-                                            _ => None,
+                                            MessagePrefix::Regular if !is_shallow => {
+                                                eprintln!("[TRUST]   -> TRUSTED as Regular");
+                                                Some(parsed)
+                                            },
+                                            MessagePrefix::Shallow if is_shallow => {
+                                                eprintln!("[TRUST]   -> TRUSTED as Shallow");
+                                                Some(parsed)
+                                            },
+                                            _ => {
+                                                eprintln!("[TRUST]   -> NOT trusted (prefix/shallow mismatch)");
+                                                None
+                                            },
                                         }
                                     }
                                 } else {
+                                    eprintln!("[TRUST]   validate=false");
                                     None
                                 }
                             } else {
+                                eprintln!("[TRUST]   parse failed");
                                 None
                             }
                         } else {
+                            eprintln!("[TRUST]   no summary");
                             None
                         }
                     } else {
