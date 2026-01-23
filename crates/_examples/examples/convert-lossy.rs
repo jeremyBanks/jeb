@@ -1,7 +1,9 @@
 use core::{
+    convert::Infallible as Never,
     fmt::Debug,
     marker::PhantomData,
 };
+
 
 pub trait Is<T> {}
 impl<T> Is<T> for T {}
@@ -28,19 +30,7 @@ impl Bool for False {
     const VALUE: bool = false;
 }
 
-#[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ConversionResult<Source, Target> {
-    source: PhantomData<fn(Source)>,
 
-    round_trippable: bool,
-    round_trippable_with_context: bool,
-    clamped: bool,
-    rounded: bool,
-    truncated: bool,
-
-    value: Option<Target>,
-}
 
 pub trait ImplConversionsFrom<Source>: Sized {
     type Supported: Bool;
@@ -48,18 +38,147 @@ pub trait ImplConversionsFrom<Source>: Sized {
     type Error: Debug;
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ConversionPriority {
+    SelfReversible,
+    ContextuallyReversible,
+    SemanticallyEquivalent,
+    NotClamped,
+    NotTruncated,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ConversionResult<Target, Source>
+where
+    Target: ImplConversionsFrom<Source>,
+{
+    source: PhantomData<fn(Source)>,
+
+    /// The converted value, or an error if we were unable to produce one.
+    value: Result<Target, Target::Error>,
+
+    /// Whether this conversion can be losslessly infallibly converted back to
+    /// the source by the inverse operation, with no additional context except
+    /// the types `Source` and `Target`.
+    self_reversible: bool,
+
+    /// Whether this conversion could hypothetically be losslessly converted
+    /// back to the source given some additional context/metadata such as a
+    /// schema or discriminants or type hints, regardless of whether we actually
+    /// support that. This usually implies that if the source if of a consistent
+    /// non-pathological format, the content will be preserved in full detail
+    /// (even if restoring the original structure is more complicated).
+    contextually_reversible: bool,
+
+    /// Whether value and its type still have roughly the same semantic meaning,
+    /// even if it's represented differently. Example: different numeric types
+    /// representing exactly the same value are semantically equivalent, but
+    /// string or byte representations of those values are not. This doesn't
+    /// preclude clamping or rounding or truncation if it's done in a way that's
+    /// more-or-less respectful of the semantic value. (However, an overflowing
+    /// value that wraps around is _not_ semantically equivalent — we're not
+    /// thinking in modular arithmetic.)
+    semantically_equivalent: bool,
+
+    /// Whether the value was clamped to a minimum or maximum value (which may
+    /// be finite or infinite) due to being outside the supported range.
+    clamped: bool,
+
+    /// Whether the value was truncated or rounded to a lower precision or to
+    /// align with a different value (but not due to going fully out of range),
+    /// or due to the value being too large (in data size, not magnitude).
+    truncated: bool,
+}
+
+impl<Target, Source> ConversionResult<Target, Source>
+where
+    Target: ImplConversionsFrom<Source>,
+{
+    pub fn with_error(error: Target::Error) -> Self {
+        Self {
+            value: Err(error),
+            source: PhantomData,
+            self_reversible: false,
+            contextually_reversible: false,
+            semantically_equivalent: false,
+            clamped: false,
+            truncated: false,
+        }
+    }
+
+    pub fn error(&self) -> Option<&Target::Error> {
+        self.value.as_ref().err()
+    }
+
+    pub fn with_identical(value: Target) -> Self {
+        Self {
+            value: Ok(value),
+            source: PhantomData,
+            self_reversible: true,
+            contextually_reversible: true,
+            semantically_equivalent: true,
+            clamped: false,
+            truncated: false,
+        }
+    }
+
+    pub fn is_identical(&self) -> bool {
+        self.value.is_ok()
+            && self.self_reversible
+            && self.contextually_reversible
+            && self.semantically_equivalent
+            && !self.clamped
+            && !self.truncated
+    }
+
+    pub fn is_self_reversible(&self) -> bool {
+        self.value.is_ok() && self.self_reversible
+    }
+
+    pub fn is_contextually_reversible(&self) -> bool {
+        self.value.is_ok() && self.contextually_reversible
+    }
+
+    pub fn is_semantically_equivalent(&self) -> bool {
+        self.value.is_ok() && self.semantically_equivalent
+    }
+
+    pub fn with_reversible_opaque(value: Target) -> Self {
+        Self {
+            value: Ok(value),
+            source: PhantomData,
+            self_reversible: true,
+            contextually_reversible: true,
+            semantically_equivalent: false,
+            clamped: false,
+            truncated: false,
+        }
+    }
+
+    pub fn with_contextually_reversible_opaque(value: Target) -> Self {
+        Self {
+            value: Ok(value),
+            source: PhantomData,
+            self_reversible: false,
+            contextually_reversible: true,
+            semantically_equivalent: false,
+            clamped: false,
+            truncated: false,
+        }
+    }
+}
+
+
+
 // XXX: Okay I think our internal type can actually just bite the bullet and be
 // very precise about what it's returning, since we'll actually expose cleaner
 // external interfaces.
 
 #[allow(unused)]
 mod thinking {
-    enum ConversionResult<
-        T,
-        TypeLossWarning = core::convert::Infallible,
-        ValueLossWarning = core::convert::Infallible,
-        FatalError = core::convert::Infallible,
-    > {
+    use core::convert::Infallible as Never;
+
+    enum ConversionResult<T, TypeLossWarning = Never, ValueLossWarning = Never, FatalError = Never> {
         Lossless(T),
         LossyType(T, TypeLossWarning),
         LossyValue(T, ValueLossWarning),

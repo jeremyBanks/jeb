@@ -146,6 +146,7 @@
     "msvc",
     "newtype",
     "newtypes",
+    "ordermap",
     "pathdiff",
     "peekable",
     "petgraph",

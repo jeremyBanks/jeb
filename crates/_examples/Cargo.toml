@@ -11,6 +11,7 @@ categories = []
 keywords = []
 
 [dependencies]
+ordermap = "1.1.0"
 
 [dev-dependencies]
 anyhow.workspace = true
