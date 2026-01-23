@@ -213,18 +213,45 @@ struct MetaVisitor;
 
 /// Convert a Value (used as variant identifier) to a variant index for Meta.
 fn variant_to_index<E: de::Error>(v: &Value) -> Result<u32, E> {
+    // Helper for signed integers: must be non-negative and fit in u32
+    fn signed_to_u32<E: de::Error>(i: i128) -> Result<u32, E> {
+        if i < 0 || i > u32::MAX as i128 {
+            Err(de::Error::custom(format!(
+                "variant index {} out of range 0..={}",
+                i,
+                u32::MAX
+            )))
+        } else {
+            Ok(i as u32)
+        }
+    }
+
+    // Helper for unsigned integers: must fit in u32
+    fn unsigned_to_u32<E: de::Error>(i: u128) -> Result<u32, E> {
+        if i > u32::MAX as u128 {
+            Err(de::Error::custom(format!(
+                "variant index {} out of range 0..={}",
+                i,
+                u32::MAX
+            )))
+        } else {
+            Ok(i as u32)
+        }
+    }
+
     match v {
-        // Integers -> variant index
+        // Unsigned integers -> variant index (with bounds check for large types)
         Value::U8(i) => Ok(*i as u32),
         Value::U16(i) => Ok(*i as u32),
         Value::U32(i) => Ok(*i),
-        Value::U64(i) => Ok(*i as u32),
-        Value::U128(i) => Ok(*i as u32),
-        Value::I8(i) => Ok(*i as u32),
-        Value::I16(i) => Ok(*i as u32),
-        Value::I32(i) => Ok(*i as u32),
-        Value::I64(i) => Ok(*i as u32),
-        Value::I128(i) => Ok(*i as u32),
+        Value::U64(i) => unsigned_to_u32::<E>(*i as u128),
+        Value::U128(i) => unsigned_to_u32::<E>(*i),
+        // Signed integers -> variant index (must be non-negative and in range)
+        Value::I8(i) => signed_to_u32::<E>(*i as i128),
+        Value::I16(i) => signed_to_u32::<E>(*i as i128),
+        Value::I32(i) => signed_to_u32::<E>(*i as i128),
+        Value::I64(i) => signed_to_u32::<E>(*i as i128),
+        Value::I128(i) => signed_to_u32::<E>(*i),
         // Strings -> variant name lookup
         Value::String(s) => match s.as_str() {
             "Bool" => Ok(0), "I8" => Ok(1), "I16" => Ok(2), "I32" => Ok(3), "I64" => Ok(4), "I128" => Ok(5),
