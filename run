@@ -4,7 +4,6 @@ set -euo pipefail
 # and the rest as the arguments to the command.
 command="$1"
 shift
-args=("$@")
 
 bin=""
 
@@ -37,4 +36,4 @@ else
     fi
 fi
 
-"$bin" "${args[@]}"
+"$bin" "$@"
