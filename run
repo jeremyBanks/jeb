@@ -27,6 +27,7 @@ declare -r CYAN=$'\033[1;36m'
 declare -r MAGENTA=$'\033[1;35m'
 declare -r RED=$'\033[1;31m'
 
+echo >&2 -e "${DARK_GRAY_BACKGROUND}"
 echo >&2 -e "${DARK_GRAY_BACKGROUND}${MAGENTA}\$${WHITE} ${BROWN}cargo build --bin${WHITE} ${CYAN}$command${WHITE}"
 echo >&2 -e "${DARK_GRAY_BACKGROUND}"
 echo >&2 -ne "${RESET}"
