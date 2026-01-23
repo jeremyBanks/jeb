@@ -30,6 +30,11 @@ pub static LOG_ENV: LazyLock<String> = LazyLock::new(|| {
     .flatten()
     .collect::<Vec<&str>>();
 
+    let mut default_parts = Vec::<String>::new();
+
+    default_parts.push(default_log_level.to_string());
+
+
     let default = "warn,jeb=info,save=info".to_string();
 
     specific.or(common).unwrap_or(default)
