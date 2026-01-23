@@ -51,11 +51,12 @@ fuzz_target!(|data: &[u8]| {
     }
 
     // Magnitude ordering: for positive n and negative -(n+1), the negative maps lower
+    // Property: for n >= 0, zig_zag(-(n+1)) < zig_zag(n+1)
     if let Some(&byte) = data.first() {
         let n = (byte as i8).saturating_abs();
-        if n > 0 && n < 127 {
+        if n >= 0 && n < 127 {
             let neg = -n - 1;
-            let pos = n;
+            let pos = n + 1;
             let u_neg: u8 = zig_zag(neg);
             let u_pos: u8 = zig_zag(pos);
             assert!(
