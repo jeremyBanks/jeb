@@ -131,3 +131,4 @@
 100. Git save needs to be agent aware
 101. A sub module is a tree entry pointing to a commit, but it's like a weak reference.
 102. Rust unstable trim-paths is a profile setting which enables and controls the sanitization of file paths in build outputs. It takes the following values and single-file-packages yay nice
+103. https://github.com/willcrichton/flowistry
