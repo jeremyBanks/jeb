@@ -4,6 +4,13 @@ use core::{
     marker::PhantomData,
 };
 
+pub fn default<T>() -> T
+where
+    T: Default,
+{
+    T::default()
+}
+
 /// Equivalent to the never type `std::convert::Infallible`/`!`, but with
 /// different trait implementations to satisfy our requirements.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -38,8 +45,12 @@ trait InnerBool {
     const VALUE: bool;
 }
 
+
+
 pub trait ImplConversionFrom<Source>: Sized {
     type Supported: Bool;
+    type Bijective: Bool;
+
     type FatalError: Debug + Default;
     type SelfReversibleWarning: Debug + Default;
     type ContextuallyReversibleWarning: Debug + Default;
@@ -56,6 +67,8 @@ pub trait ImplConversionFrom<Source>: Sized {
 
 impl ImplConversionFrom<f32> for f64 {
     type Supported = True;
+    type Bijective = False;
+
     type FatalError = Impossible;
     type SelfReversibleWarning = Impossible;
     type ContextuallyReversibleWarning = Impossible;
@@ -70,12 +83,14 @@ impl ImplConversionFrom<f32> for f64 {
 
 impl ImplConversionFrom<f64> for f32 {
     type Supported = True;
+    type Bijective = False;
+
     type FatalError = Impossible;
-    type SelfReversibleWarning = ();
-    type ContextuallyReversibleWarning = ();
+    type SelfReversibleWarning = &'static str;
+    type ContextuallyReversibleWarning = &'static str;
     type SemanticallyEquivalentWarning = Impossible;
-    type ClampedWarning = ();
-    type RoundedWarning = ();
+    type ClampedWarning = &'static str;
+    type RoundedWarning = &'static str;
 
     fn impl_conversion_from(value: f64) -> Conversion<f32, f64> {
         let value_f32 = value as f32;
@@ -83,9 +98,9 @@ impl ImplConversionFrom<f64> for f32 {
         if value_f32 as f64 == value {
             Conversion::with_identical(value_f32)
         } else if value.is_finite() && !value_f32.is_finite() {
-            Conversion::with_overflowing(value_f32, ())
+            Conversion::with_clamped(value_f32, "clamped")
         } else {
-            Conversion::with_rounded(value_f32, ())
+            Conversion::with_rounded(value_f32, "rounded")
         }
     }
 }
@@ -100,7 +115,8 @@ macro_rules! impl_conversions_not_supported {
     ($($source:ty => $target:ty);+ $(;)?) => {
         $(
             impl ImplConversionFrom<$source> for $target {
-                type Supported = True;
+                type Supported = False;
+                type Bijective = False;
                 type FatalError = &'static str;
                 type SelfReversibleWarning = Impossible;
                 type ContextuallyReversibleWarning = Impossible;
@@ -211,18 +227,6 @@ where
         }
     }
 
-    pub fn with_overflowing(value: Target, warning: Target::SelfReversibleWarning) -> Self {
-        Self {
-            value: Ok(value),
-            source: PhantomData,
-            not_self_reversible: Some(warning),
-            not_contextually_reversible: Some(Default::default()),
-            not_semantically_equivalent: None,
-            clamped: Some(Default::default()),
-            truncated: None,
-        }
-    }
-
     pub fn is_identical(&self) -> bool {
         self.is_self_reversible() && self.is_semantically_equivalent()
     }
@@ -256,7 +260,7 @@ where
             value: Ok(value),
             source: PhantomData,
             not_self_reversible: None,
-            not_contextually_reversible: Some(Default::default()),
+            not_contextually_reversible: Some(default()),
             not_semantically_equivalent: None,
             clamped: None,
             truncated: None,
@@ -269,7 +273,7 @@ where
             source: PhantomData,
             not_self_reversible: None,
             not_contextually_reversible: None,
-            not_semantically_equivalent: Some(Default::default()),
+            not_semantically_equivalent: Some(default()),
             clamped: None,
             truncated: None,
         }
@@ -279,8 +283,8 @@ where
         Self {
             value: Ok(value),
             source: PhantomData,
-            not_self_reversible: None,
-            not_contextually_reversible: None,
+            not_self_reversible: Some(default()),
+            not_contextually_reversible: Some(default()),
             not_semantically_equivalent: None,
             clamped: Some(warning),
             truncated: None,
@@ -291,8 +295,8 @@ where
         Self {
             value: Ok(value),
             source: PhantomData,
-            not_self_reversible: None,
-            not_contextually_reversible: None,
+            not_self_reversible: Some(default()),
+            not_contextually_reversible: Some(default()),
             not_semantically_equivalent: None,
             clamped: None,
             truncated: Some(warning),
@@ -312,7 +316,35 @@ where
     }
 }
 
-
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 // XXX: Okay I think our internal type can actually just bite the bullet and be
 // very precise about what it's returning, since we'll actually expose cleaner
