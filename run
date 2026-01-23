@@ -40,7 +40,7 @@ if [ -t 2 ] && [ -z "${NO_COLORS-}" ]; then
 fi
 
 echo >&2 -e "${DARK_BACKGROUND}"
-echo >&2 -e "${DARK_BACKGROUND}${MAGENTA}  \$${WHITE} ${BROWN}cargo build --bin${WHITE} ${CYAN}$command${WHITE}"
+echo >&2 -e "${DARK_BACKGROUND}${MAGENTA}  \$${WHITE} ${BROWN}cargo build --release --bin${WHITE} ${CYAN}$command${WHITE}"
 echo >&2 -e "${DARK_BACKGROUND}${RESET}"
 echo >&2
 
@@ -51,13 +51,13 @@ fi
 
 echo >&2
 
-if [ -x "./target/debug/$command" ]; then
-    bin="./target/debug/$command"
-elif [ -x "./target/release/$command" ]; then
-    echo >&2 "${YELLOW}WARNING:${WHITE} Existing debug build not found. Falling back to release build."
+if [ -x "./target/release/$command" ]; then
+    bin="./target/release/$command"
+elif [ -x "./target/debug/$command" ]; then
+    echo >&2 "${YELLOW}WARNING:${WHITE} Existing release build not found. Falling back to debug build."
     echo >&2
 
-    bin="./target/release/$command"
+    bin="./target/debug/$command"
 else
     echo >&2 "${YELLOW}WARNING:${WHITE} Existing builds not found. Falling back to cargo-installed binary."
     echo >&2
