@@ -187,8 +187,8 @@ pub struct Save {
     ///
     /// May be explicitly set to an empty string to skip brute-forcing the hash.
     ///
-    /// [default: "CCCC", representing the first four hex digits of the commit's
-    /// tree hash]
+    /// [default: the commit index modulo 10000, formatted as 4 decimal digits.
+    /// Use --tree-target to use the first 4 hex digits of the tree hash instead.]
     #[clap(
         help_heading = "COMMIT OPTIONS",
         long = "prefix",
@@ -197,6 +197,18 @@ pub struct Save {
         verbatim_doc_comment
     )]
     pub prefix_hex: Option<String>,
+
+    /// Use the tree hash prefix as the brute force target (old behavior).
+    ///
+    /// By default, the brute force target is the commit index modulo 10000
+    /// (formatted as 4 decimal digits with leading zeros). This flag restores
+    /// the old behavior of using the first 4 hex digits of the tree hash.
+    #[clap(
+        help_heading = "COMMIT OPTIONS",
+        long = "tree-target",
+        env = "SAVE_TREE_TARGET"
+    )]
+    pub tree_target: bool,
 
     // SIGNATURE OPTIONS:
     /// Override the system clock timestamp value.
@@ -542,8 +554,10 @@ pub fn main(args: Save) -> Result<()> {
     }
 
     let tree4 = tree.to_string()[..4].to_string().to_ascii_uppercase();
+    let n4 = format!("{:04}", graph_stats.commit_index % 10000);
+    let default_target = if args.tree_target { tree4.clone() } else { n4 };
 
-    let target = crate::hex::decode_hex_nibbles(args.prefix_hex.unwrap_or_else(|| tree4.clone()));
+    let target = crate::hex::decode_hex_nibbles(args.prefix_hex.unwrap_or_else(|| default_target));
 
     let tree = repo.find_tree(tree)?;
 

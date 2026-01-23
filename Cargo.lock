@@ -36,6 +36,7 @@ version = "0.0.0-dev-2026-01-19.4531"
 dependencies = [
  "anyhow",
  "ordermap",
+ "static_assertions",
 ]
 
 [[package]]
@@ -1380,6 +1381,15 @@ dependencies = [
  "tokio-stream",
  "tokio-util",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "jeb-tracing"
+version = "0.0.0-dev-2026-01-19.4531"
+dependencies = [
+ "color-eyre",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

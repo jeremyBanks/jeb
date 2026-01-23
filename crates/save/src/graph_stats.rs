@@ -201,7 +201,8 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 z_mode: true,
             };
         }
-        if unlimited_depth && self.trust_messages {
+        // Try to trust HEAD's message first (works for both limited and unlimited depth)
+        if self.trust_messages {
             if let Some(summary) = head.summary() {
                 if let Some(parsed) = MessageParser::parse(&summary) {
                     if MessageParser::validate(self.repo, head, &summary, &parsed) {
