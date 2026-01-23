@@ -4,35 +4,22 @@ use core::{
     marker::PhantomData,
 };
 
-pub mod type_logic {
-    enum TypeOnly {}
+/// Type level `Eq` operation.
+#[expect(private_bounds)]
+pub trait Eq<T>: InnerEq<T> {}
+impl<T> InnerEq<T> for T {}
+impl<T> Eq<T> for T where T: InnerEq<T> {}
+trait InnerEq<T> {}
 
-    trait Seal {}
-    #[expect(private_bounds)]
-    pub trait Sealed: Seal {}
-    impl<T: Seal> Sealed for T {}
+/// Type-level `bool` value.
+#[expect(private_bounds)]
+pub trait Bool: InnerBool {}
+impl InnerBool for True {}
+impl InnerBool for False {}
+pub enum True {}
+pub enum False {}
+trait InnerBool {}
 
-    trait InnerIs<T> {}
-    impl<T> InnerIs<T> for T {}
-
-    #[expect(private_bounds)]
-    pub trait Is<T>: InnerIs<T> {}
-    impl<T> Is<T> for T where T: InnerIs<T> {}
-
-    trait InnerBool {}
-
-    /// Type-level `bool` value.
-    #[expect(private_bounds)]
-    pub trait Bool: InnerBool {}
-
-    pub struct True(TypeOnly);
-    impl InnerBool for True {}
-
-    pub struct False(TypeOnly);
-    impl InnerBool for False {}
-}
-
-use type_logic::*;
 
 
 pub trait ImplConversionsFrom<Source>: Sized {
@@ -53,6 +40,8 @@ pub enum ConversionPriority {
 // XXX: instead of bools, these need to be optional generic error
 // types so we can statically exclude them if they're defined
 // to be Never.
+
+// like NotSelfReversibleError = () etc by default or something, hah
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ConversionResult<Target, Source>
