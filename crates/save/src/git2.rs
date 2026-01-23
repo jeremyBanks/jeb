@@ -650,6 +650,7 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
 
         let target_timestamp = target_timestamp;
         let min_timestamp = min_timestamp;
+        let letter_suffix = letter_suffix;
 
         let target_mask = &target_mask;
         let target_prefix = &target_prefix;
