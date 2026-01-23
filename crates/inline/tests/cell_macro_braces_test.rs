@@ -54,7 +54,9 @@ fn test_cell_macro_with_braces() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    unsafe {
+        env::set_var("INLINE_MODE", "write");
+    }
     inline::clear_file_state_cache();
 
     let positions = find_macro_positions(&path);
@@ -78,5 +80,7 @@ fn test_cell_macro_with_braces() {
         content
     );
 
-    env::remove_var("INLINE_MODE");
+    unsafe {
+        env::remove_var("INLINE_MODE");
+    }
 }

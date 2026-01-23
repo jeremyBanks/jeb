@@ -159,18 +159,26 @@ mod tests {
     #[test]
     fn test_snap_eq_mismatch_memory_mode() {
         // In memory mode, mismatch still returns true (conceptually updated)
-        std::env::set_var("INLINE_MODE", "memory");
+        unsafe {
+            std::env::set_var("INLINE_MODE", "memory");
+        }
         let snap = Snap::new(100i32);
         assert!(snap == 100); // Different values but returns true in memory mode
-        std::env::remove_var("INLINE_MODE");
+        unsafe {
+            std::env::remove_var("INLINE_MODE");
+        }
     }
 
     #[test]
     #[should_panic(expected = "Snapshot mismatch")]
     fn test_snap_eq_mismatch_verify_mode() {
-        std::env::set_var("INLINE_MODE", "verify");
+        unsafe {
+            std::env::set_var("INLINE_MODE", "verify");
+        }
         let snap = Snap::new(42);
         let _ = snap == 100; // Should panic
-        std::env::remove_var("INLINE_MODE");
+        unsafe {
+            std::env::remove_var("INLINE_MODE");
+        }
     }
 }
