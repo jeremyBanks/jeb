@@ -34,20 +34,19 @@ else
     if [ -x "$HOME/.cargo/bin/$command" ]; then
         bin="$HOME/.cargo/bin/$command"
     else
-        echo >&2 "${warning} \`cargo install\`ed binary not found for \`${command}\`. Falling back to any existing binary or alias."
+        echo >&2 "${warning} \`cargo install\`ed binary not found for \`${command}\`. Falling back to any matching command."
 
         if type "$command" >/dev/null 2>&1; then
             bin="$command"
         else
-            echo >&2 "${error} No existing binary or alias found for \`${command}\`. Giving up."
+            echo >&2 "${error} No matching command found for \`${command}\`. Giving up."
             exit 1
         fi
     fi
 fi
 
-# command in blue, args in cyan
 echo >&2
-echo >&2 -e "\033[1;34m$bin\033[0m \033[1;36m$@\033[0m"
+echo >&2 -e "\033[1;35m\$\033[0m \033[1;34m$bin\033[0m \033[1;36m$@\033[0m"
 echo >&2
 
 exec "$bin" "$@"
