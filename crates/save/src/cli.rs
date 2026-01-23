@@ -29,6 +29,7 @@ use {
             fmt::Write,
             fs,
             process::Command,
+            time::Instant,
         },
         tracing::{
             debug,
@@ -618,6 +619,7 @@ pub fn main(args: Save) -> Result<()> {
     let min_timestamp = previous_seconds;
     let target_timestamp = seconds;
 
+    let brute_force_start = Instant::now();
     let commit = base_commit.brute_force_timestamps(
         &repo,
         &target.bytes,
@@ -625,7 +627,9 @@ pub fn main(args: Save) -> Result<()> {
         min_timestamp,
         target_timestamp,
     );
+    let brute_force_ms = brute_force_start.elapsed().as_millis();
 
+    debug!("Brute-forced commit ID in {}ms", brute_force_ms);
     debug!("Prepared commit {}", commit.id());
 
     if !args.no_head {
