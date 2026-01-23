@@ -17,41 +17,45 @@ declare command="$1"
 shift
 declare bin=""
 
-declare -r warning=$'\033[1;33mWARNING:\033[0m'
-declare -r error=$'\033[1;31mERROR:\033[0m'
+declare -r RESET=$'\033[0m'
+declare -r BROWN=$'\033[1;33m'
+declare -r YELLOW=$'\033[1;33m'
+declare -r BLUE=$'\033[1;34m'
+declare -r CYAN=$'\033[1;36m'
+declare -r MAGENTA=$'\033[1;35m'
+declare -r RED=$'\033[1;31m'
 
-# XXX: update the below to display the cargo build --bin command in brown and yellow instead of this in blue and cyan but the command name in blue
 echo >&2 -e "\033[1;35m\$\033[0m \033[1;34mcargo\033[0m \033[1;36mbuild --bin \033[1;34m$command\033[0m\033[0m"
 echo >&2
 
 if ! cargo build --bin "$command"; then
-    echo >&2 "${warning} Failed to build \`${command}\`. Falling back to existing debug build."
+    echo >&2 "${YELLOW}WARNING:${RESET} Failed to build \`${command}\`. Falling back to existing debug build."
 fi
 
 if [ -x "./target/debug/$command" ]; then
     bin="./target/debug/$command"
 elif [ -x "./target/release/$command" ]; then
-    echo >&2 "${warning} Existing debug build not found. Falling back to release build."
+    echo >&2 "${YELLOW}WARNING:${RESET} Existing debug build not found. Falling back to release build."
     bin="./target/release/$command"
 else
-    echo >&2 "${warning} Existing builds not found. Falling back to \`cargo install\`ed binary."
+    echo >&2 "${YELLOW}WARNING:${RESET} Existing builds not found. Falling back to \`cargo install\`ed binary."
 
     if [ -x "$HOME/.cargo/bin/$command" ]; then
         bin="$HOME/.cargo/bin/$command"
     else
-        echo >&2 "${warning} \`cargo install\`ed binary not found for \`${command}\`. Falling back to any matching command."
+        echo >&2 "${YELLOW}WARNING:${RESET} \`cargo install\`ed binary not found for \`${command}\`. Falling back to any matching command."
 
         if type "$command" >/dev/null 2>&1; then
             bin="$command"
         else
-            echo >&2 "${error} No matching command found for \`${command}\`. Giving up."
+            echo >&2 "${RED}ERROR:${RESET} No matching command found for \`${command}\`. Giving up."
             exit 1
         fi
     fi
 fi
 
 echo >&2
-echo >&2 -e "\033[1;35m\$\033[0m \033[1;34m$bin\033[0m \033[1;36m$@\033[0m"
+echo >&2 -e "${MAGENTA}\$${RESET} ${BLUE}$bin${RESET} ${CYAN}$@${RESET}"
 echo >&2
 
 exec "$bin" "$@"
