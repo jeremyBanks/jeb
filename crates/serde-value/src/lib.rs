@@ -159,7 +159,3 @@ pub use error::Error;
 pub use transparent::Transparent;
 pub use to_value::to_value;
 pub use value::Value;
-
-/// Backwards-compatible alias for [`Transparent`].
-#[deprecated(since = "0.1.0", note = "Use `Transparent` instead")]
-pub type Meta = Transparent;
