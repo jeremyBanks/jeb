@@ -79,7 +79,7 @@ else
 fi
 
 echo >&2 -e "${DARK_BACKGROUND}"
-echo >&2 -e "${DARK_BACKGROUND}  ${MAGENTA}\$${WHITE} ${CYAN}${CYAN}${bin}${WHITE}${WHITE} ${BLUE}${CYAN}$@${WHITE}${WHITE}"
+echo >&2 -e "${DARK_BACKGROUND}  ${MAGENTA}\$${WHITE} ${CYAN}${CYAN}${bin}${WHITE}${WHITE} ${BLUE}${CYAN}$*${WHITE}${WHITE}"
 echo >&2 -e "${DARK_BACKGROUND}${RESET}"
 echo >&2
 

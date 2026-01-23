@@ -67,6 +67,12 @@ our workflow (not for the sake of developing/testing them, but to use them for
 their intended purpose) should be run through `./run <command> <args...>`.
 instead of `cargo run --bin <command> -- <args...>`.
 
+YOU MUST NOT USE `./run` TO RUN A BINARY THAT YOU ARE ACTIVELY WORKING ON, FOR
+TESTING! It runs in release mode, and will fall back to a previous build if
+needed. During development, you DO want to be using
+`cargo run --bin <command> -- <args...>` to ensure you're using a debug build
+with the latest code.
+
 ---
 
 When you're using the `Bash` tool to run a shell command directly, avoid using
