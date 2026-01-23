@@ -319,7 +319,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         }
         let z_mode = hit_depth_limit;
         if z_mode {
-            // In z-mode, also trust z commits we collected
+            // In z-mode, also trust z commits we collected and treat them as boundaries
             let z_commits_vec: Vec<_> = z_commits.iter().cloned().collect();
             for z_id in z_commits_vec {
                 if let Some(commit) = commit_map.get(&z_id) {
@@ -329,6 +329,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                                 && parsed.prefix == MessagePrefix::ZMode
                             {
                                 trusted_stats.insert(z_id.clone(), parsed);
+                                boundary_commits.insert(z_id.clone());
                             }
                         }
                     }
