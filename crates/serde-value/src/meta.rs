@@ -211,19 +211,52 @@ impl<'de> Deserialize<'de> for Meta {
 
 struct MetaVisitor;
 
-/// Helper to deserialize variant identifier as either index (integer) or name (string).
+/// General-purpose variant identifier that stores either an index or a name.
 ///
-/// Serde formats identify enum variants in exactly two ways:
-/// - **By index**: bincode sends `3u32` meaning "the 4th variant"
-/// - **By name**: JSON sends `"I32"` meaning "the variant named I32"
+/// This accepts:
+/// - **Integers**: as variant index (with bounds checking)
+/// - **Strings**: as variant name (caller does lookup)
+/// - **Bytes**: as variant name if valid UTF-8
+/// - **Floats**: as variant index if exact integer (no fractional part, in range)
+/// - **Char**: as single-character variant name
+/// - **Some(x)**: unwraps and recurses
 ///
-/// No other types make sense as variant identifiers. A bool, float, sequence, or map
-/// cannot meaningfully identify an enum variant, so we return an error for those.
-struct VariantId(u32);
+/// Rejects (no sensible mapping exists):
+/// - Bool, Unit, None, Sequences, Maps
+enum VariantId {
+    Index(u32),
+    Name(String),
+}
 
 impl<'de> Deserialize<'de> for VariantId {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct VariantIdVisitor;
+
+        impl VariantIdVisitor {
+            /// Convert an integer to u32, returning error if out of range.
+            fn to_index<E: de::Error>(v: i128) -> Result<VariantId, E> {
+                if v < 0 || v > u32::MAX as i128 {
+                    Err(de::Error::invalid_value(
+                        de::Unexpected::Other(&format!("integer {}", v)),
+                        &"variant index in range 0..=4294967295",
+                    ))
+                } else {
+                    Ok(VariantId::Index(v as u32))
+                }
+            }
+
+            /// Convert an unsigned integer to u32, returning error if out of range.
+            fn to_index_unsigned<E: de::Error>(v: u128) -> Result<VariantId, E> {
+                if v > u32::MAX as u128 {
+                    Err(de::Error::invalid_value(
+                        de::Unexpected::Other(&format!("integer {}", v)),
+                        &"variant index in range 0..=4294967295",
+                    ))
+                } else {
+                    Ok(VariantId::Index(v as u32))
+                }
+            }
+        }
 
         impl<'de> Visitor<'de> for VariantIdVisitor {
             type Value = VariantId;
@@ -232,60 +265,95 @@ impl<'de> Deserialize<'de> for VariantId {
                 write!(f, "variant index (integer) or variant name (string)")
             }
 
-            // === Integers: variant index (exact) ===
+            // === Signed integers: variant index with bounds checking ===
             fn visit_i8<E: de::Error>(self, v: i8) -> Result<VariantId, E> {
-                Ok(VariantId(v as u32))
+                Self::to_index(v as i128)
             }
             fn visit_i16<E: de::Error>(self, v: i16) -> Result<VariantId, E> {
-                Ok(VariantId(v as u32))
+                Self::to_index(v as i128)
             }
             fn visit_i32<E: de::Error>(self, v: i32) -> Result<VariantId, E> {
-                Ok(VariantId(v as u32))
+                Self::to_index(v as i128)
             }
             fn visit_i64<E: de::Error>(self, v: i64) -> Result<VariantId, E> {
-                Ok(VariantId(v as u32))
+                Self::to_index(v as i128)
             }
             fn visit_i128<E: de::Error>(self, v: i128) -> Result<VariantId, E> {
-                Ok(VariantId(v as u32))
+                Self::to_index(v)
             }
+
+            // === Unsigned integers: variant index with bounds checking ===
             fn visit_u8<E: de::Error>(self, v: u8) -> Result<VariantId, E> {
-                Ok(VariantId(v as u32))
+                Ok(VariantId::Index(v as u32))
             }
             fn visit_u16<E: de::Error>(self, v: u16) -> Result<VariantId, E> {
-                Ok(VariantId(v as u32))
+                Ok(VariantId::Index(v as u32))
             }
             fn visit_u32<E: de::Error>(self, v: u32) -> Result<VariantId, E> {
-                Ok(VariantId(v))
+                Ok(VariantId::Index(v))
             }
             fn visit_u64<E: de::Error>(self, v: u64) -> Result<VariantId, E> {
-                Ok(VariantId(v as u32))
+                Self::to_index_unsigned(v as u128)
             }
             fn visit_u128<E: de::Error>(self, v: u128) -> Result<VariantId, E> {
-                Ok(VariantId(v as u32))
+                Self::to_index_unsigned(v)
             }
 
-            // === Strings: variant name (exact lookup) ===
+            // === Floats: variant index if exact integer ===
+            fn visit_f32<E: de::Error>(self, v: f32) -> Result<VariantId, E> {
+                self.visit_f64(v as f64)
+            }
+            fn visit_f64<E: de::Error>(self, v: f64) -> Result<VariantId, E> {
+                if v.is_nan() || v.is_infinite() || v != v.trunc() || v < 0.0 || v > u32::MAX as f64 {
+                    Err(de::Error::invalid_value(
+                        de::Unexpected::Float(v),
+                        &"exact integer in range 0..=4294967295",
+                    ))
+                } else {
+                    Ok(VariantId::Index(v as u32))
+                }
+            }
+
+            // === Strings: variant name ===
             fn visit_str<E: de::Error>(self, v: &str) -> Result<VariantId, E> {
-                let index = match v {
-                    "Bool" => 0, "I8" => 1, "I16" => 2, "I32" => 3, "I64" => 4, "I128" => 5,
-                    "U8" => 6, "U16" => 7, "U32" => 8, "U64" => 9, "U128" => 10,
-                    "F32" => 11, "F64" => 12, "Char" => 13, "String" => 14, "Bytes" => 15,
-                    "None" => 16, "Some" => 17, "Unit" => 18, "UnitStruct" => 19,
-                    "NewtypeStruct" => 20, "NewtypeVariant" => 21,
-                    "Seq" => 22, "Tuple" => 23, "TupleStruct" => 24, "TupleVariant" => 25,
-                    "Map" => 26, "Struct" => 27, "StructVariant" => 28, "UnitVariant" => 29,
-                    _ => return Err(de::Error::unknown_variant(v, VARIANTS)),
-                };
-                Ok(VariantId(index))
+                Ok(VariantId::Name(v.to_owned()))
             }
-
             fn visit_string<E: de::Error>(self, v: String) -> Result<VariantId, E> {
-                self.visit_str(&v)
+                Ok(VariantId::Name(v))
             }
 
-            // All other types are not valid variant identifiers.
-            // The default Visitor implementations return "invalid type" errors,
-            // which is exactly what we want.
+            // === Bytes: variant name if valid UTF-8 ===
+            fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<VariantId, E> {
+                match std::str::from_utf8(v) {
+                    Ok(s) => Ok(VariantId::Name(s.to_owned())),
+                    Err(_) => Err(de::Error::invalid_value(
+                        de::Unexpected::Bytes(v),
+                        &"valid UTF-8 bytes for variant name",
+                    )),
+                }
+            }
+            fn visit_byte_buf<E: de::Error>(self, v: Vec<u8>) -> Result<VariantId, E> {
+                match String::from_utf8(v) {
+                    Ok(s) => Ok(VariantId::Name(s)),
+                    Err(e) => Err(de::Error::invalid_value(
+                        de::Unexpected::Bytes(e.as_bytes()),
+                        &"valid UTF-8 bytes for variant name",
+                    )),
+                }
+            }
+
+            // === Char: single-character variant name ===
+            fn visit_char<E: de::Error>(self, v: char) -> Result<VariantId, E> {
+                Ok(VariantId::Name(v.to_string()))
+            }
+
+            // === Some: unwrap and recurse ===
+            fn visit_some<D: Deserializer<'de>>(self, deserializer: D) -> Result<VariantId, D::Error> {
+                VariantId::deserialize(deserializer)
+            }
+
+            // All other types (bool, unit, none, seq, map) have no sensible mapping.
+            // The default Visitor implementations return "invalid type" errors.
         }
 
         deserializer.deserialize_any(VariantIdVisitor)
@@ -300,7 +368,22 @@ impl<'de> Visitor<'de> for MetaVisitor {
     }
 
     fn visit_enum<A: EnumAccess<'de>>(self, access: A) -> Result<Meta, A::Error> {
-        let (VariantId(variant_index), variant_access) = access.variant::<VariantId>()?;
+        let (variant_id, variant_access) = access.variant::<VariantId>()?;
+
+        // Resolve variant identifier to index (Meta-specific lookup)
+        let variant_index = match variant_id {
+            VariantId::Index(i) => i,
+            VariantId::Name(ref name) => match name.as_str() {
+                "Bool" => 0, "I8" => 1, "I16" => 2, "I32" => 3, "I64" => 4, "I128" => 5,
+                "U8" => 6, "U16" => 7, "U32" => 8, "U64" => 9, "U128" => 10,
+                "F32" => 11, "F64" => 12, "Char" => 13, "String" => 14, "Bytes" => 15,
+                "None" => 16, "Some" => 17, "Unit" => 18, "UnitStruct" => 19,
+                "NewtypeStruct" => 20, "NewtypeVariant" => 21,
+                "Seq" => 22, "Tuple" => 23, "TupleStruct" => 24, "TupleVariant" => 25,
+                "Map" => 26, "Struct" => 27, "StructVariant" => 28, "UnitVariant" => 29,
+                _ => return Err(de::Error::unknown_variant(name, VARIANTS)),
+            },
+        };
 
         let value = match variant_index {
             0 => Value::Bool(variant_access.newtype_variant()?),
