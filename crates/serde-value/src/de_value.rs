@@ -3,20 +3,55 @@
 //! This uses `deserialize_enum` which works with ALL serde formats,
 //! including non-self-describing formats like bincode and postcard.
 
-use crate::intern::intern_string_owned;
-use crate::Value;
-use serde::de::{self, Deserialize, Deserializer, EnumAccess, SeqAccess, VariantAccess, Visitor};
-use std::fmt;
+use {
+    crate::{
+        Value,
+        intern::intern_string_owned,
+    },
+    serde::de::{
+        self,
+        Deserialize,
+        Deserializer,
+        EnumAccess,
+        SeqAccess,
+        VariantAccess,
+        Visitor,
+    },
+    std::fmt,
+};
 
 // All Value variant names
 const VARIANTS: &[&str] = &[
-    "Bool", "I8", "I16", "I32", "I64", "I128",
-    "U8", "U16", "U32", "U64", "U128",
-    "F32", "F64", "Char", "String", "Bytes",
-    "None", "Some", "Unit", "UnitStruct",
-    "NewtypeStruct", "NewtypeVariant",
-    "Seq", "Tuple", "TupleStruct", "TupleVariant",
-    "Map", "Struct", "StructVariant", "UnitVariant",
+    "Bool",
+    "I8",
+    "I16",
+    "I32",
+    "I64",
+    "I128",
+    "U8",
+    "U16",
+    "U32",
+    "U64",
+    "U128",
+    "F32",
+    "F64",
+    "Char",
+    "String",
+    "Bytes",
+    "None",
+    "Some",
+    "Unit",
+    "UnitStruct",
+    "NewtypeStruct",
+    "NewtypeVariant",
+    "Seq",
+    "Tuple",
+    "TupleStruct",
+    "TupleVariant",
+    "Map",
+    "Struct",
+    "StructVariant",
+    "UnitVariant",
 ];
 
 impl<'de> Deserialize<'de> for Value {
@@ -51,7 +86,10 @@ impl<'de> Deserialize<'de> for VariantIdent {
 
             fn visit_u64<E: de::Error>(self, v: u64) -> Result<VariantIdent, E> {
                 if v > u32::MAX as u64 {
-                    Err(de::Error::custom(format!("variant index {} out of range", v)))
+                    Err(de::Error::custom(format!(
+                        "variant index {} out of range",
+                        v
+                    )))
                 } else {
                     Ok(VariantIdent::Index(v as u32))
                 }
@@ -74,13 +112,36 @@ fn variant_ident_to_index<E: de::Error>(v: &VariantIdent) -> Result<u32, E> {
     match v {
         VariantIdent::Index(i) => Ok(*i),
         VariantIdent::Name(s) => match s.as_str() {
-            "Bool" => Ok(0), "I8" => Ok(1), "I16" => Ok(2), "I32" => Ok(3), "I64" => Ok(4), "I128" => Ok(5),
-            "U8" => Ok(6), "U16" => Ok(7), "U32" => Ok(8), "U64" => Ok(9), "U128" => Ok(10),
-            "F32" => Ok(11), "F64" => Ok(12), "Char" => Ok(13), "String" => Ok(14), "Bytes" => Ok(15),
-            "None" => Ok(16), "Some" => Ok(17), "Unit" => Ok(18), "UnitStruct" => Ok(19),
-            "NewtypeStruct" => Ok(20), "NewtypeVariant" => Ok(21),
-            "Seq" => Ok(22), "Tuple" => Ok(23), "TupleStruct" => Ok(24), "TupleVariant" => Ok(25),
-            "Map" => Ok(26), "Struct" => Ok(27), "StructVariant" => Ok(28), "UnitVariant" => Ok(29),
+            "Bool" => Ok(0),
+            "I8" => Ok(1),
+            "I16" => Ok(2),
+            "I32" => Ok(3),
+            "I64" => Ok(4),
+            "I128" => Ok(5),
+            "U8" => Ok(6),
+            "U16" => Ok(7),
+            "U32" => Ok(8),
+            "U64" => Ok(9),
+            "U128" => Ok(10),
+            "F32" => Ok(11),
+            "F64" => Ok(12),
+            "Char" => Ok(13),
+            "String" => Ok(14),
+            "Bytes" => Ok(15),
+            "None" => Ok(16),
+            "Some" => Ok(17),
+            "Unit" => Ok(18),
+            "UnitStruct" => Ok(19),
+            "NewtypeStruct" => Ok(20),
+            "NewtypeVariant" => Ok(21),
+            "Seq" => Ok(22),
+            "Tuple" => Ok(23),
+            "TupleStruct" => Ok(24),
+            "TupleVariant" => Ok(25),
+            "Map" => Ok(26),
+            "Struct" => Ok(27),
+            "StructVariant" => Ok(28),
+            "UnitVariant" => Ok(29),
             _ => Err(de::Error::unknown_variant(s, VARIANTS)),
         },
     }
@@ -135,7 +196,8 @@ impl<'de> Visitor<'de> for ValueVisitor {
             }
             20 => {
                 // NewtypeStruct: (name, value)
-                let (name, value): (String, Value) = variant_access.tuple_variant(2, TupleVisitor2)?;
+                let (name, value): (String, Value) =
+                    variant_access.tuple_variant(2, TupleVisitor2)?;
                 Ok(Value::NewtypeStruct {
                     name: intern_string_owned(name),
                     value: Box::new(value),
@@ -164,7 +226,8 @@ impl<'de> Visitor<'de> for ValueVisitor {
             }
             24 => {
                 // TupleStruct: (name, fields)
-                let (name, fields): (String, Vec<Value>) = variant_access.tuple_variant(2, TupleVisitor2Vec)?;
+                let (name, fields): (String, Vec<Value>) =
+                    variant_access.tuple_variant(2, TupleVisitor2Vec)?;
                 Ok(Value::TupleStruct {
                     name: intern_string_owned(name),
                     fields,
@@ -188,23 +251,30 @@ impl<'de> Visitor<'de> for ValueVisitor {
             }
             27 => {
                 // Struct: (name, fields)
-                let (name, fields): (String, Vec<(String, Value)>) = variant_access.tuple_variant(2, TupleVisitor2StructFields)?;
+                let (name, fields): (String, Vec<(String, Value)>) =
+                    variant_access.tuple_variant(2, TupleVisitor2StructFields)?;
                 Ok(Value::Struct {
                     name: intern_string_owned(name),
-                    fields: fields.into_iter()
+                    fields: fields
+                        .into_iter()
                         .map(|(k, v)| (intern_string_owned(k), v))
                         .collect(),
                 })
             }
             28 => {
                 // StructVariant: (enum_name, variant_index, variant, fields)
-                let (enum_name, variant_index, variant, fields): (String, u32, String, Vec<(String, Value)>) =
-                    variant_access.tuple_variant(4, TupleVisitor4StructFields)?;
+                let (enum_name, variant_index, variant, fields): (
+                    String,
+                    u32,
+                    String,
+                    Vec<(String, Value)>,
+                ) = variant_access.tuple_variant(4, TupleVisitor4StructFields)?;
                 Ok(Value::StructVariant {
                     enum_name: intern_string_owned(enum_name),
                     variant_index,
                     variant: intern_string_owned(variant),
-                    fields: fields.into_iter()
+                    fields: fields
+                        .into_iter()
                         .map(|(k, v)| (intern_string_owned(k), v))
                         .collect(),
                 })
@@ -232,12 +302,18 @@ impl<'de> Visitor<'de> for ValueVisitor {
 struct TupleVisitor2;
 impl<'de> Visitor<'de> for TupleVisitor2 {
     type Value = (String, Value);
+
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "a 2-element tuple")
     }
+
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-        let a = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(0, &self))?;
-        let b = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(1, &self))?;
+        let a = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+        let b = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(1, &self))?;
         Ok((a, b))
     }
 }
@@ -245,12 +321,18 @@ impl<'de> Visitor<'de> for TupleVisitor2 {
 struct TupleVisitor2Vec;
 impl<'de> Visitor<'de> for TupleVisitor2Vec {
     type Value = (String, Vec<Value>);
+
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "a 2-element tuple")
     }
+
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-        let a = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(0, &self))?;
-        let b = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(1, &self))?;
+        let a = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+        let b = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(1, &self))?;
         Ok((a, b))
     }
 }
@@ -258,12 +340,18 @@ impl<'de> Visitor<'de> for TupleVisitor2Vec {
 struct TupleVisitor2StructFields;
 impl<'de> Visitor<'de> for TupleVisitor2StructFields {
     type Value = (String, Vec<(String, Value)>);
+
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "a 2-element tuple")
     }
+
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-        let a = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(0, &self))?;
-        let b = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(1, &self))?;
+        let a = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+        let b = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(1, &self))?;
         Ok((a, b))
     }
 }
@@ -271,13 +359,21 @@ impl<'de> Visitor<'de> for TupleVisitor2StructFields {
 struct TupleVisitor3;
 impl<'de> Visitor<'de> for TupleVisitor3 {
     type Value = (String, u32, String);
+
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "a 3-element tuple")
     }
+
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-        let a = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(0, &self))?;
-        let b = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(1, &self))?;
-        let c = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(2, &self))?;
+        let a = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+        let b = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(1, &self))?;
+        let c = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(2, &self))?;
         Ok((a, b, c))
     }
 }
@@ -285,14 +381,24 @@ impl<'de> Visitor<'de> for TupleVisitor3 {
 struct TupleVisitor4Newtype;
 impl<'de> Visitor<'de> for TupleVisitor4Newtype {
     type Value = (String, u32, String, Value);
+
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "a 4-element tuple")
     }
+
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-        let a = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(0, &self))?;
-        let b = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(1, &self))?;
-        let c = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(2, &self))?;
-        let d = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(3, &self))?;
+        let a = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+        let b = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(1, &self))?;
+        let c = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(2, &self))?;
+        let d = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(3, &self))?;
         Ok((a, b, c, d))
     }
 }
@@ -300,14 +406,24 @@ impl<'de> Visitor<'de> for TupleVisitor4Newtype {
 struct TupleVisitor4Vec;
 impl<'de> Visitor<'de> for TupleVisitor4Vec {
     type Value = (String, u32, String, Vec<Value>);
+
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "a 4-element tuple")
     }
+
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-        let a = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(0, &self))?;
-        let b = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(1, &self))?;
-        let c = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(2, &self))?;
-        let d = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(3, &self))?;
+        let a = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+        let b = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(1, &self))?;
+        let c = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(2, &self))?;
+        let d = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(3, &self))?;
         Ok((a, b, c, d))
     }
 }
@@ -315,14 +431,24 @@ impl<'de> Visitor<'de> for TupleVisitor4Vec {
 struct TupleVisitor4StructFields;
 impl<'de> Visitor<'de> for TupleVisitor4StructFields {
     type Value = (String, u32, String, Vec<(String, Value)>);
+
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "a 4-element tuple")
     }
+
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-        let a = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(0, &self))?;
-        let b = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(1, &self))?;
-        let c = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(2, &self))?;
-        let d = seq.next_element()?.ok_or_else(|| de::Error::invalid_length(3, &self))?;
+        let a = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+        let b = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(1, &self))?;
+        let c = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(2, &self))?;
+        let d = seq
+            .next_element()?
+            .ok_or_else(|| de::Error::invalid_length(3, &self))?;
         Ok((a, b, c, d))
     }
 }

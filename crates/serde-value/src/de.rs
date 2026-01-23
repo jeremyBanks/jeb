@@ -2,10 +2,22 @@
 //!
 //! This allows deserializing any `Deserialize` type from a `Value`.
 
-use crate::{Error, Value};
-use serde::de::{
-    self, DeserializeSeed, Deserializer, EnumAccess, IntoDeserializer, MapAccess, SeqAccess,
-    VariantAccess, Visitor,
+use {
+    crate::{
+        Error,
+        Value,
+    },
+    serde::de::{
+        self,
+        DeserializeSeed,
+        Deserializer,
+        EnumAccess,
+        IntoDeserializer,
+        MapAccess,
+        SeqAccess,
+        VariantAccess,
+        Visitor,
+    },
 };
 
 /// Convert a `Value` to any `DeserializeOwned` type.
@@ -398,7 +410,11 @@ impl<'de> Deserializer<'de> for Value {
         }
     }
 
-    fn deserialize_tuple<V: Visitor<'de>>(self, _len: usize, visitor: V) -> Result<V::Value, Error> {
+    fn deserialize_tuple<V: Visitor<'de>>(
+        self,
+        _len: usize,
+        visitor: V,
+    ) -> Result<V::Value, Error> {
         self.deserialize_seq(visitor)
     }
 
@@ -724,7 +740,10 @@ impl<'de> MapAccess<'de> for StructDeserializer {
 }
 
 /// Deserializer for enums.
-#[expect(clippy::enum_variant_names, reason = "these ARE enum variant deserializers")]
+#[expect(
+    clippy::enum_variant_names,
+    reason = "these ARE enum variant deserializers"
+)]
 enum EnumDeserializer {
     UnitVariant {
         #[allow(dead_code)]
@@ -819,9 +838,7 @@ impl<'de> VariantAccess<'de> for VariantDeserializer {
 
     fn tuple_variant<V: Visitor<'de>>(self, _len: usize, visitor: V) -> Result<V::Value, Error> {
         match self {
-            VariantDeserializer::Tuple(fields) => {
-                visitor.visit_seq(SeqDeserializer::new(fields))
-            }
+            VariantDeserializer::Tuple(fields) => visitor.visit_seq(SeqDeserializer::new(fields)),
             _ => Err(Error::type_mismatch("tuple variant", "other variant")),
         }
     }

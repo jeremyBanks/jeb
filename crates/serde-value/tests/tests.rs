@@ -1,7 +1,17 @@
 //! Tests for serde-value.
 
-use serde::{Deserialize, Serialize};
-use serde_value::{from_value, to_value, Transparent, Value};
+use {
+    serde::{
+        Deserialize,
+        Serialize,
+    },
+    serde_value::{
+        Transparent,
+        Value,
+        from_value,
+        to_value,
+    },
+};
 
 // ============================================================================
 // Primitive Tests
@@ -57,7 +67,10 @@ fn test_string() {
         to_value(&"hello".to_string()).unwrap(),
         Value::String("hello".to_string())
     );
-    assert_eq!(to_value(&"world").unwrap(), Value::String("world".to_string()));
+    assert_eq!(
+        to_value(&"world").unwrap(),
+        Value::String("world".to_string())
+    );
 
     assert_eq!(
         from_value::<String>(Value::String("test".to_string())).unwrap(),
@@ -414,13 +427,10 @@ fn test_struct_variant() {
         _ => panic!("expected StructVariant, got {value:?}"),
     }
 
-    assert_eq!(
-        from_value::<Shape>(value).unwrap(),
-        Shape::Rectangle {
-            width: 10,
-            height: 20
-        }
-    );
+    assert_eq!(from_value::<Shape>(value).unwrap(), Shape::Rectangle {
+        width: 10,
+        height: 20
+    });
 }
 
 // ============================================================================
@@ -499,7 +509,8 @@ fn test_value_hash() {
 
 #[test]
 fn test_serialize_transparent_to_json() {
-    // Use Transparent for transparent serialization (identical bytes to original type)
+    // Use Transparent for transparent serialization (identical bytes to original
+    // type)
     let value = Value::Struct {
         name: "Test",
         fields: vec![
@@ -543,8 +554,14 @@ fn test_all_integer_round_trips() {
     assert_eq!(from_value::<i32>(Value::I32(i32::MAX)).unwrap(), i32::MAX);
     assert_eq!(from_value::<i64>(Value::I64(i64::MIN)).unwrap(), i64::MIN);
     assert_eq!(from_value::<i64>(Value::I64(i64::MAX)).unwrap(), i64::MAX);
-    assert_eq!(from_value::<i128>(Value::I128(i128::MIN)).unwrap(), i128::MIN);
-    assert_eq!(from_value::<i128>(Value::I128(i128::MAX)).unwrap(), i128::MAX);
+    assert_eq!(
+        from_value::<i128>(Value::I128(i128::MIN)).unwrap(),
+        i128::MIN
+    );
+    assert_eq!(
+        from_value::<i128>(Value::I128(i128::MAX)).unwrap(),
+        i128::MAX
+    );
 
     assert_eq!(from_value::<u8>(Value::U8(u8::MIN)).unwrap(), u8::MIN);
     assert_eq!(from_value::<u8>(Value::U8(u8::MAX)).unwrap(), u8::MAX);
@@ -554,8 +571,14 @@ fn test_all_integer_round_trips() {
     assert_eq!(from_value::<u32>(Value::U32(u32::MAX)).unwrap(), u32::MAX);
     assert_eq!(from_value::<u64>(Value::U64(u64::MIN)).unwrap(), u64::MIN);
     assert_eq!(from_value::<u64>(Value::U64(u64::MAX)).unwrap(), u64::MAX);
-    assert_eq!(from_value::<u128>(Value::U128(u128::MIN)).unwrap(), u128::MIN);
-    assert_eq!(from_value::<u128>(Value::U128(u128::MAX)).unwrap(), u128::MAX);
+    assert_eq!(
+        from_value::<u128>(Value::U128(u128::MIN)).unwrap(),
+        u128::MIN
+    );
+    assert_eq!(
+        from_value::<u128>(Value::U128(u128::MAX)).unwrap(),
+        u128::MAX
+    );
 }
 
 #[test]
@@ -567,17 +590,32 @@ fn test_float_edge_cases() {
     assert_eq!(from_value::<f64>(Value::F64(-0.0)).unwrap(), -0.0);
 
     // Infinity
-    assert_eq!(from_value::<f32>(Value::F32(f32::INFINITY)).unwrap(), f32::INFINITY);
-    assert_eq!(from_value::<f32>(Value::F32(f32::NEG_INFINITY)).unwrap(), f32::NEG_INFINITY);
-    assert_eq!(from_value::<f64>(Value::F64(f64::INFINITY)).unwrap(), f64::INFINITY);
-    assert_eq!(from_value::<f64>(Value::F64(f64::NEG_INFINITY)).unwrap(), f64::NEG_INFINITY);
+    assert_eq!(
+        from_value::<f32>(Value::F32(f32::INFINITY)).unwrap(),
+        f32::INFINITY
+    );
+    assert_eq!(
+        from_value::<f32>(Value::F32(f32::NEG_INFINITY)).unwrap(),
+        f32::NEG_INFINITY
+    );
+    assert_eq!(
+        from_value::<f64>(Value::F64(f64::INFINITY)).unwrap(),
+        f64::INFINITY
+    );
+    assert_eq!(
+        from_value::<f64>(Value::F64(f64::NEG_INFINITY)).unwrap(),
+        f64::NEG_INFINITY
+    );
 
     // NaN (use is_nan since NaN != NaN in normal comparison)
     assert!(from_value::<f32>(Value::F32(f32::NAN)).unwrap().is_nan());
     assert!(from_value::<f64>(Value::F64(f64::NAN)).unwrap().is_nan());
 
     // Subnormal numbers
-    assert_eq!(from_value::<f64>(Value::F64(f64::MIN_POSITIVE)).unwrap(), f64::MIN_POSITIVE);
+    assert_eq!(
+        from_value::<f64>(Value::F64(f64::MIN_POSITIVE)).unwrap(),
+        f64::MIN_POSITIVE
+    );
 }
 
 #[test]
@@ -597,7 +635,10 @@ fn test_empty_collections() {
     let empty_map: HashMap<String, i32> = HashMap::new();
     let value = to_value(&empty_map).unwrap();
     assert_eq!(value, Value::Map(vec![]));
-    assert_eq!(from_value::<HashMap<String, i32>>(value).unwrap(), empty_map);
+    assert_eq!(
+        from_value::<HashMap<String, i32>>(value).unwrap(),
+        empty_map
+    );
 
     // Empty struct
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -626,7 +667,11 @@ fn test_variant_indices() {
     // Test non-zero variant indices
     let second = to_value(&Multi::Second).unwrap();
     match &second {
-        Value::UnitVariant { variant_index, variant, .. } => {
+        Value::UnitVariant {
+            variant_index,
+            variant,
+            ..
+        } => {
             assert_eq!(*variant_index, 1);
             assert_eq!(*variant, "Second");
         }
@@ -636,7 +681,11 @@ fn test_variant_indices() {
 
     let third = to_value(&Multi::Third).unwrap();
     match &third {
-        Value::UnitVariant { variant_index, variant, .. } => {
+        Value::UnitVariant {
+            variant_index,
+            variant,
+            ..
+        } => {
             assert_eq!(*variant_index, 2);
             assert_eq!(*variant, "Third");
         }
@@ -670,17 +719,21 @@ fn test_value_type_name() {
     assert_eq!(Value::Seq(vec![]).type_name(), "sequence");
     assert_eq!(Value::Tuple(vec![]).type_name(), "tuple");
     assert_eq!(Value::Map(vec![]).type_name(), "map");
-    assert_eq!(Value::Struct { name: "X", fields: vec![] }.type_name(), "struct");
+    assert_eq!(
+        Value::Struct {
+            name: "X",
+            fields: vec![]
+        }
+        .type_name(),
+        "struct"
+    );
 }
 
 #[test]
 fn test_value_clone() {
     let original = Value::Struct {
         name: "Test",
-        fields: vec![
-            ("a", Value::I32(1)),
-            ("b", Value::String("hello".into())),
-        ],
+        fields: vec![("a", Value::I32(1)), ("b", Value::String("hello".into()))],
     };
     let cloned = original.clone();
     assert_eq!(original, cloned);
@@ -707,7 +760,10 @@ fn test_nested_options() {
     let none_inner: Option<Option<i32>> = Some(None);
     let value = to_value(&none_inner).unwrap();
     assert_eq!(value, Value::Some(Box::new(Value::None)));
-    assert_eq!(from_value::<Option<Option<i32>>>(value).unwrap(), none_inner);
+    assert_eq!(
+        from_value::<Option<Option<i32>>>(value).unwrap(),
+        none_inner
+    );
 }
 
 #[test]
@@ -740,8 +796,14 @@ fn test_vec_of_structs() {
     }
 
     let items = vec![
-        Item { id: 1, name: "first".into() },
-        Item { id: 2, name: "second".into() },
+        Item {
+            id: 1,
+            name: "first".into(),
+        },
+        Item {
+            id: 2,
+            name: "second".into(),
+        },
     ];
 
     let value = to_value(&items).unwrap();
@@ -762,13 +824,19 @@ fn test_vec_of_structs() {
 #[test]
 fn test_deeply_nested() {
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Level3 { value: i32 }
+    struct Level3 {
+        value: i32,
+    }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Level2 { inner: Level3 }
+    struct Level2 {
+        inner: Level3,
+    }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Level1 { inner: Level2 }
+    struct Level1 {
+        inner: Level2,
+    }
 
     let deep = Level1 {
         inner: Level2 {
@@ -938,8 +1006,8 @@ fn test_cross_type_conversion_nested_structs() {
 // Field Index Tests (Binary Format Interop)
 // ============================================================================
 
-/// Test that Value preserves field names from structs, enabling name-based matching.
-/// This is the key difference from positional binary formats.
+/// Test that Value preserves field names from structs, enabling name-based
+/// matching. This is the key difference from positional binary formats.
 #[test]
 fn test_value_preserves_field_names() {
     #[derive(Serialize)]
@@ -1013,7 +1081,10 @@ fn test_json_value_roundtrip() {
         Value::Seq(vec![Value::I64(1), Value::I64(2), Value::I64(3)]),
         Value::Map(vec![
             (Value::String("key1".to_string()), Value::I64(1)),
-            (Value::String("key2".to_string()), Value::String("value".to_string())),
+            (
+                Value::String("key2".to_string()),
+                Value::String("value".to_string()),
+            ),
         ]),
     ];
 
@@ -1021,7 +1092,11 @@ fn test_json_value_roundtrip() {
         let json = serde_json::to_string(&original).unwrap();
         let roundtripped: Value = serde_json::from_str(&json).unwrap();
         // With tagged enum, types are preserved exactly
-        assert_eq!(roundtripped, original, "roundtrip failed for JSON: {}", json);
+        assert_eq!(
+            roundtripped, original,
+            "roundtrip failed for JSON: {}",
+            json
+        );
     }
 }
 
@@ -1040,9 +1115,7 @@ fn test_ron_roundtrip() {
         Value::Some(Box::new(Value::I32(42))),
         Value::Unit,
         Value::Seq(vec![Value::I32(1), Value::I32(2)]),
-        Value::Map(vec![
-            (Value::String("a".to_string()), Value::I32(1)),
-        ]),
+        Value::Map(vec![(Value::String("a".to_string()), Value::I32(1))]),
     ];
 
     for original in &test_values {
@@ -1095,9 +1168,7 @@ fn test_msgpack_roundtrip() {
         Value::String("hello world".to_string()),
         Value::Bytes(vec![1, 2, 3, 4, 5]),
         Value::Seq(vec![Value::I64(1), Value::I64(2), Value::I64(3)]),
-        Value::Map(vec![
-            (Value::String("key".to_string()), Value::I64(42)),
-        ]),
+        Value::Map(vec![(Value::String("key".to_string()), Value::I64(42))]),
     ];
 
     for original in test_values {
@@ -1109,7 +1180,8 @@ fn test_msgpack_roundtrip() {
 }
 
 /// Test that Transparent serializes to IDENTICAL bytes as the original type.
-/// This is the core guarantee: to_value() then Transparent then serialize produces same output.
+/// This is the core guarantee: to_value() then Transparent then serialize
+/// produces same output.
 #[test]
 fn test_bincode_transparent_serialization() {
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -1246,10 +1318,7 @@ fn test_struct_field_order_independence() {
     // Create a Value with fields in a specific order
     let value = Value::Struct {
         name: "Point",
-        fields: vec![
-            ("y", Value::I32(20)),
-            ("x", Value::I32(10)),
-        ],
+        fields: vec![("y", Value::I32(20)), ("x", Value::I32(10))],
     };
 
     // Deserialize to a struct where fields are declared in different order

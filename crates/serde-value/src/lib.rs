@@ -1,17 +1,18 @@
 //! Complete in-memory representation of the serde data model.
 //!
-//! This crate provides [`Value`], a type that can represent any value expressible in the
-//! [serde data model](https://serde.rs/data-model.html) with complete fidelity. Unlike
+//! This crate provides [`Value`], a type that can represent any value
+//! expressible in the [serde data model](https://serde.rs/data-model.html) with complete fidelity. Unlike
 //! [`serde_json::Value`](https://docs.rs/serde_json/latest/serde_json/value/enum.Value.html)
-//! or similar types, this preserves all information including struct names, field names,
-//! enum variant names and indices, and the distinctions between tuples and sequences,
-//! structs and maps, etc.
+//! or similar types, this preserves all information including struct names,
+//! field names, enum variant names and indices, and the distinctions between
+//! tuples and sequences, structs and maps, etc.
 //!
 //! # Serialization and Deserialization
 //!
-//! `Value` serializes and deserializes as a **tagged enum** (like `#[derive(Serialize, Deserialize)]`
-//! would produce). This works with **ALL formats** including non-self-describing binary formats
-//! like bincode and postcard.
+//! `Value` serializes and deserializes as a **tagged enum** (like
+//! `#[derive(Serialize, Deserialize)]` would produce). This works with **ALL
+//! formats** including non-self-describing binary formats like bincode and
+//! postcard.
 //!
 //! ```ignore
 //! let value = Value::I32(42);
@@ -24,8 +25,8 @@
 //!
 //! # Transparent Serialization
 //!
-//! To serialize `Value` **transparently** (producing identical bytes to the original type),
-//! use [`Transparent`]:
+//! To serialize `Value` **transparently** (producing identical bytes to the
+//! original type), use [`Transparent`]:
 //!
 //! ```ignore
 //! let original = Point { x: 10, y: 20 };
@@ -37,8 +38,8 @@
 //! assert_eq!(bytes1, bytes2);
 //! ```
 //!
-//! Note: `Transparent` can only **deserialize** from self-describing formats (JSON, MessagePack, RON)
-//! because it uses `deserialize_any`.
+//! Note: `Transparent` can only **deserialize** from self-describing formats
+//! (JSON, MessagePack, RON) because it uses `deserialize_any`.
 //!
 //! # Core API
 //!
@@ -57,13 +58,24 @@
 //! Convert any serializable Rust type to [`Value`], preserving all metadata:
 //!
 //! ```
-//! use serde::Serialize;
-//! use serde_value::{to_value, Value};
+//! use {
+//!     serde::Serialize,
+//!     serde_value::{
+//!         Value,
+//!         to_value,
+//!     },
+//! };
 //!
 //! #[derive(Serialize)]
-//! struct User { name: String, age: u32 }
+//! struct User {
+//!     name: String,
+//!     age: u32,
+//! }
 //!
-//! let user = User { name: "Alice".into(), age: 30 };
+//! let user = User {
+//!     name: "Alice".into(),
+//!     age: 30,
+//! };
 //! let value = to_value(&user).unwrap();
 //!
 //! // value is Value::Struct { name: "User", fields: [...] }
@@ -81,11 +93,19 @@
 //! Convert a [`Value`] to any deserializable Rust type:
 //!
 //! ```
-//! use serde::Deserialize;
-//! use serde_value::{from_value, to_value};
+//! use {
+//!     serde::Deserialize,
+//!     serde_value::{
+//!         from_value,
+//!         to_value,
+//!     },
+//! };
 //!
 //! #[derive(Deserialize, PartialEq, Debug)]
-//! struct User { name: String, age: u32 }
+//! struct User {
+//!     name: String,
+//!     age: u32,
+//! }
 //!
 //! # #[derive(serde::Serialize)]
 //! # struct User2 { name: String, age: u32 }
@@ -114,8 +134,8 @@
 //!
 //! # Use Case: Universal Serde Intermediate
 //!
-//! [`Value`] can serve as an intermediate representation between any serde-compatible
-//! interfaces:
+//! [`Value`] can serve as an intermediate representation between any
+//! serde-compatible interfaces:
 //!
 //! ```ignore
 //! // Type → Value → Different Type (schema migration)
@@ -133,7 +153,8 @@
 //!
 //! [`Value`] covers all 29 types in the serde data model:
 //!
-//! - **Primitives (14):** `bool`, `i8`-`i128`, `u8`-`u128`, `f32`, `f64`, `char`
+//! - **Primitives (14):** `bool`, `i8`-`i128`, `u8`-`u128`, `f32`, `f64`,
+//!   `char`
 //! - **String and Bytes (2):** `String`, `Bytes`
 //! - **Option (2):** `None`, `Some`
 //! - **Unit Types (2):** `Unit`, `UnitStruct`
@@ -149,13 +170,15 @@ mod de;
 mod de_value;
 mod error;
 mod intern;
-mod transparent;
 mod to_value;
+mod transparent;
 mod value;
 
-pub use cast::try_cast;
-pub use de::from_value;
-pub use error::Error;
-pub use transparent::Transparent;
-pub use to_value::to_value;
-pub use value::Value;
+pub use {
+    cast::try_cast,
+    de::from_value,
+    error::Error,
+    to_value::to_value,
+    transparent::Transparent,
+    value::Value,
+};

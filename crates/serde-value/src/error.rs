@@ -62,7 +62,10 @@ impl fmt::Display for Error {
                 write!(f, "length mismatch: expected {expected}, found {found}")
             }
             Error::InvalidVariant { expected, found } => {
-                write!(f, "invalid variant: expected one of {expected:?}, found {found}")
+                write!(
+                    f,
+                    "invalid variant: expected one of {expected:?}, found {found}"
+                )
             }
             Error::OutOfRange(target) => {
                 write!(f, "value out of range for {target}")

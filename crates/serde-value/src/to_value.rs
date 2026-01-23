@@ -3,10 +3,22 @@
 //! This captures the complete serde data model including struct names,
 //! field names, enum variants with indices, etc.
 
-use crate::{Error, Value};
-use serde::ser::{
-    self, Serialize, SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant,
-    SerializeTuple, SerializeTupleStruct, SerializeTupleVariant,
+use {
+    crate::{
+        Error,
+        Value,
+    },
+    serde::ser::{
+        self,
+        Serialize,
+        SerializeMap,
+        SerializeSeq,
+        SerializeStruct,
+        SerializeStructVariant,
+        SerializeTuple,
+        SerializeTupleStruct,
+        SerializeTupleVariant,
+    },
 };
 
 /// Convert any `Serialize` type to `Value`.
@@ -21,15 +33,15 @@ pub fn to_value<T: Serialize>(value: T) -> Result<Value, Error> {
 pub struct ValueSerializer;
 
 impl ser::Serializer for ValueSerializer {
-    type Ok = Value;
     type Error = Error;
+    type Ok = Value;
+    type SerializeMap = MapSerializer;
     type SerializeSeq = SeqSerializer;
+    type SerializeStruct = StructSerializer;
+    type SerializeStructVariant = StructVariantSerializer;
     type SerializeTuple = TupleSerializer;
     type SerializeTupleStruct = TupleStructSerializer;
     type SerializeTupleVariant = TupleVariantSerializer;
-    type SerializeMap = MapSerializer;
-    type SerializeStruct = StructSerializer;
-    type SerializeStructVariant = StructVariantSerializer;
 
     // === Primitives ===
 
@@ -246,8 +258,8 @@ pub struct SeqSerializer {
 }
 
 impl SerializeSeq for SeqSerializer {
-    type Ok = Value;
     type Error = Error;
+    type Ok = Value;
 
     fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Error> {
         self.values.push(to_value(value)?);
@@ -265,8 +277,8 @@ pub struct TupleSerializer {
 }
 
 impl SerializeTuple for TupleSerializer {
-    type Ok = Value;
     type Error = Error;
+    type Ok = Value;
 
     fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Error> {
         self.values.push(to_value(value)?);
@@ -285,8 +297,8 @@ pub struct TupleStructSerializer {
 }
 
 impl SerializeTupleStruct for TupleStructSerializer {
-    type Ok = Value;
     type Error = Error;
+    type Ok = Value;
 
     fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Error> {
         self.fields.push(to_value(value)?);
@@ -310,8 +322,8 @@ pub struct TupleVariantSerializer {
 }
 
 impl SerializeTupleVariant for TupleVariantSerializer {
-    type Ok = Value;
     type Error = Error;
+    type Ok = Value;
 
     fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Error> {
         self.fields.push(to_value(value)?);
@@ -335,8 +347,8 @@ pub struct MapSerializer {
 }
 
 impl SerializeMap for MapSerializer {
-    type Ok = Value;
     type Error = Error;
+    type Ok = Value;
 
     fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<(), Error> {
         self.next_key = Some(to_value(key)?);
@@ -364,8 +376,8 @@ pub struct StructSerializer {
 }
 
 impl SerializeStruct for StructSerializer {
-    type Ok = Value;
     type Error = Error;
+    type Ok = Value;
 
     fn serialize_field<T: ?Sized + Serialize>(
         &mut self,
@@ -393,8 +405,8 @@ pub struct StructVariantSerializer {
 }
 
 impl SerializeStructVariant for StructVariantSerializer {
-    type Ok = Value;
     type Error = Error;
+    type Ok = Value;
 
     fn serialize_field<T: ?Sized + Serialize>(
         &mut self,

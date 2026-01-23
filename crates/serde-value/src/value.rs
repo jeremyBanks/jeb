@@ -1,8 +1,15 @@
 //! The core `Value` type representing the complete serde data model.
 
-use serde::Serialize;
-use std::cmp::Ordering;
-use std::hash::{Hash, Hasher};
+use {
+    serde::Serialize,
+    std::{
+        cmp::Ordering,
+        hash::{
+            Hash,
+            Hasher,
+        },
+    },
+};
 
 /// A value that can represent any type in the serde data model.
 ///
@@ -18,8 +25,8 @@ use std::hash::{Hash, Hasher};
 ///
 /// # Serialization (Tagged Enum)
 ///
-/// `Value` serializes as a **tagged enum** - like `#[derive(Serialize)]` would produce.
-/// This works with ALL formats including bincode and postcard.
+/// `Value` serializes as a **tagged enum** - like `#[derive(Serialize)]` would
+/// produce. This works with ALL formats including bincode and postcard.
 ///
 /// # Deserialization (Tagged Enum)
 ///
@@ -27,9 +34,10 @@ use std::hash::{Hash, Hasher};
 ///
 /// # Transparent Serialization
 ///
-/// To serialize `Value` **transparently** (producing identical bytes to the original type),
-/// use [`Transparent(value)`](crate::Transparent). Note that `Transparent` can only
-/// deserialize from self-describing formats (JSON, MessagePack, RON).
+/// To serialize `Value` **transparently** (producing identical bytes to the
+/// original type), use [`Transparent(value)`](crate::Transparent). Note that
+/// `Transparent` can only deserialize from self-describing formats (JSON,
+/// MessagePack, RON).
 #[derive(Debug, Clone, Serialize)]
 #[must_use]
 pub enum Value {
@@ -111,10 +119,11 @@ pub enum Value {
 }
 
 impl Value {
-    /// Wrap this Value in [`Transparent`](crate::Transparent) for transparent serialization.
+    /// Wrap this Value in [`Transparent`](crate::Transparent) for transparent
+    /// serialization.
     ///
-    /// Use this when you need the serialized output to match the original type exactly,
-    /// rather than serializing Value as a tagged enum.
+    /// Use this when you need the serialized output to match the original type
+    /// exactly, rather than serializing Value as a tagged enum.
     pub fn transparent(self) -> crate::Transparent {
         crate::Transparent(self)
     }
@@ -155,8 +164,14 @@ impl PartialEq for Value {
 
             // Newtype
             (
-                NewtypeStruct { name: n1, value: v1 },
-                NewtypeStruct { name: n2, value: v2 },
+                NewtypeStruct {
+                    name: n1,
+                    value: v1,
+                },
+                NewtypeStruct {
+                    name: n2,
+                    value: v2,
+                },
             ) => n1 == n2 && v1 == v2,
             (
                 NewtypeVariant {

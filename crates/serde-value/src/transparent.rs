@@ -2,9 +2,10 @@
 //!
 //! # Transparent Serialization
 //!
-//! `Transparent` wraps a `Value` and serializes it **transparently** - producing identical
-//! bytes to the original typed value. This is useful for interop when you need the serialized
-//! output to match what the original type would produce.
+//! `Transparent` wraps a `Value` and serializes it **transparently** -
+//! producing identical bytes to the original typed value. This is useful for
+//! interop when you need the serialized output to match what the original type
+//! would produce.
 //!
 //! ```ignore
 //! use serde_value::{Value, Transparent, to_value};
@@ -21,32 +22,53 @@
 //!
 //! # Deserialization (requires `deserialize_any`)
 //!
-//! `Transparent` deserializes by calling [`Deserializer::deserialize_any`], which only works
-//! with **self-describing formats** (JSON, MessagePack, RON). Non-self-describing formats
-//! (bincode, postcard) will error.
+//! `Transparent` deserializes by calling [`Deserializer::deserialize_any`],
+//! which only works with **self-describing formats** (JSON, MessagePack, RON).
+//! Non-self-describing formats (bincode, postcard) will error.
 //!
-//! For bincode/postcard: deserialize to a typed value first, then use [`to_value()`](crate::to_value).
+//! For bincode/postcard: deserialize to a typed value first, then use
+//! [`to_value()`](crate::to_value).
 //!
 //! # Trade-off
 //!
 //! - `Value` (default): Serializes as tagged enum, works with ALL formats
-//! - `Transparent(Value)`: Identical bytes to original type, but deserialize only works with self-describing formats
-
-use crate::Value;
-use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
-use serde::ser::{
-    Serialize, SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant,
-    SerializeTuple, SerializeTupleStruct, SerializeTupleVariant, Serializer,
-};
-use std::fmt;
+//! - `Transparent(Value)`: Identical bytes to original type, but deserialize
+//!   only works with self-describing formats
 
 // Alias to avoid collision with Value::Some
 use std::option::Option::Some as StdSome;
 
-/// Wrapper that serializes `Value` transparently, producing identical bytes to the original type.
+use {
+    crate::Value,
+    serde::{
+        de::{
+            self,
+            Deserialize,
+            Deserializer,
+            MapAccess,
+            SeqAccess,
+            Visitor,
+        },
+        ser::{
+            Serialize,
+            SerializeMap,
+            SerializeSeq,
+            SerializeStruct,
+            SerializeStructVariant,
+            SerializeTuple,
+            SerializeTupleStruct,
+            SerializeTupleVariant,
+            Serializer,
+        },
+    },
+    std::fmt,
+};
+
+/// Wrapper that serializes `Value` transparently, producing identical bytes to
+/// the original type.
 ///
-/// Use this when you need the serialized output to match what the original typed value
-/// would produce, rather than serializing `Value` as an enum.
+/// Use this when you need the serialized output to match what the original
+/// typed value would produce, rather than serializing `Value` as an enum.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Transparent(pub Value);
 
@@ -316,7 +338,10 @@ impl<'de> Visitor<'de> for TransparentVisitor {
         Ok(Transparent(Value::Unit))
     }
 
-    fn visit_newtype_struct<D: Deserializer<'de>>(self, deserializer: D) -> Result<Transparent, D::Error> {
+    fn visit_newtype_struct<D: Deserializer<'de>>(
+        self,
+        deserializer: D,
+    ) -> Result<Transparent, D::Error> {
         Transparent::deserialize(deserializer)
     }
 
@@ -384,7 +409,8 @@ mod tests {
 
     #[test]
     fn test_transparent_produces_same_bytes() {
-        // Transparent serialization should produce identical bytes to direct serialization
+        // Transparent serialization should produce identical bytes to direct
+        // serialization
         let value = Value::String("hello".to_string());
         let t = Transparent(value);
 

@@ -1,8 +1,18 @@
 //! Implementation of the `Arbitrary` trait for fuzz testing.
 
-use crate::intern::{intern_string, intern_string_owned};
-use crate::Value;
-use arbitrary::{Arbitrary, Unstructured};
+use {
+    crate::{
+        Value,
+        intern::{
+            intern_string,
+            intern_string_owned,
+        },
+    },
+    arbitrary::{
+        Arbitrary,
+        Unstructured,
+    },
+};
 
 /// Maximum length for generated static strings.
 const MAX_STRING_LENGTH: usize = 64;
@@ -26,7 +36,9 @@ fn arbitrary_static_str(u: &mut Unstructured<'_>) -> arbitrary::Result<&'static 
 }
 
 /// Generate arbitrary struct fields: Vec<(&'static str, Value)>
-fn arbitrary_struct_fields(u: &mut Unstructured<'_>) -> arbitrary::Result<Vec<(&'static str, Value)>> {
+fn arbitrary_struct_fields(
+    u: &mut Unstructured<'_>,
+) -> arbitrary::Result<Vec<(&'static str, Value)>> {
     let len: usize = u.arbitrary()?;
     let mut fields = Vec::with_capacity(len.min(16));
     for _ in 0..len.min(16) {
