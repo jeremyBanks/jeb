@@ -42,8 +42,8 @@ fi
 
 echo >&2 -e "${DARK_BACKGROUND}"
 echo >&2 -e "${DARK_BACKGROUND}${MAGENTA}  \$${WHITE} ${BROWN}cargo build --bin${WHITE} ${CYAN}$command${WHITE}"
-echo >&2 -e "${DARK_BACKGROUND}"
-echo >&2 -ne "${RESET}"
+echo >&2 -e "${DARK_BACKGROUND}${RESET}"
+echo >&2
 
 if ! cargo build --bin "$command"; then
     echo >&2
@@ -81,7 +81,7 @@ fi
 
 echo >&2 -e "${DARK_BACKGROUND}"
 echo >&2 -e "${DARK_BACKGROUND}  ${MAGENTA}\$${WHITE} ${CYAN}${CYAN}${bin}${WHITE}${WHITE} ${BLUE}${CYAN}$@${WHITE}${WHITE}"
-echo >&2 -e "${DARK_BACKGROUND}"
-echo >&2 -ne "${RESET}"
+echo >&2 -e "${DARK_BACKGROUND}${RESET}"
+echo >&2
 
 exec "$bin" "$@"
