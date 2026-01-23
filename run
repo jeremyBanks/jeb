@@ -1,14 +1,11 @@
 #!/bin/bash
 set -euo pipefail
-# capture first CLI argument as the command to run,
-# and the rest as the arguments to the command.
-command="$1"
+declare command="$1"
 shift
+declare bin=""
 
-bin=""
-
-warning=$'\033[1;33mWARNING:\033[0m'
-error=$'\033[1;31mERROR:\033[0m'
+declare -r warning=$'\033[1;33mWARNING:\033[0m'
+declare -r error=$'\033[1;31mERROR:\033[0m'
 
 if ! cargo build --bin "$command"; then
     echo >&2 "${warning} Failed to build \`${command}\`. Falling back to existing debug build."
