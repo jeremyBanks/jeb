@@ -1,5 +1,6 @@
 save v0.20220708.0
-Commit everything in the current directory and repository -- no questions asked.
+Commit everything in the current directory and repository -- no questions
+asked.
 
 USAGE:
     save [OPTIONS]
@@ -37,6 +38,10 @@ COMMIT OPTIONS:
             The required commit ID hash or prefix, in hex. This will be
             brute-forced. [env: SAVE_COMMIT_PREFIX=]
 
+        --tree-target
+            Use the tree hash prefix as the brute force target (old behavior)
+            [env: SAVE_TREE_TARGET=]
+
         --head <HEAD>
             What branch head are we updating? Defaults to `"HEAD"` (which also
             updates the current branch if one is checked out). Setting it to any
@@ -53,7 +58,7 @@ SIGNATURE OPTIONS:
 
     -0, --timeless
             Use the next available timestamp after the parent commit's
-            timestamps,  regardless of the actual current clock time. Assuming
+            timestamps, regardless of the actual current clock time. Assuming
             there is a parent  commit, this is equivalent to `--timestamp=0`. If
             we're creating an  initial commit (with no parents), this uses the
             next available timestamp  after the current time (or value provided
@@ -69,6 +74,18 @@ SIGNATURE OPTIONS:
             SAVE_COMMITTER=]
 
 HISTORY OPTIONS:
+        --max-depth <MAX_DEPTH>
+            Maximum depth to search back through commit history when calculating
+            graph statistics. If this depth is reached without finding a trusted
+            commit message, the tool enters "z-mode" and treats the commit at
+            max depth as an effective origin [env: SAVE_MAX_DEPTH=] [default:
+            255]
+
+        --rebuild
+            Rebuild commit statistics from scratch, ignoring all existing commit
+            messages. This forces a full graph walk and recalculates all indices
+            [env: SAVE_REBUILD=]
+
     -p, --add-parent <ADDED_PARENT_REF>
             Adds another parent to the new commit. May be repeated to add
             multiple parents, though duplicated parents will are ignored [env:
