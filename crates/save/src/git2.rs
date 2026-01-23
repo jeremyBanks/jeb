@@ -866,4 +866,27 @@ impl<'repo> RepositoryView<'repo> for Repository {
         let tree_prefix = tree_hex[..prefix.len().min(tree_hex.len())].to_uppercase();
         tree_prefix == prefix.to_uppercase()
     }
+
+    fn shallow_boundary_commits(&self) -> std::collections::HashSet<Oid> {
+        let mut shallow_commits = std::collections::HashSet::new();
+
+        // Read .git/shallow file if it exists
+        let git_dir = self.path();
+        let shallow_path = git_dir.join("shallow");
+
+        if shallow_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&shallow_path) {
+                for line in content.lines() {
+                    let line = line.trim();
+                    if !line.is_empty() {
+                        if let Ok(oid) = Oid::from_str(line) {
+                            shallow_commits.insert(oid);
+                        }
+                    }
+                }
+            }
+        }
+
+        shallow_commits
+    }
 }
