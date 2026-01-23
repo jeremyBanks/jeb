@@ -73,6 +73,12 @@ pub trait RepositoryView<'repo> {
         tree_id: &<Self::Commit as CommitView>::Id,
         prefix: &str,
     ) -> bool;
+    /// Get the set of commit IDs that are at the shallow clone boundary.
+    ///
+    /// In a shallow clone, libgit2 reports these commits as having no parents,
+    /// but they're not true roots - they're where the clone was cut off.
+    /// We need to detect these to correctly determine if we can see true roots.
+    fn shallow_boundary_commits(&self) -> HashSet<<Self::Commit as CommitView>::Id>;
 }
 /// Parser for commit messages in our format.
 #[derive(Debug, Clone, Copy)]
@@ -574,6 +580,9 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         _is_shallow: bool,
         _unlimited_depth: bool,
     ) -> GraphStats {
+        // Get shallow boundary commits to distinguish fake roots from true roots
+        let shallow_boundary = self.repo.shallow_boundary_commits();
+
         let mut visited = HashSet::new();
         let mut queue = vec![head.id()];
         let mut commit_map: HashMap<_, R::Commit> = HashMap::new();
@@ -617,7 +626,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         let origin = if revision_index == 0 {
             None
         } else {
-            self.calculate_origin(&parent_map, &commit_map)
+            self.calculate_origin(&parent_map, &commit_map, &shallow_boundary)
         };
         GraphStats {
             revision_index,
@@ -684,19 +693,28 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         &self,
         parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
         commit_map: &HashMap<<R::Commit as CommitView>::Id, R::Commit>,
+        shallow_boundary: &HashSet<<R::Commit as CommitView>::Id>,
     ) -> Option<u16> {
-        // Find true roots (commits with no parents) and check for shallow boundaries
+        // Find true roots (commits with no parents that are NOT at the shallow boundary)
+        // and check for shallow boundaries
         let mut true_roots = Vec::new();
         let mut has_shallow_boundary = false;
 
         for (id, parents) in parent_map.iter() {
             if parents.is_empty() {
-                // True root - commit with no parents
-                if let Some(commit) = commit_map.get(id) {
+                // Check if this is a true root or a shallow boundary commit
+                // Libgit2 reports shallow boundary commits as having no parents
+                if shallow_boundary.contains(id) {
+                    // This is a shallow boundary commit, not a true root
+                    has_shallow_boundary = true;
+                } else if let Some(commit) = commit_map.get(id) {
+                    // True root - commit with no parents and not at shallow boundary
                     true_roots.push(commit);
                 }
             } else if parents.iter().any(|p| !commit_map.contains_key(p)) {
-                // Shallow boundary - has parents but they don't exist
+                // Parent doesn't exist in commit_map - shallow boundary
+                // This can happen if libgit2 reports parents (non-shallow repo)
+                // but they can't be fetched
                 has_shallow_boundary = true;
             }
         }
@@ -771,12 +789,15 @@ mod tests {
     struct MockRepo {
         commits: HashMap<MockId, MockCommit>,
         is_shallow: bool,
+        /// Commits at the shallow boundary - libgit2 reports these as having no parents
+        shallow_boundary: HashSet<MockId>,
     }
     impl MockRepo {
         fn new(is_shallow: bool) -> Self {
             Self {
                 commits: HashMap::new(),
                 is_shallow,
+                shallow_boundary: HashSet::new(),
             }
         }
 
@@ -791,6 +812,12 @@ mod tests {
             self.commits.insert(mock_id.clone(), commit);
             mock_id
         }
+
+        /// Mark a commit as being at the shallow boundary.
+        /// This simulates libgit2's behavior where such commits appear to have no parents.
+        fn mark_shallow_boundary(&mut self, id: &str) {
+            self.shallow_boundary.insert(MockId(id.to_string()));
+        }
     }
     impl<'repo> RepositoryView<'repo> for MockRepo {
         type Commit = MockCommit;
@@ -800,11 +827,21 @@ mod tests {
         }
 
         fn find_commit(&'repo self, id: MockId) -> Option<Self::Commit> {
-            self.commits.get(&id).cloned()
+            self.commits.get(&id).cloned().map(|mut commit| {
+                // Simulate libgit2 behavior: shallow boundary commits appear to have no parents
+                if self.shallow_boundary.contains(&commit.id) {
+                    commit.parent_ids = vec![];
+                }
+                commit
+            })
         }
 
         fn validate_tree_prefix(&self, _tree_id: &MockId, _prefix: &str) -> bool {
             true
+        }
+
+        fn shallow_boundary_commits(&self) -> HashSet<MockId> {
+            self.shallow_boundary.clone()
         }
     }
     #[test]
@@ -909,6 +946,34 @@ mod tests {
         let stats = calculator.calculate(head);
         assert_eq!(stats.revision_index, 1);
         assert!(!stats.z_mode);
+    }
+    #[test]
+    fn test_shallow_repo_origin_omitted() {
+        // In a shallow clone where we can't see true roots, origin should be None
+        let mut repo = MockRepo::new(true);
+        // c1 has parent c0, but we mark c1 as a shallow boundary commit
+        // This simulates libgit2 behavior where shallow boundary commits appear to have no parents
+        repo.add_commit("c1", vec!["c0"], None);
+        repo.mark_shallow_boundary("c1");
+        let head_id = repo.add_commit("c2", vec!["c1"], None);
+        let head = repo.commits.get(&head_id).unwrap();
+        // Use rebuild mode (no trusted messages) with unlimited depth
+        let calculator = GraphStatsCalculator::new_rebuild(&repo, -1);
+        let stats = calculator.calculate(head);
+        assert_eq!(stats.revision_index, 1); // c2 -> c1 (which appears as root)
+        assert!(stats.origin.is_none(), "Origin should be None in shallow clone without true roots");
+    }
+    #[test]
+    fn test_full_repo_origin_calculated() {
+        // In a full repo where we can see true roots, origin should be calculated
+        let mut repo = MockRepo::new(false);
+        repo.add_commit("c0", vec![], None); // True root - no parents
+        let head_id = repo.add_commit("c1", vec!["c0"], None);
+        let head = repo.commits.get(&head_id).unwrap();
+        let calculator = GraphStatsCalculator::new_rebuild(&repo, -1);
+        let stats = calculator.calculate(head);
+        assert_eq!(stats.revision_index, 1);
+        assert!(stats.origin.is_some(), "Origin should be calculated when true roots are visible");
     }
     #[test]
     fn test_max_depth_zero() {
