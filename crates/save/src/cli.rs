@@ -188,9 +188,9 @@ pub struct Save {
     ///
     /// May be explicitly set to an empty string to skip brute-forcing the hash.
     ///
-    /// [default: the commit index modulo 10000, formatted as 4 decimal digits,
-    /// followed by any hex letter (a-f). Use --tree-target to use the first 4 hex
-    /// digits of the tree hash instead.]
+    /// [default: the commit index as decimal digits, followed by any hex letter
+    /// (a-f). Use --tree-target to use the first 4 hex digits of the tree hash
+    /// instead.]
     #[clap(
         help_heading = "COMMIT OPTIONS",
         long = "prefix",
@@ -202,9 +202,9 @@ pub struct Save {
 
     /// Use the tree hash prefix as the brute force target (old behavior).
     ///
-    /// By default, the brute force target is the commit index modulo 10000
-    /// (formatted as 4 decimal digits) followed by any hex letter (a-f). This
-    /// flag uses the first 4 hex digits of the tree hash as an exact target.
+    /// By default, the brute force target is the commit index (as decimal digits)
+    /// followed by any hex letter (a-f). This flag uses the first 4 hex digits
+    /// of the tree hash as an exact target instead.
     #[clap(
         help_heading = "COMMIT OPTIONS",
         long = "tree-target",
@@ -556,7 +556,7 @@ pub fn main(args: Save) -> Result<()> {
     }
 
     let tree4 = tree.to_string()[..4].to_string().to_ascii_uppercase();
-    let n4 = format!("{:04}", graph_stats.commit_index % 10000);
+    let n4 = format!("{}", graph_stats.commit_index);
 
     // Determine target and whether to require letter suffix
     let (target_hex, letter_suffix) = if let Some(prefix) = args.prefix_hex.as_ref() {
