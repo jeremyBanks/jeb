@@ -243,6 +243,10 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         let mut parent_map: HashMap<_, Vec<_>> = HashMap::new();
         let mut z_commits = HashSet::new();
         let mut boundary_commits = HashSet::new();
+        // Track true roots (commits with no parents) separately for origin calculation
+        let mut true_roots = HashSet::new();
+        // Track if we hit any synthetic boundary (depth limit or shallow) without trusted origin
+        let mut has_synthetic_boundary = false;
         // Store parsed stats from trusted boundary commits
         let mut trusted_stats: HashMap<_, ParsedMessage> = HashMap::new();
         let mut queue: Vec<(_, usize)> = vec![(head.id(), 0)];
@@ -287,6 +291,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                         false
                     } else if depth >= max_depth {
                         hit_depth_limit = true;
+                        has_synthetic_boundary = true;
                         boundary_commits.insert(id.clone());
                         false
                     } else {
@@ -295,24 +300,34 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 };
                 parent_map.insert(id.clone(), parents.clone());
                 if should_continue {
-                    for parent_id in parents {
-                        if visited.insert(parent_id.clone()) {
-                            if let Some(parent) = self.repo.find_commit(parent_id.clone()) {
-                                commit_map.insert(parent_id.clone(), parent);
-                                queue.push((parent_id, depth + 1));
+                    if parents.is_empty() {
+                        // This is a TRUE ROOT - commit with no parents
+                        true_roots.insert(id.clone());
+                        boundary_commits.insert(id.clone());
+                    } else {
+                        for parent_id in parents {
+                            if visited.insert(parent_id.clone()) {
+                                if let Some(parent) = self.repo.find_commit(parent_id.clone()) {
+                                    commit_map.insert(parent_id.clone(), parent);
+                                    queue.push((parent_id, depth + 1));
+                                } else {
+                                    // Parent doesn't exist (shallow clone boundary)
+                                    has_synthetic_boundary = true;
+                                    boundary_commits.insert(id.clone());
+                                }
                             } else {
-                                // Parent doesn't exist (shallow clone boundary)
-                                boundary_commits.insert(id.clone());
-                            }
-                        } else {
-                            // Parent was already visited - check if it exists
-                            // This handles the case where multiple commits share a non-existent parent
-                            if !commit_map.contains_key(&parent_id) {
-                                boundary_commits.insert(id.clone());
+                                // Parent was already visited - check if it exists
+                                // This handles the case where multiple commits share a non-existent parent
+                                if !commit_map.contains_key(&parent_id) {
+                                    has_synthetic_boundary = true;
+                                    boundary_commits.insert(id.clone());
+                                }
                             }
                         }
                     }
                 } else if parents.is_empty() {
+                    // Trusted commit that is also a true root
+                    true_roots.insert(id.clone());
                     boundary_commits.insert(id.clone());
                 }
             }
@@ -374,11 +389,17 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         let generation_index =
             self.calculate_generation_bounded(&parent_map, &head.id(), &boundary_commits, &trusted_stats);
         let commit_index = self.calculate_commit_index_bounded(&visited, &trusted_stats);
-        // Calculate origin: prefer origin from trusted commits on first-parent chain
+        // Calculate origin: only use true roots, omit if we can't see all roots
         let origin = if revision_index == 0 {
             None
         } else {
-            self.calculate_origin_bounded(&parent_map, &commit_map, &boundary_commits, &trusted_stats)
+            self.calculate_origin_bounded(
+                &commit_map,
+                &boundary_commits,
+                &trusted_stats,
+                &true_roots,
+                has_synthetic_boundary,
+            )
         };
         GraphStats {
             revision_index,
@@ -475,45 +496,49 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
 
     /// Calculate origin for bounded graph.
     ///
-    /// If all boundaries have trusted origins that match, use that origin.
-    /// Otherwise, fall back to calculating from the boundary commit IDs.
+    /// Origin is ONLY calculated from true roots (commits with no parents).
+    /// If we can't see all true roots (hit depth limit or shallow boundary),
+    /// we either use trusted origins if they all agree, or return None.
     fn calculate_origin_bounded(
         &self,
-        _parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
         commit_map: &HashMap<<R::Commit as CommitView>::Id, R::Commit>,
         boundary_commits: &HashSet<<R::Commit as CommitView>::Id>,
         trusted_stats: &HashMap<<R::Commit as CommitView>::Id, ParsedMessage>,
+        true_roots: &HashSet<<R::Commit as CommitView>::Id>,
+        has_synthetic_boundary: bool,
     ) -> Option<u16> {
-        // Collect trusted origins from boundary commits
+        // Collect trusted origins from boundary commits that have them
         let trusted_origins: Vec<u16> = boundary_commits
             .iter()
             .filter_map(|id| trusted_stats.get(id))
             .filter_map(|parsed| parsed.origin)
             .collect();
 
-        // If we have trusted origins, check if they all agree
+        // If all trusted boundaries have the same origin, use it
         if !trusted_origins.is_empty() {
             let first = trusted_origins[0];
             if trusted_origins.iter().all(|&o| o == first) {
                 return Some(first);
             }
-            // If trusted origins disagree, hash them together
-            use sha1::{
-                Digest,
-                Sha1,
-            };
-            let mut hasher = Sha1::new();
-            let mut sorted_origins: Vec<u16> = trusted_origins.clone();
-            sorted_origins.sort();
-            for origin in sorted_origins {
-                hasher.update(origin.to_be_bytes());
+            // Trusted origins disagree - we need to scan for true roots
+            // If we have synthetic boundaries, we can't determine the true origin
+            if has_synthetic_boundary {
+                return None;
             }
-            let hash = hasher.finalize();
-            return Some(u16::from_be_bytes([hash[18], hash[19]]));
         }
 
-        // Fall back to calculating from boundary commit IDs (for untrusted boundaries)
-        let mut roots: Vec<_> = boundary_commits
+        // If we hit any synthetic boundary (depth limit or shallow) without
+        // agreeing trusted origins, we can't determine the true origin
+        if has_synthetic_boundary {
+            return None;
+        }
+
+        // We can see all true roots - calculate origin from them
+        if true_roots.is_empty() {
+            return None;
+        }
+
+        let mut roots: Vec<_> = true_roots
             .iter()
             .filter_map(|id| commit_map.get(id))
             .collect();
@@ -652,28 +677,42 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         max_distance
     }
 
+    /// Calculate origin from true roots only.
+    ///
+    /// Returns None if any path leads to a shallow boundary instead of a true root.
     fn calculate_origin(
         &self,
         parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
         commit_map: &HashMap<<R::Commit as CommitView>::Id, R::Commit>,
     ) -> Option<u16> {
-        let mut roots: Vec<_> = parent_map
-            .iter()
-            .filter(|(_id, parents)| {
-                if parents.is_empty() {
-                    true
-                } else {
-                    parents.iter().all(|p| !commit_map.contains_key(p))
+        // Find true roots (commits with no parents) and check for shallow boundaries
+        let mut true_roots = Vec::new();
+        let mut has_shallow_boundary = false;
+
+        for (id, parents) in parent_map.iter() {
+            if parents.is_empty() {
+                // True root - commit with no parents
+                if let Some(commit) = commit_map.get(id) {
+                    true_roots.push(commit);
                 }
-            })
-            .filter_map(|(id, _)| commit_map.get(id))
-            .collect();
-        if roots.is_empty() {
+            } else if parents.iter().any(|p| !commit_map.contains_key(p)) {
+                // Shallow boundary - has parents but they don't exist
+                has_shallow_boundary = true;
+            }
+        }
+
+        // If we hit any shallow boundary, we can't determine the true origin
+        if has_shallow_boundary {
             return None;
         }
-        roots.sort_by_key(|c| c.id());
-        if roots.len() == 1 {
-            let bytes = roots[0].id_bytes();
+
+        if true_roots.is_empty() {
+            return None;
+        }
+
+        true_roots.sort_by_key(|c| c.id());
+        if true_roots.len() == 1 {
+            let bytes = true_roots[0].id_bytes();
             if bytes.len() >= 2 {
                 let last_two = &bytes[bytes.len() - 2..];
                 Some(u16::from_be_bytes([last_two[0], last_two[1]]))
@@ -686,7 +725,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 Sha1,
             };
             let mut hasher = Sha1::new();
-            for root in &roots {
+            for root in &true_roots {
                 hasher.update(root.id_bytes());
             }
             let hash = hasher.finalize();
