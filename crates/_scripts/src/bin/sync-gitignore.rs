@@ -27,15 +27,32 @@ fn read_gitignore_lines(path: &Path) -> Result<Vec<String>> {
         .collect())
 }
 
-/// Normalize a gitignore line by removing leading slashes if present
-/// Lines starting with / are root-relative, but at the crate level they should be
-/// relative to the crate root
-fn normalize_line(line: &str) -> String {
-    if line.starts_with('/') {
-        line[1..].to_string()
-    } else {
-        line.to_string()
+/// Patterns that start with / and are relevant at the crate level
+/// These will be copied as-is (with the leading /)
+const CRATE_LEVEL_PATTERNS: &[&str] = &[
+    "/target/",
+    "/target",
+    "/Cargo.lock",
+    "/Cargo.toml.orig",
+];
+
+/// Check if a pattern starting with / should be included for crates
+/// Returns Some(pattern) if it should be included, None if it should be filtered out
+fn adapt_root_pattern(line: &str) -> Option<String> {
+    let trimmed = line.trim();
+
+    // Non-root patterns (no leading /) - copy as-is
+    if !trimmed.starts_with('/') {
+        return Some(trimmed.to_string());
     }
+
+    // Root patterns (leading /) - only copy if they're crate-relevant
+    if CRATE_LEVEL_PATTERNS.iter().any(|p| trimmed.starts_with(p)) {
+        return Some(trimmed.to_string());
+    }
+
+    // Filter out repo-specific root patterns
+    None
 }
 
 /// Get all crate directories under crates/
@@ -63,15 +80,9 @@ fn get_crate_dirs() -> Result<Vec<PathBuf>> {
     Ok(crate_dirs)
 }
 
-/// Check if a line matches any existing line (accounting for normalization)
-fn line_exists(normalized_line: &str, existing_lines: &[String]) -> bool {
-    for existing in existing_lines {
-        let normalized_existing = normalize_line(existing.trim());
-        if normalized_existing == normalized_line {
-            return true;
-        }
-    }
-    false
+/// Check if a pattern already exists in the existing lines
+fn pattern_exists(pattern: &str, existing_lines: &[String]) -> bool {
+    existing_lines.iter().any(|line| line.trim() == pattern)
 }
 
 fn sync_gitignore_to_crate(root_gitignore: &Path, crate_dir: &Path) -> Result<bool> {
@@ -85,17 +96,17 @@ fn sync_gitignore_to_crate(root_gitignore: &Path, crate_dir: &Path) -> Result<bo
     for line in &root_lines {
         let trimmed = line.trim();
 
-        // Skip empty lines and comments for checking, but we'll preserve them in existing
+        // Skip empty lines and comments
         if trimmed.is_empty() || trimmed.starts_with('#') {
             continue;
         }
 
-        // Normalize the line (remove leading /)
-        let normalized = normalize_line(trimmed);
-
-        // Check if this normalized line already exists
-        if !line_exists(&normalized, &existing_lines) {
-            lines_to_add.push(normalized);
+        // Adapt the pattern - this filters out repo-specific patterns
+        if let Some(adapted_pattern) = adapt_root_pattern(trimmed) {
+            // Check if this pattern already exists
+            if !pattern_exists(&adapted_pattern, &existing_lines) {
+                lines_to_add.push(adapted_pattern);
+            }
         }
     }
 
