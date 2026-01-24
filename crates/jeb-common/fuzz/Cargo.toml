@@ -1,0 +1,75 @@
+[package]
+name = "jeb-common-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+
+[dependencies.jeb-common]
+path = ".."
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+# Patch workspace dependencies so they can be found
+[patch.crates-io]
+inline = { path = "../../inline" }
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "fuzz_zig_zag"
+path = "fuzz_targets/fuzz_zig_zag.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_floating"
+path = "fuzz_targets/fuzz_floating.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_signedness"
+path = "fuzz_targets/fuzz_signedness.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_hilbert"
+path = "fuzz_targets/fuzz_hilbert.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_spiral_square"
+path = "fuzz_targets/fuzz_spiral_square.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_scatter_square"
+path = "fuzz_targets/fuzz_scatter_square.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_z_order"
+path = "fuzz_targets/fuzz_z_order.rs"
+test = false
+doc = false
+bench = false
