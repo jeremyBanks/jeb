@@ -373,7 +373,7 @@ fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
         .count();
     let artifact_count = entries.len() - corpus_count;
 
-    // Only write if there's content, and add trailing newline
+    // Only write and clean up if there's content to pack
     if !entries.is_empty() {
         fs::write(&corpus_file, format!("{}\n", content))?;
         info!(
@@ -382,35 +382,30 @@ fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
             artifact_count,
             corpus_file.file_name().unwrap_or_default().to_string_lossy()
         );
-    } else if corpus_file.exists() {
-        // Remove empty corpus file
-        fs::remove_file(&corpus_file)?;
-        info!("  removed empty corpus file");
-    } else {
-        info!("  no entries to pack");
-    }
 
-    // Clean up directories after packing (data is now in .corpus file)
-    if corpus_dir.is_dir() {
-        fs::remove_dir_all(&corpus_dir)?;
-    }
-    if artifacts_dir.is_dir() {
-        fs::remove_dir_all(&artifacts_dir)?;
-    }
-    let tmp_dir = fuzz_dir.join(".tmp");
-    if tmp_dir.is_dir() {
-        fs::remove_dir_all(&tmp_dir)?;
-    }
+        // Clean up directories after packing (data is now in .corpus file)
+        if corpus_dir.is_dir() {
+            fs::remove_dir_all(&corpus_dir)?;
+        }
+        if artifacts_dir.is_dir() {
+            fs::remove_dir_all(&artifacts_dir)?;
+        }
+        let tmp_dir = fuzz_dir.join(".tmp");
+        if tmp_dir.is_dir() {
+            fs::remove_dir_all(&tmp_dir)?;
+        }
 
-    // Remove empty parent directories
-    let corpus_parent = fuzz_dir.join("corpus");
-    if corpus_parent.is_dir() && fs::read_dir(&corpus_parent)?.next().is_none() {
-        fs::remove_dir(&corpus_parent)?;
+        // Remove empty parent directories
+        let corpus_parent = fuzz_dir.join("corpus");
+        if corpus_parent.is_dir() && fs::read_dir(&corpus_parent)?.next().is_none() {
+            fs::remove_dir(&corpus_parent)?;
+        }
+        let artifacts_parent = fuzz_dir.join("artifacts");
+        if artifacts_parent.is_dir() && fs::read_dir(&artifacts_parent)?.next().is_none() {
+            fs::remove_dir(&artifacts_parent)?;
+        }
     }
-    let artifacts_parent = fuzz_dir.join("artifacts");
-    if artifacts_parent.is_dir() && fs::read_dir(&artifacts_parent)?.next().is_none() {
-        fs::remove_dir(&artifacts_parent)?;
-    }
+    // If no entries to pack, leave existing corpus file alone
 
     Ok(())
 }
