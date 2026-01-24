@@ -1,6 +1,7 @@
 use {
     _chosen::{bytes_to_text, text_to_bytes},
     anyhow::{Context, Result},
+    clap::Parser,
     jeb_tracing::{error, info, warn},
     sha1::{Digest, Sha1},
     std::{
@@ -11,6 +12,30 @@ use {
         process::{Command, ExitCode, Stdio},
     },
 };
+
+#[derive(Parser)]
+#[clap(name = "fuzz")]
+#[clap(about = "Run fuzz tests across the workspace")]
+struct Args {
+    /// Only run targets containing this substring
+    filter: Option<String>,
+
+    /// Fuzz each target for N seconds (0 or negative = replay only)
+    #[clap(short, long, default_value = "1")]
+    seconds: i32,
+
+    /// Maximum input length in bytes
+    #[clap(long, default_value = "313")]
+    max_len: u32,
+
+    /// Only pack corpus files (no fuzzing)
+    #[clap(long)]
+    pack_only: bool,
+
+    /// Only unpack corpus files (no fuzzing)
+    #[clap(long)]
+    unpack_only: bool,
+}
 
 fn main() -> ExitCode {
     match run() {
@@ -29,60 +54,18 @@ fn main() -> ExitCode {
 }
 
 fn run() -> Result<bool> {
-    // Parse arguments
-    let mut seconds: i32 = 1;
-    let mut max_len: u32 = 313;
-    let mut target_filter: Option<String> = None;
+    let args = Args::parse();
 
-    let args: Vec<String> = env::args().skip(1).collect();
-    let mut i = 0;
-    while i < args.len() {
-        let arg = &args[i];
-        if let Some(value) = arg.strip_prefix("--seconds=") {
-            seconds = value.parse().context("invalid --seconds value")?;
-        } else if let Some(value) = arg.strip_prefix("-s=") {
-            seconds = value.parse().context("invalid -s value")?;
-        } else if let Some(value) = arg.strip_prefix("-s") {
-            if value.is_empty() {
-                // -s N form
-                i += 1;
-                if i < args.len() {
-                    seconds = args[i].parse().context("invalid -s value")?;
-                } else {
-                    error!("-s requires a value");
-                    return Ok(false);
-                }
-            } else {
-                // -sN form
-                seconds = value.parse().context("invalid -s value")?;
-            }
-        } else if let Some(value) = arg.strip_prefix("--max-len=") {
-            max_len = value.parse().context("invalid --max-len value")?;
-        } else if arg == "--help" || arg == "-h" {
-            println!("Usage: _fuzz [OPTIONS] [FILTER]");
-            println!();
-            println!("Arguments:");
-            println!("  [FILTER]            Only run targets containing this substring");
-            println!();
-            println!("Options:");
-            println!("  -s, --seconds=N     Fuzz each target for N seconds (default: 1)");
-            println!("                      If N <= 0, only replay corpus (no fuzzing)");
-            println!("  --max-len=N         Maximum input length in bytes (default: 313)");
-            println!("  --pack-only         Only pack corpus files (no fuzzing)");
-            println!("  --unpack-only       Only unpack corpus files (no fuzzing)");
-            return Ok(true);
-        } else if arg == "--pack-only" {
-            return pack_all_corpora();
-        } else if arg == "--unpack-only" {
-            return unpack_all_corpora();
-        } else if !arg.starts_with('-') {
-            target_filter = Some(arg.clone());
-        } else {
-            error!("Unknown argument: {}", arg);
-            return Ok(false);
-        }
-        i += 1;
+    if args.pack_only {
+        return pack_all_corpora();
     }
+    if args.unpack_only {
+        return unpack_all_corpora();
+    }
+
+    let seconds = args.seconds;
+    let max_len = args.max_len;
+    let target_filter = args.filter;
 
     let workspace_root = get_workspace_root();
 

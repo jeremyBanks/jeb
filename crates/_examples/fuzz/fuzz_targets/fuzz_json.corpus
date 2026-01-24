@@ -68,6 +68,7 @@ corpus:00
 corpus:0^
 corpus:1\n\n\n
 corpus:105E-310
+corpus:2
 corpus:2 
 corpus:2   
 corpus:2E4
@@ -146,12 +147,14 @@ corpus:[,
 corpus:[,  
 corpus:[,]
 corpus:[-0]
+corpus:[0 ,0 ,
 corpus:[0 ,0 , 
 corpus:[0,
 corpus:[0,0,0\x00"
 corpus:[0]
 corpus:[2,]
 corpus:[4#
+corpus:[4,
 corpus:[4,\t
 corpus:[4,\n
 corpus:[4,\r
@@ -175,6 +178,7 @@ corpus:[[]]
 corpus:[]
 corpus:[n\r\r
 corpus:[n[\n
+corpus:[t:
 corpus:[t:\t
 corpus:[t: 
 corpus:[tru:"\\r
@@ -218,12 +222,14 @@ corpus:{
 corpus:{  
 corpus:{   
 corpus:{       
+corpus:{ ?
 corpus:{ ?     
 corpus:{"
 corpus:{"\x05\r
 corpus:{"\t\t
 corpus:{"\t\n
 corpus:{"\n
+corpus:{"\r
 corpus:{"\r 
 corpus:{"\r}
 corpus:{" "
