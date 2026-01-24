@@ -1,4 +1,5 @@
 use {
+    _chosen::{bytes_to_text, text_to_bytes},
     anyhow::{Context, Result},
     sha1::{Digest, Sha1},
     std::{

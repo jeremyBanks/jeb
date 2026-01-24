@@ -47,6 +47,7 @@ dependencies = [
 name = "_scripts"
 version = "0.0.0-dev-2026-01-19.4531"
 dependencies = [
+ "_chosen",
  "anyhow",
  "glob",
  "pathdiff",

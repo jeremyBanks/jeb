@@ -35,6 +35,7 @@ panic = "abort"
 
 [patch.crates-io]
 _autofix = { path = "crates/_autofix" }
+_chosen = { path = "crates/_chosen" }
 _claude_hooks = { path = "crates/_claude_hooks" }
 _examples = { path = "crates/_examples" }
 _scripts = { path = "crates/_scripts" }
@@ -54,6 +55,7 @@ stringify_verbatim = { path = "crates/stringify_verbatim" }
 
 [workspace.dependencies]
 _autofix = { path = "crates/_autofix" }
+_chosen = { path = "crates/_chosen" }
 _claude_hooks = { path = "crates/_claude_hooks" }
 _scripts = { path = "crates/_scripts" }
 anyhow = "1.0.0"

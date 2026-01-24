@@ -11,6 +11,7 @@ categories = []
 keywords = []
 
 [dependencies]
+_chosen.workspace = true
 anyhow.workspace = true
 glob.workspace = true
 sha-1.workspace = true
