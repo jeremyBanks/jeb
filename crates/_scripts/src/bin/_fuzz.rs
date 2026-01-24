@@ -282,8 +282,8 @@ impl CorpusEntry {
                     anyhow::bail!("trailing space at end of encoded data");
                 }
                 let c = chars[i + 1];
-                // Accept 0x20-0x7E for backwards compat, but we only emit 0x21-0x7E
-                if !c.is_ascii() || (c as u8) < 0x20 || (c as u8) > 0x7E {
+                // Only accept 0x21-0x7E (printable ASCII excluding space)
+                if !c.is_ascii() || (c as u8) < 0x21 || (c as u8) > 0x7E {
                     anyhow::bail!("invalid literal character after space: {:?}", c);
                 }
                 result.push(c as u8);
