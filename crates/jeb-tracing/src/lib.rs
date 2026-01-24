@@ -8,6 +8,9 @@ use std::sync::{
     OnceLock,
 };
 
+#[doc(hidden)]
+pub use tracing as __tracing;
+
 pub static ENABLED: OnceLock<bool> = OnceLock::new();
 
 pub static LOG_ENV: LazyLock<String> = LazyLock::new(|| {
@@ -79,7 +82,7 @@ macro_rules! define_tracing_macro_wrappers {
                 ($D ($D args:tt)*) => {
                     {
                         ::std::sync::LazyLock::force(&$crate::TRACING_INITIALIZED);
-                        ::tracing::$ident!($D ($D args)*)
+                        $crate::__tracing::$ident!($D ($D args)*)
                     }
                 };
             }

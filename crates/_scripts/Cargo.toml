@@ -16,7 +16,6 @@ anyhow.workspace = true
 glob.workspace = true
 jeb-tracing.workspace = true
 sha-1.workspace = true
-tracing.workspace = true
 pathdiff.workspace = true
 semver.workspace = true
 tokio.workspace = true
