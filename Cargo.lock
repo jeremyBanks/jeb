@@ -17,6 +17,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "_chosen"
+version = "0.0.0-dev-2026-01-19.4531"
+
+[[package]]
 name = "_claude_hooks"
 version = "0.0.0-dev-2026-01-19.4531"
 dependencies = [

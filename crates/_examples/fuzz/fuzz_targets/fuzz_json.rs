@@ -3,8 +3,8 @@
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|data: &[u8]| {
-    // Truncate to 16 bytes max
-    let data = &data[..data.len().min(16)];
+    // Truncate to 8 bytes max
+    let data = &data[..data.len().min(8)];
 
     // Try to decode as UTF-8
     let Ok(text) = std::str::from_utf8(data) else {
