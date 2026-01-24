@@ -3,6 +3,4 @@
 *.local.*
 *.tmp
 *.wasm
-examples/self.sh
-history-pit/
-target/
+/target/
