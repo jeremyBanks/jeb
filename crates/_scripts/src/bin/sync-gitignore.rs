@@ -4,7 +4,6 @@ use {
         Result,
     },
     std::{
-        collections::HashSet,
         fs,
         path::{
             Path,
