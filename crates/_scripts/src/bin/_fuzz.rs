@@ -253,16 +253,16 @@ struct CorpusEntry {
 }
 
 impl CorpusEntry {
-    /// Encode bytes: printable ASCII (0x21-0x7E) as " X", others as "XX" hex
+    /// Encode bytes: graphic ASCII (0x21-0x7E) as " X", others as "XX" hex
     fn to_encoded(&self) -> String {
         self.data
             .iter()
             .map(|&b| {
                 if (0x21..=0x7E).contains(&b) {
-                    // Printable ASCII (excluding space): space + character (maintains 2-char width)
+                    // Graphic ASCII (visible glyphs): space + character (maintains 2-char width)
                     format!(" {}", b as char)
                 } else {
-                    // Non-printable or space: uppercase hex
+                    // Control chars, space, or high bytes: uppercase hex
                     format!("{:02X}", b)
                 }
             })
@@ -282,7 +282,7 @@ impl CorpusEntry {
                     anyhow::bail!("trailing space at end of encoded data");
                 }
                 let c = chars[i + 1];
-                // Only accept 0x21-0x7E (printable ASCII excluding space)
+                // Only accept 0x21-0x7E (graphic ASCII)
                 if !c.is_ascii() || (c as u8) < 0x21 || (c as u8) > 0x7E {
                     anyhow::bail!("invalid literal character after space: {:?}", c);
                 }
