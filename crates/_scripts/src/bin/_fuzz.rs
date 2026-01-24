@@ -253,24 +253,54 @@ struct CorpusEntry {
 }
 
 impl CorpusEntry {
-    fn to_hex(&self) -> String {
+    /// Encode bytes: printable ASCII (0x20-0x7E) as " X", others as "XX" hex
+    fn to_encoded(&self) -> String {
         self.data
             .iter()
-            .map(|b| format!("{:02X}", b))
+            .map(|&b| {
+                if (0x20..=0x7E).contains(&b) {
+                    // Printable ASCII: space + character (maintains 2-char width)
+                    format!(" {}", b as char)
+                } else {
+                    // Non-printable: uppercase hex
+                    format!("{:02X}", b)
+                }
+            })
             .collect::<String>()
     }
 
-    fn from_hex(hex: &str) -> Result<Vec<u8>> {
-        if hex.len() % 2 != 0 {
-            anyhow::bail!("hex string has odd length");
+    /// Decode bytes: " X" is literal char, "XX" is hex pair
+    fn from_encoded(encoded: &str) -> Result<Vec<u8>> {
+        let mut result = Vec::new();
+        let chars: Vec<char> = encoded.chars().collect();
+        let mut i = 0;
+
+        while i < chars.len() {
+            if chars[i] == ' ' {
+                // Space followed by literal character
+                if i + 1 >= chars.len() {
+                    anyhow::bail!("trailing space at end of encoded data");
+                }
+                let c = chars[i + 1];
+                if !c.is_ascii() || (c as u8) < 0x20 || (c as u8) > 0x7E {
+                    anyhow::bail!("invalid literal character after space: {:?}", c);
+                }
+                result.push(c as u8);
+                i += 2;
+            } else {
+                // Two hex digits
+                if i + 1 >= chars.len() {
+                    anyhow::bail!("odd number of hex characters");
+                }
+                let hex: String = chars[i..i + 2].iter().collect();
+                let byte = u8::from_str_radix(&hex, 16)
+                    .with_context(|| format!("invalid hex pair: {:?}", hex))?;
+                result.push(byte);
+                i += 2;
+            }
         }
-        (0..hex.len())
-            .step_by(2)
-            .map(|i| {
-                u8::from_str_radix(&hex[i..i + 2], 16)
-                    .with_context(|| format!("invalid hex at position {}", i))
-            })
-            .collect()
+
+        Ok(result)
     }
 
     /// Parse a line from .corpus file
@@ -280,18 +310,18 @@ impl CorpusEntry {
             anyhow::bail!("empty or comment line");
         }
 
-        let (artifact_type, hex) = if let Some(rest) = line.strip_prefix(':') {
-            // Corpus entry: ":HEXDATA"
+        let (artifact_type, encoded) = if let Some(rest) = line.strip_prefix(':') {
+            // Corpus entry: ":DATA"
             (None, rest)
         } else if let Some(colon_pos) = line.find(':') {
-            // Artifact entry: "type:HEXDATA"
+            // Artifact entry: "type:DATA"
             let (typ, rest) = line.split_at(colon_pos);
             (Some(typ.to_string()), &rest[1..])
         } else {
             anyhow::bail!("line missing colon separator");
         };
 
-        let data = Self::from_hex(hex)?;
+        let data = Self::from_encoded(encoded)?;
         Ok(CorpusEntry {
             artifact_type,
             data,
@@ -301,8 +331,8 @@ impl CorpusEntry {
     /// Format as a line for .corpus file
     fn to_line(&self) -> String {
         match &self.artifact_type {
-            None => format!(":{}", self.to_hex()),
-            Some(typ) => format!("{}:{}", typ, self.to_hex()),
+            None => format!(":{}", self.to_encoded()),
+            Some(typ) => format!("{}:{}", typ, self.to_encoded()),
         }
     }
 }
