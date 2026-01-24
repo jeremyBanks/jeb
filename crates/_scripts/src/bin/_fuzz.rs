@@ -254,75 +254,6 @@ struct CorpusEntry {
 }
 
 impl CorpusEntry {
-    /// Encode bytes: graphic ASCII (0x21-0x7E) as " X", common escapes as \n/\t/\r, others as "XX" hex
-    fn to_encoded(&self) -> String {
-        self.data
-            .iter()
-            .map(|&b| match b {
-                0x09 => r"\t".to_string(), // tab
-                0x0A => r"\n".to_string(), // newline
-                0x0D => r"\r".to_string(), // carriage return
-                0x21..=0x7E => {
-                    // Graphic ASCII (visible glyphs): space + character (maintains 2-char width)
-                    format!(" {}", b as char)
-                }
-                _ => {
-                    // Control chars, space, or high bytes: uppercase hex
-                    format!("{:02X}", b)
-                }
-            })
-            .collect::<String>()
-    }
-
-    /// Decode bytes: " X" is literal char, \n/\t/\r are escapes, "XX" is hex pair
-    fn from_encoded(encoded: &str) -> Result<Vec<u8>> {
-        let mut result = Vec::new();
-        let chars: Vec<char> = encoded.chars().collect();
-        let mut i = 0;
-
-        while i < chars.len() {
-            if chars[i] == ' ' {
-                // Space followed by literal character
-                if i + 1 >= chars.len() {
-                    anyhow::bail!("trailing space at end of encoded data");
-                }
-                let c = chars[i + 1];
-                // Only accept 0x21-0x7E (graphic ASCII)
-                if !c.is_ascii() || (c as u8) < 0x21 || (c as u8) > 0x7E {
-                    anyhow::bail!("invalid literal character after space: {:?}", c);
-                }
-                result.push(c as u8);
-                i += 2;
-            } else if chars[i] == '\\' {
-                // Backslash escape sequence
-                if i + 1 >= chars.len() {
-                    anyhow::bail!("trailing backslash at end of encoded data");
-                }
-                let escaped = chars[i + 1];
-                let byte = match escaped {
-                    'n' => 0x0A, // newline
-                    't' => 0x09, // tab
-                    'r' => 0x0D, // carriage return
-                    _ => anyhow::bail!("unknown escape sequence: \\{}", escaped),
-                };
-                result.push(byte);
-                i += 2;
-            } else {
-                // Two hex digits
-                if i + 1 >= chars.len() {
-                    anyhow::bail!("odd number of hex characters");
-                }
-                let hex: String = chars[i..i + 2].iter().collect();
-                let byte = u8::from_str_radix(&hex, 16)
-                    .with_context(|| format!("invalid hex pair: {:?}", hex))?;
-                result.push(byte);
-                i += 2;
-            }
-        }
-
-        Ok(result)
-    }
-
     /// Parse a line from .corpus file
     fn parse_line(line: &str) -> Result<Self> {
         let line = line.trim();
@@ -341,7 +272,7 @@ impl CorpusEntry {
             anyhow::bail!("line missing colon separator");
         };
 
-        let data = Self::from_encoded(encoded)?;
+        let data = text_to_bytes(encoded).context("invalid encoded data")?;
         Ok(CorpusEntry {
             artifact_type,
             data,
@@ -350,9 +281,10 @@ impl CorpusEntry {
 
     /// Format as a line for .corpus file
     fn to_line(&self) -> String {
+        let encoded = bytes_to_text(&self.data);
         match &self.artifact_type {
-            None => format!(":{}", self.to_encoded()),
-            Some(typ) => format!("{}:{}", typ, self.to_encoded()),
+            None => format!(":{}", encoded),
+            Some(typ) => format!("{}:{}", typ, encoded),
         }
     }
 }
