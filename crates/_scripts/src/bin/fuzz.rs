@@ -339,6 +339,15 @@ fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
                     // Parse artifact type from filename (e.g., "crash-abc123")
                     if let Some(dash_pos) = name.find('-') {
                         let entry_type = &name[..dash_pos];
+                        // Validate entry_type is a simple identifier
+                        if entry_type.is_empty()
+                            || !entry_type
+                                .chars()
+                                .all(|c| c.is_ascii_alphanumeric() || c == '_')
+                        {
+                            warn!("skipping artifact with invalid type: {:?}", name);
+                            continue;
+                        }
                         let data = fs::read(&path)?;
                         entries.insert(CorpusEntry {
                             entry_type: entry_type.to_string(),
