@@ -1,1 +1,9 @@
 /target
+*.git
+*.local
+*.local.*
+*.tmp
+*.wasm
+examples/self.sh
+history-pit/
+target/
