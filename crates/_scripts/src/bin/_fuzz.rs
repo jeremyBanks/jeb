@@ -253,15 +253,19 @@ struct CorpusEntry {
 }
 
 impl CorpusEntry {
-    /// Encode bytes: graphic ASCII (0x21-0x7E) as " X", others as "XX" hex
+    /// Encode bytes: graphic ASCII (0x21-0x7E) as " X", common escapes as \n/\t/\r, others as "XX" hex
     fn to_encoded(&self) -> String {
         self.data
             .iter()
-            .map(|&b| {
-                if (0x21..=0x7E).contains(&b) {
+            .map(|&b| match b {
+                0x09 => r"\t".to_string(), // tab
+                0x0A => r"\n".to_string(), // newline
+                0x0D => r"\r".to_string(), // carriage return
+                0x21..=0x7E => {
                     // Graphic ASCII (visible glyphs): space + character (maintains 2-char width)
                     format!(" {}", b as char)
-                } else {
+                }
+                _ => {
                     // Control chars, space, or high bytes: uppercase hex
                     format!("{:02X}", b)
                 }
@@ -269,7 +273,7 @@ impl CorpusEntry {
             .collect::<String>()
     }
 
-    /// Decode bytes: " X" is literal char, "XX" is hex pair
+    /// Decode bytes: " X" is literal char, \n/\t/\r are escapes, "XX" is hex pair
     fn from_encoded(encoded: &str) -> Result<Vec<u8>> {
         let mut result = Vec::new();
         let chars: Vec<char> = encoded.chars().collect();
@@ -287,6 +291,20 @@ impl CorpusEntry {
                     anyhow::bail!("invalid literal character after space: {:?}", c);
                 }
                 result.push(c as u8);
+                i += 2;
+            } else if chars[i] == '\\' {
+                // Backslash escape sequence
+                if i + 1 >= chars.len() {
+                    anyhow::bail!("trailing backslash at end of encoded data");
+                }
+                let escaped = chars[i + 1];
+                let byte = match escaped {
+                    'n' => 0x0A, // newline
+                    't' => 0x09, // tab
+                    'r' => 0x0D, // carriage return
+                    _ => anyhow::bail!("unknown escape sequence: \\{}", escaped),
+                };
+                result.push(byte);
                 i += 2;
             } else {
                 // Two hex digits
