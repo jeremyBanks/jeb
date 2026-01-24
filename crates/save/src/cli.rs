@@ -202,9 +202,9 @@ pub struct Save {
 
     /// Use the tree hash prefix as the brute force target (old behavior).
     ///
-    /// By default, the brute force target is the commit index (as decimal digits)
-    /// followed by any hex letter (a-f). This flag uses the first 4 hex digits
-    /// of the tree hash as an exact target instead.
+    /// By default, the brute force target is the commit index (as decimal
+    /// digits) followed by any hex letter (a-f). This flag uses the first 4
+    /// hex digits of the tree hash as an exact target instead.
     #[clap(
         help_heading = "COMMIT OPTIONS",
         long = "tree-target",
@@ -683,23 +683,23 @@ pub fn main(args: Save) -> Result<()> {
 
     eprintln!();
 
-    Command::new("git")
-        .args([
-            "--no-pager",
-            "log",
-            "--name-status",
-            "--format=fuller",
-            "--date=human-local",
-            "--walk-reflogs",
-            "--all",
-            "--decorate",
-            "-n",
-            "2",
-            &commit.id().to_string(),
-        ])
-        .status()?;
-
-    eprintln!();
+    // Command::new("git")
+    //     .args([
+    //         "--no-pager",
+    //         "log",
+    //         "--name-status",
+    //         "--format=fuller",
+    //         "--date=human-local",
+    //         "--walk-reflogs",
+    //         "--all",
+    //         "--decorate",
+    //         "-n",
+    //         "2",
+    //         &commit.id().to_string(),
+    //     ])
+    //     .status()?;
+    //
+    // eprintln!();
 
     Ok(())
 }
