@@ -8,6 +8,7 @@ crash:\r`_/_\x00;`/_\x00;_;_
 crash:\r`_`_\x00;`/_\x00;`/_\x00;`/_\x00;`/_\x00;_
 crash:\x1D|\xBB\xFF,,*SSSSSSSSSSSSSSSSSSSSS\x00,,,,\xFA\xFF\xFE\xFF\xFF\xFF\xFF!<,,,}
 crash:,,\x02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;\x00K\x0B\x1C!\xB2``
+crash:,---------------------------------------------------------------------------------------------;|\x0B
 crash:/l=(l\x00l,+=\x00\x00\x00\x00\x00\x00,|,|\x00l,l[
 crash:88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888\x0C~\x0C
 crash:>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>;8`;\xB2
@@ -701,6 +702,7 @@ corpus:|\x01|l|~~\nl,|,|\x01|l\nl,|a\xAD_\n
 corpus:|\x01|l|~~\nl,|,|\x01|l,\nz~
 corpus:|\x01|l|~~\n\x95,|,|\x01|l,\n\nz~z~
 corpus:|\n\x04\x04
+corpus:|\n`;\n`;`\n`;+`\n`;+`\xDD
 corpus:|\n`;\n`;`\x0E`;
 corpus:|\n`;\n`;\x80\x80\x80\x80\x80\x80`\x0E`;
 corpus:|\n`;`\n`;+`\x01
