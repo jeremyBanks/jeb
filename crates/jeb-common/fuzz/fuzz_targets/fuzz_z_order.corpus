@@ -2,14 +2,6 @@ corpus:\x08\n\x08\n
 corpus:\n\n\x08\n
 corpus:\n\x0B\x08@
 corpus:\x0B@
-{"type":"corpus","data":"\x08\n\x08\n"}
-{"type":"corpus","data":"\n\n\x08\n"}
-{"type":"corpus","data":"\n\x0B\x08@"}
-{"type":"corpus","data":"\x0B@"}
-{"type":"corpus","data":"\xFE\xFF\xA9\xA9\xA9\xA9\xA9\xFF\xFF\xFF\xFF\xFF\xFFh\x00\x00"}
-{"type":"corpus","data":"\xFF"}
-{"type":"corpus","data":"\xFF\xFF"}
-{"type":"corpus","data":"\xFF\xFF\xFF\xFF\xFF\xFF\x08@"}
 corpus:\xFE\xFF\xA9\xA9\xA9\xA9\xA9\xFF\xFF\xFF\xFF\xFF\xFFh\x00\x00
 corpus:\xFF
 corpus:\xFF\xFF
