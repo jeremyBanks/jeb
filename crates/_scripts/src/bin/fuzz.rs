@@ -390,6 +390,28 @@ fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
         info!("  no entries to pack");
     }
 
+    // Clean up directories after packing (data is now in .corpus file)
+    if corpus_dir.is_dir() {
+        fs::remove_dir_all(&corpus_dir)?;
+    }
+    if artifacts_dir.is_dir() {
+        fs::remove_dir_all(&artifacts_dir)?;
+    }
+    let tmp_dir = fuzz_dir.join(".tmp");
+    if tmp_dir.is_dir() {
+        fs::remove_dir_all(&tmp_dir)?;
+    }
+
+    // Remove empty parent directories
+    let corpus_parent = fuzz_dir.join("corpus");
+    if corpus_parent.is_dir() && fs::read_dir(&corpus_parent)?.next().is_none() {
+        fs::remove_dir(&corpus_parent)?;
+    }
+    let artifacts_parent = fuzz_dir.join("artifacts");
+    if artifacts_parent.is_dir() && fs::read_dir(&artifacts_parent)?.next().is_none() {
+        fs::remove_dir(&artifacts_parent)?;
+    }
+
     Ok(())
 }
 

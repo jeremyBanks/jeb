@@ -44,7 +44,7 @@ echo >&2 -e "${DARK_BACKGROUND}${MAGENTA}  \$${WHITE} ${BROWN}cargo build --rele
 echo >&2 -e "${DARK_BACKGROUND}${RESET}"
 echo >&2
 
-if ! cargo build --bin "$command"; then
+if ! cargo build --release --bin "$command"; then
     echo >&2
     echo >&2 "${YELLOW}WARNING:${WHITE} Failed to build. Falling back to existing builds."
 fi
