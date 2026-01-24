@@ -143,7 +143,8 @@ fn test_update_source_file() {
     );
 
     // Enable update mode
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     // Find the actual position of the macro
     let positions = find_litter_positions(&test_file.path);
@@ -158,7 +159,8 @@ fn test_update_source_file() {
     test_file.assert_contains("cell(100u32)");
     test_file.assert_does_not_contain("cell(42u32)");
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -173,7 +175,8 @@ fn test() {
         "test_litter_basic_update.rs",
     );
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     // Find the actual position
     let positions = find_litter_positions(&test_file.path);
@@ -196,7 +199,8 @@ fn test() {
     // Check that the file was updated
     test_file.assert_contains("cell(100u32)");
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -209,7 +213,8 @@ fn test_litter_no_update_in_memory_mode() {
     );
 
     // Explicitly set memory mode (changes in memory only, no disk writes)
-    env::set_var("INLINE_MODE", "memory");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "memory") };
 
     let positions = find_litter_positions(&test_file.path);
     assert_eq!(positions.len(), 1);
@@ -227,7 +232,8 @@ fn test_litter_no_update_in_memory_mode() {
     // But file should NOT be updated (still contains original)
     test_file.assert_contains("cell(42u32)");
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -261,7 +267,8 @@ fn test_multiple_litters_in_same_file() {
 "#,
     );
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     // Find all positions
     let positions = find_litter_positions(&test_file.path);
@@ -303,7 +310,8 @@ fn test_multiple_litters_in_same_file() {
     assert!(content.contains("cell(20u32)"), "Should contain updated b");
     assert!(content.contains("cell(30u32)"), "Should contain updated c");
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -315,7 +323,8 @@ fn test_litter_no_change_optimization() {
 "#,
     );
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     let positions = find_litter_positions(&test_file.path);
     let (line, column) = positions[0];
@@ -332,5 +341,6 @@ fn test_litter_no_change_optimization() {
     // File should still contain original value
     test_file.assert_contains("cell(42u32)");
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }

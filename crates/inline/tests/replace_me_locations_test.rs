@@ -23,7 +23,8 @@ fn test_replace_me_different_locations() {
     )
     .unwrap();
 
-    env::set_var("INLINE_MODE", "memory");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "memory") };
     inline::clear_file_state_cache();
 
     // Find both positions
@@ -65,5 +66,6 @@ fn test_replace_me_different_locations() {
     assert_eq!(result1, 10u32);
     assert_eq!(result2, 20u32);
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }

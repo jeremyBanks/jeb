@@ -65,7 +65,8 @@ fn test_tokens_macro_basic() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
     inline::clear_file_state_cache();
 
     let positions = find_tokens_macro_positions(&path);
@@ -92,7 +93,8 @@ fn test_tokens_macro_basic() {
         content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -107,7 +109,8 @@ fn test_tokens_macro_complex_tokens() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
     inline::clear_file_state_cache();
 
     let positions = find_tokens_macro_positions(&path);
@@ -138,7 +141,8 @@ fn test_tokens_macro_complex_tokens() {
         content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -153,7 +157,8 @@ fn test_tokens_macro_with_braces() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
     inline::clear_file_state_cache();
 
     let positions = find_tokens_macro_positions(&path);
@@ -178,7 +183,8 @@ fn test_tokens_macro_with_braces() {
         content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -193,7 +199,8 @@ fn test_tokens_macro_with_brackets() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
     inline::clear_file_state_cache();
 
     let positions = find_tokens_macro_positions(&path);
@@ -218,7 +225,8 @@ fn test_tokens_macro_with_brackets() {
         content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -233,7 +241,8 @@ fn test_tokens_macro_memory_mode() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "memory");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "memory") };
     inline::clear_file_state_cache();
 
     let positions = find_tokens_macro_positions(&path);
@@ -253,7 +262,8 @@ fn test_tokens_macro_memory_mode() {
         content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -268,7 +278,8 @@ fn test_tokens_macro_empty() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
     inline::clear_file_state_cache();
 
     let positions = find_tokens_macro_positions(&path);
@@ -288,7 +299,8 @@ fn test_tokens_macro_empty() {
         content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -303,7 +315,8 @@ fn test_tokens_macro_with_quote() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
     inline::clear_file_state_cache();
 
     let positions = find_tokens_macro_positions(&path);
@@ -329,7 +342,8 @@ fn test_tokens_macro_with_quote() {
         content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -344,7 +358,8 @@ fn test_tokens_macro_verify_mode() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "verify");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "verify") };
     inline::clear_file_state_cache();
 
     let positions = find_tokens_macro_positions(&path);
@@ -358,5 +373,6 @@ fn test_tokens_macro_verify_mode() {
         assert_eq!(cell.value, initial);
     }
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }

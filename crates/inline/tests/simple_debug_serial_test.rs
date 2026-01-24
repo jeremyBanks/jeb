@@ -64,7 +64,8 @@ fn debug_litter_update() {
     let column = finder.column.unwrap();
 
     // Now try to update it
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     let new_tokens: proc_macro2::TokenStream = "100u32".parse().unwrap();
     match inline::update_source_file(&path, line, column, new_tokens) {
@@ -75,5 +76,6 @@ fn debug_litter_update() {
     println!("\nFile content after update:");
     println!("{}", fs::read_to_string(&path).unwrap());
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }

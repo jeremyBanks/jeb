@@ -54,7 +54,8 @@ fn test_cell_macro_with_expression() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
     inline::clear_file_state_cache();
 
     let positions = find_macro_positions(&path);
@@ -78,5 +79,6 @@ fn test_cell_macro_with_expression() {
         content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }

@@ -54,6 +54,7 @@ fn test_cell_macro_basic() {
 "#;
     fs::write(&path, source).unwrap();
 
+    // SAFETY: Test-only; no concurrent access to this env var in this test
     unsafe {
         env::set_var("INLINE_MODE", "write");
     }
@@ -80,6 +81,7 @@ fn test_cell_macro_basic() {
         content
     );
 
+    // SAFETY: Test-only; no concurrent access to this env var in this test
     unsafe {
         env::remove_var("INLINE_MODE");
     }
