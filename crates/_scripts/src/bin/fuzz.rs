@@ -18,6 +18,8 @@ use {
 /// Output limit: show first N bytes, then "...", then last N bytes
 const OUTPUT_HEAD_BYTES: usize = 2048;
 const OUTPUT_TAIL_BYTES: usize = 2048;
+/// Grace period: wait up to N extra chars for a line break before truncating
+const OUTPUT_LINE_GRACE: usize = 128;
 
 /// Run a command with truncated output (first N + last N bytes)
 fn run_with_truncated_output(mut cmd: Command, prefix: &str) -> Result<std::process::ExitStatus> {
@@ -85,17 +87,34 @@ fn process_stream<R: std::io::Read>(reader: R, prefix: &str) -> (bool, String) {
                 if !truncated {
                     let prefixed_len = prefix.len() + line.len();
                     if bytes_shown + prefixed_len <= OUTPUT_HEAD_BYTES {
+                        // Show full line
                         eprint!("{}{}", prefix, line);
                         std::io::stderr().flush().ok();
                         bytes_shown += prefixed_len;
-                    } else {
-                        // Show partial line up to limit, then switch to tail mode
-                        let remaining = OUTPUT_HEAD_BYTES.saturating_sub(bytes_shown);
-                        if remaining > prefix.len() {
-                            let line_remaining = remaining - prefix.len();
-                            eprint!("{}{}", prefix, &line[..line_remaining.min(line.len())]);
+                    } else if bytes_shown < OUTPUT_HEAD_BYTES {
+                        // We've crossed the limit. Check if we're within grace period.
+                        let overage = (bytes_shown + prefixed_len) - OUTPUT_HEAD_BYTES;
+                        if overage <= OUTPUT_LINE_GRACE {
+                            // Within grace: show full line, then truncate
+                            eprint!("{}{}", prefix, line);
                             std::io::stderr().flush().ok();
+                        } else {
+                            // Beyond grace: show up to limit + grace, insert newline
+                            let remaining =
+                                (OUTPUT_HEAD_BYTES + OUTPUT_LINE_GRACE).saturating_sub(bytes_shown);
+                            if remaining > prefix.len() {
+                                let line_remaining = remaining - prefix.len();
+                                eprint!(
+                                    "{}{}\n",
+                                    prefix,
+                                    &line[..line_remaining.min(line.len())]
+                                );
+                                std::io::stderr().flush().ok();
+                            }
                         }
+                        truncated = true;
+                    } else {
+                        // Already past limit, just switch to tail mode
                         truncated = true;
                     }
                 }
