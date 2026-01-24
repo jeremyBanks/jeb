@@ -39,7 +39,7 @@ corpus:" \\t\\t\\t
 corpus:" \\u #\x0E:
 corpus:" t#t:
 corpus:"!\\\\\\\\\\\\
-corpus:"" 
+corpus:""
 corpus:"#\\"\\"\\"
 corpus:"#\\t
 corpus:"#\\t 
@@ -376,6 +376,7 @@ corpus:0e443
 corpus:1\n\n\n
 corpus:105E-310
 corpus:1E-308
+corpus:2 
 corpus:2   
 corpus:2E4
 corpus:2e
@@ -507,7 +508,6 @@ corpus:[4#
 corpus:[4,\t\t
 corpus:[4,\t\t\t
 corpus:[4,\t\t\t\t
-corpus:[4,\t\t\t\r
 corpus:[4,\n
 corpus:[4,\n\n
 corpus:[4,\n\n\n
@@ -628,13 +628,13 @@ corpus:{"\t\n
 corpus:{"\t\n\n\n\n
 corpus:{"\t\n<
 corpus:{"\t\r\r\t
+corpus:{"\n
 corpus:{"\n\n\n\n
 corpus:{"\n  \n  
 corpus:{"\n   
 corpus:{"\r\t\t\t
 corpus:{"\r\t\t\t\t
 corpus:{"\r\r\r\r
-corpus:{"\r\r\r\r\x00
 corpus:{"\r 
 corpus:{"\r}
 corpus:{"\x1A  
@@ -644,6 +644,7 @@ corpus:{" "\r
 corpus:{""
 corpus:{""\t
 corpus:{""\t\t
+corpus:{""\t\t\t\t
 corpus:{""\t\t\r\t\x00
 corpus:{""\t\t 
 corpus:{""\n
@@ -661,7 +662,6 @@ corpus:{""
 corpus:{"":
 corpus:{"":"
 corpus:{"":"","
-corpus:{"":0,
 corpus:{"":0,\t
 corpus:{"":0,\n
 corpus:{"":0,\n\n
@@ -674,6 +674,7 @@ corpus:{"":0,4
 corpus:{"":0,}
 corpus:{"":0:
 corpus:{"":2,\t\t
+corpus:{"":8,
 corpus:{"":8,  
 corpus:{"":{"":
 corpus:{"":{,
@@ -681,7 +682,6 @@ corpus:{"":{q
 corpus:{"":{}
 corpus:{"":{}}
 corpus:{""M
-corpus:{"$"\t\t\t\t
 corpus:{"\\""
 corpus:{"]]\r\t\t\t
 corpus:{"{":""

@@ -265,6 +265,15 @@ impl CorpusEntry {
 
         let (entry_type, encoded) = line.split_once(':').context("missing colon separator")?;
 
+        // Validate entry_type is a simple identifier (alphanumeric + underscore)
+        if entry_type.is_empty()
+            || !entry_type
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '_')
+        {
+            anyhow::bail!("invalid entry type: {}", entry_type);
+        }
+
         let data = text_to_bytes(encoded).context("invalid encoded data")?;
 
         Ok(CorpusEntry {
