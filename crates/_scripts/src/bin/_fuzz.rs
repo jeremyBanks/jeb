@@ -153,15 +153,14 @@ fn run() -> Result<bool> {
             println!("\n--- {}/{} ---", crate_name, target);
 
             // Unpack corpus before fuzzing
-            print!("Unpacking corpus... ");
-            match unpack_corpus(&fuzz_dir, target) {
-                Ok(()) => println!("done"),
-                Err(e) => println!("warning: {}", e),
+            println!("[unpack]");
+            if let Err(e) = unpack_corpus(&fuzz_dir, target) {
+                eprintln!("  warning: {}", e);
             }
 
             // Run fuzzing or corpus replay
             let status = if seconds > 0 {
-                println!("Fuzzing for {} seconds...", seconds);
+                println!("[fuzz] running for {}s...", seconds);
                 Command::new("cargo")
                     .args([
                         "+nightly",
@@ -177,7 +176,7 @@ fn run() -> Result<bool> {
                     .status()
                     .context("failed to run cargo fuzz run")?
             } else {
-                println!("Replaying corpus...");
+                println!("[replay] replaying corpus only...");
                 Command::new("cargo")
                     .args(["+nightly", "fuzz", "run", target, "--", "-runs=0"])
                     .current_dir(&fuzz_dir)
@@ -188,21 +187,19 @@ fn run() -> Result<bool> {
             };
 
             if !status.success() {
-                println!("FAILED (exit {})", status);
+                println!("[fuzz] FAILED (exit {})", status);
                 any_failed = true;
                 // Still try to pack corpus on failure
-                print!("Packing corpus... ");
-                match pack_corpus(&fuzz_dir, target) {
-                    Ok(()) => println!("done"),
-                    Err(e) => println!("warning: {}", e),
+                println!("[pack]");
+                if let Err(e) = pack_corpus(&fuzz_dir, target) {
+                    eprintln!("  warning: {}", e);
                 }
                 continue;
             }
-            println!("OK");
 
             // Run corpus minimization (only if we did actual fuzzing)
             if seconds > 0 {
-                print!("Minimizing corpus... ");
+                println!("[cmin] minimizing corpus...");
                 // Set TMPDIR to fuzz dir to avoid cross-device link errors
                 // Use absolute path to avoid issues with cargo fuzz cmin
                 let tmp_dir = fuzz_dir.join(".tmp");
@@ -212,24 +209,21 @@ fn run() -> Result<bool> {
                     .args(["+nightly", "fuzz", "cmin", target])
                     .env("TMPDIR", &tmp_dir)
                     .current_dir(&fuzz_dir)
-                    .stdout(Stdio::null())
+                    .stdout(Stdio::inherit())
                     .stderr(Stdio::inherit())
                     .status()
                     .context("failed to run cargo fuzz cmin")?;
 
                 if !status.success() {
-                    println!("FAILED");
+                    println!("[cmin] FAILED");
                     any_failed = true;
-                } else {
-                    println!("done");
                 }
             }
 
             // Pack corpus after fuzzing
-            print!("Packing corpus... ");
-            match pack_corpus(&fuzz_dir, target) {
-                Ok(()) => println!("done"),
-                Err(e) => println!("warning: {}", e),
+            println!("[pack]");
+            if let Err(e) = pack_corpus(&fuzz_dir, target) {
+                eprintln!("  warning: {}", e);
             }
         }
     }
@@ -408,12 +402,25 @@ fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
     let corpus_file = corpus_file_path(fuzz_dir, target);
     let content: String = entries.iter().map(|e| e.to_line()).collect::<Vec<_>>().join("\n");
 
+    // Count corpus vs artifacts
+    let corpus_count = entries.iter().filter(|e| e.artifact_type.is_none()).count();
+    let artifact_count = entries.len() - corpus_count;
+
     // Only write if there's content, and add trailing newline
     if !entries.is_empty() {
         fs::write(&corpus_file, format!("{}\n", content))?;
+        println!(
+            "  packed {} corpus + {} artifacts -> {}",
+            corpus_count,
+            artifact_count,
+            corpus_file.file_name().unwrap_or_default().to_string_lossy()
+        );
     } else if corpus_file.exists() {
         // Remove empty corpus file
         fs::remove_file(&corpus_file)?;
+        println!("  removed empty corpus file");
+    } else {
+        println!("  no entries to pack");
     }
 
     Ok(())
@@ -429,6 +436,10 @@ fn unpack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
     let content = fs::read_to_string(&corpus_file)?;
     let corpus_dir = fuzz_dir.join("corpus").join(target);
     let artifacts_dir = fuzz_dir.join("artifacts").join(target);
+
+    let mut corpus_count = 0;
+    let mut artifact_count = 0;
+    let mut skipped_count = 0;
 
     for line in content.lines() {
         let line = line.trim();
@@ -458,6 +469,9 @@ fn unpack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
                 let file_path = corpus_dir.join(&hash_hex);
                 if !file_path.exists() {
                     fs::write(&file_path, &entry.data)?;
+                    corpus_count += 1;
+                } else {
+                    skipped_count += 1;
                 }
             }
             Some(typ) => {
@@ -466,10 +480,18 @@ fn unpack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
                 let file_path = artifacts_dir.join(format!("{}-{}", typ, hash_hex));
                 if !file_path.exists() {
                     fs::write(&file_path, &entry.data)?;
+                    artifact_count += 1;
+                } else {
+                    skipped_count += 1;
                 }
             }
         }
     }
+
+    println!(
+        "  unpacked {} corpus, {} artifacts ({} already exist)",
+        corpus_count, artifact_count, skipped_count
+    );
 
     Ok(())
 }
