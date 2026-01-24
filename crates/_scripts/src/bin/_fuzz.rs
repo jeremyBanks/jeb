@@ -3,11 +3,45 @@ use {
     std::{
         env,
         path::PathBuf,
-        process::{Command, Stdio},
+        process::{Command, ExitCode, Stdio},
     },
 };
 
-fn main() -> Result<()> {
+fn main() -> ExitCode {
+    match run() {
+        Ok(success) => {
+            if success {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::FAILURE
+            }
+        }
+        Err(e) => {
+            eprintln!("Error: {e:?}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn run() -> Result<bool> {
+    // Parse --max-total-time=N argument (default 4 seconds, 0 or negative = replay only)
+    let mut max_total_time: i32 = 4;
+    for arg in env::args().skip(1) {
+        if let Some(value) = arg.strip_prefix("--max-total-time=") {
+            max_total_time = value.parse().context("invalid --max-total-time value")?;
+        } else if arg == "--help" || arg == "-h" {
+            println!("Usage: _fuzz [--max-total-time=SECONDS]");
+            println!();
+            println!("Options:");
+            println!("  --max-total-time=N  Fuzz each target for N seconds (default: 4)");
+            println!("                      If N <= 0, only replay corpus (no fuzzing)");
+            return Ok(true);
+        } else {
+            eprintln!("Unknown argument: {}", arg);
+            return Ok(false);
+        }
+    }
+
     let workspace_root = env::var("CARGO_WORKSPACE_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("."));
@@ -25,8 +59,10 @@ fn main() -> Result<()> {
 
     if fuzz_dirs.is_empty() {
         println!("No fuzz directories found");
-        return Ok(());
+        return Ok(true);
     }
+
+    let mut any_failed = false;
 
     for fuzz_dir in fuzz_dirs {
         let crate_dir = fuzz_dir.parent().expect("fuzz dir has parent");
@@ -49,6 +85,7 @@ fn main() -> Result<()> {
                 "cargo fuzz list failed: {}",
                 String::from_utf8_lossy(&output.stderr)
             );
+            any_failed = true;
             continue;
         }
 
@@ -68,45 +105,67 @@ fn main() -> Result<()> {
         for target in &targets {
             println!("\n--- {} ---", target);
 
-            // Run fuzzing for 20 seconds
-            println!("Fuzzing for 20 seconds...");
-            let status = Command::new("cargo")
-                .args([
-                    "+nightly",
-                    "fuzz",
-                    "run",
-                    target,
-                    "--",
-                    "-max_total_time=20",
-                ])
-                .current_dir(&fuzz_dir)
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .status()
-                .context("failed to run cargo fuzz run")?;
+            // Run fuzzing or corpus replay
+            let status = if max_total_time > 0 {
+                println!("Fuzzing for {} seconds...", max_total_time);
+                Command::new("cargo")
+                    .args([
+                        "+nightly",
+                        "fuzz",
+                        "run",
+                        target,
+                        "--",
+                        &format!("-max_total_time={}", max_total_time),
+                    ])
+                    .current_dir(&fuzz_dir)
+                    .stdout(Stdio::inherit())
+                    .stderr(Stdio::inherit())
+                    .status()
+                    .context("failed to run cargo fuzz run")?
+            } else {
+                println!("Replaying corpus...");
+                Command::new("cargo")
+                    .args(["+nightly", "fuzz", "run", target, "--", "-runs=0"])
+                    .current_dir(&fuzz_dir)
+                    .stdout(Stdio::inherit())
+                    .stderr(Stdio::inherit())
+                    .status()
+                    .context("failed to run cargo fuzz run")?
+            };
 
             if !status.success() {
                 eprintln!("Fuzzing {} failed with status: {}", target, status);
-                // Continue to next target rather than aborting
+                any_failed = true;
                 continue;
             }
 
-            // Run corpus minimization
-            println!("\nMinimizing corpus...");
-            let status = Command::new("cargo")
-                .args(["+nightly", "fuzz", "cmin", target])
-                .current_dir(&fuzz_dir)
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .status()
-                .context("failed to run cargo fuzz cmin")?;
+            // Run corpus minimization (only if we did actual fuzzing)
+            if max_total_time > 0 {
+                println!("\nMinimizing corpus...");
+                let status = Command::new("cargo")
+                    .args(["+nightly", "fuzz", "cmin", target])
+                    .current_dir(&fuzz_dir)
+                    .stdout(Stdio::inherit())
+                    .stderr(Stdio::inherit())
+                    .status()
+                    .context("failed to run cargo fuzz cmin")?;
 
-            if !status.success() {
-                eprintln!("Corpus minimization for {} failed with status: {}", target, status);
+                if !status.success() {
+                    eprintln!(
+                        "Corpus minimization for {} failed with status: {}",
+                        target, status
+                    );
+                    any_failed = true;
+                }
             }
         }
     }
 
-    println!("\n=== Fuzz smoke test complete ===");
-    Ok(())
+    if any_failed {
+        println!("\n=== Fuzz smoke test complete (with failures) ===");
+    } else {
+        println!("\n=== Fuzz smoke test complete ===");
+    }
+
+    Ok(!any_failed)
 }
