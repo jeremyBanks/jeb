@@ -30,7 +30,7 @@ fn main() -> ExitCode {
 
 fn run() -> Result<bool> {
     // Parse arguments
-    let mut seconds: i32 = 2;
+    let mut seconds: i32 = 1;
     let mut target_filter: Option<String> = None;
 
     let args: Vec<String> = env::args().skip(1).collect();
@@ -62,7 +62,7 @@ fn run() -> Result<bool> {
             println!("  [FILTER]            Only run targets containing this substring");
             println!();
             println!("Options:");
-            println!("  -s, --seconds=N     Fuzz each target for N seconds (default: 2)");
+            println!("  -s, --seconds=N     Fuzz each target for N seconds (default: 1)");
             println!("                      If N <= 0, only replay corpus (no fuzzing)");
             println!("  --pack-only         Only pack corpus files (no fuzzing)");
             println!("  --unpack-only       Only unpack corpus files (no fuzzing)");
