@@ -50,12 +50,14 @@ dependencies = [
  "_chosen",
  "anyhow",
  "glob",
+ "jeb-tracing",
  "pathdiff",
  "semver",
  "sha-1",
  "tempfile",
  "tokio",
  "toml_edit",
+ "tracing",
 ]
 
 [[package]]
