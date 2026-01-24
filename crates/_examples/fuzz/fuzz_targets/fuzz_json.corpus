@@ -16,12 +16,14 @@ corpus:\r\r\r
 corpus:\r\r\r\r
 corpus:\x1A
 corpus: 
+corpus: \n
 corpus:  
 corpus:   
 corpus:    
 corpus: [{""  :
 corpus:"
 corpus:"\n
+corpus:"\n\nG1#\x08\n
 corpus:" \n
 corpus:" #
 corpus:" ##
@@ -69,8 +71,6 @@ corpus:-8\n\n\n4[\x00
 corpus:-[
 corpus:0
 corpus:0  
-corpus:0   
-corpus:0    
 corpus:0"
 corpus:0.0.\x1C6\x1C6
 corpus:0.6
@@ -80,6 +80,8 @@ corpus:0e444
 corpus:1\n\n\n
 corpus:1\n[\\r\xB0\xB0\xB0
 corpus:105E-310
+corpus:2
+corpus:2 
 corpus:2e
 corpus:3E\x00
 corpus:4\t
@@ -104,6 +106,7 @@ corpus:4444
 corpus:4444B
 corpus:4E
 corpus:4E+
+corpus:4E-4
 corpus:4E-6
 corpus:4E23
 corpus:4E4\t
@@ -114,17 +117,17 @@ corpus:4e0
 corpus:4e04444<
 corpus:4e308
 corpus:4e444
-corpus:5
 corpus:5.40
 corpus:55555"'"
 corpus:6\r
 corpus:6\r\r
 corpus:6\r\r\r
 corpus:6\r\r\r\r
-corpus:6 
+corpus:6    
 corpus:7e22
 corpus:8\n\n\n\n
 corpus:8\n\n\n[\x00\t\t
+corpus:8   
 corpus:[
 corpus:[\t
 corpus:[\t\t
@@ -137,12 +140,16 @@ corpus:[\n\n\n\n
 corpus:[\n,\x00\x00\x00\x00\n
 corpus:[\r
 corpus:[\r\r
+corpus:[\r\r\n\r,\n\n
 corpus:[\r\r\r
 corpus:[\r\r\r\r
+corpus:[ 
 corpus:[  
 corpus:[   
 corpus:[    
 corpus:["\x05\r\r
+corpus:["\x08 
+corpus:["\n  
 corpus:[,
 corpus:[,\t
 corpus:[,\t\t
@@ -161,8 +168,6 @@ corpus:[,
 corpus:[,]
 corpus:[-\n
 corpus:[-\n\t\t
-corpus:[-\n 
-corpus:[-\n  
 corpus:[--\n\n
 corpus:[-0]
 corpus:[0,\n\n
@@ -173,6 +178,7 @@ corpus:[0,0]
 corpus:[0]
 corpus:[2,\t\t
 corpus:[2, 
+corpus:[2,  
 corpus:[2,1]
 corpus:[2,4
 corpus:[4#
@@ -181,14 +187,12 @@ corpus:[4,\t
 corpus:[4,\n
 corpus:[4,\n\x11\t\x00\t
 corpus:[4,\r
-corpus:[4,  
 corpus:[4,1\n
 corpus:[4,[4
 corpus:[4,]
 corpus:[8
 corpus:[[
 corpus:[[\x00\x00\x00\x00\x00K
-corpus:[[ [
 corpus:[[,,
 corpus:[[,,,
 corpus:[[0]
@@ -258,14 +262,14 @@ corpus:{ ,{},{:
 corpus:{"
 corpus:{"\x01\t
 corpus:{"\x01\t\t
+corpus:{"\x02  
 corpus:{"\x05\r
 corpus:{"\x05\r\r
 corpus:{"\x05\r"d\x05\r
 corpus:{"\t\n
 corpus:{"\n\n\n
-corpus:{"\n 
 corpus:{"\r}
-corpus:{"\x19  
+corpus:{"\x1B 
 corpus:{" "
 corpus:{""
 corpus:{""\t
@@ -287,16 +291,12 @@ corpus:{0
 corpus:{}
 corpus:\xAA
 archive:
-archive: \n
-archive:"\n\nG1#\x08\n
 archive:1
-archive:2
 archive:3
 archive:4
-archive:4E-4
+archive:5
 archive:6
 archive:7
-archive:[\r\r\n\r,\n\n
 archive:["\x02
 archive:["\t
 archive:[,\t\x1D
@@ -307,6 +307,7 @@ archive:[-[
 archive:[0,
 archive:[2,
 archive:[4.
+archive:[[ [
 archive:[[[\x00\x00\x00\x00[
 archive:[f\n
 archive:[f,
@@ -323,6 +324,7 @@ archive:{"\x05
 archive:{"\t
 archive:{"\n
 archive:{"\r
+archive:{"\x19
 archive:{"\x1A
 archive:{"\x1B
 archive:{"\x1F
