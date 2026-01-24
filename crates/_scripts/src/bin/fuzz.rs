@@ -31,6 +31,7 @@ fn main() -> ExitCode {
 fn run() -> Result<bool> {
     // Parse arguments
     let mut seconds: i32 = 1;
+    let mut max_len: u32 = 313;
     let mut target_filter: Option<String> = None;
 
     let args: Vec<String> = env::args().skip(1).collect();
@@ -55,6 +56,8 @@ fn run() -> Result<bool> {
                 // -sN form
                 seconds = value.parse().context("invalid -s value")?;
             }
+        } else if let Some(value) = arg.strip_prefix("--max-len=") {
+            max_len = value.parse().context("invalid --max-len value")?;
         } else if arg == "--help" || arg == "-h" {
             println!("Usage: _fuzz [OPTIONS] [FILTER]");
             println!();
@@ -64,6 +67,7 @@ fn run() -> Result<bool> {
             println!("Options:");
             println!("  -s, --seconds=N     Fuzz each target for N seconds (default: 1)");
             println!("                      If N <= 0, only replay corpus (no fuzzing)");
+            println!("  --max-len=N         Maximum input length in bytes (default: 313)");
             println!("  --pack-only         Only pack corpus files (no fuzzing)");
             println!("  --unpack-only       Only unpack corpus files (no fuzzing)");
             return Ok(true);
@@ -171,6 +175,7 @@ fn run() -> Result<bool> {
                         target,
                         "--",
                         &format!("-max_total_time={}", seconds),
+                        &format!("-max_len={}", max_len),
                     ])
                     .current_dir(&fuzz_dir)
                     .stdout(Stdio::inherit())
@@ -180,7 +185,15 @@ fn run() -> Result<bool> {
             } else {
                 info!("[replay] replaying corpus only...");
                 Command::new("cargo")
-                    .args(["+nightly", "fuzz", "run", target, "--", "-runs=0"])
+                    .args([
+                        "+nightly",
+                        "fuzz",
+                        "run",
+                        target,
+                        "--",
+                        "-runs=0",
+                        &format!("-max_len={}", max_len),
+                    ])
                     .current_dir(&fuzz_dir)
                     .stdout(Stdio::inherit())
                     .stderr(Stdio::inherit())
@@ -208,7 +221,14 @@ fn run() -> Result<bool> {
                 fs::create_dir_all(&tmp_dir).ok();
                 let tmp_dir = tmp_dir.canonicalize().unwrap_or(tmp_dir);
                 let status = Command::new("cargo")
-                    .args(["+nightly", "fuzz", "cmin", target])
+                    .args([
+                        "+nightly",
+                        "fuzz",
+                        "cmin",
+                        target,
+                        "--",
+                        &format!("-max_len={}", max_len),
+                    ])
                     .env("TMPDIR", &tmp_dir)
                     .current_dir(&fuzz_dir)
                     .stdout(Stdio::inherit())
