@@ -137,6 +137,7 @@
     "itertools",
     "Kladov",
     "libc",
+    "libfuzzer",
     "libjeb",
     "lossiness",
     "mergeoptions",
