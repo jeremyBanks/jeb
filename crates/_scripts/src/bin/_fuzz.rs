@@ -142,8 +142,12 @@ fn run() -> Result<bool> {
             // Run corpus minimization (only if we did actual fuzzing)
             if max_total_time > 0 {
                 println!("\nMinimizing corpus...");
+                // Set TMPDIR to fuzz dir to avoid cross-device link errors
+                let tmp_dir = fuzz_dir.join(".tmp");
+                std::fs::create_dir_all(&tmp_dir).ok();
                 let status = Command::new("cargo")
                     .args(["+nightly", "fuzz", "cmin", target])
+                    .env("TMPDIR", &tmp_dir)
                     .current_dir(&fuzz_dir)
                     .stdout(Stdio::inherit())
                     .stderr(Stdio::inherit())

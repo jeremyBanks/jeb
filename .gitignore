@@ -2,6 +2,7 @@
 *.local
 *.local.*
 *.tmp
+.tmp/
 *.wasm
 /examples/self.sh
 /history-pit/
