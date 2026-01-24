@@ -28,12 +28,31 @@ fn main() -> ExitCode {
 
 fn run() -> Result<bool> {
     // Parse arguments
-    let mut max_total_time: i32 = 4;
+    let mut seconds: i32 = 2;
     let mut target_filter: Option<String> = None;
 
-    for arg in env::args().skip(1) {
-        if let Some(value) = arg.strip_prefix("--max-total-time=") {
-            max_total_time = value.parse().context("invalid --max-total-time value")?;
+    let args: Vec<String> = env::args().skip(1).collect();
+    let mut i = 0;
+    while i < args.len() {
+        let arg = &args[i];
+        if let Some(value) = arg.strip_prefix("--seconds=") {
+            seconds = value.parse().context("invalid --seconds value")?;
+        } else if let Some(value) = arg.strip_prefix("-s=") {
+            seconds = value.parse().context("invalid -s value")?;
+        } else if let Some(value) = arg.strip_prefix("-s") {
+            if value.is_empty() {
+                // -s N form
+                i += 1;
+                if i < args.len() {
+                    seconds = args[i].parse().context("invalid -s value")?;
+                } else {
+                    eprintln!("-s requires a value");
+                    return Ok(false);
+                }
+            } else {
+                // -sN form
+                seconds = value.parse().context("invalid -s value")?;
+            }
         } else if arg == "--help" || arg == "-h" {
             println!("Usage: _fuzz [OPTIONS] [FILTER]");
             println!();
@@ -41,7 +60,7 @@ fn run() -> Result<bool> {
             println!("  [FILTER]            Only run targets containing this substring");
             println!();
             println!("Options:");
-            println!("  --max-total-time=N  Fuzz each target for N seconds (default: 4)");
+            println!("  -s, --seconds=N     Fuzz each target for N seconds (default: 2)");
             println!("                      If N <= 0, only replay corpus (no fuzzing)");
             println!("  --pack-only         Only pack corpus files (no fuzzing)");
             println!("  --unpack-only       Only unpack corpus files (no fuzzing)");
@@ -51,11 +70,12 @@ fn run() -> Result<bool> {
         } else if arg == "--unpack-only" {
             return unpack_all_corpora();
         } else if !arg.starts_with('-') {
-            target_filter = Some(arg);
+            target_filter = Some(arg.clone());
         } else {
             eprintln!("Unknown argument: {}", arg);
             return Ok(false);
         }
+        i += 1;
     }
 
     let workspace_root = get_workspace_root();
@@ -138,8 +158,8 @@ fn run() -> Result<bool> {
             }
 
             // Run fuzzing or corpus replay
-            let status = if max_total_time > 0 {
-                println!("Fuzzing for {} seconds...", max_total_time);
+            let status = if seconds > 0 {
+                println!("Fuzzing for {} seconds...", seconds);
                 Command::new("cargo")
                     .args([
                         "+nightly",
@@ -147,7 +167,7 @@ fn run() -> Result<bool> {
                         "run",
                         target,
                         "--",
-                        &format!("-max_total_time={}", max_total_time),
+                        &format!("-seconds={}", seconds),
                     ])
                     .current_dir(&fuzz_dir)
                     .stdout(Stdio::inherit())
@@ -176,7 +196,7 @@ fn run() -> Result<bool> {
             }
 
             // Run corpus minimization (only if we did actual fuzzing)
-            if max_total_time > 0 {
+            if seconds > 0 {
                 println!("\nMinimizing corpus...");
                 // Set TMPDIR to fuzz dir to avoid cross-device link errors
                 // Use absolute path to avoid issues with cargo fuzz cmin
