@@ -307,6 +307,7 @@ fn run() -> Result<bool> {
                     "cmin",
                     target,
                     "--",
+                    "-seed=1",
                     &format!("-max_len={}", max_len),
                 ])
                 .env("TMPDIR", &tmp_dir)
