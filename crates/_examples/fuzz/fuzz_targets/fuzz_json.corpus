@@ -63,16 +63,16 @@ corpus:0^
 corpus:1\n\n\n
 corpus:1\n[\\r\xB0\xB0\xB0
 corpus:105E-310
-corpus:2
 corpus:2e
-corpus:3 
-corpus:3  
 corpus:3E\x00
 corpus:4\t
 corpus:4\t\t
 corpus:4\t\t\t
 corpus:4\n
 corpus:4\n\n
+corpus:4 
+corpus:4  
+corpus:4   
 corpus:4.
 corpus:4.\x00\x00'\x00\r0
 corpus:4.\n
@@ -100,7 +100,6 @@ corpus:6
 corpus:6\r
 corpus:6\r\r
 corpus:6\r\r\r
-corpus:7   
 corpus:7e22
 corpus:8\n\n\n[\x00\t\t
 corpus:[
@@ -118,10 +117,10 @@ corpus:[\r\r\r
 corpus:[ 
 corpus:[  
 corpus:[   
+corpus:["\t 
 corpus:[,
 corpus:[,\t
 corpus:[,\t\t
-corpus:[,\t\x1D
 corpus:[,\n
 corpus:[,\n\n
 corpus:[,\n    \x05
@@ -131,8 +130,6 @@ corpus:[,\x1D
 corpus:[,  
 corpus:[,]
 corpus:[-0]
-corpus:[-[ 
-corpus:[0, 
 corpus:[0,0,0\x00"
 corpus:[0]
 corpus:[2,4
@@ -141,6 +138,7 @@ corpus:[4,
 corpus:[4,\t
 corpus:[4,\n
 corpus:[4,\r
+corpus:[4, 
 corpus:[4,]
 corpus:[8
 corpus:[[
@@ -203,10 +201,10 @@ corpus:{
 corpus:{ ,{},{:
 corpus:{"
 corpus:{"\x01\t
+corpus:{"\x02 
 corpus:{"\x05\r
 corpus:{"\t\n
 corpus:{"\r}
-corpus:{"\x1F 
 corpus:{" "
 corpus:{""
 corpus:{""\t
@@ -222,9 +220,15 @@ corpus:{}
 corpus:\xAA
 archive:
 archive:1
+archive:2
+archive:3
 archive:4
+archive:7
+archive:[,\t\x1D
 archive:[-
 archive:[-"
+archive:[-[
+archive:[0,
 archive:[2,
 archive:[t"
 archive:{"\x02
@@ -233,3 +237,4 @@ archive:{"\n
 archive:{"\r
 archive:{"\x1A
 archive:{"\x1B
+archive:{"\x1F
