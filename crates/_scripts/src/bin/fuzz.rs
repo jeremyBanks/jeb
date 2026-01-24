@@ -431,7 +431,8 @@ fn run() -> Result<bool> {
                     }
                 }
 
-                permit_tx.send(()).unwrap(); // Release permit
+                // Release permit (ignore error if receiver dropped after all tasks spawned)
+                let _ = permit_tx.send(());
             });
         }
     });
