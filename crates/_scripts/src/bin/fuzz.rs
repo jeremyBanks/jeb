@@ -11,6 +11,7 @@ use {
         io::{BufRead, BufReader},
         path::{Path, PathBuf},
         process::{Command, ExitCode, Stdio},
+        sync::atomic::{AtomicBool, Ordering},
     },
 };
 
@@ -19,7 +20,7 @@ const OUTPUT_HEAD_BYTES: usize = 2048;
 const OUTPUT_TAIL_BYTES: usize = 2048;
 
 /// Run a command with truncated output (first N + last N bytes)
-fn run_with_truncated_output(mut cmd: Command) -> Result<std::process::ExitStatus> {
+fn run_with_truncated_output(mut cmd: Command, prefix: &str) -> Result<std::process::ExitStatus> {
     use std::io::Write;
 
     let mut child = cmd
@@ -32,27 +33,35 @@ fn run_with_truncated_output(mut cmd: Command) -> Result<std::process::ExitStatu
     let stderr = child.stderr.take().unwrap();
 
     // Process both streams in threads
-    let stdout_handle = std::thread::spawn(move || process_stream(stdout, ""));
-    let stderr_handle = std::thread::spawn(move || process_stream(stderr, ""));
+    let prefix_owned = prefix.to_string();
+    let prefix_clone = prefix_owned.clone();
+    let stdout_handle = std::thread::spawn(move || process_stream(stdout, &prefix_owned));
+    let stderr_handle = std::thread::spawn(move || process_stream(stderr, &prefix_clone));
 
     let status = child.wait().context("failed to wait for command")?;
 
     // Wait for output threads and print any tail content
     if let Ok((truncated, tail)) = stdout_handle.join() {
         if truncated {
-            eprint!("...\n");
+            eprint!("{}...\n", prefix);
         }
         if !tail.is_empty() {
-            std::io::stderr().write_all(tail.as_bytes()).ok();
+            // Prefix each line in tail
+            for line in tail.lines() {
+                eprintln!("{}{}", prefix, line);
+            }
         }
     }
     if let Ok((truncated, tail)) = stderr_handle.join() {
         if truncated && !tail.is_empty() {
             // Only print ... if we have tail content to show
-            eprint!("...\n");
+            eprint!("{}...\n", prefix);
         }
         if !tail.is_empty() {
-            std::io::stderr().write_all(tail.as_bytes()).ok();
+            // Prefix each line in tail
+            for line in tail.lines() {
+                eprintln!("{}{}", prefix, line);
+            }
         }
     }
 
@@ -60,7 +69,7 @@ fn run_with_truncated_output(mut cmd: Command) -> Result<std::process::ExitStatu
 }
 
 /// Process a stream: print first N bytes line-buffered, buffer last N bytes
-fn process_stream<R: std::io::Read>(reader: R, _prefix: &str) -> (bool, String) {
+fn process_stream<R: std::io::Read>(reader: R, prefix: &str) -> (bool, String) {
     use std::collections::VecDeque;
     use std::io::Write;
 
@@ -76,15 +85,17 @@ fn process_stream<R: std::io::Read>(reader: R, _prefix: &str) -> (bool, String) 
             Ok(0) => break, // EOF
             Ok(_) => {
                 if !truncated {
-                    if bytes_shown + line.len() <= OUTPUT_HEAD_BYTES {
-                        eprint!("{}", line);
+                    let prefixed_len = prefix.len() + line.len();
+                    if bytes_shown + prefixed_len <= OUTPUT_HEAD_BYTES {
+                        eprint!("{}{}", prefix, line);
                         std::io::stderr().flush().ok();
-                        bytes_shown += line.len();
+                        bytes_shown += prefixed_len;
                     } else {
                         // Show partial line up to limit, then switch to tail mode
                         let remaining = OUTPUT_HEAD_BYTES.saturating_sub(bytes_shown);
-                        if remaining > 0 {
-                            eprint!("{}", &line[..remaining.min(line.len())]);
+                        if remaining > prefix.len() {
+                            let line_remaining = remaining - prefix.len();
+                            eprint!("{}{}", prefix, &line[..line_remaining.min(line.len())]);
                             std::io::stderr().flush().ok();
                         }
                         truncated = true;
@@ -92,7 +103,7 @@ fn process_stream<R: std::io::Read>(reader: R, _prefix: &str) -> (bool, String) 
                 }
 
                 if truncated {
-                    // Buffer for tail
+                    // Buffer for tail (store unprefixed, we'll add prefix when printing)
                     tail_bytes += line.len();
                     tail_buffer.push_back(line);
 
@@ -127,6 +138,18 @@ struct Args {
     #[clap(long, default_value = "313")]
     max_len: u32,
 
+    /// Number of targets to fuzz in parallel (0 = num CPUs)
+    #[clap(short = 'p', long, default_value = "0")]
+    parallelism: i32,
+
+    /// Run all targets in parallel (alias for -p0)
+    #[clap(long, conflicts_with = "serial")]
+    parallel: bool,
+
+    /// Run targets sequentially (alias for -p1)
+    #[clap(long, conflicts_with = "parallel")]
+    serial: bool,
+
     /// Only pack corpus files (no fuzzing)
     #[clap(long)]
     pack_only: bool,
@@ -152,6 +175,106 @@ fn main() -> ExitCode {
     }
 }
 
+/// Run a single fuzz target (unpack → fuzz → cmin → pack)
+/// Returns true if the target failed.
+fn run_target(
+    fuzz_dir: &Path,
+    target: &str,
+    seconds: i32,
+    max_len: u32,
+    prefix: &str,
+) -> Result<bool> {
+    let mut failed = false;
+
+    // Unpack corpus before fuzzing, tracking original entries for archive
+    info!("{}[unpack]", prefix);
+    let original_corpus = match unpack_corpus(fuzz_dir, target) {
+        Ok(corpus) => Some(corpus),
+        Err(e) => {
+            warn!("{}unpack warning: {}", prefix, e);
+            None
+        }
+    };
+
+    // Run fuzzing or corpus replay
+    let status = if seconds > 0 {
+        info!("{}[fuzz] running for {}s...", prefix, seconds);
+        let mut cmd = Command::new("cargo");
+        cmd.args([
+            "+nightly",
+            "fuzz",
+            "run",
+            target,
+            "--",
+            &format!("-max_total_time={}", seconds),
+            &format!("-max_len={}", max_len),
+        ])
+        .current_dir(fuzz_dir);
+        run_with_truncated_output(cmd, prefix)?
+    } else {
+        info!("{}[replay] replaying corpus only...", prefix);
+        let mut cmd = Command::new("cargo");
+        cmd.args([
+            "+nightly",
+            "fuzz",
+            "run",
+            target,
+            "--",
+            "-runs=0",
+            &format!("-max_len={}", max_len),
+        ])
+        .current_dir(fuzz_dir);
+        run_with_truncated_output(cmd, prefix)?
+    };
+
+    if !status.success() {
+        warn!("{}[fuzz] FAILED (exit {})", prefix, status);
+        failed = true;
+        // Still try to pack corpus on failure
+        info!("{}[pack]", prefix);
+        if let Err(e) = pack_corpus(fuzz_dir, target, original_corpus.as_ref()) {
+            warn!("{}pack warning: {}", prefix, e);
+        }
+        return Ok(failed);
+    }
+
+    // Run corpus minimization (only if we did actual fuzzing)
+    if seconds > 0 {
+        info!("{}[cmin] minimizing corpus...", prefix);
+        // Set TMPDIR to fuzz dir to avoid cross-device link errors
+        // Use absolute path to avoid issues with cargo fuzz cmin
+        let tmp_dir = fuzz_dir.join(".tmp");
+        fs::create_dir_all(&tmp_dir).ok();
+        let tmp_dir = tmp_dir.canonicalize().unwrap_or(tmp_dir);
+        let mut cmd = Command::new("cargo");
+        cmd.args([
+            "+nightly",
+            "fuzz",
+            "cmin",
+            target,
+            "--",
+            "-seed=1",
+            &format!("-max_len={}", max_len),
+        ])
+        .env("TMPDIR", &tmp_dir)
+        .current_dir(fuzz_dir);
+        let status = run_with_truncated_output(cmd, prefix)?;
+
+        if !status.success() {
+            warn!("{}[cmin] FAILED", prefix);
+            failed = true;
+        }
+    }
+
+    // Pack corpus after fuzzing
+    info!("{}[pack]", prefix);
+    if let Err(e) = pack_corpus(fuzz_dir, target, original_corpus.as_ref()) {
+        warn!("{}pack warning: {}", prefix, e);
+    }
+
+    Ok(failed)
+}
+
 fn run() -> Result<bool> {
     let args = Args::parse();
 
@@ -161,6 +284,17 @@ fn run() -> Result<bool> {
     if args.unpack_only {
         return unpack_all_corpora();
     }
+
+    // Resolve parallelism value
+    let parallelism = if args.serial {
+        1
+    } else if args.parallelism <= 0 || args.parallel {
+        std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1)
+    } else {
+        args.parallelism as usize
+    };
 
     let seconds = args.seconds;
     let max_len = args.max_len;
@@ -184,15 +318,11 @@ fn run() -> Result<bool> {
         return Ok(true);
     }
 
-    let mut any_failed = false;
+    // Collect all (fuzz_dir, target) pairs
+    let mut tasks: Vec<(PathBuf, String)> = Vec::new();
+    let mut list_failed = false;
 
     for fuzz_dir in fuzz_dirs {
-        let crate_dir = fuzz_dir.parent().expect("fuzz dir has parent");
-        let crate_name = crate_dir
-            .file_name()
-            .expect("crate dir has name")
-            .to_string_lossy();
-
         // Get list of fuzz targets by running cargo fuzz list
         let output = Command::new("cargo")
             .args(["+nightly", "fuzz", "list"])
@@ -205,7 +335,7 @@ fn run() -> Result<bool> {
                 "cargo fuzz list failed: {}",
                 String::from_utf8_lossy(&output.stderr)
             );
-            any_failed = true;
+            list_failed = true;
             continue;
         }
 
@@ -222,119 +352,100 @@ fn run() -> Result<bool> {
             .collect();
 
         if targets.is_empty() {
-            if target_filter.is_some() {
-                // Silent skip if filtering
-                continue;
+            if target_filter.is_none() {
+                let crate_name = fuzz_dir
+                    .parent()
+                    .and_then(|p| p.file_name())
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_default();
+                info!("No fuzz targets found in {}", crate_name);
             }
-            info!("No fuzz targets found in {}", crate_name);
             continue;
         }
 
-        info!("=== Fuzzing crate: {} ===", crate_name);
-        info!(
-            "Found {} target(s): {}",
-            targets.len(),
-            targets.join(", ")
-        );
-
-        for target in &targets {
-            info!("--- {}/{} ---", crate_name, target);
-
-            // Unpack corpus before fuzzing, tracking original entries for archive
-            info!("[unpack]");
-            let original_corpus = match unpack_corpus(&fuzz_dir, target) {
-                Ok(corpus) => Some(corpus),
-                Err(e) => {
-                    warn!("unpack warning: {}", e);
-                    None
-                }
-            };
-
-            // Run fuzzing or corpus replay
-            let status = if seconds > 0 {
-                info!("[fuzz] running for {}s...", seconds);
-                let mut cmd = Command::new("cargo");
-                cmd.args([
-                    "+nightly",
-                    "fuzz",
-                    "run",
-                    target,
-                    "--",
-                    &format!("-max_total_time={}", seconds),
-                    &format!("-max_len={}", max_len),
-                ])
-                .current_dir(&fuzz_dir);
-                run_with_truncated_output(cmd)?
-            } else {
-                info!("[replay] replaying corpus only...");
-                let mut cmd = Command::new("cargo");
-                cmd.args([
-                    "+nightly",
-                    "fuzz",
-                    "run",
-                    target,
-                    "--",
-                    "-runs=0",
-                    &format!("-max_len={}", max_len),
-                ])
-                .current_dir(&fuzz_dir);
-                run_with_truncated_output(cmd)?
-            };
-
-            if !status.success() {
-                warn!("[fuzz] FAILED (exit {})", status);
-                any_failed = true;
-                // Still try to pack corpus on failure
-                info!("[pack]");
-                if let Err(e) = pack_corpus(&fuzz_dir, target, original_corpus.as_ref()) {
-                    warn!("pack warning: {}", e);
-                }
-                continue;
-            }
-
-            // Run corpus minimization (only if we did actual fuzzing)
-            if seconds > 0 {
-                info!("[cmin] minimizing corpus...");
-                // Set TMPDIR to fuzz dir to avoid cross-device link errors
-                // Use absolute path to avoid issues with cargo fuzz cmin
-                let tmp_dir = fuzz_dir.join(".tmp");
-                fs::create_dir_all(&tmp_dir).ok();
-                let tmp_dir = tmp_dir.canonicalize().unwrap_or(tmp_dir);
-                let mut cmd = Command::new("cargo");
-                cmd.args([
-                    "+nightly",
-                    "fuzz",
-                    "cmin",
-                    target,
-                    "--",
-                    "-seed=1",
-                    &format!("-max_len={}", max_len),
-                ])
-                .env("TMPDIR", &tmp_dir)
-                .current_dir(&fuzz_dir);
-                let status = run_with_truncated_output(cmd)?;
-
-                if !status.success() {
-                    warn!("[cmin] FAILED");
-                    any_failed = true;
-                }
-            }
-
-            // Pack corpus after fuzzing
-            info!("[pack]");
-            if let Err(e) = pack_corpus(&fuzz_dir, target, original_corpus.as_ref()) {
-                warn!("pack warning: {}", e);
-            }
+        for target in targets {
+            tasks.push((fuzz_dir.clone(), target));
         }
     }
 
-    if any_failed {
+    if tasks.is_empty() {
+        if list_failed {
+            warn!("=== Fuzz complete (with failures) ===");
+            return Ok(false);
+        }
+        info!("No fuzz targets to run");
+        return Ok(true);
+    }
+
+    info!(
+        "Found {} target(s), running with parallelism={}",
+        tasks.len(),
+        parallelism
+    );
+
+    // Use prefix when running in parallel
+    let use_prefix = parallelism > 1;
+
+    // Track failures
+    let any_failed = AtomicBool::new(list_failed);
+
+    // Run tasks with thread pool
+    std::thread::scope(|s| {
+        use std::sync::mpsc;
+
+        let (permit_tx, permit_rx) = mpsc::sync_channel::<()>(parallelism);
+
+        // Pre-fill permits
+        for _ in 0..parallelism {
+            permit_tx.send(()).unwrap();
+        }
+
+        for (fuzz_dir, target) in &tasks {
+            permit_rx.recv().unwrap(); // Wait for permit
+            let permit_tx = permit_tx.clone();
+            let any_failed = &any_failed;
+
+            s.spawn(move || {
+                let prefix = if use_prefix {
+                    format!("[{}] ", target)
+                } else {
+                    String::new()
+                };
+
+                if !use_prefix {
+                    let crate_name = fuzz_dir
+                        .parent()
+                        .and_then(|p| p.file_name())
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_default();
+                    info!("--- {}/{} ---", crate_name, target);
+                }
+
+                match run_target(fuzz_dir, target, seconds, max_len, &prefix) {
+                    Ok(failed) => {
+                        if failed {
+                            any_failed.store(true, Ordering::SeqCst);
+                        }
+                    }
+                    Err(e) => {
+                        warn!("{}Error: {:?}", prefix, e);
+                        any_failed.store(true, Ordering::SeqCst);
+                    }
+                }
+
+                permit_tx.send(()).unwrap(); // Release permit
+            });
+        }
+    });
+
+    let failed = any_failed.load(Ordering::SeqCst);
+    if failed {
         warn!("=== Fuzz complete (with failures) ===");
     } else {
         info!("=== Fuzz complete ===");
     }
 
-    Ok(!any_failed)
+    Ok(!failed)
 }
 
 fn get_workspace_root() -> PathBuf {
