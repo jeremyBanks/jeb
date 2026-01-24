@@ -46,6 +46,7 @@ dependencies = [
  "glob",
  "pathdiff",
  "semver",
+ "sha-1",
  "tempfile",
  "tokio",
  "toml_edit",
