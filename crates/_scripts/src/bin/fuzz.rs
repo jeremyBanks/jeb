@@ -295,8 +295,20 @@ impl CorpusEntry {
 
 impl Ord for CorpusEntry {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // Sort by hex value (data), ignoring artifact_type
-        self.data.cmp(&other.data)
+        // Sort by entry_type first, with "corpus" coming AFTER all other types
+        // (so interesting types like crash, timeout, etc. appear at top)
+        // Then sort by data value within each type
+        let type_order = |t: &str| -> u8 {
+            if t == "corpus" {
+                1 // corpus comes after everything else
+            } else {
+                0 // artifacts come first
+            }
+        };
+        type_order(&self.entry_type)
+            .cmp(&type_order(&other.entry_type))
+            .then_with(|| self.entry_type.cmp(&other.entry_type))
+            .then_with(|| self.data.cmp(&other.data))
     }
 }
 
@@ -362,26 +374,75 @@ fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
         }
     }
 
+    // Limit corpus entries to 1024 (artifacts are unlimited)
+    // If over limit, delete based on SHA-1 hash ordering (deterministic but effectively random)
+    const MAX_CORPUS_ENTRIES: usize = 1024;
+
+    let mut corpus_entries: Vec<_> = entries
+        .iter()
+        .filter(|e| e.entry_type == "corpus")
+        .cloned()
+        .collect();
+    let artifact_entries: Vec<_> = entries
+        .iter()
+        .filter(|e| e.entry_type != "corpus")
+        .cloned()
+        .collect();
+
+    let mut deleted_count = 0;
+    if corpus_entries.len() > MAX_CORPUS_ENTRIES {
+        // Sort by SHA-1 hash of data (deterministic pseudo-random ordering)
+        corpus_entries.sort_by_cached_key(|e| {
+            let hash = Sha1::digest(&e.data);
+            hash.iter().map(|b| format!("{:02x}", b)).collect::<String>()
+        });
+        deleted_count = corpus_entries.len() - MAX_CORPUS_ENTRIES;
+        corpus_entries.truncate(MAX_CORPUS_ENTRIES);
+    }
+
+    // Recombine and sort for output
+    let mut final_entries: BTreeSet<CorpusEntry> = BTreeSet::new();
+    for e in artifact_entries {
+        final_entries.insert(e);
+    }
+    for e in corpus_entries {
+        final_entries.insert(e);
+    }
+
     // Write .corpus file
     let corpus_file = corpus_file_path(fuzz_dir, target);
-    let content: String = entries.iter().map(|e| e.to_line()).collect::<Vec<_>>().join("\n");
+    let content: String = final_entries
+        .iter()
+        .map(|e| e.to_line())
+        .collect::<Vec<_>>()
+        .join("\n");
 
     // Count corpus vs artifacts
-    let corpus_count = entries
+    let corpus_count = final_entries
         .iter()
         .filter(|e| e.entry_type == "corpus")
         .count();
-    let artifact_count = entries.len() - corpus_count;
+    let artifact_count = final_entries.len() - corpus_count;
 
     // Only write and clean up if there's content to pack
-    if !entries.is_empty() {
+    if !final_entries.is_empty() {
         fs::write(&corpus_file, format!("{}\n", content))?;
-        info!(
-            "  packed {} corpus + {} artifacts -> {}",
-            corpus_count,
-            artifact_count,
-            corpus_file.file_name().unwrap_or_default().to_string_lossy()
-        );
+        if deleted_count > 0 {
+            info!(
+                "  packed {} corpus + {} artifacts (deleted {} over limit) -> {}",
+                corpus_count,
+                artifact_count,
+                deleted_count,
+                corpus_file.file_name().unwrap_or_default().to_string_lossy()
+            );
+        } else {
+            info!(
+                "  packed {} corpus + {} artifacts -> {}",
+                corpus_count,
+                artifact_count,
+                corpus_file.file_name().unwrap_or_default().to_string_lossy()
+            );
+        }
 
         // Clean up directories after packing (data is now in .corpus file)
         if corpus_dir.is_dir() {
