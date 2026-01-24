@@ -8,10 +8,109 @@ use {
         collections::BTreeSet,
         env,
         fs,
+        io::{BufRead, BufReader},
         path::{Path, PathBuf},
         process::{Command, ExitCode, Stdio},
     },
 };
+
+/// Output limit: show first N bytes, then "...", then last N bytes
+const OUTPUT_HEAD_BYTES: usize = 2048;
+const OUTPUT_TAIL_BYTES: usize = 2048;
+
+/// Run a command with truncated output (first N + last N bytes)
+fn run_with_truncated_output(mut cmd: Command) -> Result<std::process::ExitStatus> {
+    use std::io::Write;
+
+    let mut child = cmd
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .context("failed to spawn command")?;
+
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+
+    // Process both streams in threads
+    let stdout_handle = std::thread::spawn(move || process_stream(stdout, ""));
+    let stderr_handle = std::thread::spawn(move || process_stream(stderr, ""));
+
+    let status = child.wait().context("failed to wait for command")?;
+
+    // Wait for output threads and print any tail content
+    if let Ok((truncated, tail)) = stdout_handle.join() {
+        if truncated {
+            eprint!("...\n");
+        }
+        if !tail.is_empty() {
+            std::io::stderr().write_all(tail.as_bytes()).ok();
+        }
+    }
+    if let Ok((truncated, tail)) = stderr_handle.join() {
+        if truncated && !tail.is_empty() {
+            // Only print ... if we have tail content to show
+            eprint!("...\n");
+        }
+        if !tail.is_empty() {
+            std::io::stderr().write_all(tail.as_bytes()).ok();
+        }
+    }
+
+    Ok(status)
+}
+
+/// Process a stream: print first N bytes line-buffered, buffer last N bytes
+fn process_stream<R: std::io::Read>(reader: R, _prefix: &str) -> (bool, String) {
+    use std::collections::VecDeque;
+    use std::io::Write;
+
+    let mut reader = BufReader::new(reader);
+    let mut bytes_shown = 0;
+    let mut truncated = false;
+    let mut tail_buffer: VecDeque<String> = VecDeque::new();
+    let mut tail_bytes = 0;
+
+    loop {
+        let mut line = String::new();
+        match reader.read_line(&mut line) {
+            Ok(0) => break, // EOF
+            Ok(_) => {
+                if !truncated {
+                    if bytes_shown + line.len() <= OUTPUT_HEAD_BYTES {
+                        eprint!("{}", line);
+                        std::io::stderr().flush().ok();
+                        bytes_shown += line.len();
+                    } else {
+                        // Show partial line up to limit, then switch to tail mode
+                        let remaining = OUTPUT_HEAD_BYTES.saturating_sub(bytes_shown);
+                        if remaining > 0 {
+                            eprint!("{}", &line[..remaining.min(line.len())]);
+                            std::io::stderr().flush().ok();
+                        }
+                        truncated = true;
+                    }
+                }
+
+                if truncated {
+                    // Buffer for tail
+                    tail_bytes += line.len();
+                    tail_buffer.push_back(line);
+
+                    // Trim buffer to stay under limit
+                    while tail_bytes > OUTPUT_TAIL_BYTES && tail_buffer.len() > 1 {
+                        if let Some(old) = tail_buffer.pop_front() {
+                            tail_bytes -= old.len();
+                        }
+                    }
+                }
+            }
+            Err(_) => break,
+        }
+    }
+
+    let tail: String = tail_buffer.into_iter().collect();
+    (truncated, tail)
+}
 
 #[derive(Parser)]
 #[clap(name = "fuzz")]
@@ -154,38 +253,32 @@ fn run() -> Result<bool> {
             // Run fuzzing or corpus replay
             let status = if seconds > 0 {
                 info!("[fuzz] running for {}s...", seconds);
-                Command::new("cargo")
-                    .args([
-                        "+nightly",
-                        "fuzz",
-                        "run",
-                        target,
-                        "--",
-                        &format!("-max_total_time={}", seconds),
-                        &format!("-max_len={}", max_len),
-                    ])
-                    .current_dir(&fuzz_dir)
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .status()
-                    .context("failed to run cargo fuzz run")?
+                let mut cmd = Command::new("cargo");
+                cmd.args([
+                    "+nightly",
+                    "fuzz",
+                    "run",
+                    target,
+                    "--",
+                    &format!("-max_total_time={}", seconds),
+                    &format!("-max_len={}", max_len),
+                ])
+                .current_dir(&fuzz_dir);
+                run_with_truncated_output(cmd)?
             } else {
                 info!("[replay] replaying corpus only...");
-                Command::new("cargo")
-                    .args([
-                        "+nightly",
-                        "fuzz",
-                        "run",
-                        target,
-                        "--",
-                        "-runs=0",
-                        &format!("-max_len={}", max_len),
-                    ])
-                    .current_dir(&fuzz_dir)
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .status()
-                    .context("failed to run cargo fuzz run")?
+                let mut cmd = Command::new("cargo");
+                cmd.args([
+                    "+nightly",
+                    "fuzz",
+                    "run",
+                    target,
+                    "--",
+                    "-runs=0",
+                    &format!("-max_len={}", max_len),
+                ])
+                .current_dir(&fuzz_dir);
+                run_with_truncated_output(cmd)?
             };
 
             if !status.success() {
@@ -207,21 +300,18 @@ fn run() -> Result<bool> {
                 let tmp_dir = fuzz_dir.join(".tmp");
                 fs::create_dir_all(&tmp_dir).ok();
                 let tmp_dir = tmp_dir.canonicalize().unwrap_or(tmp_dir);
-                let status = Command::new("cargo")
-                    .args([
-                        "+nightly",
-                        "fuzz",
-                        "cmin",
-                        target,
-                        "--",
-                        &format!("-max_len={}", max_len),
-                    ])
-                    .env("TMPDIR", &tmp_dir)
-                    .current_dir(&fuzz_dir)
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .status()
-                    .context("failed to run cargo fuzz cmin")?;
+                let mut cmd = Command::new("cargo");
+                cmd.args([
+                    "+nightly",
+                    "fuzz",
+                    "cmin",
+                    target,
+                    "--",
+                    &format!("-max_len={}", max_len),
+                ])
+                .env("TMPDIR", &tmp_dir)
+                .current_dir(&fuzz_dir);
+                let status = run_with_truncated_output(cmd)?;
 
                 if !status.success() {
                     warn!("[cmin] FAILED");
