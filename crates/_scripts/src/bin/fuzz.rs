@@ -141,11 +141,15 @@ fn run() -> Result<bool> {
         for target in &targets {
             info!("--- {}/{} ---", crate_name, target);
 
-            // Unpack corpus before fuzzing
+            // Unpack corpus before fuzzing, tracking original entries for archive
             info!("[unpack]");
-            if let Err(e) = unpack_corpus(&fuzz_dir, target) {
-                warn!("unpack warning: {}", e);
-            }
+            let original_corpus = match unpack_corpus(&fuzz_dir, target) {
+                Ok(corpus) => Some(corpus),
+                Err(e) => {
+                    warn!("unpack warning: {}", e);
+                    None
+                }
+            };
 
             // Run fuzzing or corpus replay
             let status = if seconds > 0 {
@@ -189,7 +193,7 @@ fn run() -> Result<bool> {
                 any_failed = true;
                 // Still try to pack corpus on failure
                 info!("[pack]");
-                if let Err(e) = pack_corpus(&fuzz_dir, target) {
+                if let Err(e) = pack_corpus(&fuzz_dir, target, original_corpus.as_ref()) {
                     warn!("pack warning: {}", e);
                 }
                 continue;
@@ -227,7 +231,7 @@ fn run() -> Result<bool> {
 
             // Pack corpus after fuzzing
             info!("[pack]");
-            if let Err(e) = pack_corpus(&fuzz_dir, target) {
+            if let Err(e) = pack_corpus(&fuzz_dir, target, original_corpus.as_ref()) {
                 warn!("pack warning: {}", e);
             }
         }
@@ -295,14 +299,16 @@ impl CorpusEntry {
 
 impl Ord for CorpusEntry {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // Sort by entry_type first, with "corpus" coming AFTER all other types
-        // (so interesting types like crash, timeout, etc. appear at top)
+        // Sort by entry_type first:
+        // - Artifacts (crash, timeout, etc.) come first (most interesting)
+        // - corpus comes next
+        // - archive comes last (preserved historical entries)
         // Then sort by data value within each type
         let type_order = |t: &str| -> u8 {
-            if t == "corpus" {
-                1 // corpus comes after everything else
-            } else {
-                0 // artifacts come first
+            match t {
+                "corpus" => 1,
+                "archive" => 2,
+                _ => 0, // artifacts come first
             }
         };
         type_order(&self.entry_type)
@@ -323,9 +329,18 @@ fn corpus_file_path(fuzz_dir: &Path, target: &str) -> PathBuf {
     fuzz_dir.join("fuzz_targets").join(format!("{}.corpus", target))
 }
 
-/// Pack corpus and artifacts into a .corpus text file
-fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
+/// Pack corpus and artifacts into a .corpus text file.
+/// If original_corpus is provided, entries that were in original_corpus but are
+/// no longer on the filesystem become "archive:" entries (preserved historical data).
+fn pack_corpus(
+    fuzz_dir: &Path,
+    target: &str,
+    original_corpus: Option<&std::collections::HashSet<Vec<u8>>>,
+) -> Result<()> {
+    use std::collections::HashSet;
+
     let mut entries: BTreeSet<CorpusEntry> = BTreeSet::new();
+    let mut current_corpus_data: HashSet<Vec<u8>> = HashSet::new();
 
     // Read corpus files
     let corpus_dir = fuzz_dir.join("corpus").join(target);
@@ -335,6 +350,7 @@ fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
             let path = entry.path();
             if path.is_file() {
                 let data = fs::read(&path)?;
+                current_corpus_data.insert(data.clone());
                 entries.insert(CorpusEntry {
                     entry_type: "corpus".to_string(),
                     data,
@@ -374,8 +390,22 @@ fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
         }
     }
 
-    // Limit corpus entries to 1024 (artifacts are unlimited)
-    // If over limit, delete based on SHA-1 hash ordering (deterministic but effectively random)
+    // Create archive entries for corpus items that disappeared after reduction
+    let mut archive_entries: Vec<CorpusEntry> = Vec::new();
+    if let Some(original) = original_corpus {
+        for data in original {
+            if !current_corpus_data.contains(data) {
+                archive_entries.push(CorpusEntry {
+                    entry_type: "archive".to_string(),
+                    data: data.clone(),
+                });
+            }
+        }
+    }
+
+    // Limit corpus + archive entries to 1024 (artifacts are unlimited)
+    // If over limit, delete archive entries first, then corpus entries
+    // Use SHA-1 hash ordering for deterministic pseudo-random deletion
     const MAX_CORPUS_ENTRIES: usize = 1024;
 
     let mut corpus_entries: Vec<_> = entries
@@ -389,15 +419,33 @@ fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
         .cloned()
         .collect();
 
-    let mut deleted_count = 0;
-    if corpus_entries.len() > MAX_CORPUS_ENTRIES {
-        // Sort by SHA-1 hash of data (deterministic pseudo-random ordering)
-        corpus_entries.sort_by_cached_key(|e| {
-            let hash = Sha1::digest(&e.data);
-            hash.iter().map(|b| format!("{:02x}", b)).collect::<String>()
-        });
-        deleted_count = corpus_entries.len() - MAX_CORPUS_ENTRIES;
-        corpus_entries.truncate(MAX_CORPUS_ENTRIES);
+    // Sort by SHA-1 hash (for deterministic deletion when over limit)
+    let hash_key = |e: &CorpusEntry| {
+        let hash = Sha1::digest(&e.data);
+        hash.iter().map(|b| format!("{:02x}", b)).collect::<String>()
+    };
+    corpus_entries.sort_by_cached_key(hash_key);
+    archive_entries.sort_by_cached_key(hash_key);
+
+    let mut deleted_archive = 0;
+    let mut deleted_corpus = 0;
+    let total_corpus_like = corpus_entries.len() + archive_entries.len();
+
+    if total_corpus_like > MAX_CORPUS_ENTRIES {
+        let to_delete = total_corpus_like - MAX_CORPUS_ENTRIES;
+
+        // Delete archive entries first (from the beginning, lowest hash values)
+        if archive_entries.len() >= to_delete {
+            deleted_archive = to_delete;
+            archive_entries = archive_entries.into_iter().skip(to_delete).collect();
+        } else {
+            // Delete all archive entries and some corpus entries
+            deleted_archive = archive_entries.len();
+            let remaining_to_delete = to_delete - deleted_archive;
+            archive_entries.clear();
+            deleted_corpus = remaining_to_delete;
+            corpus_entries = corpus_entries.into_iter().skip(remaining_to_delete).collect();
+        }
     }
 
     // Recombine and sort for output
@@ -406,6 +454,9 @@ fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
         final_entries.insert(e);
     }
     for e in corpus_entries {
+        final_entries.insert(e);
+    }
+    for e in archive_entries {
         final_entries.insert(e);
     }
 
@@ -417,32 +468,36 @@ fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
         .collect::<Vec<_>>()
         .join("\n");
 
-    // Count corpus vs artifacts
+    // Count entries by type
     let corpus_count = final_entries
         .iter()
         .filter(|e| e.entry_type == "corpus")
         .count();
-    let artifact_count = final_entries.len() - corpus_count;
+    let archive_count = final_entries
+        .iter()
+        .filter(|e| e.entry_type == "archive")
+        .count();
+    let artifact_count = final_entries.len() - corpus_count - archive_count;
+    let deleted_count = deleted_archive + deleted_corpus;
 
     // Only write and clean up if there's content to pack
     if !final_entries.is_empty() {
         fs::write(&corpus_file, format!("{}\n", content))?;
-        if deleted_count > 0 {
-            info!(
-                "  packed {} corpus + {} artifacts (deleted {} over limit) -> {}",
-                corpus_count,
-                artifact_count,
-                deleted_count,
-                corpus_file.file_name().unwrap_or_default().to_string_lossy()
-            );
-        } else {
-            info!(
-                "  packed {} corpus + {} artifacts -> {}",
-                corpus_count,
-                artifact_count,
-                corpus_file.file_name().unwrap_or_default().to_string_lossy()
-            );
+
+        // Log with appropriate detail
+        let mut parts = vec![format!("{} corpus", corpus_count)];
+        if archive_count > 0 {
+            parts.push(format!("{} archive", archive_count));
         }
+        parts.push(format!("{} artifacts", artifact_count));
+        if deleted_count > 0 {
+            parts.push(format!("deleted {} over limit", deleted_count));
+        }
+        info!(
+            "  packed {} -> {}",
+            parts.join(" + "),
+            corpus_file.file_name().unwrap_or_default().to_string_lossy()
+        );
 
         // Clean up directories after packing (data is now in .corpus file)
         if corpus_dir.is_dir() {
@@ -471,11 +526,16 @@ fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
     Ok(())
 }
 
-/// Unpack a .corpus text file into corpus and artifact files
-fn unpack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
+/// Unpack a .corpus text file into corpus and artifact files.
+/// Returns a set of corpus entry data (both "corpus" and "archive" types) for tracking.
+fn unpack_corpus(fuzz_dir: &Path, target: &str) -> Result<std::collections::HashSet<Vec<u8>>> {
+    use std::collections::HashSet;
+
     let corpus_file = corpus_file_path(fuzz_dir, target);
+    let mut original_corpus: HashSet<Vec<u8>> = HashSet::new();
+
     if !corpus_file.exists() {
-        return Ok(()); // Nothing to unpack
+        return Ok(original_corpus); // Nothing to unpack
     }
 
     let content = fs::read_to_string(&corpus_file)?;
@@ -484,6 +544,7 @@ fn unpack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
 
     let mut corpus_count = 0;
     let mut artifact_count = 0;
+    let mut archive_count = 0;
     let mut skipped_count = 0;
 
     for line in content.lines() {
@@ -507,13 +568,19 @@ fn unpack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
             .map(|b| format!("{:02x}", b))
             .collect::<String>();
 
-        if entry.entry_type == "corpus" {
-            // Corpus entry
+        if entry.entry_type == "corpus" || entry.entry_type == "archive" {
+            // Track corpus and archive entries for archive purposes
+            original_corpus.insert(entry.data.clone());
+            // Both corpus and archive entries are written as corpus files
             fs::create_dir_all(&corpus_dir)?;
             let file_path = corpus_dir.join(&hash_hex);
             if !file_path.exists() {
                 fs::write(&file_path, &entry.data)?;
-                corpus_count += 1;
+                if entry.entry_type == "corpus" {
+                    corpus_count += 1;
+                } else {
+                    archive_count += 1;
+                }
             } else {
                 skipped_count += 1;
             }
@@ -530,12 +597,19 @@ fn unpack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
         }
     }
 
-    info!(
-        "  unpacked {} corpus, {} artifacts ({} already exist)",
-        corpus_count, artifact_count, skipped_count
-    );
+    if archive_count > 0 {
+        info!(
+            "  unpacked {} corpus, {} artifacts, {} archive ({} already exist)",
+            corpus_count, artifact_count, archive_count, skipped_count
+        );
+    } else {
+        info!(
+            "  unpacked {} corpus, {} artifacts ({} already exist)",
+            corpus_count, artifact_count, skipped_count
+        );
+    }
 
-    Ok(())
+    Ok(original_corpus)
 }
 
 /// Pack all corpora in the workspace
@@ -564,7 +638,8 @@ fn pack_all_corpora() -> Result<bool> {
         for target in String::from_utf8_lossy(&output.stdout).lines() {
             let target = target.trim();
             if !target.is_empty() {
-                if let Err(e) = pack_corpus(&fuzz_dir, target) {
+                // When using --pack-only, we don't have original corpus info
+                if let Err(e) = pack_corpus(&fuzz_dir, target, None) {
                     warn!("Error packing {}: {}", target, e);
                 }
             }
