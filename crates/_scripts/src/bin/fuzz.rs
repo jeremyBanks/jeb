@@ -21,8 +21,6 @@ const OUTPUT_TAIL_BYTES: usize = 2048;
 
 /// Run a command with truncated output (first N + last N bytes)
 fn run_with_truncated_output(mut cmd: Command, prefix: &str) -> Result<std::process::ExitStatus> {
-    use std::io::Write;
-
     let mut child = cmd
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
