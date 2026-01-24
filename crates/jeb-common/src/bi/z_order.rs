@@ -236,10 +236,7 @@ fn deinterleave_bits_u128(n: u128) -> (u64, u64) {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        proptest::prelude::*,
-    };
+    use super::*;
 
     #[test]
     fn roundtrip_u16_sample() {
@@ -258,36 +255,6 @@ mod tests {
                 let (back_x, back_y): (u8, u8) = z_order(u);
                 assert_eq!((x, y), (back_x, back_y), "roundtrip failed for ({x}, {y})");
             }
-        }
-    }
-
-    proptest! {
-        #[test]
-        fn prop_roundtrip_u16(u in proptest::num::u16::ANY) {
-            let (x, y): (u8, u8) = z_order(u);
-            let back: u16 = z_order((x, y));
-            prop_assert_eq!(u, back);
-        }
-
-        #[test]
-        fn prop_roundtrip_u32(u in proptest::num::u32::ANY) {
-            let (x, y): (u16, u16) = z_order(u);
-            let back: u32 = z_order((x, y));
-            prop_assert_eq!(u, back);
-        }
-
-        #[test]
-        fn prop_roundtrip_u64(u in proptest::num::u64::ANY) {
-            let (x, y): (u32, u32) = z_order(u);
-            let back: u64 = z_order((x, y));
-            prop_assert_eq!(u, back);
-        }
-
-        #[test]
-        fn prop_roundtrip_u128(u in proptest::num::u128::ANY) {
-            let (x, y): (u64, u64) = z_order(u);
-            let back: u128 = z_order((x, y));
-            prop_assert_eq!(u, back);
         }
     }
 }

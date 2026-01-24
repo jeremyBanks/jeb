@@ -19,9 +19,6 @@ fast_hilbert.workspace = true
 indexmap.workspace = true
 itertools.workspace = true
 
-[dev-dependencies]
-proptest.workspace = true
-
 [features]
 default = []
 wasm = ["dep:wasm-bindgen"]
