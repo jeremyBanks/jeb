@@ -98,6 +98,7 @@ pub fn get_or_create<T: Value + 'static>(initial: T) -> &'static Mutex<InlineCel
 /// This is the internal implementation that takes explicit location parameters.
 /// Used by tests that need to specify synthetic file locations.
 #[doc(hidden)]
+#[allow(unsafe_code)]
 pub fn get_or_create_at<T: Value + 'static>(
     initial: T,
     file: &str,

@@ -251,6 +251,7 @@ impl<T> InlineSnapExt for T {
     }
 
     #[track_caller]
+    #[allow(unsafe_code)]
     fn snap<E>(self, expected: E) -> Self
     where
         Self: Value + 'static + PartialEq<E>,

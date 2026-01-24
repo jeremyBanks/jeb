@@ -80,6 +80,7 @@ where
     T: PartialEq<E> + Debug,
     E: Value + 'static,
 {
+    #[allow(unsafe_code)]
     fn eq(&self, actual: &E) -> bool {
         use std::any::TypeId;
 
