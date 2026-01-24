@@ -11,4 +11,3 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
-ideated-encoding.workspace = true

@@ -1,4 +1,8 @@
-:3ig5a00000000000000G
-:0uk
-:3mVzR{6If2
-:1u
+corpus:\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00*
+corpus:\n\n
+corpus:\n*\n\xF6\xF6\n\n\xF6
+{"type":"corpus","data":"\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00*"}
+{"type":"corpus","data":"\n\n"}
+{"type":"corpus","data":"\n*\n\xF6\xF6\n\n\xF6"}
+{"type":"corpus","data":"s"}
+corpus:s

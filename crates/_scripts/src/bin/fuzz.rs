@@ -248,45 +248,36 @@ fn get_workspace_root() -> PathBuf {
 /// Entry in a .corpus file
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct CorpusEntry {
-    /// None for corpus, Some("crash"), Some("timeout"), etc. for artifacts
-    artifact_type: Option<String>,
+    /// "corpus" for corpus entries, or artifact type like "crash", "timeout", etc.
+    entry_type: String,
     /// Raw bytes of the input
     data: Vec<u8>,
 }
 
 impl CorpusEntry {
     /// Parse a line from .corpus file
+    /// Format: TYPE:DATA (e.g., "corpus:Hello\nWorld" or "crash:\x00\xFF")
     fn parse_line(line: &str) -> Result<Self> {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
             anyhow::bail!("empty or comment line");
         }
 
-        let (artifact_type, encoded) = if let Some(rest) = line.strip_prefix(':') {
-            // Corpus entry: ":DATA"
-            (None, rest)
-        } else if let Some(colon_pos) = line.find(':') {
-            // Artifact entry: "type:DATA"
-            let (typ, rest) = line.split_at(colon_pos);
-            (Some(typ.to_string()), &rest[1..])
-        } else {
-            anyhow::bail!("line missing colon separator");
-        };
+        let (entry_type, encoded) = line.split_once(':').context("missing colon separator")?;
 
         let data = text_to_bytes(encoded).context("invalid encoded data")?;
+
         Ok(CorpusEntry {
-            artifact_type,
+            entry_type: entry_type.to_string(),
             data,
         })
     }
 
     /// Format as a line for .corpus file
+    /// Format: TYPE:DATA
     fn to_line(&self) -> String {
         let encoded = bytes_to_text(&self.data);
-        match &self.artifact_type {
-            None => format!(":{}", encoded),
-            Some(typ) => format!("{}:{}", typ, encoded),
-        }
+        format!("{}:{}", self.entry_type, encoded)
     }
 }
 
@@ -321,7 +312,7 @@ fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
             if path.is_file() {
                 let data = fs::read(&path)?;
                 entries.insert(CorpusEntry {
-                    artifact_type: None,
+                    entry_type: "corpus".to_string(),
                     data,
                 });
             }
@@ -338,10 +329,10 @@ fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
                 if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                     // Parse artifact type from filename (e.g., "crash-abc123")
                     if let Some(dash_pos) = name.find('-') {
-                        let artifact_type = &name[..dash_pos];
+                        let entry_type = &name[..dash_pos];
                         let data = fs::read(&path)?;
                         entries.insert(CorpusEntry {
-                            artifact_type: Some(artifact_type.to_string()),
+                            entry_type: entry_type.to_string(),
                             data,
                         });
                     }
@@ -355,7 +346,10 @@ fn pack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
     let content: String = entries.iter().map(|e| e.to_line()).collect::<Vec<_>>().join("\n");
 
     // Count corpus vs artifacts
-    let corpus_count = entries.iter().filter(|e| e.artifact_type.is_none()).count();
+    let corpus_count = entries
+        .iter()
+        .filter(|e| e.entry_type == "corpus")
+        .count();
     let artifact_count = entries.len() - corpus_count;
 
     // Only write if there's content, and add trailing newline
@@ -414,28 +408,25 @@ fn unpack_corpus(fuzz_dir: &Path, target: &str) -> Result<()> {
             .map(|b| format!("{:02x}", b))
             .collect::<String>();
 
-        match &entry.artifact_type {
-            None => {
-                // Corpus entry
-                fs::create_dir_all(&corpus_dir)?;
-                let file_path = corpus_dir.join(&hash_hex);
-                if !file_path.exists() {
-                    fs::write(&file_path, &entry.data)?;
-                    corpus_count += 1;
-                } else {
-                    skipped_count += 1;
-                }
+        if entry.entry_type == "corpus" {
+            // Corpus entry
+            fs::create_dir_all(&corpus_dir)?;
+            let file_path = corpus_dir.join(&hash_hex);
+            if !file_path.exists() {
+                fs::write(&file_path, &entry.data)?;
+                corpus_count += 1;
+            } else {
+                skipped_count += 1;
             }
-            Some(typ) => {
-                // Artifact entry
-                fs::create_dir_all(&artifacts_dir)?;
-                let file_path = artifacts_dir.join(format!("{}-{}", typ, hash_hex));
-                if !file_path.exists() {
-                    fs::write(&file_path, &entry.data)?;
-                    artifact_count += 1;
-                } else {
-                    skipped_count += 1;
-                }
+        } else {
+            // Artifact entry
+            fs::create_dir_all(&artifacts_dir)?;
+            let file_path = artifacts_dir.join(format!("{}-{}", entry.entry_type, hash_hex));
+            if !file_path.exists() {
+                fs::write(&file_path, &entry.data)?;
+                artifact_count += 1;
+            } else {
+                skipped_count += 1;
             }
         }
     }
