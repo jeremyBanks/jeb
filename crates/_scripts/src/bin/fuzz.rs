@@ -242,7 +242,14 @@ fn tmin_artifacts(fuzz_dir: &Path, target: &str, max_time: u32, prefix: &str) ->
 
 /// Minimize random corpus entries to potentially find smaller interesting inputs.
 /// Picks `iterations` random corpus entries and runs tmin on each for 1 second.
-fn tmin_random_corpus(fuzz_dir: &Path, target: &str, iterations: u32, prefix: &str) -> Result<()> {
+/// Skips entries in the `skip` set (already minimized this cycle).
+fn tmin_random_corpus(
+    fuzz_dir: &Path,
+    target: &str,
+    iterations: u32,
+    prefix: &str,
+    skip: &std::collections::HashSet<PathBuf>,
+) -> Result<()> {
     use rand::prelude::IndexedRandom;
 
     let corpus_dir = fuzz_dir.join("corpus").join(target);
@@ -250,11 +257,11 @@ fn tmin_random_corpus(fuzz_dir: &Path, target: &str, iterations: u32, prefix: &s
         return Ok(());
     }
 
-    // Collect corpus entry paths
+    // Collect corpus entry paths, filtering out already-minimized entries
     let entries: Vec<PathBuf> = fs::read_dir(&corpus_dir)?
         .filter_map(|e| e.ok())
         .map(|e| e.path())
-        .filter(|p| p.is_file())
+        .filter(|p| p.is_file() && !skip.contains(p))
         .collect();
 
     if entries.is_empty() {
@@ -302,6 +309,84 @@ fn tmin_random_corpus(fuzz_dir: &Path, target: &str, iterations: u32, prefix: &s
     }
 
     Ok(())
+}
+
+/// Minimize new corpus entries that weren't in the original corpus.
+/// Runs tmin for 1 second on each new entry (one-time cost per unique input).
+/// Returns the set of paths that were minimized (so tmin_random_corpus can skip them).
+fn tmin_new_entries(
+    fuzz_dir: &Path,
+    target: &str,
+    original_corpus: &std::collections::HashSet<Vec<u8>>,
+    prefix: &str,
+) -> Result<std::collections::HashSet<PathBuf>> {
+    use std::collections::HashSet;
+
+    let corpus_dir = fuzz_dir.join("corpus").join(target);
+    let mut minimized_paths: HashSet<PathBuf> = HashSet::new();
+
+    if !corpus_dir.is_dir() {
+        return Ok(minimized_paths);
+    }
+
+    // Find new entries (files whose content wasn't in original_corpus)
+    let mut new_entries: Vec<PathBuf> = Vec::new();
+    for entry in fs::read_dir(&corpus_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let data = fs::read(&path)?;
+        if !original_corpus.contains(&data) {
+            new_entries.push(path);
+        }
+    }
+
+    if new_entries.is_empty() {
+        return Ok(minimized_paths);
+    }
+
+    info!(
+        "{}[tmin-new] minimizing {} new corpus entries...",
+        prefix,
+        new_entries.len()
+    );
+
+    for (i, path) in new_entries.iter().enumerate() {
+        let name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown");
+
+        info!(
+            "{}[tmin-new {}/{}] minimizing {}...",
+            prefix,
+            i + 1,
+            new_entries.len(),
+            name
+        );
+
+        let mut cmd = Command::new("cargo");
+        cmd.args([
+            "+nightly",
+            "fuzz",
+            "tmin",
+            target,
+            path.to_str().unwrap(),
+            "--",
+            "-max_total_time=1",
+        ])
+        .current_dir(fuzz_dir);
+
+        let status = run_with_truncated_output(cmd, prefix)?;
+        minimized_paths.insert(path.clone());
+        if !status.success() {
+            // tmin failure is not fatal - entry stays as-is
+        }
+    }
+
+    Ok(minimized_paths)
 }
 
 /// Run a single fuzz target (unpack → fuzz → cmin → pack)
@@ -367,15 +452,27 @@ fn run_target(
         return Ok(failed);
     }
 
+    // Minimize NEW corpus entries (one-time cost per unique input)
+    let mut already_minimized = std::collections::HashSet::new();
+    if seconds > 0 {
+        if let Some(ref original) = original_corpus {
+            match tmin_new_entries(fuzz_dir, target, original, prefix) {
+                Ok(paths) => already_minimized = paths,
+                Err(e) => warn!("{}tmin-new warning: {}", prefix, e),
+            }
+        }
+    }
+
     // Minimize artifacts (before cmin, so minimized versions get packed)
     if seconds > 0 {
         if let Err(e) = tmin_artifacts(fuzz_dir, target, 8, prefix) {
             warn!("{}tmin warning: {}", prefix, e);
         }
 
-        // Minimize random corpus entries
+        // Minimize random corpus entries, skipping ones already done
         let iterations = seconds as u32; // seconds is i32, already > 0 here
-        if let Err(e) = tmin_random_corpus(fuzz_dir, target, iterations, prefix) {
+        if let Err(e) = tmin_random_corpus(fuzz_dir, target, iterations, prefix, &already_minimized)
+        {
             warn!("{}tmin-corpus warning: {}", prefix, e);
         }
     }
