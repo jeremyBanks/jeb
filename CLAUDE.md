@@ -12,8 +12,14 @@ commands that create new commits instead.
 
 ---
 
-After you've completed a significant chunk of work, you may create an empty
-commit with a commit message describing the changes.
+You do not need to write a descriptive commit message for every little
+checkpoint commit: `./run save` will generate a placeholder commit message if
+run without any arguments, and that's a common part of our workflow. But when
+you're wrapping up a significant piece of work or you changed something subtle
+that you want to note, `./run save` supports `-m "some message"` like
+`git commit` does. It also has `--allow-empty` and `--empty` if you don't have
+any changes to commit but would like to log a new message or description as a
+commit message.
 
 ---
 
