@@ -64,7 +64,6 @@ corpus:" \\b
 corpus:" \\f\\f\\f\\f\\f\\f\\ff\\f
 corpus:" z3~\x00\x00\x00
 corpus:""
-corpus:""                
 corpus:"#\\t
 corpus:"$\\t\\t
 corpus:"*\\\\*\\"*\\\\**\\\\*\\"*\\\\*\\\\f\\f\x00#\x19\x00\x08\\
@@ -250,8 +249,6 @@ corpus:-4
 corpus:-8\n\n\n4[\x00
 corpus:-[
 corpus:0
-corpus:0  
-corpus:0   
 corpus:0,
 corpus:0.0.\x1C6\x1C6
 corpus:0.232354785E-315
@@ -268,6 +265,7 @@ corpus:0e444
 corpus:0e488e[n
 corpus:1\n\n\n
 corpus:1        
+corpus:1                
 corpus:105E-310
 corpus:1119719711119511198809E4007\x011E85
 corpus:18446744073709551.615
@@ -291,14 +289,15 @@ corpus:1E-319
 corpus:1E-663
 corpus:1E-6666666633326
 corpus:1E-931
-corpus:2
 corpus:2\t\t\t\t\t\t\t\t
 corpus:2\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r
+corpus:2  
+corpus:2   
 corpus:20019711140.1951119809E815111400
 corpus:254028E-315
 corpus:2e
 corpus:3\r\r\r\r\r\r\r\r
-corpus:3 
+corpus:3    
 corpus:33333333333333333333333333333331
 corpus:3E\x00
 corpus:3e4084
@@ -373,6 +372,7 @@ corpus:4e308
 corpus:4e444
 corpus:4e8888884441
 corpus:5\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t
+corpus:5 
 corpus:5.40
 corpus:51090E-315
 corpus:6\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n
@@ -384,7 +384,6 @@ corpus:6\r\r
 corpus:6\r\r\n\n\n\n\n\n\n\n\n\n\r\n\r\n\x00\x00\n\n\n\x00\x00
 corpus:6\r\r\r
 corpus:6\r\r\r\r
-corpus:6    
 corpus:64666666666666666666e6\x00
 corpus:65E-324
 corpus:66\r\r6\r\r6
@@ -399,6 +398,7 @@ corpus:6666666666666666666666=
 corpus:6666666666666666666666e666\t
 corpus:66666666666666666666e6666666666
 corpus:7e22
+corpus:8
 corpus:8\t\t\t\t\r
 corpus:8\n\n\n\n
 corpus:8.88888
@@ -435,6 +435,7 @@ corpus:["\x05\r\r
 corpus:["\n\t\t\t\t
 corpus:["\n\n\n\n
 corpus:["\n\n\n\n\n
+corpus:["\n 
 corpus:["",""
 corpus:["","",""
 corpus:["","","",""
@@ -478,9 +479,7 @@ corpus:[,]
 corpus:[-\n
 corpus:[-\n\t\t
 corpus:[-\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r
-corpus:[-     
-corpus:[-         
-corpus:[-                 
+corpus:[-   
 corpus:[-,\n
 corpus:[--\n\n
 corpus:[-0,-0
@@ -499,6 +498,7 @@ corpus:[-6,-6,-6,-6,-5,-6,-5,-6]
 corpus:[-6,-6,-6,-6]
 corpus:[-6,-6,-6]
 corpus:[-6,-6]
+corpus:[0,
 corpus:[0,\t\t\t
 corpus:[0,\t\t\t\t
 corpus:[0,\n\n
@@ -506,6 +506,7 @@ corpus:[0,\n\n\n
 corpus:[0,\n\n\n\n
 corpus:[0,\n\n[\x00,
 corpus:[0,\r\r
+corpus:[0, 
 corpus:[0,                
 corpus:[0,0\x00
 corpus:[0,0,0\x00"
@@ -552,7 +553,6 @@ corpus:[23E21,23E21,23E21]
 corpus:[23E21,23E21]
 corpus:[2E+6,1E+6,5E+6,5E+
 corpus:[2E-308,1E-308]
-corpus:[3,
 corpus:[3,   t
 corpus:[3,4,4,4,2,4,4,4,\x01
 corpus:[3,4,4,[4,4,4,4,\n4,\r\r\r\r\x00
@@ -565,6 +565,7 @@ corpus:[3E-324,3E-324,3E-324]
 corpus:[3E-324,3E-324]
 corpus:[3E-355,3E-355,4E-633
 corpus:[3E-355,5E-633
+corpus:[3er        
 corpus:[4
 corpus:[4#
 corpus:[4,\t
@@ -579,8 +580,8 @@ corpus:[4,\r
 corpus:[4,\r\r\r
 corpus:[4,\r\r\r\r\r\r\r\r
 corpus:[4,\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r
-corpus:[4,  
 corpus:[4,    "
+corpus:[4,  3
 corpus:[4,1\n
 corpus:[4,1,4]
 corpus:[4,4,4,4,4,4,5,3\r
@@ -616,7 +617,6 @@ corpus:[4E-946,4E-944,4E-946,4E-946
 corpus:[4E-950,4E-953
 corpus:[4E-955,4E-633
 corpus:[4e6,0e0\n
-corpus:[5, 
 corpus:[5,2,5,3,4]
 corpus:[5,5,5,6,6,5,5]
 corpus:[5.0,5.0,5.0]
@@ -741,16 +741,16 @@ corpus:[false,false,false,fals
 corpus:[false,false,false,false
 corpus:[ff\r\r\r\r\r\r\r\r\x00
 corpus:[n\r\r
+corpus:[n,   
 corpus:[n[\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t
 corpus:[n[\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n
-corpus:[n] 
+corpus:[nl    
 corpus:[null,null
 corpus:[null,null,null,null]
 corpus:[null,null,null]
 corpus:[null,null]
 corpus:[n|\r\r\r
-corpus:[t   
-corpus:[t    
+corpus:[n}                
 corpus:[t:\t
 corpus:[true,        tg
 corpus:[true,true,tru
@@ -824,12 +824,12 @@ corpus:{
 corpus:{"
 corpus:{"\x01\t
 corpus:{"\x01\t\t
-corpus:{"\x04 
 corpus:{"\x05\r
 corpus:{"\x05\r\r
 corpus:{"\x05\r\r\r
 corpus:{"\x05\r\r{"#
 corpus:{"\x05\r"d\x05\r
+corpus:{"\x06   
 corpus:{"\t\t\t\t
 corpus:{"\t\t\t\t\t
 corpus:{"\t\t\t\t\t\t\t\t\t
@@ -838,12 +838,12 @@ corpus:{"\t\n
 corpus:{"\n\n\n
 corpus:{"\n\n\n\n
 corpus:{"\n\n\n\n\n
-corpus:{"\n   
 corpus:{"\n        \n
 corpus:{"\n                
 corpus:{"\r\r\r\r\r
 corpus:{"\r\r\r\r\r\r\r\r\r
 corpus:{"\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r
+corpus:{"\r 
 corpus:{"\r}
 corpus:{"\x1B\n\n\n\n\n\n\n\n
 corpus:{"\x1B\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n
@@ -934,6 +934,7 @@ corpus:{"":1}
 corpus:{"":2,\t\t\t
 corpus:{"":2,\t\t\t\t
 corpus:{"":2,\t\t\t\t\t\t\t\t
+corpus:{"":2,        
 corpus:{"":2,""\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t
 corpus:{"":2,""\r
 corpus:{"":2,""\r\r
@@ -944,25 +945,24 @@ corpus:{"":2,"\\r"
 corpus:{"":2,"\\r":1,"\\\\"
 corpus:{"":2,"\\r":2,"\\r":1,"\\r"
 corpus:{"":2,"\\r":2,"\\r":1,"\\r":2,"\\r"
+corpus:{"":3,""
 corpus:{"":3,""\n\n\n
 corpus:{"":4
-corpus:{"":4,
-corpus:{"":4,        
 corpus:{"":4,                u
-corpus:{"":4,""
 corpus:{"":4,""\t\t\t
 corpus:{"":4,""\n\n
+corpus:{"":4,"" 
 corpus:{"":4,""  
+corpus:{"":4,""   
 corpus:{"":4,""    
+corpus:{"":4,""        
 corpus:{"":4,""                \n
 corpus:{"":4,":":8," "
 corpus:{"":4A
+corpus:{"":5,
 corpus:{"":5,\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t
-corpus:{"":5,"" 
 corpus:{"":8,   \r\r\r\r \r\r\r\r
 corpus:{"":9,\n
-corpus:{"":9,""   
-corpus:{"":9,""        
 corpus:{"":{"":
 corpus:{"":{"":4}}
 corpus:{"":{"":{""
@@ -1011,14 +1011,14 @@ corpus:{,
 corpus:{0
 corpus:{}
 corpus:\xAA
+archive:
+archive:2
 archive:4.888888888.
 archive:5.1090E-311
-archive:8
 archive:[ ,
+archive:[-
 archive:[-0,0E6,-0,0E0]
-archive:[4,  3
 archive:[[[[[[[[\n\n\n[[[[[[[[[\n[\n\n\n\n
 archive:[[{]
 archive:[f|
-archive:{"":3,""
-archive:{"":5,
+archive:{"\n
