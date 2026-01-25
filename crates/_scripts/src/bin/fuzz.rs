@@ -300,7 +300,10 @@ fn run_target(
     if !status.success() {
         warn!("{}[fuzz] FAILED (exit {})", prefix, status);
         failed = true;
-        // Still try to pack corpus on failure
+        // Still minimize artifacts and pack corpus on failure
+        if let Err(e) = tmin_artifacts(fuzz_dir, target, 8, prefix) {
+            warn!("{}tmin warning: {}", prefix, e);
+        }
         info!("{}[pack]", prefix);
         if let Err(e) = pack_corpus(fuzz_dir, target, original_corpus.as_ref()) {
             warn!("{}pack warning: {}", prefix, e);
