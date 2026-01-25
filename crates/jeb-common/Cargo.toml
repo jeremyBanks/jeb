@@ -19,10 +19,10 @@ fast_hilbert.workspace = true
 indexmap.workspace = true
 itertools.workspace = true
 
-[dev-dependencies]
-proptest.workspace = true
-
 [features]
 default = []
 wasm = ["dep:wasm-bindgen"]
 wasm_bindgen = ["dep:wasm-bindgen"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }

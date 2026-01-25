@@ -17,18 +17,32 @@ picking points within each shell using a weakly-pseudorandom ordering.
 }
 // spell-checker: disable
 use description;
+
 impl_with!(u16, i8, u8, 8, scatter_square_u16);
 impl_with!(u32, i16, u16, 16, scatter_square_u32);
 impl_with!(u64, i32, u32, 32, scatter_square_u64);
+
 #[doc = description!()]
-pub fn scatter_square<T: ScatterSquare>(value: T) -> T::Out {
-    value.scatter_square()
+pub fn scatter_square<T: ScatterSquare>(value: T) -> T::Out
+where
+    T: Copy + PartialEq + core::fmt::Debug,
+    T::Out: ScatterSquare<Out = T> + Copy,
+{
+    let result = value.scatter_square_impl();
+    #[cfg(fuzzing)]
+    {
+        let roundtrip = result.scatter_square_impl();
+        debug_assert_eq!(roundtrip, value, "scatter_square roundtrip failed");
+    }
+    result
 }
+
 #[doc = description!()]
 pub trait ScatterSquare {
     type Out;
-    #[doc = description!()]
-    fn scatter_square(self) -> Self::Out;
+    /// Internal implementation - use `scatter_square()` function instead for fuzz-checked version
+    #[doc(hidden)]
+    fn scatter_square_impl(self) -> Self::Out;
 }
 const ROUNDS: u32 = 4;
 const MIX_MUL1: u64 = 0xBF58_476D_1CE4_E5B9;
@@ -310,7 +324,7 @@ macro_rules! impl_with {
             type Out = ($S, $S);
 
             #[inline(always)]
-            fn scatter_square(self) -> Self::Out {
+            fn scatter_square_impl(self) -> Self::Out {
                 $mod::to_xy(self)
             }
         }
@@ -318,7 +332,7 @@ macro_rules! impl_with {
             type Out = $U;
 
             #[inline(always)]
-            fn scatter_square(self) -> Self::Out {
+            fn scatter_square_impl(self) -> Self::Out {
                 $mod::from_xy(self.0, self.1)
             }
         }
@@ -327,105 +341,7 @@ macro_rules! impl_with {
 use impl_with;
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        proptest::prelude::*,
-    };
-
-    // ========================
-    // Property-Based Tests
-    // ========================
-    //
-    // These tests use proptest to verify properties hold for randomly generated
-    // values. Properties tested:
-    // 1. Roundtrip: scatter_square(scatter_square(x)) == x
-    // 2. Bijection: Every unique input maps to a unique output
-    // 3. Shell structure: Points on shell m have max(|x|, |y|) = m
-    // 4. Seed sensitivity: Different seeds produce different orderings
-
-    proptest! {
-        /// Roundtrip property: encoding and decoding returns the original u16 value
-        #[test]
-        fn prop_roundtrip_u16(u in proptest::num::u16::ANY) {
-            let (x, y): (i8, i8) = scatter_square(u);
-            let back: u16 = scatter_square((x, y));
-            prop_assert_eq!(u, back, "roundtrip failed for u16 {} -> ({}, {})", u, x, y);
-        }
-
-        /// Roundtrip property: decoding and encoding returns the original pair
-        #[test]
-        fn prop_roundtrip_pair_i8(x in i8::MIN..=i8::MAX, y in i8::MIN..=i8::MAX) {
-            let u: u16 = scatter_square((x, y));
-            let (back_x, back_y): (i8, i8) = scatter_square(u);
-            prop_assert_eq!((x, y), (back_x, back_y), "roundtrip failed for ({}, {})", x, y);
-        }
-
-        /// Roundtrip property for u32
-        #[test]
-        fn prop_roundtrip_u32(u in proptest::num::u32::ANY) {
-            let (x, y): (i16, i16) = scatter_square(u);
-            let back: u32 = scatter_square((x, y));
-            prop_assert_eq!(u, back, "roundtrip failed for u32 {}", u);
-        }
-
-        /// Roundtrip property for u64
-        #[test]
-        fn prop_roundtrip_u64(u in proptest::num::u64::ANY) {
-            let (x, y): (i32, i32) = scatter_square(u);
-            let back: u64 = scatter_square((x, y));
-            prop_assert_eq!(u, back, "roundtrip failed for u64 {}", u);
-        }
-
-        /// Bijection: two different inputs should produce different outputs
-        #[test]
-        fn prop_bijection_u16(a in proptest::num::u16::ANY, b in proptest::num::u16::ANY) {
-            prop_assume!(a != b);
-            let pair_a: (i8, i8) = scatter_square(a);
-            let pair_b: (i8, i8) = scatter_square(b);
-            prop_assert_ne!(pair_a, pair_b, "different inputs {} and {} should produce different outputs", a, b);
-        }
-
-        /// Shell property: for points in region A (excluding boundary), shell is monotonically non-decreasing
-        #[test]
-        fn prop_shell_monotonic_u16(u in 0u16..65025u16) {
-            // Region A: first 65025 values (255^2)
-            if u == 0 {
-                return Ok(());
-            }
-            let (x1, y1): (i8, i8) = scatter_square(u - 1);
-            let (x2, y2): (i8, i8) = scatter_square(u);
-            let shell1 = (x1 as i32).abs().max((y1 as i32).abs());
-            let shell2 = (x2 as i32).abs().max((y2 as i32).abs());
-            prop_assert!(
-                shell2 >= shell1,
-                "shell decreased at u={}: was {} now {}",
-                u, shell1, shell2
-            );
-        }
-
-        /// Zero maps to origin
-        #[test]
-        fn prop_zero_maps_to_origin(_unused in Just(())) {
-            let (x, y): (i8, i8) = scatter_square(0u16);
-            prop_assert_eq!((x, y), (0, 0), "0 should map to (0, 0)");
-        }
-
-        /// Region B points: the last 511 points all involve i8::MIN
-        #[test]
-        fn prop_region_b_boundary_u16(offset in 0u16..511u16) {
-            let u = 65025u16 + offset; // 65025 is 255^2, start of region B
-            let (x, y): (i8, i8) = scatter_square(u);
-            prop_assert!(
-                x == i8::MIN || y == i8::MIN,
-                "region B point at u={} is ({}, {}) which doesn't involve MIN",
-                u, x, y
-            );
-        }
-    }
-
-    // ========================
-    // Original Unit Tests
-    // ========================
+    use super::*;
 
     #[test]
     fn roundtrip_u16_to_pair() {

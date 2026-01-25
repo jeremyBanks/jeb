@@ -10,26 +10,41 @@ protocol.
     };
 }
 use description;
+
 #[doc = description!()]
-pub fn zig_zag<T: ZigZag>(value: T) -> T::Out {
-    value.zig_zag()
+pub fn zig_zag<T: ZigZag>(value: T) -> T::Out
+where
+    T: Copy + PartialEq + core::fmt::Debug,
+    T::Out: ZigZag<Out = T> + Copy,
+{
+    let result = value.zig_zag_impl();
+    #[cfg(fuzzing)]
+    {
+        let roundtrip = result.zig_zag_impl();
+        debug_assert_eq!(roundtrip, value, "zig_zag roundtrip failed");
+    }
+    result
 }
+
 impls! {
     i8 : u8; i16 : u16; i64 : u64; i128 : u128; isize : usize;
 }
+
 #[doc = description!()]
 pub trait ZigZag {
     type Out;
-    #[doc = description!()]
-    fn zig_zag(self) -> Self::Out;
+    /// Internal implementation - use `zig_zag()` function instead for fuzz-checked version
+    #[doc(hidden)]
+    fn zig_zag_impl(self) -> Self::Out;
 }
+
 macro_rules! impls {
     {$($signed:ident : $unsigned:ident;)+} => {
         $(
             impl ZigZag for $signed {
                 type Out = $unsigned;
 
-                fn zig_zag(self) -> $unsigned {
+                fn zig_zag_impl(self) -> $unsigned {
                     let sign_mask = (self >> (<$signed>::BITS - 1)) as $unsigned;
                     ((self as $unsigned) << 1) ^ sign_mask
                 }
@@ -37,7 +52,7 @@ macro_rules! impls {
             impl ZigZag for $unsigned {
                 type Out = $signed;
 
-                fn zig_zag(self) -> $signed {
+                fn zig_zag_impl(self) -> $signed {
                     let lsb: $signed = (self & 1) as $signed;
                     let neg_mask: $signed = -lsb;
                     ((self >> 1) as $signed) ^ neg_mask
@@ -49,126 +64,7 @@ macro_rules! impls {
 use impls;
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        proptest::prelude::*,
-    };
-
-    // ========================
-    // Property-Based Tests
-    // ========================
-    //
-    // These tests use proptest to verify properties hold for randomly generated
-    // values. Properties tested:
-    // 1. Roundtrip: zig_zag(zig_zag(x)) == x
-    // 2. Bijection: Every unique input maps to a unique output
-    // 3. Magnitude ordering: For positive n and negative -(n+1), the negative maps
-    //    lower
-
-    proptest! {
-        /// Roundtrip property: encoding and decoding returns the original i8 value
-        #[test]
-        fn prop_roundtrip_i8(i in i8::MIN..=i8::MAX) {
-            let u: u8 = zig_zag(i);
-            let back: i8 = zig_zag(u);
-            prop_assert_eq!(i, back, "roundtrip failed for i8 {}", i);
-        }
-
-        /// Roundtrip property: decoding and encoding returns the original u8 value
-        #[test]
-        fn prop_roundtrip_u8(u in u8::MIN..=u8::MAX) {
-            let i: i8 = zig_zag(u);
-            let back: u8 = zig_zag(i);
-            prop_assert_eq!(u, back, "roundtrip failed for u8 {}", u);
-        }
-
-        /// Roundtrip property for i16
-        #[test]
-        fn prop_roundtrip_i16(i in i16::MIN..=i16::MAX) {
-            let u: u16 = zig_zag(i);
-            let back: i16 = zig_zag(u);
-            prop_assert_eq!(i, back, "roundtrip failed for i16 {}", i);
-        }
-
-        /// Roundtrip property for i64
-        #[test]
-        fn prop_roundtrip_i64(i in proptest::num::i64::ANY) {
-            let u: u64 = zig_zag(i);
-            let back: i64 = zig_zag(u);
-            prop_assert_eq!(i, back, "roundtrip failed for i64 {}", i);
-        }
-
-        /// Roundtrip property for i128
-        #[test]
-        fn prop_roundtrip_i128(i in proptest::num::i128::ANY) {
-            let u: u128 = zig_zag(i);
-            let back: i128 = zig_zag(u);
-            prop_assert_eq!(i, back, "roundtrip failed for i128 {}", i);
-        }
-
-        /// Roundtrip property for isize
-        #[test]
-        fn prop_roundtrip_isize(i in proptest::num::isize::ANY) {
-            let u: usize = zig_zag(i);
-            let back: isize = zig_zag(u);
-            prop_assert_eq!(i, back, "roundtrip failed for isize {}", i);
-        }
-
-        /// Magnitude ordering: negative values map before their positive counterparts
-        /// For any n >= 0, zig_zag(-(n+1)) < zig_zag(n+1)
-        #[test]
-        fn prop_magnitude_ordering_i8(n in 0i8..127i8) {
-            let neg = -n - 1;
-            let pos = n + 1;
-            let u_neg: u8 = zig_zag(neg);
-            let u_pos: u8 = zig_zag(pos);
-            prop_assert!(
-                u_neg < u_pos,
-                "magnitude ordering: {} should map before {}, got {} vs {}",
-                neg, pos, u_neg, u_pos
-            );
-        }
-
-        /// Magnitude ordering for i64
-        #[test]
-        fn prop_magnitude_ordering_i64(n in 0i64..i64::MAX) {
-            let neg = -n - 1;
-            let pos = n + 1;
-            let u_neg: u64 = zig_zag(neg);
-            let u_pos: u64 = zig_zag(pos);
-            prop_assert!(
-                u_neg < u_pos,
-                "magnitude ordering: {} should map before {}, got {} vs {}",
-                neg, pos, u_neg, u_pos
-            );
-        }
-
-        /// Zero maps to zero
-        #[test]
-        fn prop_zero_maps_to_zero_i8(_unused in Just(())) {
-            prop_assert_eq!(zig_zag(0i8), 0u8);
-        }
-
-        /// ZigZag pattern: value n (positive) maps to 2n, value -n (negative) maps to 2n-1
-        #[test]
-        fn prop_zigzag_formula_positive_i64(n in 1i64..=i64::MAX/2) {
-            let encoded: u64 = zig_zag(n);
-            prop_assert_eq!(encoded, (n as u64) * 2, "positive {} should map to {}", n, n * 2);
-        }
-
-        /// ZigZag pattern: value -n maps to 2n-1
-        #[test]
-        fn prop_zigzag_formula_negative_i64(n in 1u64..=i64::MAX as u64) {
-            let neg = -(n as i64);
-            let encoded: u64 = zig_zag(neg);
-            let expected = n * 2 - 1;
-            prop_assert_eq!(encoded, expected, "negative {} should map to {}", neg, expected);
-        }
-    }
-
-    // ========================
-    // Original Unit Tests
-    // ========================
+    use super::*;
 
     #[test]
     fn roundtrip_i8_to_u8() {

@@ -13,6 +13,7 @@ keywords = []
 [dependencies]
 anyhow.workspace = true
 glob.workspace = true
+sha-1.workspace = true
 pathdiff.workspace = true
 semver.workspace = true
 tokio.workspace = true

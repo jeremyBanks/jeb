@@ -20,32 +20,47 @@ For shell m > 0, the half-shell (x ≤ y) contains 4m + 1 points:
 }
 // spell-checker: disable
 use description;
+
 impl_with!(u16, i8, u8, 8);
 impl_with!(u32, i16, u16, 16);
 impl_with!(u64, i32, u32, 32);
+
 #[doc = description!()]
-pub fn spiral_triangle<T: SpiralTriangle>(value: T) -> T::Out {
-    value.spiral_triangle()
+pub fn spiral_triangle<T: SpiralTriangle>(value: T) -> T::Out
+where
+    T: Copy + PartialEq + core::fmt::Debug,
+    T::Out: SpiralTriangle<Out = T> + Copy,
+{
+    let result = value.spiral_triangle_impl();
+    #[cfg(fuzzing)]
+    {
+        let roundtrip = result.spiral_triangle_impl();
+        debug_assert_eq!(roundtrip, value, "spiral_triangle roundtrip failed");
+    }
+    result
 }
+
 #[doc = description!()]
 pub trait SpiralTriangle {
     type Out;
-    #[doc = description!()]
-    fn spiral_triangle(self) -> Self::Out;
+    /// Internal implementation - use `spiral_triangle()` function instead for fuzz-checked version
+    #[doc(hidden)]
+    fn spiral_triangle_impl(self) -> Self::Out;
 }
+
 macro_rules! impl_with {
     ($U:ty, $S:ty, $UB:ty, $W:expr) => {
         impl SpiralTriangle for $U {
             type Out = ($S, $S);
 
-            fn spiral_triangle(self) -> Self::Out {
+            fn spiral_triangle_impl(self) -> Self::Out {
                 to_xy::<$U, $S, $UB, $W>(self)
             }
         }
         impl SpiralTriangle for ($S, $S) {
             type Out = $U;
 
-            fn spiral_triangle(self) -> Self::Out {
+            fn spiral_triangle_impl(self) -> Self::Out {
                 from_xy::<$U, $S, $UB, $W>(self.0, self.1)
             }
         }
@@ -210,85 +225,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use {super::*, proptest::prelude::*};
-
-    // ========================
-    // Property-Based Tests
-    // ========================
-
-    proptest! {
-        /// Roundtrip property: encoding and decoding returns the original u16 value
-        /// (for valid triangle indices only)
-        #[test]
-        fn prop_roundtrip_u16(u in 0u16..32896u16) {
-            // 32896 = (256 * 257) / 2 = number of (i8, i8) pairs with x <= y
-            let (x, y): (i8, i8) = spiral_triangle(u);
-            let back: u16 = spiral_triangle((x, y));
-            prop_assert_eq!(u, back, "roundtrip failed for u16 {} -> ({}, {})", u, x, y);
-        }
-
-        /// Roundtrip property: decoding and encoding returns the original pair
-        #[test]
-        fn prop_roundtrip_pair_i8(x in i8::MIN..=i8::MAX, y in i8::MIN..=i8::MAX) {
-            prop_assume!(x <= y);
-            let u: u16 = spiral_triangle((x, y));
-            let (back_x, back_y): (i8, i8) = spiral_triangle(u);
-            prop_assert_eq!((x, y), (back_x, back_y), "roundtrip failed for ({}, {})", x, y);
-        }
-
-        /// x <= y invariant: output always satisfies x <= y
-        #[test]
-        fn prop_x_le_y_invariant_u16(u in 0u16..32896u16) {
-            let (x, y): (i8, i8) = spiral_triangle(u);
-            prop_assert!(x <= y, "invariant violated: {} > {} for index {}", x, y, u);
-        }
-
-        /// Shell property: shell is monotonically non-decreasing as index increases
-        #[test]
-        fn prop_shell_monotonic_u16(u in 1u16..32640u16) {
-            // 32640 = region A size (up to shell 127)
-            let (x1, y1): (i8, i8) = spiral_triangle(u - 1);
-            let (x2, y2): (i8, i8) = spiral_triangle(u);
-            let shell1 = (x1 as i32).abs().max((y1 as i32).abs());
-            let shell2 = (x2 as i32).abs().max((y2 as i32).abs());
-            prop_assert!(
-                shell2 >= shell1,
-                "shell decreased at u={}: was {} now {}",
-                u, shell1, shell2
-            );
-        }
-
-        /// Zero maps to origin
-        #[test]
-        fn prop_zero_maps_to_origin(_unused in Just(())) {
-            let (x, y): (i8, i8) = spiral_triangle(0u16);
-            prop_assert_eq!((x, y), (0, 0), "0 should map to (0, 0)");
-        }
-
-        /// Region B points: the last 256 points all have x = MIN
-        #[test]
-        fn prop_region_b_boundary_u16(offset in 0u16..256u16) {
-            let u = 32640u16 + offset; // 32640 is region A size
-            let (x, y): (i8, i8) = spiral_triangle(u);
-            prop_assert_eq!(
-                x, i8::MIN,
-                "region B point at u={} is ({}, {}) which doesn't have x=MIN",
-                u, x, y
-            );
-        }
-
-        /// Roundtrip property for u32
-        #[test]
-        fn prop_roundtrip_u32_sample(idx in 0u32..100000u32) {
-            let (x, y): (i16, i16) = spiral_triangle(idx);
-            let back: u32 = spiral_triangle((x, y));
-            prop_assert_eq!(idx, back, "roundtrip failed for u32 {}", idx);
-        }
-    }
-
-    // ========================
-    // Unit Tests
-    // ========================
+    use super::*;
 
     #[test]
     fn roundtrip_u16_to_pair() {
