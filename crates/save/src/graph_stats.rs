@@ -207,7 +207,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 if let Some(parsed) = MessageParser::parse(&summary) {
                     if MessageParser::validate(self.repo, head, &summary, &parsed) {
                         let trusted = match parsed.prefix {
-                            MessagePrefix::Regular if !is_shallow => true,
+                            MessagePrefix::Regular => true, // Always trust r commits
                             MessagePrefix::Shallow if is_shallow => true,
                             _ => false,
                         };
@@ -265,7 +265,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                                         None
                                     } else {
                                         match parsed.prefix {
-                                            MessagePrefix::Regular if !is_shallow => Some(parsed),
+                                            MessagePrefix::Regular => Some(parsed), // Always trust r commits
                                             MessagePrefix::Shallow if is_shallow => Some(parsed),
                                             _ => None,
                                         }
