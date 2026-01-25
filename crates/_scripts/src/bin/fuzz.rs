@@ -788,7 +788,7 @@ fn unpack_corpus(fuzz_dir: &Path, target: &str) -> Result<std::collections::Hash
             .map(|b| format!("{:02x}", b))
             .collect::<String>();
 
-        if entry.entry_type == "corpus" || entry.entry_type == "archive" {
+        if entry.entry_type == "corpus" || entry.entry_type == "archive" || entry.entry_type == "slow" {
             // Track corpus and archive entries for archive purposes
             original_corpus.insert(entry.data.clone());
             // Both corpus and archive entries are written as corpus files
