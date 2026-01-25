@@ -11,6 +11,10 @@
 # for their intended purpose) should be run through `./run <command> <args...>`.
 # instead of `cargo run --bin <command> -- <args...>`. `./run save` will be
 # common.
+#
+# `./run --any <command> <args...>` may be used to run any available version of
+# the command and only building a new version as a last resort, instead of as
+# the first choice.
 
 set -euo pipefail
 

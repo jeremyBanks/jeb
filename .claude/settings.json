@@ -4,7 +4,7 @@
       {
         "hooks": [
           {
-            "command": "target/debug/_claude_hooks",
+            "command": "./run --any _claude_hooks",
             "timeout": 4,
             "type": "command"
           }
@@ -15,7 +15,7 @@
       {
         "hooks": [
           {
-            "command": "target/debug/_claude_hooks",
+            "command": "./run --any _claude_hooks",
             "timeout": 4,
             "type": "command"
           }
@@ -26,7 +26,7 @@
       {
         "hooks": [
           {
-            "command": "target/debug/_claude_hooks",
+            "command": "./run --any _claude_hooks",
             "timeout": 4,
             "type": "command"
           }
@@ -37,7 +37,7 @@
       {
         "hooks": [
           {
-            "command": "target/debug/_claude_hooks",
+            "command": "./run --any _claude_hooks",
             "timeout": 4,
             "type": "command"
           }
@@ -48,7 +48,7 @@
       {
         "hooks": [
           {
-            "command": "target/debug/_claude_hooks",
+            "command": "./run --any _claude_hooks",
             "timeout": 4,
             "type": "command"
           }
@@ -59,7 +59,7 @@
       {
         "hooks": [
           {
-            "command": "target/debug/_claude_hooks",
+            "command": "./run --any _claude_hooks",
             "timeout": 4,
             "type": "command"
           }
@@ -70,7 +70,7 @@
       {
         "hooks": [
           {
-            "command": "target/debug/_claude_hooks",
+            "command": "./run --any _claude_hooks",
             "timeout": 4,
             "type": "command"
           }
@@ -81,7 +81,7 @@
       {
         "hooks": [
           {
-            "command": "target/debug/_claude_hooks",
+            "command": "./run --any _claude_hooks",
             "timeout": 4,
             "type": "command"
           }
@@ -92,7 +92,7 @@
       {
         "hooks": [
           {
-            "command": "target/debug/_claude_hooks",
+            "command": "./run --any _claude_hooks",
             "timeout": 4,
             "type": "command"
           }
@@ -103,7 +103,7 @@
       {
         "hooks": [
           {
-            "command": "target/debug/_claude_hooks",
+            "command": "./run --any _claude_hooks",
             "timeout": 4,
             "type": "command"
           }
