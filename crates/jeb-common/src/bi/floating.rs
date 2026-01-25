@@ -8,26 +8,41 @@ the ordering of values (as defined by IEEE 754-2008).
     };
 }
 use description;
+
 impls! {
     f32 : u32; f64 : u64;
 }
+
 use crate::is;
+
 #[doc = description!()]
 pub fn floating<T: Floating>(value: T) -> T::Out {
-    value.floating()
+    let result = value.floating_impl();
+    #[cfg(fuzzing)]
+    {
+        let roundtrip = result.floating_impl();
+        T::assert_eq_bits(value, roundtrip);
+    }
+    result
 }
+
 #[doc = description!()]
 pub trait Floating {
-    type Out;
-    #[doc = description!()]
-    fn floating(self) -> Self::Out;
+    type Out: Floating<Out = Self>;
+    /// Internal implementation - use `floating()` function instead for fuzz-checked version
+    #[doc(hidden)]
+    fn floating_impl(self) -> Self::Out;
+    /// Compare equality by bits (for floats, NaN == NaN by bits)
+    #[doc(hidden)]
+    fn assert_eq_bits(a: Self, b: Self);
 }
+
 macro_rules! impls {
     {$($float:ident : $uint:ident;)+} => {
         $(
             impl Floating for $float {
                 type Out = $uint;
-                fn floating(self) -> $uint {
+                fn floating_impl(self) -> $uint {
                     let bits = self.to_bits();
                     let sign_bit = is::<$uint>(1) << ($uint::BITS - 1);
                     if (bits & sign_bit) != 0 {
@@ -36,10 +51,13 @@ macro_rules! impls {
                         bits ^ sign_bit
                     }
                 }
+                fn assert_eq_bits(a: Self, b: Self) {
+                    debug_assert_eq!(a.to_bits(), b.to_bits(), "floating roundtrip failed");
+                }
             }
             impl Floating for $uint {
                 type Out = $float;
-                fn floating(self) -> $float {
+                fn floating_impl(self) -> $float {
                     let sign_bit = is::<$uint>(1) << ($uint::BITS - 1);
                     let bits = if (self & sign_bit) != 0 {
                         self ^ sign_bit
@@ -47,6 +65,9 @@ macro_rules! impls {
                         !self
                     };
                     $float::from_bits(bits)
+                }
+                fn assert_eq_bits(a: Self, b: Self) {
+                    debug_assert_eq!(a, b, "floating roundtrip failed");
                 }
             }
         )+

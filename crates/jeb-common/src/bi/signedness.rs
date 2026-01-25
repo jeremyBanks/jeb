@@ -8,33 +8,49 @@ ordering and distance relationships of values.
     };
 }
 use description;
+
 impls! {
     i8 : u8; i16 : u16; i32 : u32; i64 : u64; i128 : u128; isize : usize;
 }
+
 use crate::is;
+
 #[doc = description!()]
-pub fn signedness<T: Signedness>(value: T) -> T::Out {
-    value.signedness()
+pub fn signedness<T: Signedness>(value: T) -> T::Out
+where
+    T: Copy + PartialEq + core::fmt::Debug,
+    T::Out: Signedness<Out = T> + Copy,
+{
+    let result = value.signedness_impl();
+    #[cfg(fuzzing)]
+    {
+        let roundtrip = result.signedness_impl();
+        debug_assert_eq!(roundtrip, value, "signedness roundtrip failed");
+    }
+    result
 }
+
 #[doc = description!()]
 pub trait Signedness {
     type Out;
-    #[doc = description!()]
-    fn signedness(self) -> Self::Out;
+    /// Internal implementation - use `signedness()` function instead for fuzz-checked version
+    #[doc(hidden)]
+    fn signedness_impl(self) -> Self::Out;
 }
+
 macro_rules! impls {
     {$($signed:ident : $unsigned:ident;)+} => {
         $(
             impl Signedness for $signed {
                 type Out = $unsigned;
-                fn signedness(self) -> $unsigned {
+                fn signedness_impl(self) -> $unsigned {
                     let high_mask = (is::<$unsigned > (1) << ($unsigned ::BITS - 1));
                     (self as $unsigned) ^ high_mask
                 }
             }
             impl Signedness for $unsigned {
                 type Out = $signed;
-                fn signedness(self) -> $signed {
+                fn signedness_impl(self) -> $signed {
                     let high_mask = (is::<$unsigned > (1) << ($unsigned ::BITS - 1));
                     (self ^ high_mask) as $signed
                 }

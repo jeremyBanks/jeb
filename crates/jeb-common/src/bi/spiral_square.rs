@@ -15,32 +15,47 @@ counterclockwise order starting from the positive x-axis, then shell 2, etc.
 }
 // spell-checker: disable
 use description;
+
 impl_with!(u16, i8, u8, 8);
 impl_with!(u32, i16, u16, 16);
 impl_with!(u64, i32, u32, 32);
+
 #[doc = description!()]
-pub fn spiral_square<T: SpiralSquare>(value: T) -> T::Out {
-    value.spiral_square()
+pub fn spiral_square<T: SpiralSquare>(value: T) -> T::Out
+where
+    T: Copy + PartialEq + core::fmt::Debug,
+    T::Out: SpiralSquare<Out = T> + Copy,
+{
+    let result = value.spiral_square_impl();
+    #[cfg(fuzzing)]
+    {
+        let roundtrip = result.spiral_square_impl();
+        debug_assert_eq!(roundtrip, value, "spiral_square roundtrip failed");
+    }
+    result
 }
+
 #[doc = description!()]
 pub trait SpiralSquare {
     type Out;
-    #[doc = description!()]
-    fn spiral_square(self) -> Self::Out;
+    /// Internal implementation - use `spiral_square()` function instead for fuzz-checked version
+    #[doc(hidden)]
+    fn spiral_square_impl(self) -> Self::Out;
 }
+
 macro_rules! impl_with {
     ($U:ty, $S:ty, $UB:ty, $W:expr) => {
         impl SpiralSquare for $U {
             type Out = ($S, $S);
 
-            fn spiral_square(self) -> Self::Out {
+            fn spiral_square_impl(self) -> Self::Out {
                 to_xy::<$U, $S, $UB, $W>(self)
             }
         }
         impl SpiralSquare for ($S, $S) {
             type Out = $U;
 
-            fn spiral_square(self) -> Self::Out {
+            fn spiral_square_impl(self) -> Self::Out {
                 from_xy::<$U, $S, $UB, $W>(self.0, self.1)
             }
         }

@@ -23,3 +23,6 @@ itertools.workspace = true
 default = []
 wasm = ["dep:wasm-bindgen"]
 wasm_bindgen = ["dep:wasm-bindgen"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }

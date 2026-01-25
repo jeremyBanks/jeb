@@ -14,8 +14,18 @@ than the Hilbert curve. It is computed by interleaving the bits of the two coord
 use description;
 
 #[doc = description!()]
-pub fn z_order<T: ZOrder>(value: T) -> T::Out {
-    value.z_order()
+pub fn z_order<T: ZOrder>(value: T) -> T::Out
+where
+    T: Copy + PartialEq + core::fmt::Debug,
+    T::Out: ZOrder<Out = T> + Copy,
+{
+    let result = value.z_order_impl();
+    #[cfg(fuzzing)]
+    {
+        let roundtrip = result.z_order_impl();
+        debug_assert_eq!(roundtrip, value, "z_order roundtrip failed");
+    }
+    result
 }
 
 // Manual implementation to avoid `paste` dependency
@@ -23,14 +33,14 @@ pub fn z_order<T: ZOrder>(value: T) -> T::Out {
 impl ZOrder for u16 {
     type Out = (u8, u8);
 
-    fn z_order(self) -> (u8, u8) {
+    fn z_order_impl(self) -> (u8, u8) {
         deinterleave_bits_u16(self)
     }
 }
 impl ZOrder for (u8, u8) {
     type Out = u16;
 
-    fn z_order(self) -> u16 {
+    fn z_order_impl(self) -> u16 {
         interleave_bits_u16(self.0, self.1)
     }
 }
@@ -38,14 +48,14 @@ impl ZOrder for (u8, u8) {
 impl ZOrder for u32 {
     type Out = (u16, u16);
 
-    fn z_order(self) -> (u16, u16) {
+    fn z_order_impl(self) -> (u16, u16) {
         deinterleave_bits_u32(self)
     }
 }
 impl ZOrder for (u16, u16) {
     type Out = u32;
 
-    fn z_order(self) -> u32 {
+    fn z_order_impl(self) -> u32 {
         interleave_bits_u32(self.0, self.1)
     }
 }
@@ -53,14 +63,14 @@ impl ZOrder for (u16, u16) {
 impl ZOrder for u64 {
     type Out = (u32, u32);
 
-    fn z_order(self) -> (u32, u32) {
+    fn z_order_impl(self) -> (u32, u32) {
         deinterleave_bits_u64(self)
     }
 }
 impl ZOrder for (u32, u32) {
     type Out = u64;
 
-    fn z_order(self) -> u64 {
+    fn z_order_impl(self) -> u64 {
         interleave_bits_u64(self.0, self.1)
     }
 }
@@ -68,14 +78,14 @@ impl ZOrder for (u32, u32) {
 impl ZOrder for u128 {
     type Out = (u64, u64);
 
-    fn z_order(self) -> (u64, u64) {
+    fn z_order_impl(self) -> (u64, u64) {
         deinterleave_bits_u128(self)
     }
 }
 impl ZOrder for (u64, u64) {
     type Out = u128;
 
-    fn z_order(self) -> u128 {
+    fn z_order_impl(self) -> u128 {
         interleave_bits_u128(self.0, self.1)
     }
 }
@@ -83,8 +93,9 @@ impl ZOrder for (u64, u64) {
 #[doc = description!()]
 pub trait ZOrder {
     type Out;
-    #[doc = description!()]
-    fn z_order(self) -> Self::Out;
+    /// Internal implementation - use `z_order()` function instead for fuzz-checked version
+    #[doc(hidden)]
+    fn z_order_impl(self) -> Self::Out;
 }
 
 /// Interleaves bits of x and y.

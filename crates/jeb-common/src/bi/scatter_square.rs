@@ -17,18 +17,32 @@ picking points within each shell using a weakly-pseudorandom ordering.
 }
 // spell-checker: disable
 use description;
+
 impl_with!(u16, i8, u8, 8, scatter_square_u16);
 impl_with!(u32, i16, u16, 16, scatter_square_u32);
 impl_with!(u64, i32, u32, 32, scatter_square_u64);
+
 #[doc = description!()]
-pub fn scatter_square<T: ScatterSquare>(value: T) -> T::Out {
-    value.scatter_square()
+pub fn scatter_square<T: ScatterSquare>(value: T) -> T::Out
+where
+    T: Copy + PartialEq + core::fmt::Debug,
+    T::Out: ScatterSquare<Out = T> + Copy,
+{
+    let result = value.scatter_square_impl();
+    #[cfg(fuzzing)]
+    {
+        let roundtrip = result.scatter_square_impl();
+        debug_assert_eq!(roundtrip, value, "scatter_square roundtrip failed");
+    }
+    result
 }
+
 #[doc = description!()]
 pub trait ScatterSquare {
     type Out;
-    #[doc = description!()]
-    fn scatter_square(self) -> Self::Out;
+    /// Internal implementation - use `scatter_square()` function instead for fuzz-checked version
+    #[doc(hidden)]
+    fn scatter_square_impl(self) -> Self::Out;
 }
 const ROUNDS: u32 = 4;
 const MIX_MUL1: u64 = 0xBF58_476D_1CE4_E5B9;
@@ -310,7 +324,7 @@ macro_rules! impl_with {
             type Out = ($S, $S);
 
             #[inline(always)]
-            fn scatter_square(self) -> Self::Out {
+            fn scatter_square_impl(self) -> Self::Out {
                 $mod::to_xy(self)
             }
         }
@@ -318,7 +332,7 @@ macro_rules! impl_with {
             type Out = $U;
 
             #[inline(always)]
-            fn scatter_square(self) -> Self::Out {
+            fn scatter_square_impl(self) -> Self::Out {
                 $mod::from_xy(self.0, self.1)
             }
         }

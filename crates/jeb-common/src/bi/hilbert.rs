@@ -11,35 +11,50 @@ integers whose Manhattan distance is at less-than or equal to X and 3√X.
 }
 // spell-checker: disable
 use description;
+
 #[doc = description!()]
-pub fn hilbert<T: Hilbert>(value: T) -> T::Out {
-    value.hilbert()
+pub fn hilbert<T: Hilbert>(value: T) -> T::Out
+where
+    T: Copy + PartialEq + core::fmt::Debug,
+    T::Out: Hilbert<Out = T> + Copy,
+{
+    let result = value.hilbert_impl();
+    #[cfg(fuzzing)]
+    {
+        let roundtrip = result.hilbert_impl();
+        debug_assert_eq!(roundtrip, value, "hilbert roundtrip failed");
+    }
+    result
 }
+
 impls! {
      u16: ( u8,  u8);
      u32: (u16, u16);
      u64: (u32, u32);
     u128: (u64, u64);
 }
+
 #[doc = description!()]
 pub trait Hilbert {
     type Out;
-    #[doc = description!()]
-    fn hilbert(self) -> Self::Out;
+    /// Internal implementation - use `hilbert()` function instead for fuzz-checked version
+    #[doc(hidden)]
+    fn hilbert_impl(self) -> Self::Out;
 }
+
 macro_rules! impls {
     {$($full:ident : ($half1:ident, $half2:ident);)+} => {
         $(
             impl Hilbert for $full {
                 type Out = ($half1, $half2);
-                fn hilbert(self) -> ($half1, $half2) {
+                fn hilbert_impl(self) -> ($half1, $half2) {
                     _ = | assert : $half1 | -> $half2 { assert };
                     ::fast_hilbert::h2xy(self, $half1 ::BITS.try_into().unwrap())
                 }
             }
             impl Hilbert for ($half1, $half2) {
                 type Out = $full;
-                fn hilbert(self) -> $full {
+                fn hilbert_impl(self) -> $full {
                     let (x, y) = self;
                     ::fast_hilbert::xy2h(x, y, $half1 ::BITS.try_into().unwrap())
                 }
