@@ -92,7 +92,23 @@ Strip trailing `/` for processing, apply rules, re-add `/` to results.
 
 ## Processing Multiple Parent Gitignores
 
-Walk from target directory up to repository root. For each parent directory with a `.gitignore`:
-1. Compute R (relative path components from that parent to target)
+**Order**: Process from repository root down to target (root gitignore first, then intermediate directories, then closest parent). This means rules from root appear first in the merged output.
+
+Walk from repository root down to target directory. For each directory with a `.gitignore`:
+1. Compute R (relative path components from that gitignore's directory to target)
 2. Transform each pattern using rules above
 3. Merge results into target's gitignore using insertion rules
+
+## File Handling
+
+- If target `.gitignore` doesn't exist, create it
+- Always ensure a single trailing blank line at end of modified files
+- When parsing, ignore trailing blank lines at end of file (don't treat as preamble to nothing)
+
+## CLI
+
+```
+cargo run --bin inline-ignore [--dry-run] <target-path>
+```
+
+- `--dry-run`: Print what would be written without modifying files
