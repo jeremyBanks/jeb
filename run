@@ -13,6 +13,13 @@
 # common.
 
 set -euo pipefail
+
+declare any_mode=false
+if [ "${1:-}" = "--any" ]; then
+    any_mode=true
+    shift
+fi
+
 declare command="$1"
 shift
 declare bin=""
@@ -39,41 +46,77 @@ if [ -t 2 ] && [ -z "${NO_COLORS-}" ]; then
     RED=$'\033[31m'
 fi
 
-echo >&2 -e "${DARK_BACKGROUND}"
-echo >&2 -e "${DARK_BACKGROUND}${MAGENTA}  \$${WHITE} ${BROWN}cargo build --release --bin${WHITE} ${CYAN}$command${WHITE}"
-echo >&2 -e "${DARK_BACKGROUND}${RESET}"
-echo >&2
+# Function to find an existing binary (without building)
+find_existing_binary() {
+    if [ -x "./target/release/$command" ]; then
+        echo "./target/release/$command"
+    elif [ -x "./target/debug/$command" ]; then
+        echo "./target/debug/$command"
+    elif [ -x "$HOME/.cargo/bin/$command" ]; then
+        echo "$HOME/.cargo/bin/$command"
+    elif type "$command" >/dev/null 2>&1; then
+        echo "$command"
+    fi
+}
 
-if ! cargo build --release --bin "$command"; then
-    echo >&2
-    echo >&2 "${YELLOW}WARNING:${WHITE} Failed to build. Falling back to existing builds."
-fi
+if [ "$any_mode" = true ]; then
+    # --any mode: try existing binaries first, only build as last resort
+    bin=$(find_existing_binary)
 
-echo >&2
-
-if [ -x "./target/release/$command" ]; then
-    bin="./target/release/$command"
-elif [ -x "./target/debug/$command" ]; then
-    echo >&2 "${YELLOW}WARNING:${WHITE} Existing release build not found. Falling back to debug build."
-    echo >&2
-
-    bin="./target/debug/$command"
-else
-    echo >&2 "${YELLOW}WARNING:${WHITE} Existing builds not found. Falling back to cargo-installed binary."
-    echo >&2
-
-    if [ -x "$HOME/.cargo/bin/$command" ]; then
-        bin="$HOME/.cargo/bin/$command"
-    else
-        echo >&2 "${YELLOW}WARNING:${WHITE} cargo-installed binary not found. Falling back to any matching command."
+    if [ -z "$bin" ]; then
+        echo >&2 -e "${DARK_BACKGROUND}"
+        echo >&2 -e "${DARK_BACKGROUND}${YELLOW}  (--any)${WHITE} No existing binary found. Building as last resort."
+        echo >&2 -e "${DARK_BACKGROUND}${MAGENTA}  \$${WHITE} ${BROWN}cargo build --release --bin${WHITE} ${CYAN}$command${WHITE}"
+        echo >&2 -e "${DARK_BACKGROUND}${RESET}"
         echo >&2
 
-        if type "$command" >/dev/null 2>&1; then
-            bin="$command"
-        else
-            echo >&2 "${RED}ERROR:${WHITE} No matching command found. Unable to continue."
-
+        if ! cargo build --release --bin "$command"; then
+            echo >&2
+            echo >&2 "${RED}ERROR:${WHITE} Failed to build and no existing binary found. Unable to continue."
             exit 1
+        fi
+
+        echo >&2
+        bin="./target/release/$command"
+    fi
+else
+    # Normal mode: try to build first, then fallback chain
+    echo >&2 -e "${DARK_BACKGROUND}"
+    echo >&2 -e "${DARK_BACKGROUND}${MAGENTA}  \$${WHITE} ${BROWN}cargo build --release --bin${WHITE} ${CYAN}$command${WHITE}"
+    echo >&2 -e "${DARK_BACKGROUND}${RESET}"
+    echo >&2
+
+    if ! cargo build --release --bin "$command"; then
+        echo >&2
+        echo >&2 "${YELLOW}WARNING:${WHITE} Failed to build. Falling back to existing builds."
+    fi
+
+    echo >&2
+
+    if [ -x "./target/release/$command" ]; then
+        bin="./target/release/$command"
+    elif [ -x "./target/debug/$command" ]; then
+        echo >&2 "${YELLOW}WARNING:${WHITE} Existing release build not found. Falling back to debug build."
+        echo >&2
+
+        bin="./target/debug/$command"
+    else
+        echo >&2 "${YELLOW}WARNING:${WHITE} Existing builds not found. Falling back to cargo-installed binary."
+        echo >&2
+
+        if [ -x "$HOME/.cargo/bin/$command" ]; then
+            bin="$HOME/.cargo/bin/$command"
+        else
+            echo >&2 "${YELLOW}WARNING:${WHITE} cargo-installed binary not found. Falling back to any matching command."
+            echo >&2
+
+            if type "$command" >/dev/null 2>&1; then
+                bin="$command"
+            else
+                echo >&2 "${RED}ERROR:${WHITE} No matching command found. Unable to continue."
+
+                exit 1
+            fi
         fi
     fi
 fi
