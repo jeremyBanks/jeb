@@ -240,6 +240,70 @@ fn tmin_artifacts(fuzz_dir: &Path, target: &str, max_time: u32, prefix: &str) ->
     Ok(())
 }
 
+/// Minimize random corpus entries to potentially find smaller interesting inputs.
+/// Picks `iterations` random corpus entries and runs tmin on each for 1 second.
+fn tmin_random_corpus(fuzz_dir: &Path, target: &str, iterations: u32, prefix: &str) -> Result<()> {
+    use rand::prelude::IndexedRandom;
+
+    let corpus_dir = fuzz_dir.join("corpus").join(target);
+    if !corpus_dir.is_dir() {
+        return Ok(());
+    }
+
+    // Collect corpus entry paths
+    let entries: Vec<PathBuf> = fs::read_dir(&corpus_dir)?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| p.is_file())
+        .collect();
+
+    if entries.is_empty() {
+        return Ok(());
+    }
+
+    let mut rng = rand::rng();
+
+    for i in 0..iterations {
+        // Pick a truly random entry
+        let path: &PathBuf = match entries.choose(&mut rng) {
+            Some(p) => p,
+            None => continue,
+        };
+
+        let name = path
+            .file_name()
+            .and_then(|n: &std::ffi::OsStr| n.to_str())
+            .unwrap_or("unknown");
+
+        info!(
+            "{}[tmin-corpus {}/{}] minimizing {}...",
+            prefix,
+            i + 1,
+            iterations,
+            name
+        );
+
+        let mut cmd = Command::new("cargo");
+        cmd.args([
+            "+nightly",
+            "fuzz",
+            "tmin",
+            target,
+            path.to_str().unwrap(),
+            "--",
+            "-max_total_time=1", // Fixed 1 second per entry
+        ])
+        .current_dir(fuzz_dir);
+
+        let status = run_with_truncated_output(cmd, prefix)?;
+        if !status.success() {
+            // Don't warn - tmin on corpus entries may not find improvements
+        }
+    }
+
+    Ok(())
+}
+
 /// Run a single fuzz target (unpack → fuzz → cmin → pack)
 /// Returns true if the target failed.
 fn run_target(
@@ -307,6 +371,12 @@ fn run_target(
     if seconds > 0 {
         if let Err(e) = tmin_artifacts(fuzz_dir, target, 8, prefix) {
             warn!("{}tmin warning: {}", prefix, e);
+        }
+
+        // Minimize random corpus entries
+        let iterations = seconds as u32; // seconds is i32, already > 0 here
+        if let Err(e) = tmin_random_corpus(fuzz_dir, target, iterations, prefix) {
+            warn!("{}tmin-corpus warning: {}", prefix, e);
         }
     }
 
