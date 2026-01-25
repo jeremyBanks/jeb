@@ -1,4 +1,5 @@
-cargo-features = ["trim-paths"]
+# XXX: temporarily disabled (see profile.release.trim-paths below)
+# cargo-features = ["trim-paths"]
 
 [workspace]
 resolver = "2"
@@ -17,7 +18,9 @@ license = "MIT OR Apache-2.0"
 include = ["**/*.rs", "**/*.toml", "**/*.lock", "**/*.md", "**/LICENSE*", "!.*"]
 
 [profile.release]
-trim-paths = "all"
+# XXX: temporarily disabled due to compatibility issue with cargo-fuzz
+# (nightly doesn't recognize -Zremap-path-scope), to be re-enabled later
+# trim-paths = "all"
 
 [profile.dev.package.backtrace]
 opt-level = 3
