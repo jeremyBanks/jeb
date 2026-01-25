@@ -866,6 +866,22 @@ mod tests {
         assert!(!stats.z_mode);
     }
     #[test]
+    fn test_shallow_repo_trusts_r_commits() {
+        // Shallow checkout should trust r commits from before the repo became shallow.
+        // This fixes a bug where s23 was generated when it should have been r222
+        // because r221 was not trusted in shallow mode.
+        let mut repo = MockRepo::new(true);
+        // r221 was committed when the repo was non-shallow, but we're now in shallow mode
+        let head_id = repo.add_commit("c1", vec!["c0"], Some("r221 / g221 / n221 / x0000 / oCD2E"));
+        let head = repo.commits.get(&head_id).unwrap();
+        let calculator = GraphStatsCalculator::new(&repo, -1);
+        let stats = calculator.calculate(head);
+        // Should be r222 = r221 + 1, not s23 or similar
+        assert_eq!(stats.revision_index, 222);
+        assert!(!stats.z_mode);
+        assert_eq!(stats.origin, Some(0xCD2E));
+    }
+    #[test]
     fn test_max_depth_zero() {
         let mut repo = MockRepo::new(false);
         repo.add_commit("c0", vec![], None);
