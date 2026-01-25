@@ -174,6 +174,10 @@ struct Args {
     /// Only unpack corpus files (no fuzzing)
     #[clap(long)]
     unpack_only: bool,
+
+    /// Run forever (loop the entire program indefinitely)
+    #[clap(long)]
+    forever: bool,
 }
 
 fn main() -> ExitCode {
@@ -219,13 +223,14 @@ fn tmin_artifacts(fuzz_dir: &Path, target: &str, max_time: u32, prefix: &str) ->
 
         info!("{}[tmin] minimizing {}...", prefix, name);
 
+        let abs_path = path.canonicalize()?;
         let mut cmd = Command::new("cargo");
         cmd.args([
             "+nightly",
             "fuzz",
             "tmin",
             target,
-            path.to_str().unwrap(),
+            abs_path.to_str().unwrap(),
             "--",
             &format!("-max_total_time={}", max_time),
         ])
@@ -290,13 +295,14 @@ fn tmin_random_corpus(
             name
         );
 
+        let abs_path = path.canonicalize()?;
         let mut cmd = Command::new("cargo");
         cmd.args([
             "+nightly",
             "fuzz",
             "tmin",
             target,
-            path.to_str().unwrap(),
+            abs_path.to_str().unwrap(),
             "--",
             "-max_total_time=1", // Fixed 1 second per entry
         ])
@@ -367,13 +373,14 @@ fn tmin_new_entries(
             name
         );
 
+        let abs_path = path.canonicalize()?;
         let mut cmd = Command::new("cargo");
         cmd.args([
             "+nightly",
             "fuzz",
             "tmin",
             target,
-            path.to_str().unwrap(),
+            abs_path.to_str().unwrap(),
             "--",
             "-max_total_time=1",
         ])
@@ -537,10 +544,12 @@ fn run() -> Result<bool> {
 
     let seconds = args.seconds;
     let max_len = args.max_len;
-    let target_filter = args.filter;
+    let target_filter = args.filter.clone();
+    let forever = args.forever;
 
     let workspace_root = get_workspace_root();
 
+    loop {
     // Find all crates with fuzz directories
     let fuzz_dirs: Vec<PathBuf> = glob::glob(
         workspace_root
@@ -554,6 +563,10 @@ fn run() -> Result<bool> {
 
     if fuzz_dirs.is_empty() {
         info!("No fuzz directories found");
+        if forever {
+            info!("=== Restarting fuzz cycle ===");
+            continue;
+        }
         return Ok(true);
     }
 
@@ -610,9 +623,17 @@ fn run() -> Result<bool> {
     if tasks.is_empty() {
         if list_failed {
             warn!("=== Fuzz complete (with failures) ===");
+            if forever {
+                info!("=== Restarting fuzz cycle ===");
+                continue;
+            }
             return Ok(false);
         }
         info!("No fuzz targets to run");
+        if forever {
+            info!("=== Restarting fuzz cycle ===");
+            continue;
+        }
         return Ok(true);
     }
 
@@ -669,7 +690,11 @@ fn run() -> Result<bool> {
         info!("=== Fuzz complete ===");
     }
 
-    Ok(!failed)
+    if !forever {
+        return Ok(!failed);
+    }
+    info!("=== Restarting fuzz cycle ===");
+    } // end loop
 }
 
 fn get_workspace_root() -> PathBuf {
