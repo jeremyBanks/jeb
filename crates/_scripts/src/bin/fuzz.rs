@@ -455,9 +455,6 @@ fn run() -> Result<bool> {
         parallelism
     );
 
-    // Use prefix when running in parallel
-    let use_prefix = parallelism > 1;
-
     // Track failures
     let any_failed = AtomicBool::new(list_failed);
 
@@ -478,20 +475,7 @@ fn run() -> Result<bool> {
             let any_failed = &any_failed;
 
             s.spawn(move || {
-                let prefix = if use_prefix {
-                    format!("[{}] ", target)
-                } else {
-                    String::new()
-                };
-
-                if !use_prefix {
-                    let crate_name = fuzz_dir
-                        .parent()
-                        .and_then(|p| p.file_name())
-                        .map(|n| n.to_string_lossy().to_string())
-                        .unwrap_or_default();
-                    info!("--- {}/{} ---", crate_name, target);
-                }
+                let prefix = format!("[{}] ", target);
 
                 match run_target(fuzz_dir, target, seconds, max_len, &prefix) {
                     Ok(failed) => {
