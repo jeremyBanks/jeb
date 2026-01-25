@@ -13,15 +13,33 @@ pub use tracing as __tracing;
 
 pub static ENABLED: OnceLock<bool> = OnceLock::new();
 
+/// Checks if an environment variable is set to a truthy value.
+///
+/// Returns `true` if the variable is set to any value except "0" or "false"
+/// (case-sensitive). An empty string is considered truthy.
+fn env_is_truthy(name: &str) -> bool {
+    match std::env::var(name) {
+        Ok(val) => val != "0" && val != "false",
+        Err(_) => false,
+    }
+}
+
 /// Returns whether colored output should be used.
 ///
-/// Color is enabled when:
-/// - stderr is a TTY, AND
-/// - the `NO_COLOR` environment variable is not set
+/// Precedence:
+/// 1. `NO_COLOR` set and truthy → disable color
+/// 2. `FORCE_COLOR` set and truthy → enable color
+/// 3. Otherwise → enable if stderr is a TTY
 ///
-/// See <https://no-color.org/> for the NO_COLOR standard.
+/// See <https://no-color.org/> and <https://force-color.org/>.
 pub fn use_color() -> bool {
-    std::io::stderr().is_terminal() && std::env::var_os("NO_COLOR").is_none()
+    if env_is_truthy("NO_COLOR") {
+        return false;
+    }
+    if env_is_truthy("FORCE_COLOR") {
+        return true;
+    }
+    std::io::stderr().is_terminal()
 }
 
 pub static LOG_ENV: LazyLock<String> = LazyLock::new(|| {
