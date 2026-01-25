@@ -13,10 +13,6 @@ readme = "README.md"
 keywords = ["codegen", "self-modifying", "snapshot", "testing"]
 categories = ["development-tools", "development-tools::testing"]
 
-[[bin]]
-name = "cargo-inline-write"
-path = "src/bin/cargo-inline-write.rs"
-
 [dependencies]
 databake.workspace = true
 once_cell.workspace = true

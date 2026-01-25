@@ -10,14 +10,6 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
-[lib]
-name = "_autofix"
-path = "src/lib.rs"
-
-[[bin]]
-name = "_autofix"
-path = "src/main.rs"
-
 [dependencies]
 anyhow.workspace = true
 glob.workspace = true

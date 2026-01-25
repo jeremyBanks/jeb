@@ -10,14 +10,6 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
-[lib]
-name = "jeb"
-path = "src/lib.rs"
-
-[[bin]]
-name = "jeb"
-path = "src/bin/jeb.rs"
-
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/{ version }/{ name }-{ target }{ archive-suffix }"
 bin-dir = "{ bin }{ binary-ext }"
