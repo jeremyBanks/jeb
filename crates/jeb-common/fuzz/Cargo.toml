@@ -2,25 +2,15 @@
 name = "jeb-common-fuzz"
 version = "0.0.0"
 publish = false
-edition = "2024"
+edition.workspace = true
 
 [package.metadata]
 cargo-fuzz = true
 
 [dependencies]
-libfuzzer-sys = "0.4"
-arbitrary = { version = "1", features = ["derive"] }
-
-[dependencies.jeb-common]
-path = ".."
-
-# Prevent this from interfering with workspaces
-[workspace]
-members = ["."]
-
-# Patch workspace dependencies so they can be found
-[patch.crates-io]
-inline = { path = "../../inline" }
+libfuzzer-sys.workspace = true
+arbitrary = { workspace = true, features = ["derive"] }
+jeb-common = { path = ".." }
 
 [profile.release]
 debug = 1
