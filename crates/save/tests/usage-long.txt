@@ -1,5 +1,6 @@
 save v0.20220708.0
-Commit everything in the current directory and repository -- no questions asked.
+Commit everything in the current directory and repository -- no questions
+asked.
 
 ╔══════════════════╗╔════╗
 ║Would you like to ║║►YES║
@@ -14,13 +15,13 @@ OPTIONS:
             Decrease log verbosity. May be repeated to decrease verbosity
             further.
             
-            [env: RUST_LOG=]
+            [env: `RUST_LOG`=]
 
     -v, --verbose
             Increase log verbosity. May be repeated to increase verbosity
             further.
             
-            [env: RUST_LOG=]
+            [env: `RUST_LOG`=]
 
     -h, --help
             Print help information
@@ -79,7 +80,8 @@ COMMIT OPTIONS:
             
             - `_` is skipped, for a character whose value we don't care about.
             - 'C' is replaced by the next nibble of the
-            minimum-timestamped-variant commit ID.
+            minimum-timestamped-variant
+              commit ID.
             - 'R' is replaced with the last digits of the revision index.
             - 'G' is replaced with the last digits of the generation index.
             - 'N' is replaced with the last digits of the commit index.
@@ -87,10 +89,22 @@ COMMIT OPTIONS:
             May be explicitly set to an empty string to skip brute-forcing the
             hash.
             
-            [default: "CCCC", representing the first four hex digits of the
-            commit's tree hash]
+            [default: the commit index modulo 10000, formatted as 4 decimal
+            digits.
+            Use --tree-target to use the first 4 hex digits of the tree hash
+            instead.]
             
             [env: SAVE_COMMIT_PREFIX=]
+
+        --tree-target
+            Use the tree hash prefix as the brute force target (old behavior).
+            
+            By default, the brute force target is the commit index modulo 10000
+            (formatted as 4 decimal digits with leading zeros). This flag
+            restores the old behavior of using the first 4 hex digits of the
+            tree hash.
+            
+            [env: SAVE_TREE_TARGET=]
 
         --head <HEAD>
             What branch head are we updating? Defaults to `"HEAD"` (which also
@@ -117,7 +131,7 @@ SIGNATURE OPTIONS:
 
     -0, --timeless
             Use the next available timestamp after the parent commit's
-            timestamps,  regardless of the actual current clock time. Assuming
+            timestamps, regardless of the actual current clock time. Assuming
             there is a parent  commit, this is equivalent to `--timestamp=0`. If
             we're creating an  initial commit (with no parents), this uses the
             next available timestamp  after the current time (or value provided
@@ -145,6 +159,29 @@ SIGNATURE OPTIONS:
             [env: SAVE_COMMITTER=]
 
 HISTORY OPTIONS:
+        --max-depth <MAX_DEPTH>
+            Maximum depth to search back through commit history when calculating
+            graph statistics. If this depth is reached without finding a trusted
+            commit message, the tool enters "z-mode" and treats the commit at
+            max depth as an effective origin.
+            
+            Set to -1 for unlimited depth (full graph walk).
+            
+            [default: 255]
+            
+            [env: SAVE_MAX_DEPTH=]
+            [default: 255]
+
+        --rebuild
+            Rebuild commit statistics from scratch, ignoring all existing commit
+            messages. This forces a full graph walk and recalculates all
+            indices.
+            
+            Useful for verifying or fixing commit messages after history
+            changes.
+            
+            [env: SAVE_REBUILD=]
+
     -p, --add-parent <ADDED_PARENT_REF>
             Adds another parent to the new commit. May be repeated to add
             multiple parents, though duplicated parents will are ignored

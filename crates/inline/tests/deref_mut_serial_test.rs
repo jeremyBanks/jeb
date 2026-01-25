@@ -24,7 +24,8 @@ fn test_deref_mut_triggers_write_on_drop() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     let positions = find_literal_positions(&path);
     let (line, col) = positions[0];
@@ -48,7 +49,8 @@ fn test_deref_mut_triggers_write_on_drop() {
         content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -64,7 +66,8 @@ fn test_deref_mut_no_write_if_unchanged() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     let positions = find_literal_positions(&path);
     let (line, col) = positions[0];
@@ -85,7 +88,8 @@ fn test_deref_mut_no_write_if_unchanged() {
         "File should still contain original value"
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -101,7 +105,8 @@ fn test_deref_mut_with_complex_mutation() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     let positions = find_literal_positions(&path);
     let (line, col) = positions[0];
@@ -126,7 +131,8 @@ fn test_deref_mut_with_complex_mutation() {
         content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -142,7 +148,8 @@ fn test_deref_mut_with_vec() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     let positions = find_literal_positions(&path);
     let (line, col) = positions[0];
@@ -166,7 +173,8 @@ fn test_deref_mut_with_vec() {
         content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -182,7 +190,8 @@ fn test_value_field_assignment_works_with_deref_mut() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     let positions = find_literal_positions(&path);
     let (line, col) = positions[0];
@@ -205,7 +214,8 @@ fn test_value_field_assignment_works_with_deref_mut() {
         "File should contain value from .value assignment"
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -221,7 +231,8 @@ fn test_deref_mut_memory_mode() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "memory");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "memory") };
 
     let positions = find_literal_positions(&path);
     let (line, col) = positions[0];
@@ -241,7 +252,8 @@ fn test_deref_mut_memory_mode() {
         // test this due to parallel test execution affecting env vars)
     }
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -257,7 +269,8 @@ fn test_multiple_mutations_before_drop() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
 
     let positions = find_literal_positions(&path);
     let (line, col) = positions[0];
@@ -282,7 +295,8 @@ fn test_multiple_mutations_before_drop() {
         content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 /// Helper to find all cell() call positions in a file

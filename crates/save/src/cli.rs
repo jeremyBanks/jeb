@@ -29,6 +29,7 @@ use {
             fmt::Write,
             fs,
             process::Command,
+            time::Instant,
         },
         tracing::{
             debug,
@@ -187,8 +188,9 @@ pub struct Save {
     ///
     /// May be explicitly set to an empty string to skip brute-forcing the hash.
     ///
-    /// [default: "CCCC", representing the first four hex digits of the commit's
-    /// tree hash]
+    /// [default: the commit index as decimal digits, followed by any hex letter
+    /// (a-f). Use --tree-target to use the first 4 hex digits of the tree hash
+    /// instead.]
     #[clap(
         help_heading = "COMMIT OPTIONS",
         long = "prefix",
@@ -197,6 +199,18 @@ pub struct Save {
         verbatim_doc_comment
     )]
     pub prefix_hex: Option<String>,
+
+    /// Use the tree hash prefix as the brute force target (old behavior).
+    ///
+    /// By default, the brute force target is the commit index (as decimal digits)
+    /// followed by any hex letter (a-f). This flag uses the first 4 hex digits
+    /// of the tree hash as an exact target instead.
+    #[clap(
+        help_heading = "COMMIT OPTIONS",
+        long = "tree-target",
+        env = "SAVE_TREE_TARGET"
+    )]
+    pub tree_target: bool,
 
     // SIGNATURE OPTIONS:
     /// Override the system clock timestamp value.
@@ -542,8 +556,19 @@ pub fn main(args: Save) -> Result<()> {
     }
 
     let tree4 = tree.to_string()[..4].to_string().to_ascii_uppercase();
+    let n4 = format!("{}", graph_stats.commit_index);
 
-    let target = crate::hex::decode_hex_nibbles(args.prefix_hex.unwrap_or_else(|| tree4.clone()));
+    // Determine target and whether to require letter suffix
+    let (target_hex, letter_suffix) = if let Some(prefix) = args.prefix_hex.as_ref() {
+        (prefix.clone(), false)
+    } else if args.tree_target {
+        (tree4.clone(), false)
+    } else {
+        // Default: NNNN with any letter suffix [a-f]
+        (n4, true)
+    };
+
+    let target = crate::hex::decode_hex_nibbles(target_hex);
 
     let tree = repo.find_tree(tree)?;
 
@@ -604,14 +629,18 @@ pub fn main(args: Save) -> Result<()> {
     let min_timestamp = previous_seconds;
     let target_timestamp = seconds;
 
+    let brute_force_start = Instant::now();
     let commit = base_commit.brute_force_timestamps(
         &repo,
         &target.bytes,
         Some(&target.mask),
+        letter_suffix,
         min_timestamp,
         target_timestamp,
     );
+    let brute_force_ms = brute_force_start.elapsed().as_millis();
 
+    debug!("Brute-forced commit ID in {}ms", brute_force_ms);
     debug!("Prepared commit {}", commit.id());
 
     if !args.no_head {

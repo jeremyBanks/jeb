@@ -5,7 +5,8 @@ use {
 
 #[test]
 fn test_static_persistence_same_value() {
-    env::set_var("INLINE_MODE", "memory");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "memory") };
 
     // Calling the macro from the same line should give the same underlying value
     fn get_value() -> inline::InlineCell<u32> {
@@ -22,15 +23,17 @@ fn test_static_persistence_same_value() {
     let val2 = get_value();
     assert_eq!(*val2, 100);
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
 fn test_static_persistence_value_mutation() {
-    env::set_var("INLINE_MODE", "memory");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "memory") };
 
     fn get_counter() -> inline::InlineCell<u32> {
-        cell(1u32) // Always same source location
+        cell(100u32) // Always same source location
     }
 
     let mut val = get_counter();
@@ -45,7 +48,8 @@ fn test_static_persistence_value_mutation() {
     let val2 = get_counter();
     assert_eq!(*val2, 100);
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -72,7 +76,8 @@ fn test_static_persistence_different_types() {
 
 #[test]
 fn test_static_persistence_across_function_calls() {
-    env::set_var("INLINE_MODE", "memory");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "memory") };
 
     fn increment_counter() -> u32 {
         let mut counter = cell(4u32);
@@ -88,18 +93,20 @@ fn test_static_persistence_across_function_calls() {
     assert_eq!(increment_counter(), 3);
     assert_eq!(increment_counter(), 4);
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
 fn test_static_persistence_thread_safety() {
     use std::thread;
 
-    env::set_var("INLINE_MODE", "memory");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "memory") };
 
     // Helper function to ensure all threads access the same source location
     fn get_counter() -> inline::InlineCell<u32> {
-        cell(876u32)
+        cell(919u32)
     }
 
     // Spawn multiple threads that all access the same static value
@@ -128,5 +135,6 @@ fn test_static_persistence_thread_safety() {
     // Should be 10 threads * 100 increments = 1000
     assert_eq!(final_value, 1000, "All increments should be accounted for");
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }

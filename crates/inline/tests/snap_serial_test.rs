@@ -53,7 +53,8 @@ fn test_snap_updates_source_file() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
     inline::clear_file_state_cache();
 
     // Find the snap! macro position
@@ -78,7 +79,8 @@ fn test_snap_updates_source_file() {
         content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -92,7 +94,8 @@ fn test_snap_with_string_updates_to_raw_string() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
     inline::clear_file_state_cache();
 
     let positions = find_snap_positions(&path);
@@ -114,7 +117,8 @@ fn test_snap_with_string_updates_to_raw_string() {
         content
     );
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }
 
 #[test]
@@ -128,7 +132,8 @@ fn test_snap_no_update_when_values_match() {
 "#;
     fs::write(&path, source).unwrap();
 
-    env::set_var("INLINE_MODE", "write");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "write") };
     inline::clear_file_state_cache();
 
     let positions = find_snap_positions(&path);
@@ -144,5 +149,6 @@ fn test_snap_no_update_when_values_match() {
     let content = fs::read_to_string(&path).unwrap();
     assert_eq!(content, source);
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }

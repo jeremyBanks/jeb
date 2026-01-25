@@ -50,7 +50,8 @@ fn test_replace_me_persistence() {
     )
     .unwrap();
 
-    env::set_var("INLINE_MODE", "memory");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::set_var("INLINE_MODE", "memory") };
     inline::clear_file_state_cache();
 
     let (line, column) = find_call_position(&path);
@@ -64,5 +65,6 @@ fn test_replace_me_persistence() {
     let result2 = replace_at(999u32, path.to_str().unwrap(), line, column);
     assert_eq!(result2, 100u32); // Should still be 100, not 999
 
-    env::remove_var("INLINE_MODE");
+    // SAFETY: Test-only; no concurrent access to this env var in this test
+    unsafe { env::remove_var("INLINE_MODE") };
 }

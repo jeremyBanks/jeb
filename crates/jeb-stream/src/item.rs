@@ -8,7 +8,7 @@ use {
     },
     jeb_value::{
         Bytes,
-        Text,
+        String as Text,
         Value,
     },
 };
@@ -40,14 +40,14 @@ impl Item {
     pub fn try_as_bytes(&self) -> Result<&[u8], &Item> {
         match self {
             Item::Bytes(bytes) | Item::Value(Value::Bytes(bytes)) => Ok(bytes),
-            Item::Text(text) | Item::Value(Value::Text(text)) => Ok(text.as_ref()),
+            Item::Text(text) | Item::Value(Value::String(text)) => Ok(text.as_ref()),
             _ => Err(self),
         }
     }
 
     pub fn try_as_str(&self) -> Result<&str, &Item> {
         match self {
-            Item::Text(text) | Item::Value(Value::Text(text)) => Ok(text.as_ref()),
+            Item::Text(text) | Item::Value(Value::String(text)) => Ok(text.as_ref()),
             Item::Bytes(bytes) | Item::Value(Value::Bytes(bytes)) => {
                 core::str::from_utf8(bytes.as_ref()).map_err(|_| self)
             }

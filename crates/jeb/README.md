@@ -1,16 +1,6 @@
-Incomplete and incorrect, vague ideas and hallucinations. At least for now.
+a fever dream
 
 ---
-
-# `jeb`
-
-JSON Entity Bag?
-
-Just Encode Bytes?
-
-Joined Escaped Binary?
-
-Semitranslucent Binary Encodings?
 
 ## License
 

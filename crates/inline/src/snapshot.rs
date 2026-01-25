@@ -251,6 +251,7 @@ impl<T> InlineSnapExt for T {
     }
 
     #[track_caller]
+    #[allow(unsafe_code)]
     fn snap<E>(self, expected: E) -> Self
     where
         Self: Value + 'static + PartialEq<E>,
@@ -406,18 +407,26 @@ mod tests {
     #[test]
     fn test_snap_mismatch_in_memory_mode() {
         // In memory mode, mismatches don't panic - just return actual
-        std::env::set_var("INLINE_MODE", "memory");
+        unsafe {
+            std::env::set_var("INLINE_MODE", "memory");
+        }
         let result = 100.snap(100i32);
         assert_eq!(result, 100);
-        std::env::remove_var("INLINE_MODE");
+        unsafe {
+            std::env::remove_var("INLINE_MODE");
+        }
     }
 
     #[test]
     #[should_panic(expected = "Snapshot mismatch")]
     fn test_snap_mismatch_panics_in_verify_mode() {
-        std::env::set_var("INLINE_MODE", "verify");
+        unsafe {
+            std::env::set_var("INLINE_MODE", "verify");
+        }
         let _ = 100.snap(42);
-        std::env::remove_var("INLINE_MODE");
+        unsafe {
+            std::env::remove_var("INLINE_MODE");
+        }
     }
 
     #[test]
@@ -429,18 +438,26 @@ mod tests {
     #[test]
     fn test_snap_dbg_mismatch_in_memory_mode() {
         // In memory mode, mismatches don't panic - just return actual
-        std::env::set_var("INLINE_MODE", "memory");
+        unsafe {
+            std::env::set_var("INLINE_MODE", "memory");
+        }
         let result = 100.snap_dbg("100");
         assert_eq!(result, 100);
-        std::env::remove_var("INLINE_MODE");
+        unsafe {
+            std::env::remove_var("INLINE_MODE");
+        }
     }
 
     #[test]
     #[should_panic(expected = "Snapshot mismatch")]
     fn test_snap_dbg_mismatch_panics_in_verify_mode() {
-        std::env::set_var("INLINE_MODE", "verify");
+        unsafe {
+            std::env::set_var("INLINE_MODE", "verify");
+        }
         let _ = 100.snap_dbg("42");
-        std::env::remove_var("INLINE_MODE");
+        unsafe {
+            std::env::remove_var("INLINE_MODE");
+        }
     }
 
     #[test]

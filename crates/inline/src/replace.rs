@@ -104,6 +104,7 @@ pub fn replace<T: Value + 'static>(value: T) -> T {
 ///
 /// Used for testing with synthetic file locations.
 #[doc(hidden)]
+#[allow(unsafe_code)]
 pub fn replace_at<T: Value + 'static>(value: T, file: &str, line: u32, column: u32) -> T {
     // Resolve to absolute path to work regardless of CWD
     let path = resolve_source_path(file);

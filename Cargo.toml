@@ -6,6 +6,7 @@ members = ["crates/*"]
 
 [workspace.package]
 version = "0.0.0-dev-2026-01-19.4531"
+authors = ["Jeremy Banks"]
 repository = "https://github.com/jeremyBanks/jeb"
 description = "(part of https://crates.io/crates/jeb)"
 publish = false
@@ -83,7 +84,7 @@ ideated-encoding = "0.0.0-dev-2026-01-19.4531"
 ignorable = "0.1.2"
 ignore = "0.4.0"
 indexmap = "2.0.0"
-inline = "0.0.1-dev.1"
+inline = "0.0.0-dev-2026-01-19.4531"
 itertools = "0.10.3"
 jeb = { version = "0.0.0-dev-2026-01-19.4531", default-features = false }
 jeb-bytes-as-text = "0.0.0-dev-2026-01-19.4531"
@@ -114,7 +115,7 @@ serde_yaml = "0.9.34"
 sha-1 = "0.10.0"
 sha1-checked = "0.10.0"
 static_assertions = "1.1.0"
-stringify_verbatim = "0.1.0"
+stringify_verbatim = "0.0.0-dev-2026-01-19.4531"
 syn = "2.0.0"
 tap = "1.0.1"
 tempfile = "3.3.0"
