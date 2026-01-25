@@ -15,6 +15,7 @@ crash:,cccD\xFF\xFF\xBBccc\x01@-A\x01\x0B,)\x0B+`=\x00\x00;,};}[////////////////
 crash:.............................................................................................................;;
 crash:/l=(l\x00l,+=\x00\x00\x00\x00\x00\x00,|,|\x00l,l[
 crash:88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888\x0C~\x0C
+crash:;C\xCD\xCD____________________;__________,,\xFF\xFC______;_______\n\xCD;
 crash:;`\n\x01\n_\xAD`/_\xAD:``;\xAB+`\n_;YYYYYYXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXYYYYYYYYYYYY;
 crash:>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>;8`;\xB2
 crash:?[[\n\xA2\n\xBB`D`[[\n/!\xA2\n\xBB`?[[\n\xA2\n\xBBZ/!/[\x8E[
@@ -141,6 +142,7 @@ corpus:\x01;;+\x00\x00@+@+_\xFF\x0E\x00
 corpus:\x01;;++;\x01\x00
 corpus:\x01;;;++,\n
 corpus:\x01;;;`[,\x7F\x04\x00\x00\x00\x00\x00`[,_+,\n
+corpus:\x01;;\xED+\xFDA
 corpus:\x01;;\xED+\xFDKI
 corpus:\x01;\xED+\xEDT\x04;\x00\x84\x84\xED
 corpus:\x01;\xED+\xED\x84\x84\xED
