@@ -12,9 +12,6 @@ libfuzzer-sys.workspace = true
 arbitrary = { workspace = true, features = ["derive"] }
 jeb-common = { path = ".." }
 
-[profile.release]
-debug = 1
-
 [[bin]]
 name = "fuzz_zig_zag"
 path = "fuzz_targets/fuzz_zig_zag.rs"

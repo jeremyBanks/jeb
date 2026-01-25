@@ -11,9 +11,6 @@ cargo-fuzz = true
 libfuzzer-sys.workspace = true
 ideated-encoding = { path = ".." }
 
-[profile.release]
-debug = 1
-
 [[bin]]
 name = "fuzz_encoding"
 path = "fuzz_targets/fuzz_encoding.rs"
