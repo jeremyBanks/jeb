@@ -27,31 +27,34 @@ fn read_gitignore_lines(path: &Path) -> Result<Vec<String>> {
         .collect())
 }
 
-/// Patterns that start with / and are relevant at the crate level
-/// These will be copied as-is (with the leading /)
-const CRATE_LEVEL_PATTERNS: &[&str] = &[
-    "/target/",
-    "/target",
-    "/Cargo.lock",
-    "/Cargo.toml.orig",
+/// Patterns that, when normalized (/ removed), are relevant at the crate level
+const CRATE_RELEVANT_PATTERNS: &[&str] = &[
+    "target/",
+    "target",
+    "Cargo.lock",
+    "Cargo.toml.orig",
 ];
 
-/// Check if a pattern starting with / should be included for crates
-/// Returns Some(pattern) if it should be included, None if it should be filtered out
+/// Adapt a root pattern for use in crate gitignores
+/// Returns Some(pattern) if it should be included, None if out of scope
 fn adapt_root_pattern(line: &str) -> Option<String> {
     let trimmed = line.trim();
 
-    // Non-root patterns (no leading /) - copy as-is
+    // Non-anchored patterns (no leading /) - copy as-is
     if !trimmed.starts_with('/') {
         return Some(trimmed.to_string());
     }
 
-    // Root patterns (leading /) - only copy if they're crate-relevant
-    if CRATE_LEVEL_PATTERNS.iter().any(|p| trimmed.starts_with(p)) {
-        return Some(trimmed.to_string());
+    // Anchored patterns (leading /) - check if relevant to crates
+    let normalized = &trimmed[1..];
+
+    // Only include if the normalized pattern is relevant to crates
+    // Keep the leading / to preserve anchored behavior
+    if CRATE_RELEVANT_PATTERNS.iter().any(|p| normalized.starts_with(p)) {
+        return Some(trimmed.to_string());  // Return WITH the /
     }
 
-    // Filter out repo-specific root patterns
+    // Filter out repo-specific patterns like /examples/self.sh, /history-pit/
     None
 }
 
