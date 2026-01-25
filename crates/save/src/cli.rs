@@ -519,6 +519,19 @@ pub fn main(args: Save) -> Result<()> {
 
     let (user_name, user_email) = get_git_user(&args, &repo, &head)?;
 
+    // Determine committer (may differ from author for agent-assisted commits)
+    let (committer_name, committer_email) = if let Some(ref explicit) = args.committer {
+        parse_signature(explicit)?
+    } else if let Some(git_env) = get_git_committer_env() {
+        debug!("Using committer from GIT_COMMITTER_* env vars: {:?}", &git_env);
+        git_env
+    } else if let Some(agent) = get_committer_from_agent_env() {
+        info!("Using committer from agent env: {:?}", &agent);
+        agent
+    } else {
+        (user_name.clone(), user_email.clone())
+    };
+
     // Calculate graph statistics using the new calculator
     let graph_stats = if let Some(ref commit) = head {
         let calculator = if args.rebuild {
@@ -619,7 +632,7 @@ pub fn main(args: Save) -> Result<()> {
     let base_commit = repo.commit(
         None,
         &Signature::new(&user_name, &user_email, &Time::new(seconds, 0)).unwrap(),
-        &Signature::new(&user_name, &user_email, &Time::new(seconds, 0)).unwrap(),
+        &Signature::new(&committer_name, &committer_email, &Time::new(seconds, 0)).unwrap(),
         &message,
         &tree,
         parents,
@@ -778,6 +791,48 @@ fn get_git_user(args: &Save, repo: &Repository, head: &Option<Commit>) -> Result
     };
 
     Ok((user_name, user_email))
+}
+
+/// Parses a "Name <email>" format string into name and email components.
+/// If the string doesn't contain angle brackets, uses it as both name and email.
+fn parse_signature(s: &str) -> Result<(String, String)> {
+    if let Some(start) = s.find('<') {
+        if let Some(end) = s.find('>') {
+            let name = s[..start].trim().to_string();
+            let email = s[start + 1..end].to_string();
+            return Ok((name, email));
+        }
+    }
+    // If no angle brackets, use the string as both name and email
+    Ok((s.to_string(), s.to_string()))
+}
+
+/// Checks for known AI agent environment variables and returns appropriate
+/// committer name and email defaults.
+fn get_committer_from_agent_env() -> Option<(String, String)> {
+    if env::var("CLAUDECODE").is_ok() {
+        let name = if env::var("CLAUDE_CODE_REMOTE").is_ok() {
+            "Claude Code (remote)".to_string()
+        } else {
+            "Claude Code".to_string()
+        };
+        Some((name, "noreply@anthropic.com".to_string()))
+    } else if env::var("GEMINI_CLI").is_ok() {
+        Some(("Gemini CLI".to_string(), "noreply@google.com".to_string()))
+    } else if env::var("CURSOR_AGENT").is_ok() {
+        Some(("Cursor".to_string(), "noreply@cursor.com".to_string()))
+    } else {
+        None
+    }
+}
+
+/// Checks for GIT_COMMITTER_NAME and GIT_COMMITTER_EMAIL environment variables.
+/// Returns Some only if BOTH are set.
+fn get_git_committer_env() -> Option<(String, String)> {
+    match (env::var("GIT_COMMITTER_NAME"), env::var("GIT_COMMITTER_EMAIL")) {
+        (Ok(name), Ok(email)) => Some((name, email)),
+        _ => None,
+    }
 }
 
 /// Opens or initializes a new [`git2::Repository`] in `CWD` or `GIT_DIR`, if
