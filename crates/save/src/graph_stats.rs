@@ -369,11 +369,11 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                     break;
                 }
             }
-            count
+            count + 1 // +1 because we're calculating for a new commit (HEAD's child)
         };
         let generation_index =
-            self.calculate_generation_bounded(&parent_map, &head.id(), &boundary_commits, &trusted_stats);
-        let commit_index = self.calculate_commit_index_bounded(&visited, &trusted_stats);
+            self.calculate_generation_bounded(&parent_map, &head.id(), &boundary_commits, &trusted_stats) + 1; // +1 for new commit
+        let commit_index = self.calculate_commit_index_bounded(&visited, &trusted_stats) + 1; // +1 for new commit
         // Calculate origin: prefer origin from trusted commits on first-parent chain
         let origin = if revision_index == 0 {
             None
@@ -579,10 +579,10 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 count += 1;
                 current_id = parents[0].clone();
             }
-            count
+            count + 1 // +1 because we're calculating for a new commit (HEAD's child)
         };
-        let generation_index = self.calculate_generation(&parent_map, &head.id());
-        let commit_index = visited.len().saturating_sub(1) as u32;
+        let generation_index = self.calculate_generation(&parent_map, &head.id()) + 1; // +1 for new commit
+        let commit_index = visited.len() as u32; // visited includes HEAD, which becomes the parent of new commit
         let origin = if revision_index == 0 {
             None
         } else {
@@ -808,9 +808,9 @@ mod tests {
         let head = repo.commits.get(&head_id).unwrap();
         let calculator = GraphStatsCalculator::new(&repo, -1);
         let stats = calculator.calculate(head);
-        assert_eq!(stats.revision_index, 3);
-        assert_eq!(stats.generation_index, 3);
-        assert_eq!(stats.commit_index, 3);
+        assert_eq!(stats.revision_index, 4);
+        assert_eq!(stats.generation_index, 4);
+        assert_eq!(stats.commit_index, 4);
         assert!(!stats.z_mode);
         assert!(stats.origin.is_some());
     }
@@ -840,7 +840,7 @@ mod tests {
         let calculator = GraphStatsCalculator::new(&repo, 2);
         let stats = calculator.calculate(head);
         assert!(stats.z_mode);
-        assert_eq!(stats.revision_index, 2);
+        assert_eq!(stats.revision_index, 3);
     }
     #[test]
     fn test_depth_limit_with_trusted_commit() {
@@ -853,7 +853,7 @@ mod tests {
         let calculator = GraphStatsCalculator::new(&repo, 5);
         let stats = calculator.calculate(head);
         assert!(!stats.z_mode);
-        assert_eq!(stats.revision_index, 2);
+        assert_eq!(stats.revision_index, 3);
     }
     #[test]
     fn test_shallow_repo_boundary() {
@@ -904,9 +904,9 @@ mod tests {
         let head = repo.commits.get(&head_id).unwrap();
         let calculator = GraphStatsCalculator::new(&repo, -1);
         let stats = calculator.calculate(head);
-        assert_eq!(stats.revision_index, 2);
-        assert_eq!(stats.generation_index, 2);
-        assert_eq!(stats.commit_index, 3);
+        assert_eq!(stats.revision_index, 3);
+        assert_eq!(stats.generation_index, 3);
+        assert_eq!(stats.commit_index, 4);
     }
     #[test]
     fn test_z_commit_not_trusted_during_initial_scan() {
@@ -919,7 +919,7 @@ mod tests {
         let calculator = GraphStatsCalculator::new(&repo, 5);
         let stats = calculator.calculate(head);
         assert!(!stats.z_mode);
-        assert_eq!(stats.revision_index, 3);
+        assert_eq!(stats.revision_index, 4);
     }
     #[test]
     fn test_z_commit_trusted_after_entering_z_mode() {
@@ -935,6 +935,6 @@ mod tests {
         let calculator = GraphStatsCalculator::new(&repo, 2);
         let stats = calculator.calculate(head);
         assert!(stats.z_mode);
-        assert_eq!(stats.revision_index, 2);
+        assert_eq!(stats.revision_index, 3);
     }
 }
