@@ -85,7 +85,7 @@ pub static TRACING_INITIALIZED: LazyLock<bool> = LazyLock::new(|| {
         .pretty()
         .init();
 
-    tracing::info!(
+    tracing::debug!(
         "Initialized default `jeb-tracing` configuration for global default `tracing` subscriber."
     );
 
