@@ -108,7 +108,41 @@ Walk from repository root down to target directory. For each directory with a `.
 ## CLI
 
 ```
-cargo run --bin inline-ignore [--dry-run] <target-path>
+cargo run --bin inline-ignore [--dry-run] [--prune] <target-path>
 ```
 
 - `--dry-run`: Print what would be written without modifying files
+- `--prune`: Remove exclusive patterns from ancestors after inlining
+
+## Exclusive Patterns and Pruning
+
+A pattern is "exclusive" to the target if it can **only** match paths within that subtree. These patterns are redundant in the ancestor after inlining.
+
+### Exclusive patterns (can be pruned)
+
+- Anchored patterns where path prefix exactly matches target: `/a/b/foo`, `a/b/foo`
+- Anchored patterns with wildcards AFTER target prefix: `/a/b/*.log`, `/a/b/cache-*`
+- Negation of exclusive patterns: `!/a/b/important.txt`
+
+### NOT exclusive (cannot be pruned)
+
+- Simple patterns: `*.log`, `node_modules/`
+- `**/` patterns: `**/a/b/foo` (matches at any level)
+- Patterns with wildcards IN the target prefix: `/a/*/foo`, `/*/b/bar`, `/a/?/baz`
+
+### Hint behavior
+
+When run without `--prune`, if exclusive patterns exist, a hint is printed to stderr:
+```
+Note: N pattern(s) in ancestor(s) exclusively apply to this target and could be pruned with --prune:
+  /path/to/.gitignore: M pattern(s)
+    /a/b/foo.txt
+    ...
+```
+
+### Pruning behavior
+
+With `--prune`:
+1. Exclusive patterns are removed from ancestor files
+2. Comments/blank lines preceding only the removed pattern are also removed
+3. Ancestor files are rewritten with a trailing blank line
