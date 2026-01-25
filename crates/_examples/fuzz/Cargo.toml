@@ -7,13 +7,13 @@ publish = false
 [package.metadata]
 cargo-fuzz = true
 
-[dependencies]
-libfuzzer-sys.workspace = true
-serde_json.workspace = true
-
 [[bin]]
 name = "fuzz_json"
 path = "fuzz_targets/fuzz_json.rs"
 test = false
 doc = false
 bench = false
+
+[dependencies]
+libfuzzer-sys.workspace = true
+serde_json.workspace = true

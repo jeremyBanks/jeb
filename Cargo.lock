@@ -8,6 +8,7 @@ version = "0.0.0-dev-2026-01-19.4531"
 dependencies = [
  "anyhow",
  "glob",
+ "jeb-tracing",
  "pathdiff",
  "semver",
  "tempfile",

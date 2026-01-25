@@ -2,15 +2,13 @@ use std::process::{
     Command,
     Stdio,
 };
+
+use crate::format::print_command;
+
 /// Run a command, logging it first, letting stdio pass through.
 /// Returns the exit code (0 = success).
 pub fn run_command(program: &str, args: &[&str]) -> i32 {
-    let cmd_str = if args.is_empty() {
-        program.to_string()
-    } else {
-        format!("{} {}", program, args.join(" "))
-    };
-    eprintln!("Running: {}", cmd_str);
+    print_command(program, args);
     match Command::new(program)
         .args(args)
         .stdin(Stdio::inherit())

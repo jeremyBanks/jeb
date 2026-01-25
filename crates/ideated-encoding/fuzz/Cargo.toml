@@ -7,13 +7,13 @@ publish = false
 [package.metadata]
 cargo-fuzz = true
 
-[dependencies]
-libfuzzer-sys.workspace = true
-ideated-encoding = { path = ".." }
-
 [[bin]]
 name = "fuzz_encoding"
 path = "fuzz_targets/fuzz_encoding.rs"
 test = false
 doc = false
 bench = false
+
+[dependencies]
+libfuzzer-sys.workspace = true
+ideated-encoding = { path = ".." }

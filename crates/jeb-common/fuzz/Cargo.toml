@@ -7,11 +7,6 @@ edition.workspace = true
 [package.metadata]
 cargo-fuzz = true
 
-[dependencies]
-libfuzzer-sys.workspace = true
-arbitrary = { workspace = true, features = ["derive"] }
-jeb-common = { path = ".." }
-
 [[bin]]
 name = "fuzz_zig_zag"
 path = "fuzz_targets/fuzz_zig_zag.rs"
@@ -32,6 +27,11 @@ path = "fuzz_targets/fuzz_signedness.rs"
 test = false
 doc = false
 bench = false
+
+[dependencies]
+libfuzzer-sys.workspace = true
+arbitrary = { workspace = true, features = ["derive"] }
+jeb-common = { path = ".." }
 
 [[bin]]
 name = "fuzz_hilbert"

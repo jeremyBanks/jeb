@@ -4,10 +4,9 @@ use {
         cargo_clippy,
         cargo_fix,
         cargo_fmt,
-        cargo_toml_normalize,
+        command_runner::run_command,
         deno_fmt,
         deno_lint,
-        workspace_deps,
     },
     tracing_subscriber::filter::EnvFilter,
 };
@@ -27,8 +26,10 @@ fn main() {
         ("cargo_fmt", cargo_fmt::main),
         ("cargo_fix", cargo_fix::main),
         ("cargo_clippy", cargo_clippy::main),
-        ("workspace_deps", workspace_deps::main),
-        ("cargo_toml_normalize", cargo_toml_normalize::main),
+        ("workspace_deps", || run_command("./run", &["workspace-deps"])),
+        ("cargo_toml_normalize", || {
+            run_command("./run", &["cargo-toml-normalize"])
+        }),
         ("deno_lint", deno_lint::main),
         ("deno_fmt", deno_fmt::main),
     ];

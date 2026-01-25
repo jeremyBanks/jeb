@@ -6,5 +6,6 @@ pub mod cargo_toml_normalize;
 pub mod command_runner;
 pub mod deno_fmt;
 pub mod deno_lint;
+pub mod format;
 pub mod lockfile;
 pub mod workspace_deps;
