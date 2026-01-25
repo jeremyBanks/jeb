@@ -192,6 +192,54 @@ fn main() -> ExitCode {
     }
 }
 
+/// Minimize artifacts (crash, timeout, leak, oom) using cargo fuzz tmin.
+/// Skips "slow-*" artifacts since those are just slow inputs, not bugs.
+fn tmin_artifacts(fuzz_dir: &Path, target: &str, max_time: u32, prefix: &str) -> Result<()> {
+    let artifacts_dir = fuzz_dir.join("artifacts").join(target);
+    if !artifacts_dir.is_dir() {
+        return Ok(());
+    }
+
+    for entry in fs::read_dir(&artifacts_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+
+        let name = match path.file_name().and_then(|n| n.to_str()) {
+            Some(n) => n,
+            None => continue,
+        };
+
+        // Skip "slow-*" artifacts
+        if name.starts_with("slow-") {
+            continue;
+        }
+
+        info!("{}[tmin] minimizing {}...", prefix, name);
+
+        let mut cmd = Command::new("cargo");
+        cmd.args([
+            "+nightly",
+            "fuzz",
+            "tmin",
+            target,
+            path.to_str().unwrap(),
+            "--",
+            &format!("-max_total_time={}", max_time),
+        ])
+        .current_dir(fuzz_dir);
+
+        let status = run_with_truncated_output(cmd, prefix)?;
+        if !status.success() {
+            warn!("{}[tmin] failed for {}", prefix, name);
+        }
+    }
+
+    Ok(())
+}
+
 /// Run a single fuzz target (unpack → fuzz → cmin → pack)
 /// Returns true if the target failed.
 fn run_target(
@@ -253,6 +301,13 @@ fn run_target(
             warn!("{}pack warning: {}", prefix, e);
         }
         return Ok(failed);
+    }
+
+    // Minimize artifacts (before cmin, so minimized versions get packed)
+    if seconds > 0 {
+        if let Err(e) = tmin_artifacts(fuzz_dir, target, 8, prefix) {
+            warn!("{}tmin warning: {}", prefix, e);
+        }
     }
 
     // Run corpus minimization (only if we did actual fuzzing)
