@@ -1,6 +1,7 @@
 use {
     anyhow::{Context, Result, bail},
     std::{
+        collections::HashMap,
         env,
         fs,
         path::{Path, PathBuf},
@@ -20,6 +21,15 @@ struct LineGroup {
     preamble: Vec<SourceLine>,
     /// The actual pattern line (None if file ends with comments/blanks)
     pattern: Option<SourceLine>,
+}
+
+/// Result of transforming a pattern
+#[derive(Debug, Clone)]
+struct TransformResult {
+    /// The transformed pattern(s)
+    patterns: Vec<String>,
+    /// Whether this pattern exclusively applies to the target (can be pruned from ancestor)
+    is_exclusive: bool,
 }
 
 /// Classification of a gitignore pattern
@@ -61,6 +71,13 @@ fn is_comment(line: &str) -> bool {
 /// Check if a line is blank (empty or whitespace only)
 fn is_blank(line: &str) -> bool {
     line.trim().is_empty()
+}
+
+/// Check if a pattern path prefix contains wildcards
+fn has_wildcard_in_prefix(pattern_parts: &[&str], prefix_len: usize) -> bool {
+    pattern_parts[..prefix_len].iter().any(|part| {
+        part.contains('*') || part.contains('?') || part.contains('[')
+    })
 }
 
 /// Parse a gitignore file into line groups
@@ -111,11 +128,14 @@ fn parse_gitignore(content: &str) -> Vec<LineGroup> {
 }
 
 /// Transform a pattern for use in a child gitignore
-/// Returns None if pattern doesn't apply, Some(vec) with transformed pattern(s)
-fn transform_pattern(pattern: &str, relative_path: &[String]) -> Option<Vec<String>> {
+/// Returns None if pattern doesn't apply, Some(TransformResult) with transformed pattern(s)
+fn transform_pattern(pattern: &str, relative_path: &[String]) -> Option<TransformResult> {
     if relative_path.is_empty() {
         // Same directory, no transformation needed
-        return Some(vec![pattern.to_string()]);
+        return Some(TransformResult {
+            patterns: vec![pattern.to_string()],
+            is_exclusive: false,
+        });
     }
 
     // Handle negation
@@ -134,16 +154,18 @@ fn transform_pattern(pattern: &str, relative_path: &[String]) -> Option<Vec<Stri
 
     let kind = classify_pattern(pattern);
 
-    let results = match kind {
+    let (results, is_exclusive) = match kind {
         PatternKind::Simple => {
-            // Copy as-is
-            vec![pattern.to_string()]
+            // Copy as-is, not exclusive (matches at any level)
+            (vec![pattern.to_string()], false)
         }
         PatternKind::Anchored => {
-            transform_anchored(pattern, relative_path)?
+            let (transformed, exclusive) = transform_anchored(pattern, relative_path)?;
+            (transformed, exclusive)
         }
         PatternKind::DoubleStar => {
-            transform_double_star(pattern, relative_path)
+            // Never exclusive (matches at multiple levels due to **/)
+            (transform_double_star(pattern, relative_path), false)
         }
     };
 
@@ -153,11 +175,15 @@ fn transform_pattern(pattern: &str, relative_path: &[String]) -> Option<Vec<Stri
         .map(|p| format!("{}{}{}", negation, p, trailing_slash))
         .collect();
 
-    Some(results)
+    Some(TransformResult {
+        patterns: results,
+        is_exclusive,
+    })
 }
 
 /// Transform an anchored pattern (has `/` in middle or leading `/`)
-fn transform_anchored(pattern: &str, relative_path: &[String]) -> Option<Vec<String>> {
+/// Returns (transformed_patterns, is_exclusive)
+fn transform_anchored(pattern: &str, relative_path: &[String]) -> Option<(Vec<String>, bool)> {
     let had_leading_slash = pattern.starts_with('/');
     let pattern = pattern.strip_prefix('/').unwrap_or(pattern);
 
@@ -166,6 +192,12 @@ fn transform_anchored(pattern: &str, relative_path: &[String]) -> Option<Vec<Str
 
     // Check if pattern starts with the relative path
     if pattern_parts.len() < relative_path.len() {
+        return None;
+    }
+
+    // Check for wildcards in the prefix that would match the relative path
+    // If there are wildcards, we can't be sure this exclusively applies to target
+    if has_wildcard_in_prefix(&pattern_parts, relative_path.len()) {
         return None;
     }
 
@@ -180,7 +212,7 @@ fn transform_anchored(pattern: &str, relative_path: &[String]) -> Option<Vec<Str
 
     if remaining.is_empty() {
         // Pattern matches exactly the target directory itself
-        // This would be weird but handle it: becomes "/" or "."
+        // This would be weird but handle it
         return None;
     }
 
@@ -197,7 +229,9 @@ fn transform_anchored(pattern: &str, relative_path: &[String]) -> Option<Vec<Str
         result
     };
 
-    Some(vec![result])
+    // This pattern exclusively applies to the target directory
+    // (it's anchored and starts with the exact target path, no wildcards in prefix)
+    Some((vec![result], true))
 }
 
 /// Transform a double-star pattern (`**/...`)
@@ -316,6 +350,46 @@ fn merge_into_target(target_content: &str, groups: Vec<LineGroup>) -> String {
     target_lines.join("\n")
 }
 
+/// Remove exclusive patterns from an ancestor gitignore
+fn prune_ancestor(gitignore_path: &Path, patterns_to_remove: &[String]) -> Result<String> {
+    let content = fs::read_to_string(gitignore_path)
+        .with_context(|| format!("Cannot read {}", gitignore_path.display()))?;
+
+    let groups = parse_gitignore(&content);
+    let mut result_lines: Vec<String> = Vec::new();
+    let mut pending_preamble: Vec<String> = Vec::new();
+
+    for group in groups {
+        if let Some(ref pattern) = group.pattern {
+            if patterns_to_remove.contains(&pattern.content) {
+                // Skip this pattern and its preamble
+                pending_preamble.clear();
+                continue;
+            }
+            // Keep this pattern - flush any pending preamble and this group
+            result_lines.extend(pending_preamble.drain(..));
+            for p in &group.preamble {
+                result_lines.push(p.content.clone());
+            }
+            result_lines.push(pattern.content.clone());
+        } else {
+            // Group with only preamble - hold it pending
+            for p in &group.preamble {
+                pending_preamble.push(p.content.clone());
+            }
+        }
+    }
+
+    // Don't include trailing preamble that had no following pattern
+
+    // Ensure trailing blank line if file is not empty
+    if !result_lines.is_empty() {
+        result_lines.push(String::new());
+    }
+
+    Ok(result_lines.join("\n"))
+}
+
 /// Find git repository root
 fn find_git_root(start: &Path) -> Result<PathBuf> {
     let mut current = start.to_path_buf();
@@ -374,11 +448,14 @@ fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
 
     let mut dry_run = false;
+    let mut prune = false;
     let mut target_path = None;
 
     for arg in &args[1..] {
         if arg == "--dry-run" {
             dry_run = true;
+        } else if arg == "--prune" {
+            prune = true;
         } else if arg.starts_with('-') {
             bail!("Unknown option: {}", arg);
         } else {
@@ -390,7 +467,7 @@ fn main() -> Result<()> {
     }
 
     let target_path = target_path
-        .context("Usage: inline-ignore [--dry-run] <target-path>")?;
+        .context("Usage: inline-ignore [--dry-run] [--prune] <target-path>")?;
 
     let target_dir = PathBuf::from(&target_path).canonicalize()
         .with_context(|| format!("Cannot resolve path: {}", target_path))?;
@@ -417,14 +494,17 @@ fn main() -> Result<()> {
 
     let mut result_content = target_content.clone();
 
+    // Track exclusive patterns per ancestor for pruning
+    let mut prune_info: HashMap<PathBuf, Vec<String>> = HashMap::new();
+
     // Collect and process parent gitignores (root to target order)
     let parent_gitignores = collect_parent_gitignores(&git_root, &target_dir)?;
 
-    for gitignore_path in parent_gitignores {
+    for gitignore_path in &parent_gitignores {
         let source_dir = gitignore_path.parent().unwrap();
         let relative_path = get_relative_path_components(source_dir, &target_dir)?;
 
-        let source_content = fs::read_to_string(&gitignore_path)
+        let source_content = fs::read_to_string(gitignore_path)
             .with_context(|| format!("Cannot read {}", gitignore_path.display()))?;
 
         let groups = parse_gitignore(&source_content);
@@ -433,9 +513,17 @@ fn main() -> Result<()> {
         let mut transformed_groups = Vec::new();
         for group in groups {
             if let Some(ref pattern) = group.pattern {
-                if let Some(transformed) = transform_pattern(&pattern.content, &relative_path) {
+                if let Some(result) = transform_pattern(&pattern.content, &relative_path) {
+                    // Track exclusive patterns for potential pruning
+                    if result.is_exclusive {
+                        prune_info
+                            .entry(gitignore_path.clone())
+                            .or_default()
+                            .push(pattern.content.clone());
+                    }
+
                     // For each transformed pattern, create a group
-                    for (i, t_pattern) in transformed.into_iter().enumerate() {
+                    for (i, t_pattern) in result.patterns.into_iter().enumerate() {
                         transformed_groups.push(LineGroup {
                             // Only include preamble for the first transformed pattern
                             preamble: if i == 0 { group.preamble.clone() } else { vec![] },
@@ -452,13 +540,77 @@ fn main() -> Result<()> {
         result_content = merge_into_target(&result_content, transformed_groups);
     }
 
+    // Count total exclusive patterns
+    let total_exclusive: usize = prune_info.values().map(|v| v.len()).sum();
+
     if dry_run {
         println!("# Would write to: {}", target_gitignore.display());
         println!("{}", result_content);
+
+        if prune && total_exclusive > 0 {
+            println!();
+            println!("# Would prune from ancestors:");
+            for (path, patterns) in &prune_info {
+                if !patterns.is_empty() {
+                    println!("# {}: {} pattern(s)", path.display(), patterns.len());
+                    for p in patterns {
+                        println!("#   - {}", p);
+                    }
+                    println!();
+                    println!("# New content for {}:", path.display());
+                    let pruned = prune_ancestor(path, patterns)?;
+                    for line in pruned.lines() {
+                        println!("# {}", line);
+                    }
+                    println!();
+                }
+            }
+        } else if !prune && total_exclusive > 0 {
+            // Hint that pruning is possible
+            eprintln!();
+            eprintln!(
+                "Note: {} pattern(s) in ancestor(s) exclusively apply to this target and could be pruned with --prune:",
+                total_exclusive
+            );
+            for (path, patterns) in &prune_info {
+                if !patterns.is_empty() {
+                    eprintln!("  {}: {} pattern(s)", path.display(), patterns.len());
+                    for p in patterns {
+                        eprintln!("    {}", p);
+                    }
+                }
+            }
+        }
     } else {
         fs::write(&target_gitignore, &result_content)
             .with_context(|| format!("Cannot write {}", target_gitignore.display()))?;
         println!("Updated: {}", target_gitignore.display());
+
+        if prune && total_exclusive > 0 {
+            for (path, patterns) in &prune_info {
+                if !patterns.is_empty() {
+                    let pruned = prune_ancestor(path, patterns)?;
+                    fs::write(path, &pruned)
+                        .with_context(|| format!("Cannot write {}", path.display()))?;
+                    println!("Pruned {} pattern(s) from: {}", patterns.len(), path.display());
+                }
+            }
+        } else if !prune && total_exclusive > 0 {
+            // Hint that pruning is possible
+            eprintln!();
+            eprintln!(
+                "Note: {} pattern(s) in ancestor(s) exclusively apply to this target and could be pruned with --prune:",
+                total_exclusive
+            );
+            for (path, patterns) in &prune_info {
+                if !patterns.is_empty() {
+                    eprintln!("  {}: {} pattern(s)", path.display(), patterns.len());
+                    for p in patterns {
+                        eprintln!("    {}", p);
+                    }
+                }
+            }
+        }
     }
 
     Ok(())
