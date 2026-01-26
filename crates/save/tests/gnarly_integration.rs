@@ -226,7 +226,45 @@ refs:
     // "Squashes these changes into the first parent."
     // If squash=1, we squash current changes into HEAD.
     // So new commit replaces HEAD (2). Parent of new commit should be parent of HEAD (1).
-    // So parents: [1].
+    assert!(snap!("") == output);
+}
+
+#[test]
+fn test_squash_to() {
+    let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 3
+1:
+  message: one
+  tree: {a: "1"}
+2:
+  parents: [1]
+  message: two
+  tree: {a: "2"}
+3:
+  parents: [2]
+  message: three
+  tree: {a: "3"}
+"#;
+    let snapshot = git_snapshot::parse(yaml).unwrap();
+    let temp_repo = snapshot.to_temporary_repository().unwrap();
+    let repo_path = temp_repo.path().parent().unwrap();
+
+    fs::write(repo_path.join("a"), "4").unwrap();
+
+    let _ctx = TestContext::new(repo_path);
+    
+    // Squash to 1 (this means new commit's parent is 1)
+    Save::with(|s| { 
+        s.squash_to_ref = vec!["1".to_string()];
+        s.timeless = true;
+        s.message = Some("squashed to one".to_string());
+    }).save().expect("save --squash-to failed");
+
+    let result = temp_repo.to_snapshot().unwrap();
+    let output = serialize(&result, CommitIdStyle::Integer, SerializationOptions::default());
     
     assert!(snap!("") == output);
 }

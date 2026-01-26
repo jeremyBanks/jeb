@@ -716,9 +716,33 @@ pub fn main(args: Save) -> Result<()> {
         } else {
             bail!("Cannot squash on unborn branch");
         }
+    } else if !args.squash_to_ref.is_empty() {
+        let mut resolved = Vec::new();
+        for r in &args.squash_to_ref {
+            resolved.push(repo.revparse_single(r)?.peel_to_commit()?);
+        }
+        resolved
     } else {
         head.iter().cloned().collect()
     };
+
+    let mut parents = parents;
+    for r in &args.added_parent_ref {
+        let commit = repo.revparse_single(r)?.peel_to_commit()?;
+        if !parents.iter().any(|p| p.id() == commit.id()) {
+            parents.push(commit);
+        }
+    }
+
+    for r in &args.removed_parent_ref {
+        let commit = repo.revparse_single(r)?.peel_to_commit()?;
+        let old_len = parents.len();
+        parents.retain(|p| p.id() != commit.id());
+        if parents.len() == old_len {
+            bail!("Parent to remove not found: {}", r);
+        }
+    }
+
     let parents_refs: Vec<&Commit> = parents.iter().collect();
 
     let base_commit = repo.commit(
