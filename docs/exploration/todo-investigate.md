@@ -4,12 +4,33 @@
 
 **Question**: Do we have different color schemes and fonts defined somewhere in this repository?
 
-**Status**: Not yet investigated
+**Status**: Investigated
 
-**Context**: User asked about this during polyglot development. May be relevant for:
-- Customizing polyglot image appearance
-- Using indexed color palettes effectively
-- Text rendering in images
+**Findings**:
+
+### Fonts (`src/font.rs`)
+6 built-in bitmap fonts via the `Font` trait:
+- `Micro3pt` (3×3 pixels) - **has glyphs defined**, inspired by u/Udzu's Unicase Micro
+- `Mini5pt` (3×5 pixels) - **has glyphs defined**, inspired by u/Udzu's Mini
+- `Slab9pt` (9×12) - empty, inspired by Susan Kare's Toronto
+- `Sans9pt` (9×12) - empty, inspired by Susan Kare's Chicago
+- `Mono9pt` (9×12) - empty, inspired by Susan Kare's Monaco
+- `Serif9pt` (9×12) - empty, inspired by Susan Kare's New York
+
+The 9pt fonts have structure but no glyphs yet.
+
+### Color Modes (`src/png.rs`)
+5 PNG color modes via `ColorMode` enum:
+- `Lightness` (grayscale, 1 sample/pixel)
+- `RedGreenBlue` (RGB, 3 samples/pixel)
+- `Indexed` (palette, 1 sample/pixel)
+- `LightnessAlpha` (grayscale+alpha, 2 samples/pixel)
+- `RedGreenBlueAlpha` (RGBA, 4 samples/pixel)
+
+### Bit Depths (`src/png.rs`)
+- 1, 2, 4, 8, or 16 bits per sample
+
+No predefined color schemes/palettes found - palettes are passed in at runtime.
 
 ## Removing the 42KB Limit
 

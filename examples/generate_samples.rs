@@ -77,6 +77,24 @@ Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris. ";
         println!("Created lorem.png ({} bytes)", polyglot.len());
     }
 
+    // Sample 6: Large multi-file archive (tests IDAT boundary handling)
+    // Total content > 65KB to verify boundary padding works
+    {
+        let mut files = IndexMap::new();
+        // Create 30KB files with varying patterns
+        let data1: Vec<u8> = (0..30_000).map(|i| (i % 256) as u8).collect();
+        let data2: Vec<u8> = (0..30_000).map(|i| ((i * 7) % 256) as u8).collect();
+        let data3: Vec<u8> = (0..30_000).map(|i| ((i * 13) % 256) as u8).collect();
+
+        files.insert(b"data1.bin".to_vec(), data1);
+        files.insert(b"data2.bin".to_vec(), data2);
+        files.insert(b"data3.bin".to_vec(), data3);
+
+        let polyglot = zipng::zipng(&files.into());
+        fs::write("target/samples/large.png", &polyglot)?;
+        println!("Created large.png ({} bytes) - tests boundary handling", polyglot.len());
+    }
+
     println!("\nAll samples created in target/samples/");
     Ok(())
 }

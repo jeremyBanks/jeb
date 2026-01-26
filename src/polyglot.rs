@@ -21,8 +21,9 @@
 //!
 //! ## IDAT Block Boundaries
 //!
-//! IDAT uses stored deflate blocks with max 65535 bytes each. Content
-//! must stay under ~42KB to avoid corruption from IDAT block headers.
+//! IDAT uses stored deflate blocks with max 65535 bytes each. Files are
+//! automatically padded to avoid crossing block boundaries, allowing
+//! unlimited total content (individual files limited to ~60KB each).
 
 use std::collections::HashSet;
 use std::ops::Not;
@@ -37,8 +38,9 @@ const MIN_ROW_WIDTH: usize = 40;
 /// Maximum bytes per IDAT deflate stored block.
 const IDAT_BLOCK_SIZE: usize = 65535;
 
-/// Maximum total content size for the polyglot to work correctly.
-pub const MAX_CONTENT_SIZE: usize = 42_000;
+/// Maximum size for a single file's compressed content.
+/// Must fit within one IDAT block (65535 bytes of filtered data).
+pub const MAX_FILE_CONTENT_SIZE: usize = 60_000;
 
 /// Estimate total data size for width calculation.
 fn estimate_total_size(files: &[(&[u8], &[u8])]) -> usize {
@@ -167,7 +169,40 @@ pub fn build_polyglot(
     output
 }
 
-/// Build pixel data with variable row width.
+/// Convert data position to filtered position (accounts for filter bytes).
+fn data_to_filtered_pos(data_pos: usize, row_width: usize) -> usize {
+    let row = data_pos / row_width;
+    let col = data_pos % row_width;
+    // Each row has a filter byte prefix, so row N starts at filtered position N * (row_width + 1)
+    // Data within the row is at filtered position row_start + 1 + col
+    row * (row_width + 1) + 1 + col
+}
+
+/// Check if a range of filtered positions crosses an IDAT block boundary.
+fn crosses_idat_boundary(start: usize, end: usize) -> bool {
+    // IDAT boundaries are at positions 65535, 131070, 196605, ...
+    let start_block = start / IDAT_BLOCK_SIZE;
+    let end_block = (end.saturating_sub(1)) / IDAT_BLOCK_SIZE;
+    start_block != end_block
+}
+
+/// Find the next row-aligned data position that starts after a filtered boundary.
+fn next_boundary_aligned_pos(current_data_pos: usize, row_width: usize) -> usize {
+    let filtered_row_size = row_width + 1;
+    let current_filtered = data_to_filtered_pos(current_data_pos, row_width);
+    let current_block = current_filtered / IDAT_BLOCK_SIZE;
+    let next_boundary = (current_block + 1) * IDAT_BLOCK_SIZE;
+
+    // Find the row that starts at or after the next boundary
+    // Row N starts at filtered position N * filtered_row_size
+    // We need N * filtered_row_size >= next_boundary
+    let target_row = (next_boundary + filtered_row_size - 1) / filtered_row_size;
+
+    // Return the data position for the start of that row
+    target_row * row_width
+}
+
+/// Build pixel data with variable row width and IDAT boundary handling.
 fn build_aligned_data(
     files: &[(&[u8], &[u8])],
     row_width: usize,
@@ -180,21 +215,35 @@ fn build_aligned_data(
     let mut final_block_rows = HashSet::new();
 
     for (name, body) in files {
-        // Align to row boundary for entry start
-        let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
-        data.resize(data.len() + padding_to_row, 0);
+        // Calculate file size before placing it
+        let header_size = 30 + name.len();
+        let bytes_for_alignment = header_size % row_width;
+        let extra_len_estimate = if bytes_for_alignment == 0 { 0 } else { row_width - bytes_for_alignment };
+        let num_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
+        let file_data_size = header_size + extra_len_estimate + num_blocks * row_width;
 
+        // Align to row boundary
+        let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
+        let mut target_pos = data.len() + padding_to_row;
+
+        // Check if file would cross an IDAT boundary
+        let filtered_start = data_to_filtered_pos(target_pos, row_width);
+        let filtered_end = data_to_filtered_pos(target_pos + file_data_size, row_width);
+
+        if crosses_idat_boundary(filtered_start, filtered_end) {
+            // File would cross a boundary; push it to start after the boundary
+            target_pos = next_boundary_aligned_pos(target_pos, row_width);
+        }
+
+        // Pad to the target position
+        data.resize(target_pos, 0);
         let entry_start = data.len();
 
-        // ZIP local header is 30 bytes + filename
-        let header_size = 30 + name.len();
-
-        // Calculate extra field size to align content to next row boundary
+        // Recalculate extra field size (may differ if position changed)
         let bytes_used = header_size % row_width;
         let extra_len = if bytes_used == 0 { 0 } else { row_width - bytes_used };
 
-        // Calculate number of deflate blocks and compressed size
-        let num_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
+        // Calculate compressed size (with filter bytes)
         let compressed_size = num_blocks * filtered_row_size;
 
         // Calculate which row contains the final block
@@ -386,6 +435,51 @@ mod tests {
         // Check PNG signature
         assert_eq!(&result[0..8], b"\x89PNG\r\n\x1A\n");
         // Check ZIP EOCD exists
+        assert!(result.windows(4).any(|w| w == b"PK\x05\x06"));
+    }
+
+    #[test]
+    fn test_boundary_detection() {
+        // Test the crosses_idat_boundary function
+        assert!(!crosses_idat_boundary(0, 1000));
+        assert!(!crosses_idat_boundary(60000, 65000));
+        assert!(crosses_idat_boundary(60000, 70000)); // Crosses 65535
+        assert!(!crosses_idat_boundary(65535, 70000)); // Starts at boundary
+        assert!(crosses_idat_boundary(130000, 132000)); // Crosses 131070
+    }
+
+    #[test]
+    fn test_data_to_filtered_pos() {
+        let row_width = 100;
+        // First byte of data is at filtered position 1 (after filter byte)
+        assert_eq!(data_to_filtered_pos(0, row_width), 1);
+        // Last byte of first row
+        assert_eq!(data_to_filtered_pos(99, row_width), 100);
+        // First byte of second row (filtered position 101 + 1 = 102)
+        assert_eq!(data_to_filtered_pos(100, row_width), 102);
+        // Second byte of second row
+        assert_eq!(data_to_filtered_pos(101, row_width), 103);
+    }
+
+    #[test]
+    fn test_large_content_multiple_files() {
+        // Create content that would exceed 65535 bytes when filtered
+        // This tests that boundary padding works
+        let large_body = vec![0xAB_u8; 30_000];
+        let files = vec![
+            (b"file1.bin".as_ref(), large_body.as_slice()),
+            (b"file2.bin".as_ref(), large_body.as_slice()),
+            (b"file3.bin".as_ref(), large_body.as_slice()),
+        ];
+
+        let result = build_polyglot(&files, 0, BitDepth::EightBit, ColorMode::Lightness, None);
+
+        // Check PNG signature
+        assert_eq!(&result[0..8], b"\x89PNG\r\n\x1A\n");
+        // Check all three files have local headers
+        let pk_count = result.windows(4).filter(|w| *w == b"PK\x03\x04").count();
+        assert_eq!(pk_count, 3, "Expected 3 local file headers");
+        // Check EOCD exists
         assert!(result.windows(4).any(|w| w == b"PK\x05\x06"));
     }
 }
