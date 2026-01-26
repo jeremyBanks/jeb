@@ -17,6 +17,12 @@
 //! - 2 bytes: LEN
 //! - 2 bytes: NLEN (~LEN)
 //! - 9 bytes: data
+//!
+//! ## IDAT Block Boundaries
+//!
+//! IDAT uses stored deflate blocks with max 65535 bytes each. To support
+//! files larger than ~42KB total, we pad so no file's content spans an
+//! IDAT block boundary.
 
 use std::collections::HashSet;
 use std::ops::Not;
@@ -30,6 +36,12 @@ const ROW_WIDTH: usize = 13;
 
 /// Data bytes per deflate block (after LEN+NLEN overhead).
 const DATA_PER_BLOCK: usize = ROW_WIDTH - 4; // = 9
+
+/// Filtered bytes per row (filter byte + data).
+const FILTERED_ROW_SIZE: usize = ROW_WIDTH + 1; // = 14
+
+/// Maximum bytes per IDAT deflate stored block.
+const IDAT_BLOCK_SIZE: usize = 65535;
 
 /// Information about a file entry.
 #[derive(Debug, Clone)]
@@ -81,6 +93,7 @@ pub fn build_polyglot(
     write_png_footer(&mut output);
 
     // Step 4: Build file entries with correct offsets
+    // Must account for IDAT deflate block headers every 65535 bytes
     let file_entries: Vec<FileEntry> = entry_infos
         .into_iter()
         .map(|(name, body, orig_pos, compressed_size)| {
@@ -88,7 +101,12 @@ pub fn build_polyglot(
             // Convert original position to filtered position
             let rows_before = orig_pos / ROW_WIDTH;
             let filtered_pos = orig_pos + rows_before + 1; // +1 for initial filter
-            let file_offset = data_offset + filtered_pos;
+
+            // Account for IDAT deflate block headers (5 bytes each) every 65535 bytes
+            let deflate_blocks_before = filtered_pos / 65535;
+            let deflate_overhead = deflate_blocks_before * 5;
+
+            let file_offset = data_offset + filtered_pos + deflate_overhead;
             FileEntry {
                 name,
                 body,
