@@ -113,7 +113,7 @@ fn test_from_json_array_empty() {
     let direct: Value = json.clone().into();
     let via_serde = from_serde_json_via_serde(&json);
     assert_eq!(direct, via_serde);
-    assert_eq!(direct, Value::Array(vec![]));
+    assert_eq!(direct, Value::Array(vec![].into()));
 }
 #[test]
 fn test_from_json_array_primitives() {
@@ -233,7 +233,7 @@ fn test_roundtrip_primitives() {
 #[test]
 fn test_roundtrip_arrays() {
     let values = vec![
-        Value::Array(vec![]),
+        Value::Array(vec![].into()),
         Value::from([Value::from(1u64), Value::from(2u64), Value::from(3u64)]),
         Value::from([
             Value::Null(Null::new()),

@@ -56,20 +56,23 @@ fn test_integer_cross_conversion() {
 }
 #[test]
 fn test_array_as_bytes() {
-    let arr = Value::Array(vec![
-        Value::from(72u64),
-        Value::from(101u64),
-        Value::from(108u64),
-        Value::from(108u64),
-        Value::from(111u64),
-    ]);
+    let arr = Value::Array(
+        vec![
+            Value::from(72u64),
+            Value::from(101u64),
+            Value::from(108u64),
+            Value::from(108u64),
+            Value::from(111u64),
+        ]
+        .into(),
+    );
     let bytes: Vec<u8> = from_value(arr).unwrap();
     assert_eq!(bytes, b"Hello");
 }
 #[test]
 fn test_empty_map_from_array() {
     use std::collections::HashMap;
-    let arr = Value::Array(vec![]);
+    let arr = Value::Array(vec![].into());
     let map: HashMap<std::string::String, i32> = from_value(arr).unwrap();
     assert!(map.is_empty());
 }
@@ -80,7 +83,7 @@ fn test_struct_from_array() {
         x: i32,
         y: i32,
     }
-    let arr = Value::Array(vec![Value::from(10i64), Value::from(20i64)]);
+    let arr = Value::Array(vec![Value::from(10i64), Value::from(20i64)].into());
     let point: Point = from_value(arr).unwrap();
     assert_eq!(point, Point { x: 10, y: 20 });
 }

@@ -181,7 +181,7 @@ fn test_bytes() {
     assert!(matches!(value, Value::Bytes(_)));
     let recovered: Bytes = from_value(value).unwrap();
     assert_eq!(recovered, bytes);
-    let arr_value = Value::Array(vec![Value::from(0), Value::from(1), Value::from(255)]);
+    let arr_value = Value::Array(vec![Value::from(0), Value::from(1), Value::from(255)].into());
     let as_vec: Vec<u8> = from_value(arr_value.clone()).unwrap();
     assert_eq!(as_vec, vec![0, 1, 255]);
     let as_bytes: Bytes = from_value(arr_value).unwrap();
