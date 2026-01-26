@@ -325,11 +325,66 @@ DEBUG=false
         println!("Created mixed_large.png ({} bytes) - large mixed content", polyglot.len());
     }
 
+    // Demo 7: LARGE polyglot using real binary files from target/
+    // This demonstrates the removed 42KB limit
+    {
+        let mut files = IndexMap::new();
+        let mut total_size = 0usize;
+
+        // Collect binary files from target/debug/deps (under 55KB each to fit in IDAT blocks)
+        let binary_sources = [
+            "target/debug/deps/libstatic_assertions-527e485f7c237177.rmeta",
+            "target/debug/deps/libunicode_ident-958e4d1913b8252f.rmeta",
+            "target/debug/deps/libcrc_catalog-f72aa4618477982d.rmeta",
+            "target/debug/deps/libconvert_case-0ed2ef63ea74f750.rmeta",
+            "target/debug/deps/libsimd_adler32-81c619463fa90026.rmeta",
+            "target/debug/deps/libunicode_ident-958e4d1913b8252f.rmeta",
+            "target/debug/deps/liballoc_stdlib-99832f0118dff4d9.rmeta",
+            "target/debug/deps/liballoc_stdlib-7b5ff8c4f1edd37d.rmeta",
+            "target/debug/deps/libstable_deref_trait-aca7dc0c7162757f.rmeta",
+        ];
+
+        for path in binary_sources {
+            if let Ok(data) = fs::read(path) {
+                if data.len() < 55_000 {  // Must fit in one IDAT block
+                    let name = std::path::Path::new(path)
+                        .file_name()
+                        .unwrap()
+                        .to_string_lossy()
+                        .into_owned();
+                    total_size += data.len();
+                    files.insert(name.into_bytes(), data);
+                }
+            }
+        }
+
+        // Add some generated large files to reach ~500KB
+        // Each file must be under 55KB
+        for i in 0..8 {
+            let data: Vec<u8> = (0..50_000)
+                .map(|j| ((i * 31 + j * 17) % 256) as u8)
+                .collect();
+            total_size += data.len();
+            files.insert(format!("generated_{}.bin", i).into_bytes(), data);
+        }
+
+        println!("Building large polyglot with {} files, {} bytes total content...",
+                 files.len(), total_size);
+
+        let polyglot = zipng::zipng(&files.into());
+        fs::write("target/demos/huge.png", &polyglot)?;
+        println!("Created huge.png ({} bytes / {:.1} KB) - {} files, {} KB content",
+                 polyglot.len(),
+                 polyglot.len() as f64 / 1024.0,
+                 binary_sources.len() + 8,
+                 total_size / 1024);
+    }
+
     println!("\nAll demos created in target/demos/");
     println!("\nTo explore:");
     println!("  file target/demos/*.png      # Verify they're valid PNGs");
     println!("  unzip -l target/demos/*.png  # List ZIP contents");
-    println!("  unzip -d /tmp/demo target/demos/webapp.png  # Extract webapp");
-    
+    println!("  unzip -t target/demos/huge.png  # Verify large archive");
+
     Ok(())
 }
