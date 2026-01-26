@@ -258,7 +258,7 @@ refs:
     
     // Squash to 1 (this means new commit's parent is 1)
     Save::with(|s| { 
-        s.squash_to_ref = vec!["1".to_string()];
+        s.squash_to_ref = vec!["HEAD~2".to_string()];
         s.timeless = true;
         s.message = Some("squashed to one".to_string());
     }).save().expect("save --squash-to failed");
