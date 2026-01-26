@@ -26,6 +26,10 @@
           "run": "cargo clippy",
           "continue-on-error": true
         }
+        {
+          "name": "rust test",
+          "run": "cargo test --all"
+        }
       ]
     }
   }
