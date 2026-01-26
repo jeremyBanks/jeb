@@ -137,6 +137,138 @@ refs:
 }
 
 #[test]
+fn test_squash_to() {
+    let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 3
+1:
+  message: one
+  tree: {a: "1"}
+2:
+  parents: [1]
+  message: two
+  tree: {a: "2"}
+3:
+  parents: [2]
+  message: three
+  tree: {a: "3"}
+"#;
+    let snapshot = git_snapshot::parse(yaml).unwrap();
+    let temp_repo = snapshot.to_temporary_repository().unwrap();
+    let repo_path = temp_repo.path().parent().unwrap();
+
+    fs::write(repo_path.join("a"), "4").unwrap();
+
+    let _ctx = TestContext::new(repo_path);
+    
+    // Squash to 1 (this means new commit's parent is 1)
+    Save::with(|s| { 
+        s.squash_to_ref = vec!["HEAD~2".to_string()];
+        s.timeless = true;
+        s.message = Some("squashed to one".to_string());
+    }).save().expect("save --squash-to failed");
+
+    let result = temp_repo.to_snapshot().unwrap();
+    let output = serialize(&result, CommitIdStyle::Integer, SerializationOptions::default());
+    
+    assert!(snap!(r#"HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  author: Author <author@example.com>
+  author-date: 1970-01-01T00:00:00Z
+  commit-date: 1970-01-01T00:00:00Z
+  message: one
+  tree:
+    a: "1"
+2:
+  parents: [1]
+  author: dev <dev@localhost>
+  author-date: 1970-06-26T17:31:44Z
+  commit-date: 1970-06-26T17:31:44Z
+  message: squashed to one
+  tree:
+    a: "4"
+"#) == output);
+}
+
+#[test]
+fn test_trust_messages() {
+    let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  message: r10
+  tree: {file1: "1"}
+2:
+  parents: [1]
+  message: r11
+  tree: {file1: "1", file2: "2"}
+"#;
+    let snapshot = git_snapshot::parse(yaml).unwrap();
+    let temp_repo = snapshot.to_temporary_repository().unwrap();
+    let repo_path = temp_repo.path().parent().unwrap();
+
+    // Ensure all files exist in workdir so save doesn't delete them
+    fs::write(repo_path.join("file1"), "1").unwrap();
+    fs::write(repo_path.join("file2"), "2").unwrap();
+    fs::write(repo_path.join("file3"), "3").unwrap();
+
+    let _ctx = TestContext::new(repo_path);
+    
+    // Should trust r11 and create r12
+    Save::with(|s| { 
+        s.timeless = true; 
+    }).save().expect("save failed");
+
+    let result = temp_repo.to_snapshot().unwrap();
+    let commit = result.head_commit().expect("No HEAD");
+    assert!(commit.message.starts_with("r12"), "Message '{}' should start with 'r12'", commit.message);
+}
+
+#[test]
+fn test_rebuild() {
+    let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  message: r10
+  tree: {file1: "1"}
+2:
+  parents: [1]
+  message: r11
+  tree: {file1: "1", file2: "2"}
+"#;
+    let snapshot = git_snapshot::parse(yaml).unwrap();
+    let temp_repo = snapshot.to_temporary_repository().unwrap();
+    let repo_path = temp_repo.path().parent().unwrap();
+
+    fs::write(repo_path.join("file1"), "1").unwrap();
+    fs::write(repo_path.join("file2"), "2").unwrap();
+    fs::write(repo_path.join("file3"), "3").unwrap();
+
+    let _ctx = TestContext::new(repo_path);
+    
+    // With --rebuild, it should ignore r11 and calculate based on graph (which is root -> 1 -> 2)
+    Save::with(|s| { 
+        s.rebuild = true;
+        s.timeless = true; 
+    }).save().expect("save --rebuild failed");
+
+    let result = temp_repo.to_snapshot().unwrap();
+    let commit = result.head_commit().expect("No HEAD");
+    // Graph is 1(r0) -> 2(r1) -> new(r2)
+    assert!(commit.message.starts_with("r2"), "Message '{}' should start with 'r2'", commit.message);
+}
+
+#[test]
 fn test_add_remove_parent() {
     let yaml = r#"
 HEAD: refs/heads/main
@@ -165,6 +297,7 @@ refs:
     
     // HEAD is 2. Parents: [1].
     // Add 3, Remove 1. Resulting parents should be [3].
+    // Use :/message syntax to find commits by message, which git2 supports
     Save::with(|s| { 
         s.added_parent_ref = vec![":/three".to_string()];
         s.removed_parent_ref = vec![":/one".to_string()];
@@ -176,7 +309,6 @@ refs:
     let commit = result.head_commit().expect("No HEAD");
     
     // Verify parents
-    // Since we don't know the exact OIDs, we check that it has 1 parent and it's 3.
     assert_eq!(commit.parents.len(), 1);
     
     let output = serialize(&result, CommitIdStyle::Integer, SerializationOptions::default());
@@ -184,6 +316,7 @@ refs:
 refs:
   heads:
     main: 4
+    other: 3
 1:
   author: Author <author@example.com>
   author-date: 1970-01-01T00:00:00Z
@@ -198,6 +331,25 @@ refs:
   commit-date: 1970-01-01T00:00:00Z
   message: two
   tree:
+    a: "2"
+3:
+  author: Author <author@example.com>
+  author-date: 1970-01-01T00:00:00Z
+  commit-date: 1970-01-01T00:00:00Z
+  message: three
+  tree:
+    b: "3"
+4:
+  parents: [3]
+  author: dev <dev@localhost>
+  author-date: 1970-06-26T17:31:44Z
+  commit-date: 1970-06-26T17:31:44Z
+  message: new parents
+  tree:
+    a: "4"
+    b: "3"
+"#) == output);
+}
     a: "2"
 3:
   author: Author <author@example.com>
