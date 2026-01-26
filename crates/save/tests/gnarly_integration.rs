@@ -226,7 +226,34 @@ refs:
     // "Squashes these changes into the first parent."
     // If squash=1, we squash current changes into HEAD.
     // So new commit replaces HEAD (2). Parent of new commit should be parent of HEAD (1).
-    assert!(snap!("") == output);
+    assert!(snap!(r#"HEAD: refs/heads/main
+refs:
+  heads:
+    main: 3
+1:
+  author: Author <author@example.com>
+  author-date: 1970-01-01T00:00:00Z
+  commit-date: 1970-01-01T00:00:00Z
+  message: one
+  tree:
+    a: "1"
+2:
+  parents: [1]
+  author: Author <author@example.com>
+  author-date: 1970-01-01T00:00:00Z
+  commit-date: 1970-01-01T00:00:00Z
+  message: two
+  tree:
+    a: "2"
+3:
+  parents: [1]
+  author: dev <dev@localhost>
+  author-date: 1970-06-26T17:31:44Z
+  commit-date: 1970-06-26T17:31:44Z
+  message: amended
+  tree:
+    a: "3"
+"#) == output);
 }
 
 #[test]
@@ -266,5 +293,93 @@ refs:
     let result = temp_repo.to_snapshot().unwrap();
     let output = serialize(&result, CommitIdStyle::Integer, SerializationOptions::default());
     
-    assert!(snap!("") == output);
+    assert!(snap!(r#"HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  author: Author <author@example.com>
+  author-date: 1970-01-01T00:00:00Z
+  commit-date: 1970-01-01T00:00:00Z
+  message: one
+  tree:
+    a: "1"
+2:
+  parents: [1]
+  author: dev <dev@localhost>
+  author-date: 1970-06-26T17:31:44Z
+  commit-date: 1970-06-26T17:31:44Z
+  message: squashed to one
+  tree:
+    a: "4"
+"#) == output);
+}
+
+#[test]
+fn test_trust_messages() {
+    let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  message: r10 / xFC87
+  tree: {file1: "1"}
+2:
+  parents: [1]
+  message: r11 / xABB3
+  tree: {file1: "1", file2: "2"}
+"#;
+    let snapshot = git_snapshot::parse(yaml).unwrap();
+    let temp_repo = snapshot.to_temporary_repository().unwrap();
+    let repo_path = temp_repo.path().parent().unwrap();
+
+    fs::write(repo_path.join("file3"), "3").unwrap();
+
+    let _ctx = TestContext::new(repo_path);
+    
+    // Should trust r11 and create r12
+    Save::with(|s| { 
+        s.timeless = true; 
+    }).save().expect("save failed");
+
+    let result = temp_repo.to_snapshot().unwrap();
+    let commit = result.head_commit().expect("No HEAD");
+    assert!(commit.message.starts_with("r12"), "Message '{}' should start with 'r12'", commit.message);
+}
+
+#[test]
+fn test_rebuild() {
+    let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  message: r10 / xFC87
+  tree: {file1: "1"}
+2:
+  parents: [1]
+  message: r11 / xABB3
+  tree: {file1: "1", file2: "2"}
+"#;
+    let snapshot = git_snapshot::parse(yaml).unwrap();
+    let temp_repo = snapshot.to_temporary_repository().unwrap();
+    let repo_path = temp_repo.path().parent().unwrap();
+
+    fs::write(repo_path.join("file3"), "3").unwrap();
+
+    let _ctx = TestContext::new(repo_path);
+    
+    // With --rebuild, it should ignore r11 and calculate based on graph (which is root -> 1 -> 2)
+    // So it should be r2 (0-indexed: root is r0, 1 is r1, 2 is r2, new is r3)
+    // Wait, if 1 is root in this graph, then 1 is r0, 2 is r1, new is r2.
+    Save::with(|s| { 
+        s.rebuild = true;
+        s.timeless = true; 
+    }).save().expect("save --rebuild failed");
+
+    let result = temp_repo.to_snapshot().unwrap();
+    let commit = result.head_commit().expect("No HEAD");
+    assert!(commit.message.starts_with("r2"), "Message '{}' should start with 'r2'", commit.message);
 }
