@@ -128,8 +128,15 @@ algorithm may need to scan deeper specifically for origin when:
 A parent commit's message is trusted if:
 
 1. It parses correctly in our format
-2. The prefix matches the current repository state (`r` for regular, `s` for
-   shallow)
+2. The prefix is acceptable for the current repository state:
+   - `r` (Regular) commits are **always trusted** - they were calculated with
+     full history visibility, so their values are accurate regardless of current
+     repo state
+   - `s` (Shallow) commits are **only trusted in shallow repositories** - a
+     regular repo with full visibility shouldn't rely on values calculated with
+     limited information
+   - `z` (Z-mode) commits are **only trusted when we ourselves enter z-mode** -
+     otherwise we should try to do better
 3. The tree hash in the message matches the commit's actual tree
 
 ### Inheritance Rules
