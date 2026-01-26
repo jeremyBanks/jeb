@@ -29,7 +29,18 @@ use std::collections::HashSet;
 use std::ops::Not;
 
 use crate::checksums::{adler32, crc32};
-use crate::png::{BitDepth, ColorMode, write_png_chunk, write_png_header, write_png_footer};
+
+// Re-export types from png module with compatibility aliases
+pub use crate::png::{BitDepth, ColorType};
+pub use crate::png::BitDepth::*;
+pub use crate::png::ColorType::*;
+
+/// Alias for backward compatibility - ColorMode is now ColorType
+pub type ColorMode = ColorType;
+
+/// Alias for backward compatibility - Lightness is now Luminance
+pub const Lightness: ColorType = ColorType::Luminance;
+pub const LightnessAlpha: ColorType = ColorType::LuminanceAlpha;
 
 /// Minimum row width to ensure filter bytes don't land in ZIP headers.
 /// ZIP local header is 30 bytes + filename, so 40 gives safe margin.
