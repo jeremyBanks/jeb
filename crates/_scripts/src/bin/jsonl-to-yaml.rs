@@ -236,3 +236,90 @@ fn write_yaml_value<W: Write>(w: &mut W, value: &Value, indent: usize, inline: b
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    /// Convert a JSON value to our YAML format and parse it back with serde_yaml
+    fn round_trip(value: &Value) -> Value {
+        let mut yaml_bytes = Vec::new();
+        write_yaml_value(&mut yaml_bytes, value, 0, false).unwrap();
+        let yaml_str = String::from_utf8(yaml_bytes).unwrap();
+        serde_yaml::from_str(&yaml_str).unwrap()
+    }
+
+    #[test]
+    fn test_scalars() {
+        assert_eq!(round_trip(&json!(null)), json!(null));
+        assert_eq!(round_trip(&json!(true)), json!(true));
+        assert_eq!(round_trip(&json!(false)), json!(false));
+        assert_eq!(round_trip(&json!(42)), json!(42));
+        assert_eq!(round_trip(&json!(3.14)), json!(3.14));
+        assert_eq!(round_trip(&json!("hello")), json!("hello"));
+    }
+
+    #[test]
+    fn test_strings_needing_quotes() {
+        assert_eq!(round_trip(&json!("123")), json!("123"));
+        assert_eq!(round_trip(&json!("true")), json!("true"));
+        assert_eq!(round_trip(&json!("null")), json!("null"));
+        assert_eq!(round_trip(&json!("yes")), json!("yes"));
+        assert_eq!(round_trip(&json!("")), json!(""));
+        assert_eq!(round_trip(&json!("hello:world")), json!("hello:world"));
+    }
+
+    #[test]
+    fn test_multiline_no_trailing() {
+        assert_eq!(round_trip(&json!("a\nb")), json!("a\nb"));
+        assert_eq!(round_trip(&json!("line1\nline2\nline3")), json!("line1\nline2\nline3"));
+    }
+
+    #[test]
+    fn test_multiline_one_trailing() {
+        assert_eq!(round_trip(&json!("a\nb\n")), json!("a\nb\n"));
+        assert_eq!(round_trip(&json!("single\n")), json!("single\n"));
+    }
+
+    #[test]
+    fn test_multiline_multiple_trailing() {
+        assert_eq!(round_trip(&json!("a\nb\n\n")), json!("a\nb\n\n"));
+        assert_eq!(round_trip(&json!("a\n\n\n")), json!("a\n\n\n"));
+        assert_eq!(round_trip(&json!("x\n\n\n\n")), json!("x\n\n\n\n"));
+    }
+
+    #[test]
+    fn test_multiline_leading_space() {
+        assert_eq!(round_trip(&json!("  indented\nnormal")), json!("  indented\nnormal"));
+        assert_eq!(round_trip(&json!("\ttabbed\nline")), json!("\ttabbed\nline"));
+    }
+
+    #[test]
+    fn test_arrays() {
+        assert_eq!(round_trip(&json!([])), json!([]));
+        assert_eq!(round_trip(&json!([1, 2, 3])), json!([1, 2, 3]));
+        assert_eq!(round_trip(&json!(["a", "b"])), json!(["a", "b"]));
+        assert_eq!(round_trip(&json!([[1, 2], [3, 4]])), json!([[1, 2], [3, 4]]));
+    }
+
+    #[test]
+    fn test_objects() {
+        assert_eq!(round_trip(&json!({})), json!({}));
+        assert_eq!(round_trip(&json!({"a": 1})), json!({"a": 1}));
+        assert_eq!(round_trip(&json!({"nested": {"deep": true}})), json!({"nested": {"deep": true}}));
+    }
+
+    #[test]
+    fn test_complex() {
+        let complex = json!({
+            "name": "test",
+            "values": [1, 2, 3],
+            "config": {
+                "enabled": true,
+                "script": "echo hello\necho world\n"
+            }
+        });
+        assert_eq!(round_trip(&complex), complex);
+    }
+}
