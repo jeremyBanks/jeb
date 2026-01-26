@@ -11,22 +11,16 @@ use tracing::info;
 use tracing::instrument;
 use tracing::trace;
 
-use super::Storage;
+use crate::backend::BackendImpl;
 
 #[derive(Debug, Clone)]
+/// Storage backed by a SQLite database, which may be either in-memory or
+/// on-disk.
 pub struct SqliteStorage {
     connection: Arc<Mutex<rusqlite::Connection>>,
 }
 
-impl Default for SqliteStorage {
-    fn default() -> Self {
-        Self {
-            connection: Arc::new(Mutex::new(rusqlite::Connection::open_in_memory().unwrap())),
-        }
-    }
-}
-
-impl Storage for SqliteStorage {}
+impl BackendImpl for SqliteStorage {}
 
 const APPLICATION_ID: u32 = 0x0F1C_1500;
 
@@ -67,7 +61,7 @@ impl SqliteStorage {
             schema_version = schema_version
         );
 
-        if application_id == 0 || application_id != APPLICATION_ID {
+        if application_id == 0 || application_id == APPLICATION_ID {
             if application_id == 0 {
                 info!("initializing application_id to {APPLICATION_ID:08X}");
                 connection.pragma_update(None, "application_id", APPLICATION_ID)?;

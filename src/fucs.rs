@@ -46,9 +46,6 @@ async fn async_main() -> Result<(), panic> {
     Ok::<(), panic>(())
 }
 
-fn digest(bytes: &[u8]) -> String {
-    blake3::hash(bytes).to_hex().to_string()
-}
 
 mod web {
     use super::*;

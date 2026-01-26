@@ -1,13 +1,89 @@
+use std::fmt::Debug;
+use std::fmt::Display;
+use std::process::ExitCode;
+use std::process::Termination;
+
+use static_assertions::assert_impl_all;
+
+pub fn default<T>() -> T
+where T: Default {
+    T::default()
+}
+
+/// equivalent to [`core::mem::drop`]
+pub fn noop_move<T>(_x: T) {}
+/// equivalent to [`core::convert::identity`]
+pub fn noop_move_move<T>(x: T) -> T {
+    x
+}
+pub fn noop_ref<T>(_x: &T) {}
+pub fn noop_ref_ref<T>(x: &T) -> &T {
+    x
+}
+pub fn noop_mut<T>(_x: &mut T) {}
+pub fn noop_mut_mut<T>(x: &mut T) -> &mut T {
+    x
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[allow(non_camel_case_types)]
+/// An uninhabited [`!`]-like "never" type, with trait implementations as needed
+/// for convenience within this crate's types.
+pub enum never {}
+
+assert_impl_all!(never: Send, Sync);
+assert_impl_all!(panic: Send, Sync);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[allow(non_camel_case_types)]
+/// An uninhabited [`!`]-like "never" type that provides a panicking
+/// implementation of `From` for any `Display + Debug` error type,
+/// with trait implementations as needed for convenience within this crate's.
+pub enum panic {}
+
+impl<Err> From<Err> for panic
+where Err: Display + Debug
+{
+    #[track_caller]
+    fn from(error: Err) -> Self {
+        panic!("{error}")
+    }
+}
+
+impl Default for never {
+    fn default() -> Self {
+        unreachable!()
+    }
+}
+
+impl From<panic> for never {
+    fn from(_: panic) -> never {
+        unreachable!()
+    }
+}
+
+impl From<never> for panic {
+    fn from(_: never) -> panic {
+        unreachable!()
+    }
+}
+
+impl Termination for panic {
+    fn report(self) -> ExitCode {
+        unreachable!()
+    }
+}
+
+impl Termination for never {
+    fn report(self) -> ExitCode {
+        unreachable!()
+    }
+}
+
 use std::cmp::Ordering;
 use std::fmt;
-use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
-
-use serde::de;
-use serde::Deserialize;
-use serde::Serialize;
-use static_assertions::assert_impl_all;
 
 /// This is a convenience wrapper for `PhantomData<fn(T) -> T>`, which
 /// seems to be the right way to defined a `PhantomData` without affecting
@@ -27,8 +103,6 @@ assert_impl_all!(
     Eq,
     Ord,
     Hash,
-    Serialize,
-    Deserialize<'static>,
     From<()>,
     Into<()>,
 );
@@ -89,33 +163,4 @@ impl<T: ?Sized> From<()> for PhantomType<T> {
 
 impl<T: ?Sized> From<PhantomType<T>> for () {
     fn from(_: PhantomType<T>) -> Self {}
-}
-
-impl<T: ?Sized> Serialize for PhantomType<T> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where S: serde::Serializer {
-        serializer.serialize_unit()
-    }
-}
-
-impl<'de, T: ?Sized> Deserialize<'de> for PhantomType<T> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where D: serde::Deserializer<'de> {
-        deserializer.deserialize_unit(UnitVisitor)?;
-        Ok(PhantomType(PhantomData))
-    }
-}
-
-struct UnitVisitor;
-impl<'de> de::Visitor<'de> for UnitVisitor {
-    type Value = ();
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("nothing (zero-sized unit value)")
-    }
-
-    fn visit_unit<E>(self) -> Result<Self::Value, E>
-    where E: de::Error {
-        Ok(())
-    }
 }

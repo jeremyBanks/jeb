@@ -1,10 +1,14 @@
-#![allow(unused_labels)]
-#![deny(unsafe_code)]
+/*
+//! it's not real
+//!
+//! it's [`fiction`][self]
 #![warn(unused_crate_dependencies, missing_docs)]
+#![allow(unused_labels, missing_docs, unused_imports)]
 #![cfg_attr(
     all(debug_assertions, any(not(test), feature = "EDITOR")),
     allow(dead_code, unreachable_code, unused_variables)
 )]
+#![deny(unsafe_code)]
 
 use std::env;
 use std::format as f;
@@ -15,36 +19,47 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
 
-mod blob;
-mod ffmpeg;
-mod generic;
-// mod queries;
-// mod throttle;
-// mod tts;
-mod context;
-mod engine;
-mod inline;
-mod query;
-mod serde;
-mod storage;
+/// Supporting types for [`Blobs`][Blob] and [`Blips`][Blip].
+pub mod blobs;
+pub mod ffmpeg;
+/// Generic supporting types.
+pub mod generic;
+// pub mod queries;
+pub mod throttle;
+// pub mod tts;
+// mod backend;
+// pub mod backends;
+/// Supporting types for [`Context`], and [`Metadata`]
+// pub mod context;
+pub mod copyvec;
+pub mod fonts;
+/// Supporting types for [`Request`], and [`Response`].
+// pub mod query;
+pub mod zip;
 
-pub use crate::blob::Blip;
-pub use crate::blob::Blob;
-pub use crate::blob::Blobbable;
-pub use crate::engine::Engine;
-pub use crate::generic::never;
-pub use crate::generic::panic;
-pub use crate::query::AnyRequest;
-pub use crate::query::AnyResponse;
-pub use crate::query::Context;
-pub use crate::query::Request;
-pub use crate::query::Response;
-pub use crate::storage::sqlite::SqliteStorage;
-pub use crate::storage::Storage;
-pub use crate::storage::StorageError;
+use std::ops::Deref;
+use std::sync::Arc;
 
-// https://blessed.rs/crates
+use blobs::blip::blip;
+// use query::TextToSpeech;
+use tracing::info;
 
+pub use crate::blobs::Blip;
+pub use crate::blobs::Blob;
+pub use crate::blobs::Blobbable;
+// pub use crate::context::Context;
+// pub use crate::context::Metadata;
+pub use crate::generic::*;
+// pub use crate::query::AnyRequest;
+// pub use crate::query::AnyResponse;
+// pub use crate::query::Request;
+// pub use crate::query::Response;
+
+/// `fiction` CLI entry point
+///
+/// # Panics
+///
+/// Panics for a variety of possible unhandled errors.
 pub fn main() -> Result<(), panic> {
     if cfg!(debug_assertions) {
         if env::var("RUST_LOG").is_err() {
@@ -63,24 +78,35 @@ pub fn main() -> Result<(), panic> {
             .with(ErrorLayer::default()),
     )?;
 
+    color_eyre::install()?;
+
+    info!("Initializing tokio runtime...");
+
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?;
 
-    // let storage: Arc<SqliteStorage> = default();
-    // let engine = Engine::new(storage);
+    info!("Starting main task...");
 
-    // let request = text_to_speech("hello, world!");
+    runtime.block_on(async {
+        let args: Vec<String> = std::env::args().skip(1).collect();
 
-    // return runtime.block_on(exercise(engine));
+        info!("I'm in ur main task...");
 
-    std::process::exit(0)
+        info!("With ur engine...");
+
+        // let request = TextToSpeech {
+        //     text: blip("Hello, world!"),
+        //     ..default()
+        // };
+
+        // info!("Executing request... {request:?}");
+
+        // dbg!(&response);
+
+        Ok(())
+    })
 }
 
-// async fn exercise(engine: Engine<impl Storage>) -> Result<(), panic> {
-//     let speech = engine.text_to_speech("hello, world!").await?;
-
-//     eprintln!("{speech:?}");
-
-//     Ok(())
-// }
+pub mod png;
+ */

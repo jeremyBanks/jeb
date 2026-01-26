@@ -9,18 +9,22 @@ use serde::Deserialize;
 use serde::Serialize;
 use static_assertions::assert_impl_all;
 
-pub use self::phantom_type::Type;
+pub(crate) use self::phantom_type::PhantomType;
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[doc(hidden)]
 #[allow(non_camel_case_types)]
+/// An uninhabited [`!`]-like "never" type, with trait implementations as needed
+/// for convenience within this crate's types.
 pub enum never {}
 
 assert_impl_all!(never: Send, Sync);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[doc(hidden)]
 #[allow(non_camel_case_types)]
+/// An uninhabited [`!`]-like "never" type that provides a panicking
+/// implementation of `From` for any `Display + Debug` error type,
+/// with trait implementations as needed for convenience within this crate's.
 pub enum panic {}
 
 assert_impl_all!(panic: Send, Sync);

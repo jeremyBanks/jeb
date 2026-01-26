@@ -5,12 +5,11 @@
 
 next goals:
 
-- [ ] make it compile, apparently we've gone ahead and figured out how we want
-      our blob/blob_id (now called "blip") implementation to work, so finish it
-      up. I think Blip is mostly good, so copy over some of the changes to Blob.
-
+- [ ] priorities: queries with NO dependencies, so we don't have to worry about
+      context doing much complicated.
 - [ ] sqlite storage layer with separate blobs and queries, but not much smarts.
       (maybe we merge later, but maybe not.)
+- [ ] cache configuration can come later
 - [ ] queries for web caching
 - [ ] and royal road ingestion
 - [ ] and per-chapter text-to-speech production of ogg files

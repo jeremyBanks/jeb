@@ -21,7 +21,7 @@ macro_rules! request_and_response {
     () => {
         request_and_response! {
             // content-addressed blob storage
-            blob_from_id     = 0x00;
+            // blob_from_id     = 0x00;
 
             // alternate content-addressings
             // blob_from_sha1   = 0x11;
