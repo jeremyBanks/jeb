@@ -10,7 +10,7 @@ use zipng::Files;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Creating polyglot PNG+ZIP file...\n");
 
-    // Create some test files
+    // Create some test files with SHORT names (< 10 chars to avoid row boundary issues)
     let mut files = IndexMap::new();
     files.insert(
         b"hello.txt".to_vec(),
@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         b"# Polyglot Test\n\nThis ZIP is also a valid PNG image!".to_vec(),
     );
     files.insert(
-        b"data/numbers.txt".to_vec(),
+        b"nums.txt".to_vec(),  // Shortened from "data/numbers.txt"
         b"1\n2\n3\n4\n5\n6\n7\n8\n9\n10".to_vec(),
     );
 
