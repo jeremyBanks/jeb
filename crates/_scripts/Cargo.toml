@@ -13,6 +13,7 @@ keywords = []
 [dependencies]
 _chosen.workspace = true
 anyhow.workspace = true
+chrono.workspace = true
 clap = { workspace = true, features = ["derive"] }
 glob.workspace = true
 jeb-tracing.workspace = true

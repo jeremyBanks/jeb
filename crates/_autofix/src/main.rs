@@ -8,10 +8,21 @@ use {
         deno_fmt,
         deno_lint,
     },
+    clap::Parser,
     tracing_subscriber::filter::EnvFilter,
 };
 
+#[derive(Parser)]
+#[command(name = "_autofix")]
+struct Args {
+    /// Run pre-release steps (bump version)
+    #[arg(long)]
+    pre_release: bool,
+}
+
 fn main() {
+    let args = Args::parse();
+
     // Initialize tracing with env-filter
     // Default: warn for external crates, debug for this crate
     let env_filter =
@@ -22,7 +33,7 @@ fn main() {
         .with_writer(std::io::stderr)
         .init();
 
-    let modules: &[(&str, fn() -> i32)] = &[
+    let mut modules: Vec<(&str, fn() -> i32)> = vec![
         ("cargo_fmt", cargo_fmt::main),
         ("cargo_fix", cargo_fix::main),
         ("cargo_clippy", cargo_clippy::main),
@@ -33,6 +44,11 @@ fn main() {
         ("deno_lint", deno_lint::main),
         ("deno_fmt", deno_fmt::main),
     ];
-    let exit_code = autofix_runner::run_autofixes(modules);
+
+    if args.pre_release {
+        modules.push(("bump_version", || run_command("./run", &["bump-version"])));
+    }
+
+    let exit_code = autofix_runner::run_autofixes(&modules);
     std::process::exit(exit_code);
 }
