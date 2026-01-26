@@ -523,7 +523,10 @@ pub fn main(args: Save) -> Result<()> {
     let (committer_name, committer_email) = if let Some(ref explicit) = args.committer {
         parse_signature(explicit)?
     } else if let Some(git_env) = get_git_committer_env() {
-        debug!("Using committer from GIT_COMMITTER_* env vars: {:?}", &git_env);
+        debug!(
+            "Using committer from GIT_COMMITTER_* env vars: {:?}",
+            &git_env
+        );
         git_env
     } else if let Some(agent) = get_committer_from_agent_env() {
         info!("Using committer from agent env: {:?}", &agent);
@@ -794,7 +797,8 @@ fn get_git_user(args: &Save, repo: &Repository, head: &Option<Commit>) -> Result
 }
 
 /// Parses a "Name <email>" format string into name and email components.
-/// If the string doesn't contain angle brackets, uses it as both name and email.
+/// If the string doesn't contain angle brackets, uses it as both name and
+/// email.
 fn parse_signature(s: &str) -> Result<(String, String)> {
     if let Some(start) = s.find('<') {
         if let Some(end) = s.find('>') {
@@ -812,15 +816,15 @@ fn parse_signature(s: &str) -> Result<(String, String)> {
 fn get_committer_from_agent_env() -> Option<(String, String)> {
     if env::var("CLAUDECODE").is_ok() {
         let name = if env::var("CLAUDE_CODE_REMOTE").is_ok() {
-            "Claude Code (remote)".to_string()
+            "✻ Claude Code (remote)".to_string()
         } else {
-            "Claude Code".to_string()
+            "✻ Claude Code".to_string()
         };
         Some((name, "noreply@anthropic.com".to_string()))
     } else if env::var("GEMINI_CLI").is_ok() {
-        Some(("Gemini CLI".to_string(), "noreply@google.com".to_string()))
+        Some(("⟡ Gemini CLI".to_string(), "noreply@google.com".to_string()))
     } else if env::var("CURSOR_AGENT").is_ok() {
-        Some(("Cursor".to_string(), "noreply@cursor.com".to_string()))
+        Some(("⇗ Cursor".to_string(), "noreply@cursor.com".to_string()))
     } else {
         None
     }
@@ -829,7 +833,10 @@ fn get_committer_from_agent_env() -> Option<(String, String)> {
 /// Checks for GIT_COMMITTER_NAME and GIT_COMMITTER_EMAIL environment variables.
 /// Returns Some only if BOTH are set.
 fn get_git_committer_env() -> Option<(String, String)> {
-    match (env::var("GIT_COMMITTER_NAME"), env::var("GIT_COMMITTER_EMAIL")) {
+    match (
+        env::var("GIT_COMMITTER_NAME"),
+        env::var("GIT_COMMITTER_EMAIL"),
+    ) {
         (Ok(name), Ok(email)) => Some((name, email)),
         _ => None,
     }
