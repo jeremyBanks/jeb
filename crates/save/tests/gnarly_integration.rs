@@ -35,7 +35,107 @@ impl Drop for TestContext {
 
 #[test]
 fn test_merge_flow_timeless() {
-...
+    let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 4
+1:
+  message: root
+  tree:
+    file1: root
+2:
+  parents: [1]
+  message: left
+  tree:
+    file1: root
+    file2: left
+3:
+  parents: [1]
+  message: right
+  tree:
+    file1: root
+    file3: right
+4:
+  parents: [2, 3]
+  message: merge
+  tree:
+    file1: root
+    file2: left
+    file3: right
+"#;
+    let snapshot = git_snapshot::parse(yaml).unwrap();
+    let temp_repo = snapshot.to_temporary_repository().unwrap();
+    let repo_path = temp_repo.path().parent().unwrap();
+
+    // Create a new file
+    fs::write(repo_path.join("file4"), "new").unwrap();
+
+    let _ctx = TestContext::new(repo_path);
+    
+    // Use timeless for deterministic output
+    Save::with(|s| { 
+        s.message = Some("post-merge".to_string()); 
+        s.timeless = true;
+    }).save().expect("save failed");
+
+    let result = temp_repo.to_snapshot().unwrap();
+    let output = serialize(&result, CommitIdStyle::Integer, SerializationOptions::default());
+
+    // We expect the new commit 5 to be added
+    assert!(snap!(r#"HEAD: refs/heads/main
+refs:
+  heads:
+    main: 5
+1:
+  author: Author <author@example.com>
+  author-date: 1970-01-01T00:00:00Z
+  commit-date: 1970-01-01T00:00:00Z
+  message: root
+  tree:
+    file1: root
+2:
+  parents: [1]
+  author: Author <author@example.com>
+  author-date: 1970-01-01T00:00:00Z
+  commit-date: 1970-01-01T00:00:00Z
+  message: left
+  tree:
+    file1: root
+    file2: left
+3:
+  parents: [1]
+  author: Author <author@example.com>
+  author-date: 1970-01-01T00:00:00Z
+  commit-date: 1970-01-01T00:00:00Z
+  message: right
+  tree:
+    file1: root
+    file3: right
+4:
+  parents: [2, 3]
+  author: Author <author@example.com>
+  author-date: 1970-01-01T00:00:00Z
+  commit-date: 1970-01-01T00:00:00Z
+  message: merge
+  tree:
+    file1: root
+    file2: left
+    file3: right
+5:
+  parents: [4]
+  author: dev <dev@localhost>
+  author-date: 1970-06-26T17:31:44Z
+  commit-date: 1970-06-26T17:31:44Z
+  message: post-merge
+  tree:
+    file1: root
+    file2: left
+    file3: right
+    file4: new
+"#) == output);
+}
+
 #[test]
 fn test_add_remove_parent() {
     let yaml = r#"
