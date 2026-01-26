@@ -6,7 +6,7 @@ resolver = "2"
 members = ["crates/*", "crates/*/fuzz"]
 
 [workspace.package]
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 authors = ["Jeremy Banks"]
 repository = "https://github.com/jeremyBanks/jeb"
 description = "(part of https://crates.io/crates/jeb)"

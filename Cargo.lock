@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "_autofix"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "anyhow",
  "clap 3.2.25",
@@ -20,11 +20,11 @@ dependencies = [
 
 [[package]]
 name = "_chosen"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 
 [[package]]
 name = "_claude_hooks"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "eyre",
  "git2",
@@ -38,7 +38,7 @@ dependencies = [
 
 [[package]]
 name = "_examples"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "anyhow",
  "ordermap",
@@ -55,7 +55,7 @@ dependencies = [
 
 [[package]]
 name = "_scripts"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "_chosen",
  "anyhow",
@@ -74,7 +74,7 @@ dependencies = [
 
 [[package]]
 name = "_trace"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "clap 4.5.54",
  "ignore",
@@ -992,7 +992,7 @@ checksum = "e629b9b98ef3dd8afe6ca2bd0f89306cec16d43d907889945bc5d6687f2f13c7"
 
 [[package]]
 name = "git-snapshot"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "clap 3.2.25",
  "git2",
@@ -1029,7 +1029,7 @@ dependencies = [
 
 [[package]]
 name = "git-zoom"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "git-snapshot",
  "indexmap 2.13.0",
@@ -1251,7 +1251,7 @@ dependencies = [
 
 [[package]]
 name = "ideated-encoding"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "thiserror 2.0.17",
 ]
@@ -1342,7 +1342,7 @@ dependencies = [
 
 [[package]]
 name = "inline"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "databake",
  "once_cell",
@@ -1387,7 +1387,7 @@ checksum = "7ee5b5339afb4c41626dde77b7a611bd4f2c202b897852b4bcf5d03eddc61010"
 
 [[package]]
 name = "jeb"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "bat",
  "color-eyre",
@@ -1421,14 +1421,14 @@ dependencies = [
 
 [[package]]
 name = "jeb-bytes-as-text"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "jeb-common",
 ]
 
 [[package]]
 name = "jeb-common"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "derive_more",
  "document-features",
@@ -1450,7 +1450,7 @@ dependencies = [
 
 [[package]]
 name = "jeb-stream"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "async-stream",
  "cfg-if",
@@ -1471,7 +1471,7 @@ dependencies = [
 
 [[package]]
 name = "jeb-tracing"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "color-eyre",
  "tracing",
@@ -1480,7 +1480,7 @@ dependencies = [
 
 [[package]]
 name = "jeb-value"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "derive_more",
  "document-features",
@@ -1493,7 +1493,7 @@ dependencies = [
 
 [[package]]
 name = "jeb-wasm"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "document-features",
  "jeb",
@@ -2173,7 +2173,7 @@ dependencies = [
 
 [[package]]
 name = "save"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "bstr 0.2.17",
  "clap 3.2.25",
@@ -2389,7 +2389,7 @@ checksum = "8207e78455ffdf55661170876f88daf85356e4edd54e0a3dbc79586ca1e50cbe"
 
 [[package]]
 name = "stringify_verbatim"
-version = "0.0.0-dev-2026-01-19.4531"
+version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "proc-macro2",
  "quote",

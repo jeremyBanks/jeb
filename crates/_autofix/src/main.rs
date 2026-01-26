@@ -13,10 +13,10 @@ use {
 };
 
 #[derive(Parser)]
-#[command(name = "_autofix")]
+#[clap(name = "_autofix")]
 struct Args {
     /// Run pre-release steps (bump version)
-    #[arg(long)]
+    #[clap(long)]
     pre_release: bool,
 }
 
