@@ -12,17 +12,17 @@
 //! By aligning file content to row boundaries and using the appropriate
 //! filter type for each row, we get valid deflate streams!
 //!
-//! ## Row structure (ROW_WIDTH = 13):
-//! - Filter byte (from PNG) = deflate block header
-//! - 2 bytes: LEN
-//! - 2 bytes: NLEN (~LEN)
-//! - 9 bytes: data
+//! ## Variable Row Width
+//!
+//! Row width is calculated to produce approximately square images:
+//! - width ≈ sqrt(total_data) for square proportions
+//! - Minimum width of 40 ensures filter bytes don't corrupt ZIP headers
+//! - Height >= width is preferred (portrait/square orientation)
 //!
 //! ## IDAT Block Boundaries
 //!
-//! IDAT uses stored deflate blocks with max 65535 bytes each. To support
-//! files larger than ~42KB total, we pad so no file's content spans an
-//! IDAT block boundary.
+//! IDAT uses stored deflate blocks with max 65535 bytes each. Content
+//! must stay under ~42KB to avoid corruption from IDAT block headers.
 
 use std::collections::HashSet;
 use std::ops::Not;
@@ -30,31 +30,27 @@ use std::ops::Not;
 use crate::checksums::{adler32, crc32};
 use crate::png::{BitDepth, ColorMode, write_png_chunk, write_png_header, write_png_footer};
 
-/// Row width in bytes. Each row = 1 filter + ROW_WIDTH data.
-/// For deflate: filter(1) + LEN(2) + NLEN(2) + data(9) = 14 bytes per row.
-///
-/// This specific width is required because the ZIP local header structure
-/// relies on filter bytes at positions 13 and 27 (in filtered output) to
-/// provide mod_date_high and name_len_high bytes respectively.
-const ROW_WIDTH: usize = 13;
-
-/// Data bytes per deflate block (after LEN+NLEN overhead).
-const DATA_PER_BLOCK: usize = ROW_WIDTH - 4; // = 9
-
-/// Filtered bytes per row (filter byte + data).
-const FILTERED_ROW_SIZE: usize = ROW_WIDTH + 1; // = 14
+/// Minimum row width to ensure filter bytes don't land in ZIP headers.
+/// ZIP local header is 30 bytes + filename, so 40 gives safe margin.
+const MIN_ROW_WIDTH: usize = 40;
 
 /// Maximum bytes per IDAT deflate stored block.
 const IDAT_BLOCK_SIZE: usize = 65535;
 
 /// Maximum total content size for the polyglot to work correctly.
-///
-/// This limit exists because IDAT deflate blocks have a maximum size of 65535
-/// bytes. When filtered data exceeds this, IDAT inserts 5-byte block headers
-/// that corrupt any ZIP data spanning the boundary. With our 14-byte filtered
-/// rows, we can have at most ~4681 rows of content, which translates to about
-/// 42KB of actual file content after accounting for headers and row expansion.
 pub const MAX_CONTENT_SIZE: usize = 42_000;
+
+/// Calculate optimal row width for approximately square images.
+/// Returns width such that height >= width (portrait/square orientation).
+fn calculate_row_width(total_data_estimate: usize) -> usize {
+    // For square: W ≈ 2 + sqrt(4 + D)
+    // Using floor ensures height >= width
+    let ideal = 2.0 + (4.0 + total_data_estimate as f64).sqrt();
+    let width = ideal.floor() as usize;
+
+    // Clamp to minimum safe width
+    width.max(MIN_ROW_WIDTH)
+}
 
 /// Information about a file entry.
 #[derive(Debug, Clone)]
