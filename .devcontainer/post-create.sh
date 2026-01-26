@@ -8,8 +8,9 @@ git config --global pull.default current
 git config --global pull.rebase false
 git config --global push.autoSetupRemote true
 git config --global core.pager "less -F -X"
-# shellcheck disable=SC2016
-git config --global alias.save '!./run save'
+
+git config alias.save '!./run save'
+git config alias.run '!./run'
 
 rustup update
 rustup show
