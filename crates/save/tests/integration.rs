@@ -15,7 +15,7 @@ struct TestContext {
 
 impl TestContext {
     fn new(new_cwd: &std::path::Path) -> Self {
-        let lock = CWD_MUTEX.lock().unwrap();
+        let lock = CWD_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
         let original_cwd = std::env::current_dir().unwrap();
         std::env::set_current_dir(new_cwd).unwrap();
         Self {
@@ -206,17 +206,25 @@ HEAD: refs/heads/trunk
 
     let _ctx = TestContext::new(repo_path);
 
+    // Save current CLAUDECODE state and unset it (CLAUDECODE takes precedence over GEMINI_CLI)
+    let claudecode_was_set = std::env::var("CLAUDECODE").ok();
+    unsafe { std::env::remove_var("CLAUDECODE"); }
+
     // Set GEMINI_CLI environment variable
     unsafe { std::env::set_var("GEMINI_CLI", "1"); }
-    
+
     let args = Save::with(|_| {});
     args.save().expect("save failed with agent env");
 
     unsafe { std::env::remove_var("GEMINI_CLI"); }
+    // Restore CLAUDECODE if it was set
+    if let Some(val) = claudecode_was_set {
+        unsafe { std::env::set_var("CLAUDECODE", val); }
+    }
 
     let roundtrip = temp_repo.to_snapshot().unwrap();
     let commit = roundtrip.head_commit().expect("No HEAD commit");
-    
+
     // Committer should be Gemini CLI
     assert_eq!(commit.committer.name, "⟡ Gemini CLI");
     assert_eq!(commit.committer.email, "noreply@google.com");
@@ -259,4 +267,124 @@ refs:
     
     assert_eq!(commit.tree.get("new.txt"), Some("new content"));
     assert_eq!(commit.tree.get("old.txt"), None);
+}
+
+#[test]
+fn test_ai_agent_email_skipped_for_author() {
+    // Start with a repo that has a commit with a known author
+    let yaml = r#"
+HEAD: refs/heads/trunk
+refs:
+  heads:
+    trunk: 1
+1:
+  message: initial
+  author: Human User <human@example.com>
+  tree:
+    file.txt: initial
+"#;
+    let snapshot = git_snapshot::parse(yaml).unwrap();
+    let temp_repo = snapshot.to_temporary_repository().unwrap();
+    let repo_path = temp_repo.path().parent().unwrap();
+
+    // Configure git with an AI agent email
+    let repo = git2::Repository::open(repo_path).unwrap();
+    repo.config().unwrap().set_str("user.name", "Claude Code").unwrap();
+    repo.config().unwrap().set_str("user.email", "noreply@anthropic.com").unwrap();
+
+    // Make a change
+    fs::write(repo_path.join("file.txt"), "changed").unwrap();
+
+    let _ctx = TestContext::new(repo_path);
+
+    let args = Save::with(|_| {});
+    args.save().expect("save failed");
+
+    let roundtrip = temp_repo.to_snapshot().unwrap();
+    let commit = roundtrip.head_commit().expect("No HEAD commit");
+
+    // Author should be from previous commit (Human User), NOT from git config (Claude Code)
+    assert_eq!(commit.author.name, "Human User");
+    assert_eq!(commit.author.email, "human@example.com");
+}
+
+#[test]
+fn test_explicit_author_overrides_ai_agent_detection() {
+    // Start with a repo that has a commit with a known author
+    let yaml = r#"
+HEAD: refs/heads/trunk
+refs:
+  heads:
+    trunk: 1
+1:
+  message: initial
+  author: Human User <human@example.com>
+  tree:
+    file.txt: initial
+"#;
+    let snapshot = git_snapshot::parse(yaml).unwrap();
+    let temp_repo = snapshot.to_temporary_repository().unwrap();
+    let repo_path = temp_repo.path().parent().unwrap();
+
+    // Configure git with an AI agent email
+    let repo = git2::Repository::open(repo_path).unwrap();
+    repo.config().unwrap().set_str("user.name", "Claude Code").unwrap();
+    repo.config().unwrap().set_str("user.email", "noreply@anthropic.com").unwrap();
+
+    // Make a change
+    fs::write(repo_path.join("file.txt"), "changed").unwrap();
+
+    let _ctx = TestContext::new(repo_path);
+
+    // Use explicit --author flag - this should override the AI agent detection
+    let args = Save::with(|s| {
+        s.author = Some("Explicit Author <explicit@example.com>".to_string());
+    });
+    args.save().expect("save failed");
+
+    let roundtrip = temp_repo.to_snapshot().unwrap();
+    let commit = roundtrip.head_commit().expect("No HEAD commit");
+
+    // Author should be the explicit one, not from previous commit
+    assert_eq!(commit.author.name, "Explicit Author");
+    assert_eq!(commit.author.email, "explicit@example.com");
+}
+
+#[test]
+fn test_non_ai_agent_email_used_normally() {
+    // Start with a repo that has a commit with a known author
+    let yaml = r#"
+HEAD: refs/heads/trunk
+refs:
+  heads:
+    trunk: 1
+1:
+  message: initial
+  author: Previous User <previous@example.com>
+  tree:
+    file.txt: initial
+"#;
+    let snapshot = git_snapshot::parse(yaml).unwrap();
+    let temp_repo = snapshot.to_temporary_repository().unwrap();
+    let repo_path = temp_repo.path().parent().unwrap();
+
+    // Configure git with a normal (non-AI agent) email
+    let repo = git2::Repository::open(repo_path).unwrap();
+    repo.config().unwrap().set_str("user.name", "Regular Dev").unwrap();
+    repo.config().unwrap().set_str("user.email", "dev@company.com").unwrap();
+
+    // Make a change
+    fs::write(repo_path.join("file.txt"), "changed").unwrap();
+
+    let _ctx = TestContext::new(repo_path);
+
+    let args = Save::with(|_| {});
+    args.save().expect("save failed");
+
+    let roundtrip = temp_repo.to_snapshot().unwrap();
+    let commit = roundtrip.head_commit().expect("No HEAD commit");
+
+    // Author should be from git config, not previous commit
+    assert_eq!(commit.author.name, "Regular Dev");
+    assert_eq!(commit.author.email, "dev@company.com");
 }

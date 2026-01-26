@@ -45,6 +45,21 @@ use {
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const V_VERSION: &str = concat!("v", env!("CARGO_PKG_VERSION"));
 
+/// Known email addresses used by AI coding agents. These are used to detect
+/// when an environment has been configured with AI agent credentials, so we can
+/// avoid attributing authorship to the agent when it should go to the human
+/// driving.
+const AI_AGENT_EMAILS: &[&str] = &[
+    "noreply@anthropic.com", // Claude Code
+    "noreply@google.com",    // Gemini CLI
+    "noreply@cursor.com",    // Cursor
+];
+
+/// Checks if the given email matches a known AI agent email address.
+fn is_ai_agent_email(email: &str) -> bool {
+    AI_AGENT_EMAILS.iter().any(|&agent_email| agent_email.eq_ignore_ascii_case(email))
+}
+
 /// Commit everything in the current directory and repository -- no questions
 /// asked.
 ///
@@ -848,39 +863,59 @@ fn get_git_user(args: &Save, repo: &Repository, head: &Option<Commit>) -> Result
 
     let config = repo.config()?;
 
-    let user_name: String = {
-        if let Ok(config_name) = config.get_string("user.name") {
-            debug!(
-                "Using author name from Git configuration: {:?}",
-                &config_name
-            );
-            config_name
-        } else if let Some(previous_name) = head
-            .as_ref()
-            .and_then(|x| x.author().name().map(ToString::to_string))
-        {
+    // Check if git config has an AI agent email. If so, we should skip git
+    // config entirely and prefer the previous commit's author, since the human
+    // driving the agent should be credited, not the agent itself.
+    let use_git_config = if let Ok(config_email) = config.get_string("user.email") {
+        if is_ai_agent_email(&config_email) {
             info!(
-                "Using author name from previous commit: {:?}",
-                &previous_name
+                "Git config email {:?} matches a known AI agent; \
+                 will use previous commit author instead",
+                &config_email
             );
-            previous_name
+            false
         } else {
-            let placeholder_name = "dev";
-            warn!(
-                "No author name found, falling back to placeholder: {:?}",
-                &placeholder_name
-            );
-            placeholder_name.to_string()
+            true
         }
+    } else {
+        // No email in git config, so we can't use it anyway
+        false
     };
 
-    let user_email: String = if let Ok(config_email) = config.get_string("user.email") {
-        debug!(
-            "Using author email from Git configuration: {:?}",
-            &config_email
+    if use_git_config {
+        // Git config email is not an AI agent, so use git config if we have both name and email
+        if let (Ok(name), Ok(email)) = (
+            config.get_string("user.name"),
+            config.get_string("user.email"),
+        ) {
+            debug!(
+                "Using author from Git configuration: {:?} <{:?}>",
+                &name, &email
+            );
+            return Ok((name, email));
+        }
+    }
+
+    // Fall back to previous commit author, then placeholder
+    let user_name = if let Some(previous_name) = head
+        .as_ref()
+        .and_then(|x| x.author().name().map(ToString::to_string))
+    {
+        info!(
+            "Using author name from previous commit: {:?}",
+            &previous_name
         );
-        config_email
-    } else if let Some(previous_email) = head
+        previous_name
+    } else {
+        let placeholder_name = "dev";
+        warn!(
+            "No author name found, falling back to placeholder: {:?}",
+            &placeholder_name
+        );
+        placeholder_name.to_string()
+    };
+
+    let user_email = if let Some(previous_email) = head
         .as_ref()
         .and_then(|x| x.author().email().map(ToString::to_string))
     {
