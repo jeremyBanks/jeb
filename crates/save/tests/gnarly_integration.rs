@@ -295,12 +295,13 @@ refs:
 
     let _ctx = TestContext::new(repo_path);
     
-    // HEAD is 2. Parents: [1].
-    // Add 3, Remove 1. Resulting parents should be [3].
-    // Use :/message syntax to find commits by message, which git2 supports
+    // HEAD is 2.
+    // We want new commit to have parent 3 (other).
+    // Default parents for new commit is [HEAD] (which is 2).
+    // So we add 3 (other) and remove HEAD (2).
     Save::with(|s| { 
-        s.added_parent_ref = vec![":/three".to_string()];
-        s.removed_parent_ref = vec![":/one".to_string()];
+        s.added_parent_ref = vec!["other".to_string()];
+        s.removed_parent_ref = vec!["HEAD".to_string()];
         s.timeless = true;
         s.message = Some("new parents".to_string());
     }).save().expect("save --add-parent --remove-parent failed");
