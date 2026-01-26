@@ -323,17 +323,20 @@ refs:
   heads:
     main: 2
 1:
-  message: r10 / xFC87
+  message: r10
   tree: {file1: "1"}
 2:
   parents: [1]
-  message: r11 / xABB3
+  message: r11
   tree: {file1: "1", file2: "2"}
 "#;
     let snapshot = git_snapshot::parse(yaml).unwrap();
     let temp_repo = snapshot.to_temporary_repository().unwrap();
     let repo_path = temp_repo.path().parent().unwrap();
 
+    // Ensure all files exist in workdir so save doesn't delete them
+    fs::write(repo_path.join("file1"), "1").unwrap();
+    fs::write(repo_path.join("file2"), "2").unwrap();
     fs::write(repo_path.join("file3"), "3").unwrap();
 
     let _ctx = TestContext::new(repo_path);
@@ -356,24 +359,24 @@ refs:
   heads:
     main: 2
 1:
-  message: r10 / xFC87
+  message: r10
   tree: {file1: "1"}
 2:
   parents: [1]
-  message: r11 / xABB3
+  message: r11
   tree: {file1: "1", file2: "2"}
 "#;
     let snapshot = git_snapshot::parse(yaml).unwrap();
     let temp_repo = snapshot.to_temporary_repository().unwrap();
     let repo_path = temp_repo.path().parent().unwrap();
 
+    fs::write(repo_path.join("file1"), "1").unwrap();
+    fs::write(repo_path.join("file2"), "2").unwrap();
     fs::write(repo_path.join("file3"), "3").unwrap();
 
     let _ctx = TestContext::new(repo_path);
     
     // With --rebuild, it should ignore r11 and calculate based on graph (which is root -> 1 -> 2)
-    // So it should be r2 (0-indexed: root is r0, 1 is r1, 2 is r2, new is r3)
-    // Wait, if 1 is root in this graph, then 1 is r0, 2 is r1, new is r2.
     Save::with(|s| { 
         s.rebuild = true;
         s.timeless = true; 
@@ -381,5 +384,6 @@ refs:
 
     let result = temp_repo.to_snapshot().unwrap();
     let commit = result.head_commit().expect("No HEAD");
+    // Graph is 1(r0) -> 2(r1) -> new(r2)
     assert!(commit.message.starts_with("r2"), "Message '{}' should start with 'r2'", commit.message);
 }
