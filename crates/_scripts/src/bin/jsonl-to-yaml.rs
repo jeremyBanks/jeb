@@ -259,7 +259,7 @@ mod tests {
         assert_eq!(round_trip(&json!(true)), json!(true));
         assert_eq!(round_trip(&json!(false)), json!(false));
         assert_eq!(round_trip(&json!(42)), json!(42));
-        assert_eq!(round_trip(&json!(3.14)), json!(3.14));
+        assert_eq!(round_trip(&json!(1.25)), json!(1.25));
         assert_eq!(round_trip(&json!("hello")), json!("hello"));
     }
 
