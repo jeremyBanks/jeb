@@ -927,9 +927,12 @@ fn get_committer_from_agent_env() -> Option<(String, String)> {
         };
         Some((name, "noreply@anthropic.com".to_string()))
     } else if env::var("GEMINI_CLI").is_ok() {
-        Some(("⟡ Gemini CLI".to_string(), "noreply@google.com".to_string()))
+        Some((
+            "⟡ Gemini CLI".to_string(),
+            "gemini-cli@google.com".to_string(),
+        ))
     } else if env::var("CURSOR_AGENT").is_ok() {
-        Some(("⇗ Cursor".to_string(), "noreply@cursor.com".to_string()))
+        Some(("⇗ Cursor".to_string(), "cursoragent@cursor.com".to_string()))
     } else {
         None
     }
