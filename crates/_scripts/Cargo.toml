@@ -17,6 +17,7 @@ chrono.workspace = true
 clap = { workspace = true, features = ["derive"] }
 glob.workspace = true
 jeb-tracing.workspace = true
+serde_json.workspace = true
 sha-1.workspace = true
 pathdiff.workspace = true
 rand.workspace = true
