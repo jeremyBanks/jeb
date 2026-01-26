@@ -1,4 +1,4 @@
-save v0.20220708.0
+save v0.0.0-dev-2026-01-19.4531
 Commit everything in the current directory and repository -- no questions
 asked.
 
@@ -133,12 +133,12 @@ HISTORY OPTIONS:
 INSTALLATION:
     save can be installed from a source release using the Cargo package manager:
 
-        cargo install save --version 0.20220708.0
+        cargo install save --version 0.0.0-dev-2026-01-19.4531
 
     Cargo can be installed along with Rust/rustup using its official installer:
 
         curl -sSf https://sh.rustup.rs | sh
 
 LINKS:
-    https://docs.rs/save/0.20220708.0
-    https://crates.io/crates/save/0.20220708.0
+    https://docs.rs/save/0.0.0-dev-2026-01-19.4531
+    https://crates.io/crates/save/0.0.0-dev-2026-01-19.4531
