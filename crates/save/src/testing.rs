@@ -336,8 +336,7 @@ fn find_str_lit_len(str_lit_to_eof: &str) -> Option<usize> {
             ('\\', Normal) => {
                 let _escaped = s.next()?;
             }
-            ('"', Normal) => break,
-            ('"', Raw(0)) => break,
+            ('"', Normal) | ('"', Raw(0)) => break,
             ('"', Raw(n)) => {
                 let (seen, c) = try_find_n_hashes(&mut s, n)?;
                 if seen == n {
@@ -560,19 +559,20 @@ fn format_patch(desired_indent: Option<usize>, patch: &str) -> String {
     }
     let mut final_newline = false;
     for line in lines_with_ends(patch) {
-        if is_multiline && !line.trim().is_empty() {
-            if let Some(indent) = &indent {
-                buf.push_str(indent);
-                buf.push_str("    ");
-            }
+        if is_multiline
+            && !line.trim().is_empty()
+            && let Some(indent) = &indent
+        {
+            buf.push_str(indent);
+            buf.push_str("    ");
         }
         buf.push_str(line);
         final_newline = line.ends_with('\n');
     }
-    if final_newline {
-        if let Some(indent) = &indent {
-            buf.push_str(indent);
-        }
+    if final_newline
+        && let Some(indent) = &indent
+    {
+        buf.push_str(indent);
     }
     lit_kind.write_end(&mut buf).unwrap();
     if matches!(lit_kind, StrLitKind::Raw(_)) {
