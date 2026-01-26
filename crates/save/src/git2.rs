@@ -706,8 +706,24 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
 
                         // Check letter suffix (next nibble must be a-f) if required
                         let suffix_matches = !letter_suffix || {
-                            let idx = target_prefix.len();
-                            idx < oid_bytes.len() && (oid_bytes[idx] >> 4) >= 0xa
+                            // If the mask for the last byte is 0xF0 (odd nibbles), we check the second nibble of that byte.
+                            // If the mask is 0xFF (even nibbles), we check the first nibble of the NEXT byte.
+                            
+                            let len = target_mask.len();
+                            if len == 0 {
+                                // Empty prefix: check first nibble of first byte
+                                oid_bytes.len() > 0 && (oid_bytes[0] >> 4) >= 0xa
+                            } else {
+                                let last_mask = target_mask[len - 1];
+                                if last_mask == 0xF0 {
+                                    // Odd nibbles: check the second nibble of the last matched byte
+                                    // We need to re-fetch the byte because it might have been partially matched
+                                    (oid_bytes[len - 1] & 0x0F) >= 0xa
+                                } else {
+                                    // Even nibbles: check the first nibble of the next byte
+                                    len < oid_bytes.len() && (oid_bytes[len] >> 4) >= 0xa
+                                }
+                            }
                         };
 
                         if prefix_matches && suffix_matches {

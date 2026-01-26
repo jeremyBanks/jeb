@@ -38,6 +38,7 @@ tracing-error = { workspace = true, features = ["traced-error"] }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 
 [dev-dependencies]
+git-snapshot.workspace = true
 inline.workspace = true
 
 [package.metadata.release]

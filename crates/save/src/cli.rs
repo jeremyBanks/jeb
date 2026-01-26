@@ -17,6 +17,7 @@ use {
         git2::{
             Commit,
             ErrorCode,
+            Oid,
             Repository,
             RepositoryInitOptions,
             RepositoryState,
@@ -51,7 +52,7 @@ const V_VERSION: &str = concat!("v", env!("CARGO_PKG_VERSION"));
 /// ║Would you like to ║║►YES║
 /// ║SAVE the changes? ║║ NO ║
 /// ╚══════════════════╝╚════╝
-#[derive(Parser, Debug, Clone, Default)]
+#[derive(Parser, Debug, Clone)]
 #[clap(
     after_help = {
         static S: Lazy<String> = Lazy::new(|| format!("INSTALLATION:
@@ -422,9 +423,44 @@ pub struct Save {
     pub retcon_all: bool,
 }
 
+impl Default for Save {
+    fn default() -> Self {
+        Self {
+            quiet: 0,
+            verbose: 0,
+            all: false,
+            staged: false,
+            tree: None,
+            empty: false,
+            allow_empty: false,
+            message: None,
+            message_prefix: None,
+            prefix_hex: None,
+            tree_target: false,
+            timestamp: None,
+            timeless: false,
+            author: None,
+            committer: None,
+            head: None,
+            no_head: false,
+            max_depth: 255,
+            rebuild: false,
+            added_parent_ref: Vec::new(),
+            removed_parent_ref: Vec::new(),
+            squash: 0,
+            squash_to_ref: Vec::new(),
+            squash_after_ref: Vec::new(),
+            squash_all: None,
+            retcon_to_ref: Vec::new(),
+            retcon_after_ref: Vec::new(),
+            retcon_all: false,
+        }
+    }
+}
+
 impl Save {
     pub fn with<F: FnOnce(&mut Self) -> T, T>(f: F) -> Self {
-        let mut save = Default::default();
+        let mut save = Self::default();
         f(&mut save);
         save
     }
@@ -548,9 +584,26 @@ pub fn main(args: Save) -> Result<()> {
         crate::graph_stats::GraphStats::default()
     };
 
-    let mut index = repo.working_index()?;
-
-    let tree = index.write_tree()?;
+    let (mut index, tree) = if let Some(ref tree_ref) = args.tree {
+        (
+            repo.index()?,
+            repo.revparse_single(tree_ref)?.peel_to_tree()?.id(),
+        )
+    } else if args.empty {
+        let tree_oid = head.as_ref().map(|c| c.tree_id()).unwrap_or_else(|| {
+            // Empty tree OID
+            Oid::from_str("4b825dc642cb6eb9a060e54bf8d69288fbee4904").unwrap()
+        });
+        (repo.index()?, tree_oid)
+    } else if args.staged {
+        let mut index = repo.index()?;
+        let tree_oid = index.write_tree()?;
+        (index, tree_oid)
+    } else {
+        let mut index = repo.working_index()?;
+        let tree_oid = index.write_tree()?;
+        (index, tree_oid)
+    };
 
     if let Some(ref head) = head {
         if tree == head.tree_id() {
@@ -560,6 +613,17 @@ pub fn main(args: Save) -> Result<()> {
                 info!("Committing with no changes.");
             } else {
                 warn!("Nothing to commit. Use --empty or --allow-empty if this is intentional.");
+                return Ok(());
+            }
+        }
+    } else {
+        // Unborn branch
+        let empty_tree_oid = Oid::from_str("4b825dc642cb6eb9a060e54bf8d69288fbee4904").unwrap();
+        if tree == empty_tree_oid {
+            if args.allow_empty || args.empty || args.message.is_some() {
+                info!("Committing empty tree on unborn branch.");
+            } else {
+                warn!("Nothing to commit (empty tree). Use --allow-empty if this is intentional.");
                 return Ok(());
             }
         }
@@ -590,38 +654,47 @@ pub fn main(args: Save) -> Result<()> {
 
     // Format the commit message
     let mut message = String::new();
-    let is_shallow = repo.is_shallow();
 
-    // Determine prefix based on z_mode and shallow state
-    let prefix_char = if graph_stats.z_mode {
-        'z'
-    } else if is_shallow {
-        's'
+    if let Some(ref prefix) = args.message_prefix {
+        writeln!(message, "{}", prefix)?;
+    }
+
+    if let Some(ref msg) = args.message {
+        message.push_str(msg);
     } else {
-        'r'
-    };
+        let is_shallow = repo.is_shallow();
 
-    // Prefix: [r|s|z]N
-    write!(message, "{}{}", prefix_char, graph_stats.revision_index)?;
+        // Determine prefix based on z_mode and shallow state
+        let prefix_char = if graph_stats.z_mode {
+            'z'
+        } else if is_shallow {
+            's'
+        } else {
+            'r'
+        };
 
-    // Optional: / gG (only if different from revision)
-    if graph_stats.generation_index != graph_stats.revision_index {
-        write!(message, " / g{}", graph_stats.generation_index)?;
-    }
+        // Prefix: [r|s|z]N
+        write!(message, "{}{}", prefix_char, graph_stats.revision_index)?;
 
-    // Optional: / nC (only if different from generation)
-    if graph_stats.commit_index != graph_stats.generation_index {
-        write!(message, " / n{}", graph_stats.commit_index)?;
-    }
+        // Optional: / gG (only if different from revision)
+        if graph_stats.generation_index != graph_stats.revision_index {
+            write!(message, " / g{}", graph_stats.generation_index)?;
+        }
 
-    // Optional: / xHHHH (tree hash, if non-empty)
-    if !tree.is_empty() {
-        write!(message, " / x{tree4}")?;
-    }
+        // Optional: / nC (only if different from generation)
+        if graph_stats.commit_index != graph_stats.generation_index {
+            write!(message, " / n{}", graph_stats.commit_index)?;
+        }
 
-    // Optional: / oHHHH (origin, omitted for root commits)
-    if let Some(origin) = graph_stats.origin {
-        write!(message, " / o{:04X}", origin)?;
+        // Optional: / xHHHH (tree hash, if non-empty)
+        if !tree.is_empty() {
+            write!(message, " / x{tree4}")?;
+        }
+
+        // Optional: / oHHHH (origin, omitted for root commits)
+        if let Some(origin) = graph_stats.origin {
+            write!(message, " / o{:04X}", origin)?;
+        }
     }
 
     // TODO: look at merge heads too, and set our minimum timestamp to one greater
@@ -630,7 +703,23 @@ pub fn main(args: Save) -> Result<()> {
     let time = Signature::now(&user_name, &user_email)?.when();
     let seconds = time.seconds();
 
-    let parents = &head.iter().collect::<Vec<_>>();
+    let parents: Vec<Commit> = if args.squash > 0 {
+        if let Some(ref head_commit) = head {
+            let mut target = head_commit.clone();
+            for _ in 0..(args.squash - 1) {
+                if target.parent_count() == 0 {
+                    bail!("Cannot squash past root commit");
+                }
+                target = target.parent(0)?;
+            }
+            target.parents().collect()
+        } else {
+            bail!("Cannot squash on unborn branch");
+        }
+    } else {
+        head.iter().cloned().collect()
+    };
+    let parents_refs: Vec<&Commit> = parents.iter().collect();
 
     let base_commit = repo.commit(
         None,
@@ -638,7 +727,7 @@ pub fn main(args: Save) -> Result<()> {
         &Signature::new(&committer_name, &committer_email, &Time::new(seconds, 0)).unwrap(),
         &message,
         &tree,
-        parents,
+        &parents_refs,
     )?;
     let base_commit = repo.find_commit(base_commit)?;
 
@@ -666,7 +755,7 @@ pub fn main(args: Save) -> Result<()> {
                 if head_ref.is_branch() {
                     head_ref.set_target(commit.id(), "committed via save")?;
                 } else {
-                    repo.set_head(&commit.id().to_string())?;
+                    repo.set_head_detached(commit.id())?;
                 }
             }
             Err(err) if err.code() == ErrorCode::UnbornBranch => {
@@ -729,16 +818,14 @@ pub fn main(args: Save) -> Result<()> {
 fn get_git_user(args: &Save, repo: &Repository, head: &Option<Commit>) -> Result<(String, String)> {
     // TODO: move this to git2.rs, right?
 
+    if let Some(ref explicit) = args.author {
+        return parse_signature(explicit);
+    }
+
     let config = repo.config()?;
 
     let user_name: String = {
-        if let Some(ref args_name) = args.author {
-            trace!(
-                "Using author name from command line argument: {:?}",
-                &args_name
-            );
-            args_name.clone()
-        } else if let Ok(config_name) = config.get_string("user.name") {
+        if let Ok(config_name) = config.get_string("user.name") {
             debug!(
                 "Using author name from Git configuration: {:?}",
                 &config_name
@@ -763,13 +850,7 @@ fn get_git_user(args: &Save, repo: &Repository, head: &Option<Commit>) -> Result
         }
     };
 
-    let user_email: String = if let Some(ref args_email) = args.author {
-        trace!(
-            "Using author email from command line argument: {:?}",
-            &args_email
-        );
-        args_email.clone()
-    } else if let Ok(config_email) = config.get_string("user.email") {
+    let user_email: String = if let Ok(config_email) = config.get_string("user.email") {
         debug!(
             "Using author email from Git configuration: {:?}",
             &config_email

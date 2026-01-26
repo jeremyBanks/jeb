@@ -4172,13 +4172,21 @@ fn git2_from_git_dir(path: &Path) -> Result<Repository, GitError> {
     let head = match git_repo.head() {
         Ok(reference) => {
             if let Some(name) = reference.name() {
-                // Symbolic reference
-                HeadState::Symbolic(RefName::new(name.to_string())?)
+                if name == "HEAD" {
+                    // Detached HEAD
+                    let oid = reference
+                        .target()
+                        .ok_or_else(|| git2::Error::from_str("HEAD has no target"))?;
+                    HeadState::Detached(convert_oid(oid))
+                } else {
+                    // Symbolic reference (branch)
+                    HeadState::Symbolic(RefName::new(name.to_string())?)
+                }
             } else {
-                // Detached HEAD
+                // Should not happen with git2
                 let oid = reference
                     .target()
-                    .ok_or_else(|| git2::Error::from_str("HEAD has no target"))?;
+                    .ok_or_else(|| git2::Error::from_str("HEAD has no name and no target"))?;
                 HeadState::Detached(convert_oid(oid))
             }
         }

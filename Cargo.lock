@@ -2182,6 +2182,7 @@ dependencies = [
  "dissimilar",
  "expect-test",
  "eyre",
+ "git-snapshot",
  "git2",
  "home",
  "inline",
