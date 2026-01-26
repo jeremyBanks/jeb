@@ -74,24 +74,25 @@ This preserves exact byte alignment needed for the polyglot trick.
 Row width is calculated for approximately square images:
 - Formula: `width = floor(sqrt(actual_data_size))`
 - Minimum: 40 bytes (ensures filter bytes don't corrupt ZIP headers)
-- Maximum: ~205 bytes (limited by 42KB content cap)
+- No maximum (scales with content size)
 
 **Two-pass approach**: Build once to measure actual size, then rebuild with optimal width.
 
 **Dimension guarantee**: Height ≥ Width (portrait/square orientation)
 
-## Current Limitations
-
-### 42KB Content Limit
+## IDAT Boundary Handling
 
 IDAT deflate blocks have a maximum size of 65535 bytes. When filtered data exceeds
-this, IDAT inserts 5-byte block headers that corrupt any ZIP data spanning boundaries.
+this, IDAT inserts 5-byte block headers that could corrupt ZIP data spanning boundaries.
 
-This limits total content to ~42KB.
+**Solution**: Files are automatically padded to avoid crossing boundaries.
 
-**Potential workarounds** (not yet implemented):
-- Pad so IDAT boundaries fall between files
-- Use row widths that divide 65535 evenly
+Before placing each file, we check if it would cross a 65535-byte boundary. If so,
+padding is added to push the file past the boundary.
+
+**Current Limits**:
+- Total content: **unlimited** (bounded only by PNG/ZIP format limits)
+- Individual file: ~60KB (must fit within one IDAT block)
 
 ### Minimum Row Width
 
@@ -100,8 +101,9 @@ don't land inside the 30-byte ZIP local file header.
 
 ## Examples
 
-| Content Size | Image Dimensions | Aspect Ratio |
-|--------------|------------------|--------------|
-| 124 bytes    | 160 × 8          | Small content, min width |
+| Content Size | Image Dimensions | Notes |
+|--------------|------------------|-------|
+| 124 bytes    | 160 × 8          | Small content, minimum width |
 | 32 KB        | 185 × 186        | ~1:1 (square) |
 | 38 KB        | 201 × 202        | ~1:1 (square) |
+| 90 KB        | 310 × 311        | Multiple IDAT blocks with boundary padding |

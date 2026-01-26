@@ -36,12 +36,17 @@ No predefined color schemes/palettes found - palettes are passed in at runtime.
 
 **Question**: Can we work around the IDAT 65535-byte block boundary issue?
 
-**Status**: Not yet implemented
+**Status**: SOLVED
 
-**Potential approaches**:
-1. Pad so IDAT boundaries fall between files (not within file content)
-2. Use row widths that divide 65535 evenly (e.g., 15, 17, 21...)
-3. Multiple IDAT chunks with careful alignment
+**Solution implemented**: Pad files so they don't cross IDAT boundaries.
 
-**Challenge**: IDAT block headers (5 bytes) get inserted every 65535 bytes of filtered
-data. Any ZIP deflate stream spanning a boundary gets corrupted.
+Before placing each file, we check if it would cross a 65535-byte boundary in
+the filtered data. If so, we add padding to push the file past the boundary.
+
+**Results**:
+- No more total content limit
+- Individual files limited to ~60KB (must fit in one IDAT block)
+- Verified: 90KB polyglot (3 × 30KB files) works correctly
+- 310×311 pixel PNG, all ZIP files extract with correct CRC
+
+See `docs/exploration/idat-boundary-analysis.md` for full analysis.
