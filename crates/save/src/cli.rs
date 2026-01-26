@@ -529,7 +529,7 @@ pub fn main(args: Save) -> Result<()> {
         );
         git_env
     } else if let Some(agent) = get_committer_from_agent_env() {
-        info!("Using committer from agent env: {:?}", &agent);
+        debug!("Using committer from agent env: {:?}", &agent);
         agent
     } else {
         (user_name.clone(), user_email.clone())
