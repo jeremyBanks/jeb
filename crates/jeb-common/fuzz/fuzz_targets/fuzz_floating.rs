@@ -1,7 +1,9 @@
 #![no_main]
 
-use jeb_common::bi::floating::floating;
-use libfuzzer_sys::fuzz_target;
+use {
+    jeb_common::bi::floating::floating,
+    libfuzzer_sys::fuzz_target,
+};
 
 fuzz_target!(|data: &[u8]| {
     // Test roundtrip properties for floating point types

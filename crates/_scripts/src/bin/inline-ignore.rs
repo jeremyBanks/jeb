@@ -1,10 +1,17 @@
 use {
-    anyhow::{Context, Result, bail},
+    anyhow::{
+        Context,
+        Result,
+        bail,
+    },
     std::{
         collections::HashMap,
         env,
         fs,
-        path::{Path, PathBuf},
+        path::{
+            Path,
+            PathBuf,
+        },
     },
 };
 
@@ -14,7 +21,8 @@ struct SourceLine {
     content: String,
 }
 
-/// A group of lines: optional preamble (comments/blanks) followed by optional pattern
+/// A group of lines: optional preamble (comments/blanks) followed by optional
+/// pattern
 #[derive(Debug, Clone)]
 struct LineGroup {
     /// Consecutive blank lines (collapsed to one entry) or comment lines
@@ -28,7 +36,8 @@ struct LineGroup {
 struct TransformResult {
     /// The transformed pattern(s)
     patterns: Vec<String>,
-    /// Whether this pattern exclusively applies to the target (can be pruned from ancestor)
+    /// Whether this pattern exclusively applies to the target (can be pruned
+    /// from ancestor)
     is_exclusive: bool,
 }
 
@@ -75,9 +84,9 @@ fn is_blank(line: &str) -> bool {
 
 /// Check if a pattern path prefix contains wildcards
 fn has_wildcard_in_prefix(pattern_parts: &[&str], prefix_len: usize) -> bool {
-    pattern_parts[..prefix_len].iter().any(|part| {
-        part.contains('*') || part.contains('?') || part.contains('[')
-    })
+    pattern_parts[..prefix_len]
+        .iter()
+        .any(|part| part.contains('*') || part.contains('?') || part.contains('['))
 }
 
 /// Parse a gitignore file into line groups
@@ -99,19 +108,25 @@ fn parse_gitignore(content: &str) -> Vec<LineGroup> {
         if is_blank(line) {
             if !in_blank_run {
                 // Start of a new blank run - add as single entry
-                current_preamble.push(SourceLine { content: line.to_string() });
+                current_preamble.push(SourceLine {
+                    content: line.to_string(),
+                });
                 in_blank_run = true;
             }
             // If already in a blank run, skip (multiple blanks = single entry)
         } else if is_comment(line) {
             in_blank_run = false;
-            current_preamble.push(SourceLine { content: line.to_string() });
+            current_preamble.push(SourceLine {
+                content: line.to_string(),
+            });
         } else {
             // Pattern line
             in_blank_run = false;
             groups.push(LineGroup {
                 preamble: std::mem::take(&mut current_preamble),
-                pattern: Some(SourceLine { content: line.to_string() }),
+                pattern: Some(SourceLine {
+                    content: line.to_string(),
+                }),
             });
         }
     }
@@ -128,7 +143,8 @@ fn parse_gitignore(content: &str) -> Vec<LineGroup> {
 }
 
 /// Transform a pattern for use in a child gitignore
-/// Returns None if pattern doesn't apply, Some(TransformResult) with transformed pattern(s)
+/// Returns None if pattern doesn't apply, Some(TransformResult) with
+/// transformed pattern(s)
 fn transform_pattern(pattern: &str, relative_path: &[String]) -> Option<TransformResult> {
     if relative_path.is_empty() {
         // Same directory, no transformation needed
@@ -220,7 +236,8 @@ fn transform_anchored(pattern: &str, relative_path: &[String]) -> Option<(Vec<St
 
     // Determine if we need a leading slash
     // We need it if: result has no slash in it (would match at any level otherwise)
-    // OR if original had leading slash and result still has slashes (preserve style)
+    // OR if original had leading slash and result still has slashes (preserve
+    // style)
     let needs_leading_slash = !result.contains('/') || had_leading_slash;
 
     let result = if needs_leading_slash {
@@ -257,9 +274,7 @@ fn transform_double_star(pattern: &str, relative_path: &[String]) -> Vec<String>
 
         // Check if suffix is a prefix of after_parts
         if after_parts.len() >= suffix.len() {
-            let matches = suffix.iter()
-                .zip(after_parts.iter())
-                .all(|(a, b)| a == b);
+            let matches = suffix.iter().zip(after_parts.iter()).all(|(a, b)| a == b);
 
             if matches {
                 // Found a match! Create anchored pattern for remainder
@@ -277,7 +292,8 @@ fn transform_double_star(pattern: &str, relative_path: &[String]) -> Vec<String>
     results
 }
 
-/// Find insertion point in target for a line, given the previous line from source
+/// Find insertion point in target for a line, given the previous line from
+/// source
 fn find_insertion_point(target_lines: &[String], previous_line: Option<&str>) -> usize {
     match previous_line {
         None => {
@@ -407,7 +423,8 @@ fn find_git_root(start: &Path) -> Result<PathBuf> {
 fn collect_parent_gitignores(git_root: &Path, target_dir: &Path) -> Result<Vec<PathBuf>> {
     let mut gitignores = Vec::new();
 
-    let relative = target_dir.strip_prefix(git_root)
+    let relative = target_dir
+        .strip_prefix(git_root)
         .context("target is not under git root")?;
 
     let mut current = git_root.to_path_buf();
@@ -435,7 +452,8 @@ fn collect_parent_gitignores(git_root: &Path, target_dir: &Path) -> Result<Vec<P
 
 /// Get relative path components from source directory to target directory
 fn get_relative_path_components(source_dir: &Path, target_dir: &Path) -> Result<Vec<String>> {
-    let relative = target_dir.strip_prefix(source_dir)
+    let relative = target_dir
+        .strip_prefix(source_dir)
         .context("target is not under source")?;
 
     Ok(relative
@@ -466,10 +484,11 @@ fn main() -> Result<()> {
         }
     }
 
-    let target_path = target_path
-        .context("Usage: inline-ignore [--dry-run] [--prune] <target-path>")?;
+    let target_path =
+        target_path.context("Usage: inline-ignore [--dry-run] [--prune] <target-path>")?;
 
-    let target_dir = PathBuf::from(&target_path).canonicalize()
+    let target_dir = PathBuf::from(&target_path)
+        .canonicalize()
         .with_context(|| format!("Cannot resolve path: {}", target_path))?;
 
     if !target_dir.is_dir() {
@@ -526,7 +545,11 @@ fn main() -> Result<()> {
                     for (i, t_pattern) in result.patterns.into_iter().enumerate() {
                         transformed_groups.push(LineGroup {
                             // Only include preamble for the first transformed pattern
-                            preamble: if i == 0 { group.preamble.clone() } else { vec![] },
+                            preamble: if i == 0 {
+                                group.preamble.clone()
+                            } else {
+                                vec![]
+                            },
                             pattern: Some(SourceLine { content: t_pattern }),
                         });
                     }
@@ -569,7 +592,8 @@ fn main() -> Result<()> {
             // Hint that pruning is possible
             eprintln!();
             eprintln!(
-                "Note: {} pattern(s) in ancestor(s) exclusively apply to this target and could be pruned with --prune:",
+                "Note: {} pattern(s) in ancestor(s) exclusively apply to this target and could be \
+                 pruned with --prune:",
                 total_exclusive
             );
             for (path, patterns) in &prune_info {
@@ -592,14 +616,19 @@ fn main() -> Result<()> {
                     let pruned = prune_ancestor(path, patterns)?;
                     fs::write(path, &pruned)
                         .with_context(|| format!("Cannot write {}", path.display()))?;
-                    println!("Pruned {} pattern(s) from: {}", patterns.len(), path.display());
+                    println!(
+                        "Pruned {} pattern(s) from: {}",
+                        patterns.len(),
+                        path.display()
+                    );
                 }
             }
         } else if !prune && total_exclusive > 0 {
             // Hint that pruning is possible
             eprintln!();
             eprintln!(
-                "Note: {} pattern(s) in ancestor(s) exclusively apply to this target and could be pruned with --prune:",
+                "Note: {} pattern(s) in ancestor(s) exclusively apply to this target and could be \
+                 pruned with --prune:",
                 total_exclusive
             );
             for (path, patterns) in &prune_info {

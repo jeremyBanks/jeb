@@ -5,7 +5,6 @@ use {
         CommitView,
         RepositoryView,
     },
-    jeb_common::bi::scatter_triangle,
     ::{
         core::{
             borrow::Borrow,
@@ -54,6 +53,7 @@ use {
             warn,
         },
     },
+    jeb_common::bi::scatter_triangle,
     std::borrow::BorrowMut,
 };
 
@@ -589,7 +589,10 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
                 &DEFAULT[..target_prefix.len().min(DEFAULT.len())]
             })
             .to_vec();
-        trace!("Brute forcing a timestamp for {target_prefix:2x?} with mask {target_mask:2x?} letter_suffix={letter_suffix}");
+        trace!(
+            "Brute forcing a timestamp for {target_prefix:2x?} with mask {target_mask:2x?} \
+             letter_suffix={letter_suffix}"
+        );
 
         let thread_count = num_cpus::get() as u64;
         trace!("Using {thread_count} threads");
@@ -658,7 +661,7 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
         // Use a deterministic seed based on the base commit content
         // This ensures that if we run the same operation twice, we get the same result
         let seed = u64::from_le_bytes(commit.id().as_bytes()[0..8].try_into().unwrap());
-        
+
         let thread_count = num_cpus::get() as u64;
         trace!("Using {thread_count} threads (seeded with {seed:016x})");
 
@@ -669,18 +672,19 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
             for thread_index in 0..thread_count {
                 threads.push(scope.spawn(move || {
                     trace!("Starting thread {thread_index}.");
-                    
+
                     // We iterate through indices sequentially (interleaved across threads).
                     // This ensures we scan timestamps "spiraling out" from the target time,
                     // finding the closest valid timestamp first.
                     // The stopping condition ensures we always return the solution with the
                     // numerically smallest index, making the result deterministic regardless
                     // of thread scheduling or count.
-                    
+
                     for local_index in 0_u64.. {
                         let index = local_index * thread_count + thread_index;
-                        
-                        // Check if we should stop early because another thread found a better solution
+
+                        // Check if we should stop early because another thread found a better
+                        // solution
                         if local_index % 32 == thread_index % 32 {
                             if let Some(ref best) = *best.read() {
                                 let best_index = best.index;
@@ -723,22 +727,24 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
 
                         // Check letter suffix (next nibble must be a-f) if required
                         let suffix_matches = !letter_suffix || {
-                            // If the mask for the last byte is 0xF0 (odd nibbles), we check the second nibble of that byte.
-                            // If the mask is 0xFF (even nibbles), we check the first nibble of the NEXT byte.
-                            
+                            // If the mask for the last byte is 0xF0 (odd nibbles), we check the
+                            // second nibble of that byte. If the mask
+                            // is 0xFF (even nibbles), we check the first nibble of the NEXT byte.
+
                             let len = target_mask.len();
                             if len == 0 {
                                 // Empty prefix: check first nibble of first byte
-                                oid_bytes.len() > 0 && (oid_bytes[0] >> 4) >= 0xa
+                                oid_bytes.len() > 0 && (oid_bytes[0] >> 4) >= 0xA
                             } else {
                                 let last_mask = target_mask[len - 1];
                                 if last_mask == 0xF0 {
                                     // Odd nibbles: check the second nibble of the last matched byte
-                                    // We need to re-fetch the byte because it might have been partially matched
-                                    (oid_bytes[len - 1] & 0x0F) >= 0xa
+                                    // We need to re-fetch the byte because it might have been
+                                    // partially matched
+                                    (oid_bytes[len - 1] & 0x0F) >= 0xA
                                 } else {
                                     // Even nibbles: check the first nibble of the next byte
-                                    len < oid_bytes.len() && (oid_bytes[len] >> 4) >= 0xa
+                                    len < oid_bytes.len() && (oid_bytes[len] >> 4) >= 0xA
                                 }
                             }
                         };

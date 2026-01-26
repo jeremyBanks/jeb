@@ -77,10 +77,6 @@ mod error;
 // Re-export public API
 // Re-export alphabet constants for advanced usage
 // Re-export base42 utilities for advanced usage
-pub use base42::{
-    Endianness,
-    MAX_LENGTH,
-};
 pub use {
     alphabet::{
         ESCAPE_BACKTICK,
@@ -95,6 +91,10 @@ pub use {
         is_escape_char,
         is_safe_for_raw,
         is_z85_char,
+    },
+    base42::{
+        Endianness,
+        MAX_LENGTH,
     },
     decode::{
         Decoder,

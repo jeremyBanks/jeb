@@ -1,7 +1,9 @@
 #![no_main]
 
-use jeb_common::bi::scatter_square::scatter_square;
-use libfuzzer_sys::fuzz_target;
+use {
+    jeb_common::bi::scatter_square::scatter_square,
+    libfuzzer_sys::fuzz_target,
+};
 
 fuzz_target!(|data: &[u8]| {
     // Test roundtrip and shell properties for scatter_square bijection

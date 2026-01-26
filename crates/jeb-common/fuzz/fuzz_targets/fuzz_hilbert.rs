@@ -1,7 +1,9 @@
 #![no_main]
 
-use jeb_common::bi::hilbert::hilbert;
-use libfuzzer_sys::fuzz_target;
+use {
+    jeb_common::bi::hilbert::hilbert,
+    libfuzzer_sys::fuzz_target,
+};
 
 fuzz_target!(|data: &[u8]| {
     // Test roundtrip and locality properties for Hilbert curve bijection
@@ -66,7 +68,8 @@ fuzz_target!(|data: &[u8]| {
             let (x2, y2): (u8, u8) = hilbert(u + 1);
             let manhattan = (x1 as i32 - x2 as i32).abs() + (y1 as i32 - y2 as i32).abs();
             assert_eq!(
-                manhattan, 1,
+                manhattan,
+                1,
                 "adjacent values {} and {} should have Manhattan distance 1, got {}",
                 u,
                 u + 1,
@@ -83,7 +86,8 @@ fuzz_target!(|data: &[u8]| {
             let (x2, y2): (u16, u16) = hilbert(u + 1);
             let manhattan = (x1 as i32 - x2 as i32).abs() + (y1 as i32 - y2 as i32).abs();
             assert_eq!(
-                manhattan, 1,
+                manhattan,
+                1,
                 "adjacent values {} and {} should have Manhattan distance 1, got {}",
                 u,
                 u + 1,

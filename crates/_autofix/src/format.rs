@@ -25,7 +25,10 @@ pub fn print_command(program: &str, args: &[&str]) {
             eprintln!("{DARK_BACKGROUND}  {MAGENTA}${WHITE} {CYAN}{program}{WHITE}");
         } else {
             let args_str = args.join(" ");
-            eprintln!("{DARK_BACKGROUND}  {MAGENTA}${WHITE} {CYAN}{program}{WHITE} {BLUE}{args_str}{WHITE}");
+            eprintln!(
+                "{DARK_BACKGROUND}  {MAGENTA}${WHITE} {CYAN}{program}{WHITE} \
+                 {BLUE}{args_str}{WHITE}"
+            );
         }
         eprintln!("{DARK_BACKGROUND}{RESET}");
     } else {

@@ -8,7 +8,12 @@
 //!
 //! Property-based testing is handled by fuzz tests in the fuzz/ directory.
 
-use ideated_encoding::{decode, encode, Decoder, Encoder};
+use ideated_encoding::{
+    Decoder,
+    Encoder,
+    decode,
+    encode,
+};
 
 // =============================================================================
 // Specific Length Tests

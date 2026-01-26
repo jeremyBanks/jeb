@@ -1,7 +1,12 @@
 #![no_main]
 
 use {
-    ideated_encoding::{decode, encode, Decoder, Encoder},
+    ideated_encoding::{
+        Decoder,
+        Encoder,
+        decode,
+        encode,
+    },
     libfuzzer_sys::fuzz_target,
 };
 
@@ -36,7 +41,10 @@ fuzz_target!(|data: &[u8]| {
         let mut decode_ok = true;
         while offset < encoded.len() {
             let chunk_size = ((offset * 7 + 3) % 13).min(encoded.len() - offset).max(1);
-            if decoder.write(&encoded[offset..offset + chunk_size]).is_err() {
+            if decoder
+                .write(&encoded[offset..offset + chunk_size])
+                .is_err()
+            {
                 decode_ok = false;
                 break;
             }
