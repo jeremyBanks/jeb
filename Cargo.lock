@@ -66,6 +66,8 @@ dependencies = [
  "pathdiff",
  "rand",
  "semver",
+ "serde_json",
+ "serde_yaml",
  "sha-1",
  "tempfile",
  "tokio",
