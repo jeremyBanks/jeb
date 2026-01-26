@@ -99,10 +99,9 @@ fn ensure_ancestors(tree: &mut RequirementTree, id: &str) {
 
     for i in 1..parts.len() {
         let ancestor_id = parts[..i].join(".");
-        if !tree.requirements.contains_key(&ancestor_id) {
-            let req = Requirement::new(ancestor_id.clone());
-            tree.requirements.insert(ancestor_id, req);
-        }
+        tree.requirements
+            .entry(ancestor_id.clone())
+            .or_insert_with(|| Requirement::new(ancestor_id));
     }
 }
 
@@ -165,10 +164,10 @@ fn build_parent_child(tree: &mut RequirementTree) {
     for id in &ids {
         if let Some(parent_id) = get_parent_id(id) {
             // Add this as a child of parent
-            if let Some(parent) = tree.requirements.get_mut(&parent_id) {
-                if !parent.children.contains(id) {
-                    parent.children.push(id.clone());
-                }
+            if let Some(parent) = tree.requirements.get_mut(&parent_id)
+                && !parent.children.contains(id)
+            {
+                parent.children.push(id.clone());
             }
             // Set parent reference
             if let Some(req) = tree.requirements.get_mut(id) {

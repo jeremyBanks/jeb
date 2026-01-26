@@ -134,10 +134,10 @@ impl MessageParser {
         let parts: Vec<&str> = message.split(" / ").collect();
         for part in &parts[1..] {
             let part = part.trim();
-            if let Some(tree_prefix) = part.strip_prefix('x') {
-                if !repo.validate_tree_prefix(&commit.tree_id(), tree_prefix) {
-                    return false;
-                }
+            if let Some(tree_prefix) = part.strip_prefix('x')
+                && !repo.validate_tree_prefix(&commit.tree_id(), tree_prefix)
+            {
+                return false;
             }
         }
         if parsed.prefix == MessagePrefix::Shallow && !repo.is_shallow() {
@@ -153,6 +153,7 @@ pub struct GraphStatsCalculator<'repo, 'a: 'repo, R: RepositoryView<'repo>> {
     trust_messages: bool,
     _phantom: std::marker::PhantomData<&'repo ()>,
 }
+#[expect(single_use_lifetimes, reason = "lifetime bound required for struct coherence")]
 impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> Debug for GraphStatsCalculator<'repo, 'a, R> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GraphStatsCalculator")
@@ -341,7 +342,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         // Calculate revision_index: count along first-parent chain, adding trusted
         // stats
         let revision_index = {
-            let mut count = 0u32;
+            let mut count = 0_u32;
             let mut current_id = head.id();
             loop {
                 // If we hit a trusted boundary, add its revision_index and stop

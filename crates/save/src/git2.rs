@@ -74,7 +74,6 @@ pub trait RepositoryExt: Borrow<Repository> + BorrowMut<Repository> {
         level = "debug",
         skip_all
     )]
-    #[must_use]
     fn working_index(&self) -> Result<Index> {
         let repo: &Repository = self.borrow();
 
@@ -112,7 +111,6 @@ pub trait RepositoryExt: Borrow<Repository> + BorrowMut<Repository> {
         level = "debug",
         skip_all
     )]
-    #[must_use]
     fn temporary() -> Result<TemporaryRepository> {
         let dir = TempDir::new()?;
         let repo = Repository::init(&dir)?;
@@ -193,6 +191,7 @@ pub trait RepositoryExt: Borrow<Repository> + BorrowMut<Repository> {
 
         // let signature = self.borrow().signature();
 
+        #[expect(clippy::todo, reason = "function under development")]
         todo!();
     }
 
@@ -651,10 +650,6 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
             committer_timestamp: i64,
         }
 
-        let target_timestamp = target_timestamp;
-        let min_timestamp = min_timestamp;
-        let letter_suffix = letter_suffix;
-
         let target_mask = &target_mask;
         let target_prefix = &target_prefix;
 
@@ -685,16 +680,16 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
 
                         // Check if we should stop early because another thread found a better
                         // solution
-                        if local_index % 32 == thread_index % 32 {
-                            if let Some(ref best) = *best.read() {
-                                let best_index = best.index;
-                                if best_index < index {
-                                    trace!(
-                                        "Ending thread {thread_index} at {index} as it's past the \
-                                         current best index: {best_index}"
-                                    );
-                                    break;
-                                }
+                        if local_index % 32 == thread_index % 32
+                            && let Some(ref best) = *best.read()
+                        {
+                            let best_index = best.index;
+                            if best_index < index {
+                                trace!(
+                                    "Ending thread {thread_index} at {index} as it's past the \
+                                     current best index: {best_index}"
+                                );
+                                break;
                             }
                         }
 
@@ -734,7 +729,7 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
                             let len = target_mask.len();
                             if len == 0 {
                                 // Empty prefix: check first nibble of first byte
-                                oid_bytes.len() > 0 && (oid_bytes[0] >> 4) >= 0xA
+                                !oid_bytes.is_empty() && (oid_bytes[0] >> 4) >= 0xA
                             } else {
                                 let last_mask = target_mask[len - 1];
                                 if last_mask == 0xF0 {

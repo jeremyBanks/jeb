@@ -1675,8 +1675,11 @@ fn build_dependency_value(
     {
         has_extra_fields = true;
     }
-    if !has_extra_fields && !needs_default_features_false && resolution.version.is_some() {
-        let version_str = resolution.version.as_ref().unwrap().to_string();
+    if !has_extra_fields
+        && !needs_default_features_false
+        && let Some(ref version) = resolution.version
+    {
+        let version_str = version.to_string();
         return Ok(value(version_str));
     }
     let mut table = InlineTable::new();
@@ -1792,12 +1795,15 @@ fn parse_resolution_from_value(value: &Item) -> Result<ResolutionFields> {
     }
     Ok(resolution)
 }
+/// Sorting key for workspace dependencies
+type DepSortKey = (bool, bool, bool, bool, bool, String);
+
 /// Sort workspace dependencies table according to our priority rules
 fn sort_workspace_dependencies(
     deps_table: &mut dyn toml_edit::TableLike,
-    updates: &HashMap<String, (ResolutionFields, String, bool, Option<Vec<String>>)>,
+    updates: &HashMap<String, WorkspaceDepsUpdate>,
 ) -> Result<()> {
-    let mut entries: Vec<(String, Item, (bool, bool, bool, bool, bool, String))> = Vec::new();
+    let mut entries: Vec<(String, Item, DepSortKey)> = Vec::new();
     for (key, value) in deps_table.iter() {
         let key_str = key.to_string();
         let resolution = if let Some((res, _, _, _)) = updates.get(&key_str) {
@@ -1900,10 +1906,11 @@ fn sort_features_section(doc: &mut DocumentMut) -> Result<()> {
 
     Ok(())
 }
+#[expect(clippy::too_many_arguments, reason = "complex normalization logic")]
 fn update_member_toml(
     member_path: &Path,
     _all_deps: &HashMap<String, Vec<(PathBuf, String, Dependency)>>,
-    workspace_updates: &HashMap<String, (ResolutionFields, String, bool, Option<Vec<String>>)>,
+    workspace_updates: &HashMap<String, WorkspaceDepsUpdate>,
     workspace_root: &Path,
     workspace_doc: &DocumentMut,
     old_workspace_deps: &HashMap<String, ResolutionFields>,
@@ -2121,7 +2128,7 @@ fn update_member_toml(
 }
 fn should_use_workspace(
     dep: &Dependency,
-    workspace_updates: &HashMap<String, (ResolutionFields, String, bool, Option<Vec<String>>)>,
+    workspace_updates: &HashMap<String, WorkspaceDepsUpdate>,
     workspace_key: &str,
 ) -> bool {
     if let Some((workspace_resolution, _, _, _)) = workspace_updates.get(workspace_key) {
@@ -2147,8 +2154,11 @@ fn inline_dependency(
     let has_config_fields = dep.config.optional.is_some()
         || dep.config.features.is_some()
         || dep.config.default_features.is_some();
-    if !has_extra_fields && !has_config_fields && dep.resolution.version.is_some() {
-        let version_str = dep.resolution.version.as_ref().unwrap().to_string();
+    if !has_extra_fields
+        && !has_config_fields
+        && let Some(ref version) = dep.resolution.version
+    {
+        let version_str = version.to_string();
         deps.insert(key, value(version_str));
         return Ok(());
     }

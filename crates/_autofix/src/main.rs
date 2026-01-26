@@ -1,6 +1,6 @@
 use {
     _autofix::{
-        autofix_runner,
+        autofix_runner::{self, AutofixModule},
         cargo_clippy,
         cargo_fix,
         cargo_fmt,
@@ -33,7 +33,7 @@ fn main() {
         .with_writer(std::io::stderr)
         .init();
 
-    let mut modules: Vec<(&str, fn() -> i32)> = vec![
+    let mut modules: Vec<AutofixModule> = vec![
         ("cargo_fmt", cargo_fmt::main),
         ("cargo_fix", cargo_fix::main),
         ("cargo_clippy", cargo_clippy::main),

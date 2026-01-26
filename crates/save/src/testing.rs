@@ -127,7 +127,7 @@ pub fn expect_file(path: impl Into<PathBuf>) -> ExpectFile {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Expect {
     #[doc(hidden)]
     pub position: Position,

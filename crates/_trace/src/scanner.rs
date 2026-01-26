@@ -40,7 +40,7 @@ pub fn scan_files(root: &PathBuf) -> Vec<ScannedFile> {
         let path = entry.path();
 
         // Skip directories
-        if entry.file_type().map_or(true, |ft| ft.is_dir()) {
+        if entry.file_type().is_none_or(|ft| ft.is_dir()) {
             continue;
         }
 
@@ -53,13 +53,13 @@ pub fn scan_files(root: &PathBuf) -> Vec<ScannedFile> {
         // 1. All .md files (**/*.md)
         // 2. All files under any src/ directory (**/src/**/*)
         let path_str = path.to_string_lossy();
-        let is_markdown = path.extension().map_or(false, |ext| ext == "md");
+        let is_markdown = path.extension().is_some_and(|ext| ext == "md");
         let is_in_src = path_str.contains("/src/");
 
-        if is_markdown || is_in_src {
-            if let Some(file) = read_file(&path.to_path_buf()) {
-                files.push(file);
-            }
+        if (is_markdown || is_in_src)
+            && let Some(file) = read_file(&path.to_path_buf())
+        {
+            files.push(file);
         }
     }
 

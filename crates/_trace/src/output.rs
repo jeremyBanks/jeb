@@ -151,14 +151,13 @@ pub fn print_list(
         // Show context if requested
         // [impl _trace.cli.context]
         // [impl _trace.cli.context-of]
-        if options.show_context || should_show_context(&options.context_of, "def") {
-            if let Some(ref def) = req.definition {
-                if !def.context.is_empty() {
-                    println!("{}  Context: {}", indent, def.location);
-                    for line in def.context.lines() {
-                        println!("{}    {}", indent, line);
-                    }
-                }
+        if (options.show_context || should_show_context(&options.context_of, "def"))
+            && let Some(ref def) = req.definition
+            && !def.context.is_empty()
+        {
+            println!("{}  Context: {}", indent, def.location);
+            for line in def.context.lines() {
+                println!("{}    {}", indent, line);
             }
         }
 

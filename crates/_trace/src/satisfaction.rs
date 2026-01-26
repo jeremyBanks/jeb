@@ -154,19 +154,19 @@ fn check_child_satisfaction(
         let mut all_requiring_satisfied = true;
 
         for child_id in &req.children {
-            if let Some(child_req) = tree.requirements.get(child_id) {
-                if child_req.required_types.contains(required_type) {
-                    has_child_requiring_type = true;
+            if let Some(child_req) = tree.requirements.get(child_id)
+                && child_req.required_types.contains(required_type)
+            {
+                has_child_requiring_type = true;
 
-                    // Check if this child is satisfied overall (not just self)
-                    // A child can be satisfied via @self, @children, or @either
-                    if let Some(child_status) = child_statuses.get(child_id) {
-                        if !child_status.satisfied {
-                            all_requiring_satisfied = false;
-                        }
-                    } else {
+                // Check if this child is satisfied overall (not just self)
+                // A child can be satisfied via @self, @children, or @either
+                if let Some(child_status) = child_statuses.get(child_id) {
+                    if !child_status.satisfied {
                         all_requiring_satisfied = false;
                     }
+                } else {
+                    all_requiring_satisfied = false;
                 }
             }
         }

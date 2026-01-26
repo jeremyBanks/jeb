@@ -24,7 +24,7 @@ fn test_lengths_0_to_100() {
     for len in 0..=100 {
         let data: Vec<u8> = (0..len).map(|i| (i * 31 + 17) as u8).collect();
         let encoded = encode(&data);
-        let decoded = decode(&encoded).expect(&format!("decode failed for len {}", len));
+        let decoded = decode(&encoded).unwrap_or_else(|_| panic!("decode failed for len {}", len));
         assert_eq!(decoded, data, "roundtrip failed for len {}", len);
     }
 }
@@ -34,10 +34,11 @@ fn test_lengths_around_block_boundaries() {
     // Test around 4-byte (input block) and 5-char (output block) boundaries
     for base in [4, 5, 8, 10, 16, 20, 40, 50, 80, 100] {
         for offset in -3i32..=3 {
-            let len = (base as i32 + offset).max(0) as usize;
+            let len = (base + offset).max(0) as usize;
             let data: Vec<u8> = (0..len).map(|i| i as u8).collect();
             let encoded = encode(&data);
-            let decoded = decode(&encoded).expect(&format!("decode failed for len {}", len));
+            let decoded =
+                decode(&encoded).unwrap_or_else(|_| panic!("decode failed for len {}", len));
             assert_eq!(decoded, data, "roundtrip failed for len {}", len);
         }
     }

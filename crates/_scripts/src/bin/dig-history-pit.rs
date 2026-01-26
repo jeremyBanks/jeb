@@ -95,9 +95,9 @@ fn find_all_deletions(pattern: &str) -> Result<Vec<BlobDeletion>> {
     let mut current_date = String::new();
 
     for line in output.lines() {
-        if line.starts_with("COMMIT ") {
+        if let Some(rest) = line.strip_prefix("COMMIT ") {
             // Parse: COMMIT <hash> <date>
-            let parts: Vec<&str> = line[7..].splitn(2, ' ').collect();
+            let parts: Vec<&str> = rest.splitn(2, ' ').collect();
             if parts.len() == 2 {
                 current_commit = parts[0].to_string();
                 current_date = parts[1].to_string();
@@ -341,7 +341,7 @@ fn main() -> Result<()> {
     }
 
     let mut skip_indices: HashSet<usize> = HashSet::new();
-    for (_path, indices) in &deletions_by_path {
+    for indices in deletions_by_path.values() {
         // Find which indices have non-whitespace content
         let non_whitespace: Vec<usize> = indices
             .iter()

@@ -29,10 +29,10 @@ impl Entry {
         }
 
         // Try JSON format first: {"type":"corpus","data":"..."}
-        if line.starts_with('{') {
-            if let Some(entry) = Self::parse_json(line) {
-                return Some(entry);
-            }
+        if line.starts_with('{')
+            && let Some(entry) = Self::parse_json(line)
+        {
+            return Some(entry);
         }
 
         // Current format: type:encoded_data

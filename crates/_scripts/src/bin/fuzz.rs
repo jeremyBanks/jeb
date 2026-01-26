@@ -69,7 +69,7 @@ fn run_with_truncated_output(mut cmd: Command, prefix: &str) -> Result<std::proc
     // Wait for output threads and print any tail content
     if let Ok((truncated, tail)) = stdout_handle.join() {
         if truncated {
-            eprint!("{}...\n", prefix);
+            eprintln!("{}...", prefix);
         }
         if !tail.is_empty() {
             // Prefix each line in tail
@@ -81,7 +81,7 @@ fn run_with_truncated_output(mut cmd: Command, prefix: &str) -> Result<std::proc
     if let Ok((truncated, tail)) = stderr_handle.join() {
         if truncated && !tail.is_empty() {
             // Only print ... if we have tail content to show
-            eprint!("{}...\n", prefix);
+            eprintln!("{}...", prefix);
         }
         if !tail.is_empty() {
             // Prefix each line in tail
@@ -132,7 +132,7 @@ fn process_stream<R: std::io::Read>(reader: R, prefix: &str) -> (bool, String) {
                                 (OUTPUT_HEAD_BYTES + OUTPUT_LINE_GRACE).saturating_sub(bytes_shown);
                             if remaining > prefix.len() {
                                 let line_remaining = remaining - prefix.len();
-                                eprint!("{}{}\n", prefix, &line[..line_remaining.min(line.len())]);
+                                eprintln!("{}{}", prefix, &line[..line_remaining.min(line.len())]);
                                 std::io::stderr().flush().ok();
                             }
                         }
@@ -353,10 +353,10 @@ fn run_target(
     }
 
     // Minimize artifacts (before cmin, so minimized versions get packed)
-    if seconds > 0 {
-        if let Err(e) = tmin_artifacts(fuzz_dir, target, 8, prefix) {
-            warn!("{}tmin warning: {}", prefix, e);
-        }
+    if seconds > 0
+        && let Err(e) = tmin_artifacts(fuzz_dir, target, 8, prefix)
+    {
+        warn!("{}tmin warning: {}", prefix, e);
     }
 
     // Run corpus minimization (only if we did actual fuzzing)
@@ -695,26 +695,26 @@ fn pack_corpus(
         for entry in fs::read_dir(&artifacts_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_file() {
-                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                    // Parse artifact type from filename (e.g., "crash-abc123")
-                    if let Some(dash_pos) = name.find('-') {
-                        let entry_type = &name[..dash_pos];
-                        // Validate entry_type is a simple identifier
-                        if entry_type.is_empty()
-                            || !entry_type
-                                .chars()
-                                .all(|c| c.is_ascii_alphanumeric() || c == '_')
-                        {
-                            warn!("skipping artifact with invalid type: {:?}", name);
-                            continue;
-                        }
-                        let data = fs::read(&path)?;
-                        entries.insert(CorpusEntry {
-                            entry_type: entry_type.to_string(),
-                            data,
-                        });
+            if path.is_file()
+                && let Some(name) = path.file_name().and_then(|n| n.to_str())
+            {
+                // Parse artifact type from filename (e.g., "crash-abc123")
+                if let Some(dash_pos) = name.find('-') {
+                    let entry_type = &name[..dash_pos];
+                    // Validate entry_type is a simple identifier
+                    if entry_type.is_empty()
+                        || !entry_type
+                            .chars()
+                            .all(|c| c.is_ascii_alphanumeric() || c == '_')
+                    {
+                        warn!("skipping artifact with invalid type: {:?}", name);
+                        continue;
                     }
+                    let data = fs::read(&path)?;
+                    entries.insert(CorpusEntry {
+                        entry_type: entry_type.to_string(),
+                        data,
+                    });
                 }
             }
         }
@@ -1016,10 +1016,10 @@ fn unpack_all_corpora() -> Result<bool> {
 
         for target in String::from_utf8_lossy(&output.stdout).lines() {
             let target = target.trim();
-            if !target.is_empty() {
-                if let Err(e) = unpack_corpus(&fuzz_dir, target) {
-                    warn!("Error unpacking {}: {}", target, e);
-                }
+            if !target.is_empty()
+                && let Err(e) = unpack_corpus(&fuzz_dir, target)
+            {
+                warn!("Error unpacking {}: {}", target, e);
             }
         }
     }

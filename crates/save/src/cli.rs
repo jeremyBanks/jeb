@@ -590,7 +590,7 @@ pub fn main(args: Save) -> Result<()> {
             repo.revparse_single(tree_ref)?.peel_to_tree()?.id(),
         )
     } else if args.empty {
-        let tree_oid = head.as_ref().map(|c| c.tree_id()).unwrap_or_else(|| {
+        let tree_oid = head.as_ref().map(git2::Commit::tree_id).unwrap_or_else(|| {
             // Empty tree OID
             Oid::from_str("4b825dc642cb6eb9a060e54bf8d69288fbee4904").unwrap()
         });
@@ -905,12 +905,12 @@ fn get_git_user(args: &Save, repo: &Repository, head: &Option<Commit>) -> Result
 /// If the string doesn't contain angle brackets, uses it as both name and
 /// email.
 fn parse_signature(s: &str) -> Result<(String, String)> {
-    if let Some(start) = s.find('<') {
-        if let Some(end) = s.find('>') {
-            let name = s[..start].trim().to_string();
-            let email = s[start + 1..end].to_string();
-            return Ok((name, email));
-        }
+    if let Some(start) = s.find('<')
+        && let Some(end) = s.find('>')
+    {
+        let name = s[..start].trim().to_string();
+        let email = s[start + 1..end].to_string();
+        return Ok((name, email));
     }
     // If no angle brackets, use the string as both name and email
     Ok((s.to_string(), s.to_string()))

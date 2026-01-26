@@ -4256,12 +4256,11 @@ fn git2_from_git_dir(path: &Path) -> Result<Repository, GitError> {
     // Read working tree
     let working = if let Some(workdir) = git_repo.workdir() {
         let mut tree = Tree::new();
-        #[expect(clippy::only_used_in_recursion, reason = "parameter needed for recursive calls")]
         fn visit_dir(
             tree: &mut Tree,
             dir: &Path,
             prefix: &str,
-            git_repo: &git2::Repository,
+            _git_repo: &git2::Repository,
         ) -> Result<(), GitError> {
             for entry in std::fs::read_dir(dir)? {
                 let entry = entry?;
@@ -4283,7 +4282,7 @@ fn git2_from_git_dir(path: &Path) -> Result<Repository, GitError> {
                 };
 
                 if path.is_dir() {
-                    visit_dir(tree, &path, &full_path, git_repo)?;
+                    visit_dir(tree, &path, &full_path, _git_repo)?;
                 } else if path.is_file() {
                     let content = std::fs::read(&path)?;
 

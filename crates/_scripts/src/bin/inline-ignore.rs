@@ -383,7 +383,7 @@ fn prune_ancestor(gitignore_path: &Path, patterns_to_remove: &[String]) -> Resul
                 continue;
             }
             // Keep this pattern - flush any pending preamble and this group
-            result_lines.extend(pending_preamble.drain(..));
+            result_lines.append(&mut pending_preamble);
             for p in &group.preamble {
                 result_lines.push(p.content.clone());
             }

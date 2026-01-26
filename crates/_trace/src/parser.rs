@@ -10,7 +10,7 @@ use {
     },
     regex::Regex,
     std::{
-        path::PathBuf,
+        path::{Path, PathBuf},
         sync::LazyLock,
     },
 };
@@ -29,7 +29,7 @@ static ANNOTATION_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
 /// Parse all annotations from file content
 /// [impl _trace.syntax.structure]
 /// [impl _trace.syntax.type]
-pub fn parse_annotations(path: &PathBuf, content: &str, contexts: &[String]) -> Vec<Annotation> {
+pub fn parse_annotations(path: &Path, content: &str, contexts: &[String]) -> Vec<Annotation> {
     let mut annotations = Vec::new();
     let lines: Vec<&str> = content.lines().collect();
 
@@ -81,7 +81,7 @@ pub fn parse_annotations(path: &PathBuf, content: &str, contexts: &[String]) -> 
             // Parse the annotation
             if let Some(annotation) = parse_annotation_inner(
                 inner,
-                path.clone(),
+                path.to_path_buf(),
                 line_num,
                 start + 1, // column is 1-indexed
                 contexts.get(line_idx).cloned().unwrap_or_default(),
