@@ -1,12 +1,20 @@
 use {
-    anyhow::{Context, Result, bail},
+    anyhow::{
+        Context,
+        Result,
+    },
     serde_json::Value,
-    std::io::{self, BufRead, Write},
+    std::io::{
+        self,
+        BufRead,
+        Write,
+    },
 };
 
 fn main() -> Result<()> {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
+    let mut wrote_any = false;
 
     for (line_num, line) in stdin.lock().lines().enumerate() {
         let line = line.with_context(|| format!("Failed to read line {}", line_num + 1))?;
@@ -22,6 +30,12 @@ fn main() -> Result<()> {
         writeln!(stdout, "---")?;
         write_yaml_value(&mut stdout, &value, 0, false)?;
         writeln!(stdout, "...")?;
+        wrote_any = true;
+    }
+
+    // Always end with a blank line at EOF
+    if wrote_any {
+        writeln!(stdout)?;
     }
 
     Ok(())
@@ -131,7 +145,8 @@ fn write_yaml_string<W: Write>(w: &mut W, s: &str, indent: usize) -> Result<()> 
 }
 
 /// Write a YAML value at the given indentation level
-/// `inline` indicates whether this is being written inline (after a key or array marker)
+/// `inline` indicates whether this is being written inline (after a key or
+/// array marker)
 fn write_yaml_value<W: Write>(w: &mut W, value: &Value, indent: usize, inline: bool) -> Result<()> {
     match value {
         Value::Null => {

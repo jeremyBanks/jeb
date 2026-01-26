@@ -1,17 +1,43 @@
 use {
-    _chosen::{bytes_to_text, text_to_bytes},
-    anyhow::{Context, Result},
+    _chosen::{
+        bytes_to_text,
+        text_to_bytes,
+    },
+    anyhow::{
+        Context,
+        Result,
+    },
     clap::Parser,
-    jeb_tracing::{error, info, warn},
-    sha1::{Digest, Sha1},
+    jeb_tracing::{
+        error,
+        info,
+        warn,
+    },
+    sha1::{
+        Digest,
+        Sha1,
+    },
     std::{
         collections::BTreeSet,
         env,
         fs,
-        io::{BufRead, BufReader},
-        path::{Path, PathBuf},
-        process::{Command, ExitCode, Stdio},
-        sync::atomic::{AtomicBool, Ordering},
+        io::{
+            BufRead,
+            BufReader,
+        },
+        path::{
+            Path,
+            PathBuf,
+        },
+        process::{
+            Command,
+            ExitCode,
+            Stdio,
+        },
+        sync::atomic::{
+            AtomicBool,
+            Ordering,
+        },
     },
 };
 
@@ -70,8 +96,10 @@ fn run_with_truncated_output(mut cmd: Command, prefix: &str) -> Result<std::proc
 
 /// Process a stream: print first N bytes line-buffered, buffer last N bytes
 fn process_stream<R: std::io::Read>(reader: R, prefix: &str) -> (bool, String) {
-    use std::collections::VecDeque;
-    use std::io::Write;
+    use std::{
+        collections::VecDeque,
+        io::Write,
+    };
 
     let mut reader = BufReader::new(reader);
     let mut bytes_shown = 0;
@@ -104,11 +132,7 @@ fn process_stream<R: std::io::Read>(reader: R, prefix: &str) -> (bool, String) {
                                 (OUTPUT_HEAD_BYTES + OUTPUT_LINE_GRACE).saturating_sub(bytes_shown);
                             if remaining > prefix.len() {
                                 let line_remaining = remaining - prefix.len();
-                                eprint!(
-                                    "{}{}\n",
-                                    prefix,
-                                    &line[..line_remaining.min(line.len())]
-                                );
+                                eprint!("{}{}\n", prefix, &line[..line_remaining.min(line.len())]);
                                 std::io::stderr().flush().ok();
                             }
                         }
@@ -148,23 +172,40 @@ struct Args {
     filter: Option<String>,
 
     /// Fuzz each target for N seconds (0 or negative = replay only)
-    #[clap(short, long, default_value = "1")]
+    #[clap(
+        short,
+        long,
+        default_value = "1"
+    )]
     seconds: i32,
 
     /// Maximum input length in bytes
-    #[clap(long, default_value = "313")]
+    #[clap(
+        long,
+        default_value = "313"
+    )]
     max_len: u32,
 
     /// Number of targets to fuzz in parallel (0 = num CPUs)
-    #[clap(short = 'p', long, default_value = "0")]
+    #[clap(
+        short = 'p',
+        long,
+        default_value = "0"
+    )]
     parallelism: i32,
 
     /// Run all targets in parallel (alias for -p0)
-    #[clap(long, conflicts_with = "serial")]
+    #[clap(
+        long,
+        conflicts_with = "serial"
+    )]
     parallel: bool,
 
     /// Run targets sequentially (alias for -p1)
-    #[clap(long, conflicts_with = "parallel")]
+    #[clap(
+        long,
+        conflicts_with = "parallel"
+    )]
     serial: bool,
 
     /// Only pack corpus files (no fuzzing)
@@ -384,150 +425,150 @@ fn run() -> Result<bool> {
     let workspace_root = get_workspace_root();
 
     loop {
-    // Find all crates with fuzz directories
-    let fuzz_dirs: Vec<PathBuf> = glob::glob(
-        workspace_root
-            .join("crates/*/fuzz")
-            .to_str()
-            .expect("valid path"),
-    )?
-    .filter_map(|p| p.ok())
-    .filter(|p| p.is_dir())
-    .collect();
+        // Find all crates with fuzz directories
+        let fuzz_dirs: Vec<PathBuf> = glob::glob(
+            workspace_root
+                .join("crates/*/fuzz")
+                .to_str()
+                .expect("valid path"),
+        )?
+        .filter_map(|p| p.ok())
+        .filter(|p| p.is_dir())
+        .collect();
 
-    if fuzz_dirs.is_empty() {
-        info!("No fuzz directories found");
-        if forever {
-            info!("=== Restarting fuzz cycle ===");
-            continue;
-        }
-        return Ok(true);
-    }
-
-    // Collect all (fuzz_dir, target) pairs
-    let mut tasks: Vec<(PathBuf, String)> = Vec::new();
-    let mut list_failed = false;
-
-    for fuzz_dir in fuzz_dirs {
-        // Get list of fuzz targets by running cargo fuzz list
-        let output = Command::new("cargo")
-            .args(["+nightly", "fuzz", "list"])
-            .current_dir(&fuzz_dir)
-            .output()
-            .context("failed to run cargo fuzz list")?;
-
-        if !output.status.success() {
-            warn!(
-                "cargo fuzz list failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            );
-            list_failed = true;
-            continue;
-        }
-
-        let targets: Vec<String> = String::from_utf8_lossy(&output.stdout)
-            .lines()
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .filter(|s| {
-                target_filter
-                    .as_ref()
-                    .map(|f| s.contains(f.as_str()))
-                    .unwrap_or(true)
-            })
-            .collect();
-
-        if targets.is_empty() {
-            if target_filter.is_none() {
-                let crate_name = fuzz_dir
-                    .parent()
-                    .and_then(|p| p.file_name())
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_default();
-                info!("No fuzz targets found in {}", crate_name);
-            }
-            continue;
-        }
-
-        for target in targets {
-            tasks.push((fuzz_dir.clone(), target));
-        }
-    }
-
-    if tasks.is_empty() {
-        if list_failed {
-            warn!("=== Fuzz complete (with failures) ===");
+        if fuzz_dirs.is_empty() {
+            info!("No fuzz directories found");
             if forever {
                 info!("=== Restarting fuzz cycle ===");
                 continue;
             }
-            return Ok(false);
-        }
-        info!("No fuzz targets to run");
-        if forever {
-            info!("=== Restarting fuzz cycle ===");
-            continue;
-        }
-        return Ok(true);
-    }
-
-    info!(
-        "Found {} target(s), running with parallelism={}",
-        tasks.len(),
-        parallelism
-    );
-
-    // Track failures
-    let any_failed = AtomicBool::new(list_failed);
-
-    // Run tasks with thread pool
-    std::thread::scope(|s| {
-        use std::sync::mpsc;
-
-        let (permit_tx, permit_rx) = mpsc::sync_channel::<()>(parallelism);
-
-        // Pre-fill permits
-        for _ in 0..parallelism {
-            permit_tx.send(()).unwrap();
+            return Ok(true);
         }
 
-        for (fuzz_dir, target) in &tasks {
-            permit_rx.recv().unwrap(); // Wait for permit
-            let permit_tx = permit_tx.clone();
-            let any_failed = &any_failed;
+        // Collect all (fuzz_dir, target) pairs
+        let mut tasks: Vec<(PathBuf, String)> = Vec::new();
+        let mut list_failed = false;
 
-            s.spawn(move || {
-                let prefix = format!("[{}] ", target);
+        for fuzz_dir in fuzz_dirs {
+            // Get list of fuzz targets by running cargo fuzz list
+            let output = Command::new("cargo")
+                .args(["+nightly", "fuzz", "list"])
+                .current_dir(&fuzz_dir)
+                .output()
+                .context("failed to run cargo fuzz list")?;
 
-                match run_target(fuzz_dir, target, seconds, max_len, &prefix) {
-                    Ok(failed) => {
-                        if failed {
+            if !output.status.success() {
+                warn!(
+                    "cargo fuzz list failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                );
+                list_failed = true;
+                continue;
+            }
+
+            let targets: Vec<String> = String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .filter(|s| {
+                    target_filter
+                        .as_ref()
+                        .map(|f| s.contains(f.as_str()))
+                        .unwrap_or(true)
+                })
+                .collect();
+
+            if targets.is_empty() {
+                if target_filter.is_none() {
+                    let crate_name = fuzz_dir
+                        .parent()
+                        .and_then(|p| p.file_name())
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_default();
+                    info!("No fuzz targets found in {}", crate_name);
+                }
+                continue;
+            }
+
+            for target in targets {
+                tasks.push((fuzz_dir.clone(), target));
+            }
+        }
+
+        if tasks.is_empty() {
+            if list_failed {
+                warn!("=== Fuzz complete (with failures) ===");
+                if forever {
+                    info!("=== Restarting fuzz cycle ===");
+                    continue;
+                }
+                return Ok(false);
+            }
+            info!("No fuzz targets to run");
+            if forever {
+                info!("=== Restarting fuzz cycle ===");
+                continue;
+            }
+            return Ok(true);
+        }
+
+        info!(
+            "Found {} target(s), running with parallelism={}",
+            tasks.len(),
+            parallelism
+        );
+
+        // Track failures
+        let any_failed = AtomicBool::new(list_failed);
+
+        // Run tasks with thread pool
+        std::thread::scope(|s| {
+            use std::sync::mpsc;
+
+            let (permit_tx, permit_rx) = mpsc::sync_channel::<()>(parallelism);
+
+            // Pre-fill permits
+            for _ in 0..parallelism {
+                permit_tx.send(()).unwrap();
+            }
+
+            for (fuzz_dir, target) in &tasks {
+                permit_rx.recv().unwrap(); // Wait for permit
+                let permit_tx = permit_tx.clone();
+                let any_failed = &any_failed;
+
+                s.spawn(move || {
+                    let prefix = format!("[{}] ", target);
+
+                    match run_target(fuzz_dir, target, seconds, max_len, &prefix) {
+                        Ok(failed) => {
+                            if failed {
+                                any_failed.store(true, Ordering::SeqCst);
+                            }
+                        }
+                        Err(e) => {
+                            warn!("{}Error: {:?}", prefix, e);
                             any_failed.store(true, Ordering::SeqCst);
                         }
                     }
-                    Err(e) => {
-                        warn!("{}Error: {:?}", prefix, e);
-                        any_failed.store(true, Ordering::SeqCst);
-                    }
-                }
 
-                // Release permit (ignore error if receiver dropped after all tasks spawned)
-                let _ = permit_tx.send(());
-            });
+                    // Release permit (ignore error if receiver dropped after all tasks spawned)
+                    let _ = permit_tx.send(());
+                });
+            }
+        });
+
+        let failed = any_failed.load(Ordering::SeqCst);
+        if failed {
+            warn!("=== Fuzz complete (with failures) ===");
+        } else {
+            info!("=== Fuzz complete ===");
         }
-    });
 
-    let failed = any_failed.load(Ordering::SeqCst);
-    if failed {
-        warn!("=== Fuzz complete (with failures) ===");
-    } else {
-        info!("=== Fuzz complete ===");
-    }
-
-    if !forever {
-        return Ok(!failed);
-    }
-    info!("=== Restarting fuzz cycle ===");
+        if !forever {
+            return Ok(!failed);
+        }
+        info!("=== Restarting fuzz cycle ===");
     } // end loop
 }
 
@@ -540,7 +581,8 @@ fn get_workspace_root() -> PathBuf {
 /// Entry in a .corpus file
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct CorpusEntry {
-    /// "corpus" for corpus entries, or artifact type like "crash", "timeout", etc.
+    /// "corpus" for corpus entries, or artifact type like "crash", "timeout",
+    /// etc.
     entry_type: String,
     /// Raw bytes of the input
     data: Vec<u8>,
@@ -611,12 +653,15 @@ impl PartialOrd for CorpusEntry {
 
 /// Get the path to the .corpus file for a target
 fn corpus_file_path(fuzz_dir: &Path, target: &str) -> PathBuf {
-    fuzz_dir.join("fuzz_targets").join(format!("{}.corpus", target))
+    fuzz_dir
+        .join("fuzz_targets")
+        .join(format!("{}.corpus", target))
 }
 
 /// Pack corpus and artifacts into a .corpus text file.
 /// If original_corpus is provided, entries that were in original_corpus but are
-/// no longer on the filesystem become "archive:" entries (preserved historical data).
+/// no longer on the filesystem become "archive:" entries (preserved historical
+/// data).
 fn pack_corpus(
     fuzz_dir: &Path,
     target: &str,
@@ -707,7 +752,9 @@ fn pack_corpus(
     // Sort by SHA-1 hash (for deterministic deletion when over limit)
     let hash_key = |e: &CorpusEntry| {
         let hash = Sha1::digest(&e.data);
-        hash.iter().map(|b| format!("{:02x}", b)).collect::<String>()
+        hash.iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>()
     };
     corpus_entries.sort_by_cached_key(hash_key);
     archive_entries.sort_by_cached_key(hash_key);
@@ -729,7 +776,10 @@ fn pack_corpus(
             let remaining_to_delete = to_delete - deleted_archive;
             archive_entries.clear();
             deleted_corpus = remaining_to_delete;
-            corpus_entries = corpus_entries.into_iter().skip(remaining_to_delete).collect();
+            corpus_entries = corpus_entries
+                .into_iter()
+                .skip(remaining_to_delete)
+                .collect();
         }
     }
 
@@ -781,7 +831,10 @@ fn pack_corpus(
         info!(
             "  packed {} -> {}",
             parts.join(" + "),
-            corpus_file.file_name().unwrap_or_default().to_string_lossy()
+            corpus_file
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
         );
 
         // Clean up directories after packing (data is now in .corpus file)
@@ -812,7 +865,8 @@ fn pack_corpus(
 }
 
 /// Unpack a .corpus text file into corpus and artifact files.
-/// Returns a set of corpus entry data (both "corpus" and "archive" types) for tracking.
+/// Returns a set of corpus entry data (both "corpus" and "archive" types) for
+/// tracking.
 fn unpack_corpus(fuzz_dir: &Path, target: &str) -> Result<std::collections::HashSet<Vec<u8>>> {
     use std::collections::HashSet;
 
@@ -853,7 +907,10 @@ fn unpack_corpus(fuzz_dir: &Path, target: &str) -> Result<std::collections::Hash
             .map(|b| format!("{:02x}", b))
             .collect::<String>();
 
-        if entry.entry_type == "corpus" || entry.entry_type == "archive" || entry.entry_type == "slow" {
+        if entry.entry_type == "corpus"
+            || entry.entry_type == "archive"
+            || entry.entry_type == "slow"
+        {
             // Track corpus and archive entries for archive purposes
             original_corpus.insert(entry.data.clone());
             // Both corpus and archive entries are written as corpus files

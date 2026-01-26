@@ -4,9 +4,16 @@
 //! where `xxxx = (yyyy XOR (dd * 100 + MM)) + (hh * 100 + mm) + 2048`
 
 use {
-    anyhow::{Context, Result, bail},
+    anyhow::{
+        Context,
+        Result,
+        bail,
+    },
     chrono::Local,
-    std::{fs, path::Path},
+    std::{
+        fs,
+        path::Path,
+    },
     toml_edit::DocumentMut,
 };
 
@@ -14,10 +21,8 @@ fn main() -> Result<()> {
     let cargo_toml_path = Path::new("Cargo.toml");
 
     // Read and parse Cargo.toml
-    let content = fs::read_to_string(cargo_toml_path)
-        .context("Failed to read Cargo.toml")?;
-    let mut doc: DocumentMut = content.parse()
-        .context("Failed to parse Cargo.toml")?;
+    let content = fs::read_to_string(cargo_toml_path).context("Failed to read Cargo.toml")?;
+    let mut doc: DocumentMut = content.parse().context("Failed to parse Cargo.toml")?;
 
     // Get current version from [workspace.package]
     let current_version = doc
@@ -51,7 +56,11 @@ fn main() -> Result<()> {
     println!("  Date: {date_str}");
     println!("  Time: {hh:02}:{min:02}");
     println!("  Formula: ({yyyy} XOR ({dd} * 100 + {mm})) + ({hh} * 100 + {min}) + 2048");
-    println!("  = ({yyyy} XOR {}) + {} + 2048", dd * 100 + mm, hh * 100 + min);
+    println!(
+        "  = ({yyyy} XOR {}) + {} + 2048",
+        dd * 100 + mm,
+        hh * 100 + min
+    );
     println!("  = {first_part} + {second_part} + 2048");
     println!("  = {xxxx}");
 
@@ -59,8 +68,7 @@ fn main() -> Result<()> {
     doc["workspace"]["package"]["version"] = toml_edit::value(&new_version);
 
     // Write back to Cargo.toml
-    fs::write(cargo_toml_path, doc.to_string())
-        .context("Failed to write Cargo.toml")?;
+    fs::write(cargo_toml_path, doc.to_string()).context("Failed to write Cargo.toml")?;
 
     println!("Updated workspace version in Cargo.toml to: {new_version}");
 
@@ -78,11 +86,14 @@ fn parse_version(version: &str) -> Result<(u32, u32, u32)> {
         bail!("Could not parse version from: {version}");
     }
 
-    let major: u32 = parts[0].parse()
+    let major: u32 = parts[0]
+        .parse()
         .with_context(|| format!("Invalid major version: {}", parts[0]))?;
-    let minor: u32 = parts[1].parse()
+    let minor: u32 = parts[1]
+        .parse()
         .with_context(|| format!("Invalid minor version: {}", parts[1]))?;
-    let patch: u32 = parts[2].parse()
+    let patch: u32 = parts[2]
+        .parse()
         .with_context(|| format!("Invalid patch version: {}", parts[2]))?;
 
     Ok((major, minor, patch))

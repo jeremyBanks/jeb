@@ -270,7 +270,10 @@ impl ser::SerializeTupleVariant for SerializeTupleVariant {
 
     fn end(self) -> Result<Value, SerdeError> {
         let mut map = IndexMap::new();
-        map.insert(String::from(self.variant.as_str()), Value::Array(self.vec.into()));
+        map.insert(
+            String::from(self.variant.as_str()),
+            Value::Array(self.vec.into()),
+        );
         Ok(Value::StringMap(map.into()))
     }
 }

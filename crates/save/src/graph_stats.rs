@@ -201,7 +201,8 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 z_mode: true,
             };
         }
-        // Try to trust HEAD's message first (works for both limited and unlimited depth)
+        // Try to trust HEAD's message first (works for both limited and unlimited
+        // depth)
         if self.trust_messages {
             if let Some(summary) = head.summary() {
                 if let Some(parsed) = MessageParser::parse(&summary) {
@@ -265,7 +266,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                                         None
                                     } else {
                                         match parsed.prefix {
-                                            MessagePrefix::Regular => Some(parsed), // Always trust r commits
+                                            MessagePrefix::Regular => Some(parsed), /* Always trust r commits */
                                             MessagePrefix::Shallow if is_shallow => Some(parsed),
                                             _ => None,
                                         }
@@ -307,7 +308,8 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                             }
                         } else {
                             // Parent was already visited - check if it exists
-                            // This handles the case where multiple commits share a non-existent parent
+                            // This handles the case where multiple commits share a non-existent
+                            // parent
                             if !commit_map.contains_key(&parent_id) {
                                 boundary_commits.insert(id.clone());
                             }
@@ -336,7 +338,8 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 }
             }
         }
-        // Calculate revision_index: count along first-parent chain, adding trusted stats
+        // Calculate revision_index: count along first-parent chain, adding trusted
+        // stats
         let revision_index = {
             let mut count = 0u32;
             let mut current_id = head.id();
@@ -360,7 +363,9 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                     let next_parent = parents[0].clone();
                     // Check if the parent exists in our explored graph before counting
                     // This handles shallow clone boundaries where the parent commit doesn't exist
-                    if !parent_map.contains_key(&next_parent) && !boundary_commits.contains(&next_parent) {
+                    if !parent_map.contains_key(&next_parent)
+                        && !boundary_commits.contains(&next_parent)
+                    {
                         break;
                     }
                     count += 1;
@@ -371,14 +376,23 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             }
             count + 1 // +1 because we're calculating for a new commit (HEAD's child)
         };
-        let generation_index =
-            self.calculate_generation_bounded(&parent_map, &head.id(), &boundary_commits, &trusted_stats) + 1; // +1 for new commit
+        let generation_index = self.calculate_generation_bounded(
+            &parent_map,
+            &head.id(),
+            &boundary_commits,
+            &trusted_stats,
+        ) + 1; // +1 for new commit
         let commit_index = self.calculate_commit_index_bounded(&visited, &trusted_stats) + 1; // +1 for new commit
         // Calculate origin: prefer origin from trusted commits on first-parent chain
         let origin = if revision_index == 0 {
             None
         } else {
-            self.calculate_origin_bounded(&parent_map, &commit_map, &boundary_commits, &trusted_stats)
+            self.calculate_origin_bounded(
+                &parent_map,
+                &commit_map,
+                &boundary_commits,
+                &trusted_stats,
+            )
         };
         GraphStats {
             revision_index,
@@ -427,15 +441,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             let parents = parent_map.get(id).map(Vec::as_slice).unwrap_or(&[]);
             let max_parent_dist = parents
                 .iter()
-                .map(|p| {
-                    visit(
-                        p,
-                        parent_map,
-                        distances,
-                        processed,
-                        max_distance,
-                    )
-                })
+                .map(|p| visit(p, parent_map, distances, processed, max_distance))
                 .max()
                 .unwrap_or(0);
             let dist = max_parent_dist + 1;
@@ -465,9 +471,9 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         let mut count = visited.len().saturating_sub(1) as u32;
         // Add commit_index from all trusted boundaries
         for parsed in trusted_stats.values() {
-            let trusted_commit_index = parsed.commit_index.unwrap_or_else(|| {
-                parsed.generation_index.unwrap_or(parsed.revision_index)
-            });
+            let trusted_commit_index = parsed
+                .commit_index
+                .unwrap_or_else(|| parsed.generation_index.unwrap_or(parsed.revision_index));
             count += trusted_commit_index;
         }
         count
@@ -871,7 +877,8 @@ mod tests {
         // This fixes a bug where s23 was generated when it should have been r222
         // because r221 was not trusted in shallow mode.
         let mut repo = MockRepo::new(true);
-        // r221 was committed when the repo was non-shallow, but we're now in shallow mode
+        // r221 was committed when the repo was non-shallow, but we're now in shallow
+        // mode
         let head_id = repo.add_commit("c1", vec!["c0"], Some("r221 / g221 / n221 / x0000 / oCD2E"));
         let head = repo.commits.get(&head_id).unwrap();
         let calculator = GraphStatsCalculator::new(&repo, -1);

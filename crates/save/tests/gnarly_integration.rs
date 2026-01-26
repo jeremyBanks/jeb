@@ -1,11 +1,17 @@
 use {
-    git_snapshot::{serialize, CommitIdStyle, SerializationOptions},
-    save::cli::Save,
-    std::fs,
-    std::sync::Mutex,
-    once_cell::sync::Lazy,
-    std::path::PathBuf,
+    git_snapshot::{
+        CommitIdStyle,
+        SerializationOptions,
+        serialize,
+    },
     inline::snap,
+    once_cell::sync::Lazy,
+    save::cli::Save,
+    std::{
+        fs,
+        path::PathBuf,
+        sync::Mutex,
+    },
 };
 
 static CWD_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
@@ -72,18 +78,26 @@ refs:
     fs::write(repo_path.join("file4"), "new").unwrap();
 
     let _ctx = TestContext::new(repo_path);
-    
+
     // Use timeless for deterministic output
-    Save::with(|s| { 
-        s.message = Some("post-merge".to_string()); 
+    Save::with(|s| {
+        s.message = Some("post-merge".to_string());
         s.timeless = true;
-    }).save().expect("save failed");
+    })
+    .save()
+    .expect("save failed");
 
     let result = temp_repo.to_snapshot().unwrap();
-    let output = serialize(&result, CommitIdStyle::Integer, SerializationOptions::default());
+    let output = serialize(
+        &result,
+        CommitIdStyle::Integer,
+        SerializationOptions::default(),
+    );
 
     // We expect the new commit 5 to be added
-    assert!(snap!(r#"HEAD: refs/heads/main
+    assert!(
+        snap!(
+            r#"HEAD: refs/heads/main
 refs:
   heads:
     main: 5
@@ -133,7 +147,9 @@ refs:
     file2: left
     file3: right
     file4: new
-"#) == output);
+"#
+        ) == output
+    );
 }
 
 #[test]
@@ -162,18 +178,26 @@ refs:
     fs::write(repo_path.join("a"), "4").unwrap();
 
     let _ctx = TestContext::new(repo_path);
-    
+
     // Squash to 1 (this means new commit's parent is 1)
-    Save::with(|s| { 
+    Save::with(|s| {
         s.squash_to_ref = vec!["HEAD~2".to_string()];
         s.timeless = true;
         s.message = Some("squashed to one".to_string());
-    }).save().expect("save --squash-to failed");
+    })
+    .save()
+    .expect("save --squash-to failed");
 
     let result = temp_repo.to_snapshot().unwrap();
-    let output = serialize(&result, CommitIdStyle::Integer, SerializationOptions::default());
-    
-    assert!(snap!(r#"HEAD: refs/heads/main
+    let output = serialize(
+        &result,
+        CommitIdStyle::Integer,
+        SerializationOptions::default(),
+    );
+
+    assert!(
+        snap!(
+            r#"HEAD: refs/heads/main
 refs:
   heads:
     main: 2
@@ -192,7 +216,9 @@ refs:
   message: squashed to one
   tree:
     a: "4"
-"#) == output);
+"#
+        ) == output
+    );
 }
 
 #[test]
@@ -220,15 +246,21 @@ refs:
     fs::write(repo_path.join("file3"), "3").unwrap();
 
     let _ctx = TestContext::new(repo_path);
-    
+
     // Should trust r11 and create r12
-    Save::with(|s| { 
-        s.timeless = true; 
-    }).save().expect("save failed");
+    Save::with(|s| {
+        s.timeless = true;
+    })
+    .save()
+    .expect("save failed");
 
     let result = temp_repo.to_snapshot().unwrap();
     let commit = result.head_commit().expect("No HEAD");
-    assert!(commit.message.starts_with("r12"), "Message '{}' should start with 'r12'", commit.message);
+    assert!(
+        commit.message.starts_with("r12"),
+        "Message '{}' should start with 'r12'",
+        commit.message
+    );
 }
 
 #[test]
@@ -255,17 +287,24 @@ refs:
     fs::write(repo_path.join("file3"), "3").unwrap();
 
     let _ctx = TestContext::new(repo_path);
-    
-    // With --rebuild, it should ignore r11 and calculate based on graph (which is root -> 1 -> 2)
-    Save::with(|s| { 
+
+    // With --rebuild, it should ignore r11 and calculate based on graph (which is
+    // root -> 1 -> 2)
+    Save::with(|s| {
         s.rebuild = true;
-        s.timeless = true; 
-    }).save().expect("save --rebuild failed");
+        s.timeless = true;
+    })
+    .save()
+    .expect("save --rebuild failed");
 
     let result = temp_repo.to_snapshot().unwrap();
     let commit = result.head_commit().expect("No HEAD");
     // Graph is 1(r0) -> 2(r1) -> new(r2)
-    assert!(commit.message.starts_with("r2"), "Message '{}' should start with 'r2'", commit.message);
+    assert!(
+        commit.message.starts_with("r2"),
+        "Message '{}' should start with 'r2'",
+        commit.message
+    );
 }
 
 #[test]
@@ -294,26 +333,34 @@ refs:
     fs::write(repo_path.join("a"), "4").unwrap();
 
     let _ctx = TestContext::new(repo_path);
-    
+
     // HEAD is 2.
     // We want new commit to have parent 3 (other).
     // Default parents for new commit is [HEAD] (which is 2).
     // So we add 3 (other) and remove HEAD (2).
-    Save::with(|s| { 
+    Save::with(|s| {
         s.added_parent_ref = vec!["other".to_string()];
         s.removed_parent_ref = vec!["HEAD".to_string()];
         s.timeless = true;
         s.message = Some("new parents".to_string());
-    }).save().expect("save --add-parent --remove-parent failed");
+    })
+    .save()
+    .expect("save --add-parent --remove-parent failed");
 
     let result = temp_repo.to_snapshot().unwrap();
     let commit = result.head_commit().expect("No HEAD");
-    
+
     // Verify parents
     assert_eq!(commit.parents.len(), 1);
-    
-    let output = serialize(&result, CommitIdStyle::Integer, SerializationOptions::default());
-    assert!(snap!(r#"HEAD: refs/heads/main
+
+    let output = serialize(
+        &result,
+        CommitIdStyle::Integer,
+        SerializationOptions::default(),
+    );
+    assert!(
+        snap!(
+            r#"HEAD: refs/heads/main
 refs:
   heads:
     main: 4
@@ -349,5 +396,7 @@ refs:
   tree:
     a: "4"
     b: "3"
-"#) == output);
+"#
+        ) == output
+    );
 }

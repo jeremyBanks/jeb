@@ -1,9 +1,10 @@
-use std::process::{
-    Command,
-    Stdio,
+use {
+    crate::format::print_command,
+    std::process::{
+        Command,
+        Stdio,
+    },
 };
-
-use crate::format::print_command;
 
 /// Run a command, logging it first, letting stdio pass through.
 /// Returns the exit code (0 = success).

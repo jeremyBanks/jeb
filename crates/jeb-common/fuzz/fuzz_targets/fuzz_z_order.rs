@@ -1,7 +1,9 @@
 #![no_main]
 
-use jeb_common::bi::z_order::z_order;
-use libfuzzer_sys::fuzz_target;
+use {
+    jeb_common::bi::z_order::z_order,
+    libfuzzer_sys::fuzz_target,
+};
 
 fuzz_target!(|data: &[u8]| {
     // Test roundtrip properties for z-order (Morton) curve bijection
@@ -74,7 +76,8 @@ fuzz_target!(|data: &[u8]| {
     }
 
     // Z-order property: interleaving bits means adjacent indices differ by at most
-    // one coordinate change. Check that x and y each change by at most 1 bit at a time.
+    // one coordinate change. Check that x and y each change by at most 1 bit at a
+    // time.
     if data.len() >= 2 {
         let u = u16::from_le_bytes([data[0], data[1]]);
         if u < u16::MAX {

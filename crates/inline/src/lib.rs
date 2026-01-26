@@ -1,4 +1,7 @@
-#![cfg_attr(not(test), deny(unsafe_code))]
+#![cfg_attr(
+    not(test),
+    deny(unsafe_code)
+)]
 
 //! Self-modifying values that update their source code at runtime.
 //!

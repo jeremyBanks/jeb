@@ -94,8 +94,9 @@ fn index_to_shell(u: u64) -> (u64, u64) {
     (m, u - half_shell_base(m))
 }
 
-/// Map index j in [0, 4m+1) to point on half-shell with max(|x|, |y|) = m where x ≤ y.
-/// Order: (m, m), then top edge left to (-m, m), then left edge down to (-m, -m).
+/// Map index j in [0, 4m+1) to point on half-shell with max(|x|, |y|) = m where
+/// x ≤ y. Order: (m, m), then top edge left to (-m, m), then left edge down to
+/// (-m, -m).
 #[inline(always)]
 fn half_perimeter_point(m: i64, j: u64) -> (i64, i64) {
     if j == 0 {
@@ -228,11 +229,7 @@ mod tests {
             for y in x..=i8::MAX {
                 let u: u16 = spiral_triangle((x, y));
                 let (back_x, back_y): (i8, i8) = spiral_triangle(u);
-                assert_eq!(
-                    (x, y),
-                    (back_x, back_y),
-                    "roundtrip failed for ({x}, {y})"
-                );
+                assert_eq!((x, y), (back_x, back_y), "roundtrip failed for ({x}, {y})");
             }
         }
     }
@@ -305,10 +302,7 @@ mod tests {
         // Shell 1 should be: (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1)
         let shell1: Vec<(i8, i8)> = (1u16..6).map(spiral_triangle).collect();
         let expected = vec![(1i8, 1i8), (0, 1), (-1, 1), (-1, 0), (-1, -1)];
-        assert_eq!(
-            shell1, expected,
-            "shell 1 should be in correct order"
-        );
+        assert_eq!(shell1, expected, "shell 1 should be in correct order");
     }
 
     #[test]
@@ -321,11 +315,7 @@ mod tests {
         }
         assert_eq!(region_b_points.len(), 256);
         for (x, _y) in &region_b_points {
-            assert_eq!(
-                *x,
-                i8::MIN,
-                "region B point ({x}, {_y}) should have x=MIN"
-            );
+            assert_eq!(*x, i8::MIN, "region B point ({x}, {_y}) should have x=MIN");
         }
     }
 
@@ -356,9 +346,7 @@ mod tests {
 
     #[test]
     fn roundtrip_u32_sample() {
-        let test_values: Vec<u32> = (0..10000)
-            .chain((0..10000).map(|i| i * 100000))
-            .collect();
+        let test_values: Vec<u32> = (0..10000).chain((0..10000).map(|i| i * 100000)).collect();
         for u in test_values {
             let (x, y): (i16, i16) = spiral_triangle(u);
             let back: u32 = spiral_triangle((x, y));
@@ -368,9 +356,7 @@ mod tests {
 
     #[test]
     fn roundtrip_u64_sample() {
-        let test_values: Vec<u64> = (0..10000)
-            .chain((0..10000).map(|i| i * 100000))
-            .collect();
+        let test_values: Vec<u64> = (0..10000).chain((0..10000).map(|i| i * 100000)).collect();
         for u in test_values {
             let (x, y): (i32, i32) = spiral_triangle(u);
             let back: u64 = spiral_triangle((x, y));

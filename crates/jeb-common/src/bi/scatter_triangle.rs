@@ -259,10 +259,7 @@ macro_rules! impl_with {
 
             /// (x, y) -> u where x ≤ y
             pub fn from_xy(x: $S, y: $S) -> $U {
-                debug_assert!(
-                    (x as i64) <= (y as i64),
-                    "scatter_triangle requires x <= y"
-                );
+                debug_assert!((x as i64) <= (y as i64), "scatter_triangle requires x <= y");
 
                 let n0 = region_a_size();
 
@@ -406,9 +403,7 @@ mod tests {
 
     #[test]
     fn roundtrip_u32_sample() {
-        let test_values: Vec<u32> = (0..10000)
-            .chain((0..10000).map(|i| i * 100000))
-            .collect();
+        let test_values: Vec<u32> = (0..10000).chain((0..10000).map(|i| i * 100000)).collect();
         for u in test_values {
             let (x, y): (i16, i16) = scatter_triangle(u);
             let back: u32 = scatter_triangle((x, y));
@@ -418,9 +413,7 @@ mod tests {
 
     #[test]
     fn roundtrip_u64_sample() {
-        let test_values: Vec<u64> = (0..10000)
-            .chain((0..10000).map(|i| i * 100000))
-            .collect();
+        let test_values: Vec<u64> = (0..10000).chain((0..10000).map(|i| i * 100000)).collect();
         for u in test_values {
             let (x, y): (i32, i32) = scatter_triangle(u);
             let back: u64 = scatter_triangle((x, y));
@@ -438,11 +431,7 @@ mod tests {
         }
         assert_eq!(region_b_points.len(), 256);
         for (x, _y) in &region_b_points {
-            assert_eq!(
-                *x,
-                i8::MIN,
-                "region B point ({x}, {_y}) should have x=MIN"
-            );
+            assert_eq!(*x, i8::MIN, "region B point ({x}, {_y}) should have x=MIN");
         }
     }
 

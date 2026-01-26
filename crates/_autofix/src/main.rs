@@ -37,7 +37,9 @@ fn main() {
         ("cargo_fmt", cargo_fmt::main),
         ("cargo_fix", cargo_fix::main),
         ("cargo_clippy", cargo_clippy::main),
-        ("workspace_deps", || run_command("./run", &["workspace-deps"])),
+        ("workspace_deps", || {
+            run_command("./run", &["workspace-deps"])
+        }),
         ("cargo_toml_normalize", || {
             run_command("./run", &["cargo-toml-normalize"])
         }),

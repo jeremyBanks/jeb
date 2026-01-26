@@ -5,7 +5,10 @@
 
 use std::{
     io::IsTerminal,
-    sync::{LazyLock, OnceLock},
+    sync::{
+        LazyLock,
+        OnceLock,
+    },
 };
 
 #[doc(hidden)]

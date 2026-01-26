@@ -1,9 +1,11 @@
 use {
-    save::cli::Save,
-    std::fs,
-    std::sync::Mutex,
     once_cell::sync::Lazy,
-    std::path::PathBuf,
+    save::cli::Save,
+    std::{
+        fs,
+        path::PathBuf,
+        sync::Mutex,
+    },
 };
 
 static CWD_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
@@ -83,7 +85,7 @@ HEAD: refs/heads/trunk
 
     let roundtrip = temp_repo.to_snapshot().unwrap();
     let commit = roundtrip.head_commit().expect("No HEAD commit");
-    
+
     assert_eq!(commit.tree.get("staged.txt"), Some("staged content"));
     assert_eq!(commit.tree.get("unstaged.txt"), None);
 }
@@ -102,7 +104,7 @@ HEAD: refs/heads/trunk
     // Without --allow-empty, it should NOT create a commit if there are no changes
     let args = Save::with(|_| {});
     args.save().expect("save failed");
-    
+
     let roundtrip = temp_repo.to_snapshot().unwrap();
     assert_eq!(roundtrip.commits().count(), 0);
 
@@ -176,19 +178,27 @@ HEAD: refs/heads/trunk
 
     // First commit
     fs::write(repo_path.join("file1.txt"), "1").unwrap();
-    Save::with(|s| { s.allow_empty = true; }).save().unwrap();
-    
+    Save::with(|s| {
+        s.allow_empty = true;
+    })
+    .save()
+    .unwrap();
+
     // Second commit
     fs::write(repo_path.join("file2.txt"), "2").unwrap();
-    Save::with(|s| { s.allow_empty = true; }).save().unwrap();
+    Save::with(|s| {
+        s.allow_empty = true;
+    })
+    .save()
+    .unwrap();
 
     let roundtrip = temp_repo.to_snapshot().unwrap();
     assert_eq!(roundtrip.commits().count(), 2);
-    
+
     // Check messages
     let mut messages: Vec<String> = roundtrip.commits().map(|c| c.message.clone()).collect();
     messages.sort(); // r0 ..., r1 ...
-    
+
     assert!(messages[0].starts_with("r0"));
     assert!(messages[1].starts_with("r1"));
 }
@@ -207,16 +217,20 @@ HEAD: refs/heads/trunk
     let _ctx = TestContext::new(repo_path);
 
     // Set GEMINI_CLI environment variable
-    unsafe { std::env::set_var("GEMINI_CLI", "1"); }
-    
+    unsafe {
+        std::env::set_var("GEMINI_CLI", "1");
+    }
+
     let args = Save::with(|_| {});
     args.save().expect("save failed with agent env");
 
-    unsafe { std::env::remove_var("GEMINI_CLI"); }
+    unsafe {
+        std::env::remove_var("GEMINI_CLI");
+    }
 
     let roundtrip = temp_repo.to_snapshot().unwrap();
     let commit = roundtrip.head_commit().expect("No HEAD commit");
-    
+
     // Committer should be Gemini CLI
     assert_eq!(commit.committer.name, "⟡ Gemini CLI");
     assert_eq!(commit.committer.email, "noreply@google.com");
@@ -256,7 +270,7 @@ refs:
 
     let roundtrip = temp_repo.to_snapshot().unwrap();
     let commit = roundtrip.head_commit().expect("No HEAD commit");
-    
+
     assert_eq!(commit.tree.get("new.txt"), Some("new content"));
     assert_eq!(commit.tree.get("old.txt"), None);
 }

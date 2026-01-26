@@ -1,7 +1,9 @@
 #![no_main]
 
-use jeb_common::bi::zig_zag::zig_zag;
-use libfuzzer_sys::fuzz_target;
+use {
+    jeb_common::bi::zig_zag::zig_zag,
+    libfuzzer_sys::fuzz_target,
+};
 
 fuzz_target!(|data: &[u8]| {
     // Test roundtrip properties for various integer sizes
@@ -50,8 +52,8 @@ fuzz_target!(|data: &[u8]| {
         assert_eq!(i, back, "roundtrip failed for i128 {}", i);
     }
 
-    // Magnitude ordering: for positive n and negative -(n+1), the negative maps lower
-    // Property: for n >= 0, zig_zag(-(n+1)) < zig_zag(n+1)
+    // Magnitude ordering: for positive n and negative -(n+1), the negative maps
+    // lower Property: for n >= 0, zig_zag(-(n+1)) < zig_zag(n+1)
     if let Some(&byte) = data.first() {
         let n = (byte as i8).saturating_abs();
         if n >= 0 && n < 127 {
