@@ -95,6 +95,19 @@ Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris. ";
         println!("Created large.png ({} bytes) - tests boundary handling", polyglot.len());
     }
 
+    // Sample 7: Very large archive (200KB+, multiple IDAT boundaries)
+    {
+        let mut files = IndexMap::new();
+        for i in 0..5 {
+            let data: Vec<u8> = (0..40_000).map(|j| ((i * 17 + j * 7) % 256) as u8).collect();
+            files.insert(format!("chunk_{}.bin", i).into_bytes(), data);
+        }
+
+        let polyglot = zipng::zipng(&files.into());
+        fs::write("target/samples/verylarge.png", &polyglot)?;
+        println!("Created verylarge.png ({} bytes) - 200KB+ content", polyglot.len());
+    }
+
     println!("\nAll samples created in target/samples/");
     Ok(())
 }

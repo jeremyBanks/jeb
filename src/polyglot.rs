@@ -482,4 +482,37 @@ mod tests {
         // Check EOCD exists
         assert!(result.windows(4).any(|w| w == b"PK\x05\x06"));
     }
+
+    #[test]
+    fn test_very_large_content() {
+        // Create 5 files of 40KB each = 200KB total
+        // This crosses multiple IDAT boundaries
+        let files: Vec<_> = (0..5)
+            .map(|i| {
+                let name = format!("file{}.bin", i);
+                let body: Vec<u8> = (0..40_000).map(|j| ((i * 17 + j * 7) % 256) as u8).collect();
+                (name.into_bytes(), body)
+            })
+            .collect();
+
+        let file_refs: Vec<(&[u8], &[u8])> = files
+            .iter()
+            .map(|(n, b)| (n.as_slice(), b.as_slice()))
+            .collect();
+
+        let result = build_polyglot(&file_refs, 0, BitDepth::EightBit, ColorMode::Lightness, None);
+
+        // Should be over 200KB
+        assert!(result.len() > 200_000, "Result should be >200KB, got {}", result.len());
+
+        // Check PNG signature
+        assert_eq!(&result[0..8], b"\x89PNG\r\n\x1A\n");
+
+        // Check all five files have local headers
+        let pk_count = result.windows(4).filter(|w| *w == b"PK\x03\x04").count();
+        assert_eq!(pk_count, 5, "Expected 5 local file headers, got {}", pk_count);
+
+        // Check EOCD exists
+        assert!(result.windows(4).any(|w| w == b"PK\x05\x06"));
+    }
 }
