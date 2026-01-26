@@ -590,7 +590,7 @@ pub fn main(args: Save) -> Result<()> {
             repo.revparse_single(tree_ref)?.peel_to_tree()?.id(),
         )
     } else if args.empty {
-        let tree_oid = head.as_ref().map(git2::Commit::tree_id).unwrap_or_else(|| {
+        let tree_oid = head.as_ref().map(Commit::tree_id).unwrap_or_else(|| {
             // Empty tree OID
             Oid::from_str("4b825dc642cb6eb9a060e54bf8d69288fbee4904").unwrap()
         });

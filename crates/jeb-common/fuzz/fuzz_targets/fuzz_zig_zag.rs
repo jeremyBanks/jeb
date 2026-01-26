@@ -56,7 +56,7 @@ fuzz_target!(|data: &[u8]| {
     // lower Property: for n >= 0, zig_zag(-(n+1)) < zig_zag(n+1)
     if let Some(&byte) = data.first() {
         let n = (byte as i8).saturating_abs();
-        if n >= 0 && n < 127 {
+        if (0..127).contains(&n) {
             let neg = -n - 1;
             let pos = n + 1;
             let u_neg: u8 = zig_zag(neg);

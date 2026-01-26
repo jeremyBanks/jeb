@@ -147,6 +147,7 @@ impl MessageParser {
     }
 }
 /// Calculator for graph statistics with z-mode support.
+#[expect(clippy::module_name_repetitions, reason = "clear naming preferred")]
 pub struct GraphStatsCalculator<'repo, 'a: 'repo, R: RepositoryView<'repo>> {
     repo: &'a R,
     max_depth: i32,
@@ -204,31 +205,29 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         }
         // Try to trust HEAD's message first (works for both limited and unlimited
         // depth)
-        if self.trust_messages {
-            if let Some(summary) = head.summary() {
-                if let Some(parsed) = MessageParser::parse(&summary) {
-                    if MessageParser::validate(self.repo, head, &summary, &parsed) {
-                        let trusted = match parsed.prefix {
-                            MessagePrefix::Regular => true, // Always trust r commits
-                            MessagePrefix::Shallow if is_shallow => true,
-                            _ => false,
-                        };
-                        if trusted {
-                            let generation_index =
-                                parsed.generation_index.unwrap_or(parsed.revision_index) + 1;
-                            let commit_index = parsed.commit_index.unwrap_or_else(|| {
-                                parsed.generation_index.unwrap_or(parsed.revision_index)
-                            }) + 1;
-                            return GraphStats {
-                                revision_index: parsed.revision_index + 1,
-                                generation_index,
-                                commit_index,
-                                origin: parsed.origin,
-                                z_mode: false,
-                            };
-                        }
-                    }
-                }
+        if self.trust_messages
+            && let Some(summary) = head.summary()
+            && let Some(parsed) = MessageParser::parse(&summary)
+            && MessageParser::validate(self.repo, head, &summary, &parsed)
+        {
+            let trusted = match parsed.prefix {
+                MessagePrefix::Regular => true, // Always trust r commits
+                MessagePrefix::Shallow if is_shallow => true,
+                _ => false,
+            };
+            if trusted {
+                let generation_index =
+                    parsed.generation_index.unwrap_or(parsed.revision_index) + 1;
+                let commit_index = parsed.commit_index.unwrap_or_else(|| {
+                    parsed.generation_index.unwrap_or(parsed.revision_index)
+                }) + 1;
+                return GraphStats {
+                    revision_index: parsed.revision_index + 1,
+                    generation_index,
+                    commit_index,
+                    origin: parsed.origin,
+                    z_mode: false,
+                };
             }
         }
         if unlimited_depth {
@@ -239,6 +238,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
     }
 
     /// Depth-limited scan implementing z-mode algorithm.
+    #[expect(clippy::cast_sign_loss, reason = "max_depth is always positive")]
     fn depth_limited_scan(&self, head: &R::Commit, is_shallow: bool) -> GraphStats {
         let max_depth = self.max_depth as usize;
         let mut visited = HashSet::new();

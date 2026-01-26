@@ -1,4 +1,4 @@
-use std::cell::Cell;
+use core::cell::Cell;
 
 thread_local! {
     /// Tracks the last line number of printed code, for detecting gaps between statements
@@ -68,10 +68,10 @@ pub fn print_single_doc_group(doc_strings: &[&str]) {
     let mut lines: &[&str] = &lines;
 
     // Strip one leading and one trailing empty line if present
-    if lines.first().map(|s| s.is_empty()).unwrap_or(false) {
+    if lines.first().is_some_and(|s| s.is_empty()) {
         lines = &lines[1..];
     }
-    if lines.last().map(|s| s.is_empty()).unwrap_or(false) {
+    if lines.last().is_some_and(|s| s.is_empty()) {
         lines = &lines[..lines.len() - 1];
     }
 
