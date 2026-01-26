@@ -387,3 +387,84 @@ refs:
     // Graph is 1(r0) -> 2(r1) -> new(r2)
     assert!(commit.message.starts_with("r2"), "Message '{}' should start with 'r2'", commit.message);
 }
+
+#[test]
+fn test_add_remove_parent() {
+    let yaml = r#"
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 2
+1:
+  message: one
+  tree: {a: "1"}
+2:
+  parents: [1]
+  message: two
+  tree: {a: "2"}
+3:
+  message: three
+  tree: {b: "3"}
+"#;
+    let snapshot = git_snapshot::parse(yaml).unwrap();
+    let temp_repo = snapshot.to_temporary_repository().unwrap();
+    let repo_path = temp_repo.path().parent().unwrap();
+
+    fs::write(repo_path.join("a"), "4").unwrap();
+
+    let _ctx = TestContext::new(repo_path);
+    
+    // HEAD is 2. Parents: [1].
+    // Add 3, Remove 1. Resulting parents should be [3].
+    Save::with(|s| { 
+        s.added_parent_ref = vec!["3".to_string()];
+        s.removed_parent_ref = vec!["1".to_string()];
+        s.timeless = true;
+        s.message = Some("new parents".to_string());
+    }).save().expect("save --add-parent --remove-parent failed");
+
+    let result = temp_repo.to_snapshot().unwrap();
+    let commit = result.head_commit().expect("No HEAD");
+    
+    // Verify parents
+    // Since we don't know the exact OIDs, we check that it has 1 parent and it's 3.
+    assert_eq!(commit.parents.len(), 1);
+    
+    let output = serialize(&result, CommitIdStyle::Integer, SerializationOptions::default());
+    assert!(snap!(r#"HEAD: refs/heads/main
+refs:
+  heads:
+    main: 4
+1:
+  author: Author <author@example.com>
+  author-date: 1970-01-01T00:00:00Z
+  commit-date: 1970-01-01T00:00:00Z
+  message: one
+  tree:
+    a: "1"
+2:
+  parents: [1]
+  author: Author <author@example.com>
+  author-date: 1970-01-01T00:00:00Z
+  commit-date: 1970-01-01T00:00:00Z
+  message: two
+  tree:
+    a: "2"
+3:
+  author: Author <author@example.com>
+  author-date: 1970-01-01T00:00:00Z
+  commit-date: 1970-01-01T00:00:00Z
+  message: three
+  tree:
+    b: "3"
+4:
+  parents: [3]
+  author: dev <dev@localhost>
+  author-date: 1970-06-26T17:31:44Z
+  commit-date: 1970-06-26T17:31:44Z
+  message: new parents
+  tree:
+    a: "4"
+    b: "3"
+"#) == output);
+}
