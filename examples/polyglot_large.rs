@@ -1,9 +1,7 @@
-//! Test polyglot with larger files
+//! Test polyglot with content near the maximum limit
 //!
-//! Each file must be ≤42KB due to IDAT deflate block size (65535 bytes).
-//! After row expansion (14/9 ratio), 42KB becomes ~65KB filtered.
-//!
-//! Total size can be unlimited by using multiple files.
+//! The polyglot approach has a ~42KB total content limit due to IDAT
+//! deflate block boundaries. This test verifies behavior near that limit.
 
 use indexmap::IndexMap;
 use std::fs;
@@ -11,27 +9,30 @@ use std::process::Command;
 use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Creating polyglot PNG+ZIP file with multiple files...\n");
+    println!("Creating polyglot PNG+ZIP near the 42KB limit...\n");
 
-    // Maximum per-file: ~42KB (expands to ~65KB filtered, fits in one IDAT block)
-    const MAX_SAFE_SIZE: usize = 40_000;
+    // Total must stay under ~42KB
+    const TOTAL_TARGET: usize = 38_000; // Leave room for headers
 
     let mut files = IndexMap::new();
 
+    // Split across multiple files
+    let per_file = TOTAL_TARGET / 4;
+
     // File 1: Text file
     let text_chunk = "The quick brown fox jumps over the lazy dog. ";
-    let large_text: String = text_chunk.repeat(MAX_SAFE_SIZE / text_chunk.len());
+    let large_text: String = text_chunk.repeat(per_file / text_chunk.len());
     println!("  text.txt: {} bytes", large_text.len());
     files.insert(b"text.txt".to_vec(), large_text.into_bytes());
 
-    // File 2: "Binary" file - sequential bytes
-    let binary_data: Vec<u8> = (0..MAX_SAFE_SIZE).map(|i| (i % 256) as u8).collect();
+    // File 2: Binary sequential data
+    let binary_data: Vec<u8> = (0..per_file).map(|i| (i % 256) as u8).collect();
     println!("  data.bin: {} bytes", binary_data.len());
     files.insert(b"data.bin".to_vec(), binary_data);
 
     // File 3: Pseudo-random data
     let mut rng_state: u64 = 12345;
-    let random_data: Vec<u8> = (0..MAX_SAFE_SIZE)
+    let random_data: Vec<u8> = (0..per_file)
         .map(|_| {
             rng_state = rng_state.wrapping_mul(1103515245).wrapping_add(12345);
             ((rng_state >> 16) & 0xFF) as u8
@@ -41,12 +42,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     files.insert(b"rand.bin".to_vec(), random_data);
 
     // File 4: JSON-like structured text
-    let json_entry = r#"{"id":12345,"name":"Test Item","value":99.99,"active":true},"#;
-    let json_data = format!("[{}]", json_entry.repeat(MAX_SAFE_SIZE / json_entry.len()));
+    let json_entry = r#"{"id":123,"name":"Test"},"#;
+    let json_data = format!("[{}]", json_entry.repeat(per_file / json_entry.len()));
     println!("  data.json: {} bytes", json_data.len());
     files.insert(b"data.json".to_vec(), json_data.into_bytes());
 
-    // File 5: Small file to verify small files still work
+    // File 5: Small file
     files.insert(b"small.txt".to_vec(), b"Hello!".to_vec());
     println!("  small.txt: 6 bytes");
 
