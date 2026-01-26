@@ -257,11 +257,11 @@ impl FileState {
             drop(shared); // Release read lock immediately
 
             // Check if we have a valid cached version
-            if let Some(cached) = cache.get(&self.path) {
-                if cached.version == current_version {
-                    // Cache hit! Return cached AST and index map
-                    return Ok((cached.ast.clone(), cached.position_to_index.clone()));
-                }
+            if let Some(cached) = cache.get(&self.path)
+                && cached.version == current_version
+            {
+                // Cache hit! Return cached AST and index map
+                return Ok((cached.ast.clone(), cached.position_to_index.clone()));
             }
 
             // Cache miss or stale - need to re-parse from ORIGINAL disk source
@@ -546,10 +546,10 @@ impl FileState {
                 match node {
                     syn::Expr::Call(call) => {
                         // Check if this is our target - use LAST arg (trailing position)
-                        if self.current_index == self.target_index {
-                            if let Some(arg) = call.args.last() {
-                                self.span = Some((arg.span().start(), arg.span().end()));
-                            }
+                        if self.current_index == self.target_index
+                            && let Some(arg) = call.args.last()
+                        {
+                            self.span = Some((arg.span().start(), arg.span().end()));
                         }
                         self.current_index += 1;
 
@@ -1013,10 +1013,11 @@ impl<'ast> syn::visit::Visit<'ast> for IndexedValueReader {
         match node {
             syn::Expr::Call(call) => {
                 // Use LAST arg (trailing position)
-                if self.tokens.is_none() && self.current_index == self.target_index {
-                    if let Some(last_arg) = call.args.last() {
-                        self.tokens = Some(quote::quote!(#last_arg));
-                    }
+                if self.tokens.is_none()
+                    && self.current_index == self.target_index
+                    && let Some(last_arg) = call.args.last()
+                {
+                    self.tokens = Some(quote::quote!(#last_arg));
                 }
                 self.current_index += 1;
 

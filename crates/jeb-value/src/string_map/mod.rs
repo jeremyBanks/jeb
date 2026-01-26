@@ -54,7 +54,6 @@ pub struct StringMap(pub(crate) OrderMap<String, Value>);
 // [impl jeb-value.string-map.from-inner]
 impl StringMap {
     /// Creates a new `StringMap` from an `OrderMap<String, Value>`.
-    #[must_use]
     pub fn new(value: OrderMap<String, Value>) -> Self {
         StringMap(value)
     }

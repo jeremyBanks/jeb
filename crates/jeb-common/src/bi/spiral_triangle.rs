@@ -138,6 +138,7 @@ fn half_perimeter_index(m: i64, x: i64, y: i64) -> u64 {
 }
 
 /// Convert unsigned index to (x, y) signed coordinates where x ≤ y.
+#[expect(clippy::extra_unused_type_parameters, reason = "macro-generated signature")]
 fn to_xy<U, S, _UB, const W: u32>(u: U) -> (S, S)
 where
     U: Copy + Into<u64> + TryFrom<u64>,
@@ -175,6 +176,7 @@ where
 }
 
 /// Convert (x, y) signed coordinates where x ≤ y to unsigned index.
+#[expect(clippy::extra_unused_type_parameters, reason = "macro-generated signature")]
 fn from_xy<U, S, _UB, const W: u32>(x: S, y: S) -> U
 where
     U: Copy + Into<u64> + TryFrom<u64>,

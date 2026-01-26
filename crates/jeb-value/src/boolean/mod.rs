@@ -40,7 +40,6 @@ pub struct Boolean(pub(crate) bool);
 // [impl jeb-value.variant.common.try-from-inner]
 impl Boolean {
     /// Creates a new `Boolean` from a `bool`.
-    #[must_use]
     pub const fn new(value: bool) -> Self {
         Boolean(value)
     }
@@ -58,6 +57,7 @@ impl Boolean {
 
     /// Returns a copy of the inner `bool`.
     #[must_use]
+    #[expect(clippy::wrong_self_convention, reason = "consistent API across all types")]
     pub fn to_inner(&self) -> bool {
         self.0
     }
@@ -81,6 +81,7 @@ impl Boolean {
 
     /// Returns a copy of the inner `bool`.
     #[must_use]
+    #[expect(clippy::wrong_self_convention, reason = "consistent API across all types")]
     pub fn to_bool(&self) -> bool {
         self.0
     }

@@ -20,7 +20,7 @@ impl TryFrom<bool> for Null {
     type Error = NotNullError;
 
     fn try_from(value: bool) -> Result<Self, Self::Error> {
-        if value == false {
+        if !value {
             Ok(Null::new())
         } else {
             Err(NotNullError)

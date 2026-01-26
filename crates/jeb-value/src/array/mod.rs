@@ -66,7 +66,6 @@ pub struct Array(pub(crate) Vec<Value>);
 // [impl jeb-value.array.from-inner]
 impl Array {
     /// Creates a new `Array` from a `Vec<Value>`.
-    #[must_use]
     pub fn new(value: Vec<Value>) -> Self {
         Array(value)
     }

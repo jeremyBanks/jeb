@@ -63,12 +63,13 @@ impl Null {
 // [impl jeb-value.variant.common.as-inner]
 impl Null {
     /// Consumes the `Null` and returns the inner `()`.
-    pub fn into_inner(self) -> () {
+    pub fn into_inner(self) {
         self.0
     }
 
     /// Returns a copy of the inner `()`.
-    pub fn to_inner(&self) -> () {
+    #[expect(clippy::wrong_self_convention, reason = "consistent API across all types")]
+    pub fn to_inner(&self) {
         self.0
     }
 
@@ -83,12 +84,13 @@ impl Null {
 // [impl jeb-value.variant.common.as-named-inner]
 impl Null {
     /// Consumes the `Null` and returns the inner `()`.
-    pub fn into_unit(self) -> () {
+    pub fn into_unit(self) {
         self.0
     }
 
     /// Returns a copy of the inner `()`.
-    pub fn to_unit(&self) -> () {
+    #[expect(clippy::wrong_self_convention, reason = "consistent API across all types")]
+    pub fn to_unit(&self) {
         self.0
     }
 

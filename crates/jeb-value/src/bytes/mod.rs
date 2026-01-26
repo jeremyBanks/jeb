@@ -60,7 +60,6 @@ pub struct Bytes(pub(crate) Vec<u8>);
 // [impl jeb-value.bytes.from-inner]
 impl Bytes {
     /// Creates a new `Bytes` from a `Vec<u8>`.
-    #[must_use]
     pub fn new(value: Vec<u8>) -> Self {
         Bytes(value)
     }

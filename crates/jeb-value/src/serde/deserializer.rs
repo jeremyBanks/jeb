@@ -302,7 +302,7 @@ impl<'de> de::Deserializer<'de> for Value {
                     match v {
                         Value::Number(n) => {
                             let f = *n;
-                            if f.fract() == 0.0 && f >= 0.0 && f <= 255.0 {
+                            if f.fract() == 0.0 && (0.0..=255.0).contains(&f) {
                                 bytes.push(f as u8);
                             } else {
                                 return Err(SerdeError::custom(

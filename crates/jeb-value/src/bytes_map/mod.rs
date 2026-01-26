@@ -54,7 +54,6 @@ pub struct BytesMap(pub(crate) OrderMap<Bytes, Value>);
 // [impl jeb-value.bytes-map.from-inner]
 impl BytesMap {
     /// Creates a new `BytesMap` from an `OrderMap<Bytes, Value>`.
-    #[must_use]
     pub fn new(value: OrderMap<Bytes, Value>) -> Self {
         BytesMap(value)
     }

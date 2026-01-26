@@ -260,7 +260,7 @@ impl<T: Value + 'static> Drop for InlineCell<T> {
             // For Verify or Write modes, we need file access
             if mode.needs_file_access() {
                 // Resolve the index (if not already resolved)
-                if let Err(_) = self.guard.resolve_index() {
+                if self.guard.resolve_index().is_err() {
                     // Silently skip if we can't resolve the index
                     return;
                 }

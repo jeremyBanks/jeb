@@ -66,7 +66,6 @@ pub struct String(pub(crate) std::string::String);
 // [impl jeb-value.string.from-inner]
 impl String {
     /// Creates a new `String` from a `std::string::String`.
-    #[must_use]
     pub fn new(value: std::string::String) -> Self {
         String(value)
     }

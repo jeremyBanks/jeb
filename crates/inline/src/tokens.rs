@@ -49,6 +49,7 @@ impl Tokens {
     /// Create a new `Tokens` from a string.
     ///
     /// The string will be parsed as tokens when needed.
+    #[expect(clippy::should_implement_trait, reason = "simpler than full FromStr impl")]
     pub fn from_str(s: &str) -> Self {
         Self {
             source: s.to_string(),
