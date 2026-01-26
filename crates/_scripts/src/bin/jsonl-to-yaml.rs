@@ -239,10 +239,13 @@ fn write_yaml_value<W: Write>(w: &mut W, value: &Value, indent: usize, inline: b
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use serde_json::json;
+    use {
+        super::*,
+        serde_json::json,
+    };
 
-    /// Convert a JSON value to our YAML format and parse it back with serde_yaml
+    /// Convert a JSON value to our YAML format and parse it back with
+    /// serde_yaml
     fn round_trip(value: &Value) -> Value {
         let mut yaml_bytes = Vec::new();
         write_yaml_value(&mut yaml_bytes, value, 0, false).unwrap();
@@ -273,7 +276,10 @@ mod tests {
     #[test]
     fn test_multiline_no_trailing() {
         assert_eq!(round_trip(&json!("a\nb")), json!("a\nb"));
-        assert_eq!(round_trip(&json!("line1\nline2\nline3")), json!("line1\nline2\nline3"));
+        assert_eq!(
+            round_trip(&json!("line1\nline2\nline3")),
+            json!("line1\nline2\nline3")
+        );
     }
 
     #[test]
@@ -291,8 +297,14 @@ mod tests {
 
     #[test]
     fn test_multiline_leading_space() {
-        assert_eq!(round_trip(&json!("  indented\nnormal")), json!("  indented\nnormal"));
-        assert_eq!(round_trip(&json!("\ttabbed\nline")), json!("\ttabbed\nline"));
+        assert_eq!(
+            round_trip(&json!("  indented\nnormal")),
+            json!("  indented\nnormal")
+        );
+        assert_eq!(
+            round_trip(&json!("\ttabbed\nline")),
+            json!("\ttabbed\nline")
+        );
     }
 
     #[test]
@@ -300,14 +312,20 @@ mod tests {
         assert_eq!(round_trip(&json!([])), json!([]));
         assert_eq!(round_trip(&json!([1, 2, 3])), json!([1, 2, 3]));
         assert_eq!(round_trip(&json!(["a", "b"])), json!(["a", "b"]));
-        assert_eq!(round_trip(&json!([[1, 2], [3, 4]])), json!([[1, 2], [3, 4]]));
+        assert_eq!(
+            round_trip(&json!([[1, 2], [3, 4]])),
+            json!([[1, 2], [3, 4]])
+        );
     }
 
     #[test]
     fn test_objects() {
         assert_eq!(round_trip(&json!({})), json!({}));
         assert_eq!(round_trip(&json!({"a": 1})), json!({"a": 1}));
-        assert_eq!(round_trip(&json!({"nested": {"deep": true}})), json!({"nested": {"deep": true}}));
+        assert_eq!(
+            round_trip(&json!({"nested": {"deep": true}})),
+            json!({"nested": {"deep": true}})
+        );
     }
 
     #[test]
