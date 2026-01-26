@@ -1,9 +1,22 @@
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    sync::{Arc, LazyLock},
+use {
+    ignorable::{
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd,
+    },
+    ordermap::OrderMap,
+    std::{
+        collections::{
+            BTreeMap,
+            BTreeSet,
+        },
+        sync::{
+            Arc,
+            LazyLock,
+        },
+    },
 };
-use ignorable::{Hash, Ord, PartialEq, PartialOrd};
-use indexmap::IndexMap;
 #[derive(Clone, Default)]
 pub struct Configuration {
     commands: BTreeSet<Command>,
@@ -21,12 +34,14 @@ impl Configuration {
 }
 pub struct Context {
     calls: Vec<Call>,
-    aliases: IndexMap<String, String>,
+    aliases: OrderMap<String, String>,
 }
 #[derive(Clone, Hash, Ord, PartialEq, PartialOrd)]
 struct Command {
     name: &'static str,
-    #[ignored(PartialEq, Hash, Ord, PartialOrd)]
+    #[ignored(
+        PartialEq, Hash, Ord, PartialOrd
+    )]
     implementation: Arc<dyn CommandImpl>,
 }
 impl Eq for Command {}
@@ -35,7 +50,7 @@ trait CommandImpl {
     fn spawn(
         &self,
         context: &mut Context,
-        named: &IndexMap<String, String>,
+        named: &OrderMap<String, String>,
         positional: &[String],
         body: Option<String>,
     ) -> Box<()> {
@@ -68,7 +83,7 @@ impl CommandImpl for Assign {}
 #[derive(Clone)]
 struct Call {
     command: Arc<Command>,
-    named: IndexMap<String, String>,
+    named: OrderMap<String, String>,
     positional: Vec<String>,
     body: Option<String>,
 }

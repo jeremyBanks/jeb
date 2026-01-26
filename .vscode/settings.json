@@ -132,7 +132,7 @@
     "HISTSIZE",
     "ignoreboth",
     "impls",
-    "indexmap",
+    "ordermap",
     "insta",
     "itertools",
     "Kladov",

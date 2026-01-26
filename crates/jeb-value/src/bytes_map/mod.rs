@@ -12,7 +12,7 @@ use {
         From,
         IntoIterator,
     },
-    indexmap::IndexMap,
+    ordermap::OrderMap,
 };
 
 // [impl jeb-value.features.core.cfg]
@@ -47,15 +47,15 @@ use {
 // [impl jeb-value.variant.common.must-use]
 #[must_use]
 // [impl jeb-value.bytes-map.struct]
-pub struct BytesMap(pub(crate) IndexMap<Bytes, Value>);
+pub struct BytesMap(pub(crate) OrderMap<Bytes, Value>);
 
 // [impl jeb-value.variant.common.constructor]
 // [impl jeb-value.variant.common.try-from-inner]
 // [impl jeb-value.bytes-map.from-inner]
 impl BytesMap {
-    /// Creates a new `BytesMap` from an `IndexMap<Bytes, Value>`.
+    /// Creates a new `BytesMap` from an `OrderMap<Bytes, Value>`.
     #[must_use]
-    pub fn new(value: IndexMap<Bytes, Value>) -> Self {
+    pub fn new(value: OrderMap<Bytes, Value>) -> Self {
         BytesMap(value)
     }
 }
@@ -66,19 +66,19 @@ impl BytesMap {
 impl BytesMap {
     /// Consumes the `BytesMap` and returns the inner map.
     #[must_use]
-    pub fn into_inner(self) -> IndexMap<Bytes, Value> {
+    pub fn into_inner(self) -> OrderMap<Bytes, Value> {
         self.0
     }
 
     /// Returns a clone of the inner map.
     #[must_use]
-    pub fn to_inner(&self) -> IndexMap<Bytes, Value> {
+    pub fn to_inner(&self) -> OrderMap<Bytes, Value> {
         self.0.clone()
     }
 
     /// Returns a reference to the inner map.
     #[must_use]
-    pub fn as_inner(&self) -> &IndexMap<Bytes, Value> {
+    pub fn as_inner(&self) -> &OrderMap<Bytes, Value> {
         &self.0
     }
 }
@@ -89,19 +89,19 @@ impl BytesMap {
 impl BytesMap {
     /// Consumes the `BytesMap` and returns the inner map.
     #[must_use]
-    pub fn into_index_map(self) -> IndexMap<Bytes, Value> {
+    pub fn into_index_map(self) -> OrderMap<Bytes, Value> {
         self.0
     }
 
     /// Returns a clone of the inner map.
     #[must_use]
-    pub fn to_index_map(&self) -> IndexMap<Bytes, Value> {
+    pub fn to_index_map(&self) -> OrderMap<Bytes, Value> {
         self.0.clone()
     }
 
     /// Returns a reference to the inner map.
     #[must_use]
-    pub fn as_index_map(&self) -> &IndexMap<Bytes, Value> {
+    pub fn as_index_map(&self) -> &OrderMap<Bytes, Value> {
         &self.0
     }
 }
@@ -156,14 +156,14 @@ impl BytesMap {
 }
 
 // [impl jeb-value.variant.common.inner-from]
-impl From<BytesMap> for IndexMap<Bytes, Value> {
+impl From<BytesMap> for OrderMap<Bytes, Value> {
     fn from(value: BytesMap) -> Self {
         value.0
     }
 }
 
 // [impl jeb-value.variant.common.hash]
-// Note: IndexMap doesn't implement Hash, so we implement it manually
+// Note: ordermap doesn't implement Hash, so we implement it manually
 impl core::hash::Hash for BytesMap {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         self.0.len().hash(state);

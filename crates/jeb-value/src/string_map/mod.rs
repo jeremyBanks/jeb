@@ -12,7 +12,7 @@ use {
         From,
         IntoIterator,
     },
-    indexmap::IndexMap,
+    ordermap::OrderMap,
 };
 
 // [impl jeb-value.features.core.cfg]
@@ -47,15 +47,15 @@ use {
 // [impl jeb-value.variant.common.must-use]
 #[must_use]
 // [impl jeb-value.string-map.struct]
-pub struct StringMap(pub(crate) IndexMap<String, Value>);
+pub struct StringMap(pub(crate) OrderMap<String, Value>);
 
 // [impl jeb-value.variant.common.constructor]
 // [impl jeb-value.variant.common.try-from-inner]
 // [impl jeb-value.string-map.from-inner]
 impl StringMap {
-    /// Creates a new `StringMap` from an `IndexMap<String, Value>`.
+    /// Creates a new `StringMap` from an `OrderMap<String, Value>`.
     #[must_use]
-    pub fn new(value: IndexMap<String, Value>) -> Self {
+    pub fn new(value: OrderMap<String, Value>) -> Self {
         StringMap(value)
     }
 }
@@ -66,19 +66,19 @@ impl StringMap {
 impl StringMap {
     /// Consumes the `StringMap` and returns the inner map.
     #[must_use]
-    pub fn into_inner(self) -> IndexMap<String, Value> {
+    pub fn into_inner(self) -> OrderMap<String, Value> {
         self.0
     }
 
     /// Returns a clone of the inner map.
     #[must_use]
-    pub fn to_inner(&self) -> IndexMap<String, Value> {
+    pub fn to_inner(&self) -> OrderMap<String, Value> {
         self.0.clone()
     }
 
     /// Returns a reference to the inner map.
     #[must_use]
-    pub fn as_inner(&self) -> &IndexMap<String, Value> {
+    pub fn as_inner(&self) -> &OrderMap<String, Value> {
         &self.0
     }
 }
@@ -89,19 +89,19 @@ impl StringMap {
 impl StringMap {
     /// Consumes the `StringMap` and returns the inner map.
     #[must_use]
-    pub fn into_index_map(self) -> IndexMap<String, Value> {
+    pub fn into_index_map(self) -> OrderMap<String, Value> {
         self.0
     }
 
     /// Returns a clone of the inner map.
     #[must_use]
-    pub fn to_index_map(&self) -> IndexMap<String, Value> {
+    pub fn to_index_map(&self) -> OrderMap<String, Value> {
         self.0.clone()
     }
 
     /// Returns a reference to the inner map.
     #[must_use]
-    pub fn as_index_map(&self) -> &IndexMap<String, Value> {
+    pub fn as_index_map(&self) -> &OrderMap<String, Value> {
         &self.0
     }
 }
@@ -156,14 +156,14 @@ impl StringMap {
 }
 
 // [impl jeb-value.variant.common.inner-from]
-impl From<StringMap> for IndexMap<String, Value> {
+impl From<StringMap> for OrderMap<String, Value> {
     fn from(value: StringMap) -> Self {
         value.0
     }
 }
 
 // [impl jeb-value.variant.common.hash]
-// Note: IndexMap doesn't implement Hash, so we implement it manually
+// Note: ordermap doesn't implement Hash, so we implement it manually
 impl Hash for StringMap {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         self.0.len().hash(state);

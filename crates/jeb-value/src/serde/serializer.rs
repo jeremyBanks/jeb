@@ -9,7 +9,7 @@ use {
         Value,
         serde::SerdeError,
     },
-    indexmap::IndexMap,
+    ordermap::OrderMap,
     serde::{
         Serialize,
         ser,
@@ -97,7 +97,7 @@ impl ser::Serializer for Serializer {
 
     fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<Value, SerdeError> {
         let inner = to_value(value)?;
-        let mut map = IndexMap::new();
+        let mut map = OrderMap::new();
         map.insert(String::from("Some".to_string()), inner);
         Ok(Value::StringMap(map.into()))
     }
@@ -135,7 +135,7 @@ impl ser::Serializer for Serializer {
         value: &T,
     ) -> Result<Value, SerdeError> {
         let inner = to_value(value)?;
-        let mut map = IndexMap::new();
+        let mut map = OrderMap::new();
         map.insert(String::from(variant.to_string()), inner);
         Ok(Value::StringMap(map.into()))
     }
@@ -269,7 +269,7 @@ impl ser::SerializeTupleVariant for SerializeTupleVariant {
     }
 
     fn end(self) -> Result<Value, SerdeError> {
-        let mut map = IndexMap::new();
+        let mut map = OrderMap::new();
         map.insert(
             String::from(self.variant.as_str()),
             Value::Array(self.vec.into()),
@@ -321,7 +321,7 @@ impl ser::SerializeMap for SerializeMap {
             }
         }
         if all_text {
-            let mut map = IndexMap::new();
+            let mut map = OrderMap::new();
             for (key, value) in self.entries {
                 match key {
                     MapKey::String(t) => {
@@ -332,7 +332,7 @@ impl ser::SerializeMap for SerializeMap {
             }
             Ok(Value::StringMap(map.into()))
         } else if all_bytes {
-            let mut map = IndexMap::new();
+            let mut map = OrderMap::new();
             for (key, value) in self.entries {
                 match key {
                     MapKey::Bytes(b) => {
@@ -397,7 +397,7 @@ impl ser::SerializeStructVariant for SerializeStructVariant {
 
     fn end(self) -> Result<Value, SerdeError> {
         let fields = ser::SerializeMap::end(self.map)?;
-        let mut map = IndexMap::new();
+        let mut map = OrderMap::new();
         map.insert(String::from(self.variant.as_str()), fields);
         Ok(Value::StringMap(map.into()))
     }
@@ -459,7 +459,7 @@ impl ser::SerializeTupleVariant for MapKeySeq {
     }
 }
 struct MapKeyStruct {
-    fields: IndexMap<String, Value>,
+    fields: OrderMap<String, Value>,
 }
 impl ser::SerializeStruct for MapKeyStruct {
     type Error = SerdeError;
@@ -535,7 +535,7 @@ impl ser::SerializeMap for MapKeyMap {
             }
         }
         if all_text {
-            let mut map = IndexMap::new();
+            let mut map = OrderMap::new();
             for (key, value) in self.entries {
                 match key {
                     MapKey::String(t) => {
@@ -546,7 +546,7 @@ impl ser::SerializeMap for MapKeyMap {
             }
             Ok(MapKey::Complex(Value::StringMap(map.into())))
         } else if all_bytes {
-            let mut map = IndexMap::new();
+            let mut map = OrderMap::new();
             for (key, value) in self.entries {
                 match key {
                     MapKey::Bytes(b) => {
@@ -689,7 +689,7 @@ impl ser::Serializer for MapKeySerializer {
         value: &T,
     ) -> Result<MapKey, SerdeError> {
         let inner = to_value(value)?;
-        let mut map = IndexMap::new();
+        let mut map = OrderMap::new();
         map.insert(String::from(variant.to_string()), inner);
         Ok(MapKey::Complex(Value::StringMap(map.into())))
     }
@@ -741,7 +741,7 @@ impl ser::Serializer for MapKeySerializer {
         _len: usize,
     ) -> Result<Self::SerializeStruct, SerdeError> {
         Ok(MapKeyStruct {
-            fields: IndexMap::new(),
+            fields: OrderMap::new(),
         })
     }
 
@@ -753,7 +753,7 @@ impl ser::Serializer for MapKeySerializer {
         _len: usize,
     ) -> Result<Self::SerializeStructVariant, SerdeError> {
         Ok(MapKeyStruct {
-            fields: IndexMap::new(),
+            fields: OrderMap::new(),
         })
     }
 }

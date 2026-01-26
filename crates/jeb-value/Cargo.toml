@@ -18,11 +18,11 @@ serde_json = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 derive_more = { workspace = true, features = ["full"] }
 document-features.workspace = true
-indexmap.workspace = true
+ordermap.workspace = true
 
 [features]
 default = []
-serde = ["dep:serde", "indexmap/serde", "serde/derive", "dep:serde_bytes"]
+serde = ["dep:serde", "ordermap/serde", "serde/derive", "dep:serde_bytes"]
 serde_bytes = ["dep:serde_bytes", "serde"]
 serde_json = ["dep:serde_json", "serde"]
 wasm = ["dep:wasm-bindgen"]

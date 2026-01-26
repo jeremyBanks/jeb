@@ -1,6 +1,6 @@
 use {
     crate::Null,
-    indexmap::IndexMap,
+    ordermap::OrderMap,
 };
 
 /// Error returned when trying to convert a non-zero value to Null.
@@ -111,11 +111,11 @@ impl<T> TryFrom<Vec<T>> for Null {
     }
 }
 
-// [impl jeb-value.null.try-from-indexmap]
-impl<K, V> TryFrom<IndexMap<K, V>> for Null {
+// [impl jeb-value.null.try-from-ordermap]
+impl<K, V> TryFrom<OrderMap<K, V>> for Null {
     type Error = NotNullError;
 
-    fn try_from(value: IndexMap<K, V>) -> Result<Self, Self::Error> {
+    fn try_from(value: OrderMap<K, V>) -> Result<Self, Self::Error> {
         if value.is_empty() {
             Ok(Null::new())
         } else {
@@ -190,9 +190,9 @@ impl<T> From<Null> for Vec<T> {
     }
 }
 
-// [impl jeb-value.null.into-indexmap]
-impl<K, V> From<Null> for IndexMap<K, V> {
+// [impl jeb-value.null.into-ordermap]
+impl<K, V> From<Null> for OrderMap<K, V> {
     fn from(_value: Null) -> Self {
-        IndexMap::new()
+        OrderMap::new()
     }
 }

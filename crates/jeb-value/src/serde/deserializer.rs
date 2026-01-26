@@ -13,7 +13,7 @@ use {
             error::Unexpected,
         },
     },
-    indexmap::IndexMap,
+    ordermap::OrderMap,
     serde::de::{
         self,
         DeserializeSeed,
@@ -546,11 +546,11 @@ impl<'de> de::SeqAccess<'de> for SeqDeserializer {
     }
 }
 struct StringMapDeserializer {
-    iter: <IndexMap<String, Value> as IntoIterator>::IntoIter,
+    iter: <OrderMap<String, Value> as IntoIterator>::IntoIter,
     value: Option<Value>,
 }
 impl StringMapDeserializer {
-    fn new(map: IndexMap<String, Value>) -> Self {
+    fn new(map: OrderMap<String, Value>) -> Self {
         StringMapDeserializer {
             iter: map.into_iter(),
             value: None,
@@ -588,11 +588,11 @@ impl<'de> de::MapAccess<'de> for StringMapDeserializer {
     }
 }
 struct BytesMapDeserializer {
-    iter: <IndexMap<Bytes, Value> as IntoIterator>::IntoIter,
+    iter: <OrderMap<Bytes, Value> as IntoIterator>::IntoIter,
     value: Option<Value>,
 }
 impl BytesMapDeserializer {
-    fn new(map: IndexMap<Bytes, Value>) -> Self {
+    fn new(map: OrderMap<Bytes, Value>) -> Self {
         BytesMapDeserializer {
             iter: map.into_iter(),
             value: None,

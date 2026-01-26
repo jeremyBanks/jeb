@@ -517,8 +517,8 @@ r[jeb-value.null.try-from-vec]
 `jeb_value::Null` MUST implement `TryFrom<Vec<T>>` (where T is _unconstrained_)
 with only the empty vector being accepted.
 
-r[jeb-value.null.try-from-indexmap]
-`jeb_value::Null` MUST implement `TryFrom<IndexMap<K, V>>` (where K and V are
+r[jeb-value.null.try-from-ordermap]
+`jeb_value::Null` MUST implement `TryFrom<ordermap<K, V>>` (where K and V are
 _unconstrained_) with only the empty map being accepted.
 
 r[jeb-value.null.into-unit]
@@ -567,8 +567,8 @@ r[jeb-value.null.into-vec]
 `Vec<T>` (where T is unconstrained) MUST implement `From<jeb_value::Null>`,
 mapping to an empty vector.
 
-r[jeb-value.null.into-indexmap]
-`IndexMap<K, V>` (where K and V are unconstrained) MUST implement
+r[jeb-value.null.into-ordermap]
+`ordermap<K, V>` (where K and V are unconstrained) MUST implement
 `From<jeb_value::Null>`, mapping to an empty map.
 
 ## Boolean (`jeb-value.boolean.`)
@@ -840,7 +840,7 @@ r[jeb-value.array.from-iterator]
 
 r[jeb-value.bytes-map.struct]
 `jeb_value::BytesMap` MUST be a single-item tuple struct wrapping an inner
-`indexmap::IndexMap<Vec<u8>, jeb_value::Value>`.
+`ordermap::ordermap<Vec<u8>, jeb_value::Value>`.
 
 r[jeb-value.bytes-map.len]
 `jeb_value::BytesMap` MUST implement `.len(&self) -> usize`.
@@ -872,7 +872,7 @@ pattern described above, accepting both native key types and `jeb_value::Value`.
 
 r[jeb-value.bytes-map.from-inner]
 `jeb_value::BytesMap` MUST implement
-`From<indexmap::IndexMap<Vec<u8>, jeb_value::Value>>`.
+`From<ordermap::ordermap<Vec<u8>, jeb_value::Value>>`.
 
 r[jeb-value.bytes-map.keys]
 `jeb_value::BytesMap` MUST implement
@@ -894,7 +894,7 @@ r[jeb-value.bytes-map.into-iterator]
 
 r[jeb-value.string-map.struct]
 `jeb_value::StringMap` MUST be a single-item tuple struct wrapping an inner
-`indexmap::IndexMap<String, jeb_value::Value>`.
+`ordermap::ordermap<String, jeb_value::Value>`.
 
 r[jeb-value.string-map.len]
 `jeb_value::StringMap` MUST implement `.len(&self) -> usize`.
@@ -926,7 +926,7 @@ pattern described above, accepting both native key types and `jeb_value::Value`.
 
 r[jeb-value.string-map.from-inner]
 `jeb_value::StringMap` MUST implement
-`From<indexmap::IndexMap<String, jeb_value::Value>>`.
+`From<ordermap::ordermap<String, jeb_value::Value>>`.
 
 r[jeb-value.string-map.keys]
 `jeb_value::StringMap` MUST implement
