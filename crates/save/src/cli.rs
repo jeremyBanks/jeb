@@ -830,8 +830,8 @@ fn get_committer_from_agent_env() -> Option<(String, String)> {
     }
 }
 
-/// Checks for GIT_COMMITTER_NAME and GIT_COMMITTER_EMAIL environment variables.
-/// Returns Some only if BOTH are set.
+/// Checks for `GIT_COMMITTER_NAME` and `GIT_COMMITTER_EMAIL` environment
+/// variables. Returns Some only if BOTH are set.
 fn get_git_committer_env() -> Option<(String, String)> {
     match (
         env::var("GIT_COMMITTER_NAME"),
