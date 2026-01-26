@@ -40,12 +40,27 @@ const IDAT_BLOCK_SIZE: usize = 65535;
 /// Maximum total content size for the polyglot to work correctly.
 pub const MAX_CONTENT_SIZE: usize = 42_000;
 
+/// Estimate total data size for width calculation.
+fn estimate_total_size(files: &[(&[u8], &[u8])]) -> usize {
+    let mut total = 0;
+    for (name, body) in files {
+        // ZIP header: 30 bytes + name length + padding estimate
+        total += 30 + name.len() + 50;
+        // File content + deflate overhead (~4 bytes per 36 bytes)
+        total += body.len();
+        total += (body.len() / 36 + 1) * 4;
+    }
+    // Minimum reasonable size
+    total.max(100)
+}
+
 /// Calculate optimal row width for approximately square images.
 /// Returns width such that height >= width (portrait/square orientation).
 fn calculate_row_width(total_data_estimate: usize) -> usize {
-    // For square: W ≈ 2 + sqrt(4 + D)
+    // For height >= width, we need: total_data / width >= width
+    // Therefore: width <= sqrt(total_data)
     // Using floor ensures height >= width
-    let ideal = 2.0 + (4.0 + total_data_estimate as f64).sqrt();
+    let ideal = (total_data_estimate as f64).sqrt();
     let width = ideal.floor() as usize;
 
     // Clamp to minimum safe width
@@ -70,17 +85,28 @@ pub fn build_polyglot(
     color_mode: ColorMode,
     palette: Option<&[u8]>,
 ) -> Vec<u8> {
-    // Step 1: Build pixel data and track which rows need final block headers
-    let (pixel_data, entry_infos, final_block_rows) = build_aligned_data(files);
+    // Two-pass approach for optimal dimensions:
+    // Pass 1: Build with estimated width to get actual data size
+    // Pass 2: Rebuild with width calculated from actual size
+
+    // Pass 1: Use estimate for initial build
+    let estimated_size = estimate_total_size(files);
+    let initial_width = calculate_row_width(estimated_size);
+    let (initial_data, _, _) = build_aligned_data(files, initial_width);
+
+    // Pass 2: Calculate optimal width from actual size, rebuild
+    let actual_size = initial_data.len();
+    let row_width = calculate_row_width(actual_size);
+    let (pixel_data, entry_infos, final_block_rows) = build_aligned_data(files, row_width);
 
     // Step 2: Calculate PNG dimensions
-    let height = (pixel_data.len() + ROW_WIDTH - 1) / ROW_WIDTH;
+    let height = if pixel_data.is_empty() { 1 } else { (pixel_data.len() + row_width - 1) / row_width };
     let mut padded = pixel_data.clone();
-    padded.resize(height * ROW_WIDTH, 0);
+    padded.resize(height * row_width, 0);
 
-    // Calculate effective pixel width
+    // Calculate effective pixel width based on bit depth
     let bits_per_pixel = bit_depth.bits_per_sample() * color_mode.samples_per_pixel();
-    let effective_width = (ROW_WIDTH * 8) / bits_per_pixel;
+    let effective_width = (row_width * 8) / bits_per_pixel;
 
     // Step 3: Build PNG
     let mut output = Vec::new();
@@ -96,23 +122,22 @@ pub fn build_polyglot(
     let data_offset = 8 + 25 + plte_size + 8 + 2 + 5;
 
     // IDAT with smart filter bytes
-    let filtered = add_smart_filter_bytes(&padded, ROW_WIDTH, &final_block_rows);
+    let filtered = add_smart_filter_bytes(&padded, row_width, &final_block_rows);
     write_idat_stored(&mut output, &filtered);
 
     write_png_footer(&mut output);
 
     // Step 4: Build file entries with correct offsets
-    // Must account for IDAT deflate block headers every 65535 bytes
     let file_entries: Vec<FileEntry> = entry_infos
         .into_iter()
         .map(|(name, body, orig_pos, compressed_size)| {
             let crc = crc32(&body);
             // Convert original position to filtered position
-            let rows_before = orig_pos / ROW_WIDTH;
+            let rows_before = orig_pos / row_width;
             let filtered_pos = orig_pos + rows_before + 1; // +1 for initial filter
 
             // Account for IDAT deflate block headers (5 bytes each) every 65535 bytes
-            let deflate_blocks_before = filtered_pos / 65535;
+            let deflate_blocks_before = filtered_pos / IDAT_BLOCK_SIZE;
             let deflate_overhead = deflate_blocks_before * 5;
 
             let file_offset = data_offset + filtered_pos + deflate_overhead;
@@ -142,95 +167,85 @@ pub fn build_polyglot(
     output
 }
 
-/// Build pixel data and return (data, entry_info, final_block_rows).
-///
-/// This function handles alignment at two levels:
-/// 1. Row alignment - each file header starts at a row boundary
-/// 2. Content alignment - file content starts at a row boundary
-///
-/// Note: Total content must be under MAX_CONTENT_SIZE (~42KB) to avoid IDAT
-/// block boundaries corrupting ZIP data.
-fn build_aligned_data(files: &[(&[u8], &[u8])]) -> (Vec<u8>, Vec<(Vec<u8>, Vec<u8>, usize, usize)>, HashSet<usize>) {
+/// Build pixel data with variable row width.
+fn build_aligned_data(
+    files: &[(&[u8], &[u8])],
+    row_width: usize,
+) -> (Vec<u8>, Vec<(Vec<u8>, Vec<u8>, usize, usize)>, HashSet<usize>) {
+    let data_per_block = row_width - 4;
+    let filtered_row_size = row_width + 1;
+
     let mut data = Vec::new();
     let mut entries = Vec::new();
     let mut final_block_rows = HashSet::new();
 
     for (name, body) in files {
-        // Align to row boundary for header start
-        let padding_to_row = (ROW_WIDTH - (data.len() % ROW_WIDTH)) % ROW_WIDTH;
+        // Align to row boundary for entry start
+        let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
         data.resize(data.len() + padding_to_row, 0);
 
         let entry_start = data.len();
 
-        // Calculate header layout
-        // For content to start at a row boundary:
-        // (28 + name.len() + extra_len) % ROW_WIDTH == 0
-        let header_plus_name = 28 + name.len();
-        let extra_for_content_align = (ROW_WIDTH - (header_plus_name % ROW_WIDTH)) % ROW_WIDTH;
-        let total_header_size = header_plus_name + extra_for_content_align;
+        // ZIP local header is 30 bytes + filename
+        let header_size = 30 + name.len();
 
-        // Encode body as deflate stored blocks
-        let deflate_content = encode_as_deflate_blocks(body);
+        // Calculate extra field size to align content to next row boundary
+        let bytes_used = header_size % row_width;
+        let extra_len = if bytes_used == 0 { 0 } else { row_width - bytes_used };
 
-        // Calculate number of blocks and compressed size (includes filter bytes)
-        let num_blocks = if body.is_empty() { 1 } else { (body.len() + DATA_PER_BLOCK - 1) / DATA_PER_BLOCK };
-        let compressed_size = num_blocks * FILTERED_ROW_SIZE;
+        // Calculate number of deflate blocks and compressed size
+        let num_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
+        let compressed_size = num_blocks * filtered_row_size;
 
         // Calculate which row contains the final block
-        let content_start_orig = entry_start + total_header_size;
-        let last_block_orig_pos = content_start_orig + (num_blocks - 1) * ROW_WIDTH;
-        let last_block_row = last_block_orig_pos / ROW_WIDTH;
+        let content_start = entry_start + header_size + extra_len;
+        let last_block_pos = content_start + (num_blocks - 1) * row_width;
+        let last_block_row = last_block_pos / row_width;
         final_block_rows.insert(last_block_row);
 
         entries.push((name.to_vec(), body.to_vec(), entry_start, compressed_size));
 
-        // Write header
-        write_local_header(&mut data, name, body.len(), compressed_size, crc32(body), extra_for_content_align);
+        // Write standard ZIP local file header (30 bytes)
+        write_local_header(&mut data, name, body.len(), compressed_size, crc32(body), extra_len);
 
-        // Write deflate content (just LEN+NLEN+data per block, filter provides header)
+        // Encode and write deflate content
+        let deflate_content = encode_as_deflate_blocks(body, row_width);
         data.extend_from_slice(&deflate_content);
     }
 
     (data, entries, final_block_rows)
 }
 
-/// Encode data as deflate stored blocks.
-/// Filter bytes provide block headers (0x00 or 0x01).
-/// We only write: LEN(2) + NLEN(2) + data per block.
-fn encode_as_deflate_blocks(body: &[u8]) -> Vec<u8> {
+/// Encode data as deflate stored blocks with variable row width.
+fn encode_as_deflate_blocks(body: &[u8], row_width: usize) -> Vec<u8> {
+    let data_per_block = row_width - 4;
     let mut result = Vec::new();
 
     if body.is_empty() {
         // Empty file: final block with 0 length
-        // Filter provides 0x01 header, we write LEN=0, NLEN=0xFFFF
         result.extend_from_slice(&0_u16.to_le_bytes());
         result.extend_from_slice(&0xFFFF_u16.to_le_bytes());
-        // Pad to full row width
-        result.resize(ROW_WIDTH, 0);
+        result.resize(row_width, 0);
         return result;
     }
 
-    let chunks: Vec<&[u8]> = body.chunks(DATA_PER_BLOCK).collect();
-
-    for chunk in chunks.iter() {
-        // Filter byte provides block header (0x00 for non-final, 0x01 for final)
-        // We just write LEN + NLEN + data
+    for chunk in body.chunks(data_per_block) {
         let len = chunk.len() as u16;
         result.extend_from_slice(&len.to_le_bytes());
         result.extend_from_slice(&len.not().to_le_bytes());
         result.extend_from_slice(chunk);
 
-        // Pad to full row width if this is a short final block
+        // Pad to full row width
         let block_size = 4 + chunk.len();
-        if block_size < ROW_WIDTH {
-            result.resize(result.len() + (ROW_WIDTH - block_size), 0);
+        if block_size < row_width {
+            result.resize(result.len() + (row_width - block_size), 0);
         }
     }
 
     result
 }
 
-/// Write ZIP local header (28 bytes we write, filters add 2 more for 30 total).
+/// Write standard ZIP local file header (30 bytes + name + extra).
 fn write_local_header(
     data: &mut Vec<u8>,
     name: &[u8],
@@ -239,28 +254,32 @@ fn write_local_header(
     crc: u32,
     extra_len: usize,
 ) {
-    // Bytes 0-12 (we write 13 bytes; filter at position 13 provides mod_date_high)
-    data.extend_from_slice(b"PK\x03\x04");
-    data.extend_from_slice(&20_u16.to_le_bytes()); // version (2.0 for deflate)
-    data.extend_from_slice(&0_u16.to_le_bytes());  // flags
-    data.extend_from_slice(&8_u16.to_le_bytes());  // compression = deflate
-    data.extend_from_slice(&0_u16.to_le_bytes());  // mod_time
-    data.push(0x00); // mod_date low (high byte comes from filter = 0x00)
+    // Standard 30-byte ZIP local file header
+    data.extend_from_slice(b"PK\x03\x04");                           // 0-3: signature
+    data.extend_from_slice(&20_u16.to_le_bytes());                   // 4-5: version needed
+    data.extend_from_slice(&0_u16.to_le_bytes());                    // 6-7: flags
+    data.extend_from_slice(&8_u16.to_le_bytes());                    // 8-9: compression (deflate)
+    data.extend_from_slice(&0_u16.to_le_bytes());                    // 10-11: mod time
+    data.extend_from_slice(&0_u16.to_le_bytes());                    // 12-13: mod date
+    data.extend_from_slice(&crc.to_le_bytes());                      // 14-17: CRC-32
+    data.extend_from_slice(&(compressed_size as u32).to_le_bytes()); // 18-21
+    data.extend_from_slice(&(uncompressed_size as u32).to_le_bytes()); // 22-25
+    data.extend_from_slice(&(name.len() as u16).to_le_bytes());      // 26-27: name length
+    data.extend_from_slice(&(extra_len as u16).to_le_bytes());       // 28-29: extra length
+    data.extend_from_slice(name);                                     // 30+: filename
 
-    // Bytes 13-25 (we write 13 bytes; filter at position 27 provides name_len_high)
-    data.extend_from_slice(&crc.to_le_bytes());
-    data.extend_from_slice(&(compressed_size as u32).to_le_bytes());
-    data.extend_from_slice(&(uncompressed_size as u32).to_le_bytes());
-    data.push((name.len() & 0xFF) as u8); // name_len low (high byte from filter = 0x00)
-
-    // Bytes 26-27
-    data.extend_from_slice(&(extra_len as u16).to_le_bytes());
-
-    // Filename
-    data.extend_from_slice(name);
-
-    // Extra field (padding to align content)
-    data.resize(data.len() + extra_len, 0);
+    // Extra field for alignment padding
+    if extra_len > 0 {
+        if extra_len >= 4 {
+            // Valid extra field structure: ID + size + data
+            data.extend_from_slice(&0x0000_u16.to_le_bytes()); // header ID
+            data.extend_from_slice(&((extra_len - 4) as u16).to_le_bytes()); // data size
+            data.resize(data.len() + extra_len - 4, 0); // data (zeros)
+        } else {
+            // Just padding bytes
+            data.resize(data.len() + extra_len, 0);
+        }
+    }
 }
 
 /// Add PNG filter bytes, using 0x01 for rows with final deflate blocks.
@@ -268,7 +287,6 @@ fn add_smart_filter_bytes(data: &[u8], row_width: usize, final_rows: &HashSet<us
     let mut filtered = Vec::new();
 
     for (i, chunk) in data.chunks(row_width).enumerate() {
-        // Use filter 0x01 (Sub) for final block rows, 0x00 (None) otherwise
         let filter_type = if final_rows.contains(&i) { 0x01 } else { 0x00 };
         filtered.push(filter_type);
         filtered.extend_from_slice(chunk);
@@ -291,9 +309,9 @@ fn write_idat_stored(buffer: &mut Vec<u8>, filtered_data: &[u8]) {
     idat_content.push(cmf);
     idat_content.push(flg);
 
-    // Single stored deflate block containing all filtered data
-    for (i, chunk) in filtered_data.chunks(65535).enumerate() {
-        let is_last = i == filtered_data.chunks(65535).count() - 1;
+    // Stored deflate blocks (max 65535 bytes each)
+    for (i, chunk) in filtered_data.chunks(IDAT_BLOCK_SIZE).enumerate() {
+        let is_last = i == filtered_data.chunks(IDAT_BLOCK_SIZE).count() - 1;
         idat_content.push(if is_last { 0x01 } else { 0x00 });
         idat_content.extend_from_slice(&(chunk.len() as u16).to_le_bytes());
         idat_content.extend_from_slice(&(chunk.len() as u16).not().to_le_bytes());
@@ -313,7 +331,7 @@ fn write_central_directory(buffer: &mut Vec<u8>, entries: &[FileEntry]) {
         buffer.extend_from_slice(&20_u16.to_le_bytes()); // version made by
         buffer.extend_from_slice(&20_u16.to_le_bytes()); // version needed
         buffer.extend_from_slice(&0_u16.to_le_bytes());  // flags
-        buffer.extend_from_slice(&8_u16.to_le_bytes());  // compression = deflate
+        buffer.extend_from_slice(&8_u16.to_le_bytes());  // compression
         buffer.extend_from_slice(&0_u16.to_le_bytes());  // mod time
         buffer.extend_from_slice(&0_u16.to_le_bytes());  // mod date
         buffer.extend_from_slice(&entry.crc.to_le_bytes());
@@ -347,22 +365,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_deflate_encoding() {
-        // 9 bytes = exactly one block
-        let data = b"123456789";
-        let encoded = encode_as_deflate_blocks(data);
-        // Should be LEN(2) + NLEN(2) + data(9) = 13 bytes
-        assert_eq!(encoded.len(), ROW_WIDTH);
-        // LEN should be 9
-        assert_eq!(u16::from_le_bytes([encoded[0], encoded[1]]), 9);
+    fn test_width_calculation() {
+        // Small content should get minimum width
+        assert_eq!(calculate_row_width(100), MIN_ROW_WIDTH);
+
+        // 10KB: sqrt(10000) = 100
+        let w = calculate_row_width(10_000);
+        assert_eq!(w, 100, "Expected 100, got {}", w);
+
+        // 40KB: sqrt(40000) ≈ 200
+        let w = calculate_row_width(40_000);
+        assert_eq!(w, 200, "Expected 200, got {}", w);
     }
 
     #[test]
     fn test_polyglot_structure() {
-        let files = vec![(b"test.txt".as_ref(), b"Hi".as_ref())];
-        let result = build_polyglot(&files, 64, BitDepth::EightBit, ColorMode::Lightness, None);
+        let files = vec![(b"test.txt".as_ref(), b"Hello, World!".as_ref())];
+        let result = build_polyglot(&files, 0, BitDepth::EightBit, ColorMode::Lightness, None);
 
+        // Check PNG signature
         assert_eq!(&result[0..8], b"\x89PNG\r\n\x1A\n");
+        // Check ZIP EOCD exists
         assert!(result.windows(4).any(|w| w == b"PK\x05\x06"));
     }
 }
