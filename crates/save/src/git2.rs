@@ -657,22 +657,9 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
 
         // Use a deterministic seed based on the base commit content
         // This ensures that if we run the same operation twice, we get the same result
-        // We'll use the first 8 bytes of the base commit ID as a seed
         let seed = u64::from_le_bytes(commit.id().as_bytes()[0..8].try_into().unwrap());
         
-        // For determinism in tests, we can force single-threaded execution if needed,
-        // or just ensure our parallel search is deterministic by having each thread
-        // check a specific, non-overlapping range.
-        // The existing implementation assigns index = local_index * thread_count + thread_index
-        // which IS deterministic assuming thread_count is constant.
-        // However, thread_count depends on num_cpus::get().
-        
-        // If SAVE_DETERMINISTIC is set, force 1 thread.
-        let thread_count = if std::env::var("SAVE_DETERMINISTIC").is_ok() {
-            1
-        } else {
-            num_cpus::get() as u64
-        };
+        let thread_count = num_cpus::get() as u64;
         trace!("Using {thread_count} threads (seeded with {seed:016x})");
 
         std::thread::scope(|scope| {
@@ -683,12 +670,12 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
                 threads.push(scope.spawn(move || {
                     trace!("Starting thread {thread_index}.");
                     
-                    // Mix the seed into the search space? 
-                    // Actually, scatter_triangle takes an index. 
-                    // We just need to make sure we start searching from a deterministic point?
-                    // The current implementation starts from 0. That's deterministic.
-                    // The only non-determinism comes from race conditions on who finds the "best" first
-                    // if there are multiple valid solutions.
+                    // We iterate through indices sequentially (interleaved across threads).
+                    // This ensures we scan timestamps "spiraling out" from the target time,
+                    // finding the closest valid timestamp first.
+                    // The stopping condition ensures we always return the solution with the
+                    // numerically smallest index, making the result deterministic regardless
+                    // of thread scheduling or count.
                     
                     for local_index in 0_u64.. {
                         let index = local_index * thread_count + thread_index;
