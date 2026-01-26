@@ -134,6 +134,11 @@ pub fn build_polyglot(
 }
 
 /// Build pixel data and return (data, entry_info, final_block_rows).
+///
+/// This function handles alignment at multiple levels:
+/// 1. Row alignment - each file header starts at a row boundary
+/// 2. Content alignment - file content starts at a row boundary
+/// 3. IDAT block alignment - file content doesn't span 65535-byte boundaries
 fn build_aligned_data(files: &[(&[u8], &[u8])]) -> (Vec<u8>, Vec<(Vec<u8>, Vec<u8>, usize, usize)>, HashSet<usize>) {
     let mut data = Vec::new();
     let mut entries = Vec::new();
@@ -144,44 +149,52 @@ fn build_aligned_data(files: &[(&[u8], &[u8])]) -> (Vec<u8>, Vec<(Vec<u8>, Vec<u
         let padding_to_row = (ROW_WIDTH - (data.len() % ROW_WIDTH)) % ROW_WIDTH;
         data.resize(data.len() + padding_to_row, 0);
 
-        let entry_start = data.len();
-
-        // We write 28 header bytes. Filter bytes at positions 13 and 27 (relative to
-        // filtered output) provide mod_date_high and name_len_high.
-        // Then filename, then extra field, then content.
-        //
-        // For content to start at a row boundary:
-        // (28 + name.len() + extra_len) % ROW_WIDTH == 0
+        // Calculate file layout before writing
         let header_plus_name = 28 + name.len();
         let extra_for_content_align = (ROW_WIDTH - (header_plus_name % ROW_WIDTH)) % ROW_WIDTH;
+        let total_header_size = header_plus_name + extra_for_content_align;
 
-        // Additionally, we want the filename to not cross row boundaries.
-        // Filename starts at header byte 30 (after our 28 + filters insert 2 = 30 bytes).
-        // In original data, that's position entry_start + 28.
-        // We need (entry_start + 28 + name.len()) to not cross a row boundary.
-        // For simplicity, let's require short names (< 10 chars) for now.
-        // TODO: Add extra padding before filename if needed.
+        // Calculate content size in filtered coordinates
+        let num_blocks = if body.is_empty() { 1 } else { (body.len() + DATA_PER_BLOCK - 1) / DATA_PER_BLOCK };
+        let compressed_size = num_blocks * FILTERED_ROW_SIZE; // includes filter bytes
+        let content_rows = num_blocks;
+
+        // Calculate filtered positions
+        let entry_start_orig = data.len();
+        let entry_start_filtered = (entry_start_orig / ROW_WIDTH) * FILTERED_ROW_SIZE;
+        let content_start_filtered = entry_start_filtered + ((total_header_size / ROW_WIDTH) + 1) * FILTERED_ROW_SIZE;
+        let content_end_filtered = content_start_filtered + (content_rows * FILTERED_ROW_SIZE);
+
+        // Check if content would span an IDAT block boundary
+        let content_start_block = content_start_filtered / IDAT_BLOCK_SIZE;
+        let content_end_block = (content_end_filtered - 1) / IDAT_BLOCK_SIZE;
+
+        if content_start_block != content_end_block && !body.is_empty() {
+            // Content would span a boundary - add padding to push past it
+            let next_boundary = (content_start_block + 1) * IDAT_BLOCK_SIZE;
+            // Calculate how many filtered bytes we need to add
+            let padding_needed_filtered = next_boundary - content_start_filtered;
+            // Convert to original data rows (round up)
+            let padding_rows = (padding_needed_filtered + FILTERED_ROW_SIZE - 1) / FILTERED_ROW_SIZE;
+            let padding_bytes = padding_rows * ROW_WIDTH;
+            data.resize(data.len() + padding_bytes, 0);
+        }
+
+        let entry_start = data.len();
+
+        // Write header
+        write_local_header(&mut data, name, body.len(), compressed_size, crc32(body), extra_for_content_align);
 
         // Encode body as deflate stored blocks
         let deflate_content = encode_as_deflate_blocks(body);
 
-        // Calculate number of blocks and actual compressed size
-        // compressed_size must include the filter bytes (which become block headers)
-        let num_blocks = if body.is_empty() { 1 } else { (body.len() + DATA_PER_BLOCK - 1) / DATA_PER_BLOCK };
-        // Each block in filtered output = 1 filter + ROW_WIDTH bytes = 14 bytes
-        // But the last block might have padding, so use: num_blocks * (ROW_WIDTH + 1)
-        let compressed_size = num_blocks * (ROW_WIDTH + 1); // includes filter bytes!
-
         // Calculate which row contains the final block
-        let content_start_orig = entry_start + header_plus_name + extra_for_content_align;
+        let content_start_orig = entry_start + total_header_size;
         let last_block_orig_pos = content_start_orig + (num_blocks - 1) * ROW_WIDTH;
         let last_block_row = last_block_orig_pos / ROW_WIDTH;
         final_block_rows.insert(last_block_row);
 
         entries.push((name.to_vec(), body.to_vec(), entry_start, compressed_size));
-
-        // Write header
-        write_local_header(&mut data, name, body.len(), compressed_size, crc32(body), extra_for_content_align);
 
         // Write deflate content (just LEN+NLEN+data per block, filter provides header)
         data.extend_from_slice(&deflate_content);
