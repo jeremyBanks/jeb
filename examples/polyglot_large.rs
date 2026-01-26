@@ -1,8 +1,9 @@
 //! Test polyglot with larger files
 //!
-//! NOTE: Current implementation has a ~64KB limit per file due to IDAT deflate
-//! block headers being interleaved every 65535 bytes. Files larger than this
-//! will have corrupted deflate streams.
+//! Each file must be ≤42KB due to IDAT deflate block size (65535 bytes).
+//! After row expansion (14/9 ratio), 42KB becomes ~65KB filtered.
+//!
+//! Total size can be unlimited by using multiple files.
 
 use indexmap::IndexMap;
 use std::fs;
@@ -10,11 +11,10 @@ use std::process::Command;
 use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Creating polyglot PNG+ZIP file with multiple medium files...\n");
+    println!("Creating polyglot PNG+ZIP file with multiple files...\n");
 
-    // Current limitation: ~45KB per file to stay safely under 64KB filtered
-    // (45KB * 14/9 row expansion ≈ 70KB, under 65535 byte IDAT block limit)
-    const MAX_SAFE_SIZE: usize = 45_000;
+    // Maximum per-file: ~42KB (expands to ~65KB filtered, fits in one IDAT block)
+    const MAX_SAFE_SIZE: usize = 40_000;
 
     let mut files = IndexMap::new();
 

@@ -145,38 +145,40 @@ fn build_aligned_data(files: &[(&[u8], &[u8])]) -> (Vec<u8>, Vec<(Vec<u8>, Vec<u
     let mut final_block_rows = HashSet::new();
 
     for (name, body) in files {
+        // Calculate file layout
+        let header_plus_name = 28 + name.len();
+        let extra_for_content_align = (ROW_WIDTH - (header_plus_name % ROW_WIDTH)) % ROW_WIDTH;
+        let total_header_size = header_plus_name + extra_for_content_align;
+        let header_rows = (total_header_size + ROW_WIDTH - 1) / ROW_WIDTH;
+
+        // Calculate content size
+        let num_blocks = if body.is_empty() { 1 } else { (body.len() + DATA_PER_BLOCK - 1) / DATA_PER_BLOCK };
+        let compressed_size = num_blocks * FILTERED_ROW_SIZE;
+        let content_rows = num_blocks;
+
         // Align to row boundary for header start
         let padding_to_row = (ROW_WIDTH - (data.len() % ROW_WIDTH)) % ROW_WIDTH;
         data.resize(data.len() + padding_to_row, 0);
 
-        // Calculate file layout before writing
-        let header_plus_name = 28 + name.len();
-        let extra_for_content_align = (ROW_WIDTH - (header_plus_name % ROW_WIDTH)) % ROW_WIDTH;
-        let total_header_size = header_plus_name + extra_for_content_align;
+        // Calculate where content would start and end in filtered coordinates
+        let current_rows = data.len() / ROW_WIDTH;
+        let content_start_row = current_rows + header_rows;
+        let content_end_row = content_start_row + content_rows;
 
-        // Calculate content size in filtered coordinates
-        let num_blocks = if body.is_empty() { 1 } else { (body.len() + DATA_PER_BLOCK - 1) / DATA_PER_BLOCK };
-        let compressed_size = num_blocks * FILTERED_ROW_SIZE; // includes filter bytes
-        let content_rows = num_blocks;
-
-        // Calculate filtered positions
-        let entry_start_orig = data.len();
-        let entry_start_filtered = (entry_start_orig / ROW_WIDTH) * FILTERED_ROW_SIZE;
-        let content_start_filtered = entry_start_filtered + ((total_header_size / ROW_WIDTH) + 1) * FILTERED_ROW_SIZE;
-        let content_end_filtered = content_start_filtered + (content_rows * FILTERED_ROW_SIZE);
+        // In filtered data: each row is FILTERED_ROW_SIZE bytes
+        let content_start_filtered = content_start_row * FILTERED_ROW_SIZE;
+        let content_end_filtered = content_end_row * FILTERED_ROW_SIZE;
 
         // Check if content would span an IDAT block boundary
         let content_start_block = content_start_filtered / IDAT_BLOCK_SIZE;
         let content_end_block = (content_end_filtered - 1) / IDAT_BLOCK_SIZE;
 
         if content_start_block != content_end_block && !body.is_empty() {
-            // Content would span a boundary - add padding to push past it
+            // Content would span a boundary - add padding to push content past it
+            // We need to add enough rows so content_start is at the next boundary
             let next_boundary = (content_start_block + 1) * IDAT_BLOCK_SIZE;
-            // Calculate how many filtered bytes we need to add
-            let padding_needed_filtered = next_boundary - content_start_filtered;
-            // Convert to original data rows (round up)
-            let padding_rows = (padding_needed_filtered + FILTERED_ROW_SIZE - 1) / FILTERED_ROW_SIZE;
-            let padding_bytes = padding_rows * ROW_WIDTH;
+            let rows_to_add = (next_boundary - content_start_filtered + FILTERED_ROW_SIZE - 1) / FILTERED_ROW_SIZE;
+            let padding_bytes = rows_to_add * ROW_WIDTH;
             data.resize(data.len() + padding_bytes, 0);
         }
 
