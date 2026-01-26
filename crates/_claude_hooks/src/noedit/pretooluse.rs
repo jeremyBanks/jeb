@@ -65,7 +65,9 @@ pub fn handle(input: &HookInput) -> Result<Option<HookOutput>> {
                      file is protected by .noedit patterns. Any changes made to this path will be \
                      automatically reverted, which may result in broken code or lost work.\n\nIf \
                      you need to modify files in this area, please inform the user that these \
-                     files are read-only and ask them to make the changes manually.",
+                     files are read-only and must be edited manually WHILE NO CLAUDE SESSION IS \
+                     ACTIVE, because we cannot distinguish user edits from agent edits during a \
+                     session.",
                     tool_name, file_path
                 )),
                 updated_input: None,
