@@ -350,22 +350,3 @@ refs:
     b: "3"
 "#) == output);
 }
-    a: "2"
-3:
-  author: Author <author@example.com>
-  author-date: 1970-01-01T00:00:00Z
-  commit-date: 1970-01-01T00:00:00Z
-  message: three
-  tree:
-    b: "3"
-4:
-  parents: [3]
-  author: dev <dev@localhost>
-  author-date: 1970-06-26T17:31:44Z
-  commit-date: 1970-06-26T17:31:44Z
-  message: new parents
-  tree:
-    a: "4"
-    b: "3"
-"#) == output);
-}
