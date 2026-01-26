@@ -7,6 +7,33 @@ edition = "2021"
 members = ["crates/*"]
 
 [dependencies]
+# Updated dependencies from claude branch
+ammonia = "4"
+bstr = "1"
+color-eyre = "0.6"
+eyre = "0.6"
+futures = "0.3"
+http = "1"
+miette = { version = "7", features = ["fancy"] }
+once-cell-regex = "0.2"
+once_cell = "1"
+regex = "1"
+reqwest = { version = "0.12", features = ["cookies", "gzip", "deflate", "multipart", "json"] }
+scraper = "0.22"
+serde = { version = "1", features = ["derive", "rc"] }
+serde_json = "1"
+static_assertions = "1"
+thiserror = "2"
+time = { version = "0.3", features = ["serde", "formatting", "parsing"] }
+tokio = { version = "1", features = ["macros", "rt", "fs", "io-std", "io-util", "net", "time", "process"] }
+tracing = "0.1"
+tracing-error = "0.2"
+tracing-subscriber = { version = "0.3", features = [ "std", "env-filter" ] }
+twox-hash = "1"
+windows = { version = "0.59", features = ["Foundation", "Media_Core", "Media_SpeechSynthesis", "Storage_Streams"] }
+windows-core = "0.59"
+
+# Original dependencies (commented out, preserved for reference)
 # ammonia = "3.2.1"
 # async-trait = "0.1.58"
 # bitvec = { version = "1.0.1", features = ["serde"] }
