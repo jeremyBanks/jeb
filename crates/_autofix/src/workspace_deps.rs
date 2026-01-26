@@ -30,6 +30,10 @@ use {
         value,
     },
 };
+
+/// Workspace dependency update: (resolution_fields, version, inherited, optional features)
+type WorkspaceDepsUpdate = (ResolutionFields, String, bool, Option<Vec<String>>);
+
 pub fn main() -> i32 {
     eprintln!("Running: workspace dependency normalization");
     match run_normalization() {
@@ -438,6 +442,7 @@ struct ConfigFields {
 #[derive(Debug, Clone)]
 struct WorkspaceCrateInfo {
     /// Package name from [package].name
+    #[expect(dead_code, reason = "stored for diagnostics/debugging")]
     name: String,
     /// Version from [package].version (resolved if workspace-inherited)
     version: String,
@@ -971,10 +976,7 @@ fn normalize_workspace_dependencies(
             original_contents.insert(member_toml, content);
         }
     }
-    let mut workspace_updates: HashMap<
-        String,
-        (ResolutionFields, String, bool, Option<Vec<String>>),
-    > = HashMap::new();
+    let mut workspace_updates: HashMap<String, WorkspaceDepsUpdate> = HashMap::new();
     for (dep_name, occurrences) in &all_deps {
         let mut equivalence_classes: Vec<EquivalenceClass> = Vec::new();
         for (member_path, _section, dep) in occurrences {
@@ -1226,7 +1228,7 @@ fn capture_old_workspace_deps(
 }
 fn update_workspace_toml(
     doc: &mut DocumentMut,
-    updates: &HashMap<String, (ResolutionFields, String, bool, Option<Vec<String>>)>,
+    updates: &HashMap<String, WorkspaceDepsUpdate>,
     workspace_root: &Path,
 ) -> Result<()> {
     if doc.get("workspace").is_none() {

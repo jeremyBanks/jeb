@@ -1,6 +1,9 @@
+/// An autofix module: (name, function)
+pub type AutofixModule = (&'static str, fn() -> i32);
+
 /// Run a list of autofixes sequentially.
 /// Returns the exit code (0 if all succeed, otherwise first error code).
-pub fn run_autofixes(modules: &[(&str, fn() -> i32)]) -> i32 {
+pub fn run_autofixes(modules: &[AutofixModule]) -> i32 {
     let mut first_error: Option<i32> = None;
     let mut failed_count = 0;
     for (name, func) in modules {
