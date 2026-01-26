@@ -417,8 +417,8 @@ refs:
     // HEAD is 2. Parents: [1].
     // Add 3, Remove 1. Resulting parents should be [3].
     Save::with(|s| { 
-        s.added_parent_ref = vec!["3".to_string()];
-        s.removed_parent_ref = vec!["1".to_string()];
+        s.added_parent_ref = vec![":/three".to_string()];
+        s.removed_parent_ref = vec![":/one".to_string()];
         s.timeless = true;
         s.message = Some("new parents".to_string());
     }).save().expect("save --add-parent --remove-parent failed");
