@@ -117,14 +117,25 @@ fn escape_string(s: &str) -> String {
 fn write_yaml_string<W: Write>(w: &mut W, s: &str, indent: usize) -> Result<()> {
     if s.contains('\n') {
         // Multi-line string: use literal block scalar
-        let lines: Vec<&str> = s.split('\n').collect();
+        // Count trailing newlines to choose the right chomping indicator:
+        // - `|-` (strip): no trailing newlines
+        // - `|` (clip): exactly one trailing newline
+        // - `|+` (keep): preserve all trailing newlines
+        let trailing_newlines = s.len() - s.trim_end_matches('\n').len();
+        let content = s.trim_end_matches('\n');
+        let lines: Vec<&str> = content.split('\n').collect();
         let first_line = lines.first().unwrap_or(&"");
 
-        // Use |2- if first line begins with whitespace
-        let indicator = if first_line.starts_with(' ') || first_line.starts_with('\t') {
-            "|2-"
-        } else {
-            "|-"
+        // Use indentation indicator (2) if first line begins with whitespace
+        let needs_indent_indicator = first_line.starts_with(' ') || first_line.starts_with('\t');
+
+        let indicator = match (needs_indent_indicator, trailing_newlines) {
+            (true, 0) => "|2-",
+            (true, 1) => "|2",
+            (true, _) => "|2+",
+            (false, 0) => "|-",
+            (false, 1) => "|",
+            (false, _) => "|+",
         };
 
         writeln!(w, "{}", indicator)?;
@@ -132,6 +143,13 @@ fn write_yaml_string<W: Write>(w: &mut W, s: &str, indent: usize) -> Result<()> 
         let prefix = "  ".repeat(indent + 1);
         for line in &lines {
             writeln!(w, "{}{}", prefix, line)?;
+        }
+
+        // For |+ with multiple trailing newlines, add extra blank lines
+        // (the content lines already contribute one newline each via writeln!,
+        // and clip/keep modes add one more, so we need trailing_newlines - 1 extra)
+        for _ in 1..trailing_newlines {
+            writeln!(w)?;
         }
     } else if can_be_unquoted(s) {
         // Unquoted string
