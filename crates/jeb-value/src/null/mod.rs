@@ -68,7 +68,10 @@ impl Null {
     }
 
     /// Returns a copy of the inner `()`.
-    #[expect(clippy::wrong_self_convention, reason = "consistent API across all types")]
+    #[expect(
+        clippy::wrong_self_convention,
+        reason = "consistent API across all types"
+    )]
     pub fn to_inner(&self) {
         self.0
     }
@@ -89,7 +92,10 @@ impl Null {
     }
 
     /// Returns a copy of the inner `()`.
-    #[expect(clippy::wrong_self_convention, reason = "consistent API across all types")]
+    #[expect(
+        clippy::wrong_self_convention,
+        reason = "consistent API across all types"
+    )]
     pub fn to_unit(&self) {
         self.0
     }

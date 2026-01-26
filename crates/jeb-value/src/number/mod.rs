@@ -53,7 +53,10 @@ impl Number {
 
     /// Returns a copy of the inner `f64`.
     #[must_use]
-    #[expect(clippy::wrong_self_convention, reason = "consistent API across all types")]
+    #[expect(
+        clippy::wrong_self_convention,
+        reason = "consistent API across all types"
+    )]
     pub fn to_inner(&self) -> f64 {
         self.0
     }
@@ -77,7 +80,10 @@ impl Number {
 
     /// Returns a copy of the inner `f64`.
     #[must_use]
-    #[expect(clippy::wrong_self_convention, reason = "consistent API across all types")]
+    #[expect(
+        clippy::wrong_self_convention,
+        reason = "consistent API across all types"
+    )]
     pub fn to_f64(&self) -> f64 {
         self.0
     }

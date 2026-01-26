@@ -1,4 +1,7 @@
-#[expect(unused_imports, reason = "example code with potentially unused items")]
+#[expect(
+    unused_imports,
+    reason = "example code with potentially unused items"
+)]
 use core::{
     convert::Infallible as Never,
     fmt::Debug,
@@ -538,7 +541,10 @@ where
 /// that each of those implementations uses the same `Warning` type and the same
 /// `Error` type, and that the `$target` type (which may be explicit or inferred
 /// ) implements `From<T>` for each type `T` in the `$intermediary` types.
-#[expect(unused_macros, reason = "example code for demonstration")]
+#[expect(
+    unused_macros,
+    reason = "example code for demonstration"
+)]
 macro_rules! try_from_maybe_lossy_via {
     ($value:expr => $($intermediary:ty)|+ $( => $target:ty)?) => {
         {

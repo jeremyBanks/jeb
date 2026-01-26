@@ -21,7 +21,8 @@ struct Entry {
 }
 
 impl Entry {
-    /// Parse a line - handles both current format (type:encoded) and old JSON format
+    /// Parse a line - handles both current format (type:encoded) and old JSON
+    /// format
     fn parse(line: &str) -> Option<Self> {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
@@ -118,7 +119,7 @@ fn unescape_json_string(s: &str) -> Option<Vec<u8>> {
                 '"' => result.push(b'"'),
                 '/' => result.push(b'/'),
                 'b' => result.push(0x08),
-                'f' => result.push(0x0c),
+                'f' => result.push(0x0C),
                 'u' => {
                     // \uXXXX
                     let hex: String = chars.by_ref().take(4).collect();
@@ -221,10 +222,7 @@ fn main() -> Result<()> {
             }
             _ => {
                 // File might not exist at this commit (renamed, etc.)
-                eprintln!(
-                    "Commit {}: file not found (possibly renamed)",
-                    &commit[..8]
-                );
+                eprintln!("Commit {}: file not found (possibly renamed)", &commit[..8]);
             }
         }
     }

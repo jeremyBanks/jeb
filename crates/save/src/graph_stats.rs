@@ -147,14 +147,20 @@ impl MessageParser {
     }
 }
 /// Calculator for graph statistics with z-mode support.
-#[expect(clippy::module_name_repetitions, reason = "clear naming preferred")]
+#[expect(
+    clippy::module_name_repetitions,
+    reason = "clear naming preferred"
+)]
 pub struct GraphStatsCalculator<'repo, 'a: 'repo, R: RepositoryView<'repo>> {
     repo: &'a R,
     max_depth: i32,
     trust_messages: bool,
     _phantom: std::marker::PhantomData<&'repo ()>,
 }
-#[expect(single_use_lifetimes, reason = "lifetime bound required for struct coherence")]
+#[expect(
+    single_use_lifetimes,
+    reason = "lifetime bound required for struct coherence"
+)]
 impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> Debug for GraphStatsCalculator<'repo, 'a, R> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GraphStatsCalculator")
@@ -216,11 +222,11 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 _ => false,
             };
             if trusted {
-                let generation_index =
-                    parsed.generation_index.unwrap_or(parsed.revision_index) + 1;
-                let commit_index = parsed.commit_index.unwrap_or_else(|| {
-                    parsed.generation_index.unwrap_or(parsed.revision_index)
-                }) + 1;
+                let generation_index = parsed.generation_index.unwrap_or(parsed.revision_index) + 1;
+                let commit_index = parsed
+                    .commit_index
+                    .unwrap_or_else(|| parsed.generation_index.unwrap_or(parsed.revision_index))
+                    + 1;
                 return GraphStats {
                     revision_index: parsed.revision_index + 1,
                     generation_index,
@@ -238,7 +244,10 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
     }
 
     /// Depth-limited scan implementing z-mode algorithm.
-    #[expect(clippy::cast_sign_loss, reason = "max_depth is always positive")]
+    #[expect(
+        clippy::cast_sign_loss,
+        reason = "max_depth is always positive"
+    )]
     fn depth_limited_scan(&self, head: &R::Commit, is_shallow: bool) -> GraphStats {
         let max_depth = self.max_depth as usize;
         let mut visited = HashSet::new();
@@ -402,7 +411,10 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
     }
 
     /// Calculate generation index for bounded graph (depth-limited scan).
-    #[expect(clippy::unused_self, reason = "method kept for API consistency")]
+    #[expect(
+        clippy::unused_self,
+        reason = "method kept for API consistency"
+    )]
     fn calculate_generation_bounded(
         &self,
         parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
@@ -461,8 +473,14 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
     }
 
     /// Calculate commit index for bounded graph, adding trusted stats.
-    #[expect(clippy::unused_self, reason = "method kept for API consistency")]
-    #[expect(clippy::cast_possible_truncation, reason = "commit count fits in u32")]
+    #[expect(
+        clippy::unused_self,
+        reason = "method kept for API consistency"
+    )]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "commit count fits in u32"
+    )]
     fn calculate_commit_index_bounded(
         &self,
         visited: &HashSet<<R::Commit as CommitView>::Id>,
@@ -484,7 +502,10 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
     ///
     /// If all boundaries have trusted origins that match, use that origin.
     /// Otherwise, fall back to calculating from the boundary commit IDs.
-    #[expect(clippy::unused_self, reason = "method kept for API consistency")]
+    #[expect(
+        clippy::unused_self,
+        reason = "method kept for API consistency"
+    )]
     fn calculate_origin_bounded(
         &self,
         _parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
@@ -590,7 +611,10 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             count + 1 // +1 because we're calculating for a new commit (HEAD's child)
         };
         let generation_index = self.calculate_generation(&parent_map, &head.id()) + 1; // +1 for new commit
-        #[expect(clippy::cast_possible_truncation, reason = "commit count fits in u32")]
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "commit count fits in u32"
+        )]
         let commit_index = visited.len() as u32; // visited includes HEAD, which becomes the parent of new commit
         let origin = if revision_index == 0 {
             None
@@ -606,7 +630,10 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         }
     }
 
-    #[expect(clippy::unused_self, reason = "method kept for API consistency")]
+    #[expect(
+        clippy::unused_self,
+        reason = "method kept for API consistency"
+    )]
     fn calculate_generation(
         &self,
         parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
@@ -656,7 +683,10 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         max_distance
     }
 
-    #[expect(clippy::unused_self, reason = "method kept for API consistency")]
+    #[expect(
+        clippy::unused_self,
+        reason = "method kept for API consistency"
+    )]
     fn calculate_origin(
         &self,
         parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,

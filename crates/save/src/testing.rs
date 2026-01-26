@@ -569,9 +569,7 @@ fn format_patch(desired_indent: Option<usize>, patch: &str) -> String {
         buf.push_str(line);
         final_newline = line.ends_with('\n');
     }
-    if final_newline
-        && let Some(indent) = &indent
-    {
+    if final_newline && let Some(indent) = &indent {
         buf.push_str(indent);
     }
     lit_kind.write_end(&mut buf).unwrap();

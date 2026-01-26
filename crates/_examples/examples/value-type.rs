@@ -15,7 +15,10 @@ pub struct ValueTypes {
     pub string_map: bool,
 }
 
-#[expect(dead_code, reason = "example code for demonstration")]
+#[expect(
+    dead_code,
+    reason = "example code for demonstration"
+)]
 pub struct TypedValue {
     outer_types: ValueTypes,
     inner_types: ValueTypes,

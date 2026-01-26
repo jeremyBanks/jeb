@@ -10,7 +10,10 @@ use {
     },
     regex::Regex,
     std::{
-        path::{Path, PathBuf},
+        path::{
+            Path,
+            PathBuf,
+        },
         sync::LazyLock,
     },
 };

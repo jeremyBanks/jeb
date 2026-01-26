@@ -189,7 +189,10 @@ impl ObjectId {
 
     /// Convert to truncated hex string of specified length
     /// Used during serialization for non-head commits
-    #[expect(clippy::wrong_self_convention, reason = "keep &self for method call consistency")]
+    #[expect(
+        clippy::wrong_self_convention,
+        reason = "keep &self for method call consistency"
+    )]
     pub fn to_hex_truncated(&self, len: usize) -> String {
         // Validate length: must be even, >= 4, <= 40
         if !(4..=40).contains(&len) || !len.is_multiple_of(2) {
@@ -1809,7 +1812,10 @@ fn get_special_key<'a>(
     None
 }
 
-#[expect(clippy::too_many_arguments, reason = "complex parsing logic requires many parameters")]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "complex parsing logic requires many parameters"
+)]
 fn build_commit(
     commit_ref: &CommitRef,
     commit_defs: &HashMap<CommitRef, &serde_yaml::Mapping>,
@@ -2847,7 +2853,10 @@ struct SerializationContext {
 
     /// Maps tree hash to (commit_id, path) where content first appeared
     /// physically
-    #[expect(dead_code, reason = "reserved for future tree deduplication")]
+    #[expect(
+        dead_code,
+        reason = "reserved for future tree deduplication"
+    )]
     tree_locations: HashMap<ObjectId, (ObjectId, String)>,
 
     /// All commits in topological order
@@ -2924,7 +2933,10 @@ impl SerializationContext {
         }
     }
 
-    #[expect(dead_code, reason = "reserved for future use")]
+    #[expect(
+        dead_code,
+        reason = "reserved for future use"
+    )]
     fn repo(&self) -> &Repository {
         unsafe { &*self.repo }
     }

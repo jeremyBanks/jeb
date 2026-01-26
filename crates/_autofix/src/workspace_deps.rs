@@ -31,7 +31,8 @@ use {
     },
 };
 
-/// Workspace dependency update: (resolution_fields, version, inherited, optional features)
+/// Workspace dependency update: (resolution_fields, version, inherited,
+/// optional features)
 type WorkspaceDepsUpdate = (ResolutionFields, String, bool, Option<Vec<String>>);
 
 pub fn main() -> i32 {
@@ -442,7 +443,10 @@ struct ConfigFields {
 #[derive(Debug, Clone)]
 struct WorkspaceCrateInfo {
     /// Package name from [package].name
-    #[expect(dead_code, reason = "stored for diagnostics/debugging")]
+    #[expect(
+        dead_code,
+        reason = "stored for diagnostics/debugging"
+    )]
     name: String,
     /// Version from [package].version (resolved if workspace-inherited)
     version: String,
@@ -1906,7 +1910,10 @@ fn sort_features_section(doc: &mut DocumentMut) -> Result<()> {
 
     Ok(())
 }
-#[expect(clippy::too_many_arguments, reason = "complex normalization logic")]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "complex normalization logic"
+)]
 fn update_member_toml(
     member_path: &Path,
     _all_deps: &HashMap<String, Vec<(PathBuf, String, Dependency)>>,

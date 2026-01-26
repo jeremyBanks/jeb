@@ -1,6 +1,9 @@
 use {
     _autofix::{
-        autofix_runner::{self, AutofixModule},
+        autofix_runner::{
+            self,
+            AutofixModule,
+        },
         cargo_clippy,
         cargo_fix,
         cargo_fmt,

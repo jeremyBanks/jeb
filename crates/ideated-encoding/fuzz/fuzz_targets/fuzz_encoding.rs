@@ -50,9 +50,7 @@ fuzz_target!(|data: &[u8]| {
             }
             offset += chunk_size;
         }
-        if decode_ok
-            && let Ok(decoded) = decoder.finish()
-        {
+        if decode_ok && let Ok(decoded) = decoder.finish() {
             assert_eq!(decoded, data, "streaming decoder roundtrip failed");
         }
     }

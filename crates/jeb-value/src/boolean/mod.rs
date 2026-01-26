@@ -57,7 +57,10 @@ impl Boolean {
 
     /// Returns a copy of the inner `bool`.
     #[must_use]
-    #[expect(clippy::wrong_self_convention, reason = "consistent API across all types")]
+    #[expect(
+        clippy::wrong_self_convention,
+        reason = "consistent API across all types"
+    )]
     pub fn to_inner(&self) -> bool {
         self.0
     }
@@ -81,7 +84,10 @@ impl Boolean {
 
     /// Returns a copy of the inner `bool`.
     #[must_use]
-    #[expect(clippy::wrong_self_convention, reason = "consistent API across all types")]
+    #[expect(
+        clippy::wrong_self_convention,
+        reason = "consistent API across all types"
+    )]
     pub fn to_bool(&self) -> bool {
         self.0
     }

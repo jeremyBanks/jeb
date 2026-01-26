@@ -124,7 +124,10 @@ pub trait RepositoryExt: Borrow<Repository> + BorrowMut<Repository> {
     /// these are not present, a warning is logged and we fall back to the
     /// author of the current HEAD commit. If there *is* no HEAD commit, we
     /// fall back to a generic placeholder signature.
-    #[expect(clippy::todo, reason = "function under development")]
+    #[expect(
+        clippy::todo,
+        reason = "function under development"
+    )]
     fn signature_or_fallback(&self) -> Signature<'_> {
         let repo: &Repository = self.borrow();
 
