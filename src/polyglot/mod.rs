@@ -146,8 +146,8 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
         .collect();
 
     // Build accumulated canvas for kerning (checks against ALL previous chars, not just one)
-    // Canvas is font.height rows × max_possible_width columns
-    let max_canvas_width = row_width * 2; // generous size
+    // Canvas must be wide enough for the entire text even if it overflows the display
+    let max_canvas_width = (name.len() * font.width).max(row_width * 2);
     let mut canvas: Vec<Vec<bool>> = vec![vec![false; max_canvas_width]; font.height];
     let mut char_positions: Vec<(usize, i32)> = Vec::new();
     let mut total_width = 0i32;
