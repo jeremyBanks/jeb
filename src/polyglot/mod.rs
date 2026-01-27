@@ -210,14 +210,12 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
     let actual_width = rightmost_pixel.max(0) as usize;
 
     // Calculate starting x position (right-align if too long)
-    // Minimal margin since entire row is header background
-    let margin = 1;
-    let available_width = row_width.saturating_sub(margin * 2);
-    let start_x: i32 = if actual_width <= available_width {
-        margin as i32 // Left-aligned with small margin
+    // No margin needed since entire row is header background
+    let start_x: i32 = if actual_width <= row_width {
+        0 // Left-aligned at edge
     } else {
         // Right-aligned: truncate from left
-        (row_width as i32 - actual_width as i32 - margin as i32).max(margin as i32 - actual_width as i32)
+        (row_width as i32 - actual_width as i32).max(-(actual_width as i32))
     };
 
     // First, render text to a temporary bitmap to know where pixels are
