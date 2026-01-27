@@ -558,12 +558,6 @@ fn calculate_file_size(name: &[u8], body: &[u8], row_width: usize, font: Option<
 }
 
 /// Check if a file fits before the next IDAT boundary.
-fn file_fits_before_boundary(target_pos: usize, file_size: usize, row_width: usize) -> bool {
-    let filtered_start = data_to_filtered_pos(target_pos, row_width);
-    let filtered_end = data_to_filtered_pos(target_pos + file_size, row_width);
-    !crosses_idat_boundary(filtered_start, filtered_end)
-}
-
 /// Build pixel data with bin packing, preferred order, and even spacing.
 ///
 /// Algorithm (from specification):
@@ -591,7 +585,7 @@ fn build_aligned_data(
         .map(|(name, body)| calculate_file_size(name, body, row_width, font))
         .collect();
 
-    // Phase 1: Bin packing (largest-first best-fit)
+    // Phase 1: Bin packing (largest-first worst-fit)
     let mut bucket_assignments = bin_pack_largest_first(files, &file_sizes, row_width);
 
     // Phase 2: Lexicographic sorting
@@ -612,33 +606,10 @@ fn build_aligned_data(
         bucket_assignments.push(last_bucket);
     }
 
-    // Phase 3: Flatten to placement order, then re-simulate to find actual IDAT bucket boundaries
-    let placement_order: Vec<usize> = bucket_assignments.iter().flatten().copied().collect();
-    let bucket_assignments = {
-        let mut buckets: Vec<Vec<usize>> = vec![vec![]];
-        let mut simulated_pos = 0usize;
-
-        for &file_idx in &placement_order {
-            let padding = (row_width - (simulated_pos % row_width)) % row_width;
-            let target = simulated_pos + padding;
-
-            if !file_fits_before_boundary(target, file_sizes[file_idx], row_width) {
-                buckets.push(vec![]);
-                simulated_pos = next_boundary_aligned_pos(target, row_width);
-            } else {
-                simulated_pos = target;
-            }
-
-            buckets.last_mut().unwrap().push(file_idx);
-            simulated_pos += file_sizes[file_idx];
-        }
-        buckets
-    };
-
-    // Phase 4: Calculate spacing for each bucket
+    // Phase 3: Calculate spacing for each bucket
     let bucket_spacing = calculate_bucket_spacing(&bucket_assignments, &file_sizes, row_width);
 
-    // Phase 5: Place files with pre-calculated spacing
+    // Phase 4: Place files with pre-calculated spacing
     let mut data = Vec::new();
     let mut entries = Vec::new();
     let mut final_block_rows = HashSet::new();
