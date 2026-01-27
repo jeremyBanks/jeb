@@ -3,6 +3,12 @@
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
+/// Result of looking up a character glyph.
+pub struct GlyphLookup<'a> {
+    pub glyph: &'a Vec<Vec<bool>>,
+    pub skip_kerning: bool, // True for space substitutions
+}
+
 /// A loaded bitmap font with glyph data.
 pub struct BitmapFont {
     pub name: &'static str,
@@ -12,9 +18,40 @@ pub struct BitmapFont {
 }
 
 impl BitmapFont {
-    /// Get glyph bitmap for a character. Returns None if not found.
-    pub fn get_glyph(&self, c: char) -> Option<&Vec<Vec<bool>>> {
-        self.glyphs.get(&c).or_else(|| self.glyphs.get(&'?'))
+    /// Get glyph bitmap for a character with fallback chain:
+    /// 1. Exact character
+    /// 2. Different capitalization (upper ↔ lower)
+    /// 3. Fallback characters: …, _, ., ?
+    /// 4. Space (with skip_kerning = true)
+    pub fn get_glyph(&self, c: char) -> Option<GlyphLookup<'_>> {
+        // 1. Try exact character
+        if let Some(g) = self.glyphs.get(&c) {
+            return Some(GlyphLookup { glyph: g, skip_kerning: c == ' ' });
+        }
+
+        // 2. Try different capitalization
+        let alt_case = if c.is_uppercase() {
+            c.to_lowercase().next()
+        } else if c.is_lowercase() {
+            c.to_uppercase().next()
+        } else {
+            None
+        };
+        if let Some(alt) = alt_case {
+            if let Some(g) = self.glyphs.get(&alt) {
+                return Some(GlyphLookup { glyph: g, skip_kerning: false });
+            }
+        }
+
+        // 3. Try fallback characters: …, _, ., ?
+        for fallback in ['…', '_', '.', '?'] {
+            if let Some(g) = self.glyphs.get(&fallback) {
+                return Some(GlyphLookup { glyph: g, skip_kerning: false });
+            }
+        }
+
+        // 4. Return space (skip kerning for inserted spaces)
+        self.glyphs.get(&' ').map(|g| GlyphLookup { glyph: g, skip_kerning: true })
     }
 
     /// Load font from embedded PNG and JSON metadata.

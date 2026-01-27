@@ -135,9 +135,9 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
     let label_rows = label_rows_for_font(font);
     let mut result = Vec::with_capacity(label_rows * row_width);
 
-    // Convert name to chars and get glyphs
+    // Convert name to chars and get glyph lookups (with fallback chain)
     let chars: Vec<char> = name.iter().map(|&b| b as char).collect();
-    let glyphs: Vec<Option<&Vec<Vec<bool>>>> = chars.iter()
+    let lookups: Vec<Option<fonts::GlyphLookup<'_>>> = chars.iter()
         .map(|&c| font.get_glyph(c))
         .collect();
 
@@ -149,47 +149,54 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
     let mut total_width = 0i32;
     let mut rightmost_pixel = 0i32;
 
-    for (i, glyph_opt) in glyphs.iter().enumerate() {
-        if let Some(glyph) = glyph_opt {
-            // Find minimum position where this glyph doesn't touch the canvas
-            let mut best_offset = total_width + font.width as i32; // default: after previous char
+    for (i, lookup_opt) in lookups.iter().enumerate() {
+        if let Some(lookup) = lookup_opt {
+            let glyph = lookup.glyph;
 
-            // Try tighter positions (can overlap into previous char's bounding box)
-            for test_offset in (total_width - font.width as i32 + 1)..=best_offset {
-                if test_offset < 0 {
-                    continue;
-                }
-                let mut touches = false;
-                'check: for (gy, glyph_row) in glyph.iter().enumerate() {
-                    for (gx, &pixel_on) in glyph_row.iter().enumerate() {
-                        if !pixel_on {
-                            continue;
-                        }
-                        let cx = test_offset as usize + gx;
-                        // Check 8-directional adjacency against canvas
-                        for dy in -1i32..=1 {
-                            for dx in -1i32..=1 {
-                                let ny = gy as i32 + dy;
-                                let nx = cx as i32 + dx;
-                                if ny >= 0 && (ny as usize) < font.height && nx >= 0 {
-                                    if canvas[ny as usize].get(nx as usize).copied().unwrap_or(false) {
-                                        touches = true;
-                                        break 'check;
+            // Default position: after previous char
+            let mut best_offset = total_width;
+
+            // Apply kerning only if skip_kerning is false
+            if !lookup.skip_kerning {
+                best_offset = total_width + font.width as i32; // Start at default spacing
+
+                // Try tighter positions (can overlap into previous char's bounding box)
+                for test_offset in (total_width - font.width as i32 + 1)..=best_offset {
+                    if test_offset < 0 {
+                        continue;
+                    }
+                    let mut touches = false;
+                    'check: for (gy, glyph_row) in glyph.iter().enumerate() {
+                        for (gx, &pixel_on) in glyph_row.iter().enumerate() {
+                            if !pixel_on {
+                                continue;
+                            }
+                            let cx = test_offset as usize + gx;
+                            // Check 8-directional adjacency against canvas
+                            for dy in -1i32..=1 {
+                                for dx in -1i32..=1 {
+                                    let ny = gy as i32 + dy;
+                                    let nx = cx as i32 + dx;
+                                    if ny >= 0 && (ny as usize) < font.height && nx >= 0 {
+                                        if canvas[ny as usize].get(nx as usize).copied().unwrap_or(false) {
+                                            touches = true;
+                                            break 'check;
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                if !touches {
-                    best_offset = test_offset;
-                    break;
+                    if !touches {
+                        best_offset = test_offset;
+                        break;
+                    }
                 }
             }
 
             char_positions.push((i, best_offset));
 
-            // Add glyph to canvas at best_offset
+            // Add glyph to canvas at best_offset (even for spaces, to track position)
             for (gy, glyph_row) in glyph.iter().enumerate() {
                 for (gx, &pixel_on) in glyph_row.iter().enumerate() {
                     if pixel_on {
@@ -230,7 +237,8 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
     for text_row in 0..font.height {
         let result_row = text_row + 1; // +1 for padding above
         for &(char_idx, char_x) in &char_positions {
-            if let Some(glyph) = glyphs[char_idx] {
+            if let Some(lookup) = &lookups[char_idx] {
+                let glyph = lookup.glyph;
                 if text_row < glyph.len() {
                     for (px, &pixel_on) in glyph[text_row].iter().enumerate() {
                         let x = (start_x + char_x + px as i32) as usize;
