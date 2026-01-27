@@ -16,7 +16,7 @@
 //!
 //! Row width is calculated to produce approximately square images:
 //! - width ≈ sqrt(total_data) for square proportions
-//! - Minimum width of 40 ensures filter bytes don't corrupt ZIP headers
+//! - Minimum width of 64 ensures filter bytes don't corrupt ZIP headers
 //! - Height >= width is preferred (portrait/square orientation)
 //!
 //! ## IDAT Block Boundaries
@@ -24,6 +24,18 @@
 //! IDAT uses stored deflate blocks with max 65535 bytes each. Files are
 //! automatically padded to avoid crossing block boundaries, allowing
 //! unlimited total content (individual files limited to ~60KB each).
+//!
+//! ## Filename Labels
+//!
+//! Filename labels are rendered above each file's content using size-appropriate
+//! bitmap fonts:
+//! - ≤ 128 KiB: Sky (9×10 pixels)
+//! - ≤ 512 KiB: Sugimori (8×8 pixels)
+//! - ≤ 1 MiB: Mini (3×6 pixels)
+//! - ≤ 3 MiB: Micro (3×3 pixels)
+//! - > 3 MiB: No labels
+
+mod fonts;
 
 #[cfg(test)]
 mod validate;
@@ -36,6 +48,7 @@ use std::ops::Not;
 use crate::checksums::{adler32, crc32};
 use crate::io::{OutputBuffer, output_buffer};
 use crate::png::write_png::{write_png_header, write_png_chunk, write_png_footer};
+use fonts::{BitmapFont, select_font};
 
 // Re-export types from png module with compatibility aliases
 pub use crate::png::{BitDepth, ColorType};
@@ -49,9 +62,13 @@ pub type ColorMode = ColorType;
 pub const Lightness: ColorType = ColorType::Luminance;
 pub const LightnessAlpha: ColorType = ColorType::LuminanceAlpha;
 
-/// Minimum row width to ensure filter bytes don't land in ZIP headers.
-/// ZIP local header is 30 bytes + filename, so 40 gives safe margin.
-const MIN_ROW_WIDTH: usize = 40;
+/// Row width alignment - all row widths are multiples of this value.
+/// This ensures consistent data alignment for better compression and structure.
+const ROW_WIDTH_ALIGNMENT: usize = 64;
+
+/// Base minimum row width (must be a multiple of ROW_WIDTH_ALIGNMENT).
+/// The actual minimum is max(this, round_up(30 + longest_filename + extra_padding)).
+const BASE_MIN_ROW_WIDTH: usize = 64;
 
 /// Maximum bytes per IDAT deflate stored block.
 const IDAT_BLOCK_SIZE: usize = 65535;
@@ -60,8 +77,125 @@ const IDAT_BLOCK_SIZE: usize = 65535;
 /// Must fit within one IDAT block (65535 bytes of filtered data).
 pub const MAX_FILE_CONTENT_SIZE: usize = 60_000;
 
+/// Maximum image height before disabling filename labels.
+const MAX_HEIGHT_WITH_LABELS: usize = 1024;
+
+/// Check if two glyphs would touch at a given horizontal offset.
+/// Returns true if any pixels are 8-directionally adjacent.
+fn glyphs_touch(prev: &[Vec<bool>], next: &[Vec<bool>], offset: i32) -> bool {
+    let prev_width = prev.first().map(|r| r.len()).unwrap_or(0);
+    let next_width = next.first().map(|r| r.len()).unwrap_or(0);
+
+    for (prev_row, prev_pixels) in prev.iter().enumerate() {
+        for (prev_col, &prev_on) in prev_pixels.iter().enumerate() {
+            if !prev_on {
+                continue;
+            }
+            // Check if any pixel in next glyph is adjacent
+            for (next_row, next_pixels) in next.iter().enumerate() {
+                for (next_col, &next_on) in next_pixels.iter().enumerate() {
+                    if !next_on {
+                        continue;
+                    }
+                    let dx = (next_col as i32 + offset) - prev_col as i32;
+                    let dy = next_row as i32 - prev_row as i32;
+                    if dx.abs() <= 1 && dy.abs() <= 1 {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Calculate minimum gap between two glyphs (ensuring no 8-directional adjacency).
+fn min_glyph_gap(prev: &[Vec<bool>], next: &[Vec<bool>], glyph_width: usize) -> usize {
+    for gap in 0..(glyph_width * 2) {
+        let offset = (glyph_width + gap) as i32;
+        if !glyphs_touch(prev, next, offset) {
+            return gap;
+        }
+    }
+    glyph_width // fallback: full glyph width gap
+}
+
+/// Calculate the number of label rows for a given font.
+fn label_rows_for_font(font: &BitmapFont) -> usize {
+    // 1 empty row above + font height + 1 empty row below
+    1 + font.height + 1
+}
+
+/// Render filename label rows using the specified font.
+/// If the name is too long, it's right-aligned (truncated from the left).
+fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont) -> Vec<u8> {
+    let label_rows = label_rows_for_font(font);
+    let mut result = Vec::with_capacity(label_rows * row_width);
+
+    // Row 0: empty (padding above)
+    result.resize(row_width, 0);
+
+    // Convert name to chars and get glyphs
+    let chars: Vec<char> = name.iter().map(|&b| b as char).collect();
+    let glyphs: Vec<Option<&Vec<Vec<bool>>>> = chars.iter()
+        .map(|&c| font.get_glyph(c))
+        .collect();
+
+    // Calculate total width with kerning
+    let mut total_width = 0usize;
+    let mut char_positions: Vec<(usize, usize)> = Vec::new(); // (char_index, x_position)
+
+    for (i, glyph_opt) in glyphs.iter().enumerate() {
+        if let Some(glyph) = glyph_opt {
+            if i > 0 {
+                // Add kerning gap
+                if let Some(prev_glyph) = glyphs[i - 1] {
+                    let gap = min_glyph_gap(prev_glyph, glyph, font.width);
+                    total_width += gap;
+                }
+            }
+            char_positions.push((i, total_width));
+            total_width += font.width;
+        }
+    }
+
+    // Calculate starting x position (right-align if too long)
+    let available_width = row_width.saturating_sub(2); // 1 pixel margin on each side
+    let start_x = if total_width <= available_width {
+        1 // Left-aligned with 1 pixel margin
+    } else {
+        // Right-aligned: truncate from left
+        (row_width as i32 - total_width as i32 - 1).max(1 - total_width as i32) as usize
+    };
+
+    // Render text rows
+    for text_row in 0..font.height {
+        let mut row = vec![0u8; row_width];
+
+        for &(char_idx, char_x) in &char_positions {
+            if let Some(glyph) = glyphs[char_idx] {
+                if text_row < glyph.len() {
+                    for (px, &pixel_on) in glyph[text_row].iter().enumerate() {
+                        let x = start_x.wrapping_add(char_x).wrapping_add(px);
+                        if x < row_width && pixel_on {
+                            row[x] = 0xFF; // foreground (white)
+                        }
+                    }
+                }
+            }
+        }
+
+        result.extend_from_slice(&row);
+    }
+
+    // Final row: empty (padding below)
+    result.resize(result.len() + row_width, 0);
+
+    result
+}
+
 /// Estimate total data size for width calculation.
-fn estimate_total_size(files: &[(&[u8], &[u8])]) -> usize {
+fn estimate_total_size(files: &[(&[u8], &[u8])], font: Option<&BitmapFont>) -> usize {
     let mut total = 0;
     for (name, body) in files {
         // ZIP header: 30 bytes + name length + padding estimate
@@ -70,21 +204,46 @@ fn estimate_total_size(files: &[(&[u8], &[u8])]) -> usize {
         total += body.len();
         total += (body.len() / 36 + 1) * 4;
     }
+    // Add label overhead estimate based on font
+    if let Some(f) = font {
+        let estimated_width = (total.max(100) as f64).sqrt() as usize;
+        let label_rows = label_rows_for_font(f);
+        total += files.len() * label_rows * estimated_width.max(BASE_MIN_ROW_WIDTH);
+    }
     // Minimum reasonable size
     total.max(100)
 }
 
+/// Round up to the nearest multiple of ROW_WIDTH_ALIGNMENT.
+fn align_to_row_width(value: usize) -> usize {
+    ((value + ROW_WIDTH_ALIGNMENT - 1) / ROW_WIDTH_ALIGNMENT) * ROW_WIDTH_ALIGNMENT
+}
+
 /// Calculate optimal row width for approximately square images.
 /// Returns width such that height >= width (portrait/square orientation).
-fn calculate_row_width(total_data_estimate: usize) -> usize {
+/// Width is always a multiple of ROW_WIDTH_ALIGNMENT (64 bytes).
+///
+/// The `min_width` parameter ensures the row is wide enough to fit ZIP headers
+/// without spanning multiple rows (which would corrupt them with filter bytes).
+fn calculate_row_width(total_data_estimate: usize, min_width: usize) -> usize {
     // For height >= width, we need: total_data / width >= width
     // Therefore: width <= sqrt(total_data)
     // Using floor ensures height >= width
     let ideal = (total_data_estimate as f64).sqrt();
     let width = ideal.floor() as usize;
 
-    // Clamp to minimum safe width
-    width.max(MIN_ROW_WIDTH)
+    // Clamp to minimum safe width and align to ROW_WIDTH_ALIGNMENT
+    align_to_row_width(width.max(min_width))
+}
+
+/// Calculate minimum row width needed for a set of files.
+/// Ensures ZIP local file headers (30 bytes + filename) fit in one row.
+/// Returns a value aligned to ROW_WIDTH_ALIGNMENT.
+fn min_row_width_for_files(files: &[(&[u8], &[u8])]) -> usize {
+    let longest_filename = files.iter().map(|(name, _)| name.len()).max().unwrap_or(0);
+    // Header is 30 bytes + filename; add 4 bytes padding for safety
+    let min_for_headers = 30 + longest_filename + 4;
+    align_to_row_width(min_for_headers.max(BASE_MIN_ROW_WIDTH))
 }
 
 /// Information about a file entry.
@@ -105,19 +264,43 @@ pub fn build_polyglot(
     color_mode: ColorMode,
     palette: Option<&[u8]>,
 ) -> Vec<u8> {
+    // Calculate minimum row width based on filename lengths
+    let min_width = min_row_width_for_files(files);
+
+    // Calculate total content size to select appropriate font
+    let total_content_size: usize = files.iter().map(|(_, body)| body.len()).sum();
+
+    // Select font based on content size (None if too large for labels)
+    let font = select_font(total_content_size);
+
     // Two-pass approach for optimal dimensions:
     // Pass 1: Build with estimated width to get actual data size
     // Pass 2: Rebuild with width calculated from actual size
 
     // Pass 1: Use estimate for initial build
-    let estimated_size = estimate_total_size(files);
-    let initial_width = calculate_row_width(estimated_size);
-    let (initial_data, _, _) = build_aligned_data(files, initial_width);
+    let estimated_size = estimate_total_size(files, font);
+    let initial_width = calculate_row_width(estimated_size, min_width);
+    let (initial_data, _, _) = build_aligned_data(files, initial_width, font);
 
     // Pass 2: Calculate optimal width from actual size, rebuild
     let actual_size = initial_data.len();
-    let row_width = calculate_row_width(actual_size);
-    let (pixel_data, entry_infos, final_block_rows) = build_aligned_data(files, row_width);
+    let row_width = calculate_row_width(actual_size, min_width);
+    let (pixel_data, entry_infos, final_block_rows) = build_aligned_data(files, row_width, font);
+
+    // Check if height exceeds limit and retry without labels if needed
+    let height = if pixel_data.is_empty() { 1 } else { (pixel_data.len() + row_width - 1) / row_width };
+    let (pixel_data, entry_infos, final_block_rows, row_width) = if font.is_some() && height > MAX_HEIGHT_WITH_LABELS {
+        // Rebuild without labels
+        let estimated_size = estimate_total_size(files, None);
+        let initial_width = calculate_row_width(estimated_size, min_width);
+        let (initial_data, _, _) = build_aligned_data(files, initial_width, None);
+        let actual_size = initial_data.len();
+        let row_width = calculate_row_width(actual_size, min_width);
+        let (pixel_data, entry_infos, final_block_rows) = build_aligned_data(files, row_width, None);
+        (pixel_data, entry_infos, final_block_rows, row_width)
+    } else {
+        (pixel_data, entry_infos, final_block_rows, row_width)
+    };
 
     // Step 2: Calculate PNG dimensions
     let height = if pixel_data.is_empty() { 1 } else { (pixel_data.len() + row_width - 1) / row_width };
@@ -225,6 +408,7 @@ fn next_boundary_aligned_pos(current_data_pos: usize, row_width: usize) -> usize
 fn build_aligned_data(
     files: &[(&[u8], &[u8])],
     row_width: usize,
+    font: Option<&BitmapFont>,
 ) -> (Vec<u8>, Vec<(Vec<u8>, Vec<u8>, usize, usize)>, HashSet<usize>) {
     let data_per_block = row_width - 4;
     let filtered_row_size = row_width + 1;
@@ -241,13 +425,16 @@ fn build_aligned_data(
         let num_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
         let file_data_size = header_size + extra_len_estimate + num_blocks * row_width;
 
+        // Add label size if font is specified
+        let label_size = font.map(|f| label_rows_for_font(f) * row_width).unwrap_or(0);
+
         // Align to row boundary
         let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
         let mut target_pos = data.len() + padding_to_row;
 
-        // Check if file would cross an IDAT boundary
+        // Check if file (including label) would cross an IDAT boundary
         let filtered_start = data_to_filtered_pos(target_pos, row_width);
-        let filtered_end = data_to_filtered_pos(target_pos + file_data_size, row_width);
+        let filtered_end = data_to_filtered_pos(target_pos + label_size + file_data_size, row_width);
 
         if crosses_idat_boundary(filtered_start, filtered_end) {
             // File would cross a boundary; push it to start after the boundary
@@ -256,6 +443,13 @@ fn build_aligned_data(
 
         // Pad to the target position
         data.resize(target_pos, 0);
+
+        // Insert filename label if font is specified
+        if let Some(f) = font {
+            let label = render_filename_label(name, row_width, f);
+            data.extend_from_slice(&label);
+        }
+
         let entry_start = data.len();
 
         // Recalculate extra field size (may differ if position changed)
@@ -434,16 +628,40 @@ mod tests {
 
     #[test]
     fn test_width_calculation() {
-        // Small content should get minimum width
-        assert_eq!(calculate_row_width(100), MIN_ROW_WIDTH);
+        // Small content should get minimum width (aligned to 64)
+        assert_eq!(calculate_row_width(100, BASE_MIN_ROW_WIDTH), BASE_MIN_ROW_WIDTH);
 
-        // 10KB: sqrt(10000) = 100
-        let w = calculate_row_width(10_000);
-        assert_eq!(w, 100, "Expected 100, got {}", w);
+        // 10KB: sqrt(10000) = 100 → aligned to 128
+        let w = calculate_row_width(10_000, BASE_MIN_ROW_WIDTH);
+        assert_eq!(w, 128, "Expected 128 (100 aligned to 64), got {}", w);
 
-        // 40KB: sqrt(40000) ≈ 200
-        let w = calculate_row_width(40_000);
-        assert_eq!(w, 200, "Expected 200, got {}", w);
+        // 40KB: sqrt(40000) ≈ 200 → aligned to 256
+        let w = calculate_row_width(40_000, BASE_MIN_ROW_WIDTH);
+        assert_eq!(w, 256, "Expected 256 (200 aligned to 64), got {}", w);
+
+        // With larger min_width requirement (e.g., long filename) → aligned to 64
+        let w = calculate_row_width(100, 60);
+        assert_eq!(w, 64, "Expected min_width of 64 (60 aligned), got {}", w);
+
+        // Verify alignment
+        assert_eq!(w % ROW_WIDTH_ALIGNMENT, 0, "Width should be aligned to {}", ROW_WIDTH_ALIGNMENT);
+    }
+
+    #[test]
+    fn test_min_row_width_for_files() {
+        // Short filenames - returns BASE_MIN_ROW_WIDTH (64)
+        let files = vec![(b"a.txt".as_ref(), b"data".as_ref())];
+        let min = min_row_width_for_files(&files);
+        assert_eq!(min, BASE_MIN_ROW_WIDTH); // 30 + 5 + 4 = 39 < 64, so 64
+
+        // Long filename that requires wider rows
+        let files = vec![(b"this-is-a-very-long-filename.txt".as_ref(), b"data".as_ref())];
+        let min = min_row_width_for_files(&files);
+        // 30 + 32 + 4 = 66 → aligned to 128
+        assert_eq!(min, 128, "Expected 128 (66 aligned to 64), got {}", min);
+
+        // Verify alignment
+        assert_eq!(min % ROW_WIDTH_ALIGNMENT, 0, "Width should be aligned to {}", ROW_WIDTH_ALIGNMENT);
     }
 
     #[test]
