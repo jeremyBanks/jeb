@@ -1,6 +1,0 @@
-# cargo +nightly fmt
-unstable_features = true
-
-group_imports = "StdExternalCrate"
-imports_granularity = "Crate"
-wrap_comments = true
