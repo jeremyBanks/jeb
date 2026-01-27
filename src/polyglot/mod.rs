@@ -128,7 +128,8 @@ fn label_rows_for_font(font: &BitmapFont) -> usize {
 }
 
 /// Render filename label rows using the specified font.
-/// If the name is too long, it's right-aligned (truncated from the left).
+/// If the name is too long, trailing blank pixels are trimmed first,
+/// then remaining overflow is truncated from the left (right-aligned).
 fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont) -> Vec<u8> {
     let label_rows = label_rows_for_font(font);
     let mut result = Vec::with_capacity(label_rows * row_width);
@@ -142,9 +143,10 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont) -> Ve
         .map(|&c| font.get_glyph(c))
         .collect();
 
-    // Calculate total width with kerning
+    // Calculate total width with kerning and find actual rendered extent
     let mut total_width = 0i32;
     let mut char_positions: Vec<(usize, i32)> = Vec::new(); // (char_index, x_position)
+    let mut rightmost_pixel = 0i32; // Track actual rightmost rendered pixel
 
     for (i, glyph_opt) in glyphs.iter().enumerate() {
         if let Some(glyph) = glyph_opt {
@@ -156,18 +158,30 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont) -> Ve
                 }
             }
             char_positions.push((i, total_width));
+
+            // Find rightmost pixel in this glyph
+            for row in glyph.iter() {
+                for (px, &pixel_on) in row.iter().enumerate() {
+                    if pixel_on {
+                        rightmost_pixel = rightmost_pixel.max(total_width + px as i32 + 1);
+                    }
+                }
+            }
+
             total_width += font.width as i32;
         }
     }
-    let total_width = total_width.max(0) as usize;
+
+    // Use actual rendered width (excluding trailing blank pixels)
+    let actual_width = rightmost_pixel.max(0) as usize;
 
     // Calculate starting x position (right-align if too long)
     let available_width = row_width.saturating_sub(2); // 1 pixel margin on each side
-    let start_x: i32 = if total_width <= available_width {
+    let start_x: i32 = if actual_width <= available_width {
         1 // Left-aligned with 1 pixel margin
     } else {
         // Right-aligned: truncate from left
-        (row_width as i32 - total_width as i32 - 1).max(1 - total_width as i32)
+        (row_width as i32 - actual_width as i32 - 1).max(1 - actual_width as i32)
     };
 
     // Render text rows

@@ -105,9 +105,13 @@ const RGB_THRESHOLD: usize = 1024 * 1024;
 /// Threshold for switching from RGB to RGBA (3 MiB)
 const RGBA_THRESHOLD: usize = 3 * 1024 * 1024;
 
-/// All available palettes for random selection
+/// All available palettes for random selection.
+/// Filtered to only include palettes with good contrast (luminance diff >= 150)
+/// between first and last colors, ensuring readable filename labels.
+/// Excludes: TURBO, and all diverging palettes (BAM, VIK, BROC, CORK, ROMA,
+/// CURL, DIFF, TARN, DELTA, BERLIN, LISBON, TOFINO, VANIMO, BALANCE).
 static ALL_PALETTES: &[&[u8]] = &[
-    // Sequential
+    // Sequential (high contrast)
     palettes::oceanic::AMP, palettes::oceanic::ICE, palettes::oceanic::OXY,
     palettes::crameri::BUDA, palettes::crameri::NUUK, palettes::crameri::OSLO,
     palettes::oceanic::DEEP, palettes::oceanic::RAIN,
@@ -115,19 +119,13 @@ static ALL_PALETTES: &[&[u8]] = &[
     palettes::crameri::IMOLA, palettes::crameri::LAPAZ, palettes::crameri::TOKYO,
     palettes::crameri::TURKU, palettes::oceanic::ALGAE, palettes::oceanic::DENSE,
     palettes::oceanic::SOLAR, palettes::oceanic::SPEED, palettes::oceanic::TEMPO,
-    palettes::singles::TURBO, palettes::viridis::MAGMA, palettes::crameri::BAMAKO,
+    palettes::viridis::MAGMA, palettes::crameri::BAMAKO,
     palettes::crameri::BATLOW, palettes::crameri::BILBAO, palettes::crameri::HAWAII,
     palettes::oceanic::HALINE, palettes::oceanic::MATTER, palettes::oceanic::TURBID,
     palettes::viridis::PLASMA, palettes::crameri::LAJOLLA, palettes::oceanic::THERMAL,
     palettes::singles::CIVIDIS, palettes::viridis::INFERNO, palettes::viridis::VIRIDIS,
     palettes::crameri::BATLOW_K, palettes::crameri::BATLOW_W,
-    // Diverging
-    palettes::crameri::BAM, palettes::crameri::VIK, palettes::crameri::BROC,
-    palettes::crameri::CORK, palettes::crameri::ROMA, palettes::oceanic::CURL,
-    palettes::oceanic::DIFF, palettes::oceanic::TARN, palettes::oceanic::DELTA,
-    palettes::crameri::BERLIN, palettes::crameri::LISBON, palettes::crameri::TOFINO,
-    palettes::crameri::VANIMO, palettes::oceanic::BALANCE,
-    // Dual-sequential
+    // Dual-sequential (high contrast)
     palettes::oceanic::TOPO, palettes::crameri::FES, palettes::crameri::OLERON,
     palettes::crameri::BUKAVU,
 ];
