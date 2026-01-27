@@ -585,26 +585,37 @@ fn main() -> Result<(), panic> {
         }
     }
 
-    // === SAMPLE 39: Incrementing bytes ===
+    // === SAMPLE 39: Compressed library files (.rlib) ===
     {
         let mut files = IndexMap::new();
-        for i in 0..8 {
-            let content: Vec<u8> = (0..10000).map(|j| (j % 256) as u8).collect();
-            files.insert(format!("incr_{}.bin", i).into_bytes(), content);
+        collect_glob(&mut files, "target/debug/deps", &["*.rlib"], Some(50_000), Some("rlib/"));
+        if files.is_empty() {
+            // Fallback: try release deps
+            collect_glob(&mut files, "target/release/deps", &["*.rlib"], Some(50_000), Some("rlib/"));
         }
-        generated.push(save_polyglot(output_dir, "incrementing", files)?);
+        generated.push(save_polyglot(output_dir, "rlib_files", files)?);
     }
 
-    // === SAMPLE 40: Empty-ish files ===
+    // === SAMPLE 40: Smallest source files ===
     {
         let mut files = IndexMap::new();
-        files.insert(b"one_byte.txt".to_vec(), b"X".to_vec());
-        files.insert(b"two_bytes.txt".to_vec(), b"XY".to_vec());
-        files.insert(b"three_bytes.txt".to_vec(), b"XYZ".to_vec());
-        for i in 1..=10 {
-            files.insert(format!("bytes_{:02}.txt", i).into_bytes(), vec![b'.' ; i]);
+        // Find the smallest source files
+        let mut entries: Vec<_> = walkdir::WalkDir::new("src")
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file())
+            .filter(|e| e.path().extension().map(|x| x == "rs").unwrap_or(false))
+            .filter_map(|e| {
+                fs::metadata(e.path()).ok().map(|m| (e, m.len()))
+            })
+            .collect();
+        entries.sort_by_key(|(_, size)| *size);
+        for (entry, _) in entries.into_iter().take(15) {
+            if let Ok(data) = fs::read(entry.path()) {
+                files.insert(entry.path().to_string_lossy().into_owned().into_bytes(), data);
+            }
         }
-        generated.push(save_polyglot(output_dir, "minimal_files", files)?);
+        generated.push(save_polyglot(output_dir, "smallest_sources", files)?);
     }
 
     // === NETWORK SAMPLES (optional) ===
