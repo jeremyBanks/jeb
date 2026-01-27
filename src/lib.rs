@@ -111,7 +111,7 @@ pub fn zipng(files: &Files) -> Vec<u8> {
         &file_list,
         0,  // auto width
         crate::png::BitDepth::EightBit,
-        crate::png::ColorType::Indexed,
+        crate::png::ColorType::Luminance,  // Grayscale - no palette needed
         None,
     )
 }

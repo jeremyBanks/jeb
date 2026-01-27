@@ -25,6 +25,11 @@
 //! automatically padded to avoid crossing block boundaries, allowing
 //! unlimited total content (individual files limited to ~60KB each).
 
+#[cfg(test)]
+mod validate;
+#[cfg(test)]
+pub use validate::{validate_polyglot, assert_valid_polyglot, ValidationResult};
+
 use std::collections::HashSet;
 use std::ops::Not;
 
