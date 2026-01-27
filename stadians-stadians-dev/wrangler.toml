@@ -1,0 +1,6 @@
+name = "stadians"
+type = "webpack"
+account_id = "52f5c983bffe028f5c13c48d777ca7f0"
+zone_id = "9410e5d9b49a5aecf258311524ff3cb9"
+routes = ["stadia.run/*"]
+webpack_config = "webpack.config.cjs"

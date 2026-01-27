@@ -1,0 +1,9 @@
+*.bak
+*.ignore*
+*.sqlite
+*.sqlite*
+*.swp
+*.wasm
+/_chrome/target/
+/canvaskit.wasm
+/dist
