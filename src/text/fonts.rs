@@ -1,5 +1,5 @@
 //! Built-in bitmap fonts.
-use {crate::Font, once_cell::sync::Lazy};
+use {super::Font, once_cell::sync::Lazy};
 
 macro_rules! pub_use_lazy_font {
     ($($path:ident as $name:ident),* $(,)?) => {

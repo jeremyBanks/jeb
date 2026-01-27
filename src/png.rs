@@ -4,9 +4,12 @@ pub mod write_png;
 pub mod palettes;
 
 mod data;
+#[cfg(feature = "dev-dependencies")]
 mod dithering;
-mod sizes;
+pub mod sizes;
 mod to_png;
 
 #[doc(inline)]
-pub use self::{data::*, dithering::*, sizes::*, to_png::*};
+pub use self::{data::*, sizes::*, to_png::*};
+#[cfg(feature = "dev-dependencies")]
+pub use self::dithering::*;

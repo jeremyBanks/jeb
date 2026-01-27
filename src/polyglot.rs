@@ -29,6 +29,8 @@ use std::collections::HashSet;
 use std::ops::Not;
 
 use crate::checksums::{adler32, crc32};
+use crate::io::{OutputBuffer, output_buffer};
+use crate::png::write_png::{write_png_header, write_png_chunk, write_png_footer};
 
 // Re-export types from png module with compatibility aliases
 pub use crate::png::{BitDepth, ColorType};
@@ -122,11 +124,12 @@ pub fn build_polyglot(
     let effective_width = (row_width * 8) / bits_per_pixel;
 
     // Step 3: Build PNG
-    let mut output = Vec::new();
+    let mut output = output_buffer();
     write_png_header(&mut output, effective_width as u32, height as u32, bit_depth, color_mode);
 
     if let Some(p) = palette {
-        write_png_chunk(&mut output, b"PLTE", p);
+        let plte_data = OutputBuffer::without_tag(p);
+        write_png_chunk(&mut output, b"PLTE", &plte_data);
     }
 
     // Calculate offset where filtered pixel data starts in the file
@@ -177,7 +180,7 @@ pub fn build_polyglot(
         cd_start as u32,
     );
 
-    output
+    output.into_bytes()
 }
 
 /// Convert data position to filtered position (accounts for filter bytes).
@@ -356,8 +359,8 @@ fn add_smart_filter_bytes(data: &[u8], row_width: usize, final_rows: &HashSet<us
 }
 
 /// Write IDAT chunk with stored deflate.
-fn write_idat_stored(buffer: &mut Vec<u8>, filtered_data: &[u8]) {
-    let mut idat_content = Vec::new();
+fn write_idat_stored(buffer: &mut OutputBuffer, filtered_data: &[u8]) {
+    let mut idat_content = output_buffer();
 
     // Zlib header
     let cmf: u8 = 0x78;
@@ -373,51 +376,51 @@ fn write_idat_stored(buffer: &mut Vec<u8>, filtered_data: &[u8]) {
     for (i, chunk) in filtered_data.chunks(IDAT_BLOCK_SIZE).enumerate() {
         let is_last = i == filtered_data.chunks(IDAT_BLOCK_SIZE).count() - 1;
         idat_content.push(if is_last { 0x01 } else { 0x00 });
-        idat_content.extend_from_slice(&(chunk.len() as u16).to_le_bytes());
-        idat_content.extend_from_slice(&(chunk.len() as u16).not().to_le_bytes());
-        idat_content.extend_from_slice(chunk);
+        idat_content += &(chunk.len() as u16).to_le_bytes();
+        idat_content += &(chunk.len() as u16).not().to_le_bytes();
+        idat_content += chunk;
     }
 
     // Adler-32
-    idat_content.extend_from_slice(&adler32(filtered_data).to_be_bytes());
+    idat_content += &adler32(filtered_data).to_be_bytes();
 
     write_png_chunk(buffer, b"IDAT", &idat_content);
 }
 
 /// Write central directory entries.
-fn write_central_directory(buffer: &mut Vec<u8>, entries: &[FileEntry]) {
+fn write_central_directory(buffer: &mut OutputBuffer, entries: &[FileEntry]) {
     for entry in entries {
-        buffer.extend_from_slice(b"PK\x01\x02");
-        buffer.extend_from_slice(&20_u16.to_le_bytes()); // version made by
-        buffer.extend_from_slice(&20_u16.to_le_bytes()); // version needed
-        buffer.extend_from_slice(&0_u16.to_le_bytes());  // flags
-        buffer.extend_from_slice(&8_u16.to_le_bytes());  // compression
-        buffer.extend_from_slice(&0_u16.to_le_bytes());  // mod time
-        buffer.extend_from_slice(&0_u16.to_le_bytes());  // mod date
-        buffer.extend_from_slice(&entry.crc.to_le_bytes());
-        buffer.extend_from_slice(&entry.compressed_size.to_le_bytes());
-        buffer.extend_from_slice(&(entry.body.len() as u32).to_le_bytes());
-        buffer.extend_from_slice(&(entry.name.len() as u16).to_le_bytes());
-        buffer.extend_from_slice(&0_u16.to_le_bytes());  // extra len
-        buffer.extend_from_slice(&0_u16.to_le_bytes());  // comment len
-        buffer.extend_from_slice(&0_u16.to_le_bytes());  // disk number
-        buffer.extend_from_slice(&0_u16.to_le_bytes());  // internal attrs
-        buffer.extend_from_slice(&0_u32.to_le_bytes());  // external attrs
-        buffer.extend_from_slice(&entry.header_offset.to_le_bytes());
-        buffer.extend_from_slice(&entry.name);
+        *buffer += b"PK\x01\x02";
+        *buffer += &20_u16.to_le_bytes(); // version made by
+        *buffer += &20_u16.to_le_bytes(); // version needed
+        *buffer += &0_u16.to_le_bytes();  // flags
+        *buffer += &8_u16.to_le_bytes();  // compression
+        *buffer += &0_u16.to_le_bytes();  // mod time
+        *buffer += &0_u16.to_le_bytes();  // mod date
+        *buffer += &entry.crc.to_le_bytes();
+        *buffer += &entry.compressed_size.to_le_bytes();
+        *buffer += &(entry.body.len() as u32).to_le_bytes();
+        *buffer += &(entry.name.len() as u16).to_le_bytes();
+        *buffer += &0_u16.to_le_bytes();  // extra len
+        *buffer += &0_u16.to_le_bytes();  // comment len
+        *buffer += &0_u16.to_le_bytes();  // disk number
+        *buffer += &0_u16.to_le_bytes();  // internal attrs
+        *buffer += &0_u32.to_le_bytes();  // external attrs
+        *buffer += &entry.header_offset.to_le_bytes();
+        *buffer += entry.name.as_slice();
     }
 }
 
 /// Write End of Central Directory record.
-fn write_eocd(buffer: &mut Vec<u8>, num_entries: u16, cd_size: u32, cd_offset: u32) {
-    buffer.extend_from_slice(b"PK\x05\x06");
-    buffer.extend_from_slice(&0_u16.to_le_bytes()); // disk number
-    buffer.extend_from_slice(&0_u16.to_le_bytes()); // disk with CD
-    buffer.extend_from_slice(&num_entries.to_le_bytes());
-    buffer.extend_from_slice(&num_entries.to_le_bytes());
-    buffer.extend_from_slice(&cd_size.to_le_bytes());
-    buffer.extend_from_slice(&cd_offset.to_le_bytes());
-    buffer.extend_from_slice(&0_u16.to_le_bytes()); // comment len
+fn write_eocd(buffer: &mut OutputBuffer, num_entries: u16, cd_size: u32, cd_offset: u32) {
+    *buffer += b"PK\x05\x06";
+    *buffer += &0_u16.to_le_bytes(); // disk number
+    *buffer += &0_u16.to_le_bytes(); // disk with CD
+    *buffer += &num_entries.to_le_bytes();
+    *buffer += &num_entries.to_le_bytes();
+    *buffer += &cd_size.to_le_bytes();
+    *buffer += &cd_offset.to_le_bytes();
+    *buffer += &0_u16.to_le_bytes(); // comment len
 }
 
 #[cfg(test)]

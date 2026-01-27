@@ -10,6 +10,7 @@ version = "0.20221122.0-dev.4"
 [dependencies]
 # Required Dependencies
 bitvec = "1.0.1"
+indexmap = "2"
 bstr = "1.0.1"
 bytemuck = { version = "1.12.3", features = ["extern_crate_alloc", "min_const_generics"] }
 crc = "3.0.0"

@@ -19,6 +19,16 @@ pub mod io;
 pub mod opstructs;
 pub mod zlib;
 
+// Re-export commonly used items at crate root for internal use
+pub use checksums::{adler32, crc32};
+pub use generic::{default, never, panic, PhantomType};
+pub use io::{OutputBuffer, output_buffer, Offset};
+pub use deflate::{write_deflate, DeflateMode};
+pub use zlib::write_zlib;
+
+// Constants
+pub const PNG_HEADER_SIZE: usize = 33;  // 8 (sig) + 25 (IHDR chunk)
+
 // PNG module with palettes
 pub mod png;
 
@@ -29,8 +39,7 @@ pub mod text;
 pub mod zip;
 
 // ZipNG module (renamed from zipng to avoid crate name collision)
-#[path = "zipng_impl.rs"]
-pub mod zipng_core;
+pub mod zipng_impl;
 
 // Polyglot module (our main work)
 pub mod polyglot;
@@ -45,9 +54,19 @@ pub mod padding;
 #[cfg(feature = "dev-dependencies")]
 pub mod dev;
 
-// Re-export key types
-pub use crate::png::{BitDepth, ColorType};
+// Re-export key types from png
+pub use crate::png::{BitDepth, ColorType, Png, ToPng};
 pub use crate::png::palettes;
+pub use crate::png::sizes::{PNG_CHUNK_PREFIX_SIZE, PNG_CHUNK_SUFFIX_SIZE, PNG_CHUNK_WRAPPER_SIZE};
+pub use crate::png::write_png;
+// Re-export ColorType variants for convenience
+pub use crate::png::ColorType::{Luminance, LuminanceAlpha, RedGreenBlue, RedGreenBlueAlpha, Indexed};
+
+// Re-export key types from zip
+pub use crate::zip::{Zip, ToZip, ZipConfiguration, ZipEntry, ZipEntryComparison};
+
+// Re-export Font from font module
+pub use crate::font::Font;
 
 /// Unstable implementation module
 pub mod r#impl {
