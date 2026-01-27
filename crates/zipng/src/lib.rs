@@ -1,219 +1,122 @@
 #![feature(doc_cfg)]
-//! A limited but fun encoder for ZIP-inclusive-or-PNG files.
-//!
-//! This crate doesn't implement any compression. Both for simplicity, and
-//! because in most cases it will be most efficient to compress the resulting
-//! ZIP as a whole, rather than compressing the constituent parts individually.
-//! We provide some wrapper functions doing so with `brotli` for convenience.
+#![doc = include_str!("../README.md")]
+#![allow(
+    dead_code,
+    unreachable_code,
+    unused_variables,
+    unused_crate_dependencies,
+    unused_imports,
+    missing_docs,
+)]
 
-use derive_more::From;
-use derive_more::Into;
-use generic::default;
-use generic::noop_mut;
 use indexmap::IndexMap;
-use png::BitDepth;
-use png::ColorMode;
-use png::EightBit;
-use png::FourBit;
-use png::Indexed;
-use png::Lightness;
-use png::OneBit;
-use png::RedGreenBlue;
-use png::RedGreenBlueAlpha;
-use png::TwoBit;
-use png::PALLETTE_8_BIT_DATA;
-use tap::Tap;
-use tracing::warn;
 
-#[doc(hidden)]
-use crate as zipng;
-#[doc(hidden)]
-pub use crate::zipng::r#impl::*;
+// Core modules - make them public for the impl module
+pub mod checksums;
+pub mod deflate;
+pub mod generic;
+pub mod io;
+pub mod opstructs;
+pub mod zlib;
 
+// Re-export commonly used items at crate root for internal use
+pub use checksums::{adler32, crc32};
+pub use generic::{default, never, panic, PhantomType};
+pub use io::{OutputBuffer, output_buffer, Offset};
+pub use deflate::{write_deflate, DeflateMode};
+pub use zlib::write_zlib;
+
+// Constants
+pub const PNG_HEADER_SIZE: usize = 33;  // 8 (sig) + 25 (IHDR chunk)
+
+// PNG module with palettes
+pub mod png;
+
+// Text/fonts module
+pub mod text;
+
+// ZIP module
+pub mod zip;
+
+// ZipNG module (renamed from zipng to avoid crate name collision)
+pub mod zipng_impl;
+
+// Polyglot module (our main work)
+pub mod polyglot;
+
+#[cfg(feature = "brotli")]
+pub mod brotli;
+
+// Legacy modules
+pub mod font;
+pub mod padding;
+
+#[cfg(feature = "dev-dependencies")]
+pub mod dev;
+
+// Re-export key types from png
+pub use crate::png::{BitDepth, ColorType, Png, ToPng};
+pub use crate::png::palettes;
+pub use crate::png::sizes::{PNG_CHUNK_PREFIX_SIZE, PNG_CHUNK_SUFFIX_SIZE, PNG_CHUNK_WRAPPER_SIZE};
+pub use crate::png::write_png;
+// Re-export ColorType variants for convenience
+pub use crate::png::ColorType::{Luminance, LuminanceAlpha, RedGreenBlue, RedGreenBlueAlpha, Indexed};
+// Re-export BitDepth variants for convenience
+pub use crate::png::BitDepth::{OneBit, TwoBit, FourBit, EightBit, SixteenBit};
+
+// Re-export key types from zip
+pub use crate::zip::{Zip, ToZip, ZipConfiguration, ZipEntry, ZipEntryComparison};
+
+// Re-export Font from font module
+pub use crate::font::Font;
+
+/// Unstable implementation module
 pub mod r#impl {
-    //! Unstable implementation details. For entertainment use only.
-    //!
-    //! This isn't actually behind a feature gate, but you'll need to import it
-    //! as `zipng::r#impl` because `impl` is a keyword.
+    pub use crate::checksums;
+    pub use crate::deflate;
+    pub use crate::font;
+    pub use crate::generic;
+    pub use crate::padding;
+    pub use crate::png;
+    pub use crate::polyglot;
+    pub use crate::text;
+    pub use crate::zip;
+    pub use crate::zlib;
 
-    #![doc(cfg(all(internal, unstable)))]
-    #![path = "."]
-    #![allow(missing_docs)]
-    pub mod brotli;
-    pub mod checksums;
-    pub mod deflate;
-    pub mod generic;
-    pub mod padding;
-    pub mod png;
-    pub mod zip;
-    pub mod zlib;
+    #[cfg(feature = "brotli")]
+    pub use crate::brotli;
 }
 
-/// Creates a zip file.
-pub fn zip(files: &Files) -> Vec<u8> {
-    zip_with(files, noop_mut)
-}
-
-/// Creates a zip file using custom options.
-pub fn zip_with(files: &Files, opts: Opts<ZipOptions>) -> Vec<u8> {
-    let _opts = ZipOptions::default().tap_mut(opts);
-    zip::zip(files.files.iter().map(|(k, v)| (k.as_ref(), v.as_ref())))
-}
-
-/// Creates a "transparent zipng" zip file with the given files, in the given
-/// order.
-pub fn zipng(files: &Files) -> Vec<u8> {
-    zipng_with(files, noop_mut)
-}
-
-type Opts<Options> = fn(&mut Options);
-
-/// Creates a "transparent zipng" zip file using custom options, with the
-/// given files, in the given order.1
-pub fn zipng_with(files: &Files, opts: Opts<ZipngOptions>) -> Vec<u8> {
-    let opts = ZipngOptions::default_for_data(&[]).tap_mut(opts);
-    todo!()
-}
-/// Creates a zip file wherein all files are stored un-compressed, directly in
-/// the zip file as-is.
-pub fn sliceable_zip(files: &Files) -> Vec<u8> {
-    sliceable_zip_with(files, noop_mut)
-}
-
-/// Creates a zip file using custom options wherein all files are stored
-/// un-compressed, directly in the zip file as-is.
-pub fn sliceable_zip_with(files: &Files, opts: Opts<ZipOptions>) -> Vec<u8> {
-    let opts = ZipOptions::default().tap_mut(opts);
-    todo!()
-}
-
-/// Creates a PNG file with the given image data.
-///
-/// If you have a real image, you probably want to use [`png_with`] instead
-/// so you can specify the actual image dimensions and color information,
-/// instead of using this function's arbitrary choices.
-pub fn png(body: &[u8]) -> Vec<u8> {
-    png_with(body, noop_mut)
-}
-
-/// Creates a PNG file with the given image data and options.
-pub fn png_with(body: &[u8], opts: Opts<PngOptions>) -> Vec<u8> {
-    let opts = PngOptions::default().tap_mut(opts);
-    todo!()
-}
-
-/// Creates a "transparent zipng" zip file with the given files, in the given
-/// order, and then compresses it with `brotli`.
-pub fn zipngbr(files: &Files) -> Vec<u8> {
-    zipngbr_with(files, noop_mut)
-}
-
-/// Creates a "transparent zipng" zip file using custom options, with the
-/// given files, in the given order, and then compresses it with `brotli`.
-pub fn zipngbr_with(files: &Files, opts: Opts<ZipngBrOptions>) -> Vec<u8> {
-    let _opts = ZipngBrOptions::default().tap_mut(opts);
-    brotli::compress(zipng(files).as_slice()).to_vec()
-}
-
-/// Files to be included in a zip archive.
-#[derive(Debug, Default, Clone, PartialEq, Eq, From, Into)]
+/// Files for a zip archive
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Files {
-    files: IndexMap<Vec<u8>, Vec<u8>>,
+    pub files: IndexMap<Vec<u8>, Vec<u8>>,
 }
 
-/// Zip archive options.
-#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[non_exhaustive]
-pub struct ZipOptions {}
-
-/// PNG encoding options.
-#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[non_exhaustive]
-pub struct PngOptions {
-    pub width: usize,
-    pub max_height: usize,
-    pub bit_depth: BitDepth,
-    pub color_mode: ColorMode,
-    pub color_palette: Option<Vec<u8>>,
-}
-
-/// Brotli compression options.
-#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[non_exhaustive]
-pub struct BrotliOptions {}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Into, From)]
-#[non_exhaustive]
-pub struct ZipngOptions {
-    pub png: PngOptions,
-    pub zip: ZipOptions,
-}
-
-impl ZipngOptions {
-    pub fn default_for_data(data: &[u8]) -> Self {
-        let mut opts = Self::default();
-
-        opts.png.bit_depth = EightBit;
-        opts.png.color_mode = Indexed;
-        opts.png.color_palette = Some(PALLETTE_8_BIT_DATA.to_vec());
-        opts.png.max_height = 8192;
-
-        match data.len() {
-            len @ 0x0..=0x20 => {
-                warn!("zip data size is weirdly low ({len} bytes)");
-                opts.png.color_palette = None;
-                opts.png.bit_depth = OneBit;
-                opts.png.color_mode = Lightness;
-                opts.png.width = 16;
-            },
-            0x21..=0x100 => {
-                opts.png.color_palette = None;
-                opts.png.bit_depth = TwoBit;
-                opts.png.color_mode = Lightness;
-                opts.png.width = 16;
-            },
-            0x101..=0x200 => {
-                opts.png.width = 16;
-            },
-            0x201..=0x800 => {
-                opts.png.width = 32;
-            },
-            0x801..=0x2000 => {
-                opts.png.width = 64;
-            },
-            0x2001..=0x8000 => {
-                opts.png.width = 128;
-            },
-            0x8001..=0x20000 => {
-                opts.png.width = 256;
-            },
-            0x20001..=0x80000 => {
-                opts.png.width = 512;
-            },
-            0x80001..=0x200000 => {
-                opts.png.width = 1024;
-            },
-            0x200001..=0x800000 => {
-                opts.png.width = 1024;
-                opts.png.color_palette = None;
-                opts.png.color_mode = RedGreenBlue;
-            },
-            len => {
-                opts.png.width = 1024;
-                opts.png.color_palette = None;
-                opts.png.color_mode = RedGreenBlueAlpha;
-                warn!("zip data size is too damn high ({len} bytes)");
-            },
-        }
-
-        opts
+impl From<IndexMap<Vec<u8>, Vec<u8>>> for Files {
+    fn from(files: IndexMap<Vec<u8>, Vec<u8>>) -> Self {
+        Files { files }
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Into, From)]
-#[non_exhaustive]
-pub struct ZipngBrOptions {
-    pub png: PngOptions,
-    pub zip: ZipOptions,
-    pub br: BrotliOptions,
+/// Creates a polyglot PNG+ZIP file
+pub fn zipng(files: &Files) -> Vec<u8> {
+    let file_list: Vec<(&[u8], &[u8])> = files
+        .files
+        .iter()
+        .map(|(k, v)| (k.as_ref(), v.as_ref()))
+        .collect();
+
+    polyglot::build_polyglot(
+        &file_list,
+        0,  // auto width
+        crate::png::BitDepth::EightBit,
+        crate::png::ColorType::Luminance,  // Grayscale - no palette needed
+        None,
+    )
+}
+
+/// Creates a simple zip file
+pub fn zip(files: &Files) -> Vec<u8> {
+    crate::zip::zip(files.files.iter().map(|(k, v)| (k.as_ref(), v.as_ref())))
 }

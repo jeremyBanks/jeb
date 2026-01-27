@@ -1,52 +1,27 @@
-use std::fmt::Debug;
-use std::fmt::Display;
-use std::process::ExitCode;
-use std::process::Termination;
-
-use static_assertions::assert_impl_all;
+use {
+    static_assertions::assert_impl_all,
+    std::{
+        fmt::{Debug, Display},
+        process::{ExitCode, Termination},
+    },
+};
 
 pub fn default<T>() -> T
 where T: Default {
     T::default()
 }
 
-/// equivalent to [`core::mem::drop`]
-pub fn noop_move<T>(_x: T) {}
-/// equivalent to [`core::convert::identity`]
-pub fn noop_move_move<T>(x: T) -> T {
-    x
-}
-pub fn noop_ref<T>(_x: &T) {}
-pub fn noop_ref_ref<T>(x: &T) -> &T {
-    x
-}
-pub fn noop_mut<T>(_x: &mut T) {}
-pub fn noop_mut_mut<T>(x: &mut T) -> &mut T {
-    x
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[allow(non_camel_case_types)]
+#[doc(hidden)]
 /// An uninhabited [`!`]-like "never" type, with trait implementations as needed
 /// for convenience within this crate's types.
 pub enum never {}
-
 assert_impl_all!(never: Send, Sync);
-assert_impl_all!(panic: Send, Sync);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[allow(non_camel_case_types)]
-/// An uninhabited [`!`]-like "never" type that provides a panicking
-/// implementation of `From` for any `Display + Debug` error type,
-/// with trait implementations as needed for convenience within this crate's.
-pub enum panic {}
-
-impl<Err> From<Err> for panic
-where Err: Display + Debug
-{
-    #[track_caller]
-    fn from(error: Err) -> Self {
-        panic!("{error}")
+impl Display for never {
+    fn fmt(&self, _: &mut fmt::Formatter<'_>) -> fmt::Result {
+        unreachable!()
     }
 }
 
@@ -62,9 +37,27 @@ impl From<panic> for never {
     }
 }
 
-impl From<never> for panic {
-    fn from(_: never) -> panic {
+impl Termination for never {
+    fn report(self) -> ExitCode {
         unreachable!()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[allow(non_camel_case_types)]
+/// An uninhabited [`!`]-like "never" type that provides a panicking
+/// implementation of `From` for any `Display + Debug` error type,
+/// with trait implementations as needed for convenience within this crate's.
+#[doc(hidden)]
+pub enum panic {}
+assert_impl_all!(panic: Send, Sync);
+
+impl<Err> From<Err> for panic
+where Err: Display + Debug
+{
+    #[track_caller]
+    fn from(error: Err) -> Self {
+        panic!("{error}")
     }
 }
 
@@ -74,22 +67,13 @@ impl Termination for panic {
     }
 }
 
-impl Termination for never {
-    fn report(self) -> ExitCode {
-        unreachable!()
-    }
-}
-
-use std::cmp::Ordering;
-use std::fmt;
-use std::hash::Hash;
-use std::marker::PhantomData;
+use std::{cmp::Ordering, fmt, hash::Hash, marker::PhantomData};
 
 /// This is a convenience wrapper for `PhantomData<fn(T) -> T>`, which
 /// seems to be the right way to defined a `PhantomData` without affecting
 /// either the borrow checker (lifetimes) or the drop checker (ownership,
 /// borrowing).
-pub(crate) struct PhantomType<T: ?Sized>(PhantomData<fn(T) -> T>);
+pub struct PhantomType<T: ?Sized>(PhantomData<fn(T) -> T>);
 
 impl<T: ?Sized> Copy for PhantomType<T> {}
 
@@ -128,13 +112,13 @@ impl<T: ?Sized> PartialOrd for PhantomType<T> {
 }
 
 impl<T: ?Sized> Ord for PhantomType<T> {
-    fn cmp(&self, other: &Self) -> Ordering {
+    fn cmp(&self, _other: &Self) -> Ordering {
         Ordering::Equal
     }
 }
 
 impl<T: ?Sized> Hash for PhantomType<T> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {}
+    fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {}
 }
 
 impl<T: ?Sized> PhantomType<T> {
