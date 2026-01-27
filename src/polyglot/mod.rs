@@ -586,30 +586,26 @@ fn build_aligned_data(
         .map(|(name, body)| calculate_file_size(name, body, row_width, font))
         .collect();
 
-    // Phase 1 & 2: Determine placement order using bin packing
-    let placement_order = plan_placement_order(&file_sizes, row_width);
+    // Phase 1: Bin packing (largest-first best-fit)
+    let mut bucket_assignments = bin_pack_largest_first(files, &file_sizes, row_width);
 
-    // Phase 3: First pass - determine bucket assignments (without spacing)
-    let bucket_assignments = {
-        let mut buckets: Vec<Vec<usize>> = vec![vec![]];
-        let mut simulated_pos = 0usize;
+    // Phase 2: Lexicographic sorting
+    // Sort files within each bucket by filename
+    for bucket in &mut bucket_assignments {
+        bucket.sort_by(|&a, &b| files[a].0.cmp(files[b].0));
+    }
 
-        for &file_idx in &placement_order {
-            let padding = (row_width - (simulated_pos % row_width)) % row_width;
-            let target = simulated_pos + padding;
-
-            if !file_fits_before_boundary(target, file_sizes[file_idx], row_width) {
-                buckets.push(vec![]);
-                simulated_pos = next_boundary_aligned_pos(target, row_width);
-            } else {
-                simulated_pos = target;
-            }
-
-            buckets.last_mut().unwrap().push(file_idx);
-            simulated_pos += file_sizes[file_idx];
-        }
-        buckets
-    };
+    // Sort all buckets except the last one by their first filename
+    // (last bucket stays last because it gets truncated/no spacing)
+    if bucket_assignments.len() > 1 {
+        let last_bucket = bucket_assignments.pop().unwrap();
+        bucket_assignments.sort_by(|a, b| {
+            let first_a = a.first().map(|&i| files[i].0);
+            let first_b = b.first().map(|&i| files[i].0);
+            first_a.cmp(&first_b)
+        });
+        bucket_assignments.push(last_bucket);
+    }
 
     // Phase 4: Calculate spacing for each bucket
     let bucket_spacing = calculate_bucket_spacing(&bucket_assignments, &file_sizes, row_width);
@@ -687,6 +683,7 @@ fn build_aligned_data(
 
 /// Calculate spacing for each bucket.
 /// Full buckets get even spacing with half-weight edges.
+/// First bucket has no leading gap (weight 0 instead of 0.5).
 /// Last bucket gets no spacing (content packed tight).
 fn calculate_bucket_spacing(
     bucket_assignments: &[Vec<usize>],
@@ -701,6 +698,7 @@ fn calculate_bucket_spacing(
     let mut result = Vec::with_capacity(num_buckets);
 
     for (bucket_idx, file_indices) in bucket_assignments.iter().enumerate() {
+        let is_first_bucket = bucket_idx == 0;
         let is_last_bucket = bucket_idx == num_buckets - 1;
         let num_files = file_indices.len();
 
@@ -724,22 +722,25 @@ fn calculate_bucket_spacing(
         }
 
         // Distribute with half-weight edges: [0.5, 1, 1, ..., 1, 0.5] = N weight total
-        let total_weight = num_files as f64;
+        // But first bucket: no leading gap, so [0, 1, 1, ..., 1, 0.5] = N - 0.5 weight
+        let first_weight = if is_first_bucket { 0.0 } else { 0.5 };
+        let total_weight = first_weight + (num_files - 1) as f64 + 0.5;
         let rows_per_unit = slack_rows as f64 / total_weight;
 
         let mut spacing = Vec::with_capacity(num_files);
         let mut allocated = 0usize;
 
         for i in 0..num_files {
-            let weight = if i == 0 { 0.5 } else { 1.0 };
+            let weight = if i == 0 { first_weight } else { 1.0 };
             let rows = (weight * rows_per_unit).floor() as usize;
             spacing.push(rows);
             allocated += rows;
         }
 
-        // Distribute remainder to middle gaps
+        // Distribute remainder to middle gaps (skip first gap if first bucket)
         let mut remaining = slack_rows.saturating_sub(allocated);
-        for i in 1..num_files {
+        let start_idx = if is_first_bucket { 1 } else { 0 };
+        for i in start_idx..num_files {
             if remaining == 0 { break; }
             spacing[i] += 1;
             remaining -= 1;
@@ -751,9 +752,13 @@ fn calculate_bucket_spacing(
     result
 }
 
-/// Plan the order of file placement using bin packing algorithm.
-/// Returns indices into the files array in placement order.
-fn plan_placement_order(file_sizes: &[usize], row_width: usize) -> Vec<usize> {
+/// Perform bin packing using largest-first best-fit algorithm.
+/// Returns bucket assignments: Vec<Vec<usize>> where each inner Vec contains file indices.
+fn bin_pack_largest_first(
+    files: &[(&[u8], &[u8])],
+    file_sizes: &[usize],
+    row_width: usize,
+) -> Vec<Vec<usize>> {
     let filtered_row_size = row_width + 1;
     let rows_per_bucket = IDAT_BLOCK_SIZE / filtered_row_size;
     let bucket_capacity = rows_per_bucket * row_width;
@@ -763,107 +768,47 @@ fn plan_placement_order(file_sizes: &[usize], row_width: usize) -> Vec<usize> {
         return vec![];
     }
 
-    let mut placement_order = Vec::with_capacity(n);
+    // Create list of (file_idx, size) and sort by size descending, tiebreak by filename
+    let mut sorted_by_size: Vec<usize> = (0..n).collect();
+    sorted_by_size.sort_by(|&a, &b| {
+        file_sizes[b].cmp(&file_sizes[a])
+            .then_with(|| files[a].0.cmp(files[b].0))
+    });
+
+    // bucket_remaining[i] = remaining space in bucket i
     let mut bucket_remaining: Vec<usize> = vec![];
-    let mut placed = vec![false; n];
-    let mut relaxed_mode = false;
+    // bucket_contents[i] = list of file indices in bucket i
+    let mut bucket_contents: Vec<Vec<usize>> = vec![];
 
-    while placement_order.len() < n {
-        // Find first unplaced file in preferred (lexicographic) order
-        let next_preferred = placed.iter().position(|&p| !p).unwrap();
+    for file_idx in sorted_by_size {
+        let size = file_sizes[file_idx];
 
-        let file_to_place = if relaxed_mode {
-            // Relaxed mode: strict preferred order using first fit
-            next_preferred
-        } else {
-            // Constrained mode: consider nearby-in-size candidates
-            let max_size = file_sizes[next_preferred];
-            let min_candidate_size = (max_size as f64 * 0.875) as usize;
+        // Find bucket with least remaining space that still fits the file (best-fit)
+        let mut best_bucket: Option<usize> = None;
+        let mut best_remaining = usize::MAX;
 
-            // Find all unplaced candidates within 12.5% of the largest remaining
-            let candidates: Vec<usize> = (next_preferred..n)
-                .filter(|&i| !placed[i] && file_sizes[i] >= min_candidate_size)
-                .collect();
-
-            // Among candidates, find the one with best fit (least remaining space)
-            let mut best_candidate = next_preferred;
-            let mut best_remaining = usize::MAX;
-            let mut best_fits = false;
-
-            for &candidate in &candidates {
-                let size = file_sizes[candidate];
-                for &remaining in &bucket_remaining {
-                    if remaining >= size {
-                        let after = remaining - size;
-                        if !best_fits || after < best_remaining {
-                            best_candidate = candidate;
-                            best_remaining = after;
-                            best_fits = true;
-                        }
-                    }
-                }
+        for (bucket_idx, &remaining) in bucket_remaining.iter().enumerate() {
+            if remaining >= size && remaining < best_remaining {
+                best_bucket = Some(bucket_idx);
+                best_remaining = remaining;
             }
+        }
 
-            if best_fits { best_candidate } else { next_preferred }
-        };
-
-        // Place the file in a bucket
-        let size = file_sizes[file_to_place];
-        placed[file_to_place] = true;
-        placement_order.push(file_to_place);
-
-        // Find bucket with enough space, or create new one
-        // Files larger than bucket capacity get their own bucket
-        let bucket_idx = if size > bucket_capacity {
-            // Large file: give it its own "bucket" with exact capacity
-            bucket_remaining.push(size);
-            bucket_remaining.len() - 1
-        } else {
-            bucket_remaining.iter()
-                .position(|&r| r >= size)
-                .unwrap_or_else(|| {
-                    bucket_remaining.push(bucket_capacity);
-                    bucket_remaining.len() - 1
-                })
-        };
-        bucket_remaining[bucket_idx] = bucket_remaining[bucket_idx].saturating_sub(size);
-
-        // Check for relaxation
-        if !relaxed_mode && can_relax(&placed, file_sizes, &bucket_remaining, bucket_capacity) {
-            relaxed_mode = true;
+        match best_bucket {
+            Some(bucket_idx) => {
+                bucket_remaining[bucket_idx] -= size;
+                bucket_contents[bucket_idx].push(file_idx);
+            }
+            None => {
+                // Create new bucket
+                let capacity = if size > bucket_capacity { size } else { bucket_capacity };
+                bucket_remaining.push(capacity - size);
+                bucket_contents.push(vec![file_idx]);
+            }
         }
     }
 
-    placement_order
-}
-
-/// Check if we can switch to relaxed mode by simulating first-fit on remaining items.
-fn can_relax(
-    placed: &[bool],
-    file_sizes: &[usize],
-    bucket_remaining: &[usize],
-    bucket_capacity: usize,
-) -> bool {
-    let mut test_remaining: Vec<usize> = bucket_remaining.to_vec();
-
-    for (i, &is_placed) in placed.iter().enumerate() {
-        if is_placed {
-            continue;
-        }
-        let size = file_sizes[i];
-
-        // First fit
-        if let Some(remaining) = test_remaining.iter_mut().find(|r| **r >= size) {
-            *remaining = remaining.saturating_sub(size);
-        } else if size <= bucket_capacity {
-            test_remaining.push(bucket_capacity.saturating_sub(size));
-        } else {
-            // Large file needs its own bucket
-            test_remaining.push(0);
-        }
-    }
-
-    test_remaining.len() <= bucket_remaining.len()
+    bucket_contents
 }
 
 /// Encode data as deflate stored blocks with variable row width.
