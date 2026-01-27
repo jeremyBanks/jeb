@@ -65,7 +65,6 @@ impl Expectations {
 }
 
 /// Validate a polyglot PNG+ZIP file using external crates.
-#[cfg(test)]
 pub fn validate_polyglot(data: &[u8]) -> ValidationResult {
     use std::io::Cursor;
 
@@ -164,14 +163,12 @@ pub fn validate_polyglot(data: &[u8]) -> ValidationResult {
 
 /// Assert that data is a valid polyglot PNG+ZIP.
 /// Panics with detailed error message if validation fails.
-#[cfg(test)]
 pub fn assert_valid_polyglot(data: &[u8]) -> ValidationResult {
     assert_valid_polyglot_with(data, None)
 }
 
 /// Assert that data is a valid polyglot PNG+ZIP with optional expectations.
 /// Panics with detailed error message if validation fails or expectations aren't met.
-#[cfg(test)]
 pub fn assert_valid_polyglot_with(data: &[u8], expectations: Option<Expectations>) -> ValidationResult {
     let result = validate_polyglot(data);
     let mut errors = result.errors.clone();

@@ -37,9 +37,9 @@
 
 mod fonts;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "dev-dependencies"))]
 mod validate;
-#[cfg(test)]
+#[cfg(any(test, feature = "dev-dependencies"))]
 pub use validate::{validate_polyglot, assert_valid_polyglot, ValidationResult};
 
 use std::collections::HashSet;

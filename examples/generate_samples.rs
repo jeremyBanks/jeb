@@ -304,6 +304,11 @@ fn create_sample(
     let files_struct: Files = index_map.into();
 
     let polyglot = zipng::zipng(&files_struct);
+
+    // Validate the generated polyglot
+    let result = zipng::polyglot::assert_valid_polyglot(&polyglot);
+    assert_eq!(result.zip_file_count, file_count, "File count mismatch for {}", name);
+
     let path = format!("target/samples/{name}.png");
     fs::write(&path, &polyglot)?;
 
