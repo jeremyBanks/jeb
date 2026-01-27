@@ -285,6 +285,248 @@ fn main() -> Result<(), panic> {
         generated.push(save_polyglot(output_dir, "size_4000k", files)?);
     }
 
+    // === MORE VARIED SAMPLES ===
+
+    // === SAMPLE 16: Single large file ===
+    {
+        let mut files = IndexMap::new();
+        files.insert(b"single_large.bin".to_vec(), vec![0xAB; 100000]);
+        generated.push(save_polyglot(output_dir, "single_100k", files)?);
+    }
+
+    // === SAMPLE 17: Many tiny files ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..100 {
+            files.insert(format!("tiny_{:03}.txt", i).into_bytes(), format!("File {}", i).into_bytes());
+        }
+        generated.push(save_polyglot(output_dir, "many_tiny", files)?);
+    }
+
+    // === SAMPLE 18: Few medium files ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..5 {
+            files.insert(format!("medium_{}.dat", i).into_bytes(), vec![(i as u8) * 50; 30000]);
+        }
+        generated.push(save_polyglot(output_dir, "few_medium", files)?);
+    }
+
+    // === SAMPLE 19: Ascending sizes ===
+    {
+        let mut files = IndexMap::new();
+        for i in 1..=10 {
+            files.insert(format!("size_{:02}k.bin", i).into_bytes(), vec![i as u8; i * 1000]);
+        }
+        generated.push(save_polyglot(output_dir, "ascending_sizes", files)?);
+    }
+
+    // === SAMPLE 20: Descending sizes ===
+    {
+        let mut files = IndexMap::new();
+        for i in (1..=10).rev() {
+            files.insert(format!("rev_{:02}k.bin", i).into_bytes(), vec![i as u8; i * 1000]);
+        }
+        generated.push(save_polyglot(output_dir, "descending_sizes", files)?);
+    }
+
+    // === SAMPLE 21: Text-heavy (ASCII patterns) ===
+    {
+        let mut files = IndexMap::new();
+        let lorem = b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. ";
+        for i in 0..15 {
+            let content: Vec<u8> = lorem.iter().cycle().take(3000 + i * 500).copied().collect();
+            files.insert(format!("text_{:02}.txt", i).into_bytes(), content);
+        }
+        generated.push(save_polyglot(output_dir, "text_heavy", files)?);
+    }
+
+    // === SAMPLE 22: Binary patterns (0x00-0xFF cycling) ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..8 {
+            let content: Vec<u8> = (0..10000).map(|j| ((j + i * 32) % 256) as u8).collect();
+            files.insert(format!("pattern_{}.bin", i).into_bytes(), content);
+        }
+        generated.push(save_polyglot(output_dir, "binary_patterns", files)?);
+    }
+
+    // === SAMPLE 23: Deep directory structure ===
+    {
+        let mut files = IndexMap::new();
+        files.insert(b"a/file.txt".to_vec(), b"Level 1".to_vec());
+        files.insert(b"a/b/file.txt".to_vec(), b"Level 2".to_vec());
+        files.insert(b"a/b/c/file.txt".to_vec(), b"Level 3".to_vec());
+        files.insert(b"a/b/c/d/file.txt".to_vec(), b"Level 4".to_vec());
+        files.insert(b"a/b/c/d/e/file.txt".to_vec(), b"Level 5".to_vec());
+        files.insert(b"x/y/z/deep.dat".to_vec(), vec![0xDD; 5000]);
+        generated.push(save_polyglot(output_dir, "deep_dirs", files)?);
+    }
+
+    // === SAMPLE 24: Long filenames ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..10 {
+            let name = format!("this_is_a_very_long_filename_number_{:02}_with_extra_text.dat", i);
+            files.insert(name.into_bytes(), vec![i as u8; 2000]);
+        }
+        generated.push(save_polyglot(output_dir, "long_names", files)?);
+    }
+
+    // === SAMPLE 25: Mixed extensions ===
+    {
+        let mut files = IndexMap::new();
+        files.insert(b"data.json".to_vec(), b"{\"key\": \"value\"}".to_vec());
+        files.insert(b"data.xml".to_vec(), b"<root><item>test</item></root>".to_vec());
+        files.insert(b"data.yaml".to_vec(), b"key: value\nlist:\n  - item1\n  - item2".to_vec());
+        files.insert(b"data.toml".to_vec(), b"[section]\nkey = \"value\"".to_vec());
+        files.insert(b"data.csv".to_vec(), b"a,b,c\n1,2,3\n4,5,6".to_vec());
+        files.insert(b"data.md".to_vec(), b"# Title\n\nParagraph text.".to_vec());
+        generated.push(save_polyglot(output_dir, "mixed_formats", files)?);
+    }
+
+    // === SAMPLE 26: Rust source subset ===
+    {
+        let mut files = IndexMap::new();
+        collect_files(&mut files, &[
+            ("lib.rs", "src/lib.rs"),
+            ("polyglot/mod.rs", "src/polyglot/mod.rs"),
+        ], Some(50000));
+        generated.push(save_polyglot(output_dir, "rust_subset", files)?);
+    }
+
+    // === SAMPLE 27: Just Cargo files ===
+    {
+        let mut files = IndexMap::new();
+        collect_files(&mut files, &[
+            ("Cargo.toml", "Cargo.toml"),
+            ("Cargo.lock", "Cargo.lock"),
+        ], None);
+        generated.push(save_polyglot(output_dir, "cargo_files", files)?);
+    }
+
+    // === SAMPLE 28: Font sprites ===
+    {
+        let mut files = IndexMap::new();
+        collect_glob(&mut files, "src/text", &["*.png"], None, Some("sprites/"));
+        generated.push(save_polyglot(output_dir, "font_sprites", files)?);
+    }
+
+    // === SAMPLE 29: Font metadata ===
+    {
+        let mut files = IndexMap::new();
+        collect_glob(&mut files, "src/text", &["*.json"], None, Some("meta/"));
+        generated.push(save_polyglot(output_dir, "font_metadata", files)?);
+    }
+
+    // === SAMPLE 30: ~64K boundary test ===
+    {
+        let mut files = IndexMap::new();
+        files.insert(b"before_boundary.bin".to_vec(), vec![0x11; 30000]);
+        files.insert(b"crosses_boundary.bin".to_vec(), vec![0x22; 40000]);
+        files.insert(b"after_boundary.bin".to_vec(), vec![0x33; 30000]);
+        generated.push(save_polyglot(output_dir, "boundary_test", files)?);
+    }
+
+    // === SAMPLE 31: Repeated content ===
+    {
+        let mut files = IndexMap::new();
+        let repeated = vec![0x42; 5000];
+        for i in 0..20 {
+            files.insert(format!("repeat_{:02}.dat", i).into_bytes(), repeated.clone());
+        }
+        generated.push(save_polyglot(output_dir, "repeated_content", files)?);
+    }
+
+    // === SAMPLE 32: Random-ish content ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..15 {
+            // Pseudo-random using simple LCG
+            let mut val = (i as u32).wrapping_mul(1103515245).wrapping_add(12345);
+            let content: Vec<u8> = (0..8000).map(|_| {
+                val = val.wrapping_mul(1103515245).wrapping_add(12345);
+                (val >> 16) as u8
+            }).collect();
+            files.insert(format!("random_{:02}.bin", i).into_bytes(), content);
+        }
+        generated.push(save_polyglot(output_dir, "pseudorandom", files)?);
+    }
+
+    // === SAMPLE 33: All zeros ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..10 {
+            files.insert(format!("zeros_{:02}.bin", i).into_bytes(), vec![0x00; 8000]);
+        }
+        generated.push(save_polyglot(output_dir, "all_zeros", files)?);
+    }
+
+    // === SAMPLE 34: All ones (0xFF) ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..10 {
+            files.insert(format!("ones_{:02}.bin", i).into_bytes(), vec![0xFF; 8000]);
+        }
+        generated.push(save_polyglot(output_dir, "all_ones", files)?);
+    }
+
+    // === SAMPLE 35: Alternating bytes ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..10 {
+            let content: Vec<u8> = (0..8000).map(|j| if j % 2 == 0 { 0x55 } else { 0xAA }).collect();
+            files.insert(format!("alt_{:02}.bin", i).into_bytes(), content);
+        }
+        generated.push(save_polyglot(output_dir, "alternating", files)?);
+    }
+
+    // === SAMPLE 36: Source with examples ===
+    {
+        let mut files = IndexMap::new();
+        collect_glob(&mut files, "src/polyglot", &["*.rs"], None, Some("src/"));
+        collect_glob(&mut files, "examples", &["*.rs"], None, Some("examples/"));
+        generated.push(save_polyglot(output_dir, "src_and_examples", files)?);
+    }
+
+    // === SAMPLE 37: PNG palette files ===
+    {
+        let mut files = IndexMap::new();
+        collect_glob(&mut files, "src/png/palettes", &["*.rs"], None, Some("palettes/"));
+        generated.push(save_polyglot(output_dir, "palette_source", files)?);
+    }
+
+    // === SAMPLE 38: Git objects only ===
+    {
+        let mut files = IndexMap::new();
+        collect_git_objects(&mut files, ".git/objects", 30, 30000);
+        if !files.is_empty() {
+            generated.push(save_polyglot(output_dir, "git_objects", files)?);
+        }
+    }
+
+    // === SAMPLE 39: Incrementing bytes ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..8 {
+            let content: Vec<u8> = (0..10000).map(|j| (j % 256) as u8).collect();
+            files.insert(format!("incr_{}.bin", i).into_bytes(), content);
+        }
+        generated.push(save_polyglot(output_dir, "incrementing", files)?);
+    }
+
+    // === SAMPLE 40: Empty-ish files ===
+    {
+        let mut files = IndexMap::new();
+        files.insert(b"one_byte.txt".to_vec(), b"X".to_vec());
+        files.insert(b"two_bytes.txt".to_vec(), b"XY".to_vec());
+        files.insert(b"three_bytes.txt".to_vec(), b"XYZ".to_vec());
+        for i in 1..=10 {
+            files.insert(format!("bytes_{:02}.txt", i).into_bytes(), vec![b'.' ; i]);
+        }
+        generated.push(save_polyglot(output_dir, "minimal_files", files)?);
+    }
+
     // === NETWORK SAMPLES (optional) ===
     if include_network {
         println!("\nFetching data from the internet...\n");
