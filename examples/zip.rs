@@ -1,10 +1,10 @@
-use zipng::{
-    dev::{init, save},
-    panic, Zip,
-};
+//! ZIP example - creates a simple ZIP archive.
+
+use std::fs;
+use zipng::{panic, Zip};
 
 fn main() -> Result<(), panic> {
-    init!();
+    fs::create_dir_all("target")?;
 
     let zip = Zip::new_with_files(vec![
         (b"README.md".to_vec(), b"hello, world?".to_vec()),
@@ -12,13 +12,10 @@ fn main() -> Result<(), panic> {
     ]);
 
     let output = zip.serialize();
-    save!({ output.as_ref() }.zip)?;
+    fs::write("target/zip_example.zip", AsRef::<[u8]>::as_ref(&output))?;
+    println!("Created target/zip_example.zip ({} bytes)", output.len());
+    println!("Verify with: unzip -l target/zip_example.zip");
 
-    let text = include_bytes!("../src/ss.htm");
-    let mut text = text.to_vec();
-    text.extend(output.into_bytes());
-
-    save!(text.htm)?;
     Ok(())
 }
 

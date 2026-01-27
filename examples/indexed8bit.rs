@@ -1,5 +1,7 @@
+//! Indexed 8-bit PNG example - creates a colorful image using the TURBO palette.
+
+use std::fs;
 use zipng::{
-    dev::{init, save},
     palettes::singles::TURBO,
     panic,
     BitDepth::EightBit,
@@ -7,7 +9,7 @@ use zipng::{
 };
 
 fn main() -> Result<(), panic> {
-    init!();
+    fs::create_dir_all("target")?;
 
     let mut png = Png::new_indexed(512, 128, EightBit, TURBO);
 
@@ -18,13 +20,9 @@ fn main() -> Result<(), panic> {
     }
 
     let output = png.serialize();
-    save!({ output.as_ref() }.png)?;
+    fs::write("target/indexed8bit.png", AsRef::<[u8]>::as_ref(&output))?;
+    println!("Created target/indexed8bit.png");
 
-    let text = include_bytes!("../src/head.htm");
-    let mut text = text.to_vec();
-    text.extend(output.to_string().as_bytes());
-
-    save!(text.htm)?;
     Ok(())
 }
 

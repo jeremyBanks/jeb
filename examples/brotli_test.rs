@@ -1,25 +1,28 @@
-//! Test zipngbr (brotli-compressed polyglot).
+//! Test brotli compression feature (placeholder).
+//!
+//! Note: Brotli-compressed polyglot (zipngbr) is not yet implemented in the new API.
+//! This example demonstrates the regular polyglot creation instead.
 
 use indexmap::IndexMap;
 use std::fs;
 use zipng::Files;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    fs::create_dir_all("target")?;
+
     let mut files = IndexMap::new();
-    files.insert(b"test.txt".to_vec(), b"Hello from brotli-compressed polyglot!".to_vec());
+    files.insert(b"test.txt".to_vec(), b"Hello from polyglot!".to_vec());
     let files: Files = files.into();
 
     // Create regular polyglot
     let polyglot = zipng::zipng(&files);
     println!("Regular polyglot: {} bytes", polyglot.len());
 
-    // Create brotli-compressed polyglot
-    let compressed = zipng::zipngbr(&files);
-    println!("Brotli compressed: {} bytes", compressed.len());
-    println!("Compression ratio: {:.1}%", (compressed.len() as f64 / polyglot.len() as f64) * 100.0);
+    fs::write("target/brotli_test.png", &polyglot)?;
+    println!("Saved to target/brotli_test.png");
 
-    fs::write("target/polyglot.png.br", &compressed)?;
-    println!("Saved to target/polyglot.png.br");
+    // Note: Brotli compression (zipngbr) would go here when implemented
+    println!("\nNote: Brotli-compressed polyglot (zipngbr) is not yet implemented.");
 
     Ok(())
 }

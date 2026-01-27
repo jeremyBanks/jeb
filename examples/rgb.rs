@@ -1,10 +1,10 @@
-use zipng::{
-    dev::{init, save},
-    panic, Png,
-};
+//! RGB PNG example - creates a colorful gradient image.
+
+use std::fs;
+use zipng::{panic, Png};
 
 fn main() -> Result<(), panic> {
-    init!();
+    fs::create_dir_all("target")?;
 
     let mut png = Png::new_rgb(512, 128);
 
@@ -18,6 +18,7 @@ fn main() -> Result<(), panic> {
         }
     }
 
+    // Draw diagonal color stripes
     for x in 0..png.height {
         png.set_pixel(png.height * 2 - x, x, &[0x00, 0, 0])?;
         png.set_pixel(png.height * 2 - x + 1, x, &[0xFF, 0, 0])?;
@@ -30,13 +31,9 @@ fn main() -> Result<(), panic> {
     }
 
     let output = png.serialize();
-    save!({ output.as_ref() }.png)?;
+    fs::write("target/rgb.png", AsRef::<[u8]>::as_ref(&output))?;
+    println!("Created target/rgb.png");
 
-    let text = include_bytes!("../src/head.htm");
-    let mut text = text.to_vec();
-    text.extend(output.to_string().as_bytes());
-
-    save!(text.htm)?;
     Ok(())
 }
 

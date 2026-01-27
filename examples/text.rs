@@ -1,32 +1,22 @@
+//! Text rendering example - renders font glyphs to a PNG.
+
+use std::fs;
 use bitvec::prelude::Lsb0;
-use bitvec::prelude::Msb0;
-use bitvec::vec::BitVec;
 use bitvec::view::AsBits;
-use indexmap::IndexMap;
-use zipng::font::Font;
-use zipng::font::Mini5pt;
-use zipng::font::FONTS;
-use zipng::generic::panic;
-use zipng::png::write_png;
-use zipng::png::BitDepth::EightBit;
-use zipng::png::BitDepth::OneBit;
-use zipng::png::ColorMode::Indexed;
-use zipng::png::ColorMode::RedGreenBlue;
-use zipng::png::PALLETTE_8_BIT_DATA;
-use zipng::zip;
-use zipng::PngOptions;
-use zipng::ZipngOptions;
+use zipng::font::{Font, Mini5pt};
+use zipng::palettes::viridis::VIRIDIS;
+use zipng::{panic, EightBit, Png};
 
 fn main() -> Result<(), panic> {
+    fs::create_dir_all("target")?;
+
     let mut data = Vec::new();
 
     let font = Mini5pt;
-    let width = font.width();
+    let glyph_width = font.width();
     let bits = font.width() * font.height();
-    for (character, bitmap) in font.glyphs() {
-        // if *character != 'A' {
-        //     continue;
-        // }
+
+    for (_character, bitmap) in font.glyphs() {
         let mut v: Vec<_> = bitmap
             .to_le_bytes()
             .as_bits::<Lsb0>()
@@ -37,53 +27,34 @@ fn main() -> Result<(), panic> {
         v.reverse();
 
         data.extend(v);
-        data.extend(vec![0; width]);
+        data.extend(vec![0; glyph_width]);
     }
 
-    let mut buffer = Vec::new();
-
-    let ZipngOptions {
-        png:
-            PngOptions {
-                bit_depth,
-                color_mode,
-                color_palette,
-                // width,
-                ..
-            },
-        ..
-    } = ZipngOptions::default_for_data(&data);
-    let color_palette = color_palette.as_deref();
-
-    let bit_depth = EightBit;
-    let color_mode = Indexed;
-    let color_palette = Some(PALLETTE_8_BIT_DATA.as_slice());
-
-    // let bit_depth = EightBit;
-    // let color_mode = RedGreenBlue;
-    // let color_palette = None::<&[u8]>;
-
-    // let bit_depth = OneBit;
-    // let color_mode = Indexed;
-    // let color_palette = [0xFF_u8, 0xFF, 0xEE, 0x11, 0x11, 0x33];
-    // let color_palette = Some(&color_palette[..]);
-
-    let bits_per_pixel = bit_depth.bits_per_sample() * color_mode.samples_per_pixel();
-    let pixels = data.len() * 8 / bits_per_pixel;
-
+    // Calculate dimensions
+    let width = glyph_width * 2;  // Two glyphs wide
+    let pixels = data.len();
     let height = (pixels / width).max(1);
 
-    write_png(
-        &mut buffer,
-        &data,
-        width as u32,
-        height as u32,
-        bit_depth,
-        color_mode,
-        color_palette,
-    );
+    // Pad data to fill complete image
+    data.resize(width * height, 0);
 
-    std::fs::write("target/test.png", buffer)?;
+    // Create indexed PNG with VIRIDIS palette
+    let mut png = Png::new_indexed(width, height, EightBit, VIRIDIS);
+
+    // Copy pixel data
+    for y in 0..height {
+        for x in 0..width {
+            let idx = y * width + x;
+            if idx < data.len() {
+                png.set_pixel(x, y, &[data[idx]])?;
+            }
+        }
+    }
+
+    let output = png.serialize();
+    fs::write("target/text.png", AsRef::<[u8]>::as_ref(&output))?;
+    println!("Created target/text.png ({} glyphs, {}x{} pixels)",
+             font.glyphs().len(), width, height);
 
     Ok(())
 }

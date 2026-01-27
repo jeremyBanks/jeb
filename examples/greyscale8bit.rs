@@ -1,11 +1,15 @@
+//! Grayscale 8-bit PNG example - creates a grayscale gradient image.
+
+use std::fs;
 use zipng::{
-    dev::{init, save},
     palettes::mappings::BIT_COUNT,
-    panic, EightBit, Png,
+    panic,
+    EightBit,
+    Png,
 };
 
 fn main() -> Result<(), panic> {
-    init!();
+    fs::create_dir_all("target")?;
 
     let mut png = Png::new_grayscale(512, 128, EightBit);
 
@@ -20,13 +24,9 @@ fn main() -> Result<(), panic> {
     }
 
     let output = png.serialize();
-    save!({ output.as_ref() }.png)?;
+    fs::write("target/greyscale8bit.png", AsRef::<[u8]>::as_ref(&output))?;
+    println!("Created target/greyscale8bit.png");
 
-    let text = include_bytes!("../src/ss.htm");
-    let mut text = text.to_vec();
-    text.extend(output.to_string().as_bytes());
-
-    save!(text.htm)?;
     Ok(())
 }
 
