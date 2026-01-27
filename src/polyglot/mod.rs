@@ -821,14 +821,24 @@ fn encode_as_deflate_blocks(body: &[u8], row_width: usize) -> Vec<u8> {
     let mut result = Vec::new();
 
     if body.is_empty() {
-        // Empty file: final block with 0 length
+        // Empty file: final block with 0 length - needs Sub filter compensation
+        // Row is: [LEN=0][NLEN=0xFFFF][padding...]
+        // With Sub filter, decoded[0]=0, decoded[1]=0, decoded[2]=0xFF, decoded[3]=0xFF+0xFF=0xFE
+        // First padding byte should cancel out: (256 - 0xFE) = 2
         result.extend_from_slice(&0_u16.to_le_bytes());
         result.extend_from_slice(&0xFFFF_u16.to_le_bytes());
-        result.resize(row_width, 0);
+        if row_width > 4 {
+            result.push(2); // Anti-Sub byte to decode to 0
+            result.resize(row_width, 0);
+        }
         return result;
     }
 
-    for chunk in body.chunks(data_per_block) {
+    let chunks: Vec<_> = body.chunks(data_per_block).collect();
+    let num_chunks = chunks.len();
+
+    for (i, chunk) in chunks.into_iter().enumerate() {
+        let is_last = i == num_chunks - 1;
         let len = chunk.len() as u16;
         result.extend_from_slice(&len.to_le_bytes());
         result.extend_from_slice(&len.not().to_le_bytes());
@@ -837,7 +847,26 @@ fn encode_as_deflate_blocks(body: &[u8], row_width: usize) -> Vec<u8> {
         // Pad to full row width
         let block_size = 4 + chunk.len();
         if block_size < row_width {
-            result.resize(result.len() + (row_width - block_size), 0);
+            let padding_needed = row_width - block_size;
+
+            if is_last && padding_needed > 0 {
+                // Last row gets 0x01 filter (Sub). Compute anti-Sub padding.
+                // After Sub filter, decoded[i] = raw[i] + decoded[i-1].
+                // To make padding decode to 0, first padding byte = (256 - last_decoded) % 256.
+                // last_decoded is the running sum of all row bytes (mod 256).
+                let row_start = result.len() - block_size;
+                let mut running_sum: u8 = 0;
+                for j in row_start..result.len() {
+                    running_sum = running_sum.wrapping_add(result[j]);
+                }
+                // First padding byte cancels out the running sum
+                result.push(running_sum.wrapping_neg());
+                // Remaining padding is zeros (decode to 0 since previous decoded is 0)
+                result.resize(result.len() + padding_needed - 1, 0);
+            } else {
+                // Non-last rows use 0x00 filter (None), just pad with zeros
+                result.resize(result.len() + padding_needed, 0);
+            }
         }
     }
 
