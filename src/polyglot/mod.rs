@@ -607,6 +607,29 @@ fn build_aligned_data(
         bucket_assignments.push(last_bucket);
     }
 
+    // Phase 3: Flatten to placement order, then re-simulate to find actual IDAT bucket boundaries
+    let placement_order: Vec<usize> = bucket_assignments.iter().flatten().copied().collect();
+    let bucket_assignments = {
+        let mut buckets: Vec<Vec<usize>> = vec![vec![]];
+        let mut simulated_pos = 0usize;
+
+        for &file_idx in &placement_order {
+            let padding = (row_width - (simulated_pos % row_width)) % row_width;
+            let target = simulated_pos + padding;
+
+            if !file_fits_before_boundary(target, file_sizes[file_idx], row_width) {
+                buckets.push(vec![]);
+                simulated_pos = next_boundary_aligned_pos(target, row_width);
+            } else {
+                simulated_pos = target;
+            }
+
+            buckets.last_mut().unwrap().push(file_idx);
+            simulated_pos += file_sizes[file_idx];
+        }
+        buckets
+    };
+
     // Phase 4: Calculate spacing for each bucket
     let bucket_spacing = calculate_bucket_spacing(&bucket_assignments, &file_sizes, row_width);
 
