@@ -1,0 +1,9 @@
+*.crt
+*.dll
+*.exe
+*.key
+*.so
+/data
+/target
+/target*
+.DS_Store
