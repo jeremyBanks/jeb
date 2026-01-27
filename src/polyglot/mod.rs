@@ -127,20 +127,13 @@ fn label_rows_for_font(font: &BitmapFont) -> usize {
     1 + font.height + 1
 }
 
-/// 4-byte prefix for label rows: LEN=0, NLEN=0xFFFF (empty deflate stored block header).
-/// This provides visual consistency with content rows which have deflate headers.
-const LABEL_ROW_PREFIX: [u8; 4] = [0x00, 0x00, 0xFF, 0xFF];
-
 /// Render filename label rows using the specified font.
-/// If the name is too long, trailing blank pixels are trimmed first,
-/// then remaining overflow is truncated from the left (right-aligned).
-fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont) -> Vec<u8> {
+/// The header_row bytes are "stretched" into each label row as a background,
+/// then text is rendered on top with a 1-pixel halo erased for readability.
+/// Kerning checks against the accumulated rendering to avoid touching earlier chars.
+fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, header_row: &[u8]) -> Vec<u8> {
     let label_rows = label_rows_for_font(font);
     let mut result = Vec::with_capacity(label_rows * row_width);
-
-    // Row 0: empty (padding above) with deflate-style prefix
-    result.extend_from_slice(&LABEL_ROW_PREFIX);
-    result.resize(row_width, 0);
 
     // Convert name to chars and get glyphs
     let chars: Vec<char> = name.iter().map(|&b| b as char).collect();
@@ -148,32 +141,68 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont) -> Ve
         .map(|&c| font.get_glyph(c))
         .collect();
 
-    // Calculate total width with kerning and find actual rendered extent
+    // Build accumulated canvas for kerning (checks against ALL previous chars, not just one)
+    // Canvas is font.height rows × max_possible_width columns
+    let max_canvas_width = row_width * 2; // generous size
+    let mut canvas: Vec<Vec<bool>> = vec![vec![false; max_canvas_width]; font.height];
+    let mut char_positions: Vec<(usize, i32)> = Vec::new();
     let mut total_width = 0i32;
-    let mut char_positions: Vec<(usize, i32)> = Vec::new(); // (char_index, x_position)
-    let mut rightmost_pixel = 0i32; // Track actual rightmost rendered pixel
+    let mut rightmost_pixel = 0i32;
 
     for (i, glyph_opt) in glyphs.iter().enumerate() {
         if let Some(glyph) = glyph_opt {
-            if i > 0 {
-                // Add kerning gap (can be negative for tighter spacing)
-                if let Some(prev_glyph) = glyphs[i - 1] {
-                    let gap = min_glyph_gap(prev_glyph, glyph, font.width);
-                    total_width += gap;
+            // Find minimum position where this glyph doesn't touch the canvas
+            let mut best_offset = total_width + font.width as i32; // default: after previous char
+
+            // Try tighter positions (can overlap into previous char's bounding box)
+            for test_offset in (total_width - font.width as i32 + 1)..=best_offset {
+                if test_offset < 0 {
+                    continue;
+                }
+                let mut touches = false;
+                'check: for (gy, glyph_row) in glyph.iter().enumerate() {
+                    for (gx, &pixel_on) in glyph_row.iter().enumerate() {
+                        if !pixel_on {
+                            continue;
+                        }
+                        let cx = test_offset as usize + gx;
+                        // Check 8-directional adjacency against canvas
+                        for dy in -1i32..=1 {
+                            for dx in -1i32..=1 {
+                                let ny = gy as i32 + dy;
+                                let nx = cx as i32 + dx;
+                                if ny >= 0 && (ny as usize) < font.height && nx >= 0 {
+                                    if canvas[ny as usize].get(nx as usize).copied().unwrap_or(false) {
+                                        touches = true;
+                                        break 'check;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if !touches {
+                    best_offset = test_offset;
+                    break;
                 }
             }
-            char_positions.push((i, total_width));
 
-            // Find rightmost pixel in this glyph
-            for row in glyph.iter() {
-                for (px, &pixel_on) in row.iter().enumerate() {
+            char_positions.push((i, best_offset));
+
+            // Add glyph to canvas at best_offset
+            for (gy, glyph_row) in glyph.iter().enumerate() {
+                for (gx, &pixel_on) in glyph_row.iter().enumerate() {
                     if pixel_on {
-                        rightmost_pixel = rightmost_pixel.max(total_width + px as i32 + 1);
+                        let cx = best_offset as usize + gx;
+                        if cx < max_canvas_width {
+                            canvas[gy][cx] = true;
+                        }
+                        rightmost_pixel = rightmost_pixel.max(cx as i32 + 1);
                     }
                 }
             }
 
-            total_width += font.width as i32;
+            total_width = best_offset + font.width as i32;
         }
     }
 
@@ -181,42 +210,75 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont) -> Ve
     let actual_width = rightmost_pixel.max(0) as usize;
 
     // Calculate starting x position (right-align if too long)
-    // Account for 4-byte prefix + 1 pixel margin
-    let prefix_len = LABEL_ROW_PREFIX.len();
-    let available_width = row_width.saturating_sub(prefix_len + 2); // prefix + 1 pixel margin on each side
+    let margin = 5; // pixels margin from edge
+    let available_width = row_width.saturating_sub(margin * 2);
     let start_x: i32 = if actual_width <= available_width {
-        (prefix_len + 1) as i32 // Left-aligned after prefix with 1 pixel margin
+        margin as i32 // Left-aligned with margin
     } else {
         // Right-aligned: truncate from left
-        (row_width as i32 - actual_width as i32 - 1).max((prefix_len + 1) as i32 - actual_width as i32)
+        (row_width as i32 - actual_width as i32 - margin as i32).max(margin as i32 - actual_width as i32)
     };
 
-    // Render text rows
-    for text_row in 0..font.height {
-        let mut row = vec![0u8; row_width];
-        // Add deflate-style prefix for visual consistency
-        row[..prefix_len].copy_from_slice(&LABEL_ROW_PREFIX);
+    // First, render text to a temporary bitmap to know where pixels are
+    let mut text_bitmap: Vec<Vec<bool>> = vec![vec![false; row_width]; label_rows];
 
+    // Padding row above (row 0) has no text
+    // Text rows are 1..=font.height
+    // Padding row below is font.height + 1
+
+    for text_row in 0..font.height {
+        let result_row = text_row + 1; // +1 for padding above
         for &(char_idx, char_x) in &char_positions {
             if let Some(glyph) = glyphs[char_idx] {
                 if text_row < glyph.len() {
                     for (px, &pixel_on) in glyph[text_row].iter().enumerate() {
-                        let x = start_x as i32 + char_x + px as i32;
-                        // Don't overwrite the prefix bytes
-                        if x >= prefix_len as i32 && (x as usize) < row_width && pixel_on {
-                            row[x as usize] = 0xFF; // foreground (white)
+                        let x = (start_x + char_x + px as i32) as usize;
+                        if x < row_width && pixel_on {
+                            text_bitmap[result_row][x] = true;
                         }
                     }
                 }
             }
         }
+    }
+
+    // Now render each label row: header background, then erase halo, then draw text
+    for row_idx in 0..label_rows {
+        let mut row = vec![0u8; row_width];
+
+        // Copy header row as background (stretched)
+        let copy_len = row_width.min(header_row.len());
+        row[..copy_len].copy_from_slice(&header_row[..copy_len]);
+
+        // Erase pixels that are 8-directionally adjacent to any text pixel
+        for x in 0..row_width {
+            let mut adjacent_to_text = false;
+            'halo: for dy in -1i32..=1 {
+                for dx in -1i32..=1 {
+                    let ny = row_idx as i32 + dy;
+                    let nx = x as i32 + dx;
+                    if ny >= 0 && (ny as usize) < label_rows && nx >= 0 && (nx as usize) < row_width {
+                        if text_bitmap[ny as usize][nx as usize] {
+                            adjacent_to_text = true;
+                            break 'halo;
+                        }
+                    }
+                }
+            }
+            if adjacent_to_text {
+                row[x] = 0x00; // erase to black (creates readable halo around text)
+            }
+        }
+
+        // Draw text pixels on top (white)
+        for x in 0..row_width {
+            if text_bitmap[row_idx][x] {
+                row[x] = 0xFF;
+            }
+        }
 
         result.extend_from_slice(&row);
     }
-
-    // Final row: empty (padding below) with deflate-style prefix
-    result.extend_from_slice(&LABEL_ROW_PREFIX);
-    result.resize(result.len() + row_width - prefix_len, 0);
 
     result
 }
@@ -529,14 +591,6 @@ fn build_aligned_data(
         let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
         data.resize(data.len() + padding_to_row, 0);
 
-        // Insert filename label if font is specified
-        if let Some(f) = font {
-            let label = render_filename_label(name, row_width, f);
-            data.extend_from_slice(&label);
-        }
-
-        let entry_start = data.len();
-
         // Calculate header and extra field sizes
         let header_size = 30 + name.len();
         let bytes_used = header_size % row_width;
@@ -546,6 +600,18 @@ fn build_aligned_data(
         let num_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
         let compressed_size = num_blocks * filtered_row_size;
 
+        // Pre-compute the header bytes (needed for label rendering)
+        let crc = crc32(body);
+        let header_bytes = build_local_header(name, body.len(), compressed_size, crc, extra_len);
+
+        // Insert filename label if font is specified (with header as background)
+        if let Some(f) = font {
+            let label = render_filename_label(name, row_width, f, &header_bytes);
+            data.extend_from_slice(&label);
+        }
+
+        let entry_start = data.len();
+
         // Calculate which row contains the final block
         let content_start = entry_start + header_size + extra_len;
         let last_block_pos = content_start + (num_blocks - 1) * row_width;
@@ -554,8 +620,8 @@ fn build_aligned_data(
 
         entries.push((name.to_vec(), body.to_vec(), entry_start, compressed_size));
 
-        // Write standard ZIP local file header (30 bytes)
-        write_local_header(&mut data, name, body.len(), compressed_size, crc32(body), extra_len);
+        // Write the pre-computed header
+        data.extend_from_slice(&header_bytes);
 
         // Encode and write deflate content
         let deflate_content = encode_as_deflate_blocks(body, row_width);
@@ -594,41 +660,45 @@ fn encode_as_deflate_blocks(body: &[u8], row_width: usize) -> Vec<u8> {
     result
 }
 
-/// Write standard ZIP local file header (30 bytes + name + extra).
-fn write_local_header(
-    data: &mut Vec<u8>,
+/// Build ZIP local file header bytes (30 bytes + name + extra).
+/// Returns the header as a Vec<u8> for use in label rendering.
+fn build_local_header(
     name: &[u8],
     uncompressed_size: usize,
     compressed_size: usize,
     crc: u32,
     extra_len: usize,
-) {
+) -> Vec<u8> {
+    let mut header = Vec::with_capacity(30 + name.len() + extra_len);
+
     // Standard 30-byte ZIP local file header
-    data.extend_from_slice(b"PK\x03\x04");                           // 0-3: signature
-    data.extend_from_slice(&20_u16.to_le_bytes());                   // 4-5: version needed
-    data.extend_from_slice(&0_u16.to_le_bytes());                    // 6-7: flags
-    data.extend_from_slice(&8_u16.to_le_bytes());                    // 8-9: compression (deflate)
-    data.extend_from_slice(&0_u16.to_le_bytes());                    // 10-11: mod time
-    data.extend_from_slice(&0_u16.to_le_bytes());                    // 12-13: mod date
-    data.extend_from_slice(&crc.to_le_bytes());                      // 14-17: CRC-32
-    data.extend_from_slice(&(compressed_size as u32).to_le_bytes()); // 18-21
-    data.extend_from_slice(&(uncompressed_size as u32).to_le_bytes()); // 22-25
-    data.extend_from_slice(&(name.len() as u16).to_le_bytes());      // 26-27: name length
-    data.extend_from_slice(&(extra_len as u16).to_le_bytes());       // 28-29: extra length
-    data.extend_from_slice(name);                                     // 30+: filename
+    header.extend_from_slice(b"PK\x03\x04");                           // 0-3: signature
+    header.extend_from_slice(&20_u16.to_le_bytes());                   // 4-5: version needed
+    header.extend_from_slice(&0_u16.to_le_bytes());                    // 6-7: flags
+    header.extend_from_slice(&8_u16.to_le_bytes());                    // 8-9: compression (deflate)
+    header.extend_from_slice(&0_u16.to_le_bytes());                    // 10-11: mod time
+    header.extend_from_slice(&0_u16.to_le_bytes());                    // 12-13: mod date
+    header.extend_from_slice(&crc.to_le_bytes());                      // 14-17: CRC-32
+    header.extend_from_slice(&(compressed_size as u32).to_le_bytes()); // 18-21
+    header.extend_from_slice(&(uncompressed_size as u32).to_le_bytes()); // 22-25
+    header.extend_from_slice(&(name.len() as u16).to_le_bytes());      // 26-27: name length
+    header.extend_from_slice(&(extra_len as u16).to_le_bytes());       // 28-29: extra length
+    header.extend_from_slice(name);                                     // 30+: filename
 
     // Extra field for alignment padding
     if extra_len > 0 {
         if extra_len >= 4 {
             // Valid extra field structure: ID + size + data
-            data.extend_from_slice(&0x0000_u16.to_le_bytes()); // header ID
-            data.extend_from_slice(&((extra_len - 4) as u16).to_le_bytes()); // data size
-            data.resize(data.len() + extra_len - 4, 0); // data (zeros)
+            header.extend_from_slice(&0x0000_u16.to_le_bytes()); // header ID
+            header.extend_from_slice(&((extra_len - 4) as u16).to_le_bytes()); // data size
+            header.resize(header.len() + extra_len - 4, 0); // data (zeros)
         } else {
             // Just padding bytes
-            data.resize(data.len() + extra_len, 0);
+            header.resize(header.len() + extra_len, 0);
         }
     }
+
+    header
 }
 
 /// Add PNG filter bytes, using 0x01 for rows with final deflate blocks.
@@ -800,9 +870,9 @@ mod tests {
 
         // Check PNG signature
         assert_eq!(&result[0..8], b"\x89PNG\r\n\x1A\n");
-        // Check all three files have local headers
-        let pk_count = result.windows(4).filter(|w| *w == b"PK\x03\x04").count();
-        assert_eq!(pk_count, 3, "Expected 3 local file headers");
+        // Check central directory has 3 entries (note: PK signatures also appear in label rows now)
+        let cd_count = result.windows(4).filter(|w| *w == b"PK\x01\x02").count();
+        assert_eq!(cd_count, 3, "Expected 3 central directory entries");
         // Check EOCD exists
         assert!(result.windows(4).any(|w| w == b"PK\x05\x06"));
     }
@@ -832,9 +902,9 @@ mod tests {
         // Check PNG signature
         assert_eq!(&result[0..8], b"\x89PNG\r\n\x1A\n");
 
-        // Check all five files have local headers
-        let pk_count = result.windows(4).filter(|w| *w == b"PK\x03\x04").count();
-        assert_eq!(pk_count, 5, "Expected 5 local file headers, got {}", pk_count);
+        // Check central directory has 5 entries (note: PK signatures also appear in label rows now)
+        let cd_count = result.windows(4).filter(|w| *w == b"PK\x01\x02").count();
+        assert_eq!(cd_count, 5, "Expected 5 central directory entries, got {}", cd_count);
 
         // Check EOCD exists
         assert!(result.windows(4).any(|w| w == b"PK\x05\x06"));
