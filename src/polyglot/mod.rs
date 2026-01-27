@@ -241,19 +241,15 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
         }
     }
 
-    // Now render each label row: header background, then erase halo, then draw text
+    // Now render each label row: header is blocked by 1px halo around text
     for row_idx in 0..label_rows {
         let mut row = vec![0u8; row_width];
 
-        // Copy header row as background (stretched)
-        let copy_len = row_width.min(header_row.len());
-        row[..copy_len].copy_from_slice(&header_row[..copy_len]);
-
-        // Erase pixels near text: 2 pixels horizontally, 1 pixel vertically
+        // Copy header ONLY where NOT near text (1px halo blocks the stretch)
         for x in 0..row_width {
             let mut near_text = false;
             'halo: for dy in -1i32..=1 {
-                for dx in -2i32..=2 {
+                for dx in -1i32..=1 {
                     let ny = row_idx as i32 + dy;
                     let nx = x as i32 + dx;
                     if ny >= 0 && (ny as usize) < label_rows && nx >= 0 && (nx as usize) < row_width {
@@ -264,8 +260,8 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
                     }
                 }
             }
-            if near_text {
-                row[x] = 0x00; // erase to black (creates readable halo around text)
+            if !near_text && x < header_row.len() {
+                row[x] = header_row[x]; // Header only appears where not touching text
             }
         }
 
