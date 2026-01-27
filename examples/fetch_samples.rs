@@ -197,193 +197,237 @@ fn main() -> Result<(), panic> {
     // === SIZE-TARGETED SAMPLES ===
     // Font thresholds: ≤128K (Sky), ≤512K (Sugimori), ≤1M (Mini), ≤3M (Micro), >3M (no labels)
     // Color thresholds: ≤1M (Indexed), ≤3M (RGB), >3M (RGBA)
+    // All samples use real-world data, replicated as needed to reach target sizes.
 
-    // === SAMPLE 6: Tiny (~100 bytes) - tests minimal file ===
-    {
+    // Helper: collect real source files up to a target total size
+    let collect_source_chunks = |target_bytes: usize| -> IndexMap<Vec<u8>, Vec<u8>> {
         let mut files = IndexMap::new();
-        files.insert(b"hello.txt".to_vec(), b"Hello, World!".to_vec());
-        generated.push(save_polyglot(output_dir, "size_tiny", files)?);
-    }
+        let mut total = 0;
+        let mut copy = 0;
 
-    // === SAMPLE 7: Small (~1 KiB) - well under Sky threshold ===
-    {
-        let mut files = IndexMap::new();
-        files.insert(b"a.txt".to_vec(), vec![b'A'; 300]);
-        files.insert(b"b.txt".to_vec(), vec![b'B'; 300]);
-        files.insert(b"c.txt".to_vec(), vec![b'C'; 300]);
-        generated.push(save_polyglot(output_dir, "size_1k", files)?);
-    }
-
-    // === SAMPLE 8: ~50 KiB - mid Sky range ===
-    {
-        let mut files = IndexMap::new();
-        for i in 0..10 {
-            files.insert(format!("file_{:02}.dat", i).into_bytes(), vec![(i as u8).wrapping_mul(17); 5000]);
+        // Cycle through source files until we reach target
+        'outer: loop {
+            for entry in walkdir::WalkDir::new("src")
+                .max_depth(5)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.file_type().is_file())
+                .filter(|e| e.path().extension().map(|x| x == "rs").unwrap_or(false))
+            {
+                if let Ok(data) = fs::read(entry.path()) {
+                    if data.len() > 60_000 { continue; }
+                    let rel = entry.path().strip_prefix("src").unwrap_or(entry.path());
+                    let name = if copy == 0 {
+                        format!("src/{}", rel.to_string_lossy())
+                    } else {
+                        format!("copy{:02}/src/{}", copy, rel.to_string_lossy())
+                    };
+                    total += data.len();
+                    files.insert(name.into_bytes(), data);
+                    if total >= target_bytes { break 'outer; }
+                }
+            }
+            copy += 1;
+            if copy > 100 { break; } // Safety limit
         }
-        generated.push(save_polyglot(output_dir, "size_50k", files)?);
+        files
+    };
+
+    // === SAMPLE 6: Tiny - just README.md ===
+    {
+        let mut files = IndexMap::new();
+        collect_files(&mut files, &[("README.md", "README.md")], None);
+        generated.push(save_polyglot(output_dir, "readme_only", files)?);
+    }
+
+    // === SAMPLE 7: Small (~1-5 KiB) - a few config files ===
+    {
+        let mut files = IndexMap::new();
+        collect_files(&mut files, &[
+            (".gitignore", ".gitignore"),
+            ("rustfmt.toml", "rustfmt.toml"),
+            ("CLAUDE.md", "CLAUDE.md"),
+        ], None);
+        generated.push(save_polyglot(output_dir, "small_configs", files)?);
+    }
+
+    // === SAMPLE 8: ~50 KiB - mid Sky range (source subset) ===
+    {
+        let files = collect_source_chunks(50_000);
+        generated.push(save_polyglot(output_dir, "source_50k", files)?);
     }
 
     // === SAMPLE 9: ~120 KiB - near Sky/Sugimori boundary (128K) ===
     {
-        let mut files = IndexMap::new();
-        for i in 0..12 {
-            files.insert(format!("chunk_{:02}.bin", i).into_bytes(), vec![(i as u8).wrapping_mul(23); 10000]);
-        }
-        generated.push(save_polyglot(output_dir, "size_120k", files)?);
+        let files = collect_source_chunks(120_000);
+        generated.push(save_polyglot(output_dir, "source_120k", files)?);
     }
 
     // === SAMPLE 10: ~200 KiB - mid Sugimori range ===
     {
-        let mut files = IndexMap::new();
-        for i in 0..20 {
-            files.insert(format!("data_{:02}.bin", i).into_bytes(), vec![(i as u8).wrapping_mul(31); 10000]);
-        }
-        generated.push(save_polyglot(output_dir, "size_200k", files)?);
+        let files = collect_source_chunks(200_000);
+        generated.push(save_polyglot(output_dir, "source_200k", files)?);
     }
 
     // === SAMPLE 11: ~500 KiB - near Sugimori/Mini boundary (512K) ===
     {
-        let mut files = IndexMap::new();
-        for i in 0..25 {
-            files.insert(format!("block_{:02}.dat", i).into_bytes(), vec![(i as u8).wrapping_mul(37); 20000]);
-        }
-        generated.push(save_polyglot(output_dir, "size_500k", files)?);
+        let files = collect_source_chunks(500_000);
+        generated.push(save_polyglot(output_dir, "source_500k", files)?);
     }
 
     // === SAMPLE 12: ~800 KiB - mid Mini range ===
     {
-        let mut files = IndexMap::new();
-        for i in 0..40 {
-            files.insert(format!("segment_{:02}.bin", i).into_bytes(), vec![(i as u8).wrapping_mul(41); 20000]);
-        }
-        generated.push(save_polyglot(output_dir, "size_800k", files)?);
+        let files = collect_source_chunks(800_000);
+        generated.push(save_polyglot(output_dir, "source_800k", files)?);
     }
 
     // === SAMPLE 13: ~1.5 MiB - mid Micro range, RGB mode ===
     {
-        let mut files = IndexMap::new();
-        for i in 0..30 {
-            files.insert(format!("large_{:02}.dat", i).into_bytes(), vec![(i as u8).wrapping_mul(43); 50000]);
-        }
-        generated.push(save_polyglot(output_dir, "size_1500k", files)?);
+        let files = collect_source_chunks(1_500_000);
+        generated.push(save_polyglot(output_dir, "source_1500k", files)?);
     }
 
     // === SAMPLE 14: ~2.5 MiB - near Micro/no-label boundary (3M) ===
     {
+        let files = collect_source_chunks(2_500_000);
+        generated.push(save_polyglot(output_dir, "source_2500k", files)?);
+    }
+
+    // === SAMPLE 15: ~4 MiB - no labels, RGBA mode ===
+    {
+        let files = collect_source_chunks(4_000_000);
+        generated.push(save_polyglot(output_dir, "source_4000k", files)?);
+    }
+
+    // === MORE VARIED SAMPLES (all real-world data) ===
+
+    // === SAMPLE 16: Single large source file ===
+    {
         let mut files = IndexMap::new();
-        for i in 0..50 {
-            files.insert(format!("huge_{:02}.bin", i).into_bytes(), vec![(i as u8).wrapping_mul(47); 50000]);
+        // Find the largest source file under 60KB
+        let mut largest: Option<(String, Vec<u8>)> = None;
+        for entry in walkdir::WalkDir::new("src")
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file())
+        {
+            if let Ok(data) = fs::read(entry.path()) {
+                if data.len() <= 60_000 {
+                    if largest.as_ref().map(|(_, d)| d.len()).unwrap_or(0) < data.len() {
+                        let name = entry.path().to_string_lossy().to_string();
+                        largest = Some((name, data));
+                    }
+                }
+            }
         }
-        generated.push(save_polyglot(output_dir, "size_2500k", files)?);
-    }
-
-    // === SAMPLE 15: ~4 MiB - no labels, RGBA mode (80 files × 50KB each)
-    {
-        let mut files = IndexMap::new();
-        for i in 0..80 {
-            files.insert(format!("massive_{:02}.dat", i).into_bytes(), vec![(i as u8).wrapping_mul(53); 50000]);
+        if let Some((name, data)) = largest {
+            files.insert(name.into_bytes(), data);
         }
-        generated.push(save_polyglot(output_dir, "size_4000k", files)?);
+        generated.push(save_polyglot(output_dir, "largest_source", files)?);
     }
 
-    // === MORE VARIED SAMPLES ===
-
-    // === SAMPLE 16: Single file near max size (55KB, just under 60KB limit) ===
+    // === SAMPLE 17: Many small source files (polyglot module) ===
     {
         let mut files = IndexMap::new();
-        files.insert(b"single_large.bin".to_vec(), vec![0xAB; 55000]);
-        generated.push(save_polyglot(output_dir, "single_55k", files)?);
+        collect_glob(&mut files, "src/polyglot", &["*.rs"], Some(60_000), Some("polyglot/"));
+        generated.push(save_polyglot(output_dir, "polyglot_module", files)?);
     }
 
-    // === SAMPLE 17: Many tiny files ===
+    // === SAMPLE 18: Text module source ===
     {
         let mut files = IndexMap::new();
-        for i in 0..100 {
-            files.insert(format!("tiny_{:03}.txt", i).into_bytes(), format!("File {}", i).into_bytes());
+        collect_glob(&mut files, "src/text", &["*.rs"], Some(60_000), Some("text/"));
+        generated.push(save_polyglot(output_dir, "text_module", files)?);
+    }
+
+    // === SAMPLE 19: PNG module source ===
+    {
+        let mut files = IndexMap::new();
+        collect_glob(&mut files, "src/png", &["*.rs"], Some(60_000), Some("png/"));
+        generated.push(save_polyglot(output_dir, "png_module", files)?);
+    }
+
+    // === SAMPLE 20: All examples ===
+    {
+        let mut files = IndexMap::new();
+        collect_glob(&mut files, "examples", &["*.rs"], Some(60_000), Some("examples/"));
+        generated.push(save_polyglot(output_dir, "all_examples", files)?);
+    }
+
+    // === SAMPLE 21: System text files (shells, paths, etc) ===
+    {
+        let mut files = IndexMap::new();
+        collect_files(&mut files, &[
+            ("shells", "/etc/shells"),
+            ("paths", "/etc/paths"),
+            ("hosts", "/etc/hosts"),
+            ("resolv.conf", "/etc/resolv.conf"),
+        ], Some(50_000));
+        generated.push(save_polyglot(output_dir, "etc_text", files)?);
+    }
+
+    // === SAMPLE 22: User shell configs ===
+    {
+        let mut files = IndexMap::new();
+        collect_files(&mut files, &[
+            ("bashrc", &format!("{}/.bashrc", home)),
+            ("zshrc", &format!("{}/.zshrc", home)),
+            ("profile", &format!("{}/.profile", home)),
+            ("bash_profile", &format!("{}/.bash_profile", home)),
+        ], Some(50_000));
+        generated.push(save_polyglot(output_dir, "shell_configs", files)?);
+    }
+
+    // === SAMPLE 23: Deep directory structure from src ===
+    {
+        let mut files = IndexMap::new();
+        // Collect files preserving their full paths to show directory depth
+        for entry in walkdir::WalkDir::new("src")
+            .max_depth(10)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file())
+            .take(30)
+        {
+            if let Ok(data) = fs::read(entry.path()) {
+                if data.len() <= 60_000 {
+                    files.insert(entry.path().to_string_lossy().into_owned().into_bytes(), data);
+                }
+            }
         }
-        generated.push(save_polyglot(output_dir, "many_tiny", files)?);
+        generated.push(save_polyglot(output_dir, "deep_source_tree", files)?);
     }
 
-    // === SAMPLE 18: Few medium files ===
+    // === SAMPLE 24: Long path names from source ===
     {
         let mut files = IndexMap::new();
-        for i in 0..5 {
-            files.insert(format!("medium_{}.dat", i).into_bytes(), vec![(i as u8) * 50; 30000]);
+        // Find files with longest paths
+        let mut entries: Vec<_> = walkdir::WalkDir::new("src")
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file())
+            .collect();
+        entries.sort_by_key(|e| std::cmp::Reverse(e.path().to_string_lossy().len()));
+        for entry in entries.into_iter().take(15) {
+            if let Ok(data) = fs::read(entry.path()) {
+                if data.len() <= 60_000 {
+                    files.insert(entry.path().to_string_lossy().into_owned().into_bytes(), data);
+                }
+            }
         }
-        generated.push(save_polyglot(output_dir, "few_medium", files)?);
+        generated.push(save_polyglot(output_dir, "long_paths", files)?);
     }
 
-    // === SAMPLE 19: Ascending sizes ===
+    // === SAMPLE 25: Config file formats (Cargo.toml, json, etc) ===
     {
         let mut files = IndexMap::new();
-        for i in 1..=10 {
-            files.insert(format!("size_{:02}k.bin", i).into_bytes(), vec![i as u8; i * 1000]);
-        }
-        generated.push(save_polyglot(output_dir, "ascending_sizes", files)?);
-    }
-
-    // === SAMPLE 20: Descending sizes ===
-    {
-        let mut files = IndexMap::new();
-        for i in (1..=10).rev() {
-            files.insert(format!("rev_{:02}k.bin", i).into_bytes(), vec![i as u8; i * 1000]);
-        }
-        generated.push(save_polyglot(output_dir, "descending_sizes", files)?);
-    }
-
-    // === SAMPLE 21: Text-heavy (ASCII patterns) ===
-    {
-        let mut files = IndexMap::new();
-        let lorem = b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. ";
-        for i in 0..15 {
-            let content: Vec<u8> = lorem.iter().cycle().take(3000 + i * 500).copied().collect();
-            files.insert(format!("text_{:02}.txt", i).into_bytes(), content);
-        }
-        generated.push(save_polyglot(output_dir, "text_heavy", files)?);
-    }
-
-    // === SAMPLE 22: Binary patterns (0x00-0xFF cycling) ===
-    {
-        let mut files = IndexMap::new();
-        for i in 0..8 {
-            let content: Vec<u8> = (0..10000).map(|j| ((j + i * 32) % 256) as u8).collect();
-            files.insert(format!("pattern_{}.bin", i).into_bytes(), content);
-        }
-        generated.push(save_polyglot(output_dir, "binary_patterns", files)?);
-    }
-
-    // === SAMPLE 23: Deep directory structure ===
-    {
-        let mut files = IndexMap::new();
-        files.insert(b"a/file.txt".to_vec(), b"Level 1".to_vec());
-        files.insert(b"a/b/file.txt".to_vec(), b"Level 2".to_vec());
-        files.insert(b"a/b/c/file.txt".to_vec(), b"Level 3".to_vec());
-        files.insert(b"a/b/c/d/file.txt".to_vec(), b"Level 4".to_vec());
-        files.insert(b"a/b/c/d/e/file.txt".to_vec(), b"Level 5".to_vec());
-        files.insert(b"x/y/z/deep.dat".to_vec(), vec![0xDD; 5000]);
-        generated.push(save_polyglot(output_dir, "deep_dirs", files)?);
-    }
-
-    // === SAMPLE 24: Long filenames ===
-    {
-        let mut files = IndexMap::new();
-        for i in 0..10 {
-            let name = format!("this_is_a_very_long_filename_number_{:02}_with_extra_text.dat", i);
-            files.insert(name.into_bytes(), vec![i as u8; 2000]);
-        }
-        generated.push(save_polyglot(output_dir, "long_names", files)?);
-    }
-
-    // === SAMPLE 25: Mixed extensions ===
-    {
-        let mut files = IndexMap::new();
-        files.insert(b"data.json".to_vec(), b"{\"key\": \"value\"}".to_vec());
-        files.insert(b"data.xml".to_vec(), b"<root><item>test</item></root>".to_vec());
-        files.insert(b"data.yaml".to_vec(), b"key: value\nlist:\n  - item1\n  - item2".to_vec());
-        files.insert(b"data.toml".to_vec(), b"[section]\nkey = \"value\"".to_vec());
-        files.insert(b"data.csv".to_vec(), b"a,b,c\n1,2,3\n4,5,6".to_vec());
-        files.insert(b"data.md".to_vec(), b"# Title\n\nParagraph text.".to_vec());
-        generated.push(save_polyglot(output_dir, "mixed_formats", files)?);
+        collect_files(&mut files, &[
+            ("Cargo.toml", "Cargo.toml"),
+            ("Cargo.lock", "Cargo.lock"),
+        ], None);
+        // Also collect any .json files from src/text
+        collect_glob(&mut files, "src/text", &["*.json"], Some(60_000), Some(""));
+        generated.push(save_polyglot(output_dir, "config_formats", files)?);
     }
 
     // === SAMPLE 26: Rust source subset ===
