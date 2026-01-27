@@ -630,6 +630,16 @@ fn build_aligned_data(
             let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
             data.resize(data.len() + padding_to_row, 0);
 
+            // Check if this file would cross an IDAT boundary
+            let file_size = file_sizes[file_idx];
+            let start_filtered = data_to_filtered_pos(data.len(), row_width);
+            let end_filtered = data_to_filtered_pos(data.len() + file_size, row_width);
+            if crosses_idat_boundary(start_filtered, end_filtered) {
+                // Pad to next boundary-aligned position
+                let boundary_target = next_boundary_aligned_pos(data.len(), row_width);
+                data.resize(boundary_target, 0);
+            }
+
             // Place the file
             let (name, body) = &files[file_idx];
 
@@ -668,13 +678,6 @@ fn build_aligned_data(
             data.extend_from_slice(&deflate_content);
         }
 
-        // If not the last bucket, pad to IDAT boundary
-        if bucket_idx < bucket_assignments.len() - 1 {
-            let padding = (row_width - (data.len() % row_width)) % row_width;
-            let target = data.len() + padding;
-            let boundary_target = next_boundary_aligned_pos(target, row_width);
-            data.resize(boundary_target, 0);
-        }
     }
 
     (data, entries, final_block_rows)
