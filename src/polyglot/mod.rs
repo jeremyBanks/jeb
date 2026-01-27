@@ -686,9 +686,8 @@ fn build_aligned_data(
 }
 
 /// Calculate spacing for each bucket.
-/// First entry starts at top (no leading padding).
-/// Spacing is distributed evenly between entries.
-/// Last bucket gets no spacing (content packed tight at bottom).
+/// Full buckets get even spacing with half-weight edges.
+/// Last bucket gets no spacing (content packed tight).
 fn calculate_bucket_spacing(
     bucket_assignments: &[Vec<usize>],
     file_sizes: &[usize],
@@ -705,8 +704,8 @@ fn calculate_bucket_spacing(
         let is_last_bucket = bucket_idx == num_buckets - 1;
         let num_files = file_indices.len();
 
-        // No spacing for last bucket, single-bucket images, or single file in bucket
-        if is_last_bucket || num_files <= 1 {
+        // No spacing for last bucket or single-bucket images
+        if is_last_bucket || num_files == 0 {
             result.push(vec![0; num_files]);
             continue;
         }
@@ -724,19 +723,26 @@ fn calculate_bucket_spacing(
             continue;
         }
 
-        // Distribute spacing between files only (no leading/trailing)
-        // First file gets 0 spacing, remaining files share the slack
-        let num_gaps = num_files - 1;
-        let rows_per_gap = slack_rows / num_gaps;
-        let extra_rows = slack_rows % num_gaps;
+        // Distribute with half-weight edges: [0.5, 1, 1, ..., 1, 0.5] = N weight total
+        let total_weight = num_files as f64;
+        let rows_per_unit = slack_rows as f64 / total_weight;
 
         let mut spacing = Vec::with_capacity(num_files);
-        spacing.push(0); // First file: no leading padding
+        let mut allocated = 0usize;
 
-        for i in 0..num_gaps {
-            // Distribute extra rows to earlier gaps
-            let extra = if i < extra_rows { 1 } else { 0 };
-            spacing.push(rows_per_gap + extra);
+        for i in 0..num_files {
+            let weight = if i == 0 { 0.5 } else { 1.0 };
+            let rows = (weight * rows_per_unit).floor() as usize;
+            spacing.push(rows);
+            allocated += rows;
+        }
+
+        // Distribute remainder to middle gaps
+        let mut remaining = slack_rows.saturating_sub(allocated);
+        for i in 1..num_files {
+            if remaining == 0 { break; }
+            spacing[i] += 1;
+            remaining -= 1;
         }
 
         result.push(spacing);
