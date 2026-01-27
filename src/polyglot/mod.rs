@@ -210,10 +210,11 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
     let actual_width = rightmost_pixel.max(0) as usize;
 
     // Calculate starting x position (right-align if too long)
-    let margin = 5; // pixels margin from edge
+    // Minimal margin since entire row is header background
+    let margin = 1;
     let available_width = row_width.saturating_sub(margin * 2);
     let start_x: i32 = if actual_width <= available_width {
-        margin as i32 // Left-aligned with margin
+        margin as i32 // Left-aligned with small margin
     } else {
         // Right-aligned: truncate from left
         (row_width as i32 - actual_width as i32 - margin as i32).max(margin as i32 - actual_width as i32)
@@ -910,3 +911,31 @@ mod tests {
         assert!(result.windows(4).any(|w| w == b"PK\x05\x06"));
     }
 }
+
+    #[test]
+    fn test_label_has_header_background() {
+        use crate::checksums::crc32;
+        let name = b"test.txt";
+        let body = b"Hello!";
+        let row_width = 64;
+
+        let header_size = 30 + name.len();
+        let bytes_used = header_size % row_width;
+        let extra_len = if bytes_used == 0 { 0 } else { row_width - bytes_used };
+        let compressed_size = row_width + 1;
+        let crc = crc32(body);
+
+        let header = build_local_header(name, body.len(), compressed_size, crc, extra_len);
+
+        // Header should start with PK signature
+        assert_eq!(&header[0..4], b"PK\x03\x04", "Header should start with PK signature");
+        assert_eq!(header.len(), row_width, "Header should be exactly row_width bytes");
+
+        // Get a font for testing
+        let font = fonts::select_font(100).expect("Should get a font for small size");
+
+        let label = render_filename_label(name, row_width, font, &header);
+
+        // First row (padding above) should contain header bytes including PK signature
+        assert_eq!(&label[0..4], b"PK\x03\x04", "Label should have PK signature in first row");
+    }
