@@ -718,13 +718,20 @@ fn plan_placement_order(file_sizes: &[usize], row_width: usize) -> Vec<usize> {
         placement_order.push(file_to_place);
 
         // Find bucket with enough space, or create new one
-        let bucket_idx = bucket_remaining.iter()
-            .position(|&r| r >= size)
-            .unwrap_or_else(|| {
-                bucket_remaining.push(bucket_capacity);
-                bucket_remaining.len() - 1
-            });
-        bucket_remaining[bucket_idx] -= size;
+        // Files larger than bucket capacity get their own bucket
+        let bucket_idx = if size > bucket_capacity {
+            // Large file: give it its own "bucket" with exact capacity
+            bucket_remaining.push(size);
+            bucket_remaining.len() - 1
+        } else {
+            bucket_remaining.iter()
+                .position(|&r| r >= size)
+                .unwrap_or_else(|| {
+                    bucket_remaining.push(bucket_capacity);
+                    bucket_remaining.len() - 1
+                })
+        };
+        bucket_remaining[bucket_idx] = bucket_remaining[bucket_idx].saturating_sub(size);
 
         // Check for relaxation
         if !relaxed_mode && can_relax(&placed, file_sizes, &bucket_remaining, bucket_capacity) {
@@ -752,11 +759,12 @@ fn can_relax(
 
         // First fit
         if let Some(remaining) = test_remaining.iter_mut().find(|r| **r >= size) {
-            *remaining -= size;
+            *remaining = remaining.saturating_sub(size);
         } else if size <= bucket_capacity {
-            test_remaining.push(bucket_capacity - size);
+            test_remaining.push(bucket_capacity.saturating_sub(size));
         } else {
-            return false;
+            // Large file needs its own bucket
+            test_remaining.push(0);
         }
     }
 
