@@ -538,6 +538,8 @@ pub fn build_polyglot(
     let plte_size = palette.map(|p| 4 + 4 + p.len() + 4).unwrap_or(0);
     let data_offset = 8 + 25 + plte_size + 8 + 2 + 5;
 
+    // Debug: print terminator rows for file_045
+    // Find file_045 entry
     // IDAT with smart filter bytes
     let filtered = add_smart_filter_bytes(&padded, row_width, &final_block_rows);
     write_idat_stored(&mut output, &filtered);
@@ -710,8 +712,34 @@ fn build_aligned_data(
         let has_label = font.is_some();
         let has_spacing_gap = spacing_rows > 0;
 
-        // Determine if this file's label can serve as terminator for previous file
-        let label_is_terminator = pending_terminator && has_label && !has_spacing_gap;
+        // Determine if this file's label can serve as terminator for previous file.
+        // The label can only serve as terminator if it's placed IMMEDIATELY after the
+        // previous file's content (same row). This requires:
+        // 1. Previous file has pending_terminator = true
+        // 2. This file has a label (font is Some)
+        // 3. No spacing gap (spacing_rows == 0)
+        // 4. No IDAT boundary crossing (would insert padding between files)
+        //
+        // We need to check boundary crossing BEFORE deciding, because if crossing happens,
+        // there will be padding rows between the previous file and this label.
+        let mut label_is_terminator = pending_terminator && has_label && !has_spacing_gap;
+
+        // Check if IDAT boundary crossing will happen - this adds padding that breaks
+        // the terminator chain. Calculate where the file would be placed.
+        if label_is_terminator {
+            // Simulate the position after alignment (spacing_rows is 0 here)
+            let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
+            let pos_after_align = data.len() + padding_to_row;
+
+            // Check if this file would cross an IDAT boundary
+            let file_size = file_sizes[file_idx];
+            let start_filtered = data_to_filtered_pos(pos_after_align, row_width);
+            let end_filtered = data_to_filtered_pos(pos_after_align + file_size, row_width);
+            if crosses_idat_boundary(start_filtered, end_filtered) {
+                // Boundary crossing will happen - label can't serve as terminator
+                label_is_terminator = false;
+            }
+        }
 
         // If previous file needs terminator and we can't use this label, add explicit one
         if pending_terminator && !label_is_terminator {
@@ -720,7 +748,7 @@ fn build_aligned_data(
             let terminator = create_terminator_row(row_width);
             data.extend_from_slice(&terminator);
         }
-        pending_terminator = false;
+        // Note: pending_terminator will be set at the end of this iteration
 
         // Add spacing BEFORE this file (after any terminator)
         if spacing_rows > 0 {
@@ -1059,7 +1087,7 @@ fn build_local_header(
     if extra_len > 0 {
         if extra_len >= 4 {
             // Valid extra field structure: ID + size + data
-            header.extend_from_slice(&0x0000_u16.to_le_bytes()); // header ID
+            header.extend_from_slice(&0xFFFF_u16.to_le_bytes()); // header ID (0xFFFF = third-party use)
             header.extend_from_slice(&((extra_len - 4) as u16).to_le_bytes()); // data size
             header.resize(header.len() + extra_len - 4, 0); // data (zeros)
         } else {
