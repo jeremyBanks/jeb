@@ -249,22 +249,22 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
         let copy_len = row_width.min(header_row.len());
         row[..copy_len].copy_from_slice(&header_row[..copy_len]);
 
-        // Erase pixels that are 8-directionally adjacent to any text pixel
+        // Erase pixels near text: 2 pixels horizontally, 1 pixel vertically
         for x in 0..row_width {
-            let mut adjacent_to_text = false;
+            let mut near_text = false;
             'halo: for dy in -1i32..=1 {
-                for dx in -1i32..=1 {
+                for dx in -2i32..=2 {
                     let ny = row_idx as i32 + dy;
                     let nx = x as i32 + dx;
                     if ny >= 0 && (ny as usize) < label_rows && nx >= 0 && (nx as usize) < row_width {
                         if text_bitmap[ny as usize][nx as usize] {
-                            adjacent_to_text = true;
+                            near_text = true;
                             break 'halo;
                         }
                     }
                 }
             }
-            if adjacent_to_text {
+            if near_text {
                 row[x] = 0x00; // erase to black (creates readable halo around text)
             }
         }
