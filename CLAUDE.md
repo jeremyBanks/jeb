@@ -2,7 +2,14 @@
 
 ## CRITICAL: Save frequently!
 
-Run `git add -A && git commit -m "..."` (or just `save`):
+Use `save` command (NOT `git commit` directly):
+- `save` - snapshot without message (for quick mid-work saves)
+- `save --message "description"` - snapshot with message
+- `save --empty --message "description"` - add message to previous empty commit
+
+NEVER EDIT EXISTING GIT HISTORY (no amend, no rebase, no force push)
+
+Save:
 - BEFORE starting any changes
 - AFTER completing any changes
 - OFTEN in between for complex changes
