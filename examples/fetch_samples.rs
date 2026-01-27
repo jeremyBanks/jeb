@@ -193,6 +193,98 @@ fn main() -> Result<(), panic> {
         }
     }
 
+    // === SIZE-TARGETED SAMPLES ===
+    // Font thresholds: ≤128K (Sky), ≤512K (Sugimori), ≤1M (Mini), ≤3M (Micro), >3M (no labels)
+    // Color thresholds: ≤1M (Indexed), ≤3M (RGB), >3M (RGBA)
+
+    // === SAMPLE 6: Tiny (~100 bytes) - tests minimal file ===
+    {
+        let mut files = IndexMap::new();
+        files.insert(b"hello.txt".to_vec(), b"Hello, World!".to_vec());
+        generated.push(save_polyglot(output_dir, "size_tiny", files)?);
+    }
+
+    // === SAMPLE 7: Small (~1 KiB) - well under Sky threshold ===
+    {
+        let mut files = IndexMap::new();
+        files.insert(b"a.txt".to_vec(), vec![b'A'; 300]);
+        files.insert(b"b.txt".to_vec(), vec![b'B'; 300]);
+        files.insert(b"c.txt".to_vec(), vec![b'C'; 300]);
+        generated.push(save_polyglot(output_dir, "size_1k", files)?);
+    }
+
+    // === SAMPLE 8: ~50 KiB - mid Sky range ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..10 {
+            files.insert(format!("file_{:02}.dat", i).into_bytes(), vec![(i as u8).wrapping_mul(17); 5000]);
+        }
+        generated.push(save_polyglot(output_dir, "size_50k", files)?);
+    }
+
+    // === SAMPLE 9: ~120 KiB - near Sky/Sugimori boundary (128K) ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..12 {
+            files.insert(format!("chunk_{:02}.bin", i).into_bytes(), vec![(i as u8).wrapping_mul(23); 10000]);
+        }
+        generated.push(save_polyglot(output_dir, "size_120k", files)?);
+    }
+
+    // === SAMPLE 10: ~200 KiB - mid Sugimori range ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..20 {
+            files.insert(format!("data_{:02}.bin", i).into_bytes(), vec![(i as u8).wrapping_mul(31); 10000]);
+        }
+        generated.push(save_polyglot(output_dir, "size_200k", files)?);
+    }
+
+    // === SAMPLE 11: ~500 KiB - near Sugimori/Mini boundary (512K) ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..25 {
+            files.insert(format!("block_{:02}.dat", i).into_bytes(), vec![(i as u8).wrapping_mul(37); 20000]);
+        }
+        generated.push(save_polyglot(output_dir, "size_500k", files)?);
+    }
+
+    // === SAMPLE 12: ~800 KiB - mid Mini range ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..40 {
+            files.insert(format!("segment_{:02}.bin", i).into_bytes(), vec![(i as u8).wrapping_mul(41); 20000]);
+        }
+        generated.push(save_polyglot(output_dir, "size_800k", files)?);
+    }
+
+    // === SAMPLE 13: ~1.5 MiB - mid Micro range, RGB mode ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..30 {
+            files.insert(format!("large_{:02}.dat", i).into_bytes(), vec![(i as u8).wrapping_mul(43); 50000]);
+        }
+        generated.push(save_polyglot(output_dir, "size_1500k", files)?);
+    }
+
+    // === SAMPLE 14: ~2.5 MiB - near Micro/no-label boundary (3M) ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..50 {
+            files.insert(format!("huge_{:02}.bin", i).into_bytes(), vec![(i as u8).wrapping_mul(47); 50000]);
+        }
+        generated.push(save_polyglot(output_dir, "size_2500k", files)?);
+    }
+
+    // === SAMPLE 15: ~4 MiB - no labels, RGBA mode ===
+    {
+        let mut files = IndexMap::new();
+        for i in 0..40 {
+            files.insert(format!("massive_{:02}.dat", i).into_bytes(), vec![(i as u8).wrapping_mul(53); 100000]);
+        }
+        generated.push(save_polyglot(output_dir, "size_4000k", files)?);
+    }
+
     // === NETWORK SAMPLES (optional) ===
     if include_network {
         println!("\nFetching data from the internet...\n");
