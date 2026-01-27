@@ -21,3 +21,13 @@ Polyglot PNG+ZIP file generator. Key constraints:
 - Max 60KB per file (IDAT boundary limitation)
 - Files are sorted lexicographically
 - Labels use size-appropriate fonts (Sky < 128K, Sugimori < 512K, Mini < 1M, Micro < 3M)
+
+## Code Documentation Requirements
+
+When implementing code with subtle algorithms (especially in polyglot/mod.rs):
+- Add detailed comments explaining the logic, constraints, and invariants
+- Include ASCII diagrams where they help clarify data structures or byte layouts
+- Comments can be extensive if needed to fully explain the algorithm
+- ALWAYS consult existing comments before making changes
+- ALWAYS update comments after making changes to keep them accurate
+- Document any non-obvious relationships between filter bytes, DEFLATE blocks, and ZIP structures

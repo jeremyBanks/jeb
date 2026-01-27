@@ -131,12 +131,60 @@ fn label_rows_for_font(font: &BitmapFont) -> usize {
     1 + font.height + 1
 }
 
+/// Check if a file's padding will require an internal terminator (BFINAL=1 in last content row).
+/// This happens when (row_width - 4 - last_chunk_size) is not divisible by 5.
+fn needs_internal_terminator(body_len: usize, row_width: usize) -> bool {
+    let data_per_block = row_width - 4;
+    if body_len == 0 {
+        // Empty file: padding = row_width - 4
+        return (row_width - 4) % 5 != 0;
+    }
+    let last_chunk_size = if body_len % data_per_block == 0 {
+        data_per_block // Last chunk is full
+    } else {
+        body_len % data_per_block
+    };
+    let padding_needed = row_width - 4 - last_chunk_size;
+    padding_needed % 5 != 0
+}
+
+/// Create a terminator row for ending a file's DEFLATE stream.
+/// This row contains the empty final DEFLATE block (BFINAL=1, LEN=0, NLEN=0xFFFF).
+/// The filter byte (0x01 for Sub) is added separately by add_smart_filter_bytes.
+///
+/// With Sub filter, the decoded values are:
+/// - decoded[0] = raw[0] = 0x00
+/// - decoded[1] = raw[1] + decoded[0] = 0x00
+/// - decoded[2] = raw[2] + decoded[1] = 0xFF
+/// - decoded[3] = raw[3] + decoded[2] = 0xFE (0xFF + 0xFF wrapped)
+/// - decoded[4..] = 0 (if we set raw[4] = 0x02, raw[5..] = 0)
+fn create_terminator_row(row_width: usize) -> Vec<u8> {
+    let mut row = vec![0u8; row_width];
+    // DEFLATE empty final block: LEN=0, NLEN=0xFFFF
+    row[0] = 0x00; // LEN low
+    row[1] = 0x00; // LEN high
+    row[2] = 0xFF; // NLEN low
+    row[3] = 0xFF; // NLEN high
+    // With Sub filter, running sum after byte 3 is 0xFE
+    // To make byte 4 decode to 0: raw[4] = (0 - 0xFE) mod 256 = 0x02
+    if row_width > 4 {
+        row[4] = 0x02;
+    }
+    // Remaining bytes are 0, which decode to 0 under Sub filter
+    row
+}
+
 /// Render filename label rows using the specified font.
 /// The meaningful header bytes (30 + filename) are "stretched" into each label row as a background,
 /// then text is rendered on top with a 1-pixel halo erased for readability.
 /// Extra field padding bytes are left as zeros - only actual ZIP metadata is shown.
 /// Kerning checks against the accumulated rendering to avoid touching earlier chars.
-fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, header_row: &[u8]) -> Vec<u8> {
+///
+/// If `is_terminator` is true, the first row becomes a terminator row for the previous file:
+/// - Bytes 0-3 are the DEFLATE empty final block (LEN=0, NLEN=0xFFFF)
+/// - Bytes 4+ are pre-filtered for Sub filter to decode to black (0)
+/// - The rest of the label rows use None filter as normal
+fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, header_row: &[u8], is_terminator: bool) -> Vec<u8> {
     let label_rows = label_rows_for_font(font);
     let mut result = Vec::with_capacity(label_rows * row_width);
 
@@ -300,13 +348,37 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
         }
     }
 
-    // Draw text pixels on top (white) and output rows
+    // Draw text pixels on top (white)
     for row_idx in 0..label_rows {
         for x in 0..row_width {
             if text_bitmap[row_idx][x] {
                 rows_data[row_idx][x] = 0xFF;
             }
         }
+    }
+
+    // If this is a terminator label, transform the first row for Sub filter
+    if is_terminator {
+        // First row becomes terminator row with DEFLATE header
+        // Bytes 0-3: empty final block (LEN=0, NLEN=0xFFFF)
+        // Bytes 4+: pre-filtered so Sub filter decodes to the desired visual (black)
+        rows_data[0][0] = 0x00; // LEN low
+        rows_data[0][1] = 0x00; // LEN high
+        rows_data[0][2] = 0xFF; // NLEN low
+        rows_data[0][3] = 0xFF; // NLEN high
+        // With Sub filter, running sum after byte 3 is 0xFE
+        // To make byte 4 decode to 0: raw[4] = (0 - 0xFE) mod 256 = 0x02
+        if row_width > 4 {
+            rows_data[0][4] = 0x02;
+            // Remaining bytes stay 0, which decode to 0 under Sub filter
+            for x in 5..row_width {
+                rows_data[0][x] = 0x00;
+            }
+        }
+    }
+
+    // Output all rows
+    for row_idx in 0..label_rows {
         result.extend_from_slice(&rows_data[row_idx]);
     }
 
@@ -545,7 +617,9 @@ fn next_boundary_aligned_pos(current_data_pos: usize, row_width: usize) -> usize
     target_row * row_width
 }
 
-/// Calculate the total size a file will occupy (label + header + content).
+/// Calculate the total size a file will occupy (label + header + content + terminator).
+/// Note: When labels are enabled, the terminator may merge with the next file's label,
+/// but we count it conservatively for bin packing purposes.
 fn calculate_file_size(name: &[u8], body: &[u8], row_width: usize, font: Option<&BitmapFont>) -> usize {
     let data_per_block = row_width - 4;
     let header_size = 30 + name.len();
@@ -554,7 +628,10 @@ fn calculate_file_size(name: &[u8], body: &[u8], row_width: usize, font: Option<
     let num_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
     let file_data_size = header_size + extra_len + num_blocks * row_width;
     let label_size = font.map(|f| label_rows_for_font(f) * row_width).unwrap_or(0);
-    label_size + file_data_size
+    // Add terminator row only if not using internal terminator
+    let uses_internal = needs_internal_terminator(body.len(), row_width);
+    let terminator_size = if uses_internal { 0 } else { row_width };
+    label_size + file_data_size + terminator_size
 }
 
 /// Check if a file fits before the next IDAT boundary.
@@ -610,77 +687,124 @@ fn build_aligned_data(
     let bucket_spacing = calculate_bucket_spacing(&bucket_assignments, &file_sizes, row_width);
 
     // Phase 4: Place files with pre-calculated spacing
+    // Each file's DEFLATE stream needs a terminator row (BFINAL=1).
+    // - If the next file has a label with no spacing gap, the label's first row is the terminator
+    // - Otherwise, add an explicit terminator row after the content
     let mut data = Vec::new();
     let mut entries = Vec::new();
-    let mut final_block_rows = HashSet::new();
+    let mut terminator_rows = HashSet::new();
 
+    // Flatten bucket assignments to get the order of files with their spacing info
+    let mut file_order_with_spacing: Vec<(usize, usize)> = Vec::new(); // (file_idx, spacing_rows)
     for (bucket_idx, file_indices) in bucket_assignments.iter().enumerate() {
         let spacing = &bucket_spacing[bucket_idx];
-
         for (file_in_bucket, &file_idx) in file_indices.iter().enumerate() {
-            // Add spacing BEFORE this file
-            let spacing_rows = spacing[file_in_bucket];
-            if spacing_rows > 0 {
-                // Align to row first, then add spacing
-                let padding = (row_width - (data.len() % row_width)) % row_width;
-                data.resize(data.len() + padding + spacing_rows * row_width, 0);
-            }
-
-            // Align to row boundary
-            let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
-            data.resize(data.len() + padding_to_row, 0);
-
-            // Check if this file would cross an IDAT boundary
-            let file_size = file_sizes[file_idx];
-            let start_filtered = data_to_filtered_pos(data.len(), row_width);
-            let end_filtered = data_to_filtered_pos(data.len() + file_size, row_width);
-            if crosses_idat_boundary(start_filtered, end_filtered) {
-                // Pad to next boundary-aligned position
-                let boundary_target = next_boundary_aligned_pos(data.len(), row_width);
-                data.resize(boundary_target, 0);
-            }
-
-            // Place the file
-            let (name, body) = &files[file_idx];
-
-            // Calculate header and extra field sizes
-            let header_size = 30 + name.len();
-            let bytes_used = header_size % row_width;
-            let extra_len = if bytes_used == 0 { 0 } else { row_width - bytes_used };
-
-            // Calculate number of deflate blocks and compressed size
-            let num_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
-            let compressed_size = num_blocks * filtered_row_size;
-
-            // Pre-compute the header bytes
-            let crc = crc32(body);
-            let header_bytes = build_local_header(name, body.len(), compressed_size, crc, extra_len);
-
-            // Insert filename label if font is specified
-            if let Some(f) = font {
-                let label = render_filename_label(name, row_width, f, &header_bytes);
-                data.extend_from_slice(&label);
-            }
-
-            let entry_start = data.len();
-
-            // Calculate which row contains the final block
-            let content_start = entry_start + header_size + extra_len;
-            let last_block_pos = content_start + (num_blocks - 1) * row_width;
-            let last_block_row = last_block_pos / row_width;
-            final_block_rows.insert(last_block_row);
-
-            entries.push((name.to_vec(), body.to_vec(), entry_start, compressed_size));
-
-            // Write the header and content
-            data.extend_from_slice(&header_bytes);
-            let deflate_content = encode_as_deflate_blocks(body, row_width);
-            data.extend_from_slice(&deflate_content);
+            file_order_with_spacing.push((file_idx, spacing[file_in_bucket]));
         }
-
     }
 
-    (data, entries, final_block_rows)
+    // Track if previous file needs a terminator
+    let mut pending_terminator = false;
+
+    for (order_idx, &(file_idx, spacing_rows)) in file_order_with_spacing.iter().enumerate() {
+        let has_label = font.is_some();
+        let has_spacing_gap = spacing_rows > 0;
+
+        // Determine if this file's label can serve as terminator for previous file
+        let label_is_terminator = pending_terminator && has_label && !has_spacing_gap;
+
+        // If previous file needs terminator and we can't use this label, add explicit one
+        if pending_terminator && !label_is_terminator {
+            let terminator_row = data.len() / row_width;
+            terminator_rows.insert(terminator_row);
+            let terminator = create_terminator_row(row_width);
+            data.extend_from_slice(&terminator);
+        }
+        pending_terminator = false;
+
+        // Add spacing BEFORE this file (after any terminator)
+        if spacing_rows > 0 {
+            // Align to row first, then add spacing
+            let padding = (row_width - (data.len() % row_width)) % row_width;
+            data.resize(data.len() + padding + spacing_rows * row_width, 0);
+        }
+
+        // Align to row boundary
+        let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
+        data.resize(data.len() + padding_to_row, 0);
+
+        // Check if this file would cross an IDAT boundary
+        let file_size = file_sizes[file_idx];
+        let start_filtered = data_to_filtered_pos(data.len(), row_width);
+        let end_filtered = data_to_filtered_pos(data.len() + file_size, row_width);
+        if crosses_idat_boundary(start_filtered, end_filtered) {
+            // Pad to next boundary-aligned position
+            let boundary_target = next_boundary_aligned_pos(data.len(), row_width);
+            data.resize(boundary_target, 0);
+        }
+
+        // Place the file
+        let (name, body) = &files[file_idx];
+
+        // Calculate header and extra field sizes
+        let header_size = 30 + name.len();
+        let bytes_used = header_size % row_width;
+        let extra_len = if bytes_used == 0 { 0 } else { row_width - bytes_used };
+
+        // Calculate number of deflate blocks and compressed size
+        // Add +1 row for terminator ONLY if padding divides evenly by 5 (separate terminator row)
+        // Otherwise, the last content row has BFINAL=1 (internal terminator)
+        let num_content_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
+        let uses_internal_terminator = needs_internal_terminator(body.len(), row_width);
+        let terminator_rows_count = if uses_internal_terminator { 0 } else { 1 };
+        let compressed_size = (num_content_blocks + terminator_rows_count) * filtered_row_size;
+
+        // Pre-compute the header bytes
+        let crc = crc32(body);
+        let header_bytes = build_local_header(name, body.len(), compressed_size, crc, extra_len);
+
+        // Insert filename label if font is specified
+        if let Some(f) = font {
+            if label_is_terminator {
+                // This label's first row serves as terminator for previous file
+                let terminator_row = data.len() / row_width;
+                terminator_rows.insert(terminator_row);
+            }
+            let label = render_filename_label(name, row_width, f, &header_bytes, label_is_terminator);
+            data.extend_from_slice(&label);
+        }
+
+        let entry_start = data.len();
+
+        entries.push((name.to_vec(), body.to_vec(), entry_start, compressed_size));
+
+        // Write the header and content
+        data.extend_from_slice(&header_bytes);
+        let mut needs_internal_terminator = false;
+        let deflate_content = encode_as_deflate_blocks(body, row_width, &mut needs_internal_terminator);
+        data.extend_from_slice(&deflate_content);
+
+        if needs_internal_terminator {
+            // Padding didn't divide evenly by 5, so the last content row
+            // has BFINAL=1 with anti-Sub padding (no separate terminator needed)
+            let last_content_row = (data.len() - 1) / row_width;
+            terminator_rows.insert(last_content_row);
+            pending_terminator = false;
+        } else {
+            // This file needs a separate terminator row
+            pending_terminator = true;
+        }
+    }
+
+    // Handle terminator for the very last file (if it used empty-block padding)
+    if pending_terminator {
+        let terminator_row = data.len() / row_width;
+        terminator_rows.insert(terminator_row);
+        let terminator = create_terminator_row(row_width);
+        data.extend_from_slice(&terminator);
+    }
+
+    (data, entries, terminator_rows)
 }
 
 /// Calculate spacing for each bucket.
@@ -816,61 +940,94 @@ fn bin_pack_largest_first(
 }
 
 /// Encode data as deflate stored blocks with variable row width.
-fn encode_as_deflate_blocks(body: &[u8], row_width: usize) -> Vec<u8> {
+/// All content rows use None filter (0x00) - terminator rows are added separately.
+///
+/// IMPORTANT: Padding after actual data must be valid DEFLATE blocks, because
+/// content rows have BFINAL=0 and the decoder continues reading after the data.
+/// We fill padding with empty stored blocks (5 bytes each: 00 00 00 FF FF).
+/// If padding doesn't divide evenly by 5, the last content row uses BFINAL=1
+/// with anti-Sub compensation (fallback to original behavior).
+fn encode_as_deflate_blocks(body: &[u8], row_width: usize, needs_internal_terminator: &mut bool) -> Vec<u8> {
     let data_per_block = row_width - 4;
     let mut result = Vec::new();
 
+    *needs_internal_terminator = false;
+
     if body.is_empty() {
-        // Empty file: final block with 0 length - needs Sub filter compensation
-        // Row is: [LEN=0][NLEN=0xFFFF][padding...]
-        // With Sub filter, decoded[0]=0, decoded[1]=0, decoded[2]=0xFF, decoded[3]=0xFF+0xFF=0xFE
-        // First padding byte should cancel out: (256 - 0xFE) = 2
+        // Empty file: single stored block with 0 length
+        // The terminator row will provide BFINAL=1
         result.extend_from_slice(&0_u16.to_le_bytes());
         result.extend_from_slice(&0xFFFF_u16.to_le_bytes());
-        if row_width > 4 {
-            result.push(2); // Anti-Sub byte to decode to 0
-            result.resize(row_width, 0);
-        }
+        // Fill padding with empty stored blocks
+        let padding_needed = row_width - 4;
+        fill_padding_with_empty_blocks(&mut result, padding_needed, row_width, needs_internal_terminator);
         return result;
     }
 
     let chunks: Vec<_> = body.chunks(data_per_block).collect();
-    let num_chunks = chunks.len();
 
-    for (i, chunk) in chunks.into_iter().enumerate() {
-        let is_last = i == num_chunks - 1;
+    for (i, chunk) in chunks.iter().enumerate() {
+        let is_last = i == chunks.len() - 1;
         let len = chunk.len() as u16;
         result.extend_from_slice(&len.to_le_bytes());
         result.extend_from_slice(&len.not().to_le_bytes());
         result.extend_from_slice(chunk);
 
-        // Pad to full row width
         let block_size = 4 + chunk.len();
         if block_size < row_width {
             let padding_needed = row_width - block_size;
 
-            if is_last && padding_needed > 0 {
-                // Last row gets 0x01 filter (Sub). Compute anti-Sub padding.
-                // After Sub filter, decoded[i] = raw[i] + decoded[i-1].
-                // To make padding decode to 0, first padding byte = (256 - last_decoded) % 256.
-                // last_decoded is the running sum of all row bytes (mod 256).
-                let row_start = result.len() - block_size;
-                let mut running_sum: u8 = 0;
-                for j in row_start..result.len() {
-                    running_sum = running_sum.wrapping_add(result[j]);
-                }
-                // First padding byte cancels out the running sum
-                result.push(running_sum.wrapping_neg());
-                // Remaining padding is zeros (decode to 0 since previous decoded is 0)
-                result.resize(result.len() + padding_needed - 1, 0);
+            if is_last {
+                // Last row: try to fill with empty blocks, or fall back to internal terminator
+                fill_padding_with_empty_blocks(&mut result, padding_needed, row_width, needs_internal_terminator);
             } else {
-                // Non-last rows use 0x00 filter (None), just pad with zeros
+                // Non-last rows: must have full data, so no padding issue
+                // (This shouldn't happen with our chunking, but handle it)
                 result.resize(result.len() + padding_needed, 0);
             }
         }
     }
 
     result
+}
+
+/// Fill padding with valid empty DEFLATE stored blocks.
+/// Each empty block is 5 bytes: [BFINAL=0, BTYPE=0][LEN=0][NLEN=0xFFFF]
+/// If padding doesn't divide evenly by 5, sets needs_internal_terminator = true
+/// and uses anti-Sub compensation instead.
+fn fill_padding_with_empty_blocks(result: &mut Vec<u8>, padding_needed: usize, row_width: usize, needs_internal_terminator: &mut bool) {
+    if padding_needed == 0 {
+        return;
+    }
+
+    // Check if padding divides evenly by 5 (empty block size)
+    if padding_needed % 5 == 0 {
+        // Perfect fit: fill with empty stored blocks
+        let num_blocks = padding_needed / 5;
+        for _ in 0..num_blocks {
+            result.push(0x00); // BFINAL=0, BTYPE=0
+            result.extend_from_slice(&0_u16.to_le_bytes()); // LEN=0
+            result.extend_from_slice(&0xFFFF_u16.to_le_bytes()); // NLEN=0xFFFF
+        }
+    } else {
+        // Can't fill evenly: this row needs BFINAL=1 with anti-Sub padding
+        // The terminator row approach won't work for this file
+        *needs_internal_terminator = true;
+
+        // Compute anti-Sub padding (original approach)
+        // The row will get filter 0x01 (Sub), so we need to compensate
+        // The current row's data is the last (row_width - padding_needed) bytes in result
+        let block_size = row_width - padding_needed; // 4 + chunk_len
+        let row_data_start = result.len().saturating_sub(block_size);
+        let mut running_sum: u8 = 0;
+        for j in row_data_start..result.len() {
+            running_sum = running_sum.wrapping_add(result[j]);
+        }
+        // First padding byte cancels out the running sum
+        result.push(running_sum.wrapping_neg());
+        // Remaining padding is zeros (decode to 0 since previous decoded is 0)
+        result.resize(result.len() + padding_needed - 1, 0);
+    }
 }
 
 /// Build ZIP local file header bytes (30 bytes + name + extra).
@@ -1155,7 +1312,7 @@ mod tests {
         // Get a font for testing
         let font = fonts::select_font(100).expect("Should get a font for small size");
 
-        let label = render_filename_label(name, row_width, font, &header);
+        let label = render_filename_label(name, row_width, font, &header, false);
 
         // Bottom row (padding below text) should have header bytes - stretch starts there
         // label_rows = font.height + 2 = 5 for typical font
