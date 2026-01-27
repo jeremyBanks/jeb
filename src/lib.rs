@@ -130,9 +130,6 @@ static ALL_PALETTES: &[&[u8]] = &[
     // Dual-sequential
     palettes::oceanic::TOPO, palettes::crameri::FES, palettes::crameri::OLERON,
     palettes::crameri::BUKAVU,
-    // Cyclic
-    palettes::crameri::BAM_O, palettes::crameri::VIK_O, palettes::oceanic::PHASE,
-    palettes::crameri::BROC_O, palettes::crameri::CORK_O, palettes::crameri::ROMA_O,
 ];
 
 /// Creates a polyglot PNG+ZIP file.
