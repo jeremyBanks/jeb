@@ -464,66 +464,101 @@ fn main() -> Result<(), panic> {
         generated.push(save_polyglot(output_dir, "font_metadata", files)?);
     }
 
-    // === SAMPLE 30: ~64K boundary test ===
+    // === SAMPLE 30: Large source files (near 60KB boundary) ===
     {
         let mut files = IndexMap::new();
-        files.insert(b"before_boundary.bin".to_vec(), vec![0x11; 30000]);
-        files.insert(b"crosses_boundary.bin".to_vec(), vec![0x22; 40000]);
-        files.insert(b"after_boundary.bin".to_vec(), vec![0x33; 30000]);
-        generated.push(save_polyglot(output_dir, "boundary_test", files)?);
+        // Collect largest source files (those near the 60KB limit)
+        let mut entries: Vec<_> = walkdir::WalkDir::new("src")
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file())
+            .filter_map(|e| {
+                fs::metadata(e.path()).ok().map(|m| (e, m.len()))
+            })
+            .filter(|(_, size)| *size <= 60_000 && *size >= 20_000)
+            .collect();
+        entries.sort_by_key(|(_, size)| std::cmp::Reverse(*size));
+        for (entry, _) in entries.into_iter().take(5) {
+            if let Ok(data) = fs::read(entry.path()) {
+                files.insert(entry.path().to_string_lossy().into_owned().into_bytes(), data);
+            }
+        }
+        generated.push(save_polyglot(output_dir, "large_sources", files)?);
     }
 
-    // === SAMPLE 31: Repeated content ===
+    // === SAMPLE 31: Same file copied multiple times (tests compression) ===
     {
         let mut files = IndexMap::new();
-        let repeated = vec![0x42; 5000];
-        for i in 0..20 {
-            files.insert(format!("repeat_{:02}.dat", i).into_bytes(), repeated.clone());
+        // Use Cargo.toml as the repeated content
+        if let Ok(data) = fs::read("Cargo.toml") {
+            for i in 0..20 {
+                files.insert(format!("copy_{:02}/Cargo.toml", i).into_bytes(), data.clone());
+            }
         }
-        generated.push(save_polyglot(output_dir, "repeated_content", files)?);
+        generated.push(save_polyglot(output_dir, "repeated_cargo", files)?);
     }
 
-    // === SAMPLE 32: Random-ish content ===
+    // === SAMPLE 32: Git pack index files (real binary data) ===
     {
         let mut files = IndexMap::new();
-        for i in 0..15 {
-            // Pseudo-random using simple LCG
-            let mut val = (i as u32).wrapping_mul(1103515245).wrapping_add(12345);
-            let content: Vec<u8> = (0..8000).map(|_| {
-                val = val.wrapping_mul(1103515245).wrapping_add(12345);
-                (val >> 16) as u8
-            }).collect();
-            files.insert(format!("random_{:02}.bin", i).into_bytes(), content);
+        collect_glob(&mut files, ".git/objects/pack", &["*.idx"], Some(60_000), Some("pack/"));
+        if files.is_empty() {
+            // Fallback to loose objects
+            collect_git_objects(&mut files, ".git/objects", 15, 30000);
         }
-        generated.push(save_polyglot(output_dir, "pseudorandom", files)?);
+        generated.push(save_polyglot(output_dir, "git_pack_index", files)?);
     }
 
-    // === SAMPLE 33: All zeros ===
+    // === SAMPLE 33: User cache files ===
     {
         let mut files = IndexMap::new();
-        for i in 0..10 {
-            files.insert(format!("zeros_{:02}.bin", i).into_bytes(), vec![0x00; 8000]);
+        // Cargo registry cache metadata
+        let cargo_home = std::env::var("CARGO_HOME")
+            .unwrap_or_else(|_| format!("{}/.cargo", home));
+        collect_glob(&mut files, &format!("{}/registry/cache", cargo_home), &["*.crate"], Some(50_000), Some("crates/"));
+        if files.len() < 3 {
+            // Fallback: collect from .git/refs
+            collect_glob(&mut files, ".git/refs", &["*"], Some(1000), Some("refs/"));
         }
-        generated.push(save_polyglot(output_dir, "all_zeros", files)?);
+        generated.push(save_polyglot(output_dir, "cargo_cache", files)?);
     }
 
-    // === SAMPLE 34: All ones (0xFF) ===
+    // === SAMPLE 34: Markdown documentation ===
     {
         let mut files = IndexMap::new();
-        for i in 0..10 {
-            files.insert(format!("ones_{:02}.bin", i).into_bytes(), vec![0xFF; 8000]);
-        }
-        generated.push(save_polyglot(output_dir, "all_ones", files)?);
+        // Collect any .md files from the project
+        collect_glob(&mut files, ".", &["*.md"], Some(60_000), Some(""));
+        // Also check parent for more READMEs
+        collect_glob(&mut files, "..", &["README.md", "CHANGELOG.md"], Some(60_000), Some("parent/"));
+        generated.push(save_polyglot(output_dir, "markdown_docs", files)?);
     }
 
-    // === SAMPLE 35: Alternating bytes ===
+    // === SAMPLE 35: License files from nearby projects ===
     {
         let mut files = IndexMap::new();
-        for i in 0..10 {
-            let content: Vec<u8> = (0..8000).map(|j| if j % 2 == 0 { 0x55 } else { 0xAA }).collect();
-            files.insert(format!("alt_{:02}.bin", i).into_bytes(), content);
+        for entry in walkdir::WalkDir::new("..")
+            .max_depth(3)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                let name = e.file_name().to_string_lossy().to_lowercase();
+                name.contains("license") || name.contains("licence") || name == "copying"
+            })
+            .take(20)
+        {
+            if let Ok(data) = fs::read(entry.path()) {
+                if data.len() <= 60_000 {
+                    let project = entry.path()
+                        .parent()
+                        .and_then(|p| p.file_name())
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "unknown".to_string());
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    files.insert(format!("{}/{}", project, name).into_bytes(), data);
+                }
+            }
         }
-        generated.push(save_polyglot(output_dir, "alternating", files)?);
+        generated.push(save_polyglot(output_dir, "licenses", files)?);
     }
 
     // === SAMPLE 36: Source with examples ===
