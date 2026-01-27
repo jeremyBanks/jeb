@@ -67,7 +67,6 @@ pub const LightnessAlpha: ColorType = ColorType::LuminanceAlpha;
 const ROW_WIDTH_ALIGNMENT: usize = 64;
 
 /// Base minimum row width (must be a multiple of ROW_WIDTH_ALIGNMENT).
-/// The actual minimum is max(this, round_up(30 + longest_filename + extra_padding)).
 const BASE_MIN_ROW_WIDTH: usize = 64;
 
 /// Maximum bytes per IDAT deflate stored block.
@@ -404,7 +403,28 @@ fn next_boundary_aligned_pos(current_data_pos: usize, row_width: usize) -> usize
     target_row * row_width
 }
 
-/// Build pixel data with variable row width and IDAT boundary handling.
+/// Calculate the total size a file will occupy (label + header + content).
+fn calculate_file_size(name: &[u8], body: &[u8], row_width: usize, font: Option<&BitmapFont>) -> usize {
+    let data_per_block = row_width - 4;
+    let header_size = 30 + name.len();
+    let bytes_for_alignment = header_size % row_width;
+    let extra_len = if bytes_for_alignment == 0 { 0 } else { row_width - bytes_for_alignment };
+    let num_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
+    let file_data_size = header_size + extra_len + num_blocks * row_width;
+    let label_size = font.map(|f| label_rows_for_font(f) * row_width).unwrap_or(0);
+    label_size + file_data_size
+}
+
+/// Check if a file fits before the next IDAT boundary.
+fn file_fits_before_boundary(target_pos: usize, file_size: usize, row_width: usize) -> bool {
+    let filtered_start = data_to_filtered_pos(target_pos, row_width);
+    let filtered_end = data_to_filtered_pos(target_pos + file_size, row_width);
+    !crosses_idat_boundary(filtered_start, filtered_end)
+}
+
+/// Build pixel data with variable row width and greedy IDAT bin-packing.
+/// Files are placed in lexicographic order when possible, but smaller files
+/// may be placed out of order to fill space before IDAT boundaries.
 fn build_aligned_data(
     files: &[(&[u8], &[u8])],
     row_width: usize,
@@ -417,32 +437,50 @@ fn build_aligned_data(
     let mut entries = Vec::new();
     let mut final_block_rows = HashSet::new();
 
-    for (name, body) in files {
-        // Calculate file size before placing it
-        let header_size = 30 + name.len();
-        let bytes_for_alignment = header_size % row_width;
-        let extra_len_estimate = if bytes_for_alignment == 0 { 0 } else { row_width - bytes_for_alignment };
-        let num_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
-        let file_data_size = header_size + extra_len_estimate + num_blocks * row_width;
+    // Pre-calculate sizes for all files
+    let file_sizes: Vec<usize> = files.iter()
+        .map(|(name, body)| calculate_file_size(name, body, row_width, font))
+        .collect();
 
-        // Add label size if font is specified
-        let label_size = font.map(|f| label_rows_for_font(f) * row_width).unwrap_or(0);
+    // Track which files have been placed
+    let mut placed = vec![false; files.len()];
+    let mut num_placed = 0;
 
+    while num_placed < files.len() {
         // Align to row boundary
         let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
-        let mut target_pos = data.len() + padding_to_row;
+        let target_pos = data.len() + padding_to_row;
 
-        // Check if file (including label) would cross an IDAT boundary
-        let filtered_start = data_to_filtered_pos(target_pos, row_width);
-        let filtered_end = data_to_filtered_pos(target_pos + label_size + file_data_size, row_width);
+        // Find next unplaced file in lexicographic order
+        let next_lex = placed.iter().position(|&p| !p).unwrap();
 
-        if crosses_idat_boundary(filtered_start, filtered_end) {
-            // File would cross a boundary; push it to start after the boundary
-            target_pos = next_boundary_aligned_pos(target_pos, row_width);
-        }
+        // Check if it fits before the next IDAT boundary
+        let file_to_place = if file_fits_before_boundary(target_pos, file_sizes[next_lex], row_width) {
+            // Next file in lex order fits
+            next_lex
+        } else {
+            // Scan forward for a file that fits
+            let fitting_file = (next_lex + 1..files.len())
+                .find(|&i| !placed[i] && file_fits_before_boundary(target_pos, file_sizes[i], row_width));
 
-        // Pad to the target position
-        data.resize(target_pos, 0);
+            if let Some(idx) = fitting_file {
+                idx
+            } else {
+                // No file fits; skip to next boundary and place next lex file
+                let new_target = next_boundary_aligned_pos(target_pos, row_width);
+                data.resize(new_target, 0);
+                next_lex
+            }
+        };
+
+        // Place the selected file
+        let (name, body) = &files[file_to_place];
+        placed[file_to_place] = true;
+        num_placed += 1;
+
+        // Re-align to row boundary (may have changed if we skipped to boundary)
+        let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
+        data.resize(data.len() + padding_to_row, 0);
 
         // Insert filename label if font is specified
         if let Some(f) = font {
@@ -452,11 +490,13 @@ fn build_aligned_data(
 
         let entry_start = data.len();
 
-        // Recalculate extra field size (may differ if position changed)
+        // Calculate header and extra field sizes
+        let header_size = 30 + name.len();
         let bytes_used = header_size % row_width;
         let extra_len = if bytes_used == 0 { 0 } else { row_width - bytes_used };
 
-        // Calculate compressed size (with filter bytes)
+        // Calculate number of deflate blocks and compressed size
+        let num_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
         let compressed_size = num_blocks * filtered_row_size;
 
         // Calculate which row contains the final block
