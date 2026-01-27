@@ -175,25 +175,25 @@ mod tests {
     }
 
     #[test]
-    fn test_very_large_content() {
-        // Test with files larger than MAX_FILE_CONTENT_SIZE (60KB)
-        let large_content = vec![0x42u8; 100_000]; // 100KB of data
+    fn test_near_max_size_content() {
+        // Test with file near MAX_FILE_CONTENT_SIZE (60KB)
+        let large_content = vec![0x42u8; 59_000]; // Just under 60KB limit
         let files = vec![(b"large.bin".as_ref(), large_content.as_ref())];
         let polyglot = build_polyglot(&files, 0, BitDepth::EightBit, ColorType::Luminance, None);
 
         let result = assert_valid_polyglot(&polyglot);
         assert_eq!(result.zip_file_count, 1);
-        assert_eq!(result.zip_total_uncompressed_size, 100_000);
+        assert_eq!(result.zip_total_uncompressed_size, 59_000);
     }
 
     #[test]
-    fn test_multiple_large_files() {
-        // Test with multiple large files like palette_source sample
-        let file1 = vec![0x41u8; 14_000];  // ~14KB like mappings.rs
-        let file2 = vec![0x42u8; 11_000];  // ~11KB like singles.rs
-        let file3 = vec![0x43u8; 170_000]; // ~170KB like crameri.rs
-        let file4 = vec![0x44u8; 107_000]; // ~107KB like oceanic.rs
-        let file5 = vec![0x45u8; 20_000];  // ~20KB like viridis.rs
+    fn test_multiple_medium_files() {
+        // Test with multiple files under the 60KB limit
+        let file1 = vec![0x41u8; 14_000];  // ~14KB
+        let file2 = vec![0x42u8; 11_000];  // ~11KB
+        let file3 = vec![0x43u8; 50_000];  // ~50KB (under limit)
+        let file4 = vec![0x44u8; 55_000];  // ~55KB (under limit)
+        let file5 = vec![0x45u8; 20_000];  // ~20KB
 
         let files = vec![
             (b"palettes/mappings.rs".as_ref(), file1.as_slice()),
@@ -206,6 +206,15 @@ mod tests {
 
         let result = assert_valid_polyglot(&polyglot);
         assert_eq!(result.zip_file_count, 5);
+    }
+
+    #[test]
+    #[should_panic(expected = "exceeding maximum")]
+    fn test_rejects_oversized_files() {
+        // Files larger than 60KB should be rejected
+        let large = vec![0x42u8; 70_000]; // 70KB - over limit
+        let files = vec![(b"large.bin".as_ref(), large.as_slice())];
+        build_polyglot(&files, 0, BitDepth::EightBit, ColorType::Luminance, None);
     }
 
     #[test]

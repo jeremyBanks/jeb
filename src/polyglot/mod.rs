@@ -284,6 +284,11 @@ struct FileEntry {
 }
 
 /// Build a polyglot PNG+ZIP file.
+///
+/// # Panics
+/// Panics if any file exceeds MAX_FILE_CONTENT_SIZE (~60KB). Large files cannot
+/// be supported because they would span IDAT block boundaries, corrupting the
+/// deflate stream.
 pub fn build_polyglot(
     files: &[(&[u8], &[u8])],
     _width: u32,
@@ -291,6 +296,20 @@ pub fn build_polyglot(
     color_mode: ColorMode,
     palette: Option<&[u8]>,
 ) -> Vec<u8> {
+    // Validate file sizes - files larger than MAX_FILE_CONTENT_SIZE will span
+    // IDAT boundaries and produce corrupt deflate streams
+    for (name, body) in files {
+        if body.len() > MAX_FILE_CONTENT_SIZE {
+            let name_str = String::from_utf8_lossy(name);
+            panic!(
+                "File '{}' is {} bytes, exceeding maximum of {} bytes. \
+                 Large files cannot be embedded in polyglot PNG+ZIP because they \
+                 would span IDAT block boundaries.",
+                name_str, body.len(), MAX_FILE_CONTENT_SIZE
+            );
+        }
+    }
+
     // Calculate minimum row width based on filename lengths
     let min_width = min_row_width_for_files(files);
 

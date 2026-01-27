@@ -37,8 +37,8 @@ fn main() -> Result<(), panic> {
     {
         let mut files = IndexMap::new();
 
-        // All Rust source files (no size limit)
-        collect_glob(&mut files, "src", &["*.rs"], None, Some("src/"));
+        // All Rust source files (max 60KB each for polyglot compatibility)
+        collect_glob(&mut files, "src", &["*.rs"], Some(60_000), Some("src/"));
 
         // Project config files
         collect_files(&mut files, &[
@@ -58,8 +58,8 @@ fn main() -> Result<(), panic> {
         // Git objects (binary)
         collect_git_objects(&mut files, ".git/objects", 20, 50000);
 
-        // Examples
-        collect_glob(&mut files, "examples", &["*.rs"], None, Some("examples/"));
+        // Examples (max 60KB each)
+        collect_glob(&mut files, "examples", &["*.rs"], Some(60_000), Some("examples/"));
 
         generated.push(save_polyglot(output_dir, "zipng_project", files)?);
     }
@@ -152,13 +152,14 @@ fn main() -> Result<(), panic> {
     {
         let mut files = IndexMap::new();
 
-        // Git pack files (highly compressed binary)
+        // Git pack files (highly compressed binary, max 60KB each)
         if let Ok(entries) = fs::read_dir(".git/objects/pack") {
             for entry in entries.filter_map(|e| e.ok()).take(4) {
-                if let Ok(mut data) = fs::read(entry.path()) {
-                    data.truncate(100000); // 100KB max per pack file
-                    let name = entry.file_name().to_string_lossy().to_string();
-                    files.insert(format!("pack/{}", name).into_bytes(), data);
+                if let Ok(data) = fs::read(entry.path()) {
+                    if data.len() <= 60_000 {
+                        let name = entry.file_name().to_string_lossy().to_string();
+                        files.insert(format!("pack/{}", name).into_bytes(), data);
+                    }
                 }
             }
         }
@@ -276,22 +277,22 @@ fn main() -> Result<(), panic> {
         generated.push(save_polyglot(output_dir, "size_2500k", files)?);
     }
 
-    // === SAMPLE 15: ~4 MiB - no labels, RGBA mode ===
+    // === SAMPLE 15: ~4 MiB - no labels, RGBA mode (80 files × 50KB each)
     {
         let mut files = IndexMap::new();
-        for i in 0..40 {
-            files.insert(format!("massive_{:02}.dat", i).into_bytes(), vec![(i as u8).wrapping_mul(53); 100000]);
+        for i in 0..80 {
+            files.insert(format!("massive_{:02}.dat", i).into_bytes(), vec![(i as u8).wrapping_mul(53); 50000]);
         }
         generated.push(save_polyglot(output_dir, "size_4000k", files)?);
     }
 
     // === MORE VARIED SAMPLES ===
 
-    // === SAMPLE 16: Single large file ===
+    // === SAMPLE 16: Single file near max size (55KB, just under 60KB limit) ===
     {
         let mut files = IndexMap::new();
-        files.insert(b"single_large.bin".to_vec(), vec![0xAB; 100000]);
-        generated.push(save_polyglot(output_dir, "single_100k", files)?);
+        files.insert(b"single_large.bin".to_vec(), vec![0xAB; 55000]);
+        generated.push(save_polyglot(output_dir, "single_55k", files)?);
     }
 
     // === SAMPLE 17: Many tiny files ===
@@ -408,14 +409,14 @@ fn main() -> Result<(), panic> {
     // === SAMPLE 28: Font sprites ===
     {
         let mut files = IndexMap::new();
-        collect_glob(&mut files, "src/text", &["*.png"], None, Some("sprites/"));
+        collect_glob(&mut files, "src/text", &["*.png"], Some(60_000), Some("sprites/"));
         generated.push(save_polyglot(output_dir, "font_sprites", files)?);
     }
 
     // === SAMPLE 29: Font metadata ===
     {
         let mut files = IndexMap::new();
-        collect_glob(&mut files, "src/text", &["*.json"], None, Some("meta/"));
+        collect_glob(&mut files, "src/text", &["*.json"], Some(60_000), Some("meta/"));
         generated.push(save_polyglot(output_dir, "font_metadata", files)?);
     }
 
@@ -484,15 +485,15 @@ fn main() -> Result<(), panic> {
     // === SAMPLE 36: Source with examples ===
     {
         let mut files = IndexMap::new();
-        collect_glob(&mut files, "src/polyglot", &["*.rs"], None, Some("src/"));
-        collect_glob(&mut files, "examples", &["*.rs"], None, Some("examples/"));
+        collect_glob(&mut files, "src/polyglot", &["*.rs"], Some(60_000), Some("src/"));
+        collect_glob(&mut files, "examples", &["*.rs"], Some(60_000), Some("examples/"));
         generated.push(save_polyglot(output_dir, "src_and_examples", files)?);
     }
 
-    // === SAMPLE 37: PNG palette files ===
+    // === SAMPLE 37: PNG palette files (filtered to <60KB each) ===
     {
         let mut files = IndexMap::new();
-        collect_glob(&mut files, "src/png/palettes", &["*.rs"], None, Some("palettes/"));
+        collect_glob(&mut files, "src/png/palettes", &["*.rs"], Some(60_000), Some("palettes/"));
         generated.push(save_polyglot(output_dir, "palette_source", files)?);
     }
 
@@ -620,9 +621,12 @@ fn main() -> Result<(), panic> {
 
 fn collect_files(files: &mut IndexMap<Vec<u8>, Vec<u8>>, paths: &[(&str, &str)], max_size: Option<usize>) {
     for (archive_path, local_path) in paths {
-        if let Ok(mut data) = fs::read(local_path) {
+        if let Ok(data) = fs::read(local_path) {
+            // Skip files over max_size (60KB limit for polyglot compatibility)
             if let Some(max) = max_size {
-                data.truncate(max);
+                if data.len() > max {
+                    continue;
+                }
             }
             if !data.is_empty() {
                 files.insert(archive_path.as_bytes().to_vec(), data);
@@ -659,9 +663,12 @@ fn collect_glob(
         });
 
         if matches {
-            if let Ok(mut data) = fs::read(path) {
+            if let Ok(data) = fs::read(path) {
+                // Skip files over max_size (60KB limit for polyglot compatibility)
                 if let Some(max) = max_size {
-                    data.truncate(max);
+                    if data.len() > max {
+                        continue;
+                    }
                 }
                 if !data.is_empty() {
                     let rel_path = path.strip_prefix(base_dir)
