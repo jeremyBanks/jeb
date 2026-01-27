@@ -1,6 +1,7 @@
 //! Built-in color palettes
 
 pub mod crameri;
+pub mod diagnostic;
 pub mod mappings;
 pub mod oceanic;
 pub mod singles;
@@ -127,4 +128,13 @@ pub static ALL_CYCLIC: &[&[u8]] = &[
     crameri::BROC_O,
     crameri::CORK_O,
     crameri::ROMA_O,
+];
+
+/// All included [`EightBit`][crate::EightBit]
+/// color maps designed for diagnostic/binary data visualization.
+///
+/// These palettes highlight different byte ranges (null, whitespace,
+/// printable ASCII, high bytes) with distinct colors.
+pub static ALL_DIAGNOSTIC: &[&[u8]] = &[
+    diagnostic::BYTE_VALUE,
 ];
