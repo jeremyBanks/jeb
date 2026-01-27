@@ -6,7 +6,7 @@ use std::collections::HashMap;
 /// Result of looking up a character glyph.
 pub struct GlyphLookup<'a> {
     pub glyph: &'a Vec<Vec<bool>>,
-    pub skip_kerning: bool, // True for space substitutions
+    pub skip_kerning: bool, // True for spaces (would kern to nothing otherwise)
 }
 
 /// A loaded bitmap font with glyph data.

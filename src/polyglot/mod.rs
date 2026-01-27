@@ -558,6 +558,7 @@ fn file_fits_before_boundary(target_pos: usize, file_size: usize, row_width: usi
 ///    If yes, switch to relaxed mode.
 /// 3. Relaxed packing: Place remaining items in strict preferred order.
 /// 4. Spacing: Distribute leftover space evenly within each full IDAT bucket.
+///    Edge gaps (before first, after last) have half weight.
 fn build_aligned_data(
     files: &[(&[u8], &[u8])],
     row_width: usize,
@@ -578,90 +579,166 @@ fn build_aligned_data(
     // Phase 1 & 2: Determine placement order using bin packing
     let placement_order = plan_placement_order(&file_sizes, row_width);
 
-    // Phase 3: Place files and track IDAT bucket boundaries
+    // Phase 3: First pass - determine bucket assignments (without spacing)
+    let bucket_assignments = {
+        let mut buckets: Vec<Vec<usize>> = vec![vec![]];
+        let mut simulated_pos = 0usize;
+
+        for &file_idx in &placement_order {
+            let padding = (row_width - (simulated_pos % row_width)) % row_width;
+            let target = simulated_pos + padding;
+
+            if !file_fits_before_boundary(target, file_sizes[file_idx], row_width) {
+                buckets.push(vec![]);
+                simulated_pos = next_boundary_aligned_pos(target, row_width);
+            } else {
+                simulated_pos = target;
+            }
+
+            buckets.last_mut().unwrap().push(file_idx);
+            simulated_pos += file_sizes[file_idx];
+        }
+        buckets
+    };
+
+    // Phase 4: Calculate spacing for each bucket
+    let bucket_spacing = calculate_bucket_spacing(&bucket_assignments, &file_sizes, row_width);
+
+    // Phase 5: Place files with pre-calculated spacing
     let mut data = Vec::new();
     let mut entries = Vec::new();
     let mut final_block_rows = HashSet::new();
 
-    // Track IDAT bucket info: (start_pos, files_in_bucket)
-    let mut bucket_info: Vec<(usize, Vec<usize>)> = vec![];
-    let mut current_bucket_start = 0;
-    let mut current_bucket_files: Vec<usize> = vec![];
+    for (bucket_idx, file_indices) in bucket_assignments.iter().enumerate() {
+        let spacing = &bucket_spacing[bucket_idx];
 
-    for &file_idx in &placement_order {
-        // Align to row boundary
-        let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
-        let target_pos = data.len() + padding_to_row;
-
-        // Check if this file would cross an IDAT boundary
-        if !file_fits_before_boundary(target_pos, file_sizes[file_idx], row_width) {
-            // Save current bucket info
-            if !current_bucket_files.is_empty() {
-                bucket_info.push((current_bucket_start, current_bucket_files.clone()));
+        for (file_in_bucket, &file_idx) in file_indices.iter().enumerate() {
+            // Add spacing BEFORE this file
+            let spacing_rows = spacing[file_in_bucket];
+            if spacing_rows > 0 {
+                // Align to row first, then add spacing
+                let padding = (row_width - (data.len() % row_width)) % row_width;
+                data.resize(data.len() + padding + spacing_rows * row_width, 0);
             }
 
-            // Skip to next IDAT boundary
-            let new_target = next_boundary_aligned_pos(target_pos, row_width);
-            data.resize(new_target, 0);
-            current_bucket_start = new_target;
-            current_bucket_files = vec![];
-        } else {
-            // Pad to row boundary
-            data.resize(target_pos, 0);
+            // Align to row boundary
+            let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
+            data.resize(data.len() + padding_to_row, 0);
+
+            // Place the file
+            let (name, body) = &files[file_idx];
+
+            // Calculate header and extra field sizes
+            let header_size = 30 + name.len();
+            let bytes_used = header_size % row_width;
+            let extra_len = if bytes_used == 0 { 0 } else { row_width - bytes_used };
+
+            // Calculate number of deflate blocks and compressed size
+            let num_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
+            let compressed_size = num_blocks * filtered_row_size;
+
+            // Pre-compute the header bytes
+            let crc = crc32(body);
+            let header_bytes = build_local_header(name, body.len(), compressed_size, crc, extra_len);
+
+            // Insert filename label if font is specified
+            if let Some(f) = font {
+                let label = render_filename_label(name, row_width, f, &header_bytes);
+                data.extend_from_slice(&label);
+            }
+
+            let entry_start = data.len();
+
+            // Calculate which row contains the final block
+            let content_start = entry_start + header_size + extra_len;
+            let last_block_pos = content_start + (num_blocks - 1) * row_width;
+            let last_block_row = last_block_pos / row_width;
+            final_block_rows.insert(last_block_row);
+
+            entries.push((name.to_vec(), body.to_vec(), entry_start, compressed_size));
+
+            // Write the header and content
+            data.extend_from_slice(&header_bytes);
+            let deflate_content = encode_as_deflate_blocks(body, row_width);
+            data.extend_from_slice(&deflate_content);
         }
 
-        // Record file position in current bucket
-        current_bucket_files.push(data.len());
-
-        // Place the file
-        let (name, body) = &files[file_idx];
-
-        // Calculate header and extra field sizes
-        let header_size = 30 + name.len();
-        let bytes_used = header_size % row_width;
-        let extra_len = if bytes_used == 0 { 0 } else { row_width - bytes_used };
-
-        // Calculate number of deflate blocks and compressed size
-        let num_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
-        let compressed_size = num_blocks * filtered_row_size;
-
-        // Pre-compute the header bytes
-        let crc = crc32(body);
-        let header_bytes = build_local_header(name, body.len(), compressed_size, crc, extra_len);
-
-        // Insert filename label if font is specified
-        if let Some(f) = font {
-            let label = render_filename_label(name, row_width, f, &header_bytes);
-            data.extend_from_slice(&label);
+        // If not the last bucket, pad to IDAT boundary
+        if bucket_idx < bucket_assignments.len() - 1 {
+            let padding = (row_width - (data.len() % row_width)) % row_width;
+            let target = data.len() + padding;
+            let boundary_target = next_boundary_aligned_pos(target, row_width);
+            data.resize(boundary_target, 0);
         }
-
-        let entry_start = data.len();
-
-        // Calculate which row contains the final block
-        let content_start = entry_start + header_size + extra_len;
-        let last_block_pos = content_start + (num_blocks - 1) * row_width;
-        let last_block_row = last_block_pos / row_width;
-        final_block_rows.insert(last_block_row);
-
-        entries.push((name.to_vec(), body.to_vec(), entry_start, compressed_size));
-
-        // Write the header and content
-        data.extend_from_slice(&header_bytes);
-        let deflate_content = encode_as_deflate_blocks(body, row_width);
-        data.extend_from_slice(&deflate_content);
     }
-
-    // Save last bucket
-    if !current_bucket_files.is_empty() {
-        bucket_info.push((current_bucket_start, current_bucket_files));
-    }
-
-    // Phase 4: Apply even spacing within full IDAT buckets
-    // (Spacing is applied by adjusting entry positions, not by inserting bytes)
-    // For now, we skip spacing as it would require restructuring the data layout.
-    // The bin packing already minimizes wasted space.
 
     (data, entries, final_block_rows)
+}
+
+/// Calculate spacing for each bucket.
+/// Full buckets get even spacing with half-weight edges.
+/// Last bucket gets no spacing (content packed tight).
+fn calculate_bucket_spacing(
+    bucket_assignments: &[Vec<usize>],
+    file_sizes: &[usize],
+    row_width: usize,
+) -> Vec<Vec<usize>> {
+    let filtered_row_size = row_width + 1;
+    let rows_per_bucket = IDAT_BLOCK_SIZE / filtered_row_size;
+    let bucket_capacity_bytes = rows_per_bucket * row_width;
+
+    let num_buckets = bucket_assignments.len();
+    let mut result = Vec::with_capacity(num_buckets);
+
+    for (bucket_idx, file_indices) in bucket_assignments.iter().enumerate() {
+        let is_last_bucket = bucket_idx == num_buckets - 1;
+        let num_files = file_indices.len();
+
+        // No spacing for last bucket or single-bucket images
+        if is_last_bucket || num_files == 0 {
+            result.push(vec![0; num_files]);
+            continue;
+        }
+
+        // Calculate total content bytes
+        let total_content: usize = file_indices.iter()
+            .map(|&idx| file_sizes[idx])
+            .sum();
+
+        let slack_bytes = bucket_capacity_bytes.saturating_sub(total_content);
+        let slack_rows = slack_bytes / row_width;
+
+        if slack_rows == 0 {
+            result.push(vec![0; num_files]);
+            continue;
+        }
+
+        // Distribute with half-weight edges: [0.5, 1, 1, ..., 1, 0.5] = N weight total
+        let total_weight = num_files as f64;
+        let rows_per_unit = slack_rows as f64 / total_weight;
+
+        let mut spacing = Vec::with_capacity(num_files);
+        let mut allocated = 0usize;
+
+        for i in 0..num_files {
+            let weight = if i == 0 { 0.5 } else { 1.0 };
+            let rows = (weight * rows_per_unit).floor() as usize;
+            spacing.push(rows);
+            allocated += rows;
+        }
+
+        // Distribute remainder to middle gaps
+        let mut remaining = slack_rows.saturating_sub(allocated);
+        for i in 1..num_files {
+            if remaining == 0 { break; }
+            spacing[i] += 1;
+            remaining -= 1;
+        }
+
+        result.push(spacing);
+    }
+
+    result
 }
 
 /// Plan the order of file placement using bin packing algorithm.
