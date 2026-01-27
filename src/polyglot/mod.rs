@@ -127,6 +127,10 @@ fn label_rows_for_font(font: &BitmapFont) -> usize {
     1 + font.height + 1
 }
 
+/// 4-byte prefix for label rows: LEN=0, NLEN=0xFFFF (empty deflate stored block header).
+/// This provides visual consistency with content rows which have deflate headers.
+const LABEL_ROW_PREFIX: [u8; 4] = [0x00, 0x00, 0xFF, 0xFF];
+
 /// Render filename label rows using the specified font.
 /// If the name is too long, trailing blank pixels are trimmed first,
 /// then remaining overflow is truncated from the left (right-aligned).
@@ -134,7 +138,8 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont) -> Ve
     let label_rows = label_rows_for_font(font);
     let mut result = Vec::with_capacity(label_rows * row_width);
 
-    // Row 0: empty (padding above)
+    // Row 0: empty (padding above) with deflate-style prefix
+    result.extend_from_slice(&LABEL_ROW_PREFIX);
     result.resize(row_width, 0);
 
     // Convert name to chars and get glyphs
@@ -176,24 +181,29 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont) -> Ve
     let actual_width = rightmost_pixel.max(0) as usize;
 
     // Calculate starting x position (right-align if too long)
-    let available_width = row_width.saturating_sub(2); // 1 pixel margin on each side
+    // Account for 4-byte prefix + 1 pixel margin
+    let prefix_len = LABEL_ROW_PREFIX.len();
+    let available_width = row_width.saturating_sub(prefix_len + 2); // prefix + 1 pixel margin on each side
     let start_x: i32 = if actual_width <= available_width {
-        1 // Left-aligned with 1 pixel margin
+        (prefix_len + 1) as i32 // Left-aligned after prefix with 1 pixel margin
     } else {
         // Right-aligned: truncate from left
-        (row_width as i32 - actual_width as i32 - 1).max(1 - actual_width as i32)
+        (row_width as i32 - actual_width as i32 - 1).max((prefix_len + 1) as i32 - actual_width as i32)
     };
 
     // Render text rows
     for text_row in 0..font.height {
         let mut row = vec![0u8; row_width];
+        // Add deflate-style prefix for visual consistency
+        row[..prefix_len].copy_from_slice(&LABEL_ROW_PREFIX);
 
         for &(char_idx, char_x) in &char_positions {
             if let Some(glyph) = glyphs[char_idx] {
                 if text_row < glyph.len() {
                     for (px, &pixel_on) in glyph[text_row].iter().enumerate() {
                         let x = start_x as i32 + char_x + px as i32;
-                        if x >= 0 && (x as usize) < row_width && pixel_on {
+                        // Don't overwrite the prefix bytes
+                        if x >= prefix_len as i32 && (x as usize) < row_width && pixel_on {
                             row[x as usize] = 0xFF; // foreground (white)
                         }
                     }
@@ -204,8 +214,9 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont) -> Ve
         result.extend_from_slice(&row);
     }
 
-    // Final row: empty (padding below)
-    result.resize(result.len() + row_width, 0);
+    // Final row: empty (padding below) with deflate-style prefix
+    result.extend_from_slice(&LABEL_ROW_PREFIX);
+    result.resize(result.len() + row_width - prefix_len, 0);
 
     result
 }
