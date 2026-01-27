@@ -209,12 +209,14 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
     // Use actual rendered width (excluding trailing blank pixels)
     let actual_width = rightmost_pixel.max(0) as usize;
 
-    // Calculate starting x position (right-align if too long)
-    // No margin needed since entire row is header background
-    let start_x: i32 = if actual_width <= row_width {
-        0 // Left-aligned at edge
+    // Calculate starting x position
+    // Default: 4px margin from left edge
+    // If text overflows: right-align (using margin space if needed, truncating from left if necessary)
+    const MARGIN: usize = 4;
+    let start_x: i32 = if actual_width + MARGIN <= row_width {
+        MARGIN as i32 // Fits with margin
     } else {
-        // Right-aligned: truncate from left
+        // Right-align: text ends at right edge, may use margin space or truncate from left
         (row_width as i32 - actual_width as i32).max(-(actual_width as i32))
     };
 
@@ -241,12 +243,19 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
         }
     }
 
-    // Now render each label row: header is blocked by 1px halo around text
-    for row_idx in 0..label_rows {
-        let mut row = vec![0u8; row_width];
+    // Header "stretches" up from bottom row, but stops when it hits the halo
+    // Track per-column whether the stretch is still active
+    let mut stretch_active: Vec<bool> = vec![true; row_width];
+    let mut rows_data: Vec<Vec<u8>> = vec![vec![0u8; row_width]; label_rows];
 
-        // Copy header ONLY where NOT near text (1px halo blocks the stretch)
+    // Process from bottom to top (header stretches upward)
+    for row_idx in (0..label_rows).rev() {
         for x in 0..row_width {
+            if !stretch_active[x] {
+                continue; // Already blocked in this column
+            }
+
+            // Check if this position is in the halo (adjacent to text)
             let mut near_text = false;
             'halo: for dy in -1i32..=1 {
                 for dx in -1i32..=1 {
@@ -260,19 +269,25 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
                     }
                 }
             }
-            if !near_text && x < header_row.len() {
-                row[x] = header_row[x]; // Header only appears where not touching text
+
+            if near_text {
+                // Block this column from stretching further up
+                stretch_active[x] = false;
+            } else if x < header_row.len() {
+                // Stretch continues - copy header byte
+                rows_data[row_idx][x] = header_row[x];
             }
         }
+    }
 
-        // Draw text pixels on top (white)
+    // Draw text pixels on top (white) and output rows
+    for row_idx in 0..label_rows {
         for x in 0..row_width {
             if text_bitmap[row_idx][x] {
-                row[x] = 0xFF;
+                rows_data[row_idx][x] = 0xFF;
             }
         }
-
-        result.extend_from_slice(&row);
+        result.extend_from_slice(&rows_data[row_idx]);
     }
 
     result
@@ -930,6 +945,10 @@ mod tests {
 
         let label = render_filename_label(name, row_width, font, &header);
 
-        // First row (padding above) should contain header bytes including PK signature
-        assert_eq!(&label[0..4], b"PK\x03\x04", "Label should have PK signature in first row");
+        // Bottom row (padding below text) should have header bytes - stretch starts there
+        // label_rows = font.height + 2 = 5 for typical font
+        let label_rows = font.height + 2;
+        let last_row_start = (label_rows - 1) * row_width;
+        assert_eq!(&label[last_row_start..last_row_start + 4], b"PK\x03\x04",
+            "Label should have PK signature in bottom row (stretch starts there)");
     }
