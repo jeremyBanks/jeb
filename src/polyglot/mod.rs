@@ -62,12 +62,16 @@ pub type ColorMode = ColorType;
 pub const Lightness: ColorType = ColorType::Luminance;
 pub const LightnessAlpha: ColorType = ColorType::LuminanceAlpha;
 
-/// Row width alignment - all row widths are multiples of this value.
-/// This ensures consistent data alignment for better compression and structure.
-const ROW_WIDTH_ALIGNMENT: usize = 64;
+/// Deflate stored block header overhead (LEN + NLEN = 4 bytes).
+/// Each row contains this header followed by the actual file data.
+pub(crate) const DEFLATE_HEADER_OVERHEAD: usize = 4;
 
-/// Base minimum row width (must be a multiple of ROW_WIDTH_ALIGNMENT).
-const BASE_MIN_ROW_WIDTH: usize = 64;
+/// Alignment for the file data portion of each row.
+/// Each row contains 64 bytes of actual ZIP file data.
+pub(crate) const DATA_ALIGNMENT: usize = 64;
+
+/// Base minimum row width (64 bytes data + 4 bytes deflate header = 68).
+const BASE_MIN_ROW_WIDTH: usize = DATA_ALIGNMENT + DEFLATE_HEADER_OVERHEAD;
 
 /// Maximum bytes per IDAT deflate stored block.
 const IDAT_BLOCK_SIZE: usize = 65535;
@@ -218,13 +222,16 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
 
     // Calculate starting x position
     // Default: 4px margin from left edge
-    // If text overflows: right-align (using margin space if needed, truncating from left if necessary)
+    // If text overflows: right-align, but always leave 1px at right edge for halo
     const MARGIN: usize = 4;
-    let start_x: i32 = if actual_width + MARGIN <= row_width {
+    const RIGHT_PADDING: usize = 1; // Always leave 1px at right for halo
+    let usable_width = row_width - RIGHT_PADDING;
+
+    let start_x: i32 = if actual_width + MARGIN <= usable_width {
         MARGIN as i32 // Fits with margin
     } else {
-        // Right-align: text ends at right edge, may use margin space or truncate from left
-        (row_width as i32 - actual_width as i32).max(-(actual_width as i32))
+        // Right-align: text ends 1px before right edge, may truncate from left
+        (usable_width as i32 - actual_width as i32).max(-(actual_width as i32))
     };
 
     // First, render text to a temporary bitmap to know where pixels are
@@ -321,14 +328,17 @@ fn estimate_total_size(files: &[(&[u8], &[u8])], font: Option<&BitmapFont>) -> u
     total.max(100)
 }
 
-/// Round up to the nearest multiple of ROW_WIDTH_ALIGNMENT.
+/// Round up so that the data portion (row_width - 4) is a multiple of 64.
+/// This ensures each row contains a whole number of 64-byte data chunks.
 fn align_to_row_width(value: usize) -> usize {
-    ((value + ROW_WIDTH_ALIGNMENT - 1) / ROW_WIDTH_ALIGNMENT) * ROW_WIDTH_ALIGNMENT
+    let min_data = value.saturating_sub(DEFLATE_HEADER_OVERHEAD);
+    let aligned_data = ((min_data + DATA_ALIGNMENT - 1) / DATA_ALIGNMENT) * DATA_ALIGNMENT;
+    aligned_data.max(DATA_ALIGNMENT) + DEFLATE_HEADER_OVERHEAD
 }
 
 /// Calculate optimal row width for approximately square images.
 /// Returns width such that height >= width (portrait/square orientation).
-/// Width is always a multiple of ROW_WIDTH_ALIGNMENT (64 bytes).
+/// The data portion (row_width - 4) is always a multiple of 64 bytes.
 ///
 /// The `min_width` parameter ensures the row is wide enough to fit ZIP headers
 /// without spanning multiple rows (which would corrupt them with filter bytes).
@@ -339,13 +349,13 @@ fn calculate_row_width(total_data_estimate: usize, min_width: usize) -> usize {
     let ideal = (total_data_estimate as f64).sqrt();
     let width = ideal.floor() as usize;
 
-    // Clamp to minimum safe width and align to ROW_WIDTH_ALIGNMENT
+    // Clamp to minimum safe width and align data portion to DATA_ALIGNMENT
     align_to_row_width(width.max(min_width))
 }
 
 /// Calculate minimum row width needed for a set of files.
 /// Ensures ZIP local file headers (30 bytes + filename) fit in one row.
-/// Returns a value aligned to ROW_WIDTH_ALIGNMENT.
+/// Returns a value where (row_width - 4) is a multiple of 64.
 fn min_row_width_for_files(files: &[(&[u8], &[u8])]) -> usize {
     let longest_filename = files.iter().map(|(name, _)| name.len()).max().unwrap_or(0);
     // Header is 30 bytes + filename; add 4 bytes padding for safety
@@ -676,8 +686,9 @@ fn build_aligned_data(
 }
 
 /// Calculate spacing for each bucket.
-/// Full buckets get even spacing with half-weight edges.
-/// Last bucket gets no spacing (content packed tight).
+/// First entry starts at top (no leading padding).
+/// Spacing is distributed evenly between entries.
+/// Last bucket gets no spacing (content packed tight at bottom).
 fn calculate_bucket_spacing(
     bucket_assignments: &[Vec<usize>],
     file_sizes: &[usize],
@@ -694,8 +705,8 @@ fn calculate_bucket_spacing(
         let is_last_bucket = bucket_idx == num_buckets - 1;
         let num_files = file_indices.len();
 
-        // No spacing for last bucket or single-bucket images
-        if is_last_bucket || num_files == 0 {
+        // No spacing for last bucket, single-bucket images, or single file in bucket
+        if is_last_bucket || num_files <= 1 {
             result.push(vec![0; num_files]);
             continue;
         }
@@ -713,26 +724,19 @@ fn calculate_bucket_spacing(
             continue;
         }
 
-        // Distribute with half-weight edges: [0.5, 1, 1, ..., 1, 0.5] = N weight total
-        let total_weight = num_files as f64;
-        let rows_per_unit = slack_rows as f64 / total_weight;
+        // Distribute spacing between files only (no leading/trailing)
+        // First file gets 0 spacing, remaining files share the slack
+        let num_gaps = num_files - 1;
+        let rows_per_gap = slack_rows / num_gaps;
+        let extra_rows = slack_rows % num_gaps;
 
         let mut spacing = Vec::with_capacity(num_files);
-        let mut allocated = 0usize;
+        spacing.push(0); // First file: no leading padding
 
-        for i in 0..num_files {
-            let weight = if i == 0 { 0.5 } else { 1.0 };
-            let rows = (weight * rows_per_unit).floor() as usize;
-            spacing.push(rows);
-            allocated += rows;
-        }
-
-        // Distribute remainder to middle gaps
-        let mut remaining = slack_rows.saturating_sub(allocated);
-        for i in 1..num_files {
-            if remaining == 0 { break; }
-            spacing[i] += 1;
-            remaining -= 1;
+        for i in 0..num_gaps {
+            // Distribute extra rows to earlier gaps
+            let extra = if i < extra_rows { 1 } else { 0 };
+            spacing.push(rows_per_gap + extra);
         }
 
         result.push(spacing);
@@ -1010,40 +1014,49 @@ mod tests {
 
     #[test]
     fn test_width_calculation() {
-        // Small content should get minimum width (aligned to 64)
+        // Small content should get minimum width (68 = 64 data + 4 header)
         assert_eq!(calculate_row_width(100, BASE_MIN_ROW_WIDTH), BASE_MIN_ROW_WIDTH);
+        assert_eq!(BASE_MIN_ROW_WIDTH, 68);
 
-        // 10KB: sqrt(10000) = 100 → aligned to 128
+        // 10KB: sqrt(10000) = 100, data portion aligned to 128 → row_width = 132
         let w = calculate_row_width(10_000, BASE_MIN_ROW_WIDTH);
-        assert_eq!(w, 128, "Expected 128 (100 aligned to 64), got {}", w);
+        assert_eq!(w, 132, "Expected 132 (128 data + 4 header), got {}", w);
 
-        // 40KB: sqrt(40000) ≈ 200 → aligned to 256
+        // 40KB: sqrt(40000) ≈ 200, data portion aligned to 256 → row_width = 260
         let w = calculate_row_width(40_000, BASE_MIN_ROW_WIDTH);
-        assert_eq!(w, 256, "Expected 256 (200 aligned to 64), got {}", w);
+        assert_eq!(w, 260, "Expected 260 (256 data + 4 header), got {}", w);
 
-        // With larger min_width requirement (e.g., long filename) → aligned to 64
+        // With smaller min_width requirement → still gets 68 minimum
         let w = calculate_row_width(100, 60);
-        assert_eq!(w, 64, "Expected min_width of 64 (60 aligned), got {}", w);
+        assert_eq!(w, 68, "Expected min_width of 68 (64 data aligned), got {}", w);
 
-        // Verify alignment
-        assert_eq!(w % ROW_WIDTH_ALIGNMENT, 0, "Width should be aligned to {}", ROW_WIDTH_ALIGNMENT);
+        // Verify data portion alignment (row_width - 4 should be multiple of 64)
+        assert_eq!((w - DEFLATE_HEADER_OVERHEAD) % DATA_ALIGNMENT, 0,
+            "Data portion should be aligned to {}", DATA_ALIGNMENT);
     }
 
     #[test]
     fn test_min_row_width_for_files() {
-        // Short filenames - returns BASE_MIN_ROW_WIDTH (64)
+        // Short filenames - returns BASE_MIN_ROW_WIDTH (68)
         let files = vec![(b"a.txt".as_ref(), b"data".as_ref())];
         let min = min_row_width_for_files(&files);
-        assert_eq!(min, BASE_MIN_ROW_WIDTH); // 30 + 5 + 4 = 39 < 64, so 64
+        assert_eq!(min, BASE_MIN_ROW_WIDTH); // 30 + 5 + 4 = 39 < 68, so 68
 
-        // Long filename that requires wider rows
+        // Moderately long filename - still fits in 68
         let files = vec![(b"this-is-a-very-long-filename.txt".as_ref(), b"data".as_ref())];
         let min = min_row_width_for_files(&files);
-        // 30 + 32 + 4 = 66 → aligned to 128
-        assert_eq!(min, 128, "Expected 128 (66 aligned to 64), got {}", min);
+        // 30 + 32 + 4 = 66 < 68, so still 68
+        assert_eq!(min, 68, "Expected 68 (66 fits in minimum), got {}", min);
 
-        // Verify alignment
-        assert_eq!(min % ROW_WIDTH_ALIGNMENT, 0, "Width should be aligned to {}", ROW_WIDTH_ALIGNMENT);
+        // Very long filename that requires wider rows
+        let files = vec![(b"this-is-an-extremely-long-filename-that-exceeds-minimum.txt".as_ref(), b"data".as_ref())];
+        let min = min_row_width_for_files(&files);
+        // 30 + 58 + 4 = 92 → data aligned to 128 → row_width = 132
+        assert_eq!(min, 132, "Expected 132 (128 data + 4 header), got {}", min);
+
+        // Verify data portion alignment
+        assert_eq!((min - DEFLATE_HEADER_OVERHEAD) % DATA_ALIGNMENT, 0,
+            "Data portion should be aligned to {}", DATA_ALIGNMENT);
     }
 
     #[test]

@@ -2,6 +2,8 @@
 //!
 //! Uses the `image` crate for PNG validation and `zip` crate for ZIP validation.
 
+use super::{DATA_ALIGNMENT, DEFLATE_HEADER_OVERHEAD};
+
 /// Result of validating a polyglot file.
 #[derive(Debug, Clone)]
 pub struct ValidationResult {
@@ -9,15 +11,56 @@ pub struct ValidationResult {
     pub is_valid_zip: bool,
     pub png_width: u32,
     pub png_height: u32,
+    pub width_properly_aligned: bool,
     pub zip_file_count: usize,
     pub zip_total_uncompressed_size: usize,
     pub zip_files: Vec<String>,
+    pub zip_file_sizes: Vec<usize>,
     pub errors: Vec<String>,
 }
 
 impl ValidationResult {
     pub fn is_valid(&self) -> bool {
-        self.is_valid_png && self.is_valid_zip && self.errors.is_empty()
+        self.is_valid_png && self.is_valid_zip && self.width_properly_aligned && self.errors.is_empty()
+    }
+}
+
+/// Optional expectations for stricter validation.
+#[derive(Debug, Clone, Default)]
+pub struct Expectations {
+    /// Expected number of files in the ZIP.
+    pub file_count: Option<usize>,
+    /// Minimum size for any individual file's content.
+    pub min_file_size: Option<usize>,
+    /// Maximum size for any individual file's content.
+    pub max_file_size: Option<usize>,
+    /// Expected total uncompressed size.
+    pub total_size: Option<usize>,
+}
+
+impl Expectations {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn file_count(mut self, count: usize) -> Self {
+        self.file_count = Some(count);
+        self
+    }
+
+    pub fn min_file_size(mut self, size: usize) -> Self {
+        self.min_file_size = Some(size);
+        self
+    }
+
+    pub fn max_file_size(mut self, size: usize) -> Self {
+        self.max_file_size = Some(size);
+        self
+    }
+
+    pub fn total_size(mut self, size: usize) -> Self {
+        self.total_size = Some(size);
+        self
     }
 }
 
@@ -31,9 +74,11 @@ pub fn validate_polyglot(data: &[u8]) -> ValidationResult {
         is_valid_zip: false,
         png_width: 0,
         png_height: 0,
+        width_properly_aligned: false,
         zip_file_count: 0,
         zip_total_uncompressed_size: 0,
         zip_files: Vec::new(),
+        zip_file_sizes: Vec::new(),
         errors: Vec::new(),
     };
 
@@ -43,6 +88,24 @@ pub fn validate_polyglot(data: &[u8]) -> ValidationResult {
             result.is_valid_png = true;
             result.png_width = img.width();
             result.png_height = img.height();
+
+            // Check width alignment: (width - 4) should be a multiple of 64
+            let width = result.png_width as usize;
+            if width >= DEFLATE_HEADER_OVERHEAD {
+                let data_portion = width - DEFLATE_HEADER_OVERHEAD;
+                result.width_properly_aligned = data_portion % DATA_ALIGNMENT == 0;
+                if !result.width_properly_aligned {
+                    result.errors.push(format!(
+                        "PNG width {} is not properly aligned: data portion {} is not a multiple of {}",
+                        width, data_portion, DATA_ALIGNMENT
+                    ));
+                }
+            } else {
+                result.errors.push(format!(
+                    "PNG width {} is too small (minimum {})",
+                    width, DEFLATE_HEADER_OVERHEAD
+                ));
+            }
         }
         Err(e) => {
             result.errors.push(format!("PNG validation failed: {}", e));
@@ -74,12 +137,14 @@ pub fn validate_polyglot(data: &[u8]) -> ValidationResult {
                                     ));
                                 }
                                 result.zip_total_uncompressed_size += actual_size;
+                                result.zip_file_sizes.push(actual_size);
                             }
                             Err(e) => {
                                 result.errors.push(format!(
                                     "ZIP file '{}': decompression failed: {}",
                                     result.zip_files.last().unwrap(), e
                                 ));
+                                result.zip_file_sizes.push(0);
                             }
                         }
                     }
@@ -101,21 +166,75 @@ pub fn validate_polyglot(data: &[u8]) -> ValidationResult {
 /// Panics with detailed error message if validation fails.
 #[cfg(test)]
 pub fn assert_valid_polyglot(data: &[u8]) -> ValidationResult {
-    let result = validate_polyglot(data);
+    assert_valid_polyglot_with(data, None)
+}
 
-    if !result.is_valid() {
+/// Assert that data is a valid polyglot PNG+ZIP with optional expectations.
+/// Panics with detailed error message if validation fails or expectations aren't met.
+#[cfg(test)]
+pub fn assert_valid_polyglot_with(data: &[u8], expectations: Option<Expectations>) -> ValidationResult {
+    let result = validate_polyglot(data);
+    let mut errors = result.errors.clone();
+
+    // Check expectations if provided
+    if let Some(exp) = expectations {
+        if let Some(expected_count) = exp.file_count {
+            if result.zip_file_count != expected_count {
+                errors.push(format!(
+                    "Expected {} files, got {}",
+                    expected_count, result.zip_file_count
+                ));
+            }
+        }
+
+        if let Some(min_size) = exp.min_file_size {
+            for (i, &size) in result.zip_file_sizes.iter().enumerate() {
+                if size < min_size {
+                    errors.push(format!(
+                        "File '{}' size {} is below minimum {}",
+                        result.zip_files.get(i).map(|s| s.as_str()).unwrap_or("?"),
+                        size, min_size
+                    ));
+                }
+            }
+        }
+
+        if let Some(max_size) = exp.max_file_size {
+            for (i, &size) in result.zip_file_sizes.iter().enumerate() {
+                if size > max_size {
+                    errors.push(format!(
+                        "File '{}' size {} exceeds maximum {}",
+                        result.zip_files.get(i).map(|s| s.as_str()).unwrap_or("?"),
+                        size, max_size
+                    ));
+                }
+            }
+        }
+
+        if let Some(expected_total) = exp.total_size {
+            if result.zip_total_uncompressed_size != expected_total {
+                errors.push(format!(
+                    "Expected total size {}, got {}",
+                    expected_total, result.zip_total_uncompressed_size
+                ));
+            }
+        }
+    }
+
+    if !result.is_valid() || !errors.is_empty() {
         panic!(
             "Invalid polyglot!\n\
-             PNG valid: {} ({}x{})\n\
+             PNG valid: {} ({}x{}, width aligned: {})\n\
              ZIP valid: {} ({} files, {} bytes)\n\
              Errors:\n  {}",
             result.is_valid_png,
             result.png_width,
             result.png_height,
+            result.width_properly_aligned,
             result.is_valid_zip,
             result.zip_file_count,
             result.zip_total_uncompressed_size,
-            result.errors.join("\n  ")
+            errors.join("\n  ")
         );
     }
 
@@ -124,7 +243,7 @@ pub fn assert_valid_polyglot(data: &[u8]) -> ValidationResult {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{*, assert_valid_polyglot_with, Expectations};
     use crate::polyglot::build_polyglot;
     use crate::png::{BitDepth, ColorType};
 
@@ -133,10 +252,14 @@ mod tests {
         let files = vec![(b"test.txt".as_ref(), b"Hello!".as_ref())];
         let polyglot = build_polyglot(&files, 0, BitDepth::EightBit, ColorType::Luminance, None);
 
-        let result = assert_valid_polyglot(&polyglot);
-        assert_eq!(result.zip_file_count, 1);
+        // Use expectations to verify file count and total size
+        let result = assert_valid_polyglot_with(&polyglot, Some(
+            Expectations::new()
+                .file_count(1)
+                .total_size(6)
+        ));
         assert_eq!(result.zip_files, vec!["test.txt"]);
-        assert_eq!(result.zip_total_uncompressed_size, 6);
+        assert!(result.width_properly_aligned);
     }
 
     #[test]
@@ -148,8 +271,9 @@ mod tests {
         ];
         let polyglot = build_polyglot(&files, 0, BitDepth::EightBit, ColorType::Luminance, None);
 
-        let result = assert_valid_polyglot(&polyglot);
-        assert_eq!(result.zip_file_count, 3);
+        assert_valid_polyglot_with(&polyglot, Some(
+            Expectations::new().file_count(3)
+        ));
     }
 
     #[test]
@@ -159,8 +283,9 @@ mod tests {
         let files = vec![(b"test.txt".as_ref(), b"Hello!".as_ref())];
         let polyglot = build_polyglot(&files, 0, BitDepth::EightBit, ColorType::Indexed, Some(VIRIDIS));
 
-        let result = assert_valid_polyglot(&polyglot);
-        assert_eq!(result.zip_file_count, 1);
+        assert_valid_polyglot_with(&polyglot, Some(
+            Expectations::new().file_count(1).total_size(6)
+        ));
     }
 
     #[test]
@@ -169,9 +294,14 @@ mod tests {
         let files = vec![(b"large.bin".as_ref(), large_content.as_ref())];
         let polyglot = build_polyglot(&files, 0, BitDepth::EightBit, ColorType::Luminance, None);
 
-        let result = assert_valid_polyglot(&polyglot);
-        assert_eq!(result.zip_file_count, 1);
-        assert_eq!(result.zip_total_uncompressed_size, 50_000);
+        // Use expectations with min/max file size
+        let result = assert_valid_polyglot_with(&polyglot, Some(
+            Expectations::new()
+                .file_count(1)
+                .min_file_size(50_000)
+                .max_file_size(50_000)
+        ));
+        assert!(result.width_properly_aligned);
     }
 
     #[test]
@@ -181,9 +311,12 @@ mod tests {
         let files = vec![(b"large.bin".as_ref(), large_content.as_ref())];
         let polyglot = build_polyglot(&files, 0, BitDepth::EightBit, ColorType::Luminance, None);
 
-        let result = assert_valid_polyglot(&polyglot);
-        assert_eq!(result.zip_file_count, 1);
-        assert_eq!(result.zip_total_uncompressed_size, 59_000);
+        assert_valid_polyglot_with(&polyglot, Some(
+            Expectations::new()
+                .file_count(1)
+                .total_size(59_000)
+                .min_file_size(59_000)
+        ));
     }
 
     #[test]
@@ -204,8 +337,12 @@ mod tests {
         ];
         let polyglot = build_polyglot(&files, 0, BitDepth::EightBit, ColorType::Luminance, None);
 
-        let result = assert_valid_polyglot(&polyglot);
-        assert_eq!(result.zip_file_count, 5);
+        assert_valid_polyglot_with(&polyglot, Some(
+            Expectations::new()
+                .file_count(5)
+                .min_file_size(11_000)
+                .max_file_size(55_000)
+        ));
     }
 
     #[test]
@@ -230,9 +367,11 @@ mod tests {
         // Use Luminance (grayscale) which doesn't require a palette
         let polyglot = build_polyglot(&files, 0, BitDepth::EightBit, ColorType::Luminance, None);
 
-        let result = assert_valid_polyglot(&polyglot);
-        assert_eq!(result.zip_file_count, 2);
-        assert_eq!(result.zip_total_uncompressed_size, cargo_toml.len() + readme.len());
+        assert_valid_polyglot_with(&polyglot, Some(
+            Expectations::new()
+                .file_count(2)
+                .total_size(cargo_toml.len() + readme.len())
+        ));
     }
 
     #[test]
@@ -246,8 +385,9 @@ mod tests {
         ];
         let polyglot = build_polyglot(&files, 0, BitDepth::EightBit, ColorType::Luminance, None);
 
-        let result = assert_valid_polyglot(&polyglot);
-        assert_eq!(result.zip_file_count, 3);
+        let result = assert_valid_polyglot_with(&polyglot, Some(
+            Expectations::new().file_count(3)
+        ));
 
         // Verify the filenames are intact
         assert!(result.zip_files.contains(&"this-is-a-very-long-filename-that-exceeds-forty-characters.txt".to_string()));
