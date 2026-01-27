@@ -109,14 +109,16 @@ fn glyphs_touch(prev: &[Vec<bool>], next: &[Vec<bool>], offset: i32) -> bool {
 }
 
 /// Calculate minimum gap between two glyphs (ensuring no 8-directional adjacency).
-fn min_glyph_gap(prev: &[Vec<bool>], next: &[Vec<bool>], glyph_width: usize) -> usize {
-    for gap in 0..(glyph_width * 2) {
-        let offset = (glyph_width + gap) as i32;
-        if !glyphs_touch(prev, next, offset) {
+/// Returns a NEGATIVE value if glyphs can overlap, positive if they need extra space.
+fn min_glyph_gap(prev: &[Vec<bool>], next: &[Vec<bool>], glyph_width: usize) -> i32 {
+    // Try negative gaps first (tighter kerning)
+    for gap in (-(glyph_width as i32 - 1))..((glyph_width * 2) as i32) {
+        let offset = glyph_width as i32 + gap;
+        if offset > 0 && !glyphs_touch(prev, next, offset) {
             return gap;
         }
     }
-    glyph_width // fallback: full glyph width gap
+    glyph_width as i32 // fallback: full glyph width gap
 }
 
 /// Calculate the number of label rows for a given font.
@@ -141,30 +143,31 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont) -> Ve
         .collect();
 
     // Calculate total width with kerning
-    let mut total_width = 0usize;
-    let mut char_positions: Vec<(usize, usize)> = Vec::new(); // (char_index, x_position)
+    let mut total_width = 0i32;
+    let mut char_positions: Vec<(usize, i32)> = Vec::new(); // (char_index, x_position)
 
     for (i, glyph_opt) in glyphs.iter().enumerate() {
         if let Some(glyph) = glyph_opt {
             if i > 0 {
-                // Add kerning gap
+                // Add kerning gap (can be negative for tighter spacing)
                 if let Some(prev_glyph) = glyphs[i - 1] {
                     let gap = min_glyph_gap(prev_glyph, glyph, font.width);
                     total_width += gap;
                 }
             }
             char_positions.push((i, total_width));
-            total_width += font.width;
+            total_width += font.width as i32;
         }
     }
+    let total_width = total_width.max(0) as usize;
 
     // Calculate starting x position (right-align if too long)
     let available_width = row_width.saturating_sub(2); // 1 pixel margin on each side
-    let start_x = if total_width <= available_width {
+    let start_x: i32 = if total_width <= available_width {
         1 // Left-aligned with 1 pixel margin
     } else {
         // Right-aligned: truncate from left
-        (row_width as i32 - total_width as i32 - 1).max(1 - total_width as i32) as usize
+        (row_width as i32 - total_width as i32 - 1).max(1 - total_width as i32)
     };
 
     // Render text rows
@@ -175,9 +178,9 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont) -> Ve
             if let Some(glyph) = glyphs[char_idx] {
                 if text_row < glyph.len() {
                     for (px, &pixel_on) in glyph[text_row].iter().enumerate() {
-                        let x = start_x.wrapping_add(char_x).wrapping_add(px);
-                        if x < row_width && pixel_on {
-                            row[x] = 0xFF; // foreground (white)
+                        let x = start_x as i32 + char_x + px as i32;
+                        if x >= 0 && (x as usize) < row_width && pixel_on {
+                            row[x as usize] = 0xFF; // foreground (white)
                         }
                     }
                 }
