@@ -61,6 +61,8 @@ pub use crate::png::sizes::{PNG_CHUNK_PREFIX_SIZE, PNG_CHUNK_SUFFIX_SIZE, PNG_CH
 pub use crate::png::write_png;
 // Re-export ColorType variants for convenience
 pub use crate::png::ColorType::{Luminance, LuminanceAlpha, RedGreenBlue, RedGreenBlueAlpha, Indexed};
+// Re-export BitDepth variants for convenience
+pub use crate::png::BitDepth::{OneBit, TwoBit, FourBit, EightBit, SixteenBit};
 
 // Re-export key types from zip
 pub use crate::zip::{Zip, ToZip, ZipConfiguration, ZipEntry, ZipEntryComparison};

@@ -444,7 +444,7 @@ mod tests {
     #[test]
     fn test_polyglot_structure() {
         let files = vec![(b"test.txt".as_ref(), b"Hello, World!".as_ref())];
-        let result = build_polyglot(&files, 0, BitDepth::EightBit, ColorMode::Lightness, None);
+        let result = build_polyglot(&files, 0, BitDepth::EightBit, Lightness, None);
 
         // Check PNG signature
         assert_eq!(&result[0..8], b"\x89PNG\r\n\x1A\n");
@@ -486,7 +486,7 @@ mod tests {
             (b"file3.bin".as_ref(), large_body.as_slice()),
         ];
 
-        let result = build_polyglot(&files, 0, BitDepth::EightBit, ColorMode::Lightness, None);
+        let result = build_polyglot(&files, 0, BitDepth::EightBit, Lightness, None);
 
         // Check PNG signature
         assert_eq!(&result[0..8], b"\x89PNG\r\n\x1A\n");
@@ -514,7 +514,7 @@ mod tests {
             .map(|(n, b)| (n.as_slice(), b.as_slice()))
             .collect();
 
-        let result = build_polyglot(&file_refs, 0, BitDepth::EightBit, ColorMode::Lightness, None);
+        let result = build_polyglot(&file_refs, 0, BitDepth::EightBit, Lightness, None);
 
         // Should be over 200KB
         assert!(result.len() > 200_000, "Result should be >200KB, got {}", result.len());

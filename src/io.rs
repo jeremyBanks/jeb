@@ -734,10 +734,11 @@ fn test_output_buffer() -> Result<(), panic> {
         Some(
             [
                 TaggedRange {
-                    start: 17,
-                    end: 22,
+                    start: 13,
+                    end: 18,
                     depth: 0,
                     name: "ZIP",
+                    attributes: [],
                     children: [],
                 },
             ],
@@ -746,67 +747,26 @@ fn test_output_buffer() -> Result<(), panic> {
     .assert_debug_eq(&buffer.root_tags("ZIP"));
 
     expect![[r#"
-        Some(
-            [
-                TaggedRange {
-                    start: 0,
-                    end: 22,
-                    depth: 0,
-                    name: "PNG",
-                    children: [
-                        TaggedRange {
-                            start: 5,
-                            end: 22,
-                            depth: 1,
-                            name: "IHDR",
-                            children: [
-                                TaggedRange {
-                                    start: 17,
-                                    end: 17,
-                                    depth: 2,
-                                    name: "signature",
-                                    children: [],
-                                },
-                                TaggedRange {
-                                    start: 17,
-                                    end: 22,
-                                    depth: 2,
-                                    name: "image data",
-                                    children: [
-                                        TaggedRange {
-                                            start: 17,
-                                            end: 22,
-                                            depth: 3,
-                                            name: "sub",
-                                            children: [],
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                    ],
-                },
-            ],
-        )
+        None
     "#]]
     .assert_debug_eq(&buffer.root_tags("PNG"));
 
     expect![[r#"
-        <PNG:PNG>
+        <png offset="0" length="18">
+          <png-signature offset="0" length="5">
             &#x89;PNG&#x0D;
-            <PNG:IHDR>
-                &#0;&#0;&#0;&#x0D;IHDRtest
-                </PNG:signature>
-        <ZIP:ZIP>
-                <PNG:image data>
-                <PNG:signature>
-                    <PNG:sub>
-                            &#x90;PNG&#x0D;
-                    </PNG:sub>
-                </PNG:image data>
-            </PNG:IHDR>
-        </PNG:PNG>
-        </ZIP:ZIP>
+          </png-signature>
+          <png-header offset="5" length="13">
+            &#x00;&#x00;&#x00;&#x0D;IHDR
+        <ZIP offset="13" length="5">
+            <png-body offset="13" length="5">
+              <png-sub offset="13" length="5">
+                &#x90;PNG&#x0D;
+              </png-sub>
+            </png-body>
+          </png-header>
+        </ZIP>
+        </png>
     "#]]
     .assert_eq(&buffer.to_string());
 
