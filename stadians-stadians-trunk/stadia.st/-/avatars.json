@@ -1,0 +1,302 @@
+{
+  "avatar-01": {
+    "avatarId": "01",
+    "name": "First Mover",
+    "type": "avatar"
+  },
+  "avatar-02": {
+    "avatarId": "02",
+    "name": "Headspace",
+    "type": "avatar"
+  },
+  "avatar-03": {
+    "avatarId": "03",
+    "name": "Good to Go",
+    "type": "avatar"
+  },
+  "avatar-04": {
+    "avatarId": "04",
+    "name": "First Down",
+    "type": "avatar"
+  },
+  "avatar-05": {
+    "avatarId": "05",
+    "name": "Smithee",
+    "type": "avatar"
+  },
+  "avatar-06": {
+    "avatarId": "06",
+    "name": "Ramen",
+    "type": "avatar"
+  },
+  "avatar-07": {
+    "avatarId": "07",
+    "name": "Scarab",
+    "type": "avatar"
+  },
+  "avatar-08": {
+    "avatarId": "08",
+    "name": "Portland",
+    "type": "avatar"
+  },
+  "avatar-09": {
+    "avatarId": "09",
+    "name": "Animaus",
+    "type": "avatar"
+  },
+  "avatar-10": {
+    "avatarId": "10",
+    "name": "Garnet",
+    "type": "avatar"
+  },
+  "avatar-11": {
+    "avatarId": "11",
+    "name": "Daemon",
+    "type": "avatar"
+  },
+  "avatar-12": {
+    "avatarId": "12",
+    "name": "Lost",
+    "type": "avatar"
+  },
+  "avatar-13": {
+    "avatarId": "13",
+    "name": "Troll",
+    "type": "avatar"
+  },
+  "avatar-14": {
+    "avatarId": "14",
+    "name": "Bend It",
+    "type": "avatar"
+  },
+  "avatar-15": {
+    "avatarId": "15",
+    "name": "It's All Cake",
+    "type": "avatar"
+  },
+  "avatar-16": {
+    "avatarId": "16",
+    "name": "Asimov",
+    "type": "avatar"
+  },
+  "avatar-17": {
+    "avatarId": "17",
+    "name": "Dogburger",
+    "type": "avatar"
+  },
+  "avatar-18": {
+    "avatarId": "18",
+    "name": "Practice",
+    "type": "avatar"
+  },
+  "avatar-19": {
+    "avatarId": "19",
+    "name": "The Gnat",
+    "type": "avatar"
+  },
+  "avatar-20": {
+    "avatarId": "20",
+    "name": "Wonderland",
+    "type": "avatar"
+  },
+  "avatar-21": {
+    "avatarId": "21",
+    "name": "Sea Saw",
+    "type": "avatar"
+  },
+  "avatar-22": {
+    "avatarId": "22",
+    "name": "Songbird",
+    "type": "avatar"
+  },
+  "avatar-23": {
+    "avatarId": "23",
+    "name": "Icarus",
+    "type": "avatar"
+  },
+  "avatar-24": {
+    "avatarId": "24",
+    "name": "Cuckoo",
+    "type": "avatar"
+  },
+  "avatar-25": {
+    "avatarId": "25",
+    "name": "Changeling",
+    "type": "avatar"
+  },
+  "avatar-26": {
+    "avatarId": "26",
+    "name": "No Spoon",
+    "type": "avatar"
+  },
+  "avatar-27": {
+    "avatarId": "27",
+    "name": "Peter",
+    "type": "avatar"
+  },
+  "avatar-28": {
+    "avatarId": "28",
+    "name": "No Thanks",
+    "type": "avatar"
+  },
+  "avatar-29": {
+    "avatarId": "29",
+    "name": "Cowabunga",
+    "type": "avatar"
+  },
+  "avatar-30": {
+    "avatarId": "30",
+    "name": "Wyvern",
+    "type": "avatar"
+  },
+  "avatar-31": {
+    "avatarId": "31",
+    "name": "Save 1",
+    "type": "avatar"
+  },
+  "avatar-32": {
+    "avatarId": "32",
+    "name": "Pegagon",
+    "type": "avatar"
+  },
+  "avatar-33": {
+    "avatarId": "33",
+    "name": "Jelly Belly",
+    "type": "avatar"
+  },
+  "avatar-34": {
+    "avatarId": "34",
+    "name": "Boxman Sombrero",
+    "type": "avatar"
+  },
+  "avatar-35": {
+    "avatarId": "35",
+    "name": "Blimpasaurus",
+    "type": "avatar"
+  },
+  "avatar-36": {
+    "avatarId": "36",
+    "name": "Vincent",
+    "type": "avatar"
+  },
+  "avatar-37": {
+    "avatarId": "37",
+    "name": "Fire",
+    "type": "avatar"
+  },
+  "avatar-38": {
+    "avatarId": "38",
+    "name": "Earth",
+    "type": "avatar"
+  },
+  "avatar-39": {
+    "avatarId": "39",
+    "name": "Wind",
+    "type": "avatar"
+  },
+  "avatar-40": {
+    "avatarId": "40",
+    "name": "Water",
+    "type": "avatar"
+  },
+  "avatar-41": {
+    "avatarId": "41",
+    "name": "CRAB!",
+    "type": "avatar"
+  },
+  "avatar-42": {
+    "avatarId": "42",
+    "name": "Lift",
+    "type": "avatar"
+  },
+  "avatar-43": {
+    "avatarId": "43",
+    "name": "Maslow",
+    "type": "avatar"
+  },
+  "avatar-44": {
+    "avatarId": "44",
+    "name": "Face Food",
+    "type": "avatar"
+  },
+  "avatar-45": {
+    "avatarId": "45",
+    "name": "It's The 90s",
+    "type": "avatar"
+  },
+  "avatar-46": {
+    "avatarId": "46",
+    "name": "Proficient",
+    "type": "avatar"
+  },
+  "avatar-47": {
+    "avatarId": "47",
+    "name": "Auntie",
+    "type": "avatar"
+  },
+  "avatar-48": {
+    "avatarId": "48",
+    "name": "Perspective",
+    "type": "avatar"
+  },
+  "avatar-49": {
+    "avatarId": "49",
+    "name": "Overgrowth",
+    "type": "avatar"
+  },
+  "avatar-50": {
+    "avatarId": "50",
+    "name": "Return to Form",
+    "type": "avatar"
+  },
+  "avatar-51": {
+    "avatarId": "51",
+    "name": "Kit",
+    "type": "avatar"
+  },
+  "avatar-52": {
+    "avatarId": "52",
+    "name": "Sapphic Sword",
+    "type": "avatar"
+  },
+  "avatar-53": {
+    "avatarId": "53",
+    "name": "Creepy Doll",
+    "type": "avatar"
+  },
+  "avatar-54": {
+    "avatarId": "54",
+    "name": "Gojack Neckman",
+    "type": "avatar"
+  },
+  "avatar-55": {
+    "avatarId": "55",
+    "name": "Rockbot",
+    "type": "avatar"
+  },
+  "avatar-56": {
+    "avatarId": "56",
+    "name": "Saturn 2.0",
+    "type": "avatar"
+  },
+  "avatar-57": {
+    "avatarId": "57",
+    "name": "Ninja",
+    "type": "avatar"
+  },
+  "avatar-58": {
+    "avatarId": "58",
+    "name": "Charmer",
+    "type": "avatar"
+  },
+  "avatar-59": {
+    "avatarId": "59",
+    "name": "Critical",
+    "type": "avatar"
+  },
+  "avatar-60": {
+    "avatarId": "60",
+    "name": "Hot",
+    "type": "avatar"
+  }
+}

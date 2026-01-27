@@ -1,0 +1,32 @@
+[package]
+name = "rust-modules"
+version = "0.0.0"
+edition = "2018"
+
+[lib]
+name = "crypto"
+path = "./crypto.rs"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "windows"
+path = "./windows.rs"
+
+[dependencies]
+aes-gcm = "0.8.0"
+console_error_panic_hook = "0.1.6"
+wasm-bindgen = "0.2.69"
+wee_alloc = "0.4.5"
+bindings = { path = "./bindings" }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.19"
+
+[package.metadata.wasm-pack.profile.release]
+# Disabled because it crashes on something in the crypto code, and
+# our WASM size and performance are not a problem.
+wasm-opt = false
+
+[profile.release]
+lto = true
+opt-level = "s"

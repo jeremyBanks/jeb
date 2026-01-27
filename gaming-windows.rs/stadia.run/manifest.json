@@ -1,0 +1,185 @@
+{
+  "background_color": "#202020",
+  "description": "a lightning-fast launcher for Stadia",
+  "display": "standalone",
+  "icons": [
+    {
+      "purpose": "maskable",
+      "sizes": "560x560",
+      "src": "/pwa.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "any",
+      "sizes": "420x420",
+      "src": "/stadian.png",
+      "type": "image/png"
+    }
+  ],
+  "name": "stadia.run",
+  "short_name": "stadia.run",
+  "shortcuts": [
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/xX2u7OA6x_5AShPuGLqLifcQUrLLXjQUr0l-dC5FIdb_af5Lu6qorHyc7-7HxDn8JcNbGE-i2c8KQ8JF0n7wIOxAd9NGoPcSf-EDprwfnTe63HYen9YVMslzZuo=s192-p-rp"
+        }
+      ],
+      "name": "Legend of Keepers: Career of a Dungeon Manager",
+      "url": "/legend-of-keepers-career-of-a-dungeon-manager"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/NEQInhl67zKsBUyiRadvlpCQgRPB0qetXYgdMXTrNCWiExNx6fsU_X1ums5K71tpDHFgMzPxlk-G54lgcAMtxTZmVDuVL-QjK2UelbW0iHhZmuJAw6AEqifFy8E=s192-p-rp"
+        }
+      ],
+      "name": "Judgment",
+      "url": "/judgment"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/9_bfI5HlZdAn2RqxSWSITFvL1Au6nXLq-IPHnzbmC7fvgAA59Q1yO2AiZlNVs243KG30MEKu2eXFhgromQ_SXfO68YMs8ZixzbmvJ0jicDkK1A6_9qBgdlZdStPP=s192-p-rp"
+        }
+      ],
+      "name": "The Darkside Detective: A Fumble in the Dark",
+      "url": "/the-darkside-detective-a-fumble-in-the-dark"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/op-eHoX0vyfmbUWLmikwj_7dep5ZxNoOt4-eXV52xVc7ueGQuxANAbsJFmbTHTvr-rCzfvCXCR-ltsB7G3Y546OD3RIPmx7o9uV_h5ael9hKFjJMYo-1z_6Ggr4=s192-p-rp"
+        }
+      ],
+      "name": "FLOOR KIDS",
+      "url": "/floor-kids"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/YdMGWs01cm2dSO5vQQl_8LERXsnd7gIPxQBZ8xNMmnSJCWUfZAMRlzu7FFrbOFCAetJ1xQ37baZgRay9LM9mgIiAZ7BqUnvNa-SneciQpB3WBIq46NfaBcm5VXg=s192-p-rp"
+        }
+      ],
+      "name": "The Legend of Heroes: Trails of Cold Steel IV",
+      "url": "/the-legend-of-heroes-trails-of-cold-steel-iv"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/dWWc2e6g9znFFkgE4umJMpTAH1oDuTnvRMnfdrco8m8I_1e0m3gO_D5xZhHCd89n0VIGZ3rBJ9a6iB9OamP1ymHVD6BtWY1ufSbyimRKbLZYIGMCU0IfjsBmkmQG=s192-p-rp"
+        }
+      ],
+      "name": "The Darkside Detective",
+      "url": "/the-darkside-detective"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/Kzko1eZ_D7rOD8TN-WFJCAhHeIsCYRsWO5DKeQd7b69FVIAv3f4GEAjOafe0hyGAKa_JQvNELDwHp1GvH1gmZcOpj_MLSPtLOKXcHlrlhbLo38Jb3TeIfh36ZFs=s192-p-rp"
+        }
+      ],
+      "name": "OUTRIDERS",
+      "url": "/outriders"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/qR2pHaywknCWsHq7nbu_FKgbzhhonGUgN-KIq9Z0RLkr71K5sCxsSv0icrcbO9V2l6ruOaQBbaRAocDM0v2rrsZrSoEs9aOdBE-uIc4tHS1lKSSp4iRZPNokB5I=s192-p-rp"
+        }
+      ],
+      "name": "The Legend of Heroes: Trails of Cold Steel III",
+      "url": "/the-legend-of-heroes-trails-of-cold-steel-iii"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/gM15GvScBygFM-qgzct-2_awI7pwONMzv9f3yOuWpsszLKUCG6xyo9sxbletvZaC2YVW0OGAyQ0doUxYAHZRVL_x5erNni40N83gV3bKUxDH1vRGYrQFZgx57mAt=s192-p-rp"
+        }
+      ],
+      "name": "Kemono Heroes",
+      "url": "/kemono-heroes"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/8Cv97fYxU3cPJ2JHq2I7kFeJ4syXP86wFpQETMXPp65k4y1APFBN2OogPPqp3OXXJyoU6p77SaoUoEefCSZ0a1KCADLgTIsP8T32f7wmdtegR4-FyVRt0JAvbA=s192-p-rp"
+        }
+      ],
+      "name": "Cosmic Star Heroine",
+      "url": "/cosmic-star-heroine"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/1j9Lu1vrlOzu_jQ6XX94r3hkebgaRmO2csh5_embdVHLLCg1qnlxhP3WaJgUUjF8ViVyU1ln6Tmqw1WuOlbymhhAaE8Zre2jMOemwA1ZSCCD__A90mCmtEvQhGU_=s192-p-rp"
+        }
+      ],
+      "name": "Resident Evil 7 biohazard",
+      "url": "/resident-evil-7-biohazard"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/BJJk8wpZoWHpRp7X48GPLPi9TqqC34EvBv5shMnZoNej3HvYq2-dHACfGXGrz5K7NHLLN1eV9hZEYGlPhoFFtkPKC4U6jWscT50RWJd5RisUXjDFfdlMmU-7ap0d=s192-p-rp"
+        }
+      ],
+      "name": "Ys VIII: Lacrimosa of DANA",
+      "url": "/ys-viii-lacrimosa-of-dana"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/3VbBQq1XlLH1_jWT9MubrNGSYcRxc9jX4453mKsxGEJ6UPEzCVmxlUB5zVOKdGXGGxqPXELMdQoE80joQDJQOxsj39JUEqtxjBtTRbDgtUoFiTk9fUkb9O5GAg=s192-p-rp"
+        }
+      ],
+      "name": "Nanotale - Typing Chronicles",
+      "url": "/nanotale-typing-chronicles"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/gGgESlvgoBfOb1uX6QUyutRWz5dP4OAppC7hcnVLTnqQBmNTqGX4GLIRcJyG3ZLbafXpWsRurwr930vGelHE1xsOGcl_JnSG98L7FOzgxemh0MJqtU7CKgJQBME=s192-p-rp"
+        }
+      ],
+      "name": "Disco Elysium - The Final Cut",
+      "url": "/disco-elysium-the-final-cut"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/4LojcmKosyty73jMHELDULY8elRGiDcz-sSEkPdBdoqgz5iLJ8x7xHOUFVwrScLaTMo07Q5SVRnwkEND0iKhndkUBvDHqGuZwDOQoqQarFSx28lFEayENQnIzQ=s192-p-rp"
+        }
+      ],
+      "name": "Killer Queen Black",
+      "url": "/killer-queen-black"
+    },
+    {
+      "icons": [
+        {
+          "sizes": "192x192",
+          "src": "https://lh3.googleusercontent.com/SWeEfBPngpCuLeTRg5dp4pDH5PuMvlDV_pZATlwWC5mj8Z76hc9DCVsG2RBxryMyqZd_uGr8sqK34Kk7I_Ot-XXfHEd7aveVXuHMp1DRiLy8LGbY0VvTNd_z6Q=s192-p-rp"
+        }
+      ],
+      "name": "Trine 4: The Nightmare Prince",
+      "url": "/trine-4-the-nightmare-prince"
+    }
+  ],
+  "start_url": "/",
+  "theme_color": "#202020"
+}

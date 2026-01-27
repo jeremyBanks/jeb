@@ -1,0 +1,1865 @@
+{
+  "list-10": {
+    "childSkuIds": [],
+    "listId": 10,
+    "name": "Recently updated",
+    "type": "list"
+  },
+  "list-100": {
+    "childSkuIds": [],
+    "listId": 100,
+    "name": "Only on Stadia",
+    "type": "list"
+  },
+  "list-1001": {
+    "childSkuIds": [],
+    "listId": 1001,
+    "name": "Action games",
+    "type": "list"
+  },
+  "list-1002": {
+    "childSkuIds": [],
+    "listId": 1002,
+    "name": "Adventure games",
+    "type": "list"
+  },
+  "list-1003": {
+    "childSkuIds": [],
+    "listId": 1003,
+    "name": "Arcade games",
+    "type": "list"
+  },
+  "list-1004": {
+    "childSkuIds": [],
+    "listId": 1004,
+    "name": "Board games",
+    "type": "list"
+  },
+  "list-1005": {
+    "childSkuIds": [],
+    "listId": 1005,
+    "name": "Casual games",
+    "type": "list"
+  },
+  "list-1006": {
+    "childSkuIds": [],
+    "listId": 1006,
+    "name": "Kids & family games",
+    "type": "list"
+  },
+  "list-1007": {
+    "childSkuIds": [],
+    "listId": 1007,
+    "name": "Fighting games",
+    "type": "list"
+  },
+  "list-1008": {
+    "childSkuIds": [],
+    "listId": 1008,
+    "name": "Horror games",
+    "type": "list"
+  },
+  "list-1009": {
+    "childSkuIds": [],
+    "listId": 1009,
+    "name": "Music or rhythm games",
+    "type": "list"
+  },
+  "list-1010": {
+    "childSkuIds": [],
+    "listId": 1010,
+    "name": "Party games",
+    "type": "list"
+  },
+  "list-1011": {
+    "childSkuIds": [],
+    "listId": 1011,
+    "name": "Puzzle games",
+    "type": "list"
+  },
+  "list-1012": {
+    "childSkuIds": [],
+    "listId": 1012,
+    "name": "Quiz games",
+    "type": "list"
+  },
+  "list-1013": {
+    "childSkuIds": [],
+    "listId": 1013,
+    "name": "Racing games",
+    "type": "list"
+  },
+  "list-1014": {
+    "childSkuIds": [],
+    "listId": 1014,
+    "name": "Role-playing games",
+    "type": "list"
+  },
+  "list-1015": {
+    "childSkuIds": [],
+    "listId": 1015,
+    "name": "Shooter games",
+    "type": "list"
+  },
+  "list-1016": {
+    "childSkuIds": [],
+    "listId": 1016,
+    "name": "Simulations",
+    "type": "list"
+  },
+  "list-1017": {
+    "childSkuIds": [],
+    "listId": 1017,
+    "name": "Simulator games",
+    "type": "list"
+  },
+  "list-1018": {
+    "childSkuIds": [],
+    "listId": 1018,
+    "name": "Sports games",
+    "type": "list"
+  },
+  "list-1019": {
+    "childSkuIds": [],
+    "listId": 1019,
+    "name": "Strategy games",
+    "type": "list"
+  },
+  "list-1020": {
+    "childSkuIds": [],
+    "listId": 1020,
+    "name": "Indie games",
+    "type": "list"
+  },
+  "list-1021": {
+    "childSkuIds": [],
+    "listId": 1021,
+    "name": "Retro games",
+    "type": "list"
+  },
+  "list-1022": {
+    "childSkuIds": [],
+    "listId": 1022,
+    "name": "Massively multiplayer games",
+    "type": "list"
+  },
+  "list-1023": {
+    "childSkuIds": [],
+    "listId": 1023,
+    "name": "Party games",
+    "type": "list"
+  },
+  "list-1024": {
+    "childSkuIds": [],
+    "listId": 1024,
+    "name": "Action & adventure games",
+    "type": "list"
+  },
+  "list-1025": {
+    "childSkuIds": [],
+    "listId": 1025,
+    "name": "Brawler games",
+    "type": "list"
+  },
+  "list-1026": {
+    "childSkuIds": [],
+    "listId": 1026,
+    "name": "Classic games",
+    "type": "list"
+  },
+  "list-1027": {
+    "childSkuIds": [],
+    "listId": 1027,
+    "name": "Competitive games",
+    "type": "list"
+  },
+  "list-1028": {
+    "childSkuIds": [],
+    "listId": 1028,
+    "name": "Cooperative games",
+    "type": "list"
+  },
+  "list-1029": {
+    "childSkuIds": [],
+    "listId": 1029,
+    "name": "Couch co-op games",
+    "type": "list"
+  },
+  "list-1030": {
+    "childSkuIds": [],
+    "listId": 1030,
+    "name": "Dating simulations",
+    "type": "list"
+  },
+  "list-1031": {
+    "childSkuIds": [],
+    "listId": 1031,
+    "name": "E-sports",
+    "type": "list"
+  },
+  "list-1032": {
+    "childSkuIds": [],
+    "listId": 1032,
+    "name": "Female protagonist",
+    "type": "list"
+  },
+  "list-1033": {
+    "childSkuIds": [],
+    "listId": 1033,
+    "name": "First-person games",
+    "type": "list"
+  },
+  "list-1034": {
+    "childSkuIds": [],
+    "listId": 1034,
+    "name": "Flight simulations",
+    "type": "list"
+  },
+  "list-1035": {
+    "childSkuIds": [],
+    "listId": 1035,
+    "name": "Great stories",
+    "type": "list"
+  },
+  "list-1036": {
+    "childSkuIds": [],
+    "listId": 1036,
+    "name": "Indies we love",
+    "type": "list"
+  },
+  "list-1037": {
+    "childSkuIds": [],
+    "listId": 1037,
+    "name": "Interactive fiction",
+    "type": "list"
+  },
+  "list-1038": {
+    "childSkuIds": [],
+    "listId": 1038,
+    "name": "JRPGs",
+    "type": "list"
+  },
+  "list-1039": {
+    "childSkuIds": [],
+    "listId": 1039,
+    "name": "MMO games",
+    "type": "list"
+  },
+  "list-1040": {
+    "childSkuIds": [],
+    "listId": 1040,
+    "name": "MMORPGs",
+    "type": "list"
+  },
+  "list-1041": {
+    "childSkuIds": [],
+    "listId": 1041,
+    "name": "MOBA games",
+    "type": "list"
+  },
+  "list-1042": {
+    "childSkuIds": [],
+    "listId": 1042,
+    "name": "Open world",
+    "type": "list"
+  },
+  "list-1043": {
+    "childSkuIds": [],
+    "listId": 1043,
+    "name": "Platformer",
+    "type": "list"
+  },
+  "list-1044": {
+    "childSkuIds": [],
+    "listId": 1044,
+    "name": "Point-&-click adventure games",
+    "type": "list"
+  },
+  "list-1045": {
+    "childSkuIds": [],
+    "listId": 1045,
+    "name": "Puzzle & card games",
+    "type": "list"
+  },
+  "list-1046": {
+    "childSkuIds": [],
+    "listId": 1046,
+    "name": "Roguelike games",
+    "type": "list"
+  },
+  "list-1047": {
+    "childSkuIds": [],
+    "listId": 1047,
+    "name": "RTS games",
+    "type": "list"
+  },
+  "list-1048": {
+    "childSkuIds": [],
+    "listId": 1048,
+    "name": "Sandbox",
+    "type": "list"
+  },
+  "list-1049": {
+    "childSkuIds": [],
+    "listId": 1049,
+    "name": "Single-player games",
+    "type": "list"
+  },
+  "list-1050": {
+    "childSkuIds": [],
+    "listId": 1050,
+    "name": "Sports & racing games",
+    "type": "list"
+  },
+  "list-1051": {
+    "childSkuIds": [],
+    "listId": 1051,
+    "name": "Survival games",
+    "type": "list"
+  },
+  "list-1052": {
+    "childSkuIds": [],
+    "listId": 1052,
+    "name": "Survival horror games",
+    "type": "list"
+  },
+  "list-1053": {
+    "childSkuIds": [],
+    "listId": 1053,
+    "name": "Third-person games",
+    "type": "list"
+  },
+  "list-1054": {
+    "childSkuIds": [],
+    "listId": 1054,
+    "name": "Trivia games",
+    "type": "list"
+  },
+  "list-1055": {
+    "childSkuIds": [],
+    "listId": 1055,
+    "name": "Turn-based games",
+    "type": "list"
+  },
+  "list-1056": {
+    "childSkuIds": [],
+    "listId": 1056,
+    "name": "Visual novel",
+    "type": "list"
+  },
+  "list-1057": {
+    "childSkuIds": [],
+    "listId": 1057,
+    "name": "Crossplay",
+    "type": "list"
+  },
+  "list-1058": {
+    "childSkuIds": [],
+    "listId": 1058,
+    "name": "Cross save",
+    "type": "list"
+  },
+  "list-11": {
+    "childSkuIds": [],
+    "listId": 11,
+    "name": "New add-ons",
+    "type": "list"
+  },
+  "list-12": {
+    "childSkuIds": [
+      "a84dcb8e05e74083b5c879b49e923205p",
+      "2240fd0ec10f4229ab05fe5c7547b20a",
+      "55b718bf03544bd3a9f6a62946fe7436"
+    ],
+    "listId": 12,
+    "name": "Early access",
+    "type": "list"
+  },
+  "list-13": {
+    "childSkuIds": [],
+    "listId": 13,
+    "name": "Great on mobile",
+    "type": "list"
+  },
+  "list-14": {
+    "childSkuIds": [
+      "f500f7d58be94fa389e1cdef3bf1118ep",
+      "80da4613928a48459214767c8316a223p",
+      "b446084511c54da8a9b3381be38255c7p",
+      "d572350afe054f9f99838e69ea68dbdep",
+      "eca0215beada49a9808ca3bf39ae7e15p",
+      "eb8bffd1d3714e8598f369e34ac10104p",
+      "862952fa89524bf394125feb46bce22fp",
+      "efe7d5f9b6ff473bb4a487cdca7d3a06p",
+      "d9b82e2beea7480ca04f7b91be9676e6p",
+      "abf7ba115c3d4747807a8cc9fe5781cep",
+      "08d1ff1f041f41a5a893ab04bb6b132cp",
+      "592b9e28893242c79af65695648100e2p",
+      "b1fa43ad8e644b90954835f40119270bp",
+      "ffe7c395664149248ed6730110cc41b3p",
+      "a14a9be9d6f747f39f52bb97bfa2aaf4p",
+      "04d3a8e049b94b0fa564bbed74cf1accp",
+      "3ffcf57bd4ab49a7bd6600658ad81a6ep",
+      "ce8a411f4dc2470da828fc259c584aa5",
+      "f491723b366248d18843107689f3ead6"
+    ],
+    "listId": 14,
+    "name": "On sale",
+    "type": "list"
+  },
+  "list-15": {
+    "childSkuIds": [],
+    "listId": 15,
+    "name": "Great offers",
+    "type": "list"
+  },
+  "list-16": {
+    "childSkuIds": [],
+    "listId": 16,
+    "name": "Game of the year winners",
+    "type": "list"
+  },
+  "list-17": {
+    "childSkuIds": [],
+    "listId": 17,
+    "name": "Beautiful games",
+    "type": "list"
+  },
+  "list-18": {
+    "childSkuIds": [],
+    "listId": 18,
+    "name": "Popular on YouTube",
+    "type": "list"
+  },
+  "list-19": {
+    "childSkuIds": [],
+    "listId": 19,
+    "name": "Most wished",
+    "type": "list"
+  },
+  "list-20": {
+    "childSkuIds": [],
+    "listId": 20,
+    "name": "Most gifted",
+    "type": "list"
+  },
+  "list-2001": {
+    "childSkuIds": [
+      "ad2362e56c57469cafad1ed5799e8997p",
+      "b485ca2ff43a4c658b32bd638546142cp",
+      "86269481f3884521806398d7d875df9e",
+      "2837a1b537a44121a5d078ba82d416dcp",
+      "5af3426b8434401897bb4eeac0344662",
+      "6ec089b591ee47fab2fed726e466700ap",
+      "5470776eda9b4270b049f081c6bc07ce",
+      "2a4af85a84974cdba4d61df620305335",
+      "470c64ea659b441a8b4d10f3e30d1862p",
+      "dc0627d002f24fdba14ac6755250360ep",
+      "cc1997b89ae44886a1197a59b42b2613",
+      "896565e45f974774a117876f949630df",
+      "f491723b366248d18843107689f3ead6",
+      "5251fd4e832d459ca046e6eb81b16809",
+      "68fb07a7c4ac41f1afb21d742c717538",
+      "163efc95783a4c39839c218b75e36127",
+      "fa63c6e891ff4d1bb76c4ac7580c119a",
+      "c43eb98aaf8e455fb6faece785893268",
+      "ac819b64342841eda35cebfd3a34c769",
+      "77ab8b1807a849e3991826d8d7a9e3e0",
+      "ce8a411f4dc2470da828fc259c584aa5",
+      "fe5459c281d9443ca8f0e420f59936fc",
+      "788a1f7b00f74b26b12d7c6d62d50d96",
+      "43fb9c029d0641e290fdbaedea1c3a40",
+      "2240fd0ec10f4229ab05fe5c7547b20a",
+      "f47a1e1e9f0b43078e0a80c57068b085",
+      "f6658df6c8874c828532d5d24c66d58f",
+      "a1afa4eca7b24713a9bcf3421dd85a13",
+      "90f5bd9270024986b26ee8221c1fa2e4",
+      "bd70626ec3834dedbc6dda5b956f7648",
+      "9ac5597c3f4a4e648c9ae56bac3d1b32"
+    ],
+    "listId": 2001,
+    "name": "Stadia Pro games",
+    "type": "list"
+  },
+  "list-2002": {
+    "childSkuIds": [],
+    "listId": 2002,
+    "name": "UPlay+ games",
+    "type": "list"
+  },
+  "list-21": {
+    "childSkuIds": [],
+    "listId": 21,
+    "name": "Top rated",
+    "type": "list"
+  },
+  "list-22": {
+    "childSkuIds": [
+      "3e5dab36f21e466499f3449f13c98329",
+      "53ed0e18ae494c929dbec8262afcc915",
+      "8e894e5800a84b8aa6b8e277e5790a53",
+      "be70e67b1fd64dc2bb4f002e65239731p",
+      "c00cecabcbde4e95bdab69be6e80b40bp",
+      "80da4613928a48459214767c8316a223p",
+      "f500f7d58be94fa389e1cdef3bf1118ep",
+      "b446084511c54da8a9b3381be38255c7p",
+      "d572350afe054f9f99838e69ea68dbdep",
+      "ad2362e56c57469cafad1ed5799e8997p",
+      "b899a93d213e4d2a9cef68e36e261715p",
+      "b485ca2ff43a4c658b32bd638546142cp",
+      "86269481f3884521806398d7d875df9e",
+      "2837a1b537a44121a5d078ba82d416dcp",
+      "66d60752c3f54ee5bf3fddfc58e5a723p",
+      "af7331db8d1b4ef588f4f1a219d7e081p",
+      "b275c670faf54754ac4bfbfa13bcc21ep",
+      "2a1351f516904ed190546d1b82934bd1",
+      "6934fd15e74946d6adcefcc19eef0e83p",
+      "5859706900cd48a88d80c89fb3a18a8bp",
+      "e414067702174e96b5971cc0ec08e4b7p"
+    ],
+    "listId": 22,
+    "name": "New releases",
+    "type": "list"
+  },
+  "list-23": {
+    "childSkuIds": [],
+    "listId": 23,
+    "name": "Best 4K games",
+    "type": "list"
+  },
+  "list-24": {
+    "childSkuIds": [],
+    "listId": 24,
+    "name": "Best cross-platform",
+    "type": "list"
+  },
+  "list-25": {
+    "childSkuIds": [],
+    "listId": 25,
+    "name": "Best HDR games",
+    "type": "list"
+  },
+  "list-26": {
+    "childSkuIds": [],
+    "listId": 26,
+    "name": "Best multiplayer games",
+    "type": "list"
+  },
+  "list-27": {
+    "childSkuIds": [],
+    "listId": 27,
+    "name": "Best of Stadia",
+    "type": "list"
+  },
+  "list-28": {
+    "childSkuIds": [],
+    "listId": 28,
+    "name": "Best with Stadia Pro",
+    "type": "list"
+  },
+  "list-29": {
+    "childSkuIds": [],
+    "listId": 29,
+    "name": "Big deals",
+    "type": "list"
+  },
+  "list-3": {
+    "childSkuIds": [
+      "be70e67b1fd64dc2bb4f002e65239731p",
+      "6760aad6e75b4edc9686c48e8dd38936",
+      "2868c83c2411473282074a6fe5dbfc85",
+      "f879d932d28c4104958c7976f201ba38",
+      "a84dcb8e05e74083b5c879b49e923205p",
+      "958f4c0900c64e7e83b9218ab479304e",
+      "f4934cfefbf845c3a3fa345dd65f9fcd",
+      "fbfc03802388481b87a6d6922b773686",
+      "a7f0a6098ae747788a6f75d0d1e1d8f2p",
+      "68fb07a7c4ac41f1afb21d742c717538",
+      "bf97db3ce0644a448815aef1a5c33e0a",
+      "f7aa7caf05e64d91af2063bf1803e947",
+      "c43eb98aaf8e455fb6faece785893268",
+      "a4d44ee20c90481c86163a5d7b7b9d97p",
+      "cb3e8ed4bf954c9984fda697f2e8c06dp",
+      "6c8ae46efebc4bd1a7de725bc630ce65",
+      "5af3426b8434401897bb4eeac0344662",
+      "41538c3158ec4c7aaf641ab7b9330d37p",
+      "6934fd15e74946d6adcefcc19eef0e83p",
+      "4950959380034dcda0aecf98f675e11f",
+      "53ed0e18ae494c929dbec8262afcc915",
+      "8e894e5800a84b8aa6b8e277e5790a53",
+      "3e5dab36f21e466499f3449f13c98329",
+      "1f50a7a214994a5cb861db76eef77564",
+      "bd70626ec3834dedbc6dda5b956f7648",
+      "58f0a37bf6b141e4ba3a14b59e46b7ff",
+      "3d2a4c3229bd44ea80647beacc9ed247",
+      "bcdca49dcac843f98ddb10e06ba83ee9",
+      "e414067702174e96b5971cc0ec08e4b7p",
+      "5859706900cd48a88d80c89fb3a18a8bp",
+      "17affc92b9ca47a7b64e748609ed25af",
+      "e74abd04f4a34c7a82b6cf8cd9cf9ac0",
+      "b171fc78d4e1496d9536d585257a771e",
+      "66f1b5a13ee54b7aa70aebfddd18c085",
+      "2240fd0ec10f4229ab05fe5c7547b20a",
+      "60da786be741463fbbeb63ed5130bc11",
+      "5cef6c44a9314c7595e267196aafa823",
+      "f500f7d58be94fa389e1cdef3bf1118ep",
+      "80da4613928a48459214767c8316a223p",
+      "b446084511c54da8a9b3381be38255c7p",
+      "d572350afe054f9f99838e69ea68dbdep",
+      "c50094b71d054fc28f3116245d9dbc9a",
+      "0292121ae01e4247ace30184df5f6ac0",
+      "1611bf48ac784869bcbd1ce85bc71add",
+      "32a0791a88474f08ad7a687846b786f2",
+      "a6ffc113bea9495b84581796893ebf50",
+      "75be643ff0fb40d7873fa41edb10d98a",
+      "4f1db1c66f6e427286cc21d116e7bbee",
+      "896565e45f974774a117876f949630df",
+      "9ac5597c3f4a4e648c9ae56bac3d1b32",
+      "dc0627d002f24fdba14ac6755250360ep",
+      "ad2362e56c57469cafad1ed5799e8997p",
+      "70d2750d0c614a01afbb34e5c4f3a9bc",
+      "5bdde123ddc246918c6919479e427c85",
+      "5978ecf352094277a09daf94b5bfff1cp",
+      "a31dabb87e2441978da11fd60f3197dfp",
+      "88ac254f308a42e88091e71169f11519",
+      "cc1997b89ae44886a1197a59b42b2613",
+      "17d98b899531490ba355016919ffe6ff",
+      "be1bff38daf046f78cde2b36228de554",
+      "bc01f7206e4f4f83a468ce33eea0c404",
+      "6ec089b591ee47fab2fed726e466700ap",
+      "569fd572ad0a4bb6b3f1a08237fc69c0p",
+      "ca8344739a34441dac1f53938b55e178p",
+      "78d9936c8cdb4f2e938158735cecd5a8p",
+      "7f69e006dede4c8eab019dede177c57dp",
+      "d7ce926f62f3488999c0dc45d52fd946p",
+      "e08ea1952a294f24b9ba58478f69a5ddp",
+      "aba2b1bc01b14666b7fa48fcef18728dp",
+      "da2272f0fb9a49e6aa6ba2a93b1e24dep",
+      "43fb9c029d0641e290fdbaedea1c3a40",
+      "3feef74cbacf4ba39b5d9087e0dfb9e4",
+      "a8918900bd834426ab8f5a55fba998c7",
+      "8d3124a81f6444219acd3d99c90a5658",
+      "12f3e5611c34478fb0285c6de4f2a8aa",
+      "163efc95783a4c39839c218b75e36127",
+      "c00cecabcbde4e95bdab69be6e80b40bp",
+      "77ab8b1807a849e3991826d8d7a9e3e0",
+      "366a682e5f1645b3a242507ae431c918",
+      "ab6a5a0d448d4c7aaed8dfa91ad6f4b9",
+      "cfc62fc3307a4ef1930e4644646c8179p",
+      "d26a526c2e0e4aefb54fbf0f87783de0p",
+      "de1e97332f1148468759dfc4553edad9",
+      "8ca5e97f091e4f7fbfcf8069ba850b1f",
+      "b1ef708943904e7eaa699d2113805814",
+      "92cd0fa4958444b5846d1b72878c7e25",
+      "256f320f886b4ee68b7980d6fc1bd1b1",
+      "38f772ac664545d99890ebb460d1d894",
+      "3ac3e537019c49028d7bb98e8cd92482",
+      "f3f250e8a4d54f60ba730fbc04268052",
+      "1e2b1a94a9d94c3fb89e353493e0d82dp",
+      "b0c60f8483be419eb2335a79a0783cc5",
+      "b6d1b295ed0d4f1080576ac5d51df6d0",
+      "183f245b98a141ae97214c9ee5ae8a56",
+      "0a763df666fc4569896ca44062308138",
+      "ae31d6ce393f4896b9b9d1f2f1ac676ep",
+      "ef438c972780466594c5d148279f72bap",
+      "a6c13e6aa796439295774eb0e8cd3f8b",
+      "55b718bf03544bd3a9f6a62946fe7436",
+      "fa63c6e891ff4d1bb76c4ac7580c119a",
+      "5fa0d3e596d74c018b6778dab6098edcp",
+      "9a25de2639254575abb6f2d58d5c57e5",
+      "ac819b64342841eda35cebfd3a34c769",
+      "9c7fd0f16817482c9e0b311a8340cb0b",
+      "e6db6f135c514fe98a62b5de7187d9a5",
+      "71e7c4fc5ca24f0f8301da6d042bf18e",
+      "2837a1b537a44121a5d078ba82d416dcp",
+      "fe5459c281d9443ca8f0e420f59936fc",
+      "dd3cc4400aba4b809fb9eafcf61cb344",
+      "78ea22fb5c054167bb722322b469f33f",
+      "65e4b00af1094f1c99f5a8c7248b433f",
+      "f790e37b6161477188923408085528a1",
+      "63e94c60b10e4267add34ef768c30f8f",
+      "08bf286364164e14bac41b0040d6331f",
+      "f139cbd41135461a83da504824a5d382",
+      "2a4af85a84974cdba4d61df620305335",
+      "f5562aaf93cb46e081d317263bde3013",
+      "5470776eda9b4270b049f081c6bc07ce",
+      "5251fd4e832d459ca046e6eb81b16809",
+      "888a817c35b5439bb6a03a78ab09e138",
+      "2a1351f516904ed190546d1b82934bd1",
+      "3ff11dc4d2bf449f89c89bf329003e10",
+      "45918155e78145af937b5df1a574afd2",
+      "bb9bcb490fd145d9997c8b3ff3f1039f",
+      "b485ca2ff43a4c658b32bd638546142cp",
+      "b899a93d213e4d2a9cef68e36e261715p",
+      "5582aa71e58a45e59a05598a93cde9a3",
+      "f16b28e2fd224acaafeee4c19134adb4",
+      "7ed521aacf2a44168fb99cd1e13472ad",
+      "f6658df6c8874c828532d5d24c66d58f",
+      "90f5bd9270024986b26ee8221c1fa2e4",
+      "f47a1e1e9f0b43078e0a80c57068b085",
+      "a1afa4eca7b24713a9bcf3421dd85a13",
+      "2d155b69c4af46078db2d96a8b0e6883",
+      "fd993b8d4b7a49b99caad668a0d7ab3d",
+      "788a1f7b00f74b26b12d7c6d62d50d96",
+      "e57401bfbe4f4dd98fdfd05b0c75acb5",
+      "470c64ea659b441a8b4d10f3e30d1862p",
+      "ce8a411f4dc2470da828fc259c584aa5",
+      "f491723b366248d18843107689f3ead6",
+      "94db678cbb6342c3bc0e58f71130b3fb",
+      "ec30180d14de41fcaec12d442b81e248",
+      "1e4107605f83447fa8e04e0abdc578b3",
+      "b9d1633ba24f41d7919f431db4744f3c",
+      "bed63eac149542078fa5b9d6f20f5f2f",
+      "f962fa4f12b64bffade9c170469d5710",
+      "06adceee27be4150b080495b3c51c68c",
+      "57bdb73d1f6e47f99d1dfc61c1ca1402",
+      "dad1cc5c8c1e45c38a83d125e59ea4b9",
+      "2a598d522e4f4f9d818d08fe582d17e3",
+      "86269481f3884521806398d7d875df9e",
+      "e8ed70244808408cbb7d3b2b1f06547f",
+      "6e98f34bbcae444a99816b8f2613452b",
+      "c86bd12f279741a8b8c9c522845c7fa9",
+      "06e101d56a03472bb6c204aee96187d7",
+      "10621ce0fe784ccca7a9d95ec0f24f37",
+      "0339b1c963e64e28a64b5778da93478c",
+      "01e95e73256c465fb5620fc574446413",
+      "cc66f2992d04402bba5cbc8abf6cc616",
+      "c147fbe82f394c11bbe41ee134d4f350",
+      "0db057f2ebf24cf0884d33d1676e588bp",
+      "3a7288e1be9d4e92bc87c2138aa547c1p",
+      "af7331db8d1b4ef588f4f1a219d7e081p",
+      "66d60752c3f54ee5bf3fddfc58e5a723p",
+      "b275c670faf54754ac4bfbfa13bcc21ep",
+      "599a08652fad4a41baad8591e18e83e2",
+      "772119af45f44182bca3ff8d39f62b0b",
+      "d3e056ee79d947c29eedc5ae232d6c2ep",
+      "31047b9e82bb4a30ba66b24bef71cdf2",
+      "30a2e74966344afcabc22d32c0d2cdc3p",
+      "3c404bed77284df9adfbb212ed6c07e5p",
+      "a7b1581491ea4b7c9fcc89710561f5f7",
+      "13f0229eab0a484382e9af78bad74ff7",
+      "5027183521d3454a8ff000edbfd478a9"
+    ],
+    "listId": 3,
+    "name": "All games",
+    "type": "list"
+  },
+  "list-30": {
+    "childSkuIds": [],
+    "listId": 30,
+    "name": "Collection",
+    "type": "list"
+  },
+  "list-3001": {
+    "childSkuIds": [],
+    "listId": 3001,
+    "name": "Your wishlist",
+    "type": "list"
+  },
+  "list-31": {
+    "childSkuIds": [],
+    "listId": 31,
+    "name": "Compilation",
+    "type": "list"
+  },
+  "list-32": {
+    "childSkuIds": [],
+    "listId": 32,
+    "name": "Demos",
+    "type": "list"
+  },
+  "list-33": {
+    "childSkuIds": [
+      "68fb07a7c4ac41f1afb21d742c717538",
+      "43fb9c029d0641e290fdbaedea1c3a40",
+      "f139cbd41135461a83da504824a5d382",
+      "5582aa71e58a45e59a05598a93cde9a3",
+      "788a1f7b00f74b26b12d7c6d62d50d96",
+      "599a08652fad4a41baad8591e18e83e2"
+    ],
+    "listId": 33,
+    "name": "Discover more games",
+    "type": "list"
+  },
+  "list-34": {
+    "childSkuIds": [],
+    "listId": 34,
+    "name": "Expansions",
+    "type": "list"
+  },
+  "list-35": {
+    "childSkuIds": [],
+    "listId": 35,
+    "name": "Featured deals",
+    "type": "list"
+  },
+  "list-36": {
+    "childSkuIds": [
+      "a8918900bd834426ab8f5a55fba998c7",
+      "92cd0fa4958444b5846d1b72878c7e25",
+      "2d155b69c4af46078db2d96a8b0e6883",
+      "772119af45f44182bca3ff8d39f62b0b"
+    ],
+    "listId": 36,
+    "name": "Leaving Stadia Pro soon",
+    "type": "list"
+  },
+  "list-37": {
+    "childSkuIds": [],
+    "listId": 37,
+    "name": "More to discover",
+    "type": "list"
+  },
+  "list-38": {
+    "childSkuIds": [],
+    "listId": 38,
+    "name": "New & trending",
+    "type": "list"
+  },
+  "list-39": {
+    "childSkuIds": [],
+    "listId": 39,
+    "name": "New this month",
+    "type": "list"
+  },
+  "list-4": {
+    "childSkuIds": [
+      "b171fc78d4e1496d9536d585257a771e",
+      "60da786be741463fbbeb63ed5130bc11",
+      "32a0791a88474f08ad7a687846b786f2",
+      "b0c60f8483be419eb2335a79a0783cc5",
+      "470c64ea659b441a8b4d10f3e30d1862p",
+      "bed63eac149542078fa5b9d6f20f5f2f"
+    ],
+    "listId": 4,
+    "name": "Featured",
+    "type": "list"
+  },
+  "list-40": {
+    "childSkuIds": [],
+    "listId": 40,
+    "name": "New this week",
+    "type": "list"
+  },
+  "list-4001": {
+    "childSkuIds": [],
+    "listId": 4001,
+    "name": "From 2K",
+    "type": "list"
+  },
+  "list-4002": {
+    "childSkuIds": [
+      "bcdca49dcac843f98ddb10e06ba83ee9",
+      "e74abd04f4a34c7a82b6cf8cd9cf9ac0",
+      "b171fc78d4e1496d9536d585257a771e",
+      "78ea22fb5c054167bb722322b469f33f",
+      "65e4b00af1094f1c99f5a8c7248b433f",
+      "06adceee27be4150b080495b3c51c68c",
+      "57bdb73d1f6e47f99d1dfc61c1ca1402",
+      "f746502dc3b54a86ba5c42bb2e0ecea5",
+      "6b1c1766bfdd494cb2df6b0323bc3ea5",
+      "dad1cc5c8c1e45c38a83d125e59ea4b9",
+      "31047b9e82bb4a30ba66b24bef71cdf2"
+    ],
+    "listId": 4002,
+    "name": "From Bethesda",
+    "type": "list"
+  },
+  "list-4003": {
+    "childSkuIds": [],
+    "listId": 4003,
+    "name": "From Devolver Digital",
+    "type": "list"
+  },
+  "list-4004": {
+    "childSkuIds": [],
+    "listId": 4004,
+    "name": "From Square Enix",
+    "type": "list"
+  },
+  "list-4005": {
+    "childSkuIds": [],
+    "listId": 4005,
+    "name": "From THQ Nordic",
+    "type": "list"
+  },
+  "list-4006": {
+    "childSkuIds": [],
+    "listId": 4006,
+    "name": "From Ubisoft",
+    "type": "list"
+  },
+  "list-41": {
+    "childSkuIds": [],
+    "listId": 41,
+    "name": "New to Stadia",
+    "type": "list"
+  },
+  "list-42": {
+    "childSkuIds": [],
+    "listId": 42,
+    "name": "Publisher spotlight",
+    "type": "list"
+  },
+  "list-43": {
+    "childSkuIds": [],
+    "listId": 43,
+    "name": "Stadia exclusives",
+    "type": "list"
+  },
+  "list-44": {
+    "childSkuIds": [],
+    "listId": 44,
+    "name": "Stadia favorites",
+    "type": "list"
+  },
+  "list-45": {
+    "childSkuIds": [
+      "60da786be741463fbbeb63ed5130bc11",
+      "5cef6c44a9314c7595e267196aafa823",
+      "f500f7d58be94fa389e1cdef3bf1118ep",
+      "80da4613928a48459214767c8316a223p",
+      "beb6b14f04e94772b78a36d2265b550fp",
+      "b446084511c54da8a9b3381be38255c7p",
+      "d572350afe054f9f99838e69ea68dbdep",
+      "646e908c74364308a034a7ffabf18f92p",
+      "eca0215beada49a9808ca3bf39ae7e15p",
+      "eb8bffd1d3714e8598f369e34ac10104p",
+      "862952fa89524bf394125feb46bce22fp",
+      "efe7d5f9b6ff473bb4a487cdca7d3a06p",
+      "d9b82e2beea7480ca04f7b91be9676e6p",
+      "abf7ba115c3d4747807a8cc9fe5781cep",
+      "08d1ff1f041f41a5a893ab04bb6b132cp",
+      "592b9e28893242c79af65695648100e2p",
+      "b1fa43ad8e644b90954835f40119270bp",
+      "ffe7c395664149248ed6730110cc41b3p",
+      "a14a9be9d6f747f39f52bb97bfa2aaf4p",
+      "04d3a8e049b94b0fa564bbed74cf1accp",
+      "3ffcf57bd4ab49a7bd6600658ad81a6ep"
+    ],
+    "listId": 45,
+    "name": "Stadia Pro deals",
+    "type": "list"
+  },
+  "list-46": {
+    "childSkuIds": [
+      "60da786be741463fbbeb63ed5130bc11",
+      "888a817c35b5439bb6a03a78ab09e138",
+      "7ed521aacf2a44168fb99cd1e13472ad",
+      "ab6a5a0d448d4c7aaed8dfa91ad6f4b9",
+      "f16b28e2fd224acaafeee4c19134adb4",
+      "a6ffc113bea9495b84581796893ebf50",
+      "5251fd4e832d459ca046e6eb81b16809",
+      "d3e056ee79d947c29eedc5ae232d6c2ep",
+      "45918155e78145af937b5df1a574afd2",
+      "6c8ae46efebc4bd1a7de725bc630ce65"
+    ],
+    "listId": 46,
+    "name": "Trending",
+    "type": "list"
+  },
+  "list-47": {
+    "childSkuIds": [],
+    "listId": 47,
+    "name": "Trials",
+    "type": "list"
+  },
+  "list-48": {
+    "childSkuIds": [],
+    "listId": 48,
+    "name": "Buy it again",
+    "type": "list"
+  },
+  "list-49": {
+    "childSkuIds": [],
+    "listId": 49,
+    "name": "Go deluxe",
+    "type": "list"
+  },
+  "list-5": {
+    "childSkuIds": [],
+    "listId": 5,
+    "name": "Most played",
+    "type": "list"
+  },
+  "list-50": {
+    "childSkuIds": [],
+    "listId": 50,
+    "name": "Deluxe editions",
+    "type": "list"
+  },
+  "list-5001": {
+    "childSkuIds": [],
+    "listId": 5001,
+    "name": "All things NBA 2K20",
+    "type": "list"
+  },
+  "list-5002": {
+    "childSkuIds": [
+      "56dbae507d1b4f1d913f367a59c17f98",
+      "0148d68a3cbd48578a03975e87d51fe7",
+      "fc33f0a856e8423e8736e0d4843cf6cb",
+      "05496803222e4109bdc38a41d60a4786",
+      "7925f6cf4e904e9d943c4c71797b94c6",
+      "029ea3124e0d4adea74f6604879026a1",
+      "b6d1b295ed0d4f1080576ac5d51df6d0",
+      "183f245b98a141ae97214c9ee5ae8a56",
+      "0a763df666fc4569896ca44062308138"
+    ],
+    "listId": 5002,
+    "name": "NBA 2K20",
+    "type": "list"
+  },
+  "list-5003": {
+    "childSkuIds": [],
+    "listId": 5003,
+    "name": "All things Destiny 2",
+    "type": "list"
+  },
+  "list-5004": {
+    "childSkuIds": [
+      "853a27516fa34723b3557a7ec100540a",
+      "8ab86e6f052f43e497861f876eb735f5",
+      "9a1db53d12fe458f97ed1b2ff073e232",
+      "196ca6668e024989ac514dbc5c01b8e8",
+      "0a271e0db9a14d7488f5b12aa516e3e1",
+      "53ed0e18ae494c929dbec8262afcc915",
+      "8e894e5800a84b8aa6b8e277e5790a53",
+      "3e5dab36f21e466499f3449f13c98329",
+      "1f50a7a214994a5cb861db76eef77564"
+    ],
+    "listId": 5004,
+    "name": "Destiny 2",
+    "type": "list"
+  },
+  "list-5005": {
+    "childSkuIds": [],
+    "listId": 5005,
+    "name": "All things Mortal Kombat 11",
+    "type": "list"
+  },
+  "list-5006": {
+    "childSkuIds": [
+      "ab50680240a94f48bc9b733a2d1882a8",
+      "8a49bd9901324fd0b66d4f718a333b03",
+      "ea524e129e0142d9a7483e43813078e7",
+      "b0e3aa85d6e94191ba19a5f1c633eab0",
+      "bc0aa265c29a4ebe9d7eb454e518c651",
+      "294cbfab6a0e4d7db0d540968af2fbc7",
+      "2440f9f3bfd1435184627a76e065ebfd",
+      "93e85c685a76480393e085f24944b8cf",
+      "a87100bea7ae42439c010becef0ca358",
+      "20ef71dd341a4fb38423fb207d6c4455",
+      "7ed368fdc86c45c5a61a44191bd0fa36",
+      "939a0ba6167a47f69168e88c0f8d7671",
+      "166c9a081fd244d5a0450b10bf244a81",
+      "f3f250e8a4d54f60ba730fbc04268052",
+      "8c37998b9fea41c89daa7a243a272fd2",
+      "1492d4fcf167420cb227a5579f447016",
+      "e94c4b9ada3e43a89fe92e86e83ed092",
+      "5886db0ca237421b82bbc2349d22c972",
+      "4a4fabe8ed9942ed9ca5fa9111f3934f",
+      "83cf93c9e14c4f5fa1260023020a6ff6",
+      "09a2304b45aa4847a31ccd51993462ff",
+      "9c1030c0644f4ab583be198548152576",
+      "56eca827816d43b88344c10b063e9cfc",
+      "018fd8b8c01d496cb4917d43645c14b5",
+      "c6dca6e721894c4eb2229acc74c22f9d"
+    ],
+    "listId": 5006,
+    "name": "Mortal Kombat 11",
+    "type": "list"
+  },
+  "list-5007": {
+    "childSkuIds": [],
+    "listId": 5007,
+    "name": "All things Assassin’s Creed Odyssey",
+    "type": "list"
+  },
+  "list-5008": {
+    "childSkuIds": [
+      "6760aad6e75b4edc9686c48e8dd38936",
+      "2faba9125f464e5ba4b85ea0a0224f03",
+      "61a25ec8151544f3a4705f92ca668a1a",
+      "f5ed9806c50249d69360c8619eac5217",
+      "cc0bba7fc82c467091224ac044b42081",
+      "4b9eacd1afd14b4b8a3d092b27016e7b",
+      "475a24e9b9e54cf8a041c3b24a86b28e",
+      "6f6a85eb8e6f4042a95cc5a51ee26984",
+      "2868c83c2411473282074a6fe5dbfc85"
+    ],
+    "listId": 5008,
+    "name": "Assassin’s Creed Odyssey",
+    "type": "list"
+  },
+  "list-5009": {
+    "childSkuIds": [],
+    "listId": 5009,
+    "name": "All things Borderlands 3",
+    "type": "list"
+  },
+  "list-5010": {
+    "childSkuIds": [
+      "958f4c0900c64e7e83b9218ab479304e",
+      "0337a541ac1c47b486e93254d4a826a6",
+      "c2ab8fcd17ad4f8fb7123ccc241788e5",
+      "d0f6c5c2a5294dafb904fff5b6b38ca1",
+      "f4934cfefbf845c3a3fa345dd65f9fcd",
+      "8eb8fae663e841bca442ca6d95b54278",
+      "551b417fd11d4ed58d739c53c1cd84dc",
+      "85a8f97e5cc448899d6f851a5976f5c4",
+      "fc54b4c07feb43068a46aa7d9b4fd419",
+      "1e6b50c7fd7640f4a7b5160e74708043",
+      "fbfc03802388481b87a6d6922b773686",
+      "2b58178e031e4332a79617bc994ac21d"
+    ],
+    "listId": 5010,
+    "name": "Borderlands 3",
+    "type": "list"
+  },
+  "list-5011": {
+    "childSkuIds": [],
+    "listId": 5011,
+    "name": "All things Red Dead Redemption 2",
+    "type": "list"
+  },
+  "list-5012": {
+    "childSkuIds": [
+      "c5b3f3aac4674a838aa54f14ceda96ff",
+      "79fc1e4943a54b598f0b25a32dfd7c77",
+      "e6b71c0c17a348c3bad4e8f46381e29e",
+      "db6d19c70c0a4d908c355f52a184dd88",
+      "8897737d25da47af942c96dd185a0c04",
+      "f790e37b6161477188923408085528a1",
+      "63e94c60b10e4267add34ef768c30f8f",
+      "08bf286364164e14bac41b0040d6331f"
+    ],
+    "listId": 5012,
+    "name": "Red Dead Redemption 2",
+    "type": "list"
+  },
+  "list-5013": {
+    "childSkuIds": [],
+    "listId": 5013,
+    "name": "All things SteamWorld",
+    "type": "list"
+  },
+  "list-5014": {
+    "childSkuIds": [
+      "f6658df6c8874c828532d5d24c66d58f",
+      "90f5bd9270024986b26ee8221c1fa2e4",
+      "f47a1e1e9f0b43078e0a80c57068b085",
+      "a1afa4eca7b24713a9bcf3421dd85a13"
+    ],
+    "listId": 5014,
+    "name": "SteamWorld",
+    "type": "list"
+  },
+  "list-5015": {
+    "childSkuIds": [],
+    "listId": 5015,
+    "name": "All things DOOM",
+    "type": "list"
+  },
+  "list-5016": {
+    "childSkuIds": [],
+    "listId": 5016,
+    "name": "DOOM",
+    "type": "list"
+  },
+  "list-5017": {
+    "childSkuIds": [],
+    "listId": 5017,
+    "name": "DOOM Eternal",
+    "type": "list"
+  },
+  "list-5018": {
+    "childSkuIds": [],
+    "listId": 5018,
+    "name": "All things Tomb Raider",
+    "type": "list"
+  },
+  "list-5019": {
+    "childSkuIds": [],
+    "listId": 5019,
+    "name": "Tomb Raider",
+    "type": "list"
+  },
+  "list-5020": {
+    "childSkuIds": [],
+    "listId": 5020,
+    "name": "All things Metro Exodus",
+    "type": "list"
+  },
+  "list-5021": {
+    "childSkuIds": [
+      "8ca5e97f091e4f7fbfcf8069ba850b1f",
+      "b1ef708943904e7eaa699d2113805814",
+      "6ad6555933ee4c34a6ad1d2d4fdf69aa",
+      "a3ae3dfc95ca4ad9b191e0ab9b75f601"
+    ],
+    "listId": 5021,
+    "name": "Metro Exodus",
+    "type": "list"
+  },
+  "list-5022": {
+    "childSkuIds": [],
+    "listId": 5022,
+    "name": "All things Ghost Recon Breakpoint",
+    "type": "list"
+  },
+  "list-5023": {
+    "childSkuIds": [
+      "1cc4e8255c564d67806aeed81edf741b",
+      "9e3e3fe699394570a8bf815b04f0b5ff",
+      "31635f3c873b41d29aeb325efff8a34f",
+      "5747ed97a28348a080fc8441cf3a8f43",
+      "91d8f9ede6ed4a508349a9072e2a727d",
+      "764aea6292f941c3a38c2875fbf1ff17",
+      "06e101d56a03472bb6c204aee96187d7",
+      "10621ce0fe784ccca7a9d95ec0f24f37",
+      "0339b1c963e64e28a64b5778da93478c"
+    ],
+    "listId": 5023,
+    "name": "Ghost Recon Breakpoint",
+    "type": "list"
+  },
+  "list-5024": {
+    "childSkuIds": [],
+    "listId": 5024,
+    "name": "All things The Division 2",
+    "type": "list"
+  },
+  "list-5025": {
+    "childSkuIds": [],
+    "listId": 5025,
+    "name": "The Division 2",
+    "type": "list"
+  },
+  "list-5026": {
+    "childSkuIds": [],
+    "listId": 5026,
+    "name": "Trials Rising",
+    "type": "list"
+  },
+  "list-5027": {
+    "childSkuIds": [],
+    "listId": 5027,
+    "name": "GRID",
+    "type": "list"
+  },
+  "list-5028": {
+    "childSkuIds": [],
+    "listId": 5028,
+    "name": "All things Rage 2",
+    "type": "list"
+  },
+  "list-5029": {
+    "childSkuIds": [],
+    "listId": 5029,
+    "name": "Rage 2",
+    "type": "list"
+  },
+  "list-5030": {
+    "childSkuIds": [],
+    "listId": 5030,
+    "name": "Samurai Shodown",
+    "type": "list"
+  },
+  "list-5031": {
+    "childSkuIds": [],
+    "listId": 5031,
+    "name": "All things Dragon Ball Xenoverse 2",
+    "type": "list"
+  },
+  "list-5032": {
+    "childSkuIds": [],
+    "listId": 5032,
+    "name": "Dragon Ball Xenoverse 2",
+    "type": "list"
+  },
+  "list-5033": {
+    "childSkuIds": [],
+    "listId": 5033,
+    "name": "All things PLAYERUNKNOWN'S BATTLEGROUNDS",
+    "type": "list"
+  },
+  "list-5034": {
+    "childSkuIds": [
+      "71e7c4fc5ca24f0f8301da6d042bf18e",
+      "5a0fbb32a8154c53967a07c233ec2a7c",
+      "decf585409804c8f9c1bd03562504e10",
+      "659aa85ef9c04f1cb5db505b3685acca",
+      "ce1f02b297f5433891b9aab3695625f8",
+      "d41a70a360b54fbc91b088679bf5624b"
+    ],
+    "listId": 5034,
+    "name": "PLAYERUNKNOWN'S BATTLEGROUNDS",
+    "type": "list"
+  },
+  "list-51": {
+    "childSkuIds": [],
+    "listId": 51,
+    "name": "Ultimate editions",
+    "type": "list"
+  },
+  "list-52": {
+    "childSkuIds": [],
+    "listId": 52,
+    "name": "Stadia Pro deals of the season",
+    "type": "list"
+  },
+  "list-53": {
+    "childSkuIds": [],
+    "listId": 53,
+    "name": "Stadia Pro sale of the season",
+    "type": "list"
+  },
+  "list-54": {
+    "childSkuIds": [],
+    "listId": 54,
+    "name": "Great value",
+    "type": "list"
+  },
+  "list-55": {
+    "childSkuIds": [],
+    "listId": 55,
+    "name": "First on Stadia",
+    "type": "list"
+  },
+  "list-56": {
+    "childSkuIds": [],
+    "listId": 56,
+    "name": "Black Friday deals",
+    "type": "list"
+  },
+  "list-57": {
+    "childSkuIds": [],
+    "listId": 57,
+    "name": "Black Friday Stadia Pro deals",
+    "type": "list"
+  },
+  "list-58": {
+    "childSkuIds": [],
+    "listId": 58,
+    "name": "Stadia Pro Black Friday deals",
+    "type": "list"
+  },
+  "list-59": {
+    "childSkuIds": [],
+    "listId": 59,
+    "name": "Holiday deals",
+    "type": "list"
+  },
+  "list-6": {
+    "childSkuIds": [],
+    "listId": 6,
+    "name": "Top selling",
+    "type": "list"
+  },
+  "list-60": {
+    "childSkuIds": [],
+    "listId": 60,
+    "name": "Holiday Stadia Pro deals",
+    "type": "list"
+  },
+  "list-61": {
+    "childSkuIds": [],
+    "listId": 61,
+    "name": "Stadia Pro holiday deals",
+    "type": "list"
+  },
+  "list-62": {
+    "childSkuIds": [],
+    "listId": 62,
+    "name": "End of the Year Pro deals",
+    "type": "list"
+  },
+  "list-63": {
+    "childSkuIds": [],
+    "listId": 63,
+    "name": "End of the Year Stadia Pro deals",
+    "type": "list"
+  },
+  "list-64": {
+    "childSkuIds": [],
+    "listId": 64,
+    "name": "End of the Year deals",
+    "type": "list"
+  },
+  "list-65": {
+    "childSkuIds": [],
+    "listId": 65,
+    "name": "Game of the year deals",
+    "type": "list"
+  },
+  "list-66": {
+    "childSkuIds": [],
+    "listId": 66,
+    "name": "Summer deals",
+    "type": "list"
+  },
+  "list-67": {
+    "childSkuIds": [],
+    "listId": 67,
+    "name": "Summer Pro deals",
+    "type": "list"
+  },
+  "list-68": {
+    "childSkuIds": [],
+    "listId": 68,
+    "name": "Summer Stadia Pro deals",
+    "type": "list"
+  },
+  "list-69": {
+    "childSkuIds": [],
+    "listId": 69,
+    "name": "Stadia Pro summer deals",
+    "type": "list"
+  },
+  "list-7": {
+    "childSkuIds": [],
+    "listId": 7,
+    "name": "Editors' choice",
+    "type": "list"
+  },
+  "list-70": {
+    "childSkuIds": [],
+    "listId": 70,
+    "name": "New Year Pro deals",
+    "type": "list"
+  },
+  "list-71": {
+    "childSkuIds": [],
+    "listId": 71,
+    "name": "Stadia Pro New Year deals",
+    "type": "list"
+  },
+  "list-72": {
+    "childSkuIds": [],
+    "listId": 72,
+    "name": "New Year deals",
+    "type": "list"
+  },
+  "list-73": {
+    "childSkuIds": [],
+    "listId": 73,
+    "name": "",
+    "type": "list"
+  },
+  "list-74": {
+    "childSkuIds": [],
+    "listId": 74,
+    "name": "",
+    "type": "list"
+  },
+  "list-75": {
+    "childSkuIds": [],
+    "listId": 75,
+    "name": "Best sellers",
+    "type": "list"
+  },
+  "list-76": {
+    "childSkuIds": [
+      "cb3e8ed4bf954c9984fda697f2e8c06dp",
+      "53ed0e18ae494c929dbec8262afcc915",
+      "8e894e5800a84b8aa6b8e277e5790a53",
+      "3e5dab36f21e466499f3449f13c98329",
+      "5978ecf352094277a09daf94b5bfff1cp",
+      "a31dabb87e2441978da11fd60f3197dfp",
+      "ca8344739a34441dac1f53938b55e178p",
+      "7f69e006dede4c8eab019dede177c57dp",
+      "aba2b1bc01b14666b7fa48fcef18728dp",
+      "5fa0d3e596d74c018b6778dab6098edcp"
+    ],
+    "listId": 76,
+    "name": "Pre-order now",
+    "type": "list"
+  },
+  "list-77": {
+    "childSkuIds": [],
+    "listId": 77,
+    "name": "The Summer of Games sale",
+    "type": "list"
+  },
+  "list-78": {
+    "childSkuIds": [
+      "2868c83c2411473282074a6fe5dbfc85",
+      "f4934cfefbf845c3a3fa345dd65f9fcd",
+      "fbfc03802388481b87a6d6922b773686",
+      "f7aa7caf05e64d91af2063bf1803e947",
+      "c43eb98aaf8e455fb6faece785893268",
+      "5af3426b8434401897bb4eeac0344662",
+      "53ed0e18ae494c929dbec8262afcc915",
+      "8e894e5800a84b8aa6b8e277e5790a53",
+      "3e5dab36f21e466499f3449f13c98329",
+      "1f50a7a214994a5cb861db76eef77564",
+      "58f0a37bf6b141e4ba3a14b59e46b7ff",
+      "e74abd04f4a34c7a82b6cf8cd9cf9ac0",
+      "b171fc78d4e1496d9536d585257a771e",
+      "5cef6c44a9314c7595e267196aafa823",
+      "0292121ae01e4247ace30184df5f6ac0",
+      "4f1db1c66f6e427286cc21d116e7bbee",
+      "5bdde123ddc246918c6919479e427c85",
+      "5978ecf352094277a09daf94b5bfff1cp",
+      "a31dabb87e2441978da11fd60f3197dfp",
+      "88ac254f308a42e88091e71169f11519",
+      "366a682e5f1645b3a242507ae431c918",
+      "d26a526c2e0e4aefb54fbf0f87783de0p",
+      "b1ef708943904e7eaa699d2113805814",
+      "183f245b98a141ae97214c9ee5ae8a56",
+      "0a763df666fc4569896ca44062308138",
+      "e6db6f135c514fe98a62b5de7187d9a5",
+      "dd3cc4400aba4b809fb9eafcf61cb344",
+      "65e4b00af1094f1c99f5a8c7248b433f",
+      "08bf286364164e14bac41b0040d6331f",
+      "fd993b8d4b7a49b99caad668a0d7ab3d",
+      "ec30180d14de41fcaec12d442b81e248",
+      "1e4107605f83447fa8e04e0abdc578b3",
+      "b9d1633ba24f41d7919f431db4744f3c",
+      "f962fa4f12b64bffade9c170469d5710",
+      "06adceee27be4150b080495b3c51c68c",
+      "57bdb73d1f6e47f99d1dfc61c1ca1402",
+      "dad1cc5c8c1e45c38a83d125e59ea4b9",
+      "10621ce0fe784ccca7a9d95ec0f24f37",
+      "0339b1c963e64e28a64b5778da93478c",
+      "cc66f2992d04402bba5cbc8abf6cc616",
+      "30a2e74966344afcabc22d32c0d2cdc3p",
+      "13f0229eab0a484382e9af78bad74ff7",
+      "5027183521d3454a8ff000edbfd478a9"
+    ],
+    "listId": 78,
+    "name": "Get your bundles on",
+    "type": "list"
+  },
+  "list-79": {
+    "childSkuIds": [],
+    "listId": 79,
+    "name": "Back to School sale",
+    "type": "list"
+  },
+  "list-8": {
+    "childSkuIds": [],
+    "listId": 8,
+    "name": "Coming soon",
+    "type": "list"
+  },
+  "list-80": {
+    "childSkuIds": [],
+    "listId": 80,
+    "name": "Deal of the week",
+    "type": "list"
+  },
+  "list-81": {
+    "childSkuIds": [],
+    "listId": 81,
+    "name": "Pro deal of the week",
+    "type": "list"
+  },
+  "list-82": {
+    "childSkuIds": [],
+    "listId": 82,
+    "name": "Stadia Pro deal of the week",
+    "type": "list"
+  },
+  "list-83": {
+    "childSkuIds": [],
+    "listId": 83,
+    "name": "Deals of the week",
+    "type": "list"
+  },
+  "list-84": {
+    "childSkuIds": [],
+    "listId": 84,
+    "name": "Pro deals of the week",
+    "type": "list"
+  },
+  "list-85": {
+    "childSkuIds": [],
+    "listId": 85,
+    "name": "Stadia Pro deals of the week",
+    "type": "list"
+  },
+  "list-86": {
+    "childSkuIds": [
+      "2868c83c2411473282074a6fe5dbfc85",
+      "6c8ae46efebc4bd1a7de725bc630ce65",
+      "5cef6c44a9314c7595e267196aafa823",
+      "3feef74cbacf4ba39b5d9087e0dfb9e4",
+      "b6d1b295ed0d4f1080576ac5d51df6d0",
+      "0339b1c963e64e28a64b5778da93478c",
+      "cc66f2992d04402bba5cbc8abf6cc616",
+      "a7b1581491ea4b7c9fcc89710561f5f7",
+      "13f0229eab0a484382e9af78bad74ff7",
+      "5027183521d3454a8ff000edbfd478a9"
+    ],
+    "listId": 86,
+    "name": "All Deals",
+    "type": "list"
+  },
+  "list-87": {
+    "childSkuIds": [],
+    "listId": 87,
+    "name": "Stadia Deals",
+    "type": "list"
+  },
+  "list-88": {
+    "childSkuIds": [],
+    "listId": 88,
+    "name": "Reduced Price",
+    "type": "list"
+  },
+  "list-89": {
+    "childSkuIds": [],
+    "listId": 89,
+    "name": "New trailers",
+    "type": "list"
+  },
+  "list-9": {
+    "childSkuIds": [],
+    "listId": 9,
+    "name": "Pre-order",
+    "type": "list"
+  },
+  "list-90": {
+    "childSkuIds": [],
+    "listId": 90,
+    "name": "Add-ons for your games",
+    "type": "list"
+  },
+  "list-91": {
+    "childSkuIds": [],
+    "listId": 91,
+    "name": "Games your friends are playing",
+    "type": "list"
+  },
+  "list-92": {
+    "childSkuIds": [],
+    "listId": 92,
+    "name": "Recommended for you",
+    "type": "list"
+  },
+  "list-93": {
+    "childSkuIds": [],
+    "listId": 93,
+    "name": "Try these games",
+    "type": "list"
+  },
+  "list-94": {
+    "childSkuIds": [],
+    "listId": 94,
+    "name": "Buy now to continue playing",
+    "type": "list"
+  },
+  "list-95": {
+    "childSkuIds": [],
+    "listId": 95,
+    "name": "Stadia Pro free games",
+    "type": "list"
+  },
+  "list-96": {
+    "childSkuIds": [],
+    "listId": 96,
+    "name": "Stadia Pro exclusives",
+    "type": "list"
+  },
+  "list-97": {
+    "childSkuIds": [],
+    "listId": 97,
+    "name": "Newly Updated",
+    "type": "list"
+  },
+  "list-98": {
+    "childSkuIds": [],
+    "listId": 98,
+    "name": "Stadia Pro exclusive deals",
+    "type": "list"
+  },
+  "list-99": {
+    "childSkuIds": [],
+    "listId": 99,
+    "name": "Previously available in Stadia Pro",
+    "type": "list"
+  },
+  "list-naught": {
+    "childSkuIds": [
+      "be70e67b1fd64dc2bb4f002e65239731p",
+      "6760aad6e75b4edc9686c48e8dd38936",
+      "2868c83c2411473282074a6fe5dbfc85",
+      "f879d932d28c4104958c7976f201ba38",
+      "a84dcb8e05e74083b5c879b49e923205p",
+      "958f4c0900c64e7e83b9218ab479304e",
+      "f4934cfefbf845c3a3fa345dd65f9fcd",
+      "fbfc03802388481b87a6d6922b773686",
+      "a7f0a6098ae747788a6f75d0d1e1d8f2p",
+      "68fb07a7c4ac41f1afb21d742c717538",
+      "bf97db3ce0644a448815aef1a5c33e0a",
+      "f7aa7caf05e64d91af2063bf1803e947",
+      "c43eb98aaf8e455fb6faece785893268",
+      "a4d44ee20c90481c86163a5d7b7b9d97p",
+      "cb3e8ed4bf954c9984fda697f2e8c06dp",
+      "6c8ae46efebc4bd1a7de725bc630ce65",
+      "5af3426b8434401897bb4eeac0344662",
+      "41538c3158ec4c7aaf641ab7b9330d37p",
+      "6934fd15e74946d6adcefcc19eef0e83p",
+      "4950959380034dcda0aecf98f675e11f",
+      "53ed0e18ae494c929dbec8262afcc915",
+      "8e894e5800a84b8aa6b8e277e5790a53",
+      "3e5dab36f21e466499f3449f13c98329",
+      "1f50a7a214994a5cb861db76eef77564",
+      "bd70626ec3834dedbc6dda5b956f7648",
+      "58f0a37bf6b141e4ba3a14b59e46b7ff",
+      "3d2a4c3229bd44ea80647beacc9ed247",
+      "bcdca49dcac843f98ddb10e06ba83ee9",
+      "e414067702174e96b5971cc0ec08e4b7p",
+      "5859706900cd48a88d80c89fb3a18a8bp",
+      "17affc92b9ca47a7b64e748609ed25af",
+      "e74abd04f4a34c7a82b6cf8cd9cf9ac0",
+      "b171fc78d4e1496d9536d585257a771e",
+      "66f1b5a13ee54b7aa70aebfddd18c085",
+      "2240fd0ec10f4229ab05fe5c7547b20a",
+      "60da786be741463fbbeb63ed5130bc11",
+      "5cef6c44a9314c7595e267196aafa823",
+      "f500f7d58be94fa389e1cdef3bf1118ep",
+      "80da4613928a48459214767c8316a223p",
+      "b446084511c54da8a9b3381be38255c7p",
+      "d572350afe054f9f99838e69ea68dbdep",
+      "c50094b71d054fc28f3116245d9dbc9a",
+      "0292121ae01e4247ace30184df5f6ac0",
+      "1611bf48ac784869bcbd1ce85bc71add",
+      "32a0791a88474f08ad7a687846b786f2",
+      "a6ffc113bea9495b84581796893ebf50",
+      "75be643ff0fb40d7873fa41edb10d98a",
+      "4f1db1c66f6e427286cc21d116e7bbee",
+      "896565e45f974774a117876f949630df",
+      "9ac5597c3f4a4e648c9ae56bac3d1b32",
+      "dc0627d002f24fdba14ac6755250360ep",
+      "ad2362e56c57469cafad1ed5799e8997p",
+      "70d2750d0c614a01afbb34e5c4f3a9bc",
+      "5bdde123ddc246918c6919479e427c85",
+      "5978ecf352094277a09daf94b5bfff1cp",
+      "a31dabb87e2441978da11fd60f3197dfp",
+      "88ac254f308a42e88091e71169f11519",
+      "cc1997b89ae44886a1197a59b42b2613",
+      "17d98b899531490ba355016919ffe6ff",
+      "be1bff38daf046f78cde2b36228de554",
+      "bc01f7206e4f4f83a468ce33eea0c404",
+      "6ec089b591ee47fab2fed726e466700ap",
+      "569fd572ad0a4bb6b3f1a08237fc69c0p",
+      "ca8344739a34441dac1f53938b55e178p",
+      "78d9936c8cdb4f2e938158735cecd5a8p",
+      "7f69e006dede4c8eab019dede177c57dp",
+      "d7ce926f62f3488999c0dc45d52fd946p",
+      "e08ea1952a294f24b9ba58478f69a5ddp",
+      "aba2b1bc01b14666b7fa48fcef18728dp",
+      "da2272f0fb9a49e6aa6ba2a93b1e24dep",
+      "43fb9c029d0641e290fdbaedea1c3a40",
+      "3feef74cbacf4ba39b5d9087e0dfb9e4",
+      "a8918900bd834426ab8f5a55fba998c7",
+      "8d3124a81f6444219acd3d99c90a5658",
+      "12f3e5611c34478fb0285c6de4f2a8aa",
+      "163efc95783a4c39839c218b75e36127",
+      "c00cecabcbde4e95bdab69be6e80b40bp",
+      "77ab8b1807a849e3991826d8d7a9e3e0",
+      "366a682e5f1645b3a242507ae431c918",
+      "ab6a5a0d448d4c7aaed8dfa91ad6f4b9",
+      "cfc62fc3307a4ef1930e4644646c8179p",
+      "d26a526c2e0e4aefb54fbf0f87783de0p",
+      "de1e97332f1148468759dfc4553edad9",
+      "8ca5e97f091e4f7fbfcf8069ba850b1f",
+      "b1ef708943904e7eaa699d2113805814",
+      "92cd0fa4958444b5846d1b72878c7e25",
+      "256f320f886b4ee68b7980d6fc1bd1b1",
+      "38f772ac664545d99890ebb460d1d894",
+      "3ac3e537019c49028d7bb98e8cd92482",
+      "f3f250e8a4d54f60ba730fbc04268052",
+      "1e2b1a94a9d94c3fb89e353493e0d82dp",
+      "b0c60f8483be419eb2335a79a0783cc5",
+      "b6d1b295ed0d4f1080576ac5d51df6d0",
+      "183f245b98a141ae97214c9ee5ae8a56",
+      "0a763df666fc4569896ca44062308138",
+      "ae31d6ce393f4896b9b9d1f2f1ac676ep",
+      "ef438c972780466594c5d148279f72bap",
+      "a6c13e6aa796439295774eb0e8cd3f8b",
+      "55b718bf03544bd3a9f6a62946fe7436",
+      "fa63c6e891ff4d1bb76c4ac7580c119a",
+      "5fa0d3e596d74c018b6778dab6098edcp",
+      "9a25de2639254575abb6f2d58d5c57e5",
+      "ac819b64342841eda35cebfd3a34c769",
+      "9c7fd0f16817482c9e0b311a8340cb0b",
+      "e6db6f135c514fe98a62b5de7187d9a5",
+      "71e7c4fc5ca24f0f8301da6d042bf18e",
+      "2837a1b537a44121a5d078ba82d416dcp",
+      "fe5459c281d9443ca8f0e420f59936fc",
+      "dd3cc4400aba4b809fb9eafcf61cb344",
+      "78ea22fb5c054167bb722322b469f33f",
+      "65e4b00af1094f1c99f5a8c7248b433f",
+      "f790e37b6161477188923408085528a1",
+      "63e94c60b10e4267add34ef768c30f8f",
+      "08bf286364164e14bac41b0040d6331f",
+      "f139cbd41135461a83da504824a5d382",
+      "2a4af85a84974cdba4d61df620305335",
+      "f5562aaf93cb46e081d317263bde3013",
+      "5470776eda9b4270b049f081c6bc07ce",
+      "5251fd4e832d459ca046e6eb81b16809",
+      "888a817c35b5439bb6a03a78ab09e138",
+      "2a1351f516904ed190546d1b82934bd1",
+      "3ff11dc4d2bf449f89c89bf329003e10",
+      "45918155e78145af937b5df1a574afd2",
+      "bb9bcb490fd145d9997c8b3ff3f1039f",
+      "b485ca2ff43a4c658b32bd638546142cp",
+      "b899a93d213e4d2a9cef68e36e261715p",
+      "5582aa71e58a45e59a05598a93cde9a3",
+      "f16b28e2fd224acaafeee4c19134adb4",
+      "7ed521aacf2a44168fb99cd1e13472ad",
+      "f6658df6c8874c828532d5d24c66d58f",
+      "90f5bd9270024986b26ee8221c1fa2e4",
+      "f47a1e1e9f0b43078e0a80c57068b085",
+      "a1afa4eca7b24713a9bcf3421dd85a13",
+      "2d155b69c4af46078db2d96a8b0e6883",
+      "fd993b8d4b7a49b99caad668a0d7ab3d",
+      "788a1f7b00f74b26b12d7c6d62d50d96",
+      "e57401bfbe4f4dd98fdfd05b0c75acb5",
+      "470c64ea659b441a8b4d10f3e30d1862p",
+      "ce8a411f4dc2470da828fc259c584aa5",
+      "f491723b366248d18843107689f3ead6",
+      "94db678cbb6342c3bc0e58f71130b3fb",
+      "ec30180d14de41fcaec12d442b81e248",
+      "1e4107605f83447fa8e04e0abdc578b3",
+      "b9d1633ba24f41d7919f431db4744f3c",
+      "bed63eac149542078fa5b9d6f20f5f2f",
+      "f962fa4f12b64bffade9c170469d5710",
+      "06adceee27be4150b080495b3c51c68c",
+      "57bdb73d1f6e47f99d1dfc61c1ca1402",
+      "dad1cc5c8c1e45c38a83d125e59ea4b9",
+      "2a598d522e4f4f9d818d08fe582d17e3",
+      "86269481f3884521806398d7d875df9e",
+      "e8ed70244808408cbb7d3b2b1f06547f",
+      "6e98f34bbcae444a99816b8f2613452b",
+      "c86bd12f279741a8b8c9c522845c7fa9",
+      "06e101d56a03472bb6c204aee96187d7",
+      "10621ce0fe784ccca7a9d95ec0f24f37",
+      "0339b1c963e64e28a64b5778da93478c",
+      "01e95e73256c465fb5620fc574446413",
+      "cc66f2992d04402bba5cbc8abf6cc616",
+      "c147fbe82f394c11bbe41ee134d4f350",
+      "0db057f2ebf24cf0884d33d1676e588bp",
+      "3a7288e1be9d4e92bc87c2138aa547c1p",
+      "af7331db8d1b4ef588f4f1a219d7e081p",
+      "66d60752c3f54ee5bf3fddfc58e5a723p",
+      "b275c670faf54754ac4bfbfa13bcc21ep",
+      "599a08652fad4a41baad8591e18e83e2",
+      "772119af45f44182bca3ff8d39f62b0b",
+      "d3e056ee79d947c29eedc5ae232d6c2ep",
+      "31047b9e82bb4a30ba66b24bef71cdf2",
+      "30a2e74966344afcabc22d32c0d2cdc3p",
+      "3c404bed77284df9adfbb212ed6c07e5p",
+      "a7b1581491ea4b7c9fcc89710561f5f7",
+      "13f0229eab0a484382e9af78bad74ff7",
+      "5027183521d3454a8ff000edbfd478a9"
+    ],
+    "listId": "",
+    "name": "All games",
+    "type": "list"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "lib": ["DOM", "DOM.Iterable", "WebWorker", "ES2020", "ESNext"],
+    "module": "ESNext",
+    "noEmit": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "rootDir": "./",
+    "strict": true,
+    "target": "ESNext"
+  },
+  "exclude": ["node_modules", "worker", "dist"],
+  "include": ["./**/*.js"]
+}

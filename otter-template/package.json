@@ -1,0 +1,113 @@
+{
+  "engines": {
+    "node": "14.3.0"
+  },
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "scripts": {
+    "build": "scripts/build",
+    "create": "scripts/create",
+    "deploy": "yarn deploy:gh-pages",
+    "deploy:gh-pages": "yarn deploy:gh-pages:build; git push --force origin gh-pages",
+    "deploy:gh-pages:build": "scripts/build-gh-pages",
+    "name": "scripts/name",
+    "pretty": "scripts/pretty",
+    "start": "react-scripts start"
+  },
+  "devDependencies": {
+    "@emotion/core": "^10.0.28",
+    "@shopify/useful-types": "^2.1.5",
+    "@types/node": "^14.0.5",
+    "@types/react": "^16.9.0",
+    "@types/react-dom": "^16.9.0",
+    "@types/xregexp": "^4.3.0",
+    "bip39": "^3.0.2",
+    "emotion": "^10.0.27",
+    "eslint-plugin-prefer-let": "^1.0.1",
+    "import-sort-cli": "^6.0.0",
+    "import-sort-parser-typescript": "^6.0.0",
+    "import-sort-style-module": "^6.0.0",
+    "json-sort-cli": "^1.15.22",
+    "prettier": "^2.0.5",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "react-scripts": "^3.4.1",
+    "typescript": "^3.9.3",
+    "xregexp": "^4.3.0"
+  },
+  "type": "module",
+  "eslintConfig": {
+    "extends": "react-app",
+    "plugins": [
+      "prefer-let"
+    ],
+    "rules": {
+      "prefer-let/prefer-let": "warn"
+    }
+  },
+  "prettier": {
+    "overrides": [
+      {
+        "files": [
+          "*.yaml",
+          "*.yml"
+        ],
+        "options": {
+          "parser": "json"
+        }
+      }
+    ],
+    "proseWrap": "always",
+    "trailingComma": "none"
+  },
+  "browserslist": {
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 edge version"
+    ],
+    "production": [
+      "Firefox ESR",
+      "last 1 chrome version",
+      "last 1 edge version",
+      "last 1 firefox version",
+      "last 1 ios version"
+    ]
+  },
+  "importSort": {
+    ".js, .jsx, .ts, .tsx, .mjs": {
+      "style": "module"
+    }
+  },
+  "format-package": {
+    "order": [
+      "workspaces",
+      "engines",
+      "os",
+      "cpu",
+      "scripts",
+      "devDependencies",
+      "dependencies",
+      "peerDependencies",
+      "resolutions",
+      "type",
+      "eslintConfig",
+      "prettier",
+      "...rest",
+      "format-package",
+      "private",
+      "license",
+      "name",
+      "version",
+      "author"
+    ]
+  },
+  "private": true,
+  "license": "UNLICENSED",
+  "name": "project",
+  "version": "0.0.0"
+}

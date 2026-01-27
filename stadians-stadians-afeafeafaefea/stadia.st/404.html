@@ -1,0 +1,32 @@
+<!doctype html><meta charset="utf-8">
+
+<script type="module">
+  (async() => {
+    const pieces = document.location.toString().split(/\//g);
+    if (pieces[pieces.length - 2] === 'add') {
+      const tail = pieces[pieces.length - 1];
+
+      if (tail.match(/^[A-Za-z0-9]{3,15}([#\-][0-9]{4})?$/)) {
+        let [targetName, targetNumber] = tail.split(/[\-#]/);
+        targetName = targetName.toLowerCase();
+        targetNumber = Number(targetNumber || 0);
+
+        const data = await (await fetch('/-/skus.json')).json();
+
+        for (const {type, item, userId, name, number} of Object.values(data)) {
+          if (
+            type === "user" &&
+            name &&
+            name.toLowerCase() === targetName &&
+            targetNumber == Number(number)
+          ) {
+            document.location.assign(`https://stadia.google.com/home?si_rid=${userId}`);
+            return;
+          }
+        }
+      }
+    }
+
+    document.location.hostname = 'stadia.run';
+  })();
+</script>

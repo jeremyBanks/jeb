@@ -1,0 +1,35 @@
+#!/bin/bash
+pushd "$(dirname "${BASH_SOURCE:-}")/.." > /dev/null;
+set -euo pipefail;
+
+mkdir -p ./src/data/magic/;
+
+url="$(curl https://api.scryfall.com/bulk-data | jq '. |
+  .data
+  | map(select(.type == "default_cards"))
+  | first
+  | .download_uri
+' --raw-output)";
+
+echo "${url}";
+
+curl "$url" | jq '
+  map(
+    select(.object == "card" and .arena_id != null)
+    | {
+      arena_id,
+      cmc,
+      colors,
+      image_uri: .image_uris.normal,
+      layout,
+      mana_cost,
+      name,
+      oracle_text,
+      rarity,
+      set,
+      standard_legal: .legalities.standard,
+      type_line,
+      multiverse_ids
+    }
+  ) | sort_by(.arena_id)
+' > ./src/data/magic/arena.json;
