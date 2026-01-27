@@ -1,0 +1,8 @@
+*.crt
+*.dll
+*.exe
+*.key
+*.so
+/data
+/target
+/target*
