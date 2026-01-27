@@ -6,6 +6,7 @@
 use indexmap::IndexMap;
 use std::fs;
 use zipng::{panic, Files};
+use zipng::polyglot::{assert_valid_polyglot_with, Expectations};
 
 fn main() -> Result<(), panic> {
     fs::create_dir_all("target/samples")?;
@@ -296,6 +297,8 @@ fn create_sample(
 ) -> Result<(String, usize, String), panic> {
     let file_count = files.len();
     let total_content: usize = files.iter().map(|(_, v)| v.len()).sum();
+    let min_file_size = files.iter().map(|(_, v)| v.len()).min().unwrap_or(0);
+    let max_file_size = files.iter().map(|(_, v)| v.len()).max().unwrap_or(0);
 
     let index_map: IndexMap<Vec<u8>, Vec<u8>> = files
         .into_iter()
@@ -305,9 +308,14 @@ fn create_sample(
 
     let polyglot = zipng::zipng(&files_struct);
 
-    // Validate the generated polyglot
-    let result = zipng::polyglot::assert_valid_polyglot(&polyglot);
-    assert_eq!(result.zip_file_count, file_count, "File count mismatch for {}", name);
+    // Validate the generated polyglot with full expectations
+    assert_valid_polyglot_with(&polyglot, Some(
+        Expectations::new()
+            .file_count(file_count)
+            .total_size(total_content)
+            .min_file_size(min_file_size)
+            .max_file_size(max_file_size)
+    ));
 
     let path = format!("target/samples/{name}.png");
     fs::write(&path, &polyglot)?;

@@ -40,7 +40,7 @@ mod fonts;
 #[cfg(any(test, feature = "dev-dependencies"))]
 mod validate;
 #[cfg(any(test, feature = "dev-dependencies"))]
-pub use validate::{validate_polyglot, assert_valid_polyglot, ValidationResult};
+pub use validate::{validate_polyglot, assert_valid_polyglot, assert_valid_polyglot_with, ValidationResult, Expectations};
 
 use std::collections::HashSet;
 use std::ops::Not;
