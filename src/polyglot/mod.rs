@@ -132,8 +132,9 @@ fn label_rows_for_font(font: &BitmapFont) -> usize {
 }
 
 /// Render filename label rows using the specified font.
-/// The header_row bytes are "stretched" into each label row as a background,
+/// The meaningful header bytes (30 + filename) are "stretched" into each label row as a background,
 /// then text is rendered on top with a 1-pixel halo erased for readability.
+/// Extra field padding bytes are left as zeros - only actual ZIP metadata is shown.
 /// Kerning checks against the accumulated rendering to avoid touching earlier chars.
 fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, header_row: &[u8]) -> Vec<u8> {
     let label_rows = label_rows_for_font(font);
@@ -259,6 +260,9 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
     }
 
     // Header "stretches" up from bottom row, but stops when it hits the halo
+    // Only show meaningful header bytes (30 + filename), not extra field padding
+    let meaningful_header_len = (30 + name.len()).min(header_row.len());
+
     // Track per-column whether the stretch is still active
     let mut stretch_active: Vec<bool> = vec![true; row_width];
     let mut rows_data: Vec<Vec<u8>> = vec![vec![0u8; row_width]; label_rows];
@@ -288,10 +292,11 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
             if near_text {
                 // Block this column from stretching further up
                 stretch_active[x] = false;
-            } else if x < header_row.len() {
-                // Stretch continues - copy header byte
+            } else if x < meaningful_header_len {
+                // Stretch continues - copy meaningful header byte only
                 rows_data[row_idx][x] = header_row[x];
             }
+            // For x >= meaningful_header_len, leave as 0 (don't show padding bytes)
         }
     }
 
@@ -775,7 +780,8 @@ fn calculate_bucket_spacing(
     result
 }
 
-/// Perform bin packing using largest-first best-fit algorithm.
+/// Perform bin packing using largest-first worst-fit algorithm.
+/// Worst-fit leaves more slack in each bucket for even spacing distribution.
 /// Returns bucket assignments: Vec<Vec<usize>> where each inner Vec contains file indices.
 fn bin_pack_largest_first(
     files: &[(&[u8], &[u8])],
@@ -806,12 +812,13 @@ fn bin_pack_largest_first(
     for file_idx in sorted_by_size {
         let size = file_sizes[file_idx];
 
-        // Find bucket with least remaining space that still fits the file (best-fit)
+        // Find bucket with MOST remaining space that still fits the file (worst-fit)
+        // This spreads files more evenly, leaving slack for spacing
         let mut best_bucket: Option<usize> = None;
-        let mut best_remaining = usize::MAX;
+        let mut best_remaining = 0usize;
 
         for (bucket_idx, &remaining) in bucket_remaining.iter().enumerate() {
-            if remaining >= size && remaining < best_remaining {
+            if remaining >= size && remaining > best_remaining {
                 best_bucket = Some(bucket_idx);
                 best_remaining = remaining;
             }
