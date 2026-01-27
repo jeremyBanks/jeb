@@ -1,0 +1,61 @@
+#!/bin/bash
+#
+# A wrapper for `yarn` which also installs and activates the appropriate version
+# of `node` and `yarn` using `nvm`, which is also installed if missing. May be
+# used as a script or sourced in Bash.
+#
+pushd "$(dirname "${BASH_SOURCE:-}")" > /dev/null;
+if (return 0 2>/dev/null); then
+  sourced=true
+else
+  sourced=false;
+  set -euo pipefail;
+  shopt -s nullglob;
+fi
+
+if "${sourced}" || [ -z "${npm_package_name:-}" ]; then
+  echo "🧶 Preparing and activating Node/Yarn environment..." 1>&2;
+
+  if [ ! -e "${HOME}/.nvm/nvm.sh" ]; then
+    echo "🧶 Installing Node Version Manager (nvm)..." 1>&2;
+    ./scripts/nvm-install-v0.35.3.bash;
+  fi
+
+  source "${HOME}/.nvm/nvm.sh";
+
+  if [ -z "$(nvm which default)" ]; then
+    echo "🧶 Installing any Node..." 1>&2;
+    nvm install stable;
+    nvm use stable;
+  else
+    nvm use default 1>/dev/null 2>/dev/null;
+  fi
+
+  node_version="$(node -p 'require("./package.json").engines.node')";
+
+  if [ -z "$(nvm which ${node_version})" ]; then
+    echo "🧶 Installing Node ${node_version}..." 1>&2;
+    nvm install "${node_version}";
+  fi
+
+  nvm use "${node_version}" 1>/dev/null 2>/dev/null
+
+  if ! nvm exec "${node_version}" yarn --version 1>/dev/null 2>/dev/null; then
+    echo "🧶 Installing Yarn for Node ${node_version}..." 1>&2;
+    npm install -g yarn;
+  fi
+
+  echo "🧶 Using Node ${node_version}." 1>&2;
+else
+  echo "🧶 Already in an NPM/Yarn script, assuming Node/Yarn environment is valid." 1>&2;
+fi
+
+yarn=( "${PWD}/.yarn/releases/yarn-1."*".cjs" "yarn" );
+
+popd > /dev/null;
+
+if "${sourced}"; then
+  "${yarn}" "$@";
+else
+  exec "${yarn}" "$@";
+fi

@@ -1,0 +1,22 @@
+#!/bin/bash
+pushd "$(dirname "${BASH_SOURCE:-}")/.." > /dev/null;
+set -euo pipefail;
+
+rm -rf ./gh-pages;
+git worktree prune;
+git branch -D gh-pages || true;
+git worktree add --force ./gh-pages -b gh-pages HEAD;
+dotgit="$(cat gh-pages/.git)";
+rm -rf gh-pages;
+mkdir -p gh-pages;
+echo "${dotgit}" > gh-pages/.git;
+yarn build;
+cp -iR ./build/* ./gh-pages;
+cp -iR ./src ./gh-pages/src;
+cd ./gh-pages;
+git add .;
+git commit --reuse-message=HEAD;
+MERKLE_NO_CONFIRM=y MERKLE_TARGET=. ../scripts/merkle master...;
+cd ..;
+rm -rf gh-pages;
+git worktree prune;

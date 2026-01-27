@@ -1,0 +1,16 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+.DS_Store
+/.env.development.local
+/.env.local
+/.env.production.local
+/.env.test.local
+/.git-rewrite
+/build
+/dist
+/docs
+/gh-pages
+/node_modules
+/npm-debug.log*
+/src/data/magic/arena.json
+/yarn-debug.log*
+/yarn-error.log*
