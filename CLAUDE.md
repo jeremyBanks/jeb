@@ -31,3 +31,11 @@ When implementing code with subtle algorithms (especially in polyglot/mod.rs):
 - ALWAYS consult existing comments before making changes
 - ALWAYS update comments after making changes to keep them accurate
 - Document any non-obvious relationships between filter bytes, DEFLATE blocks, and ZIP structures
+
+## Bash Command Guidelines
+
+- Run simple commands directly (git status, cargo test, etc.)
+- NEVER write to /tmp/ - use project directories instead
+- NEVER chain multiple commands with pipes or && in complex ways
+- For multi-step scripts or test files: write to a file (e.g., examples/debug_foo.rs) so approval is needed once
+- Re-use the same debug file for one-off tests rather than creating many files

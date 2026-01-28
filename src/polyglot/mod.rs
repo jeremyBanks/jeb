@@ -974,7 +974,12 @@ fn bin_pack_largest_first(
 /// content rows have BFINAL=0 and the decoder continues reading after the data.
 /// We fill padding with empty stored blocks (5 bytes each: 00 00 00 FF FF).
 /// If padding doesn't divide evenly by 5, the last content row uses BFINAL=1
-/// with anti-Sub compensation (fallback to original behavior).
+/// Encode body as DEFLATE stored blocks, one per row.
+/// All content rows use BFINAL=0. A separate terminator row provides BFINAL=1.
+///
+/// Padding after content is filled with empty stored blocks (5 bytes each).
+/// If padding doesn't divide evenly by 5, uses internal terminator approach
+/// where the last content row has BFINAL=1 (causes some visual artifacts).
 fn encode_as_deflate_blocks(body: &[u8], row_width: usize, needs_internal_terminator: &mut bool) -> Vec<u8> {
     let data_per_block = row_width - 4;
     let mut result = Vec::new();
@@ -983,7 +988,6 @@ fn encode_as_deflate_blocks(body: &[u8], row_width: usize, needs_internal_termin
 
     if body.is_empty() {
         // Empty file: single stored block with 0 length
-        // The terminator row will provide BFINAL=1
         result.extend_from_slice(&0_u16.to_le_bytes());
         result.extend_from_slice(&0xFFFF_u16.to_le_bytes());
         // Fill padding with empty stored blocks
@@ -1006,11 +1010,9 @@ fn encode_as_deflate_blocks(body: &[u8], row_width: usize, needs_internal_termin
             let padding_needed = row_width - block_size;
 
             if is_last {
-                // Last row: try to fill with empty blocks, or fall back to internal terminator
                 fill_padding_with_empty_blocks(&mut result, padding_needed, row_width, needs_internal_terminator);
             } else {
-                // Non-last rows: must have full data, so no padding issue
-                // (This shouldn't happen with our chunking, but handle it)
+                // Non-last rows with partial data - shouldn't happen normally
                 result.resize(result.len() + padding_needed, 0);
             }
         }
@@ -1021,14 +1023,20 @@ fn encode_as_deflate_blocks(body: &[u8], row_width: usize, needs_internal_termin
 
 /// Fill padding with valid empty DEFLATE stored blocks.
 /// Each empty block is 5 bytes: [BFINAL=0, BTYPE=0][LEN=0][NLEN=0xFFFF]
-/// If padding doesn't divide evenly by 5, sets needs_internal_terminator = true
-/// and uses anti-Sub compensation instead.
+/// If padding doesn't divide evenly by 5, uses internal terminator approach
+/// (sets needs_internal_terminator = true and fills with anti-Sub padding).
+///
+/// # Anti-Sub Padding
+/// When internal terminator is used, the row gets Sub filter (0x01). Under Sub
+/// filter, decoded[i] = raw[i] + decoded[i-1], which causes visual cumulative
+/// sums. To make padding decode to black (0), we compute:
+/// - First padding byte: (256 - running_sum) mod 256 to cancel the accumulated sum
+/// - Remaining bytes: 0 (decoded[i] = 0 + 0 = 0)
 fn fill_padding_with_empty_blocks(result: &mut Vec<u8>, padding_needed: usize, row_width: usize, needs_internal_terminator: &mut bool) {
     if padding_needed == 0 {
         return;
     }
 
-    // Check if padding divides evenly by 5 (empty block size)
     if padding_needed % 5 == 0 {
         // Perfect fit: fill with empty stored blocks
         let num_blocks = padding_needed / 5;
@@ -1038,23 +1046,30 @@ fn fill_padding_with_empty_blocks(result: &mut Vec<u8>, padding_needed: usize, r
             result.extend_from_slice(&0xFFFF_u16.to_le_bytes()); // NLEN=0xFFFF
         }
     } else {
-        // Can't fill evenly: this row needs BFINAL=1 with anti-Sub padding
-        // The terminator row approach won't work for this file
+        // Can't fill evenly: this row needs internal terminator (BFINAL=1)
+        // The filter byte becomes 0x01 (Sub filter = BFINAL=1)
         *needs_internal_terminator = true;
 
-        // Compute anti-Sub padding (original approach)
-        // The row will get filter 0x01 (Sub), so we need to compensate
-        // The current row's data is the last (row_width - padding_needed) bytes in result
-        let block_size = row_width - padding_needed; // 4 + chunk_len
-        let row_data_start = result.len().saturating_sub(block_size);
+        // Calculate the running sum of all bytes in this row so far.
+        // The row contains [LEN][NLEN][content][padding], and we need to sum
+        // everything before padding, which is (row_width - padding_needed) bytes.
+        // Since result already contains all bytes up to the padding point,
+        // row_start = result.len() - (row_width - padding_needed).
+        let bytes_before_padding = row_width - padding_needed;
+        let row_start = result.len().saturating_sub(bytes_before_padding);
         let mut running_sum: u8 = 0;
-        for j in row_data_start..result.len() {
-            running_sum = running_sum.wrapping_add(result[j]);
+        for &byte in &result[row_start..] {
+            running_sum = running_sum.wrapping_add(byte);
         }
-        // First padding byte cancels out the running sum
-        result.push(running_sum.wrapping_neg());
-        // Remaining padding is zeros (decode to 0 since previous decoded is 0)
-        result.resize(result.len() + padding_needed - 1, 0);
+
+        // First padding byte cancels the running sum so decoded value is 0
+        let anti_sum = (256u16 - running_sum as u16) as u8;
+        result.push(anti_sum);
+
+        // Remaining padding bytes are 0, which decode to 0 under Sub filter
+        if padding_needed > 1 {
+            result.resize(result.len() + padding_needed - 1, 0);
+        }
     }
 }
 
