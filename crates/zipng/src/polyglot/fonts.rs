@@ -166,7 +166,7 @@ pub static MONTE: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(MONTE_PNG, MO
 pub static SIXTH: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SIXTH_PNG, SIXTH_JSON));
 
 /// Sky font (9×10 pixels).
-/// Possibly inspired by Chicago, a classic Macintosh system font by Susan Kare.
+/// Inspired by Chicago, a classic Macintosh system font by Susan Kare.
 pub static SKY: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SKY_PNG, SKY_JSON));
 
 /// Sugimori font (8×8 pixels).
