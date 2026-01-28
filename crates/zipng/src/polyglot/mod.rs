@@ -635,9 +635,27 @@ pub fn build_polyglot(
     let initial_width = calculate_row_width(estimated_size, min_width);
     let (initial_data, _, _) = build_aligned_data(files, initial_width, font);
 
-    // Pass 2: Calculate optimal width from actual size, rebuild
+    // Pass 2: Calculate optimal width from actual size
     let actual_size = initial_data.len();
-    let row_width = calculate_row_width(actual_size, min_width);
+    let mut row_width = calculate_row_width(actual_size, min_width);
+
+    // Optimization: If all files would fit in one content row each, use narrower width.
+    // This matters for many small files where the "square" heuristic wastes space.
+    let max_body_len = files.iter().map(|(_, body)| body.len()).max().unwrap_or(0);
+    // For one content row: body must fit in (row_width - 4) data area
+    // So min width = max_body + 4, then align to DATA_ALIGNMENT
+    let min_width_for_single_row = align_to_row_width((max_body_len + DEFLATE_HEADER_OVERHEAD).max(min_width));
+
+    if min_width_for_single_row < row_width {
+        // Verify: at this width, do all files fit in one content row?
+        let data_per_row = min_width_for_single_row - DEFLATE_HEADER_OVERHEAD;
+        let all_fit = files.iter().all(|(_, body)| body.len() <= data_per_row);
+        if all_fit {
+            row_width = min_width_for_single_row;
+        }
+    }
+
+    // Build with the (possibly optimized) row_width
     let (pixel_data, entry_infos, final_block_rows) = build_aligned_data(files, row_width, font);
 
     // Check if height exceeds limit and retry without labels if needed
@@ -656,57 +674,6 @@ pub fn build_polyglot(
     };
 
     // Step 2: Calculate PNG dimensions
-    let height = if pixel_data.is_empty() { 1 } else { (pixel_data.len() + row_width - 1) / row_width };
-
-    // Optimization: If all files fit in one row each, try shrinking width without increasing height.
-    // This matters when we have small files that don't need the full "square" width.
-    // We find the largest per-file size and use that as minimum width.
-    let row_width = {
-        // Calculate each file's total size (label + header + deflate content + terminator overhead)
-        let label_rows = font.map(|f| label_rows_for_font(f)).unwrap_or(0);
-        let mut max_file_rows = 0usize;
-
-        for (name, body) in files {
-            // Estimate rows needed for this file at current width
-            let header_size = 30 + name.len() + 50; // header + extra field padding
-            let deflate_overhead = (body.len() / 36 + 1) * 4;
-            let content_size = body.len() + deflate_overhead;
-            let file_data_size = header_size + content_size;
-            let file_rows = label_rows + (file_data_size + row_width - 1) / row_width;
-            max_file_rows = max_file_rows.max(file_rows);
-        }
-
-        // If all files fit in ~1 data row (plus label), try narrower widths
-        if max_file_rows <= label_rows + 1 {
-            // Find largest file's data needs
-            let mut max_data_needed = 0usize;
-            for (name, body) in files {
-                let header_size = 30 + name.len() + 50;
-                let deflate_overhead = (body.len() / 36 + 1) * 4;
-                let file_data = header_size + body.len() + deflate_overhead;
-                max_data_needed = max_data_needed.max(file_data);
-            }
-
-            // Try progressively smaller widths
-            let mut best_width = row_width;
-            let mut test_width = row_width;
-            while test_width >= min_width {
-                // Check if this width keeps the same height
-                let test_height = (pixel_data.len() + test_width - 1) / test_width;
-                if test_height <= height && test_width >= max_data_needed {
-                    best_width = test_width;
-                }
-                // Try next smaller aligned width: subtract 64 from data portion
-                if test_width <= DEFLATE_HEADER_OVERHEAD + DATA_ALIGNMENT {
-                    break;
-                }
-                test_width = test_width - DATA_ALIGNMENT;
-            }
-            best_width
-        } else {
-            row_width
-        }
-    };
     let height = if pixel_data.is_empty() { 1 } else { (pixel_data.len() + row_width - 1) / row_width };
 
     let mut padded = pixel_data.clone();

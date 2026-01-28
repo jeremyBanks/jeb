@@ -149,25 +149,32 @@ static SUGIMORI_JSON: &str = include_str!("../text/sugimori.json");
 static SWISS_PNG: &[u8] = include_bytes!("../text/swiss.png");
 static SWISS_JSON: &str = include_str!("../text/swiss.json");
 
-/// Micro font (3×3 pixels)
+/// Micro font (3×3 pixels).
+/// Inspired by u/Udzu's Unicase Micro.
 pub static MICRO: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(MICRO_PNG, MICRO_JSON));
 
-/// Mini font (3×6 pixels)
+/// Mini font (3×6 pixels).
+/// Inspired by u/Udzu's Mini.
 pub static MINI: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(MINI_PNG, MINI_JSON));
 
-/// Monte font (5×9 pixels)
+/// Monte font (5×9 pixels).
+/// Origin unknown.
 pub static MONTE: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(MONTE_PNG, MONTE_JSON));
 
-/// Sixth font (6×8 pixels)
+/// Sixth font (6×8 pixels).
+/// Origin unknown.
 pub static SIXTH: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SIXTH_PNG, SIXTH_JSON));
 
-/// Sky font (9×10 pixels)
+/// Sky font (9×10 pixels).
+/// Origin unknown.
 pub static SKY: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SKY_PNG, SKY_JSON));
 
-/// Sugimori font (8×8 pixels)
+/// Sugimori font (8×8 pixels).
+/// Inspired by the Pokémon Red/Blue font.
 pub static SUGIMORI: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SUGIMORI_PNG, SUGIMORI_JSON));
 
-/// Swiss font (6×8 pixels)
+/// Swiss font (6×8 pixels).
+/// Possibly inspired by Susan Kare's classic Macintosh fonts.
 pub static SWISS: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SWISS_PNG, SWISS_JSON));
 
 /// All available fonts, ordered by size (smallest to largest height).
