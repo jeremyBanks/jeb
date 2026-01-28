@@ -174,17 +174,45 @@ fn create_terminator_row(row_width: usize) -> Vec<u8> {
     row
 }
 
+/// Format a file size with max 3 significant digits.
+/// Examples: 8B, 48B, 182B, 1.28KiB, 49.5KiB, 495KiB, 1.28MiB, 49.5MiB
+fn format_file_size(size: usize) -> String {
+    if size < 1000 {
+        format!("{}B", size)
+    } else if size < 10_240 {
+        // 1.00KiB to 9.99KiB
+        format!("{:.2}KiB", size as f64 / 1024.0)
+    } else if size < 102_400 {
+        // 10.0KiB to 99.9KiB
+        format!("{:.1}KiB", size as f64 / 1024.0)
+    } else if size < 1_048_576 {
+        // 100KiB to 999KiB
+        format!("{}KiB", size / 1024)
+    } else if size < 10_485_760 {
+        // 1.00MiB to 9.99MiB
+        format!("{:.2}MiB", size as f64 / (1024.0 * 1024.0))
+    } else if size < 104_857_600 {
+        // 10.0MiB to 99.9MiB
+        format!("{:.1}MiB", size as f64 / (1024.0 * 1024.0))
+    } else {
+        // 100MiB+
+        format!("{}MiB", size / (1024 * 1024))
+    }
+}
+
 /// Render filename label rows using the specified font.
 /// The meaningful header bytes (30 + filename) are "stretched" into each label row as a background,
 /// then text is rendered on top with a 1-pixel halo erased for readability.
 /// Extra field padding bytes are left as zeros - only actual ZIP metadata is shown.
 /// Kerning checks against the accumulated rendering to avoid touching earlier chars.
 ///
+/// If space permits (8px minimum gap), also renders file size right-aligned.
+///
 /// If `is_terminator` is true, the first row becomes a terminator row for the previous file:
 /// - Bytes 0-3 are the DEFLATE empty final block (LEN=0, NLEN=0xFFFF)
 /// - Bytes 4+ are pre-filtered for Sub filter to decode to black (0)
 /// - The rest of the label rows use None filter as normal
-fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, header_row: &[u8], is_terminator: bool) -> Vec<u8> {
+fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, header_row: &[u8], is_terminator: bool, file_size: usize) -> Vec<u8> {
     let label_rows = label_rows_for_font(font);
     let mut result = Vec::with_capacity(label_rows * row_width);
 
@@ -274,6 +302,7 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
     // If text overflows: right-align, but always leave 1px at right edge for halo
     const MARGIN: usize = 4;
     const RIGHT_PADDING: usize = 1; // Always leave 1px at right for halo
+    const MIN_GAP: usize = 8; // Minimum gap between filename and size
     let usable_width = row_width - RIGHT_PADDING;
 
     let start_x: i32 = if actual_width + MARGIN <= usable_width {
@@ -283,6 +312,85 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
         (usable_width as i32 - actual_width as i32).max(-(actual_width as i32))
     };
 
+    // Calculate where filename ends (for gap calculation)
+    // If start_x is negative, filename overflows left edge - use row_width as end to disable size
+    let filename_end_x = if start_x >= 0 {
+        (start_x as usize).saturating_add(actual_width)
+    } else {
+        row_width // Filename overflows, no room for size
+    };
+
+    // Try to render file size right-aligned if there's enough space
+    let size_str = format_file_size(file_size);
+    let size_chars: Vec<char> = size_str.chars().collect();
+    let size_lookups: Vec<Option<fonts::GlyphLookup<'_>>> = size_chars.iter()
+        .map(|&c| font.get_glyph(c))
+        .collect();
+
+    // Calculate size text width using same kerning logic
+    let mut size_canvas: Vec<Vec<bool>> = vec![vec![false; max_canvas_width]; font.height];
+    let mut size_char_positions: Vec<(usize, i32)> = Vec::new();
+    let mut size_total_width = 0i32;
+    let mut size_rightmost_pixel = 0i32;
+
+    for (i, lookup_opt) in size_lookups.iter().enumerate() {
+        if let Some(lookup) = lookup_opt {
+            let glyph = lookup.glyph;
+            let mut best_offset = size_total_width;
+
+            if !lookup.skip_kerning {
+                best_offset = size_total_width + font.width as i32;
+                for test_offset in (size_total_width - font.width as i32 + 1)..=best_offset {
+                    if test_offset < 0 { continue; }
+                    let mut touches = false;
+                    'check_size: for (gy, glyph_row) in glyph.iter().enumerate() {
+                        for (gx, &pixel_on) in glyph_row.iter().enumerate() {
+                            if !pixel_on { continue; }
+                            let cx = test_offset as usize + gx;
+                            for dy in -1i32..=1 {
+                                for dx in -1i32..=1 {
+                                    let ny = gy as i32 + dy;
+                                    let nx = cx as i32 + dx;
+                                    if ny >= 0 && (ny as usize) < font.height && nx >= 0 {
+                                        if size_canvas[ny as usize].get(nx as usize).copied().unwrap_or(false) {
+                                            touches = true;
+                                            break 'check_size;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if !touches {
+                        best_offset = test_offset;
+                        break;
+                    }
+                }
+            }
+
+            size_char_positions.push((i, best_offset));
+
+            for (gy, glyph_row) in glyph.iter().enumerate() {
+                for (gx, &pixel_on) in glyph_row.iter().enumerate() {
+                    if pixel_on {
+                        let cx = best_offset as usize + gx;
+                        if cx < max_canvas_width {
+                            size_canvas[gy][cx] = true;
+                        }
+                        size_rightmost_pixel = size_rightmost_pixel.max(cx as i32 + 1);
+                    }
+                }
+            }
+            size_total_width = best_offset + font.width as i32;
+        }
+    }
+
+    let size_actual_width = size_rightmost_pixel.max(0) as usize;
+
+    // Check if size fits with minimum gap
+    let size_start_x = usable_width as i32 - size_actual_width as i32 - MARGIN as i32;
+    let render_size = size_start_x >= 0 && size_start_x as usize >= filename_end_x.saturating_add(MIN_GAP);
+
     // First, render text to a temporary bitmap to know where pixels are
     let mut text_bitmap: Vec<Vec<bool>> = vec![vec![false; row_width]; label_rows];
 
@@ -290,6 +398,7 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
     // Text rows are 1..=font.height
     // Padding row below is font.height + 1
 
+    // Render filename
     for text_row in 0..font.height {
         let result_row = text_row + 1; // +1 for padding above
         for &(char_idx, char_x) in &char_positions {
@@ -300,6 +409,26 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
                         let x = (start_x + char_x + px as i32) as usize;
                         if x < row_width && pixel_on {
                             text_bitmap[result_row][x] = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Render file size (right-aligned) if there's enough space
+    if render_size {
+        for text_row in 0..font.height {
+            let result_row = text_row + 1;
+            for &(char_idx, char_x) in &size_char_positions {
+                if let Some(lookup) = &size_lookups[char_idx] {
+                    let glyph = lookup.glyph;
+                    if text_row < glyph.len() {
+                        for (px, &pixel_on) in glyph[text_row].iter().enumerate() {
+                            let x = (size_start_x + char_x + px as i32) as usize;
+                            if x < row_width && pixel_on {
+                                text_bitmap[result_row][x] = true;
+                            }
                         }
                     }
                 }
@@ -808,7 +937,7 @@ fn build_aligned_data(
                 let terminator_row = data.len() / row_width;
                 terminator_rows.insert(terminator_row);
             }
-            let label = render_filename_label(name, row_width, f, &header_bytes, label_is_terminator);
+            let label = render_filename_label(name, row_width, f, &header_bytes, label_is_terminator, body.len());
             data.extend_from_slice(&label);
         }
 
@@ -1365,7 +1494,7 @@ mod tests {
         // Get a font for testing (pass 0 as hash since we just need any font)
         let font = fonts::select_font(100, 0).expect("Should get a font for small size");
 
-        let label = render_filename_label(name, row_width, font, &header, false);
+        let label = render_filename_label(name, row_width, font, &header, false, body.len());
 
         // Bottom row (padding below text) should have header bytes - stretch starts there
         // label_rows = font.height + 2 = 5 for typical font
