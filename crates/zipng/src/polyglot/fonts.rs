@@ -166,7 +166,7 @@ pub static MONTE: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(MONTE_PNG, MO
 pub static SIXTH: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SIXTH_PNG, SIXTH_JSON));
 
 /// Sky font (9×10 pixels).
-/// Origin unknown.
+/// Possibly inspired by Chicago, a classic Macintosh system font by Susan Kare.
 pub static SKY: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SKY_PNG, SKY_JSON));
 
 /// Sugimori font (8×8 pixels).
@@ -174,7 +174,7 @@ pub static SKY: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SKY_PNG, SKY_JS
 pub static SUGIMORI: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SUGIMORI_PNG, SUGIMORI_JSON));
 
 /// Swiss font (6×8 pixels).
-/// Possibly inspired by Susan Kare's classic Macintosh fonts.
+/// Inspired by Geneva, a classic Macintosh system font by Susan Kare.
 pub static SWISS: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SWISS_PNG, SWISS_JSON));
 
 /// All available fonts, ordered by size (smallest to largest height).
