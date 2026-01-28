@@ -282,6 +282,78 @@ fn main() -> Result<(), panic> {
         ],
     )?);
 
+    // === EDGE CASES ===
+
+    // 26. Many small files (tests width optimization)
+    let many_files: Vec<(&str, Vec<u8>)> = (0..50)
+        .map(|i| {
+            let name: &'static str = Box::leak(format!("file_{i:03}.txt").into_boxed_str());
+            let content = format!("Content of file {i}").into_bytes();
+            (name, content)
+        })
+        .collect();
+    generated.push(create_sample("many_small_files", many_files)?);
+
+    // 27. Absurdly long filenames
+    generated.push(create_sample(
+        "long_filenames",
+        vec![
+            ("this-is-an-extremely-long-filename-that-tests-row-width-calculation-and-label-truncation.txt", b"A".to_vec()),
+            ("another/very/deeply/nested/directory/structure/with/many/path/components/file.dat", b"B".to_vec()),
+            ("SCREAMING_SNAKE_CASE_FILENAME_THAT_GOES_ON_AND_ON_AND_ON.TXT", b"C".to_vec()),
+            ("short.txt", b"D".to_vec()),
+        ],
+    )?);
+
+    // 28. Empty files mixed with content
+    generated.push(create_sample(
+        "with_empty_files",
+        vec![
+            ("empty1.txt", vec![]),
+            ("has_content.txt", b"This file has content".to_vec()),
+            ("empty2.txt", vec![]),
+            ("also_has_content.txt", b"More content here".to_vec()),
+            ("empty3.txt", vec![]),
+        ],
+    )?);
+
+    // 29. Single tiny file
+    generated.push(create_sample(
+        "tiny_single",
+        vec![("hi.txt", b"Hi".to_vec())],
+    )?);
+
+    // 30. Unicode and special characters in content (ASCII filenames)
+    generated.push(create_sample(
+        "unicode_content",
+        vec![
+            ("japanese.txt", "こんにちは世界".as_bytes().to_vec()),
+            ("emoji.txt", "Hello 👋 World 🌍".as_bytes().to_vec()),
+            ("math.txt", "∑∫∂∇ × ∞ = πr²".as_bytes().to_vec()),
+            ("mixed.txt", "Ça va? Привет! 你好!".as_bytes().to_vec()),
+        ],
+    )?);
+
+    // 31. Binary patterns (tests visual appearance)
+    generated.push(create_sample(
+        "binary_patterns",
+        vec![
+            ("zeros.bin", vec![0u8; 500]),
+            ("ones.bin", vec![0xFFu8; 500]),
+            ("alternating.bin", (0..500).map(|i| if i % 2 == 0 { 0x55 } else { 0xAA }).collect()),
+            ("gradient.bin", (0u8..=255).cycle().take(512).collect()),
+        ],
+    )?);
+
+    // 32. Stress test: 100 tiny files
+    let stress_files: Vec<(&str, Vec<u8>)> = (0..100)
+        .map(|i| {
+            let name: &'static str = Box::leak(format!("f{i:03}").into_boxed_str());
+            (name, vec![i as u8])
+        })
+        .collect();
+    generated.push(create_sample("hundred_files", stress_files)?);
+
     // Print summary
     println!("\nGenerated {} sample files:\n", generated.len());
     println!("{:<25} {:>10} {}", "Name", "Size", "Description");
