@@ -175,23 +175,24 @@ fn create_terminator_row(row_width: usize) -> Vec<u8> {
 }
 
 /// Format a file size with max 3 significant digits.
-/// Examples: 8B, 48B, 182B, 1.28KiB, 49.5KiB, 495KiB, 1.28MiB, 49.5MiB
+/// Examples: 8B, 48B, 999B, 1.00KiB, 49.5KiB, 495KiB, 1.00MiB, 49.5MiB
 fn format_file_size(size: usize) -> String {
-    if size < 1000 {
+    if size < 1024 {
+        // 0B to 1023B (always show bytes for < 1 KiB)
         format!("{}B", size)
-    } else if size < 10_240 {
+    } else if size < 10 * 1024 {
         // 1.00KiB to 9.99KiB
         format!("{:.2}KiB", size as f64 / 1024.0)
-    } else if size < 102_400 {
+    } else if size < 100 * 1024 {
         // 10.0KiB to 99.9KiB
         format!("{:.1}KiB", size as f64 / 1024.0)
-    } else if size < 1_048_576 {
-        // 100KiB to 999KiB
+    } else if size < 1024 * 1024 {
+        // 100KiB to 1023KiB
         format!("{}KiB", size / 1024)
-    } else if size < 10_485_760 {
+    } else if size < 10 * 1024 * 1024 {
         // 1.00MiB to 9.99MiB
         format!("{:.2}MiB", size as f64 / (1024.0 * 1024.0))
-    } else if size < 104_857_600 {
+    } else if size < 100 * 1024 * 1024 {
         // 10.0MiB to 99.9MiB
         format!("{:.1}MiB", size as f64 / (1024.0 * 1024.0))
     } else {
