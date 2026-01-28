@@ -1,7 +1,7 @@
-//! Generates a variety of sample polyglot PNG+ZIP files for testing.
+//! Generates sample polyglot PNG+ZIP files using REAL project files.
 //!
-//! Creates files with different content types, sizes, and characteristics
-//! to exercise all the palette selection and encoding paths.
+//! Uses actual source code, fonts, configs, and binary assets from the fic.is
+//! project to create diverse, realistic sample archives.
 
 use indexmap::IndexMap;
 use std::fs;
@@ -11,263 +11,274 @@ use zipng::polyglot::{assert_valid_polyglot_with, Expectations};
 fn main() -> Result<(), panic> {
     fs::create_dir_all("target/samples")?;
 
-    // Track generated files for summary
     let mut generated: Vec<(String, usize, String)> = Vec::new();
 
-    // 1. Tiny single file
+    // 1. Font assets - PNG bitmaps + JSON metadata
     generated.push(create_sample(
-        "tiny_single",
-        vec![("hello.txt", b"Hello, World!".to_vec())],
-    )?);
-
-    // 2. Multiple small text files
-    generated.push(create_sample(
-        "small_text_files",
+        "bitmap_fonts",
         vec![
-            ("readme.txt", b"This is a readme file.".to_vec()),
-            ("license.txt", b"MIT License\n\nPermission is hereby granted...".to_vec()),
-            ("changelog.md", b"# Changelog\n\n## v1.0.0\n- Initial release".to_vec()),
+            ("micro.png", include_bytes!("../src/text/micro.png").to_vec()),
+            ("micro.json", include_bytes!("../src/text/micro.json").to_vec()),
+            ("mini.png", include_bytes!("../src/text/mini.png").to_vec()),
+            ("mini.json", include_bytes!("../src/text/mini.json").to_vec()),
+            ("swiss.png", include_bytes!("../src/text/swiss.png").to_vec()),
+            ("swiss.json", include_bytes!("../src/text/swiss.json").to_vec()),
         ],
     )?);
 
-    // 3. Binary data patterns
+    // 2. All font files together
     generated.push(create_sample(
-        "binary_patterns",
+        "all_fonts",
         vec![
-            ("zeros.bin", vec![0u8; 1000]),
-            ("ones.bin", vec![0xFFu8; 1000]),
-            ("alternating.bin", (0..1000).map(|i| if i % 2 == 0 { 0x55 } else { 0xAA }).collect()),
-            ("sequential.bin", (0..256).cycle().take(1000).map(|x| x as u8).collect()),
+            ("micro.png", include_bytes!("../src/text/micro.png").to_vec()),
+            ("micro.json", include_bytes!("../src/text/micro.json").to_vec()),
+            ("mini.png", include_bytes!("../src/text/mini.png").to_vec()),
+            ("mini.json", include_bytes!("../src/text/mini.json").to_vec()),
+            ("sixth.png", include_bytes!("../src/text/sixth.png").to_vec()),
+            ("sixth.json", include_bytes!("../src/text/sixth.json").to_vec()),
+            ("monte.png", include_bytes!("../src/text/monte.png").to_vec()),
+            ("monte.json", include_bytes!("../src/text/monte.json").to_vec()),
+            ("sky.png", include_bytes!("../src/text/sky.png").to_vec()),
+            ("sky.json", include_bytes!("../src/text/sky.json").to_vec()),
+            ("sugimori.png", include_bytes!("../src/text/sugimori.png").to_vec()),
+            ("sugimori.json", include_bytes!("../src/text/sugimori.json").to_vec()),
+            ("swiss.png", include_bytes!("../src/text/swiss.png").to_vec()),
+            ("swiss.json", include_bytes!("../src/text/swiss.json").to_vec()),
         ],
     )?);
 
-    // 4. Source code files (from this project)
+    // 3. Core Rust source files
     generated.push(create_sample(
-        "source_code",
+        "rust_core",
+        vec![
+            ("lib.rs", include_bytes!("../src/lib.rs").to_vec()),
+            ("checksums.rs", include_bytes!("../src/checksums.rs").to_vec()),
+            ("deflate.rs", include_bytes!("../src/deflate.rs").to_vec()),
+            ("zlib.rs", include_bytes!("../src/zlib.rs").to_vec()),
+        ],
+    )?);
+
+    // 4. PNG module source
+    generated.push(create_sample(
+        "png_module",
+        vec![
+            ("png/mod.rs", include_bytes!("../src/png.rs").to_vec()),
+            ("png/data.rs", include_bytes!("../src/png/data.rs").to_vec()),
+            ("png/to_png.rs", include_bytes!("../src/png/to_png.rs").to_vec()),
+            ("png/write_png.rs", include_bytes!("../src/png/write_png.rs").to_vec()),
+            ("png/sizes.rs", include_bytes!("../src/png/sizes.rs").to_vec()),
+        ],
+    )?);
+
+    // 5. ZIP module source
+    generated.push(create_sample(
+        "zip_module",
+        vec![
+            ("zip/mod.rs", include_bytes!("../src/zip.rs").to_vec()),
+            ("zip/data.rs", include_bytes!("../src/zip/data.rs").to_vec()),
+            ("zip/to_zip.rs", include_bytes!("../src/zip/to_zip.rs").to_vec()),
+            ("zip/write_zip.rs", include_bytes!("../src/zip/write_zip.rs").to_vec()),
+            ("zip/configuration.rs", include_bytes!("../src/zip/configuration.rs").to_vec()),
+        ],
+    )?);
+
+    // 6. Polyglot module support files (mod.rs is too large at 65KB)
+    generated.push(create_sample(
+        "polyglot_support",
+        vec![
+            ("polyglot/fonts.rs", include_bytes!("../src/polyglot/fonts.rs").to_vec()),
+            ("polyglot/validate.rs", include_bytes!("../src/polyglot/validate.rs").to_vec()),
+        ],
+    )?);
+
+    // 7. Palette definitions
+    generated.push(create_sample(
+        "palettes",
+        vec![
+            ("palettes/mod.rs", include_bytes!("../src/png/palettes.rs").to_vec()),
+            ("palettes/viridis.rs", include_bytes!("../src/png/palettes/viridis.rs").to_vec()),
+            ("palettes/singles.rs", include_bytes!("../src/png/palettes/singles.rs").to_vec()),
+            ("palettes/diagnostic.rs", include_bytes!("../src/png/palettes/diagnostic.rs").to_vec()),
+            ("palettes/mappings.rs", include_bytes!("../src/png/palettes/mappings.rs").to_vec()),
+        ],
+    )?);
+
+    // 8. Project configuration
+    generated.push(create_sample(
+        "project_config",
         vec![
             ("Cargo.toml", include_bytes!("../Cargo.toml").to_vec()),
-            ("src/lib.rs", include_bytes!("../src/lib.rs").to_vec()),
+            ("Cargo.lock", include_bytes!("../Cargo.lock").to_vec()),
+            ("rustfmt.toml", include_bytes!("../rustfmt.toml").to_vec()),
             ("README.md", include_bytes!("../README.md").to_vec()),
+            ("CLAUDE.md", include_bytes!("../CLAUDE.md").to_vec()),
         ],
     )?);
 
-    // 5. Nested directory structure
+    // 9. Documentation
     generated.push(create_sample(
-        "nested_directories",
+        "documentation",
         vec![
-            ("project/src/main.rs", b"fn main() { println!(\"Hello\"); }".to_vec()),
-            ("project/src/lib.rs", b"pub fn greet() -> &'static str { \"Hello\" }".to_vec()),
-            ("project/tests/test_lib.rs", b"#[test] fn test_greet() { assert_eq!(lib::greet(), \"Hello\"); }".to_vec()),
-            ("project/Cargo.toml", b"[package]\nname = \"demo\"\nversion = \"0.1.0\"".to_vec()),
-            ("project/.gitignore", b"/target\n*.swp".to_vec()),
+            ("docs/polyglot-architecture.md", include_bytes!("../docs/polyglot-architecture.md").to_vec()),
+            ("docs/polyglot-constraints.md", include_bytes!("../docs/polyglot-constraints.md").to_vec()),
         ],
     )?);
 
-    // 6. Long filenames
+    // 10. Test data files (binary)
     generated.push(create_sample(
-        "long_filenames",
+        "test_data",
         vec![
-            ("this-is-a-very-long-filename-that-tests-our-row-width-calculation.txt", b"Content A".to_vec()),
-            ("another/deeply/nested/path/with/many/directory/components/file.dat", b"Content B".to_vec()),
-            ("short.txt", b"Content C".to_vec()),
+            ("test_data/zip.zip", include_bytes!("../test_data/zip.zip").to_vec()),
+            ("test_data/zip.htm", include_bytes!("../test_data/zip.htm").to_vec()),
+            ("test_data/poc.png.zip", include_bytes!("../test_data/poc.png.zip").to_vec()),
         ],
     )?);
 
-    // 7. JSON data
+    // 11. Example Rust files
     generated.push(create_sample(
-        "json_data",
+        "examples",
         vec![
-            ("config.json", br#"{"name": "test", "version": "1.0.0", "enabled": true}"#.to_vec()),
-            ("data/users.json", br#"[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]"#.to_vec()),
-            ("data/settings.json", br#"{"theme": "dark", "language": "en", "notifications": true}"#.to_vec()),
+            ("examples/zipng.rs", include_bytes!("zipng.rs").to_vec()),
+            ("examples/rgb.rs", include_bytes!("rgb.rs").to_vec()),
+            ("examples/indexed8bit.rs", include_bytes!("indexed8bit.rs").to_vec()),
+            ("examples/greyscale8bit.rs", include_bytes!("greyscale8bit.rs").to_vec()),
         ],
     )?);
 
-    // 8. Various sizes (to test different palette selections via hash)
-    for size in [100, 500, 1000, 5000, 10000, 25000, 50000] {
-        let name = format!("size_{size}");
-        let content: Vec<u8> = (0..size).map(|i| ((i * 17 + 31) % 256) as u8).collect();
-        generated.push(create_sample(
-            &name,
-            vec![("data.bin", content)],
-        )?);
-    }
-
-    // 9. Random-looking data (different seeds for different palettes)
-    for seed in [42u8, 123, 200, 7, 99] {
-        let name = format!("random_seed_{seed}");
-        let content: Vec<u8> = (0..5000)
-            .map(|i| seed.wrapping_mul(i as u8).wrapping_add((i / 256) as u8))
-            .collect();
-        generated.push(create_sample(
-            &name,
-            vec![(&format!("random_{seed}.bin"), content)],
-        )?);
-    }
-
-    // 10. Text with various encodings/content
+    // 12. Fiction spine JSON data (from parent project)
     generated.push(create_sample(
-        "text_variety",
+        "fiction_spines",
         vec![
-            ("ascii.txt", (32..127).cycle().take(500).map(|x| x as u8).collect()),
-            ("lorem.txt", LOREM_IPSUM.as_bytes().to_vec()),
-            ("numbers.txt", (0..1000).map(|i| format!("{i}\n")).collect::<String>().into_bytes()),
+            ("RYL0035858.json", include_bytes!("../../../data/spines/RYL0035858.json").to_vec()),
+            ("RYL0036950.json", include_bytes!("../../../data/spines/RYL0036950.json").to_vec()),
+            ("RYL0048012.json", include_bytes!("../../../data/spines/RYL0048012.json").to_vec()),
+            ("index.json", include_bytes!("../../../data/spines/index.json").to_vec()),
         ],
     )?);
 
-    // 11. Empty files mixed with content
+    // 13. Deno/TypeScript source
     generated.push(create_sample(
-        "with_empty_files",
+        "deno_source",
         vec![
-            ("empty1.txt", vec![]),
-            ("content.txt", b"This file has content".to_vec()),
-            ("empty2.txt", vec![]),
-            ("more_content.txt", b"More content here".to_vec()),
+            ("main.ts", include_bytes!("../../../deno/main.ts").to_vec()),
+            ("fresh.gen.ts", include_bytes!("../../../deno/fresh.gen.ts").to_vec()),
+            ("twind.config.ts", include_bytes!("../../../deno/twind.config.ts").to_vec()),
+            ("deno.json", include_bytes!("../../../deno/deno.json").to_vec()),
         ],
     )?);
 
-    // 12. Single large file (under 60KB limit)
+    // 14. Deno routes (TSX)
     generated.push(create_sample(
-        "single_large",
-        vec![("large.bin", (0..55000).map(|i| (i % 256) as u8).collect())],
-    )?);
-
-    // 13. Many small files
-    let many_files: Vec<(String, Vec<u8>)> = (0..50)
-        .map(|i| (format!("file_{i:03}.txt"), format!("Content of file {i}").into_bytes()))
-        .collect();
-    generated.push(create_sample(
-        "many_small_files",
-        many_files.iter().map(|(k, v)| (k.as_str(), v.clone())).collect(),
-    )?);
-
-    // 14. Mixed binary and text
-    generated.push(create_sample(
-        "mixed_content",
+        "deno_routes",
         vec![
-            ("image_placeholder.png", vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]), // PNG sig
-            ("document.txt", b"This is a text document.".to_vec()),
-            ("data.bin", (0u16..256).map(|x| x as u8).collect()),
-            ("script.sh", b"#!/bin/bash\necho \"Hello World\"".to_vec()),
+            ("routes/_404.ts", include_bytes!("../../../deno/routes/_404.ts").to_vec()),
+            ("routes/_500.ts", include_bytes!("../../../deno/routes/_500.ts").to_vec()),
+            ("routes/_middleware.ts", include_bytes!("../../../deno/routes/_middleware.ts").to_vec()),
         ],
     )?);
 
-    // 15. Various path styles
+    // 15. Web fonts (WOFF2 binary)
     generated.push(create_sample(
-        "path_styles",
+        "web_fonts",
         vec![
-            ("normal.txt", b"Normal filename".to_vec()),
-            ("with-dashes.txt", b"Dashes in name".to_vec()),
-            ("with_underscores.txt", b"Underscores in name".to_vec()),
-            ("CamelCase.txt", b"CamelCase name".to_vec()),
-            ("UPPERCASE.TXT", b"Uppercase name".to_vec()),
+            ("fonts/sans400.woff2", include_bytes!("../../../deno/static/fonts/sans400.woff2").to_vec()),
+            ("fonts/sans700.woff2", include_bytes!("../../../deno/static/fonts/sans700.woff2").to_vec()),
         ],
     )?);
 
-    // 16. Compressible vs incompressible data
+    // 16. Static web assets
     generated.push(create_sample(
-        "compressibility",
+        "static_assets",
         vec![
-            ("highly_compressible.txt", "AAAA".repeat(1000).into_bytes()),
-            ("moderately_compressible.txt", LOREM_IPSUM.repeat(5).into_bytes()),
-            ("incompressible.bin", (0..4000).map(|i| ((i * 997) % 256) as u8).collect()),
+            ("icon.svg", include_bytes!("../../../deno/static/icon.svg").to_vec()),
+            ("cover.png", include_bytes!("../../../deno/static/cover.png").to_vec()),
         ],
     )?);
 
-    // 17. Web assets
+    // 17. Parent project Rust source
     generated.push(create_sample(
-        "web_assets",
+        "fic_source",
         vec![
-            ("index.html", br#"<!DOCTYPE html><html><head><title>Test</title></head><body><h1>Hello</h1></body></html>"#.to_vec()),
-            ("style.css", b"body { font-family: sans-serif; margin: 2em; }".to_vec()),
-            ("script.js", b"console.log('Hello from polyglot!');".to_vec()),
-            ("manifest.json", br#"{"name": "Test App", "version": "1.0"}"#.to_vec()),
+            ("src/lib.rs", include_bytes!("../../../src/lib.rs").to_vec()),
+            ("src/backend.rs", include_bytes!("../../../src/backend.rs").to_vec()),
+            ("src/engine.rs", include_bytes!("../../../src/engine.rs").to_vec()),
+            ("src/query.rs", include_bytes!("../../../src/query.rs").to_vec()),
         ],
     )?);
 
-    // 18. Config files
+    // 18. Mixed binary + text from project
     generated.push(create_sample(
-        "config_files",
+        "mixed_project",
         vec![
-            (".gitignore", b"/target\n*.log\n.env".to_vec()),
-            (".editorconfig", b"root = true\n[*]\nindent_style = space\nindent_size = 4".to_vec()),
-            ("Makefile", b"all:\n\tcargo build\n\ntest:\n\tcargo test".to_vec()),
-            ("Dockerfile", b"FROM rust:latest\nWORKDIR /app\nCOPY . .\nRUN cargo build".to_vec()),
+            ("icon.png", include_bytes!("../../../icon.png").to_vec()),
+            ("README.md", include_bytes!("../../../README.md").to_vec()),
+            ("Cargo.toml", include_bytes!("../../../Cargo.toml").to_vec()),
+            ("CLAUDE.md", include_bytes!("../../../CLAUDE.md").to_vec()),
         ],
     )?);
 
-    // 19. Large multi-file (tests IDAT boundary handling)
+    // 19. VSCode settings (JSON)
     generated.push(create_sample(
-        "large_multi",
+        "vscode_configs",
         vec![
-            ("data1.bin", (0..30_000).map(|i| (i % 256) as u8).collect()),
-            ("data2.bin", (0..30_000).map(|i| ((i * 7) % 256) as u8).collect()),
-            ("data3.bin", (0..30_000).map(|i| ((i * 13) % 256) as u8).collect()),
+            (".vscode/settings.json", include_bytes!("../.vscode/settings.json").to_vec()),
+            (".vscode/launch.json", include_bytes!("../.vscode/launch.json").to_vec()),
         ],
     )?);
 
-    // 20. Very large (200KB+, multiple IDAT boundaries)
+    // 20. Script files
     generated.push(create_sample(
-        "very_large",
-        (0..5).map(|i| {
-            let name = format!("chunk_{i}.bin");
-            let data: Vec<u8> = (0..40_000).map(|j| ((i * 17 + j * 7) % 256) as u8).collect();
-            (name, data)
-        }).map(|(n, d)| (n.leak() as &str, d)).collect(),
-    )?);
-
-    // 21. Poetry/Literature
-    generated.push(create_sample(
-        "literature",
+        "scripts",
         vec![
-            ("shakespeare.txt", b"To be, or not to be, that is the question:\nWhether 'tis nobler in the mind to suffer\nThe slings and arrows of outrageous fortune,\nOr to take arms against a sea of troubles".to_vec()),
-            ("dickinson.txt", b"Hope is the thing with feathers\nThat perches in the soul,\nAnd sings the tune without the words,\nAnd never stops at all".to_vec()),
-            ("frost.txt", b"Two roads diverged in a yellow wood,\nAnd sorry I could not travel both\nAnd be one traveler, long I stood\nAnd looked down one as far as I could".to_vec()),
+            ("scripts/debug_polyglot.rs", include_bytes!("../scripts/debug_polyglot.rs").to_vec()),
+            ("scripts/check_font.rs", include_bytes!("../scripts/check_font.rs").to_vec()),
+            ("scripts/test_kerning.rs", include_bytes!("../scripts/test_kerning.rs").to_vec()),
         ],
     )?);
 
-    // 22. Code samples in different languages
+    // 21. IO module
     generated.push(create_sample(
-        "polyglot_code",
+        "io_module",
         vec![
-            ("hello.py", b"print('Hello, World!')".to_vec()),
-            ("hello.js", b"console.log('Hello, World!');".to_vec()),
-            ("hello.rb", b"puts 'Hello, World!'".to_vec()),
-            ("hello.go", b"package main\nimport \"fmt\"\nfunc main() { fmt.Println(\"Hello, World!\") }".to_vec()),
-            ("hello.rs", b"fn main() { println!(\"Hello, World!\"); }".to_vec()),
-            ("hello.c", b"#include <stdio.h>\nint main() { printf(\"Hello, World!\\n\"); return 0; }".to_vec()),
+            ("io/mod.rs", include_bytes!("../src/io.rs").to_vec()),
+            ("io/alignment.rs", include_bytes!("../src/io/alignment.rs").to_vec()),
         ],
     )?);
 
-    // 23. Structured data formats
+    // 22. Exploration docs
     generated.push(create_sample(
-        "data_formats",
+        "exploration_docs",
         vec![
-            ("data.json", br#"{"items": [1, 2, 3], "nested": {"key": "value"}}"#.to_vec()),
-            ("data.yaml", b"items:\n  - 1\n  - 2\n  - 3\nnested:\n  key: value".to_vec()),
-            ("data.toml", b"[package]\nname = \"test\"\nversion = \"1.0.0\"\n\n[dependencies]\nserde = \"1.0\"".to_vec()),
-            ("data.xml", b"<?xml version=\"1.0\"?><root><item>1</item><item>2</item></root>".to_vec()),
-            ("data.csv", b"name,age,city\nAlice,30,NYC\nBob,25,LA\nCarol,35,Chicago".to_vec()),
+            ("idat-boundary-analysis.md", include_bytes!("../docs/exploration/idat-boundary-analysis.md").to_vec()),
+            ("variable-width-math.md", include_bytes!("../docs/exploration/variable-width-math.md").to_vec()),
+            ("variable-width-plan.md", include_bytes!("../docs/exploration/variable-width-plan.md").to_vec()),
+            ("wider-images-analysis.md", include_bytes!("../docs/exploration/wider-images-analysis.md").to_vec()),
         ],
     )?);
 
-    // 24. Logs and output
+    // 23. Deno XML utilities
     generated.push(create_sample(
-        "logs",
+        "deno_xml",
         vec![
-            ("access.log", (0..100).map(|i| format!("127.0.0.1 - - [01/Jan/2024:00:{i:02}:00] \"GET /page{i} HTTP/1.1\" 200 1234\n")).collect::<String>().into_bytes()),
-            ("error.log", b"[ERROR] 2024-01-01 Failed to connect\n[WARN] 2024-01-01 Retrying...\n[INFO] 2024-01-01 Connected successfully".to_vec()),
-            ("debug.log", (0..50).map(|i| format!("DEBUG: Processing item {i}\n")).collect::<String>().into_bytes()),
+            ("xml/rss.ts", include_bytes!("../../../deno/xml/rss.ts").to_vec()),
+            ("xml/xml.ts", include_bytes!("../../../deno/xml/xml.ts").to_vec()),
         ],
     )?);
 
-    // 25. Certificates and keys (fake, for structure testing)
+    // 24. Deno components
     generated.push(create_sample(
-        "crypto_formats",
+        "deno_components",
         vec![
-            ("cert.pem", b"-----BEGIN CERTIFICATE-----\nMIIBkTCB+wIJAKHBfpegPjMCMA0GCSqGSIb3DQEBCwUA\n(fake certificate data for testing structure)\n-----END CERTIFICATE-----".to_vec()),
-            ("key.pem", b"-----BEGIN PRIVATE KEY-----\n(fake key data - never put real keys in test files)\n-----END PRIVATE KEY-----".to_vec()),
-            ("pubkey.pem", b"-----BEGIN PUBLIC KEY-----\n(fake public key data for structure testing)\n-----END PUBLIC KEY-----".to_vec()),
+            ("components/Page.tsx", include_bytes!("../../../deno/components/Page.tsx").to_vec()),
+            ("utils/data.ts", include_bytes!("../../../deno/utils/data.ts").to_vec()),
+        ],
+    )?);
+
+    // 25. Cargo.lock is a good large text file
+    generated.push(create_sample(
+        "large_single",
+        vec![
+            ("Cargo.lock", include_bytes!("../Cargo.lock").to_vec()),
         ],
     )?);
 
@@ -286,7 +297,7 @@ fn main() -> Result<(), panic> {
     println!("\nAll files saved to target/samples/");
     println!("\nVerify with:");
     println!("  file target/samples/*.png");
-    println!("  unzip -l target/samples/source_code.png");
+    println!("  unzip -l target/samples/rust_core.png");
 
     Ok(())
 }
@@ -333,10 +344,3 @@ fn format_size(size: usize) -> String {
         format!("{} B", size)
     }
 }
-
-const LOREM_IPSUM: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. \
-Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim \
-veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. \
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat \
-nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia \
-deserunt mollit anim id est laborum.";
