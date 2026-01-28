@@ -132,7 +132,7 @@ impl Color {
     }
 
     pub fn rgba(self) -> RGBA8 {
-        oklab::oklab_to_srgb(self.into()).alpha(self.alpha())
+        oklab::oklab_to_srgb(self.into()).with_alpha(self.alpha())
     }
 
     pub fn red(self) -> u8 {

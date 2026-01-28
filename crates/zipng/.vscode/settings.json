@@ -1,0 +1,32 @@
+{
+  "window.title": "🦀 ${activeEditorShort} ${dirty}",
+  "rust-analyzer.checkOnSave.command": "check",
+  "lldb.showDisassembly": "never",
+  "rust-analyzer.semanticHighlighting.operator.enable": true,
+  "rust-analyzer.semanticHighlighting.strings.enable": true,
+  "rust-analyzer.semanticHighlighting.punctuation.specialization.enable": true,
+  "rust-analyzer.semanticHighlighting.punctuation.separate.macro.bang": true,
+  "rust-analyzer.semanticHighlighting.punctuation.enable": true,
+  "rust-analyzer.semanticHighlighting.operator.specialization.enable": true,
+  "lldb.consoleMode": "evaluate",
+  "lldb.launch.terminal": "integrated",
+
+
+
+  "github.copilot.inlineSuggest.enable": true,
+  "github.copilot.enable": { "*": true },
+  "github.copilot.advanced": {
+    "debug.showScores": true,
+    "length": 1024,
+    "temperature": "0.99",
+    "stops": {
+      "*": [
+        "github.copilot.dont.stop"
+      ]
+    },
+    // "debug.filterLogCategories": [],
+    // "debug.overrideEngine": "copilot-codex",
+    "inlineSuggestCount": 8,
+    "listCount": 32,
+  },
+}
