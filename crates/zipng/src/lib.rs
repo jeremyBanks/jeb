@@ -128,6 +128,8 @@ static ALL_PALETTES: &[&[u8]] = &[
     // Dual-sequential (high contrast)
     palettes::oceanic::TOPO, palettes::crameri::FES, palettes::crameri::OLERON,
     palettes::crameri::BUKAVU,
+    // Diagnostic (for binary data visualization)
+    palettes::diagnostic::BYTE_VALUE,
 ];
 
 /// Creates a polyglot PNG+ZIP file.

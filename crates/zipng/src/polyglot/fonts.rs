@@ -128,48 +128,98 @@ struct FontMeta {
 }
 
 // Embed font data at compile time
+static MICRO_PNG: &[u8] = include_bytes!("../text/micro.png");
+static MICRO_JSON: &str = include_str!("../text/micro.json");
+
+static MINI_PNG: &[u8] = include_bytes!("../text/mini.png");
+static MINI_JSON: &str = include_str!("../text/mini.json");
+
+static MONTE_PNG: &[u8] = include_bytes!("../text/monte.png");
+static MONTE_JSON: &str = include_str!("../text/monte.json");
+
+static SIXTH_PNG: &[u8] = include_bytes!("../text/sixth.png");
+static SIXTH_JSON: &str = include_str!("../text/sixth.json");
+
 static SKY_PNG: &[u8] = include_bytes!("../text/sky.png");
 static SKY_JSON: &str = include_str!("../text/sky.json");
 
 static SUGIMORI_PNG: &[u8] = include_bytes!("../text/sugimori.png");
 static SUGIMORI_JSON: &str = include_str!("../text/sugimori.json");
 
-static MINI_PNG: &[u8] = include_bytes!("../text/mini.png");
-static MINI_JSON: &str = include_str!("../text/mini.json");
+static SWISS_PNG: &[u8] = include_bytes!("../text/swiss.png");
+static SWISS_JSON: &str = include_str!("../text/swiss.json");
 
-static MICRO_PNG: &[u8] = include_bytes!("../text/micro.png");
-static MICRO_JSON: &str = include_str!("../text/micro.json");
-
-/// Sky font (9×10 pixels) - for data ≤ 128 KiB
-pub static SKY: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SKY_PNG, SKY_JSON));
-
-/// Sugimori font (8×8 pixels) - for data ≤ 512 KiB
-pub static SUGIMORI: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SUGIMORI_PNG, SUGIMORI_JSON));
-
-/// Mini font (3×6 pixels) - for data ≤ 1 MiB
-pub static MINI: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(MINI_PNG, MINI_JSON));
-
-/// Micro font (3×3 pixels) - for data ≤ 3 MiB
+/// Micro font (3×3 pixels)
 pub static MICRO: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(MICRO_PNG, MICRO_JSON));
 
-/// Data size thresholds for font selection.
-pub const SKY_THRESHOLD: usize = 128 * 1024;      // 128 KiB
-pub const SUGIMORI_THRESHOLD: usize = 512 * 1024; // 512 KiB
-pub const MINI_THRESHOLD: usize = 1024 * 1024;    // 1 MiB
-pub const MICRO_THRESHOLD: usize = 3 * 1024 * 1024; // 3 MiB
+/// Mini font (3×6 pixels)
+pub static MINI: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(MINI_PNG, MINI_JSON));
 
-/// Select the appropriate font based on total data size.
+/// Monte font (5×9 pixels)
+pub static MONTE: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(MONTE_PNG, MONTE_JSON));
+
+/// Sixth font (6×8 pixels)
+pub static SIXTH: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SIXTH_PNG, SIXTH_JSON));
+
+/// Sky font (9×10 pixels)
+pub static SKY: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SKY_PNG, SKY_JSON));
+
+/// Sugimori font (8×8 pixels)
+pub static SUGIMORI: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SUGIMORI_PNG, SUGIMORI_JSON));
+
+/// Swiss font (6×8 pixels)
+pub static SWISS: Lazy<BitmapFont> = Lazy::new(|| BitmapFont::load(SWISS_PNG, SWISS_JSON));
+
+/// All available fonts, ordered by size (smallest to largest height).
+pub static ALL_FONTS: &[&Lazy<BitmapFont>] = &[
+    &MICRO,    // 3×3
+    &MINI,     // 3×6
+    &SIXTH,    // 6×8
+    &SWISS,    // 6×8
+    &SUGIMORI, // 8×8
+    &MONTE,    // 5×9
+    &SKY,      // 9×10
+];
+
+/// Maximum data size threshold for using labels at all.
+pub const MAX_LABEL_THRESHOLD: usize = 3 * 1024 * 1024; // 3 MiB
+
+/// Select a font based on total data size and a hash value for deterministic randomization.
 /// Returns None if data is too large for labels.
-pub fn select_font(total_size: usize) -> Option<&'static BitmapFont> {
-    if total_size <= SKY_THRESHOLD {
-        Some(&*SKY)
-    } else if total_size <= SUGIMORI_THRESHOLD {
-        Some(&*SUGIMORI)
-    } else if total_size <= MINI_THRESHOLD {
-        Some(&*MINI)
-    } else if total_size <= MICRO_THRESHOLD {
-        Some(&*MICRO)
-    } else {
-        None // Too large, no labels
+///
+/// The hash is used to pseudo-randomly select among fonts that fit within the size constraints.
+/// Larger data sizes restrict which fonts can be used (smaller fonts only).
+pub fn select_font(total_size: usize, hash: u32) -> Option<&'static BitmapFont> {
+    if total_size > MAX_LABEL_THRESHOLD {
+        return None; // Too large for labels
     }
+
+    // Filter fonts that fit the size constraint
+    // Larger fonts need more vertical space, so we limit them for larger data
+    let candidates: Vec<&'static BitmapFont> = ALL_FONTS
+        .iter()
+        .map(|f| &***f)
+        .filter(|f| {
+            // Allow all fonts for small data, progressively restrict for larger
+            // The idea: taller fonts take more rows, which affects total image height
+            let max_height_for_size = if total_size <= 128 * 1024 {
+                20 // Allow any font up to 128 KiB
+            } else if total_size <= 512 * 1024 {
+                12 // Medium fonts up to 512 KiB
+            } else if total_size <= 1024 * 1024 {
+                8  // Smaller fonts up to 1 MiB
+            } else {
+                6  // Only tiny fonts for 1-3 MiB
+            };
+            f.height <= max_height_for_size
+        })
+        .collect();
+
+    if candidates.is_empty() {
+        return None;
+    }
+
+    // Use hash to pick from candidates
+    let index = (hash as usize) % candidates.len();
+    Some(candidates[index])
 }

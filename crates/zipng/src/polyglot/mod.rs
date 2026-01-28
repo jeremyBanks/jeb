@@ -483,8 +483,18 @@ pub fn build_polyglot(
     // Calculate total content size to select appropriate font
     let total_content_size: usize = files.iter().map(|(_, body)| body.len()).sum();
 
-    // Select font based on content size (None if too large for labels)
-    let font = select_font(total_content_size);
+    // Hash all file paths and contents for deterministic font/palette selection
+    let mut hash_input: Vec<u8> = Vec::new();
+    for (path, content) in files {
+        hash_input.extend_from_slice(path);
+        hash_input.push(0); // separator
+        hash_input.extend_from_slice(content);
+        hash_input.push(0); // separator
+    }
+    let content_hash = crc32(&hash_input);
+
+    // Select font based on content size and hash (None if too large for labels)
+    let font = select_font(total_content_size, content_hash);
 
     // Two-pass approach for optimal dimensions:
     // Pass 1: Build with estimated width to get actual data size
@@ -1352,8 +1362,8 @@ mod tests {
         assert_eq!(&header[0..4], b"PK\x03\x04", "Header should start with PK signature");
         assert_eq!(header.len(), row_width, "Header should be exactly row_width bytes");
 
-        // Get a font for testing
-        let font = fonts::select_font(100).expect("Should get a font for small size");
+        // Get a font for testing (pass 0 as hash since we just need any font)
+        let font = fonts::select_font(100, 0).expect("Should get a font for small size");
 
         let label = render_filename_label(name, row_width, font, &header, false);
 
