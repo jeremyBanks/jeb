@@ -1,27 +1,73 @@
-use rgb::RGB8;
-use zipng::palettes::perceptual;
+use zipng::palettes;
 
 fn main() {
-    let sets: Vec<(&str, Vec<RGB8>)> = vec![
-        ("01-red", vec![RGB8::new(0xFF, 0x00, 0x00)]),
-        ("01-teal", vec![RGB8::new(0x00, 0x99, 0x88)]),
-        ("01-gold", vec![RGB8::new(0xFF, 0xD7, 0x00)]),
-        ("02-black-white", vec![RGB8::new(0x00, 0x00, 0x00), RGB8::new(0xFF, 0xFF, 0xFF)]),
-        ("02-red-cyan", vec![RGB8::new(0xFF, 0x00, 0x00), RGB8::new(0x00, 0xFF, 0xFF)]),
-        ("02-green-magenta", vec![RGB8::new(0x00, 0xFF, 0x00), RGB8::new(0xFF, 0x00, 0xFF)]),
-        ("03-near-white", vec![RGB8::new(0xFF, 0xF0, 0xF0), RGB8::new(0xF0, 0xFF, 0xF0), RGB8::new(0xF0, 0xF0, 0xFF)]),
-        ("03-near-black", vec![RGB8::new(0x20, 0x00, 0x00), RGB8::new(0x00, 0x20, 0x00), RGB8::new(0x00, 0x00, 0x20)]),
-        ("03-steel", vec![RGB8::new(0x1C, 0x1C, 0x1C), RGB8::new(0x70, 0x80, 0x90), RGB8::new(0xE8, 0xE8, 0xE8)]),
-        ("04-candy", vec![RGB8::new(0xFF, 0x69, 0xB4), RGB8::new(0xFF, 0xF0, 0xF5), RGB8::new(0xDA, 0x70, 0xD6), RGB8::new(0xFF, 0xB6, 0xC1)]),
-        ("05-pastel-rainbow", vec![RGB8::new(0xFF, 0xB3, 0xBA), RGB8::new(0xFF, 0xDF, 0xBA), RGB8::new(0xFF, 0xFF, 0xBA), RGB8::new(0xBA, 0xFF, 0xBA), RGB8::new(0xBA, 0xE1, 0xFF)]),
-        ("05-same-lightness", vec![RGB8::new(0xBF, 0x40, 0x40), RGB8::new(0x80, 0x80, 0x40), RGB8::new(0x40, 0xBF, 0x40), RGB8::new(0x40, 0x80, 0xBF), RGB8::new(0xBF, 0x40, 0xBF)]),
-        ("07-grayscale-tinted", vec![RGB8::new(0x0A, 0x0A, 0x14), RGB8::new(0x2B, 0x2B, 0x3C), RGB8::new(0x4A, 0x4A, 0x6A), RGB8::new(0x70, 0x80, 0x90), RGB8::new(0x9A, 0xA0, 0xAA), RGB8::new(0xC8, 0xCC, 0xD0), RGB8::new(0xF0, 0xF0, 0xF5)]),
-        ("08-pastels", vec![RGB8::new(0xFF, 0xAD, 0xAD), RGB8::new(0xFF, 0xD6, 0xA5), RGB8::new(0xFD, 0xFF, 0xB6), RGB8::new(0xCA, 0xFF, 0xBF), RGB8::new(0x9B, 0xF6, 0xFF), RGB8::new(0xA0, 0xC4, 0xFF), RGB8::new(0xBD, 0xB2, 0xFF), RGB8::new(0xFF, 0xC6, 0xFF)]),
+    let builtin: Vec<(&str, &[u8])> = vec![
+        ("seq-amp", palettes::oceanic::AMP),
+        ("seq-ice", palettes::oceanic::ICE),
+        ("seq-oxy", palettes::oceanic::OXY),
+        ("seq-buda", palettes::crameri::BUDA),
+        ("seq-nuuk", palettes::crameri::NUUK),
+        ("seq-oslo", palettes::crameri::OSLO),
+        ("seq-deep", palettes::oceanic::DEEP),
+        ("seq-rain", palettes::oceanic::RAIN),
+        ("seq-acton", palettes::crameri::ACTON),
+        ("seq-davos", palettes::crameri::DAVOS),
+        ("seq-devon", palettes::crameri::DEVON),
+        ("seq-imola", palettes::crameri::IMOLA),
+        ("seq-lapaz", palettes::crameri::LAPAZ),
+        ("seq-tokyo", palettes::crameri::TOKYO),
+        ("seq-turku", palettes::crameri::TURKU),
+        ("seq-algae", palettes::oceanic::ALGAE),
+        ("seq-dense", palettes::oceanic::DENSE),
+        ("seq-solar", palettes::oceanic::SOLAR),
+        ("seq-speed", palettes::oceanic::SPEED),
+        ("seq-tempo", palettes::oceanic::TEMPO),
+        ("seq-turbo", palettes::singles::TURBO),
+        ("seq-magma", palettes::viridis::MAGMA),
+        ("seq-bamako", palettes::crameri::BAMAKO),
+        ("seq-batlow", palettes::crameri::BATLOW),
+        ("seq-bilbao", palettes::crameri::BILBAO),
+        ("seq-hawaii", palettes::crameri::HAWAII),
+        ("seq-haline", palettes::oceanic::HALINE),
+        ("seq-matter", palettes::oceanic::MATTER),
+        ("seq-turbid", palettes::oceanic::TURBID),
+        ("seq-plasma", palettes::viridis::PLASMA),
+        ("seq-lajolla", palettes::crameri::LAJOLLA),
+        ("seq-thermal", palettes::oceanic::THERMAL),
+        ("seq-cividis", palettes::singles::CIVIDIS),
+        ("seq-inferno", palettes::viridis::INFERNO),
+        ("seq-viridis", palettes::viridis::VIRIDIS),
+        ("seq-batlow_k", palettes::crameri::BATLOW_K),
+        ("seq-batlow_w", palettes::crameri::BATLOW_W),
+        ("div-bam", palettes::crameri::BAM),
+        ("div-vik", palettes::crameri::VIK),
+        ("div-broc", palettes::crameri::BROC),
+        ("div-cork", palettes::crameri::CORK),
+        ("div-roma", palettes::crameri::ROMA),
+        ("div-curl", palettes::oceanic::CURL),
+        ("div-diff", palettes::oceanic::DIFF),
+        ("div-tarn", palettes::oceanic::TARN),
+        ("div-delta", palettes::oceanic::DELTA),
+        ("div-berlin", palettes::crameri::BERLIN),
+        ("div-lisbon", palettes::crameri::LISBON),
+        ("div-tofino", palettes::crameri::TOFINO),
+        ("div-vanimo", palettes::crameri::VANIMO),
+        ("div-balance", palettes::oceanic::BALANCE),
+        ("dual-topo", palettes::oceanic::TOPO),
+        ("dual-fes", palettes::crameri::FES),
+        ("dual-oleron", palettes::crameri::OLERON),
+        ("dual-bukavu", palettes::crameri::BUKAVU),
+        ("cyc-bam_o", palettes::crameri::BAM_O),
+        ("cyc-vik_o", palettes::crameri::VIK_O),
+        ("cyc-phase", palettes::oceanic::PHASE),
+        ("cyc-broc_o", palettes::crameri::BROC_O),
+        ("cyc-cork_o", palettes::crameri::CORK_O),
+        ("cyc-roma_o", palettes::crameri::ROMA_O),
+        ("diag-byte_value", palettes::diagnostic::BYTE_VALUE),
     ];
 
     let mut any_dupes = false;
-    for (name, colors) in &sets {
-        let palette = perceptual::generate(colors);
+    for (name, palette) in &builtin {
         let mut dupes = 0;
         for i in 1..256 {
             let a = &palette[(i-1)*3..(i-1)*3+3];
@@ -33,17 +79,9 @@ fn main() {
         if dupes > 0 {
             any_dupes = true;
             println!("{name}: {dupes} adjacent duplicate(s)");
-            // Show where
-            for i in 1..256 {
-                let a = &palette[(i-1)*3..(i-1)*3+3];
-                let b = &palette[i*3..i*3+3];
-                if a == b {
-                    println!("  index {}-{}: ({}, {}, {})", i-1, i, a[0], a[1], a[2]);
-                }
-            }
         }
     }
     if !any_dupes {
-        println!("No adjacent duplicates found in any sample.");
+        println!("No adjacent duplicates in any built-in palette.");
     }
 }

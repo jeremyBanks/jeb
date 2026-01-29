@@ -308,6 +308,36 @@ fn deduplicate_palette(entries: &mut [(Oklab, RGB8)]) {
     }
 }
 
+/// Deduplicate a raw 768-byte (256 × RGB) palette, ensuring every entry is
+/// unique. The Oklab target for each entry is derived from its RGB value.
+///
+/// Returns a new `Vec<u8>` of length 768 with duplicates replaced by the
+/// perceptually nearest unused RGB color.
+///
+/// # Panics
+///
+/// Panics if `palette` length is not 768.
+pub fn deduplicate_rgb_palette(palette: &[u8]) -> Vec<u8> {
+    assert_eq!(palette.len(), 768);
+
+    let mut entries: Vec<(Oklab, RGB8)> = (0..256)
+        .map(|i| {
+            let rgb = RGB8::new(palette[i * 3], palette[i * 3 + 1], palette[i * 3 + 2]);
+            (rgb_to_ok(rgb), rgb)
+        })
+        .collect();
+
+    deduplicate_palette(&mut entries);
+
+    let mut out = Vec::with_capacity(768);
+    for &(_, rgb) in &entries {
+        out.push(rgb.r);
+        out.push(rgb.g);
+        out.push(rgb.b);
+    }
+    out
+}
+
 /// Generate a perceptually uniform 256-color palette from the given control
 /// points.
 ///

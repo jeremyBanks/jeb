@@ -89,8 +89,9 @@ fn main() {
         let (category, _) = name.split_once('-').unwrap_or(("misc", name));
         let sub = out_dir.join(category);
         fs::create_dir_all(&sub).unwrap();
+        let deduped = perceptual::deduplicate_rgb_palette(palette);
         let path = sub.join(format!("{name}.png"));
-        save_gradient(&path, palette);
+        save_gradient(&path, &deduped);
         println!("  {}", path.display());
     }
 
