@@ -880,9 +880,13 @@ fn build_aligned_data(
     let mut palette_counter: usize = 0;
     let mut total_spacing_bytes: usize = 0;
 
-    // Ensure first file has ≥1 row of spacing before it (top of image is spacing)
-    if !file_order_with_spacing.is_empty() && file_order_with_spacing[0].1 == 0 {
-        file_order_with_spacing[0].1 = 1;
+    // Ensure the first 256 pixels of the image are spacing (top padding).
+    // This means we need at least ceil(256 / row_width) rows of spacing before the first file.
+    if !file_order_with_spacing.is_empty() {
+        let min_top_rows = (256 + row_width - 1) / row_width;
+        if file_order_with_spacing[0].1 < min_top_rows {
+            file_order_with_spacing[0].1 = min_top_rows;
+        }
     }
 
     for (order_idx, &(file_idx, spacing_rows)) in file_order_with_spacing.iter().enumerate() {
@@ -1016,28 +1020,17 @@ fn build_aligned_data(
         data.extend_from_slice(&terminator);
     }
 
-    // Ensure ≥1 row of spacing at the bottom of the image, and ≥256 total spacing bytes.
+    // Ensure ≥1 row of spacing at the bottom of the image.
     // Align to row boundary first.
     let padding = (row_width - (data.len() % row_width)) % row_width;
     data.resize(data.len() + padding, 0);
 
-    // Always add at least 1 trailing spacing row
-    let min_trailing_rows = 1;
-    let min_total_spacing = 256;
-    let rows_for_minimum = if total_spacing_bytes >= min_total_spacing {
-        0
-    } else {
-        (min_total_spacing - total_spacing_bytes + row_width - 1) / row_width
-    };
-    let trailing_rows = min_trailing_rows.max(rows_for_minimum);
-    let trailing_bytes = trailing_rows * row_width;
-    total_spacing_bytes += trailing_bytes;
+    // Add 1 trailing spacing row
+    let trailing_bytes = row_width;
     data.reserve(trailing_bytes);
     for _ in 0..trailing_bytes {
         data.push(cycling_palette_index(&mut palette_counter));
     }
-
-    let _ = total_spacing_bytes; // suppress unused warning
 
     (data, entries, terminator_rows)
 }
