@@ -125,9 +125,7 @@ fn perceptual_dist(a: Oklab, b: Oklab) -> f32 {
     let dl = a.l - b.l;
     let da = a.a - b.a;
     let db = a.b - b.b;
-    // Weight lightness 4× to bias sorting toward monotonic lightness,
-    // producing colormaps more readable in grayscale.
-    (4.0 * dl * dl + da * da + db * db).sqrt()
+    (dl * dl + da * da + db * db).sqrt()
 }
 
 /// Reorder colors to minimize total perceptual arc-length (shortest
