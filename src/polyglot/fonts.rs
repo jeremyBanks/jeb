@@ -21,8 +21,9 @@ impl BitmapFont {
     /// Get glyph bitmap for a character with fallback chain:
     /// 1. Exact character
     /// 2. Different capitalization (upper ↔ lower)
-    /// 3. Fallback characters: …, _, ., ?
-    /// 4. Space (with skip_kerning = true)
+    /// 3. Specific substitutions (e.g. " ↔ curly quotes, × → x, dashes → -)
+    /// 4. Generic fallback characters: …, _, ., ?
+    /// 5. Space (with skip_kerning = true)
     pub fn get_glyph(&self, c: char) -> Option<GlyphLookup<'_>> {
         // 1. Try exact character
         if let Some(g) = self.glyphs.get(&c) {
@@ -43,14 +44,31 @@ impl BitmapFont {
             }
         }
 
-        // 3. Try fallback characters: …, _, ., ?
+        // 3. Try specific character substitutions for visually similar alternatives
+        let specific_fallbacks: &[char] = match c {
+            '"'      => &['\u{201D}', '\u{201C}'],  // straight double quote → curly right/left
+            '\u{201C}' | '\u{201D}' => &['"'],       // curly double quotes → straight
+            '\''     => &['\u{2019}', '\u{2018}'],   // straight single quote → curly right/left
+            '\u{2018}' | '\u{2019}' => &['\''],      // curly single quotes → straight
+            '\u{00D7}' => &['x'],                    // × multiplication sign → x
+            '\u{2013}' | '\u{2014}' => &['-'],       // en-dash / em-dash → hyphen
+            '\u{2026}' => &['.'],                    // … ellipsis → period
+            _ => &[],
+        };
+        for &fallback in specific_fallbacks {
+            if let Some(g) = self.glyphs.get(&fallback) {
+                return Some(GlyphLookup { glyph: g, skip_kerning: false });
+            }
+        }
+
+        // 4. Try generic fallback characters: …, _, ., ?
         for fallback in ['…', '_', '.', '?'] {
             if let Some(g) = self.glyphs.get(&fallback) {
                 return Some(GlyphLookup { glyph: g, skip_kerning: false });
             }
         }
 
-        // 4. Return space (skip kerning for inserted spaces)
+        // 5. Return space (skip kerning for inserted spaces)
         self.glyphs.get(&' ').map(|g| GlyphLookup { glyph: g, skip_kerning: true })
     }
 
