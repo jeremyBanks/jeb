@@ -876,17 +876,21 @@ fn build_aligned_data(
     // Track if previous file needs a terminator
     let mut pending_terminator = false;
 
-    // Cycling palette counter and total spacing bytes tracker
-    let mut palette_counter: usize = 0;
-    let mut total_spacing_bytes: usize = 0;
+    // Insert reverse color map at the top of the image.
+    // Structure: 1 row of 0x00 padding, then enough cycling gradient rows to reach ≥256 bytes.
+    // The reverse color map lets readers map pixel colors back to byte values.
+    let reverse_color_map_rows = (256 + row_width - 1) / row_width;
+    let preamble_rows = 1 + reverse_color_map_rows; // 1 zero row + color map rows
 
-    // Ensure the first 256 pixels of the image are spacing (top padding).
-    // This means we need at least ceil(256 / row_width) rows of spacing before the first file.
-    if !file_order_with_spacing.is_empty() {
-        let min_top_rows = (256 + row_width - 1) / row_width;
-        if file_order_with_spacing[0].1 < min_top_rows {
-            file_order_with_spacing[0].1 = min_top_rows;
-        }
+    // 1 row of all zeroes
+    data.resize(row_width, 0);
+
+    // Reverse color map rows: cycling palette index pattern
+    let mut palette_counter: usize = 0;
+    let color_map_bytes = reverse_color_map_rows * row_width;
+    data.reserve(color_map_bytes);
+    for _ in 0..color_map_bytes {
+        data.push(cycling_palette_index(&mut palette_counter));
     }
 
     for (order_idx, &(file_idx, spacing_rows)) in file_order_with_spacing.iter().enumerate() {
@@ -933,16 +937,9 @@ fn build_aligned_data(
 
         // Add spacing BEFORE this file (after any terminator)
         if spacing_rows > 0 {
-            // Align to row first
+            // Align to row first, then add spacing rows (filled with 0x00)
             let padding = (row_width - (data.len() % row_width)) % row_width;
-            data.resize(data.len() + padding, 0);
-            // Fill spacing rows with cycling palette index pattern
-            let spacing_byte_count = spacing_rows * row_width;
-            total_spacing_bytes += spacing_byte_count;
-            data.reserve(spacing_byte_count);
-            for _ in 0..spacing_byte_count {
-                data.push(cycling_palette_index(&mut palette_counter));
-            }
+            data.resize(data.len() + padding + spacing_rows * row_width, 0);
         }
 
         // Align to row boundary
@@ -1020,18 +1017,6 @@ fn build_aligned_data(
         data.extend_from_slice(&terminator);
     }
 
-    // Ensure ≥1 row of spacing at the bottom of the image.
-    // Align to row boundary first.
-    let padding = (row_width - (data.len() % row_width)) % row_width;
-    data.resize(data.len() + padding, 0);
-
-    // Add 1 trailing spacing row
-    let trailing_bytes = row_width;
-    data.reserve(trailing_bytes);
-    for _ in 0..trailing_bytes {
-        data.push(cycling_palette_index(&mut palette_counter));
-    }
-
     (data, entries, terminator_rows)
 }
 
@@ -1044,8 +1029,10 @@ fn cycling_palette_index(counter: &mut usize) -> u8 {
 }
 
 /// Calculate spacing for each bucket.
-/// Full buckets get even spacing with half-weight edges.
-/// Ensures first file has ≥1 row of spacing before it and last file has ≥1 row after.
+/// Full buckets get even spacing with half-weight edges: [0.5, 1, 1, ..., 1, 0.5].
+/// The first bucket includes a leading gap (space between the reverse color map and
+/// the first file), so it also uses half-weight edges. The first bucket's capacity
+/// is reduced by the preamble rows (1 zero row + reverse color map rows).
 /// Last bucket gets no spacing (content packed tight).
 fn calculate_bucket_spacing(
     bucket_assignments: &[Vec<usize>],
@@ -1055,6 +1042,10 @@ fn calculate_bucket_spacing(
     let filtered_row_size = row_width + 1;
     let rows_per_bucket = IDAT_BLOCK_SIZE / filtered_row_size;
     let bucket_capacity_bytes = rows_per_bucket * row_width;
+
+    // Preamble: 1 zero row + ceil(256 / row_width) reverse color map rows
+    let reverse_color_map_rows = (256 + row_width - 1) / row_width;
+    let preamble_bytes = (1 + reverse_color_map_rows) * row_width;
 
     let num_buckets = bucket_assignments.len();
     let mut result = Vec::with_capacity(num_buckets);
@@ -1075,7 +1066,14 @@ fn calculate_bucket_spacing(
             .map(|&idx| file_sizes[idx])
             .sum();
 
-        let slack_bytes = bucket_capacity_bytes.saturating_sub(total_content);
+        // First bucket has reduced capacity due to the preamble (zero row + reverse color map)
+        let effective_capacity = if is_first_bucket {
+            bucket_capacity_bytes.saturating_sub(preamble_bytes)
+        } else {
+            bucket_capacity_bytes
+        };
+
+        let slack_bytes = effective_capacity.saturating_sub(total_content);
         let slack_rows = slack_bytes / row_width;
 
         if slack_rows == 0 {
@@ -1084,8 +1082,8 @@ fn calculate_bucket_spacing(
         }
 
         // Distribute with half-weight edges: [0.5, 1, 1, ..., 1, 0.5] = N weight total
-        // But first bucket: no leading gap, so [0, 1, 1, ..., 1, 0.5] = N - 0.5 weight
-        let first_weight = if is_first_bucket { 0.0 } else { 0.5 };
+        // All buckets (including first) get a leading gap for the space before the first file.
+        let first_weight = 0.5;
         let total_weight = first_weight + (num_files - 1) as f64 + 0.5;
         let rows_per_unit = slack_rows as f64 / total_weight;
 
@@ -1099,9 +1097,9 @@ fn calculate_bucket_spacing(
             allocated += rows;
         }
 
-        // Distribute remainder to middle gaps (skip first gap if first bucket)
+        // Distribute remainder to gaps
         let mut remaining = slack_rows.saturating_sub(allocated);
-        let start_idx = if is_first_bucket { 1 } else { 0 };
+        let start_idx = 0;
         for i in start_idx..num_files {
             if remaining == 0 { break; }
             spacing[i] += 1;
