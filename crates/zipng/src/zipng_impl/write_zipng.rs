@@ -97,8 +97,8 @@ pub fn poc_zipng(palette: &[u8]) -> Result<OutputBuffer, panic> {
             assert!(local_file_header.offset() < width as usize + 4);
             let padding_required = width as usize + 4 - local_file_header.offset();
             for i in 0..padding_required {
-                static padding_bytes: [u8; 4] = [0x00, 0x00, 0x00, 0x00];
-                idat += &[padding_bytes[i % padding_bytes.len()]];
+                static PADDING_BYTES: [u8; 4] = [0x00, 0x00, 0x00, 0x00];
+                idat += &[PADDING_BYTES[i % PADDING_BYTES.len()]];
             }
 
             let pixel_data = file.body;
@@ -118,7 +118,7 @@ pub fn poc_zipng(palette: &[u8]) -> Result<OutputBuffer, panic> {
 
             let bits_per_pixel = color_depth.bits_per_sample() * color_mode.samples_per_pixel();
             let bits_per_line = width * bits_per_pixel as u32;
-            let bytes_per_line = (bits_per_line + 7) / 8;
+            let bytes_per_line = bits_per_line.div_ceil(8);
             for (i, byte) in pixel_data.iter().enumerate() {
                 if i % (bytes_per_line as usize) == 0 {
                     // filter byte (uncompressed in PNG) / non-compressed block header (DEFLATE in

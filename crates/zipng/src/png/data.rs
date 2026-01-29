@@ -149,7 +149,7 @@ impl Png {
             bytes.len() * 8 / (bit_depth.bits_per_sample() * color_type.samples_per_pixel());
 
         let width = 2048.min(((pixel_count as f64 + 1.).sqrt() as usize).next_power_of_two());
-        let height = 8192.min((pixel_count + width - 1) / width);
+        let height = 8192.min(pixel_count.div_ceil(width));
 
         trace!(
             width = width,
@@ -181,7 +181,7 @@ impl Png {
     /// Returns the number of bytes per row of pixels in the image data of this
     /// [`Png`].
     pub fn image_bytes_per_row(&self) -> usize {
-        (self.width * self.bits_per_pixel() + 7) / 8
+        (self.width * self.bits_per_pixel()).div_ceil(8)
     }
 
     /// Returns the total number of image bytes that we expect the image to

@@ -148,15 +148,15 @@ fn needs_internal_terminator(body_len: usize, row_width: usize) -> bool {
     let data_per_block = row_width - 4;
     if body_len == 0 {
         // Empty file: padding = row_width - 4
-        return (row_width - 4) % 5 != 0;
+        return !(row_width - 4).is_multiple_of(5);
     }
-    let last_chunk_size = if body_len % data_per_block == 0 {
+    let last_chunk_size = if body_len.is_multiple_of(data_per_block) {
         data_per_block // Last chunk is full
     } else {
         body_len % data_per_block
     };
     let padding_needed = row_width - 4 - last_chunk_size;
-    padding_needed % 5 != 0
+    !padding_needed.is_multiple_of(5)
 }
 
 /// Create a terminator row for ending a file's DEFLATE stream.
@@ -474,12 +474,11 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
                 for dx in -1i32..=1 {
                     let ny = row_idx as i32 + dy;
                     let nx = px as i32 + dx;
-                    if ny >= 0 && (ny as usize) < label_rows && nx >= 0 && (nx as usize) < pixel_width {
-                        if text_bitmap[ny as usize][nx as usize] {
+                    if ny >= 0 && (ny as usize) < label_rows && nx >= 0 && (nx as usize) < pixel_width
+                        && text_bitmap[ny as usize][nx as usize] {
                             near_text = true;
                             break 'halo;
                         }
-                    }
                 }
             }
 
@@ -567,17 +566,17 @@ fn align_to_row_width(value: usize, bytes_per_pixel: usize) -> usize {
     // We need: offset % bpp == 0 AND (offset - 4) % 64 == 0, i.e. offset ≡ 4 (mod 64).
     // Search within one period (always small: at most LCM(64, 4) = 64).
     let offset = (0..=period)
-        .find(|&o| o % bytes_per_pixel == 0 && o >= DEFLATE_HEADER_OVERHEAD && (o - DEFLATE_HEADER_OVERHEAD) % DATA_ALIGNMENT == 0)
+        .find(|&o| o % bytes_per_pixel == 0 && o >= DEFLATE_HEADER_OVERHEAD && (o - DEFLATE_HEADER_OVERHEAD).is_multiple_of(DATA_ALIGNMENT))
         .expect("no valid alignment offset found");
 
     // Find smallest row_width >= value matching: row_width = offset + k * period
-    let row_width = if value <= offset {
+    
+    if value <= offset {
         offset
     } else {
-        let k = (value - offset + period - 1) / period;
+        let k = (value - offset).div_ceil(period);
         offset + k * period
-    };
-    row_width
+    }
 }
 
 fn gcd(mut a: usize, mut b: usize) -> usize {
@@ -659,7 +658,7 @@ pub fn build_polyglot(
 
     // Calculate bytes per pixel for row alignment (for 8-bit depth, this is samples_per_pixel)
     let bits_per_pixel = bit_depth.bits_per_sample() * color_mode.samples_per_pixel();
-    let bytes_per_pixel = (bits_per_pixel + 7) / 8;
+    let bytes_per_pixel = bits_per_pixel.div_ceil(8);
 
     // Calculate minimum row width based on filename lengths
     let min_width = min_row_width_for_files(files, bytes_per_pixel);
@@ -713,7 +712,7 @@ pub fn build_polyglot(
     let (pixel_data, entry_infos, final_block_rows) = build_aligned_data(files, row_width, font.as_ref(), bytes_per_pixel);
 
     // Calculate PNG dimensions
-    let height = if pixel_data.is_empty() { 1 } else { (pixel_data.len() + row_width - 1) / row_width };
+    let height = if pixel_data.is_empty() { 1 } else { pixel_data.len().div_ceil(row_width) };
 
     let mut padded = pixel_data.clone();
     resize_with_opaque_padding(&mut padded, height * row_width, bytes_per_pixel);
@@ -811,7 +810,7 @@ fn next_boundary_aligned_pos(current_data_pos: usize, row_width: usize) -> usize
     // Find the row that starts at or after the next boundary
     // Row N starts at filtered position N * filtered_row_size
     // We need N * filtered_row_size >= next_boundary
-    let target_row = (next_boundary + filtered_row_size - 1) / filtered_row_size;
+    let target_row = next_boundary.div_ceil(filtered_row_size);
 
     // Return the data position for the start of that row
     target_row * row_width
@@ -825,7 +824,7 @@ fn calculate_file_size(name: &[u8], body: &[u8], row_width: usize, font: Option<
     let header_size = 30 + name.len();
     let bytes_for_alignment = header_size % row_width;
     let extra_len = if bytes_for_alignment == 0 { 0 } else { row_width - bytes_for_alignment };
-    let num_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
+    let num_blocks = if body.is_empty() { 1 } else { body.len().div_ceil(data_per_block) };
     let file_data_size = header_size + extra_len + num_blocks * row_width;
     let label_size = font.map(|f| label_rows_for_font(f) * row_width).unwrap_or(0);
     // Add terminator row only if not using internal terminator
@@ -965,7 +964,7 @@ fn build_aligned_data(
     } else {
         // Indexed mode: cycling gradient (0→255→255→0→...) spanning ≥256 bytes,
         // letting readers map pixel colors back to byte values.
-        let reverse_color_map_rows = (256 + row_width - 1) / row_width;
+        let reverse_color_map_rows = 256_usize.div_ceil(row_width);
         let mut palette_counter: usize = 0;
         let color_map_bytes = reverse_color_map_rows * row_width;
         data.reserve(color_map_bytes);
@@ -986,13 +985,13 @@ fn build_aligned_data(
         // (which would insert a 5-byte deflate block header mid-ZIP-stream).
         let (name, body) = &files[file_idx];
         let file_size_with_label = file_sizes[file_idx];
-        let file_rows_with_label = (file_size_with_label + row_width - 1) / row_width;
+        let file_rows_with_label = file_size_with_label.div_ceil(row_width);
         // If file+label exceeds one block, split: place label before the IDAT
         // boundary and file after. The 5-byte deflate block header between them
         // is invisible in pixel data — only ZIP data must be contiguous.
         let (has_label, split_label) = if font.is_some() && file_rows_with_label > max_file_rows {
-            let file_size_without_label = calculate_file_size(name.as_ref(), body.as_ref(), row_width, None);
-            let file_rows_without_label = (file_size_without_label + row_width - 1) / row_width;
+            let file_size_without_label = calculate_file_size(name, body, row_width, None);
+            let file_rows_without_label = file_size_without_label.div_ceil(row_width);
             assert!(
                 file_rows_without_label <= max_file_rows,
                 "File {:?} ({} rows) exceeds single IDAT block capacity ({} rows) even without label",
@@ -1005,7 +1004,7 @@ fn build_aligned_data(
         let actual_file_size = if has_label && !split_label {
             file_size_with_label
         } else {
-            calculate_file_size(name.as_ref(), body.as_ref(), row_width, None)
+            calculate_file_size(name, body, row_width, None)
         };
 
         // Determine if this file's label can serve as terminator for previous file.
@@ -1071,7 +1070,7 @@ fn build_aligned_data(
             let header_size = 30 + name.len();
             let bytes_used = header_size % row_width;
             let extra_len = if bytes_used == 0 { 0 } else { row_width - bytes_used };
-            let num_content_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
+            let num_content_blocks = if body.is_empty() { 1 } else { body.len().div_ceil(data_per_block) };
             let uses_internal_terminator = needs_internal_terminator(body.len(), row_width);
             let terminator_rows_count = if uses_internal_terminator { 0 } else { 1 };
             let compressed_size = (num_content_blocks + terminator_rows_count) * filtered_row_size;
@@ -1099,7 +1098,7 @@ fn build_aligned_data(
         // Calculate number of deflate blocks and compressed size
         // Add +1 row for terminator ONLY if padding divides evenly by 5 (separate terminator row)
         // Otherwise, the last content row has BFINAL=1 (internal terminator)
-        let num_content_blocks = if body.is_empty() { 1 } else { (body.len() + data_per_block - 1) / data_per_block };
+        let num_content_blocks = if body.is_empty() { 1 } else { body.len().div_ceil(data_per_block) };
         let uses_internal_terminator = needs_internal_terminator(body.len(), row_width);
         let terminator_rows_count = if uses_internal_terminator { 0 } else { 1 };
         let compressed_size = (num_content_blocks + terminator_rows_count) * filtered_row_size;
@@ -1185,7 +1184,7 @@ fn build_aligned_data(
             }
         } else {
             // Indexed mode: mirrored cycling gradient
-            let trailing_color_map_rows = (256 + row_width - 1) / row_width;
+            let trailing_color_map_rows = 256_usize.div_ceil(row_width);
             let color_map_bytes = trailing_color_map_rows * row_width;
             let mut forward: Vec<u8> = Vec::with_capacity(color_map_bytes);
             let mut palette_counter: usize = 0;
@@ -1226,7 +1225,7 @@ fn calculate_bucket_spacing(
 
     // Preamble: ceil(256 / row_width) reverse color map rows at the top of the image.
     // The gap after the color map is part of normal spacing distribution (not preamble).
-    let reverse_color_map_rows = (256 + row_width - 1) / row_width;
+    let reverse_color_map_rows = 256_usize.div_ceil(row_width);
     let preamble_bytes = reverse_color_map_rows * row_width;
 
     let num_buckets = bucket_assignments.len();
@@ -1436,7 +1435,7 @@ fn fill_padding_with_empty_blocks(result: &mut Vec<u8>, padding_needed: usize, r
         return;
     }
 
-    if padding_needed % 5 == 0 {
+    if padding_needed.is_multiple_of(5) {
         // Perfect fit: fill with empty stored blocks
         let num_blocks = padding_needed / 5;
         for _ in 0..num_blocks {

@@ -10,7 +10,7 @@ pub fn write_aligned_pad_end(buffer: &mut Vec<u8>, bytes: &[u8], alignment: usiz
 
     let index_after_data = buffer.len();
 
-    if index_after_data % alignment != 0 {
+    if !index_after_data.is_multiple_of(alignment) {
         let padding = alignment - (index_after_data % alignment);
         for _ in 0..padding {
             buffer.push(0);
@@ -32,7 +32,7 @@ pub fn write_aligned_pad_start(
 ) -> Range<usize> {
     let index_before_padding = buffer.len();
     let unpadded_index_after_data = index_before_padding + bytes.len();
-    if unpadded_index_after_data % alignment != 0 {
+    if !unpadded_index_after_data.is_multiple_of(alignment) {
         let padding = alignment - (unpadded_index_after_data % alignment);
         for _ in 0..padding {
             buffer.push(0);

@@ -38,7 +38,7 @@ fn unix_to_dos(epoch: i64) -> (u16, u16) {
     let minutes = (time_of_day % 3600) / 60;
     let seconds = time_of_day % 60;
     // DOS has 2-second granularity; round up.
-    let dos_seconds = (seconds + 1) / 2;
+    let dos_seconds = seconds.div_ceil(2);
     // If rounding pushed us to 30 (i.e. 60 seconds), carry into minutes.
     let (dos_seconds, carry_min) = if dos_seconds >= 30 {
         (0u32, 1u32)

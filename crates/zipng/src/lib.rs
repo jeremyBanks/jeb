@@ -147,7 +147,7 @@ pub fn zipng_with_palette(files: &Files, palette: Option<&[u8]>) -> Vec<u8> {
         .iter()
         .map(|(k, v)| (k.as_ref(), v.as_ref()))
         .collect();
-    sorted_files.sort_by(|(a, _), (b, _)| a.cmp(b));
+    sorted_files.sort_by_key(|(a, _)| *a);
 
     // Calculate total data size
     let total_size: usize = sorted_files.iter().map(|(_, v)| v.len()).sum();

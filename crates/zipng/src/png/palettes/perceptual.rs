@@ -161,7 +161,7 @@ pub fn sort_colors(colors: &[RGB8]) -> Vec<RGB8> {
         let mut best: Option<(f32, Vec<usize>)> = None;
         permutations(&mut indices, n, &mut |perm| {
             let cost = path_cost(perm, &ok);
-            if best.as_ref().map_or(true, |(b, _)| cost < *b) {
+            if best.as_ref().is_none_or(|(b, _)| cost < *b) {
                 best = Some((cost, perm.to_vec()));
             }
         });
@@ -215,7 +215,7 @@ fn permutations(arr: &mut Vec<usize>, k: usize, f: &mut impl FnMut(&[usize])) {
     }
     permutations(arr, k - 1, f);
     for i in 0..k - 1 {
-        if k % 2 == 0 {
+        if k.is_multiple_of(2) {
             arr.swap(i, k - 1);
         } else {
             arr.swap(0, k - 1);
@@ -283,7 +283,7 @@ fn deduplicate_palette(entries: &mut [(Oklab, RGB8)]) {
 
                         let candidate = RGB8::new(r, g, b);
                         let dist = perceptual_dist(target_ok, rgb_to_ok(candidate));
-                        if best.as_ref().map_or(true, |(d, _)| dist < *d) {
+                        if best.as_ref().is_none_or(|(d, _)| dist < *d) {
                             best = Some((dist, candidate));
                         }
                     }

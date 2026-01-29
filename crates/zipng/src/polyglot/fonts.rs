@@ -149,12 +149,11 @@ impl BitmapFont {
                                 for dx in -1i32..=1 {
                                     let ny = gy as i32 + dy;
                                     let nx = cx as i32 + dx;
-                                    if ny >= 0 && (ny as usize) < self.height && nx >= 0 {
-                                        if kern_canvas[ny as usize].get(nx as usize).copied().unwrap_or(false) {
+                                    if ny >= 0 && (ny as usize) < self.height && nx >= 0
+                                        && kern_canvas[ny as usize].get(nx as usize).copied().unwrap_or(false) {
                                             touches = true;
                                             break 'check;
                                         }
-                                    }
                                 }
                             }
                         }
@@ -375,7 +374,7 @@ pub fn select_font(total_size: usize, hash: u32) -> Option<FontSelection> {
         let name_candidates: &[&Lazy<BitmapFont>] = &[&SWISS, &SIXTH, &SKY, &MONTE];
         let index = (hash as usize) % name_candidates.len();
         Some(FontSelection {
-            name_font: &name_candidates[index],
+            name_font: name_candidates[index],
             size_font: &SUGIMORI,
         })
     } else if total_size <= 1024 * 1024 {

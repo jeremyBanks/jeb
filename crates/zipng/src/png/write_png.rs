@@ -142,7 +142,7 @@ pub fn write_png(
 
     let bits_per_pixel = bit_depth.bits_per_sample() * color_mode.samples_per_pixel();
     let bits_per_line = width * bits_per_pixel as u32;
-    let bytes_per_line = (bits_per_line + 7) / 8;
+    let bytes_per_line = bits_per_line.div_ceil(8);
 
     for (i, byte) in pixel_data.iter().enumerate() {
         if i % (bytes_per_line as usize) == 0 {
