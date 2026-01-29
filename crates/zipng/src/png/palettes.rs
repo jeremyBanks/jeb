@@ -4,6 +4,7 @@ pub mod crameri;
 pub mod diagnostic;
 pub mod mappings;
 pub mod oceanic;
+pub mod perceptual;
 pub mod singles;
 pub mod viridis;
 
