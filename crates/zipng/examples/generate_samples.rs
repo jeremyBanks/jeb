@@ -673,6 +673,100 @@ fn main() -> Result<(), panic> {
         sample!("no_labels_collection", files);
     }
 
+    // =========================================================================
+    // CHUNKING STRESS TESTS — Files sized to provoke significant gaps
+    // =========================================================================
+    // IDAT bucket capacity is ~60-64KB of data (depends on row width).
+    // Files just over half that size (~33KB content + overhead) can't share a
+    // bucket, forcing each into its own bucket with ~half the space wasted as
+    // gaps. These samples exercise the bin packing and spacing logic heavily.
+
+    // 1. All files just over half bucket size — every file gets its own bucket
+    {
+        let files: Vec<(&str, Vec<u8>)> = (0..8)
+            .map(|i| {
+                let name: &'static str = Box::leak(format!("chunk_{i:02}.bin").into_boxed_str());
+                // ~33KB each: just over half of ~64KB bucket capacity
+                let content: Vec<u8> = (0..33_000u32).map(|j| ((i * 37 + j * 13) % 256) as u8).collect();
+                (name, content)
+            })
+            .collect();
+        sample!("chunking_half_plus", files);
+    }
+
+    // 2. Half-plus files mixed with small files that fill the gaps
+    {
+        let mut files: Vec<(&str, Vec<u8>)> = Vec::new();
+        for i in 0..6 {
+            let name: &'static str = Box::leak(format!("big_{i:02}.bin").into_boxed_str());
+            let content: Vec<u8> = (0..34_000u32).map(|j| ((i * 41 + j * 11) % 256) as u8).collect();
+            files.push((name, content));
+        }
+        for i in 0..12 {
+            let name: &'static str = Box::leak(format!("small_{i:02}.txt").into_boxed_str());
+            // ~2-5KB each, random-ish sizes
+            let size = 2000 + (i * 271) % 3000;
+            let content: Vec<u8> = (0..size).map(|j| ((i * 19 + j * 7) % 256) as u8).collect();
+            files.push((name, content));
+        }
+        sample!("chunking_mixed_half", files);
+    }
+
+    // 3. Files at exactly varying fractions of bucket size (1/3, 1/2+, 2/3)
+    //    to create irregular gap patterns
+    {
+        let files: Vec<(&str, Vec<u8>)> = vec![
+            ("third_a.bin", vec![0xAA; 20_000]),  // ~1/3 bucket
+            ("third_b.bin", vec![0xBB; 20_000]),  // ~1/3 bucket (fits with third_a)
+            ("half_plus_a.bin", vec![0xCC; 35_000]),  // just over 1/2
+            ("third_c.bin", vec![0xDD; 20_000]),  // ~1/3 (can it fit with half_plus?)
+            ("half_plus_b.bin", vec![0xEE; 35_000]),  // just over 1/2
+            ("half_plus_c.bin", vec![0xFF; 35_000]),  // just over 1/2
+            ("quarter_a.bin", vec![0x11; 15_000]),  // ~1/4
+            ("quarter_b.bin", vec![0x22; 15_000]),  // ~1/4
+            ("quarter_c.bin", vec![0x33; 15_000]),  // ~1/4
+            ("tiny.bin", vec![0x44; 500]),          // tiny filler
+        ];
+        sample!("chunking_mixed_fractions", files);
+    }
+
+    // 4. Near-max files (~58KB) that barely fit one per bucket, with small
+    //    files that can only squeeze into leftover scraps
+    {
+        let mut files: Vec<(&str, Vec<u8>)> = Vec::new();
+        for i in 0..4 {
+            let name: &'static str = Box::leak(format!("huge_{i}.bin").into_boxed_str());
+            let content: Vec<u8> = (0..58_000u32).map(|j| ((i * 53 + j * 3) % 256) as u8).collect();
+            files.push((name, content));
+        }
+        for i in 0..20 {
+            let name: &'static str = Box::leak(format!("crumb_{i:02}.txt").into_boxed_str());
+            let content: Vec<u8> = (0..200u32).map(|j| ((i * 23 + j) % 256) as u8).collect();
+            files.push((name, content));
+        }
+        sample!("chunking_near_max", files);
+    }
+
+    // 5. Many half-plus files with random sub-half files — larger scale stress
+    {
+        let mut files: Vec<(&str, Vec<u8>)> = Vec::new();
+        for i in 0..10 {
+            let name: &'static str = Box::leak(format!("block_{i:02}.bin").into_boxed_str());
+            // Vary slightly around 33KB to create different gap sizes
+            let size = 31_000 + (i * 997) % 5000;
+            let content: Vec<u8> = (0..size as u32).map(|j| ((i as u32 * 43 + j * 17) % 256) as u8).collect();
+            files.push((name, content));
+        }
+        for i in 0..15 {
+            let name: &'static str = Box::leak(format!("fill_{i:02}.dat").into_boxed_str());
+            // Random sizes from 500B to 25KB
+            let size = 500 + (i * 1733) % 25_000;
+            let content: Vec<u8> = (0..size as u32).map(|j| ((i as u32 * 31 + j * 9) % 256) as u8).collect();
+            files.push((name, content));
+        }
+        sample!("chunking_stress", files);
+    }
+
     // Print summary
     println!("\nGenerated {} sample files:\n", generated.len());
     println!("{:<30} {:>10} {}", "Name", "Size", "Description");
