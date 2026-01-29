@@ -125,8 +125,15 @@ fn perceptual_dist(a: Oklab, b: Oklab) -> f32 {
     let dl = a.l - b.l;
     let da = a.a - b.a;
     let db = a.b - b.b;
-    // Weight lightness 2× to bias sorting toward monotonic lightness,
-    // producing colormaps more readable in grayscale.
+    (dl * dl + da * da + db * db).sqrt()
+}
+
+/// Like `perceptual_dist` but weights lightness 2× to bias sorting toward
+/// monotonic lightness, producing orderings more readable in grayscale.
+fn sorting_dist(a: Oklab, b: Oklab) -> f32 {
+    let dl = a.l - b.l;
+    let da = a.a - b.a;
+    let db = a.b - b.b;
     (2.0 * dl * dl + da * da + db * db).sqrt()
 }
 
@@ -175,8 +182,8 @@ pub fn sort_colors(colors: &[RGB8]) -> Vec<RGB8> {
                 .iter()
                 .enumerate()
                 .min_by(|(_, &a), (_, &b)| {
-                    perceptual_dist(last, ok[a])
-                        .partial_cmp(&perceptual_dist(last, ok[b]))
+                    sorting_dist(last, ok[a])
+                        .partial_cmp(&sorting_dist(last, ok[b]))
                         .unwrap()
                 })
                 .unwrap();
@@ -192,7 +199,7 @@ pub fn sort_colors(colors: &[RGB8]) -> Vec<RGB8> {
 fn path_cost(order: &[usize], colors: &[Oklab]) -> f32 {
     order
         .windows(2)
-        .map(|w| perceptual_dist(colors[w[0]], colors[w[1]]))
+        .map(|w| sorting_dist(colors[w[0]], colors[w[1]]))
         .sum()
 }
 
