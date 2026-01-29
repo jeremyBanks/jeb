@@ -52,7 +52,7 @@ EDITOR = []
 [dependencies.image]
 version = "0.25.9"
 default-features = false
-features = ["png"]
+features = ["png", "gif", "bmp"]
 
 [dev-dependencies]
 ureq = "2"

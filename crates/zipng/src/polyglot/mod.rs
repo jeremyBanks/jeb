@@ -163,12 +163,13 @@ fn needs_internal_terminator(body_len: usize, row_width: usize) -> bool {
 /// This row contains the empty final DEFLATE block (BFINAL=1, LEN=0, NLEN=0xFFFF).
 /// The filter byte (0x01 for Sub) is added separately by add_smart_filter_bytes.
 ///
-/// With Sub filter, the decoded values are:
+/// With Sub filter (bpp=1), the decoded values are:
 /// - decoded[0] = raw[0] = 0x00
 /// - decoded[1] = raw[1] + decoded[0] = 0x00
 /// - decoded[2] = raw[2] + decoded[1] = 0xFF
 /// - decoded[3] = raw[3] + decoded[2] = 0xFE (0xFF + 0xFF wrapped)
-/// - decoded[4..] = 0 (if we set raw[4] = 0x02, raw[5..] = 0)
+/// - decoded[4] = raw[4] + decoded[3] = 0x02 + 0xFE = 0x00 (correction cancels sum)
+/// - decoded[5..] = 0
 fn create_terminator_row(row_width: usize, bytes_per_pixel: usize) -> Vec<u8> {
     let mut row = vec![0u8; row_width];
     // DEFLATE empty final block: LEN=0, NLEN=0xFFFF
@@ -191,9 +192,12 @@ fn create_terminator_row(row_width: usize, bytes_per_pixel: usize) -> Vec<u8> {
     //   Pixel 2 correction at byte 6: filtered = (0-0xFF, 0-0, 0-0xFF) = (1,0,1)
     if row_width > 4 {
         let bpp = bytes_per_pixel.max(1);
-        // Simulate Sub filter reconstruction for the first few bytes to find
-        // what actual values result from the terminator bytes + zeros
-        let sim_len = (bpp * 3).min(row_width); // enough for 2-3 pixels
+        // Find the first pixel boundary at or after byte 4 where we can insert correction
+        let first_corr = if 4 % bpp == 0 { 4 } else { (4 / bpp + 1) * bpp };
+        // Simulate Sub filter reconstruction up to the correction point.
+        // Must cover at least first_corr bytes so we know the accumulated values
+        // that the correction needs to cancel.
+        let sim_len = first_corr.min(row_width);
         let mut actual = vec![0u8; sim_len];
         for i in 0..sim_len.min(4) {
             actual[i] = row[i]; // terminator bytes
@@ -201,8 +205,6 @@ fn create_terminator_row(row_width: usize, bytes_per_pixel: usize) -> Vec<u8> {
         for i in bpp..sim_len {
             actual[i] = actual[i].wrapping_add(actual[i - bpp]);
         }
-        // Find the first pixel boundary at or after byte 4 where we can insert correction
-        let first_corr = if 4 % bpp == 0 { 4 } else { (4 / bpp + 1) * bpp };
         // Set correction bytes to cancel the accumulated values
         for c in 0..bpp {
             let pos = first_corr + c;

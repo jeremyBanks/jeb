@@ -20,3 +20,11 @@ This means:
 - No squashing, reordering, or modifying existing commits
 
 If you need to fix something, create a NEW commit. History is sacred.
+
+## Image Comparison
+
+When comparing image files (e.g. verifying PNG output), use the image_diff example:
+
+    cargo run --example image_diff -- <old> <new>
+
+This provides a text summary of differences suitable for CI/agent use.
