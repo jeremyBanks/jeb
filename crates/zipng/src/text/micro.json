@@ -8,7 +8,7 @@
   "b": 0,
   "rows": [
     "abcdefghijklmnopqrstuvwxyz",
-    "1234567890'\"^-=_+[]{}()/\\|"
+    "1234567890'\"^-=_+[]{}()\\/|"
   ],
   "name": "Micro Mono"
 }

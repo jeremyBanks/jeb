@@ -99,11 +99,8 @@ impl From<IndexMap<Vec<u8>, Vec<u8>>> for Files {
     }
 }
 
-/// Threshold for switching from indexed color to RGB (1 MiB)
-const RGB_THRESHOLD: usize = 1024 * 1024;
-
-/// Threshold for switching from RGB to RGBA (3 MiB)
-const RGBA_THRESHOLD: usize = 3 * 1024 * 1024;
+/// Threshold for switching from indexed color to RGBA (2 MiB)
+const RGBA_THRESHOLD: usize = 2 * 1024 * 1024;
 
 /// All available palettes for deterministic selection.
 /// Only sequential palettes are used, ensuring a smooth monotonic color progression
@@ -131,7 +128,7 @@ static ALL_PALETTES: &[&[u8]] = &[
 ///
 /// Files are sorted lexicographically by path. The color mode is chosen based on
 /// total data size:
-/// - For data > 1 MiB: RGBA mode for better density (4 bytes per pixel)
+/// - For data > 2 MiB: RGBA mode for better density (4 bytes per pixel)
 /// - For smaller data: Indexed color with a deterministically-selected palette
 ///   based on a hash of the input data
 pub fn zipng(files: &Files) -> Vec<u8> {
@@ -156,21 +153,12 @@ pub fn zipng_with_palette(files: &Files, palette: Option<&[u8]>) -> Vec<u8> {
     let total_size: usize = sorted_files.iter().map(|(_, v)| v.len()).sum();
 
     if total_size > RGBA_THRESHOLD {
-        // Very large data (>3 MiB): use RGBA for best density (4 bytes/pixel)
+        // Large data (>2 MiB): use RGBA for best density (4 bytes/pixel)
         polyglot::build_polyglot(
             &sorted_files,
             0,
             crate::png::BitDepth::EightBit,
             crate::png::ColorType::RedGreenBlueAlpha,
-            None,
-        )
-    } else if total_size > RGB_THRESHOLD {
-        // Large data (1-3 MiB): use RGB for good density (3 bytes/pixel)
-        polyglot::build_polyglot(
-            &sorted_files,
-            0,
-            crate::png::BitDepth::EightBit,
-            crate::png::ColorType::RedGreenBlue,
             None,
         )
     } else {

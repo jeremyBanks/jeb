@@ -169,20 +169,108 @@ fn needs_internal_terminator(body_len: usize, row_width: usize) -> bool {
 /// - decoded[2] = raw[2] + decoded[1] = 0xFF
 /// - decoded[3] = raw[3] + decoded[2] = 0xFE (0xFF + 0xFF wrapped)
 /// - decoded[4..] = 0 (if we set raw[4] = 0x02, raw[5..] = 0)
-fn create_terminator_row(row_width: usize) -> Vec<u8> {
+fn create_terminator_row(row_width: usize, bytes_per_pixel: usize) -> Vec<u8> {
     let mut row = vec![0u8; row_width];
     // DEFLATE empty final block: LEN=0, NLEN=0xFFFF
     row[0] = 0x00; // LEN low
     row[1] = 0x00; // LEN high
     row[2] = 0xFF; // NLEN low
     row[3] = 0xFF; // NLEN high
-    // With Sub filter, running sum after byte 3 is 0xFE
-    // To make byte 4 decode to 0: raw[4] = (0 - 0xFE) mod 256 = 0x02
+
+    // Sub filter correction: cancel the running sum so remaining pixels decode to 0.
+    // With Sub filter (bpp = bytes_per_pixel):
+    //   actual[i] = filtered[i] + actual[i - bpp]  (mod 256)
+    // First pixel (bytes 0..bpp) has no predecessor, so actual = filtered directly.
+    //
+    // For bpp=1: running sum after byte 3 = 0+0+FF+FF = 0xFE mod 256.
+    //   Correction at byte 4: (0 - 0xFE) mod 256 = 0x02
+    // For bpp=4 (RGBA): first pixel = (0,0,0xFF,0xFF) = opaque blue (unavoidable).
+    //   Pixel 1 correction: filtered = (0-0, 0-0, 0-0xFF, 0-0xFF) = (0,0,1,1)
+    // For bpp=3 (RGB): first pixel = (0,0,0xFF). Pixel 1 starts at byte 3.
+    //   actual[3..6] with filtered (0xFF,0,0) = (0xFF+0, 0+0, 0+0xFF) = (0xFF,0,0xFF)
+    //   Pixel 2 correction at byte 6: filtered = (0-0xFF, 0-0, 0-0xFF) = (1,0,1)
     if row_width > 4 {
-        row[4] = 0x02;
+        let bpp = bytes_per_pixel.max(1);
+        // Simulate Sub filter reconstruction for the first few bytes to find
+        // what actual values result from the terminator bytes + zeros
+        let sim_len = (bpp * 3).min(row_width); // enough for 2-3 pixels
+        let mut actual = vec![0u8; sim_len];
+        for i in 0..sim_len.min(4) {
+            actual[i] = row[i]; // terminator bytes
+        }
+        for i in bpp..sim_len {
+            actual[i] = actual[i].wrapping_add(actual[i - bpp]);
+        }
+        // Find the first pixel boundary at or after byte 4 where we can insert correction
+        let first_corr = if 4 % bpp == 0 { 4 } else { (4 / bpp + 1) * bpp };
+        // Set correction bytes to cancel the accumulated values
+        for c in 0..bpp {
+            let pos = first_corr + c;
+            if pos < row_width {
+                let prev_actual = if first_corr >= bpp { actual.get(first_corr - bpp + c).copied().unwrap_or(0) } else { 0 };
+                row[pos] = 0u8.wrapping_sub(prev_actual);
+            }
+        }
     }
-    // Remaining bytes are 0, which decode to 0 under Sub filter
     row
+}
+
+/// Generate progressively shorter file size string candidates by truncating
+/// trailing decimals (rounding up if any truncated digits are non-zero).
+/// Returns candidates from most precise to least precise.
+///
+/// Example for 1,168 bytes (1.14KiB):
+///   ["1.14KiB", "1.2KiB", "2KiB"]
+fn format_file_size_candidates(size: usize) -> Vec<String> {
+    let full = format_file_size(size);
+    let mut candidates = vec![full.clone()];
+
+    if let Some(dot_pos) = full.find('.') {
+        let suffix_start = full.find(|c: char| c.is_alphabetic()).unwrap_or(full.len());
+        let suffix = &full[suffix_start..];
+        let integer_part = &full[..dot_pos];
+        let decimal_part = &full[dot_pos + 1..suffix_start];
+
+        // Progressively truncate decimals from the right
+        for keep in (0..decimal_part.len()).rev() {
+            let truncated_digits = &decimal_part[keep..];
+            let has_nonzero = truncated_digits.chars().any(|c| c != '0');
+
+            if keep == 0 {
+                // No decimals left - just integer + suffix
+                let int_val: u64 = integer_part.parse().unwrap_or(0);
+                let rounded = if has_nonzero { int_val + 1 } else { int_val };
+                candidates.push(format!("{}{}", rounded, suffix));
+            } else {
+                let mut kept_chars: Vec<u8> = decimal_part[..keep].bytes().collect();
+                if has_nonzero {
+                    // Round up: increment last kept digit, propagate carry
+                    let mut carry = true;
+                    for d in kept_chars.iter_mut().rev() {
+                        if carry {
+                            if *d == b'9' {
+                                *d = b'0';
+                            } else {
+                                *d += 1;
+                                carry = false;
+                            }
+                        }
+                    }
+                    if carry {
+                        // Carry overflowed all decimal digits (e.g. .99 → 1.0)
+                        // Increment integer part instead
+                        let int_val: u64 = integer_part.parse().unwrap_or(0);
+                        candidates.push(format!("{}{}", int_val + 1, suffix));
+                        continue;
+                    }
+                }
+                let kept_str: String = kept_chars.iter().map(|&b| b as char).collect();
+                candidates.push(format!("{}.{}{}", integer_part, kept_str, suffix));
+            }
+        }
+    }
+
+    candidates
 }
 
 /// Format a file size with max 3 significant digits.
@@ -244,7 +332,7 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
     // If text overflows: right-align, but always leave 1px at right edge for halo
     const MARGIN: usize = 4;
     const RIGHT_PADDING: usize = 1; // Always leave 1px at right for halo
-    const MIN_GAP: usize = 8; // Minimum gap between filename and size
+    let min_gap = font.max_ink_width() + 3; // Dynamic gap: one full character width + 3px padding
     let pixel_width = row_width / bytes_per_pixel.max(1);
     let usable_width = pixel_width - RIGHT_PADDING;
 
@@ -263,17 +351,30 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
         pixel_width // Filename overflows, no room for size
     };
 
-    // Try to render file size right-aligned if there's enough space
-    let size_str = format_file_size(file_size);
-    let (size_canvas, size_char_positions, size_actual_width) = size_font.layout_text(&size_str);
+    // Try progressively shorter file size candidates until one fits
+    let candidates = format_file_size_candidates(file_size);
+    let mut render_size = false;
+    let mut size_str = String::new();
+    let mut size_char_positions: Vec<(usize, i32)> = Vec::new();
+    let mut size_actual_width: usize = 0;
+    let mut size_start_x: i32 = 0;
+
+    for candidate in &candidates {
+        let (_canvas, positions, width) = size_font.layout_text(candidate);
+        let start = usable_width as i32 - width as i32 - MARGIN as i32;
+        if start >= 0 && start as usize >= filename_end_x.saturating_add(min_gap) {
+            render_size = true;
+            size_str = candidate.clone();
+            size_char_positions = positions;
+            size_actual_width = width;
+            size_start_x = start;
+            break;
+        }
+    }
 
     let size_lookups: Vec<Option<fonts::GlyphLookup<'_>>> = size_str.chars()
         .map(|c| size_font.get_glyph(c))
         .collect();
-
-    // Check if size fits with minimum gap
-    let size_start_x = usable_width as i32 - size_actual_width as i32 - MARGIN as i32;
-    let render_size = size_start_x >= 0 && size_start_x as usize >= filename_end_x.saturating_add(MIN_GAP);
 
     // First, render text to a temporary bitmap to know where pixels are
     // Bitmap is in pixel coordinates (pixel_width wide)
@@ -332,13 +433,15 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
 
     // Track per-pixel-column whether the stretch is still active
     let mut stretch_active: Vec<bool> = vec![true; pixel_width];
-    // rows_data is in bytes (row_width per row), initialized to opaque black for RGBA
+    // rows_data is in bytes (row_width per row), initialized to opaque black for RGBA.
+    // Label rows use None filter (0x00), so pre-filtered data = raw pixel values.
+    // Only the terminator row (first row, if is_terminator) uses Sub filter,
+    // and it is overwritten below by create_terminator_row.
     let mut rows_data: Vec<Vec<u8>> = if bytes_per_pixel > 1 {
-        // Initialize each row with opaque black pixels
         let mut rows = Vec::with_capacity(label_rows);
         for _ in 0..label_rows {
             let mut row = Vec::with_capacity(row_width);
-            for px in 0..pixel_width {
+            for _px in 0..(row_width / bytes_per_pixel) {
                 for c in 0..bytes_per_pixel {
                     row.push(if c == bytes_per_pixel - 1 { 0xFF } else { 0x00 });
                 }
@@ -406,24 +509,11 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
         }
     }
 
-    // If this is a terminator label, transform the first row for Sub filter
+    // If this is a terminator label, transform the first row for Sub filter.
+    // Use the same logic as create_terminator_row for consistency.
     if is_terminator {
-        // First row becomes terminator row with DEFLATE header
-        // Bytes 0-3: empty final block (LEN=0, NLEN=0xFFFF)
-        // Bytes 4+: pre-filtered so Sub filter decodes to the desired visual (black)
-        rows_data[0][0] = 0x00; // LEN low
-        rows_data[0][1] = 0x00; // LEN high
-        rows_data[0][2] = 0xFF; // NLEN low
-        rows_data[0][3] = 0xFF; // NLEN high
-        // With Sub filter, running sum after byte 3 is 0xFE
-        // To make byte 4 decode to 0: raw[4] = (0 - 0xFE) mod 256 = 0x02
-        if row_width > 4 {
-            rows_data[0][4] = 0x02;
-            // Remaining bytes stay 0, which decode to 0 under Sub filter
-            for x in 5..row_width {
-                rows_data[0][x] = 0x00;
-            }
-        }
+        let terminator = create_terminator_row(row_width, bytes_per_pixel);
+        rows_data[0] = terminator;
     }
 
     // Output all rows
@@ -624,7 +714,7 @@ pub fn build_polyglot(
     let height = if pixel_data.is_empty() { 1 } else { (pixel_data.len() + row_width - 1) / row_width };
 
     let mut padded = pixel_data.clone();
-    resize_with_opaque_black(&mut padded, height * row_width, bytes_per_pixel);
+    resize_with_opaque_padding(&mut padded, height * row_width, bytes_per_pixel);
 
     // Calculate effective pixel width based on bit depth
     let bits_per_pixel = bit_depth.bits_per_sample() * color_mode.samples_per_pixel();
@@ -746,7 +836,17 @@ fn calculate_file_size(name: &[u8], body: &[u8], row_width: usize, font: Option<
 /// For indexed mode (bytes_per_pixel == 1), fills with 0x00.
 /// For RGB/RGBA (bytes_per_pixel > 1), fills with the pattern [0x00, ..., 0xFF]
 /// per pixel so that the alpha channel is opaque (0xFF).
-fn resize_with_opaque_black(data: &mut Vec<u8>, new_len: usize, bytes_per_pixel: usize) {
+/// Resize data with opaque black padding for RGBA, or zero padding for indexed.
+///
+/// The data buffer holds pre-filtered pixel data (filter is applied separately by
+/// `add_smart_filter_bytes`). Padding rows always use None filter (0x00), so the
+/// pre-filtered data equals the raw pixel values. For RGBA, we fill with
+/// `[0x00, 0x00, 0x00, 0xFF]` per pixel (opaque black). For indexed (bpp=1),
+/// we fill with 0x00 (palette index 0 = black in the diagnostic palette).
+///
+/// Note: terminator rows use Sub filter (0x01) and are handled separately by
+/// `create_terminator_row`, NOT by this function.
+fn resize_with_opaque_padding(data: &mut Vec<u8>, new_len: usize, bytes_per_pixel: usize) {
     if new_len <= data.len() {
         data.truncate(new_len);
         return;
@@ -757,10 +857,11 @@ fn resize_with_opaque_black(data: &mut Vec<u8>, new_len: usize, bytes_per_pixel:
     }
     let old_len = data.len();
     data.reserve(new_len - old_len);
-    // Build one pixel pattern: [0x00, 0x00, ..., 0xFF] (last byte is alpha)
+    // Fill with opaque black: [0x00, ..., 0x00, 0xFF] per pixel.
+    // Since padding always starts at a row boundary and row_width is a multiple
+    // of bytes_per_pixel, the absolute byte index gives the correct channel position.
     for i in old_len..new_len {
-        let byte_in_pixel = i % bytes_per_pixel;
-        if byte_in_pixel == bytes_per_pixel - 1 {
+        if i % bytes_per_pixel == bytes_per_pixel - 1 {
             data.push(0xFF); // alpha = opaque
         } else {
             data.push(0x00);
@@ -937,23 +1038,23 @@ fn build_aligned_data(
         if pending_terminator && !label_is_terminator {
             let terminator_row = data.len() / row_width;
             terminator_rows.insert(terminator_row);
-            let terminator = create_terminator_row(row_width);
+            let terminator = create_terminator_row(row_width, bytes_per_pixel);
             data.extend_from_slice(&terminator);
         }
         // Note: pending_terminator will be set at the end of this iteration
 
         // Add spacing BEFORE this file (after any terminator)
         if spacing_rows > 0 {
-            // Align to row first, then add spacing rows (opaque black)
+            // Align to row first, then add spacing rows (zero-filled)
             let padding = (row_width - (data.len() % row_width)) % row_width;
             let new_len = data.len() + padding + spacing_rows * row_width;
-            resize_with_opaque_black(&mut data, new_len, bytes_per_pixel);
+            resize_with_opaque_padding(&mut data, new_len, bytes_per_pixel);
         }
 
         // Align to row boundary
         let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
         let new_len = data.len() + padding_to_row;
-        resize_with_opaque_black(&mut data, new_len, bytes_per_pixel);
+        resize_with_opaque_padding(&mut data, new_len, bytes_per_pixel);
 
         // When splitting, place label BEFORE the boundary so it appears visually
         // adjacent to the file. The IDAT boundary (5-byte deflate header) between
@@ -984,7 +1085,7 @@ fn build_aligned_data(
         if crosses_idat_boundary(start_filtered, end_filtered) {
             // Pad to next boundary-aligned position
             let boundary_target = next_boundary_aligned_pos(data.len(), row_width);
-            resize_with_opaque_black(&mut data, boundary_target, bytes_per_pixel);
+            resize_with_opaque_padding(&mut data, boundary_target, bytes_per_pixel);
         }
 
         // Place the file
@@ -1043,7 +1144,7 @@ fn build_aligned_data(
     if pending_terminator {
         let terminator_row = data.len() / row_width;
         terminator_rows.insert(terminator_row);
-        let terminator = create_terminator_row(row_width);
+        let terminator = create_terminator_row(row_width, bytes_per_pixel);
         data.extend_from_slice(&terminator);
     }
 
@@ -1054,11 +1155,11 @@ fn build_aligned_data(
         // Align to row boundary first
         let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
         let new_len = data.len() + padding_to_row;
-        resize_with_opaque_black(&mut data, new_len, bytes_per_pixel);
+        resize_with_opaque_padding(&mut data, new_len, bytes_per_pixel);
 
         // Add gap rows before trailing color map
         let new_len = data.len() + trailing_gap_rows * row_width;
-        resize_with_opaque_black(&mut data, new_len, bytes_per_pixel);
+        resize_with_opaque_padding(&mut data, new_len, bytes_per_pixel);
 
         if bytes_per_pixel > 1 {
             // RGBA mode: single row with reversed 6-color cycle

@@ -501,6 +501,41 @@ fn main() -> Result<(), panic> {
     }
 
     // =========================================================================
+    // RGBA with labels (2-3M content: triggers RGBA mode but stays under label threshold)
+    // =========================================================================
+
+    {
+        let mut files: Vec<(&str, Vec<u8>)> = vec![
+            ("src/lib.rs", include_bytes!("../src/lib.rs").to_vec()),
+            ("src/checksums.rs", include_bytes!("../src/checksums.rs").to_vec()),
+            ("src/deflate.rs", include_bytes!("../src/deflate.rs").to_vec()),
+            ("src/zlib.rs", include_bytes!("../src/zlib.rs").to_vec()),
+            ("src/png.rs", include_bytes!("../src/png.rs").to_vec()),
+            ("src/zip.rs", include_bytes!("../src/zip.rs").to_vec()),
+            ("src/io.rs", include_bytes!("../src/io.rs").to_vec()),
+            ("docs/README.md", include_bytes!("../README.md").to_vec()),
+            ("docs/CLAUDE.md", include_bytes!("../CLAUDE.md").to_vec()),
+            ("config/Cargo.toml", include_bytes!("../Cargo.toml").to_vec()),
+        ];
+
+        // Add padding files to reach ~2.5 MiB total content
+        let content_so_far: usize = files.iter().map(|(_, v)| v.len()).sum();
+        let target = 2 * 1024 * 1024 + 512 * 1024; // 2.5 MiB
+        if content_so_far < target {
+            let remaining = target - content_so_far;
+            let chunk_size = 50_000;
+            let chunks = (remaining + chunk_size - 1) / chunk_size;
+            for i in 0..chunks {
+                let size = if i < chunks - 1 { chunk_size } else { remaining - i * chunk_size };
+                let name: &'static str = Box::leak(format!("padding/pad_{i:03}.bin").into_boxed_str());
+                files.push((name, vec![0x42; size]));
+            }
+        }
+
+        sample!("rgba_with_labels", files);
+    }
+
+    // =========================================================================
     // TIER 4 — Huge sample (>3M content, no labels)
     // Target ~3.5MB total content. Everything multiplied across snapshots.
     // =========================================================================
@@ -610,6 +645,20 @@ fn main() -> Result<(), panic> {
             ("parent/query.rs", include_bytes!("../../../src/query.rs").as_slice()),
         ] {
             files.push((name.to_string(), data.to_vec()));
+        }
+
+        // Add padding files to push total content over 3 MiB (label threshold)
+        let content_so_far: usize = files.iter().map(|(_, v)| v.len()).sum();
+        let target = 3 * 1024 * 1024 + 1024; // just over 3 MiB
+        if content_so_far < target {
+            let remaining = target - content_so_far;
+            // Split into ~50KB chunks (under MAX_FILE_CONTENT_SIZE)
+            let chunk_size = 50_000;
+            let chunks = (remaining + chunk_size - 1) / chunk_size;
+            for i in 0..chunks {
+                let size = if i < chunks - 1 { chunk_size } else { remaining - i * chunk_size };
+                files.push((format!("padding/pad_{i:03}.bin"), vec![0x42; size]));
+            }
         }
 
         // Convert String keys to &str via leaked strings (needed for create_sample)

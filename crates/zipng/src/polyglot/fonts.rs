@@ -61,7 +61,8 @@ impl BitmapFont {
 
     /// Compute the space bar width: half (rounded up) of the maximum ink width
     /// across all non-space glyphs. Returns at least 1.
-    fn space_bar_width(&self) -> usize {
+    /// Maximum ink width across all non-space glyphs.
+    pub fn max_ink_width(&self) -> usize {
         let mut max_ink = 0usize;
         for (c, glyph) in &self.glyphs {
             if *c == ' ' { continue; }
@@ -81,7 +82,11 @@ impl BitmapFont {
                 max_ink = max_ink.max(max_col - min_col + 1);
             }
         }
-        if max_ink == 0 { return 1; }
+        max_ink.max(1)
+    }
+
+    fn space_bar_width(&self) -> usize {
+        let max_ink = self.max_ink_width();
         (max_ink / 2).max(1)
     }
 
