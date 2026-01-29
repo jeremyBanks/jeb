@@ -4,15 +4,54 @@
 //! generates a 256-entry RGB palette where the perceptual distance between
 //! adjacent entries is uniform throughout.
 //!
-//! The algorithm:
-//! 1. Convert all control points to Oklab.
-//! 2. Compute cumulative perceptual arc-length between consecutive control
+//! ## Algorithm
+//!
+//! 1. Optionally reorder control points for global coherence (see
+//!    [`sort_colors`]).
+//! 2. Convert all control points to Oklab.
+//! 3. Compute cumulative perceptual arc-length between consecutive control
 //!    points (using many small linear steps in Oklab).
-//! 3. Redistribute the 256 output samples so that each step covers the same
+//! 4. Redistribute the 256 output samples so that each step covers the same
 //!    perceptual distance along the polyline.
 //!
 //! If only one color is provided, black is prepended and white is appended so
 //! the result is a usable gradient rather than a solid fill.
+//!
+//! ## Sorting / reordering strategies
+//!
+//! When users provide unordered colors, [`sort_colors`] can reorder them to
+//! produce a more coherent gradient. The current implementation uses a shortest
+//! Hamiltonian path (open TSP) via brute-force permutation, which finds the
+//! ordering that minimizes total perceptual arc-length in Oklab. This is
+//! feasible because users typically provide few control points (brute-force is
+//! instant for ≤10 colors, i.e. 10! = 3.6M permutations).
+//!
+//! ### Future options for alternative sort strategies
+//!
+//! The TSP distance function currently uses unweighted Oklab Euclidean
+//! distance. Several variations could be useful:
+//!
+//! - **Lightness-weighted distance**: `sqrt(w_L * ΔL² + Δa² + Δb²)` with
+//!   `w_L > 1` (e.g. 2–4) biases the path to avoid lightness reversals. This
+//!   produces colormaps that are more useful for data visualization (readable
+//!   in grayscale, accessible to colorblind viewers) at the cost of
+//!   potentially longer chromatic jumps. As `w_L → ∞` this converges to a
+//!   pure lightness sort.
+//!
+//! - **Oklch (L, C) distance**: Use the polar form of Oklab and compute
+//!   distance in just the lightness-chroma plane, ignoring hue entirely for
+//!   ordering. This produces paths monotonic in lightness/saturation while
+//!   allowing hue to vary freely — a principled decomposition that avoids
+//!   an arbitrary weight parameter.
+//!
+//! - **Pure lightness sort**: Simply sort by Oklab L. The simplest option
+//!   and guarantees monotonic lightness, but ignores chromatic relationships
+//!   entirely.
+//!
+//! - **Principal component ordering**: Project colors onto their first
+//!   principal component in Oklab and sort by that. Finds the "natural axis"
+//!   of the color set. Works well when colors roughly form a line or arc, but
+//!   can produce odd results for clustered color sets.
 
 use {
     oklab::{self, Oklab},
@@ -46,6 +85,89 @@ fn perceptual_dist(a: Oklab, b: Oklab) -> f32 {
     let da = a.a - b.a;
     let db = a.b - b.b;
     (dl * dl + da * da + db * db).sqrt()
+}
+
+/// Reorder colors to minimize total perceptual arc-length (shortest
+/// Hamiltonian path / open TSP in Oklab space).
+///
+/// For ≤10 colors this uses brute-force over all permutations. For more than
+/// 10 it falls back to a greedy nearest-neighbor heuristic starting from the
+/// darkest color.
+///
+/// The returned ordering produces the smoothest possible gradient through the
+/// given colors using unweighted Oklab Euclidean distance. See the module docs
+/// for alternative weighting strategies.
+pub fn sort_colors(colors: &[RGB8]) -> Vec<RGB8> {
+    if colors.len() <= 2 {
+        return colors.to_vec();
+    }
+
+    let ok: Vec<Oklab> = colors.iter().map(|&c| rgb_to_ok(c)).collect();
+    let n = ok.len();
+
+    let best_order = if n <= 10 {
+        // Brute-force: try all permutations, keep the shortest path.
+        let mut indices: Vec<usize> = (0..n).collect();
+        let mut best: Option<(f32, Vec<usize>)> = None;
+        permutations(&mut indices, n, &mut |perm| {
+            let cost = path_cost(perm, &ok);
+            if best.as_ref().map_or(true, |(b, _)| cost < *b) {
+                best = Some((cost, perm.to_vec()));
+            }
+        });
+        best.unwrap().1
+    } else {
+        // Greedy nearest-neighbor from the darkest color.
+        let mut remaining: Vec<usize> = (0..n).collect();
+        let start = remaining
+            .iter()
+            .copied()
+            .min_by(|&a, &b| ok[a].l.partial_cmp(&ok[b].l).unwrap())
+            .unwrap();
+        remaining.retain(|&i| i != start);
+        let mut order = vec![start];
+        while !remaining.is_empty() {
+            let last = ok[*order.last().unwrap()];
+            let (best_idx, _) = remaining
+                .iter()
+                .enumerate()
+                .min_by(|(_, &a), (_, &b)| {
+                    perceptual_dist(last, ok[a])
+                        .partial_cmp(&perceptual_dist(last, ok[b]))
+                        .unwrap()
+                })
+                .unwrap();
+            order.push(remaining.remove(best_idx));
+        }
+        order
+    };
+
+    best_order.iter().map(|&i| colors[i]).collect()
+}
+
+/// Total path cost for a given ordering of indices in Oklab space.
+fn path_cost(order: &[usize], colors: &[Oklab]) -> f32 {
+    order
+        .windows(2)
+        .map(|w| perceptual_dist(colors[w[0]], colors[w[1]]))
+        .sum()
+}
+
+/// Heap's algorithm for generating all permutations, calling `f` on each.
+fn permutations(arr: &mut Vec<usize>, k: usize, f: &mut impl FnMut(&[usize])) {
+    if k == 1 {
+        f(arr);
+        return;
+    }
+    permutations(arr, k - 1, f);
+    for i in 0..k - 1 {
+        if k % 2 == 0 {
+            arr.swap(i, k - 1);
+        } else {
+            arr.swap(0, k - 1);
+        }
+        permutations(arr, k - 1, f);
+    }
 }
 
 /// Generate a perceptually uniform 256-color palette from the given control
@@ -191,6 +313,29 @@ mod tests {
         assert!(
             p90 < mean * 2.0,
             "perceptual uniformity violated: mean={mean}, p90={p90}"
+        );
+    }
+
+    #[test]
+    fn sort_produces_shorter_path() {
+        // Deliberately scrambled order.
+        let scrambled = vec![
+            RGB8::new(0xFF, 0xFF, 0xFF),
+            RGB8::new(0x00, 0x00, 0x00),
+            RGB8::new(0xFF, 0x00, 0x00),
+            RGB8::new(0x80, 0x80, 0x80),
+        ];
+        let sorted = sort_colors(&scrambled);
+
+        let cost = |cs: &[RGB8]| -> f32 {
+            cs.windows(2)
+                .map(|w| perceptual_dist(rgb_to_ok(w[0]), rgb_to_ok(w[1])))
+                .sum()
+        };
+
+        assert!(
+            cost(&sorted) <= cost(&scrambled),
+            "sorted path should be no longer than scrambled"
         );
     }
 }

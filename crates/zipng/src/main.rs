@@ -23,6 +23,8 @@ Options:
   -q                   Quiet mode - no output on success
   --colors <hex,...>   Custom palette from comma-separated hex RGB colors
                        (e.g. --colors ffffff,ff0000,000000)
+  --sort               Reorder --colors for smoothest gradient (shortest
+                       perceptual path through the colors)
   -h, --help           Show this help
 
 Examples:
@@ -47,6 +49,7 @@ fn main() -> ExitCode {
     let mut read_stdin = false;
     let mut quiet = false;
     let mut custom_colors: Option<Vec<RGB8>> = None;
+    let mut sort_colors = false;
 
     let mut i = 0;
     while i < args.len() {
@@ -88,6 +91,10 @@ fn main() -> ExitCode {
                     }
                 }
                 i += 2;
+            }
+            "--sort" => {
+                sort_colors = true;
+                i += 1;
             }
             arg if arg.starts_with('-') => {
                 eprintln!("Error: unknown option: {}", arg);
@@ -179,7 +186,14 @@ fn main() -> ExitCode {
 
     // Generate polyglot PNG+ZIP
     let custom_palette = custom_colors
-        .map(|colors| zipng::palettes::perceptual::generate(&colors));
+        .map(|colors| {
+            let colors = if sort_colors {
+                zipng::palettes::perceptual::sort_colors(&colors)
+            } else {
+                colors
+            };
+            zipng::palettes::perceptual::generate(&colors)
+        });
     let output = zipng::zipng_with_palette(&Files::from(files), custom_palette.as_deref());
 
     // Write output
