@@ -898,6 +898,31 @@ fn build_aligned_data(
         data.extend_from_slice(&terminator);
     }
 
+    // Append trailing gap + mirrored reverse color map at end of image.
+    // This mirrors the leading color map so the last pixel matches the first,
+    // second-last matches the second, etc.
+    {
+        let trailing_gap_rows: usize = if font.is_some() { 2 } else { 1 };
+        let trailing_color_map_rows = (256 + row_width - 1) / row_width;
+
+        // Align to row boundary first
+        let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
+        data.resize(data.len() + padding_to_row, 0);
+
+        // Add gap rows before trailing color map
+        data.resize(data.len() + trailing_gap_rows * row_width, 0);
+
+        // Generate forward color map, then reverse it to create mirror
+        let color_map_bytes = trailing_color_map_rows * row_width;
+        let mut forward: Vec<u8> = Vec::with_capacity(color_map_bytes);
+        let mut palette_counter: usize = 0;
+        for _ in 0..color_map_bytes {
+            forward.push(cycling_palette_index(&mut palette_counter));
+        }
+        forward.reverse();
+        data.extend_from_slice(&forward);
+    }
+
     (data, entries, terminator_rows)
 }
 
