@@ -231,8 +231,57 @@ fn audit_font(file_name: &str, json_data: &[u8], png_data: &[u8]) {
         }
     }
 
-    if dark_outside.is_empty() && clipped.is_empty() && bleeding.is_empty() {
-        println!("  All glyphs OK - no clipping or bleeding detected.");
+    // Check for overlapping glyph cells
+    let mut overlaps = Vec::new();
+    for (row_i, row_str_i) in meta.rows.iter().enumerate() {
+        for (col_i, ch_i) in row_str_i.chars().enumerate() {
+            let gx_i = meta.x + col_i * meta.dx;
+            let gy_i = meta.y + row_i * meta.dy;
+            for (row_j, row_str_j) in meta.rows.iter().enumerate() {
+                for (col_j, ch_j) in row_str_j.chars().enumerate() {
+                    if (row_j, col_j) <= (row_i, col_i) { continue; }
+                    let gx_j = meta.x + col_j * meta.dx;
+                    let gy_j = meta.y + row_j * meta.dy;
+                    // Check if cells overlap
+                    let x_overlap = gx_i < gx_j + meta.w && gx_j < gx_i + meta.w;
+                    let y_overlap = gy_i < gy_j + meta.h && gy_j < gy_i + meta.h;
+                    if x_overlap && y_overlap {
+                        overlaps.push((row_i, col_i, ch_i, row_j, col_j, ch_j));
+                    }
+                }
+            }
+        }
+    }
+    if !overlaps.is_empty() {
+        println!("  *** {} overlapping glyph cell pairs ***", overlaps.len());
+        for &(ri, ci, chi, rj, cj, chj) in overlaps.iter().take(20) {
+            println!("    '{}' (row={},col={}) overlaps '{}' (row={},col={})", chi, ri, ci, chj, rj, cj);
+        }
+        if overlaps.len() > 20 {
+            println!("    ... and {} more", overlaps.len() - 20);
+        }
+    }
+
+    // Check for empty non-space glyphs
+    let mut empty_glyphs = Vec::new();
+    for (row_idx, row_str) in meta.rows.iter().enumerate() {
+        for (col_idx, ch) in row_str.chars().enumerate() {
+            if ch == ' ' { continue; }
+            if !glyph_dark_pixels.contains_key(&(row_idx, col_idx)) {
+                empty_glyphs.push((row_idx, col_idx, ch));
+            }
+        }
+    }
+    if !empty_glyphs.is_empty() {
+        println!("  *** {} non-space glyphs with NO dark pixels ***", empty_glyphs.len());
+        for &(row, col, ch) in &empty_glyphs {
+            println!("    '{}' (U+{:04X}) row={} col={}", ch, ch as u32, row, col);
+        }
+    }
+
+    if dark_outside.is_empty() && clipped.is_empty() && bleeding.is_empty()
+        && overlaps.is_empty() && empty_glyphs.is_empty() {
+        println!("  All glyphs OK.");
     }
     println!();
 }
