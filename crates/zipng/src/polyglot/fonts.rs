@@ -191,42 +191,50 @@ pub static ALL_FONTS: &[&Lazy<BitmapFont>] = &[
 /// Maximum data size threshold for using labels at all.
 pub const MAX_LABEL_THRESHOLD: usize = 3 * 1024 * 1024; // 3 MiB
 
-/// Select a font based on total data size and a hash value for deterministic randomization.
+/// Font selection result: may use different fonts for filename vs file size.
+pub struct FontSelection {
+    /// Font used for the filename text.
+    pub name_font: &'static BitmapFont,
+    /// Font used for the file size text (may differ from name_font).
+    pub size_font: &'static BitmapFont,
+}
+
+impl FontSelection {
+    /// The taller of the two fonts, used for label height calculations.
+    pub fn max_height(&self) -> usize {
+        self.name_font.height.max(self.size_font.height)
+    }
+}
+
+/// Select fonts based on total data size and a hash value for deterministic randomization.
 /// Returns None if data is too large for labels.
 ///
-/// The hash is used to pseudo-randomly select among fonts that fit within the size constraints.
-/// Larger data sizes restrict which fonts can be used (smaller fonts only).
-pub fn select_font(total_size: usize, hash: u32) -> Option<&'static BitmapFont> {
+/// - ≤512 KiB: filename uses one of SWISS/SIXTH/SKY/MONTE (hash-selected), size uses SUGIMORI
+/// - ≤1 MiB: both use MINI
+/// - ≤3 MiB: both use MICRO
+/// - >3 MiB: no labels
+pub fn select_font(total_size: usize, hash: u32) -> Option<FontSelection> {
     if total_size > MAX_LABEL_THRESHOLD {
-        return None; // Too large for labels
-    }
-
-    // Filter fonts that fit the size constraint
-    // Larger fonts need more vertical space, so we limit them for larger data
-    let candidates: Vec<&'static BitmapFont> = ALL_FONTS
-        .iter()
-        .map(|f| &***f)
-        .filter(|f| {
-            // Allow all fonts for small data, progressively restrict for larger
-            // The idea: taller fonts take more rows, which affects total image height
-            let max_height_for_size = if total_size <= 128 * 1024 {
-                20 // Allow any font up to 128 KiB
-            } else if total_size <= 512 * 1024 {
-                12 // Medium fonts up to 512 KiB
-            } else if total_size <= 1024 * 1024 {
-                8  // Smaller fonts up to 1 MiB
-            } else {
-                6  // Only tiny fonts for 1-3 MiB
-            };
-            f.height <= max_height_for_size
-        })
-        .collect();
-
-    if candidates.is_empty() {
         return None;
     }
 
-    // Use hash to pick from candidates
-    let index = (hash as usize) % candidates.len();
-    Some(candidates[index])
+    if total_size <= 512 * 1024 {
+        // Filename: randomly select from SWISS, SIXTH, SKY, MONTE
+        let name_candidates: &[&Lazy<BitmapFont>] = &[&SWISS, &SIXTH, &SKY, &MONTE];
+        let index = (hash as usize) % name_candidates.len();
+        Some(FontSelection {
+            name_font: &name_candidates[index],
+            size_font: &SUGIMORI,
+        })
+    } else if total_size <= 1024 * 1024 {
+        Some(FontSelection {
+            name_font: &MINI,
+            size_font: &MINI,
+        })
+    } else {
+        Some(FontSelection {
+            name_font: &MICRO,
+            size_font: &MICRO,
+        })
+    }
 }
