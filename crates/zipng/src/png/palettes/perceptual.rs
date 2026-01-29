@@ -167,7 +167,11 @@ pub fn sort_colors(colors: &[RGB8]) -> Vec<RGB8> {
         });
         best.unwrap().1
     } else {
-        // Greedy nearest-neighbor from the darkest color.
+        // Greedy nearest-neighbor from the darkest color (suboptimal).
+        eprintln!(
+            "warning: sort_colors: {n} colors exceeds brute-force limit (10), \
+             falling back to greedy nearest-neighbor heuristic"
+        );
         let mut remaining: Vec<usize> = (0..n).collect();
         let start = remaining
             .iter()
