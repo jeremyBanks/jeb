@@ -6,7 +6,7 @@ use std::collections::HashMap;
 /// Result of looking up a character glyph.
 pub struct GlyphLookup<'a> {
     pub glyph: &'a Vec<Vec<bool>>,
-    pub skip_kerning: bool, // True for spaces (would kern to nothing otherwise)
+    pub is_space: bool,
 }
 
 /// A loaded bitmap font with glyph data.
@@ -27,7 +27,7 @@ impl BitmapFont {
     pub fn get_glyph(&self, c: char) -> Option<GlyphLookup<'_>> {
         // 1. Try exact character
         if let Some(g) = self.glyphs.get(&c) {
-            return Some(GlyphLookup { glyph: g, skip_kerning: c == ' ' });
+            return Some(GlyphLookup { glyph: g, is_space: c == ' ' });
         }
 
         // 2. Try different capitalization
@@ -40,7 +40,7 @@ impl BitmapFont {
         };
         if let Some(alt) = alt_case {
             if let Some(g) = self.glyphs.get(&alt) {
-                return Some(GlyphLookup { glyph: g, skip_kerning: false });
+                return Some(GlyphLookup { glyph: g, is_space: false });
             }
         }
 
@@ -52,24 +52,23 @@ impl BitmapFont {
             '\u{2018}' | '\u{2019}' => &['\''],      // curly single quotes → straight
             '\u{00D7}' => &['x'],                    // × multiplication sign → x
             '\u{2013}' | '\u{2014}' => &['-'],       // en-dash / em-dash → hyphen
-            '\u{2026}' => &['.'],                    // … ellipsis → period
             _ => &[],
         };
         for &fallback in specific_fallbacks {
             if let Some(g) = self.glyphs.get(&fallback) {
-                return Some(GlyphLookup { glyph: g, skip_kerning: false });
+                return Some(GlyphLookup { glyph: g, is_space: false });
             }
         }
 
         // 4. Try generic fallback characters: …, _, ., ?
         for fallback in ['…', '_', '.', '?'] {
             if let Some(g) = self.glyphs.get(&fallback) {
-                return Some(GlyphLookup { glyph: g, skip_kerning: false });
+                return Some(GlyphLookup { glyph: g, is_space: false });
             }
         }
 
         // 5. Return space (skip kerning for inserted spaces)
-        self.glyphs.get(&' ').map(|g| GlyphLookup { glyph: g, skip_kerning: true })
+        self.glyphs.get(&' ').map(|g| GlyphLookup { glyph: g, is_space: true })
     }
 
     /// Load font from embedded PNG and JSON metadata.

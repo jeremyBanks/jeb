@@ -209,8 +209,8 @@ fn render_filename_label(name: &[u8], row_width: usize, font: &BitmapFont, heade
             // Default position: after previous char
             let mut best_offset = total_width;
 
-            // Apply kerning only if skip_kerning is false
-            if !lookup.skip_kerning {
+            // Apply kerning only if is_space is false
+            if !lookup.is_space {
                 best_offset = total_width + font.width as i32; // Start at default spacing
 
                 // Try tighter positions (can overlap into previous char's bounding box)
