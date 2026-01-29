@@ -128,13 +128,13 @@ fn perceptual_dist(a: Oklab, b: Oklab) -> f32 {
     (dl * dl + da * da + db * db).sqrt()
 }
 
-/// Like `perceptual_dist` but weights lightness 2× to bias sorting toward
+/// Like `perceptual_dist` but weights lightness 4× to bias sorting toward
 /// monotonic lightness, producing orderings more readable in grayscale.
 fn sorting_dist(a: Oklab, b: Oklab) -> f32 {
     let dl = a.l - b.l;
     let da = a.a - b.a;
     let db = a.b - b.b;
-    (2.0 * dl * dl + da * da + db * db).sqrt()
+    (4.0 * dl * dl + da * da + db * db).sqrt()
 }
 
 /// Reorder colors to minimize total perceptual arc-length (shortest
