@@ -35,7 +35,7 @@
 //! - ≤ 3 MiB: Micro (3×3 pixels)
 //! - > 3 MiB: No labels
 
-mod fonts;
+pub mod fonts;
 
 #[cfg(any(test, feature = "dev-dependencies"))]
 mod validate;
@@ -94,7 +94,7 @@ const MAX_HEIGHT_WITH_LABELS: usize = 1024;
 
 /// Check if two glyphs would touch at a given horizontal offset.
 /// Returns true if any pixels are 8-directionally adjacent.
-fn glyphs_touch(prev: &[Vec<bool>], next: &[Vec<bool>], offset: i32) -> bool {
+pub fn glyphs_touch(prev: &[Vec<bool>], next: &[Vec<bool>], offset: i32) -> bool {
     let prev_width = prev.first().map(|r| r.len()).unwrap_or(0);
     let next_width = next.first().map(|r| r.len()).unwrap_or(0);
 
@@ -123,7 +123,7 @@ fn glyphs_touch(prev: &[Vec<bool>], next: &[Vec<bool>], offset: i32) -> bool {
 
 /// Calculate minimum gap between two glyphs (ensuring no 8-directional adjacency).
 /// Returns a NEGATIVE value if glyphs can overlap, positive if they need extra space.
-fn min_glyph_gap(prev: &[Vec<bool>], next: &[Vec<bool>], glyph_width: usize) -> i32 {
+pub fn min_glyph_gap(prev: &[Vec<bool>], next: &[Vec<bool>], glyph_width: usize) -> i32 {
     // Try negative gaps first (tighter kerning)
     for gap in (-(glyph_width as i32 - 1))..((glyph_width * 2) as i32) {
         let offset = glyph_width as i32 + gap;
@@ -233,86 +233,14 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
     let label_rows = label_rows_for_font(fonts);
     let mut result = Vec::with_capacity(label_rows * row_width);
 
-    // Convert name to chars and get glyph lookups (with fallback chain)
-    let chars: Vec<char> = name.iter().map(|&b| b as char).collect();
-    let lookups: Vec<Option<fonts::GlyphLookup<'_>>> = chars.iter()
-        .map(|&c| font.get_glyph(c))
+    // Lay out name text with canvas-based kerning
+    let name_str: String = name.iter().map(|&b| b as char).collect();
+    let (canvas, char_positions, actual_width) = font.layout_text(&name_str);
+
+    // Re-fetch lookups for rendering (layout_text only returns positions)
+    let lookups: Vec<Option<fonts::GlyphLookup<'_>>> = name_str.chars()
+        .map(|c| font.get_glyph(c))
         .collect();
-
-    // Build accumulated canvas for kerning (checks against ALL previous chars, not just one)
-    // Canvas must be wide enough for the entire text even if it overflows the display
-    let max_canvas_width = (name.len() * font.width).max(row_width * 2);
-    let mut canvas: Vec<Vec<bool>> = vec![vec![false; max_canvas_width]; font.height];
-    let mut char_positions: Vec<(usize, i32)> = Vec::new();
-    let mut total_width = 0i32;
-    let mut rightmost_pixel = 0i32;
-
-    for (i, lookup_opt) in lookups.iter().enumerate() {
-        if let Some(lookup) = lookup_opt {
-            let glyph = lookup.glyph;
-
-            // Default position: after previous char
-            let mut best_offset = total_width;
-
-            // Apply kerning only if skip_kerning is false
-            if !lookup.skip_kerning {
-                best_offset = total_width + font.width as i32; // Start at default spacing
-
-                // Try tighter positions (can overlap into previous char's bounding box)
-                for test_offset in (total_width - font.width as i32 + 1)..=best_offset {
-                    if test_offset < 0 {
-                        continue;
-                    }
-                    let mut touches = false;
-                    'check: for (gy, glyph_row) in glyph.iter().enumerate() {
-                        for (gx, &pixel_on) in glyph_row.iter().enumerate() {
-                            if !pixel_on {
-                                continue;
-                            }
-                            let cx = test_offset as usize + gx;
-                            // Check 8-directional adjacency against canvas
-                            for dy in -1i32..=1 {
-                                for dx in -1i32..=1 {
-                                    let ny = gy as i32 + dy;
-                                    let nx = cx as i32 + dx;
-                                    if ny >= 0 && (ny as usize) < font.height && nx >= 0 {
-                                        if canvas[ny as usize].get(nx as usize).copied().unwrap_or(false) {
-                                            touches = true;
-                                            break 'check;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if !touches {
-                        best_offset = test_offset;
-                        break;
-                    }
-                }
-            }
-
-            char_positions.push((i, best_offset));
-
-            // Add glyph to canvas at best_offset (even for spaces, to track position)
-            for (gy, glyph_row) in glyph.iter().enumerate() {
-                for (gx, &pixel_on) in glyph_row.iter().enumerate() {
-                    if pixel_on {
-                        let cx = best_offset as usize + gx;
-                        if cx < max_canvas_width {
-                            canvas[gy][cx] = true;
-                        }
-                        rightmost_pixel = rightmost_pixel.max(cx as i32 + 1);
-                    }
-                }
-            }
-
-            total_width = best_offset + font.width as i32;
-        }
-    }
-
-    // Use actual rendered width (excluding trailing blank pixels)
-    let actual_width = rightmost_pixel.max(0) as usize;
 
     // Calculate starting x position
     // Default: 4px margin from left edge
@@ -339,70 +267,11 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
 
     // Try to render file size right-aligned if there's enough space
     let size_str = format_file_size(file_size);
-    let size_chars: Vec<char> = size_str.chars().collect();
-    let size_lookups: Vec<Option<fonts::GlyphLookup<'_>>> = size_chars.iter()
-        .map(|&c| size_font.get_glyph(c))
+    let (size_canvas, size_char_positions, size_actual_width) = size_font.layout_text(&size_str);
+
+    let size_lookups: Vec<Option<fonts::GlyphLookup<'_>>> = size_str.chars()
+        .map(|c| size_font.get_glyph(c))
         .collect();
-
-    // Calculate size text width using same kerning logic
-    let mut size_canvas: Vec<Vec<bool>> = vec![vec![false; max_canvas_width]; size_font.height];
-    let mut size_char_positions: Vec<(usize, i32)> = Vec::new();
-    let mut size_total_width = 0i32;
-    let mut size_rightmost_pixel = 0i32;
-
-    for (i, lookup_opt) in size_lookups.iter().enumerate() {
-        if let Some(lookup) = lookup_opt {
-            let glyph = lookup.glyph;
-            let mut best_offset = size_total_width;
-
-            if !lookup.skip_kerning {
-                best_offset = size_total_width + size_font.width as i32;
-                for test_offset in (size_total_width - size_font.width as i32 + 1)..=best_offset {
-                    if test_offset < 0 { continue; }
-                    let mut touches = false;
-                    'check_size: for (gy, glyph_row) in glyph.iter().enumerate() {
-                        for (gx, &pixel_on) in glyph_row.iter().enumerate() {
-                            if !pixel_on { continue; }
-                            let cx = test_offset as usize + gx;
-                            for dy in -1i32..=1 {
-                                for dx in -1i32..=1 {
-                                    let ny = gy as i32 + dy;
-                                    let nx = cx as i32 + dx;
-                                    if ny >= 0 && (ny as usize) < size_font.height && nx >= 0 {
-                                        if size_canvas[ny as usize].get(nx as usize).copied().unwrap_or(false) {
-                                            touches = true;
-                                            break 'check_size;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if !touches {
-                        best_offset = test_offset;
-                        break;
-                    }
-                }
-            }
-
-            size_char_positions.push((i, best_offset));
-
-            for (gy, glyph_row) in glyph.iter().enumerate() {
-                for (gx, &pixel_on) in glyph_row.iter().enumerate() {
-                    if pixel_on {
-                        let cx = best_offset as usize + gx;
-                        if cx < max_canvas_width {
-                            size_canvas[gy][cx] = true;
-                        }
-                        size_rightmost_pixel = size_rightmost_pixel.max(cx as i32 + 1);
-                    }
-                }
-            }
-            size_total_width = best_offset + size_font.width as i32;
-        }
-    }
-
-    let size_actual_width = size_rightmost_pixel.max(0) as usize;
 
     // Check if size fits with minimum gap
     let size_start_x = usable_width as i32 - size_actual_width as i32 - MARGIN as i32;
@@ -456,8 +325,10 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
         }
     }
 
-    // Header "stretches" up from bottom row, but stops when it hits the halo
-    // Only show meaningful header bytes (30 + filename), not extra field padding
+    // Header "stretches" up from bottom row, but stops:
+    // - when it hits the text halo, OR
+    // - 2 pixels from the top of the label space (whichever comes first)
+    let stretch_top_limit = 2; // don't stretch into the top 2 rows
     let meaningful_header_len = (30 + name.len()).min(header_row.len());
 
     // Track per-column whether the stretch is still active
@@ -466,6 +337,11 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
 
     // Process from bottom to top (header stretches upward)
     for row_idx in (0..label_rows).rev() {
+        // Stop stretching once we reach the top limit
+        if row_idx < stretch_top_limit {
+            break;
+        }
+
         for x in 0..row_width {
             if !stretch_active[x] {
                 continue; // Already blocked in this column
@@ -864,7 +740,7 @@ fn build_aligned_data(
     }
 
     // Phase 3: Calculate spacing for each bucket
-    let bucket_spacing = calculate_bucket_spacing(&bucket_assignments, &file_sizes, row_width);
+    let bucket_spacing = calculate_bucket_spacing(&bucket_assignments, &file_sizes, row_width, font.is_some());
 
     // Phase 4: Place files with pre-calculated spacing
     // Each file's DEFLATE stream needs a terminator row (BFINAL=1).
@@ -1043,6 +919,7 @@ fn calculate_bucket_spacing(
     bucket_assignments: &[Vec<usize>],
     file_sizes: &[usize],
     row_width: usize,
+    has_labels: bool,
 ) -> Vec<Vec<usize>> {
     let filtered_row_size = row_width + 1;
     let rows_per_bucket = IDAT_BLOCK_SIZE / filtered_row_size;
@@ -1066,12 +943,14 @@ fn calculate_bucket_spacing(
             continue;
         }
 
-        // Every file gets a minimum of 1 row of spacing before it.
-        let min_spacing_rows = num_files; // 1 per file
+        // When labels are present, no minimum gap needed (labels provide visual separation).
+        // Without labels, enforce a minimum of 1 row of spacing before each file.
+        let min_per_file: usize = if has_labels { 0 } else { 1 };
+        let min_spacing_rows = num_files * min_per_file;
 
         // Last bucket: no extra distribution, just the minimum.
         if is_last_bucket {
-            result.push(vec![1; num_files]);
+            result.push(vec![min_per_file; num_files]);
             continue;
         }
 
@@ -1094,7 +973,7 @@ fn calculate_bucket_spacing(
 
         if extra_slack_rows == 0 {
             // No room beyond the minimums
-            result.push(vec![1; num_files]);
+            result.push(vec![min_per_file; num_files]);
             continue;
         }
 
@@ -1108,9 +987,9 @@ fn calculate_bucket_spacing(
 
         for i in 0..num_files {
             let weight = if i == 0 { first_weight } else { 1.0 };
-            let rows = 1 + (weight * rows_per_unit).floor() as usize; // 1 minimum + distributed
+            let rows = min_per_file + (weight * rows_per_unit).floor() as usize;
             spacing.push(rows);
-            allocated += rows - 1; // track only the extra part
+            allocated += rows - min_per_file; // track only the extra part
         }
 
         // Distribute remainder of extra slack

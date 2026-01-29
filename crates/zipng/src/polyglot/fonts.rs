@@ -23,6 +23,11 @@ impl BitmapFont {
     /// 2. Different capitalization (upper ↔ lower)
     /// 3. Fallback characters: …, _, ., ?
     /// 4. Space (with skip_kerning = true)
+    /// Returns the set of characters this font has native glyphs for.
+    pub fn chars(&self) -> impl Iterator<Item = char> + '_ {
+        self.glyphs.keys().copied()
+    }
+
     pub fn get_glyph(&self, c: char) -> Option<GlyphLookup<'_>> {
         // 1. Try exact character
         if let Some(g) = self.glyphs.get(&c) {
@@ -54,6 +59,144 @@ impl BitmapFont {
         self.glyphs.get(&' ').map(|g| GlyphLookup { glyph: g, skip_kerning: true })
     }
 
+    /// Compute the space bar width: half (rounded up) of the maximum ink width
+    /// across all non-space glyphs. Returns at least 1.
+    fn space_bar_width(&self) -> usize {
+        let mut max_ink = 0usize;
+        for (c, glyph) in &self.glyphs {
+            if *c == ' ' { continue; }
+            let mut min_col = usize::MAX;
+            let mut max_col = 0;
+            let mut has_pixel = false;
+            for row in glyph {
+                for (col, &on) in row.iter().enumerate() {
+                    if on {
+                        min_col = min_col.min(col);
+                        max_col = max_col.max(col);
+                        has_pixel = true;
+                    }
+                }
+            }
+            if has_pixel {
+                max_ink = max_ink.max(max_col - min_col + 1);
+            }
+        }
+        if max_ink == 0 { return 1; }
+        (max_ink / 2).max(1)
+    }
+
+    /// Build a vertical bar glyph (full height, centered) with the given ink width.
+    /// Used as a synthetic space glyph for kerning purposes.
+    fn space_bar_glyph(&self, ink_width: usize) -> Vec<Vec<bool>> {
+        let mut glyph = vec![vec![false; self.width]; self.height];
+        // Center the bar horizontally within the glyph bounding box
+        let start = (self.width.saturating_sub(ink_width)) / 2;
+        for row in &mut glyph {
+            for col in start..start + ink_width.min(self.width) {
+                row[col] = true;
+            }
+        }
+        glyph
+    }
+
+    /// Lay out text with canvas-based kerning.
+    /// Returns `(canvas, char_positions, actual_width)` where:
+    /// - `canvas` is the rendered bitmap `[row][col]`
+    /// - `char_positions` maps each input char index to its x offset
+    /// - `actual_width` is the width of the rendered text in pixels
+    ///
+    /// Space characters are kerned as if they were a vertical bar with
+    /// the median ink width of the font, but are not drawn to the canvas.
+    pub fn layout_text(&self, text: &str) -> (Vec<Vec<bool>>, Vec<(usize, i32)>, usize) {
+        let space_bar = self.space_bar_glyph(self.space_bar_width());
+
+        let lookups: Vec<Option<GlyphLookup<'_>>> = text.chars()
+            .map(|c| self.get_glyph(c))
+            .collect();
+
+        let max_canvas_width = text.len() * self.width * 2;
+        let mut kern_canvas: Vec<Vec<bool>> = vec![vec![false; max_canvas_width]; self.height];
+        let mut display_canvas: Vec<Vec<bool>> = vec![vec![false; max_canvas_width]; self.height];
+        let mut char_positions: Vec<(usize, i32)> = Vec::new();
+        let mut total_width = 0i32;
+        let mut rightmost_pixel = 0i32;
+
+        for (i, lookup_opt) in lookups.iter().enumerate() {
+            if let Some(lookup) = lookup_opt {
+                let is_space = lookup.skip_kerning;
+                // For spaces, kern using the vertical bar; for others, use the real glyph.
+                let kern_glyph: &[Vec<bool>] = if is_space { &space_bar } else { lookup.glyph };
+
+                let mut best_offset = total_width + self.width as i32;
+
+                for test_offset in (total_width - self.width as i32 + 1)..=best_offset {
+                    if test_offset < 0 {
+                        continue;
+                    }
+                    let mut touches = false;
+                    'check: for (gy, glyph_row) in kern_glyph.iter().enumerate() {
+                        for (gx, &pixel_on) in glyph_row.iter().enumerate() {
+                            if !pixel_on {
+                                continue;
+                            }
+                            let cx = test_offset as usize + gx;
+                            for dy in -1i32..=1 {
+                                for dx in -1i32..=1 {
+                                    let ny = gy as i32 + dy;
+                                    let nx = cx as i32 + dx;
+                                    if ny >= 0 && (ny as usize) < self.height && nx >= 0 {
+                                        if kern_canvas[ny as usize].get(nx as usize).copied().unwrap_or(false) {
+                                            touches = true;
+                                            break 'check;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if !touches {
+                        best_offset = test_offset;
+                        break;
+                    }
+                }
+
+                char_positions.push((i, best_offset));
+
+                // Stamp the space bar onto the kern canvas so subsequent chars kern away.
+                // For non-spaces, stamp the real glyph onto both canvases.
+                let kern_stamp: &[Vec<bool>] = if is_space { &space_bar } else { lookup.glyph };
+                for (gy, glyph_row) in kern_stamp.iter().enumerate() {
+                    for (gx, &pixel_on) in glyph_row.iter().enumerate() {
+                        if pixel_on {
+                            let cx = best_offset as usize + gx;
+                            if cx < max_canvas_width {
+                                kern_canvas[gy][cx] = true;
+                            }
+                        }
+                    }
+                }
+                if !is_space {
+                    for (gy, glyph_row) in lookup.glyph.iter().enumerate() {
+                        for (gx, &pixel_on) in glyph_row.iter().enumerate() {
+                            if pixel_on {
+                                let cx = best_offset as usize + gx;
+                                if cx < max_canvas_width {
+                                    display_canvas[gy][cx] = true;
+                                }
+                                rightmost_pixel = rightmost_pixel.max(cx as i32 + 1);
+                            }
+                        }
+                    }
+                }
+
+                total_width = best_offset + self.width as i32;
+            }
+        }
+
+        let actual_width = rightmost_pixel.max(0) as usize;
+        (display_canvas, char_positions, actual_width)
+    }
+
     /// Load font from embedded PNG and JSON metadata.
     fn load(png_data: &[u8], json_data: &str) -> Self {
         let meta: FontMeta = serde_json::from_str(json_data)
@@ -77,8 +220,8 @@ impl BitmapFont {
                 let glyph_x = meta.x + col_idx * meta.dx;
                 let glyph_y = meta.y + row_idx * meta.dy;
 
-                // Skip if glyph would be out of bounds
-                if glyph_x + meta.w > img_width || glyph_y + meta.h > img_height {
+                // Skip if glyph starts entirely outside the image
+                if glyph_x >= img_width || glyph_y >= img_height {
                     continue;
                 }
 
@@ -88,9 +231,13 @@ impl BitmapFont {
                     for px in 0..meta.w {
                         let x = glyph_x + px;
                         let y = glyph_y + py;
-                        // Pixel is "on" if it's dark (< 128)
-                        let pixel = img.get_pixel(x as u32, y as u32).0[0];
-                        row.push(pixel < 128);
+                        // Treat out-of-bounds pixels as white (off)
+                        if x >= img_width || y >= img_height {
+                            row.push(false);
+                        } else {
+                            let pixel = img.get_pixel(x as u32, y as u32).0[0];
+                            row.push(pixel < 128);
+                        }
                     }
                     glyph.push(row);
                 }
