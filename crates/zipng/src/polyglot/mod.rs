@@ -876,6 +876,15 @@ fn build_aligned_data(
     // Track if previous file needs a terminator
     let mut pending_terminator = false;
 
+    // Cycling palette counter and total spacing bytes tracker
+    let mut palette_counter: usize = 0;
+    let mut total_spacing_bytes: usize = 0;
+
+    // Ensure first file has ≥1 row of spacing before it (top of image is spacing)
+    if !file_order_with_spacing.is_empty() && file_order_with_spacing[0].1 == 0 {
+        file_order_with_spacing[0].1 = 1;
+    }
+
     for (order_idx, &(file_idx, spacing_rows)) in file_order_with_spacing.iter().enumerate() {
         let has_label = font.is_some();
         let has_spacing_gap = spacing_rows > 0;
@@ -920,9 +929,16 @@ fn build_aligned_data(
 
         // Add spacing BEFORE this file (after any terminator)
         if spacing_rows > 0 {
-            // Align to row first, then add spacing
+            // Align to row first
             let padding = (row_width - (data.len() % row_width)) % row_width;
-            data.resize(data.len() + padding + spacing_rows * row_width, 0);
+            data.resize(data.len() + padding, 0);
+            // Fill spacing rows with cycling palette index pattern
+            let spacing_byte_count = spacing_rows * row_width;
+            total_spacing_bytes += spacing_byte_count;
+            data.reserve(spacing_byte_count);
+            for _ in 0..spacing_byte_count {
+                data.push(cycling_palette_index(&mut palette_counter));
+            }
         }
 
         // Align to row boundary
@@ -1000,12 +1016,43 @@ fn build_aligned_data(
         data.extend_from_slice(&terminator);
     }
 
+    // Ensure ≥1 row of spacing at the bottom of the image, and ≥256 total spacing bytes.
+    // Align to row boundary first.
+    let padding = (row_width - (data.len() % row_width)) % row_width;
+    data.resize(data.len() + padding, 0);
+
+    // Always add at least 1 trailing spacing row
+    let min_trailing_rows = 1;
+    let min_total_spacing = 256;
+    let rows_for_minimum = if total_spacing_bytes >= min_total_spacing {
+        0
+    } else {
+        (min_total_spacing - total_spacing_bytes + row_width - 1) / row_width
+    };
+    let trailing_rows = min_trailing_rows.max(rows_for_minimum);
+    let trailing_bytes = trailing_rows * row_width;
+    total_spacing_bytes += trailing_bytes;
+    data.reserve(trailing_bytes);
+    for _ in 0..trailing_bytes {
+        data.push(cycling_palette_index(&mut palette_counter));
+    }
+
+    let _ = total_spacing_bytes; // suppress unused warning
+
     (data, entries, terminator_rows)
+}
+
+/// Returns a cycling palette index: 0,1,2,...,255,255,254,...,1,0,0,1,...
+/// The counter is incremented for each call.
+fn cycling_palette_index(counter: &mut usize) -> u8 {
+    let i = *counter % 512;
+    *counter += 1;
+    if i <= 255 { i as u8 } else { (511 - i) as u8 }
 }
 
 /// Calculate spacing for each bucket.
 /// Full buckets get even spacing with half-weight edges.
-/// First bucket has no leading gap (weight 0 instead of 0.5).
+/// Ensures first file has ≥1 row of spacing before it and last file has ≥1 row after.
 /// Last bucket gets no spacing (content packed tight).
 fn calculate_bucket_spacing(
     bucket_assignments: &[Vec<usize>],
