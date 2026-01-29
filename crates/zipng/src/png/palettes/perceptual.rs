@@ -28,15 +28,14 @@
 //!
 //! ### Future options for alternative sort strategies
 //!
-//! The TSP distance function currently uses unweighted Oklab Euclidean
-//! distance. Several variations could be useful:
+//! The TSP distance function uses lightness-weighted Oklab distance with
+//! `w_L = 4`, biasing the path to avoid lightness reversals for better
+//! grayscale readability. Several alternative weightings could also be
+//! useful:
 //!
-//! - **Lightness-weighted distance**: `sqrt(w_L * ΔL² + Δa² + Δb²)` with
-//!   `w_L > 1` (e.g. 2–4) biases the path to avoid lightness reversals. This
-//!   produces colormaps that are more useful for data visualization (readable
-//!   in grayscale, accessible to colorblind viewers) at the cost of
-//!   potentially longer chromatic jumps. As `w_L → ∞` this converges to a
-//!   pure lightness sort.
+//! - **Heavier lightness weighting**: Increasing `w_L` (e.g. 3–4) further
+//!   biases toward monotonic lightness at the cost of potentially longer
+//!   chromatic jumps. As `w_L → ∞` this converges to a pure lightness sort.
 //!
 //! - **Oklch (L, C) distance**: Use the polar form of Oklab and compute
 //!   distance in just the lightness-chroma plane, ignoring hue entirely for
@@ -84,7 +83,9 @@ fn perceptual_dist(a: Oklab, b: Oklab) -> f32 {
     let dl = a.l - b.l;
     let da = a.a - b.a;
     let db = a.b - b.b;
-    (dl * dl + da * da + db * db).sqrt()
+    // Weight lightness 4× to bias sorting toward monotonic lightness,
+    // producing colormaps more readable in grayscale.
+    (4.0 * dl * dl + da * da + db * db).sqrt()
 }
 
 /// Reorder colors to minimize total perceptual arc-length (shortest
@@ -95,8 +96,8 @@ fn perceptual_dist(a: Oklab, b: Oklab) -> f32 {
 /// darkest color.
 ///
 /// The returned ordering produces the smoothest possible gradient through the
-/// given colors using unweighted Oklab Euclidean distance. See the module docs
-/// for alternative weighting strategies.
+/// given colors using lightness-weighted Oklab distance (`w_L = 4`), which
+/// biases toward monotonic lightness for better grayscale readability.
 pub fn sort_colors(colors: &[RGB8]) -> Vec<RGB8> {
     if colors.len() <= 2 {
         return colors.to_vec();
