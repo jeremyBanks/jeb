@@ -26,5 +26,5 @@ fn main() {
     // Generic defaults are allowed in this case we'd default to be BTreeMap but I don't think they are.
     let decoded: BTreeMap<Vec<u8>, Vec<u8>> = zipng::decode(encoded_with_defaults);
     let decoded_with_config: Vec<u8> = zipng::Decoder::new()
-        .with_source(zipng::Source::Pixels);
+        .with_source(zipng::Source::Zip);
 }

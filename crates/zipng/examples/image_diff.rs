@@ -1,4 +1,4 @@
-use image::GenericImageView;
+use std::io::BufReader;
 use std::process::ExitCode;
 
 fn strip_common_prefix<'a>(a: &'a str, b: &'a str) -> (&'a str, &'a str) {
@@ -12,6 +12,83 @@ fn strip_common_prefix<'a>(a: &'a str, b: &'a str) -> (&'a str, &'a str) {
     (&a[cut..], &b[cut..])
 }
 
+struct PngInfo {
+    width: u32,
+    height: u32,
+    color_type: png::ColorType,
+    bit_depth: png::BitDepth,
+    file_size: u64,
+    /// Raw index bytes if indexed color, None otherwise
+    raw_indices: Option<Vec<u8>>,
+}
+
+fn read_png_info(path: &str) -> PngInfo {
+    let file_size = std::fs::metadata(path)
+        .unwrap_or_else(|e| {
+            eprintln!("failed to stat {}: {}", path, e);
+            std::process::exit(2);
+        })
+        .len();
+
+    let file = std::fs::File::open(path).unwrap_or_else(|e| {
+        eprintln!("failed to open {}: {}", path, e);
+        std::process::exit(2);
+    });
+
+    let decoder = png::Decoder::new(BufReader::new(file));
+    let mut reader = decoder.read_info().unwrap_or_else(|e| {
+        eprintln!("failed to read PNG info from {}: {}", path, e);
+        std::process::exit(2);
+    });
+
+    let info = reader.info();
+    let width = info.width;
+    let height = info.height;
+    let color_type = info.color_type;
+    let bit_depth = info.bit_depth;
+
+    let raw_indices = if color_type == png::ColorType::Indexed {
+        let mut buf = vec![0u8; reader.output_buffer_size().unwrap()];
+        let output_info = reader.next_frame(&mut buf).unwrap_or_else(|e| {
+            eprintln!("failed to decode {}: {}", path, e);
+            std::process::exit(2);
+        });
+        buf.truncate(output_info.buffer_size());
+        Some(buf)
+    } else {
+        None
+    };
+
+    PngInfo {
+        width,
+        height,
+        color_type,
+        bit_depth,
+        file_size,
+        raw_indices,
+    }
+}
+
+fn color_type_name(ct: png::ColorType) -> &'static str {
+    match ct {
+        png::ColorType::Grayscale => "Grayscale",
+        png::ColorType::Rgb => "RGB",
+        png::ColorType::Indexed => "Indexed",
+        png::ColorType::GrayscaleAlpha => "GrayscaleAlpha",
+        png::ColorType::Rgba => "RGBA",
+    }
+}
+
+fn bit_depth_bits(bd: png::BitDepth) -> u8 {
+    match bd {
+        png::BitDepth::One => 1,
+        png::BitDepth::Two => 2,
+        png::BitDepth::Four => 4,
+        png::BitDepth::Eight => 8,
+        png::BitDepth::Sixteen => 16,
+    }
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().collect();
     if args.len() != 3 {
@@ -19,44 +96,143 @@ fn main() -> ExitCode {
         return ExitCode::from(2);
     }
 
-    let old_img = image::open(&args[1]).unwrap_or_else(|e| {
-        eprintln!("failed to open {}: {}", &args[1], e);
-        std::process::exit(2);
-    });
-    let new_img = image::open(&args[2]).unwrap_or_else(|e| {
-        eprintln!("failed to open {}: {}", &args[2], e);
-        std::process::exit(2);
-    });
-
-    let (old_w, old_h) = old_img.dimensions();
-    let (new_w, new_h) = new_img.dimensions();
+    let old_info = read_png_info(&args[1]);
+    let new_info = read_png_info(&args[2]);
 
     let (name_a, name_b) = strip_common_prefix(&args[1], &args[2]);
 
-    println!("{}: {}×{}", name_a, old_w, old_h);
-    println!("{}: {}×{}", name_b, new_w, new_h);
+    println!(
+        "{}: {}×{}, {} {}-bit, {} bytes",
+        name_a, old_info.width, old_info.height,
+        color_type_name(old_info.color_type),
+        bit_depth_bits(old_info.bit_depth),
+        old_info.file_size
+    );
+    println!(
+        "{}: {}×{}, {} {}-bit, {} bytes",
+        name_b, new_info.width, new_info.height,
+        color_type_name(new_info.color_type),
+        bit_depth_bits(new_info.bit_depth),
+        new_info.file_size
+    );
 
-    let w = old_w.min(new_w);
-    let h = old_h.min(new_h);
+    let w = old_info.width.min(new_info.width);
+    let h = old_info.height.min(new_info.height);
 
-    if old_w != new_w {
-        println!("width: {} vs {}, cropping to {}", old_w, new_w, w);
+    if old_info.width != new_info.width {
+        println!("width: {} vs {}, cropping to {}", old_info.width, new_info.width, w);
     }
-    if old_h != new_h {
-        println!("height: {} vs {}, cropping to {}", old_h, new_h, h);
+    if old_info.height != new_info.height {
+        println!("height: {} vs {}, cropping to {}", old_info.height, new_info.height, h);
     }
+
+    let both_indexed = old_info.raw_indices.is_some()
+        && new_info.raw_indices.is_some()
+        && old_info.bit_depth == new_info.bit_depth;
+
+    if old_info.color_type != new_info.color_type {
+        println!(
+            "note: color type mismatch ({} vs {}), comparing as RGBA",
+            color_type_name(old_info.color_type),
+            color_type_name(new_info.color_type)
+        );
+    }
+
+    if both_indexed {
+        compare_indexed(&args[1], &args[2], name_a, name_b, &old_info, &new_info, w, h)
+    } else {
+        compare_rgba(&args[1], &args[2], w, h)
+    }
+}
+
+fn compare_indexed(
+    _old_path: &str,
+    _new_path: &str,
+    _name_a: &str,
+    _name_b: &str,
+    old_info: &PngInfo,
+    new_info: &PngInfo,
+    w: u32,
+    h: u32,
+) -> ExitCode {
+    let old_data = old_info.raw_indices.as_ref().unwrap();
+    let new_data = new_info.raw_indices.as_ref().unwrap();
+
+    let old_stride = old_info.width as usize;
+    let new_stride = new_info.width as usize;
+
+    let total = (w as u64) * (h as u64);
+    let mut diff_count: u64 = 0;
+    let mut abs_sum: f64 = 0.0;
+    let mut signed_sum: f64 = 0.0;
+
+    let mut min_x = w;
+    let mut min_y = h;
+    let mut max_x: u32 = 0;
+    let mut max_y: u32 = 0;
+
+    for y in 0..h {
+        for x in 0..w {
+            let ov = old_data[y as usize * old_stride + x as usize];
+            let nv = new_data[y as usize * new_stride + x as usize];
+            let d = nv as i16 - ov as i16;
+            if d != 0 {
+                diff_count += 1;
+                abs_sum += d.unsigned_abs() as f64;
+                signed_sum += d as f64;
+                if x < min_x { min_x = x; }
+                if x > max_x { max_x = x; }
+                if y < min_y { min_y = y; }
+                if y > max_y { max_y = y; }
+            }
+        }
+    }
+
+    if diff_count == 0 {
+        println!("\nimages are identical ({} pixels compared)", total);
+        return ExitCode::SUCCESS;
+    }
+
+    println!("\n{} pixels compared:", total);
+    println!();
+
+    let pct = 100.0 * diff_count as f64 / total as f64;
+    let mean_abs = abs_sum / diff_count as f64;
+    let mean_signed = signed_sum / diff_count as f64;
+    println!(
+        "index: {} differ ({:.2}%), mean |d|={:.2}, mean d={:+.2}",
+        diff_count, pct, mean_abs, mean_signed
+    );
+
+    println!();
+    println!(
+        "changed pixel bounds: ({}, {}) to ({}, {}), spanning {}×{}",
+        min_x, min_y, max_x, max_y,
+        max_x - min_x + 1, max_y - min_y + 1
+    );
+
+    ExitCode::from(1)
+}
+
+fn compare_rgba(old_path: &str, new_path: &str, w: u32, h: u32) -> ExitCode {
+    let old_img = image::open(old_path).unwrap_or_else(|e| {
+        eprintln!("failed to open {}: {}", old_path, e);
+        std::process::exit(2);
+    });
+    let new_img = image::open(new_path).unwrap_or_else(|e| {
+        eprintln!("failed to open {}: {}", new_path, e);
+        std::process::exit(2);
+    });
 
     let old_rgba = old_img.to_rgba8();
     let new_rgba = new_img.to_rgba8();
 
     let total = (w as u64) * (h as u64);
 
-    // Per-channel stats
     struct ChannelStats {
         diff_count: u64,
         abs_sum: f64,
         signed_sum: f64,
-        // Track min/max across both images to detect uniform identical channels
         min_val: u8,
         max_val: u8,
     }
@@ -68,13 +244,11 @@ fn main() -> ExitCode {
         ChannelStats { diff_count: 0, abs_sum: 0.0, signed_sum: 0.0, min_val: 255, max_val: 0 },
     ];
 
-    // Bounding box of changed pixels
     let mut min_x = w;
     let mut min_y = h;
     let mut max_x: u32 = 0;
     let mut max_y: u32 = 0;
 
-    // First pass: per-channel stats and detect alpha uniformity
     for y in 0..h {
         for x in 0..w {
             let op = old_rgba.get_pixel(x, y).0;
@@ -109,11 +283,9 @@ fn main() -> ExitCode {
         }
     }
 
-    // Both fully opaque = omit alpha from output and whole-pixel calculations
     let both_opaque = ch_stats[3].min_val == 255 && ch_stats[3].max_val == 255;
     let num_channels: usize = if both_opaque { 3 } else { 4 };
 
-    // Any channel differs at all?
     let any_diff = ch_stats[..num_channels].iter().any(|s| s.diff_count > 0);
 
     if !any_diff {
@@ -121,7 +293,6 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
-    // Second pass: whole-pixel stats (excluding alpha if both opaque)
     let mut px_diff_count: u64 = 0;
     let mut px_abs_sum: f64 = 0.0;
     let mut px_signed_sum = vec![0.0f64; num_channels];

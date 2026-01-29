@@ -144,19 +144,56 @@ fn label_rows_for_font(font: &FontSelection) -> usize {
 
 /// Check if a file's padding will require an internal terminator (BFINAL=1 in last content row).
 /// This happens when (row_width - 4 - last_chunk_size) is not divisible by 5.
-fn needs_internal_terminator(body_len: usize, row_width: usize) -> bool {
+/// Returns the padding needed in the last row of a file's DEFLATE content.
+fn last_row_padding(body_len: usize, row_width: usize) -> usize {
     let data_per_block = row_width - 4;
     if body_len == 0 {
-        // Empty file: padding = row_width - 4
-        return !(row_width - 4).is_multiple_of(5);
+        return row_width - 4;
     }
     let last_chunk_size = if body_len.is_multiple_of(data_per_block) {
-        data_per_block // Last chunk is full
+        data_per_block
     } else {
         body_len % data_per_block
     };
-    let padding_needed = row_width - 4 - last_chunk_size;
-    !padding_needed.is_multiple_of(5)
+    row_width - 4 - last_chunk_size
+}
+
+fn needs_internal_terminator(body_len: usize, row_width: usize) -> bool {
+    let padding = last_row_padding(body_len, row_width);
+    // Internal terminator used when padding is non-zero and NOT divisible by 5
+    padding > 0 && !padding.is_multiple_of(5)
+}
+
+/// Returns true if the terminator will be embedded in the last row's padding.
+/// This happens when padding is non-zero and divisible by 5.
+fn embeds_terminator_in_padding(body_len: usize, row_width: usize) -> bool {
+    let padding = last_row_padding(body_len, row_width);
+    padding > 0 && padding.is_multiple_of(5)
+}
+
+/// Calculate the compressed size for a file's DEFLATE content.
+/// When the terminator is embedded in padding, compressed_size excludes trailing
+/// zero bytes (dead space) so only covers through the terminator block.
+fn calculate_compressed_size(body_len: usize, row_width: usize) -> usize {
+    let data_per_block = row_width - 4;
+    let filtered_row_size = row_width + 1; // row_width data + 1 filter byte
+    let num_content_blocks = if body_len == 0 { 1 } else { body_len.div_ceil(data_per_block) };
+
+    if embeds_terminator_in_padding(body_len, row_width) {
+        // Last row: only count through the terminator (5 bytes after content).
+        // Preceding rows are full. Last row = filter(1) + header(4) + data + terminator(5).
+        let last_chunk_len = if body_len == 0 { 0 } else {
+            let remainder = body_len % data_per_block;
+            if remainder == 0 { data_per_block } else { remainder }
+        };
+        (num_content_blocks - 1) * filtered_row_size + 1 + 4 + last_chunk_len + 5
+    } else if needs_internal_terminator(body_len, row_width) {
+        // Internal terminator: no separate row
+        num_content_blocks * filtered_row_size
+    } else {
+        // Separate terminator row (no padding, or zero padding)
+        (num_content_blocks + 1) * filtered_row_size
+    }
 }
 
 /// Create a terminator row for ending a file's DEFLATE stream.
@@ -826,9 +863,10 @@ fn calculate_file_size(name: &[u8], body: &[u8], row_width: usize, font: Option<
     let num_blocks = if body.is_empty() { 1 } else { body.len().div_ceil(data_per_block) };
     let file_data_size = header_size + extra_len + num_blocks * row_width;
     let label_size = font.map(|f| label_rows_for_font(f) * row_width).unwrap_or(0);
-    // Add terminator row only if not using internal terminator
+    // Add terminator row only if neither internal nor embedded terminator is used
     let uses_internal = needs_internal_terminator(body.len(), row_width);
-    let terminator_size = if uses_internal { 0 } else { row_width };
+    let uses_embedded = embeds_terminator_in_padding(body.len(), row_width);
+    let terminator_size = if uses_internal || uses_embedded { 0 } else { row_width };
     label_size + file_data_size + terminator_size
 }
 
@@ -1070,10 +1108,7 @@ fn build_aligned_data(
             let header_size = 30 + name.len();
             let bytes_used = header_size % row_width;
             let extra_len = if bytes_used == 0 { 0 } else { row_width - bytes_used };
-            let num_content_blocks = if body.is_empty() { 1 } else { body.len().div_ceil(data_per_block) };
-            let uses_internal_terminator = needs_internal_terminator(body.len(), row_width);
-            let terminator_rows_count = if uses_internal_terminator { 0 } else { 1 };
-            let compressed_size = (num_content_blocks + terminator_rows_count) * filtered_row_size;
+            let compressed_size = calculate_compressed_size(body.len(), row_width);
             let crc = crc32(body);
             let header_bytes = build_local_header(name, body.len(), compressed_size, crc, extra_len);
             let label = render_filename_label(name, row_width, f, &header_bytes, label_is_terminator, body.len(), bytes_per_pixel);
@@ -1096,12 +1131,7 @@ fn build_aligned_data(
         let extra_len = if bytes_used == 0 { 0 } else { row_width - bytes_used };
 
         // Calculate number of deflate blocks and compressed size
-        // Add +1 row for terminator ONLY if padding divides evenly by 5 (separate terminator row)
-        // Otherwise, the last content row has BFINAL=1 (internal terminator)
-        let num_content_blocks = if body.is_empty() { 1 } else { body.len().div_ceil(data_per_block) };
-        let uses_internal_terminator = needs_internal_terminator(body.len(), row_width);
-        let terminator_rows_count = if uses_internal_terminator { 0 } else { 1 };
-        let compressed_size = (num_content_blocks + terminator_rows_count) * filtered_row_size;
+        let compressed_size = calculate_compressed_size(body.len(), row_width);
 
         // Pre-compute the header bytes
         let crc = crc32(body);
@@ -1126,7 +1156,8 @@ fn build_aligned_data(
         // Write the header and content
         data.extend_from_slice(&header_bytes);
         let mut needs_internal_terminator = false;
-        let deflate_content = encode_as_deflate_blocks(body, row_width, &mut needs_internal_terminator);
+        let mut embedded_terminator = false;
+        let deflate_content = encode_as_deflate_blocks(body, row_width, &mut needs_internal_terminator, &mut embedded_terminator);
         data.extend_from_slice(&deflate_content);
 
         if needs_internal_terminator {
@@ -1134,6 +1165,11 @@ fn build_aligned_data(
             // has BFINAL=1 with anti-Sub padding (no separate terminator needed)
             let last_content_row = (data.len() - 1) / row_width;
             terminator_rows.insert(last_content_row);
+            pending_terminator = false;
+        } else if embedded_terminator {
+            // Terminator is embedded in the padding area of the last content row.
+            // No separate terminator row needed. The row uses None filter (not Sub),
+            // so don't insert into terminator_rows.
             pending_terminator = false;
         } else {
             // This file needs a separate terminator row
@@ -1378,11 +1414,12 @@ fn bin_pack_largest_first(
 /// Padding after content is filled with empty stored blocks (5 bytes each).
 /// If padding doesn't divide evenly by 5, uses internal terminator approach
 /// where the last content row has BFINAL=1 (causes some visual artifacts).
-fn encode_as_deflate_blocks(body: &[u8], row_width: usize, needs_internal_terminator: &mut bool) -> Vec<u8> {
+fn encode_as_deflate_blocks(body: &[u8], row_width: usize, needs_internal_terminator: &mut bool, embedded_terminator: &mut bool) -> Vec<u8> {
     let data_per_block = row_width - 4;
     let mut result = Vec::new();
 
     *needs_internal_terminator = false;
+    *embedded_terminator = false;
 
     if body.is_empty() {
         // Empty file: single stored block with 0 length
@@ -1390,7 +1427,7 @@ fn encode_as_deflate_blocks(body: &[u8], row_width: usize, needs_internal_termin
         result.extend_from_slice(&0xFFFF_u16.to_le_bytes());
         // Fill padding with empty stored blocks
         let padding_needed = row_width - 4;
-        fill_padding_with_empty_blocks(&mut result, padding_needed, row_width, needs_internal_terminator);
+        fill_padding_with_empty_blocks(&mut result, padding_needed, row_width, needs_internal_terminator, embedded_terminator);
         return result;
     }
 
@@ -1408,7 +1445,7 @@ fn encode_as_deflate_blocks(body: &[u8], row_width: usize, needs_internal_termin
             let padding_needed = row_width - block_size;
 
             if is_last {
-                fill_padding_with_empty_blocks(&mut result, padding_needed, row_width, needs_internal_terminator);
+                fill_padding_with_empty_blocks(&mut result, padding_needed, row_width, needs_internal_terminator, embedded_terminator);
             } else {
                 // Non-last rows with partial data - shouldn't happen normally
                 result.resize(result.len() + padding_needed, 0);
@@ -1430,19 +1467,23 @@ fn encode_as_deflate_blocks(body: &[u8], row_width: usize, needs_internal_termin
 /// sums. To make padding decode to black (0), we compute:
 /// - First padding byte: (256 - running_sum) mod 256 to cancel the accumulated sum
 /// - Remaining bytes: 0 (decoded[i] = 0 + 0 = 0)
-fn fill_padding_with_empty_blocks(result: &mut Vec<u8>, padding_needed: usize, row_width: usize, needs_internal_terminator: &mut bool) {
+fn fill_padding_with_empty_blocks(result: &mut Vec<u8>, padding_needed: usize, row_width: usize, needs_internal_terminator: &mut bool, embedded_terminator: &mut bool) {
     if padding_needed == 0 {
         return;
     }
 
     if padding_needed.is_multiple_of(5) {
-        // Perfect fit: fill with empty stored blocks
-        let num_blocks = padding_needed / 5;
-        for _ in 0..num_blocks {
-            result.push(0x00); // BFINAL=0, BTYPE=0
-            result.extend_from_slice(&0_u16.to_le_bytes()); // LEN=0
-            result.extend_from_slice(&0xFFFF_u16.to_le_bytes()); // NLEN=0xFFFF
+        // Embed BFINAL=1 terminator in padding, fill rest with zeros.
+        // compressed_size will be shortened to exclude the trailing zeros.
+        // This eliminates the repeating [00 00 00 FF FF] pattern that was
+        // visible as non-black pixels under None filter.
+        result.push(0x01); // BFINAL=1, BTYPE=00 (stored)
+        result.extend_from_slice(&0_u16.to_le_bytes());      // LEN=0
+        result.extend_from_slice(&0xFFFF_u16.to_le_bytes()); // NLEN=0xFFFF
+        if padding_needed > 5 {
+            result.resize(result.len() + padding_needed - 5, 0); // black pixels (dead space)
         }
+        *embedded_terminator = true;
     } else {
         // Can't fill evenly: this row needs internal terminator (BFINAL=1)
         // The filter byte becomes 0x01 (Sub filter = BFINAL=1)

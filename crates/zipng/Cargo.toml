@@ -54,6 +54,9 @@ version = "0.25.9"
 default-features = false
 features = ["png", "gif", "bmp"]
 
+[dependencies.png]
+version = "0.18"
+
 [dev-dependencies]
 ureq = "2"
 zipng = { path = ".", default-features = false, features = ["dev-dependencies"] }

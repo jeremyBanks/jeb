@@ -3386,6 +3386,7 @@ dependencies = [
  "oklab",
  "once_cell",
  "paste",
+ "png",
  "rgb",
  "serde",
  "serde_bytes",
