@@ -249,16 +249,10 @@ impl ZipngOptions {
             0x80001..=0x200000 => {
                 opts.png.width = 1024;
             },
-            0x200001..=0x800000 => {
-                opts.png.width = 1024;
-                opts.png.color_palette = None;
-                opts.png.color_mode = RedGreenBlue;
-            },
-            len => {
+            0x200001.. => {
                 opts.png.width = 1024;
                 opts.png.color_palette = None;
                 opts.png.color_mode = RedGreenBlueAlpha;
-                warn!("zip data size is too damn high ({len} bytes)");
             },
         }
 

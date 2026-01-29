@@ -224,7 +224,7 @@ fn format_file_size(size: usize) -> String {
 /// - Bytes 0-3 are the DEFLATE empty final block (LEN=0, NLEN=0xFFFF)
 /// - Bytes 4+ are pre-filtered for Sub filter to decode to black (0)
 /// - The rest of the label rows use None filter as normal
-fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, header_row: &[u8], is_terminator: bool, file_size: usize) -> Vec<u8> {
+fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, header_row: &[u8], is_terminator: bool, file_size: usize, bytes_per_pixel: usize) -> Vec<u8> {
     let font = fonts.name_font;
     let size_font = fonts.size_font;
     let label_rows = label_rows_for_font(fonts);
@@ -239,13 +239,14 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
         .map(|c| font.get_glyph(c))
         .collect();
 
-    // Calculate starting x position
+    // Calculate starting x position (in pixel coordinates)
     // Default: 4px margin from left edge
     // If text overflows: right-align, but always leave 1px at right edge for halo
     const MARGIN: usize = 4;
     const RIGHT_PADDING: usize = 1; // Always leave 1px at right for halo
     const MIN_GAP: usize = 8; // Minimum gap between filename and size
-    let usable_width = row_width - RIGHT_PADDING;
+    let pixel_width = row_width / bytes_per_pixel.max(1);
+    let usable_width = pixel_width - RIGHT_PADDING;
 
     let start_x: i32 = if actual_width + MARGIN <= usable_width {
         MARGIN as i32 // Fits with margin
@@ -259,7 +260,7 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
     let filename_end_x = if start_x >= 0 {
         (start_x as usize).saturating_add(actual_width)
     } else {
-        row_width // Filename overflows, no room for size
+        pixel_width // Filename overflows, no room for size
     };
 
     // Try to render file size right-aligned if there's enough space
@@ -275,7 +276,8 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
     let render_size = size_start_x >= 0 && size_start_x as usize >= filename_end_x.saturating_add(MIN_GAP);
 
     // First, render text to a temporary bitmap to know where pixels are
-    let mut text_bitmap: Vec<Vec<bool>> = vec![vec![false; row_width]; label_rows];
+    // Bitmap is in pixel coordinates (pixel_width wide)
+    let mut text_bitmap: Vec<Vec<bool>> = vec![vec![false; pixel_width]; label_rows];
 
     // Padding row above (row 0) has no text
     // Text area spans rows 1..=max_height, with fonts bottom-aligned
@@ -293,7 +295,7 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
                 if text_row < glyph.len() {
                     for (px, &pixel_on) in glyph[text_row].iter().enumerate() {
                         let x = (start_x + char_x + px as i32) as usize;
-                        if x < row_width && pixel_on {
+                        if x < pixel_width && pixel_on {
                             text_bitmap[result_row][x] = true;
                         }
                     }
@@ -312,7 +314,7 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
                     if text_row < glyph.len() {
                         for (px, &pixel_on) in glyph[text_row].iter().enumerate() {
                             let x = (size_start_x + char_x + px as i32) as usize;
-                            if x < row_width && pixel_on {
+                            if x < pixel_width && pixel_on {
                                 text_bitmap[result_row][x] = true;
                             }
                         }
@@ -328,29 +330,46 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
     let stretch_top_limit = 2; // don't stretch into the top 2 rows
     let meaningful_header_len = (30 + name.len()).min(header_row.len());
 
-    // Track per-column whether the stretch is still active
-    let mut stretch_active: Vec<bool> = vec![true; row_width];
-    let mut rows_data: Vec<Vec<u8>> = vec![vec![0u8; row_width]; label_rows];
+    // Track per-pixel-column whether the stretch is still active
+    let mut stretch_active: Vec<bool> = vec![true; pixel_width];
+    // rows_data is in bytes (row_width per row), initialized to opaque black for RGBA
+    let mut rows_data: Vec<Vec<u8>> = if bytes_per_pixel > 1 {
+        // Initialize each row with opaque black pixels
+        let mut rows = Vec::with_capacity(label_rows);
+        for _ in 0..label_rows {
+            let mut row = Vec::with_capacity(row_width);
+            for px in 0..pixel_width {
+                for c in 0..bytes_per_pixel {
+                    row.push(if c == bytes_per_pixel - 1 { 0xFF } else { 0x00 });
+                }
+            }
+            rows.push(row);
+        }
+        rows
+    } else {
+        vec![vec![0u8; row_width]; label_rows]
+    };
 
     // Process from bottom to top (header stretches upward)
+    // Halo detection works in pixel coordinates; header copy works in byte coordinates
     for row_idx in (0..label_rows).rev() {
         // Stop stretching once we reach the top limit
         if row_idx < stretch_top_limit {
             break;
         }
 
-        for x in 0..row_width {
-            if !stretch_active[x] {
+        for px in 0..pixel_width {
+            if !stretch_active[px] {
                 continue; // Already blocked in this column
             }
 
-            // Check if this position is in the halo (adjacent to text)
+            // Check if this pixel position is in the halo (adjacent to text)
             let mut near_text = false;
             'halo: for dy in -1i32..=1 {
                 for dx in -1i32..=1 {
                     let ny = row_idx as i32 + dy;
-                    let nx = x as i32 + dx;
-                    if ny >= 0 && (ny as usize) < label_rows && nx >= 0 && (nx as usize) < row_width {
+                    let nx = px as i32 + dx;
+                    if ny >= 0 && (ny as usize) < label_rows && nx >= 0 && (nx as usize) < pixel_width {
                         if text_bitmap[ny as usize][nx as usize] {
                             near_text = true;
                             break 'halo;
@@ -361,20 +380,28 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
 
             if near_text {
                 // Block this column from stretching further up
-                stretch_active[x] = false;
-            } else if x < meaningful_header_len {
-                // Stretch continues - copy meaningful header byte only
-                rows_data[row_idx][x] = header_row[x];
+                stretch_active[px] = false;
+            } else {
+                // Stretch continues - copy header bytes as-is (raw data, not pixel-aware)
+                let byte_start = px * bytes_per_pixel;
+                for b in 0..bytes_per_pixel {
+                    let byte_idx = byte_start + b;
+                    if byte_idx < meaningful_header_len {
+                        rows_data[row_idx][byte_idx] = header_row[byte_idx];
+                    }
+                }
             }
-            // For x >= meaningful_header_len, leave as 0 (don't show padding bytes)
         }
     }
 
-    // Draw text pixels on top (white)
+    // Draw text pixels on top (white = all channels 0xFF)
     for row_idx in 0..label_rows {
-        for x in 0..row_width {
-            if text_bitmap[row_idx][x] {
-                rows_data[row_idx][x] = 0xFF;
+        for px in 0..pixel_width {
+            if text_bitmap[row_idx][px] {
+                let byte_start = px * bytes_per_pixel;
+                for b in 0..bytes_per_pixel {
+                    rows_data[row_idx][byte_start + b] = 0xFF;
+                }
             }
         }
     }
@@ -568,7 +595,7 @@ pub fn build_polyglot(
     // Pass 1: Use estimate for initial build
     let estimated_size = estimate_total_size(files, font.as_ref());
     let initial_width = calculate_row_width(estimated_size, min_width, bytes_per_pixel);
-    let (initial_data, _, _) = build_aligned_data(files, initial_width, font.as_ref());
+    let (initial_data, _, _) = build_aligned_data(files, initial_width, font.as_ref(), bytes_per_pixel);
 
     // Pass 2: Calculate optimal width from actual size
     let actual_size = initial_data.len();
@@ -591,13 +618,13 @@ pub fn build_polyglot(
     }
 
     // Build with the (possibly optimized) row_width
-    let (pixel_data, entry_infos, final_block_rows) = build_aligned_data(files, row_width, font.as_ref());
+    let (pixel_data, entry_infos, final_block_rows) = build_aligned_data(files, row_width, font.as_ref(), bytes_per_pixel);
 
     // Calculate PNG dimensions
     let height = if pixel_data.is_empty() { 1 } else { (pixel_data.len() + row_width - 1) / row_width };
 
     let mut padded = pixel_data.clone();
-    padded.resize(height * row_width, 0);
+    resize_with_opaque_black(&mut padded, height * row_width, bytes_per_pixel);
 
     // Calculate effective pixel width based on bit depth
     let bits_per_pixel = bit_depth.bits_per_sample() * color_mode.samples_per_pixel();
@@ -715,6 +742,32 @@ fn calculate_file_size(name: &[u8], body: &[u8], row_width: usize, font: Option<
     label_size + file_data_size + terminator_size
 }
 
+/// Resize `data` to `new_len`, filling new bytes with opaque black pixels.
+/// For indexed mode (bytes_per_pixel == 1), fills with 0x00.
+/// For RGB/RGBA (bytes_per_pixel > 1), fills with the pattern [0x00, ..., 0xFF]
+/// per pixel so that the alpha channel is opaque (0xFF).
+fn resize_with_opaque_black(data: &mut Vec<u8>, new_len: usize, bytes_per_pixel: usize) {
+    if new_len <= data.len() {
+        data.truncate(new_len);
+        return;
+    }
+    if bytes_per_pixel <= 1 {
+        data.resize(new_len, 0);
+        return;
+    }
+    let old_len = data.len();
+    data.reserve(new_len - old_len);
+    // Build one pixel pattern: [0x00, 0x00, ..., 0xFF] (last byte is alpha)
+    for i in old_len..new_len {
+        let byte_in_pixel = i % bytes_per_pixel;
+        if byte_in_pixel == bytes_per_pixel - 1 {
+            data.push(0xFF); // alpha = opaque
+        } else {
+            data.push(0x00);
+        }
+    }
+}
+
 /// Check if a file fits before the next IDAT boundary.
 /// Build pixel data with bin packing, preferred order, and even spacing.
 ///
@@ -730,6 +783,7 @@ fn build_aligned_data(
     files: &[(&[u8], &[u8])],
     row_width: usize,
     font: Option<&FontSelection>,
+    bytes_per_pixel: usize,
 ) -> (Vec<u8>, Vec<(Vec<u8>, Vec<u8>, usize, usize)>, HashSet<usize>) {
     let data_per_block = row_width - 4;
     let filtered_row_size = row_width + 1;
@@ -787,15 +841,34 @@ fn build_aligned_data(
     // Track if previous file needs a terminator
     let mut pending_terminator = false;
 
-    // Insert reverse color map at the very start of the image.
-    // This is a cycling gradient (0→255→255→0→...) spanning ≥256 bytes,
-    // letting readers map pixel colors back to byte values.
-    let reverse_color_map_rows = (256 + row_width - 1) / row_width;
-    let mut palette_counter: usize = 0;
-    let color_map_bytes = reverse_color_map_rows * row_width;
-    data.reserve(color_map_bytes);
-    for _ in 0..color_map_bytes {
-        data.push(cycling_palette_index(&mut palette_counter));
+    // Insert reference color rows at the very start of the image.
+    if bytes_per_pixel > 1 {
+        // RGBA mode: single row cycling through 6 reference colors as RGBA pixels
+        // transparent, black, white, red, green, blue
+        const RGBA_REF_COLORS: [[u8; 4]; 6] = [
+            [0, 0, 0, 0],       // transparent
+            [0, 0, 0, 255],     // black
+            [255, 255, 255, 255], // white
+            [255, 0, 0, 255],   // red
+            [0, 255, 0, 255],   // green
+            [0, 0, 255, 255],   // blue
+        ];
+        data.reserve(row_width);
+        let pixels_per_row = row_width / bytes_per_pixel;
+        for px in 0..pixels_per_row {
+            let color = &RGBA_REF_COLORS[px % RGBA_REF_COLORS.len()];
+            data.extend_from_slice(color);
+        }
+    } else {
+        // Indexed mode: cycling gradient (0→255→255→0→...) spanning ≥256 bytes,
+        // letting readers map pixel colors back to byte values.
+        let reverse_color_map_rows = (256 + row_width - 1) / row_width;
+        let mut palette_counter: usize = 0;
+        let color_map_bytes = reverse_color_map_rows * row_width;
+        data.reserve(color_map_bytes);
+        for _ in 0..color_map_bytes {
+            data.push(cycling_palette_index(&mut palette_counter));
+        }
     }
 
 
@@ -871,14 +944,16 @@ fn build_aligned_data(
 
         // Add spacing BEFORE this file (after any terminator)
         if spacing_rows > 0 {
-            // Align to row first, then add spacing rows (filled with 0x00)
+            // Align to row first, then add spacing rows (opaque black)
             let padding = (row_width - (data.len() % row_width)) % row_width;
-            data.resize(data.len() + padding + spacing_rows * row_width, 0);
+            let new_len = data.len() + padding + spacing_rows * row_width;
+            resize_with_opaque_black(&mut data, new_len, bytes_per_pixel);
         }
 
         // Align to row boundary
         let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
-        data.resize(data.len() + padding_to_row, 0);
+        let new_len = data.len() + padding_to_row;
+        resize_with_opaque_black(&mut data, new_len, bytes_per_pixel);
 
         // When splitting, place label BEFORE the boundary so it appears visually
         // adjacent to the file. The IDAT boundary (5-byte deflate header) between
@@ -899,7 +974,7 @@ fn build_aligned_data(
             let compressed_size = (num_content_blocks + terminator_rows_count) * filtered_row_size;
             let crc = crc32(body);
             let header_bytes = build_local_header(name, body.len(), compressed_size, crc, extra_len);
-            let label = render_filename_label(name, row_width, f, &header_bytes, label_is_terminator, body.len());
+            let label = render_filename_label(name, row_width, f, &header_bytes, label_is_terminator, body.len(), bytes_per_pixel);
             data.extend_from_slice(&label);
         }
 
@@ -909,7 +984,7 @@ fn build_aligned_data(
         if crosses_idat_boundary(start_filtered, end_filtered) {
             // Pad to next boundary-aligned position
             let boundary_target = next_boundary_aligned_pos(data.len(), row_width);
-            data.resize(boundary_target, 0);
+            resize_with_opaque_black(&mut data, boundary_target, bytes_per_pixel);
         }
 
         // Place the file
@@ -938,7 +1013,7 @@ fn build_aligned_data(
                 let terminator_row = data.len() / row_width;
                 terminator_rows.insert(terminator_row);
             }
-            let label = render_filename_label(name, row_width, f, &header_bytes, label_is_terminator, body.len());
+            let label = render_filename_label(name, row_width, f, &header_bytes, label_is_terminator, body.len(), bytes_per_pixel);
             data.extend_from_slice(&label);
         }
 
@@ -972,29 +1047,51 @@ fn build_aligned_data(
         data.extend_from_slice(&terminator);
     }
 
-    // Append trailing gap + mirrored reverse color map at end of image.
-    // This mirrors the leading color map so the last pixel matches the first,
-    // second-last matches the second, etc.
+    // Append trailing gap + mirrored reference colors at end of image.
     {
         let trailing_gap_rows: usize = if font.is_some() { 2 } else { 1 };
-        let trailing_color_map_rows = (256 + row_width - 1) / row_width;
 
         // Align to row boundary first
         let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
-        data.resize(data.len() + padding_to_row, 0);
+        let new_len = data.len() + padding_to_row;
+        resize_with_opaque_black(&mut data, new_len, bytes_per_pixel);
 
         // Add gap rows before trailing color map
-        data.resize(data.len() + trailing_gap_rows * row_width, 0);
+        let new_len = data.len() + trailing_gap_rows * row_width;
+        resize_with_opaque_black(&mut data, new_len, bytes_per_pixel);
 
-        // Generate forward color map, then reverse it to create mirror
-        let color_map_bytes = trailing_color_map_rows * row_width;
-        let mut forward: Vec<u8> = Vec::with_capacity(color_map_bytes);
-        let mut palette_counter: usize = 0;
-        for _ in 0..color_map_bytes {
-            forward.push(cycling_palette_index(&mut palette_counter));
+        if bytes_per_pixel > 1 {
+            // RGBA mode: single row with reversed 6-color cycle
+            const RGBA_REF_COLORS: [[u8; 4]; 6] = [
+                [0, 0, 0, 0],       // transparent
+                [0, 0, 0, 255],     // black
+                [255, 255, 255, 255], // white
+                [255, 0, 0, 255],   // red
+                [0, 255, 0, 255],   // green
+                [0, 0, 255, 255],   // blue
+            ];
+            let pixels_per_row = row_width / bytes_per_pixel;
+            // Build forward, then reverse pixel order
+            let mut forward: Vec<[u8; 4]> = Vec::with_capacity(pixels_per_row);
+            for px in 0..pixels_per_row {
+                forward.push(RGBA_REF_COLORS[px % RGBA_REF_COLORS.len()]);
+            }
+            forward.reverse();
+            for color in &forward {
+                data.extend_from_slice(color);
+            }
+        } else {
+            // Indexed mode: mirrored cycling gradient
+            let trailing_color_map_rows = (256 + row_width - 1) / row_width;
+            let color_map_bytes = trailing_color_map_rows * row_width;
+            let mut forward: Vec<u8> = Vec::with_capacity(color_map_bytes);
+            let mut palette_counter: usize = 0;
+            for _ in 0..color_map_bytes {
+                forward.push(cycling_palette_index(&mut palette_counter));
+            }
+            forward.reverse();
+            data.extend_from_slice(&forward);
         }
-        forward.reverse();
-        data.extend_from_slice(&forward);
     }
 
     (data, entries, terminator_rows)
@@ -1567,7 +1664,7 @@ mod tests {
         // Get a font for testing (pass 0 as hash since we just need any font)
         let font = fonts::select_font(100, 0).expect("Should get a font for small size");
 
-        let label = render_filename_label(name, row_width, &font, &header, false, body.len());
+        let label = render_filename_label(name, row_width, &font, &header, false, body.len(), 1);
 
         // Bottom row (padding below text) should have header bytes - stretch starts there
         // label_rows = max_height + 2
