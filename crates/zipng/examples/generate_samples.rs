@@ -145,56 +145,6 @@ fn main() -> Result<(), panic> {
         ],
     )?);
 
-    // 12. Fiction spine JSON data (from parent project)
-    generated.push(create_sample(
-        "fiction_spines",
-        vec![
-            ("RYL0035858.json", include_bytes!("../../../data/spines/RYL0035858.json").to_vec()),
-            ("RYL0036950.json", include_bytes!("../../../data/spines/RYL0036950.json").to_vec()),
-            ("RYL0048012.json", include_bytes!("../../../data/spines/RYL0048012.json").to_vec()),
-            ("index.json", include_bytes!("../../../data/spines/index.json").to_vec()),
-        ],
-    )?);
-
-    // 13. Deno/TypeScript source
-    generated.push(create_sample(
-        "deno_source",
-        vec![
-            ("main.ts", include_bytes!("../../../deno/main.ts").to_vec()),
-            ("fresh.gen.ts", include_bytes!("../../../deno/fresh.gen.ts").to_vec()),
-            ("twind.config.ts", include_bytes!("../../../deno/twind.config.ts").to_vec()),
-            ("deno.json", include_bytes!("../../../deno/deno.json").to_vec()),
-        ],
-    )?);
-
-    // 14. Deno routes (TSX)
-    generated.push(create_sample(
-        "deno_routes",
-        vec![
-            ("routes/_404.ts", include_bytes!("../../../deno/routes/_404.ts").to_vec()),
-            ("routes/_500.ts", include_bytes!("../../../deno/routes/_500.ts").to_vec()),
-            ("routes/_middleware.ts", include_bytes!("../../../deno/routes/_middleware.ts").to_vec()),
-        ],
-    )?);
-
-    // 15. Web fonts (WOFF2 binary)
-    generated.push(create_sample(
-        "web_fonts",
-        vec![
-            ("fonts/sans400.woff2", include_bytes!("../../../deno/static/fonts/sans400.woff2").to_vec()),
-            ("fonts/sans700.woff2", include_bytes!("../../../deno/static/fonts/sans700.woff2").to_vec()),
-        ],
-    )?);
-
-    // 16. Static web assets
-    generated.push(create_sample(
-        "static_assets",
-        vec![
-            ("icon.svg", include_bytes!("../../../deno/static/icon.svg").to_vec()),
-            ("cover.png", include_bytes!("../../../deno/static/cover.png").to_vec()),
-        ],
-    )?);
-
     // 17. Parent project Rust source
     generated.push(create_sample(
         "fic_source",
@@ -210,7 +160,6 @@ fn main() -> Result<(), panic> {
     generated.push(create_sample(
         "mixed_project",
         vec![
-            ("icon.png", include_bytes!("../../../icon.png").to_vec()),
             ("README.md", include_bytes!("../../../README.md").to_vec()),
             ("Cargo.toml", include_bytes!("../../../Cargo.toml").to_vec()),
             ("CLAUDE.md", include_bytes!("../../../CLAUDE.md").to_vec()),
@@ -253,24 +202,6 @@ fn main() -> Result<(), panic> {
             ("variable-width-math.md", include_bytes!("../docs/exploration/variable-width-math.md").to_vec()),
             ("variable-width-plan.md", include_bytes!("../docs/exploration/variable-width-plan.md").to_vec()),
             ("wider-images-analysis.md", include_bytes!("../docs/exploration/wider-images-analysis.md").to_vec()),
-        ],
-    )?);
-
-    // 23. Deno XML utilities
-    generated.push(create_sample(
-        "deno_xml",
-        vec![
-            ("xml/rss.ts", include_bytes!("../../../deno/xml/rss.ts").to_vec()),
-            ("xml/xml.ts", include_bytes!("../../../deno/xml/xml.ts").to_vec()),
-        ],
-    )?);
-
-    // 24. Deno components
-    generated.push(create_sample(
-        "deno_components",
-        vec![
-            ("components/Page.tsx", include_bytes!("../../../deno/components/Page.tsx").to_vec()),
-            ("utils/data.ts", include_bytes!("../../../deno/utils/data.ts").to_vec()),
         ],
     )?);
 

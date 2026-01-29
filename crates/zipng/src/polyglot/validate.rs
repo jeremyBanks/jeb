@@ -276,13 +276,37 @@ mod tests {
     #[test]
     fn test_indexed_color() {
         use crate::palettes::viridis::VIRIDIS;
+        use crate::palettes::perceptual::deduplicate_rgb_palette;
 
         let files = vec![(b"test.txt".as_ref(), b"Hello!".as_ref())];
-        let polyglot = build_polyglot(&files, 0, BitDepth::EightBit, ColorType::Indexed, Some(VIRIDIS));
+        let deduped = deduplicate_rgb_palette(VIRIDIS);
+        let polyglot = build_polyglot(&files, 0, BitDepth::EightBit, ColorType::Indexed, Some(&deduped));
 
         assert_valid_polyglot_with(&polyglot, Some(
             Expectations::new().file_count(1).total_size(6)
         ));
+
+        // Assert all 256 palette entries are unique RGB triplets
+        assert_palette_unique(&polyglot);
+    }
+
+    /// Extract PLTE chunk from PNG data and assert all 256 entries are unique.
+    fn assert_palette_unique(png_data: &[u8]) {
+        use std::collections::HashSet;
+        // Find PLTE chunk: scan for "PLTE" marker
+        let plte_pos = png_data.windows(4)
+            .position(|w| w == b"PLTE")
+            .expect("No PLTE chunk found");
+        // Length is 4 bytes big-endian before the chunk type
+        let len_bytes = &png_data[plte_pos - 4..plte_pos];
+        let plte_len = u32::from_be_bytes([len_bytes[0], len_bytes[1], len_bytes[2], len_bytes[3]]) as usize;
+        assert_eq!(plte_len, 768, "PLTE chunk should be 768 bytes (256 * 3)");
+        let plte_data = &png_data[plte_pos + 4..plte_pos + 4 + plte_len];
+        let mut colors = HashSet::new();
+        for triplet in plte_data.chunks_exact(3) {
+            colors.insert((triplet[0], triplet[1], triplet[2]));
+        }
+        assert_eq!(colors.len(), 256, "All 256 palette entries must be unique RGB triplets, but only {} are unique", colors.len());
     }
 
     #[test]
@@ -425,6 +449,9 @@ mod tests {
 
         // Check for PLTE chunk presence (indicates indexed color)
         assert!(polyglot.windows(4).any(|w| w == b"PLTE"), "Small files should use indexed color with PLTE chunk");
+
+        // Assert all palette entries are unique
+        assert_palette_unique(&polyglot);
     }
 
     #[test]

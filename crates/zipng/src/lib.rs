@@ -193,12 +193,13 @@ pub fn zipng_with_palette(files: &Files, palette: Option<&[u8]>) -> Vec<u8> {
             selected_palette
         };
 
+        let deduped = palettes::perceptual::deduplicate_rgb_palette(palette_slice);
         polyglot::build_polyglot(
             &sorted_files,
             0,
             crate::png::BitDepth::EightBit,
             crate::png::ColorType::Indexed,
-            Some(palette_slice),
+            Some(&deduped),
         )
     }
 }
