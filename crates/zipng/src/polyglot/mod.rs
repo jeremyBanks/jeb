@@ -897,11 +897,6 @@ fn build_aligned_data(
         data.push(cycling_palette_index(&mut palette_counter));
     }
 
-    // The gap after the reverse color map (before the first file) is part of normal
-    // spacing distribution. Ensure at least 1 row of 0x00 padding after the color map.
-    if !file_order_with_spacing.is_empty() && file_order_with_spacing[0].1 < 1 {
-        file_order_with_spacing[0].1 = 1;
-    }
 
     for (order_idx, &(file_idx, spacing_rows)) in file_order_with_spacing.iter().enumerate() {
         let has_label = font.is_some();
@@ -1066,9 +1061,17 @@ fn calculate_bucket_spacing(
         let is_last_bucket = bucket_idx == num_buckets - 1;
         let num_files = file_indices.len();
 
-        // No spacing for last bucket or single-bucket images
-        if is_last_bucket || num_files == 0 {
-            result.push(vec![0; num_files]);
+        if num_files == 0 {
+            result.push(vec![]);
+            continue;
+        }
+
+        // Every file gets a minimum of 1 row of spacing before it.
+        let min_spacing_rows = num_files; // 1 per file
+
+        // Last bucket: no extra distribution, just the minimum.
+        if is_last_bucket {
+            result.push(vec![1; num_files]);
             continue;
         }
 
@@ -1077,41 +1080,42 @@ fn calculate_bucket_spacing(
             .map(|&idx| file_sizes[idx])
             .sum();
 
-        // First bucket has reduced capacity due to the preamble (zero row + reverse color map)
+        // First bucket has reduced capacity due to the preamble (reverse color map rows)
         let effective_capacity = if is_first_bucket {
             bucket_capacity_bytes.saturating_sub(preamble_bytes)
         } else {
             bucket_capacity_bytes
         };
 
-        let slack_bytes = effective_capacity.saturating_sub(total_content);
-        let slack_rows = slack_bytes / row_width;
+        // Slack after reserving minimum spacing for each file
+        let reserved_bytes = min_spacing_rows * row_width;
+        let slack_bytes = effective_capacity.saturating_sub(total_content + reserved_bytes);
+        let extra_slack_rows = slack_bytes / row_width;
 
-        if slack_rows == 0 {
-            result.push(vec![0; num_files]);
+        if extra_slack_rows == 0 {
+            // No room beyond the minimums
+            result.push(vec![1; num_files]);
             continue;
         }
 
-        // Distribute with half-weight edges: [0.5, 1, 1, ..., 1, 0.5] = N weight total
-        // All buckets (including first) get a leading gap for the space before the first file.
+        // Distribute extra slack with half-weight edges: [0.5, 1, 1, ..., 1, 0.5]
         let first_weight = 0.5;
         let total_weight = first_weight + (num_files - 1) as f64 + 0.5;
-        let rows_per_unit = slack_rows as f64 / total_weight;
+        let rows_per_unit = extra_slack_rows as f64 / total_weight;
 
         let mut spacing = Vec::with_capacity(num_files);
         let mut allocated = 0usize;
 
         for i in 0..num_files {
             let weight = if i == 0 { first_weight } else { 1.0 };
-            let rows = (weight * rows_per_unit).floor() as usize;
+            let rows = 1 + (weight * rows_per_unit).floor() as usize; // 1 minimum + distributed
             spacing.push(rows);
-            allocated += rows;
+            allocated += rows - 1; // track only the extra part
         }
 
-        // Distribute remainder to gaps
-        let mut remaining = slack_rows.saturating_sub(allocated);
-        let start_idx = 0;
-        for i in start_idx..num_files {
+        // Distribute remainder of extra slack
+        let mut remaining = extra_slack_rows.saturating_sub(allocated);
+        for i in 0..num_files {
             if remaining == 0 { break; }
             spacing[i] += 1;
             remaining -= 1;
