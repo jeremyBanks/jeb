@@ -224,6 +224,90 @@ fn permutations(arr: &mut Vec<usize>, k: usize, f: &mut impl FnMut(&[usize])) {
     }
 }
 
+/// Reassign duplicate RGB8 entries to the nearest unused RGB8 color.
+///
+/// Processes entries in order: the first occurrence of each RGB8 keeps it,
+/// subsequent duplicates are replaced with the perceptually closest unused
+/// RGB8 (searching outward from the original in a ±radius cube).
+fn deduplicate_palette(entries: &mut [(Oklab, RGB8)]) {
+    use std::collections::HashSet;
+
+    let mut used: HashSet<(u8, u8, u8)> = HashSet::new();
+
+    // First pass: mark which entries are unique (first occurrence wins).
+    let mut is_dupe = vec![false; entries.len()];
+    for (i, &(_, rgb)) in entries.iter().enumerate() {
+        let key = (rgb.r, rgb.g, rgb.b);
+        if !used.insert(key) {
+            is_dupe[i] = true;
+        }
+    }
+
+    // Second pass: for each duplicate, find the nearest unused RGB8.
+    for i in 0..entries.len() {
+        if !is_dupe[i] {
+            continue;
+        }
+
+        let target_ok = entries[i].0;
+        let orig = entries[i].1;
+
+        let mut best: Option<(f32, RGB8)> = None;
+
+        // Search outward in expanding radius shells.
+        for radius in 1i16..=255 {
+            let r_lo = (orig.r as i16 - radius).max(0) as u8;
+            let r_hi = (orig.r as i16 + radius).min(255) as u8;
+            let g_lo = (orig.g as i16 - radius).max(0) as u8;
+            let g_hi = (orig.g as i16 + radius).min(255) as u8;
+            let b_lo = (orig.b as i16 - radius).max(0) as u8;
+            let b_hi = (orig.b as i16 + radius).min(255) as u8;
+
+            // Only check the shell surface (values at exactly ±radius on at
+            // least one axis) to avoid re-checking the interior.
+            for r in r_lo..=r_hi {
+                for g in g_lo..=g_hi {
+                    for b in b_lo..=b_hi {
+                        // Skip interior points (already checked at smaller radius).
+                        let on_shell = (r as i16 - orig.r as i16).abs() == radius
+                            || (g as i16 - orig.g as i16).abs() == radius
+                            || (b as i16 - orig.b as i16).abs() == radius;
+                        if !on_shell {
+                            continue;
+                        }
+
+                        let key = (r, g, b);
+                        if used.contains(&key) {
+                            continue;
+                        }
+
+                        let candidate = RGB8::new(r, g, b);
+                        let dist = perceptual_dist(target_ok, rgb_to_ok(candidate));
+                        if best.as_ref().map_or(true, |(d, _)| dist < *d) {
+                            best = Some((dist, candidate));
+                        }
+                    }
+                }
+            }
+
+            // If we found any candidate at this radius, it's guaranteed to be
+            // closer than anything at a larger radius (in RGB space at least),
+            // so we can stop. The perceptual distance might not perfectly
+            // correlate with RGB radius, but the error is negligible for small
+            // radius values where duplicates occur.
+            if best.is_some() {
+                break;
+            }
+        }
+
+        if let Some((_, replacement)) = best {
+            let key = (replacement.r, replacement.g, replacement.b);
+            used.insert(key);
+            entries[i].1 = replacement;
+        }
+    }
+}
+
 /// Generate a perceptually uniform 256-color palette from the given control
 /// points.
 ///
@@ -271,7 +355,8 @@ pub fn generate(colors: &[RGB8]) -> Vec<u8> {
 
     let total_length = cumulative;
 
-    let mut palette = Vec::with_capacity(768);
+    // Pass 1: generate ideal (Oklab target, RGB8) pairs allowing duplicates.
+    let mut entries: Vec<(Oklab, RGB8)> = Vec::with_capacity(256);
     let mut cursor: usize = 0;
 
     for i in 0..256u32 {
@@ -299,7 +384,15 @@ pub fn generate(colors: &[RGB8]) -> Vec<u8> {
             }
         };
 
-        let rgb = ok_to_rgb(color);
+        entries.push((color, ok_to_rgb(color)));
+    }
+
+    // Pass 2: deduplicate by reassigning duplicate RGB8 values to the nearest
+    // unused neighbor. We process in order so earlier entries keep priority.
+    deduplicate_palette(&mut entries);
+
+    let mut palette = Vec::with_capacity(768);
+    for &(_, rgb) in &entries {
         palette.push(rgb.r);
         palette.push(rgb.g);
         palette.push(rgb.b);

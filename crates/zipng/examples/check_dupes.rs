@@ -1,0 +1,49 @@
+use rgb::RGB8;
+use zipng::palettes::perceptual;
+
+fn main() {
+    let sets: Vec<(&str, Vec<RGB8>)> = vec![
+        ("01-red", vec![RGB8::new(0xFF, 0x00, 0x00)]),
+        ("01-teal", vec![RGB8::new(0x00, 0x99, 0x88)]),
+        ("01-gold", vec![RGB8::new(0xFF, 0xD7, 0x00)]),
+        ("02-black-white", vec![RGB8::new(0x00, 0x00, 0x00), RGB8::new(0xFF, 0xFF, 0xFF)]),
+        ("02-red-cyan", vec![RGB8::new(0xFF, 0x00, 0x00), RGB8::new(0x00, 0xFF, 0xFF)]),
+        ("02-green-magenta", vec![RGB8::new(0x00, 0xFF, 0x00), RGB8::new(0xFF, 0x00, 0xFF)]),
+        ("03-near-white", vec![RGB8::new(0xFF, 0xF0, 0xF0), RGB8::new(0xF0, 0xFF, 0xF0), RGB8::new(0xF0, 0xF0, 0xFF)]),
+        ("03-near-black", vec![RGB8::new(0x20, 0x00, 0x00), RGB8::new(0x00, 0x20, 0x00), RGB8::new(0x00, 0x00, 0x20)]),
+        ("03-steel", vec![RGB8::new(0x1C, 0x1C, 0x1C), RGB8::new(0x70, 0x80, 0x90), RGB8::new(0xE8, 0xE8, 0xE8)]),
+        ("04-candy", vec![RGB8::new(0xFF, 0x69, 0xB4), RGB8::new(0xFF, 0xF0, 0xF5), RGB8::new(0xDA, 0x70, 0xD6), RGB8::new(0xFF, 0xB6, 0xC1)]),
+        ("05-pastel-rainbow", vec![RGB8::new(0xFF, 0xB3, 0xBA), RGB8::new(0xFF, 0xDF, 0xBA), RGB8::new(0xFF, 0xFF, 0xBA), RGB8::new(0xBA, 0xFF, 0xBA), RGB8::new(0xBA, 0xE1, 0xFF)]),
+        ("05-same-lightness", vec![RGB8::new(0xBF, 0x40, 0x40), RGB8::new(0x80, 0x80, 0x40), RGB8::new(0x40, 0xBF, 0x40), RGB8::new(0x40, 0x80, 0xBF), RGB8::new(0xBF, 0x40, 0xBF)]),
+        ("07-grayscale-tinted", vec![RGB8::new(0x0A, 0x0A, 0x14), RGB8::new(0x2B, 0x2B, 0x3C), RGB8::new(0x4A, 0x4A, 0x6A), RGB8::new(0x70, 0x80, 0x90), RGB8::new(0x9A, 0xA0, 0xAA), RGB8::new(0xC8, 0xCC, 0xD0), RGB8::new(0xF0, 0xF0, 0xF5)]),
+        ("08-pastels", vec![RGB8::new(0xFF, 0xAD, 0xAD), RGB8::new(0xFF, 0xD6, 0xA5), RGB8::new(0xFD, 0xFF, 0xB6), RGB8::new(0xCA, 0xFF, 0xBF), RGB8::new(0x9B, 0xF6, 0xFF), RGB8::new(0xA0, 0xC4, 0xFF), RGB8::new(0xBD, 0xB2, 0xFF), RGB8::new(0xFF, 0xC6, 0xFF)]),
+    ];
+
+    let mut any_dupes = false;
+    for (name, colors) in &sets {
+        let palette = perceptual::generate(colors);
+        let mut dupes = 0;
+        for i in 1..256 {
+            let a = &palette[(i-1)*3..(i-1)*3+3];
+            let b = &palette[i*3..i*3+3];
+            if a == b {
+                dupes += 1;
+            }
+        }
+        if dupes > 0 {
+            any_dupes = true;
+            println!("{name}: {dupes} adjacent duplicate(s)");
+            // Show where
+            for i in 1..256 {
+                let a = &palette[(i-1)*3..(i-1)*3+3];
+                let b = &palette[i*3..i*3+3];
+                if a == b {
+                    println!("  index {}-{}: ({}, {}, {})", i-1, i, a[0], a[1], a[2]);
+                }
+            }
+        }
+    }
+    if !any_dupes {
+        println!("No adjacent duplicates found in any sample.");
+    }
+}
