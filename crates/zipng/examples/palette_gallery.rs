@@ -86,7 +86,10 @@ fn main() {
     ];
 
     for (name, palette) in &builtin {
-        let path = out_dir.join(format!("{name}.png"));
+        let (category, _) = name.split_once('-').unwrap_or(("misc", name));
+        let sub = out_dir.join(category);
+        fs::create_dir_all(&sub).unwrap();
+        let path = sub.join(format!("{name}.png"));
         save_gradient(&path, palette);
         println!("  {}", path.display());
     }
@@ -180,10 +183,13 @@ fn main() {
         ("perceptual-6-all-corners", vec![c(0xFF, 0x00, 0x00), c(0xFF, 0xFF, 0x00), c(0x00, 0xFF, 0x00), c(0x00, 0xFF, 0xFF), c(0x00, 0x00, 0xFF), c(0xFF, 0x00, 0xFF)]),
     ];
 
+    let perceptual_dir = out_dir.join("perceptual");
+    fs::create_dir_all(&perceptual_dir).unwrap();
+
     for (name, colors) in &perceptual_sets {
         // Unsorted
         let palette = perceptual::generate(colors);
-        let path = out_dir.join(format!("{name}.png"));
+        let path = perceptual_dir.join(format!("{name}.png"));
         save_gradient(&path, &palette);
         println!("  {}", path.display());
 
@@ -191,7 +197,7 @@ fn main() {
         if colors.len() > 2 {
             let sorted = perceptual::sort_colors(colors);
             let palette = perceptual::generate(&sorted);
-            let path = out_dir.join(format!("{name}-sorted.png"));
+            let path = perceptual_dir.join(format!("{name}-sorted.png"));
             save_gradient(&path, &palette);
             println!("  {}", path.display());
         }
