@@ -799,9 +799,35 @@ fn build_aligned_data(
     }
 
 
+    let rows_per_bucket = IDAT_BLOCK_SIZE / filtered_row_size;
+    let max_file_rows = rows_per_bucket;
+
     for (order_idx, &(file_idx, spacing_rows)) in file_order_with_spacing.iter().enumerate() {
-        let has_label = font.is_some();
         let has_spacing_gap = spacing_rows > 0;
+
+        // Check if this file with label would exceed one IDAT block.
+        // If so, skip the label for this file to avoid crossing an IDAT boundary
+        // (which would insert a 5-byte deflate block header mid-ZIP-stream).
+        let (name, body) = &files[file_idx];
+        let file_size_with_label = file_sizes[file_idx];
+        let file_rows_with_label = (file_size_with_label + row_width - 1) / row_width;
+        let has_label = if font.is_some() && file_rows_with_label > max_file_rows {
+            let file_size_without_label = calculate_file_size(name.as_ref(), body.as_ref(), row_width, None);
+            let file_rows_without_label = (file_size_without_label + row_width - 1) / row_width;
+            assert!(
+                file_rows_without_label <= max_file_rows,
+                "File {:?} ({} rows) exceeds single IDAT block capacity ({} rows) even without label",
+                String::from_utf8_lossy(name), file_rows_without_label, max_file_rows
+            );
+            false
+        } else {
+            font.is_some()
+        };
+        let actual_file_size = if has_label {
+            file_size_with_label
+        } else {
+            calculate_file_size(name.as_ref(), body.as_ref(), row_width, None)
+        };
 
         // Determine if this file's label can serve as terminator for previous file.
         // The label can only serve as terminator if it's placed IMMEDIATELY after the
@@ -823,9 +849,8 @@ fn build_aligned_data(
             let pos_after_align = data.len() + padding_to_row;
 
             // Check if this file would cross an IDAT boundary
-            let file_size = file_sizes[file_idx];
             let start_filtered = data_to_filtered_pos(pos_after_align, row_width);
-            let end_filtered = data_to_filtered_pos(pos_after_align + file_size, row_width);
+            let end_filtered = data_to_filtered_pos(pos_after_align + actual_file_size, row_width);
             if crosses_idat_boundary(start_filtered, end_filtered) {
                 // Boundary crossing will happen - label can't serve as terminator
                 label_is_terminator = false;
@@ -853,9 +878,8 @@ fn build_aligned_data(
         data.resize(data.len() + padding_to_row, 0);
 
         // Check if this file would cross an IDAT boundary
-        let file_size = file_sizes[file_idx];
         let start_filtered = data_to_filtered_pos(data.len(), row_width);
-        let end_filtered = data_to_filtered_pos(data.len() + file_size, row_width);
+        let end_filtered = data_to_filtered_pos(data.len() + actual_file_size, row_width);
         if crosses_idat_boundary(start_filtered, end_filtered) {
             // Pad to next boundary-aligned position
             let boundary_target = next_boundary_aligned_pos(data.len(), row_width);
@@ -863,8 +887,6 @@ fn build_aligned_data(
         }
 
         // Place the file
-        let (name, body) = &files[file_idx];
-
         // Calculate header and extra field sizes
         let header_size = 30 + name.len();
         let bytes_used = header_size % row_width;
@@ -882,8 +904,9 @@ fn build_aligned_data(
         let crc = crc32(body);
         let header_bytes = build_local_header(name, body.len(), compressed_size, crc, extra_len);
 
-        // Insert filename label if font is specified
-        if let Some(f) = font {
+        // Insert filename label if font is specified and file fits within one IDAT block with label
+        if has_label {
+            let f = font.unwrap();
             if label_is_terminator {
                 // This label's first row serves as terminator for previous file
                 let terminator_row = data.len() / row_width;
