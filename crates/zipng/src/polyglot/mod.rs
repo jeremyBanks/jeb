@@ -89,9 +89,6 @@ const IDAT_BLOCK_SIZE: usize = 65535;
 /// or (worse) insufficient if layout assumptions change.
 pub const MAX_FILE_CONTENT_SIZE: usize = 60_000;
 
-/// Maximum image height before disabling filename labels.
-const MAX_HEIGHT_WITH_LABELS: usize = 1024;
-
 /// Check if two glyphs would touch at a given horizontal offset.
 /// Returns true if any pixels are 8-directionally adjacent.
 pub fn glyphs_touch(prev: &[Vec<bool>], next: &[Vec<bool>], offset: i32) -> bool {
@@ -596,22 +593,7 @@ pub fn build_polyglot(
     // Build with the (possibly optimized) row_width
     let (pixel_data, entry_infos, final_block_rows) = build_aligned_data(files, row_width, font.as_ref());
 
-    // Check if height exceeds limit and retry without labels if needed
-    let height = if pixel_data.is_empty() { 1 } else { (pixel_data.len() + row_width - 1) / row_width };
-    let (pixel_data, entry_infos, final_block_rows, row_width) = if font.is_some() && height > MAX_HEIGHT_WITH_LABELS {
-        // Rebuild without labels
-        let estimated_size = estimate_total_size(files, None);
-        let initial_width = calculate_row_width(estimated_size, min_width, bytes_per_pixel);
-        let (initial_data, _, _) = build_aligned_data(files, initial_width, None);
-        let actual_size = initial_data.len();
-        let row_width = calculate_row_width(actual_size, min_width, bytes_per_pixel);
-        let (pixel_data, entry_infos, final_block_rows) = build_aligned_data(files, row_width, None);
-        (pixel_data, entry_infos, final_block_rows, row_width)
-    } else {
-        (pixel_data, entry_infos, final_block_rows, row_width)
-    };
-
-    // Step 2: Calculate PNG dimensions
+    // Calculate PNG dimensions
     let height = if pixel_data.is_empty() { 1 } else { (pixel_data.len() + row_width - 1) / row_width };
 
     let mut padded = pixel_data.clone();
