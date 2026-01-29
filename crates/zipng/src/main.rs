@@ -5,6 +5,7 @@ use std::path::Path;
 use std::process::ExitCode;
 
 use indexmap::IndexMap;
+use rgb::RGB8;
 use zipng::Files;
 
 const MAX_FILE_SIZE: usize = 60 * 1024; // 60KB limit
@@ -20,11 +21,14 @@ Options:
   -j                   Junk paths - store just filenames, not full paths
   -@                   Read file list from stdin (one per line)
   -q                   Quiet mode - no output on success
+  --colors <hex,...>   Custom palette from comma-separated hex RGB colors
+                       (e.g. --colors ffffff,ff0000,000000)
   -h, --help           Show this help
 
 Examples:
   zipng -o archive.png file1.txt file2.txt
   zipng -j -o archive.png path/to/file.txt
+  zipng --colors ffffff,3b82f6,000000 -o archive.png file.txt
   find . -name '*.rs' | zipng -@ -o archive.png"
     );
 }
@@ -42,6 +46,7 @@ fn main() -> ExitCode {
     let mut junk_paths = false;
     let mut read_stdin = false;
     let mut quiet = false;
+    let mut custom_colors: Option<Vec<RGB8>> = None;
 
     let mut i = 0;
     while i < args.len() {
@@ -69,6 +74,20 @@ fn main() -> ExitCode {
             "-q" => {
                 quiet = true;
                 i += 1;
+            }
+            "--colors" => {
+                if i + 1 >= args.len() {
+                    eprintln!("Error: --colors requires an argument");
+                    return ExitCode::from(1);
+                }
+                match parse_colors(&args[i + 1]) {
+                    Ok(colors) => custom_colors = Some(colors),
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        return ExitCode::from(1);
+                    }
+                }
+                i += 2;
             }
             arg if arg.starts_with('-') => {
                 eprintln!("Error: unknown option: {}", arg);
@@ -159,7 +178,9 @@ fn main() -> ExitCode {
     }
 
     // Generate polyglot PNG+ZIP
-    let output = zipng::zipng(&Files::from(files));
+    let custom_palette = custom_colors
+        .map(|colors| zipng::palettes::perceptual::generate(&colors));
+    let output = zipng::zipng_with_palette(&Files::from(files), custom_palette.as_deref());
 
     // Write output
     if let Err(e) = fs::write(&output_path, &output) {
@@ -179,4 +200,28 @@ fn main() -> ExitCode {
     }
 
     ExitCode::SUCCESS
+}
+
+fn parse_colors(s: &str) -> Result<Vec<RGB8>, String> {
+    let colors: Result<Vec<RGB8>, String> = s
+        .split(',')
+        .map(|hex| {
+            let hex = hex.trim().trim_start_matches('#');
+            if hex.len() != 6 {
+                return Err(format!("invalid hex color '{}': expected 6 hex digits", hex));
+            }
+            let r = u8::from_str_radix(&hex[0..2], 16)
+                .map_err(|_| format!("invalid hex color '{}'", hex))?;
+            let g = u8::from_str_radix(&hex[2..4], 16)
+                .map_err(|_| format!("invalid hex color '{}'", hex))?;
+            let b = u8::from_str_radix(&hex[4..6], 16)
+                .map_err(|_| format!("invalid hex color '{}'", hex))?;
+            Ok(RGB8::new(r, g, b))
+        })
+        .collect();
+    let colors = colors?;
+    if colors.is_empty() {
+        return Err("--colors requires at least one color".to_string());
+    }
+    Ok(colors)
 }

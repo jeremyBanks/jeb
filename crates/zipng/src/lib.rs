@@ -140,6 +140,15 @@ static ALL_PALETTES: &[&[u8]] = &[
 /// - For smaller data: Indexed color with a deterministically-selected palette
 ///   based on a hash of the input data
 pub fn zipng(files: &Files) -> Vec<u8> {
+    zipng_with_palette(files, None)
+}
+
+/// Like [`zipng`], but allows specifying a custom 768-byte RGB palette.
+///
+/// If `palette` is `Some`, it is used directly (forcing indexed color mode for
+/// data that would fit). If `None`, falls back to the default hash-selected
+/// palette.
+pub fn zipng_with_palette(files: &Files, palette: Option<&[u8]>) -> Vec<u8> {
     // Sort files lexicographically by path
     let mut sorted_files: Vec<(&[u8], &[u8])> = files
         .files
@@ -170,25 +179,31 @@ pub fn zipng(files: &Files) -> Vec<u8> {
             None,
         )
     } else {
-        // Smaller data: use indexed color with hash-selected palette
-        // Hash all file paths and contents to deterministically select a palette
-        let mut hash_input: Vec<u8> = Vec::new();
-        for (path, content) in &sorted_files {
-            hash_input.extend_from_slice(path);
-            hash_input.push(0); // separator
-            hash_input.extend_from_slice(content);
-            hash_input.push(0); // separator
-        }
-        let hash = crc32(&hash_input);
-        let palette_index = (hash as usize) % ALL_PALETTES.len();
-        let palette = ALL_PALETTES[palette_index];
+        // Smaller data: use indexed color
+        let selected_palette;
+        let palette_slice: &[u8] = if let Some(p) = palette {
+            p
+        } else {
+            // Hash all file paths and contents to deterministically select a palette
+            let mut hash_input: Vec<u8> = Vec::new();
+            for (path, content) in &sorted_files {
+                hash_input.extend_from_slice(path);
+                hash_input.push(0); // separator
+                hash_input.extend_from_slice(content);
+                hash_input.push(0); // separator
+            }
+            let hash = crc32(&hash_input);
+            let palette_index = (hash as usize) % ALL_PALETTES.len();
+            selected_palette = ALL_PALETTES[palette_index];
+            selected_palette
+        };
 
         polyglot::build_polyglot(
             &sorted_files,
             0,
             crate::png::BitDepth::EightBit,
             crate::png::ColorType::Indexed,
-            Some(palette),
+            Some(palette_slice),
         )
     }
 }
