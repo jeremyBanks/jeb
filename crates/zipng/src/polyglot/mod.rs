@@ -59,8 +59,8 @@ pub use crate::png::ColorType::*;
 pub type ColorMode = ColorType;
 
 /// Alias for backward compatibility - Lightness is now Luminance
-pub const Lightness: ColorType = ColorType::Luminance;
-pub const LightnessAlpha: ColorType = ColorType::LuminanceAlpha;
+pub const LIGHTNESS: ColorType = ColorType::Luminance;
+pub const LIGHTNESS_ALPHA: ColorType = ColorType::LuminanceAlpha;
 
 /// Deflate stored block header overhead (LEN + NLEN = 4 bytes).
 /// Each row contains this header followed by the actual file data.
@@ -199,9 +199,8 @@ fn create_terminator_row(row_width: usize, bytes_per_pixel: usize) -> Vec<u8> {
         // that the correction needs to cancel.
         let sim_len = first_corr.min(row_width);
         let mut actual = vec![0u8; sim_len];
-        for i in 0..sim_len.min(4) {
-            actual[i] = row[i]; // terminator bytes
-        }
+        let copy_len = sim_len.min(4);
+        actual[..copy_len].copy_from_slice(&row[..copy_len]);
         for i in bpp..sim_len {
             actual[i] = actual[i].wrapping_add(actual[i - bpp]);
         }
@@ -358,7 +357,6 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
     let mut render_size = false;
     let mut size_str = String::new();
     let mut size_char_positions: Vec<(usize, i32)> = Vec::new();
-    let mut size_actual_width: usize = 0;
     let mut size_start_x: i32 = 0;
 
     for candidate in &candidates {
@@ -368,7 +366,6 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
             render_size = true;
             size_str = candidate.clone();
             size_char_positions = positions;
-            size_actual_width = width;
             size_start_x = start;
             break;
         }
@@ -463,6 +460,7 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
             break;
         }
 
+        #[expect(clippy::needless_range_loop)]
         for px in 0..pixel_width {
             if !stretch_active[px] {
                 continue; // Already blocked in this column
@@ -500,6 +498,7 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
 
     // Draw text pixels on top (white = all channels 0xFF)
     for row_idx in 0..label_rows {
+        #[expect(clippy::needless_range_loop)]
         for px in 0..pixel_width {
             if text_bitmap[row_idx][px] {
                 let byte_start = px * bytes_per_pixel;
@@ -518,8 +517,8 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
     }
 
     // Output all rows
-    for row_idx in 0..label_rows {
-        result.extend_from_slice(&rows_data[row_idx]);
+    for row in &rows_data {
+        result.extend_from_slice(row);
     }
 
     result
@@ -723,11 +722,11 @@ pub fn build_polyglot(
 
     // Step 3: Build PNG
     let mut output = output_buffer();
-    write_png_header(&mut output, effective_width as u32, height as u32, bit_depth, color_mode);
+    let _ = write_png_header(&mut output, effective_width as u32, height as u32, bit_depth, color_mode);
 
     if let Some(p) = palette {
         let plte_data = OutputBuffer::without_tag(p);
-        write_png_chunk(&mut output, b"PLTE", &plte_data);
+        let _ = write_png_chunk(&mut output, b"PLTE", &plte_data);
     }
 
     // Calculate offset where filtered pixel data starts in the file
@@ -741,7 +740,7 @@ pub fn build_polyglot(
     let filtered = add_smart_filter_bytes(&padded, row_width, &final_block_rows);
     write_idat_stored(&mut output, &filtered);
 
-    write_png_footer(&mut output);
+    let _ = write_png_footer(&mut output);
 
     // Step 4: Build file entries with correct offsets
     let file_entries: Vec<FileEntry> = entry_infos
@@ -881,6 +880,7 @@ fn resize_with_opaque_padding(data: &mut Vec<u8>, new_len: usize, bytes_per_pixe
 /// 3. Relaxed packing: Place remaining items in strict preferred order.
 /// 4. Spacing: Distribute leftover space evenly within each full IDAT bucket.
 ///    Edge gaps (before first, after last) have half weight.
+#[expect(clippy::type_complexity)]
 fn build_aligned_data(
     files: &[(&[u8], &[u8])],
     row_width: usize,
@@ -1292,9 +1292,9 @@ fn calculate_bucket_spacing(
 
         // Distribute remainder of extra slack
         let mut remaining = extra_slack_rows.saturating_sub(allocated);
-        for i in 0..num_files {
+        for s in &mut spacing {
             if remaining == 0 { break; }
-            spacing[i] += 1;
+            *s += 1;
             remaining -= 1;
         }
 
@@ -1551,7 +1551,7 @@ fn write_idat_stored(buffer: &mut OutputBuffer, filtered_data: &[u8]) {
     // Adler-32
     idat_content += &adler32(filtered_data).to_be_bytes();
 
-    write_png_chunk(buffer, b"IDAT", &idat_content);
+    let _ = write_png_chunk(buffer, b"IDAT", &idat_content);
 }
 
 /// Write central directory entries.
@@ -1657,7 +1657,7 @@ mod tests {
     #[test]
     fn test_polyglot_structure() {
         let files = vec![(b"test.txt".as_ref(), b"Hello, World!".as_ref())];
-        let result = build_polyglot(&files, 0, BitDepth::EightBit, Lightness, None);
+        let result = build_polyglot(&files, 0, BitDepth::EightBit, LIGHTNESS, None);
 
         // Check PNG signature
         assert_eq!(&result[0..8], b"\x89PNG\r\n\x1A\n");
@@ -1699,7 +1699,7 @@ mod tests {
             (b"file3.bin".as_ref(), large_body.as_slice()),
         ];
 
-        let result = build_polyglot(&files, 0, BitDepth::EightBit, Lightness, None);
+        let result = build_polyglot(&files, 0, BitDepth::EightBit, LIGHTNESS, None);
 
         // Check PNG signature
         assert_eq!(&result[0..8], b"\x89PNG\r\n\x1A\n");
@@ -1727,7 +1727,7 @@ mod tests {
             .map(|(n, b)| (n.as_slice(), b.as_slice()))
             .collect();
 
-        let result = build_polyglot(&file_refs, 0, BitDepth::EightBit, Lightness, None);
+        let result = build_polyglot(&file_refs, 0, BitDepth::EightBit, LIGHTNESS, None);
 
         // Should be over 200KB
         assert!(result.len() > 200_000, "Result should be >200KB, got {}", result.len());

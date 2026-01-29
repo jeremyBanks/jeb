@@ -93,7 +93,7 @@ assert_impl_all!(
 
 impl<T: ?Sized> Clone for PhantomType<T> {
     fn clone(&self) -> Self {
-        PhantomType(PhantomData)
+        *self
     }
 }
 
@@ -106,8 +106,8 @@ impl<T: ?Sized> PartialEq for PhantomType<T> {
 impl<T: ?Sized> Eq for PhantomType<T> {}
 
 impl<T: ?Sized> PartialOrd for PhantomType<T> {
-    fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
-        Some(Ordering::Equal)
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 

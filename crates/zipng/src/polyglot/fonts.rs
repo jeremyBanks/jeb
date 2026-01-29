@@ -18,16 +18,16 @@ pub struct BitmapFont {
 }
 
 impl BitmapFont {
-    /// Get glyph bitmap for a character with fallback chain:
-    /// 1. Exact character
-    /// 2. Different capitalization (upper ↔ lower)
-    /// 3. Fallback characters: …, _, ., ?
-    /// 4. Space (with skip_kerning = true)
     /// Returns the set of characters this font has native glyphs for.
     pub fn chars(&self) -> impl Iterator<Item = char> + '_ {
         self.glyphs.keys().copied()
     }
 
+    /// Get glyph bitmap for a character with fallback chain:
+    /// 1. Exact character
+    /// 2. Different capitalization (upper ↔ lower)
+    /// 3. Fallback characters: …, _, ., ?
+    /// 4. Space (with skip_kerning = true)
     pub fn get_glyph(&self, c: char) -> Option<GlyphLookup<'_>> {
         // 1. Try exact character
         if let Some(g) = self.glyphs.get(&c) {
@@ -97,9 +97,7 @@ impl BitmapFont {
         // Center the bar horizontally within the glyph bounding box
         let start = (self.width.saturating_sub(ink_width)) / 2;
         for row in &mut glyph {
-            for col in start..start + ink_width.min(self.width) {
-                row[col] = true;
-            }
+            row[start..start + ink_width.min(self.width)].fill(true);
         }
         glyph
     }

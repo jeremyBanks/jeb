@@ -142,6 +142,10 @@ impl OutputBuffer {
         self.bytes.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.bytes.is_empty()
+    }
+
     pub fn tracks(&self) -> impl Iterator<Item = &KString> {
         self.tag_tracks.keys()
     }
@@ -567,6 +571,10 @@ impl TaggedRange {
         self.end - self.start
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.end == self.start
+    }
+
     pub fn start(&self) -> usize {
         self.start
     }
@@ -667,6 +675,7 @@ pub fn output_buffer() -> OutputBuffer {
     default()
 }
 
+#[expect(clippy::len_without_is_empty)]
 pub trait Offset {
     fn offset(&mut self) -> usize;
 

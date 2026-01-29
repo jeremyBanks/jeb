@@ -200,8 +200,7 @@ pub fn poc_zipng(palette: &[u8]) -> Result<OutputBuffer, panic> {
             file_entry += &crc;
             // 0x0014..0x0018: compressed size
             // XXX: I need to record the actual value for this
-            file_entry += &u32::try_from((body_length) / (width) * ((width) + 5))
-                .expect("file size larger than 4GiB")
+            file_entry += &((body_length) / (width) * ((width) + 5))
                 .to_le_bytes();
             // 0x0018..0x001C: uncompressed size
             file_entry += &body_length.to_le_bytes();

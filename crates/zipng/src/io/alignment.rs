@@ -19,17 +19,17 @@ pub enum Align {
 
 impl Align {
     /// align to the left / top / beginning / start
-    pub const Left: Align = Align::Start;
+    pub const LEFT: Align = Align::Start;
     /// align to the top / beginning / start / left
-    pub const Top: Align = Align::Start;
+    pub const TOP: Align = Align::Start;
     /// align to the beginning / start / left / top
-    pub const Beginning: Align = Align::Start;
+    pub const BEGINNING: Align = Align::Start;
     /// align to the center / middle
-    pub const Center: Align = Align::Middle;
+    pub const CENTER: Align = Align::Middle;
     /// align to the right / bottom / end
-    pub const Right: Align = Align::End;
+    pub const RIGHT: Align = Align::End;
     /// align to the bottom / end / right
-    pub const Bottom: Align = Align::End;
+    pub const BOTTOM: Align = Align::End;
 }
 
 /// Writes `bytes` to `output` with as much padding as necessary to align

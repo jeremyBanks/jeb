@@ -76,7 +76,7 @@ fn unix_to_dos(epoch: i64) -> (u16, u16) {
     let y = if m <= 2 { y + 1 } else { y };
 
     // Clamp year to DOS range (1980–2107).
-    let year = y.max(1980).min(2107);
+    let year = y.clamp(1980, 2107);
     let date =
         (((year - 1980) as u16) << 9) | ((m as u16) << 5) | (d as u16);
 

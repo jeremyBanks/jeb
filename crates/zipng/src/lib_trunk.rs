@@ -20,7 +20,7 @@ use crate::png::ColorMode;
 use crate::png::EightBit;
 use crate::png::FourBit;
 use crate::png::Indexed;
-use crate::png::Lightness;
+use crate::polyglot::LIGHTNESS;
 use crate::png::OneBit;
 use crate::png::RedGreenBlue;
 use crate::png::RedGreenBlueAlpha;
@@ -219,13 +219,13 @@ impl ZipngOptions {
             len @ 0x0..=0x20 => {
                 opts.png.color_palette = None;
                 opts.png.bit_depth = OneBit;
-                opts.png.color_mode = Lightness;
+                opts.png.color_mode = LIGHTNESS;
                 opts.png.width = 16.min(len * 8);
             },
             0x21..=0x100 => {
                 opts.png.color_palette = None;
                 opts.png.bit_depth = TwoBit;
-                opts.png.color_mode = Lightness;
+                opts.png.color_mode = LIGHTNESS;
                 opts.png.width = 16;
             },
             0x101..=0x200 => {
