@@ -17,7 +17,11 @@ Save:
 
 ## Project: zipng
 
-Polyglot PNG+ZIP file generator. Key constraints:
+Polyglot PNG+ZIP file generator. Unless otherwise instructed:
+- Focus on `crates/zipng` and related files
+- All examples should write their output to a subdirectory of `target/` in the repo root
+
+Key constraints:
 - Max 60KB per file (IDAT boundary limitation)
 - Files are sorted lexicographically
 - Labels use size-appropriate fonts (Sky < 128K, Sugimori < 512K, Mini < 1M, Micro < 3M)
