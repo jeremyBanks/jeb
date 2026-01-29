@@ -70,12 +70,53 @@ fn ok_to_rgb(c: Oklab) -> RGB8 {
     oklab::oklab_to_srgb(c)
 }
 
+/// Interpolate between two Oklab colors in Oklch (polar) space.
+///
+/// Oklch is the polar form of Oklab: L (lightness), C (chroma = sqrt(a²+b²)),
+/// h (hue = atan2(b, a)). Interpolating in polar coordinates keeps chroma high
+/// through hue transitions, avoiding the desaturation dip that Cartesian lerp
+/// produces when crossing between distant hues.
+///
+/// Hue is interpolated along the shortest arc. For achromatic colors (C ≈ 0),
+/// hue is undefined; we use the other color's hue to avoid discontinuities.
 fn lerp(a: Oklab, b: Oklab, t: f32) -> Oklab {
+    use std::f32::consts::TAU;
+
     let inv = 1.0 - t;
+
+    let c_a = (a.a * a.a + a.b * a.b).sqrt();
+    let c_b = (b.a * b.a + b.b * b.b).sqrt();
+
+    let h_a = a.b.atan2(a.a);
+    let h_b = b.b.atan2(b.a);
+
+    // Interpolate hue along the shortest arc.
+    let mut dh = h_b - h_a;
+    if dh > std::f32::consts::PI {
+        dh -= TAU;
+    } else if dh < -std::f32::consts::PI {
+        dh += TAU;
+    }
+
+    // For achromatic colors, adopt the other color's hue.
+    let (h_a, dh) = if c_a < 1e-6 && c_b < 1e-6 {
+        (0.0, 0.0)
+    } else if c_a < 1e-6 {
+        (h_b, 0.0)
+    } else if c_b < 1e-6 {
+        (h_a, 0.0)
+    } else {
+        (h_a, dh)
+    };
+
+    let l = a.l * inv + b.l * t;
+    let c = c_a * inv + c_b * t;
+    let h = h_a + dh * t;
+
     Oklab {
-        l: a.l * inv + b.l * t,
-        a: a.a * inv + b.a * t,
-        b: a.b * inv + b.b * t,
+        l,
+        a: c * h.cos(),
+        b: c * h.sin(),
     }
 }
 
