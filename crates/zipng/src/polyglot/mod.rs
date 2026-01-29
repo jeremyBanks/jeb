@@ -876,21 +876,21 @@ fn build_aligned_data(
     // Track if previous file needs a terminator
     let mut pending_terminator = false;
 
-    // Insert reverse color map at the top of the image.
-    // Structure: 1 row of 0x00 padding, then enough cycling gradient rows to reach ≥256 bytes.
-    // The reverse color map lets readers map pixel colors back to byte values.
+    // Insert reverse color map at the very start of the image.
+    // This is a cycling gradient (0→255→255→0→...) spanning ≥256 bytes,
+    // letting readers map pixel colors back to byte values.
     let reverse_color_map_rows = (256 + row_width - 1) / row_width;
-    let preamble_rows = 1 + reverse_color_map_rows; // 1 zero row + color map rows
-
-    // 1 row of all zeroes
-    data.resize(row_width, 0);
-
-    // Reverse color map rows: cycling palette index pattern
     let mut palette_counter: usize = 0;
     let color_map_bytes = reverse_color_map_rows * row_width;
     data.reserve(color_map_bytes);
     for _ in 0..color_map_bytes {
         data.push(cycling_palette_index(&mut palette_counter));
+    }
+
+    // The gap after the reverse color map (before the first file) is part of normal
+    // spacing distribution. Ensure at least 1 row of 0x00 padding after the color map.
+    if !file_order_with_spacing.is_empty() && file_order_with_spacing[0].1 < 1 {
+        file_order_with_spacing[0].1 = 1;
     }
 
     for (order_idx, &(file_idx, spacing_rows)) in file_order_with_spacing.iter().enumerate() {
@@ -1043,9 +1043,10 @@ fn calculate_bucket_spacing(
     let rows_per_bucket = IDAT_BLOCK_SIZE / filtered_row_size;
     let bucket_capacity_bytes = rows_per_bucket * row_width;
 
-    // Preamble: 1 zero row + ceil(256 / row_width) reverse color map rows
+    // Preamble: ceil(256 / row_width) reverse color map rows at the top of the image.
+    // The gap after the color map is part of normal spacing distribution (not preamble).
     let reverse_color_map_rows = (256 + row_width - 1) / row_width;
-    let preamble_bytes = (1 + reverse_color_map_rows) * row_width;
+    let preamble_bytes = reverse_color_map_rows * row_width;
 
     let num_buckets = bucket_assignments.len();
     let mut result = Vec::with_capacity(num_buckets);
