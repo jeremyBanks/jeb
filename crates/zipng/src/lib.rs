@@ -105,13 +105,13 @@ const RGB_THRESHOLD: usize = 1024 * 1024;
 /// Threshold for switching from RGB to RGBA (3 MiB)
 const RGBA_THRESHOLD: usize = 3 * 1024 * 1024;
 
-/// All available palettes for random selection.
+/// All available palettes for deterministic selection.
+/// Only sequential palettes are used, ensuring a smooth monotonic color progression
+/// that works well with the cycling palette index pattern in spacing rows.
 /// Filtered to only include palettes with good contrast (luminance diff >= 150)
 /// between first and last colors, ensuring readable filename labels.
-/// Excludes: TURBO, and all diverging palettes (BAM, VIK, BROC, CORK, ROMA,
-/// CURL, DIFF, TARN, DELTA, BERLIN, LISBON, TOFINO, VANIMO, BALANCE).
+/// Excludes: TURBO (poor label contrast), all diverging, dual-sequential, and cyclic palettes.
 static ALL_PALETTES: &[&[u8]] = &[
-    // Sequential (high contrast)
     palettes::oceanic::AMP, palettes::oceanic::ICE, palettes::oceanic::OXY,
     palettes::crameri::BUDA, palettes::crameri::NUUK, palettes::crameri::OSLO,
     palettes::oceanic::DEEP, palettes::oceanic::RAIN,
@@ -125,11 +125,6 @@ static ALL_PALETTES: &[&[u8]] = &[
     palettes::viridis::PLASMA, palettes::crameri::LAJOLLA, palettes::oceanic::THERMAL,
     palettes::singles::CIVIDIS, palettes::viridis::INFERNO, palettes::viridis::VIRIDIS,
     palettes::crameri::BATLOW_K, palettes::crameri::BATLOW_W,
-    // Dual-sequential (high contrast)
-    palettes::oceanic::TOPO, palettes::crameri::FES, palettes::crameri::OLERON,
-    palettes::crameri::BUKAVU,
-    // Diagnostic (for binary data visualization)
-    palettes::diagnostic::BYTE_VALUE,
 ];
 
 /// Creates a polyglot PNG+ZIP file.
