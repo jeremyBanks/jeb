@@ -9,10 +9,11 @@
 //! 1. Optionally reorder control points for global coherence (see
 //!    [`sort_colors`]).
 //! 2. Convert all control points to Oklab.
-//! 3. Compute cumulative perceptual arc-length between consecutive control
-//!    points (using many small linear steps in Oklab).
-//! 4. Redistribute the 256 output samples so that each step covers the same
-//!    perceptual distance along the polyline.
+//! 3. Interpolate between consecutive control points in Oklch (polar Oklab)
+//!    space, which preserves chroma through hue transitions.
+//! 4. Compute cumulative perceptual arc-length along the interpolated path.
+//! 5. Redistribute the 256 output samples so that each step covers the same
+//!    perceptual distance along the path.
 //!
 //! If only one color is provided, black is prepended and white is appended so
 //! the result is a usable gradient rather than a solid fill.
