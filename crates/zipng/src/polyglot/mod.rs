@@ -430,12 +430,51 @@ fn estimate_total_size(files: &[(&[u8], &[u8])], font: Option<&FontSelection>) -
     total.max(100)
 }
 
-/// Round up so that the data portion (row_width - 4) is a multiple of 64.
-/// This ensures each row contains a whole number of 64-byte data chunks.
-fn align_to_row_width(value: usize) -> usize {
-    let min_data = value.saturating_sub(DEFLATE_HEADER_OVERHEAD);
-    let aligned_data = ((min_data + DATA_ALIGNMENT - 1) / DATA_ALIGNMENT) * DATA_ALIGNMENT;
-    aligned_data.max(DATA_ALIGNMENT) + DEFLATE_HEADER_OVERHEAD
+/// Round up so that:
+/// 1. The data portion (row_width - 4) is a multiple of DATA_ALIGNMENT (64), and
+/// 2. row_width is a multiple of bytes_per_pixel.
+///
+/// Both constraints are needed: (1) ensures each row contains whole 64-byte deflate
+/// blocks, and (2) ensures the PNG decoder computes the correct bytes_per_scanline.
+/// Without (2), `effective_width = row_width / bytes_per_pixel` truncates via integer
+/// division, and the decoder expects fewer bytes per scanline than actually present,
+/// causing data bytes to be misinterpreted as filter bytes ("Unknown filter method N").
+///
+/// The combined period is LCM(DATA_ALIGNMENT, bytes_per_pixel). We find the offset
+/// within that period where both constraints hold, then align to it.
+fn align_to_row_width(value: usize, bytes_per_pixel: usize) -> usize {
+    // Period for the combined constraints
+    let period = lcm(DATA_ALIGNMENT, bytes_per_pixel);
+    // Find the offset within `period` where row_width % bpp == 0 and (row_width - 4) % 64 == 0.
+    // Since period = LCM(64, bpp), any row_width = offset + k*period satisfying both
+    // constraints at offset will satisfy them for all k.
+    // We need: offset % bpp == 0 AND (offset - 4) % 64 == 0, i.e. offset ≡ 4 (mod 64).
+    // Search within one period (always small: at most LCM(64, 4) = 64).
+    let offset = (0..=period)
+        .find(|&o| o % bytes_per_pixel == 0 && o >= DEFLATE_HEADER_OVERHEAD && (o - DEFLATE_HEADER_OVERHEAD) % DATA_ALIGNMENT == 0)
+        .expect("no valid alignment offset found");
+
+    // Find smallest row_width >= value matching: row_width = offset + k * period
+    let row_width = if value <= offset {
+        offset
+    } else {
+        let k = (value - offset + period - 1) / period;
+        offset + k * period
+    };
+    row_width
+}
+
+fn gcd(mut a: usize, mut b: usize) -> usize {
+    while b != 0 {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
+    a
+}
+
+fn lcm(a: usize, b: usize) -> usize {
+    a / gcd(a, b) * b
 }
 
 /// Calculate optimal row width for approximately square images.
@@ -444,25 +483,25 @@ fn align_to_row_width(value: usize) -> usize {
 ///
 /// The `min_width` parameter ensures the row is wide enough to fit ZIP headers
 /// without spanning multiple rows (which would corrupt them with filter bytes).
-fn calculate_row_width(total_data_estimate: usize, min_width: usize) -> usize {
+fn calculate_row_width(total_data_estimate: usize, min_width: usize, bytes_per_pixel: usize) -> usize {
     // For height >= width, we need: total_data / width >= width
     // Therefore: width <= sqrt(total_data)
     // Using floor ensures height >= width
     let ideal = (total_data_estimate as f64).sqrt();
     let width = ideal.floor() as usize;
 
-    // Clamp to minimum safe width and align data portion to DATA_ALIGNMENT
-    align_to_row_width(width.max(min_width))
+    // Clamp to minimum safe width and align data portion to LCM(DATA_ALIGNMENT, bytes_per_pixel)
+    align_to_row_width(width.max(min_width), bytes_per_pixel)
 }
 
 /// Calculate minimum row width needed for a set of files.
 /// Ensures ZIP local file headers (30 bytes + filename) fit in one row.
 /// Returns a value where (row_width - 4) is a multiple of 64.
-fn min_row_width_for_files(files: &[(&[u8], &[u8])]) -> usize {
+fn min_row_width_for_files(files: &[(&[u8], &[u8])], bytes_per_pixel: usize) -> usize {
     let longest_filename = files.iter().map(|(name, _)| name.len()).max().unwrap_or(0);
     // Header is 30 bytes + filename; add 4 bytes padding for safety
     let min_for_headers = 30 + longest_filename + 4;
-    align_to_row_width(min_for_headers.max(BASE_MIN_ROW_WIDTH))
+    align_to_row_width(min_for_headers.max(BASE_MIN_ROW_WIDTH), bytes_per_pixel)
 }
 
 /// Information about a file entry.
@@ -502,8 +541,12 @@ pub fn build_polyglot(
         }
     }
 
+    // Calculate bytes per pixel for row alignment (for 8-bit depth, this is samples_per_pixel)
+    let bits_per_pixel = bit_depth.bits_per_sample() * color_mode.samples_per_pixel();
+    let bytes_per_pixel = (bits_per_pixel + 7) / 8;
+
     // Calculate minimum row width based on filename lengths
-    let min_width = min_row_width_for_files(files);
+    let min_width = min_row_width_for_files(files, bytes_per_pixel);
 
     // Calculate total content size to select appropriate font
     let total_content_size: usize = files.iter().map(|(_, body)| body.len()).sum();
@@ -527,19 +570,19 @@ pub fn build_polyglot(
 
     // Pass 1: Use estimate for initial build
     let estimated_size = estimate_total_size(files, font.as_ref());
-    let initial_width = calculate_row_width(estimated_size, min_width);
+    let initial_width = calculate_row_width(estimated_size, min_width, bytes_per_pixel);
     let (initial_data, _, _) = build_aligned_data(files, initial_width, font.as_ref());
 
     // Pass 2: Calculate optimal width from actual size
     let actual_size = initial_data.len();
-    let mut row_width = calculate_row_width(actual_size, min_width);
+    let mut row_width = calculate_row_width(actual_size, min_width, bytes_per_pixel);
 
     // Optimization: If all files would fit in one content row each, use narrower width.
     // This matters for many small files where the "square" heuristic wastes space.
     let max_body_len = files.iter().map(|(_, body)| body.len()).max().unwrap_or(0);
     // For one content row: body must fit in (row_width - 4) data area
-    // So min width = max_body + 4, then align to DATA_ALIGNMENT
-    let min_width_for_single_row = align_to_row_width((max_body_len + DEFLATE_HEADER_OVERHEAD).max(min_width));
+    // So min width = max_body + 4, then align to LCM(DATA_ALIGNMENT, bytes_per_pixel)
+    let min_width_for_single_row = align_to_row_width((max_body_len + DEFLATE_HEADER_OVERHEAD).max(min_width), bytes_per_pixel);
 
     if min_width_for_single_row < row_width {
         // Verify: at this width, do all files fit in one content row?
@@ -558,10 +601,10 @@ pub fn build_polyglot(
     let (pixel_data, entry_infos, final_block_rows, row_width) = if font.is_some() && height > MAX_HEIGHT_WITH_LABELS {
         // Rebuild without labels
         let estimated_size = estimate_total_size(files, None);
-        let initial_width = calculate_row_width(estimated_size, min_width);
+        let initial_width = calculate_row_width(estimated_size, min_width, bytes_per_pixel);
         let (initial_data, _, _) = build_aligned_data(files, initial_width, None);
         let actual_size = initial_data.len();
-        let row_width = calculate_row_width(actual_size, min_width);
+        let row_width = calculate_row_width(actual_size, min_width, bytes_per_pixel);
         let (pixel_data, entry_infos, final_block_rows) = build_aligned_data(files, row_width, None);
         (pixel_data, entry_infos, final_block_rows, row_width)
     } else {
@@ -1324,42 +1367,55 @@ mod tests {
     #[test]
     fn test_width_calculation() {
         // Small content should get minimum width (68 = 64 data + 4 header)
-        assert_eq!(calculate_row_width(100, BASE_MIN_ROW_WIDTH), BASE_MIN_ROW_WIDTH);
+        // For indexed color (1 byte per pixel), alignment is just DATA_ALIGNMENT (64)
+        assert_eq!(calculate_row_width(100, BASE_MIN_ROW_WIDTH, 1), BASE_MIN_ROW_WIDTH);
         assert_eq!(BASE_MIN_ROW_WIDTH, 68);
 
         // 10KB: sqrt(10000) = 100, data portion aligned to 128 → row_width = 132
-        let w = calculate_row_width(10_000, BASE_MIN_ROW_WIDTH);
+        let w = calculate_row_width(10_000, BASE_MIN_ROW_WIDTH, 1);
         assert_eq!(w, 132, "Expected 132 (128 data + 4 header), got {}", w);
 
         // 40KB: sqrt(40000) ≈ 200, data portion aligned to 256 → row_width = 260
-        let w = calculate_row_width(40_000, BASE_MIN_ROW_WIDTH);
+        let w = calculate_row_width(40_000, BASE_MIN_ROW_WIDTH, 1);
         assert_eq!(w, 260, "Expected 260 (256 data + 4 header), got {}", w);
 
         // With smaller min_width requirement → still gets 68 minimum
-        let w = calculate_row_width(100, 60);
+        let w = calculate_row_width(100, 60, 1);
         assert_eq!(w, 68, "Expected min_width of 68 (64 data aligned), got {}", w);
 
         // Verify data portion alignment (row_width - 4 should be multiple of 64)
         assert_eq!((w - DEFLATE_HEADER_OVERHEAD) % DATA_ALIGNMENT, 0,
             "Data portion should be aligned to {}", DATA_ALIGNMENT);
+
+        // For RGB (3 bytes per pixel): row_width % 3 == 0 AND (row_width - 4) % 64 == 0
+        let w = calculate_row_width(10_000, BASE_MIN_ROW_WIDTH, 3);
+        assert_eq!((w - DEFLATE_HEADER_OVERHEAD) % DATA_ALIGNMENT, 0,
+            "RGB data portion should be aligned to 64");
+        assert_eq!(w % 3, 0, "RGB row_width must be divisible by bytes_per_pixel");
+
+        // For RGBA (4 bytes per pixel): row_width % 4 == 0 AND (row_width - 4) % 64 == 0
+        let w = calculate_row_width(10_000, BASE_MIN_ROW_WIDTH, 4);
+        assert_eq!((w - DEFLATE_HEADER_OVERHEAD) % DATA_ALIGNMENT, 0,
+            "RGBA data portion should be aligned to 64");
+        assert_eq!(w % 4, 0, "RGBA row_width must be divisible by bytes_per_pixel");
     }
 
     #[test]
     fn test_min_row_width_for_files() {
         // Short filenames - returns BASE_MIN_ROW_WIDTH (68)
         let files = vec![(b"a.txt".as_ref(), b"data".as_ref())];
-        let min = min_row_width_for_files(&files);
+        let min = min_row_width_for_files(&files, 1);
         assert_eq!(min, BASE_MIN_ROW_WIDTH); // 30 + 5 + 4 = 39 < 68, so 68
 
         // Moderately long filename - still fits in 68
         let files = vec![(b"this-is-a-very-long-filename.txt".as_ref(), b"data".as_ref())];
-        let min = min_row_width_for_files(&files);
+        let min = min_row_width_for_files(&files, 1);
         // 30 + 32 + 4 = 66 < 68, so still 68
         assert_eq!(min, 68, "Expected 68 (66 fits in minimum), got {}", min);
 
         // Very long filename that requires wider rows
         let files = vec![(b"this-is-an-extremely-long-filename-that-exceeds-minimum.txt".as_ref(), b"data".as_ref())];
-        let min = min_row_width_for_files(&files);
+        let min = min_row_width_for_files(&files, 1);
         // 30 + 58 + 4 = 92 → data aligned to 128 → row_width = 132
         assert_eq!(min, 132, "Expected 132 (128 data + 4 header), got {}", min);
 

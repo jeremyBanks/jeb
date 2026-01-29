@@ -64,6 +64,30 @@ impl Expectations {
     }
 }
 
+/// Parse the PNG IHDR chunk to determine actual bytes per pixel.
+/// Returns 1 for indexed/grayscale, 3 for RGB, 4 for RGBA, etc.
+fn png_bytes_per_pixel(data: &[u8]) -> usize {
+    // PNG: 8 byte sig + IHDR chunk (4 len + 4 type + 13 data + 4 crc)
+    // IHDR data: width(4) + height(4) + bit_depth(1) + color_type(1) + ...
+    // Color type is at offset 8 + 4 + 4 + 4 + 4 + 1 = 25
+    if data.len() < 26 {
+        return 1;
+    }
+    let bit_depth = data[24] as usize;
+    let color_type = data[25];
+    let samples = match color_type {
+        0 => 1, // Grayscale
+        2 => 3, // RGB
+        3 => 1, // Indexed (1 byte per pixel index)
+        4 => 2, // Grayscale + Alpha
+        6 => 4, // RGBA
+        _ => 1,
+    };
+    // For sub-byte depths (1, 2, 4 bit indexed/grayscale), bytes_per_pixel is effectively 1
+    // since row_width in our system counts bytes.
+    (bit_depth * samples + 7) / 8
+}
+
 /// Validate a polyglot PNG+ZIP file using external crates.
 pub fn validate_polyglot(data: &[u8]) -> ValidationResult {
     use std::io::Cursor;
@@ -88,21 +112,28 @@ pub fn validate_polyglot(data: &[u8]) -> ValidationResult {
             result.png_width = img.width();
             result.png_height = img.height();
 
-            // Check width alignment: (width - 4) should be a multiple of 64
-            let width = result.png_width as usize;
-            if width >= DEFLATE_HEADER_OVERHEAD {
-                let data_portion = width - DEFLATE_HEADER_OVERHEAD;
+            // Determine bytes per pixel from the PNG IHDR, not the decoded image
+            // (the image crate may expand indexed color to RGB).
+            let bytes_per_pixel = png_bytes_per_pixel(data);
+
+            // Check width alignment: row_width = pixel_width * bytes_per_pixel.
+            // Two constraints: (row_width - 4) % 64 == 0 AND row_width % bytes_per_pixel == 0.
+            // The second is automatically satisfied since row_width = pixel_width * bpp.
+            let pixel_width = result.png_width as usize;
+            let row_width = pixel_width * bytes_per_pixel;
+            if row_width >= DEFLATE_HEADER_OVERHEAD {
+                let data_portion = row_width - DEFLATE_HEADER_OVERHEAD;
                 result.width_properly_aligned = data_portion % DATA_ALIGNMENT == 0;
                 if !result.width_properly_aligned {
                     result.errors.push(format!(
-                        "PNG width {} is not properly aligned: data portion {} is not a multiple of {}",
-                        width, data_portion, DATA_ALIGNMENT
+                        "PNG row width {} ({}px * {}bpp) is not properly aligned: data portion {} is not a multiple of {}",
+                        row_width, pixel_width, bytes_per_pixel, data_portion, DATA_ALIGNMENT
                     ));
                 }
             } else {
                 result.errors.push(format!(
-                    "PNG width {} is too small (minimum {})",
-                    width, DEFLATE_HEADER_OVERHEAD
+                    "PNG row width {} is too small (minimum {})",
+                    row_width, DEFLATE_HEADER_OVERHEAD
                 ));
             }
         }
