@@ -77,7 +77,16 @@ const BASE_MIN_ROW_WIDTH: usize = DATA_ALIGNMENT + DEFLATE_HEADER_OVERHEAD;
 const IDAT_BLOCK_SIZE: usize = 65535;
 
 /// Maximum size for a single file's compressed content.
-/// Must fit within one IDAT block (65535 bytes of filtered data).
+///
+/// This is a loose, conservative lower bound. The true maximum depends on
+/// row width: `floor(65535 / (row_width + 1)) * (row_width - 4)`, which
+/// for the minimum row width of 68 gives 60,736. This constant is a
+/// round-down that should be safe for all row widths, but it has not been
+/// rigorously verified and could be invalidated by future layout changes.
+///
+/// TODO: Replace this with a precise, row-width-aware check. The current
+/// constant is fragile — it may be unnecessarily restrictive for wide rows
+/// or (worse) insufficient if layout assumptions change.
 pub const MAX_FILE_CONTENT_SIZE: usize = 60_000;
 
 /// Maximum image height before disabling filename labels.
