@@ -207,15 +207,25 @@ fn parse_colors(s: &str) -> Result<Vec<RGB8>, String> {
         .split(',')
         .map(|hex| {
             let hex = hex.trim().trim_start_matches('#');
-            if hex.len() != 6 {
-                return Err(format!("invalid hex color '{}': expected 6 hex digits", hex));
-            }
-            let r = u8::from_str_radix(&hex[0..2], 16)
-                .map_err(|_| format!("invalid hex color '{}'", hex))?;
-            let g = u8::from_str_radix(&hex[2..4], 16)
-                .map_err(|_| format!("invalid hex color '{}'", hex))?;
-            let b = u8::from_str_radix(&hex[4..6], 16)
-                .map_err(|_| format!("invalid hex color '{}'", hex))?;
+            let (r, g, b) = if hex.len() == 3 {
+                let r = u8::from_str_radix(&hex[0..1], 16)
+                    .map_err(|_| format!("invalid hex color '{}'", hex))?;
+                let g = u8::from_str_radix(&hex[1..2], 16)
+                    .map_err(|_| format!("invalid hex color '{}'", hex))?;
+                let b = u8::from_str_radix(&hex[2..3], 16)
+                    .map_err(|_| format!("invalid hex color '{}'", hex))?;
+                (r << 4 | r, g << 4 | g, b << 4 | b)
+            } else if hex.len() == 6 {
+                let r = u8::from_str_radix(&hex[0..2], 16)
+                    .map_err(|_| format!("invalid hex color '{}'", hex))?;
+                let g = u8::from_str_radix(&hex[2..4], 16)
+                    .map_err(|_| format!("invalid hex color '{}'", hex))?;
+                let b = u8::from_str_radix(&hex[4..6], 16)
+                    .map_err(|_| format!("invalid hex color '{}'", hex))?;
+                (r, g, b)
+            } else {
+                return Err(format!("invalid hex color '{}': expected 3 or 6 hex digits", hex));
+            };
             Ok(RGB8::new(r, g, b))
         })
         .collect();
