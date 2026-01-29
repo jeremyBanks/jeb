@@ -1,6 +1,7 @@
 mod configuration;
 mod data;
 mod sizes;
+pub mod timestamp;
 mod to_zip;
 mod write_zip;
 

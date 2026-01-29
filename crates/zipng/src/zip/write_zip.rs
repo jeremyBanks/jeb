@@ -35,10 +35,8 @@ pub fn write_zip(
         header += &[0x00; 2];
         // 0x0008..0x000A: compression method
         header += &[0x00; 2];
-        // 0x000A..0x000C: modification time
-        header += b"PK";
-        // 0x000C..0x000E: modification date
-        header += b"PK";
+        // 0x000A..0x000E: modification time and date
+        header += &super::timestamp::dos_timestamp();
         // 0x000E..0x0012: checksum
         header += &crc32(body).to_le_bytes();
         // 0x0012..0x0016: compressed size
@@ -88,10 +86,8 @@ pub fn write_zip(
         header += &[0x00; 2];
         // 0x000A..0x000C: compression method
         header += &[0x00; 2];
-        // 0x000C..0x000E: modification time
-        header += b"PK";
-        // 0x000E..0x0010: modification date
-        header += b"PK";
+        // 0x000C..0x0010: modification time and date
+        header += &super::timestamp::dos_timestamp();
         // 0x0010..0x0014: checksum
         header += &crc;
         // 0x0014..0x0018: compressed size

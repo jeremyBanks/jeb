@@ -70,12 +70,8 @@ pub fn poc_zipng(palette: &[u8]) -> Result<OutputBuffer, panic> {
                 *local_file_header.tagged("zip", "bitflags") += &[0x00; 0x00];
                 // 0x0008..0x000A: compression method -- DEFLATE
                 *local_file_header.tagged("zip", "compression-mode") += &0x08_u16.to_le_bytes();
-                // 0x000A..0x000C: modification time
-                local_file_header.start("zip", "timestamp");
-                local_file_header += b"PK";
-                // 0x000C..0x000E: modification date
-                local_file_header += b"PK";
-                local_file_header.end("zip", "timestamp");
+                // 0x000A..0x000E: modification time and date
+                *local_file_header.tagged("zip", "timestamp") += &crate::zip::timestamp::dos_timestamp();
                 // 0x000E..0x0012: checksum
                 *local_file_header.tagged("zip", "checksum") += &crc32(file.body).to_le_bytes();
                 // 0x0012..0x0016: compressed size
@@ -198,10 +194,8 @@ pub fn poc_zipng(palette: &[u8]) -> Result<OutputBuffer, panic> {
             file_entry += &[0x00; 2];
             // 0x000A..0x000C: compression method
             file_entry += &0x08_u16.to_le_bytes();
-            // 0x000C..0x000E: modification time
-            file_entry += b"PK";
-            // 0x000E..0x0010: modification date
-            file_entry += b"PK";
+            // 0x000C..0x0010: modification time and date
+            file_entry += &crate::zip::timestamp::dos_timestamp();
             // 0x0010..0x0014: checksum
             file_entry += &crc;
             // 0x0014..0x0018: compressed size
