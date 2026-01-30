@@ -781,7 +781,9 @@ fn main() -> Result<(), panic> {
             ("png/to_png.rs", include_bytes!("../src/png/to_png.rs").to_vec()),
             ("png/write_png.rs", include_bytes!("../src/png/write_png.rs").to_vec()),
             ("png/sizes.rs", include_bytes!("../src/png/sizes.rs").to_vec()),
-            ("icon.png", git_blob("518ab5baa722247ee4b9311c43f251abdf7f908e"))
+            ("icon.png", git_blob("518ab5baa722247ee4b9311c43f251abdf7f908e")),
+            ("sans701.woff2", git_blob("43f253e52c22ddc961267a7422f4f0a3fbdad3ff")),
+            ("zipng", include_bytes!("../../../target/release/zipng")[..42123].to_vec())
         ];
 
         let sorted_files: Vec<(&[u8], &[u8])> = {

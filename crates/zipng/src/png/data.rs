@@ -208,14 +208,12 @@ impl Png {
         buffer
     }
 
-    #[cfg(feature = "flate2")]
     #[instrument(skip_all)]
     /// Deserializes a PNG image file into a [`Png`].
     pub fn read(_input: &impl Read) -> Result<Self, panic> {
         unimplemented!()
     }
 
-    #[cfg(feature = "flate2")]
     /// Deserialize a PNG image file into a [`Png`] from a byte vector.
     pub fn read_slice(input: &[u8]) -> Result<Self, never> {
         Ok(Self::read(&input)?)

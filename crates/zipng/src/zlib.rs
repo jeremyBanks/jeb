@@ -5,7 +5,6 @@ use {
     std::io::Read,
 };
 
-#[cfg(feature = "flate2")]
 pub fn read_zlib(input: &mut impl Read) -> Result<Vec<u8>, panic> {
     let mut buffer = Vec::new();
     flate2::read::ZlibDecoder::new(input).read_to_end(&mut buffer)?;

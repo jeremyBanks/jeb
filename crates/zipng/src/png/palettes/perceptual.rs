@@ -449,9 +449,12 @@ fn hex_to_rgb(hex: &str) -> RGB8 {
         // Expand 3-digit hex to 6-digit by doubling each digit
         format!(
             "{}{}{}{}{}{}",
-            &hex[0..1], &hex[0..1],
-            &hex[1..2], &hex[1..2],
-            &hex[2..3], &hex[2..3]
+            &hex[0..1],
+            &hex[0..1],
+            &hex[1..2],
+            &hex[1..2],
+            &hex[2..3],
+            &hex[2..3]
         )
     } else {
         hex.to_string()
@@ -468,12 +471,19 @@ fn hex_to_rgb(hex: &str) -> RGB8 {
 /// Returns a 256-color perceptually uniform palette.
 /// The control points are automatically reordered using sort_colors for better coherence.
 pub fn frozen() -> Vec<u8> {
-    let colors = vec!["533AFD", "061B31", "50617A", "F6F9FC", "FFFFFF", "635BFF"]
-        .iter()
-        .map(|hex| hex_to_rgb(hex))
-        .collect::<Vec<_>>();
-    let sorted = sort_colors(&colors);
-    generate(&sorted)
+    let mut colors = [
+        // purple navy gray pale white more purple
+        "061B31", "533AFD", "50617A", "F6F9FC", "635BFF", "FFFFFF"
+        // // yellow orange pink red
+        // "FFC01F", "FF6118", "F44BCC", "EA2261",
+    ]
+    .iter()
+    .map(|hex| hex_to_rgb(hex))
+    .collect::<Vec<_>>();
+    let mut sorted = sort_colors(&colors);
+    sorted.reverse();
+    let colors = generate(&sorted);
+    colors
 }
 
 #[cfg(test)]
@@ -506,7 +516,11 @@ mod tests {
 
         let mut diffs = Vec::new();
         for i in 0..255 {
-            let a = rgb_to_ok(RGB8::new(palette[i * 3], palette[i * 3 + 1], palette[i * 3 + 2]));
+            let a = rgb_to_ok(RGB8::new(
+                palette[i * 3],
+                palette[i * 3 + 1],
+                palette[i * 3 + 2],
+            ));
             let b = rgb_to_ok(RGB8::new(
                 palette[(i + 1) * 3],
                 palette[(i + 1) * 3 + 1],
