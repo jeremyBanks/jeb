@@ -1050,6 +1050,11 @@ fn build_aligned_data(
     // Track if previous file needs a terminator
     let mut pending_terminator = false;
 
+    // Leading gap before reference color rows.
+    let leading_gap_rows: usize = if font.is_some() { 2 } else { 1 };
+    let gap_len = leading_gap_rows * row_width;
+    resize_with_opaque_padding(&mut data, gap_len, bytes_per_pixel);
+
     // Insert reference color rows at the very start of the image.
     if bytes_per_pixel > 1 {
         // RGBA mode: single row cycling through 6 reference colors as RGBA pixels
@@ -1329,10 +1334,11 @@ fn calculate_bucket_spacing(
     let rows_per_bucket = IDAT_BLOCK_SIZE / filtered_row_size;
     let bucket_capacity_bytes = rows_per_bucket * row_width;
 
-    // Preamble: ceil(256 / row_width) reverse color map rows at the top of the image.
+    // Preamble: leading gap + reference color map rows at the top of the image.
     // The gap after the color map is part of normal spacing distribution (not preamble).
+    let leading_gap_rows: usize = if has_labels { 2 } else { 1 };
     let reverse_color_map_rows = 256_usize.div_ceil(row_width);
-    let preamble_bytes = reverse_color_map_rows * row_width;
+    let preamble_bytes = (leading_gap_rows + reverse_color_map_rows) * row_width;
 
     let num_buckets = bucket_assignments.len();
     let mut result = Vec::with_capacity(num_buckets);
