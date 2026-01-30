@@ -1,6 +1,0 @@
-[profile.release]
-lto = "thin"
-
-[env]
-UPDATE_EXPECT = "1"
-RUSTC_BOOTSTRAP = "1"
