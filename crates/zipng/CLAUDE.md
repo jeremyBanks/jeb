@@ -1,6 +1,6 @@
 # Claude Code Notes
 
-## CRITICAL: Save frequently!
+## CRITICAL: Save CONSTANTLY! This is the #1 priority!
 
 Use `save` command (NOT `git commit` directly):
 - `save` - snapshot without message (for quick mid-work saves)
@@ -9,11 +9,20 @@ Use `save` command (NOT `git commit` directly):
 
 NEVER EDIT EXISTING GIT HISTORY (no amend, no rebase, no force push)
 
+**Save after EVERY meaningful change. Intermediate states are valuable!**
+Even partially-working code, failed experiments, and debug output are worth
+preserving as snapshots. We can always go back to any snapshot, but we can
+never recover unsaved work.
+
 Save:
 - BEFORE starting any changes
-- AFTER completing any changes
-- OFTEN in between for complex changes
-- We need many snapshots to safely experiment
+- After EACH edit or small group of related edits
+- After every successful test run
+- After every failed test run (the failing state is useful!)
+- After adding debug output (before you even run it)
+- When switching approaches or strategies
+- MINIMUM every 2-3 tool calls during active development
+- When in doubt, SAVE. There is zero cost to saving too often.
 
 ## Project: zipng
 
