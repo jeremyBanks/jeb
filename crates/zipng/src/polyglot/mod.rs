@@ -5,12 +5,10 @@
 //!
 //! ## Key Insight: Filter Bytes as Deflate Block Headers
 //!
-//! PNG filter bytes are inserted at the start of each row:
-//! - Filter 0x00 (None) = deflate stored block, NOT final
-//! - Filter 0x01 (Sub) = deflate stored block, FINAL
-//!
-//! By aligning file content to row boundaries and using the appropriate
-//! filter type for each row, we get valid deflate streams!
+//! PNG filter bytes (0x00 = None) are inserted at the start of each row.
+//! Since 0x00 also means BFINAL=0, BTYPE=00 (stored block) in DEFLATE,
+//! each row naturally starts a non-final stored block. The DEFLATE stream
+//! is terminated with `03 00` (BFINAL=1 fixed Huffman end-of-block).
 //!
 //! ## Variable Row Width
 //!
@@ -152,9 +150,8 @@ fn label_rows_for_font(font: &FontSelection) -> usize {
     label_rows_for_height(font.max_height())
 }
 
-/// Check if a file's padding will require an internal terminator (BFINAL=1 in last content row).
-/// This happens when (row_width - 4 - last_chunk_size) is not divisible by 5.
-/// Returns the padding needed in the last row of a file's DEFLATE content.
+/// Returns the padding bytes available after content in the last row of a file's
+/// DEFLATE blocks. Used to determine termination strategy.
 fn last_row_padding(body_len: usize, row_width: usize) -> usize {
     let data_per_block = row_width - 4;
     if body_len == 0 {
@@ -168,35 +165,50 @@ fn last_row_padding(body_len: usize, row_width: usize) -> usize {
     row_width - 4 - last_chunk_size
 }
 
-/// Returns true if the terminator will be embedded in the last row's padding.
-/// This happens when padding is non-zero and divisible by 5.
-/// When padding % 5 != 0, a separate terminator row is used instead.
+/// Returns true if the DEFLATE terminator (`03 00` fixed Huffman final block)
+/// will be embedded in the last row's padding bytes.
+/// This happens when padding >= 2 (room for the 2-byte terminator).
+/// When padding is 0 or 1, a separate terminator row is needed.
 fn embeds_terminator_in_padding(body_len: usize, row_width: usize) -> bool {
-    let padding = last_row_padding(body_len, row_width);
-    padding > 0 && padding.is_multiple_of(5)
+    last_row_padding(body_len, row_width) >= 2
 }
 
 /// Calculate the compressed size for a file's DEFLATE content.
-/// When the terminator is embedded in padding, compressed_size excludes trailing
-/// zero bytes (dead space) so only covers through the terminator block.
+///
+/// Every byte within `compressed_size` is valid DEFLATE. Bytes outside are
+/// slack space (zeros). The DEFLATE stream ends with `03 00` (BFINAL=1,
+/// BTYPE=01 fixed Huffman, end-of-block symbol 256).
+///
+/// Three cases based on last-row padding:
+/// - padding >= 2: `03 00` embedded in padding. compressed_size ends there.
+///   = (n-1) * frs + 1 + 4 + last_chunk + 2
+/// - padding == 0: terminator row with `00 00 FF FF 03 00`.
+///   = n * frs + 7  (filter + empty_block(4) + final(2))
+/// - padding == 1: bridge byte `00` in padding, terminator row with `00 FF FF 03 00`.
+///   = n * frs + 6  (filter provides LEN_lo, row has LEN_hi + NLEN + final)
 fn calculate_compressed_size(body_len: usize, row_width: usize) -> usize {
     let data_per_block = row_width - 4;
     let filtered_row_size = row_width + 1; // row_width data + 1 filter byte
     let num_content_blocks = if body_len == 0 { 1 } else { body_len.div_ceil(data_per_block) };
+    let padding = last_row_padding(body_len, row_width);
 
-    if embeds_terminator_in_padding(body_len, row_width) {
-        // Last row: only count through the terminator (5 bytes after content).
-        // Preceding rows are full. Last row = filter(1) + header(4) + data + terminator(5).
+    if padding >= 2 {
+        // Terminator `03 00` embedded in last row's padding.
+        // Last row = filter(1) + header(4) + content + terminator(2).
         let last_chunk_len = if body_len == 0 { 0 } else {
             let remainder = body_len % data_per_block;
             if remainder == 0 { data_per_block } else { remainder }
         };
-        (num_content_blocks - 1) * filtered_row_size + 1 + 4 + last_chunk_len + 5
+        (num_content_blocks - 1) * filtered_row_size + 1 + 4 + last_chunk_len + 2
+    } else if padding == 0 {
+        // Separate terminator row: [filter 00] [00 00 FF FF] [03 00]
+        // = all content rows + filter(1) + empty_stored(4) + final(2)
+        num_content_blocks * filtered_row_size + 7
     } else {
-        // Separate terminator row (no padding, padding not divisible by 5, or zero padding).
-        // The terminator row completes the DEFLATE stream. compressed_size includes
-        // the full terminator row; any dead space after BFINAL is ignored by decompressors.
-        (num_content_blocks + 1) * filtered_row_size
+        // padding == 1: bridge byte `00` starts stored block in last row,
+        // terminator row: [filter=LEN_lo 00] [00 FF FF] [03 00]
+        // = all content rows + filter(1) + LEN_hi+NLEN(3) + final(2)
+        num_content_blocks * filtered_row_size + 6
     }
 }
 
@@ -208,58 +220,39 @@ fn calculate_compressed_size(body_len: usize, row_width: usize) -> usize {
 /// The filter byte (0x00) is added separately by `add_filter_bytes`.
 /// It serves double duty as both PNG None filter and a DEFLATE byte:
 ///
-/// | bridge | padding fill    | filter=  | row data starts with           |
-/// |--------|-----------------|----------|--------------------------------|
-/// | 0      | (all mod-5)     | BFINAL=0 | 00 00 FF FF 01 00 00 FF FF    |
-/// | 1      | 00              | LEN_lo   | 00 FF FF 01 00 00 FF FF       |
-/// | 2      | 00 00           | LEN_hi   | FF FF 01 00 00 FF FF          |
-/// | 3      | 02 00 00        | LEN_hi   | FF FF 01 00 00 FF FF          |
-/// | 4      | 02 08 00 00     | LEN_hi   | FF FF 01 00 00 FF FF          |
+/// | bridge | prev row end | filter=  | row data starts with        |
+/// |--------|--------------|----------|-----------------------------|
+/// | 0      | (full row)   | BFINAL=0 | 00 00 FF FF 03 00 [zeros]  |
+/// | 1      | 00           | LEN_lo   | 00 FF FF 03 00 [zeros]     |
 ///
 /// For bridge=0: filter starts a new empty non-final stored block, then data
-///   completes it and provides the empty final stored block.
-/// For bridge=1: previous row's `00` started a stored block, filter is LEN_lo.
-/// For bridge=2: previous row's `00 00` = header + LEN_lo, filter is LEN_hi.
-/// For bridge=3,4: previous row uses fixed Huffman block(s) to consume extra
-///   bytes, ending with a stored block header + LEN_lo; filter is LEN_hi.
+///   completes it (LEN=0, NLEN=0xFFFF), then `03 00` terminates the stream.
+/// For bridge=1: previous row's `00` started a stored block, filter is LEN_lo=0.
+///   Row provides LEN_hi=0, NLEN=0xFFFF, then `03 00` terminates.
 fn create_terminator_row(row_width: usize, bridge_bytes: usize) -> Vec<u8> {
     let mut row = vec![0u8; row_width];
     match bridge_bytes {
         0 => {
             // Filter byte 0x00 starts a non-final stored block (BFINAL=0, BTYPE=00)
-            // Row data completes it (LEN=0, NLEN=0xFFFF), then provides final block
+            // Row data completes it (LEN=0, NLEN=0xFFFF), then `03 00` final block
             row[0] = 0x00; // LEN low
             row[1] = 0x00; // LEN high
             row[2] = 0xFF; // NLEN low
             row[3] = 0xFF; // NLEN high
-            row[4] = 0x01; // BFINAL=1, BTYPE=00 (stored)
-            row[5] = 0x00; // LEN low
-            row[6] = 0x00; // LEN high
-            row[7] = 0xFF; // NLEN low
-            row[8] = 0xFF; // NLEN high
+            row[4] = 0x03; // BFINAL=1, BTYPE=01 (fixed Huffman)
+            row[5] = 0x00; // end-of-block symbol (7 zero bits)
+            // rest is zeros (slack space, not part of compressed_size)
         }
         1 => {
-            // Filter byte 0x00 is LEN_lo. Row data provides LEN_hi + NLEN + final block.
+            // Filter byte 0x00 is LEN_lo=0. Row data provides LEN_hi + NLEN + final.
             row[0] = 0x00; // LEN high → LEN=0
             row[1] = 0xFF; // NLEN low
             row[2] = 0xFF; // NLEN high
-            row[3] = 0x01; // BFINAL=1, BTYPE=00
-            row[4] = 0x00; // LEN low
-            row[5] = 0x00; // LEN high
-            row[6] = 0xFF; // NLEN low
-            row[7] = 0xFF; // NLEN high
+            row[3] = 0x03; // BFINAL=1, BTYPE=01 (fixed Huffman)
+            row[4] = 0x00; // end-of-block symbol (7 zero bits)
+            // rest is zeros (slack space)
         }
-        2 | 3 | 4 => {
-            // Filter byte 0x00 is LEN_hi → LEN=0. Row data provides NLEN + final block.
-            row[0] = 0xFF; // NLEN low
-            row[1] = 0xFF; // NLEN high
-            row[2] = 0x01; // BFINAL=1, BTYPE=00
-            row[3] = 0x00; // LEN low
-            row[4] = 0x00; // LEN high
-            row[5] = 0xFF; // NLEN low
-            row[6] = 0xFF; // NLEN high
-        }
-        _ => unreachable!("bridge_bytes must be 0..=4"),
+        _ => unreachable!("bridge_bytes must be 0 or 1"),
     }
     row
 }
@@ -1460,19 +1453,13 @@ fn bin_pack_largest_first(
     bucket_contents
 }
 
-/// Encode data as deflate stored blocks with variable row width.
-/// All content rows use None filter (0x00) - terminator rows are added separately.
-///
-/// IMPORTANT: Padding after actual data must be valid DEFLATE blocks, because
-/// content rows have BFINAL=0 and the decoder continues reading after the data.
-/// We fill padding with empty stored blocks (5 bytes each: 00 00 00 FF FF).
-/// If padding doesn't divide evenly by 5, the last content row uses BFINAL=1
 /// Encode body as DEFLATE stored blocks, one per row.
-/// All content rows use BFINAL=0. A separate terminator row provides BFINAL=1.
+/// All content rows use BFINAL=0. Termination uses `03 00` (fixed Huffman final).
 ///
-/// Padding after content is filled with empty stored blocks (5 bytes each).
-/// If padding doesn't divide evenly by 5, uses internal terminator approach
-/// where the last content row has BFINAL=1 (causes some visual artifacts).
+/// Padding after content in the last row:
+/// - >= 2 bytes: `03 00` terminates inline, rest zeros (embedded_terminator=true)
+/// - == 1 byte: `00` bridges into terminator row (bridge_bytes=1)
+/// - == 0 bytes: terminator row starts fresh (bridge_bytes=0)
 fn encode_as_deflate_blocks(body: &[u8], row_width: usize, embedded_terminator: &mut bool, bridge_bytes: &mut usize) -> Vec<u8> {
     let data_per_block = row_width - 4;
     let mut result = Vec::new();
@@ -1515,75 +1502,34 @@ fn encode_as_deflate_blocks(body: &[u8], row_width: usize, embedded_terminator: 
     result
 }
 
-/// Fill padding with valid DEFLATE blocks.
+/// Fill padding in the last content row with DEFLATE termination.
 ///
-/// When padding is divisible by 5: embed BFINAL=1 terminator in padding.
-/// When padding % 5 != 0: fill with empty non-final blocks + bridge bytes
-/// that start a stored block spanning into the next (terminator) row.
-/// The `bridge_bytes` output indicates how many bytes bridge into the next row.
-///
-/// Bridge byte patterns for remainder R = padding % 5:
-///   R=0: (all padding is complete blocks, no bridge needed)
-///   R=1: `00`           — starts a stored block header
-///   R=2: `00 00`        — header + LEN_lo=0
-///   R=3: `02 00 00`     — fixed Huffman block + header + LEN_lo=0
-///   R=4: `02 08 00 00`  — two fixed Huffman blocks + header + LEN_lo=0
+/// Three cases:
+/// - padding >= 2: Write `03 00` (BFINAL=1 fixed Huffman final block with
+///   end-of-block symbol), then fill remaining with zeros. Sets
+///   `embedded_terminator = true`. Visual: 0x03 ≈ invisible, rest black.
+/// - padding == 1: Write `00` (starts a stored block header bridging into
+///   the terminator row). Sets `bridge_bytes = 1`.
+/// - padding == 0: Nothing to do. Terminator row handles everything.
 fn fill_padding_with_empty_blocks(result: &mut Vec<u8>, padding_needed: usize, embedded_terminator: &mut bool, bridge_bytes: &mut usize) {
-    if padding_needed == 0 {
-        return;
-    }
-
     *bridge_bytes = 0;
 
-    if padding_needed.is_multiple_of(5) {
-        // Embed BFINAL=1 terminator in padding, fill rest with zeros.
-        // compressed_size will be shortened to exclude the trailing zeros.
-        result.push(0x01); // BFINAL=1, BTYPE=00 (stored)
-        result.extend_from_slice(&0_u16.to_le_bytes());      // LEN=0
-        result.extend_from_slice(&0xFFFF_u16.to_le_bytes()); // NLEN=0xFFFF
-        if padding_needed > 5 {
-            result.resize(result.len() + padding_needed - 5, 0); // black pixels (dead space)
+    if padding_needed >= 2 {
+        // `03 00` = BFINAL=1, BTYPE=01 (fixed Huffman), end-of-block symbol 256
+        // (7 bits: 0000000, packed into remaining bits of these 2 bytes)
+        result.push(0x03); // BFINAL=1 | BTYPE=01 (fixed Huffman)
+        result.push(0x00); // end-of-block symbol (7 zero bits)
+        if padding_needed > 2 {
+            result.resize(result.len() + padding_needed - 2, 0); // black pixels (slack)
         }
         *embedded_terminator = true;
-    } else {
-        let remainder = padding_needed % 5;
-        let full_blocks = padding_needed / 5;
-
-        // Fill complete 5-byte empty non-final stored blocks
-        for _ in 0..full_blocks {
-            result.push(0x00); // BFINAL=0, BTYPE=00
-            result.extend_from_slice(&0_u16.to_le_bytes());      // LEN=0
-            result.extend_from_slice(&0xFFFF_u16.to_le_bytes()); // NLEN=0xFFFF
-        }
-
-        // Fill bridge bytes for the remainder
-        match remainder {
-            1 => {
-                // Start a stored block that spans into the terminator row
-                result.push(0x00); // BFINAL=0, BTYPE=00 (stored block header)
-            }
-            2 => {
-                // Header + LEN_lo=0
-                result.push(0x00); // BFINAL=0, BTYPE=00
-                result.push(0x00); // LEN_lo=0
-            }
-            3 => {
-                // Non-final fixed Huffman block (2 bytes) + stored block start (1 byte)
-                result.push(0x02); // BFINAL=0, BTYPE=01 (fixed Huffman)
-                result.push(0x00); // end-of-block bits + next block header bits
-                result.push(0x00); // LEN_lo=0 (after stored block skip-to-byte)
-            }
-            4 => {
-                // Two fixed Huffman blocks (3 bytes) + stored block start (1 byte)
-                result.push(0x02); // BFINAL=0, BTYPE=01 (fixed Huffman)
-                result.push(0x08); // end-of-block bits + BFINAL=0 + BTYPE=01 (2nd fixed Huffman)
-                result.push(0x00); // end-of-block bits + next stored block header bits
-                result.push(0x00); // LEN_lo=0 (after stored block skip-to-byte)
-            }
-            _ => unreachable!(),
-        }
-        *bridge_bytes = remainder;
+    } else if padding_needed == 1 {
+        // Single byte starts a stored block that bridges into terminator row.
+        // `00` = BFINAL=0, BTYPE=00 (stored block header byte)
+        result.push(0x00);
+        *bridge_bytes = 1;
     }
+    // padding == 0: nothing to emit, terminator row will start fresh
 }
 
 /// Build ZIP local file header bytes (30 bytes + name + extra).
