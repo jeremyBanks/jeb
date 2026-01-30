@@ -164,17 +164,17 @@ fn main() -> Result<(), panic> {
         ("examples/greyscale8bit.rs", include_bytes!("greyscale8bit.rs").to_vec()),
     ]);
 
-    // Parent project Rust source
+    // Parent project Rust source (deleted from disk, loaded from git)
     sample!("fic_source", vec![
-        ("src/lib.rs", include_bytes!("../../../src/lib.rs").to_vec()),
-        ("src/backend.rs", include_bytes!("../../../src/backend.rs").to_vec()),
-        ("src/engine.rs", include_bytes!("../../../src/engine.rs").to_vec()),
-        ("src/query.rs", include_bytes!("../../../src/query.rs").to_vec()),
+        ("src/lib.rs", git_blob("4891687bac3382f7eb2c34fe6412d8697a618739")),
+        ("src/backend.rs", git_blob("6a6b07165b1cd913d2e788861bc9686c68221863")),
+        ("src/engine.rs", git_blob("65ba75b3b14035ba93d624642a6003c4ed240e82")),
+        ("src/query.rs", git_blob("8cf2bf7dbf5088a7e4a639d0cd98db0406d9b95f")),
     ]);
 
     // Mixed binary + text from project
     sample!("mixed_project", vec![
-        ("README.md", include_bytes!("../../../README.md").to_vec()),
+        ("README.md", git_blob("4dc6ed1606381e6e6555b3cfbd01ae2d1aa869ed")),
         ("Cargo.toml", include_bytes!("../../../Cargo.toml").to_vec()),
         ("CLAUDE.md", include_bytes!("../../../CLAUDE.md").to_vec()),
     ]);
@@ -467,10 +467,10 @@ fn main() -> Result<(), panic> {
             ("snapshot-a2/palettes/diagnostic.rs", include_bytes!("../src/png/palettes/diagnostic.rs").to_vec()),
             ("snapshot-a2/palettes/mappings.rs", include_bytes!("../src/png/palettes/mappings.rs").to_vec()),
             // Snapshot B — parent project + config + docs + examples
-            ("snapshot-b/fic/lib.rs", include_bytes!("../../../src/lib.rs").to_vec()),
-            ("snapshot-b/fic/backend.rs", include_bytes!("../../../src/backend.rs").to_vec()),
-            ("snapshot-b/fic/engine.rs", include_bytes!("../../../src/engine.rs").to_vec()),
-            ("snapshot-b/fic/query.rs", include_bytes!("../../../src/query.rs").to_vec()),
+            ("snapshot-b/fic/lib.rs", git_blob("4891687bac3382f7eb2c34fe6412d8697a618739")),
+            ("snapshot-b/fic/backend.rs", git_blob("6a6b07165b1cd913d2e788861bc9686c68221863")),
+            ("snapshot-b/fic/engine.rs", git_blob("65ba75b3b14035ba93d624642a6003c4ed240e82")),
+            ("snapshot-b/fic/query.rs", git_blob("8cf2bf7dbf5088a7e4a639d0cd98db0406d9b95f")),
             ("snapshot-b/Cargo.toml", include_bytes!("../Cargo.toml").to_vec()),
             ("snapshot-b/Cargo.lock", include_bytes!("../Cargo.lock").to_vec()),
             ("snapshot-b/README.md", include_bytes!("../README.md").to_vec()),
@@ -640,12 +640,18 @@ fn main() -> Result<(), panic> {
             ("scripts/debug_polyglot.rs", include_bytes!("../scripts/debug_polyglot.rs").as_slice()),
             ("scripts/check_font.rs", include_bytes!("../scripts/check_font.rs").as_slice()),
             ("scripts/test_kerning.rs", include_bytes!("../scripts/test_kerning.rs").as_slice()),
-            ("parent/lib.rs", include_bytes!("../../../src/lib.rs").as_slice()),
-            ("parent/backend.rs", include_bytes!("../../../src/backend.rs").as_slice()),
-            ("parent/engine.rs", include_bytes!("../../../src/engine.rs").as_slice()),
-            ("parent/query.rs", include_bytes!("../../../src/query.rs").as_slice()),
         ] {
             files.push((name.to_string(), data.to_vec()));
+        }
+
+        // Parent project source (deleted from disk, loaded from git)
+        for (name, hash) in [
+            ("parent/lib.rs", "4891687bac3382f7eb2c34fe6412d8697a618739"),
+            ("parent/backend.rs", "6a6b07165b1cd913d2e788861bc9686c68221863"),
+            ("parent/engine.rs", "65ba75b3b14035ba93d624642a6003c4ed240e82"),
+            ("parent/query.rs", "8cf2bf7dbf5088a7e4a639d0cd98db0406d9b95f"),
+        ] {
+            files.push((name.to_string(), git_blob(hash)));
         }
 
         // Add padding files to push total content over 3 MiB (label threshold)
