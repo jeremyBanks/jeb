@@ -681,6 +681,20 @@ pub fn build_polyglot(
     color_mode: ColorMode,
     palette: Option<&[u8]>,
 ) -> Vec<u8> {
+    build_polyglot_with_font(files, _width, bit_depth, color_mode, palette, None)
+}
+
+/// Like [`build_polyglot`], but allows overriding the font selection.
+/// If `font_override` is `Some`, it is used instead of the automatic
+/// size-based font selection.
+pub fn build_polyglot_with_font(
+    files: &[(&[u8], &[u8])],
+    _width: u32,
+    bit_depth: BitDepth,
+    color_mode: ColorMode,
+    palette: Option<&[u8]>,
+    font_override: Option<FontSelection>,
+) -> Vec<u8> {
     // Validate file sizes - files larger than MAX_FILE_CONTENT_SIZE will span
     // IDAT boundaries and produce corrupt deflate streams
     for (name, body) in files {
@@ -716,7 +730,7 @@ pub fn build_polyglot(
     let content_hash = crc32(&hash_input);
 
     // Select font based on content size and hash (None if too large for labels)
-    let font = select_font(total_content_size, content_hash);
+    let font = font_override.or_else(|| select_font(total_content_size, content_hash));
 
     // Two-pass approach for optimal dimensions:
     // Pass 1: Build with estimated width to get actual data size

@@ -11,6 +11,7 @@ use std::panic::catch_unwind;
 use std::process::Command;
 use zipng::{panic, Files};
 use zipng::polyglot::{assert_valid_polyglot_with, Expectations};
+use zipng::polyglot::fonts::{self, FontSelection};
 
 /// Load a blob from git history by its hash.
 fn git_blob(hash: &str) -> Vec<u8> {
@@ -765,6 +766,137 @@ fn main() -> Result<(), panic> {
             files.push((name, content));
         }
         sample!("chunking_stress", files);
+    }
+
+    // =========================================================================
+    // VARIANT GALLERY — png_module with each font and color scheme
+    // =========================================================================
+
+    {
+        fs::create_dir_all("target/samples/png_module")?;
+
+        let png_module_files: Vec<(&str, Vec<u8>)> = vec![
+            ("png/mod.rs", include_bytes!("../src/png.rs").to_vec()),
+            ("png/data.rs", include_bytes!("../src/png/data.rs").to_vec()),
+            ("png/to_png.rs", include_bytes!("../src/png/to_png.rs").to_vec()),
+            ("png/write_png.rs", include_bytes!("../src/png/write_png.rs").to_vec()),
+            ("png/sizes.rs", include_bytes!("../src/png/sizes.rs").to_vec()),
+        ];
+
+        let sorted_files: Vec<(&[u8], &[u8])> = {
+            let mut v: Vec<(&[u8], &[u8])> = png_module_files.iter()
+                .map(|(k, v)| (k.as_bytes() as &[u8], v.as_slice() as &[u8]))
+                .collect();
+            v.sort_by_key(|(a, _)| *a);
+            v
+        };
+
+        // Default size font for all font variants
+        let size_font: &'static fonts::BitmapFont = &fonts::SUGIMORI;
+
+        // Font variants: each of the 7 fonts as the name font
+        let font_variants: &[(&str, &once_cell::sync::Lazy<fonts::BitmapFont>)] = &[
+            ("micro", &fonts::MICRO),
+            ("mini", &fonts::MINI),
+            ("monte", &fonts::MONTE),
+            ("sixth", &fonts::SIXTH),
+            ("sky", &fonts::SKY),
+            ("sugimori", &fonts::SUGIMORI),
+            ("swiss", &fonts::SWISS),
+        ];
+
+        for (font_name, font_ref) in font_variants {
+            let font_sel = FontSelection {
+                name_font: font_ref,
+                size_font,
+            };
+
+            // Use default indexed color with a fixed palette
+            let palette = zipng::palettes::viridis::VIRIDIS;
+            let deduped = zipng::palettes::perceptual::deduplicate_rgb_palette(palette);
+            let polyglot = zipng::polyglot::build_polyglot_with_font(
+                &sorted_files,
+                0,
+                zipng::BitDepth::EightBit,
+                zipng::ColorType::Indexed,
+                Some(&deduped),
+                Some(font_sel),
+            );
+            let path = format!("target/samples/png_module/font_{font_name}.png");
+            fs::write(&path, &polyglot)?;
+            println!("  variant: font_{font_name}.png ({} bytes)", polyglot.len());
+        }
+
+        // Color scheme variants: each palette + RGBA
+        let palette_variants: &[(&str, &[u8])] = &[
+            ("amp", zipng::palettes::oceanic::AMP),
+            ("ice", zipng::palettes::oceanic::ICE),
+            ("oxy", zipng::palettes::oceanic::OXY),
+            ("buda", zipng::palettes::crameri::BUDA),
+            ("nuuk", zipng::palettes::crameri::NUUK),
+            ("oslo", zipng::palettes::crameri::OSLO),
+            ("deep", zipng::palettes::oceanic::DEEP),
+            ("rain", zipng::palettes::oceanic::RAIN),
+            ("acton", zipng::palettes::crameri::ACTON),
+            ("davos", zipng::palettes::crameri::DAVOS),
+            ("devon", zipng::palettes::crameri::DEVON),
+            ("imola", zipng::palettes::crameri::IMOLA),
+            ("lapaz", zipng::palettes::crameri::LAPAZ),
+            ("tokyo", zipng::palettes::crameri::TOKYO),
+            ("turku", zipng::palettes::crameri::TURKU),
+            ("algae", zipng::palettes::oceanic::ALGAE),
+            ("dense", zipng::palettes::oceanic::DENSE),
+            ("solar", zipng::palettes::oceanic::SOLAR),
+            ("speed", zipng::palettes::oceanic::SPEED),
+            ("tempo", zipng::palettes::oceanic::TEMPO),
+            ("magma", zipng::palettes::viridis::MAGMA),
+            ("bamako", zipng::palettes::crameri::BAMAKO),
+            ("batlow", zipng::palettes::crameri::BATLOW),
+            ("bilbao", zipng::palettes::crameri::BILBAO),
+            ("hawaii", zipng::palettes::crameri::HAWAII),
+            ("haline", zipng::palettes::oceanic::HALINE),
+            ("matter", zipng::palettes::oceanic::MATTER),
+            ("turbid", zipng::palettes::oceanic::TURBID),
+            ("plasma", zipng::palettes::viridis::PLASMA),
+            ("lajolla", zipng::palettes::crameri::LAJOLLA),
+            ("thermal", zipng::palettes::oceanic::THERMAL),
+            ("cividis", zipng::palettes::singles::CIVIDIS),
+            ("inferno", zipng::palettes::viridis::INFERNO),
+            ("viridis", zipng::palettes::viridis::VIRIDIS),
+            ("batlow_k", zipng::palettes::crameri::BATLOW_K),
+            ("batlow_w", zipng::palettes::crameri::BATLOW_W),
+        ];
+
+        for (palette_name, palette_data) in palette_variants {
+            let deduped = zipng::palettes::perceptual::deduplicate_rgb_palette(palette_data);
+            let polyglot = zipng::polyglot::build_polyglot(
+                &sorted_files,
+                0,
+                zipng::BitDepth::EightBit,
+                zipng::ColorType::Indexed,
+                Some(&deduped),
+            );
+            let path = format!("target/samples/png_module/color_{palette_name}.png");
+            fs::write(&path, &polyglot)?;
+            println!("  variant: color_{palette_name}.png ({} bytes)", polyglot.len());
+        }
+
+        // RGBA variant
+        {
+            let polyglot = zipng::polyglot::build_polyglot(
+                &sorted_files,
+                0,
+                zipng::BitDepth::EightBit,
+                zipng::ColorType::RedGreenBlueAlpha,
+                None,
+            );
+            let path = "target/samples/png_module/color_rgba.png";
+            fs::write(path, &polyglot)?;
+            println!("  variant: color_rgba.png ({} bytes)", polyglot.len());
+        }
+
+        println!("Generated {} font + {} color variants in target/samples/png_module/",
+            font_variants.len(), palette_variants.len() + 1);
     }
 
     // Print summary
