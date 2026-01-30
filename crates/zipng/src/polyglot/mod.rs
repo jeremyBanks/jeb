@@ -1717,167 +1717,73 @@ fn build_aligned_cd_eocd(
     start_offset: usize,
     file_prefix_size: usize, // bytes in file before the decompressed stream starts
 ) -> Vec<u8> {
-    // Compute extra_len for each CD entry iteratively.
-    // For each entry, we know its start position and can determine where boundaries fall.
-    // If a boundary falls in a "bad" region, we increase the PREVIOUS entry's extra_len
-    // (or add pre-padding for the first entry) to shift this entry forward.
+    let frs = filtered_row_size;
+
+    // Single-pass algorithm: process entries sequentially, choosing each entry's
+    // extra_len to position the NEXT entry (or EOCD) correctly.
     //
-    // However, it's simpler to add the padding to the CURRENT entry's extra field and
-    // shift subsequent entries. The extra field comes after the filename and before the
-    // next entry, so making it larger shifts everything after it.
+    // For a CD entry starting at position `pos`:
+    //   - Row boundary falls at offset `frs - (pos % frs)` within the entry
+    //     (if that offset < entry_total_size; otherwise no boundary)
+    //   - Safe offsets: 34-41 (zero fields) or >= entry_fixed (extra field, all zeros)
     //
-    // But the problem is: a boundary might fall in the fixed part (bytes 0-33 or 42-45+name)
-    // of the CURRENT entry. We can't fix that by enlarging the current entry's extra field
-    // because the boundary is before the extra field.
+    // For EOCD starting at position `pos`:
+    //   - Safe offsets: 4-7 (zero fields) or >= 22 (past EOCD, no boundary)
     //
-    // Solution: pre-pad (shift the entry forward) by adding to the PREVIOUS entry's extra
-    // field. For the first entry, prepend zero bytes to the result.
+    // Strategy: for each entry, compute valid start positions (pos % frs values)
+    // where all boundaries land on safe bytes. Then set the previous entry's
+    // extra_len (or pre_padding) to achieve a valid position.
+
+    // Precompute valid CD start remainders for each entry
+    // (depends on entry_fixed = 46 + name_len)
+    let cd_valid_remainders: Vec<Vec<usize>> = entries.iter().map(|entry| {
+        let entry_fixed = 46 + entry.name.len();
+        valid_cd_remainders(entry_fixed, frs)
+    }).collect();
+
+    // Valid EOCD start remainders
+    let eocd_valid = valid_eocd_remainders(frs);
 
     let mut extra_lens: Vec<usize> = vec![0; entries.len()];
-    let mut pre_padding: usize = 0; // padding before first CD entry
+    let mut pre_padding: usize = 0;
 
-    // Iteratively compute padding. May need multiple passes since padding one entry
-    // shifts all subsequent entries.
-    for _iteration in 0..20 {
-        let mut all_ok = true;
+    // Position the first entry
+    if !entries.is_empty() {
+        let cur_remainder = (start_offset) % frs;
+        if !cd_valid_remainders[0].contains(&cur_remainder) {
+            // Find minimum padding to reach a valid remainder
+            pre_padding = min_padding_to_valid(cur_remainder, &cd_valid_remainders[0], frs);
+        }
+    }
 
-        // Recompute positions with current padding values
-        let mut pos = start_offset + pre_padding;
+    let mut pos = start_offset + pre_padding;
 
-        for (i, entry) in entries.iter().enumerate() {
-            let entry_fixed = 46 + entry.name.len();
-            let entry_total = entry_fixed + extra_lens[i];
-            let entry_end = pos + entry_total;
+    for i in 0..entries.len() {
+        let entry_fixed = 46 + entries[i].name.len();
 
-            // Check all row boundaries within this entry (including pos itself if aligned)
-            let first_boundary = if pos % filtered_row_size == 0 { pos } else { (pos / filtered_row_size + 1) * filtered_row_size };
-            let mut boundary = first_boundary;
+        // Determine what the NEXT structure needs
+        let next_valid = if i + 1 < entries.len() {
+            &cd_valid_remainders[i + 1]
+        } else {
+            &eocd_valid
+        };
 
-            while boundary < entry_end {
-                let offset_in_entry = boundary - pos;
+        // After this entry (with extra_len=0), the next structure starts at pos + entry_fixed
+        let next_pos_base = pos + entry_fixed;
+        let next_remainder = next_pos_base % frs;
 
-                // Is this offset a zero byte?
-                let is_zero = (34..=41).contains(&offset_in_entry) // CD zero fields
-                    || offset_in_entry >= entry_fixed; // extra field (all zeros)
-
-                if !is_zero {
-                    all_ok = false;
-                    // Need to shift this entry forward so boundary lands on a zero.
-                    // Best target: the nearest zero position at or before the boundary.
-                    //
-                    // offset_in_entry is currently in a bad region.
-                    // We want offset_in_entry to be in [34, 41] or >= entry_fixed.
-                    //
-                    // To shift: add `shift` padding BEFORE this entry.
-                    // New offset_in_entry = boundary - (pos + shift) = offset_in_entry - shift
-                    // We want: (offset_in_entry - shift) in [34, 41]
-                    //   shift = offset_in_entry - 41  (land on byte 41, minimum shift)
-                    //   through offset_in_entry - 34  (land on byte 34, maximum shift)
-                    //
-                    // But if offset_in_entry < 34, shift would be negative. In that case
-                    // we need to shift further so the boundary is before this entry entirely,
-                    // or into the previous entry's extra field. Simplest: shift so
-                    // boundary lands at byte 34.
-                    let shift = if offset_in_entry > 41 {
-                        // Boundary is past the zeros but in filename region (42..entry_fixed)
-                        // Shift so it lands at byte 41
-                        offset_in_entry - 41
-                    } else {
-                        // Boundary is before the zeros (in 0..34 range)
-                        // Shift so it lands at byte 34
-                        // shift = offset_in_entry - 34, but that's negative if offset < 34
-                        // We need: boundary - (pos + shift) = 34
-                        // shift = boundary - pos - 34 = offset_in_entry - 34
-                        // But offset_in_entry < 34, so shift is negative...
-                        //
-                        // Actually we need to shift the entry FORWARD (add padding before it).
-                        // Adding `shift` means pos increases by shift.
-                        // New offset = boundary - (pos + shift) = offset_in_entry - shift
-                        // We want this to be 34, so shift = offset_in_entry - 34.
-                        // Since offset_in_entry < 34, shift is negative, meaning we'd need
-                        // to REMOVE padding. Instead, shift forward more so the boundary
-                        // lands in [34, 41]: shift = offset_in_entry + (filtered_row_size - 41)
-                        // Wait, that's not right either.
-                        //
-                        // Let's think differently. The boundary is at a fixed position.
-                        // We're moving the entry to the right by adding padding before it.
-                        // Moving right means the boundary's offset within the entry decreases.
-                        // If boundary offset is currently < 34, moving right makes it even smaller
-                        // (or even negative = boundary before entry).
-                        //
-                        // So for offset < 34: we want to push the entry right so this boundary
-                        // falls BEFORE the entry (offset < 0), and the NEXT boundary lands in
-                        // the safe zone.
-                        //
-                        // shift needed = offset_in_entry + 1 (push boundary just before entry)
-                        // But then the next boundary at offset_in_entry + filtered_row_size - shift
-                        // needs to also be safe. This gets complex.
-                        //
-                        // Simplest correct approach: try all shift values from 1..filtered_row_size
-                        // and pick the minimum that makes all boundaries safe.
-                        let mut best_shift = filtered_row_size; // worst case
-                        for s in 1..=filtered_row_size {
-                            if is_shift_valid(pos + s, entry_fixed, extra_lens[i], filtered_row_size) {
-                                best_shift = s;
-                                break;
-                            }
-                        }
-                        best_shift
-                    };
-
-                    if i == 0 {
-                        pre_padding += shift;
-                    } else {
-                        extra_lens[i - 1] += shift;
-                    }
-                    break; // restart boundary checking with new positions
-                }
-                boundary += filtered_row_size;
-            }
-
-            pos = entry_end;
+        if !next_valid.contains(&next_remainder) {
+            // Add extra_len to reach a valid remainder for the next structure
+            extra_lens[i] = min_padding_to_valid(next_remainder, next_valid, frs);
         }
 
-        // Check EOCD too
-        if all_ok {
-            let eocd_end = pos + 22;
-            let first_boundary = if pos % filtered_row_size == 0 { pos } else { (pos / filtered_row_size + 1) * filtered_row_size };
-            let mut boundary = first_boundary;
-            while boundary < eocd_end {
-                let offset = boundary - pos;
-                let is_zero = (4..=7).contains(&offset);
-                if !is_zero {
-                    all_ok = false;
-                    // Shift EOCD by adding to last CD entry's extra field
-                    let mut best_shift = filtered_row_size;
-                    for s in 1..=filtered_row_size {
-                        if is_eocd_shift_valid(pos + s, filtered_row_size) {
-                            best_shift = s;
-                            break;
-                        }
-                    }
-                    if !entries.is_empty() {
-                        extra_lens[entries.len() - 1] += best_shift;
-                    } else {
-                        pre_padding += best_shift;
-                    }
-                    break;
-                }
-                boundary += filtered_row_size;
-            }
-        }
-
-        if all_ok {
-            break;
-        }
+        pos = next_pos_base + extra_lens[i];
     }
 
     // Build the result
     let mut result: Vec<u8> = vec![0u8; pre_padding];
 
-    // Compute the CD's file offset. The CD starts at decompressed offset
-    // (start_offset + pre_padding). Map decompressed offset to file offset:
-    // each IDAT_BLOCK_SIZE chunk gets a 5-byte stored block header.
+    // Compute the CD's file offset
     let cd_decompressed_offset = start_offset + pre_padding;
     let blocks_before_cd = cd_decompressed_offset.div_ceil(IDAT_BLOCK_SIZE);
     let cd_file_offset = file_prefix_size + cd_decompressed_offset + blocks_before_cd * 5;
@@ -1890,47 +1796,75 @@ fn build_aligned_cd_eocd(
     write_eocd(&mut buf, entries.len() as u16, cd_size as u32, cd_file_offset as u32);
     result.extend_from_slice(&buf.into_bytes());
 
-    // Pad to exact multiple of filtered_row_size (relative to stream start)
+    // Pad to exact multiple of frs (relative to stream start)
     let total = start_offset + result.len();
-    let remainder = total % filtered_row_size;
+    let remainder = total % frs;
     if remainder != 0 {
-        let pad = filtered_row_size - remainder;
+        let pad = frs - remainder;
         result.resize(result.len() + pad, 0);
     }
 
     result
 }
 
-/// Check if placing a CD entry at `entry_start` with given sizes makes all
-/// row boundaries land on safe bytes (offsets 34-41 or in the extra field).
-fn is_shift_valid(entry_start: usize, entry_fixed: usize, extra_len: usize, frs: usize) -> bool {
-    let entry_end = entry_start + entry_fixed + extra_len;
-    let first_boundary = if entry_start % frs == 0 { entry_start } else { (entry_start / frs + 1) * frs };
-    let mut boundary = first_boundary;
-    while boundary < entry_end {
-        let offset = boundary - entry_start;
-        if !((34..=41).contains(&offset) || offset >= entry_fixed) {
-            return false;
+/// Compute valid `pos % frs` values for a CD entry with the given fixed size.
+///
+/// A CD entry has zero bytes at offsets 34-41. The extra field (at offset
+/// `entry_fixed` and beyond) is also all zeros. A row boundary at offset `d`
+/// within the entry requires `d` to be in [34, 41] or >= entry_fixed.
+///
+/// For an entry at position `pos`, the first boundary offset is `frs - (pos % frs)`
+/// (if that's < entry_fixed + any extra). Additional boundaries are at
+/// `frs - (pos % frs) + k*frs`.
+///
+/// A remainder `r = pos % frs` is valid if ALL boundaries within the entry
+/// land on safe bytes. Since extra_len can grow, we only need to check
+/// boundaries that fall in [0, entry_fixed).
+fn valid_cd_remainders(entry_fixed: usize, frs: usize) -> Vec<usize> {
+    (0..frs).filter(|&r| {
+        // Check all boundary offsets within [0, entry_fixed)
+        // First boundary offset: (frs - r) % frs
+        let first_off = if r == 0 { 0 } else { frs - r };
+        if first_off >= entry_fixed {
+            return true; // No boundary in fixed part
         }
-        boundary += frs;
-    }
-    true
+        // Check this and subsequent boundaries
+        let mut off = first_off;
+        while off < entry_fixed {
+            if !(34..=41).contains(&off) {
+                return false;
+            }
+            off += frs;
+        }
+        true
+    }).collect()
 }
 
-/// Check if placing the EOCD at `eocd_start` makes all row boundaries land
-/// on safe bytes (offsets 4-7).
-fn is_eocd_shift_valid(eocd_start: usize, frs: usize) -> bool {
-    let eocd_end = eocd_start + 22;
-    let first_boundary = if eocd_start % frs == 0 { eocd_start } else { (eocd_start / frs + 1) * frs };
-    let mut boundary = first_boundary;
-    while boundary < eocd_end {
-        let offset = boundary - eocd_start;
-        if !(4..=7).contains(&offset) {
-            return false;
+/// Compute valid `pos % frs` values for the EOCD (22 bytes, zeros at 4-7).
+fn valid_eocd_remainders(frs: usize) -> Vec<usize> {
+    (0..frs).filter(|&r| {
+        let first_off = if r == 0 { 0 } else { frs - r };
+        if first_off >= 22 {
+            return true; // No boundary in EOCD
         }
-        boundary += frs;
-    }
-    true
+        let mut off = first_off;
+        while off < 22 {
+            if !(4..=7).contains(&off) {
+                return false;
+            }
+            off += frs;
+        }
+        true
+    }).collect()
+}
+
+/// Find minimum padding to shift from `current_remainder` to any value in `valid`.
+fn min_padding_to_valid(current_remainder: usize, valid: &[usize], frs: usize) -> usize {
+    valid.iter()
+        .map(|&v| (v + frs - current_remainder) % frs)
+        .filter(|&p| p > 0) // Must add at least something (current is invalid)
+        .min()
+        .unwrap_or(frs) // Fallback: shift by full frs
 }
 
 /// Write End of Central Directory record.
