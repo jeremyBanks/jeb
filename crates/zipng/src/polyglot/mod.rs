@@ -1254,21 +1254,15 @@ fn build_aligned_data(
         data.extend_from_slice(&terminator);
     }
 
-    // Append gap + mirrored reference colors before CD data.
-    // The same gradient will also be added after the CD in build_polyglot.
+    // Append a single separator row of 0xFF before the CD data.
     {
-        let trailing_gap_rows: usize = if font.is_some() { 2 } else { 1 };
-
         // Align to row boundary first
         let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
         let new_len = data.len() + padding_to_row;
         resize_with_opaque_padding(&mut data, new_len, bytes_per_pixel);
 
-        // Add gap rows before gradient
-        let new_len = data.len() + trailing_gap_rows * row_width;
-        resize_with_opaque_padding(&mut data, new_len, bytes_per_pixel);
-
-        data.extend_from_slice(&build_trailing_gradient(row_width, bytes_per_pixel));
+        // Single row of all 0xFF (max palette index or white pixels)
+        data.extend_from_slice(&vec![0xFF; row_width]);
     }
 
     (data, entries, terminator_rows)
