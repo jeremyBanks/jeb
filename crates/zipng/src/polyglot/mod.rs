@@ -1050,11 +1050,6 @@ fn build_aligned_data(
     // Track if previous file needs a terminator
     let mut pending_terminator = false;
 
-    // Leading gap before reference color rows.
-    let leading_gap_rows: usize = if font.is_some() { 2 } else { 1 };
-    let gap_len = leading_gap_rows * row_width;
-    resize_with_opaque_padding(&mut data, gap_len, bytes_per_pixel);
-
     // Insert reference color rows at the very start of the image.
     if bytes_per_pixel > 1 {
         // RGBA mode: single row cycling through 6 reference colors as RGBA pixels
@@ -1259,12 +1254,18 @@ fn build_aligned_data(
         data.extend_from_slice(&terminator);
     }
 
-    // Append mirrored reference colors immediately before CD data (no gap).
+    // Append gap + mirrored reference colors before CD data.
     // The same gradient will also be added after the CD in build_polyglot.
     {
+        let trailing_gap_rows: usize = if font.is_some() { 2 } else { 1 };
+
         // Align to row boundary first
         let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
         let new_len = data.len() + padding_to_row;
+        resize_with_opaque_padding(&mut data, new_len, bytes_per_pixel);
+
+        // Add gap rows before gradient
+        let new_len = data.len() + trailing_gap_rows * row_width;
         resize_with_opaque_padding(&mut data, new_len, bytes_per_pixel);
 
         data.extend_from_slice(&build_trailing_gradient(row_width, bytes_per_pixel));
@@ -1334,11 +1335,10 @@ fn calculate_bucket_spacing(
     let rows_per_bucket = IDAT_BLOCK_SIZE / filtered_row_size;
     let bucket_capacity_bytes = rows_per_bucket * row_width;
 
-    // Preamble: leading gap + reference color map rows at the top of the image.
+    // Preamble: reference color map rows at the top of the image.
     // The gap after the color map is part of normal spacing distribution (not preamble).
-    let leading_gap_rows: usize = if has_labels { 2 } else { 1 };
     let reverse_color_map_rows = 256_usize.div_ceil(row_width);
-    let preamble_bytes = (leading_gap_rows + reverse_color_map_rows) * row_width;
+    let preamble_bytes = reverse_color_map_rows * row_width;
 
     let num_buckets = bucket_assignments.len();
     let mut result = Vec::with_capacity(num_buckets);
