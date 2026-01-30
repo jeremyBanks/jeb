@@ -13,6 +13,7 @@ mod ser;
 mod wire;
 
 mod as_postcard;
+mod serde;
 mod unterminated;
 
 #[cfg(test)]
