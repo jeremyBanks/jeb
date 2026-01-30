@@ -12,6 +12,9 @@ mod error;
 mod ser;
 mod wire;
 
+mod as_postcard;
+mod unterminated;
+
 #[cfg(test)]
 mod tests;
 
