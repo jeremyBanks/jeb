@@ -480,8 +480,7 @@ pub fn frozen() -> Vec<u8> {
     .iter()
     .map(|hex| hex_to_rgb(hex))
     .collect::<Vec<_>>();
-    let mut sorted = sort_colors(&colors);
-    sorted.reverse();
+    let sorted = sort_colors(&colors);
     let colors = generate(&sorted);
     colors
 }
