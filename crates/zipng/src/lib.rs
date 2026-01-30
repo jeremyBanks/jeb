@@ -38,9 +38,6 @@ pub mod text;
 // ZIP module
 pub mod zip;
 
-// ZipNG module (renamed from zipng to avoid crate name collision)
-pub mod zipng_impl;
-
 // Polyglot module (our main work)
 pub mod polyglot;
 

@@ -74,14 +74,6 @@ pub fn write_png_body(buffer: &mut OutputBuffer, data: &[u8]) -> Result<usize, p
     write_png_chunk(&mut buffer.tagged("png", "pixels"), b"IDAT", &deflated)
 }
 
-pub fn write_non_png_chunk(buffer: &mut OutputBuffer, data: &[u8]) -> Result<usize, panic> {
-    write_png_chunk(
-        &mut buffer.tagged("png", "comment"),
-        b"pkPK",
-        &OutputBuffer::without_tag(data),
-    )
-}
-
 pub fn write_png_footer(buffer: &mut OutputBuffer) -> Result<usize, panic> {
     write_png_chunk(
         &mut buffer.tagged("png", "footer"),

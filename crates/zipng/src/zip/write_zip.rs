@@ -163,5 +163,3 @@ pub fn write_zip(
 
     Ok(end - start)
 }
-
-pub fn write_zip_archive_terminator() {}
