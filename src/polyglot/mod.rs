@@ -515,38 +515,12 @@ pub fn build_polyglot(
         (pixel_data, entry_infos, final_block_rows, row_width)
     };
 
-    // Step 2: Calculate PNG dimensions
-    let height = if pixel_data.is_empty() { 1 } else { (pixel_data.len() + row_width - 1) / row_width };
-    let mut padded = pixel_data.clone();
-    padded.resize(height * row_width, 0);
-
-    // Calculate effective pixel width based on bit depth
-    let bits_per_pixel = bit_depth.bits_per_sample() * color_mode.samples_per_pixel();
-    let effective_width = (row_width * 8) / bits_per_pixel;
-
-    // Step 3: Build PNG
-    let mut output = output_buffer();
-    write_png_header(&mut output, effective_width as u32, height as u32, bit_depth, color_mode);
-
-    if let Some(p) = palette {
-        let plte_data = OutputBuffer::without_tag(p);
-        write_png_chunk(&mut output, b"PLTE", &plte_data);
-    }
-
+    // Step 2: Build file entries with correct offsets (need this before CD+EOCD)
     // Calculate offset where filtered pixel data starts in the file
     // PNG sig (8) + IHDR chunk (25) + PLTE if any + IDAT header (8) + zlib (2) + deflate (5)
     let plte_size = palette.map(|p| 4 + 4 + p.len() + 4).unwrap_or(0);
     let data_offset = 8 + 25 + plte_size + 8 + 2 + 5;
 
-    // Debug: print terminator rows for file_045
-    // Find file_045 entry
-    // IDAT with smart filter bytes
-    let filtered = add_smart_filter_bytes(&padded, row_width, &final_block_rows);
-    write_idat_stored(&mut output, &filtered);
-
-    write_png_footer(&mut output);
-
-    // Step 4: Build file entries with correct offsets
     let file_entries: Vec<FileEntry> = entry_infos
         .into_iter()
         .map(|(name, body, orig_pos, compressed_size)| {
@@ -570,18 +544,89 @@ pub fn build_polyglot(
         })
         .collect();
 
-    // Step 5: Central directory (after IEND)
-    let cd_start = output.len();
-    write_central_directory(&mut output, &file_entries);
-    let cd_end = output.len();
+    // Step 3: Build CD+EOCD into a temp buffer, computing the offset where CD will
+    // land inside the final file. The CD+EOCD will be appended as a trailing stored
+    // deflate block inside the IDAT chunk (after pixel data blocks, before Adler-32).
+    //
+    // Layout inside IDAT chunk data:
+    //   zlib_header(2) + pixel_deflate_blocks + trailing_block_header(5) + CD + EOCD + adler32(4)
+    //
+    // To compute cd_offset in the final file, we need to know the size of everything
+    // before the CD bytes. We first build the CD without knowing cd_offset (using a
+    // placeholder), measure its size, then compute the real offset and rebuild.
 
-    // Step 6: EOCD
+    // Build CD to measure its size (offset doesn't matter for size)
+    let mut cd_buf = output_buffer();
+    write_central_directory(&mut cd_buf, &file_entries);
+    let cd_size = cd_buf.len();
+
+    // Compute the pixel deflate size: filtered data split into IDAT_BLOCK_SIZE chunks,
+    // each with a 5-byte header (1 BFINAL + 2 LEN + 2 NLEN)
+    // We need the filtered data size first - pad pixel_data to full rows
+    let pixel_height = if pixel_data.is_empty() { 1 } else { (pixel_data.len() + row_width - 1) / row_width };
+    let mut padded_pixels = pixel_data.clone();
+    padded_pixels.resize(pixel_height * row_width, 0);
+
+    // Account for extra height needed for CD+EOCD trailing data decompressing as extra rows.
+    // The trailing block content (CD+EOCD) decompresses as extra bytes that PNG decoders
+    // will interpret as additional pixel rows. We must increase the image height so
+    // decoders don't complain about extra data.
+    //
+    // EOCD is 22 bytes, so trailing_size = cd_size + 22
+    let eocd_size = 22;
+    let trailing_data_size = cd_size + eocd_size;
+    // Total decompressed = filtered pixel data + trailing data
+    // filtered pixel data = height * (row_width + 1) bytes (each row has 1 filter byte + row_width data)
+    // trailing data adds trailing_data_size more decompressed bytes
+    // New height must accommodate: height * (row_width + 1) + trailing_data_size total bytes
+    // Each row is (row_width + 1) bytes in decompressed form (filter byte + pixel data)
+    let filtered_row_size = row_width + 1;
+    let total_decompressed = pixel_height * filtered_row_size + trailing_data_size;
+    let height = (total_decompressed + filtered_row_size - 1) / filtered_row_size;
+
+    // Repad pixel data to the new height (extra rows will be filled by trailing data decompression)
+    padded_pixels.resize(height * row_width, 0);
+
+    let filtered = add_smart_filter_bytes(&padded_pixels, row_width, &final_block_rows);
+
+    // Now compute the pixel deflate total size (all pixel stored blocks including headers)
+    let num_pixel_chunks = (filtered.len() + IDAT_BLOCK_SIZE - 1) / IDAT_BLOCK_SIZE;
+    let pixel_deflate_size = filtered.len() + num_pixel_chunks * 5; // 5 bytes header per block
+
+    // cd_offset in the final file:
+    // = PNG_sig(8) + IHDR(25) + PLTE(if any) + IDAT_chunk_header(8) + zlib(2)
+    //   + pixel_deflate_size + trailing_block_header(5)
+    let cd_offset = 8 + 25 + plte_size + 8 + 2 + pixel_deflate_size + 5;
+
+    // Build the final CD+EOCD buffer with correct offset
+    let mut cd_eocd_buf = output_buffer();
+    write_central_directory(&mut cd_eocd_buf, &file_entries);
+    let cd_end = cd_eocd_buf.len();
     write_eocd(
-        &mut output,
+        &mut cd_eocd_buf,
         file_entries.len() as u16,
-        (cd_end - cd_start) as u32,
-        cd_start as u32,
+        cd_end as u32,
+        cd_offset as u32,
     );
+    let cd_eocd_bytes: Vec<u8> = cd_eocd_buf.into_bytes();
+
+    // Calculate effective pixel width based on bit depth
+    let bits_per_pixel = bit_depth.bits_per_sample() * color_mode.samples_per_pixel();
+    let effective_width = (row_width * 8) / bits_per_pixel;
+
+    // Step 4: Build PNG with CD+EOCD inside IDAT
+    let mut output = output_buffer();
+    write_png_header(&mut output, effective_width as u32, height as u32, bit_depth, color_mode);
+
+    if let Some(p) = palette {
+        let plte_data = OutputBuffer::without_tag(p);
+        write_png_chunk(&mut output, b"PLTE", &plte_data);
+    }
+
+    // Write IDAT with trailing CD+EOCD block
+    write_idat_stored(&mut output, &filtered, Some(&cd_eocd_bytes));
+
+    write_png_footer(&mut output);
 
     output.into_bytes()
 }
@@ -1128,7 +1173,16 @@ fn add_smart_filter_bytes(data: &[u8], row_width: usize, final_rows: &HashSet<us
 }
 
 /// Write IDAT chunk with stored deflate.
-fn write_idat_stored(buffer: &mut OutputBuffer, filtered_data: &[u8]) {
+///
+/// If `trailing_data` is provided, it is appended as a separate stored deflate block
+/// after the pixel data blocks. This allows embedding raw bytes (like ZIP central
+/// directory + EOCD) inside the IDAT chunk where they appear contiguously in the
+/// final file without being interrupted by filter bytes or deflate block headers.
+///
+/// Returns the byte offset within `buffer` where `trailing_data` starts (if any).
+/// The trailing data block uses a 5-byte stored deflate header, so the raw bytes
+/// begin at offset trailing_block_start + 5 within the IDAT chunk data.
+fn write_idat_stored(buffer: &mut OutputBuffer, filtered_data: &[u8], trailing_data: Option<&[u8]>) -> Option<usize> {
     let mut idat_content = output_buffer();
 
     // Zlib header
@@ -1141,19 +1195,67 @@ fn write_idat_stored(buffer: &mut OutputBuffer, filtered_data: &[u8]) {
     idat_content.push(cmf);
     idat_content.push(flg);
 
+    let has_trailing = trailing_data.is_some() && !trailing_data.unwrap().is_empty();
+
     // Stored deflate blocks (max 65535 bytes each)
+    let num_pixel_chunks = filtered_data.chunks(IDAT_BLOCK_SIZE).count();
     for (i, chunk) in filtered_data.chunks(IDAT_BLOCK_SIZE).enumerate() {
-        let is_last = i == filtered_data.chunks(IDAT_BLOCK_SIZE).count() - 1;
-        idat_content.push(if is_last { 0x01 } else { 0x00 });
+        let is_last_pixel = i == num_pixel_chunks - 1;
+        // Only mark as BFINAL if this is the last pixel block AND there's no trailing data
+        let bfinal = is_last_pixel && !has_trailing;
+        idat_content.push(if bfinal { 0x01 } else { 0x00 });
         idat_content += &(chunk.len() as u16).to_le_bytes();
         idat_content += &(chunk.len() as u16).not().to_le_bytes();
         idat_content += chunk;
     }
 
-    // Adler-32
-    idat_content += &adler32(filtered_data).to_be_bytes();
+    // Append trailing data as a separate BFINAL stored block
+    let trailing_offset = if has_trailing {
+        let td = trailing_data.unwrap();
+        // Record the absolute file offset where trailing data bytes start
+        // buffer.len() = bytes already in output (PNG sig + IHDR + PLTE)
+        // + 8 for IDAT chunk header (4 len + 4 "IDAT")
+        // + idat_content.len() = zlib header + pixel deflate blocks so far
+        // + 1 (BFINAL byte) + 4 (LEN + NLEN) = 5 byte stored block header
+        let offset = buffer.len() + 8 + idat_content.len() + 5;
+
+        idat_content.push(0x01); // BFINAL=1, BTYPE=00 (stored)
+        idat_content += &(td.len() as u16).to_le_bytes();
+        idat_content += &(td.len() as u16).not().to_le_bytes();
+        idat_content += td;
+
+        Some(offset)
+    } else {
+        None
+    };
+
+    // Adler-32 over all decompressed data (pixels + trailing)
+    // The trailing data is also part of the decompressed stream
+    let adler = if has_trailing {
+        // Compute combined adler32: first over filtered_data, then continue over trailing
+        let a1 = adler32(filtered_data);
+        let td = trailing_data.unwrap();
+        // Combine by continuing the adler32 computation
+        adler32_combine(a1, td)
+    } else {
+        adler32(filtered_data)
+    };
+    idat_content += &adler.to_be_bytes();
 
     write_png_chunk(buffer, b"IDAT", &idat_content);
+
+    trailing_offset
+}
+
+/// Continue an Adler-32 checksum over additional data.
+fn adler32_combine(prev: u32, data: &[u8]) -> u32 {
+    let mut s1 = prev & 0xFFFF;
+    let mut s2 = prev >> 16;
+    for &byte in data {
+        s1 = (s1 + byte as u32) % 65521;
+        s2 = (s2 + s1) % 65521;
+    }
+    (s2 << 16) | s1
 }
 
 /// Write central directory entries.
