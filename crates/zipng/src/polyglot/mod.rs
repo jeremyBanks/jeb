@@ -53,7 +53,6 @@ mod validate;
 #[cfg(any(test, feature = "dev-dependencies"))]
 pub use validate::{validate_polyglot, assert_valid_polyglot, assert_valid_polyglot_with, ValidationResult, Expectations};
 
-use std::collections::HashSet;
 use std::ops::Not;
 
 use crate::checksums::{adler32, crc32};
@@ -169,14 +168,9 @@ fn last_row_padding(body_len: usize, row_width: usize) -> usize {
     row_width - 4 - last_chunk_size
 }
 
-fn needs_internal_terminator(body_len: usize, row_width: usize) -> bool {
-    let padding = last_row_padding(body_len, row_width);
-    // Internal terminator used when padding is non-zero and NOT divisible by 5
-    padding > 0 && !padding.is_multiple_of(5)
-}
-
 /// Returns true if the terminator will be embedded in the last row's padding.
 /// This happens when padding is non-zero and divisible by 5.
+/// When padding % 5 != 0, a separate terminator row is used instead.
 fn embeds_terminator_in_padding(body_len: usize, row_width: usize) -> bool {
     let padding = last_row_padding(body_len, row_width);
     padding > 0 && padding.is_multiple_of(5)
@@ -198,68 +192,74 @@ fn calculate_compressed_size(body_len: usize, row_width: usize) -> usize {
             if remainder == 0 { data_per_block } else { remainder }
         };
         (num_content_blocks - 1) * filtered_row_size + 1 + 4 + last_chunk_len + 5
-    } else if needs_internal_terminator(body_len, row_width) {
-        // Internal terminator: no separate row
-        num_content_blocks * filtered_row_size
     } else {
-        // Separate terminator row (no padding, or zero padding)
+        // Separate terminator row (no padding, padding not divisible by 5, or zero padding).
+        // The terminator row completes the DEFLATE stream. compressed_size includes
+        // the full terminator row; any dead space after BFINAL is ignored by decompressors.
         (num_content_blocks + 1) * filtered_row_size
     }
 }
 
 /// Create a terminator row for ending a file's DEFLATE stream.
-/// This row contains the empty final DEFLATE block (BFINAL=1, LEN=0, NLEN=0xFFFF).
-/// The filter byte (0x01 for Sub) is added separately by add_smart_filter_bytes.
+/// Uses None filter (0x00). The row data layout depends on `bridge_bytes`:
+/// the number of padding bytes from the previous row that started a DEFLATE
+/// stored block which spans into this row.
 ///
-/// With Sub filter (bpp=1), the decoded values are:
-/// - decoded[0] = raw[0] = 0x00
-/// - decoded[1] = raw[1] + decoded[0] = 0x00
-/// - decoded[2] = raw[2] + decoded[1] = 0xFF
-/// - decoded[3] = raw[3] + decoded[2] = 0xFE (0xFF + 0xFF wrapped)
-/// - decoded[4] = raw[4] + decoded[3] = 0x02 + 0xFE = 0x00 (correction cancels sum)
-/// - decoded[5..] = 0
-fn create_terminator_row(row_width: usize, bytes_per_pixel: usize) -> Vec<u8> {
+/// The filter byte (0x00) is added separately by `add_filter_bytes`.
+/// It serves double duty as both PNG None filter and a DEFLATE byte:
+///
+/// | bridge | padding fill    | filter=  | row data starts with           |
+/// |--------|-----------------|----------|--------------------------------|
+/// | 0      | (all mod-5)     | BFINAL=0 | 00 00 FF FF 01 00 00 FF FF    |
+/// | 1      | 00              | LEN_lo   | 00 FF FF 01 00 00 FF FF       |
+/// | 2      | 00 00           | LEN_hi   | FF FF 01 00 00 FF FF          |
+/// | 3      | 02 00 00        | LEN_hi   | FF FF 01 00 00 FF FF          |
+/// | 4      | 02 08 00 00     | LEN_hi   | FF FF 01 00 00 FF FF          |
+///
+/// For bridge=0: filter starts a new empty non-final stored block, then data
+///   completes it and provides the empty final stored block.
+/// For bridge=1: previous row's `00` started a stored block, filter is LEN_lo.
+/// For bridge=2: previous row's `00 00` = header + LEN_lo, filter is LEN_hi.
+/// For bridge=3,4: previous row uses fixed Huffman block(s) to consume extra
+///   bytes, ending with a stored block header + LEN_lo; filter is LEN_hi.
+fn create_terminator_row(row_width: usize, bridge_bytes: usize) -> Vec<u8> {
     let mut row = vec![0u8; row_width];
-    // DEFLATE empty final block: LEN=0, NLEN=0xFFFF
-    row[0] = 0x00; // LEN low
-    row[1] = 0x00; // LEN high
-    row[2] = 0xFF; // NLEN low
-    row[3] = 0xFF; // NLEN high
-
-    // Sub filter correction: cancel the running sum so remaining pixels decode to 0.
-    // With Sub filter (bpp = bytes_per_pixel):
-    //   actual[i] = filtered[i] + actual[i - bpp]  (mod 256)
-    // First pixel (bytes 0..bpp) has no predecessor, so actual = filtered directly.
-    //
-    // For bpp=1: running sum after byte 3 = 0+0+FF+FF = 0xFE mod 256.
-    //   Correction at byte 4: (0 - 0xFE) mod 256 = 0x02
-    // For bpp=4 (RGBA): first pixel = (0,0,0xFF,0xFF) = opaque blue (unavoidable).
-    //   Pixel 1 correction: filtered = (0-0, 0-0, 0-0xFF, 0-0xFF) = (0,0,1,1)
-    // For bpp=3 (RGB): first pixel = (0,0,0xFF). Pixel 1 starts at byte 3.
-    //   actual[3..6] with filtered (0xFF,0,0) = (0xFF+0, 0+0, 0+0xFF) = (0xFF,0,0xFF)
-    //   Pixel 2 correction at byte 6: filtered = (0-0xFF, 0-0, 0-0xFF) = (1,0,1)
-    if row_width > 4 {
-        let bpp = bytes_per_pixel.max(1);
-        // Find the first pixel boundary at or after byte 4 where we can insert correction
-        let first_corr = if 4 % bpp == 0 { 4 } else { (4 / bpp + 1) * bpp };
-        // Simulate Sub filter reconstruction up to the correction point.
-        // Must cover at least first_corr bytes so we know the accumulated values
-        // that the correction needs to cancel.
-        let sim_len = first_corr.min(row_width);
-        let mut actual = vec![0u8; sim_len];
-        let copy_len = sim_len.min(4);
-        actual[..copy_len].copy_from_slice(&row[..copy_len]);
-        for i in bpp..sim_len {
-            actual[i] = actual[i].wrapping_add(actual[i - bpp]);
+    match bridge_bytes {
+        0 => {
+            // Filter byte 0x00 starts a non-final stored block (BFINAL=0, BTYPE=00)
+            // Row data completes it (LEN=0, NLEN=0xFFFF), then provides final block
+            row[0] = 0x00; // LEN low
+            row[1] = 0x00; // LEN high
+            row[2] = 0xFF; // NLEN low
+            row[3] = 0xFF; // NLEN high
+            row[4] = 0x01; // BFINAL=1, BTYPE=00 (stored)
+            row[5] = 0x00; // LEN low
+            row[6] = 0x00; // LEN high
+            row[7] = 0xFF; // NLEN low
+            row[8] = 0xFF; // NLEN high
         }
-        // Set correction bytes to cancel the accumulated values
-        for c in 0..bpp {
-            let pos = first_corr + c;
-            if pos < row_width {
-                let prev_actual = if first_corr >= bpp { actual.get(first_corr - bpp + c).copied().unwrap_or(0) } else { 0 };
-                row[pos] = 0u8.wrapping_sub(prev_actual);
-            }
+        1 => {
+            // Filter byte 0x00 is LEN_lo. Row data provides LEN_hi + NLEN + final block.
+            row[0] = 0x00; // LEN high → LEN=0
+            row[1] = 0xFF; // NLEN low
+            row[2] = 0xFF; // NLEN high
+            row[3] = 0x01; // BFINAL=1, BTYPE=00
+            row[4] = 0x00; // LEN low
+            row[5] = 0x00; // LEN high
+            row[6] = 0xFF; // NLEN low
+            row[7] = 0xFF; // NLEN high
         }
+        2 | 3 | 4 => {
+            // Filter byte 0x00 is LEN_hi → LEN=0. Row data provides NLEN + final block.
+            row[0] = 0xFF; // NLEN low
+            row[1] = 0xFF; // NLEN high
+            row[2] = 0x01; // BFINAL=1, BTYPE=00
+            row[3] = 0x00; // LEN low
+            row[4] = 0x00; // LEN high
+            row[5] = 0xFF; // NLEN low
+            row[6] = 0xFF; // NLEN high
+        }
+        _ => unreachable!("bridge_bytes must be 0..=4"),
     }
     row
 }
@@ -358,10 +358,10 @@ fn format_file_size(size: usize) -> String {
 /// If space permits (8px minimum gap), also renders file size right-aligned.
 ///
 /// If `is_terminator` is true, the first row becomes a terminator row for the previous file:
-/// - Bytes 0-3 are the DEFLATE empty final block (LEN=0, NLEN=0xFFFF)
-/// - Bytes 4+ are pre-filtered for Sub filter to decode to black (0)
-/// - The rest of the label rows use None filter as normal
-fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, header_row: &[u8], is_terminator: bool, file_size: usize, bytes_per_pixel: usize) -> Vec<u8> {
+/// - Bytes 0-8 contain two empty DEFLATE blocks (non-final + final) for None filter
+/// - Bytes 9+ are zero (black)
+/// - All rows use None filter (0x00)
+fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, header_row: &[u8], is_terminator: bool, bridge_bytes: usize, file_size: usize, bytes_per_pixel: usize) -> Vec<u8> {
     let font = fonts.name_font;
     let size_font = fonts.size_font;
     let label_rows = label_rows_for_font(fonts);
@@ -481,9 +481,8 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
     // Track per-pixel-column whether the stretch is still active
     let mut stretch_active: Vec<bool> = vec![true; pixel_width];
     // rows_data is in bytes (row_width per row), initialized to opaque black for RGBA.
-    // Label rows use None filter (0x00), so pre-filtered data = raw pixel values.
-    // Only the terminator row (first row, if is_terminator) uses Sub filter,
-    // and it is overwritten below by create_terminator_row.
+    // All rows use None filter (0x00), so pre-filtered data = raw pixel values.
+    // The terminator row (first row, if is_terminator) is overwritten below.
     let mut rows_data: Vec<Vec<u8>> = if bytes_per_pixel > 1 {
         let mut rows = Vec::with_capacity(label_rows);
         for _ in 0..label_rows {
@@ -557,10 +556,10 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
         }
     }
 
-    // If this is a terminator label, transform the first row for Sub filter.
-    // Use the same logic as create_terminator_row for consistency.
+    // If this is a terminator label, overwrite the first row with terminator bytes.
+    // Uses None filter (0x00) — the double-block layout is displayed as raw bytes.
     if is_terminator {
-        let terminator = create_terminator_row(row_width, bytes_per_pixel);
+        let terminator = create_terminator_row(row_width, bridge_bytes);
         rows_data[0] = terminator;
     }
 
@@ -733,7 +732,7 @@ pub fn build_polyglot(
     // Pass 1: Use estimate for initial build
     let estimated_size = estimate_total_size(files, font.as_ref());
     let initial_width = calculate_row_width(estimated_size, min_width, bytes_per_pixel);
-    let (initial_data, _, _) = build_aligned_data(files, initial_width, font.as_ref(), bytes_per_pixel);
+    let (initial_data, _) = build_aligned_data(files, initial_width, font.as_ref(), bytes_per_pixel);
 
     // Pass 2: Calculate optimal width from actual size
     let actual_size = initial_data.len();
@@ -756,7 +755,7 @@ pub fn build_polyglot(
     }
 
     // Build with the (possibly optimized) row_width
-    let (pixel_data, entry_infos, final_block_rows) = build_aligned_data(files, row_width, font.as_ref(), bytes_per_pixel);
+    let (pixel_data, entry_infos) = build_aligned_data(files, row_width, font.as_ref(), bytes_per_pixel);
 
     // Step 2: Build file entries with correct offsets (need this before CD+EOCD)
     // Calculate offset where filtered pixel data starts in the file
@@ -809,7 +808,7 @@ pub fn build_polyglot(
     resize_with_opaque_padding(&mut padded_pixels, pixel_height * row_width, bytes_per_pixel);
 
     // Filter the pixel data
-    let mut filtered_pixels = add_smart_filter_bytes(&padded_pixels, row_width, &final_block_rows);
+    let mut filtered_pixels = add_filter_bytes(&padded_pixels, row_width);
 
     // Ensure the CD+EOCD won't be split by an IDAT stored deflate block boundary.
     // The 5-byte stored block headers appear in the file every IDAT_BLOCK_SIZE bytes
@@ -933,9 +932,8 @@ fn calculate_file_size(name: &[u8], body: &[u8], row_width: usize, font: Option<
     let file_data_size = header_size + extra_len + num_blocks * row_width;
     let label_size = font.map(|f| label_rows_for_font(f) * row_width).unwrap_or(0);
     // Add terminator row only if neither internal nor embedded terminator is used
-    let uses_internal = needs_internal_terminator(body.len(), row_width);
     let uses_embedded = embeds_terminator_in_padding(body.len(), row_width);
-    let terminator_size = if uses_internal || uses_embedded { 0 } else { row_width };
+    let terminator_size = if uses_embedded { 0 } else { row_width };
     label_size + file_data_size + terminator_size
 }
 
@@ -946,13 +944,13 @@ fn calculate_file_size(name: &[u8], body: &[u8], row_width: usize, font: Option<
 /// Resize data with opaque black padding for RGBA, or zero padding for indexed.
 ///
 /// The data buffer holds pre-filtered pixel data (filter is applied separately by
-/// `add_smart_filter_bytes`). Padding rows always use None filter (0x00), so the
+/// `add_filter_bytes`). Padding rows always use None filter (0x00), so the
 /// pre-filtered data equals the raw pixel values. For RGBA, we fill with
 /// `[0x00, 0x00, 0x00, 0xFF]` per pixel (opaque black). For indexed (bpp=1),
 /// we fill with 0x00 (palette index 0 = black in the diagnostic palette).
 ///
-/// Note: terminator rows use Sub filter (0x01) and are handled separately by
-/// `create_terminator_row`, NOT by this function.
+/// Note: terminator rows are handled separately by `create_terminator_row`,
+/// NOT by this function.
 fn resize_with_opaque_padding(data: &mut Vec<u8>, new_len: usize, bytes_per_pixel: usize) {
     if new_len <= data.len() {
         data.truncate(new_len);
@@ -993,12 +991,12 @@ fn build_aligned_data(
     row_width: usize,
     font: Option<&FontSelection>,
     bytes_per_pixel: usize,
-) -> (Vec<u8>, Vec<(Vec<u8>, Vec<u8>, usize, usize)>, HashSet<usize>) {
+) -> (Vec<u8>, Vec<(Vec<u8>, Vec<u8>, usize, usize)>) {
     let data_per_block = row_width - 4;
     let filtered_row_size = row_width + 1;
 
     if files.is_empty() {
-        return (Vec::new(), Vec::new(), HashSet::new());
+        return (Vec::new(), Vec::new());
     }
 
     // Pre-calculate sizes for all files
@@ -1036,7 +1034,7 @@ fn build_aligned_data(
     // - Otherwise, add an explicit terminator row after the content
     let mut data = Vec::new();
     let mut entries = Vec::new();
-    let mut terminator_rows = HashSet::new();
+    // All rows use None filter (0x00). No terminator row tracking needed.
 
     // Flatten bucket assignments to get the order of files with their spacing info
     let mut file_order_with_spacing: Vec<(usize, usize)> = Vec::new(); // (file_idx, spacing_rows)
@@ -1049,6 +1047,7 @@ fn build_aligned_data(
 
     // Track if previous file needs a terminator
     let mut pending_terminator = false;
+    let mut pending_bridge_bytes: usize = 0;
 
     // Insert reference color rows at the very start of the image.
     if bytes_per_pixel > 1 {
@@ -1144,9 +1143,7 @@ fn build_aligned_data(
 
         // If previous file needs terminator and we can't use this label, add explicit one
         if pending_terminator && !label_is_terminator {
-            let terminator_row = data.len() / row_width;
-            terminator_rows.insert(terminator_row);
-            let terminator = create_terminator_row(row_width, bytes_per_pixel);
+            let terminator = create_terminator_row(row_width, pending_bridge_bytes);
             data.extend_from_slice(&terminator);
         }
         // Note: pending_terminator will be set at the end of this iteration
@@ -1169,10 +1166,6 @@ fn build_aligned_data(
         // label and file is invisible in the pixel data.
         if split_label && has_label {
             let f = font.unwrap();
-            if label_is_terminator {
-                let terminator_row = data.len() / row_width;
-                terminator_rows.insert(terminator_row);
-            }
             // We need the header bytes for label rendering; pre-compute them here.
             let header_size = 30 + name.len();
             let bytes_used = header_size % row_width;
@@ -1180,7 +1173,8 @@ fn build_aligned_data(
             let compressed_size = calculate_compressed_size(body.len(), row_width);
             let crc = crc32(body);
             let header_bytes = build_local_header(name, body.len(), compressed_size, crc, extra_len);
-            let label = render_filename_label(name, row_width, f, &header_bytes, label_is_terminator, body.len(), bytes_per_pixel);
+            let label_bridge = if label_is_terminator { pending_bridge_bytes } else { 0 };
+            let label = render_filename_label(name, row_width, f, &header_bytes, label_is_terminator, label_bridge, body.len(), bytes_per_pixel);
             data.extend_from_slice(&label);
         }
 
@@ -1209,12 +1203,8 @@ fn build_aligned_data(
         // Insert filename label if not already placed before the boundary (split case)
         if has_label && !split_label {
             let f = font.unwrap();
-            if label_is_terminator {
-                // This label's first row serves as terminator for previous file
-                let terminator_row = data.len() / row_width;
-                terminator_rows.insert(terminator_row);
-            }
-            let label = render_filename_label(name, row_width, f, &header_bytes, label_is_terminator, body.len(), bytes_per_pixel);
+            let label_bridge = if label_is_terminator { pending_bridge_bytes } else { 0 };
+            let label = render_filename_label(name, row_width, f, &header_bytes, label_is_terminator, label_bridge, body.len(), bytes_per_pixel);
             data.extend_from_slice(&label);
         }
 
@@ -1224,33 +1214,26 @@ fn build_aligned_data(
 
         // Write the header and content
         data.extend_from_slice(&header_bytes);
-        let mut needs_internal_terminator = false;
         let mut embedded_terminator = false;
-        let deflate_content = encode_as_deflate_blocks(body, row_width, &mut needs_internal_terminator, &mut embedded_terminator);
+        let mut file_bridge_bytes: usize = 0;
+        let deflate_content = encode_as_deflate_blocks(body, row_width, &mut embedded_terminator, &mut file_bridge_bytes);
         data.extend_from_slice(&deflate_content);
 
-        if needs_internal_terminator {
-            // Padding didn't divide evenly by 5, so the last content row
-            // has BFINAL=1 with anti-Sub padding (no separate terminator needed)
-            let last_content_row = (data.len() - 1) / row_width;
-            terminator_rows.insert(last_content_row);
-            pending_terminator = false;
-        } else if embedded_terminator {
+        if embedded_terminator {
             // Terminator is embedded in the padding area of the last content row.
-            // No separate terminator row needed. The row uses None filter (not Sub),
-            // so don't insert into terminator_rows.
+            // No separate terminator row needed.
             pending_terminator = false;
+            pending_bridge_bytes = 0;
         } else {
             // This file needs a separate terminator row
             pending_terminator = true;
+            pending_bridge_bytes = file_bridge_bytes;
         }
     }
 
-    // Handle terminator for the very last file (if it used empty-block padding)
+    // Handle terminator for the very last file
     if pending_terminator {
-        let terminator_row = data.len() / row_width;
-        terminator_rows.insert(terminator_row);
-        let terminator = create_terminator_row(row_width, bytes_per_pixel);
+        let terminator = create_terminator_row(row_width, pending_bridge_bytes);
         data.extend_from_slice(&terminator);
     }
 
@@ -1271,7 +1254,7 @@ fn build_aligned_data(
         data.extend_from_slice(&vec![0xFF; row_width]);
     }
 
-    (data, entries, terminator_rows)
+    (data, entries)
 }
 
 /// Build the trailing mirrored reference gradient rows (unfiltered pixel data).
@@ -1490,12 +1473,12 @@ fn bin_pack_largest_first(
 /// Padding after content is filled with empty stored blocks (5 bytes each).
 /// If padding doesn't divide evenly by 5, uses internal terminator approach
 /// where the last content row has BFINAL=1 (causes some visual artifacts).
-fn encode_as_deflate_blocks(body: &[u8], row_width: usize, needs_internal_terminator: &mut bool, embedded_terminator: &mut bool) -> Vec<u8> {
+fn encode_as_deflate_blocks(body: &[u8], row_width: usize, embedded_terminator: &mut bool, bridge_bytes: &mut usize) -> Vec<u8> {
     let data_per_block = row_width - 4;
     let mut result = Vec::new();
 
-    *needs_internal_terminator = false;
     *embedded_terminator = false;
+    *bridge_bytes = 0;
 
     if body.is_empty() {
         // Empty file: single stored block with 0 length
@@ -1503,7 +1486,7 @@ fn encode_as_deflate_blocks(body: &[u8], row_width: usize, needs_internal_termin
         result.extend_from_slice(&0xFFFF_u16.to_le_bytes());
         // Fill padding with empty stored blocks
         let padding_needed = row_width - 4;
-        fill_padding_with_empty_blocks(&mut result, padding_needed, row_width, needs_internal_terminator, embedded_terminator);
+        fill_padding_with_empty_blocks(&mut result, padding_needed, embedded_terminator, bridge_bytes);
         return result;
     }
 
@@ -1521,7 +1504,7 @@ fn encode_as_deflate_blocks(body: &[u8], row_width: usize, needs_internal_termin
             let padding_needed = row_width - block_size;
 
             if is_last {
-                fill_padding_with_empty_blocks(&mut result, padding_needed, row_width, needs_internal_terminator, embedded_terminator);
+                fill_padding_with_empty_blocks(&mut result, padding_needed, embedded_terminator, bridge_bytes);
             } else {
                 // Non-last rows with partial data - shouldn't happen normally
                 result.resize(result.len() + padding_needed, 0);
@@ -1532,27 +1515,29 @@ fn encode_as_deflate_blocks(body: &[u8], row_width: usize, needs_internal_termin
     result
 }
 
-/// Fill padding with valid empty DEFLATE stored blocks.
-/// Each empty block is 5 bytes: [BFINAL=0, BTYPE=0][LEN=0][NLEN=0xFFFF]
-/// If padding doesn't divide evenly by 5, uses internal terminator approach
-/// (sets needs_internal_terminator = true and fills with anti-Sub padding).
+/// Fill padding with valid DEFLATE blocks.
 ///
-/// # Anti-Sub Padding
-/// When internal terminator is used, the row gets Sub filter (0x01). Under Sub
-/// filter, decoded[i] = raw[i] + decoded[i-1], which causes visual cumulative
-/// sums. To make padding decode to black (0), we compute:
-/// - First padding byte: (256 - running_sum) mod 256 to cancel the accumulated sum
-/// - Remaining bytes: 0 (decoded[i] = 0 + 0 = 0)
-fn fill_padding_with_empty_blocks(result: &mut Vec<u8>, padding_needed: usize, row_width: usize, needs_internal_terminator: &mut bool, embedded_terminator: &mut bool) {
+/// When padding is divisible by 5: embed BFINAL=1 terminator in padding.
+/// When padding % 5 != 0: fill with empty non-final blocks + bridge bytes
+/// that start a stored block spanning into the next (terminator) row.
+/// The `bridge_bytes` output indicates how many bytes bridge into the next row.
+///
+/// Bridge byte patterns for remainder R = padding % 5:
+///   R=0: (all padding is complete blocks, no bridge needed)
+///   R=1: `00`           — starts a stored block header
+///   R=2: `00 00`        — header + LEN_lo=0
+///   R=3: `02 00 00`     — fixed Huffman block + header + LEN_lo=0
+///   R=4: `02 08 00 00`  — two fixed Huffman blocks + header + LEN_lo=0
+fn fill_padding_with_empty_blocks(result: &mut Vec<u8>, padding_needed: usize, embedded_terminator: &mut bool, bridge_bytes: &mut usize) {
     if padding_needed == 0 {
         return;
     }
 
+    *bridge_bytes = 0;
+
     if padding_needed.is_multiple_of(5) {
         // Embed BFINAL=1 terminator in padding, fill rest with zeros.
         // compressed_size will be shortened to exclude the trailing zeros.
-        // This eliminates the repeating [00 00 00 FF FF] pattern that was
-        // visible as non-black pixels under None filter.
         result.push(0x01); // BFINAL=1, BTYPE=00 (stored)
         result.extend_from_slice(&0_u16.to_le_bytes());      // LEN=0
         result.extend_from_slice(&0xFFFF_u16.to_le_bytes()); // NLEN=0xFFFF
@@ -1561,30 +1546,43 @@ fn fill_padding_with_empty_blocks(result: &mut Vec<u8>, padding_needed: usize, r
         }
         *embedded_terminator = true;
     } else {
-        // Can't fill evenly: this row needs internal terminator (BFINAL=1)
-        // The filter byte becomes 0x01 (Sub filter = BFINAL=1)
-        *needs_internal_terminator = true;
+        let remainder = padding_needed % 5;
+        let full_blocks = padding_needed / 5;
 
-        // Calculate the running sum of all bytes in this row so far.
-        // The row contains [LEN][NLEN][content][padding], and we need to sum
-        // everything before padding, which is (row_width - padding_needed) bytes.
-        // Since result already contains all bytes up to the padding point,
-        // row_start = result.len() - (row_width - padding_needed).
-        let bytes_before_padding = row_width - padding_needed;
-        let row_start = result.len().saturating_sub(bytes_before_padding);
-        let mut running_sum: u8 = 0;
-        for &byte in &result[row_start..] {
-            running_sum = running_sum.wrapping_add(byte);
+        // Fill complete 5-byte empty non-final stored blocks
+        for _ in 0..full_blocks {
+            result.push(0x00); // BFINAL=0, BTYPE=00
+            result.extend_from_slice(&0_u16.to_le_bytes());      // LEN=0
+            result.extend_from_slice(&0xFFFF_u16.to_le_bytes()); // NLEN=0xFFFF
         }
 
-        // First padding byte cancels the running sum so decoded value is 0
-        let anti_sum = (256u16 - running_sum as u16) as u8;
-        result.push(anti_sum);
-
-        // Remaining padding bytes are 0, which decode to 0 under Sub filter
-        if padding_needed > 1 {
-            result.resize(result.len() + padding_needed - 1, 0);
+        // Fill bridge bytes for the remainder
+        match remainder {
+            1 => {
+                // Start a stored block that spans into the terminator row
+                result.push(0x00); // BFINAL=0, BTYPE=00 (stored block header)
+            }
+            2 => {
+                // Header + LEN_lo=0
+                result.push(0x00); // BFINAL=0, BTYPE=00
+                result.push(0x00); // LEN_lo=0
+            }
+            3 => {
+                // Non-final fixed Huffman block (2 bytes) + stored block start (1 byte)
+                result.push(0x02); // BFINAL=0, BTYPE=01 (fixed Huffman)
+                result.push(0x00); // end-of-block bits + next block header bits
+                result.push(0x00); // LEN_lo=0 (after stored block skip-to-byte)
+            }
+            4 => {
+                // Two fixed Huffman blocks (3 bytes) + stored block start (1 byte)
+                result.push(0x02); // BFINAL=0, BTYPE=01 (fixed Huffman)
+                result.push(0x08); // end-of-block bits + BFINAL=0 + BTYPE=01 (2nd fixed Huffman)
+                result.push(0x00); // end-of-block bits + next stored block header bits
+                result.push(0x00); // LEN_lo=0 (after stored block skip-to-byte)
+            }
+            _ => unreachable!(),
         }
+        *bridge_bytes = remainder;
     }
 }
 
@@ -1629,13 +1627,12 @@ fn build_local_header(
     header
 }
 
-/// Add PNG filter bytes, using 0x01 for rows with final deflate blocks.
-fn add_smart_filter_bytes(data: &[u8], row_width: usize, final_rows: &HashSet<usize>) -> Vec<u8> {
-    let mut filtered = Vec::new();
+/// Add PNG filter bytes. All rows use None filter (0x00).
+fn add_filter_bytes(data: &[u8], row_width: usize) -> Vec<u8> {
+    let mut filtered = Vec::with_capacity(data.len() / row_width * (row_width + 1));
 
-    for (i, chunk) in data.chunks(row_width).enumerate() {
-        let filter_type = if final_rows.contains(&i) { 0x01 } else { 0x00 };
-        filtered.push(filter_type);
+    for chunk in data.chunks(row_width) {
+        filtered.push(0x00);
         filtered.extend_from_slice(chunk);
     }
 
@@ -2087,7 +2084,7 @@ mod tests {
         // Get a font for testing (pass 0 as hash since we just need any font)
         let font = fonts::select_font(100, 0).expect("Should get a font for small size");
 
-        let label = render_filename_label(name, row_width, &font, &header, false, body.len(), 1);
+        let label = render_filename_label(name, row_width, &font, &header, false, 0, body.len(), 1);
 
         // Bottom row (padding below text) should have header bytes - stretch starts there
         // label_rows = max_height + 2
