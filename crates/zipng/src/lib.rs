@@ -49,7 +49,6 @@ pub mod brotli;
 
 // Legacy modules
 pub mod font;
-pub mod padding;
 
 #[cfg(feature = "dev-dependencies")]
 pub mod dev;
@@ -76,7 +75,6 @@ pub mod r#impl {
     pub use crate::deflate;
     pub use crate::font;
     pub use crate::generic;
-    pub use crate::padding;
     pub use crate::png;
     pub use crate::polyglot;
     pub use crate::text;
