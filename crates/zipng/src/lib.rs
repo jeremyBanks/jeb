@@ -44,6 +44,8 @@ pub mod zipng_impl;
 // Polyglot module (our main work)
 pub mod polyglot;
 
+pub mod v2;
+
 #[cfg(feature = "brotli")]
 pub mod brotli;
 

@@ -196,7 +196,44 @@ pub fn sort_colors(colors: &[RGB8]) -> Vec<RGB8> {
         order
     };
 
-    best_order.iter().map(|&i| colors[i]).collect()
+    let sorted: Vec<RGB8> = best_order.iter().map(|&i| colors[i]).collect();
+
+    // Preserve the user's intended direction: compare inversions for forward
+    // vs reversed result and return whichever is closer to the input order.
+    let reversed: Vec<RGB8> = sorted.iter().copied().rev().collect();
+    let fwd_inv = count_inversions(colors, &sorted);
+    let rev_inv = count_inversions(colors, &reversed);
+    if rev_inv < fwd_inv {
+        reversed
+    } else {
+        sorted
+    }
+}
+
+/// Count the number of pairwise inversions between `reference` order and
+/// `candidate` order. Both slices must contain the same elements.
+fn count_inversions(reference: &[RGB8], candidate: &[RGB8]) -> usize {
+    // Build a position map: for each color in the reference, what index is it at?
+    let mut ref_pos: std::collections::HashMap<(u8, u8, u8), usize> =
+        std::collections::HashMap::new();
+    for (i, c) in reference.iter().enumerate() {
+        ref_pos.entry((c.r, c.g, c.b)).or_insert(i);
+    }
+
+    let positions: Vec<usize> = candidate
+        .iter()
+        .map(|c| *ref_pos.get(&(c.r, c.g, c.b)).unwrap_or(&0))
+        .collect();
+
+    let mut inversions = 0usize;
+    for i in 0..positions.len() {
+        for j in (i + 1)..positions.len() {
+            if positions[i] > positions[j] {
+                inversions += 1;
+            }
+        }
+    }
+    inversions
 }
 
 /// Total path cost for a given ordering of indices in Oklab space.
@@ -490,6 +527,38 @@ mod tests {
         assert!(
             p90 < mean * 2.0,
             "perceptual uniformity violated: mean={mean}, p90={p90}"
+        );
+    }
+
+    #[test]
+    fn sort_preserves_input_direction() {
+        // Dark-to-light input
+        let dark_to_light = vec![
+            RGB8::new(0x00, 0x00, 0x00),
+            RGB8::new(0x80, 0x80, 0x80),
+            RGB8::new(0xFF, 0xFF, 0xFF),
+        ];
+        let sorted_dtl = sort_colors(&dark_to_light);
+        // Should remain dark-to-light (first element darker than last)
+        let first_l = rgb_to_ok(sorted_dtl[0]).l;
+        let last_l = rgb_to_ok(sorted_dtl[sorted_dtl.len() - 1]).l;
+        assert!(
+            first_l <= last_l,
+            "dark-to-light input should produce dark-to-light output, got L={first_l} -> L={last_l}"
+        );
+
+        // Light-to-dark input
+        let light_to_dark = vec![
+            RGB8::new(0xFF, 0xFF, 0xFF),
+            RGB8::new(0x80, 0x80, 0x80),
+            RGB8::new(0x00, 0x00, 0x00),
+        ];
+        let sorted_ltd = sort_colors(&light_to_dark);
+        let first_l2 = rgb_to_ok(sorted_ltd[0]).l;
+        let last_l2 = rgb_to_ok(sorted_ltd[sorted_ltd.len() - 1]).l;
+        assert!(
+            first_l2 >= last_l2,
+            "light-to-dark input should produce light-to-dark output, got L={first_l2} -> L={last_l2}"
         );
     }
 
