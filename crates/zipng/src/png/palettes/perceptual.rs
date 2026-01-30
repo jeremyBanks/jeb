@@ -473,7 +473,7 @@ fn hex_to_rgb(hex: &str) -> RGB8 {
 pub fn frozen() -> Vec<u8> {
     let mut colors = [
         // purple navy gray pale white more purple
-        "061B31", "533AFD", "50617A", "F6F9FC", "635BFF", "FFFFFF"
+        "061B31", "533AFD", /*"50617A",*/ "F6F9FC", "635BFF", "FFFFFF"
         // // yellow orange pink red
         // "FFC01F", "FF6118", "F44BCC", "EA2261",
     ]
