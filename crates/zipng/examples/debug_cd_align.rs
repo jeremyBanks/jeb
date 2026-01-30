@@ -2,19 +2,17 @@
 use zipng::polyglot::{build_polyglot, BitDepth, ColorType};
 
 fn main() {
-    // Match failing test: test_multiple_medium_files
-    let file1 = vec![0x41u8; 14_000];
-    let file2 = vec![0x42u8; 11_000];
-    let file3 = vec![0x43u8; 50_000];
-    let file4 = vec![0x44u8; 55_000];
-    let file5 = vec![0x45u8; 20_000];
-    let files: Vec<(&[u8], &[u8])> = vec![
-        (b"palettes/mappings.rs".as_ref(), file1.as_slice()),
-        (b"palettes/singles.rs".as_ref(), file2.as_slice()),
-        (b"palettes/crameri.rs".as_ref(), file3.as_slice()),
-        (b"palettes/oceanic.rs".as_ref(), file4.as_slice()),
-        (b"palettes/viridis.rs".as_ref(), file5.as_slice()),
-    ];
+    // Many small files - matching failing sample
+    let file_data: Vec<(Vec<u8>, Vec<u8>)> = (0..50)
+        .map(|i| {
+            let name = format!("file_{i:03}.txt");
+            let content = format!("Content of file {i}");
+            (name.into_bytes(), content.into_bytes())
+        })
+        .collect();
+    let files: Vec<(&[u8], &[u8])> = file_data.iter()
+        .map(|(n, b)| (n.as_slice(), b.as_slice()))
+        .collect();
     let result = build_polyglot(&files, 0, BitDepth::EightBit, ColorType::Luminance, None);
 
     // Parse IHDR to get dimensions
