@@ -776,66 +776,77 @@ pub fn build_polyglot(
         })
         .collect();
 
-    // Step 3: Build CD+EOCD into a temp buffer, computing the offset where CD will
-    // land inside the final file. The CD+EOCD will be appended as a trailing stored
-    // deflate block inside the IDAT chunk (after pixel data blocks, before Adler-32).
+    // Step 3: Build CD+EOCD as pixel rows inside IDAT.
     //
-    // Layout inside IDAT chunk data:
-    //   zlib_header(2) + pixel_deflate_blocks + trailing_block_header(5) + CD + EOCD + adler32(4)
+    // The CD+EOCD bytes become the last rows of pixel data. Zero-valued fields
+    // in the CD and EOCD structures naturally provide valid PNG None filter bytes
+    // (0x00) at row boundaries. Extra field padding is inserted when needed to
+    // align row boundaries onto these zero bytes.
+    //
+    // Layout (decompressed):
+    //   filtered_pixels (pixel rows with filter bytes)
+    //   + aligned CD+EOCD (also with filter-compatible row boundaries)
+    //
+    // From ZIP's perspective the CD+EOCD bytes are contiguous (extra fields are
+    // valid ZIP). From PNG's perspective every row starts with 0x00 (None filter).
 
-    // Build CD to measure its size (offset doesn't matter for size)
-    let mut cd_buf = output_buffer();
-    write_central_directory(&mut cd_buf, &file_entries);
-    let cd_size = cd_buf.len();
+    let filtered_row_size = row_width + 1;
 
-    // Compute the pixel deflate size: filtered data split into IDAT_BLOCK_SIZE chunks,
-    // each with a 5-byte header (1 BFINAL + 2 LEN + 2 NLEN)
-    // We need the filtered data size first - pad pixel_data to full rows
+    // Pad pixel_data to full rows
     let pixel_height = if pixel_data.is_empty() { 1 } else { pixel_data.len().div_ceil(row_width) };
     let mut padded_pixels = pixel_data.clone();
     resize_with_opaque_padding(&mut padded_pixels, pixel_height * row_width, bytes_per_pixel);
 
-    // Account for extra height needed for CD+EOCD trailing data decompressing as extra rows.
-    // The trailing block content (CD+EOCD) decompresses as extra bytes that PNG decoders
-    // will interpret as additional pixel rows. We must increase the image height so
-    // decoders don't complain about extra data.
-    let eocd_size = 22;
-    let trailing_data_size = cd_size + eocd_size;
-    let filtered_row_size = row_width + 1;
-    let total_decompressed = pixel_height * filtered_row_size + trailing_data_size;
-    let height = (total_decompressed + filtered_row_size - 1) / filtered_row_size;
+    // Filter the pixel data
+    let mut filtered_pixels = add_smart_filter_bytes(&padded_pixels, row_width, &final_block_rows);
 
-    // Repad pixel data to the new height (extra rows will be filled by trailing data decompression)
-    resize_with_opaque_padding(&mut padded_pixels, height * row_width, bytes_per_pixel);
+    // Ensure the CD+EOCD won't be split by an IDAT stored deflate block boundary.
+    // The 5-byte stored block headers appear in the file every IDAT_BLOCK_SIZE bytes
+    // of decompressed data. ZIP parsers see the raw file bytes, so any block header
+    // landing inside the CD would corrupt it.
+    //
+    // Strategy: estimate CD+EOCD size, check if it fits in the current IDAT block.
+    // If not, pad filtered_pixels with zero rows to reach the next block boundary.
+    let cd_eocd_estimate = file_entries.iter().map(|e| 46 + e.name.len()).sum::<usize>()
+        + 22  // EOCD
+        + file_entries.len() * filtered_row_size  // generous padding estimate
+        + filtered_row_size;  // final row padding
+    let space_in_current_block = IDAT_BLOCK_SIZE - (filtered_pixels.len() % IDAT_BLOCK_SIZE);
+    if cd_eocd_estimate > space_in_current_block {
+        // Pad to next IDAT block boundary with whole filtered rows
+        let pad_needed = space_in_current_block;
+        let pad_rows = pad_needed.div_ceil(filtered_row_size);
+        let old_len = filtered_pixels.len();
+        filtered_pixels.resize(old_len + pad_rows * filtered_row_size, 0);
+    }
 
-    let filtered = add_smart_filter_bytes(&padded_pixels, row_width, &final_block_rows);
+    // File prefix size: bytes before the decompressed stream in the file.
+    // PNG_sig(8) + IHDR(25) + PLTE(if any) + IDAT_chunk_header(8) + zlib(2)
+    let file_prefix_size = 8 + 25 + plte_size + 8 + 2;
 
-    // Now compute the pixel deflate total size (all pixel stored blocks including headers)
-    let num_pixel_chunks = (filtered.len() + IDAT_BLOCK_SIZE - 1) / IDAT_BLOCK_SIZE;
-    let pixel_deflate_size = filtered.len() + num_pixel_chunks * 5; // 5 bytes header per block
-
-    // cd_offset in the final file:
-    // = PNG_sig(8) + IHDR(25) + PLTE(if any) + IDAT_chunk_header(8) + zlib(2)
-    //   + pixel_deflate_size + trailing_block_header(5)
-    let cd_offset = 8 + 25 + plte_size + 8 + 2 + pixel_deflate_size + 5;
-
-    // Build the final CD+EOCD buffer with correct offset
-    let mut cd_eocd_buf = output_buffer();
-    write_central_directory(&mut cd_eocd_buf, &file_entries);
-    let cd_end = cd_eocd_buf.len();
-    write_eocd(
-        &mut cd_eocd_buf,
-        file_entries.len() as u16,
-        cd_end as u32,
-        cd_offset as u32,
+    // Build aligned CD+EOCD
+    let cd_eocd = build_aligned_cd_eocd(
+        &file_entries,
+        filtered_row_size,
+        filtered_pixels.len(),
+        file_prefix_size,
     );
-    let cd_eocd_bytes: Vec<u8> = cd_eocd_buf.into_bytes();
+
+    // Concatenate filtered pixels + CD+EOCD
+    let mut all_filtered = filtered_pixels;
+    all_filtered.extend_from_slice(&cd_eocd);
+
+    // Total height from combined decompressed size
+    let height = all_filtered.len() / filtered_row_size;
+    assert_eq!(all_filtered.len() % filtered_row_size, 0,
+        "Total filtered data ({}) must be exact multiple of filtered_row_size ({})",
+        all_filtered.len(), filtered_row_size);
 
     // Calculate effective pixel width based on bit depth
     let bits_per_pixel = bit_depth.bits_per_sample() * color_mode.samples_per_pixel();
     let effective_width = (row_width * 8) / bits_per_pixel;
 
-    // Step 4: Build PNG with CD+EOCD inside IDAT
+    // Step 4: Build PNG with CD+EOCD as pixel rows inside IDAT
     let mut output = output_buffer();
     let _ = write_png_header(&mut output, effective_width as u32, height as u32, bit_depth, color_mode);
 
@@ -844,8 +855,8 @@ pub fn build_polyglot(
         let _ = write_png_chunk(&mut output, b"PLTE", &plte_data);
     }
 
-    // Write IDAT with trailing CD+EOCD block
-    write_idat_stored(&mut output, &filtered, Some(&cd_eocd_bytes));
+    // Write IDAT — all data is in filtered pixel rows, no trailing block needed
+    write_idat_stored(&mut output, &all_filtered);
 
     let _ = write_png_footer(&mut output);
 
@@ -1599,13 +1610,12 @@ fn add_smart_filter_bytes(data: &[u8], row_width: usize, final_rows: &HashSet<us
     filtered
 }
 
-/// Write IDAT chunk with stored deflate.
+/// Write IDAT chunk with stored deflate blocks.
 ///
-/// If `trailing_data` is provided, it is appended as a separate stored deflate block
-/// after the pixel data blocks. This allows embedding raw bytes (like ZIP central
-/// directory + EOCD) inside the IDAT chunk where they appear contiguously in the
-/// final file without being interrupted by filter bytes or deflate block headers.
-fn write_idat_stored(buffer: &mut OutputBuffer, filtered_data: &[u8], trailing_data: Option<&[u8]>) {
+/// All data (pixel rows + CD+EOCD rows) is in `filtered_data` as a single
+/// contiguous buffer. It is split into stored DEFLATE blocks of up to 65535
+/// bytes each, with the last block marked BFINAL=1.
+fn write_idat_stored(buffer: &mut OutputBuffer, filtered_data: &[u8]) {
     let mut idat_content = output_buffer();
 
     // Zlib header
@@ -1618,75 +1628,309 @@ fn write_idat_stored(buffer: &mut OutputBuffer, filtered_data: &[u8], trailing_d
     idat_content.push(cmf);
     idat_content.push(flg);
 
-    let has_trailing = trailing_data.is_some() && !trailing_data.unwrap().is_empty();
-
     // Stored deflate blocks (max 65535 bytes each)
-    let num_pixel_chunks = filtered_data.chunks(IDAT_BLOCK_SIZE).count();
+    let num_chunks = filtered_data.chunks(IDAT_BLOCK_SIZE).count();
     for (i, chunk) in filtered_data.chunks(IDAT_BLOCK_SIZE).enumerate() {
-        let is_last_pixel = i == num_pixel_chunks - 1;
-        // Only mark as BFINAL if this is the last pixel block AND there's no trailing data
-        let bfinal = is_last_pixel && !has_trailing;
-        idat_content.push(if bfinal { 0x01 } else { 0x00 });
+        let is_last = i == num_chunks - 1;
+        idat_content.push(if is_last { 0x01 } else { 0x00 });
         idat_content += &(chunk.len() as u16).to_le_bytes();
         idat_content += &(chunk.len() as u16).not().to_le_bytes();
         idat_content += chunk;
     }
 
-    // Append trailing data as a separate BFINAL stored block
-    if has_trailing {
-        let td = trailing_data.unwrap();
-        idat_content.push(0x01); // BFINAL=1, BTYPE=00 (stored)
-        idat_content += &(td.len() as u16).to_le_bytes();
-        idat_content += &(td.len() as u16).not().to_le_bytes();
-        idat_content += td;
-    }
-
-    // Adler-32 over all decompressed data (pixels + trailing)
-    let adler = if has_trailing {
-        let a1 = adler32(filtered_data);
-        let td = trailing_data.unwrap();
-        adler32_combine(a1, td)
-    } else {
-        adler32(filtered_data)
-    };
+    // Adler-32 over all decompressed data
+    let adler = adler32(filtered_data);
     idat_content += &adler.to_be_bytes();
 
     let _ = write_png_chunk(buffer, b"IDAT", &idat_content);
 }
 
-/// Continue an Adler-32 checksum over additional data.
-fn adler32_combine(prev: u32, data: &[u8]) -> u32 {
-    let mut s1 = prev & 0xFFFF;
-    let mut s2 = prev >> 16;
-    for &byte in data {
-        s1 = (s1 + byte as u32) % 65521;
-        s2 = (s2 + s1) % 65521;
+/// Write a single central directory entry with a given extra field length.
+fn write_cd_entry(buffer: &mut OutputBuffer, entry: &FileEntry, extra_len: u16) {
+    *buffer += b"PK\x01\x02";
+    *buffer += &20_u16.to_le_bytes(); // version made by
+    *buffer += &20_u16.to_le_bytes(); // version needed
+    *buffer += &0_u16.to_le_bytes();  // flags
+    *buffer += &8_u16.to_le_bytes();  // compression
+    *buffer += &0_u16.to_le_bytes();  // mod time
+    *buffer += &0_u16.to_le_bytes();  // mod date
+    *buffer += &entry.crc.to_le_bytes();
+    *buffer += &entry.compressed_size.to_le_bytes();
+    *buffer += &(entry.body.len() as u32).to_le_bytes();
+    *buffer += &(entry.name.len() as u16).to_le_bytes();
+    *buffer += &extra_len.to_le_bytes();  // extra len
+    *buffer += &0_u16.to_le_bytes();  // comment len
+    *buffer += &0_u16.to_le_bytes();  // disk number
+    *buffer += &0_u16.to_le_bytes();  // internal attrs
+    *buffer += &0_u32.to_le_bytes();  // external attrs
+    *buffer += &entry.header_offset.to_le_bytes();
+    *buffer += entry.name.as_slice();
+    // Extra field: all zeros (valid filter bytes and benign ZIP extra data)
+    if extra_len > 0 {
+        for _ in 0..extra_len {
+            buffer.push(0);
+        }
     }
-    (s2 << 16) | s1
 }
 
-/// Write central directory entries.
+/// Write central directory entries (no extra field padding).
 fn write_central_directory(buffer: &mut OutputBuffer, entries: &[FileEntry]) {
     for entry in entries {
-        *buffer += b"PK\x01\x02";
-        *buffer += &20_u16.to_le_bytes(); // version made by
-        *buffer += &20_u16.to_le_bytes(); // version needed
-        *buffer += &0_u16.to_le_bytes();  // flags
-        *buffer += &8_u16.to_le_bytes();  // compression
-        *buffer += &0_u16.to_le_bytes();  // mod time
-        *buffer += &0_u16.to_le_bytes();  // mod date
-        *buffer += &entry.crc.to_le_bytes();
-        *buffer += &entry.compressed_size.to_le_bytes();
-        *buffer += &(entry.body.len() as u32).to_le_bytes();
-        *buffer += &(entry.name.len() as u16).to_le_bytes();
-        *buffer += &0_u16.to_le_bytes();  // extra len
-        *buffer += &0_u16.to_le_bytes();  // comment len
-        *buffer += &0_u16.to_le_bytes();  // disk number
-        *buffer += &0_u16.to_le_bytes();  // internal attrs
-        *buffer += &0_u32.to_le_bytes();  // external attrs
-        *buffer += &entry.header_offset.to_le_bytes();
-        *buffer += entry.name.as_slice();
+        write_cd_entry(buffer, entry, 0);
     }
+}
+
+/// Build CD+EOCD as contiguous bytes aligned so that every row boundary
+/// (at `filtered_row_size` intervals from position 0 in the decompressed stream)
+/// lands on a `0x00` byte — making it a valid PNG None filter.
+///
+/// ## CD entry layout (46 + name_len + extra_len bytes)
+///
+/// Bytes 0-3:   PK\x01\x02 (signature)
+/// Bytes 4-33:  various fields (non-zero)
+/// Bytes 34-41: disk_number(2) + internal_attrs(2) + external_attrs(4) = 8 × 0x00
+/// Bytes 42-45: header_offset (4 bytes, usually non-zero)
+/// Bytes 46+:   filename (name_len bytes, non-zero)
+/// After name:  extra field (extra_len bytes, all zeros — fully controlled)
+///
+/// ## EOCD layout (22 bytes)
+///
+/// Bytes 0-3:   PK\x05\x06 (signature)
+/// Bytes 4-7:   disk_number(2) + disk_with_cd(2) = 4 × 0x00
+/// Bytes 8-21:  various fields (non-zero)
+///
+/// ## Strategy
+///
+/// For each CD entry, we choose an extra_len that ensures all row boundaries
+/// falling within the entry (including its extra field) land on either:
+/// - bytes 34-41 (the zero fields), or
+/// - the extra field (all zeros)
+///
+/// The extra field bytes are fully controlled and set to 0x00, so any boundary
+/// landing there is also a valid None filter byte.
+///
+/// For the EOCD, if a boundary would land in a non-zero region, we add padding
+/// to the last CD entry's extra field to shift the EOCD's position.
+fn build_aligned_cd_eocd(
+    entries: &[FileEntry],
+    filtered_row_size: usize,
+    start_offset: usize,
+    file_prefix_size: usize, // bytes in file before the decompressed stream starts
+) -> Vec<u8> {
+    // Compute extra_len for each CD entry iteratively.
+    // For each entry, we know its start position and can determine where boundaries fall.
+    // If a boundary falls in a "bad" region, we increase the PREVIOUS entry's extra_len
+    // (or add pre-padding for the first entry) to shift this entry forward.
+    //
+    // However, it's simpler to add the padding to the CURRENT entry's extra field and
+    // shift subsequent entries. The extra field comes after the filename and before the
+    // next entry, so making it larger shifts everything after it.
+    //
+    // But the problem is: a boundary might fall in the fixed part (bytes 0-33 or 42-45+name)
+    // of the CURRENT entry. We can't fix that by enlarging the current entry's extra field
+    // because the boundary is before the extra field.
+    //
+    // Solution: pre-pad (shift the entry forward) by adding to the PREVIOUS entry's extra
+    // field. For the first entry, prepend zero bytes to the result.
+
+    let mut extra_lens: Vec<usize> = vec![0; entries.len()];
+    let mut pre_padding: usize = 0; // padding before first CD entry
+
+    // Iteratively compute padding. May need multiple passes since padding one entry
+    // shifts all subsequent entries.
+    for _iteration in 0..20 {
+        let mut all_ok = true;
+
+        // Recompute positions with current padding values
+        let mut pos = start_offset + pre_padding;
+
+        for (i, entry) in entries.iter().enumerate() {
+            let entry_fixed = 46 + entry.name.len();
+            let entry_total = entry_fixed + extra_lens[i];
+            let entry_end = pos + entry_total;
+
+            // Check all row boundaries within this entry (including pos itself if aligned)
+            let first_boundary = if pos % filtered_row_size == 0 { pos } else { (pos / filtered_row_size + 1) * filtered_row_size };
+            let mut boundary = first_boundary;
+
+            while boundary < entry_end {
+                let offset_in_entry = boundary - pos;
+
+                // Is this offset a zero byte?
+                let is_zero = (34..=41).contains(&offset_in_entry) // CD zero fields
+                    || offset_in_entry >= entry_fixed; // extra field (all zeros)
+
+                if !is_zero {
+                    all_ok = false;
+                    // Need to shift this entry forward so boundary lands on a zero.
+                    // Best target: the nearest zero position at or before the boundary.
+                    //
+                    // offset_in_entry is currently in a bad region.
+                    // We want offset_in_entry to be in [34, 41] or >= entry_fixed.
+                    //
+                    // To shift: add `shift` padding BEFORE this entry.
+                    // New offset_in_entry = boundary - (pos + shift) = offset_in_entry - shift
+                    // We want: (offset_in_entry - shift) in [34, 41]
+                    //   shift = offset_in_entry - 41  (land on byte 41, minimum shift)
+                    //   through offset_in_entry - 34  (land on byte 34, maximum shift)
+                    //
+                    // But if offset_in_entry < 34, shift would be negative. In that case
+                    // we need to shift further so the boundary is before this entry entirely,
+                    // or into the previous entry's extra field. Simplest: shift so
+                    // boundary lands at byte 34.
+                    let shift = if offset_in_entry > 41 {
+                        // Boundary is past the zeros but in filename region (42..entry_fixed)
+                        // Shift so it lands at byte 41
+                        offset_in_entry - 41
+                    } else {
+                        // Boundary is before the zeros (in 0..34 range)
+                        // Shift so it lands at byte 34
+                        // shift = offset_in_entry - 34, but that's negative if offset < 34
+                        // We need: boundary - (pos + shift) = 34
+                        // shift = boundary - pos - 34 = offset_in_entry - 34
+                        // But offset_in_entry < 34, so shift is negative...
+                        //
+                        // Actually we need to shift the entry FORWARD (add padding before it).
+                        // Adding `shift` means pos increases by shift.
+                        // New offset = boundary - (pos + shift) = offset_in_entry - shift
+                        // We want this to be 34, so shift = offset_in_entry - 34.
+                        // Since offset_in_entry < 34, shift is negative, meaning we'd need
+                        // to REMOVE padding. Instead, shift forward more so the boundary
+                        // lands in [34, 41]: shift = offset_in_entry + (filtered_row_size - 41)
+                        // Wait, that's not right either.
+                        //
+                        // Let's think differently. The boundary is at a fixed position.
+                        // We're moving the entry to the right by adding padding before it.
+                        // Moving right means the boundary's offset within the entry decreases.
+                        // If boundary offset is currently < 34, moving right makes it even smaller
+                        // (or even negative = boundary before entry).
+                        //
+                        // So for offset < 34: we want to push the entry right so this boundary
+                        // falls BEFORE the entry (offset < 0), and the NEXT boundary lands in
+                        // the safe zone.
+                        //
+                        // shift needed = offset_in_entry + 1 (push boundary just before entry)
+                        // But then the next boundary at offset_in_entry + filtered_row_size - shift
+                        // needs to also be safe. This gets complex.
+                        //
+                        // Simplest correct approach: try all shift values from 1..filtered_row_size
+                        // and pick the minimum that makes all boundaries safe.
+                        let mut best_shift = filtered_row_size; // worst case
+                        for s in 1..=filtered_row_size {
+                            if is_shift_valid(pos + s, entry_fixed, extra_lens[i], filtered_row_size) {
+                                best_shift = s;
+                                break;
+                            }
+                        }
+                        best_shift
+                    };
+
+                    if i == 0 {
+                        pre_padding += shift;
+                    } else {
+                        extra_lens[i - 1] += shift;
+                    }
+                    break; // restart boundary checking with new positions
+                }
+                boundary += filtered_row_size;
+            }
+
+            pos = entry_end;
+        }
+
+        // Check EOCD too
+        if all_ok {
+            let eocd_end = pos + 22;
+            let first_boundary = if pos % filtered_row_size == 0 { pos } else { (pos / filtered_row_size + 1) * filtered_row_size };
+            let mut boundary = first_boundary;
+            while boundary < eocd_end {
+                let offset = boundary - pos;
+                let is_zero = (4..=7).contains(&offset);
+                if !is_zero {
+                    all_ok = false;
+                    // Shift EOCD by adding to last CD entry's extra field
+                    let mut best_shift = filtered_row_size;
+                    for s in 1..=filtered_row_size {
+                        if is_eocd_shift_valid(pos + s, filtered_row_size) {
+                            best_shift = s;
+                            break;
+                        }
+                    }
+                    if !entries.is_empty() {
+                        extra_lens[entries.len() - 1] += best_shift;
+                    } else {
+                        pre_padding += best_shift;
+                    }
+                    break;
+                }
+                boundary += filtered_row_size;
+            }
+        }
+
+        if all_ok {
+            break;
+        }
+    }
+
+    // Build the result
+    let mut result: Vec<u8> = vec![0u8; pre_padding];
+
+    // Compute the CD's file offset. The CD starts at decompressed offset
+    // (start_offset + pre_padding). Map decompressed offset to file offset:
+    // each IDAT_BLOCK_SIZE chunk gets a 5-byte stored block header.
+    let cd_decompressed_offset = start_offset + pre_padding;
+    let blocks_before_cd = cd_decompressed_offset.div_ceil(IDAT_BLOCK_SIZE);
+    let cd_file_offset = file_prefix_size + cd_decompressed_offset + blocks_before_cd * 5;
+
+    let mut buf = output_buffer();
+    for (i, entry) in entries.iter().enumerate() {
+        write_cd_entry(&mut buf, entry, extra_lens[i] as u16);
+    }
+    let cd_size = buf.len();
+    write_eocd(&mut buf, entries.len() as u16, cd_size as u32, cd_file_offset as u32);
+    result.extend_from_slice(&buf.into_bytes());
+
+    // Pad to exact multiple of filtered_row_size (relative to stream start)
+    let total = start_offset + result.len();
+    let remainder = total % filtered_row_size;
+    if remainder != 0 {
+        let pad = filtered_row_size - remainder;
+        result.resize(result.len() + pad, 0);
+    }
+
+    result
+}
+
+/// Check if placing a CD entry at `entry_start` with given sizes makes all
+/// row boundaries land on safe bytes (offsets 34-41 or in the extra field).
+fn is_shift_valid(entry_start: usize, entry_fixed: usize, extra_len: usize, frs: usize) -> bool {
+    let entry_end = entry_start + entry_fixed + extra_len;
+    let first_boundary = if entry_start % frs == 0 { entry_start } else { (entry_start / frs + 1) * frs };
+    let mut boundary = first_boundary;
+    while boundary < entry_end {
+        let offset = boundary - entry_start;
+        if !((34..=41).contains(&offset) || offset >= entry_fixed) {
+            return false;
+        }
+        boundary += frs;
+    }
+    true
+}
+
+/// Check if placing the EOCD at `eocd_start` makes all row boundaries land
+/// on safe bytes (offsets 4-7).
+fn is_eocd_shift_valid(eocd_start: usize, frs: usize) -> bool {
+    let eocd_end = eocd_start + 22;
+    let first_boundary = if eocd_start % frs == 0 { eocd_start } else { (eocd_start / frs + 1) * frs };
+    let mut boundary = first_boundary;
+    while boundary < eocd_end {
+        let offset = boundary - eocd_start;
+        if !(4..=7).contains(&offset) {
+            return false;
+        }
+        boundary += frs;
+    }
+    true
 }
 
 /// Write End of Central Directory record.
