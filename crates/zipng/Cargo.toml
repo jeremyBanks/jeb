@@ -7,6 +7,14 @@ name = "zipng"
 repository = "https://github.com/jeremyBanks/zipng"
 version = "0.20221122.0-dev.4"
 
+[[bin]]
+name = "zipng"
+path = "src/main.rs"
+
+[[bin]]
+name = "unzipng"
+path = "src/bin/unzipng.rs"
+
 [dependencies]
 # Required Dependencies
 bitvec = "1.0.1"
