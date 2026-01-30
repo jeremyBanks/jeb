@@ -25,6 +25,17 @@
 //! automatically padded to avoid crossing block boundaries, allowing
 //! unlimited total content (individual files limited to ~60KB each).
 //!
+//! ## Central Directory Embedding
+//!
+//! The ZIP central directory (CD) and End of Central Directory (EOCD)
+//! are embedded directly as PNG pixel rows inside the IDAT chunk — not
+//! as a trailing block after pixel data. Zero-valued fields in the CD
+//! structure (disk_number, internal_attrs, external_attrs at offsets
+//! 34-41) and EOCD (disk fields at offsets 4-7) provide valid PNG None
+//! filter bytes (0x00) at row boundaries. Extra field padding is
+//! inserted to align these zero fields with row boundaries when needed.
+//! This results in zero bytes after IEND.
+//!
 //! ## Filename Labels
 //!
 //! Filename labels are rendered above each file's content using size-appropriate
