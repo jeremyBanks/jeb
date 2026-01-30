@@ -524,12 +524,16 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
                 // Block this column from stretching further up
                 stretch_active[px] = false;
             } else {
-                // Stretch continues - copy header bytes as-is (raw data, not pixel-aware)
+                // Stretch continues - copy header bytes, fading by 1 per row above
+                // the bottom. This avoids producing bytes that ZIP recovery tools
+                // could mistake for a real local file header (PK\x03\x04).
+                let rows_above_bottom = (label_rows - 1) - row_idx;
                 let byte_start = px * bytes_per_pixel;
                 for b in 0..bytes_per_pixel {
                     let byte_idx = byte_start + b;
                     if byte_idx < meaningful_header_len {
-                        rows_data[row_idx][byte_idx] = header_row[byte_idx];
+                        rows_data[row_idx][byte_idx] =
+                            header_row[byte_idx].saturating_sub(rows_above_bottom as u8);
                     }
                 }
             }
