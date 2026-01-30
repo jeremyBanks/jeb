@@ -527,7 +527,7 @@ fn render_filename_label(name: &[u8], row_width: usize, fonts: &FontSelection, h
                 // Stretch continues - copy header bytes, fading by 1 per row above
                 // the bottom. This avoids producing bytes that ZIP recovery tools
                 // could mistake for a real local file header (PK\x03\x04).
-                let rows_above_bottom = (label_rows - 1) - row_idx;
+                let rows_above_bottom = label_rows - row_idx;
                 let byte_start = px * bytes_per_pixel;
                 for b in 0..bytes_per_pixel {
                     let byte_idx = byte_start + b;
@@ -2050,10 +2050,10 @@ mod tests {
 
         let label = render_filename_label(name, row_width, &font, &header, false, 0, body.len(), 1);
 
-        // Bottom row (padding below text) should have header bytes - stretch starts there
-        // label_rows = max_height + 2
+        // Bottom row should have header bytes faded by 1 (saturating_sub)
+        // to avoid duplicating the exact PK\x03\x04 signature from the real header row below.
         let label_rows = font.max_height() + 2;
         let last_row_start = (label_rows - 1) * row_width;
-        assert_eq!(&label[last_row_start..last_row_start + 4], b"PK\x03\x04",
-            "Label should have PK signature in bottom row (stretch starts there)");
+        assert_eq!(&label[last_row_start..last_row_start + 4], &[b'P' - 1, b'K' - 1, 0x02, 0x03],
+            "Label bottom row should have PK signature faded by 1");
     }
