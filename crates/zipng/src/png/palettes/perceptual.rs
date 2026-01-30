@@ -185,9 +185,9 @@ pub fn sort_colors(colors: &[RGB8]) -> Vec<RGB8> {
             let (best_idx, _) = remaining
                 .iter()
                 .enumerate()
-                .min_by(|(_, &a), (_, &b)| {
-                    sorting_dist(last, ok[a])
-                        .partial_cmp(&sorting_dist(last, ok[b]))
+                .min_by(|(_, a), (_, b)| {
+                    sorting_dist(last, ok[**a])
+                        .partial_cmp(&sorting_dist(last, ok[**b]))
                         .unwrap()
                 })
                 .unwrap();
@@ -438,6 +438,42 @@ pub fn generate_array(colors: &[RGB8]) -> [u8; 768] {
     let mut arr = [0u8; 768];
     arr.copy_from_slice(&v);
     arr
+}
+
+/// Parse a hex color string (e.g. "F00" or "FF0000") into RGB8.
+/// Supports both 3-digit and 6-digit formats; 3-digit colors are expanded
+/// (e.g. "F00" becomes "FF0000").
+fn hex_to_rgb(hex: &str) -> RGB8 {
+    let hex = hex.trim_start_matches('#');
+    let expanded = if hex.len() == 3 {
+        // Expand 3-digit hex to 6-digit by doubling each digit
+        format!(
+            "{}{}{}{}{}{}",
+            &hex[0..1], &hex[0..1],
+            &hex[1..2], &hex[1..2],
+            &hex[2..3], &hex[2..3]
+        )
+    } else {
+        hex.to_string()
+    };
+
+    let r = u8::from_str_radix(&expanded[0..2], 16).unwrap_or(0);
+    let g = u8::from_str_radix(&expanded[2..4], 16).unwrap_or(0);
+    let b = u8::from_str_radix(&expanded[4..6], 16).unwrap_or(0);
+
+    RGB8::new(r, g, b)
+}
+
+/// Generate the "frozen" color scheme from hard-coded hex color codes.
+/// Returns a 256-color perceptually uniform palette.
+/// The control points are automatically reordered using sort_colors for better coherence.
+pub fn frozen() -> Vec<u8> {
+    let colors = vec!["533AFD", "061B31", "50617A", "F6F9FC", "FFFFFF", "635BFF"]
+        .iter()
+        .map(|hex| hex_to_rgb(hex))
+        .collect::<Vec<_>>();
+    let sorted = sort_colors(&colors);
+    generate(&sorted)
 }
 
 #[cfg(test)]

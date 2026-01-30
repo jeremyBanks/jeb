@@ -1701,7 +1701,7 @@ dependencies = [
 
 [[package]]
 name = "zipng"
-version = "0.20221122.0-dev.4"
+version = "0.0.0-dev.20260202"
 dependencies = [
  "bitvec",
  "blake3",

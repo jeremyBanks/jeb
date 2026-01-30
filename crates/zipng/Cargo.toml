@@ -1,11 +1,11 @@
 [package]
 authors = ["Jeremy Banks <_@jeremy.ca>"]
 description = "Polyglot encoder for ZIP-and/or-PNG files."
-edition = "2021"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 name = "zipng"
 repository = "https://github.com/jeremyBanks/zipng"
-version = "0.20221122.0-dev.4"
+version = "0.0.0-dev.20260202"
 
 [dependencies]
 # Required Dependencies

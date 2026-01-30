@@ -166,17 +166,17 @@ fn main() -> Result<(), panic> {
 
     // Parent project Rust source
     sample!("fic_source", vec![
-        ("src/lib.rs", include_bytes!("../../../src/lib.rs").to_vec()),
-        ("src/backend.rs", include_bytes!("../../../src/backend.rs").to_vec()),
-        ("src/engine.rs", include_bytes!("../../../src/engine.rs").to_vec()),
-        ("src/query.rs", include_bytes!("../../../src/query.rs").to_vec()),
+        ("src/lib.rs", include_bytes!("../src/lib.rs").to_vec()),
+        ("src/backend.rs", include_bytes!("../src/png.rs").to_vec()),
+        ("src/engine.rs", include_bytes!("../src/zip.rs").to_vec()),
+        ("src/query.rs", include_bytes!("../src/text.rs").to_vec()),
     ]);
 
     // Mixed binary + text from project
     sample!("mixed_project", vec![
-        ("README.md", include_bytes!("../../../README.md").to_vec()),
-        ("Cargo.toml", include_bytes!("../../../Cargo.toml").to_vec()),
-        ("CLAUDE.md", include_bytes!("../../../CLAUDE.md").to_vec()),
+        ("README.md", include_bytes!("../README.md").to_vec()),
+        ("Cargo.toml", include_bytes!("../Cargo.toml").to_vec()),
+        ("CLAUDE.md", include_bytes!("../CLAUDE.md").to_vec()),
     ]);
 
     // VSCode settings
@@ -467,10 +467,10 @@ fn main() -> Result<(), panic> {
             ("snapshot-a2/palettes/diagnostic.rs", include_bytes!("../src/png/palettes/diagnostic.rs").to_vec()),
             ("snapshot-a2/palettes/mappings.rs", include_bytes!("../src/png/palettes/mappings.rs").to_vec()),
             // Snapshot B — parent project + config + docs + examples
-            ("snapshot-b/fic/lib.rs", include_bytes!("../../../src/lib.rs").to_vec()),
-            ("snapshot-b/fic/backend.rs", include_bytes!("../../../src/backend.rs").to_vec()),
-            ("snapshot-b/fic/engine.rs", include_bytes!("../../../src/engine.rs").to_vec()),
-            ("snapshot-b/fic/query.rs", include_bytes!("../../../src/query.rs").to_vec()),
+            ("snapshot-b/fic/lib.rs", include_bytes!("../src/lib.rs").to_vec()),
+            ("snapshot-b/fic/backend.rs", include_bytes!("../src/png.rs").to_vec()),
+            ("snapshot-b/fic/engine.rs", include_bytes!("../src/zip.rs").to_vec()),
+            ("snapshot-b/fic/query.rs", include_bytes!("../src/text.rs").to_vec()),
             ("snapshot-b/Cargo.toml", include_bytes!("../Cargo.toml").to_vec()),
             ("snapshot-b/Cargo.lock", include_bytes!("../Cargo.lock").to_vec()),
             ("snapshot-b/README.md", include_bytes!("../README.md").to_vec()),
@@ -640,10 +640,10 @@ fn main() -> Result<(), panic> {
             ("scripts/debug_polyglot.rs", include_bytes!("../scripts/debug_polyglot.rs").as_slice()),
             ("scripts/check_font.rs", include_bytes!("../scripts/check_font.rs").as_slice()),
             ("scripts/test_kerning.rs", include_bytes!("../scripts/test_kerning.rs").as_slice()),
-            ("parent/lib.rs", include_bytes!("../../../src/lib.rs").as_slice()),
-            ("parent/backend.rs", include_bytes!("../../../src/backend.rs").as_slice()),
-            ("parent/engine.rs", include_bytes!("../../../src/engine.rs").as_slice()),
-            ("parent/query.rs", include_bytes!("../../../src/query.rs").as_slice()),
+            ("parent/lib.rs", include_bytes!("../src/lib.rs").as_slice()),
+            ("parent/backend.rs", include_bytes!("../src/png.rs").as_slice()),
+            ("parent/engine.rs", include_bytes!("../src/zip.rs").as_slice()),
+            ("parent/query.rs", include_bytes!("../src/text.rs").as_slice()),
         ] {
             files.push((name.to_string(), data.to_vec()));
         }
@@ -781,6 +781,7 @@ fn main() -> Result<(), panic> {
             ("png/to_png.rs", include_bytes!("../src/png/to_png.rs").to_vec()),
             ("png/write_png.rs", include_bytes!("../src/png/write_png.rs").to_vec()),
             ("png/sizes.rs", include_bytes!("../src/png/sizes.rs").to_vec()),
+            ("icon.png", git_blob("518ab5baa722247ee4b9311c43f251abdf7f908e"))
         ];
 
         let sorted_files: Vec<(&[u8], &[u8])> = {
@@ -828,7 +829,7 @@ fn main() -> Result<(), panic> {
         }
 
         // Color scheme variants: each palette + RGBA
-        let palette_variants: &[(&str, &[u8])] = &[
+        let predefined_palettes: &[(&str, &[u8])] = &[
             ("amp", zipng::palettes::oceanic::AMP),
             ("ice", zipng::palettes::oceanic::ICE),
             ("oxy", zipng::palettes::oceanic::OXY),
@@ -867,7 +868,7 @@ fn main() -> Result<(), panic> {
             ("batlow_w", zipng::palettes::crameri::BATLOW_W),
         ];
 
-        for (palette_name, palette_data) in palette_variants {
+        for (palette_name, palette_data) in predefined_palettes {
             let deduped = zipng::palettes::perceptual::deduplicate_rgb_palette(palette_data);
             let polyglot = zipng::polyglot::build_polyglot(
                 &sorted_files,
@@ -879,6 +880,21 @@ fn main() -> Result<(), panic> {
             let path = format!("target/samples/png_module/color_{palette_name}.png");
             fs::write(&path, &polyglot)?;
             println!("  variant: color_{palette_name}.png ({} bytes)", polyglot.len());
+        }
+
+        // Generated palette: frozen
+        {
+            let frozen_palette = zipng::palettes::perceptual::frozen();
+            let polyglot = zipng::polyglot::build_polyglot(
+                &sorted_files,
+                0,
+                zipng::BitDepth::EightBit,
+                zipng::ColorType::Indexed,
+                Some(&frozen_palette),
+            );
+            let path = "target/samples/png_module/color_frozen.png";
+            fs::write(path, &polyglot)?;
+            println!("  variant: color_frozen.png ({} bytes)", polyglot.len());
         }
 
         // RGBA variant
@@ -896,7 +912,7 @@ fn main() -> Result<(), panic> {
         }
 
         println!("Generated {} font + {} color variants in target/samples/png_module/",
-            font_variants.len(), palette_variants.len() + 1);
+            font_variants.len(), predefined_palettes.len() + 2);
     }
 
     // Print summary
