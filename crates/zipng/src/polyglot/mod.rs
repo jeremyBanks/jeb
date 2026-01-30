@@ -818,10 +818,17 @@ pub fn build_polyglot(
     //
     // Strategy: estimate CD+EOCD size, check if it fits in the current IDAT block.
     // If not, pad filtered_pixels with zero rows to reach the next block boundary.
+    // Estimate total size of CD+EOCD + trailing gradient to check IDAT boundary
+    let trailing_gradient_size = if bytes_per_pixel > 1 {
+        filtered_row_size  // 1 row for RGBA
+    } else {
+        256_usize.div_ceil(row_width) * filtered_row_size  // gradient rows for indexed
+    };
     let cd_eocd_estimate = file_entries.iter().map(|e| 46 + e.name.len()).sum::<usize>()
         + 22  // EOCD
         + file_entries.len() * filtered_row_size  // generous padding estimate
-        + filtered_row_size;  // final row padding
+        + filtered_row_size  // final row padding
+        + trailing_gradient_size;  // trailing gradient after CD
     let space_in_current_block = IDAT_BLOCK_SIZE - (filtered_pixels.len() % IDAT_BLOCK_SIZE);
     if cd_eocd_estimate > space_in_current_block {
         // Pad to next IDAT block boundary with whole filtered rows
@@ -843,9 +850,16 @@ pub fn build_polyglot(
         file_prefix_size,
     );
 
-    // Concatenate filtered pixels + CD+EOCD
+    // Concatenate filtered pixels + CD+EOCD + trailing gradient
     let mut all_filtered = filtered_pixels;
     all_filtered.extend_from_slice(&cd_eocd);
+
+    // Append trailing gradient after CD+EOCD (with filter bytes)
+    let trailing_gradient = build_trailing_gradient(row_width, bytes_per_pixel);
+    for row in trailing_gradient.chunks(row_width) {
+        all_filtered.push(0x00); // None filter byte
+        all_filtered.extend_from_slice(row);
+    }
 
     // Total height from combined decompressed size
     let height = all_filtered.len() / filtered_row_size;
@@ -1240,54 +1254,55 @@ fn build_aligned_data(
         data.extend_from_slice(&terminator);
     }
 
-    // Append trailing gap + mirrored reference colors at end of image.
+    // Append mirrored reference colors immediately before CD data (no gap).
+    // The same gradient will also be added after the CD in build_polyglot.
     {
-        let trailing_gap_rows: usize = if font.is_some() { 2 } else { 1 };
-
         // Align to row boundary first
         let padding_to_row = (row_width - (data.len() % row_width)) % row_width;
         let new_len = data.len() + padding_to_row;
         resize_with_opaque_padding(&mut data, new_len, bytes_per_pixel);
 
-        // Add gap rows before trailing color map
-        let new_len = data.len() + trailing_gap_rows * row_width;
-        resize_with_opaque_padding(&mut data, new_len, bytes_per_pixel);
-
-        if bytes_per_pixel > 1 {
-            // RGBA mode: single row with reversed 6-color cycle
-            const RGBA_REF_COLORS: [[u8; 4]; 6] = [
-                [0, 0, 0, 0],       // transparent
-                [0, 0, 0, 255],     // black
-                [255, 255, 255, 255], // white
-                [255, 0, 0, 255],   // red
-                [0, 255, 0, 255],   // green
-                [0, 0, 255, 255],   // blue
-            ];
-            let pixels_per_row = row_width / bytes_per_pixel;
-            // Build forward, then reverse pixel order
-            let mut forward: Vec<[u8; 4]> = Vec::with_capacity(pixels_per_row);
-            for px in 0..pixels_per_row {
-                forward.push(RGBA_REF_COLORS[px % RGBA_REF_COLORS.len()]);
-            }
-            forward.reverse();
-            for color in &forward {
-                data.extend_from_slice(color);
-            }
-        } else {
-            // Indexed mode: mirrored cycling gradient
-            let trailing_color_map_rows = 256_usize.div_ceil(row_width);
-            let color_map_bytes = trailing_color_map_rows * row_width;
-            let mut forward: Vec<u8> = Vec::with_capacity(color_map_bytes);
-            let mut palette_counter: usize = 0;
-            for _ in 0..color_map_bytes {
-                forward.push(cycling_palette_index(&mut palette_counter));
-            }
-            forward.reverse();
-            data.extend_from_slice(&forward);
-        }
+        data.extend_from_slice(&build_trailing_gradient(row_width, bytes_per_pixel));
     }
 
     (data, entries, terminator_rows)
+}
+
+/// Build the trailing mirrored reference gradient rows (unfiltered pixel data).
+/// For indexed mode: reversed cycling gradient spanning ≥256 bytes.
+/// For RGBA mode: single row with reversed 6-color cycle.
+fn build_trailing_gradient(row_width: usize, bytes_per_pixel: usize) -> Vec<u8> {
+    if bytes_per_pixel > 1 {
+        const RGBA_REF_COLORS: [[u8; 4]; 6] = [
+            [0, 0, 0, 0],       // transparent
+            [0, 0, 0, 255],     // black
+            [255, 255, 255, 255], // white
+            [255, 0, 0, 255],   // red
+            [0, 255, 0, 255],   // green
+            [0, 0, 255, 255],   // blue
+        ];
+        let pixels_per_row = row_width / bytes_per_pixel;
+        let mut forward: Vec<[u8; 4]> = Vec::with_capacity(pixels_per_row);
+        for px in 0..pixels_per_row {
+            forward.push(RGBA_REF_COLORS[px % RGBA_REF_COLORS.len()]);
+        }
+        forward.reverse();
+        let mut result = Vec::with_capacity(row_width);
+        for color in &forward {
+            result.extend_from_slice(color);
+        }
+        result
+    } else {
+        let trailing_color_map_rows = 256_usize.div_ceil(row_width);
+        let color_map_bytes = trailing_color_map_rows * row_width;
+        let mut forward: Vec<u8> = Vec::with_capacity(color_map_bytes);
+        let mut palette_counter: usize = 0;
+        for _ in 0..color_map_bytes {
+            forward.push(cycling_palette_index(&mut palette_counter));
+        }
+        forward.reverse();
+        forward
+    }
 }
 
 /// Returns a cycling palette index: 0,1,2,...,255,255,254,...,1,0,0,1,...
