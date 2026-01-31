@@ -3,7 +3,6 @@ use {
     std::{io::Read, ops::Not},
 };
 
-#[cfg(feature = "flate2")]
 pub fn read_deflate(input: &mut impl Read) -> Result<Vec<u8>, panic> {
     let mut buffer = Vec::new();
     flate2::read::DeflateDecoder::new(input).read_to_end(&mut buffer)?;

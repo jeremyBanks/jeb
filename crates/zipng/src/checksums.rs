@@ -17,7 +17,6 @@ pub fn adler32(bytes: &[u8]) -> u32 {
     simd_adler32::adler32(&bytes)
 }
 
-#[cfg(feature = "twox-hash")]
 /// Computes the XXH3 64-bit hash of a byte slice
 pub fn xxh3_64(bytes: &[u8]) -> u64 {
     let mut hasher = twox_hash::Xxh3Hash64::default();
@@ -25,7 +24,6 @@ pub fn xxh3_64(bytes: &[u8]) -> u64 {
     hasher.finish()
 }
 
-#[cfg(feature = "blake3")]
 /// Computes the BLAKE3 cryptographic hash digest of a byte slice, as an
 /// infinite stream of bytes. Using fewer than 32 bytes of the output will
 /// reduce the security level proportionally.

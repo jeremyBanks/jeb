@@ -1,4 +1,3 @@
-#![feature(doc_cfg)]
 #![doc = include_str!("../README.md")]
 #![allow(
     dead_code,
@@ -49,8 +48,6 @@ pub mod brotli;
 // Legacy modules
 pub mod font;
 
-#[cfg(feature = "dev-dependencies")]
-pub mod dev;
 
 // Re-export key types from png
 pub use crate::png::{BitDepth, ColorType, Png, ToPng};
@@ -80,7 +77,6 @@ pub mod r#impl {
     pub use crate::zip;
     pub use crate::zlib;
 
-    #[cfg(feature = "brotli")]
     pub use crate::brotli;
 }
 
