@@ -77,6 +77,7 @@ pub mod r#impl {
     pub use crate::zip;
     pub use crate::zlib;
 
+    #[cfg(feature = "brotli")]
     pub use crate::brotli;
 }
 
