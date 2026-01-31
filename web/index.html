@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>zipng - PNG+ZIP Polyglot Generator</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>zipng</h1>
+        <p class="subtitle">Generate PNG+ZIP Polyglot Files</p>
+      </header>
+
+      <main>
+        <!-- Drop Zone -->
+        <section class="drop-zone-container">
+          <div id="dropZone" class="drop-zone">
+            <div class="drop-zone-content">
+              <svg
+                class="drop-zone-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <p class="drop-zone-text">
+                Drop files here or <label for="fileInput" class="file-label">browse</label>
+              </p>
+              <p class="drop-zone-hint">Maximum 60KB per file</p>
+            </div>
+            <input type="file" id="fileInput" multiple hidden />
+          </div>
+        </section>
+
+        <!-- File List -->
+        <section id="fileListSection" class="file-list-section hidden">
+          <h2>Selected Files</h2>
+          <ul id="fileList" class="file-list"></ul>
+          <button id="clearFiles" class="btn btn-secondary">Clear All</button>
+        </section>
+
+        <!-- Options -->
+        <section class="options-section">
+          <h2>Options</h2>
+
+          <div class="option-group">
+            <label for="mode">Color Mode</label>
+            <select id="mode" class="select">
+              <option value="auto" selected>Auto (indexed ≤2MB, RGBA >2MB)</option>
+              <option value="indexed">Indexed (8-bit palette)</option>
+              <option value="rgba">RGBA (32-bit)</option>
+            </select>
+          </div>
+
+          <div class="option-group">
+            <label for="font">Font (optional)</label>
+            <select id="font" class="select">
+              <option value="" selected>Auto (size-based)</option>
+              <option value="swiss">Swiss</option>
+              <option value="sixth">Sixth</option>
+              <option value="sky">Sky</option>
+              <option value="monte">Monte</option>
+              <option value="sugimori">Sugimori</option>
+              <option value="mini">Mini</option>
+              <option value="micro">Micro</option>
+            </select>
+          </div>
+
+          <div class="option-group">
+            <label for="sortMode">Sort Mode</label>
+            <select id="sortMode" class="select">
+              <option value="lexicographic" selected>Lexicographic (A-Z)</option>
+              <option value="reverse">Reverse (Z-A)</option>
+              <option value="by_size">By Size</option>
+              <option value="by_extension">By Extension</option>
+              <option value="none">None (preserve order)</option>
+            </select>
+          </div>
+        </section>
+
+        <!-- Generate Button -->
+        <section class="action-section">
+          <button id="generateBtn" class="btn btn-primary" disabled>
+            Generate Polyglot
+          </button>
+          <div id="loader" class="loader hidden">
+            <div class="spinner"></div>
+            <p>Encoding...</p>
+          </div>
+        </section>
+
+        <!-- Preview -->
+        <section id="previewSection" class="preview-section hidden">
+          <h2>Preview</h2>
+          <div class="preview-container">
+            <img id="previewImage" alt="Generated polyglot" />
+          </div>
+          <div class="preview-info">
+            <p id="outputSize"></p>
+            <p class="preview-hint">
+              This image is also a valid ZIP archive!
+            </p>
+          </div>
+          <button id="downloadBtn" class="btn btn-primary">
+            Download PNG
+          </button>
+        </section>
+
+        <!-- Error Display -->
+        <div id="errorDisplay" class="error-display hidden"></div>
+      </main>
+
+      <footer>
+        <p>
+          <a
+            href="https://github.com/jeremyBanks/zipng"
+            target="_blank"
+            rel="noopener"
+            >zipng</a
+          >
+          - Polyglot PNG+ZIP encoder
+        </p>
+        <p class="version">Version: <span id="version">loading...</span></p>
+      </footer>
+    </div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
