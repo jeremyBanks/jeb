@@ -1581,10 +1581,10 @@ fn build_local_header(
             // Valid extra field structure: ID + size + data
             header.extend_from_slice(&0xFFFF_u16.to_le_bytes()); // header ID (0xFFFF = third-party use)
             header.extend_from_slice(&((extra_len - 4) as u16).to_le_bytes()); // data size
-            header.resize(header.len() + extra_len - 4, 0xFF); // data (all 0xFF for visibility)
+            header.resize(header.len() + extra_len - 4, 0); // data (zeros)
         } else {
-            // Just padding bytes (too small for proper extra field structure)
-            header.resize(header.len() + extra_len, 0xFF);
+            // Just padding bytes
+            header.resize(header.len() + extra_len, 0);
         }
     }
 
