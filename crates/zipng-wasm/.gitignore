@@ -1,0 +1,9 @@
+# .gitignore
+
+# Test outputs
+test_files/
+test_extract/
+test_output*.png
+**/test_node_output.png
+**/test.html
+**/test-node.js
