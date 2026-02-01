@@ -2,27 +2,12 @@
  * WASM loader and TypeScript-friendly API for zipng.
  */
 
-// Load WASM module
-const wasmPath = new URL(
-  "../crates/zipng-wasm/pkg/web/zipng_wasm_bg.wasm",
-  import.meta.url
-);
-const wasmModule = await WebAssembly.compileStreaming(fetch(wasmPath));
-const wasmInstance = await WebAssembly.instantiate(wasmModule, {});
+// Import wasm-bindgen generated module directly
+// Deno supports importing WASM modules natively
+import init, { encode as wasmEncode, encode_simple as wasmEncodeSimple, version } from "../crates/zipng-wasm/pkg/web/zipng_wasm.js";
 
-// Import generated JS bindings
-const bindingsPath = new URL(
-  "../crates/zipng-wasm/pkg/web/zipng_wasm.js",
-  import.meta.url
-);
-const { encode: wasmEncode, encode_simple: wasmEncodeSimple, version } = await import(
-  bindingsPath.href
-);
-
-// Initialize WASM
-const imports = {
-  wbg: wasmInstance.exports,
-};
+// Initialize WASM (auto-loads the .wasm file)
+await init();
 
 // TypeScript types
 export interface FileInput {

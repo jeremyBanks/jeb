@@ -235,7 +235,9 @@ impl BitmapFont {
         #[cfg(not(feature = "image"))]
         let (img_width, img_height, pixels) = {
             // Use pure Rust png crate
-            let decoder = png::Decoder::new(std::io::Cursor::new(png_data));
+            let mut decoder = png::Decoder::new(std::io::Cursor::new(png_data));
+            // Transform indexed/palette PNGs to RGB
+            decoder.set_transformations(png::Transformations::EXPAND);
             let mut reader = decoder.read_info().expect("Failed to read PNG info");
             let mut buf = vec![0; reader.output_buffer_size().expect("PNG output buffer size required")];
             let info = reader.next_frame(&mut buf).expect("Failed to decode PNG");
@@ -244,16 +246,17 @@ impl BitmapFont {
             // Convert to luminance if needed
             let pixels = match info.color_type {
                 png::ColorType::Grayscale => buf[..info.buffer_size()].to_vec(),
-                png::ColorType::Rgb => {
-                    // Convert RGB to luminance: Y = 0.299*R + 0.587*G + 0.114*B
+                png::ColorType::Rgb | png::ColorType::Rgba => {
+                    // Convert RGB(A) to luminance: Y = 0.299*R + 0.587*G + 0.114*B
+                    let bytes_per_pixel = if info.color_type == png::ColorType::Rgba { 4 } else { 3 };
                     buf[..info.buffer_size()]
-                        .chunks(3)
-                        .map(|rgb| {
-                            ((rgb[0] as u32 * 299 + rgb[1] as u32 * 587 + rgb[2] as u32 * 114) / 1000) as u8
+                        .chunks(bytes_per_pixel)
+                        .map(|pixel| {
+                            ((pixel[0] as u32 * 299 + pixel[1] as u32 * 587 + pixel[2] as u32 * 114) / 1000) as u8
                         })
                         .collect()
                 },
-                _ => panic!("Unsupported PNG color type for font"),
+                _ => panic!("Unsupported PNG color type for font: {:?}", info.color_type),
             };
             (img_width, img_height, pixels)
         };
