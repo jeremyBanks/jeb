@@ -29,6 +29,7 @@ impl Zip {
 
     #[instrument(skip_all)]
     /// Creates a new [`Zip`] from the file or directory at the given path.
+    #[cfg(feature = "std-io")]
     pub fn new_from_path(path: impl AsRef<Path>) -> Result<Self, panic> {
         let path = path.as_ref();
         let mut files = Vec::<(Vec<u8>, Vec<u8>)>::new();

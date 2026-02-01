@@ -221,12 +221,42 @@ impl BitmapFont {
         let meta: FontMeta = serde_json::from_str(json_data)
             .expect("Failed to parse font JSON");
 
-        let img = image::load_from_memory(png_data)
-            .expect("Failed to load font PNG")
-            .to_luma8();
+        #[cfg(feature = "image")]
+        let (img_width, img_height, pixels) = {
+            let img = image::load_from_memory(png_data)
+                .expect("Failed to load font PNG")
+                .to_luma8();
+            let img_width = img.width() as usize;
+            let img_height = img.height() as usize;
+            let pixels: Vec<u8> = img.into_raw();
+            (img_width, img_height, pixels)
+        };
 
-        let img_width = img.width() as usize;
-        let img_height = img.height() as usize;
+        #[cfg(not(feature = "image"))]
+        let (img_width, img_height, pixels) = {
+            // Use pure Rust png crate
+            let decoder = png::Decoder::new(std::io::Cursor::new(png_data));
+            let mut reader = decoder.read_info().expect("Failed to read PNG info");
+            let mut buf = vec![0; reader.output_buffer_size().expect("PNG output buffer size required")];
+            let info = reader.next_frame(&mut buf).expect("Failed to decode PNG");
+            let img_width = info.width as usize;
+            let img_height = info.height as usize;
+            // Convert to luminance if needed
+            let pixels = match info.color_type {
+                png::ColorType::Grayscale => buf[..info.buffer_size()].to_vec(),
+                png::ColorType::Rgb => {
+                    // Convert RGB to luminance: Y = 0.299*R + 0.587*G + 0.114*B
+                    buf[..info.buffer_size()]
+                        .chunks(3)
+                        .map(|rgb| {
+                            ((rgb[0] as u32 * 299 + rgb[1] as u32 * 587 + rgb[2] as u32 * 114) / 1000) as u8
+                        })
+                        .collect()
+                },
+                _ => panic!("Unsupported PNG color type for font"),
+            };
+            (img_width, img_height, pixels)
+        };
 
         let mut glyphs = HashMap::new();
 
@@ -254,7 +284,7 @@ impl BitmapFont {
                         if x >= img_width || y >= img_height {
                             row.push(false);
                         } else {
-                            let pixel = img.get_pixel(x as u32, y as u32).0[0];
+                            let pixel = pixels[y * img_width + x];
                             row.push(pixel < 128);
                         }
                     }
