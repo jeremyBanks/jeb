@@ -14,7 +14,7 @@ export async function initWasm() {
   }
 
   // Load WASM module
-  const wasmPath = "../../crates/zipng-wasm/pkg/web/zipng_wasm_bg.wasm";
+  const wasmPath = "../pkg/web/zipng_wasm_bg.wasm";
   const response = await fetch(wasmPath);
   const wasmBytes = await response.arrayBuffer();
   const wasmObj = await WebAssembly.instantiate(wasmBytes, {});
@@ -24,7 +24,7 @@ export async function initWasm() {
 
   // Import JS bindings
   const { default: init, encode, encode_simple, version } = await import(
-    "../../crates/zipng-wasm/pkg/web/zipng_wasm.js"
+    "../pkg/web/zipng_wasm.js"
   );
 
   // Initialize with our WASM instance

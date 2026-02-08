@@ -4,7 +4,7 @@
 
 // Import wasm-bindgen generated module directly
 // Deno supports importing WASM modules natively
-import init, { encode as wasmEncode, encode_simple as wasmEncodeSimple, version } from "../crates/zipng-wasm/pkg/web/zipng_wasm.js";
+import init, { encode as wasmEncode, encode_simple as wasmEncodeSimple, version } from "../pkg/web/zipng_wasm.js";
 
 // Initialize WASM (auto-loads the .wasm file)
 await init();
