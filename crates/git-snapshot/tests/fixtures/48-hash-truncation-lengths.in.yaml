@@ -1,0 +1,41 @@
+# Test various truncated hash lengths (hex style)
+# With many commits, hashes should truncate to minimum unique length
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 0000000000000000000000000000000000000008
+
+# Create 8 commits to test truncation algorithm
+0000000000000000000000000000000000000001:
+  tree:
+    file.txt: "commit 1"
+
+0000000000000000000000000000000000000002:
+  tree:
+    file.txt: "commit 2"
+
+0000000000000000000000000000000000000003:
+  tree:
+    file.txt: "commit 3"
+
+0000000000000000000000000000000000000004:
+  tree:
+    file.txt: "commit 4"
+
+0000000000000000000000000000000000000005:
+  tree:
+    file.txt: "commit 5"
+
+0000000000000000000000000000000000000006:
+  tree:
+    file.txt: "commit 6"
+
+0000000000000000000000000000000000000007:
+  tree:
+    file.txt: "commit 7"
+
+# Head commit - should use full 40-char hash
+0000000000000000000000000000000000000008:
+  tree:
+    file.txt: "commit 8 (head)"

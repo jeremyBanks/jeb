@@ -1,0 +1,10 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 9ead2dec0f23be0775eaca1347a1bac6d19b9481
+9ead2dec0f23be0775eaca1347a1bac6d19b9481:
+  message: commit 1
+  tree:
+    README.md: '# Hello World'
+    src:
+      lib.rs: pub fn main() {}

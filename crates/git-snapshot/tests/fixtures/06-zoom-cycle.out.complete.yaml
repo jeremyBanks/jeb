@@ -1,0 +1,77 @@
+HEAD: refs/heads/full-tree
+refs:
+  heads:
+    full-tree: 902f08a86893284d75ad988643c27586e0172dd2
+    subtree: 404a93b3e01cc9541c46e1b020fa823fedac4ce2
+df21ce447bfb9f98c26b1e9a11bdefbc8845bfb1:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    README.md: '# Main Project'
+    src:
+      lib:
+        main.rs: fn main() {}
+        utils.rs: fn util() {}
+8b79aa2330e17cc19932762370d4b7c0ae85e6e9:
+  author: git-zoom-in <git-zoom-in@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: git-zoom-in seed commit
+  parents: []
+  tree: {}
+a581df3833da8767ee8dd81e3a8e027fa85b8414:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - df21ce447bfb9f98c26b1e9a11bdefbc8845bfb1
+  tree:
+    README.md: '# Main Project v2'
+acfd5ff1bb1c3b51b3cd627d0ee131f439089beb:
+  author: git-zoom-in <git-zoom-in@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: |-
+    Merge from 'src/lib'
+
+    git-zoom-in: src/lib
+  parents:
+  - 8b79aa2330e17cc19932762370d4b7c0ae85e6e9
+  - df21ce447bfb9f98c26b1e9a11bdefbc8845bfb1
+  tree:
+    main.rs: fn main() {}
+    utils.rs: fn util() {}
+404a93b3e01cc9541c46e1b020fa823fedac4ce2:
+  author: git-zoom-in <git-zoom-in@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: git-zoom-in <git-zoom-in@localhost>
+  message: commit 5
+  parents:
+  - acfd5ff1bb1c3b51b3cd627d0ee131f439089beb
+  tree:
+    tests.rs: fn test() {}
+902f08a86893284d75ad988643c27586e0172dd2:
+  author: git-zoom-out <git-zoom-out@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'src/lib'
+
+    git-zoom-out: src/lib
+  parents:
+  - a581df3833da8767ee8dd81e3a8e027fa85b8414
+  - 404a93b3e01cc9541c46e1b020fa823fedac4ce2
+  tree:
+    src:
+      lib:
+        tests.rs: fn test() {}

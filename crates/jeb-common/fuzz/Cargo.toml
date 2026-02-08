@@ -1,0 +1,62 @@
+[package]
+name = "jeb-common-fuzz"
+version = "0.0.0"
+publish = false
+edition.workspace = true
+
+[package.metadata]
+cargo-fuzz = true
+
+[[bin]]
+name = "fuzz_zig_zag"
+path = "fuzz_targets/fuzz_zig_zag.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_floating"
+path = "fuzz_targets/fuzz_floating.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_signedness"
+path = "fuzz_targets/fuzz_signedness.rs"
+test = false
+doc = false
+bench = false
+
+[dependencies]
+libfuzzer-sys.workspace = true
+arbitrary = { workspace = true, features = ["derive"] }
+jeb-common = { path = ".." }
+
+[[bin]]
+name = "fuzz_hilbert"
+path = "fuzz_targets/fuzz_hilbert.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_spiral_square"
+path = "fuzz_targets/fuzz_spiral_square.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_scatter_square"
+path = "fuzz_targets/fuzz_scatter_square.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_z_order"
+path = "fuzz_targets/fuzz_z_order.rs"
+test = false
+doc = false
+bench = false

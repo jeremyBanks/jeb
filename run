@@ -1,0 +1,133 @@
+#!/bin/bash
+#
+# A wrapper around `cargo run`-like behavior, but falling back to existing
+# builds or system installations of tools, if we aren't able to (re)build a
+# local copy. This is to mitigate the pain of self-hosting tools inside of our
+# own workspace, where changes we're making might break our ability to build
+# the tools we want to use while continuing to work on fixing that code!
+#
+# Therefore any binary implemented in this workspace that we're running as part
+# of our workflow (not for the sake of developing/testing them, but to use them
+# for their intended purpose) should be run through `./run <command> <args...>`.
+# instead of `cargo run --bin <command> -- <args...>`. `./run save` will be
+# common.
+#
+# `./run --any <command> <args...>` may be used to run any available version of
+# the command and only building a new version as a last resort, instead of as
+# the first choice.
+
+set -euo pipefail
+
+declare any_mode=false
+if [ "${1:-}" = "--any" ]; then
+    any_mode=true
+    shift
+fi
+
+declare command="$1"
+shift
+declare bin=""
+
+declare RESET=""
+declare DARK_BACKGROUND=""
+declare WHITE=""
+declare BROWN=""
+declare YELLOW=""
+declare BLUE=""
+declare CYAN=""
+declare MAGENTA=""
+declare RED=""
+
+if [ -t 2 ] && [ -z "${NO_COLORS-}" ]; then
+    DARK_BACKGROUND=$'\033[40m\033[K'
+    RESET=$'\033[0m'
+    WHITE=$'\033[37m'
+    BROWN=$'\033[33m'
+    YELLOW=$'\033[33m'
+    BLUE=$'\033[34m'
+    CYAN=$'\033[36m'
+    MAGENTA=$'\033[35m'
+    RED=$'\033[31m'
+fi
+
+# Function to find an existing binary (without building)
+find_existing_binary() {
+    if [ -x "./target/release/$command" ]; then
+        echo "./target/release/$command"
+    elif [ -x "./target/debug/$command" ]; then
+        echo "./target/debug/$command"
+    elif [ -x "$HOME/.cargo/bin/$command" ]; then
+        echo "$HOME/.cargo/bin/$command"
+    elif type "$command" >/dev/null 2>&1; then
+        echo "$command"
+    fi
+}
+
+if [ "$any_mode" = true ]; then
+    # --any mode: try existing binaries first, only build as last resort
+    bin=$(find_existing_binary)
+
+    if [ -z "$bin" ]; then
+        echo >&2 -e "${DARK_BACKGROUND}"
+        echo >&2 -e "${DARK_BACKGROUND}${YELLOW}  (--any)${WHITE} No existing binary found. Building as last resort."
+        echo >&2 -e "${DARK_BACKGROUND}${MAGENTA}  \$${WHITE} ${BROWN}cargo build --release --bin${WHITE} ${CYAN}$command${WHITE}"
+        echo >&2 -e "${DARK_BACKGROUND}${RESET}"
+        echo >&2
+
+        if ! cargo build --release --bin "$command"; then
+            echo >&2
+            echo >&2 "${RED}ERROR:${WHITE} Failed to build and no existing binary found. Unable to continue."
+            exit 1
+        fi
+
+        echo >&2
+        bin="./target/release/$command"
+    fi
+else
+    # Normal mode: try to build first, then fallback chain
+    echo >&2 -e "${DARK_BACKGROUND}"
+    echo >&2 -e "${DARK_BACKGROUND}${MAGENTA}  \$${WHITE} ${BROWN}cargo build --release --bin${WHITE} ${CYAN}$command${WHITE}"
+    echo >&2 -e "${DARK_BACKGROUND}${RESET}"
+    echo >&2
+
+    if ! cargo build --release --bin "$command"; then
+        echo >&2
+        echo >&2 "${YELLOW}WARNING:${WHITE} Failed to build. Falling back to existing builds."
+    fi
+
+    echo >&2
+
+    if [ -x "./target/release/$command" ]; then
+        bin="./target/release/$command"
+    elif [ -x "./target/debug/$command" ]; then
+        echo >&2 "${YELLOW}WARNING:${WHITE} Existing release build not found. Falling back to debug build."
+        echo >&2
+
+        bin="./target/debug/$command"
+    else
+        echo >&2 "${YELLOW}WARNING:${WHITE} Existing builds not found. Falling back to cargo-installed binary."
+        echo >&2
+
+        if [ -x "$HOME/.cargo/bin/$command" ]; then
+            bin="$HOME/.cargo/bin/$command"
+        else
+            echo >&2 "${YELLOW}WARNING:${WHITE} cargo-installed binary not found. Falling back to any matching command."
+            echo >&2
+
+            if type "$command" >/dev/null 2>&1; then
+                bin="$command"
+            else
+                echo >&2 "${RED}ERROR:${WHITE} No matching command found. Unable to continue."
+
+                exit 1
+            fi
+        fi
+    fi
+fi
+
+echo >&2 -e "${DARK_BACKGROUND}"
+echo >&2 -e "${DARK_BACKGROUND}  ${MAGENTA}\$${WHITE} ${CYAN}${bin}${WHITE} ${BLUE}$*${WHITE}"
+echo >&2 -e "${DARK_BACKGROUND}${RESET}"
+echo >&2
+
+exec "$bin" "$@"

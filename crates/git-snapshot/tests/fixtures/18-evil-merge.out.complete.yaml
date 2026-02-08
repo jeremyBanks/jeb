@@ -1,0 +1,76 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: b50733091620b5e67525390608688aefa4872330
+22c274195d5488b5b80e3c2a116c44c56cbd618f:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    file.txt: version A
+e1013f1fce4e74ef4cf9c25ca8d7cf6b7b16bffd:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - 22c274195d5488b5b80e3c2a116c44c56cbd618f
+  tree:
+    file.txt: version B (from main)
+e616ec02a623a721ef5f672c3a1dbb1e55da4c09:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents:
+  - 22c274195d5488b5b80e3c2a116c44c56cbd618f
+  tree:
+    file.txt: version C (from feature)
+97e851c156fad181cbc0f6b297198d21f0f40341:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: Merge with conflict resolution AND extra changes
+  parents:
+  - e1013f1fce4e74ef4cf9c25ca8d7cf6b7b16bffd
+  - e616ec02a623a721ef5f672c3a1dbb1e55da4c09
+  tree:
+    MERGE-NOTES.txt: This merge also fixed a critical bug
+    file.txt: version D (merged + fixed bug)
+3c13edf2b1a93e5dd8b2f455afb9f69bd6ec33fb:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: Committer <committer@localhost>
+  message: commit 5
+  parents:
+  - 97e851c156fad181cbc0f6b297198d21f0f40341
+  tree:
+    another-file.txt: normal work
+b5a3135dd0ecfb8b0935acfbcc5ca100d5a8a5bb:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 20
+  parents: []
+  tree:
+    data.json: '{"source": "orphan"}'
+b50733091620b5e67525390608688aefa4872330:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: Committer <committer@localhost>
+  message: Merge unrelated history
+  parents:
+  - 3c13edf2b1a93e5dd8b2f455afb9f69bd6ec33fb
+  - b5a3135dd0ecfb8b0935acfbcc5ca100d5a8a5bb
+  tree:
+    INTEGRATION.md: How we integrated the orphan history
+    orphan-data.json: '{"source": "orphan"}'

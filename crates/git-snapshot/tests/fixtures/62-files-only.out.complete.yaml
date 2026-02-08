@@ -1,0 +1,13 @@
+HEAD: a1e64b2671595dc2a71d6819e8134dbf0d25bfbe
+refs: {}
+a1e64b2671595dc2a71d6819e8134dbf0d25bfbe:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    README.md: Hello
+    src:
+      main.rs: fn main() {}

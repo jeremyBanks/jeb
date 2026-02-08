@@ -1,0 +1,29 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: a98674941f4e1c965ffe8442cf29edbced803f3e
+c34c370eea3e2abd498436c8896ffe77a3b3bad9:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    README.md: '# Original README'
+    src:
+      helper.rs: pub fn help() {}
+      lib.rs: pub fn original() {}
+a98674941f4e1c965ffe8442cf29edbced803f3e:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - c34c370eea3e2abd498436c8896ffe77a3b3bad9
+  tree:
+    GUIDE.md: '# Original README'
+    src:
+      helper.rs: pub fn help() { /* updated */ }
+      new.rs: pub fn new_func() {}

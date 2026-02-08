@@ -1,0 +1,14 @@
+HEAD: 6a28e9933d3671a3f396df5c80c30389200caf8c
+refs: {}
+staged:
+  NEW.md: New file in staging
+  src:
+    lib.rs: pub fn main() { println!("staged"); }
+6a28e9933d3671a3f396df5c80c30389200caf8c:
+  message: Initial commit
+  tree:
+    README.md: '# Project'
+    docs:
+      guide.md: '# Guide'
+    src:
+      lib.rs: pub fn main() {}

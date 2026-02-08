@@ -1,0 +1,24 @@
+[package]
+name = "git-snapshot"
+publish = false
+description = "git repository snapshots for testing"
+keywords = []
+categories = []
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+clap = { workspace = true, features = ["derive"] }
+git2.workspace = true
+ignore.workspace = true
+ordermap.workspace = true
+serde = { workspace = true, features = ["rc"] }
+serde_bytes.workspace = true
+serde_json = { workspace = true, features = ["preserve_order"] }
+serde_yaml.workspace = true
+sha1-checked = { workspace = true, features = ["std"], default-features = true }
+tempfile.workspace = true
+thiserror.workspace = true

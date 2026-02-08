@@ -1,0 +1,8 @@
+HEAD: a1e64b2671595dc2a71d6819e8134dbf0d25bfbe
+refs: {}
+a1e64b2671595dc2a71d6819e8134dbf0d25bfbe:
+  message: commit 1
+  tree:
+    README.md: Hello
+    src:
+      main.rs: fn main() {}

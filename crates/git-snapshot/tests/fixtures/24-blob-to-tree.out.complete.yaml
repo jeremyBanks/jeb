@@ -1,0 +1,80 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    alternate: 5220416d39b748b0f7a70e715c728e0f1da1087a
+    main: 6686eb585c39ff194d9d3283af5e120fa71fd9d4
+c103b6c8d5d09ced084ea9f043f9d9aed97b6239:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    path:
+      to:
+        item: This is a file
+a75201d239e0f8c8af496aebfee760e16e1e356c:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents: []
+  tree: {}
+b15e85fb9743921dffa4f004a6674202e034f41c:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: |
+    Zoom in to path/to/item
+
+    git-zoom-in: path/to/item
+  parents:
+  - a75201d239e0f8c8af496aebfee760e16e1e356c
+  - c103b6c8d5d09ced084ea9f043f9d9aed97b6239
+  tree:
+    content.txt: extracted blob as tree
+571b94842dd6ff67881b1e829eb8058bfa0e4824:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: |
+    Zoom out to path/to/item
+
+    git-zoom-out: path/to/item
+  parents:
+  - c103b6c8d5d09ced084ea9f043f9d9aed97b6239
+  - b15e85fb9743921dffa4f004a6674202e034f41c
+  tree:
+    path:
+      to:
+        item:
+          content.txt: extracted blob as tree
+5220416d39b748b0f7a70e715c728e0f1da1087a:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - c103b6c8d5d09ced084ea9f043f9d9aed97b6239
+  tree:
+    path:
+      to:
+        item:
+          replaced.txt: Now it's a directory
+6686eb585c39ff194d9d3283af5e120fa71fd9d4:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: Committer <committer@localhost>
+  message: commit 6
+  parents:
+  - 571b94842dd6ff67881b1e829eb8058bfa0e4824
+  tree:
+    path:
+      to:
+        item: Back to being a file

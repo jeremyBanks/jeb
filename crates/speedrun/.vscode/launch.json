@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable: download",
+      "cargo": {
+        "args": ["build"],
+        "filter": {
+          "kind": "bin"
+        }
+      },
+      "args": ["download"]
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable: import",
+      "cargo": {
+        "args": ["build"],
+        "filter": {
+          "kind": "bin"
+        }
+      },
+      "args": ["import", "--skip-most"]
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable: serve",
+      "cargo": {
+        "args": ["build"],
+        "filter": {
+          "kind": "bin"
+        }
+      },
+      "args": ["serve"]
+    }
+  ]
+}

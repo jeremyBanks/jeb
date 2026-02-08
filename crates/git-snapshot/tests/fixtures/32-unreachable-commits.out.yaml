@@ -1,0 +1,12 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 1561ad71f5d9ccd8cffca44dcf06b7320cac7e63
+a7d274:
+  message: commit 2
+  tree:
+    reachable.txt: on main branch
+1561ad71f5d9ccd8cffca44dcf06b7320cac7e63:
+  message: commit 3
+  tree:
+    reachable.txt: also on main

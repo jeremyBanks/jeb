@@ -1,0 +1,34 @@
+[package]
+edition = "2018"
+
+name = "speedruns"
+version = "0.21.6-dev"
+
+license = "MIT"
+repository = "https://github.com/jeremybanks/speedruns"
+authors = ["Jeremy Banks <_@jeremy.ca>"]
+description = "Unofficial tools for mirroring speedrun.com API data"
+
+autobins = false
+
+[workspace]
+
+[lib]
+name = "speedruns"
+path = "src/lib/speedruns.rs"
+
+[[bin]]
+name = "speedruns"
+path = "src/bin/speedruns.rs"
+
+[dependencies]
+actix-rt = "2.9"
+argh = "0.1.3"
+async-std = { version = "1.5.0", features = ["attributes"] }
+speedruns_api = { path = "src/lib/api", version = "0.21.6-dev" }
+speedruns_cli = { path = "src/lib/cli", version = "0.21.6-dev" }
+speedruns_database = { path = "src/lib/database", version = "0.21.6-dev" }
+speedruns_juniper = { path = "src/lib/juniper", version = "0.21.6-dev" }
+speedruns_models = { path = "src/lib/models", version = "0.21.6-dev" }
+speedruns_utils = { path = "src/lib/utils", version = "0.21.6-dev" }
+anyhow = "1.0.27"

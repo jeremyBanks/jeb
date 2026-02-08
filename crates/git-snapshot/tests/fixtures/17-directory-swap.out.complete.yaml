@@ -1,0 +1,48 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: a17521ed568c0ee90d7b83e44191dfefac123b99
+e936ed81a8938e5fbe7ddd58f20c8dece066b904:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    backend:
+      database.py: backend database
+      server.py: backend server
+    frontend:
+      app.js: frontend app
+      utils.js: frontend utils
+87b2ff458396c61468942b748b73d35ab27d2d04:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - e936ed81a8938e5fbe7ddd58f20c8dece066b904
+  tree:
+    frontend:
+      database.py: backend database
+      server.py: backend server
+    temp-frontend:
+      app.js: frontend app
+      utils.js: frontend utils
+a17521ed568c0ee90d7b83e44191dfefac123b99:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents:
+  - 87b2ff458396c61468942b748b73d35ab27d2d04
+  tree:
+    backend:
+      app.js: frontend app
+      utils.js: frontend utils
+    temp-frontend:
+      app.js: null
+      utils.js: null

@@ -1,0 +1,21 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 3
+
+1:
+  tree:
+    README.md: "# Project"
+
+2:
+  tree:
+    README.md: "# Project\n\nAdded description."
+    src:
+      lib.rs: "pub fn hello() {}"
+
+3:
+  tree:
+    README.md: "# Project\n\nAdded description.\n\n## Usage"
+    src:
+      lib.rs: "pub fn hello() { println!(\"Hi\"); }"

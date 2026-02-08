@@ -1,0 +1,44 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 310e2862f282c487c421f9a08d60da07911b9ed0
+92bca6:
+  message: commit 1
+  tree:
+    README.md: '# Project Alpha'
+    docs:
+      guide.md: '# User Guide'
+    src:
+      api:
+        server.rs: pub fn serve() {}
+      core:
+        engine.rs: pub fn run() { /* v1 */ }
+        utils.rs: pub fn helper() {}
+634d6c:
+  message: commit 2
+  tree:
+    README.md: |-
+      # Project Alpha
+
+      ## Version 2.0
+    docs:
+      guide.md: null
+    src:
+      api:
+        server.rs: null
+      runtime:
+        engine.rs: pub fn run() { /* v2 - refactored */ }
+5999f5:
+  message: commit 3
+  tree:
+    README-GUIDE.md:
+      //commit: 92bca6
+      //path: docs/guide.md
+310e2862f282c487c421f9a08d60da07911b9ed0:
+  message: commit 4
+  tree:
+    src:
+      runtime:
+        shared.rs:
+          //commit: 5999f5
+          //path: src/core/utils.rs

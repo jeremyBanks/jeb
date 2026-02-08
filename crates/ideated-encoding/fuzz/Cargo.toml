@@ -1,0 +1,19 @@
+[package]
+name = "ideated-encoding-fuzz"
+version = "0.0.0"
+edition.workspace = true
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[[bin]]
+name = "fuzz_encoding"
+path = "fuzz_targets/fuzz_encoding.rs"
+test = false
+doc = false
+bench = false
+
+[dependencies]
+libfuzzer-sys.workspace = true
+ideated-encoding = { path = ".." }

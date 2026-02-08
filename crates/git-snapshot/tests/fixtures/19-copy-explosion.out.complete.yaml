@@ -1,0 +1,66 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 7c112acf565b51d027697bfb081bc3dbfe4c513f
+5b79aa62f093c28c4da6edfff11869fb9e357297:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    template.txt: TEMPLATE CONTENT
+8467d0d5592e82456ab2557428b8f5b8031533fe:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - 5b79aa62f093c28c4da6edfff11869fb9e357297
+  tree:
+    copy-1.txt: TEMPLATE CONTENT
+    copy-2.txt: TEMPLATE CONTENT
+    copy-3.txt: TEMPLATE CONTENT
+ca6fbb24eb6ba0be4a532341dc0c189ccf81c050:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents:
+  - 8467d0d5592e82456ab2557428b8f5b8031533fe
+  tree:
+    dir-a:
+      template.txt: TEMPLATE CONTENT
+    dir-b:
+      template.txt: TEMPLATE CONTENT
+    dir-c:
+      template.txt: TEMPLATE CONTENT
+95045b33a64cfa2300dd2bed6c6d5487390f9e39:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: Committer <committer@localhost>
+  message: commit 4
+  parents:
+  - ca6fbb24eb6ba0be4a532341dc0c189ccf81c050
+  tree:
+    level1:
+      level2:
+        level3:
+          template.txt: TEMPLATE CONTENT
+7c112acf565b51d027697bfb081bc3dbfe4c513f:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: Committer <committer@localhost>
+  message: commit 5
+  parents:
+  - 95045b33a64cfa2300dd2bed6c6d5487390f9e39
+  tree:
+    from-commit-1.txt: TEMPLATE CONTENT
+    from-commit-2.txt: TEMPLATE CONTENT
+    from-commit-3.txt: TEMPLATE CONTENT
+    from-commit-4.txt: TEMPLATE CONTENT

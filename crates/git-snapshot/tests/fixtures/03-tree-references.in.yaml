@@ -1,0 +1,25 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 2
+
+1:
+  tree:
+    README.md: "# Original README"
+    src:
+      lib.rs: "pub fn original() {}"
+      helper.rs: "pub fn help() {}"
+
+2:
+  tree:
+    # Rename README.md to GUIDE.md by referencing it
+    GUIDE.md:
+      [commit]: 1
+      [path]: README.md
+    # Keep src/lib.rs unchanged (inherits from parent)
+    # Modify src/helper.rs
+    src:
+      helper.rs: "pub fn help() { /* updated */ }"
+      # Add new file
+      new.rs: "pub fn new_func() {}"

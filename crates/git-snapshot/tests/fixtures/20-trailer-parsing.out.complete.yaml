@@ -1,0 +1,70 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: d2c20480b6e5ff901f5c6fdd633d8264e42948b0
+4cfc82e53a85b668e673a7e3f0aa8b821661474d:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    base.txt: base content
+0913e915171846da08a98e6aacceb6cfea9d885d:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: orphan seed
+  parents: []
+  tree: {}
+446cc29275643fdaf3bfcb1ae8bd79249a78c3eb:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: |
+    Merge from subtree
+
+    This is a detailed explanation of why
+    we're merging this subtree into our repo.
+
+    git-zoom-in: path/to/subtree
+  parents:
+  - 0913e915171846da08a98e6aacceb6cfea9d885d
+  - 4cfc82e53a85b668e673a7e3f0aa8b821661474d
+  tree:
+    file.txt: content
+60fdaf456b96c9e2f59cfa407919368c9df7760b:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: |
+    Merge to subtree
+
+    git-zoom-out: path/to/subtree
+    This line appears after the trailer
+  parents:
+  - 4cfc82e53a85b668e673a7e3f0aa8b821661474d
+  - 446cc29275643fdaf3bfcb1ae8bd79249a78c3eb
+  tree:
+    path:
+      to:
+        subtree:
+          file.txt: content
+d2c20480b6e5ff901f5c6fdd633d8264e42948b0:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: Committer <committer@localhost>
+  message: |
+    Another merge
+
+    GIT-ZOOM-IN:   spaces/around/path
+    git-zoom-out:path/no/space
+  parents:
+  - 60fdaf456b96c9e2f59cfa407919368c9df7760b
+  tree:
+    result.txt: done

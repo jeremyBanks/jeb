@@ -1,0 +1,48 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 3ae9e2ae6a288b5aa1316560606ff24884da2997
+b3992a:
+  message: commit 1
+  tree:
+    README.md: '# Shared Documentation'
+    docs:
+      guide.md: '# Shared Documentation'
+    lib:
+      header.txt: Licensed under MIT
+'831936':
+  message: commit 2
+  tree:
+    ABOUT.md:
+      //commit: b3992a
+      //path: README.md
+4ad653:
+  message: commit 3
+  tree:
+    examples:
+      header.txt:
+        //commit: '831936'
+        //path: lib/header.txt
+    lib:
+      header.txt: null
+    src:
+      header.txt:
+        //commit: '831936'
+        //path: lib/header.txt
+    tests:
+      header.txt:
+        //commit: '831936'
+        //path: lib/header.txt
+'6399e1':
+  message: commit 4
+  tree:
+    src:
+      LICENSE.txt:
+        //commit: 4ad653
+        //path: examples/header.txt
+3ae9e2ae6a288b5aa1316560606ff24884da2997:
+  message: commit 5
+  tree:
+    COPYING:
+      //commit: '6399e1'
+      //path: examples/header.txt

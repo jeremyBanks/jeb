@@ -1,4 +1,19 @@
-*.pdb
-*.rs.bk
-**/mutants.out*/
-/target
+*.git
+*.local
+*.local.*
+*.tmp
+.tmp/
+*.wasm
+/examples/self.sh
+/history-pit/
+/target/
+
+# cargo-mutants output
+mutants.out/
+mutants.out.old/
+
+# cargo-fuzz output (unpacked corpus/artifacts are ignored; .corpus files are tracked)
+**/fuzz/target/
+**/fuzz/coverage/
+**/fuzz/corpus/
+**/fuzz/artifacts/

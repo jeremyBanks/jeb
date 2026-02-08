@@ -1,0 +1,29 @@
+[package]
+name = "jeb-value"
+publish = false
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+edition.workspace = true
+include.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+# [impl jeb-value.dependencies.limit-internal]
+[dependencies]
+serde = { workspace = true, optional = true }
+serde_bytes = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+wasm-bindgen = { workspace = true, optional = true }
+derive_more = { workspace = true, features = ["full"] }
+document-features.workspace = true
+ordermap.workspace = true
+
+[features]
+default = []
+serde = ["dep:serde", "ordermap/serde", "serde/derive", "dep:serde_bytes"]
+serde_bytes = ["dep:serde_bytes", "serde"]
+serde_json = ["dep:serde_json", "serde"]
+wasm = ["dep:wasm-bindgen"]
+wasm_bindgen = ["dep:wasm-bindgen"]

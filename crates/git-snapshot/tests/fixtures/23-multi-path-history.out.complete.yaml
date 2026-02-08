@@ -1,0 +1,97 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 0716b1499eb60bd3df681f075ccad235fd4fb114
+c1809e063eebb5a582a4e3ea2e27e373b58f0f39:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    original-location:
+      file.txt: content that travels
+a4542b276c3075a7084783a3561afd19f04efd37:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 4
+  parents: []
+  tree: {}
+2fff163ad8a3bb1c18876154da51cbb0ba135fa6:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - c1809e063eebb5a582a4e3ea2e27e373b58f0f39
+  tree:
+    second-location:
+      file.txt: content that travels
+798e45793672089ddd0671ed8c9d90eebd887d9c:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: |
+    Zoom in from original-location
+
+    git-zoom-in: original-location
+  parents:
+  - a4542b276c3075a7084783a3561afd19f04efd37
+  - c1809e063eebb5a582a4e3ea2e27e373b58f0f39
+  tree:
+    file.txt: content that travels
+c7dd9ed3b17f14f97596c7cd869cc2935f21081a:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents:
+  - 2fff163ad8a3bb1c18876154da51cbb0ba135fa6
+  tree:
+    third-location:
+      file.txt: content that travels
+2378cfe23750dd7348bf3127db66ba6806dbd089:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: commit 6
+  parents:
+  - 798e45793672089ddd0671ed8c9d90eebd887d9c
+  tree:
+    file.txt: modified content
+    new.txt: new file
+31fde46c11f09d7323914096eb45f687c2915d3b:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: Committer <committer@localhost>
+  message: |
+    Zoom out to third-location
+
+    git-zoom-out: third-location
+  parents:
+  - c7dd9ed3b17f14f97596c7cd869cc2935f21081a
+  - 2378cfe23750dd7348bf3127db66ba6806dbd089
+  tree:
+    third-location:
+      file.txt: modified content
+      new.txt: new file
+0716b1499eb60bd3df681f075ccad235fd4fb114:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: Committer <committer@localhost>
+  message: commit 8
+  parents:
+  - 31fde46c11f09d7323914096eb45f687c2915d3b
+  tree:
+    other.txt: unrelated
+    third-location:
+      file.txt: final content

@@ -1,0 +1,114 @@
+{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "command": "./run --any _claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "command": "./run --any _claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "./run --any _claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "./run --any _claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "./run --any _claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "command": "./run --any _claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "./run --any _claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "./run --any _claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "command": "./run --any _claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "./run --any _claude_hooks",
+            "timeout": 4,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}

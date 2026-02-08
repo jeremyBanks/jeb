@@ -1,0 +1,85 @@
+HEAD: refs/heads/full-tree
+refs:
+  heads:
+    backend-subtree: e5d0f1f76f4b4e0dd29ea6301726a1f3e6376fa8
+    frontend-subtree: 800050a941630c781f05fd4ba8bcd8526a5d675e
+    full-tree: 2ec2c51bb575fa057121f4e7d27c065296ccf776
+a7753e:
+  message: commit 1
+  tree:
+    README.md: '# Full Stack App'
+    backend:
+      db.py: 'def connect(): pass'
+      server.py: 'def serve(): pass'
+    frontend:
+      app.js: console.log('app');
+      style.css: body { }
+1631b2:
+  author: git-zoom-in <git-zoom-in@localhost>
+  message: git-zoom-in seed for frontend
+  parents: []
+  tree: {}
+800050a941630c781f05fd4ba8bcd8526a5d675e:
+  message: |-
+    Merge from 'frontend'
+
+    git-zoom-in: frontend
+  parents:
+  - 1631b2
+  - a7753e
+  tree:
+    app.js:
+      //commit: a7753e
+      //path: frontend/app.js
+    style.css:
+      //commit: a7753e
+      //path: frontend/style.css
+    utils.js: export const util = () => {};
+df41a5:
+  author: git-zoom-out <git-zoom-out@localhost>
+  message: |-
+    Merge to 'frontend'
+
+    git-zoom-out: frontend
+  parents:
+  - a7753e
+  - 800050a941630c781f05fd4ba8bcd8526a5d675e
+  tree:
+    frontend:
+      utils.js:
+        //commit: 800050a941630c781f05fd4ba8bcd8526a5d675e
+        //path: utils.js
+e3892a:
+  author: git-zoom-in <git-zoom-in@localhost>
+  message: git-zoom-in seed for backend
+  parents: []
+  tree: {}
+e5d0f1f76f4b4e0dd29ea6301726a1f3e6376fa8:
+  message: |-
+    Merge from 'backend'
+
+    git-zoom-in: backend
+  parents:
+  - e3892a
+  - df41a5
+  tree:
+    db.py:
+      //commit: df41a5
+      //path: backend/db.py
+    routes.py: 'def routes(): pass'
+    server.py:
+      //commit: df41a5
+      //path: backend/server.py
+2ec2c51bb575fa057121f4e7d27c065296ccf776:
+  message: |-
+    Merge to 'backend'
+
+    git-zoom-out: backend
+  parents:
+  - df41a5
+  - e5d0f1f76f4b4e0dd29ea6301726a1f3e6376fa8
+  tree:
+    backend:
+      routes.py:
+        //commit: e5d0f1f76f4b4e0dd29ea6301726a1f3e6376fa8
+        //path: routes.py

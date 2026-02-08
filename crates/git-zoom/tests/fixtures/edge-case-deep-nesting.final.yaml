@@ -1,0 +1,73 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 75db4974c2ce6bcc2768f6b7dc9e2eac22f0f387
+f06308:
+  author: Tester <test@example.com>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  message: Repository with deeply nested structure
+  tree:
+    README.md: root
+    a:
+      b:
+        c:
+          d:
+            e:
+              f:
+                g:
+                  h:
+                    i:
+                      j:
+                        k:
+                          l:
+                            m:
+                              n:
+                                o:
+                                  p:
+                                    q:
+                                      r:
+                                        s:
+                                          t:
+                                            u:
+                                              v:
+                                                w:
+                                                  x:
+                                                    y:
+                                                      z:
+                                                        deep.txt: very deep file
+136d8a:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  committer: 🔎 <git-zoom-in@localhost>
+  message: Initial commit
+  parents: []
+  tree: {}
+9ccdc2:
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |-
+    Merge from 'a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z'
+
+    git-zoom-in: a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z
+  parents:
+  - 136d8a
+  - f06308
+  tree:
+    deep.txt:
+      //commit: f06308
+      //path: a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z/deep.txt
+75db4974c2ce6bcc2768f6b7dc9e2eac22f0f387:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |-
+    Merge to 'a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z'
+
+    git-zoom-out: a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z
+  parents:
+  - f06308
+  - 9ccdc2

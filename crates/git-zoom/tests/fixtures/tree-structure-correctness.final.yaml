@@ -1,0 +1,72 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 5289921504d7f7a9e603b5d7489a6a06a73eeee3
+'057668':
+  message: commit 1
+  tree:
+    a:
+      b:
+        c:
+          deep.txt: deep
+        mid.txt: mid
+      top.txt: top
+    root.txt: root
+136d8a:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  committer: 🔎 <git-zoom-in@localhost>
+  message: Initial commit
+  parents: []
+  tree: {}
+a3eaf3:
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |-
+    Merge from 'a/b'
+
+    git-zoom-in: a/b
+  parents:
+  - 136d8a
+  - '057668'
+  tree:
+    c:
+      deep.txt:
+        //commit: '057668'
+        //path: a/b/c/deep.txt
+    mid.txt:
+      //commit: '057668'
+      //path: a/b/mid.txt
+68775a:
+  author: User <user@localhost>
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  message: Add files
+  tree:
+    another.txt: at b level
+    c:
+      new.txt: new file
+5289921504d7f7a9e603b5d7489a6a06a73eeee3:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  committer: 🔍 <git-zoom-out@localhost>
+  message: |-
+    Merge to 'a/b'
+
+    git-zoom-out: a/b
+  parents:
+  - '057668'
+  - 68775a
+  tree:
+    a:
+      b:
+        another.txt:
+          //commit: 68775a
+          //path: another.txt
+        c:
+          new.txt:
+            //commit: 68775a
+            //path: c/new.txt

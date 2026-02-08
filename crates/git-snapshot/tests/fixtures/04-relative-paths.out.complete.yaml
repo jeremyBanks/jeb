@@ -1,0 +1,29 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 8cdded34091c50f0ec0ed7a1f0013e43feb8bb65
+720210cb0e6c3f71f061ec3a4ec311c7112dd317:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    bar:
+      c.txt: content c
+    foo:
+      a.txt: content a
+      b.txt: content b
+8cdded34091c50f0ec0ed7a1f0013e43feb8bb65:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - 720210cb0e6c3f71f061ec3a4ec311c7112dd317
+  tree:
+    c-moved.txt: content c
+    foo:
+      moved-b.txt: content b

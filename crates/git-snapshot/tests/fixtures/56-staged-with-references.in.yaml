@@ -1,0 +1,22 @@
+HEAD: 1
+1:
+  message: Initial commit
+  tree:
+    README.md: '# Project'
+    src:
+      lib.rs: pub fn main() {}
+    docs:
+      guide.md: '# Guide'
+
+# staged uses references to reuse content from HEAD
+staged:
+  README.md:
+    //commit: 1
+    //path: README.md
+  src:
+    lib.rs: pub fn main() { println!("staged"); }
+  docs:
+    guide.md:
+      //commit: 1
+      //path: docs/guide.md
+  NEW.md: New file in staging

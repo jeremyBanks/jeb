@@ -1,0 +1,16 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 1
+1:
+  author: "Jeremy Banks <_@jeremy.ca>"
+  author-date: "2026-01-02T21:10:36Z"
+  commit-date: "2026-01-02T21:10:36Z"
+  message: "Initial commit"
+  tree:
+    README.md: "root readme"
+    other.txt: "other file"
+    src:
+      lib:
+        foo.txt: "original"
+        bar.txt: "bar"

@@ -1,0 +1,32 @@
+[package]
+name = "inline"
+publish = false
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Self-modifying values that update their source code at runtime"
+repository = "https://github.com/jeremyBanks/inline"
+homepage = "https://github.com/jeremyBanks/inline"
+documentation = "https://docs.rs/inline"
+readme = "README.md"
+keywords = ["codegen", "self-modifying", "snapshot", "testing"]
+categories = ["development-tools", "development-tools::testing"]
+
+[dependencies]
+databake.workspace = true
+once_cell.workspace = true
+parking_lot.workspace = true
+proc-macro2 = { workspace = true, features = ["span-locations"] }
+quote.workspace = true
+syn = { workspace = true, features = ["full", "visit", "extra-traits"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[features]
+default = ["write"]
+_implicit_all = []
+no-write = []
+write = []
+

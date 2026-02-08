@@ -1,0 +1,53 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 4
+
+# Commit 1: Initial structure
+1:
+  tree:
+    README.md: "# Project Alpha"
+    src:
+      core:
+        engine.rs: "pub fn run() { /* v1 */ }"
+        utils.rs: "pub fn helper() {}"
+      api:
+        server.rs: "pub fn serve() {}"
+    docs:
+      guide.md: "# User Guide"
+
+# Commit 2: Rename src/core -> src/runtime, modify engine
+2:
+  tree:
+    README.md: "# Project Alpha\n\n## Version 2.0"
+    src:
+      runtime:
+        # Copy entire core directory with a rename
+        [commit]: 1
+        [path]: src/core
+        # But override engine.rs with new version
+        engine.rs: "pub fn run() { /* v2 - refactored */ }"
+      api:
+        # api stays the same (inherits from parent)
+    docs:
+      # docs stays the same
+
+# Commit 3: Move docs/guide.md to README-GUIDE.md at root
+3:
+  tree:
+    README-GUIDE.md:
+      [commit]: 1
+      [path]: docs/guide.md
+    # Everything else inherits from parent (commit 2)
+
+# Commit 4: Create new file that duplicates old utils.rs
+4:
+  tree:
+    src:
+      runtime:
+        # Keep existing files
+        # Add new shared.rs with same content as old utils.rs
+        shared.rs:
+          [commit]: 1
+          [path]: src/core/utils.rs

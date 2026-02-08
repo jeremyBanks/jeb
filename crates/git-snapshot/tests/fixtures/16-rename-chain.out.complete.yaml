@@ -1,0 +1,75 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 60d088dd0e92f130372207939aafb6b400f59ea3
+e698cf8d82745208736dc9ac36f3512379eb40be:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    original-name.txt: content that moves around
+    static.txt: never moves
+fafdc08d0197ef5ea80a453886f09c86a1e7f774:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - e698cf8d82745208736dc9ac36f3512379eb40be
+  tree:
+    renamed-once.txt: content that moves around
+f9c7f1b1eadda1c04ba303a04fb45b24b434d1e8:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents:
+  - fafdc08d0197ef5ea80a453886f09c86a1e7f774
+  tree:
+    renamed-twice.txt: content that moves around
+3be58949d937eabcc6b234ad4a120618885b590c:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: Committer <committer@localhost>
+  message: commit 4
+  parents:
+  - f9c7f1b1eadda1c04ba303a04fb45b24b434d1e8
+  tree:
+    renamed-thrice.txt: content that moves around
+32f67e9050b6918a7af829253931f8638a6ab0ef:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:29:28-06:24
+  commit-date: 2024-12-06T06:29:31-06:24
+  committer: Committer <committer@localhost>
+  message: commit 5
+  parents:
+  - 3be58949d937eabcc6b234ad4a120618885b590c
+  tree:
+    final-name.txt: content that moves around
+64cc88b1144b81e3d47420ee1de18da1f5c04f8c:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:33:44-06:24
+  commit-date: 2024-12-06T06:33:47-06:24
+  committer: Committer <committer@localhost>
+  message: commit 6
+  parents:
+  - 32f67e9050b6918a7af829253931f8638a6ab0ef
+  tree:
+    archive:
+      final-name.txt: content that moves around
+60d088dd0e92f130372207939aafb6b400f59ea3:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:38:00-06:24
+  commit-date: 2024-12-06T06:38:03-06:24
+  committer: Committer <committer@localhost>
+  message: commit 7
+  parents:
+  - 64cc88b1144b81e3d47420ee1de18da1f5c04f8c
+  tree:
+    restored.txt: content that moves around

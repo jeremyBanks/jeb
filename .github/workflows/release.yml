@@ -26,7 +26,7 @@ jobs:
           cargo publish --dry-run
 
       - name: Check version
-        run: ./scripts/check-version.sh
+        run: ./run check-version
 
       - name: Find baseline tag for semver check
         id: baseline
@@ -286,7 +286,7 @@ jobs:
           sed -i '/^pubkey = /d' crates/jeb/Cargo.toml
 
           # Run new-version.sh to bump to next dev version
-          ./scripts/new-version.sh
+          ./run new-version
 
           # Commit the changes
           git add Cargo.toml crates/jeb/Cargo.toml

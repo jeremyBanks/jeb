@@ -1,0 +1,15 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 3
+1:
+  tree:
+    file.txt: content
+2:
+  message: ''
+  tree:
+    file.txt: empty message commit
+3:
+  message: normal message
+  tree:
+    file.txt: final

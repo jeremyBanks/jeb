@@ -1,0 +1,63 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: 18125178bef74833e42996644ad942f68407ddad
+7be0b282ca4eacc5a12cffeefeffe0250e28ea7b:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:12:24-06:24
+  commit-date: 2024-12-06T06:12:27-06:24
+  committer: Committer <committer@localhost>
+  message: commit 1
+  parents: []
+  tree:
+    a:
+      b:
+        c:
+          d:
+            e:
+              f:
+                deep.txt: very deep file
+5e2611b908dd4a08925ddcaf65cb7122bf636b29:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:16:40-06:24
+  commit-date: 2024-12-06T06:16:43-06:24
+  committer: Committer <committer@localhost>
+  message: commit 2
+  parents:
+  - 7be0b282ca4eacc5a12cffeefeffe0250e28ea7b
+  tree:
+    x:
+      y:
+        z:
+          moved-deep.txt: very deep file
+7a3dbd86f976c2d2910ab15b8e2d6c12f29b30a1:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:20:56-06:24
+  commit-date: 2024-12-06T06:20:59-06:24
+  committer: Committer <committer@localhost>
+  message: commit 3
+  parents:
+  - 5e2611b908dd4a08925ddcaf65cb7122bf636b29
+  tree:
+    a:
+      b:
+        c:
+          d:
+            e:
+              f:
+                g:
+                  h:
+                    i:
+                      very-deep.txt: very deep file
+18125178bef74833e42996644ad942f68407ddad:
+  author: Author <author@localhost>
+  author-date: 2024-12-06T06:25:12-06:24
+  commit-date: 2024-12-06T06:25:15-06:24
+  committer: Committer <committer@localhost>
+  message: commit 4
+  parents:
+  - 7a3dbd86f976c2d2910ab15b8e2d6c12f29b30a1
+  tree:
+    flat-1.txt: very deep file
+    flat-2.txt: very deep file
+    flat-3.txt: very deep file

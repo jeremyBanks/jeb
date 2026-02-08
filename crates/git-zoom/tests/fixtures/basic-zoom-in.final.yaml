@@ -1,0 +1,41 @@
+HEAD: refs/heads/main
+refs:
+  heads:
+    main: b2846e80eaadc98ed2e8b82131068b43d374627e
+102b80:
+  author: Claude <noreply@anthropic.com>
+  author-date: 2024-12-06T12:36:24-06:24
+  commit-date: 2024-12-06T12:36:24-06:24
+  committer: 🔎 <git-zoom-in@localhost>
+  message: Initial commit
+  tree: {}
+ea2e71:
+  author: Jeremy Banks <_@jeremy.ca>
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  message: Initial commit
+  parents: []
+  tree:
+    README.md: root readme
+    src:
+      lib:
+        bar.txt: more code
+        foo.txt: library code
+b2846e80eaadc98ed2e8b82131068b43d374627e:
+  author-date: 2026-01-02T21:10:36Z
+  commit-date: 2026-01-02T21:10:36Z
+  committer: 🔎 <git-zoom-in@localhost>
+  message: |-
+    Merge from 'src/lib'
+
+    git-zoom-in: src/lib
+  parents:
+  - 102b80
+  - ea2e71
+  tree:
+    bar.txt:
+      //commit: ea2e71
+      //path: src/lib/bar.txt
+    foo.txt:
+      //commit: ea2e71
+      //path: src/lib/foo.txt

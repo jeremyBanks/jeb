@@ -1,0 +1,28 @@
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 3
+
+# Commit with nested files
+1:
+  tree:
+    outer.txt: "outer"
+    dir:
+      inner.txt: "inner"
+
+# Commit with root-level files
+2:
+  tree:
+    file-a.txt: "a"
+    file-b.txt: "b"
+
+# Try to embed commit 2's root into dir/
+3:
+  parents: [1]
+  tree:
+    # Keep outer.txt
+    # Replace dir/ with contents from commit 2
+    dir:
+      [commit]: 2
+      [path]: .

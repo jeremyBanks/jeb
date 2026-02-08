@@ -1,0 +1,23 @@
+# Test that unreachable commits are ignored during deserialization
+HEAD: refs/heads/main
+
+refs:
+  heads:
+    main: 3
+
+# This commit is unreachable from any ref
+1:
+  parents: []
+  tree:
+    unreachable.txt: "should be filtered out"
+
+# Root commit on main branch (not connected to commit 1)
+2:
+  parents: []
+  tree:
+    reachable.txt: "on main branch"
+
+3:
+  parents: [2]
+  tree:
+    reachable.txt: "also on main"
