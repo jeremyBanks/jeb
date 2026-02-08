@@ -636,7 +636,7 @@ pub fn main(args: Save) -> Result<()> {
     }
 
     let tree4 = tree.to_string()[..4].to_string().to_ascii_uppercase();
-    let n4 = format!("{}", graph_stats.commit_index);
+    let g4 = format!("{}", graph_stats.generation_index);
 
     // Determine target and whether to require letter suffix
     let (target_hex, letter_suffix) = if let Some(prefix) = args.prefix_hex.as_ref() {
@@ -645,7 +645,7 @@ pub fn main(args: Save) -> Result<()> {
         (tree4.clone(), false)
     } else {
         // Default: NNNN with any letter suffix [a-f]
-        (n4, true)
+        (g4, true)
     };
 
     let target = crate::hex::decode_hex_nibbles(target_hex);
