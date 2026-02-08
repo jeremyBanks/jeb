@@ -1,8 +1,0 @@
-{
-  "window.title": "🦀 ${activeEditorShort} ${dirty}",
-  "rust-analyzer.checkOnSave.command": "clippy",
-  "workbench.colorTheme": "1337",
-  "cSpell.words": [
-    "zipng"
-  ]
-}
