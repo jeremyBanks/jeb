@@ -5,7 +5,6 @@ use flate2::{read::GzDecoder, write::GzEncoder};
 
 use log::{debug, error, info, warn};
 use rand::seq::SliceRandom;
-use rand::prelude::*;
 use serde_json::{Deserializer as JsonDeserializer, Value as JsonValue};
 use std::{
     collections::{BTreeMap, HashSet},
