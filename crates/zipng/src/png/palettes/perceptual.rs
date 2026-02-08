@@ -508,7 +508,7 @@ fn hex_to_rgb(hex: &str) -> RGB8 {
 /// Returns a 256-color perceptually uniform palette.
 /// The control points are automatically reordered using sort_colors for better coherence.
 pub fn frozen() -> Vec<u8> {
-    let mut colors = [
+    let colors = [
         // purple navy gray pale white more purple
         "061B31", "533AFD", /*"50617A",*/ "F6F9FC", "635BFF", "FFFFFF"
         // // yellow orange pink red
