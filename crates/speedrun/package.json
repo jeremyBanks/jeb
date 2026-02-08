@@ -50,7 +50,7 @@
     "isomorphic-unfetch": "^3.0.0",
     "jq": "^1.7.2",
     "jq.node": "^2.1.2",
-    "next": "^9.3.5",
+    "next": "^15.5.10",
     "nprogress": "^0.2.0",
     "prettier": "^1.19.1",
     "react": "^16.13.1",
