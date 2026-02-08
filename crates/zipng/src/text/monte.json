@@ -1,0 +1,24 @@
+{
+  "x": 1,
+  "y": 1,
+  "dx": 20,
+  "dy": 11,
+  "w": 9,
+  "h": 11,
+  "b": 2,
+  "rows": [
+    "§!\"#$%&'",
+    "()*+,-./",
+    "01234567",
+    "89:;<=>?",
+    "@ABCDEFG",
+    "HIJKLMNO",
+    "PQRSTUVW",
+    "XYZ[\\]^_",
+    "`abcdefg",
+    "hijklmno",
+    "pqrstuvw",
+    "xyz{|}~¶"
+  ],
+  "name": "Monte Mono"
+}

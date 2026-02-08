@@ -1,0 +1,36 @@
+{
+  "name": "action",
+  "on": [
+    "push",
+    "pull_request",
+    "workflow_dispatch"
+  ],
+  "jobs": {
+    "rust": {
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "uses": "actions/checkout@v3"
+        },
+        {
+          "name": "rust build",
+          "run": "cargo build --locked"
+        },
+        {
+          "name": "rust formatting",
+          "run": "cargo fmt --check",
+          "continue-on-error": true
+        },
+        {
+          "name": "rust lint",
+          "run": "cargo clippy",
+          "continue-on-error": true
+        }
+        {
+          "name": "rust test",
+          "run": "cargo test --all"
+        }
+      ]
+    }
+  }
+}

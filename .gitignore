@@ -1,12 +1,21 @@
+*.crt
+*.dll
+*.exe
 *.git
+*.key
 *.local
 *.local.*
+*.so
 *.tmp
-.tmp/
 *.wasm
+.DS_Store
+.tmp/
+/data
 /examples/self.sh
 /history-pit/
-/target/
+/target
+/target*
+Thumbs.db
 
 # cargo-mutants output
 mutants.out/

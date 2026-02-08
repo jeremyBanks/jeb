@@ -108,3 +108,12 @@ they're not used consistently, so you probably won't need to interact with them,
 but we're providing this context so you understand what you're seeing, and in
 case related work is requested or required. Note that the `tracey` CLI is still
 in beta, and it's possible that it has bugs.
+
+---
+
+When comparing image files (e.g. verifying PNG output), use the image_diff
+example:
+
+    cargo run --example image_diff -- <old> <new>
+
+This provides a text summary of differences suitable for CI/agent use.

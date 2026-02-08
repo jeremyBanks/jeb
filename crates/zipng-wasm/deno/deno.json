@@ -1,0 +1,9 @@
+{
+  "tasks": {
+    "run": "deno run --allow-read --allow-write zipng-cli.ts",
+    "build-wasm": "./build.sh"
+  },
+  "compilerOptions": {
+    "lib": ["deno.window", "deno.unstable"]
+  }
+}
