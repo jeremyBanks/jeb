@@ -1,5 +1,8 @@
 [workspace]
-members = ["injector", "injection"]
+members = [
+    "crates/war2sr/injection",
+    "crates/war2sr/injector",
+]
 resolver = "2"
 
 [workspace.package]
