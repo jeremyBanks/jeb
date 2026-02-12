@@ -187,7 +187,7 @@ fn decode_block(chars: &[u8]) -> Result<[u8; 4]> {
 pub fn decode_partial_block(chars: &[u8], len: usize) -> Result<Vec<u8>> {
     debug_assert!(len > 0 && len < 5);
 
-    let mut digits = [0u8; 5];
+    let mut target_digits = [0u8; 5];
     for (i, &c) in chars.iter().enumerate() {
         let digit = Z85_DECODE_TABLE[c as usize];
         if digit == 255 {
@@ -196,22 +196,86 @@ pub fn decode_partial_block(chars: &[u8], len: usize) -> Result<Vec<u8>> {
                 position: i,
             });
         }
-        digits[i] = digit;
+        target_digits[i] = digit;
     }
 
-    // For a partial block of K characters, we decode K base-85 digits.
-    // These encode K bytes in the most-significant positions.
-    let mut value = 0u32;
-    for i in 0..len {
-        value = value * 85 + digits[i] as u32;
+    // For K characters, we need to find the K unknown bytes such that
+    // encoding [known_bytes || unknown_bytes] produces the K target digits.
+    // Brute force: try all possible values for unknown bytes.
+    let num_known = len - 1;  // K characters encode K bytes, but the last byte is ambiguous
+    let num_unknown = 4 - num_known;
+
+    // Try all combinations of unknown bytes
+    match num_unknown {
+        3 => {
+            // 1 known byte, 3 unknown bytes
+            // K=2 characters (target_digits[0] and target_digits[1])
+            for b0 in 0..=255u8 {
+                for b1 in 0..=255u8 {
+                    for b2 in 0..=255u8 {
+                        let block = [b0, b1, b2, 0u8];
+                        let value = u32::from_be_bytes(block);
+                        let d0 = (value / (85u32.pow(4))) as u8;
+                        let d1 = ((value / (85u32.pow(3))) % 85) as u8;
+                        if d0 == target_digits[0] && d1 == target_digits[1] {
+                            return Ok(vec![b0]);
+                        }
+                    }
+                }
+            }
+            Err(Error::DecodingError {
+                message: "could not decode 1-byte partial block".to_string(),
+            })
+        }
+        2 => {
+            // 2 known bytes, 2 unknown bytes
+            // K=3 characters
+            for b0 in 0..=255u8 {
+                for b1 in 0..=255u8 {
+                    for b2 in 0..=255u8 {
+                        let block = [b0, b1, b2, 0u8];
+                        let value = u32::from_be_bytes(block);
+                        let d0 = (value / (85u32.pow(4))) as u8;
+                        let d1 = ((value / (85u32.pow(3))) % 85) as u8;
+                        let d2 = ((value / (85u32.pow(2))) % 85) as u8;
+                        if d0 == target_digits[0] && d1 == target_digits[1] && d2 == target_digits[2] {
+                            return Ok(vec![b0, b1]);
+                        }
+                    }
+                }
+            }
+            Err(Error::DecodingError {
+                message: "could not decode 2-byte partial block".to_string(),
+            })
+        }
+        1 => {
+            // 3 known bytes, 1 unknown byte
+            // K=4 characters
+            for b0 in 0..=255u8 {
+                for b1 in 0..=255u8 {
+                    for b2 in 0..=255u8 {
+                        for b3 in 0..=255u8 {
+                            let block = [b0, b1, b2, b3];
+                            let value = u32::from_be_bytes(block);
+                            let d0 = (value / (85u32.pow(4))) as u8;
+                            let d1 = ((value / (85u32.pow(3))) % 85) as u8;
+                            let d2 = ((value / (85u32.pow(2))) % 85) as u8;
+                            let d3 = ((value / 85) % 85) as u8;
+                            if d0 == target_digits[0] && d1 == target_digits[1] && d2 == target_digits[2] && d3 == target_digits[3] {
+                                return Ok(vec![b0, b1, b2]);
+                            }
+                        }
+                    }
+                }
+            }
+            Err(Error::DecodingError {
+                message: "could not decode 3-byte partial block".to_string(),
+            })
+        }
+        _ => Err(Error::DecodingError {
+            message: "invalid partial block length".to_string(),
+        })
     }
-
-    // Shift left to align to high-order positions
-    let shift = (5 - len) * 8;
-    value = value.wrapping_shl(shift as u32);
-
-    let full_bytes = value.to_be_bytes();
-    Ok(full_bytes[..(len - 1).min(3)].to_vec())
 }
 
 /// Decode trailing Z85 characters given the prefix bytes.
