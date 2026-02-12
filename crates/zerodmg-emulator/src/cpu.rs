@@ -236,7 +236,27 @@ impl CPUController for GameBoy {
             instruction = self.instruction_from_pc();
         };
 
-        // Trace disabled
+        // Trace: show instructions after test name is printed (ser >= 23)
+        {
+            let serial_len = self.serial_output.len();
+            static TRACE_STARTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+            static TRACE_COUNT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+            if serial_len >= 23 {
+                TRACE_STARTED.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+            if TRACE_STARTED.load(std::sync::atomic::Ordering::Relaxed) {
+                let count = TRACE_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                if count < 500 {
+                    eprintln!("{:6}: {:20} SP={:04X} A={:02X} F={:02X} BC={:04X} DE={:04X} HL={:04X} ser={}",
+                        source, format!("{}", instruction),
+                        self.cpu.sp, self.cpu.a, self.cpu.f,
+                        u8s_to_u16(self.cpu.c, self.cpu.b),
+                        u8s_to_u16(self.cpu.e, self.cpu.d),
+                        u8s_to_u16(self.cpu.l, self.cpu.h),
+                        serial_len);
+                }
+            }
+        }
 
         let t_0 = self.cpu.t;
         let cycles;
@@ -255,30 +275,16 @@ impl CPUController for GameBoy {
             }
             HALT => {
                 // HALT: CPU stops advancing PC until an interrupt occurs.
-                // If IME=1: halt until interrupt, then dispatch it.
-                // If IME=0 but IE&IF!=0: halt bug — next instruction byte read twice.
-                // If IME=0 and IE&IF==0: halt until IE&IF becomes non-zero.
-                //
-                // Simplified: advance time until a pending interrupt exists.
-                // The next tick() call will either dispatch (if IME) or resume (if !IME).
-                let ie = self.cpu.ie;
-                let ift = self.cpu.ift;
-                if ie & ift != 0 {
-                    // Already a pending interrupt — resume immediately
-                    cycles = 1;
-                } else {
-                    // Advance video cycles until an interrupt fires
-                    // (up to one full frame = ~70224 cycles)
-                    let mut halt_cycles = 0u64;
-                    loop {
-                        halt_cycles += 1;
-                        self.video_cycle();
-                        if self.cpu.ie & self.cpu.ift != 0 || halt_cycles > 70224 {
-                            break;
-                        }
-                    }
-                    cycles = halt_cycles;
+                // If no interrupt pending (IE & IF == 0), hold PC at HALT so it
+                // re-executes next tick. The caller advances video/timer between
+                // ticks, which will eventually fire an interrupt.
+                // If interrupt pending, resume (PC already past HALT is correct).
+                if self.cpu.ie & self.cpu.ift == 0 {
+                    // No interrupt pending — stay at HALT instruction
+                    self.cpu.pc -= 1; // back up PC to re-execute HALT
                 }
+                // Either way, consume 1 cycle
+                cycles = 1;
                 tracer = None;
             }
             STOP(_unused) => {

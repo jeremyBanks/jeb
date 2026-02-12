@@ -45,7 +45,7 @@ impl BlarggTestRunner {
         let mut cycles: u64 = 0;
         let mut last_output_len = 0;
         let mut cycles_since_output = 0;
-        const IDLE_CYCLES_THRESHOLD: u64 = 2_000_000_000;
+        const IDLE_CYCLES_THRESHOLD: u64 = 500_000_000;
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             while cycles < max_cycles {
@@ -65,6 +65,17 @@ impl BlarggTestRunner {
                 if current_output_len > last_output_len {
                     last_output_len = current_output_len;
                     cycles_since_output = 0;
+
+                    // Check for test completion markers in output
+                    let output = gameboy.serial_output();
+                    if current_output_len >= 6 {
+                        let tail = &output[current_output_len.saturating_sub(20)..];
+                        let tail_str = String::from_utf8_lossy(tail);
+                        if tail_str.contains("Passed") || tail_str.contains("Failed") {
+                            // Give a little more time for final output
+                            cycles_since_output = IDLE_CYCLES_THRESHOLD.saturating_sub(10_000_000);
+                        }
+                    }
                 } else {
                     cycles_since_output += tick_cycles;
                 }
