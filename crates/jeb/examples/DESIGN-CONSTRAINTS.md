@@ -69,8 +69,10 @@ bytes — see §6 exit disambiguation — but never needs to scan forward.)
 binary-to-text encoding using 85 printable ASCII characters. It processes input
 in 4-byte blocks: each block is interpreted as a big-endian u32, then divided
 into 5 base-85 digits (most-significant first), each mapped to a character in
-the Z85 alphabet. This is a 4:5 expansion (~25% overhead). Input length must be
-a multiple of 4 bytes.
+the Z85 alphabet. This is a 4:5 expansion (~25% overhead). The original ZeroMQ
+spec requires input length to be a multiple of 4 bytes; we lift that restriction
+— arbitrary input lengths are supported, with partial final blocks handled the
+same way as mid-block boundary cuts (see §5-6).
 
 Extended Z85 is this same encoding with one addition: the encoder can
 opportunistically replace runs of Z85 blocks with an escape character followed
