@@ -241,56 +241,43 @@ default conventions.
 
 **Exit (suffix bytes → trailing characters):**
 
-| Bytes known | Characters emitted | Disambiguation needed | Naturally stable |
-|------------|-------------------|----------------------|-----------------|
-| 1 | 1 trailing (char 4) | ~7 bits | **0%** |
-| 2 | 2 trailing (chars 3-4) | ~4 bits | **0%** |
-| 3 | 3 trailing (chars 2-4) | ~2 bits | **0%** |
+| Bytes known | Characters emitted | Escape bits needed | Notes |
+|------------|-------------------|--------------------|-------|
+| 1 | 1 trailing (char 4) | ~2 bits | Decoder back-references raw bytes |
+| 2 | 2 trailing (chars 3-4) | ~4 bits | Same mechanism |
+| 3 | 3 trailing (chars 2-4) | ~2 bits | Same mechanism |
 
-### Exit Trailing Characters: Context-Dependent Stability
+### Exit Disambiguation Is Free (From Raw Context)
 
-The trailing Z85 characters are NOT "self-stable" — their values depend on ALL
-four bytes in the block, not just the known suffix bytes. Mathematically, since
-`gcd(256, 85) = 1`, the unknown high-order bytes can produce any residue mod
-any power of 85:
-
-- **char4:** `V mod 85 = (b0 + b1 + b2 + b3) mod 85` (all bytes contribute
-  equally because `2^8 ≡ 1 mod 85`)
-- **char3:** Unknown contribution hits all `85^2` residues
-- **char2:** Unknown contribution spans all `85^3` residues
-
-However, **the "unknown" bytes at an exit boundary are not unknown to the
-decoder.** They are the raw bytes the decoder already read. This is the critical
-insight:
-
-At an **exit boundary**, the block looks like `[raw raw raw | Z85]`. The first
-K bytes were part of the raw section — the decoder already has them. To decode
-the trailing Z85 character(s) for the remaining 4-K bytes, the decoder
-substitutes the known raw bytes into the block's Z85 arithmetic and solves for
-the boundary bytes.
+At an **exit boundary**, the block looks like `[raw raw raw | Z85]`. The
+bytes before the cut were part of the raw section — the decoder already has
+them. To decode the trailing Z85 character(s) for the remaining bytes, the
+decoder substitutes the known raw bytes into the block's Z85 arithmetic and
+solves for the boundary bytes.
 
 **Example (1-byte exit):** Block is `[b0 b1 b2 | b3]` where b0-b2 were raw.
-`char4 = (b0 + b1 + b2 + b3) mod 85`. Decoder knows b0, b1, b2 and char4,
-so `b3 = (char4 - b0 - b1 - b2) mod 85`... but b3 has 256 values and char4
-encodes only 85 residues. So ~3 candidates for b3 (need ~2 bits disambiguation
-— same as entry).
+The trailing character encodes `V mod 85 = (b0 + b1 + b2 + b3) mod 85`.
+The decoder knows b0, b1, b2 (from raw), and knows the character value, so it
+computes `b3 mod 85 = (char4_value - b0 - b1 - b2) mod 85`. Since b3 has 256
+possible values and mod 85 gives ~3 candidates per residue, the decoder needs
+~2 bits to pick the right one — but these bits can come from the raw context
+rather than from escape character info bits.
 
-**Contrast with entry boundaries:** At an entry, the block is `[Z85 | raw raw raw]`.
-The bytes after the cut are raw, but the decoder hasn't read them yet. The
-decoder must resolve disambiguation without forward context (using escape char
-info bits or other prefix data).
+**Contrast with entry boundaries:** At an entry, the block is
+`[Z85 | raw raw raw]`. The bytes after the cut are raw, but the decoder hasn't
+read them yet. The decoder must resolve disambiguation from the escape prefix
+(costly — uses limited escape char info bits).
 
 **Key asymmetry:**
-- **Entry:** Disambiguation must come from the escape prefix (costly — uses
-  escape char info bits)
-- **Exit:** Disambiguation can potentially use already-decoded raw bytes
-  (cheap — no escape bits needed, but requires the decoder to back-reference
-  recently decoded data)
+- **Entry:** ~2 bits disambiguation per boundary byte, must come from escape
+  prefix (costly)
+- **Exit:** ~2 bits disambiguation per boundary byte, can come from
+  already-decoded raw bytes (free in terms of escape budget, costs decoder
+  complexity)
 
-This means exit boundaries may be cheaper than entry boundaries in terms of
-escape char info budget, at the cost of slightly more complex decoder logic
-(back-referencing raw bytes). The trade-off between escape bit cost and decoder
-complexity is a design decision.
+Exit boundaries are **cheaper** than entry boundaries in escape bit budget.
+The cost is decoder complexity (back-referencing recently decoded raw data).
+This is exactly the kind of complexity this project is willing to accept (§9).
 
 ### Recommended Defaults
 
@@ -303,20 +290,19 @@ zeros in high bits, placing them far from `85^4` boundaries → higher stability
 68% baseline, likely higher for real data.
 
 **Exit: Trailing characters (LE), disambiguated from raw context** — The
-trailing characters are not self-stable, but the decoder already knows the
-"unknown" bytes (they were raw). The decoder can back-reference them to resolve
-disambiguation without spending escape char info bits. This makes exit
-boundaries potentially cheaper than entry boundaries.
+decoder already has the raw bytes from earlier in the block. It uses them to
+resolve the trailing Z85 characters without spending escape char info bits.
+This makes exit boundaries cheaper than entry boundaries in terms of escape
+budget.
 
-**The asymmetry is real but inverted from the original claim:**
-- Entry: 68% self-stable, 32% need escape-bit disambiguation (expensive)
-- Exit: 0% self-stable, but disambiguation is free from raw-byte context (cheap)
+**The asymmetry:**
+- Entry: ~2 bits/byte disambiguation from escape prefix (expensive, uses
+  limited info budget)
+- Exit: ~2 bits/byte disambiguation from already-decoded raw bytes (free in
+  escape budget, costs decoder complexity)
 
-Whether to use BE or LE at exit depends on decoder complexity tolerance. LE
-(trailing characters + raw back-reference) costs zero escape bits but requires
-decoder state. BE (leading characters) has 68% self-stability but needs
-escape bits for the remaining 32%. When budget allows, the escape character
-choice can signal which convention is in use (see §8).
+When budget allows, the escape character choice can signal which convention
+is in use (see §8).
 
 ### Rejected Alternative: Direct Byte Encoding
 
