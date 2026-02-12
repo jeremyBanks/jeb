@@ -506,8 +506,9 @@ impl CPUController for GameBoy {
             }
             CP_IMMEDIATE(value) => {
                 let a = self.cpu.a;
-                let delta = a.wrapping_sub(value);
-                self.set_znhc_flags(delta == 0, true, u8_get_bit(delta, 4), a < value);
+                let result = a.wrapping_sub(value);
+                let half_carry = (a & 0xF) < (value & 0xF);
+                self.set_znhc_flags(result == 0, true, half_carry, a < value);
                 let z_flag = self.z_flag();
                 let c_flag = self.c_flag();
                 cycles = 2;
