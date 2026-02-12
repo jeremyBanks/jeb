@@ -5,8 +5,8 @@
 
 use crate::error::{Error, Result};
 
-const Z85_ALPHABET: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
-const Z85_DECODE_TABLE: [u8; 256] = generate_decode_table();
+pub const Z85_ALPHABET: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
+pub const Z85_DECODE_TABLE: [u8; 256] = generate_decode_table();
 
 const fn generate_decode_table() -> [u8; 256] {
     let mut table = [255u8; 256];
@@ -77,7 +77,7 @@ pub fn encode_partial_block_leading(bytes: &[u8], output: &mut Vec<u8>) {
     block[..bytes.len()].copy_from_slice(bytes);
     let value = u32::from_be_bytes(block);
 
-    let digit4 = (value % 85) as u8;
+    let _digit4 = (value % 85) as u8;
     let digit3 = ((value / 85) % 85) as u8;
     let digit2 = ((value / (85 * 85)) % 85) as u8;
     let digit1 = ((value / (85 * 85 * 85)) % 85) as u8;
@@ -110,11 +110,11 @@ pub fn encode_trailing_bytes(prefix_bytes: &[u8], suffix_bytes: &[u8], output: &
     let digit4 = (value % 85) as u8;
     let digit3 = ((value / 85) % 85) as u8;
     let digit2 = ((value / (85 * 85)) % 85) as u8;
-    let digit1 = ((value / (85 * 85 * 85)) % 85) as u8;
-    let digit0 = (value / (85 * 85 * 85 * 85)) as u8;
+    let _digit1 = ((value / (85 * 85 * 85)) % 85) as u8;
+    let _digit0 = (value / (85 * 85 * 85 * 85)) as u8;
 
     let suffix_len = suffix_bytes.len();
-    let prefix_len = prefix_bytes.len();
+    let _prefix_len = prefix_bytes.len();
 
     // Emit trailing characters. For a suffix of length K, we emit K trailing chars
     // counting from the right (char 4, chars 3-4, chars 2-4 for K=1,2,3 respectively)
@@ -242,12 +242,12 @@ pub fn decode_trailing_chars(
     // We need to find b3 (or b2, b3 or b1, b2, b3 depending on suffix length).
 
     let prefix_sum: u32 = prefix_bytes.iter().map(|&b| b as u32).sum();
-    let digit_sum = digits.iter().take(trailing_chars.len()).map(|&d| d as u32).sum::<u32>();
+    let _digit_sum = digits.iter().take(trailing_chars.len()).map(|&d| d as u32).sum::<u32>();
 
     // Reconstruct by solving the modular arithmetic
     let mut suffix_bytes = Vec::new();
-    for i in 0..trailing_chars.len() {
-        let byte_index = prefix_bytes.len() + i;
+    for _i in 0..trailing_chars.len() {
+        let _byte_index = prefix_bytes.len() + _i;
 
         // For each byte, we need b_i such that when combined with others,
         // the trailing digit equation holds
