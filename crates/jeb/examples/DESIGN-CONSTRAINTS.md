@@ -25,7 +25,9 @@ We care about what the format *is*, not how hard it is to implement.
 **Self-signaling.** The presence of non-Z85 characters (escape chars) in the
 output self-signals that this is extended Z85, not standard Z85. A standard Z85
 decoder will reject the escape characters as invalid. This is acceptable —
-extended Z85 is a superset, not a drop-in replacement.
+extended Z85 is a superset, not a drop-in replacement. Conversely, standard Z85
+output (no escape characters) is valid extended Z85 — the encoder simply chose
+not to use any raw sections.
 
 **Data distribution.** Stability percentages in §5 and §6 assume uniformly
 random byte values. Real data (small integers, ASCII-adjacent values, structured
@@ -272,6 +274,9 @@ to determines stability:
 - If `b0` straddles a boundary → 2 possible leading digits: unstable, need
   ~2 bits to disambiguate which one
 
+Of 256 possible byte values for `b0`, 174 map to exactly 1 leading digit
+(stable) and 82 straddle a `85^4` boundary (unstable): 174/256 ≈ 68%.
+
 For 2-byte and 3-byte cuts, the same logic applies at finer granularity, with
 stability improving because more bits are known.
 
@@ -511,10 +516,11 @@ characters occupy positions that would otherwise be raw.
 Exit disambiguation is free (from raw context, §6), so it doesn't consume
 escape budget.
 
-Minimum for mid-block both ends: 4 entry positions × 4 exit positions × 4
+Worst-case for mid-block both ends: 4 entry positions × 4 exit positions × 4
 entry disambiguation candidates = **64 combinations** needed before any length
-encoding. (The "4 disambiguation candidates" is the worst case for a 1-byte
-entry cut; deeper cuts need more candidates but are less common.)
+encoding. This is a ceiling — aligned cuts need 0 disambiguation, and 68% of
+1-byte cuts are stable (also 0). The 4 disambiguation candidates apply only to
+the ~32% of 1-byte cuts that are unstable.
 
 ### Information Capacity: N Escape Characters × 1 Overhead Character
 
