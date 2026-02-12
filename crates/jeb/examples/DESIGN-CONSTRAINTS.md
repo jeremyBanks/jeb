@@ -40,6 +40,20 @@ relative to the raw section or any other reference point.
 sequential order, matching the input stream. Endianness discussion (§6) applies
 only to how partial Z85 blocks encode boundary bytes, not to raw data ordering.
 
+**Raw byte values.** The decoder imposes no restriction on what bytes appear in
+a raw section — it knows the length from the prefix and passes bytes through
+without validation. The *encoder* decides which bytes to include based on the
+desired compatibility profile: by default, any byte that wouldn't change the
+output's compatibility characteristics (Z85 alphabet characters, escape
+characters, and other printable ASCII that the output already uses). The encoder
+may allow user overrides for specialized use cases. This is an encoder policy
+decision, not a format constraint.
+
+**Multiple raw sections.** A single encoded stream can contain multiple raw
+sections interleaved with standard Z85 blocks. Each raw section is independent
+(its own escape, length, boundary handling). There is no limit on the number
+of raw sections per stream.
+
 ## 1. Mental Model
 
 This is a **standard Z85 stream** with opportunistic escape sequences that allow
