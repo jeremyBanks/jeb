@@ -236,27 +236,7 @@ impl CPUController for GameBoy {
             instruction = self.instruction_from_pc();
         };
 
-        // Trace: show instructions after test name is printed (ser >= 23)
-        {
-            let serial_len = self.serial_output.len();
-            static TRACE_STARTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-            static TRACE_COUNT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-            if serial_len >= 23 {
-                TRACE_STARTED.store(true, std::sync::atomic::Ordering::Relaxed);
-            }
-            if TRACE_STARTED.load(std::sync::atomic::Ordering::Relaxed) {
-                let count = TRACE_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                if count < 500 {
-                    eprintln!("{:6}: {:20} SP={:04X} A={:02X} F={:02X} BC={:04X} DE={:04X} HL={:04X} ser={}",
-                        source, format!("{}", instruction),
-                        self.cpu.sp, self.cpu.a, self.cpu.f,
-                        u8s_to_u16(self.cpu.c, self.cpu.b),
-                        u8s_to_u16(self.cpu.e, self.cpu.d),
-                        u8s_to_u16(self.cpu.l, self.cpu.h),
-                        serial_len);
-                }
-            }
-        }
+        // Tracing disabled
 
         let t_0 = self.cpu.t;
         let cycles;
