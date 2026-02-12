@@ -319,12 +319,20 @@ These require discussion and decision before a specification can be written:
    - Is the layout fixed, or does it vary based on escape char choice or
      raw section length?
 
-5. **Termination signaling:** How does the decoder know when a raw section
-   ends? Options include:
-   - Length prefix (explicit byte count before raw data)
-   - Sentinel/escape at the end (scan until non-raw char)
-   - Implicit from block alignment (raw ends at next Z85 block boundary)
-   - Hybrid (length for short, sentinel for long)
+5. **Length encoding method:** The decoder must know the raw section length
+   before it starts reading raw bytes (no scanning/sentinels). Acceptable
+   options:
+   - Implicit in escape char choice (e.g., different escapes for different
+     length classes)
+   - Explicit in prefix data (chars between escape and raw bytes encode
+     length)
+   - Special case: a "raw to end of input" escape where length is unknown
+     upfront but no termination detection is needed (everything remaining
+     is raw)
+   
+   Length information MUST appear before the raw data, never after.
+   Sentinels are rejected — the decoder should not scan through raw bytes
+   to find their end.
 
 ## 11. Related Design Theme
 
