@@ -19,6 +19,9 @@ influence your work here.
 - **Commit extremely often.** After every meaningful change, commit. Don't batch.
 - **NEVER rewrite history** — no `--force`, no `--amend`, no `rebase -i`, no
   `reset --hard` on pushed commits. Once committed, it stays forever.
+  **One exception:** if you notice *immediately* after committing (before push
+  or any further commits) that you included something you didn't mean to, you
+  may amend or soft-reset that single commit to fix it. That's it.
 - **No force push.** Ever. If push fails, figure out why.
 
 This repository has a messy history with bloated binary files in old commits.
