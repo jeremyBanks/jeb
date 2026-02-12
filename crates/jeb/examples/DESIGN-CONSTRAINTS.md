@@ -683,7 +683,14 @@ Grouped by dependency:
    blocks between them? If so, what separates them? If not, what's the minimum
    Z85 gap?
 
-## 13. Design Philosophy
+## 13. Test Expectations
+
+See [TEST-EXPECTATIONS.md](./TEST-EXPECTATIONS.md) for a companion document
+describing the test cases an implementation must cover. It enumerates cases
+across all sections of this document — standard Z85 baseline, mid-block
+boundaries, non-aligned lengths, position invariant, edge cases, and more.
+
+## 14. Design Philosophy
 
 This encoding shares a core value with zipng: **transparency** — making binary
 data legible without breaking the container format. zipng embeds ZIP archives in
