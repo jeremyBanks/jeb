@@ -3,6 +3,43 @@
 *Living document. Captures the invariants, constraints, and analytical findings
 that will inform the final design. Not a specification — a foundation for one.*
 
+## 0. Assumptions
+
+These are stated up front to avoid burying them in later sections.
+
+**Motivation.** Z85 encodes arbitrary binary data as printable ASCII, expanding
+4 bytes into 5 characters (~25% overhead). When the input already contains
+printable ASCII (text strings, human-readable headers, structured data), that
+overhead is pure waste — the bytes are already printable. This design extends
+Z85 with escape sequences that let the encoder pass those bytes through raw,
+eliminating the overhead for text-heavy regions.
+
+**Encoder/decoder asymmetry.** The encoder is smart; the decoder is simple. The
+encoder decides opportunistically when raw passthrough is beneficial. The decoder
+just follows unambiguous rules to reconstruct the original bytes. The format
+doesn't need to be optimal for all inputs — just unambiguous for any valid
+encoding.
+
+**Self-signaling.** The presence of non-Z85 characters (escape chars) in the
+output self-signals that this is extended Z85, not standard Z85. A standard Z85
+decoder will reject the escape characters as invalid. This is acceptable —
+extended Z85 is a superset, not a drop-in replacement.
+
+**Data distribution.** Stability percentages in §5 and §6 assume uniformly
+random byte values. Real data (small integers, ASCII-adjacent values, structured
+headers) will often have higher stability rates. The uniform-random case
+represents a conservative baseline, not a worst case — an adversarial encoder
+could always avoid unstable cuts. The percentages describe "what fraction of
+byte values allow a stable cut at this position."
+
+**Block alignment.** "Block-aligned" always means aligned to Z85's 4-byte /
+5-character block boundaries relative to the **start of the Z85 stream**, not
+relative to the raw section or any other reference point.
+
+**Raw byte order.** Bytes within raw sections appear in their original
+sequential order, matching the input stream. Endianness discussion (§6) applies
+only to how partial Z85 blocks encode boundary bytes, not to raw data ordering.
+
 ## 1. Mental Model
 
 This is a **standard Z85 stream** with opportunistic escape sequences that allow
@@ -14,21 +51,28 @@ raw (unencoded) byte passthrough. Not a new format — Z85 with extensions.
 
 All Z85-encoded portions of the output must appear at the **exact same character
 positions** as they would in a standard Z85 encoding of the same input data.
+The position invariant applies to Z85 blocks that remain Z85-encoded — raw
+sections replace Z85 blocks entirely and occupy the same character positions
+those blocks would have used.
 
 This means:
-- Output length is always **equal to or slightly shorter than** standard Z85
-  (never longer)
-- Escape sequences + raw bytes + padding must consume exactly the character
-  positions that standard Z85 would have used for those bytes
+- Output length is always **≤ standard Z85 length** for the same input (the
+  savings come from raw sections using N characters instead of `⌈N×5/4⌉`)
+- Escape sequences + raw bytes + overhead must consume exactly the character
+  positions that standard Z85 would have used for those input bytes
 - Visual diff between our output and standard Z85 output shows identical Z85
   blocks in identical positions — escape sequences *replace* Z85 blocks, they
   don't shift them
 
+This is a **constraint the encoder must satisfy**. Any encoding that violates
+position invariance is invalid, regardless of whether the decoder could
+reconstruct the bytes.
+
 **Exception — mid-block transitions:** When we cut a Z85 block partway through
 to begin or end a raw section, the partial block's Z85 characters might differ
 from what standard Z85 would produce (because we're encoding fewer bytes with a
-different convention). This is acceptable as long as it's unambiguous and the
-characters are valid Z85.
+different convention). This is acceptable as long as the decoder can
+unambiguously reconstruct the original bytes.
 
 ### P2: Context Compatibility
 
@@ -52,14 +96,19 @@ more than quantity:
 
 ## 3. Escape Detection & Decoder Constraints
 
-The escape mechanism can span multiple 5-char blocks. The decoder should never
-need more than ~1 block of lookahead beyond the block it's currently decoding
-(guideline, not hard limit). A non-Z85 escape character must appear within that
-window so the decoder knows to enter escape interpretation mode.
+A non-Z85 escape character signals the transition from standard Z85 decoding to
+raw passthrough. The escape character must appear within the character positions
+of the Z85 block(s) being replaced — practically, within ~5 characters of the
+transition point. (This is a design target, not yet a hard specification. The
+exact bound depends on layout decisions in §10 Q4.)
 
-Raw sections can be **any byte length** (not constrained to multiples of 5
-characters). The encoding is opportunistic — if a given length at a given
-alignment would cause problems, the encoder simply doesn't use it.
+The decoder must know the raw section length **before reading raw bytes** (see
+§9). No scanning or sentinel detection.
+
+Raw sections can be **any byte length** (not constrained to multiples of 4 bytes
+or 5 characters). The encoding is opportunistic — if a given length at a given
+alignment would cause problems (insufficient budget, unstable boundary), the
+encoder simply doesn't use it.
 
 ## 4. Character Compatibility Analysis
 
@@ -98,11 +147,11 @@ Ranked by the cost of using them as escape characters:
 
 ### Context Compatibility Summary
 
-| Context | Z85 already breaks? | Additional break chars |
-|---------|---------------------|----------------------|
+| Context | Z85 already breaks? | Additional break characters |
+|---------|---------------------|---------------------------|
 | JSON double-quoted strings | **NO** | `"` `\` |
 | Shell single-quoted strings | **NO** | `'` |
-| CSV unquoted fields | **NO** | `,` `"` (`;` `\|` in variants) |
+| CSV unquoted fields | **NO** | `,` `"` (`;` `|` in variants) |
 | TOML basic strings | **NO** | `"` `\` |
 | SQL single-quoted strings | **NO** | `'` (`\` in some dialects) |
 | URL components | YES | (free) |
@@ -116,141 +165,180 @@ Ranked by the cost of using them as escape characters:
 
 ### Key Insight
 
-The previous design (IDEATION.md) used all 6 chars from Tiers 1-2:
+The previous design (IDEATION.md) used all 6 characters from Tiers 1-2:
 `_` `~` `` ` `` `|` `,` `;`. This preserves JSON string compatibility — likely
-the most important context for jeb. The number of escape characters and how
-their information capacity is allocated is a central design decision (see §7).
+the most important context for jeb. This constraints document leaves the escape
+character count as an open design decision (§10 Q1). The number of escape
+characters and how their information capacity is allocated is central to the
+design (see §8).
 
-## 5. Mid-Block Stability
+## 5. Mid-Block Stability (Entry Boundaries)
 
-When cutting a Z85 block after K bytes to start a raw section, the emitted
-partial Z85 characters may or may not be "stable" (determined regardless of the
-unknown bytes' values).
+This section analyzes **entry boundaries** — where the encoder cuts a Z85 block
+to begin a raw section, emitting partial Z85 characters for the bytes before
+the cut. Exit boundaries are analyzed separately in §6.
 
-| Cut position | Chars emitted | Stable (%) | Disambiguation bits when not |
-|-------------|--------------|------------|------------------------------|
-| After 1 byte | 1 leading char | 68.0% | 2 bits (3-4 candidates) |
-| After 2 bytes | 2 leading chars | 89.3% | 4 bits (~9-10 candidates) |
-| After 3 bytes | 3 leading chars | 96.4% | 5 bits (~27-28 candidates) |
+When cutting a Z85 block after K known bytes, the K+1 leading Z85 characters
+may or may not be "stable" (uniquely determined regardless of the unknown
+bytes' values).
 
-These percentages assume uniformly random byte values. For realistic data
-(small integers, ASCII-adjacent values), stability rates may be higher.
+**Definition:** Stability = the fraction of byte values (for the known bytes)
+where the leading Z85 characters are the same for ALL possible values of the
+remaining unknown bytes. In other words: positions where the encoder can emit
+partial Z85 characters without needing disambiguation.
+
+| Cut after K bytes | Characters emitted | Stable (%) | Disambiguation bits when not |
+|-------------------|-------------------|------------|------------------------------|
+| 1 | 1 leading character | 68.0% | ~2 bits (3-4 candidates) |
+| 2 | 2 leading characters | 89.3% | ~4 bits (~9-10 candidates) |
+| 3 | 3 leading characters | 96.4% | ~5 bits (~27-28 candidates) |
 
 ### Why These Numbers
 
-Z85 encodes 4-byte blocks as big-endian u32, then extracts base-85 digits from
-most-significant to least-significant. The leading Z85 digit `c0 = V / 85^4`
-depends primarily on the high byte. Stability fails when the unknown low bytes
-could push V across an `85^4` boundary.
+Z85 encodes 4-byte blocks as big-endian u32 (`V`), then extracts base-85 digits
+most-significant first. The leading digit `c0 = V / 85^4` depends primarily on
+the first byte. Stability fails when the unknown low bytes could push V across
+a `85^4` boundary (where `85^4 = 52,200,625`).
 
-Each `c0` value maps to 3 or 4 byte values:
-- 72 out of 82 `c0` values → 3 byte candidates (need 2 bits)
-- 10 out of 82 `c0` values → 4 byte candidates (need 2 bits)
+For a 1-byte entry cut, the first byte `b0` maps to a range
+`[b0 × 2^24, (b0+1) × 2^24 - 1]` of width `2^24 = 16,777,216`. This range
+spans at most one `85^4` boundary. When it doesn't cross a boundary, the
+leading character is stable.
 
-The pattern: `256 / 85 ≈ 3.01`, so most digits cover exactly 3 byte values,
-with every ~8th covering 4.
+Of the 85 possible leading-digit values (0–84), the number that each `b0` maps
+to determines stability:
+- If `b0` maps to exactly 1 leading digit: stable (68% of byte values)
+- If `b0` straddles a boundary → 2 possible leading digits: unstable, need
+  ~2 bits to disambiguate which one
+
+For 2-byte and 3-byte cuts, the same logic applies at finer granularity, with
+stability improving because more bits are known.
 
 ## 6. Entry vs Exit Boundary Symmetry
 
 ### The Key Insight
 
-Entry and exit boundaries have **roughly the same disambiguation cost** (~2 bits
-per boundary byte). The asymmetry isn't about one being "free" and the other
-"impossible" — it's about **where in the 5-char Z85 block** the stable
-information lives:
+Entry and exit boundaries have the **same cost structure** (~2 bits of
+disambiguation per boundary byte) but **different stability profiles** due to
+the position of known bytes within the Z85 block. This motivates asymmetric
+default conventions.
 
 - **Entry boundary:** Known bytes are at the START of the block (high-order in
-  Z85's big-endian convention). Information lives in the **leading** Z85 chars.
+  Z85's big-endian convention). Information lives in the **leading** Z85
+  characters.
 - **Exit boundary:** Known bytes are at the END of the block (low-order).
-  Information lives in the **trailing** Z85 chars.
+  Information lives in the **trailing** Z85 characters.
 
 ### Stability by Position
 
-**Entry (prefix bytes → leading chars):**
+**Entry (prefix bytes → leading characters):**
 
-| Bytes known | Bits captured | Disambiguation | Naturally stable |
-|------------|--------------|----------------|-----------------|
-| 1 | ~6.4 (char 0) | ~2 bits | 68% |
-| 2 | ~12.8 (chars 0-1) | ~4 bits | 89% |
-| 3 | ~19.2 (chars 0-2) | ~5 bits | 96% |
+| Bytes known | Characters emitted | Disambiguation needed | Naturally stable |
+|------------|-------------------|----------------------|-----------------|
+| 1 | 1 leading (char 0) | ~2 bits | 68% |
+| 2 | 2 leading (chars 0-1) | ~4 bits | 89% |
+| 3 | 3 leading (chars 0-2) | ~5 bits | 96% |
 
-**Exit (suffix bytes → trailing chars):**
+**Exit (suffix bytes → trailing characters):**
 
-| Bytes known | Bits captured | Disambiguation | Trailing char stable |
-|------------|--------------|----------------|---------------------|
-| 1 | ~6.4 (char 4) | ~2 bits | **100%** |
-| 2 | ~12.8 (chars 3-4) | ~4 bits | — |
-| 3 | ~19.2 (chars 2-4) | ~5 bits | — |
+| Bytes known | Characters emitted | Disambiguation needed | Last character stable |
+|------------|-------------------|----------------------|----------------------|
+| 1 | 1 trailing (char 4) | ~2 bits | **100%** |
+| 2 | 2 trailing (chars 3-4) | ~4 bits | (not yet analyzed) |
+| 3 | 3 trailing (chars 2-4) | ~5 bits | (not yet analyzed) |
 
 The 100% stability for single-byte exit comes from a mathematical property:
-`0xFFFFFF00 mod 85 = 0`, meaning the last Z85 digit depends only on the low
-byte regardless of the high bytes.
+`0xFFFFFF00 mod 85 = 0`, meaning the last Z85 digit (`V mod 85`) depends only
+on the low byte regardless of the upper bytes' values.
 
-### Recommended Defaults (When No Budget to Signal Endianness)
+**TODO:** Analyze stability of the trailing 2 and 3 characters for multi-byte
+exit boundaries. If trailing pairs are also highly stable, the exit-LE case
+is even stronger.
 
-**Entry: BE (leading chars)** — The byte just before a raw section tends to be a
-small value (length field, type tag, null terminator). Small values have zeros
-in high bits, placing them far from `85^4` boundaries → higher stability. 68%
-baseline, likely higher for real data.
+### Recommended Defaults
 
-**Exit: Trailing chars (effectively LE)** — The trailing Z85 digit is 100%
+When the encoding has no budget to signal which convention is in use (e.g.,
+tight budget with only 1 escape character), these defaults apply:
+
+**Entry: BE (leading characters)** — The byte just before a raw section tends to
+be a small value (length field, type tag, null terminator). Small values have
+zeros in high bits, placing them far from `85^4` boundaries → higher stability.
+68% baseline, likely higher for real data.
+
+**Exit: Trailing characters (effectively LE)** — The trailing Z85 digit is 100%
 stable regardless of byte value. Since the first byte after a raw section is
 less predictable, guaranteed stability wins.
 
 This asymmetric default is natural, not arbitrary: entry and exit use different
 ends of the Z85 character block because the known bytes occupy different
-positions within the block.
+positions within the block. When budget allows, the escape character choice can
+override these defaults for specific data (see §8).
 
 ### Rejected Alternative: Direct Byte Encoding
 
-Instead of using Z85's natural leading/trailing chars for boundary bytes, we
-could encode them directly: map K bytes → K+1 Z85 chars via a bijection
+Instead of using Z85's natural leading/trailing characters for boundary bytes,
+we could encode them directly: map K bytes → K+1 Z85 characters via a bijection
 independent of the block's other bytes. This gives 100% stability (no
 disambiguation needed) at the cost of 1 extra character per boundary.
 
-| Approach | Chars used | Disambiguation | Total cost |
-|----------|-----------|----------------|-----------|
-| Natural (leading/trailing) | K | ~2 bits/byte | K chars + ~2K info bits |
-| Direct encoding | K+1 | 0 | K+1 chars |
+| Approach | Characters used | Disambiguation cost | Total cost |
+|----------|----------------|--------------------|-----------| 
+| Natural (leading/trailing) | K | ~2 bits/byte from escape char info | K characters + borrowed info bits |
+| Direct encoding | K+1 | 0 | K+1 characters |
 
 **Natural wins for tight budgets.** At budget=2 (8 raw bytes), natural uses 1
-char + 1 escape = 2 chars of budget, with disambiguation packed into the escape
-char's information bits. Direct encoding would need 2 chars + 1 escape = 3 chars
-of budget — doesn't fit.
+character + 1 escape = 2 characters of budget, with disambiguation packed into
+the escape character's information bits. Direct encoding would need 2 characters
++ 1 escape = 3 characters — doesn't fit.
 
-The key insight: each escape char choice provides ~1-2.6 bits of free
-information (depending on how many escape chars exist). Those bits can carry
-disambiguation more efficiently than spending a full extra Z85 character
-(~6.4 bits) on it. The "different level" optimization is in how escape char
-info bits are spent, not in the boundary byte encoding itself.
+The key insight: each escape character choice provides `log2(N)` bits of free
+information (where N is the number of distinct escape characters). Those bits
+can carry disambiguation more efficiently than spending a full extra Z85
+character (~6.4 bits of capacity) on it.
 
 ## 7. Padding Budget
 
-For N raw bytes, standard Z85 uses `⌈N × 5/4⌉` characters. Raw passthrough
-uses N characters. The difference is the budget for escape characters, length
-encoding, disambiguation bits, and padding.
+**Budget** = `⌈N × 5/4⌉ - N`: the number of Z85 characters that standard
+encoding would use for N bytes, minus the N characters consumed by raw
+passthrough. This budget must cover: escape character(s), length encoding,
+disambiguation bits, and any padding.
 
-| Raw bytes | Z85 chars | Budget | Notes |
-|-----------|-----------|--------|-------|
-| 1-4 | 2-5 | 1 | Escape char only. No disambiguation. |
-| 5-8 | 7-10 | 2 | Escape + 1 char for length/disambig |
-| 9-12 | 12-15 | 3 | Escape + length + disambig (comfortable) |
+| Raw bytes | Standard Z85 characters | Budget | Notes |
+|-----------|------------------------|--------|-------|
+| 4 | 5 | 1 | Escape only. No mid-block cuts. |
+| 5-8 | 7-10 | 2 | Escape + 1 character |
+| 9-12 | 12-15 | 3 | Comfortable for most cases |
 | 13-16 | 17-20 | 4 | Comfortable for all cases |
-| N (large) | ~5N/4 | ~N/4 | Abundant budget |
+| N (large) | ~5N/4 | ~N/4 | Abundant |
+
+### Break-Even Analysis
+
+At 4 raw bytes: standard Z85 = 5 characters, raw passthrough = 4 bytes + 1
+escape = 5 characters. **Zero net savings.** The benefit is transparency (raw
+bytes are readable), not compactness. Net character savings begin at 5+ raw
+bytes (budget ≥ 2, with at least 1 character saved after escape overhead).
+
+For larger raw sections, savings grow linearly: N raw bytes save approximately
+`N/4 - overhead` characters compared to standard Z85.
 
 ### Budget Requirements for Mid-Block Transitions
 
 | Configuration | Minimum budget needed |
 |--------------|---------------------|
-| Block-aligned, no length | 1 (escape only) |
-| Block-aligned, with length | 2 (escape + length char) |
-| Mid-block entry OR exit | 2 (escape + disambig) |
-| Mid-block both + length | 4 (escape + length + 2 disambig) |
+| Block-aligned, no explicit length | 1 (escape only) |
+| Block-aligned, with length | 2 (escape + length character) |
+| Mid-block entry OR exit | 2 (escape + disambiguation) |
+| Mid-block both + length | 4 (escape + length + 2× disambiguation) |
+
+Note: "block-aligned, no explicit length" at budget=1 requires the escape
+character alone to imply the raw section length. This is only possible if a
+specific escape character is dedicated to a specific length (spending one of the
+available escape characters on this case).
 
 ### Critical Thresholds
 
 - **4 bytes (budget=1):** Block-aligned raw only. No mid-block cuts. Length
-  must be implied by escape char choice.
+  must be implied by escape character choice.
 - **5-8 bytes (budget=2):** Mid-block cut at ONE boundary possible. Tight.
 - **9-12 bytes (budget=3):** Mid-block at both boundaries feasible.
 - **13+ bytes (budget=4+):** Everything works comfortably.
@@ -258,34 +346,50 @@ encoding, disambiguation bits, and padding.
 ## 8. The Escape Character Budget
 
 Each escape character beyond Z85's 85 is a precious resource. It costs context
-compatibility (§4) and provides information at a critical decision point.
+compatibility (§4) and provides information at critical decision points.
 
-**What those bits could encode** (mutually exclusive uses):
+The choice of which escape character to use at a given point provides
+`log2(N)` bits of information, where N is the total number of escape characters.
+These bits can be **multiplexed** across different purposes — they aren't
+limited to one use per character. For example, with 4 escape characters (2 bits):
+the high bit could signal endianness while the low bit signals a length class.
+
+**What escape character info bits could encode** (can be combined):
 - Endianness of boundary blocks (BE vs LE)
-- Different raw sequence lengths
-- Entry vs exit boundary conventions
-- Disambiguation information for mid-block cuts
+- Length class (short vs long raw sections)
+- Entry/exit boundary convention
+- Part of disambiguation information for mid-block cuts
 
-| Escape chars | Info bits | Example allocation |
-|-------------|----------|-------------------|
-| 1 | 0 | Fixed conventions, one raw length |
-| 2 | 1 | BE/LE choice, OR 2 length classes |
-| 3 | ~1.6 | Above + 1 more option |
-| 4 | 2 | BE/LE × 2 length classes |
+| Escape characters | Info bits (`log2(N)`) | Example allocation |
+|------------------|----------------------|-------------------|
+| 1 | 0 | Fixed conventions, length implicit |
+| 2 | 1 | BE/LE, OR 2 length classes |
+| 3 | ~1.6 | 3-way split (e.g., short/long/to-end) |
+| 4 | 2 | Endianness × length class |
 | 6 | ~2.6 | Full IDEATION.md design |
 
 The number and allocation of escape characters is **undecided**. The analysis
 above maps the constraint space; the choice depends on which capabilities matter
 most for real-world data.
 
+### Information Flow Constraint
+
+For escape character info bits to carry disambiguation, the decoder must
+encounter the escape character **before** it needs to decode the boundary block.
+This constrains the layout: the escape character must precede (or be part of)
+the prefix that appears before raw data. This is compatible with the length-
+before-data constraint (§9) — both require a prefix-oriented layout.
+
 ## 9. Resolved Design Decisions
 
 These were open questions; they've been answered:
 
-- **Minimum raw section length: 4 bytes.** There is no reason the minimum
-  would be higher. Even with budget=1 (escape char only), a 4-byte
-  block-aligned raw section works. The encoder is opportunistic — it uses
-  whatever works at each point.
+- **Minimum raw section length: 4 bytes.** The format supports raw sections as
+  short as 4 bytes. At this length, budget=1, which only allows block-aligned
+  sections with length implied by escape character choice. There are no net
+  character savings (5 characters either way), but transparency (readable raw
+  bytes) is still valuable. The encoder is opportunistic — it uses raw sections
+  wherever they fit and provide value.
 
 - **Mid-block cuts: support both entry AND exit.** We are being opportunistic;
   if a mid-block cut is possible and beneficial, do it. Both boundaries should
@@ -295,49 +399,55 @@ These were open questions; they've been answered:
   accepts high complexity in exchange for value. The asymmetric convention is
   well-motivated by the mathematics (§6) and will be carefully specified.
 
+- **Length before data; no sentinels.** The decoder must know the raw section
+  length before reading raw bytes. Length is encoded either implicitly (in the
+  escape character choice) or explicitly (in prefix characters between the
+  escape and the raw data). Sentinels are rejected. Special case: a "raw to end
+  of input" escape where no termination is needed.
+
 ## 10. Open Design Questions
 
-These require discussion and decision before a specification can be written:
+These require discussion and decision before a specification can be written.
+Grouped by dependency:
 
-1. **How many escape characters?** Tiers 1-2 give us up to 6 without breaking
-   JSON. What's the right number?
+### Design Logic
 
-2. **What information does each escape char encode?** Endianness? Length?
-   Disambiguation? Position-dependent meaning?
+1. **How many escape characters?** Tiers 1-2 give up to 6 without breaking
+   JSON. What's the right number? Does the layout complexity scale with the
+   number of escape characters, or is there a unified layout that works for any?
+
+2. **What information does each escape character encode?** The `log2(N)` bits
+   can be multiplexed across endianness, length classes, disambiguation, and
+   boundary conventions. What's the optimal allocation?
+
+### Layout & Encoding
 
 3. **How are disambiguation bits laid out?** Where in the output stream do they
-   go? What encodes them (Z85 chars? escape char choice? position within block?)
+   go? Are they encoded as part of the escape character choice, as padding
+   characters, or as part of a length prefix? How does this interact with the
+   information flow constraint (§8)?
 
-4. **Raw block internal layout:** Beyond the raw bytes themselves, what is the
-   syntax and ordering of the non-raw components? Specifically:
-   - Where does the escape char go relative to the raw data? (Before? After?
-     Multiple positions?)
-   - Where does length information go? (Implicit in escape choice? Explicit
-     prefix? Explicit suffix? Run until next escape/Z85?)
-   - Where do padding chars go? (Between escape and raw? After raw? Split?)
+4. **Raw block internal layout:** What is the syntax and ordering of non-raw
+   components? Specifically:
+   - Where does the escape character go relative to the raw data?
+   - Where does length information go? (Implied by escape? Explicit prefix?)
+   - Where do padding characters go?
    - Where do disambiguation bits for entry/exit boundary blocks go?
-   - Is the layout fixed, or does it vary based on escape char choice or
+   - Is the layout fixed, or does it vary based on escape character choice or
      raw section length?
 
-5. **Length encoding method:** The decoder must know the raw section length
-   before it starts reading raw bytes (no scanning/sentinels). Acceptable
-   options:
-   - Implicit in escape char choice (e.g., different escapes for different
-     length classes)
-   - Explicit in prefix data (chars between escape and raw bytes encode
-     length)
-   - Special case: a "raw to end of input" escape where length is unknown
-     upfront but no termination detection is needed (everything remaining
-     is raw)
-   
-   Length information MUST appear before the raw data, never after.
-   Sentinels are rejected — the decoder should not scan through raw bytes
-   to find their end.
+### Edge Cases
+
+5. **Stream boundaries:** Does the entry/exit analysis change at the very start
+   or end of the encoded stream (no preceding/following Z85 block)?
+
+6. **Consecutive raw sections:** Can two raw sections be adjacent with no Z85
+   blocks between them? If so, what separates them? If not, what's the minimum
+   Z85 gap?
 
 ## 11. Related Design Theme
 
-This encoding shares a design philosophy with
-[zipng](https://github.com/nickel-org/zipng): making binary data more
+This encoding shares a design philosophy with zipng: making binary data more
 transparent. zipng embeds ZIP archives in PNG images (binary data visually
 transparent via an image format). Extended Z85 embeds raw text in Z85 encoding
 (binary data textually transparent via a text encoding). Both optimize for
