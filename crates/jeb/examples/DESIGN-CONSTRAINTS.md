@@ -98,16 +98,16 @@ Position:     01234  56789  ABCDE
 **Extended Z85** could pass the middle block through raw, saving 1 character:
 
 ```
-Extended:     rZUgH  _Hell  0sjjE       (14 characters: 5+1+4+4≈14, 1 saved)
+Extended:     rZUgH  _Hell  0sjjE       (15 characters: 5+1+4+5)
 Position:     01234  5 6789  ABCDE
 ```
 
 Here `_` is the escape character signaling "the next 4 bytes are raw." The
 Z85 blocks at positions 0-4 and 10-14 are **identical** to standard Z85 (the
 position invariant). The escape + raw bytes replace the 5 characters that
-block 1 would have occupied, using only 5 characters (1 escape + 4 raw) vs 5
-standard — zero savings here, but "Hell" is now readable. With longer raw
-sections, the savings grow: N raw bytes use N+overhead vs ⌈N×5/4⌉ standard.
+block 1 would have occupied, using 5 characters (1 escape + 4 raw) — zero net
+savings at this size, but "Hell" is now readable. With longer raw sections,
+the savings grow: N raw bytes use N+overhead vs ⌈N×5/4⌉ standard.
 
 *(This example uses block-aligned boundaries for simplicity. Mid-block
 transitions — cutting partway through a Z85 block — are analyzed in §5-6.)*
