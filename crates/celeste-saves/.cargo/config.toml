@@ -1,0 +1,2 @@
+[env]
+RUST_LOG="warn,celeste_saves=debug"

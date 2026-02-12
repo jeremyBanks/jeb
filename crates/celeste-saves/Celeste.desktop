@@ -1,0 +1,14 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Categories=Game;
+Comment=
+Exec=/home/deck/.cargo/build/debug/celeste-saves
+GenericName=
+Icon=steam_icon_504230
+MimeType=
+Name=Celeste
+Path=
+StartupNotify=true
+Terminal=false
+TerminalOptions=
+Type=Application

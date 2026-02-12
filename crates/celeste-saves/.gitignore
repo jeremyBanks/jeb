@@ -1,0 +1,6 @@
+.DS_Store
+**/*.rs.bk
+/target
+error_log.txt
+steam_autocloud.vdf
+/logs
