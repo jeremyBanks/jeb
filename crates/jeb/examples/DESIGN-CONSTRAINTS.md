@@ -243,32 +243,39 @@ default conventions.
 
 | Bytes known | Characters emitted | Disambiguation needed | Naturally stable |
 |------------|-------------------|----------------------|-----------------|
-| 1 | 1 trailing (char 4) | ~7 bits | 0% |
-| 2 | 2 trailing (chars 3-4) | ~4 bits | (analysis pending) |
-| 3 | 3 trailing (chars 2-4) | ~2 bits | (analysis pending) |
+| 1 | 1 trailing (char 4) | ~7 bits | **0%** |
+| 2 | 2 trailing (chars 3-4) | ~4 bits | **0%** |
+| 3 | 3 trailing (chars 2-4) | ~2 bits | **0%** |
 
-### ⚠️ Correction: Exit Trailing Char Is NOT Stable
+### ⚠️ Correction: ALL Exit Trailing Characters Are 0% Stable
 
 An earlier version of this document claimed 100% stability for the trailing
-character based on `0xFFFFFF00 mod 85 = 0`. **This was wrong.** The reasoning
-error: `0xFFFFFF00` is one specific value of the unknown bytes (all `0xFF`),
-not a proof that `V mod 85` is independent of the unknown bytes.
+character based on `0xFFFFFF00 mod 85 = 0`. **This was wrong.**
 
-The actual math: since `2^8 ≡ 2^16 ≡ 2^24 ≡ 1 (mod 85)`, we get
-`V mod 85 = (b0 + b1 + b2 + b3) mod 85`. The trailing Z85 digit depends on
-the **sum of all four bytes mod 85**, not just the low byte. As the unknown
-bytes vary, this sum takes all 85 possible residues → **0% stability**.
+**The root cause:** `gcd(256, 85) = 1`. Since 256 and 85 are coprime, powers
+of 256 generate all residues modulo any power of 85. This means unknown bytes
+in the high positions can produce ANY residue in the low Z85 digits:
 
-This means exit boundaries are **worse** than entry boundaries for partial
-Z85 characters, not better. The entry leading character has 68% stability
-because the quotient `V / 85^4` is dominated by the high byte. The exit
-trailing character has 0% stability because the modulus `V mod 85` mixes
-all bytes equally.
+- **char4:** `V mod 85 = (b0 + b1 + b2 + b3) mod 85` (since `2^8 ≡ 1 mod 85`).
+  Unknown bytes sweep all 85 residues → 0% stable.
+- **char3:** Unknown contribution `(b0×766 + b1×511) mod 7225` hits all 7225
+  values → 0% stable.
+- **char2:** Unknown `b0` crosses ~2322 `85^2` boundaries per step → 0% stable.
 
-However, the disambiguation cost structure is still symmetric (~2 bits per
-boundary byte). The difference is that exit boundaries **always** need
-disambiguation for the trailing character, while entry boundaries need it
-only 32% of the time for the leading character.
+**Contrast with entry (leading characters):** The leading Z85 digit
+`c0 = V / 85^4` divides by `85^4 = 52,200,625`. Since `2^24 = 16,777,216`
+is much smaller than `85^4`, the unknown low bytes can shift V by at most
+`~2^24`, which crosses at most one `85^4` boundary. This is why entry leading
+characters have 68% stability — the division by a large power of 85 suppresses
+the contribution of low-order bytes.
+
+Exit trailing characters use modulo (small power of 85), which does the
+opposite — it **amplifies** the contribution of high-order bytes (because
+`256^k mod 85^j` generates all residues when gcd(256, 85) = 1).
+
+**Implication:** Exit boundaries always need disambiguation for trailing
+characters. Entry boundaries need disambiguation only 32% of the time (1-byte
+cut). This strongly favors BE (leading characters) at both boundaries.
 
 ### Recommended Defaults
 
