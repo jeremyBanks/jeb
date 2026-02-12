@@ -28,8 +28,8 @@ extended Z85 is a superset, not a drop-in replacement.
 **Data distribution.** Stability percentages in §5 and §6 assume uniformly
 random byte values. Real data (small integers, ASCII-adjacent values, structured
 headers) will often have higher stability rates. The uniform-random case
-represents a conservative baseline, not a worst case — an adversarial encoder
-could always avoid unstable cuts. The percentages describe "what fraction of
+represents a conservative baseline, not a worst case — adversarial input could
+maximize unstable boundaries, but the encoder can always avoid unstable cuts. The percentages describe "what fraction of
 byte values allow a stable cut at this position."
 
 **Block alignment.** "Block-aligned" always means aligned to Z85's 4-byte /
@@ -56,37 +56,41 @@ of raw sections per stream.
 
 ## 1. Mental Model
 
-This is a **standard Z85 stream** with opportunistic escape sequences that allow
-raw (unencoded) byte passthrough. Not a new format — Z85 with extensions.
+Standard Z85 encodes every 4 input bytes as a big-endian u32, then extracts
+5 base-85 digits from most-significant to least-significant, mapping each digit
+to a character in the Z85 alphabet. This is a 4:5 expansion (~25% overhead).
+
+Extended Z85 is this same encoding with one addition: the encoder can
+opportunistically replace runs of Z85 blocks with an escape character followed
+by the raw input bytes themselves. The raw bytes pass through unencoded,
+eliminating overhead for regions that are already printable.
 
 ## 2. Priority Order
 
 ### P1: Correctness & The Position Invariant
 
-All Z85-encoded portions of the output must appear at the **exact same character
-positions** as they would in a standard Z85 encoding of the same input data.
-The position invariant applies to Z85 blocks that remain Z85-encoded — raw
-sections replace Z85 blocks entirely and occupy the same character positions
-those blocks would have used.
+Every **complete Z85 block** that remains Z85-encoded must produce the exact
+same characters at the exact same positions (relative to the start of the
+standard Z85 encoding) as it would in a standard Z85 encoding of the same
+input. Raw sections replace Z85 blocks — the escape + raw bytes + overhead
+consume exactly the character positions those blocks would have occupied.
 
 This means:
 - Output length is always **≤ standard Z85 length** for the same input (the
   savings come from raw sections using N characters instead of `⌈N×5/4⌉`)
-- Escape sequences + raw bytes + overhead must consume exactly the character
-  positions that standard Z85 would have used for those input bytes
-- Visual diff between our output and standard Z85 output shows identical Z85
-  blocks in identical positions — escape sequences *replace* Z85 blocks, they
-  don't shift them
+- Each retained Z85 block is byte-for-byte identical to its standard Z85
+  encoding and occupies the same position in the original layout
 
 This is a **constraint the encoder must satisfy**. Any encoding that violates
 position invariance is invalid, regardless of whether the decoder could
 reconstruct the bytes.
 
-**Exception — mid-block transitions:** When we cut a Z85 block partway through
-to begin or end a raw section, the partial block's Z85 characters might differ
-from what standard Z85 would produce (because we're encoding fewer bytes with a
-different convention). This is acceptable as long as the decoder can
-unambiguously reconstruct the original bytes.
+**Partial blocks at boundaries:** When the encoder cuts a Z85 block partway
+through to begin or end a raw section, the partial block's Z85 characters may
+differ from what standard Z85 would produce (because they encode fewer bytes
+using a different convention). This is acceptable as long as the decoder can
+unambiguously reconstruct the original bytes. Partial blocks are a separate
+case from the position invariant above, not an exception to it.
 
 ### P2: Context Compatibility
 
@@ -255,11 +259,11 @@ default conventions.
 
 **Exit (suffix bytes → trailing characters):**
 
-| Bytes known | Characters emitted | Escape bits needed | Notes |
-|------------|-------------------|--------------------|-------|
-| 1 | 1 trailing (char 4) | ~2 bits | Decoder back-references raw bytes |
-| 2 | 2 trailing (chars 3-4) | ~4 bits | Same mechanism |
-| 3 | 3 trailing (chars 2-4) | ~2 bits | Same mechanism |
+| Bytes known | Characters emitted | Disambiguation needed | Source |
+|------------|-------------------|----------------------|--------|
+| 1 | 1 trailing (char 4) | ~2 bits | Raw context (free) |
+| 2 | 2 trailing (chars 3-4) | ~4 bits | Raw context (free) |
+| 3 | 3 trailing (chars 2-4) | ~5 bits | Raw context (free) |
 
 ### Exit Disambiguation Is Free (From Raw Context)
 
@@ -270,7 +274,8 @@ decoder substitutes the known raw bytes into the block's Z85 arithmetic and
 solves for the boundary bytes.
 
 **Example (1-byte exit):** Block is `[b0 b1 b2 | b3]` where b0-b2 were raw.
-The trailing character encodes `V mod 85 = (b0 + b1 + b2 + b3) mod 85`.
+The trailing character encodes `V mod 85`. Since `2^8 ≡ 2^16 ≡ 2^24 ≡ 1
+(mod 85)`, this simplifies to `(b0 + b1 + b2 + b3) mod 85`.
 The decoder knows b0, b1, b2 (from raw), and knows the character value, so it
 computes `b3 mod 85 = (char4_value - b0 - b1 - b2) mod 85`. Since b3 has 256
 possible values and mod 85 gives ~3 candidates per residue, the decoder needs
@@ -456,8 +461,10 @@ characters occupy positions that would otherwise be raw.
 Exit disambiguation is free (from raw context, §6), so it doesn't consume
 escape budget.
 
-Minimum for mid-block both ends: 4×4×4 = **64 combinations** needed for
-cuts + disambiguation, before any length encoding.
+Minimum for mid-block both ends: 4 entry positions × 4 exit positions × 4
+entry disambiguation candidates = **64 combinations** needed before any length
+encoding. (The "4 disambiguation candidates" is the worst case for a 1-byte
+entry cut; deeper cuts need more candidates but are less common.)
 
 ### Information Capacity: N Escape Characters × 1 Overhead Character
 
