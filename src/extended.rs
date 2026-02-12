@@ -96,19 +96,53 @@ fn encode_partial_block_leading(bytes: &[u8], output: &mut Vec<u8>) {
     }
 }
 
-/// Encode a raw section with simple length encoding.
+/// Encode a raw section with Z85-encoded length.
 fn encode_raw_section(raw_data: &[u8], output: &mut Vec<u8>) {
     debug_assert!(raw_data.len() >= MIN_RAW_LEN);
 
     output.push(ESCAPE);
 
-    // Length encoded as 2-byte big-endian u16
-    let len = raw_data.len() as u16;
-    output.push((len >> 8) as u8);
-    output.push((len & 0xFF) as u8);
+    // Length encoded in Z85 alphabet (3 characters encode up to 614,125)
+    let len = raw_data.len() as u32;
+    encode_length_z85(len, output);
 
     // Raw data passes through as-is
     output.extend_from_slice(raw_data);
+}
+
+/// Encode a length value using Z85 alphabet.
+fn encode_length_z85(len: u32, output: &mut Vec<u8>) {
+    // Use 3 Z85 characters to encode the length
+    let d0 = (len / (85 * 85)) as u8;
+    let d1 = ((len / 85) % 85) as u8;
+    let d2 = (len % 85) as u8;
+    output.push(z85::Z85_ALPHABET[d0 as usize]);
+    output.push(z85::Z85_ALPHABET[d1 as usize]);
+    output.push(z85::Z85_ALPHABET[d2 as usize]);
+}
+
+/// Decode a Z85-encoded length value.
+fn decode_length_z85(chars: &[u8]) -> Result<u32> {
+    if chars.len() < 3 {
+        return Err(Error::InvalidEscapeSequence {
+            position: 0,
+            reason: "length encoding requires 3 Z85 characters".to_string(),
+        });
+    }
+
+    let d0 = z85::Z85_DECODE_TABLE[chars[0] as usize];
+    let d1 = z85::Z85_DECODE_TABLE[chars[1] as usize];
+    let d2 = z85::Z85_DECODE_TABLE[chars[2] as usize];
+
+    if d0 == 255 || d1 == 255 || d2 == 255 {
+        return Err(Error::InvalidEscapeSequence {
+            position: 0,
+            reason: "invalid Z85 character in length".to_string(),
+        });
+    }
+
+    let len = (d0 as u32) * 85 * 85 + (d1 as u32) * 85 + (d2 as u32);
+    Ok(len)
 }
 
 /// Decode extended Z85 with raw sections.
@@ -123,29 +157,27 @@ pub fn decode(input: &[u8]) -> Result<Vec<u8>> {
             // Raw section
             input_pos += 1;
 
-            if input_pos + 2 > input.len() {
+            if input_pos + 3 > input.len() {
                 return Err(Error::InvalidEscapeSequence {
                     position: input_pos - 1,
-                    reason: "escape requires 2-byte length".to_string(),
+                    reason: "escape requires 3-character Z85 length".to_string(),
                 });
             }
 
-            // Decode 2-byte big-endian length
-            let len_hi = input[input_pos] as u16;
-            let len_lo = input[input_pos + 1] as u16;
-            let len = (len_hi << 8) | len_lo;
-            input_pos += 2;
+            // Decode 3-character Z85-encoded length
+            let len = decode_length_z85(&input[input_pos..input_pos + 3])? as usize;
+            input_pos += 3;
 
-            if input_pos + len as usize > input.len() {
+            if input_pos + len > input.len() {
                 return Err(Error::TruncatedRawSection {
-                    expected: len as usize,
+                    expected: len,
                     got: input.len().saturating_sub(input_pos),
                 });
             }
 
             // Raw data passes through
-            output.extend_from_slice(&input[input_pos..input_pos + len as usize]);
-            input_pos += len as usize;
+            output.extend_from_slice(&input[input_pos..input_pos + len]);
+            input_pos += len;
         } else if is_z85_char(c) {
             // Z85 character
             if input_pos + 5 <= input.len() {

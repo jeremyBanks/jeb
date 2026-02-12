@@ -215,9 +215,12 @@ fn test_all_printable_input_20_bytes() {
 
 #[test]
 fn test_all_printable_input_100_bytes() {
-    let input = b"0123456789abcdefghij0123456789abcdefghij0123456789abcdefghij0123456789abcdefghij0123456789ab";
+    let mut input = Vec::new();
+    for _ in 0..10 {
+        input.extend_from_slice(b"0123456789");
+    }
     assert_eq!(input.len(), 100);
-    let encoded = encode(input);
+    let encoded = encode(&input);
     let decoded = decode(&encoded).expect("failed to decode");
     assert_eq!(decoded, input);
 }
@@ -474,7 +477,7 @@ fn test_escape_character_detection() {
     let encoded = encode(input);
     for &c in &encoded {
         // Should be either Z85 alphabet or escape characters
-        assert!(is_valid_extended_char(c), "invalid character: {}", c as char);
+        assert!(is_valid_extended_char(c), "invalid character: 0x{:02x} ({})", c, c as char);
     }
 }
 
