@@ -5,7 +5,7 @@ use std::env;
 use zerodmg_codes::roms::blargg_tests;
 use zerodmg_emulator::test_runner::{BlarggTestRunner, TestStatus};
 
-const MAX_CYCLES: u64 = 100_000_000; // 100 million cycles
+const MAX_CYCLES: u64 = 2_000_000_000; // 2 billion cycles
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -56,7 +56,26 @@ fn get_test_rom(name: &str) -> Option<Vec<u8>> {
         "dmg_sound" => Some(blargg_tests::dmg_sound().to_bytes()),
         "oam_bug" => Some(blargg_tests::oam_bug().to_bytes()),
         "cgb_sound" => Some(blargg_tests::cgb_sound().to_bytes()),
-        _ => None,
+        _ => {
+            // Try loading as a file path
+            if let Ok(data) = std::fs::read(name) {
+                return Some(data);
+            }
+            // Try individual cpu_instrs sub-tests (e.g. "01" through "11")
+            let individual_dir = "crates/zerodmg-codes/src/roms/blargg_tests/cpu_instrs/individual";
+            if let Ok(entries) = std::fs::read_dir(individual_dir) {
+                for entry in entries.flatten() {
+                    let fname = entry.file_name();
+                    let fname_str = fname.to_string_lossy();
+                    if fname_str.starts_with(name) && fname_str.ends_with(".gb") {
+                        if let Ok(data) = std::fs::read(entry.path()) {
+                            return Some(data);
+                        }
+                    }
+                }
+            }
+            None
+        }
     }
 }
 

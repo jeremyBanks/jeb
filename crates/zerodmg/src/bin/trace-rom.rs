@@ -1,4 +1,4 @@
-//! Run a ROM with instruction tracing to debug test failures.
+//! Run a ROM — just capture serial output over time, no instruction trace.
 
 use std::env;
 use std::fs;
@@ -20,12 +20,14 @@ fn main() {
     let mut gb = GameBoy::new_skip_boot(rom, output_buffer);
 
     let mut cycles: u64 = 0;
-    let max_instrs = 100_000u64;
-    let mut last_instrs: Vec<String> = Vec::new();
-    let keep_last = 50;
+    let max_cycles: u64 = 5_000_000_000; // 5B cycles — about 5 seconds of GB time
+    let mut last_serial_len = 0;
+    let mut serial_text = String::new();
 
-    for i in 0..max_instrs {
-        let _pc = gb.pc();
+    // Print a status every 500M cycles
+    let mut next_status = 500_000_000u64;
+
+    while cycles < max_cycles {
         let opex = gb.tick();
         let tick_cycles = opex.t_1 - opex.t_0;
         for _ in 0..tick_cycles {
@@ -33,31 +35,37 @@ fn main() {
             gb.timer_cycle();
         }
         cycles += tick_cycles;
-        
-        let mut line = format!("{:6}: {:<24}", format!("{}", opex.source), format!("{}", opex.instruction));
-        if let Some(ref tracer) = opex.tracer {
-            line.push_str(&format!(" ; {}", tracer()));
+
+        // Check for new serial output
+        let serial = gb.serial_output();
+        if serial.len() > last_serial_len {
+            let new_bytes = &serial[last_serial_len..];
+            let s = String::from_utf8_lossy(new_bytes);
+            // Print each new character with its cycle count
+            for c in s.chars() {
+                if c == '\n' {
+                    eprintln!("[cycle {}] serial: \\n", cycles);
+                } else {
+                    eprintln!("[cycle {}] serial: '{}'", cycles, c);
+                }
+            }
+            serial_text.push_str(&s);
+            last_serial_len = serial.len();
+            
+            // Check for pass/fail
+            if serial_text.contains("Passed") || serial_text.contains("Failed") {
+                eprintln!("[cycle {}] --- TEST COMPLETED ---", cycles);
+                break;
+            }
         }
         
-        if i < 30 {
-            println!("{}", line);
+        if cycles >= next_status {
+            eprintln!("[cycle {}] --- {} bytes of serial output so far ---", cycles, serial_text.len());
+            next_status += 500_000_000;
         }
-        
-        last_instrs.push(line);
-        if last_instrs.len() > keep_last {
-            last_instrs.remove(0);
-        }
-    }
-    
-    println!("\n--- Last {} instructions (of {} total, {} cycles) ---", keep_last, max_instrs, cycles);
-    for line in &last_instrs {
-        println!("{}", line);
     }
     
     println!("\n--- After {} cycles ---", cycles);
-    println!("Final PC: 0x{:04X}", gb.pc());
-    println!("Serial output: {} bytes", gb.serial_output().len());
-    if !gb.serial_output().is_empty() {
-        println!("Output: {}", String::from_utf8_lossy(gb.serial_output()));
-    }
+    println!("Serial output ({} bytes):", serial_text.len());
+    println!("{}", serial_text);
 }

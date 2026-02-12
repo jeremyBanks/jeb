@@ -2,7 +2,7 @@
 
 mod audio;
 pub mod cpu;
-mod memory;
+pub mod memory;
 pub mod test_runner;
 pub mod video;
 

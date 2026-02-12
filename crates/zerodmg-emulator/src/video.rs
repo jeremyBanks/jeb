@@ -3,7 +3,7 @@ use super::GameBoy;
 use image::{GenericImage, GenericImageView};
 
 // seems to be the right value to meet the apparent framerate
-const CYCLES_PER_LINE: u64 = 113;
+const CYCLES_PER_LINE: u64 = 114;
 
 /// Game Boy video memory state
 pub struct VideoData {
