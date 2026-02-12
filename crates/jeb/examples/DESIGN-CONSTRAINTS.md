@@ -241,19 +241,34 @@ default conventions.
 
 **Exit (suffix bytes → trailing characters):**
 
-| Bytes known | Characters emitted | Disambiguation needed | Last character stable |
-|------------|-------------------|----------------------|----------------------|
-| 1 | 1 trailing (char 4) | ~2 bits | **100%** |
-| 2 | 2 trailing (chars 3-4) | ~4 bits | (not yet analyzed) |
-| 3 | 3 trailing (chars 2-4) | ~5 bits | (not yet analyzed) |
+| Bytes known | Characters emitted | Disambiguation needed | Naturally stable |
+|------------|-------------------|----------------------|-----------------|
+| 1 | 1 trailing (char 4) | ~7 bits | 0% |
+| 2 | 2 trailing (chars 3-4) | ~4 bits | (analysis pending) |
+| 3 | 3 trailing (chars 2-4) | ~2 bits | (analysis pending) |
 
-The 100% stability for single-byte exit comes from a mathematical property:
-`0xFFFFFF00 mod 85 = 0`, meaning the last Z85 digit (`V mod 85`) depends only
-on the low byte regardless of the upper bytes' values.
+### ⚠️ Correction: Exit Trailing Char Is NOT Stable
 
-**TODO:** Analyze stability of the trailing 2 and 3 characters for multi-byte
-exit boundaries. If trailing pairs are also highly stable, the exit-LE case
-is even stronger.
+An earlier version of this document claimed 100% stability for the trailing
+character based on `0xFFFFFF00 mod 85 = 0`. **This was wrong.** The reasoning
+error: `0xFFFFFF00` is one specific value of the unknown bytes (all `0xFF`),
+not a proof that `V mod 85` is independent of the unknown bytes.
+
+The actual math: since `2^8 ≡ 2^16 ≡ 2^24 ≡ 1 (mod 85)`, we get
+`V mod 85 = (b0 + b1 + b2 + b3) mod 85`. The trailing Z85 digit depends on
+the **sum of all four bytes mod 85**, not just the low byte. As the unknown
+bytes vary, this sum takes all 85 possible residues → **0% stability**.
+
+This means exit boundaries are **worse** than entry boundaries for partial
+Z85 characters, not better. The entry leading character has 68% stability
+because the quotient `V / 85^4` is dominated by the high byte. The exit
+trailing character has 0% stability because the modulus `V mod 85` mixes
+all bytes equally.
+
+However, the disambiguation cost structure is still symmetric (~2 bits per
+boundary byte). The difference is that exit boundaries **always** need
+disambiguation for the trailing character, while entry boundaries need it
+only 32% of the time for the leading character.
 
 ### Recommended Defaults
 
@@ -265,14 +280,21 @@ be a small value (length field, type tag, null terminator). Small values have
 zeros in high bits, placing them far from `85^4` boundaries → higher stability.
 68% baseline, likely higher for real data.
 
-**Exit: Trailing characters (effectively LE)** — The trailing Z85 digit is 100%
-stable regardless of byte value. Since the first byte after a raw section is
-less predictable, guaranteed stability wins.
+**Exit: Also BE (leading characters)** — With the trailing character 100%
+stability disproven, the exit boundary has no mathematical advantage from using
+trailing characters. BE leading characters give 68% natural stability (the
+same as entry), which is better than 0% from trailing characters.
 
-This asymmetric default is natural, not arbitrary: entry and exit use different
-ends of the Z85 character block because the known bytes occupy different
-positions within the block. When budget allows, the escape character choice can
-override these defaults for specific data (see §8).
+**Implication:** The asymmetric entry-BE/exit-LE convention may no longer be
+justified on stability grounds. Both boundaries may benefit from the same BE
+convention, simplifying the design. However, this needs further analysis —
+the exit boundary's known bytes are at the END of the block, so "leading
+characters" for exit means emitting characters that encode the high (unknown)
+bytes, which is different from the entry case. The full implications of using
+BE at exit boundaries need to be worked through.
+
+When budget allows, the escape character choice can override these defaults
+for specific data (see §8).
 
 ### Rejected Alternative: Direct Byte Encoding
 
@@ -395,9 +417,11 @@ These were open questions; they've been answered:
   if a mid-block cut is possible and beneficial, do it. Both boundaries should
   be supported.
 
-- **Asymmetric entry-BE/exit-LE: yes, worth the complexity.** This project
-  accepts high complexity in exchange for value. The asymmetric convention is
-  well-motivated by the mathematics (§6) and will be carefully specified.
+- **Complexity budget: high.** This project accepts high complexity in exchange
+  for value. Whether that manifests as asymmetric conventions or a unified
+  approach, the design will be carefully specified. (The earlier decision for
+  asymmetric entry-BE/exit-LE was based on the now-disproven 100% exit trailing
+  char stability. The question of optimal exit convention is reopened.)
 
 - **Length before data; no sentinels.** The decoder must know the raw section
   length before reading raw bytes. Length is encoded either implicitly (in the
