@@ -56,16 +56,57 @@ sections interleaved with standard Z85 blocks. Each raw section is independent
 (its own escape, length, boundary handling). There is no limit on the number
 of raw sections per stream.
 
+**Forward-only decoding.** The decoder processes the stream left to right in a
+single pass. It does not need to look ahead past the current raw section's
+prefix to determine length or boundaries. (It *may* reference recently decoded
+bytes — see §6 exit disambiguation — but never needs to scan forward.)
+
 ## 1. Mental Model
 
-Standard Z85 encodes every 4 input bytes as a big-endian u32, then extracts
-5 base-85 digits from most-significant to least-significant, mapping each digit
-to a character in the Z85 alphabet. This is a 4:5 expansion (~25% overhead).
+**Z85 background:** Z85 ([ZeroMQ RFC 32](https://rfc.zeromq.org/spec/32/)) is a
+binary-to-text encoding using 85 printable ASCII characters. It processes input
+in 4-byte blocks: each block is interpreted as a big-endian u32, then divided
+into 5 base-85 digits (most-significant first), each mapped to a character in
+the Z85 alphabet. This is a 4:5 expansion (~25% overhead). Input length must be
+a multiple of 4 bytes.
 
 Extended Z85 is this same encoding with one addition: the encoder can
 opportunistically replace runs of Z85 blocks with an escape character followed
 by the raw input bytes themselves. The raw bytes pass through unencoded,
 eliminating overhead for regions that are already printable.
+
+### Worked Example
+
+Consider encoding 12 input bytes where the middle 4 are printable ASCII:
+
+```
+Input bytes:  [0xDE 0xAD 0xBE 0xEF] [0x48 0x65 0x6C 0x6C] [0x01 0x02 0x03 0x04]
+                (binary data)          "Hell"                  (binary data)
+```
+
+**Standard Z85** encodes all 12 bytes as 15 characters (3 blocks × 5 chars):
+
+```
+Standard:     rZUgH  4erBi  0sjjE       (15 characters, no raw visibility)
+Position:     01234  56789  ABCDE
+```
+
+**Extended Z85** could pass the middle block through raw, saving 1 character:
+
+```
+Extended:     rZUgH  _Hell  0sjjE       (14 characters: 5+1+4+4≈14, 1 saved)
+Position:     01234  5 6789  ABCDE
+```
+
+Here `_` is the escape character signaling "the next 4 bytes are raw." The
+Z85 blocks at positions 0-4 and 10-14 are **identical** to standard Z85 (the
+position invariant). The escape + raw bytes replace the 5 characters that
+block 1 would have occupied, using only 5 characters (1 escape + 4 raw) vs 5
+standard — zero savings here, but "Hell" is now readable. With longer raw
+sections, the savings grow: N raw bytes use N+overhead vs ⌈N×5/4⌉ standard.
+
+*(This example uses block-aligned boundaries for simplicity. Mid-block
+transitions — cutting partway through a Z85 block — are analyzed in §5-6.)*
 
 ## 2. Priority Order
 
@@ -127,8 +168,8 @@ The decoder must know the raw section length **before reading raw bytes** (see
 
 Raw sections can be **any byte length** (not constrained to multiples of 4 bytes
 or 5 characters). The encoding is opportunistic — if a given length at a given
-alignment would cause problems (insufficient budget, unstable boundary), the
-encoder simply doesn't use it.
+alignment would cause problems (insufficient budget — see §7 — or unstable
+boundary), the encoder simply doesn't use it.
 
 ## 4. Character Compatibility Analysis
 
@@ -234,12 +275,12 @@ to determines stability:
 For 2-byte and 3-byte cuts, the same logic applies at finer granularity, with
 stability improving because more bits are known.
 
-## 6. Entry vs Exit Boundary Symmetry
+## 6. Entry vs Exit Boundary Analysis
 
-### The Key Insight
+### The Key Asymmetry
 
 Entry and exit boundaries have the **same cost structure** (~2 bits of
-disambiguation per boundary byte) but **different stability profiles** due to
+disambiguation per boundary byte) but **different disambiguation sources** due to
 the position of known bytes within the Z85 block. This motivates asymmetric
 default conventions.
 
@@ -276,8 +317,15 @@ decoder substitutes the known raw bytes into the block's Z85 arithmetic and
 solves for the boundary bytes.
 
 **Example (1-byte exit):** Block is `[b0 b1 b2 | b3]` where b0-b2 were raw.
-The trailing character encodes `V mod 85`. Since `2^8 ≡ 2^16 ≡ 2^24 ≡ 1
-(mod 85)`, this simplifies to `(b0 + b1 + b2 + b3) mod 85`.
+The trailing character encodes `V mod 85` where `V = b0×2^24 + b1×2^16 +
+b2×2^8 + b3`. A key property of Z85's arithmetic:
+
+> **`2^8 ≡ 2^16 ≡ 2^24 ≡ 1 (mod 85)`**
+>
+> Since `gcd(256, 85) = 1`, all powers of 256 are congruent to 1 mod 85.
+> This means `V mod 85 = (b0 + b1 + b2 + b3) mod 85` — the trailing digit
+> is a simple sum of all four bytes, regardless of position.
+
 The decoder knows b0, b1, b2 (from raw), and knows the character value, so it
 computes `b3 mod 85 = (char4_value - b0 - b1 - b2) mod 85`. Since b3 has 256
 possible values and mod 85 gives ~3 candidates per residue, the decoder needs
@@ -542,7 +590,10 @@ These were open questions; they've been answered:
   length before reading raw bytes. Length is encoded either implicitly (in the
   escape character choice) or explicitly (in prefix characters between the
   escape and the raw data). Sentinels are rejected. Special case: a "raw to end
-  of input" escape where no termination is needed.
+  of input" escape, where length is implicitly "everything remaining" — the
+  decoder doesn't need to know the exact byte count in advance because it reads
+  until the stream ends. This is still length-before-data in spirit: the escape
+  character tells the decoder the termination rule before any raw bytes appear.
 
 ## 11. Open Design Questions
 
@@ -584,10 +635,15 @@ Grouped by dependency:
    blocks between them? If so, what separates them? If not, what's the minimum
    Z85 gap?
 
-## 12. Related Design Theme
+## 12. Design Philosophy
 
-This encoding shares a design philosophy with zipng: making binary data more
-transparent. zipng embeds ZIP archives in PNG images (binary data visually
-transparent via an image format). Extended Z85 embeds raw text in Z85 encoding
-(binary data textually transparent via a text encoding). Both optimize for
-legibility within the constraints of a binary-safe container format.
+This encoding shares a core value with zipng: **transparency** — making binary
+data legible without breaking the container format. zipng embeds ZIP archives in
+PNG images (binary data visually transparent via an image format). Extended Z85
+embeds raw text in Z85 encoding (binary data textually transparent via a text
+encoding). Both accept format complexity in exchange for human-readable output.
+
+This philosophy informs the priority order (§2): correctness first (the format
+must work), compatibility second (it must work *in context*), transparency third
+(it should be readable where possible). Transparency is what motivates the
+entire project — without it, standard Z85 already works fine.
