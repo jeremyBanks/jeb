@@ -4,7 +4,7 @@
 use derive_more::From;
 use err_derive::Error;
 
-use log::{error, warn};
+use log::warn;
 /// Errors for [u64_from_base36].
 #[derive(Debug, Error, From, PartialEq)]
 pub enum Base36DecodingError {

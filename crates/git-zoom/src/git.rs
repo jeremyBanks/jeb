@@ -388,10 +388,12 @@ pub fn reset_hard() -> Result<()> {
     Ok(())
 }
 /// Get the commit message body for a commit.
+#[allow(dead_code)]
 pub fn commit_body(commit: &str) -> Result<String> {
     git_stdout(&["log", "-1", "--format=%B", commit])
 }
 /// Get parents of a commit.
+#[allow(dead_code)]
 pub fn parents(commit: &str) -> Result<Vec<String>> {
     let output = git_stdout(&["rev-parse", &format!("{}^@", commit)])?;
     Ok(output.lines().map(|s| s.to_string()).collect())

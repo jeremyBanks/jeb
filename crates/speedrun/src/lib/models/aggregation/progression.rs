@@ -43,7 +43,7 @@ pub fn progression<'runs>(
                 .then(a.created().cmp(&b.created()))
                 .then(a.id().cmp(&b.id()))
         })
-        .map(|run| (run.level_id, run.clone()))
+        .map(|run| (run.level_id, *run))
         .into_group_map();
 
     let mut progression: Vec<ProgressionRun> = Vec::new();
