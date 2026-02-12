@@ -1,8 +1,29 @@
-This repository has a messy history with bloated binary files (test images,
-generated data) in old commits. If you don't need deep history, prefer a
-**shallow clone** (`git clone --depth=1`) to avoid downloading ~100MB+ of
-unreachable blobs. You can always `git fetch --unshallow` later if you need
-the full history for archaeology.
+## This Repository
+
+This is a fork of [jeremyBanks/jeb](https://github.com/jeremyBanks/jeb),
+branched from `jeb/jeb`. We work on `mattemoon/dev`.
+
+**We are free to do anything here.** Break things, experiment, add crates,
+diverge from upstream — all fine. This is our space.
+
+**One constraint:** we regularly merge changes FROM upstream, so keep the
+overall project structure compatible enough that merges remain feasible.
+Individual crates can diverge completely (we just pick one side on conflict),
+but don't restructure the top-level workspace layout without good reason.
+
+**We do NOT optimize for upstreaming.** If something gets upstreamed later,
+it'll be rewritten at that point. Don't let "will this merge cleanly upstream?"
+influence your work here.
+
+**Git rules:**
+- **Commit extremely often.** After every meaningful change, commit. Don't batch.
+- **NEVER rewrite history** — no `--force`, no `--amend`, no `rebase -i`, no
+  `reset --hard` on pushed commits. Once committed, it stays forever.
+- **No force push.** Ever. If push fails, figure out why.
+
+This repository has a messy history with bloated binary files in old commits.
+Prefer a **shallow clone** (`git clone --depth=1`) if you don't need deep
+history. `git fetch --unshallow` later if needed.
 
 ---
 
