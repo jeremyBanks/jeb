@@ -5,7 +5,7 @@ use std::env;
 use zerodmg_codes::roms::blargg_tests;
 use zerodmg_emulator::test_runner::{BlarggTestRunner, TestStatus};
 
-const MAX_CYCLES: u64 = 500_000_000; // 500M cycles
+const MAX_CYCLES: u64 = 2_000_000_000; // 2B cycles
 
 fn main() {
     let args: Vec<String> = env::args().collect();

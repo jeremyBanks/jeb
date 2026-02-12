@@ -172,6 +172,23 @@ impl GameBoy {
         self.cpu.pc()
     }
 
+    /// Returns CPU register state as a tuple (A, F, B, C, D, E, H, L, SP).
+    pub fn cpu_state(&self) -> (u8, u8, u8, u8, u8, u8, u8, u8, u16) {
+        (
+            self.cpu.a(), self.cpu.f(),
+            self.cpu.b(), self.cpu.c(),
+            self.cpu.d(), self.cpu.e(),
+            self.cpu.h(), self.cpu.l(),
+            self.cpu.sp(),
+        )
+    }
+
+    /// Read a byte from memory at the given address.
+    pub fn read_memory(&self, addr: u16) -> u8 {
+        use crate::memory::MemoryController;
+        self.mem(addr)
+    }
+
     pub fn print_recent_executions(&mut self, limit: usize) {
         println!("; assembly:                        addr:         t|μs:   codes:");
         println!("; ---------                        ------        -----   --------");

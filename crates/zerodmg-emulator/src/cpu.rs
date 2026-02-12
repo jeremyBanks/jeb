@@ -6,7 +6,6 @@ use zerodmg_codes::instruction::{
 
 use super::GameBoy;
 use super::memory::MemoryController;
-use super::video::VideoController;
 
 #[derive(Debug, Clone, Copy)]
 pub struct CPUData {
@@ -61,12 +60,9 @@ pub trait CPUController:
     fn relative_jump(&mut self, n: i8);
     fn stack_push(&mut self, value: u16);
     fn stack_pop(&mut self) -> u16;
-    #[expect(dead_code)]
     fn af(&self) -> u16;
-    #[expect(dead_code)]
     fn set_af(&mut self, value: u16);
     fn c_flag(&self) -> bool;
-    #[expect(dead_code)]
     fn set_c_flag(&mut self, value: bool);
     fn h_flag(&self) -> bool;
     fn set_h_flag(&mut self, value: bool);
@@ -133,6 +129,16 @@ impl CPUData {
     pub fn pc(&self) -> u16 {
         self.pc
     }
+
+    pub fn a(&self) -> u8 { self.a }
+    pub fn f(&self) -> u8 { self.f }
+    pub fn b(&self) -> u8 { self.b }
+    pub fn c(&self) -> u8 { self.c }
+    pub fn d(&self) -> u8 { self.d }
+    pub fn e(&self) -> u8 { self.e }
+    pub fn h(&self) -> u8 { self.h }
+    pub fn l(&self) -> u8 { self.l }
+    pub fn sp(&self) -> u16 { self.sp }
 }
 
 /// Iterates over bytes at PC, while incrementing it, in a borrowed [GameBoy].
@@ -841,10 +847,12 @@ impl CPUController for GameBoy {
                 trace!("{:?}₀ = 0x{:04X}", dest, old_value);
             }
             LD_HL_FROM_SP => {
-                let sp = self.cpu.sp;
-                self.set_register(U16Register::HL, sp);
+                // NOTE: Despite the misleading name, opcode 0xF9 is LD SP,HL (SP ← HL)
+                let hl = self.get_register(U16Register::HL);
+                self.cpu.sp = hl;
+                let sp_1 = self.cpu.sp;
                 cycles = 2;
-                trace!("SP = 0x{:04X}", sp);
+                trace!("HL = 0x{:04X}, SP₁ = 0x{:04X}", hl, sp_1);
             }
             LD_HL_FROM_SP_PLUS(offset) => {
                 let sp = self.cpu.sp;

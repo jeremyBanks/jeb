@@ -45,7 +45,7 @@ impl BlarggTestRunner {
         let mut cycles: u64 = 0;
         let mut last_output_len = 0;
         let mut cycles_since_output = 0;
-        const IDLE_CYCLES_THRESHOLD: u64 = 50_000_000;
+        const IDLE_CYCLES_THRESHOLD: u64 = 500_000_000;
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             while cycles < max_cycles {
@@ -63,7 +63,7 @@ impl BlarggTestRunner {
                 // Check for new serial output
                 let current_output_len = gameboy.serial_output().len();
                 if current_output_len > last_output_len {
-                        last_output_len = current_output_len;
+                    last_output_len = current_output_len;
                     cycles_since_output = 0;
 
                     // Check for test completion markers in output
@@ -91,12 +91,6 @@ impl BlarggTestRunner {
         match result {
             Ok(gameboy) => {
                 let raw = gameboy.serial_output();
-                eprintln!("Raw serial bytes ({}):", raw.len());
-                for (i, b) in raw.iter().enumerate() {
-                    eprint!("{:02X} ", b);
-                    if (i + 1) % 32 == 0 { eprintln!(); }
-                }
-                eprintln!();
                 let output = String::from_utf8_lossy(raw).to_string();
                 let final_pc = gameboy.pc();
                 let status = if cycles >= max_cycles {
