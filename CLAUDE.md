@@ -1,3 +1,11 @@
+This repository has a messy history with bloated binary files (test images,
+generated data) in old commits. If you don't need deep history, prefer a
+**shallow clone** (`git clone --depth=1`) to avoid downloading ~100MB+ of
+unreachable blobs. You can always `git fetch --unshallow` later if you need
+the full history for archaeology.
+
+---
+
 While editing files, please run `./run save` to commit all changes in the
 working tree _very_ often, for the sake of having a lot of snapshots so we can
 cleanly revert exactly as far as we need to, if we ever need to. You'll want to
