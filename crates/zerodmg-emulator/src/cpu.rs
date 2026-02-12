@@ -888,6 +888,24 @@ impl CPUController for GameBoy {
                 cycles = 3;
                 trace!("{:?}₁ = 0x{:02X}, SP₁ = 0x{:04X}", register, value, sp_1);
             }
+            PUSH_AF => {
+                let a = self.cpu.a;
+                let f = self.cpu.f;
+                let af = u16::from(a) << 8 | u16::from(f);
+                self.stack_push(af);
+                let sp_1 = self.cpu.sp;
+                cycles = 4;
+                trace!("AF = 0x{:04X}, SP₁ = 0x{:04X}", af, sp_1);
+            }
+            POP_AF => {
+                let af = self.stack_pop();
+                let sp_1 = self.cpu.sp;
+                self.cpu.a = (af >> 8) as u8;
+                // Lower nibble of F is always 0 on GB
+                self.cpu.f = (af & 0xF0) as u8;
+                cycles = 3;
+                trace!("AF₁ = 0x{:04X}, SP₁ = 0x{:04X}", af, sp_1);
+            }
             // Jumps and Calls
             JP_IF(condition, address) => {
                 if self.condition(condition) {
