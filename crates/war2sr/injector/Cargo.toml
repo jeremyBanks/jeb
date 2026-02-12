@@ -1,0 +1,18 @@
+[package]
+name = "war2injector"
+edition = "2021"
+publish = false
+version = "0.0.0"
+
+[[bin]]
+name = "war2injector"
+path = "main.rs"
+
+[dependencies]
+chrono = "0.4.38"
+dll-syringe = { version = "0.15.2", features = ["into-x86-from-x64"] }
+
+# We don't actually use the injection library from the injector binary,
+# but we add it as a dependency to ensure it's always re-built if neccessary
+# when building the binary.
+war2injection = { path = "../injection" }

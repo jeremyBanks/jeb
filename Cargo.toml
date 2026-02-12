@@ -4,7 +4,7 @@
 [workspace]
 resolver = "2"
 members = ["crates/*", "crates/*/fuzz"]
-exclude = ["crates/speedrun"]
+exclude = ["crates/speedrun", "crates/war2sr"]
 
 [workspace.package]
 version = "0.0.0-dev-2026-01-25.7901"
