@@ -63,6 +63,9 @@ impl BlarggTestRunner {
                 // Check for new serial output
                 let current_output_len = gameboy.serial_output().len();
                 if current_output_len > last_output_len {
+                    if cycles > 100_000_000 && current_output_len % 1000 < 10 {
+                        eprintln!("SERIAL cycles={} len={} idle={}", cycles, current_output_len, cycles_since_output);
+                    }
                     last_output_len = current_output_len;
                     cycles_since_output = 0;
 
