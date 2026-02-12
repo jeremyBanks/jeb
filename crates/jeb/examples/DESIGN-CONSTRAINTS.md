@@ -481,8 +481,9 @@ available escape characters on this case).
 
 ### Critical Thresholds
 
-- **4 bytes (budget=1):** Block-aligned raw only. No mid-block cuts. Length
-  must be implied by escape character choice.
+- **4 bytes (budget=1):** Block-aligned guaranteed. Mid-block cuts possible
+  opportunistically when boundary bytes are stable (68%+ of cases per §6).
+  Length must be implied by escape character choice.
 - **5-8 bytes (budget=2):** Mid-block cut at ONE boundary possible. Tight.
 - **9-12 bytes (budget=3):** Mid-block at both boundaries feasible.
 - **13+ bytes (budget=4+):** Everything works comfortably.
@@ -613,8 +614,9 @@ If we drop mid-block cuts entirely, all N×85 combinations encode length:
 These were open questions; they've been answered:
 
 - **Minimum raw section length: 4 bytes.** The format supports raw sections as
-  short as 4 bytes. At this length, budget=1, which only allows block-aligned
-  sections with length implied by escape character choice. There are no net
+  short as 4 bytes. At this length, budget=1, which guarantees block-aligned
+  sections and allows opportunistic mid-block cuts when boundary bytes are
+  stable. Length is implied by escape character choice. There are no net
   character savings (5 characters either way), but transparency (readable raw
   bytes) is still valuable. The encoder is opportunistic — it uses raw sections
   wherever they fit and provide value.
