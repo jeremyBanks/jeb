@@ -100,10 +100,10 @@ A non-Z85 escape character signals the transition from standard Z85 decoding to
 raw passthrough. The escape character must appear within the character positions
 of the Z85 block(s) being replaced — practically, within ~5 characters of the
 transition point. (This is a design target, not yet a hard specification. The
-exact bound depends on layout decisions in §10 Q4.)
+exact bound depends on layout decisions in §11 Q4.)
 
 The decoder must know the raw section length **before reading raw bytes** (see
-§9). No scanning or sentinel detection.
+§10). No scanning or sentinel detection.
 
 Raw sections can be **any byte length** (not constrained to multiples of 4 bytes
 or 5 characters). The encoding is opportunistic — if a given length at a given
@@ -168,7 +168,7 @@ Ranked by the cost of using them as escape characters:
 The previous design (IDEATION.md) used all 6 characters from Tiers 1-2:
 `_` `~` `` ` `` `|` `,` `;`. This preserves JSON string compatibility — likely
 the most important context for jeb. This constraints document leaves the escape
-character count as an open design decision (§10 Q1). The number of escape
+character count as an open design decision (§11 Q1). The number of escape
 characters and how their information capacity is allocated is central to the
 design (see §8).
 
@@ -277,7 +277,7 @@ read them yet. The decoder must resolve disambiguation from the escape prefix
 
 Exit boundaries are **cheaper** than entry boundaries in escape bit budget.
 The cost is decoder complexity (back-referencing recently decoded raw data).
-This is exactly the kind of complexity this project is willing to accept (§9).
+This is exactly the kind of complexity this project is willing to accept (§10).
 
 ### Recommended Defaults
 
@@ -408,9 +408,90 @@ For escape character info bits to carry disambiguation, the decoder must
 encounter the escape character **before** it needs to decode the boundary block.
 This constrains the layout: the escape character must precede (or be part of)
 the prefix that appears before raw data. This is compatible with the length-
-before-data constraint (§9) — both require a prefix-oriented layout.
+before-data constraint (§10) — both require a prefix-oriented layout.
 
-## 9. Resolved Design Decisions
+## 9. Concrete Allocation Analysis (2-Block Case)
+
+The 2-block case (8 input bytes = 10 Z85 characters) is the minimum
+interesting case for mid-block transitions and the tightest budget scenario
+worth analyzing in detail.
+
+### Budget
+
+For any 2-block raw section, the budget is always **2 characters** (1 escape
++ 1 overhead), regardless of where the entry/exit cuts fall. Mid-block cuts
+reduce the number of raw bytes but don't reduce budget — the partial Z85
+characters occupy positions that would otherwise be raw.
+
+| Configuration | Raw bytes | Partial Z85 characters | Budget |
+|--------------|-----------|----------------------|--------|
+| Block-aligned both | 8 | 0 | 2 |
+| Mid-block entry only | 7 | 1 (leading) | 2 |
+| Mid-block exit only | 7 | 1 (trailing) | 2 |
+| Mid-block both | 6 | 2 | 2 |
+
+### What the Decoder Needs
+
+| Information | Options | Bits |
+|------------|---------|------|
+| Entry cut position | 4 (aligned, after 1/2/3 bytes) | 2 |
+| Exit cut position | 4 (aligned, before 1/2/3 bytes) | 2 |
+| Entry disambiguation | up to 4 candidates (when unstable) | ~2 |
+| Length / span | variable | variable |
+
+Exit disambiguation is free (from raw context, §6), so it doesn't consume
+escape budget.
+
+Minimum for mid-block both ends: 4×4×4 = **64 combinations** needed for
+cuts + disambiguation, before any length encoding.
+
+### Information Capacity: N Escape Characters × 1 Overhead Character
+
+The escape character choice gives `log2(N)` bits. The overhead character is
+from the Z85 alphabet (85 values = ~6.4 bits). Total combinations = N × 85.
+
+| Escape characters | Combinations (N×85) | After cuts+disambig (÷64) | Length classes | Context cost |
+|------------------|--------------------|--------------------------|--------------:|-------------|
+| 1 | 85 | 1.3× | **1** | Free (Tier 1) |
+| 2 | 170 | 2.7× | **2** | Free (Tier 1) |
+| 3 | 255 | 4.0× | **3** | +backtick (Tier 1.5) |
+| 4 | 340 | 5.3× | **5** | +1 CSV char (Tier 2) |
+| 6 | 510 | 8.0× | **7** | +3 CSV chars (Tier 2) |
+
+### Block-Aligned Only (Simpler Case)
+
+If we drop mid-block cuts entirely, all N×85 combinations encode length:
+
+| Escape characters | Length classes | Maximum raw bytes (×4) |
+|------------------|---------------|----------------------|
+| 1 | 85 | 340 |
+| 2 | 170 | 680 |
+| 6 | 510 | 2040 |
+
+### Key Trade-offs
+
+1. **1 escape character** can barely fit mid-block cuts for a fixed 2-block
+   span (85 ≥ 64), but has zero length flexibility. Block-aligned-only gives
+   85 length classes — generous.
+
+2. **2 escape characters** (both from Tier 1: `_` and `~`, zero context cost)
+   give enough headroom for mid-block cuts with 2 length classes, or 170
+   block-aligned length classes.
+
+3. **3+ escape characters** require Tier 1.5+ characters, adding context
+   compatibility cost. The extra capacity enables more length classes or
+   more sophisticated cut/disambiguation encoding.
+
+4. **The 2-block minimum is special** because budget=2 is tight. Longer raw
+   sections (3+ blocks, budget=3+) have progressively more headroom — an
+   additional overhead character per block gives another ~6.4 bits each time.
+
+5. **Length encoding interacts with the "raw to end" escape** (§10). If one
+   escape character means "everything remaining is raw," that's one of the
+   N options consumed — reducing the combinations available for finite-length
+   sections.
+
+## 10. Resolved Design Decisions
 
 These were open questions; they've been answered:
 
@@ -440,7 +521,7 @@ These were open questions; they've been answered:
   escape and the raw data). Sentinels are rejected. Special case: a "raw to end
   of input" escape where no termination is needed.
 
-## 10. Open Design Questions
+## 11. Open Design Questions
 
 These require discussion and decision before a specification can be written.
 Grouped by dependency:
@@ -480,7 +561,7 @@ Grouped by dependency:
    blocks between them? If so, what separates them? If not, what's the minimum
    Z85 gap?
 
-## 11. Related Design Theme
+## 12. Related Design Theme
 
 This encoding shares a design philosophy with zipng: making binary data more
 transparent. zipng embeds ZIP archives in PNG images (binary data visually
