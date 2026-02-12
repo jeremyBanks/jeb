@@ -277,6 +277,10 @@ impl GameBoy {
             for _t in t_0..t_1 {
                 self.video_cycle();
                 self.audio_cycle();
+                // Timer ticks at T-cycle rate (4x per M-cycle)
+                self.timer_cycle();
+                self.timer_cycle();
+                self.timer_cycle();
                 self.timer_cycle();
 
                 if (self.t + log_interval - log_interval.min(log_size as u64))

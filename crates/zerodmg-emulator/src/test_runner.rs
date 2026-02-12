@@ -55,6 +55,10 @@ impl BlarggTestRunner {
                 // Advance video and timer timing
                 for _ in 0..tick_cycles {
                     gameboy.video_cycle();
+                    // Timer ticks at T-cycle rate (4x per M-cycle)
+                    gameboy.timer_cycle();
+                    gameboy.timer_cycle();
+                    gameboy.timer_cycle();
                     gameboy.timer_cycle();
                 }
 
