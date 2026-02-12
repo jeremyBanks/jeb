@@ -208,19 +208,16 @@ pub fn decode_partial_block(chars: &[u8], len: usize) -> Result<Vec<u8>> {
     // Try all combinations of unknown bytes
     match num_unknown {
         3 => {
-            // 1 known byte, 3 unknown bytes
+            // 1 known byte, 3 unknown bytes (padded with zeros)
             // K=2 characters (target_digits[0] and target_digits[1])
+            // The encoder pads with zeros, so we should find b1=0, b2=0 first
             for b0 in 0..=255u8 {
-                for b1 in 0..=255u8 {
-                    for b2 in 0..=255u8 {
-                        let block = [b0, b1, b2, 0u8];
-                        let value = u32::from_be_bytes(block);
-                        let d0 = (value / (85u32.pow(4))) as u8;
-                        let d1 = ((value / (85u32.pow(3))) % 85) as u8;
-                        if d0 == target_digits[0] && d1 == target_digits[1] {
-                            return Ok(vec![b0]);
-                        }
-                    }
+                let block = [b0, 0u8, 0u8, 0u8];
+                let value = u32::from_be_bytes(block);
+                let d0 = (value / (85u32.pow(4))) as u8;
+                let d1 = ((value / (85u32.pow(3))) % 85) as u8;
+                if d0 == target_digits[0] && d1 == target_digits[1] {
+                    return Ok(vec![b0]);
                 }
             }
             Err(Error::DecodingError {
@@ -232,15 +229,13 @@ pub fn decode_partial_block(chars: &[u8], len: usize) -> Result<Vec<u8>> {
             // K=3 characters
             for b0 in 0..=255u8 {
                 for b1 in 0..=255u8 {
-                    for b2 in 0..=255u8 {
-                        let block = [b0, b1, b2, 0u8];
-                        let value = u32::from_be_bytes(block);
-                        let d0 = (value / (85u32.pow(4))) as u8;
-                        let d1 = ((value / (85u32.pow(3))) % 85) as u8;
-                        let d2 = ((value / (85u32.pow(2))) % 85) as u8;
-                        if d0 == target_digits[0] && d1 == target_digits[1] && d2 == target_digits[2] {
-                            return Ok(vec![b0, b1]);
-                        }
+                    let block = [b0, b1, 0u8, 0u8];
+                    let value = u32::from_be_bytes(block);
+                    let d0 = (value / (85u32.pow(4))) as u8;
+                    let d1 = ((value / (85u32.pow(3))) % 85) as u8;
+                    let d2 = ((value / (85u32.pow(2))) % 85) as u8;
+                    if d0 == target_digits[0] && d1 == target_digits[1] && d2 == target_digits[2] {
+                        return Ok(vec![b0, b1]);
                     }
                 }
             }
@@ -254,16 +249,14 @@ pub fn decode_partial_block(chars: &[u8], len: usize) -> Result<Vec<u8>> {
             for b0 in 0..=255u8 {
                 for b1 in 0..=255u8 {
                     for b2 in 0..=255u8 {
-                        for b3 in 0..=255u8 {
-                            let block = [b0, b1, b2, b3];
-                            let value = u32::from_be_bytes(block);
-                            let d0 = (value / (85u32.pow(4))) as u8;
-                            let d1 = ((value / (85u32.pow(3))) % 85) as u8;
-                            let d2 = ((value / (85u32.pow(2))) % 85) as u8;
-                            let d3 = ((value / 85) % 85) as u8;
-                            if d0 == target_digits[0] && d1 == target_digits[1] && d2 == target_digits[2] && d3 == target_digits[3] {
-                                return Ok(vec![b0, b1, b2]);
-                            }
+                        let block = [b0, b1, b2, 0u8];
+                        let value = u32::from_be_bytes(block);
+                        let d0 = (value / (85u32.pow(4))) as u8;
+                        let d1 = ((value / (85u32.pow(3))) % 85) as u8;
+                        let d2 = ((value / (85u32.pow(2))) % 85) as u8;
+                        let d3 = ((value / 85) % 85) as u8;
+                        if d0 == target_digits[0] && d1 == target_digits[1] && d2 == target_digits[2] && d3 == target_digits[3] {
+                            return Ok(vec![b0, b1, b2]);
                         }
                     }
                 }

@@ -5,7 +5,7 @@
 //! This is simple to parse and allows arbitrary length raw sections.
 
 use crate::error::{Error, Result};
-use crate::z85::{self, is_z85_char, encode_u32};
+use crate::z85::{self, is_z85_char, encode_u32, decode_partial_block};
 
 // Escape character (Tier 1 - completely free per §5)
 const ESCAPE: u8 = b'_';
@@ -78,7 +78,7 @@ fn encode_partial_block_leading(bytes: &[u8], output: &mut Vec<u8>) {
     block[..bytes.len()].copy_from_slice(bytes);
     let value = u32::from_be_bytes(block);
 
-    let digit4 = (value % 85) as u8;
+    let _digit4 = (value % 85) as u8;
     let digit3 = ((value / 85) % 85) as u8;
     let digit2 = ((value / (85 * 85)) % 85) as u8;
     let digit1 = ((value / (85 * 85 * 85)) % 85) as u8;
@@ -171,37 +171,6 @@ pub fn decode(input: &[u8]) -> Result<Vec<u8>> {
     }
 
     Ok(output)
-}
-
-/// Decode a partial Z85 block.
-fn decode_partial_block(chars: &[u8], len: usize) -> Result<Vec<u8>> {
-    debug_assert!(len > 0 && len < 5);
-
-    let mut digits = [0u8; 5];
-    for (i, &c) in chars.iter().enumerate() {
-        let digit = z85::Z85_DECODE_TABLE[c as usize];
-        if digit == 255 {
-            return Err(Error::InvalidZ85Character {
-                character: c as char,
-                position: i,
-            });
-        }
-        digits[i] = digit;
-    }
-
-    // For a partial block of K characters, we decode K base-85 digits.
-    // These encode K bytes in the most-significant positions.
-    let mut value = 0u32;
-    for i in 0..len {
-        value = value * 85 + digits[i] as u32;
-    }
-
-    // Shift left to align to high-order positions
-    let shift = (5 - len) * 8;
-    value = value.wrapping_shl(shift as u32);
-
-    let full_bytes = value.to_be_bytes();
-    Ok(full_bytes[..(len - 1).min(3)].to_vec())
 }
 
 /// Decode a complete Z85 block.
