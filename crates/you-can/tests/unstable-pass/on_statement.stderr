@@ -1,0 +1,14 @@
+warning: this suppresses the borrow checker in an unsafe, unsound, and unstable way that produces undefined behaviour. this is not suitable for any purpose beyond educational experimentation.
+ --> $DIR/on_statement.rs:6:5
+  |
+6 |     #[you_can::turn_off_the_borrow_checker]
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: this suppresses the borrow checker in an unsafe, unsound, and unstable way that produces undefined behaviour. this is not suitable for any purpose beyond educational experimentation.
+ --> $DIR/on_statement.rs:8:5
+  |
+8 |     #[you_can::turn_off_the_borrow_checker]
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: 2 warnings emitted
+
