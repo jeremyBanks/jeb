@@ -71,11 +71,15 @@ targets, not things an implementation may skip for convenience.
 **R1: Non-aligned raw section lengths.** Raw sections are NOT constrained to
 multiples of 4 bytes. The format supports non-aligned lengths — if 7 bytes of
 printable ASCII appear mid-stream, the encoder should be able to pass them
-through raw. However, not every (length, alignment) combination is achievable:
-small raw sections have tight overhead budgets (see §8), and some combinations
-may not fit the available escape/length encoding capacity. The encoder is
-opportunistic — it uses raw sections where the budget allows. Block-aligned raw
-sections are the easiest case, not the only case.
+through raw. Not every (length, alignment) combination is achievable in every
+situation: small raw sections have tight overhead budgets (see §8), and the
+encoder must check whether the specific boundary bytes allow a stable cut (see
+§6-7). But the stability analysis shows that most byte values at most positions
+DO allow stable cuts without spending any disambiguation bits — 68% at 1-byte
+boundaries, 89% at 2-byte, 96% at 3-byte. The encoder is opportunistic: it
+checks the actual bytes and uses non-aligned raw sections whenever the budget
+and stability permit. Block-aligned raw sections are the simplest case, not
+the only case.
 
 **R2: Mid-block boundary support.** The encoder MUST support cutting Z85 blocks
 at non-aligned positions for both entry and exit boundaries. If a raw section
