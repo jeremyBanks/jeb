@@ -247,35 +247,50 @@ default conventions.
 | 2 | 2 trailing (chars 3-4) | ~4 bits | **0%** |
 | 3 | 3 trailing (chars 2-4) | ~2 bits | **0%** |
 
-### ⚠️ Correction: ALL Exit Trailing Characters Are 0% Stable
+### Exit Trailing Characters: Context-Dependent Stability
 
-An earlier version of this document claimed 100% stability for the trailing
-character based on `0xFFFFFF00 mod 85 = 0`. **This was wrong.**
+The trailing Z85 characters are NOT "self-stable" — their values depend on ALL
+four bytes in the block, not just the known suffix bytes. Mathematically, since
+`gcd(256, 85) = 1`, the unknown high-order bytes can produce any residue mod
+any power of 85:
 
-**The root cause:** `gcd(256, 85) = 1`. Since 256 and 85 are coprime, powers
-of 256 generate all residues modulo any power of 85. This means unknown bytes
-in the high positions can produce ANY residue in the low Z85 digits:
+- **char4:** `V mod 85 = (b0 + b1 + b2 + b3) mod 85` (all bytes contribute
+  equally because `2^8 ≡ 1 mod 85`)
+- **char3:** Unknown contribution hits all `85^2` residues
+- **char2:** Unknown contribution spans all `85^3` residues
 
-- **char4:** `V mod 85 = (b0 + b1 + b2 + b3) mod 85` (since `2^8 ≡ 1 mod 85`).
-  Unknown bytes sweep all 85 residues → 0% stable.
-- **char3:** Unknown contribution `(b0×766 + b1×511) mod 7225` hits all 7225
-  values → 0% stable.
-- **char2:** Unknown `b0` crosses ~2322 `85^2` boundaries per step → 0% stable.
+However, **the "unknown" bytes at an exit boundary are not unknown to the
+decoder.** They are the raw bytes the decoder already read. This is the critical
+insight:
 
-**Contrast with entry (leading characters):** The leading Z85 digit
-`c0 = V / 85^4` divides by `85^4 = 52,200,625`. Since `2^24 = 16,777,216`
-is much smaller than `85^4`, the unknown low bytes can shift V by at most
-`~2^24`, which crosses at most one `85^4` boundary. This is why entry leading
-characters have 68% stability — the division by a large power of 85 suppresses
-the contribution of low-order bytes.
+At an **exit boundary**, the block looks like `[raw raw raw | Z85]`. The first
+K bytes were part of the raw section — the decoder already has them. To decode
+the trailing Z85 character(s) for the remaining 4-K bytes, the decoder
+substitutes the known raw bytes into the block's Z85 arithmetic and solves for
+the boundary bytes.
 
-Exit trailing characters use modulo (small power of 85), which does the
-opposite — it **amplifies** the contribution of high-order bytes (because
-`256^k mod 85^j` generates all residues when gcd(256, 85) = 1).
+**Example (1-byte exit):** Block is `[b0 b1 b2 | b3]` where b0-b2 were raw.
+`char4 = (b0 + b1 + b2 + b3) mod 85`. Decoder knows b0, b1, b2 and char4,
+so `b3 = (char4 - b0 - b1 - b2) mod 85`... but b3 has 256 values and char4
+encodes only 85 residues. So ~3 candidates for b3 (need ~2 bits disambiguation
+— same as entry).
 
-**Implication:** Exit boundaries always need disambiguation for trailing
-characters. Entry boundaries need disambiguation only 32% of the time (1-byte
-cut). This strongly favors BE (leading characters) at both boundaries.
+**Contrast with entry boundaries:** At an entry, the block is `[Z85 | raw raw raw]`.
+The bytes after the cut are raw, but the decoder hasn't read them yet. The
+decoder must resolve disambiguation without forward context (using escape char
+info bits or other prefix data).
+
+**Key asymmetry:**
+- **Entry:** Disambiguation must come from the escape prefix (costly — uses
+  escape char info bits)
+- **Exit:** Disambiguation can potentially use already-decoded raw bytes
+  (cheap — no escape bits needed, but requires the decoder to back-reference
+  recently decoded data)
+
+This means exit boundaries may be cheaper than entry boundaries in terms of
+escape char info budget, at the cost of slightly more complex decoder logic
+(back-referencing raw bytes). The trade-off between escape bit cost and decoder
+complexity is a design decision.
 
 ### Recommended Defaults
 
@@ -287,21 +302,21 @@ be a small value (length field, type tag, null terminator). Small values have
 zeros in high bits, placing them far from `85^4` boundaries → higher stability.
 68% baseline, likely higher for real data.
 
-**Exit: Also BE (leading characters)** — With the trailing character 100%
-stability disproven, the exit boundary has no mathematical advantage from using
-trailing characters. BE leading characters give 68% natural stability (the
-same as entry), which is better than 0% from trailing characters.
+**Exit: Trailing characters (LE), disambiguated from raw context** — The
+trailing characters are not self-stable, but the decoder already knows the
+"unknown" bytes (they were raw). The decoder can back-reference them to resolve
+disambiguation without spending escape char info bits. This makes exit
+boundaries potentially cheaper than entry boundaries.
 
-**Implication:** The asymmetric entry-BE/exit-LE convention may no longer be
-justified on stability grounds. Both boundaries may benefit from the same BE
-convention, simplifying the design. However, this needs further analysis —
-the exit boundary's known bytes are at the END of the block, so "leading
-characters" for exit means emitting characters that encode the high (unknown)
-bytes, which is different from the entry case. The full implications of using
-BE at exit boundaries need to be worked through.
+**The asymmetry is real but inverted from the original claim:**
+- Entry: 68% self-stable, 32% need escape-bit disambiguation (expensive)
+- Exit: 0% self-stable, but disambiguation is free from raw-byte context (cheap)
 
-When budget allows, the escape character choice can override these defaults
-for specific data (see §8).
+Whether to use BE or LE at exit depends on decoder complexity tolerance. LE
+(trailing characters + raw back-reference) costs zero escape bits but requires
+decoder state. BE (leading characters) has 68% self-stability but needs
+escape bits for the remaining 32%. When budget allows, the escape character
+choice can signal which convention is in use (see §8).
 
 ### Rejected Alternative: Direct Byte Encoding
 
@@ -425,10 +440,13 @@ These were open questions; they've been answered:
   be supported.
 
 - **Complexity budget: high.** This project accepts high complexity in exchange
-  for value. Whether that manifests as asymmetric conventions or a unified
-  approach, the design will be carefully specified. (The earlier decision for
-  asymmetric entry-BE/exit-LE was based on the now-disproven 100% exit trailing
-  char stability. The question of optimal exit convention is reopened.)
+  for value. Asymmetric entry/exit conventions are acceptable if well-motivated.
+
+- **Asymmetric entry/exit is justified, but for different reasons than
+  originally thought.** Not because trailing characters are self-stable (they
+  aren't), but because exit boundaries can use already-decoded raw bytes for
+  disambiguation (free), while entry boundaries must spend escape char info
+  bits (costly). The asymmetry is in disambiguation cost, not in stability.
 
 - **Length before data; no sentinels.** The decoder must know the raw section
   length before reading raw bytes. Length is encoded either implicitly (in the
