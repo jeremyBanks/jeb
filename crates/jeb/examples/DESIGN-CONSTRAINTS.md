@@ -18,7 +18,9 @@ eliminating the overhead for text-heavy regions.
 encoder decides opportunistically when raw passthrough is beneficial. The decoder
 just follows unambiguous rules to reconstruct the original bytes. The format
 doesn't need to be optimal for all inputs — just unambiguous for any valid
-encoding.
+encoding. Implementation complexity (encoder or decoder) is not a significant
+concern — it's an afterthought relative to the format properties themselves.
+We care about what the format *is*, not how hard it is to implement.
 
 **Self-signaling.** The presence of non-Z85 characters (escape chars) in the
 output self-signals that this is extended Z85, not standard Z85. A standard Z85
