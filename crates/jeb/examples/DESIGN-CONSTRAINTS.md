@@ -278,7 +278,24 @@ The number and allocation of escape characters is **undecided**. The analysis
 above maps the constraint space; the choice depends on which capabilities matter
 most for real-world data.
 
-## 9. Open Design Questions
+## 9. Resolved Design Decisions
+
+These were open questions; they've been answered:
+
+- **Minimum raw section length: 4 bytes.** There is no reason the minimum
+  would be higher. Even with budget=1 (escape char only), a 4-byte
+  block-aligned raw section works. The encoder is opportunistic — it uses
+  whatever works at each point.
+
+- **Mid-block cuts: support both entry AND exit.** We are being opportunistic;
+  if a mid-block cut is possible and beneficial, do it. Both boundaries should
+  be supported.
+
+- **Asymmetric entry-BE/exit-LE: yes, worth the complexity.** This project
+  accepts high complexity in exchange for value. The asymmetric convention is
+  well-motivated by the mathematics (§6) and will be carefully specified.
+
+## 10. Open Design Questions
 
 These require discussion and decision before a specification can be written:
 
@@ -288,20 +305,28 @@ These require discussion and decision before a specification can be written:
 2. **What information does each escape char encode?** Endianness? Length?
    Disambiguation? Position-dependent meaning?
 
-3. **Minimum raw section length?** 4 bytes (tight budget) vs 8+ (comfortable)?
-   Depends on how common short ASCII runs are in target data.
-
-4. **Do we need mid-block cuts at both entry AND exit?** Or is one boundary
-   sufficient?
-
-5. **How are disambiguation bits laid out?** Where in the output stream do they
+3. **How are disambiguation bits laid out?** Where in the output stream do they
    go? What encodes them (Z85 chars? escape char choice? position within block?)
 
-6. **Is the "trailing chars for exit" convention worth the architectural
-   complexity?** It gives 100% stability for single-byte exits but means entry
-   and exit use fundamentally different encoding conventions.
+4. **Raw block internal layout:** Beyond the raw bytes themselves, what is the
+   syntax and ordering of the non-raw components? Specifically:
+   - Where does the escape char go relative to the raw data? (Before? After?
+     Multiple positions?)
+   - Where does length information go? (Implicit in escape choice? Explicit
+     prefix? Explicit suffix? Run until next escape/Z85?)
+   - Where do padding chars go? (Between escape and raw? After raw? Split?)
+   - Where do disambiguation bits for entry/exit boundary blocks go?
+   - Is the layout fixed, or does it vary based on escape char choice or
+     raw section length?
 
-## 10. Related Design Theme
+5. **Termination signaling:** How does the decoder know when a raw section
+   ends? Options include:
+   - Length prefix (explicit byte count before raw data)
+   - Sentinel/escape at the end (scan until non-raw char)
+   - Implicit from block alignment (raw ends at next Z85 block boundary)
+   - Hybrid (length for short, sentinel for long)
+
+## 11. Related Design Theme
 
 This encoding shares a design philosophy with
 [zipng](https://github.com/nickel-org/zipng): making binary data more
