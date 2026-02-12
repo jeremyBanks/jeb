@@ -63,7 +63,15 @@ pub trait VideoController {
 impl VideoController for GameBoy {
     fn video_cycle(&mut self) {
         self.vid.t += 1;
+        let old_ly = self.vid.ly;
         self.vid.ly = ((self.vid.t / CYCLES_PER_LINE) % u64::from(GB_HEIGHT + 10)) as u8;
+
+        // Trigger VBlank interrupt when LY transitions to 144 (start of vblank period)
+        if old_ly != GB_HEIGHT && self.vid.ly == GB_HEIGHT {
+            use super::cpu::CPUController;
+            let ift = self.ift();
+            self.set_ift(ift | 0b00001); // Set VBlank interrupt flag
+        }
 
         // after vblank, draw
         if 0 == self.vid.ly && self.vid.t.is_multiple_of(CYCLES_PER_LINE) {
@@ -345,6 +353,7 @@ impl VideoController for GameBoy {
     }
 
     fn set_ly(&mut self, _value: u8) {
-        panic!("writing to LY is not supported");
+        // Writing any value to LY resets it to 0
+        self.vid.ly = 0;
     }
 }

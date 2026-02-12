@@ -1,10 +1,10 @@
 // #![warn(missing_docs, missing_debug_implementations)]
 
 mod audio;
-mod cpu;
+pub mod cpu;
 mod memory;
 pub mod test_runner;
-mod video;
+pub mod video;
 
 use image::GenericImageView;
 
@@ -152,6 +152,16 @@ impl GameBoy {
         }
     }
 
+    /// Create a new GameBoy with post-boot-ROM state (skips boot ROM).
+    /// Useful for test ROMs that don't need the Nintendo logo check.
+    pub fn new_skip_boot(game_rom: Vec<u8>, output_buffer: Arc<Mutex<Output>>) -> Self {
+        let mut gb = Self::new(game_rom, output_buffer);
+        // Set registers to DMG post-boot values
+        gb.cpu = CPUData::post_boot();
+        gb.mem.boot_rom_mapped = false;
+        gb
+    }
+
     /// Returns the accumulated serial output from Blargg tests.
     pub fn serial_output(&self) -> &[u8] {
         &self.serial_output
@@ -198,6 +208,39 @@ impl GameBoy {
         println!();
     }
 
+    /// Advance the timer hardware by one T-cycle.
+    pub fn timer_cycle(&mut self) {
+        use self::cpu::CPUController;
+
+        let old_div = self.mem.div_counter;
+        self.mem.div_counter = self.mem.div_counter.wrapping_add(1);
+
+        // TIMA only ticks when TAC bit 2 (enable) is set
+        if self.mem.tac & 0x04 != 0 {
+            // Clock select: determines which bit of div_counter triggers TIMA
+            let bit_pos: u16 = match self.mem.tac & 0x03 {
+                0 => 9,   // 4096 Hz (every 1024 T-cycles)
+                1 => 3,   // 262144 Hz (every 16 T-cycles)
+                2 => 5,   // 65536 Hz (every 64 T-cycles)
+                3 => 7,   // 16384 Hz (every 256 T-cycles)
+                _ => unreachable!(),
+            };
+            let mask = 1 << bit_pos;
+            // Falling edge detection: old bit was 1, new bit is 0
+            if old_div & mask != 0 && self.mem.div_counter & mask == 0 {
+                let (new_tima, overflow) = self.mem.tima.overflowing_add(1);
+                if overflow {
+                    // TIMA overflowed: reload from TMA and trigger timer interrupt
+                    self.mem.tima = self.mem.tma;
+                    let ift = self.ift();
+                    self.set_ift(ift | 0b00100); // Timer interrupt
+                } else {
+                    self.mem.tima = new_tima;
+                }
+            }
+        }
+    }
+
     pub fn run(&mut self) -> ! {
         let log_size = EXECUTIONS_BUFFER_SIZE.min(32);
         let log_interval = (1024 * 1024) / 2;
@@ -234,6 +277,7 @@ impl GameBoy {
             for _t in t_0..t_1 {
                 self.video_cycle();
                 self.audio_cycle();
+                self.timer_cycle();
 
                 if (self.t + log_interval - log_interval.min(log_size as u64))
                     .is_multiple_of(log_interval)

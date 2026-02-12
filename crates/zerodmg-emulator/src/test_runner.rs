@@ -40,21 +40,22 @@ impl BlarggTestRunner {
     /// Run a test ROM for up to max_cycles.
     pub fn run_test(rom: Vec<u8>, max_cycles: u64) -> TestResult {
         let output_buffer = Arc::new(Mutex::new(Output::new()));
-        let mut gameboy = GameBoy::new(rom, output_buffer);
+        let mut gameboy = GameBoy::new_skip_boot(rom, output_buffer);
 
         let mut cycles: u64 = 0;
         let mut last_output_len = 0;
         let mut cycles_since_output = 0;
-        const IDLE_CYCLES_THRESHOLD: u64 = 1_000_000;
+        const IDLE_CYCLES_THRESHOLD: u64 = 500_000_000;
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             while cycles < max_cycles {
                 let opex = gameboy.tick();
                 let tick_cycles = opex.t_1 - opex.t_0;
 
-                // Advance video timing (updates LY register)
+                // Advance video and timer timing
                 for _ in 0..tick_cycles {
                     gameboy.video_cycle();
+                    gameboy.timer_cycle();
                 }
 
                 cycles += tick_cycles;
@@ -78,7 +79,14 @@ impl BlarggTestRunner {
 
         match result {
             Ok(gameboy) => {
-                let output = String::from_utf8_lossy(gameboy.serial_output()).to_string();
+                let raw = gameboy.serial_output();
+                eprintln!("Raw serial bytes ({}):", raw.len());
+                for (i, b) in raw.iter().enumerate() {
+                    eprint!("{:02X} ", b);
+                    if (i + 1) % 32 == 0 { eprintln!(); }
+                }
+                eprintln!();
+                let output = String::from_utf8_lossy(raw).to_string();
                 let final_pc = gameboy.pc();
                 let status = if cycles >= max_cycles {
                     TestStatus::Timeout
