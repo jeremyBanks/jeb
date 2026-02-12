@@ -201,6 +201,29 @@ This asymmetric default is natural, not arbitrary: entry and exit use different
 ends of the Z85 character block because the known bytes occupy different
 positions within the block.
 
+### Rejected Alternative: Direct Byte Encoding
+
+Instead of using Z85's natural leading/trailing chars for boundary bytes, we
+could encode them directly: map K bytes → K+1 Z85 chars via a bijection
+independent of the block's other bytes. This gives 100% stability (no
+disambiguation needed) at the cost of 1 extra character per boundary.
+
+| Approach | Chars used | Disambiguation | Total cost |
+|----------|-----------|----------------|-----------|
+| Natural (leading/trailing) | K | ~2 bits/byte | K chars + ~2K info bits |
+| Direct encoding | K+1 | 0 | K+1 chars |
+
+**Natural wins for tight budgets.** At budget=2 (8 raw bytes), natural uses 1
+char + 1 escape = 2 chars of budget, with disambiguation packed into the escape
+char's information bits. Direct encoding would need 2 chars + 1 escape = 3 chars
+of budget — doesn't fit.
+
+The key insight: each escape char choice provides ~1-2.6 bits of free
+information (depending on how many escape chars exist). Those bits can carry
+disambiguation more efficiently than spending a full extra Z85 character
+(~6.4 bits) on it. The "different level" optimization is in how escape char
+info bits are spent, not in the boundary byte encoding itself.
+
 ## 7. Padding Budget
 
 For N raw bytes, standard Z85 uses `⌈N × 5/4⌉` characters. Raw passthrough
