@@ -27,14 +27,8 @@ impl VideoData {
     pub fn new() -> Self {
         Self {
             t: 0,
-            vram: {
-                let mut a = [0u8; 0x2000];
-                for x in a.iter_mut() {
-                    *x = rand::random();
-                }
-                a
-            },
-            bgp: rand::random(),
+            vram: [0u8; 0x2000],
+            bgp: 0xFC,  // DMG default: 11 11 11 00
             scx: 0x00,
             scy: 0x00,
             lcdc: 0x00,

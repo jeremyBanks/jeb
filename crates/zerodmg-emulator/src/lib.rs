@@ -209,7 +209,7 @@ impl GameBoy {
     }
 
     /// Advance the timer hardware by one T-cycle.
-    pub fn timer_cycle(&mut self) {
+    fn timer_tick(&mut self) {
         use self::cpu::CPUController;
 
         let old_div = self.mem.div_counter;
@@ -239,6 +239,14 @@ impl GameBoy {
                 }
             }
         }
+    }
+
+    /// Advance the timer hardware by one M-cycle (= 4 T-cycles).
+    pub fn timer_cycle(&mut self) {
+        self.timer_tick();
+        self.timer_tick();
+        self.timer_tick();
+        self.timer_tick();
     }
 
     pub fn run(&mut self) -> ! {
@@ -277,10 +285,6 @@ impl GameBoy {
             for _t in t_0..t_1 {
                 self.video_cycle();
                 self.audio_cycle();
-                // Timer ticks at T-cycle rate (4x per M-cycle)
-                self.timer_cycle();
-                self.timer_cycle();
-                self.timer_cycle();
                 self.timer_cycle();
 
                 if (self.t + log_interval - log_interval.min(log_size as u64))

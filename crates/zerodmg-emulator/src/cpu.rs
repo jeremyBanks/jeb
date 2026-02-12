@@ -285,7 +285,15 @@ impl CPUController for GameBoy {
                 cycles = 1;
                 tracer = None;
             }
-            HCF(_variant) => unimplemented!("CPU instruction: HCF (halt and catch fire)"),
+            HCF(_variant) => {
+                let hcf_pc = match source {
+                    InstructionSource::ProgramCounter(a) => a,
+                    _ => 0xFFFF,
+                };
+                let opcode_byte = self.mem(hcf_pc);
+                panic!("HCF at PC=0x{:04X} opcode=0x{:02X} SP=0x{:04X} A=0x{:02X} t={}",
+                    hcf_pc, opcode_byte, self.cpu.sp, self.cpu.a, self.cpu.t);
+            }
             // 8-Bit Arithmatic and Logic
             INC(target) => {
                 let (old_value, extra_read_cycles) = self.read_register(target);

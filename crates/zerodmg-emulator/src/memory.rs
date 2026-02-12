@@ -26,20 +26,8 @@ pub struct MemoryData {
 impl MemoryData {
     pub fn new(game_rom: Vec<u8>) -> Self {
         Self {
-            wram: {
-                let mut a = [0u8; 0x2000];
-                for x in a.iter_mut() {
-                    *x = rand::random();
-                }
-                a
-            },
-            stack_ram: {
-                let mut a = [0u8; 0x80];
-                for x in a.iter_mut() {
-                    *x = rand::random();
-                }
-                a
-            },
+            wram: [0u8; 0x2000],
+            stack_ram: [0u8; 0x80],
             oam: [0u8; 0xA0],
             io_registers: [0u8; 0x80],
             game_rom,

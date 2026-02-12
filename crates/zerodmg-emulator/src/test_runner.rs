@@ -45,7 +45,7 @@ impl BlarggTestRunner {
         let mut cycles: u64 = 0;
         let mut last_output_len = 0;
         let mut cycles_since_output = 0;
-        const IDLE_CYCLES_THRESHOLD: u64 = 500_000_000;
+        const IDLE_CYCLES_THRESHOLD: u64 = 50_000_000;
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             while cycles < max_cycles {
@@ -55,10 +55,6 @@ impl BlarggTestRunner {
                 // Advance video and timer timing
                 for _ in 0..tick_cycles {
                     gameboy.video_cycle();
-                    // Timer ticks at T-cycle rate (4x per M-cycle)
-                    gameboy.timer_cycle();
-                    gameboy.timer_cycle();
-                    gameboy.timer_cycle();
                     gameboy.timer_cycle();
                 }
 
@@ -67,10 +63,7 @@ impl BlarggTestRunner {
                 // Check for new serial output
                 let current_output_len = gameboy.serial_output().len();
                 if current_output_len > last_output_len {
-                    if cycles > 100_000_000 && current_output_len % 1000 < 10 {
-                        eprintln!("SERIAL cycles={} len={} idle={}", cycles, current_output_len, cycles_since_output);
-                    }
-                    last_output_len = current_output_len;
+                        last_output_len = current_output_len;
                     cycles_since_output = 0;
 
                     // Check for test completion markers in output
