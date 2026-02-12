@@ -935,7 +935,7 @@ fn get_committer_from_agent_env() -> Option<(String, String)> {
         Some(("⇗ Cursor".to_string(), "cursoragent@cursor.com".to_string()))
     } else if env::var("OPENCLAW_SERVICE_MARKER").is_ok() {
         Some((
-            "🐾 OpenClaw".to_string(),
+            "🦀 OpenClaw".to_string(),
             "noreply@openclaw.ai".to_string(),
         ))
     } else {
