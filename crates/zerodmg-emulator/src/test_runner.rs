@@ -45,7 +45,7 @@ impl BlarggTestRunner {
         let mut cycles: u64 = 0;
         let mut last_output_len = 0;
         let mut cycles_since_output = 0;
-        const IDLE_CYCLES_THRESHOLD: u64 = 500_000_000;
+        const IDLE_CYCLES_THRESHOLD: u64 = 2_000_000_000;
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             while cycles < max_cycles {

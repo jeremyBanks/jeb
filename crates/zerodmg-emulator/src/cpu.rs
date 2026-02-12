@@ -236,12 +236,7 @@ impl CPUController for GameBoy {
             instruction = self.instruction_from_pc();
         };
 
-        // println!("   t = {:<10}  f_z = {}", self.cpu.t, self.z_flag());
-        // println!("  HL = {:04X}  A = {:02X}  B = {:02X}  C = {:02X}  D = {:02X}, E =
-        // {:02X}", self.get_register(HL), self.get_register(A), self.get_register(B),
-        // self.get_register(C), self.get_register(D), self.get_register(E));
-        // println!("{:6}:   {:<16}  ; {:<16}", source, format!("{}", instruction),
-        // format!("{:?}", instruction));
+        // Trace disabled
 
         let t_0 = self.cpu.t;
         let cycles;
@@ -1078,16 +1073,18 @@ impl CPUController for GameBoy {
         let sp0 = self.cpu.sp;
         let sp1 = sp0 - 2;
         let (value_low, value_high) = u16_to_u8s(value);
-        self.set_mem(sp1 + 1, value_low);
-        self.set_mem(sp1, value_high);
+        // GB is little-endian: low byte at lower address
+        self.set_mem(sp1, value_low);
+        self.set_mem(sp1 + 1, value_high);
         self.cpu.sp = sp1;
     }
 
     fn stack_pop(&mut self) -> u16 {
         let sp0 = self.cpu.sp;
         let sp1 = sp0 + 2;
-        let value_low = self.mem(sp0 + 1);
-        let value_high = self.mem(sp0);
+        // GB is little-endian: low byte at lower address
+        let value_low = self.mem(sp0);
+        let value_high = self.mem(sp0 + 1);
         let value = u8s_to_u16(value_low, value_high);
         self.cpu.sp = sp1;
         value
