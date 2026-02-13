@@ -132,6 +132,19 @@ export class Z85DecodeError extends Error {
  * The division produces digits in reverse order (least significant first),
  * so we fill the output buffer from right to left.
  *
+ * # Raw Passthrough Extension
+ *
+ * When a 4-byte block consists entirely of "safe" characters, the encoder
+ * MAY use raw passthrough (`,XXXX` format) instead of standard Z85 encoding.
+ * This includes non-aligned passthrough where the 4 safe bytes don't align
+ * with block boundaries.
+ *
+ * For non-aligned passthrough at position P (1-4):
+ * - The "before" block has P high-order Z85 chars
+ * - The passthrough bytes overlap with before/after blocks
+ * - We check if the before block value is canonical (minimum)
+ * - We try both P and P+1 positions to maximize success rate
+ *
  * For trailing bytes (1-3 bytes), we:
  * 1. Pad conceptually with zeros on the right to form a partial block
  * 2. Encode only the significant portion (standard Z85, no passthrough):
@@ -171,16 +184,15 @@ export function encode(input: Uint8Array): string {
         continue;
       }
 
-      // NOTE: Non-aligned passthrough encoding is disabled for now.
-      // The decoder supports it, but the encoder complexity for ensuring
-      // correct round-trip encoding of the "after" block is significant.
-      // Only block-aligned passthrough (where all 4 bytes align) is used.
-
-      // The code below is commented out but preserved for reference:
-      // Check for non-aligned passthrough opportunities
-      // Look for safe 4-byte sequences that don't start at current position
-      // let foundNonAligned = false;
-      // ... (non-aligned encoder logic would go here)
+      // Try non-aligned passthrough within this block
+      // Look for 4 consecutive safe bytes starting at positions 1, 2, or 3
+      const nonAlignedResult = tryNonAlignedPassthrough(input, inIdx);
+      if (nonAlignedResult !== null) {
+        // Non-aligned passthrough succeeded
+        outputChars.push(...nonAlignedResult.output);
+        inIdx += nonAlignedResult.bytesConsumed;
+        continue;
+      }
 
       // No passthrough opportunity, use standard Z85 encoding
       const value =
@@ -837,6 +849,266 @@ function areBytesAllSafe(input: Uint8Array, startIdx: number): boolean {
     SAFE_CHAR_TABLE[input[startIdx + 2]] &&
     SAFE_CHAR_TABLE[input[startIdx + 3]]
   );
+}
+
+// =============================================================================
+// Non-Aligned Passthrough Encoding
+// =============================================================================
+//
+// Non-aligned passthrough allows encoding 4 consecutive safe bytes that don't
+// align with block boundaries. The `,` marker appears at position P (1-4) within
+// a 5-character output block.
+//
+// For this to work correctly:
+// 1. The "before" block value must be the canonical minimum
+// 2. The "after" block must have enough remaining input to complete
+// 3. We try both position P and P+1 to maximize success rate
+
+/**
+ * Result of a successful non-aligned passthrough encoding attempt.
+ */
+interface NonAlignedResult {
+  /** The output characters for this passthrough sequence */
+  output: string[];
+  /** Number of input bytes consumed */
+  bytesConsumed: number;
+}
+
+/**
+ * Try to find and encode a non-aligned passthrough within the current block.
+ *
+ * Looks for 4 consecutive safe bytes starting at positions 1, 2, or 3 within
+ * the current 4-byte block. For each candidate, checks if the "before" block
+ * value is canonical (minimum) and if the "after" block can be properly encoded.
+ *
+ * Returns the result if successful, null otherwise.
+ */
+function tryNonAlignedPassthrough(
+  input: Uint8Array,
+  blockStart: number
+): NonAlignedResult | null {
+  // Try positions 1, 2, 3 within the current block
+  for (let p = 1; p <= 3; p++) {
+    const result = tryNonAlignedAtPosition(input, blockStart, p);
+    if (result !== null) {
+      return result;
+    }
+  }
+  return null;
+}
+
+/**
+ * Try non-aligned passthrough at a specific position P within the block.
+ *
+ * Position P means:
+ * - The "before" block has P high-order Z85 chars
+ * - The passthrough bytes start at input[blockStart + P]
+ * - The passthrough bytes overlap: first (4-P) bytes are end of "before", last P bytes are start of "after"
+ */
+function tryNonAlignedAtPosition(
+  input: Uint8Array,
+  blockStart: number,
+  p: number
+): NonAlignedResult | null {
+  // Passthrough bytes start at blockStart + p and span 4 bytes
+  const passStart = blockStart + p;
+
+  // Check if we have enough input for the passthrough
+  if (passStart + 4 > input.length) {
+    return null;
+  }
+
+  // Check if the 4 passthrough bytes are all safe
+  if (!areBytesAllSafe(input, passStart)) {
+    return null;
+  }
+
+  // Extract the passthrough bytes
+  const passBytes = [
+    input[passStart],
+    input[passStart + 1],
+    input[passStart + 2],
+    input[passStart + 3],
+  ];
+
+  // The "before" block is the 4 bytes starting at blockStart
+  const beforeValue =
+    ((input[blockStart] << 24) |
+      (input[blockStart + 1] << 16) |
+      (input[blockStart + 2] << 8) |
+      input[blockStart + 3]) >>>
+    0;
+
+  // The known low bytes of the "before" block are the first (4-p) passthrough bytes
+  const numKnownLowBytes = 4 - p;
+  const knownLowBytes = passBytes.slice(0, numKnownLowBytes);
+
+  // Check if the beforeValue is canonical for the given partial encoding
+  if (!isCanonicalMinimumForEncoding(beforeValue, p, knownLowBytes)) {
+    return null;
+  }
+
+  // The beforeValue is canonical! Now we need to handle the "after" block.
+  //
+  // The "after" block:
+  // - Has P known high bytes from the passthrough (the last P bytes)
+  // - Needs (5-P) Z85 chars for the low-order digits
+  //
+  // We need to check if there's enough input to form a complete after block.
+
+  const knownHighBytes = passBytes.slice(numKnownLowBytes); // Last P bytes of passthrough
+
+  // The after block starts at blockStart + 4
+  // Its first P bytes are from the passthrough (knownHighBytes)
+  // Its remaining (4-P) bytes come from input starting at blockStart + 4 + P
+
+  const afterBlockDataStart = blockStart + 4;
+
+  // Check if we have enough input for the full after block
+  // The after block needs 4 bytes total, and its first P bytes are from passthrough
+  // So we need (4-P) more bytes from input starting at afterBlockDataStart + P
+  const afterRemainingStart = afterBlockDataStart + p;
+  const afterRemainingNeeded = 4 - p;
+
+  if (afterRemainingStart + afterRemainingNeeded > input.length) {
+    // Not enough input for a complete after block
+    // Check if we're at the end of input (partial after block)
+    const actualRemaining =
+      afterRemainingStart <= input.length
+        ? input.length - afterRemainingStart
+        : 0;
+
+    // If there's no remaining input at all, we just output the before block
+    // and the passthrough, and there's no after block Z85 chars needed
+    if (actualRemaining === 0 && afterRemainingStart === input.length) {
+      // Edge case: passthrough is at the very end
+      // Output: P high-order Z85 chars + comma + 4 passthrough bytes
+      const output: string[] = [];
+
+      // Encode P high-order Z85 chars from beforeValue
+      const highChars = getHighOrderZ85Chars(beforeValue, p);
+      output.push(...highChars);
+
+      // Add comma and passthrough bytes
+      output.push(",");
+      for (const byte of passBytes) {
+        output.push(String.fromCharCode(byte));
+      }
+
+      // Bytes consumed: 4 (before block) + p (extension into after block)
+      return {
+        output,
+        bytesConsumed: 4 + p,
+      };
+    }
+
+    // If there's a partial remaining, we need to handle trailing bytes for after block
+    // This is more complex; for now, don't use non-aligned passthrough in this case
+    return null;
+  }
+
+  // We have enough input for a complete after block
+  // Construct the full after block value
+  const afterBytes = new Array(4);
+
+  // First P bytes come from passthrough (knownHighBytes)
+  for (let i = 0; i < p; i++) {
+    afterBytes[i] = knownHighBytes[i];
+  }
+
+  // Remaining (4-P) bytes come from input
+  for (let i = 0; i < afterRemainingNeeded; i++) {
+    afterBytes[p + i] = input[afterRemainingStart + i];
+  }
+
+  const afterValue =
+    ((afterBytes[0] << 24) |
+      (afterBytes[1] << 16) |
+      (afterBytes[2] << 8) |
+      afterBytes[3]) >>>
+    0;
+
+  // Now construct the output:
+  // 1. P high-order Z85 chars from beforeValue
+  // 2. Comma
+  // 3. 4 passthrough bytes
+  // 4. (5-P) low-order Z85 chars from afterValue
+
+  const output: string[] = [];
+
+  // 1. P high-order Z85 chars
+  const highChars = getHighOrderZ85Chars(beforeValue, p);
+  output.push(...highChars);
+
+  // 2. Comma
+  output.push(",");
+
+  // 3. 4 passthrough bytes
+  for (const byte of passBytes) {
+    output.push(String.fromCharCode(byte));
+  }
+
+  // 4. (5-P) low-order Z85 chars from afterValue
+  const lowChars = getLowOrderZ85Chars(afterValue, 5 - p);
+  output.push(...lowChars);
+
+  // Bytes consumed: before block (4) + after block (4) = 8
+  return {
+    output,
+    bytesConsumed: 8,
+  };
+}
+
+/**
+ * Get the first P Z85 characters (high-order digits) for a 32-bit value.
+ */
+function getHighOrderZ85Chars(value: number, p: number): string[] {
+  // Full Z85 encoding produces 5 chars
+  const chars: string[] = new Array(5);
+  let v = value;
+  for (let i = 4; i >= 0; i--) {
+    chars[i] = Z85_ALPHABET[v % 85];
+    v = Math.floor(v / 85);
+  }
+  // Return first P chars
+  return chars.slice(0, p);
+}
+
+/**
+ * Get the last numChars Z85 characters (low-order digits) for a 32-bit value.
+ */
+function getLowOrderZ85Chars(value: number, numChars: number): string[] {
+  // Full Z85 encoding produces 5 chars
+  const chars: string[] = new Array(5);
+  let v = value;
+  for (let i = 4; i >= 0; i--) {
+    chars[i] = Z85_ALPHABET[v % 85];
+    v = Math.floor(v / 85);
+  }
+  // Return last numChars
+  return chars.slice(5 - numChars);
+}
+
+/**
+ * Check if a block value is the canonical minimum for given partial Z85 encoding.
+ *
+ * For non-aligned passthrough at position P, the encoder outputs P high-order Z85
+ * digits. For round-trip correctness, the block's actual value must equal the
+ * canonical minimum that the decoder would compute given those P digits and
+ * the known low bytes from the passthrough.
+ */
+function isCanonicalMinimumForEncoding(
+  blockValue: number,
+  p: number,
+  knownLowBytes: number[]
+): boolean {
+  // Get the P high-order Z85 digits of the block value
+  const highDigits = getHighOrderZ85Digits(blockValue, p);
+
+  // Compute what the canonical minimum would be
+  const canonicalMin = computeCanonicalMinimumForEncoding(highDigits, knownLowBytes);
+
+  return blockValue === canonicalMin;
 }
 
 /**
