@@ -659,9 +659,12 @@ Grouped by dependency:
 
 ### Design Logic
 
-1. **How many escape characters?** Tiers 1-2 give up to 6 without breaking
-   JSON. What's the right number? Does the layout complexity scale with the
-   number of escape characters, or is there a unified layout that works for any?
+1. **How many escape characters?** Current design uses 5: `_` `~` `|` `,` `;`
+   (Tiers 1-2, preserving JSON compatibility). Tiers 1-2 could give up to 6 by
+   including backtick, but that breaks markdown inline code. Is 5 the right
+   number, or should we use fewer (simpler) or more (more capacity)? Does the
+   layout complexity scale with the number of escape characters, or is there a
+   unified layout that works for any?
 
 2. **What information does each escape character encode?** The `log2(N)` bits
    can be multiplexed across endianness, length classes, disambiguation, and
