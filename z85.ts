@@ -344,6 +344,13 @@ export function decode(input: string): Uint8Array {
   // Process trailing characters (2, 3, or 4 chars)
   // Note: Raw passthrough does NOT apply to trailing blocks - only full 5-char blocks
   if (trailingChars > 0) {
+    // Special case: if the trailing block starts with `,`, it must have exactly
+    // 4 more bytes (total 5 chars). Otherwise, it's an invalid escape sequence.
+    if (input.charCodeAt(inIdx) === RAW_ESCAPE) {
+      // `,` at a block boundary requires exactly 4 bytes following it
+      throw new Z85DecodeError("invalid Z85 input length");
+    }
+
     const numBytes = trailingChars - 1;
 
     // Decode the partial block (standard Z85 only)
