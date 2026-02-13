@@ -218,7 +218,7 @@ export function encode(input: Uint8Array): string {
 
     // First, check if we have at least 4 bytes for a potential passthrough
     if (bytesRemaining >= 4) {
-      // Check for block-aligned passthrough (simplest case)
+      // Check for block-aligned 4-byte passthrough (highest preference)
       if (areBytesAllSafe(input, inIdx)) {
         // Block-aligned passthrough: just output , + 4 bytes
         outputChars.push(",");
@@ -230,7 +230,16 @@ export function encode(input: Uint8Array): string {
         continue;
       }
 
-      // Try non-aligned passthrough within this block
+      // Try extended passthrough (5/6/7 bytes) - second highest preference
+      // Prefer: 7-byte > 6-byte > 5-byte
+      const extendedResult = tryExtendedPassthrough(input, inIdx);
+      if (extendedResult !== null) {
+        outputChars.push(...extendedResult.output);
+        inIdx += extendedResult.bytesConsumed;
+        continue;
+      }
+
+      // Try non-aligned 4-byte passthrough (lowest preference for passthrough)
       // Look for 4 consecutive safe bytes starting at positions 1, 2, or 3
       const nonAlignedResult = tryNonAlignedPassthrough(input, inIdx);
       if (nonAlignedResult !== null) {
@@ -1024,8 +1033,163 @@ function areBytesAllSafe(input: Uint8Array, startIdx: number): boolean {
   );
 }
 
+/**
+ * Check if K consecutive bytes starting at the given index are all safe.
+ */
+function areKBytesSafe(input: Uint8Array, startIdx: number, k: number): boolean {
+  if (startIdx + k > input.length) {
+    return false;
+  }
+  for (let i = 0; i < k; i++) {
+    if (!SAFE_CHAR_TABLE[input[startIdx + i]]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // =============================================================================
-// Non-Aligned Passthrough Encoding
+// Extended Passthrough Encoding (5/6/7 bytes)
+// =============================================================================
+//
+// Extended passthrough (`;`, `_`, `~`) allows encoding 5, 6, or 7 consecutive
+// safe bytes. Unlike 4-byte passthrough, these use P+1 chars before the escape
+// (not P), which provides full disambiguation without canonical minimum constraint.
+//
+// Structure: [(P+1) Z85 chars] [escape] [K raw bytes]
+// Then the main loop handles the remaining input normally.
+//
+// Preferences: block-aligned 4-byte > 7-byte > 6-byte > 5-byte > non-aligned 4-byte
+
+/**
+ * Result of a successful extended passthrough encoding attempt.
+ */
+interface ExtendedPassthroughResult {
+  /** The output characters for this passthrough sequence */
+  output: string[];
+  /** Number of input bytes consumed */
+  bytesConsumed: number;
+}
+
+/**
+ * Try to find and encode an extended (5/6/7-byte) passthrough.
+ *
+ * Looks for K consecutive safe bytes (K = 5, 6, or 7) starting at various positions.
+ * Returns the best option found, preferring longer passthrough (7 > 6 > 5).
+ */
+function tryExtendedPassthrough(
+  input: Uint8Array,
+  blockStart: number
+): ExtendedPassthroughResult | null {
+  // Try 7-byte first (highest preference), then 6, then 5
+  for (const k of [7, 6, 5]) {
+    const result = tryExtendedPassthroughOfLength(input, blockStart, k);
+    if (result !== null) {
+      return result;
+    }
+  }
+  return null;
+}
+
+/**
+ * Try extended passthrough of a specific length K (5, 6, or 7).
+ */
+function tryExtendedPassthroughOfLength(
+  input: Uint8Array,
+  blockStart: number,
+  k: number
+): ExtendedPassthroughResult | null {
+  // Try positions 0 through 3 (skip P=4 as it would require 1 char for after)
+  for (let p = 0; p <= 3; p++) {
+    const result = tryExtendedPassthroughAtPosition(input, blockStart, k, p);
+    if (result !== null) {
+      return result;
+    }
+  }
+  return null;
+}
+
+/**
+ * Try extended passthrough of length K at a specific position P.
+ */
+function tryExtendedPassthroughAtPosition(
+  input: Uint8Array,
+  blockStart: number,
+  k: number,
+  p: number
+): ExtendedPassthroughResult | null {
+  // Passthrough bytes start at blockStart + p and span K bytes
+  const passStart = blockStart + p;
+
+  // Check if we have enough input for the passthrough bytes
+  if (passStart + k > input.length) {
+    return null;
+  }
+
+  // Check if all K passthrough bytes are safe
+  if (!areKBytesSafe(input, passStart, k)) {
+    return null;
+  }
+
+  // Compute the before block (first 4 bytes of current block)
+  const beforeValue =
+    ((input[blockStart] << 24) |
+      (input[blockStart + 1] << 16) |
+      (input[blockStart + 2] << 8) |
+      input[blockStart + 3]) >>>
+    0;
+
+  // For extended passthrough (5/6/7 bytes), we output:
+  // 1. (P+1) Z85 chars - partial encoding of before block
+  // 2. Escape character
+  // 3. K passthrough bytes
+  //
+  // The remaining input after the passthrough is handled by the main encode loop.
+  // Unlike 4-byte passthrough, there's NO canonical minimum constraint because
+  // the extra char (P+1 instead of P) provides full disambiguation.
+
+  const output: string[] = [];
+
+  // 1. (P+1) Z85 chars for before block (partial encoding)
+  const beforeChars = getHighOrderZ85Chars(beforeValue, p + 1);
+  output.push(...beforeChars);
+
+  // 2. Escape character
+  let escape: string;
+  switch (k) {
+    case 5:
+      escape = String.fromCharCode(RAW_ESCAPE_5);
+      break;
+    case 6:
+      escape = String.fromCharCode(RAW_ESCAPE_6);
+      break;
+    case 7:
+      escape = String.fromCharCode(RAW_ESCAPE_7);
+      break;
+    default:
+      throw new Error("unreachable");
+  }
+  output.push(escape);
+
+  // 3. K passthrough bytes
+  for (let i = 0; i < k; i++) {
+    output.push(String.fromCharCode(input[passStart + i]));
+  }
+
+  // Bytes consumed:
+  // - P bytes from before block (input[blockStart..blockStart+P])
+  // - K bytes of passthrough (input[blockStart+P..blockStart+P+K])
+  // Total: P + K bytes
+  const bytesConsumed = p + k;
+
+  return {
+    output,
+    bytesConsumed,
+  };
+}
+
+// =============================================================================
+// Non-Aligned 4-byte Passthrough Encoding
 // =============================================================================
 //
 // Non-aligned passthrough allows encoding 4 consecutive safe bytes that don't
