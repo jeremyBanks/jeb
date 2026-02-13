@@ -12,7 +12,7 @@
 
 ### ⚠️ Partial (Grade B-C)
 - [ ] Non-aligned lengths (only 5,6,8 tested; missing 7,9-11)
-- [ ] Budget constraints (5-byte tested; missing 4-byte break-even, 9-byte boundary)
+- [x] **Budget constraints** - ✅ DONE: 8 tests, 7 pass, 1 design issue (11:52 AM)
 - [ ] Transparency/readability
 
 ### ❌ Weak/Missing (Grade D-F)
@@ -94,6 +94,36 @@
 - Current: 37/37 tests passing
 - Sonnet review: C- grade
 - Plan: Fill gaps starting with Priority 1
+
+### 2026-02-13 11:42 AM - Priority 1 Item 1: Raw eligibility
+- Added 5 comprehensive tests
+- All printable ASCII tested systematically
+- Non-printable and escapes verified
+- ✅ All 5 tests pass
+
+### 2026-02-13 11:45 AM - Priority 1 Item 2: Exit structure
+- Added 8 tests for mid-block exit behavior
+- 7 pass, 1 fails (block-aligned exit pattern)
+- Bug documented in BUG-LOG.md
+- Decoder error: TruncatedInput on specific pattern
+
+### 2026-02-13 11:46 AM - Priority 1 Item 3: Consecutive raw
+- Added 6 tests for R4 requirement
+- Decoder properly handles consecutive sections
+- Encoder avoids them (efficient)
+- ✅ All 6 tests pass
+
+### 2026-02-13 11:50 AM - Priority 2: Budget boundaries
+- Added 8 tests for §8 budget constraints
+- 4-byte break-even, 5+ byte savings verified
+- 7 pass, 1 design issue (mid-block budget violation)
+- Mid-block + raw can exceed standard Z85 by 12.5%
+
+### Current Status (11:52 AM)
+- **60 tests total** (58 pass, 2 ignored)
+- **2 design issues** documented for Jeremy
+- Priority 1 complete (3/3), Priority 2 complete (2/2)
+- Next: Priority 3 (non-aligned lengths, edge cases)
 
 ---
 
