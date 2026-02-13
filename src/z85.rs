@@ -350,6 +350,12 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
     // Process trailing characters (2, 3, or 4 chars)
     // Note: Raw passthrough does NOT apply to trailing blocks - only full 5-char blocks
     if trailing_chars > 0 {
+        // Special case: if the trailing block starts with `,`, it must have exactly
+        // 4 more bytes (total 5 chars). Otherwise, it's an invalid escape sequence.
+        if input[in_idx] == RAW_ESCAPE {
+            // `,` at a block boundary requires exactly 4 bytes following it
+            return Err(DecodeError::InvalidLength);
+        }
         let block = &input[in_idx..];
         let num_bytes = trailing_chars - 1;
 
