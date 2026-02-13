@@ -28,6 +28,8 @@ version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "anyhow",
  "clap 3.2.25",
+ "serde",
+ "serde_yaml",
 ]
 
 [[package]]
