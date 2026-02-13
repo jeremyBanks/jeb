@@ -268,12 +268,15 @@ Ranked by the cost of using them as escape characters:
 
 ### Key Insight
 
-The previous design (IDEATION.md) used all 6 characters from Tiers 1-2:
-`_` `~` `` ` `` `|` `,` `;`. This preserves JSON string compatibility — likely
-the most important context for jeb. This constraints document leaves the escape
-character count as an open design decision (§12 Q1). The number of escape
-characters and how their information capacity is allocated is central to the
-design (see §9).
+The current design uses **5 escape characters** from Tiers 1-2: `_` `~` `|` `,` `;`.
+This provides `log2(5) ≈ 2.32 bits` of information per escape character choice.
+The cost is CSV quoting (fields containing these characters must be quoted), but
+JSON string compatibility is preserved — likely the most important context for
+jeb. Backtick (`` ` ``) from Tier 1.5 is excluded to avoid breaking markdown
+inline code.
+
+The number of escape characters and how their information capacity is allocated
+is central to the design (see §9).
 
 ## 6. Mid-Block Stability (Entry Boundaries)
 
@@ -353,7 +356,7 @@ default conventions.
 | 2 | 2 trailing (chars 3-4) | ~4 bits | Raw context (free) |
 | 3 | 3 trailing (chars 2-4) | ~5 bits | Raw context (free) |
 
-### Exit Disambiguation Is Free (From Raw Context)
+### Exit Disambiguation: Opportunistic Zero-Padding
 
 At an **exit boundary**, the block looks like `[raw raw raw | Z85]`. The
 bytes before the cut were part of the raw section — the decoder already has
@@ -374,24 +377,29 @@ b2×2^8 + b3`. A key property of Z85's arithmetic:
 The decoder knows b0, b1, b2 (from raw), and knows the character value, so it
 computes `b3 mod 85 = (char4_value - b0 - b1 - b2) mod 85`. Since b3 has 256
 possible values and mod 85 gives ~3 candidates per residue, the decoder needs
-~2 bits to pick the right one — but these bits can come from the raw context
-rather than from escape character info bits.
+**~1.59 bits to pick the right one**. 
 
-**Contrast with entry boundaries:** At an entry, the block is
-`[Z85 | raw raw raw]`. The bytes after the cut are raw, but the decoder hasn't
-read them yet. The decoder must resolve disambiguation from the escape prefix
-(costly — uses limited escape char info bits).
+**Previous claim (incorrect):** "These bits can come from the raw context
+rather than from escape character info bits." This is wrong. Knowing the raw
+bytes gives you the residue class `b3 mod 85`, but not which of the ~3
+candidates is correct. You still need ~1.59 bits per boundary byte, same cost
+as entry boundaries.
 
-**Key asymmetry:**
-- **Entry:** ~2 bits disambiguation per boundary byte, must come from escape
-  prefix (costly)
-- **Exit:** ~2 bits disambiguation per boundary byte, can come from
-  already-decoded raw bytes (free in terms of escape budget, costs decoder
-  complexity)
+**Opportunistic zero-padding solution:** The encoder only allows mid-block
+exit cuts when the actual boundary bytes produce the **same Z85 characters as
+if they were zero-padded**. The encoder checks: "Would these boundary bytes
+encode identically if unknown bytes were zeros?" If yes, the cut is valid with
+**zero disambiguation cost** — the format is self-signaling. If no, skip the
+cut and use block-aligned exit or extend the raw section.
 
-Exit boundaries are **cheaper** than entry boundaries in escape bit budget.
-The cost is decoder complexity (back-referencing recently decoded raw data).
-This is exactly the kind of complexity this project is willing to accept (§11).
+**Example:** For `[b0 b1 b2 | b3]` exit cut, check if encoding
+`[b0 b1 b2 | b3]` produces the same trailing character as `[b0 b1 b2 | 0]`.
+If yes, the decoder can assume zero-padding and uniquely recover b3. If no,
+the encoder must use a different cut position or block-aligned exit.
+
+This trades disambiguation bits (expensive in tight budgets) for encoder
+complexity (checking whether specific byte values allow stable cuts). The
+decoder remains simple: it always assumes zero-padding for exit boundaries.
 
 ### Recommended Defaults
 
@@ -403,20 +411,18 @@ be a small value (length field, type tag, null terminator). Small values have
 zeros in high bits, placing them far from `85^4` boundaries → higher stability.
 68% baseline, likely higher for real data.
 
-**Exit: Trailing characters (LE), disambiguated from raw context** — The
-decoder already has the raw bytes from earlier in the block. It uses them to
-resolve the trailing Z85 characters without spending escape char info bits.
-This makes exit boundaries cheaper than entry boundaries in terms of escape
-budget.
+**Exit: Opportunistic zero-padding** — The encoder only allows exit cuts when
+the boundary bytes encode the same as if zero-padded. No disambiguation bits
+needed. The encoder checks whether the cut works; if not, it uses block-aligned
+exit or extends the raw section.
 
-**The asymmetry:**
-- Entry: ~2 bits/byte disambiguation from escape prefix (expensive, uses
-  limited info budget)
-- Exit: ~2 bits/byte disambiguation from already-decoded raw bytes (free in
-  escape budget, costs decoder complexity)
+**No inherent asymmetry:** Both entry and exit would cost ~1.59 bits/byte for
+disambiguation if we allocated bits explicitly. The opportunistic approach
+eliminates this cost for exit boundaries by restricting which byte values allow
+cuts, at the expense of encoder complexity (checking whether cuts are valid).
 
 When budget allows, the escape character choice can signal which convention
-is in use (see §9).
+is in use, or whether opportunistic cuts are allowed (see §9).
 
 ### Rejected Alternative: Direct Byte Encoding
 
@@ -511,7 +517,7 @@ the high bit could signal endianness while the low bit signals a length class.
 | 2 | 1 | BE/LE, OR 2 length classes |
 | 3 | ~1.6 | 3-way split (e.g., short/long/to-end) |
 | 4 | 2 | Endianness × length class |
-| 6 | ~2.6 | Full IDEATION.md design |
+| 5 | ~2.3 | Current design (`_` `~` `|` `,` `;`) |
 
 The number and allocation of escape characters is **undecided**. The analysis
 above maps the constraint space; the choice depends on which capabilities matter
@@ -554,14 +560,16 @@ characters occupy positions that would otherwise be raw.
 | Entry disambiguation | up to 4 candidates (when unstable) | ~2 |
 | Length / span | variable | variable |
 
-Exit disambiguation is free (from raw context, §7), so it doesn't consume
-escape budget.
+Exit disambiguation uses **opportunistic zero-padding** (§7): the encoder only
+allows exit cuts when boundary bytes encode the same as zero-padded. Zero bits
+consumed when the cut is valid; cut disallowed otherwise.
 
 Worst-case for mid-block both ends: 4 entry positions × 4 exit positions × 4
 entry disambiguation candidates = **64 combinations** needed before any length
 encoding. This is a ceiling — aligned cuts need 0 disambiguation, and 68% of
-1-byte cuts are stable (also 0). The 4 disambiguation candidates apply only to
-the ~32% of 1-byte cuts that are unstable.
+1-byte entry cuts are stable (also 0). Exit cuts are opportunistic and add no
+bit cost (just encoder complexity to check validity). The 4 disambiguation
+candidates apply only to the ~32% of 1-byte entry cuts that are unstable.
 
 ### Information Capacity: N Escape Characters × 1 Overhead Character
 
@@ -570,11 +578,11 @@ from the Z85 alphabet (85 values = ~6.4 bits). Total combinations = N × 85.
 
 | Escape characters | Combinations (N×85) | After cuts+disambig (÷64) | Length classes | Context cost |
 |------------------|--------------------|--------------------------|--------------:|-------------|
-| 1 | 85 | 1.3× | **1** | Free (Tier 1) |
-| 2 | 170 | 2.7× | **2** | Free (Tier 1) |
+| 1 | 85 | 1.3× | **1** | Free (Tier 1: `_`) |
+| 2 | 170 | 2.7× | **2** | Free (Tier 1: `_` `~`) |
 | 3 | 255 | 4.0× | **3** | +backtick (Tier 1.5) |
-| 4 | 340 | 5.3× | **5** | +1 CSV char (Tier 2) |
-| 6 | 510 | 8.0× | **7** | +3 CSV chars (Tier 2) |
+| 4 | 340 | 5.3× | **5** | +1 CSV (Tier 2: e.g. `\|`) |
+| 5 | 425 | 6.6× | **6** | +3 CSV (current: `_` `~` `\|` `,` `;`) |
 
 ### Block-Aligned Only (Simpler Case)
 
@@ -584,7 +592,7 @@ If we drop mid-block cuts entirely, all N×85 combinations encode length:
 |------------------|---------------|----------------------|
 | 1 | 85 | 340 |
 | 2 | 170 | 680 |
-| 6 | 510 | 2040 |
+| 5 | 425 | 1700 |
 
 ### Key Trade-offs
 
@@ -628,11 +636,12 @@ These were open questions; they've been answered:
 - **Complexity budget: high.** This project accepts high complexity in exchange
   for value. Asymmetric entry/exit conventions are acceptable if well-motivated.
 
-- **Asymmetric entry/exit is justified, but for different reasons than
-  originally thought.** Not because trailing characters are self-stable (they
-  aren't), but because exit boundaries can use already-decoded raw bytes for
-  disambiguation (free), while entry boundaries must spend escape char info
-  bits (costly). The asymmetry is in disambiguation cost, not in stability.
+- **Asymmetric entry/exit conventions.** Entry boundaries use leading characters
+  (BE convention) with opportunistic disambiguation when stable (68%+ of 1-byte
+  cuts). Exit boundaries use **opportunistic zero-padding**: the encoder only
+  allows cuts when boundary bytes encode the same as if zero-padded, eliminating
+  disambiguation cost entirely. The asymmetry is in approach: entry uses partial
+  stability analysis, exit uses self-signaling byte-value constraints.
 
 - **Length before data; no sentinels.** The decoder must know the raw section
   length before reading raw bytes. Length is encoded either implicitly (in the
