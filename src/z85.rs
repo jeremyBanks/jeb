@@ -381,67 +381,13 @@ fn try_non_aligned_at_position(
     let after_remaining_needed = 4 - p;
 
     if after_remaining_start + after_remaining_needed > input.len() {
-        // Not enough input for a complete after block
-        // Check if we're at the end of input (partial after block)
-        let actual_remaining = if after_remaining_start <= input.len() {
-            input.len() - after_remaining_start
-        } else {
-            0
-        };
-
-        // If there's no remaining input at all, we just output the before block
-        // and the passthrough, and there's no after block Z85 chars needed
-        if actual_remaining == 0 && after_remaining_start == input.len() {
-            // Edge case: passthrough is at the very end
-            // Output: P high-order Z85 chars + comma + 4 passthrough bytes
-            let mut output = Vec::new();
-
-            // Encode P high-order Z85 chars from before_value
-            let high_digits = get_high_order_z85_chars(before_value, p);
-            output.extend_from_slice(&high_digits);
-
-            // Add comma and passthrough bytes
-            output.push(RAW_ESCAPE);
-            output.extend_from_slice(pass_bytes);
-
-            // Bytes consumed: the entire before block (4) + P more from the passthrough overlap
-            // Wait, the passthrough bytes overlap. Let me reconsider.
-            //
-            // Input bytes consumed:
-            // - Before block: 4 bytes (block_start to block_start+4)
-            // - After block: P bytes that are the high bytes (already part of passthrough)
-            //
-            // Actually, the passthrough bytes are:
-            // - First (4-P) bytes overlap with end of before block
-            // - Last P bytes overlap with start of after block
-            //
-            // So total unique input bytes = before block (4) + additional after bytes (4-P)
-            // But we already counted 4 bytes for before, so bytes_consumed = 4 + (4-P)?
-            // No wait, let's trace through more carefully.
-            //
-            // For P=1:
-            // - Before block: bytes 0,1,2,3
-            // - Passthrough: bytes 1,2,3,4 (overlaps before block bytes 1,2,3)
-            // - After block: bytes 4,5,6,7 (first 1 byte is passthrough byte 4)
-            // So we consume 4 bytes (before) initially, then 4 more (after block) = 8 total
-            //
-            // For P=3:
-            // - Before block: bytes 0,1,2,3
-            // - Passthrough: bytes 3,4,5,6 (overlaps before block byte 3)
-            // - After block: bytes 4,5,6,7 (first 3 bytes are passthrough bytes 4,5,6)
-            // So we consume 4 bytes (before) + 4 more (after) = 8 total
-            //
-            // In this edge case, we're at the end of input with no after block remaining bytes
-            // So bytes_consumed = 4 + p (the passthrough extends P bytes beyond the before block)
-
-            return Some(NonAlignedResult {
-                output,
-                bytes_consumed: 4 + p,
-            });
-        }
-
-        // If there's a partial remaining, we need to handle trailing bytes for after block
-        // This is more complex; for now, don't use non-aligned passthrough in this case
+        // Not enough input for a complete after block.
+        // Non-aligned passthrough requires a complete after block because:
+        // - The passthrough bytes overlap with both before and after blocks
+        // - The after block needs (5-P) Z85 chars to encode its low-order bytes
+        // - Without a complete after block, we can't properly output those Z85 chars
+        //
+        // Fall back to standard Z85 encoding for this case.
         return None;
     }
 
@@ -1221,5 +1167,192 @@ mod tests {
         assert_eq!(result.len(), 4);
         // Before block: canonical minimum with 4 digits (A=36,B=37,C=38,D=39)
         assert_eq!(&result[..], &[0x71, 0x61, 0x9E, 0x8E]);
+    }
+
+    // =========================================================================
+    // Tests for non-aligned passthrough ENCODING
+    // =========================================================================
+
+    #[test]
+    fn test_non_aligned_encode_position_1() {
+        // Input where non-aligned passthrough at P=1 should be used:
+        // - First byte is NOT safe (0x00)
+        // - Bytes 1-4 ARE safe ("test")
+        // - Before block value must be canonical minimum
+        //
+        // Input: [0x00, 't', 'e', 's', 't', 0x00, 0x00, 0x00, 0x00]
+        // Before block: 0x00746573 (canonical for digit 0 + known bytes "est")
+        // Passthrough: "test"
+        // After block: 0x74000000 ("t\x00\x00\x00")
+        let input = [0x00u8, b't', b'e', b's', b't', 0x00, 0x00, 0x00, 0x00];
+        let encoded = encode(&input);
+
+        // Should use non-aligned passthrough
+        // Format: 1 Z85 char + comma + 4 passthrough + 4 Z85 chars + 2 trailing chars
+        assert!(encoded.contains(",test"), "Expected non-aligned passthrough with ,test");
+        assert_eq!(encoded.len(), 12, "Expected 12 output chars for 9 input bytes");
+
+        // Verify round-trip
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn test_non_aligned_encode_position_1_no_trailing() {
+        // Input where non-aligned passthrough at P=1 should be used, no trailing bytes
+        // Input: [0x00, 't', 'e', 's', 't', 'X', 'Y', 'Z']
+        let input = [0x00u8, b't', b'e', b's', b't', b'X', b'Y', b'Z'];
+        let encoded = encode(&input);
+
+        // Should use non-aligned passthrough
+        // Format: 1 Z85 char + comma + 4 passthrough + 4 Z85 chars
+        assert!(encoded.contains(",test"), "Expected non-aligned passthrough with ,test");
+        assert_eq!(encoded.len(), 10, "Expected 10 output chars for 8 input bytes");
+
+        // Verify round-trip
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn test_non_aligned_encode_not_canonical() {
+        // Input where the "before" block is NOT canonical minimum
+        // Should fall back to standard Z85 encoding
+        //
+        // For non-canonical, we need a value where the same high Z85 digit and low bytes
+        // could come from a smaller value. This happens when:
+        // - The value V = canonical_min + k * modulus (for k >= 1)
+        //
+        // For P=1 with digit 0, range is [0, 52200625), modulus is 16777216
+        // So values 0x01000000, 0x02000000, etc. with low bytes 0x000000 are NOT canonical
+        // (canonical would be 0x00000000)
+        //
+        // We need: first byte such that the before block is 0x01XXYYZZ where XXYYZZ are safe chars
+        // and XXYYZZ = 0x000000 (null bytes, which are NOT safe)
+        //
+        // Actually, for the non-aligned passthrough to even be considered, the passthrough bytes
+        // must be safe. So we need a case where:
+        // - Passthrough bytes are safe
+        // - Before block value is NOT canonical
+        //
+        // Before block bytes: [B0, B1, B2, B3]
+        // For P=1: passthrough bytes are [B1, B2, B3, B4]
+        // All of B1, B2, B3, B4 must be safe
+        //
+        // We need: 0xB0B1B2B3 is NOT canonical given high digit and low bytes [B1, B2, B3]
+        //
+        // Let's try: B0 = 0x01 (so first byte is 0x01)
+        // B1, B2, B3 = 0x00, 0x00, 0x00 (but these are not safe!)
+        //
+        // This is tricky because null bytes aren't safe. Let me think...
+        //
+        // For the passthrough bytes to be safe but the value non-canonical:
+        // - Let's try finding a high digit where there are multiple valid values
+        //   with the same low bytes that are safe characters
+        //
+        // For safe bytes like "aaa" = 0x616161:
+        // Canonical min for digit 0 with low bytes 0x616161 is 0x00616161 = 6381921
+        // Next value with same low bytes is 0x01616161 = 23159137
+        // Is 23159137 in range [0, 52200625)? Yes (since 23159137 < 52200625)
+        // So 0x01616161 would NOT be canonical!
+        //
+        // Input: [0x01, 'a', 'a', 'a', ...]
+        // Before block: 0x01616161 - NOT canonical (canonical is 0x00616161)
+        // Passthrough: "aaaa" (if we have 'a' as the 5th byte)
+        let input = [0x01u8, b'a', b'a', b'a', b'a', 0x00, 0x00, 0x00];
+        let encoded = encode(&input);
+
+        // Should NOT use non-aligned passthrough (before block 0x01616161 is not canonical)
+        assert!(!encoded.contains(",aaaa"), "Should not use non-aligned passthrough for non-canonical value");
+
+        // Verify round-trip still works
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn test_non_aligned_encode_matches_ts() {
+        // Cross-validation test: ensure Rust encoder output matches expected
+        // Input: null byte followed by "test" and 4 null bytes
+        let input = [0x00u8, b't', b'e', b's', b't', 0x00, 0x00, 0x00, 0x00];
+        let encoded = encode(&input);
+
+        // Expected output: "0,testn#pv00"
+        // - "0" - high-order Z85 digit for before block 0x00746573
+        // - ",test" - comma + passthrough bytes
+        // - "n#pv" - low-order Z85 digits for after block 0x74000000
+        // - "00" - trailing byte 0x00
+        assert_eq!(encoded, "0,testn#pv00");
+    }
+
+    #[test]
+    fn test_non_aligned_encode_at_stream_end() {
+        // Test non-aligned passthrough when it ends exactly at input boundary
+        // Input: [0x00, 't', 'e', 's', 't'] (5 bytes)
+        //
+        // For non-aligned at P=1:
+        // - Before block: bytes 0-3 = [0x00, 't', 'e', 's'] = 0x00746573
+        // - Passthrough: bytes 1-4 = "test"
+        // - After block: would need bytes 4-7, but we only have byte 4 ('t')
+        //
+        // The passthrough bytes overlap:
+        // - First 3 bytes "tes" overlap with before block
+        // - Last 1 byte "t" overlaps with after block
+        //
+        // Since the after block (bytes 4-7) only has 1 byte (byte 4 = 't'),
+        // we can't complete it. The encoder should either:
+        // 1. Not use non-aligned passthrough (fall back to standard encoding)
+        // 2. Or handle the edge case of passthrough at stream end
+        //
+        // Currently our implementation doesn't use non-aligned passthrough
+        // if there's not enough input for the after block, so this should
+        // fall back to standard Z85 encoding.
+        let input = [0x00u8, b't', b'e', b's', b't'];
+        let encoded = encode(&input);
+
+        // The encoding should be: 5 bytes -> 5 chars (4 bytes) + 2 chars (1 byte) = 7 chars
+        // But standard Z85 encoding would be different structure
+        // Let's just verify round-trip works
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, input, "Round-trip should preserve input");
+
+        // Also verify the output length is correct
+        // 5 bytes = 4 bytes + 1 byte = 5 chars + 2 chars = 7 chars
+        assert_eq!(encoded.len(), 7, "5 input bytes should produce 7 output chars");
+    }
+
+    #[test]
+    fn test_is_canonical_minimum() {
+        // Test the is_canonical_minimum helper function
+
+        // Case 1: Canonical value
+        // For P=1, the "before" block has 1 high-order Z85 digit.
+        // For value 0x00746573:
+        // - High digit: 0x00746573 / 85^4 = 7628147 / 52200625 = 0
+        // - Known low bytes (from passthrough): [0x74, 0x65, 0x73]
+        // - Canonical min for digit 0 with low bytes 0x746573 is 0x00746573
+        assert!(is_canonical_minimum(0x00746573, 1, &[0x74, 0x65, 0x73]));
+
+        // Case 2: Non-canonical value
+        // For digit 0, range is [0, 52200625)
+        // With low bytes 0x000000, multiple values have the same encoding:
+        // - 0x00000000 (canonical)
+        // - 0x01000000 = 16777216 (not canonical)
+        // - 0x02000000 = 33554432 (not canonical)
+        // All have high digit 0 and low bytes 0x000000.
+        assert!(is_canonical_minimum(0x00000000, 1, &[0x00, 0x00, 0x00]));
+        assert!(!is_canonical_minimum(0x01000000, 1, &[0x00, 0x00, 0x00]));
+        assert!(!is_canonical_minimum(0x02000000, 1, &[0x00, 0x00, 0x00]));
+
+        // Case 3: Value 0xFF746573 IS canonical
+        // For digit 82, range is [4280451250, 4332651875)
+        // The span is only ~52M values, and the modulus is ~16M
+        // So there's only one value with any given low bytes in this range
+        // (since the range spans only ~3.1 modulus periods)
+        // For value 0xFF746573 = 4285818227:
+        // - High digit: 82
+        // - Low bytes: 0x746573
+        // - This is the only valid value with these parameters
+        assert!(is_canonical_minimum(0xFF746573, 1, &[0x74, 0x65, 0x73]));
     }
 }

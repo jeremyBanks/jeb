@@ -971,39 +971,13 @@ function tryNonAlignedAtPosition(
   const afterRemainingNeeded = 4 - p;
 
   if (afterRemainingStart + afterRemainingNeeded > input.length) {
-    // Not enough input for a complete after block
-    // Check if we're at the end of input (partial after block)
-    const actualRemaining =
-      afterRemainingStart <= input.length
-        ? input.length - afterRemainingStart
-        : 0;
-
-    // If there's no remaining input at all, we just output the before block
-    // and the passthrough, and there's no after block Z85 chars needed
-    if (actualRemaining === 0 && afterRemainingStart === input.length) {
-      // Edge case: passthrough is at the very end
-      // Output: P high-order Z85 chars + comma + 4 passthrough bytes
-      const output: string[] = [];
-
-      // Encode P high-order Z85 chars from beforeValue
-      const highChars = getHighOrderZ85Chars(beforeValue, p);
-      output.push(...highChars);
-
-      // Add comma and passthrough bytes
-      output.push(",");
-      for (const byte of passBytes) {
-        output.push(String.fromCharCode(byte));
-      }
-
-      // Bytes consumed: 4 (before block) + p (extension into after block)
-      return {
-        output,
-        bytesConsumed: 4 + p,
-      };
-    }
-
-    // If there's a partial remaining, we need to handle trailing bytes for after block
-    // This is more complex; for now, don't use non-aligned passthrough in this case
+    // Not enough input for a complete after block.
+    // Non-aligned passthrough requires a complete after block because:
+    // - The passthrough bytes overlap with both before and after blocks
+    // - The after block needs (5-P) Z85 chars to encode its low-order bytes
+    // - Without a complete after block, we can't properly output those Z85 chars
+    //
+    // Fall back to standard Z85 encoding for this case.
     return null;
   }
 
