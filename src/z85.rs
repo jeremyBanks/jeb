@@ -270,6 +270,15 @@ fn encode_partial_to_slice(mut value: u32, num_chars: usize, output: &mut [u8]) 
 ///    - Accumulate: value = d0*85^4 + d1*85^3 + d2*85^2 + d3*85 + d4
 ///    - Convert the u32 value to 4 big-endian bytes
 ///
+/// # Non-Aligned Passthrough (Advanced)
+///
+/// When `,` appears at position P (1-4) within a 5-char block, it interrupts
+/// the Z85 encoding of surrounding blocks:
+/// - First P chars are partial Z85 digits for the "before" block
+/// - `,` + next 4 chars are raw passthrough bytes
+/// - The "before" block is ambiguous: we compute all possible 32-bit values
+///   and output the MINIMUM (canonical) value (big-endian interpretation)
+///
 /// For trailing characters (2-4 chars), we:
 /// 1. Decode to get the partial value (standard Z85, no passthrough for partials)
 /// 2. Extract only the appropriate number of bytes:
@@ -291,100 +300,135 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
         return Ok(Vec::new());
     }
 
-    // Validate input length
-    // Valid lengths: 0, 2, 3, 4, 5, 7, 8, 9, 10, 12, ...
-    // Invalid: 1, 6, 11, 16, ... (1 mod 5 and 6 mod 5... wait, let's think about this)
-    //
-    // For n output bytes:
-    // - 0 bytes -> 0 chars
-    // - 1 byte  -> 2 chars
-    // - 2 bytes -> 3 chars
-    // - 3 bytes -> 4 chars
-    // - 4 bytes -> 5 chars
-    // - 5 bytes -> 7 chars (5 + 2)
-    // - 6 bytes -> 8 chars (5 + 3)
-    // ...
-    //
-    // So valid char counts: 0, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 17, ...
-    // Invalid: 1, 6, 11, 16, ... (i.e., 1 mod 5)
-    let trailing_chars = input.len() % 5;
-    if trailing_chars == 1 {
-        return Err(DecodeError::InvalidLength);
-    }
+    // With non-aligned passthrough, we can't pre-calculate output size easily
+    // because commas can appear anywhere and shift the alignment.
+    // We'll build output incrementally.
+    let mut output = Vec::new();
 
-    // Calculate output size
-    let full_blocks = input.len() / 5;
-    let trailing_bytes = if trailing_chars > 0 { trailing_chars - 1 } else { 0 };
-    let output_len = full_blocks * 4 + trailing_bytes;
-
-    let mut output = vec![0u8; output_len];
-    let mut out_idx = 0;
     let mut in_idx = 0;
 
-    // Process full 5-character blocks
-    while in_idx + 5 <= input.len() {
-        let block = &input[in_idx..in_idx + 5];
+    // Track position within current Z85 block (0-4)
+    let mut block_pos = 0usize;
+    // Accumulated Z85 digits for current block
+    let mut current_block_digits: Vec<u8> = Vec::with_capacity(5);
 
-        // Check for raw passthrough escape at block boundary.
-        // When `,` is the first character of a 5-char block, the next 4 bytes
-        // are taken as literal output (no Z85 decoding, no content validation).
-        if block[0] == RAW_ESCAPE {
-            // Raw passthrough: copy the 4 bytes after `,` directly to output
-            output[out_idx] = block[1];
-            output[out_idx + 1] = block[2];
-            output[out_idx + 2] = block[3];
-            output[out_idx + 3] = block[4];
+    while in_idx < input.len() {
+        let byte = input[in_idx];
+
+        if byte == RAW_ESCAPE {
+            // Found a comma - this is a passthrough marker
+            let p = block_pos; // Position within the 5-char block (0-4)
+
+            // Ensure we have at least 4 more characters for the passthrough bytes
+            if in_idx + 4 >= input.len() {
+                return Err(DecodeError::InvalidLength);
+            }
+
+            // Extract the 4 passthrough bytes
+            let pass_bytes = &input[in_idx + 1..in_idx + 5];
+
+            if p == 0 {
+                // Block-aligned passthrough: simple case, just output the 4 bytes
+                output.extend_from_slice(pass_bytes);
+                in_idx += 5; // Skip comma + 4 bytes
+                // block_pos stays at 0, current_block_digits stays empty
+            } else {
+                // Non-aligned passthrough at position P (1-4)
+                // We have P high-order Z85 digits in current_block_digits
+                // The passthrough bytes provide (4-P) known low-order bytes for the "before" block
+
+                // The first (4-P) passthrough bytes are the known low bytes of the "before" block
+                let num_known_bytes = 4 - p;
+                let known_low_bytes = &pass_bytes[0..num_known_bytes];
+
+                // Compute the canonical minimum for the "before" block
+                let before_value = compute_canonical_minimum(&current_block_digits, known_low_bytes)?;
+
+                // Output the 4 bytes of the "before" block
+                output.extend_from_slice(&before_value.to_be_bytes());
+
+                // Output the 4 passthrough bytes
+                output.extend_from_slice(pass_bytes);
+
+                // Reset block state
+                current_block_digits.clear();
+                block_pos = 0;
+
+                // Move past comma + 4 passthrough bytes
+                in_idx += 5;
+            }
         } else {
-            // Standard Z85 decoding
-            let value = decode_block(block)?;
+            // Regular Z85 character
+            let digit = Z85_DECODE_TABLE[byte as usize];
+            if digit == 0xFF {
+                return Err(DecodeError::InvalidCharacter(byte));
+            }
 
-            // Convert u32 to 4 big-endian bytes
-            let bytes = value.to_be_bytes();
-            output[out_idx..out_idx + 4].copy_from_slice(&bytes);
+            current_block_digits.push(digit);
+            block_pos += 1;
+            in_idx += 1;
+
+            // If we've completed a 5-character block, decode it
+            if block_pos == 5 {
+                // Decode the full block
+                let mut value: u64 = 0;
+                for &d in &current_block_digits {
+                    value = value * 85 + d as u64;
+                }
+
+                // Check for overflow
+                if value > u32::MAX as u64 {
+                    return Err(DecodeError::Overflow);
+                }
+
+                // Output 4 bytes
+                output.extend_from_slice(&(value as u32).to_be_bytes());
+
+                // Reset for next block
+                current_block_digits.clear();
+                block_pos = 0;
+            }
         }
-
-        in_idx += 5;
-        out_idx += 4;
     }
 
-    // Process trailing characters (2, 3, or 4 chars)
-    // Note: Raw passthrough does NOT apply to trailing blocks - only full 5-char blocks
-    if trailing_chars > 0 {
-        // Special case: if the trailing block starts with `,`, it must have exactly
-        // 4 more bytes (total 5 chars). Otherwise, it's an invalid escape sequence.
-        if input[in_idx] == RAW_ESCAPE {
-            // `,` at a block boundary requires exactly 4 bytes following it
+    // Handle trailing partial block (if any)
+    if !current_block_digits.is_empty() {
+        let num_chars = current_block_digits.len();
+
+        // Invalid: 1 character doesn't map to a valid byte count
+        if num_chars == 1 {
             return Err(DecodeError::InvalidLength);
         }
-        let block = &input[in_idx..];
-        let num_bytes = trailing_chars - 1;
 
-        // Decode the partial block (standard Z85 only)
-        let value = decode_partial_block(block)?;
+        // Decode partial block: 2 chars -> 1 byte, 3 chars -> 2 bytes, 4 chars -> 3 bytes
+        let mut value: u64 = 0;
+        for &d in &current_block_digits {
+            value = value * 85 + d as u64;
+        }
 
-        // Extract the appropriate number of bytes (most significant first)
-        // The value represents a number that should fit in num_bytes bytes
+        let num_bytes = num_chars - 1;
+
+        // Check overflow based on expected byte count
         match num_bytes {
             1 => {
                 if value > 0xFF {
                     return Err(DecodeError::Overflow);
                 }
-                output[out_idx] = value as u8;
+                output.push(value as u8);
             }
             2 => {
                 if value > 0xFFFF {
                     return Err(DecodeError::Overflow);
                 }
-                let bytes = (value as u16).to_be_bytes();
-                output[out_idx..out_idx + 2].copy_from_slice(&bytes);
+                output.extend_from_slice(&(value as u16).to_be_bytes());
             }
             3 => {
                 if value > 0xFFFFFF {
                     return Err(DecodeError::Overflow);
                 }
-                output[out_idx] = (value >> 16) as u8;
-                output[out_idx + 1] = (value >> 8) as u8;
-                output[out_idx + 2] = value as u8;
+                output.push((value >> 16) as u8);
+                output.push((value >> 8) as u8);
+                output.push(value as u8);
             }
             _ => unreachable!(),
         }
@@ -436,6 +480,100 @@ fn decode_partial_block(block: &[u8]) -> Result<u32, DecodeError> {
 
     // No overflow check here - we check in the caller based on expected byte count
     Ok(value as u32)
+}
+
+// =============================================================================
+// Non-Aligned Passthrough Support
+// =============================================================================
+//
+// When `,` appears at position P (1-4) within a 5-char block, the Z85 encoding
+// is interrupted. The "before" block becomes ambiguous because we only have
+// P high-order Z85 digits and the raw passthrough bytes provide (4-P) known
+// low-order input bytes.
+//
+// To resolve ambiguity deterministically, we compute ALL possible 32-bit values
+// that could have produced the observed partial Z85 + known bytes, then select
+// the MINIMUM value (canonical). This ensures:
+// - Decoding is deterministic and unambiguous
+// - Encoding can check if actual value equals canonical minimum before using passthrough
+
+/// Compute the canonical (minimum) 32-bit value for an ambiguous "before" block.
+///
+/// Given P high-order Z85 digits and (4-P) known low-order input bytes (from passthrough),
+/// find the minimum 32-bit value V such that:
+/// 1. V's Z85 encoding starts with the given P digits
+/// 2. V's big-endian bytes end with the given (4-P) known bytes
+///
+/// # Algorithm
+///
+/// - P Z85 digits define a range: [base, base + 85^(5-P)) where base = digits * 85^(5-P)
+/// - Within this range, find values where low bytes match the known passthrough bytes
+/// - Return the minimum such value
+///
+/// # Arguments
+///
+/// * `high_digits` - Slice of P Z85 digit values (0-84)
+/// * `known_low_bytes` - Slice of (4-P) known low-order bytes from passthrough
+///
+/// # Returns
+///
+/// The canonical minimum 32-bit value, or error if no valid value exists
+fn compute_canonical_minimum(
+    high_digits: &[u8],
+    known_low_bytes: &[u8],
+) -> Result<u32, DecodeError> {
+    let p = high_digits.len();
+    let num_known_bytes = known_low_bytes.len(); // Should be 4 - p
+
+    // Compute the base value from high Z85 digits
+    // base = d0 * 85^(5-1) + d1 * 85^(5-2) + ... + d(P-1) * 85^(5-P)
+    let mut base: u64 = 0;
+    for &digit in high_digits {
+        base = base * 85 + digit as u64;
+    }
+
+    // The range of possible values is [base * 85^(5-P), (base+1) * 85^(5-P))
+    let power = 85u64.pow((5 - p) as u32);
+    let range_start = base * power;
+    let range_end = (base + 1) * power;
+
+    // Now we need to find values in [range_start, range_end) whose big-endian bytes
+    // end with known_low_bytes
+    if num_known_bytes == 0 {
+        // P = 4: No constraint from known bytes, just return range_start
+        if range_start > u32::MAX as u64 {
+            return Err(DecodeError::Overflow);
+        }
+        return Ok(range_start as u32);
+    }
+
+    // Construct the constraint from the known bytes
+    let mut known_part: u64 = 0;
+    for &byte in known_low_bytes {
+        known_part = (known_part << 8) | byte as u64;
+    }
+
+    // The mask for the known bytes (low num_known_bytes bytes)
+    let modulus: u64 = 1 << (num_known_bytes * 8);
+
+    // Find smallest V >= range_start where V % modulus === known_part
+    let start_remainder = range_start % modulus;
+
+    let candidate = if start_remainder <= known_part {
+        range_start - start_remainder + known_part
+    } else {
+        range_start - start_remainder + modulus + known_part
+    };
+
+    // Verify candidate is in range and fits in u32
+    if candidate >= range_end {
+        return Err(DecodeError::InvalidLength); // No valid value exists
+    }
+    if candidate > u32::MAX as u64 {
+        return Err(DecodeError::Overflow);
+    }
+
+    Ok(candidate as u32)
 }
 
 #[cfg(test)]
@@ -607,18 +745,42 @@ mod tests {
     }
 
     #[test]
-    fn test_comma_in_invalid_position_1() {
-        // Comma at position 1 (not a block boundary) should be treated as invalid character
-        let result = decode("A,BCD");
-        assert!(matches!(result, Err(DecodeError::InvalidCharacter(b','))),
-                "Expected InvalidCharacter for comma at position 1");
+    fn test_non_aligned_passthrough_position_1() {
+        // Non-aligned passthrough: comma at position 1
+        // "A,BCDE" - 'A' is 1 Z85 digit, then passthrough 'BCDE'
+        // The "before" block has 1 Z85 digit (A=36) and 3 known bytes (BCD = 0x42,0x43,0x44)
+        let result = decode("A,BCDE").unwrap();
+        // Should produce 8 bytes: 4 for "before" block (canonical min) + 4 passthrough
+        assert_eq!(result.len(), 8);
+        // Before block: canonical minimum with high digit 36, low bytes 0x42,0x43,0x44
+        // This should be 0x70424344
+        assert_eq!(&result[0..4], &[0x70, 0x42, 0x43, 0x44]);
+        // Passthrough bytes: BCDE
+        assert_eq!(&result[4..8], b"BCDE");
     }
 
     #[test]
-    fn test_comma_in_invalid_position_4() {
-        // Comma at position 4 (not a block boundary) should be treated as invalid character
+    fn test_non_aligned_passthrough_incomplete() {
+        // Comma at position 4 without enough bytes after should fail
         let result = decode("ABCD,");
-        assert!(matches!(result, Err(DecodeError::InvalidCharacter(b','))),
-                "Expected InvalidCharacter for comma at position 4");
+        assert!(matches!(result, Err(DecodeError::InvalidLength)),
+                "Expected InvalidLength for incomplete passthrough");
+    }
+
+    #[test]
+    fn test_non_aligned_passthrough_position_4() {
+        // Non-aligned passthrough: comma at position 4
+        // "ABCD,efgh" - 4 Z85 digits, then passthrough 'efgh'
+        // The "before" block has 4 Z85 digits and 0 known bytes (P=4 means no known bytes)
+        let result = decode("ABCD,efgh").unwrap();
+        // Should produce 8 bytes: 4 for "before" block + 4 passthrough
+        assert_eq!(result.len(), 8);
+        // Before block: canonical minimum with 4 digits (A=36,B=37,C=38,D=39)
+        // base = 36*85^3 + 37*85^2 + 38*85 + 39 = 22379094
+        // rangeStart = base * 85 = 1902222990 = 0x71619E8E
+        // With 0 known bytes, canonical minimum = rangeStart
+        assert_eq!(&result[0..4], &[0x71, 0x61, 0x9E, 0x8E]);
+        // Passthrough bytes: efgh
+        assert_eq!(&result[4..8], b"efgh");
     }
 }
