@@ -274,3 +274,105 @@ refs:
     assert_eq!(commit.tree.get("new.txt"), Some("new content"));
     assert_eq!(commit.tree.get("old.txt"), None);
 }
+
+#[test]
+fn test_phonetic_encoding() {
+    let yaml = r#"
+HEAD: refs/heads/trunk
+"#;
+    let snapshot = git_snapshot::parse(yaml).unwrap();
+    let temp_repo = snapshot.to_temporary_repository().unwrap();
+    let repo_path = temp_repo.path().parent().unwrap();
+
+    fs::write(repo_path.join("file.txt"), "content").unwrap();
+
+    let _ctx = TestContext::new(repo_path);
+
+    let args = Save::with(|_| {});
+    args.save().expect("save failed");
+
+    let roundtrip = temp_repo.to_snapshot().unwrap();
+    let commit = roundtrip.head_commit().expect("No HEAD commit");
+
+    // Message should contain phonetic encoding
+    let message = &commit.message;
+
+    // Should have format: r0 / xHHHH phonetic-words
+    assert!(message.starts_with("r0 / x"));
+
+    // Extract tree hash from message (format: r0 / xHHHH ...)
+    let parts: Vec<&str> = message.split_whitespace().collect();
+    assert!(parts.len() >= 7); // r0 / x1234 word word word word
+
+    // Find the xHHHH part
+    let tree_hex = parts.iter()
+        .find(|p| p.starts_with('x'))
+        .expect("Should have tree hash in message")
+        .trim_start_matches('x');
+
+    assert_eq!(tree_hex.len(), 4, "Tree hash should be 4 hex chars");
+
+    // Phonetic words should be after the tree hash
+    // Format: r0 / xHHHH phonetic words...
+    let phonetic_start = parts.iter()
+        .position(|p| p.starts_with('x'))
+        .expect("Should have x prefix");
+
+    let phonetic_words = &parts[phonetic_start + 1..];
+    assert_eq!(phonetic_words.len(), 4, "Should have 4 phonetic words for 4 hex chars");
+
+    // Verify each phonetic word is valid
+    let valid_phonetics = [
+        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+        "alfa", "bravo", "charlie", "delta", "echo", "foxtrot"
+    ];
+
+    for word in phonetic_words {
+        assert!(valid_phonetics.contains(word), "Invalid phonetic word: {}", word);
+    }
+}
+
+#[test]
+fn test_phonetic_omitted_for_empty_tree() {
+    let yaml = r#"
+HEAD: refs/heads/trunk
+refs:
+  heads:
+    trunk: 1
+1:
+  message: initial
+  tree:
+    file.txt: content
+"#;
+    let snapshot = git_snapshot::parse(yaml).unwrap();
+    let temp_repo = snapshot.to_temporary_repository().unwrap();
+    let repo_path = temp_repo.path().parent().unwrap();
+
+    // Don't add any files - tree will be empty
+    let _ctx = TestContext::new(repo_path);
+
+    let args = Save::with(|_| {});
+    args.save().expect("save failed");
+
+    let roundtrip = temp_repo.to_snapshot().unwrap();
+    let commit = roundtrip.head_commit().expect("No HEAD commit");
+
+    // Message should NOT contain tree hash or phonetic for empty tree
+    let message = &commit.message;
+
+    // Should start with r1 and not have xHHHH
+    assert!(message.starts_with("r1"));
+    assert!(!message.contains(" / x"), "Empty tree should not have tree hash component");
+
+    // Should not contain phonetic words
+    let valid_phonetics = [
+        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+        "alfa", "bravo", "charlie", "delta", "echo", "foxtrot"
+    ];
+
+    let message_words: Vec<&str> = message.split_whitespace().collect();
+    for word in message_words {
+        assert!(!valid_phonetics.contains(&word),
+            "Empty tree message should not contain phonetic words, found: {}", word);
+    }
+}
