@@ -209,6 +209,8 @@ Deno.test("cross-test encode with Rust", async () => {
     new Uint8Array([0, 0, 0, 0]),
     new Uint8Array([0xff, 0xff, 0xff, 0xff]),
     new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
+    new Uint8Array([0x74, 0x65, 0x73, 0x74]), // "test" - triggers passthrough
+    new Uint8Array([0x61, 0x62, 0x63, 0x64]), // "abcd" - triggers passthrough
   ];
 
   for (const input of testCases) {

@@ -103,6 +103,8 @@ fn test_cross_encode_with_deno() {
         &[0, 0, 0, 0],
         &[0xff, 0xff, 0xff, 0xff],
         &[1, 2, 3, 4, 5, 6, 7, 8],
+        b"test", // triggers passthrough
+        b"abcd", // triggers passthrough
     ];
 
     for input in test_cases {
