@@ -695,6 +695,11 @@ pub fn main(args: Save) -> Result<()> {
         if let Some(origin) = graph_stats.origin {
             write!(message, " / o{:04X}", origin)?;
         }
+
+        // Optional: Phonetic encoding of tree hash (if tree is non-empty)
+        if !tree.is_empty() {
+            write!(message, " {}", crate::phonetic::hex_to_phonetic(&tree4))?;
+        }
     }
 
     // TODO: look at merge heads too, and set our minimum timestamp to one greater

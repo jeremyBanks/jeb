@@ -9,7 +9,7 @@ and semantics of each component.
 ## Message Format
 
 ```
-[r|s|z]N [/ gG] [/ nC] [/ xHHHH] [/ oHHHH]
+[r|s|z]N [/ gG] [/ nC] [/ xHHHH] [/ oHHHH] [phonetic]
 ```
 
 ## Components
@@ -112,6 +112,20 @@ The true roots haven't changed, but the calculated origin keeps changing.
 The solution: Origin is ONLY ever the true roots. If we can't see them, we don't
 guess - we omit.
 
+### Phonetic Encoding (optional)
+
+**Definition:** NATO phonetic alphabet encoding of the first 4 tree hash characters.
+
+**Format:** Space-separated lowercase phonetic words appended after all other components.
+
+**Display:** Only shown when tree hash component is present (non-empty tree).
+
+**Mapping:**
+- Digits 0-9: zero, one, two, three, four, five, six, seven, eight, nine
+- Hex a-f: alfa, bravo, charlie, delta, echo, foxtrot
+
+**Purpose:** Provides human-readable, easily spoken commit identifier for verbal communication and auditory verification.
+
 #### Implications for Implementation
 
 Even when trusting parent metadata for revision/generation/commit indices, the
@@ -170,9 +184,9 @@ The commit message format serves several purposes:
 ## Examples
 
 ```
-r0 / x1234                    # Root commit, no origin (it IS the origin)
-r1 / x5678 / oABCD            # Second commit, can see root ABCD
-r142 / g150 / n200 / xDEF0 / oABCD   # Deep commit with merges, same origin
-s50 / g75 / n100 / x9999      # Shallow clone, can't see roots, no origin
-z10 / x1111                   # Hit depth limit, uncertain values, no origin
+r0 / x1234 one two three four                    # Root commit, no origin (it IS the origin)
+r1 / x5678 / oABCD five six seven eight          # Second commit, can see root ABCD
+r142 / g150 / n200 / xDEF0 / oABCD delta echo foxtrot zero   # Deep commit with merges, same origin
+s50 / g75 / n100                                  # Shallow, empty tree, no phonetic
+z10 / x1111 one one one one                       # Hit depth limit, uncertain values, no origin
 ```
