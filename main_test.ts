@@ -154,6 +154,52 @@ Deno.test("cross-test decode with Rust", async () => {
 });
 
 // Test cases from test-cases/ directory
+//
+// Test case structure:
+// - X.input: raw bytes to encode/decode
+// - X.encoded: standard Z85 encoding (MUST always be present)
+// - X.encoded-Y: alternative valid encodings (optional, any number)
+// - X.encoded-expected: if present, encoder MUST produce exactly this
+//
+// Test behavior:
+// - Decode tests: ALL .encoded* files must decode to same .input
+// - Encode tests: result must match .encoded-expected if present, otherwise any .encoded* file
+
+/**
+ * Find all encoded files for a given test case base name.
+ * Returns { standard: string, alternatives: string[], expected?: string }
+ */
+async function findEncodedFiles(
+  testCasesDir: string,
+  baseName: string
+): Promise<{ standard: string; alternatives: string[]; expected?: string }> {
+  const result: { standard: string; alternatives: string[]; expected?: string } = {
+    standard: "",
+    alternatives: [],
+  };
+
+  // Read the standard .encoded file
+  const encodedPath = `${testCasesDir}/${baseName}.encoded`;
+  result.standard = await Deno.readTextFile(encodedPath);
+
+  // Scan for alternative encoded files
+  for await (const entry of Deno.readDir(testCasesDir)) {
+    const name = entry.name;
+
+    // Check for .encoded-expected
+    if (name === `${baseName}.encoded-expected`) {
+      result.expected = await Deno.readTextFile(`${testCasesDir}/${name}`);
+    }
+    // Check for .encoded-Y pattern (but not .encoded-expected)
+    else if (name.startsWith(`${baseName}.encoded-`) && name !== `${baseName}.encoded-expected`) {
+      const altEncoded = await Deno.readTextFile(`${testCasesDir}/${name}`);
+      result.alternatives.push(altEncoded);
+    }
+  }
+
+  return result;
+}
+
 Deno.test("test cases from shared directory", async () => {
   const testCasesDir = "/Users/jeb/cleanroom/test-cases";
 
@@ -162,30 +208,77 @@ Deno.test("test cases from shared directory", async () => {
 
     const baseName = entry.name.replace(".input", "");
     const inputPath = `${testCasesDir}/${baseName}.input`;
-    const encodedPath = `${testCasesDir}/${baseName}.encoded`;
 
     const inputBytes = await Deno.readFile(inputPath);
-    const encodedStr = await Deno.readTextFile(encodedPath);
 
     // Check if this is an error test case
     const inputStr = new TextDecoder().decode(inputBytes);
 
     if (inputStr === "<error />") {
-      // This is a decode error test: encoded should fail to decode
+      // This is a decode error test: all encoded files should fail to decode
+      const encodedFiles = await findEncodedFiles(testCasesDir, baseName);
+
+      // Test standard encoding fails
       assertThrows(
-        () => decode(encodedStr),
+        () => decode(encodedFiles.standard),
         Z85DecodeError,
         undefined,
-        `Expected decode error for ${baseName}`
+        `Expected decode error for ${baseName} (standard)`
       );
-    } else {
-      // Normal test: encode input should match encoded
-      const actualEncoded = encode(inputBytes);
-      assertEquals(actualEncoded, encodedStr, `encode mismatch for ${baseName}`);
 
-      // And decode should roundtrip
-      const decoded = decode(encodedStr);
-      assertEquals(decoded, inputBytes, `decode mismatch for ${baseName}`);
+      // Test alternatives also fail
+      for (const alt of encodedFiles.alternatives) {
+        assertThrows(
+          () => decode(alt),
+          Z85DecodeError,
+          undefined,
+          `Expected decode error for ${baseName} (alternative)`
+        );
+      }
+
+      // Test expected also fails if present
+      if (encodedFiles.expected) {
+        assertThrows(
+          () => decode(encodedFiles.expected!),
+          Z85DecodeError,
+          undefined,
+          `Expected decode error for ${baseName} (expected)`
+        );
+      }
+    } else {
+      // Normal test case
+      const encodedFiles = await findEncodedFiles(testCasesDir, baseName);
+
+      // DECODE TESTS: All encoded files must decode to same input
+      const decodedStandard = decode(encodedFiles.standard);
+      assertEquals(decodedStandard, inputBytes, `decode mismatch for ${baseName} (standard)`);
+
+      for (let i = 0; i < encodedFiles.alternatives.length; i++) {
+        const decodedAlt = decode(encodedFiles.alternatives[i]);
+        assertEquals(decodedAlt, inputBytes, `decode mismatch for ${baseName} (alternative ${i})`);
+      }
+
+      if (encodedFiles.expected) {
+        const decodedExpected = decode(encodedFiles.expected);
+        assertEquals(decodedExpected, inputBytes, `decode mismatch for ${baseName} (expected)`);
+      }
+
+      // ENCODE TEST: result must match .encoded-expected if present, otherwise any .encoded* file
+      const actualEncoded = encode(inputBytes);
+
+      if (encodedFiles.expected) {
+        // Must match expected exactly
+        assertEquals(actualEncoded, encodedFiles.expected, `encode must match expected for ${baseName}`);
+      } else {
+        // Must match one of: standard, or any alternative
+        const validEncodings = [encodedFiles.standard, ...encodedFiles.alternatives];
+        const matches = validEncodings.some((valid) => actualEncoded === valid);
+        assertEquals(
+          matches,
+          true,
+          `encode mismatch for ${baseName}: got "${actualEncoded}", expected one of: ${validEncodings.map(s => `"${s}"`).join(", ")}`
+        );
+      }
     }
   }
 });
