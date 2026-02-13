@@ -66,3 +66,31 @@ Options:
 3. Adjust budget calculations for mid-block cases
 
 This needs Jeremy's input on design priorities.
+
+---
+
+## 2026-02-13 11:55 AM - Length Byte Semantics (256 vs 255 max)
+
+### Observation
+Encoder uses length byte 0-255, where:
+- 1-255: literal length
+- 0: means 256 bytes (wrap-around)
+
+### Behavior
+- 255 bytes → length=255 (1 section)
+- 256 bytes → length=0 (1 section, decoded as 256)
+- 300 bytes → ??? (needs testing)
+
+### Design Question
+Is this intentional? Two interpretations:
+1. **Wrap-around**: length=0 means 256, allows 1-256 byte sections
+2. **Split required**: length=0 invalid, must split at 255 bytes
+
+Current tests show option 1 (wrap-around) is implemented.
+
+### Impact
+- If wrap-around intended: max single section = 256 bytes
+- Large sections (300+) still need split logic
+- Decoder must handle length=0 correctly
+
+Needs clarification in design doc.
