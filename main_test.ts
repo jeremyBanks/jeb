@@ -87,6 +87,81 @@ Deno.test("decode overflow", () => {
   assertThrows(() => decode("##"), Z85DecodeError);
 });
 
+// =========================================================================
+// Tests for raw passthrough extension (`,` escape)
+// =========================================================================
+
+Deno.test("raw passthrough encode", () => {
+  // "test" (4 ASCII chars) should be encoded with passthrough
+  const input = new TextEncoder().encode("test");
+  const encoded = encode(input);
+  assertEquals(encoded, ",test", "4 safe chars should use passthrough");
+});
+
+Deno.test("raw passthrough decode", () => {
+  // ",test" should decode to "test"
+  const decoded = decode(",test");
+  assertEquals(decoded, new TextEncoder().encode("test"));
+});
+
+Deno.test("raw passthrough roundtrip", () => {
+  // Various safe character combinations
+  const testCases = ["test", "abcd", "ABCD", "1234", ".-:+", ",;|~"];
+
+  for (const str of testCases) {
+    const input = new TextEncoder().encode(str);
+    const encoded = encode(input);
+    // Should use passthrough (starts with ,)
+    assertEquals(encoded.startsWith(","), true, `Expected passthrough for ${str}`);
+    const decoded = decode(encoded);
+    assertEquals(decoded, input, `roundtrip failed for ${str}`);
+  }
+});
+
+Deno.test("mixed passthrough and z85", () => {
+  // Mix of safe and non-safe blocks
+  // First 4 bytes: 0x00 0x00 0x00 0x00 (not safe - contains null bytes)
+  // Next 4 bytes: "test" (safe)
+  const input = new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x74, 0x65, 0x73, 0x74]);
+  const encoded = encode(input);
+  // Should be "00000,test" - first block Z85, second passthrough
+  assertEquals(encoded, "00000,test");
+
+  const decoded = decode(encoded);
+  assertEquals(decoded, input);
+});
+
+Deno.test("no passthrough for unsafe bytes", () => {
+  // Bytes that are not in safe chars set
+  const input = new Uint8Array([0x00, 0x01, 0x02, 0x03]);
+  const encoded = encode(input);
+  // Should NOT start with `,` - not safe for passthrough
+  assertEquals(encoded.startsWith(","), false, "Non-safe bytes should use Z85");
+
+  const decoded = decode(encoded);
+  assertEquals(decoded, input);
+});
+
+Deno.test("passthrough decode does not validate", () => {
+  // Decoder should accept ANY bytes after `,`, not just safe ones
+  // This is important: decoder trusts the input
+  const encoded = ",\x00\x01\x02\x03"; // Not actually safe chars
+  const decoded = decode(encoded);
+  assertEquals(decoded, new Uint8Array([0x00, 0x01, 0x02, 0x03]));
+});
+
+Deno.test("passthrough with trailing bytes", () => {
+  // "test" + null byte (5 bytes)
+  // First 4 bytes: "test" (safe, passthrough)
+  // Trailing 1 byte: 0x00 (Z85 encoded)
+  const input = new Uint8Array([0x74, 0x65, 0x73, 0x74, 0x00]);
+  const encoded = encode(input);
+  assertEquals(encoded, ",test00"); // passthrough + 1-byte Z85
+
+  const decoded = decode(encoded);
+  assertEquals(decoded, input);
+});
+
 // Cross-testing with Rust CLI
 // These tests invoke the Rust implementation to verify both agree
 
