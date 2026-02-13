@@ -16,11 +16,11 @@
 - [ ] Transparency/readability
 
 ### ❌ Weak/Missing (Grade D-F)
-- [x] **Raw eligibility** - ✅ DONE: 5 comprehensive tests (11:42 AM)
-- [ ] **Mid-block exit structure** - Only roundtrip, no structure verification
-- [ ] **Consecutive raw sections** - R4 requirement, not tested
+- [x] **Raw eligibility** - ✅ DONE: 5 tests, all pass (11:42 AM)
+- [x] **Mid-block exit structure** - ✅ DONE: 8 tests, 7 pass, 1 bug found (11:45 AM)
+- [x] **Consecutive raw sections** - ✅ DONE: 6 tests, all pass (11:46 AM)
 - [ ] **Edge cases** - Stream boundaries, 256+ byte splits
-- [ ] **Exit opportunistic validation** - Does it skip when zero-padding fails?
+- [ ] **Exit opportunistic validation** - Partially covered in exit tests
 
 ## Test Gaps to Fill
 
