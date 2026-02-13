@@ -209,7 +209,17 @@ pub fn encode(input: &[u8]) -> String {
 
         // First, check if we have at least 4 bytes for a potential passthrough
         if bytes_remaining >= 4 {
-            // Check for block-aligned 4-byte passthrough (highest preference)
+            // Try extended passthrough (5/6/7 bytes) - highest preference
+            // Prefer: 7-byte > 6-byte > 5-byte
+            // These are more efficient than 4-byte passthrough (8 chars for 7 bytes vs 5 chars for 4 bytes)
+            // and allow consecutive escapes with zero gap for long safe sequences.
+            if let Some(result) = try_extended_passthrough(input, in_idx) {
+                output.extend_from_slice(&result.output);
+                in_idx += result.bytes_consumed;
+                continue;
+            }
+
+            // Check for block-aligned 4-byte passthrough (second preference)
             if is_block_safe_for_passthrough(&input[in_idx..]) {
                 // Block-aligned passthrough: just output , + 4 bytes
                 output.push(RAW_ESCAPE_4);
@@ -218,14 +228,6 @@ pub fn encode(input: &[u8]) -> String {
                 output.push(input[in_idx + 2]);
                 output.push(input[in_idx + 3]);
                 in_idx += 4;
-                continue;
-            }
-
-            // Try extended passthrough (5/6/7 bytes) - second highest preference
-            // Prefer: 7-byte > 6-byte > 5-byte
-            if let Some(result) = try_extended_passthrough(input, in_idx) {
-                output.extend_from_slice(&result.output);
-                in_idx += result.bytes_consumed;
                 continue;
             }
 
@@ -522,7 +524,9 @@ fn get_low_order_z85_chars(value: u32, num_chars: usize) -> Vec<u8> {
 //
 // Structure: [(P+1) Z85 chars] [escape] [K raw bytes] [(5-P) Z85 chars]
 //
-// Preferences: block-aligned 4-byte > 7-byte > 6-byte > 5-byte > non-aligned 4-byte
+// Preferences: 7-byte > 6-byte > 5-byte > block-aligned 4-byte > non-aligned 4-byte
+// The 7-byte passthrough is most efficient (8 chars for 7 bytes = 1.14 chars/byte)
+// compared to 4-byte (5 chars for 4 bytes = 1.25 chars/byte).
 
 /// Result of a successful extended passthrough encoding attempt.
 struct ExtendedPassthroughResult {
@@ -537,19 +541,68 @@ struct ExtendedPassthroughResult {
 /// Looks for K consecutive safe bytes (K = 5, 6, or 7) starting at various positions.
 /// Returns the best option found, preferring longer passthrough (7 > 6 > 5).
 ///
-/// The structure is: [(P+1) Z85 chars] [escape] [K raw bytes] [(5-P) Z85 chars]
-/// where P is the position within the input block (0-4).
+/// Two cases are handled:
+/// 1. Block-aligned: [escape] [K raw bytes] - no preceding Z85 chars
+///    This enables consecutive escapes with zero gap (e.g., ~XXXXXXX~YYYYYYY)
+/// 2. Non-aligned: [(P+1) Z85 chars] [escape] [K raw bytes]
+///    where P is the position within the input block (1-3).
 fn try_extended_passthrough(
     input: &[u8],
     block_start: usize,
 ) -> Option<ExtendedPassthroughResult> {
     // Try 7-byte first (highest preference), then 6, then 5
     for k in [7, 6, 5] {
+        // First try block-aligned extended passthrough (escape at position 0, no preceding chars)
+        // This enables consecutive escapes with zero gap
+        if let Some(result) = try_block_aligned_extended_passthrough(input, block_start, k) {
+            return Some(result);
+        }
+
+        // Then try non-aligned positions
         if let Some(result) = try_extended_passthrough_of_length(input, block_start, k) {
             return Some(result);
         }
     }
     None
+}
+
+/// Try block-aligned extended passthrough of length K.
+///
+/// This outputs just [escape] [K raw bytes] with NO preceding Z85 chars.
+/// This is possible when the K safe bytes start exactly at block_start.
+fn try_block_aligned_extended_passthrough(
+    input: &[u8],
+    block_start: usize,
+    k: usize,
+) -> Option<ExtendedPassthroughResult> {
+    // Check if we have enough bytes for the passthrough
+    if block_start + k > input.len() {
+        return None;
+    }
+
+    // Check if all K bytes starting at block_start are safe
+    if !are_k_bytes_safe(&input[block_start..], k) {
+        return None;
+    }
+
+    // Build output: just escape + K raw bytes
+    let mut output = Vec::new();
+
+    let escape = match k {
+        5 => RAW_ESCAPE_5,
+        6 => RAW_ESCAPE_6,
+        7 => RAW_ESCAPE_7,
+        _ => unreachable!(),
+    };
+    output.push(escape);
+
+    // Add K passthrough bytes
+    output.extend_from_slice(&input[block_start..block_start + k]);
+
+    Some(ExtendedPassthroughResult {
+        output,
+        bytes_consumed: k,
+    })
 }
 
 /// Try extended passthrough of a specific length K (5, 6, or 7).
@@ -661,6 +714,7 @@ fn try_extended_passthrough_at_position(
 
 /// Encode a full 32-bit value into exactly 5 Z85 characters.
 /// Fills the slice from right to left with base-85 digits.
+#[allow(dead_code)]
 fn encode_block_to_slice(mut value: u32, output: &mut [u8]) {
     debug_assert!(output.len() == 5);
 
@@ -675,6 +729,7 @@ fn encode_block_to_slice(mut value: u32, output: &mut [u8]) {
 ///
 /// The math: for n input bytes, we need n+1 output characters.
 /// We encode as if the value represents the most significant bits of a larger number.
+#[allow(dead_code)]
 fn encode_partial_to_slice(mut value: u32, num_chars: usize, output: &mut [u8]) {
     debug_assert!(num_chars >= 2 && num_chars <= 4);
     debug_assert!(output.len() == num_chars);
@@ -1081,9 +1136,13 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
                 // But if current_block_digits.len() = 0, that's invalid (P would be -1).
 
                 if num_digits == 0 {
-                    // Invalid: 5/6/7-byte passthrough requires at least 1 Z85 digit before escape
-                    // This would mean P = -1 which doesn't make sense
-                    return Err(DecodeError::InvalidLength);
+                    // Block-aligned extended passthrough: no preceding Z85 digits
+                    // This is the "zero gap" case for consecutive escapes
+                    // Just output the K passthrough bytes directly
+                    output.extend_from_slice(pass_bytes);
+                    in_idx += 1 + pass_len; // Skip escape + K bytes
+                    // block_pos stays at 0, current_block_digits stays empty
+                    continue;
                 }
 
                 let p = num_digits - 1; // P = (P+1) - 1
@@ -1755,6 +1814,7 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
 
 /// Decode a full 5-character block into a u32.
 /// Returns error if any character is invalid or if the value overflows u32.
+#[allow(dead_code)]
 fn decode_block(block: &[u8]) -> Result<u32, DecodeError> {
     debug_assert!(block.len() == 5);
 
@@ -1781,6 +1841,7 @@ fn decode_block(block: &[u8]) -> Result<u32, DecodeError> {
 
 /// Decode a partial block (2, 3, or 4 characters) into a u32.
 /// The value represents a partial number (1, 2, or 3 bytes worth).
+#[allow(dead_code)]
 fn decode_partial_block(block: &[u8]) -> Result<u32, DecodeError> {
     debug_assert!(block.len() >= 2 && block.len() <= 4);
 
