@@ -358,8 +358,9 @@ mod tests {
         assert_eq!(encode(&[0x00]), "00");
         assert_eq!(decode("00").unwrap(), vec![0x00]);
 
-        assert_eq!(encode(&[0xff]), "c%");
-        assert_eq!(decode("c%").unwrap(), vec![0xff]);
+        // 0xFF = 255 = 3*85 + 0, so encodes to "30"
+        assert_eq!(encode(&[0xff]), "30");
+        assert_eq!(decode("30").unwrap(), vec![0xff]);
     }
 
     #[test]
@@ -388,8 +389,9 @@ mod tests {
 
     #[test]
     fn test_invalid_character() {
-        assert!(matches!(decode("hello\"world"), Err(DecodeError::InvalidCharacter(b'"'))));
-        assert!(matches!(decode("hel lo"), Err(DecodeError::InvalidCharacter(b' '))));
+        // Use valid length strings (5 chars) with invalid characters
+        assert!(matches!(decode("hel\"o"), Err(DecodeError::InvalidCharacter(b'"'))));
+        assert!(matches!(decode("hel o"), Err(DecodeError::InvalidCharacter(b' '))));
     }
 
     #[test]
