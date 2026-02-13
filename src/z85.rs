@@ -17,11 +17,66 @@
 // - 2 bytes -> 3 characters
 // - 3 bytes -> 4 characters
 // - 4 bytes -> 5 characters
+//
+// =============================================================================
+// Raw Passthrough Extension (`,` escape)
+// =============================================================================
+//
+// This implementation includes an extension to Z85 that allows raw passthrough
+// of 4-byte blocks when ALL bytes are "safe" printable characters.
+//
+// ENCODING:
+// - When a 4-byte block consists entirely of "safe" characters, the encoder
+//   MAY output `,` followed by the 4 raw bytes (5 chars total) instead of
+//   standard Z85 encoding.
+// - The `,` character acts as an escape marker indicating raw passthrough.
+// - Safe characters for encoding decisions: Z85 alphabet plus `,;|~_`
+//   (total: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#,;|~_)
+// - Standard Z85 encoding is always valid; the encoder SHOULD use `,` passthrough
+//   when possible for better readability.
+// - `,` can ONLY appear at position 0 of a 5-character block (block-aligned).
+//
+// DECODING:
+// - When `,` is encountered at a block boundary (position 0 mod 5), the next
+//   4 bytes are taken as literal output (raw passthrough).
+// - The decoder does NOT validate that raw bytes are "safe" - it trusts the input.
+// - Otherwise, standard Z85 decoding is applied.
+//
+// This extension is backward-compatible: any standard Z85 input decodes correctly,
+// and extended output can be decoded by extended decoders.
 
 /// The Z85 alphabet: 85 printable ASCII characters in a specific order.
 /// Characters are chosen to be safe in most contexts (no quotes, backslash, etc.)
 /// Index 0 = '0', Index 84 = '#'
 const Z85_ALPHABET: &[u8; 85] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
+
+/// The raw passthrough escape character.
+/// When this appears at position 0 of a 5-character block during decoding,
+/// the following 4 characters are taken as literal bytes (no Z85 decoding).
+const RAW_ESCAPE: u8 = b',';
+
+/// Extended safe characters for raw passthrough encoding decisions.
+/// These are the Z85 alphabet (85 chars) plus 5 additional safe characters: `,;|~_`
+/// Total: 90 characters that are considered "safe" for raw passthrough.
+///
+/// A 4-byte block qualifies for raw passthrough encoding (`,XXXX` format)
+/// only if ALL 4 bytes are in this safe set.
+const SAFE_CHARS: &[u8; 90] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#,;|~_";
+
+/// Lookup table for safe character detection during encoding.
+/// For each byte 0-255, stores true if the byte is a safe character for raw passthrough.
+const SAFE_CHAR_TABLE: [bool; 256] = build_safe_char_table();
+
+/// Build the safe character lookup table at compile time.
+const fn build_safe_char_table() -> [bool; 256] {
+    let mut table = [false; 256];
+    let mut i = 0usize;
+    while i < 90 {
+        table[SAFE_CHARS[i] as usize] = true;
+        i += 1;
+    }
+    table
+}
 
 /// Lookup table for decoding: maps ASCII byte value -> Z85 digit value (0-84)
 /// Invalid characters are marked with 0xFF
@@ -100,8 +155,8 @@ pub fn encode(input: &[u8]) -> String {
     }
 
     // Calculate output size:
-    // - Full 4-byte blocks: each produces 5 characters
-    // - Trailing n bytes (1-3): produces n+1 characters
+    // - Full 4-byte blocks: each produces 5 characters (either Z85 or `,` + 4 raw)
+    // - Trailing n bytes (1-3): produces n+1 characters (always Z85, no passthrough)
     let full_blocks = input.len() / 4;
     let trailing = input.len() % 4;
     let trailing_chars = if trailing > 0 { trailing + 1 } else { 0 };
@@ -113,15 +168,29 @@ pub fn encode(input: &[u8]) -> String {
     // Process full 4-byte blocks
     for chunk in input.chunks(4) {
         if chunk.len() == 4 {
-            // Convert 4 bytes to big-endian u32
-            let value = u32::from_be_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+            // Check if all 4 bytes are safe for raw passthrough.
+            // If so, use `,XXXX` format for better readability.
+            // Otherwise, use standard Z85 encoding.
+            if is_block_safe_for_passthrough(chunk) {
+                // Raw passthrough: output `,` followed by the 4 raw bytes
+                output[out_idx] = RAW_ESCAPE;
+                output[out_idx + 1] = chunk[0];
+                output[out_idx + 2] = chunk[1];
+                output[out_idx + 3] = chunk[2];
+                output[out_idx + 4] = chunk[3];
+            } else {
+                // Standard Z85 encoding
+                // Convert 4 bytes to big-endian u32
+                let value = u32::from_be_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
 
-            // Convert to base-85, filling 5 characters from right to left
-            // This naturally handles the big-endian ordering
-            encode_block_to_slice(value, &mut output[out_idx..out_idx + 5]);
+                // Convert to base-85, filling 5 characters from right to left
+                // This naturally handles the big-endian ordering
+                encode_block_to_slice(value, &mut output[out_idx..out_idx + 5]);
+            }
             out_idx += 5;
         } else {
             // Handle trailing bytes (1, 2, or 3 bytes)
+            // Note: Raw passthrough is NOT used for trailing bytes - only full 4-byte blocks
             let num_bytes = chunk.len();
             let num_chars = num_bytes + 1;
 
@@ -145,6 +214,20 @@ pub fn encode(input: &[u8]) -> String {
 
     // Convert to String (all characters are ASCII, so this is safe)
     String::from_utf8(output).expect("Z85 output should be valid UTF-8")
+}
+
+/// Check if a 4-byte block consists entirely of safe characters for raw passthrough.
+///
+/// A block qualifies for raw passthrough if ALL 4 bytes are in the SAFE_CHARS set
+/// (Z85 alphabet plus `,;|~_`). This allows the encoder to output `,XXXX` format
+/// instead of standard Z85 encoding, which can improve readability for text-like data.
+#[inline]
+fn is_block_safe_for_passthrough(block: &[u8]) -> bool {
+    debug_assert!(block.len() == 4);
+    SAFE_CHAR_TABLE[block[0] as usize]
+        && SAFE_CHAR_TABLE[block[1] as usize]
+        && SAFE_CHAR_TABLE[block[2] as usize]
+        && SAFE_CHAR_TABLE[block[3] as usize]
 }
 
 /// Encode a full 32-bit value into exactly 5 Z85 characters.
@@ -179,12 +262,16 @@ fn encode_partial_to_slice(mut value: u32, num_chars: usize, output: &mut [u8]) 
 /// # Algorithm
 ///
 /// For each 5-character block:
-/// 1. Map each character to its base-85 digit value (0-84)
-/// 2. Accumulate: value = d0*85^4 + d1*85^3 + d2*85^2 + d3*85 + d4
-/// 3. Convert the u32 value to 4 big-endian bytes
+/// 1. Check if the first character is `,` (raw passthrough escape)
+///    - If so, take the next 4 characters as literal bytes (no Z85 decoding)
+///    - The decoder does NOT validate that raw bytes are "safe" - it trusts the input
+/// 2. Otherwise, apply standard Z85 decoding:
+///    - Map each character to its base-85 digit value (0-84)
+///    - Accumulate: value = d0*85^4 + d1*85^3 + d2*85^2 + d3*85 + d4
+///    - Convert the u32 value to 4 big-endian bytes
 ///
 /// For trailing characters (2-4 chars), we:
-/// 1. Decode to get the partial value
+/// 1. Decode to get the partial value (standard Z85, no passthrough for partials)
 /// 2. Extract only the appropriate number of bytes:
 ///    - 2 chars -> 1 byte
 ///    - 3 chars -> 2 bytes
@@ -237,22 +324,36 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
     // Process full 5-character blocks
     while in_idx + 5 <= input.len() {
         let block = &input[in_idx..in_idx + 5];
-        let value = decode_block(block)?;
 
-        // Convert u32 to 4 big-endian bytes
-        let bytes = value.to_be_bytes();
-        output[out_idx..out_idx + 4].copy_from_slice(&bytes);
+        // Check for raw passthrough escape at block boundary.
+        // When `,` is the first character of a 5-char block, the next 4 bytes
+        // are taken as literal output (no Z85 decoding, no content validation).
+        if block[0] == RAW_ESCAPE {
+            // Raw passthrough: copy the 4 bytes after `,` directly to output
+            output[out_idx] = block[1];
+            output[out_idx + 1] = block[2];
+            output[out_idx + 2] = block[3];
+            output[out_idx + 3] = block[4];
+        } else {
+            // Standard Z85 decoding
+            let value = decode_block(block)?;
+
+            // Convert u32 to 4 big-endian bytes
+            let bytes = value.to_be_bytes();
+            output[out_idx..out_idx + 4].copy_from_slice(&bytes);
+        }
 
         in_idx += 5;
         out_idx += 4;
     }
 
     // Process trailing characters (2, 3, or 4 chars)
+    // Note: Raw passthrough does NOT apply to trailing blocks - only full 5-char blocks
     if trailing_chars > 0 {
         let block = &input[in_idx..];
         let num_bytes = trailing_chars - 1;
 
-        // Decode the partial block
+        // Decode the partial block (standard Z85 only)
         let value = decode_partial_block(block)?;
 
         // Extract the appropriate number of bytes (most significant first)
@@ -409,5 +510,93 @@ mod tests {
 
         // "##" for 1 byte: 84*85 + 84 = 7224 > 255
         assert!(matches!(decode("##"), Err(DecodeError::Overflow)));
+    }
+
+    // =========================================================================
+    // Tests for raw passthrough extension (`,` escape)
+    // =========================================================================
+
+    #[test]
+    fn test_raw_passthrough_encode() {
+        // "test" (4 ASCII chars) should be encoded with passthrough
+        let input = b"test";
+        let encoded = encode(input);
+        assert_eq!(encoded, ",test", "4 safe chars should use passthrough");
+    }
+
+    #[test]
+    fn test_raw_passthrough_decode() {
+        // ",test" should decode to "test"
+        let decoded = decode(",test").unwrap();
+        assert_eq!(decoded, b"test");
+    }
+
+    #[test]
+    fn test_raw_passthrough_roundtrip() {
+        // Various safe character combinations
+        let test_cases: &[&[u8]] = &[
+            b"test",
+            b"abcd",
+            b"ABCD",
+            b"1234",
+            b".-:+",
+            b",;|~",  // Extended safe chars
+        ];
+
+        for input in test_cases {
+            let encoded = encode(input);
+            // Should use passthrough (starts with ,)
+            assert!(encoded.starts_with(','), "Expected passthrough for {:?}", input);
+            let decoded = decode(&encoded).unwrap();
+            assert_eq!(decoded, *input, "roundtrip failed for {:?}", input);
+        }
+    }
+
+    #[test]
+    fn test_mixed_passthrough_and_z85() {
+        // Mix of safe and non-safe blocks
+        // First 4 bytes: 0x00 0x00 0x00 0x00 (not safe - contains null bytes)
+        // Next 4 bytes: "test" (safe)
+        let input = [0x00, 0x00, 0x00, 0x00, b't', b'e', b's', b't'];
+        let encoded = encode(&input);
+        // Should be "00000,test" - first block Z85, second passthrough
+        assert_eq!(encoded, "00000,test");
+
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn test_no_passthrough_for_unsafe_bytes() {
+        // Bytes that are not in safe chars set
+        let input = [0x00, 0x01, 0x02, 0x03];
+        let encoded = encode(&input);
+        // Should NOT start with `,` - not safe for passthrough
+        assert!(!encoded.starts_with(','), "Non-safe bytes should use Z85");
+
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn test_passthrough_decode_does_not_validate() {
+        // Decoder should accept ANY bytes after `,`, not just safe ones
+        // This is important: decoder trusts the input
+        let encoded = ",\x00\x01\x02\x03";  // Not actually safe chars
+        let decoded = decode(encoded).unwrap();
+        assert_eq!(decoded, [0x00, 0x01, 0x02, 0x03]);
+    }
+
+    #[test]
+    fn test_passthrough_with_trailing_bytes() {
+        // "test" + null byte (5 bytes)
+        // First 4 bytes: "test" (safe, passthrough)
+        // Trailing 1 byte: 0x00 (Z85 encoded)
+        let input = [b't', b'e', b's', b't', 0x00];
+        let encoded = encode(&input);
+        assert_eq!(encoded, ",test00");  // passthrough + 1-byte Z85
+
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, input);
     }
 }
