@@ -148,36 +148,82 @@ export function encode(input: Uint8Array): string {
     return "";
   }
 
-  // Calculate output size:
-  // - Full 4-byte blocks: each produces 5 characters (either Z85 or `,` + 4 raw)
-  // - Trailing n bytes (1-3): produces n+1 characters (always Z85, no passthrough)
-  const fullBlocks = Math.floor(input.length / 4);
-  const trailing = input.length % 4;
-  const trailingChars = trailing > 0 ? trailing + 1 : 0;
-  const outputLen = fullBlocks * 5 + trailingChars;
+  // With non-aligned passthrough, we build output incrementally because
+  // the alignment can shift based on where we place passthrough sections.
+  const outputChars: string[] = [];
 
-  // Pre-allocate output array
-  const output: string[] = new Array(outputLen);
-  let outIdx = 0;
-
-  // Process full 4-byte blocks
   let inIdx = 0;
-  while (inIdx + 4 <= input.length) {
-    // Check if all 4 bytes are safe for raw passthrough.
-    // If so, use `,XXXX` format for better readability.
-    // Otherwise, use standard Z85 encoding.
-    if (isBlockSafeForPassthrough(input, inIdx)) {
-      // Raw passthrough: output `,` followed by the 4 raw bytes
-      output[outIdx] = ",";
-      output[outIdx + 1] = String.fromCharCode(input[inIdx]);
-      output[outIdx + 2] = String.fromCharCode(input[inIdx + 1]);
-      output[outIdx + 3] = String.fromCharCode(input[inIdx + 2]);
-      output[outIdx + 4] = String.fromCharCode(input[inIdx + 3]);
-    } else {
-      // Standard Z85 encoding
-      // Convert 4 bytes to big-endian u32
-      // JavaScript bitwise operations work on 32-bit signed integers,
-      // so we use >>> 0 to convert to unsigned
+
+  while (inIdx < input.length) {
+    const bytesRemaining = input.length - inIdx;
+
+    // First, check if we have at least 4 bytes for a potential passthrough
+    if (bytesRemaining >= 4) {
+      // Check for block-aligned passthrough (simplest case)
+      if (areBytesAllSafe(input, inIdx)) {
+        // Block-aligned passthrough: just output , + 4 bytes
+        outputChars.push(",");
+        outputChars.push(String.fromCharCode(input[inIdx]));
+        outputChars.push(String.fromCharCode(input[inIdx + 1]));
+        outputChars.push(String.fromCharCode(input[inIdx + 2]));
+        outputChars.push(String.fromCharCode(input[inIdx + 3]));
+        inIdx += 4;
+        continue;
+      }
+
+      // Check for non-aligned passthrough opportunities
+      // Look for safe 4-byte sequences that don't start at current position
+      let foundNonAligned = false;
+
+      for (let offset = 1; offset <= 3 && inIdx + offset + 4 <= input.length; offset++) {
+        if (areBytesAllSafe(input, inIdx + offset)) {
+          // Found safe bytes at non-aligned position
+          // P = offset (position of comma within the output block)
+
+          // Compute the "before" block value (4 bytes starting at inIdx)
+          const beforeBytes = input.slice(inIdx, inIdx + 4);
+          const beforeValue =
+            ((beforeBytes[0] << 24) |
+              (beforeBytes[1] << 16) |
+              (beforeBytes[2] << 8) |
+              beforeBytes[3]) >>>
+            0;
+
+          // The known low bytes for the "before" block are the first (4-offset) passthrough bytes
+          const knownLowBytes = Array.from(input.slice(inIdx + offset, inIdx + 4));
+
+          // Check if the "before" block value is the canonical minimum
+          if (isCanonicalMinimum(beforeValue, offset, knownLowBytes)) {
+            // Yes! We can use non-aligned passthrough
+
+            // Output P Z85 digits for the high-order part of before block
+            const highDigits = getHighOrderZ85Digits(beforeValue, offset);
+            for (const d of highDigits) {
+              outputChars.push(Z85_ALPHABET[d]);
+            }
+
+            // Output comma + 4 passthrough bytes
+            outputChars.push(",");
+            outputChars.push(String.fromCharCode(input[inIdx + offset]));
+            outputChars.push(String.fromCharCode(input[inIdx + offset + 1]));
+            outputChars.push(String.fromCharCode(input[inIdx + offset + 2]));
+            outputChars.push(String.fromCharCode(input[inIdx + offset + 3]));
+
+            // Move past before block + passthrough (total: 4 + 4 - overlap)
+            // The passthrough covers bytes [inIdx+offset, inIdx+offset+4)
+            // We've now encoded [inIdx, inIdx+offset+4)
+            inIdx = inIdx + offset + 4;
+            foundNonAligned = true;
+            break;
+          }
+        }
+      }
+
+      if (foundNonAligned) {
+        continue;
+      }
+
+      // No passthrough opportunity, use standard Z85 encoding
       const value =
         ((input[inIdx] << 24) |
           (input[inIdx + 1] << 16) |
@@ -185,35 +231,41 @@ export function encode(input: Uint8Array): string {
           input[inIdx + 3]) >>>
         0;
 
-      // Convert to base-85, filling 5 characters from right to left
-      encodeBlockToArray(value, output, outIdx);
-    }
-    outIdx += 5;
-    inIdx += 4;
-  }
-
-  // Handle trailing bytes (1, 2, or 3 bytes)
-  // Note: Raw passthrough is NOT used for trailing bytes - only full 4-byte blocks
-  if (trailing > 0) {
-    const numBytes = trailing;
-    const numChars = numBytes + 1;
-
-    // Construct the value from available bytes (big-endian, left-aligned)
-    let value: number;
-    if (numBytes === 1) {
-      value = input[inIdx];
-    } else if (numBytes === 2) {
-      value = (input[inIdx] << 8) | input[inIdx + 1];
+      // Convert to base-85
+      let v = value;
+      const digits: string[] = new Array(5);
+      for (let i = 4; i >= 0; i--) {
+        digits[i] = Z85_ALPHABET[v % 85];
+        v = Math.floor(v / 85);
+      }
+      outputChars.push(...digits);
+      inIdx += 4;
     } else {
-      // 3 bytes: construct 24-bit value
-      value = (input[inIdx] << 16) | (input[inIdx + 1] << 8) | input[inIdx + 2];
-    }
+      // Trailing bytes (1-3): always use standard Z85 encoding
+      const numBytes = bytesRemaining;
+      const numChars = numBytes + 1;
 
-    // Encode the partial block
-    encodePartialToArray(value, numChars, output, outIdx);
+      let value: number;
+      if (numBytes === 1) {
+        value = input[inIdx];
+      } else if (numBytes === 2) {
+        value = (input[inIdx] << 8) | input[inIdx + 1];
+      } else {
+        value = (input[inIdx] << 16) | (input[inIdx + 1] << 8) | input[inIdx + 2];
+      }
+
+      // Encode partial block
+      const digits: string[] = new Array(numChars);
+      for (let i = numChars - 1; i >= 0; i--) {
+        digits[i] = Z85_ALPHABET[value % 85];
+        value = Math.floor(value / 85);
+      }
+      outputChars.push(...digits);
+      inIdx += numBytes;
+    }
   }
 
-  return output.join("");
+  return outputChars.join("");
 }
 
 /**
@@ -618,6 +670,123 @@ function computeCanonicalMinimum(
   }
 
   return candidate;
+}
+
+// =============================================================================
+// Non-Aligned Passthrough Encoding Support
+// =============================================================================
+//
+// For encoding, we need to check if a block's actual value equals the canonical
+// minimum for the partial Z85 + known bytes. If so, we can use non-aligned passthrough.
+
+/**
+ * Get the P high-order Z85 digits for a 32-bit value.
+ *
+ * The Z85 encoding of a 32-bit value produces 5 digits. This returns the first P digits.
+ *
+ * @param value - The 32-bit value
+ * @param P - Number of high-order digits to return (1-4)
+ * @returns Array of P Z85 digit values (0-84)
+ */
+function getHighOrderZ85Digits(value: number, P: number): number[] {
+  // Full Z85 encoding: value = d0*85^4 + d1*85^3 + d2*85^2 + d3*85 + d4
+  // We need d0, d1, ..., d(P-1)
+
+  // First, convert to all 5 digits
+  const digits: number[] = [];
+  let v = value;
+  for (let i = 0; i < 5; i++) {
+    digits.unshift(v % 85);
+    v = Math.floor(v / 85);
+  }
+
+  // Return first P digits
+  return digits.slice(0, P);
+}
+
+/**
+ * Check if a block value is the canonical minimum for given partial Z85 encoding.
+ *
+ * For non-aligned passthrough at position P, the encoder outputs P Z85 digits,
+ * then comma + 4 passthrough bytes. For this to round-trip correctly, the
+ * block's actual value must equal the canonical minimum that the decoder
+ * would compute.
+ *
+ * @param blockValue - The actual 32-bit value of the block
+ * @param P - Position of comma (1-4), meaning P high-order Z85 digits are used
+ * @param knownLowBytes - The (4-P) known low-order bytes (from passthrough)
+ * @returns true if blockValue equals the canonical minimum
+ */
+function isCanonicalMinimum(
+  blockValue: number,
+  P: number,
+  knownLowBytes: number[]
+): boolean {
+  // Get the P high-order Z85 digits of the block value
+  const highDigits = getHighOrderZ85Digits(blockValue, P);
+
+  // Compute what the canonical minimum would be
+  const canonicalMin = computeCanonicalMinimumForEncoding(highDigits, knownLowBytes);
+
+  return blockValue === canonicalMin;
+}
+
+/**
+ * Compute canonical minimum for encoding (doesn't throw, returns -1 on error).
+ */
+function computeCanonicalMinimumForEncoding(
+  highDigits: number[],
+  knownLowBytes: number[]
+): number {
+  const P = highDigits.length;
+  const numKnownBytes = knownLowBytes.length;
+
+  let base = 0;
+  for (let i = 0; i < P; i++) {
+    base = base * 85 + highDigits[i];
+  }
+
+  const power = Math.pow(85, 5 - P);
+  const rangeStart = base * power;
+  const rangeEnd = (base + 1) * power;
+
+  if (numKnownBytes === 0) {
+    if (rangeStart > 0xffffffff) return -1;
+    return rangeStart;
+  }
+
+  let knownPart = 0;
+  for (let i = 0; i < numKnownBytes; i++) {
+    knownPart = (knownPart << 8) | knownLowBytes[i];
+  }
+
+  const modulus = 1 << (numKnownBytes * 8);
+  const startRemainder = rangeStart % modulus;
+
+  let candidate: number;
+  if (startRemainder <= knownPart) {
+    candidate = rangeStart - startRemainder + knownPart;
+  } else {
+    candidate = rangeStart - startRemainder + modulus + knownPart;
+  }
+
+  if (candidate >= rangeEnd || candidate > 0xffffffff) {
+    return -1;
+  }
+
+  return candidate;
+}
+
+/**
+ * Check if 4 consecutive bytes are safe for passthrough.
+ */
+function areBytesAllSafe(input: Uint8Array, startIdx: number): boolean {
+  return (
+    SAFE_CHAR_TABLE[input[startIdx]] &&
+    SAFE_CHAR_TABLE[input[startIdx + 1]] &&
+    SAFE_CHAR_TABLE[input[startIdx + 2]] &&
+    SAFE_CHAR_TABLE[input[startIdx + 3]]
+  );
 }
 
 /**
