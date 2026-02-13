@@ -393,13 +393,21 @@ encode identically if unknown bytes were zeros?" If yes, the cut is valid with
 cut and use block-aligned exit or extend the raw section.
 
 **Example:** For `[b0 b1 b2 | b3]` exit cut, check if encoding
-`[b0 b1 b2 | b3]` produces the same trailing character as `[b0 b1 b2 | 0]`.
+`[b0 b1 b2 | b3]` produces the same trailing characters as `[0 0 0 | b3]`.
 If yes, the decoder can assume zero-padding and uniquely recover b3. If no,
 the encoder must use a different cut position or block-aligned exit.
 
 This trades disambiguation bits (expensive in tight budgets) for encoder
 complexity (checking whether specific byte values allow stable cuts). The
 decoder remains simple: it always assumes zero-padding for exit boundaries.
+
+**Empirical viability (analysis/zero-padding-exits.py):** Testing random 4-byte
+blocks shows that opportunistic zero-padding works for only ~0.02-0.31% of
+blocks depending on boundary position. This is a very restrictive constraint —
+most byte combinations will NOT allow zero-padding exits. In practice, the
+encoder will often fall back to block-aligned exits or extended raw sections.
+The strategy is theoretically sound (zero bit cost when viable) but has limited
+applicability.
 
 ### Recommended Defaults
 
