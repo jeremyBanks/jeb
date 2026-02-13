@@ -54,11 +54,38 @@ const Z85_ALPHABET =
   "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
 
 /**
- * The raw passthrough escape character.
+ * The 4-byte raw passthrough escape character.
  * When this appears at position 0 of a 5-character block during decoding,
  * the following 4 characters are taken as literal bytes (no Z85 decoding).
  */
-const RAW_ESCAPE = ",".charCodeAt(0); // 0x2C
+const RAW_ESCAPE_4 = ",".charCodeAt(0); // 0x2C
+
+/**
+ * The 5-byte raw passthrough escape character.
+ * When this appears at position P+1 of a 5-character block during decoding,
+ * the following 5 characters are taken as literal bytes (no Z85 decoding).
+ * Unlike 4-byte passthrough, this outputs P+1 chars before the escape (not P),
+ * so no canonical minimum constraint is needed - the extra char fully disambiguates.
+ */
+const RAW_ESCAPE_5 = ";".charCodeAt(0); // 0x3B
+
+/**
+ * The 6-byte raw passthrough escape character.
+ * When this appears at position P+1 of a 5-character block during decoding,
+ * the following 6 characters are taken as literal bytes (no Z85 decoding).
+ * Unlike 4-byte passthrough, this outputs P+1 chars before the escape (not P),
+ * so no canonical minimum constraint is needed - the extra char fully disambiguates.
+ */
+const RAW_ESCAPE_6 = "_".charCodeAt(0); // 0x5F
+
+/**
+ * The 7-byte raw passthrough escape character.
+ * When this appears at position P+1 of a 5-character block during decoding,
+ * the following 7 characters are taken as literal bytes (no Z85 decoding).
+ * Unlike 4-byte passthrough, this outputs P+1 chars before the escape (not P),
+ * so no canonical minimum constraint is needed - the extra char fully disambiguates.
+ */
+const RAW_ESCAPE_7 = "~".charCodeAt(0); // 0x7E
 
 /**
  * Extended safe characters for raw passthrough encoding decisions.
@@ -104,6 +131,25 @@ function buildDecodeTable(): number[] {
     table[Z85_ALPHABET.charCodeAt(i)] = i;
   }
   return table;
+}
+
+/**
+ * Check if a byte is an escape character and return the passthrough length.
+ * Returns 0 if not an escape, or the length (4, 5, 6, or 7).
+ */
+function getPassthroughLength(charCode: number): number {
+  switch (charCode) {
+    case RAW_ESCAPE_4:
+      return 4;
+    case RAW_ESCAPE_5:
+      return 5;
+    case RAW_ESCAPE_6:
+      return 6;
+    case RAW_ESCAPE_7:
+      return 7;
+    default:
+      return 0;
+  }
 }
 
 /**
@@ -346,63 +392,117 @@ export function decode(input: string): Uint8Array {
 
   while (inIdx < input.length) {
     const charCode = input.charCodeAt(inIdx);
+    const passLen = getPassthroughLength(charCode);
 
-    if (charCode === RAW_ESCAPE) {
-      // Found a comma - this is a passthrough marker
-      const P = blockPos; // Position within the 5-char block (0-4)
+    if (passLen > 0) {
+      // Found an escape character - this is a passthrough marker
+      // passLen is 4, 5, 6, or 7
 
-      // Ensure we have at least 4 more characters for the passthrough bytes
-      if (inIdx + 4 >= input.length) {
+      // Ensure we have enough characters for the passthrough bytes
+      if (inIdx + passLen >= input.length) {
         throw new Z85DecodeError("incomplete passthrough sequence");
       }
 
-      // Extract the 4 passthrough bytes
-      const passBytes = [
-        input.charCodeAt(inIdx + 1),
-        input.charCodeAt(inIdx + 2),
-        input.charCodeAt(inIdx + 3),
-        input.charCodeAt(inIdx + 4),
-      ];
+      // Extract the passthrough bytes
+      const passBytes: number[] = [];
+      for (let i = 1; i <= passLen; i++) {
+        passBytes.push(input.charCodeAt(inIdx + i));
+      }
 
-      if (P === 0) {
-        // Block-aligned passthrough: simple case, just output the 4 bytes
-        outputChunks.push(...passBytes);
-        inIdx += 5; // Skip comma + 4 bytes
-        // blockPos stays at 0, currentBlockDigits stays empty, knownHighBytes stays empty
+      if (passLen === 4) {
+        // 4-byte passthrough (`,`)
+        // Structure: [P chars] [,] [4 bytes] [(5-P) chars]
+        const P = blockPos; // Position within the 5-char block (0-4)
+
+        if (P === 0) {
+          // Block-aligned passthrough: simple case, just output the 4 bytes
+          outputChunks.push(...passBytes);
+          inIdx += 5; // Skip comma + 4 bytes
+          // blockPos stays at 0, currentBlockDigits stays empty, knownHighBytes stays empty
+        } else {
+          // Non-aligned 4-byte passthrough at position P (1-4)
+          //
+          // Structure:
+          // - We have P high-order Z85 digits for "before" block
+          // - passBytes[0..4-P] are the known low bytes of "before" block
+          // - passBytes[4-P..4] are the known high bytes of "after" block
+          //
+          // The passthrough bytes OVERLAP with both blocks!
+
+          const numKnownLowBytes = 4 - P;
+          const knownLowBytes = passBytes.slice(0, numKnownLowBytes);
+
+          // Compute the canonical minimum for the "before" block
+          const beforeValue = computeCanonicalMinimum(currentBlockDigits, knownLowBytes);
+
+          // Output the 4 bytes of the "before" block
+          outputChunks.push((beforeValue >>> 24) & 0xff);
+          outputChunks.push((beforeValue >>> 16) & 0xff);
+          outputChunks.push((beforeValue >>> 8) & 0xff);
+          outputChunks.push(beforeValue & 0xff);
+
+          // DO NOT output passthrough bytes separately - they overlap with before/after blocks!
+          // Instead, set the known high bytes for the "after" block
+          knownHighBytes = passBytes.slice(numKnownLowBytes); // Last P bytes
+
+          // Reset block state for "after" block
+          currentBlockDigits.length = 0;
+          blockPos = 0;
+
+          // Move past comma + 4 passthrough bytes
+          inIdx += 5;
+        }
       } else {
-        // Non-aligned passthrough at position P (1-4)
+        // 5/6/7-byte passthrough (`;`, `_`, `~`)
+        // Structure: [(P+1) chars] [escape] [K bytes] [(5-P) chars]
         //
-        // Structure:
-        // - We have P high-order Z85 digits for "before" block
-        // - passBytes[0..4-P] are the known low bytes of "before" block
-        // - passBytes[4-P..4] are the known high bytes of "after" block
-        //
-        // The passthrough bytes OVERLAP with both blocks!
-        // - Last (4-P) bytes of "before" = first (4-P) bytes of passthrough
-        // - First P bytes of "after" = last P bytes of passthrough
+        // KEY DIFFERENCE from 4-byte: The escape appears at position P+1 (not P).
+        // This means block_pos = P+1, so P = block_pos - 1.
+        // The extra char fully disambiguates the before block.
 
-        const numKnownLowBytes = 4 - P;
+        const numDigits = currentBlockDigits.length;
+
+        if (numDigits === 0) {
+          // Invalid: 5/6/7-byte passthrough requires at least 1 Z85 digit before escape
+          throw new Z85DecodeError("invalid passthrough position for extended escape");
+        }
+
+        const p = numDigits - 1; // P = (P+1) - 1
+
+        // For 5/6/7-byte passthrough:
+        // - First (4-P) passthrough bytes overlap with before block's low bytes
+        // - We output only the HIGH P bytes of before block (not in passthrough)
+        // - Then we output ALL passthrough bytes directly
+        // - After portion continues as normal Z85
+
+        const numKnownLowBytes = 4 - p;
         const knownLowBytes = passBytes.slice(0, numKnownLowBytes);
 
-        // Compute the canonical minimum for the "before" block
-        const beforeValue = computeCanonicalMinimum(currentBlockDigits, knownLowBytes);
+        // Compute the before block value from (P+1) Z85 digits + (4-P) known low bytes
+        const beforeValue = computeBeforeBlockFromExtendedDigits(currentBlockDigits, knownLowBytes);
 
-        // Output the 4 bytes of the "before" block
-        outputChunks.push((beforeValue >>> 24) & 0xff);
-        outputChunks.push((beforeValue >>> 16) & 0xff);
-        outputChunks.push((beforeValue >>> 8) & 0xff);
-        outputChunks.push(beforeValue & 0xff);
+        // Output only the HIGH P bytes of the before block (the ones NOT in passthrough)
+        const beforeBytes = [
+          (beforeValue >>> 24) & 0xff,
+          (beforeValue >>> 16) & 0xff,
+          (beforeValue >>> 8) & 0xff,
+          beforeValue & 0xff,
+        ];
+        for (let i = 0; i < p; i++) {
+          outputChunks.push(beforeBytes[i]);
+        }
 
-        // DO NOT output passthrough bytes separately - they overlap with before/after blocks!
-        // Instead, set the known high bytes for the "after" block
-        knownHighBytes = passBytes.slice(numKnownLowBytes); // Last P bytes
+        // Output ALL the passthrough bytes directly
+        outputChunks.push(...passBytes);
 
-        // Reset block state for "after" block
+        // Reset block state for after portion
         currentBlockDigits.length = 0;
         blockPos = 0;
+        // No known_high_bytes for 5/6/7-byte passthrough
+        knownHighBytes = [];
 
-        // Move past comma + 4 passthrough bytes
-        inIdx += 5;
+        // Move past escape + K passthrough bytes
+        inIdx += 1 + passLen;
       }
     } else {
       // Regular Z85 character
@@ -582,6 +682,79 @@ function decodePartialBlock(
 // the MINIMUM value (canonical). This ensures:
 // - Decoding is deterministic and unambiguous
 // - Encoding can check if actual value equals canonical minimum before using passthrough
+
+/**
+ * Compute the "before" block value from extended Z85 digits (P+1 digits) and known low bytes.
+ *
+ * For 5/6/7-byte passthrough, we have P+1 Z85 digits (one more than 4-byte passthrough).
+ * Combined with the (4-P) known low bytes from the passthrough, this fully determines
+ * the before block value - NO ambiguity, NO canonical minimum needed.
+ *
+ * @param highDigits - Array of (P+1) Z85 digit values (0-84)
+ * @param knownLowBytes - Array of (4-P) known low-order bytes from passthrough
+ * @returns The 32-bit before block value
+ * @throws Z85DecodeError if no valid value exists
+ */
+function computeBeforeBlockFromExtendedDigits(
+  highDigits: number[],
+  knownLowBytes: number[]
+): number {
+  const numDigits = highDigits.length; // This is P+1
+  const p = numDigits - 1;
+  const numKnownBytes = knownLowBytes.length; // This should be 4-P
+
+  // Compute the base value from high Z85 digits
+  // These numDigits define a range [base * 85^(5-numDigits), (base+1) * 85^(5-numDigits))
+  let base = 0;
+  for (let i = 0; i < numDigits; i++) {
+    base = base * 85 + highDigits[i];
+  }
+
+  // The range is [base * 85^(5-numDigits), (base+1) * 85^(5-numDigits))
+  // With numDigits = P+1, that's [base * 85^(4-P), (base+1) * 85^(4-P))
+  const power = Math.pow(85, 5 - numDigits);
+  const rangeStart = base * power;
+  const rangeEnd = (base + 1) * power;
+
+  if (numKnownBytes === 0) {
+    // P = 4, numDigits = 5: we have a full Z85 block, no additional constraint
+    if (rangeStart > 0xffffffff) {
+      throw new Z85DecodeError("Z85 value overflow in extended passthrough decode");
+    }
+    return rangeStart;
+  }
+
+  // Construct the constraint from known low bytes
+  let knownPart = 0;
+  for (let i = 0; i < numKnownBytes; i++) {
+    knownPart = (knownPart << 8) | knownLowBytes[i];
+  }
+
+  // The mask for known bytes (low numKnownBytes bytes)
+  // Note: Can't use << for 32+ bits in JS, use Math.pow instead
+  const modulus = Math.pow(2, numKnownBytes * 8);
+
+  // Find the unique value in [rangeStart, rangeEnd) where (value % modulus) === knownPart
+  const startRemainder = rangeStart % modulus;
+
+  let candidate: number;
+  if (startRemainder <= knownPart) {
+    candidate = rangeStart - startRemainder + knownPart;
+  } else {
+    candidate = rangeStart - startRemainder + modulus + knownPart;
+  }
+
+  // With P+1 digits, the range size is small enough that at most one value matches.
+  // Verify the candidate is in range.
+  if (candidate >= rangeEnd) {
+    throw new Z85DecodeError("no valid value for extended passthrough decode");
+  }
+  if (candidate > 0xffffffff) {
+    throw new Z85DecodeError("Z85 value overflow in extended passthrough decode");
+  }
+
+  return candidate;
+}
 
 /**
  * Compute the canonical (minimum) 32-bit value for an ambiguous "before" block.
