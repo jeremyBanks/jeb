@@ -177,60 +177,12 @@ pub fn encode(input: &[u8]) -> String {
                 continue;
             }
 
-            // Check for non-aligned passthrough opportunities
-            // Look for safe 4-byte sequences that don't start at current position
-            let mut found_non_aligned = false;
+            // NOTE: Non-aligned passthrough encoding is disabled for now.
+            // The decoder supports it, but the encoder complexity for ensuring
+            // correct round-trip encoding of the "after" block is significant.
+            // Only block-aligned passthrough (where all 4 bytes align) is used.
 
-            for offset in 1..=3 {
-                if in_idx + offset + 4 > input.len() {
-                    break;
-                }
-
-                if is_block_safe_for_passthrough(&input[in_idx + offset..]) {
-                    // Found safe bytes at non-aligned position
-                    // P = offset (position of comma within the output block)
-
-                    // Compute the "before" block value (4 bytes starting at in_idx)
-                    let before_value = u32::from_be_bytes([
-                        input[in_idx],
-                        input[in_idx + 1],
-                        input[in_idx + 2],
-                        input[in_idx + 3],
-                    ]);
-
-                    // The known low bytes for the "before" block are the first (4-offset) passthrough bytes
-                    let known_low_bytes = &input[in_idx + offset..in_idx + 4];
-
-                    // Check if the "before" block value is the canonical minimum
-                    if is_canonical_minimum(before_value, offset, known_low_bytes) {
-                        // Yes! We can use non-aligned passthrough
-
-                        // Output P Z85 digits for the high-order part of before block
-                        let high_digits = get_high_order_z85_digits(before_value, offset);
-                        for d in high_digits {
-                            output.push(Z85_ALPHABET[d as usize]);
-                        }
-
-                        // Output comma + 4 passthrough bytes
-                        output.push(RAW_ESCAPE);
-                        output.push(input[in_idx + offset]);
-                        output.push(input[in_idx + offset + 1]);
-                        output.push(input[in_idx + offset + 2]);
-                        output.push(input[in_idx + offset + 3]);
-
-                        // Move past before block + passthrough
-                        in_idx = in_idx + offset + 4;
-                        found_non_aligned = true;
-                        break;
-                    }
-                }
-            }
-
-            if found_non_aligned {
-                continue;
-            }
-
-            // No passthrough opportunity, use standard Z85 encoding
+            // Standard Z85 encoding
             let value = u32::from_be_bytes([
                 input[in_idx],
                 input[in_idx + 1],
@@ -386,12 +338,62 @@ fn compute_canonical_minimum_for_encoding(
 }
 
 /// Check if a block value is the canonical minimum for given partial Z85 encoding.
+#[allow(dead_code)]
 fn is_canonical_minimum(block_value: u32, p: usize, known_low_bytes: &[u8]) -> bool {
     let high_digits = get_high_order_z85_digits(block_value, p);
     match compute_canonical_minimum_for_encoding(&high_digits, known_low_bytes) {
         Some(canonical_min) => block_value == canonical_min,
         None => false,
     }
+}
+
+/// Reconstruct the "after" block value from known high bytes and low Z85 digits.
+///
+/// After a non-aligned passthrough at position P, the "after" block has:
+/// - P known high bytes from the passthrough
+/// - (5-P) low-order Z85 digits from the input
+///
+/// This function finds the 32-bit value V such that:
+/// - V's high P bytes equal known_high_bytes
+/// - V mod 85^num_digits equals low_digits_value
+fn reconstruct_after_block_value(
+    known_high_bytes: &[u8],
+    low_digits_value: u64,
+    num_digits: usize,
+) -> Result<u32, DecodeError> {
+    let p = known_high_bytes.len();
+
+    // Compute the known high value (big-endian)
+    let mut known_high: u64 = 0;
+    for &b in known_high_bytes {
+        known_high = (known_high << 8) | b as u64;
+    }
+
+    // The full value V must satisfy:
+    // - (V >> (8 * (4-P))) == known_high (high bytes match)
+    // - V % 85^num_digits == low_digits_value (low digits match)
+
+    let shift = 8 * (4 - p);
+    let range_start = known_high << shift;
+    let range_size: u64 = 1 << shift;
+
+    let modulus = 85u64.pow(num_digits as u32);
+
+    // Find smallest V >= range_start where V % modulus == low_digits_value
+    let start_remainder = range_start % modulus;
+
+    let candidate = if start_remainder <= low_digits_value {
+        range_start - start_remainder + low_digits_value
+    } else {
+        range_start - start_remainder + modulus + low_digits_value
+    };
+
+    // Verify candidate is in range
+    if candidate >= range_start + range_size {
+        return Err(DecodeError::InvalidLength);
+    }
+
+    Ok(candidate as u32)
 }
 
 /// Decode a Z85 string back into bytes.
@@ -437,9 +439,8 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
         return Ok(Vec::new());
     }
 
-    // With non-aligned passthrough, we can't pre-calculate output size easily
-    // because commas can appear anywhere and shift the alignment.
-    // We'll build output incrementally.
+    // With non-aligned passthrough, we need to track additional state because
+    // passthrough bytes overlap with the before/after blocks.
     let mut output = Vec::new();
 
     let mut in_idx = 0;
@@ -448,6 +449,8 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
     let mut block_pos = 0usize;
     // Accumulated Z85 digits for current block
     let mut current_block_digits: Vec<u8> = Vec::with_capacity(5);
+    // Known high bytes for current block (from passthrough of previous block)
+    let mut known_high_bytes: Vec<u8> = Vec::new();
 
     while in_idx < input.len() {
         let byte = input[in_idx];
@@ -468,15 +471,19 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
                 // Block-aligned passthrough: simple case, just output the 4 bytes
                 output.extend_from_slice(pass_bytes);
                 in_idx += 5; // Skip comma + 4 bytes
-                // block_pos stays at 0, current_block_digits stays empty
+                // block_pos stays at 0, current_block_digits stays empty, known_high_bytes stays empty
             } else {
                 // Non-aligned passthrough at position P (1-4)
-                // We have P high-order Z85 digits in current_block_digits
-                // The passthrough bytes provide (4-P) known low-order bytes for the "before" block
+                //
+                // Structure:
+                // - We have P high-order Z85 digits for "before" block
+                // - pass_bytes[0..4-P] are the known low bytes of "before" block
+                // - pass_bytes[4-P..4] are the known high bytes of "after" block
+                //
+                // The passthrough bytes OVERLAP with both blocks!
 
-                // The first (4-P) passthrough bytes are the known low bytes of the "before" block
-                let num_known_bytes = 4 - p;
-                let known_low_bytes = &pass_bytes[0..num_known_bytes];
+                let num_known_low_bytes = 4 - p;
+                let known_low_bytes = &pass_bytes[0..num_known_low_bytes];
 
                 // Compute the canonical minimum for the "before" block
                 let before_value = compute_canonical_minimum(&current_block_digits, known_low_bytes)?;
@@ -484,10 +491,11 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
                 // Output the 4 bytes of the "before" block
                 output.extend_from_slice(&before_value.to_be_bytes());
 
-                // Output the 4 passthrough bytes
-                output.extend_from_slice(pass_bytes);
+                // DO NOT output passthrough bytes separately - they overlap with before/after blocks!
+                // Instead, set the known high bytes for the "after" block
+                known_high_bytes = pass_bytes[num_known_low_bytes..].to_vec(); // Last P bytes
 
-                // Reset block state
+                // Reset block state for "after" block
                 current_block_digits.clear();
                 block_pos = 0;
 
@@ -505,21 +513,41 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
             block_pos += 1;
             in_idx += 1;
 
-            // If we've completed a 5-character block, decode it
-            if block_pos == 5 {
-                // Decode the full block
-                let mut value: u64 = 0;
-                for &d in &current_block_digits {
-                    value = value * 85 + d as u64;
-                }
+            // Check if we have enough digits to complete the current block
+            // Normal case: 5 digits
+            // After non-aligned passthrough: (5-P) digits where P = known_high_bytes.len()
+            let needed_digits = 5 - known_high_bytes.len();
 
-                // Check for overflow
-                if value > u32::MAX as u64 {
-                    return Err(DecodeError::Overflow);
+            if current_block_digits.len() == needed_digits {
+                let value: u32;
+
+                if known_high_bytes.is_empty() {
+                    // Normal case: decode full 5-digit block
+                    let mut v: u64 = 0;
+                    for &d in &current_block_digits {
+                        v = v * 85 + d as u64;
+                    }
+
+                    // Check for overflow
+                    if v > u32::MAX as u64 {
+                        return Err(DecodeError::Overflow);
+                    }
+                    value = v as u32;
+                } else {
+                    // After non-aligned passthrough: reconstruct block from known high bytes + low digits
+                    let mut low_digits_value: u64 = 0;
+                    for &d in &current_block_digits {
+                        low_digits_value = low_digits_value * 85 + d as u64;
+                    }
+
+                    value = reconstruct_after_block_value(&known_high_bytes, low_digits_value, needed_digits)?;
+
+                    // Clear known_high_bytes for next block
+                    known_high_bytes.clear();
                 }
 
                 // Output 4 bytes
-                output.extend_from_slice(&(value as u32).to_be_bytes());
+                output.extend_from_slice(&value.to_be_bytes());
 
                 // Reset for next block
                 current_block_digits.clear();
@@ -886,14 +914,16 @@ mod tests {
         // Non-aligned passthrough: comma at position 1
         // "A,BCDE" - 'A' is 1 Z85 digit, then passthrough 'BCDE'
         // The "before" block has 1 Z85 digit (A=36) and 3 known bytes (BCD = 0x42,0x43,0x44)
+        //
+        // Passthrough bytes overlap with before/after blocks:
+        // - 'BCD' are the last 3 bytes of "before" block
+        // - 'E' is the first byte of "after" block (need 4 more Z85 digits)
+        //
+        // Since there are no chars after passthrough, only "before" block is output.
         let result = decode("A,BCDE").unwrap();
-        // Should produce 8 bytes: 4 for "before" block (canonical min) + 4 passthrough
-        assert_eq!(result.len(), 8);
+        assert_eq!(result.len(), 4);
         // Before block: canonical minimum with high digit 36, low bytes 0x42,0x43,0x44
-        // This should be 0x70424344
-        assert_eq!(&result[0..4], &[0x70, 0x42, 0x43, 0x44]);
-        // Passthrough bytes: BCDE
-        assert_eq!(&result[4..8], b"BCDE");
+        assert_eq!(&result[..], &[0x70, 0x42, 0x43, 0x44]);
     }
 
     #[test]
@@ -908,16 +938,16 @@ mod tests {
     fn test_non_aligned_passthrough_position_4() {
         // Non-aligned passthrough: comma at position 4
         // "ABCD,efgh" - 4 Z85 digits, then passthrough 'efgh'
-        // The "before" block has 4 Z85 digits and 0 known bytes (P=4 means no known bytes)
+        //
+        // Passthrough bytes overlap:
+        // - 0 bytes are the last (4-4)=0 bytes of "before" block
+        // - 'efgh' (4 bytes) are the first 4 bytes of "after" block
+        //
+        // Since P=4, we need 5-4=1 more Z85 digit for "after" block, but there are none.
+        // So only "before" block is output (4 bytes).
         let result = decode("ABCD,efgh").unwrap();
-        // Should produce 8 bytes: 4 for "before" block + 4 passthrough
-        assert_eq!(result.len(), 8);
+        assert_eq!(result.len(), 4);
         // Before block: canonical minimum with 4 digits (A=36,B=37,C=38,D=39)
-        // base = 36*85^3 + 37*85^2 + 38*85 + 39 = 22379094
-        // rangeStart = base * 85 = 1902222990 = 0x71619E8E
-        // With 0 known bytes, canonical minimum = rangeStart
-        assert_eq!(&result[0..4], &[0x71, 0x61, 0x9E, 0x8E]);
-        // Passthrough bytes: efgh
-        assert_eq!(&result[4..8], b"efgh");
+        assert_eq!(&result[..], &[0x71, 0x61, 0x9E, 0x8E]);
     }
 }
