@@ -2206,4 +2206,217 @@ mod tests {
         // - This is the only valid value with these parameters
         assert!(is_canonical_minimum(0xFF746573, 1, &[0x74, 0x65, 0x73]));
     }
+
+    // =========================================================================
+    // Tests for 5/6/7-byte passthrough decoding (`;`, `_`, `~` escapes)
+    // =========================================================================
+
+    #[test]
+    fn test_5byte_passthrough_decode_p0() {
+        // 5-byte passthrough at P=0
+        // Structure: [1 Z85 char] [;] [5 raw bytes] [5 Z85 chars (after)]
+        // P=0 means: 1 char before escape, 5-0=5 chars after (4 bytes)
+        //
+        // For P=0, the first 4 bytes of passthrough are the "known low bytes"
+        // which must form a valid before block with the Z85 digit.
+        //
+        // Z85 digit '0' (value 0) defines range [0, 52200625)
+        // The known 4 bytes must be a value in this range.
+        // Let's use 0x00010203 = 66051, which is in range.
+        //
+        // Before block: 0x00010203
+        // Passthrough: [0x00, 0x01, 0x02, 0x03, 0x04] (5 bytes)
+        // After: 4 bytes encoded as 5 chars
+        //
+        // Encoded: "0" + ";" + 5 passthrough bytes + 5 Z85 chars
+        // The passthrough bytes need to be in the encoded string literally.
+        // We'll use bytes that are printable for the test string.
+        //
+        // Actually, the first 4 passthrough bytes = 0x00010203 contains nulls.
+        // Let's pick a value that's printable: "0000" = 0x30303030 = 808464432
+        // Is 808464432 in [0, 52200625)? No, too large.
+        //
+        // For digit '0', max value is 52200624. That's about 0x031C3670.
+        // In bytes: [0x03, 0x1C, 0x36, 0x70]
+        //
+        // Let's use smaller values. For the test, we can use non-printable bytes
+        // since the decoder doesn't care. Let's construct the encoded string
+        // with raw bytes.
+        //
+        // Actually, let's use digit 'n' (23) which gives range:
+        // 23 * 52200625 = 1200614375 to 1252814999
+        // "Hell" = 0x48656C6C = 1214606444, which is in this range!
+        //
+        // So: digit 'n', passthrough starts with "Hell" + 1 more byte.
+        // Passthrough: "Hello" (5 bytes)
+        // After: 4 bytes, let's use zeros → "00000"
+        //
+        // But wait, we output P=0 high bytes of before block, which is 0 bytes.
+        // Then we output 5 passthrough bytes.
+        // So output = 0 + 5 = 5 bytes, plus the after portion.
+        //
+        // Hmm, but we need the decoder to actually run correctly.
+        // Let me verify: before block = 0x48656C6C ("Hell")
+        // P=0, so known_low_bytes = first 4-0=4 passthrough bytes = "Hell"
+        // With digit 'n' (23), compute_before_block_from_extended_digits should find 0x48656C6C.
+        //
+        // Range: [23*52200625, 24*52200625) = [1200614375, 1252815000)
+        // known_part = 0x48656C6C = 1214606444
+        // modulus = 2^32 = 4294967296 (since 4 known bytes)
+        // start_remainder = 1200614375 % 4294967296 = 1200614375
+        // known_part = 1214606444
+        // 1200614375 < 1214606444, so candidate = 1200614375 - 1200614375 + 1214606444 = 1214606444
+        // Is 1214606444 < 1252815000? Yes! So before_value = 1214606444 = 0x48656C6C ✓
+        //
+        // Output: high 0 bytes of 0x48656C6C (empty) + "Hello" (5 bytes) + decode("00000")
+        //       = "" + "Hello" + [0,0,0,0]
+        //       = "Hello" + 4 zeros (9 bytes total)
+
+        let encoded = "n;Hello00000";
+        let decoded = decode(encoded).unwrap();
+        assert_eq!(decoded.len(), 9);
+        assert_eq!(&decoded[0..5], b"Hello"); // passthrough bytes
+        assert_eq!(&decoded[5..9], &[0, 0, 0, 0]); // decoded from "00000"
+    }
+
+    #[test]
+    fn test_5byte_passthrough_decode_p2() {
+        // 5-byte passthrough at P=2
+        // Structure: [3 Z85 chars] [;] [5 raw bytes] [3 Z85 chars (trailing)]
+        // Total: 3 + 1 + 5 + 3 = 12 chars for 9 input bytes
+        //
+        // Let's construct: encoded string where before block encodes correctly.
+        // Before block: some value that encodes to "XYZ**" (we need first 3 chars)
+        // Passthrough: "hello"
+        // After: 2 bytes encoded to 3 chars
+        //
+        // Actually, let me just construct a valid encoded string and verify decode.
+        // Use known values:
+        // - Before block: 0x00 0x00 + "he" = 0x00006865
+        // - First P+1=3 chars of Z85(0x00006865)
+        // 0x00006865 = 26725
+        // 26725 / 85^4 = 0 → '0'
+        // 26725 / 85^3 = 0 → '0'
+        // 26725 / 85^2 = 3 → '3'
+        // So first 3 chars are "003"
+        //
+        // Passthrough: "hello" (last 2 bytes of before + 3 more)
+        // After portion: bytes following passthrough, encoded with 5-P=3 chars
+        //
+        // Let's verify decode of "003;helloXXX" where XXX encodes some after bytes.
+        // For after bytes = [0,0]: 3 chars encode 2 bytes.
+        // Z85("00") = 0x0000 = 0 → "000" (3 chars)
+
+        let encoded = "003;hello000";
+        let decoded = decode(encoded).unwrap();
+        // Expected output:
+        // - Before block high P=2 bytes: determined by "003" + "he" (first 2 passthrough bytes)
+        //   Full before block is some 4-byte value. We output only high 2 bytes.
+        //   Z85 "003" with known low bytes "he" (0x6865) gives us the before value.
+        // - Then 5 passthrough bytes: "hello"
+        // - Then 2 bytes from "000": [0, 0]
+        //
+        // Let's compute before block value:
+        // Digits: [0, 0, 3] (3 digits, so range is 85^2 = 7225)
+        // Base = 0*85^2 + 0*85 + 3 = 3
+        // Range: [3 * 7225, 4 * 7225) = [21675, 28900)
+        // Known low bytes: 0x6865 = 26725
+        // Candidate: find V in [21675, 28900) where V % 65536 == 26725
+        // 21675 % 65536 = 21675
+        // 21675 < 26725, so candidate = 21675 - 21675 + 26725 = 26725
+        // 26725 < 28900? Yes. So before value = 26725 = 0x00006865
+        // High 2 bytes: 0x0000
+
+        assert_eq!(decoded.len(), 9); // 2 + 5 + 2 = 9
+        assert_eq!(&decoded[0..2], &[0x00, 0x00]); // high 2 bytes of before block
+        assert_eq!(&decoded[2..7], b"hello"); // passthrough
+        assert_eq!(&decoded[7..9], &[0x00, 0x00]); // decoded from "000"
+    }
+
+    #[test]
+    fn test_6byte_passthrough_decode_p1() {
+        // 6-byte passthrough at P=1
+        // Structure: [2 Z85 chars] [_] [6 raw bytes] [4 Z85 chars (trailing)]
+        // Total: 2 + 1 + 6 + 4 = 13 chars for 10 input bytes
+        //
+        // Let's construct encoded string:
+        // Before block: 0x00 + "abc" = 0x00616263
+        // First P+1=2 chars of Z85(0x00616263)
+        // 0x00616263 = 6382179
+        // 6382179 / 85^4 = 0 → '0'
+        // 6382179 / 85^3 = 10 → 'a'
+        // First 2 chars: "0a"
+        //
+        // Passthrough: "abcdef" (last 3 bytes of before + 3 more)
+        // After portion: 3 bytes encoded with 5-P=4 chars
+        // Let's say after = [0,0,0]: 4 chars encode 3 bytes
+        // Z85 of 0x000000 = "0000"
+
+        let encoded = "0a_abcdef0000";
+        let decoded = decode(encoded).unwrap();
+        // Before high P=1 byte: computed from "0a" + "abc"
+        // After: [0,0,0]
+
+        assert_eq!(decoded.len(), 10); // 1 + 6 + 3 = 10
+        // First byte should be 0x00 (high byte of before block)
+        assert_eq!(decoded[0], 0x00);
+        assert_eq!(&decoded[1..7], b"abcdef"); // passthrough
+        assert_eq!(&decoded[7..10], &[0x00, 0x00, 0x00]); // decoded from "0000"
+    }
+
+    #[test]
+    fn test_7byte_passthrough_decode_p0() {
+        // 7-byte passthrough at P=0
+        // Structure: [1 Z85 char] [~] [7 raw bytes] [5 Z85 chars (full block)]
+        // Total: 1 + 1 + 7 + 5 = 14 chars for 11 input bytes
+        //
+        // At P=0, we output 0 high bytes from before.
+        // Passthrough: 7 bytes
+        // After: 4 bytes (5 chars = full block)
+        //
+        // Similar to 5-byte test, we need to use passthrough bytes that are
+        // valid for the Z85 digit. Using 'n' with "Hellowo" (7 bytes starting with "Hell")
+
+        let encoded = "n~Hellowo00000";
+        let decoded = decode(encoded).unwrap();
+
+        assert_eq!(decoded.len(), 11); // 0 + 7 + 4 = 11
+        assert_eq!(&decoded[0..7], b"Hellowo"); // passthrough
+        assert_eq!(&decoded[7..11], &[0x00, 0x00, 0x00, 0x00]); // decoded from "00000"
+    }
+
+    #[test]
+    fn test_5byte_passthrough_incomplete() {
+        // 5-byte escape with insufficient bytes should fail
+        let result = decode("0;abc"); // Only 3 bytes after ;, need 5
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_6byte_passthrough_incomplete() {
+        // 6-byte escape with insufficient bytes should fail
+        let result = decode("0_abcde"); // Only 5 bytes after _, need 6
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_7byte_passthrough_incomplete() {
+        // 7-byte escape with insufficient bytes should fail
+        let result = decode("0~abcdef"); // Only 6 bytes after ~, need 7
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_mixed_escapes_decode() {
+        // Test decoding a stream with multiple different escape types
+        // This is a synthetic test - just verify decoder handles each escape type
+
+        // 4-byte passthrough: ",test" (5 chars for 4 bytes)
+        let decoded_4 = decode(",test").unwrap();
+        assert_eq!(decoded_4, b"test");
+
+        // Can't easily test standalone 5/6/7-byte without proper framing,
+        // since they require Z85 context. The previous tests verify the
+        // full framing works.
+    }
 }
