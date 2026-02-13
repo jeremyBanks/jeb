@@ -139,6 +139,19 @@ impl std::error::Error for DecodeError {}
 ///    - 2 bytes (16 bits) -> 3 chars
 ///    - 3 bytes (24 bits) -> 4 chars
 ///
+/// # Raw Passthrough Extension
+///
+/// When a 4-byte block consists entirely of "safe" characters, the encoder
+/// MAY use raw passthrough (`,XXXX` format) instead of standard Z85 encoding.
+/// This includes non-aligned passthrough where the 4 safe bytes don't align
+/// with block boundaries.
+///
+/// For non-aligned passthrough at position P (1-4):
+/// - The "before" block has P high-order Z85 chars
+/// - The passthrough bytes overlap with before/after blocks
+/// - We check if the before block value is canonical (minimum)
+/// - We try both P and P+1 positions to maximize success rate
+///
 /// # Example
 ///
 /// Input: [0x86, 0x4F, 0xD2, 0x6F]
@@ -177,10 +190,15 @@ pub fn encode(input: &[u8]) -> String {
                 continue;
             }
 
-            // NOTE: Non-aligned passthrough encoding is disabled for now.
-            // The decoder supports it, but the encoder complexity for ensuring
-            // correct round-trip encoding of the "after" block is significant.
-            // Only block-aligned passthrough (where all 4 bytes align) is used.
+            // Try non-aligned passthrough within this block
+            // Look for 4 consecutive safe bytes starting at positions 1, 2, or 3
+            if let Some(result) = try_non_aligned_passthrough(input, in_idx, &output) {
+                // Non-aligned passthrough succeeded
+                // result contains: (before_z85_chars, passthrough_bytes, after_z85_chars, bytes_consumed)
+                output.extend_from_slice(&result.output);
+                in_idx += result.bytes_consumed;
+                continue;
+            }
 
             // Standard Z85 encoding
             let value = u32::from_be_bytes([
@@ -243,6 +261,256 @@ fn is_block_safe_for_passthrough(block: &[u8]) -> bool {
         && SAFE_CHAR_TABLE[block[1] as usize]
         && SAFE_CHAR_TABLE[block[2] as usize]
         && SAFE_CHAR_TABLE[block[3] as usize]
+}
+
+// =============================================================================
+// Non-Aligned Passthrough Encoding
+// =============================================================================
+//
+// Non-aligned passthrough allows encoding 4 consecutive safe bytes that don't
+// align with block boundaries. The `,` marker appears at position P (1-4) within
+// a 5-character output block.
+//
+// For this to work correctly:
+// 1. The "before" block value must be the canonical minimum
+// 2. The "after" block must have enough remaining input to complete
+// 3. We try both position P and P+1 to maximize success rate
+
+/// Result of a successful non-aligned passthrough encoding attempt.
+struct NonAlignedResult {
+    /// The complete output bytes for this passthrough sequence
+    output: Vec<u8>,
+    /// Number of input bytes consumed
+    bytes_consumed: usize,
+}
+
+/// Try to find and encode a non-aligned passthrough within the current block.
+///
+/// Looks for 4 consecutive safe bytes starting at positions 1, 2, or 3 within
+/// the current 4-byte block. For each candidate, checks if the "before" block
+/// value is canonical (minimum) and if the "after" block can be properly encoded.
+///
+/// Returns Some(NonAlignedResult) if successful, None otherwise.
+fn try_non_aligned_passthrough(
+    input: &[u8],
+    block_start: usize,
+    _current_output: &[u8],
+) -> Option<NonAlignedResult> {
+    // We need at least 8 bytes for non-aligned passthrough:
+    // - 4 bytes for the "before" block
+    // - At least 4 bytes that start at offset 1-3 for the passthrough
+    // - The passthrough bytes overlap with both before and after blocks
+
+    // For position P (1-3), the passthrough bytes are at input[block_start + P..block_start + P + 4]
+    // The "before" block is input[block_start..block_start + 4]
+    // The "after" block starts at input[block_start + 4..block_start + 8]
+
+    // Try positions 1, 2, 3 within the current block
+    for p in 1..=3 {
+        if let Some(result) = try_non_aligned_at_position(input, block_start, p) {
+            return Some(result);
+        }
+    }
+
+    None
+}
+
+/// Try non-aligned passthrough at a specific position P within the block.
+///
+/// Position P means:
+/// - The "before" block has P high-order Z85 chars
+/// - The passthrough bytes start at input[block_start + P]
+/// - The passthrough bytes overlap: first (4-P) bytes are end of "before", last P bytes are start of "after"
+fn try_non_aligned_at_position(
+    input: &[u8],
+    block_start: usize,
+    p: usize,
+) -> Option<NonAlignedResult> {
+    // Passthrough bytes start at block_start + p and span 4 bytes
+    let pass_start = block_start + p;
+
+    // Check if we have enough input for the passthrough
+    if pass_start + 4 > input.len() {
+        return None;
+    }
+
+    // Check if the 4 passthrough bytes are all safe
+    let pass_bytes = &input[pass_start..pass_start + 4];
+    if !is_block_safe_for_passthrough(pass_bytes) {
+        return None;
+    }
+
+    // The "before" block is the 4 bytes starting at block_start
+    let before_block = &input[block_start..block_start + 4];
+    let before_value = u32::from_be_bytes([
+        before_block[0],
+        before_block[1],
+        before_block[2],
+        before_block[3],
+    ]);
+
+    // The known low bytes of the "before" block are the first (4-p) passthrough bytes
+    let num_known_low_bytes = 4 - p;
+    let known_low_bytes = &pass_bytes[0..num_known_low_bytes];
+
+    // Check if the before_value is canonical for the given partial encoding
+    if !is_canonical_minimum(before_value, p, known_low_bytes) {
+        return None;
+    }
+
+    // The before_value is canonical! Now we need to handle the "after" block.
+    //
+    // The "after" block:
+    // - Has P known high bytes from the passthrough (the last P bytes)
+    // - Needs (5-P) Z85 chars for the low-order digits
+    //
+    // We need to check if there's enough input to form a complete after block.
+
+    let known_high_bytes = &pass_bytes[num_known_low_bytes..]; // Last P bytes of passthrough
+
+    // The after block starts at block_start + 4
+    // Its first P bytes are from the passthrough (known_high_bytes)
+    // Its remaining (4-P) bytes come from input starting at block_start + 4 + P
+
+    let after_block_data_start = block_start + 4;
+
+    // Check if we have enough input for the full after block
+    // The after block needs 4 bytes total, and its first P bytes are from passthrough
+    // So we need (4-P) more bytes from input starting at after_block_data_start + P
+    let after_remaining_start = after_block_data_start + p;
+    let after_remaining_needed = 4 - p;
+
+    if after_remaining_start + after_remaining_needed > input.len() {
+        // Not enough input for a complete after block
+        // Check if we're at the end of input (partial after block)
+        let actual_remaining = if after_remaining_start <= input.len() {
+            input.len() - after_remaining_start
+        } else {
+            0
+        };
+
+        // If there's no remaining input at all, we just output the before block
+        // and the passthrough, and there's no after block Z85 chars needed
+        if actual_remaining == 0 && after_remaining_start == input.len() {
+            // Edge case: passthrough is at the very end
+            // Output: P high-order Z85 chars + comma + 4 passthrough bytes
+            let mut output = Vec::new();
+
+            // Encode P high-order Z85 chars from before_value
+            let high_digits = get_high_order_z85_chars(before_value, p);
+            output.extend_from_slice(&high_digits);
+
+            // Add comma and passthrough bytes
+            output.push(RAW_ESCAPE);
+            output.extend_from_slice(pass_bytes);
+
+            // Bytes consumed: the entire before block (4) + P more from the passthrough overlap
+            // Wait, the passthrough bytes overlap. Let me reconsider.
+            //
+            // Input bytes consumed:
+            // - Before block: 4 bytes (block_start to block_start+4)
+            // - After block: P bytes that are the high bytes (already part of passthrough)
+            //
+            // Actually, the passthrough bytes are:
+            // - First (4-P) bytes overlap with end of before block
+            // - Last P bytes overlap with start of after block
+            //
+            // So total unique input bytes = before block (4) + additional after bytes (4-P)
+            // But we already counted 4 bytes for before, so bytes_consumed = 4 + (4-P)?
+            // No wait, let's trace through more carefully.
+            //
+            // For P=1:
+            // - Before block: bytes 0,1,2,3
+            // - Passthrough: bytes 1,2,3,4 (overlaps before block bytes 1,2,3)
+            // - After block: bytes 4,5,6,7 (first 1 byte is passthrough byte 4)
+            // So we consume 4 bytes (before) initially, then 4 more (after block) = 8 total
+            //
+            // For P=3:
+            // - Before block: bytes 0,1,2,3
+            // - Passthrough: bytes 3,4,5,6 (overlaps before block byte 3)
+            // - After block: bytes 4,5,6,7 (first 3 bytes are passthrough bytes 4,5,6)
+            // So we consume 4 bytes (before) + 4 more (after) = 8 total
+            //
+            // In this edge case, we're at the end of input with no after block remaining bytes
+            // So bytes_consumed = 4 + p (the passthrough extends P bytes beyond the before block)
+
+            return Some(NonAlignedResult {
+                output,
+                bytes_consumed: 4 + p,
+            });
+        }
+
+        // If there's a partial remaining, we need to handle trailing bytes for after block
+        // This is more complex; for now, don't use non-aligned passthrough in this case
+        return None;
+    }
+
+    // We have enough input for a complete after block
+    // Construct the full after block value
+    let mut after_bytes = [0u8; 4];
+
+    // First P bytes come from passthrough (known_high_bytes)
+    after_bytes[..p].copy_from_slice(known_high_bytes);
+
+    // Remaining (4-P) bytes come from input
+    let after_remaining = &input[after_remaining_start..after_remaining_start + after_remaining_needed];
+    after_bytes[p..].copy_from_slice(after_remaining);
+
+    let after_value = u32::from_be_bytes(after_bytes);
+
+    // Now construct the output:
+    // 1. P high-order Z85 chars from before_value
+    // 2. Comma
+    // 3. 4 passthrough bytes
+    // 4. (5-P) low-order Z85 chars from after_value
+
+    let mut output = Vec::new();
+
+    // 1. P high-order Z85 chars
+    let high_digits = get_high_order_z85_chars(before_value, p);
+    output.extend_from_slice(&high_digits);
+
+    // 2. Comma
+    output.push(RAW_ESCAPE);
+
+    // 3. 4 passthrough bytes
+    output.extend_from_slice(pass_bytes);
+
+    // 4. (5-P) low-order Z85 chars from after_value
+    let low_digits = get_low_order_z85_chars(after_value, 5 - p);
+    output.extend_from_slice(&low_digits);
+
+    // Bytes consumed: before block (4) + after block (4) = 8
+    Some(NonAlignedResult {
+        output,
+        bytes_consumed: 8,
+    })
+}
+
+/// Get the first P Z85 characters (high-order digits) for a 32-bit value.
+fn get_high_order_z85_chars(value: u32, p: usize) -> Vec<u8> {
+    // Full Z85 encoding produces 5 chars
+    let mut chars = [0u8; 5];
+    let mut v = value;
+    for i in (0..5).rev() {
+        chars[i] = Z85_ALPHABET[(v % 85) as usize];
+        v /= 85;
+    }
+    // Return first P chars
+    chars[..p].to_vec()
+}
+
+/// Get the last (5-P) Z85 characters (low-order digits) for a 32-bit value.
+fn get_low_order_z85_chars(value: u32, num_chars: usize) -> Vec<u8> {
+    // Full Z85 encoding produces 5 chars
+    let mut chars = [0u8; 5];
+    let mut v = value;
+    for i in (0..5).rev() {
+        chars[i] = Z85_ALPHABET[(v % 85) as usize];
+        v /= 85;
+    }
+    // Return last num_chars
+    chars[5 - num_chars..].to_vec()
 }
 
 /// Encode a full 32-bit value into exactly 5 Z85 characters.
@@ -338,7 +606,11 @@ fn compute_canonical_minimum_for_encoding(
 }
 
 /// Check if a block value is the canonical minimum for given partial Z85 encoding.
-#[allow(dead_code)]
+///
+/// For non-aligned passthrough at position P, the encoder outputs P high-order Z85
+/// digits. For round-trip correctness, the block's actual value must equal the
+/// canonical minimum that the decoder would compute given those P digits and
+/// the known low bytes from the passthrough.
 fn is_canonical_minimum(block_value: u32, p: usize, known_low_bytes: &[u8]) -> bool {
     let high_digits = get_high_order_z85_digits(block_value, p);
     match compute_canonical_minimum_for_encoding(&high_digits, known_low_bytes) {
