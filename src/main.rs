@@ -1,6 +1,6 @@
-mod z85;
-
 use std::io::{self, Read, Write};
+
+use cleanroom::z85;
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
