@@ -46,6 +46,9 @@ fn main() {
         ("cargo_toml_normalize", || {
             run_command("./run", &["cargo-toml-normalize"])
         }),
+        ("generate_workflows", || {
+            run_command("./run", &["ci", "generate-workflows"])
+        }),
         ("deno_lint", deno_lint::main),
         ("deno_fmt", deno_fmt::main),
     ];
