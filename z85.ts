@@ -740,8 +740,7 @@ function computeBeforeBlockFromExtendedDigits(
   }
 
   // The mask for known bytes (low numKnownBytes bytes)
-  // Note: Can't use << for 32+ bits in JS, use Math.pow instead
-  const modulus = Math.pow(2, numKnownBytes * 8);
+  const modulus = 1 << (numKnownBytes * 8);
 
   // Find the unique value in [rangeStart, rangeEnd) where (value % modulus) === knownPart
   const startRemainder = rangeStart % modulus;
