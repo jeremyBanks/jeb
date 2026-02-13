@@ -1,0 +1,16 @@
+[package]
+name = "_ci"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+clap = { workspace = true, features = ["derive"] }
+
+[[bin]]
+name = "_ci"
+path = "src/main.rs"

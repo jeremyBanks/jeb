@@ -23,6 +23,14 @@ name = "_chosen"
 version = "0.0.0-dev-2026-01-25.7901"
 
 [[package]]
+name = "_ci"
+version = "0.0.0-dev-2026-01-25.7901"
+dependencies = [
+ "anyhow",
+ "clap 3.2.25",
+]
+
+[[package]]
 name = "_claude_hooks"
 version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [

@@ -40,6 +40,7 @@ panic = "abort"
 [patch.crates-io]
 _autofix = { path = "crates/_autofix" }
 _chosen = { path = "crates/_chosen" }
+_ci = { path = "crates/_ci" }
 _claude_hooks = { path = "crates/_claude_hooks" }
 _examples = { path = "crates/_examples" }
 _scripts = { path = "crates/_scripts" }
@@ -64,6 +65,7 @@ zerodmg-utils = { path = "crates/zerodmg-utils" }
 [workspace.dependencies]
 _autofix = { path = "crates/_autofix" }
 _chosen = { path = "crates/_chosen" }
+_ci = { path = "crates/_ci" }
 _claude_hooks = { path = "crates/_claude_hooks" }
 _scripts = { path = "crates/_scripts" }
 anyhow = "1.0.0"
