@@ -281,6 +281,15 @@ function encodePartialToArray(
  *    - Accumulate: value = d0*85^4 + d1*85^3 + d2*85^2 + d3*85 + d4
  *    - Convert the u32 value to 4 big-endian bytes
  *
+ * # Non-Aligned Passthrough (Advanced)
+ *
+ * When `,` appears at position P (1-4) within a 5-char block, it interrupts
+ * the Z85 encoding of surrounding blocks:
+ * - First P chars are partial Z85 of the "before" block
+ * - `,` + next 4 chars are raw passthrough bytes
+ * - The "before" block is ambiguous: we compute all possible 32-bit values
+ *   and output the MINIMUM (canonical) value (big-endian interpretation)
+ *
  * For trailing characters (2-4 chars), we:
  * 1. Decode to get the partial value (standard Z85, no passthrough for partials)
  * 2. Extract only the appropriate number of bytes:
@@ -298,89 +307,153 @@ export function decode(input: string): Uint8Array {
     return new Uint8Array(0);
   }
 
-  // Validate input length
-  // Valid lengths: 0, 2, 3, 4, 5, 7, 8, 9, 10, 12, ...
-  // Invalid: 1, 6, 11, 16, ... (i.e., 1 mod 5)
-  const trailingChars = input.length % 5;
-  if (trailingChars === 1) {
-    throw new Z85DecodeError("invalid Z85 input length");
-  }
+  // With non-aligned passthrough, we can't pre-calculate output size easily
+  // because commas can appear anywhere and shift the alignment.
+  // We'll build output incrementally.
+  const outputChunks: number[] = [];
 
-  // Calculate output size
-  const fullBlocks = Math.floor(input.length / 5);
-  const trailingBytes = trailingChars > 0 ? trailingChars - 1 : 0;
-  const outputLen = fullBlocks * 4 + trailingBytes;
-
-  const output = new Uint8Array(outputLen);
-  let outIdx = 0;
   let inIdx = 0;
 
-  // Process full 5-character blocks
-  while (inIdx + 5 <= input.length) {
-    // Check for raw passthrough escape at block boundary.
-    // When `,` is the first character of a 5-char block, the next 4 bytes
-    // are taken as literal output (no Z85 decoding, no content validation).
-    if (input.charCodeAt(inIdx) === RAW_ESCAPE) {
-      // Raw passthrough: copy the 4 bytes after `,` directly to output
-      output[outIdx] = input.charCodeAt(inIdx + 1);
-      output[outIdx + 1] = input.charCodeAt(inIdx + 2);
-      output[outIdx + 2] = input.charCodeAt(inIdx + 3);
-      output[outIdx + 3] = input.charCodeAt(inIdx + 4);
+  // We track our "logical" position within the Z85 block structure.
+  // blockPos is 0-4, representing position within current 5-char Z85 block.
+  // When we encounter a comma at blockPos P (0-4), we handle it specially.
+  let blockPos = 0;
+  // Accumulated Z85 digits for the current block (0-5 digits)
+  const currentBlockDigits: number[] = [];
+
+  while (inIdx < input.length) {
+    const charCode = input.charCodeAt(inIdx);
+
+    if (charCode === RAW_ESCAPE) {
+      // Found a comma - this is a passthrough marker
+      const P = blockPos; // Position within the 5-char block (0-4)
+
+      // Ensure we have at least 4 more characters for the passthrough bytes
+      if (inIdx + 4 >= input.length) {
+        throw new Z85DecodeError("incomplete passthrough sequence");
+      }
+
+      // Extract the 4 passthrough bytes
+      const passBytes = [
+        input.charCodeAt(inIdx + 1),
+        input.charCodeAt(inIdx + 2),
+        input.charCodeAt(inIdx + 3),
+        input.charCodeAt(inIdx + 4),
+      ];
+
+      if (P === 0) {
+        // Block-aligned passthrough: simple case, just output the 4 bytes
+        outputChunks.push(...passBytes);
+        inIdx += 5; // Skip comma + 4 bytes
+        // blockPos stays at 0, currentBlockDigits stays empty
+      } else {
+        // Non-aligned passthrough at position P (1-4)
+        // We have P high-order Z85 digits in currentBlockDigits
+        // The passthrough bytes provide (4-P) known low-order bytes for the "before" block
+
+        // The first (4-P) passthrough bytes are the known low bytes of the "before" block
+        const numKnownBytes = 4 - P;
+        const knownLowBytes = passBytes.slice(0, numKnownBytes);
+
+        // Compute the canonical minimum for the "before" block
+        const beforeValue = computeCanonicalMinimum(currentBlockDigits, knownLowBytes);
+
+        // Output the 4 bytes of the "before" block
+        outputChunks.push((beforeValue >>> 24) & 0xff);
+        outputChunks.push((beforeValue >>> 16) & 0xff);
+        outputChunks.push((beforeValue >>> 8) & 0xff);
+        outputChunks.push(beforeValue & 0xff);
+
+        // Output the 4 passthrough bytes
+        outputChunks.push(...passBytes);
+
+        // Reset block state
+        currentBlockDigits.length = 0;
+        blockPos = 0;
+
+        // Move past comma + 4 passthrough bytes
+        inIdx += 5;
+      }
     } else {
-      // Standard Z85 decoding
-      const value = decodeBlock(input, inIdx);
+      // Regular Z85 character
+      const digit = Z85_DECODE_TABLE[charCode];
+      if (digit === -1) {
+        throw new Z85DecodeError(
+          `invalid character in Z85 input: 0x${charCode.toString(16).padStart(2, "0").toUpperCase()}`
+        );
+      }
 
-      // Convert u32 to 4 big-endian bytes
-      output[outIdx] = (value >>> 24) & 0xff;
-      output[outIdx + 1] = (value >>> 16) & 0xff;
-      output[outIdx + 2] = (value >>> 8) & 0xff;
-      output[outIdx + 3] = value & 0xff;
+      currentBlockDigits.push(digit);
+      blockPos++;
+      inIdx++;
+
+      // If we've completed a 5-character block, decode it
+      if (blockPos === 5) {
+        // Decode the full block
+        let value = 0;
+        for (const d of currentBlockDigits) {
+          value = value * 85 + d;
+        }
+
+        // Check for overflow
+        if (value > 0xffffffff) {
+          throw new Z85DecodeError("Z85 value overflow");
+        }
+
+        // Output 4 bytes
+        outputChunks.push((value >>> 24) & 0xff);
+        outputChunks.push((value >>> 16) & 0xff);
+        outputChunks.push((value >>> 8) & 0xff);
+        outputChunks.push(value & 0xff);
+
+        // Reset for next block
+        currentBlockDigits.length = 0;
+        blockPos = 0;
+      }
     }
-
-    inIdx += 5;
-    outIdx += 4;
   }
 
-  // Process trailing characters (2, 3, or 4 chars)
-  // Note: Raw passthrough does NOT apply to trailing blocks - only full 5-char blocks
-  if (trailingChars > 0) {
-    // Special case: if the trailing block starts with `,`, it must have exactly
-    // 4 more bytes (total 5 chars). Otherwise, it's an invalid escape sequence.
-    if (input.charCodeAt(inIdx) === RAW_ESCAPE) {
-      // `,` at a block boundary requires exactly 4 bytes following it
+  // Handle trailing partial block (if any)
+  if (currentBlockDigits.length > 0) {
+    const numChars = currentBlockDigits.length;
+
+    // Invalid: 1 character doesn't map to a valid byte count
+    if (numChars === 1) {
       throw new Z85DecodeError("invalid Z85 input length");
     }
 
-    const numBytes = trailingChars - 1;
+    // Decode partial block: 2 chars -> 1 byte, 3 chars -> 2 bytes, 4 chars -> 3 bytes
+    let value = 0;
+    for (const d of currentBlockDigits) {
+      value = value * 85 + d;
+    }
 
-    // Decode the partial block (standard Z85 only)
-    const value = decodePartialBlock(input, inIdx, trailingChars);
+    const numBytes = numChars - 1;
 
-    // Extract the appropriate number of bytes (most significant first)
-    // The value represents a number that should fit in numBytes bytes
+    // Check overflow based on expected byte count
+    if (numBytes === 1 && value > 0xff) {
+      throw new Z85DecodeError("Z85 value overflow");
+    } else if (numBytes === 2 && value > 0xffff) {
+      throw new Z85DecodeError("Z85 value overflow");
+    } else if (numBytes === 3 && value > 0xffffff) {
+      throw new Z85DecodeError("Z85 value overflow");
+    }
+
+    // Output the appropriate number of bytes
     if (numBytes === 1) {
-      if (value > 0xff) {
-        throw new Z85DecodeError("Z85 value overflow");
-      }
-      output[outIdx] = value;
+      outputChunks.push(value);
     } else if (numBytes === 2) {
-      if (value > 0xffff) {
-        throw new Z85DecodeError("Z85 value overflow");
-      }
-      output[outIdx] = (value >>> 8) & 0xff;
-      output[outIdx + 1] = value & 0xff;
+      outputChunks.push((value >>> 8) & 0xff);
+      outputChunks.push(value & 0xff);
     } else {
       // 3 bytes
-      if (value > 0xffffff) {
-        throw new Z85DecodeError("Z85 value overflow");
-      }
-      output[outIdx] = (value >>> 16) & 0xff;
-      output[outIdx + 1] = (value >>> 8) & 0xff;
-      output[outIdx + 2] = value & 0xff;
+      outputChunks.push((value >>> 16) & 0xff);
+      outputChunks.push((value >>> 8) & 0xff);
+      outputChunks.push(value & 0xff);
     }
   }
 
-  return output;
+  return new Uint8Array(outputChunks);
 }
 
 /**
@@ -441,4 +514,121 @@ function decodePartialBlock(
 
   // No overflow check here - we check in the caller based on expected byte count
   return value;
+}
+
+// =============================================================================
+// Non-Aligned Passthrough Support
+// =============================================================================
+//
+// When `,` appears at position P (1-4) within a 5-char block, the Z85 encoding
+// is interrupted. The "before" block becomes ambiguous because we only have
+// P high-order Z85 digits and the raw passthrough bytes provide (4-P) known
+// low-order input bytes.
+//
+// To resolve ambiguity deterministically, we compute ALL possible 32-bit values
+// that could have produced the observed partial Z85 + known bytes, then select
+// the MINIMUM value (canonical). This ensures:
+// - Decoding is deterministic and unambiguous
+// - Encoding can check if actual value equals canonical minimum before using passthrough
+
+/**
+ * Compute the canonical (minimum) 32-bit value for an ambiguous "before" block.
+ *
+ * Given P high-order Z85 digits and (4-P) known low-order input bytes (from passthrough),
+ * find the minimum 32-bit value V such that:
+ * 1. V's Z85 encoding starts with the given P digits
+ * 2. V's big-endian bytes end with the given (4-P) known bytes
+ *
+ * Algorithm:
+ * - P Z85 digits define a range: [base, base + 85^(5-P)) where base = digits * 85^(5-P)
+ * - Within this range, find values where low bytes match the known passthrough bytes
+ * - Return the minimum such value
+ *
+ * @param highDigits - Array of P Z85 digit values (0-84)
+ * @param knownLowBytes - Array of (4-P) known low-order bytes from passthrough
+ * @returns The canonical minimum 32-bit value
+ * @throws Z85DecodeError if no valid value exists (should not happen with valid input)
+ */
+function computeCanonicalMinimum(
+  highDigits: number[],
+  knownLowBytes: number[]
+): number {
+  const P = highDigits.length;
+  const numKnownBytes = knownLowBytes.length; // Should be 4 - P
+
+  // Compute the base value from high Z85 digits
+  // base = d0 * 85^(5-1) + d1 * 85^(5-2) + ... + d(P-1) * 85^(5-P)
+  // This is equivalent to: digits interpreted as base-85 number, then multiplied by 85^(5-P)
+  let base = 0;
+  for (let i = 0; i < P; i++) {
+    base = base * 85 + highDigits[i];
+  }
+
+  // The range of possible values is [base * 85^(5-P), (base+1) * 85^(5-P))
+  // But we need to express this in terms of the actual 32-bit value range
+  const power = Math.pow(85, 5 - P);
+  const rangeStart = base * power;
+  const rangeEnd = (base + 1) * power;
+
+  // Now we need to find values in [rangeStart, rangeEnd) whose big-endian bytes
+  // end with knownLowBytes
+  //
+  // The knownLowBytes constrain the low (4-P) bytes of the 32-bit value.
+  // So we construct the constraint from the known bytes.
+  let knownPart = 0;
+  for (let i = 0; i < numKnownBytes; i++) {
+    knownPart = (knownPart << 8) | knownLowBytes[i];
+  }
+
+  // The mask for the known bytes (low numKnownBytes bytes)
+  const mask = (1 << (numKnownBytes * 8)) - 1;
+  // If numKnownBytes is 0, mask is 0 and any value works
+
+  // Find the minimum value in [rangeStart, rangeEnd) where (value & mask) === knownPart
+  //
+  // We need to find the smallest V >= rangeStart such that V % (mask+1) === knownPart
+  // and V < rangeEnd
+
+  if (numKnownBytes === 0) {
+    // P = 4: No constraint from known bytes, just return rangeStart
+    // But we need to check it fits in u32
+    if (rangeStart > 0xffffffff) {
+      throw new Z85DecodeError("Z85 value overflow in non-aligned decode");
+    }
+    return rangeStart;
+  }
+
+  // Find smallest V >= rangeStart where V ends with knownPart
+  const modulus = mask + 1; // 2^(numKnownBytes * 8)
+  const startRemainder = rangeStart % modulus;
+
+  let candidate: number;
+  if (startRemainder <= knownPart) {
+    candidate = rangeStart - startRemainder + knownPart;
+  } else {
+    candidate = rangeStart - startRemainder + modulus + knownPart;
+  }
+
+  // Verify candidate is in range and fits in u32
+  if (candidate >= rangeEnd) {
+    throw new Z85DecodeError("no valid value for non-aligned passthrough decode");
+  }
+  if (candidate > 0xffffffff) {
+    throw new Z85DecodeError("Z85 value overflow in non-aligned decode");
+  }
+
+  return candidate;
+}
+
+/**
+ * Find the position of `,` in the input string, if any.
+ * Returns -1 if no comma found.
+ */
+function findCommaPosition(input: string, startIdx: number, endIdx: number): number {
+  for (let i = startIdx; i < endIdx; i++) {
+    if (input.charCodeAt(i) === RAW_ESCAPE) {
+      return i;
+    }
+  }
+  return -1;
 }
