@@ -162,14 +162,37 @@ Deno.test("passthrough with trailing bytes", () => {
   assertEquals(decoded, input);
 });
 
-Deno.test("comma in invalid position 1 should fail", () => {
-  // Comma at position 1 (not a block boundary) should be treated as invalid character
-  assertThrows(() => decode("A,BCD"), Z85DecodeError, "invalid character");
+Deno.test("non-aligned passthrough position 1", () => {
+  // Non-aligned passthrough: comma at position 1
+  // "A,BCDE" - 'A' is 1 Z85 digit, then passthrough 'BCDE'
+  // The "before" block has 1 Z85 digit (A=36) and 3 known bytes (BCD = 0x42,0x43,0x44)
+  const result = decode("A,BCDE");
+  // Should produce 8 bytes: 4 for "before" block (canonical min) + 4 passthrough
+  assertEquals(result.length, 8);
+  // Before block: canonical minimum with high digit 36, low bytes 0x42,0x43,0x44
+  // This should be 0x70424344
+  assertEquals(Array.from(result.slice(0, 4)), [0x70, 0x42, 0x43, 0x44]);
+  // Passthrough bytes: BCDE
+  assertEquals(Array.from(result.slice(4, 8)), [0x42, 0x43, 0x44, 0x45]);
 });
 
-Deno.test("comma in invalid position 4 should fail", () => {
-  // Comma at position 4 (not a block boundary) should be treated as invalid character
-  assertThrows(() => decode("ABCD,"), Z85DecodeError, "invalid character");
+Deno.test("non-aligned passthrough incomplete should fail", () => {
+  // Comma at position 4 without enough bytes after should fail
+  assertThrows(() => decode("ABCD,"), Z85DecodeError, "incomplete");
+});
+
+Deno.test("non-aligned passthrough position 4", () => {
+  // Non-aligned passthrough: comma at position 4
+  // "ABCD,efgh" - 4 Z85 digits, then passthrough 'efgh'
+  const result = decode("ABCD,efgh");
+  // Should produce 8 bytes: 4 for "before" block + 4 passthrough
+  assertEquals(result.length, 8);
+  // Before block: canonical minimum with 4 digits (A=36,B=37,C=38,D=39)
+  // base = 36*85^3 + 37*85^2 + 38*85 + 39 = 22379094
+  // rangeStart = base * 85 = 1902222990 = 0x71619E8E
+  assertEquals(Array.from(result.slice(0, 4)), [0x71, 0x61, 0x9E, 0x8E]);
+  // Passthrough bytes: efgh (0x65, 0x66, 0x67, 0x68)
+  assertEquals(Array.from(result.slice(4, 8)), [0x65, 0x66, 0x67, 0x68]);
 });
 
 // Cross-testing with Rust CLI
