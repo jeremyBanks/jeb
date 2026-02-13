@@ -236,8 +236,8 @@ pub fn encode(data: &[u8]) -> Vec<u8> {
     let mut pos = 0;
     
     'outer: while pos < data.len() {
-        // Try to find raw-eligible region (min 4 bytes)
-        if let Some((raw_start, raw_end)) = find_raw_region(data, pos, 4) {
+        // Try to find raw-eligible region (min 5 bytes for net savings per §8 budget analysis)
+        if let Some((raw_start, raw_end)) = find_raw_region(data, pos, 5) {
             // Encode up to raw region
             while pos < raw_start {
                 let remaining_in_block = 4 - (pos % 4);
