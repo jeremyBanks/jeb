@@ -121,22 +121,38 @@ fn test_exit_opportunistic_failure_case() {
 }
 
 /// Test exit at exact block boundary (4 bytes after raw section)
-/// 
-/// ⚠️ KNOWN ISSUE: This test currently fails with TruncatedInput
-/// See BUG-LOG.md for details. The encoder emits 6 chars (should be 5)
-/// after a 5-byte raw section followed by 4 zeros.
+/// FIXED: Skip opportunistic exit when remaining bytes fill complete blocks
 #[test]
-#[ignore] // TODO: Fix encoder/decoder mismatch for this pattern
 fn test_exit_block_aligned() {
     // 5 spaces + 4 bytes (exactly fills a block)
     let data = b"     \x00\x00\x00\x00";
     let encoded = encode(data);
     
     println!("\nBlock-aligned exit test:");
+    println!("Input: {:?} ({} bytes)", data, data.len());
     println!("Encoded: {:?}", String::from_utf8_lossy(&encoded));
+    println!("Encoded bytes: {:?}", encoded);
+    println!("Length: {}", encoded.len());
     
-    let decoded = decode(&encoded).unwrap();
-    assert_eq!(decoded, data);
+    // Debug: what happened?
+    if encoded.len() > 0 { println!("  [0]: '{}' (escape)", encoded[0] as char); }
+    if encoded.len() > 1 { println!("  [1]: {} (length)", encoded[1]); }
+    if encoded.len() > 2 { println!("  [2-6]: raw section"); }
+    if encoded.len() > 7 { 
+        println!("  [7..]: {:?}", String::from_utf8_lossy(&encoded[7..])); 
+        println!("        ({} chars after raw)", encoded.len() - 7);
+    }
+    
+    match decode(&encoded) {
+        Ok(decoded) => {
+            println!("✓ Decoded successfully");
+            assert_eq!(decoded, data);
+        }
+        Err(e) => {
+            println!("✗ Decode error: {:?}", e);
+            panic!("Decoder failed on encoder output");
+        }
+    }
     
     // After 5 spaces (raw), we have 4 bytes left
     // These should encode as a full Z85 block (5 chars)
