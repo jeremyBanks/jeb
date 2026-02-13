@@ -3,8 +3,37 @@
 
 [workspace]
 resolver = "2"
-members = ["crates/*", "crates/*/fuzz"]
-exclude = ["crates/speedrun"]
+members = [
+    "crates/_autofix",
+    "crates/_chosen",
+    "crates/_ci",
+    "crates/_claude_hooks",
+    "crates/_examples",
+    "crates/_examples/fuzz",
+    "crates/_scripts",
+    "crates/_trace",
+    "crates/git-snapshot",
+    "crates/git-zoom",
+    "crates/ideated-encoding",
+    "crates/ideated-encoding/fuzz",
+    "crates/inline",
+    "crates/jeb",
+    "crates/jeb-bytes-as-text",
+    "crates/jeb-common",
+    "crates/jeb-common/fuzz",
+    "crates/jeb-stream",
+    "crates/jeb-tracing",
+    "crates/jeb-value",
+    "crates/jeb-wasm",
+    "crates/save",
+    "crates/stringify_verbatim",
+    "crates/zerodmg",
+    "crates/zerodmg-codes",
+    "crates/zerodmg-emulator",
+    "crates/zerodmg-utils",
+    "crates/zipng",
+    "crates/zipng-wasm",
+]
 
 [workspace.package]
 version = "0.0.0-dev-2026-01-25.7901"
@@ -60,7 +89,6 @@ jeb-tracing = { path = "crates/jeb-tracing" }
 jeb-value = { path = "crates/jeb-value" }
 jeb-wasm = { path = "crates/jeb-wasm" }
 save = { path = "crates/save" }
-speedruns = { path = "crates/speedrun" }
 stringify_verbatim = { path = "crates/stringify_verbatim" }
 zerodmg = { path = "crates/zerodmg" }
 zerodmg-codes = { path = "crates/zerodmg-codes" }
@@ -81,12 +109,6 @@ zerodmg-codes = "0.0.0-dev-2026-01-25.7901"
 zerodmg-emulator = "0.0.0-dev-2026-01-25.7901"
 zerodmg-utils = "0.0.0-dev-2026-01-25.7901"
 zipng = { version = "0.0.0-dev.20260202", default-features = false }
-speedruns_api = { version = "0.21.6-dev", path = "crates/speedrun/src/lib/api" }
-speedruns_cli = { version = "0.21.6-dev", path = "crates/speedrun/src/lib/cli" }
-speedruns_database = { version = "0.21.6-dev", path = "crates/speedrun/src/lib/database" }
-speedruns_juniper = { version = "0.21.6-dev", path = "crates/speedrun/src/lib/juniper" }
-speedruns_models = { version = "0.21.6-dev", path = "crates/speedrun/src/lib/models" }
-speedruns_utils = { version = "0.21.6-dev", path = "crates/speedrun/src/lib/utils" }
 actix-rt = "2.9.0"
 anyhow = "1.0.27"
 arbitrary = "1.0.0"
@@ -171,7 +193,6 @@ serde_yaml = "0.9.34"
 sha-1 = "0.10.0"
 sha1-checked = "0.10.0"
 simd-adler32 = "0.3.4"
-speedruns = "0.21.6-dev"
 static_assertions = "1.1.0"
 stringify_verbatim = "0.0.0-dev-2026-01-25.7901"
 syn = "2.0.0"
