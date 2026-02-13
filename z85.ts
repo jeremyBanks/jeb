@@ -218,7 +218,18 @@ export function encode(input: Uint8Array): string {
 
     // First, check if we have at least 4 bytes for a potential passthrough
     if (bytesRemaining >= 4) {
-      // Check for block-aligned 4-byte passthrough (highest preference)
+      // Try extended passthrough (5/6/7 bytes) - highest preference
+      // Prefer: 7-byte > 6-byte > 5-byte
+      // These are more efficient than 4-byte passthrough (8 chars for 7 bytes vs 5 chars for 4 bytes)
+      // and allow consecutive escapes with zero gap for long safe sequences.
+      const extendedResult = tryExtendedPassthrough(input, inIdx);
+      if (extendedResult !== null) {
+        outputChars.push(...extendedResult.output);
+        inIdx += extendedResult.bytesConsumed;
+        continue;
+      }
+
+      // Check for block-aligned 4-byte passthrough (second preference)
       if (areBytesAllSafe(input, inIdx)) {
         // Block-aligned passthrough: just output , + 4 bytes
         outputChars.push(",");
@@ -227,15 +238,6 @@ export function encode(input: Uint8Array): string {
         outputChars.push(String.fromCharCode(input[inIdx + 2]));
         outputChars.push(String.fromCharCode(input[inIdx + 3]));
         inIdx += 4;
-        continue;
-      }
-
-      // Try extended passthrough (5/6/7 bytes) - second highest preference
-      // Prefer: 7-byte > 6-byte > 5-byte
-      const extendedResult = tryExtendedPassthrough(input, inIdx);
-      if (extendedResult !== null) {
-        outputChars.push(...extendedResult.output);
-        inIdx += extendedResult.bytesConsumed;
         continue;
       }
 
@@ -472,8 +474,13 @@ export function decode(input: string): Uint8Array {
         const numDigits = currentBlockDigits.length;
 
         if (numDigits === 0) {
-          // Invalid: 5/6/7-byte passthrough requires at least 1 Z85 digit before escape
-          throw new Z85DecodeError("invalid passthrough position for extended escape");
+          // Block-aligned extended passthrough: no preceding Z85 digits
+          // This is the "zero gap" case for consecutive escapes
+          // Just output the K passthrough bytes directly
+          outputChunks.push(...passBytes);
+          inIdx += 1 + passLen; // Skip escape + K bytes
+          // blockPos stays at 0, currentBlockDigits stays empty
+          continue;
         }
 
         const p = numDigits - 1; // P = (P+1) - 1
@@ -1075,6 +1082,12 @@ interface ExtendedPassthroughResult {
  *
  * Looks for K consecutive safe bytes (K = 5, 6, or 7) starting at various positions.
  * Returns the best option found, preferring longer passthrough (7 > 6 > 5).
+ *
+ * Two cases are handled:
+ * 1. Block-aligned: [escape] [K raw bytes] - no preceding Z85 chars
+ *    This enables consecutive escapes with zero gap (e.g., ~XXXXXXX~YYYYYYY)
+ * 2. Non-aligned: [(P+1) Z85 chars] [escape] [K raw bytes]
+ *    where P is the position within the input block (1-3).
  */
 function tryExtendedPassthrough(
   input: Uint8Array,
@@ -1082,12 +1095,71 @@ function tryExtendedPassthrough(
 ): ExtendedPassthroughResult | null {
   // Try 7-byte first (highest preference), then 6, then 5
   for (const k of [7, 6, 5]) {
+    // First try block-aligned extended passthrough (escape at position 0, no preceding chars)
+    // This enables consecutive escapes with zero gap
+    const blockAlignedResult = tryBlockAlignedExtendedPassthrough(input, blockStart, k);
+    if (blockAlignedResult !== null) {
+      return blockAlignedResult;
+    }
+
+    // Then try non-aligned positions
     const result = tryExtendedPassthroughOfLength(input, blockStart, k);
     if (result !== null) {
       return result;
     }
   }
   return null;
+}
+
+/**
+ * Try block-aligned extended passthrough of length K.
+ *
+ * This outputs just [escape] [K raw bytes] with NO preceding Z85 chars.
+ * This is possible when the K safe bytes start exactly at blockStart.
+ */
+function tryBlockAlignedExtendedPassthrough(
+  input: Uint8Array,
+  blockStart: number,
+  k: number
+): ExtendedPassthroughResult | null {
+  // Check if we have enough bytes for the passthrough
+  if (blockStart + k > input.length) {
+    return null;
+  }
+
+  // Check if all K bytes starting at blockStart are safe
+  if (!areKBytesSafe(input, blockStart, k)) {
+    return null;
+  }
+
+  // Build output: just escape + K raw bytes
+  const output: string[] = [];
+
+  let escape: string;
+  switch (k) {
+    case 5:
+      escape = String.fromCharCode(RAW_ESCAPE_5);
+      break;
+    case 6:
+      escape = String.fromCharCode(RAW_ESCAPE_6);
+      break;
+    case 7:
+      escape = String.fromCharCode(RAW_ESCAPE_7);
+      break;
+    default:
+      throw new Error("unreachable");
+  }
+  output.push(escape);
+
+  // Add K passthrough bytes
+  for (let i = 0; i < k; i++) {
+    output.push(String.fromCharCode(input[blockStart + i]));
+  }
+
+  return {
+    output,
+    bytesConsumed: k,
+  };
 }
 
 /**
@@ -1427,7 +1499,7 @@ function isCanonicalMinimumForEncoding(
  */
 function findCommaPosition(input: string, startIdx: number, endIdx: number): number {
   for (let i = startIdx; i < endIdx; i++) {
-    if (input.charCodeAt(i) === RAW_ESCAPE) {
+    if (input.charCodeAt(i) === RAW_ESCAPE_4) {
       return i;
     }
   }
