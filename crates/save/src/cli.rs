@@ -686,19 +686,14 @@ pub fn main(args: Save) -> Result<()> {
             write!(message, " / n{}", graph_stats.commit_index)?;
         }
 
-        // Optional: / xHHHH (tree hash, if non-empty)
+        // Optional: / xHHHH phonetic (tree hash with phonetic encoding, if non-empty)
         if !tree.is_empty() {
-            write!(message, " / x{tree4}")?;
+            write!(message, " / x{} {}", tree4, crate::phonetic::hex_to_phonetic(&tree4))?;
         }
 
         // Optional: / oHHHH (origin, omitted for root commits)
         if let Some(origin) = graph_stats.origin {
             write!(message, " / o{:04X}", origin)?;
-        }
-
-        // Optional: Phonetic encoding of tree hash (if tree is non-empty)
-        if !tree.is_empty() {
-            write!(message, " {}", crate::phonetic::hex_to_phonetic(&tree4))?;
         }
     }
 

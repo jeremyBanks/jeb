@@ -300,25 +300,24 @@ HEAD: refs/heads/trunk
     // Should have format: r0 / xHHHH phonetic-words
     assert!(message.starts_with("r0 / x"));
 
-    // Extract tree hash from message (format: r0 / xHHHH ...)
+    // Extract tree hash from message (format: r0 / xHHHH word word word word)
     let parts: Vec<&str> = message.split_whitespace().collect();
     assert!(parts.len() >= 7); // r0 / x1234 word word word word
 
     // Find the xHHHH part
-    let tree_hex = parts.iter()
-        .find(|p| p.starts_with('x'))
-        .expect("Should have tree hash in message")
+    let tree_hex_pos = parts.iter()
+        .position(|p| p.starts_with('x'))
+        .expect("Should have tree hash in message");
+
+    let tree_hex = parts[tree_hex_pos]
         .trim_start_matches('x');
 
     assert_eq!(tree_hex.len(), 4, "Tree hash should be 4 hex chars");
 
-    // Phonetic words should be after the tree hash
-    // Format: r0 / xHHHH phonetic words...
-    let phonetic_start = parts.iter()
-        .position(|p| p.starts_with('x'))
-        .expect("Should have x prefix");
-
-    let phonetic_words = &parts[phonetic_start + 1..];
+    // Phonetic words should be immediately after the tree hash
+    // Format: r0 / xHHHH word word word word [/ oHHHH]
+    // Extract 4 words after xHHHH
+    let phonetic_words = &parts[tree_hex_pos + 1..tree_hex_pos + 5];
     assert_eq!(phonetic_words.len(), 4, "Should have 4 phonetic words for 4 hex chars");
 
     // Verify each phonetic word is valid

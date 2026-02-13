@@ -9,7 +9,7 @@ and semantics of each component.
 ## Message Format
 
 ```
-[r|s|z]N [/ gG] [/ nC] [/ xHHHH] [/ oHHHH] [phonetic]
+[r|s|z]N [/ gG] [/ nC] [/ xHHHH phonetic] [/ oHHHH]
 ```
 
 ## Components
@@ -56,15 +56,21 @@ one.
 
 **Display:** Only shown if different from generation index.
 
-### Tree Hash (`xHHHH`, optional)
+### Tree Hash (`xHHHH phonetic`, optional)
 
-**Definition:** First 4 hex characters of the commit's tree object SHA.
+**Definition:** First 4 hex characters of the commit's tree object SHA, followed
+by NATO phonetic alphabet encoding of those characters.
 
 **Special behavior:** The commit timestamp is adjusted (brute-forced) so the
 resulting commit hash starts with these same 4 characters, creating a visual
 match between tree and commit hashes.
 
 **Display:** Omitted if the tree is empty.
+
+**Phonetic Encoding:** The 4 hex characters are converted to space-separated
+lowercase phonetic words (e.g., `xC7B9` becomes `xC7B9 charlie seven bravo nine`).
+This provides a human-readable, easily spoken identifier for verbal communication
+and auditory verification.
 
 ### Origin (`oHHHH`, optional)
 
@@ -111,20 +117,6 @@ The true roots haven't changed, but the calculated origin keeps changing.
 
 The solution: Origin is ONLY ever the true roots. If we can't see them, we don't
 guess - we omit.
-
-### Phonetic Encoding (optional)
-
-**Definition:** NATO phonetic alphabet encoding of the first 4 tree hash characters.
-
-**Format:** Space-separated lowercase phonetic words appended after all other components.
-
-**Display:** Only shown when tree hash component is present (non-empty tree).
-
-**Mapping:**
-- Digits 0-9: zero, one, two, three, four, five, six, seven, eight, nine
-- Hex a-f: alfa, bravo, charlie, delta, echo, foxtrot
-
-**Purpose:** Provides human-readable, easily spoken commit identifier for verbal communication and auditory verification.
 
 #### Implications for Implementation
 
@@ -184,9 +176,9 @@ The commit message format serves several purposes:
 ## Examples
 
 ```
-r0 / x1234 one two three four                    # Root commit, no origin (it IS the origin)
-r1 / x5678 / oABCD five six seven eight          # Second commit, can see root ABCD
-r142 / g150 / n200 / xDEF0 / oABCD delta echo foxtrot zero   # Deep commit with merges, same origin
-s50 / g75 / n100                                  # Shallow, empty tree, no phonetic
-z10 / x1111 one one one one                       # Hit depth limit, uncertain values, no origin
+r0 / x1234 one two three four                             # Root commit, no origin (it IS the origin)
+r1 / x5678 five six seven eight / oABCD                   # Second commit, can see root ABCD
+r142 / g150 / n200 / xDEF0 delta echo foxtrot zero / oABCD   # Deep commit with merges, same origin
+s50 / g75 / n100                                          # Shallow, empty tree, no phonetic
+z10 / x1111 one one one one                               # Hit depth limit, uncertain values, no origin
 ```
