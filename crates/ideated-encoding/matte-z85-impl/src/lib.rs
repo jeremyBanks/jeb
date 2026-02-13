@@ -406,7 +406,7 @@ pub fn decode(data: &[u8]) -> Result<Vec<u8>, DecodeError> {
             }
             
             // Now handle the escape
-            let escape_idx = ESCAPE_CHARS.iter().position(|&c| c == data[pos]).unwrap();
+            let _escape_idx = ESCAPE_CHARS.iter().position(|&c| c == data[pos]).unwrap();
             pos += 1; // Skip escape char
             
             if pos >= data.len() {
