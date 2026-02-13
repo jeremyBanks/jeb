@@ -599,4 +599,20 @@ mod tests {
         let decoded = decode(&encoded).unwrap();
         assert_eq!(decoded, input);
     }
+
+    #[test]
+    fn test_comma_in_invalid_position_1() {
+        // Comma at position 1 (not a block boundary) should be treated as invalid character
+        let result = decode("A,BCD");
+        assert!(matches!(result, Err(DecodeError::InvalidCharacter(b','))),
+                "Expected InvalidCharacter for comma at position 1");
+    }
+
+    #[test]
+    fn test_comma_in_invalid_position_4() {
+        // Comma at position 4 (not a block boundary) should be treated as invalid character
+        let result = decode("ABCD,");
+        assert!(matches!(result, Err(DecodeError::InvalidCharacter(b','))),
+                "Expected InvalidCharacter for comma at position 4");
+    }
 }

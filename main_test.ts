@@ -162,6 +162,16 @@ Deno.test("passthrough with trailing bytes", () => {
   assertEquals(decoded, input);
 });
 
+Deno.test("comma in invalid position 1 should fail", () => {
+  // Comma at position 1 (not a block boundary) should be treated as invalid character
+  assertThrows(() => decode("A,BCD"), Z85DecodeError, "invalid character");
+});
+
+Deno.test("comma in invalid position 4 should fail", () => {
+  // Comma at position 4 (not a block boundary) should be treated as invalid character
+  assertThrows(() => decode("ABCD,"), Z85DecodeError, "invalid character");
+});
+
 // Cross-testing with Rust CLI
 // These tests invoke the Rust implementation to verify both agree
 
