@@ -154,61 +154,124 @@ pub fn encode(input: &[u8]) -> String {
         return String::new();
     }
 
-    // Calculate output size:
-    // - Full 4-byte blocks: each produces 5 characters (either Z85 or `,` + 4 raw)
-    // - Trailing n bytes (1-3): produces n+1 characters (always Z85, no passthrough)
-    let full_blocks = input.len() / 4;
-    let trailing = input.len() % 4;
-    let trailing_chars = if trailing > 0 { trailing + 1 } else { 0 };
-    let output_len = full_blocks * 5 + trailing_chars;
+    // With non-aligned passthrough, we build output incrementally because
+    // the alignment can shift based on where we place passthrough sections.
+    let mut output: Vec<u8> = Vec::new();
 
-    let mut output = vec![0u8; output_len];
-    let mut out_idx = 0;
+    let mut in_idx = 0;
 
-    // Process full 4-byte blocks
-    for chunk in input.chunks(4) {
-        if chunk.len() == 4 {
-            // Check if all 4 bytes are safe for raw passthrough.
-            // If so, use `,XXXX` format for better readability.
-            // Otherwise, use standard Z85 encoding.
-            if is_block_safe_for_passthrough(chunk) {
-                // Raw passthrough: output `,` followed by the 4 raw bytes
-                output[out_idx] = RAW_ESCAPE;
-                output[out_idx + 1] = chunk[0];
-                output[out_idx + 2] = chunk[1];
-                output[out_idx + 3] = chunk[2];
-                output[out_idx + 4] = chunk[3];
-            } else {
-                // Standard Z85 encoding
-                // Convert 4 bytes to big-endian u32
-                let value = u32::from_be_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+    while in_idx < input.len() {
+        let bytes_remaining = input.len() - in_idx;
 
-                // Convert to base-85, filling 5 characters from right to left
-                // This naturally handles the big-endian ordering
-                encode_block_to_slice(value, &mut output[out_idx..out_idx + 5]);
+        // First, check if we have at least 4 bytes for a potential passthrough
+        if bytes_remaining >= 4 {
+            // Check for block-aligned passthrough (simplest case)
+            if is_block_safe_for_passthrough(&input[in_idx..]) {
+                // Block-aligned passthrough: just output , + 4 bytes
+                output.push(RAW_ESCAPE);
+                output.push(input[in_idx]);
+                output.push(input[in_idx + 1]);
+                output.push(input[in_idx + 2]);
+                output.push(input[in_idx + 3]);
+                in_idx += 4;
+                continue;
             }
-            out_idx += 5;
+
+            // Check for non-aligned passthrough opportunities
+            // Look for safe 4-byte sequences that don't start at current position
+            let mut found_non_aligned = false;
+
+            for offset in 1..=3 {
+                if in_idx + offset + 4 > input.len() {
+                    break;
+                }
+
+                if is_block_safe_for_passthrough(&input[in_idx + offset..]) {
+                    // Found safe bytes at non-aligned position
+                    // P = offset (position of comma within the output block)
+
+                    // Compute the "before" block value (4 bytes starting at in_idx)
+                    let before_value = u32::from_be_bytes([
+                        input[in_idx],
+                        input[in_idx + 1],
+                        input[in_idx + 2],
+                        input[in_idx + 3],
+                    ]);
+
+                    // The known low bytes for the "before" block are the first (4-offset) passthrough bytes
+                    let known_low_bytes = &input[in_idx + offset..in_idx + 4];
+
+                    // Check if the "before" block value is the canonical minimum
+                    if is_canonical_minimum(before_value, offset, known_low_bytes) {
+                        // Yes! We can use non-aligned passthrough
+
+                        // Output P Z85 digits for the high-order part of before block
+                        let high_digits = get_high_order_z85_digits(before_value, offset);
+                        for d in high_digits {
+                            output.push(Z85_ALPHABET[d as usize]);
+                        }
+
+                        // Output comma + 4 passthrough bytes
+                        output.push(RAW_ESCAPE);
+                        output.push(input[in_idx + offset]);
+                        output.push(input[in_idx + offset + 1]);
+                        output.push(input[in_idx + offset + 2]);
+                        output.push(input[in_idx + offset + 3]);
+
+                        // Move past before block + passthrough
+                        in_idx = in_idx + offset + 4;
+                        found_non_aligned = true;
+                        break;
+                    }
+                }
+            }
+
+            if found_non_aligned {
+                continue;
+            }
+
+            // No passthrough opportunity, use standard Z85 encoding
+            let value = u32::from_be_bytes([
+                input[in_idx],
+                input[in_idx + 1],
+                input[in_idx + 2],
+                input[in_idx + 3],
+            ]);
+
+            // Convert to base-85
+            let mut v = value;
+            let mut digits = [0u8; 5];
+            for i in (0..5).rev() {
+                digits[i] = Z85_ALPHABET[(v % 85) as usize];
+                v /= 85;
+            }
+            output.extend_from_slice(&digits);
+            in_idx += 4;
         } else {
-            // Handle trailing bytes (1, 2, or 3 bytes)
-            // Note: Raw passthrough is NOT used for trailing bytes - only full 4-byte blocks
-            let num_bytes = chunk.len();
+            // Trailing bytes (1-3): always use standard Z85 encoding
+            let num_bytes = bytes_remaining;
             let num_chars = num_bytes + 1;
 
-            // Construct the value from available bytes (big-endian, left-aligned)
-            // Example: for 2 bytes [0xAB, 0xCD], treat as 0xABCD (16-bit value)
             let value = match num_bytes {
-                1 => chunk[0] as u32,
-                2 => u16::from_be_bytes([chunk[0], chunk[1]]) as u32,
+                1 => input[in_idx] as u32,
+                2 => u16::from_be_bytes([input[in_idx], input[in_idx + 1]]) as u32,
                 3 => {
-                    // 3 bytes: construct 24-bit value
-                    ((chunk[0] as u32) << 16) | ((chunk[1] as u32) << 8) | (chunk[2] as u32)
+                    ((input[in_idx] as u32) << 16)
+                        | ((input[in_idx + 1] as u32) << 8)
+                        | (input[in_idx + 2] as u32)
                 }
                 _ => unreachable!(),
             };
 
-            // Encode the partial block
-            encode_partial_to_slice(value, num_chars, &mut output[out_idx..out_idx + num_chars]);
-            out_idx += num_chars;
+            // Encode partial block
+            let mut v = value;
+            let mut digits = vec![0u8; num_chars];
+            for i in (0..num_chars).rev() {
+                digits[i] = Z85_ALPHABET[(v % 85) as usize];
+                v /= 85;
+            }
+            output.extend_from_slice(&digits);
+            in_idx += num_bytes;
         }
     }
 
@@ -223,8 +286,8 @@ pub fn encode(input: &[u8]) -> String {
 /// instead of standard Z85 encoding, which can improve readability for text-like data.
 #[inline]
 fn is_block_safe_for_passthrough(block: &[u8]) -> bool {
-    debug_assert!(block.len() == 4);
-    SAFE_CHAR_TABLE[block[0] as usize]
+    block.len() >= 4
+        && SAFE_CHAR_TABLE[block[0] as usize]
         && SAFE_CHAR_TABLE[block[1] as usize]
         && SAFE_CHAR_TABLE[block[2] as usize]
         && SAFE_CHAR_TABLE[block[3] as usize]
@@ -254,6 +317,80 @@ fn encode_partial_to_slice(mut value: u32, num_chars: usize, output: &mut [u8]) 
     for i in (0..num_chars).rev() {
         output[i] = Z85_ALPHABET[(value % 85) as usize];
         value /= 85;
+    }
+}
+
+// =============================================================================
+// Non-Aligned Passthrough Encoding Support
+// =============================================================================
+
+/// Get the P high-order Z85 digits for a 32-bit value.
+///
+/// The Z85 encoding of a 32-bit value produces 5 digits. This returns the first P digits.
+fn get_high_order_z85_digits(value: u32, p: usize) -> Vec<u8> {
+    // Full Z85 encoding produces 5 digits
+    let mut digits = vec![0u8; 5];
+    let mut v = value;
+    for i in (0..5).rev() {
+        digits[i] = (v % 85) as u8;
+        v /= 85;
+    }
+    // Return first P digits
+    digits.truncate(p);
+    digits
+}
+
+/// Compute canonical minimum for encoding (returns None on error instead of panicking).
+fn compute_canonical_minimum_for_encoding(
+    high_digits: &[u8],
+    known_low_bytes: &[u8],
+) -> Option<u32> {
+    let p = high_digits.len();
+    let num_known_bytes = known_low_bytes.len();
+
+    let mut base: u64 = 0;
+    for &digit in high_digits {
+        base = base * 85 + digit as u64;
+    }
+
+    let power = 85u64.pow((5 - p) as u32);
+    let range_start = base * power;
+    let range_end = (base + 1) * power;
+
+    if num_known_bytes == 0 {
+        if range_start > u32::MAX as u64 {
+            return None;
+        }
+        return Some(range_start as u32);
+    }
+
+    let mut known_part: u64 = 0;
+    for &byte in known_low_bytes {
+        known_part = (known_part << 8) | byte as u64;
+    }
+
+    let modulus: u64 = 1 << (num_known_bytes * 8);
+    let start_remainder = range_start % modulus;
+
+    let candidate = if start_remainder <= known_part {
+        range_start - start_remainder + known_part
+    } else {
+        range_start - start_remainder + modulus + known_part
+    };
+
+    if candidate >= range_end || candidate > u32::MAX as u64 {
+        return None;
+    }
+
+    Some(candidate as u32)
+}
+
+/// Check if a block value is the canonical minimum for given partial Z85 encoding.
+fn is_canonical_minimum(block_value: u32, p: usize, known_low_bytes: &[u8]) -> bool {
+    let high_digits = get_high_order_z85_digits(block_value, p);
+    match compute_canonical_minimum_for_encoding(&high_digits, known_low_bytes) {
+        Some(canonical_min) => block_value == canonical_min,
+        None => false,
     }
 }
 
