@@ -76,8 +76,10 @@ raw sections is **incomplete** per §1 R2.
 - **Unstable entry byte:** choose a byte value that straddles an 85^4 boundary
   (32% of values). Verify the encoder either disambiguates correctly or falls
   back to a different cut point.
-- **Exit disambiguation from raw context:** verify the decoder correctly uses
-  recently-decoded raw bytes to disambiguate exit boundary characters
+- **Opportunistic exit cuts:** verify the encoder only allows exit cuts when
+  boundary bytes encode the same as zero-padded (DESIGN-CONSTRAINTS §7). Test
+  with bytes that allow the cut and bytes that don't — encoder should fall back
+  to block-aligned exit when zero-padding doesn't work.
 
 ## 4. Non-Aligned Lengths
 
