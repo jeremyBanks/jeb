@@ -1,16 +1,6 @@
 use {
     super::bytes::Bytes,
-    derive_more::{
-        AsMut,
-        AsRef,
-        Deref,
-        DerefMut,
-        Display,
-        From,
-        Index,
-        IndexMut,
-        Into,
-    },
+    derive_more::{AsMut, AsRef, Deref, DerefMut, Display, From, Index, IndexMut, Into},
 };
 
 mod iterator;
@@ -18,10 +8,7 @@ mod iterator;
 // [impl jeb-value.features.core.cfg]
 #[cfg_attr(
     feature = "serde",
-    derive(
-        serde::Serialize,
-        serde::Deserialize
-    ),
+    derive(serde::Serialize, serde::Deserialize),
     serde(transparent)
 )]
 // [impl jeb-value.variant.common.clone]

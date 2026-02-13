@@ -28,7 +28,7 @@ fn main() {
             Err(err) => {
                 eprintln!("unzipng: {err}");
                 std::process::exit(1);
-            }
+            },
         }
     }
 }

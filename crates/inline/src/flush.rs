@@ -5,15 +5,9 @@ use {
     std::{
         sync::{
             Arc,
-            atomic::{
-                AtomicBool,
-                Ordering,
-            },
+            atomic::{AtomicBool, Ordering},
         },
-        thread::{
-            self,
-            JoinHandle,
-        },
+        thread::{self, JoinHandle},
         time::Duration,
     },
 };
@@ -138,14 +132,10 @@ pub(crate) fn start_background_flush_internal() -> Option<JoinHandle<()>> {
 
 /// Add random jitter to a duration (±12.5%)
 fn add_jitter(duration: Duration) -> Duration {
-    use std::{
-        collections::hash_map::RandomState,
-        hash::BuildHasher,
-    };
+    use std::{collections::hash_map::RandomState, hash::BuildHasher};
 
     // Get a random value using RandomState (no external dependency)
     let random_state = RandomState::new();
-
 
     // Hash the current time for randomness
 
@@ -163,7 +153,6 @@ fn add_jitter(duration: Duration) -> Duration {
     let offset_nanos = random_value % (jitter_nanos * 2);
 
     // Convert to signed offset: [-jitter_range, +jitter_range)
-
 
     if offset_nanos < jitter_nanos {
         // Negative jitter

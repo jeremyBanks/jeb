@@ -1,6 +1,7 @@
 # Publishing zipng-wasm
 
-This package is configured for dual-purpose publishing to both NPM and JSR (Deno's JavaScript Registry).
+This package is configured for dual-purpose publishing to both NPM and JSR
+(Deno's JavaScript Registry).
 
 ## Build Process
 
@@ -10,6 +11,7 @@ This package is configured for dual-purpose publishing to both NPM and JSR (Deno
 ```
 
 This script:
+
 1. Builds WASM for web, node, and bundler targets
 2. Updates package.json files with proper metadata and bin fields
 3. Copies CLI to Node.js package
@@ -24,20 +26,22 @@ This script:
 ```json
 {
   "name": "zipng-wasm",
-  "main": "zipng_wasm.js",     // Library
+  "main": "zipng_wasm.js", // Library
   "bin": {
-    "zipng": "./cli.mjs"        // CLI command
+    "zipng": "./cli.mjs" // CLI command
   }
 }
 ```
 
 **Usage as library:**
+
 ```javascript
-import { encode } from 'zipng-wasm';
+import { encode } from "zipng-wasm";
 const polyglot = encode(JSON.stringify({ files, options }));
 ```
 
 **Usage as CLI:**
+
 ```bash
 npm install -g zipng-wasm
 zipng -o output.png file1.txt file2.txt
@@ -52,7 +56,7 @@ npx zipng-wasm -o output.png file1.txt file2.txt
 
 ```html
 <script type="module">
-  import init, { encode } from 'zipng-wasm';
+  import init, { encode } from "zipng-wasm";
   await init();
   const result = encode(filesJson);
 </script>
@@ -63,7 +67,7 @@ npx zipng-wasm -o output.png file1.txt file2.txt
 **For webpack/rollup/vite users**
 
 ```javascript
-import { encode } from 'zipng-wasm';
+import { encode } from "zipng-wasm";
 // Bundler handles WASM loading
 ```
 
@@ -127,10 +131,12 @@ deno eval "import {encode} from './pkg/web/zipng_wasm.js'; console.log(typeof en
 ## Version Management
 
 Update version in three places:
+
 1. `Cargo.toml` (source of truth)
 2. Run `build-publish.sh` (auto-updates package.json files)
 
 Or manually:
+
 - `pkg/node/package.json`
 - `pkg/web/package.json`
 - `pkg/bundler/package.json`
@@ -138,12 +144,10 @@ Or manually:
 
 ## Package Features
 
-✅ **Works as library** - import and use programmatically
-✅ **Works as CLI** - npx/npm install global
-✅ **TypeScript types** - auto-generated .d.ts files
-✅ **Multiple platforms** - Node.js, browsers, Deno
-✅ **Multiple ecosystems** - NPM and JSR
-✅ **Zero native deps** - Pure WebAssembly
+✅ **Works as library** - import and use programmatically ✅ **Works as CLI** -
+npx/npm install global ✅ **TypeScript types** - auto-generated .d.ts files ✅
+**Multiple platforms** - Node.js, browsers, Deno ✅ **Multiple ecosystems** -
+NPM and JSR ✅ **Zero native deps** - Pure WebAssembly
 
 ## File Size
 

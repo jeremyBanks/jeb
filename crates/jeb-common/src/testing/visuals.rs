@@ -1,10 +1,6 @@
 use {
     itertools::{
-        EitherOrBoth::{
-            Both,
-            Left,
-            Right,
-        },
+        EitherOrBoth::{Both, Left, Right},
         Itertools,
     },
     std::collections::HashMap,

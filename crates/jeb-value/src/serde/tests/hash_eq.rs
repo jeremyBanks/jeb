@@ -1,16 +1,6 @@
 use {
-    crate::{
-        Bytes,
-        Null,
-        Number,
-        String,
-        Value,
-    },
-    std::collections::{
-        BTreeMap,
-        HashMap,
-        HashSet,
-    },
+    crate::{Bytes, Null, Number, String, Value},
+    std::collections::{BTreeMap, HashMap, HashSet},
 };
 #[test]
 fn test_value_as_hashmap_key() {
@@ -80,10 +70,7 @@ fn test_eq_same_numeric_value() {
 fn test_hash_consistency() {
     use std::{
         collections::hash_map::DefaultHasher,
-        hash::{
-            Hash,
-            Hasher,
-        },
+        hash::{Hash, Hasher},
     };
     let v1 = Value::from(42u64);
     let v2 = Value::from(42u64);

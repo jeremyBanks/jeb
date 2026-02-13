@@ -1,7 +1,9 @@
 //! RGB PNG example - creates a colorful gradient image.
 
-use std::fs;
-use zipng::{panic, Png};
+use {
+    std::fs,
+    zipng::{Png, panic},
+};
 
 fn main() -> Result<(), panic> {
     fs::create_dir_all("target")?;

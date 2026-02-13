@@ -258,7 +258,9 @@ export interface GetGamePage_game_gameCategories_progression_leaderboardRun_run_
   __typename: "Player";
   name: string;
   isGuest: boolean;
-  user: GetGamePage_game_gameCategories_progression_leaderboardRun_run_players_user | null;
+  user:
+    | GetGamePage_game_gameCategories_progression_leaderboardRun_run_players_user
+    | null;
 }
 
 export interface GetGamePage_game_gameCategories_progression_leaderboardRun_run {
@@ -273,10 +275,14 @@ export interface GetGamePage_game_gameCategories_progression_leaderboardRun_run 
   srcId: string;
   timeMs: number;
   videos: string[];
-  category: GetGamePage_game_gameCategories_progression_leaderboardRun_run_category;
-  level: GetGamePage_game_gameCategories_progression_leaderboardRun_run_level | null;
+  category:
+    GetGamePage_game_gameCategories_progression_leaderboardRun_run_category;
+  level:
+    | GetGamePage_game_gameCategories_progression_leaderboardRun_run_level
+    | null;
   date: number | null;
-  players: GetGamePage_game_gameCategories_progression_leaderboardRun_run_players[];
+  players:
+    GetGamePage_game_gameCategories_progression_leaderboardRun_run_players[];
 }
 
 export interface GetGamePage_game_gameCategories_progression_leaderboardRun {
@@ -291,7 +297,9 @@ export interface GetGamePage_game_gameCategories_progression {
   __typename: "ProgressionRun";
   progressMs: number;
   run: GetGamePage_game_gameCategories_progression_run;
-  leaderboardRun: GetGamePage_game_gameCategories_progression_leaderboardRun | null;
+  leaderboardRun:
+    | GetGamePage_game_gameCategories_progression_leaderboardRun
+    | null;
 }
 
 export interface GetGamePage_game_gameCategories {
@@ -540,7 +548,9 @@ export interface GetGamePage_game_levelCategories_progression_leaderboardRun_run
   __typename: "Player";
   name: string;
   isGuest: boolean;
-  user: GetGamePage_game_levelCategories_progression_leaderboardRun_run_players_user | null;
+  user:
+    | GetGamePage_game_levelCategories_progression_leaderboardRun_run_players_user
+    | null;
 }
 
 export interface GetGamePage_game_levelCategories_progression_leaderboardRun_run {
@@ -555,10 +565,14 @@ export interface GetGamePage_game_levelCategories_progression_leaderboardRun_run
   srcId: string;
   timeMs: number;
   videos: string[];
-  category: GetGamePage_game_levelCategories_progression_leaderboardRun_run_category;
-  level: GetGamePage_game_levelCategories_progression_leaderboardRun_run_level | null;
+  category:
+    GetGamePage_game_levelCategories_progression_leaderboardRun_run_category;
+  level:
+    | GetGamePage_game_levelCategories_progression_leaderboardRun_run_level
+    | null;
   date: number | null;
-  players: GetGamePage_game_levelCategories_progression_leaderboardRun_run_players[];
+  players:
+    GetGamePage_game_levelCategories_progression_leaderboardRun_run_players[];
 }
 
 export interface GetGamePage_game_levelCategories_progression_leaderboardRun {
@@ -573,7 +587,9 @@ export interface GetGamePage_game_levelCategories_progression {
   __typename: "ProgressionRun";
   progressMs: number;
   run: GetGamePage_game_levelCategories_progression_run;
-  leaderboardRun: GetGamePage_game_levelCategories_progression_leaderboardRun | null;
+  leaderboardRun:
+    | GetGamePage_game_levelCategories_progression_leaderboardRun
+    | null;
 }
 
 export interface GetGamePage_game_levelCategories_levels_level {
@@ -652,7 +668,9 @@ export interface GetGamePage_game_levelCategories_levels_leaderboard_run_players
   __typename: "Player";
   name: string;
   isGuest: boolean;
-  user: GetGamePage_game_levelCategories_levels_leaderboard_run_players_user | null;
+  user:
+    | GetGamePage_game_levelCategories_levels_leaderboard_run_players_user
+    | null;
 }
 
 export interface GetGamePage_game_levelCategories_levels_leaderboard_run {
@@ -737,7 +755,9 @@ export interface GetGamePage_game_levelCategories_levels_progression_run_players
   __typename: "Player";
   name: string;
   isGuest: boolean;
-  user: GetGamePage_game_levelCategories_levels_progression_run_players_user | null;
+  user:
+    | GetGamePage_game_levelCategories_levels_progression_run_players_user
+    | null;
 }
 
 export interface GetGamePage_game_levelCategories_levels_progression_run {
@@ -814,7 +834,9 @@ export interface GetGamePage_game_levelCategories_levels_progression_leaderboard
   __typename: "Player";
   name: string;
   isGuest: boolean;
-  user: GetGamePage_game_levelCategories_levels_progression_leaderboardRun_run_players_user | null;
+  user:
+    | GetGamePage_game_levelCategories_levels_progression_leaderboardRun_run_players_user
+    | null;
 }
 
 export interface GetGamePage_game_levelCategories_levels_progression_leaderboardRun_run {
@@ -829,10 +851,14 @@ export interface GetGamePage_game_levelCategories_levels_progression_leaderboard
   srcId: string;
   timeMs: number;
   videos: string[];
-  category: GetGamePage_game_levelCategories_levels_progression_leaderboardRun_run_category;
-  level: GetGamePage_game_levelCategories_levels_progression_leaderboardRun_run_level | null;
+  category:
+    GetGamePage_game_levelCategories_levels_progression_leaderboardRun_run_category;
+  level:
+    | GetGamePage_game_levelCategories_levels_progression_leaderboardRun_run_level
+    | null;
   date: number | null;
-  players: GetGamePage_game_levelCategories_levels_progression_leaderboardRun_run_players[];
+  players:
+    GetGamePage_game_levelCategories_levels_progression_leaderboardRun_run_players[];
 }
 
 export interface GetGamePage_game_levelCategories_levels_progression_leaderboardRun {
@@ -847,7 +873,9 @@ export interface GetGamePage_game_levelCategories_levels_progression {
   __typename: "ProgressionRun";
   progressMs: number;
   run: GetGamePage_game_levelCategories_levels_progression_run;
-  leaderboardRun: GetGamePage_game_levelCategories_levels_progression_leaderboardRun | null;
+  leaderboardRun:
+    | GetGamePage_game_levelCategories_levels_progression_leaderboardRun
+    | null;
 }
 
 export interface GetGamePage_game_levelCategories_levels {

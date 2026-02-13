@@ -1,9 +1,6 @@
 mod attempt;
 mod node;
 pub use {
-    self::{
-        attempt::*,
-        node::*,
-    },
+    self::{attempt::*, node::*},
     jeb_value::*,
 };

@@ -5,14 +5,8 @@
 //! files.
 
 use {
-    inline::{
-        InlineCellPrivate,
-        Tokens,
-    },
-    std::{
-        env,
-        fs,
-    },
+    inline::{InlineCellPrivate, Tokens},
+    std::{env, fs},
     tempfile::TempDir,
 };
 

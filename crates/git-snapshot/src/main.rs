@@ -1,14 +1,6 @@
 use {
-    clap::{
-        Parser,
-        Subcommand,
-    },
-    git_snapshot::{
-        CommitIdStyle,
-        Repository,
-        SerializationOptions,
-        Tree,
-    },
+    clap::{Parser, Subcommand},
+    git_snapshot::{CommitIdStyle, Repository, SerializationOptions, Tree},
     std::path::PathBuf,
 };
 
@@ -25,20 +17,12 @@ enum Command {
     /// Capture a git repository or directory to a YAML snapshot file
     Capture {
         /// Path to the git repository (mutually exclusive with --dir)
-        #[clap(
-            long,
-            required_unless_present = "dir",
-            conflicts_with = "dir"
-        )]
+        #[clap(long, required_unless_present = "dir", conflicts_with = "dir")]
         repo: Option<PathBuf>,
 
         /// Path to a plain directory to capture as working tree only (mutually
         /// exclusive with --repo)
-        #[clap(
-            long,
-            required_unless_present = "repo",
-            conflicts_with = "repo"
-        )]
+        #[clap(long, required_unless_present = "repo", conflicts_with = "repo")]
         dir: Option<PathBuf>,
 
         /// Path to write the snapshot file
@@ -61,20 +45,12 @@ enum Command {
         snapshot: PathBuf,
 
         /// Path to create the git repository (mutually exclusive with --dir)
-        #[clap(
-            long,
-            required_unless_present = "dir",
-            conflicts_with = "dir"
-        )]
+        #[clap(long, required_unless_present = "dir", conflicts_with = "dir")]
         repo: Option<PathBuf>,
 
         /// Path to extract working tree only as plain directory (mutually
         /// exclusive with --repo)
-        #[clap(
-            long,
-            required_unless_present = "repo",
-            conflicts_with = "repo"
-        )]
+        #[clap(long, required_unless_present = "repo", conflicts_with = "repo")]
         dir: Option<PathBuf>,
     },
 }
@@ -237,10 +213,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        std::collections::BTreeSet,
-    };
+    use {super::*, std::collections::BTreeSet};
 
     fn create_test_dir() -> tempfile::TempDir {
         tempfile::TempDir::new().expect("Failed to create temp dir")

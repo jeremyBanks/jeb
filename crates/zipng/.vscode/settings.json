@@ -11,8 +11,6 @@
   "lldb.consoleMode": "evaluate",
   "lldb.launch.terminal": "integrated",
 
-
-
   "github.copilot.inlineSuggest.enable": true,
   "github.copilot.enable": { "*": true },
   "github.copilot.advanced": {
@@ -27,6 +25,6 @@
     // "debug.filterLogCategories": [],
     // "debug.overrideEngine": "copilot-codex",
     "inlineSuggestCount": 8,
-    "listCount": 32,
-  },
+    "listCount": 32
+  }
 }

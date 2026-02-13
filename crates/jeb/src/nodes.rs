@@ -1,49 +1,19 @@
-#[cfg(
-    any(
-        feature = "stdio",
-        feature = "fs"
-    )
-)]
+#[cfg(any(feature = "stdio", feature = "fs"))]
 use tokio::io::AsyncWriteExt;
-#[cfg(
-    any(
-        feature = "stdio",
-        feature = "fs"
-    )
-)]
+#[cfg(any(feature = "stdio", feature = "fs"))]
 use tokio_stream::StreamExt;
-#[cfg(
-    any(
-        feature = "stdio",
-        feature = "fs"
-    )
-)]
-use tokio_util::codec::{
-    BytesCodec,
-    FramedRead,
-};
+#[cfg(any(feature = "stdio", feature = "fs"))]
+use tokio_util::codec::{BytesCodec, FramedRead};
 use {
-    crate::model::{
-        Node,
-        Receiver,
-        Task,
-    },
+    crate::model::{Node, Receiver, Task},
     jeb_stream::Item,
     std::borrow::Cow,
 };
 
-#[cfg(
-    any(
-        feature = "stdio",
-        feature = "fs"
-    )
-)]
+#[cfg(any(feature = "stdio", feature = "fs"))]
 use crate::{
     Panic,
-    model::{
-        Bytes,
-        channel,
-    },
+    model::{Bytes, channel},
 };
 pub trait NodeDef: Node + Send + Sync + 'static {
     const NAME: &'static str;
@@ -168,12 +138,7 @@ impl NodeDef for Stderr {
         (stack, handle)
     }
 }
-#[cfg(
-    any(
-        feature = "stdio",
-        feature = "fs"
-    )
-)]
+#[cfg(any(feature = "stdio", feature = "fs"))]
 pub async fn wip_example_pseudo_main() -> Result<(), Panic> {
     let nodes: Vec<&dyn Node> = vec![
         #[cfg(feature = "stdio")]

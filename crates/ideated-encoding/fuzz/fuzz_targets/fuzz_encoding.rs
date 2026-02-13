@@ -1,12 +1,7 @@
 #![no_main]
 
 use {
-    ideated_encoding::{
-        Decoder,
-        Encoder,
-        decode,
-        encode,
-    },
+    ideated_encoding::{Decoder, Encoder, decode, encode},
     libfuzzer_sys::fuzz_target,
 };
 

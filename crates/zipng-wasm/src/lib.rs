@@ -1,6 +1,7 @@
 //! WASM bindings for zipng polyglot encoder.
 //!
-//! Provides a JavaScript-friendly API with JSON serialization and concrete types.
+//! Provides a JavaScript-friendly API with JSON serialization and concrete
+//! types.
 
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -31,12 +32,13 @@ pub struct EncodeOptions {
     #[serde(default = "default_mode")]
     pub mode: String,
 
-    /// Font choice: "swiss", "sixth", "sky", "monte", "sugimori", "mini", "micro".
-    /// None uses automatic font selection.
+    /// Font choice: "swiss", "sixth", "sky", "monte", "sugimori", "mini",
+    /// "micro". None uses automatic font selection.
     #[serde(default)]
     pub font: Option<String>,
 
-    /// Sort mode: "lexicographic" (default), "reverse", "by_size", "by_extension", "none".
+    /// Sort mode: "lexicographic" (default), "reverse", "by_size",
+    /// "by_extension", "none".
     #[serde(default = "default_sort_mode")]
     pub sort_mode: String,
 }
@@ -74,20 +76,10 @@ struct EncodeInput {
 /// Encode files into a polyglot PNG+ZIP.
 ///
 /// # Arguments
-/// * `files_json` - JSON string containing files and options:
-///   ```json
-///   {
-///     "files": [
-///       {"path": "hello.txt", "content": [72, 101, 108, 108, 111]},
-///       {"path": "data.bin", "content": [0, 1, 2, 3]}
-///     ],
-///     "options": {
-///       "mode": "auto",
-///       "font": "swiss",
-///       "sort_mode": "lexicographic"
-///     }
-///   }
-///   ```
+/// * `files_json` - JSON string containing files and options: ```json {
+///   "files": [ {"path": "hello.txt", "content": [72, 101, 108, 108, 111]},
+///   {"path": "data.bin", "content": [0, 1, 2, 3]} ], "options": { "mode":
+///   "auto", "font": "swiss", "sort_mode": "lexicographic" } } ```
 ///
 /// # Returns
 /// PNG+ZIP polyglot as Uint8Array.
@@ -136,7 +128,7 @@ pub fn encode(files_json: &str) -> Result<Vec<u8>, JsValue> {
             file_tuples.sort_by(|a, b| {
                 let ext_a = extract_extension(&a.0);
                 let ext_b = extract_extension(&b.0);
-                ext_a.cmp(&ext_b).then_with(|| a.0.cmp(&b.0))
+                ext_a.cmp(ext_b).then_with(|| a.0.cmp(&b.0))
             });
         }
         "none" => {
@@ -210,13 +202,9 @@ fn extract_extension(path: &[u8]) -> &[u8] {
 /// Encode files with default options (auto mode, lexicographic sort).
 ///
 /// # Arguments
-/// * `files_json` - JSON array of files:
-///   ```json
-///   [
-///     {"path": "hello.txt", "content": [72, 101, 108, 108, 111]},
-///     {"path": "data.bin", "content": [0, 1, 2, 3]}
-///   ]
-///   ```
+/// * `files_json` - JSON array of files: ```json [ {"path": "hello.txt",
+///   "content": [72, 101, 108, 108, 111]}, {"path": "data.bin", "content": [0,
+///   1, 2, 3]} ] ```
 #[wasm_bindgen]
 pub fn encode_simple(files_json: &str) -> Result<Vec<u8>, JsValue> {
     // Parse as array of files

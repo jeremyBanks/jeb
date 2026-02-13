@@ -6,11 +6,7 @@
 /// execution
 mod fixtures;
 
-use std::{
-    env,
-    fs,
-    panic,
-};
+use std::{env, fs, panic};
 
 #[test]
 fn test_counter_a_modification() {

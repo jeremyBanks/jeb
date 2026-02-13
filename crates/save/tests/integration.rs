@@ -1,11 +1,7 @@
 use {
     once_cell::sync::Lazy,
     save::cli::Save,
-    std::{
-        fs,
-        path::PathBuf,
-        sync::Mutex,
-    },
+    std::{fs, path::PathBuf, sync::Mutex},
 };
 
 static CWD_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
@@ -305,12 +301,12 @@ HEAD: refs/heads/trunk
     assert!(parts.len() >= 7); // r0 / x1234 word word word word
 
     // Find the xHHHH part
-    let tree_hex_pos = parts.iter()
+    let tree_hex_pos = parts
+        .iter()
         .position(|p| p.starts_with('x'))
         .expect("Should have tree hash in message");
 
-    let tree_hex = parts[tree_hex_pos]
-        .trim_start_matches('x');
+    let tree_hex = parts[tree_hex_pos].trim_start_matches('x');
 
     assert_eq!(tree_hex.len(), 4, "Tree hash should be 4 hex chars");
 
@@ -318,16 +314,24 @@ HEAD: refs/heads/trunk
     // Format: r0 / xHHHH word word word word [/ oHHHH]
     // Extract 4 words after xHHHH
     let phonetic_words = &parts[tree_hex_pos + 1..tree_hex_pos + 5];
-    assert_eq!(phonetic_words.len(), 4, "Should have 4 phonetic words for 4 hex chars");
+    assert_eq!(
+        phonetic_words.len(),
+        4,
+        "Should have 4 phonetic words for 4 hex chars"
+    );
 
     // Verify each phonetic word is valid
     let valid_phonetics = [
-        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
-        "alfa", "bravo", "charlie", "delta", "echo", "foxtrot"
+        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "alfa",
+        "bravo", "charlie", "delta", "echo", "foxtrot",
     ];
 
     for word in phonetic_words {
-        assert!(valid_phonetics.contains(word), "Invalid phonetic word: {}", word);
+        assert!(
+            valid_phonetics.contains(word),
+            "Invalid phonetic word: {}",
+            word
+        );
     }
 }
 
@@ -361,17 +365,23 @@ refs:
 
     // Should start with r1 and not have xHHHH
     assert!(message.starts_with("r1"));
-    assert!(!message.contains(" / x"), "Empty tree should not have tree hash component");
+    assert!(
+        !message.contains(" / x"),
+        "Empty tree should not have tree hash component"
+    );
 
     // Should not contain phonetic words
     let valid_phonetics = [
-        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
-        "alfa", "bravo", "charlie", "delta", "echo", "foxtrot"
+        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "alfa",
+        "bravo", "charlie", "delta", "echo", "foxtrot",
     ];
 
     let message_words: Vec<&str> = message.split_whitespace().collect();
     for word in message_words {
-        assert!(!valid_phonetics.contains(&word),
-            "Empty tree message should not contain phonetic words, found: {}", word);
+        assert!(
+            !valid_phonetics.contains(&word),
+            "Empty tree message should not contain phonetic words, found: {}",
+            word
+        );
     }
 }

@@ -1,25 +1,13 @@
 use {
     crate::Value,
-    derive_more::{
-        AsMut,
-        AsRef,
-        Deref,
-        DerefMut,
-        From,
-        Index,
-        IndexMut,
-        IntoIterator,
-    },
+    derive_more::{AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut, IntoIterator},
 };
 
 // [impl jeb-value.features.core.cfg]
 // [impl jeb-value.features.serde.optional]
 #[cfg_attr(
     feature = "serde",
-    derive(
-        serde::Serialize,
-        serde::Deserialize
-    ),
+    derive(serde::Serialize, serde::Deserialize),
     serde(transparent)
 )]
 // [impl jeb-value.variant.common.clone]
@@ -53,9 +41,7 @@ use {
 )]
 // [impl jeb-value.variant.common.transparent]
 #[repr(transparent)]
-#[into_iterator(
-    owned, ref, ref_mut
-)]
+#[into_iterator(owned, ref, ref_mut)]
 // [impl jeb-value.variant.common.must-use]
 #[must_use]
 // [impl jeb-value.array.struct]

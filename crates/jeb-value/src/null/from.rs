@@ -1,7 +1,4 @@
-use {
-    crate::Null,
-    ordermap::OrderMap,
-};
+use {crate::Null, ordermap::OrderMap};
 
 /// Error returned when trying to convert a non-zero value to Null.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

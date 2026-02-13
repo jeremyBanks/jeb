@@ -1,26 +1,16 @@
 use ::{
     core::{
-        fmt::{
-            self,
-            Debug,
-        },
+        fmt::{self, Debug},
         mem,
         ops::Range,
         panic,
     },
-    once_cell::sync::{
-        Lazy,
-        OnceCell,
-    },
+    once_cell::sync::{Lazy, OnceCell},
     std::{
         collections::HashMap,
-        env,
-        fs,
+        env, fs,
         panic::resume_unwind,
-        path::{
-            Path,
-            PathBuf,
-        },
+        path::{Path, PathBuf},
         sync::Mutex,
     },
 };

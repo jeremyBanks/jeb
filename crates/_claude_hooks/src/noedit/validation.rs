@@ -1,22 +1,13 @@
 use {
     super::{
         git_ops::{
-            create_restoration_commit,
-            find_git_root,
-            find_session_boundary,
-            get_changed_files,
+            create_restoration_commit, find_git_root, find_session_boundary, get_changed_files,
             restore_file_from_commit,
         },
         patterns::NoeditMatcher,
     },
-    crate::{
-        HookInput,
-        HookOutput,
-    },
-    eyre::{
-        Context,
-        Result,
-    },
+    crate::{HookInput, HookOutput},
+    eyre::{Context, Result},
     git2::Repository,
     std::path::Path,
 };

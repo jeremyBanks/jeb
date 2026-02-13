@@ -68,9 +68,9 @@ match between tree and commit hashes.
 **Display:** Omitted if the tree is empty.
 
 **Phonetic Encoding:** The 4 hex characters are converted to space-separated
-lowercase phonetic words (e.g., `xC7B9` becomes `xC7B9 charlie seven bravo nine`).
-This provides a human-readable, easily spoken identifier for verbal communication
-and auditory verification.
+lowercase phonetic words (e.g., `xC7B9` becomes
+`xC7B9 charlie seven bravo nine`). This provides a human-readable, easily spoken
+identifier for verbal communication and auditory verification.
 
 ### Origin (`oHHHH`, optional)
 
@@ -147,12 +147,12 @@ A parent commit's message is trusted if:
 
 ### Inheritance Rules
 
-| Field            | Inheritance                                             |
-| ---------------- | ------------------------------------------------------- |
-| Revision Index   | Parent's value + 1                                      |
-| Generation Index | Max of all parents' values + 1                          |
-| Commit Index     | Cannot inherit; must count reachable commits            |
-| Origin           | Inherit if all parents agree; otherwise scan or omit    |
+| Field            | Inheritance                                          |
+| ---------------- | ---------------------------------------------------- |
+| Revision Index   | Parent's value + 1                                   |
+| Generation Index | Max of all parents' values + 1                       |
+| Commit Index     | Cannot inherit; must count reachable commits         |
+| Origin           | Inherit if all parents agree; otherwise scan or omit |
 
 ### Z-Mode
 
@@ -164,14 +164,14 @@ on incomplete information.
 
 The commit message format serves several purposes:
 
-| Component        | Purpose                                                 |
-| ---------------- | ------------------------------------------------------- |
+| Component        | Purpose                                                         |
+| ---------------- | --------------------------------------------------------------- |
 | Prefix           | Immediately indicates repository state (full/shallow/uncertain) |
-| Revision Index   | Simple incrementing version number along main branch    |
-| Generation Index | Reveals merge history when different from revision      |
-| Commit Index     | Shows total reachable history size                      |
-| Tree Hash        | Visual identifier; commit hash matches tree hash prefix |
-| Origin           | Detects history changes, verifies same lineage          |
+| Revision Index   | Simple incrementing version number along main branch            |
+| Generation Index | Reveals merge history when different from revision              |
+| Commit Index     | Shows total reachable history size                              |
+| Tree Hash        | Visual identifier; commit hash matches tree hash prefix         |
+| Origin           | Detects history changes, verifies same lineage                  |
 
 ## Examples
 

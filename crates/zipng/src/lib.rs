@@ -5,7 +5,7 @@
     unused_variables,
     unused_crate_dependencies,
     unused_imports,
-    missing_docs,
+    missing_docs
 )]
 
 use indexmap::IndexMap;
@@ -19,14 +19,16 @@ pub mod opstructs;
 pub mod zlib;
 
 // Re-export commonly used items at crate root for internal use
-pub use checksums::{adler32, crc32};
-pub use generic::{default, never, panic, PhantomType};
-pub use io::{OutputBuffer, output_buffer, Offset};
-pub use deflate::{write_deflate, DeflateMode};
-pub use zlib::write_zlib;
+pub use {
+    checksums::{adler32, crc32},
+    deflate::{DeflateMode, write_deflate},
+    generic::{PhantomType, default, never, panic},
+    io::{Offset, OutputBuffer, output_buffer},
+    zlib::write_zlib,
+};
 
 // Constants
-pub const PNG_HEADER_SIZE: usize = 33;  // 8 (sig) + 25 (IHDR chunk)
+pub const PNG_HEADER_SIZE: usize = 33; // 8 (sig) + 25 (IHDR chunk)
 
 // PNG module with palettes
 pub mod png;
@@ -48,37 +50,28 @@ pub mod brotli;
 // Legacy modules
 pub mod font;
 
-
 // Re-export key types from png
-pub use crate::png::{BitDepth, ColorType, Png, ToPng};
-pub use crate::png::palettes;
-pub use crate::png::sizes::{PNG_CHUNK_PREFIX_SIZE, PNG_CHUNK_SUFFIX_SIZE, PNG_CHUNK_WRAPPER_SIZE};
-pub use crate::png::write_png;
-// Re-export ColorType variants for convenience
-pub use crate::png::ColorType::{Luminance, LuminanceAlpha, RedGreenBlue, RedGreenBlueAlpha, Indexed};
-// Re-export BitDepth variants for convenience
-pub use crate::png::BitDepth::{OneBit, TwoBit, FourBit, EightBit, SixteenBit};
-
-// Re-export key types from zip
-pub use crate::zip::{Zip, ToZip, ZipConfiguration, ZipEntry, ZipEntryComparison};
-
 // Re-export Font from font module
 pub use crate::font::Font;
+// Re-export BitDepth variants for convenience
+pub use crate::png::BitDepth::{EightBit, FourBit, OneBit, SixteenBit, TwoBit};
+// Re-export ColorType variants for convenience
+pub use crate::png::ColorType::{
+    Indexed, Luminance, LuminanceAlpha, RedGreenBlue, RedGreenBlueAlpha,
+};
+pub use crate::png::{
+    BitDepth, ColorType, Png, ToPng, palettes,
+    sizes::{PNG_CHUNK_PREFIX_SIZE, PNG_CHUNK_SUFFIX_SIZE, PNG_CHUNK_WRAPPER_SIZE},
+    write_png,
+};
+// Re-export key types from zip
+pub use crate::zip::{ToZip, Zip, ZipConfiguration, ZipEntry, ZipEntryComparison};
 
 /// Unstable implementation module
 pub mod r#impl {
-    pub use crate::checksums;
-    pub use crate::deflate;
-    pub use crate::font;
-    pub use crate::generic;
-    pub use crate::png;
-    pub use crate::polyglot;
-    pub use crate::text;
-    pub use crate::zip;
-    pub use crate::zlib;
-
     #[cfg(feature = "brotli")]
     pub use crate::brotli;
+    pub use crate::{checksums, deflate, font, generic, png, polyglot, text, zip, zlib};
 }
 
 /// Files for a zip archive
@@ -97,31 +90,55 @@ impl From<IndexMap<Vec<u8>, Vec<u8>>> for Files {
 const RGBA_THRESHOLD: usize = 2 * 1024 * 1024;
 
 /// All available palettes for deterministic selection.
-/// Only sequential palettes are used, ensuring a smooth monotonic color progression
-/// that works well with the cycling palette index pattern in spacing rows.
-/// Filtered to only include palettes with good contrast (luminance diff >= 150)
-/// between first and last colors, ensuring readable filename labels.
-/// Excludes: TURBO (poor label contrast), all diverging, dual-sequential, and cyclic palettes.
+/// Only sequential palettes are used, ensuring a smooth monotonic color
+/// progression that works well with the cycling palette index pattern in
+/// spacing rows. Filtered to only include palettes with good contrast
+/// (luminance diff >= 150) between first and last colors, ensuring readable
+/// filename labels. Excludes: TURBO (poor label contrast), all diverging,
+/// dual-sequential, and cyclic palettes.
 static ALL_PALETTES: &[&[u8]] = &[
-    palettes::oceanic::AMP, palettes::oceanic::ICE, palettes::oceanic::OXY,
-    palettes::crameri::BUDA, palettes::crameri::NUUK, palettes::crameri::OSLO,
-    palettes::oceanic::DEEP, palettes::oceanic::RAIN,
-    palettes::crameri::ACTON, palettes::crameri::DAVOS, palettes::crameri::DEVON,
-    palettes::crameri::IMOLA, palettes::crameri::LAPAZ, palettes::crameri::TOKYO,
-    palettes::crameri::TURKU, palettes::oceanic::ALGAE, palettes::oceanic::DENSE,
-    palettes::oceanic::SOLAR, palettes::oceanic::SPEED, palettes::oceanic::TEMPO,
-    palettes::viridis::MAGMA, palettes::crameri::BAMAKO,
-    palettes::crameri::BATLOW, palettes::crameri::BILBAO, palettes::crameri::HAWAII,
-    palettes::oceanic::HALINE, palettes::oceanic::MATTER, palettes::oceanic::TURBID,
-    palettes::viridis::PLASMA, palettes::crameri::LAJOLLA, palettes::oceanic::THERMAL,
-    palettes::singles::CIVIDIS, palettes::viridis::INFERNO, palettes::viridis::VIRIDIS,
-    palettes::crameri::BATLOW_K, palettes::crameri::BATLOW_W,
+    palettes::oceanic::AMP,
+    palettes::oceanic::ICE,
+    palettes::oceanic::OXY,
+    palettes::crameri::BUDA,
+    palettes::crameri::NUUK,
+    palettes::crameri::OSLO,
+    palettes::oceanic::DEEP,
+    palettes::oceanic::RAIN,
+    palettes::crameri::ACTON,
+    palettes::crameri::DAVOS,
+    palettes::crameri::DEVON,
+    palettes::crameri::IMOLA,
+    palettes::crameri::LAPAZ,
+    palettes::crameri::TOKYO,
+    palettes::crameri::TURKU,
+    palettes::oceanic::ALGAE,
+    palettes::oceanic::DENSE,
+    palettes::oceanic::SOLAR,
+    palettes::oceanic::SPEED,
+    palettes::oceanic::TEMPO,
+    palettes::viridis::MAGMA,
+    palettes::crameri::BAMAKO,
+    palettes::crameri::BATLOW,
+    palettes::crameri::BILBAO,
+    palettes::crameri::HAWAII,
+    palettes::oceanic::HALINE,
+    palettes::oceanic::MATTER,
+    palettes::oceanic::TURBID,
+    palettes::viridis::PLASMA,
+    palettes::crameri::LAJOLLA,
+    palettes::oceanic::THERMAL,
+    palettes::singles::CIVIDIS,
+    palettes::viridis::INFERNO,
+    palettes::viridis::VIRIDIS,
+    palettes::crameri::BATLOW_K,
+    palettes::crameri::BATLOW_W,
 ];
 
 /// Creates a polyglot PNG+ZIP file.
 ///
-/// Files are sorted lexicographically by path. The color mode is chosen based on
-/// total data size:
+/// Files are sorted lexicographically by path. The color mode is chosen based
+/// on total data size:
 /// - For data > 2 MiB: RGBA mode for better density (4 bytes per pixel)
 /// - For smaller data: Indexed color with a deterministically-selected palette
 ///   based on a hash of the input data

@@ -7,9 +7,11 @@
  *   npx zipng-wasm --mode rgba --font swiss -o out.png *.txt
  */
 
-import { encode } from './zipng_wasm.js';
-import { readFileSync, writeFileSync, statSync } from 'fs';
-import { resolve } from 'path';
+import { encode } from "./zipng_wasm.js";
+import { readFileSync, statSync, writeFileSync } from "fs";
+import { resolve } from "path";
+import process from "node:process";
+import { Buffer } from "node:buffer";
 
 const MAX_FILE_SIZE = 60 * 1024; // 60KB
 
@@ -42,27 +44,27 @@ Examples:
 function parseArgs(args) {
   const parsed = {
     output: null,
-    mode: 'auto',
+    mode: "auto",
     font: null,
-    sort: 'lexicographic',
+    sort: "lexicographic",
     help: false,
-    files: []
+    files: [],
   };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
 
-    if (arg === '-h' || arg === '--help') {
+    if (arg === "-h" || arg === "--help") {
       parsed.help = true;
-    } else if (arg === '-o' || arg === '--output') {
+    } else if (arg === "-o" || arg === "--output") {
       parsed.output = args[++i];
-    } else if (arg === '--mode') {
+    } else if (arg === "--mode") {
       parsed.mode = args[++i];
-    } else if (arg === '--font') {
+    } else if (arg === "--font") {
       parsed.font = args[++i];
-    } else if (arg === '--sort') {
+    } else if (arg === "--sort") {
       parsed.sort = args[++i];
-    } else if (!arg.startsWith('-')) {
+    } else if (!arg.startsWith("-")) {
       parsed.files.push(arg);
     }
   }
@@ -79,13 +81,13 @@ async function main() {
   }
 
   if (!args.output) {
-    console.error('Error: Output path required (-o or --output)');
+    console.error("Error: Output path required (-o or --output)");
     printUsage();
     process.exit(1);
   }
 
   if (args.files.length === 0) {
-    console.error('Error: No input files specified');
+    console.error("Error: No input files specified");
     printUsage();
     process.exit(1);
   }
@@ -105,7 +107,7 @@ async function main() {
 
       if (stat.size > MAX_FILE_SIZE) {
         console.error(
-          `Error: File '${path}' exceeds 60KB limit (${stat.size} bytes)`
+          `Error: File '${path}' exceeds 60KB limit (${stat.size} bytes)`,
         );
         process.exit(1);
       }
@@ -134,29 +136,38 @@ async function main() {
   }
 
   // Validate options
-  if (!['auto', 'indexed', 'rgba'].includes(options.mode)) {
+  if (!["auto", "indexed", "rgba"].includes(options.mode)) {
     console.error(
-      `Error: Invalid mode '${options.mode}'. Must be: auto, indexed, or rgba`
+      `Error: Invalid mode '${options.mode}'. Must be: auto, indexed, or rgba`,
     );
     process.exit(1);
   }
 
-  if (args.font && !['swiss', 'sixth', 'sky', 'monte', 'sugimori', 'mini', 'micro'].includes(args.font)) {
+  if (
+    args.font &&
+    !["swiss", "sixth", "sky", "monte", "sugimori", "mini", "micro"].includes(
+      args.font,
+    )
+  ) {
     console.error(
-      `Error: Invalid font '${args.font}'. Must be: swiss, sixth, sky, monte, sugimori, mini, or micro`
+      `Error: Invalid font '${args.font}'. Must be: swiss, sixth, sky, monte, sugimori, mini, or micro`,
     );
     process.exit(1);
   }
 
-  if (!['lexicographic', 'reverse', 'by_size', 'by_extension', 'none'].includes(options.sort_mode)) {
+  if (
+    !["lexicographic", "reverse", "by_size", "by_extension", "none"].includes(
+      options.sort_mode,
+    )
+  ) {
     console.error(
-      `Error: Invalid sort mode '${options.sort_mode}'`
+      `Error: Invalid sort mode '${options.sort_mode}'`,
     );
     process.exit(1);
   }
 
   // Encode
-  console.log('\nEncoding polyglot...');
+  console.log("\nEncoding polyglot...");
   try {
     const input = {
       files,
@@ -177,6 +188,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('Fatal error:', err);
+  console.error("Fatal error:", err);
   process.exit(1);
 });

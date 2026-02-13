@@ -1,5 +1,5 @@
 use {
-    crate::{generic::panic, OutputBuffer},
+    crate::{OutputBuffer, generic::panic},
     std::{
         fmt::Debug,
         hash::{Hash, Hasher},

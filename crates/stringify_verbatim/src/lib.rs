@@ -6,10 +6,7 @@
 
 use {
     proc_macro::TokenStream,
-    proc_macro2::{
-        LineColumn,
-        TokenTree,
-    },
+    proc_macro2::{LineColumn, TokenTree},
 };
 
 #[proc_macro]

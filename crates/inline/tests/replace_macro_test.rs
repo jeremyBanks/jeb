@@ -1,10 +1,7 @@
 //! Test that replace!() replaces the entire macro invocation
 
 use {
-    std::{
-        env,
-        fs,
-    },
+    std::{env, fs},
     tempfile::TempDir,
 };
 

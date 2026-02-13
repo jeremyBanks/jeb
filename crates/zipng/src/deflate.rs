@@ -1,5 +1,5 @@
 use {
-    crate::{generic::default, panic, OutputBuffer},
+    crate::{OutputBuffer, generic::default, panic},
     std::{io::Read, ops::Not},
 };
 

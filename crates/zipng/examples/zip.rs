@@ -1,7 +1,9 @@
 //! ZIP example - creates a simple ZIP archive.
 
-use std::fs;
-use zipng::{panic, Zip};
+use {
+    std::fs,
+    zipng::{Zip, panic},
+};
 
 fn main() -> Result<(), panic> {
     fs::create_dir_all("target")?;

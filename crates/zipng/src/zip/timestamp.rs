@@ -13,7 +13,7 @@ pub fn dos_timestamp() -> [u8; 4] {
         Ok(val) => {
             let epoch: i64 = val.parse().unwrap_or(0);
             unix_to_dos(epoch)
-        }
+        },
         Err(_) => (0u16, 0u16),
     };
     let mut buf = [0u8; 4];
@@ -77,8 +77,7 @@ fn unix_to_dos(epoch: i64) -> (u16, u16) {
 
     // Clamp year to DOS range (1980–2107).
     let year = y.clamp(1980, 2107);
-    let date =
-        (((year - 1980) as u16) << 9) | ((m as u16) << 5) | (d as u16);
+    let date = (((year - 1980) as u16) << 9) | ((m as u16) << 5) | (d as u16);
 
     (time, date)
 }

@@ -72,10 +72,7 @@ fn replace_subtree_recursive(
 mod tests {
     use {
         super::*,
-        std::{
-            fs,
-            process::Command,
-        },
+        std::{fs, process::Command},
         tempfile::TempDir,
     };
     fn setup_test_repo() -> TempDir {

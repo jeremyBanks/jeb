@@ -1,8 +1,4 @@
-use crate::{
-    Panic,
-    Z85,
-    Z85_LUT,
-};
+use crate::{Panic, Z85, Z85_LUT};
 /// This encoding uses base 85 for binary data.
 pub const BASE_85: usize = 85;
 /// This encoding works in 4-byte (32-bit) blocks.
@@ -203,10 +199,7 @@ pub const fn decoded_z85_length(digit_length: usize) -> usize {
     let remaining_block_bytes = BLOCK_BYTES_BY_DIGITS[remaining_digits];
     full_block_bytes + remaining_block_bytes
 }
-#[cfg_attr(
-    feature = "wasm",
-    wasm_bindgen::prelude::wasm_bindgen
-)]
+#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
 #[must_use]
 pub fn encode_z85(bytes: &[u8]) -> Vec<u8> {
     let encoded_length = encoded_z85_length(bytes.len());

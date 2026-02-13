@@ -1,43 +1,16 @@
 use {
-    _chosen::{
-        bytes_to_text,
-        text_to_bytes,
-    },
-    anyhow::{
-        Context,
-        Result,
-    },
+    _chosen::{bytes_to_text, text_to_bytes},
+    anyhow::{Context, Result},
     clap::Parser,
-    jeb_tracing::{
-        error,
-        info,
-        warn,
-    },
-    sha1::{
-        Digest,
-        Sha1,
-    },
+    jeb_tracing::{error, info, warn},
+    sha1::{Digest, Sha1},
     std::{
         collections::BTreeSet,
-        env,
-        fs,
-        io::{
-            BufRead,
-            BufReader,
-        },
-        path::{
-            Path,
-            PathBuf,
-        },
-        process::{
-            Command,
-            ExitCode,
-            Stdio,
-        },
-        sync::atomic::{
-            AtomicBool,
-            Ordering,
-        },
+        env, fs,
+        io::{BufRead, BufReader},
+        path::{Path, PathBuf},
+        process::{Command, ExitCode, Stdio},
+        sync::atomic::{AtomicBool, Ordering},
     },
 };
 
@@ -96,10 +69,7 @@ fn run_with_truncated_output(mut cmd: Command, prefix: &str) -> Result<std::proc
 
 /// Process a stream: print first N bytes line-buffered, buffer last N bytes
 fn process_stream<R: std::io::Read>(reader: R, prefix: &str) -> (bool, String) {
-    use std::{
-        collections::VecDeque,
-        io::Write,
-    };
+    use std::{collections::VecDeque, io::Write};
 
     let mut reader = BufReader::new(reader);
     let mut bytes_shown = 0;
@@ -172,40 +142,23 @@ struct Args {
     filter: Option<String>,
 
     /// Fuzz each target for N seconds (0 or negative = replay only)
-    #[clap(
-        short,
-        long,
-        default_value = "1"
-    )]
+    #[clap(short, long, default_value = "1")]
     seconds: i32,
 
     /// Maximum input length in bytes
-    #[clap(
-        long,
-        default_value = "313"
-    )]
+    #[clap(long, default_value = "313")]
     max_len: u32,
 
     /// Number of targets to fuzz in parallel (0 = num CPUs)
-    #[clap(
-        short = 'p',
-        long,
-        default_value = "0"
-    )]
+    #[clap(short = 'p', long, default_value = "0")]
     parallelism: i32,
 
     /// Run all targets in parallel (alias for -p0)
-    #[clap(
-        long,
-        conflicts_with = "serial"
-    )]
+    #[clap(long, conflicts_with = "serial")]
     parallel: bool,
 
     /// Run targets sequentially (alias for -p1)
-    #[clap(
-        long,
-        conflicts_with = "parallel"
-    )]
+    #[clap(long, conflicts_with = "parallel")]
     serial: bool,
 
     /// Only pack corpus files (no fuzzing)

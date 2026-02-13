@@ -1,29 +1,22 @@
 #![cfg(feature = "bin")]
 use {
-    jeb::{
-        Panic,
-        model::Bytes,
-    },
+    jeb::{Panic, model::Bytes},
     jeb_common::shell_tokenizer,
     owo_colors::OwoColorize,
     regex::Regex,
     std::{
         convert::Infallible,
-        io::{
-            Read,
-            Write,
-        },
+        io::{Read, Write},
         mem::take,
         sync::LazyLock,
     },
     tracing::debug,
 };
 /// Pre-defined aliases that expand a single command into one or more commands.
-static ALIASES: &[(&str, &[&str])] = &[("to-jeb85-lines", &[
-    "encode-jeb85",
-    "split-80",
-    "join-lines",
-])];
+static ALIASES: &[(&str, &[&str])] = &[(
+    "to-jeb85-lines",
+    &["encode-jeb85", "split-80", "join-lines"],
+)];
 static PRELUDE: &str = include_str!("jeb/prelude.jeb");
 /// Expand an alias into its component commands, or return the original command.
 fn expand_alias(command: &str) -> Vec<String> {

@@ -3,6 +3,11 @@ name = "ideated-encoding-fuzz"
 version = "0.0.0"
 edition.workspace = true
 publish = false
+repository.workspace = true
+license.workspace = true
+description = ""
+categories = []
+keywords = []
 
 [package.metadata]
 cargo-fuzz = true
@@ -15,5 +20,5 @@ doc = false
 bench = false
 
 [dependencies]
+ideated-encoding.workspace = true
 libfuzzer-sys.workspace = true
-ideated-encoding = { path = ".." }

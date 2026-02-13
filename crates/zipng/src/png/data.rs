@@ -2,9 +2,9 @@
 
 use {
     crate::{
-        never, output_buffer,
+        OutputBuffer, ToPng, never, output_buffer,
         palettes::{crameri::OLERON, oceanic::TOPO, singles::FOUR_BIT_RAINBOW},
-        panic, OutputBuffer, ToPng,
+        panic,
     },
     bitvec::slice::BitSlice,
     serde::{Deserialize, Serialize},

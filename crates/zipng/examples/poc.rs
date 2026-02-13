@@ -1,8 +1,11 @@
-//! Proof-of-concept demo - creates a polyglot PNG+ZIP with palette visualization.
+//! Proof-of-concept demo - creates a polyglot PNG+ZIP with palette
+//! visualization.
 
-use std::fs;
-use indexmap::IndexMap;
-use zipng::{panic, Files, palettes::oceanic::TOPO};
+use {
+    indexmap::IndexMap,
+    std::fs,
+    zipng::{Files, palettes::oceanic::TOPO, panic},
+};
 
 fn main() -> Result<(), panic> {
     fs::create_dir_all("target")?;

@@ -2,11 +2,12 @@
 //!
 //! Large files (>60KB) are split into chunks to fit the IDAT boundary limit.
 
-use indexmap::IndexMap;
-use std::fs;
-use std::path::Path;
-use walkdir::WalkDir;
-use zipng::{panic, Files};
+use {
+    indexmap::IndexMap,
+    std::{fs, path::Path},
+    walkdir::WalkDir,
+    zipng::{Files, panic},
+};
 
 const MAX_CHUNK_SIZE: usize = 60_000; // 60000 byte limit (not 60KB)
 
@@ -34,10 +35,7 @@ fn main() -> Result<(), panic> {
 
         if content.len() <= MAX_CHUNK_SIZE {
             // Fits as-is
-            files.insert(
-                format!("src/{}", rel_path.display()).into_bytes(),
-                content,
-            );
+            files.insert(format!("src/{}", rel_path.display()).into_bytes(), content);
         } else {
             // Split into chunks
             chunked_count += 1;
@@ -68,7 +66,10 @@ fn main() -> Result<(), panic> {
     println!("  {} source files", files_struct.files.len());
     println!("  {} files required chunking", chunked_count);
     println!("  {:.1} KiB total source", total_size as f64 / 1024.0);
-    println!("  {:.1} KiB polyglot output", polyglot.len() as f64 / 1024.0);
+    println!(
+        "  {:.1} KiB polyglot output",
+        polyglot.len() as f64 / 1024.0
+    );
 
     Ok(())
 }

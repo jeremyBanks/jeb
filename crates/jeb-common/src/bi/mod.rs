@@ -8,15 +8,9 @@ pub mod spiral_square;
 pub mod spiral_triangle;
 pub mod zig_zag;
 pub use {
-    floating::floating,
-    hilbert::hilbert,
-    scatter_square::scatter_square,
-    scatter_triangle::scatter_triangle,
-    signedness::signedness,
-    spiral_square::spiral_square,
-    spiral_triangle::spiral_triangle,
-    z_order::z_order,
-    zig_zag::zig_zag,
+    floating::floating, hilbert::hilbert, scatter_square::scatter_square,
+    scatter_triangle::scatter_triangle, signedness::signedness, spiral_square::spiral_square,
+    spiral_triangle::spiral_triangle, z_order::z_order, zig_zag::zig_zag,
 };
 
 mod test;

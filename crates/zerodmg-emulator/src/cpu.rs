@@ -496,7 +496,9 @@ impl CPUController for GameBoy {
                 cycles = 4;
                 trace!("A = {:02X}, (0x{:04X})₀ = 0x{:02X}", address, a, old_value);
             }
-            LD_8_FROM_MEMORY_IMMEDIATE(_address) => unimplemented!("CPU instruction: LD A, (imm16)"),
+            LD_8_FROM_MEMORY_IMMEDIATE(_address) => {
+                unimplemented!("CPU instruction: LD A, (imm16)")
+            }
             // 16-Bit Loads
             LD_16_IMMEDIATE(dest, value) => {
                 let old_value = self.get_register(dest);
@@ -506,7 +508,9 @@ impl CPUController for GameBoy {
             }
             LD_HL_FROM_SP => unimplemented!("CPU instruction: LD HL, SP"),
             LD_HL_FROM_SP_PLUS(_value) => unimplemented!("CPU instruction: LD HL, SP+imm8"),
-            LD_SP_TO_IMMEDIATE_ADDRESS(_address) => unimplemented!("CPU instruction: LD (imm16), SP"),
+            LD_SP_TO_IMMEDIATE_ADDRESS(_address) => {
+                unimplemented!("CPU instruction: LD (imm16), SP")
+            }
             PUSH(register) => {
                 let value = self.get_register(register);
                 self.stack_push(value);

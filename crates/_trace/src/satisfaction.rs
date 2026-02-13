@@ -2,10 +2,7 @@
 //! [impl _trace.satisfaction]
 
 use {
-    crate::model::{
-        RequirementTree,
-        SatisfactionMode,
-    },
+    crate::model::{RequirementTree, SatisfactionMode},
     std::collections::HashMap,
 };
 
@@ -220,12 +217,7 @@ mod tests {
         crate::{
             errors::ErrorCollector,
             hierarchy::build_tree,
-            model::{
-                Annotation,
-                Location,
-                Modifiers,
-                SatisfactionMode,
-            },
+            model::{Annotation, Location, Modifiers, SatisfactionMode},
         },
         std::path::PathBuf,
     };

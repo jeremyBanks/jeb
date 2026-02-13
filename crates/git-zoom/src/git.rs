@@ -1,11 +1,7 @@
 //! Wrapper functions for git commands.
 use std::{
     io::Write,
-    process::{
-        Command,
-        Output,
-        Stdio,
-    },
+    process::{Command, Output, Stdio},
 };
 pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug)]
@@ -425,11 +421,7 @@ pub fn walk_first_parent(start: &str) -> Result<Vec<(String, Vec<String>, String
 }
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        std::fs,
-        tempfile::TempDir,
-    };
+    use {super::*, std::fs, tempfile::TempDir};
     fn setup_test_repo() -> TempDir {
         let dir = TempDir::new().unwrap();
         std::env::set_current_dir(dir.path()).unwrap();

@@ -1,11 +1,7 @@
 //! Embedded skill files
 //! [impl _trace.skills.embedded]
 
-use std::{
-    fs,
-    io,
-    path::Path,
-};
+use std::{fs, io, path::Path};
 
 /// Embedded skill file content
 /// [impl _trace.skills.embedded]

@@ -1,24 +1,9 @@
 use {
-    eyre::{
-        Context,
-        ContextCompat,
-        Result,
-        bail,
-    },
-    git2::{
-        Commit,
-        DiffOptions,
-        ObjectType,
-        Repository,
-        TreeWalkMode,
-        TreeWalkResult,
-    },
+    eyre::{Context, ContextCompat, Result, bail},
+    git2::{Commit, DiffOptions, ObjectType, Repository, TreeWalkMode, TreeWalkResult},
     std::{
         collections::HashMap,
-        path::{
-            Path,
-            PathBuf,
-        },
+        path::{Path, PathBuf},
     },
 };
 
@@ -219,9 +204,14 @@ pub fn create_restoration_commit(
         .peel_to_commit()
         .context("Failed to peel HEAD to commit")?;
 
-    repo.commit(Some("HEAD"), &signature, &signature, &message, &tree, &[
-        &parent_commit,
-    ])
+    repo.commit(
+        Some("HEAD"),
+        &signature,
+        &signature,
+        &message,
+        &tree,
+        &[&parent_commit],
+    )
     .context("Failed to create commit")?;
 
     Ok(())
@@ -251,9 +241,14 @@ pub fn create_revert_commit(
         .peel_to_commit()
         .context("Failed to peel HEAD to commit")?;
 
-    repo.commit(Some("HEAD"), &signature, &signature, &message, &tree, &[
-        &parent_commit,
-    ])
+    repo.commit(
+        Some("HEAD"),
+        &signature,
+        &signature,
+        &message,
+        &tree,
+        &[&parent_commit],
+    )
     .context("Failed to create commit")?;
 
     Ok(())

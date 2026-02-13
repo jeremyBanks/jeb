@@ -1,5 +1,5 @@
 use {
-    crate::{default, BitDepth, Png, RedGreenBlue},
+    crate::{BitDepth, Png, RedGreenBlue, default},
     bytemuck::bytes_of,
     std::borrow::Cow::{self, Borrowed, Owned},
 };

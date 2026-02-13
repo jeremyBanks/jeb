@@ -4,10 +4,7 @@
 //! reproduce them directly, preserving the original token structure.
 
 use {
-    databake::{
-        Bake,
-        CrateEnv,
-    },
+    databake::{Bake, CrateEnv},
     proc_macro2::TokenStream,
 };
 
@@ -83,7 +80,6 @@ impl Bake for Tokens {
         self.tokens()
     }
 }
-
 
 impl std::fmt::Display for Tokens {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

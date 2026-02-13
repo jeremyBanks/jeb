@@ -1,11 +1,15 @@
 //! Text rendering example - renders font glyphs to a PNG.
 
-use std::fs;
-use bitvec::prelude::Lsb0;
-use bitvec::view::AsBits;
-use zipng::font::{Font, Mini5pt};
-use zipng::palettes::viridis::VIRIDIS;
-use zipng::{panic, EightBit, Png};
+use {
+    bitvec::{prelude::Lsb0, view::AsBits},
+    std::fs,
+    zipng::{
+        EightBit, Png,
+        font::{Font, Mini5pt},
+        palettes::viridis::VIRIDIS,
+        panic,
+    },
+};
 
 fn main() -> Result<(), panic> {
     fs::create_dir_all("target")?;
@@ -31,7 +35,7 @@ fn main() -> Result<(), panic> {
     }
 
     // Calculate dimensions
-    let width = glyph_width * 2;  // Two glyphs wide
+    let width = glyph_width * 2; // Two glyphs wide
     let pixels = data.len();
     let height = (pixels / width).max(1);
 
@@ -53,8 +57,12 @@ fn main() -> Result<(), panic> {
 
     let output = png.serialize();
     fs::write("target/text.png", AsRef::<[u8]>::as_ref(&output))?;
-    println!("Created target/text.png ({} glyphs, {}x{} pixels)",
-             font.glyphs().len(), width, height);
+    println!(
+        "Created target/text.png ({} glyphs, {}x{} pixels)",
+        font.glyphs().len(),
+        width,
+        height
+    );
 
     Ok(())
 }

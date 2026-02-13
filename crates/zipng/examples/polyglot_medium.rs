@@ -2,9 +2,10 @@
 //!
 //! Current limitation: ~42KB TOTAL content due to single IDAT deflate block
 
-use indexmap::IndexMap;
-use std::fs;
-use std::process::Command;
+use {
+    indexmap::IndexMap,
+    std::{fs, process::Command},
+};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Creating polyglot PNG+ZIP file with multiple files (within limits)...\n");
@@ -50,8 +51,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  small.txt: 13 bytes");
 
     let total_content: usize = files.values().map(|v| v.len()).sum();
-    println!("\nTotal uncompressed content: {} bytes ({:.1} KB)",
-             total_content, total_content as f64 / 1024.0);
+    println!(
+        "\nTotal uncompressed content: {} bytes ({:.1} KB)",
+        total_content,
+        total_content as f64 / 1024.0
+    );
 
     if total_content > 42000 {
         println!("WARNING: Content exceeds ~42KB limit, extraction may fail!");
@@ -60,10 +64,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let files_converted: zipng::Files = files.into();
     let polyglot_data = zipng::zipng(&files_converted);
 
-    println!("Polyglot size: {} bytes ({:.1} KB)",
-             polyglot_data.len(), polyglot_data.len() as f64 / 1024.0);
-    println!("Overhead: {:.1}%",
-             (polyglot_data.len() as f64 / total_content as f64 - 1.0) * 100.0);
+    println!(
+        "Polyglot size: {} bytes ({:.1} KB)",
+        polyglot_data.len(),
+        polyglot_data.len() as f64 / 1024.0
+    );
+    println!(
+        "Overhead: {:.1}%",
+        (polyglot_data.len() as f64 / total_content as f64 - 1.0) * 100.0
+    );
 
     // Save it
     let output_path = "target/polyglot_medium.png";
@@ -97,20 +106,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let entry = entry?;
                     let size = entry.metadata()?.len() as usize;
                     total_extracted += size;
-                    println!("  {}: {} bytes",
-                             entry.file_name().to_string_lossy(), size);
+                    println!("  {}: {} bytes", entry.file_name().to_string_lossy(), size);
                 }
 
                 if total_extracted == total_content {
                     println!("\n✓ All {} bytes extracted correctly!", total_content);
                 } else {
-                    println!("\n✗ Size mismatch! Expected {}, got {}", total_content, total_extracted);
+                    println!(
+                        "\n✗ Size mismatch! Expected {}, got {}",
+                        total_content, total_extracted
+                    );
                 }
             } else {
                 println!("\n✗ Extraction failed:");
                 println!("{}", String::from_utf8_lossy(&output.stderr));
             }
-        }
+        },
         Err(_) => println!("(unzip not available)"),
     }
 

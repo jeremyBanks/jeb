@@ -6,20 +6,11 @@
 
 use {
     git_snapshot::{
-        Commit,
-        CommitIdStyle,
-        HeadState,
-        Repository,
-        SerializationOptions,
-        parse,
-        serialize,
+        Commit, CommitIdStyle, HeadState, Repository, SerializationOptions, parse, serialize,
     },
     std::{
         env,
-        path::{
-            Path,
-            PathBuf,
-        },
+        path::{Path, PathBuf},
         process::Command,
         sync::Mutex,
     },

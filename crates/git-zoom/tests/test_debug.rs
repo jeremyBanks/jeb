@@ -4,10 +4,7 @@ mod common;
 
 use {
     common::helpers::*,
-    std::{
-        env,
-        process::Command,
-    },
+    std::{env, process::Command},
 };
 
 #[test]

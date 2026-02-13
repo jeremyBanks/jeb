@@ -98,7 +98,7 @@ async function main() {
 
       if (stat.size > MAX_FILE_SIZE) {
         console.error(
-          `Error: File '${path}' exceeds 60KB limit (${stat.size} bytes)`
+          `Error: File '${path}' exceeds 60KB limit (${stat.size} bytes)`,
         );
         Deno.exit(1);
       }
@@ -122,7 +122,7 @@ async function main() {
   if (args.mode) {
     if (!["auto", "indexed", "rgba"].includes(args.mode)) {
       console.error(
-        `Error: Invalid mode '${args.mode}'. Must be: auto, indexed, or rgba`
+        `Error: Invalid mode '${args.mode}'. Must be: auto, indexed, or rgba`,
       );
       Deno.exit(1);
     }
@@ -132,11 +132,11 @@ async function main() {
   if (args.font) {
     if (
       !["swiss", "sixth", "sky", "monte", "sugimori", "mini", "micro"].includes(
-        args.font
+        args.font,
       )
     ) {
       console.error(
-        `Error: Invalid font '${args.font}'. Must be: swiss, sixth, sky, monte, sugimori, mini, or micro`
+        `Error: Invalid font '${args.font}'. Must be: swiss, sixth, sky, monte, sugimori, mini, or micro`,
       );
       Deno.exit(1);
     }
@@ -146,11 +146,11 @@ async function main() {
   if (args.sort) {
     if (
       !["lexicographic", "reverse", "by_size", "by_extension", "none"].includes(
-        args.sort
+        args.sort,
       )
     ) {
       console.error(
-        `Error: Invalid sort mode '${args.sort}'. Must be: lexicographic, reverse, by_size, by_extension, or none`
+        `Error: Invalid sort mode '${args.sort}'. Must be: lexicographic, reverse, by_size, by_extension, or none`,
       );
       Deno.exit(1);
     }

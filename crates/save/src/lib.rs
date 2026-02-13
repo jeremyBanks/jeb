@@ -70,8 +70,4 @@ pub mod testing;
 #[doc(inline)]
 pub use self::ez::*;
 #[doc(inline)]
-pub use self::git2::{
-    CommitExt,
-    OidExt,
-    RepositoryExt,
-};
+pub use self::git2::{CommitExt, OidExt, RepositoryExt};

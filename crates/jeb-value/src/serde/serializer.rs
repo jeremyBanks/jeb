@@ -1,19 +1,8 @@
 //! Serializer serializing arbitrary `Serialize` values into our `Value` type.
 use {
-    crate::{
-        Boolean,
-        Bytes,
-        Null,
-        Number,
-        String,
-        Value,
-        serde::SerdeError,
-    },
+    crate::{Boolean, Bytes, Null, Number, String, Value, serde::SerdeError},
     ordermap::OrderMap,
-    serde::{
-        Serialize,
-        ser,
-    },
+    serde::{Serialize, ser},
 };
 pub struct Serializer;
 impl ser::Serializer for Serializer {

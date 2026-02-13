@@ -55,9 +55,9 @@ pull request. Their bot should comment on the commit or PR with a link once it's
 been deployed. Most of these URLs will be randomly generated, but we have a few
 standard ones:
 
-https://speedruns.ca/ runs the latest release, matching the `deploy` branch.  
+https://speedruns.ca/ runs the latest release, matching the `deploy` branch.\
 https://staging.speedruns.ca/ runs the latest version of `master`, which will
-eventually be promoted to `deploy` unless the release fails.  
+eventually be promoted to `deploy` unless the release fails.\
 https://dev.speedruns.ca/ runs the `dev` branch, which is nothing special, just
 for convenience if I want to put up a branch at a memorable URL.
 

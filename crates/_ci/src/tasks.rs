@@ -4,14 +4,11 @@ use std::process::{Command, ExitStatus};
 pub fn build() -> Result<()> {
     println!("==> Running build checks");
 
-    run_command("cargo", &["build"])
-        .context("cargo build failed")?;
+    run_command("cargo", &["build"]).context("cargo build failed")?;
 
-    run_command("cargo", &["publish", "--dry-run"])
-        .context("cargo publish --dry-run failed")?;
+    run_command("cargo", &["publish", "--dry-run"]).context("cargo publish --dry-run failed")?;
 
-    run_command("deno", &["test"])
-        .context("deno test failed")?;
+    run_command("deno", &["test"]).context("deno test failed")?;
 
     println!("✓ Build checks passed");
     Ok(())
@@ -22,7 +19,7 @@ pub fn build_warnings() -> Result<()> {
 
     // Set RUSTFLAGS to treat warnings as errors
     let status = Command::new("cargo")
-        .args(&["build"])
+        .args(["build"])
         .env("RUSTFLAGS", "-D warnings")
         .status()
         .context("Failed to run cargo build")?;
@@ -31,8 +28,7 @@ pub fn build_warnings() -> Result<()> {
         anyhow::bail!("cargo build with -D warnings failed");
     }
 
-    run_command("cargo", &["publish", "--dry-run"])
-        .context("cargo publish --dry-run failed")?;
+    run_command("cargo", &["publish", "--dry-run"]).context("cargo publish --dry-run failed")?;
 
     println!("✓ Build warnings check passed");
     Ok(())
@@ -41,8 +37,7 @@ pub fn build_warnings() -> Result<()> {
 pub fn test() -> Result<()> {
     println!("==> Running tests");
 
-    run_command("deno", &["test"])
-        .context("deno test failed")?;
+    run_command("deno", &["test"]).context("deno test failed")?;
 
     println!("✓ Tests passed");
     Ok(())

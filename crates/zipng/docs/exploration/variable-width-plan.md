@@ -2,8 +2,8 @@
 
 ## Overview
 
-Replace the fixed ROW_WIDTH=13 approach with dynamic width calculation that produces
-approximately square images (with height >= width preference).
+Replace the fixed ROW_WIDTH=13 approach with dynamic width calculation that
+produces approximately square images (with height >= width preference).
 
 ## Key Changes
 
@@ -19,17 +19,20 @@ fn calculate_row_width(total_data_estimate: usize) -> usize {
 ### 2. Remove Fixed Constants
 
 **Remove:**
+
 - `const ROW_WIDTH: usize = 13`
 - `const DATA_PER_BLOCK: usize = ROW_WIDTH - 4`
 - `const FILTERED_ROW_SIZE: usize = ROW_WIDTH + 1`
 
 **Replace with:**
+
 - `MIN_ROW_WIDTH = 40` (minimum safe width)
 - Calculate others dynamically based on chosen width
 
 ### 3. Modify `build_polyglot` Function
 
 Current signature:
+
 ```rust
 pub fn build_polyglot(
     files: &[(&[u8], &[u8])],
@@ -41,6 +44,7 @@ pub fn build_polyglot(
 ```
 
 New approach:
+
 1. First pass: estimate total data size from files
 2. Calculate optimal row width
 3. Second pass: build aligned data with that width
@@ -49,16 +53,19 @@ New approach:
 ### 4. Modify `build_aligned_data` Function
 
 Current:
+
 ```rust
 fn build_aligned_data(files: &[(&[u8], &[u8])]) -> (...)
 ```
 
 New:
+
 ```rust
 fn build_aligned_data(files: &[(&[u8], &[u8])], row_width: usize) -> (...)
 ```
 
 Changes inside:
+
 - Use `row_width` instead of `ROW_WIDTH` constant
 - `data_per_block = row_width - 4`
 - `filtered_row_size = row_width + 1`
@@ -67,11 +74,13 @@ Changes inside:
 ### 5. Modify `encode_as_deflate_blocks` Function
 
 Current:
+
 ```rust
 fn encode_as_deflate_blocks(body: &[u8]) -> Vec<u8>
 ```
 
 New:
+
 ```rust
 fn encode_as_deflate_blocks(body: &[u8], row_width: usize) -> Vec<u8>
 ```
@@ -82,6 +91,7 @@ Current approach uses tricks where filter bytes at positions 13 and 27 provide
 mod_date_high and name_len_high.
 
 **With variable width >= 40, filter bytes land AFTER the header, so:**
+
 - Write complete standard ZIP local header (all fields fully specified)
 - No filter-byte tricks needed
 - Use extra field for padding to align content to row boundary
@@ -89,6 +99,7 @@ mod_date_high and name_len_high.
 ### 7. Modify `add_smart_filter_bytes` Function
 
 Current:
+
 ```rust
 fn add_smart_filter_bytes(data: &[u8], row_width: usize, final_rows: &HashSet<usize>) -> Vec<u8>
 ```
@@ -98,6 +109,7 @@ This already takes `row_width` as parameter - good!
 ### 8. Offset Calculation
 
 The offset calculation in `build_polyglot` needs row_width:
+
 ```rust
 let rows_before = orig_pos / row_width;
 let filtered_pos = orig_pos + rows_before + 1;
@@ -131,7 +143,8 @@ let filtered_pos = orig_pos + rows_before + 1;
 
 ## Edge Cases
 
-1. **Very small content (<1KB)**: width = 40 (minimum), produces tall narrow image
+1. **Very small content (<1KB)**: width = 40 (minimum), produces tall narrow
+   image
 2. **Content near 42KB limit**: width ≈ 200, produces ~200×200 image
 3. **Single tiny file**: May have significant padding overhead
 

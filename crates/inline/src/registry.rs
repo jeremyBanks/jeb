@@ -33,18 +33,10 @@
 //! - Boxes are allocated by this module, pointers are valid for `'static`
 
 use {
-    crate::{
-        inline::InlineCellInner,
-        runtime::resolve_source_path,
-        value::Value,
-    },
+    crate::{inline::InlineCellInner, runtime::resolve_source_path, value::Value},
     once_cell::sync::Lazy,
     parking_lot::Mutex,
-    std::{
-        any::TypeId,
-        collections::HashMap,
-        path::PathBuf,
-    },
+    std::{any::TypeId, collections::HashMap, path::PathBuf},
 };
 
 /// Registry key that can represent either a stable index or a (line, column)

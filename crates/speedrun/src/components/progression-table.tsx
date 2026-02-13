@@ -36,54 +36,60 @@ const ProgressionTable: React.FC<{
       </tr>
     </thead>
     <tbody>
-      {runs.length ? (
-        runs.map(progress => (
-          <tr
-            key={progress.run.id}
-            data-rank={progress.leaderboardRun?.rank ?? "obsolete"}
-          >
-            {showLevels ? (
-              <td className={styles.level}>
-                <AutoColor>{progress.run.level?.name}</AutoColor>
+      {runs.length
+        ? (
+          runs.map((progress) => (
+            <tr
+              key={progress.run.id}
+              data-rank={progress.leaderboardRun?.rank ?? "obsolete"}
+            >
+              {showLevels
+                ? (
+                  <td className={styles.level}>
+                    <AutoColor>{progress.run.level?.name}</AutoColor>
+                  </td>
+                )
+                : null}
+              {showCategories
+                ? (
+                  <td className={styles.level}>
+                    <AutoColor>{progress.run.category?.name}</AutoColor>
+                  </td>
+                )
+                : null}
+              <td className={styles.date}>
+                <Link
+                  href="/[game]/run/[runSrcId]"
+                  as={`/${game.slug}/run/${progress.run.srcId}`}
+                >
+                  <a>
+                    <RunDate date={progress.run.date} />
+                  </a>
+                </Link>
               </td>
-            ) : null}
-            {showCategories ? (
-              <td className={styles.level}>
-                <AutoColor>{progress.run.category?.name}</AutoColor>
+              <td className={styles.links}>
+                <RunLinks run={progress.run} />
               </td>
-            ) : null}
-            <td className={styles.date}>
-              <Link
-                href="/[game]/run/[runSrcId]"
-                as={`/${game.slug}/run/${progress.run.srcId}`}
-              >
-                <a>
-                  <RunDate date={progress.run.date} />
-                </a>
-              </Link>
-            </td>
-            <td className={styles.links}>
-              <RunLinks run={progress.run} />
-            </td>
-            <td className={styles.progress}>
-              <RunDuration ms={progress.progressMs} />
-            </td>
-            <td className={styles.time}>
-              <RunDuration ms={progress.run.timeMs} />
-            </td>
-            <td className={styles.player}>
-              <RunPlayers players={progress.run.players} />
-            </td>
-            <td className={styles.rank}>
-              <RunRank rank={progress.leaderboardRun?.rank} />
-            </td>
+              <td className={styles.progress}>
+                <RunDuration ms={progress.progressMs} />
+              </td>
+              <td className={styles.time}>
+                <RunDuration ms={progress.run.timeMs} />
+              </td>
+              <td className={styles.player}>
+                <RunPlayers players={progress.run.players} />
+              </td>
+              <td className={styles.rank}>
+                <RunRank rank={progress.leaderboardRun?.rank} />
+              </td>
+            </tr>
+          ))
+        )
+        : (
+          <tr className={styles.empty}>
+            <td colSpan={5}>no runs</td>
           </tr>
-        ))
-      ) : (
-        <tr className={styles.empty}>
-          <td colSpan={5}>no runs</td>
-        </tr>
-      )}
+        )}
     </tbody>
   </table>
 );

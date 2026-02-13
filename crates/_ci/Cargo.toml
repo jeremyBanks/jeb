@@ -6,13 +6,16 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 publish = false
+description = ""
+categories = []
+keywords = []
+
+[[bin]]
+name = "_ci"
+path = "src/main.rs"
 
 [dependencies]
 anyhow.workspace = true
 clap = { workspace = true, features = ["derive"] }
 serde = { workspace = true, features = ["derive"] }
 serde_yaml.workspace = true
-
-[[bin]]
-name = "_ci"
-path = "src/main.rs"

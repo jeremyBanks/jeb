@@ -1,9 +1,9 @@
 import { ApolloProvider } from "@apollo/react-hooks";
 import { getDataFromTree } from "@apollo/react-ssr";
 import {
+  defaultDataIdFromObject,
   InMemoryCache,
   NormalizedCacheObject,
-  defaultDataIdFromObject,
 } from "apollo-cache-inmemory";
 import ApolloClient from "apollo-client";
 import { HttpLink } from "apollo-link-http";
@@ -11,20 +11,19 @@ import fetch from "isomorphic-unfetch";
 import { NextPage, NextPageContext } from "next";
 import Head from "next/head";
 import React from "react";
+import process from "node:process";
 
 const onNode = typeof window === "undefined";
 const onNodeDev = onNode && process.env.NODE_ENV !== "production";
 const inBrowser = !onNode;
-const inBrowserDev =
-  inBrowser &&
-  ["localhost", "0.0.0.0", "127.0.0.1"].includes(window.location.hostname);
+const inBrowserDev = inBrowser &&
+  ["localhost", "0.0.0.0", "127.0.0.1"].includes(globalThis.location.hostname);
 export const DEBUG = inBrowserDev || onNodeDev;
 
 export const prodEndpoint = "https://graphql-v0.speedrun.ca/graphql";
 export const devEndpoint = "http://localhost:3001/graphql";
 
-export const GRAPHQL_ENDPOINT =
-  (onNode && process.env.GRAPHQL_ENDPOINT) ||
+export const GRAPHQL_ENDPOINT = (onNode && process.env.GRAPHQL_ENDPOINT) ||
   (DEBUG ? devEndpoint : prodEndpoint);
 
 let globalApolloClient: ApolloClient<NormalizedCacheObject> | undefined;

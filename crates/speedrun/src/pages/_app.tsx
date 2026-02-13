@@ -3,7 +3,7 @@ import Head from "next/head";
 import Router from "next/router";
 
 import styles from "~/components/styles.module.scss";
-import { inc, dec } from "~/components/hooks/use-nprogress";
+import { dec, inc } from "~/components/hooks/use-nprogress";
 import Header from "~/components/header";
 import Footer from "~/components/footer";
 

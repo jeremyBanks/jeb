@@ -7,10 +7,7 @@ use {
     parking_lot::Mutex,
     std::{
         collections::HashSet,
-        path::{
-            Path,
-            PathBuf,
-        },
+        path::{Path, PathBuf},
     },
 };
 

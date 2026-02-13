@@ -15,10 +15,7 @@
 
 use std::{
     env,
-    process::{
-        Command,
-        exit,
-    },
+    process::{Command, exit},
 };
 
 fn main() {

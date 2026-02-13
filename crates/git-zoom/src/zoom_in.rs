@@ -1,8 +1,5 @@
 //! git zoom in implementation.
-use crate::{
-    git,
-    scan,
-};
+use crate::{git, scan};
 const COMMITTER_NAME: &str = "🔎";
 const COMMITTER_EMAIL: &str = "git-zoom-in@localhost";
 /// Normalize a path: strip trailing slashes, remove `.` components, reject
@@ -93,10 +90,7 @@ pub fn zoom_in(path: Option<&str>, allow_empty: bool) -> git::Result<()> {
 mod tests {
     use {
         super::*,
-        std::{
-            fs,
-            process::Command,
-        },
+        std::{fs, process::Command},
         tempfile::TempDir,
     };
     fn setup_test_repo() -> TempDir {

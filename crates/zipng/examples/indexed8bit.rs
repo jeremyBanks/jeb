@@ -1,11 +1,9 @@
-//! Indexed 8-bit PNG example - creates a colorful image using the TURBO palette.
+//! Indexed 8-bit PNG example - creates a colorful image using the TURBO
+//! palette.
 
-use std::fs;
-use zipng::{
-    palettes::singles::TURBO,
-    panic,
-    BitDepth::EightBit,
-    Png,
+use {
+    std::fs,
+    zipng::{BitDepth::EightBit, Png, palettes::singles::TURBO, panic},
 };
 
 fn main() -> Result<(), panic> {

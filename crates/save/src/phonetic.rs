@@ -23,6 +23,7 @@
 /// assert_eq!(hex_to_phonetic("DE64"), "delta echo six four");
 /// assert_eq!(hex_to_phonetic(""), "");
 /// ```
+#[must_use] 
 pub fn hex_to_phonetic(hex: &str) -> String {
     hex.chars()
         .filter_map(|c| {
