@@ -1,23 +1,24 @@
 # matte-1 Implementation Status
 
-## ✅ ALL TESTS PASSING (15/15)
+## ✅ ALL TESTS PASSING (18/18)
 
 ### Test Results
 - Unit tests: 4/4 ✓
 - Integration tests: 5/5 ✓
-- Mid-block tests: 6/6 ✓
+- Mid-block entry tests: 6/6 ✓
+- Mid-block exit tests: 3/3 ✓
 
 ### Success Criteria
 
 1. **Position invariant** ✅ - Z85 blocks appear at same positions as standard Z85
 2. **Mid-block entry cuts** ✅ - Can transition Z85→raw at 1-3 byte boundaries when stable
-3. **Mid-block exit cuts** ⚠️ - Not yet implemented (opportunistic zero-padding strategy)
+3. **Mid-block exit cuts** ✅ - Opportunistic zero-padding strategy implemented
 4. **Raw passthrough** ✅ - Raw sections preserve bytes unchanged
 5. **Length bound** ✅ - Output never longer than standard Z85
 6. **Roundtrip** ✅ - Perfect roundtrip for all test cases
 7. **Standard Z85 compatibility** ✅ - Standard Z85 input decodes correctly
 
-**Score: 6/7 criteria met**
+**Score: 7/7 criteria met ✨**
 
 ## Implementation Details
 
@@ -44,12 +45,11 @@
 - Falls back to full block encoding
 - Re-evaluates raw regions after fallback
 
-### What's Not Implemented
-
 **Mid-block exit (raw→Z85):**
-- Opportunistic zero-padding strategy from design doc
-- Currently only does block-aligned raw sections
-- Would use escape chars to signal exit position
+- Opportunistic zero-padding check after raw sections
+- If remaining bytes to block boundary encode same with/without zeros, emit as partial Z85
+- Seamless transition from raw back to Z85 mid-block
+- Tested with 3 comprehensive test cases
 
 **Multi-section raw:**
 - Splitting raw sections > 255 bytes
@@ -77,8 +77,8 @@ This gives unique reconstruction because partial encoding is invertible.
 ## Score vs Sub-Agents
 
 - **9 previous implementations:** 0/9 implemented ANY extended features
-- **matte-1:** 6/7 success criteria, all tests passing
-- **Key achievement:** First implementation to successfully handle mid-block boundaries
+- **matte-1:** 7/7 success criteria, all tests passing ✨
+- **Key achievement:** First and only implementation to successfully handle both mid-block entry AND exit
 
 ## Next Steps (if needed)
 

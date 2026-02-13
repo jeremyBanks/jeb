@@ -304,6 +304,20 @@ pub fn encode(data: &[u8]) -> Vec<u8> {
                 result.push(raw_len as u8);
                 result.extend_from_slice(&data[raw_start..raw_end]);
                 pos = raw_end;
+                
+                // Mid-block exit: check if we can emit partial Z85 before next block boundary
+                let bytes_into_block_at_exit = pos % 4;
+                if bytes_into_block_at_exit > 0 && pos < data.len() {
+                    let bytes_until_block = 4 - bytes_into_block_at_exit;
+                    let remaining = data.len() - pos;
+                    let bytes_to_check = bytes_until_block.min(remaining);
+                    
+                    if can_exit_opportunistic(&data[pos..pos + bytes_to_check]) {
+                        let partial = encode_partial(&data[pos..pos + bytes_to_check]);
+                        result.extend_from_slice(&partial);
+                        pos += bytes_to_check;
+                    }
+                }
             }
         } else {
             // No more raw regions
