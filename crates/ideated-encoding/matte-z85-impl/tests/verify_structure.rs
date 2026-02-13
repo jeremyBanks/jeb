@@ -29,10 +29,11 @@ fn test_raw_bytes_present_in_output() {
 }
 
 /// Verify mid-block entry creates partial Z85 encoding before escape
+/// Updated: Use 11+ byte raw section to satisfy budget (P1)
 #[test]
 fn test_midblock_entry_structure() {
-    // 1 byte (stable) + 5 spaces (raw) - need 5+ for net savings
-    let data = b"\x32     "; // 0x32 = 50 < 174 (stable)
+    // 1 byte (stable) + 11 spaces (raw) - sufficient budget for mid-block
+    let data = b"\x32           "; // 0x32 = 50 < 174 (stable), 11 spaces
     let encoded = encode(data);
     
     println!("Input: {:?}", data);
@@ -42,20 +43,21 @@ fn test_midblock_entry_structure() {
     // Expected structure:
     // - 2 chars: partial Z85 encoding of byte 0x32 (1 byte → 2 chars)
     // - 1 char: escape (should be '~' for 1-byte-into-block)
-    // - 1 byte: length (5)
-    // - 5 bytes: raw spaces
-    // Total: 2 + 1 + 1 + 5 = 9 bytes
+    // - 1 byte: length (11)
+    // - 11 bytes: raw spaces
+    // Total: 2 + 1 + 1 + 11 = 15 bytes
+    // Standard Z85: ceil(12 * 5/4) = 15 bytes (equal, budget-viable)
     
-    assert_eq!(encoded.len(), 9, "Expected 9 bytes: 2 (partial Z85) + 1 (escape) + 1 (len) + 5 (raw)");
+    assert_eq!(encoded.len(), 15, "Expected 15 bytes: 2 (partial Z85) + 1 (escape) + 1 (len) + 11 (raw)");
     
     // Third byte should be escape char '~' (1 byte into block)
     assert_eq!(encoded[2], b'~', "Expected '~' escape for 1-byte entry. Got: {:?}", encoded[2] as char);
     
-    // Fourth byte should be length 5
-    assert_eq!(encoded[3], 5, "Expected length byte = 5");
+    // Fourth byte should be length 11
+    assert_eq!(encoded[3], 11, "Expected length byte = 11");
     
-    // Last 5 bytes should be literal spaces
-    assert_eq!(&encoded[4..9], b"     ", "Last 5 bytes should be raw spaces");
+    // Last 11 bytes should be literal spaces
+    assert_eq!(&encoded[4..15], b"           ", "Last 11 bytes should be raw spaces");
     
     // Verify roundtrip
     let decoded = decode(&encoded).unwrap();
@@ -63,9 +65,10 @@ fn test_midblock_entry_structure() {
 }
 
 /// Verify 2-byte mid-block entry uses correct escape char
+/// Updated: Use 10+ byte raw section (budget requirement)
 #[test]
 fn test_midblock_entry_2byte_structure() {
-    let data = b"\x32\x33     "; // 2 bytes + 5 spaces
+    let data = b"\x32\x33          "; // 2 bytes + 10 spaces (budget-viable)
     let encoded = encode(data);
     
     println!("2-byte entry encoded: {:?}", String::from_utf8_lossy(&encoded));
@@ -73,22 +76,25 @@ fn test_midblock_entry_2byte_structure() {
     // Expected structure:
     // - 3 chars: partial Z85 encoding of 2 bytes (2 bytes → 3 chars)
     // - 1 char: escape '|' (2 bytes into block)
-    // - 1 byte: length (5)
-    // - 5 bytes: raw spaces
+    // - 1 byte: length (10)
+    // - 10 bytes: raw spaces
+    // Total: 3 + 1 + 1 + 10 = 15 bytes
+    // Standard Z85: ceil(12 * 5/4) = 15 bytes (budget-viable)
     
-    assert_eq!(encoded.len(), 10, "Expected 10 bytes: 3 (partial) + 1 (escape) + 1 (len) + 5 (raw)");
+    assert_eq!(encoded.len(), 15, "Expected 15 bytes: 3 (partial) + 1 (escape) + 1 (len) + 10 (raw)");
     assert_eq!(encoded[3], b'|', "Expected '|' escape for 2-byte entry");
-    assert_eq!(encoded[4], 5, "Expected length = 5");
-    assert_eq!(&encoded[5..10], b"     ");
+    assert_eq!(encoded[4], 10, "Expected length = 10");
+    assert_eq!(&encoded[5..15], b"          ");
     
     let decoded = decode(&encoded).unwrap();
     assert_eq!(decoded, data);
 }
 
 /// Verify 3-byte mid-block entry uses correct escape char
+/// Updated: Use 9+ byte raw section (budget requirement)
 #[test]
 fn test_midblock_entry_3byte_structure() {
-    let data = b"\x32\x33\x34     "; // 3 bytes + 5 spaces
+    let data = b"\x32\x33\x34         "; // 3 bytes + 9 spaces (budget-viable)
     let encoded = encode(data);
     
     println!("3-byte entry encoded: {:?}", String::from_utf8_lossy(&encoded));
@@ -96,13 +102,15 @@ fn test_midblock_entry_3byte_structure() {
     // Expected structure:
     // - 4 chars: partial Z85 encoding of 3 bytes (3 bytes → 4 chars)
     // - 1 char: escape ',' (3 bytes into block)
-    // - 1 byte: length (5)
-    // - 5 bytes: raw spaces
+    // - 1 byte: length (9)
+    // - 9 bytes: raw spaces
+    // Total: 4 + 1 + 1 + 9 = 15 bytes
+    // Standard Z85: ceil(12 * 5/4) = 15 bytes (budget-viable)
     
-    assert_eq!(encoded.len(), 11, "Expected 11 bytes: 4 (partial) + 1 (escape) + 1 (len) + 5 (raw)");
+    assert_eq!(encoded.len(), 15, "Expected 15 bytes: 4 (partial) + 1 (escape) + 1 (len) + 9 (raw)");
     assert_eq!(encoded[4], b',', "Expected ',' escape for 3-byte entry");
-    assert_eq!(encoded[5], 5, "Expected length = 5");
-    assert_eq!(&encoded[6..11], b"     ");
+    assert_eq!(encoded[5], 9, "Expected length = 9");
+    assert_eq!(&encoded[6..15], b"         ");
     
     let decoded = decode(&encoded).unwrap();
     assert_eq!(decoded, data);

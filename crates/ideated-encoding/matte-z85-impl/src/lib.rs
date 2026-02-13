@@ -116,6 +116,20 @@ fn encode_mid_block_entry(bytes: &[u8]) -> (Vec<u8>, bool) {
     (encode_partial(bytes), true)
 }
 
+/// Check if mid-block entry + raw would violate position invariant (P1)
+/// Returns true if the approach is valid (won't exceed standard Z85 length)
+fn check_midblock_budget(leading_bytes: &[u8], raw_len: usize, total_len: usize) -> bool {
+    // Mid-block cost: partial_chars + escape + length + raw_bytes
+    let partial_chars = leading_bytes.len() + 1; // K bytes → K+1 chars
+    let midblock_cost = partial_chars + 1 + 1 + raw_len;
+    
+    // Standard Z85 cost for the same total bytes
+    let standard_cost = (total_len * 5 + 3) / 4;
+    
+    // P1 requirement: output ≤ standard Z85
+    midblock_cost <= standard_cost
+}
+
 /// Encode 1-3 bytes as partial Z85 block
 fn encode_partial(bytes: &[u8]) -> Vec<u8> {
     assert!(bytes.len() > 0 && bytes.len() < 4);
@@ -249,11 +263,14 @@ pub fn encode(data: &[u8]) -> Vec<u8> {
                     result.extend_from_slice(&encode_block(&block));
                     pos += 4;
                 } else if bytes_to_raw < remaining_in_block {
-                    // Mid-block entry: emit partial encoding if stable
+                    // Mid-block entry: emit partial encoding if stable AND budget permits
                     let boundary_bytes = &data[pos..raw_start];
+                    let raw_len = raw_end - raw_start;
+                    let total_len = (raw_end - pos).min(data.len() - pos);
                     let (partial_encoding, stable) = encode_mid_block_entry(boundary_bytes);
                     
-                    if stable {
+                    // Check both stability and budget (P1: never exceed standard Z85 length)
+                    if stable && check_midblock_budget(boundary_bytes, raw_len, total_len) {
                         // Emit partial encoding
                         result.extend_from_slice(&partial_encoding);
                         pos = raw_start;

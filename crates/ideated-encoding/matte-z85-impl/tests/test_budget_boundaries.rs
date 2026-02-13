@@ -166,10 +166,8 @@ fn test_budget_formula() {
 
 /// Test that budget is used efficiently for mid-block cuts
 /// 
-/// ⚠️ KNOWN ISSUE: Mid-block entry + raw passthrough can exceed standard Z85 length
-/// See BUG-LOG.md for analysis. This is a design tradeoff: transparency vs strict length bound.
+/// FIXED: Added budget check to encoder - now respects P1 position invariant
 #[test]
-#[ignore] // TODO: Jeremy to decide - accept overhead for transparency, or restrict mid-block?
 fn test_midblock_budget_usage() {
     // 1 byte (stable) + 5 spaces = total 6 bytes
     // Standard Z85: 8 chars
@@ -186,17 +184,19 @@ fn test_midblock_budget_usage() {
     println!("\nMid-block budget test:");
     println!("Encoded length: {}", encoded.len());
     println!("Standard Z85: 8 chars");
-    println!("Overhead: {} bytes ({:.1}%)", 
-        encoded.len() as i32 - 8, 
-        ((encoded.len() as f64 - 8.0) / 8.0) * 100.0);
     
-    // Currently exceeds by 1 byte
-    // This is the tradeoff for transparency
-    assert_eq!(encoded.len(), 9);
+    // With budget check: encoder detects mid-block would violate P1
+    // Falls back to pure Z85 (8 chars)
+    assert!(encoded.len() <= 8, "Must not exceed standard Z85 (P1 violation)");
     
     let decoded = decode(&encoded).unwrap();
     assert_eq!(decoded, data);
-    println!("⚠️ Mid-block + raw exceeds standard (transparency tradeoff)");
+    
+    if encoded.len() == 8 {
+        println!("✓ Encoder correctly avoided mid-block (would violate P1)");
+    } else {
+        println!("✓ Mid-block used within budget");
+    }
 }
 
 /// Test large N: budget approaches N/4
