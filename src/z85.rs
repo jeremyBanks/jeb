@@ -3153,4 +3153,115 @@ mod tests {
         let result = read_long_escape_prefix(&[2, 58]).unwrap();
         assert_eq!(result, 100);
     }
+
+    // =========================================================================
+    // Tests for 8+ byte passthrough encoding (`|` escape)
+    // =========================================================================
+
+    #[test]
+    fn test_long_escape_encode_8bytes() {
+        // 8 safe bytes at end of input -> 0| rest-of-input
+        let input = b"abcdefgh";
+        let encoded = encode(input);
+        assert_eq!(encoded, "0|abcdefgh");
+
+        // Verify round-trip
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn test_long_escape_encode_20bytes() {
+        // 20 safe bytes at end of input -> 0| rest-of-input
+        let input = b"abcdefghijklmnopqrst";
+        let encoded = encode(input);
+        assert_eq!(encoded, "0|abcdefghijklmnopqrst");
+
+        // Verify round-trip
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn test_long_escape_encode_100bytes() {
+        // 100 safe bytes at end of input
+        let input: Vec<u8> = (0..100).map(|i| b'a' + (i % 26)).collect();
+        let encoded = encode(&input);
+        assert!(encoded.starts_with("0|"));
+        assert_eq!(encoded.len(), 2 + 100); // "0|" + 100 raw bytes
+
+        // Verify round-trip
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn test_long_escape_encode_after_unsafe() {
+        // Unsafe bytes followed by safe bytes
+        let input = b"\x00\x00\x00\x00abcdefghij"; // 4 unsafe + 10 safe
+        let encoded = encode(input);
+        // Should encode 4 zeros as Z85 then use 0| for rest
+        assert!(encoded.starts_with("00000")); // 4 zeros = 5 Z85 chars
+        assert!(encoded.contains("|")); // Should use | escape
+        assert!(encoded.ends_with("abcdefghij"));
+
+        // Verify round-trip
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn test_long_escape_not_used_for_7bytes() {
+        // Only 7 safe bytes - should NOT use | escape, should use ~ instead
+        let input = b"abcdefg";
+        let encoded = encode(input);
+        assert!(!encoded.contains("|"));
+        assert!(encoded.contains("~")); // Should use 7-byte escape
+
+        // Verify round-trip
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn test_long_escape_roundtrip_various() {
+        // Test various lengths from 8 to 50
+        for len in 8..=50 {
+            let input: Vec<u8> = (0..len).map(|i| b'a' + ((i as u8) % 26)).collect();
+            let encoded = encode(&input);
+            let decoded = decode(&encoded).unwrap();
+            assert_eq!(decoded, input, "Failed for length {}", len);
+        }
+    }
+
+    #[test]
+    fn test_generate_long_escape_prefix() {
+        // Test the prefix generation helper
+
+        // Single digit: 8
+        let prefix = generate_long_escape_prefix(8);
+        assert_eq!(prefix, b"8");
+
+        // Single digit: 0
+        let prefix = generate_long_escape_prefix(0);
+        assert_eq!(prefix, b"0");
+
+        // Single digit: 41 (max single digit)
+        let prefix = generate_long_escape_prefix(41);
+        assert_eq!(prefix, &[Z85_ALPHABET[41]]); // 'F'
+
+        // Two digits: 42 = 1*42 + 0
+        // Most significant: 1 (terminal) -> '1'
+        // Least significant: 0+42 = 42 (continuation) -> Z85[42]
+        let prefix = generate_long_escape_prefix(42);
+        assert_eq!(prefix.len(), 2);
+        assert_eq!(prefix[0], b'1');
+        assert_eq!(prefix[1], Z85_ALPHABET[42]); // 'U'
+
+        // Two digits: 100 = 2*42 + 16
+        let prefix = generate_long_escape_prefix(100);
+        assert_eq!(prefix.len(), 2);
+        assert_eq!(prefix[0], b'2');
+        assert_eq!(prefix[1], Z85_ALPHABET[58]); // 'W'
+    }
 }
