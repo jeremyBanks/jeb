@@ -190,7 +190,7 @@ fn render_to_oam() -> Vec<Instruction> {
     
     // ROW_LOOP:
     code.extend(vec![
-        LD_8_IMMEDIATE(D, 0),         // x coord
+        LD_8_IMMEDIATE(B, 0),         // x coord (use B, not D!)
     ]);
     
     // CELL_LOOP:
@@ -208,8 +208,8 @@ fn render_to_oam() -> Vec<Instruction> {
         LD_8_TO_SECONDARY(AT_DE),
         INC_16(DE),
         
-        // X = D * 8 + 8  
-        LD_8_INTERNAL(A, D),
+        // X = B * 8 + 8  
+        LD_8_INTERNAL(A, B),
         SLA(A), SLA(A), SLA(A),
         ADD_IMMEDIATE(8),
         LD_8_TO_SECONDARY(AT_DE),
@@ -228,8 +228,8 @@ fn render_to_oam() -> Vec<Instruction> {
     
     // SKIP_DEAD (grid pointer already incremented above):
     code.extend(vec![
-        INC(D),  // Next column
-        LD_8_INTERNAL(A, D),
+        INC(B),  // Next column (x coord)
+        LD_8_INTERNAL(A, B),
         CP_IMMEDIATE(GRID_W),
         JR_IF(if_NZ, -36), // Back to CELL_LOOP
         
