@@ -1,4 +1,4 @@
-export{z855,decode};let Z="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#",_=x=>~~(x+.99),z855=b=>{if(!b[L])return""
+export{z855,decode};let Z="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#",_=x=>~~(x+.99),_e=k=>k<6?";":k<7?"_":"~",z855=b=>{if(!b[L])return""
 let S=new Set([...Z+",;|~_"].map(c=>c.charCodeAt())),f=(i,k)=>{if(i+k>b[L])return 0;for(let j=0;j<k;j++)if(!S.has(b[i+j]))return 0;return 1}
 let A=v=>{let d=[];for(let i=0;i<5;i++){d.unshift(v%E);v=v/E|0}return d},R=n=>{let x=BigInt(n);x=((x&0x5555555555555555n)<<1n)|((x>>1n)&0x5555555555555555n);x=((x&0x3333333333333333n)<<2n)|((x>>2n)&0x3333333333333333n)
 x=((x&0x0f0f0f0f0f0f0f0fn)<<4n)|((x>>4n)&0x0f0f0f0f0f0f0f0fn);x=((x&0x00ff00ff00ff00ffn)<<8n)|((x>>8n)&0x00ff00ff00ff00ffn)
@@ -13,11 +13,11 @@ let s=u+m+g[L]+1+j,I=s+w-1,x=s*4/5|0,y=I*4/5|0,U=R(x),K=R(y),Q=R(s),T=R(I),k=[U<
 if(Y===null||k[0]<Y[0]||k[0]===Y[0]&&k[1]<Y[1]||k[0]===Y[0]&&k[1]===Y[1]&&k[2]<Y[2]||k[0]===Y[0]&&k[1]===Y[1]&&k[2]===Y[2]&&k[3]<Y[3]){Y=k;X=j}}
 let q=X>0?G(X):[];o+=q.join("")+g.join("")+"|"+".".repeat(X);for(let j=0;j<w;j++)o+=C(b[i+j]);let p=d-q[L]-X
 o+=".".repeat(p);u+=V;i+=w;continue}}}}if(r>=5){let T=0;for(let k of[7,6,5]){if(r<k||T)continue
-if(f(i,k)){let h=r,a=h-k,y=k+1;if(y+_(a*5/4)===_(h*5/4)){let j=k<6?";":k<7?"_":"~";o+=j;for(let l=0;l<k;l++)o+=C(b[i+l])
+if(f(i,k)){let h=r,a=h-k,y=k+1;if(y+_(a*5/4)===_(h*5/4)){let j=_e(k);o+=j;for(let l=0;l<k;l++)o+=C(b[i+l])
 u+=y;i+=k;T=1;break}}if(!T){let x=[];for(let p=0;p<=3;p++){let m=p+k;if(i+m>n)continue;let a=r-m,y=m+2;if(y+_(a*5/4)!==_(r*5/4))continue
 let s=i+p,I=s+k-1,U=R(s),K=R(I),z=U<K?U:K,t=U<K?K:U;x[P]({z,t,p})}x.sort((a,c)=>{if(a.z<c.z)return -1;if(a.z>c.z)return 1
 if(a.t<c.t)return -1;if(a.t>c.t)return 1;return 0});for(let {p} of x){let s=i+p;if(!f(s,k))continue;let v=$(b,i)
-let h=H(v,p+1),j=k<6?";":k<7?"_":"~";o+=h.join("")+j;for(let l=0;l<k;l++)o+=C(b[s+l]);u+=p+k+2;i+=p+k;T=1;break}if(T)break}}if(T)continue}
+let h=H(v,p+1),j=_e(k);o+=h.join("")+j;for(let l=0;l<k;l++)o+=C(b[s+l]);u+=p+k+2;i+=p+k;T=1;break}if(T)break}}if(T)continue}
 if(r>=4&&f(i,4)){o+=",";for(let j=0;j<4;j++)o+=C(b[i+j]);u+=5;i+=4;continue}if(r>=4){let x=[];for(let p=1;p<=3;p++){let s=i+p
 if(s+4>n)continue;if(!f(s,4))continue;let I=s+3,U=R(s),K=R(I);x[P]({z:U<K?U:K,t:U<K?K:U,p})}x.sort((a,c)=>{if(a.z!==c.z)return a.z<c.z?-1:1
 if(a.t!==c.t)return a.t<c.t?-1:1;return 0});let V=0;for(let {p} of x){let s=i+p,y=[b[s],b[s+1],b[s+2],b[s+3]],v=$(b,i)
