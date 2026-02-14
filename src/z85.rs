@@ -895,6 +895,66 @@ fn get_passthrough_length(byte: u8) -> Option<usize> {
     }
 }
 
+/// Check if a byte is the long escape character `|`.
+#[inline]
+fn is_long_escape(byte: u8) -> bool {
+    byte == RAW_ESCAPE_LONG
+}
+
+/// Read the variable-length prefix for the `|` escape.
+///
+/// The prefix uses base-42 with continuation bits:
+/// - Values 0-41: terminal digit (no more digits)
+/// - Values 42-83: continuation digit (subtract 42, continue reading)
+///
+/// The digits are read backwards from the `|`, but interpreted as big-endian.
+/// The `prefix_digits` slice should contain the Z85 digit VALUES (0-84), NOT ASCII.
+///
+/// Returns the decoded length value, or error if invalid.
+fn read_long_escape_prefix(prefix_digits: &[u8]) -> Result<u64, DecodeError> {
+    if prefix_digits.is_empty() {
+        // No prefix digits before `|` means length 0 (rest of input is raw)
+        // This is allowed: `0|` at the start of a stream
+        return Err(DecodeError::InvalidLength);
+    }
+
+    // Read backwards from the |
+    // The last digit in prefix_digits is the one immediately before |
+    let mut value: u64 = 0;
+    let mut multiplier: u64 = 1;
+
+    for i in (0..prefix_digits.len()).rev() {
+        let digit = prefix_digits[i];
+
+        if digit > 83 {
+            // Invalid Z85 digit value for prefix
+            return Err(DecodeError::InvalidCharacter(digit));
+        }
+
+        if digit >= 42 {
+            // Continuation digit
+            let base_value = (digit - 42) as u64;
+            value = value.checked_add(base_value.checked_mul(multiplier).ok_or(DecodeError::Overflow)?)
+                .ok_or(DecodeError::Overflow)?;
+            multiplier = multiplier.checked_mul(42).ok_or(DecodeError::Overflow)?;
+        } else {
+            // Terminal digit (0-41)
+            let base_value = digit as u64;
+            value = value.checked_add(base_value.checked_mul(multiplier).ok_or(DecodeError::Overflow)?)
+                .ok_or(DecodeError::Overflow)?;
+            // This is the last digit to process
+            // But we process in reverse, so this should be at position 0
+            if i != 0 {
+                // There are more digits before the terminal - invalid prefix
+                return Err(DecodeError::InvalidLength);
+            }
+            break;
+        }
+    }
+
+    Ok(value)
+}
+
 /// Decode a Z85 string back into bytes.
 ///
 /// # Algorithm
