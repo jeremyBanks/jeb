@@ -205,14 +205,12 @@ proptest! {
 // Property 8: Empty Input Edge Case
 // =============================================================================
 
-proptest! {
-    #[test]
-    fn empty_input_roundtrips() {
-        let data: Vec<u8> = vec![];
-        let encoded = encode(&data);
-        let decoded = decode(&encoded).expect("empty input should decode");
-        prop_assert_eq!(decoded, data, "empty input roundtrip failed");
-    }
+#[test]
+fn empty_input_roundtrips() {
+    let data: Vec<u8> = vec![];
+    let encoded = encode(&data);
+    let decoded = decode(&encoded).expect("empty input should decode");
+    assert_eq!(decoded, data, "empty input roundtrip failed");
 }
 
 // =============================================================================
