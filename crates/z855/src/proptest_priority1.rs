@@ -81,14 +81,8 @@ proptest! {
         let z855_output = encode(&data);
         let std_z85_output = standard_z85_encode(&data);
         
-        // Remove any escape characters and raw bytes to isolate Z85 chars
-        let z855_z85_only: String = z855_output
-            .chars()
-            .filter(|&c| Z85_ALPHABET.contains(&(c as u8)))
-            .collect();
-        
-        // For aligned blocks, Z85 characters should match positions
-        // (This is a weak form of position invariance - better test below)
+        // For aligned blocks, output length should match or be less
+        // (This is a weak form of position invariance - full test would compare actual positions)
         prop_assert!(z855_output.len() <= std_z85_output.len());
     }
 }
