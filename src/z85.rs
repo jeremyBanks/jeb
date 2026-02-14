@@ -1084,6 +1084,12 @@ fn read_long_escape_prefix(prefix_digits: &[u8]) -> Result<u64, DecodeError> {
         }
     }
 
+    // Check if the first digit (index 0) was a continuation digit
+    // A valid prefix must have a terminal digit as the most significant digit
+    if prefix_digits[0] >= 42 {
+        return Err(DecodeError::InvalidLength);
+    }
+
     Ok(value)
 }
 

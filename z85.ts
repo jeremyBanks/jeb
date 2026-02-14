@@ -216,6 +216,9 @@ function readLongEscapePrefix(prefixDigits: number[]): number {
       if (multiplier > Number.MAX_SAFE_INTEGER) {
         throw new Z85DecodeError("prefix value overflow");
       }
+      if (value > Number.MAX_SAFE_INTEGER) {
+        throw new Z85DecodeError("long escape prefix value overflow");
+      }
     } else {
       // Terminal digit (0-41)
       value += digit * multiplier;
@@ -227,6 +230,12 @@ function readLongEscapePrefix(prefixDigits: number[]): number {
       }
       break;
     }
+  }
+
+  // Check if the first digit (index 0) was a continuation digit
+  // A valid prefix must have a terminal digit as the most significant digit
+  if (prefixDigits[0] >= 42) {
+    throw new Z85DecodeError("invalid prefix structure");
   }
 
   return value;
