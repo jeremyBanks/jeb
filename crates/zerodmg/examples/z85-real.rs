@@ -117,58 +117,93 @@ fn delay_loop_de() -> Vec<Instruction> {
     ]
 }
 
+/// Divide E by 85 using repeated subtraction
+/// Input: E = dividend (8-bit)
+/// Output: C = quotient (8-bit), A = remainder (8-bit, in range 0-84)
+fn div_e_by_85() -> Vec<Instruction> {
+    use Instruction::*;
+    use U8Register::*;
+    use FlagCondition::*;
+    
+    vec![
+        // Initialize quotient to 0
+        LD_8_IMMEDIATE(C, 0),
+        
+        // DIV_LOOP: Subtract 85 from E repeatedly
+        LD_8_INTERNAL(A, E),
+        CP_IMMEDIATE(85),
+        JR_IF(if_C, 6), // If A < 85, exit loop (jump forward +6 to EXIT)
+        
+        // A >= 85, subtract
+        SUB_IMMEDIATE(85),
+        LD_8_INTERNAL(E, A),
+        
+        // Increment quotient
+        INC(C),
+        
+        // Loop back
+        JR(-11), // Jump back -11 bytes to LOOP_START
+        
+        // LOOP_EXIT: E < 85
+        LD_8_INTERNAL(A, E), // Remainder in A
+        // C has quotient
+    ]
+}
+
 fn test_encoding() -> Vec<Instruction> {
     use Instruction::*;
     use U8Register::*;
     use U16Register::*;
     use FlagCondition::*;
     
-    // Test: encode a 16-bit value (for now, will extend to 32-bit later)
-    // Using value 1234 (0x04D2)
-    // This requires actual division, not hardcoded digits
+    // Test: encode 8-bit value using actual division
+    // Using value 210 (0xD2) - small enough for 8-bit division
+    // 210 / 85 = 2 remainder 40
+    // 2 / 85 = 0 remainder 2
+    // So digits should be: 0, 0, 0, 2, 40 (reading left to right)
     
     let mut code = vec![
-        // Store test value (1234 = 0x04D2) as 16-bit at 0xC100-0xC101 (little-endian)
+        // Store test value at 0xC100 (8-bit for now)
         LD_16_IMMEDIATE(HL, 0xC100),
-        LD_8_IMMEDIATE(A, 0xD2), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // low byte
-        LD_8_IMMEDIATE(A, 0x04), LD_8_INTERNAL(AT_HL, A),              // high byte
+        LD_8_IMMEDIATE(A, 0xD2), // 210
+        LD_8_INTERNAL(AT_HL, A),
     ];
     
-    // Encode: repeatedly divide by 85, store remainder as digit
-    // We'll compute digits from least significant to most (right to left)
-    // Store 5 digit indices at 0xC110-0xC114
-    
-    // For a 16-bit value, we only need to compute up to 3 digits
-    // (85^3 = 614,125 > 65,535)
-    // But we'll still generate 5 to match Z85 format (padding with 0s)
+    // Compute digits from right to left (least to most significant)
+    // Store at 0xC114, 0xC113, 0xC112, 0xC111, 0xC110
     
     code.extend(vec![
-        // Digit computation: for each digit (5 iterations)
-        // Read 16-bit value from 0xC100-0xC101
-        // Divide by 85, store remainder, update value with quotient
-        
-        LD_16_IMMEDIATE(DE, 0xC110), // Digit storage pointer (will fill right-to-left)
-        LD_16_IMMEDIATE(DE, 0xC114), // Start from last digit (index 4)
-        LD_8_IMMEDIATE(C, 5),         // Digit counter
+        LD_16_IMMEDIATE(HL, 0xC114), // Start at last digit (index 4)
+        LD_8_IMMEDIATE(B, 5),         // Digit counter
     ]);
     
-    // For now, use simplified algorithm: compute digits for small test value
-    // TODO: Implement actual 16-bit division by 85
-    // For test value 1234:
-    // 1234 % 85 = 14 (digit 4)
-    // 1234 / 85 = 14
-    // 14 % 85 = 14 (digit 3)
-    // 14 / 85 = 0
-    // Rest are 0 (digits 2, 1, 0)
-    
-    // Hardcoded for now:
+    // DIGIT_LOOP: Compute one digit per iteration
     code.extend(vec![
-        LD_16_IMMEDIATE(HL, 0xC110),
-        LD_8_IMMEDIATE(A, 0), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // digit 0
-        LD_8_IMMEDIATE(A, 0), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // digit 1
-        LD_8_IMMEDIATE(A, 0), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // digit 2
-        LD_8_IMMEDIATE(A, 14), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // digit 3
-        LD_8_IMMEDIATE(A, 14), LD_8_INTERNAL(AT_HL, A),              // digit 4
+        // Load value into E (8-bit for now)
+        LD_16_IMMEDIATE(DE, 0xC100),
+        LD_8_FROM_SECONDARY(AT_DE),
+        LD_8_INTERNAL(E, A),
+        
+        // Divide E by 85: quotient in C, remainder in A
+    ]);
+    
+    code.extend(div_e_by_85());
+    
+    code.extend(vec![
+        // Store remainder (digit) at (HL)
+        LD_8_INTERNAL(AT_HL, A),
+        
+        // Store quotient back to 0xC100 for next iteration
+        LD_16_IMMEDIATE(DE, 0xC100),
+        LD_8_INTERNAL(A, C),
+        LD_8_TO_SECONDARY(AT_DE),
+        
+        // Move to next digit position (decrement HL for right-to-left)
+        DEC_16(HL),
+        
+        // Loop
+        DEC(B),
+        JR_IF(if_NZ, -29), // 27 bytes loop body + 2 for JR
     ]);
     
     // Output the 5 digits
