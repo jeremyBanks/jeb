@@ -13,7 +13,7 @@ cargo-fuzz = true
 
 [dependencies]
 z855 = { path = ".." }
-libfuzzer-sys.workspace = true
+libfuzzer-sys = "0.4"
 
 [[bin]]
 name = "fuzz_roundtrip"
