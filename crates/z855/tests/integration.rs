@@ -146,9 +146,10 @@ fn find_encoded_files(test_cases_dir: &Path, base_name: &str) -> EncodedFiles {
         expected: None,
     };
 
-    // Read the standard .encoded file
+    // Read the standard .encoded file (binary-safe for passthrough bytes)
     let encoded_path = test_cases_dir.join(format!("{}.encoded", base_name));
-    result.standard = fs::read_to_string(&encoded_path).expect("Failed to read encoded file").trim().to_string();
+    let encoded_bytes = fs::read(&encoded_path).expect("Failed to read encoded file");
+    result.standard = unsafe { std::str::from_utf8_unchecked(&encoded_bytes) }.trim().to_string();
 
     // Scan for alternative encoded files
     for entry in fs::read_dir(test_cases_dir).expect("Failed to read test-cases directory") {
@@ -159,12 +160,14 @@ fn find_encoded_files(test_cases_dir: &Path, base_name: &str) -> EncodedFiles {
         let expected_name = format!("{}.encoded-expected", base_name);
         if file_name == expected_name {
             let path = test_cases_dir.join(&file_name);
-            result.expected = Some(fs::read_to_string(&path).expect("Failed to read expected file").trim().to_string());
+            let bytes = fs::read(&path).expect("Failed to read expected file");
+            result.expected = Some(unsafe { std::str::from_utf8_unchecked(&bytes) }.trim().to_string());
         }
         // Check for .encoded-Y pattern (but not .encoded-expected)
         else if file_name.starts_with(&format!("{}.encoded-", base_name)) && file_name != expected_name {
             let path = test_cases_dir.join(&file_name);
-            let alt_encoded = fs::read_to_string(&path).expect("Failed to read alternative file").trim().to_string();
+            let bytes = fs::read(&path).expect("Failed to read alternative file");
+            let alt_encoded = unsafe { std::str::from_utf8_unchecked(&bytes) }.trim().to_string();
             result.alternatives.push(alt_encoded);
         }
     }

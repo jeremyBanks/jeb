@@ -9,3 +9,6 @@ name = "z855"
 path = "src/main.rs"
 
 [dependencies]
+
+[dev-dependencies]
+proptest = "1.10.0"
