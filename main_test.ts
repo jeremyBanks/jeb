@@ -540,3 +540,101 @@ Deno.test("test cases from shared directory", async () => {
     }
   }
 });
+
+// =========================================================================
+// Tests for 8+ byte passthrough decoding (`|` escape)
+// =========================================================================
+
+Deno.test("long escape decode 8 bytes", () => {
+  // 8 bytes exactly - no padding needed
+  // Structure: [prefix digit 8][|][8 raw bytes]
+  // Z85 digit for value 8 is '8'
+  const encoded = "8|abcdefgh";
+  const decoded = decode(encoded);
+  assertEquals(decoded, new TextEncoder().encode("abcdefgh"));
+});
+
+Deno.test("long escape decode 9 bytes", () => {
+  // 9 bytes - needs 1 padding char (the final |)
+  const encoded = "9|abcdefghi|";
+  const decoded = decode(encoded);
+  assertEquals(decoded, new TextEncoder().encode("abcdefghi"));
+});
+
+Deno.test("long escape decode 20 bytes", () => {
+  // 20 bytes - needs more padding
+  // Z85[20] is 'k' (20 is in 10-35 range, so 'a' + (20-10) = 'k')
+  const encoded = "k|abcdefghijklmnopqrst..|";
+  const decoded = decode(encoded);
+  assertEquals(decoded, new TextEncoder().encode("abcdefghijklmnopqrst"));
+});
+
+Deno.test("long escape decode 41 bytes", () => {
+  // 41 bytes - single digit max (41 < 42)
+  // Z85[41] = position 41: 0-9(10), a-z(26) = positions 10-35, A-Z starts at 36
+  // 41 - 36 = 5, so it's 'F'
+  const rawBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO";
+  const encoded = `F|${rawBytes}`;
+  const decoded = decode(encoded);
+  assertEquals(decoded.length, 41);
+  assertEquals(decoded, new TextEncoder().encode(rawBytes));
+});
+
+Deno.test("long escape decode 100 bytes", () => {
+  // 100 bytes - multi-digit prefix
+  // 100 = 2*42 + 16
+  // Most significant: 2 (terminal) -> Z85[2] = '2'
+  // Least significant: 16 (continuation) -> Z85[16+42] = Z85[58]
+  // 58 = 36 + 22 = 'W'
+  // Prefix: "2W"
+  const rawBytes = Array.from({ length: 100 }, (_, i) =>
+    String.fromCharCode("a".charCodeAt(0) + (i % 26))
+  ).join("");
+  const encoded = `2W|${rawBytes}`;
+  const decoded = decode(encoded);
+  assertEquals(decoded.length, 100);
+  assertEquals(decoded, new TextEncoder().encode(rawBytes));
+});
+
+Deno.test("long escape decode rest of input (0|)", () => {
+  // 0| means rest of input is raw
+  const encoded = "0|hello world!";
+  const decoded = decode(encoded);
+  assertEquals(decoded, new TextEncoder().encode("hello world!"));
+});
+
+Deno.test("long escape decode invalid length 1-7", () => {
+  // Length 1-7 should error
+  for (let len = 1; len <= 7; len++) {
+    const prefix = String(len);
+    const encoded = `${prefix}|xxxxxxxx`;
+    let threw = false;
+    try {
+      decode(encoded);
+    } catch {
+      threw = true;
+    }
+    assertEquals(threw, true, `Length ${len} should throw`);
+  }
+});
+
+Deno.test("long escape decode insufficient bytes", () => {
+  // 8-byte escape with only 7 bytes available
+  let threw = false;
+  try {
+    decode("8|abcdefg");
+  } catch {
+    threw = true;
+  }
+  assertEquals(threw, true);
+});
+
+Deno.test("long escape followed by normal z85", () => {
+  // Long escape followed by normal Z85 encoded data
+  // 8|abcdefgh followed by Z85 for [0,0,0,0]
+  const encoded = "8|abcdefgh00000";
+  const decoded = decode(encoded);
+  assertEquals(decoded.length, 12); // 8 + 4
+  assertEquals(decoded.slice(0, 8), new TextEncoder().encode("abcdefgh"));
+  assertEquals(decoded.slice(8, 12), new Uint8Array([0, 0, 0, 0]));
+});
