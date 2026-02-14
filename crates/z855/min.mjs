@@ -1,4 +1,4 @@
-export{z855,decode};let Z="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#",_=x=>~~(x+.99),_e=k=>k<6?";":k<7?"_":"~",srt=(a,c)=>a.z!==c.z?a.z<c.z?-1:1:a.t!==c.t?a.t<c.t?-1:1:0,z855=b=>{if(!b[L])return""
+export{z855,decode};let Z="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#",_=x=>~~(x+.99),_e=k=>k<6?";":k<7?"_":"~",srt=(a,c)=>a.z!==c.z?a.z<c.z?-1:1:a.t!==c.t?a.t<c.t?-1:1:0,b85=(v,n)=>{let s="";for(let j=n;j--;){s=Z[v%E]+s;v=v/E|0}return s},z855=b=>{if(!b[L])return""
 let S=new Set([...Z+",;|~_"].map(c=>c.charCodeAt())),f=(i,k)=>{if(i+k>b[L])return 0;for(let j=0;j<k;j++)if(!S.has(b[i+j]))return 0;return 1}
 let A=v=>{let d=[];for(let i=0;i<5;i++){d.unshift(v%E);v=v/E|0}return d},R=n=>{n=((n&0x55555555)<<1)|((n>>>1)&0x55555555);n=((n&0x33333333)<<2)|((n>>>2)&0x33333333);n=((n&0x0f0f0f0f)<<4)|((n>>>4)&0x0f0f0f0f);n=((n&0x00ff00ff)<<8)|((n>>>8)&0x00ff00ff);n=(n<<16)|(n>>>16);return n>>>0},G=n=>{if(n<42)return[Z[n]];let d=[]
 while(n>0){d[P](n%42);n=n/42|0}d.reverse();let r=[];for(let i=0;i<d[L];i++)r[P](Z[d[i]+(i>0?42:0)]);return r},D=(v,p)=>A(v)[O](0,p),H=(v,p)=>A(v)[O](0,p).map(x=>Z[x]),W=(v,n)=>A(v)[O](5-n).map(x=>Z[x])
@@ -19,9 +19,7 @@ if(r>=4&&f(i,4)){o+=",";for(let j=0;j<4;j++)o+=C(b[i+j]);u+=5;i+=4;continue}if(r
 if(s+4>n)continue;if(!f(s,4))continue;let I=s+3,U=R(s),K=R(I);x[P]({z:U<K?U:K,t:U<K?K:U,p})}x.sort(srt);let V=0;for(let {p} of x){let s=i+p,y=[b[s],b[s+1],b[s+2],b[s+3]],v=$(b,i)
 let m=4-p,l=y[O](0,m);if(!J(v,p,l))continue;let h=y[O](m),a=i+4,w=a+p,e=4-p;if(w+e>n)continue;let z=[];for(let j=0;j<p;j++)z[P](h[j])
 for(let j=0;j<e;j++)z[P](b[w+j]);let A=$(z,0),g=H(v,p);o+=g.join("")+",";for(let j of y)o+=C(j)
-o+=W(A,5-p).join("");u+=10;i+=8;V=1;break}if(V)continue}if(r>=4){let v=$(b,i),s=""
-for(let j=5;j--;){s=Z[v%E]+s;v=v/E|0}o+=s;u+=5;i+=4}else{let m=r,c=m+1,v=m===1?b[i]:m===2?(b[i]<<8)|b[i+1]:(b[i]<<16)|(b[i+1]<<8)|b[i+2],s=""
-for(let j=c;j--;){s=Z[v%E]+s;v=v/E|0}o+=s;u+=c;i+=m}}return o},decode=(s)=>{let S=s[L];if(!S)return new U(0);let q=j=>K(s[j]),W=(g,e)=>{let v=0,m=1,p=e,c=0;while(p>0){p--;c++;let d=g[p]
+o+=W(A,5-p).join("");u+=10;i+=8;V=1;break}if(V)continue}if(r>=4){let v=$(b,i);o+=b85(v,5);u+=5;i+=4}else{let m=r,c=m+1,v=m===1?b[i]:m===2?(b[i]<<8)|b[i+1]:(b[i]<<16)|(b[i+1]<<8)|b[i+2];o+=b85(v,c);u+=c;i+=m}}return o},decode=(s)=>{let S=s[L];if(!S)return new U(0);let q=j=>K(s[j]),W=(g,e)=>{let v=0,m=1,p=e,c=0;while(p>0){p--;c++;let d=g[p]
 d>83&&Q();if(d>=42){v+=(d-42)*m;m*=42}else{v+=d*m;break}}c&&g[p]<42||Q();return{v,c}},X=(h,l)=>{let m=l[L],b=h.reduce((p,x)=>p*E+x,0),I=E**(5-h[L]),R=b*I,u=R+I
 if(!m)return R>F?-1:R;let k=0;for(let j=0;j<m;j++)k=k<<8|l[j];let G=1<<m*8,y=R%G,c=y<=k?R-y+k:R-y+G+k
 return c>=u||c>F?-1:c},Y=(g,l)=>{let n=g[L],m=l[L],b=0;for(let j=0;j<n;j++)b=b*E+g[j];let I=E**(5-n),R=b*I,u=R+I;if(!m)return R>F?-1:R
