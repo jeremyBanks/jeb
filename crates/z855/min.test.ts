@@ -232,7 +232,9 @@ Deno.test("Encoder uses passthrough for safe bytes", async (t) => {
     const input = new Uint8Array([97, 98, 99, 100, 101, 102, 103, 104, 0]); // abcdefgh + null
     const encoded = min.z855(input);
     // Should use 8| passthrough for first 8, then standard Z85 for trailing byte
-    assertEquals(encoded.startsWith("8|abcdefgh|"), true);
+    // No terminating | because paddingNeeded == 0
+    assertEquals(encoded.startsWith("8|abcdefgh"), true);
+    assertEquals(encoded, "8|abcdefgh00");
   });
 });
 
