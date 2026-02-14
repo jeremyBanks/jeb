@@ -7,3 +7,6 @@ mod proptest;
 
 #[cfg(test)]
 mod proptest_priority1;
+
+#[cfg(test)]
+mod proptest_priority2;
