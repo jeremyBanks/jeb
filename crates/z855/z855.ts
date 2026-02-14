@@ -89,7 +89,7 @@ const RAW_ESCAPE_7 = "~".charCodeAt(0); // 0x7E
 
 /**
  * The 8+ byte raw passthrough escape character (long escape).
- * Structure: [prefix digits][|][raw bytes][padding][|]
+ * Structure: [prefix digits][|][raw bytes][padding]
  * The prefix encodes the raw byte count using base-42 with continuation bits.
  * Values 0-41 are terminal digits, 42-83 are continuation digits (+42).
  * Special cases:
@@ -614,7 +614,7 @@ export function decode(input: string): Uint8Array {
     // Check for long escape (|) first
     if (isLongEscape(charCode)) {
       // The | escape for 8+ bytes
-      // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after][|]
+      // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after]
       //
       // The prefix digits are in currentBlockDigits (the accumulated Z85 digits)
       // We read them to get offset (if present) and length.
@@ -1380,7 +1380,7 @@ function areKBytesSafe(input: Uint8Array, startIdx: number, k: number): boolean 
 // Long passthrough allows encoding 8 or more consecutive safe bytes using the
 // `|` escape character with a variable-length prefix.
 //
-// Structure: [prefix digits][|][raw bytes][padding][|]
+// Structure: [prefix digits][|][raw bytes][padding]
 //
 // The prefix encodes the raw byte count using base-42 with continuation bits.
 // Special case: 0| means "rest of input is raw" (can be shorter than standard Z85).
@@ -1458,7 +1458,7 @@ function tryLongPassthrough(
   }
 
   // Not at end: use length-prefixed escape
-  // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after][|]
+  // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after]
   //
   // We need to calculate padding to maintain length invariant.
   //
@@ -1545,14 +1545,9 @@ function tryLongPassthrough(
   // Remaining = (paddingNeeded - offsetPrefix.length) - offset
   const paddingAfter = paddingNeeded - offsetPrefix.length - offset;
 
-  // Add remaining padding: (paddingAfter - 1) dots + final |
-  // But if paddingAfter == 1, just the |
-  // If paddingAfter == 0, no trailing padding at all
-  if (paddingAfter > 0) {
-    for (let i = 0; i < paddingAfter - 1; i++) {
-      output.push(String.fromCharCode(RAW_ESCAPE_PADDING));
-    }
-    output.push(String.fromCharCode(RAW_ESCAPE_LONG)); // Final | terminator
+  // Add remaining padding: all dots, no final |
+  for (let i = 0; i < paddingAfter; i++) {
+    output.push(String.fromCharCode(RAW_ESCAPE_PADDING));
   }
 
   return {
@@ -1594,8 +1589,7 @@ function findBestOffset(
     const offsetPrefixLen = offset > 0 ? generateLongEscapePrefix(offset).length : 0;
 
     // Check if this offset is valid (fits in padding budget)
-    // We need: offsetPrefixLen + offset (dots before) + remaining <= paddingNeeded
-    // Where remaining includes (paddingAfter - 1) dots + final |
+    // We need: offsetPrefixLen + offset (dots before) + paddingAfter (dots after) <= paddingNeeded
     // Actually: offsetPrefixLen + offset + paddingAfter = paddingNeeded
     // And paddingAfter must be >= 0
     if (offsetPrefixLen + offset > paddingNeeded) {

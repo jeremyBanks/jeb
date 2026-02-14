@@ -438,7 +438,7 @@ async function findEncodedFiles(
 
   // Read the standard .encoded file (trim trailing newlines)
   const encodedPath = `${testCasesDir}/${baseName}.encoded`;
-  result.standard = (await Deno.readTextFile(encodedPath)).trimEnd();
+  result.standard = (await Deno.readTextFile(encodedPath)).trim();
 
   // Scan for alternative encoded files
   for await (const entry of Deno.readDir(testCasesDir)) {
@@ -446,11 +446,11 @@ async function findEncodedFiles(
 
     // Check for .encoded-expected
     if (name === `${baseName}.encoded-expected`) {
-      result.expected = (await Deno.readTextFile(`${testCasesDir}/${name}`)).trimEnd();
+      result.expected = (await Deno.readTextFile(`${testCasesDir}/${name}`)).trim();
     }
     // Check for .encoded-Y pattern (but not .encoded-expected)
     else if (name.startsWith(`${baseName}.encoded-`) && name !== `${baseName}.encoded-expected`) {
-      const altEncoded = (await Deno.readTextFile(`${testCasesDir}/${name}`)).trimEnd();
+      const altEncoded = (await Deno.readTextFile(`${testCasesDir}/${name}`)).trim();
       result.alternatives.push(altEncoded);
     }
   }
