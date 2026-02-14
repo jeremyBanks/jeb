@@ -1,274 +1,41 @@
 export default {encode,decode}
-/**@returns {string}*/export function encode(/**@type {Uint8Array}*/input) {
-  if(input.length===0)return""
-
-  // Z85 alphabet
-  const A="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#"
-  // Safe chars (Z85 + ,;|~_)
-  const S="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#,;|~_"
-  const safe=new Set([...S].map(c=>c.charCodeAt(0)))
-
-  // Check if all bytes from idx are safe
-  const allSafe=(idx,len)=>{
-    for(let i=0;i<len;i++)if(!safe.has(input[idx+i]))return false
-    return true
-  }
-
-  // Encode 4 bytes to 5 chars
-  const enc4=(idx)=>{
-    let v=((input[idx]<<24)|(input[idx+1]<<16)|(input[idx+2]<<8)|input[idx+3])>>>0
-    let s=""
-    for(let i=0;i<5;i++){s=A[v%85]+s;v=Math.floor(v/85)}
-    return s
-  }
-
-  let out="",i=0
-
-  while(i<input.length){
-    const rem=input.length-i
-
-    // Check for 0| (rest of input is all safe)
-    if(rem>=8&&allSafe(i,rem)){
-      out+=A[0]+"|"
-      for(let j=i;j<input.length;j++)out+=String.fromCharCode(input[j])
-      return out
-    }
-
-    // Check for 8| (exactly 8 safe bytes, not at end)
-    if(rem>=8&&allSafe(i,8)&&(rem>8||!allSafe(i,rem))){
-      out+=A[8]+"|"
-      for(let j=0;j<8;j++)out+=String.fromCharCode(input[i+j])
-      out+="|"
-      i+=8
-      continue
-    }
-
-    // Check for , (4 safe bytes block-aligned)
-    if(rem>=4&&allSafe(i,4)){
-      out+=","
-      for(let j=0;j<4;j++)out+=String.fromCharCode(input[i+j])
-      i+=4
-      continue
-    }
-
-    // Standard Z85 encoding
-    if(rem>=4){
-      out+=enc4(i)
-      i+=4
-    }else{
-      // Trailing 1-3 bytes
-      let v=0
-      for(let j=0;j<rem;j++)v=(v<<8)|input[i+j]
-      let s=""
-      for(let j=0;j<=rem;j++){s=A[v%85]+s;v=Math.floor(v/85)}
-      out+=s
-      i+=rem
-    }
-  }
-
-  return out
+/**@returns {string}*/export function encode(/**@type {Uint8Array}*/d) {
+if(!d.length)return""
+const A="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#"
+const S=new Set([...A+",;|~_"].map(c=>c.charCodeAt(0)))
+const ok=(x,n)=>{for(let j=0;j<n;j++)if(!S.has(d[x+j]))return 0;return 1}
+const e4=x=>{let v=((d[x]<<24)|(d[x+1]<<16)|(d[x+2]<<8)|d[x+3])>>>0,s="";for(let j=0;j<5;j++){s=A[v%85]+s;v=v/85|0}return s}
+let o="",i=0,n=d.length
+while(i<n){
+let r=n-i
+if(r>=8&&ok(i,r)){o+=A[0]+"|";for(;i<n;)o+=String.fromCharCode(d[i++]);return o}
+if(r>=8&&ok(i,8)){o+=A[8]+"|";for(let j=0;j<8;)o+=String.fromCharCode(d[i+j++]);o+="|";i+=8;continue}
+if(r>=4&&ok(i,4)){o+=",";for(let j=0;j<4;)o+=String.fromCharCode(d[i+j++]);i+=4;continue}
+if(r>=4){o+=e4(i);i+=4}
+else{let v=0;for(let j=0;j<r;j++)v=(v<<8)|d[i+j];let s="";for(let j=0;j<=r;j++){s=A[v%85]+s;v=v/85|0}o+=s;i+=r}
 }
-
-/**@returns {Uint8Array}*/export function decode(/**@type {string}*/input) {
-  if(input.length===0)return new Uint8Array(0)
-
-  const A="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#"
-  const D=new Array(256).fill(-1)
-  for(let i=0;i<85;i++)D[A.charCodeAt(i)]=i
-
-  const COMMA=44,SEMI=59,UNDER=95,TILDE=126,PIPE=124,DOT=46
-
-  // Read base-42 number backwards from digits array
-  const readB42=(digits,end)=>{
-    let v=0,m=1,pos=end,cnt=0
-    while(pos>0){
-      pos--;cnt++
-      const d=digits[pos]
-      if(d>83)throw new Error("invalid prefix digit")
-      if(d>=42){v+=(d-42)*m;m*=42}
-      else{v+=d*m;break}
-    }
-    if(cnt===0||digits[pos]>=42)throw new Error("invalid prefix")
-    return{value:v,consumed:cnt}
-  }
-
-  // Compute canonical minimum for non-aligned , passthrough
-  const canonMin=(highDigits,knownLow)=>{
-    const P=highDigits.length,nKnown=knownLow.length
-    let base=0
-    for(let i=0;i<P;i++)base=base*85+highDigits[i]
-    const power=Math.pow(85,5-P)
-    const rangeStart=base*power,rangeEnd=(base+1)*power
-    if(nKnown===0)return rangeStart>0xffffffff?-1:rangeStart
-    let known=0
-    for(let i=0;i<nKnown;i++)known=(known<<8)|knownLow[i]
-    const mod=1<<(nKnown*8)
-    const rem=rangeStart%mod
-    let c=rem<=known?rangeStart-rem+known:rangeStart-rem+mod+known
-    return c>=rangeEnd||c>0xffffffff?-1:c
-  }
-
-  // Compute before block value for extended (;_~) passthrough
-  const extendedBefore=(digits,knownLow)=>{
-    const n=digits.length,p=n-1,nKnown=knownLow.length
-    let base=0
-    for(let i=0;i<n;i++)base=base*85+digits[i]
-    const power=Math.pow(85,5-n)
-    const rs=base*power,re=(base+1)*power
-    if(nKnown===0)return rs>0xffffffff?-1:rs
-    if(nKnown===4){
-      let k=0
-      for(let i=0;i<4;i++)k=(k<<8)|knownLow[i]
-      return k>=rs&&k<re?k:-1
-    }
-    let known=0
-    for(let i=0;i<nKnown;i++)known=(known<<8)|knownLow[i]
-    const mod=Math.pow(2,nKnown*8)
-    const rem=rs%mod
-    let c=rem<=known?rs-rem+known:rs-rem+mod+known
-    return c>=re||c>0xffffffff?-1:c
-  }
-
-  // Reconstruct after block from known high bytes + low digits
-  const reconAfter=(highBytes,lowVal,numDigits)=>{
-    const P=highBytes.length
-    let high=0
-    for(const b of highBytes)high=(high<<8)|b
-    const shift=8*(4-P)
-    const rs=high<<shift,rSize=1<<shift
-    const mod=Math.pow(85,numDigits)
-    const rem=rs%mod
-    let c=rem<=lowVal?rs-rem+lowVal:rs-rem+mod+lowVal
-    if(c>=rs+rSize)throw new Error("invalid after block")
-    return c>>>0
-  }
-
-  const out=[],curDigits=[]
-  let i=0,blockPos=0,knownHigh=[]
-
-  while(i<input.length){
-    const c=input.charCodeAt(i)
-
-    // Check for | escape
-    if(c===PIPE){
-      if(curDigits.length===0)throw new Error("no prefix before |")
-      // Read offset and length
-      const{value:len,consumed:lc}=readB42(curDigits,curDigits.length)
-      let offset=0
-      if(lc<curDigits.length){
-        const{value:off,consumed:oc}=readB42(curDigits,curDigits.length-lc)
-        if(lc+oc!==curDigits.length)throw new Error("invalid prefix structure")
-        offset=off
-      }
-      if(len>=1&&len<=7)throw new Error("invalid length for | escape")
-      if(len===0){
-        i++
-        for(;i<input.length;i++)out.push(input.charCodeAt(i))
-        return new Uint8Array(out)
-      }
-      // len >= 8
-      i++
-      // Skip offset padding
-      for(let j=0;j<offset;j++){
-        if(i>=input.length||input.charCodeAt(i)!==DOT)throw new Error("bad offset padding")
-        i++
-      }
-      if(i+len>input.length)throw new Error("insufficient bytes for | escape")
-      for(let j=0;j<len;j++)out.push(input.charCodeAt(i++))
-      // Skip trailing padding/terminator
-      while(i<input.length){
-        const nc=input.charCodeAt(i)
-        if(nc===DOT){i++;continue}
-        if(nc===PIPE){i++;break}
-        break
-      }
-      curDigits.length=0;blockPos=0;knownHigh=[]
-      continue
-    }
-
-    // Check for passthrough escapes
-    const passLen=c===COMMA?4:c===SEMI?5:c===UNDER?6:c===TILDE?7:0
-
-    if(passLen>0){
-      if(i+passLen>=input.length)throw new Error("incomplete passthrough")
-      const pass=[]
-      for(let j=1;j<=passLen;j++)pass.push(input.charCodeAt(i+j))
-
-      if(passLen===4){
-        const P=curDigits.length
-        if(P===0){
-          // Block-aligned
-          out.push(...pass)
-          i+=5
-        }else{
-          // Non-aligned
-          const nKnownLow=4-P,knownLow=pass.slice(0,nKnownLow)
-          const bv=canonMin(curDigits,knownLow)
-          if(bv<0)throw new Error("invalid non-aligned passthrough")
-          out.push((bv>>>24)&0xff,(bv>>>16)&0xff,(bv>>>8)&0xff,bv&0xff)
-          knownHigh=pass.slice(nKnownLow)
-          curDigits.length=0;blockPos=0
-          i+=5
-        }
-      }else{
-        // 5/6/7 byte passthrough
-        const n=curDigits.length
-        if(n===0){
-          out.push(...pass)
-          i+=1+passLen
-          continue
-        }
-        const p=n-1,nKnownLow=4-p,knownLow=pass.slice(0,nKnownLow)
-        const bv=extendedBefore(curDigits,knownLow)
-        if(bv<0)throw new Error("invalid extended passthrough")
-        const bb=[(bv>>>24)&0xff,(bv>>>16)&0xff,(bv>>>8)&0xff,bv&0xff]
-        for(let j=0;j<p;j++)out.push(bb[j])
-        out.push(...pass)
-        curDigits.length=0;blockPos=0;knownHigh=[]
-        i+=1+passLen
-      }
-      continue
-    }
-
-    // Regular Z85 character
-    const d=D[c]
-    if(d===-1)throw new Error(`invalid character: 0x${c.toString(16)}`)
-    curDigits.push(d)
-    blockPos++
-    i++
-
-    const needed=5-knownHigh.length
-    if(curDigits.length===needed){
-      let v
-      if(knownHigh.length===0){
-        v=0
-        for(const d of curDigits)v=v*85+d
-      }else{
-        let low=0
-        for(const d of curDigits)low=low*85+d
-        v=reconAfter(knownHigh,low,needed)
-        knownHigh=[]
-      }
-      if(v>0xffffffff)throw new Error("Z85 value overflow")
-      out.push((v>>>24)&0xff,(v>>>16)&0xff,(v>>>8)&0xff,v&0xff)
-      curDigits.length=0;blockPos=0
-    }
-  }
-
-  // Handle trailing partial block
-  if(curDigits.length>0){
-    const n=curDigits.length
-    if(n===1)throw new Error("invalid Z85 input length")
-    let v=0
-    for(const d of curDigits)v=v*85+d
-    const nb=n-1
-    if(nb===1&&v>0xff)throw new Error("Z85 value overflow")
-    if(nb===2&&v>0xffff)throw new Error("Z85 value overflow")
-    if(nb===3&&v>0xffffff)throw new Error("Z85 value overflow")
-    if(nb===1)out.push(v)
-    else if(nb===2)out.push((v>>>8)&0xff,v&0xff)
-    else out.push((v>>>16)&0xff,(v>>>8)&0xff,v&0xff)
-  }
-
-  return new Uint8Array(out)
+return o
+}
+/**@returns {Uint8Array}*/export function decode(/**@type {string}*/s) {
+if(!s.length)return new Uint8Array(0)
+const A="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#"
+const D=Array(256).fill(-1);for(let j=0;j<85;j++)D[A.charCodeAt(j)]=j
+const E=s=>new Error(s)
+const b42=(g,e)=>{let v=0,m=1,p=e,c=0;while(p>0){p--;c++;let d=g[p];if(d>83)throw E("bad prefix");if(d>=42){v+=(d-42)*m;m*=42}else{v+=d*m;break}}if(!c||g[p]>=42)throw E("bad prefix");return{v,c}}
+const cmin=(h,l)=>{let P=h.length,K=l.length,b=0;for(let j=0;j<P;j++)b=b*85+h[j];let pw=85**(5-P),rs=b*pw,re=(b+1)*pw;if(!K)return rs>0xffffffff?-1:rs;let k=0;for(let j=0;j<K;j++)k=(k<<8)|l[j];let md=1<<(K*8),rm=rs%md,c=rm<=k?rs-rm+k:rs-rm+md+k;return c>=re||c>0xffffffff?-1:c}
+const xbef=(g,l)=>{let n=g.length,p=n-1,K=l.length,b=0;for(let j=0;j<n;j++)b=b*85+g[j];let pw=85**(5-n),rs=b*pw,re=(b+1)*pw;if(!K)return rs>0xffffffff?-1:rs;if(K===4){let k=0;for(let j=0;j<4;j++)k=(k<<8)|l[j];return k>=rs&&k<re?k:-1}let k=0;for(let j=0;j<K;j++)k=(k<<8)|l[j];let md=2**(K*8),rm=rs%md,c=rm<=k?rs-rm+k:rs-rm+md+k;return c>=re||c>0xffffffff?-1:c}
+const raft=(h,lv,nd)=>{let P=h.length,hi=0;for(let b of h)hi=(hi<<8)|b;let sh=8*(4-P),rs=hi<<sh,sz=1<<sh,md=85**nd,rm=rs%md,c=rm<=lv?rs-rm+lv:rs-rm+md+lv;if(c>=rs+sz)throw E("bad after");return c>>>0}
+const o=[],g=[];let i=0,kh=[]
+while(i<s.length){
+let c=s.charCodeAt(i)
+if(c===124){if(!g.length)throw E("no prefix");let{v:ln,c:lc}=b42(g,g.length),of=0;if(lc<g.length){let{v:ov,c:oc}=b42(g,g.length-lc);if(lc+oc!==g.length)throw E("bad prefix");of=ov}if(ln>=1&&ln<=7)throw E("bad len");if(!ln){i++;for(;i<s.length;)o.push(s.charCodeAt(i++));return new Uint8Array(o)}i++;for(let j=0;j<of;j++){if(i>=s.length||s.charCodeAt(i)!==46)throw E("bad pad");i++}if(i+ln>s.length)throw E("short");for(let j=0;j<ln;j++)o.push(s.charCodeAt(i++));while(i<s.length){let nc=s.charCodeAt(i);if(nc===46){i++;continue}if(nc===124){i++;break}break}g.length=0;kh=[];continue}
+let pl=c===44?4:c===59?5:c===95?6:c===126?7:0
+if(pl){if(i+pl>=s.length)throw E("short");let ps=[];for(let j=1;j<=pl;j++)ps.push(s.charCodeAt(i+j))
+if(pl===4){let P=g.length;if(!P){o.push(...ps);i+=5}else{let nl=4-P,kl=ps.slice(0,nl),bv=cmin(g,kl);if(bv<0)throw E("bad");o.push((bv>>>24)&255,(bv>>>16)&255,(bv>>>8)&255,bv&255);kh=ps.slice(nl);g.length=0;i+=5}}
+else{let n=g.length;if(!n){o.push(...ps);i+=1+pl;continue}let p=n-1,nl=4-p,kl=ps.slice(0,nl),bv=xbef(g,kl);if(bv<0)throw E("bad");let bb=[(bv>>>24)&255,(bv>>>16)&255,(bv>>>8)&255,bv&255];for(let j=0;j<p;j++)o.push(bb[j]);o.push(...ps);g.length=0;kh=[];i+=1+pl}continue}
+let d=D[c];if(d===-1)throw E("bad char");g.push(d);i++
+let nd=5-kh.length;if(g.length===nd){let v;if(!kh.length){v=0;for(let x of g)v=v*85+x}else{let lw=0;for(let x of g)lw=lw*85+x;v=raft(kh,lw,nd);kh=[]}if(v>0xffffffff)throw E("overflow");o.push((v>>>24)&255,(v>>>16)&255,(v>>>8)&255,v&255);g.length=0}
+}
+if(g.length){let n=g.length;if(n===1)throw E("bad len");let v=0;for(let x of g)v=v*85+x;let nb=n-1;if(nb===1&&v>255)throw E("overflow");if(nb===2&&v>65535)throw E("overflow");if(nb===3&&v>16777215)throw E("overflow");if(nb===1)o.push(v);else if(nb===2)o.push((v>>>8)&255,v&255);else o.push((v>>>16)&255,(v>>>8)&255,v&255)}
+return new Uint8Array(o)
 }
