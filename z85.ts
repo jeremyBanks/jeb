@@ -170,6 +170,69 @@ function getPassthroughLength(charCode: number): number {
 }
 
 /**
+ * Check if a char code is the long escape character `|`.
+ */
+function isLongEscape(charCode: number): boolean {
+  return charCode === RAW_ESCAPE_LONG;
+}
+
+/**
+ * Read the variable-length prefix for the `|` escape.
+ *
+ * The prefix uses base-42 with continuation bits:
+ * - Values 0-41: terminal digit (no more digits)
+ * - Values 42-83: continuation digit (subtract 42, continue reading)
+ *
+ * The digits are read backwards from the `|`, but interpreted as big-endian.
+ * The `prefixDigits` array should contain the Z85 digit VALUES (0-84), NOT ASCII.
+ *
+ * Returns the decoded length value, or throws on error.
+ */
+function readLongEscapePrefix(prefixDigits: number[]): number {
+  if (prefixDigits.length === 0) {
+    // No prefix digits before `|` - invalid
+    throw new Z85DecodeError("no prefix digits before |");
+  }
+
+  // Read backwards from the |
+  // The last digit in prefixDigits is the one immediately before |
+  let value = 0;
+  let multiplier = 1;
+
+  for (let i = prefixDigits.length - 1; i >= 0; i--) {
+    const digit = prefixDigits[i];
+
+    if (digit > 83) {
+      // Invalid Z85 digit value for prefix
+      throw new Z85DecodeError(`invalid prefix digit value: ${digit}`);
+    }
+
+    if (digit >= 42) {
+      // Continuation digit
+      const baseValue = digit - 42;
+      value += baseValue * multiplier;
+      multiplier *= 42;
+      // Check for overflow (JavaScript safe integer limit)
+      if (multiplier > Number.MAX_SAFE_INTEGER) {
+        throw new Z85DecodeError("prefix value overflow");
+      }
+    } else {
+      // Terminal digit (0-41)
+      value += digit * multiplier;
+      // This is the last digit to process
+      // But we process in reverse, so this should be at position 0
+      if (i !== 0) {
+        // There are more digits before the terminal - invalid prefix
+        throw new Z85DecodeError("invalid prefix structure");
+      }
+      break;
+    }
+  }
+
+  return value;
+}
+
+/**
  * Error class for Z85 decoding failures
  */
 export class Z85DecodeError extends Error {
@@ -420,6 +483,82 @@ export function decode(input: string): Uint8Array {
 
   while (inIdx < input.length) {
     const charCode = input.charCodeAt(inIdx);
+
+    // Check for long escape (|) first
+    if (isLongEscape(charCode)) {
+      // The | escape for 8+ bytes
+      // Structure: [prefix digits][|][raw bytes][padding][|]
+      //
+      // The prefix digits are in currentBlockDigits (the accumulated Z85 digits)
+      // We read them to get the length, then handle accordingly.
+
+      if (currentBlockDigits.length === 0) {
+        // No prefix digits means invalid encoding
+        throw new Z85DecodeError("no prefix digits before |");
+      }
+
+      const length = readLongEscapePrefix(currentBlockDigits);
+
+      // Handle length semantics
+      if (length >= 1 && length <= 7) {
+        // Invalid: should use ,;_~ escapes for 4-7 bytes
+        throw new Z85DecodeError(`invalid length ${length} for | escape (use ,;_~ for 4-7 bytes)`);
+      }
+
+      if (length === 0) {
+        // Special case: rest of input is raw
+        // Skip the |
+        inIdx += 1;
+        // Output all remaining bytes as raw
+        for (let i = inIdx; i < input.length; i++) {
+          outputChunks.push(input.charCodeAt(i));
+        }
+        // Done decoding
+        return new Uint8Array(outputChunks);
+      }
+
+      // length >= 8: that many raw bytes follow
+      const rawLen = length;
+
+      // Skip the |
+      inIdx += 1;
+
+      // Ensure we have enough input for the raw bytes
+      if (inIdx + rawLen > input.length) {
+        throw new Z85DecodeError(`insufficient bytes for | escape: need ${rawLen}, have ${input.length - inIdx}`);
+      }
+
+      // Output the raw bytes
+      for (let i = 0; i < rawLen; i++) {
+        outputChunks.push(input.charCodeAt(inIdx + i));
+      }
+      inIdx += rawLen;
+
+      // Now we need to skip the padding (. characters) and final |
+      // Padding format: [. chars][|] or just [|] if no padding needed
+      // Or no padding at all for exact fit (8 bytes)
+      while (inIdx < input.length) {
+        const nextChar = input.charCodeAt(inIdx);
+        if (nextChar === RAW_ESCAPE_PADDING) {
+          // Skip padding
+          inIdx += 1;
+        } else if (isLongEscape(nextChar)) {
+          // Final | (aesthetic terminator)
+          inIdx += 1;
+          break;
+        } else {
+          // End of padding section, continue normal decoding
+          break;
+        }
+      }
+
+      // Reset block state
+      currentBlockDigits.length = 0;
+      blockPos = 0;
+      knownHighBytes = [];
+      continue;
+    }
+
     const passLen = getPassthroughLength(charCode);
 
     if (passLen > 0) {
