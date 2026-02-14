@@ -25,6 +25,7 @@ function getTestCases(): { name: string; input: Uint8Array; encodings: string[];
     const inputPath = join(TEST_CASES_DIR, inputFile);
     const encodedPath = join(TEST_CASES_DIR, name + ".encoded");
     const minEncodedPath = join(TEST_CASES_DIR, name + ".encoded-min");
+    const expectedPath = join(TEST_CASES_DIR, name + ".encoded-expected");
 
     const input = readFileSync(inputPath);
     const encodings: string[] = [];
@@ -33,16 +34,27 @@ function getTestCases(): { name: string; input: Uint8Array; encodings: string[];
     const isError = inputText.trim() === "<error />";
 
     // Read all valid encodings
+    // Note: encoded files may contain non-UTF-8 bytes in raw passthrough sections.
+    // Use String.fromCharCode to preserve byte values.
+    
+    // If .encoded-expected exists, that's what the encoder SHOULD produce
+    // The .encoded file may contain decoder-only liberal inputs
     try {
-      const encodedData = readFileSync(encodedPath);
-      encodings.push(new TextDecoder().decode(encodedData).trim());
+      const expectedData = readFileSync(expectedPath);
+      encodings.push(String.fromCharCode(...expectedData).trim());
     } catch {
-      // No encoded file
+      // No expected file, use .encoded
+      try {
+        const encodedData = readFileSync(encodedPath);
+        encodings.push(String.fromCharCode(...encodedData).trim());
+      } catch {
+        // No encoded file either
+      }
     }
 
     try {
       const minEncodedData = readFileSync(minEncodedPath);
-      const minEncoded = new TextDecoder().decode(minEncodedData).trim();
+      const minEncoded = String.fromCharCode(...minEncodedData).trim();
       // Only add if different from first encoding
       if (!encodings.includes(minEncoded)) {
         encodings.push(minEncoded);

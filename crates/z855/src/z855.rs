@@ -3695,8 +3695,11 @@ mod tests {
                 // Should fail to decode the .encoded file
                 let encoded_path = test_cases_dir.join(format!("{}.encoded", base_name));
                 if encoded_path.exists() {
-                    let encoded = fs::read_to_string(&encoded_path)
-                        .expect(&format!("Failed to read {}", encoded_path.display()))
+                    // Read as bytes then convert unsafely (encoded files may contain
+                    // non-UTF-8 bytes in raw passthrough sections)
+                    let encoded_bytes = fs::read(&encoded_path)
+                        .expect(&format!("Failed to read {}", encoded_path.display()));
+                    let encoded = unsafe { std::str::from_utf8_unchecked(&encoded_bytes) }
                         .trim()
                         .to_string();
                     
@@ -3710,8 +3713,11 @@ mod tests {
                 // Normal test case - test encoding and decoding
                 let encoded_path = test_cases_dir.join(format!("{}.encoded", base_name));
                 if encoded_path.exists() {
-                    let encoded = fs::read_to_string(&encoded_path)
-                        .expect(&format!("Failed to read {}", encoded_path.display()))
+                    // Read as bytes then convert unsafely (encoded files may contain
+                    // non-UTF-8 bytes in raw passthrough sections)
+                    let encoded_bytes = fs::read(&encoded_path)
+                        .expect(&format!("Failed to read {}", encoded_path.display()));
+                    let encoded = unsafe { std::str::from_utf8_unchecked(&encoded_bytes) }
                         .trim()
                         .to_string();
 

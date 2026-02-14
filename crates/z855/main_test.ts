@@ -437,8 +437,12 @@ async function findEncodedFiles(
   };
 
   // Read the standard .encoded file (trim trailing newlines)
+  // Note: encoded files may contain non-UTF-8 bytes in raw passthrough sections.
+  // JavaScript strings are UTF-16, but we need to preserve byte values.
+  // Use String.fromCharCode to create a string where each character code = byte value.
   const encodedPath = `${testCasesDir}/${baseName}.encoded`;
-  result.standard = (await Deno.readTextFile(encodedPath)).trim();
+  const encodedBytes = await Deno.readFile(encodedPath);
+  result.standard = String.fromCharCode(...encodedBytes).trim();
 
   // Scan for alternative encoded files
   for await (const entry of Deno.readDir(testCasesDir)) {
@@ -446,11 +450,13 @@ async function findEncodedFiles(
 
     // Check for .encoded-expected
     if (name === `${baseName}.encoded-expected`) {
-      result.expected = (await Deno.readTextFile(`${testCasesDir}/${name}`)).trim();
+      const bytes = await Deno.readFile(`${testCasesDir}/${name}`);
+      result.expected = String.fromCharCode(...bytes).trim();
     }
     // Check for .encoded-Y pattern (but not .encoded-expected)
     else if (name.startsWith(`${baseName}.encoded-`) && name !== `${baseName}.encoded-expected`) {
-      const altEncoded = (await Deno.readTextFile(`${testCasesDir}/${name}`)).trim();
+      const bytes = await Deno.readFile(`${testCasesDir}/${name}`);
+      const altEncoded = String.fromCharCode(...bytes).trim();
       result.alternatives.push(altEncoded);
     }
   }
