@@ -6,7 +6,7 @@ x=((x&0x0000ffff0000ffffn)<<16n)|((x>>16n)&0x0000ffff0000ffffn);x=(x<<32n)|(x>>3
 while(n>0){d[P](n%42);n=n/42|0}d.reverse();let r=[];for(let i=0;i<d[L];i++)r[P](Z[d[i]+(i>0?42:0)]);return r},D=(v,p)=>{let d=[]
 for(let i=0;i<5;i++){d.unshift(v%E);v=v/E|0}return d[O](0,p)},H=(v,p)=>{let d=[];for(let i=0;i<5;i++){d.unshift(v%E);v=v/E|0}
 return d[O](0,p).map(x=>Z[x])},W=(v,n)=>{let d=[];for(let i=0;i<5;i++){d.unshift(v%E);v=v/E|0}return d[O](5-n).map(x=>Z[x])}
-let N=(h,l)=>{let p=h[L],m=l[L],s=0;for(let d of h)s=s*E+d;let w=Math.pow(E,5-p),r=s*w;if(!m)return r>F?-1:r;let k=0
+let N=(h,l)=>{let p=h[L],m=l[L],s=0;for(let d of h)s=s*E+d;let w=E**(5-p),r=s*w;if(!m)return r>F?-1:r;let k=0
 for(let y of l)k=(k<<8)|y;let q=1<<(m*8),z=r%q,c=z<=k?r-z+k:r-z+q+k;return c>=(s+1)*w||c>F?-1:c},J=(v,p,l)=>{let h=D(v,p),c=N(h,l)
 return v===c},o="",i=0,n=b[L],u=0;while(i<n){let r=n-i;if(r>=8){let e=0;for(let j=i;j<n&&e<65536;j++)if(S.has(b[j]))e++;else break
 if(e>=8){let a=i+e===n;if(a){o+=Z[0]+"|";for(let j=i;j<n;j++)o+=C(b[j]);return o}else{let w=Math.min(e,65536),g=G(w),t=Math.ceil(r*5/4)
