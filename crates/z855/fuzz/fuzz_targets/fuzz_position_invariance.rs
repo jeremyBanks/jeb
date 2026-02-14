@@ -13,13 +13,14 @@ fuzz_target!(|data: &[u8]| {
     }
     
     let encoded = encode(data);
+    let encoded_bytes = encoded.as_bytes();
     
     // Find Z85-encoded sections (continuous non-escape characters)
     let mut in_z85 = false;
     let mut z85_start = 0;
     let mut char_pos = 0;
     
-    for (i, &byte) in encoded.iter().enumerate() {
+    for (i, &byte) in encoded_bytes.iter().enumerate() {
         let is_z85_char = matches!(byte, b'0'..=b'9' | b'A'..=b'Z' | b'a'..=b'z' | b'.' | b'-');
         let is_escape = matches!(byte, b'_' | b'~' | b'`' | b'|' | b',' | b';');
         
