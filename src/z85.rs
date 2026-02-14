@@ -311,6 +311,58 @@ pub fn encode(input: &[u8]) -> String {
     String::from_utf8(output).expect("Z85 output should be valid UTF-8")
 }
 
+/// Encodes a byte slice to standard Z85 without any passthrough escapes.
+///
+/// This produces the same output as the original Z85 specification,
+/// useful for comparison with extended encoding.
+pub fn encode_standard(input: &[u8]) -> String {
+    if input.is_empty() {
+        return String::new();
+    }
+
+    let output_len = (input.len() * 5 + 3) / 4;
+    let mut output: Vec<u8> = Vec::with_capacity(output_len);
+    let mut in_idx = 0;
+
+    // Process full 4-byte blocks
+    while in_idx + 4 <= input.len() {
+        let value = u32::from_be_bytes([
+            input[in_idx],
+            input[in_idx + 1],
+            input[in_idx + 2],
+            input[in_idx + 3],
+        ]);
+
+        let mut v = value;
+        let mut digits = [0u8; 5];
+        for i in (0..5).rev() {
+            digits[i] = Z85_ALPHABET[(v % 85) as usize];
+            v /= 85;
+        }
+        output.extend_from_slice(&digits);
+        in_idx += 4;
+    }
+
+    // Handle trailing bytes (1-3)
+    let remaining = input.len() - in_idx;
+    if remaining > 0 {
+        let num_chars = remaining + 1;
+        let mut v: u32 = 0;
+        for i in 0..remaining {
+            v = (v << 8) | input[in_idx + i] as u32;
+        }
+
+        let mut digits = vec![0u8; num_chars];
+        for i in (0..num_chars).rev() {
+            digits[i] = Z85_ALPHABET[(v % 85) as usize];
+            v /= 85;
+        }
+        output.extend_from_slice(&digits);
+    }
+
+    String::from_utf8(output).expect("Z85 output should be valid UTF-8")
+}
+
 /// Check if a 4-byte block consists entirely of safe characters for raw passthrough.
 ///
 /// A block qualifies for raw passthrough if ALL 4 bytes are in the SAFE_CHARS set
@@ -720,8 +772,22 @@ fn try_block_aligned_extended_passthrough(
     block_start: usize,
     k: usize,
 ) -> Option<ExtendedPassthroughResult> {
+    // Block-aligned extended passthrough: escape + K raw bytes, consuming K bytes.
+    // Since K=5,6,7 are not multiples of 4, this only maintains the length
+    // invariant when the remaining bytes after the passthrough form complete
+    // 4-byte blocks (remaining % 4 == 0).
+
     // Check if we have enough bytes for the passthrough
     if block_start + k > input.len() {
+        return None;
+    }
+
+    // Check the length invariant: passthrough_output + z85(remaining) == z85(total)
+    // Block-aligned output is 1 (escape) + K (raw) = K+1 chars.
+    let total_remaining = input.len() - block_start;
+    let remaining = total_remaining - k;
+    let passthrough_output_chars = k + 1;
+    if passthrough_output_chars + z85_output_length(remaining) != z85_output_length(total_remaining) {
         return None;
     }
 
@@ -759,23 +825,53 @@ fn try_extended_passthrough_of_length(
     // For K-byte passthrough at position P:
     // - We need K consecutive safe bytes starting at block_start + P
     // - The before block is input[block_start..block_start+4]
-    // - We output P+1 Z85 chars for the before block
+    // - We output (P+1) Z85 chars for the before block
     // - We output the escape character
     // - We output K raw bytes
-    // - We need enough remaining input for the (5-P) Z85 after portion
     //
-    // Total input consumed: before_block (4 bytes, but P bytes not in passthrough)
-    //                     + passthrough (K bytes)
-    //                     + after_portion (4-P bytes, encoded as 5-P chars)
-    //                     = P + K + (4-P) = K + 4 bytes total
+    // Length invariant: the remaining bytes after the passthrough must form
+    // complete 4-byte blocks (i.e., remaining % 4 == 0). This ensures that
+    // z85_output_length(consumed) + z85_output_length(remaining) ==
+    // z85_output_length(total), maintaining the overall length invariant.
+    //
+    // When P+K is already a multiple of 4 (e.g., P+K=8), the invariant is
+    // automatically satisfied regardless of total input length.
+    //
+    // Prefer P+K=8 first (always valid), then try other positions that
+    // satisfy the remaining-bytes constraint.
 
-    // Try positions 0 through 4
-    for p in 0..=4 {
-        // Skip P=4 for extended passthrough (would require 1 char for after, which is invalid)
-        if p == 4 {
+    let total_remaining = input.len() - block_start;
+
+    // Try all positions P=0..3, checking the length invariant.
+    //
+    // The passthrough outputs (P+1) + 1 + K = P+K+2 chars, consuming P+K bytes.
+    // The remaining bytes are encoded by the main loop as standard Z85.
+    // For the total length invariant to hold:
+    //   (P+K+2) + z85_output_length(remaining) == z85_output_length(total)
+    //
+    // When P+K is a multiple of 4 (e.g., P+K=8), this is always satisfied because
+    // P+K+2 == z85_output_length(P+K) and z85 is additive over multiples of 4.
+    // For other values, we check the exact condition at runtime.
+    //
+    // Prefer P+K=8 first (always valid, most common), then try other positions.
+    let p_ideal = 8 - k; // K=5→P=3, K=6→P=2, K=7→P=1
+    let positions = [p_ideal, 0, 1, 2, 3];
+    let mut tried = [false; 4];
+
+    for &p in &positions {
+        if p > 3 || tried[p] {
             continue;
         }
-
+        tried[p] = true;
+        let bytes_consumed = p + k;
+        if block_start + bytes_consumed > input.len() {
+            continue; // Not enough input
+        }
+        let remaining = total_remaining - bytes_consumed;
+        let passthrough_output_chars = bytes_consumed + 2; // (P+1) + 1 + K = P+K+2
+        if passthrough_output_chars + z85_output_length(remaining) != z85_output_length(total_remaining) {
+            continue; // Would violate length invariant
+        }
         if let Some(result) = try_extended_passthrough_at_position(input, block_start, k, p) {
             return Some(result);
         }
@@ -845,10 +941,10 @@ fn try_extended_passthrough_at_position(
     // 3. K passthrough bytes
     output.extend_from_slice(pass_bytes);
 
-    // Bytes consumed:
-    // - P bytes from before block (input[block_start..block_start+P])
-    // - K bytes of passthrough (input[block_start+P..block_start+P+K])
-    // Total: P + K bytes
+    // Bytes consumed: P + K bytes. The caller ensures that either:
+    // 1. P + K is a multiple of 4 (always valid), OR
+    // 2. The remaining input after this passthrough is a multiple of 4 bytes
+    //    (so the length invariant is maintained for the total encoding).
     let bytes_consumed = p + k;
 
     Some(ExtendedPassthroughResult {
@@ -3218,11 +3314,13 @@ mod tests {
 
     #[test]
     fn test_long_escape_not_used_for_7bytes() {
-        // Only 7 safe bytes - should NOT use | escape, should use ~ instead
+        // Only 7 safe bytes - should NOT use | escape.
+        // Extended passthrough requires P+K=8 bytes total, so with only 7 bytes
+        // of input, neither ~ (7-byte) nor | (8+ byte) can be used.
+        // The encoder will fall back to 4-byte passthrough or standard Z85.
         let input = b"abcdefg";
         let encoded = encode(input);
         assert!(!encoded.contains("|"));
-        assert!(encoded.contains("~")); // Should use 7-byte escape
 
         // Verify round-trip
         let decoded = decode(&encoded).unwrap();
