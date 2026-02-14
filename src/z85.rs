@@ -1022,6 +1022,86 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
     while in_idx < input.len() {
         let byte = input[in_idx];
 
+        // Check for long escape (|) first
+        if is_long_escape(byte) {
+            // The | escape for 8+ bytes
+            // Structure: [prefix digits][|][raw bytes][padding][|]
+            //
+            // The prefix digits are in current_block_digits (the accumulated Z85 digits)
+            // We read them to get the length, then handle accordingly.
+
+            let length = if current_block_digits.is_empty() {
+                // No prefix digits means the raw digit '0' was encoded as the value
+                // But '0' at index 0 has Z85 value 0, which means "rest of input is raw"
+                // Actually, for `0|` at stream start, we'd have the digit '0' accumulated
+                // An empty prefix means we just saw | at position 0 with no prefix
+                // This is invalid - we need at least one prefix digit
+                return Err(DecodeError::InvalidLength);
+            } else {
+                read_long_escape_prefix(&current_block_digits)?
+            };
+
+            // Handle length semantics
+            if length >= 1 && length <= 7 {
+                // Invalid: should use ,;_~ escapes for 4-7 bytes
+                return Err(DecodeError::InvalidLength);
+            }
+
+            if length == 0 {
+                // Special case: rest of input is raw
+                // Skip the |
+                in_idx += 1;
+                // Output all remaining bytes as raw
+                output.extend_from_slice(&input[in_idx..]);
+                // Done decoding
+                return Ok(output);
+            }
+
+            // length >= 8: that many raw bytes follow
+            let raw_len = length as usize;
+
+            // Skip the |
+            in_idx += 1;
+
+            // Ensure we have enough input for the raw bytes
+            if in_idx + raw_len > input.len() {
+                return Err(DecodeError::InvalidLength);
+            }
+
+            // Output the raw bytes
+            output.extend_from_slice(&input[in_idx..in_idx + raw_len]);
+            in_idx += raw_len;
+
+            // Now we need to skip the padding (. characters) and final |
+            // Padding format: [. chars][|] or just [|] if no padding needed
+            // Or no padding at all for exact fit (8 bytes)
+            //
+            // The decoder should skip any . characters and expect a final |
+            // But for exact fit (8 bytes with 10 output chars), there's no room for padding
+            //
+            // Let's check if there's more input
+            while in_idx < input.len() {
+                let next_byte = input[in_idx];
+                if next_byte == RAW_ESCAPE_PADDING {
+                    // Skip padding
+                    in_idx += 1;
+                } else if is_long_escape(next_byte) {
+                    // Final | (aesthetic terminator)
+                    in_idx += 1;
+                    break;
+                } else {
+                    // End of padding section, continue normal decoding
+                    break;
+                }
+            }
+
+            // Reset block state
+            current_block_digits.clear();
+            block_pos = 0;
+            known_high_bytes.clear();
+            continue;
+        }
+
         if let Some(pass_len) = get_passthrough_length(byte) {
             // Found an escape character - this is a passthrough marker
             // pass_len is 4, 5, 6, or 7
