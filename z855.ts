@@ -34,7 +34,7 @@
 //   (total: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#,;|~_)
 // - Standard Z85 encoding is always valid; the encoder SHOULD use `,` passthrough
 //   when possible for better readability.
-// - `,` can ONLY appear at position 0 of a 5-character block (block-aligned).
+// - `,` can appear at position 0 (block-aligned) or position P (1-4) for non-aligned.
 //
 // DECODING:
 // - When `,` is encountered at a block boundary (position 0 mod 5), the next
