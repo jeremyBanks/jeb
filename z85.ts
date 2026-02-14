@@ -1378,19 +1378,36 @@ function tryLongPassthrough(
 
   // Not at end: use length-prefixed escape
   // Structure: [prefix][|][raw bytes][padding][|]
+  //
+  // We need to calculate padding to maintain length invariant.
+  //
+  // IMPORTANT: Z85 output length is NOT additive!
+  // z85OutputLength(a + b) != z85OutputLength(a) + z85OutputLength(b) in general.
+  //
+  // We must ensure: escape_chars + z85OutputLength(remaining) <= z85OutputLength(total)
+  // where total = bytesRemaining and remaining = bytesRemaining - rawLen.
+
   const rawLen = Math.min(safeCount, MAX_LONG_PASSTHROUGH_LENGTH);
   const prefix = generateLongEscapePrefix(rawLen);
 
-  // Calculate padding needed
-  // Total bytes being encoded: rawLen
-  // Standard Z85 length: ceil(rawLen * 5/4)
-  const standardZ85Len = z85OutputLength(rawLen);
+  // Calculate the budget available for the escape sequence
+  // Total standard Z85 length for all remaining bytes
+  const totalStandardLen = z85OutputLength(bytesRemaining);
+  // Standard Z85 length for bytes after the passthrough
+  const afterLen = z85OutputLength(bytesRemaining - rawLen);
+  // Available chars for our escape (must not exceed this to maintain invariant)
+  const availableChars = totalStandardLen - afterLen;
+
   // Our encoding (without padding): prefix.length + 1 (|) + rawLen
   const ourLenNoPadding = prefix.length + 1 + rawLen;
 
-  // Padding needed (might be 0 for exact fit like 8 bytes)
-  const paddingNeeded =
-    standardZ85Len > ourLenNoPadding ? standardZ85Len - ourLenNoPadding : 0;
+  // If our escape is already too long, don't use it
+  if (ourLenNoPadding > availableChars) {
+    return null;
+  }
+
+  // Padding needed to reach the available budget (or 0 if exact fit)
+  const paddingNeeded = availableChars - ourLenNoPadding;
 
   const output: string[] = [];
   output.push(...prefix);
