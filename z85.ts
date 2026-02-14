@@ -973,11 +973,22 @@ function computeBeforeBlockFromExtendedDigits(
   // Construct the constraint from known low bytes
   let knownPart = 0;
   for (let i = 0; i < numKnownBytes; i++) {
-    knownPart = (knownPart << 8) | knownLowBytes[i];
+    knownPart = ((knownPart << 8) | knownLowBytes[i]) >>> 0;
+  }
+
+  // When numKnownBytes == 4, all 4 bytes are known, so there's only one possible value.
+  // We just need to check if knownPart is in the range.
+  if (numKnownBytes === 4) {
+    if (knownPart >= rangeStart && knownPart < rangeEnd) {
+      return knownPart;
+    } else {
+      throw new Z85DecodeError("no valid value for extended passthrough decode");
+    }
   }
 
   // The mask for known bytes (low numKnownBytes bytes)
-  const modulus = 1 << (numKnownBytes * 8);
+  // Use Math.pow to avoid JavaScript's 32-bit shift limitation
+  const modulus = Math.pow(2, numKnownBytes * 8);
 
   // Find the unique value in [rangeStart, rangeEnd) where (value % modulus) === knownPart
   const startRemainder = rangeStart % modulus;
@@ -1496,6 +1507,15 @@ function tryBlockAlignedExtendedPassthrough(
     return null;
   }
 
+  // Check the length invariant: passthrough_output + z85(remaining) == z85(total)
+  // Block-aligned output is 1 (escape) + K (raw) = K+1 chars.
+  const totalRemaining = input.length - blockStart;
+  const remaining = totalRemaining - k;
+  const passthroughOutputChars = k + 1;
+  if (passthroughOutputChars + z85OutputLength(remaining) !== z85OutputLength(totalRemaining)) {
+    return null;
+  }
+
   // Check if all K bytes starting at blockStart are safe
   if (!areKBytesSafe(input, blockStart, k)) {
     return null;
@@ -1539,8 +1559,19 @@ function tryExtendedPassthroughOfLength(
   blockStart: number,
   k: number
 ): ExtendedPassthroughResult | null {
+  const totalRemaining = input.length - blockStart;
+
   // Try positions 0 through 3 (skip P=4 as it would require 1 char for after)
   for (let p = 0; p <= 3; p++) {
+    const bytesConsumed = p + k;
+    if (blockStart + bytesConsumed > input.length) {
+      continue; // Not enough input
+    }
+    const remaining = totalRemaining - bytesConsumed;
+    const passthroughOutputChars = bytesConsumed + 2; // (P+1) + 1 + K = P+K+2
+    if (passthroughOutputChars + z85OutputLength(remaining) !== z85OutputLength(totalRemaining)) {
+      continue; // Would violate length invariant
+    }
     const result = tryExtendedPassthroughAtPosition(input, blockStart, k, p);
     if (result !== null) {
       return result;
