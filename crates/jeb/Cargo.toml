@@ -22,6 +22,7 @@ algorithm = "minisign"
 inline.workspace = true
 jeb-common.workspace = true
 stringify_verbatim.workspace = true
+z855.workspace = true
 jeb-stream = { workspace = true, features = ["json", "serde"] }
 jeb-value = { workspace = true, features = ["serde", "serde_json"] }
 color-eyre = { workspace = true, optional = true }

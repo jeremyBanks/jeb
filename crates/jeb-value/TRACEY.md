@@ -778,9 +778,8 @@ r[jeb-value.bytes.encoding.string-to-bytes]
 3. Otherwise: literal UTF-8 bytes
 
 r[jeb-value.bytes.encoding.bytes-as-text-constraint]
-The `jeb_bytes_as_text` encoding used for non-UTF-8 bytes MUST have an output
-alphabet that does NOT include `\b` (0x08). Base64 (`[A-Za-z0-9+/=]`) satisfies
-this constraint.
+The z855 encoding used for non-UTF-8 bytes MUST have an output alphabet that
+does NOT include `\b` (0x08). Z855 satisfies this constraint.
 
 r[jeb-value.bytes.encoding.bijective]
 The encoding MUST be bijective: every byte sequence maps to exactly one string,
