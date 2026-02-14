@@ -1747,8 +1747,42 @@ function tryNonAlignedPassthrough(
   input: Uint8Array,
   blockStart: number
 ): NonAlignedResult | null {
-  // Try positions 1, 2, 3 within the current block
+  // Generate candidates and sort by bit-reversal for consistent position preference.
+  // This matches the approach used for extended passthrough (5/6/7 bytes).
+  const candidates: Array<[bigint, bigint, number]> = [];
+
   for (let p = 1; p <= 3; p++) {
+    const passStart = blockStart + p;
+    if (passStart + 4 > input.length) {
+      continue;
+    }
+    // Check if passthrough bytes are safe before adding as candidate
+    const passBytes = input.slice(passStart, passStart + 4);
+    if (!isBlockSafeForPassthrough(passBytes)) {
+      continue;
+    }
+
+    // Compute sort key using bit reversal
+    const start = passStart;
+    const end = start + 3; // 4 bytes, so end is start + 3
+    const revStart = bitReverse(start);
+    const revEnd = bitReverse(end);
+    const sortKey: [bigint, bigint] = [
+      revStart < revEnd ? revStart : revEnd,
+      revStart < revEnd ? revEnd : revStart,
+    ];
+    candidates.push([sortKey[0], sortKey[1], p]);
+  }
+
+  // Sort by sort key (lower is better - more aligned positions first)
+  candidates.sort((a, b) => {
+    if (a[0] !== b[0]) return a[0] < b[0] ? -1 : 1;
+    if (a[1] !== b[1]) return a[1] < b[1] ? -1 : 1;
+    return 0;
+  });
+
+  // Try candidates in sorted order
+  for (const [, , p] of candidates) {
     const result = tryNonAlignedAtPosition(input, blockStart, p);
     if (result !== null) {
       return result;

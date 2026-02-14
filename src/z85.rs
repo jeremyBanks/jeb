@@ -433,8 +433,35 @@ fn try_non_aligned_passthrough(
     // The "before" block is input[block_start..block_start + 4]
     // The "after" block starts at input[block_start + 4..block_start + 8]
 
-    // Try positions 1, 2, 3 within the current block
+    // Generate candidates and sort by bit-reversal for consistent position preference.
+    // This matches the approach used for extended passthrough (5/6/7 bytes).
+    let mut candidates: Vec<(u64, u64, usize)> = Vec::new();
+
     for p in 1..=3 {
+        let pass_start = block_start + p;
+        if pass_start + 4 > input.len() {
+            continue;
+        }
+        // Check if passthrough bytes are safe before adding as candidate
+        let pass_bytes = &input[pass_start..pass_start + 4];
+        if !is_block_safe_for_passthrough(pass_bytes) {
+            continue;
+        }
+
+        // Compute sort key using bit reversal
+        let start = pass_start;
+        let end = start + 3; // 4 bytes, so end is start + 3
+        let rev_start = bit_reverse(start);
+        let rev_end = bit_reverse(end);
+        let sort_key = (rev_start.min(rev_end), rev_start.max(rev_end));
+        candidates.push((sort_key.0, sort_key.1, p));
+    }
+
+    // Sort by sort key (lower is better - more aligned positions first)
+    candidates.sort();
+
+    // Try candidates in sorted order
+    for (_, _, p) in candidates {
         if let Some(result) = try_non_aligned_at_position(input, block_start, p) {
             return Some(result);
         }
