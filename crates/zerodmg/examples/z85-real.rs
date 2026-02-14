@@ -150,23 +150,67 @@ fn div_e_by_85() -> Vec<Instruction> {
     ]
 }
 
-fn test_encoding() -> Vec<Instruction> {
+/// Divide DE by 85 using repeated subtraction (16-bit version)
+/// Input: DE = dividend (16-bit)
+/// Output: BC = quotient (16-bit), A = remainder (8-bit, in range 0-84)
+fn div_de_by_85_simple() -> Vec<Instruction> {
     use Instruction::*;
     use U8Register::*;
     use U16Register::*;
     use FlagCondition::*;
     
-    // Test: encode 8-bit value using actual division
-    // Using value 210 (0xD2) - small enough for 8-bit division
+    vec![
+        // Initialize quotient to 0
+        LD_16_IMMEDIATE(BC, 0),
+        
+        // DIV_LOOP: while DE >= 85
+        // Check if D > 0 (then definitely >= 85)
+        LD_8_INTERNAL(A, D),
+        OR(A),
+        JR_IF(if_NZ, 5), // If D != 0, skip low byte check
+        
+        // D == 0, check E >= 85
+        LD_8_INTERNAL(A, E),
+        CP_IMMEDIATE(85),
+        JR_IF(if_C, 13), // If E < 85, exit (jump +13 to LOOP_EXIT)
+        
+        // DE >= 85, subtract
+        LD_8_INTERNAL(A, E),
+        SUB_IMMEDIATE(85),
+        LD_8_INTERNAL(E, A),
+        JR_IF(if_NC, 2), // No borrow/carry
+        DEC(D), // Borrow from high byte
+        
+        // Increment quotient
+        INC_16(BC),
+        
+        // Loop back
+        JR(-21), // 19 bytes loop body + 2 for JR
+        
+        // LOOP_EXIT
+        LD_8_INTERNAL(A, E), // Remainder in A (low byte of DE)
+        // BC has quotient
+    ]
+}
+
+fn test_encoding() -> Vec<Instruction> {
+    use Instruction::*;
+    use U8Register::*;
+    use U16Register::*;
+    use U8SecondaryRegister::*;
+    use FlagCondition::*;
+    
+    // Test: encode 16-bit value using actual division
+    // Using value 210 (0x00D2) - same as 8-bit test
     // 210 / 85 = 2 remainder 40
     // 2 / 85 = 0 remainder 2
     // So digits should be: 0, 0, 0, 2, 40 (reading left to right)
     
     let mut code = vec![
-        // Store test value at 0xC100 (8-bit for now)
+        // Store test value at 0xC100-0xC101 (16-bit, little-endian)
         LD_16_IMMEDIATE(HL, 0xC100),
-        LD_8_IMMEDIATE(A, 0xD2), // 210
-        LD_8_INTERNAL(AT_HL, A),
+        LD_8_IMMEDIATE(A, 0xD2), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // Low byte (210)
+        LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A),              // High byte (0)
     ];
     
     // Compute digits from right to left (least to most significant)
@@ -179,31 +223,37 @@ fn test_encoding() -> Vec<Instruction> {
     
     // DIGIT_LOOP: Compute one digit per iteration
     code.extend(vec![
-        // Load value into E (8-bit for now)
-        LD_16_IMMEDIATE(DE, 0xC100),
-        LD_8_FROM_SECONDARY(AT_DE),
-        LD_8_INTERNAL(E, A),
+        // Load 16-bit value into DE
+        LD_16_IMMEDIATE(HL, 0xC100),
+        LD_8_INTERNAL(A, AT_HL), LD_8_INTERNAL(E, A), INC_16(HL),
+        LD_8_INTERNAL(A, AT_HL), LD_8_INTERNAL(D, A),
         
-        // Divide E by 85: quotient in C, remainder in A
+        // Divide DE by 85: quotient in BC, remainder in A
     ]);
     
-    code.extend(div_e_by_85());
+    code.extend(div_de_by_85_simple());
     
     code.extend(vec![
         // Store remainder (digit) at (HL)
-        LD_8_INTERNAL(AT_HL, A),
+        PUSH(HL), // Save digit pointer
+        PUSH_AF, // Save remainder
         
-        // Store quotient back to 0xC100 for next iteration
-        LD_16_IMMEDIATE(DE, 0xC100),
-        LD_8_INTERNAL(A, C),
-        LD_8_TO_SECONDARY(AT_DE),
+        // Store quotient (BC) back to 0xC100-0xC101
+        LD_16_IMMEDIATE(HL, 0xC100),
+        LD_8_INTERNAL(A, C), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // Low byte
+        LD_8_INTERNAL(A, B), LD_8_INTERNAL(AT_HL, A),              // High byte
         
-        // Move to next digit position (decrement HL for right-to-left)
+        // Restore digit pointer and store remainder
+        POP_AF, // Remainder
+        POP(HL), // Digit pointer
+        LD_8_INTERNAL(AT_HL, A), // Store digit
+        
+        // Move to next digit position
         DEC_16(HL),
         
         // Loop
         DEC(B),
-        JR_IF(if_NZ, -29), // 27 bytes loop body + 2 for JR
+        JR_IF(if_NZ, -45), // 43 bytes loop body + 2 for JR
     ]);
     
     // Output the 5 digits
