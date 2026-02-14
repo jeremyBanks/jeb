@@ -348,7 +348,7 @@ Deno.test("non-aligned decode with trailing partial block", () => {
 
 async function runRustEncode(input: Uint8Array): Promise<string> {
   const command = new Deno.Command("cargo", {
-    args: ["run", "--quiet", "--release", "--manifest-path", "/Users/jeb/z855/Cargo.toml", "--", "encode"],
+    args: ["run", "--quiet", "--release", "--manifest-path", "Cargo.toml", "--", "encode"],
     stdin: "piped",
     stdout: "piped",
     stderr: "piped",
@@ -365,7 +365,7 @@ async function runRustEncode(input: Uint8Array): Promise<string> {
 
 async function runRustDecode(input: string): Promise<Uint8Array | null> {
   const command = new Deno.Command("cargo", {
-    args: ["run", "--quiet", "--release", "--manifest-path", "/Users/jeb/z855/Cargo.toml", "--", "decode"],
+    args: ["run", "--quiet", "--release", "--manifest-path", "Cargo.toml", "--", "decode"],
     stdin: "piped",
     stdout: "piped",
     stderr: "piped",
@@ -459,7 +459,7 @@ async function findEncodedFiles(
 }
 
 Deno.test("test cases from shared directory", async () => {
-  const testCasesDir = "/Users/jeb/z855/test-cases";
+  const testCasesDir = "test-cases";
 
   for await (const entry of Deno.readDir(testCasesDir)) {
     if (!entry.name.endsWith(".input")) continue;

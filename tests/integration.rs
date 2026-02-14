@@ -12,7 +12,7 @@ use std::path::Path;
 /// Run the TypeScript/Deno CLI for encoding
 fn run_deno_encode(input: &[u8]) -> String {
     let mut child = Command::new("deno")
-        .args(["run", "/Users/jeb/z855/main.ts", "encode"])
+        .args(["run", "main.ts", "encode"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -31,7 +31,7 @@ fn run_deno_encode(input: &[u8]) -> String {
 /// Run the TypeScript/Deno CLI for decoding
 fn run_deno_decode(input: &str) -> Result<Vec<u8>, String> {
     let mut child = Command::new("deno")
-        .args(["run", "/Users/jeb/z855/main.ts", "decode"])
+        .args(["run", "main.ts", "decode"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -55,7 +55,7 @@ fn run_deno_decode(input: &str) -> Result<Vec<u8>, String> {
 /// Run the Rust CLI for encoding (self-test helper)
 fn run_rust_encode(input: &[u8]) -> String {
     let mut child = Command::new("cargo")
-        .args(["run", "--quiet", "--release", "--manifest-path", "/Users/jeb/z855/Cargo.toml", "--", "encode"])
+        .args(["run", "--quiet", "--release", "--", "encode"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -74,7 +74,7 @@ fn run_rust_encode(input: &[u8]) -> String {
 /// Run the Rust CLI for decoding (self-test helper)
 fn run_rust_decode(input: &str) -> Result<Vec<u8>, String> {
     let mut child = Command::new("cargo")
-        .args(["run", "--quiet", "--release", "--manifest-path", "/Users/jeb/z855/Cargo.toml", "--", "decode"])
+        .args(["run", "--quiet", "--release", "--", "decode"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -174,7 +174,7 @@ fn find_encoded_files(test_cases_dir: &Path, base_name: &str) -> EncodedFiles {
 
 #[test]
 fn test_shared_test_cases() {
-    let test_cases_dir = Path::new("/Users/jeb/z855/test-cases");
+    let test_cases_dir = Path::new("test-cases");
 
     for entry in fs::read_dir(test_cases_dir).expect("Failed to read test-cases directory") {
         let entry = entry.expect("Failed to read directory entry");
