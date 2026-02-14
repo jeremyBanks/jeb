@@ -1,41 +1,24 @@
 export default {encode,decode}
-/**@returns {string}*/export function encode(/**@type {Uint8Array}*/d) {
+/**@returns {string}*/export function encode(/**@type {Uint8Array}*/d){
 if(!d.length)return""
-const A="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#"
-const S=new Set([...A+",;|~_"].map(c=>c.charCodeAt(0)))
-const ok=(x,n)=>{for(let j=0;j<n;j++)if(!S.has(d[x+j]))return 0;return 1}
-const e4=x=>{let v=((d[x]<<24)|(d[x+1]<<16)|(d[x+2]<<8)|d[x+3])>>>0,s="";for(let j=0;j<5;j++){s=A[v%85]+s;v=v/85|0}return s}
-let o="",i=0,n=d.length
-while(i<n){
-let r=n-i
+let A="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#",S=new Set([...A+",;|~_"].map(c=>c.charCodeAt(0))),ok=(x,n)=>{for(let j=0;j<n;j++)if(!S.has(d[x+j]))return 0;return 1},e4=x=>{let v=((d[x]<<24)|(d[x+1]<<16)|(d[x+2]<<8)|d[x+3])>>>0,s="";for(let j=5;j--;){s=A[v%85]+s;v=v/85|0}return s},o="",i=0,n=d.length
+while(i<n){let r=n-i
 if(r>=8&&ok(i,r)){o+=A[0]+"|";for(;i<n;)o+=String.fromCharCode(d[i++]);return o}
 if(r>=8&&ok(i,8)){o+=A[8]+"|";for(let j=0;j<8;)o+=String.fromCharCode(d[i+j++]);o+="|";i+=8;continue}
 if(r>=4&&ok(i,4)){o+=",";for(let j=0;j<4;)o+=String.fromCharCode(d[i+j++]);i+=4;continue}
-if(r>=4){o+=e4(i);i+=4}
-else{let v=0;for(let j=0;j<r;j++)v=(v<<8)|d[i+j];let s="";for(let j=0;j<=r;j++){s=A[v%85]+s;v=v/85|0}o+=s;i+=r}
-}
-return o
-}
-/**@returns {Uint8Array}*/export function decode(/**@type {string}*/s) {
+if(r>=4){o+=e4(i);i+=4}else{let v=0;for(let j=0;j<r;j++)v=v<<8|d[i+j];let s="";for(let j=r;j-->=0;){s=A[v%85]+s;v=v/85|0}o+=s;i=n}}
+return o}
+/**@returns {Uint8Array}*/export function decode(/**@type {string}*/s){
 if(!s.length)return new Uint8Array(0)
-const A="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#"
-const D=Array(256).fill(-1);for(let j=0;j<85;j++)D[A.charCodeAt(j)]=j
-const E=s=>new Error(s)
-const b42=(g,e)=>{let v=0,m=1,p=e,c=0;while(p>0){p--;c++;let d=g[p];if(d>83)throw E("bad prefix");if(d>=42){v+=(d-42)*m;m*=42}else{v+=d*m;break}}if(!c||g[p]>=42)throw E("bad prefix");return{v,c}}
-const cmin=(h,l)=>{let P=h.length,K=l.length,b=0;for(let j=0;j<P;j++)b=b*85+h[j];let pw=85**(5-P),rs=b*pw,re=(b+1)*pw;if(!K)return rs>0xffffffff?-1:rs;let k=0;for(let j=0;j<K;j++)k=(k<<8)|l[j];let md=1<<(K*8),rm=rs%md,c=rm<=k?rs-rm+k:rs-rm+md+k;return c>=re||c>0xffffffff?-1:c}
-const xbef=(g,l)=>{let n=g.length,p=n-1,K=l.length,b=0;for(let j=0;j<n;j++)b=b*85+g[j];let pw=85**(5-n),rs=b*pw,re=(b+1)*pw;if(!K)return rs>0xffffffff?-1:rs;if(K===4){let k=0;for(let j=0;j<4;j++)k=(k<<8)|l[j];return k>=rs&&k<re?k:-1}let k=0;for(let j=0;j<K;j++)k=(k<<8)|l[j];let md=2**(K*8),rm=rs%md,c=rm<=k?rs-rm+k:rs-rm+md+k;return c>=re||c>0xffffffff?-1:c}
-const raft=(h,lv,nd)=>{let P=h.length,hi=0;for(let b of h)hi=(hi<<8)|b;let sh=8*(4-P),rs=hi<<sh,sz=1<<sh,md=85**nd,rm=rs%md,c=rm<=lv?rs-rm+lv:rs-rm+md+lv;if(c>=rs+sz)throw E("bad after");return c>>>0}
-const o=[],g=[];let i=0,kh=[]
-while(i<s.length){
-let c=s.charCodeAt(i)
-if(c===124){if(!g.length)throw E("no prefix");let{v:ln,c:lc}=b42(g,g.length),of=0;if(lc<g.length){let{v:ov,c:oc}=b42(g,g.length-lc);if(lc+oc!==g.length)throw E("bad prefix");of=ov}if(ln>=1&&ln<=7)throw E("bad len");if(!ln){i++;for(;i<s.length;)o.push(s.charCodeAt(i++));return new Uint8Array(o)}i++;for(let j=0;j<of;j++){if(i>=s.length||s.charCodeAt(i)!==46)throw E("bad pad");i++}if(i+ln>s.length)throw E("short");for(let j=0;j<ln;j++)o.push(s.charCodeAt(i++));while(i<s.length){let nc=s.charCodeAt(i);if(nc===46){i++;continue}if(nc===124){i++;break}break}g.length=0;kh=[];continue}
+let A="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#",D=Array(256).fill(-1),j=85;while(j--)D[A.charCodeAt(j)]=j
+let E=s=>new Error(s),b42=(g,e)=>{let v=0,m=1,p=e,c=0;while(p>0){p--;c++;let d=g[p];if(d>83)throw E("x");if(d>=42){v+=(d-42)*m;m*=42}else{v+=d*m;break}}if(!c||g[p]>=42)throw E("x");return{v,c}},cmin=(h,l)=>{let P=h.length,K=l.length,b=0;for(let j=0;j<P;j++)b=b*85+h[j];let pw=85**(5-P),rs=b*pw,re=rs+pw;if(!K)return rs>0xffffffff?-1:rs;let k=0;for(let j=0;j<K;j++)k=k<<8|l[j];let md=1<<K*8,rm=rs%md,c=rm<=k?rs-rm+k:rs-rm+md+k;return c>=re||c>0xffffffff?-1:c},xbef=(g,l)=>{let n=g.length,K=l.length,b=0;for(let j=0;j<n;j++)b=b*85+g[j];let pw=85**(5-n),rs=b*pw,re=rs+pw;if(!K)return rs>0xffffffff?-1:rs;if(K===4){let k=0;for(let j=0;j<4;j++)k=k<<8|l[j];return k>=rs&&k<re?k:-1}let k=0;for(let j=0;j<K;j++)k=k<<8|l[j];let md=2**(K*8),rm=rs%md,c=rm<=k?rs-rm+k:rs-rm+md+k;return c>=re||c>0xffffffff?-1:c},raft=(h,lv,nd)=>{let P=h.length,hi=0;for(let b of h)hi=hi<<8|b;let sh=8*(4-P),rs=hi<<sh,sz=1<<sh,md=85**nd,rm=rs%md,c=rm<=lv?rs-rm+lv:rs-rm+md+lv;if(c>=rs+sz)throw E("x");return c>>>0},o=[],g=[],i=0,kh=[]
+while(i<s.length){let c=s.charCodeAt(i)
+if(c===124){if(!g.length)throw E("x");let{v:ln,c:lc}=b42(g,g.length),of=0;if(lc<g.length){let{v:ov,c:oc}=b42(g,g.length-lc);if(lc+oc!==g.length)throw E("x");of=ov}if(ln>=1&&ln<=7)throw E("x");if(!ln){i++;for(;i<s.length;)o.push(s.charCodeAt(i++));return new Uint8Array(o)}i++;for(let j=0;j<of;j++){if(i>=s.length||s.charCodeAt(i)!==46)throw E("x");i++}if(i+ln>s.length)throw E("x");for(let j=0;j<ln;j++)o.push(s.charCodeAt(i++));while(i<s.length){let nc=s.charCodeAt(i);if(nc===46){i++;continue}if(nc===124){i++;break}break}g.length=0;kh=[];continue}
 let pl=c===44?4:c===59?5:c===95?6:c===126?7:0
-if(pl){if(i+pl>=s.length)throw E("short");let ps=[];for(let j=1;j<=pl;j++)ps.push(s.charCodeAt(i+j))
-if(pl===4){let P=g.length;if(!P){o.push(...ps);i+=5}else{let nl=4-P,kl=ps.slice(0,nl),bv=cmin(g,kl);if(bv<0)throw E("bad");o.push((bv>>>24)&255,(bv>>>16)&255,(bv>>>8)&255,bv&255);kh=ps.slice(nl);g.length=0;i+=5}}
-else{let n=g.length;if(!n){o.push(...ps);i+=1+pl;continue}let p=n-1,nl=4-p,kl=ps.slice(0,nl),bv=xbef(g,kl);if(bv<0)throw E("bad");let bb=[(bv>>>24)&255,(bv>>>16)&255,(bv>>>8)&255,bv&255];for(let j=0;j<p;j++)o.push(bb[j]);o.push(...ps);g.length=0;kh=[];i+=1+pl}continue}
-let d=D[c];if(d===-1)throw E("bad char");g.push(d);i++
-let nd=5-kh.length;if(g.length===nd){let v;if(!kh.length){v=0;for(let x of g)v=v*85+x}else{let lw=0;for(let x of g)lw=lw*85+x;v=raft(kh,lw,nd);kh=[]}if(v>0xffffffff)throw E("overflow");o.push((v>>>24)&255,(v>>>16)&255,(v>>>8)&255,v&255);g.length=0}
-}
-if(g.length){let n=g.length;if(n===1)throw E("bad len");let v=0;for(let x of g)v=v*85+x;let nb=n-1;if(nb===1&&v>255)throw E("overflow");if(nb===2&&v>65535)throw E("overflow");if(nb===3&&v>16777215)throw E("overflow");if(nb===1)o.push(v);else if(nb===2)o.push((v>>>8)&255,v&255);else o.push((v>>>16)&255,(v>>>8)&255,v&255)}
-return new Uint8Array(o)
-}
+if(pl){if(i+pl>=s.length)throw E("x");let ps=[];for(let j=1;j<=pl;j++)ps.push(s.charCodeAt(i+j))
+if(pl===4){let P=g.length;if(!P){o.push(...ps);i+=5}else{let nl=4-P,kl=ps.slice(0,nl),bv=cmin(g,kl);if(bv<0)throw E("x");o.push(bv>>>24&255,bv>>>16&255,bv>>>8&255,bv&255);kh=ps.slice(nl);g.length=0;i+=5}}
+else{let n=g.length;if(!n){o.push(...ps);i+=1+pl;continue}let p=n-1,nl=4-p,kl=ps.slice(0,nl),bv=xbef(g,kl);if(bv<0)throw E("x");let bb=[bv>>>24&255,bv>>>16&255,bv>>>8&255,bv&255];for(let j=0;j<p;j++)o.push(bb[j]);o.push(...ps);g.length=0;kh=[];i+=1+pl}continue}
+let d=D[c];if(d<0)throw E("x");g.push(d);i++
+let nd=5-kh.length;if(g.length===nd){let v;if(!kh.length){v=0;for(let x of g)v=v*85+x}else{let lw=0;for(let x of g)lw=lw*85+x;v=raft(kh,lw,nd);kh=[]}if(v>0xffffffff)throw E("x");o.push(v>>>24&255,v>>>16&255,v>>>8&255,v&255);g.length=0}}
+if(g.length){let n=g.length;if(n===1)throw E("x");let v=0;for(let x of g)v=v*85+x;let nb=n-1;if(nb===1&&v>255||nb===2&&v>65535||nb===3&&v>16777215)throw E("x");if(nb===1)o.push(v);else if(nb===2)o.push(v>>>8&255,v&255);else o.push(v>>>16&255,v>>>8&255,v&255)}
+return new Uint8Array(o)}
