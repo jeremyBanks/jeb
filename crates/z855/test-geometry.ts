@@ -1,4 +1,4 @@
-import { z855, decode } from "./z855.ts";
+import { encode, decode } from "./z855.ts";
 
 // Test various sizes to see what the encoder actually produces
 
