@@ -6,7 +6,7 @@ use z855::{decode, encode};
 fuzz_target!(|data: &[u8]| {
     // Roundtrip property: decode(encode(data)) == data
     let encoded = encode(data);
-    let decoded = decode(&encoded);
+    let decoded = decode(&encoded).expect("decode failed on encoder output");
     
     assert_eq!(
         data, &decoded[..],
