@@ -32,19 +32,19 @@ fn build_rom() -> Vec<u8> {
     rom.push(0);
     rom.push(0);
     
-    // Game code starts at 0x0150
-    while rom.len() < 0x0150 { rom.push(0); }
+    // Z85 alphabet lookup table - put it right after header at 0x0200
+    while rom.len() < 0x0200 { rom.push(0); }
+    let z85_alphabet = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
+    let alphabet_addr = rom.len() as u16;  // Will be 0x0200
+    rom.extend_from_slice(z85_alphabet);
     
-    let instructions = game_code();
+    // Game code starts after alphabet
+    while rom.len() < 0x0250 { rom.push(0); }
+    
+    let instructions = game_code(alphabet_addr);
     for inst in instructions {
         rom.extend_from_slice(&inst.to_bytes());
     }
-    
-    // Z85 alphabet lookup table at 0x8000 (we'll copy to WRAM at 0xC000)
-    while rom.len() < 0x8000 { rom.push(0); }
-    
-    let z85_alphabet = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
-    rom.extend_from_slice(z85_alphabet);
     
     // Pad to minimum ROM size
     while rom.len() < 32768 {
@@ -54,7 +54,7 @@ fn build_rom() -> Vec<u8> {
     rom
 }
 
-fn game_code() -> Vec<Instruction> {
+fn game_code(alphabet_addr: u16) -> Vec<Instruction> {
     use Instruction::*;
     use U8Register::*;
     use U16Register::*;
@@ -67,19 +67,19 @@ fn game_code() -> Vec<Instruction> {
         LD_16_IMMEDIATE(SP, 0xFFFE),
         
         // Copy Z85 alphabet to WRAM (0xC000)
-        // Source: 0x8000 (in ROM)
+        // Source: alphabet_addr (in ROM, typically 0x0200)
         // Dest: 0xC000 (WRAM)
         // Length: 85 bytes
-        LD_16_IMMEDIATE(HL, 0x8000), // Source
+        LD_16_IMMEDIATE(HL, alphabet_addr), // Source
         LD_16_IMMEDIATE(DE, 0xC000), // Dest
         LD_8_IMMEDIATE(B, 85),        // Counter
         
-        // COPY_LOOP:
-        LD_8_FROM_SECONDARY(AT_HL_Plus),
-        LD_8_TO_SECONDARY(AT_DE),
-        INC_16(DE),
-        DEC(B),
-        JR_IF(if_NZ, -7),
+        // COPY_LOOP: (1+1+1+1+2 = 6 bytes total)
+        LD_8_FROM_SECONDARY(AT_HL_Plus),  // 1 byte
+        LD_8_TO_SECONDARY(AT_DE),          // 1 byte
+        INC_16(DE),                        // 1 byte
+        DEC(B),                            // 1 byte
+        JR_IF(if_NZ, -6),                  // 2 bytes, jump back 6 to loop start
         
         // Test: encode "Test" (0x54,0x65,0x73,0x74)
         // For simplicity, just output first 5 chars of alphabet
@@ -88,16 +88,15 @@ fn game_code() -> Vec<Instruction> {
         LD_8_IMMEDIATE(B, 5),        // 5 characters to output
         LD_16_IMMEDIATE(HL, 0xC000), // Alphabet base
         
-        // OUTPUT_LOOP:
-        LD_8_FROM_SECONDARY(AT_HL_Plus), // Get next alphabet char
-        LD_8_TO_FF_IMMEDIATE(0x01),       // Write to serial data
-        PUSH_AF,
-        LD_8_IMMEDIATE(A, 0x81),           // Trigger transfer
-        LD_8_TO_FF_IMMEDIATE(0x02),
-        POP_AF,
-        
-        DEC(B),
-        JR_IF(if_NZ, -11),
+        // OUTPUT_LOOP: (1+2+1+2+2+1+1+2 = 12 bytes total)
+        LD_8_FROM_SECONDARY(AT_HL_Plus), // Get next alphabet char (1 byte)
+        LD_8_TO_FF_IMMEDIATE(0x01),       // Write to serial data (2 bytes)
+        PUSH_AF,                          // Save A (1 byte)
+        LD_8_IMMEDIATE(A, 0x81),          // Trigger transfer (2 bytes)
+        LD_8_TO_FF_IMMEDIATE(0x02),       // Write to serial control (2 bytes)
+        POP_AF,                           // Restore A (1 byte)
+        DEC(B),                           // Decrement counter (1 byte)
+        JR_IF(if_NZ, -12),                // Jump back 12 bytes (2 bytes)
         
         // Send newline
         LD_8_IMMEDIATE(A, b'\n'),
