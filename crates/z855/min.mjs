@@ -1,8 +1,6 @@
 export{z855,decode};let Z="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#",_=x=>~~(x+.99),_e=k=>k<6?";":k<7?"_":"~",z855=b=>{if(!b[L])return""
 let S=new Set([...Z+",;|~_"].map(c=>c.charCodeAt())),f=(i,k)=>{if(i+k>b[L])return 0;for(let j=0;j<k;j++)if(!S.has(b[i+j]))return 0;return 1}
-let A=v=>{let d=[];for(let i=0;i<5;i++){d.unshift(v%E);v=v/E|0}return d},R=n=>{let x=BigInt(n);x=((x&0x5555555555555555n)<<1n)|((x>>1n)&0x5555555555555555n);x=((x&0x3333333333333333n)<<2n)|((x>>2n)&0x3333333333333333n)
-x=((x&0x0f0f0f0f0f0f0f0fn)<<4n)|((x>>4n)&0x0f0f0f0f0f0f0f0fn);x=((x&0x00ff00ff00ff00ffn)<<8n)|((x>>8n)&0x00ff00ff00ff00ffn)
-x=((x&0x0000ffff0000ffffn)<<16n)|((x>>16n)&0x0000ffff0000ffffn);x=(x<<32n)|(x>>32n);return x},G=n=>{if(n<42)return[Z[n]];let d=[]
+let A=v=>{let d=[];for(let i=0;i<5;i++){d.unshift(v%E);v=v/E|0}return d},R=n=>{n=((n&0x55555555)<<1)|((n>>>1)&0x55555555);n=((n&0x33333333)<<2)|((n>>>2)&0x33333333);n=((n&0x0f0f0f0f)<<4)|((n>>>4)&0x0f0f0f0f);n=((n&0x00ff00ff)<<8)|((n>>>8)&0x00ff00ff);n=(n<<16)|(n>>>16);return n>>>0},G=n=>{if(n<42)return[Z[n]];let d=[]
 while(n>0){d[P](n%42);n=n/42|0}d.reverse();let r=[];for(let i=0;i<d[L];i++)r[P](Z[d[i]+(i>0?42:0)]);return r},D=(v,p)=>A(v)[O](0,p),H=(v,p)=>A(v)[O](0,p).map(x=>Z[x]),W=(v,n)=>A(v)[O](5-n).map(x=>Z[x])
 let N=(h,l)=>{let p=h[L],m=l[L],s=0;for(let d of h)s=s*E+d;let w=E**(5-p),r=s*w;if(!m)return r>F?-1:r;let k=0
 for(let y of l)k=(k<<8)|y;let q=1<<(m*8),z=r%q,c=z<=k?r-z+k:r-z+q+k;return c>=(s+1)*w||c>F?-1:c},J=(v,p,l)=>{let h=D(v,p),c=N(h,l)
