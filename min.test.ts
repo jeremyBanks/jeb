@@ -16,7 +16,7 @@ function arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
 }
 
 // Get all test case files
-function getTestCases(): { name: string; input: Uint8Array; encoded?: string; isError?: boolean }[] {
+function getTestCases(): { name: string; input: Uint8Array; encodings: string[]; isError?: boolean }[] {
   const files = readdirSync(TEST_CASES_DIR);
   const inputFiles = files.filter(f => f.endsWith(".input"));
 
@@ -24,20 +24,34 @@ function getTestCases(): { name: string; input: Uint8Array; encoded?: string; is
     const name = inputFile.replace(".input", "");
     const inputPath = join(TEST_CASES_DIR, inputFile);
     const encodedPath = join(TEST_CASES_DIR, name + ".encoded");
+    const minEncodedPath = join(TEST_CASES_DIR, name + ".encoded-min");
 
     const input = readFileSync(inputPath);
-    let encoded: string | undefined;
-    // Check if it's an error case (filename suggests error)
-    const isError = name.includes("invalid") || name.includes("overflow") || name.includes("incomplete") || name.includes("error");
+    const encodings: string[] = [];
+    // Check if it's an error case (file content is <error />)
+    const inputText = new TextDecoder().decode(input);
+    const isError = inputText.trim() === "<error />";
 
+    // Read all valid encodings
     try {
       const encodedData = readFileSync(encodedPath);
-      encoded = new TextDecoder().decode(encodedData);
+      encodings.push(new TextDecoder().decode(encodedData).trim());
     } catch {
       // No encoded file
     }
 
-    return { name, input: new Uint8Array(input), encoded, isError };
+    try {
+      const minEncodedData = readFileSync(minEncodedPath);
+      const minEncoded = new TextDecoder().decode(minEncodedData).trim();
+      // Only add if different from first encoding
+      if (!encodings.includes(minEncoded)) {
+        encodings.push(minEncoded);
+      }
+    } catch {
+      // No encoded-min file
+    }
+
+    return { name, input: new Uint8Array(input), encodings, isError };
   });
 }
 
@@ -46,17 +60,27 @@ Deno.test("min.decode matches z855.decode for valid encoded inputs", async (t) =
   const testCases = getTestCases();
 
   for (const tc of testCases) {
-    if (!tc.encoded || tc.isError) continue;
+    if (tc.encodings.length === 0 || tc.isError) continue;
 
     await t.step(tc.name, () => {
-      const z855Result = z855.decode(tc.encoded!);
-      const minResult = min.decode(tc.encoded!);
+      // Test all valid encodings
+      for (const encoded of tc.encodings) {
+        const z855Result = z855.decode(encoded);
+        const minResult = min.decode(encoded);
 
-      assertEquals(
-        Array.from(minResult),
-        Array.from(z855Result),
-        `Decode mismatch for ${tc.name}`
-      );
+        assertEquals(
+          Array.from(minResult),
+          Array.from(z855Result),
+          `Decode mismatch for ${tc.name} with encoding: ${encoded.substring(0, 40)}`
+        );
+
+        // Both should decode to original input
+        assertEquals(
+          Array.from(minResult),
+          Array.from(tc.input),
+          `min.decode doesn't match input for ${tc.name}`
+        );
+      }
     });
   }
 });
@@ -75,7 +99,7 @@ Deno.test("Round-trip: z855.encode -> min.decode", async (t) => {
       assertEquals(
         Array.from(decoded),
         Array.from(tc.input),
-        `Round-trip failed for ${tc.name}: encoded=${encoded}`
+        `Round-trip failed for ${tc.name}: encoded=${encoded.substring(0, 40)}`
       );
     });
   }
@@ -95,8 +119,18 @@ Deno.test("Round-trip: min.z855 -> z855.decode", async (t) => {
       assertEquals(
         Array.from(decoded),
         Array.from(tc.input),
-        `Round-trip failed for ${tc.name}: encoded=${encoded}`
+        `Round-trip failed for ${tc.name}: encoded=${encoded.substring(0, 40)}`
       );
+
+      // Verify min.z855 produces one of the expected encodings
+      if (tc.encodings.length > 0) {
+        const isValid = tc.encodings.includes(encoded);
+        assertEquals(
+          isValid,
+          true,
+          `min.z855 produced unexpected encoding for ${tc.name}:\n  Got: ${encoded.substring(0, 60)}\n  Expected one of: ${tc.encodings.map(e => e.substring(0, 60)).join(" OR ")}`
+        );
+      }
     });
   }
 });
