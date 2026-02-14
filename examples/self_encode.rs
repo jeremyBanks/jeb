@@ -28,7 +28,32 @@ fn main() {
     // Encode as extended Z85
     println!("Encoding as extended Z85...");
     let encoded = cleanroom::encode(&binary_data);
-    println!("Encoded size: {} characters", encoded.len());
+    println!("Extended Z85 size: {} characters", encoded.len());
+
+    // Also encode as standard Z85 for comparison
+    println!("Encoding as standard Z85...");
+    let standard = cleanroom::z85::encode_standard(&binary_data);
+    println!("Standard Z85 size: {} characters", standard.len());
+
+    let expected_len = (binary_data.len() * 5 + 3) / 4;
+    println!("Expected length: {} characters", expected_len);
+    println!("Difference (extended - standard): {} characters",
+             encoded.len() as i64 - standard.len() as i64);
+
+    // Try decoding to verify correctness
+    match cleanroom::decode(&encoded) {
+        Ok(decoded) => {
+            if decoded == binary_data {
+                println!("Decoding verification: OK");
+            } else {
+                println!("Decoding verification: FAILED (decoded {} bytes vs original {} bytes)",
+                         decoded.len(), binary_data.len());
+            }
+        }
+        Err(e) => {
+            println!("Decoding verification: ERROR {:?}", e);
+        }
+    }
 
     // Insert newlines every 80 characters
     let mut with_newlines = String::new();
