@@ -7,11 +7,12 @@ use std::sync::{Arc, Mutex};
 use std::fs;
 
 fn main() {
-    let rom = fs::read("z85-encoder.gb").expect("Failed to read ROM");
+    let rom_path = std::env::args().nth(1).unwrap_or_else(|| "z85-encoder.gb".to_string());
+    let rom = fs::read(&rom_path).expect("Failed to read ROM");
     let output_buffer = Arc::new(Mutex::new(Output::new()));
     let mut gb = GameBoy::new_skip_boot(rom, output_buffer);
     
-    println!("Running z85-encoder.gb...");
+    println!("Running {}...", rom_path);
     
     // Run for 1,000,000 cycles
     let mut cycles = 0;
