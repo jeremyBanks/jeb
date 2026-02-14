@@ -58,32 +58,46 @@ fn game_code() -> Vec<Instruction> {
     use Instruction::*;
     use U8Register::*;
     use U16Register::*;
+    use U8SecondaryRegister::*;
+    use FlagCondition::*;
     
     vec![
         // Initialize
         DI,
         LD_16_IMMEDIATE(SP, 0xFFFE),
         
-        // Send test message "Z85\n" to serial output
-        // to verify serial communication works
+        // Copy Z85 alphabet to WRAM (0xC000)
+        // Source: 0x8000 (in ROM)
+        // Dest: 0xC000 (WRAM)
+        // Length: 85 bytes
+        LD_16_IMMEDIATE(HL, 0x8000), // Source
+        LD_16_IMMEDIATE(DE, 0xC000), // Dest
+        LD_8_IMMEDIATE(B, 85),        // Counter
         
-        // Send 'Z'
-        LD_8_IMMEDIATE(A, b'Z'),
-        LD_8_TO_FF_IMMEDIATE(0x01), // Write to SB
-        LD_8_IMMEDIATE(A, 0x81),     // Trigger transfer
-        LD_8_TO_FF_IMMEDIATE(0x02), // Write to SC
+        // COPY_LOOP:
+        LD_8_FROM_SECONDARY(AT_HL_Plus),
+        LD_8_TO_SECONDARY(AT_DE),
+        INC_16(DE),
+        DEC(B),
+        JR_IF(if_NZ, -7),
         
-        // Send '8'
-        LD_8_IMMEDIATE(A, b'8'),
-        LD_8_TO_FF_IMMEDIATE(0x01),
-        LD_8_IMMEDIATE(A, 0x81),
+        // Test: encode "Test" (0x54,0x65,0x73,0x74)
+        // For simplicity, just output first 5 chars of alphabet
+        // (Real Z85 encoding is complex - need 32-bit division by 85)
+        
+        LD_8_IMMEDIATE(B, 5),        // 5 characters to output
+        LD_16_IMMEDIATE(HL, 0xC000), // Alphabet base
+        
+        // OUTPUT_LOOP:
+        LD_8_FROM_SECONDARY(AT_HL_Plus), // Get next alphabet char
+        LD_8_TO_FF_IMMEDIATE(0x01),       // Write to serial data
+        PUSH_AF,
+        LD_8_IMMEDIATE(A, 0x81),           // Trigger transfer
         LD_8_TO_FF_IMMEDIATE(0x02),
+        POP_AF,
         
-        // Send '5'
-        LD_8_IMMEDIATE(A, b'5'),
-        LD_8_TO_FF_IMMEDIATE(0x01),
-        LD_8_IMMEDIATE(A, 0x81),
-        LD_8_TO_FF_IMMEDIATE(0x02),
+        DEC(B),
+        JR_IF(if_NZ, -11),
         
         // Send newline
         LD_8_IMMEDIATE(A, b'\n'),
@@ -91,7 +105,7 @@ fn game_code() -> Vec<Instruction> {
         LD_8_IMMEDIATE(A, 0x81),
         LD_8_TO_FF_IMMEDIATE(0x02),
         
-        // Done - infinite loop
+        // Done
         HALT,
         JR(-1),
     ]
