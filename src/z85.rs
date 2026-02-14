@@ -667,28 +667,34 @@ fn try_long_passthrough(
     // Structure: [prefix][|][raw bytes][padding][|]
     //
     // We need to calculate padding to maintain length invariant.
-    // Standard Z85 for N bytes = ceil(N * 5/4) characters
-    // Our encoding uses: prefix_len + 1 + raw_len + padding_len
     //
-    // For efficiency, we encode as many safe bytes as possible (up to limit).
-    // But we may want to leave some for subsequent escapes if we hit the limit.
+    // IMPORTANT: Z85 output length is NOT additive!
+    // z85_output_length(a + b) != z85_output_length(a) + z85_output_length(b) in general.
+    //
+    // We must ensure: escape_chars + z85_output_length(remaining) <= z85_output_length(total)
+    // where total = bytes_remaining and remaining = bytes_remaining - raw_len.
 
     let raw_len = safe_count.min(MAX_LONG_PASSTHROUGH_LENGTH);
     let prefix = generate_long_escape_prefix(raw_len);
 
-    // Calculate padding needed
-    // Total bytes being encoded: raw_len
-    // Standard Z85 length: ceil(raw_len * 5/4)
-    let standard_z85_len = z85_output_length(raw_len);
+    // Calculate the budget available for the escape sequence
+    // Total standard Z85 length for all remaining bytes
+    let total_standard_len = z85_output_length(bytes_remaining);
+    // Standard Z85 length for bytes after the passthrough
+    let after_len = z85_output_length(bytes_remaining - raw_len);
+    // Available chars for our escape (must not exceed this to maintain invariant)
+    let available_chars = total_standard_len - after_len;
+
     // Our encoding (without padding): prefix.len() + 1 (|) + raw_len
     let our_len_no_padding = prefix.len() + 1 + raw_len;
 
-    // Padding needed (might be 0 for exact fit like 8 bytes)
-    let padding_needed = if standard_z85_len > our_len_no_padding {
-        standard_z85_len - our_len_no_padding
-    } else {
-        0
-    };
+    // If our escape is already too long, don't use it
+    if our_len_no_padding > available_chars {
+        return None;
+    }
+
+    // Padding needed to reach the available budget (or 0 if exact fit)
+    let padding_needed = available_chars - our_len_no_padding;
 
     let mut output = Vec::new();
     output.extend_from_slice(&prefix);
