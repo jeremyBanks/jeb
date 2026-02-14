@@ -86,6 +86,19 @@ const RAW_ESCAPE_6: u8 = b'_';
 /// so no canonical minimum constraint is needed - the extra char fully disambiguates.
 const RAW_ESCAPE_7: u8 = b'~';
 
+/// The 8+ byte raw passthrough escape character (long escape).
+/// Structure: [prefix digits][|][raw bytes][padding][|]
+/// The prefix encodes the raw byte count using base-42 with continuation bits.
+/// Values 0-41 are terminal digits, 42-83 are continuation digits (+42).
+/// Special cases:
+/// - 0: rest of input is raw (can be shorter than standard Z85)
+/// - 1-7: decoding error (use ,;_~ escapes for these)
+/// - 8+: that many raw bytes follow
+const RAW_ESCAPE_LONG: u8 = b'|';
+
+/// Padding character for the long escape (aesthetic, ignored by decoder)
+const RAW_ESCAPE_PADDING: u8 = b'.';
+
 /// Extended safe characters for raw passthrough encoding decisions.
 /// These are the Z85 alphabet (85 chars) plus 5 additional safe characters: `,;|~_`
 /// Total: 90 characters that are considered "safe" for raw passthrough.
