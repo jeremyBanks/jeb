@@ -233,6 +233,62 @@ function readLongEscapePrefix(prefixDigits: number[]): number {
 }
 
 /**
+ * Generate prefix characters for encoding a length value with the `|` escape.
+ *
+ * Uses base-42 with continuation bits:
+ * - Most significant digit is output as-is (terminal, 0-41)
+ * - Remaining digits are output with +42 (continuation, 42-83)
+ *
+ * Returns an array of Z85 CHARACTERS (not digit values).
+ */
+function generateLongEscapePrefix(length: number): string[] {
+  if (length < 42) {
+    // Single digit: just the length value as a Z85 character
+    return [Z85_ALPHABET[length]];
+  }
+
+  // Multiple digits: extract base-42 digits
+  const digits: number[] = [];
+  let remaining = length;
+
+  while (remaining > 0) {
+    digits.push(remaining % 42);
+    remaining = Math.floor(remaining / 42);
+  }
+
+  // digits is now in reverse order (least significant first)
+  // We need to output: most significant as terminal (0-41), rest as continuation (+42)
+  const output: string[] = [];
+
+  // Reverse to get big-endian order
+  digits.reverse();
+
+  for (let i = 0; i < digits.length; i++) {
+    const d = digits[i];
+    if (i === 0) {
+      // Most significant digit: terminal (as-is)
+      output.push(Z85_ALPHABET[d]);
+    } else {
+      // Continuation digit: add 42
+      output.push(Z85_ALPHABET[d + 42]);
+    }
+  }
+
+  return output;
+}
+
+/**
+ * Calculate the standard Z85 output length for a given input byte count.
+ */
+function z85OutputLength(inputBytes: number): number {
+  // ceil(inputBytes * 5 / 4)
+  return Math.ceil((inputBytes * 5) / 4);
+}
+
+/** Maximum length for a single long passthrough segment (64 KiB implementation limit) */
+const MAX_LONG_PASSTHROUGH_LENGTH = 65536;
+
+/**
  * Error class for Z85 decoding failures
  */
 export class Z85DecodeError extends Error {
@@ -298,7 +354,16 @@ export function encode(input: Uint8Array): string {
 
     // First, check if we have at least 4 bytes for a potential passthrough
     if (bytesRemaining >= 4) {
-      // Try extended passthrough (5/6/7 bytes) - highest preference
+      // HIGHEST PRIORITY: Try 8+ byte passthrough (| escape)
+      // This is most efficient for long runs of safe bytes
+      const longResult = tryLongPassthrough(input, inIdx);
+      if (longResult !== null) {
+        outputChars.push(...longResult.output);
+        inIdx += longResult.bytesConsumed;
+        continue;
+      }
+
+      // Try extended passthrough (5/6/7 bytes) - second preference
       // Prefer: 7-byte > 6-byte > 5-byte
       // These are more efficient than 4-byte passthrough (8 chars for 7 bytes vs 5 chars for 4 bytes)
       // and allow consecutive escapes with zero gap for long safe sequences.
@@ -309,7 +374,7 @@ export function encode(input: Uint8Array): string {
         continue;
       }
 
-      // Check for block-aligned 4-byte passthrough (second preference)
+      // Check for block-aligned 4-byte passthrough (third preference)
       if (areBytesAllSafe(input, inIdx)) {
         // Block-aligned passthrough: just output , + 4 bytes
         outputChars.push(",");
@@ -1221,7 +1286,129 @@ function areKBytesSafe(input: Uint8Array, startIdx: number, k: number): boolean 
 // Structure: [(P+1) Z85 chars] [escape] [K raw bytes]
 // Then the main loop handles the remaining input normally.
 //
-// Preferences: block-aligned 4-byte > 7-byte > 6-byte > 5-byte > non-aligned 4-byte
+// Preferences: 8+ byte (|) > 7-byte (~) > 6-byte (_) > 5-byte (;) > 4-byte (,)
+
+// =============================================================================
+// Long Passthrough Encoding (8+ bytes with | escape)
+// =============================================================================
+//
+// Long passthrough allows encoding 8 or more consecutive safe bytes using the
+// `|` escape character with a variable-length prefix.
+//
+// Structure: [prefix digits][|][raw bytes][padding][|]
+//
+// The prefix encodes the raw byte count using base-42 with continuation bits.
+// Special case: 0| means "rest of input is raw" (can be shorter than standard Z85).
+
+/**
+ * Result of a successful long passthrough encoding attempt.
+ */
+interface LongPassthroughResult {
+  /** The output characters for this passthrough sequence */
+  output: string[];
+  /** Number of input bytes consumed */
+  bytesConsumed: number;
+}
+
+/**
+ * Try to encode 8+ consecutive safe bytes using the `|` escape.
+ *
+ * This has highest priority among passthrough escapes because it's most efficient
+ * for long runs of safe bytes.
+ *
+ * Two cases:
+ * 1. At end of input: use `0|` (rest is raw) - shorter output
+ * 2. Otherwise: use length-prefixed escape
+ */
+function tryLongPassthrough(
+  input: Uint8Array,
+  startIdx: number
+): LongPassthroughResult | null {
+  const bytesRemaining = input.length - startIdx;
+
+  // Need at least 8 safe bytes for this escape
+  if (bytesRemaining < 8) {
+    return null;
+  }
+
+  // Count consecutive safe bytes starting at startIdx
+  let safeCount = 0;
+  for (let i = startIdx; i < input.length; i++) {
+    if (SAFE_CHAR_TABLE[input[i]]) {
+      safeCount++;
+      // Cap at implementation limit
+      if (safeCount >= MAX_LONG_PASSTHROUGH_LENGTH) {
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+
+  // Need at least 8 consecutive safe bytes
+  if (safeCount < 8) {
+    return null;
+  }
+
+  // Check if this safe run extends to end of input
+  const atEndOfInput = startIdx + safeCount === input.length;
+
+  if (atEndOfInput) {
+    // Use 0| (rest of input is raw) - shorter output
+    const output: string[] = [];
+    output.push(Z85_ALPHABET[0]); // '0' prefix
+    output.push(String.fromCharCode(RAW_ESCAPE_LONG)); // '|'
+    for (let i = startIdx; i < input.length; i++) {
+      output.push(String.fromCharCode(input[i]));
+    }
+    return {
+      output,
+      bytesConsumed: safeCount,
+    };
+  }
+
+  // Not at end: use length-prefixed escape
+  // Structure: [prefix][|][raw bytes][padding][|]
+  const rawLen = Math.min(safeCount, MAX_LONG_PASSTHROUGH_LENGTH);
+  const prefix = generateLongEscapePrefix(rawLen);
+
+  // Calculate padding needed
+  // Total bytes being encoded: rawLen
+  // Standard Z85 length: ceil(rawLen * 5/4)
+  const standardZ85Len = z85OutputLength(rawLen);
+  // Our encoding (without padding): prefix.length + 1 (|) + rawLen
+  const ourLenNoPadding = prefix.length + 1 + rawLen;
+
+  // Padding needed (might be 0 for exact fit like 8 bytes)
+  const paddingNeeded =
+    standardZ85Len > ourLenNoPadding ? standardZ85Len - ourLenNoPadding : 0;
+
+  const output: string[] = [];
+  output.push(...prefix);
+  output.push(String.fromCharCode(RAW_ESCAPE_LONG));
+  for (let i = 0; i < rawLen; i++) {
+    output.push(String.fromCharCode(input[startIdx + i]));
+  }
+
+  // Add padding if needed: (paddingNeeded - 1) dots + final |
+  // But if paddingNeeded == 1, just the |
+  // If paddingNeeded == 0, no padding at all
+  if (paddingNeeded > 0) {
+    for (let i = 0; i < paddingNeeded - 1; i++) {
+      output.push(String.fromCharCode(RAW_ESCAPE_PADDING));
+    }
+    output.push(String.fromCharCode(RAW_ESCAPE_LONG)); // Final | terminator
+  }
+
+  return {
+    output,
+    bytesConsumed: rawLen,
+  };
+}
+
+// =============================================================================
+// Extended Passthrough Encoding (5/6/7 bytes)
+// =============================================================================
 
 /**
  * Result of a successful extended passthrough encoding attempt.
