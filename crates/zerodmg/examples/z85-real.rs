@@ -200,32 +200,31 @@ fn test_encoding() -> Vec<Instruction> {
     use FlagCondition::*;
     
     // Test: encode 16-bit value using actual division
-    // Using value 1234 (0x04D2)
-    // 1234 / 85 = 14 remainder 44
-    // 14 / 85 = 0 remainder 14
-    // So digits should be: 0, 0, 0, 14, 44 (reading left to right)
-    // Output: "000e," (0='0', 14='e', 44=',')
+    // Using value 210 (0x00D2) to match 8-bit test
+    // 210 / 85 = 2 remainder 40
+    // 2 / 85 = 0 remainder 2
+    // So digits should be: 0, 0, 0, 2, 40 (reading left to right)
+    // Output: "0002E"
     
     let mut code = vec![
         // Store test value at 0xC100-0xC101 (16-bit, little-endian)
         LD_16_IMMEDIATE(HL, 0xC100),
-        LD_8_IMMEDIATE(A, 0xD2), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // Low: 0xD2
-        LD_8_IMMEDIATE(A, 0x04), LD_8_INTERNAL(AT_HL, A),              // High: 0x04
+        LD_8_IMMEDIATE(A, 0xD2), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // Low: 0xD2 (210)
+        LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A),              // High: 0x00
     ];
     
     // Compute digits from right to left (least to most significant)
     // Store at 0xC114, 0xC113, 0xC112, 0xC111, 0xC110
+    // Use 0xC105 to store loop counter (avoids register conflicts)
     
     code.extend(vec![
-        LD_16_IMMEDIATE(HL, 0xC114), // Start at last digit (index 4)
-        LD_8_IMMEDIATE(B, 5),         // Digit counter
+        LD_8_IMMEDIATE(A, 5),         // Loop counter
+        LD_16_IMMEDIATE(HL, 0xC105),
+        LD_8_INTERNAL(AT_HL, A),      // Store counter at 0xC105
     ]);
     
-    // DIGIT_LOOP: Compute one digit per iteration  
+    // DIGIT_LOOP: Compute one digit per iteration
     code.extend(vec![
-        // Save digit pointer (HL points to current digit position)
-        PUSH(HL),
-        
         // Load 16-bit value from 0xC100-0xC101 into DE
         LD_16_IMMEDIATE(HL, 0xC100),
         LD_8_INTERNAL(E, AT_HL), // E = byte at 0xC100 (low)
@@ -241,7 +240,7 @@ fn test_encoding() -> Vec<Instruction> {
     code.extend(vec![
         // A now has remainder (the digit)
         // BC has quotient
-        // Save remainder before we clobber A
+        // Save remainder
         PUSH_AF,
         
         // Store quotient back to 0xC100-0xC101 for next iteration
@@ -249,19 +248,31 @@ fn test_encoding() -> Vec<Instruction> {
         LD_8_INTERNAL(A, C), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // Low byte
         LD_8_INTERNAL(A, B), LD_8_INTERNAL(AT_HL, A),              // High byte
         
-        // Restore remainder and digit pointer
-        POP_AF, // A = remainder
-        POP(HL), // HL = digit pointer (from start of loop)
+        // Load loop counter from memory
+        LD_16_IMMEDIATE(HL, 0xC105),
+        LD_8_INTERNAL(A, AT_HL),
+        LD_8_INTERNAL(B, A), // B = loop counter
+        
+        // Calculate digit pointer: 0xC10F + B
+        LD_16_IMMEDIATE(HL, 0xC10F),
+        LD_8_INTERNAL(A, B),
+        ADD(L),
+        LD_8_INTERNAL(L, A),
         
         // Store digit
+        POP_AF, // A = remainder
         LD_8_INTERNAL(AT_HL, A),
         
-        // Move to next digit position (right-to-left)
-        DEC_16(HL),
-        
-        // Loop
+        // Decrement and save loop counter
         DEC(B),
-        JR_IF(if_NZ, -46), // Jump back to PUSH HL at loop start (0x0281)
+        LD_16_IMMEDIATE(HL, 0xC105),
+        LD_8_INTERNAL(A, B),
+        LD_8_INTERNAL(AT_HL, A),
+        
+        // Loop if counter > 0
+        LD_8_INTERNAL(A, B),
+        OR(A),
+        JR_IF(if_NZ, -62), // Loop body is 60 bytes, PC is +2 after JR
     ]);
     
     // Output the 5 digits
