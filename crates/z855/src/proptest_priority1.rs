@@ -39,7 +39,7 @@ fn standard_z85_encode(data: &[u8]) -> String {
         let mut padded = [0u8; 4];
         padded[..remainder.len()].copy_from_slice(remainder);
         
-        let value = u32::from_be_bytes(padded);
+        let mut value = u32::from_be_bytes(padded);
         let mut block = [0u8; 5];
         
         for i in (0..5).rev() {
