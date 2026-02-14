@@ -85,11 +85,11 @@ proptest! {
         let encoded = encode(&data);
         
         // Check if output contains escape characters
-        let has_escapes = encoded.contains(',') || 
-                          encoded.contains(';') || 
-                          encoded.contains('_') || 
-                          encoded.contains('~') || 
-                          encoded.contains('|');
+        let _has_escapes = encoded.contains(',') || 
+                           encoded.contains(';') || 
+                           encoded.contains('_') || 
+                           encoded.contains('~') || 
+                           encoded.contains('|');
         
         // If passthrough is used, escape chars MUST be present
         // (We can't easily check the inverse - encoder is opportunistic)
