@@ -511,6 +511,34 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore] // Manual inspection test
+    fn inspect_rgba_structure() {
+        // Load an RGBA zipng and inspect its structure
+        let data = std::fs::read("/tmp/zipng-rgba-test/rgba-test.png").unwrap();
+        let img = image::load_from_memory(&data).unwrap();
+        let rgba = img.to_rgba8();
+        
+        println!("Dimensions: {}x{}", rgba.width(), rgba.height());
+        println!("\nFirst 12 pixels:");
+        for x in 0..12 {
+            let p = rgba.get_pixel(x, 0);
+            println!("  {:?}", p.0);
+        }
+        
+        // Count colors
+        use std::collections::HashSet;
+        let mut colors = HashSet::new();
+        let pixels = rgba.as_raw();
+        for chunk in pixels.chunks_exact(4) {
+            colors.insert([chunk[0], chunk[1], chunk[2], chunk[3]]);
+            if colors.len() > 300 {
+                break;
+            }
+        }
+        println!("\nUnique colors: {}", colors.len());
+    }
+
+    #[test]
     fn encode_produces_nonempty_output() {
         let files = vec![
             ("hello.txt", "Hello, world!"),
