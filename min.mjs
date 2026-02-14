@@ -18,5 +18,5 @@ J<0&&Q();o[P](...B(J));w=a[O](m);g=[];i+=5}}else{let n=g[L];if(!n){o[P](...a);i+
 let H=B(J);for(let j=0;j<p;j++)o[P](H[j]);o[P](...a);g=[];w=[];i+=1+t}continue}let d=D[c];d<0&&Q();g[P](d);i++;let M=5-w[L];if(g[L]==M){let v
 if(!w[L]){v=0;for(let x of g)v=v*E+x}else{let m=0;for(let x of g)m=m*E+x;v=A(w,m,M);w=[]}v>F&&Q();o[P](...B(v));g=[]}}if(g[L]){let n=g[L]
 n<2&&Q();let v=0;for(let x of g)v=v*E+x;let N=n-1;v>=256**N&&Q();o[P](...B(v)[O](4-N))}return new U(o)},L='length',P='push',O='slice',E=85,M
-=255,F=2**32-1,B=v=>[v>>>24&M,v>>>16&M,v>>>8&M,v&M],C=String.fromCharCode,U=Uint8Array,D=[],K=s=>s.charCodeAt(),H=new Set([...Z+",;|~_"].
-map(c=>K(c))),$=a=>a.reduce((p,x)=>p*E+x,0),T=TypeError,Q=z=>{throw new T};for(let j=E;j--;)D[K(Z[j])]=j
+=255,F=2**32-1,B=v=>[v>>>24&M,v>>>16&M,v>>>8&M,v&M],C=String.fromCharCode,U=Uint8Array,D=[],K=s=>s.charCodeAt(),H=new
+Set([...Z+",;|~_"].map(c=>K(c))),$=a=>a.reduce((p,x)=>p*E+x,0),T=TypeError,Q=z=>{throw new T};for(let j=E;j--;)D[K(Z[j])]=j
