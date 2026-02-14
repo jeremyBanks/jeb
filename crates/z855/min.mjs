@@ -11,8 +11,8 @@ if(e>=8){let a=i+e===n;if(a){o+=Z[0]+"|";for(let j=i;j<n;j++)o+=C(b[j]);return o
 let A=_((r-w)*5/4),V=t-A,B=g[L]+1+w;if(B<=V){let d=V-B,X=0,Y=null;for(let j=0;j<=d;j++){let m=j>0?G(j)[L]:0;if(m+j>d)continue
 let s=u+m+g[L]+1+j,I=s+w-1,x=s*4/5|0,y=I*4/5|0,U=R(x),K=R(y),Q=R(s),T=R(I),k=[U<K?U:K,U>K?U:K,Q<T?Q:T,Q>T?Q:T]
 if(Y===null||k[0]<Y[0]||k[0]===Y[0]&&k[1]<Y[1]||k[0]===Y[0]&&k[1]===Y[1]&&k[2]<Y[2]||k[0]===Y[0]&&k[1]===Y[1]&&k[2]===Y[2]&&k[3]<Y[3]){Y=k;X=j}}
-let q=X>0?G(X):[];o+=q.join("")+g.join("")+"|";for(let j=0;j<X;j++)o+=".";for(let j=0;j<w;j++)o+=C(b[i+j]);let p=d-q[L]-X
-for(let j=0;j<p;j++)o+=".";u+=V;i+=w;continue}}}}if(r>=5){let T=0;for(let k of[7,6,5]){if(r<k||T)continue
+let q=X>0?G(X):[];o+=q.join("")+g.join("")+"|"+".".repeat(X);for(let j=0;j<w;j++)o+=C(b[i+j]);let p=d-q[L]-X
+o+=".".repeat(p);u+=V;i+=w;continue}}}}if(r>=5){let T=0;for(let k of[7,6,5]){if(r<k||T)continue
 if(f(i,k)){let h=r,a=h-k,y=k+1;if(y+_(a*5/4)===_(h*5/4)){let j=k<6?";":k<7?"_":"~";o+=j;for(let l=0;l<k;l++)o+=C(b[i+l])
 u+=y;i+=k;T=1;break}}if(!T){let x=[];for(let p=0;p<=3;p++){let m=p+k;if(i+m>n)continue;let a=r-m,y=m+2;if(y+_(a*5/4)!==_(r*5/4))continue
 let s=i+p,I=s+k-1,U=R(s),K=R(I),z=U<K?U:K,t=U<K?K:U;x[P]({z,t,p})}x.sort((a,c)=>{if(a.z<c.z)return -1;if(a.z>c.z)return 1
