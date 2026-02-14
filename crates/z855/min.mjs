@@ -37,3 +37,5 @@ n<2&&Q();let v=0;for(let x of g)v=v*E+x;let N=n-1;v>=256**N&&Q();o[P](...B(v)[O]
 U(o)},L='length',P='push',O='slice',E=85,M=255,F=2**32-1,B=v=>[v>>>24&M,v>>>16&M,v>>>8&M,v&M],C=String.fromCharCode,Q=z=>{throw new
 TypeError},U=Uint8Array,D=[],K=s=>s.charCodeAt(),H=new Set([...Z+",;|~_"].map(c=>K(c))),$=(a,i)=>((a[i]<<24)|(a[i+1]<<16)|(a[i+2]<<8)|a[i+3])>>>0
 for(let j=E;j--;)D[K(Z[j])]=j
+// CLI: node/deno/bun min.mjs <encode|decode> <stdin >stdout
+if(import.meta.main||import.meta.url===`file://${process?.argv?.[1]}`){(async()=>{let a=process?.argv||Deno?.args||Bun?.argv||[],m=a[a[0]?.includes?.('node')||a[0]?.includes?.('bun')?2:1];if(!m||!['encode','decode'].includes(m))((process||Deno||Bun)?.exit?.(1));let d='',e=new TextEncoder(),r=new TextDecoder();if(typeof Deno!=='undefined'){Deno.stdin.setRaw?.(false);for await(let c of Deno.stdin.readable){d+=r.decode(c,{stream:true})}}else{process.stdin.setEncoding('utf8');for await(let c of process.stdin)d+=c}d=d.trimEnd();let o=m==='encode'?z855(e.encode(d)):r.decode(decode(d));(process?.stdout||Deno?.stdout||Bun?.stdout)?.write?.(o)})()}
