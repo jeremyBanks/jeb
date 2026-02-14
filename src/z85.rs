@@ -222,7 +222,15 @@ pub fn encode(input: &[u8]) -> String {
 
         // First, check if we have at least 4 bytes for a potential passthrough
         if bytes_remaining >= 4 {
-            // Try extended passthrough (5/6/7 bytes) - highest preference
+            // HIGHEST PRIORITY: Try 8+ byte passthrough (| escape)
+            // This is most efficient for long runs of safe bytes
+            if let Some(result) = try_long_passthrough(input, in_idx) {
+                output.extend_from_slice(&result.output);
+                in_idx += result.bytes_consumed;
+                continue;
+            }
+
+            // Try extended passthrough (5/6/7 bytes) - second preference
             // Prefer: 7-byte > 6-byte > 5-byte
             // These are more efficient than 4-byte passthrough (8 chars for 7 bytes vs 5 chars for 4 bytes)
             // and allow consecutive escapes with zero gap for long safe sequences.
@@ -232,7 +240,7 @@ pub fn encode(input: &[u8]) -> String {
                 continue;
             }
 
-            // Check for block-aligned 4-byte passthrough (second preference)
+            // Check for block-aligned 4-byte passthrough (third preference)
             if is_block_safe_for_passthrough(&input[in_idx..]) {
                 // Block-aligned passthrough: just output , + 4 bytes
                 output.push(RAW_ESCAPE_4);
@@ -525,6 +533,130 @@ fn get_low_order_z85_chars(value: u32, num_chars: usize) -> Vec<u8> {
     }
     // Return last num_chars
     chars[5 - num_chars..].to_vec()
+}
+
+// =============================================================================
+// Long Passthrough Encoding (8+ bytes with | escape)
+// =============================================================================
+//
+// Long passthrough allows encoding 8 or more consecutive safe bytes using the
+// `|` escape character with a variable-length prefix.
+//
+// Structure: [prefix digits][|][raw bytes][padding][|]
+//
+// The prefix encodes the raw byte count using base-42 with continuation bits.
+// Special case: 0| means "rest of input is raw" (can be shorter than standard Z85).
+
+/// Result of a successful long passthrough encoding attempt.
+struct LongPassthroughResult {
+    /// The complete output bytes for this passthrough sequence
+    output: Vec<u8>,
+    /// Number of input bytes consumed
+    bytes_consumed: usize,
+}
+
+/// Maximum length for a single long passthrough segment (64 KiB implementation limit)
+const MAX_LONG_PASSTHROUGH_LENGTH: usize = 65536;
+
+/// Try to encode 8+ consecutive safe bytes using the `|` escape.
+///
+/// This has highest priority among passthrough escapes because it's most efficient
+/// for long runs of safe bytes.
+///
+/// Two cases:
+/// 1. At end of input: use `0|` (rest is raw) - shorter output
+/// 2. Otherwise: use length-prefixed escape
+fn try_long_passthrough(
+    input: &[u8],
+    start_idx: usize,
+) -> Option<LongPassthroughResult> {
+    let bytes_remaining = input.len() - start_idx;
+
+    // Need at least 8 safe bytes for this escape
+    if bytes_remaining < 8 {
+        return None;
+    }
+
+    // Count consecutive safe bytes starting at start_idx
+    let mut safe_count = 0;
+    for i in start_idx..input.len() {
+        if SAFE_CHAR_TABLE[input[i] as usize] {
+            safe_count += 1;
+            // Cap at implementation limit
+            if safe_count >= MAX_LONG_PASSTHROUGH_LENGTH {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+
+    // Need at least 8 consecutive safe bytes
+    if safe_count < 8 {
+        return None;
+    }
+
+    // Check if this safe run extends to end of input
+    let at_end_of_input = start_idx + safe_count == input.len();
+
+    if at_end_of_input {
+        // Use 0| (rest of input is raw) - shorter output
+        let mut output = Vec::new();
+        output.push(Z85_ALPHABET[0]); // '0' prefix
+        output.push(RAW_ESCAPE_LONG); // '|'
+        output.extend_from_slice(&input[start_idx..]);
+        return Some(LongPassthroughResult {
+            output,
+            bytes_consumed: safe_count,
+        });
+    }
+
+    // Not at end: use length-prefixed escape
+    // Structure: [prefix][|][raw bytes][padding][|]
+    //
+    // We need to calculate padding to maintain length invariant.
+    // Standard Z85 for N bytes = ceil(N * 5/4) characters
+    // Our encoding uses: prefix_len + 1 + raw_len + padding_len
+    //
+    // For efficiency, we encode as many safe bytes as possible (up to limit).
+    // But we may want to leave some for subsequent escapes if we hit the limit.
+
+    let raw_len = safe_count.min(MAX_LONG_PASSTHROUGH_LENGTH);
+    let prefix = generate_long_escape_prefix(raw_len);
+
+    // Calculate padding needed
+    // Total bytes being encoded: raw_len
+    // Standard Z85 length: ceil(raw_len * 5/4)
+    let standard_z85_len = z85_output_length(raw_len);
+    // Our encoding (without padding): prefix.len() + 1 (|) + raw_len
+    let our_len_no_padding = prefix.len() + 1 + raw_len;
+
+    // Padding needed (might be 0 for exact fit like 8 bytes)
+    let padding_needed = if standard_z85_len > our_len_no_padding {
+        standard_z85_len - our_len_no_padding
+    } else {
+        0
+    };
+
+    let mut output = Vec::new();
+    output.extend_from_slice(&prefix);
+    output.push(RAW_ESCAPE_LONG);
+    output.extend_from_slice(&input[start_idx..start_idx + raw_len]);
+
+    // Add padding if needed: (padding_needed - 1) dots + final |
+    // But if padding_needed == 1, just the |
+    // If padding_needed == 0, no padding at all
+    if padding_needed > 0 {
+        for _ in 0..(padding_needed - 1) {
+            output.push(RAW_ESCAPE_PADDING);
+        }
+        output.push(RAW_ESCAPE_LONG); // Final | terminator
+    }
+
+    Some(LongPassthroughResult {
+        output,
+        bytes_consumed: raw_len,
+    })
 }
 
 // =============================================================================
