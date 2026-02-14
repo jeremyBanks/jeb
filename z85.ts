@@ -177,33 +177,34 @@ function isLongEscape(charCode: number): boolean {
 }
 
 /**
- * Read the variable-length prefix for the `|` escape.
+ * Read a single base-42 self-terminating number from an array of Z85 digit values,
+ * reading backwards from the given end position.
  *
- * The prefix uses base-42 with continuation bits:
- * - Values 0-41: terminal digit (no more digits)
- * - Values 42-83: continuation digit (subtract 42, continue reading)
+ * The format is: [terminal digit][continuation digits...]
+ * When reading backwards, we see continuation digits first (>= 42), then the terminal.
  *
- * The digits are read backwards from the `|`, but interpreted as big-endian.
- * The `prefixDigits` array should contain the Z85 digit VALUES (0-84), NOT ASCII.
- *
- * Returns the decoded length value, or throws on error.
+ * Returns { value, digitsConsumed }.
  */
-function readLongEscapePrefix(prefixDigits: number[]): number {
-  if (prefixDigits.length === 0) {
-    // No prefix digits before `|` - invalid
-    throw new Z85DecodeError("no prefix digits before |");
+function readSingleBase42NumberBackwards(
+  digits: number[],
+  end: number
+): { value: number; digitsConsumed: number } {
+  if (end === 0 || end > digits.length) {
+    throw new Z85DecodeError("invalid prefix position");
   }
 
-  // Read backwards from the |
-  // The last digit in prefixDigits is the one immediately before |
   let value = 0;
   let multiplier = 1;
+  let pos = end;
+  let count = 0;
 
-  for (let i = prefixDigits.length - 1; i >= 0; i--) {
-    const digit = prefixDigits[i];
+  // Read backwards: continuation digits first, then terminal
+  while (pos > 0) {
+    pos -= 1;
+    count += 1;
+    const digit = digits[pos];
 
     if (digit > 83) {
-      // Invalid Z85 digit value for prefix
       throw new Z85DecodeError(`invalid prefix digit value: ${digit}`);
     }
 
@@ -212,33 +213,63 @@ function readLongEscapePrefix(prefixDigits: number[]): number {
       const baseValue = digit - 42;
       value += baseValue * multiplier;
       multiplier *= 42;
-      // Check for overflow (JavaScript safe integer limit)
-      if (multiplier > Number.MAX_SAFE_INTEGER) {
+      // Check for overflow
+      if (value > Number.MAX_SAFE_INTEGER || multiplier > Number.MAX_SAFE_INTEGER) {
         throw new Z85DecodeError("prefix value overflow");
       }
-      if (value > Number.MAX_SAFE_INTEGER) {
-        throw new Z85DecodeError("long escape prefix value overflow");
-      }
     } else {
-      // Terminal digit (0-41)
+      // Terminal digit - this completes the number
       value += digit * multiplier;
-      // This is the last digit to process
-      // But we process in reverse, so this should be at position 0
-      if (i !== 0) {
-        // There are more digits before the terminal - invalid prefix
-        throw new Z85DecodeError("invalid prefix structure");
-      }
       break;
     }
   }
 
-  // Check if the first digit (index 0) was a continuation digit
-  // A valid prefix must have a terminal digit as the most significant digit
-  if (prefixDigits[0] >= 42) {
+  // Verify we ended on a terminal digit
+  if (count === 0 || digits[pos] >= 42) {
     throw new Z85DecodeError("invalid prefix structure");
   }
 
-  return value;
+  return { value, digitsConsumed: count };
+}
+
+/**
+ * Read offset and length from prefix digits for the `|` escape.
+ *
+ * Reading backwards from the `|`:
+ * 1. Read length (first number encountered going backwards)
+ * 2. If there are more digits, read offset (second number)
+ *
+ * Returns { offset, length }.
+ */
+function readOffsetAndLengthFromPrefix(prefixDigits: number[]): { offset: number; length: number } {
+  if (prefixDigits.length === 0) {
+    throw new Z85DecodeError("no prefix digits");
+  }
+
+  // Read length first (backwards from end)
+  const { value: length, digitsConsumed: lengthConsumed } = readSingleBase42NumberBackwards(
+    prefixDigits,
+    prefixDigits.length
+  );
+
+  if (lengthConsumed === prefixDigits.length) {
+    // Only one number - it's the length, offset = 0
+    return { offset: 0, length };
+  }
+
+  // There are more digits - read offset (backwards from where length started)
+  const offsetEnd = prefixDigits.length - lengthConsumed;
+  const { value: offset, digitsConsumed: offsetConsumed } = readSingleBase42NumberBackwards(
+    prefixDigits,
+    offsetEnd
+  );
+
+  // Verify we consumed all digits
+  if (lengthConsumed + offsetConsumed !== prefixDigits.length) {
+    throw new Z85DecodeError("invalid prefix structure");
+  }
+
+  return { offset, length };
 }
 
 /**
@@ -387,7 +418,7 @@ export function encode(input: Uint8Array): string {
     if (bytesRemaining >= 4) {
       // HIGHEST PRIORITY: Try 8+ byte passthrough (| escape)
       // This is most efficient for long runs of safe bytes
-      const longResult = tryLongPassthrough(input, inIdx);
+      const longResult = tryLongPassthrough(input, inIdx, outputChars.length);
       if (longResult !== null) {
         outputChars.push(...longResult.output);
         inIdx += longResult.bytesConsumed;
@@ -583,17 +614,18 @@ export function decode(input: string): Uint8Array {
     // Check for long escape (|) first
     if (isLongEscape(charCode)) {
       // The | escape for 8+ bytes
-      // Structure: [prefix digits][|][raw bytes][padding][|]
+      // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after][|]
       //
       // The prefix digits are in currentBlockDigits (the accumulated Z85 digits)
-      // We read them to get the length, then handle accordingly.
+      // We read them to get offset (if present) and length.
 
       if (currentBlockDigits.length === 0) {
         // No prefix digits means invalid encoding
         throw new Z85DecodeError("no prefix digits before |");
       }
 
-      const length = readLongEscapePrefix(currentBlockDigits);
+      // Try to read offset and length from prefix digits
+      const { offset, length } = readOffsetAndLengthFromPrefix(currentBlockDigits);
 
       // Handle length semantics
       if (length >= 1 && length <= 7) {
@@ -619,6 +651,17 @@ export function decode(input: string): Uint8Array {
       // Skip the |
       inIdx += 1;
 
+      // Skip offset padding characters (dots before raw bytes)
+      for (let i = 0; i < offset; i++) {
+        if (inIdx >= input.length) {
+          throw new Z85DecodeError("insufficient input for offset padding");
+        }
+        if (input.charCodeAt(inIdx) !== RAW_ESCAPE_PADDING) {
+          throw new Z85DecodeError("expected padding dot for offset");
+        }
+        inIdx += 1;
+      }
+
       // Ensure we have enough input for the raw bytes
       if (inIdx + rawLen > input.length) {
         throw new Z85DecodeError(`insufficient bytes for | escape: need ${rawLen}, have ${input.length - inIdx}`);
@@ -630,7 +673,7 @@ export function decode(input: string): Uint8Array {
       }
       inIdx += rawLen;
 
-      // Now we need to skip the padding (. characters) and final |
+      // Now we need to skip the remaining padding (. characters) and final |
       // Padding format: [. chars][|] or just [|] if no padding needed
       // Or no padding at all for exact fit (8 bytes)
       while (inIdx < input.length) {
@@ -1360,11 +1403,16 @@ interface LongPassthroughResult {
  *
  * Two cases:
  * 1. At end of input: use `0|` (rest is raw) - shorter output
- * 2. Otherwise: use length-prefixed escape
+ * 2. Otherwise: use length-prefixed escape with optional offset for alignment
+ *
+ * When paddingNeeded >= 2, the encoder can choose where to position the raw data
+ * within the padding space. An offset prefix is added to indicate how many padding
+ * bytes precede the raw data.
  */
 function tryLongPassthrough(
   input: Uint8Array,
-  startIdx: number
+  startIdx: number,
+  currentOutputLen: number
 ): LongPassthroughResult | null {
   const bytesRemaining = input.length - startIdx;
 
@@ -1410,7 +1458,7 @@ function tryLongPassthrough(
   }
 
   // Not at end: use length-prefixed escape
-  // Structure: [prefix][|][raw bytes][padding][|]
+  // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after][|]
   //
   // We need to calculate padding to maintain length invariant.
   //
@@ -1421,7 +1469,7 @@ function tryLongPassthrough(
   // where total = bytesRemaining and remaining = bytesRemaining - rawLen.
 
   const rawLen = Math.min(safeCount, MAX_LONG_PASSTHROUGH_LENGTH);
-  const prefix = generateLongEscapePrefix(rawLen);
+  const lengthPrefix = generateLongEscapePrefix(rawLen);
 
   // Calculate the budget available for the escape sequence
   // Total standard Z85 length for all remaining bytes
@@ -1431,8 +1479,8 @@ function tryLongPassthrough(
   // Available chars for our escape (must not exceed this to maintain invariant)
   const availableChars = totalStandardLen - afterLen;
 
-  // Our encoding (without padding): prefix.length + 1 (|) + rawLen
-  const ourLenNoPadding = prefix.length + 1 + rawLen;
+  // Our encoding (without padding, without offset): lengthPrefix.length + 1 (|) + rawLen
+  const ourLenNoPadding = lengthPrefix.length + 1 + rawLen;
 
   // If our escape is already too long, don't use it
   if (ourLenNoPadding > availableChars) {
@@ -1442,18 +1490,66 @@ function tryLongPassthrough(
   // Padding needed to reach the available budget (or 0 if exact fit)
   const paddingNeeded = availableChars - ourLenNoPadding;
 
+  // When paddingNeeded >= 2, we can choose an offset for alignment
+  // When paddingNeeded < 2, offset is implicitly 0 and not encoded
+  // When bestOffset == 0, we also don't encode it (for backward compatibility)
+  let offset: number;
+  let offsetPrefix: string[];
+  if (paddingNeeded >= 2) {
+    // Find the best offset using bit-reversal sort key
+    const bestOffset = findBestOffset(
+      currentOutputLen,
+      lengthPrefix.length,
+      rawLen,
+      paddingNeeded
+    );
+    // Only include offset prefix if offset > 0
+    if (bestOffset > 0) {
+      offsetPrefix = generateLongEscapePrefix(bestOffset);
+      offset = bestOffset;
+    } else {
+      offsetPrefix = [];
+      offset = 0;
+    }
+  } else {
+    offsetPrefix = [];
+    offset = 0;
+  }
+
+  // If we're encoding an offset, we need space for it in the padding
+  // The offset prefix chars come from the padding budget
+  if (offsetPrefix.length > paddingNeeded) {
+    return null;
+  }
+
   const output: string[] = [];
-  output.push(...prefix);
+
+  // Output offset prefix (if any), then length prefix
+  output.push(...offsetPrefix);
+  output.push(...lengthPrefix);
   output.push(String.fromCharCode(RAW_ESCAPE_LONG));
+
+  // Output padding before raw bytes (offset dots)
+  for (let i = 0; i < offset; i++) {
+    output.push(String.fromCharCode(RAW_ESCAPE_PADDING));
+  }
+
+  // Output raw bytes
   for (let i = 0; i < rawLen; i++) {
     output.push(String.fromCharCode(input[startIdx + i]));
   }
 
-  // Add padding if needed: (paddingNeeded - 1) dots + final |
-  // But if paddingNeeded == 1, just the |
-  // If paddingNeeded == 0, no padding at all
-  if (paddingNeeded > 0) {
-    for (let i = 0; i < paddingNeeded - 1; i++) {
+  // Calculate remaining padding after raw bytes
+  // Total padding space = paddingNeeded - offsetPrefix.length (offset prefix chars)
+  // We've used 'offset' chars as dots before raw bytes
+  // Remaining = (paddingNeeded - offsetPrefix.length) - offset
+  const paddingAfter = paddingNeeded - offsetPrefix.length - offset;
+
+  // Add remaining padding: (paddingAfter - 1) dots + final |
+  // But if paddingAfter == 1, just the |
+  // If paddingAfter == 0, no trailing padding at all
+  if (paddingAfter > 0) {
+    for (let i = 0; i < paddingAfter - 1; i++) {
       output.push(String.fromCharCode(RAW_ESCAPE_PADDING));
     }
     output.push(String.fromCharCode(RAW_ESCAPE_LONG)); // Final | terminator
@@ -1463,6 +1559,93 @@ function tryLongPassthrough(
     output,
     bytesConsumed: rawLen,
   };
+}
+
+/**
+ * Find the best offset for padding alignment using bit-reversal sort key.
+ *
+ * The sort key is a 4-tuple:
+ * (min(bitReverse(inputStart), bitReverse(inputEnd)),
+ *  max(bitReverse(inputStart), bitReverse(inputEnd)),
+ *  min(bitReverse(outputStart), bitReverse(outputEnd)),
+ *  max(bitReverse(outputStart), bitReverse(outputEnd)))
+ *
+ * We pick the offset with the lexicographically smallest key.
+ */
+function findBestOffset(
+  currentOutputLen: number,
+  lengthPrefixLen: number,
+  rawLen: number,
+  paddingNeeded: number
+): number {
+  // Generate candidate offsets: 0 to maxOffset
+  // The offset prefix takes space from the padding budget, so we need to account for that
+  // We iterate over possible offsets and compute valid ones
+  //
+  // Note: offset=0 means no offset prefix is encoded (for backward compatibility)
+  // offset>0 requires encoding the offset prefix, which takes space
+
+  let bestOffset = 0;
+  let bestKey: [bigint, bigint, bigint, bigint] | null = null;
+
+  for (let offset = 0; offset <= paddingNeeded; offset++) {
+    // When offset=0, no offset prefix is encoded
+    // When offset>0, we need to encode the offset value
+    const offsetPrefixLen = offset > 0 ? generateLongEscapePrefix(offset).length : 0;
+
+    // Check if this offset is valid (fits in padding budget)
+    // We need: offsetPrefixLen + offset (dots before) + remaining <= paddingNeeded
+    // Where remaining includes (paddingAfter - 1) dots + final |
+    // Actually: offsetPrefixLen + offset + paddingAfter = paddingNeeded
+    // And paddingAfter must be >= 0
+    if (offsetPrefixLen + offset > paddingNeeded) {
+      continue;
+    }
+
+    // Compute output positions
+    // Output structure: [offset_prefix][length_prefix][|][offset dots][raw bytes][remaining dots][|]
+    const outputStart = currentOutputLen + offsetPrefixLen + lengthPrefixLen + 1 + offset;
+    const outputEnd = outputStart + rawLen - 1;
+
+    // Map output positions to input positions
+    // inPos = floor(outPos * 4 / 5)
+    const inputStart = Math.floor(outputStart * 4 / 5);
+    const inputEnd = Math.floor(outputEnd * 4 / 5);
+
+    // Compute bit-reversed values
+    const revInStart = bitReverse(inputStart);
+    const revInEnd = bitReverse(inputEnd);
+    const revOutStart = bitReverse(outputStart);
+    const revOutEnd = bitReverse(outputEnd);
+
+    // Build sort key
+    const key: [bigint, bigint, bigint, bigint] = [
+      revInStart < revInEnd ? revInStart : revInEnd,
+      revInStart > revInEnd ? revInStart : revInEnd,
+      revOutStart < revOutEnd ? revOutStart : revOutEnd,
+      revOutStart > revOutEnd ? revOutStart : revOutEnd,
+    ];
+
+    // Update best if this is better (or first candidate)
+    if (bestKey === null || compareTuples(key, bestKey) < 0) {
+      bestKey = key;
+      bestOffset = offset;
+    }
+  }
+
+  return bestOffset;
+}
+
+/**
+ * Compare two 4-tuples lexicographically.
+ * Returns negative if a < b, 0 if a == b, positive if a > b.
+ */
+function compareTuples(a: [bigint, bigint, bigint, bigint], b: [bigint, bigint, bigint, bigint]): number {
+  for (let i = 0; i < 4; i++) {
+    if (a[i] < b[i]) return -1;
+    if (a[i] > b[i]) return 1;
+  }
+  return 0;
 }
 
 // =============================================================================
@@ -1757,8 +1940,7 @@ function tryNonAlignedPassthrough(
       continue;
     }
     // Check if passthrough bytes are safe before adding as candidate
-    const passBytes = input.slice(passStart, passStart + 4);
-    if (!isBlockSafeForPassthrough(passBytes)) {
+    if (!isBlockSafeForPassthrough(input, passStart)) {
       continue;
     }
 

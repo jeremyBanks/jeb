@@ -224,7 +224,7 @@ pub fn encode(input: &[u8]) -> String {
         if bytes_remaining >= 4 {
             // HIGHEST PRIORITY: Try 8+ byte passthrough (| escape)
             // This is most efficient for long runs of safe bytes
-            if let Some(result) = try_long_passthrough(input, in_idx) {
+            if let Some(result) = try_long_passthrough(input, in_idx, output.len()) {
                 output.extend_from_slice(&result.output);
                 in_idx += result.bytes_consumed;
                 continue;
@@ -644,10 +644,15 @@ const MAX_LONG_PASSTHROUGH_LENGTH: usize = 65536;
 ///
 /// Two cases:
 /// 1. At end of input: use `0|` (rest is raw) - shorter output
-/// 2. Otherwise: use length-prefixed escape
+/// 2. Otherwise: use length-prefixed escape with optional offset for alignment
+///
+/// When padding_needed >= 2, the encoder can choose where to position the raw data
+/// within the padding space. An offset prefix is added to indicate how many padding
+/// bytes precede the raw data.
 fn try_long_passthrough(
     input: &[u8],
     start_idx: usize,
+    current_output_len: usize,
 ) -> Option<LongPassthroughResult> {
     let bytes_remaining = input.len() - start_idx;
 
@@ -691,7 +696,7 @@ fn try_long_passthrough(
     }
 
     // Not at end: use length-prefixed escape
-    // Structure: [prefix][|][raw bytes][padding][|]
+    // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after][|]
     //
     // We need to calculate padding to maintain length invariant.
     //
@@ -702,7 +707,7 @@ fn try_long_passthrough(
     // where total = bytes_remaining and remaining = bytes_remaining - raw_len.
 
     let raw_len = safe_count.min(MAX_LONG_PASSTHROUGH_LENGTH);
-    let prefix = generate_long_escape_prefix(raw_len);
+    let length_prefix = generate_long_escape_prefix(raw_len);
 
     // Calculate the budget available for the escape sequence
     // Total standard Z85 length for all remaining bytes
@@ -712,8 +717,8 @@ fn try_long_passthrough(
     // Available chars for our escape (must not exceed this to maintain invariant)
     let available_chars = total_standard_len - after_len;
 
-    // Our encoding (without padding): prefix.len() + 1 (|) + raw_len
-    let our_len_no_padding = prefix.len() + 1 + raw_len;
+    // Our encoding (without padding, without offset): length_prefix.len() + 1 (|) + raw_len
+    let our_len_no_padding = length_prefix.len() + 1 + raw_len;
 
     // If our escape is already too long, don't use it
     if our_len_no_padding > available_chars {
@@ -723,16 +728,60 @@ fn try_long_passthrough(
     // Padding needed to reach the available budget (or 0 if exact fit)
     let padding_needed = available_chars - our_len_no_padding;
 
+    // When padding_needed >= 2, we can choose an offset for alignment
+    // When padding_needed < 2, offset is implicitly 0 and not encoded
+    // When best_offset == 0, we also don't encode it (for backward compatibility)
+    let (offset, offset_prefix) = if padding_needed >= 2 {
+        // Find the best offset using bit-reversal sort key
+        let best_offset = find_best_offset(
+            current_output_len,
+            length_prefix.len(),
+            raw_len,
+            padding_needed,
+        );
+        // Only include offset prefix if offset > 0
+        if best_offset > 0 {
+            let offset_prefix = generate_long_escape_prefix(best_offset);
+            (best_offset, offset_prefix)
+        } else {
+            (0, Vec::new())
+        }
+    } else {
+        (0, Vec::new())
+    };
+
+    // If we're encoding an offset, we need space for it in the padding
+    // The offset prefix chars come from the padding budget
+    if offset_prefix.len() > padding_needed {
+        return None;
+    }
+
     let mut output = Vec::new();
-    output.extend_from_slice(&prefix);
+
+    // Output offset prefix (if any), then length prefix
+    output.extend_from_slice(&offset_prefix);
+    output.extend_from_slice(&length_prefix);
     output.push(RAW_ESCAPE_LONG);
+
+    // Output padding before raw bytes (offset dots)
+    for _ in 0..offset {
+        output.push(RAW_ESCAPE_PADDING);
+    }
+
+    // Output raw bytes
     output.extend_from_slice(&input[start_idx..start_idx + raw_len]);
 
-    // Add padding if needed: (padding_needed - 1) dots + final |
-    // But if padding_needed == 1, just the |
-    // If padding_needed == 0, no padding at all
-    if padding_needed > 0 {
-        for _ in 0..(padding_needed - 1) {
+    // Calculate remaining padding after raw bytes
+    // Total padding space = padding_needed - offset_prefix.len() (offset prefix chars)
+    // We've used 'offset' chars as dots before raw bytes
+    // Remaining = (padding_needed - offset_prefix.len()) - offset
+    let padding_after = padding_needed - offset_prefix.len() - offset;
+
+    // Add remaining padding: (padding_after - 1) dots + final |
+    // But if padding_after == 1, just the |
+    // If padding_after == 0, no trailing padding at all
+    if padding_after > 0 {
+        for _ in 0..(padding_after - 1) {
             output.push(RAW_ESCAPE_PADDING);
         }
         output.push(RAW_ESCAPE_LONG); // Final | terminator
@@ -742,6 +791,83 @@ fn try_long_passthrough(
         output,
         bytes_consumed: raw_len,
     })
+}
+
+/// Find the best offset for padding alignment using bit-reversal sort key.
+///
+/// The sort key is a 4-tuple:
+/// (min(bit_rev(input_start), bit_rev(input_end)),
+///  max(bit_rev(input_start), bit_rev(input_end)),
+///  min(bit_rev(output_start), bit_rev(output_end)),
+///  max(bit_rev(output_start), bit_rev(output_end)))
+///
+/// We pick the offset with the lexicographically smallest key.
+fn find_best_offset(
+    current_output_len: usize,
+    length_prefix_len: usize,
+    raw_len: usize,
+    padding_needed: usize,
+) -> usize {
+    // Generate candidate offsets: 0 to max_offset
+    // The offset prefix takes space from the padding budget, so we need to account for that
+    // We iterate over possible offsets and compute valid ones
+    //
+    // Note: offset=0 means no offset prefix is encoded (for backward compatibility)
+    // offset>0 requires encoding the offset prefix, which takes space
+
+    let mut best_offset = 0;
+    let mut best_key: Option<(u64, u64, u64, u64)> = None;
+
+    for offset in 0..=padding_needed {
+        // When offset=0, no offset prefix is encoded
+        // When offset>0, we need to encode the offset value
+        let offset_prefix_len = if offset > 0 {
+            generate_long_escape_prefix(offset).len()
+        } else {
+            0
+        };
+
+        // Check if this offset is valid (fits in padding budget)
+        // We need: offset_prefix_len + offset (dots before) + remaining <= padding_needed
+        // Where remaining includes (padding_after - 1) dots + final |
+        // Actually: offset_prefix_len + offset + padding_after = padding_needed
+        // And padding_after must be >= 0
+        if offset_prefix_len + offset > padding_needed {
+            continue;
+        }
+
+        // Compute output positions
+        // Output structure: [offset_prefix][length_prefix][|][offset dots][raw bytes][remaining dots][|]
+        let output_start = current_output_len + offset_prefix_len + length_prefix_len + 1 + offset;
+        let output_end = output_start + raw_len - 1;
+
+        // Map output positions to input positions
+        // in_pos = floor(out_pos * 4 / 5)
+        let input_start = output_start * 4 / 5;
+        let input_end = output_end * 4 / 5;
+
+        // Compute bit-reversed values
+        let rev_in_start = bit_reverse(input_start);
+        let rev_in_end = bit_reverse(input_end);
+        let rev_out_start = bit_reverse(output_start);
+        let rev_out_end = bit_reverse(output_end);
+
+        // Build sort key
+        let key = (
+            rev_in_start.min(rev_in_end),
+            rev_in_start.max(rev_in_end),
+            rev_out_start.min(rev_out_end),
+            rev_out_start.max(rev_out_end),
+        );
+
+        // Update best if this is better (or first candidate)
+        if best_key.is_none() || key < best_key.unwrap() {
+            best_key = Some(key);
+            best_offset = offset;
+        }
+    }
+
+    best_offset
 }
 
 // =============================================================================
@@ -1163,33 +1289,30 @@ fn is_long_escape(byte: u8) -> bool {
     byte == RAW_ESCAPE_LONG
 }
 
-/// Read the variable-length prefix for the `|` escape.
+/// Read a single base-42 self-terminating number from a slice of Z85 digit values,
+/// reading backwards from the given end position.
 ///
-/// The prefix uses base-42 with continuation bits:
-/// - Values 0-41: terminal digit (no more digits)
-/// - Values 42-83: continuation digit (subtract 42, continue reading)
+/// The format is: [terminal digit][continuation digits...]
+/// When reading backwards, we see continuation digits first (>= 42), then the terminal.
 ///
-/// The digits are read backwards from the `|`, but interpreted as big-endian.
-/// The `prefix_digits` slice should contain the Z85 digit VALUES (0-84), NOT ASCII.
-///
-/// Returns the decoded length value, or error if invalid.
-fn read_long_escape_prefix(prefix_digits: &[u8]) -> Result<u64, DecodeError> {
-    if prefix_digits.is_empty() {
-        // No prefix digits before `|` means length 0 (rest of input is raw)
-        // This is allowed: `0|` at the start of a stream
+/// Returns (decoded_value, number_of_digits_consumed).
+fn read_single_base42_number_backwards(digits: &[u8], end: usize) -> Result<(u64, usize), DecodeError> {
+    if end == 0 || end > digits.len() {
         return Err(DecodeError::InvalidLength);
     }
 
-    // Read backwards from the |
-    // The last digit in prefix_digits is the one immediately before |
     let mut value: u64 = 0;
     let mut multiplier: u64 = 1;
+    let mut pos = end;
+    let mut count = 0;
 
-    for i in (0..prefix_digits.len()).rev() {
-        let digit = prefix_digits[i];
+    // Read backwards: continuation digits first, then terminal
+    while pos > 0 {
+        pos -= 1;
+        count += 1;
+        let digit = digits[pos];
 
         if digit > 83 {
-            // Invalid Z85 digit value for prefix
             return Err(DecodeError::InvalidCharacter(digit));
         }
 
@@ -1200,27 +1323,51 @@ fn read_long_escape_prefix(prefix_digits: &[u8]) -> Result<u64, DecodeError> {
                 .ok_or(DecodeError::Overflow)?;
             multiplier = multiplier.checked_mul(42).ok_or(DecodeError::Overflow)?;
         } else {
-            // Terminal digit (0-41)
-            let base_value = digit as u64;
-            value = value.checked_add(base_value.checked_mul(multiplier).ok_or(DecodeError::Overflow)?)
+            // Terminal digit - this completes the number
+            value = value.checked_add((digit as u64).checked_mul(multiplier).ok_or(DecodeError::Overflow)?)
                 .ok_or(DecodeError::Overflow)?;
-            // This is the last digit to process
-            // But we process in reverse, so this should be at position 0
-            if i != 0 {
-                // There are more digits before the terminal - invalid prefix
-                return Err(DecodeError::InvalidLength);
-            }
             break;
         }
     }
 
-    // Check if the first digit (index 0) was a continuation digit
-    // A valid prefix must have a terminal digit as the most significant digit
-    if prefix_digits[0] >= 42 {
+    // Verify we ended on a terminal digit
+    if count == 0 || digits[pos] >= 42 {
         return Err(DecodeError::InvalidLength);
     }
 
-    Ok(value)
+    Ok((value, count))
+}
+
+/// Read offset and length from prefix digits for the `|` escape.
+///
+/// Reading backwards from the `|`:
+/// 1. Read length (first number encountered going backwards)
+/// 2. If there are more digits, read offset (second number)
+///
+/// Returns (offset, length).
+fn read_offset_and_length_from_prefix(prefix_digits: &[u8]) -> Result<(usize, u64), DecodeError> {
+    if prefix_digits.is_empty() {
+        return Err(DecodeError::InvalidLength);
+    }
+
+    // Read length first (backwards from end)
+    let (length, length_consumed) = read_single_base42_number_backwards(prefix_digits, prefix_digits.len())?;
+
+    if length_consumed == prefix_digits.len() {
+        // Only one number - it's the length, offset = 0
+        return Ok((0, length));
+    }
+
+    // There are more digits - read offset (backwards from where length started)
+    let offset_end = prefix_digits.len() - length_consumed;
+    let (offset, offset_consumed) = read_single_base42_number_backwards(prefix_digits, offset_end)?;
+
+    // Verify we consumed all digits
+    if length_consumed + offset_consumed != prefix_digits.len() {
+        return Err(DecodeError::InvalidLength);
+    }
+
+    Ok((offset as usize, length))
 }
 
 /// Generate prefix digits for encoding a length value with the `|` escape.
@@ -1352,21 +1499,22 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
         // Check for long escape (|) first
         if is_long_escape(byte) {
             // The | escape for 8+ bytes
-            // Structure: [prefix digits][|][raw bytes][padding][|]
+            // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after][|]
             //
             // The prefix digits are in current_block_digits (the accumulated Z85 digits)
-            // We read them to get the length, then handle accordingly.
+            // We read them to get offset (if present) and length.
+            //
+            // Both offset and length are self-terminating base-42 numbers.
+            // If there are two numbers, offset comes first, then length.
+            // If there's only one number, it's the length and offset = 0.
 
-            let length = if current_block_digits.is_empty() {
-                // No prefix digits means the raw digit '0' was encoded as the value
-                // But '0' at index 0 has Z85 value 0, which means "rest of input is raw"
-                // Actually, for `0|` at stream start, we'd have the digit '0' accumulated
-                // An empty prefix means we just saw | at position 0 with no prefix
-                // This is invalid - we need at least one prefix digit
+            if current_block_digits.is_empty() {
+                // No prefix digits - invalid
                 return Err(DecodeError::InvalidLength);
-            } else {
-                read_long_escape_prefix(&current_block_digits)?
-            };
+            }
+
+            // Try to read offset and length from prefix digits
+            let (offset, length) = read_offset_and_length_from_prefix(&current_block_digits)?;
 
             // Handle length semantics
             if length >= 1 && length <= 7 {
@@ -1390,6 +1538,17 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
             // Skip the |
             in_idx += 1;
 
+            // Skip offset padding characters (dots before raw bytes)
+            for _ in 0..offset {
+                if in_idx >= input.len() {
+                    return Err(DecodeError::InvalidLength);
+                }
+                if input[in_idx] != RAW_ESCAPE_PADDING {
+                    return Err(DecodeError::InvalidLength);
+                }
+                in_idx += 1;
+            }
+
             // Ensure we have enough input for the raw bytes
             if in_idx + raw_len > input.len() {
                 return Err(DecodeError::InvalidLength);
@@ -1399,14 +1558,9 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
             output.extend_from_slice(&input[in_idx..in_idx + raw_len]);
             in_idx += raw_len;
 
-            // Now we need to skip the padding (. characters) and final |
+            // Now we need to skip the remaining padding (. characters) and final |
             // Padding format: [. chars][|] or just [|] if no padding needed
             // Or no padding at all for exact fit (8 bytes)
-            //
-            // The decoder should skip any . characters and expect a final |
-            // But for exact fit (8 bytes with 10 output chars), there's no room for padding
-            //
-            // Let's check if there's more input
             while in_idx < input.len() {
                 let next_byte = input[in_idx];
                 if next_byte == RAW_ESCAPE_PADDING {
@@ -3274,30 +3428,47 @@ mod tests {
 
     #[test]
     fn test_read_long_escape_prefix() {
-        // Test the prefix reading helper directly
+        // Test the prefix reading helper directly using read_offset_and_length_from_prefix
 
-        // Single terminal digit: value 8
+        // Single terminal digit: value 8 (length=8, offset=0)
         // Z85[8] = '8', which has Z85 digit value 8
-        let result = read_long_escape_prefix(&[8]).unwrap();
-        assert_eq!(result, 8);
+        let (offset, length) = read_offset_and_length_from_prefix(&[8]).unwrap();
+        assert_eq!(offset, 0);
+        assert_eq!(length, 8);
 
-        // Single terminal digit: value 0
-        let result = read_long_escape_prefix(&[0]).unwrap();
-        assert_eq!(result, 0);
+        // Single terminal digit: value 0 (length=0, offset=0)
+        let (offset, length) = read_offset_and_length_from_prefix(&[0]).unwrap();
+        assert_eq!(offset, 0);
+        assert_eq!(length, 0);
 
-        // Single terminal digit: value 41
-        let result = read_long_escape_prefix(&[41]).unwrap();
-        assert_eq!(result, 41);
+        // Single terminal digit: value 41 (length=41, offset=0)
+        let (offset, length) = read_offset_and_length_from_prefix(&[41]).unwrap();
+        assert_eq!(offset, 0);
+        assert_eq!(length, 41);
 
-        // Two digits: value 42 = 1*42 + 0
+        // Two digits: value 42 = 1*42 + 0 (length=42, offset=0)
         // Stream order: [terminal 1][continuation 0+42=42]
-        let result = read_long_escape_prefix(&[1, 42]).unwrap();
-        assert_eq!(result, 42);
+        let (offset, length) = read_offset_and_length_from_prefix(&[1, 42]).unwrap();
+        assert_eq!(offset, 0);
+        assert_eq!(length, 42);
 
-        // Two digits: value 100 = 2*42 + 16
+        // Two digits: value 100 = 2*42 + 16 (length=100, offset=0)
         // Stream order: [terminal 2][continuation 16+42=58]
-        let result = read_long_escape_prefix(&[2, 58]).unwrap();
-        assert_eq!(result, 100);
+        let (offset, length) = read_offset_and_length_from_prefix(&[2, 58]).unwrap();
+        assert_eq!(offset, 0);
+        assert_eq!(length, 100);
+
+        // Test with offset prefix: offset=5, length=10
+        // Stream order: [terminal 5][terminal 10] (both single-digit)
+        let (offset, length) = read_offset_and_length_from_prefix(&[5, 10]).unwrap();
+        assert_eq!(offset, 5);
+        assert_eq!(length, 10);
+
+        // Test with offset prefix: offset=5, length=100
+        // Stream order: [terminal 5][terminal 2][continuation 16+42=58]
+        let (offset, length) = read_offset_and_length_from_prefix(&[5, 2, 58]).unwrap();
+        assert_eq!(offset, 5);
+        assert_eq!(length, 100);
     }
 
     // =========================================================================
