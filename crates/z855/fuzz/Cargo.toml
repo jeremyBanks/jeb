@@ -2,13 +2,14 @@
 name = "z855-fuzz"
 version = "0.0.0"
 publish = false
-edition.workspace = true
-repository.workspace = true
-license.workspace = true
+edition = "2021"
 description = "Fuzz testing for z855 encoder/decoder"
 
 [package.metadata]
 cargo-fuzz = true
+
+[workspace]
+# Standalone workspace to avoid conflicts with parent
 
 [dependencies]
 z855 = { path = ".." }
