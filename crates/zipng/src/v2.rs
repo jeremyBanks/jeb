@@ -49,8 +49,8 @@ pub enum EncoderMode {
 pub enum Source {
     /// Decode from the ZIP layer.
     Zip,
-    /// Decode from the PNG layer.
-    Png,
+    /// Decode from the image pixel data (works with PNG, GIF, or any indexed format).
+    Image,
 }
 
 /// Named font choice.
@@ -319,32 +319,32 @@ impl Decoder {
     pub fn decode(self, data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
         match self.source {
             Some(Source::Zip) => decode_via_zip(data),
-            Some(Source::Png) => decode_via_png(data),
+            Some(Source::Image) => decode_via_image(data),
             None => {
                 // Try both methods
                 let zip_result = decode_via_zip(data);
-                let png_result = decode_via_png(data);
+                let image_result = decode_via_image(data);
 
-                match (zip_result, png_result) {
-                    (Ok(zip_files), Ok(png_files)) => {
-                        if self.verify && zip_files != png_files {
+                match (zip_result, image_result) {
+                    (Ok(zip_files), Ok(image_files)) => {
+                        if self.verify && zip_files != image_files {
                             Err(DecodeError::MethodMismatch {
                                 zip_count: zip_files.len(),
-                                png_count: png_files.len(),
+                                image_count: image_files.len(),
                             })
                         } else {
                             Ok(zip_files)
                         }
                     },
                     (Ok(files), Err(_)) => {
-                        tracing::info!("Extracted via ZIP method only (PNG method failed)");
+                        tracing::info!("Extracted via ZIP method only (image method failed)");
                         Ok(files)
                     },
                     (Err(_), Ok(files)) => {
-                        tracing::info!("Extracted via PNG method only (ZIP method failed)");
+                        tracing::info!("Extracted via image method only (ZIP method failed)");
                         Ok(files)
                     },
-                    (Err(zip_err), Err(_png_err)) => Err(zip_err),
+                    (Err(zip_err), Err(_image_err)) => Err(zip_err),
                 }
             },
         }
@@ -356,24 +356,24 @@ impl Decoder {
 pub enum DecodeError {
     /// ZIP extraction failed.
     ZipError(String),
-    /// PNG extraction failed.
-    PngError(String),
+    /// Image extraction failed.
+    ImageError(String),
     /// Both methods succeeded but produced different results.
-    MethodMismatch { zip_count: usize, png_count: usize },
+    MethodMismatch { zip_count: usize, image_count: usize },
 }
 
 impl std::fmt::Display for DecodeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::ZipError(msg) => write!(f, "ZIP extraction failed: {}", msg),
-            Self::PngError(msg) => write!(f, "PNG extraction failed: {}", msg),
+            Self::ImageError(msg) => write!(f, "Image extraction failed: {}", msg),
             Self::MethodMismatch {
                 zip_count,
-                png_count,
+                image_count,
             } => write!(
                 f,
-                "Extraction mismatch: ZIP found {} files, PNG found {} files",
-                zip_count, png_count
+                "Extraction mismatch: ZIP found {} files, image found {} files",
+                zip_count, image_count
             ),
         }
     }
@@ -419,15 +419,15 @@ fn decode_via_zip(_data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> 
 }
 
 #[cfg(feature = "image")]
-fn decode_via_png(data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
+fn decode_via_image(data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
     use std::{
         collections::HashMap,
         io::{Cursor, Read},
     };
 
-    // Load image using the image crate
+    // Load image using the image crate (works with PNG, GIF, BMP, etc.)
     let img = image::load_from_memory(data)
-        .map_err(|e| DecodeError::PngError(format!("Failed to load image: {}", e)))?;
+        .map_err(|e| DecodeError::ImageError(format!("Failed to load image: {}", e)))?;
 
     let rgb_img = img.to_rgb8();
     let pixels = rgb_img.as_raw();
@@ -438,11 +438,19 @@ fn decode_via_png(data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
         let rgb = [chunk[0], chunk[1], chunk[2]];
         let next_index = unique_colors.len();
         unique_colors.entry(rgb).or_insert(next_index);
+        
+        // Early exit if too many colors
+        if unique_colors.len() > 256 {
+            return Err(DecodeError::ImageError(
+                "Image has >256 unique colors, not indexed mode (likely RGBA or corrupted)".to_string(),
+            ));
+        }
     }
 
-    if unique_colors.len() > 256 {
-        return Err(DecodeError::PngError(format!(
-            "Image has {} unique colors (>256), not indexed color mode",
+    // Valid indexed zipng must have exactly 256 colors
+    if unique_colors.len() != 256 {
+        return Err(DecodeError::ImageError(format!(
+            "Image has {} unique colors (expected exactly 256 for indexed mode)",
             unique_colors.len()
         )));
     }
@@ -463,14 +471,14 @@ fn decode_via_png(data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
     // Parse as ZIP archive
     let cursor = Cursor::new(&bytes);
     let mut archive =
-        zip::ZipArchive::new(cursor).map_err(|e| DecodeError::PngError(e.to_string()))?;
+        zip::ZipArchive::new(cursor).map_err(|e| DecodeError::ImageError(e.to_string()))?;
 
     let mut files = Vec::new();
 
     for i in 0..archive.len() {
         let mut file = archive
             .by_index(i)
-            .map_err(|e| DecodeError::PngError(e.to_string()))?;
+            .map_err(|e| DecodeError::ImageError(e.to_string()))?;
 
         if file.is_dir() {
             continue;
@@ -479,7 +487,7 @@ fn decode_via_png(data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
         let name = file.name().as_bytes().to_vec();
         let mut content = Vec::new();
         file.read_to_end(&mut content)
-            .map_err(|e| DecodeError::PngError(e.to_string()))?;
+            .map_err(|e| DecodeError::ImageError(e.to_string()))?;
 
         files.push((name, content));
     }
@@ -488,9 +496,9 @@ fn decode_via_png(data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
 }
 
 #[cfg(not(feature = "image"))]
-fn decode_via_png(_data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
-    Err(DecodeError::PngError(
-        "PNG decoding not available (feature not enabled)".to_string(),
+fn decode_via_image(_data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
+    Err(DecodeError::ImageError(
+        "Image decoding not available (feature not enabled)".to_string(),
     ))
 }
 
