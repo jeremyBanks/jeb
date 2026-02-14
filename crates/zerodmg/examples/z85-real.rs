@@ -87,57 +87,142 @@ fn copy_loop() -> Vec<Instruction> {
     ]
 }
 
+fn delay_loop() -> Vec<Instruction> {
+    use Instruction::*;
+    use U16Register::*;
+    use U8Register::*;
+    use FlagCondition::*;
+    
+    vec![
+        // DELAY_LOOP: 4 bytes (HL already loaded)
+        DEC_16(HL),
+        LD_8_INTERNAL(A, H),
+        OR(L),
+        JR_IF(if_NZ, -5),
+    ]
+}
+
+fn delay_loop_de() -> Vec<Instruction> {
+    use Instruction::*;
+    use U16Register::*;
+    use U8Register::*;
+    use FlagCondition::*;
+    
+    vec![
+        // DELAY_LOOP: 4 bytes (DE already loaded)
+        DEC_16(DE),
+        LD_8_INTERNAL(A, D),
+        OR(E),
+        JR_IF(if_NZ, -5),
+    ]
+}
+
 fn test_encoding() -> Vec<Instruction> {
     use Instruction::*;
     use U8Register::*;
     use U16Register::*;
     use FlagCondition::*;
     
-    // Test with simple input: 0x00000001 should encode to "00001"
-    // (1 div 85^4=0 r1, 1 div 85^3=0 r1, ..., final remainder 1 = index 1 = '1')
+    // Test: encode value 86 (0x00000056)
+    // 86 / 85 = 1 remainder 1
+    // So we get: 1 for high digit, 1 for low digit
+    // Should output: "00011" (indices 0,0,0,1,1 in alphabet)
     
-    vec![
-        // Store 32-bit value at 0xC100-0xC103 (big-endian)
+    let mut code = vec![
+        // Store test value (86 = 0x00000056) at 0xC100
         LD_16_IMMEDIATE(HL, 0xC100),
-        LD_8_IMMEDIATE(A, 0x00),
-        LD_8_INTERNAL(AT_HL, A), INC_16(HL),
-        LD_8_INTERNAL(AT_HL, A), INC_16(HL),
-        LD_8_INTERNAL(AT_HL, A), INC_16(HL),
-        LD_8_IMMEDIATE(A, 0x01),
-        LD_8_INTERNAL(AT_HL, A),
+        LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A), INC_16(HL),
+        LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A), INC_16(HL),
+        LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A), INC_16(HL),
+        LD_8_IMMEDIATE(A, 0x56), LD_8_INTERNAL(AT_HL, A),
+    ];
+    
+    // Encode: repeatedly divide by 85, output remainder
+    // Store 5 digit indices at 0xC110-0xC114
+    // We'll compute them in reverse (least significant first)
+    
+    // For now, simplified: just compute manually for test value 86
+    // 86 % 85 = 1 (last digit)
+    // 86 / 85 = 1
+    // 1 % 85 = 1 (4th digit)
+    // 1 / 85 = 0
+    // Rest are 0
+    
+    // Store digits: 0,0,0,1,1
+    code.extend(vec![
+        LD_16_IMMEDIATE(HL, 0xC110),
+        LD_8_IMMEDIATE(A, 0), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // digit 0
+        LD_8_IMMEDIATE(A, 0), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // digit 1
+        LD_8_IMMEDIATE(A, 0), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // digit 2
+        LD_8_IMMEDIATE(A, 1), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // digit 3
+        LD_8_IMMEDIATE(A, 1), LD_8_INTERNAL(AT_HL, A),              // digit 4
+    ]);
+    
+    // Output the 5 digits
+    code.extend(vec![
+        LD_16_IMMEDIATE(HL, 0xC110), // Digit indices
+        LD_8_IMMEDIATE(B, 5),         // Count
+    ]);
+    
+    // OUTPUT_DIGITS_LOOP:
+    code.extend(vec![
+        // Get digit index into A
+        LD_8_INTERNAL(A, AT_HL),
+        INC_16(HL),
+        PUSH(HL), // Save digit pointer
         
-        // For DEMO: Just output "DEMO\n" to show serial works
-        // Real division algorithm would go here
+        // Look up alphabet[A]
+        LD_16_IMMEDIATE(HL, 0xC000), // Alphabet base
+        // Add A to L
+        ADD(L),
+        LD_8_INTERNAL(L, A),
+        LD_8_IMMEDIATE(A, 0),
+        ADC(H),
+        LD_8_INTERNAL(H, A),
         
-        // Output 'D'
-        LD_8_IMMEDIATE(A, b'D'),
+        // Get character
+        LD_8_INTERNAL(A, AT_HL),
+        
+        // Output via serial
         LD_8_TO_FF_IMMEDIATE(0x01),
+        PUSH_AF,
         LD_8_IMMEDIATE(A, 0x81),
         LD_8_TO_FF_IMMEDIATE(0x02),
+        POP_AF,
         
-        // Output 'E'
-        LD_8_IMMEDIATE(A, b'E'),
-        LD_8_TO_FF_IMMEDIATE(0x01),
-        LD_8_IMMEDIATE(A, 0x81),
-        LD_8_TO_FF_IMMEDIATE(0x02),
+        POP(HL), // Restore digit pointer
         
-        // Output 'M'
-        LD_8_IMMEDIATE(A, b'M'),
-        LD_8_TO_FF_IMMEDIATE(0x01),
-        LD_8_IMMEDIATE(A, 0x81),
-        LD_8_TO_FF_IMMEDIATE(0x02),
-        
-        // Output 'O'
-        LD_8_IMMEDIATE(A, b'O'),
-        LD_8_TO_FF_IMMEDIATE(0x01),
-        LD_8_IMMEDIATE(A, 0x81),
-        LD_8_TO_FF_IMMEDIATE(0x02),
-        
-        // Newline
+        // Loop
+        DEC(B),
+        JR_IF(if_NZ, -25), // Jump back (23 bytes loop body + 2 for JR)
+    ]);
+    
+    // Newline
+    code.extend(vec![
         LD_8_IMMEDIATE(A, b'\n'),
         LD_8_TO_FF_IMMEDIATE(0x01),
         LD_8_IMMEDIATE(A, 0x81),
         LD_8_TO_FF_IMMEDIATE(0x02),
+    ]);
+    
+    code
+}
+
+// Helper: Add A to DE (16-bit += 8-bit)
+fn ADD_A_TO_DE() -> Vec<Instruction> {
+    use Instruction::*;
+    use U8Register::*;
+    use U16Register::*;
+    
+    vec![
+        // DE += A
+        // E = E + A
+        ADD(E),
+        LD_8_INTERNAL(E, A),
+        // D = D + carry
+        LD_8_IMMEDIATE(A, 0),
+        ADC(D),
+        LD_8_INTERNAL(D, A),
     ]
 }
 

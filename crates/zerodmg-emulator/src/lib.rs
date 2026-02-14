@@ -197,6 +197,14 @@ impl GameBoy {
         use crate::memory::MemoryController;
         self.mem(addr)
     }
+    
+    pub fn read_b(&self) -> u8 {
+        self.cpu.b()
+    }
+    
+    pub fn read_hl(&self) -> u16 {
+        ((self.cpu.h() as u16) << 8) | (self.cpu.l() as u16)
+    }
 
     pub fn print_recent_executions(&mut self, limit: usize) {
         println!("; assembly:                        addr:         t|μs:   codes:");

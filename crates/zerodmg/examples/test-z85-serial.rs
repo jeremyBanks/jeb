@@ -53,4 +53,27 @@ fn main() {
         print!("{}", if byte >= 32 && byte < 127 { byte as char } else { '.' });
     }
     println!();
+    
+    // Check digit storage at 0xC110-0xC114
+    println!("\n=== Digit Storage at 0xC110 ===");
+    print!("5 digits: ");
+    for i in 0..5 {
+        let byte = gb.read_memory(0xC110 + i);
+        print!("{:02X} ", byte);
+    }
+    println!();
+    
+    // Check register state
+    println!("\n=== Register State ===");
+    println!("B: 0x{:02X}", gb.read_b());
+    println!("HL: 0x{:04X}", gb.read_hl());
+    
+    // Check test value at 0xC100
+    println!("\n=== Test Value at 0xC100 ===");
+    print!("4 bytes: ");
+    for i in 0..4 {
+        let byte = gb.read_memory(0xC100 + i);
+        print!("{:02X} ", byte);
+    }
+    println!(" (should be 00 00 00 56)");
 }
