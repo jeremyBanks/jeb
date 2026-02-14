@@ -2,15 +2,19 @@
 //!
 //! Provides `encode`/`decode` free functions and builder patterns.
 
-use std::cmp::Ordering;
-
-use crate::checksums::crc32;
-use crate::png::palettes;
-use crate::polyglot::fonts::{self, FontSelection};
+use {
+    crate::{
+        checksums::crc32,
+        png::palettes,
+        polyglot::fonts::{self, FontSelection},
+    },
+    std::cmp::Ordering,
+};
 
 /// Encode files into a polyglot PNG+ZIP.
 ///
-/// Uses default settings: lexicographic sort, auto mode, auto palette, auto font.
+/// Uses default settings: lexicographic sort, auto mode, auto palette, auto
+/// font.
 pub fn encode<I, K, V>(files: I) -> Vec<u8>
 where
     I: IntoIterator<Item = (K, V)>,
@@ -204,16 +208,15 @@ impl Encoder {
                     let palette_index = (hash as usize) % super::ALL_PALETTES.len();
                     let raw = super::ALL_PALETTES[palette_index];
                     palettes::perceptual::deduplicate_rgb_palette(raw)
-                }
+                },
                 PaletteChoice::Named(ref _named) => {
                     // Future: map NamedPalette variants to palette bytes
                     let palette_index = (hash as usize) % super::ALL_PALETTES.len();
                     let raw = super::ALL_PALETTES[palette_index];
                     palettes::perceptual::deduplicate_rgb_palette(raw)
-                }
-                PaletteChoice::Custom(ref raw) => {
-                    palettes::perceptual::deduplicate_rgb_palette(raw)
-                }
+                },
+                PaletteChoice::Custom(ref raw) =>
+                    palettes::perceptual::deduplicate_rgb_palette(raw),
                 PaletteChoice::Colors(ref colors) => {
                     let rgb_colors: Vec<rgb::RGB8> = colors
                         .iter()
@@ -221,7 +224,7 @@ impl Encoder {
                         .collect();
                     let sorted = palettes::perceptual::sort_colors(&rgb_colors);
                     palettes::perceptual::generate(&sorted)
-                }
+                },
             };
 
             // 7. Determine font
@@ -262,18 +265,18 @@ impl Encoder {
         // Default v2 font logic: always SWISS for ≤512 KiB
         if total_size <= 512 * 1024 {
             Some(FontSelection {
-                name_font: &*fonts::SWISS,
-                size_font: &*fonts::SUGIMORI,
+                name_font: &fonts::SWISS,
+                size_font: &fonts::SUGIMORI,
             })
         } else if total_size <= 1024 * 1024 {
             Some(FontSelection {
-                name_font: &*fonts::MINI,
-                size_font: &*fonts::MINI,
+                name_font: &fonts::MINI,
+                size_font: &fonts::MINI,
             })
         } else {
             Some(FontSelection {
-                name_font: &*fonts::MICRO,
-                size_font: &*fonts::MICRO,
+                name_font: &fonts::MICRO,
+                size_font: &fonts::MICRO,
             })
         }
     }
@@ -327,7 +330,11 @@ mod tests {
         let output = encode(files);
         assert!(!output.is_empty(), "encoded output should not be empty");
         // Should start with PNG signature
-        assert_eq!(&output[..4], b"\x89PNG", "output should start with PNG signature");
+        assert_eq!(
+            &output[..4],
+            b"\x89PNG",
+            "output should start with PNG signature"
+        );
     }
 
     #[test]

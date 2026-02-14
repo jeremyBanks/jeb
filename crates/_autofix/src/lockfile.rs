@@ -3,10 +3,7 @@
 use {
     anyhow::Result,
     std::{
-        collections::{
-            HashMap,
-            HashSet,
-        },
+        collections::{HashMap, HashSet},
         path::Path,
     },
     toml_edit::DocumentMut,

@@ -7,11 +7,11 @@
 //!   cargo run --example fetch_samples
 //!   cargo run --example fetch_samples -- --include-network
 
-use indexmap::IndexMap;
-use std::fs;
-use std::io::Read;
-use std::path::Path;
-use zipng::{panic, Files};
+use {
+    indexmap::IndexMap,
+    std::{fs, io::Read, path::Path},
+    zipng::{Files, panic},
+};
 
 fn main() -> Result<(), panic> {
     let include_network = std::env::args().any(|a| a == "--include-network");
@@ -22,7 +22,12 @@ fn main() -> Result<(), panic> {
     // Clean existing samples
     for entry in fs::read_dir(output_dir)? {
         if let Ok(entry) = entry {
-            if entry.path().extension().map(|e| e == "png").unwrap_or(false) {
+            if entry
+                .path()
+                .extension()
+                .map(|e| e == "png")
+                .unwrap_or(false)
+            {
                 let _ = fs::remove_file(entry.path());
             }
         }
@@ -41,25 +46,39 @@ fn main() -> Result<(), panic> {
         collect_glob(&mut files, "src", &["*.rs"], Some(60_000), Some("src/"));
 
         // Project config files
-        collect_files(&mut files, &[
-            ("Cargo.toml", "Cargo.toml"),
-            ("Cargo.lock", "Cargo.lock"),
-            ("README.md", "README.md"),
-        ], None);
+        collect_files(
+            &mut files,
+            &[
+                ("Cargo.toml", "Cargo.toml"),
+                ("Cargo.lock", "Cargo.lock"),
+                ("README.md", "README.md"),
+            ],
+            None,
+        );
 
         // Git metadata
-        collect_files(&mut files, &[
-            ("git/HEAD", ".git/HEAD"),
-            ("git/config", ".git/config"),
-            ("git/index", ".git/index"),
-            ("git/COMMIT_EDITMSG", ".git/COMMIT_EDITMSG"),
-        ], None);
+        collect_files(
+            &mut files,
+            &[
+                ("git/HEAD", ".git/HEAD"),
+                ("git/config", ".git/config"),
+                ("git/index", ".git/index"),
+                ("git/COMMIT_EDITMSG", ".git/COMMIT_EDITMSG"),
+            ],
+            None,
+        );
 
         // Git objects (binary)
         collect_git_objects(&mut files, ".git/objects", 20, 50000);
 
         // Examples (max 60KB each)
-        collect_glob(&mut files, "examples", &["*.rs"], Some(60_000), Some("examples/"));
+        collect_glob(
+            &mut files,
+            "examples",
+            &["*.rs"],
+            Some(60_000),
+            Some("examples/"),
+        );
 
         generated.push(save_polyglot(output_dir, "zipng_project", files)?);
     }
@@ -69,37 +88,65 @@ fn main() -> Result<(), panic> {
         let mut files = IndexMap::new();
 
         // System files
-        collect_files(&mut files, &[
-            ("etc/hosts", "/etc/hosts"),
-            ("etc/passwd", "/etc/passwd"),
-            ("etc/shells", "/etc/shells"),
-            ("etc/resolv.conf", "/etc/resolv.conf"),
-            ("etc/paths", "/etc/paths"),
-        ], None);
+        collect_files(
+            &mut files,
+            &[
+                ("etc/hosts", "/etc/hosts"),
+                ("etc/passwd", "/etc/passwd"),
+                ("etc/shells", "/etc/shells"),
+                ("etc/resolv.conf", "/etc/resolv.conf"),
+                ("etc/paths", "/etc/paths"),
+            ],
+            None,
+        );
 
         // User configs
-        collect_files(&mut files, &[
-            ("home/.bashrc", &format!("{}/.bashrc", home)),
-            ("home/.zshrc", &format!("{}/.zshrc", home)),
-            ("home/.profile", &format!("{}/.profile", home)),
-            ("home/.gitconfig", &format!("{}/.gitconfig", home)),
-            ("home/.vimrc", &format!("{}/.vimrc", home)),
-            ("home/.tmux.conf", &format!("{}/.tmux.conf", home)),
-        ], None);
+        collect_files(
+            &mut files,
+            &[
+                ("home/.bashrc", &format!("{}/.bashrc", home)),
+                ("home/.zshrc", &format!("{}/.zshrc", home)),
+                ("home/.profile", &format!("{}/.profile", home)),
+                ("home/.gitconfig", &format!("{}/.gitconfig", home)),
+                ("home/.vimrc", &format!("{}/.vimrc", home)),
+                ("home/.tmux.conf", &format!("{}/.tmux.conf", home)),
+            ],
+            None,
+        );
 
         // SSH configs (public only)
-        collect_files(&mut files, &[
-            ("home/.ssh/config", &format!("{}/.ssh/config", home)),
-            ("home/.ssh/known_hosts", &format!("{}/.ssh/known_hosts", home)),
-        ], Some(50000));
+        collect_files(
+            &mut files,
+            &[
+                ("home/.ssh/config", &format!("{}/.ssh/config", home)),
+                (
+                    "home/.ssh/known_hosts",
+                    &format!("{}/.ssh/known_hosts", home),
+                ),
+            ],
+            Some(50000),
+        );
 
         #[cfg(target_os = "macos")]
         {
-            collect_files(&mut files, &[
-                ("macos/SystemVersion.plist", "/System/Library/CoreServices/SystemVersion.plist"),
-                ("macos/finder.plist", &format!("{}/Library/Preferences/com.apple.finder.plist", home)),
-                ("macos/dock.plist", &format!("{}/Library/Preferences/com.apple.dock.plist", home)),
-            ], Some(50000));
+            collect_files(
+                &mut files,
+                &[
+                    (
+                        "macos/SystemVersion.plist",
+                        "/System/Library/CoreServices/SystemVersion.plist",
+                    ),
+                    (
+                        "macos/finder.plist",
+                        &format!("{}/Library/Preferences/com.apple.finder.plist", home),
+                    ),
+                    (
+                        "macos/dock.plist",
+                        &format!("{}/Library/Preferences/com.apple.dock.plist", home),
+                    ),
+                ],
+                Some(50000),
+            );
         }
 
         generated.push(save_polyglot(output_dir, "system_configs", files)?);
@@ -118,7 +165,8 @@ fn main() -> Result<(), panic> {
             .take(10)
         {
             if let Ok(data) = fs::read(entry.path()) {
-                let project_name = entry.path()
+                let project_name = entry
+                    .path()
                     .parent()
                     .and_then(|p| p.file_name())
                     .map(|n| n.to_string_lossy().to_string())
@@ -131,7 +179,10 @@ fn main() -> Result<(), panic> {
                 if let Ok(readme) = fs::read(&readme_path) {
                     let mut truncated = readme;
                     truncated.truncate(30000);
-                    files.insert(format!("{}/README.md", project_name).into_bytes(), truncated);
+                    files.insert(
+                        format!("{}/README.md", project_name).into_bytes(),
+                        truncated,
+                    );
                 }
 
                 // And src/lib.rs or src/main.rs
@@ -165,13 +216,23 @@ fn main() -> Result<(), panic> {
         }
 
         // Cargo build artifacts metadata
-        collect_files(&mut files, &[
-            ("target/CACHEDIR.TAG", "target/CACHEDIR.TAG"),
-            ("target/.rustc_info.json", "target/.rustc_info.json"),
-        ], None);
+        collect_files(
+            &mut files,
+            &[
+                ("target/CACHEDIR.TAG", "target/CACHEDIR.TAG"),
+                ("target/.rustc_info.json", "target/.rustc_info.json"),
+            ],
+            None,
+        );
 
         // .rlib or .rmeta files if any exist (truncated)
-        collect_glob(&mut files, "target/debug/deps", &["*.rlib", "*.rmeta"], Some(50000), Some("deps/"));
+        collect_glob(
+            &mut files,
+            "target/debug/deps",
+            &["*.rlib", "*.rmeta"],
+            Some(50000),
+            Some("deps/"),
+        );
 
         generated.push(save_polyglot(output_dir, "binary_data", files)?);
     }
@@ -181,13 +242,23 @@ fn main() -> Result<(), panic> {
         let mut files = IndexMap::new();
 
         // System logs
-        collect_glob(&mut files, "/var/log", &["*.log"], Some(50000), Some("var/log/"));
+        collect_glob(
+            &mut files,
+            "/var/log",
+            &["*.log"],
+            Some(50000),
+            Some("var/log/"),
+        );
 
         // Also try common log locations
-        collect_files(&mut files, &[
-            ("var/log/system.log", "/var/log/system.log"),
-            ("var/log/wifi.log", "/var/log/wifi.log"),
-        ], Some(50000));
+        collect_files(
+            &mut files,
+            &[
+                ("var/log/system.log", "/var/log/system.log"),
+                ("var/log/wifi.log", "/var/log/wifi.log"),
+            ],
+            Some(50000),
+        );
 
         if !files.is_empty() {
             generated.push(save_polyglot(output_dir, "log_files", files)?);
@@ -195,8 +266,8 @@ fn main() -> Result<(), panic> {
     }
 
     // === SIZE-TARGETED SAMPLES ===
-    // Font thresholds: ≤128K (Sky), ≤512K (Sugimori), ≤1M (Mini), ≤3M (Micro), >3M (no labels)
-    // Color thresholds: ≤1M (Indexed), ≤3M (RGB), >3M (RGBA)
+    // Font thresholds: ≤128K (Sky), ≤512K (Sugimori), ≤1M (Mini), ≤3M (Micro), >3M
+    // (no labels) Color thresholds: ≤1M (Indexed), ≤3M (RGB), >3M (RGBA)
     // All samples use real-world data, replicated as needed to reach target sizes.
 
     // Helper: collect real source files up to a target total size
@@ -215,7 +286,9 @@ fn main() -> Result<(), panic> {
                 .filter(|e| e.path().extension().map(|x| x == "rs").unwrap_or(false))
             {
                 if let Ok(data) = fs::read(entry.path()) {
-                    if data.len() > 60_000 { continue; }
+                    if data.len() > 60_000 {
+                        continue;
+                    }
                     let rel = entry.path().strip_prefix("src").unwrap_or(entry.path());
                     let name = if copy == 0 {
                         format!("src/{}", rel.to_string_lossy())
@@ -224,11 +297,15 @@ fn main() -> Result<(), panic> {
                     };
                     total += data.len();
                     files.insert(name.into_bytes(), data);
-                    if total >= target_bytes { break 'outer; }
+                    if total >= target_bytes {
+                        break 'outer;
+                    }
                 }
             }
             copy += 1;
-            if copy > 100 { break; } // Safety limit
+            if copy > 100 {
+                break;
+            } // Safety limit
         }
         files
     };
@@ -243,11 +320,15 @@ fn main() -> Result<(), panic> {
     // === SAMPLE 7: Small (~1-5 KiB) - a few config files ===
     {
         let mut files = IndexMap::new();
-        collect_files(&mut files, &[
-            (".gitignore", ".gitignore"),
-            ("rustfmt.toml", "rustfmt.toml"),
-            ("CLAUDE.md", "CLAUDE.md"),
-        ], None);
+        collect_files(
+            &mut files,
+            &[
+                (".gitignore", ".gitignore"),
+                ("rustfmt.toml", "rustfmt.toml"),
+                ("CLAUDE.md", "CLAUDE.md"),
+            ],
+            None,
+        );
         generated.push(save_polyglot(output_dir, "small_configs", files)?);
     }
 
@@ -329,14 +410,26 @@ fn main() -> Result<(), panic> {
     // === SAMPLE 17: Many small source files (polyglot module) ===
     {
         let mut files = IndexMap::new();
-        collect_glob(&mut files, "src/polyglot", &["*.rs"], Some(60_000), Some("polyglot/"));
+        collect_glob(
+            &mut files,
+            "src/polyglot",
+            &["*.rs"],
+            Some(60_000),
+            Some("polyglot/"),
+        );
         generated.push(save_polyglot(output_dir, "polyglot_module", files)?);
     }
 
     // === SAMPLE 18: Text module source ===
     {
         let mut files = IndexMap::new();
-        collect_glob(&mut files, "src/text", &["*.rs"], Some(60_000), Some("text/"));
+        collect_glob(
+            &mut files,
+            "src/text",
+            &["*.rs"],
+            Some(60_000),
+            Some("text/"),
+        );
         generated.push(save_polyglot(output_dir, "text_module", files)?);
     }
 
@@ -350,31 +443,45 @@ fn main() -> Result<(), panic> {
     // === SAMPLE 20: All examples ===
     {
         let mut files = IndexMap::new();
-        collect_glob(&mut files, "examples", &["*.rs"], Some(60_000), Some("examples/"));
+        collect_glob(
+            &mut files,
+            "examples",
+            &["*.rs"],
+            Some(60_000),
+            Some("examples/"),
+        );
         generated.push(save_polyglot(output_dir, "all_examples", files)?);
     }
 
     // === SAMPLE 21: System text files (shells, paths, etc) ===
     {
         let mut files = IndexMap::new();
-        collect_files(&mut files, &[
-            ("shells", "/etc/shells"),
-            ("paths", "/etc/paths"),
-            ("hosts", "/etc/hosts"),
-            ("resolv.conf", "/etc/resolv.conf"),
-        ], Some(50_000));
+        collect_files(
+            &mut files,
+            &[
+                ("shells", "/etc/shells"),
+                ("paths", "/etc/paths"),
+                ("hosts", "/etc/hosts"),
+                ("resolv.conf", "/etc/resolv.conf"),
+            ],
+            Some(50_000),
+        );
         generated.push(save_polyglot(output_dir, "etc_text", files)?);
     }
 
     // === SAMPLE 22: User shell configs ===
     {
         let mut files = IndexMap::new();
-        collect_files(&mut files, &[
-            ("bashrc", &format!("{}/.bashrc", home)),
-            ("zshrc", &format!("{}/.zshrc", home)),
-            ("profile", &format!("{}/.profile", home)),
-            ("bash_profile", &format!("{}/.bash_profile", home)),
-        ], Some(50_000));
+        collect_files(
+            &mut files,
+            &[
+                ("bashrc", &format!("{}/.bashrc", home)),
+                ("zshrc", &format!("{}/.zshrc", home)),
+                ("profile", &format!("{}/.profile", home)),
+                ("bash_profile", &format!("{}/.bash_profile", home)),
+            ],
+            Some(50_000),
+        );
         generated.push(save_polyglot(output_dir, "shell_configs", files)?);
     }
 
@@ -391,7 +498,10 @@ fn main() -> Result<(), panic> {
         {
             if let Ok(data) = fs::read(entry.path()) {
                 if data.len() <= 60_000 {
-                    files.insert(entry.path().to_string_lossy().into_owned().into_bytes(), data);
+                    files.insert(
+                        entry.path().to_string_lossy().into_owned().into_bytes(),
+                        data,
+                    );
                 }
             }
         }
@@ -411,7 +521,10 @@ fn main() -> Result<(), panic> {
         for entry in entries.into_iter().take(15) {
             if let Ok(data) = fs::read(entry.path()) {
                 if data.len() <= 60_000 {
-                    files.insert(entry.path().to_string_lossy().into_owned().into_bytes(), data);
+                    files.insert(
+                        entry.path().to_string_lossy().into_owned().into_bytes(),
+                        data,
+                    );
                 }
             }
         }
@@ -421,10 +534,11 @@ fn main() -> Result<(), panic> {
     // === SAMPLE 25: Config file formats (Cargo.toml, json, etc) ===
     {
         let mut files = IndexMap::new();
-        collect_files(&mut files, &[
-            ("Cargo.toml", "Cargo.toml"),
-            ("Cargo.lock", "Cargo.lock"),
-        ], None);
+        collect_files(
+            &mut files,
+            &[("Cargo.toml", "Cargo.toml"), ("Cargo.lock", "Cargo.lock")],
+            None,
+        );
         // Also collect any .json files from src/text
         collect_glob(&mut files, "src/text", &["*.json"], Some(60_000), Some(""));
         generated.push(save_polyglot(output_dir, "config_formats", files)?);
@@ -433,34 +547,51 @@ fn main() -> Result<(), panic> {
     // === SAMPLE 26: Rust source subset ===
     {
         let mut files = IndexMap::new();
-        collect_files(&mut files, &[
-            ("lib.rs", "src/lib.rs"),
-            ("polyglot/mod.rs", "src/polyglot/mod.rs"),
-        ], Some(50000));
+        collect_files(
+            &mut files,
+            &[
+                ("lib.rs", "src/lib.rs"),
+                ("polyglot/mod.rs", "src/polyglot/mod.rs"),
+            ],
+            Some(50000),
+        );
         generated.push(save_polyglot(output_dir, "rust_subset", files)?);
     }
 
     // === SAMPLE 27: Just Cargo files ===
     {
         let mut files = IndexMap::new();
-        collect_files(&mut files, &[
-            ("Cargo.toml", "Cargo.toml"),
-            ("Cargo.lock", "Cargo.lock"),
-        ], None);
+        collect_files(
+            &mut files,
+            &[("Cargo.toml", "Cargo.toml"), ("Cargo.lock", "Cargo.lock")],
+            None,
+        );
         generated.push(save_polyglot(output_dir, "cargo_files", files)?);
     }
 
     // === SAMPLE 28: Font sprites ===
     {
         let mut files = IndexMap::new();
-        collect_glob(&mut files, "src/text", &["*.png"], Some(60_000), Some("sprites/"));
+        collect_glob(
+            &mut files,
+            "src/text",
+            &["*.png"],
+            Some(60_000),
+            Some("sprites/"),
+        );
         generated.push(save_polyglot(output_dir, "font_sprites", files)?);
     }
 
     // === SAMPLE 29: Font metadata ===
     {
         let mut files = IndexMap::new();
-        collect_glob(&mut files, "src/text", &["*.json"], Some(60_000), Some("meta/"));
+        collect_glob(
+            &mut files,
+            "src/text",
+            &["*.json"],
+            Some(60_000),
+            Some("meta/"),
+        );
         generated.push(save_polyglot(output_dir, "font_metadata", files)?);
     }
 
@@ -472,15 +603,16 @@ fn main() -> Result<(), panic> {
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().is_file())
-            .filter_map(|e| {
-                fs::metadata(e.path()).ok().map(|m| (e, m.len()))
-            })
+            .filter_map(|e| fs::metadata(e.path()).ok().map(|m| (e, m.len())))
             .filter(|(_, size)| *size <= 60_000 && *size >= 20_000)
             .collect();
         entries.sort_by_key(|(_, size)| std::cmp::Reverse(*size));
         for (entry, _) in entries.into_iter().take(5) {
             if let Ok(data) = fs::read(entry.path()) {
-                files.insert(entry.path().to_string_lossy().into_owned().into_bytes(), data);
+                files.insert(
+                    entry.path().to_string_lossy().into_owned().into_bytes(),
+                    data,
+                );
             }
         }
         generated.push(save_polyglot(output_dir, "large_sources", files)?);
@@ -492,7 +624,10 @@ fn main() -> Result<(), panic> {
         // Use Cargo.toml as the repeated content
         if let Ok(data) = fs::read("Cargo.toml") {
             for i in 0..20 {
-                files.insert(format!("copy_{:02}/Cargo.toml", i).into_bytes(), data.clone());
+                files.insert(
+                    format!("copy_{:02}/Cargo.toml", i).into_bytes(),
+                    data.clone(),
+                );
             }
         }
         generated.push(save_polyglot(output_dir, "repeated_cargo", files)?);
@@ -501,7 +636,13 @@ fn main() -> Result<(), panic> {
     // === SAMPLE 32: Git pack index files (real binary data) ===
     {
         let mut files = IndexMap::new();
-        collect_glob(&mut files, ".git/objects/pack", &["*.idx"], Some(60_000), Some("pack/"));
+        collect_glob(
+            &mut files,
+            ".git/objects/pack",
+            &["*.idx"],
+            Some(60_000),
+            Some("pack/"),
+        );
         if files.is_empty() {
             // Fallback to loose objects
             collect_git_objects(&mut files, ".git/objects", 15, 30000);
@@ -513,9 +654,14 @@ fn main() -> Result<(), panic> {
     {
         let mut files = IndexMap::new();
         // Cargo registry cache metadata
-        let cargo_home = std::env::var("CARGO_HOME")
-            .unwrap_or_else(|_| format!("{}/.cargo", home));
-        collect_glob(&mut files, &format!("{}/registry/cache", cargo_home), &["*.crate"], Some(50_000), Some("crates/"));
+        let cargo_home = std::env::var("CARGO_HOME").unwrap_or_else(|_| format!("{}/.cargo", home));
+        collect_glob(
+            &mut files,
+            &format!("{}/registry/cache", cargo_home),
+            &["*.crate"],
+            Some(50_000),
+            Some("crates/"),
+        );
         if files.len() < 3 {
             // Fallback: collect from .git/refs
             collect_glob(&mut files, ".git/refs", &["*"], Some(1000), Some("refs/"));
@@ -529,7 +675,13 @@ fn main() -> Result<(), panic> {
         // Collect any .md files from the project
         collect_glob(&mut files, ".", &["*.md"], Some(60_000), Some(""));
         // Also check parent for more READMEs
-        collect_glob(&mut files, "..", &["README.md", "CHANGELOG.md"], Some(60_000), Some("parent/"));
+        collect_glob(
+            &mut files,
+            "..",
+            &["README.md", "CHANGELOG.md"],
+            Some(60_000),
+            Some("parent/"),
+        );
         generated.push(save_polyglot(output_dir, "markdown_docs", files)?);
     }
 
@@ -548,7 +700,8 @@ fn main() -> Result<(), panic> {
         {
             if let Ok(data) = fs::read(entry.path()) {
                 if data.len() <= 60_000 {
-                    let project = entry.path()
+                    let project = entry
+                        .path()
                         .parent()
                         .and_then(|p| p.file_name())
                         .map(|n| n.to_string_lossy().to_string())
@@ -564,15 +717,33 @@ fn main() -> Result<(), panic> {
     // === SAMPLE 36: Source with examples ===
     {
         let mut files = IndexMap::new();
-        collect_glob(&mut files, "src/polyglot", &["*.rs"], Some(60_000), Some("src/"));
-        collect_glob(&mut files, "examples", &["*.rs"], Some(60_000), Some("examples/"));
+        collect_glob(
+            &mut files,
+            "src/polyglot",
+            &["*.rs"],
+            Some(60_000),
+            Some("src/"),
+        );
+        collect_glob(
+            &mut files,
+            "examples",
+            &["*.rs"],
+            Some(60_000),
+            Some("examples/"),
+        );
         generated.push(save_polyglot(output_dir, "src_and_examples", files)?);
     }
 
     // === SAMPLE 37: PNG palette files (filtered to <60KB each) ===
     {
         let mut files = IndexMap::new();
-        collect_glob(&mut files, "src/png/palettes", &["*.rs"], Some(60_000), Some("palettes/"));
+        collect_glob(
+            &mut files,
+            "src/png/palettes",
+            &["*.rs"],
+            Some(60_000),
+            Some("palettes/"),
+        );
         generated.push(save_polyglot(output_dir, "palette_source", files)?);
     }
 
@@ -588,10 +759,22 @@ fn main() -> Result<(), panic> {
     // === SAMPLE 39: Compressed library files (.rlib) ===
     {
         let mut files = IndexMap::new();
-        collect_glob(&mut files, "target/debug/deps", &["*.rlib"], Some(50_000), Some("rlib/"));
+        collect_glob(
+            &mut files,
+            "target/debug/deps",
+            &["*.rlib"],
+            Some(50_000),
+            Some("rlib/"),
+        );
         if files.is_empty() {
             // Fallback: try release deps
-            collect_glob(&mut files, "target/release/deps", &["*.rlib"], Some(50_000), Some("rlib/"));
+            collect_glob(
+                &mut files,
+                "target/release/deps",
+                &["*.rlib"],
+                Some(50_000),
+                Some("rlib/"),
+            );
         }
         generated.push(save_polyglot(output_dir, "rlib_files", files)?);
     }
@@ -605,14 +788,15 @@ fn main() -> Result<(), panic> {
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().is_file())
             .filter(|e| e.path().extension().map(|x| x == "rs").unwrap_or(false))
-            .filter_map(|e| {
-                fs::metadata(e.path()).ok().map(|m| (e, m.len()))
-            })
+            .filter_map(|e| fs::metadata(e.path()).ok().map(|m| (e, m.len())))
             .collect();
         entries.sort_by_key(|(_, size)| *size);
         for (entry, _) in entries.into_iter().take(15) {
             if let Ok(data) = fs::read(entry.path()) {
-                files.insert(entry.path().to_string_lossy().into_owned().into_bytes(), data);
+                files.insert(
+                    entry.path().to_string_lossy().into_owned().into_bytes(),
+                    data,
+                );
             }
         }
         generated.push(save_polyglot(output_dir, "smallest_sources", files)?);
@@ -627,13 +811,20 @@ fn main() -> Result<(), panic> {
             let mut files = IndexMap::new();
 
             // Project Gutenberg texts
-            if let Ok(data) = fetch_url("https://www.gutenberg.org/cache/epub/1041/pg1041.txt", Some(100000)) {
+            if let Ok(data) = fetch_url(
+                "https://www.gutenberg.org/cache/epub/1041/pg1041.txt",
+                Some(100000),
+            ) {
                 files.insert(b"literature/shakespeare_sonnets.txt".to_vec(), data);
             }
-            if let Ok(data) = fetch_url("https://www.gutenberg.org/files/1342/1342-0.txt", Some(100000)) {
+            if let Ok(data) = fetch_url(
+                "https://www.gutenberg.org/files/1342/1342-0.txt",
+                Some(100000),
+            ) {
                 files.insert(b"literature/pride_and_prejudice.txt".to_vec(), data);
             }
-            if let Ok(data) = fetch_url("https://www.gutenberg.org/files/84/84-0.txt", Some(100000)) {
+            if let Ok(data) = fetch_url("https://www.gutenberg.org/files/84/84-0.txt", Some(100000))
+            {
                 files.insert(b"literature/frankenstein.txt".to_vec(), data);
             }
 
@@ -658,7 +849,10 @@ fn main() -> Result<(), panic> {
             }
 
             // USGS earthquake data
-            if let Ok(data) = fetch_url("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.csv", Some(200000)) {
+            if let Ok(data) = fetch_url(
+                "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.csv",
+                Some(200000),
+            ) {
                 files.insert(b"data/earthquakes_week.csv".to_vec(), data);
             }
 
@@ -672,7 +866,10 @@ fn main() -> Result<(), panic> {
             let mut files = IndexMap::new();
 
             // Random photos from Lorem Picsum
-            for (i, size) in [(400, 300), (300, 400), (500, 500), (600, 400)].iter().enumerate() {
+            for (i, size) in [(400, 300), (300, 400), (500, 500), (600, 400)]
+                .iter()
+                .enumerate()
+            {
                 let url = format!("https://picsum.photos/{}/{}", size.0, size.1);
                 if let Ok(data) = fetch_url(&url, None) {
                     files.insert(format!("photos/photo_{}.jpg", i + 1).into_bytes(), data);
@@ -686,7 +883,10 @@ fn main() -> Result<(), panic> {
     }
 
     // Filter out empty/failed samples
-    let generated: Vec<_> = generated.into_iter().filter(|(_, size, _)| *size > 0).collect();
+    let generated: Vec<_> = generated
+        .into_iter()
+        .filter(|(_, size, _)| *size > 0)
+        .collect();
 
     // Print summary
     println!("\n{}", "=".repeat(75));
@@ -709,7 +909,11 @@ fn main() -> Result<(), panic> {
     Ok(())
 }
 
-fn collect_files(files: &mut IndexMap<Vec<u8>, Vec<u8>>, paths: &[(&str, &str)], max_size: Option<usize>) {
+fn collect_files(
+    files: &mut IndexMap<Vec<u8>, Vec<u8>>,
+    paths: &[(&str, &str)],
+    max_size: Option<usize>,
+) {
     for (archive_path, local_path) in paths {
         if let Ok(data) = fs::read(local_path) {
             // Skip files over max_size (60KB limit for polyglot compatibility)
@@ -761,7 +965,8 @@ fn collect_glob(
                     }
                 }
                 if !data.is_empty() {
-                    let rel_path = path.strip_prefix(base_dir)
+                    let rel_path = path
+                        .strip_prefix(base_dir)
                         .unwrap_or(path)
                         .to_string_lossy()
                         .to_string();
@@ -772,7 +977,12 @@ fn collect_glob(
     }
 }
 
-fn collect_git_objects(files: &mut IndexMap<Vec<u8>, Vec<u8>>, objects_dir: &str, max_count: usize, max_size: usize) {
+fn collect_git_objects(
+    files: &mut IndexMap<Vec<u8>, Vec<u8>>,
+    objects_dir: &str,
+    max_count: usize,
+    max_size: usize,
+) {
     if !Path::new(objects_dir).exists() {
         return;
     }
@@ -819,8 +1029,17 @@ fn save_polyglot(
     let path = format!("{}/{}.png", output_dir, name);
     fs::write(&path, &polyglot)?;
 
-    let desc = format!("{} files, {} content", file_count, format_size(total_content));
-    println!("  {:<20} {:>12} ({})", name, format_size(polyglot.len()), desc);
+    let desc = format!(
+        "{} files, {} content",
+        file_count,
+        format_size(total_content)
+    );
+    println!(
+        "  {:<20} {:>12} ({})",
+        name,
+        format_size(polyglot.len()),
+        desc
+    );
 
     Ok((name.to_string(), polyglot.len(), desc))
 }

@@ -1,7 +1,4 @@
-use {
-    inline::cell,
-    std::env,
-};
+use {inline::cell, std::env};
 
 #[test]
 fn test_static_persistence_same_value() {

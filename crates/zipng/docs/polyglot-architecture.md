@@ -1,11 +1,12 @@
 # Polyglot PNG+ZIP Architecture
 
-This document describes the final architecture of the polyglot PNG+ZIP implementation.
+This document describes the final architecture of the polyglot PNG+ZIP
+implementation.
 
 ## Overview
 
-A polyglot file is simultaneously a valid PNG image and a valid ZIP archive. The same
-bytes serve as both PNG pixel data and ZIP file contents.
+A polyglot file is simultaneously a valid PNG image and a valid ZIP archive. The
+same bytes serve as both PNG pixel data and ZIP file contents.
 
 ## File Structure
 
@@ -50,12 +51,13 @@ The IDAT chunk contains **uncompressed** (stored deflate) data that includes:
 
 3. **Alignment Padding** - Between files and at row boundaries
 
-**Recovery**: File contents could theoretically be recovered from pixel data alone,
-without the central directory, since local headers are self-describing.
+**Recovery**: File contents could theoretically be recovered from pixel data
+alone, without the central directory, since local headers are self-describing.
 
 ## The Filter Byte Trick
 
 PNG prepends a filter byte to each row. We exploit this:
+
 - `0x00` (None filter) = deflate stored block, NOT final
 - `0x01` (Sub filter) = deflate stored block, FINAL (marks end of file content)
 
@@ -64,6 +66,7 @@ This makes PNG filter bytes serve double duty as ZIP deflate block headers.
 ## Compression
 
 Both layers use **uncompressed** (stored) deflate:
+
 - ZIP file contents: stored deflate blocks
 - PNG IDAT: stored deflate blocks wrapping the filtered pixel data
 
@@ -72,38 +75,42 @@ This preserves exact byte alignment needed for the polyglot trick.
 ## Variable Row Width
 
 Row width is calculated for approximately square images:
+
 - Formula: `width = floor(sqrt(actual_data_size))`
 - Minimum: 40 bytes (ensures filter bytes don't corrupt ZIP headers)
 - No maximum (scales with content size)
 
-**Two-pass approach**: Build once to measure actual size, then rebuild with optimal width.
+**Two-pass approach**: Build once to measure actual size, then rebuild with
+optimal width.
 
 **Dimension guarantee**: Height ≥ Width (portrait/square orientation)
 
 ## IDAT Boundary Handling
 
-IDAT deflate blocks have a maximum size of 65535 bytes. When filtered data exceeds
-this, IDAT inserts 5-byte block headers that could corrupt ZIP data spanning boundaries.
+IDAT deflate blocks have a maximum size of 65535 bytes. When filtered data
+exceeds this, IDAT inserts 5-byte block headers that could corrupt ZIP data
+spanning boundaries.
 
 **Solution**: Files are automatically padded to avoid crossing boundaries.
 
-Before placing each file, we check if it would cross a 65535-byte boundary. If so,
-padding is added to push the file past the boundary.
+Before placing each file, we check if it would cross a 65535-byte boundary. If
+so, padding is added to push the file past the boundary.
 
 **Current Limits**:
+
 - Total content: **unlimited** (bounded only by PNG/ZIP format limits)
 - Individual file: ~60KB (must fit within one IDAT block)
 
 ### Minimum Row Width
 
-Row width must be ≥ 40 bytes so that filter bytes (at positions 0, W+1, 2W+2, ...)
-don't land inside the 30-byte ZIP local file header.
+Row width must be ≥ 40 bytes so that filter bytes (at positions 0, W+1, 2W+2,
+...) don't land inside the 30-byte ZIP local file header.
 
 ## Examples
 
-| Content Size | Image Dimensions | Notes |
-|--------------|------------------|-------|
-| 124 bytes    | 160 × 8          | Small content, minimum width |
-| 32 KB        | 185 × 186        | ~1:1 (square) |
-| 38 KB        | 201 × 202        | ~1:1 (square) |
+| Content Size | Image Dimensions | Notes                                      |
+| ------------ | ---------------- | ------------------------------------------ |
+| 124 bytes    | 160 × 8          | Small content, minimum width               |
+| 32 KB        | 185 × 186        | ~1:1 (square)                              |
+| 38 KB        | 201 × 202        | ~1:1 (square)                              |
 | 90 KB        | 310 × 311        | Multiple IDAT blocks with boundary padding |

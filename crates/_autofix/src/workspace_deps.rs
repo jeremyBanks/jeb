@@ -1,34 +1,15 @@
 use {
     crate::lockfile::{
-        LockPackage,
-        build_dependency_graph,
-        get_transitive_dependencies,
-        parse_cargo_lock,
+        LockPackage, build_dependency_graph, get_transitive_dependencies, parse_cargo_lock,
     },
-    anyhow::{
-        Context,
-        Result,
-    },
+    anyhow::{Context, Result},
     glob::glob,
     semver::Version,
     std::{
-        collections::{
-            HashMap,
-            HashSet,
-        },
-        path::{
-            Path,
-            PathBuf,
-        },
+        collections::{HashMap, HashSet},
+        path::{Path, PathBuf},
     },
-    toml_edit::{
-        DocumentMut,
-        InlineTable,
-        Item,
-        Key,
-        Value,
-        value,
-    },
+    toml_edit::{DocumentMut, InlineTable, Item, Key, Value, value},
 };
 
 /// Workspace dependency update: (resolution_fields, version, inherited,
@@ -326,11 +307,14 @@ fn collect_workspace_crates(
         };
 
         if let (Some(name), Some(version)) = (name, version) {
-            workspace_crates.insert(name.clone(), WorkspaceCrateInfo {
-                name,
-                version,
-                relative_path,
-            });
+            workspace_crates.insert(
+                name.clone(),
+                WorkspaceCrateInfo {
+                    name,
+                    version,
+                    relative_path,
+                },
+            );
         }
     }
 
@@ -443,10 +427,7 @@ struct ConfigFields {
 #[derive(Debug, Clone)]
 struct WorkspaceCrateInfo {
     /// Package name from [package].name
-    #[expect(
-        dead_code,
-        reason = "stored for diagnostics/debugging"
-    )]
+    #[expect(dead_code, reason = "stored for diagnostics/debugging")]
     name: String,
     /// Version from [package].version (resolved if workspace-inherited)
     version: String,
@@ -1910,10 +1891,7 @@ fn sort_features_section(doc: &mut DocumentMut) -> Result<()> {
 
     Ok(())
 }
-#[expect(
-    clippy::too_many_arguments,
-    reason = "complex normalization logic"
-)]
+#[expect(clippy::too_many_arguments, reason = "complex normalization logic")]
 fn update_member_toml(
     member_path: &Path,
     _all_deps: &HashMap<String, Vec<(PathBuf, String, Dependency)>>,
@@ -2267,11 +2245,7 @@ fn prepend_default_feature(features: Option<Vec<String>>) -> Vec<String> {
 }
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        std::fs,
-        tempfile::TempDir,
-    };
+    use {super::*, std::fs, tempfile::TempDir};
     fn create_test_workspace() -> Result<TempDir> {
         let dir = TempDir::new()?;
         let workspace_root = dir.path();

@@ -1,17 +1,9 @@
 use {
-    anyhow::{
-        Context,
-        Result,
-        bail,
-    },
+    anyhow::{Context, Result, bail},
     std::{
         collections::HashMap,
-        env,
-        fs,
-        path::{
-            Path,
-            PathBuf,
-        },
+        env, fs,
+        path::{Path, PathBuf},
     },
 };
 

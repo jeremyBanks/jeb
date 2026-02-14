@@ -9,8 +9,8 @@ const Footer: React.FC = () => (
         The information on this site may be incomplete or aggregated
         incorrectly.
       </strong>{" "}
-      Refer to <a href="https://www.speedrun.com/games">speedrun.com</a> for
-      certainty.
+      Refer to <a href="https://www.speedrun.com/games">speedrun.com</a>{" "}
+      for certainty.
     </p>
 
     <p>

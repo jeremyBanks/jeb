@@ -1,9 +1,6 @@
 #![no_main]
 
-use {
-    jeb_common::bi::signedness::signedness,
-    libfuzzer_sys::fuzz_target,
-};
+use {jeb_common::bi::signedness::signedness, libfuzzer_sys::fuzz_target};
 
 fuzz_target!(|data: &[u8]| {
     // Test roundtrip properties for signedness bijection

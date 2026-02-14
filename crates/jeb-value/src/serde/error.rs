@@ -1,7 +1,4 @@
-use std::fmt::{
-    self,
-    Display,
-};
+use std::fmt::{self, Display};
 /// Error type for both serialization and deserialization of `Value`.
 ///
 /// This error type is used by both:

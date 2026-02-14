@@ -49,10 +49,7 @@ pub fn scan_for_zoom_out(filter_path: Option<&str>) -> git::Result<Option<Found>
 mod tests {
     use {
         super::*,
-        std::{
-            fs,
-            process::Command,
-        },
+        std::{fs, process::Command},
         tempfile::TempDir,
     };
     fn setup_test_repo() -> TempDir {

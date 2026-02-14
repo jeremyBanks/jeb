@@ -1,6 +1,6 @@
 use {
     crate::{
-        crc32, output_buffer, panic, write_zlib, BitDepth, ColorType, OutputBuffer, PNG_HEADER_SIZE,
+        BitDepth, ColorType, OutputBuffer, PNG_HEADER_SIZE, crc32, output_buffer, panic, write_zlib,
     },
     std::ops::AddAssign,
     tracing::warn,

@@ -1,15 +1,7 @@
 use crate::{
-    ASCII_INLINE_TEXT_LUT,
-    Z85,
-    div_exact,
-    pow,
-    usize_eq,
+    ASCII_INLINE_TEXT_LUT, Z85, div_exact, pow, usize_eq,
     z85::{
-        BASE_85,
-        BLOCK_BYTES_4,
-        BLOCK_DIGITS_5,
-        BLOCK_DIGITS_BY_BYTES,
-        encode_z85_block,
+        BASE_85, BLOCK_BYTES_4, BLOCK_DIGITS_5, BLOCK_DIGITS_BY_BYTES, encode_z85_block,
         encoded_z85_length,
     },
 };
@@ -36,10 +28,7 @@ pub const TARGET_LINE_SIZE_BYTES: usize = usize_eq(
     64,
     div_exact(TARGET_LINE_SIZE_DIGITS * BLOCK_BYTES_4, BLOCK_DIGITS_5),
 );
-#[cfg_attr(
-    feature = "wasm",
-    wasm_bindgen::prelude::wasm_bindgen
-)]
+#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
 #[must_use]
 pub fn encode_jeb85(bytes: &[u8]) -> Vec<u8> {
     let encoded_length = encoded_z85_length(bytes.len());

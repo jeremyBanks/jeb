@@ -14,15 +14,8 @@
 //! and panics in Verify/Reject modes if there's a mismatch.
 
 use {
-    crate::{
-        runtime,
-        snapshot::make_raw_string,
-        value::Value,
-    },
-    std::{
-        fmt::Debug,
-        panic::Location,
-    },
+    crate::{runtime, snapshot::make_raw_string, value::Value},
+    std::{fmt::Debug, panic::Location},
 };
 
 /// A snapshot value for comparison with `==`.

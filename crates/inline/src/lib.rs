@@ -1,7 +1,4 @@
-#![cfg_attr(
-    not(test),
-    deny(unsafe_code)
-)]
+#![cfg_attr(not(test), deny(unsafe_code))]
 
 //! Self-modifying values that update their source code at runtime.
 //!
@@ -89,13 +86,11 @@
 //! For `replace()` mode, the entire call/macro expression is replaced.
 
 // Compile-time check: write and no-write features are mutually exclusive
-#[cfg(
-    all(
-        feature = "write",
-        feature = "no-write",
-        not(feature = "_implicit_all"),
-    )
-)]
+#[cfg(all(
+    feature = "write",
+    feature = "no-write",
+    not(feature = "_implicit_all"),
+))]
 compile_error!("Features 'write' and 'no-write' are mutually exclusive. Enable only one.");
 
 mod dirty;
@@ -112,24 +107,11 @@ mod value;
 
 // Re-export replace functions and aliases
 pub use {
-    dirty::{
-        dirty_count,
-        has_dirty_cells,
-    },
+    dirty::{dirty_count, has_dirty_cells},
     ext::*,
-    flush::{
-        flush_all,
-        start_background_flush,
-    },
+    flush::{flush_all, start_background_flush},
     inline::*,
-    replace::{
-        REPLACE_ME,
-        eval,
-        replace,
-        replace_at,
-        replace_default,
-        val,
-    },
+    replace::{REPLACE_ME, eval, replace, replace_at, replace_default, val},
     runtime::*,
     snap::Snap,
     snapshot::InlineSnapExt,

@@ -1,11 +1,7 @@
 #![cfg(test)]
 // spell-checker: disable
 
-use {
-    crate::text::b1032::*,
-    inline::InlineSnapExt,
-    itertools::Itertools,
-};
+use {crate::text::b1032::*, inline::InlineSnapExt, itertools::Itertools};
 
 #[test]
 fn test_b1032() {

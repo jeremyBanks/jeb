@@ -1,9 +1,5 @@
 use {
-    crate::Item,
-    async_stream::stream,
-    futures::Stream,
-    std::path::Path,
-    tokio::io::AsyncReadExt,
+    crate::Item, async_stream::stream, futures::Stream, std::path::Path, tokio::io::AsyncReadExt,
 };
 
 /// Creates a stream that reads from stdin.

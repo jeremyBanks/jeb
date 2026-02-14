@@ -2,7 +2,7 @@ import { NextPage } from "next";
 import { useQuery } from "@apollo/react-hooks";
 import gql from "graphql-tag";
 import Link from "next/link";
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import styles from "~/components/styles.module.scss";
 import * as schema from "~/components/schema";
@@ -44,8 +44,8 @@ export const HomePage: NextPage<{}> = () => {
 
   const [targetName, setTargetName] = useState<string>("");
   const debouncedTargetName = useDebounced(targetName, 250);
-  const debouncedTargetNameOrSuggestion =
-    debouncedTargetName || searchSuggestion;
+  const debouncedTargetNameOrSuggestion = debouncedTargetName ||
+    searchSuggestion;
 
   useEffect(() => {
     while (true) {
@@ -120,12 +120,11 @@ export const HomePage: NextPage<{}> = () => {
   useProgressIndicator(gameIndex.loading);
 
   const backendVersion = home?.data?.stats?.version;
-  const backendVersionLink =
-    !backendVersion || backendVersion?.endsWith("-dev")
-      ? "https://github.com/jeremyBanks/speedruns/"
-      : backendVersion.includes("-dev")
-      ? `https://github.com/jeremyBanks/speedruns/releases/tag/${backendVersion}`
-      : `https://crates.io/crates/speedruns/${backendVersion}`;
+  const backendVersionLink = !backendVersion || backendVersion?.endsWith("-dev")
+    ? "https://github.com/jeremyBanks/speedruns/"
+    : backendVersion.includes("-dev")
+    ? `https://github.com/jeremyBanks/speedruns/releases/tag/${backendVersion}`
+    : `https://crates.io/crates/speedruns/${backendVersion}`;
   const frontendVersionLink =
     !frontendVersion || frontendVersion?.endsWith("-dev")
       ? "https://github.com/jeremyBanks/speedruns/"
@@ -145,14 +144,14 @@ export const HomePage: NextPage<{}> = () => {
           content="speedruns.ca: an unofficial mirror of speedrun.com"
         />
       </Head>
-      {gameIndex?.error || home?.error ? (
-        <pre>{JSON.stringify([gameIndex?.error, home?.error], null, 2)}</pre>
-      ) : null}
+      {gameIndex?.error || home?.error
+        ? <pre>{JSON.stringify([gameIndex?.error, home?.error], null, 2)}</pre>
+        : null}
 
       <h2>Games</h2>
 
       <form
-        onSubmit={event => {
+        onSubmit={(event) => {
           event.preventDefault();
           // HACK: sue me
           (event.target as any)
@@ -179,7 +178,7 @@ export const HomePage: NextPage<{}> = () => {
           <input
             ref={input}
             placeholder={debouncedTargetNameOrSuggestion}
-            onChange={e => void setTargetName(e.target.value)}
+            onChange={(e) => void setTargetName(e.target.value)}
             style={{
               display: "flex",
               flex: 1,
@@ -190,74 +189,77 @@ export const HomePage: NextPage<{}> = () => {
         </label>
       </form>
 
-      {gameIndex?.data ? (
-        <>
-          {targetGames ? (
-            <ul>
-              {targetGames.map(({ slug, name }) => (
-                <li key={slug}>
-                  <Link href={`/[game]?game=${slug}`} as={`/${slug}`}>
-                    <a>
-                      <code>
-                        <b>/{slug}</b>
-                      </code>{" "}
-                      {name}
-                    </a>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <>
-              <p style={{ paddingLeft: "2em" }}>
-                <i>
-                  <b>Search failed</b>: {orError}
-                </i>
-              </p>
-            </>
-          )}
-        </>
-      ) : (
-        <LoadingBlock />
-      )}
+      {gameIndex?.data
+        ? (
+          <>
+            {targetGames
+              ? (
+                <ul>
+                  {targetGames.map(({ slug, name }) => (
+                    <li key={slug}>
+                      <Link href={`/[game]?game=${slug}`} as={`/${slug}`}>
+                        <a>
+                          <code>
+                            <b>/{slug}</b>
+                          </code>{" "}
+                          {name}
+                        </a>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )
+              : (
+                <>
+                  <p style={{ paddingLeft: "2em" }}>
+                    <i>
+                      <b>Search failed</b>: {orError}
+                    </i>
+                  </p>
+                </>
+              )}
+          </>
+        )
+        : <LoadingBlock />}
 
       <h2>Internals</h2>
 
-      {home?.data ? (
-        <>
-          <ul>
-            <li>
-              backend:{" "}
-              <a href={backendVersionLink}>
-                <code>{backendVersion}</code>
-              </a>
-            </li>
-            <li>
-              frontend:{" "}
-              <a href={frontendVersionLink}>
-                <code>{frontendVersion}</code>
-              </a>
-            </li>
-          </ul>
+      {home?.data
+        ? (
+          <>
+            <ul>
+              <li>
+                backend:{" "}
+                <a href={backendVersionLink}>
+                  <code>{backendVersion}</code>
+                </a>
+              </li>
+              <li>
+                frontend:{" "}
+                <a href={frontendVersionLink}>
+                  <code>{frontendVersion}</code>
+                </a>
+              </li>
+            </ul>
 
-          <h3>Stats</h3>
+            <h3>Stats</h3>
 
-          <ul>
-            <li>
-              updated:{" "}
-              {new Date(home.data.stats.lastUpdated)
-                .toISOString()
-                .slice(0, "YYYY-MM-DD".length)}
-            </li>
-            <li>
-              games: <code>{home.data.stats.games}</code>
-            </li>
-            <li>
-              runs: <code>{home.data.stats.runs}</code>
-            </li>
-          </ul>
-        </>
-      ) : null}
+            <ul>
+              <li>
+                updated: {new Date(home.data.stats.lastUpdated)
+                  .toISOString()
+                  .slice(0, "YYYY-MM-DD".length)}
+              </li>
+              <li>
+                games: <code>{home.data.stats.games}</code>
+              </li>
+              <li>
+                runs: <code>{home.data.stats.runs}</code>
+              </li>
+            </ul>
+          </>
+        )
+        : null}
 
       <h3>GraphQL Schema</h3>
 

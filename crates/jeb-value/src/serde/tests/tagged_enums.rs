@@ -1,12 +1,6 @@
 use {
-    crate::{
-        from_value,
-        to_value,
-    },
-    serde::{
-        Deserialize,
-        Serialize,
-    },
+    crate::{from_value, to_value},
+    serde::{Deserialize, Serialize},
 };
 /// Test internally and adjacently tagged enums
 /// These use deserialize_any to peek at the structure
@@ -41,10 +35,7 @@ fn test_internally_tagged_enum() {
 #[test]
 fn test_adjacently_tagged_enum() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(
-        tag = "t",
-        content = "c"
-    )]
+    #[serde(tag = "t", content = "c")]
     enum Message {
         Request { id: u32, data: String },
         Response { id: u32, result: i32 },

@@ -1,8 +1,8 @@
 use {
     crate::{
-        crc32,
+        OutputBuffer, crc32,
         io::{write_aligned_pad_end, write_aligned_pad_start},
-        output_buffer, panic, OutputBuffer,
+        output_buffer, panic,
     },
     bstr::ByteSlice,
     std::io::Write,

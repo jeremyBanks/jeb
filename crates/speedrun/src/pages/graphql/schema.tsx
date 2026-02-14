@@ -21,7 +21,7 @@ const GraphQLDocs: React.FC<{}> = () => {
 
   useEffect(() => {
     import("graphql-docs").then(({ GraphQLDocs }) =>
-      setGraphQLDocs(() => GraphQLDocs),
+      setGraphQLDocs(() => GraphQLDocs)
     );
   }, []);
 
@@ -39,8 +39,7 @@ const GraphQLDocs: React.FC<{}> = () => {
                 body: JSON.stringify({ query }),
                 headers: { "Content-Type": "application/json" },
                 method: "post",
-              }).then(response => response.json())
-            }
+              }).then((response) => response.json())}
           />
         </div>
       );

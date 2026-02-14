@@ -2,15 +2,19 @@
 
 ## Color Schemes and Fonts
 
-**Question**: Do we have different color schemes and fonts defined somewhere in this repository?
+**Question**: Do we have different color schemes and fonts defined somewhere in
+this repository?
 
 **Status**: Investigated
 
 **Findings**:
 
 ### Fonts (`src/font.rs`)
+
 6 built-in bitmap fonts via the `Font` trait:
-- `Micro3pt` (3×3 pixels) - **has glyphs defined**, inspired by u/Udzu's Unicase Micro
+
+- `Micro3pt` (3×3 pixels) - **has glyphs defined**, inspired by u/Udzu's Unicase
+  Micro
 - `Mini5pt` (3×5 pixels) - **has glyphs defined**, inspired by u/Udzu's Mini
 - `Slab9pt` (9×12) - empty, inspired by Susan Kare's Toronto
 - `Sans9pt` (9×12) - empty, inspired by Susan Kare's Chicago
@@ -20,7 +24,9 @@
 The 9pt fonts have structure but no glyphs yet.
 
 ### Color Modes (`src/png.rs`)
+
 5 PNG color modes via `ColorMode` enum:
+
 - `Lightness` (grayscale, 1 sample/pixel)
 - `RedGreenBlue` (RGB, 3 samples/pixel)
 - `Indexed` (palette, 1 sample/pixel)
@@ -28,6 +34,7 @@ The 9pt fonts have structure but no glyphs yet.
 - `RedGreenBlueAlpha` (RGBA, 4 samples/pixel)
 
 ### Bit Depths (`src/png.rs`)
+
 - 1, 2, 4, 8, or 16 bits per sample
 
 No predefined color schemes/palettes found - palettes are passed in at runtime.
@@ -44,6 +51,7 @@ Before placing each file, we check if it would cross a 65535-byte boundary in
 the filtered data. If so, we add padding to push the file past the boundary.
 
 **Results**:
+
 - No more total content limit
 - Individual files limited to ~60KB (must fit in one IDAT block)
 - Verified: 90KB polyglot (3 × 30KB files) works correctly

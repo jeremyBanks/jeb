@@ -1086,7 +1086,9 @@ fn can_round_trip_any_leading_byte() {
             continue;
         }
 
-        let round_tripped = instruction.expect("instruction should be Some after successful decode").to_bytes();
+        let round_tripped = instruction
+            .expect("instruction should be Some after successful decode")
+            .to_bytes();
         if round_tripped.len() == 0 {
             println!("0x{byte:02X}: failed to round-trip, got zero bytes");
             failed = true;
@@ -1125,7 +1127,9 @@ fn can_round_trip_any_cb_instructions() {
             continue;
         }
 
-        let round_tripped = instruction.expect("instruction should be Some after successful decode").to_bytes();
+        let round_tripped = instruction
+            .expect("instruction should be Some after successful decode")
+            .to_bytes();
         if bytes != round_tripped {
             println!(
                 "0xCB{:02X}: failed to round-trip, got {:?} {:?} from {:?}",

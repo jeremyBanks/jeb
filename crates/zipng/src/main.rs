@@ -1,12 +1,14 @@
-use std::env;
-use std::fs;
-use std::io::{self, BufRead};
-use std::path::Path;
-use std::process::ExitCode;
-
-use indexmap::IndexMap;
-use rgb::RGB8;
-use zipng::v2::{Encoder, FontChoice, PaletteChoice};
+use {
+    indexmap::IndexMap,
+    rgb::RGB8,
+    std::{
+        env, fs,
+        io::{self, BufRead},
+        path::Path,
+        process::ExitCode,
+    },
+    zipng::v2::{Encoder, FontChoice, PaletteChoice},
+};
 
 const MAX_FILE_SIZE: usize = 60 * 1024; // 60KB limit
 
@@ -259,19 +261,19 @@ fn main() -> ExitCode {
             "-h" | "--help" => {
                 print_help(default_mode);
                 return ExitCode::SUCCESS;
-            }
+            },
             "-c" | "--create" => {
                 mode = Some(Mode::Create);
                 i += 1;
-            }
+            },
             "-x" | "--extract" => {
                 mode = Some(Mode::Extract);
                 i += 1;
-            }
+            },
             "-t" | "-l" | "--list" => {
                 mode = Some(Mode::List);
                 i += 1;
-            }
+            },
             "-f" | "--file" => {
                 if i + 1 >= args.len() {
                     eprintln!("Error: {} requires an argument", args[i]);
@@ -279,7 +281,7 @@ fn main() -> ExitCode {
                 }
                 file_flag = Some(args[i + 1].clone());
                 i += 2;
-            }
+            },
             "--in" => {
                 if i + 1 >= args.len() {
                     eprintln!("Error: --in requires an argument");
@@ -287,7 +289,7 @@ fn main() -> ExitCode {
                 }
                 in_args.push(args[i + 1].clone());
                 i += 2;
-            }
+            },
             "-o" | "--out" => {
                 if i + 1 >= args.len() {
                     eprintln!("Error: {} requires an argument", args[i]);
@@ -295,7 +297,7 @@ fn main() -> ExitCode {
                 }
                 out_path = Some(args[i + 1].clone());
                 i += 2;
-            }
+            },
             "-C" | "-d" | "--directory" => {
                 if i + 1 >= args.len() {
                     eprintln!("Error: {} requires an argument", args[i]);
@@ -303,27 +305,27 @@ fn main() -> ExitCode {
                 }
                 out_path = Some(args[i + 1].clone());
                 i += 2;
-            }
+            },
             "-n" | "--no-clobber" => {
                 // no-op, default behavior
                 i += 1;
-            }
+            },
             "--force" => {
                 force = true;
                 i += 1;
-            }
+            },
             "-v" | "--verbose" => {
                 verbose += 1;
                 i += 1;
-            }
+            },
             "-q" | "--quiet" => {
                 quiet = true;
                 i += 1;
-            }
+            },
             "-@" => {
                 read_stdin = true;
                 i += 1;
-            }
+            },
             "--colors" => {
                 if i + 1 >= args.len() {
                     eprintln!("Error: --colors requires an argument");
@@ -331,15 +333,15 @@ fn main() -> ExitCode {
                 }
                 colors_spec = Some(args[i + 1].clone());
                 i += 2;
-            }
+            },
             "--sort" => {
                 sort_colors = true;
                 i += 1;
-            }
+            },
             "--no-sort" => {
                 sort_colors = false;
                 i += 1;
-            }
+            },
             "--font" => {
                 if i + 1 >= args.len() {
                     eprintln!("Error: --font requires an argument");
@@ -350,18 +352,18 @@ fn main() -> ExitCode {
                     Err(e) => {
                         eprintln!("Error: {}", e);
                         return ExitCode::from(1);
-                    }
+                    },
                 }
                 i += 2;
-            }
+            },
             arg if arg.starts_with('-') && arg != "-" => {
                 eprintln!("Error: unknown option: {}", arg);
                 return ExitCode::from(1);
-            }
+            },
             _ => {
                 positionals.push(args[i].clone());
                 i += 1;
-            }
+            },
         }
     }
 
@@ -378,11 +380,11 @@ fn main() -> ExitCode {
                     if !path.is_empty() {
                         stdin_files.push(path);
                     }
-                }
+                },
                 Err(e) => {
                     eprintln!("Error reading stdin: {}", e);
                     return ExitCode::from(1);
-                }
+                },
             }
         }
     }
@@ -401,7 +403,15 @@ fn main() -> ExitCode {
             sort_colors,
             font_choice,
         ),
-        Mode::Extract => run_extract(file_flag, in_args, out_path, positionals, force, verbose, quiet),
+        Mode::Extract => run_extract(
+            file_flag,
+            in_args,
+            out_path,
+            positionals,
+            force,
+            verbose,
+            quiet,
+        ),
         Mode::List => run_list(file_flag, in_args, positionals, verbose, quiet),
     }
 }
@@ -431,7 +441,7 @@ fn run_create(
         None => {
             eprintln!("Error: no output path specified (use --out or provide as first argument)");
             return ExitCode::from(1);
-        }
+        },
     };
 
     // Check overwrite
@@ -478,7 +488,7 @@ fn run_create(
             Err(e) => {
                 eprintln!("Error reading {}: {}", path, e);
                 return ExitCode::from(1);
-            }
+            },
         };
 
         if contents.len() > MAX_FILE_SIZE {
@@ -503,23 +513,20 @@ fn run_create(
                 // For Custom (named palette), if --no-sort we pass as-is.
                 // The v2 Colors variant always sorts internally, so if --no-sort
                 // with hex colors, we use Custom instead.
-                if !sort_colors {
-                    if let PaletteChoice::Colors(ref colors) = palette {
+                if !sort_colors
+                    && let PaletteChoice::Colors(ref colors) = palette {
                         // Convert to a raw palette without sorting
-                        let rgb_colors: Vec<RGB8> = colors
-                            .iter()
-                            .map(|c| RGB8::new(c[0], c[1], c[2]))
-                            .collect();
+                        let rgb_colors: Vec<RGB8> =
+                            colors.iter().map(|c| RGB8::new(c[0], c[1], c[2])).collect();
                         let raw = zipng::palettes::perceptual::generate(&rgb_colors);
                         palette = PaletteChoice::Custom(raw);
                     }
-                }
                 encoder = encoder.with_palette(palette);
-            }
+            },
             Err(e) => {
                 eprintln!("Error: {}", e);
                 return ExitCode::from(1);
-            }
+            },
         }
     }
 

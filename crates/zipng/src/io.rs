@@ -708,7 +708,6 @@ where T: Seek
 #[cfg(test)]
 #[test]
 fn test_output_buffer() -> Result<(), panic> {
-
     let mut buffer = output_buffer();
 
     {

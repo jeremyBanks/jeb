@@ -1,9 +1,6 @@
 use std::{
     fs,
-    path::{
-        Path,
-        PathBuf,
-    },
+    path::{Path, PathBuf},
 };
 
 /// Fixture-based tests for git-snapshot library
@@ -16,12 +13,7 @@ use std::{
 /// 5. Verify round-trip stability (deserialize output, serialize again)
 ///
 /// If expected output doesn't exist, it's auto-generated and the test fails.
-use git_snapshot::{
-    CommitIdStyle,
-    SerializationOptions,
-    parse,
-    serialize,
-};
+use git_snapshot::{CommitIdStyle, SerializationOptions, parse, serialize};
 
 /// Defines a serialization output variant
 struct OptionVariant {

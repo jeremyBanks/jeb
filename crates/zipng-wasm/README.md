@@ -4,9 +4,12 @@ WebAssembly bindings for the zipng polyglot PNG+ZIP encoder.
 
 ## Features
 
-- **WASM-friendly API**: JSON-based interface with concrete types instead of generic iterators
-- **File validation**: Automatic 60KB per-file limit enforcement (IDAT boundary constraint)
-- **Predefined sort strategies**: Five built-in sorting modes to replace closures
+- **WASM-friendly API**: JSON-based interface with concrete types instead of
+  generic iterators
+- **File validation**: Automatic 60KB per-file limit enforcement (IDAT boundary
+  constraint)
+- **Predefined sort strategies**: Five built-in sorting modes to replace
+  closures
 - **Cross-platform**: Works in web browsers, Node.js, and Deno
 - **Pure Rust**: No native dependencies, compiles to WASM cleanly
 
@@ -30,24 +33,24 @@ The build script generates three targets:
 ### Node.js
 
 ```javascript
-const { encode_simple, version } = require('./pkg/node/zipng_wasm.js');
+const { encode_simple, version } = require("./pkg/node/zipng_wasm.js");
 
 const files = [
-    {
-        path: "hello.txt",
-        content: Array.from(Buffer.from("Hello, World!"))
-    },
-    {
-        path: "data.json",
-        content: Array.from(Buffer.from('{"test": true}'))
-    }
+  {
+    path: "hello.txt",
+    content: Array.from(Buffer.from("Hello, World!")),
+  },
+  {
+    path: "data.json",
+    content: Array.from(Buffer.from('{"test": true}')),
+  },
 ];
 
 const filesJson = JSON.stringify(files);
 const polyglot = encode_simple(filesJson);
 
 // polyglot is a Uint8Array containing a valid PNG+ZIP
-fs.writeFileSync('output.png', Buffer.from(polyglot));
+fs.writeFileSync("output.png", Buffer.from(polyglot));
 ```
 
 ### Deno
@@ -62,20 +65,20 @@ deno run --allow-read --allow-write ../deno/zipng-cli.ts -o output.png file1.txt
 
 ```html
 <script type="module">
-import init, { encode_simple } from './pkg/web/zipng_wasm.js';
+  import init, { encode_simple } from "./pkg/web/zipng_wasm.js";
 
-await init();
+  await init();
 
-const files = [
+  const files = [
     {
-        path: "hello.txt",
-        content: Array.from(new TextEncoder().encode("Hello!"))
-    }
-];
+      path: "hello.txt",
+      content: Array.from(new TextEncoder().encode("Hello!")),
+    },
+  ];
 
-const result = encode_simple(JSON.stringify(files));
-const blob = new Blob([result], { type: 'image/png' });
-// Download or display...
+  const result = encode_simple(JSON.stringify(files));
+  const blob = new Blob([result], { type: "image/png" });
+  // Download or display...
 </script>
 ```
 
@@ -86,10 +89,11 @@ const blob = new Blob([result], { type: 'image/png' });
 Encode files with default options (auto mode, lexicographic sort).
 
 **Input JSON format:**
+
 ```json
 [
-  {"path": "file1.txt", "content": [72, 101, 108, 108, 111]},
-  {"path": "file2.txt", "content": [87, 111, 114, 108, 100]}
+  { "path": "file1.txt", "content": [72, 101, 108, 108, 111] },
+  { "path": "file2.txt", "content": [87, 111, 114, 108, 100] }
 ]
 ```
 
@@ -98,10 +102,11 @@ Encode files with default options (auto mode, lexicographic sort).
 Encode files with custom options.
 
 **Input JSON format:**
+
 ```json
 {
   "files": [
-    {"path": "file1.txt", "content": [72, 101, 108, 108, 111]}
+    { "path": "file1.txt", "content": [72, 101, 108, 108, 111] }
   ],
   "options": {
     "mode": "auto",
@@ -112,9 +117,12 @@ Encode files with custom options.
 ```
 
 **Options:**
+
 - `mode`: `"auto"` (default), `"indexed"`, or `"rgba"`
-- `font`: `"swiss"`, `"sixth"`, `"sky"`, `"monte"`, `"sugimori"`, `"mini"`, `"micro"`, or `null` (auto)
-- `sort_mode`: `"lexicographic"` (default), `"reverse"`, `"by_size"`, `"by_extension"`, or `"none"`
+- `font`: `"swiss"`, `"sixth"`, `"sky"`, `"monte"`, `"sugimori"`, `"mini"`,
+  `"micro"`, or `null` (auto)
+- `sort_mode`: `"lexicographic"` (default), `"reverse"`, `"by_size"`,
+  `"by_extension"`, or `"none"`
 
 ### `version() -> string`
 
@@ -138,7 +146,8 @@ Returns the zipng-wasm version.
 
 ### Type Conversion Strategy
 
-Instead of using generic `IntoIterator` and closures, the WASM API uses concrete JSON types:
+Instead of using generic `IntoIterator` and closures, the WASM API uses concrete
+JSON types:
 
 - Files as `Vec<FileInput>` (path: String, content: Vec<u8>)
 - Sort strategies as enum strings
@@ -149,6 +158,7 @@ This avoids wasm-bindgen limitations with generics and closures.
 ### Dependency Management
 
 The core `zipng` crate's I/O-dependent features are disabled for WASM:
+
 - `image` crate: Optional, uses pure-Rust `png` crate for font loading
 - `brotli`, `zip`: Optional, disabled in WASM builds
 - `walkdir`: Feature-gated, not available in WASM
@@ -156,6 +166,7 @@ The core `zipng` crate's I/O-dependent features are disabled for WASM:
 ### Font Loading
 
 Fonts are loaded at compile-time using the `png` crate with transformations:
+
 - Indexed/palette PNGs → RGB → Luminance
 - RGBA → Luminance
 - Grayscale → Direct use
@@ -165,6 +176,7 @@ No `image` crate needed in WASM builds.
 ## Testing
 
 ### Deno CLI Test
+
 ```bash
 cd ../deno
 deno run --allow-read --allow-write zipng-cli.ts -o test.png file1.txt file2.txt
@@ -173,6 +185,7 @@ unzip -l test.png  # Verify it's a ZIP
 ```
 
 ### Node.js Test
+
 ```bash
 node test-node.js
 file test_node_output.png
@@ -180,6 +193,7 @@ unzip -l test_node_output.png
 ```
 
 ### Web Test
+
 ```bash
 python3 -m http.server 8000
 # Open http://localhost:8000/test.html
@@ -201,7 +215,8 @@ python3 -m http.server 8000
 
 ### Performance
 
-Encoding performance is comparable to native builds. Font rendering and palette generation happen at compile-time.
+Encoding performance is comparable to native builds. Font rendering and palette
+generation happen at compile-time.
 
 ## License
 

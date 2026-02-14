@@ -70,8 +70,8 @@ fn main() {
     for (name, palette) in &builtin {
         let mut dupes = 0;
         for i in 1..256 {
-            let a = &palette[(i-1)*3..(i-1)*3+3];
-            let b = &palette[i*3..i*3+3];
+            let a = &palette[(i - 1) * 3..(i - 1) * 3 + 3];
+            let b = &palette[i * 3..i * 3 + 3];
             if a == b {
                 dupes += 1;
             }

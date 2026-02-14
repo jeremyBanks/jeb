@@ -1,5 +1,4 @@
-use zipng::palettes;
-use std::collections::HashSet;
+use {std::collections::HashSet, zipng::palettes};
 
 fn main() {
     let builtin: Vec<(&str, &[u8])> = vec![
@@ -46,20 +45,20 @@ fn main() {
     for (name, palette) in &builtin {
         let mut unique_colors = HashSet::new();
         let mut duplicate_count = 0;
-        
+
         for i in 0..256 {
-            let color = &palette[i*3..i*3+3];
+            let color = &palette[i * 3..i * 3 + 3];
             if !unique_colors.insert(color) {
                 duplicate_count += 1;
             }
         }
-        
+
         if duplicate_count > 0 {
             any_nonunique = true;
             println!("{name}: {duplicate_count} total duplicate color(s) (non-unique indices)");
         }
     }
-    
+
     if !any_nonunique {
         println!("All built-in palettes have 256 unique colors each!");
     }

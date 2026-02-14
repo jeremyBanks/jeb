@@ -83,7 +83,7 @@ async function addFiles(files) {
     // Validate size
     if (file.size > MAX_FILE_SIZE) {
       showError(
-        `File '${file.name}' exceeds 60KB limit (${formatBytes(file.size)})`
+        `File '${file.name}' exceeds 60KB limit (${formatBytes(file.size)})`,
       );
       continue;
     }
@@ -147,13 +147,13 @@ function updateFileList() {
         ×
       </button>
     </li>
-  `
+  `,
     )
     .join("");
 }
 
 // Export for inline onclick (simpler than adding event listeners dynamically)
-window.removeFileAt = removeFile;
+globalThis.removeFileAt = removeFile;
 
 // Generate polyglot
 async function generatePolyglot() {

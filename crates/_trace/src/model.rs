@@ -3,10 +3,7 @@
 //! [impl _trace.types]
 
 use std::{
-    collections::{
-        HashMap,
-        HashSet,
-    },
+    collections::{HashMap, HashSet},
     path::PathBuf,
 };
 

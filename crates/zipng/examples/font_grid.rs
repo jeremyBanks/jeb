@@ -1,8 +1,9 @@
 //! Renders all bitmap fonts side-by-side in a grid PNG for visual comparison.
 
-use std::collections::BTreeSet;
-
-use zipng::polyglot::fonts::{ALL_FONTS, BitmapFont};
+use {
+    std::collections::BTreeSet,
+    zipng::polyglot::fonts::{ALL_FONTS, BitmapFont},
+};
 
 fn main() {
     // Collect all fonts.

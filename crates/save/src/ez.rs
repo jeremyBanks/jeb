@@ -1,9 +1,4 @@
-use {
-    crate::cli::Save,
-    eyre::Report,
-    itertools::Itertools,
-    std::path::PathBuf,
-};
+use {crate::cli::Save, eyre::Report, itertools::Itertools, std::path::PathBuf};
 
 /// `save`
 pub fn all() -> Result<(), ::eyre::Report> {

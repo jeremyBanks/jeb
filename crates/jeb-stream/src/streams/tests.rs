@@ -1,10 +1,7 @@
 #[cfg(test)]
 mod tests {
     use {
-        crate::{
-            Item,
-            streams::*,
-        },
+        crate::{Item, streams::*},
         futures::StreamExt,
     };
 

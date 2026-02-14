@@ -3,10 +3,10 @@
 //! The polyglot approach has a ~42KB total content limit due to IDAT
 //! deflate block boundaries. This test verifies behavior near that limit.
 
-use indexmap::IndexMap;
-use std::fs;
-use std::process::Command;
-use std::time::Instant;
+use {
+    indexmap::IndexMap,
+    std::{fs, process::Command, time::Instant},
+};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Creating polyglot PNG+ZIP near the 42KB limit...\n");
@@ -52,8 +52,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  small.txt: 6 bytes");
 
     let total_content: usize = files.values().map(|v| v.len()).sum();
-    println!("\nTotal uncompressed content: {} bytes ({:.2} MB)",
-             total_content, total_content as f64 / 1_000_000.0);
+    println!(
+        "\nTotal uncompressed content: {} bytes ({:.2} MB)",
+        total_content,
+        total_content as f64 / 1_000_000.0
+    );
 
     let files_converted: zipng::Files = files.into();
 
@@ -64,10 +67,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let elapsed = start.elapsed();
 
     println!("Generated in {:.2?}", elapsed);
-    println!("Polyglot size: {} bytes ({:.2} MB)",
-             polyglot_data.len(), polyglot_data.len() as f64 / 1_000_000.0);
-    println!("Overhead: {:.1}%",
-             (polyglot_data.len() as f64 / total_content as f64 - 1.0) * 100.0);
+    println!(
+        "Polyglot size: {} bytes ({:.2} MB)",
+        polyglot_data.len(),
+        polyglot_data.len() as f64 / 1_000_000.0
+    );
+    println!(
+        "Overhead: {:.1}%",
+        (polyglot_data.len() as f64 / total_content as f64 - 1.0) * 100.0
+    );
 
     // Save it
     let output_path = "target/polyglot_large.png";
@@ -93,13 +101,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("{}", line);
                 }
                 println!("...");
-                for line in out.lines().rev().take(3).collect::<Vec<_>>().into_iter().rev() {
+                for line in out
+                    .lines()
+                    .rev()
+                    .take(3)
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                    .rev()
+                {
                     println!("{}", line);
                 }
             } else {
-                println!("unzip -l failed: {}", String::from_utf8_lossy(&output.stderr));
+                println!(
+                    "unzip -l failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                );
             }
-        }
+        },
         Err(_) => println!("(unzip not available)"),
     }
 
@@ -127,8 +145,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let meta = entry.metadata()?;
                     let size = meta.len() as usize;
                     total_extracted += size;
-                    println!("  {:12} {:>10} bytes",
-                             entry.file_name().to_string_lossy(), size);
+                    println!(
+                        "  {:12} {:>10} bytes",
+                        entry.file_name().to_string_lossy(),
+                        size
+                    );
                 }
                 println!("  {:12} {:>10} bytes", "TOTAL", total_extracted);
 
@@ -145,12 +166,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     println!("✗ small.txt content mismatch: {:?}", small_content);
                 }
-
             } else {
                 println!("✗ Extraction failed:");
                 println!("{}", String::from_utf8_lossy(&output.stderr));
             }
-        }
+        },
         Err(_) => println!("(unzip not available for extraction)"),
     }
 

@@ -3,10 +3,7 @@
 
 use {
     ignore::WalkBuilder,
-    std::{
-        fs,
-        path::PathBuf,
-    },
+    std::{fs, path::PathBuf},
 };
 
 /// A file with its content
@@ -86,10 +83,7 @@ fn read_file(path: &PathBuf) -> Option<ScannedFile> {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        std::env,
-    };
+    use {super::*, std::env};
 
     /// [test _trace.files]
     /// [test _trace.files.globs]

@@ -31,17 +31,10 @@
 //! - **After replacement**: The `replace(...)` call no longer exists in source
 
 use {
-    crate::{
-        runtime::resolve_source_path,
-        value::Value,
-    },
+    crate::{runtime::resolve_source_path, value::Value},
     once_cell::sync::Lazy,
     parking_lot::Mutex,
-    std::{
-        any::TypeId,
-        collections::HashMap,
-        path::PathBuf,
-    },
+    std::{any::TypeId, collections::HashMap, path::PathBuf},
 };
 
 /// Registry key for replace: (file, index_or_position, type_id)

@@ -1,7 +1,4 @@
-use std::{
-    sync::Arc,
-    thread,
-};
+use std::{sync::Arc, thread};
 
 fn find_litter_positions(file_path: &std::path::Path) -> Vec<(u32, u32)> {
     use syn::visit::Visit;

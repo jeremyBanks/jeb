@@ -1,11 +1,9 @@
 //! Test brotli compression feature (placeholder).
 //!
-//! Note: Brotli-compressed polyglot (zipngbr) is not yet implemented in the new API.
-//! This example demonstrates the regular polyglot creation instead.
+//! Note: Brotli-compressed polyglot (zipngbr) is not yet implemented in the new
+//! API. This example demonstrates the regular polyglot creation instead.
 
-use indexmap::IndexMap;
-use std::fs;
-use zipng::Files;
+use {indexmap::IndexMap, std::fs, zipng::Files};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all("target")?;

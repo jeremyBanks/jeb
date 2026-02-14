@@ -41,17 +41,17 @@
 //! - **Oklch (L, C) distance**: Use the polar form of Oklab and compute
 //!   distance in just the lightness-chroma plane, ignoring hue entirely for
 //!   ordering. This produces paths monotonic in lightness/saturation while
-//!   allowing hue to vary freely — a principled decomposition that avoids
-//!   an arbitrary weight parameter.
+//!   allowing hue to vary freely — a principled decomposition that avoids an
+//!   arbitrary weight parameter.
 //!
-//! - **Pure lightness sort**: Simply sort by Oklab L. The simplest option
-//!   and guarantees monotonic lightness, but ignores chromatic relationships
+//! - **Pure lightness sort**: Simply sort by Oklab L. The simplest option and
+//!   guarantees monotonic lightness, but ignores chromatic relationships
 //!   entirely.
 //!
 //! - **Principal component ordering**: Project colors onto their first
-//!   principal component in Oklab and sort by that. Finds the "natural axis"
-//!   of the color set. Works well when colors roughly form a line or arc, but
-//!   can produce odd results for clustered color sets.
+//!   principal component in Oklab and sort by that. Finds the "natural axis" of
+//!   the color set. Works well when colors roughly form a line or arc, but can
+//!   produce odd results for clustered color sets.
 
 use {
     oklab::{self, Oklab},
@@ -169,8 +169,8 @@ pub fn sort_colors(colors: &[RGB8]) -> Vec<RGB8> {
     } else {
         // Greedy nearest-neighbor from the darkest color (suboptimal).
         eprintln!(
-            "warning: sort_colors: {n} colors exceeds brute-force limit (10), \
-             falling back to greedy nearest-neighbor heuristic"
+            "warning: sort_colors: {n} colors exceeds brute-force limit (10), falling back to \
+             greedy nearest-neighbor heuristic"
         );
         let mut remaining: Vec<usize> = (0..n).collect();
         let start = remaining
@@ -203,11 +203,7 @@ pub fn sort_colors(colors: &[RGB8]) -> Vec<RGB8> {
     let reversed: Vec<RGB8> = sorted.iter().copied().rev().collect();
     let fwd_inv = count_inversions(colors, &sorted);
     let rev_inv = count_inversions(colors, &reversed);
-    if rev_inv < fwd_inv {
-        reversed
-    } else {
-        sorted
-    }
+    if rev_inv < fwd_inv { reversed } else { sorted }
 }
 
 /// Count the number of pairwise inversions between `reference` order and
@@ -506,20 +502,21 @@ fn hex_to_rgb(hex: &str) -> RGB8 {
 
 /// Generate the "frozen" color scheme from hard-coded hex color codes.
 /// Returns a 256-color perceptually uniform palette.
-/// The control points are automatically reordered using sort_colors for better coherence.
+/// The control points are automatically reordered using sort_colors for better
+/// coherence.
 pub fn frozen() -> Vec<u8> {
     let colors = [
         // purple navy gray pale white more purple
-        "061B31", "533AFD", /*"50617A",*/ "F6F9FC", "635BFF", "FFFFFF"
-        // // yellow orange pink red
-        // "FFC01F", "FF6118", "F44BCC", "EA2261",
+        "061B31", "533AFD", /* "50617A", */ "F6F9FC", "635BFF",
+        "FFFFFF", /* // yellow orange pink red
+                  * "FFC01F", "FF6118", "F44BCC", "EA2261", */
     ]
     .iter()
     .map(|hex| hex_to_rgb(hex))
     .collect::<Vec<_>>();
     let sorted = sort_colors(&colors);
-    let colors = generate(&sorted);
-    colors
+    
+    generate(&sorted)
 }
 
 #[cfg(test)]
@@ -593,7 +590,8 @@ mod tests {
         let last_l = rgb_to_ok(sorted_dtl[sorted_dtl.len() - 1]).l;
         assert!(
             first_l <= last_l,
-            "dark-to-light input should produce dark-to-light output, got L={first_l} -> L={last_l}"
+            "dark-to-light input should produce dark-to-light output, got L={first_l} -> \
+             L={last_l}"
         );
 
         // Light-to-dark input
@@ -607,7 +605,8 @@ mod tests {
         let last_l2 = rgb_to_ok(sorted_ltd[sorted_ltd.len() - 1]).l;
         assert!(
             first_l2 >= last_l2,
-            "light-to-dark input should produce light-to-dark output, got L={first_l2} -> L={last_l2}"
+            "light-to-dark input should produce light-to-dark output, got L={first_l2} -> \
+             L={last_l2}"
         );
     }
 

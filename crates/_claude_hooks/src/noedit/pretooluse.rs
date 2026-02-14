@@ -1,16 +1,7 @@
 use {
     super::patterns::NoeditMatcher,
-    crate::{
-        HookInput,
-        HookInputDetails,
-        HookOutput,
-        HookOutputDetails,
-        PermissionDecision,
-    },
-    eyre::{
-        ContextCompat,
-        Result,
-    },
+    crate::{HookInput, HookInputDetails, HookOutput, HookOutputDetails, PermissionDecision},
+    eyre::{ContextCompat, Result},
     std::path::Path,
 };
 

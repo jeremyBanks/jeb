@@ -1,17 +1,9 @@
 use {
-    git_snapshot::{
-        CommitIdStyle,
-        SerializationOptions,
-        serialize,
-    },
+    git_snapshot::{CommitIdStyle, SerializationOptions, serialize},
     inline::snap,
     once_cell::sync::Lazy,
     save::cli::Save,
-    std::{
-        fs,
-        path::PathBuf,
-        sync::Mutex,
-    },
+    std::{fs, path::PathBuf, sync::Mutex},
 };
 
 static CWD_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));

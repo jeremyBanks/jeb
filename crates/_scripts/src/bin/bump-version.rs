@@ -4,16 +4,9 @@
 //! where `xxxx = (yyyy XOR (dd * 100 + MM)) + (hh * 100 + mm) + 2048`
 
 use {
-    anyhow::{
-        Context,
-        Result,
-        bail,
-    },
+    anyhow::{Context, Result, bail},
     chrono::Local,
-    std::{
-        fs,
-        path::Path,
-    },
+    std::{fs, path::Path},
     toml_edit::DocumentMut,
 };
 

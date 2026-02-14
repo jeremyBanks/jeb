@@ -2,18 +2,10 @@
 //! [impl _trace.syntax]
 
 use {
-    crate::model::{
-        Annotation,
-        Location,
-        Modifiers,
-        SatisfactionMode,
-    },
+    crate::model::{Annotation, Location, Modifiers, SatisfactionMode},
     regex::Regex,
     std::{
-        path::{
-            Path,
-            PathBuf,
-        },
+        path::{Path, PathBuf},
         sync::LazyLock,
     },
 };

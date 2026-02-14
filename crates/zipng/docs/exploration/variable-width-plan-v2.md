@@ -1,6 +1,6 @@
 # Variable Width Implementation Plan v2
 
-*Updated based on review feedback*
+_Updated based on review feedback_
 
 ## Implementation Order
 
@@ -57,7 +57,8 @@ fn estimate_total_size(files: &[(&[u8], &[u8])]) -> usize {
 
 ## write_local_header Complete Rewrite
 
-**Old approach (width=13):** Used filter bytes at positions 13 and 27 to provide certain header bytes.
+**Old approach (width=13):** Used filter bytes at positions 13 and 27 to provide
+certain header bytes.
 
 **New approach (width>=40):** Write complete standard ZIP local header.
 
@@ -103,6 +104,7 @@ Note: This writes 30 bytes (not 28), plus name, plus extra field.
 ## Edge Cases
 
 ### Empty files array
+
 ```rust
 if files.is_empty() {
     // Return minimal valid PNG+ZIP with no entries
@@ -111,6 +113,7 @@ if files.is_empty() {
 ```
 
 ### Content exceeds 42KB limit
+
 ```rust
 let total_content: usize = files.iter().map(|(_, b)| b.len()).sum();
 if total_content > MAX_CONTENT_SIZE {
@@ -120,11 +123,14 @@ if total_content > MAX_CONTENT_SIZE {
 ```
 
 ### Very small content
-With MIN_ROW_WIDTH=40, very small content produces narrow images. This is acceptable.
+
+With MIN_ROW_WIDTH=40, very small content produces narrow images. This is
+acceptable.
 
 ## Offset Calculation
 
 The offset calculation needs row_width:
+
 ```rust
 // Convert original data position to filtered position
 let rows_before = orig_pos / row_width;
@@ -138,17 +144,18 @@ let file_offset = data_offset + filtered_pos + (idat_blocks_before * 5);
 
 ## Testing Matrix
 
-| Content Size | Expected Width | Expected Height | Test |
-|--------------|----------------|-----------------|------|
-| 0 bytes      | 40             | 1+ (min)        | Edge |
-| 100 bytes    | 40             | ~5              | Small |
-| 1 KB         | 40             | ~30             | Small |
+| Content Size | Expected Width | Expected Height | Test   |
+| ------------ | -------------- | --------------- | ------ |
+| 0 bytes      | 40             | 1+ (min)        | Edge   |
+| 100 bytes    | 40             | ~5              | Small  |
+| 1 KB         | 40             | ~30             | Small  |
 | 5 KB         | ~73            | ~73             | Medium |
 | 10 KB        | ~102           | ~102            | Medium |
-| 30 KB        | ~175           | ~175            | Large |
-| 42 KB        | ~207           | ~207            | Limit |
+| 30 KB        | ~175           | ~175            | Large  |
+| 42 KB        | ~207           | ~207            | Limit  |
 
 Test with:
+
 - `unzip -t` (verify integrity)
 - `unzip -l` (list contents)
 - `unzip` (extract)
@@ -160,6 +167,7 @@ Test with:
 Current: `build_polyglot(files, _width, bit_depth, color_mode, palette)`
 
 Options:
+
 1. **Remove it** - API breaking change
 2. **Ignore it** - Current behavior, confusing
 3. **Use as minimum** - `width.max(MIN_ROW_WIDTH).max(user_width)`

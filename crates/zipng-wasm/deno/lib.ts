@@ -4,7 +4,11 @@
 
 // Import wasm-bindgen generated module directly
 // Deno supports importing WASM modules natively
-import init, { encode as wasmEncode, encode_simple as wasmEncodeSimple, version } from "../pkg/web/zipng_wasm.js";
+import init, {
+  encode as wasmEncode,
+  encode_simple as wasmEncodeSimple,
+  version,
+} from "../pkg/web/zipng_wasm.js";
 
 // Initialize WASM (auto-loads the .wasm file)
 await init();
@@ -38,7 +42,7 @@ function normalizeContent(content: number[] | Uint8Array): number[] {
  */
 export function encode(
   files: FileInput[],
-  options?: EncodeOptions
+  options?: EncodeOptions,
 ): Uint8Array {
   const input = {
     files: files.map((f) => ({

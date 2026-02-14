@@ -13,20 +13,10 @@ mod streams;
 // Re-export everything
 pub use {
     item::*,
-    split::{
-        ErrStream,
-        OkStream,
-        oks_and_errs,
-    },
-    stream_utils::{
-        errs,
-        fail_fast,
-        oks,
-        unwrap_oks,
-    },
+    split::{ErrStream, OkStream, oks_and_errs},
+    stream_utils::{errs, fail_fast, oks, unwrap_oks},
     streams::*,
 };
-
 
 pub trait StreamExt: futures::stream::Stream + futures::stream::StreamExt {}
 impl<T> StreamExt for T where T: futures::stream::StreamExt {}

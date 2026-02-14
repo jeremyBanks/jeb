@@ -1,10 +1,7 @@
 //! Integration tests for snap! macro and Snap type with source file updates.
 
 use {
-    std::{
-        env,
-        fs,
-    },
+    std::{env, fs},
     tempfile::TempDir,
 };
 

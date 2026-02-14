@@ -19,11 +19,11 @@ coverage for the bijection functions:
 
 ### scatter_square module results (partial):
 
-| Result | Count | Description |
-|--------|-------|-------------|
-| MISSED | ~23 | Tests don't catch these bugs |
-| TIMEOUT | ~22 | Mutations cause infinite loops |
-| CAUGHT | 0 | Tests successfully detect bugs |
+| Result  | Count | Description                    |
+| ------- | ----- | ------------------------------ |
+| MISSED  | ~23   | Tests don't catch these bugs   |
+| TIMEOUT | ~22   | Mutations cause infinite loops |
+| CAUGHT  | 0     | Tests successfully detect bugs |
 
 ### Key observations:
 
@@ -86,6 +86,7 @@ coverage for the bijection functions:
 ### Configuration
 
 Create `mutants.toml` in the workspace root:
+
 ```toml
 # Exclude test code and generated files
 exclude_globs = ["**/tests/**", "**/benches/**", "**/*_test.rs"]

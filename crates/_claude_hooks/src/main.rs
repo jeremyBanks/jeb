@@ -159,15 +159,9 @@ pub enum HookInputDetails {
     },
 }
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, PartialEq, Eq, Hash)]
-#[serde(
-    deny_unknown_fields,
-    rename_all = "camelCase"
-)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct HookOutput {
-    #[serde(
-        rename = "continue",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "continue", skip_serializing_if = "Option::is_none")]
     pub should_continue: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stop_reason: Option<String>,
@@ -230,10 +224,7 @@ pub enum HookOutputDetails {
 #[derive(
     serde::Deserialize, serde::Serialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
-#[serde(
-    deny_unknown_fields,
-    rename_all = "camelCase"
-)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub enum PermissionMode {
     Plan,
     Default,

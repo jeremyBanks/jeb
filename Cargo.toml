@@ -3,8 +3,38 @@
 
 [workspace]
 resolver = "2"
-members = ["crates/*", "crates/*/fuzz"]
-exclude = ["crates/speedrun", "crates/war2sr", "crates/you-can"]
+members = [
+    "crates/_autofix",
+    "crates/_chosen",
+    "crates/_ci",
+    "crates/_claude_hooks",
+    "crates/_examples",
+    "crates/_examples/fuzz",
+    "crates/_scripts",
+    "crates/_trace",
+    "crates/git-snapshot",
+    "crates/git-zoom",
+    "crates/ideated-encoding",
+    "crates/ideated-encoding/fuzz",
+    "crates/inline",
+    "crates/jeb",
+    "crates/jeb-bytes-as-text",
+    "crates/jeb-common",
+    "crates/jeb-common/fuzz",
+    "crates/jeb-stream",
+    "crates/jeb-tracing",
+    "crates/jeb-value",
+    "crates/jeb-wasm",
+    "crates/save",
+    "crates/stringify_verbatim",
+    "crates/z855",
+    "crates/zerodmg",
+    "crates/zerodmg-codes",
+    "crates/zerodmg-emulator",
+    "crates/zerodmg-utils",
+    "crates/zipng",
+    "crates/zipng-wasm",
+]
 
 [workspace.package]
 version = "0.0.0-dev-2026-01-25.7901"
@@ -40,41 +70,66 @@ panic = "abort"
 [patch.crates-io]
 _autofix = { path = "crates/_autofix" }
 _chosen = { path = "crates/_chosen" }
+_ci = { path = "crates/_ci" }
 _claude_hooks = { path = "crates/_claude_hooks" }
 _examples = { path = "crates/_examples" }
+_examples-fuzz = { path = "crates/_examples/fuzz" }
 _scripts = { path = "crates/_scripts" }
 _trace = { path = "crates/_trace" }
 git-snapshot = { path = "crates/git-snapshot" }
 git-zoom = { path = "crates/git-zoom" }
 ideated-encoding = { path = "crates/ideated-encoding" }
+ideated-encoding-fuzz = { path = "crates/ideated-encoding/fuzz" }
 inline = { path = "crates/inline" }
 jeb = { path = "crates/jeb" }
 jeb-bytes-as-text = { path = "crates/jeb-bytes-as-text" }
 jeb-common = { path = "crates/jeb-common" }
-jeb-tracing = { path = "crates/jeb-tracing" }
+jeb-common-fuzz = { path = "crates/jeb-common/fuzz" }
 jeb-stream = { path = "crates/jeb-stream" }
+jeb-tracing = { path = "crates/jeb-tracing" }
 jeb-value = { path = "crates/jeb-value" }
 jeb-wasm = { path = "crates/jeb-wasm" }
 save = { path = "crates/save" }
 stringify_verbatim = { path = "crates/stringify_verbatim" }
+zerodmg = { path = "crates/zerodmg" }
 zerodmg-codes = { path = "crates/zerodmg-codes" }
 zerodmg-emulator = { path = "crates/zerodmg-emulator" }
 zerodmg-utils = { path = "crates/zerodmg-utils" }
+zipng = { path = "crates/zipng" }
+zipng-wasm = { path = "crates/zipng-wasm" }
 
 [workspace.dependencies]
 _autofix = { path = "crates/_autofix" }
 _chosen = { path = "crates/_chosen" }
+_ci = { path = "crates/_ci" }
 _claude_hooks = { path = "crates/_claude_hooks" }
 _scripts = { path = "crates/_scripts" }
-anyhow = "1.0.0"
+ideated-encoding = "0.0.0-dev-2026-01-25.7901"
+jeb-tracing = "0.0.0-dev-2026-01-25.7901"
+zerodmg-codes = "0.0.0-dev-2026-01-25.7901"
+zerodmg-emulator = "0.0.0-dev-2026-01-25.7901"
+zerodmg-utils = "0.0.0-dev-2026-01-25.7901"
+zipng = { version = "0.0.0-dev.20260202", default-features = false }
+actix-rt = "2.9.0"
+anyhow = "1.0.27"
+arbitrary = "1.0.0"
+argh = "0.1.3"
+async-std = "1.5.0"
 async-stream = "0.3.6"
 bat = "0.24.0"
-bstr = "0.2.17"
+bitvec = "1.0.1"
+blake3 = "1.3.2"
+brotli = "3.3.4"
+bstr = "1.0.1"
+bytemuck = "1.12.3"
+bytes = "1.0.0"
 cfg-if = "1.0.4"
-chrono = "0.4"
+chrono = "0.4.0"
 clap = "3.2.8"
 color-eyre = "0.6.5"
+console_error_panic_hook = "0.1.0"
 crabtime = "1.1.4"
+crc = "3.0.0"
 databake = "0.1.0"
 derive_more = "2.0.1"
 digest = "0.10.3"
@@ -84,50 +139,63 @@ dotenv = "0.15.0"
 expect-test = "1.4.0"
 eyre = "0.6.8"
 fast_hilbert = "2.0.2"
+flate2 = { version = "1.0.24", default-features = false }
 futures = "0.3.0"
+getrandom = "0.2.0"
 getset = "0.1.6"
-git-snapshot = "0.0.0-dev-2026-01-19.4531"
-git-zoom = "0.0.0-dev-2026-01-19.4531"
+git-snapshot = "0.0.0-dev-2026-01-25.7901"
+git-zoom = "0.0.0-dev-2026-01-25.7901"
 git2 = "0.18.0"
 glob = "0.3.0"
 home = "0.5.3"
-ideated-encoding = "0.0.0-dev-2026-01-19.4531"
+http-body-util = "0.1.0"
+hyper = "1.0.0"
+hyper-util = "0.1.0"
+ideated-encoding-fuzz = "0.0.0"
 ignorable = "0.1.2"
 ignore = "0.4.0"
-ordermap = "1.1.0"
-inline = "0.0.0-dev-2026-01-19.4531"
+image = "0.23.0"
+indexmap = "2.0.0"
+inline = "0.0.0-dev-2026-01-25.7901"
 itertools = "0.10.3"
-jeb = { version = "0.0.0-dev-2026-01-19.4531", default-features = false }
-jeb-bytes-as-text = "0.0.0-dev-2026-01-19.4531"
-jeb-common = "0.0.0-dev-2026-01-19.4531"
-jeb-tracing = { path = "crates/jeb-tracing" }
-jeb-stream = "0.0.0-dev-2026-01-19.4531"
-jeb-value = "0.0.0-dev-2026-01-19.4531"
-jeb-wasm = "0.0.0-dev-2026-01-19.4531"
+jeb = { version = "0.0.0-dev-2026-01-25.7901", default-features = false }
+jeb-bytes-as-text = "0.0.0-dev-2026-01-25.7901"
+jeb-common = "0.0.0-dev-2026-01-25.7901"
+jeb-common-fuzz = "0.0.0"
+jeb-stream = "0.0.0-dev-2026-01-25.7901"
+jeb-value = "0.0.0-dev-2026-01-25.7901"
+jeb-wasm = "0.0.0-dev-2026-01-25.7901"
 js-sys = "0.3.82"
+kstring = "2.0.0"
+libfuzzer-sys = "0.4.0"
 macro_rules_attribute = "0.2.2"
 num-integer = "0.1.45"
 num-traits = "0.2.15"
 num_cpus = "1.13.1"
-once_cell = "1.13.0"
+oklab = "1.0.0"
+once_cell = "1.16.0"
+ordermap = "1.1.0"
 owo-colors = "4.2.3"
 parking_lot = "0.12.1"
 pathdiff = "0.2.0"
 petgraph = "0.6.2"
+png = "0.18.0"
 proc-macro2 = "1.0.40"
 quote = "1.0.0"
-rand = "0.9"
+rand = "0.8.0"
 regex = "1.12.2"
-save = "0.20220708.0"
+rgb = "0.8.34"
+save = "0.0.0-dev-2026-01-25.7901"
 semver = "1.0.0"
-serde = "1.0.0"
-serde_bytes = "0.11.0"
+serde = "1.0.147"
+serde_bytes = "0.11.7"
 serde_json = "1.0.0"
 serde_yaml = "0.9.34"
 sha-1 = "0.10.0"
 sha1-checked = "0.10.0"
+simd-adler32 = "0.3.4"
 static_assertions = "1.1.0"
-stringify_verbatim = "0.0.0-dev-2026-01-19.4531"
+stringify_verbatim = "0.0.0-dev-2026-01-25.7901"
 syn = "2.0.0"
 tap = "1.0.1"
 tempfile = "3.3.0"
@@ -140,13 +208,11 @@ toml_edit = "0.22.0"
 tracing = "0.1.43"
 tracing-error = "0.2.0"
 tracing-subscriber = "0.3.22"
-walkdir = "2.0.0"
+twox-hash = "1.6.3"
+ureq = "2.0.0"
+walkdir = "2.3.2"
 wasm-bindgen = "0.2.105"
 web-sys = "0.3.82"
-zerodmg-codes = { path = "crates/zerodmg-codes" }
-zerodmg-emulator = { path = "crates/zerodmg-emulator" }
-zerodmg-utils = { path = "crates/zerodmg-utils" }
-
-# Fuzz testing
-libfuzzer-sys = "0.4"
-arbitrary = { version = "1", features = ["derive"] }
+zerodmg = "0.0.0-dev-2026-01-25.7901"
+zip = { version = "0.6.3", default-features = false }
+zipng-wasm = "0.0.0-dev.20260131"

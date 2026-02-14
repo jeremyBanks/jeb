@@ -136,6 +136,4 @@ pub static ALL_CYCLIC: &[&[u8]] = &[
 ///
 /// These palettes highlight different byte ranges (null, whitespace,
 /// printable ASCII, high bytes) with distinct colors.
-pub static ALL_DIAGNOSTIC: &[&[u8]] = &[
-    diagnostic::BYTE_VALUE,
-];
+pub static ALL_DIAGNOSTIC: &[&[u8]] = &[diagnostic::BYTE_VALUE];

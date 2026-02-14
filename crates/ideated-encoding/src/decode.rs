@@ -5,17 +5,10 @@
 
 use crate::{
     alphabet::{
-        ESCAPE_PIPE,
-        decode_z85_block,
-        escape_info_at_position_1_to_3,
-        escape_raw_bytes_at_position_0,
-        is_escape_char,
-        z85_digit_value,
+        ESCAPE_PIPE, decode_z85_block, escape_info_at_position_1_to_3,
+        escape_raw_bytes_at_position_0, is_escape_char, z85_digit_value,
     },
-    base42::{
-        Endianness,
-        decode_length,
-    },
+    base42::{Endianness, decode_length},
     error::DecodeError,
 };
 
@@ -389,11 +382,7 @@ mod tests {
     use {
         super::*,
         crate::alphabet::{
-            ESCAPE_BACKTICK,
-            ESCAPE_COMMA,
-            PADDING_CHAR,
-            encode_z85_block,
-            z85_digit_char,
+            ESCAPE_BACKTICK, ESCAPE_COMMA, PADDING_CHAR, encode_z85_block, z85_digit_char,
         },
     };
 

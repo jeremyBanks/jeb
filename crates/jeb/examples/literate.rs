@@ -1,12 +1,6 @@
 #![recursion_limit = "1024"]
-#![allow(
-    non_snake_case,
-    unused
-)]
-use {
-    inline::*,
-    jeb::testing::literate,
-};
+#![allow(non_snake_case, unused)]
+use {inline::*, jeb::testing::literate};
 
 literate! {
 /*

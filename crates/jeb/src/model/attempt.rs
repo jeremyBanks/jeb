@@ -1,16 +1,7 @@
 use {
-    derive_more::{
-        Deref,
-        DerefMut,
-    },
-    getset::{
-        Getters,
-        Setters,
-    },
-    serde::{
-        Deserialize,
-        Serialize,
-    },
+    derive_more::{Deref, DerefMut},
+    getset::{Getters, Setters},
+    serde::{Deserialize, Serialize},
 };
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Getters, Setters, Deref, DerefMut)]
 pub struct Attempt<T, W> {

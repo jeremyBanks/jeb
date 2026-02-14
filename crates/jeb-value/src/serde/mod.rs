@@ -6,11 +6,4 @@ mod serialize;
 mod serializer;
 #[cfg(test)]
 mod tests;
-pub use {
-    deserialize::*,
-    deserializer::*,
-    error::*,
-    serde_bytes::*,
-    serialize::*,
-    serializer::*,
-};
+pub use {deserialize::*, deserializer::*, error::*, serde_bytes::*, serialize::*, serializer::*};

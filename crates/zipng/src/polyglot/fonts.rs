@@ -1,7 +1,6 @@
 //! Bitmap font loading for filename labels.
 
-use once_cell::sync::Lazy;
-use std::collections::HashMap;
+use {once_cell::sync::Lazy, std::collections::HashMap};
 
 /// Result of looking up a character glyph.
 pub struct GlyphLookup<'a> {
@@ -32,7 +31,10 @@ impl BitmapFont {
     pub fn get_glyph(&self, c: char) -> Option<GlyphLookup<'_>> {
         // 1. Try exact character
         if let Some(g) = self.glyphs.get(&c) {
-            return Some(GlyphLookup { glyph: g, is_space: c == ' ' });
+            return Some(GlyphLookup {
+                glyph: g,
+                is_space: c == ' ',
+            });
         }
 
         // 2. Try different capitalization
@@ -43,37 +45,48 @@ impl BitmapFont {
         } else {
             None
         };
-        if let Some(alt) = alt_case {
-            if let Some(g) = self.glyphs.get(&alt) {
-                return Some(GlyphLookup { glyph: g, is_space: false });
+        if let Some(alt) = alt_case
+            && let Some(g) = self.glyphs.get(&alt) {
+                return Some(GlyphLookup {
+                    glyph: g,
+                    is_space: false,
+                });
             }
-        }
 
         // 3. Try specific character substitutions for visually similar alternatives
         let specific_fallbacks: &[char] = match c {
-            '"'      => &['\u{201D}', '\u{201C}'],  // straight double quote → curly right/left
-            '\u{201C}' | '\u{201D}' => &['"'],       // curly double quotes → straight
-            '\''     => &['\u{2019}', '\u{2018}'],   // straight single quote → curly right/left
-            '\u{2018}' | '\u{2019}' => &['\''],      // curly single quotes → straight
-            '\u{00D7}' => &['x'],                    // × multiplication sign → x
-            '\u{2013}' | '\u{2014}' => &['-'],       // en-dash / em-dash → hyphen
+            '"' => &['\u{201D}', '\u{201C}'], // straight double quote → curly right/left
+            '\u{201C}' | '\u{201D}' => &['"'], // curly double quotes → straight
+            '\'' => &['\u{2019}', '\u{2018}'], // straight single quote → curly right/left
+            '\u{2018}' | '\u{2019}' => &['\''], // curly single quotes → straight
+            '\u{00D7}' => &['x'],             // × multiplication sign → x
+            '\u{2013}' | '\u{2014}' => &['-'], // en-dash / em-dash → hyphen
             _ => &[],
         };
         for &fallback in specific_fallbacks {
             if let Some(g) = self.glyphs.get(&fallback) {
-                return Some(GlyphLookup { glyph: g, is_space: false });
+                return Some(GlyphLookup {
+                    glyph: g,
+                    is_space: false,
+                });
             }
         }
 
         // 4. Try generic fallback characters: …, _, ., ?
         for fallback in ['…', '_', '.', '?'] {
             if let Some(g) = self.glyphs.get(&fallback) {
-                return Some(GlyphLookup { glyph: g, is_space: false });
+                return Some(GlyphLookup {
+                    glyph: g,
+                    is_space: false,
+                });
             }
         }
 
         // 5. Return space (skip kerning for inserted spaces)
-        self.glyphs.get(&' ').map(|g| GlyphLookup { glyph: g, is_space: true })
+        self.glyphs.get(&' ').map(|g| GlyphLookup {
+            glyph: g,
+            is_space: true,
+        })
     }
 
     /// Compute the space bar width: half (rounded up) of the maximum ink width
@@ -82,7 +95,9 @@ impl BitmapFont {
     pub fn max_ink_width(&self) -> usize {
         let mut max_ink = 0usize;
         for (c, glyph) in &self.glyphs {
-            if *c == ' ' { continue; }
+            if *c == ' ' {
+                continue;
+            }
             let mut min_col = usize::MAX;
             let mut max_col = 0;
             let mut has_pixel = false;
@@ -107,8 +122,8 @@ impl BitmapFont {
         (max_ink / 2).max(1)
     }
 
-    /// Build a vertical bar glyph (full height, centered) with the given ink width.
-    /// Used as a synthetic space glyph for kerning purposes.
+    /// Build a vertical bar glyph (full height, centered) with the given ink
+    /// width. Used as a synthetic space glyph for kerning purposes.
     fn space_bar_glyph(&self, ink_width: usize) -> Vec<Vec<bool>> {
         let mut glyph = vec![vec![false; self.width]; self.height];
         // Center the bar horizontally within the glyph bounding box
@@ -130,9 +145,8 @@ impl BitmapFont {
     pub fn layout_text(&self, text: &str) -> (Vec<Vec<bool>>, Vec<(usize, i32)>, usize) {
         let space_bar = self.space_bar_glyph(self.space_bar_width());
 
-        let lookups: Vec<Option<GlyphLookup<'_>>> = text.chars()
-            .map(|c| self.get_glyph(c))
-            .collect();
+        let lookups: Vec<Option<GlyphLookup<'_>>> =
+            text.chars().map(|c| self.get_glyph(c)).collect();
 
         let max_canvas_width = text.len() * self.width * 2;
         let mut kern_canvas: Vec<Vec<bool>> = vec![vec![false; max_canvas_width]; self.height];
@@ -164,11 +178,17 @@ impl BitmapFont {
                                 for dx in -1i32..=1 {
                                     let ny = gy as i32 + dy;
                                     let nx = cx as i32 + dx;
-                                    if ny >= 0 && (ny as usize) < self.height && nx >= 0
-                                        && kern_canvas[ny as usize].get(nx as usize).copied().unwrap_or(false) {
-                                            touches = true;
-                                            break 'check;
-                                        }
+                                    if ny >= 0
+                                        && (ny as usize) < self.height
+                                        && nx >= 0
+                                        && kern_canvas[ny as usize]
+                                            .get(nx as usize)
+                                            .copied()
+                                            .unwrap_or(false)
+                                    {
+                                        touches = true;
+                                        break 'check;
+                                    }
                                 }
                             }
                         }
@@ -218,8 +238,7 @@ impl BitmapFont {
 
     /// Load font from embedded PNG and JSON metadata.
     fn load(png_data: &[u8], json_data: &str) -> Self {
-        let meta: FontMeta = serde_json::from_str(json_data)
-            .expect("Failed to parse font JSON");
+        let meta: FontMeta = serde_json::from_str(json_data).expect("Failed to parse font JSON");
 
         #[cfg(feature = "image")]
         let (img_width, img_height, pixels) = {
@@ -239,7 +258,12 @@ impl BitmapFont {
             // Transform indexed/palette PNGs to RGB
             decoder.set_transformations(png::Transformations::EXPAND);
             let mut reader = decoder.read_info().expect("Failed to read PNG info");
-            let mut buf = vec![0; reader.output_buffer_size().expect("PNG output buffer size required")];
+            let mut buf = vec![
+                0;
+                reader
+                    .output_buffer_size()
+                    .expect("PNG output buffer size required")
+            ];
             let info = reader.next_frame(&mut buf).expect("Failed to decode PNG");
             let img_width = info.width as usize;
             let img_height = info.height as usize;
@@ -248,11 +272,18 @@ impl BitmapFont {
                 png::ColorType::Grayscale => buf[..info.buffer_size()].to_vec(),
                 png::ColorType::Rgb | png::ColorType::Rgba => {
                     // Convert RGB(A) to luminance: Y = 0.299*R + 0.587*G + 0.114*B
-                    let bytes_per_pixel = if info.color_type == png::ColorType::Rgba { 4 } else { 3 };
+                    let bytes_per_pixel = if info.color_type == png::ColorType::Rgba {
+                        4
+                    } else {
+                        3
+                    };
                     buf[..info.buffer_size()]
                         .chunks(bytes_per_pixel)
                         .map(|pixel| {
-                            ((pixel[0] as u32 * 299 + pixel[1] as u32 * 587 + pixel[2] as u32 * 114) / 1000) as u8
+                            ((pixel[0] as u32 * 299
+                                + pixel[1] as u32 * 587
+                                + pixel[2] as u32 * 114)
+                                / 1000) as u8
                         })
                         .collect()
                 },
@@ -298,9 +329,7 @@ impl BitmapFont {
         }
 
         // Add space glyph (all off)
-        let space_glyph: Vec<Vec<bool>> = (0..meta.h)
-            .map(|_| vec![false; meta.w])
-            .collect();
+        let space_glyph: Vec<Vec<bool>> = (0..meta.h).map(|_| vec![false; meta.w]).collect();
         glyphs.insert(' ', space_glyph);
 
         BitmapFont {
@@ -405,10 +434,11 @@ impl FontSelection {
     }
 }
 
-/// Select fonts based on total data size and a hash value for deterministic randomization.
-/// Returns None if data is too large for labels.
+/// Select fonts based on total data size and a hash value for deterministic
+/// randomization. Returns None if data is too large for labels.
 ///
-/// - ≤512 KiB: filename uses one of SWISS/SIXTH/SKY/MONTE (hash-selected), size uses SUGIMORI
+/// - ≤512 KiB: filename uses one of SWISS/SIXTH/SKY/MONTE (hash-selected), size
+///   uses SUGIMORI
 /// - ≤1 MiB: both use MINI
 /// - ≤3 MiB: both use MICRO
 /// - >3 MiB: no labels

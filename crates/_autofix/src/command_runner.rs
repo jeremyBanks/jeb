@@ -1,9 +1,6 @@
 use {
     crate::format::print_command,
-    std::process::{
-        Command,
-        Stdio,
-    },
+    std::process::{Command, Stdio},
 };
 
 /// Run a command, logging it first, letting stdio pass through.

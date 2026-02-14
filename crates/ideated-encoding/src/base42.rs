@@ -18,10 +18,7 @@
 //! This halves the range to encode endianness in the spare bits.
 
 use crate::{
-    alphabet::{
-        z85_digit_char,
-        z85_digit_value,
-    },
+    alphabet::{z85_digit_char, z85_digit_value},
     error::DecodeError,
 };
 
@@ -243,10 +240,7 @@ pub fn decode_length(
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::alphabet::z85_digit_char,
-    };
+    use {super::*, crate::alphabet::z85_digit_char};
 
     #[test]
     fn test_encode_length_50() {

@@ -6,21 +6,10 @@
 
 use crate::{
     alphabet::{
-        ESCAPE_BACKTICK,
-        ESCAPE_COMMA,
-        ESCAPE_PIPE,
-        ESCAPE_SEMICOLON,
-        ESCAPE_TILDE,
-        ESCAPE_UNDERSCORE,
-        PADDING_CHAR,
-        encode_z85_block,
-        is_safe_for_raw,
-        z85_digit_char,
+        ESCAPE_BACKTICK, ESCAPE_COMMA, ESCAPE_PIPE, ESCAPE_SEMICOLON, ESCAPE_TILDE,
+        ESCAPE_UNDERSCORE, PADDING_CHAR, encode_z85_block, is_safe_for_raw, z85_digit_char,
     },
-    base42::{
-        Endianness,
-        encode_length,
-    },
+    base42::{Endianness, encode_length},
 };
 
 /// Encoding strategy determined by buffer analysis.
@@ -469,10 +458,7 @@ pub fn encode(data: &[u8]) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::decode::decode,
-    };
+    use {super::*, crate::decode::decode};
 
     #[test]
     fn test_encode_empty() {

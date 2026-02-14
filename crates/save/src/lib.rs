@@ -65,12 +65,9 @@ pub mod ez;
 pub mod git2;
 pub mod graph_stats;
 pub mod hex;
+pub mod phonetic;
 pub mod testing;
 #[doc(inline)]
 pub use self::ez::*;
 #[doc(inline)]
-pub use self::git2::{
-    CommitExt,
-    OidExt,
-    RepositoryExt,
-};
+pub use self::git2::{CommitExt, OidExt, RepositoryExt};

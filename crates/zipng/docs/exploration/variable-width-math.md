@@ -1,11 +1,14 @@
 # Variable Width Calculation (EXPLORATORY)
 
 ## Goal
-Calculate row width that produces approximately square images for any content size.
+
+Calculate row width that produces approximately square images for any content
+size.
 
 ## Math
 
 Let:
+
 - W = row width (bytes) = image width (pixels at 8-bit)
 - D = total data bytes to store
 - Data per row = W - 4 (subtract LEN + NLEN overhead)
@@ -24,12 +27,12 @@ W = (4 + sqrt(16 + 4D)) / 2 = 2 + sqrt(4 + D)
 ## Examples
 
 | Content Size | Ideal Width | Approx Dimensions |
-|--------------|-------------|-------------------|
-| 1 KB         | 34 px       | 34 × 33          |
-| 5 KB         | 73 px       | 73 × 72          |
-| 10 KB        | 102 px      | 102 × 102        |
-| 20 KB        | 143 px      | 143 × 143        |
-| 40 KB        | 202 px      | 202 × 201        |
+| ------------ | ----------- | ----------------- |
+| 1 KB         | 34 px       | 34 × 33           |
+| 5 KB         | 73 px       | 73 × 72           |
+| 10 KB        | 102 px      | 102 × 102         |
+| 20 KB        | 143 px      | 143 × 143         |
+| 40 KB        | 202 px      | 202 × 201         |
 
 ## Constraints
 

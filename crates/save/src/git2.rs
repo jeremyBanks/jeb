@@ -1,57 +1,27 @@
 //! Extending [`::git2`] (`libgit2`).
 
 use {
-    crate::graph_stats::{
-        CommitView,
-        RepositoryView,
-    },
+    crate::graph_stats::{CommitView, RepositoryView},
     ::{
         core::{
             borrow::Borrow,
             fmt::Debug,
             mem::transmute,
-            ops::{
-                Deref,
-                DerefMut,
-            },
+            ops::{Deref, DerefMut},
         },
-        digest::{
-            Digest,
-            generic_array::GenericArray,
-            typenum::U20,
-        },
-        eyre::{
-            Context,
-            Result,
-        },
-        git2::{
-            Commit,
-            ErrorCode,
-            Index,
-            ObjectType,
-            Oid,
-            Repository,
-            Signature,
-        },
+        digest::{Digest, generic_array::GenericArray, typenum::U20},
+        eyre::{Context, Result},
+        git2::{Commit, ErrorCode, Index, ObjectType, Oid, Repository, Signature},
         itertools::Itertools,
         parking_lot::RwLock,
         petgraph::{
-            EdgeDirection::{
-                Incoming,
-                Outgoing,
-            },
+            EdgeDirection::{Incoming, Outgoing},
             graphmap::DiGraphMap,
             visit::Topo,
         },
         std::path::PathBuf,
         tempfile::TempDir,
-        tracing::{
-            debug,
-            info,
-            instrument,
-            trace,
-            warn,
-        },
+        tracing::{debug, info, instrument, trace, warn},
     },
     jeb_common::bi::scatter_triangle,
     std::borrow::BorrowMut,
@@ -70,10 +40,7 @@ pub trait RepositoryExt: Borrow<Repository> + BorrowMut<Repository> {
     /// # Panics
     ///
     /// If the repository is bare (per [`Repository::is_bare`]).
-    #[instrument(
-        level = "debug",
-        skip_all
-    )]
+    #[instrument(level = "debug", skip_all)]
     fn working_index(&self) -> Result<Index> {
         let repo: &Repository = self.borrow();
 
@@ -107,10 +74,7 @@ pub trait RepositoryExt: Borrow<Repository> + BorrowMut<Repository> {
     }
 
     /// Creates a [`Repository`] backed by a new temporary directory.
-    #[instrument(
-        level = "debug",
-        skip_all
-    )]
+    #[instrument(level = "debug", skip_all)]
     fn temporary() -> Result<TemporaryRepository> {
         let dir = TempDir::new()?;
         let repo = Repository::init(&dir)?;
@@ -124,10 +88,7 @@ pub trait RepositoryExt: Borrow<Repository> + BorrowMut<Repository> {
     /// these are not present, a warning is logged and we fall back to the
     /// author of the current HEAD commit. If there *is* no HEAD commit, we
     /// fall back to a generic placeholder signature.
-    #[expect(
-        clippy::todo,
-        reason = "function under development"
-    )]
+    #[expect(clippy::todo, reason = "function under development")]
     fn signature_or_fallback(&self) -> Signature<'_> {
         let repo: &Repository = self.borrow();
 
@@ -373,10 +334,7 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
         })
     }
 
-    #[instrument(
-        level = "debug",
-        skip(repo)
-    )]
+    #[instrument(level = "debug", skip(repo))]
     #[must_use]
     fn graph_stats(&self, repo: &Repository) -> GraphStats {
         let commit: &Commit = self.borrow();
@@ -570,10 +528,7 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
     /// # Panics
     ///
     /// If `min_timestamp` > `max_timestamp`.
-    #[instrument(
-        level = "debug",
-        skip_all
-    )]
+    #[instrument(level = "debug", skip_all)]
     #[must_use]
     fn brute_force_timestamps(
         &self,

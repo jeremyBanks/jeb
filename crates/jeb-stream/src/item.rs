@@ -1,23 +1,9 @@
 use {
-    derive_more::{
-        From,
-        IsVariant,
-        TryInto,
-        TryUnwrap,
-        Unwrap,
-    },
-    jeb_value::{
-        Bytes,
-        String as Text,
-        Value,
-    },
+    derive_more::{From, IsVariant, TryInto, TryUnwrap, Unwrap},
+    jeb_value::{Bytes, String as Text, Value},
 };
 
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize),
-    serde(untagged)
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize), serde(untagged))]
 #[derive(
     Debug, Clone, From, TryInto, IsVariant, TryUnwrap, Unwrap, Hash, Eq, PartialEq, PartialOrd, Ord,
 )]

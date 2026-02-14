@@ -1,12 +1,7 @@
-use std::io::BufReader;
-use std::process::ExitCode;
+use std::{io::BufReader, process::ExitCode};
 
 fn strip_common_prefix<'a>(a: &'a str, b: &'a str) -> (&'a str, &'a str) {
-    let common_len = a
-        .bytes()
-        .zip(b.bytes())
-        .take_while(|(x, y)| x == y)
-        .count();
+    let common_len = a.bytes().zip(b.bytes()).take_while(|(x, y)| x == y).count();
     // Back up to last '/' within the common prefix
     let cut = a[..common_len].rfind('/').map(|i| i + 1).unwrap_or(0);
     (&a[cut..], &b[cut..])
@@ -103,14 +98,18 @@ fn main() -> ExitCode {
 
     println!(
         "{}: {}×{}, {} {}-bit, {} bytes",
-        name_a, old_info.width, old_info.height,
+        name_a,
+        old_info.width,
+        old_info.height,
         color_type_name(old_info.color_type),
         bit_depth_bits(old_info.bit_depth),
         old_info.file_size
     );
     println!(
         "{}: {}×{}, {} {}-bit, {} bytes",
-        name_b, new_info.width, new_info.height,
+        name_b,
+        new_info.width,
+        new_info.height,
         color_type_name(new_info.color_type),
         bit_depth_bits(new_info.bit_depth),
         new_info.file_size
@@ -120,10 +119,16 @@ fn main() -> ExitCode {
     let h = old_info.height.min(new_info.height);
 
     if old_info.width != new_info.width {
-        println!("width: {} vs {}, cropping to {}", old_info.width, new_info.width, w);
+        println!(
+            "width: {} vs {}, cropping to {}",
+            old_info.width, new_info.width, w
+        );
     }
     if old_info.height != new_info.height {
-        println!("height: {} vs {}, cropping to {}", old_info.height, new_info.height, h);
+        println!(
+            "height: {} vs {}, cropping to {}",
+            old_info.height, new_info.height, h
+        );
     }
 
     let both_indexed = old_info.raw_indices.is_some()
@@ -139,7 +144,9 @@ fn main() -> ExitCode {
     }
 
     if both_indexed {
-        compare_indexed(&args[1], &args[2], name_a, name_b, &old_info, &new_info, w, h)
+        compare_indexed(
+            &args[1], &args[2], name_a, name_b, &old_info, &new_info, w, h,
+        )
     } else {
         compare_rgba(&args[1], &args[2], w, h)
     }
@@ -180,10 +187,18 @@ fn compare_indexed(
                 diff_count += 1;
                 abs_sum += d.unsigned_abs() as f64;
                 signed_sum += d as f64;
-                if x < min_x { min_x = x; }
-                if x > max_x { max_x = x; }
-                if y < min_y { min_y = y; }
-                if y > max_y { max_y = y; }
+                if x < min_x {
+                    min_x = x;
+                }
+                if x > max_x {
+                    max_x = x;
+                }
+                if y < min_y {
+                    min_y = y;
+                }
+                if y > max_y {
+                    max_y = y;
+                }
             }
         }
     }
@@ -207,8 +222,12 @@ fn compare_indexed(
     println!();
     println!(
         "changed pixel bounds: ({}, {}) to ({}, {}), spanning {}×{}",
-        min_x, min_y, max_x, max_y,
-        max_x - min_x + 1, max_y - min_y + 1
+        min_x,
+        min_y,
+        max_x,
+        max_y,
+        max_x - min_x + 1,
+        max_y - min_y + 1
     );
 
     ExitCode::from(1)
@@ -238,10 +257,34 @@ fn compare_rgba(old_path: &str, new_path: &str, w: u32, h: u32) -> ExitCode {
     }
 
     let mut ch_stats = [
-        ChannelStats { diff_count: 0, abs_sum: 0.0, signed_sum: 0.0, min_val: 255, max_val: 0 },
-        ChannelStats { diff_count: 0, abs_sum: 0.0, signed_sum: 0.0, min_val: 255, max_val: 0 },
-        ChannelStats { diff_count: 0, abs_sum: 0.0, signed_sum: 0.0, min_val: 255, max_val: 0 },
-        ChannelStats { diff_count: 0, abs_sum: 0.0, signed_sum: 0.0, min_val: 255, max_val: 0 },
+        ChannelStats {
+            diff_count: 0,
+            abs_sum: 0.0,
+            signed_sum: 0.0,
+            min_val: 255,
+            max_val: 0,
+        },
+        ChannelStats {
+            diff_count: 0,
+            abs_sum: 0.0,
+            signed_sum: 0.0,
+            min_val: 255,
+            max_val: 0,
+        },
+        ChannelStats {
+            diff_count: 0,
+            abs_sum: 0.0,
+            signed_sum: 0.0,
+            min_val: 255,
+            max_val: 0,
+        },
+        ChannelStats {
+            diff_count: 0,
+            abs_sum: 0.0,
+            signed_sum: 0.0,
+            min_val: 255,
+            max_val: 0,
+        },
     ];
 
     let mut min_x = w;
@@ -260,10 +303,18 @@ fn compare_rgba(old_path: &str, new_path: &str, w: u32, h: u32) -> ExitCode {
                 let ov = op[c];
                 let nv = np[c];
                 let s = &mut ch_stats[c];
-                if ov < s.min_val { s.min_val = ov; }
-                if ov > s.max_val { s.max_val = ov; }
-                if nv < s.min_val { s.min_val = nv; }
-                if nv > s.max_val { s.max_val = nv; }
+                if ov < s.min_val {
+                    s.min_val = ov;
+                }
+                if ov > s.max_val {
+                    s.max_val = ov;
+                }
+                if nv < s.min_val {
+                    s.min_val = nv;
+                }
+                if nv > s.max_val {
+                    s.max_val = nv;
+                }
 
                 let d = nv as i16 - ov as i16;
                 if d != 0 {
@@ -275,10 +326,18 @@ fn compare_rgba(old_path: &str, new_path: &str, w: u32, h: u32) -> ExitCode {
             }
 
             if pixel_differs {
-                if x < min_x { min_x = x; }
-                if x > max_x { max_x = x; }
-                if y < min_y { min_y = y; }
-                if y > max_y { max_y = y; }
+                if x < min_x {
+                    min_x = x;
+                }
+                if x > max_x {
+                    max_x = x;
+                }
+                if y < min_y {
+                    min_y = y;
+                }
+                if y > max_y {
+                    max_y = y;
+                }
             }
         }
     }
@@ -336,7 +395,10 @@ fn compare_rgba(old_path: &str, new_path: &str, w: u32, h: u32) -> ExitCode {
             if s.min_val == s.max_val {
                 println!("{}: identical (all 0x{:02X})", name, s.min_val);
             } else {
-                println!("{}: identical (range 0x{:02X}..0x{:02X})", name, s.min_val, s.max_val);
+                println!(
+                    "{}: identical (range 0x{:02X}..0x{:02X})",
+                    name, s.min_val, s.max_val
+                );
             }
         } else {
             let pct = 100.0 * s.diff_count as f64 / total as f64;
@@ -371,8 +433,12 @@ fn compare_rgba(old_path: &str, new_path: &str, w: u32, h: u32) -> ExitCode {
     println!();
     println!(
         "changed pixel bounds: ({}, {}) to ({}, {}), spanning {}×{}",
-        min_x, min_y, max_x, max_y,
-        max_x - min_x + 1, max_y - min_y + 1
+        min_x,
+        min_y,
+        max_x,
+        max_y,
+        max_x - min_x + 1,
+        max_y - min_y + 1
     );
 
     ExitCode::from(1)

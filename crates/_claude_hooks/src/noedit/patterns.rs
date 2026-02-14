@@ -1,14 +1,7 @@
 use {
     super::git_ops::read_noedit_files_from_commit,
-    eyre::{
-        Context,
-        ContextCompat,
-        Result,
-    },
-    git2::{
-        Commit,
-        Repository,
-    },
+    eyre::{Context, ContextCompat, Result},
+    git2::{Commit, Repository},
     ignore::gitignore::GitignoreBuilder,
     std::path::Path,
     walkdir::WalkDir,
@@ -129,11 +122,7 @@ impl NoeditMatcher {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        std::fs,
-        tempfile::TempDir,
-    };
+    use {super::*, std::fs, tempfile::TempDir};
 
     #[test]
     fn test_basic_pattern_matching() -> Result<()> {

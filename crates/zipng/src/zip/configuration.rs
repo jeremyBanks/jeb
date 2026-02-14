@@ -1,5 +1,5 @@
 use {
-    crate::{default, Zip},
+    crate::{Zip, default},
     std::{cmp::Ordering, fmt::Debug},
 };
 

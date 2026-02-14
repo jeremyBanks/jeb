@@ -35,13 +35,6 @@ pub mod nodes;
 pub mod testing;
 pub mod z85;
 pub use {
-    crate::{
-        byte_ranges::*,
-        common::*,
-        const_checked::*,
-        value::*,
-    },
-    jeb_common as common,
-    jeb_stream as streams,
-    jeb_value as value,
+    crate::{byte_ranges::*, common::*, const_checked::*, value::*},
+    jeb_common as common, jeb_stream as streams, jeb_value as value,
 };
