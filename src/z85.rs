@@ -955,6 +955,55 @@ fn read_long_escape_prefix(prefix_digits: &[u8]) -> Result<u64, DecodeError> {
     Ok(value)
 }
 
+/// Generate prefix digits for encoding a length value with the `|` escape.
+///
+/// Uses base-42 with continuation bits:
+/// - Most significant digit is output as-is (terminal, 0-41)
+/// - Remaining digits are output with +42 (continuation, 42-83)
+///
+/// Returns a vector of Z85 CHARACTER CODES (not digit values).
+fn generate_long_escape_prefix(length: usize) -> Vec<u8> {
+    if length < 42 {
+        // Single digit: just the length value as a Z85 character
+        return vec![Z85_ALPHABET[length]];
+    }
+
+    // Multiple digits: extract base-42 digits
+    let mut digits: Vec<usize> = Vec::new();
+    let mut remaining = length;
+
+    while remaining > 0 {
+        digits.push(remaining % 42);
+        remaining /= 42;
+    }
+
+    // digits is now in reverse order (least significant first)
+    // We need to output: most significant as terminal (0-41), rest as continuation (+42)
+    let mut output = Vec::with_capacity(digits.len());
+
+    // Reverse to get big-endian order
+    digits.reverse();
+
+    for (i, &d) in digits.iter().enumerate() {
+        if i == 0 {
+            // Most significant digit: terminal (as-is)
+            output.push(Z85_ALPHABET[d]);
+        } else {
+            // Continuation digit: add 42
+            output.push(Z85_ALPHABET[d + 42]);
+        }
+    }
+
+    output
+}
+
+/// Calculate the standard Z85 output length for a given input byte count.
+#[inline]
+fn z85_output_length(input_bytes: usize) -> usize {
+    // ceil(input_bytes * 5 / 4)
+    (input_bytes * 5 + 3) / 4
+}
+
 /// Decode a Z85 string back into bytes.
 ///
 /// # Algorithm
