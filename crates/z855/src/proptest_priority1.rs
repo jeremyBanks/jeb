@@ -204,13 +204,14 @@ proptest! {
         data.extend(vec![0x42; raw_length]);   // 'B' (printable)
         data.extend(vec![0x43; suffix_length]); // 'C' (printable)
         
+        let data_len = data.len();
         let encoded = encode(&data);
         let decoded = decode(&encoded).expect("both-boundaries should decode");
         
         prop_assert_eq!(decoded, data, "roundtrip failed for both-mid-block case");
         
         // Verify output length is reasonable (tightest budget case)
-        let max_len = ((data.len() + 3) / 4) * 5; // Standard Z85 length
+        let max_len = ((data_len + 3) / 4) * 5; // Standard Z85 length
         prop_assert!(
             encoded.len() <= max_len,
             "both-mid-block output ({}) exceeds max ({})",
