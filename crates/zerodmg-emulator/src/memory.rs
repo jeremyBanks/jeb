@@ -204,9 +204,9 @@ impl GameBoy {
             // Background Palette
             0xFF47 => self.bgp(),
             // Object Palette 0
-            0xFF48 => 0x00,
+            0xFF48 => self.obp0(),
             // Object Palette 1
-            0xFF49 => 0x00,
+            0xFF49 => self.obp1(),
             // Window Y
             0xFF4A => 0x00,
             // Window X
@@ -258,6 +258,10 @@ impl GameBoy {
             0xFF44 => self.set_ly(0),
             // Background Palette
             0xFF47 => self.set_bgp(value),
+            // Object Palette 0
+            0xFF48 => self.set_obp0(value),
+            // Object Palette 1
+            0xFF49 => self.set_obp1(value),
             // Boot ROM disable
             0xFF50 => {
                 if value != 0 {

@@ -11,6 +11,10 @@ pub struct VideoData {
     vram: [u8; 0x2000],
     // background palette register
     bgp: u8,
+    // object palette 0
+    obp0: u8,
+    // object palette 1
+    obp1: u8,
     // background scroll/offset x and y
     scx: u8,
     scy: u8,
@@ -29,6 +33,8 @@ impl VideoData {
             t: 0,
             vram: [0u8; 0x2000],
             bgp: 0xFC,  // DMG default: 11 11 11 00
+            obp0: 0xFF, // DMG default
+            obp1: 0xFF, // DMG default
             scx: 0x00,
             scy: 0x00,
             lcdc: 0x00,
@@ -41,8 +47,13 @@ pub trait VideoController {
     fn video_cycle(&mut self);
     fn vram(&self, index: usize) -> u8;
     fn set_vram(&mut self, index: usize, value: u8);
+    fn oam(&self, index: usize) -> u8;
     fn bgp(&self) -> u8;
     fn set_bgp(&mut self, value: u8);
+    fn obp0(&self) -> u8;
+    fn set_obp0(&mut self, value: u8);
+    fn obp1(&self) -> u8;
+    fn set_obp1(&mut self, value: u8);
     fn scy(&self) -> u8;
     fn set_scy(&mut self, value: u8);
     fn scx(&self) -> u8;
@@ -269,6 +280,91 @@ impl VideoController for GameBoy {
             }
         }
 
+        // Draw sprites (objects) if enabled
+        let lcdc = self.lcdc();
+        let sprites_enabled = (lcdc & 0b00000010) != 0; // LCDC bit 1: OBJ enable
+        let sprite_size = if (lcdc & 0b00000100) != 0 { 16 } else { 8 }; // LCDC bit 2: 8x8 or 8x16
+
+        if sprites_enabled {
+            // Parse all 40 sprite entries from OAM
+            let mut sprites: Vec<(u8, u8, u8, u8)> = Vec::new();
+            for i in 0..40 {
+                let base = i * 4;
+                let y = self.oam(base);
+                let x = self.oam(base + 1);
+                let tile_num = self.oam(base + 2);
+                let attrs = self.oam(base + 3);
+                
+                // Skip off-screen sprites
+                if y == 0 || y >= 160 || x == 0 || x >= 168 {
+                    continue;
+                }
+                
+                sprites.push((y, x, tile_num, attrs));
+            }
+
+            // Sort by X coordinate (lower X = higher priority, drawn last = on top)
+            sprites.sort_by_key(|s| s.1);
+
+            // Build object palettes
+            let obp0 = self.obp0();
+            let obp0_palette = [
+                // Color 0 is transparent for sprites
+                image::Rgba([0, 0, 0, 0]),
+                image::Rgba([(!((obp0 & 0b0000_1100) >> 2)) * 0b0101_0101, (!((obp0 & 0b0000_1100) >> 2)) * 0b0101_0101, (!((obp0 & 0b0000_1100) >> 2)) * 0b0101_0101, 0xFF]),
+                image::Rgba([(!((obp0 & 0b0011_0000) >> 4)) * 0b0101_0101, (!((obp0 & 0b0011_0000) >> 4)) * 0b0101_0101, (!((obp0 & 0b0011_0000) >> 4)) * 0b0101_0101, 0xFF]),
+                image::Rgba([(!((obp0 & 0b1100_0000) >> 6)) * 0b0101_0101, (!((obp0 & 0b1100_0000) >> 6)) * 0b0101_0101, (!((obp0 & 0b1100_0000) >> 6)) * 0b0101_0101, 0xFF]),
+            ];
+            let obp1 = self.obp1();
+            let obp1_palette = [
+                image::Rgba([0, 0, 0, 0]),
+                image::Rgba([(!((obp1 & 0b0000_1100) >> 2)) * 0b0101_0101, (!((obp1 & 0b0000_1100) >> 2)) * 0b0101_0101, (!((obp1 & 0b0000_1100) >> 2)) * 0b0101_0101, 0xFF]),
+                image::Rgba([(!((obp1 & 0b0011_0000) >> 4)) * 0b0101_0101, (!((obp1 & 0b0011_0000) >> 4)) * 0b0101_0101, (!((obp1 & 0b0011_0000) >> 4)) * 0b0101_0101, 0xFF]),
+                image::Rgba([(!((obp1 & 0b1100_0000) >> 6)) * 0b0101_0101, (!((obp1 & 0b1100_0000) >> 6)) * 0b0101_0101, (!((obp1 & 0b1100_0000) >> 6)) * 0b0101_0101, 0xFF]),
+            ];
+
+            // Draw sprites
+            for (y_pos, x_pos, tile_num, attrs) in sprites {
+                let palette = if (attrs & 0b00010000) != 0 { &obp1_palette } else { &obp0_palette };
+                let flip_x = (attrs & 0b00100000) != 0;
+                let flip_y = (attrs & 0b01000000) != 0;
+
+                // Sprite position is offset by 16,8
+                let screen_y = y_pos.wrapping_sub(16);
+                let screen_x = x_pos.wrapping_sub(8);
+
+                // Get tile data
+                let tile_data_index = (tile_num as usize) * 16;
+                let tile_data = &self.vid.vram[tile_data_index..tile_data_index + 16];
+
+                // Draw 8x8 (or 8x16 if that mode is enabled)
+                for ty in 0..sprite_size {
+                    let row_index = if flip_y { (sprite_size - 1 - ty) as usize } else { ty as usize };
+                    let low_byte = tile_data[row_index * 2 + 1];
+                    let high_byte = tile_data[row_index * 2];
+
+                    for tx in 0..8 {
+                        let bit_pos = if flip_x { tx } else { 7 - tx };
+                        let color_num = (((high_byte >> bit_pos) & 1) << 1) | ((low_byte >> bit_pos) & 1);
+
+                        // Color 0 is transparent
+                        if color_num == 0 {
+                            continue;
+                        }
+
+                        let pixel_y = screen_y.wrapping_add(ty);
+                        let pixel_x = screen_x.wrapping_add(tx);
+
+                        // Only draw if on screen
+                        if pixel_y < GB_HEIGHT && pixel_x < GB_WIDTH {
+                            let color = palette[color_num as usize];
+                            display.put_pixel(pixel_x as u32, pixel_y as u32, color);
+                        }
+                    }
+                }
+            }
+        }
+
         // Draw border around active background in debug buffer.
         let border_width: i16 = 12;
         for dy in -border_width..border_width {
@@ -310,6 +406,11 @@ impl VideoController for GameBoy {
         };
     }
 
+    fn oam(&self, index: usize) -> u8 {
+        use super::memory::MemoryController;
+        self.mem(0xFE00 + index as u16)
+    }
+
     fn bgp(&self) -> u8 {
         self.vid.bgp
     }
@@ -317,6 +418,22 @@ impl VideoController for GameBoy {
     fn set_bgp(&mut self, value: u8) {
         // println!("    ; vid bgp = 0x{:02X}", value);
         self.vid.bgp = value;
+    }
+
+    fn obp0(&self) -> u8 {
+        self.vid.obp0
+    }
+
+    fn set_obp0(&mut self, value: u8) {
+        self.vid.obp0 = value;
+    }
+
+    fn obp1(&self) -> u8 {
+        self.vid.obp1
+    }
+
+    fn set_obp1(&mut self, value: u8) {
+        self.vid.obp1 = value;
     }
 
     fn scy(&self) -> u8 {
