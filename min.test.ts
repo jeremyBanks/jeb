@@ -81,15 +81,15 @@ Deno.test("Round-trip: z855.encode -> min.decode", async (t) => {
   }
 });
 
-// Test: z855.decode(min.encode(input)) === input (round-trip min->deno)
-Deno.test("Round-trip: min.encode -> z855.decode", async (t) => {
+// Test: z855.decode(min.z855(input)) === input (round-trip min->deno)
+Deno.test("Round-trip: min.z855 -> z855.decode", async (t) => {
   const testCases = getTestCases();
 
   for (const tc of testCases) {
     if (tc.isError) continue;
 
     await t.step(tc.name, () => {
-      const encoded = min.encode(tc.input);
+      const encoded = min.z855(tc.input);
       const decoded = z855.decode(encoded);
 
       assertEquals(
@@ -101,15 +101,15 @@ Deno.test("Round-trip: min.encode -> z855.decode", async (t) => {
   }
 });
 
-// Test: min.decode(min.encode(input)) === input (round-trip min->min)
-Deno.test("Round-trip: min.encode -> min.decode", async (t) => {
+// Test: min.decode(min.z855(input)) === input (round-trip min->min)
+Deno.test("Round-trip: min.z855 -> min.decode", async (t) => {
   const testCases = getTestCases();
 
   for (const tc of testCases) {
     if (tc.isError) continue;
 
     await t.step(tc.name, () => {
-      const encoded = min.encode(tc.input);
+      const encoded = min.z855(tc.input);
       const decoded = min.decode(encoded);
 
       assertEquals(
@@ -146,7 +146,7 @@ Deno.test("Error cases throw correctly", async (t) => {
 // Test: Empty input
 Deno.test("Empty input", () => {
   const emptyArr = new Uint8Array(0);
-  assertEquals(min.encode(emptyArr), "");
+  assertEquals(min.z855(emptyArr), "");
   assertEquals(Array.from(min.decode("")), []);
 });
 
@@ -178,25 +178,25 @@ Deno.test("Known values", async (t) => {
   });
 });
 
-// Test: min.encode uses passthrough for safe bytes
+// Test: min.z855 uses passthrough for safe bytes
 Deno.test("Encoder uses passthrough for safe bytes", async (t) => {
   await t.step("4 safe bytes use comma passthrough", () => {
     const input = new Uint8Array([65, 66, 67, 68]); // ABCD
-    const encoded = min.encode(input);
+    const encoded = min.z855(input);
     // Should use comma passthrough: ,ABCD
     assertEquals(encoded, ",ABCD");
   });
 
   await t.step("8 safe bytes at end use 0| passthrough", () => {
     const input = new Uint8Array([97, 98, 99, 100, 101, 102, 103, 104]); // abcdefgh
-    const encoded = min.encode(input);
+    const encoded = min.z855(input);
     // Should use 0| passthrough
     assertEquals(encoded, "0|abcdefgh");
   });
 
   await t.step("8 safe bytes not at end use 8| passthrough", () => {
     const input = new Uint8Array([97, 98, 99, 100, 101, 102, 103, 104, 0]); // abcdefgh + null
-    const encoded = min.encode(input);
+    const encoded = min.z855(input);
     // Should use 8| passthrough for first 8, then standard Z85 for trailing byte
     assertEquals(encoded.startsWith("8|abcdefgh|"), true);
   });
@@ -212,8 +212,8 @@ Deno.test("Large random inputs round-trip", () => {
       input[i] = Math.floor(Math.random() * 256);
     }
 
-    // min.encode -> min.decode
-    const encoded = min.encode(input);
+    // min.z855 -> min.decode
+    const encoded = min.z855(input);
     const decoded = min.decode(encoded);
     assertEquals(
       Array.from(decoded),
@@ -221,7 +221,7 @@ Deno.test("Large random inputs round-trip", () => {
       `Round-trip failed for size ${size}`
     );
 
-    // min.encode -> z855.decode
+    // min.z855 -> z855.decode
     const decoded2 = z855.decode(encoded);
     assertEquals(
       Array.from(decoded2),
