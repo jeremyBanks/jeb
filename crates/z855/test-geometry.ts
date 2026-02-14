@@ -10,7 +10,7 @@ for (let len = 5; len <= 7; len++) {
     input[i] = 0x61 + i; // 'a', 'b', 'c', ...
   }
   
-  const encoded = z855(input);
+  const encoded = encode(input);
   const decoded = decode(encoded);
   
   console.log(`${len} bytes: ${Array.from(input).map(b => String.fromCharCode(b)).join('')}`);
