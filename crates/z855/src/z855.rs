@@ -87,7 +87,7 @@ const RAW_ESCAPE_6: u8 = b'_';
 const RAW_ESCAPE_7: u8 = b'~';
 
 /// The 8+ byte raw passthrough escape character (long escape).
-/// Structure: [prefix digits][|][raw bytes][padding][|]
+/// Structure: [prefix digits][|][raw bytes][padding]
 /// The prefix encodes the raw byte count using base-42 with continuation bits.
 /// Values 0-41 are terminal digits, 42-83 are continuation digits (+42).
 /// Special cases:
@@ -696,7 +696,7 @@ fn try_long_passthrough(
     }
 
     // Not at end: use length-prefixed escape
-    // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after][|]
+    // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after]
     //
     // We need to calculate padding to maintain length invariant.
     //
@@ -777,14 +777,9 @@ fn try_long_passthrough(
     // Remaining = (padding_needed - offset_prefix.len()) - offset
     let padding_after = padding_needed - offset_prefix.len() - offset;
 
-    // Add remaining padding: (padding_after - 1) dots + final |
-    // But if padding_after == 1, just the |
-    // If padding_after == 0, no trailing padding at all
-    if padding_after > 0 {
-        for _ in 0..(padding_after - 1) {
-            output.push(RAW_ESCAPE_PADDING);
-        }
-        output.push(RAW_ESCAPE_LONG); // Final | terminator
+    // Add remaining padding: all dots, no final |
+    for _ in 0..padding_after {
+        output.push(RAW_ESCAPE_PADDING);
     }
 
     Some(LongPassthroughResult {
@@ -828,8 +823,7 @@ fn find_best_offset(
         };
 
         // Check if this offset is valid (fits in padding budget)
-        // We need: offset_prefix_len + offset (dots before) + remaining <= padding_needed
-        // Where remaining includes (padding_after - 1) dots + final |
+        // We need: offset_prefix_len + offset (dots before) + padding_after (dots after) <= padding_needed
         // Actually: offset_prefix_len + offset + padding_after = padding_needed
         // And padding_after must be >= 0
         if offset_prefix_len + offset > padding_needed {
@@ -1499,7 +1493,7 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
         // Check for long escape (|) first
         if is_long_escape(byte) {
             // The | escape for 8+ bytes
-            // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after][|]
+            // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after]
             //
             // The prefix digits are in current_block_digits (the accumulated Z85 digits)
             // We read them to get offset (if present) and length.
