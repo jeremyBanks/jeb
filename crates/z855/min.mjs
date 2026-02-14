@@ -11,7 +11,7 @@ for(let y of l)k=(k<<8)|y;let q=1<<(m*8),z=r%q,c=z<=k?r-z+k:r-z+q+k;return c>=(s
 return v===c},o="",i=0,n=b[L],u=0;while(i<n){let r=n-i;if(r>=8){let e=0;for(let j=i;j<n&&e<65536;j++)if(S.has(b[j]))e++;else break
 if(e>=8){let a=i+e===n;if(a){o+=Z[0]+"|";for(let j=i;j<n;j++)o+=C(b[j]);return o}else{let w=e<65536?e:65536,g=G(w),t=Math.ceil(r*5/4)
 let A=Math.ceil((r-w)*5/4),V=t-A,B=g[L]+1+w;if(B<=V){let d=V-B,X=0,Y=null;for(let j=0;j<=d;j++){let m=j>0?G(j)[L]:0;if(m+j>d)continue
-let s=u+m+g[L]+1+j,I=s+w-1,x=Math.floor(s*4/5),y=Math.floor(I*4/5),U=R(x),K=R(y),Q=R(s),T=R(I),k=[U<K?U:K,U>K?U:K,Q<T?Q:T,Q>T?Q:T]
+let s=u+m+g[L]+1+j,I=s+w-1,x=s*4/5|0,y=I*4/5|0,U=R(x),K=R(y),Q=R(s),T=R(I),k=[U<K?U:K,U>K?U:K,Q<T?Q:T,Q>T?Q:T]
 if(Y===null||k[0]<Y[0]||k[0]===Y[0]&&k[1]<Y[1]||k[0]===Y[0]&&k[1]===Y[1]&&k[2]<Y[2]||k[0]===Y[0]&&k[1]===Y[1]&&k[2]===Y[2]&&k[3]<Y[3]){Y=k;X=j}}
 let q=X>0?G(X):[];o+=q.join("")+g.join("")+"|";for(let j=0;j<X;j++)o+=".";for(let j=0;j<w;j++)o+=C(b[i+j]);let p=d-q[L]-X
 for(let j=0;j<p;j++)o+=".";u+=V;i+=w;continue}}}}if(r>=5){let $=0;for(let k of[7,6,5]){if(r<k||$)continue
