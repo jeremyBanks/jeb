@@ -1608,21 +1608,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ideated-encoding"
-version = "0.0.0-dev-2026-01-25.7901"
-dependencies = [
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "ideated-encoding-fuzz"
-version = "0.0.0"
-dependencies = [
- "ideated-encoding",
- "libfuzzer-sys",
-]
-
-[[package]]
 name = "idna"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1816,13 +1801,7 @@ dependencies = [
  "tracing-subscriber",
  "wasm-bindgen",
  "web-sys",
-]
-
-[[package]]
-name = "jeb-bytes-as-text"
-version = "0.0.0-dev-2026-01-25.7901"
-dependencies = [
- "jeb-common",
+ "z855",
 ]
 
 [[package]]

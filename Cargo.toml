@@ -14,11 +14,8 @@ members = [
     "crates/_trace",
     "crates/git-snapshot",
     "crates/git-zoom",
-    "crates/ideated-encoding",
-    "crates/ideated-encoding/fuzz",
     "crates/inline",
     "crates/jeb",
-    "crates/jeb-bytes-as-text",
     "crates/jeb-common",
     "crates/jeb-common/fuzz",
     "crates/jeb-stream",
@@ -78,11 +75,8 @@ _scripts = { path = "crates/_scripts" }
 _trace = { path = "crates/_trace" }
 git-snapshot = { path = "crates/git-snapshot" }
 git-zoom = { path = "crates/git-zoom" }
-ideated-encoding = { path = "crates/ideated-encoding" }
-ideated-encoding-fuzz = { path = "crates/ideated-encoding/fuzz" }
 inline = { path = "crates/inline" }
 jeb = { path = "crates/jeb" }
-jeb-bytes-as-text = { path = "crates/jeb-bytes-as-text" }
 jeb-common = { path = "crates/jeb-common" }
 jeb-common-fuzz = { path = "crates/jeb-common/fuzz" }
 jeb-stream = { path = "crates/jeb-stream" }
@@ -95,6 +89,7 @@ zerodmg = { path = "crates/zerodmg" }
 zerodmg-codes = { path = "crates/zerodmg-codes" }
 zerodmg-emulator = { path = "crates/zerodmg-emulator" }
 zerodmg-utils = { path = "crates/zerodmg-utils" }
+z855 = { path = "crates/z855" }
 zipng = { path = "crates/zipng" }
 zipng-wasm = { path = "crates/zipng-wasm" }
 
@@ -104,8 +99,8 @@ _chosen = { path = "crates/_chosen" }
 _ci = { path = "crates/_ci" }
 _claude_hooks = { path = "crates/_claude_hooks" }
 _scripts = { path = "crates/_scripts" }
-ideated-encoding = "0.0.0-dev-2026-01-25.7901"
 jeb-tracing = "0.0.0-dev-2026-01-25.7901"
+z855 = "0.1.0"
 zerodmg-codes = "0.0.0-dev-2026-01-25.7901"
 zerodmg-emulator = "0.0.0-dev-2026-01-25.7901"
 zerodmg-utils = "0.0.0-dev-2026-01-25.7901"
