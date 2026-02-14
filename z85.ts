@@ -294,6 +294,28 @@ function z85OutputLength(inputBytes: number): number {
   return Math.ceil((inputBytes * 5) / 4);
 }
 
+/**
+ * Reverse the bits of a number, treating it as a 64-bit integer.
+ *
+ * Positions aligned to power-of-2 boundaries have trailing zeros.
+ * Bit reversal turns trailing zeros into leading zeros, so aligned
+ * positions sort first naturally when comparing reversed values.
+ *
+ * Since JavaScript doesn't have native 64-bit integers, we use BigInt
+ * for the reversal and return the result as a bigint.
+ */
+function bitReverse(n: number): bigint {
+  let x = BigInt(n);
+  // Reverse bits of a 64-bit integer
+  x = ((x & 0x5555555555555555n) << 1n) | ((x >> 1n) & 0x5555555555555555n);
+  x = ((x & 0x3333333333333333n) << 2n) | ((x >> 2n) & 0x3333333333333333n);
+  x = ((x & 0x0f0f0f0f0f0f0f0fn) << 4n) | ((x >> 4n) & 0x0f0f0f0f0f0f0f0fn);
+  x = ((x & 0x00ff00ff00ff00ffn) << 8n) | ((x >> 8n) & 0x00ff00ff00ff00ffn);
+  x = ((x & 0x0000ffff0000ffffn) << 16n) | ((x >> 16n) & 0x0000ffff0000ffffn);
+  x = (x << 32n) | (x >> 32n);
+  return x;
+}
+
 /** Maximum length for a single long passthrough segment (64 KiB implementation limit) */
 const MAX_LONG_PASSTHROUGH_LENGTH = 65536;
 
@@ -1561,7 +1583,15 @@ function tryExtendedPassthroughOfLength(
 ): ExtendedPassthroughResult | null {
   const totalRemaining = input.length - blockStart;
 
-  // Try positions 0 through 3 (skip P=4 as it would require 1 char for after)
+  // Generate all valid positions and compute sort keys using bit reversal.
+  // Positions aligned to power-of-2 boundaries have trailing zeros.
+  // Bit reversal turns trailing zeros into leading zeros, so aligned
+  // positions sort first naturally.
+  //
+  // Sort key = (min(rev_start, rev_end), max(rev_start, rev_end))
+  // where start = blockStart + p, end = start + k - 1
+  const candidates: Array<{ sortKey0: bigint; sortKey1: bigint; p: number }> = [];
+
   for (let p = 0; p <= 3; p++) {
     const bytesConsumed = p + k;
     if (blockStart + bytesConsumed > input.length) {
@@ -1572,6 +1602,28 @@ function tryExtendedPassthroughOfLength(
     if (passthroughOutputChars + z85OutputLength(remaining) !== z85OutputLength(totalRemaining)) {
       continue; // Would violate length invariant
     }
+
+    // Compute sort key using bit reversal
+    const start = blockStart + p;
+    const end = start + k - 1;
+    const revStart = bitReverse(start);
+    const revEnd = bitReverse(end);
+    const sortKey0 = revStart < revEnd ? revStart : revEnd;
+    const sortKey1 = revStart < revEnd ? revEnd : revStart;
+    candidates.push({ sortKey0, sortKey1, p });
+  }
+
+  // Sort by sort key (lower is better)
+  candidates.sort((a, b) => {
+    if (a.sortKey0 < b.sortKey0) return -1;
+    if (a.sortKey0 > b.sortKey0) return 1;
+    if (a.sortKey1 < b.sortKey1) return -1;
+    if (a.sortKey1 > b.sortKey1) return 1;
+    return 0;
+  });
+
+  // Try candidates in sorted order
+  for (const { p } of candidates) {
     const result = tryExtendedPassthroughAtPosition(input, blockStart, k, p);
     if (result !== null) {
       return result;

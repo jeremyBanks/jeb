@@ -842,33 +842,19 @@ fn try_extended_passthrough_of_length(
     //
     // When P+K is already a multiple of 4 (e.g., P+K=8), the invariant is
     // automatically satisfied regardless of total input length.
-    //
-    // Prefer P+K=8 first (always valid), then try other positions that
-    // satisfy the remaining-bytes constraint.
 
     let total_remaining = input.len() - block_start;
 
-    // Try all positions P=0..3, checking the length invariant.
+    // Generate all valid positions and compute sort keys using bit reversal.
+    // Positions aligned to power-of-2 boundaries have trailing zeros.
+    // Bit reversal turns trailing zeros into leading zeros, so aligned
+    // positions sort first naturally.
     //
-    // The passthrough outputs (P+1) + 1 + K = P+K+2 chars, consuming P+K bytes.
-    // The remaining bytes are encoded by the main loop as standard Z85.
-    // For the total length invariant to hold:
-    //   (P+K+2) + z85_output_length(remaining) == z85_output_length(total)
-    //
-    // When P+K is a multiple of 4 (e.g., P+K=8), this is always satisfied because
-    // P+K+2 == z85_output_length(P+K) and z85 is additive over multiples of 4.
-    // For other values, we check the exact condition at runtime.
-    //
-    // Prefer P+K=8 first (always valid, most common), then try other positions.
-    let p_ideal = 8 - k; // K=5→P=3, K=6→P=2, K=7→P=1
-    let positions = [p_ideal, 0, 1, 2, 3];
-    let mut tried = [false; 4];
+    // Sort key = (min(rev_start, rev_end), max(rev_start, rev_end))
+    // where start = block_start + p, end = start + k - 1
+    let mut candidates: Vec<(u64, u64, usize)> = Vec::new();
 
-    for &p in &positions {
-        if p > 3 || tried[p] {
-            continue;
-        }
-        tried[p] = true;
+    for p in 0..=3 {
         let bytes_consumed = p + k;
         if block_start + bytes_consumed > input.len() {
             continue; // Not enough input
@@ -878,6 +864,21 @@ fn try_extended_passthrough_of_length(
         if passthrough_output_chars + z85_output_length(remaining) != z85_output_length(total_remaining) {
             continue; // Would violate length invariant
         }
+
+        // Compute sort key using bit reversal
+        let start = block_start + p;
+        let end = start + k - 1;
+        let rev_start = bit_reverse(start);
+        let rev_end = bit_reverse(end);
+        let sort_key = (rev_start.min(rev_end), rev_start.max(rev_end));
+        candidates.push((sort_key.0, sort_key.1, p));
+    }
+
+    // Sort by sort key (lower is better)
+    candidates.sort();
+
+    // Try candidates in sorted order
+    for (_, _, p) in candidates {
         if let Some(result) = try_extended_passthrough_at_position(input, block_start, k, p) {
             return Some(result);
         }
@@ -1242,6 +1243,16 @@ fn generate_long_escape_prefix(length: usize) -> Vec<u8> {
 fn z85_output_length(input_bytes: usize) -> usize {
     // ceil(input_bytes * 5 / 4)
     (input_bytes * 5 + 3) / 4
+}
+
+/// Reverse the bits of a 64-bit integer.
+///
+/// Positions aligned to power-of-2 boundaries have trailing zeros.
+/// Bit reversal turns trailing zeros into leading zeros, so aligned
+/// positions sort first naturally when comparing reversed values.
+#[inline]
+fn bit_reverse(n: usize) -> u64 {
+    (n as u64).reverse_bits()
 }
 
 /// Decode a Z85 string back into bytes.
