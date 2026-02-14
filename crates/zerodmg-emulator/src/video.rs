@@ -109,33 +109,34 @@ impl VideoController for GameBoy {
         };
 
         // draw background palettes
-        // the ! is because the GB colours values are darkness, but RGB is brightness
-        let bgp_a = (!self.bgp() & 0b1100_0000) >> 6;
+        // GB palette values are darkness (0=white, 3=black), invert to RGB brightness
+        let bgp_val = self.bgp();
+        let bgp_a = (bgp_val & 0b1100_0000) >> 6;
         let bgp_a_color = image::Rgba([
-            bgp_a * 0b0101_0101,
-            bgp_a * 0b0101_0101,
-            bgp_a * 0b0101_0101,
+            (3 - bgp_a) * 0b0101_0101,
+            (3 - bgp_a) * 0b0101_0101,
+            (3 - bgp_a) * 0b0101_0101,
             0xFF,
         ]);
-        let bgp_b = (!self.bgp() & 0b0011_0000) >> 4;
+        let bgp_b = (bgp_val & 0b0011_0000) >> 4;
         let bgp_b_color = image::Rgba([
-            bgp_b * 0b0101_0101,
-            bgp_b * 0b0101_0101,
-            bgp_b * 0b0101_0101,
+            (3 - bgp_b) * 0b0101_0101,
+            (3 - bgp_b) * 0b0101_0101,
+            (3 - bgp_b) * 0b0101_0101,
             0xFF,
         ]);
-        let bgp_c = (!self.bgp() & 0b0000_1100) >> 2;
+        let bgp_c = (bgp_val & 0b0000_1100) >> 2;
         let bgp_c_color = image::Rgba([
-            bgp_c * 0b0101_0101,
-            bgp_c * 0b0101_0101,
-            bgp_c * 0b0101_0101,
+            (3 - bgp_c) * 0b0101_0101,
+            (3 - bgp_c) * 0b0101_0101,
+            (3 - bgp_c) * 0b0101_0101,
             0xFF,
         ]);
-        let bgp_d = !self.bgp() & 0b0000_0011;
+        let bgp_d = bgp_val & 0b0000_0011;
         let bgp_d_color = image::Rgba([
-            bgp_d * 0b0101_0101,
-            bgp_d * 0b0101_0101,
-            bgp_d * 0b0101_0101,
+            (3 - bgp_d) * 0b0101_0101,
+            (3 - bgp_d) * 0b0101_0101,
+            (3 - bgp_d) * 0b0101_0101,
             0xFF,
         ]);
         bgp.put_pixel(0, 0, bgp_a_color);
@@ -181,19 +182,19 @@ impl VideoController for GameBoy {
                 let y_tile_offset = 8 * i64::from(tile_row);
                 let y = ((y_tile_offset + (j / 2) as i64) % 256) as u32;
 
-                let byte = !byte_val;
+                let byte = byte_val;
                 let a = (byte & 0b1100_0000) >> 6;
                 let a_color =
-                    image::Rgba([a * 0b0101_0101, a * 0b0101_0101, a * 0b0101_0101, 0xFF]);
+                    image::Rgba([(3 - a) * 0b0101_0101, (3 - a) * 0b0101_0101, (3 - a) * 0b0101_0101, 0xFF]);
                 let b = (byte & 0b0011_0000) >> 4;
                 let b_color =
-                    image::Rgba([b * 0b0101_0101, b * 0b0101_0101, b * 0b0101_0101, 0xFF]);
+                    image::Rgba([(3 - b) * 0b0101_0101, (3 - b) * 0b0101_0101, (3 - b) * 0b0101_0101, 0xFF]);
                 let c = (byte & 0b0000_1100) >> 2;
                 let c_color =
-                    image::Rgba([c * 0b0101_0101, c * 0b0101_0101, c * 0b0101_0101, 0xFF]);
+                    image::Rgba([(3 - c) * 0b0101_0101, (3 - c) * 0b0101_0101, (3 - c) * 0b0101_0101, 0xFF]);
                 let d = byte & 0b0000_0011;
                 let d_color =
-                    image::Rgba([d * 0b0101_0101, d * 0b0101_0101, d * 0b0101_0101, 0xFF]);
+                    image::Rgba([(3 - d) * 0b0101_0101, (3 - d) * 0b0101_0101, (3 - d) * 0b0101_0101, 0xFF]);
 
                 tiles.put_pixel(x + tile_col, y + tile_row, a_color);
                 tiles.put_pixel(x + 1 + tile_col, y + tile_row, b_color);
@@ -248,7 +249,7 @@ impl VideoController for GameBoy {
                 let y = ((y_tile_offset + (j / 2) as i64) % 256) as u32;
                 let scrolled_y = (y + 256 - u32::from(self.scy())) % 256;
 
-                let byte = !byte_val;
+                let byte = byte_val;
                 let a = (byte & 0b1100_0000) >> 6;
                 let a_color = bg_palette[a as usize];
                 let b = (byte & 0b0011_0000) >> 4;
