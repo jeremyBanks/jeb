@@ -638,3 +638,81 @@ Deno.test("long escape followed by normal z85", () => {
   assertEquals(decoded.slice(0, 8), new TextEncoder().encode("abcdefgh"));
   assertEquals(decoded.slice(8, 12), new Uint8Array([0, 0, 0, 0]));
 });
+
+// =========================================================================
+// Tests for 8+ byte passthrough encoding (`|` escape)
+// =========================================================================
+
+Deno.test("long escape encode 8 bytes", () => {
+  // 8 safe bytes at end of input -> 0| rest-of-input
+  const input = new TextEncoder().encode("abcdefgh");
+  const encoded = encode(input);
+  assertEquals(encoded, "0|abcdefgh");
+
+  // Verify round-trip
+  const decoded = decode(encoded);
+  assertEquals(decoded, input);
+});
+
+Deno.test("long escape encode 20 bytes", () => {
+  // 20 safe bytes at end of input -> 0| rest-of-input
+  const input = new TextEncoder().encode("abcdefghijklmnopqrst");
+  const encoded = encode(input);
+  assertEquals(encoded, "0|abcdefghijklmnopqrst");
+
+  // Verify round-trip
+  const decoded = decode(encoded);
+  assertEquals(decoded, input);
+});
+
+Deno.test("long escape encode 100 bytes", () => {
+  // 100 safe bytes at end of input
+  const input = new Uint8Array(
+    Array.from({ length: 100 }, (_, i) => "a".charCodeAt(0) + (i % 26))
+  );
+  const encoded = encode(input);
+  assertEquals(encoded.startsWith("0|"), true);
+  assertEquals(encoded.length, 2 + 100); // "0|" + 100 raw bytes
+
+  // Verify round-trip
+  const decoded = decode(encoded);
+  assertEquals(decoded, input);
+});
+
+Deno.test("long escape encode after unsafe", () => {
+  // Unsafe bytes followed by safe bytes
+  const input = new Uint8Array([0, 0, 0, 0, ..."abcdefghij".split("").map((c) => c.charCodeAt(0))]);
+  const encoded = encode(input);
+  // Should encode 4 zeros as Z85 then use 0| for rest
+  assertEquals(encoded.startsWith("00000"), true); // 4 zeros = 5 Z85 chars
+  assertEquals(encoded.includes("|"), true); // Should use | escape
+  assertEquals(encoded.endsWith("abcdefghij"), true);
+
+  // Verify round-trip
+  const decoded = decode(encoded);
+  assertEquals(decoded, input);
+});
+
+Deno.test("long escape not used for 7 bytes", () => {
+  // Only 7 safe bytes - should NOT use | escape, should use ~ instead
+  const input = new TextEncoder().encode("abcdefg");
+  const encoded = encode(input);
+  assertEquals(encoded.includes("|"), false);
+  assertEquals(encoded.includes("~"), true); // Should use 7-byte escape
+
+  // Verify round-trip
+  const decoded = decode(encoded);
+  assertEquals(decoded, input);
+});
+
+Deno.test("long escape roundtrip various lengths", () => {
+  // Test various lengths from 8 to 50
+  for (let len = 8; len <= 50; len++) {
+    const input = new Uint8Array(
+      Array.from({ length: len }, (_, i) => "a".charCodeAt(0) + (i % 26))
+    );
+    const encoded = encode(input);
+    const decoded = decode(encoded);
+    assertEquals(decoded, input, `Failed for length ${len}`);
+  }
+});
