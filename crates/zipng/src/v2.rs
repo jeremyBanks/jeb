@@ -429,6 +429,13 @@ fn decode_via_image(data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError>
     let img = image::load_from_memory(data)
         .map_err(|e| DecodeError::ImageError(format!("Failed to load image: {}", e)))?;
 
+    // Try RGBA mode first (simpler)
+    let rgba_img = img.to_rgba8();
+    if is_rgba_mode(&rgba_img) {
+        return decode_rgba(&rgba_img);
+    }
+
+    // Fall back to indexed mode
     let rgb_img = img.to_rgb8();
     let pixels = rgb_img.as_raw();
 
@@ -469,7 +476,48 @@ fn decode_via_image(data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError>
     }
 
     // Parse as ZIP archive
-    let cursor = Cursor::new(&bytes);
+    parse_zip_from_bytes(&bytes)
+}
+
+#[cfg(feature = "image")]
+fn is_rgba_mode(img: &image::RgbaImage) -> bool {
+    const RGBA_REF_COLORS: [[u8; 4]; 6] = [
+        [0, 0, 0, 0],         // transparent
+        [0, 0, 0, 255],       // black
+        [255, 255, 255, 255], // white
+        [255, 0, 0, 255],     // red
+        [0, 255, 0, 255],     // green
+        [0, 0, 255, 255],     // blue
+    ];
+    
+    let width = img.width() as usize;
+    // Check first row for gradient pattern (at least 2 cycles)
+    let check_pixels = width.min(12);
+    
+    for x in 0..check_pixels {
+        let pixel = img.get_pixel(x as u32, 0);
+        let expected = &RGBA_REF_COLORS[x % 6];
+        if &pixel.0 != expected {
+            return false;
+        }
+    }
+    
+    true
+}
+
+#[cfg(feature = "image")]
+fn decode_rgba(img: &image::RgbaImage) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
+    // In RGBA mode, pixel bytes ARE the file bytes (direct 4:1 mapping)
+    // [R, G, B, A] channels map to 4 consecutive bytes
+    let bytes = img.as_raw().clone();
+    parse_zip_from_bytes(&bytes)
+}
+
+#[cfg(feature = "image")]
+fn parse_zip_from_bytes(bytes: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
+    use std::io::{Cursor, Read};
+    
+    let cursor = Cursor::new(bytes);
     let mut archive =
         zip::ZipArchive::new(cursor).map_err(|e| DecodeError::ImageError(e.to_string()))?;
 
@@ -572,6 +620,42 @@ mod tests {
             .with_sorted(false)
             .encode(vec![("z.txt", "zzz"), ("a.txt", "aaa")]);
         assert!(!output.is_empty());
+    }
+
+    #[test]
+    #[cfg(all(feature = "zip", feature = "image"))]
+    fn roundtrip_rgba_mode() {
+        // Create files totaling >2 MiB to trigger RGBA mode
+        let large_data = vec![0x42u8; 55 * 1024]; // 55 KB
+        let mut files = Vec::new();
+        for i in 0..40 {
+            files.push((format!("file{}.dat", i), large_data.clone()));
+        }
+
+        // Encode (should use RGBA mode)
+        let archive = Encoder::new()
+            .with_mode(EncoderMode::Rgba)
+            .encode(files.clone());
+        
+        assert!(!archive.is_empty());
+        assert_eq!(&archive[..4], b"\x89PNG");
+
+        // Decode
+        let decoded = decode(&archive).expect("RGBA decode should succeed");
+
+        // Verify file count
+        assert_eq!(decoded.len(), 40);
+
+        // Verify all files have correct content
+        for (name, content) in decoded.iter() {
+            assert_eq!(content.len(), 55 * 1024);
+            assert!(content.iter().all(|&b| b == 0x42));
+            
+            // Name should match pattern file\d+.dat
+            let name_str = String::from_utf8(name.clone()).unwrap();
+            assert!(name_str.starts_with("file"));
+            assert!(name_str.ends_with(".dat"));
+        }
     }
 
     #[test]
