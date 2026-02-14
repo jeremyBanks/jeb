@@ -233,13 +233,11 @@ proptest! {
 // Property 10: Large Inputs (Stress Test)
 // =============================================================================
 
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(10))] // Fewer cases for large inputs
-    
-    #[test]
-    fn large_input_roundtrips(data in prop::collection::vec(any::<u8>(), 1000..10000)) {
+#[test]
+fn large_input_roundtrips() {
+    proptest!(ProptestConfig::with_cases(10), |(data in prop::collection::vec(any::<u8>(), 1000..10000))| {
         let encoded = encode(&data);
         let decoded = decode(&encoded).expect("large input should decode");
         prop_assert_eq!(decoded, data, "large input roundtrip failed");
-    }
+    });
 }
