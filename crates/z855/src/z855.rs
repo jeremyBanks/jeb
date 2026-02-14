@@ -3663,4 +3663,84 @@ mod tests {
         assert_eq!(decoded.len(), 7);
         assert_eq!(decoded, input, "Round-trip failed for 7-byte input");
     }
+
+    #[test]
+    fn test_all_test_cases() {
+        // Test all cases from test-cases/ directory
+        use std::fs;
+        use std::path::Path;
+
+        let test_cases_dir = Path::new("test-cases");
+        if !test_cases_dir.exists() {
+            // Skip if test-cases directory doesn't exist (e.g., in CI)
+            return;
+        }
+
+        let entries = fs::read_dir(test_cases_dir).expect("Failed to read test-cases directory");
+
+        let mut test_count = 0;
+        for entry in entries {
+            let entry = entry.expect("Failed to read directory entry");
+            let path = entry.path();
+            
+            if path.extension().and_then(|s| s.to_str()) != Some("input") {
+                continue;
+            }
+
+            let base_name = path.file_stem().unwrap().to_str().unwrap();
+            let input_bytes = fs::read(&path).expect(&format!("Failed to read {}", path.display()));
+
+            // Check if this is an error test case
+            if input_bytes == b"<error />" {
+                // Should fail to decode the .encoded file
+                let encoded_path = test_cases_dir.join(format!("{}.encoded", base_name));
+                if encoded_path.exists() {
+                    let encoded = fs::read_to_string(&encoded_path)
+                        .expect(&format!("Failed to read {}", encoded_path.display()))
+                        .trim()
+                        .to_string();
+                    
+                    assert!(
+                        decode(&encoded).is_err(),
+                        "Error test case {} should fail to decode",
+                        base_name
+                    );
+                }
+            } else {
+                // Normal test case - test encoding and decoding
+                let encoded_path = test_cases_dir.join(format!("{}.encoded", base_name));
+                if encoded_path.exists() {
+                    let encoded = fs::read_to_string(&encoded_path)
+                        .expect(&format!("Failed to read {}", encoded_path.display()))
+                        .trim()
+                        .to_string();
+
+                    // Test decoding
+                    let decoded = decode(&encoded)
+                        .expect(&format!("Failed to decode test case {}", base_name));
+                    assert_eq!(
+                        decoded, input_bytes,
+                        "Decode mismatch for test case {}",
+                        base_name
+                    );
+
+                    // Test encoding (roundtrip)
+                    let re_encoded = encode(&input_bytes);
+                    let re_decoded = decode(&re_encoded)
+                        .expect(&format!("Failed to decode re-encoded test case {}", base_name));
+                    assert_eq!(
+                        re_decoded, input_bytes,
+                        "Roundtrip mismatch for test case {}",
+                        base_name
+                    );
+                }
+
+                test_count += 1;
+            }
+        }
+
+        // Ensure we actually tested some cases
+        assert!(test_count > 0, "No test cases found in test-cases/ directory");
+        println!("Tested {} cases from test-cases/ directory", test_count);
+    }
 }
