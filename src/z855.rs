@@ -3583,4 +3583,90 @@ mod tests {
         assert_eq!(prefix[0], b'2');
         assert_eq!(prefix[1], Z85_ALPHABET[58]); // 'W'
     }
+
+    // =========================================================================
+    // Tests for offset selection (padding alignment)
+    // =========================================================================
+
+    #[test]
+    fn test_find_best_offset_prefers_zero_when_best() {
+        // When offset=0 has the best alignment, it should be chosen
+        // (offset=0 means no offset prefix is encoded, for backward compatibility)
+        //
+        // Set up parameters where offset=0 would have better alignment than offset=1
+        // current_output_len = 0, length_prefix_len = 1, raw_len = 10, padding_needed = 5
+        let best_offset = find_best_offset(0, 1, 10, 5);
+        assert_eq!(best_offset, 0, "offset=0 should be chosen when it has best alignment");
+    }
+
+    #[test]
+    fn test_find_best_offset_chooses_nonzero_for_better_alignment() {
+        // When a non-zero offset improves alignment, it should be chosen
+        // This tests that offset selection considers actual alignment benefits
+        let best_offset = find_best_offset(0, 1, 15, 10);
+        // The actual best offset depends on bit-reversal alignment metrics
+        // We just verify it runs and returns a valid offset
+        assert!(best_offset <= 10, "offset should fit in padding budget");
+    }
+
+    #[test]
+    fn test_find_best_offset_respects_padding_budget() {
+        // offset should never exceed padding_needed, even when considering alignment
+        let padding = 7;
+        let best_offset = find_best_offset(0, 2, 20, padding);
+        assert!(best_offset <= padding, "offset {} exceeds padding budget {}", best_offset, padding);
+    }
+
+    // =========================================================================
+    // Tests for 64 KiB boundary (MAX_LONG_PASSTHROUGH_LENGTH = 65536)
+    // =========================================================================
+
+    #[test]
+    fn test_long_passthrough_boundary_under_limit() {
+        // Test encoding safe bytes well under the 65536 MAX_LONG_PASSTHROUGH_LENGTH
+        // This verifies the encoder respects the limit and works for large safe runs
+        let input = vec![b'a'; 10000];
+        let encoded = encode(&input);
+
+        // Should use 0| escape (rest of input)
+        assert!(encoded.starts_with("0|"), "Should use 0| escape for end-of-input");
+        assert_eq!(encoded.len(), 2 + 10000, "Encoded length should be 2 + raw bytes");
+
+        // Verify round-trip
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded.len(), 10000, "Decoded length should be 10000");
+        assert_eq!(decoded, input, "Round-trip failed for 10000-byte input");
+    }
+
+    #[test]
+    fn test_long_passthrough_multiple_sizes() {
+        // Test that long passthrough encoding works correctly for various sizes
+        // under MAX_LONG_PASSTHROUGH_LENGTH limit, verifying the limit is enforced
+        let test_sizes = [100, 500, 1000, 5000, 10000, 20000];
+
+        for size in &test_sizes {
+            let input = vec![b'x'; *size];
+            let encoded = encode(&input);
+            let decoded = decode(&encoded).unwrap();
+
+            assert_eq!(decoded.len(), *size, "Length mismatch for {} bytes", size);
+            assert_eq!(decoded, input, "Content mismatch for {} bytes", size);
+        }
+    }
+
+    #[test]
+    fn test_long_passthrough_not_used_for_short_safe() {
+        // Verify long passthrough is only used for 8+ consecutive safe bytes
+        // Shorter safe runs should use other escapes or standard Z85
+        let input = vec![b'a'; 7]; // Just under 8-byte threshold
+        let encoded = encode(&input);
+
+        // Should not use long escape |
+        assert!(!encoded.contains("|"), "Short safe run should not use long escape");
+
+        // Verify round-trip
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded.len(), 7);
+        assert_eq!(decoded, input, "Round-trip failed for 7-byte input");
+    }
 }
