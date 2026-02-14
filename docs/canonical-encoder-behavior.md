@@ -4,7 +4,7 @@
 
 ## Overview
 
-Extended Z85 allows multiple valid encodings for the same input. For example, 8 safe bytes could be encoded as:
+Extended Z855 allows multiple valid encodings for the same input. For example, 8 safe bytes could be encoded as:
 - Standard Z85 (10 chars)
 - Two 4-byte passthroughs: `,[4 bytes],[4 bytes]` (10 chars)
 - One 8-byte passthrough: `8|[8 bytes]` (10 chars, assuming block-aligned)

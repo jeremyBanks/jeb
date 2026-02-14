@@ -1,4 +1,4 @@
-# Extended Z85: Raw Passthrough Encoding
+# Extended Z855: Raw Passthrough Encoding
 
 > **Note:** This document represents the current best understanding of the planned encoding scheme as of the time of writing. Details may be incorrect or outdated. Always refer to the actual implementation and tests as the source of truth.
 
@@ -16,7 +16,7 @@ Z85 encodes binary data as printable ASCII using an 85-character alphabet:
 
 **Arbitrary length:** Trailing 1-3 bytes are encoded as 2-4 characters respectively.
 
-## Our Extension: Raw Passthrough
+## Z855 Extension: Raw Passthrough
 
 ### Goal
 

@@ -1,5 +1,5 @@
 import { assertEquals, assertThrows } from "@std/assert";
-import { encode, decode, Z85DecodeError } from "./z85.ts";
+import { encode, decode, Z855DecodeError } from "./z855.ts";
 
 // Unit tests for Z85 encode/decode
 
@@ -69,22 +69,22 @@ Deno.test("roundtrip various lengths", () => {
 
 Deno.test("decode invalid character", () => {
   // Use valid length strings (5 chars) with invalid characters
-  assertThrows(() => decode('hel"o'), Z85DecodeError);
-  assertThrows(() => decode("hel o"), Z85DecodeError);
+  assertThrows(() => decode('hel"o'), Z855DecodeError);
+  assertThrows(() => decode("hel o"), Z855DecodeError);
 });
 
 Deno.test("decode invalid length", () => {
   // Length 1 is invalid
-  assertThrows(() => decode("0"), Z85DecodeError);
+  assertThrows(() => decode("0"), Z855DecodeError);
   // Length 6 is invalid (would be 1 mod 5)
-  assertThrows(() => decode("000000"), Z85DecodeError);
+  assertThrows(() => decode("000000"), Z855DecodeError);
 });
 
 Deno.test("decode overflow", () => {
   // "#####" = 84*85^4 + 84*85^3 + 84*85^2 + 84*85 + 84 = 4,437,053,124 > 0xFFFFFFFF
-  assertThrows(() => decode("#####"), Z85DecodeError);
+  assertThrows(() => decode("#####"), Z855DecodeError);
   // "##" for 1 byte: 84*85 + 84 = 7224 > 255
-  assertThrows(() => decode("##"), Z85DecodeError);
+  assertThrows(() => decode("##"), Z855DecodeError);
 });
 
 // =========================================================================
@@ -118,7 +118,7 @@ Deno.test("raw passthrough roundtrip", () => {
   }
 });
 
-Deno.test("mixed passthrough and z85", () => {
+Deno.test("mixed passthrough and z855", () => {
   // Mix of safe and non-safe blocks
   // First 4 bytes: 0x00 0x00 0x00 0x00 (not safe - contains null bytes)
   // Next 4 bytes: "test" (safe)
@@ -181,7 +181,7 @@ Deno.test("non-aligned passthrough position 1", () => {
 
 Deno.test("non-aligned passthrough incomplete should fail", () => {
   // Comma at position 4 without enough bytes after should fail
-  assertThrows(() => decode("ABCD,"), Z85DecodeError, "incomplete");
+  assertThrows(() => decode("ABCD,"), Z855DecodeError, "incomplete");
 });
 
 Deno.test("non-aligned passthrough position 4", () => {
@@ -348,7 +348,7 @@ Deno.test("non-aligned decode with trailing partial block", () => {
 
 async function runRustEncode(input: Uint8Array): Promise<string> {
   const command = new Deno.Command("cargo", {
-    args: ["run", "--quiet", "--release", "--manifest-path", "/Users/jeb/cleanroom/Cargo.toml", "--", "encode"],
+    args: ["run", "--quiet", "--release", "--manifest-path", "/Users/jeb/z855/Cargo.toml", "--", "encode"],
     stdin: "piped",
     stdout: "piped",
     stderr: "piped",
@@ -365,7 +365,7 @@ async function runRustEncode(input: Uint8Array): Promise<string> {
 
 async function runRustDecode(input: string): Promise<Uint8Array | null> {
   const command = new Deno.Command("cargo", {
-    args: ["run", "--quiet", "--release", "--manifest-path", "/Users/jeb/cleanroom/Cargo.toml", "--", "decode"],
+    args: ["run", "--quiet", "--release", "--manifest-path", "/Users/jeb/z855/Cargo.toml", "--", "decode"],
     stdin: "piped",
     stdout: "piped",
     stderr: "piped",
@@ -459,7 +459,7 @@ async function findEncodedFiles(
 }
 
 Deno.test("test cases from shared directory", async () => {
-  const testCasesDir = "/Users/jeb/cleanroom/test-cases";
+  const testCasesDir = "/Users/jeb/z855/test-cases";
 
   for await (const entry of Deno.readDir(testCasesDir)) {
     if (!entry.name.endsWith(".input")) continue;
@@ -479,7 +479,7 @@ Deno.test("test cases from shared directory", async () => {
       // Test standard encoding fails
       assertThrows(
         () => decode(encodedFiles.standard),
-        Z85DecodeError,
+        Z855DecodeError,
         undefined,
         `Expected decode error for ${baseName} (standard)`
       );
@@ -488,7 +488,7 @@ Deno.test("test cases from shared directory", async () => {
       for (const alt of encodedFiles.alternatives) {
         assertThrows(
           () => decode(alt),
-          Z85DecodeError,
+          Z855DecodeError,
           undefined,
           `Expected decode error for ${baseName} (alternative)`
         );
@@ -498,7 +498,7 @@ Deno.test("test cases from shared directory", async () => {
       if (encodedFiles.expected) {
         assertThrows(
           () => decode(encodedFiles.expected!),
-          Z85DecodeError,
+          Z855DecodeError,
           undefined,
           `Expected decode error for ${baseName} (expected)`
         );
@@ -629,7 +629,7 @@ Deno.test("long escape decode insufficient bytes", () => {
   assertEquals(threw, true);
 });
 
-Deno.test("long escape followed by normal z85", () => {
+Deno.test("long escape followed by normal z855", () => {
   // Long escape followed by normal Z85 encoded data
   // 8|abcdefgh followed by Z85 for [0,0,0,0]
   const encoded = "8|abcdefgh00000";

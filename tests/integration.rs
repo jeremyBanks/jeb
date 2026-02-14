@@ -1,4 +1,4 @@
-// Integration tests for Z85 implementation
+// Integration tests for Z855 implementation
 // Includes cross-testing with TypeScript/Deno CLI and shared test case verification
 
 use std::process::{Command, Stdio};
@@ -6,13 +6,13 @@ use std::io::Write;
 use std::fs;
 use std::path::Path;
 
-// Re-import the z85 module functions
+// Re-import the z855 module functions
 // Note: For integration tests, we test via the CLI interface
 
 /// Run the TypeScript/Deno CLI for encoding
 fn run_deno_encode(input: &[u8]) -> String {
     let mut child = Command::new("deno")
-        .args(["run", "/Users/jeb/cleanroom/main.ts", "encode"])
+        .args(["run", "/Users/jeb/z855/main.ts", "encode"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -31,7 +31,7 @@ fn run_deno_encode(input: &[u8]) -> String {
 /// Run the TypeScript/Deno CLI for decoding
 fn run_deno_decode(input: &str) -> Result<Vec<u8>, String> {
     let mut child = Command::new("deno")
-        .args(["run", "/Users/jeb/cleanroom/main.ts", "decode"])
+        .args(["run", "/Users/jeb/z855/main.ts", "decode"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -55,7 +55,7 @@ fn run_deno_decode(input: &str) -> Result<Vec<u8>, String> {
 /// Run the Rust CLI for encoding (self-test helper)
 fn run_rust_encode(input: &[u8]) -> String {
     let mut child = Command::new("cargo")
-        .args(["run", "--quiet", "--release", "--manifest-path", "/Users/jeb/cleanroom/Cargo.toml", "--", "encode"])
+        .args(["run", "--quiet", "--release", "--manifest-path", "/Users/jeb/z855/Cargo.toml", "--", "encode"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -74,7 +74,7 @@ fn run_rust_encode(input: &[u8]) -> String {
 /// Run the Rust CLI for decoding (self-test helper)
 fn run_rust_decode(input: &str) -> Result<Vec<u8>, String> {
     let mut child = Command::new("cargo")
-        .args(["run", "--quiet", "--release", "--manifest-path", "/Users/jeb/cleanroom/Cargo.toml", "--", "decode"])
+        .args(["run", "--quiet", "--release", "--manifest-path", "/Users/jeb/z855/Cargo.toml", "--", "decode"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -174,7 +174,7 @@ fn find_encoded_files(test_cases_dir: &Path, base_name: &str) -> EncodedFiles {
 
 #[test]
 fn test_shared_test_cases() {
-    let test_cases_dir = Path::new("/Users/jeb/cleanroom/test-cases");
+    let test_cases_dir = Path::new("/Users/jeb/z855/test-cases");
 
     for entry in fs::read_dir(test_cases_dir).expect("Failed to read test-cases directory") {
         let entry = entry.expect("Failed to read directory entry");

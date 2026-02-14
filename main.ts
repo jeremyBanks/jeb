@@ -1,7 +1,7 @@
-import { encode, decode, Z85DecodeError } from "./z85.ts";
+import { encode, decode, Z855DecodeError } from "./z855.ts";
 
 // Re-export library functions for external use
-export { encode, decode, Z85DecodeError } from "./z85.ts";
+export { encode, decode, Z855DecodeError } from "./z855.ts";
 
 // CLI entry point
 if (import.meta.main) {
@@ -19,7 +19,7 @@ if (import.meta.main) {
     // Read all bytes from stdin
     const input = await readAllStdin();
 
-    // Encode to Z85
+    // Encode to Z855
     const encoded = encode(input);
 
     // Write to stdout
@@ -31,12 +31,12 @@ if (import.meta.main) {
     // Read all bytes from stdin
     const input = await readAllStdin();
 
-    // Convert to string (Z85 is ASCII, so this should be valid UTF-8)
+    // Convert to string (Z855 is ASCII, so this should be valid UTF-8)
     const decoder = new TextDecoder();
     const inputStr = decoder.decode(input);
 
     try {
-      // Decode from Z85
+      // Decode from Z855
       const decoded = decode(inputStr);
 
       // Write raw bytes to stdout
@@ -44,7 +44,7 @@ if (import.meta.main) {
 
       Deno.exit(0);
     } catch (e) {
-      if (e instanceof Z85DecodeError) {
+      if (e instanceof Z855DecodeError) {
         console.error(`error: ${e.message}`);
       } else {
         console.error(`error: ${e}`);

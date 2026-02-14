@@ -1,5 +1,5 @@
-// Z85 Encoding/Decoding Implementation
-// =====================================
+// Z855 Encoding/Decoding Implementation
+// ======================================
 //
 // Z85 is a binary-to-text encoding scheme defined by ZeroMQ (RFC 32).
 // It encodes binary data into printable ASCII characters, similar to Base64
@@ -190,7 +190,7 @@ function readSingleBase42NumberBackwards(
   end: number
 ): { value: number; digitsConsumed: number } {
   if (end === 0 || end > digits.length) {
-    throw new Z85DecodeError("invalid prefix position");
+    throw new Z855DecodeError("invalid prefix position");
   }
 
   let value = 0;
@@ -205,7 +205,7 @@ function readSingleBase42NumberBackwards(
     const digit = digits[pos];
 
     if (digit > 83) {
-      throw new Z85DecodeError(`invalid prefix digit value: ${digit}`);
+      throw new Z855DecodeError(`invalid prefix digit value: ${digit}`);
     }
 
     if (digit >= 42) {
@@ -215,7 +215,7 @@ function readSingleBase42NumberBackwards(
       multiplier *= 42;
       // Check for overflow
       if (value > Number.MAX_SAFE_INTEGER || multiplier > Number.MAX_SAFE_INTEGER) {
-        throw new Z85DecodeError("prefix value overflow");
+        throw new Z855DecodeError("prefix value overflow");
       }
     } else {
       // Terminal digit - this completes the number
@@ -226,7 +226,7 @@ function readSingleBase42NumberBackwards(
 
   // Verify we ended on a terminal digit
   if (count === 0 || digits[pos] >= 42) {
-    throw new Z85DecodeError("invalid prefix structure");
+    throw new Z855DecodeError("invalid prefix structure");
   }
 
   return { value, digitsConsumed: count };
@@ -243,7 +243,7 @@ function readSingleBase42NumberBackwards(
  */
 function readOffsetAndLengthFromPrefix(prefixDigits: number[]): { offset: number; length: number } {
   if (prefixDigits.length === 0) {
-    throw new Z85DecodeError("no prefix digits");
+    throw new Z855DecodeError("no prefix digits");
   }
 
   // Read length first (backwards from end)
@@ -266,7 +266,7 @@ function readOffsetAndLengthFromPrefix(prefixDigits: number[]): { offset: number
 
   // Verify we consumed all digits
   if (lengthConsumed + offsetConsumed !== prefixDigits.length) {
-    throw new Z85DecodeError("invalid prefix structure");
+    throw new Z855DecodeError("invalid prefix structure");
   }
 
   return { offset, length };
@@ -320,7 +320,7 @@ function generateLongEscapePrefix(length: number): string[] {
 /**
  * Calculate the standard Z85 output length for a given input byte count.
  */
-function z85OutputLength(inputBytes: number): number {
+function z855OutputLength(inputBytes: number): number {
   // ceil(inputBytes * 5 / 4)
   return Math.ceil((inputBytes * 5) / 4);
 }
@@ -353,10 +353,10 @@ const MAX_LONG_PASSTHROUGH_LENGTH = 65536;
 /**
  * Error class for Z85 decoding failures
  */
-export class Z85DecodeError extends Error {
+export class Z855DecodeError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "Z85DecodeError";
+    this.name = "Z855DecodeError";
   }
 }
 
@@ -586,7 +586,7 @@ function encodePartialToArray(
  *
  * @param input - The Z85 encoded string
  * @returns The decoded bytes as Uint8Array
- * @throws Z85DecodeError on invalid input
+ * @throws Z855DecodeError on invalid input
  */
 export function decode(input: string): Uint8Array {
   // Handle empty input
@@ -621,7 +621,7 @@ export function decode(input: string): Uint8Array {
 
       if (currentBlockDigits.length === 0) {
         // No prefix digits means invalid encoding
-        throw new Z85DecodeError("no prefix digits before |");
+        throw new Z855DecodeError("no prefix digits before |");
       }
 
       // Try to read offset and length from prefix digits
@@ -630,7 +630,7 @@ export function decode(input: string): Uint8Array {
       // Handle length semantics
       if (length >= 1 && length <= 7) {
         // Invalid: should use ,;_~ escapes for 4-7 bytes
-        throw new Z85DecodeError(`invalid length ${length} for | escape (use ,;_~ for 4-7 bytes)`);
+        throw new Z855DecodeError(`invalid length ${length} for | escape (use ,;_~ for 4-7 bytes)`);
       }
 
       if (length === 0) {
@@ -654,17 +654,17 @@ export function decode(input: string): Uint8Array {
       // Skip offset padding characters (dots before raw bytes)
       for (let i = 0; i < offset; i++) {
         if (inIdx >= input.length) {
-          throw new Z85DecodeError("insufficient input for offset padding");
+          throw new Z855DecodeError("insufficient input for offset padding");
         }
         if (input.charCodeAt(inIdx) !== RAW_ESCAPE_PADDING) {
-          throw new Z85DecodeError("expected padding dot for offset");
+          throw new Z855DecodeError("expected padding dot for offset");
         }
         inIdx += 1;
       }
 
       // Ensure we have enough input for the raw bytes
       if (inIdx + rawLen > input.length) {
-        throw new Z85DecodeError(`insufficient bytes for | escape: need ${rawLen}, have ${input.length - inIdx}`);
+        throw new Z855DecodeError(`insufficient bytes for | escape: need ${rawLen}, have ${input.length - inIdx}`);
       }
 
       // Output the raw bytes
@@ -706,7 +706,7 @@ export function decode(input: string): Uint8Array {
 
       // Ensure we have enough characters for the passthrough bytes
       if (inIdx + passLen >= input.length) {
-        throw new Z85DecodeError("incomplete passthrough sequence");
+        throw new Z855DecodeError("incomplete passthrough sequence");
       }
 
       // Extract the passthrough bytes
@@ -819,7 +819,7 @@ export function decode(input: string): Uint8Array {
       // Regular Z85 character
       const digit = Z85_DECODE_TABLE[charCode];
       if (digit === -1) {
-        throw new Z85DecodeError(
+        throw new Z855DecodeError(
           `invalid character in Z85 input: 0x${charCode.toString(16).padStart(2, "0").toUpperCase()}`
         );
       }
@@ -860,7 +860,7 @@ export function decode(input: string): Uint8Array {
 
         // Check for overflow
         if (value > 0xffffffff) {
-          throw new Z85DecodeError("Z85 value overflow");
+          throw new Z855DecodeError("Z85 value overflow");
         }
 
         // Output 4 bytes
@@ -882,7 +882,7 @@ export function decode(input: string): Uint8Array {
 
     // Invalid: 1 character doesn't map to a valid byte count
     if (numChars === 1) {
-      throw new Z85DecodeError("invalid Z85 input length");
+      throw new Z855DecodeError("invalid Z85 input length");
     }
 
     // Decode partial block: 2 chars -> 1 byte, 3 chars -> 2 bytes, 4 chars -> 3 bytes
@@ -895,11 +895,11 @@ export function decode(input: string): Uint8Array {
 
     // Check overflow based on expected byte count
     if (numBytes === 1 && value > 0xff) {
-      throw new Z85DecodeError("Z85 value overflow");
+      throw new Z855DecodeError("Z85 value overflow");
     } else if (numBytes === 2 && value > 0xffff) {
-      throw new Z85DecodeError("Z85 value overflow");
+      throw new Z855DecodeError("Z85 value overflow");
     } else if (numBytes === 3 && value > 0xffffff) {
-      throw new Z85DecodeError("Z85 value overflow");
+      throw new Z855DecodeError("Z85 value overflow");
     }
 
     // Output the appropriate number of bytes
@@ -921,7 +921,7 @@ export function decode(input: string): Uint8Array {
 
 /**
  * Decode a full 5-character block into a number.
- * Throws Z85DecodeError if any character is invalid or if the value overflows u32.
+ * Throws Z855DecodeError if any character is invalid or if the value overflows u32.
  */
 function decodeBlock(input: string, startIdx: number): number {
   let value = 0;
@@ -934,7 +934,7 @@ function decodeBlock(input: string, startIdx: number): number {
     const digit = Z85_DECODE_TABLE[charCode];
 
     if (digit === -1) {
-      throw new Z85DecodeError(
+      throw new Z855DecodeError(
         `invalid character in Z85 input: 0x${charCode.toString(16).padStart(2, "0").toUpperCase()}`
       );
     }
@@ -945,7 +945,7 @@ function decodeBlock(input: string, startIdx: number): number {
   // Check for overflow (max valid Z85 5-char value is 85^5 - 1 = 4,437,053,124)
   // But we need it to fit in u32 (max 4,294,967,295 = 0xFFFFFFFF)
   if (value > 0xffffffff) {
-    throw new Z85DecodeError("Z85 value overflow");
+    throw new Z855DecodeError("Z85 value overflow");
   }
 
   return value;
@@ -967,7 +967,7 @@ function decodePartialBlock(
     const digit = Z85_DECODE_TABLE[charCode];
 
     if (digit === -1) {
-      throw new Z85DecodeError(
+      throw new Z855DecodeError(
         `invalid character in Z85 input: 0x${charCode.toString(16).padStart(2, "0").toUpperCase()}`
       );
     }
@@ -1004,7 +1004,7 @@ function decodePartialBlock(
  * @param highDigits - Array of (P+1) Z85 digit values (0-84)
  * @param knownLowBytes - Array of (4-P) known low-order bytes from passthrough
  * @returns The 32-bit before block value
- * @throws Z85DecodeError if no valid value exists
+ * @throws Z855DecodeError if no valid value exists
  */
 function computeBeforeBlockFromExtendedDigits(
   highDigits: number[],
@@ -1030,7 +1030,7 @@ function computeBeforeBlockFromExtendedDigits(
   if (numKnownBytes === 0) {
     // P = 4, numDigits = 5: we have a full Z85 block, no additional constraint
     if (rangeStart > 0xffffffff) {
-      throw new Z85DecodeError("Z85 value overflow in extended passthrough decode");
+      throw new Z855DecodeError("Z85 value overflow in extended passthrough decode");
     }
     return rangeStart;
   }
@@ -1047,7 +1047,7 @@ function computeBeforeBlockFromExtendedDigits(
     if (knownPart >= rangeStart && knownPart < rangeEnd) {
       return knownPart;
     } else {
-      throw new Z85DecodeError("no valid value for extended passthrough decode");
+      throw new Z855DecodeError("no valid value for extended passthrough decode");
     }
   }
 
@@ -1068,10 +1068,10 @@ function computeBeforeBlockFromExtendedDigits(
   // With P+1 digits, the range size is small enough that at most one value matches.
   // Verify the candidate is in range.
   if (candidate >= rangeEnd) {
-    throw new Z85DecodeError("no valid value for extended passthrough decode");
+    throw new Z855DecodeError("no valid value for extended passthrough decode");
   }
   if (candidate > 0xffffffff) {
-    throw new Z85DecodeError("Z85 value overflow in extended passthrough decode");
+    throw new Z855DecodeError("Z85 value overflow in extended passthrough decode");
   }
 
   return candidate;
@@ -1093,7 +1093,7 @@ function computeBeforeBlockFromExtendedDigits(
  * @param highDigits - Array of P Z85 digit values (0-84)
  * @param knownLowBytes - Array of (4-P) known low-order bytes from passthrough
  * @returns The canonical minimum 32-bit value
- * @throws Z85DecodeError if no valid value exists (should not happen with valid input)
+ * @throws Z855DecodeError if no valid value exists (should not happen with valid input)
  */
 function computeCanonicalMinimum(
   highDigits: number[],
@@ -1139,7 +1139,7 @@ function computeCanonicalMinimum(
     // P = 4: No constraint from known bytes, just return rangeStart
     // But we need to check it fits in u32
     if (rangeStart > 0xffffffff) {
-      throw new Z85DecodeError("Z85 value overflow in non-aligned decode");
+      throw new Z855DecodeError("Z85 value overflow in non-aligned decode");
     }
     return rangeStart;
   }
@@ -1157,10 +1157,10 @@ function computeCanonicalMinimum(
 
   // Verify candidate is in range and fits in u32
   if (candidate >= rangeEnd) {
-    throw new Z85DecodeError("no valid value for non-aligned passthrough decode");
+    throw new Z855DecodeError("no valid value for non-aligned passthrough decode");
   }
   if (candidate > 0xffffffff) {
-    throw new Z85DecodeError("Z85 value overflow in non-aligned decode");
+    throw new Z855DecodeError("Z85 value overflow in non-aligned decode");
   }
 
   return candidate;
@@ -1327,7 +1327,7 @@ function reconstructAfterBlockValue(
   if (candidate >= rangeStart + rangeSize) {
     // This shouldn't happen with valid input, but fall back to rangeStart
     // (This could indicate malformed input)
-    throw new Z85DecodeError("invalid after-block reconstruction");
+    throw new Z855DecodeError("invalid after-block reconstruction");
   }
 
   return candidate >>> 0; // Ensure unsigned
@@ -1463,9 +1463,9 @@ function tryLongPassthrough(
   // We need to calculate padding to maintain length invariant.
   //
   // IMPORTANT: Z85 output length is NOT additive!
-  // z85OutputLength(a + b) != z85OutputLength(a) + z85OutputLength(b) in general.
+  // z855OutputLength(a + b) != z855OutputLength(a) + z855OutputLength(b) in general.
   //
-  // We must ensure: escape_chars + z85OutputLength(remaining) <= z85OutputLength(total)
+  // We must ensure: escape_chars + z855OutputLength(remaining) <= z855OutputLength(total)
   // where total = bytesRemaining and remaining = bytesRemaining - rawLen.
 
   const rawLen = Math.min(safeCount, MAX_LONG_PASSTHROUGH_LENGTH);
@@ -1473,9 +1473,9 @@ function tryLongPassthrough(
 
   // Calculate the budget available for the escape sequence
   // Total standard Z85 length for all remaining bytes
-  const totalStandardLen = z85OutputLength(bytesRemaining);
+  const totalStandardLen = z855OutputLength(bytesRemaining);
   // Standard Z85 length for bytes after the passthrough
-  const afterLen = z85OutputLength(bytesRemaining - rawLen);
+  const afterLen = z855OutputLength(bytesRemaining - rawLen);
   // Available chars for our escape (must not exceed this to maintain invariant)
   const availableChars = totalStandardLen - afterLen;
 
@@ -1712,12 +1712,12 @@ function tryBlockAlignedExtendedPassthrough(
     return null;
   }
 
-  // Check the length invariant: passthrough_output + z85(remaining) == z85(total)
+  // Check the length invariant: passthrough_output + z855(remaining) == z855(total)
   // Block-aligned output is 1 (escape) + K (raw) = K+1 chars.
   const totalRemaining = input.length - blockStart;
   const remaining = totalRemaining - k;
   const passthroughOutputChars = k + 1;
-  if (passthroughOutputChars + z85OutputLength(remaining) !== z85OutputLength(totalRemaining)) {
+  if (passthroughOutputChars + z855OutputLength(remaining) !== z855OutputLength(totalRemaining)) {
     return null;
   }
 
@@ -1782,7 +1782,7 @@ function tryExtendedPassthroughOfLength(
     }
     const remaining = totalRemaining - bytesConsumed;
     const passthroughOutputChars = bytesConsumed + 2; // (P+1) + 1 + K = P+K+2
-    if (passthroughOutputChars + z85OutputLength(remaining) !== z85OutputLength(totalRemaining)) {
+    if (passthroughOutputChars + z855OutputLength(remaining) !== z855OutputLength(totalRemaining)) {
       continue; // Would violate length invariant
     }
 

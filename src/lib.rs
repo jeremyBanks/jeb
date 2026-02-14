@@ -1,3 +1,3 @@
-pub mod z85;
+pub mod z855;
 
-pub use z85::{decode, encode, DecodeError};
+pub use z855::{decode, encode, DecodeError};

@@ -1,6 +1,6 @@
 use std::io::{self, Read, Write};
 
-use cleanroom::z85;
+use z855::z855;
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
@@ -9,7 +9,7 @@ fn main() -> ExitCode {
 
     if args.len() != 2 {
         eprintln!("error: expected exactly one argument: 'encode' or 'decode'");
-        eprintln!("Usage: {} <encode|decode>", args.get(0).map(|s| s.as_str()).unwrap_or("z85"));
+        eprintln!("Usage: {} <encode|decode>", args.get(0).map(|s| s.as_str()).unwrap_or("z855"));
         return ExitCode::FAILURE;
     }
 
@@ -24,8 +24,8 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
 
-            // Encode to Z85
-            let encoded = z85::encode(&input);
+            // Encode to Z855
+            let encoded = z855::encode(&input);
 
             // Write to stdout
             if let Err(e) = io::stdout().write_all(encoded.as_bytes()) {
@@ -43,7 +43,7 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
 
-            // Convert input to string (Z85 is ASCII, so this should be valid UTF-8)
+            // Convert input to string (Z855 is ASCII, so this should be valid UTF-8)
             let input_str = match std::str::from_utf8(&input) {
                 Ok(s) => s,
                 Err(e) => {
@@ -52,8 +52,8 @@ fn main() -> ExitCode {
                 }
             };
 
-            // Decode from Z85
-            let decoded = match z85::decode(input_str) {
+            // Decode from Z855
+            let decoded = match z855::decode(input_str) {
                 Ok(bytes) => bytes,
                 Err(e) => {
                     eprintln!("error: {}", e);

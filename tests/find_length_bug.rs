@@ -1,6 +1,6 @@
-// Minimal test case for the Z85 length invariant bug.
+// Minimal test case for the Z855 length invariant bug.
 //
-// Bug: The extended Z85 encoder produces MORE characters than standard Z85
+// Bug: The extended Z855 encoder produces MORE characters than standard Z85
 // for certain input patterns involving safe bytes followed by unsafe bytes.
 //
 // The bug triggers when:
@@ -11,7 +11,7 @@
 // Root cause: The length-prefixed `|` escape does not maintain the Z85 length
 // invariant when the safe byte count leaves a non-multiple-of-4 remainder.
 
-use cleanroom::z85::{encode, encode_standard};
+use z855::z855::{encode, encode_standard};
 
 /// Check if the length invariant holds for a given input.
 /// Returns Some((extended, standard, diff)) if invariant is violated.
@@ -140,7 +140,7 @@ fn test_accumulating_bug() {
 #[test]
 fn test_summarize_findings() {
     println!("\n========================================");
-    println!("SUMMARY: Z85 Length Invariant Bug");
+    println!("SUMMARY: Z855 Length Invariant Bug");
     println!("========================================\n");
 
     println!("SMALLEST INPUT THAT TRIGGERS THE BUG:");

@@ -1,5 +1,5 @@
-// Z85 Encoding/Decoding Implementation
-// =====================================
+// Z855 Encoding/Decoding Implementation
+// ======================================
 //
 // Z85 is a binary-to-text encoding scheme defined by ZeroMQ (RFC 32).
 // It encodes binary data into printable ASCII characters, similar to Base64
@@ -568,7 +568,7 @@ fn try_non_aligned_at_position(
     let mut output = Vec::new();
 
     // 1. P high-order Z85 chars
-    let high_digits = get_high_order_z85_chars(before_value, p);
+    let high_digits = get_high_order_z855_chars(before_value, p);
     output.extend_from_slice(&high_digits);
 
     // 2. Comma
@@ -578,7 +578,7 @@ fn try_non_aligned_at_position(
     output.extend_from_slice(pass_bytes);
 
     // 4. (5-P) low-order Z85 chars from after_value
-    let low_digits = get_low_order_z85_chars(after_value, 5 - p);
+    let low_digits = get_low_order_z855_chars(after_value, 5 - p);
     output.extend_from_slice(&low_digits);
 
     // Bytes consumed: before block (4) + after block (4) = 8
@@ -589,7 +589,7 @@ fn try_non_aligned_at_position(
 }
 
 /// Get the first P Z85 characters (high-order digits) for a 32-bit value.
-fn get_high_order_z85_chars(value: u32, p: usize) -> Vec<u8> {
+fn get_high_order_z855_chars(value: u32, p: usize) -> Vec<u8> {
     // Full Z85 encoding produces 5 chars
     let mut chars = [0u8; 5];
     let mut v = value;
@@ -602,7 +602,7 @@ fn get_high_order_z85_chars(value: u32, p: usize) -> Vec<u8> {
 }
 
 /// Get the last (5-P) Z85 characters (low-order digits) for a 32-bit value.
-fn get_low_order_z85_chars(value: u32, num_chars: usize) -> Vec<u8> {
+fn get_low_order_z855_chars(value: u32, num_chars: usize) -> Vec<u8> {
     // Full Z85 encoding produces 5 chars
     let mut chars = [0u8; 5];
     let mut v = value;
@@ -701,9 +701,9 @@ fn try_long_passthrough(
     // We need to calculate padding to maintain length invariant.
     //
     // IMPORTANT: Z85 output length is NOT additive!
-    // z85_output_length(a + b) != z85_output_length(a) + z85_output_length(b) in general.
+    // z855_output_length(a + b) != z855_output_length(a) + z855_output_length(b) in general.
     //
-    // We must ensure: escape_chars + z85_output_length(remaining) <= z85_output_length(total)
+    // We must ensure: escape_chars + z855_output_length(remaining) <= z855_output_length(total)
     // where total = bytes_remaining and remaining = bytes_remaining - raw_len.
 
     let raw_len = safe_count.min(MAX_LONG_PASSTHROUGH_LENGTH);
@@ -711,9 +711,9 @@ fn try_long_passthrough(
 
     // Calculate the budget available for the escape sequence
     // Total standard Z85 length for all remaining bytes
-    let total_standard_len = z85_output_length(bytes_remaining);
+    let total_standard_len = z855_output_length(bytes_remaining);
     // Standard Z85 length for bytes after the passthrough
-    let after_len = z85_output_length(bytes_remaining - raw_len);
+    let after_len = z855_output_length(bytes_remaining - raw_len);
     // Available chars for our escape (must not exceed this to maintain invariant)
     let available_chars = total_standard_len - after_len;
 
@@ -941,12 +941,12 @@ fn try_block_aligned_extended_passthrough(
         return None;
     }
 
-    // Check the length invariant: passthrough_output + z85(remaining) == z85(total)
+    // Check the length invariant: passthrough_output + z855(remaining) == z855(total)
     // Block-aligned output is 1 (escape) + K (raw) = K+1 chars.
     let total_remaining = input.len() - block_start;
     let remaining = total_remaining - k;
     let passthrough_output_chars = k + 1;
-    if passthrough_output_chars + z85_output_length(remaining) != z85_output_length(total_remaining) {
+    if passthrough_output_chars + z855_output_length(remaining) != z855_output_length(total_remaining) {
         return None;
     }
 
@@ -990,8 +990,8 @@ fn try_extended_passthrough_of_length(
     //
     // Length invariant: the remaining bytes after the passthrough must form
     // complete 4-byte blocks (i.e., remaining % 4 == 0). This ensures that
-    // z85_output_length(consumed) + z85_output_length(remaining) ==
-    // z85_output_length(total), maintaining the overall length invariant.
+    // z855_output_length(consumed) + z855_output_length(remaining) ==
+    // z855_output_length(total), maintaining the overall length invariant.
     //
     // When P+K is already a multiple of 4 (e.g., P+K=8), the invariant is
     // automatically satisfied regardless of total input length.
@@ -1014,7 +1014,7 @@ fn try_extended_passthrough_of_length(
         }
         let remaining = total_remaining - bytes_consumed;
         let passthrough_output_chars = bytes_consumed + 2; // (P+1) + 1 + K = P+K+2
-        if passthrough_output_chars + z85_output_length(remaining) != z85_output_length(total_remaining) {
+        if passthrough_output_chars + z855_output_length(remaining) != z855_output_length(total_remaining) {
             continue; // Would violate length invariant
         }
 
@@ -1086,7 +1086,7 @@ fn try_extended_passthrough_at_position(
     let mut output = Vec::new();
 
     // 1. (P+1) Z85 chars for before block (partial encoding)
-    let before_chars = get_high_order_z85_chars(before_value, p + 1);
+    let before_chars = get_high_order_z855_chars(before_value, p + 1);
     output.extend_from_slice(&before_chars);
 
     // 2. Escape character
@@ -1149,7 +1149,7 @@ fn encode_partial_to_slice(mut value: u32, num_chars: usize, output: &mut [u8]) 
 /// Get the P high-order Z85 digits for a 32-bit value.
 ///
 /// The Z85 encoding of a 32-bit value produces 5 digits. This returns the first P digits.
-fn get_high_order_z85_digits(value: u32, p: usize) -> Vec<u8> {
+fn get_high_order_z855_digits(value: u32, p: usize) -> Vec<u8> {
     // Full Z85 encoding produces 5 digits
     let mut digits = vec![0u8; 5];
     let mut v = value;
@@ -1214,7 +1214,7 @@ fn compute_canonical_minimum_for_encoding(
 /// canonical minimum that the decoder would compute given those P digits and
 /// the known low bytes from the passthrough.
 fn is_canonical_minimum(block_value: u32, p: usize, known_low_bytes: &[u8]) -> bool {
-    let high_digits = get_high_order_z85_digits(block_value, p);
+    let high_digits = get_high_order_z855_digits(block_value, p);
     match compute_canonical_minimum_for_encoding(&high_digits, known_low_bytes) {
         Some(canonical_min) => block_value == canonical_min,
         None => false,
@@ -1414,7 +1414,7 @@ fn generate_long_escape_prefix(length: usize) -> Vec<u8> {
 
 /// Calculate the standard Z85 output length for a given input byte count.
 #[inline]
-fn z85_output_length(input_bytes: usize) -> usize {
+fn z855_output_length(input_bytes: usize) -> usize {
     // ceil(input_bytes * 5 / 4)
     (input_bytes * 5 + 3) / 4
 }
@@ -2795,7 +2795,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mixed_passthrough_and_z85() {
+    fn test_mixed_passthrough_and_z855() {
         // Mix of safe and non-safe blocks
         // First 4 bytes: 0x00 0x00 0x00 0x00 (not safe - contains null bytes)
         // Next 4 bytes: "test" (safe)
@@ -3416,7 +3416,7 @@ mod tests {
     }
 
     #[test]
-    fn test_long_escape_followed_by_normal_z85() {
+    fn test_long_escape_followed_by_normal_z855() {
         // Long escape followed by normal Z85 encoded data
         // 8|abcdefgh followed by Z85 for [0,0,0,0]
         let encoded = "8|abcdefgh00000";

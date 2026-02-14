@@ -1,4 +1,4 @@
-//! Encodes the release binary itself as extended Z85 and saves to target/
+//! Encodes the release binary itself as extended Z855 and saves to target/
 //!
 //! Run with: cargo run --example self_encode
 
@@ -20,19 +20,19 @@ fn main() {
     }
 
     // Read the release binary
-    let binary_path = "target/release/cleanroom";
+    let binary_path = "target/release/z855";
     println!("Reading binary from {}...", binary_path);
     let binary_data = fs::read(binary_path).expect("Failed to read release binary");
     println!("Binary size: {} bytes", binary_data.len());
 
-    // Encode as extended Z85
-    println!("Encoding as extended Z85...");
-    let encoded = cleanroom::encode(&binary_data);
-    println!("Extended Z85 size: {} characters", encoded.len());
+    // Encode as extended Z855
+    println!("Encoding as extended Z855...");
+    let encoded = z855::encode(&binary_data);
+    println!("Extended Z855 size: {} characters", encoded.len());
 
     // Also encode as standard Z85 for comparison
     println!("Encoding as standard Z85...");
-    let standard = cleanroom::z85::encode_standard(&binary_data);
+    let standard = z855::z855::encode_standard(&binary_data);
     println!("Standard Z85 size: {} characters", standard.len());
 
     let expected_len = (binary_data.len() * 5 + 3) / 4;
@@ -41,7 +41,7 @@ fn main() {
              encoded.len() as i64 - standard.len() as i64);
 
     // Try decoding to verify correctness
-    match cleanroom::decode(&encoded) {
+    match z855::decode(&encoded) {
         Ok(decoded) => {
             if decoded == binary_data {
                 println!("Decoding verification: OK");
@@ -66,7 +66,7 @@ fn main() {
     with_newlines.push('\n'); // trailing newline
 
     // Save to target/
-    let output_path = "target/cleanroom-release.z85.txt";
+    let output_path = "target/z855-release.z855.txt";
     println!("Writing to {}...", output_path);
     let mut file = fs::File::create(output_path).expect("Failed to create output file");
     file.write_all(with_newlines.as_bytes()).expect("Failed to write output");
