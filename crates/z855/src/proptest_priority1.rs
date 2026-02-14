@@ -6,7 +6,10 @@
 #![cfg(test)]
 
 use proptest::prelude::*;
-use crate::z855::{encode, decode, Z85_ALPHABET};
+use crate::z855::{encode, decode};
+
+// Z85 alphabet for reference encoder
+const Z85_ALPHABET: &[u8; 85] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
 
 // =============================================================================
 // Helper: Standard Z85 Reference Encoder
