@@ -35,6 +35,9 @@ pub struct GameBoy {
     // Serial I/O for Blargg test output
     serial_output: Vec<u8>,
     sb_register: u8,
+    
+    // Joypad state
+    joypad_buttons: u8, // Bits 0-7: Right, Left, Up, Down, A, B, Select, Start
 }
 
 pub struct Output {
@@ -149,7 +152,13 @@ impl GameBoy {
             output_buffer,
             serial_output: Vec::new(),
             sb_register: 0,
+            joypad_buttons: 0,
         }
+    }
+    
+    /// Set joypad button state. Bits: 0=Right, 1=Left, 2=Up, 3=Down, 4=A, 5=B, 6=Select, 7=Start
+    pub fn set_joypad(&mut self, buttons: u8) {
+        self.joypad_buttons = buttons;
     }
 
     /// Create a new GameBoy with post-boot-ROM state (skips boot ROM).

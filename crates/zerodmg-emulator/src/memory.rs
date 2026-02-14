@@ -168,7 +168,35 @@ impl GameBoy {
     fn read_io(&self, addr: u16) -> u8 {
         match addr {
             // Joypad
-            0xFF00 => 0xFF, // No buttons pressed
+            0xFF00 => {
+                // P1/JOYP register
+                // Bit 5: Select Action buttons (0=selected)
+                // Bit 4: Select Direction buttons (0=selected)
+                // Bits 3-0: Button states (0=pressed, 1=not pressed)
+                let p1 = self.mem.io_registers[0];
+                let select_action = (p1 & 0x20) == 0;
+                let select_direction = (p1 & 0x10) == 0;
+                
+                let mut result = p1 | 0x0F; // Start with all buttons unpressed
+                
+                if select_action {
+                    // Action buttons: A, B, Select, Start
+                    if (self.joypad_buttons & 0x10) != 0 { result &= !0x01; } // A
+                    if (self.joypad_buttons & 0x20) != 0 { result &= !0x02; } // B
+                    if (self.joypad_buttons & 0x40) != 0 { result &= !0x04; } // Select
+                    if (self.joypad_buttons & 0x80) != 0 { result &= !0x08; } // Start
+                }
+                
+                if select_direction {
+                    // Direction buttons: Right, Left, Up, Down
+                    if (self.joypad_buttons & 0x01) != 0 { result &= !0x01; } // Right
+                    if (self.joypad_buttons & 0x02) != 0 { result &= !0x02; } // Left
+                    if (self.joypad_buttons & 0x04) != 0 { result &= !0x04; } // Up
+                    if (self.joypad_buttons & 0x08) != 0 { result &= !0x08; } // Down
+                }
+                
+                result
+            }
             // Serial Data (SB)
             0xFF01 => self.sb_register,
             // Serial Control (SC)

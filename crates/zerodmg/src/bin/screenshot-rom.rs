@@ -18,19 +18,27 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
-        eprintln!("Usage: screenshot-rom <path-to-rom.gb> [output-dir]");
+        eprintln!("Usage: screenshot-rom <path-to-rom.gb> [output-dir] [--start]");
         eprintln!();
         eprintln!("Runs ROM for 10 seconds, takes screenshot every second.");
         eprintln!("Saves frames as frame_001.png, frame_002.png, etc.");
+        eprintln!();
+        eprintln!("Options:");
+        eprintln!("  --start    Press START button at beginning (to skip title screens)");
         return;
     }
 
     let rom_path = &args[1];
-    let output_dir = if args.len() >= 3 {
-        &args[2]
-    } else {
-        "screenshots"
-    };
+    let mut output_dir = "screenshots";
+    let mut press_start = false;
+    
+    for arg in &args[2..] {
+        if arg == "--start" {
+            press_start = true;
+        } else if !arg.starts_with("--") {
+            output_dir = arg;
+        }
+    }
 
     let rom = fs::read(rom_path).expect("Failed to read ROM file");
 
@@ -51,10 +59,27 @@ fn main() {
     let mut cycle_count = 0u64;
     let mut next_screenshot_cycle = 0u64;
     let mut screenshot_num = 1;
+    
+    // START button press timing (if enabled)
+    let start_press_begin = CYCLES_PER_SECOND / 2; // 0.5s
+    let start_press_end = CYCLES_PER_SECOND; // 1.0s
 
+    if press_start {
+        println!("Will press START button at 0.5-1.0s");
+    }
     println!("Running emulator...");
 
     while cycle_count < MAX_CYCLES {
+        // Handle START button press if enabled
+        if press_start {
+            if cycle_count >= start_press_begin && cycle_count < start_press_end {
+                gb.set_joypad(0x80); // START button
+            } else if cycle_count >= start_press_end {
+                gb.set_joypad(0); // Release
+                press_start = false; // Only press once
+            }
+        }
+        
         // Execute one instruction
         let opex = gb.tick();
         let tick_cycles = opex.t_1 - opex.t_0;
