@@ -1073,20 +1073,20 @@ impl CPUController for GameBoy {
 
     fn stack_push(&mut self, value: u16) {
         let sp0 = self.cpu.sp;
-        let sp1 = sp0 - 2;
+        let sp1 = sp0.wrapping_sub(2);
         let (value_low, value_high) = u16_to_u8s(value);
         // GB is little-endian: low byte at lower address
         self.set_mem(sp1, value_low);
-        self.set_mem(sp1 + 1, value_high);
+        self.set_mem(sp1.wrapping_add(1), value_high);
         self.cpu.sp = sp1;
     }
 
     fn stack_pop(&mut self) -> u16 {
         let sp0 = self.cpu.sp;
-        let sp1 = sp0 + 2;
+        let sp1 = sp0.wrapping_add(2);
         // GB is little-endian: low byte at lower address
         let value_low = self.mem(sp0);
-        let value_high = self.mem(sp0 + 1);
+        let value_high = self.mem(sp0.wrapping_add(1));
         let value = u8s_to_u16(value_low, value_high);
         self.cpu.sp = sp1;
         value
