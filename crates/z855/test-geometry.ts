@@ -33,7 +33,7 @@ const testCases = [
 
 for (const { desc, input } of testCases) {
   const inputBytes = new Uint8Array(input);
-  const encoded = z855(inputBytes);
+  const encoded = encode(inputBytes);
   const decoded = decode(encoded);
   
   console.log(desc);
