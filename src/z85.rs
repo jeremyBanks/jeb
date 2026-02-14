@@ -2808,4 +2808,168 @@ mod tests {
         // since they require Z85 context. The previous tests verify the
         // full framing works.
     }
+
+    // =========================================================================
+    // Tests for 8+ byte passthrough decoding (`|` escape)
+    // =========================================================================
+
+    #[test]
+    fn test_long_escape_decode_8bytes() {
+        // 8 bytes exactly - no padding needed
+        // Structure: [prefix digit 8][|][8 raw bytes]
+        // Z85 digit for value 8 is '8'
+        // Total: 1 + 1 + 8 = 10 chars = ceil(8 * 5/4) = 10 ✓
+        let encoded = "8|abcdefgh";
+        let decoded = decode(encoded).unwrap();
+        assert_eq!(decoded, b"abcdefgh");
+    }
+
+    #[test]
+    fn test_long_escape_decode_9bytes() {
+        // 9 bytes - needs 1 padding char
+        // Standard Z85: ceil(9 * 5/4) = ceil(11.25) = 12 chars
+        // Our encoding: 1 (prefix) + 1 (|) + 9 (raw) = 11 chars
+        // Padding: 12 - 11 = 1 char (just the final |)
+        let encoded = "9|abcdefghi|";
+        let decoded = decode(encoded).unwrap();
+        assert_eq!(decoded, b"abcdefghi");
+    }
+
+    #[test]
+    fn test_long_escape_decode_20bytes() {
+        // 20 bytes - needs more padding
+        // Standard Z85: ceil(20 * 5/4) = 25 chars
+        // Our encoding: 1 (prefix) + 1 (|) + 20 (raw) = 22 chars
+        // Padding: 25 - 22 = 3 chars (..| format)
+        let encoded = "k|abcdefghijklmnopqrst..|";
+        let decoded = decode(encoded).unwrap();
+        assert_eq!(decoded, b"abcdefghijklmnopqrst");
+    }
+
+    #[test]
+    fn test_long_escape_decode_42bytes() {
+        // 42 bytes - single digit (42 is still < 42, wait no, 42 requires continuation)
+        // Actually 42 in base-42 is: 1*42 + 0 = digit '1' then digit '0'+42 = 'U' (42+42=84, but wait)
+        // Let me recalculate: value 42 = 1*42 + 0
+        // Big-endian: first digit is 1 (terminal), second digit is 0+42=42 (continuation)
+        // But we read backwards, so prefix is [continuation digit][terminal digit]
+        // In Z85: digit value 42 is 'U', digit value 1 is '1'
+        // So prefix is 'U1' (low digit first in stream, but we read backwards)
+        // Actually wait - the design says prefix is written in reading order
+        // Let me re-read: "Output most significant digit as-is (value < 42)"
+        //               "Output remaining digits with +42 (continuation bit)"
+        // So for 42 = 1*42 + 0:
+        // - Most significant: 1 (terminal)
+        // - Least significant: 0 (continuation, output as 0+42=42)
+        // Stream order: '1' then Z85[42]
+        // Z85[42] = 'U'
+        // Prefix: "1U"
+        //
+        // Let's just use 41 which is a single digit
+        // Z85[41] = 'T' (no, let me check: Z85 alphabet is 0-9a-zA-Z.-:+=^!/*?&<>()[]{}@%$#)
+        // Position 41 is... let me count: 0-9 (10), a-z (26), A-Z (26)...
+        // 0-9: positions 0-9
+        // a-z: positions 10-35
+        // A-Z: positions 36-61
+        // So position 41 is 'F' (41-36=5, so the 6th uppercase letter)
+        //
+        // Actually, let me test with 8 bytes first (single digit '8')
+        // For 41 bytes (single digit 'F'):
+        let raw_bytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO"; // 41 chars
+        let encoded = format!("F|{}", raw_bytes);
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded.len(), 41);
+        assert_eq!(&decoded[..], raw_bytes.as_bytes());
+    }
+
+    #[test]
+    fn test_long_escape_decode_100bytes() {
+        // 100 bytes - multi-digit prefix
+        // 100 = 2*42 + 16
+        // Most significant: 2 (terminal) -> Z85[2] = '2'
+        // Least significant: 16 (continuation) -> Z85[16+42] = Z85[58]
+        // Z85[58] is in the uppercase range... let me check
+        // 36-61 = A-Z, so 58 = 36 + 22 = 'W'
+        // Prefix: "2W"
+        let raw_bytes: Vec<u8> = (0..100).map(|i| (b'a' + (i % 26)) as u8).collect();
+        let encoded = format!("2W|{}", String::from_utf8(raw_bytes.clone()).unwrap());
+        let decoded = decode(&encoded).unwrap();
+        assert_eq!(decoded.len(), 100);
+        assert_eq!(decoded, raw_bytes);
+    }
+
+    #[test]
+    fn test_long_escape_decode_rest_of_input() {
+        // 0| means rest of input is raw
+        // Z85[0] = '0'
+        let encoded = "0|hello world!";
+        let decoded = decode(encoded).unwrap();
+        assert_eq!(decoded, b"hello world!");
+    }
+
+    #[test]
+    fn test_long_escape_decode_invalid_length_1to7() {
+        // Length 1-7 should error
+        for len in 1..=7 {
+            let prefix = match len {
+                1 => '1',
+                2 => '2',
+                3 => '3',
+                4 => '4',
+                5 => '5',
+                6 => '6',
+                7 => '7',
+                _ => unreachable!(),
+            };
+            let encoded = format!("{}|xxxxxxxx", prefix);
+            let result = decode(&encoded);
+            assert!(result.is_err(), "Length {} should be an error", len);
+        }
+    }
+
+    #[test]
+    fn test_long_escape_decode_insufficient_bytes() {
+        // 8-byte escape with only 7 bytes available
+        let result = decode("8|abcdefg");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_long_escape_followed_by_normal_z85() {
+        // Long escape followed by normal Z85 encoded data
+        // 8|abcdefgh followed by Z85 for [0,0,0,0]
+        let encoded = "8|abcdefgh00000";
+        let decoded = decode(encoded).unwrap();
+        assert_eq!(decoded.len(), 12); // 8 + 4
+        assert_eq!(&decoded[0..8], b"abcdefgh");
+        assert_eq!(&decoded[8..12], &[0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_read_long_escape_prefix() {
+        // Test the prefix reading helper directly
+
+        // Single terminal digit: value 8
+        // Z85[8] = '8', which has Z85 digit value 8
+        let result = read_long_escape_prefix(&[8]).unwrap();
+        assert_eq!(result, 8);
+
+        // Single terminal digit: value 0
+        let result = read_long_escape_prefix(&[0]).unwrap();
+        assert_eq!(result, 0);
+
+        // Single terminal digit: value 41
+        let result = read_long_escape_prefix(&[41]).unwrap();
+        assert_eq!(result, 41);
+
+        // Two digits: value 42 = 1*42 + 0
+        // Stream order: [terminal 1][continuation 0+42=42]
+        let result = read_long_escape_prefix(&[1, 42]).unwrap();
+        assert_eq!(result, 42);
+
+        // Two digits: value 100 = 2*42 + 16
+        // Stream order: [terminal 2][continuation 16+42=58]
+        let result = read_long_escape_prefix(&[2, 58]).unwrap();
+        assert_eq!(result, 100);
+    }
 }
