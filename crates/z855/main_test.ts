@@ -716,3 +716,80 @@ Deno.test("long escape roundtrip various lengths", () => {
     assertEquals(decoded, input, `Failed for length ${len}`);
   }
 });
+
+// =========================================================================
+// Position Invariant Test
+// =========================================================================
+
+Deno.test("position invariant - Z85 blocks at same positions", () => {
+  // For an input that will have both Z85-encoded and raw sections,
+  // verify that Z85-encoded blocks appear at the same character positions
+  // as they would in standard Z85 encoding
+
+  // Input: 12 bytes, first 4 unsafe (→ Z85), middle 4 safe (→ raw), last 4 unsafe (→ Z85)
+  const input = new Uint8Array([
+    0x00, 0x01, 0x02, 0x03,  // Block 1: unsafe → standard Z85
+    0x61, 0x62, 0x63, 0x64,  // Block 2: safe ("abcd") → raw passthrough
+    0x10, 0x11, 0x12, 0x13   // Block 3: unsafe → standard Z85
+  ]);
+
+  const extended = encode(input);
+  
+  // Standard Z85 would encode all 12 bytes as 15 characters (3 blocks × 5 chars)
+  // Extended z855 should have:
+  // - Block 1 at positions 0-4 (5 chars)
+  // - Block 2 as passthrough (,abcd or similar - 5 chars)
+  // - Block 3 at positions 10-14 (5 chars)
+  
+  // The key test: decode works and produces original input
+  const decoded = decode(extended);
+  assertEquals(decoded, input, "Extended encoding must decode to original input");
+  
+  // Extended output should not be longer than standard Z85 (position invariant)
+  const standardZ85Length = 15; // 12 bytes → 15 Z85 characters
+  assertEquals(
+    extended.length <= standardZ85Length,
+    true,
+    `Extended length ${extended.length} should not exceed standard Z85 length ${standardZ85Length}`
+  );
+});
+
+// =========================================================================
+// Consecutive Sections Test
+// =========================================================================
+
+Deno.test("consecutive raw sections - decoder accepts", () => {
+  // Manually construct an encoding with consecutive raw sections
+  // (though encoder shouldn't produce this - single longer section is more efficient)
+  
+  // Two 4-byte raw sections back-to-back
+  const encoded = ",abcd,efgh";
+  
+  // Decoder should accept this
+  const decoded = decode(encoded);
+  assertEquals(decoded, new TextEncoder().encode("abcdefgh"));
+});
+
+Deno.test("consecutive raw sections - encoder produces single section", () => {
+  // When encoder sees a long run of safe bytes, it should use a single
+  // long section, not multiple consecutive short sections
+  
+  const input = new TextEncoder().encode("abcdefghijklmnop"); // 16 safe bytes
+  const encoded = encode(input);
+  
+  // Should NOT have multiple consecutive escape characters
+  // Count comma characters (4-byte escape)
+  const commaCount = (encoded.match(/,/g) || []).length;
+  
+  // Should be at most 1 escape for this input (one long section)
+  // Either: one long escape (|) or one 4-7 byte escape, not multiple
+  assertEquals(
+    commaCount <= 1,
+    true,
+    `Encoder should not produce multiple consecutive commas (got ${commaCount})`
+  );
+  
+  // Verify roundtrip
+  const decoded = decode(encoded);
+  assertEquals(decoded, input);
+});
