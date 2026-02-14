@@ -1,9 +1,0 @@
-[package]
-name = "z85-extended"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-
-[workspace]
-# Empty workspace table makes this a standalone package
