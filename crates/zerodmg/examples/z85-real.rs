@@ -200,17 +200,17 @@ fn test_encoding() -> Vec<Instruction> {
     use FlagCondition::*;
     
     // Test: encode 16-bit value using actual division
-    // Using value 210 (0x00D2) - same as 8-bit test
-    // 210 / 85 = 2 remainder 40
-    // 2 / 85 = 0 remainder 2
-    // So digits should be: 0, 0, 0, 2, 40 (reading left to right)
-    // Output: "0002E"
+    // Using value 1234 (0x04D2)
+    // 1234 / 85 = 14 remainder 44
+    // 14 / 85 = 0 remainder 14
+    // So digits should be: 0, 0, 0, 14, 44 (reading left to right)
+    // Output: "000e," (0='0', 14='e', 44=',')
     
     let mut code = vec![
         // Store test value at 0xC100-0xC101 (16-bit, little-endian)
         LD_16_IMMEDIATE(HL, 0xC100),
-        LD_8_IMMEDIATE(A, 0xD2), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // Low: 0xD2 (210)
-        LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A),              // High: 0x00
+        LD_8_IMMEDIATE(A, 0xD2), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // Low: 0xD2
+        LD_8_IMMEDIATE(A, 0x04), LD_8_INTERNAL(AT_HL, A),              // High: 0x04
     ];
     
     // Compute digits from right to left (least to most significant)
@@ -221,38 +221,47 @@ fn test_encoding() -> Vec<Instruction> {
         LD_8_IMMEDIATE(B, 5),         // Digit counter
     ]);
     
-    // DIGIT_LOOP: Compute one digit per iteration
+    // DIGIT_LOOP: Compute one digit per iteration  
     code.extend(vec![
-        // Save digit pointer before we clobber HL
+        // Save digit pointer (HL points to current digit position)
         PUSH(HL),
         
-        // Load 16-bit value into DE
+        // Load 16-bit value from 0xC100-0xC101 into DE
         LD_16_IMMEDIATE(HL, 0xC100),
-        LD_8_INTERNAL(A, AT_HL), LD_8_INTERNAL(E, A),
+        LD_8_INTERNAL(E, AT_HL), // E = byte at 0xC100 (low)
         INC_16(HL),
-        LD_8_INTERNAL(A, AT_HL), LD_8_INTERNAL(D, A),
+        LD_8_INTERNAL(D, AT_HL), // D = byte at 0xC101 (high)
+        // DE now contains our value
         
-        // Divide DE by 85: quotient in BC, remainder in A
+        // Divide DE by 85: quotient → BC, remainder → A
     ]);
     
     code.extend(div_de_by_85_16bit());
     
     code.extend(vec![
-        // Restore digit pointer and store remainder
-        POP(HL), // Restore digit pointer (saved before division)
+        // A now has remainder (the digit)
+        // BC has quotient
+        // Save remainder before we clobber A
+        PUSH_AF,
+        
+        // Store quotient back to 0xC100-0xC101 for next iteration
+        LD_16_IMMEDIATE(HL, 0xC100),
+        LD_8_INTERNAL(A, C), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // Low byte
+        LD_8_INTERNAL(A, B), LD_8_INTERNAL(AT_HL, A),              // High byte
+        
+        // Restore remainder and digit pointer
+        POP_AF, // A = remainder
+        POP(HL), // HL = digit pointer (from start of loop)
+        
+        // Store digit
         LD_8_INTERNAL(AT_HL, A),
         
-        // Store quotient (BC) back to 0xC100-0xC101
-        LD_16_IMMEDIATE(DE, 0xC100),
-        LD_8_INTERNAL(A, C), LD_8_TO_SECONDARY(AT_DE), INC_16(DE), // Low byte
-        LD_8_INTERNAL(A, B), LD_8_TO_SECONDARY(AT_DE),              // High byte
-        
-        // Move to next digit position
+        // Move to next digit position (right-to-left)
         DEC_16(HL),
         
         // Loop
         DEC(B),
-        JR_IF(if_NZ, -46), // 44 bytes loop body + 2 for JR
+        JR_IF(if_NZ, -46), // Jump back to PUSH HL at loop start (0x0281)
     ]);
     
     // Output the 5 digits
