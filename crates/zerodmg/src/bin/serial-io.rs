@@ -21,12 +21,10 @@ use zerodmg_emulator::cpu::CPUController;
 use zerodmg_emulator::video::VideoController;
 
 #[cfg(unix)]
-use std::os::unix::io::AsRawFd;
-
 const ACTIVITY_TIMEOUT: usize = 4_000_000;  // 4M cycles (~1 second)
 const MAX_TOTAL_CYCLES: usize = 20_000_000; // Safety limit
 const INPUT_QUEUE_LIMIT: usize = 10;         // Backpressure threshold
-const SERIAL_TRANSFER_CYCLES: usize = 1024;  // Realistic serial timing
+const _SERIAL_TRANSFER_CYCLES: usize = 1024;  // For future use (realistic serial timing)
 
 fn main() {
     let args: Vec<String> = env::args().collect();
