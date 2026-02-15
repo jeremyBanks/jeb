@@ -258,10 +258,16 @@ impl GameBoy {
         match addr {
             // Serial Data (SB)
             0xFF01 => self.sb_register = value,
-            // Serial Control (SC) - writing 0x81 triggers transfer
+            // Serial Control (SC)
             0xFF02 => {
                 if value == 0x81 {
+                    // Output: push SB to output queue
                     self.serial_output.push(self.sb_register);
+                } else if value == 0x80 {
+                    // Input: pop from input queue into SB
+                    if !self.serial_input.is_empty() {
+                        self.sb_register = self.serial_input.remove(0);
+                    }
                 }
             }
             // Timer registers

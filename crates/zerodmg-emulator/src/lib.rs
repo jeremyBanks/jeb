@@ -34,6 +34,7 @@ pub struct GameBoy {
 
     // Serial I/O for Blargg test output
     serial_output: Vec<u8>,
+    serial_input: Vec<u8>,  // Queue of bytes to be read by ROM
     sb_register: u8,
     
     // Joypad state
@@ -151,6 +152,7 @@ impl GameBoy {
             debug_latest_executions_next_i: 0,
             output_buffer,
             serial_output: Vec::new(),
+            serial_input: Vec::new(),
             sb_register: 0,
             joypad_buttons: 0,
         }
@@ -174,6 +176,16 @@ impl GameBoy {
     /// Returns the accumulated serial output from Blargg tests.
     pub fn serial_output(&self) -> &[u8] {
         &self.serial_output
+    }
+    
+    /// Push a byte to the serial input queue (for ROM to read via 0xFF01).
+    pub fn push_serial_input(&mut self, byte: u8) {
+        self.serial_input.push(byte);
+    }
+    
+    /// Check if serial input is available.
+    pub fn has_serial_input(&self) -> bool {
+        !self.serial_input.is_empty()
     }
 
     /// Returns the current program counter value.
