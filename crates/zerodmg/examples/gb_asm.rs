@@ -24,6 +24,7 @@ enum AsmLine {
     Label(String),
     Instruction(Instruction),
     Jump { cond: Option<FlagCondition>, target: String },
+    LongJump { cond: Option<FlagCondition>, target: String },
 }
 
 pub struct Assembler {
@@ -59,6 +60,16 @@ impl Assembler {
         self
     }
     
+    pub fn jp(&mut self, target: &str) -> &mut Self {
+        self.lines.push(AsmLine::LongJump { cond: None, target: target.to_string() });
+        self
+    }
+    
+    pub fn jp_cond(&mut self, cond: FlagCondition, target: &str) -> &mut Self {
+        self.lines.push(AsmLine::LongJump { cond: Some(cond), target: target.to_string() });
+        self
+    }
+    
     /// Assemble to final instruction list with resolved jumps
     pub fn assemble(mut self) -> Vec<Instruction> {
         // First pass: calculate label positions
@@ -75,6 +86,9 @@ impl Assembler {
                 }
                 AsmLine::Jump { .. } => {
                     pc += 2; // JR is always 2 bytes
+                }
+                AsmLine::LongJump { .. } => {
+                    pc += 3; // JP is always 3 bytes
                 }
             }
         }
@@ -100,7 +114,7 @@ impl Assembler {
                     let offset = (*target_pc as i32) - ((pc + 2) as i32);
                     
                     if offset < -128 || offset > 127 {
-                        panic!("Jump offset {} out of range for JR to {}", offset, target);
+                        panic!("Jump offset {} out of range for JR to {} (use jp instead)", offset, target);
                     }
                     
                     let inst = if let Some(cond) = cond {
@@ -111,6 +125,19 @@ impl Assembler {
                     
                     result.push(inst);
                     pc += 2;
+                }
+                AsmLine::LongJump { cond, target } => {
+                    let target_pc = label_positions.get(target)
+                        .expect(&format!("Undefined label: {}", target));
+                    
+                    let inst = if let Some(cond) = cond {
+                        Instruction::JP_IF(*cond, *target_pc as u16)
+                    } else {
+                        Instruction::JP(*target_pc as u16)
+                    };
+                    
+                    result.push(inst);
+                    pc += 3;
                 }
             }
         }
