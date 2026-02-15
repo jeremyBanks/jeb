@@ -172,9 +172,8 @@ fn find_encoded_files(test_cases_dir: &Path, base_name: &str) -> EncodedFiles {
     result
 }
 
-#[test]
-fn test_shared_test_cases() {
-    let test_cases_dir = Path::new("test-cases");
+fn collect_test_case_base_names(test_cases_dir: &Path) -> Vec<String> {
+    let mut base_names = Vec::new();
 
     for entry in fs::read_dir(test_cases_dir).expect("Failed to read test-cases directory") {
         let entry = entry.expect("Failed to read directory entry");
@@ -186,11 +185,25 @@ fn test_shared_test_cases() {
 
         let base_name = path.file_stem().unwrap().to_str().unwrap();
 
-        // Skip artificial padding tests (they use isolated formula, not real encoder behavior)
-        if base_name.starts_with("padding-") {
+        base_names.push(base_name.to_string());
+    }
+
+    // Deterministic ordering is important so shards are stable.
+    base_names.sort();
+    base_names
+}
+
+fn run_shared_test_cases_shard(shard_idx: usize, shard_count: usize) {
+    assert!(shard_count > 0, "shard_count must be > 0");
+    assert!(shard_idx < shard_count, "shard_idx must be < shard_count");
+
+    let test_cases_dir = Path::new("test-cases");
+    let base_names = collect_test_case_base_names(test_cases_dir);
+
+    for (case_idx, base_name) in base_names.iter().enumerate() {
+        if case_idx % shard_count != shard_idx {
             continue;
         }
-
         let input_path = test_cases_dir.join(format!("{}.input", base_name));
 
         let input_bytes = fs::read(&input_path).expect("Failed to read input file");
@@ -237,6 +250,13 @@ fn test_shared_test_cases() {
 
             // ENCODE TEST: result must match .encoded-expected if present, otherwise any .encoded* file
             let actual_encoded = run_rust_encode(&input_bytes);
+            if base_name.starts_with("padding-") {
+                assert!(
+                    encoded_files.expected.is_some(),
+                    "padding fixture {} must define .encoded-expected",
+                    base_name
+                );
+            }
 
             if let Some(expected) = &encoded_files.expected {
                 // Must match expected exactly
@@ -255,3 +275,20 @@ fn test_shared_test_cases() {
         }
     }
 }
+
+#[test]
+fn test_shared_test_cases_shard_0_of_8() { run_shared_test_cases_shard(0, 8); }
+#[test]
+fn test_shared_test_cases_shard_1_of_8() { run_shared_test_cases_shard(1, 8); }
+#[test]
+fn test_shared_test_cases_shard_2_of_8() { run_shared_test_cases_shard(2, 8); }
+#[test]
+fn test_shared_test_cases_shard_3_of_8() { run_shared_test_cases_shard(3, 8); }
+#[test]
+fn test_shared_test_cases_shard_4_of_8() { run_shared_test_cases_shard(4, 8); }
+#[test]
+fn test_shared_test_cases_shard_5_of_8() { run_shared_test_cases_shard(5, 8); }
+#[test]
+fn test_shared_test_cases_shard_6_of_8() { run_shared_test_cases_shard(6, 8); }
+#[test]
+fn test_shared_test_cases_shard_7_of_8() { run_shared_test_cases_shard(7, 8); }

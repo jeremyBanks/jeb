@@ -1,4 +1,4 @@
-import { assertEquals, assertThrows } from "jsr:@std/assert";
+import { assert, assertEquals, assertThrows } from "jsr:@std/assert";
 import * as z855 from "./z855.ts";
 import * as min from "./min.mjs";
 import { readdirSync, readFileSync } from "node:fs";
@@ -6,17 +6,14 @@ import { join } from "node:path";
 
 const TEST_CASES_DIR = "./test-cases";
 
-// Helper to compare Uint8Arrays
-function arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
-}
-
 // Get all test case files
-function getTestCases(): { name: string; input: Uint8Array; encodings: string[]; isError?: boolean }[] {
+function getTestCases(): {
+  name: string;
+  input: Uint8Array;
+  encodings: string[];
+  expected?: string;
+  isError?: boolean;
+}[] {
   const files = readdirSync(TEST_CASES_DIR);
   const inputFiles = files.filter(f => f.endsWith(".input"));
 
@@ -25,6 +22,7 @@ function getTestCases(): { name: string; input: Uint8Array; encodings: string[];
     const inputPath = join(TEST_CASES_DIR, inputFile);
     const encodedPath = join(TEST_CASES_DIR, name + ".encoded");
     const minEncodedPath = join(TEST_CASES_DIR, name + ".encoded-min");
+    const expectedPath = join(TEST_CASES_DIR, name + ".encoded-expected");
 
     const input = readFileSync(inputPath);
     const encodings: string[] = [];
@@ -51,7 +49,14 @@ function getTestCases(): { name: string; input: Uint8Array; encodings: string[];
       // No encoded-min file
     }
 
-    return { name, input: new Uint8Array(input), encodings, isError };
+    let expected: string | undefined;
+    try {
+      expected = new TextDecoder().decode(readFileSync(expectedPath)).trim();
+    } catch {
+      // No encoded-expected file
+    }
+
+    return { name, input: new Uint8Array(input), encodings, expected, isError };
   });
 }
 
@@ -123,12 +128,21 @@ Deno.test("Round-trip: min.z855 -> z855.decode", async (t) => {
       );
 
       // Verify min.z855 produces one of the expected encodings
-      if (tc.encodings.length > 0) {
+      if (tc.name.startsWith("padding-")) {
+        assert(tc.expected !== undefined, `padding fixture ${tc.name} must define .encoded-expected`);
+      }
+      if (tc.expected !== undefined) {
+        assertEquals(
+          encoded,
+          tc.expected,
+          `min.z855 must match expected for ${tc.name}`
+        );
+      } else if (tc.encodings.length > 0) {
         const isValid = tc.encodings.includes(encoded);
         assertEquals(
           isValid,
           true,
-          `min.z855 produced unexpected encoding for ${tc.name}:\n  Got: ${encoded.substring(0, 60)}\n  Expected one of: ${tc.encodings.map(e => e.substring(0, 60)).join(" OR ")}`
+          `min.z855 produced unexpected encoding for ${tc.name}:\n  Got: ${encoded.substring(0, 60)}\n  Expected one of: ${tc.encodings.map((e) => e.substring(0, 60)).join(" OR ")}`
         );
       }
     });
