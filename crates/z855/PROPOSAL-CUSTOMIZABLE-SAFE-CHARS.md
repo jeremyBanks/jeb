@@ -87,22 +87,35 @@ Beyond safe character customization, two additional encoder options enable compo
 
 **Encoder behavior:**
 1. Disable end-of-stream optimization (always use length-prefixed raw segments)
-2. If final encoded block is not 4-byte aligned, pad the **beginning** with `#` characters
+2. If the **final encoded block** is not 4-byte aligned, pad the **beginning of that final block** with `#` characters to reach 4-byte alignment
+3. All blocks before the final one are unchanged (aside from not using end-of-stream escape)
+
+**Clarification on padding location:**
+- `#` characters are added **only at the beginning of the final block**
+- Not at the beginning of the entire output
+- Previous blocks remain identical to non-concatenatable mode (except no end-of-stream escape)
+- Example: If final block would be 3 encoded characters, it becomes `#` + 3 chars = 4 chars
 
 **Why `#` padding works:**
-- `#` is a valid Z85 alphabet character
+- `#` is a valid Z85 alphabet character (byte value 35)
 - Cannot naturally appear at the beginning of a Z85-encoded block (guaranteed by encoding math)
 - Acts as unambiguous padding signal that decoder can strip
 
 **Decoder requirement:**
-- Decoder must strip leading `#` characters from **any block at any position**
-- This enables concatenated chunks to have padding at internal boundaries
+- Decoder must strip leading `#` characters from **any block at any position** (not just stream start)
+- This enables concatenated chunks to have padding at concatenation boundaries
 - Decoder change required regardless of encoder option (must support legacy concatenatable output)
+
+**Requires additional safe characters:**
+- Concatenatable mode requires at least one escape character beyond the Z85 alphabet
+- Cannot be used with empty safe character set (`safeChars: []`)
+- The output uses Z85 alphabet characters but is **not compatible with pure Z85** encoding
+- Encoder should validate and throw error if `concatenatable: true` with empty safe set
 
 **Benefit:** Encoded chunks can be concatenated freely without alignment constraints:
 ```typescript
-const chunk1 = z855(data1, { concatenatable: true })  // 7 bytes → padded
-const chunk2 = z855(data2, { concatenatable: true })  // 5 bytes → padded
+const chunk1 = z855(data1, { concatenatable: true })  // 7 bytes → final block padded
+const chunk2 = z855(data2, { concatenatable: true })  // 5 bytes → final block padded
 const combined = chunk1 + chunk2  // Valid z855-encoded output
 ```
 
