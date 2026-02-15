@@ -1,5 +1,5 @@
 import { assertEquals, assertThrows } from "@std/assert";
-import { encode, decode, Z855DecodeError } from "./z855.ts";
+import { encode, decode, z855Binary, Z855DecodeError } from "./z855.ts";
 
 // Unit tests for Z85 encode/decode
 
@@ -315,6 +315,90 @@ Deno.test("multiple blocks round-trip", () => {
   const encoded = encode(input);
   const decoded = decode(encoded);
   assertEquals(Array.from(decoded), Array.from(input));
+});
+
+Deno.test("options: invalid safeChars and maxRawSegmentLength fail eagerly", () => {
+  const input = new Uint8Array([0x74, 0x65, 0x73, 0x74]);
+
+  assertThrows(() => encode(input, { safeChars: [256] }), TypeError);
+  assertThrows(() => encode(input, { safeChars: [-1] }), TypeError);
+  assertThrows(() => encode(input, { safeChars: [1.5] }), TypeError);
+  assertThrows(() => encode(input, { safeChars: ["ab"] }), TypeError);
+  assertThrows(() => encode(input, { maxRawSegmentLength: -1 }), TypeError);
+  assertThrows(() => encode(input, { maxRawSegmentLength: 1.5 }), TypeError);
+});
+
+Deno.test("options: text encode rejects non-ASCII safeChars, binary encode accepts them", () => {
+  const input = new Uint8Array([200, 200, 200, 200]);
+  const options = { safeChars: [200, ","], maxRawSegmentLength: 4 };
+
+  assertThrows(() => encode(input, options), TypeError);
+
+  const encodedBinary = z855Binary(input, options);
+  // With comma escape available and all 4 bytes in safe set, this should be a raw comma block.
+  assertEquals(Array.from(encodedBinary), [",".charCodeAt(0), 200, 200, 200, 200]);
+  assertEquals(Array.from(decode(encodedBinary)), Array.from(input));
+});
+
+Deno.test("options: maxRawSegmentLength 0 equals safeChars empty", () => {
+  const input = new Uint8Array([0x74, 0x65, 0x73, 0x74, 0x61, 0x62, 0x63, 0x64]);
+
+  const byMaxLen = encode(input, { maxRawSegmentLength: 0 });
+  const byEmptySafe = encode(input, { safeChars: [] });
+
+  assertEquals(byMaxLen, byEmptySafe);
+  assertEquals(Array.from(decode(byMaxLen)), Array.from(input));
+});
+
+Deno.test("options: maxRawSegmentLength caps long escapes", () => {
+  const input = new TextEncoder().encode("abcdefgh");
+
+  const defaultEncoded = encode(input);
+  assertEquals(defaultEncoded.startsWith("0|"), true);
+
+  const capped = encode(input, { maxRawSegmentLength: 7 });
+  assertEquals(capped.includes("|"), false);
+  assertEquals(Array.from(decode(capped)), Array.from(input));
+});
+
+Deno.test("options: decode accepts string and Uint8Array", () => {
+  const input = new Uint8Array([0, 1, 2, 3, 4, 5, 6]);
+  const encoded = encode(input);
+  const encodedBytes = new Uint8Array(Array.from(encoded, (c) => c.charCodeAt(0)));
+
+  assertEquals(Array.from(decode(encoded)), Array.from(input));
+  assertEquals(Array.from(decode(encodedBytes)), Array.from(input));
+});
+
+Deno.test("options: concatenatable pads short final block and decodes round-trip", () => {
+  const input = new Uint8Array([0]);
+  const encoded = encode(input, { concatenatable: true });
+
+  assertEquals(encoded.length % 5, 0);
+  assertEquals(encoded.startsWith("###"), true);
+  assertEquals(Array.from(decode(encoded)), Array.from(input));
+});
+
+Deno.test("options: concatenatable chunks can be concatenated", () => {
+  const chunk1 = new Uint8Array([0]);
+  const chunk2 = new Uint8Array([1, 2]);
+
+  const encoded1 = encode(chunk1, { concatenatable: true });
+  const encoded2 = encode(chunk2, { concatenatable: true });
+  const combined = encoded1 + encoded2;
+
+  assertEquals(Array.from(decode(combined)), [0, 1, 2]);
+});
+
+Deno.test("options: concatenatable disables 0| rest-of-input optimization", () => {
+  const input = new TextEncoder().encode("abcdefgh");
+
+  const normal = encode(input);
+  const concatenatable = encode(input, { concatenatable: true });
+
+  assertEquals(normal.startsWith("0|"), true);
+  assertEquals(concatenatable.startsWith("0|"), false);
+  assertEquals(Array.from(decode(concatenatable)), Array.from(input));
 });
 
 Deno.test("non-aligned decode with trailing partial block", () => {

@@ -750,7 +750,7 @@ function decodeFromStringCore(input: string): Uint8Array {
   while (inIdx < input.length) {
     const charCode = input.charCodeAt(inIdx);
 
-    if (blockPos === 0 && charCode === HASH_PADDING) {
+    if (blockPos === 0 && (inIdx % 5) === 0 && charCode === HASH_PADDING) {
       const remaining = input.length - inIdx;
       if (remaining >= 5) {
         let hashRun = 0;
@@ -758,7 +758,29 @@ function decodeFromStringCore(input: string): Uint8Array {
           hashRun += 1;
         }
         if (hashRun > 0) {
-          inIdx += hashRun;
+          const numChars = 5 - hashRun;
+          const startIdx = inIdx + hashRun;
+          const value = decodePartialBlock(input, startIdx, numChars);
+          const numBytes = numChars - 1;
+
+          if (numBytes === 1) {
+            if (value > 0xff) throw new Z855DecodeError("Z85 value overflow");
+            outputChunks.push(value);
+          } else if (numBytes === 2) {
+            if (value > 0xffff) throw new Z855DecodeError("Z85 value overflow");
+            outputChunks.push((value >>> 8) & 0xff);
+            outputChunks.push(value & 0xff);
+          } else {
+            if (value > 0xffffff) throw new Z855DecodeError("Z85 value overflow");
+            outputChunks.push((value >>> 16) & 0xff);
+            outputChunks.push((value >>> 8) & 0xff);
+            outputChunks.push(value & 0xff);
+          }
+
+          inIdx += 5;
+          currentBlockDigits.length = 0;
+          blockPos = 0;
+          knownHighBytes = [];
           continue;
         }
       }
@@ -804,6 +826,18 @@ function decodeFromStringCore(input: string): Uint8Array {
       // Skip the |
       inIdx += 1;
 
+      // Backward-compatible fast path for `[length]|[raw]` with no padding.
+      if (offset === 0 && offsetDigitsUsed === 0 && input.length - inIdx === rawLen) {
+        for (let i = 0; i < rawLen; i++) {
+          outputChunks.push(input.charCodeAt(inIdx + i));
+        }
+        inIdx += rawLen;
+        currentBlockDigits.length = 0;
+        blockPos = 0;
+        knownHighBytes = [];
+        continue;
+      }
+
       // Calculate padding positions (position-based, not content-based!)
       // Match encoder's calculation by determining bytesRemaining:
       // 1. Calculate total bytes that will be decoded from entire input
@@ -823,33 +857,34 @@ function decodeFromStringCore(input: string): Uint8Array {
       const paddingBefore = offset;
       const paddingAfter = paddingNeeded - offsetDigitsUsed - paddingBefore;
 
-      const canUsePaddedLayout =
-        paddingAfter >= 0 &&
-        inIdx + paddingBefore + rawLen + paddingAfter <= input.length;
-
-      if (canUsePaddedLayout) {
-        // Skip padding before (ANY content - do not check!)
-        inIdx += paddingBefore;
-
-        // Output the raw bytes
-        for (let i = 0; i < rawLen; i++) {
-          outputChunks.push(input.charCodeAt(inIdx + i));
-        }
-        inIdx += rawLen;
-
-        // Skip padding after (ANY content - do not check!)
-        inIdx += paddingAfter;
-      } else if (offset === 0 && offsetDigitsUsed === 0 && inIdx + rawLen <= input.length) {
-        // Backward-compatible fallback for simple `[length]|[raw]` sequences.
-        for (let i = 0; i < rawLen; i++) {
-          outputChunks.push(input.charCodeAt(inIdx + i));
-        }
-        inIdx += rawLen;
-      } else {
+      if (paddingAfter < 0) {
         throw new Z855DecodeError(
           `invalid padding calculation: paddingNeeded=${paddingNeeded}, offsetDigits=${offsetDigitsUsed}, offset=${offset}`
         );
       }
+
+      // Skip padding before (ANY content - do not check!)
+      if (inIdx + paddingBefore > input.length) {
+        throw new Z855DecodeError("insufficient input for padding before");
+      }
+      inIdx += paddingBefore;
+
+      // Ensure we have enough input for the raw bytes
+      if (inIdx + rawLen > input.length) {
+        throw new Z855DecodeError(`insufficient bytes for | escape: need ${rawLen}, have ${input.length - inIdx}`);
+      }
+
+      // Output the raw bytes
+      for (let i = 0; i < rawLen; i++) {
+        outputChunks.push(input.charCodeAt(inIdx + i));
+      }
+      inIdx += rawLen;
+
+      // Skip padding after (ANY content - do not check!)
+      if (inIdx + paddingAfter > input.length) {
+        throw new Z855DecodeError("insufficient input for padding after");
+      }
+      inIdx += paddingAfter;
 
       // Reset block state
       currentBlockDigits.length = 0;
