@@ -73,7 +73,7 @@ fn game_code() -> Vec<Instruction> {
         DEC_16(HL),
         LD_8_INTERNAL(A, AT_HL), // byte 0
         CP_IMMEDIATE(85),
-        JR_IF(if_C, 30), // Exit if byte 0 < 85 (jump to output)
+        JR_IF(if_C, 25), // Exit if byte 0 < 85 (jump to output)
         
         // Value >= 85, subtract
         // Subtract 85 from byte 0, propagate borrow through bytes 1-3
@@ -93,10 +93,17 @@ fn game_code() -> Vec<Instruction> {
         INC(A),
         LD_8_INTERNAL(AT_HL, A),
         
-        // Loop back to comparison start
-        JR(-61), // 59 bytes (6 quotient + 30 subtract + 23 compare) + 2 for PC
+        // Loop back to comparison start (LD_16_IMMEDIATE(HL, 0xC113))
+        JR(-45), // 43 bytes from end of JR to loop start + 2 for PC offset
         
-        // Output: remainder (byte 0) and quotient
+        // Output: marker 0xBB then remainder (byte 0) and quotient
+        LD_8_IMMEDIATE(A, 0xBB),
+        LD_8_TO_FF_IMMEDIATE(0x01),
+        PUSH_AF,
+        LD_8_IMMEDIATE(A, 0x81),
+        LD_8_TO_FF_IMMEDIATE(0x02),
+        POP_AF,
+        
         LD_16_IMMEDIATE(HL, 0xC110),
         LD_8_INTERNAL(A, AT_HL),
         LD_8_TO_FF_IMMEDIATE(0x01),
