@@ -307,10 +307,6 @@ Existing code continues to work unchanged:
 - New binary functions are additions, not replacements
 - Text wrappers gain optional parameter but maintain backward compatibility
 
-## Open Questions
-
-None. Specification is complete pending implementation.
-
 ## Summary
 
 This proposal enables z855 to handle diverse encoding requirements through three orthogonal configuration dimensions:
