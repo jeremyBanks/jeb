@@ -69,6 +69,67 @@ Users may specify byte values >127 (non-ASCII) in the safe set. This means:
 - User has implicitly opted into binary output
 - Useful for cases like "allow everything except null byte"
 
+## Additional Encoder Configuration
+
+Beyond safe character customization, two additional encoder options enable composability and resource control.
+
+### Disable End-of-Stream Raw Indicator
+
+**Option name:** `disableEndOfStreamRaw` (boolean, default `false`)
+
+**Current behavior:** When the encoder reaches end-of-stream and remaining data is raw-passable, it emits a special indicator meaning "everything until end-of-stream is raw" instead of a length-prefixed segment.
+
+**Problem for composability:** This indicator affects interpretation of any data concatenated afterward. If you encode multiple chunks separately (each a multiple of 4 bytes) and concatenate them, the result is invalid if any chunk used the end-of-stream optimization.
+
+**Proposed option:** When set to `true`, disable the end-of-stream optimization. Always use length-prefixed raw segments, even at stream end.
+
+**Benefit:** Encoded chunks can be concatenated freely:
+```typescript
+const chunk1 = z855(data1, { disableEndOfStreamRaw: true })
+const chunk2 = z855(data2, { disableEndOfStreamRaw: true })
+const combined = chunk1 + chunk2  // Valid z855-encoded output
+```
+
+**Constraint:** Each chunk must be a multiple of 4 bytes for clean concatenation (otherwise the boundary isn't Z85-aligned).
+
+### Configurable Maximum Raw Segment Length
+
+**Option name:** `maxRawSegmentLength` (integer, default `65536` = 64 KB)
+
+**Current behavior:** Encoder limits raw passthrough segments to 64 KB by default. Larger raw sequences are broken into multiple segments or encoded as Z85.
+
+**Motivation:** Different use cases have different trade-offs:
+- Frequent escaping (small limit) → more encoded bytes, more opportunities to detect corruption
+- Large raw segments (large limit) → fewer escape sequences, better compression for raw-heavy data
+
+**Proposed option:** Allow configuring this limit to any value between `0` and decoder maximum (`Number.MAX_SAFE_INTEGER` in JS, effectively unlimited).
+
+**Valid range:**
+- Minimum: `0` (no raw passthrough at all, pure Z85 encoding)
+- Maximum: `9007199254740991` (JS max safe integer, decoder's enforced maximum)
+- Values `0-3` are effectively equivalent (too small for any escape sequence)
+
+**Special value handling:**
+- No explicit "unlimited" needed; users pass `Number.MAX_SAFE_INTEGER` if desired
+- Library may provide constant: `Z855_MAX_RAW_LENGTH = Number.MAX_SAFE_INTEGER`
+
+**Example usage:**
+```typescript
+// No raw passthrough, pure Z85
+z855(data, { maxRawSegmentLength: 0 })
+
+// Very small segments (frequent escaping)
+z855(data, { maxRawSegmentLength: 256 })
+
+// Default behavior
+z855(data, { maxRawSegmentLength: 65536 })
+
+// Effectively unlimited
+z855(data, { maxRawSegmentLength: Number.MAX_SAFE_INTEGER })
+```
+
+**Interaction with safe characters:** If safe set is empty, raw passthrough is impossible regardless of this limit. This option only affects behavior when escapes are available.
+
 ## Library Interface Changes
 
 ### Binary-Returning Functions (New)
@@ -78,14 +139,24 @@ Core encoding functions that always return binary data (`Uint8Array` / `Vec<u8>`
 ```typescript
 function z855Binary(
   input: Uint8Array,
-  options?: { safeChars?: Iterable<number | string> }
+  options?: {
+    safeChars?: Iterable<number | string>
+    disableEndOfStreamRaw?: boolean
+    maxRawSegmentLength?: number
+  }
 ): Uint8Array
 
 function decodeBinary(encoded: Uint8Array): Uint8Array
 ```
 
 ```rust
-fn z855_binary(input: &[u8], safe_chars: impl IntoIterator<Item = u8>) -> Vec<u8>
+struct Z855Options {
+    safe_chars: Option<Vec<u8>>,
+    disable_end_of_stream_raw: bool,
+    max_raw_segment_length: usize,
+}
+
+fn z855_binary(input: &[u8], options: Z855Options) -> Vec<u8>
 fn decode_binary(encoded: &[u8]) -> Vec<u8>
 ```
 
@@ -98,7 +169,11 @@ Convenience wrappers that return text strings:
 ```typescript
 function z855(
   input: Uint8Array,
-  options?: { safeChars?: Iterable<number | string> }
+  options?: {
+    safeChars?: Iterable<number | string>
+    disableEndOfStreamRaw?: boolean
+    maxRawSegmentLength?: number
+  }
 ): string
 
 function decode(encoded: string): Uint8Array
@@ -156,6 +231,33 @@ z855(data, { safeChars: [...' ~'.charCodeAt(0)] })
 // Output: text, all characters in range 0x20-0x7E
 ```
 
+### Concatenable streaming chunks
+```typescript
+const chunks = largeData.match(/.{1,1024}/g)  // 1KB chunks
+const encoded = chunks.map(chunk => 
+  z855(chunk, { disableEndOfStreamRaw: true })
+).join('')
+// Each chunk is independently valid and concatenable
+```
+
+### Aggressive raw passthrough (minimize escaping)
+```typescript
+z855(data, { maxRawSegmentLength: Number.MAX_SAFE_INTEGER })
+// Use largest possible raw segments, minimize escape overhead
+```
+
+### Frequent escaping for error detection
+```typescript
+z855(data, { maxRawSegmentLength: 256 })
+// Small segments increase opportunities to detect corruption
+```
+
+### Pure Z85 via segment limit
+```typescript
+z855(data, { maxRawSegmentLength: 0 })
+// Alternative to safeChars: [], disables all raw passthrough
+```
+
 ## Implementation Scope
 
 ### Minimal Encoder (min.mjs)
@@ -184,11 +286,17 @@ None. Specification is complete pending implementation.
 
 ## Summary
 
-This proposal enables z855 to handle diverse encoding requirements while:
-- Preserving backward compatibility (default unchanged)
+This proposal enables z855 to handle diverse encoding requirements through three orthogonal configuration dimensions:
+
+1. **Safe character sets** - Control which bytes can pass through unencoded
+2. **Stream composability** - Disable end-of-stream optimization for concatenable chunks
+3. **Raw segment sizing** - Tune escape frequency vs. segment size
+
+Design principles maintained:
+- Preserving backward compatibility (defaults unchanged)
 - Maintaining deterministic behavior
 - Validating configuration eagerly (developer-friendly)
 - Separating binary and text output concerns
 - Keeping the minimal encoder simple
 
-The customizable safe character set transforms z855 from a fixed-configuration encoder into a flexible encoding framework suitable for domain-specific constraints.
+The customizable configuration transforms z855 from a fixed-configuration encoder into a flexible encoding framework suitable for diverse use cases: domain-specific safe character constraints, composable streaming output, and resource-aware segment sizing.
