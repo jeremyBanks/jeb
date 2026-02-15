@@ -248,31 +248,32 @@ fn test_encoding() -> Vec<Instruction> {
         LD_8_INTERNAL(A, C), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // Low byte
         LD_8_INTERNAL(A, B), LD_8_INTERNAL(AT_HL, A),              // High byte
         
-        // Load loop counter from memory
+        // Load loop counter from memory into temp storage (NOT B!)
         LD_16_IMMEDIATE(HL, 0xC105),
         LD_8_INTERNAL(A, AT_HL),
-        LD_8_INTERNAL(B, A), // B = loop counter
+        // Store counter at 0xC106 temporarily
+        LD_16_IMMEDIATE(HL, 0xC106),
+        LD_8_INTERNAL(AT_HL, A),
         
-        // Calculate digit pointer: 0xC10F + B
+        // Calculate digit pointer: 0xC10F + counter
         LD_16_IMMEDIATE(HL, 0xC10F),
-        LD_8_INTERNAL(A, B),
         ADD(L),
         LD_8_INTERNAL(L, A),
         
-        // Store digit
+        // Store digit (remainder from earlier PUSH_AF)
         POP_AF, // A = remainder
         LD_8_INTERNAL(AT_HL, A),
         
         // Decrement and save loop counter
-        DEC(B),
+        LD_16_IMMEDIATE(HL, 0xC106),
+        LD_8_INTERNAL(A, AT_HL),
+        DEC(A),
         LD_16_IMMEDIATE(HL, 0xC105),
-        LD_8_INTERNAL(A, B),
         LD_8_INTERNAL(AT_HL, A),
         
-        // Loop if counter > 0
-        LD_8_INTERNAL(A, B),
+        // Loop if counter > 0 (A already has counter from above)
         OR(A),
-        JR_IF(if_NZ, -62), // Loop body is 60 bytes, PC is +2 after JR
+        JR_IF(if_NZ, -62), // Loop body size TBD, need to recalculate
     ]);
     
     // Output the 5 digits
