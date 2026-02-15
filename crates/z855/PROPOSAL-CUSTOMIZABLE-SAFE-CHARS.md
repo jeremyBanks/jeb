@@ -259,11 +259,17 @@ None. Specification is complete pending implementation.
 
 ## Summary
 
-This proposal enables z855 to handle diverse encoding requirements while:
-- Preserving backward compatibility (default unchanged)
+This proposal enables z855 to handle diverse encoding requirements through three orthogonal configuration dimensions:
+
+1. **Safe character sets** - Control which bytes can pass through unencoded
+2. **Stream composability** - Disable end-of-stream optimization for concatenable chunks
+3. **Raw segment sizing** - Tune escape frequency vs. segment size
+
+Design principles maintained:
+- Preserving backward compatibility (defaults unchanged)
 - Maintaining deterministic behavior
 - Validating configuration eagerly (developer-friendly)
 - Separating binary and text output concerns
 - Keeping the minimal encoder simple
 
-The customizable safe character set transforms z855 from a fixed-configuration encoder into a flexible encoding framework suitable for domain-specific constraints.
+The customizable configuration transforms z855 from a fixed-configuration encoder into a flexible encoding framework suitable for diverse use cases: domain-specific safe character constraints, composable streaming output, and resource-aware segment sizing.
