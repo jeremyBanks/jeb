@@ -73,24 +73,38 @@ Users may specify byte values >127 (non-ASCII) in the safe set. This means:
 
 Beyond safe character customization, two additional encoder options enable composability and resource control.
 
-### Disable End-of-Stream Raw Indicator
+### Concatenatable Mode
 
-**Option name:** `disableEndOfStreamRaw` (boolean, default `false`)
+**Option name:** `concatenatable` (boolean, default `false`)
 
-**Current behavior:** When the encoder reaches end-of-stream and remaining data is raw-passable, it emits a special indicator meaning "everything until end-of-stream is raw" instead of a length-prefixed segment.
+**Current behavior:** Encoded output may use end-of-stream optimization (raw data until end without length prefix) and may not be 4-byte aligned at stream end.
 
-**Problem for composability:** This indicator affects interpretation of any data concatenated afterward. If you encode multiple chunks separately (each a multiple of 4 bytes) and concatenate them, the result is invalid if any chunk used the end-of-stream optimization.
+**Problem for composability:** 
+1. End-of-stream indicator affects interpretation of any data concatenated afterward
+2. Non-aligned boundaries break Z85 decoding when chunks are joined
 
-**Proposed option:** When set to `true`, disable the end-of-stream optimization. Always use length-prefixed raw segments, even at stream end.
+**Proposed option:** When set to `true`, produce output that can be safely concatenated:
 
-**Benefit:** Encoded chunks can be concatenated freely:
+**Encoder behavior:**
+1. Disable end-of-stream optimization (always use length-prefixed raw segments)
+2. If final encoded block is not 4-byte aligned, pad the **beginning** with `#` characters
+
+**Why `#` padding works:**
+- `#` is a valid Z85 alphabet character
+- Cannot naturally appear at the beginning of a Z85-encoded block (guaranteed by encoding math)
+- Acts as unambiguous padding signal that decoder can strip
+
+**Decoder requirement:**
+- Decoder must strip leading `#` characters from **any block at any position**
+- This enables concatenated chunks to have padding at internal boundaries
+- Decoder change required regardless of encoder option (must support legacy concatenatable output)
+
+**Benefit:** Encoded chunks can be concatenated freely without alignment constraints:
 ```typescript
-const chunk1 = z855(data1, { disableEndOfStreamRaw: true })
-const chunk2 = z855(data2, { disableEndOfStreamRaw: true })
+const chunk1 = z855(data1, { concatenatable: true })  // 7 bytes → padded
+const chunk2 = z855(data2, { concatenatable: true })  // 5 bytes → padded
 const combined = chunk1 + chunk2  // Valid z855-encoded output
 ```
-
-**Constraint:** Each chunk must be a multiple of 4 bytes for clean concatenation (otherwise the boundary isn't Z85-aligned).
 
 ### Configurable Maximum Raw Segment Length
 
@@ -98,9 +112,10 @@ const combined = chunk1 + chunk2  // Valid z855-encoded output
 
 **Current behavior:** Encoder limits raw passthrough segments to 64 KB by default. Larger raw sequences are broken into multiple segments or encoded as Z85.
 
-**Motivation:** Different use cases have different trade-offs:
-- Frequent escaping (small limit) → more encoded bytes, more opportunities to detect corruption
-- Large raw segments (large limit) → fewer escape sequences, better compression for raw-heavy data
+**Motivation:** Different use cases optimize for different properties:
+- Small limit → more frequent escape sequences, larger output for raw-heavy data
+- Large limit → fewer escape sequences, smaller output for raw-heavy data
+- Configurable limit allows tuning escape frequency vs. output size
 
 **Proposed option:** Allow configuring this limit to any value between `0` and decoder maximum (`Number.MAX_SAFE_INTEGER` in JS, effectively unlimited).
 
@@ -118,13 +133,13 @@ const combined = chunk1 + chunk2  // Valid z855-encoded output
 // No raw passthrough, pure Z85
 z855(data, { maxRawSegmentLength: 0 })
 
-// Very small segments (frequent escaping)
+// Frequent mode switching
 z855(data, { maxRawSegmentLength: 256 })
 
 // Default behavior
 z855(data, { maxRawSegmentLength: 65536 })
 
-// Effectively unlimited
+// Minimize escape sequences
 z855(data, { maxRawSegmentLength: Number.MAX_SAFE_INTEGER })
 ```
 
@@ -141,7 +156,7 @@ function z855Binary(
   input: Uint8Array,
   options?: {
     safeChars?: Iterable<number | string>
-    disableEndOfStreamRaw?: boolean
+    concatenatable?: boolean
     maxRawSegmentLength?: number
   }
 ): Uint8Array
@@ -152,7 +167,7 @@ function decodeBinary(encoded: Uint8Array): Uint8Array
 ```rust
 struct Z855Options {
     safe_chars: Option<Vec<u8>>,
-    disable_end_of_stream_raw: bool,
+    concatenatable: bool,
     max_raw_segment_length: usize,
 }
 
@@ -171,7 +186,7 @@ function z855(
   input: Uint8Array,
   options?: {
     safeChars?: Iterable<number | string>
-    disableEndOfStreamRaw?: boolean
+    concatenatable?: boolean
     maxRawSegmentLength?: number
   }
 ): string
@@ -235,21 +250,21 @@ z855(data, { safeChars: [...' ~'.charCodeAt(0)] })
 ```typescript
 const chunks = largeData.match(/.{1,1024}/g)  // 1KB chunks
 const encoded = chunks.map(chunk => 
-  z855(chunk, { disableEndOfStreamRaw: true })
+  z855(chunk, { concatenatable: true })
 ).join('')
-// Each chunk is independently valid and concatenable
+// Each chunk independently valid and concatenable, even if not 4-byte aligned
 ```
 
-### Aggressive raw passthrough (minimize escaping)
+### Minimize escape sequences
 ```typescript
 z855(data, { maxRawSegmentLength: Number.MAX_SAFE_INTEGER })
 // Use largest possible raw segments, minimize escape overhead
 ```
 
-### Frequent escaping for error detection
+### Frequent mode switching
 ```typescript
 z855(data, { maxRawSegmentLength: 256 })
-// Small segments increase opportunities to detect corruption
+// Switch between raw and encoded segments more frequently
 ```
 
 ### Pure Z85 via segment limit
