@@ -51,6 +51,25 @@ fn game_code() -> Vec<Instruction> {
     asm.inst(LD_8_IMMEDIATE(A, 0x91))  // LCD on, BG on
         .inst(LD_8_TO_FF_IMMEDIATE(0x40));
     
+    // Set up tiles: tile 0 = empty (all 0xFF = white), tile 1 = filled (all 0x00 = black)
+    // Tile data at 0x8000, each tile is 16 bytes
+    asm.inst(LD_16_IMMEDIATE(HL, 0x8000))
+        .inst(LD_8_IMMEDIATE(B, 16));
+    asm.label("TILE0")
+        .inst(LD_8_IMMEDIATE(A, 0xFF))  // White
+        .inst(LD_8_INTERNAL(AT_HL, A))
+        .inst(INC_16(HL))
+        .inst(DEC(B))
+        .jr_cond(if_NZ, "TILE0");
+    
+    asm.inst(LD_8_IMMEDIATE(B, 16));
+    asm.label("TILE1")
+        .inst(LD_8_IMMEDIATE(A, 0x00))  // Black
+        .inst(LD_8_INTERNAL(AT_HL, A))
+        .inst(INC_16(HL))
+        .inst(DEC(B))
+        .jr_cond(if_NZ, "TILE1");
+    
     // Clear grid
     asm.inst(LD_16_IMMEDIATE(HL, 0xC000))
         .inst(LD_16_IMMEDIATE(BC, 360));
