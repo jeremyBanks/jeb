@@ -139,14 +139,24 @@ Core encoding functions that always return binary data (`Uint8Array` / `Vec<u8>`
 ```typescript
 function z855Binary(
   input: Uint8Array,
-  options?: { safeChars?: Iterable<number | string> }
+  options?: {
+    safeChars?: Iterable<number | string>
+    disableEndOfStreamRaw?: boolean
+    maxRawSegmentLength?: number
+  }
 ): Uint8Array
 
 function decodeBinary(encoded: Uint8Array): Uint8Array
 ```
 
 ```rust
-fn z855_binary(input: &[u8], safe_chars: impl IntoIterator<Item = u8>) -> Vec<u8>
+struct Z855Options {
+    safe_chars: Option<Vec<u8>>,
+    disable_end_of_stream_raw: bool,
+    max_raw_segment_length: usize,
+}
+
+fn z855_binary(input: &[u8], options: Z855Options) -> Vec<u8>
 fn decode_binary(encoded: &[u8]) -> Vec<u8>
 ```
 
@@ -159,7 +169,11 @@ Convenience wrappers that return text strings:
 ```typescript
 function z855(
   input: Uint8Array,
-  options?: { safeChars?: Iterable<number | string> }
+  options?: {
+    safeChars?: Iterable<number | string>
+    disableEndOfStreamRaw?: boolean
+    maxRawSegmentLength?: number
+  }
 ): string
 
 function decode(encoded: string): Uint8Array
