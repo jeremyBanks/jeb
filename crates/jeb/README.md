@@ -30,15 +30,13 @@ This repository is about **tackling complexity in order of nuance, not ease**. T
 
 - **zipng** (`crates/zipng/`) - A PNG that's also a valid ZIP archive. Polyglot file format done right. Demonstrates: format boundary exploitation, careful bit-level reasoning, making the impossible seem obvious in hindsight.
 
-- **zerodmg** (`crates/zerodmg/`) - Game Boy emulator where 11/11 Blargg CPU tests pass. The journey: systematic debugging (stack endianness, HALT timing, timer T-cycles), isolating correctness before performance. Watch the commit history for real debugging methodology.
+- **zerodmg** (`crates/zerodmg/`) - Game Boy emulator where 11/11 Blargg cpu_instrs tests pass (first passing suite). The journey: systematic debugging (stack endianness, HALT timing, timer T-cycles), isolating correctness before performance. Watch the commit history for real debugging methodology. Other test suites still in progress.
 
-- **Z85 extensions** (`crates/ideated-encoding/`, analysis scripts in `examples/`) - Extended Z85 encoding supporting mid-block boundaries. Demonstrates: design from constraints, comprehensive testing (93 tests), finding and fixing subtle bugs (budget checks, decoder fragmentation). Implementation race showed 9/10 attempts failed on the same design trap.
-
-- **you-can** (`crates/you-can/`) - Async cancellation that actually works. Demonstrates: finding the real abstraction, not the obvious one.
+- **Z85 extensions** (`crates/z855/`, design analysis in `crates/jeb/examples/DESIGN-CONSTRAINTS.md`) - Extended Z85 encoding supporting mid-block boundaries. Demonstrates: design from constraints, property-based testing (91 tests, 88 passing), finding and fixing subtle bugs during development. Implementation race showed 9/10 attempts failed on the same design trap. Active development.
 
 **What connects these**: They're all about finding the precise point where things get hard, understanding why, and solving that in isolation before expanding. Complexity ordering over feature accumulation.
 
-**Caveats**: Active development. APIs unstable. Tests may fail. Documentation lags understanding. Code quality varies (some crates are explorations, not products). Commit history is the real documentation.
+**Caveats**: Active development. APIs unstable. Tests may fail (some currently do). Documentation lags understanding. Code quality varies (some crates are explorations, not products). Commit history is the real documentation. Above themes are patterns I've observed, not explicit methodology — interpretation may be incomplete or wrong.
 
 ## Installation
 
