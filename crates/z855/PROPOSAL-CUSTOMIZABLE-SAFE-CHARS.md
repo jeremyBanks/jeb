@@ -156,7 +156,7 @@ function z855Binary(
   input: Uint8Array,
   options?: {
     safeChars?: Iterable<number | string>
-    disableEndOfStreamRaw?: boolean
+    concatenatable?: boolean
     maxRawSegmentLength?: number
   }
 ): Uint8Array
@@ -167,7 +167,7 @@ function decodeBinary(encoded: Uint8Array): Uint8Array
 ```rust
 struct Z855Options {
     safe_chars: Option<Vec<u8>>,
-    disable_end_of_stream_raw: bool,
+    concatenatable: bool,
     max_raw_segment_length: usize,
 }
 
@@ -186,7 +186,7 @@ function z855(
   input: Uint8Array,
   options?: {
     safeChars?: Iterable<number | string>
-    disableEndOfStreamRaw?: boolean
+    concatenatable?: boolean
     maxRawSegmentLength?: number
   }
 ): string
