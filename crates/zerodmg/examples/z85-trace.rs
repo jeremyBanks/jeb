@@ -1,4 +1,4 @@
-//! Z85 Trace - Single division iteration with full output
+// Z85 with execution tracing
 
 use zerodmg_codes::instruction::prelude::*;
 use zerodmg_codes::instruction::FlagCondition;
@@ -6,7 +6,7 @@ use zerodmg_codes::instruction::FlagCondition;
 fn main() {
     let rom = build_rom();
     std::fs::write("z85-trace.gb", &rom).expect("Failed to write ROM");
-    println!("Generated z85-trace.gb ({} bytes)", rom.len());
+    println!("Generated z85-trace.gb - outputs markers");
 }
 
 fn build_rom() -> Vec<u8> {
@@ -14,7 +14,7 @@ fn build_rom() -> Vec<u8> {
     
     rom.extend_from_slice(&nintendo_logo());
     rom.extend_from_slice(&[
-        b'T', b'R', b'A', b'C', b'E', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        b'Z', b'8', b'5', b'T', b'R', b'C', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ]);
     
     while rom.len() < 0x0147 { rom.push(0); }
@@ -22,112 +22,96 @@ fn build_rom() -> Vec<u8> {
     while rom.len() < 0x014E { rom.push(0); }
     rom.push(0); rom.push(0);
     
-    while rom.len() < 0x0260 { rom.push(0); }
+    while rom.len() < 0x0200 { rom.push(0); }
     
-    let instructions = game_code();
-    for inst in instructions {
-        rom.extend_from_slice(&inst.to_bytes());
-    }
-    
-    while rom.len() < 32768 {
-        rom.push(0);
-    }
-    
-    rom
-}
-
-fn game_code() -> Vec<Instruction> {
-    use Instruction::*;
-    use U8Register::*;
-    use U16Register::*;
-    
-    vec![
+    let mut instructions = vec![
         DI,
         LD_16_IMMEDIATE(SP, 0xFFFE),
         
-        // Store value 210 at 0xC100-0xC101
+        // Store 210
         LD_16_IMMEDIATE(HL, 0xC100),
         LD_8_IMMEDIATE(A, 0xD2), LD_8_INTERNAL(AT_HL, A), INC_16(HL),
+        LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A), INC_16(HL),
+        LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A), INC_16(HL),
         LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A),
         
-        // Load into DE - use correct instruction for reading from memory
+        // Output "1" - before division
+        LD_8_IMMEDIATE(A, b'1'),
+        LD_8_TO_FF_IMMEDIATE(0x01),
+        PUSH_AF,
+        LD_8_IMMEDIATE(A, 0x81),
+        LD_8_TO_FF_IMMEDIATE(0x02),
+        POP_AF,
+    ];
+    
+    // ONE division with detailed tracing
+    instructions.extend(vec![
+        // Init quotient
+        LD_8_IMMEDIATE(A, 0),
+        LD_16_IMMEDIATE(HL, 0xC110),
+        LD_8_INTERNAL(AT_HL, A),
+        
+        // Output "2" - quotient initialized
+        LD_8_IMMEDIATE(A, b'2'),
+        LD_8_TO_FF_IMMEDIATE(0x01),
+        PUSH_AF,
+        LD_8_IMMEDIATE(A, 0x81),
+        LD_8_TO_FF_IMMEDIATE(0x02),
+        POP_AF,
+        
+        // Division loop
         LD_16_IMMEDIATE(HL, 0xC100),
-        LD_8_INTERNAL(A, AT_HL), LD_8_INTERNAL(E, A), INC_16(HL),
-        LD_8_INTERNAL(A, AT_HL), LD_8_INTERNAL(D, A),
-        
-        // Output DE BEFORE division to verify it loaded correctly
-        // Output E (low byte) - should be 0xD2
-        LD_8_INTERNAL(A, E),
-        LD_8_TO_FF_IMMEDIATE(0x01),
-        PUSH_AF,
-        LD_8_IMMEDIATE(A, 0x81),
-        LD_8_TO_FF_IMMEDIATE(0x02),
-        POP_AF,
-        
-        // Output D (high byte) - should be 0x00
-        LD_8_INTERNAL(A, D),
-        LD_8_TO_FF_IMMEDIATE(0x01),
-        PUSH_AF,
-        LD_8_IMMEDIATE(A, 0x81),
-        LD_8_TO_FF_IMMEDIATE(0x02),
-        POP_AF,
-        
-        // Space
-        LD_8_IMMEDIATE(A, b' '),
-        LD_8_TO_FF_IMMEDIATE(0x01),
-        PUSH_AF,
-        LD_8_IMMEDIATE(A, 0x81),
-        LD_8_TO_FF_IMMEDIATE(0x02),
-        POP_AF,
-        
-        // Initialize quotient
-        LD_16_IMMEDIATE(BC, 0),
-        
-        // DIV_LOOP
-        LD_8_INTERNAL(A, D),
-        OR(A),
-        JR_IF(if_NZ, 5),
-        
-        LD_8_INTERNAL(A, E),
+        LD_8_INTERNAL(A, AT_HL),
         CP_IMMEDIATE(85),
-        JR_IF(if_C, 13),
+        JR_IF(if_C, 14),  // Jump to output section (14 bytes ahead)
         
-        LD_8_INTERNAL(A, E),
         SUB_IMMEDIATE(85),
-        LD_8_INTERNAL(E, A),
-        JR_IF(if_NC, 2),
-        DEC(D),
+        LD_16_IMMEDIATE(HL, 0xC100),
+        LD_8_INTERNAL(AT_HL, A),
         
-        INC_16(BC),
-        JR(-21),
+        LD_16_IMMEDIATE(HL, 0xC110),
+        LD_8_INTERNAL(A, AT_HL),
+        INC(A),
+        LD_8_INTERNAL(AT_HL, A),
         
-        // Division done: E=remainder, BC=quotient
-        // Output marker 0xAA to show division finished
-        LD_8_IMMEDIATE(A, 0xAA),
+        JR(-24),
+        
+        // Output "3" - exited loop
+        LD_8_IMMEDIATE(A, b'3'),
         LD_8_TO_FF_IMMEDIATE(0x01),
         PUSH_AF,
         LD_8_IMMEDIATE(A, 0x81),
         LD_8_TO_FF_IMMEDIATE(0x02),
         POP_AF,
         
-        // Remainder (E) - should be 40 (0x28)
-        LD_8_INTERNAL(A, E),
+        // Get remainder
+        LD_16_IMMEDIATE(HL, 0xC100),
+        LD_8_INTERNAL(A, AT_HL),
+        
+        // Output "4" - got remainder
+        PUSH_AF,  // Save remainder
+        LD_8_IMMEDIATE(A, b'4'),
         LD_8_TO_FF_IMMEDIATE(0x01),
         PUSH_AF,
         LD_8_IMMEDIATE(A, 0x81),
         LD_8_TO_FF_IMMEDIATE(0x02),
         POP_AF,
+        POP_AF,  // Restore remainder
         
-        // Quotient low (C) - should be 2
-        LD_8_INTERNAL(A, C),
+        // Add '0'
+        ADD_IMMEDIATE(b'0'),
+        
+        // Output "5" - added '0'
+        PUSH_AF,
+        LD_8_IMMEDIATE(A, b'5'),
         LD_8_TO_FF_IMMEDIATE(0x01),
         PUSH_AF,
         LD_8_IMMEDIATE(A, 0x81),
         LD_8_TO_FF_IMMEDIATE(0x02),
         POP_AF,
+        POP_AF,
         
-        // Quotient high (B) - should be 0
-        LD_8_INTERNAL(A, B),
+        // Output the actual character
         LD_8_TO_FF_IMMEDIATE(0x01),
         PUSH_AF,
         LD_8_IMMEDIATE(A, 0x81),
@@ -144,7 +128,17 @@ fn game_code() -> Vec<Instruction> {
         
         HALT,
         JR(-1),
-    ]
+    ]);
+    
+    for inst in instructions {
+        rom.extend_from_slice(&inst.to_bytes());
+    }
+    
+    while rom.len() < 32768 {
+        rom.push(0);
+    }
+    
+    rom
 }
 
 fn nintendo_logo() -> [u8; 0x30] {

@@ -1,4 +1,4 @@
-//! Z85 Debug - Output intermediate values to diagnose the issue
+// Debug version - output markers to see execution flow
 
 use zerodmg_codes::instruction::prelude::*;
 use zerodmg_codes::instruction::FlagCondition;
@@ -6,7 +6,7 @@ use zerodmg_codes::instruction::FlagCondition;
 fn main() {
     let rom = build_rom();
     std::fs::write("z85-debug.gb", &rom).expect("Failed to write ROM");
-    println!("Generated z85-debug.gb ({} bytes)", rom.len());
+    println!("Generated z85-debug.gb - outputs markers to trace execution");
 }
 
 fn build_rom() -> Vec<u8> {
@@ -14,7 +14,7 @@ fn build_rom() -> Vec<u8> {
     
     rom.extend_from_slice(&nintendo_logo());
     rom.extend_from_slice(&[
-        b'Z', b'8', b'5', b'-', b'D', b'E', b'B', b'U', b'G', 0, 0, 0, 0, 0, 0, 0,
+        b'Z', b'8', b'5', b'D', b'B', b'G', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ]);
     
     while rom.len() < 0x0147 { rom.push(0); }
@@ -23,10 +23,6 @@ fn build_rom() -> Vec<u8> {
     rom.push(0); rom.push(0);
     
     while rom.len() < 0x0200 { rom.push(0); }
-    let z85_alphabet = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
-    rom.extend_from_slice(z85_alphabet);
-    
-    while rom.len() < 0x0260 { rom.push(0); }
     
     let instructions = game_code();
     for inst in instructions {
@@ -40,107 +36,99 @@ fn build_rom() -> Vec<u8> {
     rom
 }
 
+fn serial_out(c: u8) -> Vec<Instruction> {
+    use Instruction::*;
+    use U8Register::*;
+    
+    vec![
+        LD_8_IMMEDIATE(A, c),
+        LD_8_TO_FF_IMMEDIATE(0x01),
+        PUSH_AF,
+        LD_8_IMMEDIATE(A, 0x81),
+        LD_8_TO_FF_IMMEDIATE(0x02),
+        POP_AF,
+    ]
+}
+
 fn game_code() -> Vec<Instruction> {
     use Instruction::*;
     use U8Register::*;
     use U16Register::*;
-    use U8SecondaryRegister::*;
     use FlagCondition::*;
     
-    vec![
+    let mut code = vec![
         DI,
         LD_16_IMMEDIATE(SP, 0xFFFE),
-        
-        // Copy alphabet
-        LD_16_IMMEDIATE(HL, 0x0200),
-        LD_16_IMMEDIATE(DE, 0xC000),
-        LD_8_IMMEDIATE(B, 85),
-        LD_8_FROM_SECONDARY(AT_HL_Plus),
-        LD_8_TO_SECONDARY(AT_DE),
-        INC_16(DE),
-        DEC(B),
-        JR_IF(if_NZ, -6),
-        
-        // Store test value 1234 (0x04D2) at 0xC100-0xC101
+    ];
+    
+    // Output "A"
+    code.extend(serial_out(b'A'));
+    
+    // Store 210 at 0xC100
+    code.extend(vec![
         LD_16_IMMEDIATE(HL, 0xC100),
         LD_8_IMMEDIATE(A, 0xD2), LD_8_INTERNAL(AT_HL, A), INC_16(HL),
-        LD_8_IMMEDIATE(A, 0x04), LD_8_INTERNAL(AT_HL, A),
-        
-        // Load and output the value to verify it's stored correctly
+        LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A), INC_16(HL),
+        LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A), INC_16(HL),
+        LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A),
+    ]);
+    
+    // Output "B"
+    code.extend(serial_out(b'B'));
+    
+    // Do ONE division
+    code.extend(vec![
+        // Init quotient
+        LD_8_IMMEDIATE(A, 0),
+        LD_16_IMMEDIATE(HL, 0xC110),
+        LD_8_INTERNAL(AT_HL, A),
+    ]);
+    
+    // Output "C" (entering loop)
+    code.extend(serial_out(b'C'));
+    
+    // Simple division loop (just count how many times we subtract 85)
+    // LOOP:
+    code.extend(vec![
+        // Check if byte 0 < 85 (simplified - assumes higher bytes are 0)
         LD_16_IMMEDIATE(HL, 0xC100),
-        LD_8_INTERNAL(E, AT_HL), INC_16(HL),
-        LD_8_INTERNAL(D, AT_HL),
-        
-        // Output D (high byte) - should be 0x04
-        LD_8_INTERNAL(A, D),
-        LD_8_TO_FF_IMMEDIATE(0x01),
-        PUSH_AF,
-        LD_8_IMMEDIATE(A, 0x81),
-        LD_8_TO_FF_IMMEDIATE(0x02),
-        POP_AF,
-        
-        // Output E (low byte) - should be 0xD2
-        LD_8_INTERNAL(A, E),
-        LD_8_TO_FF_IMMEDIATE(0x01),
-        PUSH_AF,
-        LD_8_IMMEDIATE(A, 0x81),
-        LD_8_TO_FF_IMMEDIATE(0x02),
-        POP_AF,
-        
-        // Space
-        LD_8_IMMEDIATE(A, b' '),
-        LD_8_TO_FF_IMMEDIATE(0x01),
-        PUSH_AF,
-        LD_8_IMMEDIATE(A, 0x81),
-        LD_8_TO_FF_IMMEDIATE(0x02),
-        POP_AF,
-        
-        // Now divide DE by 85
-        LD_16_IMMEDIATE(BC, 0),
-        
-        // DIV_LOOP
-        LD_8_INTERNAL(A, D),
-        OR(A),
-        JR_IF(if_NZ, 5),
-        
-        LD_8_INTERNAL(A, E),
+        LD_8_INTERNAL(A, AT_HL),
         CP_IMMEDIATE(85),
-        JR_IF(if_C, 13),
+        JR_IF(if_C, 20), // Exit loop if A < 85
         
-        LD_8_INTERNAL(A, E),
+        // Subtract 85
         SUB_IMMEDIATE(85),
-        LD_8_INTERNAL(E, A),
-        JR_IF(if_NC, 2),
-        DEC(D),
+        LD_16_IMMEDIATE(HL, 0xC100),
+        LD_8_INTERNAL(AT_HL, A),
         
-        INC_16(BC),
-        JR(-21),
+        // Inc quotient
+        LD_16_IMMEDIATE(HL, 0xC110),
+        LD_8_INTERNAL(A, AT_HL),
+        INC(A),
+        LD_8_INTERNAL(AT_HL, A),
         
-        // OUTPUT remainder (E)
-        LD_8_INTERNAL(A, E),
+        JR(-24), // Back to loop start
+    ]);
+    
+    // Output "D" (exited loop)
+    code.extend(serial_out(b'D'));
+    
+    // Output remainder (add '0')
+    code.extend(vec![
+        LD_16_IMMEDIATE(HL, 0xC100),
+        LD_8_INTERNAL(A, AT_HL),
+        ADD_IMMEDIATE(b'0'),
         LD_8_TO_FF_IMMEDIATE(0x01),
         PUSH_AF,
         LD_8_IMMEDIATE(A, 0x81),
         LD_8_TO_FF_IMMEDIATE(0x02),
         POP_AF,
-        
-        // Output quotient high byte (B)
-        LD_8_INTERNAL(A, B),
-        LD_8_TO_FF_IMMEDIATE(0x01),
-        PUSH_AF,
-        LD_8_IMMEDIATE(A, 0x81),
-        LD_8_TO_FF_IMMEDIATE(0x02),
-        POP_AF,
-        
-        // Output quotient low byte (C)
-        LD_8_INTERNAL(A, C),
-        LD_8_TO_FF_IMMEDIATE(0x01),
-        PUSH_AF,
-        LD_8_IMMEDIATE(A, 0x81),
-        LD_8_TO_FF_IMMEDIATE(0x02),
-        POP_AF,
-        
-        // Newline
+    ]);
+    
+    // Output "E" (done)
+    code.extend(serial_out(b'E'));
+    
+    code.extend(vec![
         LD_8_IMMEDIATE(A, b'\n'),
         LD_8_TO_FF_IMMEDIATE(0x01),
         PUSH_AF,
@@ -150,7 +138,9 @@ fn game_code() -> Vec<Instruction> {
         
         HALT,
         JR(-1),
-    ]
+    ]);
+    
+    code
 }
 
 fn nintendo_logo() -> [u8; 0x30] {
