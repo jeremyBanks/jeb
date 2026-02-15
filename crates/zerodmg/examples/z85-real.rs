@@ -178,7 +178,7 @@ fn div_de_by_85_16bit() -> Vec<Instruction> {
         LD_8_INTERNAL(A, E),
         SUB_IMMEDIATE(85),
         LD_8_INTERNAL(E, A),
-        JR_IF(if_NC, 2), // No borrow
+        JR_IF(if_NC, 1), // No borrow - skip DEC D only
         DEC(D), // Borrow from high byte
         
         // Increment quotient
