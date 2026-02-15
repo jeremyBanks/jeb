@@ -226,7 +226,7 @@ fn test_shared_test_cases() {
             assert_eq!(decoded_standard, input_bytes, "decode mismatch for {} (standard)", base_name);
 
             for (i, alt) in encoded_files.alternatives.iter().enumerate() {
-                let decoded_alt = run_rust_decode(alt).expect(&format!("Decode failed (alternative {})", i));
+                let decoded_alt = run_rust_decode(alt).expect(&format!("Decode failed for {} (alternative {})", base_name, i));
                 assert_eq!(decoded_alt, input_bytes, "decode mismatch for {} (alternative {})", base_name, i);
             }
 

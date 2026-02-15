@@ -1413,15 +1413,24 @@ fn z855_output_length(input_bytes: usize) -> usize {
     (input_bytes * 5 + 3) / 4
 }
 
-/// Calculate total space available for a long escape of given raw length.
-/// This is the space budget (availableChars) for the entire escape.
+/// Calculate input byte count from Z85 output length (inverse of z855_output_length).
+/// Finds largest n such that z855_output_length(n) <= output_len.
 #[inline]
-fn calculate_total_escape_space(raw_len: usize) -> usize {
-    if raw_len < 8 {
+fn z855_input_length(output_len: usize) -> usize {
+    if output_len == 0 {
         return 0;
     }
-    // Total space is constant regardless of position in input
-    z855_output_length(raw_len) - z855_output_length(raw_len.saturating_sub(8))
+    // Start with approximation
+    let mut n = (output_len * 4) / 5;
+    // Adjust down if too large
+    while n > 0 && z855_output_length(n) > output_len {
+        n -= 1;
+    }
+    // Adjust up if too small
+    while z855_output_length(n + 1) <= output_len {
+        n += 1;
+    }
+    n
 }
 
 /// Reverse the bits of a 64-bit integer.
@@ -1544,13 +1553,19 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
             in_idx += 1;
 
             // Calculate padding positions (position-based, not content-based!)
-            // Match encoder's calculation:
-            // availableChars = space budget for this escape
-            // ourLenNoPadding = lengthPrefix + | + rawBytes
-            // paddingNeeded = availableChars - ourLenNoPadding
-            // paddingAfter = paddingNeeded - offsetPrefix - paddingBefore
+            // Match encoder's calculation by determining bytesRemaining:
+            // 1. Calculate total bytes that will be decoded from entire input
+            // 2. Subtract bytes already decoded to get bytesRemaining
+            // 3. Use encoder's formula: availableChars = z855OutputLength(bytesRemaining) - z855OutputLength(bytesAfter)
+            let total_bytes_to_decode = z855_input_length(input.len());
+            let bytes_decoded_so_far = output.len();
+            let bytes_remaining = total_bytes_to_decode.saturating_sub(bytes_decoded_so_far);
+            let bytes_after = bytes_remaining.saturating_sub(raw_len);
+
             let length_prefix_len = current_block_digits.len() - offset_digits_used;
-            let available_chars = calculate_total_escape_space(raw_len);
+            let total_standard_len = z855_output_length(bytes_remaining);
+            let after_len = z855_output_length(bytes_after);
+            let available_chars = total_standard_len - after_len;
             let our_len_no_padding = length_prefix_len + 1 + raw_len;
             let padding_needed = available_chars.saturating_sub(our_len_no_padding);
             let padding_before = offset;
