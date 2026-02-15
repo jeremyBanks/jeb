@@ -326,15 +326,16 @@ function z855OutputLength(inputBytes: number): number {
 }
 
 /**
- * Calculate padding needed for a long escape of given raw length.
- * This is the space budget available for padding characters and prefix digits.
+ * Calculate total space available for a long escape of given raw length.
+ * This matches the test generator's calculatePaddingNeeded() function.
+ * Returns the total space that can be used for ALL of: prefix digits + | + padding + raw bytes.
  */
-function calculatePaddingNeeded(rawLen: number): number {
+function calculateTotalEscapeSpace(rawLen: number): number {
   if (rawLen < 8) {
     return 0;
   }
-  // Available space = z855OutputLength(rawLen) - z855OutputLength(rawLen - 8)
-  // This is the space saved by using the long escape instead of standard Z85
+  // Total space is constant regardless of position in input
+  // It's z855OutputLength(rawLen) - z855OutputLength(rawLen - 8)
   return z855OutputLength(rawLen) - z855OutputLength(rawLen - 8);
 }
 
@@ -665,9 +666,17 @@ export function decode(input: string): Uint8Array {
       inIdx += 1;
 
       // Calculate padding positions (position-based, not content-based!)
-      const paddingNeeded = calculatePaddingNeeded(rawLen);
+      // Match encoder's calculation:
+      // availableChars = space budget for this escape
+      // ourLenNoPadding = lengthPrefix + | + rawBytes
+      // paddingNeeded = availableChars - ourLenNoPadding
+      // paddingAfter = paddingNeeded - offsetPrefix - paddingBefore
+      const lengthPrefixLen = currentBlockDigits.length - offsetDigitsUsed;
+      const availableChars = calculateTotalEscapeSpace(rawLen);
+      const ourLenNoPadding = lengthPrefixLen + 1 + rawLen;
+      const paddingNeeded = availableChars - ourLenNoPadding;
       const paddingBefore = offset;
-      const paddingAfter = paddingNeeded - offsetDigitsUsed - offset;
+      const paddingAfter = paddingNeeded - offsetDigitsUsed - paddingBefore;
 
       if (paddingAfter < 0) {
         throw new Z855DecodeError(`invalid padding calculation: paddingNeeded=${paddingNeeded}, offsetDigits=${offsetDigitsUsed}, offset=${offset}`);
