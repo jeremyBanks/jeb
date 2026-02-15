@@ -1,0 +1,12 @@
+# Basic test script
+LOG Starting basic test
+TIMEOUT 5000000
+
+WAIT 1000
+LOG Waited 1000 cycles
+
+WAIT_FRAMES 10
+LOG Waited 10 frames
+
+HALT
+LOG This should not appear
