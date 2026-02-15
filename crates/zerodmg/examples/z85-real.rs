@@ -273,7 +273,7 @@ fn test_encoding() -> Vec<Instruction> {
         
         // Loop if counter > 0 (A already has counter from above)
         OR(A),
-        JR_IF(if_NZ, -62), // Loop body size TBD, need to recalculate
+        JR_IF(if_NZ, -65), // Loop body: 6 (before div) + 23 (div) + 36 (after) - 2 = 63 bytes
     ]);
     
     // Output the 5 digits
