@@ -1,6 +1,18 @@
 a fever dream
 
----
+JSON Entity Bag?
+
+Just Encode Bytes?
+
+Joined Escaped Binary?
+
+Slop, with Semitranslucent Binary Encodings.
+
+## Installation
+
+```sh
+cargo install jeb --version ^0.0.0-vibes
+```
 
 ## Changes from Upstream
 
@@ -32,7 +44,7 @@ All upstream commits are preserved; this fork is 987 commits ahead, 0 behind.
 
 ## License
 
-Copyright Jeremy Banks and contributors.
+Copyright Jeremy Banks.
 
 Licensed under either of:
 
