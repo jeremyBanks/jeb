@@ -412,23 +412,8 @@ function z855OutputLength(inputBytes: number): number {
   return Math.ceil((inputBytes * 5) / 4);
 }
 
-/**
- * Calculate input byte count from Z85 output length (inverse of z855OutputLength).
- * Finds largest n such that z855OutputLength(n) <= outputLen.
- */
-function z855InputLength(outputLen: number): number {
-  if (outputLen === 0) return 0;
-  // Start with approximation
-  let n = Math.floor((outputLen * 4) / 5);
-  // Adjust down if too large
-  while (n > 0 && z855OutputLength(n) > outputLen) {
-    n--;
-  }
-  // Adjust up if too small
-  while (z855OutputLength(n + 1) <= outputLen) {
-    n++;
-  }
-  return n;
+function longEscapeTotalLength(rawLen: number): number {
+  return z855OutputLength(rawLen);
 }
 
 /**
@@ -838,22 +823,11 @@ function decodeFromStringCore(input: string): Uint8Array {
         continue;
       }
 
-      // Calculate padding positions (position-based, not content-based!)
-      // Match encoder's calculation by determining bytesRemaining:
-      // 1. Calculate total bytes that will be decoded from entire input
-      // 2. Subtract bytes already decoded to get bytesRemaining
-      // 3. Use encoder's formula: availableChars = z855OutputLength(bytesRemaining) - z855OutputLength(bytesRemaining - rawLen)
-      const totalBytesToDecode = z855InputLength(input.length);
-      const bytesDecodedSoFar = outputChunks.length;
-      const bytesRemaining = totalBytesToDecode - bytesDecodedSoFar;
-      const bytesAfter = bytesRemaining - rawLen;
-
+      // Padding is local to this long escape: derived only from rawLen/prefix.
       const lengthPrefixLen = currentBlockDigits.length - offsetDigitsUsed;
-      const totalStandardLen = z855OutputLength(bytesRemaining);
-      const afterLen = z855OutputLength(bytesAfter);
-      const availableChars = totalStandardLen - afterLen;
+      const totalLen = longEscapeTotalLength(rawLen);
       const ourLenNoPadding = lengthPrefixLen + 1 + rawLen;
-      const paddingNeeded = availableChars - ourLenNoPadding;
+      const paddingNeeded = totalLen - ourLenNoPadding;
       const paddingBefore = offset;
       const paddingAfter = paddingNeeded - offsetDigitsUsed - paddingBefore;
 
@@ -1618,10 +1592,8 @@ function tryLongPassthrough(
   if (!config.hasLongEscape) {
     return null;
   }
-  const bytesRemaining = input.length - startIdx;
-
   // Need at least 8 safe bytes for this escape
-  if (bytesRemaining < 8) {
+  if (input.length - startIdx < 8) {
     return null;
   }
 
@@ -1664,35 +1636,14 @@ function tryLongPassthrough(
   // Not at end: use length-prefixed escape
   // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after]
   //
-  // We need to calculate padding to maintain length invariant.
-  //
-  // IMPORTANT: Z85 output length is NOT additive!
-  // z855OutputLength(a + b) != z855OutputLength(a) + z855OutputLength(b) in general.
-  //
-  // We must ensure: escape_chars + z855OutputLength(remaining) <= z855OutputLength(total)
-  // where total = bytesRemaining and remaining = bytesRemaining - rawLen.
-
   const rawLen = Math.min(safeCount, config.maxRawSegmentLength, MAX_LONG_PASSTHROUGH_LENGTH);
   const lengthPrefix = generateLongEscapePrefix(rawLen);
-
-  // Calculate the budget available for the escape sequence
-  // Total standard Z85 length for all remaining bytes
-  const totalStandardLen = z855OutputLength(bytesRemaining);
-  // Standard Z85 length for bytes after the passthrough
-  const afterLen = z855OutputLength(bytesRemaining - rawLen);
-  // Available chars for our escape (must not exceed this to maintain invariant)
-  const availableChars = totalStandardLen - afterLen;
-
-  // Our encoding (without padding, without offset): lengthPrefix.length + 1 (|) + rawLen
+  const totalLen = longEscapeTotalLength(rawLen);
   const ourLenNoPadding = lengthPrefix.length + 1 + rawLen;
-
-  // If our escape is already too long, don't use it
-  if (ourLenNoPadding > availableChars) {
+  if (ourLenNoPadding > totalLen) {
     return null;
   }
-
-  // Padding needed to reach the available budget (or 0 if exact fit)
-  const paddingNeeded = availableChars - ourLenNoPadding;
+  const paddingNeeded = totalLen - ourLenNoPadding;
 
   // When paddingNeeded >= 2, we can choose an offset for alignment
   // When paddingNeeded < 2, offset is implicitly 0 and not encoded

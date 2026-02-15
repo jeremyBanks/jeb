@@ -785,10 +785,8 @@ fn try_long_passthrough(
     if !config.has_long_escape {
         return None;
     }
-    let bytes_remaining = input.len() - start_idx;
-
     // Need at least 8 safe bytes for this escape
-    if bytes_remaining < 8 {
+    if input.len() - start_idx < 8 {
         return None;
     }
 
@@ -829,37 +827,16 @@ fn try_long_passthrough(
     // Not at end: use length-prefixed escape
     // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after]
     //
-    // We need to calculate padding to maintain length invariant.
-    //
-    // IMPORTANT: Z85 output length is NOT additive!
-    // z855_output_length(a + b) != z855_output_length(a) + z855_output_length(b) in general.
-    //
-    // We must ensure: escape_chars + z855_output_length(remaining) <= z855_output_length(total)
-    // where total = bytes_remaining and remaining = bytes_remaining - raw_len.
-
     let raw_len = safe_count
         .min(config.max_raw_segment_length)
         .min(MAX_LONG_PASSTHROUGH_LENGTH);
     let length_prefix = generate_long_escape_prefix(raw_len);
-
-    // Calculate the budget available for the escape sequence
-    // Total standard Z85 length for all remaining bytes
-    let total_standard_len = z855_output_length(bytes_remaining);
-    // Standard Z85 length for bytes after the passthrough
-    let after_len = z855_output_length(bytes_remaining - raw_len);
-    // Available chars for our escape (must not exceed this to maintain invariant)
-    let available_chars = total_standard_len - after_len;
-
-    // Our encoding (without padding, without offset): length_prefix.len() + 1 (|) + raw_len
+    let total_len = long_escape_total_length(raw_len);
     let our_len_no_padding = length_prefix.len() + 1 + raw_len;
-
-    // If our escape is already too long, don't use it
-    if our_len_no_padding > available_chars {
+    if our_len_no_padding > total_len {
         return None;
     }
-
-    // Padding needed to reach the available budget (or 0 if exact fit)
-    let padding_needed = available_chars - our_len_no_padding;
+    let padding_needed = total_len - our_len_no_padding;
 
     // When padding_needed >= 2, we can choose an offset for alignment
     // When padding_needed < 2, offset is implicitly 0 and not encoded
@@ -1559,24 +1536,9 @@ fn z855_output_length(input_bytes: usize) -> usize {
     (input_bytes * 5 + 3) / 4
 }
 
-/// Calculate input byte count from Z85 output length (inverse of z855_output_length).
-/// Finds largest n such that z855_output_length(n) <= output_len.
 #[inline]
-fn z855_input_length(output_len: usize) -> usize {
-    if output_len == 0 {
-        return 0;
-    }
-    // Start with approximation
-    let mut n = (output_len * 4) / 5;
-    // Adjust down if too large
-    while n > 0 && z855_output_length(n) > output_len {
-        n -= 1;
-    }
-    // Adjust up if too small
-    while z855_output_length(n + 1) <= output_len {
-        n += 1;
-    }
-    n
+fn long_escape_total_length(raw_len: usize) -> usize {
+    z855_output_length(raw_len)
 }
 
 /// Reverse the bits of a 64-bit integer.
@@ -1753,24 +1715,19 @@ fn decode_core(input: &[u8]) -> Result<Vec<u8>, DecodeError> {
                 continue;
             }
 
-            // Calculate padding positions (position-based, not content-based!)
-            // Match encoder's calculation by determining bytesRemaining:
-            // 1. Calculate total bytes that will be decoded from entire input
-            // 2. Subtract bytes already decoded to get bytesRemaining
-            // 3. Use encoder's formula: availableChars = z855OutputLength(bytesRemaining) - z855OutputLength(bytesAfter)
-            let total_bytes_to_decode = z855_input_length(input.len());
-            let bytes_decoded_so_far = output.len();
-            let bytes_remaining = total_bytes_to_decode.saturating_sub(bytes_decoded_so_far);
-            let bytes_after = bytes_remaining.saturating_sub(raw_len);
-
+            // Padding is local to this long escape: derived only from raw_len/prefix.
             let length_prefix_len = current_block_digits.len() - offset_digits_used;
-            let total_standard_len = z855_output_length(bytes_remaining);
-            let after_len = z855_output_length(bytes_after);
-            let available_chars = total_standard_len - after_len;
+            let total_len = long_escape_total_length(raw_len);
             let our_len_no_padding = length_prefix_len + 1 + raw_len;
-            let padding_needed = available_chars.saturating_sub(our_len_no_padding);
+            if our_len_no_padding > total_len {
+                return Err(DecodeError::InvalidLength);
+            }
+            let padding_needed = total_len - our_len_no_padding;
             let padding_before = offset;
-            let padding_after = padding_needed.saturating_sub(offset_digits_used).saturating_sub(padding_before);
+            if offset_digits_used + padding_before > padding_needed {
+                return Err(DecodeError::InvalidLength);
+            }
+            let padding_after = padding_needed - offset_digits_used - padding_before;
 
             // Skip padding before (ANY content - do not check!)
             if in_idx + padding_before > input.len() {
