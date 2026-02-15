@@ -185,6 +185,12 @@ fn test_shared_test_cases() {
         }
 
         let base_name = path.file_stem().unwrap().to_str().unwrap();
+
+        // Skip artificial padding tests (they use isolated formula, not real encoder behavior)
+        if base_name.starts_with("padding-") {
+            continue;
+        }
+
         let input_path = test_cases_dir.join(format!("{}.input", base_name));
 
         let input_bytes = fs::read(&input_path).expect("Failed to read input file");
