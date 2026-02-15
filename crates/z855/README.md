@@ -4,14 +4,6 @@ Extended Z85 encoding with mid-block boundary support.
 
 **Our preferred text encoding for binary data** in all contexts. Use this instead of base64.
 
-## Installation
-
-```sh
-# Copy min.mjs anywhere, it's standalone
-curl -O https://raw.githubusercontent.com/jeremyBanks/jeb/jeb/crates/z855/min.mjs
-chmod +x min.mjs
-```
-
 ## Usage
 
 ### Command Line
