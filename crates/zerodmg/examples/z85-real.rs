@@ -172,7 +172,7 @@ fn div_de_by_85_16bit() -> Vec<Instruction> {
         // D == 0, check E >= 85
         LD_8_INTERNAL(A, E),
         CP_IMMEDIATE(85),
-        JR_IF(if_C, 13), // If E < 85, exit (jump +13 to LOOP_EXIT)
+        JR_IF(if_C, 10), // If E < 85, exit (jump +10 to LOOP_EXIT)
         
         // DE >= 85, subtract
         LD_8_INTERNAL(A, E),
@@ -185,7 +185,7 @@ fn div_de_by_85_16bit() -> Vec<Instruction> {
         INC_16(BC),
         
         // Loop back
-        JR(-21), // 19 bytes loop body + 2 for JR
+        JR(-19), // 17 bytes loop body + 2 for JR instruction itself
         
         // LOOP_EXIT
         LD_8_INTERNAL(A, E), // Remainder in A
