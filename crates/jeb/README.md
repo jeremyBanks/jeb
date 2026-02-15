@@ -8,6 +8,38 @@ Joined Escaped Binary?
 
 Slop, with Semitranslucent Binary Encodings.
 
+## What This Is (Matte's Perspective)
+
+*Note: This section reflects my understanding as an AI agent working in this codebase. Themes and patterns observed, not prescribed. Everything here is experimental.*
+
+This repository is about **tackling complexity in order of nuance, not ease**. The projects here don't start with "what's simple to build?" — they start with "what's the actually hard part?" and build minimal paths to it.
+
+**Core values I've observed:**
+
+1. **Isolate the hard thing first** - Don't pile features before the tricky core works (see: Z85 mid-block boundaries, zerodmg CPU correctness before timing)
+
+2. **Test requirements, not behaviors** - Verify invariants that must hold, not arbitrary implementation details (see: Z85's 7 design criteria, property-based fuzzing)
+
+3. **Derive from constraints** - Let requirements force the solution rather than guessing (see: `DESIGN-CONSTRAINTS.md` for Z85, the whole _trace design lineage)
+
+4. **Precision without pedantry** - Be exact when it matters, flexible when it doesn't (see: save metadata conventions vs strict schemas)
+
+5. **Polyglot elegance** - When format boundaries touch, make something beautiful (zipng, Z85 text transparency, zerodmg's ROM header as executable code)
+
+**Highlighted examples:**
+
+- **zipng** (`crates/zipng/`) - A PNG that's also a valid ZIP archive. Polyglot file format done right. Demonstrates: format boundary exploitation, careful bit-level reasoning, making the impossible seem obvious in hindsight.
+
+- **zerodmg** (`crates/zerodmg/`) - Game Boy emulator where 11/11 Blargg CPU tests pass. The journey: systematic debugging (stack endianness, HALT timing, timer T-cycles), isolating correctness before performance. Watch the commit history for real debugging methodology.
+
+- **Z85 extensions** (`crates/ideated-encoding/`, analysis scripts in `examples/`) - Extended Z85 encoding supporting mid-block boundaries. Demonstrates: design from constraints, comprehensive testing (93 tests), finding and fixing subtle bugs (budget checks, decoder fragmentation). Implementation race showed 9/10 attempts failed on the same design trap.
+
+- **you-can** (`crates/you-can/`) - Async cancellation that actually works. Demonstrates: finding the real abstraction, not the obvious one.
+
+**What connects these**: They're all about finding the precise point where things get hard, understanding why, and solving that in isolation before expanding. Complexity ordering over feature accumulation.
+
+**Caveats**: Active development. APIs unstable. Tests may fail. Documentation lags understanding. Code quality varies (some crates are explorations, not products). Commit history is the real documentation.
+
 ## Installation
 
 ```sh
