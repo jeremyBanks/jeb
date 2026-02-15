@@ -326,17 +326,22 @@ function z855OutputLength(inputBytes: number): number {
 }
 
 /**
- * Calculate total space available for a long escape of given raw length.
- * This matches the test generator's calculatePaddingNeeded() function.
- * Returns the total space that can be used for ALL of: prefix digits + | + padding + raw bytes.
+ * Calculate input byte count from Z85 output length (inverse of z855OutputLength).
+ * Finds largest n such that z855OutputLength(n) <= outputLen.
  */
-function calculateTotalEscapeSpace(rawLen: number): number {
-  if (rawLen < 8) {
-    return 0;
+function z855InputLength(outputLen: number): number {
+  if (outputLen === 0) return 0;
+  // Start with approximation
+  let n = Math.floor((outputLen * 4) / 5);
+  // Adjust down if too large
+  while (n > 0 && z855OutputLength(n) > outputLen) {
+    n--;
   }
-  // Total space is constant regardless of position in input
-  // It's z855OutputLength(rawLen) - z855OutputLength(rawLen - 8)
-  return z855OutputLength(rawLen) - z855OutputLength(rawLen - 8);
+  // Adjust up if too small
+  while (z855OutputLength(n + 1) <= outputLen) {
+    n++;
+  }
+  return n;
 }
 
 /**
@@ -666,13 +671,19 @@ export function decode(input: string): Uint8Array {
       inIdx += 1;
 
       // Calculate padding positions (position-based, not content-based!)
-      // Match encoder's calculation:
-      // availableChars = space budget for this escape
-      // ourLenNoPadding = lengthPrefix + | + rawBytes
-      // paddingNeeded = availableChars - ourLenNoPadding
-      // paddingAfter = paddingNeeded - offsetPrefix - paddingBefore
+      // Match encoder's calculation by determining bytesRemaining:
+      // 1. Calculate total bytes that will be decoded from entire input
+      // 2. Subtract bytes already decoded to get bytesRemaining
+      // 3. Use encoder's formula: availableChars = z855OutputLength(bytesRemaining) - z855OutputLength(bytesRemaining - rawLen)
+      const totalBytesToDecode = z855InputLength(input.length);
+      const bytesDecodedSoFar = outputChunks.length;
+      const bytesRemaining = totalBytesToDecode - bytesDecodedSoFar;
+      const bytesAfter = bytesRemaining - rawLen;
+
       const lengthPrefixLen = currentBlockDigits.length - offsetDigitsUsed;
-      const availableChars = calculateTotalEscapeSpace(rawLen);
+      const totalStandardLen = z855OutputLength(bytesRemaining);
+      const afterLen = z855OutputLength(bytesAfter);
+      const availableChars = totalStandardLen - afterLen;
       const ourLenNoPadding = lengthPrefixLen + 1 + rawLen;
       const paddingNeeded = availableChars - ourLenNoPadding;
       const paddingBefore = offset;

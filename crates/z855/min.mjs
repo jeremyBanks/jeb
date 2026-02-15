@@ -26,8 +26,7 @@ if(m==4){let k=0;for(let j=0;j<4;j++)k=k<<8|l[j];return k>=R&&k<u?k:-1}let k=0;f
 let G=2**(m*8),y=R%G,c=y<=k?R-y+k:R-y+G+k;return c>=u||c>F?-1:c},A=(h,r,M)=>{let T=h[L],y=0;for(let b of h)y=y<<8|b
 let u=8*(4-T),R=y<<u,V=1<<u,G=E**M,e=R%G,c=e<=r?R-e+r:R-e+G+r;c>=R+V&&Q();return c>>>0},o=[],g=[],i=0,w=[];while(i<S){let c=q(i)
 if(c==124){g[L]||Q();let{v:H,c:I}=W(g,g[L]),p=0;if(I<g[L]){let{v:y,c:u}=W(g,g[L]-I);I+u!=g[L]&&Q();p=y}H>=1&&H<=7&&Q();if(!H){i++
-for(;i<S;)o[P](q(i++));return new U(o)}i++;for(let j=0;j<p;j++){i<S&&q(i)==46||Q();i++}i+H>S&&Q();for(let j=0;j<H;j++)o[P](q(i++))
-while(i<S){let e=q(i);if(e==46){i++;continue}if(e==124){i++;break}break}g=[];w=[];continue}let t=c==44?4:c==59?5:c==95?6:c==126?7:0
+for(;i<S;)o[P](q(i++));return new U(o)}i++;let lpLen=g[L]-I,av=H<8?0:Math.ceil(H*5/4)-Math.ceil((H-8)*5/4),pn=av-lpLen-1-H,pb=p,pa=pn-I-pb;pa<0&&(pa=0);pn<0&&(pn=0);i+=pb;i+H>S&&Q();for(let j=0;j<H;j++)o[P](q(i++));i+=pa;g=[];w=[];continue}let t=c==44?4:c==59?5:c==95?6:c==126?7:0
 if(t){i+t>=S&&Q();let a=[];for(let j=1;j<=t;j++)a[P](q(i+j));if(t==4){let T=g[L];if(!T){o[P](...a);i+=5}else{let m=4-T,r=a[O](0,m),J=X(g,r)
 J<0&&Q();o[P](...B(J));w=a[O](m);g=[];i+=5}}else{let n=g[L];if(!n){o[P](...a);i+=1+t;continue}let p=n-1,m=4-p,r=a[O](0,m),J=Y(g,r);J<0&&Q()
 let H=B(J);for(let j=0;j<p;j++)o[P](H[j]);o[P](...a);g=[];w=[];i+=1+t}continue}let d=D[c];d<0&&Q();g[P](d);i++;let M=5-w[L];if(g[L]==M){let v
