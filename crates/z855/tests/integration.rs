@@ -222,7 +222,7 @@ fn test_shared_test_cases() {
             let encoded_files = find_encoded_files(test_cases_dir, base_name);
 
             // DECODE TESTS: All encoded files must decode to same input
-            let decoded_standard = run_rust_decode(&encoded_files.standard).expect("Decode failed (standard)");
+            let decoded_standard = run_rust_decode(&encoded_files.standard).expect(&format!("Decode failed for {} (standard)", base_name));
             assert_eq!(decoded_standard, input_bytes, "decode mismatch for {} (standard)", base_name);
 
             for (i, alt) in encoded_files.alternatives.iter().enumerate() {
