@@ -71,32 +71,123 @@ fn game_code() -> Vec<Instruction> {
         .jr_cond(if_NZ, "CLEAR_GRID");
     
     // Initialize with glider pattern at (5,5)
-    asm.inst(LD_16_IMMEDIATE(HL, 0xC000 + 5 * GRID_WIDTH + 6))
+    asm.inst(LD_16_IMMEDIATE(HL, (0xC000 + 5 * GRID_WIDTH + 6) as u16))
         .inst(LD_8_IMMEDIATE(A, 1))
         .inst(LD_8_INTERNAL(AT_HL, A));
-    asm.inst(LD_16_IMMEDIATE(HL, 0xC000 + 6 * GRID_WIDTH + 7))
+    asm.inst(LD_16_IMMEDIATE(HL, (0xC000 + 6 * GRID_WIDTH + 7) as u16))
         .inst(LD_8_IMMEDIATE(A, 1))
         .inst(LD_8_INTERNAL(AT_HL, A));
-    asm.inst(LD_16_IMMEDIATE(HL, 0xC000 + 7 * GRID_WIDTH + 5))
+    asm.inst(LD_16_IMMEDIATE(HL, (0xC000 + 7 * GRID_WIDTH + 5) as u16))
         .inst(LD_8_IMMEDIATE(A, 1))
         .inst(LD_8_INTERNAL(AT_HL, A));
-    asm.inst(LD_16_IMMEDIATE(HL, 0xC000 + 7 * GRID_WIDTH + 6))
+    asm.inst(LD_16_IMMEDIATE(HL, (0xC000 + 7 * GRID_WIDTH + 6) as u16))
         .inst(LD_8_IMMEDIATE(A, 1))
         .inst(LD_8_INTERNAL(AT_HL, A));
-    asm.inst(LD_16_IMMEDIATE(HL, 0xC000 + 7 * GRID_WIDTH + 7))
+    asm.inst(LD_16_IMMEDIATE(HL, (0xC000 + 7 * GRID_WIDTH + 7) as u16))
         .inst(LD_8_IMMEDIATE(A, 1))
         .inst(LD_8_INTERNAL(AT_HL, A));
     
     // Main loop
-    asm.label("MAIN_LOOP")
-        // Render current grid
-        // TODO: implement rendering
-        
-        // Evolve: compute next generation
-        // TODO: implement evolution
-        
-        // Delay
-        .inst(LD_16_IMMEDIATE(BC, 10000))
+    asm.label("MAIN_LOOP");
+    
+    // Render current grid to screen (0x9800)
+    asm.inst(LD_16_IMMEDIATE(HL, 0xC000))  // Source: current grid
+        .inst(LD_16_IMMEDIATE(DE, 0x9800));  // Dest: BG tilemap
+    
+    asm.inst(LD_8_IMMEDIATE(B, GRID_HEIGHT as u8));
+    asm.label("RENDER_ROW")
+        .inst(LD_8_IMMEDIATE(C, GRID_WIDTH as u8));
+    
+    asm.label("RENDER_CELL")
+        .inst(LD_8_INTERNAL(A, AT_HL))
+        .inst(INC_16(HL))
+        .inst(OR(A))
+        .jr_cond(if_Z, "RENDER_DEAD")
+        // Alive: tile 1
+        .inst(LD_8_IMMEDIATE(A, 1))
+        .jr("RENDER_WRITE");
+    
+    asm.label("RENDER_DEAD")
+        .inst(LD_8_IMMEDIATE(A, 0));
+    
+    asm.label("RENDER_WRITE")
+        .inst(LD_8_TO_SECONDARY(AT_DE))
+        .inst(INC_16(DE))
+        .inst(DEC(C))
+        .jr_cond(if_NZ, "RENDER_CELL");
+    
+    // Skip to next row in tilemap (32-byte rows)
+    asm.inst(LD_8_INTERNAL(A, E))
+        .inst(ADD_IMMEDIATE(32 - GRID_WIDTH as u8))
+        .inst(LD_8_INTERNAL(E, A))
+        .inst(LD_8_IMMEDIATE(A, 0))
+        .inst(ADC(D))
+        .inst(LD_8_INTERNAL(D, A))
+        .inst(DEC(B))
+        .jr_cond(if_NZ, "RENDER_ROW");
+    
+    // Evolve: compute next generation
+    // For each cell, count neighbors and apply rules
+    asm.inst(LD_8_IMMEDIATE(B, GRID_HEIGHT as u8));
+    
+    asm.label("EVOLVE_ROW")
+        .inst(LD_8_IMMEDIATE(C, GRID_WIDTH as u8));
+    
+    asm.label("EVOLVE_CELL")
+        // Count neighbors for cell at (B, C)
+        // Store y in 0xC400, x in 0xC401
+        .inst(LD_16_IMMEDIATE(HL, 0xC400))
+        .inst(LD_8_INTERNAL(A, B))
+        .inst(LD_8_INTERNAL(AT_HL, A))
+        .inst(INC_16(HL))
+        .inst(LD_8_INTERNAL(A, C))
+        .inst(LD_8_INTERNAL(AT_HL, A));
+    
+    // TODO: Count neighbors (this is the hard part!)
+    // For now, just copy current state
+    asm.inst(LD_8_INTERNAL(A, B))
+        .inst(DEC(A))  // y-1
+        .inst(LD_8_INTERNAL(H, A))
+        .inst(LD_8_INTERNAL(A, C))
+        .inst(DEC(A))  // x-1
+        .inst(LD_8_INTERNAL(L, A));
+    
+    // Calculate address: 0xC000 + y*20 + x
+    // Multiply y by 20: y*16 + y*4 = y << 4 + y << 2
+    
+    // Actually, let's use a simpler approach for now
+    // Just copy current state to next generation
+    .inst(LD_16_IMMEDIATE(HL, 0xC000))
+        .inst(LD_16_IMMEDIATE(DE, 0xC200))
+        .inst(LD_16_IMMEDIATE(BC, 360));
+    
+    asm.label("COPY_GRID")
+        .inst(LD_8_INTERNAL(A, AT_HL))
+        .inst(INC_16(HL))
+        .inst(LD_8_INTERNAL(AT_DE, A))
+        .inst(INC_16(DE))
+        .inst(DEC_16(BC))
+        .inst(LD_8_INTERNAL(A, B))
+        .inst(OR(C))
+        .jr_cond(if_NZ, "COPY_GRID");
+    
+    // Swap grids: copy next → current
+    asm.inst(LD_16_IMMEDIATE(HL, 0xC200))
+        .inst(LD_16_IMMEDIATE(DE, 0xC000))
+        .inst(LD_16_IMMEDIATE(BC, 360));
+    
+    asm.label("SWAP_GRID")
+        .inst(LD_8_INTERNAL(A, AT_HL))
+        .inst(INC_16(HL))
+        .inst(LD_8_INTERNAL(AT_DE, A))
+        .inst(INC_16(DE))
+        .inst(DEC_16(BC))
+        .inst(LD_8_INTERNAL(A, B))
+        .inst(OR(C))
+        .jr_cond(if_NZ, "SWAP_GRID");
+    
+    // Delay
+    asm.inst(LD_16_IMMEDIATE(BC, 5000))
         .label("DELAY")
         .inst(DEC_16(BC))
         .inst(LD_8_INTERNAL(A, B))
