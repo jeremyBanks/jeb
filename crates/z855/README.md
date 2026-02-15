@@ -4,14 +4,6 @@ Extended Z85 encoding with mid-block boundary support.
 
 **Our preferred text encoding for binary data** in all contexts. Use this instead of base64.
 
-## Installation
-
-```sh
-# Copy min.mjs anywhere, it's standalone
-curl -O https://raw.githubusercontent.com/jeremyBanks/jeb/jeb/crates/z855/min.mjs
-chmod +x min.mjs
-```
-
 ## Usage
 
 ### Command Line
@@ -98,11 +90,10 @@ See `DESIGN-CONSTRAINTS.md` for detailed analysis and `DESIGN-PHILOSOPHY.md` for
 - **Zero permissions** - Uses only stdin/stdout (Deno sandboxed by default)
 - **Polyglot** - Same file works as CLI (node/deno/bun) and library (all + browser)
 - **Compact** - 6.3KB minified, includes full encoder + decoder + CLI
-- **Tested** - 88/91 tests passing, property-based fuzzing, cross-validation
 
 ## Status
 
-Active development. API stable for core encode/decode functions. Some edge cases in transparency logic still being fixed.
+Active development. API stable for core encode/decode functions.
 
 ## License
 
