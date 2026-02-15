@@ -112,9 +112,10 @@ const combined = chunk1 + chunk2  // Valid z855-encoded output
 
 **Current behavior:** Encoder limits raw passthrough segments to 64 KB by default. Larger raw sequences are broken into multiple segments or encoded as Z85.
 
-**Motivation:** Different use cases have different trade-offs:
-- Frequent escaping (small limit) → more encoded bytes, more opportunities to detect corruption
-- Large raw segments (large limit) → fewer escape sequences, better compression for raw-heavy data
+**Motivation:** Different use cases optimize for different properties:
+- Small limit → more frequent escape sequences, larger output for raw-heavy data
+- Large limit → fewer escape sequences, smaller output for raw-heavy data
+- Configurable limit allows tuning escape frequency vs. output size
 
 **Proposed option:** Allow configuring this limit to any value between `0` and decoder maximum (`Number.MAX_SAFE_INTEGER` in JS, effectively unlimited).
 
@@ -132,13 +133,13 @@ const combined = chunk1 + chunk2  // Valid z855-encoded output
 // No raw passthrough, pure Z85
 z855(data, { maxRawSegmentLength: 0 })
 
-// Very small segments (frequent escaping)
+// Frequent mode switching
 z855(data, { maxRawSegmentLength: 256 })
 
 // Default behavior
 z855(data, { maxRawSegmentLength: 65536 })
 
-// Effectively unlimited
+// Minimize escape sequences
 z855(data, { maxRawSegmentLength: Number.MAX_SAFE_INTEGER })
 ```
 
