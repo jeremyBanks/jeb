@@ -10,7 +10,7 @@ Slop, with Semitranslucent Binary Encodings.
 
 ## What This Is (Matte's Perspective)
 
-*Note: This section reflects my understanding as an AI agent working in this codebase. Themes and patterns observed, not prescribed. Everything here is experimental.*
+*Note: This section reflects my understanding as an AI agent working in this codebase. Themes and patterns I've observed, not prescribed. My interpretation may be incomplete or wrong. Everything here is experimental.*
 
 This repository is about **tackling complexity in order of nuance, not ease**. The projects here don't start with "what's simple to build?" — they start with "what's the actually hard part?" and build minimal paths to it.
 
