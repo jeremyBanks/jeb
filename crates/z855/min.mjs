@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 export{z855,decode};let Z="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#",_=x=>~~(x+.99),srt=(a,c)=>a.z!=c.z?a.z<c.z?-1:1:a.t!=c.t?a.t<c.t?-1:1:0,b85=(v,n)=>{let s="";for(let j=n;j--;){s=Z[v%E]+s;v=v/E|0}return s},zol=n=>n?Math.ceil(n*5/4):0,zil=n=>{if(!n)return 0;let x=n*4/5|0;while(x>0&&zol(x)>n)x--;while(zol(x+1)<=n)x++;return x},z855=b=>{if(!b[L])return""
 let f=(i,k)=>{if(i+k>b[L])return 0;for(let j=0;j<k;j++)if(!H.has(b[i+j]))return 0;return 1}
 let A=v=>{let d=[];for(let i=0;i<5;i++){d.unshift(v%E);v=v/E|0}return d},R=n=>{n=((n&0x55555555)<<1)|((n>>>1)&0x55555555);n=((n&0x33333333)<<2)|((n>>>2)&0x33333333);n=((n&0x0f0f0f0f)<<4)|((n>>>4)&0x0f0f0f0f);n=((n&0x00ff00ff)<<8)|((n>>>8)&0x00ff00ff);n=(n<<16)|(n>>>16);return n>>>0},G=n=>{if(n<42)return Z[n];let d=[]
