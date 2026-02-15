@@ -200,17 +200,14 @@ fn test_encoding() -> Vec<Instruction> {
     use FlagCondition::*;
     
     // Test: encode 16-bit value using actual division
-    // Using value 210 (0x00D2) to match 8-bit test
-    // 210 / 85 = 2 remainder 40
-    // 2 / 85 = 0 remainder 2
-    // So digits should be: 0, 0, 0, 2, 40 (reading left to right)
-    // Output: "0002E"
+    // Using value 0xABCD (43981 decimal)
+    // Expected Z85 output: "0067A"
     
     let mut code = vec![
         // Store test value at 0xC100-0xC101 (16-bit, little-endian)
         LD_16_IMMEDIATE(HL, 0xC100),
-        LD_8_IMMEDIATE(A, 0xD2), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // Low: 0xD2 (210)
-        LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A),              // High: 0x00
+        LD_8_IMMEDIATE(A, 0xCD), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // Low: 0xCD
+        LD_8_IMMEDIATE(A, 0xAB), LD_8_INTERNAL(AT_HL, A),              // High: 0xAB
     ];
     
     // Compute digits from right to left (least to most significant)
