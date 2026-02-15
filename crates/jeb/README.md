@@ -1,10 +1,22 @@
 a fever dream
 
----
+JSON Entity Bag?
+
+Just Encode Bytes?
+
+Joined Escaped Binary?
+
+Slop, with Semitranslucent Binary Encodings.
+
+## Installation
+
+```sh
+cargo install jeb --version ^0.0.0-vibes
+```
 
 ## License
 
-Copyright Jeremy Banks and contributors.
+Copyright Jeremy Banks.
 
 Licensed under either of:
 
