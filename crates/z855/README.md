@@ -90,11 +90,10 @@ See `DESIGN-CONSTRAINTS.md` for detailed analysis and `DESIGN-PHILOSOPHY.md` for
 - **Zero permissions** - Uses only stdin/stdout (Deno sandboxed by default)
 - **Polyglot** - Same file works as CLI (node/deno/bun) and library (all + browser)
 - **Compact** - 6.3KB minified, includes full encoder + decoder + CLI
-- **Tested** - 88/91 tests passing, property-based fuzzing, cross-validation
 
 ## Status
 
-Active development. API stable for core encode/decode functions. Some edge cases in transparency logic still being fixed.
+Active development. API stable for core encode/decode functions.
 
 ## License
 
