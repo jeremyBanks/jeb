@@ -36,14 +36,14 @@ fn game_code() -> Vec<Instruction> {
         DI,
         LD_16_IMMEDIATE(SP, 0xFFFE),
         
-        // Test value: 0x86 0x4F 0xD2 0x6F (from Z85 spec)
-        // This should produce digits that spell "HelloW" when looked up
+        // Test value: 210 (0x000000D2) - simple test
+        // Expected: quotient=2, remainder=40
         // Store at 0xC100-0xC103 (little-endian)
         LD_16_IMMEDIATE(HL, 0xC100),
-        LD_8_IMMEDIATE(A, 0x6F), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // byte 0 (LSB)
-        LD_8_IMMEDIATE(A, 0xD2), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // byte 1
-        LD_8_IMMEDIATE(A, 0x4F), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // byte 2
-        LD_8_IMMEDIATE(A, 0x86), LD_8_INTERNAL(AT_HL, A),              // byte 3 (MSB)
+        LD_8_IMMEDIATE(A, 0xD2), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // byte 0 (LSB)
+        LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // byte 1
+        LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A), INC_16(HL), // byte 2
+        LD_8_IMMEDIATE(A, 0x00), LD_8_INTERNAL(AT_HL, A),              // byte 3 (MSB)
         
         // First, let's just test one division to verify 32-bit subtraction works
         // Load value into memory workspace at 0xC110-0xC113
@@ -65,11 +65,11 @@ fn game_code() -> Vec<Instruction> {
         // Compare 4-byte value at 0xC110 with 85
         // If any byte 1-3 is non-zero, value >= 85
         LD_16_IMMEDIATE(HL, 0xC113), // Start from MSB
-        LD_8_INTERNAL(A, AT_HL), OR(A), JR_IF(if_NZ, 9), // byte 3
+        LD_8_INTERNAL(A, AT_HL), OR(A), JR_IF(if_NZ, 16), // byte 3: jump to subtraction
         DEC_16(HL),
-        LD_8_INTERNAL(A, AT_HL), OR(A), JR_IF(if_NZ, 6), // byte 2
+        LD_8_INTERNAL(A, AT_HL), OR(A), JR_IF(if_NZ, 11), // byte 2: jump to subtraction
         DEC_16(HL),
-        LD_8_INTERNAL(A, AT_HL), OR(A), JR_IF(if_NZ, 3), // byte 1
+        LD_8_INTERNAL(A, AT_HL), OR(A), JR_IF(if_NZ, 6), // byte 1: jump to subtraction
         DEC_16(HL),
         LD_8_INTERNAL(A, AT_HL), // byte 0
         CP_IMMEDIATE(85),
@@ -93,8 +93,8 @@ fn game_code() -> Vec<Instruction> {
         INC(A),
         LD_8_INTERNAL(AT_HL, A),
         
-        // Loop back
-        JR(-50), // Jump back to comparison
+        // Loop back to comparison start
+        JR(-61), // 59 bytes (6 quotient + 30 subtract + 23 compare) + 2 for PC
         
         // Output: remainder (byte 0) and quotient
         LD_16_IMMEDIATE(HL, 0xC110),
