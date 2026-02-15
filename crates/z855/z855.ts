@@ -241,7 +241,7 @@ function readSingleBase42NumberBackwards(
  *
  * Returns { offset, length }.
  */
-function readOffsetAndLengthFromPrefix(prefixDigits: number[]): { offset: number; length: number } {
+function readOffsetAndLengthFromPrefix(prefixDigits: number[]): { offset: number; length: number; offsetDigitsUsed: number } {
   if (prefixDigits.length === 0) {
     throw new Z855DecodeError("no prefix digits");
   }
@@ -254,7 +254,7 @@ function readOffsetAndLengthFromPrefix(prefixDigits: number[]): { offset: number
 
   if (lengthConsumed === prefixDigits.length) {
     // Only one number - it's the length, offset = 0
-    return { offset: 0, length };
+    return { offset: 0, length, offsetDigitsUsed: 0 };
   }
 
   // There are more digits - read offset (backwards from where length started)
@@ -269,7 +269,7 @@ function readOffsetAndLengthFromPrefix(prefixDigits: number[]): { offset: number
     throw new Z855DecodeError("invalid prefix structure");
   }
 
-  return { offset, length };
+  return { offset, length, offsetDigitsUsed: offsetConsumed };
 }
 
 /**
@@ -323,6 +323,19 @@ function generateLongEscapePrefix(length: number): string[] {
 function z855OutputLength(inputBytes: number): number {
   // ceil(inputBytes * 5 / 4)
   return Math.ceil((inputBytes * 5) / 4);
+}
+
+/**
+ * Calculate padding needed for a long escape of given raw length.
+ * This is the space budget available for padding characters and prefix digits.
+ */
+function calculatePaddingNeeded(rawLen: number): number {
+  if (rawLen < 8) {
+    return 0;
+  }
+  // Available space = z855OutputLength(rawLen) - z855OutputLength(rawLen - 8)
+  // This is the space saved by using the long escape instead of standard Z85
+  return z855OutputLength(rawLen) - z855OutputLength(rawLen - 8);
 }
 
 /**
@@ -625,7 +638,7 @@ export function decode(input: string): Uint8Array {
       }
 
       // Try to read offset and length from prefix digits
-      const { offset, length } = readOffsetAndLengthFromPrefix(currentBlockDigits);
+      const { offset, length, offsetDigitsUsed } = readOffsetAndLengthFromPrefix(currentBlockDigits);
 
       // Handle length semantics
       if (length >= 1 && length <= 7) {
@@ -651,16 +664,20 @@ export function decode(input: string): Uint8Array {
       // Skip the |
       inIdx += 1;
 
-      // Skip offset padding characters (dots before raw bytes)
-      for (let i = 0; i < offset; i++) {
-        if (inIdx >= input.length) {
-          throw new Z855DecodeError("insufficient input for offset padding");
-        }
-        if (input.charCodeAt(inIdx) !== RAW_ESCAPE_PADDING) {
-          throw new Z855DecodeError("expected padding dot for offset");
-        }
-        inIdx += 1;
+      // Calculate padding positions (position-based, not content-based!)
+      const paddingNeeded = calculatePaddingNeeded(rawLen);
+      const paddingBefore = offset;
+      const paddingAfter = paddingNeeded - offsetDigitsUsed - offset;
+
+      if (paddingAfter < 0) {
+        throw new Z855DecodeError(`invalid padding calculation: paddingNeeded=${paddingNeeded}, offsetDigits=${offsetDigitsUsed}, offset=${offset}`);
       }
+
+      // Skip padding before (ANY content - do not check!)
+      if (inIdx + paddingBefore > input.length) {
+        throw new Z855DecodeError("insufficient input for padding before");
+      }
+      inIdx += paddingBefore;
 
       // Ensure we have enough input for the raw bytes
       if (inIdx + rawLen > input.length) {
@@ -673,23 +690,11 @@ export function decode(input: string): Uint8Array {
       }
       inIdx += rawLen;
 
-      // Now we need to skip the remaining padding (. characters) and final |
-      // Padding format: [. chars][|] or just [|] if no padding needed
-      // Or no padding at all for exact fit (8 bytes)
-      while (inIdx < input.length) {
-        const nextChar = input.charCodeAt(inIdx);
-        if (nextChar === RAW_ESCAPE_PADDING) {
-          // Skip padding
-          inIdx += 1;
-        } else if (isLongEscape(nextChar)) {
-          // Final | (aesthetic terminator)
-          inIdx += 1;
-          break;
-        } else {
-          // End of padding section, continue normal decoding
-          break;
-        }
+      // Skip padding after (ANY content - do not check!)
+      if (inIdx + paddingAfter > input.length) {
+        throw new Z855DecodeError("insufficient input for padding after");
       }
+      inIdx += paddingAfter;
 
       // Reset block state
       currentBlockDigits.length = 0;
