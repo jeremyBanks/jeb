@@ -231,6 +231,33 @@ z855(data, { safeChars: [...' ~'.charCodeAt(0)] })
 // Output: text, all characters in range 0x20-0x7E
 ```
 
+### Concatenable streaming chunks
+```typescript
+const chunks = largeData.match(/.{1,1024}/g)  // 1KB chunks
+const encoded = chunks.map(chunk => 
+  z855(chunk, { disableEndOfStreamRaw: true })
+).join('')
+// Each chunk is independently valid and concatenable
+```
+
+### Aggressive raw passthrough (minimize escaping)
+```typescript
+z855(data, { maxRawSegmentLength: Number.MAX_SAFE_INTEGER })
+// Use largest possible raw segments, minimize escape overhead
+```
+
+### Frequent escaping for error detection
+```typescript
+z855(data, { maxRawSegmentLength: 256 })
+// Small segments increase opportunities to detect corruption
+```
+
+### Pure Z85 via segment limit
+```typescript
+z855(data, { maxRawSegmentLength: 0 })
+// Alternative to safeChars: [], disables all raw passthrough
+```
+
 ## Implementation Scope
 
 ### Minimal Encoder (min.mjs)
