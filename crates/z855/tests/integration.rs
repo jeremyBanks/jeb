@@ -185,11 +185,6 @@ fn collect_test_case_base_names(test_cases_dir: &Path) -> Vec<String> {
 
         let base_name = path.file_stem().unwrap().to_str().unwrap();
 
-        // Skip artificial padding tests (they use isolated formula, not real encoder behavior)
-        if base_name.starts_with("padding-") {
-            continue;
-        }
-
         base_names.push(base_name.to_string());
     }
 
@@ -255,6 +250,13 @@ fn run_shared_test_cases_shard(shard_idx: usize, shard_count: usize) {
 
             // ENCODE TEST: result must match .encoded-expected if present, otherwise any .encoded* file
             let actual_encoded = run_rust_encode(&input_bytes);
+            if base_name.starts_with("padding-") {
+                assert!(
+                    encoded_files.expected.is_some(),
+                    "padding fixture {} must define .encoded-expected",
+                    base_name
+                );
+            }
 
             if let Some(expected) = &encoded_files.expected {
                 // Must match expected exactly

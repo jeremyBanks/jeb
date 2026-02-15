@@ -607,6 +607,13 @@ Deno.test("test cases from shared directory", async () => {
 
       // ENCODE TEST: result must match .encoded-expected if present, otherwise any .encoded* file
       const actualEncoded = encode(inputBytes);
+      if (baseName.startsWith("padding-")) {
+        assertEquals(
+          encodedFiles.expected !== undefined,
+          true,
+          `padding fixture ${baseName} must define .encoded-expected`
+        );
+      }
 
       if (encodedFiles.expected) {
         // Must match expected exactly
