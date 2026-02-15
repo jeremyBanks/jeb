@@ -1,9 +1,9 @@
 export{z855,decode};let Z="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#",_=x=>~~(x+.99),srt=(a,c)=>a.z!=c.z?a.z<c.z?-1:1:a.t!=c.t?a.t<c.t?-1:1:0,b85=(v,n)=>{let s="";for(let j=n;j--;){s=Z[v%E]+s;v=v/E|0}return s},z855=b=>{if(!b[L])return""
-let S=new Set([...Z+",;|~_"].map(c=>c.charCodeAt())),f=(i,k)=>{if(i+k>b[L])return 0;for(let j=0;j<k;j++)if(!S.has(b[i+j]))return 0;return 1}
+let f=(i,k)=>{if(i+k>b[L])return 0;for(let j=0;j<k;j++)if(!H.has(b[i+j]))return 0;return 1}
 let A=v=>{let d=[];for(let i=0;i<5;i++){d.unshift(v%E);v=v/E|0}return d},R=n=>{n=((n&0x55555555)<<1)|((n>>>1)&0x55555555);n=((n&0x33333333)<<2)|((n>>>2)&0x33333333);n=((n&0x0f0f0f0f)<<4)|((n>>>4)&0x0f0f0f0f);n=((n&0x00ff00ff)<<8)|((n>>>8)&0x00ff00ff);n=(n<<16)|(n>>>16);return n>>>0},G=n=>{if(n<42)return Z[n];let d=[]
 while(n>0){d[P](n%42);n=n/42|0}d.reverse();let r="";for(let i=0;i<d[L];i++)r+=Z[d[i]+(i>0?42:0)];return r},D=(v,p)=>A(v)[O](0,p),H=(v,p)=>A(v)[O](0,p).map(x=>Z[x]).join(""),W=(v,n)=>A(v)[O](5-n).map(x=>Z[x]).join("")
 let N=(h,l)=>{let p=h[L],m=l[L],s=0;for(let d of h)s=s*E+d;let w=E**(5-p),r=s*w;if(!m)return r>F?-1:r;let k=0
-for(let y of l)k=(k<<8)|y;let q=1<<(m*8),z=r%q,c=z<=k?r-z+k:r-z+q+k;return c>=(s+1)*w||c>F?-1:c},o="",i=0,n=b[L],u=0;while(i<n){let r=n-i;if(r>=8){let e=0;for(let j=i;j<n&&e<65536;j++)if(S.has(b[j]))e++;else break
+for(let y of l)k=(k<<8)|y;let q=1<<(m*8),z=r%q,c=z<=k?r-z+k:r-z+q+k;return c>=(s+1)*w||c>F?-1:c},o="",i=0,n=b[L],u=0;while(i<n){let r=n-i;if(r>=8){let e=0;for(let j=i;j<n&&e<65536;j++)if(H.has(b[j]))e++;else break
 if(e>=8){if(i+e==n){o+="0|";for(let j=i;j<n;j++)o+=C(b[j]);return o}else{let g=G(e)
 let V=_(r*5/4)-_((r-e)*5/4),B=g[L]+1+e;if(B<=V){let d=V-B,X=0,Y=null;for(let j=0;j<=d;j++){let m=j>0?G(j)[L]:0;if(m+j>d)continue
 let s=u+m+g[L]+1+j,I=s+e-1,x=s*4/5|0,y=I*4/5|0,U=R(x),K=R(y),Q=R(s),T=R(I),k=[U<K?U:K,U>K?U:K,Q<T?Q:T,Q>T?Q:T]
