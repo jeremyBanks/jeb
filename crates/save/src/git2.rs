@@ -658,7 +658,7 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
                         let author_timestamp = target_timestamp + d_author;
                         let committer_timestamp = target_timestamp + d_committer;
 
-                        if author_timestamp < min_timestamp {
+                        if committer_timestamp < min_timestamp {
                             continue;
                         }
 
