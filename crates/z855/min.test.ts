@@ -235,20 +235,27 @@ Deno.test("Encoder uses passthrough for safe bytes", async (t) => {
     assertEquals(encoded, ",ABCD");
   });
 
-  await t.step("8 safe bytes at end use 0| passthrough", () => {
+  await t.step("8 safe bytes at end use long-escape (concatenatable)", () => {
     const input = new Uint8Array([97, 98, 99, 100, 101, 102, 103, 104]); // abcdefgh
     const encoded = min.z855(input);
-    // Should use 0| passthrough
-    assertEquals(encoded, "0|abcdefgh");
+    // In concatenatable mode, uses long-escape with # padding
+    // Should have 8| followed by safe bytes, with # padding to make length divisible by 5
+    assertEquals(encoded.startsWith("8|abcdefgh"), true);
+    assertEquals(encoded.length % 5, 0); // Length must be divisible by 5
+    // Verify it round-trips correctly
+    const decoded = min.decode(encoded);
+    assertEquals(decoded, input);
   });
 
-  await t.step("8 safe bytes not at end use 8| passthrough", () => {
+  await t.step("8 safe bytes not at end use long-escape (concatenatable)", () => {
     const input = new Uint8Array([97, 98, 99, 100, 101, 102, 103, 104, 0]); // abcdefgh + null
     const encoded = min.z855(input);
-    // Should use 8| passthrough for first 8, then standard Z85 for trailing byte
-    // No terminating | because paddingNeeded == 0
+    // Should use long-escape for first 8, then standard Z85 for trailing byte
     assertEquals(encoded.startsWith("8|abcdefgh"), true);
-    assertEquals(encoded, "8|abcdefgh00");
+    assertEquals(encoded.length % 5, 0); // Length must be divisible by 5
+    // Verify it round-trips correctly
+    const decoded = min.decode(encoded);
+    assertEquals(decoded, input);
   });
 });
 

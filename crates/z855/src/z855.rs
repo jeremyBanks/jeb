@@ -3678,6 +3678,46 @@ mod tests {
     }
 
     #[test]
+    fn test_long_escape_decode_uses_local_padding_with_escape_like_bytes() {
+        // rawLen=16 => length prefix 'g', total local envelope length is 20 chars.
+        // paddingAfter=2 and uses ',' + '|' deliberately.
+        let encoded = "g|abcdefghijklmnop,|00000";
+        let decoded = decode(encoded).unwrap();
+        let mut expected = b"abcdefghijklmnop".to_vec();
+        expected.extend_from_slice(&[0, 0, 0, 0]);
+        assert_eq!(decoded, expected);
+    }
+
+    #[test]
+    fn test_long_escape_decode_offset_envelope_stays_local() {
+        // offset=1, rawLen=16 envelope plus one trailing byte encoded as "00".
+        let encoded = "1g|.abcdefghijklmnop00";
+        let decoded = decode(encoded).unwrap();
+        let mut expected = b"abcdefghijklmnop".to_vec();
+        expected.push(0);
+        assert_eq!(decoded, expected);
+    }
+
+    #[test]
+    fn test_long_escape_encode_prefix_independent_of_remaining_stream_bytes() {
+        let mut input_a = b"abcdefghijklmnop".to_vec();
+        input_a.push(0); // 1 trailing byte (2 Z85 chars)
+
+        let mut input_b = b"abcdefghijklmnop".to_vec();
+        input_b.extend_from_slice(&[0, 1, 2]); // 3 trailing bytes (4 Z85 chars)
+
+        let encoded_a = encode(&input_a);
+        let encoded_b = encode(&input_b);
+
+        let prefix_a = &encoded_a[..encoded_a.len() - 2];
+        let prefix_b = &encoded_b[..encoded_b.len() - 4];
+
+        assert!(prefix_a.contains('|'));
+        assert!(prefix_b.contains('|'));
+        assert_eq!(prefix_a, prefix_b);
+    }
+
+    #[test]
     fn test_read_long_escape_prefix() {
         // Test the prefix reading helper directly using read_offset_and_length_from_prefix
 

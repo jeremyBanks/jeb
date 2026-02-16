@@ -730,6 +730,40 @@ Deno.test("long escape followed by normal z855", () => {
   assertEquals(decoded.slice(8, 12), new Uint8Array([0, 0, 0, 0]));
 });
 
+Deno.test("long escape decode uses local padding with escape-like bytes", () => {
+  // rawLen=16 => length prefix 'g', total local envelope length is 20 chars.
+  // Here paddingAfter is 2 chars and deliberately uses ',' and '|' to ensure
+  // decoder treats them as padding bytes, not nested escapes.
+  const encoded = "g|abcdefghijklmnop,|00000";
+  const decoded = decode(encoded);
+  assertEquals(decoded, new Uint8Array([...new TextEncoder().encode("abcdefghijklmnop"), 0, 0, 0, 0]));
+});
+
+Deno.test("long escape decode offset envelope stays local", () => {
+  // offset=1, rawLen=16: [offset=1][len=16]|[1 padding][16 raw][0 padding]
+  // followed by one trailing byte encoded as "00".
+  const encoded = "1g|.abcdefghijklmnop00";
+  const decoded = decode(encoded);
+  assertEquals(decoded, new Uint8Array([...new TextEncoder().encode("abcdefghijklmnop"), 0]));
+});
+
+Deno.test("long escape encode prefix does not depend on remaining stream bytes", () => {
+  const run = new TextEncoder().encode("abcdefghijklmnop"); // 16 safe bytes
+  const inputA = new Uint8Array([...run, 0]); // 1 trailing byte
+  const inputB = new Uint8Array([...run, 0, 1, 2]); // 3 trailing bytes
+
+  const encodedA = encode(inputA);
+  const encodedB = encode(inputB);
+
+  // Remove trailing standard-Z85 suffix chars (ceil(n*5/4)).
+  const prefixA = encodedA.slice(0, -2); // 1 trailing byte => 2 chars
+  const prefixB = encodedB.slice(0, -4); // 3 trailing bytes => 4 chars
+
+  assertEquals(prefixA.includes("|"), true);
+  assertEquals(prefixB.includes("|"), true);
+  assertEquals(prefixA, prefixB);
+});
+
 // =========================================================================
 // Tests for 8+ byte passthrough encoding (`|` escape)
 // =========================================================================
