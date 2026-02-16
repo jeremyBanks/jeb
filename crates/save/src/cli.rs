@@ -589,22 +589,22 @@ pub fn main(args: Save) -> Result<()> {
     let gen_idx = graph_stats.generation_index;
 
     // Determine target and suffix requirement
-    let (target_hex, letter_suffix) = if let Some(prefix) = args.prefix_hex.as_ref() {
-        (prefix.clone(), false)
+    use crate::suffix::SuffixRequirement;
+    let (target_hex, suffix_req) = if let Some(prefix) = args.prefix_hex.as_ref() {
+        (prefix.clone(), SuffixRequirement::None)
     } else if args.tree_target {
-        (tree4.clone(), false)
+        (tree4.clone(), SuffixRequirement::None)
     } else {
         // Default: hex-b1032-like scheme
         // 0-9999: decimal + any letter [a-f]
         // 10000-65535: hex (≥4 digits) + any digit [0-9]
         // 65536+: hex, no suffix constraint
         if gen_idx <= 9999 {
-            (format!("{}", gen_idx), true)
+            (format!("{}", gen_idx), SuffixRequirement::Letter)
         } else if gen_idx <= 65535 {
-            // TODO: Implement digit suffix support
-            (format!("{:04X}", gen_idx), false)
+            (format!("{:04X}", gen_idx), SuffixRequirement::Digit)
         } else {
-            (format!("{:X}", gen_idx), false)
+            (format!("{:X}", gen_idx), SuffixRequirement::None)
         }
     };
 
@@ -728,7 +728,7 @@ pub fn main(args: Save) -> Result<()> {
         &repo,
         &target.bytes,
         Some(&target.mask),
-        letter_suffix,
+        suffix_req,
         min_timestamp,
         target_timestamp,
     );
