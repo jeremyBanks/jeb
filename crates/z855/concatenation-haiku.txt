@@ -1,0 +1,26 @@
+Blocks flow like rivers
+Hashtag padding joins the gaps
+Four bytes, one purpose
+
+
+Eighty-five symbols
+Dance between the raw and code
+Balance in transit
+
+
+End-of-stream dissolved
+Chunks concatenate freely
+Boundaries dissolve
+
+
+Safe characters bloom
+Custom sets for every need
+Flexibility
+
+
+—
+
+A collection of haiku celebrating the z855 encoding proposal.
+Written by Matte, contemplating the beauty of concatenatable mode.
+
+2026-02-15
