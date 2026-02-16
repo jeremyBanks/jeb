@@ -1,37 +1,50 @@
-export{z855,decode};let Z="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#",_=x=>~~(x+.99),srt=(a,c)=>a.z!=c.z?a.z<c.z?-1:1:a.t!=c.t?a.t<c.t?-1:1:0,b85=(v,n)=>{let s="";for(let j=n;j--;){s=Z[v%E]+s;v=v/E|0}return s},zol=n=>n?Math.ceil(n*5/4):0,zil=n=>{if(!n)return 0;let x=n*4/5|0;while(x>0&&zol(x)>n)x--;while(zol(x+1)<=n)x++;return x},z855=b=>{if(!b[L])return""
-let f=(i,k)=>{if(i+k>b[L])return 0;for(let j=0;j<k;j++)if(!H.has(b[i+j]))return 0;return 1}
-let A=v=>{let d=[];for(let i=0;i<5;i++){d.unshift(v%E);v=v/E|0}return d},R=n=>{n=((n&0x55555555)<<1)|((n>>>1)&0x55555555);n=((n&0x33333333)<<2)|((n>>>2)&0x33333333);n=((n&0x0f0f0f0f)<<4)|((n>>>4)&0x0f0f0f0f);n=((n&0x00ff00ff)<<8)|((n>>>8)&0x00ff00ff);n=(n<<16)|(n>>>16);return n>>>0},G=n=>{if(n<42)return Z[n];let d=[]
-while(n>0){d[P](n%42);n=n/42|0}d.reverse();let r="";for(let i=0;i<d[L];i++)r+=Z[d[i]+(i>0?42:0)];return r},D=(v,p)=>A(v)[O](0,p),J=(v,p)=>A(v)[O](0,p).map(x=>Z[x]).join(""),W=(v,n)=>A(v)[O](5-n).map(x=>Z[x]).join("")
-let N=(h,l)=>{let p=h[L],m=l[L],s=0;for(let d of h)s=s*E+d;let w=E**(5-p),r=s*w;if(!m)return r>F?-1:r;let k=0
-for(let y of l)k=(k<<8)|y;let q=1<<(m*8),z=r%q,c=z<=k?r-z+k:r-z+q+k;return c>=(s+1)*w||c>F?-1:c},o="",i=0,n=b[L],u=0;while(i<n){let r=n-i;if(r>=8){let e=0;for(let j=i;j<n&&e<65536;j++)if(H.has(b[j]))e++;else break
-if(e>=8){let g=G(e)
-let V=_(r*5/4)-_((r-e)*5/4),B=g[L]+1+e;if(B<=V){let d=V-B,X=0,Y=null;for(let j=0;j<=d;j++){let m=j>0?G(j)[L]:0;if(m+j>d)continue
-let s=u+m+g[L]+1+j,I=s+e-1,x=s*4/5|0,y=I*4/5|0,U=R(x),K=R(y),Q=R(s),T=R(I),k=[U<K?U:K,U>K?U:K,Q<T?Q:T,Q>T?Q:T]
-if(Y===null||k[0]<Y[0]||k[0]===Y[0]&&k[1]<Y[1]||k[0]===Y[0]&&k[1]===Y[1]&&k[2]<Y[2]||k[0]===Y[0]&&k[1]===Y[1]&&k[2]===Y[2]&&k[3]<Y[3]){Y=k;X=j}}
-let q=X>0?G(X):"";o+=q+g+"|"+".".repeat(X);for(let j=0;j<e;j++)o+=C(b[i+j])
-o+=".".repeat(d-q[L]-X);u+=V;i+=e;continue}}}if(r>=5){let T=0;for(let k of[7,6,5]){if(r<k||T)continue
-if(f(i,k)){if(k+1+_((r-k)*5/4)==_(r*5/4)){o+=k<6?";":k<7?"_":"~";for(let l=0;l<k;l++)o+=C(b[i+l])
-u+=k+1;i+=k;T=1;break}}if(!T){let x=[];for(let p=0;p<=3;p++){let m=p+k;if(i+m>n)continue;if(m+2+_((r-m)*5/4)!=_(r*5/4))continue
-let s=i+p,I=s+k-1,U=R(s),K=R(I),z=U<K?U:K,t=U<K?K:U;x[P]({z,t,p})}x.sort(srt);for(let {p} of x){let s=i+p;if(!f(s,k))continue;let v=$(b,i)
-o+=J(v,p+1)+(k<6?";":k<7?"_":"~");for(let l=0;l<k;l++)o+=C(b[s+l]);u+=p+k+2;i+=p+k;T=1;break}if(T)break}}if(T)continue}
-if(r>=4&&f(i,4)){o+=",";for(let j=0;j<4;j++)o+=C(b[i+j]);u+=5;i+=4;continue}if(r>=4){let x=[];for(let p=1;p<=3;p++){let s=i+p
-if(s+4>n)continue;if(!f(s,4))continue;let I=s+3,U=R(s),K=R(I);x[P]({z:U<K?U:K,t:U<K?K:U,p})}x.sort(srt);let V=0;for(let {p} of x){let s=i+p,y=[b[s],b[s+1],b[s+2],b[s+3]],v=$(b,i)
-let m=4-p,l=y[O](0,m);if(v!=N(D(v,p),l))continue;let h=y[O](m);if(i+8>n)continue;let z=[];for(let j=0;j<p;j++)z[P](h[j])
-for(let j=0;j<4-p;j++)z[P](b[i+4+p+j]);o+=J(v,p)+",";for(let j of y)o+=C(j)
-o+=W($(z,0),5-p);u+=10;i+=8;V=1;break}if(V)continue}if(r>=4){o+=b85($(b,i),5);u+=5;i+=4}else{let v=r==1?b[i]:r==2?(b[i]<<8)|b[i+1]:(b[i]<<16)|(b[i+1]<<8)|b[i+2];o+=b85(v,r+1);u+=r+1;i+=r}}let r=o[L]%5;if(r){o=o[O](0,-r)+"#".repeat(5-r)+o[O](-r)}return o},decode=(s)=>{let S=s[L];if(!S)return new U(0);let q=j=>K(s[j]),W=(g,e)=>{let v=0,m=1,p=e,c=0;while(p>0){p--;c++;let d=g[p]
-d>83&&Q();if(d>=42){v+=(d-42)*m;m*=42}else{v+=d*m;break}}c&&g[p]<42||Q();return{v,c}},X=(h,l)=>{let m=l[L],b=h.reduce((p,x)=>p*E+x,0),I=E**(5-h[L]),R=b*I,u=R+I
-if(!m)return R>F?-1:R;let k=0;for(let j=0;j<m;j++)k=k<<8|l[j];let G=1<<m*8,y=R%G,c=y<=k?R-y+k:R-y+G+k
-return c>=u||c>F?-1:c},Y=(g,l)=>{let n=g[L],m=l[L],b=0;for(let j=0;j<n;j++)b=b*E+g[j];let I=E**(5-n),R=b*I,u=R+I;if(!m)return R>F?-1:R
-if(m==4){let k=0;for(let j=0;j<4;j++)k=k<<8|l[j];return k>=R&&k<u?k:-1}let k=0;for(let j=0;j<m;j++)k=k<<8|l[j]
-let G=2**(m*8),y=R%G,c=y<=k?R-y+k:R-y+G+k;return c>=u||c>F?-1:c},A=(h,r,M)=>{let T=h[L],y=0;for(let b of h)y=y<<8|b
-let u=8*(4-T),R=y<<u,V=1<<u,G=E**M,e=R%G,c=e<=r?R-e+r:R-e+G+r;c>=R+V&&Q();return c>>>0},o=[],g=[],i=0,w=[];while(i<S){let c=q(i)
-if(c==124){g[L]||Q();let{v:H,c:I}=W(g,g[L]),p=0;if(I<g[L]){let{v:y,c:u}=W(g,g[L]-I);I+u!=g[L]&&Q();p=y}H>=1&&H<=7&&Q();if(!H){i++
-for(;i<S;)o[P](q(i++));return new U(o)}i++;let lpLen=g[L]-I,tb=zil(S),br=tb-o[L],ba=br-H,av=zol(br)-zol(ba),pn=av-lpLen-1-H,pb=p,pa=pn-I-pb;pa<0&&(pa=0);pn<0&&(pn=0);i+=pb;i+H>S&&Q();for(let j=0;j<H;j++)o[P](q(i++));i+=pa;g=[];w=[];continue}let t=c==44?4:c==59?5:c==95?6:c==126?7:0
-if(t){i+t>=S&&Q();let a=[];for(let j=1;j<=t;j++)a[P](q(i+j));if(t==4){let T=g[L];if(!T){o[P](...a);i+=5}else{let m=4-T,r=a[O](0,m),J=X(g,r)
-J<0&&Q();o[P](...B(J));w=a[O](m);g=[];i+=5}}else{let n=g[L];if(!n){o[P](...a);i+=1+t;continue}let p=n-1,m=4-p,r=a[O](0,m),J=Y(g,r);J<0&&Q()
-let H=B(J);for(let j=0;j<p;j++)o[P](H[j]);o[P](...a);g=[];w=[];i+=1+t}continue}if(!g[L]&&!w[L]&&!(i%5)&&c==35){let h=0;while(h<3&&i+h<S&&q(i+h)==35)h++;if(h){i+=h;continue}}let d=D[c];!(d>=0)&&Q();g[P](d);i++;let M=5-w[L];if(g[L]==M){let v
-if(!w[L]){v=0;for(let x of g)v=v*E+x}else{let m=0;for(let x of g)m=m*E+x;v=A(w,m,M);w=[]}v>F&&Q();o[P](...B(v));g=[]}}if(g[L]){let n=g[L]
-n<2&&Q();let v=0;for(let x of g)v=v*E+x;let N=n-1;v>=256**N&&Q();o[P](...B(v)[O](4-N))}return new
-U(o)},L='length',P='push',O='slice',E=85,M=255,F=2**32-1,B=v=>[v>>>24&M,v>>>16&M,v>>>8&M,v&M],C=String.fromCharCode,Q=z=>{throw new
-TypeError},U=Uint8Array,D=[],K=s=>s.charCodeAt(),H=new Set([...Z+",;|~_"].map(c=>K(c))),$=(a,i)=>((a[i]<<24)|(a[i+1]<<16)|(a[i+2]<<8)|a[i+3])>>>0
-for(let j=E;j--;)D[K(Z[j])]=j
+#!/usr/bin/env -S deno run
+export{z as z855,b as decode};let Z="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#",z=z=>{if(!z[p])return""
+let J=(Z,J)=>{if(Z+J>z[p])return 0;for(let E=0;J>E;E++)if(!o.has(z[Z+E]))return 0;return 1},E=Z=>{let z=[];for(let J=0;5>J;J++)z.unshift(Z%G),Z=Z/G|0
+return z},j=Z=>(Z=(Z=(I&(Z=(e&(Z=(b&(Z=(2&Z)<<1|Z>>>1&e))<<2|Z>>>2&b))<<4|Z>>>4&e))<<8|Z>>>8&I)<<16|Z>>>16)>>>0,g=z=>{if(42>z)return Z[z];let J=[]
+for(;z>0;)J[N](z%42),z=z/42|0;J.reverse();let E="";for(let z=0;z<J[p];z++)E+=Z[J[z]+(z>0?42:0)]
+return E},f=(Z,z)=>E(Z)[n](0,z),t=(z,J)=>E(z)[n](0,J).map(z=>Z[z]).join(""),A=(z,J)=>E(z)[n](5-J).map(z=>Z[z]).join(""),a=(Z,z)=>{let J=Z[p],E=z[p],B=0
+for(let z of Z)B=B*G+z;let j=G**(5-J),e=B*j;if(!E)return e>F?-1:e;let b=0;for(let Z of z)b=b<<8|Z;let I=1<<8*E,i=e%I,P=i>b?e-i+I+b:e-i+b
+return P>=(B+1)*j||P>F?-1:P},O="",s=0,R=z[p],r=0;for(;R>s;){let Z=R-s;if(Z>=8){let J=0;for(let Z=s;R>Z&&65536>J&&o.has(z[Z]);Z++)J++
+if(J>=8){let E=g(J),B=i(5*Z/4)-i(5*(Z-J)/4),e=E[p]+1+J;if(B>=e){let Z=B-e,b=0,I=null;for(let z=0;Z>=z;z++){let B=z>0?g(z)[p]:0
+if(B+z>Z)continue;let e=r+B+E[p]+1+z,i=e+J-1,P=4*i/5|0,N=j(4*e/5|0),n=j(P),G=j(e),F=j(i),f=[n>N?N:n,N>n?N:n,F>G?G:F,G>F?G:F];(null===I||f[0]<I[0]||f[0]===I[0]&&f[1]<I[1]||f[0]===I[0]&&f[1]===I[1]&&f[2]<I[2]||f[0]===I[0]&&f[1]===I[1]&&f[2]===I[2]&&f[3]<I[3])&&(I=f,b=z)}let i=b>0?g(b):""
+O+=i+E+"|"+".".repeat(b);for(let Z=0;J>Z;Z++)O+=T(z[s+Z]);O+=".".repeat(Z-i[p]-b),r+=B,s+=J;continue}}}if(Z>=5){let E=0;for(let B of[7,6,5])if(Z>=B&&!E){if(J(s,B)&&B+1+i(5*(Z-B)/4)==i(5*Z/4)){O+=6>B?";":7>B?"_":"~";for(let Z=0;B>Z;Z++)O+=T(z[s+Z])
+r+=B+1,s+=B,E=1;break}if(!E){let e=[];for(let z=0;3>=z;z++){let J=z+B;if(s+J>R)continue;if(J+2+i(5*(Z-J)/4)!=i(5*Z/4))continue;let E=s+z,b=E+B-1,I=j(E),P=j(b);e[N]({z:P>I?I:P,t:P>I?P:I,p:z})}e.sort(P);for(let{p:Z}of e){let j=s+Z
+if(J(j,B)){O+=t(S(z,s),Z+1)+(6>B?";":7>B?"_":"~");for(let Z=0;B>Z;Z++)O+=T(z[j+Z]);r+=Z+B+2,s+=Z+B,E=1;break}}if(E)break}}if(E)continue}if(Z>=4&&J(s,4)){O+=",";for(let Z=0;4>Z;Z++)O+=T(z[s+Z]);r+=5,s+=4}else{if(Z>=4){let Z=[]
+for(let z=1;3>=z;z++){let E=s+z;if(E+4>R)continue;if(!J(E,4))continue;let B=E+3,e=j(E),b=j(B);Z[N]({z:b>e?e:b,t:b>e?b:e,p:z})}Z.sort(P);let E=0;for(let{p:J}of Z){let Z=s+J,B=[z[Z],z[Z+1],z[Z+2],z[Z+3]],j=S(z,s),e=4-J,b=B[n](0,e)
+if(j!=a(f(j,J),b))continue;let I=B[n](e);if(s+8>R)continue;let i=[];for(let Z=0;J>Z;Z++)i[N](I[Z]);for(let Z=0;4-J>Z;Z++)i[N](z[s+4+J+Z]);O+=t(j,J)+",";for(let Z of B)O+=T(Z);O+=A(S(i,0),5-J),r+=10,s+=8,E=1
+break}if(E)continue}4>Z?(O+=B(1==Z?z[s]:2==Z?z[s]<<8|z[s+1]:z[s]<<16|z[s+1]<<8|z[s+2],Z+1),r+=Z+1,s+=Z):(O+=B(S(z,s),5),r+=5,s+=4)}}let H=O[p]%5;return H&&(O=O[n](0,-H)+"#".repeat(5-H)+O[n](-H)),O},B=(z,J)=>{let E=""
+for(let B=J;B--;)E=Z[z%G]+E,z=z/G|0;return E};J=Z=>Z?Math.ceil(5*Z/4):0,E=Z=>{if(!Z)return 0;let z=4*Z/5|0;for(;z>0&&J(z)>Z;)z--;for(;J(z+1)<=Z;)z++
+return z},e=252645135,b=858993459,I=16711935,p="length",N="push",n="slice",b=Z=>{let z=Z[p];if(!z)return new A(0)
+let B=z=>O(Z[z]),j=(Z,z)=>{let J=0,E=1,B=z,j=0;for(;B>0;){B--,j++;let z=Z[B];if(z>83&&t(),42>z){J+=z*E
+break}J+=(z-42)*E,E*=42}return j&&42>Z[B]||t(),{v:J,c:j}},e=(Z,z)=>{let J=z[p],E=Z.reduce((Z,z)=>Z*G+z,0),B=G**(5-Z[p]),j=E*B,e=j+B
+if(!J)return j>F?-1:j;let b=0;for(let Z=0;J>Z;Z++)b=b<<8|z[Z];let I=1<<8*J,i=j%I,P=i>b?j-i+I+b:j-i+b
+return P>=e||P>F?-1:P},b=(Z,z)=>{let J=Z[p],E=z[p],B=0;for(let z=0;J>z;z++)B=B*G+Z[z]
+let j=G**(5-J),e=B*j,b=e+j;if(!E)return e>F?-1:e;if(4==E){let Z=0
+for(let J=0;4>J;J++)Z=Z<<8|z[J];return Z>=e&&b>Z?Z:-1}let I=0
+for(let Z=0;E>Z;Z++)I=I<<8|z[Z];let i=2**(8*E),P=e%i,N=P>I?e-P+i+I:e-P+I
+return N>=b||N>F?-1:N},I=(Z,z,J)=>{let E=Z[p],B=0;for(let z of Z)B=B<<8|z
+let j=8*(4-E),e=B<<j,b=G**J,I=e%b,i=I>z?e-I+b+z:e-I+z
+return i>=e+(1<<j)&&t(),i>>>0},i=[],P=[],g=0,T=[]
+for(;z>g;){let Z=B(g);if(124==Z){P[p]||t()
+let{v:Z,c:e}=j(P,P[p]),b=0;if(e<P[p]){let{v:Z,c:z}=j(P,P[p]-e)
+e+z!=P[p]&&t(),b=Z}if(Z>=1&&7>=Z&&t(),!Z){for(g++;z>g;)i[N](B(g++))
+return new A(i)}g++;let I=P[p]-e,n=E(z)-i[p],G=n-Z,F=J(n)-J(G)-I-1-Z,f=F-e-b
+0>f&&(f=0),0>F&&(F=0),g+=b,g+Z>z&&t();for(let z=0;Z>z;z++)i[N](B(g++))
+g+=f,P=[],T=[];continue}let O=44==Z?4:59==Z?5:95==Z?6:126==Z?7:0
+if(O){g+O>=z&&t();let Z=[];for(let z=1;O>=z;z++)Z[N](B(g+z))
+if(4==O){let z=P[p];if(z){let J=4-z,E=e(P,Z[n](0,J))
+0>E&&t(),i[N](...f(E)),T=Z[n](J),P=[],g+=5}else i[N](...Z),g+=5}else{let z=P[p]
+if(!z){i[N](...Z),g+=1+O;continue}let J=z-1,E=b(P,Z[n](0,4-J));0>E&&t()
+let B=f(E);for(let Z=0;J>Z;Z++)i[N](B[Z])
+i[N](...Z),P=[],T=[],g+=1+O}continue}if(!(P[p]||T[p]||g%5||35!=Z)){let Z=0
+for(;3>Z&&z>g+Z&&35==B(g+Z);)Z++;if(Z){g+=Z;continue}}let o=a[Z]
+!(o>=0)&&t(),P[N](o),g++;let S=5-T[p];if(P[p]==S){let Z
+if(T[p]){let z=0;for(let Z of P)z=z*G+Z
+Z=I(T,z,S),T=[]}else{Z=0;for(let z of P)Z=Z*G+z}Z>F&&t(),i[N](...f(Z)),P=[]}}if(P[p]){let Z=P[p]
+2>Z&&t();let z=0;for(let Z of P)z=z*G+Z;let J=Z-1
+z>=256**J&&t(),i[N](...f(z)[n](4-J))}return new A(i)},i=Z=>~~(Z+.99),P=(Z,z)=>Z.z!=z.z?Z.z<z.z?-1:1:Z.t!=z.t?Z.t<z.t?-1:1:0,G=85,g=255,F=2**32-1,f=Z=>[Z>>>24&g,Z>>>16&g,Z>>>8&g,Z&g],T=String.fromCharCode,t=Z=>{throw new TypeError},A=Uint8Array,a=[],O=Z=>Z.charCodeAt(),o=new Set([...Z+",;|~_"].map(Z=>O(Z))),S=(Z,z)=>(Z[z]<<24|Z[z+1]<<16|Z[z+2]<<8|Z[z+3])>>>0
+for(let z=G;z--;)a[O(Z[z])]=z;(import.meta.main||import.meta.url==="file://"+process?.argv?.[1])&&(async()=>{let Z="undefined"!=typeof Deno,z=Z?Deno.args:process?.argv||Bun?.argv||[],J=Z?z[0]:z[z[0]?.includes?.("node")||z[0]?.includes?.("bun")?2:1]
+J&&["encode","decode"].includes(J)||(console.error("usage: min.mjs <encode|decode> <stdin >stdout"),(process||Deno||Bun).exit(2));let E="",B=new TextEncoder,j=new TextDecoder;if(Z){Deno.stdin.setRaw?.(!1)
+for await(let Z of Deno.stdin.readable)E+=j.decode(Z,{stream:!0})}else{process.stdin.setEncoding("utf8");for await(let Z of process.stdin)E+=Z}E=E.trimEnd();let e="encode"===J?z855(B.encode(E)):j.decode(decode(E))
+Z?Deno.stdout.writeSync("string"==typeof e?B.encode(e):e):(process?.stdout||Bun?.stdout)?.write?.(e)})()
