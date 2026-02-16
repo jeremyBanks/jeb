@@ -315,44 +315,61 @@ fn encode_to_vec_core(input: &[u8], config: &EncodeConfig) -> Vec<u8> {
 
         // First, check if we have at least 4 bytes for a potential passthrough
         if bytes_remaining >= 4 {
-            // HIGHEST PRIORITY: Try 8+ byte passthrough (| escape)
-            // This is most efficient for long runs of safe bytes
-            if let Some(result) = try_long_passthrough(input, in_idx, output.len(), config) {
-                output.extend_from_slice(&result.output);
-                in_idx += result.bytes_consumed;
-                continue;
-            }
+            // In concatenatable mode, don't use passthrough for the final block if it would
+            // create a partial block (non-divisible-by-5 output), since hash padding would split it.
+            // We check if encoding these 4 bytes as passthrough would be the last operation
+            // and would result in remainder > 0.
+            let skip_passthrough = if config.concatenatable && bytes_remaining == 4 {
+                // If we encode these 4 bytes as passthrough (5 chars), what would the total length be?
+                let hypothetical_length = output.len() + 5;
+                let would_need_padding = hypothetical_length % 5 != 0;
+                eprintln!("DEBUG: Final 4 bytes, output.len()={}, hyp_len={}, would_need_padding={}",
+                    output.len(), hypothetical_length, would_need_padding);
+                would_need_padding
+            } else {
+                false
+            };
 
-            // Try extended passthrough (5/6/7 bytes) - second preference
-            // Prefer: 7-byte > 6-byte > 5-byte
-            // These are more efficient than 4-byte passthrough (8 chars for 7 bytes vs 5 chars for 4 bytes)
-            // and allow consecutive escapes with zero gap for long safe sequences.
-            if let Some(result) = try_extended_passthrough(input, in_idx, config) {
-                output.extend_from_slice(&result.output);
-                in_idx += result.bytes_consumed;
-                continue;
-            }
+            if !skip_passthrough {
+                // HIGHEST PRIORITY: Try 8+ byte passthrough (| escape)
+                // This is most efficient for long runs of safe bytes
+                if let Some(result) = try_long_passthrough(input, in_idx, output.len(), config) {
+                    output.extend_from_slice(&result.output);
+                    in_idx += result.bytes_consumed;
+                    continue;
+                }
 
-            // Check for block-aligned 4-byte passthrough (third preference)
-            if config.has_escape_4 && is_block_safe_for_passthrough(&input[in_idx..], &config.safe_char_table) {
-                // Block-aligned passthrough: just output , + 4 bytes
-                output.push(RAW_ESCAPE_4);
-                output.push(input[in_idx]);
-                output.push(input[in_idx + 1]);
-                output.push(input[in_idx + 2]);
-                output.push(input[in_idx + 3]);
-                in_idx += 4;
-                continue;
-            }
+                // Try extended passthrough (5/6/7 bytes) - second preference
+                // Prefer: 7-byte > 6-byte > 5-byte
+                // These are more efficient than 4-byte passthrough (8 chars for 7 bytes vs 5 chars for 4 bytes)
+                // and allow consecutive escapes with zero gap for long safe sequences.
+                if let Some(result) = try_extended_passthrough(input, in_idx, config) {
+                    output.extend_from_slice(&result.output);
+                    in_idx += result.bytes_consumed;
+                    continue;
+                }
 
-            // Try non-aligned 4-byte passthrough (lowest preference for passthrough)
-            // Look for 4 consecutive safe bytes starting at positions 1, 2, or 3
-            if let Some(result) = try_non_aligned_passthrough(input, in_idx, &output, config) {
-                // Non-aligned passthrough succeeded
-                // result contains: (before_z85_chars, passthrough_bytes, after_z85_chars, bytes_consumed)
-                output.extend_from_slice(&result.output);
-                in_idx += result.bytes_consumed;
-                continue;
+                // Check for block-aligned 4-byte passthrough (third preference)
+                if config.has_escape_4 && is_block_safe_for_passthrough(&input[in_idx..], &config.safe_char_table) {
+                    // Block-aligned passthrough: just output , + 4 bytes
+                    output.push(RAW_ESCAPE_4);
+                    output.push(input[in_idx]);
+                    output.push(input[in_idx + 1]);
+                    output.push(input[in_idx + 2]);
+                    output.push(input[in_idx + 3]);
+                    in_idx += 4;
+                    continue;
+                }
+
+                // Try non-aligned 4-byte passthrough (lowest preference for passthrough)
+                // Look for 4 consecutive safe bytes starting at positions 1, 2, or 3
+                if let Some(result) = try_non_aligned_passthrough(input, in_idx, &output, config) {
+                    // Non-aligned passthrough succeeded
+                    // result contains: (before_z85_chars, passthrough_bytes, after_z85_chars, bytes_consumed)
+                    output.extend_from_slice(&result.output);
+                    in_idx += result.bytes_consumed;
+                    continue;
+                }
             }
 
             // Standard Z85 encoding
@@ -403,6 +420,7 @@ fn encode_to_vec_core(input: &[u8], config: &EncodeConfig) -> Vec<u8> {
     if config.concatenatable {
         let remainder = output.len() % 5;
         if remainder > 0 {
+            // Insert hash padding before the last `remainder` characters
             let pad_len = 5 - remainder;
             let insert_at = output.len() - remainder;
             for _ in 0..pad_len {
@@ -1624,40 +1642,8 @@ fn decode_core(input: &[u8]) -> Result<Vec<u8>, DecodeError> {
                     hash_run += 1;
                 }
                 if hash_run > 0 {
-                    let num_chars = 5 - hash_run;
-                    let start_idx = in_idx + hash_run;
-                    let value = decode_partial_block(&input[start_idx..start_idx + num_chars])?;
-                    let num_bytes = num_chars - 1;
-
-                    match num_bytes {
-                        1 => {
-                            if value > 0xFF {
-                                return Err(DecodeError::Overflow);
-                            }
-                            output.push(value as u8);
-                        }
-                        2 => {
-                            if value > 0xFFFF {
-                                return Err(DecodeError::Overflow);
-                            }
-                            output.push((value >> 8) as u8);
-                            output.push(value as u8);
-                        }
-                        3 => {
-                            if value > 0xFFFFFF {
-                                return Err(DecodeError::Overflow);
-                            }
-                            output.push((value >> 16) as u8);
-                            output.push((value >> 8) as u8);
-                            output.push(value as u8);
-                        }
-                        _ => unreachable!(),
-                    }
-
-                    in_idx += 5;
-                    current_block_digits.clear();
-                    block_pos = 0;
-                    known_high_bytes.clear();
+                    // Skip the hash padding and continue normal decoding
+                    in_idx += hash_run;
                     continue;
                 }
             }

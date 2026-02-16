@@ -743,29 +743,8 @@ function decodeFromStringCore(input: string): Uint8Array {
           hashRun += 1;
         }
         if (hashRun > 0) {
-          const numChars = 5 - hashRun;
-          const startIdx = inIdx + hashRun;
-          const value = decodePartialBlock(input, startIdx, numChars);
-          const numBytes = numChars - 1;
-
-          if (numBytes === 1) {
-            if (value > 0xff) throw new Z855DecodeError("Z85 value overflow");
-            outputChunks.push(value);
-          } else if (numBytes === 2) {
-            if (value > 0xffff) throw new Z855DecodeError("Z85 value overflow");
-            outputChunks.push((value >>> 8) & 0xff);
-            outputChunks.push(value & 0xff);
-          } else {
-            if (value > 0xffffff) throw new Z855DecodeError("Z85 value overflow");
-            outputChunks.push((value >>> 16) & 0xff);
-            outputChunks.push((value >>> 8) & 0xff);
-            outputChunks.push(value & 0xff);
-          }
-
-          inIdx += 5;
-          currentBlockDigits.length = 0;
-          blockPos = 0;
-          knownHighBytes = [];
+          // Skip the hash padding and continue normal decoding
+          inIdx += hashRun;
           continue;
         }
       }
