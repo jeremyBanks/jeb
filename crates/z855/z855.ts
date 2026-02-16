@@ -104,6 +104,8 @@ const RAW_ESCAPE_LONG = "|".charCodeAt(0); // 0x7C
  */
 const RAW_ESCAPE_PADDING = ".".charCodeAt(0); // 0x2E
 
+const HASH_PADDING = "#".charCodeAt(0); // 0x23
+
 /**
  * Extended safe characters for raw passthrough encoding decisions.
  * These are the Z85 alphabet (85 chars) plus 5 additional safe characters: `,;|~_`
@@ -121,6 +123,25 @@ const SAFE_CHARS =
  */
 const SAFE_CHAR_TABLE: boolean[] = buildSafeCharTable();
 
+type SafeCharInput = number | string;
+
+export interface Z855EncodeOptions {
+  safeChars?: Iterable<SafeCharInput>;
+  concatenatable?: boolean;
+  maxRawSegmentLength?: number;
+}
+
+interface EncodeConfig {
+  safeCharTable: boolean[];
+  maxRawSegmentLength: number;
+  concatenatable: boolean;
+  hasEscape4: boolean;
+  hasEscape5: boolean;
+  hasEscape6: boolean;
+  hasEscape7: boolean;
+  hasLongEscape: boolean;
+}
+
 /**
  * Build the safe character lookup table.
  */
@@ -130,6 +151,72 @@ function buildSafeCharTable(): boolean[] {
     table[SAFE_CHARS.charCodeAt(i)] = true;
   }
   return table;
+}
+
+function validateSafeCharValue(value: SafeCharInput, textMode: boolean): number {
+  if (typeof value === "number") {
+    if (!Number.isInteger(value) || value < 0 || value > 255) {
+      throw new TypeError(`safeChars contains invalid byte value: ${value}`);
+    }
+    if (textMode && value > 127) {
+      throw new TypeError(`safeChars contains non-ASCII byte for text encode: ${value}`);
+    }
+    return value;
+  }
+
+  if (typeof value === "string") {
+    if (value.length !== 1) {
+      throw new TypeError(`safeChars string entries must be exactly one character: "${value}"`);
+    }
+    const codePoint = value.codePointAt(0);
+    if (codePoint === undefined || codePoint > 127) {
+      throw new TypeError(`safeChars string entries must be ASCII: "${value}"`);
+    }
+    return codePoint;
+  }
+
+  throw new TypeError(`safeChars contains invalid entry type: ${typeof value}`);
+}
+
+function buildCustomSafeCharTable(safeChars: Iterable<SafeCharInput>, textMode: boolean): boolean[] {
+  const table = new Array(256).fill(false);
+  for (const value of safeChars) {
+    table[validateSafeCharValue(value, textMode)] = true;
+  }
+  return table;
+}
+
+function resolveMaxRawSegmentLength(options?: Z855EncodeOptions): number {
+  const raw = options?.maxRawSegmentLength;
+  if (raw === undefined) {
+    return DEFAULT_MAX_RAW_SEGMENT_LENGTH;
+  }
+  if (!Number.isInteger(raw) || raw < 0 || raw > MAX_ALLOWED_RAW_SEGMENT_LENGTH) {
+    throw new TypeError(
+      `maxRawSegmentLength must be an integer in range 0..${MAX_ALLOWED_RAW_SEGMENT_LENGTH}`
+    );
+  }
+  return raw;
+}
+
+function buildEncodeConfig(options?: Z855EncodeOptions, textMode = false): EncodeConfig {
+  const safeCharTable =
+    options?.safeChars === undefined
+      ? SAFE_CHAR_TABLE
+      : buildCustomSafeCharTable(options.safeChars, textMode);
+  const maxRawSegmentLength = resolveMaxRawSegmentLength(options);
+  const concatenatable = options?.concatenatable === true;
+
+  return {
+    safeCharTable,
+    maxRawSegmentLength,
+    concatenatable,
+    hasEscape4: safeCharTable[RAW_ESCAPE_4] && maxRawSegmentLength >= 4,
+    hasEscape5: safeCharTable[RAW_ESCAPE_5] && maxRawSegmentLength >= 5,
+    hasEscape6: safeCharTable[RAW_ESCAPE_6] && maxRawSegmentLength >= 6,
+    hasEscape7: safeCharTable[RAW_ESCAPE_7] && maxRawSegmentLength >= 7,
+    hasLongEscape: safeCharTable[RAW_ESCAPE_LONG] && maxRawSegmentLength >= 8,
+  };
 }
 
 /**
@@ -325,23 +412,8 @@ function z855OutputLength(inputBytes: number): number {
   return Math.ceil((inputBytes * 5) / 4);
 }
 
-/**
- * Calculate input byte count from Z85 output length (inverse of z855OutputLength).
- * Finds largest n such that z855OutputLength(n) <= outputLen.
- */
-function z855InputLength(outputLen: number): number {
-  if (outputLen === 0) return 0;
-  // Start with approximation
-  let n = Math.floor((outputLen * 4) / 5);
-  // Adjust down if too large
-  while (n > 0 && z855OutputLength(n) > outputLen) {
-    n--;
-  }
-  // Adjust up if too small
-  while (z855OutputLength(n + 1) <= outputLen) {
-    n++;
-  }
-  return n;
+function longEscapeTotalLength(rawLen: number): number {
+  return z855OutputLength(rawLen);
 }
 
 /**
@@ -368,6 +440,8 @@ function bitReverse(n: number): bigint {
 
 /** Maximum length for a single long passthrough segment (64 KiB implementation limit) */
 const MAX_LONG_PASSTHROUGH_LENGTH = 65536;
+const DEFAULT_MAX_RAW_SEGMENT_LENGTH = 65536;
+const MAX_ALLOWED_RAW_SEGMENT_LENGTH = Number.MAX_SAFE_INTEGER;
 
 /**
  * Error class for Z85 decoding failures
@@ -418,7 +492,7 @@ export class Z855DecodeError extends Error {
  * @param input - The bytes to encode (Uint8Array)
  * @returns The Z85 encoded string
  */
-export function encode(input: Uint8Array): string {
+function encodeToStringCore(input: Uint8Array, config: EncodeConfig): string {
   // Handle empty input
   if (input.length === 0) {
     return "";
@@ -437,7 +511,7 @@ export function encode(input: Uint8Array): string {
     if (bytesRemaining >= 4) {
       // HIGHEST PRIORITY: Try 8+ byte passthrough (| escape)
       // This is most efficient for long runs of safe bytes
-      const longResult = tryLongPassthrough(input, inIdx, outputChars.length);
+      const longResult = tryLongPassthrough(input, inIdx, outputChars.length, config);
       if (longResult !== null) {
         outputChars.push(...longResult.output);
         inIdx += longResult.bytesConsumed;
@@ -448,7 +522,7 @@ export function encode(input: Uint8Array): string {
       // Prefer: 7-byte > 6-byte > 5-byte
       // These are more efficient than 4-byte passthrough (8 chars for 7 bytes vs 5 chars for 4 bytes)
       // and allow consecutive escapes with zero gap for long safe sequences.
-      const extendedResult = tryExtendedPassthrough(input, inIdx);
+      const extendedResult = tryExtendedPassthrough(input, inIdx, config);
       if (extendedResult !== null) {
         outputChars.push(...extendedResult.output);
         inIdx += extendedResult.bytesConsumed;
@@ -456,7 +530,7 @@ export function encode(input: Uint8Array): string {
       }
 
       // Check for block-aligned 4-byte passthrough (third preference)
-      if (areBytesAllSafe(input, inIdx)) {
+      if (config.hasEscape4 && areBytesAllSafe(input, inIdx, config.safeCharTable)) {
         // Block-aligned passthrough: just output , + 4 bytes
         outputChars.push(",");
         outputChars.push(String.fromCharCode(input[inIdx]));
@@ -469,7 +543,7 @@ export function encode(input: Uint8Array): string {
 
       // Try non-aligned 4-byte passthrough (lowest preference for passthrough)
       // Look for 4 consecutive safe bytes starting at positions 1, 2, or 3
-      const nonAlignedResult = tryNonAlignedPassthrough(input, inIdx);
+      const nonAlignedResult = tryNonAlignedPassthrough(input, inIdx, config);
       if (nonAlignedResult !== null) {
         // Non-aligned passthrough succeeded
         outputChars.push(...nonAlignedResult.output);
@@ -519,7 +593,38 @@ export function encode(input: Uint8Array): string {
     }
   }
 
+  if (config.concatenatable) {
+    const remainder = outputChars.length % 5;
+    if (remainder > 0) {
+      outputChars.splice(outputChars.length - remainder, 0, ...new Array(5 - remainder).fill("#"));
+    }
+  }
+
   return outputChars.join("");
+}
+
+function stringToBinaryBytes(value: string): Uint8Array {
+  const out = new Uint8Array(value.length);
+  for (let i = 0; i < value.length; i++) {
+    out[i] = value.charCodeAt(i) & 0xff;
+  }
+  return out;
+}
+
+function bytesToBinaryString(value: Uint8Array): string {
+  let out = "";
+  for (let i = 0; i < value.length; i++) {
+    out += String.fromCharCode(value[i]);
+  }
+  return out;
+}
+
+export function encode(input: Uint8Array, options?: Z855EncodeOptions): string {
+  return encodeToStringCore(input, buildEncodeConfig(options, true));
+}
+
+export function z855Binary(input: Uint8Array, options?: Z855EncodeOptions): Uint8Array {
+  return stringToBinaryBytes(encodeToStringCore(input, buildEncodeConfig(options, false)));
 }
 
 /**
@@ -529,12 +634,12 @@ export function encode(input: Uint8Array): string {
  * (Z85 alphabet plus `,;|~_`). This allows the encoder to output `,XXXX` format
  * instead of standard Z85 encoding, which can improve readability for text-like data.
  */
-function isBlockSafeForPassthrough(input: Uint8Array, startIdx: number): boolean {
+function isBlockSafeForPassthrough(input: Uint8Array, startIdx: number, safeCharTable: boolean[]): boolean {
   return (
-    SAFE_CHAR_TABLE[input[startIdx]] &&
-    SAFE_CHAR_TABLE[input[startIdx + 1]] &&
-    SAFE_CHAR_TABLE[input[startIdx + 2]] &&
-    SAFE_CHAR_TABLE[input[startIdx + 3]]
+    safeCharTable[input[startIdx]] &&
+    safeCharTable[input[startIdx + 1]] &&
+    safeCharTable[input[startIdx + 2]] &&
+    safeCharTable[input[startIdx + 3]]
   );
 }
 
@@ -607,7 +712,7 @@ function encodePartialToArray(
  * @returns The decoded bytes as Uint8Array
  * @throws Z855DecodeError on invalid input
  */
-export function decode(input: string): Uint8Array {
+function decodeFromStringCore(input: string): Uint8Array {
   // Handle empty input
   if (input.length === 0) {
     return new Uint8Array(0);
@@ -629,6 +734,21 @@ export function decode(input: string): Uint8Array {
 
   while (inIdx < input.length) {
     const charCode = input.charCodeAt(inIdx);
+
+    if (blockPos === 0 && (inIdx % 5) === 0 && charCode === HASH_PADDING) {
+      const remaining = input.length - inIdx;
+      if (remaining >= 5) {
+        let hashRun = 0;
+        while (hashRun < 3 && input.charCodeAt(inIdx + hashRun) === HASH_PADDING) {
+          hashRun += 1;
+        }
+        if (hashRun > 0) {
+          // Skip the hash padding and continue normal decoding
+          inIdx += hashRun;
+          continue;
+        }
+      }
+    }
 
     // Check for long escape (|) first
     if (isLongEscape(charCode)) {
@@ -670,27 +790,30 @@ export function decode(input: string): Uint8Array {
       // Skip the |
       inIdx += 1;
 
-      // Calculate padding positions (position-based, not content-based!)
-      // Match encoder's calculation by determining bytesRemaining:
-      // 1. Calculate total bytes that will be decoded from entire input
-      // 2. Subtract bytes already decoded to get bytesRemaining
-      // 3. Use encoder's formula: availableChars = z855OutputLength(bytesRemaining) - z855OutputLength(bytesRemaining - rawLen)
-      const totalBytesToDecode = z855InputLength(input.length);
-      const bytesDecodedSoFar = outputChunks.length;
-      const bytesRemaining = totalBytesToDecode - bytesDecodedSoFar;
-      const bytesAfter = bytesRemaining - rawLen;
+      // Backward-compatible fast path for `[length]|[raw]` with no padding.
+      if (offset === 0 && offsetDigitsUsed === 0 && input.length - inIdx === rawLen) {
+        for (let i = 0; i < rawLen; i++) {
+          outputChunks.push(input.charCodeAt(inIdx + i));
+        }
+        inIdx += rawLen;
+        currentBlockDigits.length = 0;
+        blockPos = 0;
+        knownHighBytes = [];
+        continue;
+      }
 
+      // Padding is local to this long escape: derived only from rawLen/prefix.
       const lengthPrefixLen = currentBlockDigits.length - offsetDigitsUsed;
-      const totalStandardLen = z855OutputLength(bytesRemaining);
-      const afterLen = z855OutputLength(bytesAfter);
-      const availableChars = totalStandardLen - afterLen;
+      const totalLen = longEscapeTotalLength(rawLen);
       const ourLenNoPadding = lengthPrefixLen + 1 + rawLen;
-      const paddingNeeded = availableChars - ourLenNoPadding;
+      const paddingNeeded = totalLen - ourLenNoPadding;
       const paddingBefore = offset;
       const paddingAfter = paddingNeeded - offsetDigitsUsed - paddingBefore;
 
       if (paddingAfter < 0) {
-        throw new Z855DecodeError(`invalid padding calculation: paddingNeeded=${paddingNeeded}, offsetDigits=${offsetDigitsUsed}, offset=${offset}`);
+        throw new Z855DecodeError(
+          `invalid padding calculation: paddingNeeded=${paddingNeeded}, offsetDigits=${offsetDigitsUsed}, offset=${offset}`
+        );
       }
 
       // Skip padding before (ANY content - do not check!)
@@ -942,6 +1065,11 @@ export function decode(input: string): Uint8Array {
   }
 
   return new Uint8Array(outputChunks);
+}
+
+export function decode(input: string | Uint8Array): Uint8Array {
+  const asString = typeof input === "string" ? input : bytesToBinaryString(input);
+  return decodeFromStringCore(asString);
 }
 
 /**
@@ -1361,24 +1489,24 @@ function reconstructAfterBlockValue(
 /**
  * Check if 4 consecutive bytes are safe for passthrough.
  */
-function areBytesAllSafe(input: Uint8Array, startIdx: number): boolean {
+function areBytesAllSafe(input: Uint8Array, startIdx: number, safeCharTable: boolean[]): boolean {
   return (
-    SAFE_CHAR_TABLE[input[startIdx]] &&
-    SAFE_CHAR_TABLE[input[startIdx + 1]] &&
-    SAFE_CHAR_TABLE[input[startIdx + 2]] &&
-    SAFE_CHAR_TABLE[input[startIdx + 3]]
+    safeCharTable[input[startIdx]] &&
+    safeCharTable[input[startIdx + 1]] &&
+    safeCharTable[input[startIdx + 2]] &&
+    safeCharTable[input[startIdx + 3]]
   );
 }
 
 /**
  * Check if K consecutive bytes starting at the given index are all safe.
  */
-function areKBytesSafe(input: Uint8Array, startIdx: number, k: number): boolean {
+function areKBytesSafe(input: Uint8Array, startIdx: number, k: number, safeCharTable: boolean[]): boolean {
   if (startIdx + k > input.length) {
     return false;
   }
   for (let i = 0; i < k; i++) {
-    if (!SAFE_CHAR_TABLE[input[startIdx + i]]) {
+    if (!safeCharTable[input[startIdx + i]]) {
       return false;
     }
   }
@@ -1437,22 +1565,24 @@ interface LongPassthroughResult {
 function tryLongPassthrough(
   input: Uint8Array,
   startIdx: number,
-  currentOutputLen: number
+  currentOutputLen: number,
+  config: EncodeConfig
 ): LongPassthroughResult | null {
-  const bytesRemaining = input.length - startIdx;
-
+  if (!config.hasLongEscape) {
+    return null;
+  }
   // Need at least 8 safe bytes for this escape
-  if (bytesRemaining < 8) {
+  if (input.length - startIdx < 8) {
     return null;
   }
 
   // Count consecutive safe bytes starting at startIdx
   let safeCount = 0;
   for (let i = startIdx; i < input.length; i++) {
-    if (SAFE_CHAR_TABLE[input[i]]) {
+    if (config.safeCharTable[input[i]]) {
       safeCount++;
       // Cap at implementation limit
-      if (safeCount >= MAX_LONG_PASSTHROUGH_LENGTH) {
+      if (safeCount >= Math.min(config.maxRawSegmentLength, MAX_LONG_PASSTHROUGH_LENGTH)) {
         break;
       }
     } else {
@@ -1468,7 +1598,7 @@ function tryLongPassthrough(
   // Check if this safe run extends to end of input
   const atEndOfInput = startIdx + safeCount === input.length;
 
-  if (atEndOfInput) {
+  if (atEndOfInput && !config.concatenatable) {
     // Use 0| (rest of input is raw) - shorter output
     const output: string[] = [];
     output.push(Z85_ALPHABET[0]); // '0' prefix
@@ -1485,35 +1615,14 @@ function tryLongPassthrough(
   // Not at end: use length-prefixed escape
   // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after]
   //
-  // We need to calculate padding to maintain length invariant.
-  //
-  // IMPORTANT: Z85 output length is NOT additive!
-  // z855OutputLength(a + b) != z855OutputLength(a) + z855OutputLength(b) in general.
-  //
-  // We must ensure: escape_chars + z855OutputLength(remaining) <= z855OutputLength(total)
-  // where total = bytesRemaining and remaining = bytesRemaining - rawLen.
-
-  const rawLen = Math.min(safeCount, MAX_LONG_PASSTHROUGH_LENGTH);
+  const rawLen = Math.min(safeCount, config.maxRawSegmentLength, MAX_LONG_PASSTHROUGH_LENGTH);
   const lengthPrefix = generateLongEscapePrefix(rawLen);
-
-  // Calculate the budget available for the escape sequence
-  // Total standard Z85 length for all remaining bytes
-  const totalStandardLen = z855OutputLength(bytesRemaining);
-  // Standard Z85 length for bytes after the passthrough
-  const afterLen = z855OutputLength(bytesRemaining - rawLen);
-  // Available chars for our escape (must not exceed this to maintain invariant)
-  const availableChars = totalStandardLen - afterLen;
-
-  // Our encoding (without padding, without offset): lengthPrefix.length + 1 (|) + rawLen
+  const totalLen = longEscapeTotalLength(rawLen);
   const ourLenNoPadding = lengthPrefix.length + 1 + rawLen;
-
-  // If our escape is already too long, don't use it
-  if (ourLenNoPadding > availableChars) {
+  if (ourLenNoPadding > totalLen) {
     return null;
   }
-
-  // Padding needed to reach the available budget (or 0 if exact fit)
-  const paddingNeeded = availableChars - ourLenNoPadding;
+  const paddingNeeded = totalLen - ourLenNoPadding;
 
   // When paddingNeeded >= 2, we can choose an offset for alignment
   // When paddingNeeded < 2, offset is implicitly 0 and not encoded
@@ -1695,19 +1804,27 @@ interface ExtendedPassthroughResult {
  */
 function tryExtendedPassthrough(
   input: Uint8Array,
-  blockStart: number
+  blockStart: number,
+  config: EncodeConfig
 ): ExtendedPassthroughResult | null {
   // Try 7-byte first (highest preference), then 6, then 5
   for (const k of [7, 6, 5]) {
+    const escapeEnabled =
+      (k === 7 && config.hasEscape7) ||
+      (k === 6 && config.hasEscape6) ||
+      (k === 5 && config.hasEscape5);
+    if (!escapeEnabled || config.maxRawSegmentLength < k) {
+      continue;
+    }
     // First try block-aligned extended passthrough (escape at position 0, no preceding chars)
     // This enables consecutive escapes with zero gap
-    const blockAlignedResult = tryBlockAlignedExtendedPassthrough(input, blockStart, k);
+    const blockAlignedResult = tryBlockAlignedExtendedPassthrough(input, blockStart, k, config);
     if (blockAlignedResult !== null) {
       return blockAlignedResult;
     }
 
     // Then try non-aligned positions
-    const result = tryExtendedPassthroughOfLength(input, blockStart, k);
+    const result = tryExtendedPassthroughOfLength(input, blockStart, k, config);
     if (result !== null) {
       return result;
     }
@@ -1724,7 +1841,8 @@ function tryExtendedPassthrough(
 function tryBlockAlignedExtendedPassthrough(
   input: Uint8Array,
   blockStart: number,
-  k: number
+  k: number,
+  config: EncodeConfig
 ): ExtendedPassthroughResult | null {
   // Check if we have enough bytes for the passthrough
   if (blockStart + k > input.length) {
@@ -1741,7 +1859,7 @@ function tryBlockAlignedExtendedPassthrough(
   }
 
   // Check if all K bytes starting at blockStart are safe
-  if (!areKBytesSafe(input, blockStart, k)) {
+  if (!areKBytesSafe(input, blockStart, k, config.safeCharTable)) {
     return null;
   }
 
@@ -1781,7 +1899,8 @@ function tryBlockAlignedExtendedPassthrough(
 function tryExtendedPassthroughOfLength(
   input: Uint8Array,
   blockStart: number,
-  k: number
+  k: number,
+  config: EncodeConfig
 ): ExtendedPassthroughResult | null {
   const totalRemaining = input.length - blockStart;
 
@@ -1826,7 +1945,7 @@ function tryExtendedPassthroughOfLength(
 
   // Try candidates in sorted order
   for (const { p } of candidates) {
-    const result = tryExtendedPassthroughAtPosition(input, blockStart, k, p);
+    const result = tryExtendedPassthroughAtPosition(input, blockStart, k, p, config);
     if (result !== null) {
       return result;
     }
@@ -1841,7 +1960,8 @@ function tryExtendedPassthroughAtPosition(
   input: Uint8Array,
   blockStart: number,
   k: number,
-  p: number
+  p: number,
+  config: EncodeConfig
 ): ExtendedPassthroughResult | null {
   // Passthrough bytes start at blockStart + p and span K bytes
   const passStart = blockStart + p;
@@ -1852,7 +1972,7 @@ function tryExtendedPassthroughAtPosition(
   }
 
   // Check if all K passthrough bytes are safe
-  if (!areKBytesSafe(input, passStart, k)) {
+  if (!areKBytesSafe(input, passStart, k, config.safeCharTable)) {
     return null;
   }
 
@@ -1947,8 +2067,12 @@ interface NonAlignedResult {
  */
 function tryNonAlignedPassthrough(
   input: Uint8Array,
-  blockStart: number
+  blockStart: number,
+  config: EncodeConfig
 ): NonAlignedResult | null {
+  if (!config.hasEscape4 || config.maxRawSegmentLength < 4) {
+    return null;
+  }
   // Generate candidates and sort by bit-reversal for consistent position preference.
   // This matches the approach used for extended passthrough (5/6/7 bytes).
   const candidates: Array<[bigint, bigint, number]> = [];
@@ -1959,7 +2083,7 @@ function tryNonAlignedPassthrough(
       continue;
     }
     // Check if passthrough bytes are safe before adding as candidate
-    if (!isBlockSafeForPassthrough(input, passStart)) {
+    if (!isBlockSafeForPassthrough(input, passStart, config.safeCharTable)) {
       continue;
     }
 
@@ -1984,7 +2108,7 @@ function tryNonAlignedPassthrough(
 
   // Try candidates in sorted order
   for (const [, , p] of candidates) {
-    const result = tryNonAlignedAtPosition(input, blockStart, p);
+    const result = tryNonAlignedAtPosition(input, blockStart, p, config);
     if (result !== null) {
       return result;
     }
@@ -2003,7 +2127,8 @@ function tryNonAlignedPassthrough(
 function tryNonAlignedAtPosition(
   input: Uint8Array,
   blockStart: number,
-  p: number
+  p: number,
+  config: EncodeConfig
 ): NonAlignedResult | null {
   // Passthrough bytes start at blockStart + p and span 4 bytes
   const passStart = blockStart + p;
@@ -2014,7 +2139,7 @@ function tryNonAlignedAtPosition(
   }
 
   // Check if the 4 passthrough bytes are all safe
-  if (!areBytesAllSafe(input, passStart)) {
+  if (!areBytesAllSafe(input, passStart, config.safeCharTable)) {
     return null;
   }
 

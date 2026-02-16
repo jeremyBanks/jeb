@@ -1,7 +1,7 @@
-import { encode, decode, Z855DecodeError } from "./z855.ts";
+import { encode, decode, z855Binary, Z855DecodeError, type Z855EncodeOptions } from "./z855.ts";
 
 // Re-export library functions for external use
-export { encode, decode, Z855DecodeError } from "./z855.ts";
+export { encode, decode, z855Binary, Z855DecodeError, type Z855EncodeOptions } from "./z855.ts";
 
 // CLI entry point
 if (import.meta.main) {

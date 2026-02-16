@@ -98,6 +98,7 @@ const RAW_ESCAPE_LONG: u8 = b'|';
 
 /// Padding character for the long escape (aesthetic, ignored by decoder)
 const RAW_ESCAPE_PADDING: u8 = b'.';
+const HASH_PADDING: u8 = b'#';
 
 /// Extended safe characters for raw passthrough encoding decisions.
 /// These are the Z85 alphabet (85 chars) plus 5 additional safe characters: `,;|~_`
@@ -111,6 +112,38 @@ const SAFE_CHARS: &[u8; 90] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKL
 /// For each byte 0-255, stores true if the byte is a safe character for raw passthrough.
 const SAFE_CHAR_TABLE: [bool; 256] = build_safe_char_table();
 
+const DEFAULT_MAX_RAW_SEGMENT_LENGTH: usize = 65536;
+const MAX_ALLOWED_RAW_SEGMENT_LENGTH: usize = usize::MAX;
+
+#[derive(Debug, Clone)]
+pub struct Z855Options {
+    pub safe_chars: Option<Vec<u8>>,
+    pub concatenatable: bool,
+    pub max_raw_segment_length: usize,
+}
+
+impl Default for Z855Options {
+    fn default() -> Self {
+        Self {
+            safe_chars: None,
+            concatenatable: false,
+            max_raw_segment_length: DEFAULT_MAX_RAW_SEGMENT_LENGTH,
+        }
+    }
+}
+
+#[derive(Clone)]
+struct EncodeConfig {
+    safe_char_table: [bool; 256],
+    max_raw_segment_length: usize,
+    concatenatable: bool,
+    has_escape_4: bool,
+    has_escape_5: bool,
+    has_escape_6: bool,
+    has_escape_7: bool,
+    has_long_escape: bool,
+}
+
 /// Build the safe character lookup table at compile time.
 const fn build_safe_char_table() -> [bool; 256] {
     let mut table = [false; 256];
@@ -120,6 +153,47 @@ const fn build_safe_char_table() -> [bool; 256] {
         i += 1;
     }
     table
+}
+
+fn build_custom_safe_char_table(safe_chars: &[u8]) -> [bool; 256] {
+    let mut table = [false; 256];
+    for &b in safe_chars {
+        table[b as usize] = true;
+    }
+    // Z85 alphabet bytes are always considered safe for passthrough eligibility.
+    for &b in Z85_ALPHABET {
+        table[b as usize] = true;
+    }
+    table
+}
+
+fn build_encode_config(options: Option<&Z855Options>) -> EncodeConfig {
+    let safe_char_table = if let Some(opts) = options {
+        if let Some(safe_chars) = opts.safe_chars.as_ref() {
+            build_custom_safe_char_table(safe_chars)
+        } else {
+            SAFE_CHAR_TABLE
+        }
+    } else {
+        SAFE_CHAR_TABLE
+    };
+
+    let (concatenatable, max_raw_segment_length) = if let Some(opts) = options {
+        (opts.concatenatable, opts.max_raw_segment_length.min(MAX_ALLOWED_RAW_SEGMENT_LENGTH))
+    } else {
+        (false, DEFAULT_MAX_RAW_SEGMENT_LENGTH)
+    };
+
+    EncodeConfig {
+        safe_char_table,
+        max_raw_segment_length,
+        concatenatable,
+        has_escape_4: safe_char_table[RAW_ESCAPE_4 as usize] && max_raw_segment_length >= 4,
+        has_escape_5: safe_char_table[RAW_ESCAPE_5 as usize] && max_raw_segment_length >= 5,
+        has_escape_6: safe_char_table[RAW_ESCAPE_6 as usize] && max_raw_segment_length >= 6,
+        has_escape_7: safe_char_table[RAW_ESCAPE_7 as usize] && max_raw_segment_length >= 7,
+        has_long_escape: safe_char_table[RAW_ESCAPE_LONG as usize] && max_raw_segment_length >= 8,
+    }
 }
 
 /// Lookup table for decoding: maps ASCII byte value -> Z85 digit value (0-84)
@@ -139,6 +213,25 @@ const fn build_decode_table() -> [u8; 256] {
 }
 
 /// Error type for Z85 decoding failures
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EncodeError {
+    NonAsciiSafeChar(u8),
+    NonUtf8Output,
+}
+
+impl std::fmt::Display for EncodeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EncodeError::NonAsciiSafeChar(b) => {
+                write!(f, "safe_chars contains non-ASCII byte for text encode: {}", b)
+            }
+            EncodeError::NonUtf8Output => write!(f, "encoded output is not valid UTF-8"),
+        }
+    }
+}
+
+impl std::error::Error for EncodeError {}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DecodeError {
     /// Input contains a character not in the Z85 alphabet
@@ -205,10 +298,10 @@ impl std::error::Error for DecodeError {}
 /// 2252698223 / 85 = 26502332 remainder 3  -> alphabet[3] = '3' (but this goes last)
 /// ... (continue division)
 ///
-pub fn encode(input: &[u8]) -> String {
+fn encode_to_vec_core(input: &[u8], config: &EncodeConfig) -> Vec<u8> {
     // Handle empty input
     if input.is_empty() {
-        return String::new();
+        return Vec::new();
     }
 
     // With non-aligned passthrough, we build output incrementally because
@@ -222,44 +315,61 @@ pub fn encode(input: &[u8]) -> String {
 
         // First, check if we have at least 4 bytes for a potential passthrough
         if bytes_remaining >= 4 {
-            // HIGHEST PRIORITY: Try 8+ byte passthrough (| escape)
-            // This is most efficient for long runs of safe bytes
-            if let Some(result) = try_long_passthrough(input, in_idx, output.len()) {
-                output.extend_from_slice(&result.output);
-                in_idx += result.bytes_consumed;
-                continue;
-            }
+            // In concatenatable mode, don't use passthrough for the final block if it would
+            // create a partial block (non-divisible-by-5 output), since hash padding would split it.
+            // We check if encoding these 4 bytes as passthrough would be the last operation
+            // and would result in remainder > 0.
+            let skip_passthrough = if config.concatenatable && bytes_remaining == 4 {
+                // If we encode these 4 bytes as passthrough (5 chars), what would the total length be?
+                let hypothetical_length = output.len() + 5;
+                let would_need_padding = hypothetical_length % 5 != 0;
+                eprintln!("DEBUG: Final 4 bytes, output.len()={}, hyp_len={}, would_need_padding={}",
+                    output.len(), hypothetical_length, would_need_padding);
+                would_need_padding
+            } else {
+                false
+            };
 
-            // Try extended passthrough (5/6/7 bytes) - second preference
-            // Prefer: 7-byte > 6-byte > 5-byte
-            // These are more efficient than 4-byte passthrough (8 chars for 7 bytes vs 5 chars for 4 bytes)
-            // and allow consecutive escapes with zero gap for long safe sequences.
-            if let Some(result) = try_extended_passthrough(input, in_idx) {
-                output.extend_from_slice(&result.output);
-                in_idx += result.bytes_consumed;
-                continue;
-            }
+            if !skip_passthrough {
+                // HIGHEST PRIORITY: Try 8+ byte passthrough (| escape)
+                // This is most efficient for long runs of safe bytes
+                if let Some(result) = try_long_passthrough(input, in_idx, output.len(), config) {
+                    output.extend_from_slice(&result.output);
+                    in_idx += result.bytes_consumed;
+                    continue;
+                }
 
-            // Check for block-aligned 4-byte passthrough (third preference)
-            if is_block_safe_for_passthrough(&input[in_idx..]) {
-                // Block-aligned passthrough: just output , + 4 bytes
-                output.push(RAW_ESCAPE_4);
-                output.push(input[in_idx]);
-                output.push(input[in_idx + 1]);
-                output.push(input[in_idx + 2]);
-                output.push(input[in_idx + 3]);
-                in_idx += 4;
-                continue;
-            }
+                // Try extended passthrough (5/6/7 bytes) - second preference
+                // Prefer: 7-byte > 6-byte > 5-byte
+                // These are more efficient than 4-byte passthrough (8 chars for 7 bytes vs 5 chars for 4 bytes)
+                // and allow consecutive escapes with zero gap for long safe sequences.
+                if let Some(result) = try_extended_passthrough(input, in_idx, config) {
+                    output.extend_from_slice(&result.output);
+                    in_idx += result.bytes_consumed;
+                    continue;
+                }
 
-            // Try non-aligned 4-byte passthrough (lowest preference for passthrough)
-            // Look for 4 consecutive safe bytes starting at positions 1, 2, or 3
-            if let Some(result) = try_non_aligned_passthrough(input, in_idx, &output) {
-                // Non-aligned passthrough succeeded
-                // result contains: (before_z85_chars, passthrough_bytes, after_z85_chars, bytes_consumed)
-                output.extend_from_slice(&result.output);
-                in_idx += result.bytes_consumed;
-                continue;
+                // Check for block-aligned 4-byte passthrough (third preference)
+                if config.has_escape_4 && is_block_safe_for_passthrough(&input[in_idx..], &config.safe_char_table) {
+                    // Block-aligned passthrough: just output , + 4 bytes
+                    output.push(RAW_ESCAPE_4);
+                    output.push(input[in_idx]);
+                    output.push(input[in_idx + 1]);
+                    output.push(input[in_idx + 2]);
+                    output.push(input[in_idx + 3]);
+                    in_idx += 4;
+                    continue;
+                }
+
+                // Try non-aligned 4-byte passthrough (lowest preference for passthrough)
+                // Look for 4 consecutive safe bytes starting at positions 1, 2, or 3
+                if let Some(result) = try_non_aligned_passthrough(input, in_idx, &output, config) {
+                    // Non-aligned passthrough succeeded
+                    // result contains: (before_z85_chars, passthrough_bytes, after_z85_chars, bytes_consumed)
+                    output.extend_from_slice(&result.output);
+                    in_idx += result.bytes_consumed;
+                    continue;
+                }
             }
 
             // Standard Z85 encoding
@@ -307,7 +417,37 @@ pub fn encode(input: &[u8]) -> String {
         }
     }
 
-    // Convert to String (all characters are ASCII, so this is safe)
+    if config.concatenatable {
+        let remainder = output.len() % 5;
+        if remainder > 0 {
+            // Insert hash padding before the last `remainder` characters
+            let pad_len = 5 - remainder;
+            let insert_at = output.len() - remainder;
+            for _ in 0..pad_len {
+                output.insert(insert_at, HASH_PADDING);
+            }
+        }
+    }
+
+    output
+}
+
+pub fn z855_binary(input: &[u8], options: Option<&Z855Options>) -> Vec<u8> {
+    let config = build_encode_config(options);
+    encode_to_vec_core(input, &config)
+}
+
+pub fn encode_with_options(input: &[u8], options: &Z855Options) -> Result<String, EncodeError> {
+    if let Some(safe_chars) = options.safe_chars.as_ref() {
+        if let Some(&invalid) = safe_chars.iter().find(|&&b| b > 0x7F) {
+            return Err(EncodeError::NonAsciiSafeChar(invalid));
+        }
+    }
+    String::from_utf8(z855_binary(input, Some(options))).map_err(|_| EncodeError::NonUtf8Output)
+}
+
+pub fn encode(input: &[u8]) -> String {
+    let output = z855_binary(input, None);
     String::from_utf8(output).expect("Z85 output should be valid UTF-8")
 }
 
@@ -369,22 +509,22 @@ pub fn encode_standard(input: &[u8]) -> String {
 /// (Z85 alphabet plus `,;|~_`). This allows the encoder to output `,XXXX` format
 /// instead of standard Z85 encoding, which can improve readability for text-like data.
 #[inline]
-fn is_block_safe_for_passthrough(block: &[u8]) -> bool {
+fn is_block_safe_for_passthrough(block: &[u8], safe_char_table: &[bool; 256]) -> bool {
     block.len() >= 4
-        && SAFE_CHAR_TABLE[block[0] as usize]
-        && SAFE_CHAR_TABLE[block[1] as usize]
-        && SAFE_CHAR_TABLE[block[2] as usize]
-        && SAFE_CHAR_TABLE[block[3] as usize]
+        && safe_char_table[block[0] as usize]
+        && safe_char_table[block[1] as usize]
+        && safe_char_table[block[2] as usize]
+        && safe_char_table[block[3] as usize]
 }
 
 /// Check if K consecutive bytes starting at the given slice are all safe.
 #[inline]
-fn are_k_bytes_safe(bytes: &[u8], k: usize) -> bool {
+fn are_k_bytes_safe(bytes: &[u8], k: usize, safe_char_table: &[bool; 256]) -> bool {
     if bytes.len() < k {
         return false;
     }
     for i in 0..k {
-        if !SAFE_CHAR_TABLE[bytes[i] as usize] {
+        if !safe_char_table[bytes[i] as usize] {
             return false;
         }
     }
@@ -423,7 +563,11 @@ fn try_non_aligned_passthrough(
     input: &[u8],
     block_start: usize,
     _current_output: &[u8],
+    config: &EncodeConfig,
 ) -> Option<NonAlignedResult> {
+    if !config.has_escape_4 || config.max_raw_segment_length < 4 {
+        return None;
+    }
     // We need at least 8 bytes for non-aligned passthrough:
     // - 4 bytes for the "before" block
     // - At least 4 bytes that start at offset 1-3 for the passthrough
@@ -444,7 +588,7 @@ fn try_non_aligned_passthrough(
         }
         // Check if passthrough bytes are safe before adding as candidate
         let pass_bytes = &input[pass_start..pass_start + 4];
-        if !is_block_safe_for_passthrough(pass_bytes) {
+        if !is_block_safe_for_passthrough(pass_bytes, &config.safe_char_table) {
             continue;
         }
 
@@ -462,7 +606,7 @@ fn try_non_aligned_passthrough(
 
     // Try candidates in sorted order
     for (_, _, p) in candidates {
-        if let Some(result) = try_non_aligned_at_position(input, block_start, p) {
+        if let Some(result) = try_non_aligned_at_position(input, block_start, p, config) {
             return Some(result);
         }
     }
@@ -480,6 +624,7 @@ fn try_non_aligned_at_position(
     input: &[u8],
     block_start: usize,
     p: usize,
+    config: &EncodeConfig,
 ) -> Option<NonAlignedResult> {
     // Passthrough bytes start at block_start + p and span 4 bytes
     let pass_start = block_start + p;
@@ -491,7 +636,7 @@ fn try_non_aligned_at_position(
 
     // Check if the 4 passthrough bytes are all safe
     let pass_bytes = &input[pass_start..pass_start + 4];
-    if !is_block_safe_for_passthrough(pass_bytes) {
+    if !is_block_safe_for_passthrough(pass_bytes, &config.safe_char_table) {
         return None;
     }
 
@@ -653,21 +798,23 @@ fn try_long_passthrough(
     input: &[u8],
     start_idx: usize,
     current_output_len: usize,
+    config: &EncodeConfig,
 ) -> Option<LongPassthroughResult> {
-    let bytes_remaining = input.len() - start_idx;
-
+    if !config.has_long_escape {
+        return None;
+    }
     // Need at least 8 safe bytes for this escape
-    if bytes_remaining < 8 {
+    if input.len() - start_idx < 8 {
         return None;
     }
 
     // Count consecutive safe bytes starting at start_idx
     let mut safe_count = 0;
     for i in start_idx..input.len() {
-        if SAFE_CHAR_TABLE[input[i] as usize] {
+        if config.safe_char_table[input[i] as usize] {
             safe_count += 1;
             // Cap at implementation limit
-            if safe_count >= MAX_LONG_PASSTHROUGH_LENGTH {
+            if safe_count >= config.max_raw_segment_length.min(MAX_LONG_PASSTHROUGH_LENGTH) {
                 break;
             }
         } else {
@@ -683,7 +830,7 @@ fn try_long_passthrough(
     // Check if this safe run extends to end of input
     let at_end_of_input = start_idx + safe_count == input.len();
 
-    if at_end_of_input {
+    if at_end_of_input && !config.concatenatable {
         // Use 0| (rest of input is raw) - shorter output
         let mut output = Vec::new();
         output.push(Z85_ALPHABET[0]); // '0' prefix
@@ -698,35 +845,16 @@ fn try_long_passthrough(
     // Not at end: use length-prefixed escape
     // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after]
     //
-    // We need to calculate padding to maintain length invariant.
-    //
-    // IMPORTANT: Z85 output length is NOT additive!
-    // z855_output_length(a + b) != z855_output_length(a) + z855_output_length(b) in general.
-    //
-    // We must ensure: escape_chars + z855_output_length(remaining) <= z855_output_length(total)
-    // where total = bytes_remaining and remaining = bytes_remaining - raw_len.
-
-    let raw_len = safe_count.min(MAX_LONG_PASSTHROUGH_LENGTH);
+    let raw_len = safe_count
+        .min(config.max_raw_segment_length)
+        .min(MAX_LONG_PASSTHROUGH_LENGTH);
     let length_prefix = generate_long_escape_prefix(raw_len);
-
-    // Calculate the budget available for the escape sequence
-    // Total standard Z85 length for all remaining bytes
-    let total_standard_len = z855_output_length(bytes_remaining);
-    // Standard Z85 length for bytes after the passthrough
-    let after_len = z855_output_length(bytes_remaining - raw_len);
-    // Available chars for our escape (must not exceed this to maintain invariant)
-    let available_chars = total_standard_len - after_len;
-
-    // Our encoding (without padding, without offset): length_prefix.len() + 1 (|) + raw_len
+    let total_len = long_escape_total_length(raw_len);
     let our_len_no_padding = length_prefix.len() + 1 + raw_len;
-
-    // If our escape is already too long, don't use it
-    if our_len_no_padding > available_chars {
+    if our_len_no_padding > total_len {
         return None;
     }
-
-    // Padding needed to reach the available budget (or 0 if exact fit)
-    let padding_needed = available_chars - our_len_no_padding;
+    let padding_needed = total_len - our_len_no_padding;
 
     // When padding_needed >= 2, we can choose an offset for alignment
     // When padding_needed < 2, offset is implicitly 0 and not encoded
@@ -899,17 +1027,27 @@ struct ExtendedPassthroughResult {
 fn try_extended_passthrough(
     input: &[u8],
     block_start: usize,
+    config: &EncodeConfig,
 ) -> Option<ExtendedPassthroughResult> {
     // Try 7-byte first (highest preference), then 6, then 5
     for k in [7, 6, 5] {
+        let escape_enabled = match k {
+            7 => config.has_escape_7,
+            6 => config.has_escape_6,
+            5 => config.has_escape_5,
+            _ => false,
+        };
+        if !escape_enabled || config.max_raw_segment_length < k {
+            continue;
+        }
         // First try block-aligned extended passthrough (escape at position 0, no preceding chars)
         // This enables consecutive escapes with zero gap
-        if let Some(result) = try_block_aligned_extended_passthrough(input, block_start, k) {
+        if let Some(result) = try_block_aligned_extended_passthrough(input, block_start, k, config) {
             return Some(result);
         }
 
         // Then try non-aligned positions
-        if let Some(result) = try_extended_passthrough_of_length(input, block_start, k) {
+        if let Some(result) = try_extended_passthrough_of_length(input, block_start, k, config) {
             return Some(result);
         }
     }
@@ -924,6 +1062,7 @@ fn try_block_aligned_extended_passthrough(
     input: &[u8],
     block_start: usize,
     k: usize,
+    config: &EncodeConfig,
 ) -> Option<ExtendedPassthroughResult> {
     // Block-aligned extended passthrough: escape + K raw bytes, consuming K bytes.
     // Since K=5,6,7 are not multiples of 4, this only maintains the length
@@ -945,7 +1084,7 @@ fn try_block_aligned_extended_passthrough(
     }
 
     // Check if all K bytes starting at block_start are safe
-    if !are_k_bytes_safe(&input[block_start..], k) {
+    if !are_k_bytes_safe(&input[block_start..], k, &config.safe_char_table) {
         return None;
     }
 
@@ -974,6 +1113,7 @@ fn try_extended_passthrough_of_length(
     input: &[u8],
     block_start: usize,
     k: usize,
+    config: &EncodeConfig,
 ) -> Option<ExtendedPassthroughResult> {
     // For K-byte passthrough at position P:
     // - We need K consecutive safe bytes starting at block_start + P
@@ -1026,7 +1166,7 @@ fn try_extended_passthrough_of_length(
 
     // Try candidates in sorted order
     for (_, _, p) in candidates {
-        if let Some(result) = try_extended_passthrough_at_position(input, block_start, k, p) {
+        if let Some(result) = try_extended_passthrough_at_position(input, block_start, k, p, config) {
             return Some(result);
         }
     }
@@ -1039,6 +1179,7 @@ fn try_extended_passthrough_at_position(
     block_start: usize,
     k: usize,
     p: usize,
+    config: &EncodeConfig,
 ) -> Option<ExtendedPassthroughResult> {
     // Passthrough bytes start at block_start + p and span K bytes
     let pass_start = block_start + p;
@@ -1049,7 +1190,7 @@ fn try_extended_passthrough_at_position(
     }
 
     // Check if all K passthrough bytes are safe
-    if !are_k_bytes_safe(&input[pass_start..], k) {
+    if !are_k_bytes_safe(&input[pass_start..], k, &config.safe_char_table) {
         return None;
     }
 
@@ -1413,24 +1554,9 @@ fn z855_output_length(input_bytes: usize) -> usize {
     (input_bytes * 5 + 3) / 4
 }
 
-/// Calculate input byte count from Z85 output length (inverse of z855_output_length).
-/// Finds largest n such that z855_output_length(n) <= output_len.
 #[inline]
-fn z855_input_length(output_len: usize) -> usize {
-    if output_len == 0 {
-        return 0;
-    }
-    // Start with approximation
-    let mut n = (output_len * 4) / 5;
-    // Adjust down if too large
-    while n > 0 && z855_output_length(n) > output_len {
-        n -= 1;
-    }
-    // Adjust up if too small
-    while z855_output_length(n + 1) <= output_len {
-        n += 1;
-    }
-    n
+fn long_escape_total_length(raw_len: usize) -> usize {
+    z855_output_length(raw_len)
 }
 
 /// Reverse the bits of a 64-bit integer.
@@ -1486,9 +1612,7 @@ fn bit_reverse(n: usize) -> u64 {
 /// - `Overflow`: The accumulated value exceeds what can fit in the target bytes
 /// - `InvalidLength`: Input length is 1 or 6 (mod 5), which can't map to valid byte counts
 ///
-pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
-    let input = input.as_bytes();
-
+fn decode_core(input: &[u8]) -> Result<Vec<u8>, DecodeError> {
     // Handle empty input
     if input.is_empty() {
         return Ok(Vec::new());
@@ -1509,6 +1633,21 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
 
     while in_idx < input.len() {
         let byte = input[in_idx];
+
+        if block_pos == 0 && (in_idx % 5) == 0 && byte == HASH_PADDING {
+            let remaining = input.len() - in_idx;
+            if remaining >= 5 {
+                let mut hash_run = 0usize;
+                while hash_run < 3 && input[in_idx + hash_run] == HASH_PADDING {
+                    hash_run += 1;
+                }
+                if hash_run > 0 {
+                    // Skip the hash padding and continue normal decoding
+                    in_idx += hash_run;
+                    continue;
+                }
+            }
+        }
 
         // Check for long escape (|) first
         if is_long_escape(byte) {
@@ -1552,24 +1691,29 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
             // Skip the |
             in_idx += 1;
 
-            // Calculate padding positions (position-based, not content-based!)
-            // Match encoder's calculation by determining bytesRemaining:
-            // 1. Calculate total bytes that will be decoded from entire input
-            // 2. Subtract bytes already decoded to get bytesRemaining
-            // 3. Use encoder's formula: availableChars = z855OutputLength(bytesRemaining) - z855OutputLength(bytesAfter)
-            let total_bytes_to_decode = z855_input_length(input.len());
-            let bytes_decoded_so_far = output.len();
-            let bytes_remaining = total_bytes_to_decode.saturating_sub(bytes_decoded_so_far);
-            let bytes_after = bytes_remaining.saturating_sub(raw_len);
+            // Backward-compatible fast path for `[length]|[raw]` with no padding.
+            if offset == 0 && offset_digits_used == 0 && input.len() - in_idx == raw_len {
+                output.extend_from_slice(&input[in_idx..in_idx + raw_len]);
+                in_idx += raw_len;
+                current_block_digits.clear();
+                block_pos = 0;
+                known_high_bytes.clear();
+                continue;
+            }
 
+            // Padding is local to this long escape: derived only from raw_len/prefix.
             let length_prefix_len = current_block_digits.len() - offset_digits_used;
-            let total_standard_len = z855_output_length(bytes_remaining);
-            let after_len = z855_output_length(bytes_after);
-            let available_chars = total_standard_len - after_len;
+            let total_len = long_escape_total_length(raw_len);
             let our_len_no_padding = length_prefix_len + 1 + raw_len;
-            let padding_needed = available_chars.saturating_sub(our_len_no_padding);
+            if our_len_no_padding > total_len {
+                return Err(DecodeError::InvalidLength);
+            }
+            let padding_needed = total_len - our_len_no_padding;
             let padding_before = offset;
-            let padding_after = padding_needed.saturating_sub(offset_digits_used).saturating_sub(padding_before);
+            if offset_digits_used + padding_before > padding_needed {
+                return Err(DecodeError::InvalidLength);
+            }
+            let padding_after = padding_needed - offset_digits_used - padding_before;
 
             // Skip padding before (ANY content - do not check!)
             if in_idx + padding_before > input.len() {
@@ -2462,6 +2606,14 @@ pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
     Ok(output)
 }
 
+pub fn decode_binary(input: &[u8]) -> Result<Vec<u8>, DecodeError> {
+    decode_core(input)
+}
+
+pub fn decode(input: &str) -> Result<Vec<u8>, DecodeError> {
+    decode_core(input.as_bytes())
+}
+
 /// Decode a full 5-character block into a u32.
 /// Returns error if any character is invalid or if the value overflows u32.
 #[allow(dead_code)]
@@ -2698,6 +2850,81 @@ mod tests {
     fn test_empty() {
         assert_eq!(encode(&[]), "");
         assert_eq!(decode("").unwrap(), vec![]);
+        assert_eq!(decode_binary(b"").unwrap(), vec![]);
+    }
+
+    #[test]
+    fn test_options_text_encode_rejects_non_ascii_safe_chars() {
+        let options = Z855Options {
+            safe_chars: Some(vec![200, b',']),
+            concatenatable: false,
+            max_raw_segment_length: 4,
+        };
+        let err = encode_with_options(&[200, 200, 200, 200], &options).unwrap_err();
+        assert!(matches!(err, EncodeError::NonAsciiSafeChar(200)));
+    }
+
+    #[test]
+    fn test_options_binary_encode_allows_non_ascii_safe_chars() {
+        let options = Z855Options {
+            safe_chars: Some(vec![200, b',']),
+            concatenatable: false,
+            max_raw_segment_length: 4,
+        };
+        let encoded = z855_binary(&[200, 200, 200, 200], Some(&options));
+        assert_eq!(encoded, vec![b',', 200, 200, 200, 200]);
+        assert_eq!(decode_binary(&encoded).unwrap(), vec![200, 200, 200, 200]);
+    }
+
+    #[test]
+    fn test_options_max_raw_segment_length_zero_matches_empty_safe_chars() {
+        let input = b"testabcd";
+        let mut opts_zero = Z855Options::default();
+        opts_zero.max_raw_segment_length = 0;
+        let mut opts_empty = Z855Options::default();
+        opts_empty.safe_chars = Some(Vec::new());
+
+        let by_len = encode_with_options(input, &opts_zero).unwrap();
+        let by_safe = encode_with_options(input, &opts_empty).unwrap();
+        assert_eq!(by_len, by_safe);
+        assert_eq!(decode(&by_len).unwrap(), input);
+    }
+
+    #[test]
+    fn test_options_decode_binary_matches_decode_string() {
+        let input = [0u8, 1, 2, 3, 4, 5, 6];
+        let encoded = encode(&input);
+        let bytes = encoded.as_bytes().to_vec();
+        assert_eq!(decode(&encoded).unwrap(), input);
+        assert_eq!(decode_binary(&bytes).unwrap(), input);
+    }
+
+    #[test]
+    fn test_options_concatenatable_chunks_decode_when_joined() {
+        let opts = Z855Options {
+            concatenatable: true,
+            ..Z855Options::default()
+        };
+        let chunk1 = [0u8];
+        let chunk2 = [1u8, 2u8];
+        let encoded1 = encode_with_options(&chunk1, &opts).unwrap();
+        let encoded2 = encode_with_options(&chunk2, &opts).unwrap();
+        let combined = format!("{}{}", encoded1, encoded2);
+        assert_eq!(decode(&combined).unwrap(), vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn test_options_concatenatable_disables_rest_of_input_long_escape() {
+        let input = b"abcdefgh";
+        let normal = encode(input);
+        let opts = Z855Options {
+            concatenatable: true,
+            ..Z855Options::default()
+        };
+        let concat = encode_with_options(input, &opts).unwrap();
+        assert!(normal.starts_with("0|"));
+        assert!(!concat.starts_with("0|"));
+        assert_eq!(decode(&concat).unwrap(), input);
     }
 
     #[test]
@@ -3434,6 +3661,46 @@ mod tests {
         assert_eq!(decoded.len(), 12); // 8 + 4
         assert_eq!(&decoded[0..8], b"abcdefgh");
         assert_eq!(&decoded[8..12], &[0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_long_escape_decode_uses_local_padding_with_escape_like_bytes() {
+        // rawLen=16 => length prefix 'g', total local envelope length is 20 chars.
+        // paddingAfter=2 and uses ',' + '|' deliberately.
+        let encoded = "g|abcdefghijklmnop,|00000";
+        let decoded = decode(encoded).unwrap();
+        let mut expected = b"abcdefghijklmnop".to_vec();
+        expected.extend_from_slice(&[0, 0, 0, 0]);
+        assert_eq!(decoded, expected);
+    }
+
+    #[test]
+    fn test_long_escape_decode_offset_envelope_stays_local() {
+        // offset=1, rawLen=16 envelope plus one trailing byte encoded as "00".
+        let encoded = "1g|.abcdefghijklmnop00";
+        let decoded = decode(encoded).unwrap();
+        let mut expected = b"abcdefghijklmnop".to_vec();
+        expected.push(0);
+        assert_eq!(decoded, expected);
+    }
+
+    #[test]
+    fn test_long_escape_encode_prefix_independent_of_remaining_stream_bytes() {
+        let mut input_a = b"abcdefghijklmnop".to_vec();
+        input_a.push(0); // 1 trailing byte (2 Z85 chars)
+
+        let mut input_b = b"abcdefghijklmnop".to_vec();
+        input_b.extend_from_slice(&[0, 1, 2]); // 3 trailing bytes (4 Z85 chars)
+
+        let encoded_a = encode(&input_a);
+        let encoded_b = encode(&input_b);
+
+        let prefix_a = &encoded_a[..encoded_a.len() - 2];
+        let prefix_b = &encoded_b[..encoded_b.len() - 4];
+
+        assert!(prefix_a.contains('|'));
+        assert!(prefix_b.contains('|'));
+        assert_eq!(prefix_a, prefix_b);
     }
 
     #[test]

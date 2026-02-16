@@ -1,5 +1,5 @@
 import { assertEquals, assertThrows } from "@std/assert";
-import { encode, decode, Z855DecodeError } from "./z855.ts";
+import { encode, decode, z855Binary, Z855DecodeError } from "./z855.ts";
 
 // Unit tests for Z85 encode/decode
 
@@ -317,6 +317,90 @@ Deno.test("multiple blocks round-trip", () => {
   assertEquals(Array.from(decoded), Array.from(input));
 });
 
+Deno.test("options: invalid safeChars and maxRawSegmentLength fail eagerly", () => {
+  const input = new Uint8Array([0x74, 0x65, 0x73, 0x74]);
+
+  assertThrows(() => encode(input, { safeChars: [256] }), TypeError);
+  assertThrows(() => encode(input, { safeChars: [-1] }), TypeError);
+  assertThrows(() => encode(input, { safeChars: [1.5] }), TypeError);
+  assertThrows(() => encode(input, { safeChars: ["ab"] }), TypeError);
+  assertThrows(() => encode(input, { maxRawSegmentLength: -1 }), TypeError);
+  assertThrows(() => encode(input, { maxRawSegmentLength: 1.5 }), TypeError);
+});
+
+Deno.test("options: text encode rejects non-ASCII safeChars, binary encode accepts them", () => {
+  const input = new Uint8Array([200, 200, 200, 200]);
+  const options = { safeChars: [200, ","], maxRawSegmentLength: 4 };
+
+  assertThrows(() => encode(input, options), TypeError);
+
+  const encodedBinary = z855Binary(input, options);
+  // With comma escape available and all 4 bytes in safe set, this should be a raw comma block.
+  assertEquals(Array.from(encodedBinary), [",".charCodeAt(0), 200, 200, 200, 200]);
+  assertEquals(Array.from(decode(encodedBinary)), Array.from(input));
+});
+
+Deno.test("options: maxRawSegmentLength 0 equals safeChars empty", () => {
+  const input = new Uint8Array([0x74, 0x65, 0x73, 0x74, 0x61, 0x62, 0x63, 0x64]);
+
+  const byMaxLen = encode(input, { maxRawSegmentLength: 0 });
+  const byEmptySafe = encode(input, { safeChars: [] });
+
+  assertEquals(byMaxLen, byEmptySafe);
+  assertEquals(Array.from(decode(byMaxLen)), Array.from(input));
+});
+
+Deno.test("options: maxRawSegmentLength caps long escapes", () => {
+  const input = new TextEncoder().encode("abcdefgh");
+
+  const defaultEncoded = encode(input);
+  assertEquals(defaultEncoded.startsWith("0|"), true);
+
+  const capped = encode(input, { maxRawSegmentLength: 7 });
+  assertEquals(capped.includes("|"), false);
+  assertEquals(Array.from(decode(capped)), Array.from(input));
+});
+
+Deno.test("options: decode accepts string and Uint8Array", () => {
+  const input = new Uint8Array([0, 1, 2, 3, 4, 5, 6]);
+  const encoded = encode(input);
+  const encodedBytes = new Uint8Array(Array.from(encoded, (c) => c.charCodeAt(0)));
+
+  assertEquals(Array.from(decode(encoded)), Array.from(input));
+  assertEquals(Array.from(decode(encodedBytes)), Array.from(input));
+});
+
+Deno.test("options: concatenatable pads short final block and decodes round-trip", () => {
+  const input = new Uint8Array([0]);
+  const encoded = encode(input, { concatenatable: true });
+
+  assertEquals(encoded.length % 5, 0);
+  assertEquals(encoded.startsWith("###"), true);
+  assertEquals(Array.from(decode(encoded)), Array.from(input));
+});
+
+Deno.test("options: concatenatable chunks can be concatenated", () => {
+  const chunk1 = new Uint8Array([0]);
+  const chunk2 = new Uint8Array([1, 2]);
+
+  const encoded1 = encode(chunk1, { concatenatable: true });
+  const encoded2 = encode(chunk2, { concatenatable: true });
+  const combined = encoded1 + encoded2;
+
+  assertEquals(Array.from(decode(combined)), [0, 1, 2]);
+});
+
+Deno.test("options: concatenatable disables 0| rest-of-input optimization", () => {
+  const input = new TextEncoder().encode("abcdefgh");
+
+  const normal = encode(input);
+  const concatenatable = encode(input, { concatenatable: true });
+
+  assertEquals(normal.startsWith("0|"), true);
+  assertEquals(concatenatable.startsWith("0|"), false);
+  assertEquals(Array.from(decode(concatenatable)), Array.from(input));
+});
+
 Deno.test("non-aligned decode with trailing partial block", () => {
   // Decode a manually constructed string with non-aligned passthrough
   // followed by a trailing partial block
@@ -529,6 +613,13 @@ Deno.test("test cases from shared directory", async () => {
 
       // ENCODE TEST: result must match .encoded-expected if present, otherwise any .encoded* file
       const actualEncoded = encode(inputBytes);
+      if (baseName.startsWith("padding-")) {
+        assertEquals(
+          encodedFiles.expected !== undefined,
+          true,
+          `padding fixture ${baseName} must define .encoded-expected`
+        );
+      }
 
       if (encodedFiles.expected) {
         // Must match expected exactly
@@ -643,6 +734,40 @@ Deno.test("long escape followed by normal z855", () => {
   assertEquals(decoded.length, 12); // 8 + 4
   assertEquals(decoded.slice(0, 8), new TextEncoder().encode("abcdefgh"));
   assertEquals(decoded.slice(8, 12), new Uint8Array([0, 0, 0, 0]));
+});
+
+Deno.test("long escape decode uses local padding with escape-like bytes", () => {
+  // rawLen=16 => length prefix 'g', total local envelope length is 20 chars.
+  // Here paddingAfter is 2 chars and deliberately uses ',' and '|' to ensure
+  // decoder treats them as padding bytes, not nested escapes.
+  const encoded = "g|abcdefghijklmnop,|00000";
+  const decoded = decode(encoded);
+  assertEquals(decoded, new Uint8Array([...new TextEncoder().encode("abcdefghijklmnop"), 0, 0, 0, 0]));
+});
+
+Deno.test("long escape decode offset envelope stays local", () => {
+  // offset=1, rawLen=16: [offset=1][len=16]|[1 padding][16 raw][0 padding]
+  // followed by one trailing byte encoded as "00".
+  const encoded = "1g|.abcdefghijklmnop00";
+  const decoded = decode(encoded);
+  assertEquals(decoded, new Uint8Array([...new TextEncoder().encode("abcdefghijklmnop"), 0]));
+});
+
+Deno.test("long escape encode prefix does not depend on remaining stream bytes", () => {
+  const run = new TextEncoder().encode("abcdefghijklmnop"); // 16 safe bytes
+  const inputA = new Uint8Array([...run, 0]); // 1 trailing byte
+  const inputB = new Uint8Array([...run, 0, 1, 2]); // 3 trailing bytes
+
+  const encodedA = encode(inputA);
+  const encodedB = encode(inputB);
+
+  // Remove trailing standard-Z85 suffix chars (ceil(n*5/4)).
+  const prefixA = encodedA.slice(0, -2); // 1 trailing byte => 2 chars
+  const prefixB = encodedB.slice(0, -4); // 3 trailing bytes => 4 chars
+
+  assertEquals(prefixA.includes("|"), true);
+  assertEquals(prefixB.includes("|"), true);
+  assertEquals(prefixA, prefixB);
 });
 
 // =========================================================================
