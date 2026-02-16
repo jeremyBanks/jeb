@@ -150,9 +150,11 @@ pub struct Save {
     ///
     /// May be explicitly set to an empty string to skip brute-forcing the hash.
     ///
-    /// [default: the commit index as decimal digits, followed by any hex letter
-    /// (a-f). Use --tree-target to use the first 4 hex digits of the tree hash
-    /// instead.]
+    /// [default: generation index using hex-b1032 encoding:
+    ///   • 0-9999: decimal + any letter [a-f]
+    ///   • 10000-65535: hex (≥4 digits) + any digit [0-9]
+    ///   • 65536+: hex, no suffix constraint
+    /// Use --tree-target to use the first 4 hex digits of the tree hash instead.]
     #[clap(
         help_heading = "COMMIT OPTIONS",
         long = "prefix",
