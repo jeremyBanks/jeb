@@ -597,17 +597,19 @@ pub fn main(args: Save) -> Result<()> {
     } else if args.tree_target {
         (tree4.clone(), SuffixRequirement::None)
     } else {
-        // Default: hex-b1032-like scheme
+        // Default: hex-b1032 scheme
         // 0-9999: decimal + any letter [a-f]
-        // 10000-65535: hex (≥4 digits) + any digit [0-9]
+        // 10000-65535: hex (skipping all-digit values) + any digit [0-9]
         // 65536+: hex, no suffix constraint
-        if gen_idx <= 9999 {
-            (format!("{}", gen_idx), SuffixRequirement::Letter)
+        let encoded = crate::hex_b1032::encode_generation_index(gen_idx);
+        let suffix = if gen_idx <= 9999 {
+            SuffixRequirement::Letter
         } else if gen_idx <= 65535 {
-            (format!("{:04X}", gen_idx), SuffixRequirement::Digit)
+            SuffixRequirement::Digit
         } else {
-            (format!("{:X}", gen_idx), SuffixRequirement::None)
-        }
+            SuffixRequirement::None
+        };
+        (encoded, suffix)
     };
 
     let target = crate::hex::decode_hex_nibbles(target_hex);
