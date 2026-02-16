@@ -1,0 +1,15 @@
+# Conway's Game of Life screenshot test
+LOG Capturing Conway's Life evolution
+
+# Let the game run for a bit
+WAIT_FRAMES 60
+SCREENSHOT conway-frame-60.png
+
+WAIT_FRAMES 60
+SCREENSHOT conway-frame-120.png
+
+WAIT_FRAMES 60
+SCREENSHOT conway-frame-180.png
+
+LOG Captured 3 screenshots at frames 60, 120, 180
+HALT

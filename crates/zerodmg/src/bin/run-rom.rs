@@ -407,10 +407,18 @@ impl ScriptRunner {
         self.gb.set_joypad(self.buttons_pressed);
     }
     
-    fn save_screenshot(&self, _path: &str) -> Result<(), String> {
-        // TODO: Implement screenshot capture
-        // For now, just log
-        eprintln!("  (Screenshot not yet implemented)");
+    fn save_screenshot(&self, path: &str) -> Result<(), String> {
+        // Access the output buffer and save the display image
+        let output_buffer = self.gb.output_buffer
+            .lock()
+            .map_err(|e| format!("Failed to lock output buffer: {}", e))?;
+        
+        // Save the display image as PNG
+        output_buffer.display
+            .save(path)
+            .map_err(|e| format!("Failed to save screenshot to {}: {}", path, e))?;
+        
+        eprintln!("  Saved screenshot to {}", path);
         Ok(())
     }
 }
