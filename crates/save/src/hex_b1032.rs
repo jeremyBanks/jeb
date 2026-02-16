@@ -6,6 +6,7 @@
 //! - 65536+: hex representation, no constraints
 
 /// Check if a 4-digit hex value (0x0000-0xFFFF) is "good" (contains at least one letter A-F).
+#[cfg(test)]
 fn is_good_hex(v: u32) -> bool {
     debug_assert!(v <= 0xFFFF);
     // Extract the 4 hex digits
