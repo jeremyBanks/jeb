@@ -1,5 +1,4 @@
-//! Simple label-based Game Boy assembler
-//! 
+//! Simple label-based Game Boy assembler — shared module (not a standalone binary).
 //! Converts pseudo-assembly with labels into zerodmg-codes Instructions with correct JR offsets.
 //! 
 //! Example:
@@ -196,3 +195,6 @@ pub use U8Register::*;
 pub use U16Register::*;
 pub use U8SecondaryRegister::*;
 pub use FlagCondition::*;
+
+
+fn main() {}
