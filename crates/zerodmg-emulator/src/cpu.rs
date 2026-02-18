@@ -636,12 +636,12 @@ impl CPUController for GameBoy {
             // 8-Bit Bitwise Operations
             RL(register) => {
                 let f_c_0 = self.c_flag();
-                let value_0 = self.get_register(register);
+                let (value_0, extra_read) = self.read_register(register);
                 let value_1 = (value_0 << 1) + if f_c_0 { 1 } else { 0 };
                 let f_c_1 = value_0 & 0b1000_0000 > 0;
-                self.set_register(register, value_1);
+                let extra_write = self.set_register(register, value_1);
                 self.set_znhc_flags(value_1 == 0, false, false, f_c_1);
-                cycles = 2;
+                cycles = 2 + extra_read + extra_write;
                 trace!(
                     "Fc₀ = {}, {}₀ = 0x{:02X}, Fc₁ = {}, {}₁ = 0x{:02X}",
                     f_c_0, register, value_0, f_c_1, register, value_1
@@ -662,12 +662,12 @@ impl CPUController for GameBoy {
                 );
             }
             RLC(register) => {
-                let value_0 = self.get_register(register);
+                let (value_0, extra_read) = self.read_register(register);
                 let high_bit = value_0 >> 7;
                 let value_1 = (value_0 << 1) | high_bit;
-                self.set_register(register, value_1);
+                let extra_write = self.set_register(register, value_1);
                 self.set_znhc_flags(value_1 == 0, false, false, high_bit != 0);
-                cycles = 2;
+                cycles = 2 + extra_read + extra_write;
                 trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
             }
             RLCA => {
@@ -681,13 +681,13 @@ impl CPUController for GameBoy {
                 trace!("A₀ = 0x{:02X}, A₁ = 0x{:02X}", a_0, a_1);
             }
             RR(register) => {
-                let value_0 = self.get_register(register);
+                let (value_0, extra_read) = self.read_register(register);
                 let old_carry = if self.c_flag() { 1u8 } else { 0u8 };
                 let new_carry = value_0 & 1;
                 let value_1 = (value_0 >> 1) | (old_carry << 7);
-                self.set_register(register, value_1);
+                let extra_write = self.set_register(register, value_1);
                 self.set_znhc_flags(value_1 == 0, false, false, new_carry != 0);
-                cycles = 2;
+                cycles = 2 + extra_read + extra_write;
                 trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
             }
             RRA => {
@@ -701,12 +701,12 @@ impl CPUController for GameBoy {
                 trace!("A₀ = 0x{:02X}, A₁ = 0x{:02X}", a_0, a_1);
             }
             RRC(register) => {
-                let value_0 = self.get_register(register);
+                let (value_0, extra_read) = self.read_register(register);
                 let low_bit = value_0 & 1;
                 let value_1 = (value_0 >> 1) | (low_bit << 7);
-                self.set_register(register, value_1);
+                let extra_write = self.set_register(register, value_1);
                 self.set_znhc_flags(value_1 == 0, false, false, low_bit != 0);
-                cycles = 2;
+                cycles = 2 + extra_read + extra_write;
                 trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
             }
             RRCA => {
@@ -719,62 +719,63 @@ impl CPUController for GameBoy {
                 trace!("A₀ = 0x{:02X}, A₁ = 0x{:02X}", a_0, a_1);
             }
             SRL(register) => {
-                let value_0 = self.get_register(register);
+                let (value_0, extra_read) = self.read_register(register);
                 let low_bit = value_0 & 1;
                 let value_1 = value_0 >> 1;
-                self.set_register(register, value_1);
+                let extra_write = self.set_register(register, value_1);
                 self.set_znhc_flags(value_1 == 0, false, false, low_bit != 0);
-                cycles = 2;
+                cycles = 2 + extra_read + extra_write;
                 trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
             }
             SRA(register) => {
-                let value_0 = self.get_register(register);
+                let (value_0, extra_read) = self.read_register(register);
                 let low_bit = value_0 & 1;
                 // Arithmetic shift: preserve bit 7
                 let value_1 = (value_0 >> 1) | (value_0 & 0x80);
-                self.set_register(register, value_1);
+                let extra_write = self.set_register(register, value_1);
                 self.set_znhc_flags(value_1 == 0, false, false, low_bit != 0);
-                cycles = 2;
+                cycles = 2 + extra_read + extra_write;
                 trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
             }
             SLA(register) => {
-                let value_0 = self.get_register(register);
+                let (value_0, extra_read) = self.read_register(register);
                 let high_bit = value_0 >> 7;
                 let value_1 = value_0 << 1;
-                self.set_register(register, value_1);
+                let extra_write = self.set_register(register, value_1);
                 self.set_znhc_flags(value_1 == 0, false, false, high_bit != 0);
-                cycles = 2;
+                cycles = 2 + extra_read + extra_write;
                 trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
             }
             SWAP(register) => {
-                let value_0 = self.get_register(register);
+                let (value_0, extra_read) = self.read_register(register);
                 let value_1 = (value_0 >> 4) | (value_0 << 4);
-                self.set_register(register, value_1);
+                let extra_write = self.set_register(register, value_1);
                 self.set_znhc_flags(value_1 == 0, false, false, false);
-                cycles = 2;
+                cycles = 2 + extra_read + extra_write;
                 trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
             }
             BIT(bit, register) => {
-                let value = self.get_register(register);
+                // BIT is read-only (no write back): 2 M-cycles + 1 for AT_HL read
+                let (value, extra_read) = self.read_register(register);
                 let result = !u8_get_bit(value, bit.index());
                 self.set_z_flag(result);
                 self.set_n_flag(false);
                 self.set_h_flag(true);
-                cycles = 2;
+                cycles = 2 + extra_read;
                 trace!("Z₁ = {}", result);
             }
             SET(bit, register) => {
-                let value_0 = self.get_register(register);
+                let (value_0, extra_read) = self.read_register(register);
                 let value_1 = value_0 | (1 << bit.index());
-                self.set_register(register, value_1);
-                cycles = 2;
+                let extra_write = self.set_register(register, value_1);
+                cycles = 2 + extra_read + extra_write;
                 trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
             }
             RES(bit, register) => {
-                let value_0 = self.get_register(register);
+                let (value_0, extra_read) = self.read_register(register);
                 let value_1 = value_0 & !(1 << bit.index());
-                self.set_register(register, value_1);
-                cycles = 2;
+                let extra_write = self.set_register(register, value_1);
+                cycles = 2 + extra_read + extra_write;
                 trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
             }
             // 8-Bit Loads
@@ -996,7 +997,7 @@ impl CPUController for GameBoy {
                 let pc_1 = self.stack_pop();
                 let sp_1 = self.cpu.sp;
                 self.cpu.pc = pc_1;
-                cycles = 2;
+                cycles = 4; // RET = 4 M-cycles on DMG (was incorrectly 2)
                 trace!("SP₁ = {:04X}", sp_1);
             }
             RET_IF(condition) => {
