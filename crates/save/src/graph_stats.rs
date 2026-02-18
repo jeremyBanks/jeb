@@ -526,23 +526,13 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             return None;
         }
         roots.sort_by_key(|c| c.id());
-        if roots.len() == 1 {
-            let bytes = roots[0].id_bytes();
-            if bytes.len() >= 2 {
-                let last_two = &bytes[bytes.len() - 2..];
-                Some(u16::from_be_bytes([last_two[0], last_two[1]]))
-            } else {
-                Some(0x0000)
-            }
-        } else {
-            use sha1::{Digest, Sha1};
-            let mut hasher = Sha1::new();
-            for root in &roots {
-                hasher.update(root.id_bytes());
-            }
-            let hash = hasher.finalize();
-            Some(u16::from_be_bytes([hash[18], hash[19]]))
+        use sha1::{Digest, Sha1};
+        let mut hasher = Sha1::new();
+        for root in &roots {
+            hasher.update(root.id_bytes());
         }
+        let hash = hasher.finalize();
+        Some(u16::from_be_bytes([hash[18], hash[19]]))
     }
 
     fn full_graph_walk(
@@ -671,23 +661,13 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             return None;
         }
         roots.sort_by_key(|c| c.id());
-        if roots.len() == 1 {
-            let bytes = roots[0].id_bytes();
-            if bytes.len() >= 2 {
-                let last_two = &bytes[bytes.len() - 2..];
-                Some(u16::from_be_bytes([last_two[0], last_two[1]]))
-            } else {
-                Some(0x0000)
-            }
-        } else {
-            use sha1::{Digest, Sha1};
-            let mut hasher = Sha1::new();
-            for root in &roots {
-                hasher.update(root.id_bytes());
-            }
-            let hash = hasher.finalize();
-            Some(u16::from_be_bytes([hash[18], hash[19]]))
+        use sha1::{Digest, Sha1};
+        let mut hasher = Sha1::new();
+        for root in &roots {
+            hasher.update(root.id_bytes());
         }
+        let hash = hasher.finalize();
+        Some(u16::from_be_bytes([hash[18], hash[19]]))
     }
 }
 #[cfg(test)]
