@@ -196,13 +196,28 @@ export function decode(input: string): Uint8Array {
     const code = input.charCodeAt(i);
 
     // ------------------------------------------------------------------
-    // Hash padding — used in concatenatable mode; skip it.
+    // Hash padding — used in concatenatable mode only.
+    // A hash-padded block looks like: [1–3 '#' chars][2–4 Z85 chars], 5 chars total.
+    // We only trigger this path when we see '#' at a block boundary AND the following
+    // chars include at least one non-'#' Z85 char (so that '#####' is NOT treated as
+    // hash-padded — it should be decoded normally and fail with an overflow error).
     // ------------------------------------------------------------------
-    if (code === PAD_HASH && blockDigits.length === 0 && (i % 5) === 0) {
-      const partial = decodeHashPaddedBlock(input, i);
-      out.push(...partial.bytes);
-      i += 5;
-      continue;
+    if (code === PAD_HASH && blockDigits.length === 0 && (i % 5) === 0 &&
+        input.length - i >= 5) {
+      // Count leading '#' chars (at most 3; a 4th '#' would mean 1 data char = invalid).
+      let hashRun = 0;
+      while (hashRun < 3 && i + hashRun < input.length && input.charCodeAt(i + hashRun) === PAD_HASH) {
+        hashRun++;
+      }
+      // Only use hash-padding path if the char right after the hashes is NOT a '#'
+      // (otherwise it's #####, which should be treated as a regular Z85 block).
+      if (hashRun > 0 && i + hashRun < input.length && input.charCodeAt(i + hashRun) !== PAD_HASH) {
+        const partial = decodeHashPaddedBlock(input, i);
+        out.push(...partial.bytes);
+        i += 5;
+        continue;
+      }
+      // Fall through to normal Z85 processing.
     }
 
     // ------------------------------------------------------------------
