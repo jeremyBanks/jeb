@@ -854,6 +854,9 @@ function decodeHashPaddedBlock(input: string, blockStart: number): { bytes: numb
     value = value * 85 + digit;
   }
 
+  const maxValue = numBytes === 1 ? 0xff : numBytes === 2 ? 0xffff : 0xffffff;
+  if (value > maxValue) throw new Z855DecodeError("Z85 value overflow in hash-padded block");
+
   const bytes: number[] = [];
   for (let k = numBytes - 1; k >= 0; k--) bytes.unshift((value >>> (k * 8)) & 0xff);
   return { bytes };
