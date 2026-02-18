@@ -315,22 +315,21 @@ fn encode_to_vec_core(input: &[u8], config: &EncodeConfig) -> Vec<u8> {
 
         // First, check if we have at least 4 bytes for a potential passthrough
         if bytes_remaining >= 4 {
-            // In concatenatable mode, don't use passthrough for the final block if it would
-            // create a partial block (non-divisible-by-5 output), since hash padding would split it.
-            // We check if encoding these 4 bytes as passthrough would be the last operation
-            // and would result in remainder > 0.
-            let skip_passthrough = if config.concatenatable && bytes_remaining == 4 {
-                // If we encode these 4 bytes as passthrough (5 chars), what would the total length be?
-                let hypothetical_length = output.len() + 5;
-                let would_need_padding = hypothetical_length % 5 != 0;
-                eprintln!("DEBUG: Final 4 bytes, output.len()={}, hyp_len={}, would_need_padding={}",
-                    output.len(), hypothetical_length, would_need_padding);
-                would_need_padding
+            if config.concatenatable {
+                // In concatenatable mode, only allow block-aligned 4-byte passthrough
+                // (produces exactly 5 chars, keeping output aligned). Extended, long, and
+                // non-aligned passthroughs produce non-5-aligned output which would require
+                // hash padding that splits encoding units.
+                if config.has_escape_4 && is_block_safe_for_passthrough(&input[in_idx..], &config.safe_char_table) {
+                    output.push(RAW_ESCAPE_4);
+                    output.push(input[in_idx]);
+                    output.push(input[in_idx + 1]);
+                    output.push(input[in_idx + 2]);
+                    output.push(input[in_idx + 3]);
+                    in_idx += 4;
+                    continue;
+                }
             } else {
-                false
-            };
-
-            if !skip_passthrough {
                 // HIGHEST PRIORITY: Try 8+ byte passthrough (| escape)
                 // This is most efficient for long runs of safe bytes
                 if let Some(result) = try_long_passthrough(input, in_idx, output.len(), config) {
@@ -390,7 +389,18 @@ fn encode_to_vec_core(input: &[u8], config: &EncodeConfig) -> Vec<u8> {
             output.extend_from_slice(&digits);
             in_idx += 4;
         } else {
-            // Trailing bytes (1-3): always use standard Z85 encoding
+            // Trailing bytes (1-3)
+            if config.concatenatable {
+                // In concatenatable mode, push hash padding FIRST, then the partial block.
+                // This ensures hash padding appears at block_pos==0 for the decoder.
+                let num_chars = bytes_remaining + 1;
+                let pad_len = 5 - num_chars;
+                for _ in 0..pad_len {
+                    output.push(HASH_PADDING);
+                }
+            }
+
+            // Standard Z85 partial block encoding
             let num_bytes = bytes_remaining;
             let num_chars = num_bytes + 1;
 
@@ -405,7 +415,6 @@ fn encode_to_vec_core(input: &[u8], config: &EncodeConfig) -> Vec<u8> {
                 _ => unreachable!(),
             };
 
-            // Encode partial block
             let mut v = value;
             let mut digits = vec![0u8; num_chars];
             for i in (0..num_chars).rev() {
@@ -414,18 +423,6 @@ fn encode_to_vec_core(input: &[u8], config: &EncodeConfig) -> Vec<u8> {
             }
             output.extend_from_slice(&digits);
             in_idx += num_bytes;
-        }
-    }
-
-    if config.concatenatable {
-        let remainder = output.len() % 5;
-        if remainder > 0 {
-            // Insert hash padding before the last `remainder` characters
-            let pad_len = 5 - remainder;
-            let insert_at = output.len() - remainder;
-            for _ in 0..pad_len {
-                output.insert(insert_at, HASH_PADDING);
-            }
         }
     }
 
@@ -1642,8 +1639,40 @@ fn decode_core(input: &[u8]) -> Result<Vec<u8>, DecodeError> {
                     hash_run += 1;
                 }
                 if hash_run > 0 {
-                    // Skip the hash padding and continue normal decoding
-                    in_idx += hash_run;
+                    let num_chars = 5 - hash_run;
+                    let start_idx = in_idx + hash_run;
+                    let value = decode_partial_block(&input[start_idx..start_idx + num_chars])?;
+                    let num_bytes = num_chars - 1;
+
+                    match num_bytes {
+                        1 => {
+                            if value > 0xFF {
+                                return Err(DecodeError::Overflow);
+                            }
+                            output.push(value as u8);
+                        }
+                        2 => {
+                            if value > 0xFFFF {
+                                return Err(DecodeError::Overflow);
+                            }
+                            output.push((value >> 8) as u8);
+                            output.push(value as u8);
+                        }
+                        3 => {
+                            if value > 0xFFFFFF {
+                                return Err(DecodeError::Overflow);
+                            }
+                            output.push((value >> 16) as u8);
+                            output.push((value >> 8) as u8);
+                            output.push(value as u8);
+                        }
+                        _ => unreachable!(),
+                    }
+
+                    in_idx += 5;
+                    current_block_digits.clear();
+                    block_pos = 0;
+                    known_high_bytes.clear();
                     continue;
                 }
             }

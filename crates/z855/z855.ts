@@ -492,6 +492,18 @@ export class Z855DecodeError extends Error {
  * @param input - The bytes to encode (Uint8Array)
  * @returns The Z85 encoded string
  */
+
+/** Calculate hypothetical output length for concatenatable mode (simplified) */
+function calculateHypotheticalOutputLength(input: Uint8Array): number {
+  const fullBlocks = Math.floor(input.length / 4);
+  const trailing = input.length % 4;
+  let length = fullBlocks * 5;
+  if (trailing > 0) {
+    length += trailing + 1;
+  }
+  return length;
+}
+
 function encodeToStringCore(input: Uint8Array, config: EncodeConfig): string {
   // Handle empty input
   if (input.length === 0) {
@@ -504,7 +516,26 @@ function encodeToStringCore(input: Uint8Array, config: EncodeConfig): string {
 
   let inIdx = 0;
 
-  while (inIdx < input.length) {
+  // In concatenatable mode, calculate if we need to handle final bytes specially
+  let stopEncodingAt: number;
+  let reserveBytesForPartial: number;
+  if (config.concatenatable) {
+    const hypotheticalLen = calculateHypotheticalOutputLength(input);
+    const remainder = hypotheticalLen % 5;
+
+    if (remainder > 0 && remainder !== 1) {
+      reserveBytesForPartial = remainder - 1;
+      stopEncodingAt = input.length - reserveBytesForPartial;
+    } else {
+      reserveBytesForPartial = 0;
+      stopEncodingAt = input.length;
+    }
+  } else {
+    reserveBytesForPartial = 0;
+    stopEncodingAt = input.length;
+  }
+
+  while (inIdx < stopEncodingAt) {
     const bytesRemaining = input.length - inIdx;
 
     // First, check if we have at least 4 bytes for a potential passthrough
@@ -593,7 +624,39 @@ function encodeToStringCore(input: Uint8Array, config: EncodeConfig): string {
     }
   }
 
-  if (config.concatenatable) {
+  // In concatenatable mode, handle reserved bytes for partial block
+  if (config.concatenatable && reserveBytesForPartial > 0) {
+    // Insert hash padding at current position (before partial block)
+    const remainderBefore = outputChars.length % 5;
+    const hashCount = remainderBefore === 0 ?
+      5 - (reserveBytesForPartial + 1) : 0;
+
+    for (let i = 0; i < hashCount; i++) {
+      outputChars.push("#");
+    }
+
+    // Encode reserved bytes as partial block
+    const remainingBytes = input.slice(inIdx);
+    const numBytes = remainingBytes.length;
+    const numChars = numBytes + 1;
+
+    let value: number;
+    if (numBytes === 1) {
+      value = remainingBytes[0];
+    } else if (numBytes === 2) {
+      value = (remainingBytes[0] << 8) | remainingBytes[1];
+    } else {
+      value = (remainingBytes[0] << 16) | (remainingBytes[1] << 8) | remainingBytes[2];
+    }
+
+    const digits: string[] = new Array(numChars);
+    for (let i = numChars - 1; i >= 0; i--) {
+      digits[i] = Z85_ALPHABET[value % 85];
+      value = Math.floor(value / 85);
+    }
+    outputChars.push(...digits);
+  } else if (config.concatenatable) {
+    // No reserved bytes, use old hash padding logic
     const remainder = outputChars.length % 5;
     if (remainder > 0) {
       outputChars.splice(outputChars.length - remainder, 0, ...new Array(5 - remainder).fill("#"));
@@ -743,8 +806,29 @@ function decodeFromStringCore(input: string): Uint8Array {
           hashRun += 1;
         }
         if (hashRun > 0) {
-          // Skip the hash padding and continue normal decoding
-          inIdx += hashRun;
+          const numChars = 5 - hashRun;
+          const startIdx = inIdx + hashRun;
+          const value = decodePartialBlock(input, startIdx, numChars);
+          const numBytes = numChars - 1;
+
+          if (numBytes === 1) {
+            if (value > 0xff) throw new Z855DecodeError("Z85 value overflow");
+            outputChunks.push(value);
+          } else if (numBytes === 2) {
+            if (value > 0xffff) throw new Z855DecodeError("Z85 value overflow");
+            outputChunks.push((value >>> 8) & 0xff);
+            outputChunks.push(value & 0xff);
+          } else {
+            if (value > 0xffffff) throw new Z855DecodeError("Z85 value overflow");
+            outputChunks.push((value >>> 16) & 0xff);
+            outputChunks.push((value >>> 8) & 0xff);
+            outputChunks.push(value & 0xff);
+          }
+
+          inIdx += 5;
+          currentBlockDigits.length = 0;
+          blockPos = 0;
+          knownHighBytes = [];
           continue;
         }
       }
