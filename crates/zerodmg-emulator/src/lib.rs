@@ -193,6 +193,11 @@ impl GameBoy {
         self.cpu.pc()
     }
 
+    /// Returns the raw internal div_counter value (for timer debugging).
+    pub fn raw_div_counter(&self) -> u16 {
+        self.mem.div_counter
+    }
+
     /// Returns CPU register state as a tuple (A, F, B, C, D, E, H, L, SP).
     pub fn cpu_state(&self) -> (u8, u8, u8, u8, u8, u8, u8, u8, u16) {
         (

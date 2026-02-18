@@ -813,7 +813,7 @@ impl CPUController for GameBoy {
                 let a = self.cpu.a;
                 let address = 0xFF00 + u16::from(offset);
                 self.set_mem(address, a);
-                cycles = 4;
+                cycles = 3; // LDH (n),A = 3 M-cycles (was incorrectly 4)
                 trace!("A = 0x{:02X}", a);
             }
             LD_8_FROM_FF_IMMEDIATE(offset) => {
