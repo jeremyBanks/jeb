@@ -97,14 +97,17 @@ D up to `prefixLen(K) + slack`. Disambiguation at position P requires D ≥ P+1.
 | 17–20 | 1 | 3 | 3 | never |
 | 21+ | 1+ | 4+ | 3 | never |
 
-So **canonical minimum is needed for `|` escapes when K ≤ 16 and P is large
-enough that slack < P**.
+So canonical minimum would be needed for `|` escapes at non-zero P if the
+prefix digits before `|` were Z85 block data. However, this never happens:
 
-Specifically:
-- K=8: canonical min needed at P=1,2,3 (same exposure as `,`)
-- K=9..12: canonical min needed at P=2,3
-- K=13..16: canonical min needed at P=3
-- K≥17: canonical min never needed (slack ≥ 3, can always emit P+1 digits)
+**`|` is always tried first in the encoder loop**, before any Z85 chars are
+emitted for the current block position. The chars that precede `|` in the
+output are always `|`'s own length/offset prefix digits — the decoder reads
+them as length encoding, not as a partial before-block to reconstruct. No
+before-block reconstruction occurs for `|` at all.
+
+The slack analysis above is therefore moot for `|`: the before-block
+disambiguation problem simply doesn't arise.
 
 ## Summary
 
@@ -114,10 +117,7 @@ Specifically:
 | `;` | 5 | No |
 | `_` | 6 | No |
 | `~` | 7 | No |
-| `\|` | 8 | Yes, at P=1,2,3 |
-| `\|` | 9–12 | Yes, at P=2,3 |
-| `\|` | 13–16 | Yes, at P=3 |
-| `\|` | ≥17 | No (slack sufficient to pad prefix to P+1 digits) |
+| `\|` | any | No (prefix digits are length encoding, not Z85 block data) |
 
 ## Formal Proofs
 
