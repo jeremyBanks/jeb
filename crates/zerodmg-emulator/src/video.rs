@@ -7,7 +7,7 @@ const CYCLES_PER_LINE: u64 = 114;
 
 /// Game Boy video memory state
 pub struct VideoData {
-    t: u64,
+    pub t: u64,
     vram: [u8; 0x2000],
     // background palette register
     bgp: u8,

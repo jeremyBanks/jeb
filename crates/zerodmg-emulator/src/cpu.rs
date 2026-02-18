@@ -37,8 +37,7 @@ pub struct CPUData {
     /// Disable interrupts after next instruction
     #[expect(dead_code)]
     di_pending: bool,
-    /// Enable interrupt after next instruction
-    #[expect(dead_code)]
+    /// Enable interrupt after next instruction (EI has a 1-instruction delay on DMG)
     ei_pending: bool,
     /// HALT bug: next instruction fetch should re-read current PC byte
     /// (occurs when HALT is executed with IME=0 and IE&IF != 0)
@@ -235,6 +234,12 @@ impl CPUController for GameBoy {
     fn tick(&mut self) -> InstructionExecution {
         use zerodmg_codes::instruction::prelude::*;
 
+        // EI has a 1-instruction delay: enable IME after the instruction following EI.
+        if self.cpu.ei_pending {
+            self.cpu.ei_pending = false;
+            self.cpu.ime = true;
+        }
+
         let has_interrupt = self.pop_interrupt();
 
         let source;
@@ -318,8 +323,9 @@ impl CPUController for GameBoy {
                 tracer = None;
             }
             EI => {
-                // Enable interrupts (takes effect after the next instruction)
-                self.cpu.ime = true;
+                // Enable interrupts with 1-instruction delay (DMG hardware behavior).
+                // IME becomes true at the START of the tick AFTER the next instruction.
+                self.cpu.ei_pending = true;
                 cycles = 1;
                 tracer = None;
             }

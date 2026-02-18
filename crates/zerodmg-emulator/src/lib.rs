@@ -170,6 +170,10 @@ impl GameBoy {
         // Set registers to DMG post-boot values
         gb.cpu = CPUData::post_boot();
         gb.mem.boot_rom_mapped = false;
+        // Set PPU to post-boot state: real DMG boot ROM takes ~32768 M-cycles.
+        // After boot, LY=153 (0x99) — the last VBlank line, 114 cycles before
+        // wrapping to LY=0. This matches documented DMG post-boot hardware state.
+        gb.vid.t = 153 * 114; // LY=153, start of last VBlank line
         gb
     }
 
