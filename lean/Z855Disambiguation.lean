@@ -96,49 +96,43 @@ example : ((List.range 7225).filter (fun n => n % 256 = 42)).length = 29 := by
 -- ============================================================
 
 -- For K < 42 (single prefix digit):
---   total output chars = ceil(K * 5 / 4)
+--   total output chars = ceil(K * 5 / 4)   [same as standard z855 for K bytes]
 --   chars spent: 1 (prefix digit) + 1 (|) + K (raw bytes) = K + 2
---   slack = ceil(K * 5 / 4) - (K + 2)
+--   slack = total - spent
 --
--- We can use slack chars as extra padding digits before |,
--- bringing total digits before | up to 1 + slack = ceil(K*5/4) - K - 1.
+-- The slack chars can be used as extra digits before |, bringing the
+-- total digits before | up to 1 + slack.
+-- Unambiguous at all P ∈ {0,1,2,3} requires 1 + slack ≥ P+1 for all P,
+-- i.e. 1 + slack ≥ 4, i.e. slack ≥ 3.
 --
--- For unambiguity at all P ∈ {0,1,2,3}, we need digits before | ≥ P+1 ≥ 4,
--- so we need: 1 + slack ≥ 4, i.e. slack ≥ 3.
---
--- slack = ceil(K*5/4) - K - 2
--- ceil(K*5/4) - K = ceil(K/4)  [since ceil(K*5/4) = K + ceil(K/4)]
--- So: slack = ceil(K/4) - 2
---
--- slack ≥ 3 iff ceil(K/4) ≥ 5 iff K ≥ 17.
+-- Chain of reasoning:
 
--- First verify the identity ceil(K*5/4) = K + ceil(K/4) for relevant K:
--- (K*5/4 = K + K/4, so ceil(K*5/4) = K + ceil(K/4) — true since K is integer)
--- Proved by native_decide for K = 8..20:
-example : (8 * 5 + 3) / 4 = 8 + (8 + 3) / 4 := by native_decide
-example : (17 * 5 + 3) / 4 = 17 + (17 + 3) / 4 := by native_decide
+-- Step 1: total output = K + ceil(K/4)
+-- (ceil(K*5/4) = ceil(K + K/4) = K + ceil(K/4) since K is a whole number)
+theorem total_eq (K : Nat) : (K * 5 + 3) / 4 = K + (K + 3) / 4 := by omega
 
--- The slack formula: slack(K) = ceil(K/4) - 2, verified for K = 8..20:
--- (using Nat ceiling division: ceil(K/4) = (K+3)/4)
-example : (8 * 5 + 3) / 4 - 8 - 2 = (8 + 3) / 4 - 2 := by native_decide
-example : (9 * 5 + 3) / 4 - 9 - 2 = (9 + 3) / 4 - 2 := by native_decide
-example : (16 * 5 + 3) / 4 - 16 - 2 = (16 + 3) / 4 - 2 := by native_decide
-example : (17 * 5 + 3) / 4 - 17 - 2 = (17 + 3) / 4 - 2 := by native_decide
+-- Step 2: slack = ceil(K/4) - 2
+-- (total - K - 2 = (K + ceil(K/4)) - K - 2 = ceil(K/4) - 2)
+theorem slack_eq (K : Nat) (h : 2 ≤ (K + 3) / 4) :
+    (K * 5 + 3) / 4 - K - 2 = (K + 3) / 4 - 2 := by omega
 
--- The threshold: K ≥ 17 iff slack ≥ 3 iff ceil(K/4) ≥ 5
--- Proved for the boundary cases:
-example : (16 + 3) / 4 = 4 := by native_decide  -- K=16: ceil(16/4)=4, slack=2, max P=2
-example : (17 + 3) / 4 = 5 := by native_decide  -- K=17: ceil(17/4)=5, slack=3, max P=3
-
--- General theorem: for K ≥ 17 (and K < 42), slack ≥ 3
+-- Step 3a: K ≥ 17 → ceil(K/4) ≥ 5 → slack ≥ 3 → unambiguous at all P
 theorem long_escape_sufficient_slack (K : Nat) (hlo : 17 ≤ K) (hhi : K < 42) :
     3 ≤ (K * 5 + 3) / 4 - K - 2 := by
+  have hceil : 5 ≤ (K + 3) / 4 := by omega  -- ceil(K/4) ≥ 5
+  have hslack : (K * 5 + 3) / 4 - K - 2 = (K + 3) / 4 - 2 := by omega
   omega
 
--- For K < 17, slack < 3 — canonical minimum needed at P=3
+-- Step 3b: K < 17 → ceil(K/4) ≤ 4 → slack < 3 → canonical minimum needed at P=3
 theorem long_escape_insufficient_slack (K : Nat) (hlo : 8 ≤ K) (hhi : K < 17) :
     (K * 5 + 3) / 4 - K - 2 < 3 := by
+  have hceil : (K + 3) / 4 ≤ 4 := by omega  -- ceil(K/4) ≤ 4
+  have hslack : (K * 5 + 3) / 4 - K - 2 = (K + 3) / 4 - 2 := by omega
   omega
+
+-- Boundary check: K=16 has slack=2 (not enough), K=17 has slack=3 (just enough)
+example : (16 + 3) / 4 = 4 := by native_decide  -- ceil(16/4) = 4, slack = 2
+example : (17 + 3) / 4 = 5 := by native_decide  -- ceil(17/4) = 5, slack = 3
 
 -- Exact slack values for K = 8..20:
 #eval (List.range 13).map (fun i =>
