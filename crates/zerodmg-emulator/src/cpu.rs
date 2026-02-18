@@ -40,6 +40,9 @@ pub struct CPUData {
     /// Enable interrupt after next instruction
     #[expect(dead_code)]
     ei_pending: bool,
+    /// HALT bug: next instruction fetch should re-read current PC byte
+    /// (occurs when HALT is executed with IME=0 and IE&IF != 0)
+    halt_bug: bool,
 }
 
 pub struct InstructionExecution {
@@ -100,6 +103,7 @@ impl CPUData {
             ift: 0x00,
             di_pending: false,
             ei_pending: false,
+            halt_bug: false,
         }
     }
 
@@ -122,6 +126,7 @@ impl CPUData {
             ift: 0x00,
             di_pending: false,
             ei_pending: false,
+            halt_bug: false,
         }
     }
 
@@ -152,8 +157,15 @@ impl<'gb> Iterator for PCMemoryIterator<'gb> {
     fn next(&mut self) -> Option<u8> {
         let pc_0 = self.gb.cpu.pc;
         let byte = self.gb.mem(pc_0);
-        let pc_1 = pc_0.wrapping_add(0x001);
-        self.gb.cpu.pc = pc_1;
+        // HALT bug: if active, suppress PC increment on this (first) fetch,
+        // so the next byte is read at the same address again.
+        if self.gb.cpu.halt_bug {
+            self.gb.cpu.halt_bug = false;
+            // PC does NOT advance — next fetch reads same byte as operand
+        } else {
+            let pc_1 = pc_0.wrapping_add(0x001);
+            self.gb.cpu.pc = pc_1;
+        }
         Some(byte)
     }
 }
@@ -260,16 +272,26 @@ impl CPUController for GameBoy {
                 tracer = None;
             }
             HALT => {
-                // HALT: CPU stops advancing PC until an interrupt occurs.
-                // If no interrupt pending (IE & IF == 0), hold PC at HALT so it
-                // re-executes next tick. The caller advances video/timer between
-                // ticks, which will eventually fire an interrupt.
-                // If interrupt pending, resume (PC already past HALT is correct).
-                if self.cpu.ie & self.cpu.ift == 0 {
-                    // No interrupt pending — stay at HALT instruction
-                    self.cpu.pc -= 1; // back up PC to re-execute HALT
+                // HALT behavior depends on IME and pending interrupts:
+                //
+                // Case 1: IME=1, IE&IF=0  → CPU halts; re-execute HALT until interrupt fires
+                // Case 2: IME=1, IE&IF≠0  → interrupt dispatched on next tick (no halt)
+                //         (pop_interrupt() at start of tick handles this; HALT just completes)
+                // Case 3: IME=0, IE&IF=0  → CPU halts; exits when IE&IF≠0, but IME stays 0
+                //         so interrupt is NOT dispatched; execution continues after HALT
+                // Case 4: IME=0, IE&IF≠0  → HALT BUG: CPU does NOT halt, but PC is not
+                //         advanced past HALT opcode, so next byte is fetched twice
+                let pending = self.cpu.ie & self.cpu.ift;
+                if pending == 0 {
+                    // Cases 1 & 3: no pending interrupt — keep halting
+                    self.cpu.pc -= 1; // back up to re-execute HALT
+                } else if !self.cpu.ime {
+                    // Case 4: HALT BUG — IME=0 with pending interrupt
+                    // HALT exits immediately, but next instruction's opcode byte
+                    // is read twice (PC not incremented for first fetch)
+                    self.cpu.halt_bug = true;
                 }
-                // Either way, consume 1 cycle
+                // Case 2: IME=1, IE&IF≠0 — HALT exits, next tick dispatches interrupt
                 cycles = 1;
                 tracer = None;
             }

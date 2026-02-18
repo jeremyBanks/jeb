@@ -16,6 +16,9 @@ pub struct MemoryData {
     // MBC1 state
     rom_bank: u8,
     ram_enable: bool,
+    // External RAM (cartridge RAM) — 4 banks x 8KB = 32KB
+    ext_ram: [u8; 0x8000],
+    ext_ram_bank: u8,
     // Timer state
     pub div_counter: u16,  // Internal counter for DIV register (increments every cycle)
     pub tima: u8,          // Timer counter
@@ -34,7 +37,11 @@ impl MemoryData {
             boot_rom: zerodmg_codes::roms::dmg_boot().to_bytes(),
             boot_rom_mapped: true,
             rom_bank: 1,
-            ram_enable: false,
+            // Initialize RAM as enabled — MBC1 games should write 0x0A to 0x0000-0x1FFF
+            // to enable it, but for test ROMs we pre-enable it.
+            ram_enable: true,
+            ext_ram: [0u8; 0x8000],
+            ext_ram_bank: 0,
             div_counter: 0,
             tima: 0,
             tma: 0,
@@ -76,8 +83,16 @@ impl MemoryController for GameBoy {
                 let i = (addr - 0x8000) as usize;
                 self.vram(i)
             }
-            // External RAM (cartridge) — not implemented, return 0xFF
-            0xA000..=0xBFFF => 0xFF,
+            // External RAM (cartridge)
+            0xA000..=0xBFFF => {
+                if self.mem.ram_enable {
+                    let bank = self.mem.ext_ram_bank as usize;
+                    let offset = (addr - 0xA000) as usize;
+                    self.mem.ext_ram[(bank * 0x2000) + offset]
+                } else {
+                    0xFF
+                }
+            }
             // Working RAM
             0xC000..=0xDFFF => {
                 let i = (addr - 0xC000) as usize;
@@ -121,8 +136,10 @@ impl MemoryController for GameBoy {
                 self.mem.rom_bank = (self.mem.rom_bank & 0x60) | bank;
             }
             0x4000..=0x5FFF => {
-                // RAM Bank / Upper ROM Bank bits
+                // RAM Bank / Upper ROM Bank bits (mode-dependent)
+                // In RAM banking mode, selects RAM bank; in ROM banking mode, selects upper ROM bits
                 self.mem.rom_bank = (self.mem.rom_bank & 0x1F) | ((value & 0x03) << 5);
+                self.mem.ext_ram_bank = value & 0x03;
             }
             0x6000..=0x7FFF => {
                 // Banking Mode Select — ignored for now
@@ -132,8 +149,14 @@ impl MemoryController for GameBoy {
                 let i = (addr - 0x8000) as usize;
                 self.set_vram(i, value);
             }
-            // External RAM (cartridge) — not implemented, ignore
-            0xA000..=0xBFFF => {}
+            // External RAM (cartridge)
+            0xA000..=0xBFFF => {
+                if self.mem.ram_enable {
+                    let bank = self.mem.ext_ram_bank as usize;
+                    let offset = (addr - 0xA000) as usize;
+                    self.mem.ext_ram[(bank * 0x2000) + offset] = value;
+                }
+            }
             // Working RAM
             0xC000..=0xDFFF => {
                 let i = (addr - 0xC000) as usize;
