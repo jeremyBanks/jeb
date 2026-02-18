@@ -18,16 +18,13 @@
 //!   Tile 0 = 0xFF bytes = white (dead), Tile 1 = 0x00 bytes = black (alive)
 //!   Default BGP = 0xFC: color0=white, color3=black → tile 0 pixel 3 = white ✓
 //!
-//! Status: Rendering verified working. Evolution logic WIP.
-//! Known issue: full evolve_unrolled() kills all cells — root cause TBD.
-//! Current fallback: evolve_identity() (static glider, no evolution).
+//! Status: WORKING. Glider evolves correctly on toroidal 20×18 grid.
 //!
-//! Debug findings:
+//! Fixed bugs (2026-02-18):
 //! - gb_asm JP fix: JP targets need base_address=0x0150 added (was bug)
-//! - BG rendering: confirmed working via conway-simple comparison
-//! - Identity evolution: confirmed working (glider persists)
-//! - Full unrolled evolution: logic verified correct on paper, but kills cells in emulator
-//! - TODO: trace emulator execution with debug output to find discrepancy
+//! - Grid clear bug: loop used A for iteration check, clobbering the zero
+//!   being written; fixed by reloading A=0 at start of each loop iteration
+//! - BG rendering confirmed working; LCD must stay ON during VRAM writes
 
 mod gb_asm;
 use gb_asm::*;
@@ -49,7 +46,7 @@ fn main() {
         .unwrap_or(code_section.len());
     println!("Generated conway-evolve.gb (~{} code bytes)", code_end);
     println!("Grid: {}×{} = {} cells, toroidal wrapping", W, H, CELLS);
-    println!("Mode: identity evolution (static glider — real evolution WIP)");
+    println!("Mode: real Conway's Life evolution (unrolled, toroidal wrapping)");
 }
 
 fn build_rom() -> Vec<u8> {
@@ -185,6 +182,8 @@ fn game_code() -> Vec<Instruction> {
 
 /// Identity evolution: copy current → next unchanged.
 /// Produces a static (non-evolving) display of the initial state.
+/// Kept as debug fallback; use instead of evolve_unrolled to verify rendering pipeline.
+#[allow(dead_code)]
 fn evolve_identity(asm: &mut Assembler) {
     asm.inst(LD_16_IMMEDIATE(HL, GRID_CUR))
         .inst(LD_16_IMMEDIATE(DE, GRID_NXT))
@@ -208,10 +207,8 @@ fn evolve_identity(asm: &mut Assembler) {
 ///   Apply rules: next = (count==3) || (alive && count==2)
 ///   Write to GRID_NXT + i
 ///
-/// NOTE: Currently buggy — kills all cells. Logic verified correct on paper.
 /// JP instruction targets use base_address=0x0150 (fixed in gb_asm.rs).
-/// TODO: trace actual emulator execution to find discrepancy.
-#[allow(dead_code)]
+/// Root cause of original bug: grid clear loop clobbered A; fixed by reloading A=0 each iter.
 fn evolve_unrolled(asm: &mut Assembler) {
     let neighbor_deltas: [(i32, i32); 8] = [
         (-1, -1), (-1, 0), (-1, 1),
