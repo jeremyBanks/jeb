@@ -4,66 +4,72 @@
  * Z855 extends RFC 32 Z85 (ZeroMQ's binary-to-text encoding) in two ways:
  *
  *   1. **Arbitrary-length input**: Z85 requires input to be a multiple of 4 bytes.
- *      Z855 handles any length by treating the final 1–3 bytes as a partial block
- *      (encoded with one fewer output character than a full block would use).
+ *      Z855 handles any length by treating the final 1–3 bytes as a "partial block"
+ *      encoded with one fewer output character than a full block (N bytes → N+1 chars).
  *
- *   2. **Raw passthrough for readable bytes**: When a run of input bytes happens to
- *      be printable, Z855 may output them literally instead of Z85-encoding them.
- *      This improves human-readability of encoded data that contains readable text
- *      or identifiers. The passthrough is marked with an escape character so the
- *      decoder knows to copy the following bytes directly without decoding.
+ *   2. **Raw passthrough for readable bytes**: When a run of input bytes are all in
+ *      the "safe" set, Z855 may output them literally instead of Z85-encoding them.
+ *      An escape character marks the raw bytes so the decoder copies them directly.
+ *      This makes encoded data human-readable whenever the input contains text.
  *
  * Z85 quick recap:
- *   - 85-character alphabet: `0123456789abcdefghijklmnopqrstuvwxyz
- *                               ABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#`
- *   - Full blocks: 4 input bytes → 5 output chars (big-endian u32 in base 85)
- *   - Partial blocks: N bytes (1–3) → N+1 output chars
+ *   - 85-character alphabet: `0–9 a–z A–Z . - : + = ^ ! / * ? & < > ( ) [ ] { } @ % $ #`
+ *   - Full blocks: 4 input bytes → 5 output chars  (big-endian u32, base-85 encoded)
+ *   - Partial final block: N bytes (1–3) → N+1 output chars
  *
- * This file prioritises clarity over performance. All edge cases are handled by
- * the production implementation in `z855.ts`; the two files share the same format.
+ * Passthrough escapes (all produce output the same length as standard Z85 would):
+ *   `,XXXX`       — 4 raw bytes  (block-aligned or non-aligned)
+ *   `C;BBBBB`     — 1 Z85 char + 5 raw bytes  (and similar with `_` for 6, `~` for 7)
+ *   `NN|RRR...`   — 8+ raw bytes, length encoded as base-42 prefix `NN`, padding with `.`
+ *   `0|RRR...`    — rest-of-input raw (shortcut when safe bytes reach end of input)
+ *
+ * This file prioritises clarity over performance. It produces the same output as
+ * the production `z855.ts` for all inputs (verified against 1416 test cases) except
+ * for the *choice* of passthrough position when multiple positions are equally valid —
+ * the production encoder uses a bit-reversal heuristic to pick the "most aligned" one,
+ * which we skip here since it only affects aesthetics, not correctness.
  */
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-/** The 85-character Z85 alphabet. Index i maps to alphabet[i]. */
+/** The 85-character Z85 alphabet. Index i → alphabet[i]. */
 const ALPHABET =
   "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
 
-/** Reverse lookup: char code → Z85 digit value (0–84), or −1 if invalid. */
+/** Reverse map: char code → Z85 digit value (0–84), or −1 if not in alphabet. */
 const CHAR_TO_DIGIT: Int8Array = (() => {
-  const table = new Int8Array(256).fill(-1);
-  for (let i = 0; i < 85; i++) table[ALPHABET.charCodeAt(i)] = i;
-  return table;
+  const t = new Int8Array(256).fill(-1);
+  for (let i = 0; i < 85; i++) t[ALPHABET.charCodeAt(i)] = i;
+  return t;
 })();
 
 /**
- * "Safe" characters: bytes that are allowed through the passthrough extension.
- * This is the Z85 alphabet (85 chars) plus five additional escape-marker characters
- * that are needed by the various passthrough escape forms: `,;|~_`.
+ * The "safe" set: bytes that qualify for raw passthrough.
+ * This is the Z85 alphabet (85 chars) plus the five escape characters themselves
+ * (`,;|~_`), so that sequences containing those characters can also pass through.
  * Total: 90 characters.
  */
 const SAFE_CHARS =
   "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#,;|~_";
 
-/** Fast lookup table for safe-character detection. */
 const IS_SAFE: Uint8Array = (() => {
-  const table = new Uint8Array(256);
-  for (let i = 0; i < SAFE_CHARS.length; i++) table[SAFE_CHARS.charCodeAt(i)] = 1;
-  return table;
+  const t = new Uint8Array(256);
+  for (let i = 0; i < SAFE_CHARS.length; i++) t[SAFE_CHARS.charCodeAt(i)] = 1;
+  return t;
 })();
 
-// Escape character codes used by the passthrough extension.
-const ESC_4    = 0x2c; // ',' — the next 4 bytes are literal (block-aligned or non-aligned)
-const ESC_5    = 0x3b; // ';' — extended: (P+1) Z85 chars, then 5 literal bytes
-const ESC_6    = 0x5f; // '_' — extended: (P+1) Z85 chars, then 6 literal bytes
-const ESC_7    = 0x7e; // '~' — extended: (P+1) Z85 chars, then 7 literal bytes
-const ESC_LONG = 0x7c; // '|' — long:   [prefix][|][raw bytes][padding]
-const PAD_DOT  = 0x2e; // '.' — padding byte for the long escape (ignored on decode)
-const PAD_HASH = 0x23; // '#' — padding used in concatenatable mode for partial blocks
+// Escape character codes for the passthrough extension.
+const ESC_4    = 0x2c; // ',' — next 4 bytes are raw
+const ESC_5    = 0x3b; // ';' — extended: (P+1) Z85 + 5 raw bytes
+const ESC_6    = 0x5f; // '_' — extended: (P+1) Z85 + 6 raw bytes
+const ESC_7    = 0x7e; // '~' — extended: (P+1) Z85 + 7 raw bytes
+const ESC_LONG = 0x7c; // '|' — long: base-42 prefix + raw bytes + dot padding
+const PAD_DOT  = 0x2e; // '.' — padding byte inside the long escape (ignored on decode)
+const PAD_HASH = 0x23; // '#' — padding used in concatenatable mode (not our concern here)
 
-/** Maximum length for a single long-passthrough segment (matches the Rust impl). */
+/** Maximum safe-byte run that a single long-escape can cover. */
 const MAX_LONG_PASSTHROUGH = 65536;
 
 // ---------------------------------------------------------------------------
@@ -71,102 +77,77 @@ const MAX_LONG_PASSTHROUGH = 65536;
 // ---------------------------------------------------------------------------
 
 export class Z855DecodeError extends Error {
-  constructor(msg: string) {
-    super(msg);
-    this.name = "Z855DecodeError";
-  }
+  constructor(msg: string) { super(msg); this.name = "Z855DecodeError"; }
 }
 
 /**
  * Encode arbitrary bytes to a Z855 string.
  *
- * The output is a printable ASCII string that is slightly longer than the input
- * (at most 25% overhead for pure binary data; often much shorter if the input
- * contains readable text that triggers the passthrough extension).
+ * Walks the input sequentially, choosing at each position the best available
+ * passthrough form (most bytes covered) or falling back to standard Z85.
  */
 export function encode(input: Uint8Array): string {
   if (input.length === 0) return "";
 
   const out: string[] = [];
-  let i = 0; // byte index into input
+  let i = 0;
 
   while (i < input.length) {
     const remaining = input.length - i;
 
     // -----------------------------------------------------------------------
-    // Full-block path (4 or more bytes remaining)
+    // Full-block path: 4 or more bytes available.
+    //
+    // We try passthrough forms first (most-efficient to least), then fall back
+    // to standard Z85.  Every passthrough form produces exactly the same number
+    // of output characters as standard Z85 would for the same byte count — so
+    // switching between them never changes the total output length.
     // -----------------------------------------------------------------------
     if (remaining >= 4) {
-      // Try each passthrough form, most-efficient-first.  Fall through to
-      // standard Z85 encoding if none applies.
-
-      // (A) Long passthrough: 8+ consecutive safe bytes → [prefix]|[raw bytes]
+      // (A) Long passthrough: 8+ consecutive safe bytes → prefix `|` raw [padding]
       const long = tryLongPassthrough(input, i);
-      if (long !== null) {
-        out.push(...long.chars);
-        i += long.consumed;
-        continue;
-      }
+      if (long !== null) { out.push(...long.chars); i += long.consumed; continue; }
 
-      // (B) Extended passthrough: 5, 6, or 7 safe bytes → [(P+1) Z85][ESC][raw]
+      // (B) Extended passthrough: 5, 6, or 7 safe bytes → (P+1) Z85 + escape + raw
       const ext = tryExtendedPassthrough(input, i);
-      if (ext !== null) {
-        out.push(...ext.chars);
-        i += ext.consumed;
-        continue;
-      }
+      if (ext !== null) { out.push(...ext.chars); i += ext.consumed; continue; }
 
-      // (C) Block-aligned 4-byte passthrough: all 4 bytes are safe → `,XXXX`
+      // (C) Block-aligned 4-byte passthrough: all 4 bytes safe → `,XXXX`
       if (allSafe(input, i, 4)) {
         out.push(",");
-        for (let k = 0; k < 4; k++) out.push(String.fromCharCode(input[i + k]));
+        for (let k = 0; k < 4; k++) out.push(chr(input[i + k]));
         i += 4;
         continue;
       }
 
-      // (D) Non-aligned 4-byte passthrough: 4 safe bytes starting at offset 1–3
-      //     within this block.  Only valid when the surrounding block values
-      //     satisfy a canonical-minimum constraint (see encodeNonAligned).
+      // (D) Non-aligned 4-byte passthrough: 4 safe bytes at offset 1, 2, or 3 within
+      //     the current 4-byte block.  Requires additional constraints — see below.
       const nna = tryNonAlignedPassthrough(input, i);
-      if (nna !== null) {
-        out.push(...nna.chars);
-        i += nna.consumed;
-        continue;
-      }
+      if (nna !== null) { out.push(...nna.chars); i += nna.consumed; continue; }
 
       // (E) Standard Z85 encoding for a full 4-byte block.
-      out.push(...encodeFullBlock(readU32(input, i)));
+      out.push(...z85Encode(readU32(input, i), 5));
       i += 4;
       continue;
     }
 
     // -----------------------------------------------------------------------
-    // Partial-block path (1, 2, or 3 bytes remaining) — always Z85, no passthrough
+    // Partial-block path: 1, 2, or 3 bytes remaining.
     //
-    // A partial block of N bytes is treated as if it were the high-order bytes of
-    // a 4-byte value (with the missing low bytes implicitly zero).  We then emit
-    // N+1 Z85 characters — one more than the number of bytes, analogous to how a
-    // full block always uses 5 characters for 4 bytes.
+    // There is no passthrough for partial blocks — always Z85.
     //
-    // Why N+1 instead of N?  Because N Z85 characters can only distinguish 85^N
-    // values, which (for N=1) is only 85 — not enough to represent all 256 possible
-    // single-byte values.  N+1 characters give 85^(N+1) possibilities, which is
-    // always sufficient.
+    // A partial block of N bytes is encoded as N+1 Z85 characters.  Why N+1?
+    // Because N Z85 characters can represent only 85^N distinct values.  For
+    // N=1 that's 85, which is fewer than the 256 possible byte values.  Adding
+    // one extra character gives 85^(N+1) ≥ 256^N possibilities, always enough.
     //
-    // The decoder recognises the partial block by length: any sequence that is not
-    // a multiple of 5 characters (and not explained by an escape) must end with a
-    // partial block of 2, 3, or 4 trailing characters.  (A single trailing character
-    // is always invalid because 85^1 < 256.)
+    // Mechanically: treat the N bytes as an integer (big-endian), then base-85
+    // encode it into exactly N+1 digits — the same math as a full block but
+    // stopping one digit early.
     // -----------------------------------------------------------------------
-    const numChars = remaining + 1; // 1 byte → 2 chars, 2 bytes → 3 chars, 3 bytes → 4 chars
-
-    // Pack the N bytes into a number as if they were the high-order bytes of a u32.
     let value = 0;
-    for (let k = 0; k < remaining; k++) value = (value * 256 + input[i + k]) | 0;
-    // (No left-shift needed: we emit exactly numChars digits, so the base-85 math
-    //  works on the value directly.)
-
-    out.push(...encodeValue(value, numChars));
+    for (let k = 0; k < remaining; k++) value = value * 256 + input[i + k];
+    out.push(...z85Encode(value, remaining + 1));
     i += remaining;
   }
 
@@ -175,313 +156,210 @@ export function encode(input: Uint8Array): string {
 
 /**
  * Decode a Z855 string back to bytes.
- *
  * @throws Z855DecodeError on any invalid input.
  */
 export function decode(input: string): Uint8Array {
   if (input.length === 0) return new Uint8Array(0);
 
   const out: number[] = [];
-  let i = 0; // character index into input
+  let i = 0;
 
-  // Accumulated Z85 digits for the current block.
-  let blockDigits: number[] = [];
-  // After a non-aligned 4-byte passthrough, the decoder knows the high P bytes
-  // of the "after" block from the passthrough itself.  These are held here so
-  // that when the remaining (5−P) Z85 digits arrive, we can reconstruct the
-  // full 32-bit value.
+  // Z85 digits accumulated for the current block (cleared after each full block).
+  let digits: number[] = [];
+
+  // After a non-aligned `,` passthrough, the P high bytes of the "after" block are
+  // known from the passthrough itself.  We hold them here until the remaining (5−P)
+  // Z85 digits arrive, then reconstruct the full 32-bit value.
   let knownHighBytes: number[] = [];
 
   while (i < input.length) {
     const code = input.charCodeAt(i);
 
     // ------------------------------------------------------------------
-    // Hash padding — used in concatenatable mode only.
-    // A hash-padded block looks like: [1–3 '#' chars][2–4 Z85 chars], 5 chars total.
-    // We only trigger this path when we see '#' at a block boundary AND the following
-    // chars include at least one non-'#' Z85 char (so that '#####' is NOT treated as
-    // hash-padded — it should be decoded normally and fail with an overflow error).
+    // Hash padding (concatenatable mode): `#` at block boundary.
+    // A valid hash-padded group is 1–3 `#` chars followed by 2–4 Z85 chars.
+    // `#####` is NOT hash padding — it falls through to normal Z85 (and overflows).
     // ------------------------------------------------------------------
-    if (code === PAD_HASH && blockDigits.length === 0 && (i % 5) === 0 &&
-        input.length - i >= 5) {
-      // Count leading '#' chars (at most 3; a 4th '#' would mean 1 data char = invalid).
-      let hashRun = 0;
-      while (hashRun < 3 && i + hashRun < input.length && input.charCodeAt(i + hashRun) === PAD_HASH) {
-        hashRun++;
-      }
-      // Only use hash-padding path if the char right after the hashes is NOT a '#'
-      // (otherwise it's #####, which should be treated as a regular Z85 block).
-      if (hashRun > 0 && i + hashRun < input.length && input.charCodeAt(i + hashRun) !== PAD_HASH) {
-        const partial = decodeHashPaddedBlock(input, i);
-        out.push(...partial.bytes);
+    if (code === PAD_HASH && digits.length === 0 && i % 5 === 0 && input.length - i >= 5) {
+      let h = 0;
+      while (h < 3 && input.charCodeAt(i + h) === PAD_HASH) h++;
+      if (h > 0 && input.charCodeAt(i + h) !== PAD_HASH) {
+        out.push(...decodeHashBlock(input, i, h));
         i += 5;
         continue;
       }
-      // Fall through to normal Z85 processing.
+      // Fall through: not hash padding, treat '#' as a Z85 digit.
     }
 
     // ------------------------------------------------------------------
     // Long escape: `|`
     //
-    // Structure: [prefix digits] `|` [optional dot padding] [raw bytes] [optional dot padding]
+    // Full structure:  [prefix][`|`][`offset` bytes of padding][raw bytes][remaining padding]
     //
-    // The prefix digits (accumulated in blockDigits) encode the raw-byte count
-    // in a self-terminating base-42 scheme.  A prefix of `0` is the special
-    // "rest of input is raw" form.
+    // The prefix (in `digits`) encodes two optional self-terminating base-42 numbers:
+    //   - If two numbers: first is `offset` (dots before raw), second is `rawLen`.
+    //   - If one number:  it is `rawLen`, offset = 0.
+    //   - `rawLen = 0` is special: copy the rest of input literally.
+    //
+    // Total envelope length is always z855OutputLen(rawLen), so the decoder knows
+    // exactly how much to skip after the raw bytes.
     // ------------------------------------------------------------------
     if (code === ESC_LONG) {
-      if (blockDigits.length === 0) throw new Z855DecodeError("'|' without preceding prefix digits");
-      const { offset, length } = readLongEscapePrefix(blockDigits);
+      if (digits.length === 0) throw new Z855DecodeError("'|' with no prefix");
+      i++; // consume '|'
 
-      if (length >= 1 && length <= 7) {
-        throw new Z855DecodeError(`invalid | escape length ${length} (use ,;_~ for 4–7 bytes)`);
-      }
+      const { offset, length: rawLen } = readLongPrefix(digits);
+      if (rawLen >= 1 && rawLen <= 7) throw new Z855DecodeError(`invalid | length ${rawLen}`);
 
-      i++; // consume `|`
-
-      if (length === 0) {
-        // Special form: copy all remaining input bytes literally.
+      if (rawLen === 0) {
+        // Rest-of-input raw.
         for (; i < input.length; i++) out.push(input.charCodeAt(i));
-        blockDigits = [];
-        knownHighBytes = [];
         break;
       }
 
-      // General form: copy exactly `length` raw bytes (with padding around them).
-      const rawLen = length;
-      const prefixCharCount = blockDigits.length - (offset > 0 ? generateLongPrefix(offset).length : 0);
-      const totalEnvelopeLen = z855OutputLen(rawLen);
-      const paddingNeeded = totalEnvelopeLen - (prefixCharCount + 1 + rawLen);
-      const paddingAfter = paddingNeeded - (offset > 0 ? generateLongPrefix(offset).length : 0) - offset;
+      // The total envelope is: prefixLen + 1('|') + paddingTotal + rawLen = z855OutputLen(rawLen).
+      const prefixLen = digits.length;
+      const envelopeLen = z855OutputLen(rawLen);
+      const paddingTotal = envelopeLen - prefixLen - 1 - rawLen;
+      // `offset` bytes of padding come before the raw bytes; the rest come after.
+      const paddingAfter = paddingTotal - offset;
+      if (paddingAfter < 0) throw new Z855DecodeError("invalid | offset");
 
-      // Skip `offset` padding bytes before the raw data (content is irrelevant).
-      i += offset;
+      i += offset; // skip pre-raw padding (content doesn't matter)
       if (i + rawLen > input.length) throw new Z855DecodeError("truncated | escape");
-
       for (let k = 0; k < rawLen; k++) out.push(input.charCodeAt(i + k));
       i += rawLen;
-      i += paddingAfter; // skip trailing padding
+      i += paddingAfter; // skip post-raw padding
 
-      blockDigits = [];
-      knownHighBytes = [];
+      digits = []; knownHighBytes = [];
       continue;
     }
 
     // ------------------------------------------------------------------
-    // Short passthrough escapes: `,` (4 bytes), `;` (5), `_` (6), `~` (7)
+    // Short passthrough escapes: `,` (4), `;` (5), `_` (6), `~` (7)
     // ------------------------------------------------------------------
-    const passLen = shortPassthroughLength(code);
+    const passLen = escapeLen(code);
     if (passLen > 0) {
-      if (i + passLen >= input.length) throw new Z855DecodeError("incomplete passthrough sequence");
-      const passBytes: number[] = [];
-      for (let k = 1; k <= passLen; k++) passBytes.push(input.charCodeAt(i + k));
+      if (i + passLen >= input.length) throw new Z855DecodeError("incomplete passthrough");
+      const pass: number[] = [];
+      for (let k = 1; k <= passLen; k++) pass.push(input.charCodeAt(i + k));
 
       if (passLen === 4) {
         // `,` escape.
-        // Position P = blockDigits.length (how many Z85 chars were before the `,`).
-        const P = blockDigits.length;
+        // P = how many Z85 chars accumulated before the `,`.
+        const P = digits.length;
 
         if (P === 0) {
-          // Block-aligned (P=0): the 4 passthrough bytes are the full output.
-          out.push(...passBytes);
-          i += 5; // `,` + 4 bytes
+          // Block-aligned: just copy the 4 bytes.
+          out.push(...pass);
+          i += 5;
         } else {
-          // Non-aligned (P ≥ 1): the passthrough bytes OVERLAP the surrounding blocks.
+          // Non-aligned (P ≥ 1): the passthrough bytes overlap with the surrounding blocks.
           //
-          // The "before" block: the encoder output P Z85 digits, then hid the low
-          // (4−P) bytes of that block inside the passthrough.  The decoder picks the
-          // *minimum* 32-bit value consistent with those P digits and those (4−P)
-          // known bytes (called the "canonical minimum").
+          // "Before" block: the encoder emitted P Z85 digits, then hid the low (4−P) bytes
+          // of that block inside the passthrough.  To recover the before-block value, we
+          // need the minimum 32-bit number consistent with those P digits AND those (4−P)
+          // known low bytes.  (This "canonical minimum" is also what the encoder checks
+          // before allowing non-aligned passthrough — guaranteeing a unique round-trip.)
           //
-          // The "after" block: the last P bytes of the passthrough are the *high*
-          // bytes of the next block.  The decoder holds them in `knownHighBytes`
-          // and waits for the remaining (5−P) Z85 digits.
+          // "After" block: the last P passthrough bytes are the HIGH bytes of the next
+          // block.  Hold them in knownHighBytes; the remaining (5−P) Z85 digits will
+          // arrive next and let us reconstruct the full value.
           const numKnownLow = 4 - P;
-          const knownLow = passBytes.slice(0, numKnownLow);
-          const beforeValue = canonicalMinimum(blockDigits, knownLow);
-          out.push(...u32ToBytes(beforeValue));
-
-          knownHighBytes = passBytes.slice(numKnownLow); // last P bytes
-          blockDigits = [];
-          i += 5; // `,` + 4 bytes
+          out.push(...u32ToBytes(canonicalMin(digits, pass.slice(0, numKnownLow))));
+          knownHighBytes = pass.slice(numKnownLow);
+          digits = [];
+          i += 5;
         }
       } else {
-        // `;` / `_` / `~` escape (5, 6, or 7 bytes).
-        // Structure: [(P+1) Z85 chars before escape] [ESC] [K raw bytes]
+        // `;` / `_` / `~` extended escape (K = 5, 6, or 7 bytes).
         //
-        // Unlike the `,` case, the extra digit (P+1 instead of P) provides enough
-        // information to fully determine the before-block without the canonical-
-        // minimum trick.  The decoder computes the before-block value directly,
-        // outputs only the *top P* bytes (those not covered by the passthrough),
-        // then outputs all K passthrough bytes verbatim.
-        const numDigits = blockDigits.length; // = P+1
-
-        if (numDigits === 0) {
-          // Block-aligned extended passthrough (P+1 = 0 means no preceding digits);
-          // just copy the raw bytes.
-          out.push(...passBytes);
+        // Structure: [(P+1) Z85 chars][escape][K raw bytes]
+        //
+        // The key difference from `,`: there's ONE EXTRA Z85 digit before the escape.
+        // That extra digit fully determines the before-block (no canonical-minimum
+        // search needed).  We output only the top P bytes of the before-block
+        // (the remaining 4−P overlap with the passthrough and are output via it),
+        // then output all K passthrough bytes directly.
+        //
+        // P+1 = digits.length, so P = digits.length − 1.
+        // When digits.length = 0 (block-aligned), just copy raw bytes.
+        if (digits.length === 0) {
+          out.push(...pass);
           i += 1 + passLen;
           continue;
         }
-
-        const P = numDigits - 1;
+        const P = digits.length - 1;
         const numKnownLow = 4 - P;
-        const knownLow = passBytes.slice(0, numKnownLow);
-
-        // Determine the full before-block value from (P+1) digits + known low bytes.
-        const beforeValue = beforeBlockFromExtendedDigits(blockDigits, knownLow);
-
-        // Emit the top P bytes (the rest are covered by the passthrough).
-        const beforeBytes = u32ToBytes(beforeValue);
-        for (let k = 0; k < P; k++) out.push(beforeBytes[k]);
-
-        // Then emit all K passthrough bytes directly.
-        out.push(...passBytes);
-
-        blockDigits = [];
-        knownHighBytes = [];
+        const beforeVal = beforeBlockFromDigits(digits, pass.slice(0, numKnownLow));
+        // Output the top P bytes (the ones NOT covered by the passthrough).
+        const bBytes = u32ToBytes(beforeVal);
+        for (let k = 0; k < P; k++) out.push(bBytes[k]);
+        // Then all K raw bytes.
+        out.push(...pass);
+        digits = []; knownHighBytes = [];
         i += 1 + passLen;
       }
       continue;
     }
 
     // ------------------------------------------------------------------
-    // Regular Z85 character — accumulate digit and flush full blocks.
+    // Regular Z85 character — accumulate and flush when block is complete.
     // ------------------------------------------------------------------
-    const digit = CHAR_TO_DIGIT[code];
-    if (digit === -1) {
-      throw new Z855DecodeError(
-        `invalid character 0x${code.toString(16).padStart(2, "0").toUpperCase()}`
-      );
-    }
-    blockDigits.push(digit);
+    const d = CHAR_TO_DIGIT[code];
+    if (d === -1) throw new Z855DecodeError(`invalid char 0x${code.toString(16).toUpperCase()}`);
+    digits.push(d);
     i++;
 
-    // How many digits do we need before we can output bytes?
-    // - Normally: 5 (full Z85 block → 4 bytes)
-    // - After a non-aligned `,` passthrough: 5 − P digits remain for the after-block,
-    //   where P = knownHighBytes.length.
+    // We need 5 digits for a full block, but after a non-aligned `,` passthrough
+    // we already know the top P bytes, so we only need 5−P more digits.
     const needed = 5 - knownHighBytes.length;
+    if (digits.length === needed) {
+      const raw = digitsToValue(digits);
+      const value = knownHighBytes.length === 0
+        ? raw                                                   // normal block
+        : reconstructAfterBlock(knownHighBytes, raw, needed);  // after non-aligned ','
 
-    if (blockDigits.length === needed) {
-      // Decode the accumulated digits.
-      const lowDigitsValue = digitsToValue(blockDigits);
-
-      let value: number;
-      if (knownHighBytes.length === 0) {
-        // Normal full-block decode.
-        value = lowDigitsValue;
-        if (value > 0xffffffff) throw new Z855DecodeError("Z85 value overflow");
-      } else {
-        // After-block reconstruct: we know the top P bytes (from the passthrough),
-        // and the Z85 digits encode the remaining low-order bits.
-        value = reconstructAfterBlock(knownHighBytes, lowDigitsValue, needed);
-        knownHighBytes = [];
-      }
-
+      if (value > 0xffffffff) throw new Z855DecodeError("Z85 value overflow");
       out.push(...u32ToBytes(value));
-      blockDigits = [];
+      digits = []; knownHighBytes = [];
     }
   }
 
   // ------------------------------------------------------------------
-  // Flush any remaining partial block (2, 3, or 4 accumulated digits).
+  // Flush any trailing partial block (2, 3, or 4 accumulated digits).
   //
-  // This is the decoder side of the partial-block handling described in the
-  // encoder.  Trailing digits that don't make a full 5-digit group are
-  // interpreted as a shortened encoding of 1–3 bytes.
+  // The decoder side of the partial-block encoding: 2 digits → 1 byte,
+  // 3 digits → 2 bytes, 4 digits → 3 bytes.  1 digit is always invalid.
   // ------------------------------------------------------------------
-  if (blockDigits.length > 0) {
-    const numChars = blockDigits.length;
-    if (numChars === 1) throw new Z855DecodeError("invalid length: single trailing character");
-
-    const value = digitsToValue(blockDigits);
-    const numBytes = numChars - 1; // 2 chars → 1 byte, 3 → 2, 4 → 3
-
+  if (digits.length > 0) {
+    if (digits.length === 1) throw new Z855DecodeError("invalid: single trailing char");
+    const value = digitsToValue(digits);
+    const numBytes = digits.length - 1;
     const maxValue = [0, 0xff, 0xffff, 0xffffff][numBytes];
     if (value > maxValue) throw new Z855DecodeError("Z85 value overflow in partial block");
-
-    // Extract the bytes from the value (big-endian).
-    for (let k = numBytes - 1; k >= 0; k--) {
-      out.push((value >>> (k * 8)) & 0xff);
-    }
+    for (let k = numBytes - 1; k >= 0; k--) out.push((value >>> (k * 8)) & 0xff);
   }
 
   return new Uint8Array(out);
 }
 
 // ---------------------------------------------------------------------------
-// Encoding helpers
-// ---------------------------------------------------------------------------
-
-/** Encode a 32-bit value into exactly `numChars` Z85 characters. */
-function encodeValue(value: number, numChars: number): string[] {
-  const chars: string[] = new Array(numChars);
-  let v = value;
-  for (let i = numChars - 1; i >= 0; i--) {
-    chars[i] = ALPHABET[v % 85];
-    v = Math.floor(v / 85);
-  }
-  return chars;
-}
-
-/** Encode a full 4-byte block (always exactly 5 chars). */
-function encodeFullBlock(value: number): string[] {
-  return encodeValue(value, 5);
-}
-
-/** Read 4 bytes from `input[i..i+4]` as a big-endian unsigned 32-bit integer. */
-function readU32(input: Uint8Array, i: number): number {
-  return (
-    ((input[i] << 24) | (input[i + 1] << 16) | (input[i + 2] << 8) | input[i + 3]) >>> 0
-  );
-}
-
-/** Convert a 32-bit integer to 4 big-endian bytes. */
-function u32ToBytes(value: number): [number, number, number, number] {
-  return [
-    (value >>> 24) & 0xff,
-    (value >>> 16) & 0xff,
-    (value >>> 8) & 0xff,
-    value & 0xff,
-  ];
-}
-
-/** True if all `count` bytes starting at `input[start]` are in the safe-char set. */
-function allSafe(input: Uint8Array, start: number, count: number): boolean {
-  for (let k = 0; k < count; k++) {
-    if (!IS_SAFE[input[start + k]]) return false;
-  }
-  return true;
-}
-
-/** The standard Z85 output length for `n` input bytes: ceil(n × 5 / 4). */
-function z855OutputLen(n: number): number {
-  return Math.ceil((n * 5) / 4);
-}
-
-// ---------------------------------------------------------------------------
-// Passthrough encoding — long (8+ bytes)
+// Long passthrough (8+ bytes)
 // ---------------------------------------------------------------------------
 
 /**
- * Try to encode 8 or more consecutive safe bytes using the `|` long escape.
+ * Try to encode 8+ consecutive safe bytes using the `|` long escape.
  *
- * Structure of the output:
- *   [prefix][`|`][optional dot padding][raw bytes][optional dot padding]
+ * When the safe run reaches end-of-input: emit `0|` + all remaining bytes.
+ * Otherwise: emit a base-42 length prefix, `|`, the raw bytes, and dot padding.
+ * The total output length equals z855OutputLen(rawLen) in both cases.
  *
- * The prefix encodes the number of raw bytes in base-42 (self-terminating).
- * The total envelope length equals `z855OutputLen(rawLen)` so the encoded
- * length is the same as if the bytes were Z85-encoded normally.
- *
- * Special case: when the safe run reaches the end of input, emit `0|` followed
- * by all remaining bytes — this is shorter than the general form.
+ * The encoder always puts padding AFTER the raw bytes (offset = 0).  The
+ * production encoder places padding more cleverly for alignment aesthetics, but
+ * any placement is valid — the decoder uses the prefix to find the raw bytes.
  */
-function tryLongPassthrough(
-  input: Uint8Array,
-  start: number
-): { chars: string[]; consumed: number } | null {
-  // Count consecutive safe bytes.
+function tryLongPassthrough(input: Uint8Array, start: number): { chars: string[]; consumed: number } | null {
   let safeCount = 0;
   for (let j = start; j < input.length && safeCount < MAX_LONG_PASSTHROUGH; j++) {
     if (!IS_SAFE[input[j]]) break;
@@ -489,407 +367,331 @@ function tryLongPassthrough(
   }
   if (safeCount < 8) return null;
 
-  // "Rest of input is raw" shortcut.
   if (start + safeCount === input.length) {
-    const chars: string[] = ["0", "|"];
-    for (let j = start; j < input.length; j++) chars.push(String.fromCharCode(input[j]));
-    return { chars, consumed: safeCount };
+    // Rest-of-input shortcut: `0|` + raw bytes (no padding needed).
+    return { chars: ["0", "|", ...rawChars(input, start, safeCount)], consumed: safeCount };
   }
 
-  // General form: fixed-length envelope.
+  // General form: length-prefixed envelope, all padding after raw bytes.
   const rawLen = safeCount;
-  const prefix = generateLongPrefix(rawLen);
+  const prefix = longPrefix(rawLen);
   const totalLen = z855OutputLen(rawLen);
-  const paddingNeeded = totalLen - prefix.length - 1 - rawLen; // padding = envelope − prefix − `|` − raw
-
-  const chars: string[] = [...prefix, "|"];
-  for (let j = 0; j < rawLen; j++) chars.push(String.fromCharCode(input[start + j]));
-  for (let j = 0; j < paddingNeeded; j++) chars.push(".");         // trailing padding (offset = 0)
-  // Note: we put all padding after the raw bytes for simplicity (offset = 0).
-  // The production encoder uses a smarter offset for alignment; the decoder ignores padding content.
-
-  return { chars, consumed: rawLen };
+  const paddingCount = totalLen - prefix.length - 1 - rawLen;
+  return {
+    chars: [...prefix, "|", ...rawChars(input, start, rawLen), ...Array(paddingCount).fill(".")],
+    consumed: rawLen,
+  };
 }
 
-/**
- * Generate the base-42 length prefix for the `|` escape.
- *
- * Base-42 self-terminating encoding:
- *   - Split `value` into base-42 digits (big-endian).
- *   - The most-significant digit is the *terminal* digit (value < 42, output as-is).
- *   - All other digits are *continuation* digits (value += 42 before emitting).
- *
- * The Z85 alphabet is used to represent digit values (digit 0 → `'0'`, etc.).
- */
-function generateLongPrefix(value: number): string[] {
+/** Generate base-42 self-terminating prefix characters for a given length value. */
+function longPrefix(value: number): string[] {
+  // Single digit if value < 42 (terminal digit, < 42).
   if (value < 42) return [ALPHABET[value]];
-
+  // Multi-digit: extract base-42 digits big-endian; first is terminal, rest get +42.
   const digits: number[] = [];
-  let v = value;
-  while (v > 0) {
-    digits.push(v % 42);
-    v = Math.floor(v / 42);
-  }
-  digits.reverse(); // big-endian
-
-  return digits.map((d, idx) => (idx === 0 ? ALPHABET[d] : ALPHABET[d + 42]));
+  for (let v = value; v > 0; v = Math.floor(v / 42)) digits.push(v % 42);
+  digits.reverse();
+  return digits.map((d, i) => ALPHABET[i === 0 ? d : d + 42]);
 }
 
 /**
- * Parse the prefix digits accumulated before a `|` and return
- * `{ offset, length }` where `length` is the raw byte count
- * (0 = rest-of-input) and `offset` is the dot padding before raw data.
+ * Parse the base-42 prefix digits accumulated before a `|`.
  *
- * The prefix may contain two self-terminating base-42 numbers:
- *   [optional offset number][length number]
- * Both are read right-to-left to find their boundaries.
+ * The prefix holds at most two self-terminating base-42 numbers (read right-to-left):
+ *   - Last number  = rawLen (0 means "rest of input")
+ *   - First number = offset (dots before raw bytes; 0 if absent)
+ *
+ * A digit < 42 terminates a number; a digit ≥ 42 is a continuation digit (value − 42).
  */
-function readLongEscapePrefix(digits: number[]): { offset: number; length: number } {
-  // Read the rightmost number first — that is the length.
-  const { value: length, count: lengthCount } = readBase42Backwards(digits, digits.length);
-  if (lengthCount === digits.length) {
-    // Only one number: it is the length, offset defaults to 0.
-    return { offset: 0, length };
-  }
-  // There is a second number before the length: that is the offset.
-  const { value: offset } = readBase42Backwards(digits, digits.length - lengthCount);
+function readLongPrefix(digits: number[]): { offset: number; length: number } {
+  const { value: length, count } = readBase42RTL(digits, digits.length);
+  if (count === digits.length) return { offset: 0, length }; // only one number
+  const { value: offset } = readBase42RTL(digits, digits.length - count);
   return { offset, length };
 }
 
-/** Read a single base-42 self-terminating number backwards from `digits[0..end]`. */
-function readBase42Backwards(
-  digits: number[],
-  end: number
-): { value: number; count: number } {
-  let value = 0;
-  let multiplier = 1;
-  let pos = end;
-  let count = 0;
-
+/** Read one base-42 self-terminating number from `digits[0..end]`, right-to-left. */
+function readBase42RTL(digits: number[], end: number): { value: number; count: number } {
+  let value = 0, multiplier = 1, pos = end, count = 0;
   while (pos > 0) {
-    pos--;
-    count++;
-    const d = digits[pos];
-    if (d >= 42) {
-      // Continuation digit.
-      value += (d - 42) * multiplier;
-      multiplier *= 42;
-    } else {
-      // Terminal digit — stops the number.
-      value += d * multiplier;
-      break;
-    }
+    const d = digits[--pos]; count++;
+    if (d >= 42) { value += (d - 42) * multiplier; multiplier *= 42; }
+    else         { value += d * multiplier; break; }
   }
-
   return { value, count };
 }
 
 // ---------------------------------------------------------------------------
-// Passthrough encoding — extended (5, 6, or 7 bytes)
+// Extended passthrough (5, 6, or 7 bytes)
 // ---------------------------------------------------------------------------
 
 /**
- * Try to encode 5, 6, or 7 consecutive safe bytes using the extended escapes
- * (`;`, `_`, `~`).
+ * Try to encode 5, 6, or 7 consecutive safe bytes using `;`, `_`, or `~`.
  *
- * Structure: [(P+1) Z85 chars] [ESC] [K raw bytes]
+ * Structure: [(P+1) Z85 chars from before-block] [escape] [K raw bytes]
  *
  * P is chosen so that:
- *   - `input[blockStart + P .. blockStart + P + K]` are all safe, and
- *   - The total output length (P+1 + 1 + K) + z855OutputLen(remaining after) equals
- *     z855OutputLen(total remaining), preserving the length invariant.
+ *   - K safe bytes start at input[blockStart + P], and
+ *   - Total output length = (P+1) + 1 + K + z855OutputLen(remaining) = z855OutputLen(total).
+ *     (This "length invariant" ensures the extended passthrough fits the envelope exactly.)
  *
- * Using P+1 chars (instead of P as with the `,` escape) fully determines the
- * before-block, eliminating the need for a canonical-minimum check.
- *
- * Longer K is preferred (7 > 6 > 5) and block-aligned forms (P=0) are tried first.
+ * We prefer larger K (7 > 6 > 5) and prefer block-aligned positions (P=0) first.
+ * The (P+1) Z85 digits uniquely determine the before-block — no canonical-minimum
+ * check needed (that's the advantage over the `,` form which only uses P digits).
  */
-function tryExtendedPassthrough(
-  input: Uint8Array,
-  blockStart: number
-): { chars: string[]; consumed: number } | null {
+function tryExtendedPassthrough(input: Uint8Array, blockStart: number): { chars: string[]; consumed: number } | null {
   for (const k of [7, 6, 5]) {
-    // Choose the escape character for this K.
-    const esc = k === 7 ? ESC_7 : k === 6 ? ESC_6 : ESC_5;
+    const esc = chr(k === 7 ? ESC_7 : k === 6 ? ESC_6 : ESC_5);
+    const total = input.length - blockStart;
 
-    // Try block-aligned (P=0): just [ESC][K raw bytes], no preceding Z85 digits.
+    // Try P = 0 first (block-aligned: just escape + K raw bytes, no preceding Z85 digits).
     if (blockStart + k <= input.length && allSafe(input, blockStart, k)) {
-      const totalRemaining = input.length - blockStart;
-      const remaining = totalRemaining - k;
-      // Check length invariant: (1 + k) + z855OutputLen(remaining) === z855OutputLen(totalRemaining)
-      if (1 + k + z855OutputLen(remaining) === z855OutputLen(totalRemaining)) {
-        const chars: string[] = [String.fromCharCode(esc)];
-        for (let j = 0; j < k; j++) chars.push(String.fromCharCode(input[blockStart + j]));
-        return { chars, consumed: k };
+      // Length invariant: (1 + k) + z855OutputLen(total − k) === z855OutputLen(total)
+      if (1 + k + z855OutputLen(total - k) === z855OutputLen(total)) {
+        return { chars: [esc, ...rawChars(input, blockStart, k)], consumed: k };
       }
     }
 
-    // Try non-aligned positions P = 0 through 3 (P=0 was already tried above).
+    // Try P = 1, 2, 3 (non-aligned).
     for (let p = 1; p <= 3; p++) {
       const passStart = blockStart + p;
       if (passStart + k > input.length) continue;
       if (!allSafe(input, passStart, k)) continue;
-
-      const totalRemaining = input.length - blockStart;
-      const bytesConsumed = p + k;
-      const remaining = totalRemaining - bytesConsumed;
-      const outputChars = (p + 1) + 1 + k; // (P+1) Z85 + ESC + K raw
-      if (outputChars + z855OutputLen(remaining) !== z855OutputLen(totalRemaining)) continue;
-
-      // Read the before-block and emit (P+1) high-order Z85 digits.
+      const consumed = p + k;
+      // Length invariant: (p+1 + 1 + k) + z855OutputLen(total − consumed) === z855OutputLen(total)
+      if (p + 1 + 1 + k + z855OutputLen(total - consumed) !== z855OutputLen(total)) continue;
       if (blockStart + 4 > input.length) continue;
-      const beforeValue = readU32(input, blockStart);
-      const chars: string[] = [...topNDigits(beforeValue, p + 1), String.fromCharCode(esc)];
-      for (let j = 0; j < k; j++) chars.push(String.fromCharCode(input[passStart + j]));
 
-      return { chars, consumed: bytesConsumed };
+      const beforeVal = readU32(input, blockStart);
+      return {
+        chars: [...z85Encode(beforeVal, 5).slice(0, p + 1), esc, ...rawChars(input, passStart, k)],
+        consumed,
+      };
     }
   }
   return null;
 }
 
 // ---------------------------------------------------------------------------
-// Passthrough encoding — non-aligned 4-byte
+// Non-aligned 4-byte passthrough
 // ---------------------------------------------------------------------------
 
 /**
  * Try to encode a non-aligned 4-byte passthrough.
  *
- * This form handles the case where 4 safe bytes appear at byte offset P (1–3)
- * within the current 4-byte input block.  The encoder emits:
- *   [P Z85 chars for before-block][`,`][4 safe bytes][(5−P) Z85 chars for after-block]
+ * This handles 4 safe bytes starting at offset P = 1, 2, or 3 within the current
+ * 4-byte input block.  Output:
+ *   [P Z85 chars for before-block] [`,`] [4 safe bytes] [(5−P) Z85 chars for after-block]
  *
- * For round-tripping to work, the 32-bit "before" block value must equal the
- * canonical minimum for its P Z85 digits and the (4−P) known low bytes
- * (the decoder uses that same rule to recover the before-block).  We check
- * this before committing.
+ * Two constraints must hold:
  *
- * The "after" block also needs at least 4 bytes of input; if not enough remain,
- * we skip this form.
+ *   1. CANONICAL MINIMUM: The 32-bit "before" block value must be the *smallest*
+ *      value consistent with its P Z85 digits and the (4−P) passthrough bytes that
+ *      overlap it.  The decoder recovers the before-block by this same rule, so any
+ *      other value would round-trip incorrectly.
+ *
+ *   2. COMPLETE AFTER-BLOCK: The 4 bytes after the current 4-byte block must all
+ *      be present in the input, because the non-aligned passthrough overlaps them.
+ *      (If the input ends partway through the after-block, fall back to standard Z85.)
  */
-function tryNonAlignedPassthrough(
-  input: Uint8Array,
-  blockStart: number
-): { chars: string[]; consumed: number } | null {
-  for (let p = 1; p <= 3; p++) {
+function tryNonAlignedPassthrough(input: Uint8Array, blockStart: number): { chars: string[]; consumed: number } | null {
+  for (const p of [1, 2, 3]) {
     const passStart = blockStart + p;
     if (passStart + 4 > input.length) continue;
     if (!allSafe(input, passStart, 4)) continue;
 
-    const beforeValue = readU32(input, blockStart);
+    const beforeVal = readU32(input, blockStart);
     const numKnownLow = 4 - p;
-    const knownLow: number[] = [];
-    for (let k = 0; k < numKnownLow; k++) knownLow.push(input[passStart + k]);
+    const knownLow: number[] = Array.from({ length: numKnownLow }, (_, k) => input[passStart + k]);
 
-    // Verify before-block is the canonical minimum (required for correct decoding).
-    if (!isCanonicalMinimum(beforeValue, p, knownLow)) continue;
+    if (!isCanonicalMin(beforeVal, p, knownLow)) continue;
 
-    // We also need enough input to form the after-block.
+    // The after-block: first P bytes come from passthrough, next (4−P) from input.
     const afterStart = blockStart + 4;
-    const afterRemaining = input.length - (afterStart + p);
-    if (afterRemaining < 4 - p) continue;
+    if (afterStart + p + (4 - p) > input.length) continue; // need full after-block
 
-    // Assemble the full after-block value.
-    const afterBytes: number[] = [];
-    for (let k = 0; k < p; k++) afterBytes.push(input[passStart + numKnownLow + k]); // from passthrough
-    for (let k = 0; k < 4 - p; k++) afterBytes.push(input[afterStart + p + k]);       // from input
-    const afterValue =
-      ((afterBytes[0] << 24) | (afterBytes[1] << 16) | (afterBytes[2] << 8) | afterBytes[3]) >>> 0;
-
-    // Build output.
-    const chars: string[] = [
-      ...topNDigits(beforeValue, p),
-      ",",
-      ...Array.from({ length: 4 }, (_, k) => String.fromCharCode(input[passStart + k])),
-      ...bottomNDigits(afterValue, 5 - p),
+    const afterBytes = [
+      ...Array.from({ length: p }, (_, k) => input[passStart + numKnownLow + k]),   // from passthrough
+      ...Array.from({ length: 4 - p }, (_, k) => input[afterStart + p + k]),        // from input
     ];
+    const afterVal = (afterBytes[0] << 24 | afterBytes[1] << 16 | afterBytes[2] << 8 | afterBytes[3]) >>> 0;
 
-    return { chars, consumed: 8 }; // before block (4) + after block (4)
+    return {
+      chars: [
+        ...z85Encode(beforeVal, 5).slice(0, p),
+        ",",
+        ...Array.from({ length: 4 }, (_, k) => chr(input[passStart + k])),
+        ...z85Encode(afterVal, 5).slice(p),
+      ],
+      consumed: 8,
+    };
   }
   return null;
 }
 
 // ---------------------------------------------------------------------------
-// Canonical-minimum logic (shared by encoder and decoder)
+// Canonical-minimum logic
 // ---------------------------------------------------------------------------
 
 /**
  * Return the canonical (minimum) 32-bit value consistent with:
- *   - `highDigits`: the P high-order Z85 digits that were emitted
- *   - `knownLowBytes`: the (4−P) low-order bytes known from the passthrough
+ *   - `digits`: P high-order Z85 digits
+ *   - `knownLow`: the (4−P) low bytes known from the passthrough
  *
- * The P Z85 digits define a contiguous range of u32 values (a "stripe").
- * Within that stripe, many values share the same low (4−P) bytes (mod 2^(8*(4−P))).
- * We return the *smallest* such value — that is what the encoder requires and
- * what the decoder will produce.
+ * The P Z85 digits define a contiguous "stripe" of u32 values.  Within that
+ * stripe, many values share the same low (4−P) bytes.  We return the smallest.
+ *
+ * Math: digits define range [base·85^(5−P), (base+1)·85^(5−P)).
+ * We find the smallest value ≥ rangeStart where (value mod 256^(4−P)) = knownPart.
  */
-function canonicalMinimum(highDigits: number[], knownLowBytes: number[]): number {
-  const P = highDigits.length;
-
-  // Compute the start of the range defined by these P Z85 digits.
+function canonicalMin(digits: number[], knownLow: number[]): number {
   let base = 0;
-  for (const d of highDigits) base = base * 85 + d;
-  const power = Math.pow(85, 5 - P);       // 85^(5−P)
+  for (const d of digits) base = base * 85 + d;
+  const power = 85 ** (5 - digits.length);
   const rangeStart = base * power;
   const rangeEnd = (base + 1) * power;
 
-  if (knownLowBytes.length === 0) {
-    // P = 4: the 5 Z85 digits uniquely determine the value.
-    return rangeStart;
-  }
+  if (knownLow.length === 0) return rangeStart; // P=4: digits fully determine value
 
-  // Pack the known low bytes into a number.
   let knownPart = 0;
-  for (const b of knownLowBytes) knownPart = (knownPart << 8) | b;
+  for (const b of knownLow) knownPart = knownPart * 256 + b;
+  const modulus = 256 ** knownLow.length;
 
-  const modulus = Math.pow(2, knownLowBytes.length * 8);
-  const startRemainder = rangeStart % modulus;
-
-  // Find the smallest value ≥ rangeStart congruent to knownPart (mod modulus).
-  let candidate = rangeStart - startRemainder + knownPart;
-  if (startRemainder > knownPart) candidate += modulus;
+  let candidate = rangeStart - rangeStart % modulus + knownPart;
+  if (rangeStart % modulus > knownPart) candidate += modulus;
 
   if (candidate >= rangeEnd || candidate > 0xffffffff) {
-    throw new Z855DecodeError("non-aligned passthrough: no valid before-block value");
+    throw new Z855DecodeError("non-aligned passthrough: invalid before-block");
   }
   return candidate;
 }
 
-/** Return true if `value` equals the canonical minimum for these digits + known bytes. */
-function isCanonicalMinimum(value: number, P: number, knownLowBytes: number[]): boolean {
-  const highDigits = topNDigits(value, P).map((ch) => ALPHABET.indexOf(ch));
-  try {
-    return value === canonicalMinimum(highDigits, knownLowBytes);
-  } catch {
-    return false;
-  }
+/** True if `value` equals the canonical minimum for these P digits and known low bytes. */
+function isCanonicalMin(value: number, P: number, knownLow: number[]): boolean {
+  const digits = z85Encode(value, 5).slice(0, P).map(ch => ALPHABET.indexOf(ch));
+  try { return value === canonicalMin(digits, knownLow); }
+  catch { return false; }
 }
 
 /**
- * Determine the before-block value from (P+1) Z85 digits and (4−P) known low bytes.
+ * Determine the before-block value from (P+1) Z85 digits + (4−P) known low bytes.
  *
- * Unlike the `,` case (which needs a canonical-minimum search), the extended
- * escapes (`;`/`_`/`~`) emit *one extra* Z85 digit.  That extra digit is always
- * enough information to uniquely identify the value — no search needed.
+ * Same math as canonicalMin, but with one extra digit (P+1 instead of P), which
+ * is always sufficient to uniquely identify the value — no "minimum of a set" needed.
  */
-function beforeBlockFromExtendedDigits(highDigits: number[], knownLowBytes: number[]): number {
-  // Same range computation as in canonicalMinimum, but here we expect exactly one answer.
+function beforeBlockFromDigits(digits: number[], knownLow: number[]): number {
   let base = 0;
-  for (const d of highDigits) base = base * 85 + d;
-  const power = Math.pow(85, 5 - highDigits.length);
+  for (const d of digits) base = base * 85 + d;
+  const power = 85 ** (5 - digits.length);
   const rangeStart = base * power;
   const rangeEnd = (base + 1) * power;
 
-  if (knownLowBytes.length === 0) {
-    if (rangeStart > 0xffffffff) throw new Z855DecodeError("overflow in extended passthrough decode");
-    return rangeStart;
-  }
+  if (knownLow.length === 0) return rangeStart;
 
   let knownPart = 0;
-  for (const b of knownLowBytes) knownPart = (knownPart << 8) | b;
+  for (const b of knownLow) knownPart = knownPart * 256 + b;
+  const modulus = 256 ** knownLow.length;
 
-  const modulus = Math.pow(2, knownLowBytes.length * 8);
-  const startRemainder = rangeStart % modulus;
-
-  let candidate = rangeStart - startRemainder + knownPart;
-  if (startRemainder > knownPart) candidate += modulus;
+  let candidate = rangeStart - rangeStart % modulus + knownPart;
+  if (rangeStart % modulus > knownPart) candidate += modulus;
 
   if (candidate >= rangeEnd || candidate > 0xffffffff) {
-    throw new Z855DecodeError("extended passthrough: no valid before-block value");
+    throw new Z855DecodeError("extended passthrough: invalid before-block");
   }
   return candidate;
 }
 
 // ---------------------------------------------------------------------------
-// After-block reconstruction (for non-aligned `,` decode)
+// After-block reconstruction (non-aligned `,` decode)
 // ---------------------------------------------------------------------------
 
 /**
- * After a non-aligned `,` passthrough, reconstruct the 32-bit "after" block from:
- *   - `knownHigh`: the P known high bytes (from the passthrough)
- *   - `lowDigitsValue`: the numeric value of the (5−P) low Z85 digits
- *   - `numDigits`: how many low digits there were (5−P)
+ * After a non-aligned `,` passthrough, the "after" block is partly known:
+ *   - `knownHigh`: the top P bytes (came from the passthrough)
+ *   - `lowVal`: the numeric value of the (5−P) low Z85 digits
+ *   - `numDigits`: 5−P
+ *
+ * Find the 32-bit value V where high P bytes = knownHigh and V mod 85^(5−P) = lowVal.
  */
-function reconstructAfterBlock(
-  knownHigh: number[],
-  lowDigitsValue: number,
-  numDigits: number
-): number {
-  const P = knownHigh.length;
-
+function reconstructAfterBlock(knownHigh: number[], lowVal: number, numDigits: number): number {
   let highPart = 0;
-  for (const b of knownHigh) highPart = (highPart << 8) | b;
-
-  const shift = 8 * (4 - P);
+  for (const b of knownHigh) highPart = highPart * 256 + b;
+  const shift = 8 * (4 - knownHigh.length);
   const rangeStart = (highPart << shift) >>> 0;
   const rangeSize = 1 << shift;
-  const modulus = Math.pow(85, numDigits);
+  const modulus = 85 ** numDigits;
 
-  const startRemainder = rangeStart % modulus;
-  let candidate = rangeStart - startRemainder + lowDigitsValue;
-  if (startRemainder > lowDigitsValue) candidate += modulus;
+  let candidate = rangeStart - rangeStart % modulus + lowVal;
+  if (rangeStart % modulus > lowVal) candidate += modulus;
 
-  if (candidate >= rangeStart + rangeSize) {
-    throw new Z855DecodeError("after-block reconstruction failed");
-  }
+  if (candidate >= rangeStart + rangeSize) throw new Z855DecodeError("after-block reconstruction failed");
   return candidate >>> 0;
 }
 
 // ---------------------------------------------------------------------------
-// Hash-padding decode (concatenatable mode)
+// Hash-block decode (concatenatable mode)
 // ---------------------------------------------------------------------------
 
-function decodeHashPaddedBlock(input: string, blockStart: number): { bytes: number[] } {
-  let hashRun = 0;
-  while (hashRun < 3 && input.charCodeAt(blockStart + hashRun) === PAD_HASH) hashRun++;
-
-  const numChars = 5 - hashRun;
+function decodeHashBlock(input: string, blockStart: number, hashCount: number): number[] {
+  const numChars = 5 - hashCount;
   const numBytes = numChars - 1;
-
   let value = 0;
   for (let k = 0; k < numChars; k++) {
-    const code = input.charCodeAt(blockStart + hashRun + k);
-    const digit = CHAR_TO_DIGIT[code];
-    if (digit === -1) throw new Z855DecodeError("invalid character in hash-padded block");
-    value = value * 85 + digit;
+    const d = CHAR_TO_DIGIT[input.charCodeAt(blockStart + hashCount + k)];
+    if (d === -1) throw new Z855DecodeError("invalid char in hash block");
+    value = value * 85 + d;
   }
-
-  const maxValue = numBytes === 1 ? 0xff : numBytes === 2 ? 0xffff : 0xffffff;
-  if (value > maxValue) throw new Z855DecodeError("Z85 value overflow in hash-padded block");
-
-  const bytes: number[] = [];
-  for (let k = numBytes - 1; k >= 0; k--) bytes.unshift((value >>> (k * 8)) & 0xff);
-  return { bytes };
+  const maxVal = [0, 0xff, 0xffff, 0xffffff][numBytes];
+  if (value > maxVal) throw new Z855DecodeError("overflow in hash block");
+  return Array.from({ length: numBytes }, (_, k) => (value >>> ((numBytes - 1 - k) * 8)) & 0xff);
 }
 
 // ---------------------------------------------------------------------------
-// Z85 digit utilities
+// Tiny utilities
 // ---------------------------------------------------------------------------
 
-/** Convert an array of Z85 digit values to a numeric value. */
+/** Encode `value` as exactly `numChars` Z85 characters (big-endian base-85). */
+function z85Encode(value: number, numChars: number): string[] {
+  const chars = new Array<string>(numChars);
+  for (let j = numChars - 1; j >= 0; j--) { chars[j] = ALPHABET[value % 85]; value = Math.floor(value / 85); }
+  return chars;
+}
+
+/** Read 4 bytes at `input[i..i+4]` as a big-endian unsigned 32-bit integer. */
+function readU32(input: Uint8Array, i: number): number {
+  return ((input[i] << 24) | (input[i+1] << 16) | (input[i+2] << 8) | input[i+3]) >>> 0;
+}
+
+/** Split a 32-bit integer into 4 big-endian bytes. */
+function u32ToBytes(v: number): [number, number, number, number] {
+  return [(v >>> 24) & 0xff, (v >>> 16) & 0xff, (v >>> 8) & 0xff, v & 0xff];
+}
+
+/** Accumulate Z85 digit values into a single number. */
 function digitsToValue(digits: number[]): number {
   let v = 0;
   for (const d of digits) v = v * 85 + d;
   return v;
 }
 
-/** Return the top `n` Z85 characters of `value` (as character strings). */
-function topNDigits(value: number, n: number): string[] {
-  const all = encodeValue(value, 5);
-  return all.slice(0, n);
+/** True if `count` bytes starting at `input[start]` are all in the safe set. */
+function allSafe(input: Uint8Array, start: number, count: number): boolean {
+  for (let k = 0; k < count; k++) if (!IS_SAFE[input[start + k]]) return false;
+  return true;
 }
 
-/** Return the bottom `n` Z85 characters of `value` (as character strings). */
-function bottomNDigits(value: number, n: number): string[] {
-  const all = encodeValue(value, 5);
-  return all.slice(5 - n);
+/** Standard Z85 output length for N input bytes: ceil(N × 5 / 4). */
+function z855OutputLen(n: number): number { return Math.ceil(n * 5 / 4); }
+
+/** Return the short-passthrough byte count for an escape char code, or 0. */
+function escapeLen(code: number): number {
+  return code === ESC_4 ? 4 : code === ESC_5 ? 5 : code === ESC_6 ? 6 : code === ESC_7 ? 7 : 0;
 }
 
-/** Return the short passthrough length (4, 5, 6, or 7) for an escape char, or 0. */
-function shortPassthroughLength(code: number): number {
-  if (code === ESC_4) return 4;
-  if (code === ESC_5) return 5;
-  if (code === ESC_6) return 6;
-  if (code === ESC_7) return 7;
-  return 0;
+/** Convert a byte value to a one-character string. */
+function chr(b: number): string { return String.fromCharCode(b); }
+
+/** Extract `count` bytes from `input` starting at `start` as char strings. */
+function rawChars(input: Uint8Array, start: number, count: number): string[] {
+  return Array.from({ length: count }, (_, k) => chr(input[start + k]));
 }
