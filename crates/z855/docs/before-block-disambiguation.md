@@ -119,6 +119,85 @@ Specifically:
 | `\|` | 13–16 | Yes, at P=3 |
 | `\|` | ≥17 | No (slack sufficient to pad prefix to P+1 digits) |
 
+## Formal Proofs
+
+These results are machine-verified in Lean 4 (`lean/Z855Disambiguation.lean`).
+The proofs are structured to mirror the prose argument above.
+
+### Core uniqueness lemma
+
+A range of size `< modulus` contains at most one element of any congruence
+class. If two solutions `n`, `m` exist in `[lo, lo+size)` with `n % mod = m %
+mod`, their difference is `< size < mod`, yet divisible by `mod` — so it must
+be zero.
+
+```lean
+theorem unique_in_small_range
+    (lo size modulus : Nat) (hsize : size < modulus)
+    (n m : Nat)
+    (hn : lo ≤ n ∧ n < lo + size) (hm : lo ≤ m ∧ m < lo + size)
+    (hcong : n % modulus = m % modulus) : n = m
+```
+
+Applied to z855: with D digits known, range = 85^(5-D); with (4-P) low bytes
+known, modulus = 256^(4-P). Setting D = P+1 gives range = 85^(4-P) <
+256^(4-P) (since 85 < 256 at every exponent):
+
+```lean
+example : 85^4 < 256^4 := by native_decide  -- P=0, D=1
+example : 85^3 < 256^3 := by native_decide  -- P=1, D=2
+example : 85^2 < 256^2 := by native_decide  -- P=2, D=3
+example : 85^1 < 256^1 := by native_decide  -- P=3, D=4
+```
+
+### `,` ambiguity
+
+With D = P (one short), range = 85^(5-P) > 256^(4-P) — multiple solutions
+exist. At P=3 there are up to 29:
+
+```lean
+example : 85^2 > 256^1 := by native_decide  -- P=3, D=3: ambiguous
+example : ((List.range 7225).filter (fun n => n % 256 = 42)).length = 29
+        := by native_decide
+```
+
+### `|` escape slack analysis
+
+For K < 42 (single prefix digit), the proof follows three named steps:
+
+```lean
+-- Step 1: total output chars = K + ceil(K/4)
+-- (ceil(K×5/4) = K + ceil(K/4) since K is a whole number)
+theorem total_eq (K : Nat) :
+    (K * 5 + 3) / 4 = K + (K + 3) / 4 := by omega
+
+-- Step 2: slack = ceil(K/4) - 2
+-- (total - 1 prefix digit - 1 pipe char - K raw bytes = ceil(K/4) - 2)
+theorem slack_eq (K : Nat) (h : 2 ≤ (K + 3) / 4) :
+    (K * 5 + 3) / 4 - K - 2 = (K + 3) / 4 - 2 := by omega
+
+-- Step 3a: K ≥ 17 → ceil(K/4) ≥ 5 → slack ≥ 3 → unambiguous at all P
+theorem long_escape_sufficient_slack (K : Nat) (hlo : 17 ≤ K) (hhi : K < 42) :
+    3 ≤ (K * 5 + 3) / 4 - K - 2 := by
+  have hceil : 5 ≤ (K + 3) / 4 := by omega  -- ceil(K/4) ≥ 5
+  have hslack : (K * 5 + 3) / 4 - K - 2 = (K + 3) / 4 - 2 := by omega
+  omega
+
+-- Step 3b: K < 17 → ceil(K/4) ≤ 4 → slack < 3 → canonical minimum needed at P=3
+theorem long_escape_insufficient_slack (K : Nat) (hlo : 8 ≤ K) (hhi : K < 17) :
+    (K * 5 + 3) / 4 - K - 2 < 3 := by
+  have hceil : (K + 3) / 4 ≤ 4 := by omega  -- ceil(K/4) ≤ 4
+  have hslack : (K * 5 + 3) / 4 - K - 2 = (K + 3) / 4 - 2 := by omega
+  omega
+
+-- Boundary: K=16 has slack=2 (not enough), K=17 has slack=3 (just enough)
+example : (16 + 3) / 4 = 4 := by native_decide  -- ceil(16/4) = 4, slack = 2
+example : (17 + 3) / 4 = 5 := by native_decide  -- ceil(17/4) = 5, slack = 3
+```
+
+The `omega` tactic handles Nat linear arithmetic automatically; the `have`
+steps name the intermediate claims so the proof mirrors the argument in prose.
+
 ## Why `,` Can't Be Fixed Without Longer Output
 
 One might ask: why not make `,` also output P+1 digits, eliminating the
