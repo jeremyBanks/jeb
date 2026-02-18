@@ -43,6 +43,10 @@ pub struct CPUData {
     /// HALT bug: next instruction fetch should re-read current PC byte
     /// (occurs when HALT is executed with IME=0 and IE&IF != 0)
     halt_bug: bool,
+    /// CPU is halted and waiting (Case 1 or 3: HALT entered with IE&IF=0).
+    /// When we re-execute HALT and pending becomes non-zero, we exit cleanly
+    /// (no halt bug) because the interrupt became pending AFTER halt was entered.
+    halting: bool,
 }
 
 pub struct InstructionExecution {
@@ -104,6 +108,7 @@ impl CPUData {
             di_pending: false,
             ei_pending: false,
             halt_bug: false,
+            halting: false,
         }
     }
 
@@ -127,6 +132,7 @@ impl CPUData {
             di_pending: false,
             ei_pending: false,
             halt_bug: false,
+            halting: false,
         }
     }
 
@@ -281,14 +287,24 @@ impl CPUController for GameBoy {
                 //         so interrupt is NOT dispatched; execution continues after HALT
                 // Case 4: IME=0, IE&IF≠0  → HALT BUG: CPU does NOT halt, but PC is not
                 //         advanced past HALT opcode, so next byte is fetched twice
+                //
+                // Key distinction for halt_bug:
+                // - Case 4: HALT BUG fires only when IE&IF≠0 at the moment HALT is FIRST executed
+                // - Case 3 exit: when HALT was entered with IE&IF=0 and an interrupt later becomes
+                //   pending, HALT exits cleanly — no halt bug (even though we re-execute HALT and
+                //   now see IE&IF≠0, this was not the Case 4 condition at entry)
                 let pending = self.cpu.ie & self.cpu.ift;
                 if pending == 0 {
-                    // Cases 1 & 3: no pending interrupt — keep halting
+                    // Cases 1 & 3: no pending interrupt — enter/continue halting
                     self.cpu.pc -= 1; // back up to re-execute HALT
+                    self.cpu.halting = true;
+                } else if self.cpu.halting {
+                    // Case 3 exit: we were truly halted (entered with IE&IF=0), now an interrupt
+                    // became pending. Exit cleanly — no halt bug.
+                    self.cpu.halting = false;
                 } else if !self.cpu.ime {
-                    // Case 4: HALT BUG — IME=0 with pending interrupt
-                    // HALT exits immediately, but next instruction's opcode byte
-                    // is read twice (PC not incremented for first fetch)
+                    // Case 4: HALT BUG — first execution of HALT with IME=0 and IE&IF≠0.
+                    // HALT exits immediately, but next instruction's opcode byte is read twice.
                     self.cpu.halt_bug = true;
                 }
                 // Case 2: IME=1, IE&IF≠0 — HALT exits, next tick dispatches interrupt
