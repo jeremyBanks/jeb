@@ -214,6 +214,7 @@ export function decode(input: string): Uint8Array {
       if (rawLen === 0) {
         // Rest-of-input raw.
         for (; i < input.length; i++) out.push(input.charCodeAt(i));
+        digits = []; knownHighBytes = [];
         break;
       }
 
