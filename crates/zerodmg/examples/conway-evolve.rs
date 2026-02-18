@@ -111,6 +111,7 @@ fn game_code() -> Vec<Instruction> {
         .inst(LD_16_IMMEDIATE(BC, (CELLS * 2) as u16))
         .inst(LD_8_IMMEDIATE(A, 0));
     asm.label("CLR")
+        .inst(LD_8_IMMEDIATE(A, 0))       // Reload A=0 each iteration (loop check clobbers A)
         .inst(LD_8_TO_SECONDARY(AT_HL_Plus))
         .inst(DEC_16(BC))
         .inst(LD_8_INTERNAL(A, B))
@@ -152,10 +153,8 @@ fn game_code() -> Vec<Instruction> {
         .inst(DEC(B))
         .jr_cond(if_NZ, "RROW");
 
-    // --- EVOLVE ---
-    // TODO: evolve_unrolled() kills all cells — root cause unknown
-    // Using identity evolution for now (static display)
-    evolve_identity(&mut asm);
+    // --- EVOLVE: real Conway's Life ---
+    evolve_unrolled(&mut asm);
 
     // --- COPY next → current ---
     asm.inst(LD_16_IMMEDIATE(HL, GRID_NXT))

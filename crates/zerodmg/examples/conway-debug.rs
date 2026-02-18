@@ -78,6 +78,7 @@ fn game_code() -> Vec<Instruction> {
         .inst(LD_16_IMMEDIATE(BC, CELLS as u16))
         .inst(LD_8_IMMEDIATE(A, 0));
     asm.label("CLR")
+        .inst(LD_8_IMMEDIATE(A, 0))
         .inst(LD_8_TO_SECONDARY(AT_HL_Plus))
         .inst(DEC_16(BC))
         .inst(LD_8_INTERNAL(A, B))
