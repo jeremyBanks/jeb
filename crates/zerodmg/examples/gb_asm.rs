@@ -30,6 +30,9 @@ enum AsmLine {
 pub struct Assembler {
     lines: Vec<AsmLine>,
     labels: HashMap<String, usize>,
+    /// Base PC address where emitted code will be placed (e.g. 0x0150 for standard GB ROMs).
+    /// JP targets are offset by this value so absolute jumps land at the right address.
+    base_address: usize,
 }
 
 impl Assembler {
@@ -37,6 +40,15 @@ impl Assembler {
         Self {
             lines: Vec::new(),
             labels: HashMap::new(),
+            base_address: 0x0150, // Default: standard GB ROM code start
+        }
+    }
+    
+    pub fn with_base(base_address: usize) -> Self {
+        Self {
+            lines: Vec::new(),
+            labels: HashMap::new(),
+            base_address,
         }
     }
     
@@ -130,10 +142,13 @@ impl Assembler {
                     let target_pc = label_positions.get(target)
                         .expect(&format!("Undefined label: {}", target));
                     
+                    // JP target must be an absolute ROM address
+                    let abs_target = (self.base_address + target_pc) as u16;
+                    
                     let inst = if let Some(cond) = cond {
-                        Instruction::JP_IF(*cond, *target_pc as u16)
+                        Instruction::JP_IF(*cond, abs_target)
                     } else {
-                        Instruction::JP(*target_pc as u16)
+                        Instruction::JP(abs_target)
                     };
                     
                     result.push(inst);
