@@ -488,9 +488,9 @@ function tryLongPassthrough(
   const paddingNeeded = totalLen - prefix.length - 1 - rawLen; // padding = envelope − prefix − `|` − raw
 
   const chars: string[] = [...prefix, "|"];
-  for (let j = 0; j < paddingNeeded; j++) chars.push(".");         // padding before raw bytes
   for (let j = 0; j < rawLen; j++) chars.push(String.fromCharCode(input[start + j]));
-  // Note: we put all padding before the raw bytes for simplicity (offset = paddingNeeded).
+  for (let j = 0; j < paddingNeeded; j++) chars.push(".");         // trailing padding (offset = 0)
+  // Note: we put all padding after the raw bytes for simplicity (offset = 0).
   // The production encoder uses a smarter offset for alignment; the decoder ignores padding content.
 
   return { chars, consumed: rawLen };
