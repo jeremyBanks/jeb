@@ -1,3 +1,4 @@
+#!/usr/bin/env -S deno run --allow-read --allow-write
 /**
  * Z855: Extended Z85 Binary-to-Text Encoding with Safe-String Passthrough
  *
