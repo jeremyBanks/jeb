@@ -621,6 +621,10 @@ export function encode(
   }
 
   // In concatenatable mode, reserve trailing 1-3 bytes to be encoded AFTER hash padding.
+  // We also reserve one full 4-byte block ("safeZone") before the tail to ensure the
+  // main loop always ends at a 5-aligned output boundary, even when passthrough escapes
+  // shift the output length. The safeZone block is always encoded as plain Z85, so the
+  // last 5 chars before the hash+tail block are guaranteed Z85.
   let stopAt = original.length;
   let reservedTail = 0;
   if (concatenatable) {
