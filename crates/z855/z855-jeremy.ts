@@ -266,7 +266,9 @@ export function encode(
       // Try different passthrough forms in order of preference
 
       // (A) Long passthrough for 8+ bytes
-      if (safeLength >= 8) {
+      // Only applies when the current block is fully safe (safeBytesAtEnd === 4),
+      // so there is no before-block partial encoding needed.
+      if (safeLength >= 8 && safeBytesAtEnd === 4) {
         const safeStart = inputOffset + BLOCK_SIZE_ORIGINAL - safeBytesAtEnd;
         const rawLen = safeLength;
 
@@ -291,8 +293,8 @@ export function encode(
 
         // Normal long escape with padding
         const prefix = encodeLongPrefix(rawLen, 0); // offset = 0 (all padding after)
-        const totalLen = Math.ceil((inputOffset + rawLen) * 5 / 4) - encodedOffset;
-        const paddingCount = totalLen - prefix.length - 1 - rawLen;
+        const envelopeLen = Math.ceil(rawLen * 5 / 4);
+        const paddingCount = envelopeLen - prefix.length - 1 - rawLen;
 
         // Emit prefix + '|' + raw bytes + padding
         for (const p of prefix) {
