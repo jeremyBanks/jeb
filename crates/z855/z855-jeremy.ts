@@ -722,7 +722,10 @@ export function encode(
         const rawOffset = paddingNeeded >= 2
           ? findBestOffset(outOff, lenPrefix.length, rawLen, paddingNeeded)
           : 0;
-        const offsetPrefix = (rawLen > 15 && rawOffset > 0) ? encodeBase42(rawOffset) : [];
+        // Cap: total prefix (offset + length) must be < 5 digits, otherwise the
+        // decoder triggers a Z85 block decode before seeing `|` (spurious block).
+        const rawOffsetPrefix = (rawLen > 15 && rawOffset > 0) ? encodeBase42(rawOffset) : [];
+        const offsetPrefix = (rawOffsetPrefix.length + lenPrefix.length < 5) ? rawOffsetPrefix : [];
         const offset = offsetPrefix.length > 0 ? rawOffset : 0;
 
         if (offsetPrefix.length + offset <= paddingNeeded) {
