@@ -3,7 +3,10 @@
   "specifiers": {
     "jsr:@std/assert@*": "1.0.16",
     "jsr:@std/assert@1": "1.0.16",
+    "jsr:@std/bytes@^1.0.6": "1.0.6",
+    "jsr:@std/cli@*": "1.0.27",
     "jsr:@std/internal@^1.0.12": "1.0.12",
+    "jsr:@std/io@*": "0.225.3",
     "npm:terser@^5.36.0": "5.46.0"
   },
   "jsr": {
@@ -13,8 +16,20 @@
         "jsr:@std/internal"
       ]
     },
+    "@std/bytes@1.0.6": {
+      "integrity": "f6ac6adbd8ccd99314045f5703e23af0a68d7f7e58364b47d2c7f408aeb5820a"
+    },
+    "@std/cli@1.0.27": {
+      "integrity": "eba97edd0891871a7410e835dd94b3c260c709cca5983df2689c25a71fbe04de"
+    },
     "@std/internal@1.0.12": {
       "integrity": "972a634fd5bc34b242024402972cd5143eac68d8dffaca5eaa4dba30ce17b027"
+    },
+    "@std/io@0.225.3": {
+      "integrity": "27b07b591384d12d7b568f39e61dff966b8230559122df1e9fd11cc068f7ddd1",
+      "dependencies": [
+        "jsr:@std/bytes"
+      ]
     }
   },
   "npm": {

@@ -259,32 +259,35 @@ export function encode(
       const safeLength = safeBytesAtEnd + safeBytesFollowing;
       const remainingAfterSafe = remainingAfterBlock - safeBytesFollowing;
 
-      // Now we have to determine all of the possible ways that we could encode this block, then we filter
-      // the candidates to determine which ones round-trip correctly, then sort them based on length
-      // and alignment.
-
-      if (remainingAfterSafe == 0 && !concatenatable) {
-        // If we don't need to be concatenatable, we can use the `0|` "until end of stream"
-        // special raw escape prefix. This is the ONLY case where the output can have a different length
-        // than the standard Z85 encoding.
-        const prefix = new TextEncoder().encode(`0${ESCAPE_MANY}`);
-        buffer.set(prefix, encodedOffset);
-        encodedOffset += prefix.length;
-        // The safe bytes start at (inputOffset + BLOCK_SIZE_ORIGINAL - safeBytesAtEnd)
-        const safeStart = inputOffset + BLOCK_SIZE_ORIGINAL - safeBytesAtEnd;
-        buffer.set(original.subarray(safeStart, original.length), encodedOffset);
-        encodedOffset += safeLength;
-        inputOffset = original.length;
-        break;
-      }
-
       // Implement the main passthrough logic
 
       // Try different passthrough forms in order of preference
 
       // (A) Long passthrough for 8+ bytes
       if (safeLength >= 8) {
+        const safeStart = inputOffset + BLOCK_SIZE_ORIGINAL - safeBytesAtEnd;
         const rawLen = safeLength;
+
+        // Special case: if this safe run goes to end of input and we're not concatenatable,
+        // use the `0|` rest-of-input escape (no padding needed, output shorter than Z85)
+        if (remainingAfterSafe === 0 && !concatenatable) {
+          const prefix = new TextEncoder().encode(`0${ESCAPE_MANY}`);
+          // Reallocate buffer if needed
+          const neededSize = encodedOffset + prefix.length + rawLen;
+          let outBuffer = buffer;
+          if (neededSize > buffer.length) {
+            outBuffer = new Uint8Array(neededSize);
+            outBuffer.set(buffer.subarray(0, encodedOffset));
+          }
+          outBuffer.set(prefix, encodedOffset);
+          encodedOffset += prefix.length;
+          outBuffer.set(original.subarray(safeStart, original.length), encodedOffset);
+          encodedOffset += rawLen;
+          inputOffset = original.length;
+          return outBuffer.subarray(0, encodedOffset);
+        }
+
+        // Normal long escape with padding
         const prefix = encodeLongPrefix(rawLen, 0); // offset = 0 (all padding after)
         const totalLen = Math.ceil((inputOffset + rawLen) * 5 / 4) - encodedOffset;
         const paddingCount = totalLen - prefix.length - 1 - rawLen;
@@ -295,7 +298,6 @@ export function encode(
         }
         buffer[encodedOffset++] = ESCAPE_MANY.charCodeAt(0);
 
-        const safeStart = inputOffset + BLOCK_SIZE_ORIGINAL - safeBytesAtEnd;
         buffer.set(original.subarray(safeStart, safeStart + rawLen), encodedOffset);
         encodedOffset += rawLen;
 
@@ -628,6 +630,7 @@ export function decode(encoded: Uint8Array): Uint8Array {
     const needed = 5 - knownHighBytes.length;
     if (digits.length === needed) {
       const raw = digitsToValue(digits);
+      if (raw === null) throw new Error("Z85 value overflow");
 
       let value: number;
       if (knownHighBytes.length === 0) {
@@ -657,6 +660,7 @@ export function decode(encoded: Uint8Array): Uint8Array {
   if (digits.length > 0) {
     if (digits.length === 1) throw new Error("invalid: single trailing char");
     const value = digitsToValue(digits);
+    if (value === null) throw new Error("Z85 value overflow in partial block");
     const numBytes = digits.length - 1;
     const maxValue = [0, 0xff, 0xffff, 0xffffff][numBytes];
     if (value > maxValue) throw new Error("Z85 value overflow in partial block");
@@ -789,7 +793,7 @@ const Z85_VALUES = new Map(
   Z85_DIGITS.map((digit, index) => [digit, index]),
 );
 const Z85_VALUES_BYTES = new Map(
-  Z85_DIGIT_BYTES.entries().map(([byte, index]) => [byte, index]),
+  Z85_DIGIT_BYTES.entries().map(([index, byte]) => [byte, index]),
 );
 
 const BLOCK_SIZE_ORIGINAL = 4;
@@ -871,7 +875,12 @@ function digitsToValue(digits: number[]) {
 
 /** Convert a 32-bit unsigned integer to a 5-character Z85 string. */
 function valueToChars(v: number) {
-  return valueToDigits(v).map((d) => Z85_DIGITS[d]).join("");
+  const digits = valueToDigits(v);
+  return Array.from(digits).map((byteVal) => {
+    const idx = Z85_VALUES_BYTES.get(byteVal);
+    if (idx === undefined) throw new Error("invalid digit byte");
+    return Z85_DIGITS[idx];
+  }).join("");
 }
 
 /** Convert a 32-bit unsigned integer to 4 bytes (big-endian). */
