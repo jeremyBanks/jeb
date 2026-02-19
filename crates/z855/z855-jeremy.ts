@@ -189,34 +189,35 @@ export function encode(
       inputOffset + BLOCK_SIZE_ORIGINAL,
     );
 
-    let blockDigits = valueToDigits(bytesToValue([...nextBlock]));
+    // For full blocks, compute blockDigits from the 4-byte value.
+    // For partial blocks, we handle encoding separately below.
+    const isFullBlock = nextBlock.length === BLOCK_SIZE_ORIGINAL;
+    const blockValue = isFullBlock ? bytesToValue([...nextBlock]) : 0;
+    let blockDigits = isFullBlock ? valueToDigits(blockValue) : new Uint8Array(5);
 
     if (nextBlock.length < BLOCK_SIZE_ORIGINAL) {
-      // incomplete block at end of input, if this hasn't already been
-      // merged into a previous raw escape it's too late and we know it
-      // must be encoded with Z85, then handled as appropriate depending
-      // on whether we're in concatenatable mode or not.
-      const requiredDigits = nextBlock.length + 1;
+      // Partial (final) block: N bytes → N+1 Z85 characters.
+      // Encode the N bytes as a big-endian integer and emit N+1 digits.
+      const numBytes = nextBlock.length;
+      const requiredDigits = numBytes + 1;
+      let partialValue = 0;
+      for (let k = 0; k < numBytes; k++) partialValue = partialValue * 256 + nextBlock[k];
+      const partialDigits = encodePartial(partialValue, requiredDigits);
+
       if (concatenatable) {
-        // Hash padding goes at the FRONT, not overwriting the digits
-        const paddingByte = PAD_HASH;
+        // Hash padding goes at the FRONT to fill out to 5 chars.
         const paddingCount = 5 - requiredDigits;
         const output = new Uint8Array(5);
-        for (let i = 0; i < paddingCount; i++) {
-          output[i] = paddingByte;
-        }
-        for (let i = 0; i < requiredDigits; i++) {
-          output[paddingCount + i] = blockDigits[5 - requiredDigits + i];
-        }
+        for (let k = 0; k < paddingCount; k++) output[k] = PAD_HASH;
+        for (let k = 0; k < requiredDigits; k++) output[paddingCount + k] = partialDigits[k];
         buffer.set(output, encodedOffset);
         encodedOffset += 5;
       } else {
-        const partialDigits = blockDigits.subarray(5 - requiredDigits);
         buffer.set(partialDigits, encodedOffset);
         encodedOffset += partialDigits.length;
       }
 
-      inputOffset += nextBlock.length;
+      inputOffset += numBytes;
     } else if (!safeBytes[nextBlock.at(-1)!]) {
       // If the last byte of this block is not safe, the entire block must be Z85-encoded.
       buffer.set(blockDigits, encodedOffset);
@@ -854,7 +855,7 @@ export function textDecode(encoded: string): Uint8Array {
   return decode(new TextEncoder().encode(encoded));
 }
 
-/** Convert a 32-bit unsigned integer to 5 Z85 digit bytes. */
+/** Convert a 32-bit unsigned integer to 5 Z85 char bytes (as a Uint8Array). */
 function valueToDigits(v: number): Uint8Array {
   const digits = new Uint8Array(5);
   for (let i = 4; i >= 0; i--) {
@@ -864,10 +865,20 @@ function valueToDigits(v: number): Uint8Array {
   return digits;
 }
 
-/** Convert 5 Z85 digit indices to a 32-bit unsigned integer, or null if out of range. */
+/** Encode a partial-block value into exactly `numChars` Z85 char bytes. */
+function encodePartial(v: number, numChars: number): Uint8Array {
+  const out = new Uint8Array(numChars);
+  for (let i = numChars - 1; i >= 0; i--) {
+    out[i] = Z85_DIGIT_BYTES[v % 85];
+    v = Math.floor(v / 85);
+  }
+  return out;
+}
+
+/** Convert Z85 digit indices (2–5 of them) to a number, or null if out of range. */
 function digitsToValue(digits: number[]) {
   let v = 0;
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < digits.length; i++) {
     v = v * 85 + digits[i];
   }
   return v <= 0xFFFFFFFF ? v : null;
