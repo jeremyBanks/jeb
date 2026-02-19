@@ -693,9 +693,13 @@ export function encode(
     // Encodes using |: [offset-base42?][length-base42]|[padding][raw-bytes][padding]
     //
     // Special case: 0| (rest-of-input, non-concatenatable only).
+    //
+    // In concatenatable mode, cap the raw run at stopAt to avoid consuming
+    // reserved-tail bytes. The reserved tail must be encoded as a separate
+    // partial block (hash-padded) after the main loop.
     if (hasLongEscape && safeLen >= 8 && safeBytesAtEnd === 4) {
       const safeStart = inOff; // block-aligned
-      const rawLen = safeLen;
+      const rawLen = concatenatable ? Math.min(safeLen, stopAt - inOff) : safeLen;
 
       // 0| rest-of-input escape: only when safe run reaches end of input.
       if (remainingAfterSafe === 0 && !concatenatable) {
