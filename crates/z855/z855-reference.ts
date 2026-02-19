@@ -703,7 +703,10 @@ export function encode(
         const rawOffset = paddingNeeded >= 2
           ? findBestOffset(outOff, lenPrefix.length, rawLen, paddingNeeded)
           : 0;
-        const offsetPrefix = (rawLen > 15 && rawOffset > 0) ? encodeBase42(rawOffset) : [];
+        // Cap: total prefix (offset + length) must be < 5 digits, otherwise the
+        // decoder triggers a Z85 block decode before seeing `|` (spurious block).
+        const rawOffsetPrefix = (rawLen > 15 && rawOffset > 0) ? encodeBase42(rawOffset) : [];
+        const offsetPrefix = (rawOffsetPrefix.length + lenPrefix.length < 5) ? rawOffsetPrefix : [];
         const offset = offsetPrefix.length > 0 ? rawOffset : 0;
 
         if (offsetPrefix.length + offset <= paddingNeeded) {
@@ -741,8 +744,10 @@ export function encode(
         const totalRemaining = original.length - inOff;
 
         // Collect valid candidates (p, sortKey).
+        // In concatenatable mode only use p=0 (block-aligned): non-aligned passthroughs
+        // (p≥1) emit a non-multiple-of-5 chars, breaking the reserved-tail alignment.
         const candidates: Array<{ p: number; key: [bigint, bigint] }> = [];
-        for (let p = 0; p <= 3; p++) {
+        for (let p = 0; p <= (concatenatable ? 0 : 3); p++) {
           const bytesConsumed = p + K;
           if (inOff + bytesConsumed > original.length) continue;
           // Length invariant: passthrough output + remaining output = total output.
@@ -802,7 +807,9 @@ export function encode(
     //   • Before-block value must satisfy canonical-minimum rule
     //   • After-block value is reconstructed from P known high bytes + (5-P) digits
     //   • Requires full after-block (8 bytes total consumed)
-    if (hasEscape4) {
+    //
+    // Disabled in concatenatable mode: non-aligned output breaks reserved-tail alignment.
+    if (hasEscape4 && !concatenatable) {
       const totalRemaining = original.length - inOff;
       const candidates: Array<{ p: number; key: [bigint, bigint] }> = [];
       for (let p = 1; p <= 3; p++) {
@@ -857,14 +864,9 @@ export function encode(
     // If the loop left output at a non-5-aligned offset, first splice hashes before
     // the dangling bytes to complete that block (same as the else-if branch below),
     // then emit the reserved-tail partial block.
-    const remBefore = outOff % 5;
-    if (remBefore > 0) {
-      const hashCount = 5 - remBefore;
-      const tail = buf.slice(outOff - remBefore, outOff);
-      outOff -= remBefore;
-      for (let k = 0; k < hashCount; k++) emit(PAD_HASH);
-      for (let k = 0; k < tail.length; k++) emit(tail[k]);
-    }
+    // Non-aligned passthroughs are disabled in concatenatable mode, so the main
+    // loop always exits at outOff % 5 === 0. Assert this holds.
+    assert(outOff % 5 === 0, `concat mode: unexpected outOff alignment ${outOff % 5}`);
     const partialChars = reservedTail + 1;
     const hashCount = 5 - partialChars;
     for (let k = 0; k < hashCount; k++) emit(PAD_HASH);

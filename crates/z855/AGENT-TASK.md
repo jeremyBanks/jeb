@@ -1,4 +1,4 @@
-# Task: Complete z855-jeremy.ts
+# Task: Complete z855-reference.ts
 
 ## Context
 
@@ -8,11 +8,11 @@ This is a z855 codec implementation. z855 is an extension of Z85 (ZeroMQ RFC 32)
 
 ## Your Goal
 
-Complete `z855-jeremy.ts` into a fully working, well-tested implementation.
+Complete `z855-reference.ts` into a fully working, well-tested implementation.
 **Commit extremely often — after every meaningful change.**
 **Never amend, rebase, or force-push.**
 
-## Key Design Decisions (Jeremy's sketch is authoritative)
+## Key Design Decisions (the sketch is authoritative)
 
 ### Escape byte assignments (NEW — different from production z855.ts):
 - `_` (0x5F) = escape 4 raw bytes
@@ -58,12 +58,12 @@ The decoder must recover the before-block using the `findAllValues` / `findMinVa
 - `;` (7-byte): P+1 chars before escape
 
 Wait, let me clarify from the production implementation context:
-- 4-byte escape (`,` in production, `_` in Jeremy's): P chars before, uses canonical minimum
+- 4-byte escape (`,` in production, `_` in the): P chars before, uses canonical minimum
 - 5/6/7-byte escapes: (P+1) chars before, no canonical minimum needed (extra char disambiguates)
 
 ## Files to Study
 
-1. `z855-jeremy.ts` — the incomplete sketch (your primary target)
+1. `z855-reference.ts` — the incomplete sketch (your primary target)
 2. `z855-readable.ts` — my completed readable implementation (different escape ordering but same concepts)
 3. `z855.ts` — production implementation (complex, reference only)
 4. `test-cases/` — 1416 test cases (but these use the OLD escape ordering!)
@@ -71,13 +71,13 @@ Wait, let me clarify from the production implementation context:
 ## Test Strategy
 
 The test-cases directory uses the OLD escape ordering (`,`=4, `;`=5, `_`=6, `~`=7).
-Jeremy's new ordering is (`_`=4, `,`=5, `~`=6, `;`=7).
+the new ordering is (`_`=4, `,`=5, `~`=6, `;`=7).
 
-So you CANNOT directly use the existing test-cases to validate Jeremy's encoder output format.
+So you CANNOT directly use the existing test-cases to validate the encoder output format.
 However, you CAN use them to validate the **decoder** for old-format encoded strings if needed.
 
 Instead, write your own tests:
-1. Encode with jeremy's encoder → decode with jeremy's decoder → check roundtrip
+1. Encode with the reference encoder → decode with the reference decoder → check roundtrip
 2. Test specific cases from the sketch/spec
 3. Cross-check against `z855-readable.ts` for the algorithmic logic (same logic, different escape chars)
 
@@ -102,7 +102,7 @@ Complete `decode()`. Follow the same state-machine approach as `z855-readable.ts
 for the new escape ordering.
 
 ### Phase 4: Write tests
-Create `z855-jeremy-test.ts` with comprehensive tests:
+Create `z855-reference-test.ts` with comprehensive tests:
 - Empty input
 - All lengths 0–20 (roundtrip)  
 - Known specific values (zeros, max, etc.)
@@ -112,7 +112,7 @@ Create `z855-jeremy-test.ts` with comprehensive tests:
 
 ### Phase 5: Wire up CLI and run it
 ```bash
-echo "hello world test 1234" | deno run z855-jeremy.ts encode | deno run z855-jeremy.ts decode
+echo "hello world test 1234" | deno run z855-reference.ts encode | deno run z855-reference.ts decode
 ```
 
 ## Key Helper Already Implemented
@@ -133,8 +133,8 @@ const canonical = findMinValue(chars, bytes);
 
 ```bash
 cd /Users/matte/jeb/crates/z855
-deno test z855-jeremy-test.ts --allow-read
-deno run --allow-read z855-jeremy.ts encode < /dev/null
+deno test z855-reference-test.ts --allow-read
+deno run --allow-read z855-reference.ts encode < /dev/null
 ```
 
 ## Done Criteria
@@ -144,8 +144,8 @@ deno run --allow-read z855-jeremy.ts encode < /dev/null
 - [ ] All escape forms (_, , ~, ;, |, 0|) are exercised by tests
 - [ ] Concatenatable mode works
 - [ ] Tests pass with `deno test`
-- [ ] CLI works: `echo "test" | deno run z855-jeremy.ts encode | deno run z855-jeremy.ts decode`
+- [ ] CLI works: `echo "test" | deno run z855-reference.ts encode | deno run z855-reference.ts decode`
 - [ ] Committed with frequent intermediate commits
 
 When completely finished, run:
-openclaw system event --text "Done: z855-jeremy.ts fully implemented and tested" --mode now
+openclaw system event --text "Done: z855-reference.ts fully implemented and tested" --mode now

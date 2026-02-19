@@ -1,9 +1,9 @@
 /**
- * Test suite for z855-jeremy.ts
+ * Test suite for z855-reference.ts
  */
 
 import { assertEquals, assertThrows } from "jsr:@std/assert";
-import { encode, decode, textEncode, textDecode } from "./z855-jeremy.ts";
+import { encode, decode, textEncode, textDecode } from "./z855-reference.ts";
 
 // Helper to convert string to Uint8Array
 function bytes(s: string): Uint8Array {
