@@ -198,16 +198,24 @@ export function encode(
       // on whether we're in concatenatable mode or not.
       const requiredDigits = nextBlock.length + 1;
       if (concatenatable) {
-        const paddingByte = Z85_DIGIT_BYTES.at(-1)!;
-        for (let i = 0; i < requiredDigits; i++) {
-          blockDigits[i] = paddingByte;
+        // Hash padding goes at the FRONT, not overwriting the digits
+        const paddingByte = PAD_HASH;
+        const paddingCount = 5 - requiredDigits;
+        const output = new Uint8Array(5);
+        for (let i = 0; i < paddingCount; i++) {
+          output[i] = paddingByte;
         }
+        for (let i = 0; i < requiredDigits; i++) {
+          output[paddingCount + i] = blockDigits[5 - requiredDigits + i];
+        }
+        buffer.set(output, encodedOffset);
+        encodedOffset += 5;
       } else {
-        blockDigits = blockDigits.slice(5 - requiredDigits);
+        const partialDigits = blockDigits.subarray(5 - requiredDigits);
+        buffer.set(partialDigits, encodedOffset);
+        encodedOffset += partialDigits.length;
       }
 
-      buffer.set(blockDigits, encodedOffset);
-      encodedOffset += blockDigits.length;
       inputOffset += nextBlock.length;
     } else if (!safeBytes[nextBlock.at(-1)!]) {
       // If the last byte of this block is not safe, the entire block must be Z85-encoded.
@@ -258,13 +266,14 @@ export function encode(
       if (remainingAfterSafe == 0 && !concatenatable) {
         // If we don't need to be concatenatable, we can use the `0|` "until end of stream"
         // special raw escape prefix. This is the ONLY case where the output can have a different length
-        // than the
+        // than the standard Z85 encoding.
         const prefix = new TextEncoder().encode(`0${ESCAPE_MANY}`);
         buffer.set(prefix, encodedOffset);
         encodedOffset += prefix.length;
-        buffer.set(original.subarray(inputOffset, safeLength), encodedOffset);
-        encodedOffset += safeLength - inputOffset;
-        continue;
+        buffer.set(original.subarray(inputOffset, inputOffset + safeLength), encodedOffset);
+        encodedOffset += safeLength;
+        inputOffset += safeLength;
+        break;
       }
 
       throw new Error("not implemented");
@@ -384,11 +393,12 @@ const Z85_VALUES_BYTES = new Map(
 const BLOCK_SIZE_ORIGINAL = 4;
 const BLOCK_SIZE_ENCODED = 5;
 
-const ESCAPE_4 = ",";
-const ESCAPE_5 = ";";
-const ESCAPE_6 = "_";
-const ESCAPE_7 = "~";
+const ESCAPE_4 = "_";  // Jeremy's new assignment (was `,` in production)
+const ESCAPE_5 = ",";  // Jeremy's new assignment (was `;` in production)
+const ESCAPE_6 = "~";  // Jeremy's new assignment (was `_` in production)
+const ESCAPE_7 = ";";  // Jeremy's new assignment (was `~` in production)
 const ESCAPE_MANY = "|";
+const PAD_HASH = 0x23;  // '#' — padding for concatenatable mode
 const Z855_ESCAPE_CHARACTERS = [
   ESCAPE_4,
   ESCAPE_5,
@@ -438,11 +448,11 @@ export function textDecode(encoded: string): Uint8Array {
   return decode(new TextEncoder().encode(encoded));
 }
 
-/** Convert a 32-bit unsigned integer to 5 Z85 digit indices (0–84). */
-function valueToDigits(v: number) {
-  const digits = [0, 0, 0, 0, 0];
+/** Convert a 32-bit unsigned integer to 5 Z85 digit bytes. */
+function valueToDigits(v: number): Uint8Array {
+  const digits = new Uint8Array(5);
   for (let i = 4; i >= 0; i--) {
-    digits[i] = v % 85;
+    digits[i] = Z85_DIGIT_BYTES[v % 85];
     v = Math.floor(v / 85);
   }
   return digits;
