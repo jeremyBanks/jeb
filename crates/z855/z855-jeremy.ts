@@ -1207,25 +1207,14 @@ export async function main() {
   } else if (Deno.args[0] === "shebang-decode") {
     const stdin = await readAll(Deno.stdin);
     const text = new TextDecoder().decode(stdin);
-    const lines = text.split('\n');
 
-    // Skip shebang and find the encoded data
-    let encodedData = '';
-    let inDataSection = false;
-
-    for (const line of lines) {
-      if (line.startsWith('#!')) continue;
-      if (line.includes('const encoded =')) {
-        inDataSection = true;
-        continue;
-      }
-      if (inDataSection) {
-        if (line.includes('`;')) break;
-        if (line.startsWith('`')) continue;
-        encodedData += line;
-      }
+    // Find and extract the encoded data from the template literal
+    const match = text.match(/const encoded = `([^`]+)`/);
+    if (!match) {
+      throw new Error("Could not find encoded data in shebang file");
     }
 
+    const encodedData = match[1];
     const decoded = textDecode(encodedData);
     await Deno.stdout.write(decoded);
   } else {
