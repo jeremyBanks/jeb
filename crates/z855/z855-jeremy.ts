@@ -686,7 +686,10 @@ export function encode(
     // Encodes using |: [offset-base42?][length-base42]|[padding][raw-bytes][padding]
     //
     // Special case: 0| (rest-of-input, non-concatenatable only).
-    if (hasLongEscape && safeLen >= 8 && safeBytesAtEnd === 4) {
+    // Long escape is disabled in concatenatable mode: its variable-length output
+    // is incompatible with the reserved-tail partial-block mechanism. The B/C/D/E
+    // paths handle all cases correctly in concatenatable mode.
+    if (hasLongEscape && safeLen >= 8 && safeBytesAtEnd === 4 && !concatenatable) {
       const safeStart = inOff; // block-aligned
       const rawLen = safeLen;
 
