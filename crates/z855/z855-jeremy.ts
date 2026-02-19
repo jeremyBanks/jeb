@@ -723,6 +723,10 @@ export function encode(
           for (let k = 0; k < paddingAfter; k++) emit(0x2e); // '.' padding after
 
           inOff = safeStart + rawLen;
+          // In concatenatable mode, long passthrough output length is independent of
+          // z855OutputLen(), so the reserved-tail calculation is invalidated. Reset it
+          // so the post-loop padding falls through to the simple # alignment branch.
+          if (concatenatable) reservedTail = 0;
           continue mainLoop;
         }
       }
