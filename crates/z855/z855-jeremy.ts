@@ -729,16 +729,7 @@ export function encode(
           emitBytes(original, safeStart, rawLen);              // raw bytes
           for (let k = 0; k < paddingAfter; k++) emit(0x2e); // '.' padding after
 
-          // In concatenatable mode, the long escape block has variable output length
-          // independent of z855OutputLen(). Emit '#' padding immediately after the
-          // block to restore 5-char alignment, so the reserved-tail partial block
-          // (emitted after the loop) lands on a 5-boundary.
-          if (concatenatable) {
-            const rem = outOff % 5;
-            if (rem !== 0) for (let k = 0; k < 5 - rem; k++) emit(PAD_HASH);
-            // Do NOT reset reservedTail — the post-loop code still needs to encode
-            // the reserved tail bytes that were excluded from stopAt.
-          }
+
 
           inOff = safeStart + rawLen;
           continue mainLoop;
