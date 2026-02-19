@@ -1139,47 +1139,113 @@ export function decode(encoded: Uint8Array): Uint8Array {
   return new Uint8Array(out);
 }
 
+/**
+ * Create a self-extracting shebang script from Z855-encoded data.
+ *
+ * The generated script contains an inline Z855 decoder, the encoded payload,
+ * and bootstrap logic that:
+ *   1. Decodes the payload to a temp file
+ *   2. Makes it executable
+ *   3. Executes it with inherited stdio and forwarded args
+ *   4. Cleans up on exit
+ *
+ * The script requires Deno with `--allow-all` (written into the shebang line).
+ */
+function createShebangScript(encoded: string): string {
+  // Compact inline decoder — no external imports, handles all Z855 escape types.
+  // deno-fmt-ignore
+  const inlineDecoder = `const z85="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
+const z85Map=new Map([...z85].map((c,i)=>[c.charCodeAt(0),i]));
+const ESC_4=95,ESC_5=44,ESC_6=126,ESC_7=59,ESC_MANY=124,PAD_HASH=35;
+function z855OutputLen(n){return Math.ceil(n*5/4)}
+function readBase42RTL(digits,end){let value=0,multiplier=1,pos=end,count=0;while(pos>0){const d=digits[--pos];count++;if(d>=42){value+=(d-42)*multiplier;multiplier*=42}else{value+=d*multiplier;break}}return{value,count}}
+function decodeLongPrefix(digits){const{value:length,count}=readBase42RTL(digits,digits.length);if(count===digits.length)return{offset:0,length};const{value:offset}=readBase42RTL(digits,digits.length-count);return{offset,length}}
+function canonicalMin(highDigits,knownLowBytes){const P=highDigits.length;let base=0;for(const d of highDigits)base=base*85+d;const power=Math.pow(85,5-P);const rangeStart=base*power;const rangeEnd=(base+1)*power;if(knownLowBytes.length===0)return rangeStart>0xffffffff?-1:rangeStart;let knownPart=0;for(const b of knownLowBytes)knownPart=(knownPart<<8|b)>>>0;const modulus=Math.pow(2,knownLowBytes.length*8);const rem=rangeStart%modulus;let candidate=rem<=knownPart?rangeStart-rem+knownPart:rangeStart-rem+modulus+knownPart;if(candidate>=rangeEnd||candidate>0xffffffff)return -1;return candidate}
+function extendedBlockValue(highDigits,knownLowBytes){let base=0;for(const d of highDigits)base=base*85+d;const power=Math.pow(85,5-highDigits.length);const rangeStart=base*power;const rangeEnd=(base+1)*power;if(knownLowBytes.length===0)return rangeStart>0xffffffff?-1:rangeStart;let knownPart=0;for(const b of knownLowBytes)knownPart=(knownPart<<8|b)>>>0;const modulus=Math.pow(2,knownLowBytes.length*8);const rem=rangeStart%modulus;let candidate=rem<=knownPart?rangeStart-rem+knownPart:rangeStart-rem+modulus+knownPart;if(candidate>=rangeEnd||candidate>0xffffffff)return -1;return candidate}
+function reconstructAfterBlock(knownHighBytes,lowDigitsVal,numLowDigits){const P=knownHighBytes.length;let highPart=0;for(const b of knownHighBytes)highPart=highPart*256+b;const shift=8*(4-P);const rangeStart=(highPart<<shift)>>>0;const modulus=Math.pow(85,numLowDigits);const rem=rangeStart%modulus;let candidate=rem<=lowDigitsVal?rangeStart-rem+lowDigitsVal:rangeStart-rem+modulus+lowDigitsVal;return candidate>>>0}
+function digitsToValue(digits){let v=0;for(let i=0;i<digits.length;i++)v=v*85+digits[i];return v<=0xFFFFFFFF?v:null}
+function valueToBytes(v){return[(v>>>24)&0xFF,(v>>>16)&0xFF,(v>>>8)&0xFF,v&0xFF]}
+function decode(enc){const encoded=new TextEncoder().encode(enc);if(encoded.length===0)return new Uint8Array(0);const out=[];let i=0,digits=[],knownHighBytes=[];while(i<encoded.length){const code=encoded[i];if(code===PAD_HASH&&digits.length===0&&i%5===0&&encoded.length-i>=5){let h=0;while(h<3&&encoded[i+h]===PAD_HASH)h++;if(h>0&&encoded[i+h]!==PAD_HASH){const numChars=5-h,numBytes=numChars-1;let value=0;for(let k=0;k<numChars;k++){const d=z85Map.get(encoded[i+h+k]);if(d===undefined)throw new Error("invalid char in hash block");value=value*85+d}const maxVal=[0,0xff,0xffff,0xffffff][numBytes];if(value>maxVal)throw new Error("overflow in hash block");for(let k=numBytes-1;k>=0;k--)out.push((value>>>(k*8))&0xff);i+=5;digits=[];knownHighBytes=[];continue}}if(code===ESC_MANY){if(digits.length===0)throw new Error("'|' with no prefix digits");i++;const{offset,length:rawLen}=decodeLongPrefix(digits);if(rawLen>=1&&rawLen<=7)throw new Error(\`invalid | length \${rawLen}\`);if(rawLen===0){for(;i<encoded.length;i++)out.push(encoded[i]);digits=[];knownHighBytes=[];break}const prefixLen=digits.length;const envelopeLen=z855OutputLen(rawLen);const paddingTotal=envelopeLen-prefixLen-1-rawLen;const paddingAfter=paddingTotal-offset;if(paddingAfter<0)throw new Error("invalid | offset");i+=offset;if(i+rawLen>encoded.length)throw new Error("truncated | escape");for(let k=0;k<rawLen;k++)out.push(encoded[i+k]);i+=rawLen;i+=paddingAfter;digits=[];knownHighBytes=[];continue}let passLen=0;if(code===ESC_4)passLen=4;else if(code===ESC_5)passLen=5;else if(code===ESC_6)passLen=6;else if(code===ESC_7)passLen=7;if(passLen>0){if(i+passLen>=encoded.length)throw new Error("incomplete passthrough");const pass=[];for(let k=1;k<=passLen;k++)pass.push(encoded[i+k]);if(passLen===4){const P=digits.length;if(P===0){out.push(...pass);i+=5}else{const numKnownLow=4-P;const knownLow=pass.slice(0,numKnownLow);const beforeVal=canonicalMin(digits,knownLow);if(beforeVal<0)throw new Error("non-aligned passthrough: invalid before-block");out.push(...valueToBytes(beforeVal));knownHighBytes=pass.slice(numKnownLow);digits=[];i+=5}}else{if(digits.length===0){out.push(...pass);i+=1+passLen;continue}const numDigits=digits.length;const P=numDigits-1;const numKnownLow=4-P;const knownLow=pass.slice(0,numKnownLow);const beforeVal=extendedBlockValue(digits,knownLow);if(beforeVal<0)throw new Error("extended passthrough: invalid before-block");const bBytes=valueToBytes(beforeVal);for(let k=0;k<P;k++)out.push(bBytes[k]);out.push(...pass);digits=[];knownHighBytes=[];i+=1+passLen}continue}const d=z85Map.get(code);if(d===undefined)throw new Error(\`invalid Z85 char 0x\${code.toString(16).toUpperCase()}\`);digits.push(d);i++;const needed=5-knownHighBytes.length;if(digits.length===needed){const raw=digitsToValue(digits);if(raw===null)throw new Error("Z85 value overflow");let value;if(knownHighBytes.length===0){value=raw}else{value=reconstructAfterBlock(knownHighBytes,raw,needed)}if(value>0xffffffff)throw new Error("Z85 value overflow");out.push(...valueToBytes(value));digits=[];knownHighBytes=[]}}if(digits.length>0){if(digits.length===1)throw new Error("invalid: single trailing Z85 char");const value=digitsToValue(digits);if(value===null)throw new Error("Z85 value overflow in partial block");const numBytes=digits.length-1;const maxValue=[0,0xff,0xffff,0xffffff][numBytes];if(value>maxValue)throw new Error("Z85 value overflow in partial block");for(let k=numBytes-1;k>=0;k--)out.push((value>>>(k*8))&0xff)}return new Uint8Array(out)}`;
+
+  return `#!/usr/bin/env -S deno run --allow-all
+${inlineDecoder}
+const encoded=\`${encoded}\`;
+const binary=decode(encoded.trim());
+const tmpDir=Deno.makeTempDirSync({prefix:'z855_'});
+const tmpFile=tmpDir+'/payload';
+Deno.writeFileSync(tmpFile,binary);
+Deno.chmodSync(tmpFile,0o755);
+const cmd=new Deno.Command(tmpFile,{args:Deno.args,stdin:"inherit",stdout:"inherit",stderr:"inherit"});
+const {code}=await cmd.spawn().status;
+try{Deno.removeSync(tmpDir,{recursive:true})}catch{}
+Deno.exit(code);
+`;
+}
+
 /** Entry point for the command-line interface. */
 export async function main() {
   if (Deno.args[0] === "encode") {
     const args = parseArgs(Deno.args.slice(1), {
       boolean: ["concatenatable"],
       negatable: ["concatenatable"],
-      string: ["extra-safe-characters", "max-raw-length"],
+      string: ["extra-safe-bytes", "max-raw-length"],
       default: {
         concatenatable: CANONICAL_ENCODING.concatenatable,
-        "extra-safe-characters": CANONICAL_ENCODING.extraSafeBytes,
+        "extra-safe-bytes": "",
         "max-raw-length": CANONICAL_ENCODING.maxRawLength.toString(),
       },
     });
-    const opts = {
-      concatenatable: args.concatenatable,
-      extraSafeCharacters: args["extra-safe-characters"],
-      maxRawLength: Number(args["max-raw-length"]),
-    };
+    const maxRawLength = Number(args["max-raw-length"]);
+    assert(Number.isInteger(maxRawLength), "max-raw-length must be an integer");
+    assert(Number.isFinite(maxRawLength), "max-raw-length must be finite");
     assert(
-      Number.isInteger(opts.maxRawLength),
-      "max-raw-length must be an integer",
-    );
-    assert(
-      Number.isFinite(opts.maxRawLength),
-      "max-raw-length must be finite",
-    );
-    assert(
-      opts.maxRawLength <= Number.MAX_SAFE_INTEGER,
+      maxRawLength <= Number.MAX_SAFE_INTEGER,
       "max-raw-length must be less than or equal to 2^53 - 1",
     );
-    assert(opts.maxRawLength > 0, "max-raw-length must be greater than 0");
+    assert(maxRawLength > 0, "max-raw-length must be greater than 0");
+    const extraSafeBytes = args["extra-safe-bytes"]
+      ? new Uint8Array([...args["extra-safe-bytes"]].map((c) => c.charCodeAt(0)))
+      : undefined;
     const stdin = await readAll(Deno.stdin);
     await Deno.stdout.write(encode(stdin, {
       concatenatable: args.concatenatable,
+      extraSafeBytes,
+      maxRawLength,
     }));
+  } else if (Deno.args[0] === "encode-lines") {
+    // Encode stdin using PRINTABLE_ASCII_ENCODING and split into 80-char lines.
+    const stdin = await readAll(Deno.stdin);
+    const encoded = textEncode(stdin, PRINTABLE_ASCII_ENCODING);
+    const lines: string[] = [];
+    for (let i = 0; i < encoded.length; i += 80) {
+      lines.push(encoded.slice(i, i + 80));
+    }
+    await Deno.stdout.write(new TextEncoder().encode(lines.join("\n") + "\n"));
   } else if (Deno.args[0] === "decode") {
     const stdin = await readAll(Deno.stdin);
     await Deno.stdout.write(decode(stdin));
+  } else if (Deno.args[0] === "decode-lines") {
+    // Strip newlines before decoding (inverse of encode-lines).
+    const stdin = await readAll(Deno.stdin);
+    const text = new TextDecoder().decode(stdin);
+    const stripped = text.replace(/\n/g, "");
+    await Deno.stdout.write(textDecode(stripped));
+  } else if (Deno.args[0] === "shebang") {
+    // Create a self-extracting Deno script from binary stdin.
+    const stdin = await readAll(Deno.stdin);
+    const encoded = textEncode(stdin, CANONICAL_ENCODING);
+    const shebangScript = createShebangScript(encoded);
+    await Deno.stdout.write(new TextEncoder().encode(shebangScript));
+  } else if (Deno.args[0] === "shebang-decode") {
+    // Extract and decode the original binary from a shebang script.
+    const stdin = await readAll(Deno.stdin);
+    const text = new TextDecoder().decode(stdin);
+    const match = text.match(/const encoded=`([^`]+)`/);
+    if (!match) throw new Error("Could not find encoded data in shebang file");
+    await Deno.stdout.write(textDecode(match[1]));
   } else {
     await Deno.stderr.write(new TextEncoder().encode(
-      "Usage: z855 encode|decode < input > output\n",
+      "Usage: z855 encode|decode|encode-lines|decode-lines|shebang|shebang-decode < input > output\n",
     ));
     return 2;
   }
