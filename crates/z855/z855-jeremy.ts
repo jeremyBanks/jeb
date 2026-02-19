@@ -707,10 +707,14 @@ export function encode(
         const paddingNeeded = envelopeLen - ourLenNoPad;
 
         // Find best alignment offset via bit-reversal sort key.
-        const offset = paddingNeeded >= 2
+        // Offset is only encodable (and thus decodable) when rawLen > 15,
+        // because the decoder distinguishes offset prefix from length prefix
+        // only when the length requires multiple base-42 digits.
+        const rawOffset = paddingNeeded >= 2
           ? findBestOffset(outOff, lenPrefix.length, rawLen, paddingNeeded)
           : 0;
-        const offsetPrefix = (rawLen > 15 && offset > 0) ? encodeBase42(offset) : [];
+        const offsetPrefix = (rawLen > 15 && rawOffset > 0) ? encodeBase42(rawOffset) : [];
+        const offset = offsetPrefix.length > 0 ? rawOffset : 0;
 
         if (offsetPrefix.length + offset <= paddingNeeded) {
           const paddingAfter = paddingNeeded - offsetPrefix.length - offset;
