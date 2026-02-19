@@ -123,11 +123,11 @@ Deno.test("long escape (8+ bytes)", () => {
 });
 
 Deno.test("rest-of-input escape (0|)", () => {
-  // Long safe string at end, non-concatenatable
-  const input = bytes("test hello world and more text here");
+  // Long safe string at end, non-concatenatable (all Z85-safe chars)
+  const input = bytes("testinglongstringofallsafecharacters");
   const encoded = encode(input);
   const decoded = decode(encoded);
-  assertEquals(str(decoded), "test hello world and more text here");
+  assertEquals(str(decoded), "testinglongstringofallsafecharacters");
   // Should contain 0| escape
   assertEquals(str(encoded).includes("0|"), true);
 });
