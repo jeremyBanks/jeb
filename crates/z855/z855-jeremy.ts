@@ -768,8 +768,10 @@ export function encode(
         const totalRemaining = original.length - inOff;
 
         // Collect valid candidates (p, sortKey).
+        // In concatenatable mode only use p=0 (block-aligned): non-aligned passthroughs
+        // (p≥1) emit a non-multiple-of-5 chars, breaking the reserved-tail alignment.
         const candidates: Array<{ p: number; key: [bigint, bigint] }> = [];
-        for (let p = 0; p <= 3; p++) {
+        for (let p = 0; p <= (concatenatable ? 0 : 3); p++) {
           const bytesConsumed = p + K;
           if (inOff + bytesConsumed > original.length) continue;
           // Length invariant: passthrough output + remaining output = total output.
