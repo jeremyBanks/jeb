@@ -722,11 +722,16 @@ export function encode(
           emitBytes(original, safeStart, rawLen);              // raw bytes
           for (let k = 0; k < paddingAfter; k++) emit(0x2e); // '.' padding after
 
+          // In concatenatable mode, the long escape block has variable output length
+          // independent of z855OutputLen(). Emit '#' padding immediately after the
+          // block to restore 5-char alignment, so concatenated segments stay aligned.
+          if (concatenatable) {
+            const rem = outOff % 5;
+            if (rem !== 0) for (let k = 0; k < 5 - rem; k++) emit(PAD_HASH);
+            reservedTail = 0; // invalidated; post-loop splice must not fire
+          }
+
           inOff = safeStart + rawLen;
-          // In concatenatable mode, long passthrough output length is independent of
-          // z855OutputLen(), so the reserved-tail calculation is invalidated. Reset it
-          // so the post-loop padding falls through to the simple # alignment branch.
-          if (concatenatable) reservedTail = 0;
           continue mainLoop;
         }
       }
