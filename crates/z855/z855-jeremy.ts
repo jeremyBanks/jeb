@@ -684,11 +684,7 @@ export function encode(
       else break;
     }
 
-    // In concatenatable mode, cap safeLen at stopAt so the long escape never
-    // consumes reserved-tail bytes (which must be encoded separately as a partial
-    // block). Capping here means the long escape simply won't fire if the safe run
-    // would need to extend into the tail — falling through to B/C/D/E instead.
-    const safeLen = Math.min(safeBytesAtEnd + safeBytesFollowing, stopAt - inOff);
+    const safeLen = safeBytesAtEnd + safeBytesFollowing;
     const remainingAfterSafe = original.length - afterBlock - safeBytesFollowing;
 
     // ── (A) Long passthrough: 8+ bytes ──────────────────────────────────────
