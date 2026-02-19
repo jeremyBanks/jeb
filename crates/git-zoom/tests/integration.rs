@@ -5,10 +5,7 @@
 
 mod common;
 
-use common::{
-    fixtures::test_fixture,
-    helpers::*,
-};
+use common::{fixtures::test_fixture, helpers::*};
 
 // ============================================================================
 // Category A: Basic Operations

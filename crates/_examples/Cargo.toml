@@ -11,6 +11,7 @@ categories = []
 keywords = []
 
 [dependencies]
+jeb-common = { path = "../jeb-common" }
 ordermap.workspace = true
 static_assertions.workspace = true
 

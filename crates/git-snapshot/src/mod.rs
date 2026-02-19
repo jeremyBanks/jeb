@@ -1,15 +1,7 @@
 use std::{
-    collections::{
-        BTreeMap,
-        HashMap,
-        HashSet,
-        VecDeque,
-    },
+    collections::{BTreeMap, HashMap, HashSet, VecDeque},
     fmt,
-    ops::{
-        Deref,
-        DerefMut,
-    },
+    ops::{Deref, DerefMut},
     path::Path,
 };
 
@@ -2853,10 +2845,7 @@ struct SerializationContext {
 
     /// Maps tree hash to (commit_id, path) where content first appeared
     /// physically
-    #[expect(
-        dead_code,
-        reason = "reserved for future tree deduplication"
-    )]
+    #[expect(dead_code, reason = "reserved for future tree deduplication")]
     tree_locations: HashMap<ObjectId, (ObjectId, String)>,
 
     /// All commits in topological order
@@ -2933,10 +2922,7 @@ impl SerializationContext {
         }
     }
 
-    #[expect(
-        dead_code,
-        reason = "reserved for future use"
-    )]
+    #[expect(dead_code, reason = "reserved for future use")]
     fn repo(&self) -> &Repository {
         unsafe { &*self.repo }
     }

@@ -1,13 +1,7 @@
 use {
     crate::Item,
-    futures::{
-        Stream,
-        StreamExt,
-    },
-    std::{
-        path::Path,
-        pin::pin,
-    },
+    futures::{Stream, StreamExt},
+    std::{path::Path, pin::pin},
     tokio::io::AsyncWriteExt,
 };
 

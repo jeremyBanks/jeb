@@ -2,10 +2,7 @@
 // spell-checker: disable
 
 use {
-    crate::{
-        bi::*,
-        testing::visuals::*,
-    },
+    crate::{bi::*, testing::visuals::*},
     inline::InlineSnapExt,
 };
 
@@ -83,7 +80,6 @@ $$$$$$$$&&&&&&&&&###  |           @@@@#######
     );
 }
 
-
 #[test]
 fn test_scatter_square() {
     render_d2d((0u16..=390).map(scatter_square)).snap(
@@ -112,8 +108,6 @@ $XQIGEDGFBCCEGDFGJTZ&  |  @VOIGDFEBBGDDDECEKOU
 ",
     );
 }
-
-
 
 #[test]
 fn test_hilbert() {

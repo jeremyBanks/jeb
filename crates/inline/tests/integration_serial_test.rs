@@ -1,10 +1,6 @@
 use {
     inline::InlineCellPrivate,
-    std::{
-        env,
-        fs,
-        path::PathBuf,
-    },
+    std::{env, fs, path::PathBuf},
     tempfile::TempDir,
 };
 

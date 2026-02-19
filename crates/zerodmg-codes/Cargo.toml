@@ -8,6 +8,8 @@ repository.workspace = true
 publish.workspace = true
 description = "pieces of a naive incomplete broken game boy emulator"
 readme = "../zerodmg/README.md"
+categories = []
+keywords = []
 
 [dependencies]
 zerodmg-utils.workspace = true

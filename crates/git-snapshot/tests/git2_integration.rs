@@ -1,16 +1,8 @@
 //! Integration tests for git2 repository reading and writing
 
 use {
-    git_snapshot::{
-        GitError,
-        HeadState,
-        Repository,
-        UnsupportedFeature,
-    },
-    std::{
-        fs,
-        path::Path,
-    },
+    git_snapshot::{GitError, HeadState, Repository, UnsupportedFeature},
+    std::{fs, path::Path},
     tempfile::TempDir,
 };
 
@@ -184,9 +176,14 @@ fn test_multiple_commits_with_merge() {
     let tree_id = index.write_tree().unwrap();
     let tree = repo.find_tree(tree_id).unwrap();
     let commit3 = repo
-        .commit(Some("refs/heads/feature"), &sig, &sig, "Branch", &tree, &[
-            &commit1_obj,
-        ])
+        .commit(
+            Some("refs/heads/feature"),
+            &sig,
+            &sig,
+            "Branch",
+            &tree,
+            &[&commit1_obj],
+        )
         .unwrap();
     let commit3_obj = repo.find_commit(commit3).unwrap();
 
@@ -196,10 +193,14 @@ fn test_multiple_commits_with_merge() {
     index.add_path(Path::new("file.txt")).unwrap();
     let tree_id = index.write_tree().unwrap();
     let tree = repo.find_tree(tree_id).unwrap();
-    repo.commit(Some("HEAD"), &sig, &sig, "Merge", &tree, &[
-        &commit2_obj,
-        &commit3_obj,
-    ])
+    repo.commit(
+        Some("HEAD"),
+        &sig,
+        &sig,
+        "Merge",
+        &tree,
+        &[&commit2_obj, &commit3_obj],
+    )
     .unwrap();
 
     // Read snapshot

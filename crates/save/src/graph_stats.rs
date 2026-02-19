@@ -9,10 +9,7 @@
 //! The algorithm supports depth-limited scanning ("z-mode") to bound complexity
 //! in large repositories.
 use std::{
-    collections::{
-        HashMap,
-        HashSet,
-    },
+    collections::{HashMap, HashSet},
     fmt::Debug,
     hash::Hash,
 };
@@ -147,10 +144,7 @@ impl MessageParser {
     }
 }
 /// Calculator for graph statistics with z-mode support.
-#[expect(
-    clippy::module_name_repetitions,
-    reason = "clear naming preferred"
-)]
+#[expect(clippy::module_name_repetitions, reason = "clear naming preferred")]
 pub struct GraphStatsCalculator<'repo, 'a: 'repo, R: RepositoryView<'repo>> {
     repo: &'a R,
     max_depth: i32,
@@ -244,10 +238,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
     }
 
     /// Depth-limited scan implementing z-mode algorithm.
-    #[expect(
-        clippy::cast_sign_loss,
-        reason = "max_depth is always positive"
-    )]
+    #[expect(clippy::cast_sign_loss, reason = "max_depth is always positive")]
     fn depth_limited_scan(&self, head: &R::Commit, is_shallow: bool) -> GraphStats {
         let max_depth = self.max_depth as usize;
         let mut visited = HashSet::new();
@@ -411,10 +402,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
     }
 
     /// Calculate generation index for bounded graph (depth-limited scan).
-    #[expect(
-        clippy::unused_self,
-        reason = "method kept for API consistency"
-    )]
+    #[expect(clippy::unused_self, reason = "method kept for API consistency")]
     fn calculate_generation_bounded(
         &self,
         parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
@@ -473,14 +461,8 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
     }
 
     /// Calculate commit index for bounded graph, adding trusted stats.
-    #[expect(
-        clippy::unused_self,
-        reason = "method kept for API consistency"
-    )]
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "commit count fits in u32"
-    )]
+    #[expect(clippy::unused_self, reason = "method kept for API consistency")]
+    #[expect(clippy::cast_possible_truncation, reason = "commit count fits in u32")]
     fn calculate_commit_index_bounded(
         &self,
         visited: &HashSet<<R::Commit as CommitView>::Id>,
@@ -502,10 +484,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
     ///
     /// If all boundaries have trusted origins that match, use that origin.
     /// Otherwise, fall back to calculating from the boundary commit IDs.
-    #[expect(
-        clippy::unused_self,
-        reason = "method kept for API consistency"
-    )]
+    #[expect(clippy::unused_self, reason = "method kept for API consistency")]
     fn calculate_origin_bounded(
         &self,
         _parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
@@ -527,10 +506,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
                 return Some(first);
             }
             // If trusted origins disagree, hash them together
-            use sha1::{
-                Digest,
-                Sha1,
-            };
+            use sha1::{Digest, Sha1};
             let mut hasher = Sha1::new();
             let mut sorted_origins: Vec<u16> = trusted_origins.clone();
             sorted_origins.sort();
@@ -550,26 +526,13 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             return None;
         }
         roots.sort_by_key(|c| c.id());
-        if roots.len() == 1 {
-            let bytes = roots[0].id_bytes();
-            if bytes.len() >= 2 {
-                let last_two = &bytes[bytes.len() - 2..];
-                Some(u16::from_be_bytes([last_two[0], last_two[1]]))
-            } else {
-                Some(0x0000)
-            }
-        } else {
-            use sha1::{
-                Digest,
-                Sha1,
-            };
-            let mut hasher = Sha1::new();
-            for root in &roots {
-                hasher.update(root.id_bytes());
-            }
-            let hash = hasher.finalize();
-            Some(u16::from_be_bytes([hash[18], hash[19]]))
+        use sha1::{Digest, Sha1};
+        let mut hasher = Sha1::new();
+        for root in &roots {
+            hasher.update(root.id_bytes());
         }
+        let hash = hasher.finalize();
+        Some(u16::from_be_bytes([hash[18], hash[19]]))
     }
 
     fn full_graph_walk(
@@ -611,10 +574,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             count + 1 // +1 because we're calculating for a new commit (HEAD's child)
         };
         let generation_index = self.calculate_generation(&parent_map, &head.id()) + 1; // +1 for new commit
-        #[expect(
-            clippy::cast_possible_truncation,
-            reason = "commit count fits in u32"
-        )]
+        #[expect(clippy::cast_possible_truncation, reason = "commit count fits in u32")]
         let commit_index = visited.len() as u32; // visited includes HEAD, which becomes the parent of new commit
         let origin = if revision_index == 0 {
             None
@@ -630,10 +590,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         }
     }
 
-    #[expect(
-        clippy::unused_self,
-        reason = "method kept for API consistency"
-    )]
+    #[expect(clippy::unused_self, reason = "method kept for API consistency")]
     fn calculate_generation(
         &self,
         parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
@@ -683,10 +640,7 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
         max_distance
     }
 
-    #[expect(
-        clippy::unused_self,
-        reason = "method kept for API consistency"
-    )]
+    #[expect(clippy::unused_self, reason = "method kept for API consistency")]
     fn calculate_origin(
         &self,
         parent_map: &HashMap<<R::Commit as CommitView>::Id, Vec<<R::Commit as CommitView>::Id>>,
@@ -707,26 +661,13 @@ impl<'repo, 'a: 'repo, R: RepositoryView<'repo>> GraphStatsCalculator<'repo, 'a,
             return None;
         }
         roots.sort_by_key(|c| c.id());
-        if roots.len() == 1 {
-            let bytes = roots[0].id_bytes();
-            if bytes.len() >= 2 {
-                let last_two = &bytes[bytes.len() - 2..];
-                Some(u16::from_be_bytes([last_two[0], last_two[1]]))
-            } else {
-                Some(0x0000)
-            }
-        } else {
-            use sha1::{
-                Digest,
-                Sha1,
-            };
-            let mut hasher = Sha1::new();
-            for root in &roots {
-                hasher.update(root.id_bytes());
-            }
-            let hash = hasher.finalize();
-            Some(u16::from_be_bytes([hash[18], hash[19]]))
+        use sha1::{Digest, Sha1};
+        let mut hasher = Sha1::new();
+        for root in &roots {
+            hasher.update(root.id_bytes());
         }
+        let hash = hasher.finalize();
+        Some(u16::from_be_bytes([hash[18], hash[19]]))
     }
 }
 #[cfg(test)]

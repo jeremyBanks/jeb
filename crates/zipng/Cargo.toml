@@ -1,0 +1,60 @@
+[package]
+authors = ["Jeremy Banks <_@jeremy.ca>"]
+description = "Polyglot encoder for ZIP-and/or-PNG files."
+edition = "2024"
+license = "MIT OR Apache-2.0"
+name = "zipng"
+repository = "https://github.com/jeremyBanks/zipng"
+version = "0.0.0-dev.20260202"
+categories = []
+keywords = []
+
+[[bin]]
+name = "zipng"
+path = "src/main.rs"
+
+[[bin]]
+name = "unzipng"
+path = "src/bin/unzipng.rs"
+
+[dependencies]
+image = { version = "0.25.9", default-features = false, features = ["png"], optional = true }
+derive_more = { version = "0.99.17"   }
+brotli = { workspace = true, optional = true }
+ureq = { workspace = true, optional = true }
+walkdir = { workspace = true, optional = true }
+zip = { workspace = true, optional = true, features = ["deflate"], default-features = false }
+bitvec.workspace = true
+blake3.workspace = true
+bstr.workspace = true
+bytemuck = { workspace = true, features = ["extern_crate_alloc", "min_const_generics"] }
+crc.workspace = true
+expect-test.workspace = true
+flate2 = { workspace = true, features = ["rust_backend"], default-features = false }
+indexmap.workspace = true
+kstring = { workspace = true, features = ["arc", "max_inline", "serde"] }
+oklab.workspace = true
+once_cell.workspace = true
+png.workspace = true
+rgb.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_bytes.workspace = true
+serde_json.workspace = true
+simd-adler32.workspace = true
+static_assertions.workspace = true
+tracing.workspace = true
+twox-hash.workspace = true
+
+[dev-dependencies]
+zipng = { workspace = true, features = ["dev-dependencies"], default-features = false }
+ureq.workspace = true
+
+[features]
+default = ["brotli", "image", "zip", "std-io"]
+EDITOR = []
+brotli = ["dep:brotli"]
+dev-dependencies = ["blake3/default", "derive_more/default", "flate2/default", "twox-hash/default", "zip/default", "serde/derive"]
+image = ["dep:image"]
+std-io = ["walkdir", "ureq"]
+walkdir = ["dep:walkdir"]
+zip = ["dep:zip"]

@@ -1,14 +1,6 @@
 use {
-    crate::{
-        Bytes,
-        Value,
-        from_value,
-        to_value,
-    },
-    serde::{
-        Deserialize,
-        Serialize,
-    },
+    crate::{Bytes, Value, from_value, to_value},
+    serde::{Deserialize, Serialize},
     std::collections::HashMap,
 };
 #[test]

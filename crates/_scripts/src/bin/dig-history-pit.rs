@@ -1,15 +1,8 @@
 use {
-    anyhow::{
-        Context,
-        Result,
-    },
+    anyhow::{Context, Result},
     std::{
-        collections::{
-            HashMap,
-            HashSet,
-        },
-        env,
-        fs,
+        collections::{HashMap, HashSet},
+        env, fs,
         path::Path,
         process::Command,
     },

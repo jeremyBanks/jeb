@@ -23,41 +23,43 @@ const LeaderboardTable: React.FC<{
       </tr>
     </thead>
     <tbody>
-      {runs.length ? (
-        runs.map(leaderboardRun => (
-          <tr
-            key={leaderboardRun.run.id}
-            data-rank={leaderboardRun?.tiedRank ?? "obsolete"}
-          >
-            <td className={styles.rank}>
-              <RunRank rank={leaderboardRun?.tiedRank} />
-            </td>
-            <td className={styles.player}>
-              <RunPlayers players={leaderboardRun.run.players} />
-            </td>
-            <td className={styles.time}>
-              <RunDuration ms={leaderboardRun.run.timeMs} />
-            </td>
-            <td className={styles.date}>
-              <Link
-                href="/[game]/run/[runSrcId]"
-                as={`/${game.slug}/run/${leaderboardRun.run.srcId}`}
-              >
-                <a>
-                  <RunDate date={leaderboardRun.run.date} />
-                </a>
-              </Link>
-            </td>
-            <td className={styles.links}>
-              <RunLinks run={leaderboardRun.run} />
-            </td>
+      {runs.length
+        ? (
+          runs.map((leaderboardRun) => (
+            <tr
+              key={leaderboardRun.run.id}
+              data-rank={leaderboardRun?.tiedRank ?? "obsolete"}
+            >
+              <td className={styles.rank}>
+                <RunRank rank={leaderboardRun?.tiedRank} />
+              </td>
+              <td className={styles.player}>
+                <RunPlayers players={leaderboardRun.run.players} />
+              </td>
+              <td className={styles.time}>
+                <RunDuration ms={leaderboardRun.run.timeMs} />
+              </td>
+              <td className={styles.date}>
+                <Link
+                  href="/[game]/run/[runSrcId]"
+                  as={`/${game.slug}/run/${leaderboardRun.run.srcId}`}
+                >
+                  <a>
+                    <RunDate date={leaderboardRun.run.date} />
+                  </a>
+                </Link>
+              </td>
+              <td className={styles.links}>
+                <RunLinks run={leaderboardRun.run} />
+              </td>
+            </tr>
+          ))
+        )
+        : (
+          <tr className={styles.empty}>
+            <td colSpan={6}>no runs</td>
           </tr>
-        ))
-      ) : (
-        <tr className={styles.empty}>
-          <td colSpan={6}>no runs</td>
-        </tr>
-      )}
+        )}
     </tbody>
   </table>
 );

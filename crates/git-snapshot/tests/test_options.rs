@@ -1,9 +1,4 @@
-use git_snapshot::{
-    CommitIdStyle,
-    SerializationOptions,
-    parse,
-    serialize,
-};
+use git_snapshot::{CommitIdStyle, SerializationOptions, parse, serialize};
 
 #[test]
 fn test_serialization_options() {
@@ -23,10 +18,14 @@ fn test_serialization_options() {
     println!("{}\n", output_default);
 
     // Test 2: No deduplication
-    let output_no_dedup = serialize(&repo, CommitIdStyle::Integer, SerializationOptions {
-        use_deduplication: false,
-        ..SerializationOptions::default()
-    });
+    let output_no_dedup = serialize(
+        &repo,
+        CommitIdStyle::Integer,
+        SerializationOptions {
+            use_deduplication: false,
+            ..SerializationOptions::default()
+        },
+    );
     println!("=== NO DEDUP (dedup=no, short=yes, int) ===");
     println!("{}\n", output_no_dedup);
 
@@ -36,28 +35,40 @@ fn test_serialization_options() {
     println!("{}\n", output_hex_short);
 
     // Test 4: Hex IDs with full hashes
-    let output_hex_full = serialize(&repo, CommitIdStyle::Hex, SerializationOptions {
-        force_full_hashes: true,
-        ..SerializationOptions::default()
-    });
+    let output_hex_full = serialize(
+        &repo,
+        CommitIdStyle::Hex,
+        SerializationOptions {
+            force_full_hashes: true,
+            ..SerializationOptions::default()
+        },
+    );
     println!("=== HEX FULL (dedup=yes, full hashes, hex) ===");
     println!("{}\n", output_hex_full);
 
     // Test 5: Hex with no short hashes (same as force_full_hashes but without the
     // flag)
-    let output_hex_no_short = serialize(&repo, CommitIdStyle::Hex, SerializationOptions {
-        use_short_hashes: false,
-        ..SerializationOptions::default()
-    });
+    let output_hex_no_short = serialize(
+        &repo,
+        CommitIdStyle::Hex,
+        SerializationOptions {
+            use_short_hashes: false,
+            ..SerializationOptions::default()
+        },
+    );
     println!("=== HEX NO SHORT (dedup=yes, no short, hex) ===");
     println!("{}\n", output_hex_no_short);
 
     // Test 6: No dedup, full hashes
-    let output_no_dedup_full = serialize(&repo, CommitIdStyle::Hex, SerializationOptions {
-        use_deduplication: false,
-        force_full_hashes: true,
-        ..SerializationOptions::default()
-    });
+    let output_no_dedup_full = serialize(
+        &repo,
+        CommitIdStyle::Hex,
+        SerializationOptions {
+            use_deduplication: false,
+            force_full_hashes: true,
+            ..SerializationOptions::default()
+        },
+    );
     println!("=== NO DEDUP + FULL HASH (dedup=no, full, hex) ===");
     println!("{}\n", output_no_dedup_full);
 

@@ -163,9 +163,7 @@ impl MemoryController for GameBoy {
             0xFF0F => self.set_ift(value),
             // Interrupt Enable
             0xFFFF => self.set_ie(value),
-            _ => panic!(
-                "I don't know how to set memory address {addr:#06X} (to {value:#04X})"
-            ),
+            _ => panic!("I don't know how to set memory address {addr:#06X} (to {value:#04X})"),
         }
     }
 }

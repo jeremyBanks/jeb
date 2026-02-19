@@ -4,17 +4,9 @@
 use {
     crate::{
         errors::ErrorCollector,
-        model::{
-            Annotation,
-            Requirement,
-            RequirementTree,
-            SatisfactionMode,
-        },
+        model::{Annotation, Requirement, RequirementTree, SatisfactionMode},
     },
-    std::collections::{
-        HashMap,
-        HashSet,
-    },
+    std::collections::{HashMap, HashSet},
 };
 
 /// Default required types
@@ -200,11 +192,7 @@ fn get_parent_id(id: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::model::Location,
-        std::path::PathBuf,
-    };
+    use {super::*, crate::model::Location, std::path::PathBuf};
 
     fn make_def(id: &str) -> Annotation {
         Annotation {

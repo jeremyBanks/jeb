@@ -21,15 +21,8 @@
 //! ```
 
 use {
-    crate::{
-        runtime,
-        value::Value,
-    },
-    std::{
-        any::TypeId,
-        fmt::Debug,
-        panic::Location,
-    },
+    crate::{runtime, value::Value},
+    std::{any::TypeId, fmt::Debug, panic::Location},
 };
 
 /// Create a raw string literal token stream from content.
@@ -119,10 +112,7 @@ pub(crate) fn make_raw_string(content: &str) -> proc_macro2::TokenStream {
 /// Walks through the token tree and converts any string literals that contain
 /// escape sequences into raw string literals for better readability.
 fn convert_strings_to_raw(tokens: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
-    use proc_macro2::{
-        Group,
-        TokenTree,
-    };
+    use proc_macro2::{Group, TokenTree};
 
     tokens
         .into_iter()

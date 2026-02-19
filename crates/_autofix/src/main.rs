@@ -1,15 +1,9 @@
 use {
     _autofix::{
-        autofix_runner::{
-            self,
-            AutofixModule,
-        },
-        cargo_clippy,
-        cargo_fix,
-        cargo_fmt,
+        autofix_runner::{self, AutofixModule},
+        cargo_clippy, cargo_fix, cargo_fmt,
         command_runner::run_command,
-        deno_fmt,
-        deno_lint,
+        deno_fmt, deno_lint,
     },
     clap::Parser,
     tracing_subscriber::filter::EnvFilter,
@@ -45,6 +39,9 @@ fn main() {
         }),
         ("cargo_toml_normalize", || {
             run_command("./run", &["cargo-toml-normalize"])
+        }),
+        ("generate_workflows", || {
+            run_command("./run", &["ci", "generate-workflows"])
         }),
         ("deno_lint", deno_lint::main),
         ("deno_fmt", deno_fmt::main),

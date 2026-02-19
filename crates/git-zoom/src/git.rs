@@ -1,11 +1,7 @@
 //! Wrapper functions for git commands.
 use std::{
     io::Write,
-    process::{
-        Command,
-        Output,
-        Stdio,
-    },
+    process::{Command, Output, Stdio},
 };
 pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug)]
@@ -388,10 +384,12 @@ pub fn reset_hard() -> Result<()> {
     Ok(())
 }
 /// Get the commit message body for a commit.
+#[allow(dead_code)]
 pub fn commit_body(commit: &str) -> Result<String> {
     git_stdout(&["log", "-1", "--format=%B", commit])
 }
 /// Get parents of a commit.
+#[allow(dead_code)]
 pub fn parents(commit: &str) -> Result<Vec<String>> {
     let output = git_stdout(&["rev-parse", &format!("{}^@", commit)])?;
     Ok(output.lines().map(|s| s.to_string()).collect())
@@ -423,11 +421,7 @@ pub fn walk_first_parent(start: &str) -> Result<Vec<(String, Vec<String>, String
 }
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        std::fs,
-        tempfile::TempDir,
-    };
+    use {super::*, std::fs, tempfile::TempDir};
     fn setup_test_repo() -> TempDir {
         let dir = TempDir::new().unwrap();
         std::env::set_current_dir(dir.path()).unwrap();

@@ -2,11 +2,7 @@
 //! [impl _trace.cli]
 
 use {
-    crate::{
-        errors::ErrorCollector,
-        model::RequirementTree,
-        satisfaction::SatisfactionStatus,
-    },
+    crate::{errors::ErrorCollector, model::RequirementTree, satisfaction::SatisfactionStatus},
     std::collections::HashMap,
 };
 
@@ -342,10 +338,7 @@ mod tests {
         let _f1: fn() = print_help_hints;
 
         // print_summary and print_list exist as public functions
-        use crate::{
-            errors::ErrorCollector,
-            model::RequirementTree,
-        };
+        use crate::{errors::ErrorCollector, model::RequirementTree};
 
         let tree = RequirementTree::new();
         let statuses: HashMap<String, SatisfactionStatus> = HashMap::new();

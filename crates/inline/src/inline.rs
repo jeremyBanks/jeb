@@ -1,9 +1,6 @@
 use {
     crate::value::Value,
-    std::{
-        ops::Deref,
-        path::PathBuf,
-    },
+    std::{ops::Deref, path::PathBuf},
 };
 
 /// Internal implementation of a self-modifying value.

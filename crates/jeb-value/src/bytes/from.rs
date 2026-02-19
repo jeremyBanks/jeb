@@ -1,7 +1,4 @@
-use crate::{
-    Bytes,
-    String,
-};
+use crate::{Bytes, String};
 
 impl From<&str> for Bytes {
     fn from(value: &str) -> Self {

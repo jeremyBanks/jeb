@@ -22,7 +22,8 @@ pub async fn handle_request(
                 .expect("failed to build HTTP response"))
         }
         (&Method::GET | &Method::HEAD, "/output.png") => {
-            let display = output_buffer.lock()
+            let display = output_buffer
+                .lock()
                 .expect("output buffer mutex poisoned")
                 .combined_image();
             let mut encoded_image = Vec::new();

@@ -1,9 +1,6 @@
 #![no_main]
 
-use {
-    jeb_common::bi::zig_zag::zig_zag,
-    libfuzzer_sys::fuzz_target,
-};
+use {jeb_common::bi::zig_zag::zig_zag, libfuzzer_sys::fuzz_target};
 
 fuzz_target!(|data: &[u8]| {
     // Test roundtrip properties for various integer sizes

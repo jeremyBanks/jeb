@@ -7,17 +7,8 @@
 
 use {
     super::helpers::TestRepo,
-    git_snapshot::{
-        CommitIdStyle,
-        SerializationOptions,
-        parse,
-        serialize,
-    },
-    std::{
-        env,
-        fs,
-        path::Path,
-    },
+    git_snapshot::{CommitIdStyle, SerializationOptions, parse, serialize},
+    std::{env, fs, path::Path},
 };
 
 /// Run a fixture-based test

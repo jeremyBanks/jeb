@@ -1,28 +1,12 @@
 use {
-    crate::lockfile::{
-        build_dependency_graph,
-        parse_cargo_lock,
-    },
-    anyhow::{
-        Context,
-        Result,
-    },
+    crate::lockfile::{build_dependency_graph, parse_cargo_lock},
+    anyhow::{Context, Result},
     glob::glob,
     std::{
-        collections::{
-            HashMap,
-            HashSet,
-        },
-        path::{
-            Path,
-            PathBuf,
-        },
+        collections::{HashMap, HashSet},
+        path::{Path, PathBuf},
     },
-    toml_edit::{
-        DocumentMut,
-        Item,
-        Value,
-    },
+    toml_edit::{DocumentMut, Item, Value},
 };
 
 pub fn main() -> i32 {
@@ -298,11 +282,14 @@ fn collect_all_dependencies(doc: &DocumentMut) -> Result<HashMap<String, Depende
                 let optional = is_optional_dependency(value);
                 let normalized = normalize_dep_name_for_feature(key);
 
-                deps.insert(normalized.clone(), DependencyInfo {
-                    cargo_toml_key: key.to_string(),
-                    normalized_name: normalized,
-                    optional,
-                });
+                deps.insert(
+                    normalized.clone(),
+                    DependencyInfo {
+                        cargo_toml_key: key.to_string(),
+                        normalized_name: normalized,
+                        optional,
+                    },
+                );
             }
         }
     }

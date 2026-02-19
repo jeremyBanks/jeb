@@ -1,14 +1,4 @@
-use derive_more::{
-    AsMut,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Index,
-    IndexMut,
-    Into,
-    IntoIterator,
-};
+use derive_more::{AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut, Into, IntoIterator};
 
 mod from;
 mod serde;
@@ -47,9 +37,7 @@ mod value;
 // [impl jeb-value.variant.common.transparent]
 #[repr(transparent)]
 #[as_ref(Vec<u8>, [u8])]
-#[into_iterator(
-    owned, ref, ref_mut
-)]
+#[into_iterator(owned, ref, ref_mut)]
 // [impl jeb-value.variant.common.must-use]
 #[must_use]
 // [impl jeb-value.bytes.struct]

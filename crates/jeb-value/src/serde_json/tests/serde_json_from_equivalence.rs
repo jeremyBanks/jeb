@@ -3,11 +3,7 @@
 ///
 /// This verifies the claim in serde_json/mod.rs that the direct conversions
 /// are equivalent to using the serialize trait, just with less overhead.
-use crate::{
-    Null,
-    Number,
-    Value,
-};
+use crate::{Null, Number, Value};
 /// Helper to convert a jeb Value to serde_json::Value via serialization
 fn to_serde_json_via_serde(value: &Value) -> serde_json::Value {
     serde_json::to_value(value).expect("serialization should succeed")

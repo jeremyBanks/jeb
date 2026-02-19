@@ -1,16 +1,7 @@
 use {
-    _chosen::{
-        bytes_to_text,
-        text_to_bytes,
-    },
-    anyhow::{
-        Context,
-        Result,
-    },
-    std::{
-        collections::BTreeSet,
-        process::Command,
-    },
+    _chosen::{bytes_to_text, text_to_bytes},
+    anyhow::{Context, Result},
+    std::{collections::BTreeSet, process::Command},
 };
 
 /// Represents a corpus entry with type and raw data

@@ -1,17 +1,10 @@
 use {
-    futures::{
-        Stream,
-        stream::FusedStream,
-    },
+    futures::{Stream, stream::FusedStream},
     parking_lot::Mutex,
     std::{
         pin::Pin,
         sync::Arc,
-        task::{
-            Context,
-            Poll,
-            Waker,
-        },
+        task::{Context, Poll, Waker},
     },
 };
 

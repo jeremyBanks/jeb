@@ -1,44 +1,17 @@
 //! The CLI.
 
 use {
-    crate::{
-        git2::*,
-        graph_stats::GraphStatsCalculator,
-    },
+    crate::{git2::*, graph_stats::GraphStatsCalculator},
     ::{
-        clap::{
-            AppSettings,
-            Parser,
-        },
-        eyre::{
-            Result,
-            bail,
-        },
+        clap::{AppSettings, Parser},
+        eyre::{Result, bail},
         git2::{
-            Commit,
-            ErrorCode,
-            Oid,
-            Repository,
-            RepositoryInitOptions,
-            RepositoryState,
-            Signature,
+            Commit, ErrorCode, Oid, Repository, RepositoryInitOptions, RepositoryState, Signature,
             Time,
         },
         once_cell::sync::Lazy,
-        std::{
-            env,
-            fmt::Write,
-            fs,
-            process::Command,
-            time::Instant,
-        },
-        tracing::{
-            debug,
-            info,
-            instrument,
-            trace,
-            warn,
-        },
+        std::{env, fmt::Write, fs, process::Command, time::Instant},
+        tracing::{debug, info, instrument, trace, warn},
     },
 };
 
@@ -82,21 +55,13 @@ pub struct Save {
     /// Decrease log verbosity. May be repeated to decrease verbosity further.
     ///
     /// [env: `RUST_LOG`=]
-    #[clap(
-        long,
-        short = 'q',
-        parse(from_occurrences)
-    )]
+    #[clap(long, short = 'q', parse(from_occurrences))]
     pub quiet: i32,
 
     /// Increase log verbosity. May be repeated to increase verbosity further.
     ///
     /// [env: `RUST_LOG`=]
-    #[clap(
-        long,
-        short = 'v',
-        parse(from_occurrences)
-    )]
+    #[clap(long, short = 'v', parse(from_occurrences))]
     pub verbose: i32,
 
     /// Commit all files in the repository. This is the default.
@@ -144,11 +109,7 @@ pub struct Save {
     pub empty: bool,
 
     /// Create the commit even if it contains no changes.
-    #[clap(
-        help_heading = "CONTENT OPTIONS",
-        long,
-        env = "SAVE_ALLOW_EMPTY"
-    )]
+    #[clap(help_heading = "CONTENT OPTIONS", long, env = "SAVE_ALLOW_EMPTY")]
     pub allow_empty: bool,
 
     /// The commit message.
@@ -245,21 +206,13 @@ pub struct Save {
     ///
     /// [default: name from git, or else from parent commit, or else "user
     /// <user@localhost>"]
-    #[clap(
-        help_heading = "SIGNATURE OPTIONS",
-        long,
-        env = "SAVE_AUTHOR"
-    )]
+    #[clap(help_heading = "SIGNATURE OPTIONS", long, env = "SAVE_AUTHOR")]
     pub author: Option<String>,
 
     /// The name and email to use for the commit's committer.
     ///
     /// [default: copied from the commit author]
-    #[clap(
-        help_heading = "SIGNATURE OPTIONS",
-        long,
-        env = "SAVE_COMMITTER"
-    )]
+    #[clap(help_heading = "SIGNATURE OPTIONS", long, env = "SAVE_COMMITTER")]
     pub committer: Option<String>,
 
     /// What branch head are we updating? Defaults to `"HEAD"` (which also
@@ -536,10 +489,7 @@ impl Save {
 }
 
 /// CLI entry point.
-#[instrument(
-    level = "debug",
-    skip(args)
-)]
+#[instrument(level = "debug", skip(args))]
 pub fn main(args: Save) -> Result<()> {
     let repo = open_or_init_repo(&args)?;
 
@@ -636,7 +586,7 @@ pub fn main(args: Save) -> Result<()> {
     }
 
     let tree4 = tree.to_string()[..4].to_string().to_ascii_uppercase();
-    let n4 = format!("{}", graph_stats.commit_index);
+    let g4 = format!("{}", graph_stats.generation_index);
 
     // Determine target and whether to require letter suffix
     let (target_hex, letter_suffix) = if let Some(prefix) = args.prefix_hex.as_ref() {
@@ -645,7 +595,7 @@ pub fn main(args: Save) -> Result<()> {
         (tree4.clone(), false)
     } else {
         // Default: NNNN with any letter suffix [a-f]
-        (n4, true)
+        (g4, true)
     };
 
     let target = crate::hex::decode_hex_nibbles(target_hex);
@@ -686,9 +636,14 @@ pub fn main(args: Save) -> Result<()> {
             write!(message, " / n{}", graph_stats.commit_index)?;
         }
 
-        // Optional: / xHHHH (tree hash, if non-empty)
+        // Optional: / xHHHH phonetic (tree hash with phonetic encoding, if non-empty)
         if !tree.is_empty() {
-            write!(message, " / x{tree4}")?;
+            write!(
+                message,
+                " / x{} {}",
+                tree4,
+                crate::phonetic::hex_to_phonetic(&tree4)
+            )?;
         }
 
         // Optional: / oHHHH (origin, omitted for root commits)
@@ -835,10 +790,7 @@ pub fn main(args: Save) -> Result<()> {
 
 /// Determine the Git user name and email to use.
 /// XXX: This should be removed or merged into git2.rs.
-#[instrument(
-    level = "debug",
-    skip(repo)
-)]
+#[instrument(level = "debug", skip(repo))]
 fn get_git_user(args: &Save, repo: &Repository, head: &Option<Commit>) -> Result<(String, String)> {
     // TODO: move this to git2.rs, right?
 

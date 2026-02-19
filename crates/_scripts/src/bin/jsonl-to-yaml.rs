@@ -1,14 +1,7 @@
 use {
-    anyhow::{
-        Context,
-        Result,
-    },
+    anyhow::{Context, Result},
     serde_json::Value,
-    std::io::{
-        self,
-        BufRead,
-        Write,
-    },
+    std::io::{self, BufRead, Write},
 };
 
 fn main() -> Result<()> {
@@ -239,10 +232,7 @@ fn write_yaml_value<W: Write>(w: &mut W, value: &Value, indent: usize, inline: b
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        serde_json::json,
-    };
+    use {super::*, serde_json::json};
 
     /// Convert a JSON value to our YAML format and parse it back with
     /// serde_yaml

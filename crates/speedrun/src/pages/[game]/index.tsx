@@ -10,7 +10,7 @@ import ProgressionTable from "~/components/progression-table";
 import LeaderboardTable from "~/components/leaderboard-table";
 import * as schema from "~/components/schema";
 import styles from "~/components/styles.module.scss";
-import { withApollo, DEBUG } from "~/components/hooks/with-apollo";
+import { DEBUG, withApollo } from "~/components/hooks/with-apollo";
 import useProgressIndicator from "~/components/hooks/use-nprogress";
 import LoadingBlock from "~/components/loading-block";
 
@@ -52,7 +52,7 @@ const GamePage: NextPage = () => {
         </Link>
       </h2>
 
-      {game.gameCategories.map(category => (
+      {game.gameCategories.map((category) => (
         <section key={category.id} id={`${category.id}`}>
           <h3>
             <a href={`#${category.id}`}>{category.name}</a>
@@ -68,7 +68,7 @@ const GamePage: NextPage = () => {
         </section>
       ))}
 
-      {game.levelCategories.map(levelCategory => (
+      {game.levelCategories.map((levelCategory) => (
         <div key={levelCategory.id} id={levelCategory.id}>
           <h2>
             <a href={`#${levelCategory.id}`}>{levelCategory.name}</a>
@@ -78,8 +78,8 @@ const GamePage: NextPage = () => {
 
           <ProgressionTable
             runs={levelCategory.progression}
-            showLevels={true}
-            showSums={true}
+            showLevels
+            showSums
             game={game}
           />
 

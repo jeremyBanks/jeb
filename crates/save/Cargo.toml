@@ -10,8 +10,8 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
-bstr.workspace = true
 jeb-common.workspace = true
+bstr.workspace = true
 clap = { workspace = true, features = ["derive", "env", "cargo", "unicode", "wrap_help"] }
 color-eyre.workspace = true
 digest.workspace = true

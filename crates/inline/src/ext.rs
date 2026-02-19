@@ -4,10 +4,7 @@
 //! functionality without polluting the namespace of the inner type `T`.
 
 use {
-    crate::{
-        inline::InlineCell,
-        value::Value,
-    },
+    crate::{inline::InlineCell, value::Value},
     std::path::Path,
 };
 

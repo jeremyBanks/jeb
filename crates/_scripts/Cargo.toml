@@ -11,17 +11,17 @@ categories = []
 keywords = []
 
 [dependencies]
+jeb-tracing.workspace = true
 _chosen.workspace = true
 anyhow.workspace = true
 chrono.workspace = true
 clap = { workspace = true, features = ["derive"] }
 glob.workspace = true
-jeb-tracing.workspace = true
-serde_json.workspace = true
-sha-1.workspace = true
 pathdiff.workspace = true
 rand.workspace = true
 semver.workspace = true
+serde_json.workspace = true
+sha-1.workspace = true
 tokio.workspace = true
 toml_edit.workspace = true
 

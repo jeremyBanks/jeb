@@ -1,29 +1,22 @@
 #![cfg(feature = "bin")]
 use {
-    jeb::{
-        Panic,
-        model::Bytes,
-    },
+    jeb::{Panic, model::Bytes},
     jeb_common::shell_tokenizer,
     owo_colors::OwoColorize,
     regex::Regex,
     std::{
         convert::Infallible,
-        io::{
-            Read,
-            Write,
-        },
+        io::{Read, Write},
         mem::take,
         sync::LazyLock,
     },
     tracing::debug,
 };
 /// Pre-defined aliases that expand a single command into one or more commands.
-static ALIASES: &[(&str, &[&str])] = &[("to-jeb85-lines", &[
-    "encode-jeb85",
-    "split-80",
-    "join-lines",
-])];
+static ALIASES: &[(&str, &[&str])] = &[(
+    "to-jeb85-lines",
+    &["encode-jeb85", "split-80", "join-lines"],
+)];
 static PRELUDE: &str = include_str!("jeb/prelude.jeb");
 /// Expand an alias into its component commands, or return the original command.
 fn expand_alias(command: &str) -> Vec<String> {
@@ -176,23 +169,26 @@ fn stdout(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
 fn encode_z85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let bytes = take(piece);
-        let encoded = jeb::z85::encode_z85(&bytes);
-        *piece = encoded.into();
+        let encoded = z855::encode(&bytes);
+        *piece = encoded.as_bytes().into();
     }
     Ok(state)
 }
 fn encode_jeb85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let bytes = take(piece);
-        let encoded = jeb::jeb85::encode_jeb85(&bytes);
-        *piece = encoded.into();
+        let encoded = z855::encode(&bytes);
+        *piece = encoded.as_bytes().into();
     }
     Ok(state)
 }
 fn decode_z85(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     for piece in &mut state {
         let encoded = take(piece);
-        let decoded = jeb::z85::decode_z85(&encoded)?;
+        let encoded_str = std::str::from_utf8(&encoded)
+            .map_err(|e| format!("invalid UTF-8 in z855 input: {}", e))?;
+        let decoded = z855::decode(encoded_str)
+            .map_err(|e| format!("z855 decode error: {}", e))?;
         *piece = decoded.into();
     }
     Ok(state)

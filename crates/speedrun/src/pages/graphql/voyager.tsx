@@ -36,7 +36,7 @@ const Voyager: React.FC<{}> = () => {
           displayOptions={{
             skipRelay: false,
           }}
-          hideSettings={true}
+          hideSettings
         />
       </div>
     );

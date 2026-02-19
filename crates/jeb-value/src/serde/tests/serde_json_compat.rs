@@ -1,9 +1,5 @@
 use {
-    crate::{
-        Null,
-        Value,
-        from_value,
-    },
+    crate::{Null, Value, from_value},
     serde::Deserialize,
 };
 /// Test that our deserializer can accept serde_json-style data

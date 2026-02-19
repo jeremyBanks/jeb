@@ -101,7 +101,7 @@ pub fn print_single_doc_group(doc_strings: &[&str]) {
         .join("\n");
 
     // Print with bat markdown highlighting (add trailing newline to content)
-    let content = format!("{}\n", dedented);
+    let content = format!("{dedented}\n");
     eprintln!();
     ::bat::PrettyPrinter::new()
         .input_from_bytes(content.as_bytes())
@@ -136,7 +136,7 @@ pub fn print_code(code: &str) {
         .collect::<Vec<_>>()
         .join("\n");
 
-    let content = format!("{}\n", normalized);
+    let content = format!("{normalized}\n");
     ::bat::PrettyPrinter::new()
         .input_from_bytes(content.as_bytes())
         .language("rust")
@@ -295,10 +295,5 @@ macro_rules! literate {
     };
 }
 pub use {
-    literate,
-    literate_docs,
-    literate_fn,
-    literate_inner,
-    literate_static_const,
-    literate_stmt,
+    literate, literate_docs, literate_fn, literate_inner, literate_static_const, literate_stmt,
 };

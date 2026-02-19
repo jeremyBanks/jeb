@@ -1,18 +1,8 @@
 #![expect(clippy::type_complexity)]
 use {
-    crate::{
-        Value,
-        from_value,
-        to_value,
-    },
-    serde::{
-        Deserialize,
-        Serialize,
-    },
-    std::collections::{
-        BTreeMap,
-        HashMap,
-    },
+    crate::{Value, from_value, to_value},
+    serde::{Deserialize, Serialize},
+    std::collections::{BTreeMap, HashMap},
 };
 /// Test complex map keys (tuples, structs)
 /// This is useful for composite indexing in data structures like BTrees

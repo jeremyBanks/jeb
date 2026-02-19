@@ -2,23 +2,11 @@
 //! `Deserialize` types.
 use {
     crate::{
-        Boolean,
-        Bytes,
-        Null,
-        Number,
-        String,
-        Value,
-        serde::{
-            SerdeError,
-            error::Unexpected,
-        },
+        Boolean, Bytes, Null, Number, String, Value,
+        serde::{SerdeError, error::Unexpected},
     },
     ordermap::OrderMap,
-    serde::de::{
-        self,
-        DeserializeSeed,
-        Visitor,
-    },
+    serde::de::{self, DeserializeSeed, Visitor},
 };
 impl<'de> de::Deserializer<'de> for Value {
     type Error = SerdeError;

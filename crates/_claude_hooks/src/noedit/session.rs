@@ -1,10 +1,7 @@
 use {
     super::git_ops::find_git_root,
     crate::HookInput,
-    eyre::{
-        Context,
-        Result,
-    },
+    eyre::{Context, Result},
     git2::Repository,
     std::io::Write,
 };

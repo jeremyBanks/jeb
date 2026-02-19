@@ -1,0 +1,23 @@
+[package]
+name = "zipng-wasm"
+version = "0.0.0-dev.20260131"
+edition = "2024"
+authors = ["Jeremy Banks <_@jeremy.ca>"]
+description = "WASM bindings for zipng polyglot encoder"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/jeremyBanks/zipng"
+categories = []
+keywords = []
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+zipng = { workspace = true, default-features = false }
+console_error_panic_hook.workspace = true
+getrandom = { workspace = true, features = ["js"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+wasm-bindgen.workspace = true
+web-sys = { workspace = true, features = ["console"] }
+

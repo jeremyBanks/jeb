@@ -9,7 +9,7 @@ and semantics of each component.
 ## Message Format
 
 ```
-[r|s|z]N [/ gG] [/ nC] [/ xHHHH] [/ oHHHH]
+[r|s|z]N [/ gG] [/ nC] [/ xHHHH phonetic] [/ oHHHH]
 ```
 
 ## Components
@@ -56,15 +56,21 @@ one.
 
 **Display:** Only shown if different from generation index.
 
-### Tree Hash (`xHHHH`, optional)
+### Tree Hash (`xHHHH phonetic`, optional)
 
-**Definition:** First 4 hex characters of the commit's tree object SHA.
+**Definition:** First 4 hex characters of the commit's tree object SHA, followed
+by NATO phonetic alphabet encoding of those characters.
 
 **Special behavior:** The commit timestamp is adjusted (brute-forced) so the
 resulting commit hash starts with these same 4 characters, creating a visual
 match between tree and commit hashes.
 
 **Display:** Omitted if the tree is empty.
+
+**Phonetic Encoding:** The 4 hex characters are converted to space-separated
+lowercase phonetic words (e.g., `xC7B9` becomes
+`xC7B9 charlie seven bravo nine`). This provides a human-readable, easily spoken
+identifier for verbal communication and auditory verification.
 
 ### Origin (`oHHHH`, optional)
 
@@ -141,12 +147,12 @@ A parent commit's message is trusted if:
 
 ### Inheritance Rules
 
-| Field            | Inheritance                                             |
-| ---------------- | ------------------------------------------------------- |
-| Revision Index   | Parent's value + 1                                      |
-| Generation Index | Max of all parents' values + 1                          |
-| Commit Index     | Cannot inherit; must count reachable commits            |
-| Origin           | Inherit if all parents agree; otherwise scan or omit    |
+| Field            | Inheritance                                          |
+| ---------------- | ---------------------------------------------------- |
+| Revision Index   | Parent's value + 1                                   |
+| Generation Index | Max of all parents' values + 1                       |
+| Commit Index     | Cannot inherit; must count reachable commits         |
+| Origin           | Inherit if all parents agree; otherwise scan or omit |
 
 ### Z-Mode
 
@@ -158,21 +164,21 @@ on incomplete information.
 
 The commit message format serves several purposes:
 
-| Component        | Purpose                                                 |
-| ---------------- | ------------------------------------------------------- |
+| Component        | Purpose                                                         |
+| ---------------- | --------------------------------------------------------------- |
 | Prefix           | Immediately indicates repository state (full/shallow/uncertain) |
-| Revision Index   | Simple incrementing version number along main branch    |
-| Generation Index | Reveals merge history when different from revision      |
-| Commit Index     | Shows total reachable history size                      |
-| Tree Hash        | Visual identifier; commit hash matches tree hash prefix |
-| Origin           | Detects history changes, verifies same lineage          |
+| Revision Index   | Simple incrementing version number along main branch            |
+| Generation Index | Reveals merge history when different from revision              |
+| Commit Index     | Shows total reachable history size                              |
+| Tree Hash        | Visual identifier; commit hash matches tree hash prefix         |
+| Origin           | Detects history changes, verifies same lineage                  |
 
 ## Examples
 
 ```
-r0 / x1234                    # Root commit, no origin (it IS the origin)
-r1 / x5678 / oABCD            # Second commit, can see root ABCD
-r142 / g150 / n200 / xDEF0 / oABCD   # Deep commit with merges, same origin
-s50 / g75 / n100 / x9999      # Shallow clone, can't see roots, no origin
-z10 / x1111                   # Hit depth limit, uncertain values, no origin
+r0 / x1234 one two three four                             # Root commit, no origin (it IS the origin)
+r1 / x5678 five six seven eight / oABCD                   # Second commit, can see root ABCD
+r142 / g150 / n200 / xDEF0 delta echo foxtrot zero / oABCD   # Deep commit with merges, same origin
+s50 / g75 / n100                                          # Shallow, empty tree, no phonetic
+z10 / x1111 one one one one                               # Hit depth limit, uncertain values, no origin
 ```

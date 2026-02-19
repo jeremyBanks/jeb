@@ -4,13 +4,8 @@ use {
     std::{
         cell::RefCell,
         collections::HashMap,
-        env,
-        fs,
-        io,
-        path::{
-            Path,
-            PathBuf,
-        },
+        env, fs, io,
+        path::{Path, PathBuf},
         sync::Arc,
     },
 };
@@ -90,22 +85,12 @@ impl Mode {
         }
 
         // If write feature is disabled, Write mode behaves like Memory mode
-        #[cfg(
-            all(
-                not(feature = "no-write"),
-                feature = "write"
-            )
-        )]
+        #[cfg(all(not(feature = "no-write"), feature = "write"))]
         {
             matches!(self, Mode::Write)
         }
 
-        #[cfg(
-            all(
-                not(feature = "no-write"),
-                not(feature = "write")
-            )
-        )]
+        #[cfg(all(not(feature = "no-write"), not(feature = "write")))]
         {
             false
         }
@@ -275,11 +260,14 @@ impl FileState {
             let position_to_index = Self::build_index_map(&ast);
 
             // Update thread-local cache
-            cache.insert(self.path.clone(), CachedState {
-                ast: ast.clone(),
-                position_to_index: position_to_index.clone(),
-                version: current_version,
-            });
+            cache.insert(
+                self.path.clone(),
+                CachedState {
+                    ast: ast.clone(),
+                    position_to_index: position_to_index.clone(),
+                    version: current_version,
+                },
+            );
 
             Ok((ast, position_to_index))
         })

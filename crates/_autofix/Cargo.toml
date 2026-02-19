@@ -11,10 +11,10 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+jeb-tracing.workspace = true
 anyhow.workspace = true
 clap = { workspace = true, features = ["derive"] }
 glob.workspace = true
-jeb-tracing.workspace = true
 pathdiff.workspace = true
 semver.workspace = true
 toml_edit.workspace = true

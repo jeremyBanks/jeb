@@ -1,30 +1,14 @@
 use {
     super::{
-        array::Array,
-        boolean::Boolean,
-        bytes::Bytes,
-        bytes_map::BytesMap,
-        null::Null,
-        number::Number,
-        string::String,
-        string_map::StringMap,
+        array::Array, boolean::Boolean, bytes::Bytes, bytes_map::BytesMap, null::Null,
+        number::Number, string::String, string_map::StringMap,
     },
-    derive_more::{
-        From,
-        IsVariant,
-        TryInto,
-        TryUnwrap,
-        Unwrap,
-    },
+    derive_more::{From, IsVariant, TryInto, TryUnwrap, Unwrap},
 };
 
 // [impl jeb-value.features.core.cfg]
 // [impl jeb-value.features.serde.optional]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize),
-    serde(untagged)
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize), serde(untagged))]
 // [impl jeb-value.value.traits.clone]
 // [impl jeb-value.value.traits.debug]
 #[derive(Debug, Clone, From, IsVariant, TryUnwrap, Unwrap)]
@@ -86,10 +70,7 @@ impl core::hash::Hash for Value {
 // [impl jeb-value.variant.common.cmp-mixed-variants]
 impl Ord for Value {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        use {
-            Value::*,
-            core::cmp::Ordering::*,
-        };
+        use {Value::*, core::cmp::Ordering::*};
 
         // [impl jeb-value.src.ordering.spec]
         // Order: Null, Boolean, Number, Bytes, String, Array, BytesMap, StringMap

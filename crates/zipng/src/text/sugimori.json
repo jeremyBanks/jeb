@@ -1,0 +1,22 @@
+{
+  "x": 1,
+  "y": 1,
+  "dx": 9,
+  "dy": 9,
+  "w": 8,
+  "h": 8,
+  "b": 1,
+  "rows": [
+    "ABCDEFGHIJKLMNOP",
+    "QRSTUVWXYZ():;[]",
+    "abcdefghijklmnop",
+    "qrstuvwxyzàèéùÀÁ",
+    "ÄÖÜäöüÈÉÌÍÑÒÓÙÚá",
+    "ìíñòóúº&        ",
+    "'  -+ ?!    ▷▶▼♂",
+    " ×./,♀0123456789",
+    "                ",
+    "‘’“” …          "
+  ],
+  "name": "Sugimori Sans"
+}

@@ -1,10 +1,7 @@
 use {
     crate::Item,
     async_stream::stream,
-    futures::{
-        Stream,
-        StreamExt,
-    },
+    futures::{Stream, StreamExt},
     std::pin::pin,
 };
 
