@@ -113,11 +113,11 @@ Deno.test("7-byte escape", () => {
 });
 
 Deno.test("long escape (8+ bytes)", () => {
-  // Long safe string should use | escape
-  const input = bytes("hello world!");
+  // Long safe string should use | escape (12 bytes, all Z85-safe)
+  const input = bytes("helloworld!!");
   const encoded = encode(input);
   const decoded = decode(encoded);
-  assertEquals(str(decoded), "hello world!");
+  assertEquals(str(decoded), "helloworld!!");
   // Should contain | escape
   assertEquals(str(encoded).includes("|"), true);
 });
