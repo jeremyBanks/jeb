@@ -602,6 +602,10 @@ export function encode(
   }
 
   // In concatenatable mode, reserve trailing 1-3 bytes to be encoded AFTER hash padding.
+  // We also reserve one full 4-byte block ("safeZone") before the tail to ensure the
+  // main loop always ends at a 5-aligned output boundary, even when passthrough escapes
+  // shift the output length. The safeZone block is always encoded as plain Z85, so the
+  // last 5 chars before the hash+tail block are guaranteed Z85.
   let stopAt = original.length;
   let reservedTail = 0;
   if (concatenatable) {
@@ -667,12 +671,13 @@ export function encode(
     // Encodes using |: [offset-base42?][length-base42]|[padding][raw-bytes][padding]
     //
     // Special case: 0| (rest-of-input, non-concatenatable only).
-    // Long escape is disabled in concatenatable mode: its variable-length output
-    // is incompatible with the reserved-tail partial-block mechanism. The B/C/D/E
-    // paths handle all cases correctly in concatenatable mode.
-    if (hasLongEscape && safeLen >= 8 && safeBytesAtEnd === 4 && !concatenatable) {
+    //
+    // In concatenatable mode, cap the raw run at stopAt to avoid consuming
+    // reserved-tail bytes. The reserved tail must be encoded as a separate
+    // partial block (hash-padded) after the main loop.
+    if (hasLongEscape && safeLen >= 8 && safeBytesAtEnd === 4) {
       const safeStart = inOff; // block-aligned
-      const rawLen = safeLen;
+      const rawLen = concatenatable ? Math.min(safeLen, stopAt - inOff) : safeLen;
 
       // 0| rest-of-input escape: only when safe run reaches end of input.
       if (remainingAfterSafe === 0 && !concatenatable) {
