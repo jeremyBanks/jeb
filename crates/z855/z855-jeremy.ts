@@ -183,7 +183,7 @@ export function encode(
     safeBytes[byte] = true;
   }
 
-  while (inputOffset < original.length) {
+  mainLoop: while (inputOffset < original.length) {
     const nextBlock = original.subarray(
       inputOffset,
       inputOffset + BLOCK_SIZE_ORIGINAL,
@@ -311,7 +311,8 @@ export function encode(
       }
 
       // (B) Extended passthrough: 5, 6, or 7 bytes
-      for (const k of [7, 6, 5]) {
+      let handledB = false;
+      outerB: for (const k of [7, 6, 5]) {
         if (safeLength !== k) continue;
 
         const escChar = k === 7 ? ESCAPE_7 : k === 6 ? ESCAPE_6 : ESCAPE_5;
@@ -323,7 +324,8 @@ export function encode(
           buffer.set(original.subarray(inputOffset, inputOffset + k), encodedOffset);
           encodedOffset += k;
           inputOffset += k;
-          continue;
+          handledB = true;
+          break outerB;
         }
 
         // Try non-aligned (P = 1, 2, or 3)
@@ -340,9 +342,11 @@ export function encode(
           buffer.set(original.subarray(safeStart, safeStart + k), encodedOffset);
           encodedOffset += k;
           inputOffset += P + k;
-          continue;
+          handledB = true;
+          break outerB;
         }
       }
+      if (handledB) continue;
 
       // (C) Block-aligned 4-byte passthrough
       if (safeLength >= 4 && safeBytesAtEnd === 4) {
