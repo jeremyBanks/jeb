@@ -1073,10 +1073,11 @@ export function decode(encoded: Uint8Array): Uint8Array {
       i += rawLen;
       i += paddingAfter; // skip padding-after
 
-      // Consume any '#' alignment padding that follows in concatenatable output.
-      // These are emitted by the encoder when the long escape block ends at a
-      // non-5-aligned position, to restore block alignment for concatenation.
-      while (i < encoded.length && encoded[i] === PAD_HASH) i++;
+      // Consume '#' alignment padding emitted after the long escape block to
+      // restore 5-char alignment in concatenatable mode. Stop at the next
+      // 5-boundary so we don't consume hash-padding that belongs to the next block.
+      const alignTarget = i % 5 === 0 ? i : i + (5 - i % 5);
+      while (i < alignTarget && i < encoded.length && encoded[i] === PAD_HASH) i++;
 
       digits = []; knownHighBytes = [];
       continue;
