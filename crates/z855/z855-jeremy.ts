@@ -873,13 +873,20 @@ export function encode(
   // Concatenatable mode: insert hash padding before any reserved tail bytes.
   if (concatenatable && reservedTail > 0) {
     // Partial-block encoding: emit [###...][partial Z85 chars] aligned to 5.
-    // The hashes + partial chars must together form a 5-char block starting at
-    // a 5-aligned boundary, so pad with hashes to reach the next 5-boundary first.
+    // Must start at a 5-aligned boundary. If the loop left output mid-block,
+    // pad to the next 5-boundary first (those filler hashes form their own block
+    // or extend to fill a partial block — the decoder handles them via the else-if
+    // branch below, which splices hashes inline before the last `rem` bytes).
+    // Here we just ensure the hash+partial group lands on a 5-boundary.
     const remBefore = outOff % 5;
+    if (remBefore > 0) {
+      // Align to next 5-boundary with hashes, then splice: handled by else-if below.
+      // Instead, emit enough hashes now to reach alignment.
+      const fillCount = 5 - remBefore;
+      for (let k = 0; k < fillCount; k++) emit(PAD_HASH);
+    }
     const partialChars = reservedTail + 1;
-    const hashCount = remBefore === 0
-      ? 5 - partialChars           // already aligned: fill up to 5
-      : (5 - remBefore) + (5 - partialChars); // pad to next boundary, then fill
+    const hashCount = 5 - partialChars;
     for (let k = 0; k < hashCount; k++) emit(PAD_HASH);
     let pv = 0;
     for (let k = 0; k < reservedTail; k++) pv = pv * 256 + original[stopAt + k];
