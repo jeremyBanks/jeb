@@ -6,10 +6,10 @@
 //!
 //! Rules (Conway in 1D, 2 neighbors only, max count=2):
 //!   Born:    count == 2 (both neighbors alive)
-//!   Survive: count == 1 or count == 2
-//!   Die:     count == 0
+//!   Survive: count == 2 only (maps from Conway's "2 or 3"; 3 is unreachable in 1D)
+//!   Die:     count == 0 or 1
 //!
-//! Initial state: 0b00011000 = cells 3,4 alive (two in the middle of 8)
+//! Initial state: alternating 10101010 — oscillates with period 2
 //!
 //! Memory layout:
 //!   0xC000 = current row (8 bytes: cells 0-7)
@@ -91,9 +91,9 @@ fn build_rom() -> Vec<u8> {
         .inst(OR(C))
         .jr_cond(if_NZ, "CLR_BG");
 
-    // Initialize 1D grid: cells 3,4 alive (0b00011000)
+    // Initialize 1D grid: alternating 10101010
     for i in 0..CELLS {
-        let val: u8 = if i == 3 || i == 4 { 1 } else { 0 };
+        let val: u8 = if i % 2 == 0 { 1 } else { 0 };
         asm.inst(LD_16_IMMEDIATE(HL, ROW_BASE + i as u16))
             .inst(LD_8_IMMEDIATE(A, val))
             .inst(LD_8_INTERNAL(AT_HL, A));
@@ -161,19 +161,17 @@ fn build_rom() -> Vec<u8> {
     // --- EVOLVE: compute next generation ---
     // For each cell i (0..7): neighbors are (i-1) mod 8 and (i+1) mod 8
     // count = left + right
-    // next = if count==2 { 1 } else if count==1 { alive } else { 0 }
+    // next = if count==2 { 1 } else { 0 }
     // Write result to scratch at 0xC020..0xC027
     let scratch: u16 = 0xC020;
 
     for i in 0..CELLS {
         let left  = ROW_BASE + ((i + CELLS - 1) % CELLS) as u16;
         let right = ROW_BASE + ((i + 1) % CELLS) as u16;
-        let cur   = ROW_BASE + i as u16;
+
         let dst   = scratch + i as u16;
 
-        let lbl_born   = format!("BORN_{}", i);
-        let lbl_check2 = format!("CHK2_{}", i);
-        let lbl_die    = format!("DIE_{}", i);
+        let lbl_alive  = format!("ALIVE_{}", i);
         let lbl_end    = format!("END_{}", i);
 
         // count = left + right
@@ -181,30 +179,20 @@ fn build_rom() -> Vec<u8> {
             .inst(LD_16_IMMEDIATE(HL, right))
             .inst(ADD(AT_HL));                      // A = left + right (count)
 
-        // if count == 2: born/survive (write 1)
+        // Rule: alive iff count == 2, dead otherwise
         asm.inst(CP_IMMEDIATE(2));
-        asm.jp_cond(if_Z, &lbl_born);
+        asm.jp_cond(if_Z, &lbl_alive);
 
-        // if count == 1: survive only if alive
-        asm.inst(CP_IMMEDIATE(1));
-        asm.jp_cond(if_NZ, &lbl_die);              // count == 0 → die
-
-        // count == 1: check alive
-        asm.label(&lbl_check2);
-        asm.inst(LD_8_FROM_MEMORY_IMMEDIATE(cur)); // A = current state
-        asm.inst(CP_IMMEDIATE(1));
-        asm.jp_cond(if_NZ, &lbl_die);             // dead with 1 neighbor → stays dead
-
-        // survive (count=1, alive=1)
-        asm.label(&lbl_born);
+        // count != 2: write 0
         asm.inst(LD_16_IMMEDIATE(HL, dst))
-            .inst(LD_8_IMMEDIATE(A, 1))
+            .inst(LD_8_IMMEDIATE(A, 0))
             .inst(LD_8_INTERNAL(AT_HL, A));
         asm.jp(&lbl_end);
 
-        asm.label(&lbl_die);
+        // count == 2: write 1
+        asm.label(&lbl_alive);
         asm.inst(LD_16_IMMEDIATE(HL, dst))
-            .inst(LD_8_IMMEDIATE(A, 0))
+            .inst(LD_8_IMMEDIATE(A, 1))
             .inst(LD_8_INTERNAL(AT_HL, A));
 
         asm.label(&lbl_end);

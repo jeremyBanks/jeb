@@ -270,9 +270,11 @@ export function encode(
         const prefix = new TextEncoder().encode(`0${ESCAPE_MANY}`);
         buffer.set(prefix, encodedOffset);
         encodedOffset += prefix.length;
-        buffer.set(original.subarray(inputOffset, inputOffset + safeLength), encodedOffset);
+        // The safe bytes start at (inputOffset + BLOCK_SIZE_ORIGINAL - safeBytesAtEnd)
+        const safeStart = inputOffset + BLOCK_SIZE_ORIGINAL - safeBytesAtEnd;
+        buffer.set(original.subarray(safeStart, original.length), encodedOffset);
         encodedOffset += safeLength;
-        inputOffset += safeLength;
+        inputOffset = original.length;
         break;
       }
 
