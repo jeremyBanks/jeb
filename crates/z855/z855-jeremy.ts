@@ -1055,6 +1055,11 @@ export function decode(encoded: Uint8Array): Uint8Array {
       i += rawLen;
       i += paddingAfter; // skip padding-after
 
+      // Consume any '#' alignment padding that follows in concatenatable output.
+      // These are emitted by the encoder when the long escape block ends at a
+      // non-5-aligned position, to restore block alignment for concatenation.
+      while (i < encoded.length && encoded[i] === PAD_HASH) i++;
+
       digits = []; knownHighBytes = [];
       continue;
     }
