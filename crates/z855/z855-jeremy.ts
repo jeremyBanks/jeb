@@ -667,7 +667,10 @@ export function encode(
     // Encodes using |: [offset-base42?][length-base42]|[padding][raw-bytes][padding]
     //
     // Special case: 0| (rest-of-input, non-concatenatable only).
-    if (hasLongEscape && safeLen >= 8 && safeBytesAtEnd === 4) {
+    // Long escape is disabled in concatenatable mode: its variable-length output
+    // is incompatible with the reserved-tail partial-block mechanism. The B/C/D/E
+    // paths handle all cases correctly in concatenatable mode.
+    if (hasLongEscape && safeLen >= 8 && safeBytesAtEnd === 4 && !concatenatable) {
       const safeStart = inOff; // block-aligned
       const rawLen = safeLen;
 
@@ -706,15 +709,6 @@ export function encode(
           for (let k = 0; k < offset; k++) emit(0x2e);       // '.' padding before
           emitBytes(original, safeStart, rawLen);              // raw bytes
           for (let k = 0; k < paddingAfter; k++) emit(0x2e); // '.' padding after
-
-          // In concatenatable mode, the long escape block has variable output length
-          // independent of z855OutputLen(). Emit '#' padding immediately after the
-          // block to restore 5-char alignment, so concatenated segments stay aligned.
-          if (concatenatable) {
-            const rem = outOff % 5;
-            if (rem !== 0) for (let k = 0; k < 5 - rem; k++) emit(PAD_HASH);
-            reservedTail = 0; // invalidated; post-loop splice must not fire
-          }
 
           inOff = safeStart + rawLen;
           continue mainLoop;
@@ -853,12 +847,24 @@ export function encode(
 
   // Concatenatable mode: insert hash padding before any reserved tail bytes.
   if (concatenatable && reservedTail > 0) {
+    // Partial-block encoding: emit [###...][partial Z85 chars] in a 5-char block.
+    // If the loop left output at a non-5-aligned offset, first splice hashes before
+    // the dangling bytes to complete that block (same as the else-if branch below),
+    // then emit the reserved-tail partial block.
     const remBefore = outOff % 5;
-    const hashCount = remBefore === 0 ? 5 - (reservedTail + 1) : 0;
+    if (remBefore > 0) {
+      const hashCount = 5 - remBefore;
+      const tail = buf.slice(outOff - remBefore, outOff);
+      outOff -= remBefore;
+      for (let k = 0; k < hashCount; k++) emit(PAD_HASH);
+      for (let k = 0; k < tail.length; k++) emit(tail[k]);
+    }
+    const partialChars = reservedTail + 1;
+    const hashCount = 5 - partialChars;
     for (let k = 0; k < hashCount; k++) emit(PAD_HASH);
     let pv = 0;
     for (let k = 0; k < reservedTail; k++) pv = pv * 256 + original[stopAt + k];
-    const pd = encodePartial(pv, reservedTail + 1);
+    const pd = encodePartial(pv, partialChars);
     for (let k = 0; k < pd.length; k++) emit(pd[k]);
   } else if (concatenatable) {
     // No reserved tail but output might not be 5-aligned: insert hash padding.
@@ -1040,9 +1046,8 @@ export function decode(encoded: Uint8Array): Uint8Array {
       i += rawLen;
       i += paddingAfter; // skip padding-after
 
-      // Consume any '#' alignment padding that follows in concatenatable output.
-      // These are emitted by the encoder when the long escape block ends at a
-      // non-5-aligned position, to restore block alignment for concatenation.
+      // Consume any '#' alignment padding following a long escape in non-concatenatable
+      // output (none expected in concatenatable mode since long escape is disabled there).
       while (i < encoded.length && encoded[i] === PAD_HASH) i++;
 
       digits = []; knownHighBytes = [];
