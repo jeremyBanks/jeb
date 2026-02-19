@@ -159,7 +159,8 @@ export function encode(
     CANONICAL_ENCODING,
     opts,
   );
-  const bufferSize = Math.ceil(original.length / 4) * 5;
+  // Allocate buffer with some extra space for escapes and padding
+  const bufferSize = Math.ceil(original.length / 4) * 5 + 10;
   const buffer = new Uint8Array(bufferSize);
 
   let inputOffset = 0;
