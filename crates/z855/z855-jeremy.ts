@@ -149,6 +149,72 @@ import { assert } from "jsr:@std/assert";
 import { parseArgs } from "jsr:@std/cli/parse-args";
 import { readAll } from "jsr:@std/io";
 
+// ─── Constants ───
+
+const z85 = "" +
+  "0123456789abcdefghijk" +
+  "lmnopqrstuvwxyzABCDEF" +
+  "GHIJKLMNOPQRSTUVWXYZ." +
+  "-:+=^!/*?&<>()[]{}@%$" +
+  "#";
+const Z85_DIGITS = [...z85];
+const Z85_DIGIT_BYTES = new TextEncoder().encode(z85);
+const Z85_VALUES = new Map(
+  Z85_DIGITS.map((digit, index) => [digit, index]),
+);
+const Z85_VALUES_BYTES = new Map(
+  Z85_DIGIT_BYTES.entries().map(([index, byte]) => [byte, index]),
+);
+
+const BLOCK_SIZE_ORIGINAL = 4;
+
+const ESCAPE_4 = "_";  // Jeremy's new assignment (was `,` in production)
+const ESCAPE_5 = ",";  // Jeremy's new assignment (was `;` in production)
+const ESCAPE_6 = "~";  // Jeremy's new assignment (was `_` in production)
+const ESCAPE_7 = ";";  // Jeremy's new assignment (was `~` in production)
+const ESCAPE_MANY = "|";
+const PAD_HASH = 0x23;  // '#' — padding for concatenatable mode
+
+/** Options for encoding using Z855. (Decoders support all options without requiring any configuration.) */
+export interface EncodeOptions {
+  /** Whether to add padding to support concatenating multiple encoded values together. */
+  concatenatable?: boolean;
+  /** Bytes that are considered "safe" and will not be escaped beyond the Z85 alphabet. */
+  extraSafeBytes?: Iterable<string | number>;
+  /** Sequences of bytes that are considered "unsafe" and will not be included in escapes. */
+  unsafeSequences?: Iterable<string | Iterable<number>>;
+  /** The maximum size in bytes of a raw escape block. */
+  maxRawLength?: number;
+}
+
+/** Canonical Z855 encoding. */
+export const CANONICAL_ENCODING: Required<EncodeOptions> = {
+  concatenatable: false,
+  extraSafeBytes: "_,~;|",
+  maxRawLength: 64 * 1024,
+  unsafeSequences: [],
+};
+
+/** Concatenatable Z855 encoding. */
+export const CONCATENATABLE_ENCODING: Required<EncodeOptions> = {
+  concatenatable: true,
+  extraSafeBytes: "_,~;|",
+  maxRawLength: 64 * 1024,
+  unsafeSequences: [],
+};
+
+/**
+ * Printable ASCII Z855 encoding with terminal-size raw blocks and markdown
+ * code fence escaping. Looks nice when split into 80 character lines, if you
+ * strip all newlines before decoding.
+ */
+export const PRINTABLE_ASCII_ENCODING: Required<EncodeOptions> = {
+  concatenatable: true,
+  extraSafeBytes: `_,~;| "'\`\\`,
+  maxRawLength: 64 * 24,
+  unsafeSequences: ["```"],
+};
+
 // ─── Alignment helpers ───
 
 /**
@@ -283,16 +349,6 @@ function encodeBase42(n: number): string[] {
 }
 
 /**
- * Build the full prefix string array for a `|` long escape.
- * For length > 15, an offset may be prepended (offset encoded first, then length).
- */
-function encodeLongPrefix(length: number, offset: number): string[] {
-  const lenChars = encodeBase42(length);
-  if (length <= 15 || offset === 0) return lenChars;
-  return [...encodeBase42(offset), ...lenChars];
-}
-
-/**
  * Find the best offset for a long-escape block using the bit-reversal sort key.
  * We pick the offset whose sort key (4-tuple of bigints) is lexicographically smallest.
  */
@@ -367,7 +423,7 @@ export function encode(
   const hasLongEscape = safeBytes[ESCAPE_MANY.charCodeAt(0)] && maxRawLength >= 8;
 
   // Allocate output buffer; may be grown for the 0| escape.
-  let buf = new Uint8Array(Math.ceil(original.length / 4) * 5 + 16);
+  let buf = new Uint8Array(Math.ceil(original.length / BLOCK_SIZE_ORIGINAL) * 5 + 16);
   let outOff = 0;   // bytes written so far into buf
   let inOff  = 0;   // bytes consumed from original
 
@@ -419,7 +475,7 @@ export function encode(
     // Skip passthrough logic if last byte of block isn't safe.
     if (!safeBytes[original[inOff + 3]]) {
       for (let k = 0; k < 5; k++) emit(blockDigits[k]);
-      inOff += 4;
+      inOff += BLOCK_SIZE_ORIGINAL;
       continue;
     }
 
@@ -431,7 +487,7 @@ export function encode(
     }
 
     // Count safe bytes immediately following this block (capped at maxRawLength).
-    const afterBlock = inOff + 4;
+    const afterBlock = inOff + BLOCK_SIZE_ORIGINAL;
     const afterBlockEnd = Math.min(original.length, inOff + maxRawLength);
     let safeBytesFollowing = 0;
     for (let j = afterBlock; j < afterBlockEnd && safeBytesFollowing + safeBytesAtEnd < maxRawLength; j++) {
@@ -444,11 +500,11 @@ export function encode(
 
     // ── (A) Long passthrough: 8+ bytes ──────────────────────────────────────
     //
-    // Only block-aligned (safeBytesAtEnd === 4): all 4 bytes of this block are
+    // Only block-aligned (safeBytesAtEnd === BLOCK_SIZE_ORIGINAL): all bytes of this block are
     // safe, so the raw run starts at inOff.  Non-aligned cases fall through to (B).
     //
     // Special case: 0| (rest-of-input, non-concatenatable only).
-    if (hasLongEscape && safeLen >= 8 && safeBytesAtEnd === 4) {
+    if (hasLongEscape && safeLen >= 8 && safeBytesAtEnd === BLOCK_SIZE_ORIGINAL) {
       const safeStart = inOff; // block-aligned
       const rawLen = safeLen;
 
@@ -552,10 +608,10 @@ export function encode(
     }
 
     // ── (C) Block-aligned 4-byte passthrough ────────────────────────────────
-    if (hasEscape4 && safeBytesAtEnd === 4) {
+    if (hasEscape4 && safeBytesAtEnd === BLOCK_SIZE_ORIGINAL) {
       emitStr(ESCAPE_4);
-      emitBytes(original, inOff, 4);
-      inOff += 4;
+      emitBytes(original, inOff, BLOCK_SIZE_ORIGINAL);
+      inOff += BLOCK_SIZE_ORIGINAL;
       continue;
     }
 
@@ -600,7 +656,7 @@ export function encode(
         // Reconstruct after-block value and emit its last (5-p) Z85 chars.
         const afterBytes: number[] = [];
         for (let k = 0; k < p; k++) afterBytes.push(original[passStart + numKnownLow + k]);
-        for (let k = 0; k < 4 - p; k++) afterBytes.push(original[inOff + 4 + p + k]);
+        for (let k = 0; k < BLOCK_SIZE_ORIGINAL - p; k++) afterBytes.push(original[inOff + BLOCK_SIZE_ORIGINAL + p + k]);
         const afterVal = bytesToValue(afterBytes);
         const afterDig = valueToDigits(afterVal);
         for (let k = p; k < 5; k++) emit(afterDig[k]);
@@ -612,7 +668,7 @@ export function encode(
 
     // ── (E) Standard Z85 ────────────────────────────────────────────────────
     for (let k = 0; k < 5; k++) emit(blockDigits[k]);
-    inOff += 4;
+    inOff += BLOCK_SIZE_ORIGINAL;
   }
 
   // Concatenatable mode: insert hash padding before any reserved tail bytes.
@@ -867,9 +923,6 @@ export function decode(encoded: Uint8Array): Uint8Array {
 
 /** Entry point for the command-line interface. */
 export async function main() {
-  // TODO: add encode-lines which uses PRINTABLE_ASCII_ENCODING and splits into
-  // 80-character line-delimited blocks, and decode-lines which strips newlines
-  // when decoding.
   if (Deno.args[0] === "encode") {
     const args = parseArgs(Deno.args.slice(1), {
       boolean: ["concatenatable"],
@@ -883,7 +936,7 @@ export async function main() {
     });
     const opts = {
       concatenatable: args.concatenatable,
-      extraSafeCharacters: args["extra-safe-characters"],
+      extraSafeBytes: args["extra-safe-characters"],
       maxRawLength: Number(args["max-raw-length"]),
     };
     assert(
@@ -900,116 +953,33 @@ export async function main() {
     );
     assert(opts.maxRawLength > 0, "max-raw-length must be greater than 0");
     const stdin = await readAll(Deno.stdin);
-    await Deno.stdout.write(encode(stdin, {
-      concatenatable: args.concatenatable,
-    }));
+    await Deno.stdout.write(encode(stdin, opts));
+  } else if (Deno.args[0] === "encode-lines") {
+    const stdin = await readAll(Deno.stdin);
+    const encoded = textEncode(stdin, PRINTABLE_ASCII_ENCODING);
+    // Split into 80-character lines
+    const lines: string[] = [];
+    for (let i = 0; i < encoded.length; i += 80) {
+      lines.push(encoded.slice(i, i + 80));
+    }
+    await Deno.stdout.write(new TextEncoder().encode(lines.join('\n') + '\n'));
   } else if (Deno.args[0] === "decode") {
     const stdin = await readAll(Deno.stdin);
     await Deno.stdout.write(decode(stdin));
+  } else if (Deno.args[0] === "decode-lines") {
+    const stdin = await readAll(Deno.stdin);
+    const text = new TextDecoder().decode(stdin);
+    // Strip all newlines before decoding
+    const stripped = text.replace(/\n/g, '');
+    const decoded = textDecode(stripped);
+    await Deno.stdout.write(decoded);
   } else {
     await Deno.stderr.write(new TextEncoder().encode(
-      "Usage: z855 encode|decode < input > output",
+      "Usage: z855 encode|decode|encode-lines|decode-lines < input > output\n",
     ));
     return 2;
   }
 }
-
-// Returns a string that can be used to rank how-aligned a given number is, implicitly
-// tiebreaking in favor of lower numbers, with 0 being the maximally-aligned value.
-function alignmentKey(n: number): string {
-  if (n === 0) return "";
-  let key = "";
-  let r = 0;
-  let prevDist = 0;
-  for (let k = 0;; k++) {
-    r |= ((n >> k) & 1) << k;
-    const pow = 1 << (k + 1);
-    const dist = r < pow - r ? r : pow - r;
-    key += dist > prevDist ? "1" : "0";
-    prevDist = dist;
-    if (r === n && dist === n) break;
-  }
-  return key;
-}
-
-function alignmentRank(n: number): string {
-  return (
-    parseInt([...(n | 0).toString(2).padStart(32, "0")].reverse().join(""), 2)
-      .toString(16)
-  ).padStart(8, "0");
-}
-
-/** Options for encoding using Z855. (Decoders support all options without requiring any configuration.) */
-export interface EncodeOptions {
-  /** Whether to add padding to support concatenating multiple encoded values together. */
-  concatenatable?: boolean;
-  /** Bytes that are considered "safe" and will not be escaped beyond the Z85 alphabet. */
-  extraSafeBytes?: Iterable<string | number>;
-  /** Sequences of bytes that are considered "unsafe" and will not be included in escapes. */
-  unsafeSequences?: Iterable<string | Iterable<number>>;
-  /** The maximum size in bytes of a raw escape block. */
-  maxRawLength?: number;
-}
-
-const z85 = "" +
-  "0123456789abcdefghijk" +
-  "lmnopqrstuvwxyzABCDEF" +
-  "GHIJKLMNOPQRSTUVWXYZ." +
-  "-:+=^!/*?&<>()[]{}@%$" +
-  "#";
-const Z85_DIGITS = [...z85];
-const Z85_DIGIT_BYTES = new TextEncoder().encode(z85);
-const Z85_VALUES = new Map(
-  Z85_DIGITS.map((digit, index) => [digit, index]),
-);
-const Z85_VALUES_BYTES = new Map(
-  Z85_DIGIT_BYTES.entries().map(([index, byte]) => [byte, index]),
-);
-
-const BLOCK_SIZE_ORIGINAL = 4;
-const BLOCK_SIZE_ENCODED = 5;
-
-const ESCAPE_4 = "_";  // Jeremy's new assignment (was `,` in production)
-const ESCAPE_5 = ",";  // Jeremy's new assignment (was `;` in production)
-const ESCAPE_6 = "~";  // Jeremy's new assignment (was `_` in production)
-const ESCAPE_7 = ";";  // Jeremy's new assignment (was `~` in production)
-const ESCAPE_MANY = "|";
-const PAD_HASH = 0x23;  // '#' — padding for concatenatable mode
-const Z855_ESCAPE_CHARACTERS = [
-  ESCAPE_4,
-  ESCAPE_5,
-  ESCAPE_6,
-  ESCAPE_7,
-  ESCAPE_MANY,
-].join("");
-
-/** Canonical Z855 encoding. */
-export const CANONICAL_ENCODING: Required<EncodeOptions> = {
-  concatenatable: false,
-  extraSafeBytes: "_,~;|",
-  maxRawLength: 64 * 1024,
-  unsafeSequences: [],
-};
-
-/** Concatenatable Z855 encoding. */
-export const CONCATENATABLE_ENCODING: Required<EncodeOptions> = {
-  concatenatable: true,
-  extraSafeBytes: "_,~;|",
-  maxRawLength: 64 * 1024,
-  unsafeSequences: [],
-};
-
-/**
- * Printable ASCII Z855 encoding with terminal-size raw blocks and markdown
- * code fence escaping. Looks nice when split into 80 character lines, if you
- * strip all newlines before decoding.
- */
-export const PRINTABLE_ASCII_ENCODING: Required<EncodeOptions> = {
-  concatenatable: true,
-  extraSafeBytes: `_,~;| "'\`\\`,
-  maxRawLength: 64 * 24,
-  unsafeSequences: ["```"],
-};
 
 /** Encode a Uint8Array to a string using Z855. */
 export function textEncode(
@@ -1053,16 +1023,6 @@ function digitsToValue(digits: number[]) {
   return v <= 0xFFFFFFFF ? v : null;
 }
 
-/** Convert a 32-bit unsigned integer to a 5-character Z85 string. */
-function valueToChars(v: number) {
-  const digits = valueToDigits(v);
-  return Array.from(digits).map((byteVal) => {
-    const idx = Z85_VALUES_BYTES.get(byteVal);
-    if (idx === undefined) throw new Error("invalid digit byte");
-    return Z85_DIGITS[idx];
-  }).join("");
-}
-
 /** Convert a 32-bit unsigned integer to 4 bytes (big-endian). */
 function valueToBytes(v: number) {
   return [
@@ -1076,160 +1036,6 @@ function valueToBytes(v: number) {
 /** Convert 4 bytes (big-endian) to a 32-bit unsigned integer. */
 function bytesToValue(b: number[]) {
   return ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) >>> 0;
-}
-
-// ─── Core solver ───
-
-/**
- * Find all 32-bit values consistent with the given constraints.
- *
- * @param {Array<string|null>} chars - Length-5 array.
- *   Each element is a Z85 character (known) or null (unknown).
- * @param {Array<number|null>} bytes - Length-4 array.
- *   Each element is a byte value 0–255 (known) or null (unknown).
- *
- * @returns {number[]} Sorted ascending array of all valid 32-bit values.
- */
-function findAllValues(chars: (string | null)[], bytes: (number | null)[]) {
-  if (chars.length !== 5) throw new Error("chars must have length 5");
-  if (bytes.length !== 4) throw new Error("bytes must have length 4");
-
-  // Count known values
-  const knownCharCount = chars.filter((c) => c !== null).length;
-  const knownByteCount = bytes.filter((b) => b !== null).length;
-  const totalKnown = knownCharCount + knownByteCount;
-
-  if (totalKnown < 3) {
-    throw new Error(
-      `At least 3 known values required (got ${knownCharCount} chars + ${knownByteCount} bytes = ${totalKnown}).`,
-    );
-  }
-
-  // Validate known chars
-  for (let i = 0; i < 5; i++) {
-    if (chars[i] !== null && !Z85_VALUES.has(chars[i]!)) {
-      throw new Error(`Invalid Z85 char at position ${i}: '${chars[i]}'`);
-    }
-  }
-
-  // Validate known bytes
-  for (let j = 0; j < 4; j++) {
-    if (bytes[j] !== null && (bytes[j]! < 0 || bytes[j]! > 255)) {
-      throw new Error(`Invalid byte value at position ${j}: ${bytes[j]}`);
-    }
-  }
-
-  // Enumerate whichever side has fewer unknowns.
-  const unknownChars = 5 - knownCharCount;
-  const unknownBytes = 4 - knownByteCount;
-
-  // Optimization note: a smarter version could use range + modular arithmetic
-  // to avoid enumeration entirely. For now we just pick the smaller search space.
-  if (unknownBytes <= unknownChars) {
-    return enumerateBytes(chars, bytes);
-  } else {
-    return enumerateChars(chars, bytes);
-  }
-}
-
-/**
- * Enumerate all possible byte combinations, filter by char constraints.
- */
-function enumerateBytes(chars: (string | null)[], bytes: (number | null)[]) {
-  const unknownPositions = [];
-  const template = [...bytes];
-  for (let j = 0; j < 4; j++) {
-    if (bytes[j] === null) {
-      unknownPositions.push(j);
-      template[j] = 0;
-    }
-  }
-
-  const numUnknown = unknownPositions.length;
-  const totalCombinations = Math.pow(256, numUnknown);
-  const results = [];
-
-  for (let combo = 0; combo < totalCombinations; combo++) {
-    // Fill in unknown byte positions from combo (treated as base-256 digits).
-    let remaining = combo;
-    for (let u = numUnknown - 1; u >= 0; u--) {
-      template[unknownPositions[u]] = remaining & 0xFF;
-      remaining = remaining >>> 8;
-    }
-
-    const v = bytesToValue(template.filter((b) => b !== null) as number[]);
-
-    // Check against known characters.
-    // valueToDigits() returns Uint8Array of char bytes; compare with char codes.
-    const digits = valueToDigits(v);
-    let match = true;
-    for (let i = 0; i < 5; i++) {
-      if (chars[i] !== null && digits[i] !== chars[i]!.charCodeAt(0)) {
-        match = false;
-        break;
-      }
-    }
-
-    if (match) results.push(v);
-  }
-
-  results.sort((a, b) => a - b);
-  return results;
-}
-
-/**
- * Enumerate all possible char digit combinations, filter by byte constraints.
- */
-function enumerateChars(chars: (string | null)[], bytes: (number | null)[]) {
-  const unknownPositions = [];
-  const template = chars.map((c) => c !== null ? Z85_VALUES.get(c)! : 0);
-  for (let i = 0; i < 5; i++) {
-    if (chars[i] === null) {
-      unknownPositions.push(i);
-    }
-  }
-
-  const numUnknown = unknownPositions.length;
-  const totalCombinations = Math.pow(85, numUnknown);
-  const results = [];
-
-  for (let combo = 0; combo < totalCombinations; combo++) {
-    // Fill in unknown char positions from combo (treated as base-85 digits).
-    let remaining = combo;
-    for (let u = numUnknown - 1; u >= 0; u--) {
-      template[unknownPositions[u]] = remaining % 85;
-      remaining = Math.floor(remaining / 85);
-    }
-
-    const v = digitsToValue(template);
-
-    // Skip values that overflow 32 bits.
-    if (v === null) continue;
-
-    // Check against known bytes.
-    const vBytes = valueToBytes(v);
-    let match = true;
-    for (let j = 0; j < 4; j++) {
-      if (bytes[j] !== null && vBytes[j] !== bytes[j]!) {
-        match = false;
-        break;
-      }
-    }
-
-    if (match) results.push(v);
-  }
-
-  results.sort((a, b) => a - b);
-  return results;
-}
-
-/**
- * Convenience: find just the minimum valid value.
- * Returns null if no valid value exists.
- */
-function findMinValue(chars: (string | null)[], bytes: (number | null)[]) {
-  const all = findAllValues(chars, bytes);
-  return all.length > 0 ? all[0] : null;
 }
 
 if (import.meta.main) {
