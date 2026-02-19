@@ -888,14 +888,9 @@ export function encode(
     // If the loop left output at a non-5-aligned offset, first splice hashes before
     // the dangling bytes to complete that block (same as the else-if branch below),
     // then emit the reserved-tail partial block.
-    const remBefore = outOff % 5;
-    if (remBefore > 0) {
-      const hashCount = 5 - remBefore;
-      const tail = buf.slice(outOff - remBefore, outOff);
-      outOff -= remBefore;
-      for (let k = 0; k < hashCount; k++) emit(PAD_HASH);
-      for (let k = 0; k < tail.length; k++) emit(tail[k]);
-    }
+    // Non-aligned passthroughs are disabled in concatenatable mode, so the main
+    // loop always exits at outOff % 5 === 0. Assert this holds.
+    assert(outOff % 5 === 0, `concat mode: unexpected outOff alignment ${outOff % 5}`);
     const partialChars = reservedTail + 1;
     const hashCount = 5 - partialChars;
     for (let k = 0; k < hashCount; k++) emit(PAD_HASH);
