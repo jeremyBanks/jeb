@@ -942,7 +942,7 @@ function findAllValues(chars: (string | null)[], bytes: (number | null)[]) {
 
   // Validate known chars
   for (let i = 0; i < 5; i++) {
-    if (chars[i] !== null && !Object.hasOwn(Z85_VALUES, chars[i]!)) {
+    if (chars[i] !== null && !Z85_VALUES.has(chars[i]!)) {
       throw new Error(`Invalid Z85 char at position ${i}: '${chars[i]}'`);
     }
   }
@@ -995,10 +995,11 @@ function enumerateBytes(chars: (string | null)[], bytes: (number | null)[]) {
     const v = bytesToValue(template.filter((b) => b !== null) as number[]);
 
     // Check against known characters.
+    // valueToDigits() returns Uint8Array of char bytes; compare with char codes.
     const digits = valueToDigits(v);
     let match = true;
     for (let i = 0; i < 5; i++) {
-      if (chars[i] !== null && digits[i] !== Z85_VALUES.get(chars[i]!)) {
+      if (chars[i] !== null && digits[i] !== chars[i]!.charCodeAt(0)) {
         match = false;
         break;
       }
