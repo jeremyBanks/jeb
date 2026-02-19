@@ -688,10 +688,14 @@ export function encode(
         const paddingNeeded = envelopeLen - ourLenNoPad;
 
         // Find best alignment offset via bit-reversal sort key.
-        const offset = paddingNeeded >= 2
+        // Offset is only encodable (and thus decodable) when rawLen > 15,
+        // because the decoder distinguishes offset prefix from length prefix
+        // only when the length requires multiple base-42 digits.
+        const rawOffset = paddingNeeded >= 2
           ? findBestOffset(outOff, lenPrefix.length, rawLen, paddingNeeded)
           : 0;
-        const offsetPrefix = (rawLen > 15 && offset > 0) ? encodeBase42(offset) : [];
+        const offsetPrefix = (rawLen > 15 && rawOffset > 0) ? encodeBase42(rawOffset) : [];
+        const offset = offsetPrefix.length > 0 ? rawOffset : 0;
 
         if (offsetPrefix.length + offset <= paddingNeeded) {
           const paddingAfter = paddingNeeded - offsetPrefix.length - offset;
@@ -702,6 +706,15 @@ export function encode(
           for (let k = 0; k < offset; k++) emit(0x2e);       // '.' padding before
           emitBytes(original, safeStart, rawLen);              // raw bytes
           for (let k = 0; k < paddingAfter; k++) emit(0x2e); // '.' padding after
+
+          // In concatenatable mode, the long escape block has variable output length
+          // independent of z855OutputLen(). Emit '#' padding immediately after the
+          // block to restore 5-char alignment, so concatenated segments stay aligned.
+          if (concatenatable) {
+            const rem = outOff % 5;
+            if (rem !== 0) for (let k = 0; k < 5 - rem; k++) emit(PAD_HASH);
+            reservedTail = 0; // invalidated; post-loop splice must not fire
+          }
 
           inOff = safeStart + rawLen;
           continue mainLoop;
@@ -1027,6 +1040,11 @@ export function decode(encoded: Uint8Array): Uint8Array {
       i += rawLen;
       i += paddingAfter; // skip padding-after
 
+      // Consume any '#' alignment padding that follows in concatenatable output.
+      // These are emitted by the encoder when the long escape block ends at a
+      // non-5-aligned position, to restore block alignment for concatenation.
+      while (i < encoded.length && encoded[i] === PAD_HASH) i++;
+
       digits = []; knownHighBytes = [];
       continue;
     }
@@ -1165,7 +1183,7 @@ function extendedBlockValue(highDigits,knownLowBytes){let base=0;for(const d of 
 function reconstructAfterBlock(knownHighBytes,lowDigitsVal,numLowDigits){const P=knownHighBytes.length;let highPart=0;for(const b of knownHighBytes)highPart=highPart*256+b;const shift=8*(4-P);const rangeStart=(highPart<<shift)>>>0;const modulus=Math.pow(85,numLowDigits);const rem=rangeStart%modulus;let candidate=rem<=lowDigitsVal?rangeStart-rem+lowDigitsVal:rangeStart-rem+modulus+lowDigitsVal;return candidate>>>0}
 function digitsToValue(digits){let v=0;for(let i=0;i<digits.length;i++)v=v*85+digits[i];return v<=0xFFFFFFFF?v:null}
 function valueToBytes(v){return[(v>>>24)&0xFF,(v>>>16)&0xFF,(v>>>8)&0xFF,v&0xFF]}
-function decode(enc){const encoded=new TextEncoder().encode(enc);if(encoded.length===0)return new Uint8Array(0);const out=[];let i=0,digits=[],knownHighBytes=[];while(i<encoded.length){const code=encoded[i];if(code===PAD_HASH&&digits.length===0&&i%5===0&&encoded.length-i>=5){let h=0;while(h<3&&encoded[i+h]===PAD_HASH)h++;if(h>0&&encoded[i+h]!==PAD_HASH){const numChars=5-h,numBytes=numChars-1;let value=0;for(let k=0;k<numChars;k++){const d=z85Map.get(encoded[i+h+k]);if(d===undefined)throw new Error("invalid char in hash block");value=value*85+d}const maxVal=[0,0xff,0xffff,0xffffff][numBytes];if(value>maxVal)throw new Error("overflow in hash block");for(let k=numBytes-1;k>=0;k--)out.push((value>>>(k*8))&0xff);i+=5;digits=[];knownHighBytes=[];continue}}if(code===ESC_MANY){if(digits.length===0)throw new Error("'|' with no prefix digits");i++;const{offset,length:rawLen}=decodeLongPrefix(digits);if(rawLen>=1&&rawLen<=7)throw new Error(\`invalid | length \${rawLen}\`);if(rawLen===0){for(;i<encoded.length;i++)out.push(encoded[i]);digits=[];knownHighBytes=[];break}const prefixLen=digits.length;const envelopeLen=z855OutputLen(rawLen);const paddingTotal=envelopeLen-prefixLen-1-rawLen;const paddingAfter=paddingTotal-offset;if(paddingAfter<0)throw new Error("invalid | offset");i+=offset;if(i+rawLen>encoded.length)throw new Error("truncated | escape");for(let k=0;k<rawLen;k++)out.push(encoded[i+k]);i+=rawLen;i+=paddingAfter;digits=[];knownHighBytes=[];continue}let passLen=0;if(code===ESC_4)passLen=4;else if(code===ESC_5)passLen=5;else if(code===ESC_6)passLen=6;else if(code===ESC_7)passLen=7;if(passLen>0){if(i+passLen>=encoded.length)throw new Error("incomplete passthrough");const pass=[];for(let k=1;k<=passLen;k++)pass.push(encoded[i+k]);if(passLen===4){const P=digits.length;if(P===0){out.push(...pass);i+=5}else{const numKnownLow=4-P;const knownLow=pass.slice(0,numKnownLow);const beforeVal=canonicalMin(digits,knownLow);if(beforeVal<0)throw new Error("non-aligned passthrough: invalid before-block");out.push(...valueToBytes(beforeVal));knownHighBytes=pass.slice(numKnownLow);digits=[];i+=5}}else{if(digits.length===0){out.push(...pass);i+=1+passLen;continue}const numDigits=digits.length;const P=numDigits-1;const numKnownLow=4-P;const knownLow=pass.slice(0,numKnownLow);const beforeVal=extendedBlockValue(digits,knownLow);if(beforeVal<0)throw new Error("extended passthrough: invalid before-block");const bBytes=valueToBytes(beforeVal);for(let k=0;k<P;k++)out.push(bBytes[k]);out.push(...pass);digits=[];knownHighBytes=[];i+=1+passLen}continue}const d=z85Map.get(code);if(d===undefined)throw new Error(\`invalid Z85 char 0x\${code.toString(16).toUpperCase()}\`);digits.push(d);i++;const needed=5-knownHighBytes.length;if(digits.length===needed){const raw=digitsToValue(digits);if(raw===null)throw new Error("Z85 value overflow");let value;if(knownHighBytes.length===0){value=raw}else{value=reconstructAfterBlock(knownHighBytes,raw,needed)}if(value>0xffffffff)throw new Error("Z85 value overflow");out.push(...valueToBytes(value));digits=[];knownHighBytes=[]}}if(digits.length>0){if(digits.length===1)throw new Error("invalid: single trailing Z85 char");const value=digitsToValue(digits);if(value===null)throw new Error("Z85 value overflow in partial block");const numBytes=digits.length-1;const maxValue=[0,0xff,0xffff,0xffffff][numBytes];if(value>maxValue)throw new Error("Z85 value overflow in partial block");for(let k=numBytes-1;k>=0;k--)out.push((value>>>(k*8))&0xff)}return new Uint8Array(out)}`;
+function decode(enc){const encoded=new TextEncoder().encode(enc);if(encoded.length===0)return new Uint8Array(0);const out=[];let i=0,digits=[],knownHighBytes=[];while(i<encoded.length){const code=encoded[i];if(code===PAD_HASH&&digits.length===0&&i%5===0&&encoded.length-i>=5){let h=0;while(h<3&&encoded[i+h]===PAD_HASH)h++;if(h>0&&encoded[i+h]!==PAD_HASH){const numChars=5-h,numBytes=numChars-1;let value=0;for(let k=0;k<numChars;k++){const d=z85Map.get(encoded[i+h+k]);if(d===undefined)throw new Error("invalid char in hash block");value=value*85+d}const maxVal=[0,0xff,0xffff,0xffffff][numBytes];if(value>maxVal)throw new Error("overflow in hash block");for(let k=numBytes-1;k>=0;k--)out.push((value>>>(k*8))&0xff);i+=5;digits=[];knownHighBytes=[];continue}}if(code===ESC_MANY){if(digits.length===0)throw new Error("'|' with no prefix digits");i++;const{offset,length:rawLen}=decodeLongPrefix(digits);if(rawLen>=1&&rawLen<=7)throw new Error(\`invalid | length \${rawLen}\`);if(rawLen===0){for(;i<encoded.length;i++)out.push(encoded[i]);digits=[];knownHighBytes=[];break}const prefixLen=digits.length;const envelopeLen=z855OutputLen(rawLen);const paddingTotal=envelopeLen-prefixLen-1-rawLen;const paddingAfter=paddingTotal-offset;if(paddingAfter<0)throw new Error("invalid | offset");i+=offset;if(i+rawLen>encoded.length)throw new Error("truncated | escape");for(let k=0;k<rawLen;k++)out.push(encoded[i+k]);i+=rawLen;i+=paddingAfter;while(i<encoded.length&&encoded[i]===PAD_HASH)i++;digits=[];knownHighBytes=[];continue}let passLen=0;if(code===ESC_4)passLen=4;else if(code===ESC_5)passLen=5;else if(code===ESC_6)passLen=6;else if(code===ESC_7)passLen=7;if(passLen>0){if(i+passLen>=encoded.length)throw new Error("incomplete passthrough");const pass=[];for(let k=1;k<=passLen;k++)pass.push(encoded[i+k]);if(passLen===4){const P=digits.length;if(P===0){out.push(...pass);i+=5}else{const numKnownLow=4-P;const knownLow=pass.slice(0,numKnownLow);const beforeVal=canonicalMin(digits,knownLow);if(beforeVal<0)throw new Error("non-aligned passthrough: invalid before-block");out.push(...valueToBytes(beforeVal));knownHighBytes=pass.slice(numKnownLow);digits=[];i+=5}}else{if(digits.length===0){out.push(...pass);i+=1+passLen;continue}const numDigits=digits.length;const P=numDigits-1;const numKnownLow=4-P;const knownLow=pass.slice(0,numKnownLow);const beforeVal=extendedBlockValue(digits,knownLow);if(beforeVal<0)throw new Error("extended passthrough: invalid before-block");const bBytes=valueToBytes(beforeVal);for(let k=0;k<P;k++)out.push(bBytes[k]);out.push(...pass);digits=[];knownHighBytes=[];i+=1+passLen}continue}const d=z85Map.get(code);if(d===undefined)throw new Error(\`invalid Z85 char 0x\${code.toString(16).toUpperCase()}\`);digits.push(d);i++;const needed=5-knownHighBytes.length;if(digits.length===needed){const raw=digitsToValue(digits);if(raw===null)throw new Error("Z85 value overflow");let value;if(knownHighBytes.length===0){value=raw}else{value=reconstructAfterBlock(knownHighBytes,raw,needed)}if(value>0xffffffff)throw new Error("Z85 value overflow");out.push(...valueToBytes(value));digits=[];knownHighBytes=[]}}if(digits.length>0){if(digits.length===1)throw new Error("invalid: single trailing Z85 char");const value=digitsToValue(digits);if(value===null)throw new Error("Z85 value overflow in partial block");const numBytes=digits.length-1;const maxValue=[0,0xff,0xffff,0xffffff][numBytes];if(value>maxValue)throw new Error("Z85 value overflow in partial block");for(let k=numBytes-1;k>=0;k--)out.push((value>>>(k*8))&0xff)}return new Uint8Array(out)}`;
 
   return `#!/usr/bin/env -S deno run --allow-all
 ${inlineDecoder}
