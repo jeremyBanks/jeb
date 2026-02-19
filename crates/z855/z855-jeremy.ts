@@ -278,11 +278,192 @@ export function encode(
         break;
       }
 
-      throw new Error("not implemented");
+      // Implement the main passthrough logic
+
+      // Try different passthrough forms in order of preference
+
+      // (A) Long passthrough for 8+ bytes
+      if (safeLength >= 8) {
+        const rawLen = safeLength;
+        const prefix = encodeLongPrefix(rawLen, 0); // offset = 0 (all padding after)
+        const totalLen = Math.ceil((inputOffset + rawLen) * 5 / 4) - encodedOffset;
+        const paddingCount = totalLen - prefix.length - 1 - rawLen;
+
+        // Emit prefix + '|' + raw bytes + padding
+        for (const p of prefix) {
+          buffer[encodedOffset++] = p.charCodeAt(0);
+        }
+        buffer[encodedOffset++] = ESCAPE_MANY.charCodeAt(0);
+
+        const safeStart = inputOffset + BLOCK_SIZE_ORIGINAL - safeBytesAtEnd;
+        buffer.set(original.subarray(safeStart, safeStart + rawLen), encodedOffset);
+        encodedOffset += rawLen;
+
+        for (let i = 0; i < paddingCount; i++) {
+          buffer[encodedOffset++] = 0x2e; // '.'
+        }
+
+        inputOffset += BLOCK_SIZE_ORIGINAL + safeBytesFollowing;
+        continue;
+      }
+
+      // (B) Extended passthrough: 5, 6, or 7 bytes
+      for (const k of [7, 6, 5]) {
+        if (safeLength !== k) continue;
+
+        const escChar = k === 7 ? ESCAPE_7 : k === 6 ? ESCAPE_6 : ESCAPE_5;
+
+        // Try block-aligned first (P=0)
+        if (safeBytesAtEnd === 4) {
+          // All 4 bytes in this block are safe, and we have k-4 more following
+          buffer[encodedOffset++] = escChar.charCodeAt(0);
+          buffer.set(original.subarray(inputOffset, inputOffset + k), encodedOffset);
+          encodedOffset += k;
+          inputOffset += k;
+          continue;
+        }
+
+        // Try non-aligned (P = 1, 2, or 3)
+        const P = BLOCK_SIZE_ORIGINAL - safeBytesAtEnd;
+        if (P >= 1 && P <= 3 && inputOffset + BLOCK_SIZE_ORIGINAL <= original.length) {
+          // Emit (P+1) Z85 chars for before-block
+          for (let i = 0; i <= P; i++) {
+            buffer[encodedOffset++] = blockDigits[i];
+          }
+          // Emit escape
+          buffer[encodedOffset++] = escChar.charCodeAt(0);
+          // Emit k raw bytes
+          const safeStart = inputOffset + P;
+          buffer.set(original.subarray(safeStart, safeStart + k), encodedOffset);
+          encodedOffset += k;
+          inputOffset += P + k;
+          continue;
+        }
+      }
+
+      // (C) Block-aligned 4-byte passthrough
+      if (safeLength >= 4 && safeBytesAtEnd === 4) {
+        buffer[encodedOffset++] = ESCAPE_4.charCodeAt(0);
+        buffer.set(original.subarray(inputOffset, inputOffset + 4), encodedOffset);
+        encodedOffset += 4;
+        inputOffset += 4;
+        continue;
+      }
+
+      // (D) Non-aligned 4-byte passthrough
+      if (safeLength >= 4 && safeBytesAtEnd < 4) {
+        const P = BLOCK_SIZE_ORIGINAL - safeBytesAtEnd;
+        if (P >= 1 && P <= 3 && inputOffset + 8 <= original.length) {
+          const numKnownLow = 4 - P;
+          const knownLow: (number | null)[] = [];
+          const safeStart = inputOffset + P;
+          for (let i = 0; i < numKnownLow; i++) {
+            knownLow.push(original[safeStart + i]);
+          }
+
+          // Build chars array for findMinValue
+          const chars: (string | null)[] = [];
+          for (let i = 0; i < P; i++) {
+            chars.push(String.fromCharCode(blockDigits[i]));
+          }
+          while (chars.length < 5) {
+            chars.push(null);
+          }
+
+          const bytes: (number | null)[] = [null, null, null, null];
+          for (let i = 0; i < numKnownLow; i++) {
+            bytes[4 - numKnownLow + i] = knownLow[i];
+          }
+
+          const minValue = findMinValue(chars, bytes);
+          const actualValue = bytesToValue(Array.from(nextBlock));
+
+          if (minValue === actualValue) {
+            // Can use non-aligned passthrough
+            // Emit P Z85 chars
+            for (let i = 0; i < P; i++) {
+              buffer[encodedOffset++] = blockDigits[i];
+            }
+            // Emit escape
+            buffer[encodedOffset++] = ESCAPE_4.charCodeAt(0);
+            // Emit 4 raw bytes
+            buffer.set(original.subarray(safeStart, safeStart + 4), encodedOffset);
+            encodedOffset += 4;
+
+            // Now handle the "after" block
+            const afterBytes = [];
+            for (let i = 0; i < P; i++) {
+              afterBytes.push(original[safeStart + numKnownLow + i]);
+            }
+            for (let i = 0; i < 4 - P; i++) {
+              afterBytes.push(original[inputOffset + 4 + P + i]);
+            }
+            const afterValue = bytesToValue(afterBytes);
+            const afterDigits = valueToDigits(afterValue);
+
+            // Emit the last (5-P) Z85 chars
+            for (let i = P; i < 5; i++) {
+              buffer[encodedOffset++] = afterDigits[i];
+            }
+
+            inputOffset += 8;
+            continue;
+          }
+        }
+      }
+
+      // (E) Fall back to standard Z85
+      buffer.set(blockDigits, encodedOffset);
+      encodedOffset += blockDigits.length;
+      inputOffset += BLOCK_SIZE_ORIGINAL;
     }
   }
 
   return buffer.subarray(0, encodedOffset);
+}
+
+/** Encode a length (and optional offset) as a base-42 self-terminating prefix for long escapes. */
+function encodeLongPrefix(length: number, offset: number): string[] {
+  const result: string[] = [];
+
+  // Encode length as base-42
+  if (length < 42) {
+    result.push(Z85_DIGITS[length]);
+  } else {
+    const digits: number[] = [];
+    let v = length;
+    while (v > 0) {
+      digits.push(v % 42);
+      v = Math.floor(v / 42);
+    }
+    digits.reverse();
+    // First digit is terminal (value), rest are continuation (value + 42)
+    for (let i = 0; i < digits.length; i++) {
+      result.push(Z85_DIGITS[i === 0 ? digits[i] : digits[i] + 42]);
+    }
+  }
+
+  // If length > 15, also encode offset
+  if (length > 15 && offset > 0) {
+    const offsetDigits: string[] = [];
+    if (offset < 42) {
+      offsetDigits.push(Z85_DIGITS[offset]);
+    } else {
+      const odigits: number[] = [];
+      let v = offset;
+      while (v > 0) {
+        odigits.push(v % 42);
+        v = Math.floor(v / 42);
+      }
+      odigits.reverse();
+      for (let i = 0; i < odigits.length; i++) {
+        offsetDigits.push(Z85_DIGITS[i === 0 ? odigits[i] : odigits[i] + 42]);
+      }
+    }
+    result.unshift(...offsetDigits);
+  }
+
+  return result;
 }
 
 /** Decode a Uint8Array to a Uint8Array using Z855. */
