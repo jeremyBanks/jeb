@@ -867,7 +867,14 @@ fn try_long_passthrough(
         // Only include offset prefix if offset > 0
         if best_offset > 0 {
             let offset_prefix = generate_long_escape_prefix(best_offset);
-            (best_offset, offset_prefix)
+            // Total prefix (offset + length) must be < 5 digits, otherwise the
+            // decoder would trigger a Z85 block decode before seeing `|`.
+            if offset_prefix.len() + length_prefix.len() >= 5 {
+                // Offset too large — fall back to offset=0
+                (0, Vec::new())
+            } else {
+                (best_offset, offset_prefix)
+            }
         } else {
             (0, Vec::new())
         }

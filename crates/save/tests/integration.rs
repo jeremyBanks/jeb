@@ -199,6 +199,42 @@ HEAD: refs/heads/trunk
     assert!(messages[1].starts_with("r1"));
 }
 
+/// All environment variables that affect committer detection, used to isolate
+/// tests from the host environment.
+const COMMITTER_ENV_VARS: &[&str] = &[
+    "CLAUDECODE",
+    "CLAUDE_CODE_REMOTE",
+    "GEMINI_CLI",
+    "CURSOR_AGENT",
+    "GIT_COMMITTER_NAME",
+    "GIT_COMMITTER_EMAIL",
+];
+
+/// Clear all committer-related env vars, returning their previous values for
+/// restoration.
+fn clear_committer_env() -> Vec<(&'static str, Option<String>)> {
+    COMMITTER_ENV_VARS
+        .iter()
+        .map(|&var| {
+            let prev = std::env::var(var).ok();
+            unsafe { std::env::remove_var(var) };
+            (var, prev)
+        })
+        .collect()
+}
+
+/// Restore previously saved env vars.
+fn restore_committer_env(saved: Vec<(&'static str, Option<String>)>) {
+    for (var, val) in saved {
+        unsafe {
+            match val {
+                Some(v) => std::env::set_var(var, v),
+                None => std::env::remove_var(var),
+            }
+        }
+    }
+}
+
 #[test]
 fn test_agent_committer() {
     let yaml = r#"
@@ -212,24 +248,29 @@ HEAD: refs/heads/trunk
 
     let _ctx = TestContext::new(repo_path);
 
-    // Set GEMINI_CLI environment variable
+    // Clear all committer env vars and set only the one we're testing
+    let saved = clear_committer_env();
     unsafe {
         std::env::set_var("GEMINI_CLI", "1");
     }
 
     let args = Save::with(|_| {});
-    args.save().expect("save failed with agent env");
+    let result = args.save();
 
+    // Restore env before asserting so cleanup happens even on failure
     unsafe {
         std::env::remove_var("GEMINI_CLI");
     }
+    restore_committer_env(saved);
+
+    result.expect("save failed with agent env");
 
     let roundtrip = temp_repo.to_snapshot().unwrap();
     let commit = roundtrip.head_commit().expect("No HEAD commit");
 
     // Committer should be Gemini CLI
     assert_eq!(commit.committer.name, "⟡ Gemini CLI");
-    assert_eq!(commit.committer.email, "noreply@google.com");
+    assert_eq!(commit.committer.email, "gemini-cli@google.com");
 }
 
 #[test]

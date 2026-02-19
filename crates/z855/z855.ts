@@ -1723,8 +1723,17 @@ function tryLongPassthrough(
     );
     // Only include offset prefix if offset > 0
     if (bestOffset > 0) {
-      offsetPrefix = generateLongEscapePrefix(bestOffset);
-      offset = bestOffset;
+      const candidateOffsetPrefix = generateLongEscapePrefix(bestOffset);
+      // Total prefix (offset + length) must be < 5 digits, otherwise the
+      // decoder would trigger a Z85 block decode before seeing `|`.
+      if (candidateOffsetPrefix.length + lengthPrefix.length >= 5) {
+        // Offset too large — fall back to offset=0
+        offsetPrefix = [];
+        offset = 0;
+      } else {
+        offsetPrefix = candidateOffsetPrefix;
+        offset = bestOffset;
+      }
     } else {
       offsetPrefix = [];
       offset = 0;
