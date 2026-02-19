@@ -659,7 +659,10 @@ export function encode(
     const blockDigits = valueToDigits(blockValue);
 
     // Quick rejection: if last byte of block isn't safe, skip passthrough logic.
-    if (!safeBytes[original[inOff + 3]]) {
+    // Also skip passthrough for the last full block in concatenatable mode: this
+    // guarantees the loop always exits at a 5-aligned output offset, making the
+    // reserved-tail hash-block splice safe (no escape chars in the spliced tail).
+    if (!safeBytes[original[inOff + 3]] || (concatenatable && remaining === 4)) {
       for (let k = 0; k < 5; k++) emit(blockDigits[k]);
       inOff += 4;
       continue;
