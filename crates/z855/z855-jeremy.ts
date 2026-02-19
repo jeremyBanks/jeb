@@ -660,7 +660,10 @@ export function encode(
     const blockDigits = valueToDigits(blockValue);
 
     // Quick rejection: if last byte of block isn't safe, skip passthrough logic.
-    if (!safeBytes[original[inOff + 3]]) {
+    // Also skip passthrough for the last 2 blocks before stopAt in concatenatable
+    // mode: this ensures the last chars before the reserved-tail splice are always
+    // Z85 digits, making the splice safe (no escape chars in the spliced tail).
+    if (!safeBytes[original[inOff + 3]] || (concatenatable && stopAt - inOff <= 8)) {
       for (let k = 0; k < 5; k++) emit(blockDigits[k]);
       inOff += 4;
       continue;
