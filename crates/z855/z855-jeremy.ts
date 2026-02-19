@@ -831,7 +831,9 @@ export function encode(
     //   • Before-block value must satisfy canonical-minimum rule
     //   • After-block value is reconstructed from P known high bytes + (5-P) digits
     //   • Requires full after-block (8 bytes total consumed)
-    if (hasEscape4) {
+    //
+    // Disabled in concatenatable mode: non-aligned output breaks reserved-tail alignment.
+    if (hasEscape4 && !concatenatable) {
       const totalRemaining = original.length - inOff;
       const candidates: Array<{ p: number; key: [bigint, bigint] }> = [];
       for (let p = 1; p <= 3; p++) {
