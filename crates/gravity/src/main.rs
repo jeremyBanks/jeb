@@ -1163,11 +1163,13 @@ fn main() {
     // ── Epilogue phase ────────────────────────────────────────────────────
     if do_epilogue {
         println!("\n[epilogue] converging to original {} cells...", orig.count);
-        const MAX_EPILOGUE_TICKS: usize = 7680; // 128s safety cap (4× slower epilogue)
+        const MAX_EPILOGUE_TICKS: usize = 7680; // 128s safety cap
         let mut ep_tick = 0usize;
         let mut ep_frame = 0usize;
         let mut ep_chunk_frames: Vec<String> = Vec::new();
         let ep_seg_start = total_frames;
+        let mut pos_converged = false;
+        let mut vel_tick = 0usize;
 
         loop {
             if !keep_running.load(Ordering::Relaxed) {
@@ -1184,9 +1186,26 @@ fn main() {
                 println!("[signal] Stopping epilogue — concatenating completed segments.");
                 break;
             }
-            let converged = sim.epilogue_tick(&orig, ep_tick);
+
+            // Two-phase epilogue:
+            // Phase 1 (position): kill/revive nudges until all cells at orig positions.
+            // Phase 2 (velocity): up to 64 ticks, gravity ramps to 0 over first 32,
+            //                     velocities clamped to never diverge from target.
+            let done = if pos_converged {
+                sim.epilogue_vel_tick(&orig, vel_tick);
+                vel_tick += 1;
+                vel_tick >= 64
+            } else {
+                let pc = sim.epilogue_tick(&orig, ep_tick);
+                if pc {
+                    pos_converged = true;
+                    println!("  [epilogue] positions converged at tick {} ({:.1}s) — velocity phase begins",
+                        ep_tick, ep_tick as f32 / FPS as f32);
+                }
+                false
+            };
+
             // Ramp background fade: starts at normal rate, ramps to 0.5^0.25≈0.84/tick at full t
-            // 1/4 speed vs old 0.5 end: 0.5^(t/4) so full convergence takes 4× longer
             let t = (ep_tick as f32 / 600.0_f32).min(1.0);
             let fade = 0.999767_f32.powf(1.0 - t) * 0.5_f32.powf(t * 0.25);
             for v in canvas.iter_mut() { *v *= fade; }
@@ -1199,7 +1218,7 @@ fn main() {
             ep_tick += 1;
 
             // Encode + flush every CHUNK_FRAMES frames
-            if ep_chunk_frames.len() == CHUNK_FRAMES || converged || ep_tick >= MAX_EPILOGUE_TICKS {
+            if ep_chunk_frames.len() == CHUNK_FRAMES || done || ep_tick >= MAX_EPILOGUE_TICKS {
                 if !ep_chunk_frames.is_empty() {
                     let seg_path = format!("{segments_dir}/seg_{:08}.mp4", ep_seg_start + ep_frame - ep_chunk_frames.len());
                     encode_chunk(frames_dir, &seg_path, ep_chunk_frames.len());
@@ -1216,10 +1235,11 @@ fn main() {
                     .count();
                 let live_non_orig = sim.cells.len() - live_orig;
                 let dead_orig = orig.count.saturating_sub(live_orig);
-                println!("  epilogue t={:.2} pop={} live_orig={} non_orig={} dead_orig={}", 
-                    (ep_tick as f32 / 600.0).min(1.0), sim.cells.len(), live_orig, live_non_orig, dead_orig);
+                println!("  epilogue t={:.2} pos_conv={} vel_tick={} pop={} live_orig={} non_orig={} dead_orig={}",
+                    (ep_tick as f32 / 600.0).min(1.0), pos_converged, vel_tick,
+                    sim.cells.len(), live_orig, live_non_orig, dead_orig);
             }
-            if converged { println!("  epilogue converged at tick {ep_tick} ({:.1}s)", ep_tick as f32 / FPS as f32); break; }
+            if done { println!("  epilogue complete at tick {ep_tick} ({:.1}s)", ep_tick as f32 / FPS as f32); break; }
             if ep_tick >= MAX_EPILOGUE_TICKS { println!("  epilogue hit safety cap ({MAX_EPILOGUE_TICKS} ticks = 128s)"); break; }
         }
         println!("  epilogue: {ep_frame} frames appended");
