@@ -665,8 +665,8 @@ impl Sim {
         for c in &mut self.cells {
             let pos = (c.x as usize % W, c.y as usize % H);
             if let Some(&(tvx, tvy)) = orig.velocities.get(&pos) {
-                c.vx += (tvx - c.vx) * 0.125;
-                c.vy += (tvy - c.vy) * 0.125;
+                c.vx += (tvx - c.vx) * 0.03125; // 3.125%/tick = 12.5%/tick ÷ 4
+                c.vy += (tvy - c.vy) * 0.03125;
             }
         }
 
