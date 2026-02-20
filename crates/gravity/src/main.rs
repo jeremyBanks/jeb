@@ -330,7 +330,7 @@ impl Sim {
     fn paint_frame(&self, canvas: &mut Vec<u8>) {
         // Fade existing canvas slowly
         for v in canvas.iter_mut() {
-            *v = (*v as u16 * 253 / 256) as u8;
+            *v = (*v as u16 * 254 / 256) as u8;
         }
         for c in &self.cells {
             let xi = c.x as usize % W;
@@ -455,39 +455,13 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32,
 fn main() {
     fs::create_dir_all("frames").unwrap();
 
-    let snaps = &[0usize, 300, 600, 900, 1200, 1600, 2000, 2400];
+    let snaps = &[0usize, 300, 600, 900, 1200, 1600, 2000, 2400]; // unused now
 
-    // A: Slow mutual orbit — v tuned near circular orbit velocity
-    // For two equal masses M each, separated by d, circular orbit: v = sqrt(G*M/d)
-    // M~530 (half total), d~192, G=0.0008 → v ≈ sqrt(0.0008*530/192) ≈ 0.047
-    // Use tangential velocity perpendicular to separation axis
-    run("A_orbit", 0.0008, 1.5, 0.3, &[
-        ( 96.0, 128.0, 13.0,  0.0,  0.05, 0),
-        (288.0, 128.0, 13.0,  0.0, -0.05, 0),
-    ], 2400, snaps);
+    let d_snaps: Vec<usize> = (0..=32).map(|i| i * 150).collect();
 
-    // B: Glancing blow — moving toward each other but offset, gravity curves paths
-    run("B_glancing", 0.0008, 1.5, 0.8, &[
-        ( 80.0,  90.0, 13.0,  0.4,  0.0, 0),
-        (304.0, 166.0, 13.0, -0.4,  0.0, 0),
-    ], 2400, snaps);
-
-    // C: Three-body triangle — three circles, each aimed tangentially
-    run("C_three_body", 0.0006, 1.5, 0.6, &[
-        (192.0,  70.0, 10.0,  0.25,  0.0,  0),
-        ( 90.0, 186.0, 10.0, -0.12, -0.22, 0),
-        (294.0, 186.0, 10.0, -0.12,  0.22, 0),
-    ], 2400, snaps);
-
-    // D: Head-on collision — meeting in the middle, low speed so gravity pulls hard
-    run("D_head_on", 0.001, 1.5, 0.5, &[
-        ( 80.0, 128.0, 13.0,  0.2,  0.0, 0),
-        (304.0, 128.0, 13.0, -0.2,  0.0, 0),
-    ], 2400, snaps);
-
-    // E: Perpendicular crossing — each moving at 90° to the other
-    run("E_perpendicular", 0.0008, 1.5, 0.6, &[
-        (192.0,  60.0, 13.0,  0.3,  0.0, 0),
-        (120.0, 128.0, 13.0,  0.0,  0.3, 0),
-    ], 2400, snaps);
+    // D2: medium offset (13px) — slingshot zone
+    run("D_best", 0.001, 1.5, 0.5, &[
+        ( 80.0, 115.0, 13.0,  0.2,  0.0, 0),
+        (304.0, 141.0, 13.0, -0.2,  0.0, 0),
+    ], 4800, &d_snaps);
 }
