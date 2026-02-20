@@ -247,18 +247,21 @@ impl Sim {
             }
         }
 
-        // Speed cap: clamp to max(prev_speed, global_cap) so momentum from
-        // Conway operations isn't immediately eaten by the hard limit.
-        // prev_speed decays toward global_cap each tick to prevent ratcheting.
+        // Record speed BEFORE applying cap — this is what the cell "earned" via
+        // gravity this tick. Next tick's floor is max(this speed, global_cap).
+        // Gravity can slow a cell naturally (by pulling against its direction),
+        // but the cap never takes away momentum the cell legitimately had.
         for c in &mut self.cells {
             let spd = (c.vx * c.vx + c.vy * c.vy).sqrt();
             let effective_cap = c.prev_speed.max(self.speed_cap);
             if spd > effective_cap {
                 c.vx = c.vx / spd * effective_cap;
                 c.vy = c.vy / spd * effective_cap;
+                c.prev_speed = effective_cap;
+            } else {
+                // Cell is under cap — record actual speed as new floor
+                c.prev_speed = spd;
             }
-            // Hold prev_speed — cell keeps earned momentum until gravity slows it naturally
-            c.prev_speed = spd.min(effective_cap);
         }
 
         // Movement with reservation chaining:
