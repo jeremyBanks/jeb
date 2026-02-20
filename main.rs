@@ -498,20 +498,18 @@ fn main() {
     // to see what speeds actually develop — then set v_init to match.
     let snaps: Vec<usize> = (0..=10).map(|i| i * 50).collect();
 
-    // G=0.003, soft=20: orbital v = 0.065, period ~8800 ticks
-    // cap=0.15 gives headroom without letting them escape
-    // Run 2 full orbits = 17600 ticks, snap every 440 ticks = 40 frames
-    let snaps: Vec<usize> = (0..=40).map(|i| i * 440).collect();
+    // G=0.0003, soft=20 → orbital v = 0.021, period ~27000 ticks
+    // No meaningful cap (5.0) so gravity steers freely
+    // Run 1.5 orbits = 40000 ticks, snap every 1000 = 40 frames
+    let snaps: Vec<usize> = (0..=40).map(|i| i * 1000).collect();
 
-    // Pure gravity reference
-    run("orbit2_pure", 0.003, 20.0, 0.15, 0, &[
-        (100.0, 128.0, 13.0,  0.0, -0.065, 0),
-        (284.0, 128.0, 13.0,  0.0,  0.065, 0),
-    ], 17600, &snaps);
+    run("orbit3_pure", 0.0003, 20.0, 5.0, 0, &[
+        (100.0, 128.0, 13.0,  0.0, -0.021, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.021, 0),
+    ], 40000, &snaps);
 
-    // Conway every 8
-    run("orbit2_conway8", 0.003, 20.0, 0.15, 8, &[
-        (100.0, 128.0, 13.0,  0.0, -0.065, 0),
-        (284.0, 128.0, 13.0,  0.0,  0.065, 0),
-    ], 17600, &snaps);
+    run("orbit3_conway8", 0.0003, 20.0, 5.0, 8, &[
+        (100.0, 128.0, 13.0,  0.0, -0.021, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.021, 0),
+    ], 40000, &snaps);
 }
