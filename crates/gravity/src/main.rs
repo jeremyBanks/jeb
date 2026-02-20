@@ -383,10 +383,17 @@ impl Sim {
         let neighbour_offsets: [(i32, i32); 8] = [
             (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)
         ];
+        let wrap = self.wrap;
         let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
             neighbour_offsets.iter().filter_map(|&(dy, dx)| {
-                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
-                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                let ry = gy as i32 + dy;
+                let rx = gx as i32 + dx;
+                let (ny, nx) = if wrap {
+                    (ry.rem_euclid(H as i32) as usize, rx.rem_euclid(W as i32) as usize)
+                } else {
+                    if ry < 0 || ry >= H as i32 || rx < 0 || rx >= W as i32 { return None; }
+                    (ry as usize, rx as usize)
+                };
                 let idx = grid[ny * W + nx];
                 if idx != usize::MAX { Some(idx) } else { None }
             }).collect()
