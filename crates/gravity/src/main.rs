@@ -218,8 +218,11 @@ impl Sim {
         shuffle_vec(&mut desired_deaths, &mut self.rng);
         shuffle_vec(&mut desired_births, &mut self.rng);
 
-        let max_births = pop_max.saturating_sub(n);
-        let max_deaths = n.saturating_sub(pop_min);
+        // Rate-limit: max ceil(pop_band/2) births or deaths per tick (1/4 of total band range).
+        // Applies even outside the band — prevents runaway explosions/collapses.
+        let rate_limit = ((self.pop_band / 2.0).ceil() as usize).max(1);
+        let max_births = pop_max.saturating_sub(n).min(rate_limit);
+        let max_deaths = n.saturating_sub(pop_min).min(rate_limit);
         desired_births.truncate(max_births);
         desired_deaths.truncate(max_deaths);
 
