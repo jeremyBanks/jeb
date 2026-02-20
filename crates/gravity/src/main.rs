@@ -19,13 +19,14 @@ struct Sim {
     softening: f32,
     speed_cap: f32,
     start_pop: usize,
-    conway_every: usize, // 0 = disabled, N = run Conway every N gravity ticks
+    conway_every: usize,  // 0 = disabled, N = run Conway every N gravity ticks
+    pop_band: f32,        // fraction: population clamped to start_pop * (1 ± pop_band)
     tick_count: usize,
     prev_live: Vec<bool>, // which pixels were live last frame (for fading)
 }
 
 impl Sim {
-    fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, conway_every: usize,
+    fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, conway_every: usize, pop_band: f32,
            clumps: &[(f32, f32, f32, f32, f32, usize)]) -> Self {
         let mut rng = rng_seed;
         let mut cells = Vec::new();
@@ -50,14 +51,14 @@ impl Sim {
 
         let n = cells.len();
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: n,
-              conway_every, tick_count: 0, prev_live: vec![false; W * H] }
+              conway_every, pop_band, tick_count: 0, prev_live: vec![false; W * H] }
     }
 
     // ── Conway step (modified) ─────────────────────────────────────────────
     fn conway_step(&mut self) {
         let n = self.cells.len();
-        let pop_min = self.start_pop / 2;
-        let pop_max = self.start_pop * 2;
+        let pop_min = ((self.start_pop as f32) * (1.0 - self.pop_band)) as usize;
+        let pop_max = ((self.start_pop as f32) * (1.0 + self.pop_band)) as usize;
 
         // Build occupancy grid: cell index at each grid position (usize::MAX = empty)
         let mut grid = vec![usize::MAX; W * H];
@@ -458,15 +459,15 @@ fn xorf32(s: &mut u64) -> f32 {
     (xoru64(s) & 0xFFFFFF) as f32 / 0xFFFFFF as f32
 }
 
-fn run(name: &str, g: f32, softening: f32, speed_cap: f32, conway_every: usize,
+fn run(name: &str, g: f32, softening: f32, speed_cap: f32, conway_every: usize, pop_band: f32,
        clumps: &[(f32, f32, f32, f32, f32, usize)],
        ticks: usize, snap_at: &[usize]) {
     let dir = format!("frames/{name}");
     fs::create_dir_all(&dir).unwrap();
 
-    let mut sim = Sim::new(42, g, softening, speed_cap, conway_every, clumps);
+    let mut sim = Sim::new(42, g, softening, speed_cap, conway_every, pop_band, clumps);
     let mut canvas = vec![0u8; W * H * 3];
-    println!("\n=== {name} | g={g} soft={softening} cap={speed_cap} conway_every={conway_every} start_pop={} ===",
+    println!("\n=== {name} | g={g} soft={softening} cap={speed_cap} conway_every={conway_every} pop_band={pop_band} start_pop={} ===",
         sim.cells.len());
 
     for tick in 0..=ticks {
@@ -493,12 +494,11 @@ fn main() {
     // G=0.00005 was best — spread dropped 112→92, actual attraction visible
     // Now try smaller blobs (r=6) — fewer cells = less intra-blob self-gravity
     // Also keep r=13 at same G for comparison
-    // Winner: r=6, G=0.00005 — gentle deflection, beautiful trails
-    // 8x frames = 320 snaps, at 30fps = ~10s video
-    // 4800 ticks * 8 = 38400 ticks total, snap every 120
+    // Conway every tick, pop clamped to ±12.5% of start
+    // Same winning params: r=6, G=0.00005, 320 frames at 30fps
     let snaps: Vec<usize> = (0..=320).map(|i| i * 120).collect();
 
-    run("beauty_r6_g5e5", 0.00005, 1.5, 0.5, 0, &[
+    run("conway_tight", 0.00005, 1.5, 0.5, 1, 0.125, &[
         ( 80.0, 115.0, 6.0,  0.2,  0.0, 0),
         (304.0, 141.0, 6.0, -0.2,  0.0, 0),
     ], 38400, &snaps);
