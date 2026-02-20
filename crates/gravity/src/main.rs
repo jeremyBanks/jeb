@@ -537,12 +537,13 @@ fn main() {
     // Original D_best had vx=±0.2, offset=26px — looked great but moved too fast.
     // Keep vx=±0.2, raise cap to 2.0 so gravity can still steer post-collision.
     // Vary offset to find the best slingshot angle.
-    // G way down — gravity as a gentle nudge, not a cannon
-    // vx=±0.2 so they actually move, cap=0.5 so there's room to deflect
-    for &g in &[0.00005f32, 0.0001, 0.0002, 0.0005] {
-        let name = format!("nudge_g{g:.5}");
+    // G=0.00005 was best — spread dropped 112→92, actual attraction visible
+    // Now try smaller blobs (r=6) — fewer cells = less intra-blob self-gravity
+    // Also keep r=13 at same G for comparison
+    for &(r, g) in &[(13.0f32, 0.00005f32), (6.0, 0.00005), (6.0, 0.0002), (6.0, 0.001)] {
+        let name = format!("size_r{:.0}_g{g:.5}", r);
         run(&name, g, 1.5, 0.5, 0, &[
-            ( 80.0, 115.0, 13.0,  0.2,  0.0, 0),
-            (304.0, 141.0, 13.0, -0.2,  0.0, 0),
+            ( 80.0, 115.0, r,  0.2,  0.0, 0),
+            (304.0, 141.0, r, -0.2,  0.0, 0),
         ], 4800, &snaps);
     }
