@@ -244,35 +244,80 @@ impl Sim {
             }
         }
 
-        // Move in random order, skip if target occupied
-        let mut occupied = vec![false; W * H];
-        for c in &self.cells {
-            occupied[c.y as usize % H * W + c.x as usize % W] = true;
+        // Movement with reservation chaining:
+        // If a cell can't move because its target is occupied, it reserves that cell.
+        // If the occupant later moves away in the same tick, the reservation is fulfilled
+        // and may cascade further reservations.
+
+        // Build: cell index at each grid position
+        let mut grid = vec![usize::MAX; W * H];
+        for (i, c) in self.cells.iter().enumerate() {
+            grid[c.y as usize % H * W + c.x as usize % W] = i;
         }
 
+        // Compute desired target for each cell
+        let mut target_pos: Vec<(usize, usize, f32, f32)> = self.cells.iter().map(|c| {
+            let nx = (c.x + c.vx).rem_euclid(W as f32);
+            let ny = (c.y + c.vy).rem_euclid(H as f32);
+            (nx as usize % W, ny as usize % H, nx, ny)
+        }).collect();
+
+        // Shuffle order for fairness
         let n = self.order.len();
         for i in (1..n).rev() {
             let j = (xoru64(&mut self.rng) as usize) % (i + 1);
             self.order.swap(i, j);
         }
 
-        for &idx in &self.order {
-            let c = &self.cells[idx];
-            let old_xi = c.x as usize % W;
-            let old_yi = c.y as usize % H;
-            let nx = (c.x + c.vx).rem_euclid(W as f32);
-            let ny = (c.y + c.vy).rem_euclid(H as f32);
-            let new_xi = nx as usize % W;
-            let new_yi = ny as usize % H;
+        // reservation: for each grid cell, which cell index wants to move there
+        let mut reservation: Vec<usize> = vec![usize::MAX; W * H];
 
-            if new_xi == old_xi && new_yi == old_yi {
+        // First pass: try to move each cell; if blocked, record reservation
+        let mut moved = vec![false; n];
+        for &idx in &self.order {
+            let (tx, ty, nx, ny) = target_pos[idx];
+            let old_x = self.cells[idx].x as usize % W;
+            let old_y = self.cells[idx].y as usize % H;
+
+            if tx == old_x && ty == old_y {
+                // Sub-pixel move, same cell
                 self.cells[idx].x = nx;
                 self.cells[idx].y = ny;
-            } else if !occupied[new_yi * W + new_xi] {
-                occupied[old_yi * W + old_xi] = false;
-                occupied[new_yi * W + new_xi] = true;
+                moved[idx] = true;
+                continue;
+            }
+
+            if grid[ty * W + tx] == usize::MAX {
+                // Target free — move immediately
+                grid[old_y * W + old_x] = usize::MAX;
+                grid[ty * W + tx] = idx;
                 self.cells[idx].x = nx;
                 self.cells[idx].y = ny;
+                moved[idx] = true;
+
+                // Cascade: if anyone reserved this old cell, they can now move
+                let mut freed = old_y * W + old_x;
+                loop {
+                    let waiter = reservation[freed];
+                    if waiter == usize::MAX { break; }
+                    reservation[freed] = usize::MAX;
+                    let (wtx, wty, wnx, wny) = target_pos[waiter];
+                    let wox = self.cells[waiter].x as usize % W;
+                    let woy = self.cells[waiter].y as usize % H;
+                    // freed cell should now be empty
+                    grid[woy * W + wox] = usize::MAX;
+                    grid[wty * W + wtx] = waiter;
+                    self.cells[waiter].x = wnx;
+                    self.cells[waiter].y = wny;
+                    moved[waiter] = true;
+                    freed = woy * W + wox; // cascade: waiter's old cell is now freed
+                }
+            } else {
+                // Blocked — record reservation (first-come wins)
+                let key = ty * W + tx;
+                if reservation[key] == usize::MAX {
+                    reservation[key] = idx;
+                }
             }
         }
     }
@@ -414,7 +459,7 @@ fn main() {
     // W=384, H=256 — circles of radius 20 (~1256 cells each)
     // Paths: left-circle moves right at y=85, right-circle moves left at y=170
     run("conway_gravity", 0.0008, 1.5, 2.0, &[
-        ( 96.0,  85.0, 20.0,  0.5,  0.0, 0),
-        (288.0, 170.0, 20.0, -0.5,  0.0, 0),
+        ( 96.0,  85.0, 13.0,  0.5,  0.0, 0),
+        (288.0, 170.0, 13.0, -0.5,  0.0, 0),
     ], 2800, &[0, 400, 800, 1200, 1600, 2000, 2400, 2800]);
 }
