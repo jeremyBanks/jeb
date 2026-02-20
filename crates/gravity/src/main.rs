@@ -432,9 +432,12 @@ impl Sim {
                 }
             }
         }
+        // Birth rule: B3 normally; B2|B3 when population is below target (helps sparse fields grow).
+        // At low density, B3 almost never fires — B2 allows growth from any pair of adjacent cells.
+        let birth_min = if n < self.start_pop { 2 } else { 3 };
         for (gy, gx) in candidates {
             let nbrs = live_neighbours(gy, gx);
-            if nbrs.len() == 3 { desired_births.push((gy, gx, nbrs)); }
+            if nbrs.len() >= birth_min && nbrs.len() <= 3 { desired_births.push((gy, gx, nbrs)); }
         }
 
         shuffle_vec(&mut desired_deaths, &mut self.rng);
@@ -482,7 +485,7 @@ impl Sim {
         //
         // weight = sum of live-neighbour speeds (post-deaths) + BIRTH_SOFT
         // BIRTH_SOFT ensures every valid candidate has a nonzero base probability.
-        const BIRTH_SOFT: f32 = 0.005; // ~1/10 of speed_cap; baseline birth weight
+        const BIRTH_SOFT: f32 = 0.4; // ~1/10 of speed_cap (4.0); baseline birth weight
 
         let mut birth_keys: Vec<(f32, usize)> = desired_births.iter()
             .enumerate()
@@ -1132,9 +1135,9 @@ fn main() {
     // Sim parameters
     let g: f32 = parse_arg("--gravity")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(0.000300_f32); // 4× stronger gravity
+        .unwrap_or(0.003000_f32); // 10× previous (cells need ≥0.5 vel/frame to move with round())
     let softening   = 1.5_f32;
-    let speed_cap   = 0.093750_f32; // 2× previous cap
+    let speed_cap   = 4.0_f32; // cells/frame; needs to be >0.5 for round()-based movement
     let conway_every = FPS as usize / 4; // run Conway 4× per second → up to 4 births + 4 deaths/sec
     let pop_band    = 8.0_f32; // gap halved: min stays same, max comes halfway down
 
