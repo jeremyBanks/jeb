@@ -154,11 +154,17 @@ impl Sim {
             *v = read_f32!();
         }
 
+        // Rebuild prev_live from cell positions so first painted frame does correct 50% snap
+        // (if we used the saved prev_live, a SIGTERM mid-tick could leave it stale)
+        let mut prev_live_rebuilt = vec![false; W * H];
+        for c in &cells {
+            prev_live_rebuilt[c.y as usize % H * W + c.x as usize % W] = true;
+        }
         let order = (0..cells.len()).collect();
         let target_pop = W * H / 32;
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
                         start_pop: target_pop, conway_every, pop_band,
-                        tick_count, prev_live };
+                        tick_count, prev_live: prev_live_rebuilt };
         Some((sim, canvas, chunk_index))
     }
 
