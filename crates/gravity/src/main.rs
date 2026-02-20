@@ -1428,3 +1428,51 @@ use std::io::{BufWriter, Write};
         }
         self.order = (0..self.cells.len()).collect();
     }
+
+// [recovery] edit target not found, appending:
+        let neighbour_offsets: [(i32, i32); 8] = [
+            (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)
+        ];
+        let wrap = self.wrap;
+        // Resolve a neighbour offset to a grid index, respecting wrap/no-wrap.
+        let resolve_nbr = |gy: usize, gx: usize, dy: i32, dx: i32| -> Option<(usize, usize)> {
+            let ry = gy as i32 + dy;
+            let rx = gx as i32 + dx;
+            if wrap {
+                Some((ry.rem_euclid(H as i32) as usize, rx.rem_euclid(W as i32) as usize))
+            } else {
+                if ry < 0 || ry >= H as i32 || rx < 0 || rx >= W as i32 { None }
+                else { Some((ry as usize, rx as usize)) }
+            }
+        };
+        let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
+            neighbour_offsets.iter().filter_map(|&(dy, dx)| {
+                let (ny, nx) = resolve_nbr(gy, gx, dy, dx)?;
+                let idx = grid[ny * W + nx];
+                if idx != usize::MAX { Some(idx) } else { None }
+            }).collect()
+        };
+
+        let mut desired_births: Vec<(usize, usize, Vec<usize>)> = Vec::new();
+        let mut desired_deaths: Vec<usize> = Vec::new();
+
+        for (i, c) in self.cells.iter().enumerate() {
+            let gx = c.x;
+            let gy = c.y;
+            let nbrs = live_neighbours(gy, gx);
+            let count = nbrs.len();
+            if count != 2 && count != 3 {
+                if !nbrs.is_empty() { desired_deaths.push(i); }
+            }
+        }
+
+        let mut candidates = std::collections::HashSet::new();
+        for c in &self.cells {
+            let gx = c.x;
+            let gy = c.y;
+            for &(dy, dx) in &neighbour_offsets {
+                if let Some((ny, nx)) = resolve_nbr(gy, gx, dy, dx) {
+                    if grid[ny * W + nx] == usize::MAX { candidates.insert((ny, nx)); }
+                }
+            }
+        }
