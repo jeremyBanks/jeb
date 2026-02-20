@@ -417,25 +417,26 @@ impl Sim {
             grid[c.y as usize % H * W + c.x as usize % W] = i;
         }
 
-        // 25%×t: kill one random non-original live cell
-        if xorf32(&mut self.rng) < kill_chance {
-            let non_orig: Vec<usize> = self.cells.iter().enumerate()
-                .filter(|(_, c)| !orig.positions.contains(&(c.x as usize % W, c.y as usize % H)))
-                .map(|(i, _)| i)
-                .collect();
-            if !non_orig.is_empty() {
-                let pick = non_orig[(xoru64(&mut self.rng) as usize) % non_orig.len()];
-                self.cells.swap_remove(pick);
-            }
+        // Per-cell nudges: every non-original live cell has kill_chance of dying,
+        // every dead original cell has revive_chance of being born.
+        // Collect indices to kill (high to low for swap_remove stability)
+        let mut to_kill: Vec<usize> = self.cells.iter().enumerate()
+            .filter(|(_, c)| !orig.positions.contains(&(c.x as usize % W, c.y as usize % H)))
+            .filter(|_| xorf32(&mut self.rng) < kill_chance)
+            .map(|(i, _)| i)
+            .collect();
+        to_kill.sort_unstable_by(|a, b| b.cmp(a));
+        for i in to_kill { self.cells.swap_remove(i); }
+
+        // Rebuild grid after kills
+        let mut grid2 = vec![usize::MAX; W * H];
+        for (i, c) in self.cells.iter().enumerate() {
+            grid2[c.y as usize % H * W + c.x as usize % W] = i;
         }
 
-        // 12.5%×t: revive one random dead original-position cell
-        if xorf32(&mut self.rng) < revive_chance {
-            let dead_orig: Vec<(usize, usize)> = orig.positions.iter()
-                .filter(|&&(ox, oy)| grid[oy * W + ox] == usize::MAX)
-                .cloned().collect();
-            if !dead_orig.is_empty() {
-                let (ox, oy) = dead_orig[(xoru64(&mut self.rng) as usize) % dead_orig.len()];
+        // Every dead original cell has revive_chance of being born
+        for &(ox, oy) in &orig.positions {
+            if grid2[oy * W + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
                 self.cells.push(Cell { x: ox as f32 + 0.5, y: oy as f32 + 0.5,
                                        vx: 0.0, vy: 0.0, prev_speed: 0.0 });
             }
