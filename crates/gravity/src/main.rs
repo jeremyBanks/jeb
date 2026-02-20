@@ -330,7 +330,7 @@ impl Sim {
     fn paint_frame(&self, canvas: &mut Vec<u8>) {
         // Fade existing canvas slowly
         for v in canvas.iter_mut() {
-            *v = (*v as u16 * 253 / 256) as u8;
+            *v = (*v as u16 * 254 / 256) as u8;
         }
         for c in &self.cells {
             let xi = c.x as usize % W;
