@@ -11,19 +11,18 @@ import { minify } from "npm:terser@^5.36";
 const INPUT  = "./z855-reference.ts";
 const OUTPUT = "./z855-reference.min.mjs";
 
-// ── Transpile TS → JS via Deno.transpileOnly ────────────────────────────────
+// ── Transpile TS → JS via esbuild ────────────────────────────────────────────
+import * as esbuild from "npm:esbuild@^0.25";
+
 const tsSource = await Deno.readTextFile(INPUT);
-// Strip the shebang line if present (transpiler chokes on it)
-const tsNoShebang = tsSource.startsWith("#!") 
-  ? tsSource.slice(tsSource.indexOf("\n") + 1) 
-  : tsSource;
-const result = await Deno.emit(INPUT, {
-  sources: { [new URL(INPUT, import.meta.url).href]: tsNoShebang },
-  compilerOptions: { target: "es2020", module: "esnext" },
+const transformed = await esbuild.transform(tsSource, {
+  loader: "ts",
+  target: "es2020",
+  format: "esm",
+  banner: "",
 });
-const outputKey = Object.keys(result.files).find(k => k.endsWith(".js"));
-if (!outputKey) { console.error("No JS output from transpile"); Deno.exit(1); }
-const jsCode = result.files[outputKey].replace(/^\/\/# sourceMappingURL=.*$/m, "").trim();
+await esbuild.stop();
+const jsCode = transformed.code;
 console.error(`Transpiled: ${jsCode.length} bytes`);
 
 // ── Custom identifier generator ──────────────────────────────────────────────
