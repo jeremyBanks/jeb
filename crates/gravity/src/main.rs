@@ -195,8 +195,9 @@ impl Sim {
                     let y = (cy + dy as f32).rem_euclid(H as f32);
                     let xi = x as usize;
                     let yi = y as usize;
-                    // Checkerboard 50%, then randomly discard half → ~25% density
+                    // Checkerboard 50%, then randomly discard half twice → ~12.5% density
                     if xi % 2 != 0 || yi % 2 != 0 { continue; }
+                    if xoru64(&mut rng) % 2 != 0 { continue; }
                     if xoru64(&mut rng) % 2 != 0 { continue; }
                     if cells.iter().any(|c: &Cell| c.x as usize == xi && c.y as usize == yi) {
                         continue;
@@ -222,7 +223,12 @@ impl Sim {
             let yi = (xoru64(&mut rng) as usize) % H;
             let idx = yi * W + xi;
             if !occupied[idx] {
-                cells.push(Cell { x: xi as f32 + 0.5, y: yi as f32 + 0.5, vx: 0.0, vy: 0.0, prev_speed: 0.0 });
+                // Small random initial velocity: speed ~ U[0, 1% of speed_cap], random direction
+                let spd   = xorf32(&mut rng) * speed_cap * 0.01;
+                let angle = xorf32(&mut rng) * 2.0 * std::f32::consts::PI;
+                let vx    = angle.cos() * spd;
+                let vy    = angle.sin() * spd;
+                cells.push(Cell { x: xi as f32 + 0.5, y: yi as f32 + 0.5, vx, vy, prev_speed: 0.0 });
                 occupied[idx] = true;
                 seeded += 1;
             }
@@ -686,11 +692,22 @@ impl Sim {
     }
 
     // Velocity convergence phase: called for up to 64 ticks once positions have converged.
-    // Ramps gravity to 0 over the first 32 ticks.
+    // Ramps gravity AND life (Conway deaths + nudge kill/revive) to 0 over the first 32 ticks.
     // Guarantees velocity error never increases: snapshots pre-gravity error, clamps any
     // growth after gravity runs, then lerps toward target.
-    fn epilogue_vel_tick(&mut self, orig: &OriginalState, vel_phase_tick: usize) {
-        let g_scale = (1.0 - vel_phase_tick as f32 / 32.0).max(0.0);
+    // conv_t: the RAMP_TICKS t-value at the tick positions converged (used to compute
+    //         residual Conway/nudge rates at entry so the ramp starts from that level).
+    fn epilogue_vel_tick(&mut self, orig: &OriginalState, vel_phase_tick: usize, conv_t: f32) {
+        let g_scale    = (1.0 - vel_phase_tick as f32 / 32.0).max(0.0);
+        let life_scale = (1.0 - vel_phase_tick as f32 / 32.0).max(0.0);
+
+        // Ramp down residual Conway deaths to zero over 32 frames.
+        // (Kill/revive nudges are no-ops here: positions converged means all cells
+        //  are at original positions, so there's nothing to kill or revive.)
+        let conway_max = (8.0 * (1.0 - conv_t) * life_scale).floor() as usize;
+        if conway_max > 0 {
+            self.epilogue_conway_deaths_only(conway_max);
+        }
 
         // Snapshot pre-gravity squared error for each cell
         let pre_err_sq: Vec<f32> = self.cells.iter().map(|c| {
@@ -1009,11 +1026,11 @@ fn main() {
     let blob_radius: f32 = parse_arg("--radius")
         .and_then(|s| s.parse().ok())
         .unwrap_or(4.0);
-    // --seed-density: random zero-momentum cells as 1/N of empty cells (0 = none)
-    // Default 32 = 1/32 of empty cells (doubled from previous 1/64)
+    // --seed-density: random cells as 1/N of empty cells (0 = none)
+    // Default 64 = 1/64 of empty cells (half as dense as before)
     let seed_density_inv: usize = parse_arg("--seed-density")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(32);
+        .unwrap_or(64);
 
     let total_frames = seconds * FPS as usize;
     let n_chunks = (total_frames + CHUNK_FRAMES - 1) / CHUNK_FRAMES;
@@ -1175,6 +1192,7 @@ fn main() {
         let ep_seg_start = total_frames;
         let mut pos_converged = false;
         let mut vel_tick = 0usize;
+        let mut conv_t = 0.0f32; // RAMP_TICKS t-value when positions converged
 
         loop {
             if !keep_running.load(Ordering::Relaxed) {
@@ -1197,15 +1215,16 @@ fn main() {
             // Phase 2 (velocity): up to 64 ticks, gravity ramps to 0 over first 32,
             //                     velocities clamped to never diverge from target.
             let done = if pos_converged {
-                sim.epilogue_vel_tick(&orig, vel_tick);
+                sim.epilogue_vel_tick(&orig, vel_tick, conv_t);
                 vel_tick += 1;
                 vel_tick >= 64
             } else {
                 let pc = sim.epilogue_tick(&orig, ep_tick);
                 if pc {
                     pos_converged = true;
-                    println!("  [epilogue] positions converged at tick {} ({:.1}s) — velocity phase begins",
-                        ep_tick, ep_tick as f32 / FPS as f32);
+                    conv_t = (ep_tick as f32 / 2400.0_f32).min(1.0);
+                    println!("  [epilogue] positions converged at tick {} ({:.1}s, t={:.2}) — velocity phase begins",
+                        ep_tick, ep_tick as f32 / FPS as f32, conv_t);
                 }
                 false
             };
