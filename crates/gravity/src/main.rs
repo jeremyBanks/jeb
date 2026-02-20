@@ -129,22 +129,17 @@ impl Sim {
             }
         }
 
-        // Apply population bounds by randomly trimming births/deaths
-        let current = n;
-        let after = current + desired_births.len() - desired_deaths.len();
-
-        // Always shuffle deaths and births before trimming — ensures no index bias
-        // (low-index cells = first blob should not be systematically favoured)
+        // Shuffle before any trimming — no index bias
         shuffle_vec(&mut desired_deaths, &mut self.rng);
         shuffle_vec(&mut desired_births, &mut self.rng);
 
-        if after > pop_max {
-            let excess = after - pop_max;
-            desired_births.truncate(desired_births.len().saturating_sub(excess));
-        } else if after < pop_min {
-            let excess = pop_min - after;
-            desired_deaths.truncate(desired_deaths.len().saturating_sub(excess));
-        }
+        // Enforce per-component: clamp births and deaths independently.
+        // Births can't push us above pop_max; deaths can't push us below pop_min.
+        // No cross-cancellation — a death isn't "saved" by a birth happening elsewhere.
+        let max_births = (pop_max).saturating_sub(n);
+        let max_deaths = n.saturating_sub(pop_min);
+        desired_births.truncate(max_births);
+        desired_deaths.truncate(max_deaths);
 
         // Mark deaths (we'll process them, removing from cells)
         let mut dying: std::collections::HashSet<usize> = desired_deaths.iter().cloned().collect();
@@ -496,42 +491,10 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32, conway_every: usize, 
 fn main() {
     fs::create_dir_all("frames").unwrap();
 
-    // D_best style: two blobs moving toward each other, offset vertically ~26px.
-    // This is what produced the interesting collision/slingshot.
-    // Original vx=±0.2 was too fast. Sweep slower speeds with/without Conway.
-    let snaps: Vec<usize> = (0..=40).map(|i| i * 120).collect();
-
-    // Original D_best had vx=±0.2, offset=26px — looked great but moved too fast.
-    // Keep vx=±0.2, raise cap to 2.0 so gravity can still steer post-collision.
-    // Vary offset to find the best slingshot angle.
-    // G=0.00005 was best — spread dropped 112→92, actual attraction visible
-    // Now try smaller blobs (r=6) — fewer cells = less intra-blob self-gravity
-    // Also keep r=13 at same G for comparison
-    // Conway every tick, pop clamped to ±12.5% of start
-    // Same winning params: r=6, G=0.00005, 320 frames at 30fps
     let snaps: Vec<usize> = (0..=320).map(|i| i * 120).collect();
 
-    // Same thirds positions but velocities aimed directly at each other
-    // so neither blob is systematically favoured by the approach geometry.
-    // Vector from blob1→blob2: (128, 86), length ~152 → unit (0.842, 0.566)
-    // Each blob moves at speed 0.2 toward the other's initial position.
-    // Three-body: two left blobs moving right, one right blob moving left
-    // All clustered in the middle vertical band
-    // W=384: left≈130, right≈260; H=256: top≈96, mid≈128, bot≈160
-    // Conway fully disabled (conway_every=0)
-    run("sym_no_conway", 0.00005, 1.5, 0.125, 0, 4.0, &[
-        (192.0,  85.0, 6.0,  0.0,  0.08, 0),
-        (192.0, 171.0, 6.0,  0.0, -0.08, 0),
-    ], 38400, &snaps);
-
-    // pop_band=0 (should be equivalent — every birth/death trimmed)
-    run("sym_band_zero", 0.00005, 1.5, 0.125, 1, 0.0, &[
-        (192.0,  85.0, 6.0,  0.0,  0.08, 0),
-        (192.0, 171.0, 6.0,  0.0, -0.08, 0),
-    ], 38400, &snaps);
-
-    // Also run three-body for comparison
-    run("three_body_tight", 0.00005, 1.5, 0.125, 1, 4.0, &[
+    // Per-component birth/death clamping — ±4 cells, three-body
+    run("percomp_3body", 0.00005, 1.5, 0.125, 1, 4.0, &[
         (130.0,  96.0, 6.0,  0.08,  0.0, 0),
         (130.0, 160.0, 6.0,  0.08,  0.0, 0),
         (260.0, 128.0, 6.0, -0.08,  0.0, 0),
