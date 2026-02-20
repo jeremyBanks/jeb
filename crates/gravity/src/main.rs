@@ -758,6 +758,9 @@ fn main() {
         .expect("Usage: gravity --seconds <N> [--radius <r>] [--seed-density <1/N>] [--epilogue]");
     let do_epilogue = args.iter().any(|a| a == "--epilogue");
     // --radius: circle radius (0 = no blobs), default 4
+    let rng_seed: u64 = parse_arg("--seed")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(44);
     let blob_radius: f32 = parse_arg("--radius")
         .and_then(|s| s.parse().ok())
         .unwrap_or(4.0);
@@ -818,7 +821,7 @@ fn main() {
         })
         .unwrap_or_else(|| {
             println!("Fresh start (radius={blob_radius}, seed_density=1/{seed_density_inv})");
-            let s = Sim::new(44, g, softening, speed_cap, conway_every, pop_band, clumps, seed_density_inv);
+            let s = Sim::new(rng_seed, g, softening, speed_cap, conway_every, pop_band, clumps, seed_density_inv);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
