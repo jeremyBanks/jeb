@@ -42,8 +42,8 @@ impl Sim {
                     let y = (cy + dy as f32).rem_euclid(H as f32);
                     let xi = x as usize;
                     let yi = y as usize;
-                    // 50% random inclusion — no spatial bias
-                    if xoru64(&mut rng) % 2 != 0 { continue; }
+                    // Checkerboard 50% density — deterministic, no spatial bias vs RNG
+                    if (xi + yi) % 2 != 0 { continue; }
                     if cells.iter().any(|c: &Cell| c.x as usize == xi && c.y as usize == yi) {
                         continue;
                     }
