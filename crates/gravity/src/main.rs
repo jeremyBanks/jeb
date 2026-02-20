@@ -503,8 +503,17 @@ fn main() {
     // 40 frames at 10fps = 4 seconds, snap every 250 ticks over 10000
     let snaps: Vec<usize> = (0..=40).map(|i| i * 250).collect();
 
-    run("soft25", 0.003, 25.0, 0.5, 128, &[
+    // soft25 confirmed working (spread 80-117). Now run longer + denser frames.
+    // Also try v=0.03 (slower start) to see if orbit is tighter.
+    let snaps: Vec<usize> = (0..=60).map(|i| i * 500).collect(); // 60 frames, 30s@10fps
+
+    run("orbit_long_v046", 0.003, 25.0, 0.5, 128, &[
         (100.0, 128.0, 13.0,  0.0, -0.046, 0),
         (284.0, 128.0, 13.0,  0.0,  0.046, 0),
-    ], 10000, &snaps);
+    ], 30000, &snaps);
+
+    run("orbit_long_v030", 0.003, 25.0, 0.5, 128, &[
+        (100.0, 128.0, 13.0,  0.0, -0.030, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.030, 0),
+    ], 30000, &snaps);
 }
