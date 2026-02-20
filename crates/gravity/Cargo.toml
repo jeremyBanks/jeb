@@ -2,5 +2,3 @@
 // [recovery] edit target not found, appending:
 [dependencies]
 png = "0.17"
-
-[workspace]
