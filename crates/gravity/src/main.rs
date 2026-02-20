@@ -222,7 +222,12 @@ impl Sim {
             let yi = (xoru64(&mut rng) as usize) % H;
             let idx = yi * W + xi;
             if !occupied[idx] {
-                cells.push(Cell { x: xi as f32 + 0.5, y: yi as f32 + 0.5, vx: 0.0, vy: 0.0, prev_speed: 0.0 });
+                // Small random initial velocity: speed ~ U[0, 1% of speed_cap], random direction
+                let spd   = xorf32(&mut rng) * speed_cap * 0.01;
+                let angle = xorf32(&mut rng) * 2.0 * std::f32::consts::PI;
+                let vx    = angle.cos() * spd;
+                let vy    = angle.sin() * spd;
+                cells.push(Cell { x: xi as f32 + 0.5, y: yi as f32 + 0.5, vx, vy, prev_speed: 0.0 });
                 occupied[idx] = true;
                 seeded += 1;
             }
