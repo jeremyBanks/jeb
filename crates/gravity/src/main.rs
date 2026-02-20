@@ -808,6 +808,9 @@ fn main() {
         positions: sim.cells.iter()
             .map(|c| (c.x as usize % W, c.y as usize % H))
             .collect(),
+        velocities: sim.cells.iter()
+            .map(|c| ((c.x as usize % W, c.y as usize % H), (c.vx, c.vy)))
+            .collect(),
         count: sim.cells.len(),
     };
 
