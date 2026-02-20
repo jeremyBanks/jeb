@@ -482,32 +482,34 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32, conway_every: usize,
 fn main() {
     fs::create_dir_all("frames").unwrap();
 
-    // Circular orbit parameters (derived):
-    //   G=0.003, M_other~531, separation=184px → v_circular=0.093 px/tick
-    //   Period ≈ 6200 ticks; run for ~1.5 orbits = 9600 ticks
-    //   Blobs at x=100 and x=284 (center 192), y=128 (center of 256px grid)
-    //   Left blob → moving UP  (vy = -0.093)
-    //   Right blob → moving DOWN (vy = +0.093)
-    //   This gives counter-clockwise rotation around common CoM
+    // Circular orbit parameters (N-body corrected):
+    //   Each blob has ~531 cells; within-blob forces dominate at short range.
+    //   High softening (15px) prevents intra-blob acceleration from hitting cap.
+    //   G=0.000006, softening=15, cap=0.3
+    //   At sep=184px: inter-blob accel ≈ 531 * 6e-6 / 184² ≈ 9.4e-8 px/tick² per cell
+    //   Within-blob at r=2px: 6e-6 / (4 + 225) ≈ 2.6e-8 — manageable with soft=15
+    //   v_circ = sqrt(531 * G * 92 / 184²) = sqrt(531 * 6e-6 * 92 / 33856) ≈ 0.029 px/tick
+    //   Period ≈ 2π * 92 / 0.029 ≈ 19900 ticks → run 20000 ticks
+    //   Blobs at x=100 and x=284, y=128
 
-    // Snap every 300 ticks (32 frames over 9600 ticks)
-    let snaps: Vec<usize> = (0..=32).map(|i| i * 300).collect();
+    // Snap every 500 ticks (40 frames over 20000)
+    let snaps: Vec<usize> = (0..=40).map(|i| i * 500).collect();
 
     // ── A: Pure gravity, no Conway — reference orbit ──────────────────────────
-    run("orbit_pure", 0.003, 2.0, 1.0, 0, &[
-        (100.0, 128.0, 13.0,  0.0, -0.093, 0),
-        (284.0, 128.0, 13.0,  0.0,  0.093, 0),
-    ], 9600, &snaps);
+    run("orbit_pure", 0.000006, 15.0, 0.3, 0, &[
+        (100.0, 128.0, 13.0,  0.0, -0.029, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.029, 0),
+    ], 20000, &snaps);
 
     // ── B: Conway every 8 ticks — subtle perturbation ────────────────────────
-    run("orbit_conway8", 0.003, 2.0, 1.0, 8, &[
-        (100.0, 128.0, 13.0,  0.0, -0.093, 0),
-        (284.0, 128.0, 13.0,  0.0,  0.093, 0),
-    ], 9600, &snaps);
+    run("orbit_conway8", 0.000006, 15.0, 0.3, 8, &[
+        (100.0, 128.0, 13.0,  0.0, -0.029, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.029, 0),
+    ], 20000, &snaps);
 
     // ── C: Conway every 1 tick — maximum perturbation ────────────────────────
-    run("orbit_conway1", 0.003, 2.0, 1.0, 1, &[
-        (100.0, 128.0, 13.0,  0.0, -0.093, 0),
-        (284.0, 128.0, 13.0,  0.0,  0.093, 0),
-    ], 9600, &snaps);
+    run("orbit_conway1", 0.000006, 15.0, 0.3, 1, &[
+        (100.0, 128.0, 13.0,  0.0, -0.029, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.029, 0),
+    ], 20000, &snaps);
 }
