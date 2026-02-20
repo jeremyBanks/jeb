@@ -487,12 +487,14 @@ fn main() {
     // Original vx=±0.2 was too fast. Sweep slower speeds with/without Conway.
     let snaps: Vec<usize> = (0..=40).map(|i| i * 120).collect();
 
-    // Sweep: vary vertical offset and G, no Conway, cap high enough not to interfere
-    for &(offset, g) in &[(30.0f32, 0.0005f32), (50.0, 0.0005), (30.0, 0.0002), (50.0, 0.0002)] {
-        let name = format!("sweep_off{:.0}_g{g:.4}", offset);
-        run(&name, g, 1.5, 0.3, 0, &[
-            ( 80.0, 128.0 - offset/2.0, 13.0,  0.05,  0.0, 0),
-            (304.0, 128.0 + offset/2.0, 13.0, -0.05,  0.0, 0),
+    // Original D_best had vx=±0.2, offset=26px — looked great but moved too fast.
+    // Keep vx=±0.2, raise cap to 2.0 so gravity can still steer post-collision.
+    // Vary offset to find the best slingshot angle.
+    for &offset in &[13.0f32, 26.0, 40.0, 60.0] {
+        let name = format!("sling_off{:.0}", offset);
+        run(&name, 0.001, 1.5, 2.0, 0, &[
+            ( 80.0, 128.0 - offset/2.0, 13.0,  0.2,  0.0, 0),
+            (304.0, 128.0 + offset/2.0, 13.0, -0.2,  0.0, 0),
         ], 4800, &snaps);
     }
 }
