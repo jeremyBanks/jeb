@@ -42,9 +42,9 @@ impl Sim {
                     let y = (cy + dy as f32).rem_euclid(H as f32);
                     let xi = x as usize;
                     let yi = y as usize;
-                    // 25% density — every other checkerboard square (xi+yi divisible by 4 roughly)
-                    // Use (xi%2==0 && yi%2==0) for a sparser but still regular pattern
+                    // Checkerboard 50%, then randomly discard half → ~25% density, 2x cells vs r=12@25%
                     if xi % 2 != 0 || yi % 2 != 0 { continue; }
+                    if xoru64(&mut rng) % 2 != 0 { continue; }
                     if cells.iter().any(|c: &Cell| c.x as usize == xi && c.y as usize == yi) {
                         continue;
                     }
