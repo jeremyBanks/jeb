@@ -129,22 +129,17 @@ impl Sim {
             }
         }
 
-        // Apply population bounds by randomly trimming births/deaths
-        let current = n;
-        let after = current + desired_births.len() - desired_deaths.len();
-
-        // Always shuffle deaths and births before trimming — ensures no index bias
-        // (low-index cells = first blob should not be systematically favoured)
+        // Shuffle before any trimming — no index bias
         shuffle_vec(&mut desired_deaths, &mut self.rng);
         shuffle_vec(&mut desired_births, &mut self.rng);
 
-        if after > pop_max {
-            let excess = after - pop_max;
-            desired_births.truncate(desired_births.len().saturating_sub(excess));
-        } else if after < pop_min {
-            let excess = pop_min - after;
-            desired_deaths.truncate(desired_deaths.len().saturating_sub(excess));
-        }
+        // Enforce per-component: clamp births and deaths independently.
+        // Births can't push us above pop_max; deaths can't push us below pop_min.
+        // No cross-cancellation — a death isn't "saved" by a birth happening elsewhere.
+        let max_births = (pop_max).saturating_sub(n);
+        let max_deaths = n.saturating_sub(pop_min);
+        desired_births.truncate(max_births);
+        desired_deaths.truncate(max_deaths);
 
         // Mark deaths (we'll process them, removing from cells)
         let mut dying: std::collections::HashSet<usize> = desired_deaths.iter().cloned().collect();
