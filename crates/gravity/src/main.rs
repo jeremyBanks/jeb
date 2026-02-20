@@ -492,11 +492,24 @@ fn main() {
     //   Period ≈ 2π * 92 / 0.029 ≈ 19900 ticks → run 20000 ticks
     //   Blobs at x=100 and x=284, y=128
 
-    // Sanity check: 500 ticks only
-    let snaps: Vec<usize> = (0..=10).map(|i| i * 50).collect();
+    // Snap every 500 ticks (40 frames over 20000)
+    let snaps: Vec<usize> = (0..=40).map(|i| i * 500).collect();
 
-    run("orbit_check", 0.000006, 15.0, 0.3, 0, &[
+    // ── A: Pure gravity, no Conway — reference orbit ──────────────────────────
+    run("orbit_pure", 0.000006, 15.0, 0.3, 0, &[
         (100.0, 128.0, 13.0,  0.0, -0.029, 0),
         (284.0, 128.0, 13.0,  0.0,  0.029, 0),
-    ], 500, &snaps);
+    ], 20000, &snaps);
+
+    // ── B: Conway every 8 ticks — subtle perturbation ────────────────────────
+    run("orbit_conway8", 0.000006, 15.0, 0.3, 8, &[
+        (100.0, 128.0, 13.0,  0.0, -0.029, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.029, 0),
+    ], 20000, &snaps);
+
+    // ── C: Conway every 1 tick — maximum perturbation ────────────────────────
+    run("orbit_conway1", 0.000006, 15.0, 0.3, 1, &[
+        (100.0, 128.0, 13.0,  0.0, -0.029, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.029, 0),
+    ], 20000, &snaps);
 }
