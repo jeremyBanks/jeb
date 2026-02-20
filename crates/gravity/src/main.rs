@@ -257,9 +257,8 @@ impl Sim {
                 c.vx = c.vx / spd * effective_cap;
                 c.vy = c.vy / spd * effective_cap;
             }
-            // Decay prev_speed toward global_cap — momentum bleeds off over ~16 ticks
-            let capped_spd = spd.min(effective_cap);
-            c.prev_speed = (capped_spd * 0.9 + self.speed_cap * 0.1).max(self.speed_cap);
+            // Hold prev_speed — cell keeps earned momentum until gravity slows it naturally
+            c.prev_speed = spd.min(effective_cap);
         }
 
         // Movement with reservation chaining:
