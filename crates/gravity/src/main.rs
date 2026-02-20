@@ -1251,3 +1251,20 @@ use std::io::{BufWriter, Write};
         let max_deaths = n.saturating_sub(pop_min).min(rate_limit);
         desired_births.truncate(max_births);
         desired_deaths.truncate(max_deaths);
+
+// [recovery] edit target not found, appending:
+    fn gravity_step_epilogue(&mut self, orig: &OriginalState, g_scale: f32) {
+        let n = self.cells.len();
+        // Barnes-Hut for epilogue: original particles are fixed, no force applied to them
+        let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
+        nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
+        for i in 0..n {
+            let (px, py) = (self.cells[i].x, self.cells[i].y);
+            qt_insert(&mut nodes, 0, i, px, py, 0);
+        }
+        for i in 0..n {
+            let is_orig = orig.positions.contains(
+                &(self.cells[i].x as usize % W, self.cells[i].y as usize % H));
+            if is_orig { continue; }
+            let (px, py) = (self.cells[i].x, self.cells[i].y);
+            let (fx, fy) = qt_force(&nodes, 0, i, px, py, self.g * g_scale, self.softening);
