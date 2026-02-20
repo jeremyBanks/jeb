@@ -1,8 +1,8 @@
 use std::fs;
 use std::io::BufWriter;
 
-const W: usize = 384;
-const H: usize = 256;
+const W: usize = 192;
+const H: usize = 128;
 
 struct Cell {
     x: f32,
@@ -247,11 +247,6 @@ impl Sim {
     fn gravity_step(&mut self) {
         let n = self.cells.len();
 
-        // Cutoff: skip pairs beyond this distance — gravity falls off as 1/r²
-        // so distant pairs contribute nearly nothing. Keeps perf manageable at high pop.
-        const CUTOFF: f32 = 64.0;
-        const CUTOFF2: f32 = CUTOFF * CUTOFF;
-
         for i in 0..n {
             for j in (i + 1)..n {
                 let mut dx = self.cells[j].x - self.cells[i].x;
@@ -262,8 +257,6 @@ impl Sim {
                 if dx < -hw { dx += W as f32; }
                 if dy >  hh { dy -= H as f32; }
                 if dy < -hh { dy += H as f32; }
-
-                if dx * dx + dy * dy > CUTOFF2 { continue; }
 
                 let r2 = dx * dx + dy * dy + self.softening * self.softening;
                 let r = r2.sqrt();
@@ -395,9 +388,9 @@ impl Sim {
                     canvas[i + 1] *= 0.5;
                     canvas[i + 2] *= 0.5;
                 } else {
-                    canvas[i]     *= 0.995;
-                    canvas[i + 1] *= 0.995;
-                    canvas[i + 2] *= 0.995;
+                    canvas[i]     *= 0.99875;
+                    canvas[i + 1] *= 0.99875;
+                    canvas[i + 2] *= 0.99875;
                 }
             }
         }
@@ -550,10 +543,11 @@ fn main() {
     //   bot-right  (288, 192) → moving left   (-0.08,  0.0)
     //   bot-left    (96, 192) → moving up     ( 0.0,  -0.08)
     // r=24 (2x again), checkerboard 50% then random-half discard → ~12.5% density → ~2x cells vs r=12@25%
+    // Halved dimensions (192×128), so halve positions and radii too
     run("four_clockwise", 0.00005, 1.5, 0.03125, 1, 16.0, &[
-        ( 96.0,  64.0, 24.0,  0.010,  0.000, 0),
-        (288.0,  64.0, 24.0,  0.000,  0.010, 0),
-        (288.0, 192.0, 24.0, -0.010,  0.000, 0),
-        ( 96.0, 192.0, 24.0,  0.000, -0.010, 0),
+        ( 48.0,  32.0, 12.0,  0.010,  0.000, 0),
+        (144.0,  32.0, 12.0,  0.000,  0.010, 0),
+        (144.0,  96.0, 12.0, -0.010,  0.000, 0),
+        ( 48.0,  96.0, 12.0,  0.000, -0.010, 0),
     ], 38400, &snaps);
 }
