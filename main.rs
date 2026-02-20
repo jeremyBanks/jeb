@@ -820,8 +820,46 @@ fn main() {
         println!("  chunk {}/{n_chunks} done ({pct}%)  pop={}", chunk+1, sim.cells.len());
     }
 
+    // ── Epilogue phase ────────────────────────────────────────────────────
+    if do_epilogue {
+        println!("\n[epilogue] converging to original {} cells...", orig.count);
+        const MAX_EPILOGUE_TICKS: usize = 18000; // 5 min safety cap
+        let mut ep_tick = 0usize;
+        let mut ep_frame = 0usize;
+        let mut ep_chunk_frames: Vec<String> = Vec::new();
+        let ep_seg_start = total_frames;
+
+        loop {
+            let converged = sim.epilogue_tick(&orig, ep_tick);
+            sim.paint_frame(&mut canvas);
+            let global_frame = total_frames + ep_frame;
+            let path = format!("{frames_dir}/f{global_frame:08}.png");
+            Sim::save_png(&canvas, &path);
+            ep_chunk_frames.push(path);
+            ep_frame += 1;
+            ep_tick += 1;
+
+            // Encode + flush every CHUNK_FRAMES frames
+            if ep_chunk_frames.len() == CHUNK_FRAMES || converged || ep_tick >= MAX_EPILOGUE_TICKS {
+                if !ep_chunk_frames.is_empty() {
+                    let seg_path = format!("{segments_dir}/seg_{:08}.mp4", ep_seg_start + ep_frame - ep_chunk_frames.len());
+                    encode_chunk(frames_dir, &seg_path, ep_chunk_frames.len());
+                    writeln!(seg_list, "file '{seg_path}'").unwrap();
+                    seg_list.flush().unwrap();
+                    delete_frames(frames_dir);
+                    ep_chunk_frames.clear();
+                }
+            }
+
+            if converged { println!("  epilogue converged at tick {ep_tick} ({:.1}s)", ep_tick as f32 / FPS as f32); break; }
+            if ep_tick >= MAX_EPILOGUE_TICKS { println!("  epilogue hit safety cap ({MAX_EPILOGUE_TICKS} ticks)"); break; }
+        }
+        println!("  epilogue: {ep_frame} frames appended");
+    }
+
     // Final concat
-    println!("\nConcatenating {} segments → {output_file}", n_chunks);
+    let total_segs = fs::read_to_string(segments_file).unwrap_or_default().lines().count();
+    println!("\nConcatenating {total_segs} segments → {output_file}");
     concat_segments(segments_file, &output_file);
 
     let size = fs::metadata(&output_file).map(|m| m.len()).unwrap_or(0);
