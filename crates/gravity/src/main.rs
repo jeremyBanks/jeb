@@ -18,6 +18,7 @@ struct Sim {
     g: f32,
     softening: f32,
     speed_cap: f32,
+    start_pop: usize,
 }
 
 impl Sim {
@@ -47,13 +48,171 @@ impl Sim {
         }
 
         let n = cells.len();
-        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap }
+        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: n }
     }
 
-    fn tick(&mut self) {
+    // ── Conway step (modified) ─────────────────────────────────────────────
+    fn conway_step(&mut self) {
+        let n = self.cells.len();
+        let pop_min = self.start_pop / 2;
+        let pop_max = self.start_pop * 2;
+
+        // Build occupancy grid: cell index at each grid position (usize::MAX = empty)
+        let mut grid = vec![usize::MAX; W * H];
+        for (i, c) in self.cells.iter().enumerate() {
+            let xi = c.x as usize % W;
+            let yi = c.y as usize % H;
+            grid[yi * W + xi] = i;
+        }
+
+        // For each grid cell, count live neighbours and collect their indices
+        let neighbour_offsets: [(i32, i32); 8] = [
+            (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)
+        ];
+        let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
+            neighbour_offsets.iter().filter_map(|&(dy, dx)| {
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                let idx = grid[ny * W + nx];
+                if idx != usize::MAX { Some(idx) } else { None }
+            }).collect()
+        };
+
+        // Determine desired births and deaths
+        let mut desired_births: Vec<(usize, usize, Vec<usize>)> = Vec::new(); // (gy, gx, neighbour_indices)
+        let mut desired_deaths: Vec<usize> = Vec::new(); // cell indices
+
+        // Check all alive cells for death
+        for (i, c) in self.cells.iter().enumerate() {
+            let gx = c.x as usize % W;
+            let gy = c.y as usize % H;
+            let nbrs = live_neighbours(gy, gx);
+            let count = nbrs.len();
+            // Standard Conway: dies if not 2 or 3 neighbours
+            if count != 2 && count != 3 {
+                // Can only die if has at least one neighbour to receive velocity
+                if !nbrs.is_empty() {
+                    desired_deaths.push(i);
+                }
+            }
+        }
+
+        // Check all empty cells for birth
+        // Only need to check cells adjacent to live cells
+        let mut candidates = std::collections::HashSet::new();
+        for c in &self.cells {
+            let gx = c.x as usize % W;
+            let gy = c.y as usize % H;
+            for &(dy, dx) in &neighbour_offsets {
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                if grid[ny * W + nx] == usize::MAX {
+                    candidates.insert((ny, nx));
+                }
+            }
+        }
+        for (gy, gx) in candidates {
+            let nbrs = live_neighbours(gy, gx);
+            if nbrs.len() == 3 {
+                desired_births.push((gy, gx, nbrs));
+            }
+        }
+
+        // Apply population bounds by randomly trimming births/deaths
+        let current = n;
+        let after = current + desired_births.len() - desired_deaths.len();
+
+        if after > pop_max {
+            // Too many births — randomly trim births
+            let excess = after - pop_max;
+            shuffle_vec(&mut desired_births, &mut self.rng);
+            desired_births.truncate(desired_births.len().saturating_sub(excess));
+        } else if after < pop_min {
+            // Too many deaths — randomly trim deaths
+            let excess = pop_min - after;
+            shuffle_vec(&mut desired_deaths, &mut self.rng);
+            desired_deaths.truncate(desired_deaths.len().saturating_sub(excess));
+        }
+
+        // Mark deaths (we'll process them, removing from cells)
+        let mut dying: std::collections::HashSet<usize> = desired_deaths.iter().cloned().collect();
+
+        // Apply velocity transfers for deaths: distribute velocity equally to live neighbours
+        // (excluding other dying cells)
+        for &di in &dying {
+            let (dvx, dvy) = (self.cells[di].vx, self.cells[di].vy);
+            let gx = self.cells[di].x as usize % W;
+            let gy = self.cells[di].y as usize % H;
+            let receivers: Vec<usize> = live_neighbours(gy, gx).into_iter()
+                .filter(|&ni| !dying.contains(&ni))
+                .collect();
+            if !receivers.is_empty() {
+                let share = 1.0 / receivers.len() as f32;
+                for &ri in &receivers {
+                    self.cells[ri].vx += dvx * share;
+                    self.cells[ri].vy += dvy * share;
+                }
+            }
+        }
+
+        // Remove dying cells (in reverse index order to preserve indices)
+        let mut death_indices: Vec<usize> = dying.drain().collect();
+        death_indices.sort_unstable_by(|a, b| b.cmp(a));
+        for i in death_indices {
+            self.cells.swap_remove(i);
+        }
+
+        // Births: place new cells with velocity = equal average of their neighbours
+        // Neighbours' indices may have shifted due to swap_remove — rebuild grid
+        let mut grid2 = vec![usize::MAX; W * H];
+        for (i, c) in self.cells.iter().enumerate() {
+            let xi = c.x as usize % W;
+            let yi = c.y as usize % H;
+            grid2[yi * W + xi] = i;
+        }
+
+        for (gy, gx, old_nbr_indices) in desired_births {
+            // Re-check the position is still empty (could collide with another birth)
+            if grid2[gy * W + gx] != usize::MAX { continue; }
+
+            // Recompute live neighbours from updated grid (old indices may be stale)
+            let live_nbrs: Vec<usize> = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                let idx = grid2[ny * W + nx];
+                if idx != usize::MAX { Some(idx) } else { None }
+            }).collect();
+
+            // Need at least the original 3 (some may have died)
+            if live_nbrs.is_empty() {
+                // All neighbours died — skip birth, use old indices as fallback
+                // (shouldn't normally happen)
+                let _ = old_nbr_indices;
+                continue;
+            }
+
+            let n_nbrs = live_nbrs.len() as f32;
+            let vx = live_nbrs.iter().map(|&i| self.cells[i].vx).sum::<f32>() / n_nbrs;
+            let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
+
+            let new_idx = self.cells.len();
+            self.cells.push(Cell {
+                x: gx as f32 + 0.5,
+                y: gy as f32 + 0.5,
+                vx,
+                vy,
+            });
+            grid2[gy * W + gx] = new_idx;
+        }
+
+        // Rebuild order for gravity shuffle
+        self.order = (0..self.cells.len()).collect();
+    }
+
+    // ── Gravity step ───────────────────────────────────────────────────────
+    fn gravity_step(&mut self) {
         let n = self.cells.len();
 
-        // All-pairs 1/r² gravity
         for i in 0..n {
             for j in (i + 1)..n {
                 let mut dx = self.cells[j].x - self.cells[i].x;
@@ -87,7 +246,7 @@ impl Sim {
             }
         }
 
-        // Move in random order, skip if target cell occupied
+        // Move in random order, skip if target occupied
         let mut occupied = vec![false; W * H];
         for c in &self.cells {
             occupied[c.y as usize % H * W + c.x as usize % W] = true;
@@ -120,12 +279,16 @@ impl Sim {
         }
     }
 
+    fn tick(&mut self) {
+        self.conway_step();
+        self.gravity_step();
+    }
+
     fn paint_frame(&self, canvas: &mut Vec<u8>) {
-        // Fade existing canvas by ~2% per tick
+        // Fade existing canvas slowly
         for v in canvas.iter_mut() {
             *v = (*v as u16 * 253 / 256) as u8;
         }
-        // Paint live cells on top
         for c in &self.cells {
             let xi = c.x as usize % W;
             let yi = c.y as usize % H;
@@ -167,26 +330,32 @@ impl Sim {
         let max_spd = self.cells.iter().map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).fold(0.0f32, f32::max);
         let cx = self.cells.iter().map(|c| c.x).sum::<f32>() / n;
         let cy = self.cells.iter().map(|c| c.y).sum::<f32>() / n;
-        // spread = mean distance from CoM
         let spread = self.cells.iter().map(|c| {
             let dx = c.x - cx; let dy = c.y - cy;
             (dx*dx+dy*dy).sqrt()
         }).sum::<f32>() / n;
-        format!("avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1} com=({cx:.0},{cy:.0})")
+        format!("pop={} avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1}",
+            self.cells.len())
+    }
+}
+
+fn shuffle_vec<T>(v: &mut Vec<T>, rng: &mut u64) {
+    let n = v.len();
+    for i in (1..n).rev() {
+        let j = (xoru64(rng) as usize) % (i + 1);
+        v.swap(i, j);
     }
 }
 
 /// Map velocity to color:
 /// - Hue = direction of motion (angle of vx,vy)
 /// - Saturation = speed (0=grey, 1=fully saturated)
-/// - Value = 1.0 always, but minimum brightness 25% via floor on RGB
+/// - Value = 1.0 always, minimum brightness 25%
 fn velocity_color(vx: f32, vy: f32, speed_cap: f32) -> (u8, u8, u8) {
     let spd = (vx * vx + vy * vy).sqrt();
     let sat = (spd / speed_cap).clamp(0.0, 1.0);
-    // Hue from direction: atan2 in [0, 2π]
     let hue = (vy.atan2(vx) + std::f32::consts::PI) / (2.0 * std::f32::consts::PI);
     let (r, g, b) = hsv_to_rgb(hue, sat, 1.0);
-    // Floor at 25% (64/255) so cells are never invisible
     let floor = 64u8;
     (r.max(floor), g.max(floor), b.max(floor))
 }
@@ -227,14 +396,14 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32,
 
     let mut sim = Sim::new(42, g, softening, speed_cap, clumps);
     let mut canvas = vec![0u8; W * H * 3];
-    println!("\n=== {name} | g={g} soft={softening} cap={speed_cap} cells={} ===",
+    println!("\n=== {name} | g={g} soft={softening} cap={speed_cap} start_pop={} ===",
         sim.cells.len());
 
     for tick in 0..=ticks {
         sim.paint_frame(&mut canvas);
         if snap_at.contains(&tick) {
             Sim::save_png(&canvas, &format!("{dir}/t{tick:04}.png"));
-            sim.print_ascii(&format!("t={tick}  {}", sim.stats()));
+            println!("  t={tick:4}  {}", sim.stats());
         }
         if tick < ticks { sim.tick(); }
     }
@@ -243,39 +412,8 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32,
 fn main() {
     fs::create_dir_all("frames").unwrap();
 
-    // Two circles of cells, in opposite diagonal quadrants, moving on parallel paths.
-    // Circle A: top-left quadrant, moving right (+x)
-    // Circle B: bottom-right quadrant, moving left (-x)
-    // Both paths are horizontal at y=42 and y=86 respectively — parallel, offset.
-    // They'll pass each other, gravity will curve them, trails will show the arc.
-    //
-    // Speed: 0.5px/tick → 256 ticks to cross the grid
-    // Fade: 2%/tick → ~110 ticks to fully fade → trails span ~55px = nearly half the grid
-    run("parallel", 0.0008, 1.5, 2.0, &[
-        (32.0, 42.0, 10.0,  0.5,  0.0, 60),  // circle A: top-left, moving right
-        (96.0, 86.0, 10.0, -0.5,  0.0, 60),  // circle B: bottom-right, moving left
+    run("conway_gravity", 0.0008, 1.5, 2.0, &[
+        (32.0, 42.0, 10.0,  0.5,  0.0, 60),
+        (96.0, 86.0, 10.0, -0.5,  0.0, 60),
     ], 2800, &[0, 400, 800, 1200, 1600, 2000, 2400, 2800]);
-}
-
-// [recovery] edit target not found, appending:
-fn run(name: &str, g: f32, softening: f32, speed_cap: f32,
-       clumps: &[(f32, f32, f32, f32, f32, usize)],
-       ticks: usize, snap_at: &[usize]) {
-    let dir = format!("frames/{name}");
-    fs::create_dir_all(&dir).unwrap();
-
-    let mut sim = Sim::new(42, g, softening, speed_cap, clumps);
-    let mut canvas = vec![0u8; W * H * 3];
-
-    println!("\n=== {name} | g={g} soft={softening} cap={speed_cap} cells={} ===",
-        sim.cells.len());
-
-    for tick in 0..=ticks {
-        sim.paint_frame(&mut canvas);
-        if snap_at.contains(&tick) {
-            Sim::save_png(&canvas, &format!("{dir}/t{tick:04}.png"));
-            sim.print_ascii(&format!("t={tick}  {}", sim.stats()));
-        }
-        if tick < ticks { sim.tick(); }
-    }
 }
