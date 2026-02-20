@@ -394,9 +394,9 @@ impl Sim {
                     canvas[i + 1] *= 0.5;
                     canvas[i + 2] *= 0.5;
                 } else {
-                    canvas[i]     *= 0.999688;
-                    canvas[i + 1] *= 0.999688;
-                    canvas[i + 2] *= 0.999688;
+                    canvas[i]     *= 0.999534;
+                    canvas[i + 1] *= 0.999534;
+                    canvas[i + 2] *= 0.999534;
                 }
             }
         }
