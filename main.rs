@@ -37,6 +37,8 @@ struct Sim {
 // Original state captured at tick=0 for epilogue convergence
 struct OriginalState {
     positions: std::collections::HashSet<(usize, usize)>,
+    // Map from grid position → original velocity
+    velocities: std::collections::HashMap<(usize, usize), (f32, f32)>,
     count: usize,
 }
 
