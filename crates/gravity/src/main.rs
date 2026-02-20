@@ -1051,11 +1051,11 @@ fn main() {
     let blob_radius: f32 = parse_arg("--radius")
         .and_then(|s| s.parse().ok())
         .unwrap_or(4.0);
-    // --seed-density: random zero-momentum cells as 1/N of empty cells (0 = none)
-    // Default 32 = 1/32 of empty cells (doubled from previous 1/64)
+    // --seed-density: random cells as 1/N of empty cells (0 = none)
+    // Default 64 = 1/64 of empty cells (half as dense as before)
     let seed_density_inv: usize = parse_arg("--seed-density")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(32);
+        .unwrap_or(64);
 
     let total_frames = seconds * FPS as usize;
     let n_chunks = (total_frames + CHUNK_FRAMES - 1) / CHUNK_FRAMES;
