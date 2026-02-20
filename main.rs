@@ -53,7 +53,7 @@ impl Sim {
     fn tick(&mut self) {
         let n = self.cells.len();
 
-        // All-pairs gravity
+        // All-pairs 1/r² gravity
         for i in 0..n {
             for j in (i + 1)..n {
                 let mut dx = self.cells[j].x - self.cells[i].x;
@@ -87,7 +87,7 @@ impl Sim {
             }
         }
 
-        // Move in random order, skip if target occupied
+        // Move in random order, skip if target cell occupied
         let mut occupied = vec![false; W * H];
         for c in &self.cells {
             occupied[c.y as usize % H * W + c.x as usize % W] = true;
@@ -127,8 +127,9 @@ impl Sim {
             let yi = c.y as usize % H;
             let spd = (c.vx * c.vx + c.vy * c.vy).sqrt();
             let t = (spd / self.speed_cap).clamp(0.0, 1.0);
-            let r = 255;
-            let g = (255.0 * (1.0 - t * 0.73)) as u8;
+            // cool (slow) = blue-white, hot (fast) = orange
+            let r = (255.0 * (0.5 + 0.5 * t)) as u8;
+            let g = (255.0 * (0.8 - 0.5 * t)) as u8;
             let b = (255.0 * (1.0 - t)) as u8;
             let i = (yi * W + xi) * 3;
             pixels[i]     = r;
@@ -143,37 +144,33 @@ impl Sim {
         writer.write_image_data(&pixels).unwrap();
     }
 
-    fn stats(&self) -> (f32, f32, f32, f32) {
-        let speeds: Vec<f32> = self.cells.iter()
-            .map(|c| (c.vx * c.vx + c.vy * c.vy).sqrt())
-            .collect();
-        let avg_spd = speeds.iter().sum::<f32>() / speeds.len() as f32;
-        let max_spd = speeds.iter().cloned().fold(0.0f32, f32::max);
-        let cx = self.cells.iter().map(|c| c.x).sum::<f32>() / self.cells.len() as f32;
-        let cy = self.cells.iter().map(|c| c.y).sum::<f32>() / self.cells.len() as f32;
-        (avg_spd, max_spd, cx, cy)
+    fn print_ascii(&self, label: &str) {
+        println!("--- {label} (cells={}) ---", self.cells.len());
+        let scale = 4usize;
+        let mut grid = vec![false; (W/scale) * (H/scale)];
+        for c in &self.cells {
+            let xi = (c.x as usize % W) / scale;
+            let yi = (c.y as usize % H) / scale;
+            grid[yi * (W/scale) + xi] = true;
+        }
+        for y in 0..H/scale {
+            let row: String = (0..W/scale).map(|x| if grid[y*(W/scale)+x] { '█' } else { '·' }).collect();
+            println!("  {row}");
+        }
     }
 
-    // Measure how "interesting" the sim is:
-    // reward: cells staying clumped (low spread), varied speeds, center of mass moving
-    fn score_snapshot(&self) -> f32 {
-        // Spread: mean distance from center of mass
-        let cx = self.cells.iter().map(|c| c.x).sum::<f32>() / self.cells.len() as f32;
-        let cy = self.cells.iter().map(|c| c.y).sum::<f32>() / self.cells.len() as f32;
+    fn stats(&self) -> String {
+        let n = self.cells.len() as f32;
+        let avg_spd = self.cells.iter().map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).sum::<f32>() / n;
+        let max_spd = self.cells.iter().map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).fold(0.0f32, f32::max);
+        let cx = self.cells.iter().map(|c| c.x).sum::<f32>() / n;
+        let cy = self.cells.iter().map(|c| c.y).sum::<f32>() / n;
+        // spread = mean distance from CoM
         let spread = self.cells.iter().map(|c| {
-            let dx = c.x - cx;
-            let dy = c.y - cy;
-            (dx*dx + dy*dy).sqrt()
-        }).sum::<f32>() / self.cells.len() as f32;
-        // Speed variance
-        let avg_spd = self.cells.iter().map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).sum::<f32>()
-            / self.cells.len() as f32;
-        let spd_var = self.cells.iter().map(|c| {
-            let s = (c.vx*c.vx+c.vy*c.vy).sqrt();
-            (s - avg_spd).powi(2)
-        }).sum::<f32>() / self.cells.len() as f32;
-        // Score: reward tight spread + speed variation
-        spd_var.sqrt() - spread * 0.1
+            let dx = c.x - cx; let dy = c.y - cy;
+            (dx*dx+dy*dy).sqrt()
+        }).sum::<f32>() / n;
+        format!("avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1} com=({cx:.0},{cy:.0})")
     }
 }
 
@@ -188,103 +185,69 @@ fn xorf32(s: &mut u64) -> f32 {
     (xoru64(s) & 0xFFFFFF) as f32 / 0xFFFFFF as f32
 }
 
-// Run a config for N ticks, return (score_at_end, final_sim)
-fn run_config(name: &str, g: f32, softening: f32, speed_cap: f32,
-              clumps: &[(f32, f32, f32, f32, f32, usize)],
-              ticks: usize, snapshots: &[usize]) -> f32 {
+fn run(name: &str, g: f32, softening: f32, speed_cap: f32,
+       clumps: &[(f32, f32, f32, f32, f32, usize)],
+       ticks: usize, snap_at: &[usize]) {
     let dir = format!("frames/{name}");
     fs::create_dir_all(&dir).unwrap();
 
-    let mut sim = Sim::new(12345, g, softening, speed_cap, clumps);
-    let mut score_sum = 0.0f32;
+    let mut sim = Sim::new(42, g, softening, speed_cap, clumps);
+    println!("\n=== {name} | g={g} soft={softening} cap={speed_cap} cells={} ===",
+        sim.cells.len());
 
     for tick in 0..=ticks {
-        if snapshots.contains(&tick) {
+        if snap_at.contains(&tick) {
             sim.save_png(&format!("{dir}/t{tick:04}.png"));
+            sim.print_ascii(&format!("t={tick}  {}", sim.stats()));
         }
-        let s = sim.score_snapshot();
-        score_sum += s;
         if tick < ticks { sim.tick(); }
     }
-
-    let (avg_spd, max_spd, cx, cy) = sim.stats();
-    let score = score_sum / ticks as f32;
-    println!("  {name:<20} g={g:.3} soft={softening:.1} cells={} | avg_spd={avg_spd:.2} max={max_spd:.2} com=({cx:.0},{cy:.0}) | score={score:.3}",
-        sim.cells.len());
-    score
 }
 
 fn main() {
     fs::create_dir_all("frames").unwrap();
 
-    let snap = &[0, 20, 50, 100, 200];
+    // Key insight: speed_cap must be ~0.5-2.0 (sub-pixel to ~2px/tick)
+    // so cells actually collide and stay clumped. G must be tiny.
+    // At sub-pixel speeds, 100s of ticks needed to see meaningful motion.
 
-    println!("=== iterating configs ===\n");
+    let snap = &[0, 50, 100, 200, 400];
 
-    let configs: Vec<(&str, f32, f32, f32, Vec<(f32,f32,f32,f32,f32,usize)>)> = vec![
-        // name, G, softening, speed_cap, clumps: (cx, cy, radius, vx, vy, count)
+    // Two clumps orbiting — tangential velocity chosen for rough circular orbit:
+    // For two equal masses separated by d=22, v_orbit ≈ sqrt(G*M/(2d))
+    // With M=60 particles each, G=0.001, d=22: v ≈ sqrt(0.001*60/44) ≈ 0.037
+    // Start with a few values around that
+    run("orbit_gentle", 0.001, 1.5, 1.0, &[
+        (42.0, 64.0, 8.0,  0.0,  0.05, 50),
+        (86.0, 64.0, 8.0,  0.0, -0.05, 50),
+    ], 400, snap);
 
-        // Two clumps, gentle G, orbital tangential velocity
-        ("two_clumps_slow",   0.05, 2.0, 8.0, vec![
-            (42.0, 64.0, 10.0,  0.0,  0.4, 60),
-            (86.0, 64.0, 10.0,  0.0, -0.4, 60),
-        ]),
-        ("two_clumps_med",    0.1, 2.0, 8.0, vec![
-            (42.0, 64.0, 10.0,  0.0,  0.6, 60),
-            (86.0, 64.0, 10.0,  0.0, -0.6, 60),
-        ]),
-        ("two_clumps_fast",   0.2, 2.0, 16.0, vec![
-            (42.0, 64.0, 10.0,  0.0,  1.0, 60),
-            (86.0, 64.0, 10.0,  0.0, -1.0, 60),
-        ]),
+    run("orbit_fast", 0.001, 1.5, 1.0, &[
+        (42.0, 64.0, 8.0,  0.0,  0.15, 50),
+        (86.0, 64.0, 8.0,  0.0, -0.15, 50),
+    ], 400, snap);
 
-        // Three clumps in triangle
-        ("three_clumps",      0.1, 2.0, 8.0, vec![
-            (64.0, 32.0, 8.0,  0.5,  0.0, 40),
-            (32.0, 96.0, 8.0, -0.25, -0.4, 40),
-            (96.0, 96.0, 8.0, -0.25,  0.4, 40),
-        ]),
+    run("three_triangle", 0.001, 1.5, 1.0, &[
+        (64.0, 30.0, 7.0,  0.12,  0.0,  35),
+        (30.0, 98.0, 7.0, -0.06, -0.10, 35),
+        (98.0, 98.0, 7.0, -0.06,  0.10, 35),
+    ], 400, snap);
 
-        // Four corner clumps falling inward
-        ("four_corners",      0.08, 2.0, 8.0, vec![
-            (20.0, 20.0, 8.0,  0.3,  0.3, 30),
-            (108.0,20.0, 8.0, -0.3,  0.3, 30),
-            (20.0,108.0, 8.0,  0.3, -0.3, 30),
-            (108.0,108.0,8.0, -0.3, -0.3, 30),
-        ]),
+    // Dense small clumps — more particles per area, stronger local gravity
+    run("dense_orbit", 0.002, 1.0, 1.0, &[
+        (44.0, 64.0, 5.0,  0.0,  0.1, 20),
+        (84.0, 64.0, 5.0,  0.0, -0.1, 20),
+    ], 400, snap);
 
-        // Two dense small clumps, strong G — collapse and orbit
-        ("dense_pair",        0.3, 1.0, 16.0, vec![
-            (44.0, 64.0, 6.0,  0.0,  1.2, 30),
-            (84.0, 64.0, 6.0,  0.0, -1.2, 30),
-        ]),
+    // Head-on collision (no tangential velocity)
+    run("collision", 0.001, 1.5, 1.0, &[
+        (35.0, 64.0, 8.0,  0.08,  0.0, 50),
+        (93.0, 64.0, 8.0, -0.08,  0.0, 50),
+    ], 400, snap);
 
-        // Disk collision — two clumps headed toward each other
-        ("head_on",           0.1, 2.0, 8.0, vec![
-            (32.0, 64.0, 10.0,  0.5,  0.0, 50),
-            (96.0, 64.0, 10.0, -0.5,  0.0, 50),
-        ]),
-
-        // Ring of clumps
-        ("ring_6",            0.08, 2.0, 8.0, vec![
-            (64.0+40.0, 64.0,       5.0,  0.0,  0.6, 20),
-            (64.0+20.0, 64.0+35.0, 5.0, -0.5,  0.3, 20),
-            (64.0-20.0, 64.0+35.0, 5.0, -0.5, -0.3, 20),
-            (64.0-40.0, 64.0,       5.0,  0.0, -0.6, 20),
-            (64.0-20.0, 64.0-35.0, 5.0,  0.5, -0.3, 20),
-            (64.0+20.0, 64.0-35.0, 5.0,  0.5,  0.3, 20),
-        ]),
-    ];
-
-    let mut results: Vec<(f32, &str)> = vec![];
-    for (name, g, soft, cap, clumps) in &configs {
-        let score = run_config(name, *g, *soft, *cap, clumps, 200, snap);
-        results.push((score, name));
-    }
-
-    results.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
-    println!("\n=== rankings ===");
-    for (score, name) in &results {
-        println!("  {score:6.3}  {name}");
-    }
+    // Off-center collision — glancing blow
+    run("glancing", 0.001, 1.5, 1.0, &[
+        (35.0, 56.0, 8.0,  0.08,  0.0, 50),
+        (93.0, 72.0, 8.0, -0.08,  0.0, 50),
+    ], 400, snap);
 }
