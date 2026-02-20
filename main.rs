@@ -457,10 +457,10 @@ fn main() {
 
     let snaps = &[0usize, 300, 600, 900, 1200, 1600, 2000, 2400]; // unused now
 
-    // D: Head-on — 32 frames at interval 150, out to t=4800
+    // D: Near-miss — offset 6px vertically so they graze rather than collide directly
     let d_snaps: Vec<usize> = (0..=32).map(|i| i * 150).collect();
     run("D_head_on", 0.001, 1.5, 0.5, &[
-        ( 80.0, 128.0, 13.0,  0.2,  0.0, 0),
-        (304.0, 128.0, 13.0, -0.2,  0.0, 0),
+        ( 80.0, 122.0, 13.0,  0.2,  0.0, 0),
+        (304.0, 134.0, 13.0, -0.2,  0.0, 0),
     ], 4800, &d_snaps);
 }
