@@ -1503,3 +1503,15 @@ use std::io::{BufWriter, Write};
             let new_idx = self.cells.len();
             self.cells.push(Cell { x: gx, y: gy, vx, vy, prev_speed: birth_spd });
             grid2[gy * W + gx] = new_idx;
+
+// [recovery] edit target not found, appending:
+            let new_idx = self.cells.len();
+            self.cells.push(Cell { x: gx, y: gy, vx, vy, prev_speed: birth_spd });
+            grid2[gy * W + gx] = new_idx;
+            self.conway_births += 1;
+        }
+
+        self.order = (0..self.cells.len()).collect();
+    }
+
+    // ── Gravity step (Barnes-Hut O(n log n)) ──────────────────────────────
