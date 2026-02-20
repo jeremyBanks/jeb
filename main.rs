@@ -78,7 +78,9 @@ impl Sim {
         shuffle_vec(&mut cells, &mut rng);
 
         let n = cells.len();
-        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: n,
+        // target_pop is W*H/32 regardless of initial cell count — Conway grows freely until then
+        let target_pop = W * H / 32;
+        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
               conway_every, pop_band, tick_count: 0, prev_live: vec![false; W * H] }
     }
 
