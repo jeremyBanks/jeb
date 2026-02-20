@@ -977,7 +977,7 @@ fn main() {
     let kr = keep_running.clone();
     ctrlc::set_handler(move || {
         if kr.load(Ordering::Relaxed) {
-            println!("\n[signal] Caught — finishing current chunk then concatenating completed segments...");
+            println!("\n[signal] Caught — discarding current chunk, concatenating completed segments...");
             kr.store(false, Ordering::Relaxed);
         }
     }).expect("Error setting signal handler");
