@@ -35,6 +35,8 @@ struct Sim {
     prev_live: Vec<bool>,
     wrap: bool,   // toroidal wrapping (false = hard walls)
     steer: bool,  // counter-rotate velocity to compensate discrete-move angular error
+    conway_births: usize,  // cumulative Conway births
+    conway_deaths: usize,  // cumulative Conway deaths
 }
 
 // Original state captured at tick=0 for epilogue convergence
@@ -244,7 +246,8 @@ impl Sim {
         let n = cells.len();
         let target_pop = W * H / 32;
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
-              conway_every, pop_band, tick_count: 0, prev_live: vec![false; W * H], wrap, steer }
+              conway_every, pop_band, tick_count: 0, prev_live: vec![false; W * H], wrap, steer,
+              conway_births: 0, conway_deaths: 0 }
     }
 
     // ── Checkpoint save/load ───────────────────────────────────────────────
@@ -326,7 +329,8 @@ impl Sim {
         let target_pop = W * H / 32;
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
                         start_pop: target_pop, conway_every, pop_band,
-                        tick_count, prev_live: prev_live_rebuilt, wrap, steer };
+                        tick_count, prev_live: prev_live_rebuilt, wrap, steer,
+                        conway_births: 0, conway_deaths: 0 };
         Some((sim, canvas, chunk_index))
     }
 
@@ -437,9 +441,9 @@ impl Sim {
         // Deaths: uniform random selection (shuffled above)
         // Births: weighted by neighbour speed — handled below after grid2 is built
 
-        // Rate-limit: 1 birth and 1 death per Conway call, independent of pop_band.
-        // With conway_every=FPS this equals 1 birth and 1 death per second max.
-        let rate_limit = 1_usize;
+        // Rate-limit: max births/deaths per Conway call, independent of pop_band.
+        // With conway_every=FPS/4 (4 calls/sec) and rate_limit=4: up to 16 births+deaths/sec.
+        let rate_limit = 4_usize;
         let max_births = pop_max.saturating_sub(n).min(rate_limit);
         let max_deaths = n.saturating_sub(pop_min).min(rate_limit);
         // desired_births NOT truncated here — weighted selection happens post-deaths
@@ -464,6 +468,7 @@ impl Sim {
 
         let mut death_indices: Vec<usize> = dying.drain().collect();
         death_indices.sort_unstable_by(|a, b| b.cmp(a));
+        self.conway_deaths += death_indices.len();
         for i in death_indices { self.cells.swap_remove(i); }
 
         let mut grid2 = vec![usize::MAX; W * H];
@@ -516,6 +521,7 @@ impl Sim {
             let new_idx = self.cells.len();
             self.cells.push(Cell { x: gx, y: gy, vx, vy, prev_speed: birth_spd });
             grid2[gy * W + gx] = new_idx;
+            self.conway_births += 1;
         }
 
         self.order = (0..self.cells.len()).collect();
@@ -575,19 +581,23 @@ impl Sim {
 
         // Target integer position.
         // Wrap mode: toroidal (rem_euclid). No-wrap mode: stay put if target is out of bounds.
+        // IMPORTANT: use round(), not truncation (cast). Truncation biases movement toward
+        // -x/-y: vx∈(-1,0) always moves left, vx∈(0,1) never moves right → top-left drift.
         let target_pos: Vec<(usize, usize)> = self.cells.iter().map(|c| {
             let raw_x = c.x as f32 + c.vx;
             let raw_y = c.y as f32 + c.vy;
             if self.wrap {
-                let tx = raw_x.rem_euclid(W as f32) as usize % W;
-                let ty = raw_y.rem_euclid(H as f32) as usize % H;
+                let tx = (raw_x.round() as i32).rem_euclid(W as i32) as usize;
+                let ty = (raw_y.round() as i32).rem_euclid(H as i32) as usize;
                 (tx, ty)
             } else {
                 // Out of bounds → don't move (same rule as occupied cell)
-                if raw_x < 0.0 || raw_x >= W as f32 || raw_y < 0.0 || raw_y >= H as f32 {
+                let rx = raw_x.round();
+                let ry = raw_y.round();
+                if rx < 0.0 || rx >= W as f32 || ry < 0.0 || ry >= H as f32 {
                     (c.x, c.y)
                 } else {
-                    (raw_x as usize, raw_y as usize)
+                    (rx as usize, ry as usize)
                 }
             }
         }).collect();
@@ -1006,7 +1016,8 @@ impl Sim {
             if dy > hh { dy -= H as f32; } if dy < -hh { dy += H as f32; }
             (dx*dx+dy*dy).sqrt()
         }).sum::<f32>() / n;
-        format!("pop={} avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1}", self.cells.len())
+        format!("pop={} births={} deaths={} avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1} com=({cx:.1},{cy:.1})",
+            self.cells.len(), self.conway_births, self.conway_deaths)
     }
 }
 
@@ -1124,7 +1135,7 @@ fn main() {
         .unwrap_or(0.000300_f32); // 4× stronger gravity
     let softening   = 1.5_f32;
     let speed_cap   = 0.093750_f32; // 2× previous cap
-    let conway_every = FPS as usize; // run Conway once per second → 1 birth + 1 death max/sec
+    let conway_every = FPS as usize / 4; // run Conway 4× per second → up to 4 births + 4 deaths/sec
     let pop_band    = 8.0_f32; // gap halved: min stays same, max comes halfway down
 
     // Four clockwise blobs — radius from --radius (0 = no blobs)
