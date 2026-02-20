@@ -739,19 +739,17 @@ export function encode(
     //
     // For each length K ∈ {7, 6, 5} (larger preferred):
     //   Try all positions p ∈ {0, 1, 2, 3}:
-    //     p=0: block-aligned, emit [escape][K bytes]  — outputs 1+K chars (not 5-aligned)
+    //     p=0: block-aligned, emit [escape][K bytes]
     //     p≥1: non-aligned, emit [(p+1) Z85 chars][escape][K bytes]
     //   Pick candidate with best bit-reversal alignment score.
     //
     // No canonical-min check needed (P+1 digits uniquely determine the value).
     //
-    // In concatenatable mode: disabled entirely. p=0 emits 1+K = 6, 7, or 8 chars
-    // which is not divisible by 5. The splicing logic cannot safely repair this because
-    // the emitted bytes are raw passthrough (not Z85-encoded), so a decoder seeing
-    // hash-padded chars before them would misinterpret them as Z85 value digits.
-    // Extended passthroughs are an optimisation; falling through to standard Z85 (E)
-    // is always correct.
-    if (!concatenatable) {
+    // The length invariant check below ensures the passthrough keeps total output
+    // 5-aligned, so concat mode is handled correctly without special-casing.
+    // In concatenatable mode, non-aligned positions (p≥1) are still excluded
+    // because they break the reserved-tail alignment.
+    {
       let handledB = false;
       for (const K of [7, 6, 5]) {
         const escEnabled = (K === 7 && hasEscape7) || (K === 6 && hasEscape6) || (K === 5 && hasEscape5);
@@ -802,7 +800,7 @@ export function encode(
         }
         if (handledB) continue mainLoop;
       }
-    } // end if (!concatenatable) for B escapes
+    }
 
     // ── (C) Block-aligned 4-byte passthrough ────────────────────────────────
     //
