@@ -247,6 +247,11 @@ impl Sim {
     fn gravity_step(&mut self) {
         let n = self.cells.len();
 
+        // Cutoff: skip pairs beyond this distance — gravity falls off as 1/r²
+        // so distant pairs contribute nearly nothing. Keeps perf manageable at high pop.
+        const CUTOFF: f32 = 64.0;
+        const CUTOFF2: f32 = CUTOFF * CUTOFF;
+
         for i in 0..n {
             for j in (i + 1)..n {
                 let mut dx = self.cells[j].x - self.cells[i].x;
@@ -257,6 +262,8 @@ impl Sim {
                 if dx < -hw { dx += W as f32; }
                 if dy >  hh { dy -= H as f32; }
                 if dy < -hh { dy += H as f32; }
+
+                if dx * dx + dy * dy > CUTOFF2 { continue; }
 
                 let r2 = dx * dx + dy * dy + self.softening * self.softening;
                 let r = r2.sqrt();
