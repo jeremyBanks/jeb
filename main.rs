@@ -195,8 +195,9 @@ impl Sim {
                     let y = (cy + dy as f32).rem_euclid(H as f32);
                     let xi = x as usize;
                     let yi = y as usize;
-                    // Checkerboard 50%, then randomly discard half → ~25% density
+                    // Checkerboard 50%, then randomly discard half twice → ~12.5% density
                     if xi % 2 != 0 || yi % 2 != 0 { continue; }
+                    if xoru64(&mut rng) % 2 != 0 { continue; }
                     if xoru64(&mut rng) % 2 != 0 { continue; }
                     if cells.iter().any(|c: &Cell| c.x as usize == xi && c.y as usize == yi) {
                         continue;
