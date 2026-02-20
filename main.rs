@@ -512,10 +512,10 @@ fn main() {
     let seconds: usize = parse_arg("--seconds")
         .and_then(|s| s.parse().ok())
         .expect("Usage: gravity --seconds <N> [--radius <r>] [--seed-density <1/N>]");
-    // --radius: circle radius (0 = no blobs)
+    // --radius: circle radius (0 = no blobs), default 4
     let blob_radius: f32 = parse_arg("--radius")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(6.0);
+        .unwrap_or(4.0);
     // --seed-density: random zero-momentum cells as 1/N of empty cells (0 = none)
     // Default 32 = 1/32 of empty cells (doubled from previous 1/64)
     let seed_density_inv: usize = parse_arg("--seed-density")
