@@ -1055,10 +1055,10 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(4.0);
     // --seed-density: random cells as 1/N of empty cells (0 = none)
-    // Default 64 = 1/64 of empty cells (half as dense as before)
+    // Default 128 = 1/128 of empty cells (half as dense again)
     let seed_density_inv: usize = parse_arg("--seed-density")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(64);
+        .unwrap_or(128);
 
     let total_frames = seconds * FPS as usize;
     let n_chunks = (total_frames + CHUNK_FRAMES - 1) / CHUNK_FRAMES;
