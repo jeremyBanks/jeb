@@ -6,8 +6,8 @@ const W: usize = 192;
 const H: usize = 108; // 192×108 × 20 = 3840×2160 exactly (square pixels)
 
 // Output video settings
-const OUT_W: u32 = 3840;
-const OUT_H: u32 = 2160;
+const OUT_W: u32 = 3840; // 192 × 20
+const OUT_H: u32 = 2160; // 108 × 20
 const FPS: u32 = 60;
 const CRF: u32 = 12;
 const CHUNK_FRAMES: usize = 3840; // 64s at 60fps
