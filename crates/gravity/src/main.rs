@@ -812,7 +812,8 @@ fn shuffle_vec<T>(v: &mut Vec<T>, rng: &mut u64) {
 
 fn velocity_color(vx: f32, vy: f32, speed_cap: f32) -> (u8, u8, u8) {
     let spd = (vx * vx + vy * vy).sqrt();
-    let sat = (spd / speed_cap).clamp(0.0, 1.0);
+    // speed_cap → 75% saturation; 100% requires exceeding speed_cap (≥ 4/3 × speed_cap)
+    let sat = (spd * 0.75 / speed_cap).clamp(0.0, 1.0);
     let hue = (vy.atan2(vx) + std::f32::consts::PI) / (2.0 * std::f32::consts::PI);
     let (r, g, b) = hsv_to_rgb(hue, sat, 1.0);
     let floor = 64u8;
