@@ -19,7 +19,8 @@ struct Sim {
     softening: f32,
     speed_cap: f32,
     start_pop: usize,
-    conway_every: usize, // 0 = disabled, N = run Conway every N gravity ticks
+    conway_every: usize,  // 0 = disabled, N = run Conway every N gravity ticks
+    pop_band: f32,        // fraction: population clamped to start_pop * (1 ± pop_band)
     tick_count: usize,
     prev_live: Vec<bool>, // which pixels were live last frame (for fading)
 }
