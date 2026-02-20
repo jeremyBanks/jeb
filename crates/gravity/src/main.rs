@@ -424,30 +424,24 @@ impl Sim {
         self.order = (0..self.cells.len()).collect();
     }
 
-    // ── Gravity step ───────────────────────────────────────────────────────
+    // ── Gravity step (Barnes-Hut O(n log n)) ──────────────────────────────
     fn gravity_step(&mut self) {
         let n = self.cells.len();
 
+        // Build quadtree over the toroidal domain
+        let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
+        nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
         for i in 0..n {
-            for j in (i + 1)..n {
-                let mut dx = self.cells[j].x - self.cells[i].x;
-                let mut dy = self.cells[j].y - self.cells[i].y;
-                let hw = W as f32 / 2.0;
-                let hh = H as f32 / 2.0;
-                if dx >  hw { dx -= W as f32; }
-                if dx < -hw { dx += W as f32; }
-                if dy >  hh { dy -= H as f32; }
-                if dy < -hh { dy += H as f32; }
-                let r2 = dx * dx + dy * dy + self.softening * self.softening;
-                let r = r2.sqrt();
-                let force = self.g / r2;
-                let fx = force * dx / r;
-                let fy = force * dy / r;
-                self.cells[i].vx += fx;
-                self.cells[i].vy += fy;
-                self.cells[j].vx -= fx;
-                self.cells[j].vy -= fy;
-            }
+            let (px, py) = (self.cells[i].x, self.cells[i].y);
+            qt_insert(&mut nodes, 0, i, px, py, 0);
+        }
+
+        // Compute gravitational force on each particle via tree traversal
+        for i in 0..n {
+            let (px, py) = (self.cells[i].x, self.cells[i].y);
+            let (fx, fy) = qt_force(&nodes, 0, i, px, py, self.g, self.softening);
+            self.cells[i].vx += fx;
+            self.cells[i].vy += fy;
         }
 
         for c in &mut self.cells {
