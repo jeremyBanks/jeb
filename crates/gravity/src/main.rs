@@ -52,7 +52,7 @@ impl Sim {
             }
         }
         // Shuffle so cell indices are interleaved across blobs — no first-blob bias
-        shuffle_vec_rng(&mut cells, &mut rng);
+        shuffle_vec(&mut cells, &mut rng);
 
         let n = cells.len();
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: n,
