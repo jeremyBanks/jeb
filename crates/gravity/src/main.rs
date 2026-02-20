@@ -482,7 +482,7 @@ impl Sim {
         //
         // weight = sum of live-neighbour speeds (post-deaths) + BIRTH_SOFT
         // BIRTH_SOFT ensures every valid candidate has a nonzero base probability.
-        const BIRTH_SOFT: f32 = 2.4; // ~1/10 of speed_cap (24.0); baseline birth weight
+        const BIRTH_SOFT: f32 = 1.2; // ~1/10 of speed_cap (12.0); baseline birth weight
 
         let mut birth_keys: Vec<(f32, usize)> = desired_births.iter()
             .enumerate()
@@ -1134,7 +1134,7 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(0.096000_f32); // 8× previous
     let softening   = 1.5_f32;
-    let speed_cap   = 24.0_f32; // cells/frame
+    let speed_cap   = 12.0_f32; // cells/frame
     let conway_every = FPS as usize / 4; // run Conway 4× per second → up to 4 births + 4 deaths/sec
     let pop_band    = 8.0_f32; // gap halved: min stays same, max comes halfway down
 
