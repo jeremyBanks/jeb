@@ -462,31 +462,32 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32, conway_every: usize,
 fn main() {
     fs::create_dir_all("frames").unwrap();
 
-    let snaps: Vec<usize> = (0..=32).map(|i| i * 150).collect();
+    // Circular orbit parameters (derived):
+    //   G=0.003, M_other~531, separation=184px → v_circular=0.093 px/tick
+    //   Period ≈ 6200 ticks; run for ~1.5 orbits = 9600 ticks
+    //   Blobs at x=100 and x=284 (center 192), y=128 (center of 256px grid)
+    //   Left blob → moving UP  (vy = -0.093)
+    //   Right blob → moving DOWN (vy = +0.093)
+    //   This gives counter-clockwise rotation around common CoM
 
-    // ── Scenario A: gravity-only (no Conway), slow approach, stronger G ──────
-    // Perpendicular velocities — classic orbit setup
-    // Left blob moves up, right blob moves down → gravity pulls them sideways
-    run("orbit_slow", 0.003, 2.0, 1.0, 0, &[
-        (100.0, 128.0, 13.0,  0.0, -0.06, 0),  // left blob, moving up
-        (284.0, 128.0, 13.0,  0.0,  0.06, 0),  // right blob, moving down
-    ], 4800, &snaps);
+    // Snap every 300 ticks (32 frames over 9600 ticks)
+    let snaps: Vec<usize> = (0..=32).map(|i| i * 300).collect();
 
-    // ── Scenario B: Conway every 8 ticks, same orbital setup ─────────────────
+    // ── A: Pure gravity, no Conway — reference orbit ──────────────────────────
+    run("orbit_pure", 0.003, 2.0, 1.0, 0, &[
+        (100.0, 128.0, 13.0,  0.0, -0.093, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.093, 0),
+    ], 9600, &snaps);
+
+    // ── B: Conway every 8 ticks — subtle perturbation ────────────────────────
     run("orbit_conway8", 0.003, 2.0, 1.0, 8, &[
-        (100.0, 128.0, 13.0,  0.0, -0.06, 0),
-        (284.0, 128.0, 13.0,  0.0,  0.06, 0),
-    ], 4800, &snaps);
+        (100.0, 128.0, 13.0,  0.0, -0.093, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.093, 0),
+    ], 9600, &snaps);
 
-    // ── Scenario C: Conway every 1 tick (original behavior), orbital setup ───
+    // ── C: Conway every 1 tick — maximum perturbation ────────────────────────
     run("orbit_conway1", 0.003, 2.0, 1.0, 1, &[
-        (100.0, 128.0, 13.0,  0.0, -0.06, 0),
-        (284.0, 128.0, 13.0,  0.0,  0.06, 0),
-    ], 4800, &snaps);
-
-    // ── Scenario D: gravity-only, head-on but slower (compare to old D_best) ─
-    run("headon_slow", 0.003, 2.0, 1.0, 0, &[
-        ( 80.0, 128.0, 13.0,  0.06,  0.0, 0),
-        (304.0, 128.0, 13.0, -0.06,  0.0, 0),
-    ], 4800, &snaps);
+        (100.0, 128.0, 13.0,  0.0, -0.093, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.093, 0),
+    ], 9600, &snaps);
 }
