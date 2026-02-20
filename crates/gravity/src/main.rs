@@ -66,8 +66,9 @@ impl Sim {
         shuffle_vec(&mut self.cells, &mut self.rng);
 
         let n = self.cells.len();
-        let pop_min = ((self.start_pop as f32) * (1.0 - self.pop_band)) as usize;
-        let pop_max = ((self.start_pop as f32) * (1.0 + self.pop_band)) as usize;
+        // pop_band is now absolute cell count (not fraction)
+        let pop_min = self.start_pop.saturating_sub(self.pop_band as usize);
+        let pop_max = self.start_pop + self.pop_band as usize;
 
         // Build occupancy grid: cell index at each grid position (usize::MAX = empty)
         let mut grid = vec![usize::MAX; W * H];
