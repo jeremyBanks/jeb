@@ -513,3 +513,22 @@ fn main() {
         (304.0, 141.0, 13.0, -0.05,  0.0, 0),  // right blob moving left, offset 26px down
     ], 10000, &snaps);
 }
+
+// [recovery] edit target not found, appending:
+fn main() {
+    fs::create_dir_all("frames").unwrap();
+
+    // D_best style: two blobs moving toward each other, offset vertically.
+    // This is what produced the interesting collision/slingshot behavior.
+    // Original had vx=±0.2 which was too fast. Trying slower speeds.
+    // 40 frames at 10fps = 4s video, snap every 120 ticks over 4800 ticks.
+    let snaps: Vec<usize> = (0..=40).map(|i| i * 120).collect();
+
+    for &(vx, conway_every) in &[(0.08f32, 0usize), (0.08, 128), (0.04, 0), (0.04, 128)] {
+        let name = format!("glancing_v{vx:.2}_c{conway_every}");
+        run(&name, 0.001, 1.5, 0.5, conway_every, &[
+            ( 80.0, 115.0, 13.0,  vx,  0.0, 0),
+            (304.0, 141.0, 13.0, -vx,  0.0, 0),
+        ], 4800, &snaps);
+    }
+}
