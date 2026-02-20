@@ -492,19 +492,16 @@ fn main() {
     //   Period ≈ 2π * 92 / 0.029 ≈ 19900 ticks → run 20000 ticks
     //   Blobs at x=100 and x=284, y=128
 
-    // ── Tuning run: find orbital velocity that doesn't immediately max out ──
-    // Problem: 531 cells/blob means N-body gravity is way stronger than point-mass.
-    // Strategy: very small G, very small initial v, high softening to tame intra-blob.
-    // Target: avg_spd should stay well below cap for first few hundred ticks.
-    // Cap raised to 0.5 so we can see what speed they actually want to reach.
-    let snaps: Vec<usize> = (0..=20).map(|i| i * 100).collect();
+    // The real issue: with 531 cells/blob all doing N-body gravity, intra-blob
+    // forces are enormous at close range and immediately saturate the speed cap.
+    // Fix: remove speed cap entirely (set very high), use tiny G, print stats
+    // to see what speeds actually develop — then set v_init to match.
+    let snaps: Vec<usize> = (0..=10).map(|i| i * 50).collect();
 
-    // Try a sweep of initial velocities with G scaled way down
-    for &(v, g) in &[(0.005f32, 0.0000001f32), (0.008, 0.0000002), (0.012, 0.0000003)] {
-        let name = format!("tune_v{:.3}_g{:.7}", v, g);
-        run(&name, g, 20.0, 0.5, 0, &[
-            (100.0, 128.0, 13.0,  0.0, -v, 0),
-            (284.0, 128.0, 13.0,  0.0,  v, 0),
-        ], 2000, &snaps);
-    }
+    // No cap (10.0), no initial velocity — just let gravity pull from rest
+    // and observe what speed cells reach. That IS the circular orbital speed.
+    run("nocap_pull", 0.000001, 20.0, 10.0, 0, &[
+        (100.0, 128.0, 13.0,  0.0, 0.0, 0),
+        (284.0, 128.0, 13.0,  0.0, 0.0, 0),
+    ], 500, &snaps);
 }
