@@ -702,7 +702,8 @@ fn main() {
     };
     let seconds: usize = parse_arg("--seconds")
         .and_then(|s| s.parse().ok())
-        .expect("Usage: gravity --seconds <N> [--radius <r>] [--seed-density <1/N>]");
+        .expect("Usage: gravity --seconds <N> [--radius <r>] [--seed-density <1/N>] [--epilogue]");
+    let do_epilogue = args.iter().any(|a| a == "--epilogue");
     // --radius: circle radius (0 = no blobs), default 4
     let blob_radius: f32 = parse_arg("--radius")
         .and_then(|s| s.parse().ok())
