@@ -609,3 +609,6 @@ fn main() {
     let _ = fs::remove_file(checkpoint_path);
     println!("Checkpoint removed.");
 }
+
+// [recovery] edit target not found, appending:
+use std::io::{BufWriter, Write};
