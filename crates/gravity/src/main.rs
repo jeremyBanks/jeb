@@ -14,8 +14,8 @@ const CRF: u32 = 12;
 const CHUNK_FRAMES: usize = 3840; // 64s at 60fps
 
 struct Cell {
-    x: f32,
-    y: f32,
+    x: usize,  // integer grid column [0, W)
+    y: usize,  // integer grid row    [0, H)
     vx: f32,
     vy: f32,
     prev_speed: f32,
