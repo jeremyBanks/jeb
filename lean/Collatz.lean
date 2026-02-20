@@ -72,7 +72,7 @@ theorem pow2_converges (k : Nat) : collatzN k (2^k) = 1 := by
       simp [Nat.pow_succ, Nat.mul_comm]
     rw [if_pos heven]
     have hdiv : 2^(k+1) / 2 = 2^k := by
-      simp [Nat.pow_succ, Nat.mul_comm, Nat.mul_div_cancel]
+      simp [Nat.pow_succ, Nat.mul_comm]
     rw [hdiv]
     exact ih
 
@@ -180,3 +180,120 @@ theorem shortcut_odd (n : Nat) (hn : n % 2 = 1) :
 
 -- 871 is the champion under 1000 (178 steps):
 #eval collatzSteps 500 871   -- 178
+
+-- ============================================================
+-- Computational convergence certificates
+-- ============================================================
+
+-- A cleaner convergence check: does n reach 1 within `fuel` steps?
+def convergesIn : Nat → Nat → Bool
+  | _,      1 => true
+  | 0,      _ => false
+  | f + 1,  n => convergesIn f (collatz n)
+
+-- Sanity checks
+#eval convergesIn 200 27    -- true (takes 111 steps)
+#eval convergesIn 50  27    -- false (not enough fuel)
+
+-- This gives us a *certificate*: to prove collatzConverges n,
+-- just exhibit a fuel value and show convergesIn fuel n = true.
+-- 0 is a fixed point of collatz (0 % 2 = 0, 0 / 2 = 0)
+theorem collatz_zero : collatz 0 = 0 := by native_decide
+
+-- Therefore 0 never converges (convergesIn always returns false for 0)
+theorem convergesIn_zero_false : ∀ fuel, convergesIn fuel 0 = false := by
+  intro fuel
+  induction fuel with
+  | zero => rfl
+  | succ f ih =>
+    show convergesIn f (collatz 0) = false
+    rw [collatz_zero]; exact ih
+
+theorem convergesIn_correct {fuel n : Nat} (h : convergesIn fuel n = true) :
+    collatzConverges n := by
+  induction fuel generalizing n with
+  | zero =>
+    -- convergesIn 0 n: only | _, 1 => true fires; everything else is false
+    match n with
+    | 0     =>
+      -- convergesIn 0 0 = false (| 0, _ => false pattern)
+      exact absurd h (convergesIn_zero_false 0)
+    | 1     => exact ⟨0, rfl⟩
+    | n + 2 =>
+      -- convergesIn 0 (n+2) = false definitionally (n+2 ≠ 1, fuel=0)
+      have hf : convergesIn 0 (n + 2) = false := rfl
+      rw [hf] at h; simp at h
+  | succ f ih =>
+    match n with
+    | 0     => exact absurd h (convergesIn_zero_false (f + 1))
+    | 1     => exact ⟨0, rfl⟩
+    | n + 2 =>
+      -- convergesIn (f+1) (n+2) reduces to convergesIn f (collatz (n+2)) definitionally
+      have h' : convergesIn f (collatz (n + 2)) = true := h
+      obtain ⟨k, hk⟩ := ih h'
+      exact ⟨k + 1, by simp [collatzN, hk]⟩
+
+-- Computationally verify: all n ∈ [1..100] converge (within 10000 steps)
+-- native_decide computes this efficiently at compile time
+theorem all_converge_below_100 :
+    ∀ n : Fin 101, 0 < n.val → convergesIn 10000 n.val = true := by
+  native_decide
+
+-- Corollary: all n ≤ 100 satisfy the Collatz conjecture
+theorem collatz_verified_100 :
+    ∀ n : Nat, 0 < n → n ≤ 100 → collatzConverges n := by
+  intro n hpos hle
+  apply convergesIn_correct
+  have h := all_converge_below_100 ⟨n, by omega⟩ hpos
+  exact h
+
+-- ============================================================
+-- The only cycle up to 100 is {1, 2, 4}
+-- ============================================================
+
+-- A number n > 0 is "in the canonical cycle" if its trajectory from 1
+-- passes through n. The only such numbers ≤ 100 are 1, 2, 4.
+
+-- More practically: no n ≤ 100 (other than 1, 2, 4) satisfies collatzN k n = n
+-- for any k ≤ 20. We check this by deciding the bounded version.
+def isPeriodicIn (maxK n : Nat) : Bool :=
+  (List.range maxK).any (fun k => collatzN (k + 1) n == n)
+
+-- 1, 2, 4 are all periodic (part of the known cycle):
+#eval isPeriodicIn 10 1   -- true (period 3: 1→4→2→1)
+#eval isPeriodicIn 10 2   -- true
+#eval isPeriodicIn 10 4   -- true
+#eval isPeriodicIn 10 27  -- false (converges to 1, doesn't cycle back)
+
+-- No n ∈ [5..100] is periodic within 500 steps:
+example : ∀ n : Fin 101, 4 < n.val →
+    isPeriodicIn 500 n.val = false := by native_decide
+
+-- ============================================================
+-- Connection to Busy Beaver and Antihydra
+-- ============================================================
+
+-- BB(5) = 47,176,870 was proved in 2024 by the bbchallenge community,
+-- formally verified in Rocq (Coq) by the mysterious contributor "mxdys".
+-- The proof ran automated decision procedures on all 5-state Turing machines,
+-- leaving 13 "sporadic machines" requiring individual non-halting proofs.
+-- One machine was the champion (halts after exactly 47,176,870 steps).
+-- Reference: https://github.com/ccz181078/Coq-BB5
+
+-- For BB(6), the barrier is "Antihydra" — a 6-state 2-symbol TM whose
+-- behavior is structurally similar to the Collatz conjecture.
+-- Determining whether Antihydra halts would require solving a Collatz-like
+-- open problem, which is why BB(6) may be unknowable with current mathematics.
+
+-- This connects Collatz to the frontier of formal computability theory:
+-- the reason BB(n) gets hard is precisely that longer-running machines
+-- can encode open conjectures like Collatz as their halting condition.
+
+-- The shortcut Collatz map is essentially a 2-state, infinite-tape machine
+-- with a simple update rule — exactly the kind of thing busy beaver hunters
+-- fear: simple rule, complex behavior, no known invariant.
+
+-- Our shortcutCollatz theorem above already shows the structure:
+-- odd → even is forced (odd_step_produces_even), giving the "2-step" view.
+-- But the interleaving of growth (×1.5) and shrinkage (÷2) has no
+-- algebraic invariant we can exploit for a general termination proof.
