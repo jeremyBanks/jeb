@@ -125,15 +125,16 @@ impl Sim {
         let current = n;
         let after = current + desired_births.len() - desired_deaths.len();
 
+        // Always shuffle deaths and births before trimming — ensures no index bias
+        // (low-index cells = first blob should not be systematically favoured)
+        shuffle_vec(&mut desired_deaths, &mut self.rng);
+        shuffle_vec(&mut desired_births, &mut self.rng);
+
         if after > pop_max {
-            // Too many births — randomly trim births
             let excess = after - pop_max;
-            shuffle_vec(&mut desired_births, &mut self.rng);
             desired_births.truncate(desired_births.len().saturating_sub(excess));
         } else if after < pop_min {
-            // Too many deaths — randomly trim deaths
             let excess = pop_min - after;
-            shuffle_vec(&mut desired_deaths, &mut self.rng);
             desired_deaths.truncate(desired_deaths.len().saturating_sub(excess));
         }
 
