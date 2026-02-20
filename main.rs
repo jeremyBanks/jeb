@@ -42,8 +42,9 @@ impl Sim {
                     let y = (cy + dy as f32).rem_euclid(H as f32);
                     let xi = x as usize;
                     let yi = y as usize;
-                    // Checkerboard 50% density — deterministic, no spatial bias vs RNG
-                    if (xi + yi) % 2 != 0 { continue; }
+                    // 25% density — every other checkerboard square (xi+yi divisible by 4 roughly)
+                    // Use (xi%2==0 && yi%2==0) for a sparser but still regular pattern
+                    if xi % 2 != 0 || yi % 2 != 0 { continue; }
                     if cells.iter().any(|c: &Cell| c.x as usize == xi && c.y as usize == yi) {
                         continue;
                     }
