@@ -36,7 +36,7 @@ struct Sim {
 
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, conway_every: usize, pop_band: f32,
-           clumps: &[(f32, f32, f32, f32, f32, usize)]) -> Self {
+           clumps: &[(f32, f32, f32, f32, f32, usize)], seed_density_inv: usize) -> Self {
         let mut rng = rng_seed;
         let mut cells = Vec::new();
 
@@ -61,12 +61,14 @@ impl Sim {
         }
         shuffle_vec(&mut cells, &mut rng);
 
-        // Seed 1/64th of empty cells as zero-momentum live cells
+        // Seed 1/seed_density_inv of empty cells as zero-momentum live cells (0 = none)
         let mut occupied = vec![false; W * H];
         for c in &cells {
             occupied[c.y as usize % H * W + c.x as usize % W] = true;
         }
-        let seed_count = occupied.iter().filter(|&&v| !v).count() / 64;
+        let seed_count = if seed_density_inv > 0 {
+            occupied.iter().filter(|&&v| !v).count() / seed_density_inv
+        } else { 0 };
         let mut seeded = 0;
         for _ in 0..W * H * 4 {
             if seeded >= seed_count { break; }
@@ -116,7 +118,7 @@ impl Sim {
     }
 
     fn load_checkpoint(path: &str, g: f32, softening: f32, speed_cap: f32,
-                       conway_every: usize, pop_band: f32)
+                       conway_every: usize, pop_band: f32, _seed_density_inv: usize)
         -> Option<(Self, Vec<f32>, usize)>
     {
         let buf = fs::read(path).ok()?;
@@ -502,14 +504,23 @@ fn concat_segments(segments_file: &str, output: &str) {
 }
 
 fn main() {
-    // Parse --seconds N
+    // Parse args
     let args: Vec<String> = std::env::args().collect();
-    let seconds: usize = {
-        let pos = args.iter().position(|a| a == "--seconds")
-            .expect("Usage: gravity --seconds <N>");
-        args.get(pos + 1).and_then(|s| s.parse().ok())
-            .expect("--seconds requires a positive integer")
+    let parse_arg = |flag: &str| -> Option<String> {
+        args.iter().position(|a| a == flag).and_then(|i| args.get(i + 1)).cloned()
     };
+    let seconds: usize = parse_arg("--seconds")
+        .and_then(|s| s.parse().ok())
+        .expect("Usage: gravity --seconds <N> [--radius <r>] [--seed-density <1/N>]");
+    // --radius: circle radius (0 = no blobs)
+    let blob_radius: f32 = parse_arg("--radius")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(6.0);
+    // --seed-density: random zero-momentum cells as 1/N of empty cells (0 = none)
+    // Default 32 = 1/32 of empty cells (doubled from previous 1/64)
+    let seed_density_inv: usize = parse_arg("--seed-density")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(32);
 
     let total_frames = seconds * FPS as usize;
     let n_chunks = (total_frames + CHUNK_FRAMES - 1) / CHUNK_FRAMES;
@@ -524,13 +535,18 @@ fn main() {
     let conway_every = 1_usize;
     let pop_band    = 16.0_f32;
 
-    // Four clockwise blobs, r=6 (halved again for much smaller initial pop)
-    let clumps: &[(f32, f32, f32, f32, f32, usize)] = &[
-        ( 48.0,  32.0, 6.0,  0.010,  0.000, 0),
-        (144.0,  32.0, 6.0,  0.000,  0.010, 0),
-        (144.0,  96.0, 6.0, -0.010,  0.000, 0),
-        ( 48.0,  96.0, 6.0,  0.000, -0.010, 0),
-    ];
+    // Four clockwise blobs — radius from --radius (0 = no blobs)
+    let clumps_owned: Vec<(f32, f32, f32, f32, f32, usize)> = if blob_radius > 0.0 {
+        vec![
+            ( 48.0,  32.0, blob_radius,  0.010,  0.000, 0),
+            (144.0,  32.0, blob_radius,  0.000,  0.010, 0),
+            (144.0,  96.0, blob_radius, -0.010,  0.000, 0),
+            ( 48.0,  96.0, blob_radius,  0.000, -0.010, 0),
+        ]
+    } else {
+        vec![]
+    };
+    let clumps: &[(f32, f32, f32, f32, f32, usize)] = &clumps_owned;
 
     let checkpoint_path = "state/checkpoint.bin";
     let segments_dir    = "segments";
@@ -544,14 +560,14 @@ fn main() {
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_chunk) =
-        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, conway_every, pop_band)
+        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, conway_every, pop_band, seed_density_inv)
         .map(|(s, c, ci)| {
             println!("Resuming from checkpoint: chunk {}/{}", ci, n_chunks);
             (s, c, ci)
         })
         .unwrap_or_else(|| {
-            println!("Fresh start");
-            let s = Sim::new(42, g, softening, speed_cap, conway_every, pop_band, clumps);
+            println!("Fresh start (radius={blob_radius}, seed_density=1/{seed_density_inv})");
+            let s = Sim::new(42, g, softening, speed_cap, conway_every, pop_band, clumps, seed_density_inv);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
