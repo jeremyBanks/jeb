@@ -565,11 +565,16 @@ fn main() {
     // Three-body: two left blobs moving right, one right blob moving left
     // All clustered in the middle vertical band
     // W=384: left≈130, right≈260; H=256: top≈96, mid≈128, bot≈160
-    // Vertical sym test: top blob scanned first in row-major grid order
-    // If top blob dies consistently, it's a scan-order bias in Conway logic
-    run("sym_vertical", 0.00005, 1.5, 0.125, 1, 4.0, &[
-        (192.0,  85.0, 6.0,  0.0,  0.08, 0),  // top, moving down
-        (192.0, 171.0, 6.0,  0.0, -0.08, 0),  // bottom, moving up
+    // Conway fully disabled (conway_every=0)
+    run("sym_no_conway", 0.00005, 1.5, 0.125, 0, 4.0, &[
+        (192.0,  85.0, 6.0,  0.0,  0.08, 0),
+        (192.0, 171.0, 6.0,  0.0, -0.08, 0),
+    ], 38400, &snaps);
+
+    // pop_band=0 (should be equivalent — every birth/death trimmed)
+    run("sym_band_zero", 0.00005, 1.5, 0.125, 1, 0.0, &[
+        (192.0,  85.0, 6.0,  0.0,  0.08, 0),
+        (192.0, 171.0, 6.0,  0.0, -0.08, 0),
     ], 38400, &snaps);
 
     // Also run three-body for comparison
