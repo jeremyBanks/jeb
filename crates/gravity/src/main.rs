@@ -32,7 +32,8 @@ impl Sim {
         let mut cells = Vec::new();
 
         for &(cx, cy, r, ivx, ivy, _count) in clumps {
-            // Fill every grid cell inside the circle
+            // Fill checkerboard pattern inside the circle (50% density)
+            // Checkerboard: include cell if (xi + yi) is even
             let ri = r.ceil() as i32;
             for dy in -ri..=ri {
                 for dx in -ri..=ri {
@@ -41,6 +42,8 @@ impl Sim {
                     let y = (cy + dy as f32).rem_euclid(H as f32);
                     let xi = x as usize;
                     let yi = y as usize;
+                    // Checkerboard: skip if xi+yi is odd
+                    if (xi + yi) % 2 != 0 { continue; }
                     if cells.iter().any(|c: &Cell| c.x as usize == xi && c.y as usize == yi) {
                         continue;
                     }
@@ -48,6 +51,9 @@ impl Sim {
                 }
             }
         }
+        // Shuffle initial cell order so neither blob has systematic index advantage
+        let mut rng_init = rng_seed ^ 0xdeadbeef;
+        shuffle_vec_rng(&mut cells, &mut rng_init);
 
         let n = cells.len();
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: n,
@@ -56,6 +62,9 @@ impl Sim {
 
     // ── Conway step (modified) ─────────────────────────────────────────────
     fn conway_step(&mut self) {
+        // Shuffle cells before processing so iteration order never favours one blob
+        shuffle_vec(&mut self.cells, &mut self.rng);
+
         let n = self.cells.len();
         let pop_min = ((self.start_pop as f32) * (1.0 - self.pop_band)) as usize;
         let pop_max = ((self.start_pop as f32) * (1.0 + self.pop_band)) as usize;
@@ -417,6 +426,10 @@ fn shuffle_vec<T>(v: &mut Vec<T>, rng: &mut u64) {
         let j = (xoru64(rng) as usize) % (i + 1);
         v.swap(i, j);
     }
+}
+
+fn shuffle_vec_rng<T>(v: &mut Vec<T>, rng: &mut u64) {
+    shuffle_vec(v, rng);
 }
 
 /// Map velocity to color:
