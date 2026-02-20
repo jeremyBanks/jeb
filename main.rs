@@ -552,13 +552,14 @@ impl Sim {
 
         let mut grid = vec![usize::MAX; W * H];
         for (i, c) in self.cells.iter().enumerate() {
-            grid[c.y as usize % H * W + c.x as usize % W] = i;
+            grid[c.y * W + c.x] = i;
         }
 
-        let target_pos: Vec<(usize, usize, f32, f32)> = self.cells.iter().map(|c| {
-            let nx = (c.x + c.vx).rem_euclid(W as f32);
-            let ny = (c.y + c.vy).rem_euclid(H as f32);
-            (nx as usize % W, ny as usize % H, nx, ny)
+        // Target integer position: round (x + vx) to nearest grid square
+        let target_pos: Vec<(usize, usize)> = self.cells.iter().map(|c| {
+            let tx = ((c.x as f32 + c.vx).rem_euclid(W as f32)) as usize;
+            let ty = ((c.y as f32 + c.vy).rem_euclid(H as f32)) as usize;
+            (tx, ty)
         }).collect();
 
         let n = self.order.len();
@@ -571,13 +572,11 @@ impl Sim {
         let mut moved = vec![false; n];
 
         for &idx in &self.order {
-            let (tx, ty, nx, ny) = target_pos[idx];
-            let old_x = self.cells[idx].x as usize % W;
-            let old_y = self.cells[idx].y as usize % H;
+            let (tx, ty) = target_pos[idx];
+            let old_x = self.cells[idx].x;
+            let old_y = self.cells[idx].y;
 
             if tx == old_x && ty == old_y {
-                self.cells[idx].x = nx;
-                self.cells[idx].y = ny;
                 moved[idx] = true;
                 continue;
             }
@@ -585,8 +584,8 @@ impl Sim {
             if grid[ty * W + tx] == usize::MAX {
                 grid[old_y * W + old_x] = usize::MAX;
                 grid[ty * W + tx] = idx;
-                self.cells[idx].x = nx;
-                self.cells[idx].y = ny;
+                self.cells[idx].x = tx;
+                self.cells[idx].y = ty;
                 moved[idx] = true;
 
                 let mut freed = old_y * W + old_x;
@@ -594,13 +593,13 @@ impl Sim {
                     let waiter = reservation[freed];
                     if waiter == usize::MAX { break; }
                     reservation[freed] = usize::MAX;
-                    let (wtx, wty, wnx, wny) = target_pos[waiter];
-                    let wox = self.cells[waiter].x as usize % W;
-                    let woy = self.cells[waiter].y as usize % H;
+                    let (wtx, wty) = target_pos[waiter];
+                    let wox = self.cells[waiter].x;
+                    let woy = self.cells[waiter].y;
                     grid[woy * W + wox] = usize::MAX;
                     grid[wty * W + wtx] = waiter;
-                    self.cells[waiter].x = wnx;
-                    self.cells[waiter].y = wny;
+                    self.cells[waiter].x = wtx;
+                    self.cells[waiter].y = wty;
                     moved[waiter] = true;
                     freed = woy * W + wox;
                 }
