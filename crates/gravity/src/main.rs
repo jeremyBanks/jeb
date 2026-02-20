@@ -949,11 +949,11 @@ impl Sim {
         let n = self.cells.len() as f32;
         let avg_spd = self.cells.iter().map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).sum::<f32>() / n;
         let max_spd = self.cells.iter().map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).fold(0.0f32, f32::max);
-        let cx = self.cells.iter().map(|c| c.x).sum::<f32>() / n;
-        let cy = self.cells.iter().map(|c| c.y).sum::<f32>() / n;
+        let cx = self.cells.iter().map(|c| c.x as f32).sum::<f32>() / n;
+        let cy = self.cells.iter().map(|c| c.y as f32).sum::<f32>() / n;
         let hw = W as f32 / 2.0; let hh = H as f32 / 2.0;
         let spread = self.cells.iter().map(|c| {
-            let mut dx = c.x - cx; let mut dy = c.y - cy;
+            let mut dx = c.x as f32 - cx; let mut dy = c.y as f32 - cy;
             if dx > hw { dx -= W as f32; } if dx < -hw { dx += W as f32; }
             if dy > hh { dy -= H as f32; } if dy < -hh { dy += H as f32; }
             (dx*dx+dy*dy).sqrt()
