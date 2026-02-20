@@ -80,7 +80,17 @@ async function tryMinify(code: string, compress: object, semicolons: boolean): P
 }
 
 function packLines(code: string, target: number): string {
-  const lines = code.split("\n").map(l => l.trim()).filter(l => l);
+  const allLines = code.split("\n").map(l => l.trim()).filter(l => l);
+  // Always keep shebang as its own line
+  const prefix: string[] = [];
+  const lines: string[] = [];
+  for (const l of allLines) {
+    if (l.startsWith("#!") && prefix.length === 0 && lines.length === 0) {
+      prefix.push(l);
+    } else {
+      lines.push(l);
+    }
+  }
   const packed: string[] = [];
   let cur = "";
   let tgt = target;
@@ -94,7 +104,7 @@ function packLines(code: string, target: number): string {
     else { packed.push(cur); tgt = Math.max(48, Math.min(256, cur.length)); cur = line; }
   }
   if (cur) packed.push(cur);
-  return packed.join("\n");
+  return [...prefix, ...packed].join("\n");
 }
 
 const size = (s: string) => new TextEncoder().encode(s).length;
