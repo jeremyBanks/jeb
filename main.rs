@@ -540,11 +540,12 @@ fn main() {
 
     // Four clockwise blobs — radius from --radius (0 = no blobs)
     let clumps_owned: Vec<(f32, f32, f32, f32, f32, usize)> = if blob_radius > 0.0 {
+        // W=192, H=108 — inner quarters: x∈{48,144}, y∈{27,81}
         vec![
-            ( 48.0,  32.0, blob_radius,  0.010,  0.000, 0),
-            (144.0,  32.0, blob_radius,  0.000,  0.010, 0),
-            (144.0,  96.0, blob_radius, -0.010,  0.000, 0),
-            ( 48.0,  96.0, blob_radius,  0.000, -0.010, 0),
+            ( 48.0,  27.0, blob_radius,  0.010,  0.000, 0),
+            (144.0,  27.0, blob_radius,  0.000,  0.010, 0),
+            (144.0,  81.0, blob_radius, -0.010,  0.000, 0),
+            ( 48.0,  81.0, blob_radius,  0.000, -0.010, 0),
         ]
     } else {
         vec![]
