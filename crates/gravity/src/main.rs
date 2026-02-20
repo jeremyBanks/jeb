@@ -701,12 +701,40 @@ impl Sim {
         let g_scale    = (1.0 - vel_phase_tick as f32 / 32.0).max(0.0);
         let life_scale = (1.0 - vel_phase_tick as f32 / 32.0).max(0.0);
 
-        // Ramp down residual Conway deaths to zero over 32 frames.
-        // (Kill/revive nudges are no-ops here: positions converged means all cells
-        //  are at original positions, so there's nothing to kill or revive.)
+        // Ramp Conway deaths down to zero over 32 frames (residual from position phase).
         let conway_max = (8.0 * (1.0 - conv_t) * life_scale).floor() as usize;
         if conway_max > 0 {
             self.epilogue_conway_deaths_only(conway_max);
+        }
+
+        // Kill/revive nudges: ramp from convergence strength up to full over 64 frames.
+        // These stay active to correct any cells displaced by residual gravity.
+        let vel_scale    = conv_t + (1.0 - conv_t) * (vel_phase_tick as f32 / 64.0).min(1.0);
+        let kill_chance   = 0.75  * vel_scale;
+        let revive_chance = 0.375 * vel_scale;
+        {
+            let mut grid = vec![usize::MAX; W * H];
+            for (i, c) in self.cells.iter().enumerate() {
+                grid[c.y as usize % H * W + c.x as usize % W] = i;
+            }
+            let mut to_kill: Vec<usize> = self.cells.iter().enumerate()
+                .filter(|(_, c)| !orig.positions.contains(&(c.x as usize % W, c.y as usize % H)))
+                .filter(|_| xorf32(&mut self.rng) < kill_chance)
+                .map(|(i, _)| i)
+                .collect();
+            to_kill.sort_unstable_by(|a, b| b.cmp(a));
+            for i in to_kill { self.cells.swap_remove(i); }
+
+            let mut grid2 = vec![usize::MAX; W * H];
+            for (i, c) in self.cells.iter().enumerate() {
+                grid2[c.y as usize % H * W + c.x as usize % W] = i;
+            }
+            for &(ox, oy) in &orig.positions {
+                if grid2[oy * W + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
+                    self.cells.push(Cell { x: ox as f32 + 0.5, y: oy as f32 + 0.5,
+                                           vx: 0.0, vy: 0.0, prev_speed: 0.0 });
+                }
+            }
         }
 
         // Snapshot pre-gravity squared error for each cell
