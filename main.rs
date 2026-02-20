@@ -498,10 +498,13 @@ fn main() {
     // to see what speeds actually develop — then set v_init to match.
     let snaps: Vec<usize> = (0..=10).map(|i| i * 50).collect();
 
-    // No cap (10.0), no initial velocity — just let gravity pull from rest
-    // and observe what speed cells reach. That IS the circular orbital speed.
-    run("nocap_pull", 0.000001, 20.0, 10.0, 0, &[
-        (100.0, 128.0, 13.0,  0.0, 0.0, 0),
-        (284.0, 128.0, 13.0,  0.0, 0.0, 0),
-    ], 500, &snaps);
+    // Find G where blobs actually move and measure natural fall speed.
+    // Use head-on (no perp velocity) to see gravitational acceleration cleanly.
+    for &g in &[0.001f32, 0.003, 0.01, 0.03] {
+        let name = format!("fall_g{g}");
+        run(&name, g, 20.0, 10.0, 0, &[
+            (100.0, 128.0, 13.0,  0.0, 0.0, 0),
+            (284.0, 128.0, 13.0,  0.0, 0.0, 0),
+        ], 500, &snaps);
+    }
 }
