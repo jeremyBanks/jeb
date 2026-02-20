@@ -252,8 +252,8 @@ impl Sim {
         buf.extend_from_slice(&(chunk_index as u64).to_le_bytes());
         // cells
         for c in &self.cells {
-            buf.extend_from_slice(&c.x.to_le_bytes());
-            buf.extend_from_slice(&c.y.to_le_bytes());
+            buf.extend_from_slice(&(c.x as u32).to_le_bytes());
+            buf.extend_from_slice(&(c.y as u32).to_le_bytes());
             buf.extend_from_slice(&c.vx.to_le_bytes());
             buf.extend_from_slice(&c.vy.to_le_bytes());
             buf.extend_from_slice(&c.prev_speed.to_le_bytes());
