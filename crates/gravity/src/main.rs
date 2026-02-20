@@ -3,11 +3,11 @@ use std::io::{BufWriter, Write};
 use std::process::Command;
 
 const W: usize = 192;
-const H: usize = 108; // 192×108 × 20 = 3840×2160 exactly (square pixels)
+const H: usize = 120; // 192×120 × 10 = 1920×1200 exactly (square pixels)
 
 // Output video settings
-const OUT_W: u32 = 3840; // 192 × 20
-const OUT_H: u32 = 2160; // 108 × 20
+const OUT_W: u32 = 1920; // 192 × 10
+const OUT_H: u32 = 1200; // 120 × 10
 const FPS: u32 = 60;
 const CRF: u32 = 12;
 const CHUNK_FRAMES: usize = 3840; // 64s at 60fps
