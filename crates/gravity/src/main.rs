@@ -247,13 +247,16 @@ impl Sim {
             }
         }
 
-        // Speed cap
+        // Speed cap: clamp to max(prev_speed, global_cap) so momentum from
+        // Conway operations isn't immediately eaten by the hard limit.
         for c in &mut self.cells {
             let spd = (c.vx * c.vx + c.vy * c.vy).sqrt();
-            if spd > self.speed_cap {
-                c.vx = c.vx / spd * self.speed_cap;
-                c.vy = c.vy / spd * self.speed_cap;
+            let effective_cap = c.prev_speed.max(self.speed_cap);
+            if spd > effective_cap {
+                c.vx = c.vx / spd * effective_cap;
+                c.vy = c.vy / spd * effective_cap;
             }
+            c.prev_speed = spd.min(effective_cap); // record speed after cap for next tick
         }
 
         // Movement with reservation chaining:
