@@ -176,6 +176,38 @@ impl Sim {
     }
 }
 
+/// Map velocity to color:
+/// - Hue = direction of motion (angle of vx,vy)
+/// - Saturation = speed (0=grey, 1=fully saturated)
+/// - Value = 1.0 always, but minimum brightness 25% via floor on RGB
+fn velocity_color(vx: f32, vy: f32, speed_cap: f32) -> (u8, u8, u8) {
+    let spd = (vx * vx + vy * vy).sqrt();
+    let sat = (spd / speed_cap).clamp(0.0, 1.0);
+    // Hue from direction: atan2 in [0, 2π]
+    let hue = (vy.atan2(vx) + std::f32::consts::PI) / (2.0 * std::f32::consts::PI);
+    let (r, g, b) = hsv_to_rgb(hue, sat, 1.0);
+    // Floor at 25% (64/255) so cells are never invisible
+    let floor = 64u8;
+    (r.max(floor), g.max(floor), b.max(floor))
+}
+
+fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
+    let i = (h * 6.0).floor() as u32;
+    let f = h * 6.0 - i as f32;
+    let p = v * (1.0 - s);
+    let q = v * (1.0 - f * s);
+    let t = v * (1.0 - (1.0 - f) * s);
+    let (r, g, b) = match i % 6 {
+        0 => (v, t, p),
+        1 => (q, v, p),
+        2 => (p, v, t),
+        3 => (p, q, v),
+        4 => (t, p, v),
+        _ => (v, p, q),
+    };
+    ((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8)
+}
+
 fn xoru64(s: &mut u64) -> u64 {
     *s ^= *s << 13;
     *s ^= *s >> 7;
