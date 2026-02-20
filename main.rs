@@ -260,7 +260,9 @@ impl Sim {
             }
             // Lower prev_speed if gravity slowed us, but don't raise it here —
             // only Conway birth/death velocity transfers raise the floor.
-            c.prev_speed = c.prev_speed.min(spd).max(self.speed_cap);
+            // Hard ceiling at 2× global_cap to prevent compounding explosion.
+            let hard_ceil = self.speed_cap * 2.0;
+            c.prev_speed = c.prev_speed.min(spd).max(self.speed_cap).min(hard_ceil);
         }
 
         // Movement with reservation chaining:
