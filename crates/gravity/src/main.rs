@@ -593,8 +593,8 @@ fn main() {
     // Also keep r=13 at same G for comparison
     // Conway every tick, pop clamped to ±12.5% of start
     // Same winning params: r=6, G=0.00005, 320 frames at 30fps
-    // Every tick, 960 frames = 32 seconds at 30fps
-    let snaps: Vec<usize> = (0..=960).collect();
+    // Every tick, 3840 frames = 64 seconds at 60fps
+    let snaps: Vec<usize> = (0..=3840).collect();
 
     // Same thirds positions but velocities aimed directly at each other
     // so neither blob is systematically favoured by the approach geometry.
