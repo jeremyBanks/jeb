@@ -33,6 +33,8 @@ struct Sim {
     pop_band: f32,
     tick_count: usize,
     prev_live: Vec<bool>,
+    wrap: bool,   // toroidal wrapping (false = hard walls)
+    steer: bool,  // counter-rotate velocity to compensate discrete-move angular error
 }
 
 // Original state captured at tick=0 for epilogue convergence
@@ -143,11 +145,13 @@ fn min_image(d: f32, dim: f32) -> f32 {
 }
 
 fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
-            px: f32, py: f32, g: f32, softening: f32) -> (f32, f32) {
+            px: f32, py: f32, g: f32, softening: f32, wrap: bool) -> (f32, f32) {
     let node = &nodes[node_idx];
     if node.body == -2 { return (0.0, 0.0); } // empty node
-    let dx = min_image(node.com_x - px, W as f32);
-    let dy = min_image(node.com_y - py, H as f32);
+    let raw_dx = node.com_x - px;
+    let raw_dy = node.com_y - py;
+    let dx = if wrap { min_image(raw_dx, W as f32) } else { raw_dx };
+    let dy = if wrap { min_image(raw_dy, H as f32) } else { raw_dy };
     // Leaf: exact pairwise force (skip self)
     if node.body >= 0 {
         if node.body as usize == body { return (0.0, 0.0); }
@@ -171,7 +175,7 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
     let mut fy = 0.0f32;
     for &ch in &node.ch {
         if ch >= 0 {
-            let (cfx, cfy) = qt_force(nodes, ch as usize, body, px, py, g, softening);
+            let (cfx, cfy) = qt_force(nodes, ch as usize, body, px, py, g, softening, wrap);
             fx += cfx;
             fy += cfy;
         }
@@ -182,7 +186,8 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, conway_every: usize, pop_band: f32,
-           clumps: &[(f32, f32, f32, f32, f32, usize)], seed_density_inv: usize) -> Self {
+           clumps: &[(f32, f32, f32, f32, f32, usize)], seed_density_inv: usize,
+           wrap: bool, steer: bool) -> Self {
         let mut rng = rng_seed;
         let mut cells = Vec::new();
 
@@ -239,7 +244,7 @@ impl Sim {
         let n = cells.len();
         let target_pop = W * H / 32;
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
-              conway_every, pop_band, tick_count: 0, prev_live: vec![false; W * H] }
+              conway_every, pop_band, tick_count: 0, prev_live: vec![false; W * H], wrap, steer }
     }
 
     // ── Checkpoint save/load ───────────────────────────────────────────────
@@ -271,7 +276,8 @@ impl Sim {
     }
 
     fn load_checkpoint(path: &str, g: f32, softening: f32, speed_cap: f32,
-                       conway_every: usize, pop_band: f32, _seed_density_inv: usize)
+                       conway_every: usize, pop_band: f32, _seed_density_inv: usize,
+                       wrap: bool, steer: bool)
         -> Option<(Self, Vec<f32>, usize)>
     {
         let buf = fs::read(path).ok()?;
@@ -320,7 +326,7 @@ impl Sim {
         let target_pop = W * H / 32;
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
                         start_pop: target_pop, conway_every, pop_band,
-                        tick_count, prev_live: prev_live_rebuilt };
+                        tick_count, prev_live: prev_live_rebuilt, wrap, steer };
         Some((sim, canvas, chunk_index))
     }
 
@@ -379,10 +385,21 @@ impl Sim {
         let neighbour_offsets: [(i32, i32); 8] = [
             (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)
         ];
+        let wrap = self.wrap;
+        // Resolve a neighbour offset to a grid index, respecting wrap/no-wrap.
+        let resolve_nbr = |gy: usize, gx: usize, dy: i32, dx: i32| -> Option<(usize, usize)> {
+            let ry = gy as i32 + dy;
+            let rx = gx as i32 + dx;
+            if wrap {
+                Some((ry.rem_euclid(H as i32) as usize, rx.rem_euclid(W as i32) as usize))
+            } else {
+                if ry < 0 || ry >= H as i32 || rx < 0 || rx >= W as i32 { None }
+                else { Some((ry as usize, rx as usize)) }
+            }
+        };
         let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
             neighbour_offsets.iter().filter_map(|&(dy, dx)| {
-                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
-                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                let (ny, nx) = resolve_nbr(gy, gx, dy, dx)?;
                 let idx = grid[ny * W + nx];
                 if idx != usize::MAX { Some(idx) } else { None }
             }).collect()
@@ -406,9 +423,9 @@ impl Sim {
             let gx = c.x;
             let gy = c.y;
             for &(dy, dx) in &neighbour_offsets {
-                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
-                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
-                if grid[ny * W + nx] == usize::MAX { candidates.insert((ny, nx)); }
+                if let Some((ny, nx)) = resolve_nbr(gy, gx, dy, dx) {
+                    if grid[ny * W + nx] == usize::MAX { candidates.insert((ny, nx)); }
+                }
             }
         }
         for (gy, gx) in candidates {
@@ -467,8 +484,7 @@ impl Sim {
             .filter_map(|(i, (gy, gx, _))| {
                 if grid2[gy * W + gx] != usize::MAX { return None; } // already occupied
                 let spd_sum: f32 = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
-                    let ny = ((*gy as i32 + dy).rem_euclid(H as i32)) as usize;
-                    let nx = ((*gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                    let (ny, nx) = resolve_nbr(*gy, *gx, dy, dx)?;
                     let idx = grid2[ny * W + nx];
                     if idx != usize::MAX {
                         let c = &self.cells[idx];
@@ -488,8 +504,7 @@ impl Sim {
             let (gy, gx, _) = desired_births[bi];
             if grid2[gy * W + gx] != usize::MAX { continue; } // double-check: may have been filled
             let live_nbrs: Vec<usize> = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
-                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
-                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                let (ny, nx) = resolve_nbr(gy, gx, dy, dx)?;
                 let idx = grid2[ny * W + nx];
                 if idx != usize::MAX { Some(idx) } else { None }
             }).collect();
@@ -521,7 +536,7 @@ impl Sim {
         // Compute gravitational force on each particle via tree traversal
         for i in 0..n {
             let (px, py) = (self.cells[i].x as f32 + 0.5, self.cells[i].y as f32 + 0.5);
-            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g, self.softening);
+            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g, self.softening, self.wrap);
             self.cells[i].vx += gfx;
             self.cells[i].vy += gfy;
         }
@@ -555,12 +570,26 @@ impl Sim {
             grid[c.y * W + c.x] = i;
         }
 
-        // Target integer position: add velocity to integer position, wrap toroidally.
-        // The % W/H guards against the rare float case where rem_euclid rounds up to W or H.
+        // Save pre-move positions for steer correction
+        let old_pos: Vec<(usize, usize)> = self.cells.iter().map(|c| (c.x, c.y)).collect();
+
+        // Target integer position.
+        // Wrap mode: toroidal (rem_euclid). No-wrap mode: stay put if target is out of bounds.
         let target_pos: Vec<(usize, usize)> = self.cells.iter().map(|c| {
-            let tx = ((c.x as f32 + c.vx).rem_euclid(W as f32)) as usize % W;
-            let ty = ((c.y as f32 + c.vy).rem_euclid(H as f32)) as usize % H;
-            (tx, ty)
+            let raw_x = c.x as f32 + c.vx;
+            let raw_y = c.y as f32 + c.vy;
+            if self.wrap {
+                let tx = raw_x.rem_euclid(W as f32) as usize % W;
+                let ty = raw_y.rem_euclid(H as f32) as usize % H;
+                (tx, ty)
+            } else {
+                // Out of bounds → don't move (same rule as occupied cell)
+                if raw_x < 0.0 || raw_x >= W as f32 || raw_y < 0.0 || raw_y >= H as f32 {
+                    (c.x, c.y)
+                } else {
+                    (raw_x as usize, raw_y as usize)
+                }
+            }
         }).collect();
 
         let n = self.order.len();
@@ -607,6 +636,31 @@ impl Sim {
             } else {
                 let key = ty * W + tx;
                 if reservation[key] == usize::MAX { reservation[key] = idx; }
+            }
+        }
+
+        // Steer correction: counter-rotate velocity by the angular error introduced by
+        // discrete grid movement. If the grid forced a cell 20° clockwise of its intended
+        // direction, rotate the velocity 20° counter-clockwise to compensate.
+        if self.steer {
+            for idx in 0..n {
+                if !moved[idx] { continue; }
+                let (ox, oy) = old_pos[idx];
+                let (nx, ny) = (self.cells[idx].x, self.cells[idx].y);
+                if nx == ox && ny == oy { continue; } // stayed in same square, no error
+                // Actual displacement (with min-image for wrap, direct for no-wrap)
+                let adx = if self.wrap { min_image(nx as f32 - ox as f32, W as f32) }
+                           else { nx as f32 - ox as f32 };
+                let ady = if self.wrap { min_image(ny as f32 - oy as f32, H as f32) }
+                           else { ny as f32 - oy as f32 };
+                let spd = (self.cells[idx].vx.powi(2) + self.cells[idx].vy.powi(2)).sqrt();
+                if spd == 0.0 { continue; }
+                let intended = self.cells[idx].vy.atan2(self.cells[idx].vx);
+                let actual   = ady.atan2(adx);
+                let error    = actual - intended; // how much the grid rotated us
+                let corrected = intended - error; // rotate back by the same amount
+                self.cells[idx].vx = corrected.cos() * spd;
+                self.cells[idx].vy = corrected.sin() * spd;
             }
         }
     }
@@ -886,7 +940,7 @@ impl Sim {
         for i in 0..n {
             if orig.positions.contains(&(self.cells[i].x, self.cells[i].y)) { continue; }
             let (px, py) = (self.cells[i].x as f32 + 0.5, self.cells[i].y as f32 + 0.5);
-            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g * g_scale, self.softening);
+            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g * g_scale, self.softening, self.wrap);
             self.cells[i].vx += gfx;
             self.cells[i].vy += gfy;
         }
@@ -1043,6 +1097,8 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .expect("Usage: gravity --seconds <N> [--radius <r>] [--seed-density <1/N>] [--epilogue]");
     let do_epilogue = args.iter().any(|a| a == "--epilogue");
+    let wrap  = !args.iter().any(|a| a == "--no-wrap");  // default: toroidal wrap
+    let steer = args.iter().any(|a| a == "--steer");     // default: off
     // --radius: circle radius (0 = no blobs), default 4
     let rng_seed: u64 = parse_arg("--seed")
         .and_then(|s| s.parse().ok())
@@ -1105,14 +1161,14 @@ fn main() {
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_chunk) =
-        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, conway_every, pop_band, seed_density_inv)
+        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, conway_every, pop_band, seed_density_inv, wrap, steer)
         .map(|(s, c, ci)| {
             println!("Resuming from checkpoint: chunk {}/{}", ci, n_chunks);
             (s, c, ci)
         })
         .unwrap_or_else(|| {
             println!("Fresh start (radius={blob_radius}, seed_density=1/{seed_density_inv})");
-            let s = Sim::new(rng_seed, g, softening, speed_cap, conway_every, pop_band, clumps, seed_density_inv);
+            let s = Sim::new(rng_seed, g, softening, speed_cap, conway_every, pop_band, clumps, seed_density_inv, wrap, steer);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
