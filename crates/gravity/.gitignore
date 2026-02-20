@@ -1,1 +1,6 @@
 frames/
+*.mp4
+state/
+segments/
+gravity_*.mp4
+
