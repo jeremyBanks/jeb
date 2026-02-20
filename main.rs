@@ -455,7 +455,7 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32,
 fn main() {
     fs::create_dir_all("frames").unwrap();
 
-    let snaps = &[0usize, 300, 600, 900, 1200, 1600, 2000, 2400];
+    let snaps = &[0usize, 300, 600, 900, 1200, 1600, 2000, 2400]; // unused now
 
     // A: Slow mutual orbit — v tuned near circular orbit velocity
     // For two equal masses M each, separated by d, circular orbit: v = sqrt(G*M/d)
