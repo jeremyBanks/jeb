@@ -502,14 +502,23 @@ fn concat_segments(segments_file: &str, output: &str) {
 }
 
 fn main() {
-    // Parse --seconds N
+    // Parse args
     let args: Vec<String> = std::env::args().collect();
-    let seconds: usize = {
-        let pos = args.iter().position(|a| a == "--seconds")
-            .expect("Usage: gravity --seconds <N>");
-        args.get(pos + 1).and_then(|s| s.parse().ok())
-            .expect("--seconds requires a positive integer")
+    let parse_arg = |flag: &str| -> Option<String> {
+        args.iter().position(|a| a == flag).and_then(|i| args.get(i + 1)).cloned()
     };
+    let seconds: usize = parse_arg("--seconds")
+        .and_then(|s| s.parse().ok())
+        .expect("Usage: gravity --seconds <N> [--radius <r>] [--seed-density <1/N>]");
+    // --radius: circle radius (0 = no blobs)
+    let blob_radius: f32 = parse_arg("--radius")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(6.0);
+    // --seed-density: random zero-momentum cells as 1/N of empty cells (0 = none)
+    // Default 32 = 1/32 of empty cells (doubled from previous 1/64)
+    let seed_density_inv: usize = parse_arg("--seed-density")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(32);
 
     let total_frames = seconds * FPS as usize;
     let n_chunks = (total_frames + CHUNK_FRAMES - 1) / CHUNK_FRAMES;
