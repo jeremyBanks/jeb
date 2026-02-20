@@ -559,12 +559,26 @@ impl Sim {
             grid[c.y * W + c.x] = i;
         }
 
-        // Target integer position: add velocity to integer position, wrap toroidally.
-        // The % W/H guards against the rare float case where rem_euclid rounds up to W or H.
+        // Save pre-move positions for steer correction
+        let old_pos: Vec<(usize, usize)> = self.cells.iter().map(|c| (c.x, c.y)).collect();
+
+        // Target integer position.
+        // Wrap mode: toroidal (rem_euclid). No-wrap mode: stay put if target is out of bounds.
         let target_pos: Vec<(usize, usize)> = self.cells.iter().map(|c| {
-            let tx = ((c.x as f32 + c.vx).rem_euclid(W as f32)) as usize % W;
-            let ty = ((c.y as f32 + c.vy).rem_euclid(H as f32)) as usize % H;
-            (tx, ty)
+            let raw_x = c.x as f32 + c.vx;
+            let raw_y = c.y as f32 + c.vy;
+            if self.wrap {
+                let tx = raw_x.rem_euclid(W as f32) as usize % W;
+                let ty = raw_y.rem_euclid(H as f32) as usize % H;
+                (tx, ty)
+            } else {
+                // Out of bounds → don't move (same rule as occupied cell)
+                if raw_x < 0.0 || raw_x >= W as f32 || raw_y < 0.0 || raw_y >= H as f32 {
+                    (c.x, c.y)
+                } else {
+                    (raw_x as usize, raw_y as usize)
+                }
+            }
         }).collect();
 
         let n = self.order.len();
