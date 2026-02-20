@@ -254,7 +254,7 @@ fn main() {
     run("parallel", 0.0008, 1.5, 2.0, &[
         (32.0, 42.0, 10.0,  0.5,  0.0, 60),  // circle A: top-left, moving right
         (96.0, 86.0, 10.0, -0.5,  0.0, 60),  // circle B: bottom-right, moving left
-    ], 800, &[0, 100, 200, 300, 400, 500, 600, 700]);
+    ], 2800, &[0, 400, 800, 1200, 1600, 2000, 2400, 2800]);
 }
 
 // [recovery] edit target not found, appending:
