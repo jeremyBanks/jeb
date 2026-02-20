@@ -398,10 +398,11 @@ impl Sim {
         const RAMP_TICKS: usize = 600; // 10 seconds at 60fps
         let t = (epilogue_tick as f32 / RAMP_TICKS as f32).min(1.0);
 
-        // Conway with ramping-down max births/deaths
+        // Conway deaths only (no births) with ramping-down rate — clears non-original cells.
+        // Births are handled exclusively by the revive nudge, ensuring only original positions get filled.
         let conway_max = (8.0 * (1.0 - t)).floor() as usize;
         if conway_max > 0 {
-            self.epilogue_conway_step(conway_max, orig.count);
+            self.epilogue_conway_deaths_only(conway_max);
         }
 
         // Gravity still runs (frozen cells handled by not moving them)
