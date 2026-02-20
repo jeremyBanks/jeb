@@ -422,7 +422,8 @@ pub fn walk_first_parent(start: &str) -> Result<Vec<(String, Vec<String>, String
 #[cfg(test)]
 mod tests {
     use {super::*, std::fs, tempfile::TempDir};
-    fn setup_test_repo() -> TempDir {
+    fn setup_test_repo() -> (TempDir, std::sync::MutexGuard<'static, ()>) {
+        let lock = crate::test_utils::CWD_LOCK.lock().unwrap();
         let dir = TempDir::new().unwrap();
         std::env::set_current_dir(dir.path()).unwrap();
         Command::new("git")
@@ -440,17 +441,17 @@ mod tests {
             .current_dir(dir.path())
             .output()
             .unwrap();
-        dir
+        (dir, lock)
     }
     #[test]
     fn test_empty_tree() {
-        let _dir = setup_test_repo();
+        let (_dir, _lock) = setup_test_repo();
         let tree = empty_tree().unwrap();
         assert_eq!(tree, "4b825dc642cb6eb9a060e54bf8d69288fbee4904");
     }
     #[test]
     fn test_mktree_and_ls_tree() {
-        let dir = setup_test_repo();
+        let (dir, _lock) = setup_test_repo();
         fs::write(dir.path().join("test.txt"), "hello").unwrap();
         Command::new("git")
             .args(["add", "test.txt"])

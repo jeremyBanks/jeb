@@ -8,6 +8,8 @@ mod scan;
 mod tree;
 mod zoom_in;
 mod zoom_out;
+#[cfg(test)]
+mod test_utils;
 use std::{env, process::ExitCode};
 fn print_usage() {
     eprintln!("Usage:");
