@@ -335,11 +335,29 @@ impl Sim {
         self.tick_count += 1;
     }
 
-    fn paint_frame(&self, canvas: &mut Vec<u8>) {
-        // Fade existing canvas slowly
-        for v in canvas.iter_mut() {
-            *v = (*v as u16 * 254 / 256) as u8;
+    fn paint_frame(&mut self, canvas: &mut Vec<u8>) {
+        // Step 1: fade canvas.
+        //   - Pixels that were live last frame: snap down by 25% (→ 75%), then slow-fade
+        //   - All other pixels: slow-fade only (254/256 ≈ 99.2%)
+        for py in 0..H {
+            for px in 0..W {
+                let i = (py * W + px) * 3;
+                if self.prev_live[py * W + px] {
+                    // Was live last frame — snap to 75% then slow-fade
+                    canvas[i]     = (canvas[i]     as u16 * 192 / 256) as u8;
+                    canvas[i + 1] = (canvas[i + 1] as u16 * 192 / 256) as u8;
+                    canvas[i + 2] = (canvas[i + 2] as u16 * 192 / 256) as u8;
+                } else {
+                    // Slow fade only
+                    canvas[i]     = (canvas[i]     as u16 * 254 / 256) as u8;
+                    canvas[i + 1] = (canvas[i + 1] as u16 * 254 / 256) as u8;
+                    canvas[i + 2] = (canvas[i + 2] as u16 * 254 / 256) as u8;
+                }
+            }
         }
+
+        // Step 2: record which pixels are live now, then paint them at full brightness
+        self.prev_live.fill(false);
         for c in &self.cells {
             let xi = c.x as usize % W;
             let yi = c.y as usize % H;
@@ -348,6 +366,7 @@ impl Sim {
             canvas[i]     = r;
             canvas[i + 1] = g;
             canvas[i + 2] = b;
+            self.prev_live[yi * W + xi] = true;
         }
     }
 
