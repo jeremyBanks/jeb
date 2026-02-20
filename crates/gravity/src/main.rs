@@ -518,11 +518,11 @@ fn main() {
     // Three-body: two left blobs moving right, one right blob moving left
     // All clustered in the middle vertical band
     // W=384: left≈130, right≈260; H=256: top≈96, mid≈128, bot≈160
-    // Perfectly symmetric two-blob test: identical size, mirrored positions+velocities
-    // If one still dies first it's a code bias, not physics asymmetry
-    run("sym_test", 0.00005, 1.5, 0.125, 1, 4.0, &[
-        (128.0, 128.0, 6.0,  0.08,  0.0, 0),  // left, moving right
-        (256.0, 128.0, 6.0, -0.08,  0.0, 0),  // right, moving left
+    // Vertical sym test: top blob scanned first in row-major grid order
+    // If top blob dies consistently, it's a scan-order bias in Conway logic
+    run("sym_vertical", 0.00005, 1.5, 0.125, 1, 4.0, &[
+        (192.0,  85.0, 6.0,  0.0,  0.08, 0),  // top, moving down
+        (192.0, 171.0, 6.0,  0.0, -0.08, 0),  // bottom, moving up
     ], 38400, &snaps);
 
     // Also run three-body for comparison
