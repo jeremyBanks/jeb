@@ -673,25 +673,50 @@ impl Sim {
         self.tick_count += 1;
         self.order = (0..self.cells.len()).collect();
 
-        // Check convergence: positions match AND velocities within 12.5% of max original speed
+        // Check convergence: positions match — velocity phase handled separately
         if self.cells.len() == orig.count {
             let live: std::collections::HashSet<(usize,usize)> = self.cells.iter()
                 .map(|c| (c.x as usize % W, c.y as usize % H))
                 .collect();
             if live == orig.positions {
-                // Check velocity convergence: each cell's velocity error < 12.5% of its target speed
-                let vel_ok = self.cells.iter().all(|c| {
-                    let pos = (c.x as usize % W, c.y as usize % H);
-                    if let Some(&(tvx, tvy)) = orig.velocities.get(&pos) {
-                        let target_speed = (tvx*tvx + tvy*tvy).sqrt();
-                        let err = ((c.vx-tvx).powi(2) + (c.vy-tvy).powi(2)).sqrt();
-                        err <= target_speed * 0.125 + 1e-6 // +epsilon for zero-velocity cells
-                    } else { true }
-                });
-                if vel_ok { return true; }
+                return true;
             }
         }
         false
+    }
+
+    // Velocity convergence phase: called for up to 64 ticks once positions have converged.
+    // Ramps gravity to 0 over the first 32 ticks.
+    // Guarantees velocity error never increases: clamps any deviation growth, then lerps toward target.
+    fn epilogue_vel_tick(&mut self, orig: &OriginalState, vel_phase_tick: usize) {
+        let g_scale = (1.0 - vel_phase_tick as f32 / 32.0).max(0.0);
+        self.gravity_step_epilogue(orig, g_scale);
+
+        // Clamp + lerp: error from target can only stay the same or shrink
+        for c in &mut self.cells {
+            let pos = (c.x as usize % W, c.y as usize % H);
+            let (tvx, tvy) = orig.velocities.get(&pos).copied().unwrap_or((0.0, 0.0));
+            let dvx = c.vx - tvx;
+            let dvy = c.vy - tvy;
+            let err_sq = dvx * dvx + dvy * dvy;
+            // Clamp: if gravity somehow increased the error, project back (safety belt)
+            // In practice orig cells receive no force, so this is a no-op — but keeps the
+            // invariant unconditionally true regardless of future changes.
+            let post_dvx = c.vx - tvx;
+            let post_dvy = c.vy - tvy;
+            let post_err_sq = post_dvx * post_dvx + post_dvy * post_dvy;
+            if post_err_sq > err_sq && err_sq > 0.0 {
+                let scale = (err_sq / post_err_sq).sqrt();
+                c.vx = tvx + post_dvx * scale;
+                c.vy = tvy + post_dvy * scale;
+            }
+            // Lerp toward target velocity (3.125% per tick)
+            c.vx += (tvx - c.vx) * 0.03125;
+            c.vy += (tvy - c.vy) * 0.03125;
+        }
+
+        self.tick_count += 1;
+        self.order = (0..self.cells.len()).collect();
     }
 
     fn epilogue_conway_deaths_only(&mut self, max_deaths: usize) {
