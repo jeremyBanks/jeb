@@ -215,8 +215,7 @@ fn run_config(name: &str, g: f32, softening: f32, speed_cap: f32,
 }
 
 fn main() {
-    let out_dir = std::env::args().nth(1).unwrap_or_else(|| "frames".to_string());
-    fs::create_dir_all(&out_dir).unwrap();
+    fs::create_dir_all("frames").unwrap();
 
     let snap = &[0, 20, 50, 100, 200];
 
