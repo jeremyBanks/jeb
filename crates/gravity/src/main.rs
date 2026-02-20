@@ -123,7 +123,7 @@ impl Sim {
     fn paint_frame(&self, canvas: &mut Vec<u8>) {
         // Fade existing canvas by ~2% per tick
         for v in canvas.iter_mut() {
-            *v = (*v as u16 * 250 / 256) as u8;
+            *v = (*v as u16 * 253 / 256) as u8;
         }
         // Paint live cells on top
         for c in &self.cells {
