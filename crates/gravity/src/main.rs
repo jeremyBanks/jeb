@@ -968,12 +968,27 @@ fn main() {
         count: sim.cells.len(),
     };
 
+    // Graceful shutdown: SIGINT/SIGTERM sets flag; loops check it and break,
+    // then the normal final-concat path runs with whatever chunks are done.
+    let keep_running = Arc::new(AtomicBool::new(true));
+    let kr = keep_running.clone();
+    ctrlc::set_handler(move || {
+        if kr.load(Ordering::Relaxed) {
+            println!("\n[signal] Caught — finishing current chunk then concatenating completed segments...");
+            kr.store(false, Ordering::Relaxed);
+        }
+    }).expect("Error setting signal handler");
+
     // Open/append segments list
     let mut seg_list = fs::OpenOptions::new()
         .create(true).append(true)
         .open(segments_file).unwrap();
 
     for chunk in start_chunk..n_chunks {
+        if !keep_running.load(Ordering::Relaxed) {
+            println!("[signal] Stopping after chunk {chunk} — will concat completed segments.");
+            break;
+        }
         let chunk_start_frame = chunk * CHUNK_FRAMES;
         let chunk_end_frame = ((chunk + 1) * CHUNK_FRAMES).min(total_frames);
         let this_chunk_frames = chunk_end_frame - chunk_start_frame;
