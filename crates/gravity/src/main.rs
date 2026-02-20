@@ -352,48 +352,48 @@ impl Sim {
         self.tick_count += 1;
     }
 
-    fn paint_frame(&mut self, canvas: &mut Vec<u8>) {
-        // Step 1: fade canvas.
-        //   - Pixels that were live last frame: snap down by 25% (→ 75%), then slow-fade
-        //   - All other pixels: slow-fade only (254/256 ≈ 99.2%)
+    fn paint_frame(&mut self, canvas: &mut Vec<f32>) {
+        // Step 1: fade canvas (f32 precision — much smoother than u8 rounding).
+        //   - Pixels live last frame: snap to 50% immediately
+        //   - All others: very slow fade (×0.995 per tick → half-life ~138 ticks)
         for py in 0..H {
             for px in 0..W {
                 let i = (py * W + px) * 3;
                 if self.prev_live[py * W + px] {
-                    // Was live last frame — snap to 75% then slow-fade
-                    canvas[i]     = (canvas[i]     as u16 * 192 / 256) as u8;
-                    canvas[i + 1] = (canvas[i + 1] as u16 * 192 / 256) as u8;
-                    canvas[i + 2] = (canvas[i + 2] as u16 * 192 / 256) as u8;
+                    canvas[i]     *= 0.5;
+                    canvas[i + 1] *= 0.5;
+                    canvas[i + 2] *= 0.5;
                 } else {
-                    // Slow fade only
-                    canvas[i]     = (canvas[i]     as u16 * 254 / 256) as u8;
-                    canvas[i + 1] = (canvas[i + 1] as u16 * 254 / 256) as u8;
-                    canvas[i + 2] = (canvas[i + 2] as u16 * 254 / 256) as u8;
+                    canvas[i]     *= 0.995;
+                    canvas[i + 1] *= 0.995;
+                    canvas[i + 2] *= 0.995;
                 }
             }
         }
 
-        // Step 2: record which pixels are live now, then paint them at full brightness
+        // Step 2: paint live cells at full brightness, record for next fade
         self.prev_live.fill(false);
         for c in &self.cells {
             let xi = c.x as usize % W;
             let yi = c.y as usize % H;
             let (r, g, b) = velocity_color(c.vx, c.vy, self.speed_cap);
             let i = (yi * W + xi) * 3;
-            canvas[i]     = r;
-            canvas[i + 1] = g;
-            canvas[i + 2] = b;
+            canvas[i]     = r as f32;
+            canvas[i + 1] = g as f32;
+            canvas[i + 2] = b as f32;
             self.prev_live[yi * W + xi] = true;
         }
     }
 
-    fn save_png(canvas: &[u8], path: &str) {
+    fn save_png(canvas: &[f32], path: &str) {
+        // Quantize f32 → u8 for output
+        let pixels: Vec<u8> = canvas.iter().map(|&v| v.clamp(0.0, 255.0) as u8).collect();
         let file = fs::File::create(path).unwrap();
         let mut enc = png::Encoder::new(BufWriter::new(file), W as u32, H as u32);
         enc.set_color(png::ColorType::Rgb);
         enc.set_depth(png::BitDepth::Eight);
         let mut writer = enc.write_header().unwrap();
-        writer.write_image_data(canvas).unwrap();
+        writer.write_image_data(&pixels).unwrap();
     }
 
     fn print_ascii(&self, label: &str) {
@@ -486,7 +486,7 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32, conway_every: usize, 
     fs::create_dir_all(&dir).unwrap();
 
     let mut sim = Sim::new(42, g, softening, speed_cap, conway_every, pop_band, clumps);
-    let mut canvas = vec![0u8; W * H * 3];
+    let mut canvas = vec![0.0f32; W * H * 3];
     println!("\n=== {name} | g={g} soft={softening} cap={speed_cap} conway_every={conway_every} pop_band={pop_band} start_pop={} ===",
         sim.cells.len());
 
