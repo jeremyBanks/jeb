@@ -417,9 +417,9 @@ impl Sim {
         // Deaths: uniform random selection (shuffled above)
         // Births: weighted by neighbour speed — handled below after grid2 is built
 
-        // Rate-limit: max ceil(pop_band/2) births or deaths per tick (1/4 of total band range).
-        // Applies even outside the band — prevents runaway explosions/collapses.
-        let rate_limit = ((self.pop_band / 2.0).ceil() as usize).max(1);
+        // Rate-limit: 1 birth and 1 death per Conway call, independent of pop_band.
+        // With conway_every=FPS this equals 1 birth and 1 death per second max.
+        let rate_limit = 1_usize;
         let max_births = pop_max.saturating_sub(n).min(rate_limit);
         let max_deaths = n.saturating_sub(pop_min).min(rate_limit);
         // desired_births NOT truncated here — weighted selection happens post-deaths
