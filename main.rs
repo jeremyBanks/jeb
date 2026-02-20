@@ -1044,15 +1044,33 @@ fn main() {
             (s, c, 0)
         });
 
-    // Capture original state for epilogue (only meaningful on fresh start)
-    let orig = OriginalState {
-        positions: sim.cells.iter()
-            .map(|c| (c.x as usize % W, c.y as usize % H))
-            .collect(),
-        velocities: sim.cells.iter()
-            .map(|c| ((c.x as usize % W, c.y as usize % H), (c.vx, c.vy)))
-            .collect(),
-        count: sim.cells.len(),
+    let orig_state_path = "state/orig_state.bin";
+
+    // OriginalState = tick=0 layout. On fresh start: capture now and persist.
+    // On checkpoint resume: load from disk so epilogue targets the actual first frame.
+    let orig = if start_chunk == 0 {
+        // Fresh start — this IS tick=0
+        let o = OriginalState {
+            positions:  sim.cells.iter().map(|c| (c.x as usize % W, c.y as usize % H)).collect(),
+            velocities: sim.cells.iter().map(|c| ((c.x as usize % W, c.y as usize % H), (c.vx, c.vy))).collect(),
+            count: sim.cells.len(),
+        };
+        Sim::save_orig_state(&o, orig_state_path);
+        println!("Saved original state ({} cells) for epilogue target.", o.count);
+        o
+    } else {
+        // Checkpoint resume — load the tick=0 state saved on fresh start
+        match Sim::load_orig_state(orig_state_path) {
+            Some(o) => { println!("Loaded original state ({} cells) for epilogue target.", o.count); o }
+            None => {
+                println!("WARNING: orig_state.bin not found — epilogue will target checkpoint state, not tick=0.");
+                OriginalState {
+                    positions:  sim.cells.iter().map(|c| (c.x as usize % W, c.y as usize % H)).collect(),
+                    velocities: sim.cells.iter().map(|c| ((c.x as usize % W, c.y as usize % H), (c.vx, c.vy))).collect(),
+                    count: sim.cells.len(),
+                }
+            }
+        }
     };
 
     // Graceful shutdown: SIGINT/SIGTERM sets flag; loops check it and break,
