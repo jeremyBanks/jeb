@@ -2,3 +2,4 @@
 // [recovery] edit target not found, appending:
 [dependencies]
 png = "0.17"
+ctrlc = { version = "3", features = ["termination"] }
