@@ -69,7 +69,7 @@ const baseCompress = {
 
 async function tryMinify(code: string, compress: object, semicolons: boolean): Promise<string> {
   const result = await minify(code, {
-    ecma: 2020,
+    ecma: 2022,
     module: true,
     compress,
     mangle: { toplevel: true, nth_identifier },
