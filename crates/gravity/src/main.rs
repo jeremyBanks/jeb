@@ -1069,7 +1069,7 @@ fn main() {
     // Sim parameters
     let g: f32 = parse_arg("--gravity")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(0.000075_f32); // default +50% over original
+        .unwrap_or(0.000300_f32); // 4× stronger gravity
     let softening   = 1.5_f32;
     let speed_cap   = 0.046875_f32; // +50%
     let conway_every = 1_usize;
