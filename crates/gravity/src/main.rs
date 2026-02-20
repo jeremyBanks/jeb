@@ -487,11 +487,12 @@ fn main() {
     // Original vx=±0.2 was too fast. Sweep slower speeds with/without Conway.
     let snaps: Vec<usize> = (0..=40).map(|i| i * 120).collect();
 
-    for &(vx, conway_every) in &[(0.08f32, 0usize), (0.08, 128), (0.04, 0), (0.04, 128)] {
-        let name = format!("glancing_v{:.2}_c{conway_every}", vx);
-        run(&name, 0.001, 1.5, 0.5, conway_every, &[
-            ( 80.0, 115.0, 13.0,  vx,  0.0, 0),
-            (304.0, 141.0, 13.0, -vx,  0.0, 0),
+    // Sweep: vary vertical offset and G, no Conway, cap high enough not to interfere
+    for &(offset, g) in &[(30.0f32, 0.0005f32), (50.0, 0.0005), (30.0, 0.0002), (50.0, 0.0002)] {
+        let name = format!("sweep_off{:.0}_g{g:.4}", offset);
+        run(&name, g, 1.5, 0.3, 0, &[
+            ( 80.0, 128.0 - offset/2.0, 13.0,  0.05,  0.0, 0),
+            (304.0, 128.0 + offset/2.0, 13.0, -0.05,  0.0, 0),
         ], 4800, &snaps);
     }
 }
