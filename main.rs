@@ -510,20 +510,20 @@ impl Sim {
     fn gravity_step(&mut self) {
         let n = self.cells.len();
 
-        // Build quadtree over the toroidal domain
+        // Build quadtree over the toroidal domain (use cell centres for continuous physics)
         let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
         nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
         for i in 0..n {
-            let (px, py) = (self.cells[i].x, self.cells[i].y);
+            let (px, py) = (self.cells[i].x as f32 + 0.5, self.cells[i].y as f32 + 0.5);
             qt_insert(&mut nodes, 0, i, px, py, 0);
         }
 
         // Compute gravitational force on each particle via tree traversal
         for i in 0..n {
-            let (px, py) = (self.cells[i].x, self.cells[i].y);
-            let (fx, fy) = qt_force(&nodes, 0, i, px, py, self.g, self.softening);
-            self.cells[i].vx += fx;
-            self.cells[i].vy += fy;
+            let (px, py) = (self.cells[i].x as f32 + 0.5, self.cells[i].y as f32 + 0.5);
+            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g, self.softening);
+            self.cells[i].vx += gfx;
+            self.cells[i].vy += gfy;
         }
 
         for c in &mut self.cells {
