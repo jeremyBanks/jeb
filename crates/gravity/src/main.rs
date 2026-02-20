@@ -3,11 +3,11 @@ use std::io::{BufWriter, Write};
 use std::process::Command;
 
 const W: usize = 192;
-const H: usize = 128;
+const H: usize = 108; // 192×108 × 20 = 3840×2160 exactly (square pixels)
 
 // Output video settings
-const OUT_W: u32 = 3840;
-const OUT_H: u32 = 2160;
+const OUT_W: u32 = 3840; // 192 × 20
+const OUT_H: u32 = 2160; // 108 × 20
 const FPS: u32 = 60;
 const CRF: u32 = 12;
 const CHUNK_FRAMES: usize = 3840; // 64s at 60fps
@@ -388,9 +388,9 @@ impl Sim {
                     canvas[i + 1] *= 0.5;
                     canvas[i + 2] *= 0.5;
                 } else {
-                    canvas[i]     *= 0.99875;
-                    canvas[i + 1] *= 0.99875;
-                    canvas[i + 2] *= 0.99875;
+                    canvas[i]     *= 0.999688;
+                    canvas[i + 1] *= 0.999688;
+                    canvas[i + 2] *= 0.999688;
                 }
             }
         }
@@ -540,11 +540,12 @@ fn main() {
 
     // Four clockwise blobs — radius from --radius (0 = no blobs)
     let clumps_owned: Vec<(f32, f32, f32, f32, f32, usize)> = if blob_radius > 0.0 {
+        // W=192, H=108 — inner quarters: x∈{48,144}, y∈{27,81}
         vec![
-            ( 48.0,  32.0, blob_radius,  0.010,  0.000, 0),
-            (144.0,  32.0, blob_radius,  0.000,  0.010, 0),
-            (144.0,  96.0, blob_radius, -0.010,  0.000, 0),
-            ( 48.0,  96.0, blob_radius,  0.000, -0.010, 0),
+            ( 48.0,  27.0, blob_radius,  0.010,  0.000, 0),
+            (144.0,  27.0, blob_radius,  0.000,  0.010, 0),
+            (144.0,  81.0, blob_radius, -0.010,  0.000, 0),
+            ( 48.0,  81.0, blob_radius,  0.000, -0.010, 0),
         ]
     } else {
         vec![]
