@@ -34,6 +34,12 @@ struct Sim {
     prev_live: Vec<bool>,
 }
 
+// Original state captured at tick=0 for epilogue convergence
+struct OriginalState {
+    positions: std::collections::HashSet<(usize, usize)>,
+    count: usize,
+}
+
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, conway_every: usize, pop_band: f32,
            clumps: &[(f32, f32, f32, f32, f32, usize)], seed_density_inv: usize) -> Self {
