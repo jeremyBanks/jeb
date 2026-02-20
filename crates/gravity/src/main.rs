@@ -195,8 +195,9 @@ impl Sim {
                     let y = (cy + dy as f32).rem_euclid(H as f32);
                     let xi = x as usize;
                     let yi = y as usize;
-                    // Checkerboard 50%, then randomly discard half twice → ~12.5% density
+                    // Checkerboard 50%, then randomly discard half ×3 → ~6.25% density
                     if xi % 2 != 0 || yi % 2 != 0 { continue; }
+                    if xoru64(&mut rng) % 2 != 0 { continue; }
                     if xoru64(&mut rng) % 2 != 0 { continue; }
                     if xoru64(&mut rng) % 2 != 0 { continue; }
                     if cells.iter().any(|c: &Cell| c.x as usize == xi && c.y as usize == yi) {
@@ -1055,10 +1056,10 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(4.0);
     // --seed-density: random cells as 1/N of empty cells (0 = none)
-    // Default 64 = 1/64 of empty cells (half as dense as before)
+    // Default 128 = 1/128 of empty cells (half as dense again)
     let seed_density_inv: usize = parse_arg("--seed-density")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(64);
+        .unwrap_or(128);
 
     let total_frames = seconds * FPS as usize;
     let n_chunks = (total_frames + CHUNK_FRAMES - 1) / CHUNK_FRAMES;
@@ -1069,7 +1070,7 @@ fn main() {
     // Sim parameters
     let g: f32 = parse_arg("--gravity")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(0.000075_f32); // default +50% over original
+        .unwrap_or(0.000300_f32); // 4× stronger gravity
     let softening   = 1.5_f32;
     let speed_cap   = 0.046875_f32; // +50%
     let conway_every = 1_usize;
