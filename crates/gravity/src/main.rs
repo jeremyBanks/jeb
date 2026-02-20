@@ -503,8 +503,9 @@ fn main() {
     // so neither blob is systematically favoured by the approach geometry.
     // Vector from blob1→blob2: (128, 86), length ~152 → unit (0.842, 0.566)
     // Each blob moves at speed 0.2 toward the other's initial position.
-    run("aimed", 0.00005, 1.5, 0.125, 1, 0.0625, &[
-        (128.0,  85.0, 6.0,  0.168,  0.113, 0),   // aimed toward (256,171)
-        (256.0, 171.0, 6.0, -0.168, -0.113, 0),   // aimed toward (128,85)
+    // Back to thirds + horizontal velocity — check if bias is gone after shuffle fix
+    run("thirds_fixed", 0.00005, 1.5, 0.125, 1, 0.0625, &[
+        (128.0,  85.0, 6.0,  0.2,  0.0, 0),
+        (256.0, 171.0, 6.0, -0.2,  0.0, 0),
     ], 38400, &snaps);
 }
