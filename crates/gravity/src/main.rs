@@ -687,28 +687,32 @@ impl Sim {
 
     // Velocity convergence phase: called for up to 64 ticks once positions have converged.
     // Ramps gravity to 0 over the first 32 ticks.
-    // Guarantees velocity error never increases: clamps any deviation growth, then lerps toward target.
+    // Guarantees velocity error never increases: snapshots pre-gravity error, clamps any
+    // growth after gravity runs, then lerps toward target.
     fn epilogue_vel_tick(&mut self, orig: &OriginalState, vel_phase_tick: usize) {
         let g_scale = (1.0 - vel_phase_tick as f32 / 32.0).max(0.0);
+
+        // Snapshot pre-gravity squared error for each cell
+        let pre_err_sq: Vec<f32> = self.cells.iter().map(|c| {
+            let pos = (c.x as usize % W, c.y as usize % H);
+            let (tvx, tvy) = orig.velocities.get(&pos).copied().unwrap_or((0.0, 0.0));
+            (c.vx - tvx).powi(2) + (c.vy - tvy).powi(2)
+        }).collect();
+
         self.gravity_step_epilogue(orig, g_scale);
 
         // Clamp + lerp: error from target can only stay the same or shrink
-        for c in &mut self.cells {
+        for (i, c) in self.cells.iter_mut().enumerate() {
             let pos = (c.x as usize % W, c.y as usize % H);
             let (tvx, tvy) = orig.velocities.get(&pos).copied().unwrap_or((0.0, 0.0));
             let dvx = c.vx - tvx;
             let dvy = c.vy - tvy;
-            let err_sq = dvx * dvx + dvy * dvy;
-            // Clamp: if gravity somehow increased the error, project back (safety belt)
-            // In practice orig cells receive no force, so this is a no-op — but keeps the
-            // invariant unconditionally true regardless of future changes.
-            let post_dvx = c.vx - tvx;
-            let post_dvy = c.vy - tvy;
-            let post_err_sq = post_dvx * post_dvx + post_dvy * post_dvy;
-            if post_err_sq > err_sq && err_sq > 0.0 {
-                let scale = (err_sq / post_err_sq).sqrt();
-                c.vx = tvx + post_dvx * scale;
-                c.vy = tvy + post_dvy * scale;
+            let post_err_sq = dvx * dvx + dvy * dvy;
+            // Clamp: if gravity increased the error, project back to pre-gravity magnitude
+            if post_err_sq > pre_err_sq[i] && pre_err_sq[i] > 0.0 {
+                let scale = (pre_err_sq[i] / post_err_sq).sqrt();
+                c.vx = tvx + dvx * scale;
+                c.vy = tvy + dvy * scale;
             }
             // Lerp toward target velocity (3.125% per tick)
             c.vx += (tvx - c.vx) * 0.03125;
