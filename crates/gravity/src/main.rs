@@ -541,12 +541,11 @@ fn main() {
     // G=0.00005 was best — spread dropped 112→92, actual attraction visible
     // Now try smaller blobs (r=6) — fewer cells = less intra-blob self-gravity
     // Also keep r=13 at same G for comparison
-    // Winner: r=6, G=0.00005 — gentle deflection, beautiful trails
-    // 8x frames = 320 snaps, at 30fps = ~10s video
-    // 4800 ticks * 8 = 38400 ticks total, snap every 120
+    // Conway every tick, pop clamped to ±12.5% of start
+    // Same winning params: r=6, G=0.00005, 320 frames at 30fps
     let snaps: Vec<usize> = (0..=320).map(|i| i * 120).collect();
 
-    run("beauty_r6_g5e5", 0.00005, 1.5, 0.5, 0, &[
+    run("conway_tight", 0.00005, 1.5, 0.5, 1, 0.125, &[
         ( 80.0, 115.0, 6.0,  0.2,  0.0, 0),
         (304.0, 141.0, 6.0, -0.2,  0.0, 0),
     ], 38400, &snaps);
