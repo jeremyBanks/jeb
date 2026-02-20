@@ -78,10 +78,12 @@ impl Sim {
             grid[yi * W + xi] = i;
         }
 
-        // For each grid cell, count live neighbours and collect their indices
-        let neighbour_offsets: [(i32, i32); 8] = [
-            (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)
-        ];
+        // Conway range=8: all cells within Chebyshev distance 8 (excludes self)
+        const CONWAY_RANGE: i32 = 8;
+        let neighbour_offsets: Vec<(i32, i32)> = (-CONWAY_RANGE..=CONWAY_RANGE)
+            .flat_map(|dy| (-CONWAY_RANGE..=CONWAY_RANGE).map(move |dx| (dy, dx)))
+            .filter(|&(dy, dx)| dy != 0 || dx != 0)
+            .collect();
         let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
             neighbour_offsets.iter().filter_map(|&(dy, dx)| {
                 let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
@@ -110,8 +112,7 @@ impl Sim {
             }
         }
 
-        // Check all empty cells for birth
-        // Only need to check cells adjacent to live cells
+        // Check all empty cells for birth — candidates are empty cells within range of any live cell
         let mut candidates = std::collections::HashSet::new();
         for c in &self.cells {
             let gx = c.x as usize % W;
