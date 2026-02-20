@@ -9,6 +9,7 @@ struct Cell {
     y: f32,
     vx: f32,
     vy: f32,
+    prev_speed: f32, // speed at start of last tick — cap is max(prev_speed, global_cap)
 }
 
 struct Sim {
@@ -46,7 +47,7 @@ impl Sim {
                     if cells.iter().any(|c: &Cell| c.x as usize == xi && c.y as usize == yi) {
                         continue;
                     }
-                    cells.push(Cell { x, y, vx: ivx, vy: ivy });
+                    cells.push(Cell { x, y, vx: ivx, vy: ivy, prev_speed: 0.0 });
                 }
             }
         }
@@ -203,11 +204,13 @@ impl Sim {
             let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
 
             let new_idx = self.cells.len();
+            let birth_spd = (vx * vx + vy * vy).sqrt();
             self.cells.push(Cell {
                 x: gx as f32 + 0.5,
                 y: gy as f32 + 0.5,
                 vx,
                 vy,
+                prev_speed: birth_spd,
             });
             grid2[gy * W + gx] = new_idx;
         }
@@ -244,13 +247,16 @@ impl Sim {
             }
         }
 
-        // Speed cap
+        // Speed cap: clamp to max(prev_speed, global_cap) so momentum from
+        // Conway operations isn't immediately eaten by the hard limit.
         for c in &mut self.cells {
             let spd = (c.vx * c.vx + c.vy * c.vy).sqrt();
-            if spd > self.speed_cap {
-                c.vx = c.vx / spd * self.speed_cap;
-                c.vy = c.vy / spd * self.speed_cap;
+            let effective_cap = c.prev_speed.max(self.speed_cap);
+            if spd > effective_cap {
+                c.vx = c.vx / spd * effective_cap;
+                c.vy = c.vy / spd * effective_cap;
             }
+            c.prev_speed = spd.min(effective_cap); // record speed after cap for next tick
         }
 
         // Movement with reservation chaining:
