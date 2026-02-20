@@ -620,7 +620,7 @@ impl Sim {
     // epilogue_tick: 0-based tick within epilogue phase.
     // Returns true when converged.
     fn epilogue_tick(&mut self, orig: &OriginalState, epilogue_tick: usize) -> bool {
-        const RAMP_TICKS: usize = 2400; // 40 seconds at 60fps (4× slower than before)
+        const RAMP_TICKS: usize = 32; // fully ramped by frame 32
         let t = (epilogue_tick as f32 / RAMP_TICKS as f32).min(1.0);
 
         // Conway deaths only (no births) with ramping-down rate — clears non-original cells.
@@ -1251,7 +1251,7 @@ fn main() {
                 let pc = sim.epilogue_tick(&orig, ep_tick);
                 if pc {
                     pos_converged = true;
-                    conv_t = (ep_tick as f32 / 2400.0_f32).min(1.0);
+                    conv_t = (ep_tick as f32 / 32.0_f32).min(1.0);
                     println!("  [epilogue] positions converged at tick {} ({:.1}s, t={:.2}) — velocity phase begins",
                         ep_tick, ep_tick as f32 / FPS as f32, conv_t);
                 }
