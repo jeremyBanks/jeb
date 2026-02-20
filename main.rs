@@ -3,7 +3,7 @@ use std::io::{BufWriter, Write};
 use std::process::Command;
 
 const W: usize = 192;
-const H: usize = 128;
+const H: usize = 108; // 192×108 × 20 = 3840×2160 exactly (square pixels)
 
 // Output video settings
 const OUT_W: u32 = 3840;
