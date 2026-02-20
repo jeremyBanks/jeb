@@ -1214,15 +1214,16 @@ fn main() {
             // Phase 2 (velocity): up to 64 ticks, gravity ramps to 0 over first 32,
             //                     velocities clamped to never diverge from target.
             let done = if pos_converged {
-                sim.epilogue_vel_tick(&orig, vel_tick);
+                sim.epilogue_vel_tick(&orig, vel_tick, conv_t);
                 vel_tick += 1;
                 vel_tick >= 64
             } else {
                 let pc = sim.epilogue_tick(&orig, ep_tick);
                 if pc {
                     pos_converged = true;
-                    println!("  [epilogue] positions converged at tick {} ({:.1}s) — velocity phase begins",
-                        ep_tick, ep_tick as f32 / FPS as f32);
+                    conv_t = (ep_tick as f32 / 2400.0_f32).min(1.0);
+                    println!("  [epilogue] positions converged at tick {} ({:.1}s, t={:.2f}) — velocity phase begins",
+                        ep_tick, ep_tick as f32 / FPS as f32, conv_t);
                 }
                 false
             };
