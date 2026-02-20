@@ -217,47 +217,16 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32,
 fn main() {
     fs::create_dir_all("frames").unwrap();
 
-    // Key insight: speed_cap must be ~0.5-2.0 (sub-pixel to ~2px/tick)
-    // so cells actually collide and stay clumped. G must be tiny.
-    // At sub-pixel speeds, 100s of ticks needed to see meaningful motion.
-
-    let snap = &[0, 50, 100, 200, 400];
-
-    // Two clumps orbiting — tangential velocity chosen for rough circular orbit:
-    // For two equal masses separated by d=22, v_orbit ≈ sqrt(G*M/(2d))
-    // With M=60 particles each, G=0.001, d=22: v ≈ sqrt(0.001*60/44) ≈ 0.037
-    // Start with a few values around that
-    run("orbit_gentle", 0.001, 1.5, 1.0, &[
-        (42.0, 64.0, 8.0,  0.0,  0.05, 50),
-        (86.0, 64.0, 8.0,  0.0, -0.05, 50),
-    ], 400, snap);
-
-    run("orbit_fast", 0.001, 1.5, 1.0, &[
-        (42.0, 64.0, 8.0,  0.0,  0.15, 50),
-        (86.0, 64.0, 8.0,  0.0, -0.15, 50),
-    ], 400, snap);
-
-    run("three_triangle", 0.001, 1.5, 1.0, &[
-        (64.0, 30.0, 7.0,  0.12,  0.0,  35),
-        (30.0, 98.0, 7.0, -0.06, -0.10, 35),
-        (98.0, 98.0, 7.0, -0.06,  0.10, 35),
-    ], 400, snap);
-
-    // Dense small clumps — more particles per area, stronger local gravity
-    run("dense_orbit", 0.002, 1.0, 1.0, &[
-        (44.0, 64.0, 5.0,  0.0,  0.1, 20),
-        (84.0, 64.0, 5.0,  0.0, -0.1, 20),
-    ], 400, snap);
-
-    // Head-on collision (no tangential velocity)
-    run("collision", 0.001, 1.5, 1.0, &[
-        (35.0, 64.0, 8.0,  0.08,  0.0, 50),
-        (93.0, 64.0, 8.0, -0.08,  0.0, 50),
-    ], 400, snap);
-
-    // Off-center collision — glancing blow
-    run("glancing", 0.001, 1.5, 1.0, &[
-        (35.0, 56.0, 8.0,  0.08,  0.0, 50),
-        (93.0, 72.0, 8.0, -0.08,  0.0, 50),
-    ], 400, snap);
+    // Two circles of cells, in opposite diagonal quadrants, moving on parallel paths.
+    // Circle A: top-left quadrant, moving right (+x)
+    // Circle B: bottom-right quadrant, moving left (-x)
+    // Both paths are horizontal at y=42 and y=86 respectively — parallel, offset.
+    // They'll pass each other, gravity will curve them, trails will show the arc.
+    //
+    // Speed: 0.5px/tick → 256 ticks to cross the grid
+    // Fade: 2%/tick → ~110 ticks to fully fade → trails span ~55px = nearly half the grid
+    run("parallel", 0.0008, 1.5, 2.0, &[
+        (32.0, 42.0, 10.0,  0.5,  0.0, 60),  // circle A: top-left, moving right
+        (96.0, 86.0, 10.0, -0.5,  0.0, 60),  // circle B: bottom-right, moving left
+    ], 600, &[0, 50, 100, 150, 200, 300, 400, 600]);
 }
