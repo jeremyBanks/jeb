@@ -624,7 +624,7 @@ impl Sim {
         }
 
         // Gravity still runs (frozen cells handled by not moving them)
-        self.gravity_step_epilogue(orig);
+        self.gravity_step_epilogue(orig, 1.0);
 
         // Nudges: ramp up
         let kill_chance   = 0.75 * t;
