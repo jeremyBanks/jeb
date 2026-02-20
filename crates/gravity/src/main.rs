@@ -482,38 +482,16 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32, conway_every: usize,
 fn main() {
     fs::create_dir_all("frames").unwrap();
 
-    // Circular orbit parameters (N-body corrected):
-    //   Each blob has ~531 cells; within-blob forces dominate at short range.
-    //   High softening (15px) prevents intra-blob acceleration from hitting cap.
-    //   G=0.000006, softening=15, cap=0.3
-    //   At sep=184px: inter-blob accel ≈ 531 * 6e-6 / 184² ≈ 9.4e-8 px/tick² per cell
-    //   Within-blob at r=2px: 6e-6 / (4 + 225) ≈ 2.6e-8 — manageable with soft=15
-    //   v_circ = sqrt(531 * G * 92 / 184²) = sqrt(531 * 6e-6 * 92 / 33856) ≈ 0.029 px/tick
-    //   Period ≈ 2π * 92 / 0.029 ≈ 19900 ticks → run 20000 ticks
-    //   Blobs at x=100 and x=284, y=128
+    // D_best style: two blobs moving toward each other, offset vertically ~26px.
+    // This is what produced the interesting collision/slingshot.
+    // Original vx=±0.2 was too fast. Sweep slower speeds with/without Conway.
+    let snaps: Vec<usize> = (0..=40).map(|i| i * 120).collect();
 
-    // The real issue: with 531 cells/blob all doing N-body gravity, intra-blob
-    // forces are enormous at close range and immediately saturate the speed cap.
-    // Fix: remove speed cap entirely (set very high), use tiny G, print stats
-    // to see what speeds actually develop — then set v_init to match.
-    let snaps: Vec<usize> = (0..=10).map(|i| i * 50).collect();
-
-    // Back to what looked good: G=0.003, soft=2, cap=1
-    // Just cut initial velocity in half so they move slower
-    // 40 frames at 10fps = 4 seconds, snap every 250 ticks over 10000
-    let snaps: Vec<usize> = (0..=40).map(|i| i * 250).collect();
-
-    // soft25 confirmed working (spread 80-117). Now run longer + denser frames.
-    // Also try v=0.03 (slower start) to see if orbit is tighter.
-    let snaps: Vec<usize> = (0..=60).map(|i| i * 500).collect(); // 60 frames, 30s@10fps
-
-    run("orbit_long_v046", 0.003, 25.0, 0.5, 128, &[
-        (100.0, 128.0, 13.0,  0.0, -0.046, 0),
-        (284.0, 128.0, 13.0,  0.0,  0.046, 0),
-    ], 30000, &snaps);
-
-    run("orbit_long_v030", 0.003, 25.0, 0.5, 128, &[
-        (100.0, 128.0, 13.0,  0.0, -0.030, 0),
-        (284.0, 128.0, 13.0,  0.0,  0.030, 0),
-    ], 30000, &snaps);
+    for &(vx, conway_every) in &[(0.08f32, 0usize), (0.08, 128), (0.04, 0), (0.04, 128)] {
+        let name = format!("glancing_v{:.2}_c{conway_every}", vx);
+        run(&name, 0.001, 1.5, 0.5, conway_every, &[
+            ( 80.0, 115.0, 13.0,  vx,  0.0, 0),
+            (304.0, 141.0, 13.0, -vx,  0.0, 0),
+        ], 4800, &snaps);
+    }
 }
