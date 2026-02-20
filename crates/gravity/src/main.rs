@@ -1,8 +1,8 @@
 use std::fs;
 use std::io::BufWriter;
 
-const W: usize = 128;
-const H: usize = 128;
+const W: usize = 384;
+const H: usize = 256;
 
 struct Cell {
     x: f32,
@@ -18,6 +18,7 @@ struct Sim {
     g: f32,
     softening: f32,
     speed_cap: f32,
+    start_pop: usize,
 }
 
 impl Sim {
@@ -26,34 +27,190 @@ impl Sim {
         let mut rng = rng_seed;
         let mut cells = Vec::new();
 
-        for &(cx, cy, r, ivx, ivy, count) in clumps {
-            let mut placed = 0;
-            let mut attempts = 0;
-            while placed < count && attempts < 100_000 {
-                attempts += 1;
-                let rx = xorf32(&mut rng) * 2.0 - 1.0;
-                let ry = xorf32(&mut rng) * 2.0 - 1.0;
-                if rx * rx + ry * ry > 1.0 { continue; }
-                let x = (cx + rx * r).rem_euclid(W as f32);
-                let y = (cy + ry * r).rem_euclid(H as f32);
-                let xi = x as usize;
-                let yi = y as usize;
-                if cells.iter().any(|c: &Cell| c.x as usize == xi && c.y as usize == yi) {
-                    continue;
+        for &(cx, cy, r, ivx, ivy, _count) in clumps {
+            // Fill every grid cell inside the circle
+            let ri = r.ceil() as i32;
+            for dy in -ri..=ri {
+                for dx in -ri..=ri {
+                    if (dx as f32).powi(2) + (dy as f32).powi(2) > r * r { continue; }
+                    let x = (cx + dx as f32).rem_euclid(W as f32);
+                    let y = (cy + dy as f32).rem_euclid(H as f32);
+                    let xi = x as usize;
+                    let yi = y as usize;
+                    if cells.iter().any(|c: &Cell| c.x as usize == xi && c.y as usize == yi) {
+                        continue;
+                    }
+                    cells.push(Cell { x, y, vx: ivx, vy: ivy });
                 }
-                cells.push(Cell { x, y, vx: ivx, vy: ivy });
-                placed += 1;
             }
         }
 
         let n = cells.len();
-        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap }
+        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: n }
     }
 
-    fn tick(&mut self) {
+    // ── Conway step (modified) ─────────────────────────────────────────────
+    fn conway_step(&mut self) {
+        let n = self.cells.len();
+        let pop_min = self.start_pop / 2;
+        let pop_max = self.start_pop * 2;
+
+        // Build occupancy grid: cell index at each grid position (usize::MAX = empty)
+        let mut grid = vec![usize::MAX; W * H];
+        for (i, c) in self.cells.iter().enumerate() {
+            let xi = c.x as usize % W;
+            let yi = c.y as usize % H;
+            grid[yi * W + xi] = i;
+        }
+
+        // For each grid cell, count live neighbours and collect their indices
+        let neighbour_offsets: [(i32, i32); 8] = [
+            (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)
+        ];
+        let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
+            neighbour_offsets.iter().filter_map(|&(dy, dx)| {
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                let idx = grid[ny * W + nx];
+                if idx != usize::MAX { Some(idx) } else { None }
+            }).collect()
+        };
+
+        // Determine desired births and deaths
+        let mut desired_births: Vec<(usize, usize, Vec<usize>)> = Vec::new(); // (gy, gx, neighbour_indices)
+        let mut desired_deaths: Vec<usize> = Vec::new(); // cell indices
+
+        // Check all alive cells for death
+        for (i, c) in self.cells.iter().enumerate() {
+            let gx = c.x as usize % W;
+            let gy = c.y as usize % H;
+            let nbrs = live_neighbours(gy, gx);
+            let count = nbrs.len();
+            // Standard Conway: dies if not 2 or 3 neighbours
+            if count != 2 && count != 3 {
+                // Can only die if has at least one neighbour to receive velocity
+                if !nbrs.is_empty() {
+                    desired_deaths.push(i);
+                }
+            }
+        }
+
+        // Check all empty cells for birth
+        // Only need to check cells adjacent to live cells
+        let mut candidates = std::collections::HashSet::new();
+        for c in &self.cells {
+            let gx = c.x as usize % W;
+            let gy = c.y as usize % H;
+            for &(dy, dx) in &neighbour_offsets {
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                if grid[ny * W + nx] == usize::MAX {
+                    candidates.insert((ny, nx));
+                }
+            }
+        }
+        for (gy, gx) in candidates {
+            let nbrs = live_neighbours(gy, gx);
+            if nbrs.len() == 3 {
+                desired_births.push((gy, gx, nbrs));
+            }
+        }
+
+        // Apply population bounds by randomly trimming births/deaths
+        let current = n;
+        let after = current + desired_births.len() - desired_deaths.len();
+
+        if after > pop_max {
+            // Too many births — randomly trim births
+            let excess = after - pop_max;
+            shuffle_vec(&mut desired_births, &mut self.rng);
+            desired_births.truncate(desired_births.len().saturating_sub(excess));
+        } else if after < pop_min {
+            // Too many deaths — randomly trim deaths
+            let excess = pop_min - after;
+            shuffle_vec(&mut desired_deaths, &mut self.rng);
+            desired_deaths.truncate(desired_deaths.len().saturating_sub(excess));
+        }
+
+        // Mark deaths (we'll process them, removing from cells)
+        let mut dying: std::collections::HashSet<usize> = desired_deaths.iter().cloned().collect();
+
+        // Apply velocity transfers for deaths: distribute velocity equally to live neighbours
+        // (excluding other dying cells)
+        for &di in &dying {
+            let (dvx, dvy) = (self.cells[di].vx, self.cells[di].vy);
+            let gx = self.cells[di].x as usize % W;
+            let gy = self.cells[di].y as usize % H;
+            let receivers: Vec<usize> = live_neighbours(gy, gx).into_iter()
+                .filter(|&ni| !dying.contains(&ni))
+                .collect();
+            if !receivers.is_empty() {
+                let share = 1.0 / receivers.len() as f32;
+                for &ri in &receivers {
+                    self.cells[ri].vx += dvx * share;
+                    self.cells[ri].vy += dvy * share;
+                }
+            }
+        }
+
+        // Remove dying cells (in reverse index order to preserve indices)
+        let mut death_indices: Vec<usize> = dying.drain().collect();
+        death_indices.sort_unstable_by(|a, b| b.cmp(a));
+        for i in death_indices {
+            self.cells.swap_remove(i);
+        }
+
+        // Births: place new cells with velocity = equal average of their neighbours
+        // Neighbours' indices may have shifted due to swap_remove — rebuild grid
+        let mut grid2 = vec![usize::MAX; W * H];
+        for (i, c) in self.cells.iter().enumerate() {
+            let xi = c.x as usize % W;
+            let yi = c.y as usize % H;
+            grid2[yi * W + xi] = i;
+        }
+
+        for (gy, gx, old_nbr_indices) in desired_births {
+            // Re-check the position is still empty (could collide with another birth)
+            if grid2[gy * W + gx] != usize::MAX { continue; }
+
+            // Recompute live neighbours from updated grid (old indices may be stale)
+            let live_nbrs: Vec<usize> = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                let idx = grid2[ny * W + nx];
+                if idx != usize::MAX { Some(idx) } else { None }
+            }).collect();
+
+            // Need at least the original 3 (some may have died)
+            if live_nbrs.is_empty() {
+                // All neighbours died — skip birth, use old indices as fallback
+                // (shouldn't normally happen)
+                let _ = old_nbr_indices;
+                continue;
+            }
+
+            let n_nbrs = live_nbrs.len() as f32;
+            let vx = live_nbrs.iter().map(|&i| self.cells[i].vx).sum::<f32>() / n_nbrs;
+            let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
+
+            let new_idx = self.cells.len();
+            self.cells.push(Cell {
+                x: gx as f32 + 0.5,
+                y: gy as f32 + 0.5,
+                vx,
+                vy,
+            });
+            grid2[gy * W + gx] = new_idx;
+        }
+
+        // Rebuild order for gravity shuffle
+        self.order = (0..self.cells.len()).collect();
+    }
+
+    // ── Gravity step ───────────────────────────────────────────────────────
+    fn gravity_step(&mut self) {
         let n = self.cells.len();
 
-        // All-pairs 1/r² gravity
         for i in 0..n {
             for j in (i + 1)..n {
                 let mut dx = self.cells[j].x - self.cells[i].x;
@@ -87,7 +244,7 @@ impl Sim {
             }
         }
 
-        // Move in random order, skip if target cell occupied
+        // Move in random order, skip if target occupied
         let mut occupied = vec![false; W * H];
         for c in &self.cells {
             occupied[c.y as usize % H * W + c.x as usize % W] = true;
@@ -120,28 +277,34 @@ impl Sim {
         }
     }
 
-    fn save_png(&self, path: &str) {
-        let mut pixels = vec![0u8; W * H * 3];
+    fn tick(&mut self) {
+        self.conway_step();
+        self.gravity_step();
+    }
+
+    fn paint_frame(&self, canvas: &mut Vec<u8>) {
+        // Fade existing canvas slowly
+        for v in canvas.iter_mut() {
+            *v = (*v as u16 * 253 / 256) as u8;
+        }
         for c in &self.cells {
             let xi = c.x as usize % W;
             let yi = c.y as usize % H;
-            let spd = (c.vx * c.vx + c.vy * c.vy).sqrt();
-            let t = (spd / self.speed_cap).clamp(0.0, 1.0);
-            // cool (slow) = blue-white, hot (fast) = orange
-            let r = (255.0 * (0.5 + 0.5 * t)) as u8;
-            let g = (255.0 * (0.8 - 0.5 * t)) as u8;
-            let b = (255.0 * (1.0 - t)) as u8;
+            let (r, g, b) = velocity_color(c.vx, c.vy, self.speed_cap);
             let i = (yi * W + xi) * 3;
-            pixels[i]     = r;
-            pixels[i + 1] = g;
-            pixels[i + 2] = b;
+            canvas[i]     = r;
+            canvas[i + 1] = g;
+            canvas[i + 2] = b;
         }
+    }
+
+    fn save_png(canvas: &[u8], path: &str) {
         let file = fs::File::create(path).unwrap();
         let mut enc = png::Encoder::new(BufWriter::new(file), W as u32, H as u32);
         enc.set_color(png::ColorType::Rgb);
         enc.set_depth(png::BitDepth::Eight);
         let mut writer = enc.write_header().unwrap();
-        writer.write_image_data(&pixels).unwrap();
+        writer.write_image_data(canvas).unwrap();
     }
 
     fn print_ascii(&self, label: &str) {
@@ -165,13 +328,51 @@ impl Sim {
         let max_spd = self.cells.iter().map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).fold(0.0f32, f32::max);
         let cx = self.cells.iter().map(|c| c.x).sum::<f32>() / n;
         let cy = self.cells.iter().map(|c| c.y).sum::<f32>() / n;
-        // spread = mean distance from CoM
         let spread = self.cells.iter().map(|c| {
             let dx = c.x - cx; let dy = c.y - cy;
             (dx*dx+dy*dy).sqrt()
         }).sum::<f32>() / n;
-        format!("avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1} com=({cx:.0},{cy:.0})")
+        format!("pop={} avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1}",
+            self.cells.len())
     }
+}
+
+fn shuffle_vec<T>(v: &mut Vec<T>, rng: &mut u64) {
+    let n = v.len();
+    for i in (1..n).rev() {
+        let j = (xoru64(rng) as usize) % (i + 1);
+        v.swap(i, j);
+    }
+}
+
+/// Map velocity to color:
+/// - Hue = direction of motion (angle of vx,vy)
+/// - Saturation = speed (0=grey, 1=fully saturated)
+/// - Value = 1.0 always, minimum brightness 25%
+fn velocity_color(vx: f32, vy: f32, speed_cap: f32) -> (u8, u8, u8) {
+    let spd = (vx * vx + vy * vy).sqrt();
+    let sat = (spd / speed_cap).clamp(0.0, 1.0);
+    let hue = (vy.atan2(vx) + std::f32::consts::PI) / (2.0 * std::f32::consts::PI);
+    let (r, g, b) = hsv_to_rgb(hue, sat, 1.0);
+    let floor = 64u8;
+    (r.max(floor), g.max(floor), b.max(floor))
+}
+
+fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
+    let i = (h * 6.0).floor() as u32;
+    let f = h * 6.0 - i as f32;
+    let p = v * (1.0 - s);
+    let q = v * (1.0 - f * s);
+    let t = v * (1.0 - (1.0 - f) * s);
+    let (r, g, b) = match i % 6 {
+        0 => (v, t, p),
+        1 => (q, v, p),
+        2 => (p, v, t),
+        3 => (p, q, v),
+        4 => (t, p, v),
+        _ => (v, p, q),
+    };
+    ((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8)
 }
 
 fn xoru64(s: &mut u64) -> u64 {
@@ -192,13 +393,15 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32,
     fs::create_dir_all(&dir).unwrap();
 
     let mut sim = Sim::new(42, g, softening, speed_cap, clumps);
-    println!("\n=== {name} | g={g} soft={softening} cap={speed_cap} cells={} ===",
+    let mut canvas = vec![0u8; W * H * 3];
+    println!("\n=== {name} | g={g} soft={softening} cap={speed_cap} start_pop={} ===",
         sim.cells.len());
 
     for tick in 0..=ticks {
+        sim.paint_frame(&mut canvas);
         if snap_at.contains(&tick) {
-            sim.save_png(&format!("{dir}/t{tick:04}.png"));
-            sim.print_ascii(&format!("t={tick}  {}", sim.stats()));
+            Sim::save_png(&canvas, &format!("{dir}/t{tick:04}.png"));
+            println!("  t={tick:4}  {}", sim.stats());
         }
         if tick < ticks { sim.tick(); }
     }
@@ -207,47 +410,11 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32,
 fn main() {
     fs::create_dir_all("frames").unwrap();
 
-    // Key insight: speed_cap must be ~0.5-2.0 (sub-pixel to ~2px/tick)
-    // so cells actually collide and stay clumped. G must be tiny.
-    // At sub-pixel speeds, 100s of ticks needed to see meaningful motion.
-
-    let snap = &[0, 50, 100, 200, 400];
-
-    // Two clumps orbiting — tangential velocity chosen for rough circular orbit:
-    // For two equal masses separated by d=22, v_orbit ≈ sqrt(G*M/(2d))
-    // With M=60 particles each, G=0.001, d=22: v ≈ sqrt(0.001*60/44) ≈ 0.037
-    // Start with a few values around that
-    run("orbit_gentle", 0.001, 1.5, 1.0, &[
-        (42.0, 64.0, 8.0,  0.0,  0.05, 50),
-        (86.0, 64.0, 8.0,  0.0, -0.05, 50),
-    ], 400, snap);
-
-    run("orbit_fast", 0.001, 1.5, 1.0, &[
-        (42.0, 64.0, 8.0,  0.0,  0.15, 50),
-        (86.0, 64.0, 8.0,  0.0, -0.15, 50),
-    ], 400, snap);
-
-    run("three_triangle", 0.001, 1.5, 1.0, &[
-        (64.0, 30.0, 7.0,  0.12,  0.0,  35),
-        (30.0, 98.0, 7.0, -0.06, -0.10, 35),
-        (98.0, 98.0, 7.0, -0.06,  0.10, 35),
-    ], 400, snap);
-
-    // Dense small clumps — more particles per area, stronger local gravity
-    run("dense_orbit", 0.002, 1.0, 1.0, &[
-        (44.0, 64.0, 5.0,  0.0,  0.1, 20),
-        (84.0, 64.0, 5.0,  0.0, -0.1, 20),
-    ], 400, snap);
-
-    // Head-on collision (no tangential velocity)
-    run("collision", 0.001, 1.5, 1.0, &[
-        (35.0, 64.0, 8.0,  0.08,  0.0, 50),
-        (93.0, 64.0, 8.0, -0.08,  0.0, 50),
-    ], 400, snap);
-
-    // Off-center collision — glancing blow
-    run("glancing", 0.001, 1.5, 1.0, &[
-        (35.0, 56.0, 8.0,  0.08,  0.0, 50),
-        (93.0, 72.0, 8.0, -0.08,  0.0, 50),
-    ], 400, snap);
+    // Two fully-filled circles on opposite diagonal quadrants, parallel paths
+    // W=384, H=256 — circles of radius 20 (~1256 cells each)
+    // Paths: left-circle moves right at y=85, right-circle moves left at y=170
+    run("conway_gravity", 0.0008, 1.5, 2.0, &[
+        ( 96.0,  85.0, 20.0,  0.5,  0.0, 0),
+        (288.0, 170.0, 20.0, -0.5,  0.0, 0),
+    ], 2800, &[0, 400, 800, 1200, 1600, 2000, 2400, 2800]);
 }
