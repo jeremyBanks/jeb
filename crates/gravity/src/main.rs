@@ -540,10 +540,12 @@ fn main() {
     // G=0.00005 was best — spread dropped 112→92, actual attraction visible
     // Now try smaller blobs (r=6) — fewer cells = less intra-blob self-gravity
     // Also keep r=13 at same G for comparison
-    for &(r, g) in &[(13.0f32, 0.00005f32), (6.0, 0.00005), (6.0, 0.0002), (6.0, 0.001)] {
-        let name = format!("size_r{:.0}_g{g:.5}", r);
-        run(&name, g, 1.5, 0.5, 0, &[
-            ( 80.0, 115.0, r,  0.2,  0.0, 0),
-            (304.0, 141.0, r, -0.2,  0.0, 0),
-        ], 4800, &snaps);
-    }
+    // Winner: r=6, G=0.00005 — gentle deflection, beautiful trails
+    // 8x frames = 320 snaps, at 30fps = ~10s video
+    // 4800 ticks * 8 = 38400 ticks total, snap every 120
+    let snaps: Vec<usize> = (0..=320).map(|i| i * 120).collect();
+
+    run("beauty_r6_g5e5", 0.00005, 1.5, 0.5, 0, &[
+        ( 80.0, 115.0, 6.0,  0.2,  0.0, 0),
+        (304.0, 141.0, 6.0, -0.2,  0.0, 0),
+    ], 38400, &snaps);
