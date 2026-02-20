@@ -120,28 +120,35 @@ impl Sim {
         }
     }
 
-    fn save_png(&self, path: &str) {
-        let mut pixels = vec![0u8; W * H * 3];
+    fn paint_frame(&self, canvas: &mut Vec<u8>) {
+        // Fade existing canvas by 12.5% (multiply by 0.875 = 7/8)
+        for v in canvas.iter_mut() {
+            *v = (*v as u16 * 7 / 8) as u8;
+        }
+        // Paint live cells on top
         for c in &self.cells {
             let xi = c.x as usize % W;
             let yi = c.y as usize % H;
             let spd = (c.vx * c.vx + c.vy * c.vy).sqrt();
             let t = (spd / self.speed_cap).clamp(0.0, 1.0);
-            // cool (slow) = blue-white, hot (fast) = orange
+            // slow = blue-white, fast = orange
             let r = (255.0 * (0.5 + 0.5 * t)) as u8;
             let g = (255.0 * (0.8 - 0.5 * t)) as u8;
             let b = (255.0 * (1.0 - t)) as u8;
             let i = (yi * W + xi) * 3;
-            pixels[i]     = r;
-            pixels[i + 1] = g;
-            pixels[i + 2] = b;
+            canvas[i]     = r;
+            canvas[i + 1] = g;
+            canvas[i + 2] = b;
         }
+    }
+
+    fn save_png(canvas: &[u8], path: &str) {
         let file = fs::File::create(path).unwrap();
         let mut enc = png::Encoder::new(BufWriter::new(file), W as u32, H as u32);
         enc.set_color(png::ColorType::Rgb);
         enc.set_depth(png::BitDepth::Eight);
         let mut writer = enc.write_header().unwrap();
-        writer.write_image_data(&pixels).unwrap();
+        writer.write_image_data(canvas).unwrap();
     }
 
     fn print_ascii(&self, label: &str) {
