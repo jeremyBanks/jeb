@@ -533,13 +533,18 @@ fn main() {
     let conway_every = 1_usize;
     let pop_band    = 16.0_f32;
 
-    // Four clockwise blobs, r=6 (halved again for much smaller initial pop)
-    let clumps: &[(f32, f32, f32, f32, f32, usize)] = &[
-        ( 48.0,  32.0, 6.0,  0.010,  0.000, 0),
-        (144.0,  32.0, 6.0,  0.000,  0.010, 0),
-        (144.0,  96.0, 6.0, -0.010,  0.000, 0),
-        ( 48.0,  96.0, 6.0,  0.000, -0.010, 0),
-    ];
+    // Four clockwise blobs — radius from --radius (0 = no blobs)
+    let clumps_owned: Vec<(f32, f32, f32, f32, f32, usize)> = if blob_radius > 0.0 {
+        vec![
+            ( 48.0,  32.0, blob_radius,  0.010,  0.000, 0),
+            (144.0,  32.0, blob_radius,  0.000,  0.010, 0),
+            (144.0,  96.0, blob_radius, -0.010,  0.000, 0),
+            ( 48.0,  96.0, blob_radius,  0.000, -0.010, 0),
+        ]
+    } else {
+        vec![]
+    };
+    let clumps: &[(f32, f32, f32, f32, f32, usize)] = &clumps_owned;
 
     let checkpoint_path = "state/checkpoint.bin";
     let segments_dir    = "segments";
