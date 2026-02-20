@@ -503,7 +503,7 @@ fn main() {
     // 40 frames at 10fps = 4 seconds, snap every 250 ticks over 10000
     let snaps: Vec<usize> = (0..=40).map(|i| i * 250).collect();
 
-    run("back_to_basics", 0.003, 8.0, 0.1, 128, &[
+    run("soft25", 0.003, 25.0, 0.5, 128, &[
         (100.0, 128.0, 13.0,  0.0, -0.046, 0),
         (284.0, 128.0, 13.0,  0.0,  0.046, 0),
     ], 10000, &snaps);
