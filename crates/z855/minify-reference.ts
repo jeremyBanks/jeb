@@ -17,7 +17,7 @@ import * as esbuild from "npm:esbuild@^0.25";
 const tsSource = await Deno.readTextFile(INPUT);
 const transformed = await esbuild.transform(tsSource, {
   loader: "ts",
-  target: "es2020",
+  target: "esnext",
   format: "esm",
   banner: "",
 });
