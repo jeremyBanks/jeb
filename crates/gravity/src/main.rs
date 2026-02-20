@@ -913,7 +913,7 @@ fn main() {
     let softening   = 1.5_f32;
     let speed_cap   = 0.046875_f32; // +50%
     let conway_every = 1_usize;
-    let pop_band    = 16.0_f32;
+    let pop_band    = 8.0_f32; // gap halved: min stays same, max comes halfway down
 
     // Four clockwise blobs — radius from --radius (0 = no blobs)
     let clumps_owned: Vec<(f32, f32, f32, f32, f32, usize)> = if blob_radius > 0.0 {
