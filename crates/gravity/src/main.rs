@@ -567,7 +567,8 @@ fn main() {
     // Three-body: two left blobs moving right, one right blob moving left
     // All clustered in the middle vertical band
     // W=384: left≈130, right≈260; H=256: top≈96, mid≈128, bot≈160
-    run("three_body", 0.00005, 1.5, 0.125, 1, 0.0625, &[
+    // pop_band is now absolute cells — ±4 cells from start_pop
+    run("three_body_tight", 0.00005, 1.5, 0.125, 1, 4.0, &[
         (130.0,  96.0, 6.0,  0.08,  0.0, 0),  // top-left, moving right
         (130.0, 160.0, 6.0,  0.08,  0.0, 0),  // bot-left, moving right
         (260.0, 128.0, 6.0, -0.08,  0.0, 0),  // mid-right, moving left
