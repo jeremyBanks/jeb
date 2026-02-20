@@ -37,6 +37,8 @@ struct Sim {
 // Original state captured at tick=0 for epilogue convergence
 struct OriginalState {
     positions: std::collections::HashSet<(usize, usize)>,
+    // Map from grid position → original velocity
+    velocities: std::collections::HashMap<(usize, usize), (f32, f32)>,
     count: usize,
 }
 
@@ -443,15 +445,35 @@ impl Sim {
             }
         }
 
+        // Lerp velocities of live-original cells 12.5% closer to their original velocity each tick
+        for c in &mut self.cells {
+            let pos = (c.x as usize % W, c.y as usize % H);
+            if let Some(&(tvx, tvy)) = orig.velocities.get(&pos) {
+                c.vx += (tvx - c.vx) * 0.125;
+                c.vy += (tvy - c.vy) * 0.125;
+            }
+        }
+
         self.tick_count += 1;
         self.order = (0..self.cells.len()).collect();
 
-        // Check convergence: all live cells are at original positions
+        // Check convergence: positions match AND velocities within 12.5% of max original speed
         if self.cells.len() == orig.count {
             let live: std::collections::HashSet<(usize,usize)> = self.cells.iter()
                 .map(|c| (c.x as usize % W, c.y as usize % H))
                 .collect();
-            if live == orig.positions { return true; }
+            if live == orig.positions {
+                // Check velocity convergence: each cell's velocity error < 12.5% of its target speed
+                let vel_ok = self.cells.iter().all(|c| {
+                    let pos = (c.x as usize % W, c.y as usize % H);
+                    if let Some(&(tvx, tvy)) = orig.velocities.get(&pos) {
+                        let target_speed = (tvx*tvx + tvy*tvy).sqrt();
+                        let err = ((c.vx-tvx).powi(2) + (c.vy-tvy).powi(2)).sqrt();
+                        err <= target_speed * 0.125 + 1e-6 // +epsilon for zero-velocity cells
+                    } else { true }
+                });
+                if vel_ok { return true; }
+            }
         }
         false
     }
@@ -805,6 +827,9 @@ fn main() {
     let orig = OriginalState {
         positions: sim.cells.iter()
             .map(|c| (c.x as usize % W, c.y as usize % H))
+            .collect(),
+        velocities: sim.cells.iter()
+            .map(|c| ((c.x as usize % W, c.y as usize % H), (c.vx, c.vy)))
             .collect(),
         count: sim.cells.len(),
     };
