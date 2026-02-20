@@ -19,10 +19,13 @@ struct Sim {
     softening: f32,
     speed_cap: f32,
     start_pop: usize,
+    conway_every: usize, // 0 = disabled, N = run Conway every N gravity ticks
+    tick_count: usize,
+    prev_live: Vec<bool>, // which pixels were live last frame (for fading)
 }
 
 impl Sim {
-    fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32,
+    fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, conway_every: usize,
            clumps: &[(f32, f32, f32, f32, f32, usize)]) -> Self {
         let mut rng = rng_seed;
         let mut cells = Vec::new();
@@ -46,7 +49,8 @@ impl Sim {
         }
 
         let n = cells.len();
-        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: n }
+        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: n,
+              conway_every, tick_count: 0, prev_live: vec![false; W * H] }
     }
 
     // ── Conway step (modified) ─────────────────────────────────────────────
@@ -323,15 +327,37 @@ impl Sim {
     }
 
     fn tick(&mut self) {
-        self.conway_step();
+        // Run Conway only when enabled and on the right tick
+        if self.conway_every > 0 && self.tick_count % self.conway_every == 0 {
+            self.conway_step();
+        }
         self.gravity_step();
+        self.tick_count += 1;
     }
 
-    fn paint_frame(&self, canvas: &mut Vec<u8>) {
-        // Fade existing canvas slowly
-        for v in canvas.iter_mut() {
-            *v = (*v as u16 * 254 / 256) as u8;
+    fn paint_frame(&mut self, canvas: &mut Vec<u8>) {
+        // Step 1: fade canvas.
+        //   - Pixels that were live last frame: snap down by 25% (→ 75%), then slow-fade
+        //   - All other pixels: slow-fade only (254/256 ≈ 99.2%)
+        for py in 0..H {
+            for px in 0..W {
+                let i = (py * W + px) * 3;
+                if self.prev_live[py * W + px] {
+                    // Was live last frame — snap to 75% then slow-fade
+                    canvas[i]     = (canvas[i]     as u16 * 192 / 256) as u8;
+                    canvas[i + 1] = (canvas[i + 1] as u16 * 192 / 256) as u8;
+                    canvas[i + 2] = (canvas[i + 2] as u16 * 192 / 256) as u8;
+                } else {
+                    // Slow fade only
+                    canvas[i]     = (canvas[i]     as u16 * 254 / 256) as u8;
+                    canvas[i + 1] = (canvas[i + 1] as u16 * 254 / 256) as u8;
+                    canvas[i + 2] = (canvas[i + 2] as u16 * 254 / 256) as u8;
+                }
+            }
         }
+
+        // Step 2: record which pixels are live now, then paint them at full brightness
+        self.prev_live.fill(false);
         for c in &self.cells {
             let xi = c.x as usize % W;
             let yi = c.y as usize % H;
@@ -340,6 +366,7 @@ impl Sim {
             canvas[i]     = r;
             canvas[i + 1] = g;
             canvas[i + 2] = b;
+            self.prev_live[yi * W + xi] = true;
         }
     }
 
@@ -431,15 +458,15 @@ fn xorf32(s: &mut u64) -> f32 {
     (xoru64(s) & 0xFFFFFF) as f32 / 0xFFFFFF as f32
 }
 
-fn run(name: &str, g: f32, softening: f32, speed_cap: f32,
+fn run(name: &str, g: f32, softening: f32, speed_cap: f32, conway_every: usize,
        clumps: &[(f32, f32, f32, f32, f32, usize)],
        ticks: usize, snap_at: &[usize]) {
     let dir = format!("frames/{name}");
     fs::create_dir_all(&dir).unwrap();
 
-    let mut sim = Sim::new(42, g, softening, speed_cap, clumps);
+    let mut sim = Sim::new(42, g, softening, speed_cap, conway_every, clumps);
     let mut canvas = vec![0u8; W * H * 3];
-    println!("\n=== {name} | g={g} soft={softening} cap={speed_cap} start_pop={} ===",
+    println!("\n=== {name} | g={g} soft={softening} cap={speed_cap} conway_every={conway_every} start_pop={} ===",
         sim.cells.len());
 
     for tick in 0..=ticks {
@@ -455,13 +482,34 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32,
 fn main() {
     fs::create_dir_all("frames").unwrap();
 
-    let snaps = &[0usize, 300, 600, 900, 1200, 1600, 2000, 2400]; // unused now
+    // Circular orbit parameters (N-body corrected):
+    //   Each blob has ~531 cells; within-blob forces dominate at short range.
+    //   High softening (15px) prevents intra-blob acceleration from hitting cap.
+    //   G=0.000006, softening=15, cap=0.3
+    //   At sep=184px: inter-blob accel ≈ 531 * 6e-6 / 184² ≈ 9.4e-8 px/tick² per cell
+    //   Within-blob at r=2px: 6e-6 / (4 + 225) ≈ 2.6e-8 — manageable with soft=15
+    //   v_circ = sqrt(531 * G * 92 / 184²) = sqrt(531 * 6e-6 * 92 / 33856) ≈ 0.029 px/tick
+    //   Period ≈ 2π * 92 / 0.029 ≈ 19900 ticks → run 20000 ticks
+    //   Blobs at x=100 and x=284, y=128
 
-    let d_snaps: Vec<usize> = (0..=32).map(|i| i * 150).collect();
+    // Snap every 500 ticks (40 frames over 20000)
+    let snaps: Vec<usize> = (0..=40).map(|i| i * 500).collect();
 
-    // D2: medium offset (13px) — slingshot zone
-    run("D_best", 0.001, 1.5, 0.5, &[
-        ( 80.0, 115.0, 13.0,  0.2,  0.0, 0),
-        (304.0, 141.0, 13.0, -0.2,  0.0, 0),
-    ], 4800, &d_snaps);
+    // ── A: Pure gravity, no Conway — reference orbit ──────────────────────────
+    run("orbit_pure", 0.000006, 15.0, 0.3, 0, &[
+        (100.0, 128.0, 13.0,  0.0, -0.029, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.029, 0),
+    ], 20000, &snaps);
+
+    // ── B: Conway every 8 ticks — subtle perturbation ────────────────────────
+    run("orbit_conway8", 0.000006, 15.0, 0.3, 8, &[
+        (100.0, 128.0, 13.0,  0.0, -0.029, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.029, 0),
+    ], 20000, &snaps);
+
+    // ── C: Conway every 1 tick — maximum perturbation ────────────────────────
+    run("orbit_conway1", 0.000006, 15.0, 0.3, 1, &[
+        (100.0, 128.0, 13.0,  0.0, -0.029, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.029, 0),
+    ], 20000, &snaps);
 }
