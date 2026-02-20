@@ -42,6 +42,143 @@ struct OriginalState {
     count: usize,
 }
 
+// ── Barnes-Hut quadtree for O(n log n) gravity ────────────────────────────
+const BH_THETA: f32 = 0.5; // opening-angle criterion: width/dist < theta → use point-mass
+
+#[derive(Clone)]
+struct QNode {
+    x0: f32, y0: f32, x1: f32, y1: f32, // bounding box
+    com_x: f32, com_y: f32,              // centre of mass
+    mass: f32,                           // particle count in subtree
+    body: i32,    // ≥0: leaf with one particle; -1: internal; -2: empty
+    ch: [i32; 4], // arena indices of children (q=0..3), -1 = absent
+}
+
+impl QNode {
+    fn empty(x0: f32, y0: f32, x1: f32, y1: f32) -> Self {
+        QNode { x0, y0, x1, y1, com_x: 0.0, com_y: 0.0, mass: 0.0, body: -2, ch: [-1; 4] }
+    }
+    #[inline] fn mid_x(&self) -> f32 { (self.x0 + self.x1) * 0.5 }
+    #[inline] fn mid_y(&self) -> f32 { (self.y0 + self.y1) * 0.5 }
+    #[inline] fn width(&self) -> f32 { (self.x1 - self.x0).max(self.y1 - self.y0) }
+    #[inline] fn quadrant(&self, x: f32, y: f32) -> usize {
+        (if x >= self.mid_x() { 1 } else { 0 }) | (if y >= self.mid_y() { 2 } else { 0 })
+    }
+    fn child_box(&self, q: usize) -> (f32, f32, f32, f32) {
+        let (mx, my) = (self.mid_x(), self.mid_y());
+        match q {
+            0 => (self.x0, self.y0, mx,       my      ),
+            1 => (mx,       self.y0, self.x1, my      ),
+            2 => (self.x0, my,       mx,       self.y1),
+            _ => (mx,       my,       self.x1, self.y1),
+        }
+    }
+}
+
+fn qt_insert(nodes: &mut Vec<QNode>, idx: usize, body: usize, px: f32, py: f32, depth: u32) {
+    if depth > 64 { return; } // safety: coincident particles
+    match nodes[idx].body {
+        -2 => {
+            // Empty → leaf
+            nodes[idx].body   = body as i32;
+            nodes[idx].com_x  = px;
+            nodes[idx].com_y  = py;
+            nodes[idx].mass   = 1.0;
+        }
+        -1 => {
+            // Internal: update COM, recurse into child
+            let q = nodes[idx].quadrant(px, py);
+            let child_idx = if nodes[idx].ch[q] < 0 {
+                let (cx0, cy0, cx1, cy1) = nodes[idx].child_box(q);
+                let c = nodes.len() as i32;
+                nodes.push(QNode::empty(cx0, cy0, cx1, cy1));
+                nodes[idx].ch[q] = c;
+                c as usize
+            } else {
+                nodes[idx].ch[q] as usize
+            };
+            let m = nodes[idx].mass;
+            nodes[idx].com_x = (nodes[idx].com_x * m + px) / (m + 1.0);
+            nodes[idx].com_y = (nodes[idx].com_y * m + py) / (m + 1.0);
+            nodes[idx].mass  += 1.0;
+            qt_insert(nodes, child_idx, body, px, py, depth + 1);
+        }
+        old_body => {
+            // Leaf → split: re-insert old particle, insert new
+            let old_px = nodes[idx].com_x;
+            let old_py = nodes[idx].com_y;
+            let old_body = old_body as usize;
+            // Convert to internal with 2-particle COM
+            nodes[idx].body  = -1;
+            nodes[idx].com_x = (old_px + px) * 0.5;
+            nodes[idx].com_y = (old_py + py) * 0.5;
+            nodes[idx].mass  = 2.0;
+            // Re-insert old particle
+            let q_old = nodes[idx].quadrant(old_px, old_py);
+            let (cx0, cy0, cx1, cy1) = nodes[idx].child_box(q_old);
+            let c_old = nodes.len() as i32;
+            nodes.push(QNode::empty(cx0, cy0, cx1, cy1));
+            nodes[idx].ch[q_old] = c_old;
+            qt_insert(nodes, c_old as usize, old_body, old_px, old_py, depth + 1);
+            // Insert new particle
+            let q_new = nodes[idx].quadrant(px, py);
+            let child_new = if nodes[idx].ch[q_new] < 0 {
+                let (cx0, cy0, cx1, cy1) = nodes[idx].child_box(q_new);
+                let c = nodes.len() as i32;
+                nodes.push(QNode::empty(cx0, cy0, cx1, cy1));
+                nodes[idx].ch[q_new] = c;
+                c as usize
+            } else {
+                nodes[idx].ch[q_new] as usize
+            };
+            qt_insert(nodes, child_new, body, px, py, depth + 1);
+        }
+    }
+}
+
+#[inline]
+fn min_image(d: f32, dim: f32) -> f32 {
+    if d > dim * 0.5 { d - dim } else if d < -dim * 0.5 { d + dim } else { d }
+}
+
+fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
+            px: f32, py: f32, g: f32, softening: f32) -> (f32, f32) {
+    let node = &nodes[node_idx];
+    if node.body == -2 { return (0.0, 0.0); } // empty node
+    let dx = min_image(node.com_x - px, W as f32);
+    let dy = min_image(node.com_y - py, H as f32);
+    // Leaf: exact pairwise force (skip self)
+    if node.body >= 0 {
+        if node.body as usize == body { return (0.0, 0.0); }
+        let r2 = dx*dx + dy*dy + softening*softening;
+        let r  = r2.sqrt();
+        let f  = g * node.mass / r2;
+        return (f * dx / r, f * dy / r);
+    }
+    // Internal: Barnes-Hut criterion uses actual (un-softened) distance
+    let r2_actual = dx*dx + dy*dy;
+    let d = r2_actual.sqrt();
+    if d > 0.0 && node.width() / d < BH_THETA {
+        // Far enough: treat as single point mass
+        let r2 = r2_actual + softening*softening;
+        let r  = r2.sqrt();
+        let f  = g * node.mass / r2;
+        return (f * dx / r, f * dy / r);
+    }
+    // Too close or at same position: recurse into children
+    let mut fx = 0.0f32;
+    let mut fy = 0.0f32;
+    for &ch in &node.ch {
+        if ch >= 0 {
+            let (cfx, cfy) = qt_force(nodes, ch as usize, body, px, py, g, softening);
+            fx += cfx;
+            fy += cfy;
+        }
+    }
+    (fx, fy)
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, conway_every: usize, pop_band: f32,
            clumps: &[(f32, f32, f32, f32, f32, usize)], seed_density_inv: usize) -> Self {
