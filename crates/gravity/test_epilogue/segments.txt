@@ -1,6 +1,0 @@
-file 'segments/seg_00000000.mp4'
-file 'segments/seg_00000960.mp4'
-file 'segments/seg_00004800.mp4'
-file 'segments/seg_00008640.mp4'
-file 'segments/seg_00012480.mp4'
-file 'segments/seg_00016320.mp4'
