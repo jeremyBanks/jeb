@@ -1072,7 +1072,7 @@ fn main() {
         .unwrap_or(0.000300_f32); // 4× stronger gravity
     let softening   = 1.5_f32;
     let speed_cap   = 0.093750_f32; // 2× previous cap
-    let conway_every = 1_usize;
+    let conway_every = FPS as usize; // run Conway once per second → 1 birth + 1 death max/sec
     let pop_band    = 8.0_f32; // gap halved: min stays same, max comes halfway down
 
     // Four clockwise blobs — radius from --radius (0 = no blobs)
