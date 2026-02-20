@@ -856,8 +856,17 @@ fn main() {
                 }
             }
 
+            if ep_tick % 120 == 0 {
+                let live_orig = sim.cells.iter()
+                    .filter(|c| orig.positions.contains(&(c.x as usize % W, c.y as usize % H)))
+                    .count();
+                let live_non_orig = sim.cells.len() - live_orig;
+                let dead_orig = orig.count - live_orig;
+                println!("  epilogue t={:.2} pop={} live_orig={} non_orig={} dead_orig={}", 
+                    (ep_tick as f32 / 600.0).min(1.0), sim.cells.len(), live_orig, live_non_orig, dead_orig);
+            }
             if converged { println!("  epilogue converged at tick {ep_tick} ({:.1}s)", ep_tick as f32 / FPS as f32); break; }
-            if ep_tick >= MAX_EPILOGUE_TICKS { println!("  epilogue hit safety cap ({MAX_EPILOGUE_TICKS} ticks)"); break; }
+            if ep_tick >= MAX_EPILOGUE_TICKS { println!("  epilogue hit safety cap ({MAX_EPILOGUE_TICKS} ticks = 32s)"); break; }
         }
         println!("  epilogue: {ep_frame} frames appended");
     }
