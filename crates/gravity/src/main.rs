@@ -457,10 +457,23 @@ fn main() {
 
     let snaps = &[0usize, 300, 600, 900, 1200, 1600, 2000, 2400]; // unused now
 
-    // D: Near-miss — offset 6px vertically so they graze rather than collide directly
     let d_snaps: Vec<usize> = (0..=32).map(|i| i * 150).collect();
-    run("D_head_on", 0.001, 1.5, 0.5, &[
-        ( 80.0, 122.0, 13.0,  0.2,  0.0, 0),
-        (304.0, 134.0, 13.0, -0.2,  0.0, 0),
+
+    // D1: tiny offset — near-direct, gravity bends them just slightly
+    run("D1_offset6", 0.001, 1.5, 0.5, &[
+        ( 80.0, 125.0, 13.0,  0.2,  0.0, 0),
+        (304.0, 131.0, 13.0, -0.2,  0.0, 0),
+    ], 4800, &d_snaps);
+
+    // D2: medium offset — paths cross diagonally, slingshot territory
+    run("D2_offset13", 0.001, 1.5, 0.5, &[
+        ( 80.0, 115.0, 13.0,  0.2,  0.0, 0),
+        (304.0, 141.0, 13.0, -0.2,  0.0, 0),
+    ], 4800, &d_snaps);
+
+    // D3: large offset — wide pass, gravity just curves the edges
+    run("D3_offset26", 0.001, 1.5, 0.5, &[
+        ( 80.0, 102.0, 13.0,  0.2,  0.0, 0),
+        (304.0, 154.0, 13.0, -0.2,  0.0, 0),
     ], 4800, &d_snaps);
 }
