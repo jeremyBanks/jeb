@@ -12,7 +12,7 @@ while true; do
     rm -f segments.txt state/checkpoint.bin
     rm -f segments/*.mp4 2>/dev/null || true
 
-    ./target/release/gravity --seconds $SECONDS_PER_RUN --epilogue --seed $SEED
+    cargo run --release -- --seconds $SECONDS_PER_RUN --epilogue --seed $SEED
 
     OUTPUT="gravity_${SECONDS_PER_RUN}s.mp4"
     if [ -f "$OUTPUT" ]; then
