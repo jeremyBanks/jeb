@@ -425,6 +425,10 @@ fn shuffle_vec<T>(v: &mut Vec<T>, rng: &mut u64) {
     }
 }
 
+fn shuffle_vec_rng<T>(v: &mut Vec<T>, rng: &mut u64) {
+    shuffle_vec(v, rng);
+}
+
 /// Map velocity to color:
 /// - Hue = direction of motion (angle of vx,vy)
 /// - Saturation = speed (0=grey, 1=fully saturated)
