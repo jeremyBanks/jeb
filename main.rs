@@ -27,23 +27,21 @@ impl Sim {
         let mut rng = rng_seed;
         let mut cells = Vec::new();
 
-        for &(cx, cy, r, ivx, ivy, count) in clumps {
-            let mut placed = 0;
-            let mut attempts = 0;
-            while placed < count && attempts < 100_000 {
-                attempts += 1;
-                let rx = xorf32(&mut rng) * 2.0 - 1.0;
-                let ry = xorf32(&mut rng) * 2.0 - 1.0;
-                if rx * rx + ry * ry > 1.0 { continue; }
-                let x = (cx + rx * r).rem_euclid(W as f32);
-                let y = (cy + ry * r).rem_euclid(H as f32);
-                let xi = x as usize;
-                let yi = y as usize;
-                if cells.iter().any(|c: &Cell| c.x as usize == xi && c.y as usize == yi) {
-                    continue;
+        for &(cx, cy, r, ivx, ivy, _count) in clumps {
+            // Fill every grid cell inside the circle
+            let ri = r.ceil() as i32;
+            for dy in -ri..=ri {
+                for dx in -ri..=ri {
+                    if (dx as f32).powi(2) + (dy as f32).powi(2) > r * r { continue; }
+                    let x = (cx + dx as f32).rem_euclid(W as f32);
+                    let y = (cy + dy as f32).rem_euclid(H as f32);
+                    let xi = x as usize;
+                    let yi = y as usize;
+                    if cells.iter().any(|c: &Cell| c.x as usize == xi && c.y as usize == yi) {
+                        continue;
+                    }
+                    cells.push(Cell { x, y, vx: ivx, vy: ivy });
                 }
-                cells.push(Cell { x, y, vx: ivx, vy: ivy });
-                placed += 1;
             }
         }
 
