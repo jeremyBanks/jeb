@@ -440,12 +440,6 @@ impl Sim {
         // Deaths: uniform random selection (shuffled above)
         // Births: weighted by neighbour speed — handled below after grid2 is built
 
-        // DEBUG: log first few conway calls
-        if self.tick_count < 200 {
-            eprintln!("[conway dbg tick={}] candidates={} desired_births={} desired_deaths={} n={}",
-                self.tick_count, 0, desired_births.len(), desired_deaths.len(), n);
-        }
-
         // Rate-limit: max births/deaths per Conway call, independent of pop_band.
         // With conway_every=FPS/4 (4 calls/sec) and rate_limit=4: up to 16 births+deaths/sec.
         let rate_limit = 4_usize;
