@@ -3,4 +3,6 @@ frames/
 state/
 segments/
 gravity_*.mp4
+test_epilogue/
+segments_partial.txt
 
