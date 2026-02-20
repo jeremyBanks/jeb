@@ -498,10 +498,12 @@ fn main() {
     // Same winning params: r=6, G=0.00005, 320 frames at 30fps
     let snaps: Vec<usize> = (0..=320).map(|i| i * 120).collect();
 
-    // Blobs at horizontal thirds (128, 256), vertical thirds (85, 171)
-    // W=384 → thirds at 128, 256; H=256 → thirds at ~85, ~171
-    run("thirds", 0.00005, 1.5, 0.125, 1, 0.0625, &[
-        (128.0,  85.0, 6.0,  0.2,  0.0, 0),
-        (256.0, 171.0, 6.0, -0.2,  0.0, 0),
+    // Same thirds positions but velocities aimed directly at each other
+    // so neither blob is systematically favoured by the approach geometry.
+    // Vector from blob1→blob2: (128, 86), length ~152 → unit (0.842, 0.566)
+    // Each blob moves at speed 0.2 toward the other's initial position.
+    run("aimed", 0.00005, 1.5, 0.125, 1, 0.0625, &[
+        (128.0,  85.0, 6.0,  0.168,  0.113, 0),   // aimed toward (256,171)
+        (256.0, 171.0, 6.0, -0.168, -0.113, 0),   // aimed toward (128,85)
     ], 38400, &snaps);
 }
