@@ -258,3 +258,26 @@ fn main() {
         (93.0, 72.0, 8.0, -0.08,  0.0, 50),
     ], 400, snap);
 }
+
+// [recovery] edit target not found, appending:
+fn run(name: &str, g: f32, softening: f32, speed_cap: f32,
+       clumps: &[(f32, f32, f32, f32, f32, usize)],
+       ticks: usize, snap_at: &[usize]) {
+    let dir = format!("frames/{name}");
+    fs::create_dir_all(&dir).unwrap();
+
+    let mut sim = Sim::new(42, g, softening, speed_cap, clumps);
+    let mut canvas = vec![0u8; W * H * 3];
+
+    println!("\n=== {name} | g={g} soft={softening} cap={speed_cap} cells={} ===",
+        sim.cells.len());
+
+    for tick in 0..=ticks {
+        sim.paint_frame(&mut canvas);
+        if snap_at.contains(&tick) {
+            Sim::save_png(&canvas, &format!("{dir}/t{tick:04}.png"));
+            sim.print_ascii(&format!("t={tick}  {}", sim.stats()));
+        }
+        if tick < ticks { sim.tick(); }
+    }
+}
