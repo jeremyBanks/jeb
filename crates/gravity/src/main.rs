@@ -1191,6 +1191,7 @@ fn main() {
         let ep_seg_start = total_frames;
         let mut pos_converged = false;
         let mut vel_tick = 0usize;
+        let mut conv_t = 0.0f32; // RAMP_TICKS t-value when positions converged
 
         loop {
             if !keep_running.load(Ordering::Relaxed) {
