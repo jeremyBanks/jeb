@@ -1,8 +1,8 @@
 use std::fs;
 use std::io::BufWriter;
 
-const W: usize = 384;
-const H: usize = 256;
+const W: usize = 192;
+const H: usize = 128;
 
 struct Cell {
     x: f32,
