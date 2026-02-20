@@ -1,5 +1,5 @@
 use std::fs;
-use std::io::{BufWriter, Write, Read};
+use std::io::{BufWriter, Write};
 use std::process::Command;
 
 const W: usize = 192;
