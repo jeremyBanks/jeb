@@ -532,3 +532,13 @@ fn main() {
         ], 4800, &snaps);
     }
 }
+
+// [recovery] edit target not found, appending:
+    // Sweep: vary vertical offset and G, no Conway, cap high enough not to interfere
+    for &(offset, g) in &[(30.0f32, 0.0005f32), (50.0, 0.0005), (30.0, 0.0002), (50.0, 0.0002)] {
+        let name = format!("sweep_off{:.0}_g{g:.4}", offset);
+        run(&name, g, 1.5, 0.3, 0, &[
+            ( 80.0, 128.0 - offset/2.0, 13.0,  0.05,  0.0, 0),
+            (304.0, 128.0 + offset/2.0, 13.0, -0.05,  0.0, 0),
+        ], 4800, &snaps);
+    }
