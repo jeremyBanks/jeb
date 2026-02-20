@@ -21,6 +21,7 @@ struct Sim {
     start_pop: usize,
     conway_every: usize, // 0 = disabled, N = run Conway every N gravity ticks
     tick_count: usize,
+    prev_live: Vec<bool>, // which pixels were live last frame (for fading)
 }
 
 impl Sim {
