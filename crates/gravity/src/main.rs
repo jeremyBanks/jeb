@@ -244,7 +244,7 @@ impl Sim {
         let n = cells.len();
         let target_pop = W * H / 32;
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
-              conway_every, pop_band, tick_count: 0, prev_live: vec![false; W * H] }
+              conway_every, pop_band, tick_count: 0, prev_live: vec![false; W * H], wrap, steer }
     }
 
     // ── Checkpoint save/load ───────────────────────────────────────────────
