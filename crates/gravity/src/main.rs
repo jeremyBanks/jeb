@@ -1475,3 +1475,18 @@ use std::io::{BufWriter, Write};
                 }
             }
         }
+
+// [recovery] edit target not found, appending:
+            let live_nbrs: Vec<usize> = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
+                let (ny, nx) = resolve_nbr(gy, gx, dy, dx)?;
+                let idx = grid2[ny * W + nx];
+                if idx != usize::MAX { Some(idx) } else { None }
+            }).collect();
+            if live_nbrs.is_empty() { continue; }
+            let n_nbrs = live_nbrs.len() as f32;
+            let vx = live_nbrs.iter().map(|&i| self.cells[i].vx).sum::<f32>() / n_nbrs;
+            let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
+            let birth_spd = (vx * vx + vy * vy).sqrt();
+            let new_idx = self.cells.len();
+            self.cells.push(Cell { x: gx, y: gy, vx, vy, prev_speed: birth_spd });
+            grid2[gy * W + gx] = new_idx;
