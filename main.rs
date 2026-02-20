@@ -60,10 +60,12 @@ impl Sim {
             for j in (i + 1)..n {
                 let mut dx = self.cells[j].x - self.cells[i].x;
                 let mut dy = self.cells[j].y - self.cells[i].y;
-                if dx >  W as f32 / 2.0 { dx -= W as f32; }
-                if dx < -W as f32 / 2.0 { dx += W as f32; }
-                if dy >  H as f32 / 2.0 { dy -= H as f32; }
-                if dy < -H as f32 / 2.0 { dy += H as f32; }
+                let hw = W as f32 / 2.0;
+                let hh = H as f32 / 2.0;
+                if dx >  hw { dx -= W as f32; }
+                if dx < -hw { dx += W as f32; }
+                if dy >  hh { dy -= H as f32; }
+                if dy < -hh { dy += H as f32; }
 
                 let r2 = dx * dx + dy * dy + SOFTENING * SOFTENING;
                 let r = r2.sqrt();
