@@ -32,8 +32,7 @@ impl Sim {
         let mut cells = Vec::new();
 
         for &(cx, cy, r, ivx, ivy, _count) in clumps {
-            // Fill checkerboard pattern inside the circle (50% density)
-            // Checkerboard: include cell if (xi + yi) is even
+            // Fill circle with ~50% random density using RNG — no geometric pattern
             let ri = r.ceil() as i32;
             for dy in -ri..=ri {
                 for dx in -ri..=ri {
@@ -42,8 +41,8 @@ impl Sim {
                     let y = (cy + dy as f32).rem_euclid(H as f32);
                     let xi = x as usize;
                     let yi = y as usize;
-                    // Checkerboard: skip if xi+yi is odd
-                    if (xi + yi) % 2 != 0 { continue; }
+                    // 50% random inclusion — no spatial bias
+                    if xoru64(&mut rng) % 2 != 0 { continue; }
                     if cells.iter().any(|c: &Cell| c.x as usize == xi && c.y as usize == yi) {
                         continue;
                     }
@@ -51,9 +50,8 @@ impl Sim {
                 }
             }
         }
-        // Shuffle initial cell order so neither blob has systematic index advantage
-        let mut rng_init = rng_seed ^ 0xdeadbeef;
-        shuffle_vec_rng(&mut cells, &mut rng_init);
+        // Shuffle so cell indices are interleaved across blobs — no first-blob bias
+        shuffle_vec_rng(&mut cells, &mut rng);
 
         let n = cells.len();
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: n,
