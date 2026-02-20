@@ -408,8 +408,8 @@ impl Sim {
         self.gravity_step_epilogue(orig);
 
         // Nudges: ramp up
-        let kill_chance   = 0.25 * t;
-        let revive_chance = 0.125 * t;
+        let kill_chance   = 0.75 * t;
+        let revive_chance = 0.375 * t;
 
         // Build current live set
         let mut grid = vec![usize::MAX; W * H];
