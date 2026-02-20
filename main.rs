@@ -314,7 +314,7 @@ impl Sim {
         // (if we used the saved prev_live, a SIGTERM mid-tick could leave it stale)
         let mut prev_live_rebuilt = vec![false; W * H];
         for c in &cells {
-            prev_live_rebuilt[c.y as usize % H * W + c.x as usize % W] = true;
+            prev_live_rebuilt[c.y * W + c.x] = true;
         }
         let order = (0..cells.len()).collect();
         let target_pop = W * H / 32;
