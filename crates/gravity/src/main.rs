@@ -560,14 +560,14 @@ fn main() {
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_chunk) =
-        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, conway_every, pop_band)
+        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, conway_every, pop_band, seed_density_inv)
         .map(|(s, c, ci)| {
             println!("Resuming from checkpoint: chunk {}/{}", ci, n_chunks);
             (s, c, ci)
         })
         .unwrap_or_else(|| {
-            println!("Fresh start");
-            let s = Sim::new(42, g, softening, speed_cap, conway_every, pop_band, clumps);
+            println!("Fresh start (radius={blob_radius}, seed_density=1/{seed_density_inv})");
+            let s = Sim::new(42, g, softening, speed_cap, conway_every, pop_band, clumps, seed_density_inv);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
