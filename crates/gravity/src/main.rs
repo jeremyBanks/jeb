@@ -314,6 +314,45 @@ impl Sim {
         Some((sim, canvas, chunk_index))
     }
 
+    // ── Original-state save/load (for correct epilogue target) ───────────
+    // Saved once at fresh-start tick=0; loaded on checkpoint resume so the
+    // epilogue always converges toward the very first frame of the simulation.
+    fn save_orig_state(orig: &OriginalState, path: &str) {
+        let mut buf: Vec<u8> = Vec::new();
+        buf.extend_from_slice(&(orig.count as u64).to_le_bytes());
+        // Save as sorted list of (x, y, vx, vy) — ordered for determinism
+        let mut entries: Vec<((usize,usize),(f32,f32))> = orig.velocities.iter()
+            .map(|(&pos, &vel)| (pos, vel)).collect();
+        entries.sort_unstable_by_key(|&((x,y),_)| (y,x));
+        for ((x,y),(vx,vy)) in &entries {
+            buf.extend_from_slice(&(*x as u64).to_le_bytes());
+            buf.extend_from_slice(&(*y as u64).to_le_bytes());
+            buf.extend_from_slice(&vx.to_le_bytes());
+            buf.extend_from_slice(&vy.to_le_bytes());
+        }
+        fs::create_dir_all(std::path::Path::new(path).parent().unwrap()).unwrap();
+        fs::write(path, &buf).unwrap();
+    }
+
+    fn load_orig_state(path: &str) -> Option<OriginalState> {
+        let buf = fs::read(path).ok()?;
+        let mut pos = 0;
+        macro_rules! read_u64 { () => {{ let v = u64::from_le_bytes(buf[pos..pos+8].try_into().ok()?); pos += 8; v }}; }
+        macro_rules! read_f32 { () => {{ let v = f32::from_le_bytes(buf[pos..pos+4].try_into().ok()?); pos += 4; v }}; }
+        let count = read_u64!() as usize;
+        let mut positions = std::collections::HashSet::with_capacity(count);
+        let mut velocities = std::collections::HashMap::with_capacity(count);
+        for _ in 0..count {
+            let x  = read_u64!() as usize;
+            let y  = read_u64!() as usize;
+            let vx = read_f32!();
+            let vy = read_f32!();
+            positions.insert((x, y));
+            velocities.insert((x, y), (vx, vy));
+        }
+        Some(OriginalState { positions, velocities, count })
+    }
+
     // ── Conway step ────────────────────────────────────────────────────────
     fn conway_step(&mut self) {
         shuffle_vec(&mut self.cells, &mut self.rng);
@@ -574,7 +613,7 @@ impl Sim {
     // epilogue_tick: 0-based tick within epilogue phase.
     // Returns true when converged.
     fn epilogue_tick(&mut self, orig: &OriginalState, epilogue_tick: usize) -> bool {
-        const RAMP_TICKS: usize = 600; // 10 seconds at 60fps
+        const RAMP_TICKS: usize = 2400; // 40 seconds at 60fps (4× slower than before)
         let t = (epilogue_tick as f32 / RAMP_TICKS as f32).min(1.0);
 
         // Conway deaths only (no births) with ramping-down rate — clears non-original cells.
@@ -622,12 +661,12 @@ impl Sim {
             }
         }
 
-        // Lerp velocities of live-original cells 12.5% closer to their original velocity each tick
+        // Lerp velocities of live-original cells 3.125% closer to their original velocity each tick (4× slower)
         for c in &mut self.cells {
             let pos = (c.x as usize % W, c.y as usize % H);
             if let Some(&(tvx, tvy)) = orig.velocities.get(&pos) {
-                c.vx += (tvx - c.vx) * 0.125;
-                c.vy += (tvy - c.vy) * 0.125;
+                c.vx += (tvx - c.vx) * 0.03125; // 3.125%/tick = 12.5%/tick ÷ 4
+                c.vy += (tvy - c.vy) * 0.03125;
             }
         }
 
@@ -1006,15 +1045,33 @@ fn main() {
             (s, c, 0)
         });
 
-    // Capture original state for epilogue (only meaningful on fresh start)
-    let orig = OriginalState {
-        positions: sim.cells.iter()
-            .map(|c| (c.x as usize % W, c.y as usize % H))
-            .collect(),
-        velocities: sim.cells.iter()
-            .map(|c| ((c.x as usize % W, c.y as usize % H), (c.vx, c.vy)))
-            .collect(),
-        count: sim.cells.len(),
+    let orig_state_path = "state/orig_state.bin";
+
+    // OriginalState = tick=0 layout. On fresh start: capture now and persist.
+    // On checkpoint resume: load from disk so epilogue targets the actual first frame.
+    let orig = if start_chunk == 0 {
+        // Fresh start — this IS tick=0
+        let o = OriginalState {
+            positions:  sim.cells.iter().map(|c| (c.x as usize % W, c.y as usize % H)).collect(),
+            velocities: sim.cells.iter().map(|c| ((c.x as usize % W, c.y as usize % H), (c.vx, c.vy))).collect(),
+            count: sim.cells.len(),
+        };
+        Sim::save_orig_state(&o, orig_state_path);
+        println!("Saved original state ({} cells) for epilogue target.", o.count);
+        o
+    } else {
+        // Checkpoint resume — load the tick=0 state saved on fresh start
+        match Sim::load_orig_state(orig_state_path) {
+            Some(o) => { println!("Loaded original state ({} cells) for epilogue target.", o.count); o }
+            None => {
+                println!("WARNING: orig_state.bin not found — epilogue will target checkpoint state, not tick=0.");
+                OriginalState {
+                    positions:  sim.cells.iter().map(|c| (c.x as usize % W, c.y as usize % H)).collect(),
+                    velocities: sim.cells.iter().map(|c| ((c.x as usize % W, c.y as usize % H), (c.vx, c.vy))).collect(),
+                    count: sim.cells.len(),
+                }
+            }
+        }
     };
 
     // Graceful shutdown: SIGINT/SIGTERM sets flag; loops check it and break,
@@ -1080,7 +1137,7 @@ fn main() {
     // ── Epilogue phase ────────────────────────────────────────────────────
     if do_epilogue {
         println!("\n[epilogue] converging to original {} cells...", orig.count);
-        const MAX_EPILOGUE_TICKS: usize = 1920; // 32s safety cap
+        const MAX_EPILOGUE_TICKS: usize = 7680; // 128s safety cap (4× slower epilogue)
         let mut ep_tick = 0usize;
         let mut ep_frame = 0usize;
         let mut ep_chunk_frames: Vec<String> = Vec::new();
@@ -1137,7 +1194,7 @@ fn main() {
                     (ep_tick as f32 / 600.0).min(1.0), sim.cells.len(), live_orig, live_non_orig, dead_orig);
             }
             if converged { println!("  epilogue converged at tick {ep_tick} ({:.1}s)", ep_tick as f32 / FPS as f32); break; }
-            if ep_tick >= MAX_EPILOGUE_TICKS { println!("  epilogue hit safety cap ({MAX_EPILOGUE_TICKS} ticks = 32s)"); break; }
+            if ep_tick >= MAX_EPILOGUE_TICKS { println!("  epilogue hit safety cap ({MAX_EPILOGUE_TICKS} ticks = 128s)"); break; }
         }
         println!("  epilogue: {ep_frame} frames appended");
     }
