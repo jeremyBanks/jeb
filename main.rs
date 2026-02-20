@@ -492,13 +492,19 @@ fn main() {
     //   Period ≈ 2π * 92 / 0.029 ≈ 19900 ticks → run 20000 ticks
     //   Blobs at x=100 and x=284, y=128
 
-    // ── Deep run: orbit_conway8, 60000 ticks, frame every 300 → 200 snapshots ──
-    // Conway every 8 ticks is the sweet spot: blobs stay coherent (Conway fills
-    // orbital-shear gaps) but are genuinely perturbed. ~3 full orbits of drift.
-    let snaps: Vec<usize> = (0..=200).map(|i| i * 300).collect();
+    // ── Tuning run: find orbital velocity that doesn't immediately max out ──
+    // Problem: 531 cells/blob means N-body gravity is way stronger than point-mass.
+    // Strategy: very small G, very small initial v, high softening to tame intra-blob.
+    // Target: avg_spd should stay well below cap for first few hundred ticks.
+    // Cap raised to 0.5 so we can see what speed they actually want to reach.
+    let snaps: Vec<usize> = (0..=20).map(|i| i * 100).collect();
 
-    run("orbit_deep", 0.000006, 15.0, 0.3, 8, &[
-        (100.0, 128.0, 13.0,  0.0, -0.029, 0),
-        (284.0, 128.0, 13.0,  0.0,  0.029, 0),
-    ], 60000, &snaps);
+    // Try a sweep of initial velocities with G scaled way down
+    for &(v, g) in &[(0.005f32, 0.0000001f32), (0.008, 0.0000002), (0.012, 0.0000003)] {
+        let name = format!("tune_v{:.3}_g{:.7}", v, g);
+        run(&name, g, 20.0, 0.5, 0, &[
+            (100.0, 128.0, 13.0,  0.0, -v, 0),
+            (284.0, 128.0, 13.0,  0.0,  v, 0),
+        ], 2000, &snaps);
+    }
 }
