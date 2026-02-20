@@ -597,3 +597,18 @@ fn main() {
         (130.0, 160.0, 6.0,  0.08,  0.0, 0),
         (260.0, 128.0, 6.0, -0.08,  0.0, 0),
     ], 38400, &snaps);
+
+// [recovery] edit target not found, appending:
+    // Four-body clockwise: each blob at a corner of the middle region,
+    // velocity perpendicular pointing clockwise.
+    // W=384, H=256 — inner thirds: x∈[96,288], y∈[64,192]
+    //   top-left    (96,  64) → moving right  ( 0.08,  0.0)
+    //   top-right  (288,  64) → moving down   ( 0.0,   0.08)
+    //   bot-right  (288, 192) → moving left   (-0.08,  0.0)
+    //   bot-left    (96, 192) → moving up     ( 0.0,  -0.08)
+    run("four_clockwise", 0.00005, 1.5, 0.125, 1, 4.0, &[
+        ( 96.0,  64.0, 6.0,  0.08,  0.00, 0),
+        (288.0,  64.0, 6.0,  0.00,  0.08, 0),
+        (288.0, 192.0, 6.0, -0.08,  0.00, 0),
+        ( 96.0, 192.0, 6.0,  0.00, -0.08, 0),
+    ], 38400, &snaps);
