@@ -426,7 +426,9 @@ impl Sim {
             if dy >  hh { dy -= H as f32; } if dy < -hh { dy += H as f32; }
             (dx*dx+dy*dy).sqrt()
         }).sum::<f32>() / n;
-        format!("pop={} avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1}",
+        let sum_vx = self.cells.iter().map(|c| c.vx).sum::<f32>();
+        let sum_vy = self.cells.iter().map(|c| c.vy).sum::<f32>();
+        format!("pop={} avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1} sum_v=({sum_vx:+.3},{sum_vy:+.3})",
             self.cells.len())
     }
 }
