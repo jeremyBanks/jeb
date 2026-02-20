@@ -11,18 +11,19 @@ import { minify } from "npm:terser@^5.36";
 const INPUT  = "./z855-reference.ts";
 const OUTPUT = "./z855-reference.min.mjs";
 
-// ── Transpile TS → JS via deno ───────────────────────────────────────────────
-const transpile = await new Deno.Command("deno", {
-  args: ["emit", "--quiet", INPUT],
-  stdout: "piped",
-  stderr: "piped",
-}).output();
-
-if (!transpile.success) {
-  console.error("Transpile failed:", new TextDecoder().decode(transpile.stderr));
-  Deno.exit(1);
-}
-const jsCode = new TextDecoder().decode(transpile.stdout);
+// ── Transpile TS → JS via Deno.transpileOnly ────────────────────────────────
+const tsSource = await Deno.readTextFile(INPUT);
+// Strip the shebang line if present (transpiler chokes on it)
+const tsNoShebang = tsSource.startsWith("#!") 
+  ? tsSource.slice(tsSource.indexOf("\n") + 1) 
+  : tsSource;
+const result = await Deno.emit(INPUT, {
+  sources: { [new URL(INPUT, import.meta.url).href]: tsNoShebang },
+  compilerOptions: { target: "es2020", module: "esnext" },
+});
+const outputKey = Object.keys(result.files).find(k => k.endsWith(".js"));
+if (!outputKey) { console.error("No JS output from transpile"); Deno.exit(1); }
+const jsCode = result.files[outputKey].replace(/^\/\/# sourceMappingURL=.*$/m, "").trim();
 console.error(`Transpiled: ${jsCode.length} bytes`);
 
 // ── Custom identifier generator ──────────────────────────────────────────────
