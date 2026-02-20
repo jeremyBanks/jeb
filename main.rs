@@ -686,11 +686,48 @@ impl Sim {
     }
 
     // Velocity convergence phase: called for up to 64 ticks once positions have converged.
-    // Ramps gravity to 0 over the first 32 ticks.
+    // Ramps gravity AND life (Conway deaths + nudge kill/revive) to 0 over the first 32 ticks.
     // Guarantees velocity error never increases: snapshots pre-gravity error, clamps any
     // growth after gravity runs, then lerps toward target.
-    fn epilogue_vel_tick(&mut self, orig: &OriginalState, vel_phase_tick: usize) {
-        let g_scale = (1.0 - vel_phase_tick as f32 / 32.0).max(0.0);
+    // conv_t: the RAMP_TICKS t-value at the tick positions converged (used to compute
+    //         residual Conway/nudge rates at entry so the ramp starts from that level).
+    fn epilogue_vel_tick(&mut self, orig: &OriginalState, vel_phase_tick: usize, conv_t: f32) {
+        let g_scale    = (1.0 - vel_phase_tick as f32 / 32.0).max(0.0);
+        let life_scale = (1.0 - vel_phase_tick as f32 / 32.0).max(0.0);
+
+        // Ramp down any residual Conway deaths (were active if conv_t < 1)
+        let conway_max = (8.0 * (1.0 - conv_t) * life_scale).floor() as usize;
+        if conway_max > 0 {
+            self.epilogue_conway_deaths_only(conway_max);
+        }
+
+        // Ramp down residual nudge kill/revive chances
+        let kill_chance   = 0.75  * conv_t * life_scale;
+        let revive_chance = 0.375 * conv_t * life_scale;
+        if kill_chance > 0.0 || revive_chance > 0.0 {
+            let mut grid = vec![usize::MAX; W * H];
+            for (i, c) in self.cells.iter().enumerate() {
+                grid[c.y as usize % H * W + c.x as usize % W] = i;
+            }
+            let mut to_kill: Vec<usize> = self.cells.iter().enumerate()
+                .filter(|(_, c)| !orig.positions.contains(&(c.x as usize % W, c.y as usize % H)))
+                .filter(|_| xorf32(&mut self.rng) < kill_chance)
+                .map(|(i, _)| i)
+                .collect();
+            to_kill.sort_unstable_by(|a, b| b.cmp(a));
+            for i in to_kill { self.cells.swap_remove(i); }
+
+            let mut grid2 = vec![usize::MAX; W * H];
+            for (i, c) in self.cells.iter().enumerate() {
+                grid2[c.y as usize % H * W + c.x as usize % W] = i;
+            }
+            for &(ox, oy) in &orig.positions {
+                if grid2[oy * W + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
+                    self.cells.push(Cell { x: ox as f32 + 0.5, y: oy as f32 + 0.5,
+                                           vx: 0.0, vy: 0.0, prev_speed: 0.0 });
+                }
+            }
+        }
 
         // Snapshot pre-gravity squared error for each cell
         let pre_err_sq: Vec<f32> = self.cells.iter().map(|c| {
