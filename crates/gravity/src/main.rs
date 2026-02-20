@@ -1347,3 +1347,33 @@ use std::io::{BufWriter, Write};
         // Rate-limit: 1 birth and 1 death per Conway call (independent of pop_band).
         // With conway_every=FPS this equals 1 per second.
         let rate_limit = 1_usize;
+
+// [recovery] edit target not found, appending:
+    fn gravity_step_epilogue(&mut self, orig: &OriginalState, g_scale: f32) {
+        let n = self.cells.len();
+        // Barnes-Hut for epilogue: forces only, no movement — positions stay integer-discrete.
+        // Original-position cells are frozen (no force applied); non-originals get force
+        // but movement is handled by the kill/revive nudges, not direct position update.
+        let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
+        nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
+        for i in 0..n {
+            let (px, py) = (self.cells[i].x as f32 + 0.5, self.cells[i].y as f32 + 0.5);
+            qt_insert(&mut nodes, 0, i, px, py, 0);
+        }
+        for i in 0..n {
+            if orig.positions.contains(&(self.cells[i].x, self.cells[i].y)) { continue; }
+            let (px, py) = (self.cells[i].x as f32 + 0.5, self.cells[i].y as f32 + 0.5);
+            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g * g_scale, self.softening);
+            self.cells[i].vx += gfx;
+            self.cells[i].vy += gfy;
+        }
+        // Cap speeds (velocity still evolves, even though positions don't move this phase)
+        for c in &mut self.cells {
+            let spd = (c.vx*c.vx+c.vy*c.vy).sqrt();
+            let cap = c.prev_speed.max(self.speed_cap);
+            if spd > cap { c.vx = c.vx/spd*cap; c.vy = c.vy/spd*cap; }
+            let hard_ceil = self.speed_cap * 2.0;
+            c.prev_speed = c.prev_speed.min(spd).max(self.speed_cap).min(hard_ceil);
+        }
+        self.order = (0..self.cells.len()).collect();
+    }
