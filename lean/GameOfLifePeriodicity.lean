@@ -262,23 +262,43 @@ private theorem rot_right (i : Fin 8) :
 -- whether we rotate-then-step or step-then-rotate.
 -- The key: after rotation, neighbours of i in (rotate s) are
 -- the same cells as neighbours of (i+1) in s.
+-- Rotation commutes with step: proved by showing index arithmetic works out.
+-- The key identities (for i : Fin 8):
+--   ((i+7)%8 + 1) % 8 = (i+1+7) % 8   [left neighbour shifts with rotation]
+--   ((i+1)%8 + 1) % 8 = (i+1+1) % 8   [right neighbour shifts with rotation]
+-- We prove this cell-by-cell via Fin.val case analysis (8 cases).
+-- Rotation commutes with step.
+-- We prove this at the Nat/index level: for all i < 8, the step output
+-- at position i after rotating equals rotating the step output at i.
+-- The key index identities (i < 8):
+--   left of i after rotate  = left of rotate(i)  in original
+--   right of i after rotate = right of rotate(i) in original
+-- Helper: the left-neighbour index commutes with rotation
+-- ((i+7)%8+1)%8 = (i+1+7)%8  (both equal (i+8)%8 = i%8 when i<8... wait, not quite)
+-- Actually: ((i+7)%8+1)%8 = (i%8) since (i+7)%8 = i-1 mod 8, then +1 = i.
+-- And (i+1+7)%8 = (i+8)%8 = i%8. So both = i%8. They're equal!
+private theorem left_nb_idx (i : Fin 8) :
+    ((i.val + 7) % 8 + 1) % 8 = (i.val + 1 + 7) % 8 := by
+  have := i.isLt; omega
+
 theorem step_commutes_with_rotation (s : RingState) :
     ringStep1D (rotate s) = rotate (ringStep1D s) := by
-  funext ⟨iv, hiv⟩
+  funext i
+  -- Unfold everything and then use the fact that Fin equality is decidable
+  -- and the state space is Fin 8 → Bool, so we can use congrArg s (Fin.ext ...)
   simp only [ringStep1D, rotate, ringNeighbours]
-  -- Rewrite all Fin indices to show both sides are identical
-  -- LHS: uses s at (iv+7%8+1)%8, (iv+1)%8
-  -- RHS: uses s at (iv+1+7)%8,   (iv+1+1)%8
-  -- These are equal by mod arithmetic (with bound hiv : iv < 8)
-  congr 1
-  · -- alive condition at center: s[(iv+1)%8] on both sides (trivially equal)
-    rfl
-  · -- neighbour count: two lookups
-    congr 1
-    · -- left neighbour index: ((iv+7)%8+1)%8 = (iv+1+7)%8
-      congr 1; apply Fin.ext; omega
-    · -- right neighbour index: ((iv+1)%8+1)%8 = (iv+1+1)%8
-      congr 1; apply Fin.ext; omega
+  -- The left-neighbour index on LHS is ((i+7)%8+1)%8, on RHS is ((i+1)%8+7)%8.
+  -- These are definitionally equal as Nats (by omega) so the Fins are equal.
+  -- We use congrArg to rewrite s applied to these Fins.
+  -- Two index rewrites needed:
+  --   ((i+7)%8+1)%8 = (i+1+7)%8     [left nb of i after rotate = left nb of rotate(i)]
+  --   (i+1+7)%8     = ((i+1)%8+7)%8  [same thing written differently on RHS]
+  -- Together: replace LHS left-nb index with RHS left-nb index.
+  have h1 : ((i.val + 7) % 8 + 1) % 8 = ((i.val + 1) % 8 + 7) % 8 := by
+    have := i.isLt; omega
+  have heq1 : (⟨((i.val + 7) % 8 + 1) % 8, by omega⟩ : Fin 8) =
+              ⟨((i.val + 1) % 8 + 7) % 8, by omega⟩ := Fin.ext h1
+  simp only [congrArg s heq1]
 
 -- Key: iteration commutes with rotation (by induction on steps)
 theorem iter_commutes_with_rotation (s : RingState) (p : Nat) :
