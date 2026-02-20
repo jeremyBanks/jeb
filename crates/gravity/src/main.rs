@@ -1054,7 +1054,7 @@ fn main() {
         .unwrap_or(44);
     let blob_radius: f32 = parse_arg("--radius")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(4.0);
+        .unwrap_or(0.0); // no blobs by default
     // --seed-density: random cells as 1/N of empty cells (0 = none)
     // Default 128 = 1/128 of empty cells (half as dense again)
     let seed_density_inv: usize = parse_arg("--seed-density")
