@@ -1,7 +1,11 @@
 use {inline::InlineCellPrivate, std::env};
 
+/// Serialize tests that mutate INLINE_MODE env var (process-global state).
+static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[test]
 fn test_lazy_loading_allows_missing_files_on_read() {
+    let _guard = ENV_LOCK.lock().unwrap();
     // Creating a Inline for a non-existent file should not fail
     let value = inline::InlineCell::__new(42u32, "/nonexistent/path.rs", 1, 1);
 
@@ -14,6 +18,7 @@ fn test_lazy_loading_allows_missing_files_on_read() {
 
 #[test]
 fn test_lazy_loading_write_fails_silently_for_missing_file() {
+    let _guard = ENV_LOCK.lock().unwrap();
     // Ensure we're in a mode that requires file access
     // SAFETY: Test-only; no concurrent access to this env var in this test
     unsafe { env::set_var("INLINE_MODE", "write") };
@@ -37,6 +42,7 @@ fn test_lazy_loading_write_fails_silently_for_missing_file() {
 
 #[test]
 fn test_lazy_loading_memory_mode_works_without_file() {
+    let _guard = ENV_LOCK.lock().unwrap();
     // In Memory mode, we should be able to set() without file access
     // SAFETY: Test-only; no concurrent access to this env var in this test
     unsafe { env::set_var("INLINE_MODE", "memory") };
@@ -53,6 +59,7 @@ fn test_lazy_loading_memory_mode_works_without_file() {
 
 #[test]
 fn test_lazy_loading_verify_mode_fails_silently_for_missing_file() {
+    let _guard = ENV_LOCK.lock().unwrap();
     // In Verify mode, we need file access
     // SAFETY: Test-only; no concurrent access to this env var in this test
     unsafe { env::set_var("INLINE_MODE", "verify") };
