@@ -55,8 +55,32 @@ impl Sim {
         // Shuffle so cell indices are interleaved across blobs — no first-blob bias
         shuffle_vec(&mut cells, &mut rng);
 
+        // Seed 1/64th of all empty grid cells as zero-momentum live cells
+        let mut occupied = vec![false; W * H];
+        for c in &cells {
+            occupied[c.y as usize % H * W + c.x as usize % W] = true;
+        }
+        let empty_count = occupied.iter().filter(|&&v| !v).count();
+        let seed_count = empty_count / 64;
+        let mut seeded = 0;
+        for _ in 0..W * H * 4 {
+            if seeded >= seed_count { break; }
+            let xi = (xoru64(&mut rng) as usize) % W;
+            let yi = (xoru64(&mut rng) as usize) % H;
+            let idx = yi * W + xi;
+            if !occupied[idx] {
+                cells.push(Cell { x: xi as f32 + 0.5, y: yi as f32 + 0.5, vx: 0.0, vy: 0.0, prev_speed: 0.0 });
+                occupied[idx] = true;
+                seeded += 1;
+            }
+        }
+        // Shuffle again to mix seeded cells into the order
+        shuffle_vec(&mut cells, &mut rng);
+
         let n = cells.len();
-        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: n,
+        // target_pop is W*H/32 regardless of initial cell count — Conway grows freely until then
+        let target_pop = W * H / 32;
+        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
               conway_every, pop_band, tick_count: 0, prev_live: vec![false; W * H] }
     }
 
@@ -78,12 +102,10 @@ impl Sim {
             grid[yi * W + xi] = i;
         }
 
-        // Conway range=8: all cells within Chebyshev distance 8 (excludes self)
-        const CONWAY_RANGE: i32 = 8;
-        let neighbour_offsets: Vec<(i32, i32)> = (-CONWAY_RANGE..=CONWAY_RANGE)
-            .flat_map(|dy| (-CONWAY_RANGE..=CONWAY_RANGE).map(move |dx| (dy, dx)))
-            .filter(|&(dy, dx)| dy != 0 || dx != 0)
-            .collect();
+        // Standard Conway: 8 immediate neighbours
+        let neighbour_offsets: [(i32, i32); 8] = [
+            (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)
+        ];
         let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
             neighbour_offsets.iter().filter_map(|&(dy, dx)| {
                 let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
@@ -521,7 +543,7 @@ fn main() {
     //   bot-right  (288, 192) → moving left   (-0.08,  0.0)
     //   bot-left    (96, 192) → moving up     ( 0.0,  -0.08)
     // r=24 (2x again), checkerboard 50% then random-half discard → ~12.5% density → ~2x cells vs r=12@25%
-    run("four_clockwise", 0.00005, 1.5, 0.03125, 1, 2.0, &[
+    run("four_clockwise", 0.00005, 1.5, 0.03125, 1, 16.0, &[
         ( 96.0,  64.0, 24.0,  0.010,  0.000, 0),
         (288.0,  64.0, 24.0,  0.000,  0.010, 0),
         (288.0, 192.0, 24.0, -0.010,  0.000, 0),
