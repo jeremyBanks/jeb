@@ -770,6 +770,14 @@ fn main() {
             (s, c, 0)
         });
 
+    // Capture original state for epilogue (only meaningful on fresh start)
+    let orig = OriginalState {
+        positions: sim.cells.iter()
+            .map(|c| (c.x as usize % W, c.y as usize % H))
+            .collect(),
+        count: sim.cells.len(),
+    };
+
     // Open/append segments list
     let mut seg_list = fs::OpenOptions::new()
         .create(true).append(true)
