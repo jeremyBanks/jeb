@@ -204,11 +204,13 @@ impl Sim {
             let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
 
             let new_idx = self.cells.len();
+            let birth_spd = (vx * vx + vy * vy).sqrt();
             self.cells.push(Cell {
                 x: gx as f32 + 0.5,
                 y: gy as f32 + 0.5,
                 vx,
                 vy,
+                prev_speed: birth_spd,
             });
             grid2[gy * W + gx] = new_idx;
         }
