@@ -50,7 +50,7 @@ impl Sim {
 
         let n = cells.len();
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: n,
-              conway_every, tick_count: 0 }
+              conway_every, tick_count: 0, prev_live: vec![false; W * H] }
     }
 
     // ── Conway step (modified) ─────────────────────────────────────────────
