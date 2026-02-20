@@ -175,7 +175,7 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
     let mut fy = 0.0f32;
     for &ch in &node.ch {
         if ch >= 0 {
-            let (cfx, cfy) = qt_force(nodes, ch as usize, body, px, py, g, softening);
+            let (cfx, cfy) = qt_force(nodes, ch as usize, body, px, py, g, softening, wrap);
             fx += cfx;
             fy += cfy;
         }
