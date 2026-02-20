@@ -314,6 +314,45 @@ impl Sim {
         Some((sim, canvas, chunk_index))
     }
 
+    // ── Original-state save/load (for correct epilogue target) ───────────
+    // Saved once at fresh-start tick=0; loaded on checkpoint resume so the
+    // epilogue always converges toward the very first frame of the simulation.
+    fn save_orig_state(orig: &OriginalState, path: &str) {
+        let mut buf: Vec<u8> = Vec::new();
+        buf.extend_from_slice(&(orig.count as u64).to_le_bytes());
+        // Save as sorted list of (x, y, vx, vy) — ordered for determinism
+        let mut entries: Vec<((usize,usize),(f32,f32))> = orig.velocities.iter()
+            .map(|(&pos, &vel)| (pos, vel)).collect();
+        entries.sort_unstable_by_key(|&((x,y),_)| (y,x));
+        for ((x,y),(vx,vy)) in &entries {
+            buf.extend_from_slice(&(*x as u64).to_le_bytes());
+            buf.extend_from_slice(&(*y as u64).to_le_bytes());
+            buf.extend_from_slice(&vx.to_le_bytes());
+            buf.extend_from_slice(&vy.to_le_bytes());
+        }
+        fs::create_dir_all(std::path::Path::new(path).parent().unwrap()).unwrap();
+        fs::write(path, &buf).unwrap();
+    }
+
+    fn load_orig_state(path: &str) -> Option<OriginalState> {
+        let buf = fs::read(path).ok()?;
+        let mut pos = 0;
+        macro_rules! read_u64 { () => {{ let v = u64::from_le_bytes(buf[pos..pos+8].try_into().ok()?); pos += 8; v }}; }
+        macro_rules! read_f32 { () => {{ let v = f32::from_le_bytes(buf[pos..pos+4].try_into().ok()?); pos += 4; v }}; }
+        let count = read_u64!() as usize;
+        let mut positions = std::collections::HashSet::with_capacity(count);
+        let mut velocities = std::collections::HashMap::with_capacity(count);
+        for _ in 0..count {
+            let x  = read_u64!() as usize;
+            let y  = read_u64!() as usize;
+            let vx = read_f32!();
+            let vy = read_f32!();
+            positions.insert((x, y));
+            velocities.insert((x, y), (vx, vy));
+        }
+        Some(OriginalState { positions, velocities, count })
+    }
+
     // ── Conway step ────────────────────────────────────────────────────────
     fn conway_step(&mut self) {
         shuffle_vec(&mut self.cells, &mut self.rng);
