@@ -55,6 +55,28 @@ impl Sim {
         // Shuffle so cell indices are interleaved across blobs — no first-blob bias
         shuffle_vec(&mut cells, &mut rng);
 
+        // Seed 1/64th of all empty grid cells as zero-momentum live cells
+        let mut occupied = vec![false; W * H];
+        for c in &cells {
+            occupied[c.y as usize % H * W + c.x as usize % W] = true;
+        }
+        let empty_count = occupied.iter().filter(|&&v| !v).count();
+        let seed_count = empty_count / 64;
+        let mut seeded = 0;
+        for _ in 0..W * H * 4 {
+            if seeded >= seed_count { break; }
+            let xi = (xoru64(&mut rng) as usize) % W;
+            let yi = (xoru64(&mut rng) as usize) % H;
+            let idx = yi * W + xi;
+            if !occupied[idx] {
+                cells.push(Cell { x: xi as f32 + 0.5, y: yi as f32 + 0.5, vx: 0.0, vy: 0.0, prev_speed: 0.0 });
+                occupied[idx] = true;
+                seeded += 1;
+            }
+        }
+        // Shuffle again to mix seeded cells into the order
+        shuffle_vec(&mut cells, &mut rng);
+
         let n = cells.len();
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: n,
               conway_every, pop_band, tick_count: 0, prev_live: vec![false; W * H] }
