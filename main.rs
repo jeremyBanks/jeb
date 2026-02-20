@@ -62,6 +62,9 @@ impl Sim {
 
     // ── Conway step (modified) ─────────────────────────────────────────────
     fn conway_step(&mut self) {
+        // Shuffle cells before processing so iteration order never favours one blob
+        shuffle_vec(&mut self.cells, &mut self.rng);
+
         let n = self.cells.len();
         let pop_min = ((self.start_pop as f32) * (1.0 - self.pop_band)) as usize;
         let pop_max = ((self.start_pop as f32) * (1.0 + self.pop_band)) as usize;
