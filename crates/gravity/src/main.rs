@@ -661,7 +661,7 @@ impl Sim {
             }
         }
 
-        // Lerp velocities of live-original cells 12.5% closer to their original velocity each tick
+        // Lerp velocities of live-original cells 3.125% closer to their original velocity each tick (4× slower)
         for c in &mut self.cells {
             let pos = (c.x as usize % W, c.y as usize % H);
             if let Some(&(tvx, tvy)) = orig.velocities.get(&pos) {
