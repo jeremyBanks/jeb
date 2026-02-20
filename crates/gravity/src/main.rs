@@ -978,7 +978,7 @@ fn main() {
     let kr = keep_running.clone();
     ctrlc::set_handler(move || {
         if kr.load(Ordering::Relaxed) {
-            println!("\n[signal] Caught — finishing current chunk then concatenating completed segments...");
+            println!("\n[signal] Caught — discarding current chunk, concatenating completed segments...");
             kr.store(false, Ordering::Relaxed);
         }
     }).expect("Error setting signal handler");
@@ -988,19 +988,22 @@ fn main() {
         .create(true).append(true)
         .open(segments_file).unwrap();
 
-    for chunk in start_chunk..n_chunks {
-        if !keep_running.load(Ordering::Relaxed) {
-            println!("[signal] Stopping after chunk {chunk} — will concat completed segments.");
-            break;
-        }
+    'chunks: for chunk in start_chunk..n_chunks {
         let chunk_start_frame = chunk * CHUNK_FRAMES;
         let chunk_end_frame = ((chunk + 1) * CHUNK_FRAMES).min(total_frames);
         let this_chunk_frames = chunk_end_frame - chunk_start_frame;
 
         println!("\n[chunk {}/{n_chunks}] frames {}..{}", chunk+1, chunk_start_frame, chunk_end_frame);
 
-        // Render frames for this chunk
+        // Render frames for this chunk — check signal each frame
         for local_frame in 0..this_chunk_frames {
+            if !keep_running.load(Ordering::Relaxed) {
+                // Discard partial chunk and stop immediately
+                println!("[signal] Discarding partial chunk {}, cleaning up {} frames...",
+                    chunk + 1, local_frame);
+                delete_frames(frames_dir);
+                break 'chunks;
+            }
             let global_frame = chunk_start_frame + local_frame;
             sim.paint_frame(&mut canvas);
             Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:08}.png"));
@@ -1039,6 +1042,20 @@ fn main() {
         let ep_seg_start = total_frames;
 
         loop {
+            if !keep_running.load(Ordering::Relaxed) {
+                // Flush any accumulated epilogue frames (already fully rendered), then stop
+                if !ep_chunk_frames.is_empty() {
+                    let seg_path = format!("{segments_dir}/seg_{:08}.mp4",
+                        ep_seg_start + ep_frame - ep_chunk_frames.len());
+                    encode_chunk(frames_dir, &seg_path, ep_chunk_frames.len());
+                    writeln!(seg_list, "file '{seg_path}'").unwrap();
+                    seg_list.flush().unwrap();
+                    delete_frames(frames_dir);
+                    ep_chunk_frames.clear();
+                }
+                println!("[signal] Stopping epilogue — concatenating completed segments.");
+                break;
+            }
             let converged = sim.epilogue_tick(&orig, ep_tick);
             // Ramp background fade: starts at normal rate, ramps to 0.5^0.25≈0.84/tick at full t
             // 1/4 speed vs old 0.5 end: 0.5^(t/4) so full convergence takes 4× longer
@@ -1076,7 +1093,6 @@ fn main() {
             }
             if converged { println!("  epilogue converged at tick {ep_tick} ({:.1}s)", ep_tick as f32 / FPS as f32); break; }
             if ep_tick >= MAX_EPILOGUE_TICKS { println!("  epilogue hit safety cap ({MAX_EPILOGUE_TICKS} ticks = 32s)"); break; }
-            if !keep_running.load(Ordering::Relaxed) { println!("  [signal] Stopping epilogue — will concat completed segments."); break; }
         }
         println!("  epilogue: {ep_frame} frames appended");
     }
