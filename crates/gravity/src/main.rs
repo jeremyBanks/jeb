@@ -1214,7 +1214,7 @@ fn main() {
     // ── Epilogue phase ────────────────────────────────────────────────────
     if do_epilogue {
         println!("\n[epilogue] converging to original {} cells...", orig.count);
-        const MAX_EPILOGUE_TICKS: usize = 7680; // 128s safety cap
+        const MAX_EPILOGUE_TICKS: usize = 240; // 4s hard cap
         let mut ep_tick = 0usize;
         let mut ep_frame = 0usize;
         let mut ep_chunk_frames: Vec<String> = Vec::new();
