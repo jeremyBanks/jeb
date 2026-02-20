@@ -472,7 +472,7 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32, conway_every: usize,
     for tick in 0..=ticks {
         sim.paint_frame(&mut canvas);
         if snap_at.contains(&tick) {
-            Sim::save_png(&canvas, &format!("{dir}/t{tick:04}.png"));
+            Sim::save_png(&canvas, &format!("{dir}/t{tick:06}.png"));
             println!("  t={tick:4}  {}", sim.stats());
         }
         if tick < ticks { sim.tick(); }
