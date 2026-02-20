@@ -492,13 +492,24 @@ fn main() {
     //   Period ≈ 2π * 92 / 0.029 ≈ 19900 ticks → run 20000 ticks
     //   Blobs at x=100 and x=284, y=128
 
-    // ── Deep run: orbit_conway8, 60000 ticks, frame every 300 → 200 snapshots ──
-    // Conway every 8 ticks is the sweet spot: blobs stay coherent (Conway fills
-    // orbital-shear gaps) but are genuinely perturbed. ~3 full orbits of drift.
-    let snaps: Vec<usize> = (0..=200).map(|i| i * 300).collect();
+    // The real issue: with 531 cells/blob all doing N-body gravity, intra-blob
+    // forces are enormous at close range and immediately saturate the speed cap.
+    // Fix: remove speed cap entirely (set very high), use tiny G, print stats
+    // to see what speeds actually develop — then set v_init to match.
+    let snaps: Vec<usize> = (0..=10).map(|i| i * 50).collect();
 
-    run("orbit_deep", 0.000006, 15.0, 0.3, 8, &[
-        (100.0, 128.0, 13.0,  0.0, -0.029, 0),
-        (284.0, 128.0, 13.0,  0.0,  0.029, 0),
-    ], 60000, &snaps);
+    // G=0.0003, soft=20 → orbital v = 0.021, period ~27000 ticks
+    // No meaningful cap (5.0) so gravity steers freely
+    // Run 1.5 orbits = 40000 ticks, snap every 1000 = 40 frames
+    let snaps: Vec<usize> = (0..=40).map(|i| i * 1000).collect();
+
+    run("orbit3_pure", 0.0003, 20.0, 5.0, 0, &[
+        (100.0, 128.0, 13.0,  0.0, -0.021, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.021, 0),
+    ], 40000, &snaps);
+
+    run("orbit3_conway8", 0.0003, 20.0, 5.0, 8, &[
+        (100.0, 128.0, 13.0,  0.0, -0.021, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.021, 0),
+    ], 40000, &snaps);
 }
