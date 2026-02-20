@@ -19,10 +19,12 @@ struct Sim {
     softening: f32,
     speed_cap: f32,
     start_pop: usize,
+    conway_every: usize, // 0 = disabled, N = run Conway every N gravity ticks
+    tick_count: usize,
 }
 
 impl Sim {
-    fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32,
+    fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, conway_every: usize,
            clumps: &[(f32, f32, f32, f32, f32, usize)]) -> Self {
         let mut rng = rng_seed;
         let mut cells = Vec::new();
@@ -46,7 +48,8 @@ impl Sim {
         }
 
         let n = cells.len();
-        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: n }
+        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: n,
+              conway_every, tick_count: 0 }
     }
 
     // ── Conway step (modified) ─────────────────────────────────────────────
@@ -323,8 +326,12 @@ impl Sim {
     }
 
     fn tick(&mut self) {
-        self.conway_step();
+        // Run Conway only when enabled and on the right tick
+        if self.conway_every > 0 && self.tick_count % self.conway_every == 0 {
+            self.conway_step();
+        }
         self.gravity_step();
+        self.tick_count += 1;
     }
 
     fn paint_frame(&self, canvas: &mut Vec<u8>) {
@@ -431,15 +438,15 @@ fn xorf32(s: &mut u64) -> f32 {
     (xoru64(s) & 0xFFFFFF) as f32 / 0xFFFFFF as f32
 }
 
-fn run(name: &str, g: f32, softening: f32, speed_cap: f32,
+fn run(name: &str, g: f32, softening: f32, speed_cap: f32, conway_every: usize,
        clumps: &[(f32, f32, f32, f32, f32, usize)],
        ticks: usize, snap_at: &[usize]) {
     let dir = format!("frames/{name}");
     fs::create_dir_all(&dir).unwrap();
 
-    let mut sim = Sim::new(42, g, softening, speed_cap, clumps);
+    let mut sim = Sim::new(42, g, softening, speed_cap, conway_every, clumps);
     let mut canvas = vec![0u8; W * H * 3];
-    println!("\n=== {name} | g={g} soft={softening} cap={speed_cap} start_pop={} ===",
+    println!("\n=== {name} | g={g} soft={softening} cap={speed_cap} conway_every={conway_every} start_pop={} ===",
         sim.cells.len());
 
     for tick in 0..=ticks {
@@ -455,13 +462,31 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32,
 fn main() {
     fs::create_dir_all("frames").unwrap();
 
-    let snaps = &[0usize, 300, 600, 900, 1200, 1600, 2000, 2400]; // unused now
+    let snaps: Vec<usize> = (0..=32).map(|i| i * 150).collect();
 
-    let d_snaps: Vec<usize> = (0..=32).map(|i| i * 150).collect();
+    // ── Scenario A: gravity-only (no Conway), slow approach, stronger G ──────
+    // Perpendicular velocities — classic orbit setup
+    // Left blob moves up, right blob moves down → gravity pulls them sideways
+    run("orbit_slow", 0.003, 2.0, 1.0, 0, &[
+        (100.0, 128.0, 13.0,  0.0, -0.06, 0),  // left blob, moving up
+        (284.0, 128.0, 13.0,  0.0,  0.06, 0),  // right blob, moving down
+    ], 4800, &snaps);
 
-    // D2: medium offset (13px) — slingshot zone
-    run("D_best", 0.001, 1.5, 0.5, &[
-        ( 80.0, 115.0, 13.0,  0.2,  0.0, 0),
-        (304.0, 141.0, 13.0, -0.2,  0.0, 0),
-    ], 4800, &d_snaps);
+    // ── Scenario B: Conway every 8 ticks, same orbital setup ─────────────────
+    run("orbit_conway8", 0.003, 2.0, 1.0, 8, &[
+        (100.0, 128.0, 13.0,  0.0, -0.06, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.06, 0),
+    ], 4800, &snaps);
+
+    // ── Scenario C: Conway every 1 tick (original behavior), orbital setup ───
+    run("orbit_conway1", 0.003, 2.0, 1.0, 1, &[
+        (100.0, 128.0, 13.0,  0.0, -0.06, 0),
+        (284.0, 128.0, 13.0,  0.0,  0.06, 0),
+    ], 4800, &snaps);
+
+    // ── Scenario D: gravity-only, head-on but slower (compare to old D_best) ─
+    run("headon_slow", 0.003, 2.0, 1.0, 0, &[
+        ( 80.0, 128.0, 13.0,  0.06,  0.0, 0),
+        (304.0, 128.0, 13.0, -0.06,  0.0, 0),
+    ], 4800, &snaps);
 }
