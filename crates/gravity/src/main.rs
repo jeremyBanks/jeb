@@ -656,6 +656,10 @@ fn xoru64(s: &mut u64) -> u64 {
     *s ^= *s << 13; *s ^= *s >> 7; *s ^= *s << 17; *s
 }
 
+fn xorf32(s: &mut u64) -> f32 {
+    (xoru64(s) & 0xFFFFFF) as f32 / 0xFFFFFF as f32
+}
+
 fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize) {
     // ffmpeg glob requires sorted files — they're zero-padded so glob order = numeric order
     let scale = format!("scale={}:{}:flags=neighbor", OUT_W, OUT_H);
