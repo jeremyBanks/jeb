@@ -555,10 +555,11 @@ impl Sim {
             grid[c.y * W + c.x] = i;
         }
 
-        // Target integer position: round (x + vx) to nearest grid square
+        // Target integer position: add velocity to integer position, wrap toroidally.
+        // The % W/H guards against the rare float case where rem_euclid rounds up to W or H.
         let target_pos: Vec<(usize, usize)> = self.cells.iter().map(|c| {
-            let tx = ((c.x as f32 + c.vx).rem_euclid(W as f32)) as usize;
-            let ty = ((c.y as f32 + c.vy).rem_euclid(H as f32)) as usize;
+            let tx = ((c.x as f32 + c.vx).rem_euclid(W as f32)) as usize % W;
+            let ty = ((c.y as f32 + c.vy).rem_euclid(H as f32)) as usize % H;
             (tx, ty)
         }).collect();
 
