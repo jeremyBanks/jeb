@@ -57,8 +57,8 @@ impl Sim {
     // ── Conway step (modified) ─────────────────────────────────────────────
     fn conway_step(&mut self) {
         let n = self.cells.len();
-        let pop_min = self.start_pop / 2;
-        let pop_max = self.start_pop * 2;
+        let pop_min = ((self.start_pop as f32) * (1.0 - self.pop_band)) as usize;
+        let pop_max = ((self.start_pop as f32) * (1.0 + self.pop_band)) as usize;
 
         // Build occupancy grid: cell index at each grid position (usize::MAX = empty)
         let mut grid = vec![usize::MAX; W * H];
