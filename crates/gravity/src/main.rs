@@ -478,8 +478,7 @@ impl Sim {
             .filter_map(|(i, (gy, gx, _))| {
                 if grid2[gy * W + gx] != usize::MAX { return None; } // already occupied
                 let spd_sum: f32 = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
-                    let ny = ((*gy as i32 + dy).rem_euclid(H as i32)) as usize;
-                    let nx = ((*gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                    let (ny, nx) = resolve_nbr(*gy, *gx, dy, dx)?;
                     let idx = grid2[ny * W + nx];
                     if idx != usize::MAX {
                         let c = &self.cells[idx];
