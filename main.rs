@@ -1193,7 +1193,7 @@ fn main() {
                     (ep_tick as f32 / 600.0).min(1.0), sim.cells.len(), live_orig, live_non_orig, dead_orig);
             }
             if converged { println!("  epilogue converged at tick {ep_tick} ({:.1}s)", ep_tick as f32 / FPS as f32); break; }
-            if ep_tick >= MAX_EPILOGUE_TICKS { println!("  epilogue hit safety cap ({MAX_EPILOGUE_TICKS} ticks = 32s)"); break; }
+            if ep_tick >= MAX_EPILOGUE_TICKS { println!("  epilogue hit safety cap ({MAX_EPILOGUE_TICKS} ticks = 128s)"); break; }
         }
         println!("  epilogue: {ep_frame} frames appended");
     }
