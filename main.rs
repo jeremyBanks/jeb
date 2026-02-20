@@ -112,8 +112,7 @@ impl Sim {
             }
         }
 
-        // Check all empty cells for birth
-        // Only need to check cells adjacent to live cells
+        // Check all empty cells for birth — candidates are empty cells within range of any live cell
         let mut candidates = std::collections::HashSet::new();
         for c in &self.cells {
             let gx = c.x as usize % W;
