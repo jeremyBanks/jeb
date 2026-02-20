@@ -15,7 +15,7 @@ mkdir -p "$GRAVITY_SHARED_DIR"
 
 while true; do
     echo "=== Starting run seed=$SEED, ${SECONDS_PER_RUN}s → $GRAVITY_SHARED_DIR ==="
-    rm -f segments.txt state/checkpoint.bin
+    rm -f segments.txt state/checkpoint.bin state/orig_state.bin
     rm -f segments/*.mp4 2>/dev/null || true
 
     cargo run --release -- --seconds "$SECONDS_PER_RUN" --epilogue --seed "$SEED"
