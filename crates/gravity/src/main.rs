@@ -432,12 +432,9 @@ impl Sim {
                 }
             }
         }
-        // Birth rule: B3 normally; B2|B3 when population is below target (helps sparse fields grow).
-        // At low density, B3 almost never fires — B2 allows growth from any pair of adjacent cells.
-        let birth_min = if n < self.start_pop { 2 } else { 3 };
         for (gy, gx) in candidates {
             let nbrs = live_neighbours(gy, gx);
-            if nbrs.len() >= birth_min && nbrs.len() <= 3 { desired_births.push((gy, gx, nbrs)); }
+            if nbrs.len() == 3 { desired_births.push((gy, gx, nbrs)); }
         }
 
         shuffle_vec(&mut desired_deaths, &mut self.rng);
