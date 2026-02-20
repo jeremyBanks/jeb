@@ -545,7 +545,7 @@ fn main() {
     // Same winning params: r=6, G=0.00005, 320 frames at 30fps
     let snaps: Vec<usize> = (0..=320).map(|i| i * 120).collect();
 
-    run("conway_1_16", 0.00005, 1.5, 0.25, 1, 0.0625, &[
+    run("conway_cap125", 0.00005, 1.5, 0.125, 1, 0.0625, &[
         ( 80.0, 115.0, 6.0,  0.2,  0.0, 0),
         (304.0, 141.0, 6.0, -0.2,  0.0, 0),
     ], 38400, &snaps);
