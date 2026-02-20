@@ -1,0 +1,8 @@
+
+// [recovery] edit target not found, appending:
+frames/
+*.mp4
+state/
+segments/
+gravity_*.mp4
+
