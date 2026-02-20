@@ -1041,6 +1041,20 @@ fn main() {
         let ep_seg_start = total_frames;
 
         loop {
+            if !keep_running.load(Ordering::Relaxed) {
+                // Flush any accumulated epilogue frames (already fully rendered), then stop
+                if !ep_chunk_frames.is_empty() {
+                    let seg_path = format!("{segments_dir}/seg_{:08}.mp4",
+                        ep_seg_start + ep_frame - ep_chunk_frames.len());
+                    encode_chunk(frames_dir, &seg_path, ep_chunk_frames.len());
+                    writeln!(seg_list, "file '{seg_path}'").unwrap();
+                    seg_list.flush().unwrap();
+                    delete_frames(frames_dir);
+                    ep_chunk_frames.clear();
+                }
+                println!("[signal] Stopping epilogue — concatenating completed segments.");
+                break;
+            }
             let converged = sim.epilogue_tick(&orig, ep_tick);
             // Ramp background fade: starts at normal rate, ramps to 0.5^0.25≈0.84/tick at full t
             // 1/4 speed vs old 0.5 end: 0.5^(t/4) so full convergence takes 4× longer
