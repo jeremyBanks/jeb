@@ -459,13 +459,13 @@ fn xorf32(s: &mut u64) -> f32 {
     (xoru64(s) & 0xFFFFFF) as f32 / 0xFFFFFF as f32
 }
 
-fn run(name: &str, g: f32, softening: f32, speed_cap: f32, conway_every: usize,
+fn run(name: &str, g: f32, softening: f32, speed_cap: f32, conway_every: usize, pop_band: f32,
        clumps: &[(f32, f32, f32, f32, f32, usize)],
        ticks: usize, snap_at: &[usize]) {
     let dir = format!("frames/{name}");
     fs::create_dir_all(&dir).unwrap();
 
-    let mut sim = Sim::new(42, g, softening, speed_cap, conway_every, clumps);
+    let mut sim = Sim::new(42, g, softening, speed_cap, conway_every, pop_band, clumps);
     let mut canvas = vec![0u8; W * H * 3];
     println!("\n=== {name} | g={g} soft={softening} cap={speed_cap} conway_every={conway_every} start_pop={} ===",
         sim.cells.len());
