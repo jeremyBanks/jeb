@@ -614,12 +614,12 @@ fn main() {
     //   top-right  (288,  64) → moving down   ( 0.0,   0.08)
     //   bot-right  (288, 192) → moving left   (-0.08,  0.0)
     //   bot-left    (96, 192) → moving up     ( 0.0,  -0.08)
-    // r=12 (2x radius), checkerboard 25% density (half of 50%) → ~2x population
+    // r=24 (2x again), checkerboard 50% then random-half discard → ~12.5% density → ~2x cells vs r=12@25%
     run("four_clockwise", 0.00005, 1.5, 0.03125, 1, 2.0, &[
-        ( 96.0,  64.0, 12.0,  0.010,  0.000, 0),
-        (288.0,  64.0, 12.0,  0.000,  0.010, 0),
-        (288.0, 192.0, 12.0, -0.010,  0.000, 0),
-        ( 96.0, 192.0, 12.0,  0.000, -0.010, 0),
+        ( 96.0,  64.0, 24.0,  0.010,  0.000, 0),
+        (288.0,  64.0, 24.0,  0.000,  0.010, 0),
+        (288.0, 192.0, 24.0, -0.010,  0.000, 0),
+        ( 96.0, 192.0, 24.0,  0.000, -0.010, 0),
     ], 38400, &snaps);
 
 // [recovery] edit target not found, appending:
