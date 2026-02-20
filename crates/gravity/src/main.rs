@@ -27,8 +27,7 @@ struct Sim {
 }
 
 impl Sim {
-    fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, conway_every: usize,
-           target_pop: usize, pop_band: f32,
+    fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, conway_every: usize, pop_band: f32,
            clumps: &[(f32, f32, f32, f32, f32, usize)]) -> Self {
         let mut rng = rng_seed;
         let mut cells = Vec::new();
