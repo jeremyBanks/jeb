@@ -234,6 +234,7 @@ const ESCAPE_7 = ";";  // Jeremy's new assignment (was `~` in production)
 const ESCAPE_MANY = "|";
 const PAD_HASH = 0x23;  // '#' — padding for concatenatable mode
 
+// @strip-encoder-start
 /** Options for encoding using Z855. (Decoders support all options without requiring any configuration.) */
 export interface EncodeOptions {
   /** Whether to add padding to support concatenating multiple encoded values together. */
@@ -273,6 +274,7 @@ export const PRINTABLE_ASCII_ENCODING: Required<EncodeOptions> = {
   maxRawLength: 64 * 24,
   unsafeSequences: ["```"],
 };
+// @strip-encoder-end
 
 // ─── Alignment helpers ───
 
@@ -533,6 +535,7 @@ function kBytesSafe(input: Uint8Array, start: number, k: number, safe: boolean[]
 
 // ─── Encoder ───
 
+// @strip-encoder-start
 /**
  * Encode a Uint8Array to a Uint8Array using Z855.
  *
@@ -901,6 +904,7 @@ export function encode(
 
   return buf.subarray(0, outOff);
 }
+// @strip-encoder-end
 
 // ─── Decoder helpers ───
 
