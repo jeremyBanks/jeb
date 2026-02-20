@@ -572,19 +572,23 @@ impl Sim {
 
         // Target integer position.
         // Wrap mode: toroidal (rem_euclid). No-wrap mode: stay put if target is out of bounds.
+        // IMPORTANT: use round(), not truncation (cast). Truncation biases movement toward
+        // -x/-y: vx∈(-1,0) always moves left, vx∈(0,1) never moves right → top-left drift.
         let target_pos: Vec<(usize, usize)> = self.cells.iter().map(|c| {
             let raw_x = c.x as f32 + c.vx;
             let raw_y = c.y as f32 + c.vy;
             if self.wrap {
-                let tx = raw_x.rem_euclid(W as f32) as usize % W;
-                let ty = raw_y.rem_euclid(H as f32) as usize % H;
+                let tx = (raw_x.round() as i32).rem_euclid(W as i32) as usize;
+                let ty = (raw_y.round() as i32).rem_euclid(H as i32) as usize;
                 (tx, ty)
             } else {
                 // Out of bounds → don't move (same rule as occupied cell)
-                if raw_x < 0.0 || raw_x >= W as f32 || raw_y < 0.0 || raw_y >= H as f32 {
+                let rx = raw_x.round();
+                let ry = raw_y.round();
+                if rx < 0.0 || rx >= W as f32 || ry < 0.0 || ry >= H as f32 {
                     (c.x, c.y)
                 } else {
-                    (raw_x as usize, raw_y as usize)
+                    (rx as usize, ry as usize)
                 }
             }
         }).collect();
