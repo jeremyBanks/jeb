@@ -405,20 +405,51 @@ impl Sim {
             grid2[c.y as usize % H * W + c.x as usize % W] = i;
         }
 
-        for (gy, gx, old_nbr_indices) in desired_births {
-            if grid2[gy * W + gx] != usize::MAX { continue; }
+        // Weighted birth selection: candidates with faster-moving neighbours are
+        // proportionally more likely to be born. Uses Efraimidis-Spirakis reservoir
+        // sampling: key = u^(1/w), sort descending, take top max_births.
+        //
+        // weight = sum of live-neighbour speeds (post-deaths) + BIRTH_SOFT
+        // BIRTH_SOFT ensures every valid candidate has a nonzero base probability.
+        const BIRTH_SOFT: f32 = 0.005; // ~1/10 of speed_cap; baseline birth weight
+
+        let mut birth_keys: Vec<(f32, usize)> = desired_births.iter()
+            .enumerate()
+            .filter_map(|(i, (gy, gx, _))| {
+                if grid2[gy * W + gx] != usize::MAX { return None; } // already occupied
+                let spd_sum: f32 = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
+                    let ny = ((*gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                    let nx = ((*gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                    let idx = grid2[ny * W + nx];
+                    if idx != usize::MAX {
+                        let c = &self.cells[idx];
+                        Some((c.vx * c.vx + c.vy * c.vy).sqrt())
+                    } else { None }
+                }).sum();
+                let w = spd_sum + BIRTH_SOFT;
+                let u = xorf32(&mut self.rng).max(f32::EPSILON); // avoid u=0
+                Some((u.powf(1.0 / w), i))
+            })
+            .collect();
+
+        // Sort descending by key — highest key = most likely to be selected
+        birth_keys.sort_unstable_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+
+        for (_, bi) in birth_keys.into_iter().take(max_births) {
+            let (gy, gx, _) = desired_births[bi];
+            if grid2[gy * W + gx] != usize::MAX { continue; } // double-check: may have been filled
             let live_nbrs: Vec<usize> = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
                 let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
                 let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
                 let idx = grid2[ny * W + nx];
                 if idx != usize::MAX { Some(idx) } else { None }
             }).collect();
-            if live_nbrs.is_empty() { let _ = old_nbr_indices; continue; }
+            if live_nbrs.is_empty() { continue; }
             let n_nbrs = live_nbrs.len() as f32;
             let vx = live_nbrs.iter().map(|&i| self.cells[i].vx).sum::<f32>() / n_nbrs;
             let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
-            let new_idx = self.cells.len();
             let birth_spd = (vx * vx + vy * vy).sqrt();
+            let new_idx = self.cells.len();
             self.cells.push(Cell { x: gx as f32 + 0.5, y: gy as f32 + 0.5, vx, vy, prev_speed: birth_spd });
             grid2[gy * W + gx] = new_idx;
         }
