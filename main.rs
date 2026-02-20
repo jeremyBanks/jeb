@@ -492,24 +492,13 @@ fn main() {
     //   Period ≈ 2π * 92 / 0.029 ≈ 19900 ticks → run 20000 ticks
     //   Blobs at x=100 and x=284, y=128
 
-    // Snap every 500 ticks (40 frames over 20000)
-    let snaps: Vec<usize> = (0..=40).map(|i| i * 500).collect();
+    // ── Deep run: orbit_conway8, 60000 ticks, frame every 300 → 200 snapshots ──
+    // Conway every 8 ticks is the sweet spot: blobs stay coherent (Conway fills
+    // orbital-shear gaps) but are genuinely perturbed. ~3 full orbits of drift.
+    let snaps: Vec<usize> = (0..=200).map(|i| i * 300).collect();
 
-    // ── A: Pure gravity, no Conway — reference orbit ──────────────────────────
-    run("orbit_pure", 0.000006, 15.0, 0.3, 0, &[
+    run("orbit_deep", 0.000006, 15.0, 0.3, 8, &[
         (100.0, 128.0, 13.0,  0.0, -0.029, 0),
         (284.0, 128.0, 13.0,  0.0,  0.029, 0),
-    ], 20000, &snaps);
-
-    // ── B: Conway every 8 ticks — subtle perturbation ────────────────────────
-    run("orbit_conway8", 0.000006, 15.0, 0.3, 8, &[
-        (100.0, 128.0, 13.0,  0.0, -0.029, 0),
-        (284.0, 128.0, 13.0,  0.0,  0.029, 0),
-    ], 20000, &snaps);
-
-    // ── C: Conway every 1 tick — maximum perturbation ────────────────────────
-    run("orbit_conway1", 0.000006, 15.0, 0.3, 1, &[
-        (100.0, 128.0, 13.0,  0.0, -0.029, 0),
-        (284.0, 128.0, 13.0,  0.0,  0.029, 0),
-    ], 20000, &snaps);
+    ], 60000, &snaps);
 }
