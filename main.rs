@@ -61,12 +61,14 @@ impl Sim {
         }
         shuffle_vec(&mut cells, &mut rng);
 
-        // Seed 1/64th of empty cells as zero-momentum live cells
+        // Seed 1/seed_density_inv of empty cells as zero-momentum live cells (0 = none)
         let mut occupied = vec![false; W * H];
         for c in &cells {
             occupied[c.y as usize % H * W + c.x as usize % W] = true;
         }
-        let seed_count = occupied.iter().filter(|&&v| !v).count() / 64;
+        let seed_count = if seed_density_inv > 0 {
+            occupied.iter().filter(|&&v| !v).count() / seed_density_inv
+        } else { 0 };
         let mut seeded = 0;
         for _ in 0..W * H * 4 {
             if seeded >= seed_count { break; }
