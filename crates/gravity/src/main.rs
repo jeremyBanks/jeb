@@ -711,22 +711,20 @@ impl Sim {
     // Gravity step where original-position cells don't move (but still exert gravity)
     fn gravity_step_epilogue(&mut self, orig: &OriginalState) {
         let n = self.cells.len();
+        // Barnes-Hut tree for epilogue gravity (original particles are "fixed" — no force applied)
+        let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
+        nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
         for i in 0..n {
-            for j in (i+1)..n {
-                let mut dx = self.cells[j].x - self.cells[i].x;
-                let mut dy = self.cells[j].y - self.cells[i].y;
-                let hw = W as f32 / 2.0; let hh = H as f32 / 2.0;
-                if dx > hw { dx -= W as f32; } if dx < -hw { dx += W as f32; }
-                if dy > hh { dy -= H as f32; } if dy < -hh { dy += H as f32; }
-                let r2 = dx*dx + dy*dy + self.softening*self.softening;
-                let r = r2.sqrt();
-                let force = self.g / r2;
-                let fx = force * dx / r; let fy = force * dy / r;
-                let i_orig = orig.positions.contains(&(self.cells[i].x as usize % W, self.cells[i].y as usize % H));
-                let j_orig = orig.positions.contains(&(self.cells[j].x as usize % W, self.cells[j].y as usize % H));
-                if !i_orig { self.cells[i].vx += fx; self.cells[i].vy += fy; }
-                if !j_orig { self.cells[j].vx -= fx; self.cells[j].vy -= fy; }
-            }
+            let (px, py) = (self.cells[i].x, self.cells[i].y);
+            qt_insert(&mut nodes, 0, i, px, py, 0);
+        }
+        for i in 0..n {
+            let is_orig = orig.positions.contains(&(self.cells[i].x as usize % W, self.cells[i].y as usize % H));
+            if is_orig { continue; } // original particles are fixed, skip force
+            let (px, py) = (self.cells[i].x, self.cells[i].y);
+            let (fx, fy) = qt_force(&nodes, 0, i, px, py, self.g, self.softening);
+            self.cells[i].vx += fx;
+            self.cells[i].vy += fy;
         }
         // Cap speeds, then only move non-original cells
         for c in &mut self.cells {
