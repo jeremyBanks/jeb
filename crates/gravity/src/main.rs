@@ -1250,7 +1250,7 @@ fn main() {
                 let pc = sim.epilogue_tick(&orig, ep_tick);
                 if pc {
                     pos_converged = true;
-                    conv_t = (ep_tick as f32 / 2400.0_f32).min(1.0);
+                    conv_t = (ep_tick as f32 / 32.0_f32).min(1.0);
                     println!("  [epilogue] positions converged at tick {} ({:.1}s, t={:.2}) — velocity phase begins",
                         ep_tick, ep_tick as f32 / FPS as f32, conv_t);
                 }
