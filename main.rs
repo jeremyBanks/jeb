@@ -100,12 +100,10 @@ impl Sim {
             grid[yi * W + xi] = i;
         }
 
-        // Conway range=8: all cells within Chebyshev distance 8 (excludes self)
-        const CONWAY_RANGE: i32 = 8;
-        let neighbour_offsets: Vec<(i32, i32)> = (-CONWAY_RANGE..=CONWAY_RANGE)
-            .flat_map(|dy| (-CONWAY_RANGE..=CONWAY_RANGE).map(move |dx| (dy, dx)))
-            .filter(|&(dy, dx)| dy != 0 || dx != 0)
-            .collect();
+        // Standard Conway: 8 immediate neighbours
+        let neighbour_offsets: [(i32, i32); 8] = [
+            (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)
+        ];
         let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
             neighbour_offsets.iter().filter_map(|&(dy, dx)| {
                 let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
