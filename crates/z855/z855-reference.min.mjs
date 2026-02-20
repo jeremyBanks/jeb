@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno run --allow-read --allow-write
+#!/usr/bin/env -S deno run
 import{assert as Z}from"jsr:@std/assert"
 import{parseArgs as z}from"jsr:@std/cli/parse-args"
 import{readAll as J}from"jsr:@std/io"
@@ -16,11 +16,15 @@ for(const Z of e.keys())P[Z]=!0;const n=P[95]&&i>=4,g=P[44]&&i>=5,F=P[126]&&i>=6
 Z.set(o),o=Z}o[S++]=Z}function r(Z){for(let z=0;Z.length>z;z++)R(Z.charCodeAt(z))}function H(Z,z,J){for(;S+J>o.length;){const Z=new Uint8Array(2*o.length);Z.set(o),o=Z}o.set(Z.subarray(z,z+J),S),S+=J}let l=z.length,D=0
 if(E){const Z=G(z.length)%5;Z>0&&1!==Z&&(D=Z-1,l=z.length-D)}Z:for(;l>s;){const Z=l-s;if(4>Z){const J=Z;let E=0;for(let Z=0;J>Z;Z++)E=256*E+z[s+Z];const B=L(E,J+1);for(let Z=0;B.length>Z;Z++)R(B[Z]);s+=J
 break}const J=d([z[s],z[s+1],z[s+2],z[s+3]]),j=h(J);if(!P[z[s+3]]){for(let Z=0;5>Z;Z++)R(j[Z]);s+=4;continue}let e=0;for(let Z=3;Z>=0&&P[z[s+Z]];Z--)e++;const b=s+4,I=Math.min(z.length,s+i);let D=0
-for(let Z=b;I>Z&&i>D+e&&P[z[Z]];Z++)D++;const C=e+D,c=z.length-b-D;if(O&&C>=8&&4===e){const Z=s,J=E?Math.min(C,l-s):C;if(0===c&&!E)return r(B[0]),r("|"),H(z,Z,J),s=z.length,o.subarray(0,S)
-const j=T(J),e=G(J),b=j.length+1+J;if(e>=b){const E=e-b,B=2>E?0:t(S,j.length,J,E),I=J>15&&B>0?T(B):[],i=5>I.length+j.length?I:[],P=i.length>0?B:0;if(E>=i.length+P){const B=E-i.length-P
-for(const Z of i)r(Z);for(const Z of j)r(Z);r("|");for(let Z=0;P>Z;Z++)R(46);H(z,Z,J);for(let Z=0;B>Z;Z++)R(46);s=Z+J;continue Z}}}{let Z=!1
-for(const J of[7,6,5]){if(!(7===J&&a||6===J&&F||5===J&&g)||J>i)continue;const B=7===J?";":6===J?"~":",",e=z.length-s,b=[]
-for(let Z=0;(E?0:3)>=Z;Z++){const E=Z+J;if(s+E>z.length)continue;if((0===Z?1:Z+2)+G(e-E)!==G(e))continue
+for(let Z=b;I>Z&&i>D+e&&P[z[Z]];Z++)D++;const C=e+D,c=z.length-b-D;if(O&&C>=8&&4===e){const Z=s,J=E?Math.min(C,l-s):C,j=E?4*Math.floor(J/4):J
+if(j>=8){if(0===c&&!E)return r(B[0]),r("|"),H(z,Z,j),s=z.length,o.subarray(0,S);const J=T(j),e=G(j),b=J.length+1+j
+if(e>=b){const E=e-b,B=2>E?0:t(S,J.length,j,E),I=j>15&&B>0?T(B):[],i=5>I.length+J.length?I:[],P=i.length>0?B:0
+if(E>=i.length+P){const B=E-i.length-P;for(const Z of i)r(Z);for(const Z of J)r(Z);r("|");for(let Z=0;P>Z;Z++)R(46)
+H(z,Z,j);for(let Z=0;B>Z;Z++)R(46);s=Z+j;continue Z}}}}{let Z=!1
+for(const J of[7,6,5]){if(!(7===J&&a||6===J&&F||5===J&&g)||J>i)continue
+const B=7===J?";":6===J?"~":",",e=z.length-s,b=[]
+for(let Z=0;(E?0:3)>=Z;Z++){const E=Z+J
+if(s+E>z.length)continue;if((0===Z?1:Z+2)+G(e-E)!==G(e))continue
 if(!A(z,s+Z,J,P))continue;const B=s+Z,j=B+J-1,I=p(B),i=p(j)
 b.push({p:Z,key:[i>I?I:i,I>i?I:i]})}if(0!==b.length){b.sort((Z,z)=>N(Z.key,z.key))
 for(const{p:E}of b){const e=s+E;if(0===E)r(B),H(z,e,J),s=e+J
