@@ -1340,3 +1340,8 @@ use std::io::{BufWriter, Write};
             if is_orig { continue; }
             let (px, py) = (self.cells[i].x, self.cells[i].y);
             let (fx, fy) = qt_force(&nodes, 0, i, px, py, self.g * g_scale, self.softening);
+
+// [recovery] edit target not found, appending:
+        // Rate-limit: 1 birth and 1 death per Conway call (independent of pop_band).
+        // With conway_every=FPS this equals 1 per second.
+        let rate_limit = 1_usize;
