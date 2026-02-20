@@ -1184,6 +1184,7 @@ export function decode(encoded: Uint8Array): Uint8Array {
 
 /** Entry point for the command-line interface. */
 export async function main() {
+  // @strip-encoder-start
   if (Deno.args[0] === "encode") {
     const args = parseArgs(Deno.args.slice(1), {
       boolean: ["concatenatable"],
@@ -1221,7 +1222,9 @@ export async function main() {
       lines.push(encoded.slice(i, i + 80));
     }
     await Deno.stdout.write(new TextEncoder().encode(lines.join("\n") + "\n"));
-  } else if (Deno.args[0] === "decode") {
+  } else
+  // @strip-encoder-end
+  if (Deno.args[0] === "decode") {
     const stdin = await readAll(Deno.stdin);
     await Deno.stdout.write(decode(stdin));
   } else if (Deno.args[0] === "decode-lines") {
@@ -1240,6 +1243,7 @@ export async function main() {
 
 // ─── Text encode/decode helpers ───
 
+// @strip-encoder-start
 /** Encode a Uint8Array to a string using Z855. */
 export function textEncode(
   original: Uint8Array,
@@ -1247,6 +1251,7 @@ export function textEncode(
 ): string {
   return new TextDecoder().decode(encode(original, opts));
 }
+// @strip-encoder-end
 
 /** Decode a string to a Uint8Array using Z855. */
 export function textDecode(encoded: string): Uint8Array {
