@@ -121,8 +121,7 @@ impl Sim {
     }
 
     fn paint_frame(&self, canvas: &mut Vec<u8>) {
-        // Fade existing canvas by ~2% per tick (multiply by 0.98)
-        // At 0.5px/tick avg speed, cells travel ~50px before fully faded = nice long trails
+        // Fade existing canvas by ~2% per tick
         for v in canvas.iter_mut() {
             *v = (*v as u16 * 250 / 256) as u8;
         }
@@ -130,12 +129,7 @@ impl Sim {
         for c in &self.cells {
             let xi = c.x as usize % W;
             let yi = c.y as usize % H;
-            let spd = (c.vx * c.vx + c.vy * c.vy).sqrt();
-            let t = (spd / self.speed_cap).clamp(0.0, 1.0);
-            // slow = blue-white, fast = orange
-            let r = (255.0 * (0.5 + 0.5 * t)) as u8;
-            let g = (255.0 * (0.8 - 0.5 * t)) as u8;
-            let b = (255.0 * (1.0 - t)) as u8;
+            let (r, g, b) = velocity_color(c.vx, c.vy, self.speed_cap);
             let i = (yi * W + xi) * 3;
             canvas[i]     = r;
             canvas[i + 1] = g;
