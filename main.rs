@@ -937,7 +937,10 @@ fn main() {
     let segments_dir    = "segments";
     let frames_dir      = "frames/chunk";
     let segments_file   = "segments.txt";
-    let output_file     = format!("gravity_{}s.mp4", seconds);
+    let shared_dir = std::env::var("GRAVITY_SHARED_DIR")
+        .unwrap_or_else(|_| String::from("/Users/matte/.openclaw/workspace/shared/gravity"));
+    fs::create_dir_all(&shared_dir).ok();
+    let output_file = format!("{}/gravity_{}s_seed{}.mp4", shared_dir, seconds, rng_seed);
 
     fs::create_dir_all(segments_dir).unwrap();
     fs::create_dir_all(frames_dir).unwrap();
