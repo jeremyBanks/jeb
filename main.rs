@@ -987,19 +987,22 @@ fn main() {
         .create(true).append(true)
         .open(segments_file).unwrap();
 
-    for chunk in start_chunk..n_chunks {
-        if !keep_running.load(Ordering::Relaxed) {
-            println!("[signal] Stopping after chunk {chunk} — will concat completed segments.");
-            break;
-        }
+    'chunks: for chunk in start_chunk..n_chunks {
         let chunk_start_frame = chunk * CHUNK_FRAMES;
         let chunk_end_frame = ((chunk + 1) * CHUNK_FRAMES).min(total_frames);
         let this_chunk_frames = chunk_end_frame - chunk_start_frame;
 
         println!("\n[chunk {}/{n_chunks}] frames {}..{}", chunk+1, chunk_start_frame, chunk_end_frame);
 
-        // Render frames for this chunk
+        // Render frames for this chunk — check signal each frame
         for local_frame in 0..this_chunk_frames {
+            if !keep_running.load(Ordering::Relaxed) {
+                // Discard partial chunk and stop immediately
+                println!("[signal] Discarding partial chunk {}, cleaning up {} frames...",
+                    chunk + 1, local_frame);
+                delete_frames(frames_dir);
+                break 'chunks;
+            }
             let global_frame = chunk_start_frame + local_frame;
             sim.paint_frame(&mut canvas);
             Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:08}.png"));
