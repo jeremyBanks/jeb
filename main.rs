@@ -1021,7 +1021,7 @@ impl Sim {
             if dy > hh { dy -= H as f32; } if dy < -hh { dy += H as f32; }
             (dx*dx+dy*dy).sqrt()
         }).sum::<f32>() / n;
-        format!("pop={} avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1}", self.cells.len())
+        format!("pop={} avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1} com=({cx:.1},{cy:.1})", self.cells.len())
     }
 }
 
