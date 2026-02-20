@@ -217,7 +217,7 @@ theorem convergesIn_correct {fuel n : Nat} (h : convergesIn fuel n = true) :
     match n with
     | 0     =>
       -- convergesIn 0 0 = false (| 0, _ => false pattern)
-      exact absurd h (convergesIn_zero_false 0)
+      simp [convergesIn_zero_false] at h
     | 1     => exact ⟨0, rfl⟩
     | n + 2 =>
       -- convergesIn 0 (n+2) = false definitionally (n+2 ≠ 1, fuel=0)
@@ -225,7 +225,7 @@ theorem convergesIn_correct {fuel n : Nat} (h : convergesIn fuel n = true) :
       rw [hf] at h; simp at h
   | succ f ih =>
     match n with
-    | 0     => exact absurd h (convergesIn_zero_false (f + 1))
+    | 0     => simp [convergesIn_zero_false] at h
     | 1     => exact ⟨0, rfl⟩
     | n + 2 =>
       -- convergesIn (f+1) (n+2) reduces to convergesIn f (collatz (n+2)) definitionally
