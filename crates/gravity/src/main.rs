@@ -607,7 +607,7 @@ fn main() {
     run("sym_no_conway", 0.00005, 1.5, 0.125, 0, 4.0, &[
         (192.0,  85.0, 6.0,  0.0,  0.08, 0),
         (192.0, 171.0, 6.0,  0.0, -0.08, 0),
-    ], 960, &snaps);
+    ], 3840, &snaps);
 
     // pop_band=0 (should be equivalent — every birth/death trimmed)
     run("sym_band_zero", 0.00005, 1.5, 0.125, 1, 0.0, &[
