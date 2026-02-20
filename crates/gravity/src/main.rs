@@ -625,9 +625,9 @@ impl Sim {
                     canvas[i + 1] *= 0.5;
                     canvas[i + 2] *= 0.5;
                 } else {
-                    canvas[i]     *= 0.999069; // 0.999534² — doubled fade rate
-                    canvas[i + 1] *= 0.999069;
-                    canvas[i + 2] *= 0.999069;
+                    canvas[i]     *= 0.999534;
+                    canvas[i + 1] *= 0.999534;
+                    canvas[i + 2] *= 0.999534;
                 }
             }
         }
@@ -890,7 +890,7 @@ fn main() {
             // Ramp background fade: normal=0.999534/tick → 0.5/tick at full t
             // Lerp in log space: fade_rate = 0.999534^(1-t) * 0.5^t
             let t = (ep_tick as f32 / 600.0_f32).min(1.0);
-            let fade = 0.999069_f32.powf(1.0 - t) * 0.5_f32.powf(t);
+            let fade = 0.999534_f32.powf(1.0 - t) * 0.5_f32.powf(t);
             for v in canvas.iter_mut() { *v *= fade; }
             sim.paint_frame(&mut canvas);
             let global_frame = total_frames + ep_frame;
