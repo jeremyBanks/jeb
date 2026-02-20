@@ -47,7 +47,7 @@ impl Sim {
                     if cells.iter().any(|c: &Cell| c.x as usize == xi && c.y as usize == yi) {
                         continue;
                     }
-                    cells.push(Cell { x, y, vx: ivx, vy: ivy });
+                    cells.push(Cell { x, y, vx: ivx, vy: ivy, prev_speed: 0.0 });
                 }
             }
         }
