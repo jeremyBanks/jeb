@@ -410,8 +410,11 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32,
 fn main() {
     fs::create_dir_all("frames").unwrap();
 
+    // Two fully-filled circles on opposite diagonal quadrants, parallel paths
+    // W=384, H=256 — circles of radius 20 (~1256 cells each)
+    // Paths: left-circle moves right at y=85, right-circle moves left at y=170
     run("conway_gravity", 0.0008, 1.5, 2.0, &[
-        (32.0, 42.0, 10.0,  0.5,  0.0, 60),
-        (96.0, 86.0, 10.0, -0.5,  0.0, 60),
+        ( 96.0,  85.0, 20.0,  0.5,  0.0, 0),
+        (288.0, 170.0, 20.0, -0.5,  0.0, 0),
     ], 2800, &[0, 400, 800, 1200, 1600, 2000, 2400, 2800]);
 }
