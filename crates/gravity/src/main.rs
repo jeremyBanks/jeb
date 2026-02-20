@@ -1,6 +1,7 @@
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
+use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 
 const W: usize = 192;
 const H: usize = 120; // 192×120 × 10 = 1920×1200 exactly (square pixels)
