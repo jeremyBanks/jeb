@@ -818,7 +818,7 @@ fn main() {
         })
         .unwrap_or_else(|| {
             println!("Fresh start (radius={blob_radius}, seed_density=1/{seed_density_inv})");
-            let s = Sim::new(43, g, softening, speed_cap, conway_every, pop_band, clumps, seed_density_inv);
+            let s = Sim::new(44, g, softening, speed_cap, conway_every, pop_band, clumps, seed_density_inv);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
