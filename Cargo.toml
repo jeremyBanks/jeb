@@ -24,6 +24,7 @@ members = [
     "crates/jeb-wasm",
     "crates/save",
     "crates/stringify_verbatim",
+    "crates/gravity",
     "crates/z855",
     "crates/zerodmg",
     "crates/zerodmg-codes",
