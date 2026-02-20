@@ -34,6 +34,12 @@ struct Sim {
     prev_live: Vec<bool>,
 }
 
+// Original state captured at tick=0 for epilogue convergence
+struct OriginalState {
+    positions: std::collections::HashSet<(usize, usize)>,
+    count: usize,
+}
+
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, conway_every: usize, pop_band: f32,
            clumps: &[(f32, f32, f32, f32, f32, usize)], seed_density_inv: usize) -> Self {
@@ -385,6 +391,182 @@ impl Sim {
         self.tick_count += 1;
     }
 
+    // Epilogue tick: ramp Conway down, ramp nudges up, converge to original state.
+    // epilogue_tick: 0-based tick within epilogue phase.
+    // Returns true when converged.
+    fn epilogue_tick(&mut self, orig: &OriginalState, epilogue_tick: usize) -> bool {
+        const RAMP_TICKS: usize = 600; // 10 seconds at 60fps
+        let t = (epilogue_tick as f32 / RAMP_TICKS as f32).min(1.0);
+
+        // Conway with ramping-down max births/deaths
+        let conway_max = (8.0 * (1.0 - t)).floor() as usize;
+        if conway_max > 0 {
+            self.epilogue_conway_step(conway_max, orig.count);
+        }
+
+        // Gravity still runs (frozen cells handled by not moving them)
+        self.gravity_step_epilogue(orig);
+
+        // Nudges: ramp up
+        let kill_chance   = 0.25 * t;
+        let revive_chance = 0.125 * t;
+
+        // Build current live set
+        let mut grid = vec![usize::MAX; W * H];
+        for (i, c) in self.cells.iter().enumerate() {
+            grid[c.y as usize % H * W + c.x as usize % W] = i;
+        }
+
+        // 25%×t: kill one random non-original live cell
+        if xorf32(&mut self.rng) < kill_chance {
+            let non_orig: Vec<usize> = self.cells.iter().enumerate()
+                .filter(|(_, c)| !orig.positions.contains(&(c.x as usize % W, c.y as usize % H)))
+                .map(|(i, _)| i)
+                .collect();
+            if !non_orig.is_empty() {
+                let pick = non_orig[(xoru64(&mut self.rng) as usize) % non_orig.len()];
+                self.cells.swap_remove(pick);
+            }
+        }
+
+        // 12.5%×t: revive one random dead original-position cell
+        if xorf32(&mut self.rng) < revive_chance {
+            let dead_orig: Vec<(usize, usize)> = orig.positions.iter()
+                .filter(|&&(ox, oy)| grid[oy * W + ox] == usize::MAX)
+                .cloned().collect();
+            if !dead_orig.is_empty() {
+                let (ox, oy) = dead_orig[(xoru64(&mut self.rng) as usize) % dead_orig.len()];
+                self.cells.push(Cell { x: ox as f32 + 0.5, y: oy as f32 + 0.5,
+                                       vx: 0.0, vy: 0.0, prev_speed: 0.0 });
+            }
+        }
+
+        self.tick_count += 1;
+        self.order = (0..self.cells.len()).collect();
+
+        // Check convergence: all live cells are at original positions
+        if self.cells.len() == orig.count {
+            let live: std::collections::HashSet<(usize,usize)> = self.cells.iter()
+                .map(|c| (c.x as usize % W, c.y as usize % H))
+                .collect();
+            if live == orig.positions { return true; }
+        }
+        false
+    }
+
+    fn epilogue_conway_step(&mut self, max_per_component: usize, target_pop: usize) {
+        // Simplified Conway step with fixed max births/deaths (no pop_band logic)
+        shuffle_vec(&mut self.cells, &mut self.rng);
+        let n = self.cells.len();
+        let mut grid = vec![usize::MAX; W * H];
+        for (i, c) in self.cells.iter().enumerate() {
+            grid[c.y as usize % H * W + c.x as usize % W] = i;
+        }
+        let neighbour_offsets: [(i32, i32); 8] = [
+            (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)
+        ];
+        let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
+            neighbour_offsets.iter().filter_map(|&(dy, dx)| {
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                let idx = grid[ny * W + nx];
+                if idx != usize::MAX { Some(idx) } else { None }
+            }).collect()
+        };
+        let mut deaths: Vec<usize> = Vec::new();
+        let mut births: Vec<(usize, usize, Vec<usize>)> = Vec::new();
+        for (i, c) in self.cells.iter().enumerate() {
+            let gx = c.x as usize % W; let gy = c.y as usize % H;
+            let nbrs = live_neighbours(gy, gx);
+            let cnt = nbrs.len();
+            if cnt != 2 && cnt != 3 && !nbrs.is_empty() { deaths.push(i); }
+        }
+        let mut candidates = std::collections::HashSet::new();
+        for c in &self.cells {
+            let gx = c.x as usize % W; let gy = c.y as usize % H;
+            for &(dy, dx) in &neighbour_offsets {
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                if grid[ny * W + nx] == usize::MAX { candidates.insert((ny, nx)); }
+            }
+        }
+        for (gy, gx) in candidates {
+            let nbrs = live_neighbours(gy, gx);
+            if nbrs.len() == 3 { births.push((gy, gx, nbrs)); }
+        }
+        shuffle_vec(&mut deaths, &mut self.rng);
+        shuffle_vec(&mut births, &mut self.rng);
+        let max_births = (target_pop.saturating_sub(n)).min(max_per_component);
+        let max_deaths = (n.saturating_sub(target_pop)).min(max_per_component);
+        deaths.truncate(max_deaths);
+        births.truncate(max_births);
+        let dying: std::collections::HashSet<usize> = deaths.iter().cloned().collect();
+        let mut di: Vec<usize> = dying.iter().cloned().collect();
+        di.sort_unstable_by(|a, b| b.cmp(a));
+        for i in di { self.cells.swap_remove(i); }
+        let mut grid2 = vec![usize::MAX; W * H];
+        for (i, c) in self.cells.iter().enumerate() {
+            grid2[c.y as usize % H * W + c.x as usize % W] = i;
+        }
+        for (gy, gx, _) in births {
+            if grid2[gy * W + gx] != usize::MAX { continue; }
+            let live_nbrs: Vec<usize> = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                let idx = grid2[ny * W + nx];
+                if idx != usize::MAX { Some(idx) } else { None }
+            }).collect();
+            if live_nbrs.is_empty() { continue; }
+            let n_nbrs = live_nbrs.len() as f32;
+            let vx = live_nbrs.iter().map(|&i| self.cells[i].vx).sum::<f32>() / n_nbrs;
+            let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
+            let new_idx = self.cells.len();
+            let spd = (vx*vx+vy*vy).sqrt();
+            self.cells.push(Cell { x: gx as f32+0.5, y: gy as f32+0.5, vx, vy, prev_speed: spd });
+            grid2[gy * W + gx] = new_idx;
+        }
+        self.order = (0..self.cells.len()).collect();
+    }
+
+    // Gravity step where original-position cells don't move (but still exert gravity)
+    fn gravity_step_epilogue(&mut self, orig: &OriginalState) {
+        let n = self.cells.len();
+        for i in 0..n {
+            for j in (i+1)..n {
+                let mut dx = self.cells[j].x - self.cells[i].x;
+                let mut dy = self.cells[j].y - self.cells[i].y;
+                let hw = W as f32 / 2.0; let hh = H as f32 / 2.0;
+                if dx > hw { dx -= W as f32; } if dx < -hw { dx += W as f32; }
+                if dy > hh { dy -= H as f32; } if dy < -hh { dy += H as f32; }
+                let r2 = dx*dx + dy*dy + self.softening*self.softening;
+                let r = r2.sqrt();
+                let force = self.g / r2;
+                let fx = force * dx / r; let fy = force * dy / r;
+                let i_orig = orig.positions.contains(&(self.cells[i].x as usize % W, self.cells[i].y as usize % H));
+                let j_orig = orig.positions.contains(&(self.cells[j].x as usize % W, self.cells[j].y as usize % H));
+                if !i_orig { self.cells[i].vx += fx; self.cells[i].vy += fy; }
+                if !j_orig { self.cells[j].vx -= fx; self.cells[j].vy -= fy; }
+            }
+        }
+        // Cap speeds, then only move non-original cells
+        for c in &mut self.cells {
+            let spd = (c.vx*c.vx+c.vy*c.vy).sqrt();
+            let cap = c.prev_speed.max(self.speed_cap);
+            if spd > cap { c.vx = c.vx/spd*cap; c.vy = c.vy/spd*cap; }
+            let hard_ceil = self.speed_cap * 2.0;
+            c.prev_speed = c.prev_speed.min(spd).max(self.speed_cap).min(hard_ceil);
+        }
+        // Move only non-original cells
+        for c in &mut self.cells {
+            let xi = c.x as usize % W; let yi = c.y as usize % H;
+            if !orig.positions.contains(&(xi, yi)) {
+                c.x = (c.x + c.vx).rem_euclid(W as f32);
+                c.y = (c.y + c.vy).rem_euclid(H as f32);
+            }
+        }
+        self.order = (0..self.cells.len()).collect();
+    }
+
     fn paint_frame(&mut self, canvas: &mut Vec<f32>) {
         for py in 0..H {
             for px in 0..W {
@@ -474,6 +656,10 @@ fn xoru64(s: &mut u64) -> u64 {
     *s ^= *s << 13; *s ^= *s >> 7; *s ^= *s << 17; *s
 }
 
+fn xorf32(s: &mut u64) -> f32 {
+    (xoru64(s) & 0xFFFFFF) as f32 / 0xFFFFFF as f32
+}
+
 fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize) {
     // ffmpeg glob requires sorted files — they're zero-padded so glob order = numeric order
     let scale = format!("scale={}:{}:flags=neighbor", OUT_W, OUT_H);
@@ -520,7 +706,8 @@ fn main() {
     };
     let seconds: usize = parse_arg("--seconds")
         .and_then(|s| s.parse().ok())
-        .expect("Usage: gravity --seconds <N> [--radius <r>] [--seed-density <1/N>]");
+        .expect("Usage: gravity --seconds <N> [--radius <r>] [--seed-density <1/N>] [--epilogue]");
+    let do_epilogue = args.iter().any(|a| a == "--epilogue");
     // --radius: circle radius (0 = no blobs), default 4
     let blob_radius: f32 = parse_arg("--radius")
         .and_then(|s| s.parse().ok())
@@ -587,6 +774,14 @@ fn main() {
             (s, c, 0)
         });
 
+    // Capture original state for epilogue (only meaningful on fresh start)
+    let orig = OriginalState {
+        positions: sim.cells.iter()
+            .map(|c| (c.x as usize % W, c.y as usize % H))
+            .collect(),
+        count: sim.cells.len(),
+    };
+
     // Open/append segments list
     let mut seg_list = fs::OpenOptions::new()
         .create(true).append(true)
@@ -629,8 +824,46 @@ fn main() {
         println!("  chunk {}/{n_chunks} done ({pct}%)  pop={}", chunk+1, sim.cells.len());
     }
 
+    // ── Epilogue phase ────────────────────────────────────────────────────
+    if do_epilogue {
+        println!("\n[epilogue] converging to original {} cells...", orig.count);
+        const MAX_EPILOGUE_TICKS: usize = 18000; // 5 min safety cap
+        let mut ep_tick = 0usize;
+        let mut ep_frame = 0usize;
+        let mut ep_chunk_frames: Vec<String> = Vec::new();
+        let ep_seg_start = total_frames;
+
+        loop {
+            let converged = sim.epilogue_tick(&orig, ep_tick);
+            sim.paint_frame(&mut canvas);
+            let global_frame = total_frames + ep_frame;
+            let path = format!("{frames_dir}/f{global_frame:08}.png");
+            Sim::save_png(&canvas, &path);
+            ep_chunk_frames.push(path);
+            ep_frame += 1;
+            ep_tick += 1;
+
+            // Encode + flush every CHUNK_FRAMES frames
+            if ep_chunk_frames.len() == CHUNK_FRAMES || converged || ep_tick >= MAX_EPILOGUE_TICKS {
+                if !ep_chunk_frames.is_empty() {
+                    let seg_path = format!("{segments_dir}/seg_{:08}.mp4", ep_seg_start + ep_frame - ep_chunk_frames.len());
+                    encode_chunk(frames_dir, &seg_path, ep_chunk_frames.len());
+                    writeln!(seg_list, "file '{seg_path}'").unwrap();
+                    seg_list.flush().unwrap();
+                    delete_frames(frames_dir);
+                    ep_chunk_frames.clear();
+                }
+            }
+
+            if converged { println!("  epilogue converged at tick {ep_tick} ({:.1}s)", ep_tick as f32 / FPS as f32); break; }
+            if ep_tick >= MAX_EPILOGUE_TICKS { println!("  epilogue hit safety cap ({MAX_EPILOGUE_TICKS} ticks)"); break; }
+        }
+        println!("  epilogue: {ep_frame} frames appended");
+    }
+
     // Final concat
-    println!("\nConcatenating {} segments → {output_file}", n_chunks);
+    let total_segs = fs::read_to_string(segments_file).unwrap_or_default().lines().count();
+    println!("\nConcatenating {total_segs} segments → {output_file}");
     concat_segments(segments_file, &output_file);
 
     let size = fs::metadata(&output_file).map(|m| m.len()).unwrap_or(0);
