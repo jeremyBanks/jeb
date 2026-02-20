@@ -1,6 +1,7 @@
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
+use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 
 const W: usize = 192;
 const H: usize = 120; // 192×120 × 10 = 1920×1200 exactly (square pixels)
@@ -937,7 +938,10 @@ fn main() {
     let segments_dir    = "segments";
     let frames_dir      = "frames/chunk";
     let segments_file   = "segments.txt";
-    let output_file     = format!("gravity_{}s.mp4", seconds);
+    let shared_dir = std::env::var("GRAVITY_SHARED_DIR")
+        .unwrap_or_else(|_| String::from("/Users/matte/.openclaw/workspace/shared/gravity"));
+    fs::create_dir_all(&shared_dir).ok();
+    let output_file = format!("{}/gravity_{}s_seed{}.mp4", shared_dir, seconds, rng_seed);
 
     fs::create_dir_all(segments_dir).unwrap();
     fs::create_dir_all(frames_dir).unwrap();
@@ -968,12 +972,27 @@ fn main() {
         count: sim.cells.len(),
     };
 
+    // Graceful shutdown: SIGINT/SIGTERM sets flag; loops check it and break,
+    // then the normal final-concat path runs with whatever chunks are done.
+    let keep_running = Arc::new(AtomicBool::new(true));
+    let kr = keep_running.clone();
+    ctrlc::set_handler(move || {
+        if kr.load(Ordering::Relaxed) {
+            println!("\n[signal] Caught — finishing current chunk then concatenating completed segments...");
+            kr.store(false, Ordering::Relaxed);
+        }
+    }).expect("Error setting signal handler");
+
     // Open/append segments list
     let mut seg_list = fs::OpenOptions::new()
         .create(true).append(true)
         .open(segments_file).unwrap();
 
     for chunk in start_chunk..n_chunks {
+        if !keep_running.load(Ordering::Relaxed) {
+            println!("[signal] Stopping after chunk {chunk} — will concat completed segments.");
+            break;
+        }
         let chunk_start_frame = chunk * CHUNK_FRAMES;
         let chunk_end_frame = ((chunk + 1) * CHUNK_FRAMES).min(total_frames);
         let this_chunk_frames = chunk_end_frame - chunk_start_frame;
@@ -1057,6 +1076,7 @@ fn main() {
             }
             if converged { println!("  epilogue converged at tick {ep_tick} ({:.1}s)", ep_tick as f32 / FPS as f32); break; }
             if ep_tick >= MAX_EPILOGUE_TICKS { println!("  epilogue hit safety cap ({MAX_EPILOGUE_TICKS} ticks = 32s)"); break; }
+            if !keep_running.load(Ordering::Relaxed) { println!("  [signal] Stopping epilogue — will concat completed segments."); break; }
         }
         println!("  epilogue: {ep_frame} frames appended");
     }
