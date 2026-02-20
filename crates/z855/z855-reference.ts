@@ -678,49 +678,59 @@ export function encode(
     // partial block (hash-padded) after the main loop.
     if (hasLongEscape && safeLen >= 8 && safeBytesAtEnd === 4) {
       const safeStart = inOff; // block-aligned
-      const rawLen = concatenatable ? Math.min(safeLen, stopAt - inOff) : safeLen;
 
-      // 0| rest-of-input escape: only when safe run reaches end of input.
-      if (remainingAfterSafe === 0 && !concatenatable) {
-        emitStr(Z85_DIGITS[0]); // '0' prefix digit
-        emitStr(ESCAPE_MANY);
-        emitBytes(original, safeStart, rawLen);
-        inOff = original.length;
-        return buf.subarray(0, outOff);
-      }
+      // In concatenatable mode, cap rawLen to:
+      //   1. At most stopAt - inOff (don't consume reserved-tail bytes), and
+      //   2. A multiple of 4, so z855OutputLen(rawLen) = ceil(rawLen*5/4) is
+      //      divisible by 5 and preserves 5-alignment of outOff.
+      // In non-concatenatable mode, use the full safe run.
+      const rawLenUncapped = concatenatable ? Math.min(safeLen, stopAt - inOff) : safeLen;
+      const rawLen = concatenatable ? Math.floor(rawLenUncapped / 4) * 4 : rawLenUncapped;
 
-      // Normal long escape with padding.
-      const lenPrefix = encodeBase42(rawLen);
-      const envelopeLen = z855OutputLen(rawLen);
-      const ourLenNoPad = lenPrefix.length + 1 + rawLen;
-      if (ourLenNoPad <= envelopeLen) {
-        const paddingNeeded = envelopeLen - ourLenNoPad;
-
-        // Find best alignment offset via bit-reversal sort key.
-        // Offset is only encodable (and thus decodable) when rawLen > 15,
-        // because the decoder distinguishes offset prefix from length prefix
-        // only when the length requires multiple base-42 digits.
-        const rawOffset = paddingNeeded >= 2
-          ? findBestOffset(outOff, lenPrefix.length, rawLen, paddingNeeded)
-          : 0;
-        // Cap: total prefix (offset + length) must be < 5 digits, otherwise the
-        // decoder triggers a Z85 block decode before seeing `|` (spurious block).
-        const rawOffsetPrefix = (rawLen > 15 && rawOffset > 0) ? encodeBase42(rawOffset) : [];
-        const offsetPrefix = (rawOffsetPrefix.length + lenPrefix.length < 5) ? rawOffsetPrefix : [];
-        const offset = offsetPrefix.length > 0 ? rawOffset : 0;
-
-        if (offsetPrefix.length + offset <= paddingNeeded) {
-          const paddingAfter = paddingNeeded - offsetPrefix.length - offset;
-
-          for (const c of offsetPrefix) emitStr(c);
-          for (const c of lenPrefix)    emitStr(c);
+      // Only proceed if the clamped run is still long enough for a long escape.
+      if (rawLen >= 8) {
+        // 0| rest-of-input escape: only when safe run reaches end of input.
+        if (remainingAfterSafe === 0 && !concatenatable) {
+          emitStr(Z85_DIGITS[0]); // '0' prefix digit
           emitStr(ESCAPE_MANY);
-          for (let k = 0; k < offset; k++) emit(0x2e);       // '.' padding before
-          emitBytes(original, safeStart, rawLen);              // raw bytes
-          for (let k = 0; k < paddingAfter; k++) emit(0x2e); // '.' padding after
+          emitBytes(original, safeStart, rawLen);
+          inOff = original.length;
+          return buf.subarray(0, outOff);
+        }
 
-          inOff = safeStart + rawLen;
-          continue mainLoop;
+        // Normal long escape with padding.
+        const lenPrefix = encodeBase42(rawLen);
+        const envelopeLen = z855OutputLen(rawLen);
+        const ourLenNoPad = lenPrefix.length + 1 + rawLen;
+        if (ourLenNoPad <= envelopeLen) {
+          const paddingNeeded = envelopeLen - ourLenNoPad;
+
+          // Find best alignment offset via bit-reversal sort key.
+          // Offset is only encodable (and thus decodable) when rawLen > 15,
+          // because the decoder distinguishes offset prefix from length prefix
+          // only when the length requires multiple base-42 digits.
+          const rawOffset = paddingNeeded >= 2
+            ? findBestOffset(outOff, lenPrefix.length, rawLen, paddingNeeded)
+            : 0;
+          // Cap: total prefix (offset + length) must be < 5 digits, otherwise the
+          // decoder triggers a Z85 block decode before seeing `|` (spurious block).
+          const rawOffsetPrefix = (rawLen > 15 && rawOffset > 0) ? encodeBase42(rawOffset) : [];
+          const offsetPrefix = (rawOffsetPrefix.length + lenPrefix.length < 5) ? rawOffsetPrefix : [];
+          const offset = offsetPrefix.length > 0 ? rawOffset : 0;
+
+          if (offsetPrefix.length + offset <= paddingNeeded) {
+            const paddingAfter = paddingNeeded - offsetPrefix.length - offset;
+
+            for (const c of offsetPrefix) emitStr(c);
+            for (const c of lenPrefix)    emitStr(c);
+            emitStr(ESCAPE_MANY);
+            for (let k = 0; k < offset; k++) emit(0x2e);       // '.' padding before
+            emitBytes(original, safeStart, rawLen);              // raw bytes
+            for (let k = 0; k < paddingAfter; k++) emit(0x2e); // '.' padding after
+
+            inOff = safeStart + rawLen;
+            continue mainLoop;
+          }
         }
       }
     }
@@ -729,12 +739,19 @@ export function encode(
     //
     // For each length K ∈ {7, 6, 5} (larger preferred):
     //   Try all positions p ∈ {0, 1, 2, 3}:
-    //     p=0: block-aligned, emit [escape][K bytes]
+    //     p=0: block-aligned, emit [escape][K bytes]  — outputs 1+K chars (not 5-aligned)
     //     p≥1: non-aligned, emit [(p+1) Z85 chars][escape][K bytes]
     //   Pick candidate with best bit-reversal alignment score.
     //
     // No canonical-min check needed (P+1 digits uniquely determine the value).
-    {
+    //
+    // In concatenatable mode: disabled entirely. p=0 emits 1+K = 6, 7, or 8 chars
+    // which is not divisible by 5. The splicing logic cannot safely repair this because
+    // the emitted bytes are raw passthrough (not Z85-encoded), so a decoder seeing
+    // hash-padded chars before them would misinterpret them as Z85 value digits.
+    // Extended passthroughs are an optimisation; falling through to standard Z85 (E)
+    // is always correct.
+    if (!concatenatable) {
       let handledB = false;
       for (const K of [7, 6, 5]) {
         const escEnabled = (K === 7 && hasEscape7) || (K === 6 && hasEscape6) || (K === 5 && hasEscape5);
@@ -785,7 +802,7 @@ export function encode(
         }
         if (handledB) continue mainLoop;
       }
-    }
+    } // end if (!concatenatable) for B escapes
 
     // ── (C) Block-aligned 4-byte passthrough ────────────────────────────────
     //
@@ -861,11 +878,8 @@ export function encode(
   // Concatenatable mode: insert hash padding before any reserved tail bytes.
   if (concatenatable && reservedTail > 0) {
     // Partial-block encoding: emit [###...][partial Z85 chars] in a 5-char block.
-    // If the loop left output at a non-5-aligned offset, first splice hashes before
-    // the dangling bytes to complete that block (same as the else-if branch below),
-    // then emit the reserved-tail partial block.
-    // Non-aligned passthroughs are disabled in concatenatable mode, so the main
-    // loop always exits at outOff % 5 === 0. Assert this holds.
+    // B escapes are disabled in concatenatable mode, so the main loop always
+    // exits at outOff % 5 === 0. Assert this invariant holds.
     assert(outOff % 5 === 0, `concat mode: unexpected outOff alignment ${outOff % 5}`);
     const partialChars = reservedTail + 1;
     const hashCount = 5 - partialChars;
