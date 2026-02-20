@@ -1148,9 +1148,9 @@ fn main() {
     // Sim parameters
     let g: f32 = parse_arg("--gravity")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(0.000300_f32); // 4× stronger gravity
+        .unwrap_or(0.003000_f32); // 10× previous (cells need ≥0.5 vel/frame to move with round())
     let softening   = 1.5_f32;
-    let speed_cap   = 0.093750_f32; // 2× previous cap
+    let speed_cap   = 4.0_f32; // cells/frame; needs to be >0.5 for round()-based movement
     let conway_every = FPS as usize / 4; // run Conway 4× per second → up to 4 births + 4 deaths/sec
     let pop_band    = 8.0_f32; // gap halved: min stays same, max comes halfway down
 
