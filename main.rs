@@ -9,6 +9,7 @@ struct Cell {
     y: f32,
     vx: f32,
     vy: f32,
+    prev_speed: f32, // speed at start of last tick — cap is max(prev_speed, global_cap)
 }
 
 struct Sim {
